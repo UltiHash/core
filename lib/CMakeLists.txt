@@ -4,6 +4,7 @@ project(uhLibCommon)
 #testing needs to be enabled to 'collect' tests of all subdirectories into top-level cmake project
 enable_testing()
 
+add_subdirectory(network)
 add_subdirectory(logging)
 add_subdirectory(conceptTypes)
 #add_subdirectory(dbSupport)
