@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.22.0)
 project(agency-node VERSION 0.0.1)
 
+set(CMAKE_CXX_STANDARD 23)
+
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/lib)
 
 find_package(Git REQUIRED)
