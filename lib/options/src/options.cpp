@@ -1,4 +1,4 @@
-#include "../include/options.h"
+#include "options.h"
 
 #include <boost/program_options/parsers.hpp>
 
