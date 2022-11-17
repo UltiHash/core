@@ -26,7 +26,7 @@ foreach(testSrc ${TEST_SRCS})
     target_link_libraries(${PROJECT_NAME}_${testName} ${${PROJECT_NAME}_LINK_LIBRARIES} ${DEPENDENCIES})
     #make sure to register the test binary for the "make test" target
     add_test(NAME ${PROJECT_NAME}_${testName}
-            COMMAND ${PROJECT_NAME}_${testName} )
+            COMMAND ${EXECUTABLE_OUTPUT_PATH}/${PROJECT_NAME}_${testName} )
     #store source file name for single test executable scenario (see below)
     list(APPEND testSrcFiles ${testSrc})
 endforeach(testSrc)

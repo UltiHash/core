@@ -5,11 +5,11 @@ project(uhLibDBSupport)
 message(STATUS "Using ${PROJECT_NAME}...")
 
 # external dependencies
-find_package(Boost 1.80 COMPONENTS log unit_test_framework REQUIRED)
+find_package(Boost 1.80 COMPONENTS unit_test_framework REQUIRED)
 find_library(PQXX_LIB pqxx REQUIRED)
 find_library(PQ_LIB pq REQUIRED)
 
-set(${PROJECT_NAME}_INCLUDE_DIRS ${PROJECT_SOURCE_DIR}/include)
+set(${PROJECT_NAME}_INCLUDE_DIRS ${PROJECT_SOURCE_DIR}/include ${Boost_INCLUDE_DIRS})
 set(${PROJECT_NAME}_LINK_LIBRARIES ${Boost_LIBRARIES} ${PQXX_LIB})
 
 # internal dependencies

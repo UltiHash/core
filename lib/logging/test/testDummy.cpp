@@ -6,7 +6,7 @@
 #ifdef SINGLE_TEST_RUNNER
 #define BOOST_TEST_NO_MAIN
 #else
-#define BOOST_TEST_MODULE "Constructor Tests"
+#define BOOST_TEST_MODULE "uhLibLogging Dummy Tests"
 #endif
 
 #include <boost/test/unit_test.hpp>

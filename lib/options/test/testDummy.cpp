@@ -6,12 +6,12 @@
 #ifdef SINGLE_TEST_RUNNER
 #define BOOST_TEST_NO_MAIN
 #else
-#define BOOST_TEST_MODULE "Constructor Tests"
+#define BOOST_TEST_MODULE "uhLibOptions Dummy Tests"
 #endif
 
 #include <boost/test/unit_test.hpp>
-#include "logging_boost.h"
-#include "custom_exceptions.h"
+#include "basic_options.h"
+#include "options.h"
 
 // ------------- Tests Follow --------------
 BOOST_AUTO_TEST_CASE( dummy )
