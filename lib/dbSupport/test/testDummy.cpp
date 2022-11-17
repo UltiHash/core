@@ -10,11 +10,11 @@
 #endif
 
 #include <boost/test/unit_test.hpp>
-#include "config_files.h"
-#include "containerSQL.h"
-#include "database_call_ops.h"
-#include "global_custom_functions.h"
-#include "postgresSQL.h"
+#include <dbSupport/config_files.h>
+#include <dbSupport/containerSQL.h>
+#include <dbSupport/database_call_ops.h>
+#include <dbSupport/global_custom_functions.h>
+#include <dbSupport/postgresSQL.h>
 
 // ------------- Tests Follow --------------
 BOOST_AUTO_TEST_CASE( dummy )

@@ -12,8 +12,8 @@
 #include <boost/test/unit_test.hpp>
 #include <boost/test/data/test_case.hpp>
 #include <boost/test/data/monomorphic.hpp>
-#include "../include/BigInteger.h"
-#include "gmpxx.h"
+#include <numbers/BigInteger.h>
+#include <gmpxx.h>
 
 using namespace ultihash::numbers;
 namespace bdata = boost::unit_test::data;

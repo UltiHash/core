@@ -11,8 +11,8 @@
 
 #include <utility>
 
+#include <conceptTypes/conceptTypes.h>
 #include "config_files.h"
-#include "conceptTypes.h"
 
 extern std::recursive_mutex postgresMutex;
 

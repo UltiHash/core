@@ -10,13 +10,13 @@
 #endif
 
 #include <boost/test/unit_test.hpp>
-#include "net_client.h"
-#include "net_common.h"
-#include "net_connection.h"
-#include "net_message.h"
-#include "net_queue_ts.h"
-#include "net_server.h"
-#include "net_uhcustom.h"
+#include <network/net_client.h>
+#include <network/net_common.h>
+#include <network/net_connection.h>
+#include <network/net_message.h>
+#include <network/net_queue_ts.h>
+#include <network/net_server.h>
+#include <network/net_uhcustom.h>
 
 // ------------- Tests Follow --------------
 BOOST_AUTO_TEST_CASE( dummy )

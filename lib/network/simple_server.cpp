@@ -3,7 +3,7 @@
 //
 
 #include <iostream>
-#include "../include/net_uhcustom.h"
+#include "net_uhcustom.h"
 
 class CustomServer : public uh::net::server_interface<CustomMsgTypes>
 {

@@ -5,9 +5,9 @@
 #ifndef SCHOOL_PROJECT_CONFIG_FILES_H
 #define SCHOOL_PROJECT_CONFIG_FILES_H
 
-#include "conceptTypes.h"
-#include "logging_boost.h"
-#include "custom_exceptions.h"
+#include <conceptTypes/conceptTypes.h>
+#include <logging/logging_boost.h>
+#include <logging/custom_exceptions.h>
 
 class config_files {
 

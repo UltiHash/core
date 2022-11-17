@@ -7,18 +7,14 @@ message(STATUS "Using ${PROJECT_NAME}...")
 # external dependencies
 find_package(Boost 1.80 COMPONENTS program_options unit_test_framework REQUIRED)
 
-set(${PROJECT_NAME}_INCLUDE_DIRS ${PROJECT_SOURCE_DIR}/include ${Boost_INCLUDE_DIRS})
+set(${PROJECT_NAME}_INCLUDE_DIRS ${Boost_INCLUDE_DIRS})
 set(${PROJECT_NAME}_LINK_LIBRARIES ${Boost_LIBRARIES})
 
 # adding all the .h files of the current project
-file(GLOB HEADER_FILE_LIST
-        ${CMAKE_CURRENT_SOURCE_DIR}/include/*.h
-        )
+file(GLOB HEADER_FILE_LIST ${CMAKE_CURRENT_SOURCE_DIR}/*.h)
 
 # adding all the .cpp files of the current project
-file(GLOB SOURCE_FILE_LIST
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp
-        )
+file(GLOB SOURCE_FILE_LIST ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp)
 
 add_library(${PROJECT_NAME} ${HEADER_FILE_LIST} ${SOURCE_FILE_LIST})
 target_include_directories(${PROJECT_NAME} PUBLIC ${${PROJECT_NAME}_INCLUDE_DIRS})

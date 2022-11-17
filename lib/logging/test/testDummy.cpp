@@ -10,8 +10,8 @@
 #endif
 
 #include <boost/test/unit_test.hpp>
-#include "logging_boost.h"
-#include "custom_exceptions.h"
+#include <logging/logging_boost.h>
+#include <logging/custom_exceptions.h>
 
 // ------------- Tests Follow --------------
 BOOST_AUTO_TEST_CASE( dummy )

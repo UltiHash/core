@@ -2,10 +2,10 @@
 // Created by benjamin-elias on 4/25/22.
 //
 
-#include "valueRangesSingle.h"
-
 #ifndef CMAKE_BUILD_DEBUG_ULTIHASH_VALUERANGESDOUBLE_H
 #define CMAKE_BUILD_DEBUG_ULTIHASH_VALUERANGESDOUBLE_H
+
+#include "valueRangesSingle.h"
 
 //or map<tuple<start_big_ref_a,end_big_ref_a>,map<tuple<start_big_ref_b,end_big_ref_b>,tuple<vector<tuple<goal,rest...>>,map<tuple<start_sub_ref,end_sub_ref>,vector<tuple<start_sort,end_sort>>>>>>
 //if the benchTuple tuple has more than 3 values, we assume the second double map and an input with 5 values in benchTuple with the form:

@@ -10,7 +10,7 @@
 #endif
 
 #include <boost/test/unit_test.hpp>
-#include "../include/BigInteger.h"
+#include <numbers/BigInteger.h>
 
 using namespace ultihash::numbers;
 // ------------- Tests Follow --------------

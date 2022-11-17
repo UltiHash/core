@@ -10,9 +10,9 @@
 #endif
 
 #include <boost/test/unit_test.hpp>
-#include "hashLibraries.h"
-#include "valueRangesDouble.h"
-#include "valueRangesSingle.h"
+#include <statistics/hashLibraries.h>
+#include <statistics/valueRangesDouble.h>
+#include <statistics/valueRangesSingle.h>
 
 // ------------- Tests Follow --------------
 BOOST_AUTO_TEST_CASE( dummy )

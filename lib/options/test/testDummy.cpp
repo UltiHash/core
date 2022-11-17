@@ -10,8 +10,8 @@
 #endif
 
 #include <boost/test/unit_test.hpp>
-#include "basic_options.h"
-#include "options.h"
+#include <options/basic_options.h>
+#include <options/options.h>
 
 // ------------- Tests Follow --------------
 BOOST_AUTO_TEST_CASE( dummy )

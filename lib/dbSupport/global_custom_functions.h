@@ -5,7 +5,7 @@
 #ifndef INC_20_DATABASE_SUPPORT_GLOBAL_CUSTOM_FUNCTIONS_H
 #define INC_20_DATABASE_SUPPORT_GLOBAL_CUSTOM_FUNCTIONS_H
 
-#include "conceptTypes.h"
+#include <conceptTypes/conceptTypes.h>
 
 namespace custom_function{
     template<typename Args>

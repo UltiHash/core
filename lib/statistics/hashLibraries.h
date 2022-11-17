@@ -5,8 +5,8 @@
 #ifndef CMAKE_BUILD_DEBUG_ULTIHASH_HASHLIBRARIES_H
 #define CMAKE_BUILD_DEBUG_ULTIHASH_HASHLIBRARIES_H
 
-#include "conceptTypes.h"
-#include "logging_boost.h"
+#include <conceptTypes/conceptTypes.h>
+#include <logging/logging_boost.h>
 
 namespace tuple_hash_lib {
     template<typename...Args>

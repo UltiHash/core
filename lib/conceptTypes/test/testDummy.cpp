@@ -10,7 +10,7 @@
 #endif
 
 #include <boost/test/unit_test.hpp>
-#include "conceptTypes.h"
+#include <conceptTypes/conceptTypes.h>
 
 // ------------- Tests Follow --------------
 BOOST_AUTO_TEST_CASE( dummy )

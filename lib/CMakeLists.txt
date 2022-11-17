@@ -1,11 +1,16 @@
 cmake_minimum_required(VERSION 3.22.0 FATAL_ERROR)
 project(uhLibCommon)
 
+include_directories(${CMAKE_CURRENT_SOURCE_DIR})
+
 #testing needs to be enabled to 'collect' tests of all subdirectories into top-level cmake project
 enable_testing()
 
-set(COMPONENTS network logging conceptTypes numbers statistics dbSupport)
-foreach(COMPONENT ${COMPONENTS})
-    include_directories(${CMAKE_SOURCE_DIR}/${COMPONENT}/include)
-    add_subdirectory(${COMPONENT})
-endforeach()
+add_subdirectory(logging)
+add_subdirectory(options)
+add_subdirectory(conceptTypes)
+add_subdirectory(network)
+add_subdirectory(numbers)
+add_subdirectory(statistics)
+add_subdirectory(dbSupport)
+
