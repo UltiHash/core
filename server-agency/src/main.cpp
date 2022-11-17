@@ -1,8 +1,11 @@
 #include <exception>
 #include <iostream>
 
-#include <options/basic_options.hpp>
+#include <options/basic_options.h>
+#include <logging/logging_boost.h>
 #include <config.hpp>
+#include "protocol.h"
+#include "server.h"
 
 
 namespace uh::an
@@ -45,6 +48,17 @@ uh::options::basic_options& options::basic()
 
 // ---------------------------------------------------------------------
 
+class protocol_factory : public util::factory<protocol>
+{
+public:
+    virtual std::unique_ptr<protocol> create() const override
+    {
+        return std::make_unique<uh_protocol>();
+    }
+};
+
+// ---------------------------------------------------------------------
+
 }
 
 int main(int argc, const char** argv)
@@ -74,10 +88,22 @@ int main(int argc, const char** argv)
             std::cout << "vcsid: " << PROJECT_REPOSITORY << " - " << PROJECT_VCSID << "\n";
             exit = true;
         }
+
+        if (exit)
+        {
+            return 0;
+        }
+
+        INFO << "starting server";
+        uh::an::server_config config;
+        uh::an::protocol_factory pf;
+        uh::an::server srv(config, pf);
+
+        srv.run();
     }
     catch (const std::exception& e)
     {
-        std::cerr << "FATAL: " << e.what() << "\n";
+        FATAL << e.what() << "\n";
     }
     return 0;
 }
