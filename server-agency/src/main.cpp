@@ -21,8 +21,10 @@ public:
     virtual void evaluate(const boost::program_options::variables_map& vars) override;
 
     uh::options::basic_options& basic();
+    server_options& server();
 private:
     uh::options::basic_options m_basic;
+    server_options m_server;
 };
 
 // ---------------------------------------------------------------------
@@ -30,6 +32,7 @@ private:
 options::options()
 {
     m_basic.apply(*this);
+    m_server.apply(*this);
 }
 
 // ---------------------------------------------------------------------
@@ -37,6 +40,7 @@ options::options()
 void options::evaluate(const boost::program_options::variables_map& vars)
 {
     m_basic.evaluate(vars);
+    m_server.evaluate(vars);
 }
 
 // ---------------------------------------------------------------------
@@ -44,6 +48,13 @@ void options::evaluate(const boost::program_options::variables_map& vars)
 uh::options::basic_options& options::basic()
 {
     return m_basic;
+}
+
+// ---------------------------------------------------------------------
+
+server_options& options::server()
+{
+    return m_server;
 }
 
 // ---------------------------------------------------------------------
@@ -95,9 +106,8 @@ int main(int argc, const char** argv)
         }
 
         INFO << "starting server";
-        uh::an::server_config config;
         uh::an::protocol_factory pf;
-        uh::an::server srv(config, pf);
+        uh::an::server srv(options.server().config(), pf);
 
         srv.run();
     }
