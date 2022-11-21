@@ -5,6 +5,7 @@
 #include "protocol.h"
 #include "scheduler.h"
 
+#include <options/basic_options.h>
 #include <utils/factory.h>
 
 #include <boost/asio.hpp>
@@ -21,16 +22,33 @@ namespace uh::an
 
 struct server_config
 {
-    uint16_t port = 0x5548;
+    constexpr static uint16_t DEFAULT_PORT = 0x5548;
+    constexpr static std::size_t DEFAULT_THREADS = 3;
+
+    uint16_t port = DEFAULT_PORT;
 
     std::filesystem::path tls_chain;
     std::filesystem::path tls_pkey;
 
-    std::size_t threads = 3;
+    std::size_t threads = DEFAULT_THREADS;
 };
 
-// TODO run multiple threads on m_context ( see https://www.boost.org/doc/libs/1_74_0/doc/html/boost_asio/reference/io_context/run/overload1.html)
-// TODO spawn handlers
+// ---------------------------------------------------------------------
+
+class server_options : public uh::options::options
+{
+public:
+    server_options();
+
+    void apply(options& opts);
+    virtual void evaluate(const boost::program_options::variables_map& vars) override;
+
+    const server_config& config() const;
+
+private:
+    server_config m_config;
+    boost::program_options::options_description m_desc;
+};
 
 // ---------------------------------------------------------------------
 
