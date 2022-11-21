@@ -13,9 +13,8 @@ jobs:
     strategy:
       matrix:
         build: [Release, Debug]
-        arch: [x64]
-        os: [linux]
-    runs-on: [self-hosted, ${{ matrix.os }}, ${{ matrix.arch }}]
+        arch: [x64, ARM64]
+    runs-on: [self-hosted, Linux, ${{ matrix.arch }}]
 
     steps:
       - uses: actions/checkout@v3
