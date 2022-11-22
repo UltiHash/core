@@ -57,3 +57,58 @@ BOOST_AUTO_TEST_CASE( init_from_string )
     BOOST_CHECK(c.as_string()==test_str);
 }
 
+// ------------- Arithmetic Tests Follow --------------
+BOOST_AUTO_TEST_CASE( plus_test )
+{
+    BigInteger a(std::numeric_limits<std::size_t>::max());
+    BigInteger b(1);
+    BigInteger c=a+b;
+    BOOST_CHECK(c.size()==2);
+    BOOST_CHECK(c[1]==1);
+
+    a=std::numeric_limits<std::size_t>::max();
+    a+=b;
+    a=-a;
+    a+=b;
+    BOOST_CHECK(c.size()==1);
+    BOOST_CHECK(c[0]==std::numeric_limits<std::size_t>::max());
+    BOOST_CHECK(a+0==a);
+}
+BOOST_AUTO_TEST_CASE( minus_test )
+{
+    BigInteger a(std::numeric_limits<std::size_t>::max());
+    a++;
+    BigInteger b(1);
+    BigInteger c=a-b;
+    BOOST_CHECK(c.size()==1);
+    BOOST_CHECK(c[0]==std::numeric_limits<std::size_t>::max());
+
+    a=0;
+    BOOST_CHECK_NO_THROW(a-b);
+    BOOST_CHECK(a-0==a);
+}
+
+BOOST_AUTO_TEST_CASE( mult_test )
+{
+    BigInteger a(std::numeric_limits<std::size_t>::max());
+    BigInteger b(std::numeric_limits<std::size_t>::max());
+    BigInteger c=a*b;
+    BOOST_CHECK(c.size()==2);
+    BOOST_CHECK(c==std::string("340282366920938463426481119284349108225"));
+    BOOST_CHECK(a*0==0);
+    BOOST_CHECK(a*1==a);
+}
+
+BOOST_AUTO_TEST_CASE( divmod_test )
+{
+    BigInteger a(std::numeric_limits<std::size_t>::max());
+    BigInteger b(std::numeric_limits<std::size_t>::max());
+    BigInteger c=a*b;
+    BOOST_CHECK(c.size()==2);
+    BOOST_CHECK(c==std::string("340282366920938463426481119284349108225"));
+    BOOST_CHECK(c/std::numeric_limits<std::size_t>::max()==std::numeric_limits<std::size_t>::max());
+    BOOST_CHECK(c%std::numeric_limits<std::size_t>::max()==0);
+    c--;
+    BOOST_CHECK(c/std::numeric_limits<std::size_t>::max()==std::numeric_limits<std::size_t>::max()-1);
+    BOOST_CHECK(c%std::numeric_limits<std::size_t>::max()==std::numeric_limits<std::size_t>::max()-1);
+}
