@@ -57,3 +57,14 @@ BOOST_AUTO_TEST_CASE( init_from_string )
     BOOST_CHECK(c.as_string()==test_str);
 }
 
+//TODO: while this test probably belongs somewhere else, it will remain here for the time being
+BOOST_AUTO_TEST_CASE( arrays_are_zero_initialized)
+{
+    std::unique_ptr<std::size_t[]> outPtr(new (std::align_val_t(64)) std::size_t[512]{});
+    bool isZero = true;
+    for(int i = 0; i < 512; i++) {
+        isZero = (outPtr[i] == 0) && isZero;
+    }
+    BOOST_CHECK_MESSAGE(isZero, "All element of the allocated array are supposed to be zero-initialized.");
+}
+

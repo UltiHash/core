@@ -32,7 +32,7 @@ namespace ultihash::numbers {
         BigInteger(BigInteger const &integer) {
             this->len = integer.len;
             this->sign = integer.sign;
-            this->data.reset(new (std::align_val_t(ALIGNMENT_SIZE)) std::size_t[(this->len + 1) * sizeof(std::size_t)]);
+            this->data.reset(new (std::align_val_t(ALIGNMENT_SIZE)) std::size_t[this->len + 1]);
             //todo: round up allocation size to next multiple of alignment for simplified SIMD/GPU acceleration
 
             std::memcpy(this->data.get(), integer.data.get(), this->len * sizeof(std::size_t));
@@ -42,7 +42,7 @@ namespace ultihash::numbers {
         BigInteger(std::size_t *data, std::size_t len, bool sign = false) : BigBasicsCustom() {
             this->len = len;
             this->sign = sign;
-            this->data.reset(new (std::align_val_t(ALIGNMENT_SIZE)) std::size_t[(this->len + 1) * sizeof(std::size_t)]);
+            this->data.reset(new (std::align_val_t(ALIGNMENT_SIZE)) std::size_t[this->len + 1]);
             //todo: round up allocation size to next multiple of alignment for simplified SIMD/GPU acceleration
 
             std::memcpy(this->data.get(), data, this->len * sizeof(std::size_t));
@@ -250,7 +250,7 @@ namespace ultihash::numbers {
                     }
                     else{
                         out = ultihash::numbers::BigInteger::minus(rhs.data, rhs.len, lhs.data, lhs.len);
-                        return {std::get<0>(out), std::get<1>(out), static_cast<bool>(not lhs.sign), true};
+                        return {std::get<0>(out), std::get<1>(out), static_cast<bool>(not lhs.sign)};
                     }
                 }
             }

@@ -19,6 +19,11 @@
 
 namespace ultihash::basics {
 
+    template<typename CALCTYPE> struct uhBigNumber {
+        std::unique_ptr<CALCTYPE[]> data;
+        std::size_t len;
+    };
+
     struct UnderflowSubtractException : public std::exception {
         [[nodiscard]] const char *what() const noexcept override {
             return "Underflow at BigInteger minus detected!";
@@ -41,14 +46,24 @@ namespace ultihash::basics {
  * Conventions: every array has a size of at least 1 if the value is 0 or at least 2 elements,
  * if the value is not 0, the last element of each array is free and 0
  * the len0 and len1 are the actual array size minus 1, so they represent the number content size
- * Use of BigEndian on all arrays so overflow is in order
+ * Use of LittleEndian semantics on all arrays so overflow is in order
+ * |L0|L1|L2|...|Ln| with L0 being the least-significant and Ln being the most-significant limb
  * --> max size of Block is UINT32_MAX - 1
- * 16 bit and higher
- */
+ * limbs may be 16, 32, 64 bit unsigned integer data types
+ * */
+//TODO: potential venue for performance improvements: use large/huge pages for respective block/number sizes
     template<typename CALCTYPE>
     class BigBasicsCustom {
     protected:
-//TODO: replace all new operators with custom malloc
+        // To figure out the ideal alignment for the target hardware, this information
+        // is queried using a function to allow replacing magic numbers with dynamic detection in the future.
+        // The alignment should consider cache line size, width of SIMD registers, and page size
+        static constexpr std::size_t getAlignment() {
+            return 64; // this value assuming AVX512 for now
+        }
+//TODO: replace all new operators with custom
+//TODO: max: relying only on free ram on Linux/UNIX as the only metric is tricky, as FS buffers and similar constructs
+// are eating up any RAM they can get but which also will get evicted any time free RAM is becoming remotely scarce
         //check hardware for memory constraints to improve performance by using more RAM
         static std::size_t getTotalSystemMemory() {
             struct sysinfo memInfo{};
@@ -75,28 +90,27 @@ namespace ultihash::basics {
         }
 
         //in0+in1
-        static std::tuple<CALCTYPE *, std::size_t>
+        static std::tuple<std::unique_ptr<CALCTYPE[]>, std::size_t>
         plus(CALCTYPE *in0, std::size_t len0, CALCTYPE *in1, std::size_t len1) {
             //setup new variable with 1 buffer at end
-            std::size_t outlen = std::max(len0, len1) + 1;
+            std::size_t outputLen = std::max(len0, len1) + 1;
+            std::unique_ptr<CALCTYPE[]> output(new (std::align_val_t(getAlignment())) CALCTYPE[outputLen]{});
 
-            auto *out = new CALCTYPE[outlen];
-            out[outlen - 1] = 0;
 
             bool overflow_detect = false;
             for (std::size_t i = 0; i < std::min(len0, len1) or overflow_detect; ++i) {
-                out[i] = i <= len0 ? in0[i] : 0 + i <= len1 ? in1[i] : 0 + overflow_detect;
-                overflow_detect = out[i] < (std::max(in0[i], in1[i]));
+                output[i] = i <= len0 ? in0[i] : 0 + i <= len1 ? in1[i] : 0 + overflow_detect;
+                overflow_detect = output[i] < (std::max(in0[i], in1[i]));
             }
 
-            if (out[outlen - 1] != 0) {
-                auto *out2 = new CALCTYPE[outlen + 1];
-                std::memcpy(out2, out, outlen * sizeof(CALCTYPE));
+            if (output[outputLen - 1] != 0) {
+                auto *out2 = new CALCTYPE[outputLen + 1];
+                std::memcpy(out2, out, outputLen * sizeof(CALCTYPE));
                 std::free(out);
-                return std::make_tuple(out2, outlen);
+                return std::make_tuple(out2, outputLen);
             }
 
-            return std::make_tuple(out, outlen - 1);
+            return std::make_tuple(output, outputLen - 1);
         }
 
         //in0-in1; in1 is defined being smaller than in0
