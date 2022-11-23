@@ -178,7 +178,7 @@ namespace ultihash::numbers {
         explicit BigInteger(Fundamental in) : BigBasicsCustom() {
             if constexpr (sizeof(in) > sizeof(std::size_t)) {
                 std::cerr<<"Limb width of " + std::to_string(sizeof(in)) + " bytes not supported, but only " +
-                std::to_string(sizeof(std::size_t)) + " bytes!"<<std::endl;
+                           std::to_string(sizeof(std::size_t)) + " bytes!"<<std::endl;
                 return;
             }
 
@@ -194,6 +194,7 @@ namespace ultihash::numbers {
                 out = static_cast<std::size_t>(in);
             }
             this->data[0]=out;
+            //this->data[this->len-1]=0;
         }
 
         BigInteger() {
@@ -206,7 +207,7 @@ namespace ultihash::numbers {
         explicit BigInteger(const Fundamental &in) : BigBasicsCustom() {
             *this=in;
         }
-
+        //basic self assignment
         BigInteger operator+() {
             return *this;
         }
@@ -352,7 +353,7 @@ namespace ultihash::numbers {
                 return {std::get<0>(std::get<0>(out)), std::get<1>(std::get<0>(out)), static_cast<bool>(lhs.sign xor tmp2.sign), true};
             }
         }
-
+        //logic operations
         template<typename InType, std::enable_if_t<std::disjunction<std::is_arithmetic<InType>,std::is_same<InType, BigInteger>,std::is_same<InType, std::string>>::value, bool> = true>
         friend BigInteger operator&(BigInteger &lhs, const InType &rhs) {
             std::tuple<std::size_t*,std::size_t> out;
@@ -418,7 +419,7 @@ namespace ultihash::numbers {
                 out = ultihash::numbers::BigInteger::shiftl(lhs.data, lhs.len, static_cast<std::size_t>(*rhs.data));
             }
             else{
-                BigInteger tmp2(lhs);
+                BigInteger tmp2(rhs);
                 out = ultihash::numbers::BigInteger::shiftl(lhs.data, lhs.len, static_cast<std::size_t>(*tmp2.data));
             }
 
@@ -432,7 +433,7 @@ namespace ultihash::numbers {
                 out = ultihash::numbers::BigInteger::shiftr(lhs.data, lhs.len, static_cast<std::size_t>(*rhs.data));
             }
             else{
-                BigInteger tmp2(lhs);
+                BigInteger tmp2(rhs);
                 out = ultihash::numbers::BigInteger::shiftr(lhs.data, lhs.len, static_cast<std::size_t>(*tmp2.data));
             }
 
@@ -523,7 +524,7 @@ namespace ultihash::numbers {
                 }
             }
             else{
-                BigInteger tmp2(lhs);
+                BigInteger tmp2(rhs);
                 if(lhs.len==0 and tmp2.len==0)return false;
                 if(lhs.sign != tmp2.sign){
                     if(not lhs.sign){
@@ -566,7 +567,7 @@ namespace ultihash::numbers {
                 }
             }
             else{
-                BigInteger tmp2(lhs);
+                BigInteger tmp2(rhs);
                 if(lhs.len==0 and tmp2.len==0)return false;
                 if(lhs.sign != tmp2.sign){
                     if(not lhs.sign){
@@ -609,7 +610,7 @@ namespace ultihash::numbers {
                 }
             }
             else{
-                BigInteger tmp2(lhs);
+                BigInteger tmp2(rhs);
                 if(lhs.len==0 and tmp2.len==0)return true;
                 if(lhs.sign != tmp2.sign){
                     if(not lhs.sign){
@@ -652,7 +653,7 @@ namespace ultihash::numbers {
                 }
             }
             else{
-                BigInteger tmp2(lhs);
+                BigInteger tmp2(rhs);
                 if(lhs.len==0 and tmp2.len==0)return true;
                 if(lhs.sign != tmp2.sign){
                     if(not lhs.sign){
@@ -679,7 +680,7 @@ namespace ultihash::numbers {
                 return lhs.len==rhs.len and lhs.sign == rhs.sign and ultihash::numbers::BigInteger::equ(lhs.data, lhs.len, rhs.data, rhs.len);
             }
             else{
-                BigInteger tmp2(lhs);
+                BigInteger tmp2(rhs);
                 return lhs.len==tmp2.len and lhs.sign == tmp2.sign and ultihash::numbers::BigInteger::equ(lhs.data, lhs.len, tmp2.data, tmp2.len);
             }
         }
@@ -690,7 +691,7 @@ namespace ultihash::numbers {
                 return lhs.len!=rhs.len or lhs.sign != rhs.sign or ultihash::numbers::BigInteger::ne(lhs.data, lhs.len, rhs.data, rhs.len);
             }
             else{
-                BigInteger tmp2(lhs);
+                BigInteger tmp2(rhs);
                 return lhs.len!=tmp2.len or lhs.sign != tmp2.sign or ultihash::numbers::BigInteger::ne(lhs.data, lhs.len, tmp2.data, tmp2.len);
             }
         }
