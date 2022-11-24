@@ -93,24 +93,22 @@ namespace ultihash::basics {
         static std::tuple<std::unique_ptr<CALCTYPE[]>, std::size_t>
         plus(CALCTYPE *in0, std::size_t len0, CALCTYPE *in1, std::size_t len1) {
             //setup new variable with 1 buffer at end
-            std::size_t outputLen = std::max(len0, len1) + 1;
-            std::unique_ptr<CALCTYPE[]> output(new (std::align_val_t(getAlignment())) CALCTYPE[outputLen]{});
+            std::size_t outputLenAllocated = std::max(len0, len1) + 1;
+            std::unique_ptr<CALCTYPE[]> output(new (std::align_val_t(getAlignment())) CALCTYPE[outputLenAllocated]{});
 
 
             bool overflow_detect = false;
+            std::size_t outputLenActual = 0;
+            // TODO urgent: logic error! don't stop after min(len0,len1) + overflow!
+            // that way all further digits of the larger number will be omitted
             for (std::size_t i = 0; i < std::min(len0, len1) or overflow_detect; ++i) {
-                output[i] = i <= len0 ? in0[i] : 0 + i <= len1 ? in1[i] : 0 + overflow_detect;
-                overflow_detect = output[i] < (std::max(in0[i], in1[i]));
+                output[i] = (i <= len0 ? in0[i] : 0) + (i <= len1 ? in1[i] : 0) + overflow_detect;
+                overflow_detect = output[i] < (std::min(in0[i], in1[i]) + overflow_detect);
+
             }
 
-            if (output[outputLen - 1] != 0) {
-                auto *out2 = new CALCTYPE[outputLen + 1];
-                std::memcpy(out2, out, outputLen * sizeof(CALCTYPE));
-                std::free(out);
-                return std::make_tuple(out2, outputLen);
-            }
 
-            return std::make_tuple(output, outputLen - 1);
+            return std::make_tuple(output, outputLenAllocated - 1);
         }
 
         //in0-in1; in1 is defined being smaller than in0
