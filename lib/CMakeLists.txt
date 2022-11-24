@@ -10,7 +10,7 @@ add_subdirectory(logging)
 add_subdirectory(options)
 add_subdirectory(conceptTypes)
 add_subdirectory(network)
-#add_subdirectory(numbers)
+add_subdirectory(numbers)
 add_subdirectory(statistics)
 add_subdirectory(dbSupport)
 

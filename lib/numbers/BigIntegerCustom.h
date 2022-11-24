@@ -9,11 +9,7 @@
 
 #define ALIGNMENT_SIZE 64
 
-namespace ultihash::numbers {
-
-    struct free_delete {
-        void operator()(void* p) { std::free(p); }
-    };
+namespace ultihash::lib::numbers {
 
     class BigInteger : virtual public ultihash::basics::BigBasicsCustom<std::size_t> {
     protected:
@@ -738,7 +734,7 @@ namespace ultihash::numbers {
                 //power--;
             }
 
-            auto dividend=BigInteger(std::get<0>(this->as_array_ref()),std::get<1>(this->as_array_ref()));
+            auto dividend=BigInteger(std::get<0>(this->as_array_ref()), std::get<1>(this->as_array_ref()));
             std::tuple<std::tuple<std::size_t*, std::size_t>, std::tuple<std::size_t*, std::size_t>> div;
             bool check_gt;
 
@@ -746,12 +742,12 @@ namespace ultihash::numbers {
                 div=divmod(std::get<0>(dividend.as_array_ref()),std::get<1>(dividend.as_array_ref()),std::get<0>(divisor.as_array_ref()),std::get<1>(divisor.as_array_ref()));
                 divisor/=mod_big;
                 //power--;
-                std::string app_str=BigInteger(std::get<0>(std::get<0>(div)),std::get<1>(std::get<0>(div))).as_string();
+                std::string app_str=BigInteger(std::get<0>(std::get<0>(div)), std::get<1>(std::get<0>(div))).as_string();
                 while(app_str.size()<mod_str_len){
                     app_str.insert(app_str.cbegin(),'0');
                 }
                 out+=app_str;
-                dividend=BigInteger(std::get<0>(std::get<1>(div)),std::get<1>(std::get<1>(div)));
+                dividend=BigInteger(std::get<0>(std::get<1>(div)), std::get<1>(std::get<1>(div)));
                 check_gt = dividend > divisor;
                 if(check_gt){
                     std::free(std::get<0>(std::get<0>(div)));
@@ -759,7 +755,7 @@ namespace ultihash::numbers {
                 }
             }while (check_gt);
 
-            std::string app_str=BigInteger(std::get<0>(std::get<1>(div)),std::get<1>(std::get<1>(div))).as_string();
+            std::string app_str=BigInteger(std::get<0>(std::get<1>(div)), std::get<1>(std::get<1>(div))).as_string();
             while(app_str.size()<mod_str_len){
                 app_str.insert(app_str.cbegin(),'0');
             }

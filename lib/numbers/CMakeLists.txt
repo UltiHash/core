@@ -4,6 +4,11 @@ set(CMAKE_CXX_STANDARD 23)
 project(uhLibNumbers)
 message(STATUS "Using ${PROJECT_NAME}...")
 
+#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -fsanitize=address")
+
+option(USE_GMP "Use libgmp instead of a custom implementation for arbitrary precision integer arithmetic." TRUE)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/BigInteger.h.in ${CMAKE_CURRENT_SOURCE_DIR}/BigInteger.h @ONLY)
+
 # external dependencies
 find_package(Boost 1.80 COMPONENTS unit_test_framework REQUIRED)
 find_path(GMP_INCLUDE_DIRS NAMES gmp.h)
