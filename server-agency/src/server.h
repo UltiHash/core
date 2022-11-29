@@ -5,6 +5,7 @@
 #include "protocol.h"
 #include "scheduler.h"
 
+#include <network/connection.h>
 #include <options/basic_options.h>
 #include <utils/factory.h>
 
@@ -56,17 +57,17 @@ class server
 {
 public:
     server(const server_config& config,
-           const util::factory<protocol>& protocol_factory);
+           const util::factory<uh::protocol::protocol>& protocol_factory);
 
     void run();
 
-    void spawn_client(std::shared_ptr<connection> client);
+    void spawn_client(std::shared_ptr<net::connection> client);
 
 private:
     boost::asio::io_context m_context;
     boost::asio::ip::tcp::acceptor m_acceptor;
 
-    const util::factory<protocol>& m_protocol_factory;
+    const util::factory<uh::protocol::protocol>& m_protocol_factory;
     scheduler m_scheduler;
 
     std::atomic<bool> m_running;

@@ -9,5 +9,5 @@ add_executable(agency-node
                scheduler.cpp
                server.cpp)
 
-target_link_libraries(agency-node uhLibOptions uhLibLogging ${Boost_LIBRARIES})
+target_link_libraries(agency-node uhLibOptions uhLibLogging ${Boost_LIBRARIES} uhprotocol)
 target_include_directories(agency-node PRIVATE ${CMAKE_CURRENT_BINARY_DIR})

@@ -1,35 +1,39 @@
 #include "protocol.h"
 
+#include <config.hpp>
+#include <logging/logging_boost.h>
 
-using namespace boost::asio;
+#include <vector>
+
+
+using namespace uh::protocol;
 
 namespace uh::an
 {
 
 // ---------------------------------------------------------------------
 
-void uh_protocol::handle(std::shared_ptr<connection> client)
+server_information protocol::on_hello(const std::string& client_version)
 {
-    ip::tcp::iostream io(std::move(client->socket()));
+    INFO << "connection from client with version " << client_version;
+    return {
+        .version = PROJECT_VERSION,
+        .protocol = 1,
+    };
+}
 
-    std::string in1, in2;
-    io << "give me in1 ...\n";
-    io >> in1;
+// ---------------------------------------------------------------------
 
-    io << "received in ... \n";
-    io << "give me in2 ...\n";
-    io >> in2;
+blob protocol::on_write_chunk(blob&& data)
+{
+    throw std::runtime_error("to be implemented");
+}
 
-    if (in1.size() > in2.size())
-    {
-        io << "in1 is longer\n";
-    }
-    else
-    {
-        io << "in1 is not longer\n";
-    }
+// ---------------------------------------------------------------------
 
-    io.socket().close();
+blob protocol::on_read_chunk(blob&& hash)
+{
+    throw std::runtime_error("to be implemented");
 }
 
 // ---------------------------------------------------------------------

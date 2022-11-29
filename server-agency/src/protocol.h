@@ -1,7 +1,7 @@
 #ifndef SERVER_AGENCY_PROTOCOL_H
 #define SERVER_AGENCY_PROTOCOL_H
 
-#include "connection.h"
+#include <protocol/server.h>
 #include <boost/asio.hpp>
 
 #include <memory>
@@ -14,19 +14,12 @@ namespace uh::an
 
 // ---------------------------------------------------------------------
 
-class protocol
+class protocol : public uh::protocol::server
 {
 public:
-    virtual ~protocol() = default;
-    virtual void handle(std::shared_ptr<connection> client) = 0;
-};
-
-// ---------------------------------------------------------------------
-
-class uh_protocol : public protocol
-{
-public:
-    virtual void handle(std::shared_ptr<connection> client) override;
+    virtual uh::protocol::server_information on_hello(const std::string& client_version) override;
+    virtual uh::protocol::blob on_write_chunk(uh::protocol::blob&& data) override;
+    virtual uh::protocol::blob on_read_chunk(uh::protocol::blob&& hash) override;
 };
 
 // ---------------------------------------------------------------------

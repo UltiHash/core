@@ -58,7 +58,7 @@ const server_config& server_options::config() const
 // ---------------------------------------------------------------------
 
 server::server(const server_config& config,
-               const util::factory<protocol>& protocol_factory)
+               const util::factory<uh::protocol::protocol>& protocol_factory)
     : m_context(),
       m_acceptor(m_context, tcp::endpoint(tcp::v4(), config.port)),
       m_protocol_factory(protocol_factory),
@@ -77,7 +77,7 @@ void server::run()
     {
         try
         {
-            std::shared_ptr<connection> conn = std::make_shared<connection>(m_context);
+            std::shared_ptr<net::connection> conn = std::make_shared<net::connection>(m_context);
             tcp::endpoint peer;
             m_acceptor.accept(conn->socket(), peer);
 
@@ -96,7 +96,7 @@ void server::run()
 
 // ---------------------------------------------------------------------
 
-void server::spawn_client(std::shared_ptr<connection> client)
+void server::spawn_client(std::shared_ptr<net::connection> client)
 {
     m_scheduler.spawn([this, client] ()
     {

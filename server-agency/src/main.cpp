@@ -59,12 +59,12 @@ server_options& options::server()
 
 // ---------------------------------------------------------------------
 
-class protocol_factory : public util::factory<protocol>
+class protocol_factory : public util::factory<uh::protocol::protocol>
 {
 public:
-    virtual std::unique_ptr<protocol> create() const override
+    virtual std::unique_ptr<uh::protocol::protocol> create() const override
     {
-        return std::make_unique<uh_protocol>();
+        return std::make_unique<protocol>();
     }
 };
 
