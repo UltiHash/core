@@ -1,7 +1,7 @@
 #ifndef PROTOCOL_PROTOCOL_H
 #define PROTOCOL_PROTOCOL_H
 
-#include <network/connection.h>
+#include <net/connection.h>
 #include <memory>
 
 
