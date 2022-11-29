@@ -3,68 +3,14 @@
 //
 #pragma once
 
-//std libraries general
-#include <fstream>
-#include <thread>
-#include <stack>
-#include <functional>
-#include <utility>
-#include <tr2/type_traits>
 #include <concepts>
 #include <iostream>
-#include <mutex>
-#include <random>
-#include <bits/stdc++.h>
-#include <sstream>
-#include <cmath>
-#include <filesystem>
-#include <bitset>
-#include <iterator>
-#include <algorithm>
-#include <fstream>
-#include <cstdio>
-#include <cstring>
-#include <unistd.h>
-#include <sys/socket.h>
-#include <sys/un.h>
-#include <sys/types.h>
-
-//low level filesystem, sha
-#include <sys/stat.h>
-#include "openssl/sha.h"
 
 //boost libraries general
-//#include "boost/filesystem/operations.hpp" // includes boost/filesystem/path.hpp
-#include <boost/property_tree/json_parser.hpp>
-#include <boost/chrono.hpp>
-#include <boost/tuple/tuple.hpp>
-#include <boost/tuple/tuple_io.hpp>
 #include <boost/mp11.hpp>
-#include <boost/utility.hpp>
-#include <boost/shared_ptr.hpp>
-#include <boost/make_shared.hpp>
-#include <boost/tti/tti.hpp>
-#include <boost/phoenix.hpp>
-#include <boost/function.hpp>
-#include <boost/property_tree/ptree.hpp>
-#include <boost/algorithm/string/replace.hpp>
-#include <boost/algorithm/string.hpp>
-#include <boost/algorithm/cxx14/equal.hpp>
-#include <boost/algorithm/clamp.hpp>
-#include <boost/algorithm/hex.hpp>
-#include <boost/range/algorithm/reverse.hpp>
-#include <boost/sort/sort.hpp>
 #include <boost/heap/heap_concepts.hpp>
-#include <boost/fusion/adapted/std_tuple.hpp>
-#include <boost/fusion/include/adapt_struct.hpp>
 #include <boost/spirit/include/qi.hpp>
-#include <boost/container_hash/hash.hpp>
-#include <boost/assert/source_location.hpp>
-#include <boost/dynamic_bitset.hpp>
-#include <boost/archive/binary_iarchive.hpp>
-#include <boost/archive/binary_oarchive.hpp>
 #include <boost/serialization/vector.hpp>
-#include <boost/serialization/version.hpp>
 
 //container libraries general
 #include <vector>

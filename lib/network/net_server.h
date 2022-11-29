@@ -10,10 +10,26 @@
 #include "net_message.h"
 #include "net_connection.h"
 
+#include <logging/logging_boost.h>
+
+#include <filesystem>
+
+
 /**
  * @brief Namespace for UltiHash's custom networking implementations.
  */
 namespace uh::net {
+    struct server_config {
+        /// port the server will be bound to
+        uint16_t port;
+
+        /// path to the TLS certificate chain
+        std::filesystem::path tlsChain;
+
+        /// path to the TLS private key
+        std::filesystem::path tlsKey;
+    };
+
     /**
      * @brief An access point for a custom server applications that abstracts away all the asynchronous asio implementations.
      * @tparam T Data Type of the parameter.
@@ -22,29 +38,19 @@ namespace uh::net {
     template<typename T>
     class server_interface {
     public:
-        explicit server_interface(uint16_t port) : m_asioAcceptor(m_asioContext, boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), port)) {
-            // provide server certificate for the handshake process
-            std::string userName = getlogin();
-            m_SSLcontext.use_certificate_chain_file("/home/" + userName +"/CLionProjects/3_Network_Communication/include/server.pem");
-            m_SSLcontext.use_private_key_file("/home/" + userName + "/CLionProjects/3_Network_Communication/include/server.key", boost::asio::ssl::context::pem);
+        explicit server_interface(const server_config& config)
+            : m_asioAcceptor(m_asioContext, boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), config.port)) {
+            m_SSLcontext.use_certificate_chain_file(config.tlsChain);
+            m_SSLcontext.use_private_key_file(config.tlsKey, boost::asio::ssl::context::pem);
         }
 
         virtual ~server_interface() {
             stop();
         }
 
-        bool start() {
-            try {
-                // priming the asio context with a work before running it in a thread
-                waitForClientConnection();
-                m_threadContext = std::jthread([this]() { m_asioContext.run(); });
-            } catch (std::exception &e) {
-                std::cerr << "[SERVER] Exception: " << e.what() << "\n";
-                return false;
-            }
-
-            std::cout << "[SERVER] started...\n";
-            return true;
+        void start() {
+            waitForClientConnection();
+            m_threadContext = std::jthread([this]() { m_asioContext.run(); });
         }
 
         void stop() {
@@ -52,8 +58,6 @@ namespace uh::net {
             m_asioContext.stop();
             // see if the context thread is still active or not and join it
             if (m_threadContext.joinable()) {m_threadContext.join();}
-
-            std::cout << "[SERVER] stopped.\n";
         }
 
         // ASYNCHRONOUS - Instructs asio to listen for the connections
@@ -63,23 +67,23 @@ namespace uh::net {
                 if (!ec) {
                     // custom logic implementation to deny the connection
                     if (onClientConnect(newconn)) {
-                        std::cout << "[SERVER] New Connection Request: " << newconn->socket().remote_endpoint() << "\n";
+                        INFO << "new connection request: " << newconn->socket().remote_endpoint();
                         newconn->sslSocket().async_handshake(boost::asio::ssl::stream_base::server, [this, newconn](const std::error_code ec) {
                             if (!ec) {
-                                std::cout << "[Server] Handshake Successful!\n";
+                                TRACE << "handshake successful";
                                 m_deqConnections.push_back(std::move(newconn));
                                 m_deqConnections.back()->connectToClient(nIDCounter++);
-                                std::cout << "["<< m_deqConnections.back()->getID() << "] Connection Approved.\n";
+                                TRACE << "["<< m_deqConnections.back()->getID() << "] connection approved";
                             } else {
-                                std::cout << "[Server] Handshake Failed! " << ec.message() << "\n";
+                                INFO << "handshake failed: " << ec.message();
                                 newconn->socket().close();
                             }
                         });
                     } else {
-                        std::cout << "[SERVER] Connection Denied.\n";
+                        INFO << "connection denied";
                     }
                 } else {
-                    std::cout << "[SERVER] New Connection Error: " << ec.message() << "\n";
+                    WARNING << "new connection error: " << ec.message();
                 }
                 // prime the asio context to listen for more connections
                 waitForClientConnection();
@@ -120,7 +124,7 @@ namespace uh::net {
 
         // called when the message arrives
         virtual void onMessage(std::shared_ptr<connection<T>> client, message<T>& msg) {
-            std::cout << "Should be overriden!" << std::endl;
+            WARNING << "Should be overriden!";
         }
 
     protected:
