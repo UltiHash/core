@@ -2,13 +2,13 @@
 // Created by ankit on 08.11.22.
 //
 
-#include <iostream>
 #include "net_uhcustom.h"
 
 class CustomServer : public uh::net::server_interface<CustomMsgTypes>
 {
 public:
-    CustomServer(uint16_t nPort) : uh::net::server_interface<CustomMsgTypes>(nPort)
+    CustomServer(const uh::net::server_config& config)
+        : uh::net::server_interface<CustomMsgTypes>(config)
     {
 
     }
@@ -21,7 +21,7 @@ protected:
 
     // Called when a client appears to have disconnected
     void onClientDisconnect(std::shared_ptr<uh::net::connection<CustomMsgTypes>> client) override {
-        std::cout << "Removing client [" << client->getID() << "]\n";
+        INFO << "removing client [" << client->getID() << "]\n";
     }
 
     // Called when a message arrives
@@ -29,9 +29,9 @@ protected:
     {
         switch (msg.header.id) {
             case CustomMsgTypes::Ping: {
-                std::cout << "[" << clientConnection->getID() << "]: Received Ping.\n";
+                INFO << "[" << clientConnection->getID() << "]: received ping";
                 clientConnection->send(msg);
-                std::cout << "[SERVER]: Sent Pong.\n";
+                INFO << "sent pong";
             }
             break;
             case CustomMsgTypes::ServerAccept:
@@ -46,12 +46,29 @@ template<> std::atomic<std::size_t> uh::net::connection<CustomMsgTypes>::s_runni
 
 int main()
 {
-    CustomServer server(6000);
-    server.start();
-
-    while (1)
+    try
     {
-        server.update();
+        std::string userName = getlogin();
+
+        uh::net::server_config config {
+            .port = 6000,
+            .tlsChain = "/home/" + userName +"/CLionProjects/3_Network_Communication/include/server.pem",
+            .tlsKey = "/home/" + userName + "/CLionProjects/3_Network_Communication/include/server.key",
+        };
+
+        CustomServer server(config);
+        server.start();
+
+        while (true)
+        {
+            server.update();
+        }
+
     }
+    catch (const std::exception& e)
+    {
+        FATAL << e.what();
+    }
+
     return 0;
 }
