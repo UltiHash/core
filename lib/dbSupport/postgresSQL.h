@@ -9,10 +9,16 @@
 #include <pqxx/pqxx>
 #include <pqxx/connection.hxx>
 
+#include <shared_mutex>
 #include <utility>
 
 #include <conceptTypes/conceptTypes.h>
 #include "config_files.h"
+
+#include <boost/algorithm/string/find.hpp>
+#include <boost/algorithm/string/predicate.hpp>
+#include <boost/property_tree/ptree.hpp>
+
 
 extern std::recursive_mutex postgresMutex;
 

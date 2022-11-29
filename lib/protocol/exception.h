@@ -1,7 +1,7 @@
 #ifndef PROTOCOL_EXCEPTION_H
 #define PROTOCOL_EXCEPTION_H
 
-#include <utils/exception.h>
+#include <util/exception.h>
 
 
 namespace uh::protocol

@@ -9,6 +9,9 @@
 #include "global_custom_functions.h"
 #include "postgresSQL.h"
 
+#include <boost/algorithm/hex.hpp>
+
+
 class database_call_ops {
     bool connection_set=false;
     std::recursive_mutex database_mutex{};
