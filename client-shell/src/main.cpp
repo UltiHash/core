@@ -1,5 +1,5 @@
-#include "client_shel_ver.h"
-#include "Recompilation.h"
+#include <client_shell_ver.h>
+#include <serialization/Recompilation.h>
 
 /*translate --help or other explicit flags to their not explicit letter -h
  */
@@ -277,12 +277,15 @@ int main(int argc, char *argv[]) {
      * the recompilation file if /Videos can be enlisted from inside
      * WARNING: after cd ./path2.uh we should be able to call ls ./Videos right away
      */
-    //root_path was deleted from system
+    //read basic input pipe info
+    std::string exeRun(argv[0]);
+    auto root_work_path = new std::filesystem::path{exeRun};
+    root_work_path->assign(root_work_path->parent_path());
     //logging system
-    init_logging(std::filesystem::path{argv[0]}.parent_path().append("27_Include_Manager.log").string());
+    init_logging(std::filesystem::path{*root_work_path}.append("./UltiHash.log").string());
     //first log that program started
     INFO << "UltiHash started running..." << std::endl;
-    const std::string VERSION = std::to_string(UltiHash_VERSION_MAJOR) + "." + std::to_string(UltiHash_VERSION_MINOR);
+    const std::string VERSION = std::to_string(CLIENT_SHELL_VERSION_MAJOR) + "." + std::to_string(CLIENT_SHELL_VERSION_MINOR);
     std::list<std::string> input_commands;
     std::vector<std::string> flags;
     for (unsigned int i = 1; i < static_cast<unsigned int>(argc); i++) {
