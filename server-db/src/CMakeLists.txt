@@ -1,3 +1,4 @@
+configure_file(config.hpp.in ${CMAKE_CURRENT_BINARY_DIR}/config.hpp)
 
 file(GLOB SOURCES
         *.h
@@ -6,7 +7,7 @@ file(GLOB SOURCES
 
 find_package(Boost 1.80 COMPONENTS unit_test_framework REQUIRED)
 
-add_executable(main ${SOURCES})
+add_executable(db-node ${SOURCES})
 
-target_link_libraries(main uhLibOptions uhLibLogging ${Boost_LIBRARIES})
-target_include_directories(main PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
+target_link_libraries(db-node uhLibOptions uhLibLogging uhLibNetwork uhprotocol ${Boost_LIBRARIES})
+target_include_directories(db-node PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
