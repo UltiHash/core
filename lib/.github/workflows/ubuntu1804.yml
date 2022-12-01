@@ -1,0 +1,23 @@
+name: CI (Ubuntu 18.04)
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+  schedule:
+    - cron: '0 6 * * *'
+
+jobs:
+
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+      - name: Build the Docker image
+        run: |
+          export IMAGE_TAG=libcommon:ubuntu1804-$(date +%Y%m%d%H%M%S)
+          docker build . --file Dockerfile.ubuntu1804 --tag $IMAGE_TAG
+          docker run --rm -t $IMAGE_TAG

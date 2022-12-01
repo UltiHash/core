@@ -1,3 +1,6 @@
+cmake_minimum_required(VERSION 3.22.0 FATAL_ERROR)
+set(CMAKE_CXX_STANDARD 20)
+
 option(PROTOCOL_USE_SMALL_CHUNKS "Enable small maximum chunk size to allow for testing protocol implementation in environments with restricted memory" OFF)
 
 find_package(Boost 1.80 COMPONENTS unit_test_framework test_exec_monitor REQUIRED)
