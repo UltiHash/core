@@ -1,13 +1,10 @@
 configure_file(config.hpp.in ${CMAKE_CURRENT_BINARY_DIR}/config.hpp)
 
-file(GLOB SOURCES
-        *.h
-        *.cpp
-        )
+# adding all the .cpp to the sources and .h to the headers of the current project
+file(GLOB SOURCES ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp)
+file(GLOB HEADER_FILE_LIST ${CMAKE_CURRENT_SOURCE_DIR}/*.h)
 
-find_package(Boost 1.80 COMPONENTS unit_test_framework REQUIRED)
+add_executable(${PROJECT_NAME} ${SOURCES})
 
-add_executable(db-node ${SOURCES})
-
-target_link_libraries(db-node uhLibOptions uhLibLogging uhLibNetwork uhprotocol ${Boost_LIBRARIES})
-target_include_directories(db-node PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
+target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_CURRENT_BINARY_DIR})
+target_link_libraries(${PROJECT_NAME} uhLibOptions uhLibLogging uhLibNetwork uhprotocol ${Boost_LIBRARIES})
