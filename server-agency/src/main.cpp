@@ -2,6 +2,7 @@
 #include <iostream>
 
 #include <net/server.h>
+#include <protocol/client_factory.h>
 #include <logging/logging_boost.h>
 #include <config.hpp>
 #include "options.h"
@@ -42,7 +43,20 @@ int main(int argc, const char** argv)
         }
 
         INFO << "starting server";
-        uh::an::protocol_factory pf;
+        boost::asio::io_context io;
+
+        std::stringstream s;
+        s << PROJECT_NAME << " " << PROJECT_VERSION;
+        uh::protocol::client_factory_config cf_config
+        {
+            .hostname = "localhost",
+            .port = 12345,
+            .client_version = s.str()
+        };
+
+        uh::protocol::client_factory client_factory(io, cf_config);
+        uh::protocol::client_pool clients(client_factory, 10);
+        uh::an::protocol_factory pf(clients);
         uh::net::server srv(options.server().config(), pf);
 
         srv.run();
