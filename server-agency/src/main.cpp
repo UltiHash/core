@@ -1,76 +1,12 @@
 #include <exception>
 #include <iostream>
 
-#include <options/basic_options.h>
+#include <net/server.h>
 #include <logging/logging_boost.h>
 #include <config.hpp>
-#include "protocol.h"
-#include "server.h"
+#include "options.h"
+#include "protocol_factory.h"
 
-
-namespace uh::an
-{
-
-// ---------------------------------------------------------------------
-
-class options : public uh::options::options
-{
-public:
-    options();
-
-    virtual void evaluate(const boost::program_options::variables_map& vars) override;
-
-    uh::options::basic_options& basic();
-    server_options& server();
-private:
-    uh::options::basic_options m_basic;
-    server_options m_server;
-};
-
-// ---------------------------------------------------------------------
-
-options::options()
-{
-    m_basic.apply(*this);
-    m_server.apply(*this);
-}
-
-// ---------------------------------------------------------------------
-
-void options::evaluate(const boost::program_options::variables_map& vars)
-{
-    m_basic.evaluate(vars);
-    m_server.evaluate(vars);
-}
-
-// ---------------------------------------------------------------------
-
-uh::options::basic_options& options::basic()
-{
-    return m_basic;
-}
-
-// ---------------------------------------------------------------------
-
-server_options& options::server()
-{
-    return m_server;
-}
-
-// ---------------------------------------------------------------------
-
-class protocol_factory : public util::factory<uh::protocol::protocol>
-{
-public:
-    virtual std::unique_ptr<uh::protocol::protocol> create() const override
-    {
-        return std::make_unique<protocol>();
-    }
-};
-
-// ---------------------------------------------------------------------
-
-}
 
 int main(int argc, const char** argv)
 {
@@ -107,13 +43,20 @@ int main(int argc, const char** argv)
 
         INFO << "starting server";
         uh::an::protocol_factory pf;
-        uh::an::server srv(options.server().config(), pf);
+        uh::net::server srv(options.server().config(), pf);
 
         srv.run();
     }
     catch (const std::exception& e)
     {
-        FATAL << e.what() << "\n";
+        FATAL << e.what();
+        return 1;
     }
+    catch (...)
+    {
+        FATAL << "unknown exception occured";
+        return 1;
+    }
+
     return 0;
 }
