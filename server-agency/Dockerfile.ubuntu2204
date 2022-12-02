@@ -1,0 +1,56 @@
+FROM ubuntu:22.04
+
+# Install dependencies
+RUN DEBIAN_FRONTEND=noninteractive apt-get update \
+    && apt install --yes software-properties-common \
+    && add-apt-repository --yes ppa:ubuntu-toolchain-r/test \
+    && apt-get install --yes --no-install-recommends \
+        build-essential \
+        git \
+        cmake \
+        wget \
+        ca-certificates \
+        gcc-12 \
+        g++-12 \
+        libssl-dev \
+        libgmp3-dev \
+        libpqxx-dev
+
+# Update alternatives
+RUN update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-12 20 && \
+    update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-12 20 && \
+    update-alternatives --install /usr/bin/cpp cpp /usr/bin/cpp-12 20 && \
+    update-alternatives --install /usr/bin/gcov c++ /usr/bin/gcov-12 20 && \
+    update-alternatives --install /usr/bin/gcov-dump c++ /usr/bin/gcov-dump-12 20 && \
+    update-alternatives --install /usr/bin/gcov-tool c++ /usr/bin/gcov-tool-12 20 && \
+    update-alternatives --install /usr/bin/gcc-ar gcc-ar /usr/bin/gcc-ar-12 20 && \
+    update-alternatives --install /usr/bin/gcc-nm gcc-nm /usr/bin/gcc-nm-12 20 && \
+    update-alternatives --install /usr/bin/gcc-ranlib gcc-ranlib /usr/bin/gcc-ranlib-12 20
+
+
+
+# Download, compile and install Boost 1.80
+RUN wget -O /tmp/boost_1_80_0.tar.gz https://sourceforge.net/projects/boost/files/boost/1.80.0/boost_1_80_0.tar.gz/download \
+    && cd /tmp/ \
+	&& tar -xzf boost_1_80_0.tar.gz \
+	&& cd /tmp/boost_1_80_0 \
+	&& ./bootstrap.sh --with-libraries=all --with-toolset=gcc \
+	&& ./b2 -j $(nproc) --target=shared,static --toolset=gcc --link=shared\
+	&& ./b2 install --target=shared,static --toolset=gcc --link=shared\
+	&& cd /tmp \
+	&& rm -Rf /tmp/boost_1_80_0
+
+
+COPY . /uhServerAgency
+WORKDIR /uhServerAgency
+
+# Configure and compile lib-common
+RUN mkdir build \
+    && cmake -B build -DCMAKE_BUILD_TYPE=Release -DUPDATE_GIT_SUBMODULE=Off -DPROTOCOL_USE_SMALL_CHUNKS=On \
+    && cmake --build build -j $(nproc) --config Release
+
+ENV LD_LIBRARY_PATH="${LD_LIBRARY_PATH}:/usr/local/lib/"
+WORKDIR /uhServerAgency/build
+
+# Execute tests
+CMD ctest -C Release --output-on-failure
