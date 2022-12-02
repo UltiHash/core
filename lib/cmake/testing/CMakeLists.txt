@@ -1,6 +1,5 @@
 #Setup CMake to run tests
 enable_testing()
-include_directories (${Boost_INCLUDE_DIRS})
 
 #Find all *.cpp files in the test folder
 file(GLOB TEST_SRCS RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} test/*.cpp)
@@ -19,7 +18,7 @@ foreach(testSrc ${TEST_SRCS})
     #Extract the filename without an extension (NAME_WE)
     get_filename_component(testName ${testSrc} NAME_WE)
     #Add compile target
-    add_executable(${PROJECT_NAME}_${testName} ${HEADER_FILE_LIST} ${testSrc})
+    add_executable(${PROJECT_NAME}_${testName} ${HEADER_FILE_LIST} ${SOURCE_FILE_LIST} ${testSrc})
     #set include directory of this project
     target_include_directories(${PROJECT_NAME}_${testName} PUBLIC ${${PROJECT_NAME}_INCLUDE_DIRS})
     #link to Boost libraries AND your targets and dependencies
@@ -32,7 +31,7 @@ foreach(testSrc ${TEST_SRCS})
 endforeach(testSrc)
 
 # creating a single test executable facilitates a better integration between boost.test and CLion
-add_executable (${PROJECT_NAME}_allTests ${HEADER_FILE_LIST} ${testSrcFiles} test/testRunner.cpp)
+add_executable (${PROJECT_NAME}_allTests ${HEADER_FILE_LIST} ${SOURCE_FILE_LIST} ${testSrcFiles} test/testRunner.cpp)
 target_compile_definitions(${PROJECT_NAME}_allTests PUBLIC SINGLE_TEST_RUNNER=1)
 target_include_directories(${PROJECT_NAME}_allTests PUBLIC ${${PROJECT_NAME}_INCLUDE_DIRS})
 target_link_libraries (${PROJECT_NAME}_allTests ${${PROJECT_NAME}_LINK_LIBRARIES} ${DEPENDENCIES})

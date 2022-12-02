@@ -1,7 +1,11 @@
-#define BOOST_TEST_MAIN
+#define BOOST_TEST_DYN_LINK
+#ifdef SINGLE_TEST_RUNNER
+#define BOOST_TEST_NO_MAIN
+#else
+#define BOOST_TEST_MODULE "uhLibProtocol Message Tests"
+#endif
 
-#include <boost/test/included/unit_test.hpp>
-
+#include <boost/test/unit_test.hpp>
 #include <protocol/exception.h>
 #include <protocol/serializer.h>
 
