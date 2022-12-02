@@ -8,14 +8,15 @@ namespace uh::protocol
 
 // ---------------------------------------------------------------------
 
-client::client(std::iostream& io)
-    : m_io(io)
+client::client(std::unique_ptr<net::connection> conn)
+    : m_conn(std::move(conn)),
+      m_io(std::move(m_conn->socket()))
 {
 }
 
 // ---------------------------------------------------------------------
 
-server_information client::hello(const std::string& client_version) const
+server_information client::hello(const std::string& client_version)
 {
     write(m_io, hello::request{ .client_version = client_version });
 
@@ -30,7 +31,7 @@ server_information client::hello(const std::string& client_version) const
 
 // ---------------------------------------------------------------------
 
-blob client::write_chunk(blob&& data) const
+blob client::write_chunk(const blob& data)
 {
     write(m_io, write_chunk::request{ .content = std::move(data) });
 
@@ -42,7 +43,7 @@ blob client::write_chunk(blob&& data) const
 
 // ---------------------------------------------------------------------
 
-blob client::read_chunk(blob&& hash) const
+blob client::read_chunk(const blob& hash)
 {
     write(m_io, read_chunk::request{ .hash = std::move(hash) });
 

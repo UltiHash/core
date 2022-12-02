@@ -1,0 +1,70 @@
+#include "client_pool.h"
+
+
+namespace uh::protocol
+{
+
+// ---------------------------------------------------------------------
+
+client_pool::handle::~handle()
+{
+    m_pool.put_back(std::move(m_client));
+}
+
+// ---------------------------------------------------------------------
+
+client* client_pool::handle::operator->()
+{
+    return m_client.get();
+}
+
+// ---------------------------------------------------------------------
+
+client_pool::handle::handle(client_pool& pool, std::unique_ptr<client>&& c)
+    : m_pool(pool),
+      m_client(std::move(c))
+{
+}
+
+// ---------------------------------------------------------------------
+
+client_pool::client_pool(const util::factory<client>& factory, std::size_t pool_size)
+    : m_factory(factory),
+      m_pool_size(pool_size)
+{
+    while (m_clients.size() < m_pool_size)
+    {
+        m_clients.push_back(m_factory.create());
+    }
+}
+
+// ---------------------------------------------------------------------
+
+client_pool::handle client_pool::get()
+{
+    std::unique_lock lk(m_mutex);
+
+    if (m_clients.empty())
+    {
+        m_cv.wait(lk, [this](){ return !m_clients.empty(); });
+    }
+
+    auto client = std::move(m_clients.front());
+    m_clients.pop_front();
+
+    return handle(*this, std::move(client));
+}
+
+// ---------------------------------------------------------------------
+
+void client_pool::put_back(std::unique_ptr<client> c)
+{
+    std::unique_lock lk(m_mutex);
+
+    m_clients.push_back(std::move(c));
+    m_cv.notify_all();
+}
+
+// ---------------------------------------------------------------------
+
+} // namespace uh::protocol

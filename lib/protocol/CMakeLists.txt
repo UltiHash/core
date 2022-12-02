@@ -7,9 +7,12 @@ find_package(Boost 1.80 COMPONENTS unit_test_framework test_exec_monitor REQUIRE
 
 add_library(uhprotocol
             client.cpp
+            client_factory.cpp
+            client_pool.cpp
             messages.cpp
             serializer.cpp
             server.cpp)
+
 target_link_libraries(uhprotocol uhLibNetwork uhLibLogging uhutils)
 
 if (PROTOCOL_USE_SMALL_CHUNKS)

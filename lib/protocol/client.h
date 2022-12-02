@@ -1,6 +1,7 @@
 #ifndef PROTOCOL_CLIENT_H
 #define PROTOCOL_CLIENT_H
 
+#include <net/connection.h>
 #include "common.h"
 
 #include <iostream>
@@ -15,7 +16,7 @@ namespace uh::protocol
 class client
 {
 public:
-    client(std::iostream& io);
+    client(std::unique_ptr<net::connection> conn);
 
     /**
      * Send client version information to the server. This must be the first
@@ -24,7 +25,7 @@ public:
      *
      * @throw on error status
      */
-    server_information hello(const std::string& client_version) const;
+    server_information hello(const std::string& client_version);
 
     /**
      * Send a `write_chunk` request to the server. The chunk will be stored
@@ -33,7 +34,7 @@ public:
      *
      * @throw on error status
      */
-    blob write_chunk(blob&& data) const;
+    blob write_chunk(const blob& data);
 
     /**
      * Send a `read_chunk` request to the server. The server will look up
@@ -41,10 +42,11 @@ public:
      *
      * @throw on error status
      */
-    blob read_chunk(blob&& hash) const;
+    blob read_chunk(const blob& hash);
 
 private:
-    std::iostream& m_io;
+    std::unique_ptr<net::connection> m_conn;
+    boost::asio::ip::tcp::iostream m_io;
 };
 
 // ---------------------------------------------------------------------
