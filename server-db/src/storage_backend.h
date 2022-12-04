@@ -20,9 +20,9 @@ namespace uh::dbn {
 
 // ---------------------------------------------------------------------
 
-    class storage_backend_interface {
+    class storage_backend {
     public:
-        virtual ~storage_backend_interface() = default;
+        virtual ~storage_backend() = default;
 
 
         /**
@@ -52,9 +52,20 @@ namespace uh::dbn {
 
 // ---------------------------------------------------------------------
 
-    class storage_backend : public storage_backend_interface {
+//TODO:
+//class storage_backend -->  class dump_storage
+//class dump_storage
+//class radix_tree_storage
+//class etc_storage
+//class postgress_storage
+
+//TODO:
+// Write unit test, generic, for any storage backend:
+// Write block, read block, read non-existent block and receive error, write with error and throw exception.
+
+    class dump_storage : public storage_backend {
     public:
-        storage_backend(const db_config &some_config):
+        dump_storage(const db_config &some_config):
         m_config(some_config)
         {
             if(!(boost::filesystem::exists(some_config.db_dir))) {

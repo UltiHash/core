@@ -8,7 +8,7 @@ namespace uh::dbn
 
 // ---------------------------------------------------------------------
 
-protocol_factory::protocol_factory(storage_backend_interface& storage)
+protocol_factory::protocol_factory(storage_backend& storage)
     : m_storage(storage)
 {
 }

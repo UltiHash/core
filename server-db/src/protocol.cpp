@@ -11,7 +11,7 @@ namespace uh::dbn
 
 // ---------------------------------------------------------------------
 
-protocol::protocol(storage_backend_interface& storage)
+protocol::protocol(storage_backend& storage)
     : m_storage(storage)
 {
 }

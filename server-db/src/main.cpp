@@ -52,7 +52,7 @@ int main(int argc, const char** argv)
             std::string msg("Path does not exist: " + config.db_dir.string());
             throw std::runtime_error(msg);
         }
-        storage_backend uhsb(config);
+        dump_storage uhsb(config);
 
         INFO << "starting server";
         uh::dbn::protocol_factory pf(uhsb);

@@ -15,12 +15,12 @@ namespace uh::dbn
 class protocol_factory : public util::factory<uh::protocol::protocol>
 {
 public:
-    protocol_factory(storage_backend_interface& storage);
+    protocol_factory(storage_backend& storage);
 
     virtual std::unique_ptr<uh::protocol::protocol> create() const override;
 
 private:
-    storage_backend_interface& m_storage;
+    storage_backend& m_storage;
 };
 
 // ---------------------------------------------------------------------

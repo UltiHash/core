@@ -13,14 +13,14 @@ namespace uh::dbn
 class protocol : public uh::protocol::server
 {
 public:
-    protocol(storage_backend_interface& storage);
+    protocol(storage_backend& storage);
 
     virtual uh::protocol::server_information on_hello(const std::string& client_version) override;
     virtual uh::protocol::blob on_write_chunk(uh::protocol::blob&& data) override;
     virtual uh::protocol::blob on_read_chunk(uh::protocol::blob&& hash) override;
 
 private:
-    storage_backend_interface& m_storage;
+    storage_backend& m_storage;
 };
 
 // ---------------------------------------------------------------------

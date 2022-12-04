@@ -8,7 +8,7 @@ using namespace uh::dbn;
 namespace fs = boost::filesystem;
 
 
-std::vector<char> storage_backend::write_block(const std::vector<char>& some_data){
+std::vector<char> dump_storage::write_block(const std::vector<char>& some_data){
 
     std::string hash_str = "ThisIsTheHashKey";
     std::vector<char> hash_vec(hash_str.begin(), hash_str.end());
@@ -27,7 +27,7 @@ std::vector<char> storage_backend::write_block(const std::vector<char>& some_dat
     return hash_vec;
 }
 
-std::vector<char> storage_backend::read_block(const std::vector<char>& some_hash){
+std::vector<char> dump_storage::read_block(const std::vector<char>& some_hash){
 
     fs::path filepath = this->m_config.db_file_fullpath;
     std::ifstream infile(filepath, std::ios::binary);
