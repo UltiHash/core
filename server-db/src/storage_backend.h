@@ -4,6 +4,8 @@
 #include <vector>
 #include <string>
 #include <boost/filesystem.hpp>
+#include <openssl/sha.h>
+#include <logging/logging_boost.h>
 
 
 namespace fs = boost::filesystem;
@@ -14,9 +16,33 @@ namespace uh::dbn {
 
     struct db_config{
         fs::path db_dir = "./DB_ROOT";
-        fs::path db_filename = "block_test_file";
-        fs::path db_file_fullpath = db_dir / db_filename;
     };
+
+// ---------------------------------------------------------------------
+
+    template <typename Iterator>
+    std::string to_hex_string(Iterator begin, Iterator end);
+
+    template <typename Iterator>
+    std::string uh::dbn::to_hex_string(Iterator begin, Iterator end)
+    {
+        std::stringstream ss;
+        while(begin != end)
+        {
+            ss << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(static_cast<unsigned char>(*begin));
+            begin++;
+        }
+        return ss.str();
+    }
+
+// ---------------------------------------------------------------------
+
+    bool maybe_write_data_to_filepath(const std::vector<char> &some_data, const fs::path &filepath);
+
+
+// ---------------------------------------------------------------------
+
+    std::vector<char> sha512(const std::vector<char>& some_data);
 
 // ---------------------------------------------------------------------
 
@@ -48,6 +74,27 @@ namespace uh::dbn {
          * @throw may throw any derivative of exception on error
          */
         virtual std::vector <char> read_block(const std::vector<char> &hash) = 0;
+
+    private:
+
+        /**
+         * Given a block of data, return its hash
+         *
+         * This function computes a hash string givena block of binary data
+         *
+         * @return the hash
+         * @throw may throw any derivative of exception on error
+         */
+        virtual std::vector <char> hashing_function(const std::vector<char> &data) = 0;
+
+
+        /**
+         * Given a hash string as a std::vector<char>, return the file path
+         * to the corresponding data block
+         * @param hash: the hash as a std::vector
+         * @return a file path as a boost::filesystem::path
+         */
+        virtual fs::path get_filepath_from_hash(const std::vector<char> &hash) = 0;
     };
 
 // ---------------------------------------------------------------------
@@ -98,7 +145,26 @@ namespace uh::dbn {
          */
         virtual std::vector <char> read_block(const std::vector<char> &hash) override;
 
+
     private:
+
+        /**
+         * Given a block of data, return its hash
+         *
+         * This function computes a hash string givena block of binary data
+         *
+         * @return the hash
+         * @throw may throw any derivative of exception on error
+         */
+        virtual std::vector<char> hashing_function(const std::vector<char> &data) override;
+
+        /**
+         * Given a hash string as a std::vector<char>, return the file path
+         * to the corresponding data block
+         * @param hash: the hash as a std::vector
+         * @return a file path as a boost::filesystem::path
+         */
+        virtual fs::path get_filepath_from_hash(const std::vector<char> &hash);
 
         db_config m_config;
     };
