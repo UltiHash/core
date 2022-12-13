@@ -1,10 +1,8 @@
 cmake_minimum_required(VERSION 3.22.0)
-project(agency-node VERSION 0.1.0)
+project(uhServerAgency VERSION 0.1.0)
+message(STATUS "Building ${PROJECT_NAME}...")
 
 set(CMAKE_CXX_STANDARD 20)
-
-project(uhServerAgency)
-message(STATUS "Using ${PROJECT_NAME}...")
 
 find_package(Boost 1.80 COMPONENTS unit_test_framework REQUIRED)
 
