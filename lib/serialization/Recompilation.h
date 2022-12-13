@@ -11,7 +11,6 @@
 
 class Recompilation final : virtual public std::fstream {
 private:
-    std::string db_config_file;
     std::list<Data> data; // just stream data; save data blocks directly to the database, while return the prefix and hash blocks to the compilation class who saves them file/folder by file/folder.
     enum Datatype {
         notexist, directories, files, unknown
@@ -24,6 +23,7 @@ private:
     bool multimode{};
 
     static std::filesystem::path fileNameCount(std::filesystem::path filename);
+    uh::protocol::client& m_client;
 
 protected:
     //file tree to recompilation file
@@ -32,7 +32,7 @@ protected:
     bool decode();
 
 public:
-    Recompilation(const std::string& db_config, bool encodeBool, std::list<std::string> input,std::map<std::string, bool> flags);
+    Recompilation(bool encodeBool, std::list<std::string> input,std::map<std::string, bool> flags, uh::protocol::client& client);
 
     ~Recompilation() final;
 

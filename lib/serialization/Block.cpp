@@ -8,6 +8,6 @@ std::size_t Block::size() const {
     return infoS.size();
 }
 
-std::string Block::get() {
+std::string& Block::get() {
     return infoS;
 }

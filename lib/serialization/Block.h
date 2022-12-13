@@ -16,7 +16,7 @@ private:
 public:
     [[nodiscard]] std::size_t size() const;
 
-    std::string get();
+    std::string& get();
 
     template<class OutType>
     OutType encode() {
