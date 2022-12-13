@@ -170,7 +170,7 @@ bool postgresSQL::connect(const std::string &database) {
                 datab = database;
                 return true;
             } else {
-                CUSTOM_THROW(1,"Can't open database")
+                THROW(uh::util::exception, "Can't open database");
             }
         } catch (const std::exception &e) {
             ERROR << "connect on Database " << database << " failed for this reason: " << e.what();

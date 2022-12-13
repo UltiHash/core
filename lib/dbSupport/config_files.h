@@ -7,7 +7,7 @@
 
 #include <conceptTypes/conceptTypes.h>
 #include <logging/logging_boost.h>
-#include <logging/custom_exceptions.h>
+#include <util/exception.h>
 
 class config_files {
 

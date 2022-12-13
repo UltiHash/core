@@ -10,6 +10,7 @@
 #include "postgresSQL.h"
 
 #include <boost/algorithm/hex.hpp>
+#include <boost/algorithm/string.hpp>
 
 
 class database_call_ops {
@@ -47,7 +48,7 @@ protected:
         const std::lock_guard lock(database_mutex);
         try{
             std::string sql = "SELECT EXISTS(SELECT schema_name FROM information_schema.schemata WHERE schema_name = \'"+schema+"\');";
-            while(sql.contains("  ")){
+            while(boost::algorithm::contains(sql, "  ")){
                 boost::replace_all(sql, "  ", " ");
             }
             pqxx::nontransaction n(*connection);
@@ -68,7 +69,7 @@ protected:
         if (checkSchemaExists(schema))[[likely]]return true;
         try{
             std::string sql = "CREATE SCHEMA IF NOT EXISTS " + schema + " AUTHORIZATION " + user + " ; GRANT ALL ON SCHEMA " + schema + " TO " + datab + " ; GRANT ALL ON SCHEMA " + schema + " TO public;";
-            while(sql.contains("  ")){
+            while(boost::algorithm::contains(sql, "  ")){
                 boost::replace_all(sql, "  ", " ");
             }
             pqxx::work n(*connection);
@@ -88,7 +89,7 @@ protected:
         if (!checkSchemaExists(schema))[[unlikely]]{return false;}
         try{
             std::string sql = "DROP SCHEMA IF EXISTS "+schema+" CASCADE;";
-            while(sql.contains("  ")){
+            while(boost::algorithm::contains(sql, "  ")){
                 boost::replace_all(sql, "  ", " ");
             }
             pqxx::work n(*connection);
@@ -106,7 +107,7 @@ protected:
         const std::lock_guard lock(database_mutex);
         try{
             std::string sql = "SELECT EXISTS ( SELECT FROM information_schema.tables WHERE table_schema = \'"+schema+"\' AND table_name = \'"+table+"\' ) ;";
-            while(sql.contains("  ")){
+            while(boost::algorithm::contains(sql, "  ")){
                 boost::replace_all(sql, "  ", " ");
             }
             pqxx::nontransaction n(*connection);
@@ -129,7 +130,7 @@ protected:
             //table_name, column_name, data_type
             if(!checkTableExists(schema,table))[[unlikely]]{return out;}
             std::string sql = "SELECT column_name, data_type FROM information_schema.columns WHERE table_schema like '"+schema+"%' AND table_name like '"+table+"%' ;";
-            while(sql.contains("  ")){
+            while(boost::algorithm::contains(sql, "  ")){
                 boost::replace_all(sql, "  ", " ");
             }
             pqxx::nontransaction n(*connection);
@@ -152,7 +153,7 @@ protected:
         if (!checkTableExists(schema,table))[[unlikely]]{return false;}
         try{
             std::string sql = "DROP TABLE IF EXISTS "+schema+"."+table+";";
-            while(sql.contains("  ")){
+            while(boost::algorithm::contains(sql, "  ")){
                 boost::replace_all(sql, "  ", " ");
             }
             pqxx::work n(*connection);
@@ -293,7 +294,7 @@ public:
                     datab = database;
                     return true;
                 } else {
-                    CUSTOM_THROW(1,"Can't open database")
+                    THROW(uh::util::exception, "Can't open database");
                 }
             } catch (const std::exception &e) {
                 ERROR << "connect on Database " << database << " failed for this reason: " << e.what();
@@ -326,7 +327,7 @@ public:
         }
         if(checkTableExists(schema,table))[[likely]]{return false;}
         std::string sql = "CREATE "+pre_options+" TABLE "+options+" "+schema+"."+table+" ( "+createTableRecursiveVariadicDefinition(args...)+" ) ;";
-        while(sql.contains("  ")){
+        while(boost::algorithm::contains(sql, "  ")){
             boost::replace_all(sql, "  ", " ");
         }
 
@@ -372,7 +373,7 @@ public:
     bool check_block_exists(const std::string& identifier) {
         const std::lock_guard lock(database_mutex);
         std::string sql = "SELECT exists ( SELECT identifier FROM " + schem + "." + tab + " WHERE identifier = \'"+ boost::algorithm::hex(identifier) + "\' ) ;";
-        while(sql.contains("  ")){
+        while(boost::algorithm::contains(sql, "  ")){
             boost::replace_all(sql, "  ", " ");
         }
         pqxx::nontransaction nf(*connection);
@@ -394,7 +395,7 @@ public:
             std::exit(EXIT_FAILURE);
         }
         std::string sql = "SELECT identifier,block FROM " + schem + "." + tab + " WHERE identifier = \'" + boost::algorithm::hex(identifier) + "\' ;";
-        while(sql.contains("  ")){
+        while(boost::algorithm::contains(sql, "  ")){
             boost::replace_all(sql, "  ", " ");
         }
         pqxx::nontransaction nf(*connection);
@@ -421,7 +422,7 @@ public:
         }
         std::string sql =
                 "INSERT INTO " + schem + "." + tab + " (identifier,block) VALUES ( \'" + boost::algorithm::hex(identifier) +"\' , \'" + boost::algorithm::hex(block) +"\' ) ON CONFLICT (identifier) DO UPDATE SET block = excluded.block ;";
-        while(sql.contains("  ")){
+        while(boost::algorithm::contains(sql, "  ")){
             boost::replace_all(sql, "  ", " ");
         }
         pqxx::work n2(*connection);
