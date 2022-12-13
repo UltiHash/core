@@ -10,7 +10,7 @@ find_library(PQXX_LIB pqxx REQUIRED)
 find_library(PQ_LIB pq REQUIRED)
 
 set(${PROJECT_NAME}_INCLUDE_DIRS ${Boost_INCLUDE_DIRS})
-set(${PROJECT_NAME}_LINK_LIBRARIES ${Boost_LIBRARIES} ${PQXX_LIB})
+set(${PROJECT_NAME}_LINK_LIBRARIES ${Boost_LIBRARIES} ${PQXX_LIB} uhLibLogging uhLibUtil uhLibConceptTypes)
 
 # adding all the .h files of the current project
 file(GLOB HEADER_FILE_LIST ${CMAKE_CURRENT_SOURCE_DIR}/*.h)
@@ -19,8 +19,8 @@ file(GLOB HEADER_FILE_LIST ${CMAKE_CURRENT_SOURCE_DIR}/*.h)
 file(GLOB SOURCE_FILE_LIST ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp)
 
 add_library(${PROJECT_NAME} STATIC ${HEADER_FILE_LIST} ${SOURCE_FILE_LIST})
-target_include_directories(${PROJECT_NAME} PUBLIC uhLibLogging uhLibConceptTypes ${${PROJECT_NAME}_INCLUDE_DIRS})
-target_link_libraries(${PROJECT_NAME} PUBLIC uhLibLogging uhLibConceptTypes ${${PROJECT_NAME}_LINK_LIBRARIES})
+target_include_directories(${PROJECT_NAME} PUBLIC ${${PROJECT_NAME}_INCLUDE_DIRS})
+target_link_libraries(${PROJECT_NAME} PUBLIC ${${PROJECT_NAME}_LINK_LIBRARIES})
 
 # create testing targets
 include(${CMAKE_CURRENT_SOURCE_DIR}/../cmake/testing/CMakeLists.txt)

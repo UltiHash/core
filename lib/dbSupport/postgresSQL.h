@@ -13,6 +13,7 @@
 #include <utility>
 
 #include <conceptTypes/conceptTypes.h>
+#include <util/exception.h>
 #include "config_files.h"
 
 #include <boost/algorithm/string/find.hpp>

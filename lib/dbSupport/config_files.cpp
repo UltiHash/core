@@ -15,10 +15,10 @@ void config_files::run() {
 
 std::vector<std::string> config_files::read() {
     if (!std::filesystem::exists(at)){
-        CUSTOM_THROW(1,"Configuration file at "+at.string()+" could not be found!\n");
+        THROW(uh::util::exception, "Configuration file at "+at.string()+" could not be found!");
     }
     if(std::filesystem::is_empty(at)){
-        CUSTOM_THROW(1,"Configuration file at "+at.string()+" was empty!\n");
+        THROW(uh::util::exception, "Configuration file at "+at.string()+" was empty!");
     }
     std::fstream file(at.c_str());
     std::string str;
