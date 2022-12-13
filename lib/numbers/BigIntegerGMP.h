@@ -8,7 +8,7 @@
 #include <type_traits>
 #include <gmpxx.h>
 
-namespace ultihash::lib::numbers {
+namespace uh::numbers {
 
     class BigInteger {
     protected:
@@ -17,6 +17,7 @@ namespace ultihash::lib::numbers {
         template<typename Fundamental, std::enable_if_t<std::is_arithmetic<Fundamental>::value, bool> = true>
         explicit BigInteger(Fundamental in) {
             if (sizeof(in) > (mp_bits_per_limb / 8)) {
+
                 std::cerr<<"Limb width of " + std::to_string(sizeof(in)) + " bytes not supported, but only " +
                            std::to_string((mp_bits_per_limb / 8)) + " bytes!"<<std::endl;
                 return;
@@ -225,7 +226,7 @@ namespace ultihash::lib::numbers {
 
 
 
-    inline std::ostream& operator<<(std::ostream& os, const ultihash::lib::numbers::BigInteger& obj) {
+    inline std::ostream& operator<<(std::ostream& os, const uh::numbers::BigInteger& obj) {
         // write obj to stream
         return os << obj.getNumber().get_str();
     }

@@ -6,8 +6,9 @@ message(STATUS "Using ${PROJECT_NAME}...")
 
 #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -fsanitize=address")
 
-option(USE_GMP "Use libgmp instead of a custom implementation for arbitrary precision integer arithmetic." TRUE)
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/BigInteger.h.in ${CMAKE_CURRENT_SOURCE_DIR}/BigInteger.h @ONLY)
+option(USE_GMP "Use libgmp instead of a custom implementation for arbitrary precision integer arithmetic." OFF)
+
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/BigInteger.h.in ${CMAKE_CURRENT_SOURCE_DIR}/BigInteger.h)
 
 # external dependencies
 find_package(Boost 1.80 COMPONENTS unit_test_framework REQUIRED)
