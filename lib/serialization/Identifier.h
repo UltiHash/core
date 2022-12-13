@@ -6,6 +6,8 @@
 #define CMAKE_BUILD_DEBUG_ULTIHASH_IDENTIFIER_H
 
 #include "Block.h"
+#include "protocol/common.h"
+#include <openssl/sha.h>
 
 //The identifier is the checksum of a block together with its identifying reference to the database
 class Identifier {
@@ -30,6 +32,12 @@ public:
     }
 
     Identifier()=default;
+
+    // TODO: research on optimization for best way to convert vector of chars to strings
+    explicit Identifier(const uh::protocol::blob& nm_hash) {
+        hash.clear();
+        hash = std::string(nm_hash.begin(), nm_hash.end());
+    }
 
     explicit Identifier(Block &input){
         //generate sha512 to hash with openSSL library

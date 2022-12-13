@@ -5,12 +5,14 @@
 
 #include <concepts>
 #include <iostream>
+#include <sys/stat.h>
 
 //boost libraries general
 #include <boost/mp11.hpp>
 #include <boost/heap/heap_concepts.hpp>
 #include <boost/spirit/include/qi.hpp>
 #include <boost/serialization/vector.hpp>
+#include <boost/algorithm/string/predicate.hpp>
 
 //container libraries general
 #include <vector>
@@ -20,6 +22,7 @@
 #include <map>
 #include <unordered_map>
 #include <set>
+#include <stack>
 #include <unordered_set>
 #include <boost/unordered_map.hpp>
 #include <boost/fusion/container/map.hpp>
@@ -30,6 +33,7 @@
 #include <boost/container/devector.hpp>
 #include <boost/container/slist.hpp>
 #include <boost/container/list.hpp>
+
 
 //module concepttypes start
 #ifndef INTEGRATION_PROJECT_CONCEPTTYPES_H

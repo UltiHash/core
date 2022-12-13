@@ -2,6 +2,8 @@
 // Created by tariq on 5/11/22.
 //
 
+#ifndef SERIALIZATION_RECOMPILATION_H
+#define SERIALIZATION_RECOMPILATION_H
 #include "Recompilation.h"
 
 bool Recompilation::encode() {
@@ -9,7 +11,7 @@ bool Recompilation::encode() {
     for(const auto&c:input_commands){
         this->open(std::get<1>(c), std::ios::out | std::ios::app | std::ios::binary );
         if(this->is_open())[[likely]]{
-            std::cout << "Successfully created and openened fresh recompilation file at "<<std::get<1>(c)<<" !"<<std::endl;
+            std::cout << "Successfully created and opened fresh recompilation file at "<<std::get<1>(c)<<" !"<<std::endl;
         }
         else[[unlikely]]{
             std::cerr << "Could not create recompilation file! Aborting!"<<std::endl;
@@ -24,7 +26,7 @@ bool Recompilation::encode() {
         bool is_dir=std::filesystem::is_directory(current_path);
         bool is_empty=std::filesystem::is_empty(current_path);
 
-        Data d_first(current_path, (is_empty and is_dir), db_config_file);
+        Data d_first(current_path, (is_empty and is_dir), m_client);
         SequentialContainer auto d_first_encode=d_first.encodeD<std::vector<unsigned char>>();
 
         std::for_each(d_first_encode.cbegin(),d_first_encode.cend(),[this](const unsigned char character){
@@ -47,7 +49,7 @@ bool Recompilation::encode() {
                     fileTreeStack.pop();
                 }
 
-                Data d(current_path, diff_go_up_levels, db_config_file);
+                Data d(current_path, diff_go_up_levels, m_client);
                 SequentialContainer auto d_loop_encode=d.encodeD<std::vector<unsigned char>>();
                 std::for_each(d_loop_encode.cbegin(),d_loop_encode.cend(),[this](const unsigned char character){*this<<character;});
             }while(!fileTreeStack.empty());
@@ -82,14 +84,14 @@ bool Recompilation::decode() {
             auto root_folder_current_it = std::make_tuple(std::get<1>(c),input.begin());
             std::filesystem::create_directories(std::get<0>(root_folder_current_it));
 
-            Data d(db_config_file);
+            Data d(m_client);
             do{
                 root_folder_current_it = d.write_from_stream_vector(input,root_folder_current_it);
             }while(std::get<1>(c)!=std::get<0>(root_folder_current_it));
 
             std::cout << "Successfully read existing recompilation file!"<<std::endl;
         }
-        catch(std::exception &e){
+        catch(const std::exception &e){
             FATAL << "Reading recompilation file failed due to this reason: " << e.what() << std::endl;
             return false;
         }
@@ -140,11 +142,10 @@ std::filesystem::path Recompilation::fileNameCount(std::filesystem::path filenam
     return newFilename;
 }
 
-Recompilation::Recompilation(const std::string &db_config, const bool encodeBool, std::list<std::string> input,
-                             std::map<std::string, bool> flags) {
+Recompilation::Recompilation(const bool encodeBool, std::list<std::string> input,
+                             std::map<std::string, bool> flags, uh::protocol::client& client): m_client(client) {
     multimode=input.size()>=2;
     flag_check=std::move(flags);
-    db_config_file = db_config;
     encodingMode = encodeBool;
     std::filesystem::path from, to;
     overwrite=false;//TODO: remove
@@ -334,7 +335,7 @@ Recompilation::Recompilation(const std::string &db_config, const bool encodeBool
         }
         //actually work through after prepare
         std::cout << "INPUT: " << from << std::endl;
-        std::cout << "OUTPUT " << to << std::endl;
+        std::cout << "OUTPUT " << to << "\n\n";
         input_commands.emplace_back(from,to);
         inputIt++;
     }
@@ -365,3 +366,5 @@ bool Recompilation::valid() {
     //TODO: validity check
     return true;
 }
+
+#endif

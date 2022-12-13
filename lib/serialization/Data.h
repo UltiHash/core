@@ -5,14 +5,15 @@
 #ifndef SCHOOL_PROJECT_DATA_H
 #define SCHOOL_PROJECT_DATA_H
 
-#include <dbSupport/database_call_ops.h>
 #include "Prefix.h"
 #include "Identifier.h"
+#include <protocol/client_factory.h>
+#include <protocol/client_pool.h>
 
 class Data : virtual public Prefix{
     std::vector<Block> hash_blocks;
     std::size_t numBlocks{};
-    std::string db_config_file;
+    uh::protocol::client& m_client;
 
 private:
     static std::string demo_perms(std::filesystem::perms p){
@@ -37,22 +38,54 @@ public:
         if(this->is_regular_file() and not this->emptyObject())[[likely]] {
             std::string numBlocks_string=this->write_pod(numBlocks).str();//TODO: also encode Blocks, compress
             std::for_each(numBlocks_string.begin(),numBlocks_string.end(),[&prefix_encode](const unsigned char c){prefix_encode.push_back(c);});
+            try {
+                INFO << "Sending blocks...";
 
-            database_call_ops tmpDB(db_config_file);
-            for (auto &i: hash_blocks) {
-                //write to database
-                auto id_obj=Identifier(i);
-                OutType tmpID_encode=id_obj.encode<OutType>();
+                std::size_t totalBlockSize= 0;
+                long totalNanoSec{};
+                long totalMicroSec{};
+                long totalMilliSec{};
+                long totalSec{};
+                std::uint64_t count=0;
+                for (auto &i: hash_blocks) {
+                    // time measurement statistics for reading blocks from the agency server
+                    auto start = std::chrono::steady_clock::now();
+                    auto hash = m_client.write_chunk(std::vector<char>(i.get().begin(),i.get().end()));
+                    auto end = std::chrono::steady_clock::now();
 
-                if (!tmpDB.write_block(id_obj.get(), i.get())) {
-                    std::string errorstring{tmpID_encode.cbegin(),tmpID_encode.cend()};
-                    ERROR << "Block " << errorstring << " could not be written back to database!";
-                    std::exit(EXIT_FAILURE);
+                    auto nanoSec = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
+                    auto microSec = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+                    auto milliSec = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+                    auto Sec = std::chrono::duration_cast<std::chrono::seconds>(end - start).count();
+                    auto blockSize = i.get().size();
+                    totalNanoSec+=nanoSec;
+                    totalMicroSec+=microSec;
+                    totalMilliSec+=milliSec;
+                    totalSec+=Sec;
+                    totalBlockSize+=blockSize;
+                    count++;
+                    INFO << "Block-" << count << ": " << "Size " << blockSize << " Bytes - RTT " << nanoSec << " ns, "
+                         << microSec << " µs, "
+                         << milliSec << " ms, "
+                         << Sec << " sec";
+
+                    //write to database, can be optimized here
+                    auto id_obj = Identifier(hash);
+                    OutType tmpID_encode = id_obj.encode<OutType>();
+                    prefix_encode.insert(prefix_encode.cend(), tmpID_encode.begin(), tmpID_encode.end());
                 }
-                prefix_encode.insert(prefix_encode.cend(),tmpID_encode.begin(),tmpID_encode.end());
+
+                // total block time
+                INFO << "Total: " << "Size " << totalBlockSize << " Bytes " << static_cast<float>(totalBlockSize)/static_cast<float>(1000000000) <<  "GB - Total RTT " << totalNanoSec << " ns, "
+                     << totalMicroSec << " µs, "
+                     << totalMilliSec << " ms, "
+                     << totalSec << " sec";
+
+            } catch (const std::exception &exc) {
+                ERROR << "Error occurred while sending/encoding the blocks." << exc.what();
+                std::exit(EXIT_FAILURE);
             }
         }
-
         return prefix_encode;
     }
 
@@ -65,11 +98,53 @@ public:
             step+=sizeof(numBlocks);
 
             hash_blocks.clear();
-            database_call_ops tmpDB(db_config_file);
-            for(std::size_t i=0; i<numBlocks; i++){
-                Identifier id;
-                step=id.decode(iss,step);
-                hash_blocks.emplace_back(tmpDB.read_block(id.get()));
+            try {
+                INFO << "Reading Blocks...";
+
+                std::size_t totalBlockSize= 0;
+                long totalNanoSec{};
+                long totalMicroSec{};
+                long totalMilliSec{};
+                long totalSec{};
+                for(std::size_t i=0; i<numBlocks; i++)
+                {
+                    Identifier id;
+                    step=id.decode(iss,step);
+                    auto hashID = id.get();
+                    std::vector<char> vecHash(hashID.begin(), hashID.end());
+
+                    // time measurement statistics for reading blocks from the agency server
+                    auto start = std::chrono::steady_clock::now();
+                    auto data = m_client.read_chunk(vecHash);
+                    auto end = std::chrono::steady_clock::now();
+
+                    auto nanoSec = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
+                    auto microSec = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
+                    auto milliSec = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+                    auto Sec = std::chrono::duration_cast<std::chrono::seconds>(end - start).count();
+
+                    totalNanoSec+=nanoSec;
+                    totalMicroSec+=microSec;
+                    totalMilliSec+=milliSec;
+                    totalSec+=Sec;
+                    totalBlockSize+=data.size();
+                    INFO << "Block-" << i+1  << ": " << "Size " << data.size() << " Bytes - RTT " << nanoSec << " ns, "
+                         << microSec << " µs, "
+                         << milliSec << " ms, "
+                         << Sec << " sec";
+
+                    hash_blocks.emplace_back(std::string(data.begin(), data.end()));
+                }
+
+                // total block time
+                INFO << "Total: " << "Size " << totalBlockSize << " Bytes, " << static_cast<float>(totalBlockSize)/static_cast<float>(1000000000) << " GB - Total RTT " << totalNanoSec << " ns, "
+                     << totalMicroSec << " µs, "
+                     << totalMilliSec << " ms, "
+                     << totalSec << " sec";
+            }
+            catch (const std::exception &exc) {
+                ERROR << "Error occurred while receiving/decoding the hash." << exc.what();
+                std::exit(EXIT_FAILURE);
             }
         }
 
@@ -92,7 +167,7 @@ public:
         std::get<1>(stepper)=decodeD(iss,std::get<1>(stepper));
         std::get<0>(stepper)=std::filesystem::path(std::get<0>(stepper).string()+"/"+object_name).make_preferred();
 
-        std::cout << "Read from recompilation file: " << std::get<0>(stepper) <<  std::endl;
+        std::cout << "Read from recompilation file: " << std::get<0>(stepper) <<  "\n\n";
         bool is_file=false;
         if(not is_regular_file()){
             if(not std::filesystem::exists(std::get<0>(stepper)))[[likely]]{
@@ -165,9 +240,8 @@ public:
         return stepper;
     }
 
-    Data(const std::string &in, unsigned short folderE,const std::string& db_config);
-
-    explicit Data(const std::string& db_config);
+    Data(const std::string &in, unsigned short folderE, uh::protocol::client& client);
+    explicit Data(uh::protocol::client& client);
 };
 //BOOST_CLASS_VERSION(Data, 1)
 #endif //SCHOOL_PROJECT_DATA_H
