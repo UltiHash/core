@@ -1,4 +1,4 @@
-#include <client_shell_ver.h>
+#include "config.h"
 #include <serialization/Recompilation.h>
 
 /*translate --help or other explicit flags to their not explicit letter -h
@@ -285,7 +285,7 @@ int main(int argc, char *argv[]) {
     init_logging(std::filesystem::path{*root_work_path}.append("./UltiHash.log").string());
     //first log that program started
     INFO << "UltiHash started running..." << std::endl;
-    const std::string VERSION = std::to_string(CLIENT_SHELL_VERSION_MAJOR) + "." + std::to_string(CLIENT_SHELL_VERSION_MINOR);
+    const std::string VERSION = std::to_string(uhClientCLI_VERSION_MAJOR) + "." + std::to_string(uhClientCLI_VERSION_MINOR);
     std::list<std::string> input_commands;
     std::vector<std::string> flags;
     for (unsigned int i = 1; i < static_cast<unsigned int>(argc); i++) {

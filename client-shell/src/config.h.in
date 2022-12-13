@@ -1,0 +1,2 @@
+#define uhClientCLI_VERSION_MAJOR @uhClientCLI_VERSION_MAJOR@
+#define uhClientCLI_VERSION_MINOR @uhClientCLI_VERSION_MINOR@
