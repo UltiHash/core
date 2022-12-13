@@ -19,7 +19,7 @@ public:
     virtual blob on_write_chunk(blob&& data) = 0;
     virtual blob on_read_chunk(blob&& hash) = 0;
 
-    virtual void handle(std::shared_ptr<net::connection> client) override;
+    virtual void handle(std::shared_ptr<net::socket> client) override;
 
     void handle_hello(std::iostream& io);
     void handle_write_chunk(std::iostream& io);

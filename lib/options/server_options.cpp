@@ -13,8 +13,8 @@ server_options::server_options()
 {
     m_desc.add_options()
         ("port", value<uint16_t>()->default_value(net::server_config::DEFAULT_PORT), "start the server listening on this port")
-        ("tls-chain", "certificate chain to use for TLS connections")
-        ("tls-key", "private key to use for TLS connections")
+        ("tls-chain", value<std::string>(), "certificate chain to use for TLS connections")
+        ("tls-key", value<std::string>(), "private key to use for TLS connections")
         ("threads", value<std::size_t>()->default_value(net::server_config::DEFAULT_THREADS), "number of threads handling connections");
 }
 

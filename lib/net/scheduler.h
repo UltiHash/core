@@ -18,6 +18,7 @@ class scheduler
 {
 public:
     scheduler(std::size_t threads);
+    ~scheduler();
 
     void spawn(std::function<void()> f);
 

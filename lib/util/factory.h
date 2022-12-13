@@ -15,7 +15,7 @@ class factory
 public:
     virtual ~factory() = default;
 
-    virtual std::unique_ptr<type> create() const = 0;
+    virtual std::unique_ptr<type> create() = 0;
 };
 
 // ---------------------------------------------------------------------

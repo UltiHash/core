@@ -1,6 +1,7 @@
 #include "server.h"
 
 #include <logging/logging_boost.h>
+#include <net/plain_socket.h>
 
 
 using namespace boost::asio::ip;
@@ -11,7 +12,7 @@ namespace uh::net
 // ---------------------------------------------------------------------
 
 server::server(const server_config& config,
-               const util::factory<uh::protocol::protocol>& protocol_factory)
+               util::factory<uh::protocol::protocol>& protocol_factory)
     : m_context(),
       m_acceptor(m_context, tcp::endpoint(tcp::v4(), config.port)),
       m_protocol_factory(protocol_factory),
@@ -30,13 +31,15 @@ void server::run()
     {
         try
         {
-            std::shared_ptr<net::connection> conn = std::make_shared<net::connection>(m_context);
+            tcp::socket s(m_context);
             tcp::endpoint peer;
-            m_acceptor.accept(conn->socket(), peer);
+            m_acceptor.accept(s, peer);
 
             INFO << "new connection: " << peer;
 
-            spawn_client(conn);
+            auto sock = std::make_shared<plain_socket>(std::move(s));
+            sock->peer() = peer;
+            spawn_client(sock);
         }
         catch (const std::exception& e)
         {
@@ -49,11 +52,11 @@ void server::run()
 
 // ---------------------------------------------------------------------
 
-void server::spawn_client(std::shared_ptr<net::connection> client)
+void server::spawn_client(std::shared_ptr<net::socket> sock)
 {
-    m_scheduler.spawn([this, client] ()
+    m_scheduler.spawn([this, sock] ()
     {
-        m_protocol_factory.create()->handle(client);
+        m_protocol_factory.create()->handle(sock);
     });
 }
 

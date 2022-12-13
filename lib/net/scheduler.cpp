@@ -1,5 +1,9 @@
 #include "scheduler.h"
 
+#include <logging/logging_boost.h>
+
+#include <exception>
+
 
 namespace uh::net
 {
@@ -12,6 +16,13 @@ scheduler::scheduler(std::size_t threads)
     {
         m_threads.push_back(std::thread([this](){ this->worker(); }));
     }
+}
+
+// ---------------------------------------------------------------------
+
+scheduler::~scheduler()
+{
+    stop();
 }
 
 // ---------------------------------------------------------------------
@@ -49,7 +60,19 @@ void scheduler::worker()
             auto job = m_jobs.front();
             m_jobs.pop_front();
             lk.unlock();
-            job();
+
+            try
+            {
+                job();
+            }
+            catch (const std::exception& e)
+            {
+                ERROR << "job failed: " << e.what();
+            }
+            catch (...)
+            {
+                ERROR << "job failed with unknown exception";
+            }
         }
     }
 }

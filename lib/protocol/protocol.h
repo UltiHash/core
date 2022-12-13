@@ -1,7 +1,7 @@
 #ifndef PROTOCOL_PROTOCOL_H
 #define PROTOCOL_PROTOCOL_H
 
-#include <net/connection.h>
+#include <net/socket.h>
 #include <memory>
 
 
@@ -14,7 +14,7 @@ class protocol
 {
 public:
     virtual ~protocol() = default;
-    virtual void handle(std::shared_ptr<net::connection> client) = 0;
+    virtual void handle(std::shared_ptr<net::socket> client) = 0;
 };
 
 // ---------------------------------------------------------------------

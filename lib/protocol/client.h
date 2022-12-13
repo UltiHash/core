@@ -1,9 +1,10 @@
 #ifndef PROTOCOL_CLIENT_H
 #define PROTOCOL_CLIENT_H
 
-#include <net/connection.h>
+#include <net/socket.h>
 #include "common.h"
 
+#include <boost/iostreams/stream.hpp>
 #include <iostream>
 #include <string>
 
@@ -16,7 +17,7 @@ namespace uh::protocol
 class client
 {
 public:
-    client(std::unique_ptr<net::connection> conn);
+    client(std::unique_ptr<net::socket> sock);
 
     /**
      * Send client version information to the server. This must be the first
@@ -45,8 +46,8 @@ public:
     blob read_chunk(const blob& hash);
 
 private:
-    std::unique_ptr<net::connection> m_conn;
-    boost::asio::ip::tcp::iostream m_io;
+    std::shared_ptr<net::socket> m_sock;
+    boost::iostreams::stream<net::socket_device> m_io;
 };
 
 // ---------------------------------------------------------------------

@@ -4,6 +4,7 @@
 #include "serializer.h"
 
 #include <logging/logging_boost.h>
+#include <boost/iostreams/stream.hpp>
 
 
 using namespace boost::asio;
@@ -13,9 +14,9 @@ namespace uh::protocol
 
 // ---------------------------------------------------------------------
 
-void server::handle(std::shared_ptr<net::connection> client)
+void server::handle(std::shared_ptr<net::socket> client)
 {
-    ip::tcp::iostream io(std::move(client->socket()));
+    boost::iostreams::stream<net::socket_device> io(client);
 
     while (io)
     {
@@ -43,6 +44,7 @@ void server::handle(std::shared_ptr<net::connection> client)
         catch (const std::exception& e)
         {
             write(io, status{ .code = status::OK, .message = e.what() });
+            io.flush();
         }
     }
 }
@@ -60,6 +62,7 @@ void server::handle_hello(std::iostream& io)
     write(io, hello::response{
         .server_version = info.version,
         .protocol_version = info.protocol });
+    io.flush();
 }
 
 // ---------------------------------------------------------------------
@@ -73,6 +76,7 @@ void server::handle_write_chunk(std::iostream& io)
 
     write(io, status{ status::OK });
     write(io, write_chunk::response{ std::move(hash) });
+    io.flush();
 }
 
 // ---------------------------------------------------------------------
@@ -86,6 +90,7 @@ void server::handle_read_chunk(std::iostream& io)
 
     write(io, status{ status::OK });
     write(io, read_chunk::response{ std::move(content) });
+    io.flush();
 }
 
 // ---------------------------------------------------------------------

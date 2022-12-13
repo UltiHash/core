@@ -28,7 +28,7 @@ client_pool::handle::handle(client_pool& pool, std::unique_ptr<client>&& c)
 
 // ---------------------------------------------------------------------
 
-client_pool::client_pool(const util::factory<client>& factory, std::size_t pool_size)
+client_pool::client_pool(util::factory<client>& factory, std::size_t pool_size)
     : m_factory(factory),
       m_pool_size(pool_size)
 {

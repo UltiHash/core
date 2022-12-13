@@ -1,6 +1,6 @@
 #include "client_factory.h"
 
-#include <net/connection.h>
+#include <net/plain_socket.h>
 
 #include "exception.h"
 
@@ -12,20 +12,18 @@ namespace uh::protocol
 
 // ---------------------------------------------------------------------
 
-client_factory::client_factory(boost::asio::io_context& context,
+client_factory::client_factory(util::factory<net::socket>& socket_factory,
                                const client_factory_config& config)
-    : m_hostname(config.hostname),
-      m_port(config.port),
-      m_client_version(config.client_version),
-      m_context(context)
+    : m_sf(socket_factory),
+      m_client_version(config.client_version)
 {
 }
 
 // ---------------------------------------------------------------------
 
-std::unique_ptr<client> client_factory::create() const
+std::unique_ptr<client> client_factory::create()
 {
-    auto conn = net::connection::connect(m_context, m_hostname, m_port);
+    auto conn = m_sf.create();
 
     auto c = std::make_unique<client>(std::move(conn));
 
