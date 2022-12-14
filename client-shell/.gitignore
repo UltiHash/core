@@ -3,4 +3,3 @@ cmake-build-*/*
 *.log
 .idea/
 .idea/*
-src/config.h

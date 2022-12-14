@@ -1,14 +1,20 @@
-cmake_minimum_required(VERSION 3.22.0)
-project(uhClientCLI VERSION 0.1.0)
+cmake_minimum_required(VERSION 3.22.0 FATAL_ERROR)
+
+project(uhClientShell VERSION 0.1.0)
+set(CMAKE_CXX_STANDARD 20)
 message(STATUS "Using ${PROJECT_NAME}...")
 
-set(CMAKE_CXX_STANDARD 20)
+# configure a header file to pass some of the CMake settings
+# to the source code
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/config.h.in ${CMAKE_CURRENT_SOURCE_DIR}/src/config.h)
 
 # external dependencies
-find_package(Boost 1.80 COMPONENTS thread system log unit_test_framework REQUIRED)
+find_package(Boost 1.80 COMPONENTS unit_test_framework REQUIRED)
 find_package(OpenSSL REQUIRED)
-find_library(PQXX_LIB pqxx REQUIRED)
-find_library(PQ_LIB pq REQUIRED)
+
+# putting internal project repository LIBUH_DEP in a variable
+set(LIBUH_DEP "lib")
+add_subdirectory(${LIBUH_DEP})
 
 find_package(Git REQUIRED)
 if(GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/.git")
@@ -42,19 +48,18 @@ if(GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/.git")
     endif()
 endif()
 
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/config.h.in ${CMAKE_CURRENT_SOURCE_DIR}/src/config.h)
-
-add_subdirectory(lib)
-
-set(${PROJECT_NAME}_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/lib ${CMAKE_CURRENT_SOURCE_DIR}/src ${Boost_INCLUDE_DIRS} ${OPENSSL_INCLUDE_DIRS})
-set(${PROJECT_NAME}_LINK_LIBRARIES ${Boost_LIBRARIES} ${OPENSSL_LIBRARIES} ${PQXX_LIB} ${PQ_LIB})
+# configuring library dependencies for cmake and linker
+set(${PROJECT_NAME}_INCLUDE_DIRS ${PROJECT_BINARY_DIR} ${PROJECT_SOURCE_DIR}/${LIBUH_DEP})
+set(${PROJECT_NAME}_LINK_LIBRARIES uhLibSerialization uhLibProtocol ${OPENSSL_LIBRARIES})
 
 # adding all the .h files of the current project
-file(GLOB HEADER_FILE_LIST ${CMAKE_CURRENT_SOURCE_DIR}/src/*.h)
-
+file(GLOB HEADER_FILE_LIST
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/*.h)
 # adding all the .h files of the current project
-file(GLOB SOURCE_FILE_LIST ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp)
+file(GLOB SOURCE_FILE_LIST
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp)
 
+# creating a target executable
 add_executable(${PROJECT_NAME} ${HEADER_FILE_LIST} ${SOURCE_FILE_LIST})
 target_include_directories(${PROJECT_NAME} PRIVATE ${${PROJECT_NAME}_INCLUDE_DIRS})
 target_link_libraries(${PROJECT_NAME} PRIVATE ${${PROJECT_NAME}_LINK_LIBRARIES})

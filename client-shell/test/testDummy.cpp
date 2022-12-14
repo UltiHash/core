@@ -10,7 +10,7 @@
 #endif
 
 #include <boost/test/unit_test.hpp>
-#include <recomp_tree.h>
+#include <util/recomp_tree.h>
 
 
 // ------------- Tests Follow --------------

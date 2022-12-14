@@ -279,13 +279,10 @@ int main(int argc, char *argv[]) {
      */
     //read basic input pipe info
     std::string exeRun(argv[0]);
-    auto root_work_path = new std::filesystem::path{exeRun};
-    root_work_path->assign(root_work_path->parent_path());
-    //logging system
-    init_logging(std::filesystem::path{*root_work_path}.append("./UltiHash.log").string());
-    //first log that program started
-    INFO << "UltiHash started running..." << std::endl;
-    const std::string VERSION = std::to_string(uhClientCLI_VERSION_MAJOR) + "." + std::to_string(uhClientCLI_VERSION_MINOR);
+    auto root_work_path = std::filesystem::path{exeRun};
+    root_work_path.assign(root_work_path.parent_path());
+    INFO << "UltiHash started running...";
+    const std::string VERSION = PROJECT_VERSION;
     std::list<std::string> input_commands;
     std::vector<std::string> flags;
     for (unsigned int i = 1; i < static_cast<unsigned int>(argc); i++) {
@@ -353,61 +350,52 @@ int main(int argc, char *argv[]) {
                         }
                         decideOption+="write";
                     }
-                    //TODO: support multiple databases
-                    std::string db_request="Since you want to "+decideOption+" you need to specify the postgresql databases you want to use for the operation in the following form:\n"
-                                                                             "1. Target database server ip adress.\n"
-                                                                             "2. Target database server port.\n"
-                                                                             "3. Target database server username.\n"
-                                                                             "4. Target database server user password.\n"
-                                                                             "5. Target database server internal database name to write on.\n"
-                                                                             "6. Target database server internal database scheme to write on.\n"
-                                                                             "7. Target database server internal database table to write on.\n"
-                                                                             "If not existent in write mode, the schemes and tables will be created on the chosen internal database. Add steps 1 to 7 recursively under the first database to connect more databases.\n"
-                                                                             "\nNow enter the path to the database configuration file:\n";
-                    //print help text for database setup
-                    std::printf("%s", db_request.c_str());
+                }
 
-                    std::string read_db_config_str {};
-                    //user's custom config file
-                    std::getline(std::cin,read_db_config_str);
+                // configuration for the agency server
+                try {
+                    INFO << "connecting to the server";
+                    boost::asio::io_context io;
+                    std::stringstream s;
+                    s << PROJECT_NAME << " " << PROJECT_VERSION;
+                    uh::protocol::client_factory_config cf_config
+                            {
+                                    .hostname = "localhost",
+                                    .port = 0x5548,
+                                    .client_version = s.str()
+                            };
+                    uh::protocol::client_factory client_factory(io, cf_config);
+                    auto start = std::chrono::steady_clock::now();
+                    auto client = client_factory.create();
+                    auto end = std::chrono::steady_clock::now();
 
-                    if(not (std::filesystem::exists(read_db_config_str))){
-                        std::printf("%s", "The suggested file does not exist! Aborting!\n");
-                        return EXIT_FAILURE;
+                    // time measurement statistics for connecting to the agency server
+                    INFO << "Client-Agency Server Connection times: " << std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count() << " ns, "
+                        << std::chrono::duration_cast<std::chrono::microseconds>(end - start).count() << " µs, "
+                        << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << " ms, "
+                        << std::chrono::duration_cast<std::chrono::seconds>(end - start).count() << " sec\n";
+
+                    if (commands_todo.at("write")) {
+                        //write first
+                        std::cout << "writing...\n";
+                        Recompilation(true, input_commands, flag_check, *client);
                     }
-                    if(not (std::filesystem::is_regular_file(read_db_config_str))){
-                        std::printf("%s", "The suggested path is no file that we can read! Aborting!\n");
-                        return EXIT_FAILURE;
+                    if (commands_todo.at("read")) {
+                        //read second
+                        std::cout << "reading...\n";
+                        Recompilation(false, input_commands, flag_check, *client);
                     }
-                    db_config_file_path = read_db_config_str;
+                    if (commands_todo.at("cd")) {
+                        throw std::runtime_error("cd function is not implemented yet!");
+                    }
+                    if (commands_todo.at("ls")) {
+                        throw std::runtime_error("ls function is not implemented yet!");
+                    }
                 }
-                if (commands_todo.at("write")) {
-                    //write first
-                    std::cout << "writing...\n";
-                    Recompilation(db_config_file_path,true,input_commands,flag_check);
-                }
-                if (commands_todo.at("read")) {
-                    //read second
-                    std::cout << "reading...\n";
-                    Recompilation(db_config_file_path,false,input_commands,flag_check);
-                }
-                if (commands_todo.at("cd")) {
-                    //cd third
-                    std::cout << "cd...\n";
-                    std::cout << "Function is not implemented yet!" << std::endl;
-                    /*
-                     * Recompilation r=Recompilation(db_config_file_path,true,input_commands,flag_check);
-                    r.cd();
-                     */
-                }
-                if (commands_todo.at("ls")) {
-                    //ls fourth
-                    std::cout << "ls...\n";
-                    std::cout << "Function is not implemented yet!" << std::endl;
-                    /*
-                     * Recompilation r=Recompilation(db_config_file_path,true,input_commands,flag_check);
-                    r.ls();
-                     */
+                catch (const std::exception& exc)
+                {
+                    ERROR << exc.what();
+                    return EXIT_FAILURE;
                 }
             }
         }
