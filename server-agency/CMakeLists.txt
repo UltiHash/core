@@ -21,7 +21,7 @@ if(GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/.git")
     string(STRIP "${GIT_REPOSITORY}" PROJECT_REPOSITORY)
 
     # Update submodules as needed
-    option(UPDATE_GIT_SUBMODULE "Check submodules during build" ON)
+    option(UPDATE_GIT_SUBMODULE "Update submodules during build" OFF)
     if(UPDATE_GIT_SUBMODULE)
         message(STATUS "Updating submodules...")
         execute_process(COMMAND ${GIT_EXECUTABLE} submodule update --init --recursive --remote
