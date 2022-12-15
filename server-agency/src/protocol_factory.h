@@ -15,7 +15,7 @@ class protocol_factory : public util::factory<uh::protocol::protocol>
 public:
     protocol_factory(uh::protocol::client_pool& clients);
 
-    virtual std::unique_ptr<uh::protocol::protocol> create() const override;
+    virtual std::unique_ptr<uh::protocol::protocol> create() override;
 
 private:
     uh::protocol::client_pool& m_clients;
