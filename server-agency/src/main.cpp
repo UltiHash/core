@@ -2,6 +2,8 @@
 #include <iostream>
 
 #include <net/server.h>
+#include <net/tls_server.h>
+#include <net/plain_socket.h>
 #include <protocol/client_factory.h>
 #include <logging/logging_boost.h>
 #include <config.hpp>
@@ -49,17 +51,25 @@ int main(int argc, const char** argv)
         s << PROJECT_NAME << " " << PROJECT_VERSION;
         uh::protocol::client_factory_config cf_config
         {
-            .hostname = "localhost",
-            .port = 12345,
             .client_version = s.str()
         };
 
-        uh::protocol::client_factory client_factory(io, cf_config);
+        uh::net::plain_socket_factory socket_factory(io, "localhost", 12345);
+        uh::protocol::client_factory client_factory(socket_factory, cf_config);
+
         uh::protocol::client_pool clients(client_factory, 10);
         uh::an::protocol_factory pf(clients);
-        uh::net::server srv(options.server().config(), pf);
 
-        srv.run();
+        if (!options.server().config().tls_chain.empty())
+        {
+            uh::net::tls_server srv(options.server().config(), pf);
+            srv.run();
+        }
+        else
+        {
+            uh::net::server srv(options.server().config(), pf);
+            srv.run();
+        }
     }
     catch (const std::exception& e)
     {
