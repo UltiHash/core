@@ -3,6 +3,7 @@
 
 #include <options/basic_options.h>
 #include <options/server_options.h>
+#include "database_options.h"
 
 
 namespace uh::dbn
@@ -19,9 +20,11 @@ public:
 
     uh::options::basic_options& basic();
     uh::options::server_options& server();
+    uh::options::database_options& database();
 private:
     uh::options::basic_options m_basic;
     uh::options::server_options m_server;
+    uh::options::database_options m_database;
 };
 
 // ---------------------------------------------------------------------
