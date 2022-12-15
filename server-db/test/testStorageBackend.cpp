@@ -67,7 +67,7 @@ uh::dbn::db_config create_test_db_and_file(){
     write_input_test_file(c.test_input_filepath);
     write_input_test_file(c.test_input_filepath_2);
     uh::dbn::db_config config;
-    config.db_dir = test_db_dir;
+    config.db_root = test_db_dir;
     return config;
 }
 

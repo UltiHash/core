@@ -15,7 +15,7 @@ protocol_factory::protocol_factory(storage_backend& storage)
 
 // ---------------------------------------------------------------------
 
-std::unique_ptr<uh::protocol::protocol> protocol_factory::create() const
+std::unique_ptr<uh::protocol::protocol> protocol_factory::create()
 {
     return std::make_unique<protocol>(m_storage);
 }

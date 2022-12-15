@@ -7,16 +7,12 @@
 #include <openssl/sha.h>
 #include <logging/logging_boost.h>
 
+#include "db_config.h"
+
 
 namespace fs = boost::filesystem;
 
 namespace uh::dbn {
-
-// ---------------------------------------------------------------------
-
-    struct db_config{
-        fs::path db_dir = "./DB_ROOT";
-    };
 
 // ---------------------------------------------------------------------
 
@@ -115,8 +111,8 @@ namespace uh::dbn {
         dump_storage(const db_config &some_config):
         m_config(some_config)
         {
-            if(!(boost::filesystem::exists(some_config.db_dir))) {
-                std::string msg("Path does not exist: " + some_config.db_dir.string());
+            if(!(boost::filesystem::exists(some_config.db_root))) {
+                std::string msg("Path does not exist: " + some_config.db_root.string());
                 throw std::runtime_error(msg);
             }
         }

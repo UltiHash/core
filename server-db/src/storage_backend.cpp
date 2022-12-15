@@ -59,7 +59,7 @@ fs::path dump_storage::get_filepath_from_hash(const std::vector<char> &hash){
     DEBUG << "---------------------------";
 
 
-   fs::path filepath = this->m_config.db_dir / hash_string;
+   fs::path filepath = this->m_config.db_root / hash_string;
    return filepath;
 }
 

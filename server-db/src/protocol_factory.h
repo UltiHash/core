@@ -17,7 +17,7 @@ class protocol_factory : public util::factory<uh::protocol::protocol>
 public:
     protocol_factory(storage_backend& storage);
 
-    virtual std::unique_ptr<uh::protocol::protocol> create() const override;
+    virtual std::unique_ptr<uh::protocol::protocol> create() override;
 
 private:
     storage_backend& m_storage;
