@@ -36,17 +36,17 @@ namespace uh::util{
             }
         };
 
-        void add(const char* bin,std::size_t len){
+        std::list<radix_custom*> add(const char* bin,std::size_t len,std::list<radix_custom*> enlist = std::list<radix_custom*>{}){
             if(len>0) {
                 std::shared_lock lock(local_m);
-                bool has_children = false;
-                for(const auto & i : children){
-                    if(i != nullptr){
-                        has_children = true;
-                        break;
-                    }
-                }
                 if (length == 0) {
+                    bool has_children = false;
+                    for(const auto & i : children){
+                        if(i != nullptr){
+                            has_children = true;
+                            break;
+                        }
+                    }
                     if (!has_children) {
                         if (data != nullptr)std::free(data);
                         data = static_cast<char *>(malloc(sizeof(char) * len));
@@ -54,25 +54,36 @@ namespace uh::util{
                         length = len;
                     } else {
                         if(children[(unsigned char)bin[0]] == nullptr){
+                            // no match, create new node for rest of string
                             children[(unsigned char)bin[0]] = (struct radix_custom*) std::malloc(sizeof(struct radix_custom));
-                            new (children[(unsigned char)bin[0]]) radix_custom(bin,len);
+                            new (children[(unsigned char)bin[0]]) radix_custom();
+                            auto enlist_append = children[(unsigned char)bin[0]] -> add(bin,len,enlist);
+                            enlist.push_back(children[(unsigned char)bin[0]]);
+                            enlist.splice(enlist.end(),enlist_append);
+                            return enlist;
                         }
                         else{
-                            children[(unsigned char)bin[0]]->add(bin,len);
+                            enlist.push_back(children[(unsigned char)bin[0]]);
+                            return children[(unsigned char)bin[0]]->add(bin,len,enlist);
                         }
                     }
                 } else {
+                    std::size_t i = 0;
+                    for(; i < std::min(length,len); i++){
+                        if(data[i] != bin[i])break;
+                    }
+                    if(i == length-1){
+                        // direct match, direct redirect
+                        enlist.push_back(this);
+                        return enlist;
+                    }
+                    if(i < length - 1){
+                        // match string is too short -> split node
+                        // TODO: notifiy changes
 
+                    }
                 }
             }
-        }
-
-        radix_custom(const char* bin,std::size_t len):radix_custom(){
-            add(bin,len);
-        }
-
-        explicit radix_custom(const std::string& in):radix_custom(){
-            add(in.data(),in.length());
         }
 
         void destroy_recursive(){
