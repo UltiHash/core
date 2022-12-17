@@ -14,30 +14,76 @@
 // a Trie
 // Since we have 26 english letters, we need
 // 26 children per node
-#define N 256
+
 #include "conceptTypes/conceptTypes.h"
 #include "logging/logging_boost.h"
+#include <shared_mutex>
 
-typedef struct radix_custom radix_custom;
+namespace uh::util{
+#define N 256
+    typedef struct radix_custom radix_custom;
 
-struct radix_custom {
-    // The Trie Node Structure
-    // Each node has N children, starting from the root
-    // and a flag to check if it's a leaf node
-    std::list<std::tuple<unsigned char,std::shared_ptr<radix_custom>>> children;
-    char* data{}; // Storing for printing purposes only
-    std::size_t size{};
+    struct radix_custom {
+    protected:
+        radix_custom* children[N]{};
+        char* data{}; // Storing for printing purposes only
+        std::size_t length{};
+        std::shared_mutex local_m;
+    public:
+        radix_custom(){
+            for(auto & i : children){
+                i = nullptr;
+            }
+        };
 
-    radix_custom()=default;
+        void add(const char* bin,std::size_t len){
+            if(len>0) {
+                std::shared_lock lock(local_m);
+                bool has_children = false;
+                for(const auto & i : children){
+                    if(i != nullptr){
+                        has_children = true;
+                        break;
+                    }
+                }
+                if (length == 0) {
+                    if (!has_children) {
+                        if (data != nullptr)std::free(data);
+                        data = static_cast<char *>(malloc(sizeof(char) * len));
+                        std::memcpy(data, bin, len);
+                        length = len;
+                    } else {
+                        if(children[(unsigned char)bin[0]] == nullptr){
+                            children[(unsigned char)bin[0]] = (struct radix_custom*) std::malloc(sizeof(struct radix_custom));
+                            new (children[(unsigned char)bin[0]]) radix_custom(bin,len);
+                        }
+                        else{
+                            children[(unsigned char)bin[0]]->add(bin,len);
+                        }
+                    }
+                } else {
 
-    ~radix_custom(){
-        for(const auto &i:children){
-
+                }
+            }
         }
-        std::free(data);
-    }
-};
 
+        //template <typename Integer,
+        //              std::enable_if_t<std::is_integral<Integer>::value, bool> = true
+        //    >
+        radix_custom(const char* bin,std::size_t len){
+            for(auto & i : children){
+                i = nullptr;
+            }
+            add(bin,len);
+        }
+
+        explicit radix_custom(const std::string& in){
+            add(in.data(),in.length());
+        }
+    };
+}
+
+/*
 radix_custom* make_radix_custom(char data) {
     // Allocate memory for a radix_custom
     auto* node = (radix_custom*) calloc (1, sizeof(radix_custom));
@@ -247,6 +293,6 @@ void print_search(radix_custom* root, char* word) {
     else
         printf("Found!\n");
 }
-
+*/
 
 #endif //UHLIBCOMMON_RADIX_CUSTOM_H
