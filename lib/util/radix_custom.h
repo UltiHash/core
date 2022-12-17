@@ -80,6 +80,26 @@ namespace uh::util{
         explicit radix_custom(const std::string& in){
             add(in.data(),in.length());
         }
+
+        void destroy_recursive(){
+            for(auto & i : children){
+                if(i != nullptr){
+                    i -> destroy_recursive();
+                    delete i;
+                }
+            }
+        }
+
+        void destroy_recursive(char sub){
+            if(children[sub] != nullptr){
+                children[sub] -> destroy_recursive();
+                delete children[sub];
+            }
+        }
+
+        ~radix_custom(){
+            std::free(data);
+        }
     };
 }
 
