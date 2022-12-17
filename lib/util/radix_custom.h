@@ -67,17 +67,11 @@ namespace uh::util{
             }
         }
 
-        //template <typename Integer,
-        //              std::enable_if_t<std::is_integral<Integer>::value, bool> = true
-        //    >
-        radix_custom(const char* bin,std::size_t len){
-            for(auto & i : children){
-                i = nullptr;
-            }
+        radix_custom(const char* bin,std::size_t len):radix_custom(){
             add(bin,len);
         }
 
-        explicit radix_custom(const std::string& in){
+        explicit radix_custom(const std::string& in):radix_custom(){
             add(in.data(),in.length());
         }
 
@@ -93,7 +87,9 @@ namespace uh::util{
         void destroy_recursive(char sub){
             if(children[sub] != nullptr){
                 children[sub] -> destroy_recursive();
-                delete children[sub];
+                std::free(children[sub] -> data);
+                std::free(children[sub]);
+                children[sub] = nullptr;
             }
         }
 
