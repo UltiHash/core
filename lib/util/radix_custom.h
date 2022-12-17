@@ -28,7 +28,7 @@ namespace uh::util{
         radix_custom* children[N]{};
         char* data{}; // Storing for printing purposes only
         std::size_t length{};
-        std::shared_mutex local_m;
+        std::shared_mutex local_m{};
     public:
         radix_custom(){
             for(auto & i : children){
