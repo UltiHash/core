@@ -61,4 +61,8 @@ BOOST_AUTO_TEST_CASE( add_test )
     BOOST_CHECK(std::strncmp(t_nil2->child(' ')->data_blob()," World",6)==0);
     BOOST_CHECK(std::strncmp(t_nil2->child(' ')->child(' ')->data_blob()," of tomorrow!",13)==0);
     BOOST_CHECK(std::strncmp(t_nil2->child(' ')->child(' ')->child(' ')->data_blob()," I am superman!",15)==0);
+
+    std::vector<uh::trees::tree_radix_custom*> address_seq{t_nil2,t_nil2->child(' '),t_nil2->child(' ')->child(' '),
+                                                           t_nil2->child(' ')->child(' ')->child(' ')};
+    BOOST_CHECK_EQUAL_COLLECTIONS(address_list2.begin(),address_list2.end(),address_seq.begin(),address_seq.end());
 }

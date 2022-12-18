@@ -116,7 +116,6 @@ namespace uh::trees{
                         }
                         children[(unsigned char)lower_node[0]] = tmp;
                         enlist.push_back(tmp);
-                        enlist.push_back(this);
                         return enlist;
                     }
                 }
