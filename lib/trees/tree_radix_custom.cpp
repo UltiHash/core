@@ -53,7 +53,7 @@ uh::util::tree_radix_custom::add(const char *bin, std::size_t len, std::list<tre
                     }
                     else{
                         enlist.push_back(children[(unsigned char)bin[i+1]]);
-                        return children[(unsigned char)bin[i+1]]->add(bin+i+1,length-i,enlist);
+                        return children[(unsigned char)bin[i+1]]->add(bin+length,len-length,enlist);
                     }
                 }
                 // direct match, direct redirect
@@ -85,7 +85,7 @@ uh::util::tree_radix_custom::add(const char *bin, std::size_t len, std::list<tre
             }
         }
     }
-    else return enlist;
+    return enlist;
 }
 
 uh::util::tree_radix_custom *uh::util::tree_radix_custom::copy() {
@@ -164,6 +164,47 @@ void uh::util::tree_radix_custom::insert(uh::util::tree_radix_custom *in) {
             concat_string.pop_back();
         }
     }
+}
+
+std::tuple<std::list<uh::util::tree_radix_custom *>, std::size_t>
+uh::util::tree_radix_custom::search(const char *bin, std::size_t len,
+                                    std::tuple<std::list<tree_radix_custom *>, std::size_t> enlist) {
+    if(len>0){
+        if(length == 0){
+            if(!has_children() || children[(unsigned char)bin[0]] == nullptr){
+                return enlist;
+            }
+            else{
+                std::get<0>(enlist).push_back(this);
+                return children[(unsigned char)bin[0]] -> search(bin,len,enlist);
+            }
+        }
+        else{
+            std::size_t i = 0;
+            for(; i < std::min(length,len); i++){
+                if(data[i] != bin[i])break;
+            }
+            if(i == length-1){
+                if(len>length && children[(unsigned char)bin[i+1]] != nullptr){
+                    std::get<0>(enlist).push_back(children[(unsigned char)bin[i+1]]);
+                    std::get<1>(enlist)+=length;
+                    return children[(unsigned char)bin[i+1]]->search(bin+std::get<1>(enlist),length-i,enlist);
+                }
+                // direct match, direct redirect
+                std::get<0>(enlist).push_back(this);
+                std::get<1>(enlist)+=length;
+                return enlist;
+            }
+            if(i < length - 1){
+                if(i){
+                    std::get<0>(enlist).push_back(this);
+                    std::get<1>(enlist)+=i+1;
+                }
+                return enlist;
+            }
+        }
+    }
+    return enlist;
 }
 
 uh::util::tree_radix_custom::~tree_radix_custom() {
