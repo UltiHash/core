@@ -87,4 +87,15 @@ BOOST_AUTO_TEST_CASE( search_test )
     auto s_result2 = t_nil1.search("Hello Wor",9);
     BOOST_CHECK_EQUAL(std::get<0>(s_result2).size(),2);
     BOOST_CHECK_EQUAL(std::get<1>(s_result2),9);
+    //no fit
+    auto s_result3 = t_nil1.search("Bye Wor",7);
+    BOOST_CHECK_EQUAL(std::get<0>(s_result3).size(),0);
+    BOOST_CHECK_EQUAL(std::get<1>(s_result3),0);
+    //overfitting
+    auto s_result4 = t_nil1.search("Hello World of tomorrow! I am superman! Your saviour.",53);
+    BOOST_CHECK_EQUAL(std::get<0>(s_result4).size(),4);
+    BOOST_CHECK_EQUAL(std::get<1>(s_result4),39);
+
+    t_nil1->destroy_recursive();
+    delete t_nil1;
 }
