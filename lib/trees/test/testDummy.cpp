@@ -39,11 +39,18 @@ BOOST_AUTO_TEST_CASE( add_test )
     address_list1 = t_nil1.add("Hello World",11);
     BOOST_CHECK_EQUAL(&t_nil1 , address_list1.front());
 
-    //test overfitting and underfitting
+    //test overfitting
     uh::trees::tree_radix_custom *t_nil2=t_nil1.copy_recursive();
     auto address_list2=t_nil2->add("Hello World of tomorrow!",24);
     BOOST_CHECK(t_nil2->has_children());
     BOOST_CHECK_EQUAL(std::distance(address_list2.begin(),address_list2.end()),2);
     BOOST_CHECK(std::strncmp(t_nil2->data_blob(),"Hello World",11)==0);
     BOOST_CHECK(std::strncmp(t_nil2->child(' ')->data_blob()," of tomorrow!",13)==0);
+    //one more overfit
+    address_list2=t_nil2->add("Hello World of tomorrow! I am superman!",39);
+    BOOST_CHECK(t_nil2->has_children());
+    BOOST_CHECK_EQUAL(std::distance(address_list2.begin(),address_list2.end()),2);
+    BOOST_CHECK(std::strncmp(t_nil2->data_blob(),"Hello World",11)==0);
+    BOOST_CHECK(std::strncmp(t_nil2->child(' ')->data_blob()," of tomorrow!",13)==0);
+    BOOST_CHECK(std::strncmp(t_nil2->child(' ')->child(' ')->data_blob()," I am superman!",15)==0);
 }
