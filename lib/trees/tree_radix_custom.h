@@ -32,38 +32,13 @@ namespace uh::util{
 
         void destroy_recursive(char sub);
 
-        void insert(tree_radix_custom* in){
-            std::list<std::tuple<tree_radix_custom*,unsigned char>> concat_string;
-            concat_string.emplace_back(in,0);
-            while(!concat_string.empty()){
-                bool has_children = false;
-                for(unsigned char &i=std::get<1>(concat_string.back()); i<(unsigned char)N;i++){
-                    if(std::get<0>(concat_string.back())->children[i] != nullptr){
-                        has_children=true;
-                        concat_string.emplace_back(std::get<0>(concat_string.back())->children[i],0);
-                        break;
-                    }
-                }
-                if(!has_children){
-                    std::size_t concat_size{},start_step{};
-                    std::for_each(concat_string.cbegin(),concat_string.cend(),[&concat_size](auto in){
-                        concat_size+=std::get<0>(in) -> length;
-                    });
-                    char* concat_sequence = (char*) std::malloc(concat_size * sizeof(char));
-                    std::for_each(concat_string.cbegin(),concat_string.cend(),[&concat_sequence,&start_step](auto in){
-                        std::memcpy(concat_sequence+start_step,std::get<0>(in) -> data,std::get<0>(in) -> length);
-                        start_step+=std::get<0>(in) -> length;
-                    });
-                    (void) add(concat_sequence,concat_size);
-                    std::free(concat_sequence);
-                    concat_string.pop_back();
-                }
-            }
+        void insert(tree_radix_custom* in);
+
+        std::tuple<std::list<tree_radix_custom*>,std::size_t> search(const char* bin, std::size_t len, std::tuple<std::list<tree_radix_custom*>,std::size_t> enlist = std::make_tuple(std::list<tree_radix_custom*>{},std::size_t{})){
+
         }
 
-        ~tree_radix_custom(){
-            std::free(data);
-        }
+        ~tree_radix_custom();
         //TODO: insert/merge radix tree and search and check search method and prefix pointer
     };
 }
