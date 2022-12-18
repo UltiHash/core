@@ -156,7 +156,7 @@ namespace uh::util{
         ~radix_custom(){
             std::free(data);
         }
-        //TODO: insert radix tree and search and check search method and prefix pointer
+        //TODO: insert/merge radix tree and search and check search method and prefix pointer
     };
 }
 
