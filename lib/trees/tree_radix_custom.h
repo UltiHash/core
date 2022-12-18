@@ -80,7 +80,7 @@ namespace uh::trees{
                                 new (tmp) tree_radix_custom();
                                 children[(unsigned char)bin[i+1]] = tmp;
                                 enlist.push_back(tmp);
-                                return tmp->add(bin+i+1,length-i,enlist);
+                                return tmp->add(bin+length,len-length,enlist);
                             }
                             else{
                                 enlist.push_back(children[(unsigned char)bin[i+1]]);
