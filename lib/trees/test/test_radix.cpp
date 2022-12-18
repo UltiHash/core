@@ -6,7 +6,7 @@
 #ifdef SINGLE_TEST_RUNNER
 #define BOOST_TEST_NO_MAIN
 #else
-#define BOOST_TEST_MODULE "uhLibTrees Dummy Tests"
+#define BOOST_TEST_MODULE "uhLibTrees Radix Tests"
 #endif
 
 #include <boost/test/unit_test.hpp>
@@ -84,7 +84,7 @@ BOOST_AUTO_TEST_CASE( search_test )
     address_list1 = t_nil1.add("Hello World of tomorrow! I am superman!",39);
     address_list1 = t_nil1.add("Hello",5);
     //underfitting
-    s_result = t_nil1.search("Hello Wor",9);
-    BOOST_CHECK_EQUAL(std::get<0>(s_result).size(),2);
-    BOOST_CHECK_EQUAL(std::get<1>(s_result),9);
+    auto s_result2 = t_nil1.search("Hello Wor",9);
+    BOOST_CHECK_EQUAL(std::get<0>(s_result2).size(),2);
+    BOOST_CHECK_EQUAL(std::get<1>(s_result2),9);
 }
