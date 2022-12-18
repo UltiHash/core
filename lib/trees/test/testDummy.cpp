@@ -56,12 +56,14 @@ BOOST_AUTO_TEST_CASE( add_test )
     //test underfitting
     address_list2=t_nil2->add("Hello",5);
     BOOST_CHECK(t_nil2->has_children());
-    BOOST_CHECK_EQUAL(std::distance(address_list2.begin(),address_list2.end()),4);
+    BOOST_CHECK_EQUAL(std::distance(address_list2.begin(),address_list2.end()),1);
     BOOST_CHECK(std::strncmp(t_nil2->data_blob(),"Hello",5)==0);
     BOOST_CHECK(std::strncmp(t_nil2->child(' ')->data_blob()," World",6)==0);
     BOOST_CHECK(std::strncmp(t_nil2->child(' ')->child(' ')->data_blob()," of tomorrow!",13)==0);
     BOOST_CHECK(std::strncmp(t_nil2->child(' ')->child(' ')->child(' ')->data_blob()," I am superman!",15)==0);
 
+    //check if sequence is returned
+    address_list2=t_nil2->add("Hello World of tomorrow! I am superman!",39);
     std::vector<uh::trees::tree_radix_custom*> address_seq{t_nil2,t_nil2->child(' '),t_nil2->child(' ')->child(' '),
                                                            t_nil2->child(' ')->child(' ')->child(' ')};
     BOOST_CHECK_EQUAL_COLLECTIONS(address_list2.begin(),address_list2.end(),address_seq.begin(),address_seq.end());
