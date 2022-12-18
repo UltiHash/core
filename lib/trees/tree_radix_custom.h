@@ -69,7 +69,7 @@ namespace uh::trees{
                     }
                 } else {
                     std::size_t i = 0;
-                    for(; i < std::min(length,len); i++){
+                    for(; i < std::min(length,len)-1; i++){
                         if(data[i] != bin[i])break;
                     }
                     if(i == length-1){
@@ -131,7 +131,7 @@ namespace uh::trees{
 
         tree_radix_custom *copy_recursive() {
             auto* tmp = copy();
-            for(unsigned char i=0;i<(unsigned char)N;i++){
+            for(unsigned short i=0;i<(unsigned short)N;i++){
                 if(children[i] != nullptr){
                     tmp->children[i] = children[i]->copy_recursive();
                 }
@@ -173,7 +173,7 @@ namespace uh::trees{
             concat_string.emplace_back(in,0);
             while(!concat_string.empty()){
                 bool has_children = false;
-                for(unsigned char &i=std::get<1>(concat_string.back()); i<(unsigned char)N;i++){
+                for(unsigned char &i=std::get<1>(concat_string.back()); i<(unsigned short)N-1;i++){
                     if(std::get<0>(concat_string.back())->children[i] != nullptr){
                         has_children=true;
                         concat_string.emplace_back(std::get<0>(concat_string.back())->children[i],0);
