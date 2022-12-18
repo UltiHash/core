@@ -19,7 +19,7 @@ namespace uh::trees{
         char* data{}; // Storing for printing purposes only
         std::size_t length{};
     public:
-        tree_radix_custom();;
+        tree_radix_custom();
 
         std::list<tree_radix_custom*> add(const char* bin, std::size_t len, std::list<tree_radix_custom*> enlist = std::list<tree_radix_custom*>{});
 
