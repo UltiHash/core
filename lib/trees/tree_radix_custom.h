@@ -41,6 +41,10 @@ namespace uh::trees{
             return data;
         }
 
+        tree_radix_custom * child(char i){
+            return children[(unsigned char)i];
+        }
+
         std::list<tree_radix_custom *>
         add(const char *bin, std::size_t len, std::list<tree_radix_custom *> enlist = std::list<tree_radix_custom *>{}) {
             if(len>0) {

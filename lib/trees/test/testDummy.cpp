@@ -33,13 +33,17 @@ BOOST_AUTO_TEST_CASE( constructor )
 BOOST_AUTO_TEST_CASE( add_test )
 {
     uh::trees::tree_radix_custom t_nil1;
-    auto adress_list1 = t_nil1.add("Hello World",11);
-    BOOST_CHECK_EQUAL(&t_nil1 , adress_list1.front());
+    auto address_list1 = t_nil1.add("Hello World",11);
+    BOOST_CHECK_EQUAL(&t_nil1 , address_list1.front());
     //identical match
-    adress_list1 = t_nil1.add("Hello World",11);
-    BOOST_CHECK_EQUAL(&t_nil1 , adress_list1.front());
+    address_list1 = t_nil1.add("Hello World",11);
+    BOOST_CHECK_EQUAL(&t_nil1 , address_list1.front());
 
     //test overfitting and underfitting
     uh::trees::tree_radix_custom *t_nil2=t_nil1.copy_recursive();
-    t_nil2->add("Hello World of tomorrow!",24);
+    auto address_list2=t_nil2->add("Hello World of tomorrow!",24);
+    BOOST_CHECK(t_nil2->has_children());
+    BOOST_CHECK_EQUAL(std::distance(address_list2.begin(),address_list2.end()),2);
+    BOOST_CHECK(std::strncmp(t_nil2->data_blob(),"Hello World",11)==0);
+    BOOST_CHECK(std::strncmp(t_nil2->child(' ')->data_blob()," of tomorrow!",13)==0);
 }
