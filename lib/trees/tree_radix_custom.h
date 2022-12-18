@@ -87,7 +87,7 @@ namespace uh::trees{
                                 return tmp->add(bin+length,len-length,enlist);
                             }
                             else{
-                                enlist.push_back(children[(unsigned char)bin[length]]);
+                                enlist.push_back(this);
                                 return children[(unsigned char)bin[length]]->add(bin+length,len-length,enlist);
                             }
                         }
