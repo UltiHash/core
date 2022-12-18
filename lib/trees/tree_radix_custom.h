@@ -100,9 +100,9 @@ namespace uh::trees{
                         // TODO: notifiy changes in case of depending tree
                         char* higher_node = (char*) std::malloc((i+1)*sizeof(char));
                         std::memcpy(higher_node,data,i);
-                        length = i+1;
                         char* lower_node = (char*) std::malloc((length-(i+1))*sizeof(char));
                         std::memcpy(lower_node,data+i+1,length-(i+1));
+                        length = i+1;
                         std::free(data);
                         data = higher_node;
                         auto* tmp = (struct tree_radix_custom*) std::malloc(sizeof(struct tree_radix_custom));
