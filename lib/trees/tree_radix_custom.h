@@ -131,7 +131,7 @@ namespace uh::trees{
 
         tree_radix_custom *copy_recursive() {
             auto* tmp = copy();
-            unsigned char i=0;
+            unsigned short i=0;
             for(;i<(unsigned short)N;i++){
                 if(children[i] != nullptr){
                     tmp->children[i] = children[i]->copy_recursive();
