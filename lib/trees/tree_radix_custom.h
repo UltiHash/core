@@ -98,18 +98,19 @@ namespace uh::trees{
                     if(i < length - 1){
                         // match string is too short -> split node
                         // TODO: notifiy changes in case of depending tree
-                        char* higher_node = (char*) std::malloc((i+1)*sizeof(char));
-                        std::memcpy(higher_node,data,i+1);
-                        char* lower_node = (char*) std::malloc((length-(i+1))*sizeof(char));
-                        std::memcpy(lower_node,data+i+1,length-(i+1));
-                        length = i+1;
+                        std::size_t higher_val=i+1,lower_val=length-(i+1);
+                        char* higher_node = (char*) std::malloc(higher_val*sizeof(char));
+                        std::memcpy(higher_node,data,higher_val);
+                        char* lower_node = (char*) std::malloc(lower_val*sizeof(char));
+                        std::memcpy(lower_node,data+higher_val,lower_val);
+                        length = higher_val;
                         std::free(data);
                         data = higher_node;
                         auto* tmp = (struct tree_radix_custom*) std::malloc(sizeof(struct tree_radix_custom));
                         new (tmp) tree_radix_custom();
                         std::memcpy(tmp->children,this->children,N * sizeof(tree_radix_custom*));
                         tmp->data = lower_node;
-                        tmp->length = length-(i+1);
+                        tmp->length = lower_val;
                         for(auto & i1 : children){
                             i1 = nullptr;
                         }
