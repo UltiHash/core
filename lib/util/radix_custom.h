@@ -73,6 +73,10 @@ namespace uh::util{
                         if(data[i] != bin[i])break;
                     }
                     if(i == length-1){
+                        if(len>length){
+                            //insert deeper node directly on rest
+
+                        }
                         // direct match, direct redirect
                         enlist.push_back(this);
                         return enlist;
@@ -80,7 +84,25 @@ namespace uh::util{
                     if(i < length - 1){
                         // match string is too short -> split node
                         // TODO: notifiy changes
-
+                        char* higher_node = (char*) std::malloc(i*sizeof(char));
+                        std::memcpy(higher_node,data,i);
+                        length = i;
+                        char* lower_node = (char*) std::malloc((length-i)*sizeof(char));
+                        std::memcpy(lower_node,data+i+1,length-i);
+                        std::free(data);
+                        data = higher_node;
+                        auto* tmp = (struct radix_custom*) std::malloc(sizeof(struct radix_custom));
+                        new (tmp) radix_custom();
+                        std::memcpy(tmp->children,this->children,N * sizeof(radix_custom*));
+                        tmp->data = lower_node;
+                        tmp->length = length-i;
+                        for(auto & i1 : children){
+                            i1 = nullptr;
+                        }
+                        children[(unsigned char)lower_node[0]] = tmp;
+                        enlist.push_back(tmp);
+                        enlist.push_back(this);
+                        return enlist;
                     }
                 }
             }
