@@ -10,10 +10,11 @@
 #endif
 
 #include <boost/test/unit_test.hpp>
-#include <logging/logging_boost.h>
+#include <trees/tree_radix_custom.h>
 
 // ------------- Tests Follow --------------
-BOOST_AUTO_TEST_CASE( dummy )
+BOOST_AUTO_TEST_CASE( constructor )
 {
-    BOOST_CHECK(true);
+    uh::trees::tree_radix_custom t;
+    BOOST_CHECK(!t.has_children());
 }
