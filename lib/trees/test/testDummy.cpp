@@ -20,10 +20,12 @@ BOOST_AUTO_TEST_CASE( constructor )
     uh::trees::tree_radix_custom t_hello("Hello World");
     BOOST_CHECK(!t_hello.has_children());
     BOOST_CHECK(t_hello.size()==11);
+    BOOST_CHECK(std::strncmp(t_hello.data_blob(),"Hello World",11)==0);
 
     char input[11];
     std::strcpy(input,"Hello World");
     uh::trees::tree_radix_custom t_hello2(input,11);
     BOOST_CHECK(!t_hello2.has_children());
     BOOST_CHECK(t_hello2.size()==11);
+    BOOST_CHECK(std::strncmp(t_hello2.data_blob(),"Hello World",11)==0);
 }
