@@ -33,6 +33,10 @@ namespace uh::trees{
             add(s.data(),s.length());
         }
 
+        std::size_t size(){
+            return length;
+        }
+
         std::list<tree_radix_custom *>
         add(const char *bin, std::size_t len, std::list<tree_radix_custom *> enlist = std::list<tree_radix_custom *>{}) {
             if(len>0) {
