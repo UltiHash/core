@@ -42,7 +42,8 @@ namespace uh::util{
                         return enlist;
                     }
                     else{
-
+                        std::get<0>(enlist).push_back(this);
+                        return children[(unsigned char)bin[0]] -> search(bin,len,enlist);
                     }
                 }
                 else{
