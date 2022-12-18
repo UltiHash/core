@@ -79,7 +79,7 @@ namespace uh::trees{
                                 auto* tmp = (struct tree_radix_custom*) std::malloc(sizeof(struct tree_radix_custom));
                                 new (tmp) tree_radix_custom();
                                 children[(unsigned char)bin[i+1]] = tmp;
-                                enlist.push_back(tmp);
+                                enlist.push_back(this);
                                 return tmp->add(bin+length,len-length,enlist);
                             }
                             else{
