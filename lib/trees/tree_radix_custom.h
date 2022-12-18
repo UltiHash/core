@@ -218,18 +218,14 @@ namespace uh::trees{
                 }
                 else{
                     std::size_t i = 0;
-                    for(; i < std::min(length,len); i++){
+                    for(; i < std::min(length,len)-1; i++){
                         if(data[i] != bin[i])break;
                     }
                     if(i == length-1){
-                        if(len>length && children[(unsigned char)bin[i+1]] != nullptr){
-                            std::get<0>(enlist).push_back(children[(unsigned char)bin[i+1]]);
-                            std::get<1>(enlist)+=length;
-                            return children[(unsigned char)bin[i+1]]->search(bin+std::get<1>(enlist),length-i,enlist);
-                        }
-                        // direct match, direct redirect
                         std::get<0>(enlist).push_back(this);
                         std::get<1>(enlist)+=length;
+                        if(len>length && children[(unsigned char)bin[length]] != nullptr)return children[(unsigned char)bin[length]]->search(bin+length,len-length,enlist);
+                        // direct match, direct redirect
                         return enlist;
                     }
                     if(i < length - 1){
