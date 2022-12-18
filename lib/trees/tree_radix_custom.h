@@ -5,7 +5,9 @@
 #ifndef UHLIBCOMMON_TREE_RADIX_CUSTOM_H
 #define UHLIBCOMMON_TREE_RADIX_CUSTOM_H
 
-#include "tree_base.h"
+#include "conceptTypes/conceptTypes.h"
+#include "logging/logging_boost.h"
+#include <shared_mutex>
 
 namespace uh::util{
 #define N 256
