@@ -4,14 +4,14 @@
 
 #include "tree_radix_custom.h"
 
-uh::util::tree_radix_custom::tree_radix_custom() {
+uh::trees::tree_radix_custom::tree_radix_custom() {
     for(auto & i : children){
         i = nullptr;
     }
 }
 
-std::list<uh::util::tree_radix_custom *>
-uh::util::tree_radix_custom::add(const char *bin, std::size_t len, std::list<tree_radix_custom *> enlist) {
+std::list<uh::trees::tree_radix_custom *>
+uh::trees::tree_radix_custom::add(const char *bin, std::size_t len, std::list<tree_radix_custom *> enlist) {
     if(len>0) {
         if (length == 0) {
             if (!has_children()) {
@@ -88,7 +88,7 @@ uh::util::tree_radix_custom::add(const char *bin, std::size_t len, std::list<tre
     return enlist;
 }
 
-uh::util::tree_radix_custom *uh::util::tree_radix_custom::copy() {
+uh::trees::tree_radix_custom *uh::trees::tree_radix_custom::copy() {
     auto* tmp = (struct tree_radix_custom*) std::malloc(sizeof(struct tree_radix_custom));
     new (tmp) tree_radix_custom();
     std::memcpy(tmp->children,this->children,N * sizeof(tree_radix_custom*));
@@ -98,7 +98,7 @@ uh::util::tree_radix_custom *uh::util::tree_radix_custom::copy() {
     return tmp;
 }
 
-uh::util::tree_radix_custom *uh::util::tree_radix_custom::copy_recursive() {
+uh::trees::tree_radix_custom *uh::trees::tree_radix_custom::copy_recursive() {
     auto* tmp = copy();
     for(unsigned char i=0;i<(unsigned char)N;i++){
         if(children[i] != nullptr){
@@ -108,7 +108,7 @@ uh::util::tree_radix_custom *uh::util::tree_radix_custom::copy_recursive() {
     return tmp;
 }
 
-void uh::util::tree_radix_custom::destroy_recursive() {
+void uh::trees::tree_radix_custom::destroy_recursive() {
     for(auto & i : children){
         if(i != nullptr){
             i -> destroy_recursive();
@@ -117,7 +117,7 @@ void uh::util::tree_radix_custom::destroy_recursive() {
     }
 }
 
-void uh::util::tree_radix_custom::destroy_recursive(char sub) {
+void uh::trees::tree_radix_custom::destroy_recursive(char sub) {
     if(children[sub] != nullptr){
         children[sub] -> destroy_recursive();
         std::free(children[sub] -> data);
@@ -126,7 +126,7 @@ void uh::util::tree_radix_custom::destroy_recursive(char sub) {
     }
 }
 
-bool uh::util::tree_radix_custom::has_children() {
+bool uh::trees::tree_radix_custom::has_children() {
     bool has_children = false;
     for(const auto & i : children){
         if(i != nullptr){
@@ -137,7 +137,7 @@ bool uh::util::tree_radix_custom::has_children() {
     return has_children;
 }
 
-void uh::util::tree_radix_custom::insert(uh::util::tree_radix_custom *in) {
+void uh::trees::tree_radix_custom::insert(uh::trees::tree_radix_custom *in) {
     std::list<std::tuple<tree_radix_custom*,unsigned char>> concat_string;
     concat_string.emplace_back(in,0);
     while(!concat_string.empty()){
@@ -166,8 +166,8 @@ void uh::util::tree_radix_custom::insert(uh::util::tree_radix_custom *in) {
     }
 }
 
-std::tuple<std::list<uh::util::tree_radix_custom *>, std::size_t>
-uh::util::tree_radix_custom::search(const char *bin, std::size_t len,
+std::tuple<std::list<uh::trees::tree_radix_custom *>, std::size_t>
+uh::trees::tree_radix_custom::search(const char *bin, std::size_t len,
                                     std::tuple<std::list<tree_radix_custom *>, std::size_t> enlist) {
     if(len>0){
         if(length == 0){
@@ -207,6 +207,6 @@ uh::util::tree_radix_custom::search(const char *bin, std::size_t len,
     return enlist;
 }
 
-uh::util::tree_radix_custom::~tree_radix_custom() {
+uh::trees::tree_radix_custom::~tree_radix_custom() {
     std::free(data);
 }

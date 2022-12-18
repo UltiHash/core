@@ -9,7 +9,7 @@
 #include "logging/logging_boost.h"
 #include <shared_mutex>
 
-namespace uh::util{
+namespace uh::trees{
 #define N 256
     typedef struct tree_radix_custom tree_radix_custom;
 
