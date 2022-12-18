@@ -13,16 +13,8 @@ uh::util::tree_radix_custom::tree_radix_custom() {
 std::list<uh::util::tree_radix_custom *>
 uh::util::tree_radix_custom::add(const char *bin, std::size_t len, std::list<tree_radix_custom *> enlist) {
     if(len>0) {
-        std::shared_lock lock(local_m);
         if (length == 0) {
-            bool has_children = false;
-            for(const auto & i : children){
-                if(i != nullptr){
-                    has_children = true;
-                    break;
-                }
-            }
-            if (!has_children) {
+            if (!has_children()) {
                 if (data != nullptr)std::free(data);
                 data = static_cast<char *>(malloc(sizeof(char) * len));
                 std::memcpy(data, bin, len);
@@ -132,6 +124,17 @@ void uh::util::tree_radix_custom::destroy_recursive(char sub) {
         std::free(children[sub]);
         children[sub] = nullptr;
     }
+}
+
+bool uh::util::tree_radix_custom::has_children() {
+    bool has_children = false;
+    for(const auto & i : children){
+        if(i != nullptr){
+            has_children = true;
+            break;
+        }
+    }
+    return has_children;
 }
 
 void uh::util::tree_radix_custom::insert(uh::util::tree_radix_custom *in) {

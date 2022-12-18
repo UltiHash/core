@@ -18,7 +18,6 @@ namespace uh::util{
         tree_radix_custom* children[N]{};
         char* data{}; // Storing for printing purposes only
         std::size_t length{};
-        std::shared_mutex local_m{};
     public:
         tree_radix_custom();;
 
@@ -34,8 +33,23 @@ namespace uh::util{
 
         void insert(tree_radix_custom* in);
 
-        std::tuple<std::list<tree_radix_custom*>,std::size_t> search(const char* bin, std::size_t len, std::tuple<std::list<tree_radix_custom*>,std::size_t> enlist = std::make_tuple(std::list<tree_radix_custom*>{},std::size_t{})){
+        bool has_children();
 
+        std::tuple<std::list<tree_radix_custom*>,std::size_t> search(const char* bin, std::size_t len, std::tuple<std::list<tree_radix_custom*>,std::size_t> enlist = std::make_tuple(std::list<tree_radix_custom*>{},std::size_t{})){
+            if(len>0){
+                if(length == 0){
+                    if(!has_children() || children[(unsigned char)bin[0]] == nullptr){
+                        return enlist;
+                    }
+                    else{
+
+                    }
+                }
+                else{
+
+                }
+            }
+            else return enlist;
         }
 
         ~tree_radix_custom();
