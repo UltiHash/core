@@ -75,7 +75,17 @@ namespace uh::util{
                     if(i == length-1){
                         if(len>length){
                             //insert deeper node directly on rest
-
+                            if(children[(unsigned char)bin[i+1]] == nullptr){
+                                auto* tmp = (struct radix_custom*) std::malloc(sizeof(struct radix_custom));
+                                new (tmp) radix_custom();
+                                children[(unsigned char)bin[i+1]] = tmp;
+                                enlist.push_back(tmp);
+                                return tmp->add(bin+i+1,length-i,enlist);
+                            }
+                            else{
+                                enlist.push_back(children[(unsigned char)bin[i+1]]);
+                                return children[(unsigned char)bin[i+1]]->add(bin+i+1,length-i,enlist);
+                            }
                         }
                         // direct match, direct redirect
                         enlist.push_back(this);
