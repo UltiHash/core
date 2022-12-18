@@ -5,9 +5,6 @@
 #ifndef UHLIBCOMMON_RADIX_CUSTOM_H
 #define UHLIBCOMMON_RADIX_CUSTOM_H
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 
 // The number of children for each node
 // We will construct a N-ary tree and make it
@@ -116,6 +113,26 @@ namespace uh::util{
                     }
                 }
             }
+        }
+
+        radix_custom* copy(){
+            auto* tmp = (struct radix_custom*) std::malloc(sizeof(struct radix_custom));
+            new (tmp) radix_custom();
+            std::memcpy(tmp->children,this->children,N * sizeof(radix_custom*));
+            tmp->data = (char*) std::malloc(length*sizeof(char));
+            std::memcpy(tmp->data,data,length);
+            tmp->length=length;
+            return tmp;
+        }
+
+        radix_custom* copy_recursive(){
+            auto* tmp = copy();
+            for(unsigned char i=0;i<(unsigned char)N;i++){
+                if(children[i] != nullptr){
+                    tmp->children[i] = children[i]->copy_recursive();
+                }
+            }
+            return tmp;
         }
 
         void destroy_recursive(){
