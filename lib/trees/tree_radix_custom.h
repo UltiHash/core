@@ -153,12 +153,12 @@ namespace uh::trees{
             }
         }
 
-        void destroy_recursive(char sub) {
-            if(children[sub] != nullptr){
-                children[sub] -> destroy_recursive();
-                std::free(children[sub] -> data);
-                std::free(children[sub]);
-                children[sub] = nullptr;
+        void destroy_recursive(char child) {
+            if(children[child] != nullptr){
+                children[child] -> destroy_recursive();
+                delete children[child];
+                std::free(children[child]);
+                children[child] = nullptr;
             }
         }
 
