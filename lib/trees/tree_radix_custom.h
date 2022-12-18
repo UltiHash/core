@@ -131,11 +131,11 @@ namespace uh::trees{
 
         tree_radix_custom *copy_recursive() {
             auto* tmp = copy();
-            unsigned short i=0;
-            for(;i<(unsigned short)N;i++){
+            for(unsigned char i=0;;i++){
                 if(children[i] != nullptr){
                     tmp->children[i] = children[i]->copy_recursive();
                 }
+                if(i==(unsigned char)N)break;
             }
             return tmp;
         }
@@ -174,12 +174,13 @@ namespace uh::trees{
             concat_string.emplace_back(in,0);
             while(!concat_string.empty()){
                 bool has_children = false;
-                for(unsigned char &i=std::get<1>(concat_string.back()); i<(unsigned short)N;i++){
+                for(unsigned char &i=std::get<1>(concat_string.back());;i++){
                     if(std::get<0>(concat_string.back())->children[i] != nullptr){
                         has_children=true;
                         concat_string.emplace_back(std::get<0>(concat_string.back())->children[i],0);
                         break;
                     }
+                    if(i==(unsigned char)N)break;
                 }
                 if(!has_children){
                     std::size_t concat_size{},start_step{};
