@@ -2,38 +2,29 @@
 // Created by benjamin-elias on 17.12.22.
 //
 
-#ifndef UHLIBCOMMON_RADIX_CUSTOM_H
-#define UHLIBCOMMON_RADIX_CUSTOM_H
+#ifndef UHLIBCOMMON_TREE_RADIX_CUSTOM_H
+#define UHLIBCOMMON_TREE_RADIX_CUSTOM_H
 
-
-// The number of children for each node
-// We will construct a N-ary tree and make it
-// a Trie
-// Since we have 26 english letters, we need
-// 26 children per node
-
-#include "conceptTypes/conceptTypes.h"
-#include "logging/logging_boost.h"
-#include <shared_mutex>
+#include "tree_base.h"
 
 namespace uh::util{
 #define N 256
-    typedef struct radix_custom radix_custom;
+    typedef struct tree_radix_custom tree_radix_custom;
 
-    struct radix_custom {
+    struct tree_radix_custom {
     protected:
-        radix_custom* children[N]{};
+        tree_radix_custom* children[N]{};
         char* data{}; // Storing for printing purposes only
         std::size_t length{};
         std::shared_mutex local_m{};
     public:
-        radix_custom(){
+        tree_radix_custom(){
             for(auto & i : children){
                 i = nullptr;
             }
         };
 
-        std::list<radix_custom*> add(const char* bin,std::size_t len,std::list<radix_custom*> enlist = std::list<radix_custom*>{}){
+        std::list<tree_radix_custom*> add(const char* bin, std::size_t len, std::list<tree_radix_custom*> enlist = std::list<tree_radix_custom*>{}){
             if(len>0) {
                 std::shared_lock lock(local_m);
                 if (length == 0) {
@@ -52,8 +43,8 @@ namespace uh::util{
                     } else {
                         if(children[(unsigned char)bin[0]] == nullptr){
                             // no match, create new node for rest of string
-                            children[(unsigned char)bin[0]] = (struct radix_custom*) std::malloc(sizeof(struct radix_custom));
-                            new (children[(unsigned char)bin[0]]) radix_custom();
+                            children[(unsigned char)bin[0]] = (struct tree_radix_custom*) std::malloc(sizeof(struct tree_radix_custom));
+                            new (children[(unsigned char)bin[0]]) tree_radix_custom();
                             auto enlist_append = children[(unsigned char)bin[0]] -> add(bin,len,enlist);
                             enlist.push_back(children[(unsigned char)bin[0]]);
                             enlist.splice(enlist.end(),enlist_append);
@@ -73,8 +64,8 @@ namespace uh::util{
                         if(len>length){
                             //insert deeper node directly on rest
                             if(children[(unsigned char)bin[i+1]] == nullptr){
-                                auto* tmp = (struct radix_custom*) std::malloc(sizeof(struct radix_custom));
-                                new (tmp) radix_custom();
+                                auto* tmp = (struct tree_radix_custom*) std::malloc(sizeof(struct tree_radix_custom));
+                                new (tmp) tree_radix_custom();
                                 children[(unsigned char)bin[i+1]] = tmp;
                                 enlist.push_back(tmp);
                                 return tmp->add(bin+i+1,length-i,enlist);
@@ -98,9 +89,9 @@ namespace uh::util{
                         std::memcpy(lower_node,data+i+1,length-i);
                         std::free(data);
                         data = higher_node;
-                        auto* tmp = (struct radix_custom*) std::malloc(sizeof(struct radix_custom));
-                        new (tmp) radix_custom();
-                        std::memcpy(tmp->children,this->children,N * sizeof(radix_custom*));
+                        auto* tmp = (struct tree_radix_custom*) std::malloc(sizeof(struct tree_radix_custom));
+                        new (tmp) tree_radix_custom();
+                        std::memcpy(tmp->children,this->children,N * sizeof(tree_radix_custom*));
                         tmp->data = lower_node;
                         tmp->length = length-i;
                         for(auto & i1 : children){
@@ -115,17 +106,17 @@ namespace uh::util{
             }
         }
 
-        radix_custom* copy(){
-            auto* tmp = (struct radix_custom*) std::malloc(sizeof(struct radix_custom));
-            new (tmp) radix_custom();
-            std::memcpy(tmp->children,this->children,N * sizeof(radix_custom*));
+        tree_radix_custom* copy(){
+            auto* tmp = (struct tree_radix_custom*) std::malloc(sizeof(struct tree_radix_custom));
+            new (tmp) tree_radix_custom();
+            std::memcpy(tmp->children,this->children,N * sizeof(tree_radix_custom*));
             tmp->data = (char*) std::malloc(length*sizeof(char));
             std::memcpy(tmp->data,data,length);
             tmp->length=length;
             return tmp;
         }
 
-        radix_custom* copy_recursive(){
+        tree_radix_custom* copy_recursive(){
             auto* tmp = copy();
             for(unsigned char i=0;i<(unsigned char)N;i++){
                 if(children[i] != nullptr){
@@ -153,11 +144,11 @@ namespace uh::util{
             }
         }
 
-        ~radix_custom(){
+        ~tree_radix_custom(){
             std::free(data);
         }
         //TODO: insert/merge radix tree and search and check search method and prefix pointer
     };
 }
 
-#endif //UHLIBCOMMON_RADIX_CUSTOM_H
+#endif //UHLIBCOMMON_TREE_RADIX_CUSTOM_H
