@@ -29,6 +29,10 @@ namespace uh::trees{
             add(bin,len);
         }
 
+        tree_radix_custom(const std::string &s):tree_radix_custom(){
+            add(s.data(),s.length());
+        }
+
         std::list<tree_radix_custom *>
         add(const char *bin, std::size_t len, std::list<tree_radix_custom *> enlist = std::list<tree_radix_custom *>{}) {
             if(len>0) {
