@@ -79,16 +79,16 @@ namespace uh::trees{
                     if(i == length-1){
                         if(len>length){
                             //insert deeper node directly on rest
-                            if(children[(unsigned char)bin[i+1]] == nullptr){
+                            if(children[(unsigned char)bin[length]] == nullptr){
                                 auto* tmp = (struct tree_radix_custom*) std::malloc(sizeof(struct tree_radix_custom));
                                 new (tmp) tree_radix_custom();
-                                children[(unsigned char)bin[i+1]] = tmp;
+                                children[(unsigned char)bin[length]] = tmp;
                                 enlist.push_back(this);
                                 return tmp->add(bin+length,len-length,enlist);
                             }
                             else{
-                                enlist.push_back(children[(unsigned char)bin[i+1]]);
-                                return children[(unsigned char)bin[i+1]]->add(bin+length,len-length,enlist);
+                                enlist.push_back(children[(unsigned char)bin[length]]);
+                                return children[(unsigned char)bin[length]]->add(bin+length,len-length,enlist);
                             }
                         }
                         // direct match, direct redirect
