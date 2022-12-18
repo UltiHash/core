@@ -205,7 +205,7 @@ namespace uh::trees{
 
         std::tuple<std::list<tree_radix_custom *>, std::size_t>
         search(const char *bin, std::size_t len,
-                                             std::tuple<std::list<tree_radix_custom *>, std::size_t> enlist) {
+                                             std::tuple<std::list<tree_radix_custom *>, std::size_t> enlist=std::tuple<std::list<tree_radix_custom *>, std::size_t>{}) {
             if(len>0){
                 if(length == 0){
                     if(!has_children() || children[(unsigned char)bin[0]] == nullptr){

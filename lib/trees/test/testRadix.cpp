@@ -73,5 +73,18 @@ BOOST_AUTO_TEST_CASE( add_test )
 
 BOOST_AUTO_TEST_CASE( search_test )
 {
-
+    uh::trees::tree_radix_custom t_nil1;
+    //check search on empty tree
+    auto s_result = t_nil1.search("Hello Wor",9);
+    BOOST_CHECK_EQUAL(std::get<0>(s_result).size(),0);
+    BOOST_CHECK_EQUAL(std::get<1>(s_result),0);
+    //check search on filled tree
+    auto address_list1 = t_nil1.add("Hello World",11);
+    address_list1 = t_nil1.add("Hello World of tomorrow!",24);
+    address_list1 = t_nil1.add("Hello World of tomorrow! I am superman!",39);
+    address_list1 = t_nil1.add("Hello",5);
+    //underfitting
+    s_result = t_nil1.search("Hello Wor",9);
+    BOOST_CHECK_EQUAL(std::get<0>(s_result).size(),2);
+    BOOST_CHECK_EQUAL(std::get<1>(s_result),9);
 }
