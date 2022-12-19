@@ -78,7 +78,6 @@ namespace uh::trees{
                         else i++;
                     }
                     if(i==0){
-                        //TODO: check if children paths already exist, use add; merge if length of child nodes is also 0
                         auto* tmp = (struct tree_radix_custom*) std::malloc(sizeof(struct tree_radix_custom));
                         new (tmp) tree_radix_custom();
                         std::memcpy(tmp->children,this->children,N * sizeof(tree_radix_custom*));
@@ -113,7 +112,6 @@ namespace uh::trees{
                     }
                     if(i < length - 1){
                         // match string is too short -> split node
-                        // TODO: notifiy changes in case of depending tree
                         std::size_t higher_val=i+1,lower_val=length-(i+1);
                         char* higher_node = (char*) std::malloc(higher_val*sizeof(char));
                         std::memcpy(higher_node,data,higher_val);
