@@ -196,6 +196,7 @@ namespace uh::trees{
                     if(std::get<0>(concat_string.back())->children[i] != nullptr){
                         has_children=true;
                         concat_string.emplace_back(std::get<0>(concat_string.back())->children[i],0);
+                        i++;
                         break;
                     }
                     if(i==(unsigned char)(N-1))break;
