@@ -51,16 +51,17 @@ namespace uh::trees{
                 if (length == 0) {
                     if (!has_children()) {
                         if (data != nullptr)std::free(data);
-                        data = (char*)malloc(sizeof(char) * len);
-                        std::memcpy(data, bin, len);
+                        //data = (char*)malloc(sizeof(char) * len);
+                        data = new char[len];
+                        std::memcpy(data, bin, len);//TODO: copy error here
                         length = len;
                         enlist.push_back(this);
                         return enlist;
                     } else {
                         if(children[(unsigned char)bin[0]] == nullptr){
                             // no match, create new node for rest of string
-                            children[(unsigned char)bin[0]] = (struct tree_radix_custom*) std::malloc(sizeof(struct tree_radix_custom));
-                            new (children[(unsigned char)bin[0]]) tree_radix_custom();
+                            children[(unsigned char)bin[0]] = new tree_radix_custom();//(struct tree_radix_custom*) std::malloc(sizeof(struct tree_radix_custom));
+                            //new (children[(unsigned char)bin[0]]) tree_radix_custom();
                             auto enlist_append = children[(unsigned char)bin[0]] -> add(bin,len,enlist);
                             enlist.push_back(this);
                             enlist.splice(enlist.end(),enlist_append);
@@ -79,7 +80,7 @@ namespace uh::trees{
                     }
                     if(i==0){
                         auto* tmp = (struct tree_radix_custom*) std::malloc(sizeof(struct tree_radix_custom));
-                        new (tmp) tree_radix_custom();
+                        //new (tmp) tree_radix_custom();
                         std::memcpy(tmp->children,this->children,N * sizeof(tree_radix_custom*));
                         for(auto & i1 : children){
                             i1 = nullptr;
@@ -95,8 +96,8 @@ namespace uh::trees{
                         if(len>length){
                             //insert deeper node directly on rest
                             if(children[(unsigned char)bin[length]] == nullptr){
-                                auto* tmp = (struct tree_radix_custom*) std::malloc(sizeof(struct tree_radix_custom));
-                                new (tmp) tree_radix_custom();
+                                auto* tmp = new tree_radix_custom();//(struct tree_radix_custom*) std::malloc(sizeof(struct tree_radix_custom));
+                                //new (tmp) tree_radix_custom();
                                 children[(unsigned char)bin[length]] = tmp;
                                 enlist.push_back(this);
                                 return tmp->add(bin+length,len-length,enlist);
@@ -113,15 +114,15 @@ namespace uh::trees{
                     if(i < length - 1){
                         // match string is too short -> split node
                         std::size_t higher_val=i+1,lower_val=length-(i+1);
-                        char* higher_node = (char*) std::malloc(higher_val*sizeof(char));
+                        char* higher_node = new char[higher_val];//(char*) std::malloc(higher_val*sizeof(char));
                         std::memcpy(higher_node,data,higher_val);
-                        char* lower_node = (char*) std::malloc(lower_val*sizeof(char));
+                        char* lower_node = new char[lower_val];//(char*) std::malloc(lower_val*sizeof(char));
                         std::memcpy(lower_node,data+higher_val,lower_val);
                         length = higher_val;
                         std::free(data);
                         data = higher_node;
                         auto* tmp = (struct tree_radix_custom*) std::malloc(sizeof(struct tree_radix_custom));
-                        new (tmp) tree_radix_custom();
+                        //new (tmp) tree_radix_custom();
                         std::memcpy(tmp->children,this->children,N * sizeof(tree_radix_custom*));
                         tmp->data = lower_node;
                         tmp->length = lower_val;
@@ -139,7 +140,7 @@ namespace uh::trees{
 
         tree_radix_custom *copy() {
             auto* tmp = (struct tree_radix_custom*) std::malloc(sizeof(struct tree_radix_custom));
-            new (tmp) tree_radix_custom();
+            //new (tmp) tree_radix_custom();
             std::memcpy(tmp->children,this->children,N * sizeof(tree_radix_custom*));
             tmp->data = (char*) std::malloc(length*sizeof(char));
             std::memcpy(tmp->data,data,length);
@@ -206,7 +207,7 @@ namespace uh::trees{
                     std::for_each(concat_string.cbegin(),concat_string.cend(),[&concat_size](auto in){
                         concat_size+=std::get<0>(in) -> length;
                     });
-                    char* concat_sequence = (char*) std::malloc(concat_size * sizeof(char));
+                    char* concat_sequence = new char[concat_size];//(char*) std::malloc(concat_size * sizeof(char));
                     std::for_each(concat_string.cbegin(),concat_string.cend(),[&concat_sequence,&start_step](auto in){
                         std::memcpy(concat_sequence+start_step,std::get<0>(in) -> data,std::get<0>(in) -> length);
                         start_step+=std::get<0>(in) -> length;
