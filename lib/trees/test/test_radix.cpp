@@ -73,7 +73,8 @@ BOOST_AUTO_TEST_CASE( add_test )
     BOOST_CHECK_EQUAL(t_nil2->size(),0);
     BOOST_CHECK(std::strncmp(t_nil2->child('B')->data_blob(),"Bye",3)==0);
     BOOST_CHECK(std::strncmp(t_nil2->child('H')->data_blob(),"Hello",5)==0);
-    BOOST_CHECK_EQUAL(address_list2.front(),t_nil2->child('B'));
+    std::vector<uh::trees::tree_radix_custom*> address_seq2{&t_nil2,t_nil2->child('B')};
+    BOOST_CHECK_EQUAL_COLLECTIONS(address_list2.begin(),address_list2.end(),address_seq2.begin(),address_seq2.end());
 
     t_nil2->destroy_recursive();
     delete t_nil2;

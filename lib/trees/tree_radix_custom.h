@@ -51,7 +51,7 @@ namespace uh::trees{
                 if (length == 0) {
                     if (!has_children()) {
                         if (data != nullptr)std::free(data);
-                        data = static_cast<char *>(malloc(sizeof(char) * len));
+                        data = (char*)malloc(sizeof(char) * len);
                         std::memcpy(data, bin, len);
                         length = len;
                         enlist.push_back(this);
