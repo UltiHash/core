@@ -67,6 +67,14 @@ BOOST_AUTO_TEST_CASE( add_test )
     std::vector<uh::trees::tree_radix_custom*> address_seq{t_nil2,t_nil2->child(' '),t_nil2->child(' ')->child(' '),
                                                            t_nil2->child(' ')->child(' ')->child(' ')};
     BOOST_CHECK_EQUAL_COLLECTIONS(address_list2.begin(),address_list2.end(),address_seq.begin(),address_seq.end());
+
+    //check 0 fit integration
+    address_list2=t_nil2->add("Bye",3);
+    BOOST_CHECK_EQUAL(t_nil2->size(),0);
+    BOOST_CHECK(std::strncmp(t_nil2->child('B')->data_blob(),"Bye",3)==0);
+    BOOST_CHECK(std::strncmp(t_nil2->child('H')->data_blob(),"Hello",5)==0);
+    BOOST_CHECK_EQUAL(address_list2.front(),t_nil2->child('B'));
+
     t_nil2->destroy_recursive();
     delete t_nil2;
 }

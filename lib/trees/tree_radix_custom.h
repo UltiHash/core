@@ -62,21 +62,37 @@ namespace uh::trees{
                             children[(unsigned char)bin[0]] = (struct tree_radix_custom*) std::malloc(sizeof(struct tree_radix_custom));
                             new (children[(unsigned char)bin[0]]) tree_radix_custom();
                             auto enlist_append = children[(unsigned char)bin[0]] -> add(bin,len,enlist);
-                            enlist.push_back(children[(unsigned char)bin[0]]);
+                            enlist.push_back(this);
                             enlist.splice(enlist.end(),enlist_append);
                             return enlist;
                         }
                         else{
-                            enlist.push_back(children[(unsigned char)bin[0]]);
+                            enlist.push_back(this);
                             return children[(unsigned char)bin[0]]->add(bin,len,enlist);
                         }
                     }
                 } else {
                     std::size_t i = 0;
-                    for(; i < std::min(length,len)-1; i++){
+                    for(; i < std::min(length,len)-1; ){
                         if(data[i] != bin[i])break;
+                        else i++;
                     }
-                    if(i == length-1 && i>0){
+                    if(i==0){
+                        //TODO: check if children paths already exist, use add; merge if length of child nodes is also 0
+                        auto* tmp = (struct tree_radix_custom*) std::malloc(sizeof(struct tree_radix_custom));
+                        new (tmp) tree_radix_custom();
+                        std::memcpy(tmp->children,this->children,N * sizeof(tree_radix_custom*));
+                        for(auto & i1 : children){
+                            i1 = nullptr;
+                        }
+                        tmp->data=data;
+                        data= nullptr;
+                        tmp->length=length;
+                        length=0;
+                        children[(unsigned char)tmp->data[0]]=tmp;
+                        return add(bin,len,enlist);
+                    }
+                    if(i == length-1){
                         if(len>length){
                             //insert deeper node directly on rest
                             if(children[(unsigned char)bin[length]] == nullptr){
@@ -94,23 +110,6 @@ namespace uh::trees{
                         // direct match, direct redirect
                         enlist.push_back(this);
                         return enlist;
-                    }
-                    if(i==0){
-                        //TODO: check if children paths already exist, use add; merge if length of child nodes is also 0
-                        auto* tmp = (struct tree_radix_custom*) std::malloc(sizeof(struct tree_radix_custom));
-                        new (tmp) tree_radix_custom();
-                        std::memcpy(tmp->children,this->children,N * sizeof(tree_radix_custom*));
-                        for(auto & i1 : children){
-                            i1 = nullptr;
-                        }
-                        tmp->data=data;
-                        data= nullptr;
-                        tmp->length=length;
-                        length=0;
-                        children[(unsigned char)tmp->data[0]]=tmp;
-                        auto* tmp2 = (struct tree_radix_custom*) std::malloc(sizeof(struct tree_radix_custom));
-                        new (tmp2) tree_radix_custom(bin,len);
-                        children[(unsigned char)bin[0]]=tmp2;
                     }
                     if(i < length - 1){
                         // match string is too short -> split node
@@ -235,8 +234,9 @@ namespace uh::trees{
                 }
                 else{
                     std::size_t i = 0;
-                    for(; i < std::min(length,len)-1; i++){
+                    for(; i < std::min(length,len)-1; ){
                         if(data[i] != bin[i])break;
+                        else i++;
                     }
                     if(i == length-1){
                         std::get<0>(enlist).push_back(this);
