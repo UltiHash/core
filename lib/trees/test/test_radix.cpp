@@ -96,6 +96,24 @@ BOOST_AUTO_TEST_CASE( search_test )
     BOOST_CHECK_EQUAL(std::get<0>(s_result4).size(),4);
     BOOST_CHECK_EQUAL(std::get<1>(s_result4),39);
 
-    t_nil1->destroy_recursive();
-    delete t_nil1;
+    t_nil1.destroy_recursive();
+}
+
+BOOST_AUTO_TEST_CASE( insert_test )
+{
+    uh::trees::tree_radix_custom t_nil1;
+    uh::trees::tree_radix_custom t_nil2;
+    //check search on empty tree
+    //check search on filled tree
+    auto address_list1 = t_nil1.add("Hello World",11);
+    address_list1 = t_nil1.add("Hello World of tomorrow!",24);
+    address_list1 = t_nil1.add("Hello World of tomorrow! I am superman!",39);
+    address_list1 = t_nil1.add("Hello",5);
+
+    auto address_list2 = t_nil2.add("Hello World",11);
+    address_list2 = t_nil2.add("Bye World of tomorrow!",22);
+    address_list2 = t_nil2.add("Hello World of yesterday! I am superman!",40);
+    address_list2 = t_nil1.add("Bye",3);
+
+    t_nil1.insert(&t_nil2);
 }
