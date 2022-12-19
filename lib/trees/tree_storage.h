@@ -2,8 +2,8 @@
 // Created by benjamin-elias on 19.12.22.
 //
 
-#ifndef UHLIBCOMMON_TREE_RADIX_CUSTOM_H
-#define UHLIBCOMMON_TREE_RADIX_CUSTOM_H
+#ifndef UHLIBCOMMON_TREE_STORAGE_H
+#define UHLIBCOMMON_TREE_STORAGE_H
 
 #include "conceptTypes/conceptTypes.h"
 #include "logging/logging_boost.h"
@@ -15,13 +15,13 @@ namespace uh::trees{
 
     struct tree_storage {
     protected:
-        tree_storage* children[N]{};//deeper blocks
-        std::vector<bool> available_store_chunks{};
-        std::size_t size{};
+        tree_storage* children[N]{};//deeper tree storage blocks and folders
+        std::size_t size[N]{};
     public:
         tree_storage() {
-            available_store_chunks.reserve(N);
-
+            for(auto & i1 : size){
+                i1 = 0;
+            }
             for(auto & i : children){
                 i = nullptr;
             }
@@ -34,4 +34,4 @@ namespace uh::trees{
     };
 }
 
-#endif //UHLIBCOMMON_TREE_RADIX_CUSTOM_H
+#endif //UHLIBCOMMON_TREE_STORAGE_H
