@@ -76,7 +76,7 @@ namespace uh::trees{
                     for(; i < std::min(length,len)-1; i++){
                         if(data[i] != bin[i])break;
                     }
-                    if(i == length-1){
+                    if(i == length-1 && i>0){
                         if(len>length){
                             //insert deeper node directly on rest
                             if(children[(unsigned char)bin[length]] == nullptr){
@@ -96,7 +96,7 @@ namespace uh::trees{
                         return enlist;
                     }
                     if(i==0){
-                        //TODO: check if children paths already exist, use add
+                        //TODO: check if children paths already exist, use add; merge if length of child nodes is also 0
                         auto* tmp = (struct tree_radix_custom*) std::malloc(sizeof(struct tree_radix_custom));
                         new (tmp) tree_radix_custom();
                         std::memcpy(tmp->children,this->children,N * sizeof(tree_radix_custom*));
