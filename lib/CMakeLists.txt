@@ -18,6 +18,7 @@ add_subdirectory(protocol)
 add_subdirectory(numbers)
 add_subdirectory(util)
 add_subdirectory(serialization)
+add_subdirectory(trees)
 
 if(WITH_DBSUPPORT)
     add_subdirectory(dbSupport)
