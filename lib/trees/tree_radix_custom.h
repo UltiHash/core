@@ -29,11 +29,11 @@ namespace uh::trees{
             add(bin,len);
         }
 
-        tree_radix_custom(const std::string &s):tree_radix_custom(){
+        explicit tree_radix_custom(const std::string &s):tree_radix_custom(){
             add(s.data(),s.length());
         }
 
-        std::size_t size(){
+        [[nodiscard]] std::size_t size() const{
             return length;
         }
 
