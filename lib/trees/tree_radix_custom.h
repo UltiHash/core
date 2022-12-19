@@ -153,7 +153,7 @@ namespace uh::trees{
                 if(children[i] != nullptr){
                     tmp->children[i] = children[i]->copy_recursive();
                 }
-                if(i==(unsigned char)N)break;
+                if(i==(unsigned char)(N-1))break;
             }
             return tmp;
         }
@@ -198,7 +198,7 @@ namespace uh::trees{
                         concat_string.emplace_back(std::get<0>(concat_string.back())->children[i],0);
                         break;
                     }
-                    if(i==(unsigned char)N)break;
+                    if(i==(unsigned char)(N-1))break;
                 }
                 if(!has_children){
                     std::size_t concat_size{},start_step{};
