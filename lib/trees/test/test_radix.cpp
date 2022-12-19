@@ -105,9 +105,9 @@ BOOST_AUTO_TEST_CASE( search_test )
     BOOST_CHECK_EQUAL(std::get<0>(s_result4).size(),4);
     BOOST_CHECK_EQUAL(std::get<1>(s_result4),39);
     //search no fit
-    auto s_result4 = t_nil1.search("No Wor",6);
-    BOOST_CHECK_EQUAL(std::get<0>(s_result4).size(),0);
-    BOOST_CHECK_EQUAL(std::get<1>(s_result4),0);
+    auto s_result5 = t_nil1.search("No Wor",6);
+    BOOST_CHECK_EQUAL(std::get<0>(s_result5).size(),0);
+    BOOST_CHECK_EQUAL(std::get<1>(s_result5),0);
 
     t_nil1.destroy_recursive();
 }
