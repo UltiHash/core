@@ -95,22 +95,16 @@ namespace uh::trees{
                     if(i == length-1){
                         if(len>length){
                             //insert deeper node directly on rest
-                            char* bin_cpy = new char[len-length];
-                            std::memcpy(bin_cpy,bin+length,len-length);
                             if(children[(unsigned char)bin[length]] == nullptr){
                                 auto* tmp = new tree_radix_custom();//(struct tree_radix_custom*) std::malloc(sizeof(struct tree_radix_custom));
                                 //new (tmp) tree_radix_custom();
                                 children[(unsigned char)bin[length]] = tmp;
                                 enlist.push_back(this);
-                                auto out = tmp->add(bin_cpy,len-length,enlist);
-                                std::free(bin_cpy);
-                                return out;
+                                return tmp->add(bin+length,len-length,enlist);
                             }
                             else{
                                 enlist.push_back(this);
-                                auto out=children[(unsigned char)bin[length]]->add(bin_cpy,len-length,enlist);
-                                std::free(bin_cpy);
-                                return out;
+                                return children[(unsigned char)bin[length]]->add(bin+length,len-length,enlist);
                             }
                         }
                         // direct match, direct redirect
@@ -250,13 +244,7 @@ namespace uh::trees{
                     if(i == length-1){
                         std::get<0>(enlist).push_back(this);
                         std::get<1>(enlist)+=length;
-                        if(len>length && children[(unsigned char)bin[length]] != nullptr){
-                            char* bin_cpy = new char[len-length];
-                            std::memcpy(bin_cpy,bin+length,len-length);
-                            auto out=children[(unsigned char)bin[length]]->search(bin+length,len-length,enlist);
-                            std::free(bin_cpy);
-                            return out;
-                        }
+                        if(len>length && children[(unsigned char)bin[length]] != nullptr)return children[(unsigned char)bin[length]]->search(bin+length,len-length,enlist);
                         // direct match, direct redirect
                         return enlist;
                     }
