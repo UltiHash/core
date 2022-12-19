@@ -126,7 +126,7 @@ BOOST_AUTO_TEST_CASE( insert_test )
     auto address_list2 = t_nil2.add("Hello World",11);
     address_list2 = t_nil2.add("Bye World of tomorrow!",22);
     address_list2 = t_nil2.add("Hello World of yesterday! I am superman!",40);
-    address_list2 = t_nil1.add("Bye",3);
+    address_list2 = t_nil2.add("Bye",3);
 
     t_nil1.insert(&t_nil2);
 
