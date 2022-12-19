@@ -45,6 +45,7 @@ namespace uh::trees{
             return children[(unsigned char)i];
         }
 
+        //add some string into the radix tree, returning the tree nodes where it was compressed and stored along the way
         std::list<tree_radix_custom *>
         add(const char *bin, std::size_t len, std::list<tree_radix_custom *> enlist = std::list<tree_radix_custom *>{}) {
             if(len>0) {
@@ -137,7 +138,7 @@ namespace uh::trees{
             }
             return enlist;
         }
-
+        //copy one node without children
         tree_radix_custom *copy() {
             auto* tmp = (struct tree_radix_custom*) std::malloc(sizeof(struct tree_radix_custom));
             //new (tmp) tree_radix_custom();
@@ -147,7 +148,7 @@ namespace uh::trees{
             tmp->length=length;
             return tmp;
         }
-
+        //copy recursive on one node
         tree_radix_custom *copy_recursive() {
             auto* tmp = copy();
             for(unsigned char i=0;;i++){
@@ -158,7 +159,7 @@ namespace uh::trees{
             }
             return tmp;
         }
-
+        //destroy sub structure of node to prevent memory leaks before deleting the node itself
         void destroy_recursive() {
             for(auto & i : children){
                 if(i != nullptr){
@@ -167,7 +168,7 @@ namespace uh::trees{
                 }
             }
         }
-
+        //destroy one child recursively if it exists
         void destroy_recursive(char child) {
             if(children[child] != nullptr){
                 children[child] -> destroy_recursive();
@@ -176,7 +177,7 @@ namespace uh::trees{
                 children[child] = nullptr;
             }
         }
-
+        //check if the structure has children
         bool has_children() {
             bool has_children = false;
             for(const auto & i : children){
@@ -187,7 +188,10 @@ namespace uh::trees{
             }
             return has_children;
         }
-
+        /*
+         * insert another node and all children strings to this root node, scan through all combined strings,
+         * that are formed from the root to every child node; and finally copy all contents of the incoming node to "this"
+         */
         void insert(tree_radix_custom *in) {
             std::list<std::tuple<tree_radix_custom*,unsigned char>> concat_string;
             concat_string.emplace_back(in,0);
@@ -218,7 +222,10 @@ namespace uh::trees{
                 }
             }
         }
-
+        /*
+         * search through this node and return the matching pathway and the depth until the incoming string fit the
+         * internals of the node
+         */
         std::tuple<std::list<tree_radix_custom *>, std::size_t>
         search(const char *bin, std::size_t len,
                                              std::tuple<std::list<tree_radix_custom *>, std::size_t> enlist=std::tuple<std::list<tree_radix_custom *>, std::size_t>{}) {
