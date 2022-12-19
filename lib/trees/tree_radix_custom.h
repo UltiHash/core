@@ -95,6 +95,23 @@ namespace uh::trees{
                         enlist.push_back(this);
                         return enlist;
                     }
+                    if(i==0){
+                        //TODO: check if children paths already exist, use add
+                        auto* tmp = (struct tree_radix_custom*) std::malloc(sizeof(struct tree_radix_custom));
+                        new (tmp) tree_radix_custom();
+                        std::memcpy(tmp->children,this->children,N * sizeof(tree_radix_custom*));
+                        for(auto & i1 : children){
+                            i1 = nullptr;
+                        }
+                        tmp->data=data;
+                        data= nullptr;
+                        tmp->length=length;
+                        length=0;
+                        children[(unsigned char)tmp->data[0]]=tmp;
+                        auto* tmp2 = (struct tree_radix_custom*) std::malloc(sizeof(struct tree_radix_custom));
+                        new (tmp2) tree_radix_custom(bin,len);
+                        children[(unsigned char)bin[0]]=tmp2;
+                    }
                     if(i < length - 1){
                         // match string is too short -> split node
                         // TODO: notifiy changes in case of depending tree
