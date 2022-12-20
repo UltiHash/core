@@ -192,7 +192,7 @@ namespace uh::trees {
                 }
                 if(std::get<1>(children[min_pos]) == nullptr){
                     std::string ref_name{boost::algorithm::hex(std::string(reinterpret_cast<const char *>(min_pos), 1))};
-                    std::string new_node_name = combined_path.string().substr(2,4) + ref_name;
+                    std::string new_node_name = combined_path.string().substr(2,4) + ref_name;//get hex of latter folder name indexer
                     std::filesystem::path new_node_dir = combined_path/new_node_name;
                     std::filesystem::create_directories(new_node_dir);
                     std::get<1>(children[min_pos]) = new tree_storage(new_node_dir);
@@ -201,6 +201,29 @@ namespace uh::trees {
                 out_vec.insert(out_vec.cbegin(),min_pos);
                 std::get<0>(children[min_pos]) += total_size;
                 return out_vec;
+            }
+        }
+
+        std::vector<unsigned char> read(const std::vector<unsigned char> &block_code){
+            if(block_code.size()>5){
+                //size encoding is not reached yet, read along tree path
+                if(std::get<1>(children[block_code[0]]) == nullptr){
+                    std::string not_found((const char*)block_code.data(),block_code.size());
+                    DEBUG << "<Block error trace>: Block code "+boost::algorithm::hex(not_found)+" could not be found in storage tree \""+combined_path.string()+"\".";
+                    return std::vector<unsigned char>{};
+                }
+                else{
+                    std::vector<unsigned char> sub_block_code{block_code.cbegin()+1,block_code.cend()};
+                    std::vector<unsigned char> out_vec = std::get<1>(children[block_code[0]])->read(sub_block_code);
+                    if(out_vec.empty()){
+                        std::string not_found((const char*)block_code.data(),block_code.size());
+                        DEBUG << "<Block error trace on return>: Block code "+boost::algorithm::hex(not_found)+" could not be found in storage tree \""+combined_path.string()+"\".";
+                    }
+                    return out_vec;
+                }
+            }
+            else{
+                //the block code should have a size of 5; one chunk index and 4 bytes of encoding for the offset
             }
         }
 
