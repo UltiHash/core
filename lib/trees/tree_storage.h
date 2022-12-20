@@ -100,8 +100,8 @@ namespace uh::trees {
                     size[i] = std::filesystem::file_size(chunk);
                 } else size[i] = 0;
 
-                s_tmp = std::string(combined_path.c_str() + 2, combined_path.c_str() + 4);
-                s_tmp += boost::algorithm::hex(std::string(reinterpret_cast<const char *>(i), 1));
+                s_tmp = std::string(combined_path.filename().c_str() + 2, combined_path.filename().c_str() + 4);
+                s_tmp += boost::algorithm::hex(std::string{(char)*s_tmp2.begin()});
                 std::filesystem::path deeper_tree = combined_path / s_tmp;
                 //check if sub folder in tree exists
                 if (std::filesystem::exists(deeper_tree)) {
