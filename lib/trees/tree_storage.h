@@ -89,7 +89,7 @@ namespace uh::trees {
                 }
             combined_path = root;
             if (!valid_root) {
-                combined_path /= "/0000";
+                combined_path /= "0000";
             }
             std::filesystem::create_directories(combined_path);
             for (unsigned char i = 0;; i++) {
