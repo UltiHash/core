@@ -25,7 +25,7 @@ namespace uh::trees{
         std::filesystem::path combined_path{};
 
         //returns wrapped string
-        std::string prefix_wrap(std::size_t input_size){
+        static std::string prefix_wrap(std::size_t input_size){
             std::bitset<64> h_bit{input_size};
             unsigned char total_bit_count{};
             //counting max bits
@@ -109,9 +109,31 @@ namespace uh::trees{
             return s;
         }
 
-        //write a string and get a reference string back
-        std::string write(const std::string& input){
-
+        //write a string and get size of written block representation and a reference string back
+        std::tuple<std::size_t,std::string> write(const std::string& input){
+            if(input.size()>STORE_MAX){
+                FATAL << "A block could not be written because it exceeded maximum size of blocks \""+std::to_string(STORE_MAX)+
+                "\" with a size of \""+std::to_string(input.size())+"\".";
+                std::exit(EXIT_FAILURE);
+            }
+            std::string prefix = prefix_wrap(input.size());
+            std::size_t total_size = input.size() + prefix.size();
+            //check block fill of this node, look for free space
+            std::size_t min_val=size[0];
+            unsigned char min_pos{};
+            for(unsigned char i=0; ;i++){
+                if(size[i]<min_val){
+                    min_val = size[i];
+                    min_pos = i;
+                }
+                if(i==(unsigned char)N)break;
+            }
+            if(min_val < STORE_MAX && min_val+total_size < STORE_HARD_LIMIT){
+                //store block to this position
+            }
+            else{
+                //find or create balanced deepter tree node to store
+            }
         }
         
     };
