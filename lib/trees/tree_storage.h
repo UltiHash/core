@@ -93,7 +93,7 @@ namespace uh::trees {
             }
             std::filesystem::create_directories(combined_path);
             for (unsigned char i = 0;; i++) {
-                std::vector<unsigned char> s_tmp2(i, 1);
+                std::vector<unsigned char> s_tmp2{i};
                 std::vector<char> s_tmp_hex;
                 s_tmp_hex.reserve(s_tmp2.size()*2);
                 boost::algorithm::hex(s_tmp2.begin(),s_tmp2.end(),s_tmp_hex.begin());
