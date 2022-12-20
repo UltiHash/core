@@ -24,8 +24,8 @@ namespace uh::trees{
         //radix_tree* block_indexes[N]{}; // index local block finds
         std::filesystem::path combined_path{};
 
-        std::string prefix_wrap(const std::string& input){
-            auto input_size=input.size();
+        //returns wrapped string
+        std::string prefix_wrap(std::size_t input_size){
             std::bitset<64> h_bit{input_size};
             unsigned char total_bit_count{};
             //counting max bits
@@ -42,10 +42,19 @@ namespace uh::trees{
             auto mem_size_convert=std::array<unsigned char,sizeof(input_size)>();
             std::memcpy(mem_size_convert.data(),reinterpret_cast<unsigned char*>(&input_size),sizeof(input_size));
             for(unsigned char i=0; i<byte_count;i++){
-                prefix.insert(prefix.begin(),mem_size_convert[i]);
+                if constexpr (std::endian::native == std::endian::big){
+                    prefix.insert(prefix.cbegin(),mem_size_convert[byte_count-i-1]);
+                }
+                else{
+                    prefix.insert(prefix.cbegin(),mem_size_convert[i]);
+                }
             }
             prefix.insert(prefix.cbegin(),byte_count);
             return std::string{prefix.cbegin(),prefix.cend()};
+        }
+
+        std::size_t prefix_unwrap(std::string::iterator in){
+            return (std::size_t)(reinterpret_cast<unsigned char*>(*in)[0])+1;
         }
 
     public:
