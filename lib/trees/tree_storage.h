@@ -127,7 +127,7 @@ namespace uh::trees {
         }
 
         //write a string and get size of written block representation and a reference string back
-        std::tuple<std::size_t, std::string> write(const std::vector<unsigned char> &input,std::size_t tree_level=0) {
+        std::vector<unsigned char> write(const std::vector<unsigned char> &input) {
             if (input.size() > STORE_MAX) {
                 FATAL << "A block could not be written because it exceeded maximum size of blocks \"" +
                          std::to_string(STORE_MAX) +
@@ -148,8 +148,9 @@ namespace uh::trees {
             }
             if (min_val < STORE_MAX && min_val + total_size < STORE_HARD_LIMIT) {
                 //store block to this position
+                std::string ref_name{boost::algorithm::hex(std::string(reinterpret_cast<const char *>(min_pos), 1))};
                 std::filesystem::path read_chunk =
-                        combined_path / boost::algorithm::hex(std::string(reinterpret_cast<const char *>(min_pos), 1));
+                        combined_path / ref_name;
                 FILE *writer = std::fopen(read_chunk.c_str(), "ab+");
                 if (!writer) {
                     ERROR << "File opening failed at \"" + read_chunk.string() + "\"";
@@ -164,7 +165,20 @@ namespace uh::trees {
                     std::exit(EXIT_FAILURE);
                 }
                 std::fclose(writer);
+                //start position of the block for seeking it later on is the old size
+                std::vector<unsigned char> out_vec;
+                out_vec.reserve(sizeof(unsigned int));
+                for(unsigned char i=0;i<sizeof(unsigned int);i++){
+                    if constexpr (std::endian::native == std::endian::big) {
+                        out_vec.push_back(reinterpret_cast<const unsigned char *>(size[min_pos])[sizeof(unsigned int)-i-1]);
+                    }
+                    else{
+                        out_vec.push_back(reinterpret_cast<const unsigned char *>(size[min_pos])[i]);
+                    }
+                }
+                out_vec.insert(out_vec.cbegin(),min_pos);
                 size[min_pos]+=total_size;
+                return out_vec;//structure: BIN,OFFSET*4
             } else {
                 //find or create balanced deeper tree node to store
 
