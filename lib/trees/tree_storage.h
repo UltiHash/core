@@ -243,14 +243,64 @@ namespace uh::trees {
                     }
                     //File should have been opened or created here
                     std::fseek( reader, static_cast<long>(offset), SEEK_SET );
-                    std::fwrite(prefix.data(), prefix.size(), sizeof(unsigned char), reader);
-                    std::fwrite(input.data(), input.size(), sizeof(unsigned char), reader);
 
                     if (std::ferror(reader)) {
-                        FATAL << "I/O error when reading \"" + read_chunk.string() + "\"";
+                        FATAL << "I/O error when seeking \"" + read_path.string() + "\"";
                         std::exit(EXIT_FAILURE);
                     }
+
+                    int c; // note: int, not char, required to handle EOF
+                    bool first_byte = false;
+                    unsigned char buf_size = 0;
+                    unsigned char buf_count = 0;
+                    std::vector<unsigned char> buffer_array;
+                    while ((c = std::fgetc(reader)) != EOF) { // standard C I/O file reading loop
+                        unsigned char c_conv = reinterpret_cast<const unsigned char*>((char)c)[0];
+                        if(!first_byte){
+                            buf_size = c_conv;
+                            first_byte = true;
+                            continue;
+                        }
+                        buffer_array.push_back(c_conv);
+
+                        if (buf_count == buf_size) {
+                            break;
+                        }
+                    }
+
+                    if (std::ferror(reader)) {
+                        FATAL << "I/O error when reading prefix at path \"" + read_path.string() + "\"";
+                        std::exit(EXIT_FAILURE);
+                    }
+
+                    std::size_t output_size{};
+                    while(buffer_array.size() < sizeof(output_size))buffer_array.push_back(0);
+                    if constexpr (std::endian::native == std::endian::big) {
+                        auto mem_size_convert = std::array<unsigned char, sizeof(output_size)>();
+                        for (unsigned char i = 0; i < buf_size; i++) {
+                            mem_size_convert[buf_size - i - 1] = buffer_array[i];
+                        }
+                        std::memcpy(reinterpret_cast<void *>(&output_size), mem_size_convert.data(), sizeof(output_size));
+                    } else {
+                        std::memcpy(reinterpret_cast<void *>(&output_size), buffer_array.data(), sizeof(output_size));
+                    }
+
+                    std::vector<unsigned char> out_vec{};
+                    out_vec.reserve(output_size);
+                    std::size_t count = std::fread(out_vec.data(),sizeof(char),output_size,reader);
+
+                    if (count!=output_size) {
+                        FATAL << "I/O was not completed on path \"" + read_path.string() + "\"";
+                        std::exit(EXIT_FAILURE);
+                    }
+                    if (std::ferror(reader)) {
+                        FATAL << "I/O error when reading prefix at path \"" + read_path.string() + "\"";
+                        std::exit(EXIT_FAILURE);
+                    }
+
                     std::fclose(reader);
+
+                    return out_vec;
                 }
             }
         }
