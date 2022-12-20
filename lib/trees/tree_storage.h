@@ -25,7 +25,7 @@ namespace uh::trees{
         std::filesystem::path combined_path{};
 
         //returns wrapped string
-        static std::string prefix_wrap(std::size_t input_size){
+        static std::vector<unsigned char> prefix_wrap(std::size_t input_size){
             std::bitset<64> h_bit{input_size};
             unsigned char total_bit_count{};
             //counting max bits
@@ -43,18 +43,38 @@ namespace uh::trees{
             std::memcpy(mem_size_convert.data(),reinterpret_cast<unsigned char*>(&input_size),sizeof(input_size));
             for(unsigned char i=0; i<byte_count;i++){
                 if constexpr (std::endian::native == std::endian::big){
-                    prefix.insert(prefix.cbegin(),mem_size_convert[byte_count-i-1]);
+                    prefix.push_back(mem_size_convert[byte_count-i-1]);
                 }
                 else{
-                    prefix.insert(prefix.cbegin(),mem_size_convert[i]);
+                    prefix.push_back(mem_size_convert[i]);
                 }
             }
             prefix.insert(prefix.cbegin(),byte_count);
-            return std::string{prefix.cbegin(),prefix.cend()};
+            return prefix;
         }
 
-        std::size_t prefix_unwrap(std::string::iterator in){
-            return (std::size_t)(reinterpret_cast<unsigned char*>(*in)[0])+1;
+        std::size_t prefix_unwrap_size(std::vector<unsigned char>::iterator in){
+            return (std::size_t)(*in+1);
+        }
+
+        std::size_t prefix_unwrap_content_size(std::vector<unsigned char>::iterator &in){
+            std::size_t byte_count = prefix_unwrap_size(in)-1;
+            in++;
+            std::vector<unsigned char> in_buf{in,in+static_cast<long>(byte_count)};
+            in+=static_cast<long>(byte_count);
+            std::size_t output_size{};
+            while(in_buf.size()<sizeof(output_size))in_buf.push_back(0);
+            if constexpr (std::endian::native == std::endian::big){
+                auto mem_size_convert=std::array<unsigned char,sizeof(output_size)>();
+                for(unsigned char i=0; i<byte_count;i++){
+                    mem_size_convert[byte_count-i-1] = in_buf[i];
+                }
+                std::memcpy(reinterpret_cast<void *>(&output_size), mem_size_convert.data(), in_buf.size());
+            }
+            else{
+                std::memcpy(reinterpret_cast<void *>(&output_size), in_buf.data(), in_buf.size());
+            }
+            return output_size;
         }
 
     public:
@@ -130,6 +150,24 @@ namespace uh::trees{
             }
             if(min_val < STORE_MAX && min_val+total_size < STORE_HARD_LIMIT){
                 //store block to this position
+                std::filesystem::path read_chunk = combined_path/boost::algorithm::hex(std::string(reinterpret_cast<const char *>(min_pos),1));
+                FILE* reader = std::fopen(read_chunk.c_str(),"w+");
+                if(!reader) {
+                    ERROR << "File opening failed at \""+read_chunk.string()+"\"";
+                    std::exit(EXIT_FAILURE);
+                }
+                int c; // note: int, not char, required to handle EOF
+                while ((c = std::fgetc(reader)) != EOF) { // standard C I/O file reading loop
+                    std::putchar(c);
+                }
+                if (std::ferror(reader)) {
+                    std::puts("I/O error when reading");
+                } else if (std::feof(reader)) {
+                    std::puts("End of file reached successfully");
+                    is_ok = EXIT_SUCCESS;
+                }
+                std::fclose(fp);
+                return is_ok;
             }
             else{
                 //find or create balanced deepter tree node to store
