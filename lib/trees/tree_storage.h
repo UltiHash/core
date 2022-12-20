@@ -94,10 +94,7 @@ namespace uh::trees {
             std::filesystem::create_directories(combined_path);
             for (unsigned char i = 0;; i++) {
                 std::vector<unsigned char> s_tmp2{i};
-                std::vector<char> s_tmp_hex;
-                s_tmp_hex.reserve(s_tmp2.size()*2);
-                boost::algorithm::hex(s_tmp2.begin(),s_tmp2.end(),s_tmp_hex.begin());
-                std::string s_tmp{s_tmp_hex.begin(),s_tmp_hex.end()};
+                std::string s_tmp=boost::algorithm::hex(std::string{(char)*s_tmp2.begin()});
                 std::filesystem::path chunk = combined_path / s_tmp;
                 if (std::filesystem::exists(chunk)) {
                     size[i] = std::filesystem::file_size(chunk);
