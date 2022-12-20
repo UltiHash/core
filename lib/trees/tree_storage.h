@@ -178,19 +178,29 @@ namespace uh::trees {
                 }
                 out_vec.insert(out_vec.cbegin(),min_pos);
                 size[min_pos]+=total_size;
-                return out_vec;//structure: BIN,OFFSET*4
+                return out_vec;//structure: BIN,OFFSET * 4 BYTES
             } else {
                 //find or create balanced deeper tree node to store
-
                 min_val = std::get<0>(children[0]);
                 min_pos = 0;
                 for (unsigned char i = 0;; i++) {
-                    if (size[i] < min_val) {
-                        min_val = size[i];
+                    if (std::get<0>(children[i]) < min_val) {
+                        min_val = std::get<0>(children[i]);
                         min_pos = i;
                     }
                     if (i == (unsigned char) N)break;
                 }
+                if(std::get<1>(children[min_pos]) == nullptr){
+                    std::string ref_name{boost::algorithm::hex(std::string(reinterpret_cast<const char *>(min_pos), 1))};
+                    std::string new_node_name = combined_path.string().substr(2,4) + ref_name;
+                    std::filesystem::path new_node_dir = combined_path/new_node_name;
+                    std::filesystem::create_directories(new_node_dir);
+                    std::get<1>(children[min_pos]) = new tree_storage(new_node_dir);
+                }
+                std::vector<unsigned char> out_vec = std::get<1>(children[min_pos])->write(input);
+                out_vec.insert(out_vec.cbegin(),min_pos);
+                std::get<0>(children[min_pos]) += total_size;
+                return out_vec;
             }
         }
 
