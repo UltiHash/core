@@ -112,7 +112,7 @@ namespace uh::trees {
                     std::get<0>(children[i]) = 0;
                     std::get<1>(children[i]) = nullptr;
                 }
-                if (i == (unsigned char) N)break;
+                if ((unsigned short)i == (unsigned short) N)break;
             }
         }
 
@@ -123,7 +123,7 @@ namespace uh::trees {
                 if (std::get<1>(children[i]) != nullptr) {
                     s += std::get<0>(children[i]);
                 }
-                if (i == (unsigned char) N)break;
+                if ((unsigned short)i == (unsigned short) N)break;
             }
             return s;
         }
@@ -146,7 +146,7 @@ namespace uh::trees {
                     min_val = size[i];
                     min_pos = i;
                 }
-                if (i == (unsigned char) N)break;
+                if ((unsigned short)i == (unsigned short) N)break;
             }
             if (min_val < STORE_MAX && min_val + total_size < STORE_HARD_LIMIT) {
                 //store block to this position
@@ -189,7 +189,7 @@ namespace uh::trees {
                         min_val = std::get<0>(children[i]);
                         min_pos = i;
                     }
-                    if (i == (unsigned char) N)break;
+                    if ((unsigned short)i == (unsigned short) N)break;
                 }
                 if(std::get<1>(children[min_pos]) == nullptr){
                     std::string ref_name{boost::algorithm::hex(std::string(reinterpret_cast<const char *>(min_pos), 1))};
