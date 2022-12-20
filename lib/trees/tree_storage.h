@@ -21,8 +21,32 @@ namespace uh::trees{
         //every file storage level contains a maximum of 256 storage chunks and 256 folders to deeper levels
         std::size_t size[N]{};
         std::tuple<std::size_t,tree_storage*> children[N]{};//deeper tree storage blocks and folders
-        //radix_tree* block_indexes[N]{};
+        //radix_tree* block_indexes[N]{}; // index local block finds
         std::filesystem::path combined_path{};
+
+        std::string prefix_wrap(const std::string& input){
+            auto input_size=input.size();
+            std::bitset<64> h_bit{input_size};
+            unsigned char total_bit_count{};
+            //counting max bits
+            while(h_bit!=0)[[likely]]{
+                total_bit_count++;
+                h_bit>>=1;
+            }
+            unsigned char byte_count=total_bit_count/8;
+            if(total_bit_count%8 or byte_count==0)[[likely]]{
+                byte_count++;
+            }
+            std::vector<unsigned char> prefix{};
+
+            auto mem_size_convert=std::array<unsigned char,sizeof(input_size)>();
+            std::memcpy(mem_size_convert.data(),reinterpret_cast<unsigned char*>(&input_size),sizeof(input_size));
+            for(unsigned char i=0; i<byte_count;i++){
+                prefix.insert(prefix.begin(),mem_size_convert[i]);
+            }
+            prefix.insert(prefix.cbegin(),byte_count);
+            return std::string{prefix.cbegin(),prefix.cend()};
+        }
 
     public:
         explicit tree_storage(const std::filesystem::path& root){
@@ -74,6 +98,11 @@ namespace uh::trees{
                 if(i==(unsigned char)N)break;
             }
             return s;
+        }
+
+        //write a string and get a reference string back
+        std::string write(const std::string& input){
+
         }
         
     };
