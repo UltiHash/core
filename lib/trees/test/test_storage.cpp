@@ -16,4 +16,5 @@
 BOOST_AUTO_TEST_CASE( constructor )
 {
     uh::trees::tree_storage t1("/mnt/md0");
+    //TODO: more tests
 }
