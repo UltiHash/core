@@ -130,7 +130,7 @@ namespace uh::trees{
         }
 
         //write a string and get size of written block representation and a reference string back
-        std::tuple<std::size_t,std::string> write(const std::string& input){
+        std::tuple<std::size_t,std::string> write(const std::vector<unsigned char>& input){
             if(input.size()>STORE_MAX){
                 FATAL << "A block could not be written because it exceeded maximum size of blocks \""+std::to_string(STORE_MAX)+
                 "\" with a size of \""+std::to_string(input.size())+"\".";
@@ -151,21 +151,20 @@ namespace uh::trees{
             if(min_val < STORE_MAX && min_val+total_size < STORE_HARD_LIMIT){
                 //store block to this position
                 std::filesystem::path read_chunk = combined_path/boost::algorithm::hex(std::string(reinterpret_cast<const char *>(min_pos),1));
-                FILE* reader = std::fopen(read_chunk.c_str(),"ab+");
-                if(!reader) {
+                FILE* writer = std::fopen(read_chunk.c_str(), "ab+");
+                if(!writer) {
                     ERROR << "File opening failed at \""+read_chunk.string()+"\"";
                     std::exit(EXIT_FAILURE);
                 }
                 //File should have been opened or created here
-                int c; // note: int, not char, required to handle EOF
-                while ((c = std::fgetc(reader)) != EOF) { // standard C I/O file reading loop
-                    std::putchar(c);
-                }
-                if (std::ferror(reader)) {
+                std::fwrite(prefix.data(),prefix.size(), sizeof(unsigned char),writer);
+                std::fwrite(input.data(),input.size(), sizeof(unsigned char),writer);
+
+                if (std::ferror(writer)) {
                     FATAL << "I/O error when reading \""+read_chunk.string()+"\"";
                     std::exit(EXIT_FAILURE);
                 }
-                std::fclose(reader);
+                std::fclose(writer);
             }
             else{
                 //find or create balanced deeper tree node to store
