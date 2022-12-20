@@ -19,9 +19,10 @@ namespace uh::trees{
     struct tree_storage {
     protected:
         //every file storage level contains a maximum of 256 storage chunks and 256 folders to deeper levels
-        tree_storage* children[N]{};//deeper tree storage blocks and folders
         std::size_t size[N]{};
-        unsigned char root_name[2]{};
+        tree_storage* children[N]{};//deeper tree storage blocks and folders
+        //radix_tree* block_indexes[N]{};
+        std::filesystem::path combined_path{};
     public:
         tree_storage() {
             for(auto & i1 : size){
@@ -32,17 +33,21 @@ namespace uh::trees{
             }
         }
 
-        void init(const std::filesystem::path& root,bool is_root=true){
-            if(!is_root){
-                //expected are 4 bytes that mimic hexadecimal string representation
-                char* parent_name = const_cast<char *>(root.parent_path().filename().c_str());
-                boost::algorithm::unhex(parent_name,parent_name+4,root_name);//FF,FF to {BIN,BIN}
+        explicit tree_storage(const std::filesystem::path& root):tree_storage(){
+            //expected are 4 bytes that mimic hexadecimal string representation
+            std::string parent_name = root.filename().string();
+            bool valid_root=parent_name.size()==4 and root.extension().string().empty();
+            if(valid_root)for(const char &i:parent_name){
+                    if(!(('0'<= i and i <= '9')||('A'<= i and i <= 'F'))){
+                        valid_root=false;
+                        break;
+                    }
+                }
+            combined_path = root;
+            if(!valid_root){
+                combined_path /= "/0000";
             }
-            else{
-                root_name[0]=0;
-                root_name[1]=0;
-            }
-
+            std::filesystem::create_directories(combined_path);
         }
 
         tree_storage * child(char i){
