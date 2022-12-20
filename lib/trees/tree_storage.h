@@ -23,6 +23,7 @@ namespace uh::trees{
         tree_storage* children[N]{};//deeper tree storage blocks and folders
         //radix_tree* block_indexes[N]{};
         std::filesystem::path combined_path{};
+
     public:
         tree_storage() {
             for(auto & i1 : size){
@@ -48,6 +49,24 @@ namespace uh::trees{
                 combined_path /= "/0000";
             }
             std::filesystem::create_directories(combined_path);
+            for(unsigned char i=0; ;i++){
+                std::string s_tmp(reinterpret_cast<const char *>(i),1);
+                std::filesystem::path chunk=combined_path/boost::algorithm::hex(s_tmp);
+                if(std::filesystem::exists(chunk)){
+                    size[i] = std::filesystem::file_size(chunk);
+                }
+                else size[i] = 0;
+                if(i==(unsigned char)N)break;
+            }
+            for(unsigned char i=0; ;i++){
+                std::string s_tmp=std::string(combined_path.c_str()+2,combined_path.c_str()+4);
+                s_tmp+=boost::algorithm::hex(std::string(reinterpret_cast<const char *>(i),1));
+                std::filesystem::path deeper_tree=combined_path/s_tmp;
+                //check if sub folder in tree exists
+                if(std::filesystem::exists(deeper_tree))children[i] = new tree_storage(deeper_tree);
+                else children[i] = nullptr;
+                if(i==(unsigned char)N)break;
+            }
         }
 
         tree_storage * child(char i){
