@@ -149,11 +149,10 @@ namespace uh::trees {
             if (min_val < STORE_MAX && min_val + total_size < STORE_HARD_LIMIT) {
                 //store block to this position
                 std::string ref_name{boost::algorithm::hex(std::string(reinterpret_cast<const char *>(min_pos), 1))};
-                std::filesystem::path read_chunk =
-                        combined_path / ref_name;
+                std::filesystem::path read_chunk = combined_path / ref_name;
                 FILE *writer = std::fopen(read_chunk.c_str(), "ab+");
                 if (!writer) {
-                    ERROR << "File opening failed at \"" + read_chunk.string() + "\"";
+                    ERROR << "File write opening failed at \"" + read_chunk.string() + "\"";
                     std::exit(EXIT_FAILURE);
                 }
                 //File should have been opened or created here
@@ -161,7 +160,7 @@ namespace uh::trees {
                 std::fwrite(input.data(), input.size(), sizeof(unsigned char), writer);
 
                 if (std::ferror(writer)) {
-                    FATAL << "I/O error when reading \"" + read_chunk.string() + "\"";
+                    FATAL << "I/O error when writing \"" + read_chunk.string() + "\"";
                     std::exit(EXIT_FAILURE);
                 }
                 std::fclose(writer);
@@ -224,6 +223,35 @@ namespace uh::trees {
             }
             else{
                 //the block code should have a size of 5; one chunk index and 4 bytes of encoding for the offset
+                if(!size[block_code[0]]){
+                    std::string not_found((const char*)block_code.data(),block_code.size());
+                    DEBUG << "<Block error trace on return, final tree>: Block code "+boost::algorithm::hex(not_found)+" could not be found in storage tree \""+combined_path.string()+"\" and size of storage chunk was 0.";
+                    return std::vector<unsigned char>{};
+                }
+                else{
+                    std::vector<unsigned char> sub_block_code{block_code.cbegin()+1,block_code.cend()}; //copy offset code and rebuild
+                    std::size_t offset{};
+                    for(unsigned char i=0;i<sizeof(unsigned int);i++){
+                        offset+=(((std::size_t)sub_block_code[i]) << (i*8));
+                    }
+                    std::string ref_name{boost::algorithm::hex(std::string(reinterpret_cast<const char *>(block_code[0]), 1))};
+                    std::filesystem::path read_path = combined_path/ref_name;
+                    FILE *reader = std::fopen(read_path.c_str(), "rb");
+                    if (!reader) {
+                        ERROR << "File read opening failed at \"" + read_path.string() + "\"";
+                        std::exit(EXIT_FAILURE);
+                    }
+                    //File should have been opened or created here
+                    std::fseek( reader, static_cast<long>(offset), SEEK_SET );
+                    std::fwrite(prefix.data(), prefix.size(), sizeof(unsigned char), reader);
+                    std::fwrite(input.data(), input.size(), sizeof(unsigned char), reader);
+
+                    if (std::ferror(reader)) {
+                        FATAL << "I/O error when reading \"" + read_chunk.string() + "\"";
+                        std::exit(EXIT_FAILURE);
+                    }
+                    std::fclose(reader);
+                }
             }
         }
 
