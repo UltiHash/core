@@ -136,7 +136,7 @@ namespace uh::trees{
                 "\" with a size of \""+std::to_string(input.size())+"\".";
                 std::exit(EXIT_FAILURE);
             }
-            std::string prefix = prefix_wrap(input.size());
+            std::vector<unsigned char> prefix = prefix_wrap(input.size());
             std::size_t total_size = input.size() + prefix.size();
             //check block fill of this node, look for free space
             std::size_t min_val=size[0];
@@ -151,26 +151,24 @@ namespace uh::trees{
             if(min_val < STORE_MAX && min_val+total_size < STORE_HARD_LIMIT){
                 //store block to this position
                 std::filesystem::path read_chunk = combined_path/boost::algorithm::hex(std::string(reinterpret_cast<const char *>(min_pos),1));
-                FILE* reader = std::fopen(read_chunk.c_str(),"w+");
+                FILE* reader = std::fopen(read_chunk.c_str(),"ab+");
                 if(!reader) {
                     ERROR << "File opening failed at \""+read_chunk.string()+"\"";
                     std::exit(EXIT_FAILURE);
                 }
+                //File should have been opened or created here
                 int c; // note: int, not char, required to handle EOF
                 while ((c = std::fgetc(reader)) != EOF) { // standard C I/O file reading loop
                     std::putchar(c);
                 }
                 if (std::ferror(reader)) {
-                    std::puts("I/O error when reading");
-                } else if (std::feof(reader)) {
-                    std::puts("End of file reached successfully");
-                    is_ok = EXIT_SUCCESS;
+                    FATAL << "I/O error when reading \""+read_chunk.string()+"\"";
+                    std::exit(EXIT_FAILURE);
                 }
-                std::fclose(fp);
-                return is_ok;
+                std::fclose(reader);
             }
             else{
-                //find or create balanced deepter tree node to store
+                //find or create balanced deeper tree node to store
             }
         }
         
