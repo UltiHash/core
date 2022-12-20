@@ -10,6 +10,9 @@
 #include <protocol/client_factory.h>
 #include <protocol/client_pool.h>
 
+#include <fstream>
+
+
 class Data : virtual public Prefix{
     std::vector<Block> hash_blocks;
     std::size_t numBlocks{};

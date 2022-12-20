@@ -8,7 +8,7 @@ message(STATUS "Using ${PROJECT_NAME}...")
 find_package(Boost 1.80 COMPONENTS program_options unit_test_framework REQUIRED)
 
 set(${PROJECT_NAME}_INCLUDE_DIRS ${Boost_INCLUDE_DIRS})
-set(${PROJECT_NAME}_LINK_LIBRARIES ${Boost_LIBRARIES})
+set(${PROJECT_NAME}_LINK_LIBRARIES ${Boost_LIBRARIES} uhLibLogging)
 
 # adding all the .h files of the current project
 file(GLOB HEADER_FILE_LIST ${CMAKE_CURRENT_SOURCE_DIR}/*.h)
