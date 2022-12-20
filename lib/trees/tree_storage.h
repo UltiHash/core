@@ -164,8 +164,10 @@ namespace uh::trees {
                     std::exit(EXIT_FAILURE);
                 }
                 std::fclose(writer);
+                size[min_pos]+=total_size;
             } else {
                 //find or create balanced deeper tree node to store
+
                 min_val = std::get<0>(children[0]);
                 min_pos = 0;
                 for (unsigned char i = 0;; i++) {
