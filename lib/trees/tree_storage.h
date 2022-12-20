@@ -20,21 +20,12 @@ namespace uh::trees{
     protected:
         //every file storage level contains a maximum of 256 storage chunks and 256 folders to deeper levels
         std::size_t size[N]{};
-        tree_storage* children[N]{};//deeper tree storage blocks and folders
+        std::tuple<std::size_t,tree_storage*> children[N]{};//deeper tree storage blocks and folders
         //radix_tree* block_indexes[N]{};
         std::filesystem::path combined_path{};
 
     public:
-        tree_storage() {
-            for(auto & i1 : size){
-                i1 = 0;
-            }
-            for(auto & i : children){
-                i = nullptr;
-            }
-        }
-
-        explicit tree_storage(const std::filesystem::path& root):tree_storage(){
+        explicit tree_storage(const std::filesystem::path& root){
             //expected are 4 bytes that mimic hexadecimal string representation
             std::string parent_name = root.filename().string();
             bool valid_root=parent_name.size()==4 and root.extension().string().empty();
@@ -63,14 +54,28 @@ namespace uh::trees{
                 s_tmp+=boost::algorithm::hex(std::string(reinterpret_cast<const char *>(i),1));
                 std::filesystem::path deeper_tree=combined_path/s_tmp;
                 //check if sub folder in tree exists
-                if(std::filesystem::exists(deeper_tree))children[i] = new tree_storage(deeper_tree);
-                else children[i] = nullptr;
+                if(std::filesystem::exists(deeper_tree)){
+                    std::get<1>(children[i]) = new tree_storage(deeper_tree);
+                    std::get<0>(children[i]) = std::get<1>(children[i])->get_size();
+                }
+                else{
+                    std::get<0>(children[i]) = 0;
+                    std::get<1>(children[i]) = nullptr;
+                }
                 if(i==(unsigned char)N)break;
             }
         }
 
-        tree_storage * child(char i){
-            return children[(unsigned char)i];
+        std::size_t get_size(){
+            std::size_t s{};
+            for(unsigned char i=0; ;i++){
+                s+=size[i];
+                if(std::get<1>(children[i]) != nullptr){
+                    s+=std::get<0>(children[i]);
+                }
+                if(i==(unsigned char)N)break;
+            }
+            return s;
         }
         
     };
