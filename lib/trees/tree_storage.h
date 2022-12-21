@@ -248,39 +248,34 @@ namespace uh::trees {
                         std::exit(EXIT_FAILURE);
                     }
 
-                    int c; // note: int, not char, required to handle EOF
-                    bool first_byte = false;
                     unsigned char buf_size = 0;
-                    unsigned char buf_count = 0;
-                    std::vector<unsigned char> buffer_array;
-                    while ((c = std::fgetc(reader)) != EOF) { // standard C I/O file reading loop
-                        auto c_conv = (unsigned char)((char) c);
-                        if (!first_byte) {
-                            buf_size = c_conv;
-                            first_byte = true;
-                            continue;
-                        }
-                        buffer_array.push_back(c_conv);
-
-                        if (buf_count == buf_size) {
-                            break;
-                        }
-                        else buf_count++;
+                    std::size_t count = std::fread(&buf_size, sizeof(char), 1, reader);
+                    if (count != 1) {
+                        FATAL << "I/O prefix first byte reading was not completed on path \"" + read_path.string() + "\"";
+                        std::exit(EXIT_FAILURE);
                     }
 
                     if (std::ferror(reader)) {
                         FATAL << "I/O error when reading prefix at path \"" + read_path.string() + "\"";
                         std::exit(EXIT_FAILURE);
                     }
-
-                    std::size_t output_size{};
-                    for(buf_count=0;buf_count<=buf_size;buf_count++){
-                        output_size+=(buffer_array[buf_count]<<(buf_count*8));
+                    auto* buffer_in = new unsigned char[buf_size+1];
+                    count = std::fread(&buf_size, sizeof(char), 1, reader);
+                    if (count != buf_size) {
+                        FATAL << "I/O prefix first byte reading was not completed on path \"" + read_path.string() + "\"";
+                        std::exit(EXIT_FAILURE);
                     }
+                    std::size_t output_size{};
+                    for(unsigned char buf_count=0;buf_count<=buf_size;buf_count++){
+                        output_size+=(buffer_in[buf_count]<<(buf_count*8));
+                    }
+                    delete[] buffer_in;
 
                     std::vector<unsigned char> out_vec{};
-                    out_vec.reserve(output_size);
-                    std::size_t count = std::fread(out_vec.data(), sizeof(char), output_size, reader);
+                    auto* tmp_buf = new unsigned char[output_size];
+                    count = std::fread(tmp_buf, sizeof(char), output_size, reader);
+                    out_vec.assign(tmp_buf,tmp_buf+output_size);
+                    delete[] tmp_buf;
 
                     if (count != output_size) {
                         FATAL << "I/O was not completed on path \"" + read_path.string() + "\"";
