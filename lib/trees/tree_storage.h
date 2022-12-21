@@ -34,9 +34,10 @@ namespace uh::trees {
                 h_bit >>= 1;
             }
             unsigned char byte_count = total_bit_count / 8;
-            if (total_bit_count % 8 or byte_count == 0)[[likely]] {
+            if (total_bit_count % 8)[[likely]] {
                 byte_count++;
             }
+            if(byte_count>0)byte_count--;//there is at least one description byte
             std::vector<unsigned char> prefix{};
 
             auto mem_size_convert = std::array<unsigned char, sizeof(input_size)>();
@@ -270,6 +271,7 @@ namespace uh::trees {
                         if (buf_count == buf_size) {
                             break;
                         }
+                        else buf_count++;
                     }
 
                     if (std::ferror(reader)) {
