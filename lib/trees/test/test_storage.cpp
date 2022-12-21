@@ -110,7 +110,7 @@ BOOST_AUTO_TEST_CASE(write_read_test)
     std::random_device dev;
     std::mt19937 rng(dev());
     std::uniform_int_distribution<std::mt19937::result_type> dist(0, write_times.size());
-    while(total_size<(std::size_t)std::pow(2,38)){
+    while(total_size<(std::size_t)(std::pow(2,38))){
         std::size_t access_point = dist(rng);
         gettimeofday(&time, nullptr);
         long double millis = ((long double) time.tv_sec * 1000) + ((long double) time.tv_usec / 1000);
@@ -125,5 +125,11 @@ BOOST_AUTO_TEST_CASE(write_read_test)
         total_size+=read_result.size();
     }
 
-
+    //write times min, max, average on size/block ref size/time taken
+    BOOST_TEST_MESSAGE("Test results for writing:\n");
+    BOOST_TEST_MESSAGE("Minimum results:");
+    auto min_size = std::min_element(write_times.cbegin(),write_times.cend(),[](const auto &a,const auto &b){return std::get<1>(a)<std::get<1>(b);});
+    BOOST_TEST_MESSAGE("Minimum size is "+std::to_string(std::get<1>(*min_size))+
+    " from Block reference \""+boost::algorithm::hex(std::string{std::get<0>(*min_size).cbegin(),std::get<0>(*min_size).cend()})+"\" with an integration time of "+
+    std::to_string(std::get<2>(*min_size))+" ms");
 }
