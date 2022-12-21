@@ -57,7 +57,9 @@ BOOST_AUTO_TEST_CASE(write_read_test)
     uh::trees::tree_storage t1("/mnt/md0");//A test folder reserved for tree storage
     struct timeval time{};
 
-    std::vector<std::tuple<std::vector<unsigned char>, std::size_t, long double>> write_times;//list of write times with local_block_ref, integrated block size and milliseconds
+    //list of write times with local_block_ref, integrated block size and milliseconds
+    std::vector<std::tuple<std::vector<unsigned char>, std::size_t, long double>> write_times;
+    //only retrieved block size and time taken
     std::vector<std::tuple<std::size_t, long double>> read_after_write_times;
 
     while (total_size < std::pow(1024, 4) * 4) {//write 4TB for testing
@@ -72,6 +74,7 @@ BOOST_AUTO_TEST_CASE(write_read_test)
                 "Database writing failed at block size " + std::to_string(test_bin.size()) + " at total size " +
                 std::to_string(total_size) + " . No reference retrieved!").c_str());
         if(local_block_ref.empty())continue;
+        write_times.emplace_back(local_block_ref,test_bin.size(),write_time);
         //read after write test
         gettimeofday(&time, NULL);
         millis = ((long double) time.tv_sec * 1000) + ((long double) time.tv_usec / 1000);
@@ -82,6 +85,7 @@ BOOST_AUTO_TEST_CASE(write_read_test)
         //check correctness of stored string
         BOOST_CHECK_EQUAL_COLLECTIONS(test_bin.cbegin(), test_bin.cend(), read_result.cbegin(), read_result.cend());
 
+        read_after_write_times.emplace_back(read_result.size(),read_after_write_time);
 
         total_size += test_bin.size();
     }
