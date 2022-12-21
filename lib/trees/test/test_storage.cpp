@@ -58,9 +58,8 @@ BOOST_AUTO_TEST_CASE(write_read_test)
     struct timeval time{};
 
     //list of write times with local_block_ref, integrated block size and milliseconds
-    std::vector<std::tuple<std::vector<unsigned char>, std::size_t, long double>> write_times;
+    std::vector<std::tuple<std::vector<unsigned char>, std::size_t, long double>> write_times,read_after_write_times, linear_read, randam_access_read;
     //retrieved block size, local_block_ref size and time taken
-    std::vector<std::tuple<std::size_t, std::size_t, long double>> read_after_write_times, linear_read, randam_access_read;
 
     while (total_size < (std::size_t) (std::pow(1024, 4) * 4)) {//write 4TB for testing
         std::vector<unsigned char> test_bin = binary_generator();
@@ -85,7 +84,7 @@ BOOST_AUTO_TEST_CASE(write_read_test)
         //check correctness of stored string
         BOOST_CHECK_EQUAL_COLLECTIONS(test_bin.cbegin(), test_bin.cend(), read_result.cbegin(), read_result.cend());
 
-        read_after_write_times.emplace_back(read_result.size(), local_block_ref.size(), read_after_write_time);
+        read_after_write_times.emplace_back(local_block_ref,read_result.size(), read_after_write_time);
 
         total_size += test_bin.size();
     }
@@ -103,7 +102,7 @@ BOOST_AUTO_TEST_CASE(write_read_test)
                 "Database sequential reading failed at block reference " +
                 boost::algorithm::hex(std::string{std::get<0>(i).cbegin(), std::get<0>(i).cend()}) +
                 " . No block retrieved!").c_str());
-        linear_read.emplace_back(read_result.size(), std::get<0>(i).size(), read_sequential);
+        linear_read.emplace_back(std::get<0>(i),read_result.size(), read_sequential);
     }
 
     //test random access times for 256GB
@@ -124,7 +123,7 @@ BOOST_AUTO_TEST_CASE(write_read_test)
                 boost::algorithm::hex(std::string{std::get<0>(write_times[access_point]).cbegin(),
                                                   std::get<0>(write_times[access_point]).cend()}) +
                 " . No block retrieved!").c_str());
-        randam_access_read.emplace_back(read_result.size(), std::get<0>(write_times[access_point]).size(),
+        randam_access_read.emplace_back(std::get<0>(write_times[access_point]), read_result.size(),
                                         read_sequential);
         total_size += read_result.size();
     }
@@ -133,65 +132,65 @@ BOOST_AUTO_TEST_CASE(write_read_test)
     BOOST_TEST_MESSAGE("Test results for writing:\n");
     BOOST_TEST_MESSAGE("Minimum results:");
     //minimum size
-    auto min_size = std::min_element(write_times.cbegin(), write_times.cend(),
+    auto write_min_size = std::min_element(write_times.cbegin(), write_times.cend(),
                                      [](const auto &a, const auto &b) { return std::get<1>(a) < std::get<1>(b); });
-    BOOST_TEST_MESSAGE("Minimum size is " + std::to_string(std::get<1>(*min_size)) +
+    BOOST_TEST_MESSAGE("Minimum size is " + std::to_string(std::get<1>(*write_min_size)) +
                        " from Block reference \"" + boost::algorithm::hex(
-            std::string{std::get<0>(*min_size).cbegin(), std::get<0>(*min_size).cend()}) + "\" with a size of " +
-                       std::to_string(std::get<0>(*min_size).size()) + " with an integration time of " +
-                       std::to_string(std::get<2>(*min_size)) + " ms");
+            std::string{std::get<0>(*write_min_size).cbegin(), std::get<0>(*write_min_size).cend()}) + "\" with a size of " +
+                       std::to_string(std::get<0>(*write_min_size).size()) + " with an integration time of " +
+                       std::to_string(std::get<2>(*write_min_size)) + " ms");
     //minimum block ref size
-    auto min_block_ref_size = std::min_element(write_times.cbegin(), write_times.cend(),
+    auto write_min_block_ref_size = std::min_element(write_times.cbegin(), write_times.cend(),
                                                [](const auto &a, const auto &b) {
                                                    return std::get<0>(a).size() < std::get<0>(b).size();
                                                });
-    BOOST_TEST_MESSAGE("Minimum block reference size is " + std::to_string(std::get<0>(*min_size).size()) +
+    BOOST_TEST_MESSAGE("Minimum block reference size is " + std::to_string(std::get<0>(*write_min_block_ref_size).size()) +
                        " from Block reference \"" + boost::algorithm::hex(
-            std::string{std::get<0>(*min_size).cbegin(), std::get<0>(*min_size).cend()}) +
-                       "\" with a total block size of " + std::to_string(std::get<1>(*min_size)) +
+            std::string{std::get<0>(*write_min_block_ref_size).cbegin(), std::get<0>(*write_min_block_ref_size).cend()}) +
+                       "\" with a total block size of " + std::to_string(std::get<1>(*write_min_block_ref_size)) +
                        " with an integration time of " +
-                       std::to_string(std::get<2>(*min_size)) + " ms");
+                       std::to_string(std::get<2>(*write_min_block_ref_size)) + " ms");
     //minimum time taken
-    auto min_time_taken = std::min_element(write_times.cbegin(), write_times.cend(), [](const auto &a, const auto &b) {
+    auto write_min_time_taken = std::min_element(write_times.cbegin(), write_times.cend(), [](const auto &a, const auto &b) {
         return std::get<2>(a) < std::get<2>(b);
     });
-    BOOST_TEST_MESSAGE("Minimum integration time is " + std::to_string(std::get<2>(*min_size)) +
+    BOOST_TEST_MESSAGE("Minimum integration time is " + std::to_string(std::get<2>(*write_min_time_taken)) +
                        " ms from Block reference \"" + boost::algorithm::hex(
-            std::string{std::get<0>(*min_size).cbegin(), std::get<0>(*min_size).cend()}) +
+            std::string{std::get<0>(*write_min_time_taken).cbegin(), std::get<0>(*write_min_time_taken).cend()}) +
                        "\" with a block reference size of " +
-                       std::to_string(std::get<0>(*min_size).size()) + " with a total block size of " +
-                       std::to_string(std::get<1>(*min_size)) + "\n");
+                       std::to_string(std::get<0>(*write_min_time_taken).size()) + " with a total block size of " +
+                       std::to_string(std::get<1>(*write_min_time_taken)) + "\n");
 
     BOOST_TEST_MESSAGE("Maximum results:");
     //maximum size
-    auto max_size = std::max_element(write_times.cbegin(), write_times.cend(),
+    auto write_max_size = std::max_element(write_times.cbegin(), write_times.cend(),
                                      [](const auto &a, const auto &b) { return std::get<1>(a) < std::get<1>(b); });
-    BOOST_TEST_MESSAGE("Maximum size is " + std::to_string(std::get<1>(*max_size)) +
+    BOOST_TEST_MESSAGE("Maximum size is " + std::to_string(std::get<1>(*write_max_size)) +
                        " from Block reference \"" + boost::algorithm::hex(
-            std::string{std::get<0>(*max_size).cbegin(), std::get<0>(*max_size).cend()}) + "\" with a size of " +
-                       std::to_string(std::get<0>(*max_size).size()) + " with an integration time of " +
-                       std::to_string(std::get<2>(*max_size)) + " ms");
+            std::string{std::get<0>(*write_max_size).cbegin(), std::get<0>(*write_max_size).cend()}) + "\" with a size of " +
+                       std::to_string(std::get<0>(*write_max_size).size()) + " with an integration time of " +
+                       std::to_string(std::get<2>(*write_max_size)) + " ms");
     //maximum block ref size
-    auto max_block_ref_size = std::max_element(write_times.cbegin(), write_times.cend(),
+    auto write_max_block_ref_size = std::max_element(write_times.cbegin(), write_times.cend(),
                                                [](const auto &a, const auto &b) {
                                                    return std::get<0>(a).size() < std::get<0>(b).size();
                                                });
-    BOOST_TEST_MESSAGE("Maximum block reference size is " + std::to_string(std::get<0>(*max_size).size()) +
+    BOOST_TEST_MESSAGE("Maximum block reference size is " + std::to_string(std::get<0>(*write_max_block_ref_size).size()) +
                        " from Block reference \"" + boost::algorithm::hex(
-            std::string{std::get<0>(*max_size).cbegin(), std::get<0>(*max_size).cend()}) +
-                       "\" with a total block size of " + std::to_string(std::get<1>(*max_size)) +
+            std::string{std::get<0>(*write_max_block_ref_size).cbegin(), std::get<0>(*write_max_block_ref_size).cend()}) +
+                       "\" with a total block size of " + std::to_string(std::get<1>(*write_max_block_ref_size)) +
                        " with an integration time of " +
-                       std::to_string(std::get<2>(*max_size)) + " ms");
+                       std::to_string(std::get<2>(*write_max_block_ref_size)) + " ms");
     //maximum time taken
-    auto max_time_taken = std::max_element(write_times.cbegin(), write_times.cend(), [](const auto &a, const auto &b) {
+    auto write_max_time_taken = std::max_element(write_times.cbegin(), write_times.cend(), [](const auto &a, const auto &b) {
         return std::get<2>(a) < std::get<2>(b);
     });
-    BOOST_TEST_MESSAGE("Maximum integration time is " + std::to_string(std::get<2>(*max_size)) +
+    BOOST_TEST_MESSAGE("Maximum integration time is " + std::to_string(std::get<2>(*write_max_time_taken)) +
                        " ms from Block reference \"" + boost::algorithm::hex(
-            std::string{std::get<0>(*max_size).cbegin(), std::get<0>(*max_size).cend()}) +
+            std::string{std::get<0>(*write_max_time_taken).cbegin(), std::get<0>(*write_max_time_taken).cend()}) +
                        "\" with a block reference size of " +
-                       std::to_string(std::get<0>(*max_size).size()) + " with a total block size of " +
-                       std::to_string(std::get<1>(*max_size)) + "\n");
+                       std::to_string(std::get<0>(*write_max_time_taken).size()) + " with a total block size of " +
+                       std::to_string(std::get<1>(*write_max_time_taken)) + "\n");
 
     long double avg_size = 0;
     long double avg_block_ref_size = 0;
@@ -207,7 +206,7 @@ BOOST_AUTO_TEST_CASE(write_read_test)
 
     long double integration_speed_MB = (avg_size/std::pow(2,20))/(avg_time/1000);
 
-    BOOST_TEST_MESSAGE("Average results:");
+    BOOST_TEST_MESSAGE("Average writing results:");
     BOOST_TEST_MESSAGE("Average integration time is " + std::to_string(avg_time) +
                        " ms with an average block reference size of " +
                        std::to_string(avg_block_ref_size) + " with an average total block size of " +
