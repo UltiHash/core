@@ -67,7 +67,7 @@ BOOST_AUTO_TEST_CASE(write_read_test)
         //list of write times with local_block_ref, integrated block size and milliseconds
         std::vector<std::tuple<std::vector<unsigned char>, std::size_t, long double>> write_times,read_after_write_times, linear_read_times, randam_access_read_times;
         //retrieved block size, local_block_ref size and time taken
-        mode?BOOST_TEST_MESSAGE("Entering short block latency measurement write read mode:\n"):BOOST_TEST_MESSAGE("Entering normal write read mode:\n");
+        mode?BOOST_TEST_MESSAGE("---Entering short block latency measurement write read mode:---\n"):BOOST_TEST_MESSAGE("---Entering normal write read mode:---\n");
         while (total_size < mode?(std::size_t)std::pow(2,35):(std::size_t) (std::pow(1024, 4) * 4)) {//write 4TB for testing
             std::vector<unsigned char> test_bin = binary_generator(mode?32:STORE_MAX);
             //write test
@@ -207,6 +207,7 @@ BOOST_AUTO_TEST_CASE(write_read_test)
             write_avg_size+=std::get<0>(i).size();
             write_avg_time+=std::get<2>(i);
         }
+        long double write_total_time = write_avg_time;
         write_avg_size/=write_times.size();
         write_avg_block_ref_size/=write_times.size();
         write_avg_time/=write_times.size();
@@ -218,7 +219,7 @@ BOOST_AUTO_TEST_CASE(write_read_test)
                            " ms with an average block reference size of " +
                            std::to_string(write_avg_block_ref_size) + " with an average total block size of " +
                            std::to_string(write_avg_size) + ". This results in an average integration speed of "+std::to_string(write_integration_speed_MB)+" MB per second\n");
-
+        BOOST_TEST_MESSAGE("The total time taken to write "+std::to_string(total_size)+" bytes was "+std::to_string(write_total_time)+" ms");
         //show read after write results
         BOOST_TEST_MESSAGE("Test results for read after write:\n");
         BOOST_TEST_MESSAGE("Minimum results:");
@@ -291,6 +292,7 @@ BOOST_AUTO_TEST_CASE(write_read_test)
             read_after_write_avg_size+=std::get<0>(i).size();
             read_after_write_avg_time+=std::get<2>(i);
         }
+        long double read_after_write_total_time = read_after_write_avg_time;
         read_after_write_avg_size/=read_after_write_times.size();
         read_after_write_avg_block_ref_size/=read_after_write_times.size();
         read_after_write_avg_time/=read_after_write_times.size();
@@ -302,7 +304,7 @@ BOOST_AUTO_TEST_CASE(write_read_test)
                            " ms with an average block reference size of " +
                            std::to_string(read_after_write_avg_block_ref_size) + " with an average total block size of " +
                            std::to_string(read_after_write_avg_size) + ". This results in an average read after write speed of "+std::to_string(read_after_write_integration_speed_MB)+" MB per second\n");
-
+        BOOST_TEST_MESSAGE("The total time taken to read after write "+std::to_string(total_size)+" bytes was "+std::to_string(read_after_write_total_time)+" ms");
         //show linear read results
         BOOST_TEST_MESSAGE("Test results for linear read:\n");
         BOOST_TEST_MESSAGE("Minimum results:");
@@ -375,6 +377,7 @@ BOOST_AUTO_TEST_CASE(write_read_test)
             linear_read_avg_size+=std::get<0>(i).size();
             linear_read_avg_time+=std::get<2>(i);
         }
+        long double linear_read_total_time = linear_read_avg_time;
         linear_read_avg_size/=linear_read_times.size();
         linear_read_avg_block_ref_size/=linear_read_times.size();
         linear_read_avg_time/=linear_read_times.size();
@@ -386,7 +389,7 @@ BOOST_AUTO_TEST_CASE(write_read_test)
                            " ms with an average block reference size of " +
                            std::to_string(linear_read_avg_block_ref_size) + " with an average total block size of " +
                            std::to_string(linear_read_avg_size) + ". This results in an average linear read speed of "+std::to_string(linear_read_integration_speed_MB)+" MB per second\n");
-
+        BOOST_TEST_MESSAGE("The total time taken to linear read "+std::to_string(total_size)+" bytes was "+std::to_string(linear_read_total_time)+" ms");
         //show random access read results
         BOOST_TEST_MESSAGE("Test results for random access read:\n");
         BOOST_TEST_MESSAGE("Minimum results:");
@@ -459,6 +462,7 @@ BOOST_AUTO_TEST_CASE(write_read_test)
             randam_access_read_avg_size+=std::get<0>(i).size();
             randam_access_read_avg_time+=std::get<2>(i);
         }
+        long double random_access_read_total_time = randam_access_read_avg_time;
         randam_access_read_avg_size/=randam_access_read_times.size();
         randam_access_read_avg_block_ref_size/=randam_access_read_times.size();
         randam_access_read_avg_time/=randam_access_read_times.size();
@@ -470,6 +474,6 @@ BOOST_AUTO_TEST_CASE(write_read_test)
                            " ms with an average block reference size of " +
                            std::to_string(randam_access_read_avg_block_ref_size) + " with an average total block size of " +
                            std::to_string(randam_access_read_avg_size) + ". This results in an average random access read speed of "+std::to_string(randam_access_read_integration_speed_MB)+" MB per second\n");
-
+        BOOST_TEST_MESSAGE("The total time taken to random access read "+std::to_string(total_size)+" bytes was "+std::to_string(random_access_read_total_time)+" ms");
     }
 }
