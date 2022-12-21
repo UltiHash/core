@@ -259,7 +259,7 @@ namespace uh::trees {
                     unsigned char buf_count = 0;
                     std::vector<unsigned char> buffer_array;
                     while ((c = std::fgetc(reader)) != EOF) { // standard C I/O file reading loop
-                        unsigned char c_conv = reinterpret_cast<const unsigned char *>((char) c)[0];
+                        unsigned char c_conv = (unsigned char)((char) c);
                         if (!first_byte) {
                             buf_size = c_conv;
                             first_byte = true;
