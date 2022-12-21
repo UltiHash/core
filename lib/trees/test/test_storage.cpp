@@ -15,29 +15,30 @@
 #include <trees/tree_storage.h>
 #include <random>
 
-std::vector<unsigned char> binary_generator(){
+std::vector<unsigned char> binary_generator() {
     std::random_device dev;
     std::mt19937 rng(dev());
-    std::uniform_int_distribution<std::mt19937::result_type> dist(16,STORE_MAX);
+    std::uniform_int_distribution<std::mt19937::result_type> dist(16, STORE_MAX);
 
     std::size_t len = dist(rng);
 
     std::random_device dev2;
     std::mt19937 rng2(dev2());
-    std::uniform_int_distribution<std::mt19937::result_type> dist2(0,UINT64_MAX);
+    std::uniform_int_distribution<std::mt19937::result_type> dist2(0, UINT64_MAX);
 
     std::random_device dev3;
     std::mt19937 rng3(dev3());
-    std::uniform_int_distribution<std::mt19937::result_type> dist3(0,UINT8_MAX);
+    std::uniform_int_distribution<std::mt19937::result_type> dist3(0, UINT8_MAX);
 
     std::vector<unsigned char> out_return;
     out_return.reserve(len);
     std::size_t i = 0;
-    for(; i<len-sizeof(std::size_t);i+=sizeof(std::size_t)){
-        std::memcpy(reinterpret_cast<void *>(out_return[i]), reinterpret_cast<const std::size_t *>(dist2(rng2)), sizeof(std::size_t));
+    for (; i < len - sizeof(std::size_t); i += sizeof(std::size_t)) {
+        std::memcpy(reinterpret_cast<void *>(out_return[i]), reinterpret_cast<const std::size_t *>(dist2(rng2)),
+                    sizeof(std::size_t));
     }
 
-    for(;i<len;i++){
+    for (; i < len; i++) {
         out_return[i] = dist3(rng3);
     }
 
@@ -45,37 +46,43 @@ std::vector<unsigned char> binary_generator(){
 }
 
 // ------------- Tests Follow --------------
-BOOST_AUTO_TEST_CASE( constructor_test )
+BOOST_AUTO_TEST_CASE(constructor_test)
 {
     uh::trees::tree_storage t1("/mnt/md0");//A test folder reserved for tree storage
 }
 
-BOOST_AUTO_TEST_CASE( write_read_test )
+BOOST_AUTO_TEST_CASE(write_read_test)
 {
     std::size_t total_size{};
     uh::trees::tree_storage t1("/mnt/md0");//A test folder reserved for tree storage
     struct timeval time{};
 
-    while(total_size<std::pow(1024,4)*4){//write 4TB for testing
+    std::vector<std::tuple<std::vector<unsigned char>, std::size_t, long double>> write_times;//list of write times with local_block_ref, integrated block size and milliseconds
+    std::vector<std::tuple<std::size_t, long double>> read_after_write_times;
+
+    while (total_size < std::pow(1024, 4) * 4) {//write 4TB for testing
         std::vector<unsigned char> test_bin = binary_generator();
         //write test
         gettimeofday(&time, NULL);
-        long double millis = ((long double)time.tv_sec * 1000) + ((long double)time.tv_usec / 1000);
+        long double millis = ((long double) time.tv_sec * 1000) + ((long double) time.tv_usec / 1000);
         std::vector<unsigned char> local_block_ref = t1.write(test_bin);
         gettimeofday(&time, NULL);
-        long double write_time = (((long double)time.tv_sec * 1000) + ((long double)time.tv_usec / 1000)) - millis;
-        BOOST_CHECK_MESSAGE(!local_block_ref.empty(),std::string("Database writing failed at block size "+std::to_string(test_bin.size())+" at total size "+std::to_string(total_size)+" . No reference retrieved!").c_str());
+        long double write_time = (((long double) time.tv_sec * 1000) + ((long double) time.tv_usec / 1000)) - millis;
+        BOOST_CHECK_MESSAGE(!local_block_ref.empty(), std::string(
+                "Database writing failed at block size " + std::to_string(test_bin.size()) + " at total size " +
+                std::to_string(total_size) + " . No reference retrieved!").c_str());
+        if(local_block_ref.empty())continue;
         //read after write test
         gettimeofday(&time, NULL);
-        millis = ((long double)time.tv_sec * 1000) + ((long double)time.tv_usec / 1000);
+        millis = ((long double) time.tv_sec * 1000) + ((long double) time.tv_usec / 1000);
         std::vector<unsigned char> read_result = t1.read(local_block_ref);
         gettimeofday(&time, NULL);
-        long double read_after_write_time = (((long double)time.tv_sec * 1000) + ((long double)time.tv_usec / 1000)) - millis;
+        long double read_after_write_time =
+                (((long double) time.tv_sec * 1000) + ((long double) time.tv_usec / 1000)) - millis;
+        //check correctness of stored string
+        BOOST_CHECK_EQUAL_COLLECTIONS(test_bin.cbegin(), test_bin.cend(), read_result.cbegin(), read_result.cend());
 
-        BOOST_CHECK_EQUAL_COLLECTIONS(test_bin.cbegin(),test_bin.cend(),read_result.cbegin(),read_result.cend());
 
-
-
-        total_size+=test_bin.size();
+        total_size += test_bin.size();
     }
 }
