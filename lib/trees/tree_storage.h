@@ -236,9 +236,9 @@ namespace uh::trees {
                         FATAL << "I/O error when reading prefix at path \"" + read_path.string() + "\"";
                         std::exit(EXIT_FAILURE);
                     }
-                    auto* buffer_in = new unsigned char[buf_size+1];
-                    count = std::fread(&buf_size, sizeof(char), 1, reader);
-                    if (count != buf_size) {
+                    unsigned char buffer_in[buf_size+1];
+                    count = std::fread(&buffer_in, sizeof(char), buf_size+1, reader);
+                    if (count != buf_size+1) {
                         FATAL << "I/O prefix first byte reading was not completed on path \"" + read_path.string() + "\"";
                         std::exit(EXIT_FAILURE);
                     }
@@ -246,7 +246,6 @@ namespace uh::trees {
                     for(unsigned char buf_count=0;buf_count<=buf_size;buf_count++){
                         output_size+=(buffer_in[buf_count]<<(buf_count*8));
                     }
-                    delete[] buffer_in;
 
                     std::vector<unsigned char> out_vec{};
                     auto* tmp_buf = new unsigned char[output_size];
