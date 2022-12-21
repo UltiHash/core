@@ -30,17 +30,16 @@ std::vector<unsigned char> binary_generator(){
     std::mt19937 rng3(dev3());
     std::uniform_int_distribution<std::mt19937::result_type> dist3(0,UINT8_MAX);
 
-    auto* out_ptr = (unsigned char*) std::malloc(sizeof(unsigned char)*len);
+    std::vector<unsigned char> out_return;
+    out_return.reserve(len);
     std::size_t i = 0;
     for(; i<len-sizeof(std::size_t);i+=sizeof(std::size_t)){
-        std::memcpy(reinterpret_cast<void *>(out_ptr[i]), reinterpret_cast<const std::size_t *>(dist2(rng2)), sizeof(std::size_t));
+        std::memcpy(reinterpret_cast<void *>(out_return[i]), reinterpret_cast<const std::size_t *>(dist2(rng2)), sizeof(std::size_t));
     }
 
     for(;i<len;i++){
-        out_ptr[i] = dist3(rng3);
+        out_return[i] = dist3(rng3);
     }
-
-    std::vector<unsigned char> out_return{out_ptr,out_ptr+len};
 
     return out_return;
 }
@@ -51,3 +50,32 @@ BOOST_AUTO_TEST_CASE( constructor_test )
     uh::trees::tree_storage t1("/mnt/md0");//A test folder reserved for tree storage
 }
 
+BOOST_AUTO_TEST_CASE( write_read_test )
+{
+    std::size_t total_size{};
+    uh::trees::tree_storage t1("/mnt/md0");//A test folder reserved for tree storage
+    struct timeval time{};
+
+    while(total_size<std::pow(1024,4)*4){//write 4TB for testing
+        std::vector<unsigned char> test_bin = binary_generator();
+        //write test
+        gettimeofday(&time, NULL);
+        long double millis = ((long double)time.tv_sec * 1000) + ((long double)time.tv_usec / 1000);
+        std::vector<unsigned char> local_block_ref = t1.write(test_bin);
+        gettimeofday(&time, NULL);
+        long double write_time = (((long double)time.tv_sec * 1000) + ((long double)time.tv_usec / 1000)) - millis;
+        BOOST_CHECK_MESSAGE(!local_block_ref.empty(),std::string("Database writing failed at block size "+std::to_string(test_bin.size())+" at total size "+std::to_string(total_size)+" . No reference retrieved!").c_str());
+        //read after write test
+        gettimeofday(&time, NULL);
+        millis = ((long double)time.tv_sec * 1000) + ((long double)time.tv_usec / 1000);
+        std::vector<unsigned char> read_result = t1.read(local_block_ref);
+        gettimeofday(&time, NULL);
+        long double read_after_write_time = (((long double)time.tv_sec * 1000) + ((long double)time.tv_usec / 1000)) - millis;
+
+        BOOST_CHECK_EQUAL_COLLECTIONS(test_bin.cbegin(),test_bin.cend(),read_result.cbegin(),read_result.cend());
+
+
+
+        total_size+=test_bin.size();
+    }
+}

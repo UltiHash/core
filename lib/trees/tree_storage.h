@@ -52,7 +52,7 @@ namespace uh::trees {
             return prefix;
         }
 
-        std::size_t prefix_unwrap_size(std::vector<unsigned char>::iterator in) {
+        static std::size_t prefix_unwrap_size(std::vector<unsigned char>::iterator in) {
             return (std::size_t) (*in + 1);
         }
 
