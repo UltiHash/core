@@ -158,7 +158,7 @@ BOOST_AUTO_TEST_CASE(write_read_test)
     BOOST_TEST_MESSAGE("Minimum integration time is " + std::to_string(std::get<2>(*min_size)) +
                        " ms from Block reference \"" + boost::algorithm::hex(
             std::string{std::get<0>(*min_size).cbegin(), std::get<0>(*min_size).cend()}) +
-                       "\" with an block reference size of " +
+                       "\" with a block reference size of " +
                        std::to_string(std::get<0>(*min_size).size()) + " with a total block size of " +
                        std::to_string(std::get<1>(*min_size)) + "\n");
 
@@ -189,7 +189,27 @@ BOOST_AUTO_TEST_CASE(write_read_test)
     BOOST_TEST_MESSAGE("Maximum integration time is " + std::to_string(std::get<2>(*max_size)) +
                        " ms from Block reference \"" + boost::algorithm::hex(
             std::string{std::get<0>(*max_size).cbegin(), std::get<0>(*max_size).cend()}) +
-                       "\" with an block reference size of " +
+                       "\" with a block reference size of " +
                        std::to_string(std::get<0>(*max_size).size()) + " with a total block size of " +
                        std::to_string(std::get<1>(*max_size)) + "\n");
+
+    long double avg_size = 0;
+    long double avg_block_ref_size = 0;
+    long double avg_time = 0;
+    for(const auto &i:write_times){
+        avg_size+=std::get<1>(i);
+        avg_size+=std::get<0>(i).size();
+        avg_time+=std::get<2>(i);
+    }
+    avg_size/=write_times.size();
+    avg_block_ref_size/=write_times.size();
+    avg_time/=write_times.size();
+
+    long double integration_speed_MB = (avg_size/std::pow(2,20))/(avg_time/1000);
+
+    BOOST_TEST_MESSAGE("Average results:");
+    BOOST_TEST_MESSAGE("Average integration time is " + std::to_string(avg_time) +
+                       " ms with an average block reference size of " +
+                       std::to_string(avg_block_ref_size) + " with an average total block size of " +
+                       std::to_string(avg_size) + ". This results in an average integration speed of "+std::to_string(integration_speed_MB)+" MB per second\n");
 }
