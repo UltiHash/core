@@ -58,7 +58,7 @@ BOOST_AUTO_TEST_CASE(write_read_test)
     struct timeval time{};
 
     //list of write times with local_block_ref, integrated block size and milliseconds
-    std::vector<std::tuple<std::vector<unsigned char>, std::size_t, long double>> write_times,read_after_write_times, linear_read, randam_access_read;
+    std::vector<std::tuple<std::vector<unsigned char>, std::size_t, long double>> write_times,read_after_write_times, linear_read_times, randam_access_read_times;
     //retrieved block size, local_block_ref size and time taken
 
     while (total_size < (std::size_t) (std::pow(1024, 4) * 4)) {//write 4TB for testing
@@ -102,7 +102,7 @@ BOOST_AUTO_TEST_CASE(write_read_test)
                 "Database sequential reading failed at block reference " +
                 boost::algorithm::hex(std::string{std::get<0>(i).cbegin(), std::get<0>(i).cend()}) +
                 " . No block retrieved!").c_str());
-        linear_read.emplace_back(std::get<0>(i),read_result.size(), read_sequential);
+        linear_read_times.emplace_back(std::get<0>(i),read_result.size(), read_sequential);
     }
 
     //test random access times for 256GB
@@ -123,7 +123,7 @@ BOOST_AUTO_TEST_CASE(write_read_test)
                 boost::algorithm::hex(std::string{std::get<0>(write_times[access_point]).cbegin(),
                                                   std::get<0>(write_times[access_point]).cend()}) +
                 " . No block retrieved!").c_str());
-        randam_access_read.emplace_back(std::get<0>(write_times[access_point]), read_result.size(),
+        randam_access_read_times.emplace_back(std::get<0>(write_times[access_point]), read_result.size(),
                                         read_sequential);
         total_size += read_result.size();
     }
@@ -290,10 +290,94 @@ BOOST_AUTO_TEST_CASE(write_read_test)
 
     long double read_after_write_integration_speed_MB = (read_after_write_avg_size/std::pow(2,20))/(read_after_write_avg_time/1000);
 
-    BOOST_TEST_MESSAGE("Average writing results:");
+    BOOST_TEST_MESSAGE("Average read after write results:");
     BOOST_TEST_MESSAGE("Average read after write time is " + std::to_string(read_after_write_avg_time) +
                        " ms with an average block reference size of " +
                        std::to_string(read_after_write_avg_block_ref_size) + " with an average total block size of " +
                        std::to_string(read_after_write_avg_size) + ". This results in an average read after write speed of "+std::to_string(read_after_write_integration_speed_MB)+" MB per second\n");
+
+    //show linear read results
+    BOOST_TEST_MESSAGE("Test results for linear read:\n");
+    BOOST_TEST_MESSAGE("Minimum results:");
+    //minimum size
+    auto linear_read_min_size = std::min_element(linear_read_times.cbegin(), linear_read_times.cend(),
+                                                      [](const auto &a, const auto &b) { return std::get<1>(a) < std::get<1>(b); });
+    BOOST_TEST_MESSAGE("Minimum size is " + std::to_string(std::get<1>(*linear_read_min_size)) +
+                       " from Block reference \"" + boost::algorithm::hex(
+            std::string{std::get<0>(*linear_read_min_size).cbegin(), std::get<0>(*linear_read_min_size).cend()}) + "\" with a size of " +
+                       std::to_string(std::get<0>(*linear_read_min_size).size()) + " with an linear read time of " +
+                       std::to_string(std::get<2>(*linear_read_min_size)) + " ms");
+    //minimum block ref size
+    auto linear_read_min_block_ref_size = std::min_element(linear_read_times.cbegin(), linear_read_times.cend(),
+                                                                [](const auto &a, const auto &b) {
+                                                                    return std::get<0>(a).size() < std::get<0>(b).size();
+                                                                });
+    BOOST_TEST_MESSAGE("Minimum block reference size is " + std::to_string(std::get<0>(*linear_read_min_block_ref_size).size()) +
+                       " from Block reference \"" + boost::algorithm::hex(
+            std::string{std::get<0>(*linear_read_min_block_ref_size).cbegin(), std::get<0>(*linear_read_min_block_ref_size).cend()}) +
+                       "\" with a total block size of " + std::to_string(std::get<1>(*linear_read_min_block_ref_size)) +
+                       " with an linear read time of " +
+                       std::to_string(std::get<2>(*linear_read_min_block_ref_size)) + " ms");
+    //minimum time taken
+    auto linear_read_min_time_taken = std::min_element(linear_read_times.cbegin(), linear_read_times.cend(), [](const auto &a, const auto &b) {
+        return std::get<2>(a) < std::get<2>(b);
+    });
+    BOOST_TEST_MESSAGE("Minimum linear read time is " + std::to_string(std::get<2>(*linear_read_min_time_taken)) +
+                       " ms from Block reference \"" + boost::algorithm::hex(
+            std::string{std::get<0>(*linear_read_min_time_taken).cbegin(), std::get<0>(*linear_read_min_time_taken).cend()}) +
+                       "\" with a block reference size of " +
+                       std::to_string(std::get<0>(*linear_read_min_time_taken).size()) + " with a total block size of " +
+                       std::to_string(std::get<1>(*linear_read_min_time_taken)) + "\n");
+
+    BOOST_TEST_MESSAGE("Maximum results:");
+    //maximum size
+    auto linear_read_max_size = std::max_element(linear_read_times.cbegin(), linear_read_times.cend(),
+                                                      [](const auto &a, const auto &b) { return std::get<1>(a) < std::get<1>(b); });
+    BOOST_TEST_MESSAGE("Maximum size is " + std::to_string(std::get<1>(*linear_read_max_size)) +
+                       " from Block reference \"" + boost::algorithm::hex(
+            std::string{std::get<0>(*linear_read_max_size).cbegin(), std::get<0>(*linear_read_max_size).cend()}) + "\" with a size of " +
+                       std::to_string(std::get<0>(*linear_read_max_size).size()) + " with an linear read time of " +
+                       std::to_string(std::get<2>(*linear_read_max_size)) + " ms");
+    //maximum block ref size
+    auto linear_read_max_block_ref_size = std::max_element(linear_read_times.cbegin(), linear_read_times.cend(),
+                                                                [](const auto &a, const auto &b) {
+                                                                    return std::get<0>(a).size() < std::get<0>(b).size();
+                                                                });
+    BOOST_TEST_MESSAGE("Maximum block reference size is " + std::to_string(std::get<0>(*linear_read_max_block_ref_size).size()) +
+                       " from Block reference \"" + boost::algorithm::hex(
+            std::string{std::get<0>(*linear_read_max_block_ref_size).cbegin(), std::get<0>(*linear_read_max_block_ref_size).cend()}) +
+                       "\" with a total block size of " + std::to_string(std::get<1>(*linear_read_max_block_ref_size)) +
+                       " with an linear read time of " +
+                       std::to_string(std::get<2>(*linear_read_max_block_ref_size)) + " ms");
+    //maximum time taken
+    auto linear_read_max_time_taken = std::max_element(linear_read_times.cbegin(), linear_read_times.cend(), [](const auto &a, const auto &b) {
+        return std::get<2>(a) < std::get<2>(b);
+    });
+    BOOST_TEST_MESSAGE("Maximum linear read time is " + std::to_string(std::get<2>(*linear_read_max_time_taken)) +
+                       " ms from Block reference \"" + boost::algorithm::hex(
+            std::string{std::get<0>(*linear_read_max_time_taken).cbegin(), std::get<0>(*linear_read_max_time_taken).cend()}) +
+                       "\" with a block reference size of " +
+                       std::to_string(std::get<0>(*linear_read_max_time_taken).size()) + " with a total block size of " +
+                       std::to_string(std::get<1>(*linear_read_max_time_taken)) + "\n");
+
+    long double linear_read_avg_size = 0;
+    long double linear_read_avg_block_ref_size = 0;
+    long double linear_read_avg_time = 0;
+    for(const auto &i:linear_read_times){
+        linear_read_avg_size+=std::get<1>(i);
+        linear_read_avg_size+=std::get<0>(i).size();
+        linear_read_avg_time+=std::get<2>(i);
+    }
+    linear_read_avg_size/=linear_read_times.size();
+    linear_read_avg_block_ref_size/=linear_read_times.size();
+    linear_read_avg_time/=linear_read_times.size();
+
+    long double linear_read_integration_speed_MB = (linear_read_avg_size/std::pow(2,20))/(linear_read_avg_time/1000);
+
+    BOOST_TEST_MESSAGE("Average linear read results:");
+    BOOST_TEST_MESSAGE("Average linear read time is " + std::to_string(linear_read_avg_time) +
+                       " ms with an average block reference size of " +
+                       std::to_string(linear_read_avg_block_ref_size) + " with an average total block size of " +
+                       std::to_string(linear_read_avg_size) + ". This results in an average linear read speed of "+std::to_string(linear_read_integration_speed_MB)+" MB per second\n");
 
 }
