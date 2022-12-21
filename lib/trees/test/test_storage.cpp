@@ -32,10 +32,10 @@ std::vector<unsigned char> binary_generator() {
 
     std::vector<unsigned char> out_return;
     out_return.reserve(len);
+    std::size_t* cheater = reinterpret_cast<std::size_t *>(out_return.data());
     std::size_t i = 0;
     for (; i < len - sizeof(std::size_t); i += sizeof(std::size_t)) {
-        std::memcpy(reinterpret_cast<void *>(out_return[i]), reinterpret_cast<const std::size_t *>(dist2(rng2)),
-                    sizeof(std::size_t));
+        cheater[i]=(std::size_t)dist2(rng2);
     }
 
     for (; i < len; i++) {
