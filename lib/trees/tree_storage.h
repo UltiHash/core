@@ -153,7 +153,7 @@ namespace uh::trees {
             }
             if (min_val < STORE_MAX && min_val + total_size < STORE_HARD_LIMIT) {
                 //store block to this position
-                std::string ref_name{boost::algorithm::hex(std::string{(char)min_pos}};
+                std::string ref_name{boost::algorithm::hex(std::string{(char)min_pos})};
                 std::filesystem::path read_chunk = combined_path / ref_name;
                 FILE *writer = std::fopen(read_chunk.c_str(), "ab+");
                 if (!writer) {
