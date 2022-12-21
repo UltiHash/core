@@ -47,29 +47,6 @@ namespace uh::trees {
             return prefix;
         }
 
-        static std::size_t prefix_unwrap_size(std::vector<unsigned char>::iterator in) {
-            return (std::size_t) (*in + 1);
-        }
-
-        std::size_t prefix_unwrap_content_size(std::vector<unsigned char>::iterator &in) {
-            std::size_t byte_count = prefix_unwrap_size(in) - 1;
-            in++;
-            std::vector<unsigned char> in_buf{in, in + static_cast<long>(byte_count)};
-            in += static_cast<long>(byte_count);
-            std::size_t output_size{};
-            while (in_buf.size() < sizeof(output_size))in_buf.push_back(0);
-            if constexpr (std::endian::native == std::endian::big) {
-                auto mem_size_convert = std::array<unsigned char, sizeof(output_size)>();
-                for (unsigned char i = 0; i < byte_count; i++) {
-                    mem_size_convert[byte_count - i - 1] = in_buf[i];
-                }
-                std::memcpy(reinterpret_cast<void *>(&output_size), mem_size_convert.data(), in_buf.size());
-            } else {
-                std::memcpy(reinterpret_cast<void *>(&output_size), in_buf.data(), in_buf.size());
-            }
-            return output_size;
-        }
-
     public:
         explicit tree_storage(const std::filesystem::path &root) {
             //expected are 4 bytes that mimic hexadecimal string representation
