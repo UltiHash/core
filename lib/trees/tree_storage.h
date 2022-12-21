@@ -244,7 +244,7 @@ namespace uh::trees {
                     }
                     std::size_t output_size{};
                     for(unsigned char buf_count=0;buf_count<=buf_size;buf_count++){
-                        output_size+=(buffer_in[buf_count]<<(buf_count*8));
+                        output_size+=(((std::size_t)buffer_in[buf_count])<<(buf_count*8));
                     }
 
                     std::vector<unsigned char> out_vec{};
