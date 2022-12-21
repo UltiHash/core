@@ -59,16 +59,16 @@ BOOST_AUTO_TEST_CASE(write_read_test)
 
     //list of write times with local_block_ref, integrated block size and milliseconds
     std::vector<std::tuple<std::vector<unsigned char>, std::size_t, long double>> write_times;
-    //only retrieved block size and time taken
-    std::vector<std::tuple<std::size_t, long double>> read_after_write_times;
+    //retrieved block size, local_block_ref size and time taken
+    std::vector<std::tuple<std::size_t, std::size_t, long double>> read_after_write_times,linear_read,randam_access_read;
 
-    while (total_size < std::pow(1024, 4) * 4) {//write 4TB for testing
+    while (total_size < (std::size_t)(std::pow(1024, 4) * 4)) {//write 4TB for testing
         std::vector<unsigned char> test_bin = binary_generator();
         //write test
-        gettimeofday(&time, NULL);
+        gettimeofday(&time, nullptr);
         long double millis = ((long double) time.tv_sec * 1000) + ((long double) time.tv_usec / 1000);
         std::vector<unsigned char> local_block_ref = t1.write(test_bin);
-        gettimeofday(&time, NULL);
+        gettimeofday(&time, nullptr);
         long double write_time = (((long double) time.tv_sec * 1000) + ((long double) time.tv_usec / 1000)) - millis;
         BOOST_CHECK_MESSAGE(!local_block_ref.empty(), std::string(
                 "Database writing failed at block size " + std::to_string(test_bin.size()) + " at total size " +
@@ -76,17 +76,48 @@ BOOST_AUTO_TEST_CASE(write_read_test)
         if(local_block_ref.empty())continue;
         write_times.emplace_back(local_block_ref,test_bin.size(),write_time);
         //read after write test
-        gettimeofday(&time, NULL);
+        gettimeofday(&time, nullptr);
         millis = ((long double) time.tv_sec * 1000) + ((long double) time.tv_usec / 1000);
         std::vector<unsigned char> read_result = t1.read(local_block_ref);
-        gettimeofday(&time, NULL);
+        gettimeofday(&time, nullptr);
         long double read_after_write_time =
                 (((long double) time.tv_sec * 1000) + ((long double) time.tv_usec / 1000)) - millis;
         //check correctness of stored string
         BOOST_CHECK_EQUAL_COLLECTIONS(test_bin.cbegin(), test_bin.cend(), read_result.cbegin(), read_result.cend());
 
-        read_after_write_times.emplace_back(read_result.size(),read_after_write_time);
+        read_after_write_times.emplace_back(read_result.size(), local_block_ref.size(), read_after_write_time);
 
         total_size += test_bin.size();
     }
+
+    BOOST_CHECK_MESSAGE(!write_times.empty(),"No write times were tested!");
+    //test sequential read from beginning on
+    for(const auto &i:write_times){
+        gettimeofday(&time, nullptr);
+        long double millis = ((long double) time.tv_sec * 1000) + ((long double) time.tv_usec / 1000);
+        std::vector<unsigned char> read_result = t1.read(std::get<0>(i));
+        gettimeofday(&time, nullptr);
+        long double read_sequential =
+                (((long double) time.tv_sec * 1000) + ((long double) time.tv_usec / 1000)) - millis;
+        linear_read.emplace_back(read_result.size(),std::get<0>(i).size(),read_sequential);
+    }
+
+    //test random access times for 256GB
+    total_size = 0;
+    std::random_device dev;
+    std::mt19937 rng(dev());
+    std::uniform_int_distribution<std::mt19937::result_type> dist(0, write_times.size());
+    while(total_size<(std::size_t)std::pow(2,38)){
+        std::size_t access_point = dist(rng);
+        gettimeofday(&time, nullptr);
+        long double millis = ((long double) time.tv_sec * 1000) + ((long double) time.tv_usec / 1000);
+        std::vector<unsigned char> read_result = t1.read(std::get<0>(write_times[access_point]));
+        gettimeofday(&time, nullptr);
+        long double read_sequential =
+                (((long double) time.tv_sec * 1000) + ((long double) time.tv_usec / 1000)) - millis;
+        randam_access_read.emplace_back(read_result.size(),std::get<0>(write_times[access_point]).size(),read_sequential);
+        total_size+=read_result.size();
+    }
+
+
 }
