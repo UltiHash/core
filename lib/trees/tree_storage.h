@@ -278,6 +278,7 @@ namespace uh::trees {
                     std::string ref_name{boost::algorithm::hex(std::string{(char)i})};
                     std::filesystem::path read_path = combined_path / ref_name;
                     FILE *reader = std::fopen(read_path.c_str(), "rb");
+                    std::size_t cur_pos = 0;
                     while(!std::feof(reader)){
                         if (!reader) {
                             ERROR << "File read opening failed at \"" + read_path.string() + "\"";
@@ -289,8 +290,16 @@ namespace uh::trees {
                             std::exit(EXIT_FAILURE);
                         }
 
+                        std::vector<unsigned char> local_block_ref;
+                        local_block_ref.reserve(sizeof(unsigned int));
+                        for (unsigned char i = 0; i < sizeof(unsigned int); i++) {//STORE_MAX will fit in 4 bytes
+                            local_block_ref.push_back((unsigned char)(cur_pos>>(i*8)));
+                        }
+                        local_block_ref.insert(local_block_ref.cbegin(), i);
+
                         unsigned char buf_size = 0;
                         std::size_t count = std::fread(&buf_size, sizeof(char), 1, reader);
+                        cur_pos+=count;
                         if (count != 1) {
                             FATAL << "I/O prefix first byte reading was not completed on path \"" + read_path.string() + "\"";
                             std::exit(EXIT_FAILURE);
@@ -302,6 +311,7 @@ namespace uh::trees {
                         }
                         unsigned char buffer_in[buf_size+1];
                         count = std::fread(&buffer_in, sizeof(char), buf_size+1, reader);
+                        cur_pos+=count;
                         if (count != buf_size+1) {
                             FATAL << "I/O prefix first byte reading was not completed on path \"" + read_path.string() + "\"";
                             std::exit(EXIT_FAILURE);
@@ -314,6 +324,7 @@ namespace uh::trees {
                         std::vector<unsigned char> out_vec{};
                         auto* tmp_buf = new unsigned char[output_size];
                         count = std::fread(tmp_buf, sizeof(char), output_size, reader);
+                        cur_pos+=count;
                         out_vec.assign(tmp_buf,tmp_buf+output_size);
                         delete[] tmp_buf;
 
