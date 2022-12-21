@@ -211,4 +211,89 @@ BOOST_AUTO_TEST_CASE(write_read_test)
                        " ms with an average block reference size of " +
                        std::to_string(write_avg_block_ref_size) + " with an average total block size of " +
                        std::to_string(write_avg_size) + ". This results in an average integration speed of "+std::to_string(write_integration_speed_MB)+" MB per second\n");
+
+    //show read after write results
+    BOOST_TEST_MESSAGE("Test results for read after write:\n");
+    BOOST_TEST_MESSAGE("Minimum results:");
+    //minimum size
+    auto read_after_write_min_size = std::min_element(read_after_write_times.cbegin(), read_after_write_times.cend(),
+                                           [](const auto &a, const auto &b) { return std::get<1>(a) < std::get<1>(b); });
+    BOOST_TEST_MESSAGE("Minimum size is " + std::to_string(std::get<1>(*read_after_write_min_size)) +
+                       " from Block reference \"" + boost::algorithm::hex(
+            std::string{std::get<0>(*read_after_write_min_size).cbegin(), std::get<0>(*read_after_write_min_size).cend()}) + "\" with a size of " +
+                       std::to_string(std::get<0>(*read_after_write_min_size).size()) + " with an read after write time of " +
+                       std::to_string(std::get<2>(*read_after_write_min_size)) + " ms");
+    //minimum block ref size
+    auto read_after_write_min_block_ref_size = std::min_element(read_after_write_times.cbegin(), read_after_write_times.cend(),
+                                                     [](const auto &a, const auto &b) {
+                                                         return std::get<0>(a).size() < std::get<0>(b).size();
+                                                     });
+    BOOST_TEST_MESSAGE("Minimum block reference size is " + std::to_string(std::get<0>(*read_after_write_min_block_ref_size).size()) +
+                       " from Block reference \"" + boost::algorithm::hex(
+            std::string{std::get<0>(*read_after_write_min_block_ref_size).cbegin(), std::get<0>(*read_after_write_min_block_ref_size).cend()}) +
+                       "\" with a total block size of " + std::to_string(std::get<1>(*read_after_write_min_block_ref_size)) +
+                       " with an read after write time of " +
+                       std::to_string(std::get<2>(*read_after_write_min_block_ref_size)) + " ms");
+    //minimum time taken
+    auto read_after_write_min_time_taken = std::min_element(read_after_write_times.cbegin(), read_after_write_times.cend(), [](const auto &a, const auto &b) {
+        return std::get<2>(a) < std::get<2>(b);
+    });
+    BOOST_TEST_MESSAGE("Minimum read after write time is " + std::to_string(std::get<2>(*read_after_write_min_time_taken)) +
+                       " ms from Block reference \"" + boost::algorithm::hex(
+            std::string{std::get<0>(*read_after_write_min_time_taken).cbegin(), std::get<0>(*read_after_write_min_time_taken).cend()}) +
+                       "\" with a block reference size of " +
+                       std::to_string(std::get<0>(*read_after_write_min_time_taken).size()) + " with a total block size of " +
+                       std::to_string(std::get<1>(*read_after_write_min_time_taken)) + "\n");
+
+    BOOST_TEST_MESSAGE("Maximum results:");
+    //maximum size
+    auto read_after_write_max_size = std::max_element(read_after_write_times.cbegin(), read_after_write_times.cend(),
+                                           [](const auto &a, const auto &b) { return std::get<1>(a) < std::get<1>(b); });
+    BOOST_TEST_MESSAGE("Maximum size is " + std::to_string(std::get<1>(*read_after_write_max_size)) +
+                       " from Block reference \"" + boost::algorithm::hex(
+            std::string{std::get<0>(*read_after_write_max_size).cbegin(), std::get<0>(*read_after_write_max_size).cend()}) + "\" with a size of " +
+                       std::to_string(std::get<0>(*read_after_write_max_size).size()) + " with an read after write time of " +
+                       std::to_string(std::get<2>(*read_after_write_max_size)) + " ms");
+    //maximum block ref size
+    auto read_after_write_max_block_ref_size = std::max_element(read_after_write_times.cbegin(), read_after_write_times.cend(),
+                                                     [](const auto &a, const auto &b) {
+                                                         return std::get<0>(a).size() < std::get<0>(b).size();
+                                                     });
+    BOOST_TEST_MESSAGE("Maximum block reference size is " + std::to_string(std::get<0>(*read_after_write_max_block_ref_size).size()) +
+                       " from Block reference \"" + boost::algorithm::hex(
+            std::string{std::get<0>(*read_after_write_max_block_ref_size).cbegin(), std::get<0>(*read_after_write_max_block_ref_size).cend()}) +
+                       "\" with a total block size of " + std::to_string(std::get<1>(*read_after_write_max_block_ref_size)) +
+                       " with an read after write time of " +
+                       std::to_string(std::get<2>(*read_after_write_max_block_ref_size)) + " ms");
+    //maximum time taken
+    auto read_after_write_max_time_taken = std::max_element(read_after_write_times.cbegin(), read_after_write_times.cend(), [](const auto &a, const auto &b) {
+        return std::get<2>(a) < std::get<2>(b);
+    });
+    BOOST_TEST_MESSAGE("Maximum read after write time is " + std::to_string(std::get<2>(*read_after_write_max_time_taken)) +
+                       " ms from Block reference \"" + boost::algorithm::hex(
+            std::string{std::get<0>(*read_after_write_max_time_taken).cbegin(), std::get<0>(*read_after_write_max_time_taken).cend()}) +
+                       "\" with a block reference size of " +
+                       std::to_string(std::get<0>(*read_after_write_max_time_taken).size()) + " with a total block size of " +
+                       std::to_string(std::get<1>(*read_after_write_max_time_taken)) + "\n");
+
+    long double read_after_write_avg_size = 0;
+    long double read_after_write_avg_block_ref_size = 0;
+    long double read_after_write_avg_time = 0;
+    for(const auto &i:read_after_write_times){
+        read_after_write_avg_size+=std::get<1>(i);
+        read_after_write_avg_size+=std::get<0>(i).size();
+        read_after_write_avg_time+=std::get<2>(i);
+    }
+    read_after_write_avg_size/=read_after_write_times.size();
+    read_after_write_avg_block_ref_size/=read_after_write_times.size();
+    read_after_write_avg_time/=read_after_write_times.size();
+
+    long double read_after_write_integration_speed_MB = (read_after_write_avg_size/std::pow(2,20))/(read_after_write_avg_time/1000);
+
+    BOOST_TEST_MESSAGE("Average writing results:");
+    BOOST_TEST_MESSAGE("Average read after write time is " + std::to_string(read_after_write_avg_time) +
+                       " ms with an average block reference size of " +
+                       std::to_string(read_after_write_avg_block_ref_size) + " with an average total block size of " +
+                       std::to_string(read_after_write_avg_size) + ". This results in an average read after write speed of "+std::to_string(read_after_write_integration_speed_MB)+" MB per second\n");
+
 }
