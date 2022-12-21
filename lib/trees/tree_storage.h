@@ -162,7 +162,7 @@ namespace uh::trees {
                 }
                 if (std::get<1>(children[min_pos]) == nullptr) {
                     std::string ref_name{
-                            boost::algorithm::hex(std::string(reinterpret_cast<const char *>(min_pos), 1))};
+                            boost::algorithm::hex(std::string{(char)min_pos})};
                     std::string new_node_name =
                             combined_path.string().substr(2, 4) + ref_name;//get hex of latter folder name indexer
                     std::filesystem::path new_node_dir = combined_path / new_node_name;
@@ -269,6 +269,70 @@ namespace uh::trees {
             }
         }
         //TODO: index and delete
+        //The index gives tuple<hash,local_block_reference>
+        std::list<std::tuple<std::vector<unsigned char>,std::vector<unsigned char>>> index() {
+            std::list<std::tuple<std::vector<unsigned char>,std::vector<unsigned char>>> search_index;
+            for (unsigned short i = 0; i < (unsigned short) N; i++) {
+                if(size[i]>0){
+                    //read entire block generating hashes and block references
+                    std::string ref_name{boost::algorithm::hex(std::string{(char)i})};
+                    std::filesystem::path read_path = combined_path / ref_name;
+                    FILE *reader = std::fopen(read_path.c_str(), "rb");
+                    while(!std::feof(reader)){
+                        if (!reader) {
+                            ERROR << "File read opening failed at \"" + read_path.string() + "\"";
+                            std::exit(EXIT_FAILURE);
+                        }
+                        //File should have been opened or created here
+                        if (std::ferror(reader)) {
+                            FATAL << "I/O error when seeking \"" + read_path.string() + "\"";
+                            std::exit(EXIT_FAILURE);
+                        }
+
+                        unsigned char buf_size = 0;
+                        std::size_t count = std::fread(&buf_size, sizeof(char), 1, reader);
+                        if (count != 1) {
+                            FATAL << "I/O prefix first byte reading was not completed on path \"" + read_path.string() + "\"";
+                            std::exit(EXIT_FAILURE);
+                        }
+
+                        if (std::ferror(reader)) {
+                            FATAL << "I/O error when reading prefix at path \"" + read_path.string() + "\"";
+                            std::exit(EXIT_FAILURE);
+                        }
+                        unsigned char buffer_in[buf_size+1];
+                        count = std::fread(&buffer_in, sizeof(char), buf_size+1, reader);
+                        if (count != buf_size+1) {
+                            FATAL << "I/O prefix first byte reading was not completed on path \"" + read_path.string() + "\"";
+                            std::exit(EXIT_FAILURE);
+                        }
+                        std::size_t output_size{};
+                        for(unsigned char buf_count=0;buf_count<=buf_size;buf_count++){
+                            output_size+=(((std::size_t)buffer_in[buf_count])<<(buf_count*8));
+                        }
+
+                        std::vector<unsigned char> out_vec{};
+                        auto* tmp_buf = new unsigned char[output_size];
+                        count = std::fread(tmp_buf, sizeof(char), output_size, reader);
+                        out_vec.assign(tmp_buf,tmp_buf+output_size);
+                        delete[] tmp_buf;
+
+                        if (count != output_size) {
+                            FATAL << "I/O was not completed on path \"" + read_path.string() + "\"";
+                            std::exit(EXIT_FAILURE);
+                        }
+                        if (std::ferror(reader)) {
+                            FATAL << "I/O error when reading prefix at path \"" + read_path.string() + "\"";
+                            std::exit(EXIT_FAILURE);
+                        }
+
+                    }
+
+                    std::fclose(reader);
+                }
+            }
+            return search_index;
+        }
     };
 }
 
