@@ -26,7 +26,7 @@ namespace uh::trees {
 
         //returns wrapped string
         static std::vector<unsigned char> prefix_wrap(std::size_t input_size) {
-            std::bitset<64> h_bit{input_size};
+            std::size_t h_bit{input_size};
             unsigned char total_bit_count{};
             //counting max bits
             while (h_bit != 0)[[likely]] {
@@ -37,11 +37,12 @@ namespace uh::trees {
             if (total_bit_count % 8)[[likely]] {
                 byte_count++;
             }
-            if(byte_count>0)byte_count--;//there is at least one description byte
             std::vector<unsigned char> prefix{};
             for (unsigned char i = 0; i < byte_count; i++) {
                 prefix.push_back((unsigned char)(input_size>>(i*8)));
             }
+            if(byte_count>1)byte_count--;//there is at least one description byte
+            if(prefix.empty())prefix.push_back(0);
             prefix.insert(prefix.cbegin(), byte_count);
             return prefix;
         }
@@ -273,7 +274,7 @@ namespace uh::trees {
                     }
 
                     std::size_t output_size{};
-                    for(buf_count=0;buf_count<buf_size;buf_count++){
+                    for(buf_count=0;buf_count<=buf_size;buf_count++){
                         output_size+=(buffer_array[buf_count]<<(buf_count*8));
                     }
 
