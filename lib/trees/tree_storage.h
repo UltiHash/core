@@ -39,15 +39,8 @@ namespace uh::trees {
             }
             if(byte_count>0)byte_count--;//there is at least one description byte
             std::vector<unsigned char> prefix{};
-
-            auto mem_size_convert = std::array<unsigned char, sizeof(input_size)>();
-            std::memcpy(mem_size_convert.data(), reinterpret_cast<unsigned char *>(&input_size), sizeof(input_size));
             for (unsigned char i = 0; i < byte_count; i++) {
-                if constexpr (std::endian::native == std::endian::big) {
-                    prefix.push_back(mem_size_convert[byte_count - i - 1]);
-                } else {
-                    prefix.push_back(mem_size_convert[i]);
-                }
+                prefix.push_back((unsigned char)(input_size>>(i*8)));
             }
             prefix.insert(prefix.cbegin(), byte_count);
             return prefix;
@@ -280,16 +273,8 @@ namespace uh::trees {
                     }
 
                     std::size_t output_size{};
-                    while (buffer_array.size() < sizeof(output_size))buffer_array.push_back(0);
-                    if constexpr (std::endian::native == std::endian::big) {
-                        auto mem_size_convert = std::array<unsigned char, sizeof(output_size)>();
-                        for (unsigned char i = 0; i < buf_size; i++) {
-                            mem_size_convert[buf_size - i - 1] = buffer_array[i];
-                        }
-                        std::memcpy(reinterpret_cast<void *>(&output_size), mem_size_convert.data(),
-                                    sizeof(output_size));
-                    } else {
-                        std::memcpy(reinterpret_cast<void *>(&output_size), buffer_array.data(), sizeof(output_size));
+                    for(buf_count=0;buf_count<buf_size;buf_count++){
+                        output_size+=(buffer_array[buf_count]<<(buf_count*8));
                     }
 
                     std::vector<unsigned char> out_vec{};
