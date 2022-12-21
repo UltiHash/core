@@ -114,24 +114,24 @@ namespace uh::trees{
                     }
                     if(i < length - 1){
                         // match string is too short -> split node
-                        std::size_t higher_val=i+1,lower_val=length-(i+1);
-                        char* higher_node = new char[higher_val];//(char*) std::malloc(higher_val*sizeof(char));
-                        std::memcpy(higher_node,data,higher_val);
-                        char* lower_node = new char[lower_val];//(char*) std::malloc(lower_val*sizeof(char));
-                        std::memcpy(lower_node,data+higher_val,lower_val);
-                        length = higher_val;
+                        std::size_t higher_string_len=i+1,lower_string_len= length - (i + 1);
+                        char* higher_node_string = new char[higher_string_len];//(char*) std::malloc(higher_val*sizeof(char));
+                        std::memcpy(higher_node_string, data, higher_string_len);
+                        char* lower_node_string = new char[lower_string_len];//(char*) std::malloc(lower_string_len*sizeof(char));
+                        std::memcpy(lower_node_string, data + higher_string_len, lower_string_len);
+                        length = higher_string_len;
                         std::free(data);
-                        data = higher_node;
-                        auto* tmp = (struct tree_radix_custom*) std::malloc(sizeof(struct tree_radix_custom));
-                        //new (tmp) tree_radix_custom();
-                        std::memcpy(tmp->children,this->children,N * sizeof(tree_radix_custom*));
-                        tmp->data = lower_node;
-                        tmp->length = lower_val;
+                        data = higher_node_string;
+                        auto* new_child_node = (struct tree_radix_custom*) std::malloc(sizeof(struct tree_radix_custom));
+                        //new (new_child_node) tree_radix_custom();
+                        std::memcpy(new_child_node->children, this->children, N * sizeof(tree_radix_custom*));
+                        new_child_node->data = lower_node_string;
+                        new_child_node->length = lower_string_len;
                         for(auto & i1 : children){
                             i1 = nullptr;
                         }
-                        children[(unsigned char)lower_node[0]] = tmp;
-                        enlist.push_back(tmp);
+                        children[(unsigned char)lower_node_string[0]] = new_child_node;
+                        enlist.push_back(new_child_node);
                         return enlist;
                     }
                 }
