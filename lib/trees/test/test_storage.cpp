@@ -192,23 +192,23 @@ BOOST_AUTO_TEST_CASE(write_read_test)
                        std::to_string(std::get<0>(*write_max_time_taken).size()) + " with a total block size of " +
                        std::to_string(std::get<1>(*write_max_time_taken)) + "\n");
 
-    long double avg_size = 0;
-    long double avg_block_ref_size = 0;
-    long double avg_time = 0;
+    long double write_avg_size = 0;
+    long double write_avg_block_ref_size = 0;
+    long double write_avg_time = 0;
     for(const auto &i:write_times){
-        avg_size+=std::get<1>(i);
-        avg_size+=std::get<0>(i).size();
-        avg_time+=std::get<2>(i);
+        write_avg_size+=std::get<1>(i);
+        write_avg_size+=std::get<0>(i).size();
+        write_avg_time+=std::get<2>(i);
     }
-    avg_size/=write_times.size();
-    avg_block_ref_size/=write_times.size();
-    avg_time/=write_times.size();
+    write_avg_size/=write_times.size();
+    write_avg_block_ref_size/=write_times.size();
+    write_avg_time/=write_times.size();
 
-    long double integration_speed_MB = (avg_size/std::pow(2,20))/(avg_time/1000);
+    long double write_integration_speed_MB = (write_avg_size/std::pow(2,20))/(write_avg_time/1000);
 
     BOOST_TEST_MESSAGE("Average writing results:");
-    BOOST_TEST_MESSAGE("Average integration time is " + std::to_string(avg_time) +
+    BOOST_TEST_MESSAGE("Average integration time is " + std::to_string(write_avg_time) +
                        " ms with an average block reference size of " +
-                       std::to_string(avg_block_ref_size) + " with an average total block size of " +
-                       std::to_string(avg_size) + ". This results in an average integration speed of "+std::to_string(integration_speed_MB)+" MB per second\n");
+                       std::to_string(write_avg_block_ref_size) + " with an average total block size of " +
+                       std::to_string(write_avg_size) + ". This results in an average integration speed of "+std::to_string(write_integration_speed_MB)+" MB per second\n");
 }
