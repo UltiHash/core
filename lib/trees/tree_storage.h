@@ -172,13 +172,8 @@ namespace uh::trees {
                 //start position of the block for seeking it later on is the old size
                 std::vector<unsigned char> out_vec;
                 out_vec.reserve(sizeof(unsigned int));
-                for (unsigned char i = 0; i < sizeof(unsigned int); i++) {
-                    if constexpr (std::endian::native == std::endian::big) {
-                        out_vec.push_back(
-                                reinterpret_cast<const unsigned char *>(size[min_pos])[sizeof(unsigned int) - i - 1]);
-                    } else {
-                        out_vec.push_back(reinterpret_cast<const unsigned char *>(size[min_pos])[i]);
-                    }
+                for (unsigned char i = 0; i < sizeof(unsigned int); i++) {//STORE_MAX will fit in 4 bytes
+                    out_vec.push_back((unsigned char)(size[min_pos]>>(i*8)));
                 }
                 out_vec.insert(out_vec.cbegin(), min_pos);
                 size[min_pos] += total_size;
@@ -243,8 +238,7 @@ namespace uh::trees {
                     for (unsigned char i = 0; i < sizeof(unsigned int); i++) {
                         offset += (((std::size_t) sub_block_code[i]) << (i * 8));
                     }
-                    std::string ref_name{
-                            boost::algorithm::hex(std::string(reinterpret_cast<const char *>(block_code[0]), 1))};
+                    std::string ref_name{boost::algorithm::hex(std::string{(char)block_code[0]})};
                     std::filesystem::path read_path = combined_path / ref_name;
                     FILE *reader = std::fopen(read_path.c_str(), "rb");
                     if (!reader) {
