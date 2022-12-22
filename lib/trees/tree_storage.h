@@ -40,10 +40,10 @@ namespace uh::trees {
             }
             std::vector<unsigned char> prefix{};
             for (unsigned char i = 0; i < byte_count; i++) {
-                prefix.push_back((unsigned char)(input_size>>(i*8)));
+                prefix.push_back((unsigned char) (input_size >> (i * 8)));
             }
-            if(byte_count>1)byte_count--;//there is at least one description byte
-            if(prefix.empty())prefix.push_back(0);
+            if (byte_count > 1)byte_count--;//there is at least one description byte
+            if (prefix.empty())prefix.push_back(0);
             prefix.insert(prefix.cbegin(), byte_count);
             return prefix;
         }
@@ -101,10 +101,10 @@ namespace uh::trees {
 
         //write a string and get size of written block representation and a reference string back
         std::vector<unsigned char> write(const std::vector<unsigned char> &input) {
-            if (input.size()<16) {
-                std::string s_tmp = boost::algorithm::hex(std::string{input.begin(),input.end()});
+            if (input.size() < 16) {
+                std::string s_tmp = boost::algorithm::hex(std::string{input.begin(), input.end()});
                 ERROR << "Tried to write a binary string smaller 16 unsigned char elements. This is not allowed!"
-                         "The input was \""+s_tmp+"\"";
+                         "The input was \"" + s_tmp + "\"";
                 return std::vector<unsigned char>{};
             }
             if (input.size() > STORE_MAX) {
@@ -126,7 +126,7 @@ namespace uh::trees {
             }
             if (min_val < STORE_MAX && min_val + total_size < STORE_HARD_LIMIT) {
                 //store block to this position
-                std::string ref_name{boost::algorithm::hex(std::string{(char)min_pos})};
+                std::string ref_name{boost::algorithm::hex(std::string{(char) min_pos})};
                 std::filesystem::path read_chunk = combined_path / ref_name;
                 FILE *writer = std::fopen(read_chunk.c_str(), "ab+");
                 if (!writer) {
@@ -146,7 +146,7 @@ namespace uh::trees {
                 std::vector<unsigned char> out_vec;
                 out_vec.reserve(sizeof(unsigned int));
                 for (unsigned char i = 0; i < sizeof(unsigned int); i++) {//STORE_MAX will fit in 4 bytes
-                    out_vec.push_back((unsigned char)(size[min_pos]>>(i*8)));
+                    out_vec.push_back((unsigned char) (size[min_pos] >> (i * 8)));
                 }
                 out_vec.insert(out_vec.cbegin(), min_pos);
                 size[min_pos] += total_size;
@@ -163,7 +163,7 @@ namespace uh::trees {
                 }
                 if (std::get<1>(children[min_pos]) == nullptr) {
                     std::string ref_name{
-                            boost::algorithm::hex(std::string{(char)min_pos})};
+                            boost::algorithm::hex(std::string{(char) min_pos})};
                     std::string new_node_name =
                             combined_path.string().substr(2, 4) + ref_name;//get hex of latter folder name indexer
                     std::filesystem::path new_node_dir = combined_path / new_node_name;
@@ -211,7 +211,7 @@ namespace uh::trees {
                     for (unsigned char i = 0; i < sizeof(unsigned int); i++) {
                         offset += (((std::size_t) sub_block_code[i]) << (i * 8));
                     }
-                    std::string ref_name{boost::algorithm::hex(std::string{(char)block_code[0]})};
+                    std::string ref_name{boost::algorithm::hex(std::string{(char) block_code[0]})};
                     std::filesystem::path read_path = combined_path / ref_name;
                     FILE *reader = std::fopen(read_path.c_str(), "rb");
                     if (!reader) {
@@ -229,7 +229,8 @@ namespace uh::trees {
                     unsigned char buf_size = 0;
                     std::size_t count = std::fread(&buf_size, sizeof(char), 1, reader);
                     if (count != 1) {
-                        FATAL << "I/O prefix first byte reading was not completed on path \"" + read_path.string() + "\"";
+                        FATAL
+                            << "I/O prefix first byte reading was not completed on path \"" + read_path.string() + "\"";
                         std::exit(EXIT_FAILURE);
                     }
 
@@ -237,21 +238,22 @@ namespace uh::trees {
                         FATAL << "I/O error when reading prefix at path \"" + read_path.string() + "\"";
                         std::exit(EXIT_FAILURE);
                     }
-                    unsigned char buffer_in[buf_size+1];
-                    count = std::fread(&buffer_in, sizeof(char), buf_size+1, reader);
-                    if (count != buf_size+1) {
-                        FATAL << "I/O prefix first byte reading was not completed on path \"" + read_path.string() + "\"";
+                    unsigned char buffer_in[buf_size + 1];
+                    count = std::fread(&buffer_in, sizeof(char), buf_size + 1, reader);
+                    if (count != buf_size + 1) {
+                        FATAL
+                            << "I/O prefix first byte reading was not completed on path \"" + read_path.string() + "\"";
                         std::exit(EXIT_FAILURE);
                     }
                     std::size_t output_size{};
-                    for(unsigned char buf_count=0;buf_count<=buf_size;buf_count++){
-                        output_size+=(((std::size_t)buffer_in[buf_count])<<(buf_count*8));
+                    for (unsigned char buf_count = 0; buf_count <= buf_size; buf_count++) {
+                        output_size += (((std::size_t) buffer_in[buf_count]) << (buf_count * 8));
                     }
 
                     std::vector<unsigned char> out_vec{};
-                    auto* tmp_buf = new unsigned char[output_size];
+                    auto *tmp_buf = new unsigned char[output_size];
                     count = std::fread(tmp_buf, sizeof(char), output_size, reader);
-                    out_vec.assign(tmp_buf,tmp_buf+output_size);
+                    out_vec.assign(tmp_buf, tmp_buf + output_size);
                     delete[] tmp_buf;
 
                     if (count != output_size) {
@@ -269,18 +271,19 @@ namespace uh::trees {
                 }
             }
         }
+
         //TODO: index and delete
         //The index gives tuple<hash,local_block_reference>
-        std::list<std::tuple<std::vector<unsigned char>,std::vector<unsigned char>>> index() {
-            std::list<std::tuple<std::vector<unsigned char>,std::vector<unsigned char>>> search_index;
+        std::list<std::tuple<std::vector<unsigned char>, std::vector<unsigned char>>> index() {
+            std::list<std::tuple<std::vector<unsigned char>, std::vector<unsigned char>>> search_index;
             for (unsigned short i = 0; i < (unsigned short) N; i++) {
-                if(size[i]>0){
+                if (size[i] > 0) {
                     //read entire block generating hashes and block references
-                    std::string ref_name{boost::algorithm::hex(std::string{(char)i})};
+                    std::string ref_name{boost::algorithm::hex(std::string{(char) i})};
                     std::filesystem::path read_path = combined_path / ref_name;
                     FILE *reader = std::fopen(read_path.c_str(), "rb");
                     std::size_t cur_pos = 0;
-                    while(!std::feof(reader)){
+                    while (!std::feof(reader)) {
                         if (!reader) {
                             ERROR << "File read opening failed at \"" + read_path.string() + "\"";
                             std::exit(EXIT_FAILURE);
@@ -291,18 +294,19 @@ namespace uh::trees {
                             std::exit(EXIT_FAILURE);
                         }
 
-                        std::vector<unsigned char> hash,local_block_ref;
+                        std::vector<unsigned char> hash, local_block_ref;
                         local_block_ref.reserve(sizeof(unsigned int));
                         for (unsigned char i = 0; i < sizeof(unsigned int); i++) {//STORE_MAX will fit in 4 bytes
-                            local_block_ref.push_back((unsigned char)(cur_pos>>(i*8)));
+                            local_block_ref.push_back((unsigned char) (cur_pos >> (i * 8)));
                         }
                         local_block_ref.insert(local_block_ref.cbegin(), i);
 
                         unsigned char buf_size = 0;
                         std::size_t count = std::fread(&buf_size, sizeof(char), 1, reader);
-                        cur_pos+=count;
+                        cur_pos += count;
                         if (count != 1) {
-                            FATAL << "I/O prefix first byte reading was not completed on path \"" + read_path.string() + "\"";
+                            FATAL << "I/O prefix first byte reading was not completed on path \"" + read_path.string() +
+                                     "\"";
                             std::exit(EXIT_FAILURE);
                         }
 
@@ -310,21 +314,22 @@ namespace uh::trees {
                             FATAL << "I/O error when reading prefix at path \"" + read_path.string() + "\"";
                             std::exit(EXIT_FAILURE);
                         }
-                        unsigned char buffer_in[buf_size+1];
-                        count = std::fread(&buffer_in, sizeof(char), buf_size+1, reader);
-                        cur_pos+=count;
-                        if (count != buf_size+1) {
-                            FATAL << "I/O prefix first byte reading was not completed on path \"" + read_path.string() + "\"";
+                        unsigned char buffer_in[buf_size + 1];
+                        count = std::fread(&buffer_in, sizeof(char), buf_size + 1, reader);
+                        cur_pos += count;
+                        if (count != buf_size + 1) {
+                            FATAL << "I/O prefix first byte reading was not completed on path \"" + read_path.string() +
+                                     "\"";
                             std::exit(EXIT_FAILURE);
                         }
                         std::size_t output_size{};
-                        for(unsigned char buf_count=0;buf_count<=buf_size;buf_count++){
-                            output_size+=(((std::size_t)buffer_in[buf_count])<<(buf_count*8));
+                        for (unsigned char buf_count = 0; buf_count <= buf_size; buf_count++) {
+                            output_size += (((std::size_t) buffer_in[buf_count]) << (buf_count * 8));
                         }
 
-                        auto* tmp_buf = new unsigned char[output_size];
+                        auto *tmp_buf = new unsigned char[output_size];
                         count = std::fread(tmp_buf, sizeof(char), output_size, reader);
-                        cur_pos+=count;
+                        cur_pos += count;
 
                         if (count != output_size) {
                             FATAL << "I/O was not completed on path \"" + read_path.string() + "\"";
@@ -335,16 +340,23 @@ namespace uh::trees {
                             std::exit(EXIT_FAILURE);
                         }
 
-                        unsigned char hash_buf[SHA512_DIGEST_LENGTH];
+                        unsigned char hash_buf[SHA512_DIGEST_LENGTH];//HASH GENERATION
                         SHA512(tmp_buf, output_size, hash_buf);
                         delete[] tmp_buf;
 
-                        hash.assign(hash_buf,hash_buf+SHA512_DIGEST_LENGTH);
-                        search_index.emplace_back(hash,local_block_ref);
+                        hash.assign(hash_buf, hash_buf + SHA512_DIGEST_LENGTH);
+                        search_index.emplace_back(hash, local_block_ref);
                     }
                     std::fclose(reader);
                 }
                 //splice indexes of children plus the min_pos to decide local_block_ref of children array
+                if (std::get<0>(children[i]) > 0 and std::get<1>(children[i]) != nullptr) {
+                    auto append_list = std::get<1>(children[i])->index();
+                    for(auto &el:append_list){
+                        std::get<1>(el).insert(std::get<1>(el).cbegin(),i);
+                    }
+                    search_index.splice(search_index.cend(),append_list);
+                }
             }
             return search_index;
         }
