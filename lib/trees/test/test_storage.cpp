@@ -587,10 +587,26 @@ BOOST_AUTO_TEST_CASE(write_read_test)
 BOOST_AUTO_TEST_CASE(index_read_test)
 {
     //get entire index, read block with local_block_reference and finally calculate the hash if it matches
+    struct timeval time{};
+    gettimeofday(&time, nullptr);
+    long double millis = ((long double) time.tv_sec * 1000) + ((long double) time.tv_usec / 1000);
     uh::trees::tree_storage t1("/mnt/md0");//A test folder reserved for tree storage, read existing structure coarse grained
-    auto index_list = t1.index();
-    for(const auto &el:index_list){
+    gettimeofday(&time, nullptr);
+    long double constructor_time = (((long double) time.tv_sec * 1000) + ((long double) time.tv_usec / 1000)) - millis;
 
+    gettimeofday(&time, nullptr);
+    millis = ((long double) time.tv_sec * 1000) + ((long double) time.tv_usec / 1000);
+    auto index_list = t1.index();
+    gettimeofday(&time, nullptr);
+    long double index_time = (((long double) time.tv_sec * 1000) + ((long double) time.tv_usec / 1000)) - millis;
+
+    BOOST_TEST_MESSAGE("The constructor of tree storage took "+std::to_string(constructor_time)+" ms in a full state. The index time of that tree took"+std::to_string(index_time)+" ms. The total time to bring the database back to life was "+std::to_string(constructor_time+index_time)+" ms.");
+
+    for(const auto &el:index_list){
+        std::vector<unsigned char> read_result = t1.read(std::get<1>(el));
+        unsigned char hash_buf[SHA512_DIGEST_LENGTH];//HASH GENERATION
+        SHA512(read_result.data(), read_result.size(), hash_buf);
+        BOOST_CHECK_EQUAL_COLLECTIONS(std::get<0>(el).cbegin(),std::get<1>(el).cend(),hash_buf,hash_buf+SHA512_DIGEST_LENGTH);
     }
     //t1.delete_recursive();
 }
