@@ -66,16 +66,14 @@ namespace uh::trees {
             }
             std::filesystem::create_directories(combined_path);
             for (unsigned short i = 0; i < (unsigned short) N; i++) {
-                std::vector<unsigned char> s_tmp2{(unsigned char) i};
-                std::string s_tmp = boost::algorithm::hex(std::string{(char) *s_tmp2.begin()});
+                std::string s_tmp = boost::algorithm::hex(std::string{(char)i});
                 std::filesystem::path chunk = combined_path / s_tmp;
                 if (std::filesystem::exists(chunk)) {
                     size[i] = std::filesystem::file_size(chunk);
                 } else size[i] = 0;
 
                 std::string fname = combined_path.filename().string();
-                s_tmp = std::string(fname.cbegin() + 2, fname.cbegin() + 4);
-                s_tmp += boost::algorithm::hex(std::string{(char) *s_tmp2.begin()});
+                s_tmp.insert(s_tmp.cbegin(),fname.cbegin() + 2, fname.cbegin() + 4);
                 std::filesystem::path deeper_tree = combined_path / s_tmp;
                 //check if sub folder in tree exists
                 if (std::filesystem::exists(deeper_tree)) {
