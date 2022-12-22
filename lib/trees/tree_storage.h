@@ -9,6 +9,7 @@
 #include "logging/logging_boost.h"
 #include <filesystem>
 #include "boost/algorithm/hex.hpp"
+#include <openssl/sha.h>
 
 namespace uh::trees {
 #define N 256
@@ -290,7 +291,7 @@ namespace uh::trees {
                             std::exit(EXIT_FAILURE);
                         }
 
-                        std::vector<unsigned char> local_block_ref;
+                        std::vector<unsigned char> hash,local_block_ref;
                         local_block_ref.reserve(sizeof(unsigned int));
                         for (unsigned char i = 0; i < sizeof(unsigned int); i++) {//STORE_MAX will fit in 4 bytes
                             local_block_ref.push_back((unsigned char)(cur_pos>>(i*8)));
@@ -321,12 +322,9 @@ namespace uh::trees {
                             output_size+=(((std::size_t)buffer_in[buf_count])<<(buf_count*8));
                         }
 
-                        std::vector<unsigned char> out_vec{};
                         auto* tmp_buf = new unsigned char[output_size];
                         count = std::fread(tmp_buf, sizeof(char), output_size, reader);
                         cur_pos+=count;
-                        out_vec.assign(tmp_buf,tmp_buf+output_size);
-                        delete[] tmp_buf;
 
                         if (count != output_size) {
                             FATAL << "I/O was not completed on path \"" + read_path.string() + "\"";
@@ -337,10 +335,16 @@ namespace uh::trees {
                             std::exit(EXIT_FAILURE);
                         }
 
-                    }
+                        unsigned char hash_buf[SHA512_DIGEST_LENGTH];
+                        SHA512(tmp_buf, output_size, hash_buf);
+                        delete[] tmp_buf;
 
+                        hash.assign(hash_buf,hash_buf+SHA512_DIGEST_LENGTH);
+                        search_index.emplace_back(hash,local_block_ref);
+                    }
                     std::fclose(reader);
                 }
+                //splice indexes of children plus the min_pos to decide local_block_ref of children array
             }
             return search_index;
         }
