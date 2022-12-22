@@ -377,6 +377,13 @@ namespace uh::trees {
             }
         }
 
+        ~tree_storage(){
+            for (unsigned short i = 0; i < (unsigned short) N; i++) {
+                if (std::get<1>(children[i]) != nullptr) {
+                    delete std::get<1>(children[i]);
+                }
+            }
+        }
     };
 }
 
