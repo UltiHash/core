@@ -373,6 +373,8 @@ namespace uh::trees {
             }
         }
 
+        //TODO: integrate block time stamp, integrate delete block, make class thread safe
+
         ~tree_storage(){
             for (auto & i : children) {
                 if (std::get<1>(i) != nullptr) {
