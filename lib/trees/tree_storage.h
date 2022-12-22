@@ -99,12 +99,13 @@ namespace uh::trees {
 
         //write a string and get size of written block representation and a reference string back
         std::vector<unsigned char> write(const std::vector<unsigned char> &input) {
+            /*
             if (input.size() < 16) {
                 std::string s_tmp = boost::algorithm::hex(std::string{input.begin(), input.end()});
                 ERROR << "Tried to write a binary string smaller 16 unsigned char elements. This is not allowed!"
                          "The input was \"" + s_tmp + "\"";
                 return std::vector<unsigned char>{};
-            }
+            }*/
             if (input.size() > STORE_MAX) {
                 FATAL << "A block could not be written because it exceeded maximum size of blocks \"" +
                          std::to_string(STORE_MAX) +
