@@ -2,6 +2,7 @@
 #define SERVER_AGENCY_OPTIONS_H
 
 #include <options/basic_options.h>
+#include <options/logging_options.h>
 #include <options/server_options.h>
 
 
@@ -19,9 +20,11 @@ public:
 
     uh::options::basic_options& basic();
     uh::options::server_options& server();
+    uh::options::logging_options& logging();
 private:
     uh::options::basic_options m_basic;
     uh::options::server_options m_server;
+    uh::options::logging_options m_logging;
 };
 
 // ---------------------------------------------------------------------

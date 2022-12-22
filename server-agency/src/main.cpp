@@ -11,6 +11,8 @@
 #include "protocol_factory.h"
 
 
+using namespace uh::log;
+
 int main(int argc, const char** argv)
 {
     try
@@ -43,6 +45,8 @@ int main(int argc, const char** argv)
         {
             return 0;
         }
+
+        init_logging(options.logging().config());
 
         INFO << "starting server";
         boost::asio::io_context io;
