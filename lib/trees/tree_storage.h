@@ -160,13 +160,11 @@ namespace uh::trees {
                     }
                 }
                 if (std::get<1>(children[min_pos]) == nullptr) {
-                    std::string ref_name{
-                            boost::algorithm::hex(std::string{(char) min_pos})};
-                    std::string new_node_name =
-                            combined_path.string().substr(2, 4) + ref_name;//get hex of latter folder name indexer
-                    std::filesystem::path new_node_dir = combined_path / new_node_name;
-                    std::filesystem::create_directories(new_node_dir);
-                    std::get<1>(children[min_pos]) = new tree_storage(new_node_dir);
+                    std::string ref_name{boost::algorithm::hex(std::string{(char) min_pos})};
+                    std::string fname = combined_path.filename().string();
+                    ref_name.insert(ref_name.cbegin(),fname.cbegin() + 2, fname.cbegin() + 4);
+                    std::filesystem::path deeper_tree = combined_path / ref_name;
+                    std::get<1>(children[min_pos]) = new tree_storage(deeper_tree);
                 }
                 std::vector<unsigned char> out_vec = std::get<1>(children[min_pos])->write(input);
                 out_vec.insert(out_vec.cbegin(), min_pos);
