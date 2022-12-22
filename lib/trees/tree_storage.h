@@ -272,7 +272,6 @@ namespace uh::trees {
             }
         }
 
-        //TODO: index and delete
         //The index gives tuple<hash,local_block_reference>
         std::list<std::tuple<std::vector<unsigned char>, std::vector<unsigned char>>> index() {
             std::list<std::tuple<std::vector<unsigned char>, std::vector<unsigned char>>> search_index;
@@ -360,6 +359,24 @@ namespace uh::trees {
             }
             return search_index;
         }
+
+        void delete_recursive(){
+            for (unsigned short i = 0; i < (unsigned short) N; i++) {
+                if (size[i] > 0) {
+                    std::string ref_name{boost::algorithm::hex(std::string{(char) i})};
+                    std::filesystem::path read_path = combined_path / ref_name;
+                    if(std::remove(read_path.c_str())!=0){
+                        FATAL << "Removing was not completed on path \"" + read_path.string() + "\"";
+                        std::exit(EXIT_FAILURE);
+                    }
+                }
+                //splice indexes of children plus the min_pos to decide local_block_ref of children array
+                if (std::get<0>(children[i]) > 0 and std::get<1>(children[i]) != nullptr) {
+                    std::get<1>(children[i])->delete_recursive();
+                }
+            }
+        }
+
     };
 }
 
