@@ -38,10 +38,18 @@ std::vector<unsigned char> binary_generator(std::size_t max_len) {
         auto *out_fast = new std::size_t[len / sizeof(std::size_t)];
         auto *out_fast_cheat = reinterpret_cast<unsigned char *>(out_fast);
 
-#pragma omp parallel for simd schedule(dynamic)
-        for (std::size_t i = 0; i < len / sizeof(std::size_t); i++) {
-            out_fast[i] = (std::size_t) dist2(rng2);
+        if(len<(std::size_t)std::pow(2,24)){
+            for (std::size_t i = 0; i < len / sizeof(std::size_t); i++) {
+                out_fast[i] = (std::size_t) dist2(rng2);
+            }
         }
+        else{
+            #pragma omp parallel for simd schedule(dynamic)
+            for (std::size_t i = 0; i < len / sizeof(std::size_t); i++) {
+                out_fast[i] = (std::size_t) dist2(rng2);
+            }
+        }
+
         //copy out_fast to out_return
         out_return.assign(out_fast_cheat, out_fast_cheat + (len / sizeof(std::size_t)) * sizeof(std::size_t));
         std::free(out_fast);
@@ -78,7 +86,7 @@ BOOST_AUTO_TEST_CASE(write_read_test)
         //retrieved block size, local_block_ref size and time taken
         mode ? BOOST_TEST_MESSAGE("---Entering short block latency measurement write read mode:---\n") :
         BOOST_TEST_MESSAGE("---Entering normal write read mode:---\n");
-        while (total_size < (std::size_t) std::pow(2, 35)/*mode ? (std::size_t) std::pow(2, 35) :
+        while (total_size < mode?(std::size_t) std::pow(2, 22):(std::size_t) std::pow(2, 35)/*mode ? (std::size_t) std::pow(2, 35) :
              * (std::size_t) (std::pow(1024, 4) * 4)*/) {//write 4TB for testing
             std::vector<unsigned char> test_bin = binary_generator(mode ? 32 : STORE_MAX);
             //write test
