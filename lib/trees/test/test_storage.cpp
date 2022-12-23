@@ -15,7 +15,6 @@
 #include <trees/tree_storage.h>
 #include <random>
 #include <cstdio>
-#include <omp.h>
 
 std::vector<unsigned char> binary_generator(std::size_t max_len) {
     std::random_device dev;
