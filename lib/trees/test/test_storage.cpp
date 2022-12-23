@@ -86,7 +86,7 @@ BOOST_AUTO_TEST_CASE(write_read_test)
         //retrieved block size, local_block_ref size and time taken
         mode ? BOOST_TEST_MESSAGE("---Entering short block latency measurement write read mode:---\n") :
         BOOST_TEST_MESSAGE("---Entering normal write read mode:---\n");
-        while (total_size < mode?(std::size_t) std::pow(2, 22):(std::size_t) std::pow(2, 35)/*mode ? (std::size_t) std::pow(2, 35) :
+        while (total_size < (mode?(std::size_t) std::pow(2, 22):(std::size_t) std::pow(2, 35))/*mode ? (std::size_t) std::pow(2, 35) :
              * (std::size_t) (std::pow(1024, 4) * 4)*/) {//write 4TB for testing
             std::vector<unsigned char> test_bin = binary_generator(mode ? 32 : STORE_MAX);
             //write test
