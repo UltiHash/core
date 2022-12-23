@@ -53,6 +53,12 @@ public:
      */
     void quit(const std::string& reason);
 
+    /**
+     * Return true, if there is a working underlying connection. False indicates
+     * that there was an I/O error before.
+     */
+    bool valid() const;
+
 private:
     std::shared_ptr<net::socket> m_sock;
     boost::iostreams::stream<net::socket_device> m_io;

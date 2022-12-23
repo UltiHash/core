@@ -17,20 +17,6 @@ plain_socket::plain_socket(boost::asio::ip::tcp::socket&& sock)
 
 // ---------------------------------------------------------------------
 
-std::streamsize plain_socket::write(std::span<const char> buffer)
-{
-    return m_sock.write_some(const_buffer{ buffer.data(), buffer.size() });
-}
-
-// ---------------------------------------------------------------------
-
-std::streamsize plain_socket::read(std::span<char> buffer)
-{
-    return m_sock.read_some(mutable_buffer{ buffer.data(), buffer.size() });
-}
-
-// ---------------------------------------------------------------------
-
 std::unique_ptr<plain_socket> plain_socket::connect(io_context& ctx,
                                                     const std::string& hostname,
                                                     uint16_t port)
@@ -53,6 +39,20 @@ std::unique_ptr<plain_socket> plain_socket::connect(io_context& ctx,
     conn->peer() = endpoint;
 
     return std::move(conn);
+}
+
+// ---------------------------------------------------------------------
+
+std::streamsize plain_socket::write_impl(std::span<const char> buffer)
+{
+    return m_sock.write_some(const_buffer{ buffer.data(), buffer.size() });
+}
+
+// ---------------------------------------------------------------------
+
+std::streamsize plain_socket::read_impl(std::span<char> buffer)
+{
+    return m_sock.read_some(mutable_buffer{ buffer.data(), buffer.size() });
 }
 
 // ---------------------------------------------------------------------

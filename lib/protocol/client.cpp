@@ -88,4 +88,11 @@ void client::quit(const std::string& reason)
 
 // ---------------------------------------------------------------------
 
+bool client::valid() const
+{
+    return m_sock->valid();;
+}
+
+// ---------------------------------------------------------------------
+
 } // namespace uh::protocol
