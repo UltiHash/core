@@ -34,22 +34,23 @@ std::vector<unsigned char> binary_generator(std::size_t max_len) {
 
     std::vector<unsigned char> out_return;
     out_return.reserve(len);
-    auto *out_fast = new std::size_t[len / sizeof(std::size_t)];
-    auto *out_fast_cheat = reinterpret_cast<unsigned char *>(out_fast);
+    if((len / sizeof(std::size_t))>0){
+        auto *out_fast = new std::size_t[len / sizeof(std::size_t)];
+        auto *out_fast_cheat = reinterpret_cast<unsigned char *>(out_fast);
 
 #pragma omp parallel for simd schedule(dynamic)
-    for (std::size_t i = 0; i < len / sizeof(std::size_t); i++) {
-        out_fast[i] = (std::size_t) dist2(rng2);
+        for (std::size_t i = 0; i < len / sizeof(std::size_t); i++) {
+            out_fast[i] = (std::size_t) dist2(rng2);
+        }
+        //copy out_fast to out_return
+        out_return.assign(out_fast_cheat, out_fast_cheat + (len / sizeof(std::size_t)) * sizeof(std::size_t));
+        std::free(out_fast);
     }
-    //copy out_fast to out_return
-    out_return.assign(out_fast_cheat, out_fast_cheat + (len / sizeof(std::size_t)) * sizeof(std::size_t));
 
     //complete
     for (std::size_t i1 = (len / sizeof(std::size_t)) * sizeof(std::size_t); i1 < (len / sizeof(std::size_t)) * sizeof(std::size_t) + len % sizeof(std::size_t); i1++) {
         out_return[i1] = dist3(rng3);
     }
-
-    std::free(out_fast);
 
     return out_return;
 }
@@ -70,7 +71,7 @@ BOOST_AUTO_TEST_CASE(write_read_test)
     uh::trees::tree_storage t1(std::filesystem::path("/home")/std::string(getenv("USER")));//A test folder reserved for tree storage
 
     struct timeval time{};
-    for (unsigned char mode = 0; mode < 2; mode++) {
+    for (unsigned char mode = 1; mode < 2; mode++) {
         std::size_t total_size{};
         //list of write times with local_block_ref, integrated block size and milliseconds
         std::vector<std::tuple<std::vector<unsigned char>, std::size_t, long double>> write_times, read_after_write_times, linear_read_times, randam_access_read_times;
