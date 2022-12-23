@@ -11,11 +11,10 @@
 
 
 using namespace uh::dbn;
-namespace fs = boost::filesystem;
 
 dump_storage create_ultihash_storage_backend(options &options){
     uh::dbn::db_config config = options.database().config();
-    if(!(fs::exists(config.db_root))) {
+    if(!(std::filesystem::exists(config.db_root))) {
         // The root path does not exist. Should we create a new one?
         if(!config.create_new_root) {
             // We don't want to create a new root for the db;
@@ -25,7 +24,7 @@ dump_storage create_ultihash_storage_backend(options &options){
         }else{
             // We want to create a new root.
             // If the root fails to be created, throw an error.
-            if(!boost::filesystem::create_directories(config.db_root)){
+            if(!std::filesystem::create_directories(config.db_root)){
                 std::string msg("Unable to create path for database root: " + config.db_root.string());
                 throw std::runtime_error(msg);
             }
