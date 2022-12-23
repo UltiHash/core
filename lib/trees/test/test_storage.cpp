@@ -37,7 +37,7 @@ std::vector<unsigned char> binary_generator(std::size_t max_len) {
     auto *out_fast = new std::size_t[len / sizeof(std::size_t)];
     auto *out_fast_cheat = reinterpret_cast<unsigned char *>(out_fast);
 
-#pragma omp parallel for schedule(dynamic)
+#pragma omp parallel for schedule(static)
     for (std::size_t i = 0; i < len / sizeof(std::size_t); i++) {
         out_fast[i] = (std::size_t) dist2(rng2);
     }
