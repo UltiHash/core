@@ -17,20 +17,20 @@
 
 
 struct db_test_config{
-    fs::path test_db_dir = "./TEST_DB_DIR";
-    fs::path test_input_dir = "./TEST_INPUT_DIR";
-    fs::path test_incoming_file_name = "test_input_file.txt";
-    fs::path test_incoming_file_name_2 = "test_input_file_2.txt";
-    fs::path test_input_filepath = test_input_dir / test_incoming_file_name;
-    fs::path test_input_filepath_2 = test_input_dir / test_incoming_file_name_2;
+    std::filesystem::path test_db_dir = "./TEST_DB_DIR";
+    std::filesystem::path test_input_dir = "./TEST_INPUT_DIR";
+    std::filesystem::path test_incoming_file_name = "test_input_file.txt";
+    std::filesystem::path test_incoming_file_name_2 = "test_input_file_2.txt";
+    std::filesystem::path test_input_filepath = test_input_dir / test_incoming_file_name;
+    std::filesystem::path test_input_filepath_2 = test_input_dir / test_incoming_file_name_2;
     std::string contents_str = "These are the contents of test_input_file.txt and test_input_file_2.txt";
     //std::string expected_sha512_hash = "57579fadafb55d4fe92f84c699d8cce55d238a1b1747914f56c9f1c35fbb35f6ba41b986f071ef1da60f0f4482339860d4bbcccf7b24336c5ae44f47c73acdbe";
     //std::string expected_sha512_hash = "8a5cc075bbca891c91a1000b5fc5858d96c79bae07eb3498569df2ed9fa5def8d205d717e117bcbeeab18cc061072687c93e6203f267e691dfb8053d62653878";
     std::string expected_sha512_hash = "2610fa1ed2dc40f92a3e44cb894b757e4e4469a053b5b2ccf69179b577cfac29403aed645ecab45e10c5db2d9c6bbb0916b0b7c9caa635d271f5274b3e868011";
 };
 
-void create_dir(fs::path dirpath){
-    if(!(boost::filesystem::exists(dirpath))) {
+void create_dir(std::filesystem::path dirpath){
+    if(!(std::filesystem::exists(dirpath))) {
         if (mkdir(dirpath.c_str(), 0777) == -1)
             std::cerr << "Error :  " << strerror(errno) << std::endl;
         else
@@ -38,10 +38,10 @@ void create_dir(fs::path dirpath){
     }
 }
 
-void write_input_test_file(fs::path test_input_filepath){
+void write_input_test_file(std::filesystem::path test_input_filepath){
     db_test_config c;
-    fs::path filepath = test_input_filepath;
-    if(!(boost::filesystem::exists(filepath))) {
+    std::filesystem::path filepath = test_input_filepath;
+    if(!(std::filesystem::exists(filepath))) {
 
         std::string msg("Path does not exist: " + filepath.string());
 
@@ -60,8 +60,8 @@ void write_input_test_file(fs::path test_input_filepath){
 
 uh::dbn::db_config create_test_db_and_file(){
     db_test_config c;
-    fs::path test_db_dir = c.test_db_dir;
-    fs::path test_input_dir = c.test_input_dir;
+    std::filesystem::path test_db_dir = c.test_db_dir;
+    std::filesystem::path test_input_dir = c.test_input_dir;
     create_dir(test_db_dir);
     create_dir(test_input_dir);
     write_input_test_file(c.test_input_filepath);
@@ -74,7 +74,7 @@ uh::dbn::db_config create_test_db_and_file(){
 bool test_storage_backend_io(uh::dbn::storage_backend &uhsb){
     bool tf = false;
     db_test_config c;
-    fs::path input_filepath = c.test_input_filepath;
+    std::filesystem::path input_filepath = c.test_input_filepath;
     std::cout << "original filepath: " << input_filepath << std::endl;
     std::ifstream infile(input_filepath, std::ios::binary);
     std::vector<char> x(std::istreambuf_iterator<char>(infile), {});
@@ -93,7 +93,7 @@ bool test_storage_backend_io(uh::dbn::storage_backend &uhsb){
     return tf;
 }
 
-std::vector<char> write_block_from_file(fs::path input_filepath, uh::dbn::storage_backend &uhsb){
+std::vector<char> write_block_from_file(std::filesystem::path input_filepath, uh::dbn::storage_backend &uhsb){
 
     std::cout << "original filepath: " << input_filepath << std::endl;
     std::ifstream infile(input_filepath, std::ios::binary);
@@ -122,7 +122,7 @@ BOOST_AUTO_TEST_CASE( dump_storage_io )
     db_test_config c;
     uh::dbn::db_config config;
     config = create_test_db_and_file();
-    fs::path input_filepath = c.test_input_filepath;
+    std::filesystem::path input_filepath = c.test_input_filepath;
 
     uh::dbn::dump_storage uhsb(config);
     success = test_storage_backend_io(uhsb);

@@ -1,29 +1,25 @@
 #include "storage_backend.h"
 #include <logging/logging_boost.h>
 
+#include <util/temp_file.h>
+
+
 using namespace uh::dbn;
-namespace fs = boost::filesystem;
 
 // ---------------------------------------------------------------------
 
-bool uh::dbn::maybe_write_data_to_filepath(const std::vector<char> &some_data, const fs::path &filepath){
-    if(fs::exists(filepath)) {
+bool uh::dbn::maybe_write_data_to_filepath(const std::vector<char> &some_data, const std::filesystem::path &filepath){
+    if(std::filesystem::exists(filepath)) {
         INFO << "Data block already exists at " << filepath;
         return false;
     }
 
-    std::vector<char> buffer(L_tmpnam, 0);
-    fs::path tmpf = std::tmpnam(&buffer[0]);
+    util::temp_file tmp(filepath.parent_path());
 
-    std::ofstream outfile(tmpf, std::ios::out | std::ios::binary);
-    if(!outfile.is_open()) {
-        std::string msg("Error opening file: " + filepath.string());
-        throw std::ofstream::failure(msg);
-    }
-    outfile.write(some_data.data(), some_data.size());
     DEBUG << "Block written to " << filepath;
+    tmp.write(some_data.data(), some_data.size());
 
-    fs::rename(tmpf, filepath);
+    tmp.release_to(filepath);
     return true;
 }
 
@@ -49,7 +45,7 @@ std::vector<char> uh::dbn::sha512(const std::vector<char>& some_data){
 
 // ---------------------------------------------------------------------
 
-fs::path dump_storage::get_filepath_from_hash(const std::vector<char> &hash){
+std::filesystem::path dump_storage::get_filepath_from_hash(const std::vector<char> &hash){
 
     std::string hash_string = to_hex_string(hash.begin(), hash.end());
 
@@ -59,7 +55,7 @@ fs::path dump_storage::get_filepath_from_hash(const std::vector<char> &hash){
     DEBUG << "---------------------------";
 
 
-   fs::path filepath = this->m_config.db_root / hash_string;
+    std::filesystem::path filepath = this->m_config.db_root / hash_string;
    return filepath;
 }
 
@@ -78,7 +74,7 @@ std::vector<char> dump_storage::write_block(const std::vector<char>& some_data){
 
     DEBUG << "hash string (should look like binary rubish):" << hash_string;
 
-    fs::path filepath = this->get_filepath_from_hash(hash_vec);
+    std::filesystem::path filepath = this->get_filepath_from_hash(hash_vec);
 
     if(maybe_write_data_to_filepath(some_data, filepath)){
         INFO << "Data block written to " << filepath;
@@ -94,7 +90,7 @@ std::vector<char> dump_storage::read_block(const std::vector<char>& some_hash){
 
     std::string hash_string(some_hash.begin(), some_hash.end());
 
-    fs::path filepath = this->get_filepath_from_hash(some_hash);
+    std::filesystem::path filepath = this->get_filepath_from_hash(some_hash);
     std::ifstream infile(filepath, std::ios::binary);
 
     if(!infile.is_open()) {

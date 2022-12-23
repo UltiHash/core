@@ -3,14 +3,12 @@
 
 #include <vector>
 #include <string>
-#include <boost/filesystem.hpp>
+#include <filesystem>
 #include <openssl/sha.h>
 #include <logging/logging_boost.h>
 
 #include "db_config.h"
 
-
-namespace fs = boost::filesystem;
 
 namespace uh::dbn {
 
@@ -33,7 +31,7 @@ namespace uh::dbn {
 
 // ---------------------------------------------------------------------
 
-    bool maybe_write_data_to_filepath(const std::vector<char> &some_data, const fs::path &filepath);
+    bool maybe_write_data_to_filepath(const std::vector<char> &some_data, const std::filesystem::path &filepath);
 
 
 // ---------------------------------------------------------------------
@@ -90,7 +88,7 @@ namespace uh::dbn {
          * @param hash: the hash as a std::vector
          * @return a file path as a boost::filesystem::path
          */
-        virtual fs::path get_filepath_from_hash(const std::vector<char> &hash) = 0;
+        virtual std::filesystem::path get_filepath_from_hash(const std::vector<char> &hash) = 0;
     };
 
 // ---------------------------------------------------------------------
@@ -111,7 +109,7 @@ namespace uh::dbn {
         dump_storage(const db_config &some_config):
         m_config(some_config)
         {
-            if(!(boost::filesystem::exists(some_config.db_root))) {
+            if(!(std::filesystem::exists(some_config.db_root))) {
                 std::string msg("Path does not exist: " + some_config.db_root.string());
                 throw std::runtime_error(msg);
             }
@@ -160,7 +158,7 @@ namespace uh::dbn {
          * @param hash: the hash as a std::vector
          * @return a file path as a boost::filesystem::path
          */
-        virtual fs::path get_filepath_from_hash(const std::vector<char> &hash);
+        virtual std::filesystem::path get_filepath_from_hash(const std::vector<char> &hash);
 
         db_config m_config;
     };
