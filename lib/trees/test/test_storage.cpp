@@ -88,7 +88,7 @@ BOOST_AUTO_TEST_CASE(write_read_test)
             gettimeofday(&time, nullptr);
             long double write_time =
                     (((long double) time.tv_sec * 1000) + ((long double) time.tv_usec / 1000)) - millis;
-            BOOST_CHECK_MESSAGE(!local_block_ref.empty(), std::string(
+            BOOST_ASSERT_MSG(!local_block_ref.empty(), std::string(
                     "Database writing failed at block size " + std::to_string(test_bin.size()) + " at total size " +
                     std::to_string(total_size) + " . No reference retrieved!").c_str());
             if (local_block_ref.empty())continue;
@@ -108,7 +108,7 @@ BOOST_AUTO_TEST_CASE(write_read_test)
             total_size += test_bin.size();
         }
 
-        BOOST_CHECK_MESSAGE(!write_times.empty(), "No write times were tested!");
+        BOOST_ASSERT_MSG(!write_times.empty(), "No write times were tested!");
         //test sequential read from beginning on
         for (const auto &i: write_times) {
             gettimeofday(&time, nullptr);
@@ -117,7 +117,7 @@ BOOST_AUTO_TEST_CASE(write_read_test)
             gettimeofday(&time, nullptr);
             long double read_sequential =
                     (((long double) time.tv_sec * 1000) + ((long double) time.tv_usec / 1000)) - millis;
-            BOOST_CHECK_MESSAGE(!read_result.empty(), std::string(
+            BOOST_ASSERT_MSG(!read_result.empty(), std::string(
                     "Database sequential reading failed at block reference " +
                     boost::algorithm::hex(std::string{std::get<0>(i).cbegin(), std::get<0>(i).cend()}) +
                     " . No block retrieved!").c_str());
@@ -137,7 +137,7 @@ BOOST_AUTO_TEST_CASE(write_read_test)
             gettimeofday(&time, nullptr);
             long double read_sequential =
                     (((long double) time.tv_sec * 1000) + ((long double) time.tv_usec / 1000)) - millis;
-            BOOST_CHECK_MESSAGE(!read_result.empty(), std::string(
+            BOOST_ASSERT_MSG(!read_result.empty(), std::string(
                     "Database random access reading failed at block reference " +
                     boost::algorithm::hex(std::string{std::get<0>(write_times[access_point]).cbegin(),
                                                       std::get<0>(write_times[access_point]).cend()}) +
