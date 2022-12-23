@@ -139,7 +139,7 @@ BOOST_AUTO_TEST_CASE(write_read_test)
         }
 
         //write times min, max, average on size/block ref size/time taken
-        BOOST_TEST_MESSAGE("Test results for writing:\n");
+        BOOST_TEST_MESSAGE("\nTest results for writing:\n");
         BOOST_TEST_MESSAGE("Minimum results:");
         //minimum size
         auto write_min_size = std::min_element(write_times.cbegin(), write_times.cend(),
@@ -149,7 +149,7 @@ BOOST_AUTO_TEST_CASE(write_read_test)
         BOOST_TEST_MESSAGE("Minimum size is " + std::to_string(std::get<1>(*write_min_size)) +
                            " from Block reference \"" + boost::algorithm::hex(
                 std::string{std::get<0>(*write_min_size).cbegin(), std::get<0>(*write_min_size).cend()}) +
-                           "\" with a size of " +
+                           "\" with a block reference size of " +
                            std::to_string(std::get<0>(*write_min_size).size()) + " with an integration time of " +
                            std::to_string(std::get<2>(*write_min_size)) + " ms");
         //minimum block ref size
@@ -186,7 +186,7 @@ BOOST_AUTO_TEST_CASE(write_read_test)
         BOOST_TEST_MESSAGE("Maximum size is " + std::to_string(std::get<1>(*write_max_size)) +
                            " from Block reference \"" + boost::algorithm::hex(
                 std::string{std::get<0>(*write_max_size).cbegin(), std::get<0>(*write_max_size).cend()}) +
-                           "\" with a size of " +
+                           "\" with a block reference size of " +
                            std::to_string(std::get<0>(*write_max_size).size()) + " with an integration time of " +
                            std::to_string(std::get<2>(*write_max_size)) + " ms");
         //maximum block ref size
@@ -238,7 +238,7 @@ BOOST_AUTO_TEST_CASE(write_read_test)
         BOOST_TEST_MESSAGE("The total time taken to write " + std::to_string(total_size) + " bytes was " +
                            std::to_string(write_total_time) + " ms");
         //show read after write results
-        BOOST_TEST_MESSAGE("Test results for read after write:\n");
+        BOOST_TEST_MESSAGE("\nTest results for read after write:\n");
         BOOST_TEST_MESSAGE("Minimum results:");
         //minimum size
         auto read_after_write_min_size = std::min_element(read_after_write_times.cbegin(),
@@ -249,7 +249,7 @@ BOOST_AUTO_TEST_CASE(write_read_test)
         BOOST_TEST_MESSAGE("Minimum size is " + std::to_string(std::get<1>(*read_after_write_min_size)) +
                            " from Block reference \"" + boost::algorithm::hex(
                 std::string{std::get<0>(*read_after_write_min_size).cbegin(),
-                            std::get<0>(*read_after_write_min_size).cend()}) + "\" with a size of " +
+                            std::get<0>(*read_after_write_min_size).cend()}) + "\" with a block reference size of " +
                            std::to_string(std::get<0>(*read_after_write_min_size).size()) +
                            " with a read after write time of " +
                            std::to_string(std::get<2>(*read_after_write_min_size)) + " ms");
@@ -294,7 +294,7 @@ BOOST_AUTO_TEST_CASE(write_read_test)
         BOOST_TEST_MESSAGE("Maximum size is " + std::to_string(std::get<1>(*read_after_write_max_size)) +
                            " from Block reference \"" + boost::algorithm::hex(
                 std::string{std::get<0>(*read_after_write_max_size).cbegin(),
-                            std::get<0>(*read_after_write_max_size).cend()}) + "\" with a size of " +
+                            std::get<0>(*read_after_write_max_size).cend()}) + "\" with a block reference size of " +
                            std::to_string(std::get<0>(*read_after_write_max_size).size()) +
                            " with a read after write time of " +
                            std::to_string(std::get<2>(*read_after_write_max_size)) + " ms");
@@ -356,7 +356,7 @@ BOOST_AUTO_TEST_CASE(write_read_test)
         BOOST_TEST_MESSAGE("The total time taken to read after write " + std::to_string(total_size) + " bytes was " +
                            std::to_string(read_after_write_total_time) + " ms");
         //show linear read results
-        BOOST_TEST_MESSAGE("Test results for linear read:\n");
+        BOOST_TEST_MESSAGE("\nTest results for linear read:\n");
         BOOST_TEST_MESSAGE("Minimum results:");
         //minimum size
         auto linear_read_min_size = std::min_element(linear_read_times.cbegin(), linear_read_times.cend(),
@@ -366,7 +366,7 @@ BOOST_AUTO_TEST_CASE(write_read_test)
         BOOST_TEST_MESSAGE("Minimum size is " + std::to_string(std::get<1>(*linear_read_min_size)) +
                            " from Block reference \"" + boost::algorithm::hex(
                 std::string{std::get<0>(*linear_read_min_size).cbegin(), std::get<0>(*linear_read_min_size).cend()}) +
-                           "\" with a size of " +
+                           "\" with a block reference size of " +
                            std::to_string(std::get<0>(*linear_read_min_size).size()) + " with a linear read time of " +
                            std::to_string(std::get<2>(*linear_read_min_size)) + " ms");
         //minimum block ref size
@@ -406,7 +406,7 @@ BOOST_AUTO_TEST_CASE(write_read_test)
         BOOST_TEST_MESSAGE("Maximum size is " + std::to_string(std::get<1>(*linear_read_max_size)) +
                            " from Block reference \"" + boost::algorithm::hex(
                 std::string{std::get<0>(*linear_read_max_size).cbegin(), std::get<0>(*linear_read_max_size).cend()}) +
-                           "\" with a size of " +
+                           "\" with a block reference size of " +
                            std::to_string(std::get<0>(*linear_read_max_size).size()) + " with a linear read time of " +
                            std::to_string(std::get<2>(*linear_read_max_size)) + " ms");
         //maximum block ref size
@@ -462,7 +462,7 @@ BOOST_AUTO_TEST_CASE(write_read_test)
         BOOST_TEST_MESSAGE("The total time taken to linear read " + std::to_string(total_size) + " bytes was " +
                            std::to_string(linear_read_total_time) + " ms");
         //show random access read results
-        BOOST_TEST_MESSAGE("Test results for random access read:\n");
+        BOOST_TEST_MESSAGE("\nTest results for random access read:\n");
         BOOST_TEST_MESSAGE("Minimum results:");
         //minimum size
         auto randam_access_read_min_size = std::min_element(randam_access_read_times.cbegin(),
@@ -473,7 +473,7 @@ BOOST_AUTO_TEST_CASE(write_read_test)
         BOOST_TEST_MESSAGE("Minimum size is " + std::to_string(std::get<1>(*randam_access_read_min_size)) +
                            " from Block reference \"" + boost::algorithm::hex(
                 std::string{std::get<0>(*randam_access_read_min_size).cbegin(),
-                            std::get<0>(*randam_access_read_min_size).cend()}) + "\" with a size of " +
+                            std::get<0>(*randam_access_read_min_size).cend()}) + "\" with a block reference size of " +
                            std::to_string(std::get<0>(*randam_access_read_min_size).size()) +
                            " with a random access read time of " +
                            std::to_string(std::get<2>(*randam_access_read_min_size)) + " ms");
@@ -519,7 +519,7 @@ BOOST_AUTO_TEST_CASE(write_read_test)
         BOOST_TEST_MESSAGE("Maximum size is " + std::to_string(std::get<1>(*randam_access_read_max_size)) +
                            " from Block reference \"" + boost::algorithm::hex(
                 std::string{std::get<0>(*randam_access_read_max_size).cbegin(),
-                            std::get<0>(*randam_access_read_max_size).cend()}) + "\" with a size of " +
+                            std::get<0>(*randam_access_read_max_size).cend()}) + "\" with a block reference size of " +
                            std::to_string(std::get<0>(*randam_access_read_max_size).size()) +
                            " with a random access read time of " +
                            std::to_string(std::get<2>(*randam_access_read_max_size)) + " ms");
