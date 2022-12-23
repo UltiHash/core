@@ -14,9 +14,7 @@
 #include <boost/test/data/monomorphic.hpp>
 #include <trees/tree_storage.h>
 #include <random>
-#include <stdio.h>
-
-#define MAX_USERID_LENGTH 32
+#include <cstdio>
 
 std::vector<unsigned char> binary_generator(std::size_t max_len) {
     std::random_device dev;
@@ -58,16 +56,23 @@ std::vector<unsigned char> binary_generator(std::size_t max_len) {
 // ------------- Tests Follow --------------
 BOOST_AUTO_TEST_CASE(constructor_test)
 {
-    char username[MAX_USERID_LENGTH];
-    cuserid(username);
-    uh::trees::tree_storage t1(std::filesystem::path("/home")/std::string(username));//A test folder reserved for tree storage
+    char text[255];
+    FILE *name;
+    name = popen("whoami", "r");
+    fgets(text, sizeof(text), name);
+    pclose(name);
+    uh::trees::tree_storage t1(std::filesystem::path("/home")/std::string(text));//A test folder reserved for tree storage
 }
 
 BOOST_AUTO_TEST_CASE(write_read_test)
 {
-    char username[MAX_USERID_LENGTH];
-    cuserid(username);
-    uh::trees::tree_storage t1(std::filesystem::path("/home")/std::string(username));//A test folder reserved for tree storage
+    char text[255];
+    FILE *name;
+    name = popen("whoami", "r");
+    fgets(text, sizeof(text), name);
+    pclose(name);
+    uh::trees::tree_storage t1(std::filesystem::path("/home")/std::string(text));//A test folder reserved for tree storage
+
     struct timeval time{};
     for (unsigned char mode = 0; mode < 2; mode++) {
         std::size_t total_size{};
