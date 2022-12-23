@@ -56,12 +56,7 @@ std::vector<unsigned char> binary_generator(std::size_t max_len) {
 // ------------- Tests Follow --------------
 BOOST_AUTO_TEST_CASE(constructor_test)
 {
-    char text[255];
-    FILE *name;
-    name = popen("whoami", "r");
-    fgets(text, sizeof(text), name);
-    pclose(name);
-    uh::trees::tree_storage t1(std::filesystem::path("/home")/std::string(text));//A test folder reserved for tree storage
+    uh::trees::tree_storage t1(std::filesystem::path("/home")/std::string(getenv("USER")));//A test folder reserved for tree storage
 }
 
 BOOST_AUTO_TEST_CASE(write_read_test)
@@ -71,7 +66,7 @@ BOOST_AUTO_TEST_CASE(write_read_test)
     name = popen("whoami", "r");
     fgets(text, sizeof(text), name);
     pclose(name);
-    uh::trees::tree_storage t1(std::filesystem::path("/home")/std::string(text));//A test folder reserved for tree storage
+    uh::trees::tree_storage t1(std::filesystem::path("/home")/std::string(getenv("USER")));//A test folder reserved for tree storage
 
     struct timeval time{};
     for (unsigned char mode = 0; mode < 2; mode++) {
