@@ -18,14 +18,21 @@ class socket
 public:
     virtual ~socket() = default;
 
-    virtual std::streamsize write(std::span<const char> buffer) = 0;
-    virtual std::streamsize read(std::span<char> buffer) = 0;
+    std::streamsize write(std::span<const char> buffer);
+    std::streamsize read(std::span<char> buffer);
 
     const boost::asio::ip::tcp::endpoint& peer() const;
     boost::asio::ip::tcp::endpoint& peer();
 
+    bool valid() const;
+
+protected:
+    virtual std::streamsize write_impl(std::span<const char> buffer) = 0;
+    virtual std::streamsize read_impl(std::span<char> buffer) = 0;
+
 private:
     boost::asio::ip::tcp::endpoint m_peer;
+    bool m_valid = true;
 };
 
 // ---------------------------------------------------------------------
