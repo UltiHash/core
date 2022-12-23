@@ -12,7 +12,7 @@
 #include <openssl/sha.h>
 
 namespace uh::trees {
-#define N 2
+#define N 256
 #define STORE_MAX (unsigned int) std::numeric_limits<unsigned int>::max()
 #define STORE_HARD_LIMIT (unsigned long) (std::numeric_limits<unsigned int>::max() * 2)
     typedef struct tree_storage tree_storage;
