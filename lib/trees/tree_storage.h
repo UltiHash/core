@@ -12,7 +12,7 @@
 #include <openssl/sha.h>
 
 namespace uh::trees {
-#define N 256
+#define N 2
 #define STORE_MAX (unsigned int) std::numeric_limits<unsigned int>::max()
 #define STORE_HARD_LIMIT (unsigned long) (std::numeric_limits<unsigned int>::max() * 2)
     typedef struct tree_storage tree_storage;
@@ -292,8 +292,8 @@ namespace uh::trees {
 
                         std::vector<unsigned char> hash, local_block_ref;
                         local_block_ref.reserve(sizeof(unsigned int));
-                        for (unsigned char i = 0; i < sizeof(unsigned int); i++) {//STORE_MAX will fit in 4 bytes
-                            local_block_ref.push_back((unsigned char) (cur_pos >> (i * 8)));
+                        for (unsigned char i1 = 0; i1 < (unsigned char)sizeof(unsigned int); i1++) {//STORE_MAX will fit in 4 bytes
+                            local_block_ref.push_back((unsigned char) (cur_pos >> (i1 * 8)));
                         }
                         local_block_ref.insert(local_block_ref.cbegin(), i);
 
@@ -310,8 +310,8 @@ namespace uh::trees {
                             FATAL << "I/O error when reading prefix at path \"" + read_path.string() + "\"";
                             std::exit(EXIT_FAILURE);
                         }
-                        unsigned char buffer_in[buf_size + 1];
-                        count = std::fread(&buffer_in, sizeof(char), buf_size + 1, reader);
+                        unsigned char buffer_for_size[buf_size + 1];
+                        count = std::fread(&buffer_for_size, sizeof(char), buf_size + 1, reader);
                         cur_pos += count;
                         if (count != buf_size + 1) {
                             FATAL << "I/O prefix first byte reading was not completed on path \"" + read_path.string() +
@@ -320,7 +320,7 @@ namespace uh::trees {
                         }
                         std::size_t output_size{};
                         for (unsigned char buf_count = 0; buf_count <= buf_size; buf_count++) {
-                            output_size += (((std::size_t) buffer_in[buf_count]) << (buf_count * 8));
+                            output_size += (((std::size_t) buffer_for_size[buf_count]) << (buf_count * 8));
                         }
 
                         auto *tmp_buf = new unsigned char[output_size];

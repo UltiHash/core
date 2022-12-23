@@ -119,7 +119,7 @@ BOOST_AUTO_TEST_CASE(write_read_test)
         total_size = 0;
         std::random_device dev;
         std::mt19937 rng(dev());
-        std::uniform_int_distribution<std::mt19937::result_type> dist(0, write_times.size());
+        std::uniform_int_distribution<std::mt19937::result_type> dist(0, write_times.size()-1);
         while (total_size < (std::size_t) (std::pow(2, 38))) {
             std::size_t access_point = dist(rng);
             gettimeofday(&time, nullptr);
