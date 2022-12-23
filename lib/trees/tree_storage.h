@@ -36,7 +36,7 @@ namespace uh::trees {
             }
             unsigned char byte_count = total_bit_count / 8;
             std::vector<unsigned char> prefix{};
-            for (unsigned char i = 0; i < byte_count; i++) {
+            for (unsigned char i = 0; i < byte_count+1; i++) {
                 prefix.push_back((unsigned char) (input_size >> (i * 8)));
             }
             if (prefix.empty())prefix.push_back(0);
