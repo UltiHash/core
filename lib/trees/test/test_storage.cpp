@@ -15,6 +15,7 @@
 #include <trees/tree_storage.h>
 #include <random>
 #include <cstdio>
+#include <omp.h>
 
 std::vector<unsigned char> binary_generator(std::size_t max_len) {
     std::random_device dev;
@@ -36,15 +37,15 @@ std::vector<unsigned char> binary_generator(std::size_t max_len) {
     auto *out_fast = new std::size_t[len / sizeof(std::size_t)];
     auto *out_fast_cheat = reinterpret_cast<unsigned char *>(out_fast);
 
-    std::size_t i = 0;
-    for (; i < len / sizeof(std::size_t); i++) {
+#pragma omp parallel for schedule(dynamic)
+    for (std::size_t i = 0; i < len / sizeof(std::size_t); i++) {
         out_fast[i] = (std::size_t) dist2(rng2);
     }
     //copy out_fast to out_return
-    out_return.assign(out_fast_cheat, out_fast_cheat + i * sizeof(std::size_t));
+    out_return.assign(out_fast_cheat, out_fast_cheat + (len / sizeof(std::size_t)) * sizeof(std::size_t));
 
     //complete
-    for (std::size_t i1 = i * sizeof(std::size_t); i1 < i * sizeof(std::size_t) + len % sizeof(std::size_t); i1++) {
+    for (std::size_t i1 = (len / sizeof(std::size_t)) * sizeof(std::size_t); i1 < (len / sizeof(std::size_t)) * sizeof(std::size_t) + len % sizeof(std::size_t); i1++) {
         out_return[i1] = dist3(rng3);
     }
 
