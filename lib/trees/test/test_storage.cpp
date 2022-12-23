@@ -608,7 +608,10 @@ BOOST_AUTO_TEST_CASE(index_read_test)
     struct timeval time{};
     gettimeofday(&time, nullptr);
     long double millis = ((long double) time.tv_sec * 1000) + ((long double) time.tv_usec / 1000);
-    uh::trees::tree_storage t1("/mnt/md0");//A test folder reserved for tree storage, read existing structure coarse grained
+    //for any machine
+    //uh::trees::tree_storage t1(std::filesystem::path("/home")/std::string(getenv("USER")));//A test folder reserved for tree storage
+    //for strong laptops with SSD extension (configure test db server to run this??)
+    uh::trees::tree_storage t1("/mnt/md0");//A test folder reserved for tree storage
     gettimeofday(&time, nullptr);
     long double constructor_time = (((long double) time.tv_sec * 1000) + ((long double) time.tv_usec / 1000)) - millis;
 
