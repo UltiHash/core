@@ -176,7 +176,9 @@ namespace uh::trees {
         }
 
         std::vector<unsigned char> read(const std::vector<unsigned char> &block_code) {
-            if(block_code.empty())return std::vector<unsigned char>{};
+            if(block_code.empty()){
+                return std::vector<unsigned char>{};
+            }
             if (block_code.size() > 5) {
                 //size encoding is not reached yet, read along tree path
                 if (std::get<1>(children[block_code[0]]) == nullptr) {
