@@ -71,7 +71,7 @@ BOOST_AUTO_TEST_CASE(write_read_test)
     uh::trees::tree_storage t1(std::filesystem::path("/home")/std::string(getenv("USER")));//A test folder reserved for tree storage
 
     struct timeval time{};
-    for (unsigned char mode = 1; mode < 2; mode++) {
+    for (unsigned char mode = 0; mode < 2; mode++) {
         std::size_t total_size{};
         //list of write times with local_block_ref, integrated block size and milliseconds
         std::vector<std::tuple<std::vector<unsigned char>, std::size_t, long double>> write_times, read_after_write_times, linear_read_times, randam_access_read_times;
