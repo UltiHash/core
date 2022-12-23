@@ -35,14 +35,10 @@ namespace uh::trees {
                 h_bit >>= 1;
             }
             unsigned char byte_count = total_bit_count / 8;
-            if (total_bit_count % 8)[[likely]] {
-                byte_count++;
-            }
             std::vector<unsigned char> prefix{};
             for (unsigned char i = 0; i < byte_count; i++) {
                 prefix.push_back((unsigned char) (input_size >> (i * 8)));
             }
-            if (byte_count > 1)byte_count--;//there is at least one description byte
             if (prefix.empty())prefix.push_back(0);
             prefix.insert(prefix.cbegin(), byte_count);
             return prefix;
