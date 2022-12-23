@@ -608,5 +608,5 @@ BOOST_AUTO_TEST_CASE(index_read_test)
         SHA512(read_result.data(), read_result.size(), hash_buf);
         BOOST_CHECK_EQUAL_COLLECTIONS(std::get<0>(el).cbegin(),std::get<1>(el).cend(),hash_buf,hash_buf+SHA512_DIGEST_LENGTH);
     }
-    //t1.delete_recursive();
+    t1.delete_recursive();
 }
