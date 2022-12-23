@@ -219,7 +219,7 @@ BOOST_AUTO_TEST_CASE(write_read_test)
         long double write_avg_time = 0;
         for (const auto &i: write_times) {
             write_avg_size += std::get<1>(i);
-            write_avg_size += std::get<0>(i).size();
+            write_avg_block_ref_size += std::get<0>(i).size();
             write_avg_time += std::get<2>(i);
         }
         long double write_total_time = write_avg_time;
@@ -334,7 +334,7 @@ BOOST_AUTO_TEST_CASE(write_read_test)
         long double read_after_write_avg_time = 0;
         for (const auto &i: read_after_write_times) {
             read_after_write_avg_size += std::get<1>(i);
-            read_after_write_avg_size += std::get<0>(i).size();
+            read_after_write_avg_block_ref_size += std::get<0>(i).size();
             read_after_write_avg_time += std::get<2>(i);
         }
         long double read_after_write_total_time = read_after_write_avg_time;
@@ -442,7 +442,7 @@ BOOST_AUTO_TEST_CASE(write_read_test)
         long double linear_read_avg_time = 0;
         for (const auto &i: linear_read_times) {
             linear_read_avg_size += std::get<1>(i);
-            linear_read_avg_size += std::get<0>(i).size();
+            linear_read_avg_block_ref_size += std::get<0>(i).size();
             linear_read_avg_time += std::get<2>(i);
         }
         long double linear_read_total_time = linear_read_avg_time;
@@ -560,7 +560,7 @@ BOOST_AUTO_TEST_CASE(write_read_test)
         long double randam_access_read_avg_time = 0;
         for (const auto &i: randam_access_read_times) {
             randam_access_read_avg_size += std::get<1>(i);
-            randam_access_read_avg_size += std::get<0>(i).size();
+            randam_access_read_avg_block_ref_size += std::get<0>(i).size();
             randam_access_read_avg_time += std::get<2>(i);
         }
         long double random_access_read_total_time = randam_access_read_avg_time;
