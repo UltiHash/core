@@ -376,65 +376,86 @@ namespace uh::trees {
 
                     std::thread rt,ht;
 
+                    std::vector<unsigned char> local_block_ref;
+                    unsigned char* tmp_buf[2];
+                    std::size_t output_size{};
+                    bool parallel_switch{};
+                    std::mutex m1{};
                     while (!std::feof(reader)) {
-                        std::vector<unsigned char> hash, local_block_ref;
-                        local_block_ref.reserve(sizeof(unsigned int));
+                        auto read_func = [&](){
+                            std::unique_lock lock(m1);
+                            local_block_ref.reserve(sizeof(unsigned int));
 
-                        for (unsigned char i1 = 0; i1 < (unsigned char)sizeof(unsigned int); i1++) {//STORE_MAX will fit in 4 bytes
-                            local_block_ref.push_back((unsigned char) (cur_pos >> (i1 * 8)));
-                        }
-                        local_block_ref.insert(local_block_ref.cbegin(), i);
+                            for (unsigned char i1 = 0; i1 < (unsigned char)sizeof(unsigned int); i1++) {//STORE_MAX will fit in 4 bytes
+                                local_block_ref.push_back((unsigned char) (cur_pos >> (i1 * 8)));
+                            }
+                            local_block_ref.insert(local_block_ref.cbegin(), i);
+                            lock.unlock();
 
-                        auto read_func = [](){
+                            unsigned char buf_size = 0;
+                            std::size_t count = std::fread(&buf_size, sizeof(char), 1, reader);
+                            cur_pos += count;
+                            if (count != 1) {
+                                FATAL << "I/O prefix first byte reading was not completed on path \"" + read_path.string() +
+                                         "\"";
+                                std::exit(EXIT_FAILURE);
+                            }
 
+                            if (std::ferror(reader)) {
+                                FATAL << "I/O error when reading prefix at path \"" + read_path.string() + "\"";
+                                std::exit(EXIT_FAILURE);
+                            }
+                            unsigned char buffer_for_size[buf_size + 1];
+                            count = std::fread(&buffer_for_size, sizeof(char), buf_size + 1, reader);
+                            cur_pos += count;
+                            if (count != buf_size + 1) {
+                                FATAL << "I/O prefix first byte reading was not completed on path \"" + read_path.string() +
+                                         "\"";
+                                std::exit(EXIT_FAILURE);
+                            }
+                            output_size=0;
+                            for (unsigned char buf_count = 0; buf_count <= buf_size; buf_count++) {
+                                output_size += (((std::size_t) buffer_for_size[buf_count]) << (buf_count * 8));
+                            }
+
+                            mem_wait(output_size);
+
+                            tmp_buf[parallel_switch] = new unsigned char[output_size];
+                            count = std::fread(tmp_buf[parallel_switch], sizeof(char), output_size, reader);
+                            cur_pos += count;
+
+                            if (count != output_size) {
+                                FATAL << "I/O was not completed on path \"" + read_path.string() + "\"";
+                                std::exit(EXIT_FAILURE);
+                            }
+                            if (std::ferror(reader)) {
+                                FATAL << "I/O error when reading prefix at path \"" + read_path.string() + "\"";
+                                std::exit(EXIT_FAILURE);
+                            }
                         };
-                        unsigned char buf_size = 0;
-                        std::size_t count = std::fread(&buf_size, sizeof(char), 1, reader);
-                        cur_pos += count;
-                        if (count != 1) {
-                            FATAL << "I/O prefix first byte reading was not completed on path \"" + read_path.string() +
-                                     "\"";
-                            std::exit(EXIT_FAILURE);
-                        }
+                        if(rt.joinable())rt.join();
+                        rt=std::thread(read_func);
 
-                        if (std::ferror(reader)) {
-                            FATAL << "I/O error when reading prefix at path \"" + read_path.string() + "\"";
-                            std::exit(EXIT_FAILURE);
-                        }
-                        unsigned char buffer_for_size[buf_size + 1];
-                        count = std::fread(&buffer_for_size, sizeof(char), buf_size + 1, reader);
-                        cur_pos += count;
-                        if (count != buf_size + 1) {
-                            FATAL << "I/O prefix first byte reading was not completed on path \"" + read_path.string() +
-                                     "\"";
-                            std::exit(EXIT_FAILURE);
-                        }
-                        std::size_t output_size{};
-                        for (unsigned char buf_count = 0; buf_count <= buf_size; buf_count++) {
-                            output_size += (((std::size_t) buffer_for_size[buf_count]) << (buf_count * 8));
-                        }
+                        auto hash_func = [&](){
+                            std::unique_lock lock(m1);
+                            unsigned char hash_buf[SHA512_DIGEST_LENGTH];//HASH GENERATION
+                            bool parallel_switch_copy = parallel_switch;
+                            parallel_switch=!parallel_switch;
+                            auto output_tmp = output_size;
+                            auto tmp_local_block_ref = local_block_ref;
+                            local_block_ref.clear();
+                            lock.unlock();
+                            SHA512(tmp_buf[parallel_switch_copy], output_tmp, hash_buf);
+                            delete[] tmp_buf[parallel_switch_copy];
 
-                        mem_wait(output_size);
+                            std::vector<unsigned char> hash{hash_buf, hash_buf + SHA512_DIGEST_LENGTH};
+                            search_index->emplace_back(hash, tmp_local_block_ref);
+                            local_block_ref.clear();
+                        };
 
-                        auto *tmp_buf = new unsigned char[output_size];
-                        count = std::fread(tmp_buf, sizeof(char), output_size, reader);
-                        cur_pos += count;
+                        if(ht.joinable())ht.join();
+                        ht=std::thread(hash_func);
 
-                        if (count != output_size) {
-                            FATAL << "I/O was not completed on path \"" + read_path.string() + "\"";
-                            std::exit(EXIT_FAILURE);
-                        }
-                        if (std::ferror(reader)) {
-                            FATAL << "I/O error when reading prefix at path \"" + read_path.string() + "\"";
-                            std::exit(EXIT_FAILURE);
-                        }
-
-                        unsigned char hash_buf[SHA512_DIGEST_LENGTH];//HASH GENERATION
-                        SHA512(tmp_buf, output_size, hash_buf);
-                        delete[] tmp_buf;
-
-                        hash.assign(hash_buf, hash_buf + SHA512_DIGEST_LENGTH);
-                        search_index->emplace_back(hash, local_block_ref);
                     }
                     std::fclose(reader);
                     no_index.unlock();
