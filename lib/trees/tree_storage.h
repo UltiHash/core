@@ -92,6 +92,18 @@ namespace uh::trees {
                 std::lock_guard lock2(global_var_mutex);
                 *i_constructor=i=(short)std::max(*i_constructor+1,i+1);
             }
+            if(std::is_sorted(size->begin(),size->end(),[](const auto &a, const auto &b){
+                return std::get<2>(a)<std::get<2>(b);
+            }))return;
+            std::sort(size->begin(),size->end(),[](const auto &a, const auto &b){
+                return std::get<2>(a)<std::get<2>(b);
+            });
+            if(std::is_sorted(children->begin(),children->end(),[](const auto &a, const auto &b){
+                return std::get<2>(a)<std::get<2>(b);
+            }))return;
+            std::sort(children->begin(),children->end(),[](const auto &a, const auto &b){
+                return std::get<2>(a)<std::get<2>(b);
+            });
         }
 
         std::size_t get_size() {
