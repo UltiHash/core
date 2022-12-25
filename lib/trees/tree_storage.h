@@ -94,6 +94,8 @@ namespace uh::trees {
             }
             if(std::is_sorted(size->begin(),size->end(),[](const auto &a, const auto &b){
                 return std::get<2>(a)<std::get<2>(b);
+            })&&std::is_sorted(children->begin(),children->end(),[](const auto &a, const auto &b){
+                return std::get<2>(a)<std::get<2>(b);
             }))return;
             std::sort(size->begin(),size->end(),[](const auto &a, const auto &b){
                 return std::get<2>(a)<std::get<2>(b);
@@ -109,7 +111,7 @@ namespace uh::trees {
         std::size_t get_size() {
             std::size_t s{};
             for (unsigned short i = 0; i < (unsigned short) N; i++) {
-                s += size[i];
+                s += size->size()>i?std::get<0>(size->at(i)):0;
                 if (std::get<1>(children[i]) != nullptr) {
                     s += std::get<0>(children[i]);
                 }
