@@ -22,11 +22,11 @@ namespace uh::trees {
     struct tree_storage {
     protected:
         //every file storage level contains a maximum of 256 storage chunks and 256 folders to deeper levels
-        std::unique_ptr<std::vector<std::tuple<std::size_t,std::unique_ptr<std::mutex>>>> size{};//different storage chunks with write protection
-        std::unique_ptr<std::vector<std::tuple<std::size_t, tree_storage *>>> children{};//deeper tree storage blocks and folders
+        std::unique_ptr<std::vector<std::tuple<std::size_t,std::unique_ptr<std::mutex>,unsigned char>>> size{};//different storage chunks with write protection
+        std::unique_ptr<std::vector<std::tuple<std::size_t, tree_storage *,unsigned char>>> children{};//deeper tree storage blocks and folders
         //radix_tree* block_indexes[N]{}; // index local block finds
         std::unique_ptr<std::filesystem::path> combined_path{};
-        std::unique_ptr<short> i_constructor{};
+        std::unique_ptr<short> i_constructor = std::make_unique<short>(-1);
         std::shared_mutex global_var_mutex;//protect everything out of size array
         bool path_is_set_up = false;
 
@@ -52,6 +52,8 @@ namespace uh::trees {
     public:
         explicit tree_storage(const std::filesystem::path &root) {
             //expected are 4 bytes that mimic hexadecimal string representation
+            if(*i_constructor+1 == (short)N)return;
+
             std::unique_lock lock(global_var_mutex);
             if(!path_is_set_up){
                 std::string parent_name = root.filename().string();
@@ -72,16 +74,11 @@ namespace uh::trees {
             }
             lock.unlock();
 
-            for (short i=*i_constructor; i < (short) N; *i_constructor+=1) {
+            for (short i=(*i_constructor+=1); i < (short) N;) {
                 std::string s_tmp = boost::algorithm::hex(std::string{(char)i});
                 std::filesystem::path chunk = *combined_path / s_tmp;
                 if (std::filesystem::exists(chunk)) {
-                    while(i>size->size()-1){
-                        size->emplace_back(0,std::make_unique<std::mutex>());
-                    }
-                    std::get<1>(size->at(i))->lock();
-                    if(std::get<0>(size->at(i)))std::get<0>(size->at(i))=std::filesystem::file_size(chunk);
-                    std::get<1>(size->at(i))->unlock();
+                    size->emplace_back(std::filesystem::file_size(chunk),std::make_unique<std::mutex>(),i);
                 }
 
                 std::string fname = combined_path->filename().string();
@@ -89,12 +86,11 @@ namespace uh::trees {
                 std::filesystem::path deeper_tree = *combined_path / s_tmp;
                 //check if sub folder in tree exists
                 if (std::filesystem::exists(deeper_tree)) {
-                    std::get<1>(children[i]) = new tree_storage(deeper_tree);
-                    std::get<0>(children[i]) = std::get<1>(children[i])->get_size();
-                } else {
-                    std::get<0>(children[i]) = 0;
-                    std::get<1>(children[i]) = nullptr;
+                    auto* tmp_tree = new tree_storage(deeper_tree);
+                    children->emplace_back(tmp_tree->get_size(),tmp_tree,i);
                 }
+                std::lock_guard lock2(global_var_mutex);
+                *i_constructor=i=(short)std::max(*i_constructor+1,i+1);
             }
         }
 
