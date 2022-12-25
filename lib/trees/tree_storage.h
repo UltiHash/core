@@ -28,13 +28,33 @@ namespace uh::trees {
     typedef struct tree_storage tree_storage;
 
     struct tree_storage {
+    private:
+        void mem_wait(std::size_t mem){
+            std::lock_guard lock(global_var_mutex);
+            struct sysinfo memInfo{};
+            unsigned long totalFreeVirtualMem;
+            do{
+                sysinfo (&memInfo);
+                totalFreeVirtualMem = memInfo.freeram;
+                totalFreeVirtualMem += memInfo.freeswap;
+                totalFreeVirtualMem *= memInfo.mem_unit;
+                if(totalFreeVirtualMem<mem){
+#ifdef _WIN32
+                    Sleep(10);
+#else
+                    usleep(10 * 1000);
+#endif // _WIN32
+                }
+            }
+            while(totalFreeVirtualMem<mem);
+        }
     protected:
         //every file storage level contains a maximum of 256 storage chunks and 256 folders to deeper levels
-        std::unique_ptr<std::vector<std::tuple<std::size_t,std::unique_ptr<std::shared_mutex>,unsigned char>>> size{};//different storage chunks with write protection
-        std::unique_ptr<std::vector<std::tuple<std::size_t, tree_storage *,unsigned char>>> children{};//deeper tree storage blocks and folders
+        std::shared_ptr<std::vector<std::tuple<std::size_t,std::shared_ptr<std::shared_mutex>,unsigned char>>> size{};//different storage chunks with write protection
+        std::shared_ptr<std::vector<std::tuple<std::size_t, tree_storage *,unsigned char>>> children{};//deeper tree storage blocks and folders
         //radix_tree* block_indexes[N]{}; // index local block finds
-        std::unique_ptr<std::filesystem::path> combined_path{};
-        std::unique_ptr<short> i_constructor = std::make_unique<short>(-1);
+        std::shared_ptr<std::filesystem::path> combined_path{};
+        std::shared_ptr<short> i_constructor = std::make_unique<short>(-1);
         std::shared_mutex global_var_mutex;//protect everything out of size array
         bool path_is_set_up = false;
 
@@ -305,7 +325,7 @@ namespace uh::trees {
                     for (unsigned char buf_count = 0; buf_count <= buf_size; buf_count++) {
                         output_size += (((std::size_t) buffer_in[buf_count]) << (buf_count * 8));
                     }
-
+                    mem_wait(output_size);
                     auto *tmp_buf = new unsigned char[output_size];
                     count = std::fread(tmp_buf, sizeof(char), output_size, reader);
 
@@ -333,7 +353,7 @@ namespace uh::trees {
 
         //The index gives tuple<hash,local_block_reference>, always run index single without reading or writing interference
         std::list<std::tuple<std::vector<unsigned char>, std::vector<unsigned char>>> index(unsigned short num_threads = 1) {
-            std::unique_ptr<std::list<std::tuple<std::vector<unsigned char>, std::vector<unsigned char>>>> search_index;
+            std::shared_ptr<std::list<std::tuple<std::vector<unsigned char>, std::vector<unsigned char>>>> search_index;
             for (unsigned short i = 0; i < (unsigned short) N; i++) {
                 if (i < size->size() && std::get<0>(size->at(i)) > 0) {
                     //read entire block generating hashes and block references
@@ -355,14 +375,19 @@ namespace uh::trees {
                     std::size_t cur_pos = 0;
 
                     std::thread rt,ht;
+
                     while (!std::feof(reader)) {
                         std::vector<unsigned char> hash, local_block_ref;
                         local_block_ref.reserve(sizeof(unsigned int));
+
                         for (unsigned char i1 = 0; i1 < (unsigned char)sizeof(unsigned int); i1++) {//STORE_MAX will fit in 4 bytes
                             local_block_ref.push_back((unsigned char) (cur_pos >> (i1 * 8)));
                         }
                         local_block_ref.insert(local_block_ref.cbegin(), i);
 
+                        auto read_func = [](){
+
+                        };
                         unsigned char buf_size = 0;
                         std::size_t count = std::fread(&buf_size, sizeof(char), 1, reader);
                         cur_pos += count;
@@ -389,22 +414,7 @@ namespace uh::trees {
                             output_size += (((std::size_t) buffer_for_size[buf_count]) << (buf_count * 8));
                         }
 
-                        struct sysinfo memInfo{};
-                        unsigned long totalFreeVirtualMem;
-                        do{
-                            sysinfo (&memInfo);
-                            totalFreeVirtualMem = memInfo.freeram;
-                            totalFreeVirtualMem += memInfo.freeswap;
-                            totalFreeVirtualMem *= memInfo.mem_unit;
-                            if(totalFreeVirtualMem<output_size){
-                                #ifdef _WIN32
-                                Sleep(10);
-                                #else
-                                usleep(10 * 1000);
-                                #endif // _WIN32
-                            }
-                        }
-                        while(totalFreeVirtualMem<output_size);
+                        mem_wait(output_size);
 
                         auto *tmp_buf = new unsigned char[output_size];
                         count = std::fread(tmp_buf, sizeof(char), output_size, reader);
