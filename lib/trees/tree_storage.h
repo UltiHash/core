@@ -10,6 +10,8 @@
 #include <filesystem>
 #include "boost/algorithm/hex.hpp"
 #include <openssl/sha.h>
+#include <shared_mutex>
+#include <memory>
 
 namespace uh::trees {
 #define N 256
@@ -20,10 +22,12 @@ namespace uh::trees {
     struct tree_storage {
     protected:
         //every file storage level contains a maximum of 256 storage chunks and 256 folders to deeper levels
-        std::size_t size[N]{};
-        std::tuple<std::size_t, tree_storage *> children[N]{};//deeper tree storage blocks and folders
+        std::unique_ptr<std::vector<std::tuple<std::size_t,std::unique_ptr<std::mutex>>>> size{};//different storage chunks with write protection
+        std::unique_ptr<std::vector<std::tuple<std::size_t, tree_storage *>>> children{};//deeper tree storage blocks and folders
         //radix_tree* block_indexes[N]{}; // index local block finds
-        std::filesystem::path combined_path{};
+        std::unique_ptr<std::filesystem::path> combined_path{};
+        std::shared_mutex global_var_mutex;//protect everything out of size array
+        bool path_is_set_up = false;
 
         //returns wrapped string
         static std::vector<unsigned char> prefix_wrap(std::size_t input_size) {
@@ -47,28 +51,38 @@ namespace uh::trees {
     public:
         explicit tree_storage(const std::filesystem::path &root) {
             //expected are 4 bytes that mimic hexadecimal string representation
-            std::string parent_name = root.filename().string();
-            bool valid_root = parent_name.size() == 4 and root.extension().string().empty();
-            if (valid_root)
-                for (const char &i: parent_name) {
-                    if (!(('0' <= i and i <= '9') || ('A' <= i and i <= 'F'))) {
-                        valid_root = false;
-                        break;
+            std::unique_lock lock(global_var_mutex);
+            if(!path_is_set_up){
+                std::string parent_name = root.filename().string();
+                bool valid_root = parent_name.size() == 4 and root.extension().string().empty();
+                if (valid_root)
+                    for (const char &i: parent_name) {
+                        if (!(('0' <= i and i <= '9') || ('A' <= i and i <= 'F'))) {
+                            valid_root = false;
+                            break;
+                        }
                     }
+                *combined_path = root;
+                if (!valid_root) {
+                    *combined_path /= "0000";
                 }
-            combined_path = root;
-            if (!valid_root) {
-                combined_path /= "0000";
+                std::filesystem::create_directories(*combined_path);
+                path_is_set_up = true;
             }
-            std::filesystem::create_directories(combined_path);
+            lock.unlock();
+
             for (unsigned short i = 0; i < (unsigned short) N; i++) {
                 std::string s_tmp = boost::algorithm::hex(std::string{(char)i});
-                std::filesystem::path chunk = combined_path / s_tmp;
+                std::filesystem::path chunk = *combined_path / s_tmp;
                 if (std::filesystem::exists(chunk)) {
-                    size[i] = std::filesystem::file_size(chunk);
-                } else size[i] = 0;
+                    while(i>size->size()-1){
+                        size->emplace_back(0,std::make_unique<std::mutex>());
+                    }
+                    std::lock_guard lock2();
+                    if(size.at)std::get<0>(*size[i])=std::filesystem::file_size(chunk);
+                }
 
-                std::string fname = combined_path.filename().string();
+                std::string fname = combined_path->filename().string();
                 s_tmp.insert(s_tmp.cbegin(),fname.cbegin() + 2, fname.cbegin() + 4);
                 std::filesystem::path deeper_tree = combined_path / s_tmp;
                 //check if sub folder in tree exists
