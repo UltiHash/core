@@ -12,6 +12,7 @@
 #include <openssl/sha.h>
 #include <shared_mutex>
 #include <memory>
+#include <thread>
 
 namespace uh::trees {
 #define N 256
@@ -50,9 +51,8 @@ namespace uh::trees {
         }
 
     public:
-        explicit tree_storage(const std::filesystem::path &root) {
+        explicit tree_storage(const std::filesystem::path &root, unsigned short num_threads = 1) {
             //expected are 4 bytes that mimic hexadecimal string representation
-            if(*i_constructor+1 == (short)N)return;
 
             std::unique_lock lock(global_var_mutex);
             if(!path_is_set_up){
@@ -74,23 +74,39 @@ namespace uh::trees {
             }
             lock.unlock();
 
-            for (short i=(*i_constructor+=1); i < (short) N;) {
-                std::string s_tmp = boost::algorithm::hex(std::string{(char)i});
-                std::filesystem::path chunk = *combined_path / s_tmp;
-                if (std::filesystem::exists(chunk)) {
-                    size->emplace_back(std::filesystem::file_size(chunk),std::make_unique<std::shared_mutex>(),i);
-                }
+            auto multithread_constructor = [&](){
+                if(*i_constructor+1 == (short)N)return;
+                for (short i=(*i_constructor+=1); i < (short) N;) {
+                    std::string s_tmp = boost::algorithm::hex(std::string{(char)i});
+                    std::filesystem::path chunk = *combined_path / s_tmp;
+                    if (std::filesystem::exists(chunk)) {
+                        size->emplace_back(std::filesystem::file_size(chunk),std::make_unique<std::shared_mutex>(),i);
+                    }
 
-                std::string fname = combined_path->filename().string();
-                s_tmp.insert(s_tmp.cbegin(),fname.cbegin() + 2, fname.cbegin() + 4);
-                std::filesystem::path deeper_tree = *combined_path / s_tmp;
-                //check if sub folder in tree exists
-                if (std::filesystem::exists(deeper_tree)) {
-                    auto* tmp_tree = new tree_storage(deeper_tree);
-                    children->emplace_back(tmp_tree->get_size(),tmp_tree,i);
+                    std::string fname = combined_path->filename().string();
+                    s_tmp.insert(s_tmp.cbegin(),fname.cbegin() + 2, fname.cbegin() + 4);
+                    std::filesystem::path deeper_tree = *combined_path / s_tmp;
+                    //check if sub folder in tree exists
+                    if (std::filesystem::exists(deeper_tree)) {
+                        auto* tmp_tree = new tree_storage(deeper_tree);
+                        children->emplace_back(tmp_tree->get_size(),tmp_tree,i);
+                    }
+                    std::lock_guard lock2(global_var_mutex);
+                    *i_constructor=i=(short)std::max(*i_constructor+1,i+1);
                 }
-                std::lock_guard lock2(global_var_mutex);
-                *i_constructor=i=(short)std::max(*i_constructor+1,i+1);
+            };
+
+            if(num_threads == 1){
+                multithread_constructor();
+            }
+            else{
+                std::vector<std::thread> workers;
+                for(unsigned short i=0;i<num_threads;i++){
+                    std::thread w(multithread_constructor);
+                    workers.push_back(std::move(w));
+                }
+                for (auto& th : workers)
+                    th.join();
             }
 
             if(!std::is_sorted(size->begin(),size->end(),[](const auto &a, const auto &b){
@@ -107,6 +123,7 @@ namespace uh::trees {
 
         std::size_t get_size() {
             std::size_t s{};
+            std::lock_guard lock(global_var_mutex);
             for (unsigned short i = 0; i < (unsigned short) N; i++) {
                 s += size->size()>i?std::get<0>(size->at(i)):0;
                 if (children->size()>i) {
@@ -311,10 +328,13 @@ namespace uh::trees {
         std::list<std::tuple<std::vector<unsigned char>, std::vector<unsigned char>>> index() {
             std::list<std::tuple<std::vector<unsigned char>, std::vector<unsigned char>>> search_index;
             for (unsigned short i = 0; i < (unsigned short) N; i++) {
-                if (size[i] > 0) {
+                if (i < size->size() && std::get<0>(size->at(i)) > 0) {
                     //read entire block generating hashes and block references
                     std::string ref_name{boost::algorithm::hex(std::string{(char) i})};
-                    std::filesystem::path read_path = combined_path / ref_name;
+                    std::filesystem::path read_path = *combined_path / ref_name;
+
+                    std::unique_lock no_index(*std::get<1>(size->at(i)));
+
                     FILE *reader = std::fopen(read_path.c_str(), "rb");
                     std::size_t cur_pos = 0;
                     while (!std::feof(reader)) {
@@ -382,15 +402,17 @@ namespace uh::trees {
                         search_index.emplace_back(hash, local_block_ref);
                     }
                     std::fclose(reader);
+                    no_index.unlock();
                 }
                 //splice indexes of children plus the min_pos to decide local_block_ref of children array
-                if (std::get<0>(children[i]) > 0 and std::get<1>(children[i]) != nullptr) {
+                if (i < children->size() && std::get<0>(children->at(i)) > 0) {
                     auto append_list = std::get<1>(children[i])->index();
                     for(auto &el:append_list){
                         std::get<1>(el).insert(std::get<1>(el).cbegin(),i);
                     }
                     search_index.splice(search_index.cend(),append_list);
                 }
+                if(i>=size->size()&&i>=children->size())break;
             }
             return search_index;
         }
