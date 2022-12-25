@@ -354,6 +354,8 @@ namespace uh::trees {
         //The index gives tuple<hash,local_block_reference>, always run index single without reading or writing interference
         std::list<std::tuple<std::vector<unsigned char>, std::vector<unsigned char>>> index(unsigned short num_threads = 1) {
             std::shared_ptr<std::list<std::tuple<std::vector<unsigned char>, std::vector<unsigned char>>>> search_index;
+
+#pragma omp parallel for if(parallelism_enabled)
             for (unsigned short i = 0; i < (unsigned short) N; i++) {
                 if (i < size->size() && std::get<0>(size->at(i)) > 0) {
                     //read entire block generating hashes and block references
