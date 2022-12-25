@@ -26,6 +26,7 @@ namespace uh::trees {
         std::unique_ptr<std::vector<std::tuple<std::size_t, tree_storage *>>> children{};//deeper tree storage blocks and folders
         //radix_tree* block_indexes[N]{}; // index local block finds
         std::unique_ptr<std::filesystem::path> combined_path{};
+        std::unique_ptr<short> i_constructor{};
         std::shared_mutex global_var_mutex;//protect everything out of size array
         bool path_is_set_up = false;
 
@@ -71,20 +72,21 @@ namespace uh::trees {
             }
             lock.unlock();
 
-            for (unsigned short i = 0; i < (unsigned short) N; i++) {
+            for (short i=*i_constructor; i < (short) N; *i_constructor+=1) {
                 std::string s_tmp = boost::algorithm::hex(std::string{(char)i});
                 std::filesystem::path chunk = *combined_path / s_tmp;
                 if (std::filesystem::exists(chunk)) {
                     while(i>size->size()-1){
                         size->emplace_back(0,std::make_unique<std::mutex>());
                     }
-                    std::lock_guard lock2();
-                    if(size.at)std::get<0>(*size[i])=std::filesystem::file_size(chunk);
+                    std::get<1>(size->at(i))->lock();
+                    if(std::get<0>(size->at(i)))std::get<0>(size->at(i))=std::filesystem::file_size(chunk);
+                    std::get<1>(size->at(i))->unlock();
                 }
 
                 std::string fname = combined_path->filename().string();
                 s_tmp.insert(s_tmp.cbegin(),fname.cbegin() + 2, fname.cbegin() + 4);
-                std::filesystem::path deeper_tree = combined_path / s_tmp;
+                std::filesystem::path deeper_tree = *combined_path / s_tmp;
                 //check if sub folder in tree exists
                 if (std::filesystem::exists(deeper_tree)) {
                     std::get<1>(children[i]) = new tree_storage(deeper_tree);
