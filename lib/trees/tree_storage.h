@@ -209,28 +209,28 @@ namespace uh::trees {
             }
             if (block_code.size() > 5) {
                 //size encoding is not reached yet, read along tree path
-                if (std::get<1>(children[block_code[0]]) == nullptr) {
+                if ((short)children->size() - 1 < (short)block_code[0] || !std::get<0>(children->at(block_code[0]))) {
                     std::string not_found((const char *) block_code.data(), block_code.size());
                     DEBUG << "<Block error trace>: Block code " + boost::algorithm::hex(not_found) +
-                             " could not be found in storage tree \"" + combined_path.string() + "\".";
+                             " could not be found in storage tree \"" + combined_path->string() + "\".";
                     return std::vector<unsigned char>{};
                 } else {
                     std::vector<unsigned char> sub_block_code{block_code.cbegin() + 1, block_code.cend()};
-                    std::vector<unsigned char> out_vec = std::get<1>(children[block_code[0]])->read(sub_block_code);
+                    std::vector<unsigned char> out_vec = std::get<1>(children->at(block_code[0]))->read(sub_block_code);
                     if (out_vec.empty()) {
                         std::string not_found((const char *) block_code.data(), block_code.size());
                         DEBUG << "<Block error trace on return>: Block code " + boost::algorithm::hex(not_found) +
-                                 " could not be found in storage tree \"" + combined_path.string() + "\".";
+                                 " could not be found in storage tree \"" + combined_path->string() + "\".";
                     }
                     return out_vec;
                 }
             } else {
                 //the block code should have a size of 5; one chunk index and 4 bytes of encoding for the offset
-                if (!size[block_code[0]]) {
+                if ((short)size->size() - 1 < (short)block_code[0] || !std::get<0>(size->at(block_code[0]))) {
                     std::string not_found((const char *) block_code.data(), block_code.size());
                     DEBUG
                         << "<Block error trace on return, final tree>: Block code " + boost::algorithm::hex(not_found) +
-                           " could not be found in storage tree \"" + combined_path.string() +
+                           " could not be found in storage tree \"" + combined_path->string() +
                            "\" and size of storage chunk was 0.";
                     return std::vector<unsigned char>{};
                 } else {
