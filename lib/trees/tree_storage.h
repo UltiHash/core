@@ -22,7 +22,7 @@ namespace uh::trees {
     struct tree_storage {
     protected:
         //every file storage level contains a maximum of 256 storage chunks and 256 folders to deeper levels
-        std::unique_ptr<std::vector<std::tuple<std::size_t,std::unique_ptr<std::mutex>,unsigned char>>> size{};//different storage chunks with write protection
+        std::unique_ptr<std::vector<std::tuple<std::size_t,std::unique_ptr<std::shared_mutex>,unsigned char>>> size{};//different storage chunks with write protection
         std::unique_ptr<std::vector<std::tuple<std::size_t, tree_storage *,unsigned char>>> children{};//deeper tree storage blocks and folders
         //radix_tree* block_indexes[N]{}; // index local block finds
         std::unique_ptr<std::filesystem::path> combined_path{};
@@ -78,7 +78,7 @@ namespace uh::trees {
                 std::string s_tmp = boost::algorithm::hex(std::string{(char)i});
                 std::filesystem::path chunk = *combined_path / s_tmp;
                 if (std::filesystem::exists(chunk)) {
-                    size->emplace_back(std::filesystem::file_size(chunk),std::make_unique<std::mutex>(),i);
+                    size->emplace_back(std::filesystem::file_size(chunk),std::make_unique<std::shared_mutex>(),i);
                 }
 
                 std::string fname = combined_path->filename().string();
@@ -92,18 +92,15 @@ namespace uh::trees {
                 std::lock_guard lock2(global_var_mutex);
                 *i_constructor=i=(short)std::max(*i_constructor+1,i+1);
             }
-            if(std::is_sorted(size->begin(),size->end(),[](const auto &a, const auto &b){
+
+            if(!std::is_sorted(size->begin(),size->end(),[](const auto &a, const auto &b){
                 return std::get<2>(a)<std::get<2>(b);
-            })&&std::is_sorted(children->begin(),children->end(),[](const auto &a, const auto &b){
-                return std::get<2>(a)<std::get<2>(b);
-            }))return;
-            std::sort(size->begin(),size->end(),[](const auto &a, const auto &b){
+            }))std::sort(size->begin(),size->end(),[](const auto &a, const auto &b){
                 return std::get<2>(a)<std::get<2>(b);
             });
-            if(std::is_sorted(children->begin(),children->end(),[](const auto &a, const auto &b){
+            if(!std::is_sorted(children->begin(),children->end(),[](const auto &a, const auto &b){
                 return std::get<2>(a)<std::get<2>(b);
-            }))return;
-            std::sort(children->begin(),children->end(),[](const auto &a, const auto &b){
+            }))std::sort(children->begin(),children->end(),[](const auto &a, const auto &b){
                 return std::get<2>(a)<std::get<2>(b);
             });
         }
@@ -123,13 +120,6 @@ namespace uh::trees {
         //write a string and get size of written block representation and a reference string back
         std::vector<unsigned char> write(const std::vector<unsigned char> &input) {
             if(input.empty())return std::vector<unsigned char>{};
-            /*
-            if (input.size() < 16) {
-                std::string s_tmp = boost::algorithm::hex(std::string{input.begin(), input.end()});
-                ERROR << "Tried to write a binary string smaller 16 unsigned char elements. This is not allowed!"
-                         "The input was \"" + s_tmp + "\"";
-                return std::vector<unsigned char>{};
-            }*/
             if (input.size() > STORE_MAX) {
                 FATAL << "A block could not be written because it exceeded maximum size of blocks \"" +
                          std::to_string(STORE_MAX) +
@@ -139,18 +129,47 @@ namespace uh::trees {
             std::vector<unsigned char> prefix = prefix_wrap(input.size());
             std::size_t total_size = input.size() + prefix.size();
             //check block fill of this node, look for free space
-            std::size_t min_val = size[0];
             unsigned char min_pos{};
-            for (unsigned short i = 0; i < (unsigned short) N; i++) {
-                if (size[i] < min_val) {
-                    min_val = size[i];
-                    min_pos = (unsigned char) i;
-                }
+            std::unique_lock lock(global_var_mutex);
+            std::size_t min_val = !size->empty()?std::get<0>(size->at(0)):0;
+
+            bool no_deeper = min_val < STORE_MAX && min_val + total_size < STORE_HARD_LIMIT;
+            std::size_t size_tmp{};
+            if(no_deeper){
+                size_tmp = std::get<0>(size->at(min_pos));
+                std::get<0>(size->at(min_pos)) += total_size;
             }
-            if (min_val < STORE_MAX && min_val + total_size < STORE_HARD_LIMIT) {
+            else{
+                min_val = std::get<0>(children->at(0));
+                min_pos = 0;
+                //find or create balanced deeper tree node to store
+                if((unsigned short) children->size() < (unsigned short)N){
+                    min_pos = (unsigned short) children->size();
+                    std::string ref_name{boost::algorithm::hex(std::string{(char) min_pos})};
+                    std::string fname = combined_path->filename().string();
+                    ref_name.insert(ref_name.cbegin(),fname.cbegin() + 2, fname.cbegin() + 4);
+                    std::filesystem::path deeper_tree = *combined_path / ref_name;
+                    auto* tmp_tree = new tree_storage(deeper_tree);
+                    children->emplace_back(tmp_tree->get_size(),tmp_tree,min_pos);
+                }
+                else{
+                    for (unsigned short i3 = 0; i3 < (unsigned short) children->size(); i3++) {
+                        size_t size_old = min_val;
+                        min_val = std::min(min_val,std::get<0>(children->at(i3)));
+                        if (size_old-min_val) min_pos = (unsigned char) i3;
+                    }
+                }
+                std::get<0>(children->at(min_pos)) += total_size;
+            }
+            lock.unlock();//go into deeper structure and release lock, else only
+
+            if (no_deeper) {
                 //store block to this position
                 std::string ref_name{boost::algorithm::hex(std::string{(char) min_pos})};
-                std::filesystem::path read_chunk = combined_path / ref_name;
+                std::filesystem::path read_chunk = *combined_path / ref_name;
+
+                std::unique_lock no_write(*std::get<1>(size->at(min_pos)));
+
                 FILE *writer = std::fopen(read_chunk.c_str(), "ab+");
                 if (!writer) {
                     ERROR << "File write opening failed at \"" + read_chunk.string() + "\"";
@@ -165,35 +184,21 @@ namespace uh::trees {
                     std::exit(EXIT_FAILURE);
                 }
                 std::fclose(writer);
+
+                no_write.unlock();
+
                 //start position of the block for seeking it later on is the old size
                 std::vector<unsigned char> out_vec;
                 out_vec.reserve(sizeof(unsigned int));
-                for (unsigned char i = 0; i < sizeof(unsigned int); i++) {//STORE_MAX will fit in 4 bytes
-                    out_vec.push_back((unsigned char) (size[min_pos] >> (i * 8)));
+                for (unsigned char i = 0; i < (unsigned char) sizeof(unsigned int); i++) {//STORE_MAX will fit in 4 bytes
+                    out_vec.push_back((unsigned char) (size_tmp >> (i * 8)));
                 }
                 out_vec.insert(out_vec.cbegin(), min_pos);
-                size[min_pos] += total_size;
+
                 return out_vec;//structure: BIN,OFFSET * 4 BYTES
             } else {
-                //find or create balanced deeper tree node to store
-                min_val = std::get<0>(children[0]);
-                min_pos = 0;
-                for (unsigned short i = 0; i < (unsigned short) N; i++) {
-                    if (std::get<0>(children[i]) < min_val) {
-                        min_val = std::get<0>(children[i]);
-                        min_pos = i;
-                    }
-                }
-                if (std::get<1>(children[min_pos]) == nullptr) {
-                    std::string ref_name{boost::algorithm::hex(std::string{(char) min_pos})};
-                    std::string fname = combined_path.filename().string();
-                    ref_name.insert(ref_name.cbegin(),fname.cbegin() + 2, fname.cbegin() + 4);
-                    std::filesystem::path deeper_tree = combined_path / ref_name;
-                    std::get<1>(children[min_pos]) = new tree_storage(deeper_tree);
-                }
-                std::vector<unsigned char> out_vec = std::get<1>(children[min_pos])->write(input);
+                std::vector<unsigned char> out_vec = std::get<1>(children->at(min_pos))->write(input);
                 out_vec.insert(out_vec.cbegin(), min_pos);
-                std::get<0>(children[min_pos]) += total_size;
                 return out_vec;
             }
         }
