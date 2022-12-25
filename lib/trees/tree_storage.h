@@ -237,11 +237,14 @@ namespace uh::trees {
                     std::vector<unsigned char> sub_block_code{block_code.cbegin() + 1,
                                                               block_code.cend()}; //copy offset code and rebuild
                     std::size_t offset{};
-                    for (unsigned char i = 0; i < sizeof(unsigned int); i++) {
+                    for (unsigned char i = 0; i < (unsigned char) sizeof(unsigned int); i++) {
                         offset += (((std::size_t) sub_block_code[i]) << (i * 8));
                     }
                     std::string ref_name{boost::algorithm::hex(std::string{(char) block_code[0]})};
-                    std::filesystem::path read_path = combined_path / ref_name;
+                    std::filesystem::path read_path = *combined_path / ref_name;
+
+                    std::unique_lock no_read(*std::get<1>(size->at(block_code[0])));
+
                     FILE *reader = std::fopen(read_path.c_str(), "rb");
                     if (!reader) {
                         ERROR << "File read opening failed at \"" + read_path.string() + "\"";
@@ -279,11 +282,8 @@ namespace uh::trees {
                         output_size += (((std::size_t) buffer_in[buf_count]) << (buf_count * 8));
                     }
 
-                    std::vector<unsigned char> out_vec{};
                     auto *tmp_buf = new unsigned char[output_size];
                     count = std::fread(tmp_buf, sizeof(char), output_size, reader);
-                    out_vec.assign(tmp_buf, tmp_buf + output_size);
-                    delete[] tmp_buf;
 
                     if (count != output_size) {
                         FATAL << "I/O was not completed on path \"" + read_path.string() + "\"";
@@ -294,7 +294,13 @@ namespace uh::trees {
                         std::exit(EXIT_FAILURE);
                     }
 
+                    no_read.unlock();
+
                     std::fclose(reader);
+
+                    std::vector<unsigned char> out_vec{};
+                    out_vec.assign(tmp_buf, tmp_buf + output_size);
+                    delete[] tmp_buf;
 
                     return out_vec;
                 }
