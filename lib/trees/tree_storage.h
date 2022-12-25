@@ -112,9 +112,10 @@ namespace uh::trees {
             std::size_t s{};
             for (unsigned short i = 0; i < (unsigned short) N; i++) {
                 s += size->size()>i?std::get<0>(size->at(i)):0;
-                if (std::get<1>(children[i]) != nullptr) {
-                    s += std::get<0>(children[i]);
+                if (children->size()>i) {
+                    s += std::get<0>(children->at(i));
                 }
+                if(i>=size->size()&&i>=children->size())break;
             }
             return s;
         }
