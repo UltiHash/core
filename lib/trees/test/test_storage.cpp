@@ -43,7 +43,7 @@ std::vector<unsigned char> binary_generator(std::size_t max_len) {
             }
         }
         else{
-            #pragma omp parallel for simd schedule(dynamic)
+#pragma omp parallel for simd schedule(dynamic)
             for (std::size_t i = 0; i < len / sizeof(std::size_t); i++) {
                 out_fast[i] = (std::size_t) dist2(rng2);
             }
@@ -137,7 +137,7 @@ BOOST_AUTO_TEST_CASE(write_read_test)
         std::random_device dev;
         std::mt19937 rng(dev());
         std::uniform_int_distribution<std::mt19937::result_type> dist(0, write_times.size()-1);
-        while (total_size < (std::size_t) (std::pow(2, 38))) {
+        while (total_size < (mode?(std::size_t) std::pow(2, 22):(std::size_t) (std::pow(1024, 4) * 4))) {
             std::size_t access_point = dist(rng);
             gettimeofday(&time, nullptr);
             long double millis = ((long double) time.tv_sec * 1000) + ((long double) time.tv_usec / 1000);
