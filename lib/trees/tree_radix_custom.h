@@ -40,7 +40,7 @@ namespace uh::trees {
         tree_radix_custom *child(char i) {
             return children[(unsigned char) i];
         }
-
+/*
         //add some string into the radix tree, returning the tree nodes where it was compressed and stored along the way
         std::tuple<std::list<tree_radix_custom *>>//TODO: within the output list either return the radix tree pointer or an offset+choose_tree descriptor to jump over a certain section of string
         //TODO: inter-link only to string sections that are larger equal to the current string size, but only for data tree
@@ -123,7 +123,8 @@ namespace uh::trees {
             }
             return enlist;
         }
-
+*/
+/*
         //copy one node without children
         tree_radix_custom *copy() {
             auto *tmp = (struct tree_radix_custom *) std::malloc(sizeof(struct tree_radix_custom));
@@ -178,11 +179,12 @@ namespace uh::trees {
             }
             return has_children;
         }
-
+*/
         /*
          * insert another node and all children strings to this root node, scan through all combined strings,
          * that are formed from the root to every child node; and finally copy all contents of the incoming node to "this"
          */
+        /*
         void insert(tree_radix_custom *in) {
             std::list<std::tuple<tree_radix_custom *, unsigned char>> concat_string;
             concat_string.emplace_back(in, 0);
@@ -215,11 +217,12 @@ namespace uh::trees {
                 }
             }
         }
-
+*/
         /*
          * search through this node and return the matching pathway and the depth until the incoming string fit the
          * internals of the node
          */
+        /*
         std::tuple<std::list<tree_radix_custom *>, std::size_t>
         search(std::vector<unsigned char> bin,
                std::tuple<std::list<tree_radix_custom *>, std::size_t> enlist = std::tuple<std::list<tree_radix_custom *>, std::size_t>{}) {
@@ -257,10 +260,7 @@ namespace uh::trees {
             }
             return enlist;
         }
-
-        ~tree_radix_custom() {
-            std::free(data);
-        }
+         */
     };
 }
 
