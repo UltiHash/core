@@ -13,6 +13,13 @@
 #include <shared_mutex>
 #include <memory>
 #include <thread>
+#ifdef _WIN32
+#include <windows.h>
+#else
+#include <unistd.h>
+#endif // _WIN32
+#include "sys/types.h"
+#include "sys/sysinfo.h"
 
 namespace uh::trees {
 #define N 256
@@ -324,9 +331,9 @@ namespace uh::trees {
             }
         }
 
-        //The index gives tuple<hash,local_block_reference>
-        std::list<std::tuple<std::vector<unsigned char>, std::vector<unsigned char>>> index() {
-            std::list<std::tuple<std::vector<unsigned char>, std::vector<unsigned char>>> search_index;
+        //The index gives tuple<hash,local_block_reference>, always run index single without reading or writing interference
+        std::list<std::tuple<std::vector<unsigned char>, std::vector<unsigned char>>> index(unsigned short num_threads = 1) {
+            std::unique_ptr<std::list<std::tuple<std::vector<unsigned char>, std::vector<unsigned char>>>> search_index;
             for (unsigned short i = 0; i < (unsigned short) N; i++) {
                 if (i < size->size() && std::get<0>(size->at(i)) > 0) {
                     //read entire block generating hashes and block references
@@ -336,18 +343,19 @@ namespace uh::trees {
                     std::unique_lock no_index(*std::get<1>(size->at(i)));
 
                     FILE *reader = std::fopen(read_path.c_str(), "rb");
+                    if (!reader) {
+                        ERROR << "File read opening failed at \"" + read_path.string() + "\"";
+                        std::exit(EXIT_FAILURE);
+                    }
+                    //File should have been opened or created here
+                    if (std::ferror(reader)) {
+                        FATAL << "I/O error when seeking \"" + read_path.string() + "\"";
+                        std::exit(EXIT_FAILURE);
+                    }
                     std::size_t cur_pos = 0;
-                    while (!std::feof(reader)) {
-                        if (!reader) {
-                            ERROR << "File read opening failed at \"" + read_path.string() + "\"";
-                            std::exit(EXIT_FAILURE);
-                        }
-                        //File should have been opened or created here
-                        if (std::ferror(reader)) {
-                            FATAL << "I/O error when seeking \"" + read_path.string() + "\"";
-                            std::exit(EXIT_FAILURE);
-                        }
 
+                    std::thread rt,ht;
+                    while (!std::feof(reader)) {
                         std::vector<unsigned char> hash, local_block_ref;
                         local_block_ref.reserve(sizeof(unsigned int));
                         for (unsigned char i1 = 0; i1 < (unsigned char)sizeof(unsigned int); i1++) {//STORE_MAX will fit in 4 bytes
@@ -381,6 +389,23 @@ namespace uh::trees {
                             output_size += (((std::size_t) buffer_for_size[buf_count]) << (buf_count * 8));
                         }
 
+                        struct sysinfo memInfo{};
+                        unsigned long totalFreeVirtualMem;
+                        do{
+                            sysinfo (&memInfo);
+                            totalFreeVirtualMem = memInfo.freeram;
+                            totalFreeVirtualMem += memInfo.freeswap;
+                            totalFreeVirtualMem *= memInfo.mem_unit;
+                            if(totalFreeVirtualMem<output_size){
+                                #ifdef _WIN32
+                                Sleep(10);
+                                #else
+                                usleep(10 * 1000);
+                                #endif // _WIN32
+                            }
+                        }
+                        while(totalFreeVirtualMem<output_size);
+
                         auto *tmp_buf = new unsigned char[output_size];
                         count = std::fread(tmp_buf, sizeof(char), output_size, reader);
                         cur_pos += count;
@@ -399,45 +424,46 @@ namespace uh::trees {
                         delete[] tmp_buf;
 
                         hash.assign(hash_buf, hash_buf + SHA512_DIGEST_LENGTH);
-                        search_index.emplace_back(hash, local_block_ref);
+                        search_index->emplace_back(hash, local_block_ref);
                     }
                     std::fclose(reader);
                     no_index.unlock();
                 }
                 //splice indexes of children plus the min_pos to decide local_block_ref of children array
                 if (i < children->size() && std::get<0>(children->at(i)) > 0) {
-                    auto append_list = std::get<1>(children[i])->index();
+                    auto append_list = std::get<1>(children->at(i))->index();
                     for(auto &el:append_list){
                         std::get<1>(el).insert(std::get<1>(el).cbegin(),i);
                     }
-                    search_index.splice(search_index.cend(),append_list);
+                    search_index->splice(search_index->cend(),append_list);
                 }
                 if(i>=size->size()&&i>=children->size())break;
             }
-            return search_index;
+            return *search_index;
         }
 
         void delete_recursive(){
             for (unsigned short i = 0; i < (unsigned short) N; i++) {
-                if (size[i] > 0) {
+                if (i<size->size() && std::get<0>(size->at(i)) > 0) {
                     std::string ref_name{boost::algorithm::hex(std::string{(char) i})};
-                    std::filesystem::path read_path = combined_path / ref_name;
+                    std::filesystem::path read_path = *combined_path / ref_name;
                     if(std::remove(read_path.c_str())!=0){
                         FATAL << "Removing was not completed on path \"" + read_path.string() + "\"";
                         std::exit(EXIT_FAILURE);
                     }
                 }
                 //splice indexes of children plus the min_pos to decide local_block_ref of children array
-                if (std::get<0>(children[i]) > 0 and std::get<1>(children[i]) != nullptr) {
-                    std::get<1>(children[i])->delete_recursive();
+                if (i<children->size() && std::get<0>(children->at(i)) > 0) {
+                    std::get<1>(children->at(i))->delete_recursive();
                 }
+                if(i>=size->size()&&i>=children->size())break;
             }
         }
 
         //TODO: integrate block time stamp, integrate delete block, make class thread safe
 
         ~tree_storage(){
-            for (auto & i : children) {
+            for (auto & i : *children) {
                 if (std::get<1>(i) != nullptr) {
                     delete std::get<1>(i);
                 }
