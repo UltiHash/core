@@ -613,7 +613,7 @@ namespace uh::trees {
             *i_constructor = 0;
         }
 
-        //TODO: integrate block time stamp, integrate delete blocks, integrate set time/get time/maintain valid time
+        //TODO: integrate delete blocks, integrate set time/get time/maintain valid time
 
         ~tree_storage() {
             for (auto &i: *children) {
