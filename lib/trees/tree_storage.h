@@ -30,7 +30,6 @@ namespace uh::trees {
     struct tree_storage {
     private:
         void mem_wait(std::size_t mem){
-            std::lock_guard lock(global_var_mutex);
             struct sysinfo memInfo{};
             unsigned long totalFreeVirtualMem;
             do{
@@ -54,7 +53,7 @@ namespace uh::trees {
         std::shared_ptr<std::vector<std::tuple<std::size_t, tree_storage *,unsigned char>>> children{};//deeper tree storage blocks and folders
         //radix_tree* block_indexes[N]{}; // index local block finds
         std::shared_ptr<std::filesystem::path> combined_path{};
-        std::shared_ptr<short> i_constructor = std::make_unique<short>(-1);
+        std::shared_ptr<short> i_constructor = std::make_shared<short>(0);
         std::shared_mutex global_var_mutex;//protect everything out of size array
         bool path_is_set_up = false;
 
@@ -78,7 +77,7 @@ namespace uh::trees {
         }
 
     public:
-        explicit tree_storage(const std::filesystem::path &root, unsigned short num_threads = 1) {
+        explicit tree_storage(const std::filesystem::path &root, unsigned short num_threads = std::thread::hardware_concurrency()) {
             //expected are 4 bytes that mimic hexadecimal string representation
 
             std::unique_lock lock(global_var_mutex);
@@ -102,8 +101,11 @@ namespace uh::trees {
             lock.unlock();
 
             auto multithread_constructor = [&](){
-                if(*i_constructor+1 == (short)N)return;
-                for (short i=(*i_constructor+=1); i < (short) N;) {
+                std::unique_lock lock_init(global_var_mutex);
+                if(*i_constructor == (short)N)return;
+                short i=*i_constructor;
+                lock_init.unlock();
+                for (; i < (short) N;) {
                     std::string s_tmp = boost::algorithm::hex(std::string{(char)i});
                     std::filesystem::path chunk = *combined_path / s_tmp;
                     if (std::filesystem::exists(chunk)) {
@@ -135,6 +137,8 @@ namespace uh::trees {
                 for (auto& th : workers)
                     th.join();
             }
+
+            *i_constructor = 0;
 
             if(!std::is_sorted(size->begin(),size->end(),[](const auto &a, const auto &b){
                 return std::get<2>(a)<std::get<2>(b);
@@ -352,132 +356,157 @@ namespace uh::trees {
         }
 
         //The index gives tuple<hash,local_block_reference>, always run index single without reading or writing interference
-        std::list<std::tuple<std::vector<unsigned char>, std::vector<unsigned char>>> index() {
+        std::list<std::tuple<std::vector<unsigned char>, std::vector<unsigned char>>> index(unsigned short num_threads=std::thread::hardware_concurrency()) {
             std::shared_ptr<std::list<std::tuple<std::vector<unsigned char>, std::vector<unsigned char>>>> search_index;
 
-#pragma omp parallel schedule(dynamic) for if(parallelism_enabled)
-            for (unsigned short i = 0; i < (unsigned short) N; i++) {
-                if (i < size->size() && std::get<0>(size->at(i)) > 0) {
-                    //read entire block generating hashes and block references
-                    std::string ref_name{boost::algorithm::hex(std::string{(char) i})};
-                    std::filesystem::path read_path = *combined_path / ref_name;
+            auto multithread_index = [&](){
+                std::unique_lock lock_init(global_var_mutex);
+                if(*i_constructor == (short)N)return;
+                short i=*i_constructor;
+                lock_init.unlock();
+                for (; i < (short) N;) {
 
-                    std::unique_lock no_index(*std::get<1>(size->at(i)));
+                    if (i < size->size() && std::get<0>(size->at(i)) > 0) {
+                        //read entire block generating hashes and block references
+                        std::string ref_name{boost::algorithm::hex(std::string{(char) i})};
+                        std::filesystem::path read_path = *combined_path / ref_name;
 
-                    FILE *reader = std::fopen(read_path.c_str(), "rb");
-                    if (!reader) {
-                        ERROR << "File read opening failed at \"" + read_path.string() + "\"";
-                        std::exit(EXIT_FAILURE);
-                    }
-                    //File should have been opened or created here
-                    if (std::ferror(reader)) {
-                        FATAL << "I/O error when seeking \"" + read_path.string() + "\"";
-                        std::exit(EXIT_FAILURE);
-                    }
-                    std::size_t cur_pos = 0;
+                        std::unique_lock no_index(*std::get<1>(size->at(i)));
 
-                    std::thread rt,ht;
+                        FILE *reader = std::fopen(read_path.c_str(), "rb");
+                        if (!reader) {
+                            ERROR << "File read opening failed at \"" + read_path.string() + "\"";
+                            std::exit(EXIT_FAILURE);
+                        }
+                        //File should have been opened or created here
+                        if (std::ferror(reader)) {
+                            FATAL << "I/O error when seeking \"" + read_path.string() + "\"";
+                            std::exit(EXIT_FAILURE);
+                        }
+                        std::size_t cur_pos = 0;
 
-                    std::shared_ptr<std::vector<unsigned char>> local_block_ref;
-                    std::shared_ptr<unsigned char*> tmp_buf[2];
-                    std::shared_ptr<std::size_t> output_size{};
-                    std::shared_ptr<bool> parallel_switch{};
-                    std::shared_mutex m1{};
-                    while (!std::feof(reader)) {
-                        auto read_func = [&](){
-                            std::unique_lock lock(m1);
-                            local_block_ref->reserve(sizeof(unsigned int));
+                        std::thread rt,ht;
 
-                            for (unsigned char i1 = 0; i1 < (unsigned char)sizeof(unsigned int); i1++) {//STORE_MAX will fit in 4 bytes
-                                local_block_ref->push_back((unsigned char) (cur_pos >> (i1 * 8)));
-                            }
-                            local_block_ref->insert(local_block_ref->cbegin(), i);
-                            bool parallel_switch_tmp = *parallel_switch;
+                        std::shared_ptr<std::vector<unsigned char>> local_block_ref;
+                        std::shared_ptr<unsigned char*> tmp_buf[2];
+                        std::shared_ptr<std::size_t> output_size{};
+                        std::shared_ptr<bool> parallel_switch{};
+                        std::shared_mutex m1{};
+                        while (!std::feof(reader)) {
+                            auto read_func = [&](){
+                                std::unique_lock lock(m1);
+                                local_block_ref->reserve(sizeof(unsigned int));
 
-                            unsigned char buf_size = 0;
-                            std::size_t count = std::fread(&buf_size, sizeof(char), 1, reader);
-                            cur_pos += count;
-                            if (count != 1) {
-                                FATAL << "I/O prefix first byte reading was not completed on path \"" + read_path.string() +
-                                         "\"";
-                                std::exit(EXIT_FAILURE);
-                            }
+                                for (unsigned char i1 = 0; i1 < (unsigned char)sizeof(unsigned int); i1++) {//STORE_MAX will fit in 4 bytes
+                                    local_block_ref->push_back((unsigned char) (cur_pos >> (i1 * 8)));
+                                }
+                                local_block_ref->insert(local_block_ref->cbegin(), i);
+                                bool parallel_switch_tmp = *parallel_switch;
 
-                            if (std::ferror(reader)) {
-                                FATAL << "I/O error when reading prefix at path \"" + read_path.string() + "\"";
-                                std::exit(EXIT_FAILURE);
-                            }
-                            unsigned char buffer_for_size[buf_size + 1];
-                            count = std::fread(&buffer_for_size, sizeof(char), buf_size + 1, reader);
-                            cur_pos += count;
-                            if (count != buf_size + 1) {
-                                FATAL << "I/O prefix first byte reading was not completed on path \"" + read_path.string() +
-                                         "\"";
-                                std::exit(EXIT_FAILURE);
-                            }
-                            *output_size=0;
-                            for (unsigned char buf_count = 0; buf_count <= buf_size; buf_count++) {
-                                *output_size += (((std::size_t) buffer_for_size[buf_count]) << (buf_count * 8));
-                            }
-                            lock.unlock();
-                            mem_wait(*output_size);
+                                unsigned char buf_size = 0;
+                                std::size_t count = std::fread(&buf_size, sizeof(char), 1, reader);
+                                cur_pos += count;
+                                if (count != 1) {
+                                    FATAL << "I/O prefix first byte reading was not completed on path \"" + read_path.string() +
+                                             "\"";
+                                    std::exit(EXIT_FAILURE);
+                                }
 
-                            *tmp_buf[parallel_switch_tmp] = new unsigned char[*output_size];
-                            count = std::fread(*tmp_buf[parallel_switch_tmp], sizeof(char), *output_size, reader);
-                            cur_pos += count;
+                                if (std::ferror(reader)) {
+                                    FATAL << "I/O error when reading prefix at path \"" + read_path.string() + "\"";
+                                    std::exit(EXIT_FAILURE);
+                                }
+                                unsigned char buffer_for_size[buf_size + 1];
+                                count = std::fread(&buffer_for_size, sizeof(char), buf_size + 1, reader);
+                                cur_pos += count;
+                                if (count != buf_size + 1) {
+                                    FATAL << "I/O prefix first byte reading was not completed on path \"" + read_path.string() +
+                                             "\"";
+                                    std::exit(EXIT_FAILURE);
+                                }
+                                *output_size=0;
+                                for (unsigned char buf_count = 0; buf_count <= buf_size; buf_count++) {
+                                    *output_size += (((std::size_t) buffer_for_size[buf_count]) << (buf_count * 8));
+                                }
+                                lock.unlock();
+                                mem_wait(*output_size);
 
-                            if (count != *output_size) {
-                                FATAL << "I/O was not completed on path \"" + read_path.string() + "\"";
-                                std::exit(EXIT_FAILURE);
-                            }
-                            if (std::ferror(reader)) {
-                                FATAL << "I/O error when reading prefix at path \"" + read_path.string() + "\"";
-                                std::exit(EXIT_FAILURE);
-                            }
-                        };
-                        if(rt.joinable())rt.join();
-                        rt=std::thread(read_func);
+                                *tmp_buf[parallel_switch_tmp] = new unsigned char[*output_size];
+                                count = std::fread(*tmp_buf[parallel_switch_tmp], sizeof(char), *output_size, reader);
+                                cur_pos += count;
 
-                        auto hash_func = [&](){
-                            std::unique_lock lock(m1);
-                            unsigned char hash_buf[SHA512_DIGEST_LENGTH];//HASH GENERATION
-                            bool parallel_switch_copy = *parallel_switch;
-                            *parallel_switch=!*parallel_switch;
-                            auto tmp_local_block_ref = *local_block_ref;
-                            local_block_ref->clear();
-                            auto output_tmp = *output_size;
-                            lock.unlock();
-                            SHA512(*tmp_buf[parallel_switch_copy], output_tmp, hash_buf);
-                            delete[] *tmp_buf[parallel_switch_copy];
+                                if (count != *output_size) {
+                                    FATAL << "I/O was not completed on path \"" + read_path.string() + "\"";
+                                    std::exit(EXIT_FAILURE);
+                                }
+                                if (std::ferror(reader)) {
+                                    FATAL << "I/O error when reading prefix at path \"" + read_path.string() + "\"";
+                                    std::exit(EXIT_FAILURE);
+                                }
+                            };
+                            if(rt.joinable())rt.join();
+                            rt=std::thread(read_func);
 
-                            std::vector<unsigned char> hash{hash_buf, hash_buf + SHA512_DIGEST_LENGTH};
-                            search_index->emplace_back(hash, tmp_local_block_ref);
-                        };
+                            auto hash_func = [&](){
+                                std::unique_lock lock(m1);
+                                unsigned char hash_buf[SHA512_DIGEST_LENGTH];//HASH GENERATION
+                                bool parallel_switch_copy = *parallel_switch;
+                                *parallel_switch=!*parallel_switch;
+                                auto tmp_local_block_ref = *local_block_ref;
+                                local_block_ref->clear();
+                                auto output_tmp = *output_size;
+                                lock.unlock();
+                                SHA512(*tmp_buf[parallel_switch_copy], output_tmp, hash_buf);
+                                delete[] *tmp_buf[parallel_switch_copy];
 
-                        if(rt.joinable())rt.join();
-                        if(ht.joinable())ht.join();
-                        ht=std::thread(hash_func);
+                                std::vector<unsigned char> hash{hash_buf, hash_buf + SHA512_DIGEST_LENGTH};
+                                search_index->emplace_back(hash, tmp_local_block_ref);
+                            };
 
-                        if(std::feof(reader)){
                             if(rt.joinable())rt.join();
                             if(ht.joinable())ht.join();
-                            std::free(*tmp_buf[0]);
-                            std::free(*tmp_buf[1]);
+                            ht=std::thread(hash_func);
+
+                            if(std::feof(reader)){
+                                if(rt.joinable())rt.join();
+                                if(ht.joinable())ht.join();
+                                std::free(*tmp_buf[0]);
+                                std::free(*tmp_buf[1]);
+                            }
                         }
+                        std::fclose(reader);
+                        no_index.unlock();
                     }
-                    std::fclose(reader);
-                    no_index.unlock();
-                }
-                //splice indexes of children plus the min_pos to decide local_block_ref of children array
-                if (i < children->size() && std::get<0>(children->at(i)) > 0) {
-                    auto append_list = std::get<1>(children->at(i))->index();
-                    for(auto &el:append_list){
-                        std::get<1>(el).insert(std::get<1>(el).cbegin(),i);
+                    //splice indexes of children plus the min_pos to decide local_block_ref of children array
+                    if (i < children->size() && std::get<0>(children->at(i)) > 0) {
+                        auto append_list = std::get<1>(children->at(i))->index();
+                        for(auto &el:append_list){
+                            std::get<1>(el).insert(std::get<1>(el).cbegin(),i);
+                        }
+                        search_index->splice(search_index->cend(),append_list);
                     }
-                    search_index->splice(search_index->cend(),append_list);
+                    if(i>=size->size()&&i>=children->size())break;
+
+                    std::lock_guard lock2(global_var_mutex);
+                    *i_constructor=i=(short)std::max(*i_constructor+1,i+1);
                 }
-                if(i>=size->size()&&i>=children->size())break;
+            };
+
+            if(num_threads == 1){
+                multithread_index();
             }
+            else{
+                std::vector<std::thread> workers;
+                for(unsigned short i=0;i<num_threads;i++){
+                    std::thread w(multithread_index);
+                    workers.push_back(std::move(w));
+                }
+                for (auto& th : workers)
+                    th.join();
+            }
+
+            *i_constructor = 0;
+
             return *search_index;
         }
 
