@@ -510,25 +510,51 @@ namespace uh::trees {
             return *search_index;
         }
 
-        void delete_recursive(){
-            for (unsigned short i = 0; i < (unsigned short) N; i++) {
-                if (i<size->size() && std::get<0>(size->at(i)) > 0) {
-                    std::string ref_name{boost::algorithm::hex(std::string{(char) i})};
-                    std::filesystem::path read_path = *combined_path / ref_name;
-                    if(std::remove(read_path.c_str())!=0){
-                        FATAL << "Removing was not completed on path \"" + read_path.string() + "\"";
-                        std::exit(EXIT_FAILURE);
+        void delete_recursive(unsigned short num_threads=std::thread::hardware_concurrency()){
+
+            auto multithread_index = [&](){
+                std::unique_lock lock_init(global_var_mutex);
+                if(*i_constructor == (short)N)return;
+                short i=*i_constructor;
+                lock_init.unlock();
+                for (; i < (short) N;) {
+
+                    if (i<size->size() && std::get<0>(size->at(i)) > 0) {
+                        std::string ref_name{boost::algorithm::hex(std::string{(char) i})};
+                        std::filesystem::path read_path = *combined_path / ref_name;
+                        if(std::remove(read_path.c_str())!=0){
+                            FATAL << "Removing was not completed on path \"" + read_path.string() + "\"";
+                            std::exit(EXIT_FAILURE);
+                        }
                     }
+                    //splice indexes of children plus the min_pos to decide local_block_ref of children array
+                    if (i<children->size() && std::get<0>(children->at(i)) > 0) {
+                        std::get<1>(children->at(i))->delete_recursive();
+                    }
+                    if(i>=size->size()&&i>=children->size())break;
+
+                    std::lock_guard lock2(global_var_mutex);
+                    *i_constructor=i=(short)std::max(*i_constructor+1,i+1);
                 }
-                //splice indexes of children plus the min_pos to decide local_block_ref of children array
-                if (i<children->size() && std::get<0>(children->at(i)) > 0) {
-                    std::get<1>(children->at(i))->delete_recursive();
-                }
-                if(i>=size->size()&&i>=children->size())break;
+            };
+
+            if(num_threads == 1){
+                multithread_index();
             }
+            else{
+                std::vector<std::thread> workers;
+                for(unsigned short i=0;i<num_threads;i++){
+                    std::thread w(multithread_index);
+                    workers.push_back(std::move(w));
+                }
+                for (auto& th : workers)
+                    th.join();
+            }
+
+            *i_constructor = 0;
         }
 
-        //TODO: integrate block time stamp, integrate delete block, make class thread safe
+        //TODO: integrate block time stamp, integrate delete block
 
         ~tree_storage(){
             for (auto & i : *children) {
