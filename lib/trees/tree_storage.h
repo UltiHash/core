@@ -251,7 +251,8 @@ namespace uh::trees {
                 //start position of the block for seeking it later on is the old size
                 std::vector<unsigned char> out_vec;
                 out_vec.reserve(sizeof(unsigned int));
-                for (unsigned char i = 0; i < (unsigned char) sizeof(unsigned int); i++) {//STORE_MAX will fit in 4 bytes
+                for (unsigned char i = 0;
+                     i < (unsigned char) sizeof(unsigned int); i++) {//STORE_MAX will fit in 4 bytes
                     out_vec.push_back((unsigned char) (size_tmp >> (i * 8)));
                 }
                 out_vec.insert(out_vec.cbegin(), min_pos);
@@ -264,7 +265,7 @@ namespace uh::trees {
             }
         }
 
-        std::tuple<unsigned long,std::vector<unsigned char>> read(const std::vector<unsigned char> &block_code) {
+        std::tuple<unsigned long, std::vector<unsigned char>> read(const std::vector<unsigned char> &block_code) {
             if (block_code.empty()) {
                 return {};
             }
@@ -274,7 +275,7 @@ namespace uh::trees {
                     std::string not_found((const char *) block_code.data(), block_code.size());
                     DEBUG << "<Block error trace>: Block code " + boost::algorithm::hex(not_found) +
                              " could not be found in storage tree \"" + combined_path->string() + "\".";
-                    return {0,std::vector<unsigned char>{}};
+                    return {0, std::vector<unsigned char>{}};
                 } else {
                     std::vector<unsigned char> sub_block_code{block_code.cbegin() + 1, block_code.cend()};
                     auto out_vec = std::get<1>(children->at(block_code[0]))->read(sub_block_code);
@@ -293,7 +294,7 @@ namespace uh::trees {
                         << "<Block error trace on return, final tree>: Block code " + boost::algorithm::hex(not_found) +
                            " could not be found in storage tree \"" + combined_path->string() +
                            "\" and size of storage chunk was 0.";
-                    return {0,std::vector<unsigned char>{}};
+                    return {0, std::vector<unsigned char>{}};
                 } else {
                     std::vector<unsigned char> sub_block_code{block_code.cbegin() + 1,
                                                               block_code.cend()}; //copy offset code and rebuild
@@ -319,16 +320,17 @@ namespace uh::trees {
                         std::exit(EXIT_FAILURE);
                     }
 
-                    auto* time_buf = new unsigned char[sizeof(unsigned long)];
+                    auto *time_buf = new unsigned char[sizeof(unsigned long)];
                     std::size_t count = std::fread(&time_buf, sizeof(char), sizeof(unsigned long), reader);
                     if (count != sizeof(unsigned long)) {
                         FATAL
-                            << "I/O prefix first byte reading was not completed on path \"" + read_path.string() + "\"";
+                            << "I/O time first 8 bytes reading was not completed on path \"" + read_path.string() +
+                               "\"";
                         std::exit(EXIT_FAILURE);
                     }
 
                     if (std::ferror(reader)) {
-                        FATAL << "I/O error when reading prefix at path \"" + read_path.string() + "\"";
+                        FATAL << "I/O error when reading time of block at path \"" + read_path.string() + "\"";
                         std::exit(EXIT_FAILURE);
                     }
                     unsigned long block_time{};
@@ -381,15 +383,15 @@ namespace uh::trees {
                     out_vec.assign(tmp_buf, tmp_buf + output_size);
                     delete[] tmp_buf;
 
-                    return {block_time,out_vec};
+                    return {block_time, out_vec};
                 }
             }
         }
 
         //The index gives tuple<hash,local_block_reference>, always run index single without reading or writing interference
-        std::list<std::tuple<std::vector<unsigned char>, std::vector<unsigned char>>>
+        std::list<std::tuple<std::vector<unsigned char>, std::vector<unsigned char>, unsigned long>>
         index(unsigned short num_threads = std::thread::hardware_concurrency()) {
-            std::shared_ptr<std::list<std::tuple<std::vector<unsigned char>, std::vector<unsigned char>>>> search_index;
+            std::shared_ptr<std::list<std::tuple<std::vector<unsigned char>, std::vector<unsigned char>, unsigned long>>> search_index;
 
             auto multithread_index = [&]() {
                 std::unique_lock lock_init(global_var_mutex);
@@ -415,11 +417,12 @@ namespace uh::trees {
                             FATAL << "I/O error when seeking \"" + read_path.string() + "\"";
                             std::exit(EXIT_FAILURE);
                         }
-                        std::size_t cur_pos = 0;
+                        std::shared_ptr<std::size_t> cur_pos = 0;
 
                         std::thread rt, ht;
 
-                        std::shared_ptr<std::vector<unsigned char>> local_block_ref;
+                        std::shared_ptr<std::vector<unsigned char>> local_block_ref{};
+                        std::shared_ptr<unsigned long> block_time_current = std::make_shared<unsigned long>(0);
                         std::shared_ptr<unsigned char *> tmp_buf[2];
                         std::shared_ptr<std::size_t> output_size{};
                         std::shared_ptr<bool> parallel_switch{};
@@ -431,14 +434,36 @@ namespace uh::trees {
 
                                 for (unsigned char i1 = 0;
                                      i1 < (unsigned char) sizeof(unsigned int); i1++) {//STORE_MAX will fit in 4 bytes
-                                    local_block_ref->push_back((unsigned char) (cur_pos >> (i1 * 8)));
+                                    local_block_ref->push_back((unsigned char) (*cur_pos >> (i1 * 8)));
                                 }
                                 local_block_ref->insert(local_block_ref->cbegin(), i);
                                 bool parallel_switch_tmp = *parallel_switch;
 
+                                auto *time_buf = new unsigned char[sizeof(unsigned long)];
+                                std::size_t count = std::fread(&time_buf, sizeof(char), sizeof(unsigned long), reader);
+                                *cur_pos += count;
+                                if (count != sizeof(unsigned long)) {
+                                    FATAL
+                                        << "I/O time first 8 bytes reading was not completed on path \"" +
+                                           read_path.string() + "\"";
+                                    std::exit(EXIT_FAILURE);
+                                }
+
+                                if (std::ferror(reader)) {
+                                    FATAL << "I/O error when reading time of block at path \"" + read_path.string() +
+                                             "\"";
+                                    std::exit(EXIT_FAILURE);
+                                }
+                                unsigned long block_time{};
+                                for (unsigned char i4 = 0; i4 < (unsigned char) sizeof(unsigned long); i4++) {
+                                    block_time += (((std::size_t) time_buf[i4]) << (i4 * 8));
+                                }
+                                delete[] time_buf;
+                                *block_time_current = block_time;
+
                                 unsigned char buf_size = 0;
-                                std::size_t count = std::fread(&buf_size, sizeof(char), 1, reader);
-                                cur_pos += count;
+                                count = std::fread(&buf_size, sizeof(char), 1, reader);
+                                *cur_pos += count;
                                 if (count != 1) {
                                     FATAL << "I/O prefix first byte reading was not completed on path \"" +
                                              read_path.string() +
@@ -452,7 +477,7 @@ namespace uh::trees {
                                 }
                                 unsigned char buffer_for_size[buf_size + 1];
                                 count = std::fread(&buffer_for_size, sizeof(char), buf_size + 1, reader);
-                                cur_pos += count;
+                                *cur_pos += count;
                                 if (count != buf_size + 1) {
                                     FATAL << "I/O prefix first byte reading was not completed on path \"" +
                                              read_path.string() +
@@ -468,7 +493,7 @@ namespace uh::trees {
 
                                 *tmp_buf[parallel_switch_tmp] = new unsigned char[*output_size];
                                 count = std::fread(*tmp_buf[parallel_switch_tmp], sizeof(char), *output_size, reader);
-                                cur_pos += count;
+                                *cur_pos += count;
 
                                 if (count != *output_size) {
                                     FATAL << "I/O was not completed on path \"" + read_path.string() + "\"";
@@ -489,13 +514,14 @@ namespace uh::trees {
                                 *parallel_switch = !*parallel_switch;
                                 auto tmp_local_block_ref = *local_block_ref;
                                 local_block_ref->clear();
+                                auto block_time_cpy = *block_time_current;
                                 auto output_tmp = *output_size;
                                 lock.unlock();
                                 SHA512(*tmp_buf[parallel_switch_copy], output_tmp, hash_buf);
                                 delete[] *tmp_buf[parallel_switch_copy];
 
                                 std::vector<unsigned char> hash{hash_buf, hash_buf + SHA512_DIGEST_LENGTH};
-                                search_index->emplace_back(hash, tmp_local_block_ref);
+                                search_index->emplace_back(hash, tmp_local_block_ref, block_time_cpy);
                             };
 
                             if (rt.joinable())rt.join();
