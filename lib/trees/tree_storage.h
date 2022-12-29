@@ -264,7 +264,7 @@ namespace uh::trees {
             }
         }
 
-        std::vector<unsigned char> read(const std::vector<unsigned char> &block_code) {
+        std::tuple<unsigned long,std::vector<unsigned char>> read(const std::vector<unsigned char> &block_code) {
             if (block_code.empty()) {
                 return {};
             }
@@ -274,11 +274,11 @@ namespace uh::trees {
                     std::string not_found((const char *) block_code.data(), block_code.size());
                     DEBUG << "<Block error trace>: Block code " + boost::algorithm::hex(not_found) +
                              " could not be found in storage tree \"" + combined_path->string() + "\".";
-                    return std::vector<unsigned char>{};
+                    return {0,std::vector<unsigned char>{}};
                 } else {
                     std::vector<unsigned char> sub_block_code{block_code.cbegin() + 1, block_code.cend()};
-                    std::vector<unsigned char> out_vec = std::get<1>(children->at(block_code[0]))->read(sub_block_code);
-                    if (out_vec.empty()) {
+                    auto out_vec = std::get<1>(children->at(block_code[0]))->read(sub_block_code);
+                    if (std::get<1>(out_vec).empty()) {
                         std::string not_found((const char *) block_code.data(), block_code.size());
                         DEBUG << "<Block error trace on return>: Block code " + boost::algorithm::hex(not_found) +
                                  " could not be found in storage tree \"" + combined_path->string() + "\".";
@@ -293,7 +293,7 @@ namespace uh::trees {
                         << "<Block error trace on return, final tree>: Block code " + boost::algorithm::hex(not_found) +
                            " could not be found in storage tree \"" + combined_path->string() +
                            "\" and size of storage chunk was 0.";
-                    return std::vector<unsigned char>{};
+                    return {0,std::vector<unsigned char>{}};
                 } else {
                     std::vector<unsigned char> sub_block_code{block_code.cbegin() + 1,
                                                               block_code.cend()}; //copy offset code and rebuild
@@ -319,8 +319,26 @@ namespace uh::trees {
                         std::exit(EXIT_FAILURE);
                     }
 
+                    auto* time_buf = new unsigned char[sizeof(unsigned long)];
+                    std::size_t count = std::fread(&time_buf, sizeof(char), sizeof(unsigned long), reader);
+                    if (count != sizeof(unsigned long)) {
+                        FATAL
+                            << "I/O prefix first byte reading was not completed on path \"" + read_path.string() + "\"";
+                        std::exit(EXIT_FAILURE);
+                    }
+
+                    if (std::ferror(reader)) {
+                        FATAL << "I/O error when reading prefix at path \"" + read_path.string() + "\"";
+                        std::exit(EXIT_FAILURE);
+                    }
+                    unsigned long block_time{};
+                    for (unsigned char i = 0; i < (unsigned char) sizeof(unsigned long); i++) {
+                        block_time += (((std::size_t) time_buf[i]) << (i * 8));
+                    }
+                    delete[] time_buf;
+
                     unsigned char buf_size = 0;
-                    std::size_t count = std::fread(&buf_size, sizeof(char), 1, reader);
+                    count = std::fread(&buf_size, sizeof(char), 1, reader);
                     if (count != 1) {
                         FATAL
                             << "I/O prefix first byte reading was not completed on path \"" + read_path.string() + "\"";
@@ -363,7 +381,7 @@ namespace uh::trees {
                     out_vec.assign(tmp_buf, tmp_buf + output_size);
                     delete[] tmp_buf;
 
-                    return out_vec;
+                    return {block_time,out_vec};
                 }
             }
         }
