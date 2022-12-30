@@ -265,6 +265,7 @@ namespace uh::trees {
             }
         }
 
+        //returns a tuple with block time and binary vector of block
         std::tuple<unsigned long, std::vector<unsigned char>> read(const std::vector<unsigned char> &block_code) {
             if (block_code.empty()) {
                 return {};
@@ -375,9 +376,9 @@ namespace uh::trees {
                         std::exit(EXIT_FAILURE);
                     }
 
-                    no_read.unlock();
-
                     std::fclose(reader);
+
+                    no_read.unlock();
 
                     std::vector<unsigned char> out_vec{};
                     out_vec.assign(tmp_buf, tmp_buf + output_size);
@@ -613,7 +614,115 @@ namespace uh::trees {
             *i_constructor = 0;
         }
 
-        //TODO: integrate delete blocks, integrate set time/get time/maintain valid time
+        //TODO: integrate delete blocks, integrate set time/maintain valid time
+
+        //returns a tuple with block time and block size from disk
+        std::tuple<unsigned long, std::size_t> get_info(const std::vector<unsigned char> &block_code) {
+            if (block_code.empty()) {
+                return {};
+            }
+            if (block_code.size() > 5) {
+                //size encoding is not reached yet, get_info along tree path
+                if ((short) children->size() - 1 < (short) block_code[0] || !std::get<0>(children->at(block_code[0]))) {
+                    std::string not_found((const char *) block_code.data(), block_code.size());
+                    DEBUG << "<Block error trace>: Block code " + boost::algorithm::hex(not_found) +
+                             " could not be found in storage tree \"" + combined_path->string() + "\".";
+                    return {0, 0};
+                } else {
+                    std::vector<unsigned char> sub_block_code{block_code.cbegin() + 1, block_code.cend()};
+                    auto out_vec = std::get<1>(children->at(block_code[0]))->get_info(sub_block_code);
+                    if (std::get<1>(out_vec) == 0) {
+                        std::string not_found((const char *) block_code.data(), block_code.size());
+                        DEBUG << "<Block error trace on return>: Block code " + boost::algorithm::hex(not_found) +
+                                 " could not be found in storage tree \"" + combined_path->string() + "\".";
+                    }
+                    return out_vec;
+                }
+            } else {
+                //the block code should have a size of 5; one chunk index and 4 bytes of encoding for the offset
+                if ((short) size->size() - 1 < (short) block_code[0] || !std::get<0>(size->at(block_code[0]))) {
+                    std::string not_found((const char *) block_code.data(), block_code.size());
+                    DEBUG
+                        << "<Block error trace on return, final tree>: Block code " + boost::algorithm::hex(not_found) +
+                           " could not be found in storage tree \"" + combined_path->string() +
+                           "\" and size of storage chunk was 0.";
+                    return {0, 0};
+                } else {
+                    std::vector<unsigned char> sub_block_code{block_code.cbegin() + 1,
+                                                              block_code.cend()}; //copy offset code and rebuild
+                    std::size_t offset{};
+                    for (unsigned char i = 0; i < (unsigned char) sizeof(unsigned int); i++) {
+                        offset += (((std::size_t) sub_block_code[i]) << (i * 8));
+                    }
+                    std::string ref_name{boost::algorithm::hex(std::string{(char) block_code[0]})};
+                    std::filesystem::path read_path = *combined_path / ref_name;
+
+                    std::unique_lock no_read(*std::get<1>(size->at(block_code[0])));
+
+                    FILE *reader = std::fopen(read_path.c_str(), "rb");
+                    if (!reader) {
+                        ERROR << "File get_info opening failed at \"" + read_path.string() + "\"";
+                        std::exit(EXIT_FAILURE);
+                    }
+                    //File should have been opened or created here
+                    std::fseek(reader, static_cast<long>(offset), SEEK_SET);
+
+                    if (std::ferror(reader)) {
+                        FATAL << "I/O error when seeking \"" + read_path.string() + "\"";
+                        std::exit(EXIT_FAILURE);
+                    }
+
+                    auto *time_buf = new unsigned char[sizeof(unsigned long)];
+                    std::size_t count = std::fread(&time_buf, sizeof(char), sizeof(unsigned long), reader);
+                    if (count != sizeof(unsigned long)) {
+                        FATAL
+                            << "I/O time first 8 bytes reading was not completed on path \"" + read_path.string() +
+                               "\"";
+                        std::exit(EXIT_FAILURE);
+                    }
+
+                    if (std::ferror(reader)) {
+                        FATAL << "I/O error when reading time of block at path \"" + read_path.string() + "\"";
+                        std::exit(EXIT_FAILURE);
+                    }
+                    unsigned long block_time{};
+                    for (unsigned char i = 0; i < (unsigned char) sizeof(unsigned long); i++) {
+                        block_time += (((std::size_t) time_buf[i]) << (i * 8));
+                    }
+                    delete[] time_buf;
+
+                    unsigned char buf_size = 0;
+                    count = std::fread(&buf_size, sizeof(char), 1, reader);
+                    if (count != 1) {
+                        FATAL
+                            << "I/O prefix first byte reading was not completed on path \"" + read_path.string() + "\"";
+                        std::exit(EXIT_FAILURE);
+                    }
+
+                    if (std::ferror(reader)) {
+                        FATAL << "I/O error when reading prefix at path \"" + read_path.string() + "\"";
+                        std::exit(EXIT_FAILURE);
+                    }
+                    unsigned char buffer_in[buf_size + 1];
+                    count = std::fread(&buffer_in, sizeof(char), buf_size + 1, reader);
+                    if (count != buf_size + 1) {
+                        FATAL
+                            << "I/O prefix first byte reading was not completed on path \"" + read_path.string() + "\"";
+                        std::exit(EXIT_FAILURE);
+                    }
+                    std::size_t output_size{};
+                    for (unsigned char buf_count = 0; buf_count <= buf_size; buf_count++) {
+                        output_size += (((std::size_t) buffer_in[buf_count]) << (buf_count * 8));
+                    }
+
+                    std::fclose(reader);
+
+                    no_read.unlock();
+
+                    return {block_time, output_size};
+                }
+            }
+        }
 
         ~tree_storage() {
             for (auto &i: *children) {
