@@ -230,7 +230,7 @@ namespace uh::trees {
 
                 std::unique_lock no_write(*std::get<1>(size->at(min_pos)));
 
-                FILE *writer = std::fopen(read_chunk.c_str(), "ab+");
+                FILE *writer = std::fopen(read_chunk.c_str(), "ab");
                 if (!writer) {
                     ERROR << "File write opening failed at \"" + read_chunk.string() + "\"";
                     std::exit(EXIT_FAILURE);
@@ -720,6 +720,84 @@ namespace uh::trees {
                     no_read.unlock();
 
                     return {block_time, output_size};
+                }
+            }
+        }
+
+        //returns a tuple with block time and binary vector of block
+        bool set_time(const std::vector<unsigned char> &block_code,unsigned long current_time = (unsigned long) std::chrono::nanoseconds(
+                std::chrono::high_resolution_clock::now().time_since_epoch()).count()) {
+            if (block_code.empty()) {
+                return false;
+            }
+            if (block_code.size() > 5) {
+                //size encoding is not reached yet, set_time along tree path
+                if ((short) children->size() - 1 < (short) block_code[0] || !std::get<0>(children->at(block_code[0]))) {
+                    std::string not_found((const char *) block_code.data(), block_code.size());
+                    DEBUG << "<Block error trace>: Block code " + boost::algorithm::hex(not_found) +
+                             " could not be found in storage tree \"" + combined_path->string() + "\".";
+                    return false;
+                } else {
+                    std::vector<unsigned char> sub_block_code{block_code.cbegin() + 1, block_code.cend()};
+                    auto out_vec = std::get<1>(children->at(block_code[0]))->set_time(sub_block_code,current_time);
+                    if (!out_vec) {
+                        std::string not_found((const char *) block_code.data(), block_code.size());
+                        DEBUG << "<Block error trace on return>: Block code " + boost::algorithm::hex(not_found) +
+                                 " could not be found in storage tree \"" + combined_path->string() + "\".";
+                    }
+                    return out_vec;
+                }
+            } else {
+                //the block code should have a size of 5; one chunk index and 4 bytes of encoding for the offset
+                if ((short) size->size() - 1 < (short) block_code[0] || !std::get<0>(size->at(block_code[0]))) {
+                    std::string not_found((const char *) block_code.data(), block_code.size());
+                    DEBUG
+                        << "<Block error trace on return, final tree>: Block code " + boost::algorithm::hex(not_found) +
+                           " could not be found in storage tree \"" + combined_path->string() +
+                           "\" and size of storage chunk was 0.";
+                    return false;
+                } else {
+                    std::vector<unsigned char> sub_block_code{block_code.cbegin() + 1,
+                                                              block_code.cend()}; //copy offset code and rebuild
+                    std::size_t offset{};
+                    for (unsigned char i = 0; i < (unsigned char) sizeof(unsigned int); i++) {
+                        offset += (((std::size_t) sub_block_code[i]) << (i * 8));
+                    }
+                    std::string ref_name{boost::algorithm::hex(std::string{(char) block_code[0]})};
+                    std::filesystem::path read_path = *combined_path / ref_name;
+
+                    //calculate binary of timestamp
+                    std::vector<unsigned char> bin_time;
+                    for (unsigned char i = 0; i < (unsigned char) sizeof(current_time); i++) {
+                        bin_time.push_back((unsigned char) (current_time >> (i * 8)));
+                    }
+
+                    std::unique_lock no_read(*std::get<1>(size->at(block_code[0])));
+
+                    FILE *writer = std::fopen(read_path.c_str(), "wb");
+                    if (!writer) {
+                        ERROR << "File write opening failed at \"" + read_path.string() + "\"";
+                        std::exit(EXIT_FAILURE);
+                    }
+                    //File should have been opened or created here
+                    std::fseek(writer, static_cast<long>(offset), SEEK_SET);
+
+                    if (std::ferror(writer)) {
+                        FATAL << "I/O error when seeking \"" + read_path.string() + "\"";
+                        std::exit(EXIT_FAILURE);
+                    }
+                    //File should have been opened or created here
+                    std::fwrite(bin_time.data(), bin_time.size(), sizeof(unsigned char), writer);
+
+                    if (std::ferror(writer)) {
+                        FATAL << "I/O error when writing \"" + read_path.string() + "\"";
+                        std::exit(EXIT_FAILURE);
+                    }
+                    std::fclose(writer);
+
+                    no_read.unlock();
+
+                    return true;
                 }
             }
         }
