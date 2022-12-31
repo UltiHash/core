@@ -58,7 +58,6 @@ namespace uh::trees {
         std::atomic<std::shared_ptr<std::vector<std::tuple<std::size_t, tree_storage *, unsigned char>>>> children{};//deeper tree storage blocks and folders
         //radix_tree* block_indexes[N]{}; // index local block finds
         std::atomic<std::shared_ptr<std::filesystem::path>> combined_path{};
-        std::atomic<std::size_t> i_constructor{};
         std::shared_mutex global_var_mutex;//protect everything out of size array
 
         //returns wrapped string
@@ -83,7 +82,7 @@ namespace uh::trees {
     public:
         explicit tree_storage(const std::filesystem::path &root,
                               unsigned short num_threads = std::thread::hardware_concurrency()) {
-            //expected are 4 bytes that mimic hexadecimal string representation
+            std::atomic<std::size_t> i_constructor{};
 
             std::unique_lock lock(global_var_mutex);
             if (combined_path.load()->empty()) {
@@ -139,8 +138,6 @@ namespace uh::trees {
                 for (auto &th: workers)
                     th.join();
             }
-
-            i_constructor = 0;
 
             if (!std::is_sorted(size.load()->begin(), size.load()->end(), [](const auto &a, const auto &b) {
                 return std::get<1>(a) < std::get<1>(b);
@@ -258,6 +255,7 @@ namespace uh::trees {
                 std::fclose(writer);
 
                 std::atomic_flag_clear_explicit(&(*write_ptr), std::memory_order_release);
+                if(!write_ptr->test())write_ptr->notify_all();
 
                 //start position of the block for seeking it later on is the old size
                 std::vector<unsigned char> out_vec;
@@ -397,6 +395,7 @@ namespace uh::trees {
 
                     std::fclose(reader);
                     *read_ptr -= 1;
+                    if(!*read_ptr)write_ptr->notify_one();
 
                     std::vector<unsigned char> out_vec{};
                     out_vec.assign(tmp_buf, tmp_buf + output_size);
@@ -411,6 +410,7 @@ namespace uh::trees {
         std::list<std::tuple<std::vector<unsigned char>, std::vector<unsigned char>, unsigned long>>
         index(unsigned short num_threads = std::thread::hardware_concurrency()) {
             std::atomic<std::shared_ptr<std::list<std::tuple<std::vector<unsigned char>, std::vector<unsigned char>, unsigned long>>>> search_index;
+            std::atomic<std::size_t> i_constructor{};
 
             auto multithread_index = [&]() {
                 std::size_t i = i_constructor.load();
@@ -561,6 +561,7 @@ namespace uh::trees {
                         }
                         std::fclose(reader);
                         *read_ptr -= 1;
+                        if(!*read_ptr)write_ptr->notify_one();
                     }
                     //splice indexes of children plus the min_pos to decide local_block_ref of children array
                     if (i < children.load()->size() && std::get<0>(children.load()->at(i)) > 0) {
@@ -594,6 +595,7 @@ namespace uh::trees {
         }
 
         void delete_recursive(unsigned short num_threads = std::thread::hardware_concurrency()) {
+            std::atomic<std::size_t> i_constructor{};
 
             auto multithread_index = [&]() {
                 std::size_t i = i_constructor.load();
@@ -743,6 +745,7 @@ namespace uh::trees {
 
                     std::fclose(reader);
                     *read_ptr -= 1;
+                    if(!*read_ptr)write_ptr->notify_one();
 
                     return {block_time, output_size};
                 }
@@ -833,6 +836,7 @@ namespace uh::trees {
                     }
                     std::fclose(writer);
                     std::atomic_flag_clear_explicit(&(*write_ptr), std::memory_order_release);
+                    if(!write_ptr->test())write_ptr->notify_all();
 
                     return true;
                 }
