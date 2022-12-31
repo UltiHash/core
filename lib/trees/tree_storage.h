@@ -109,7 +109,7 @@ namespace uh::trees {
                 if (i == N)return;
                 for (; i < N;) {
                     std::string s_tmp = boost::algorithm::hex(std::string{(char) i});
-                    std::filesystem::path chunk = std::filesystem::path(combined_path.load(std::memory_order_relaxed)->string()) / s_tmp;
+                    std::filesystem::path chunk = *combined_path.load(std::memory_order_relaxed) / s_tmp;
                     if (std::filesystem::exists(chunk)) {
                         std::shared_ptr<std::atomic_flag> f1(ATOMIC_FLAG_INIT);
                         std::shared_ptr<std::atomic<unsigned short>> f2{};
@@ -118,7 +118,7 @@ namespace uh::trees {
 
                     std::string fname = combined_path.load(std::memory_order_relaxed)->filename().string();
                     s_tmp.insert(s_tmp.cbegin(), fname.cbegin() + 2, fname.cbegin() + 4);
-                    std::filesystem::path deeper_tree = std::filesystem::path(combined_path.load(std::memory_order_relaxed)->string()) / s_tmp;
+                    std::filesystem::path deeper_tree = *combined_path.load(std::memory_order_relaxed) / s_tmp;
                     //check if sub folder in tree exists
                     if (std::filesystem::exists(deeper_tree)) {
                         auto *tmp_tree = new tree_storage(deeper_tree);
@@ -201,7 +201,7 @@ namespace uh::trees {
                     std::string ref_name{boost::algorithm::hex(std::string{(char) min_pos})};
                     std::string fname = combined_path.load(std::memory_order_relaxed)->filename().string();
                     ref_name.insert(ref_name.cbegin(), fname.cbegin() + 2, fname.cbegin() + 4);
-                    std::filesystem::path deeper_tree = std::filesystem::path(combined_path.load(std::memory_order_relaxed)->string()) / ref_name;
+                    std::filesystem::path deeper_tree = *combined_path.load(std::memory_order_relaxed) / ref_name;
                     auto *tmp_tree = new tree_storage(deeper_tree);
                     children.load()->emplace_back(tmp_tree->get_size(), tmp_tree, min_pos);
                 } else {
@@ -218,7 +218,7 @@ namespace uh::trees {
             if (no_deeper) {
                 //store block to this position
                 std::string ref_name{boost::algorithm::hex(std::string{(char) min_pos})};
-                std::filesystem::path read_chunk = std::filesystem::path(combined_path.load(std::memory_order_relaxed)->string()) / ref_name;
+                std::filesystem::path read_chunk = *combined_path.load(std::memory_order_relaxed) / ref_name;
 
                 //calculate binary of timestamp
                 std::vector<unsigned char> bin_time;
@@ -235,9 +235,9 @@ namespace uh::trees {
 
                 while(read_ptr->load()>0){
 #ifdef _WIN32
-                    Sleep(80);
+                    Sleep(10);
 #else
-                    usleep(80 * 1000);
+                    usleep(10 * 1000);
 #endif // _WIN32
                 }
 
@@ -316,7 +316,7 @@ namespace uh::trees {
                         offset += (((std::size_t) sub_block_code[i]) << (i * 8));
                     }
                     std::string ref_name{boost::algorithm::hex(std::string{(char) block_code[0]})};
-                    std::filesystem::path read_path = std::filesystem::path(combined_path.load(std::memory_order_relaxed)->string()) / ref_name;
+                    std::filesystem::path read_path = *combined_path.load(std::memory_order_relaxed) / ref_name;
 
                     auto write_ptr = std::get<2>(size.load()->at(block_code[0]));
                     auto read_ptr = std::get<3>(size.load()->at(block_code[0]));
@@ -420,7 +420,7 @@ namespace uh::trees {
                     if (i < size.load()->size() && std::get<0>(size.load()->at(i)) > 0) {
                         //read entire block generating hashes and block references
                         std::string ref_name{boost::algorithm::hex(std::string{(char) i})};
-                        std::filesystem::path read_path = std::filesystem::path(combined_path.load(std::memory_order_relaxed)->string()) / ref_name;
+                        std::filesystem::path read_path = *combined_path.load(std::memory_order_relaxed) / ref_name;
 
                         auto write_ptr = std::get<2>(size.load()->at(i));
                         auto read_ptr = std::get<3>(size.load()->at(i));
@@ -596,28 +596,25 @@ namespace uh::trees {
         void delete_recursive(unsigned short num_threads = std::thread::hardware_concurrency()) {
 
             auto multithread_index = [&]() {
-                std::unique_lock lock_init(global_var_mutex);
-                if (*i_constructor == (short) N)return;
-                short i = *i_constructor;
-                lock_init.unlock();
-                for (; i < (short) N;) {
+                std::size_t i = i_constructor.load();
+                if (i == N)return;
+                for (; i < N;) {
 
-                    if (i < size->size() && std::get<0>(size->at(i)) > 0) {
+                    if (i < size.load()->size() && std::get<0>(size.load()->at(i)) > 0) {
                         std::string ref_name{boost::algorithm::hex(std::string{(char) i})};
-                        std::filesystem::path read_path = *combined_path / ref_name;
+                        std::filesystem::path read_path = *combined_path.load(std::memory_order_relaxed) / ref_name;
                         if (std::remove(read_path.c_str()) != 0) {
                             FATAL << "Removing was not completed on path \"" + read_path.string() + "\"";
                             std::exit(EXIT_FAILURE);
                         }
                     }
                     //splice indexes of children plus the min_pos to decide local_block_ref of children array
-                    if (i < children->size() && std::get<0>(children->at(i)) > 0) {
-                        std::get<1>(children->at(i))->delete_recursive();
+                    if (i < children.load()->size() && std::get<0>(children.load()->at(i)) > 0) {
+                        std::get<1>(children.load()->at(i))->delete_recursive();
                     }
-                    if (i >= size->size() && i >= children->size())break;
+                    if (i >= size.load()->size() && i >= children.load()->size())break;
 
-                    std::lock_guard lock2(global_var_mutex);
-                    *i_constructor = i = (short) std::max(*i_constructor + 1, i + 1);
+                    i = (i_constructor += 1);
                 }
             };
 
@@ -633,7 +630,7 @@ namespace uh::trees {
                     th.join();
             }
 
-            *i_constructor = 0;
+            i_constructor = 0;
         }
 
         //TODO: integrate delete blocks, integrate set time/maintain valid time
@@ -645,28 +642,28 @@ namespace uh::trees {
             }
             if (block_code.size() > 5) {
                 //size encoding is not reached yet, get_info along tree path
-                if ((short) children->size() - 1 < (short) block_code[0] || !std::get<0>(children->at(block_code[0]))) {
+                if ((short) children.load()->size() - 1 < (short) block_code[0] || !std::get<0>(children.load()->at(block_code[0]))) {
                     std::string not_found((const char *) block_code.data(), block_code.size());
                     DEBUG << "<Block error trace>: Block code " + boost::algorithm::hex(not_found) +
-                             " could not be found in storage tree \"" + combined_path->string() + "\".";
+                             " could not be found in storage tree \"" + combined_path.load(std::memory_order_relaxed)->string() + "\".";
                     return {0, 0};
                 } else {
                     std::vector<unsigned char> sub_block_code{block_code.cbegin() + 1, block_code.cend()};
-                    auto out_vec = std::get<1>(children->at(block_code[0]))->get_info(sub_block_code);
+                    auto out_vec = std::get<1>(children.load()->at(block_code[0]))->get_info(sub_block_code);
                     if (std::get<1>(out_vec) == 0) {
                         std::string not_found((const char *) block_code.data(), block_code.size());
                         DEBUG << "<Block error trace on return>: Block code " + boost::algorithm::hex(not_found) +
-                                 " could not be found in storage tree \"" + combined_path->string() + "\".";
+                                 " could not be found in storage tree \"" + combined_path.load(std::memory_order_relaxed)->string() + "\".";
                     }
                     return out_vec;
                 }
             } else {
                 //the block code should have a size of 5; one chunk index and 4 bytes of encoding for the offset
-                if ((short) size->size() - 1 < (short) block_code[0] || !std::get<0>(size->at(block_code[0]))) {
+                if ((short) size.load()->size() - 1 < (short) block_code[0] || !std::get<0>(size.load()->at(block_code[0]))) {
                     std::string not_found((const char *) block_code.data(), block_code.size());
                     DEBUG
                         << "<Block error trace on return, final tree>: Block code " + boost::algorithm::hex(not_found) +
-                           " could not be found in storage tree \"" + combined_path->string() +
+                           " could not be found in storage tree \"" + combined_path.load(std::memory_order_relaxed)->string() +
                            "\" and size of storage chunk was 0.";
                     return {0, 0};
                 } else {
@@ -677,9 +674,16 @@ namespace uh::trees {
                         offset += (((std::size_t) sub_block_code[i]) << (i * 8));
                     }
                     std::string ref_name{boost::algorithm::hex(std::string{(char) block_code[0]})};
-                    std::filesystem::path read_path = *combined_path / ref_name;
+                    std::filesystem::path read_path = *combined_path.load(std::memory_order_relaxed) / ref_name;
 
-                    std::unique_lock no_read(*std::get<1>(size->at(block_code[0])));
+                    auto write_ptr = std::get<2>(size.load()->at(block_code[0]));
+                    auto read_ptr = std::get<3>(size.load()->at(block_code[0]));
+
+                    *read_ptr += 1;
+
+                    while(write_ptr->test()){
+                        write_ptr->wait(true);
+                    }
 
                     FILE *reader = std::fopen(read_path.c_str(), "rb");
                     if (!reader) {
@@ -738,8 +742,7 @@ namespace uh::trees {
                     }
 
                     std::fclose(reader);
-
-                    no_read.unlock();
+                    *read_ptr -= 1;
 
                     return {block_time, output_size};
                 }
@@ -754,28 +757,28 @@ namespace uh::trees {
             }
             if (block_code.size() > 5) {
                 //size encoding is not reached yet, set_time along tree path
-                if ((short) children->size() - 1 < (short) block_code[0] || !std::get<0>(children->at(block_code[0]))) {
+                if ((short) children.load()->size() - 1 < (short) block_code[0] || !std::get<0>(children.load()->at(block_code[0]))) {
                     std::string not_found((const char *) block_code.data(), block_code.size());
                     DEBUG << "<Block error trace>: Block code " + boost::algorithm::hex(not_found) +
-                             " could not be found in storage tree \"" + combined_path->string() + "\".";
+                             " could not be found in storage tree \"" + combined_path.load(std::memory_order_relaxed)->string() + "\".";
                     return false;
                 } else {
                     std::vector<unsigned char> sub_block_code{block_code.cbegin() + 1, block_code.cend()};
-                    auto out_vec = std::get<1>(children->at(block_code[0]))->set_time(sub_block_code,current_time);
+                    auto out_vec = std::get<1>(children.load()->at(block_code[0]))->set_time(sub_block_code,current_time);
                     if (!out_vec) {
                         std::string not_found((const char *) block_code.data(), block_code.size());
                         DEBUG << "<Block error trace on return>: Block code " + boost::algorithm::hex(not_found) +
-                                 " could not be found in storage tree \"" + combined_path->string() + "\".";
+                                 " could not be found in storage tree \"" + combined_path.load()->string() + "\".";
                     }
                     return out_vec;
                 }
             } else {
                 //the block code should have a size of 5; one chunk index and 4 bytes of encoding for the offset
-                if ((short) size->size() - 1 < (short) block_code[0] || !std::get<0>(size->at(block_code[0]))) {
+                if ((short) size.load()->size() - 1 < (short) block_code[0] || !std::get<0>(size.load()->at(block_code[0]))) {
                     std::string not_found((const char *) block_code.data(), block_code.size());
                     DEBUG
                         << "<Block error trace on return, final tree>: Block code " + boost::algorithm::hex(not_found) +
-                           " could not be found in storage tree \"" + combined_path->string() +
+                           " could not be found in storage tree \"" + combined_path.load()->string() +
                            "\" and size of storage chunk was 0.";
                     return false;
                 } else {
@@ -786,7 +789,7 @@ namespace uh::trees {
                         offset += (((std::size_t) sub_block_code[i]) << (i * 8));
                     }
                     std::string ref_name{boost::algorithm::hex(std::string{(char) block_code[0]})};
-                    std::filesystem::path read_path = *combined_path / ref_name;
+                    std::filesystem::path read_path = *combined_path.load(std::memory_order_relaxed) / ref_name;
 
                     //calculate binary of timestamp
                     std::vector<unsigned char> bin_time;
@@ -794,7 +797,20 @@ namespace uh::trees {
                         bin_time.push_back((unsigned char) (current_time >> (i * 8)));
                     }
 
-                    std::unique_lock no_read(*std::get<1>(size->at(block_code[0])));
+                    auto write_ptr = std::get<2>(size.load()->at(block_code[0]));
+                    auto read_ptr = std::get<3>(size.load()->at(block_code[0]));
+
+                    while(std::atomic_flag_test_and_set_explicit(&(*write_ptr), std::memory_order_acquire)){
+                        write_ptr->wait(true);
+                    }
+
+                    while(read_ptr->load()>0){
+#ifdef _WIN32
+                        Sleep(10);
+#else
+                        usleep(10 * 1000);
+#endif // _WIN32
+                    }
 
                     FILE *writer = std::fopen(read_path.c_str(), "wb");
                     if (!writer) {
@@ -816,8 +832,7 @@ namespace uh::trees {
                         std::exit(EXIT_FAILURE);
                     }
                     std::fclose(writer);
-
-                    no_read.unlock();
+                    std::atomic_flag_clear_explicit(&(*write_ptr), std::memory_order_release);
 
                     return true;
                 }
@@ -825,7 +840,7 @@ namespace uh::trees {
         }
 
         ~tree_storage() {
-            for (auto &i: *children) {
+            for (auto &i: *children.load()) {
                 if (std::get<1>(i) != nullptr) {
                     delete std::get<1>(i);
                 }
