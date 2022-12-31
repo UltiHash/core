@@ -13,6 +13,7 @@
 #include <shared_mutex>
 #include <memory>
 #include <thread>
+#include <atomic>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -53,13 +54,12 @@ namespace uh::trees {
 
     protected:
         //every file storage level contains a maximum of 256 storage chunks and 256 folders to deeper levels
-        std::shared_ptr<std::vector<std::tuple<std::size_t, std::shared_ptr<std::shared_mutex>, unsigned char>>> size{};//different storage chunks with write protection
-        std::shared_ptr<std::vector<std::tuple<std::size_t, tree_storage *, unsigned char>>> children{};//deeper tree storage blocks and folders
+        std::atomic<std::shared_ptr<std::vector<std::tuple<std::size_t, unsigned char, std::shared_ptr<std::atomic_flag>, std::shared_ptr<std::atomic_flag>>>>> size{};//different storage chunks with write and read protection flags
+        std::atomic<std::shared_ptr<std::vector<std::tuple<std::size_t, tree_storage *, unsigned char>>>> children{};//deeper tree storage blocks and folders
         //radix_tree* block_indexes[N]{}; // index local block finds
-        std::shared_ptr<std::filesystem::path> combined_path{};
-        std::shared_ptr<short> i_constructor = std::make_shared<short>(0);
+        std::atomic<std::shared_ptr<std::filesystem::path>> combined_path{};
+        std::atomic<short> i_constructor{};
         std::shared_mutex global_var_mutex;//protect everything out of size array
-        bool path_is_set_up = false;
 
         //returns wrapped string
         static std::vector<unsigned char> prefix_wrap(std::size_t input_size) {
@@ -86,7 +86,7 @@ namespace uh::trees {
             //expected are 4 bytes that mimic hexadecimal string representation
 
             std::unique_lock lock(global_var_mutex);
-            if (!path_is_set_up) {
+            if (combined_path.load()->empty()) {
                 std::string parent_name = root.filename().string();
                 bool valid_root = parent_name.size() == 4 and root.extension().string().empty();
                 if (valid_root)
@@ -96,37 +96,34 @@ namespace uh::trees {
                             break;
                         }
                     }
-                *combined_path = root;
+                combined_path.load()->operator=(root);
                 if (!valid_root) {
-                    *combined_path /= "0000";
+                    combined_path.load()->operator/=("0000");
                 }
-                std::filesystem::create_directories(*combined_path);
-                path_is_set_up = true;
+                std::filesystem::create_directories(combined_path.load()->string());
             }
             lock.unlock();
 
             auto multithread_constructor = [&]() {
-                std::unique_lock lock_init(global_var_mutex);
-                if (*i_constructor == (short) N)return;
-                short i = *i_constructor;
-                lock_init.unlock();
+                short i = i_constructor;
+                if (i == (short) N)return;
                 for (; i < (short) N;) {
                     std::string s_tmp = boost::algorithm::hex(std::string{(char) i});
-                    std::filesystem::path chunk = *combined_path / s_tmp;
+                    std::filesystem::path chunk = std::filesystem::path(combined_path.load(std::memory_order_relaxed)->string()) / s_tmp;
                     if (std::filesystem::exists(chunk)) {
-                        size->emplace_back(std::filesystem::file_size(chunk), std::make_unique<std::shared_mutex>(), i);
+                        std::shared_ptr<std::atomic_flag> f1(ATOMIC_FLAG_INIT),f2(ATOMIC_FLAG_INIT);
+                        size.load()->emplace_back(std::filesystem::file_size(chunk), i, f1, f2);
                     }
 
-                    std::string fname = combined_path->filename().string();
+                    std::string fname = combined_path.load(std::memory_order_relaxed)->filename().string();
                     s_tmp.insert(s_tmp.cbegin(), fname.cbegin() + 2, fname.cbegin() + 4);
-                    std::filesystem::path deeper_tree = *combined_path / s_tmp;
+                    std::filesystem::path deeper_tree = std::filesystem::path(combined_path.load(std::memory_order_relaxed)->string()) / s_tmp;
                     //check if sub folder in tree exists
                     if (std::filesystem::exists(deeper_tree)) {
                         auto *tmp_tree = new tree_storage(deeper_tree);
-                        children->emplace_back(tmp_tree->get_size(), tmp_tree, i);
+                        children.load()->emplace_back(tmp_tree->get_size(), tmp_tree, i);
                     }
-                    std::lock_guard lock2(global_var_mutex);
-                    *i_constructor = i = (short) std::max(*i_constructor + 1, i + 1);
+                    i_constructor = i = (short) std::max(i_constructor + 1, i + 1);
                 }
             };
 
@@ -142,19 +139,19 @@ namespace uh::trees {
                     th.join();
             }
 
-            *i_constructor = 0;
+            i_constructor = 0;
 
-            if (!std::is_sorted(size->begin(), size->end(), [](const auto &a, const auto &b) {
-                return std::get<2>(a) < std::get<2>(b);
+            if (!std::is_sorted(size.load()->begin(), size.load()->end(), [](const auto &a, const auto &b) {
+                return std::get<1>(a) < std::get<1>(b);
             }))
-                std::sort(size->begin(), size->end(), [](const auto &a, const auto &b) {
-                    return std::get<2>(a) < std::get<2>(b);
+                std::sort(size.load()->begin(), size.load()->end(), [](const auto &a, const auto &b) {
+                    return std::get<1>(a) < std::get<1>(b);
                 });
-            if (!std::is_sorted(children->begin(), children->end(), [](const auto &a, const auto &b) {
-                return std::get<2>(a) < std::get<2>(b);
+            if (!std::is_sorted(children.load()->begin(), children.load()->end(), [](const auto &a, const auto &b) {
+                return std::get<1>(a) < std::get<1>(b);
             }))
-                std::sort(children->begin(), children->end(), [](const auto &a, const auto &b) {
-                    return std::get<2>(a) < std::get<2>(b);
+                std::sort(children.load()->begin(), children.load()->end(), [](const auto &a, const auto &b) {
+                    return std::get<1>(a) < std::get<1>(b);
                 });
         }
 
