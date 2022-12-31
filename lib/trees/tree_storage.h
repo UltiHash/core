@@ -34,7 +34,7 @@ namespace uh::trees {
 
     struct tree_storage {
     private:
-        void mem_wait(std::size_t mem) {
+        static void mem_wait(std::size_t mem) {
             struct sysinfo memInfo{};
             unsigned long totalFreeVirtualMem;
             do {
@@ -110,7 +110,7 @@ namespace uh::trees {
                     std::string s_tmp = boost::algorithm::hex(std::string{(char) i});
                     std::filesystem::path chunk = *combined_path.load(std::memory_order_relaxed) / s_tmp;
                     if (std::filesystem::exists(chunk)) {
-                        std::shared_ptr<std::atomic_flag> f1(ATOMIC_FLAG_INIT);
+                        std::shared_ptr<std::atomic_flag> f1{ATOMIC_FLAG_INIT};
                         std::shared_ptr<std::atomic<unsigned short>> f2{};
                         size.load()->emplace_back(std::filesystem::file_size(chunk), i, f1, f2);
                     }
@@ -120,7 +120,7 @@ namespace uh::trees {
                     std::filesystem::path deeper_tree = *combined_path.load(std::memory_order_relaxed) / s_tmp;
                     //check if sub folder in tree exists
                     if (std::filesystem::exists(deeper_tree)) {
-                        auto *tmp_tree = new tree_storage(deeper_tree);
+                        auto *tmp_tree = new tree_storage(deeper_tree,1);
                         children.load()->emplace_back(tmp_tree->get_size(), tmp_tree, i);
                     }
                     i = (i_constructor += 1);
@@ -565,7 +565,7 @@ namespace uh::trees {
                     }
                     //splice indexes of children plus the min_pos to decide local_block_ref of children array
                     if (i < children.load()->size() && std::get<0>(children.load()->at(i)) > 0) {
-                        auto append_list = std::get<1>(children.load()->at(i))->index();
+                        auto append_list = std::get<1>(children.load()->at(i))->index(1);
                         for (auto &el: append_list) {
                             std::get<1>(el).insert(std::get<1>(el).cbegin(), i);
                         }
@@ -589,13 +589,12 @@ namespace uh::trees {
                     th.join();
             }
 
-            i_constructor = 0;
-
             return *search_index.load();
         }
 
-        void delete_recursive(unsigned short num_threads = std::thread::hardware_concurrency()) {
+        std::size_t delete_recursive(unsigned short num_threads = std::thread::hardware_concurrency()) {
             std::atomic<std::size_t> i_constructor{};
+            std::atomic<std::size_t> out_size{};
 
             auto multithread_index = [&]() {
                 std::size_t i = i_constructor.load();
@@ -605,6 +604,9 @@ namespace uh::trees {
                     if (i < size.load()->size() && std::get<0>(size.load()->at(i)) > 0) {
                         std::string ref_name{boost::algorithm::hex(std::string{(char) i})};
                         std::filesystem::path read_path = *combined_path.load(std::memory_order_relaxed) / ref_name;
+                        std::size_t vanish_size = std::filesystem::file_size(read_path);
+                        out_size += vanish_size;
+                        std::get<0>(size.load()->at(i)) -= vanish_size;
                         if (std::remove(read_path.c_str()) != 0) {
                             FATAL << "Removing was not completed on path \"" + read_path.string() + "\"";
                             std::exit(EXIT_FAILURE);
@@ -612,7 +614,9 @@ namespace uh::trees {
                     }
                     //splice indexes of children plus the min_pos to decide local_block_ref of children array
                     if (i < children.load()->size() && std::get<0>(children.load()->at(i)) > 0) {
-                        std::get<1>(children.load()->at(i))->delete_recursive();
+                        std::size_t vanish_size = std::get<1>(children.load()->at(i))->delete_recursive(1);
+                        out_size += vanish_size;
+                        std::get<0>(size.load()->at(i)) -= vanish_size;
                     }
                     if (i >= size.load()->size() && i >= children.load()->size())break;
 
@@ -631,11 +635,8 @@ namespace uh::trees {
                 for (auto &th: workers)
                     th.join();
             }
-
-            i_constructor = 0;
+            return out_size.load();
         }
-
-        //TODO: integrate delete blocks, integrate set time/maintain valid time
 
         //returns a tuple with block time and block size from disk
         std::tuple<unsigned long, std::size_t> get_info(const std::vector<unsigned char> &block_code) {
@@ -842,6 +843,8 @@ namespace uh::trees {
                 }
             }
         }
+
+        //TODO: integrate delete blocks, maintain valid time
 
         ~tree_storage() {
             for (auto &i: *children.load()) {
