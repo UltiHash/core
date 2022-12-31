@@ -856,6 +856,7 @@ namespace uh::trees {
                 return std::lexicographical_compare(a.begin(),a.end(),b.begin(),b.end());
             });
             //scan and filter for size == 5 and delete blocks from chunks, deliver deleted size and changed local block codes via chunk level indexing after change spot
+            //use multithreading with a thread management system so that threads from deleting go on to deeper delete
 
             unsigned char current;
             bool first = true;
@@ -884,6 +885,7 @@ namespace uh::trees {
                 }
                 cur = end;
             }
+            return {out_size.load(),*out_change_list.load()};
         }
 
         ~tree_storage() {
