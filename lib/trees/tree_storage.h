@@ -847,13 +847,38 @@ namespace uh::trees {
 
         //TODO: integrate delete blocks, maintain valid time
 
-        std::size_t delete_blocks(std::vector<std::vector<unsigned char>> &block_codes){
-            if(block_codes.empty())return 0;
+        std::tuple<std::size_t,std::list<std::tuple<std::vector<unsigned char>,std::vector<unsigned char>>>> delete_blocks(std::vector<std::vector<unsigned char>> &block_codes){
+            if(block_codes.empty())return {};
+            std::atomic<std::size_t> out_size{};
+            std::atomic<std::shared_ptr<std::list<std::tuple<std::vector<unsigned char>,std::vector<unsigned char>>>>> out_change_list{};
             //sort for lexicographic to find blocks within the same chunks that all need to be deleted
             std::sort(std::execution::par_unseq, block_codes.begin(),block_codes.end(),[](auto &a,auto &b){
                 return std::lexicographical_compare(a.begin(),a.end(),b.begin(),b.end());
             });
+            //scan and filter for size == 5 and delete blocks from chunks, deliver deleted size and changed local block codes via chunk level indexing after change spot
 
+            unsigned char current;
+            bool first = true;
+            auto beg = block_codes.begin();
+            auto end = beg;
+            auto cur = end;
+            for(;end< block_codes.end();end++){
+                if(first){
+                    first = false;
+                    current = (*end)[0];
+                }
+                else{
+                    if(current!=(*end)[0]){
+                        std::vector<std::vector<unsigned char>> deeper_codes{};
+                        std::for_each(beg,cur,[&deeper_codes](auto &a){
+                            deeper_codes.emplace_back(a.begin()+1,a.end());
+                        });
+                        auto tmp_deeper_tree_ptr = std::get<1>(children.load()->at((*cur)[0]));
+                        auto deeper_delete = tmp_deeper_tree_ptr->delete_blocks(deeper_codes);
+                    }
+                }
+                cur = end;
+            }
         }
 
         ~tree_storage() {
