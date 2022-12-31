@@ -14,6 +14,7 @@
 #include <memory>
 #include <thread>
 #include <atomic>
+#include <execution>
 
 #ifdef _WIN32
 #include <windows.h>
@@ -139,16 +140,16 @@ namespace uh::trees {
                     th.join();
             }
 
-            if (!std::is_sorted(size.load()->begin(), size.load()->end(), [](const auto &a, const auto &b) {
+            if (!std::is_sorted(std::execution::par_unseq, size.load()->begin(), size.load()->end(), [](const auto &a, const auto &b) {
                 return std::get<1>(a) < std::get<1>(b);
             }))
-                std::sort(size.load()->begin(), size.load()->end(), [](const auto &a, const auto &b) {
+                std::sort(std::execution::par_unseq, size.load()->begin(), size.load()->end(), [](const auto &a, const auto &b) {
                     return std::get<1>(a) < std::get<1>(b);
                 });
-            if (!std::is_sorted(children.load()->begin(), children.load()->end(), [](const auto &a, const auto &b) {
+            if (!std::is_sorted(std::execution::par_unseq, children.load()->begin(), children.load()->end(), [](const auto &a, const auto &b) {
                 return std::get<1>(a) < std::get<1>(b);
             }))
-                std::sort(children.load()->begin(), children.load()->end(), [](const auto &a, const auto &b) {
+                std::sort(std::execution::par_unseq, children.load()->begin(), children.load()->end(), [](const auto &a, const auto &b) {
                     return std::get<1>(a) < std::get<1>(b);
                 });
         }
@@ -845,6 +846,15 @@ namespace uh::trees {
         }
 
         //TODO: integrate delete blocks, maintain valid time
+
+        std::size_t delete_blocks(std::vector<std::vector<unsigned char>> &block_codes){
+            if(block_codes.empty())return 0;
+            //sort for lexicographic to find blocks within the same chunks that all need to be deleted
+            std::sort(std::execution::par_unseq, block_codes.begin(),block_codes.end(),[](auto &a,auto &b){
+                return std::lexicographical_compare(a.begin(),a.end(),b.begin(),b.end());
+            });
+
+        }
 
         ~tree_storage() {
             for (auto &i: *children.load()) {
