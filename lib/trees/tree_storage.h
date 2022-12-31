@@ -58,7 +58,7 @@ namespace uh::trees {
         std::atomic<std::shared_ptr<std::vector<std::tuple<std::size_t, tree_storage *, unsigned char>>>> children{};//deeper tree storage blocks and folders
         //radix_tree* block_indexes[N]{}; // index local block finds
         std::atomic<std::shared_ptr<std::filesystem::path>> combined_path{};
-        std::atomic<short> i_constructor{};
+        std::atomic<std::size_t> i_constructor{};
         std::shared_mutex global_var_mutex;//protect everything out of size array
 
         //returns wrapped string
@@ -105,14 +105,14 @@ namespace uh::trees {
             lock.unlock();
 
             auto multithread_constructor = [&]() {
-                short i = i_constructor;
-                if (i == (short) N)return;
-                for (; i < (short) N;) {
+                std::size_t i = i_constructor.load();
+                if (i == N)return;
+                for (; i < N;) {
                     std::string s_tmp = boost::algorithm::hex(std::string{(char) i});
                     std::filesystem::path chunk = std::filesystem::path(combined_path.load(std::memory_order_relaxed)->string()) / s_tmp;
                     if (std::filesystem::exists(chunk)) {
                         std::shared_ptr<std::atomic_flag> f1(ATOMIC_FLAG_INIT);
-                        std::shared_ptr<std::atomic<unsigned short>> f2(0);
+                        std::shared_ptr<std::atomic<unsigned short>> f2{};
                         size.load()->emplace_back(std::filesystem::file_size(chunk), i, f1, f2);
                     }
 
@@ -124,7 +124,7 @@ namespace uh::trees {
                         auto *tmp_tree = new tree_storage(deeper_tree);
                         children.load()->emplace_back(tmp_tree->get_size(), tmp_tree, i);
                     }
-                    i_constructor = i = (short) std::max(i_constructor + 1, i + 1);
+                    i = (i_constructor += 1);
                 }
             };
 
@@ -410,21 +410,26 @@ namespace uh::trees {
         //The index gives tuple<hash,local_block_reference>, always run index single without reading or writing interference
         std::list<std::tuple<std::vector<unsigned char>, std::vector<unsigned char>, unsigned long>>
         index(unsigned short num_threads = std::thread::hardware_concurrency()) {
-            std::shared_ptr<std::list<std::tuple<std::vector<unsigned char>, std::vector<unsigned char>, unsigned long>>> search_index;
+            std::atomic<std::shared_ptr<std::list<std::tuple<std::vector<unsigned char>, std::vector<unsigned char>, unsigned long>>>> search_index;
 
             auto multithread_index = [&]() {
-                std::unique_lock lock_init(global_var_mutex);//TODO: swap 417 and 418
-                if (*i_constructor == (short) N)return;
-                short i = *i_constructor;
-                lock_init.unlock();
-                for (; i < (short) N;) {
+                std::size_t i = i_constructor.load();
+                if (i == N)return;
+                for (; i < N;) {
 
-                    if (i < size->size() && std::get<0>(size->at(i)) > 0) {
+                    if (i < size.load()->size() && std::get<0>(size.load()->at(i)) > 0) {
                         //read entire block generating hashes and block references
                         std::string ref_name{boost::algorithm::hex(std::string{(char) i})};
-                        std::filesystem::path read_path = *combined_path / ref_name;
+                        std::filesystem::path read_path = std::filesystem::path(combined_path.load(std::memory_order_relaxed)->string()) / ref_name;
 
-                        std::unique_lock no_index(*std::get<1>(size->at(i)));
+                        auto write_ptr = std::get<2>(size.load()->at(i));
+                        auto read_ptr = std::get<3>(size.load()->at(i));
+
+                        *read_ptr += 1;
+
+                        while(write_ptr->test()){
+                            write_ptr->wait(true);
+                        }
 
                         FILE *reader = std::fopen(read_path.c_str(), "rb");
                         if (!reader) {
@@ -436,7 +441,7 @@ namespace uh::trees {
                             FATAL << "I/O error when seeking \"" + read_path.string() + "\"";
                             std::exit(EXIT_FAILURE);
                         }
-                        std::shared_ptr<std::size_t> cur_pos = 0;
+                        std::shared_ptr<std::size_t> cur_pos{};
 
                         std::thread rt, ht;
 
@@ -540,7 +545,7 @@ namespace uh::trees {
                                 delete[] *tmp_buf[parallel_switch_copy];
 
                                 std::vector<unsigned char> hash{hash_buf, hash_buf + SHA512_DIGEST_LENGTH};
-                                search_index->emplace_back(hash, tmp_local_block_ref, block_time_cpy);
+                                search_index.load()->emplace_back(hash, tmp_local_block_ref, block_time_cpy);
                             };
 
                             if (rt.joinable())rt.join();
@@ -555,20 +560,19 @@ namespace uh::trees {
                             }
                         }
                         std::fclose(reader);
-                        no_index.unlock();
+                        *read_ptr -= 1;
                     }
                     //splice indexes of children plus the min_pos to decide local_block_ref of children array
-                    if (i < children->size() && std::get<0>(children->at(i)) > 0) {
-                        auto append_list = std::get<1>(children->at(i))->index();
+                    if (i < children.load()->size() && std::get<0>(children.load()->at(i)) > 0) {
+                        auto append_list = std::get<1>(children.load()->at(i))->index();
                         for (auto &el: append_list) {
                             std::get<1>(el).insert(std::get<1>(el).cbegin(), i);
                         }
-                        search_index->splice(search_index->cend(), append_list);
+                        auto cur_end = search_index.load(std::memory_order_relaxed)->cend();
+                        search_index.load()->splice(cur_end, append_list);
                     }
-                    if (i >= size->size() && i >= children->size())break;
-
-                    std::lock_guard lock2(global_var_mutex);
-                    *i_constructor = i = (short) std::max(*i_constructor + 1, i + 1);
+                    if (i >= size.load()->size() && i >= children.load()->size())break;
+                    i = (i_constructor += 1);
                 }
             };
 
@@ -584,9 +588,9 @@ namespace uh::trees {
                     th.join();
             }
 
-            *i_constructor = 0;
+            i_constructor = 0;
 
-            return *search_index;
+            return *search_index.load();
         }
 
         void delete_recursive(unsigned short num_threads = std::thread::hardware_concurrency()) {
