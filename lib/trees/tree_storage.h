@@ -159,11 +159,11 @@ namespace uh::trees {
             std::size_t s{};
             std::lock_guard lock(global_var_mutex);
             for (unsigned short i = 0; i < (unsigned short) N; i++) {
-                s += size->size() > i ? std::get<0>(size->at(i)) : 0;
-                if (children->size() > i) {
-                    s += std::get<0>(children->at(i));
+                s += size.load()->size() > i ? std::get<0>(size.load()->at(i)) : 0;
+                if (children.load()->size() > i) {
+                    s += std::get<0>(children.load()->at(i));
                 }
-                if (i >= size->size() && i >= children->size())break;
+                if (i >= size.load()->size() && i >= children.load()->size())break;
             }
             return s;
         }
