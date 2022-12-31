@@ -862,19 +862,24 @@ namespace uh::trees {
             auto beg = block_codes.begin();
             auto end = beg;
             auto cur = end;
-            for(;end< block_codes.end();end++){
+            for(;end < block_codes.end();end++){
                 if(first){
                     first = false;
                     current = (*end)[0];
                 }
                 else{
-                    if(current!=(*end)[0]){
+                    if(current!=(*end)[0] || end == block_codes.end()-1){
                         std::vector<std::vector<unsigned char>> deeper_codes{};
                         std::for_each(beg,cur,[&deeper_codes](auto &a){
                             deeper_codes.emplace_back(a.begin()+1,a.end());
                         });
                         auto tmp_deeper_tree_ptr = std::get<1>(children.load()->at((*cur)[0]));
                         auto deeper_delete = tmp_deeper_tree_ptr->delete_blocks(deeper_codes);
+                        out_size += std::get<0>(deeper_delete);
+                        auto last_end = out_change_list.load()->cend();
+                        out_change_list.load()->splice(last_end,std::get<1>(deeper_delete));
+                        beg = end;
+                        current = (*end)[0];
                     }
                 }
                 cur = end;
