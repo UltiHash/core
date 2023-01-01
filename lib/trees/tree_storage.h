@@ -55,7 +55,7 @@ namespace uh::trees {
 
     protected:
         //every file storage level contains a maximum of 256 storage chunks and 256 folders to deeper levels
-        std::atomic<std::shared_ptr<std::vector<std::tuple<std::size_t, unsigned char, std::shared_ptr<std::atomic_flag>, std::shared_ptr<std::atomic<unsigned short>>, std::shared_ptr<std::atomic_flag>>>>> size{};//different storage chunks with write, read and maintain protection flags
+        std::atomic<std::shared_ptr<std::vector<std::tuple<std::size_t, unsigned char, std::shared_ptr<std::atomic_flag>, std::shared_ptr<std::atomic<std::size_t>>, std::shared_ptr<std::atomic_flag>>>>> size{};//different storage chunks with write, read and maintain protection flags
         std::atomic<std::shared_ptr<std::vector<std::tuple<std::size_t, tree_storage *, unsigned char>>>> children{};//deeper tree storage blocks and folders
         std::atomic<std::shared_ptr<std::filesystem::path>> combined_path{};
         std::shared_mutex global_var_mutex{};//protect everything out of size array
@@ -112,7 +112,7 @@ namespace uh::trees {
                     std::filesystem::path chunk = *combined_path.load(std::memory_order_relaxed) / s_tmp;
                     if (std::filesystem::exists(chunk)) {
                         std::shared_ptr<std::atomic_flag> f1{ATOMIC_FLAG_INIT}, f3{ATOMIC_FLAG_INIT};
-                        std::shared_ptr<std::atomic<unsigned short>> f2{};
+                        std::shared_ptr<std::atomic<std::size_t>> f2{};
                         size.load()->emplace_back(std::filesystem::file_size(chunk), i, f1, f2, f3);
                     }
 
@@ -193,7 +193,7 @@ namespace uh::trees {
                 min_pos = size.load()->size();
                 min_val = 0;
                 std::shared_ptr<std::atomic_flag> f1{ATOMIC_FLAG_INIT}, f3{ATOMIC_FLAG_INIT};
-                std::shared_ptr<std::atomic<unsigned short>> f2{};
+                std::shared_ptr<std::atomic<std::size_t>> f2{};
                 size.load()->emplace_back(min_val, min_pos, f1, f2, f3);
             }
             else{
