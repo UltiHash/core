@@ -870,6 +870,7 @@ namespace uh::trees {
                 }
                 else{
                     if(current!=(*end)[0] || end == block_codes.end()-1){
+                        //take a branch to delete multiple blocks within
                         std::vector<std::vector<unsigned char>> deeper_codes{};
                         std::for_each(beg,cur,[&deeper_codes](auto &a){
                             deeper_codes.emplace_back(a.begin()+1,a.end());
