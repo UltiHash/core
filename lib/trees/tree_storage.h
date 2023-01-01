@@ -905,16 +905,18 @@ namespace uh::trees {
 
         //TODO: integrate delete blocks, maintain valid time
         //after deletion some blocks are de-fragmented in descending order. Behind the deleted block(s) all blocks need to be re-mapped
-        //returns the deleted total size and a list of tuple<old_block_reference with first element tree reference, new_block_reference with first element tree reference,reference to tree_storage of change, reference chunk truncate>
-        //maintaining the system can be done in 2 steps: delete_blocks_copy and after that init_maintained_chunk_reset to relink all blocks to their new offset under prohibited write
-        std::tuple<std::size_t, std::list<std::tuple<std::vector<unsigned char>, std::vector<unsigned char>, tree_storage *, std::size_t>>>
+        //returns the deleted total size and a list of tuple<old_block_reference with first element tree reference, new_block_reference with first element tree reference,reference to tree_storage of change>
+        //maintaining the system can be done in 2 steps: delete_blocks_copy and after that we need to re-map all local block references
+        //after function delete_blocks_copy was called the atomic_flag securing write on the chunk will be active and we need to re-map all blocks of a chunk before setting the write flag back to false
+        //it is wise to call a delete on blocks on the same chunk, one at a time
+        std::tuple<std::size_t, std::list<std::tuple<std::vector<unsigned char>, std::vector<unsigned char>, tree_storage *>>>
         delete_blocks_copy(
                 std::vector<std::vector<unsigned char>> &block_codes,
                 unsigned short num_threads = std::thread::hardware_concurrency()) {
             if (block_codes.empty() || !num_threads)return {};
             std::atomic<std::shared_ptr<std::size_t>> active_threads{};
             std::atomic<std::size_t> out_size{};
-            std::atomic<std::shared_ptr<std::list<std::tuple<std::vector<unsigned char>, std::vector<unsigned char>, tree_storage *, std::size_t>>>> out_change_list{};
+            std::atomic<std::shared_ptr<std::list<std::tuple<std::vector<unsigned char>, std::vector<unsigned char>, tree_storage *>>>> out_change_list{};
             //sort for lexicographic to find blocks within the same chunks that all need to be deleted
             std::sort(std::execution::par_unseq, block_codes.begin(), block_codes.end(), [](auto &a, auto &b) {
                 return std::lexicographical_compare(a.begin(), a.end(), b.begin(), b.end());
@@ -975,12 +977,6 @@ namespace uh::trees {
                                 while (write_ptr->test()) {
                                     write_ptr->wait(true);
                                 }
-                                //delete from block
-                                //1. create maintain atomic_flag to make sure only one instance is maintaining the chunk and set it
-                                //2. open read instance and write to <chunk_code>_maintain by indexing the chunk until a block to be deleted
-                                // just skip block and copy all blocks except the ones that are under the block codes
-                                //3. create init_maintained_chunk_reset function that is separated and called in a protected area as soon as block re-mapping has taken place,
-                                // the to be deleted blocks guide the way where a maintain file has been created to reset maintain atomic_flags
 
                                 //sort blocks to be deleted here after their offset on the chunk
                                 std::string ref_name{boost::algorithm::hex(std::string{(char) (*cur_tmp)[0]})};
@@ -1028,7 +1024,7 @@ namespace uh::trees {
                                 std::size_t delete_size{};
                                 //producer consumer queue for reading and writing; contains RAM pointer; size of RAM pointer; local tree storage reference of;
                                 // *this tree where the referring chunk is stored; truncate size for the chunk; new storage reference after append
-                                std::atomic<std::shared_ptr<std::list<std::tuple<unsigned char*,std::size_t,std::vector<unsigned char>, tree_storage *, std::size_t, std::size_t>>>> multithreading_factory{};
+                                std::atomic<std::shared_ptr<std::list<std::tuple<unsigned char*,std::size_t,std::vector<unsigned char>, tree_storage *, std::size_t>>>> multithreading_factory{};
                                 std::shared_ptr<std::atomic_flag> write_control{};
 
                                 while (std::atomic_flag_test_and_set_explicit(&(*write_control), std::memory_order_acquire)) {
@@ -1048,7 +1044,7 @@ namespace uh::trees {
                                             out_vec.reserve(sizeof(unsigned int));
                                             for (unsigned char i = 0;
                                                  i < (unsigned char) sizeof(unsigned int); i++) {//STORE_MAX will fit in 4 bytes
-                                                out_vec.push_back((unsigned char) (std::get<5>(*multithreading_factory.load()->cbegin()) >> (i * 8)));
+                                                out_vec.push_back((unsigned char) (std::get<4>(*multithreading_factory.load()->cbegin()) >> (i * 8)));
                                             }
                                             out_vec.insert(out_vec.cbegin(), std::get<2>(*multithreading_factory.load()->cbegin())[0]);
 
@@ -1060,7 +1056,7 @@ namespace uh::trees {
                                             std::free(std::get<0>(*multithreading_factory.load()->begin()));
                                             //tmp_buf,write_back_size,out_vec,this,trunc_at
                                             //std::vector<unsigned char>, std::vector<unsigned char>, tree_storage *, std::size_t>>>
-                                            out_change_list.load()->emplace_back(std::get<2>(*multithreading_factory.load()->cbegin()),out_vec,std::get<3>(*multithreading_factory.load()->cbegin()),std::get<4>(*multithreading_factory.load()->cbegin()));
+                                            out_change_list.load()->emplace_back(std::get<2>(*multithreading_factory.load()->cbegin()),out_vec,std::get<3>(*multithreading_factory.load()->cbegin()));
                                             multithreading_factory.load()->pop_front();
                                         }
 #ifdef _WIN32
@@ -1166,7 +1162,7 @@ namespace uh::trees {
                                             std::exit(EXIT_FAILURE);
                                         }
                                         cur_pos += count;
-                                        multithreading_factory.load()->emplace_back(tmp_buf,write_back_size,out_vec,this,trunc_at,cur_pos-write_back_size-delete_size);
+                                        multithreading_factory.load()->emplace_back(tmp_buf,write_back_size,out_vec,this,cur_pos-write_back_size-delete_size);
                                     }
                                 }
                                 std::fclose(reader);
@@ -1178,10 +1174,13 @@ namespace uh::trees {
                                     DEBUG << "Block code \""+boost::algorithm::hex(std::string{it->cbegin(),it->cend()})+"\" could not be deleted. Please check for bugs.";
                                 }
 
-                                //TODO: move to init_maintained_chunk_reset
-                                //std::atomic_flag_clear_explicit(&(*maintain_ptr), std::memory_order_release);
-                                //if(!maintain_ptr->test())maintain_ptr->notify_one();
+                                //after the truncate position are known and the following blocks are filtered, truncation and append need to take place under atomic flag protection
+                                //write and truncate
+                                truncate64(chunk.c_str(),trunc_at);
 
+                                //TODO: move to init_maintained_chunk_reset
+                                std::atomic_flag_clear_explicit(&(*maintain_ptr), std::memory_order_release);
+                                if(!maintain_ptr->test())maintain_ptr->notify_one();
                             }
 
                             //delete deeper codes
