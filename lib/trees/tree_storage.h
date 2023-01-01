@@ -360,7 +360,7 @@ namespace uh::trees {
                         std::exit(EXIT_FAILURE);
                     }
 
-                    auto *time_buf = new unsigned char[sizeof(unsigned long)];
+                    unsigned char time_buf[sizeof(unsigned long)];
                     std::size_t count = std::fread(&time_buf, sizeof(char), sizeof(unsigned long), reader);
                     if (count != sizeof(unsigned long)) {
                         FATAL
@@ -377,7 +377,6 @@ namespace uh::trees {
                     for (unsigned char i = 0; i < (unsigned char) sizeof(unsigned long); i++) {
                         block_time += (((std::size_t) time_buf[i]) << (i * 8));
                     }
-                    delete[] time_buf;
 
                     unsigned char buf_size = 0;
                     count = std::fread(&buf_size, sizeof(char), 1, reader);
@@ -486,7 +485,7 @@ namespace uh::trees {
                                 local_block_ref->insert(local_block_ref->cbegin(), i);
                                 bool parallel_switch_tmp = *parallel_switch;
 
-                                auto *time_buf = new unsigned char[sizeof(unsigned long)];
+                                unsigned char time_buf[sizeof(unsigned long)];
                                 std::size_t count = std::fread(&time_buf, sizeof(char), sizeof(unsigned long), reader);
                                 *cur_pos += count;
                                 if (count != sizeof(unsigned long)) {
@@ -505,7 +504,6 @@ namespace uh::trees {
                                 for (unsigned char i4 = 0; i4 < (unsigned char) sizeof(unsigned long); i4++) {
                                     block_time += (((std::size_t) time_buf[i4]) << (i4 * 8));
                                 }
-                                delete[] time_buf;
                                 *block_time_current = block_time;
 
                                 unsigned char buf_size = 0;
@@ -737,7 +735,7 @@ namespace uh::trees {
                         std::exit(EXIT_FAILURE);
                     }
 
-                    auto *time_buf = new unsigned char[sizeof(unsigned long)];
+                    unsigned char time_buf[sizeof(unsigned long)];
                     std::size_t count = std::fread(&time_buf, sizeof(char), sizeof(unsigned long), reader);
                     if (count != sizeof(unsigned long)) {
                         FATAL
@@ -754,7 +752,6 @@ namespace uh::trees {
                     for (unsigned char i = 0; i < (unsigned char) sizeof(unsigned long); i++) {
                         block_time += (((std::size_t) time_buf[i]) << (i * 8));
                     }
-                    delete[] time_buf;
 
                     unsigned char buf_size = 0;
                     count = std::fread(&buf_size, sizeof(char), 1, reader);
@@ -1060,7 +1057,7 @@ namespace uh::trees {
                                     }
                                     out_vec.insert(out_vec.cbegin(), (*cur_tmp)[0]);
 
-                                    auto *time_buf = new unsigned char[sizeof(unsigned long)];
+                                    unsigned char time_buf[sizeof(unsigned long)];
                                     std::size_t count = std::fread(&time_buf, sizeof(char), sizeof(unsigned long), reader);
                                     if (count != sizeof(unsigned long)) {
                                         FATAL
@@ -1074,11 +1071,6 @@ namespace uh::trees {
                                         FATAL << "I/O error when reading time of block at path \"" + chunk.string() + "\"";
                                         std::exit(EXIT_FAILURE);
                                     }
-                                    unsigned long block_time{};
-                                    for (unsigned char i = 0; i < (unsigned char) sizeof(unsigned long); i++) {
-                                        block_time += (((std::size_t) time_buf[i]) << (i * 8));
-                                    }
-                                    delete[] time_buf;
 
                                     unsigned char buf_size = 0;
                                     count = std::fread(&buf_size, sizeof(char), 1, reader);
@@ -1118,9 +1110,21 @@ namespace uh::trees {
                                     }
                                     else{
                                         //copy block to maintain file
-                                        std::size_t write_back_size = output_size;
+                                        std::size_t write_back_size = sizeof(time_buf) + 1 + sizeof(buffer_in) + output_size;
                                         mem_wait(write_back_size);
                                         auto *tmp_buf = new unsigned char[write_back_size];
+                                        unsigned char i = 0;
+                                        for(; i < (unsigned char) sizeof(time_buf);i++){
+                                            tmp_buf[i] = time_buf[i];
+                                        }
+                                        tmp_buf[i] = buf_size;
+                                        i++;
+                                        unsigned char meta_offset = i;
+                                        i=0;
+                                        for(; i < (unsigned char) sizeof(buffer_in);i++){
+                                            tmp_buf[i + meta_offset] = buffer_in[i];
+                                        }
+
                                         count = std::fread(tmp_buf+(write_back_size-output_size), sizeof(char), output_size, reader);
 
                                         if (count != output_size) {
@@ -1132,7 +1136,7 @@ namespace uh::trees {
                                             std::exit(EXIT_FAILURE);
                                         }
                                         cur_pos += count;
-                                        multithreading_factory.load()->emplace_back(tmp_buf,write_back_size);//TODO: not only copy block but also metadata
+                                        multithreading_factory.load()->emplace_back(tmp_buf,write_back_size);
                                     }
                                 }
                                 std::fclose(reader);
