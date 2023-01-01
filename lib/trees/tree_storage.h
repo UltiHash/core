@@ -232,7 +232,6 @@ namespace uh::trees {
                 auto read_ptr = std::get<3>(size.load()->at(min_pos));
                 auto maintain_ptr = std::get<4>(size.load()->at(min_pos));
 
-
                 while (std::atomic_flag_test_and_set_explicit(&(*maintain_ptr), std::memory_order_acquire)) {
                     maintain_ptr->wait(true);
                 }
@@ -1015,6 +1014,41 @@ namespace uh::trees {
                                 }
 
                                 std::size_t trunc_at = cur_pos;
+                                //producer consumer queue for reading and writing
+                                std::atomic<std::shared_ptr<std::list<std::tuple<unsigned char*,std::size_t>>>> multithreading_factory{};
+                                std::shared_ptr<std::atomic_flag> write_control{};
+
+                                while (std::atomic_flag_test_and_set_explicit(&(*write_control), std::memory_order_acquire)) {
+                                    write_control->wait(true);
+                                }
+
+                                FILE *writer = std::fopen(chunk_maintain.c_str(), "ab");
+                                if (!writer) {
+                                    ERROR << "File write opening failed at \"" + chunk_maintain.string() + "\"";
+                                    std::exit(EXIT_FAILURE);
+                                }
+
+                                auto consumer_function = [&](){
+                                    while(write_control->test()){
+                                        while(!multithreading_factory.load()->empty()){
+                                            std::fwrite(std::get<0>(*multithreading_factory.load()->cbegin()), std::get<1>(*multithreading_factory.load()->cbegin()), sizeof(unsigned char), writer);
+                                            if (std::ferror(writer)) {
+                                                FATAL << "I/O error when writing \"" + chunk_maintain.string() + "\"";
+                                                std::exit(EXIT_FAILURE);
+                                            }
+                                            std::free(std::get<0>(*multithreading_factory.load()->begin()));
+                                            multithreading_factory.load()->pop_front();
+                                        }
+#ifdef _WIN32
+                                        Sleep(10);
+#else
+                                        usleep(10 * 1000);
+#endif // _WIN32
+                                    }
+                                    std::fclose(writer);
+                                };
+                                std::thread w1(consumer_function);
+
                                 while (!std::feof(reader)) {
                                     //File should have been opened or created here, seek for first block
                                     //start position of the block for seeking it later on is the old size
@@ -1097,22 +1131,18 @@ namespace uh::trees {
                                             std::exit(EXIT_FAILURE);
                                         }
                                         cur_pos += count;
+                                        multithreading_factory.load()->emplace_back(tmp_buf,output_size);//TODO: not only copy block but also metadata
                                     }
                                 }
-
-
-
-                                FILE *writer = std::fopen(chunk_maintain.c_str(), "ab");
-                                if (!writer) {
-                                    ERROR << "File write opening failed at \"" + chunk_maintain.string() + "\"";
-                                    std::exit(EXIT_FAILURE);
-                                }
-
+                                std::fclose(reader);
+                                *read_ptr -= 1;
+                                std::atomic_flag_clear_explicit(&(*write_control), std::memory_order_release);
+                                if(w1.joinable())w1.join();
 
                                 //TODO: move to init_maintained_chunk_reset
                                 //std::atomic_flag_clear_explicit(&(*maintain_ptr), std::memory_order_release);
                                 //if(!maintain_ptr->test())maintain_ptr->notify_one();
-                                *read_ptr -= 1;
+
                             }
 
                             //delete deeper codes
