@@ -299,6 +299,12 @@ namespace uh::trees {
                     return out_vec;
                 }
             } else {
+                if(block_code.size()<5){
+                    std::string not_found((const char *) block_code.data(), block_code.size());
+                    FATAL << "<Block error trace>: Block code " + boost::algorithm::hex(not_found) +
+                             " was too short for storage tree \"" + combined_path.load(std::memory_order_relaxed)->string() + "\".";
+                    std::exit(EXIT_FAILURE);
+                }
                 //the block code should have a size of 5; one chunk index and 4 bytes of encoding for the offset
                 if ((short) size.load()->size() - 1 < (short) block_code[0] || !std::get<0>(size.load()->at(block_code[0]))) {
                     std::string not_found((const char *) block_code.data(), block_code.size());
@@ -662,6 +668,12 @@ namespace uh::trees {
                     return out_vec;
                 }
             } else {
+                if(block_code.size()<5){
+                    std::string not_found((const char *) block_code.data(), block_code.size());
+                    FATAL << "<Block error trace>: Block code " + boost::algorithm::hex(not_found) +
+                             " was too short for storage tree \"" + combined_path.load(std::memory_order_relaxed)->string() + "\".";
+                    std::exit(EXIT_FAILURE);
+                }
                 //the block code should have a size of 5; one chunk index and 4 bytes of encoding for the offset
                 if ((short) size.load()->size() - 1 < (short) block_code[0] || !std::get<0>(size.load()->at(block_code[0]))) {
                     std::string not_found((const char *) block_code.data(), block_code.size());
@@ -778,6 +790,12 @@ namespace uh::trees {
                     return out_vec;
                 }
             } else {
+                if(block_code.size()<5){
+                    std::string not_found((const char *) block_code.data(), block_code.size());
+                    FATAL << "<Block error trace>: Block code " + boost::algorithm::hex(not_found) +
+                             " was too short for storage tree \"" + combined_path.load(std::memory_order_relaxed)->string() + "\".";
+                    std::exit(EXIT_FAILURE);
+                }
                 //the block code should have a size of 5; one chunk index and 4 bytes of encoding for the offset
                 if ((short) size.load()->size() - 1 < (short) block_code[0] || !std::get<0>(size.load()->at(block_code[0]))) {
                     std::string not_found((const char *) block_code.data(), block_code.size());
@@ -846,8 +864,9 @@ namespace uh::trees {
         }
 
         //TODO: integrate delete blocks, maintain valid time
-
-        std::tuple<std::size_t,std::list<std::tuple<std::vector<unsigned char>,std::vector<unsigned char>>>> delete_blocks(std::vector<std::vector<unsigned char>> &block_codes){
+        //after deletion some blocks are de-fragmented in descending order. Behind the deleted block(s) all blocks need to be re-mapped
+        //returns the deleted total size and a list of tuple<old_block_reference, new_block_reference>
+        std::tuple<std::size_t,std::list<std::tuple<std::vector<unsigned char>,std::vector<unsigned char>>>> delete_blocks(std::vector<std::vector<unsigned char>> &block_codes, unsigned short num_threads = std::thread::hardware_concurrency()){
             if(block_codes.empty())return {};
             std::atomic<std::size_t> out_size{};
             std::atomic<std::shared_ptr<std::list<std::tuple<std::vector<unsigned char>,std::vector<unsigned char>>>>> out_change_list{};
@@ -870,16 +889,33 @@ namespace uh::trees {
                 }
                 else{
                     if(current!=(*end)[0] || end == block_codes.end()-1){
+                        //first filter all blocks with size 5 from the incoming sequence and delete them within this tree level
+                        //parallel start
+                        std::vector<std::vector<unsigned char>> deeper_codes{}, delete_here_codes{};
                         //take a branch to delete multiple blocks within
-                        std::vector<std::vector<unsigned char>> deeper_codes{};
-                        std::for_each(beg,cur,[&deeper_codes](auto &a){
-                            deeper_codes.emplace_back(a.begin()+1,a.end());
+                        std::for_each(beg,cur,[&](auto &a){
+                            if(a.size()>5)deeper_codes.emplace_back(a.begin()+1,a.end());
+                            else{
+                                if(a.size()<5){
+                                    std::string not_found((const char *) a.data(), a.size());
+                                    FATAL << "<Block error trace>: Block code " + boost::algorithm::hex(not_found) +
+                                             " was too short for storage tree \"" + combined_path.load(std::memory_order_relaxed)->string() + "\".";
+                                    std::exit(EXIT_FAILURE);
+                                }
+                                else delete_here_codes.emplace_back(a.begin(),a.end());
+                            }
                         });
+                        //delete from block
+
+                        //delete deeper codes
+
                         auto tmp_deeper_tree_ptr = std::get<1>(children.load()->at((*cur)[0]));
-                        auto deeper_delete = tmp_deeper_tree_ptr->delete_blocks(deeper_codes);
+                        //parallel start
+                        auto deeper_delete = tmp_deeper_tree_ptr->delete_blocks(deeper_codes,1);
                         out_size += std::get<0>(deeper_delete);
                         auto last_end = out_change_list.load()->cend();
                         out_change_list.load()->splice(last_end,std::get<1>(deeper_delete));
+                        //parallel end
                         beg = end;
                         current = (*end)[0];
                     }
