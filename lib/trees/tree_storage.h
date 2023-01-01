@@ -871,11 +871,11 @@ namespace uh::trees {
 
         //TODO: integrate delete blocks, maintain valid time
         //after deletion some blocks are de-fragmented in descending order. Behind the deleted block(s) all blocks need to be re-mapped
-        //returns the deleted total size and a list of tuple<old_block_reference, new_block_reference>
-        std::tuple<std::size_t,std::list<std::tuple<std::vector<unsigned char>,std::vector<unsigned char>>>> delete_blocks(std::vector<std::vector<unsigned char>> &block_codes, unsigned short num_threads = std::thread::hardware_concurrency()){
+        //returns the deleted total size and a list of tuple<old_block_reference, new_block_reference,reference block truncate>
+        std::tuple<std::size_t,std::list<std::tuple<std::vector<unsigned char>,std::vector<unsigned char>,std::size_t>>> delete_blocks(std::vector<std::vector<unsigned char>> &block_codes, unsigned short num_threads = std::thread::hardware_concurrency()){
             if(block_codes.empty())return {};
             std::atomic<std::size_t> out_size{};
-            std::atomic<std::shared_ptr<std::list<std::tuple<std::vector<unsigned char>,std::vector<unsigned char>>>>> out_change_list{};
+            std::atomic<std::shared_ptr<std::list<std::tuple<std::vector<unsigned char>,std::vector<unsigned char>,std::size_t>>>> out_change_list{};
             //sort for lexicographic to find blocks within the same chunks that all need to be deleted
             std::sort(std::execution::par_unseq, block_codes.begin(),block_codes.end(),[](auto &a,auto &b){
                 return std::lexicographical_compare(a.begin(),a.end(),b.begin(),b.end());
@@ -916,36 +916,40 @@ namespace uh::trees {
                                     else delete_here_codes.emplace_back(a.begin(),a.end());
                                 }
                             });
-                            auto maintain_ptr = std::get<4>(size.load()->at((*cur_tmp)[0]));
-                            auto read_ptr = std::get<3>(size.load()->at((*cur_tmp)[0]));
-                            auto write_ptr = std::get<2>(size.load()->at((*cur_tmp)[0]));
 
-                            while(std::atomic_flag_test_and_set_explicit(&(*maintain_ptr), std::memory_order_acquire)){
-                                maintain_ptr->wait(true);
-                            }
-
-                            lock.unlock();
-
-                            *read_ptr += 1;
-
-                            while(write_ptr->test()){
-                                write_ptr->wait(true);
-                            }
                             if ((*cur_tmp)[0] < size.load()->size() && std::get<0>(size.load()->at((*cur_tmp)[0])) > 0) {
+                                auto maintain_ptr = std::get<4>(size.load()->at((*cur_tmp)[0]));
+                                auto read_ptr = std::get<3>(size.load()->at((*cur_tmp)[0]));
+                                auto write_ptr = std::get<2>(size.load()->at((*cur_tmp)[0]));
+
+                                while(std::atomic_flag_test_and_set_explicit(&(*maintain_ptr), std::memory_order_acquire)){
+                                    maintain_ptr->wait(true);
+                                }
+
+                                lock.unlock();
+
+                                *read_ptr += 1;
+
+                                while(write_ptr->test()){
+                                    write_ptr->wait(true);
+                                }
                                 //delete from block
                                 //1. create maintain atomic_flag to make sure only one instance is maintaining the chunk and set it
                                 //2. open read instance and write to <chunk_code>_maintain by indexing the chunk until a block to be deleted
                                 // just skip block and copy all blocks except the ones that are under the block codes
                                 //3. create init_maintained_chunk_reset function that is separated and called in a protected area as soon as block re-mapping has taken place,
                                 // the to be deleted blocks guide the way where a maintain file has been created to reset maintain atomic_flags
-
+                                std::string s_tmp = boost::algorithm::hex(std::string{(char) (*cur_tmp)[0]});
+                                std::filesystem::path chunk = *combined_path.load(std::memory_order_relaxed) / s_tmp;
                                 //read chunk at index (*cur_tmp)[0]
+
+
+                                //TODO: move to init_maintained_chunk_reset
+                                //std::atomic_flag_clear_explicit(&(*maintain_ptr), std::memory_order_release);
+                                //if(!maintain_ptr->test())maintain_ptr->notify_one();
+                                *read_ptr -= 1;
                             }
 
-                            //TODO: move to init_maintained_chunk_reset
-                            //std::atomic_flag_clear_explicit(&(*maintain_ptr), std::memory_order_release);
-                            //if(!maintain_ptr->test())maintain_ptr->notify_one();
-                            *read_ptr -= 1;
                             //delete deeper codes
                             if ((*cur_tmp)[0] < children.load()->size() && std::get<0>(children.load()->at((*cur_tmp)[0])) > 0) {
                                 auto tmp_deeper_tree_ptr = std::get<1>(children.load()->at((*cur_tmp)[0]));
