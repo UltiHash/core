@@ -931,28 +931,35 @@ namespace uh::trees {
                             while(write_ptr->test()){
                                 write_ptr->wait(true);
                             }
-                            //delete from block
-                            //1. create maintain atomic_flag to make sure only one instance is maintaining the chunk and set it
-                            //2. open read instance and write to <chunk_code>_maintain by indexing the chunk until a block to be deleted
-                            // just skip block and copy all blocks except the ones that are under the block codes
-                            //3. create init_maintained_chunk_reset function that is separated and called in a protected area as soon as block re-mapping has taken place,
-                            // the to be deleted blocks guide the way where a maintain file has been created to reset maintain atomic_flags
+                            if ((*cur_tmp)[0] < size.load()->size() && std::get<0>(size.load()->at((*cur_tmp)[0])) > 0) {
+                                //delete from block
+                                //1. create maintain atomic_flag to make sure only one instance is maintaining the chunk and set it
+                                //2. open read instance and write to <chunk_code>_maintain by indexing the chunk until a block to be deleted
+                                // just skip block and copy all blocks except the ones that are under the block codes
+                                //3. create init_maintained_chunk_reset function that is separated and called in a protected area as soon as block re-mapping has taken place,
+                                // the to be deleted blocks guide the way where a maintain file has been created to reset maintain atomic_flags
 
-                            //read chunk at index (*cur_tmp)[0]
-
+                                //read chunk at index (*cur_tmp)[0]
+                            }
 
                             //TODO: move to init_maintained_chunk_reset
                             //std::atomic_flag_clear_explicit(&(*maintain_ptr), std::memory_order_release);
                             //if(!maintain_ptr->test())maintain_ptr->notify_one();
                             *read_ptr -= 1;
                             //delete deeper codes
-
-                            auto tmp_deeper_tree_ptr = std::get<1>(children.load()->at((*cur_tmp)[0]));
-                            //parallel start
-                            auto deeper_delete = tmp_deeper_tree_ptr->delete_blocks(deeper_codes,1);
-                            out_size += std::get<0>(deeper_delete);
-                            auto last_end = out_change_list.load()->cend();
-                            out_change_list.load()->splice(last_end,std::get<1>(deeper_delete));
+                            if ((*cur_tmp)[0] < children.load()->size() && std::get<0>(children.load()->at((*cur_tmp)[0])) > 0) {
+                                auto tmp_deeper_tree_ptr = std::get<1>(children.load()->at((*cur_tmp)[0]));
+                                //parallel start
+                                auto deeper_delete = tmp_deeper_tree_ptr->delete_blocks(deeper_codes,1);
+                                out_size += std::get<0>(deeper_delete);
+                                auto last_end = out_change_list.load()->cend();
+                                out_change_list.load()->splice(last_end,std::get<1>(deeper_delete));
+                            }
+                            if ((*cur_tmp)[0] >= size.load()->size() || (*cur_tmp)[0] >= children.load()->size()){
+                                std::string not_found((const char *) cur_tmp->data(), cur_tmp->size());
+                                DEBUG << "<Block error trace>: Block code " + boost::algorithm::hex(not_found) +
+                                         " was exceeding limits of storage tree \"" + combined_path.load(std::memory_order_relaxed)->string() + "\" and was skipped!.";
+                            }
                             //parallel end
                         };
                         if(num_threads == 1)first_index_exe_function();
