@@ -185,11 +185,26 @@ namespace uh::trees {
             std::vector<unsigned char> prefix = prefix_wrap(input.size());
             std::size_t total_size = input.size() + prefix.size();
             //check block fill of this node, look for free space
-            unsigned char min_pos{};
-            std::unique_lock lock(global_var_mutex);
-            std::size_t min_val = !size.load()->empty() ? std::get<0>(size.load()->at(0)) : 0;
 
-            bool no_deeper = min_val < STORE_MAX && min_val + total_size < STORE_HARD_LIMIT;
+            std::unique_lock lock(global_var_mutex);
+            unsigned char min_pos;
+            std::size_t min_val;
+            if(size.load()->size() < N){
+                min_pos = size.load()->size();
+                min_val = 0;
+                std::shared_ptr<std::atomic_flag> f1{ATOMIC_FLAG_INIT}, f3{ATOMIC_FLAG_INIT};
+                std::shared_ptr<std::atomic<unsigned short>> f2{};
+                size.load()->emplace_back(min_val, min_pos, f1, f2, f3);
+            }
+            else{
+                auto min_el = *std::min_element(size.load()->begin(),size.load()->end(),[](auto &a, auto &b){
+                    return std::get<0>(a) < std::get<0>(b) && !std::get<4>(a)->test() && !std::get<4>(b)->test();//skip maintain chunks for smaller check
+                });
+                min_pos = std::get<1>(min_el);
+                min_val = std::get<0>(size.load()->at(min_pos));
+            }
+
+            bool no_deeper = min_val < STORE_MAX && min_val + total_size < STORE_HARD_LIMIT && !(std::get<4>(size.load()->at(min_pos))->test());
             std::size_t size_tmp{};
             if (no_deeper) {
                 size_tmp = std::get<0>(size.load()->at(min_pos));
