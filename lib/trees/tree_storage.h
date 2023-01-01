@@ -55,11 +55,10 @@ namespace uh::trees {
 
     protected:
         //every file storage level contains a maximum of 256 storage chunks and 256 folders to deeper levels
-        std::atomic<std::shared_ptr<std::vector<std::tuple<std::size_t, unsigned char, std::shared_ptr<std::atomic_flag>, std::shared_ptr<std::atomic<unsigned short>>>>>> size{};//different storage chunks with write and read protection flags
+        std::atomic<std::shared_ptr<std::vector<std::tuple<std::size_t, unsigned char, std::shared_ptr<std::atomic_flag>, std::shared_ptr<std::atomic<unsigned short>>, std::shared_ptr<std::atomic_flag>>>>> size{};//different storage chunks with write, read and maintain protection flags
         std::atomic<std::shared_ptr<std::vector<std::tuple<std::size_t, tree_storage *, unsigned char>>>> children{};//deeper tree storage blocks and folders
-        //radix_tree* block_indexes[N]{}; // index local block finds
         std::atomic<std::shared_ptr<std::filesystem::path>> combined_path{};
-        std::shared_mutex global_var_mutex;//protect everything out of size array
+        std::shared_mutex global_var_mutex{};//protect everything out of size array
 
         //returns wrapped string
         static std::vector<unsigned char> prefix_wrap(std::size_t input_size) {
@@ -111,9 +110,9 @@ namespace uh::trees {
                     std::string s_tmp = boost::algorithm::hex(std::string{(char) i});
                     std::filesystem::path chunk = *combined_path.load(std::memory_order_relaxed) / s_tmp;
                     if (std::filesystem::exists(chunk)) {
-                        std::shared_ptr<std::atomic_flag> f1{ATOMIC_FLAG_INIT};
+                        std::shared_ptr<std::atomic_flag> f1{ATOMIC_FLAG_INIT},f3{ATOMIC_FLAG_INIT};
                         std::shared_ptr<std::atomic<unsigned short>> f2{};
-                        size.load()->emplace_back(std::filesystem::file_size(chunk), i, f1, f2);
+                        size.load()->emplace_back(std::filesystem::file_size(chunk), i, f1, f2, f3);
                     }
 
                     std::string fname = combined_path.load(std::memory_order_relaxed)->filename().string();
@@ -226,7 +225,12 @@ namespace uh::trees {
 
                 auto write_ptr = std::get<2>(size.load()->at(min_pos));
                 auto read_ptr = std::get<3>(size.load()->at(min_pos));
+                auto maintain_ptr = std::get<4>(size.load()->at(min_pos));
 
+
+                while(std::atomic_flag_test_and_set_explicit(&(*maintain_ptr), std::memory_order_acquire)){
+                    maintain_ptr->wait(true);
+                }
                 while(std::atomic_flag_test_and_set_explicit(&(*write_ptr), std::memory_order_acquire)){
                     write_ptr->wait(true);
                 }
@@ -257,6 +261,8 @@ namespace uh::trees {
 
                 std::atomic_flag_clear_explicit(&(*write_ptr), std::memory_order_release);
                 if(!write_ptr->test())write_ptr->notify_all();
+                std::atomic_flag_clear_explicit(&(*maintain_ptr), std::memory_order_release);
+                if(!maintain_ptr->test())maintain_ptr->notify_one();
 
                 //start position of the block for seeking it later on is the old size
                 std::vector<unsigned char> out_vec;
@@ -890,32 +896,71 @@ namespace uh::trees {
                 else{
                     if(current!=(*end)[0] || end == block_codes.end()-1){
                         //first filter all blocks with size 5 from the incoming sequence and delete them within this tree level
-                        //parallel start
-                        std::vector<std::vector<unsigned char>> deeper_codes{}, delete_here_codes{};
-                        //take a branch to delete multiple blocks within
-                        std::for_each(beg,cur,[&](auto &a){
-                            if(a.size()>5)deeper_codes.emplace_back(a.begin()+1,a.end());
-                            else{
-                                if(a.size()<5){
-                                    std::string not_found((const char *) a.data(), a.size());
-                                    FATAL << "<Block error trace>: Block code " + boost::algorithm::hex(not_found) +
-                                             " was too short for storage tree \"" + combined_path.load(std::memory_order_relaxed)->string() + "\".";
-                                    std::exit(EXIT_FAILURE);
+                        std::shared_mutex m1{};
+                        std::unique_lock lock(m1);
+                        auto first_index_exe_function = [&](){
+                            //parallel start
+                            std::vector<std::vector<unsigned char>> deeper_codes{}, delete_here_codes{};
+                            auto beg_tmp = beg;
+                            auto cur_tmp = cur;
+                            //take a branch to delete multiple blocks within
+                            std::for_each(beg_tmp,cur_tmp,[&](auto &a){
+                                if(a.size()>5)deeper_codes.emplace_back(a.begin()+1,a.end());
+                                else{
+                                    if(a.size()<5){
+                                        std::string not_found((const char *) a.data(), a.size());
+                                        FATAL << "<Block error trace>: Block code " + boost::algorithm::hex(not_found) +
+                                                 " was too short for storage tree \"" + combined_path.load(std::memory_order_relaxed)->string() + "\".";
+                                        std::exit(EXIT_FAILURE);
+                                    }
+                                    else delete_here_codes.emplace_back(a.begin(),a.end());
                                 }
-                                else delete_here_codes.emplace_back(a.begin(),a.end());
+                            });
+                            auto maintain_ptr = std::get<4>(size.load()->at((*cur_tmp)[0]));
+                            auto read_ptr = std::get<3>(size.load()->at((*cur_tmp)[0]));
+                            auto write_ptr = std::get<2>(size.load()->at((*cur_tmp)[0]));
+
+                            while(std::atomic_flag_test_and_set_explicit(&(*maintain_ptr), std::memory_order_acquire)){
+                                maintain_ptr->wait(true);
                             }
-                        });
-                        //delete from block
 
-                        //delete deeper codes
+                            lock.unlock();
 
-                        auto tmp_deeper_tree_ptr = std::get<1>(children.load()->at((*cur)[0]));
-                        //parallel start
-                        auto deeper_delete = tmp_deeper_tree_ptr->delete_blocks(deeper_codes,1);
-                        out_size += std::get<0>(deeper_delete);
-                        auto last_end = out_change_list.load()->cend();
-                        out_change_list.load()->splice(last_end,std::get<1>(deeper_delete));
-                        //parallel end
+                            *read_ptr += 1;
+
+                            while(write_ptr->test()){
+                                write_ptr->wait(true);
+                            }
+                            //delete from block
+                            //1. create maintain atomic_flag to make sure only one instance is maintaining the chunk and set it
+                            //2. open read instance and write to <chunk_code>_maintain by indexing the chunk until a block to be deleted
+                            // just skip block and copy all blocks except the ones that are under the block codes
+                            //3. create init_maintained_chunk function that is separated and called in a protected area as soon as block re-mapping has taken place, resetting the maintaining flags
+
+                            //read chunk at index (*cur_tmp)[0]
+
+
+                            std::atomic_flag_clear_explicit(&(*maintain_ptr), std::memory_order_release);
+                            if(!maintain_ptr->test())maintain_ptr->notify_one();
+                            *read_ptr -= 1;
+                            if(!*read_ptr)write_ptr->notify_one();
+                            //delete deeper codes
+
+                            auto tmp_deeper_tree_ptr = std::get<1>(children.load()->at((*cur_tmp)[0]));
+                            //parallel start
+                            auto deeper_delete = tmp_deeper_tree_ptr->delete_blocks(deeper_codes,1);
+                            out_size += std::get<0>(deeper_delete);
+                            auto last_end = out_change_list.load()->cend();
+                            out_change_list.load()->splice(last_end,std::get<1>(deeper_delete));
+                            //parallel end
+                        };
+                        if(num_threads == 1)first_index_exe_function();
+                        else{
+                            //threading manager
+                            first_index_exe_function();
+                        }
+                        std::lock_guard lock2(m1);
+
                         beg = end;
                         current = (*end)[0];
                     }
