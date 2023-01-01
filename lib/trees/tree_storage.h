@@ -1097,7 +1097,7 @@ namespace uh::trees {
                                     for (unsigned char buf_count = 0; buf_count <= buf_size; buf_count++) {
                                         output_size += (((std::size_t) buffer_in[buf_count]) << (buf_count * 8));
                                     }
-
+                                    //TODO: push back changes to list
                                     if(block_step_beg<delete_here_codes.cend() && std::equal(out_vec.cbegin(),out_vec.cend(),block_step_beg->cbegin(),block_step_beg->cend())){
                                         //skip block copy and seek over it
                                         std::fseek(reader, static_cast<long>(output_size), SEEK_CUR);
