@@ -988,7 +988,7 @@ namespace uh::trees {
                                 });
 
 
-                                auto block_step_beg = delete_here_codes.begin();
+                                auto block_step_beg = delete_here_codes.cbegin();
 
                                 auto offset_calc = [](const auto &a_ref, const auto &b_ref){
                                     std::vector<unsigned char> sub_block_code{a_ref + 1,
@@ -1006,8 +1006,102 @@ namespace uh::trees {
                                     ERROR << "File read opening failed at \"" + chunk.string() + "\"";
                                     std::exit(EXIT_FAILURE);
                                 }
-                                //File should have been opened or created here, seek for first block
-                                std::fseek(reader, static_cast<long>(offset_calc(block_step_beg->cbegin(),block_step_beg->cend())), SEEK_SET);
+                                std::size_t cur_pos = offset_calc(block_step_beg->cbegin(),block_step_beg->cend());
+
+                                std::fseek(reader, static_cast<long>(cur_pos), SEEK_SET);
+                                if (std::ferror(reader)) {
+                                    FATAL << "I/O error when seeking \"" + chunk.string() + "\"";
+                                    std::exit(EXIT_FAILURE);
+                                }
+
+                                std::size_t trunc_at = cur_pos;
+                                while (!std::feof(reader)) {
+                                    //File should have been opened or created here, seek for first block
+                                    //start position of the block for seeking it later on is the old size
+                                    std::vector<unsigned char> out_vec;
+                                    out_vec.reserve(sizeof(unsigned int));
+                                    for (unsigned char i = 0;
+                                         i < (unsigned char) sizeof(unsigned int); i++) {//STORE_MAX will fit in 4 bytes
+                                        out_vec.push_back((unsigned char) (cur_pos >> (i * 8)));
+                                    }
+                                    out_vec.insert(out_vec.cbegin(), (*cur_tmp)[0]);
+
+                                    auto *time_buf = new unsigned char[sizeof(unsigned long)];
+                                    std::size_t count = std::fread(&time_buf, sizeof(char), sizeof(unsigned long), reader);
+                                    if (count != sizeof(unsigned long)) {
+                                        FATAL
+                                            << "I/O time first 8 bytes reading was not completed on path \"" + chunk.string() +
+                                               "\"";
+                                        std::exit(EXIT_FAILURE);
+                                    }
+                                    cur_pos += count;
+
+                                    if (std::ferror(reader)) {
+                                        FATAL << "I/O error when reading time of block at path \"" + chunk.string() + "\"";
+                                        std::exit(EXIT_FAILURE);
+                                    }
+                                    unsigned long block_time{};
+                                    for (unsigned char i = 0; i < (unsigned char) sizeof(unsigned long); i++) {
+                                        block_time += (((std::size_t) time_buf[i]) << (i * 8));
+                                    }
+                                    delete[] time_buf;
+
+                                    unsigned char buf_size = 0;
+                                    count = std::fread(&buf_size, sizeof(char), 1, reader);
+                                    if (count != 1) {
+                                        FATAL
+                                            << "I/O prefix first byte reading was not completed on path \"" + chunk.string() + "\"";
+                                        std::exit(EXIT_FAILURE);
+                                    }
+                                    cur_pos += count;
+
+                                    if (std::ferror(reader)) {
+                                        FATAL << "I/O error when reading prefix at path \"" + chunk.string() + "\"";
+                                        std::exit(EXIT_FAILURE);
+                                    }
+                                    unsigned char buffer_in[buf_size + 1];
+                                    count = std::fread(&buffer_in, sizeof(char), buf_size + 1, reader);
+                                    if (count != buf_size + 1) {
+                                        FATAL
+                                            << "I/O prefix first byte reading was not completed on path \"" + chunk.string() + "\"";
+                                        std::exit(EXIT_FAILURE);
+                                    }
+                                    cur_pos += count;
+                                    std::size_t output_size{};
+                                    for (unsigned char buf_count = 0; buf_count <= buf_size; buf_count++) {
+                                        output_size += (((std::size_t) buffer_in[buf_count]) << (buf_count * 8));
+                                    }
+
+                                    if(block_step_beg<delete_here_codes.cend() && std::equal(out_vec.cbegin(),out_vec.cend(),block_step_beg->cbegin(),block_step_beg->cend())){
+                                        //skip block copy and seek over it
+                                        std::fseek(reader, static_cast<long>(output_size), SEEK_CUR);
+                                        if (std::ferror(reader)) {
+                                            FATAL << "I/O error when seeking \"" + chunk.string() + "\"";
+                                            std::exit(EXIT_FAILURE);
+                                        }
+                                        cur_pos += output_size;
+                                        block_step_beg++;
+                                    }
+                                    else{
+                                        //copy block to maintain file
+                                        mem_wait(output_size);
+                                        auto *tmp_buf = new unsigned char[output_size];
+                                        count = std::fread(tmp_buf, sizeof(char), output_size, reader);
+
+                                        if (count != output_size) {
+                                            FATAL << "I/O was not completed on path \"" + chunk.string() + "\"";
+                                            std::exit(EXIT_FAILURE);
+                                        }
+                                        if (std::ferror(reader)) {
+                                            FATAL << "I/O error when reading prefix at path \"" + chunk.string() + "\"";
+                                            std::exit(EXIT_FAILURE);
+                                        }
+                                        cur_pos += count;
+                                    }
+                                }
+
+
+
                                 FILE *writer = std::fopen(chunk_maintain.c_str(), "ab");
                                 if (!writer) {
                                     ERROR << "File write opening failed at \"" + chunk_maintain.string() + "\"";
