@@ -1143,6 +1143,7 @@ namespace uh::trees {
                                 *read_ptr -= 1;
                                 std::atomic_flag_clear_explicit(&(*write_control), std::memory_order_release);
                                 if(w1.joinable())w1.join();
+                                //TODO if block_step_beg did not reach its end not all blocks have been found, throw error
 
                                 //TODO: move to init_maintained_chunk_reset
                                 //std::atomic_flag_clear_explicit(&(*maintain_ptr), std::memory_order_release);
