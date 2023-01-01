@@ -183,7 +183,7 @@ namespace uh::trees {
                 std::exit(EXIT_FAILURE);
             }
             std::vector<unsigned char> prefix = prefix_wrap(input.size());
-            std::size_t total_size = input.size() + prefix.size();
+            std::size_t total_size = input.size() + prefix.size() + sizeof(unsigned long);
             //check block fill of this node, look for free space
 
             std::unique_lock lock(global_var_mutex);
@@ -283,7 +283,7 @@ namespace uh::trees {
                 if (!maintain_ptr->test())maintain_ptr->notify_one();
 
                 //start position of the block for seeking it later on is the old size
-                std::vector<unsigned char> out_vec;
+                std::vector<unsigned char> out_vec{};
                 out_vec.reserve(sizeof(unsigned int));
                 for (unsigned char i = 0;
                      i < (unsigned char) sizeof(unsigned int); i++) {//STORE_MAX will fit in 4 bytes
@@ -905,16 +905,16 @@ namespace uh::trees {
 
         //TODO: integrate delete blocks, maintain valid time
         //after deletion some blocks are de-fragmented in descending order. Behind the deleted block(s) all blocks need to be re-mapped
-        //returns the deleted total size and a list of tuple<old_block_reference, new_block_reference,reference to tree_storage of change, refererence of chunk within tree, reference chunk truncate>
+        //returns the deleted total size and a list of tuple<old_block_reference with first element tree reference, new_block_reference with first element tree reference,reference to tree_storage of change, reference chunk truncate>
         //maintaining the system can be done in 2 steps: delete_blocks_copy and after that init_maintained_chunk_reset to relink all blocks to their new offset under prohibited write
-        std::tuple<std::size_t, std::list<std::tuple<std::vector<unsigned char>, std::vector<unsigned char>, tree_storage *, unsigned char, std::size_t>>>
+        std::tuple<std::size_t, std::list<std::tuple<std::vector<unsigned char>, std::vector<unsigned char>, tree_storage *, std::size_t>>>
         delete_blocks_copy(
                 std::vector<std::vector<unsigned char>> &block_codes,
                 unsigned short num_threads = std::thread::hardware_concurrency()) {
             if (block_codes.empty() || !num_threads)return {};
             std::atomic<std::shared_ptr<std::size_t>> active_threads{};
             std::atomic<std::size_t> out_size{};
-            std::atomic<std::shared_ptr<std::list<std::tuple<std::vector<unsigned char>, std::vector<unsigned char>, tree_storage *, unsigned char, std::size_t>>>> out_change_list{};
+            std::atomic<std::shared_ptr<std::list<std::tuple<std::vector<unsigned char>, std::vector<unsigned char>, tree_storage *, std::size_t>>>> out_change_list{};
             //sort for lexicographic to find blocks within the same chunks that all need to be deleted
             std::sort(std::execution::par_unseq, block_codes.begin(), block_codes.end(), [](auto &a, auto &b) {
                 return std::lexicographical_compare(a.begin(), a.end(), b.begin(), b.end());
@@ -1025,8 +1025,10 @@ namespace uh::trees {
                                 }
 
                                 std::size_t trunc_at = cur_pos;
-                                //producer consumer queue for reading and writing
-                                std::atomic<std::shared_ptr<std::list<std::tuple<unsigned char*,std::size_t>>>> multithreading_factory{};
+                                std::size_t delete_size{};
+                                //producer consumer queue for reading and writing; contains RAM pointer; size of RAM pointer; local tree storage reference of;
+                                // *this tree where the referring chunk is stored; truncate size for the chunk; new storage reference after append
+                                std::atomic<std::shared_ptr<std::list<std::tuple<unsigned char*,std::size_t,std::vector<unsigned char>, tree_storage *, std::size_t, std::size_t>>>> multithreading_factory{};
                                 std::shared_ptr<std::atomic_flag> write_control{};
 
                                 while (std::atomic_flag_test_and_set_explicit(&(*write_control), std::memory_order_acquire)) {
@@ -1042,12 +1044,23 @@ namespace uh::trees {
                                 auto consumer_function = [&](){
                                     while(write_control->test()){
                                         while(!multithreading_factory.load()->empty()){
+                                            std::vector<unsigned char> out_vec{};
+                                            out_vec.reserve(sizeof(unsigned int));
+                                            for (unsigned char i = 0;
+                                                 i < (unsigned char) sizeof(unsigned int); i++) {//STORE_MAX will fit in 4 bytes
+                                                out_vec.push_back((unsigned char) (std::get<5>(*multithreading_factory.load()->cbegin()) >> (i * 8)));
+                                            }
+                                            out_vec.insert(out_vec.cbegin(), std::get<2>(*multithreading_factory.load()->cbegin())[0]);
+
                                             std::fwrite(std::get<0>(*multithreading_factory.load()->cbegin()), std::get<1>(*multithreading_factory.load()->cbegin()), sizeof(unsigned char), writer);
                                             if (std::ferror(writer)) {
                                                 FATAL << "I/O error when writing \"" + chunk_maintain.string() + "\"";
                                                 std::exit(EXIT_FAILURE);
                                             }
                                             std::free(std::get<0>(*multithreading_factory.load()->begin()));
+                                            //tmp_buf,write_back_size,out_vec,this,trunc_at
+                                            //std::vector<unsigned char>, std::vector<unsigned char>, tree_storage *, std::size_t>>>
+                                            out_change_list.load()->emplace_back(std::get<2>(*multithreading_factory.load()->cbegin()),out_vec,std::get<3>(*multithreading_factory.load()->cbegin()),std::get<4>(*multithreading_factory.load()->cbegin()));
                                             multithreading_factory.load()->pop_front();
                                         }
 #ifdef _WIN32
@@ -1063,7 +1076,7 @@ namespace uh::trees {
                                 while (!std::feof(reader)) {
                                     //File should have been opened or created here, seek for first block
                                     //start position of the block for seeking it later on is the old size
-                                    std::vector<unsigned char> out_vec;
+                                    std::vector<unsigned char> out_vec{};
                                     out_vec.reserve(sizeof(unsigned int));
                                     for (unsigned char i = 0;
                                          i < (unsigned char) sizeof(unsigned int); i++) {//STORE_MAX will fit in 4 bytes
@@ -1111,7 +1124,9 @@ namespace uh::trees {
                                     for (unsigned char buf_count = 0; buf_count <= buf_size; buf_count++) {
                                         output_size += (((std::size_t) buffer_in[buf_count]) << (buf_count * 8));
                                     }
-                                    //TODO: push back changes to list
+
+                                    std::size_t write_back_size = sizeof(time_buf) + 1 + sizeof(buffer_in) + output_size;
+
                                     if(block_step_beg<delete_here_codes.cend() && std::equal(out_vec.cbegin(),out_vec.cend(),block_step_beg->cbegin(),block_step_beg->cend())){
                                         //skip block copy and seek over it
                                         std::fseek(reader, static_cast<long>(output_size), SEEK_CUR);
@@ -1120,11 +1135,12 @@ namespace uh::trees {
                                             std::exit(EXIT_FAILURE);
                                         }
                                         cur_pos += output_size;
+                                        delete_size += write_back_size;
+                                        out_size += write_back_size;
                                         block_step_beg++;
                                     }
                                     else{
                                         //copy block to maintain file
-                                        std::size_t write_back_size = sizeof(time_buf) + 1 + sizeof(buffer_in) + output_size;
                                         mem_wait(write_back_size);
                                         auto *tmp_buf = new unsigned char[write_back_size];
                                         unsigned char i = 0;
@@ -1150,14 +1166,17 @@ namespace uh::trees {
                                             std::exit(EXIT_FAILURE);
                                         }
                                         cur_pos += count;
-                                        multithreading_factory.load()->emplace_back(tmp_buf,write_back_size);
+                                        multithreading_factory.load()->emplace_back(tmp_buf,write_back_size,out_vec,this,trunc_at,cur_pos-write_back_size-delete_size);
                                     }
                                 }
                                 std::fclose(reader);
                                 *read_ptr -= 1;
                                 std::atomic_flag_clear_explicit(&(*write_control), std::memory_order_release);
                                 if(w1.joinable())w1.join();
-                                //TODO if block_step_beg did not reach its end not all blocks have been found, throw error
+
+                                for(auto it = block_step_beg; it < delete_here_codes.cend(); it++){
+                                    DEBUG << "Block code \""+boost::algorithm::hex(std::string{it->cbegin(),it->cend()})+"\" could not be deleted. Please check for bugs.";
+                                }
 
                                 //TODO: move to init_maintained_chunk_reset
                                 //std::atomic_flag_clear_explicit(&(*maintain_ptr), std::memory_order_release);
@@ -1171,7 +1190,14 @@ namespace uh::trees {
                                 auto tmp_deeper_tree_ptr = std::get<1>(children.load()->at((*cur_tmp)[0]));
                                 //parallel start
                                 auto deeper_delete = tmp_deeper_tree_ptr->delete_blocks_copy(deeper_codes, 1);
-                                out_size += std::get<0>(deeper_delete);
+                                std::get<0>(children.load()->at((*cur_tmp)[0])) -= std::get<0>(deeper_delete);//subtract deleted size from deeper node
+                                out_size += std::get<0>(deeper_delete);//add total deleted size
+                                for(auto &it:std::get<1>(deeper_delete)){
+                                    //deeper elements have their first position filtered so that we need to rebuild it
+                                    std::get<0>(it).insert(std::get<0>(it).cbegin(),(*cur_tmp)[0]);
+                                    std::get<1>(it).insert(std::get<1>(it).cbegin(),(*cur_tmp)[0]);
+                                }
+
                                 auto last_end = out_change_list.load()->cend();
                                 out_change_list.load()->splice(last_end, std::get<1>(deeper_delete));
                             }
