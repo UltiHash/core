@@ -1118,9 +1118,10 @@ namespace uh::trees {
                                     }
                                     else{
                                         //copy block to maintain file
-                                        mem_wait(output_size);
-                                        auto *tmp_buf = new unsigned char[output_size];
-                                        count = std::fread(tmp_buf, sizeof(char), output_size, reader);
+                                        std::size_t write_back_size = output_size;
+                                        mem_wait(write_back_size);
+                                        auto *tmp_buf = new unsigned char[write_back_size];
+                                        count = std::fread(tmp_buf+(write_back_size-output_size), sizeof(char), output_size, reader);
 
                                         if (count != output_size) {
                                             FATAL << "I/O was not completed on path \"" + chunk.string() + "\"";
@@ -1131,7 +1132,7 @@ namespace uh::trees {
                                             std::exit(EXIT_FAILURE);
                                         }
                                         cur_pos += count;
-                                        multithreading_factory.load()->emplace_back(tmp_buf,output_size);//TODO: not only copy block but also metadata
+                                        multithreading_factory.load()->emplace_back(tmp_buf,write_back_size);//TODO: not only copy block but also metadata
                                     }
                                 }
                                 std::fclose(reader);
