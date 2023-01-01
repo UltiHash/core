@@ -210,8 +210,6 @@ namespace uh::trees {
                 size_tmp = std::get<0>(size.load()->at(min_pos));
                 std::get<0>(size.load()->at(min_pos)) += total_size;
             } else {
-                min_val = std::get<0>(children.load()->at(0));
-                min_pos = 0;
                 //find or create balanced deeper tree node to store
                 if ((unsigned short) children.load()->size() < (unsigned short) N) {
                     min_pos = (unsigned short) children.load()->size();
@@ -220,13 +218,14 @@ namespace uh::trees {
                     ref_name.insert(ref_name.cbegin(), fname.cbegin() + 2, fname.cbegin() + 4);
                     std::filesystem::path deeper_tree = *combined_path.load(std::memory_order_relaxed) / ref_name;
                     auto *tmp_tree = new tree_storage(deeper_tree);
-                    children.load()->emplace_back(tmp_tree->get_size(), tmp_tree, min_pos);
+                    min_val = tmp_tree->get_size();
+                    children.load()->emplace_back(min_val, tmp_tree, min_pos);
                 } else {
-                    for (unsigned short i3 = 0; i3 < (unsigned short) children.load()->size(); i3++) {
-                        size_t size_old = min_val;
-                        min_val = std::min(min_val, std::get<0>(children.load()->at(i3)));
-                        if (size_old - min_val) min_pos = (unsigned char) i3;
-                    }
+                    auto min_el = *std::min_element(children.load()->begin(),children.load()->end(),[](auto &a,auto &b){
+                        return std::get<0>(a) < std::get<0>(b);
+                    });
+                    min_val = std::get<0>(min_el);
+                    min_pos = std::get<2>(min_el);
                 }
                 std::get<0>(children.load()->at(min_pos)) += total_size;
             }
