@@ -935,15 +935,16 @@ namespace uh::trees {
                             //1. create maintain atomic_flag to make sure only one instance is maintaining the chunk and set it
                             //2. open read instance and write to <chunk_code>_maintain by indexing the chunk until a block to be deleted
                             // just skip block and copy all blocks except the ones that are under the block codes
-                            //3. create init_maintained_chunk function that is separated and called in a protected area as soon as block re-mapping has taken place, resetting the maintaining flags
+                            //3. create init_maintained_chunk_reset function that is separated and called in a protected area as soon as block re-mapping has taken place,
+                            // the to be deleted blocks guide the way where a maintain file has been created to reset maintain atomic_flags
 
                             //read chunk at index (*cur_tmp)[0]
 
 
-                            std::atomic_flag_clear_explicit(&(*maintain_ptr), std::memory_order_release);
-                            if(!maintain_ptr->test())maintain_ptr->notify_one();
+                            //TODO: move to init_maintained_chunk_reset
+                            //std::atomic_flag_clear_explicit(&(*maintain_ptr), std::memory_order_release);
+                            //if(!maintain_ptr->test())maintain_ptr->notify_one();
                             *read_ptr -= 1;
-                            if(!*read_ptr)write_ptr->notify_one();
                             //delete deeper codes
 
                             auto tmp_deeper_tree_ptr = std::get<1>(children.load()->at((*cur_tmp)[0]));
