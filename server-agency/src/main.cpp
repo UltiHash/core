@@ -1,6 +1,7 @@
 #include <exception>
 #include <iostream>
 
+#include <metrics/service.h>
 #include <net/server.h>
 #include <net/tls_server.h>
 #include <net/plain_socket.h>
@@ -47,6 +48,9 @@ int main(int argc, const char** argv)
         }
 
         init_logging(options.logging().config());
+
+        INFO << "Setting up metrics";
+        uh::metrics::service metrics(uh::metrics::config{});
 
         INFO << "starting server";
         boost::asio::io_context io;
