@@ -1036,7 +1036,7 @@ namespace uh::trees {
         //it is wise to call a delete on blocks on the same chunk, one at a time
         ///WARNING: deleting is not fully thread safe since references are re-mapped, so make sure no reading is scheduled on the chunks carrying the blocks while calling delete!!
         ///Recommended: delete as many blocks as you have CPU cores so one core handles one block delete at a time
-        std::tuple<std::size_t, std::list<std::tuple<std::vector<unsigned char>, std::vector<unsigned char>, tree_storage *>>>
+        std::tuple<std::size_t, std::list<std::tuple<std::vector<unsigned char>, std::vector<unsigned char>>>>
         delete_blocks(
                 std::vector<std::vector<unsigned char>> &block_codes,
                 unsigned short num_threads = std::thread::hardware_concurrency()) {
@@ -1044,8 +1044,8 @@ namespace uh::trees {
             std::atomic<std::shared_ptr<std::size_t>> active_threads{};
             active_threads.store(std::make_shared<std::size_t>());
             std::atomic<std::size_t> out_size{};
-            std::atomic<std::shared_ptr<std::list<std::tuple<std::vector<unsigned char>, std::vector<unsigned char>, tree_storage *>>>> out_change_list{};
-            out_change_list.store(std::make_shared<std::list<std::tuple<std::vector<unsigned char>, std::vector<unsigned char>, tree_storage *>>>());
+            std::atomic<std::shared_ptr<std::list<std::tuple<std::vector<unsigned char>, std::vector<unsigned char>>>>> out_change_list{};
+            out_change_list.store(std::make_shared<std::list<std::tuple<std::vector<unsigned char>, std::vector<unsigned char>>>>());
             //sort for lexicographic to find blocks within the same chunks that all need to be deleted
             std::sort(std::execution::par_unseq, block_codes.begin(), block_codes.end(), [](auto &a, auto &b) {
                 return std::lexicographical_compare(a.begin(), a.end(), b.begin(), b.end());
@@ -1155,8 +1155,8 @@ namespace uh::trees {
                                 std::size_t delete_size{};
                                 //producer consumer queue for reading and writing; contains RAM pointer; size of RAM pointer; local tree storage reference of;
                                 // *this tree where the referring chunk is stored; truncate size for the chunk; new storage reference after append
-                                std::atomic<std::shared_ptr<std::list<std::tuple<unsigned char*,std::size_t,std::vector<unsigned char>, tree_storage *, std::size_t>>>> multithreading_factory{};
-                                multithreading_factory.store(std::make_shared<std::list<std::tuple<unsigned char*,std::size_t,std::vector<unsigned char>, tree_storage *, std::size_t>>>());
+                                std::atomic<std::shared_ptr<std::list<std::tuple<unsigned char*,std::size_t,std::vector<unsigned char>, std::size_t>>>> multithreading_factory{};
+                                multithreading_factory.store(std::make_shared<std::list<std::tuple<unsigned char*,std::size_t,std::vector<unsigned char>, std::size_t>>>());
                                 std::atomic_flag write_control{ATOMIC_FLAG_INIT};
 
                                 while (std::atomic_flag_test_and_set_explicit(&write_control, std::memory_order_acquire)) {
@@ -1177,7 +1177,7 @@ namespace uh::trees {
                                             out_vec.reserve(sizeof(unsigned int));
                                             for (unsigned char i = 0;
                                                  i < (unsigned char) sizeof(unsigned int); i++) {//STORE_MAX will fit in 4 bytes
-                                                out_vec.push_back((unsigned char) (std::get<4>(*multithreading_factory.load()->cbegin()) >> (i * 8)));
+                                                out_vec.push_back((unsigned char) (std::get<3>(*multithreading_factory.load()->cbegin()) >> (i * 8)));
                                             }
                                             out_vec.insert(out_vec.cbegin(), std::get<2>(*multithreading_factory.load()->cbegin())[0]);
 
@@ -1189,7 +1189,7 @@ namespace uh::trees {
                                             std::free(std::get<0>(*multithreading_factory.load()->begin()));
                                             //tmp_buf,write_back_size,out_vec,this,trunc_at
                                             //std::vector<unsigned char>, std::vector<unsigned char>, tree_storage *, std::size_t>>>
-                                            out_change_list.load()->emplace_back(std::get<2>(*multithreading_factory.load()->cbegin()),out_vec,std::get<3>(*multithreading_factory.load()->cbegin()));
+                                            out_change_list.load()->emplace_back(std::get<2>(*multithreading_factory.load()->cbegin()),out_vec);
                                             multithreading_factory.load()->pop_front();
                                         }
 #ifdef _WIN32
@@ -1295,7 +1295,7 @@ namespace uh::trees {
                                             std::exit(EXIT_FAILURE);
                                         }
                                         cur_pos += count;
-                                        multithreading_factory.load()->emplace_back(tmp_buf,write_back_size,out_vec,this,cur_pos-write_back_size-delete_size);
+                                        multithreading_factory.load()->emplace_back(tmp_buf,write_back_size,out_vec,cur_pos-write_back_size-delete_size);
                                     }
                                 }
                                 std::fclose(reader);
