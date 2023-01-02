@@ -1217,6 +1217,8 @@ namespace uh::trees {
                                 fclose(source);
                                 fclose(dest);
 
+                                std::filesystem::remove(chunk_maintain);
+
                                 std::atomic_flag_clear_explicit(&(*write_ptr), std::memory_order_release);
                                 if(!write_ptr->test())write_ptr->notify_one();
                                 std::atomic_flag_clear_explicit(&(*maintain_ptr), std::memory_order_release);
