@@ -197,8 +197,8 @@ namespace uh::trees {
             if(size.load()->size() < N){
                 min_pos = size.load()->size();
                 min_val = 0;
-                std::shared_ptr<std::atomic_flag> f1{ATOMIC_FLAG_INIT}, f3{ATOMIC_FLAG_INIT};
-                std::shared_ptr<std::atomic<std::size_t>> f2{};
+                std::shared_ptr<std::atomic_flag> f1 = std::make_shared<std::atomic_flag>(), f3 = std::make_shared<std::atomic_flag>();
+                std::shared_ptr<std::atomic<std::size_t>> f2 = std::make_shared<std::atomic<std::size_t>>();
                 size.load()->emplace_back(min_val, min_pos, f1, f2, f3);
             }
             else{
@@ -450,6 +450,7 @@ namespace uh::trees {
         index(unsigned short num_threads = std::thread::hardware_concurrency()) {
             if (!num_threads)return {};
             std::atomic<std::shared_ptr<std::list<std::tuple<std::vector<unsigned char>, std::vector<unsigned char>, unsigned long>>>> search_index;
+            search_index.store(std::make_shared<std::list<std::tuple<std::vector<unsigned char>, std::vector<unsigned char>, unsigned long>>>());
             std::atomic<std::size_t> i_constructor{};
 
             auto multithread_index = [&]() {
@@ -481,15 +482,17 @@ namespace uh::trees {
                             FATAL << "I/O error when seeking \"" + read_path.string() + "\"";
                             std::exit(EXIT_FAILURE);
                         }
-                        std::shared_ptr<std::size_t> cur_pos{};
+                        std::shared_ptr<std::size_t> cur_pos = std::make_shared<std::size_t>();
 
                         std::thread rt, ht;
 
-                        std::shared_ptr<std::vector<unsigned char>> local_block_ref{};
-                        std::shared_ptr<unsigned long> block_time_current = std::make_shared<unsigned long>(0);
+                        std::shared_ptr<std::vector<unsigned char>> local_block_ref = std::make_shared<std::vector<unsigned char>>();
+                        std::shared_ptr<unsigned long> block_time_current = std::make_shared<unsigned long>();
                         std::shared_ptr<unsigned char *> tmp_buf[2];
-                        std::shared_ptr<std::size_t> output_size{};
-                        std::shared_ptr<bool> parallel_switch{};
+                        tmp_buf[0] = std::make_shared<unsigned char*>();
+                        tmp_buf[1] = std::make_shared<unsigned char*>();
+                        std::shared_ptr<std::size_t> output_size = std::make_shared<std::size_t>();
+                        std::shared_ptr<bool> parallel_switch = std::make_shared<bool>();
                         std::shared_mutex m1{};
                         while (!std::feof(reader)) {
                             auto read_func = [&]() {
@@ -920,8 +923,10 @@ namespace uh::trees {
                 unsigned short num_threads = std::thread::hardware_concurrency()) {
             if (block_codes.empty() || !num_threads)return {};
             std::atomic<std::shared_ptr<std::size_t>> active_threads{};
+            active_threads.store(std::make_shared<std::size_t>());
             std::atomic<std::size_t> out_size{};
             std::atomic<std::shared_ptr<std::list<std::tuple<std::vector<unsigned char>, std::vector<unsigned char>, tree_storage *>>>> out_change_list{};
+            out_change_list.store(std::make_shared<std::list<std::tuple<std::vector<unsigned char>, std::vector<unsigned char>, tree_storage *>>>());
             //sort for lexicographic to find blocks within the same chunks that all need to be deleted
             std::sort(std::execution::par_unseq, block_codes.begin(), block_codes.end(), [](auto &a, auto &b) {
                 return std::lexicographical_compare(a.begin(), a.end(), b.begin(), b.end());
@@ -1030,7 +1035,8 @@ namespace uh::trees {
                                 //producer consumer queue for reading and writing; contains RAM pointer; size of RAM pointer; local tree storage reference of;
                                 // *this tree where the referring chunk is stored; truncate size for the chunk; new storage reference after append
                                 std::atomic<std::shared_ptr<std::list<std::tuple<unsigned char*,std::size_t,std::vector<unsigned char>, tree_storage *, std::size_t>>>> multithreading_factory{};
-                                std::shared_ptr<std::atomic_flag> write_control{};
+                                multithreading_factory.store(std::make_shared<std::list<std::tuple<unsigned char*,std::size_t,std::vector<unsigned char>, tree_storage *, std::size_t>>>());
+                                std::shared_ptr<std::atomic_flag> write_control = std::make_shared<std::atomic_flag>();
 
                                 while (std::atomic_flag_test_and_set_explicit(&(*write_control), std::memory_order_acquire)) {
                                     write_control->wait(true);
