@@ -50,7 +50,8 @@ int main(int argc, const char** argv)
         init_logging(options.logging().config());
 
         INFO << "Setting up metrics";
-        uh::metrics::service metrics(options.metrics().config());
+        uh::metrics::service metrics_service(options.metrics().config());
+        uh::an::metrics metrics(metrics_service);
 
         INFO << "starting server";
         boost::asio::io_context io;
@@ -66,7 +67,7 @@ int main(int argc, const char** argv)
         uh::protocol::client_factory client_factory(socket_factory, cf_config);
 
         uh::protocol::client_pool clients(client_factory, 10);
-        uh::an::protocol_factory pf(clients);
+        uh::an::protocol_factory pf(clients, metrics);
 
         if (!options.server().config().tls_chain.empty())
         {

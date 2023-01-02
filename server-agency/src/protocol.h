@@ -5,6 +5,8 @@
 #include <protocol/server.h>
 #include <boost/asio.hpp>
 
+#include "metrics.h"
+
 #include <memory>
 
 
@@ -18,7 +20,7 @@ namespace uh::an
 class protocol : public uh::protocol::server
 {
 public:
-    protocol(uh::protocol::client_pool& clients);
+    protocol(uh::protocol::client_pool& clients, const metrics& metrics);
 
     virtual uh::protocol::server_information on_hello(const std::string& client_version) override;
     virtual uh::protocol::blob on_write_chunk(uh::protocol::blob&& data) override;
@@ -26,6 +28,7 @@ public:
 
 private:
     uh::protocol::client_pool& m_clients;
+    const metrics& m_metrics;
 };
 
 // ---------------------------------------------------------------------

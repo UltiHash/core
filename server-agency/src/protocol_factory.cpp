@@ -8,8 +8,10 @@ namespace uh::an
 
 // ---------------------------------------------------------------------
 
-protocol_factory::protocol_factory(uh::protocol::client_pool& clients)
-    : m_clients(clients)
+protocol_factory::protocol_factory(uh::protocol::client_pool& clients,
+                                   const uh::an::metrics& metrics)
+    : m_clients(clients),
+      m_metrics(metrics)
 {
 }
 
@@ -17,7 +19,7 @@ protocol_factory::protocol_factory(uh::protocol::client_pool& clients)
 
 std::unique_ptr<uh::protocol::protocol> protocol_factory::create()
 {
-    return std::make_unique<protocol>(m_clients);
+    return std::make_unique<protocol>(m_clients, m_metrics);
 }
 
 // ---------------------------------------------------------------------
