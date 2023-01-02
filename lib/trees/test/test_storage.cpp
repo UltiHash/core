@@ -682,9 +682,12 @@ BOOST_AUTO_TEST_CASE(delete_test)
     //uh::trees::tree_storage t1("/mnt/md0");//A test folder reserved for tree storage for performance tests
     auto index_list = t1.index();
     std::vector<std::vector<unsigned char>> to_del;
-    std::ranges::for_each(index_list.begin(),index_list.end(),[&to_del](auto &a){
+    //from index take 2 blocks of the same chunk and copy them to RAM
+    //delete one block over its reference and check if the block of the retured local reference is the same
+    /*
+    std::ranges::for_each(index_list.begin(),std::advance(index_list.begin(),3),[&to_del](auto &a){
         to_del.push_back(std::get<1>(a));
-    });
+    });*/
 
     t1.delete_recursive();
 }
