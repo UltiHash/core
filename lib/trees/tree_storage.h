@@ -220,70 +220,84 @@ namespace uh::trees {
             std::size_t total_size = input.size() + prefix.size() + sizeof(unsigned long);
             //check block fill of this node, look for free space
 
-            std::unique_lock lock(global_var_mutex);
+            std::shared_lock lock_size(size_protect);
             unsigned char min_pos;
             std::size_t min_val;
-            if(size.load()->size() < N){
-                min_pos = size.load()->size();
+            if(size->size() < N){
+                min_pos = size->size();
+                lock_size.unlock();
                 min_val = 0;
                 std::shared_ptr<std::atomic_flag> f1 = std::make_shared<std::atomic_flag>(), f3 = std::make_shared<std::atomic_flag>();
                 std::shared_ptr<std::atomic<std::size_t>> f2 = std::make_shared<std::atomic<std::size_t>>();
-                size.load()->emplace_back(min_val, min_pos, f1, f2, f3);
+                std::lock_guard size_own1(size_protect);
+                size->emplace_back(min_val, min_pos, f1, f2, f3);
             }
             else{
-                auto min_el = *std::min_element(size.load()->begin(),size.load()->end(),[](auto &a, auto &b){
+                auto min_el = *std::min_element(size->begin(),size->end(),[](auto &a, auto &b){
                     return std::get<0>(a) < std::get<0>(b) && !std::get<4>(a)->test() && !std::get<4>(b)->test();//skip maintain chunks for smaller check
                 });
                 min_pos = std::get<1>(min_el);
-                min_val = std::get<0>(size.load()->at(min_pos));
+                min_val = std::get<0>(size->at(min_pos));
+                lock_size.unlock();
             }
-
-            bool no_deeper = min_val < STORE_MAX && min_val + total_size < STORE_HARD_LIMIT && !(std::get<4>(size.load()->at(min_pos))->test());
+            lock_size.lock();
+            bool no_deeper = min_val < STORE_MAX && min_val + total_size < STORE_HARD_LIMIT && !(std::get<4>(size->at(min_pos))->test());
+            lock_size.unlock();
             if (!no_deeper) {
                 //find or create balanced deeper tree node to store
-                if ((unsigned short) children.load()->size() < (unsigned short) N) {
-                    min_pos = (unsigned short) children.load()->size();
+                std::unique_lock lock_children(children_protect);
+                if ((unsigned short) children->size() < (unsigned short) N) {
+                    min_pos = (unsigned short) children->size();
                     std::string ref_name{boost::algorithm::hex(std::string{(char) min_pos})};
-                    std::string fname = combined_path.load(std::memory_order_relaxed)->filename().string();
+                    std::shared_lock lock_path1(combined_path_protect);
+                    std::string fname = combined_path->filename().string();
+                    lock_path1.unlock();
                     ref_name.insert(ref_name.cbegin(), fname.cbegin() + 2, fname.cbegin() + 4);
-                    std::filesystem::path deeper_tree = *combined_path.load(std::memory_order_relaxed) / ref_name;
+                    lock_path1.lock();
+                    std::filesystem::path deeper_tree = *combined_path / ref_name;
+                    lock_path1.unlock();
                     auto *tmp_tree = new tree_storage(deeper_tree);
                     min_val = tmp_tree->get_size();
-                    children.load()->emplace_back(min_val, tmp_tree, min_pos);
+                    children->emplace_back(min_val, tmp_tree, min_pos);
                 } else {
-                    auto min_el = *std::min_element(children.load()->begin(),children.load()->end(),[](auto &a,auto &b){
+                    auto min_el = *std::min_element(children->begin(),children->end(),[](auto &a,auto &b){
                         return std::get<0>(a) < std::get<0>(b);
                     });
                     min_val = std::get<0>(min_el);
                     min_pos = std::get<2>(min_el);
                 }
-                std::get<0>(children.load()->at(min_pos)) += total_size;
-                lock.unlock();//go into deeper structure and release lock, else only
+                std::get<0>(children->at(min_pos)) += total_size;
+                lock_children.unlock();
 
-                std::vector<unsigned char> out_vec = std::get<1>(children.load()->at(min_pos))->write(input,current_time);
+                std::shared_lock read_children(children_protect);
+                auto tree_ptr2 = std::get<1>(children->at(min_pos));
+                read_children.unlock();
+                std::vector<unsigned char> out_vec = tree_ptr2->write(input,current_time);
                 out_vec.insert(out_vec.cbegin(), min_pos);
                 return out_vec;
             }
             else{
-                lock.unlock();//go into deeper structure and release lock, else only
                 //store block to this position
                 std::string ref_name{boost::algorithm::hex(std::string{(char) min_pos})};
-                std::filesystem::path read_chunk = *combined_path.load(std::memory_order_relaxed) / ref_name;
+                std::shared_lock path_lock2(combined_path_protect);
+                std::filesystem::path read_chunk = *combined_path / ref_name;
+                path_lock2.unlock();
 
                 //calculate binary of timestamp
                 std::vector<unsigned char> bin_time;
                 for (unsigned char i = 0; i < (unsigned char) sizeof(current_time); i++) {
                     bin_time.push_back((unsigned char) (current_time >> (i * 8)));
                 }
+                lock_size.lock();
+                auto write_ptr = &(*std::get<2>(size->at(min_pos)));
+                auto read_ptr = &(*std::get<3>(size->at(min_pos)));
+                auto maintain_ptr = &(*std::get<4>(size->at(min_pos)));
+                lock_size.unlock();
 
-                auto write_ptr = std::get<2>(size.load()->at(min_pos));
-                auto read_ptr = std::get<3>(size.load()->at(min_pos));
-                auto maintain_ptr = std::get<4>(size.load()->at(min_pos));
-
-                while (std::atomic_flag_test_and_set_explicit(&(*maintain_ptr), std::memory_order_acquire)) {
+                while (std::atomic_flag_test_and_set_explicit(maintain_ptr, std::memory_order_acquire)) {
                     maintain_ptr->wait(true);
                 }
-                while (std::atomic_flag_test_and_set_explicit(&(*write_ptr), std::memory_order_acquire)) {
+                while (std::atomic_flag_test_and_set_explicit(write_ptr, std::memory_order_acquire)) {
                     write_ptr->wait(true);
                 }
 
@@ -294,9 +308,10 @@ namespace uh::trees {
                     usleep(10 * 1000);
 #endif // _WIN32
                 }
-
-                std::size_t size_tmp = std::get<0>(size.load()->at(min_pos));
-                std::get<0>(size.load()->at(min_pos)) += total_size;
+                lock_size.lock();
+                std::size_t size_tmp = std::get<0>(size->at(min_pos));
+                std::get<0>(size->at(min_pos)) += total_size;
+                lock_size.unlock();
 
                 FILE *writer = std::fopen(read_chunk.c_str(), "ab");
                 if (!writer) {
