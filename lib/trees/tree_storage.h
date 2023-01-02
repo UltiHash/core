@@ -35,6 +35,13 @@ namespace uh::trees {
 #define STORE_HARD_LIMIT (unsigned long) (std::numeric_limits<unsigned int>::max() * 2)
     typedef struct tree_storage tree_storage;
 
+    /*
+     * module description: Tree storage is fast tree based interface to write binary information to disk at a given root folder, the tree storage root
+     * The module is a thread safe and multithreading optimized approach to manage data on the later system. The storage tree
+     * automatically balances load among the used B+-Tree file tree to share load of all hard drives of the RAID controller in an optimal fashion
+     * While maintaining the tree storage, deleting blocks with an outdated timestamp, we should prevent the to be deleted blocks from being read (only not thread safe aspect)
+     */
+
     struct tree_storage {
 
     protected:
@@ -100,6 +107,11 @@ namespace uh::trees {
         }
 
     public:
+        /*
+         * tell a root folder, if another root is detected it is loaded into a loose substructure that is not indexed yet
+         * the module will not know the blocks within the storage chunks, reading will fail
+         * call the index function after crating the tree_storage to proceed
+         */
         explicit tree_storage(const std::filesystem::path &root,
                               unsigned short num_threads = std::thread::hardware_concurrency()) {
             if (!num_threads)return;
@@ -189,6 +201,10 @@ namespace uh::trees {
                           });
         }
 
+        /*
+         * get the size of the entire tree, so the size of all contained information in total, the tree always maintains total size
+         * call get_info() to get the real block size and the total size as well as the block time stamp in comparison
+         */
         std::size_t get_size() {
             std::size_t s{};
             for (unsigned short i = 0; i < (unsigned short) N; i++) {
@@ -207,7 +223,7 @@ namespace uh::trees {
             return s;
         }
 
-        //write a string and get size of written block representation and a reference string back
+        //write a binary block to a certain creation date and get a local block reference in return
         std::vector<unsigned char> write(const std::vector<unsigned char> &input,
                                          unsigned long current_time = (unsigned long) std::chrono::nanoseconds(
                                                  std::chrono::high_resolution_clock::now().time_since_epoch()).count()) {
@@ -349,7 +365,10 @@ namespace uh::trees {
             }
         }
 
-        //returns a tuple with block time and binary vector of block
+        /*
+         * returns a tuple with block time and binary vector of block when entering a block reference (as far as it exists)
+         * WARNING: not existing blocks will still crash the procedure, a radix tree for block existence is needed
+         */
         std::tuple<unsigned long, std::vector<unsigned char>> read(const std::vector<unsigned char> &block_code) {
             if (block_code.empty()) {
                 return {};
@@ -506,7 +525,11 @@ namespace uh::trees {
             }
         }
 
-        //The index gives tuple<hash,local_block_reference>, always run index single without reading or writing interference
+        /*
+         * The index reads the entire information of the tree storage and calculates SHA512 hashes for every single block
+         * matching a local storage reference
+         * By running index on startup of a DB node it can scans information about the existence and validity of all blocks
+         */
         std::list<std::tuple<std::vector<unsigned char>, std::vector<unsigned char>, unsigned long>>
         index(unsigned short num_threads = std::thread::hardware_concurrency()) {
             if (!num_threads)return {};
@@ -710,6 +733,11 @@ namespace uh::trees {
             return *search_index.load();
         }
 
+        /*
+         * deletes all storage recursively within its root file and unregisters it on RAM
+         * In case of failure the node can clean itself off and reload blocks from different locations where the now
+         * missing blocks still persist
+         */
         std::size_t delete_recursive(unsigned short num_threads = std::thread::hardware_concurrency()) {
             if (!num_threads)return {};
             std::atomic<std::size_t> i_constructor{};
@@ -770,7 +798,7 @@ namespace uh::trees {
             return out_size.load();
         }
 
-        //returns a tuple with block time and block size from disk and total size on disk
+        //returns a tuple with block time and block size from disk and total size on disk on request of local block reference
         std::tuple<unsigned long, std::size_t, std::size_t> get_info(const std::vector<unsigned char> &block_code) {
             if (block_code.empty()) {
                 return {};
@@ -911,7 +939,10 @@ namespace uh::trees {
             }
         }
 
-        //returns a tuple with block time and binary vector of block
+        /*
+         * returns success on changing touch time of a block, giving the function a valid block code
+         * WARNING: Wrong block references will cause data loss!!!
+         */
         bool set_time(const std::vector<unsigned char> &block_code,
                       unsigned long current_time = (unsigned long) std::chrono::nanoseconds(
                               std::chrono::high_resolution_clock::now().time_since_epoch()).count()) {
@@ -1036,6 +1067,10 @@ namespace uh::trees {
         //it is wise to call a delete on blocks on the same chunk, one at a time
         ///WARNING: deleting is not fully thread safe since references are re-mapped, so make sure no reading is scheduled on the chunks carrying the blocks while calling delete!!
         ///Recommended: delete as many blocks as you have CPU cores so one core handles one block delete at a time
+        /*
+         * The function can delete multiple blocks at once, giving back changed offsets of other blocks it contained
+         * which need to be internally reconfigured to be read
+         */
         std::tuple<std::size_t, std::list<std::tuple<std::vector<unsigned char>, std::vector<unsigned char>>>>
         delete_blocks(
                 std::vector<std::vector<unsigned char>> &block_codes,
@@ -1424,6 +1459,11 @@ namespace uh::trees {
             return {out_size.load(), *out_change_list.load()};
         }
 
+        /*
+         * the deconstructor should also let all writing processes and reading processes end before it deletes the tree node
+         * After the current writing and reading process is finished, all threads that come later will get a Segfault
+         * for their operation since the struct will disassemble, but no dataloss can occur
+         */
         ~tree_storage() {
             std::unique_lock child_write(children_protect);
             for (auto &i: *children) {
