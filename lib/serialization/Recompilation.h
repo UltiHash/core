@@ -4,6 +4,9 @@
 
 #pragma once
 #include <utility>
+#include <stack>
+#include <map>
+#include <boost/algorithm/string/predicate.hpp>
 
 #include "Data.h"
 
