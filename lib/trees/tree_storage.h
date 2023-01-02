@@ -361,7 +361,7 @@ namespace uh::trees {
                     !std::get<0>(children->at(block_code[0]))) {
                     read_children.unlock();
                     std::string not_found((const char *) block_code.data(), block_code.size());
-                    std::lock_guard read_path(combined_path_protect);
+                    std::shared_lock read_path(combined_path_protect);
                     DEBUG << "<Block error trace>: Block code " + boost::algorithm::hex(not_found) +
                              " could not be found in storage tree \"" +
                              combined_path->string() + "\".";
@@ -373,7 +373,7 @@ namespace uh::trees {
                     auto out_vec = tree_ptr3->read(sub_block_code);
                     if (std::get<1>(out_vec).empty()) {
                         std::string not_found((const char *) block_code.data(), block_code.size());
-                        std::lock_guard read_path(combined_path_protect);
+                        std::shared_lock read_path(combined_path_protect);
                         DEBUG << "<Block error trace on return>: Block code " + boost::algorithm::hex(not_found) +
                                  " could not be found in storage tree \"" +
                                  combined_path->string() + "\".";
@@ -383,7 +383,7 @@ namespace uh::trees {
             } else {
                 if (block_code.size() < 5) {
                     std::string not_found((const char *) block_code.data(), block_code.size());
-                    std::lock_guard read_path(combined_path_protect);
+                    std::shared_lock read_path(combined_path_protect);
                     FATAL << "<Block error trace>: Block code " + boost::algorithm::hex(not_found) +
                              " was too short for storage tree \"" +
                              combined_path->string() + "\".";
@@ -395,7 +395,7 @@ namespace uh::trees {
                     !std::get<0>(size->at(block_code[0]))) {
                     size_lock.unlock();
                     std::string not_found((const char *) block_code.data(), block_code.size());
-                    std::lock_guard read_path(combined_path_protect);
+                    std::shared_lock read_path(combined_path_protect);
                     DEBUG
                         << "<Block error trace on return, final tree>: Block code " + boost::algorithm::hex(not_found) +
                            " could not be found in storage tree \"" + combined_path->string() +
@@ -493,8 +493,8 @@ namespace uh::trees {
                     }
 
                     std::fclose(reader);
-                    *read_ptr -= 1;
-                    if (!*read_ptr)write_ptr->notify_one();
+                    read_ptr -= 1;
+                    if (!read_ptr)write_ptr->notify_one();
 
                     std::vector<unsigned char> out_vec{};
                     out_vec.reserve(output_size);
@@ -777,43 +777,54 @@ namespace uh::trees {
             }
             if (block_code.size() > 5) {
                 //size encoding is not reached yet, get_info along tree path
-                if ((short) children.load()->size() - 1 < (short) block_code[0] ||
-                    !std::get<0>(children.load()->at(block_code[0]))) {
+                std::shared_lock read_children(children_protect);
+                if ((short) children->size() - 1 < (short) block_code[0] ||
+                    !std::get<0>(children->at(block_code[0]))) {
+                    read_children.unlock();
                     std::string not_found((const char *) block_code.data(), block_code.size());
+                    std::shared_lock read_path(combined_path_protect);
                     DEBUG << "<Block error trace>: Block code " + boost::algorithm::hex(not_found) +
                              " could not be found in storage tree \"" +
-                             combined_path.load(std::memory_order_relaxed)->string() + "\".";
+                             combined_path->string() + "\".";
                     return {};
                 } else {
+                    auto tree_ptr = std::get<1>(children->at(block_code[0]));
+                    read_children.unlock();
                     std::vector<unsigned char> sub_block_code{block_code.cbegin() + 1, block_code.cend()};
-                    auto out_vec = std::get<1>(children.load()->at(block_code[0]))->get_info(sub_block_code);
+                    auto out_vec = tree_ptr->get_info(sub_block_code);
                     if (std::get<1>(out_vec) == 0) {
                         std::string not_found((const char *) block_code.data(), block_code.size());
+                        std::shared_lock read_path(combined_path_protect);
                         DEBUG << "<Block error trace on return>: Block code " + boost::algorithm::hex(not_found) +
                                  " could not be found in storage tree \"" +
-                                 combined_path.load(std::memory_order_relaxed)->string() + "\".";
+                                 combined_path->string() + "\".";
                     }
                     return out_vec;
                 }
             } else {
                 if (block_code.size() < 5) {
                     std::string not_found((const char *) block_code.data(), block_code.size());
+                    std::shared_lock read_path(combined_path_protect);
                     FATAL << "<Block error trace>: Block code " + boost::algorithm::hex(not_found) +
                              " was too short for storage tree \"" +
-                             combined_path.load(std::memory_order_relaxed)->string() + "\".";
+                             combined_path->string() + "\".";
                     std::exit(EXIT_FAILURE);
                 }
                 //the block code should have a size of 5; one chunk index and 4 bytes of encoding for the offset
-                if ((short) size.load()->size() - 1 < (short) block_code[0] ||
-                    !std::get<0>(size.load()->at(block_code[0]))) {
+                std::shared_lock read_size(size_protect);
+                if ((short) size->size() - 1 < (short) block_code[0] ||
+                    !std::get<0>(size->at(block_code[0]))) {
+                    read_size.unlock();
                     std::string not_found((const char *) block_code.data(), block_code.size());
+                    std::shared_lock read_path(combined_path_protect);
                     DEBUG
                         << "<Block error trace on return, final tree>: Block code " + boost::algorithm::hex(not_found) +
                            " could not be found in storage tree \"" +
-                           combined_path.load(std::memory_order_relaxed)->string() +
+                           combined_path->string() +
                            "\" and size of storage chunk was 0.";
                     return {};
                 } else {
+                    read_size.unlock();
                     std::vector<unsigned char> sub_block_code{block_code.cbegin() + 1,
                                                               block_code.cend()}; //copy offset code and rebuild
                     std::size_t offset{};
@@ -821,12 +832,16 @@ namespace uh::trees {
                         offset += (((std::size_t) sub_block_code[i]) << (i * 8));
                     }
                     std::string ref_name{boost::algorithm::hex(std::string{(char) block_code[0]})};
-                    std::filesystem::path read_path = *combined_path.load(std::memory_order_relaxed) / ref_name;
+                    std::shared_lock read_path2(combined_path_protect);
+                    std::filesystem::path read_path = *combined_path / ref_name;
+                    read_path2.unlock();
 
-                    auto write_ptr = std::get<2>(size.load()->at(block_code[0]));
-                    auto read_ptr = std::get<3>(size.load()->at(block_code[0]));
+                    read_size.lock();
+                    auto write_ptr = &(*std::get<2>(size->at(block_code[0])));
+                    auto read_ptr = &(*std::get<3>(size->at(block_code[0])));
+                    read_size.unlock();
 
-                    *read_ptr += 1;
+                    read_ptr += 1;
 
                     while (write_ptr->test()) {
                         write_ptr->wait(true);
@@ -888,8 +903,8 @@ namespace uh::trees {
                     }
 
                     std::fclose(reader);
-                    *read_ptr -= 1;
-                    if (!*read_ptr)write_ptr->notify_one();
+                    read_ptr -= 1;
+                    if (!read_ptr)write_ptr->notify_one();
 
                     return {block_time, output_size, sizeof(time_buf)+1+sizeof(buffer_in)+output_size};
                 }
