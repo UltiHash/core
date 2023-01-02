@@ -1078,21 +1078,21 @@ namespace uh::trees {
                                 else {
                                     if (a.size() < 5) {
                                         std::string not_found((const char *) a.data(), a.size());
+                                        std::shared_lock read_path(combined_path_protect);
                                         FATAL << "<Block error trace>: Block code " + boost::algorithm::hex(not_found) +
                                                  " was too short for storage tree \"" +
-                                                 combined_path.load(std::memory_order_relaxed)->string() + "\".";
+                                                 combined_path->string() + "\".";
                                         std::exit(EXIT_FAILURE);
                                     } else delete_here_codes.emplace_back(a.begin(), a.end());
                                 }
                             });
-
-                            if(delete_here_codes.empty())lock.unlock();
-
-                            if (!delete_here_codes.empty() && (*cur_tmp)[0] < size.load()->size() &&
-                                std::get<0>(size.load()->at((*cur_tmp)[0])) > 0) {
-                                auto maintain_ptr = std::get<4>(size.load()->at((*cur_tmp)[0]));
-                                auto read_ptr = std::get<3>(size.load()->at((*cur_tmp)[0]));
-                                auto write_ptr = std::get<2>(size.load()->at((*cur_tmp)[0]));
+                            std::shared_lock size_read(size_protect);
+                            if (!delete_here_codes.empty() && (*cur_tmp)[0] < size->size() &&
+                                std::get<0>(size->at((*cur_tmp)[0])) > 0) {
+                                auto maintain_ptr = &(*std::get<4>(size->at((*cur_tmp)[0])));
+                                auto read_ptr = &(*std::get<3>(size->at((*cur_tmp)[0])));
+                                auto write_ptr = &(*std::get<2>(size->at((*cur_tmp)[0])));
+                                size_read.unlock();
 
                                 while (std::atomic_flag_test_and_set_explicit(&(*maintain_ptr),
                                                                               std::memory_order_acquire)) {
@@ -1101,7 +1101,7 @@ namespace uh::trees {
 
                                 lock.unlock();
 
-                                *read_ptr += 1;
+                                read_ptr += 1;
 
                                 while (write_ptr->test()) {
                                     write_ptr->wait(true);
@@ -1109,7 +1109,9 @@ namespace uh::trees {
 
                                 //sort blocks to be deleted here after their offset on the chunk
                                 std::string ref_name{boost::algorithm::hex(std::string{(char) (*cur_tmp)[0]})};
-                                std::filesystem::path chunk = *combined_path.load(std::memory_order_relaxed) / ref_name;
+                                std::shared_lock path_read(combined_path_protect);
+                                std::filesystem::path chunk = *combined_path / ref_name;
+                                path_read.unlock();
                                 std::filesystem::path chunk_maintain = chunk.parent_path() / (chunk.filename().string()+"_maintain");
 
                                 std::sort(delete_here_codes.begin(),delete_here_codes.end(),[](auto &a, auto &b){
@@ -1155,10 +1157,10 @@ namespace uh::trees {
                                 // *this tree where the referring chunk is stored; truncate size for the chunk; new storage reference after append
                                 std::atomic<std::shared_ptr<std::list<std::tuple<unsigned char*,std::size_t,std::vector<unsigned char>, tree_storage *, std::size_t>>>> multithreading_factory{};
                                 multithreading_factory.store(std::make_shared<std::list<std::tuple<unsigned char*,std::size_t,std::vector<unsigned char>, tree_storage *, std::size_t>>>());
-                                std::shared_ptr<std::atomic_flag> write_control = std::make_shared<std::atomic_flag>();
+                                std::atomic_flag write_control{ATOMIC_FLAG_INIT};
 
-                                while (std::atomic_flag_test_and_set_explicit(&(*write_control), std::memory_order_acquire)) {
-                                    write_control->wait(true);
+                                while (std::atomic_flag_test_and_set_explicit(&write_control, std::memory_order_acquire)) {
+                                    write_control.wait(true);
                                 }
 
                                 if(std::filesystem::exists(chunk_maintain))std::filesystem::remove(chunk_maintain);
@@ -1169,7 +1171,7 @@ namespace uh::trees {
                                 }
 
                                 auto consumer_function = [&](){
-                                    while(write_control->test()){
+                                    while(write_control.test()){
                                         while(!multithreading_factory.load()->empty()){
                                             std::vector<unsigned char> out_vec{};
                                             out_vec.reserve(sizeof(unsigned int));
@@ -1297,8 +1299,8 @@ namespace uh::trees {
                                     }
                                 }
                                 std::fclose(reader);
-                                *read_ptr -= 1;
-                                std::atomic_flag_clear_explicit(&(*write_control), std::memory_order_release);
+                                read_ptr -= 1;
+                                std::atomic_flag_clear_explicit(&write_control, std::memory_order_release);
                                 if(w1.joinable())w1.join();
 
                                 for(auto it = block_step_beg; it < delete_here_codes.cend(); it++){
@@ -1319,7 +1321,6 @@ namespace uh::trees {
 #endif // _WIN32
                                 }
                                 truncate64(chunk.c_str(),static_cast<long>(trunc_at));
-                                std::get<0>(size.load()->at((*cur_tmp)[0])) -= delete_size;
 
                                 std::size_t maintain_size_append = cur_pos-delete_size;
                                 auto buf = new unsigned char[maintain_size_append];
@@ -1350,19 +1351,31 @@ namespace uh::trees {
 
                                 std::filesystem::remove(chunk_maintain);
 
-                                std::atomic_flag_clear_explicit(&(*write_ptr), std::memory_order_release);
+                                size_read.lock();
+                                std::get<0>(size->at((*cur_tmp)[0])) -= delete_size;
+                                size_read.unlock();
+
+                                std::atomic_flag_clear_explicit(write_ptr, std::memory_order_release);
                                 if(!write_ptr->test())write_ptr->notify_one();
-                                std::atomic_flag_clear_explicit(&(*maintain_ptr), std::memory_order_release);
+                                std::atomic_flag_clear_explicit(maintain_ptr, std::memory_order_release);
                                 if(!maintain_ptr->test())maintain_ptr->notify_one();
+                            }
+                            else{
+                                size_read.unlock();
+                                lock.unlock();
                             }
 
                             //delete deeper codes
-                            if (!deeper_codes.empty() && (*cur_tmp)[0] < children.load()->size() &&
-                                std::get<0>(children.load()->at((*cur_tmp)[0])) > 0) {
-                                auto tmp_deeper_tree_ptr = std::get<1>(children.load()->at((*cur_tmp)[0]));
+                            std::shared_lock children_read(children_protect);
+                            if (!deeper_codes.empty() && (*cur_tmp)[0] < children->size() &&
+                                std::get<0>(children->at((*cur_tmp)[0])) > 0) {
+                                auto tmp_deeper_tree_ptr = std::get<1>(children->at((*cur_tmp)[0]));
+                                children_read.unlock();
                                 //parallel start
                                 auto deeper_delete = tmp_deeper_tree_ptr->delete_blocks(deeper_codes, 1);
-                                std::get<0>(children.load()->at((*cur_tmp)[0])) -= std::get<0>(deeper_delete);//subtract deleted size from deeper node
+                                std::unique_lock children_write(children_protect);
+                                std::get<0>(children->at((*cur_tmp)[0])) -= std::get<0>(deeper_delete);//subtract deleted size from deeper node
+                                children_write.unlock();
                                 out_size += std::get<0>(deeper_delete);//add total deleted size
                                 for(auto &it:std::get<1>(deeper_delete)){
                                     //deeper elements have their first position filtered so that we need to rebuild it
@@ -1373,13 +1386,16 @@ namespace uh::trees {
                                 auto last_end = out_change_list.load()->cend();
                                 out_change_list.load()->splice(last_end, std::get<1>(deeper_delete));
                             }
-                            if ((*cur_tmp)[0] >= size.load()->size() || (*cur_tmp)[0] >= children.load()->size()) {
+                            else children_read.unlock();
+
+                            std::lock(size_read,children_read);
+                            if ((*cur_tmp)[0] >= size->size() || (*cur_tmp)[0] >= children->size()) {
                                 std::string not_found((const char *) cur_tmp->data(), cur_tmp->size());
+                                std::shared_lock path_read(combined_path_protect);
                                 DEBUG << "<Block error trace>: Block code " + boost::algorithm::hex(not_found) +
                                          " was exceeding limits of storage tree \"" +
-                                         combined_path.load(std::memory_order_relaxed)->string() +
+                                         combined_path->string() +
                                          "\" and was skipped!.";
-                                lock.unlock();
                             }
                             //parallel end
                             *active_threads.load() -= 1;
@@ -1409,10 +1425,34 @@ namespace uh::trees {
         }
 
         ~tree_storage() {
-            for (auto &i: *children.load()) {
+            std::unique_lock child_write(children_protect);
+            for (auto &i: *children) {
+                child_write.unlock();
+                std::shared_lock lock_size(size_protect);
+                //stop all reading and writing operations on this tree node and reserve all rights before destroying itself
+                auto write_ptr = &(*std::get<2>(size->at(std::get<2>(i))));
+                auto read_ptr = &(*std::get<3>(size->at(std::get<2>(i))));
+                auto maintain_ptr = &(*std::get<4>(size->at(std::get<2>(i))));
+                lock_size.unlock();
+
+                while (std::atomic_flag_test_and_set_explicit(maintain_ptr, std::memory_order_acquire)) {
+                    maintain_ptr->wait(true);
+                }
+                while (std::atomic_flag_test_and_set_explicit(write_ptr, std::memory_order_acquire)) {
+                    write_ptr->wait(true);
+                }
+
+                while (read_ptr->load() > 0) {
+#ifdef _WIN32
+                    Sleep(10);
+#else
+                    usleep(10 * 1000);
+#endif // _WIN32
+                }
                 if (std::get<1>(i) != nullptr) {
                     delete std::get<1>(i);
                 }
+                child_write.lock();
             }
         }
     };
