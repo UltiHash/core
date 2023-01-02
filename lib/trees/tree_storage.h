@@ -126,7 +126,7 @@ namespace uh::trees {
 
             auto multithread_constructor = [&]() {
                 std::size_t i = i_constructor.load();
-                if (i == N)return;
+                if (i >= N)return;
                 for (; i < N;) {
                     std::string s_tmp = boost::algorithm::hex(std::string{(char) i});
                     std::shared_lock lock(combined_path_protect);
@@ -516,18 +516,23 @@ namespace uh::trees {
 
             auto multithread_index = [&]() {
                 std::size_t i = i_constructor.load();
-                if (i == N)return;
+                if (i >= N)return;
                 for (; i < N;) {
-
-                    if (i < size.load()->size() && std::get<0>(size.load()->at(i)) > 0) {
+                    std::shared_lock size_lock(size_protect);
+                    if (i < size->size() && std::get<0>(size->at(i)) > 0) {
+                        size_lock.unlock();
                         //read entire block generating hashes and block references
                         std::string ref_name{boost::algorithm::hex(std::string{(char) i})};
-                        std::filesystem::path read_path = *combined_path.load(std::memory_order_relaxed) / ref_name;
+                        std::shared_lock read_path_lock(combined_path_protect);
+                        std::filesystem::path read_path = *combined_path / ref_name;
+                        read_path_lock.unlock();
 
-                        auto write_ptr = std::get<2>(size.load()->at(i));
-                        auto read_ptr = std::get<3>(size.load()->at(i));
+                        size_lock.lock();
+                        auto write_ptr = &(*std::get<2>(size->at(i)));
+                        auto read_ptr = &(*std::get<3>(size->at(i)));
+                        size_lock.unlock();
 
-                        *read_ptr += 1;
+                        read_ptr += 1;
 
                         while (write_ptr->test()) {
                             write_ptr->wait(true);
@@ -663,19 +668,29 @@ namespace uh::trees {
                             }
                         }
                         std::fclose(reader);
-                        *read_ptr -= 1;
-                        if (!*read_ptr)write_ptr->notify_one();
+                        read_ptr -= 1;
+                        if (!read_ptr)write_ptr->notify_one();
+                    }
+                    else{
+                        size_lock.unlock();
                     }
                     //splice indexes of children plus the min_pos to decide local_block_ref of children array
-                    if (i < children.load()->size() && std::get<0>(children.load()->at(i)) > 0) {
-                        auto append_list = std::get<1>(children.load()->at(i))->index(1);
+                    std::shared_lock children_lock(children_protect);
+                    if (i < children->size() && std::get<0>(children->at(i)) > 0) {
+                        auto tree_ptr = std::get<1>(children->at(i));
+                        children_lock.unlock();
+                        auto append_list = tree_ptr->index(1);
                         for (auto &el: append_list) {
                             std::get<1>(el).insert(std::get<1>(el).cbegin(), i);
                         }
                         auto cur_end = search_index.load(std::memory_order_relaxed)->cend();
                         search_index.load()->splice(cur_end, append_list);
                     }
-                    if (i >= size.load()->size() && i >= children.load()->size())break;
+                    else{
+                        children_lock.unlock();
+                    }
+                    std::lock(size_lock,children_lock);
+                    if (i >= size->size() && i >= children->size())break;
                     i = (i_constructor += 1);
                 }
             };
@@ -702,7 +717,7 @@ namespace uh::trees {
 
             auto multithread_index = [&]() {
                 std::size_t i = i_constructor.load();
-                if (i == N)return;
+                if (i >= N)return;
                 for (; i < N;) {
 
                     if (i < size.load()->size() && std::get<0>(size.load()->at(i)) > 0) {
