@@ -15,6 +15,7 @@
 #include <thread>
 #include <atomic>
 #include <execution>
+#include "util/exception.h"
 
 #ifdef _WIN32
 #include <windows.h>
@@ -28,41 +29,26 @@
 #include "sys/sysinfo.h"
 
 namespace uh::trees {
+    DEFINE_EXCEPTION(out_of_memory);
 #define N 256
 #define STORE_MAX (unsigned int) std::numeric_limits<unsigned int>::max()
 #define STORE_HARD_LIMIT (unsigned long) (std::numeric_limits<unsigned int>::max() * 2)
     typedef struct tree_storage tree_storage;
 
     struct tree_storage {
-    private:
-        static void mem_wait(std::size_t mem) {
-            struct sysinfo memInfo{};
-            unsigned long totalFreeVirtualMem;
-            do {
-                sysinfo (&memInfo);
-                totalFreeVirtualMem = memInfo.freeram;
-                totalFreeVirtualMem += memInfo.freeswap;
-                totalFreeVirtualMem *= memInfo.mem_unit;
-                if (totalFreeVirtualMem < mem) {
-#ifdef _WIN32
-                    Sleep(10);
-#else
-                    usleep(10 * 1000);
-#endif // _WIN32
-                }
-            } while (totalFreeVirtualMem < mem);
-        }
 
     protected:
         //every file storage level contains a maximum of 256 storage chunks and 256 folders to deeper levels
         //different storage chunks with write, read and maintain protection flags
-        std::shared_mutex size_protect{};
-        std::shared_ptr<std::vector<std::tuple<std::size_t, unsigned char, std::shared_ptr<std::atomic_flag>, std::shared_ptr<std::atomic<std::size_t>>, std::shared_ptr<std::atomic_flag>>>> size;
+        std::shared_mutex size_protect = std::shared_mutex();
+        std::shared_ptr<std::vector<std::tuple<std::size_t, unsigned char, std::shared_ptr<std::atomic_flag>, std::shared_ptr<std::atomic<std::size_t>>, std::shared_ptr<std::atomic_flag>>>> size = std::make_shared<std::vector<std::tuple<std::size_t, unsigned char, std::shared_ptr<std::atomic_flag>, std::shared_ptr<std::atomic<std::size_t>>, std::shared_ptr<std::atomic_flag>>>>();
         //deeper tree storage blocks and folders
-        std::shared_mutex children_protect{}; // PROTOECT THE CHILDREN!!! :D
-        std::shared_ptr<std::vector<std::tuple<std::size_t, tree_storage *, unsigned char>>> children;
-        std::shared_mutex combined_path_protect{};
-        std::shared_ptr<std::filesystem::path> combined_path;
+        std::shared_mutex children_protect = std::shared_mutex(); // PROTOECT THE CHILDREN!!! :D
+        std::shared_ptr<std::vector<std::tuple<std::size_t, tree_storage *, unsigned char>>> children = std::make_shared<std::vector<std::tuple<std::size_t, tree_storage *, unsigned char>>>();
+        std::shared_mutex combined_path_protect = std::shared_mutex();
+        std::shared_ptr<std::filesystem::path> combined_path = std::make_shared<std::filesystem::path>();
+        std::shared_mutex mem_protect = std::shared_mutex();
+        std::shared_ptr<std::size_t> max_request = std::make_shared<std::size_t>(), count_request = std::make_shared<std::size_t>();
 
         //returns wrapped string
         static std::vector<unsigned char> prefix_wrap(std::size_t input_size) {
@@ -83,17 +69,42 @@ namespace uh::trees {
             return prefix;
         }
 
+    private:
+        void mem_wait(std::size_t mem) {
+            struct sysinfo memInfo{};
+            unsigned long totalFreeVirtualMem;
+            do {
+                sysinfo (&memInfo);
+                totalFreeVirtualMem = memInfo.freeram;
+                totalFreeVirtualMem += memInfo.freeswap;
+                totalFreeVirtualMem *= memInfo.mem_unit;
+                if (totalFreeVirtualMem < mem) {
+                    std::unique_lock lock(mem_protect);
+                    if(mem == *max_request)*count_request += 1;
+                    *max_request = std::max(*max_request, mem);
+                    if(*count_request == 6000){
+                        lock.unlock();
+                        THROW(out_of_memory,"The largest block of " + std::to_string(*max_request) + "could not aquire memory anymore for a time span of 60 seconds!");
+                    }
+                    lock.unlock();
+
+#ifdef _WIN32
+                    Sleep(10);
+#else
+                    usleep(10 * 1000);
+#endif // _WIN32
+                }
+            } while (totalFreeVirtualMem < mem);
+        }
+
     public:
         explicit tree_storage(const std::filesystem::path &root,
                               unsigned short num_threads = std::thread::hardware_concurrency()) {
             if (!num_threads)return;
             std::atomic<std::size_t> i_constructor{};
 
-            std::unique_lock lock(global_var_mutex);
-            if (combined_path.load() == nullptr) {
-                combined_path.store(std::make_shared<std::filesystem::path>());
-                size.store(std::make_shared<std::vector<std::tuple<std::size_t, unsigned char, std::shared_ptr<std::atomic_flag>, std::shared_ptr<std::atomic<std::size_t>>, std::shared_ptr<std::atomic_flag>>>>());
-                children.store(std::make_shared<std::vector<std::tuple<std::size_t, tree_storage *, unsigned char>>>());
+            std::unique_lock lock(combined_path_protect);
+            if (combined_path->empty()) {
                 std::string parent_name = root.filename().string();
                 bool valid_root = parent_name.size() == 4 and root.extension().string().empty();
                 if (valid_root)
@@ -103,11 +114,11 @@ namespace uh::trees {
                             break;
                         }
                     }
-                combined_path.load()->operator=(root);
+                combined_path->operator=(root);
                 if (!valid_root) {
-                    combined_path.load()->operator/=("0000");
+                    combined_path->operator/=("0000");
                 }
-                std::filesystem::create_directories(combined_path.load()->string());
+                std::filesystem::create_directories(combined_path->string());
             }
             lock.unlock();
 
@@ -116,7 +127,9 @@ namespace uh::trees {
                 if (i == N)return;
                 for (; i < N;) {
                     std::string s_tmp = boost::algorithm::hex(std::string{(char) i});
-                    std::filesystem::path chunk = *combined_path.load(std::memory_order_relaxed) / s_tmp;
+                    std::shared_mutex lock2(combined_path_protect);
+                    std::filesystem::path chunk = *combined_path / s_tmp;
+
                     if (std::filesystem::exists(chunk)) {
                         std::shared_ptr<std::atomic_flag> f1 = std::make_shared<std::atomic_flag>(), f3 = std::make_shared<std::atomic_flag>();
                         std::shared_ptr<std::atomic<std::size_t>> f2 = std::make_shared<std::atomic<std::size_t>>();
