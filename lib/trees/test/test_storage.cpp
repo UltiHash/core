@@ -63,20 +63,23 @@ std::vector<unsigned char> binary_generator(std::size_t max_len) {
 }
 
 // ------------- Tests Follow --------------
+/*
+ * test setting up a tree storage at a given location
+ */
 BOOST_AUTO_TEST_CASE(constructor_test)
 {
-    //tests for any machine
-    //uh::trees::tree_storage t1(std::filesystem::path("/home")/std::string(getenv("USER")));//A test folder reserved for tree storage
+    //tests for any linux machine
+    uh::trees::tree_storage t1(std::filesystem::path("/home")/std::string(getenv("USER")));//A test folder reserved for tree storage
     //for strong laptops with SSD extension (configure test db server to run this??)
-    uh::trees::tree_storage t1("/mnt/md0");//A test folder reserved for tree storage
+    //uh::trees::tree_storage t1("/mnt/md0");//A test folder reserved for tree storage for performance tests
 }
 
 BOOST_AUTO_TEST_CASE(write_read_test)
 {
     //tests for any linux machine
-    //uh::trees::tree_storage t1(std::filesystem::path("/home")/std::string(getenv("USER")));//A test folder reserved for tree storage
+    uh::trees::tree_storage t1(std::filesystem::path("/home")/std::string(getenv("USER")));//A test folder reserved for tree storage
     //for strong laptops with SSD extension (configure test db server to run this??)
-    uh::trees::tree_storage t1("/mnt/md0");//A test folder reserved for tree storage
+    //uh::trees::tree_storage t1("/mnt/md0");//A test folder reserved for tree storage for performance tests
 
     struct timeval time{};
     for (unsigned char mode = 0; mode < 2; mode++) {
@@ -86,7 +89,8 @@ BOOST_AUTO_TEST_CASE(write_read_test)
         //retrieved block size, local_block_ref size and time taken
         mode ? BOOST_TEST_MESSAGE("---Entering short block latency measurement write read mode:---\n") :
         BOOST_TEST_MESSAGE("---Entering normal write read mode:---\n");
-        while (total_size < (mode ? (std::size_t) std::pow(2, 22) : (std::size_t) (std::pow(1024, 4) * 4))) {
+        //total size is the total write size that the database tests
+        while (total_size < (mode ? (std::size_t) std::pow(2, 22) : (std::size_t) (std::pow(2, 34)))) {// for performance test on mode == 0 use a size of 4TB std::pow(1024, 4) * 4
             //(std::size_t) std::pow(2, 35))
             std::vector<unsigned char> test_bin = binary_generator(mode ? 32 : STORE_MAX);
             //write test
@@ -612,9 +616,9 @@ BOOST_AUTO_TEST_CASE(index_read_test)
     gettimeofday(&time, nullptr);
     long double millis = ((long double) time.tv_sec * 1000) + ((long double) time.tv_usec / 1000);
     //for any machine
-    //uh::trees::tree_storage t1(std::filesystem::path("/home")/std::string(getenv("USER")));//A test folder reserved for tree storage
+    uh::trees::tree_storage t1(std::filesystem::path("/home")/std::string(getenv("USER")));//A test folder reserved for tree storage
     //for strong laptops with SSD extension (configure test db server to run this??)
-    uh::trees::tree_storage t1("/mnt/md0");//A test folder reserved for tree storage
+    //uh::trees::tree_storage t1("/mnt/md0");//A test folder reserved for tree storage for performance tests
     gettimeofday(&time, nullptr);
     long double constructor_time = (((long double) time.tv_sec * 1000) + ((long double) time.tv_usec / 1000)) - millis;
 
@@ -637,13 +641,15 @@ BOOST_AUTO_TEST_CASE(index_read_test)
         BOOST_CHECK_EQUAL_COLLECTIONS(std::get<0>(el).cbegin(), std::get<1>(el).cend(), hash_buf,
                                       hash_buf + SHA512_DIGEST_LENGTH);
     }
-    t1.delete_recursive();
 }
 
 BOOST_AUTO_TEST_CASE(get_info_set_time_test)
 {
     struct timeval time{};
-    uh::trees::tree_storage t1("/mnt/md0");//A test folder reserved for tree storage
+    //tests for any linux machine
+    uh::trees::tree_storage t1(std::filesystem::path("/home")/std::string(getenv("USER")));//A test folder reserved for tree storage
+    //for strong laptops with SSD extension (configure test db server to run this??)
+    //uh::trees::tree_storage t1("/mnt/md0");//A test folder reserved for tree storage for performance tests
     auto index_list = t1.index();
     auto first_el = index_list.begin();
     gettimeofday(&time, nullptr);
@@ -670,10 +676,15 @@ BOOST_AUTO_TEST_CASE(get_info_set_time_test)
 
 BOOST_AUTO_TEST_CASE(delete_test)
 {
-    uh::trees::tree_storage t1("/mnt/md0");//A test folder reserved for tree storage
+    //tests for any linux machine
+    uh::trees::tree_storage t1(std::filesystem::path("/home")/std::string(getenv("USER")));//A test folder reserved for tree storage
+    //for strong laptops with SSD extension (configure test db server to run this??)
+    //uh::trees::tree_storage t1("/mnt/md0");//A test folder reserved for tree storage for performance tests
     auto index_list = t1.index();
     std::vector<std::vector<unsigned char>> to_del;
     std::ranges::for_each(index_list.begin(),index_list.end(),[&to_del](auto &a){
         to_del.push_back(std::get<1>(a));
     });
+
+    t1.delete_recursive();
 }
