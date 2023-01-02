@@ -719,25 +719,38 @@ namespace uh::trees {
                 std::size_t i = i_constructor.load();
                 if (i >= N)return;
                 for (; i < N;) {
-
-                    if (i < size.load()->size() && std::get<0>(size.load()->at(i)) > 0) {
+                    std::unique_lock size_lock(size_protect);
+                    if (i < size->size() && std::get<0>(size->at(i)) > 0) {
                         std::string ref_name{boost::algorithm::hex(std::string{(char) i})};
-                        std::filesystem::path read_path = *combined_path.load(std::memory_order_relaxed) / ref_name;
+                        std::filesystem::path read_path = *combined_path / ref_name;
                         std::size_t vanish_size = std::filesystem::file_size(read_path);
                         out_size += vanish_size;
-                        std::get<0>(size.load()->at(i)) -= vanish_size;
+                        std::get<0>(size->at(i)) -= vanish_size;
+                        size_lock.unlock();
                         if (std::remove(read_path.c_str()) != 0) {
                             FATAL << "Removing was not completed on path \"" + read_path.string() + "\"";
                             std::exit(EXIT_FAILURE);
                         }
                     }
-                    //splice indexes of children plus the min_pos to decide local_block_ref of children array
-                    if (i < children.load()->size() && std::get<0>(children.load()->at(i)) > 0) {
-                        std::size_t vanish_size = std::get<1>(children.load()->at(i))->delete_recursive(1);
-                        out_size += vanish_size;
-                        std::get<0>(size.load()->at(i)) -= vanish_size;
+                    else{
+                        size_lock.unlock();
                     }
-                    if (i >= size.load()->size() && i >= children.load()->size())break;
+                    //splice indexes of children plus the min_pos to decide local_block_ref of children array
+                    std::unique_lock children_lock(children_protect);
+                    if (i < children->size() && std::get<0>(children->at(i)) > 0) {
+                        auto tree_ptr = std::get<1>(children->at(i));
+                        children_lock.unlock();
+                        std::size_t vanish_size = tree_ptr->delete_recursive(1);
+                        out_size += vanish_size;
+                        std::lock_guard lg(size_protect);
+                        std::get<0>(size->at(i)) -= vanish_size;
+                    }
+                    else{
+                        children_lock.unlock();
+                    }
+
+                    std::lock(size_lock,children_lock);
+                    if (i >= size->size() && i >= children->size())break;
 
                     i = (i_constructor += 1);
                 }
