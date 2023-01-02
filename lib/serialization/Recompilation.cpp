@@ -4,6 +4,7 @@
 
 #ifndef SERIALIZATION_RECOMPILATION_H
 #define SERIALIZATION_RECOMPILATION_H
+
 #include "Recompilation.h"
 
 bool Recompilation::encode() {
