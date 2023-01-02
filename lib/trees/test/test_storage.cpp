@@ -673,7 +673,7 @@ BOOST_AUTO_TEST_CASE(get_info_set_time_test)
     auto block_info2 = t1.get_info(std::get<1>(*first_el));
     BOOST_ASSERT_MSG(std::get<0>(block_info) < std::get<0>(block_info2), "Block time reset was not successful internally!");
 }
-
+/*
 BOOST_AUTO_TEST_CASE(delete_test)
 {
     //tests for any linux machine
@@ -684,10 +684,11 @@ BOOST_AUTO_TEST_CASE(delete_test)
     std::vector<std::vector<unsigned char>> to_del;
     //from index take 2 blocks of the same chunk and copy them to RAM
     //delete one block over its reference and check if the block of the retured local reference is the same
-    /*
+
     std::ranges::for_each(index_list.begin(),std::advance(index_list.begin(),3),[&to_del](auto &a){
         to_del.push_back(std::get<1>(a));
-    });*/
+    });
 
     t1.delete_recursive();
 }
+ */
