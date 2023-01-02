@@ -116,8 +116,8 @@ namespace uh::trees {
                     std::string s_tmp = boost::algorithm::hex(std::string{(char) i});
                     std::filesystem::path chunk = *combined_path.load(std::memory_order_relaxed) / s_tmp;
                     if (std::filesystem::exists(chunk)) {
-                        std::shared_ptr<std::atomic_flag> f1{ATOMIC_FLAG_INIT}, f3{ATOMIC_FLAG_INIT};
-                        std::shared_ptr<std::atomic<std::size_t>> f2{};
+                        std::shared_ptr<std::atomic_flag> f1 = std::make_shared<std::atomic_flag>(), f3 = std::make_shared<std::atomic_flag>();
+                        std::shared_ptr<std::atomic<std::size_t>> f2 = std::make_shared<std::atomic<std::size_t>>();
                         size.load()->emplace_back(std::filesystem::file_size(chunk), i, f1, f2, f3);
                     }
 
