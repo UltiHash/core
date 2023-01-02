@@ -56,11 +56,13 @@ namespace uh::trees {
     protected:
         //every file storage level contains a maximum of 256 storage chunks and 256 folders to deeper levels
         //different storage chunks with write, read and maintain protection flags
-        std::atomic<std::shared_ptr<std::vector<std::tuple<std::size_t, unsigned char, std::shared_ptr<std::atomic_flag>, std::shared_ptr<std::atomic<std::size_t>>, std::shared_ptr<std::atomic_flag>>>>> size;
+        std::shared_mutex size_protect{};
+        std::shared_ptr<std::vector<std::tuple<std::size_t, unsigned char, std::shared_ptr<std::atomic_flag>, std::shared_ptr<std::atomic<std::size_t>>, std::shared_ptr<std::atomic_flag>>>> size;
         //deeper tree storage blocks and folders
-        std::atomic<std::shared_ptr<std::vector<std::tuple<std::size_t, tree_storage *, unsigned char>>>> children;
-        std::atomic<std::shared_ptr<std::filesystem::path>> combined_path;
-        std::shared_mutex global_var_mutex{};//protect everything out of size array
+        std::shared_mutex children_protect{}; // PROTOECT THE CHILDREN!!! :D
+        std::shared_ptr<std::vector<std::tuple<std::size_t, tree_storage *, unsigned char>>> children;
+        std::shared_mutex combined_path_protect{};
+        std::shared_ptr<std::filesystem::path> combined_path;
 
         //returns wrapped string
         static std::vector<unsigned char> prefix_wrap(std::size_t input_size) {
