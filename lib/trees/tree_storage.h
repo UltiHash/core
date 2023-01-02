@@ -230,7 +230,10 @@ namespace uh::trees {
                 }
                 std::get<0>(children.load()->at(min_pos)) += total_size;
                 lock.unlock();//go into deeper structure and release lock, else only
-                std::get<1>(children.load()->at(min_pos))->write(input,current_time);
+
+                std::vector<unsigned char> out_vec = std::get<1>(children.load()->at(min_pos))->write(input,current_time);
+                out_vec.insert(out_vec.cbegin(), min_pos);
+                return out_vec;
             }
             else{
                 lock.unlock();//go into deeper structure and release lock, else only
@@ -297,11 +300,6 @@ namespace uh::trees {
                 out_vec.insert(out_vec.cbegin(), min_pos);
 
                 return out_vec;//structure: BIN,OFFSET * 4 BYTES
-            } else {
-                auto tmp_ptr = std::get<1>(children.load()->at(min_pos));
-                std::vector<unsigned char> out_vec = tmp_ptr->write(input);
-                out_vec.insert(out_vec.cbegin(), min_pos);
-                return out_vec;
             }
         }
 
