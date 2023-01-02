@@ -315,7 +315,7 @@ namespace uh::trees {
                 std::get<0>(size->at(min_pos)) += total_size;
                 lock_size.unlock();
 
-                FILE *writer = std::fopen(read_chunk.c_str(), "ab");
+                FILE *writer = std::fopen(read_chunk.make_preferred().c_str(), "ab");
                 if (!writer) {
                     ERROR << "File write opening failed at \"" + read_chunk.string() + "\"";
                     std::exit(EXIT_FAILURE);
@@ -425,7 +425,7 @@ namespace uh::trees {
                         write_ptr->wait(true);
                     }
 
-                    FILE *reader = std::fopen(read_path.c_str(), "rb");
+                    FILE *reader = std::fopen(read_path.make_preferred().c_str(), "rb");
                     if (!reader) {
                         ERROR << "File read opening failed at \"" + read_path.string() + "\"";
                         std::exit(EXIT_FAILURE);
@@ -538,7 +538,7 @@ namespace uh::trees {
                             write_ptr->wait(true);
                         }
 
-                        FILE *reader = std::fopen(read_path.c_str(), "rb");
+                        FILE *reader = std::fopen(read_path.make_preferred().c_str(), "rb");
                         if (!reader) {
                             ERROR << "File read opening failed at \"" + read_path.string() + "\"";
                             std::exit(EXIT_FAILURE);
@@ -847,7 +847,7 @@ namespace uh::trees {
                         write_ptr->wait(true);
                     }
 
-                    FILE *reader = std::fopen(read_path.c_str(), "rb");
+                    FILE *reader = std::fopen(read_path.make_preferred().c_str(), "rb");
                     if (!reader) {
                         ERROR << "File get_info opening failed at \"" + read_path.string() + "\"";
                         std::exit(EXIT_FAILURE);
@@ -1000,7 +1000,7 @@ namespace uh::trees {
 #endif // _WIN32
                     }
 
-                    FILE *writer = std::fopen(read_path.c_str(), "wb");
+                    FILE *writer = std::fopen(read_path.make_preferred().c_str(), "wb");
                     if (!writer) {
                         ERROR << "File write opening failed at \"" + read_path.string() + "\"";
                         std::exit(EXIT_FAILURE);
@@ -1138,7 +1138,7 @@ namespace uh::trees {
                                 };
 
                                 //read chunk at index (*cur_tmp)[0]
-                                FILE *reader = std::fopen(chunk.c_str(), "rb");
+                                FILE *reader = std::fopen(chunk.make_preferred().c_str(), "rb");
                                 if (!reader) {
                                     ERROR << "File read opening failed at \"" + chunk.string() + "\"";
                                     std::exit(EXIT_FAILURE);
@@ -1164,7 +1164,7 @@ namespace uh::trees {
                                 }
 
                                 if(std::filesystem::exists(chunk_maintain))std::filesystem::remove(chunk_maintain);
-                                FILE *writer = std::fopen(chunk_maintain.c_str(), "ab");
+                                FILE *writer = std::fopen(chunk_maintain.make_preferred().c_str(), "ab");
                                 if (!writer) {
                                     ERROR << "File write opening failed at \"" + chunk_maintain.string() + "\"";
                                     std::exit(EXIT_FAILURE);
@@ -1325,7 +1325,7 @@ namespace uh::trees {
                                 std::size_t maintain_size_append = cur_pos-delete_size;
                                 auto buf = new unsigned char[maintain_size_append];
 
-                                FILE* source = fopen(chunk_maintain.c_str(), "rb");
+                                FILE* source = fopen(chunk_maintain.make_preferred().c_str(), "rb");
                                 if (!source) {
                                     ERROR << "File read opening failed at \"" + chunk_maintain.string() + "\"";
                                     std::exit(EXIT_FAILURE);
@@ -1335,7 +1335,7 @@ namespace uh::trees {
                                     FATAL << "I/O error when reading \"" + chunk_maintain.string() + "\"";
                                     std::exit(EXIT_FAILURE);
                                 }
-                                FILE* dest = fopen(chunk.c_str(), "ab");
+                                FILE* dest = fopen(chunk.make_preferred().c_str(), "ab");
                                 if (!dest) {
                                     ERROR << "File append opening failed at \"" + chunk_maintain.string() + "\"";
                                     std::exit(EXIT_FAILURE);
