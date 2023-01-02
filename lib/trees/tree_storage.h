@@ -55,9 +55,11 @@ namespace uh::trees {
 
     protected:
         //every file storage level contains a maximum of 256 storage chunks and 256 folders to deeper levels
-        std::atomic<std::shared_ptr<std::vector<std::tuple<std::size_t, unsigned char, std::shared_ptr<std::atomic_flag>, std::shared_ptr<std::atomic<std::size_t>>, std::shared_ptr<std::atomic_flag>>>>> size{};//different storage chunks with write, read and maintain protection flags
-        std::atomic<std::shared_ptr<std::vector<std::tuple<std::size_t, tree_storage *, unsigned char>>>> children{};//deeper tree storage blocks and folders
-        std::atomic<std::shared_ptr<std::filesystem::path>> combined_path{};
+        //different storage chunks with write, read and maintain protection flags
+        std::atomic<std::shared_ptr<std::vector<std::tuple<std::size_t, unsigned char, std::shared_ptr<std::atomic_flag>, std::shared_ptr<std::atomic<std::size_t>>, std::shared_ptr<std::atomic_flag>>>>> size;
+        //deeper tree storage blocks and folders
+        std::atomic<std::shared_ptr<std::vector<std::tuple<std::size_t, tree_storage *, unsigned char>>>> children;
+        std::atomic<std::shared_ptr<std::filesystem::path>> combined_path;
         std::shared_mutex global_var_mutex{};//protect everything out of size array
 
         //returns wrapped string
@@ -86,7 +88,10 @@ namespace uh::trees {
             std::atomic<std::size_t> i_constructor{};
 
             std::unique_lock lock(global_var_mutex);
-            if (combined_path.load()->empty()) {
+            if (combined_path.load() == nullptr) {
+                combined_path.store(std::make_shared<std::filesystem::path>());
+                size.store(std::make_shared<std::vector<std::tuple<std::size_t, unsigned char, std::shared_ptr<std::atomic_flag>, std::shared_ptr<std::atomic<std::size_t>>, std::shared_ptr<std::atomic_flag>>>>());
+                children.store(std::make_shared<std::vector<std::tuple<std::size_t, tree_storage *, unsigned char>>>());
                 std::string parent_name = root.filename().string();
                 bool valid_root = parent_name.size() == 4 and root.extension().string().empty();
                 if (valid_root)
