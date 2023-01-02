@@ -3,6 +3,7 @@
 
 #include <options/basic_options.h>
 #include <options/logging_options.h>
+#include <options/metrics_options.h>
 #include <options/server_options.h>
 
 
@@ -21,10 +22,12 @@ public:
     uh::options::basic_options& basic();
     uh::options::server_options& server();
     uh::options::logging_options& logging();
+    uh::options::metrics_options& metrics();
 private:
     uh::options::basic_options m_basic;
     uh::options::server_options m_server;
     uh::options::logging_options m_logging;
+    uh::options::metrics_options m_metrics;
 };
 
 // ---------------------------------------------------------------------
