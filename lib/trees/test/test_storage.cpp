@@ -670,5 +670,8 @@ BOOST_AUTO_TEST_CASE(get_info_set_time_test)
 
 BOOST_AUTO_TEST_CASE(delete_test)
 {
-
+    uh::trees::tree_storage t1("/mnt/md0");//A test folder reserved for tree storage
+    auto index_list = t1.index();
+    std::vector<std::vector<unsigned char>> to_del;
+    std:
 }

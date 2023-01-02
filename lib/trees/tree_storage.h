@@ -229,10 +229,11 @@ namespace uh::trees {
                     min_pos = std::get<2>(min_el);
                 }
                 std::get<0>(children.load()->at(min_pos)) += total_size;
+                lock.unlock();//go into deeper structure and release lock, else only
+                std::get<1>(children.load()->at(min_pos))->write(input,current_time);
             }
-            lock.unlock();//go into deeper structure and release lock, else only
-
-            if (no_deeper) {
+            else{
+                lock.unlock();//go into deeper structure and release lock, else only
                 //store block to this position
                 std::string ref_name{boost::algorithm::hex(std::string{(char) min_pos})};
                 std::filesystem::path read_chunk = *combined_path.load(std::memory_order_relaxed) / ref_name;
