@@ -127,22 +127,29 @@ namespace uh::trees {
                 if (i == N)return;
                 for (; i < N;) {
                     std::string s_tmp = boost::algorithm::hex(std::string{(char) i});
-                    std::shared_mutex lock2(combined_path_protect);
+                    std::shared_lock lock(combined_path_protect);
                     std::filesystem::path chunk = *combined_path / s_tmp;
+                    lock.unlock();
 
                     if (std::filesystem::exists(chunk)) {
                         std::shared_ptr<std::atomic_flag> f1 = std::make_shared<std::atomic_flag>(), f3 = std::make_shared<std::atomic_flag>();
                         std::shared_ptr<std::atomic<std::size_t>> f2 = std::make_shared<std::atomic<std::size_t>>();
-                        size.load()->emplace_back(std::filesystem::file_size(chunk), i, f1, f2, f3);
+                        std::lock_guard lock1(size_protect);
+                        size->emplace_back(std::filesystem::file_size(chunk), i, f1, f2, f3);
                     }
 
-                    std::string fname = combined_path.load(std::memory_order_relaxed)->filename().string();
+                    lock.lock();
+                    std::string fname = combined_path->filename().string();
+                    lock.unlock();
                     s_tmp.insert(s_tmp.cbegin(), fname.cbegin() + 2, fname.cbegin() + 4);
-                    std::filesystem::path deeper_tree = *combined_path.load(std::memory_order_relaxed) / s_tmp;
+                    lock.lock();
+                    std::filesystem::path deeper_tree = *combined_path / s_tmp;
+                    lock.unlock();
                     //check if sub folder in tree exists
                     if (std::filesystem::exists(deeper_tree)) {
                         auto *tmp_tree = new tree_storage(deeper_tree, 1);
-                        children.load()->emplace_back(tmp_tree->get_size(), tmp_tree, i);
+                        std::lock_guard lock2(children_protect);
+                        children->emplace_back(tmp_tree->get_size(), tmp_tree, i);
                     }
                     i = (i_constructor += 1);
                 }
@@ -159,20 +166,22 @@ namespace uh::trees {
                 for (auto &th: workers)
                     th.join();
             }
-
-            if (!std::is_sorted(std::execution::par_unseq, size.load()->begin(), size.load()->end(),
+            std::unique_lock lock_size(size_protect);
+            if (!std::is_sorted(std::execution::par_unseq, size->begin(), size->end(),
                                 [](const auto &a, const auto &b) {
                                     return std::get<1>(a) < std::get<1>(b);
                                 }))
-                std::sort(std::execution::par_unseq, size.load()->begin(), size.load()->end(),
+                std::sort(std::execution::par_unseq, size->begin(), size->end(),
                           [](const auto &a, const auto &b) {
                               return std::get<1>(a) < std::get<1>(b);
                           });
-            if (!std::is_sorted(std::execution::par_unseq, children.load()->begin(), children.load()->end(),
+            lock_size.unlock();
+            std::lock_guard lock_children(children_protect);
+            if (!std::is_sorted(std::execution::par_unseq, children->begin(), children->end(),
                                 [](const auto &a, const auto &b) {
                                     return std::get<1>(a) < std::get<1>(b);
                                 }))
-                std::sort(std::execution::par_unseq, children.load()->begin(), children.load()->end(),
+                std::sort(std::execution::par_unseq, children->begin(), children->end(),
                           [](const auto &a, const auto &b) {
                               return std::get<1>(a) < std::get<1>(b);
                           });
