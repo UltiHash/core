@@ -104,13 +104,15 @@ BOOST_AUTO_TEST_CASE(write_read_test)
             //read after write test
             gettimeofday(&time, nullptr);
             millis = ((long double) time.tv_sec * 1000) + ((long double) time.tv_usec / 1000);
-            std::vector<unsigned char> read_result = t1.read(local_block_ref);
+            auto all_result = t1.read(local_block_ref);
+            std::vector<unsigned char> read_result = std::get<1>(all_result);
             gettimeofday(&time, nullptr);
             long double read_after_write_time =
                     (((long double) time.tv_sec * 1000) + ((long double) time.tv_usec / 1000)) - millis;
             //check correctness of stored string
             bool cmp = std::equal(test_bin.cbegin(),test_bin.cend(),read_result.cbegin(),read_result.cend());
             BOOST_ASSERT_MSG(cmp,std::string("The write read result from block \""+boost::algorithm::hex(std::string(local_block_ref.cbegin(),local_block_ref.cend()))+"\" failed.").c_str());
+            BOOST_ASSERT_MSG(std::get<0>(all_result)>std::chrono::high_resolution_clock::now().time_since_epoch().count()-std::chrono::seconds(300).count(),"The block could not be written and read back in the last 5 Minutes!! System is too slow!");
             read_after_write_times.emplace_back(local_block_ref, read_result.size(), read_after_write_time);
 
             total_size += test_bin.size();
@@ -121,7 +123,8 @@ BOOST_AUTO_TEST_CASE(write_read_test)
         for (const auto &i: write_times) {
             gettimeofday(&time, nullptr);
             long double millis = ((long double) time.tv_sec * 1000) + ((long double) time.tv_usec / 1000);
-            std::vector<unsigned char> read_result = t1.read(std::get<0>(i));
+            auto all_results = t1.read(std::get<0>(i));
+            std::vector<unsigned char> read_result = std::get<1>(all_results);
             gettimeofday(&time, nullptr);
             long double read_sequential =
                     (((long double) time.tv_sec * 1000) + ((long double) time.tv_usec / 1000)) - millis;
@@ -129,6 +132,7 @@ BOOST_AUTO_TEST_CASE(write_read_test)
                     "Database sequential reading failed at block reference " +
                     boost::algorithm::hex(std::string{std::get<0>(i).cbegin(), std::get<0>(i).cend()}) +
                     " . No block retrieved!").c_str());
+            BOOST_ASSERT_MSG(std::get<0>(all_results)>std::chrono::high_resolution_clock::now().time_since_epoch().count()-std::chrono::days(1).count(),"The block could not be sequentially read back within the last day!! System is too slow!");
             linear_read_times.emplace_back(std::get<0>(i), read_result.size(), read_sequential);
         }
 
@@ -141,7 +145,8 @@ BOOST_AUTO_TEST_CASE(write_read_test)
             std::size_t access_point = dist(rng);
             gettimeofday(&time, nullptr);
             long double millis = ((long double) time.tv_sec * 1000) + ((long double) time.tv_usec / 1000);
-            std::vector<unsigned char> read_result = t1.read(std::get<0>(write_times[access_point]));
+            auto all_results = t1.read(std::get<0>(write_times[access_point]));
+            std::vector<unsigned char> read_result = std::get<1>(all_results);
             gettimeofday(&time, nullptr);
             long double read_sequential =
                     (((long double) time.tv_sec * 1000) + ((long double) time.tv_usec / 1000)) - millis;
@@ -150,6 +155,7 @@ BOOST_AUTO_TEST_CASE(write_read_test)
                     boost::algorithm::hex(std::string{std::get<0>(write_times[access_point]).cbegin(),
                                                       std::get<0>(write_times[access_point]).cend()}) +
                     " . No block retrieved!").c_str());
+            BOOST_ASSERT_MSG(std::get<0>(all_results)>std::chrono::high_resolution_clock::now().time_since_epoch().count()-std::chrono::days(1).count(),"The block could not be randomly read back within the last day!! System is too slow!");
             randam_access_read_times.emplace_back(std::get<0>(write_times[access_point]), read_result.size(),
                                                   read_sequential);
             total_size += read_result.size();
@@ -623,10 +629,12 @@ BOOST_AUTO_TEST_CASE(index_read_test)
     BOOST_TEST_MESSAGE("The constructor of tree storage took "+std::to_string(constructor_time)+" ms in a full state. The index time of that tree took"+std::to_string(index_time)+" ms. The total time to bring the database back to life was "+std::to_string(constructor_time+index_time)+" ms.");
 
     for(const auto &el:index_list){
-        std::vector<unsigned char> read_result = t1.read(std::get<1>(el));
+        auto all_results = t1.read(std::get<1>(el));
+        std::vector<unsigned char> read_result = std::get<1>(all_results);
         unsigned char hash_buf[SHA512_DIGEST_LENGTH];//HASH GENERATION
         SHA512(read_result.data(), read_result.size(), hash_buf);
         BOOST_CHECK_EQUAL_COLLECTIONS(std::get<0>(el).cbegin(),std::get<1>(el).cend(),hash_buf,hash_buf+SHA512_DIGEST_LENGTH);
+        BOOST_ASSERT_MSG(std::get<0>(all_results)>std::chrono::high_resolution_clock::now().time_since_epoch().count()-std::chrono::days(1).count(),"The block could not be indexed within the last day!! System is too slow!");
     }
     t1.delete_recursive();
 }
