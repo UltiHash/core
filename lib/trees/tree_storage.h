@@ -437,7 +437,8 @@ namespace uh::trees {
                     if (!*read_ptr)write_ptr->notify_one();
 
                     std::vector<unsigned char> out_vec{};
-                    out_vec.assign(tmp_buf, tmp_buf + output_size);
+                    out_vec.reserve(output_size);
+                    std::copy(std::execution::par_unseq,tmp_buf, tmp_buf + output_size, out_vec.end());
                     delete[] tmp_buf;
 
                     return {block_time, out_vec};
@@ -681,8 +682,8 @@ namespace uh::trees {
             return out_size.load();
         }
 
-        //returns a tuple with block time and block size from disk
-        std::tuple<unsigned long, std::size_t> get_info(const std::vector<unsigned char> &block_code) {
+        //returns a tuple with block time and block size from disk and total size on disk
+        std::tuple<unsigned long, std::size_t, std::size_t> get_info(const std::vector<unsigned char> &block_code) {
             if (block_code.empty()) {
                 return {};
             }
@@ -694,7 +695,7 @@ namespace uh::trees {
                     DEBUG << "<Block error trace>: Block code " + boost::algorithm::hex(not_found) +
                              " could not be found in storage tree \"" +
                              combined_path.load(std::memory_order_relaxed)->string() + "\".";
-                    return {0, 0};
+                    return {};
                 } else {
                     std::vector<unsigned char> sub_block_code{block_code.cbegin() + 1, block_code.cend()};
                     auto out_vec = std::get<1>(children.load()->at(block_code[0]))->get_info(sub_block_code);
@@ -723,7 +724,7 @@ namespace uh::trees {
                            " could not be found in storage tree \"" +
                            combined_path.load(std::memory_order_relaxed)->string() +
                            "\" and size of storage chunk was 0.";
-                    return {0, 0};
+                    return {};
                 } else {
                     std::vector<unsigned char> sub_block_code{block_code.cbegin() + 1,
                                                               block_code.cend()}; //copy offset code and rebuild
@@ -802,7 +803,7 @@ namespace uh::trees {
                     *read_ptr -= 1;
                     if (!*read_ptr)write_ptr->notify_one();
 
-                    return {block_time, output_size};
+                    return {block_time, output_size, sizeof(time_buf)+1+sizeof(buffer_in)+output_size};
                 }
             }
         }
@@ -917,6 +918,7 @@ namespace uh::trees {
         //after function delete_blocks_copy was called the atomic_flag securing write on the chunk will be active and we need to re-map all blocks of a chunk before setting the write flag back to false
         //it is wise to call a delete on blocks on the same chunk, one at a time
         ///WARNING: deleting is not fully thread safe since references are re-mapped, so make sure no reading is scheduled on the chunks carrying the blocks while calling delete!!
+        ///Recommended: delete as many blocks as you have CPU cores so one core handles one block delete at a time
         std::tuple<std::size_t, std::list<std::tuple<std::vector<unsigned char>, std::vector<unsigned char>, tree_storage *>>>
         delete_blocks(
                 std::vector<std::vector<unsigned char>> &block_codes,

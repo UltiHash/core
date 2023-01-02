@@ -33,16 +33,15 @@ std::vector<unsigned char> binary_generator(std::size_t max_len) {
 
     std::vector<unsigned char> out_return;
     out_return.reserve(len);
-    if((len / sizeof(std::size_t))>0){
+    if ((len / sizeof(std::size_t)) > 0) {
         auto *out_fast = new std::size_t[len / sizeof(std::size_t)];
         auto *out_fast_cheat = reinterpret_cast<unsigned char *>(out_fast);
 
-        if(len<(std::size_t)std::pow(2,24)){
+        if (len < (std::size_t) std::pow(2, 24)) {
             for (std::size_t i = 0; i < len / sizeof(std::size_t); i++) {
                 out_fast[i] = (std::size_t) dist2(rng2);
             }
-        }
-        else{
+        } else {
 #pragma omp parallel for simd schedule(dynamic)
             for (std::size_t i = 0; i < len / sizeof(std::size_t); i++) {
                 out_fast[i] = (std::size_t) dist2(rng2);
@@ -55,7 +54,8 @@ std::vector<unsigned char> binary_generator(std::size_t max_len) {
     }
 
     //complete
-    for (std::size_t i1 = (len / sizeof(std::size_t)) * sizeof(std::size_t); i1 < (len / sizeof(std::size_t)) * sizeof(std::size_t) + len % sizeof(std::size_t); i1++) {
+    for (std::size_t i1 = (len / sizeof(std::size_t)) * sizeof(std::size_t);
+         i1 < (len / sizeof(std::size_t)) * sizeof(std::size_t) + len % sizeof(std::size_t); i1++) {
         out_return[i1] = dist3(rng3);
     }
 
@@ -86,7 +86,7 @@ BOOST_AUTO_TEST_CASE(write_read_test)
         //retrieved block size, local_block_ref size and time taken
         mode ? BOOST_TEST_MESSAGE("---Entering short block latency measurement write read mode:---\n") :
         BOOST_TEST_MESSAGE("---Entering normal write read mode:---\n");
-        while (total_size < (mode?(std::size_t) std::pow(2, 22):(std::size_t) (std::pow(1024, 4) * 4))){
+        while (total_size < (mode ? (std::size_t) std::pow(2, 22) : (std::size_t) (std::pow(1024, 4) * 4))) {
             //(std::size_t) std::pow(2, 35))
             std::vector<unsigned char> test_bin = binary_generator(mode ? 32 : STORE_MAX);
             //write test
@@ -110,8 +110,9 @@ BOOST_AUTO_TEST_CASE(write_read_test)
             long double read_after_write_time =
                     (((long double) time.tv_sec * 1000) + ((long double) time.tv_usec / 1000)) - millis;
             //check correctness of stored string
-            bool cmp = std::equal(test_bin.cbegin(),test_bin.cend(),read_result.cbegin(),read_result.cend());
-            BOOST_ASSERT_MSG(cmp,std::string("The write read result from block \""+boost::algorithm::hex(std::string(local_block_ref.cbegin(),local_block_ref.cend()))+"\" failed.").c_str());
+            bool cmp = std::equal(test_bin.cbegin(), test_bin.cend(), read_result.cbegin(), read_result.cend());
+            BOOST_ASSERT_MSG(cmp, std::string("The write read result from block \"" + boost::algorithm::hex(
+                    std::string(local_block_ref.cbegin(), local_block_ref.cend())) + "\" failed.").c_str());
             read_after_write_times.emplace_back(local_block_ref, read_result.size(), read_after_write_time);
 
             total_size += test_bin.size();
@@ -138,8 +139,8 @@ BOOST_AUTO_TEST_CASE(write_read_test)
         total_size = 0;
         std::random_device dev;
         std::mt19937 rng(dev());
-        std::uniform_int_distribution<std::mt19937::result_type> dist(0, write_times.size()-1);
-        while (total_size < (mode?(std::size_t) std::pow(2, 22):(std::size_t) (std::pow(1024, 4) * 4))) {
+        std::uniform_int_distribution<std::mt19937::result_type> dist(0, write_times.size() - 1);
+        while (total_size < (mode ? (std::size_t) std::pow(2, 22) : (std::size_t) (std::pow(1024, 4) * 4))) {
             std::size_t access_point = dist(rng);
             gettimeofday(&time, nullptr);
             long double millis = ((long double) time.tv_sec * 1000) + ((long double) time.tv_usec / 1000);
@@ -623,14 +624,51 @@ BOOST_AUTO_TEST_CASE(index_read_test)
     gettimeofday(&time, nullptr);
     long double index_time = (((long double) time.tv_sec * 1000) + ((long double) time.tv_usec / 1000)) - millis;
 
-    BOOST_TEST_MESSAGE("The constructor of tree storage took "+std::to_string(constructor_time)+" ms in a full state. The index time of that tree took"+std::to_string(index_time)+" ms. The total time to bring the database back to life was "+std::to_string(constructor_time+index_time)+" ms.");
+    BOOST_TEST_MESSAGE("The constructor of tree storage took " + std::to_string(constructor_time) +
+                       " ms in a full state. The index time of that tree took" + std::to_string(index_time) +
+                       " ms. The total time to bring the database back to life was " +
+                       std::to_string(constructor_time + index_time) + " ms.");
 
-    for(const auto &el:index_list){
+    for (const auto &el: index_list) {
         auto all_results = t1.read(std::get<1>(el));
         std::vector<unsigned char> read_result = std::get<1>(all_results);
         unsigned char hash_buf[SHA512_DIGEST_LENGTH];//HASH GENERATION
         SHA512(read_result.data(), read_result.size(), hash_buf);
-        BOOST_CHECK_EQUAL_COLLECTIONS(std::get<0>(el).cbegin(),std::get<1>(el).cend(),hash_buf,hash_buf+SHA512_DIGEST_LENGTH);
+        BOOST_CHECK_EQUAL_COLLECTIONS(std::get<0>(el).cbegin(), std::get<1>(el).cend(), hash_buf,
+                                      hash_buf + SHA512_DIGEST_LENGTH);
     }
     t1.delete_recursive();
+}
+
+BOOST_AUTO_TEST_CASE(get_info_set_time_test)
+{
+    struct timeval time{};
+    uh::trees::tree_storage t1("/mnt/md0");//A test folder reserved for tree storage
+    auto index_list = t1.index();
+    auto first_el = index_list.begin();
+    gettimeofday(&time, nullptr);
+    long double millis = ((long double) time.tv_sec * 1000) + ((long double) time.tv_usec / 1000);
+    auto block_info = t1.get_info(std::get<1>(*first_el));
+    gettimeofday(&time, nullptr);
+    long double write_time =
+            (((long double) time.tv_sec * 1000) + ((long double) time.tv_usec / 1000)) - millis;
+    BOOST_TEST_MESSAGE("\nThe get_info test to seek the information of one block took "+std::to_string(write_time)+" ms.");
+    BOOST_ASSERT_MSG(std::get<0>(block_info) < (unsigned long) std::chrono::nanoseconds(
+            std::chrono::high_resolution_clock::now().time_since_epoch()).count(),
+                     "Block was not older than current time");
+    BOOST_ASSERT_MSG(std::get<1>(block_info) < std::get<2>(block_info), "The total size must always be larger than the block size!");
+    gettimeofday(&time, nullptr);
+    millis = ((long double) time.tv_sec * 1000) + ((long double) time.tv_usec / 1000);
+    bool test_ok = t1.set_time(std::get<1>(*first_el));
+    gettimeofday(&time, nullptr);
+    write_time = (((long double) time.tv_sec * 1000) + ((long double) time.tv_usec / 1000)) - millis;
+    BOOST_ASSERT_MSG(test_ok,"Current time could not be set to first block of index!");
+    BOOST_TEST_MESSAGE("\nSetting a new block time took "+std::to_string(write_time)+" ms.");
+    auto block_info2 = t1.get_info(std::get<1>(*first_el));
+    BOOST_ASSERT_MSG(std::get<0>(block_info) < std::get<0>(block_info2), "Block time reset was not successful internally!");
+}
+
+BOOST_AUTO_TEST_CASE(delete_test)
+{
+
 }
