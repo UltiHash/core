@@ -205,11 +205,7 @@ namespace uh::trees {
             }
 
             bool no_deeper = min_val < STORE_MAX && min_val + total_size < STORE_HARD_LIMIT && !(std::get<4>(size.load()->at(min_pos))->test());
-            std::size_t size_tmp{};
-            if (no_deeper) {
-                size_tmp = std::get<0>(size.load()->at(min_pos));
-                std::get<0>(size.load()->at(min_pos)) += total_size;
-            } else {
+            if (!no_deeper) {
                 //find or create balanced deeper tree node to store
                 if ((unsigned short) children.load()->size() < (unsigned short) N) {
                     min_pos = (unsigned short) children.load()->size();
@@ -260,6 +256,9 @@ namespace uh::trees {
                     usleep(10 * 1000);
 #endif // _WIN32
                 }
+
+                std::size_t size_tmp = std::get<0>(size.load()->at(min_pos));
+                std::get<0>(size.load()->at(min_pos)) += total_size;
 
                 FILE *writer = std::fopen(read_chunk.c_str(), "ab");
                 if (!writer) {
@@ -909,8 +908,9 @@ namespace uh::trees {
         //maintaining the system can be done in 2 steps: delete_blocks_copy and after that we need to re-map all local block references
         //after function delete_blocks_copy was called the atomic_flag securing write on the chunk will be active and we need to re-map all blocks of a chunk before setting the write flag back to false
         //it is wise to call a delete on blocks on the same chunk, one at a time
+        ///WARNING: deleting is not fully thread safe since references are re-mapped, so make sure no reading is scheduled on the chunks carrying the blocks while calling delete!!
         std::tuple<std::size_t, std::list<std::tuple<std::vector<unsigned char>, std::vector<unsigned char>, tree_storage *>>>
-        delete_blocks_copy(
+        delete_blocks(
                 std::vector<std::vector<unsigned char>> &block_codes,
                 unsigned short num_threads = std::thread::hardware_concurrency()) {
             if (block_codes.empty() || !num_threads)return {};
@@ -1176,9 +1176,49 @@ namespace uh::trees {
 
                                 //after the truncate position are known and the following blocks are filtered, truncation and append need to take place under atomic flag protection
                                 //write and truncate
-                                truncate64(chunk.c_str(),trunc_at);
+                                while (std::atomic_flag_test_and_set_explicit(&(*write_ptr), std::memory_order_acquire)) {
+                                    write_ptr->wait(true);
+                                }
 
-                                //TODO: move to init_maintained_chunk_reset
+                                while (read_ptr->load() > 0) {
+#ifdef _WIN32
+                                    Sleep(10);
+#else
+                                    usleep(10 * 1000);
+#endif // _WIN32
+                                }
+                                truncate64(chunk.c_str(),static_cast<long>(trunc_at));
+                                std::get<0>(size.load()->at((*cur_tmp)[0])) -= delete_size;
+
+                                std::size_t maintain_size_append = cur_pos-delete_size;
+                                auto buf = new unsigned char[maintain_size_append];
+
+                                FILE* source = fopen(chunk_maintain.c_str(), "rb");
+                                if (!source) {
+                                    ERROR << "File read opening failed at \"" + chunk_maintain.string() + "\"";
+                                    std::exit(EXIT_FAILURE);
+                                }
+                                fread(buf, sizeof(unsigned char), maintain_size_append, source);
+                                if (std::ferror(source)) {
+                                    FATAL << "I/O error when reading \"" + chunk_maintain.string() + "\"";
+                                    std::exit(EXIT_FAILURE);
+                                }
+                                FILE* dest = fopen(chunk.c_str(), "ab");
+                                if (!dest) {
+                                    ERROR << "File append opening failed at \"" + chunk_maintain.string() + "\"";
+                                    std::exit(EXIT_FAILURE);
+                                }
+                                fwrite(buf, sizeof(unsigned char), maintain_size_append, dest);
+                                if (std::ferror(dest)) {
+                                    FATAL << "I/O error when appending \"" + chunk_maintain.string() + "\"";
+                                    std::exit(EXIT_FAILURE);
+                                }
+
+                                fclose(source);
+                                fclose(dest);
+
+                                std::atomic_flag_clear_explicit(&(*write_ptr), std::memory_order_release);
+                                if(!write_ptr->test())write_ptr->notify_one();
                                 std::atomic_flag_clear_explicit(&(*maintain_ptr), std::memory_order_release);
                                 if(!maintain_ptr->test())maintain_ptr->notify_one();
                             }
@@ -1188,7 +1228,7 @@ namespace uh::trees {
                                 std::get<0>(children.load()->at((*cur_tmp)[0])) > 0) {
                                 auto tmp_deeper_tree_ptr = std::get<1>(children.load()->at((*cur_tmp)[0]));
                                 //parallel start
-                                auto deeper_delete = tmp_deeper_tree_ptr->delete_blocks_copy(deeper_codes, 1);
+                                auto deeper_delete = tmp_deeper_tree_ptr->delete_blocks(deeper_codes, 1);
                                 std::get<0>(children.load()->at((*cur_tmp)[0])) -= std::get<0>(deeper_delete);//subtract deleted size from deeper node
                                 out_size += std::get<0>(deeper_delete);//add total deleted size
                                 for(auto &it:std::get<1>(deeper_delete)){
