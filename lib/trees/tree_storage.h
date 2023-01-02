@@ -1031,6 +1031,7 @@ namespace uh::trees {
                                     write_control->wait(true);
                                 }
 
+                                if(std::filesystem::exists(chunk_maintain))std::filesystem::remove(chunk_maintain);
                                 FILE *writer = std::fopen(chunk_maintain.c_str(), "ab");
                                 if (!writer) {
                                     ERROR << "File write opening failed at \"" + chunk_maintain.string() + "\"";
