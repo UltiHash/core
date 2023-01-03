@@ -68,7 +68,7 @@ namespace uh::trees {
             }
             unsigned char byte_count = total_bit_count / 8;
             std::vector<unsigned char> prefix{};
-            for (unsigned char i = 0; i < byte_count + 1; i++) {
+            for (unsigned char i = 0; i <= byte_count; i++) {
                 prefix.push_back((unsigned char) (input_size >> (i * 8)));
             }
             if (prefix.empty())prefix.push_back(0);
@@ -77,16 +77,17 @@ namespace uh::trees {
         }
 
     private:
-        void mem_wait(std::size_t mem) {
+        template<typename ALLOC>
+        ALLOC* mem_wait(std::size_t mem) {
             struct sysinfo memInfo{};
             unsigned long totalFreeVirtualMem;
             do {
+                std::unique_lock lock(mem_protect);
                 sysinfo (&memInfo);
                 totalFreeVirtualMem = memInfo.freeram;
                 totalFreeVirtualMem += memInfo.freeswap;
                 totalFreeVirtualMem *= memInfo.mem_unit;
                 if (totalFreeVirtualMem < mem) {
-                    std::unique_lock lock(mem_protect);
                     if(mem == *max_request)*count_request += 1;
                     *max_request = std::max(*max_request, mem);
                     if(*count_request == 12000){// since a block of 4GB may take 2 minutes to be written back we need to wait for that time
@@ -101,9 +102,14 @@ namespace uh::trees {
                     usleep(10 * 1000);
 #endif // _WIN32
                 }
+                else lock.unlock();
             } while (totalFreeVirtualMem < mem);
             std::lock_guard lock2(mem_protect);
-            if(mem == *max_request)*count_request = 0;
+            if(mem == *max_request){
+                *count_request = 0;
+                *max_request = 0;
+            }
+            return new ALLOC[mem];
         }
 
     public:
@@ -498,8 +504,7 @@ namespace uh::trees {
                     for (unsigned char buf_count = 0; buf_count <= buf_size; buf_count++) {
                         output_size += (((std::size_t) buffer_in[buf_count]) << (buf_count * 8));
                     }
-                    mem_wait(output_size);
-                    auto *tmp_buf = new unsigned char[output_size];
+                    auto *tmp_buf = mem_wait<unsigned char>(output_size);
                     count = std::fread(tmp_buf, sizeof(char), output_size, reader);
 
                     if (count != output_size) {
@@ -517,7 +522,7 @@ namespace uh::trees {
 
                     std::vector<unsigned char> out_vec{};
                     out_vec.reserve(output_size);
-                    std::copy(std::execution::par_unseq,tmp_buf, tmp_buf + output_size, out_vec.end());
+                    std::copy(tmp_buf, tmp_buf + output_size, out_vec.end());
                     delete[] tmp_buf;
 
                     return {block_time, out_vec};
@@ -644,9 +649,8 @@ namespace uh::trees {
                                     *output_size += (((std::size_t) buffer_for_size[buf_count]) << (buf_count * 8));
                                 }
                                 lock.unlock();
-                                mem_wait(*output_size);
 
-                                *tmp_buf[parallel_switch_tmp] = new unsigned char[*output_size];
+                                *tmp_buf[parallel_switch_tmp] = mem_wait<unsigned char>(*output_size);
                                 count = std::fread(*tmp_buf[parallel_switch_tmp], sizeof(char), *output_size, reader);
                                 *cur_pos += count;
 
@@ -1305,8 +1309,7 @@ namespace uh::trees {
                                     }
                                     else{
                                         //copy block to maintain file
-                                        mem_wait(write_back_size);
-                                        auto *tmp_buf = new unsigned char[write_back_size];
+                                        auto *tmp_buf = mem_wait<unsigned char>(write_back_size);
                                         unsigned char i = 0;
                                         for(; i < (unsigned char) sizeof(time_buf);i++){
                                             tmp_buf[i] = time_buf[i];
@@ -1358,7 +1361,7 @@ namespace uh::trees {
                                 truncate64(chunk.c_str(),static_cast<long>(trunc_at));
 
                                 std::size_t maintain_size_append = cur_pos-delete_size;
-                                auto buf = new unsigned char[maintain_size_append];
+                                auto buf = mem_wait<unsigned char>(maintain_size_append);
 
                                 FILE* source = fopen(chunk_maintain.make_preferred().c_str(), "rb");
                                 if (!source) {
@@ -1465,9 +1468,8 @@ namespace uh::trees {
          * for their operation since the struct will disassemble, but no dataloss can occur
          */
         ~tree_storage() {
-            std::unique_lock child_write(children_protect);
             for (auto &i: *children) {
-                child_write.unlock();
+
                 std::shared_lock lock_size(size_protect);
                 //stop all reading and writing operations on this tree node and reserve all rights before destroying itself
                 auto write_ptr = &(*std::get<2>(size->at(std::get<2>(i))));
@@ -1495,7 +1497,6 @@ namespace uh::trees {
                 if (std::get<1>(i) != nullptr) {
                     delete std::get<1>(i);
                 }
-                child_write.lock();
             }
         }
     };
