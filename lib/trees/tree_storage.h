@@ -563,8 +563,8 @@ namespace uh::trees {
         std::list<std::tuple<std::vector<unsigned char>, std::vector<unsigned char>, unsigned long>>
         index(unsigned short num_threads = std::thread::hardware_concurrency()) {
             if (!num_threads)return {};
-            std::atomic<std::shared_ptr<std::list<std::tuple<std::vector<unsigned char>, std::vector<unsigned char>, unsigned long>>>> search_index;
-            search_index.store(std::make_shared<std::list<std::tuple<std::vector<unsigned char>, std::vector<unsigned char>, unsigned long>>>());//TODO: mutex protect
+            std::shared_ptr<std::list<std::tuple<std::vector<unsigned char>, std::vector<unsigned char>, unsigned long>>> search_index = std::make_shared<std::list<std::tuple<std::vector<unsigned char>, std::vector<unsigned char>, unsigned long>>>();
+            std::shared_mutex search_index_protect{};
             std::atomic<std::size_t> i_constructor{};
             std::atomic_flag error_flag{ATOMIC_FLAG_INIT};
 
@@ -739,7 +739,8 @@ namespace uh::trees {
                                 delete[] *tmp_buf[parallel_switch_copy];
 
                                 std::vector<unsigned char> hash{hash_buf, hash_buf + SHA512_DIGEST_LENGTH};
-                                search_index.load()->emplace_back(hash, tmp_local_block_ref, block_time_cpy);
+                                std::lock_guard lock_emplace(search_index_protect);
+                                search_index->emplace_back(hash, tmp_local_block_ref, block_time_cpy);
                             };
 
                             if (rt.joinable())rt.join();
@@ -771,8 +772,8 @@ namespace uh::trees {
                         for (auto &el: append_list) {
                             std::get<1>(el).insert(std::get<1>(el).cbegin(), i);
                         }
-                        auto cur_end = search_index.load(std::memory_order_relaxed)->cend();
-                        search_index.load()->splice(cur_end, append_list);
+                        std::lock_guard lock_splice(search_index_protect);
+                        search_index->splice(search_index->cend(), append_list);
                     }
                     else{
                         children_lock.unlock();
@@ -800,7 +801,8 @@ namespace uh::trees {
                 return {};
             }
 
-            return *search_index.load();
+            std::shared_lock lock_return(search_index_protect);
+            return *search_index;
         }
 
         /*
