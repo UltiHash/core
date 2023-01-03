@@ -1173,11 +1173,10 @@ namespace uh::trees {
                 unsigned short num_threads = std::thread::hardware_concurrency()) {
             if (block_codes.empty() || !num_threads)return {};
             std::atomic_flag error_flag{ATOMIC_FLAG_INIT};
-            std::atomic<std::shared_ptr<std::size_t>> active_threads{};//TODO: mutex with atomic will be enough
-            active_threads.store(std::make_shared<std::size_t>());
+            std::atomic<std::size_t> active_threads{};
             std::atomic<std::size_t> out_size{};
-            std::atomic<std::shared_ptr<std::list<std::tuple<std::vector<unsigned char>, std::vector<unsigned char>>>>> out_change_list{};
-            out_change_list.store(std::make_shared<std::list<std::tuple<std::vector<unsigned char>, std::vector<unsigned char>>>>());
+            std::shared_mutex out_change_list_protect{};
+            std::shared_ptr<std::list<std::tuple<std::vector<unsigned char>, std::vector<unsigned char>>>> out_change_list = std::make_shared<std::list<std::tuple<std::vector<unsigned char>, std::vector<unsigned char>>>>();
             //sort for lexicographic to find blocks within the same chunks that all need to be deleted
             std::sort(std::execution::par_unseq, block_codes.begin(), block_codes.end(), [](auto &a, auto &b) {
                 return std::lexicographical_compare(a.begin(), a.end(), b.begin(), b.end());
@@ -1302,8 +1301,8 @@ namespace uh::trees {
                                 std::size_t delete_size{};
                                 //producer consumer queue for reading and writing; contains RAM pointer; size of RAM pointer; local tree storage reference of;
                                 // *this tree where the referring chunk is stored; truncate size for the chunk; new storage reference after append
-                                std::atomic<std::shared_ptr<std::list<std::tuple<unsigned char*,std::size_t,std::vector<unsigned char>, std::size_t>>>> multithreading_factory{};
-                                multithreading_factory.store(std::make_shared<std::list<std::tuple<unsigned char*,std::size_t,std::vector<unsigned char>, std::size_t>>>());//TODO: mutex protect
+                                std::shared_ptr<std::list<std::tuple<unsigned char*,std::size_t,std::vector<unsigned char>, std::size_t>>> multithreading_factory = std::make_shared<std::list<std::tuple<unsigned char*,std::size_t,std::vector<unsigned char>, std::size_t>>>();
+                                std::shared_mutex multithreading_factory_protect{};
 
                                 while (std::atomic_flag_test_and_set_explicit(&write_control, std::memory_order_acquire)) {
                                     write_control.wait(true);
@@ -1326,32 +1325,46 @@ namespace uh::trees {
 
                                 auto consumer_function = [&](){
                                     while(write_control.test()){
-                                        while(!multithreading_factory.load()->empty()){
+                                        std::shared_lock multithread_f_read(multithreading_factory_protect);
+                                        while(!multithreading_factory->empty()){
+                                            auto new_offset = std::get<3>(*multithreading_factory->cbegin());
+                                            auto old_block_code = std::get<2>(*multithreading_factory->cbegin());
+                                            auto size_of_block = std::get<1>(*multithreading_factory->cbegin());
+                                            auto current_storage_ptr = std::get<0>(*multithreading_factory->cbegin());
+                                            multithread_f_read.unlock();
                                             std::vector<unsigned char> out_vec{};
                                             out_vec.reserve(sizeof(unsigned int));
+                                            //offset of blocks have been changed, take the first byte for chunk ordering and the last 4 bytes for offset;
                                             for (unsigned char i = 0;
                                                  i < (unsigned char) sizeof(unsigned int); i++) {//STORE_MAX will fit in 4 bytes
-                                                out_vec.push_back((unsigned char) (std::get<3>(*multithreading_factory.load()->cbegin()) >> (i * 8)));
+                                                out_vec.push_back((unsigned char) (new_offset) >> (i * 8));
                                             }
-                                            out_vec.insert(out_vec.cbegin(), std::get<2>(*multithreading_factory.load()->cbegin())[0]);
+                                            out_vec.insert(out_vec.cbegin(), old_block_code[0]);
 
-                                            std::fwrite(std::get<0>(*multithreading_factory.load()->cbegin()), std::get<1>(*multithreading_factory.load()->cbegin()), sizeof(unsigned char), writer);
+                                            std::fwrite(current_storage_ptr, size_of_block, sizeof(unsigned char), writer);
                                             if (std::ferror(writer)) {
                                                 FATAL << "I/O error when deleting block writing \"" + chunk_maintain.string() + "\"";
                                                 io_end_sequence();
                                                 error_thread_sequence();
                                                 if(error_flag.test()){
-                                                    for(const auto &it:*multithreading_factory.load()){
+                                                    multithread_f_read.lock();
+                                                    for(const auto &it:*multithreading_factory){
                                                         std::free(std::get<0>(it));
                                                     }
+                                                    multithread_f_read.unlock();
                                                     return;
                                                 }
                                             }
-                                            std::free(std::get<0>(*multithreading_factory.load()->begin()));
+                                            std::free(current_storage_ptr);
                                             //tmp_buf,write_back_size,out_vec,this,trunc_at
                                             //std::vector<unsigned char>, std::vector<unsigned char>, tree_storage *, std::size_t>>>
-                                            out_change_list.load()->emplace_back(std::get<2>(*multithreading_factory.load()->cbegin()),out_vec);
-                                            multithreading_factory.load()->pop_front();
+                                            std::unique_lock lock_output(out_change_list_protect);
+                                            out_change_list->emplace_back(old_block_code,out_vec);
+                                            lock_output.unlock();
+                                            std::unique_lock write_multithreading_f(multithreading_factory_protect);
+                                            multithreading_factory->pop_front();
+                                            write_multithreading_f.unlock();
+                                            multithread_f_read.lock();
                                         }
                                         if(error_flag.test()){
                                             FATAL << "I/O extern error when deleting block writing \"" + chunk_maintain.string() + "\"";
@@ -1580,8 +1593,8 @@ namespace uh::trees {
                                     std::get<1>(it).insert(std::get<1>(it).cbegin(),(*cur_tmp)[0]);
                                 }
 
-                                auto last_end = out_change_list.load()->cend();
-                                out_change_list.load()->splice(last_end, std::get<1>(deeper_delete));
+                                std::lock_guard lock_splice(out_change_list_protect);
+                                out_change_list->splice(out_change_list->cend(), std::get<1>(deeper_delete));
                             }
                             else children_read.unlock();
 
@@ -1595,12 +1608,12 @@ namespace uh::trees {
                                          "\" and was skipped!.";
                             }
                             //parallel end
-                            *active_threads.load() -= 1;
+                            active_threads -= 1;
                         };
                         if (num_threads == 1)first_index_exe_function();
                         else {
                             //threading manager
-                            while (*active_threads.load() >= num_threads) {
+                            while (active_threads.load() >= num_threads) {
                                 if(error_flag.test()){
                                     FATAL << "Delete_blocks threading engine crashed unexpectedly while waiting for CPU cores!";
                                     return {};
@@ -1611,7 +1624,7 @@ namespace uh::trees {
                                 usleep(10 * 1000);
 #endif // _WIN32
                             }
-                            *active_threads.load() += 1;
+                            active_threads += 1;
                             std::thread(first_index_exe_function).detach();
                             if(error_flag.test()){
                                 FATAL << "Delete_blocks threading engine crashed unexpectedly!";
@@ -1626,7 +1639,8 @@ namespace uh::trees {
                 }
                 cur = end;
             }
-            return {out_size.load(), *out_change_list.load()};
+            std::lock_guard out_return_lock(out_change_list_protect);
+            return {out_size.load(), *out_change_list};
         }
 
         /*
