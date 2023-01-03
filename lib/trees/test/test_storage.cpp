@@ -69,7 +69,7 @@ std::vector<unsigned char> binary_generator(std::size_t max_len) {
 BOOST_AUTO_TEST_CASE(constructor_test)
 {
     //tests for any linux machine
-    uh::trees::tree_storage t1(std::filesystem::path("/home")/std::string(getenv("USER")));//A test folder reserved for tree storage
+    uh::trees::tree_storage t1(std::filesystem::path("/home")/std::string(getenv("USER")),1);//A test folder reserved for tree storage
     //for strong laptops with SSD extension (configure test db server to run this??)
     //uh::trees::tree_storage t1("/mnt/md0");//A test folder reserved for tree storage for performance tests
 }
@@ -77,7 +77,7 @@ BOOST_AUTO_TEST_CASE(constructor_test)
 BOOST_AUTO_TEST_CASE(write_read_test)
 {
     //tests for any linux machine
-    uh::trees::tree_storage t1(std::filesystem::path("/home")/std::string(getenv("USER")));//A test folder reserved for tree storage
+    uh::trees::tree_storage t1(std::filesystem::path("/home")/std::string(getenv("USER")),1);//A test folder reserved for tree storage
     //for strong laptops with SSD extension (configure test db server to run this??)
     //uh::trees::tree_storage t1("/mnt/md0");//A test folder reserved for tree storage for performance tests
 
@@ -616,7 +616,7 @@ BOOST_AUTO_TEST_CASE(index_read_test)
     gettimeofday(&time, nullptr);
     long double millis = ((long double) time.tv_sec * 1000) + ((long double) time.tv_usec / 1000);
     //for any machine
-    uh::trees::tree_storage t1(std::filesystem::path("/home")/std::string(getenv("USER")));//A test folder reserved for tree storage
+    uh::trees::tree_storage t1(std::filesystem::path("/home")/std::string(getenv("USER")),1);//A test folder reserved for tree storage
     //for strong laptops with SSD extension (configure test db server to run this??)
     //uh::trees::tree_storage t1("/mnt/md0");//A test folder reserved for tree storage for performance tests
     gettimeofday(&time, nullptr);
@@ -624,7 +624,7 @@ BOOST_AUTO_TEST_CASE(index_read_test)
 
     gettimeofday(&time, nullptr);
     millis = ((long double) time.tv_sec * 1000) + ((long double) time.tv_usec / 1000);
-    auto index_list = t1.index();
+    auto index_list = t1.index(1);
     gettimeofday(&time, nullptr);
     long double index_time = (((long double) time.tv_sec * 1000) + ((long double) time.tv_usec / 1000)) - millis;
 
@@ -647,10 +647,10 @@ BOOST_AUTO_TEST_CASE(get_info_set_time_test)
 {
     struct timeval time{};
     //tests for any linux machine
-    uh::trees::tree_storage t1(std::filesystem::path("/home")/std::string(getenv("USER")));//A test folder reserved for tree storage
+    uh::trees::tree_storage t1(std::filesystem::path("/home")/std::string(getenv("USER")),1);//A test folder reserved for tree storage
     //for strong laptops with SSD extension (configure test db server to run this??)
     //uh::trees::tree_storage t1("/mnt/md0");//A test folder reserved for tree storage for performance tests
-    auto index_list = t1.index();
+    auto index_list = t1.index(1);
     auto first_el = index_list.begin();
     gettimeofday(&time, nullptr);
     long double millis = ((long double) time.tv_sec * 1000) + ((long double) time.tv_usec / 1000);
@@ -680,7 +680,7 @@ BOOST_AUTO_TEST_CASE(delete_test)
     uh::trees::tree_storage t1(std::filesystem::path("/home")/std::string(getenv("USER")));//A test folder reserved for tree storage
     //for strong laptops with SSD extension (configure test db server to run this??)
     //uh::trees::tree_storage t1("/mnt/md0");//A test folder reserved for tree storage for performance tests
-    auto index_list = t1.index();
+    auto index_list = t1.index(1);
     std::vector<std::vector<unsigned char>> to_del;
     //from index take 2 blocks of the same chunk and copy them to RAM
     //delete one block over its reference and check if the block of the retured local reference is the same
