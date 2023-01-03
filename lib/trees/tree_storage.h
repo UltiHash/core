@@ -79,34 +79,35 @@ namespace uh::trees {
     private:
         template<typename ALLOC>
         ALLOC* mem_wait(std::size_t mem) {
-            struct sysinfo memInfo{};
             unsigned long totalFreeVirtualMem;
             do {
+                std::unique_lock lock(mem_protect);
+                struct sysinfo memInfo{};
                 sysinfo (&memInfo);
                 totalFreeVirtualMem = memInfo.freeram;
                 totalFreeVirtualMem += memInfo.freeswap;
                 totalFreeVirtualMem *= memInfo.mem_unit;
-                if (totalFreeVirtualMem < mem) {
-                    std::unique_lock lock(mem_protect);
-                    if(mem >= *max_request)*count_request += 1;
+                if(mem >= *max_request){
+                    *count_request += 1;
                     *max_request = std::max(*max_request, mem);
-                    if(*count_request == 12000){// since a block of 4GB may take 2 minutes to be written back we need to wait for that time
-                        THROW(out_of_memory,"The largest block of " + std::to_string(*max_request) + "could not aquire memory anymore for a time span of 60 seconds!");
-                    }
-                    lock.unlock();
-
-#ifdef _WIN32
-                    Sleep(10);
-#else
-                    usleep(10 * 1000);
-#endif // _WIN32
                 }
+                if(totalFreeVirtualMem >= mem){
+                    if(mem == *max_request){
+                        *count_request = 0;
+                        *max_request = 0;
+                    }
+                    return new ALLOC[mem];
+                }
+                if(*count_request == 12000){// since a block of 4GB may take 2 minutes to be written back we need to wait for that time
+                    THROW(out_of_memory,"The largest block of " + std::to_string(*max_request) + "could not aquire memory anymore for a time span of 60 seconds!");
+                }
+                lock.unlock();
+#ifdef _WIN32
+                Sleep(10);
+#else
+                usleep(10 * 1000);
             } while (totalFreeVirtualMem < mem);
-            std::lock_guard lock2(mem_protect);
-            if(mem == *max_request){
-                *count_request = 0;
-                *max_request = 0;
-            }
+
             return new ALLOC[mem];
         }
 
