@@ -96,12 +96,14 @@ namespace uh::trees {
                         *count_request = 0;
                         *max_request = 0;
                     }
+                    lock.unlock();
                     return new ALLOC[mem];
                 }
                 if(*count_request == 12000){// since a block of 4GB may take 2 minutes to be written back we need to wait for that time
+                    lock.unlock();
                     THROW(out_of_memory,"The largest block of " + std::to_string(*max_request) + "could not aquire memory anymore for a time span of 60 seconds!");
                 }
-                lock.unlock();
+                else lock.unlock();
 #ifdef _WIN32
                 Sleep(10);
 #else
