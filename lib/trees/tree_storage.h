@@ -77,37 +77,38 @@ namespace uh::trees {
         }
 
     private:
-        template<typename ALLOC>
-        ALLOC* mem_wait(std::size_t mem) {
-            unsigned long totalFreeVirtualMem;
-            do {
-                std::unique_lock lock(mem_protect);
-                struct sysinfo memInfo{};
-                sysinfo (&memInfo);
-                totalFreeVirtualMem = memInfo.freeram;
-                totalFreeVirtualMem += memInfo.freeswap;
-                totalFreeVirtualMem *= memInfo.mem_unit;
-                if(mem >= *max_request){
-                    *count_request += 1;
-                    *max_request = std::max(*max_request, mem);
+    template<typename ALLOC>
+    ALLOC* mem_wait(std::size_t mem) {
+        unsigned long totalFreeVirtualMem;
+        do {
+            std::unique_lock lock(mem_protect);
+            struct sysinfo memInfo{};
+            sysinfo (&memInfo);
+            totalFreeVirtualMem = memInfo.freeram;
+            totalFreeVirtualMem += memInfo.freeswap;
+            totalFreeVirtualMem *= memInfo.mem_unit;
+            if(mem >= *max_request){
+                *count_request += 1;
+                *max_request = std::max(*max_request, mem);
+            }
+            if(totalFreeVirtualMem >= mem){
+                if(mem == *max_request){
+                    *count_request = 0;
+                    *max_request = 0;
                 }
-                if(totalFreeVirtualMem >= mem){
-                    if(mem == *max_request){
-                        *count_request = 0;
-                        *max_request = 0;
-                    }
-                    lock.unlock();
-                    return new ALLOC[mem];
-                }
-                if(*count_request == 12000){// since a block of 4GB may take 2 minutes to be written back we need to wait for that time
-                    lock.unlock();
-                    THROW(out_of_memory,"The largest block of " + std::to_string(*max_request) + "could not aquire memory anymore for a time span of 60 seconds!");
-                }
-                else lock.unlock();
+                lock.unlock();
+                return new ALLOC[mem];
+            }
+            if(*count_request == 12000){// since a block of 4GB may take 2 minutes to be written back we need to wait for that time
+                lock.unlock();
+                THROW(out_of_memory,"The largest block of " + std::to_string(*max_request) + "could not aquire memory anymore for a time span of 60 seconds!");
+            }
+            else lock.unlock();
 #ifdef _WIN32
-                Sleep(10);
+            Sleep(10);
 #else
-                usleep(10 * 1000);
+            usleep(10 * 1000);
+#endif // _WIN32
             } while (totalFreeVirtualMem < mem);
 
             return new ALLOC[mem];
