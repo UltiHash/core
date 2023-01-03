@@ -695,7 +695,9 @@ BOOST_AUTO_TEST_CASE(delete_test)
     for(const auto &i:std::get<1>(delete_list)){
         std::string old_ref = boost::algorithm::hex(std::string().assign(std::get<0>(i).cbegin(),std::get<0>(i).cend()));
         std::string new_ref = boost::algorithm::hex(std::string().assign(std::get<1>(i).cbegin(),std::get<1>(i).cend()));
-        BOOST_ASSERT_MSG(!std::get<1>(t1.read(std::get<1>(i))).empty(),"Block with old reference " + old_ref + " and new reference "+new_ref+" could not be read back after deletion!");
+        auto read_result = t1.read(std::get<1>(i));
+        bool test_ok = !std::get<1>(read_result).empty();
+        BOOST_ASSERT_MSG(test_ok,std::string("Block with old reference " + old_ref + " and new reference "+new_ref+" could not be read back after deletion!").c_str());
     }
 
     t1.delete_recursive();
