@@ -88,7 +88,7 @@ namespace uh::trees {
                 totalFreeVirtualMem += memInfo.freeswap;
                 totalFreeVirtualMem *= memInfo.mem_unit;
                 if (totalFreeVirtualMem < mem) {
-                    if(mem == *max_request)*count_request += 1;
+                    if(mem >= *max_request)*count_request += 1;
                     *max_request = std::max(*max_request, mem);
                     if(*count_request == 12000){// since a block of 4GB may take 2 minutes to be written back we need to wait for that time
                         lock.unlock();
@@ -1469,31 +1469,6 @@ namespace uh::trees {
          */
         ~tree_storage() {
             for (auto &i: *children) {
-
-                std::shared_lock lock_size(size_protect);
-                //stop all reading and writing operations on this tree node and reserve all rights before destroying itself
-                auto write_ptr = &(*std::get<2>(size->at(std::get<2>(i))));
-                auto read_ptr = &(*std::get<3>(size->at(std::get<2>(i))));
-                auto maintain_ptr = &(*std::get<4>(size->at(std::get<2>(i))));
-                lock_size.unlock();
-
-                while (std::atomic_flag_test_and_set_explicit(maintain_ptr, std::memory_order_acquire)) {
-                    maintain_ptr->wait(true);
-                }
-                while (std::atomic_flag_test_and_set_explicit(write_ptr, std::memory_order_acquire)) {
-                    write_ptr->wait(true);
-                }
-
-                while (read_ptr->load() > 0) {
-#ifdef _WIN32
-                    Sleep(10);
-#else
-                    usleep(10 * 1000);
-#endif // _WIN32
-                }
-
-                *read_ptr +=1;
-
                 if (std::get<1>(i) != nullptr) {
                     delete std::get<1>(i);
                 }
