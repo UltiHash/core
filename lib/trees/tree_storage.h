@@ -566,6 +566,7 @@ namespace uh::trees {
             std::atomic<std::shared_ptr<std::list<std::tuple<std::vector<unsigned char>, std::vector<unsigned char>, unsigned long>>>> search_index;
             search_index.store(std::make_shared<std::list<std::tuple<std::vector<unsigned char>, std::vector<unsigned char>, unsigned long>>>());
             std::atomic<std::size_t> i_constructor{};
+            std::atomic_flag error_flag{ATOMIC_FLAG_INIT};
 
             auto multithread_index = [&]() {
                 std::size_t i = i_constructor.load();
@@ -592,14 +593,28 @@ namespace uh::trees {
                         }
 
                         FILE *reader = std::fopen(read_path.make_preferred().c_str(), "rb");
+                        auto read_end_sequence = [&](){
+                            std::fclose(reader);
+                            *read_ptr -= 1;
+                            if (!read_ptr->load())write_ptr->notify_one();
+                        };
+                        auto error_thread_sequence = [&](){
+                            while (std::atomic_flag_test_and_set_explicit(&error_flag, std::memory_order_acquire)) {
+                                return;
+                            }
+                        };
                         if (!reader) {
                             ERROR << "File read opening failed at \"" + read_path.string() + "\"";
-                            std::exit(EXIT_FAILURE);
+                            read_end_sequence();
+                            error_thread_sequence();
+                            if(error_flag.test())return;
                         }
                         //File should have been opened or created here
                         if (std::ferror(reader)) {
                             FATAL << "I/O error when seeking \"" + read_path.string() + "\"";
-                            std::exit(EXIT_FAILURE);
+                            read_end_sequence();
+                            error_thread_sequence();
+                            if(error_flag.test())return;
                         }
                         std::shared_ptr<std::size_t> cur_pos = std::make_shared<std::size_t>();
 
@@ -632,13 +647,17 @@ namespace uh::trees {
                                     FATAL
                                         << "I/O time first 8 bytes reading was not completed on path \"" +
                                            read_path.string() + "\"";
-                                    std::exit(EXIT_FAILURE);
+                                    read_end_sequence();
+                                    error_thread_sequence();
+                                    if(error_flag.test())return;
                                 }
 
                                 if (std::ferror(reader)) {
                                     FATAL << "I/O error when reading time of block at path \"" + read_path.string() +
                                              "\"";
-                                    std::exit(EXIT_FAILURE);
+                                    read_end_sequence();
+                                    error_thread_sequence();
+                                    if(error_flag.test())return;
                                 }
                                 unsigned long block_time{};
                                 for (unsigned char i4 = 0; i4 < (unsigned char) sizeof(unsigned long); i4++) {
@@ -653,12 +672,16 @@ namespace uh::trees {
                                     FATAL << "I/O prefix first byte reading was not completed on path \"" +
                                              read_path.string() +
                                              "\"";
-                                    std::exit(EXIT_FAILURE);
+                                    read_end_sequence();
+                                    error_thread_sequence();
+                                    if(error_flag.test())return;
                                 }
 
                                 if (std::ferror(reader)) {
                                     FATAL << "I/O error when reading prefix at path \"" + read_path.string() + "\"";
-                                    std::exit(EXIT_FAILURE);
+                                    read_end_sequence();
+                                    error_thread_sequence();
+                                    if(error_flag.test())return;
                                 }
                                 unsigned char buffer_for_size[buf_size + 1];
                                 count = std::fread(&buffer_for_size, sizeof(char), buf_size + 1, reader);
@@ -667,7 +690,9 @@ namespace uh::trees {
                                     FATAL << "I/O prefix first byte reading was not completed on path \"" +
                                              read_path.string() +
                                              "\"";
-                                    std::exit(EXIT_FAILURE);
+                                    read_end_sequence();
+                                    error_thread_sequence();
+                                    if(error_flag.test())return;
                                 }
                                 *output_size = 0;
                                 for (unsigned char buf_count = 0; buf_count <= buf_size; buf_count++) {
@@ -681,13 +706,22 @@ namespace uh::trees {
 
                                 if (count != *output_size) {
                                     FATAL << "I/O was not completed on path \"" + read_path.string() + "\"";
-                                    std::exit(EXIT_FAILURE);
+                                    delete[] *tmp_buf[0];
+                                    delete[] *tmp_buf[1];
+                                    read_end_sequence();
+                                    error_thread_sequence();
+                                    if(error_flag.test())return;
                                 }
                                 if (std::ferror(reader)) {
                                     FATAL << "I/O error when reading prefix at path \"" + read_path.string() + "\"";
-                                    std::exit(EXIT_FAILURE);
+                                    delete[] *tmp_buf[0];
+                                    delete[] *tmp_buf[1];
+                                    read_end_sequence();
+                                    error_thread_sequence();
+                                    if(error_flag.test())return;
                                 }
                             };
+
                             if (rt.joinable())rt.join();
                             rt = std::thread(read_func);
 
@@ -709,6 +743,10 @@ namespace uh::trees {
                             };
 
                             if (rt.joinable())rt.join();
+                            if(error_flag.test()){
+                                FATAL << "Indexing reader thread quit unexpectedly!";
+                                return;
+                            }
                             if (ht.joinable())ht.join();
                             ht = std::thread(hash_func);
 
@@ -719,9 +757,7 @@ namespace uh::trees {
                                 std::free(*tmp_buf[1]);
                             }
                         }
-                        std::fclose(reader);
-                        *read_ptr -= 1;
-                        if (!read_ptr->load())write_ptr->notify_one();
+                        read_end_sequence();
                     }
                     else{
                         size_lock.unlock();
@@ -755,8 +791,13 @@ namespace uh::trees {
                     std::thread w(multithread_index);
                     workers.push_back(std::move(w));
                 }
-                for (auto &th: workers)
+                for (auto &th: workers){
                     th.join();
+                }
+            }
+            if(error_flag.test()){
+                FATAL << "Indexing threading engine crashed unexpectedly!";
+                return {};
             }
 
             return *search_index.load();
