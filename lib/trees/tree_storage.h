@@ -564,7 +564,7 @@ namespace uh::trees {
         index(unsigned short num_threads = std::thread::hardware_concurrency()) {
             if (!num_threads)return {};
             std::atomic<std::shared_ptr<std::list<std::tuple<std::vector<unsigned char>, std::vector<unsigned char>, unsigned long>>>> search_index;
-            search_index.store(std::make_shared<std::list<std::tuple<std::vector<unsigned char>, std::vector<unsigned char>, unsigned long>>>());
+            search_index.store(std::make_shared<std::list<std::tuple<std::vector<unsigned char>, std::vector<unsigned char>, unsigned long>>>());//TODO: mutex protect
             std::atomic<std::size_t> i_constructor{};
             std::atomic_flag error_flag{ATOMIC_FLAG_INIT};
 
@@ -1171,7 +1171,7 @@ namespace uh::trees {
                 unsigned short num_threads = std::thread::hardware_concurrency()) {
             if (block_codes.empty() || !num_threads)return {};
             std::atomic_flag error_flag{ATOMIC_FLAG_INIT};
-            std::atomic<std::shared_ptr<std::size_t>> active_threads{};
+            std::atomic<std::shared_ptr<std::size_t>> active_threads{};//TODO: mutex with atomic will be enough
             active_threads.store(std::make_shared<std::size_t>());
             std::atomic<std::size_t> out_size{};
             std::atomic<std::shared_ptr<std::list<std::tuple<std::vector<unsigned char>, std::vector<unsigned char>>>>> out_change_list{};
@@ -1599,6 +1599,10 @@ namespace uh::trees {
                         else {
                             //threading manager
                             while (*active_threads.load() >= num_threads) {
+                                if(error_flag.test()){
+                                    FATAL << "Delete_blocks threading engine crashed unexpectedly while waiting for CPU cores!";
+                                    return {};
+                                }
 #ifdef _WIN32
                                 Sleep(10);
 #else
@@ -1607,6 +1611,10 @@ namespace uh::trees {
                             }
                             *active_threads.load() += 1;
                             std::thread(first_index_exe_function).detach();
+                            if(error_flag.test()){
+                                FATAL << "Delete_blocks threading engine crashed unexpectedly!";
+                                return {};
+                            }
                         }
                         std::lock_guard lock2(m1);
 
