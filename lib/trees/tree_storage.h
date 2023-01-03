@@ -82,16 +82,15 @@ namespace uh::trees {
             struct sysinfo memInfo{};
             unsigned long totalFreeVirtualMem;
             do {
-                std::unique_lock lock(mem_protect);
                 sysinfo (&memInfo);
                 totalFreeVirtualMem = memInfo.freeram;
                 totalFreeVirtualMem += memInfo.freeswap;
                 totalFreeVirtualMem *= memInfo.mem_unit;
                 if (totalFreeVirtualMem < mem) {
+                    std::unique_lock lock(mem_protect);
                     if(mem >= *max_request)*count_request += 1;
                     *max_request = std::max(*max_request, mem);
                     if(*count_request == 12000){// since a block of 4GB may take 2 minutes to be written back we need to wait for that time
-                        lock.unlock();
                         THROW(out_of_memory,"The largest block of " + std::to_string(*max_request) + "could not aquire memory anymore for a time span of 60 seconds!");
                     }
                     lock.unlock();
@@ -102,7 +101,6 @@ namespace uh::trees {
                     usleep(10 * 1000);
 #endif // _WIN32
                 }
-                else lock.unlock();
             } while (totalFreeVirtualMem < mem);
             std::lock_guard lock2(mem_protect);
             if(mem == *max_request){
@@ -166,10 +164,14 @@ namespace uh::trees {
                     std::filesystem::path deeper_tree = *combined_path / s_tmp;
                     lock.unlock();
                     //check if sub folder in tree exists
+
                     if (std::filesystem::exists(deeper_tree)) {
-                        auto *tmp_tree = new tree_storage(deeper_tree, 1);
-                        std::lock_guard lock2(children_protect);
-                        children->emplace_back(tmp_tree->get_size(), tmp_tree, i);
+                        if(std::filesystem::is_empty(deeper_tree))std::filesystem::remove_all(deeper_tree);
+                        else{
+                            auto *tmp_tree = new tree_storage(deeper_tree, 1);
+                            std::lock_guard lock2(children_protect);
+                            children->emplace_back(tmp_tree->get_size(), tmp_tree, i);
+                        }
                     }
                     i = (i_constructor += 1);
                 }
@@ -1468,10 +1470,34 @@ namespace uh::trees {
          * for their operation since the struct will disassemble, but no dataloss can occur
          */
         ~tree_storage() {
+            std::unique_lock child_write(children_protect);
             for (auto &i: *children) {
+                child_write.unlock();
+                std::shared_lock lock_size(size_protect);
+                //stop all reading and writing operations on this tree node and reserve all rights before destroying itself
+                auto write_ptr = &(*std::get<2>(size->at(std::get<2>(i))));
+                auto read_ptr = &(*std::get<3>(size->at(std::get<2>(i))));
+                auto maintain_ptr = &(*std::get<4>(size->at(std::get<2>(i))));
+                lock_size.unlock();
+
+                while (std::atomic_flag_test_and_set_explicit(maintain_ptr, std::memory_order_acquire)) {
+                    maintain_ptr->wait(true);
+                }
+                while (std::atomic_flag_test_and_set_explicit(write_ptr, std::memory_order_acquire)) {
+                    write_ptr->wait(true);
+                }
+
+                while (read_ptr->load() > 0) {
+#ifdef _WIN32
+                    Sleep(10);
+#else
+                    usleep(10 * 1000);
+#endif // _WIN32
+                }
                 if (std::get<1>(i) != nullptr) {
                     delete std::get<1>(i);
                 }
+                child_write.lock();
             }
         }
     };
