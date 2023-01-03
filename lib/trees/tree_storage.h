@@ -438,7 +438,7 @@ namespace uh::trees {
                     auto read_ptr = &(*std::get<3>(size->at(block_code[0])));
                     size_lock.unlock();
 
-                    read_ptr += 1;
+                    *read_ptr += 1;
 
                     while (write_ptr->test()) {
                         write_ptr->wait(true);
@@ -512,8 +512,8 @@ namespace uh::trees {
                     }
 
                     std::fclose(reader);
-                    read_ptr -= 1;
-                    if (!read_ptr)write_ptr->notify_one();
+                    *read_ptr -= 1;
+                    if (!read_ptr->load())write_ptr->notify_one();
 
                     std::vector<unsigned char> out_vec{};
                     out_vec.reserve(output_size);
@@ -555,7 +555,7 @@ namespace uh::trees {
                         auto read_ptr = &(*std::get<3>(size->at(i)));
                         size_lock.unlock();
 
-                        read_ptr += 1;
+                        *read_ptr += 1;
 
                         while (write_ptr->test()) {
                             write_ptr->wait(true);
@@ -691,8 +691,8 @@ namespace uh::trees {
                             }
                         }
                         std::fclose(reader);
-                        read_ptr -= 1;
-                        if (!read_ptr)write_ptr->notify_one();
+                        *read_ptr -= 1;
+                        if (!read_ptr->load())write_ptr->notify_one();
                     }
                     else{
                         size_lock.unlock();
@@ -869,7 +869,7 @@ namespace uh::trees {
                     auto read_ptr = &(*std::get<3>(size->at(block_code[0])));
                     read_size.unlock();
 
-                    read_ptr += 1;
+                    *read_ptr += 1;
 
                     while (write_ptr->test()) {
                         write_ptr->wait(true);
@@ -931,8 +931,8 @@ namespace uh::trees {
                     }
 
                     std::fclose(reader);
-                    read_ptr -= 1;
-                    if (!read_ptr)write_ptr->notify_one();
+                    *read_ptr -= 1;
+                    if (!read_ptr->load())write_ptr->notify_one();
 
                     return {block_time, output_size, sizeof(time_buf)+1+sizeof(buffer_in)+output_size};
                 }
@@ -1136,7 +1136,7 @@ namespace uh::trees {
 
                                 lock.unlock();
 
-                                read_ptr += 1;
+                                *read_ptr += 1;
 
                                 while (write_ptr->test()) {
                                     write_ptr->wait(true);
@@ -1334,7 +1334,7 @@ namespace uh::trees {
                                     }
                                 }
                                 std::fclose(reader);
-                                read_ptr -= 1;
+                                *read_ptr -= 1;
                                 std::atomic_flag_clear_explicit(&write_control, std::memory_order_release);
                                 if(w1.joinable())w1.join();
 
@@ -1489,6 +1489,9 @@ namespace uh::trees {
                     usleep(10 * 1000);
 #endif // _WIN32
                 }
+
+                *read_ptr +=1;
+
                 if (std::get<1>(i) != nullptr) {
                     delete std::get<1>(i);
                 }
