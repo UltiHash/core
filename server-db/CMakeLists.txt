@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22.0)
-project(uhServerDB VERSION 0.1.0)
+project(uhServerDB VERSION 0.2.0)
 message(STATUS "Using ${PROJECT_NAME}...")
 
 set(CMAKE_CXX_STANDARD 20)
@@ -42,8 +42,8 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/config.hpp.in ${CMAKE_CURRENT_SOU
 
 add_subdirectory(lib)
 
-set(${PROJECT_NAME}_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/lib ${CMAKE_CURRENT_SOURCE_DIR}/src ${Boost_INCLUDE_DIRS})
-set(${PROJECT_NAME}_LINK_LIBRARIES ${Boost_LIBRARIES} uhLibOptions uhLibLogging uhLibNet uhLibProtocol uhLibNet)
+set(${PROJECT_NAME}_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/lib ${CMAKE_CURRENT_SOURCE_DIR}/src ${Boost_INCLUDE_DIRS} uhLibOptions uhLibLogging uhLibProtocol uhLibNet)
+set(${PROJECT_NAME}_LINK_LIBRARIES ${Boost_LIBRARIES} uhLibOptions uhLibLogging uhLibProtocol uhLibNet)
 
 # adding all the .h files of the current project
 file(GLOB HEADER_FILE_LIST ${CMAKE_CURRENT_SOURCE_DIR}/src/*.h)

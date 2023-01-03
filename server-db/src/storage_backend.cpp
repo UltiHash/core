@@ -2,7 +2,7 @@
 #include <logging/logging_boost.h>
 
 #include <util/temp_file.h>
-
+#include <fstream>
 
 using namespace uh::dbn;
 
@@ -56,7 +56,7 @@ std::filesystem::path dump_storage::get_filepath_from_hash(const std::vector<cha
 
 
     std::filesystem::path filepath = this->m_config.db_root / hash_string;
-   return filepath;
+    return filepath;
 }
 
 // ---------------------------------------------------------------------

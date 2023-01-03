@@ -11,6 +11,7 @@
 
 
 using namespace uh::dbn;
+using namespace uh::log;
 
 dump_storage create_ultihash_storage_backend(options &options){
     uh::dbn::db_config config = options.database().config();
@@ -75,6 +76,7 @@ int main(int argc, const char** argv)
         {
             return 0;
         }
+        init_logging(options.logging().config());
     }
     catch (const std::exception& e)
     {

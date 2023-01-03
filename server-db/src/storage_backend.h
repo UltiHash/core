@@ -6,6 +6,8 @@
 #include <filesystem>
 #include <openssl/sha.h>
 #include <logging/logging_boost.h>
+#include <boost/algorithm/hex.hpp>
+#include <boost/algorithm/string.hpp>
 
 #include "db_config.h"
 
@@ -20,13 +22,21 @@ namespace uh::dbn {
     template <typename Iterator>
     std::string uh::dbn::to_hex_string(Iterator begin, Iterator end)
     {
-        std::stringstream ss;
-        while(begin != end)
-        {
-            ss << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(static_cast<unsigned char>(*begin));
-            begin++;
-        }
-        return ss.str();
+        std::string hash_string;
+        boost::algorithm::hex(begin, end, std::back_inserter(hash_string));
+        boost::algorithm::to_lower(hash_string);
+        return hash_string;
+
+        // A home-made boost-free implementation:
+        //
+        // std::stringstream ss;
+        // while(begin != end)
+        // {
+        //     ss << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(static_cast<unsigned char>(*begin));
+        //     begin++;
+        // }
+        // hash_string = ss.str();
+        // return hash_string;
     }
 
 // ---------------------------------------------------------------------
