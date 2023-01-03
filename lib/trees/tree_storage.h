@@ -240,7 +240,7 @@ namespace uh::trees {
                 FATAL << "A block could not be written because it exceeded maximum size of blocks \"" +
                          std::to_string(STORE_MAX) +
                          "\" with a size of \"" + std::to_string(input.size()) + "\".";
-                std::exit(EXIT_FAILURE);
+                return std::vector<unsigned char>{};
             }
             std::vector<unsigned char> prefix = prefix_wrap(input.size());
             std::size_t total_size = input.size() + prefix.size() + sizeof(unsigned long);
@@ -342,9 +342,19 @@ namespace uh::trees {
                 write_size.unlock();
 
                 FILE *writer = std::fopen(read_chunk.make_preferred().c_str(), "ab");
+                auto end_write_sequence = [&](){
+                    std::fclose(writer);
+
+                    std::atomic_flag_clear_explicit(write_ptr, std::memory_order_release);
+                    if (!write_ptr->test())write_ptr->notify_all();
+                    std::atomic_flag_clear_explicit(maintain_ptr, std::memory_order_release);
+                    if (!maintain_ptr->test())maintain_ptr->notify_one();
+                };
+
                 if (!writer) {
                     ERROR << "File write opening failed at \"" + read_chunk.string() + "\"";
-                    std::exit(EXIT_FAILURE);
+                    end_write_sequence();
+                    return std::vector<unsigned char>{};
                 }
                 //File should have been opened or created here
                 std::fwrite(bin_time.data(), bin_time.size(), sizeof(unsigned char), writer);
@@ -353,14 +363,11 @@ namespace uh::trees {
 
                 if (std::ferror(writer)) {
                     FATAL << "I/O error when writing \"" + read_chunk.string() + "\"";
-                    std::exit(EXIT_FAILURE);
+                    end_write_sequence();
+                    return std::vector<unsigned char>{};
                 }
-                std::fclose(writer);
 
-                std::atomic_flag_clear_explicit(write_ptr, std::memory_order_release);
-                if (!write_ptr->test())write_ptr->notify_all();
-                std::atomic_flag_clear_explicit(maintain_ptr, std::memory_order_release);
-                if (!maintain_ptr->test())maintain_ptr->notify_one();
+                end_write_sequence();
 
                 //start position of the block for seeking it later on is the old size
                 std::vector<unsigned char> out_vec{};
