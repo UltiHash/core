@@ -812,6 +812,7 @@ namespace uh::trees {
             if (!num_threads)return {};
             std::atomic<std::size_t> i_constructor{};
             std::atomic<std::size_t> out_size{};
+            std::atomic_flag error_flag{ATOMIC_FLAG_INIT};
 
             auto multithread_index = [&]() {
                 std::size_t i = i_constructor.load();
@@ -827,7 +828,10 @@ namespace uh::trees {
                         size_lock.unlock();
                         if (std::remove(read_path.c_str()) != 0) {
                             FATAL << "Removing was not completed on path \"" + read_path.string() + "\"";
-                            std::exit(EXIT_FAILURE);
+                            while (std::atomic_flag_test_and_set_explicit(&error_flag, std::memory_order_acquire)) {
+                                return;
+                            }
+                            if(error_flag.test())return;
                         }
                     }
                     else{
@@ -864,6 +868,10 @@ namespace uh::trees {
                 }
                 for (auto &th: workers)
                     th.join();
+            }
+            if(error_flag.test()){
+                FATAL << "Delete_recursive threading engine crashed unexpectedly!";
+                return {};
             }
             return out_size.load();
         }
