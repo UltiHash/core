@@ -684,20 +684,19 @@ BOOST_AUTO_TEST_CASE(delete_test)
     std::vector<std::vector<unsigned char>> to_del;
     //from index take 2 blocks of the same chunk and copy them to RAM
     //delete one block over its reference and check if the block of the retured local reference is the same
+    std::tuple<std::size_t, std::list<std::tuple<std::vector<unsigned char>, std::vector<unsigned char>>>> delete_list{};
 
-    std::size_t count{};
+    do{
+        auto del_list = std::vector<std::vector<unsigned char>>{std::get<1>(*index_list.cbegin())};
+        delete_list = t1.delete_blocks(del_list);
+        index_list.pop_front();
+    }while(std::get<1>(delete_list).empty());
 
-    std::ranges::for_each(index_list.begin(),index_list.end(),[&to_del,&count](auto &a){
-        if(count >= 2)return;
-        if(std::get<1>(a).size() == 5 && !count){
-            to_del.push_back(std::get<1>(a));
-            count++;
-        }
-        if(std::get<1>(a).size() == 5 && count == 1 && std::get<1>(a)[0] == (*to_del.cbegin())[0]){
-            to_del.push_back(std::get<1>(a));
-            count++;
-        }
-    });
+    for(const auto &i:std::get<1>(delete_list)){
+        std::string old_ref = boost::algorithm::hex(std::string().assign(std::get<0>(i).cbegin(),std::get<0>(i).cend()));
+        std::string new_ref = boost::algorithm::hex(std::string().assign(std::get<1>(i).cbegin(),std::get<1>(i).cend()));
+        BOOST_ASSERT_MSG(!std::get<1>(t1.read(std::get<1>(i))).empty(),"Block with old reference " + old_ref + " and new reference "+new_ref+" could not be read back after deletion!");
+    }
 
     t1.delete_recursive();
 }
