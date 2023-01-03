@@ -55,7 +55,7 @@ namespace uh::trees {
         std::shared_mutex combined_path_protect = std::shared_mutex();
         std::shared_ptr<std::filesystem::path> combined_path = std::make_shared<std::filesystem::path>();
         std::shared_mutex mem_protect = std::shared_mutex();
-        std::shared_ptr<std::size_t> max_request = std::make_shared<std::size_t>(), count_request = std::make_shared<std::size_t>();
+        std::atomic<std::size_t> count_request{};
 
         //returns wrapped string
         static std::vector<unsigned char> prefix_wrap(std::size_t input_size) {
@@ -87,21 +87,15 @@ namespace uh::trees {
             totalFreeVirtualMem = memInfo.freeram;
             totalFreeVirtualMem += memInfo.freeswap;
             totalFreeVirtualMem *= memInfo.mem_unit;
-            if(mem >= *max_request){
-                *count_request += 1;
-                *max_request = std::max(*max_request, mem);
-            }
             if(totalFreeVirtualMem >= mem){
-                if(mem == *max_request){
-                    *count_request = 0;
-                    *max_request = 0;
-                }
+                count_request = 0;
                 lock.unlock();
                 return new ALLOC[mem];
             }
-            if(*count_request == 12000){// since a block of 4GB may take 2 minutes to be written back we need to wait for that time
+            count_request += 1;
+            if(count_request.load() >= 12000){// since a block of 4GB may take 2 minutes to be written back we need to wait for that time
                 lock.unlock();
-                THROW(out_of_memory,"The largest block of " + std::to_string(*max_request) + "could not aquire memory anymore for a time span of 60 seconds!");
+                THROW(out_of_memory,"The largest block of " + std::to_string(mem) + "could not aquire memory anymore for a time span of 60 seconds!");
             }
             else lock.unlock();
 #ifdef _WIN32
