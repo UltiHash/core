@@ -665,7 +665,7 @@ BOOST_AUTO_TEST_CASE(get_info_set_time_test)
     BOOST_ASSERT_MSG(std::get<1>(block_info) < std::get<2>(block_info), "The total size must always be larger than the block size!");
     gettimeofday(&time, nullptr);
     millis = ((long double) time.tv_sec * 1000) + ((long double) time.tv_usec / 1000);
-    bool test_ok = t1.set_time(std::get<1>(*first_el));
+    bool test_ok = t1.set_block_time(std::get<1>(*first_el));
     gettimeofday(&time, nullptr);
     write_time = (((long double) time.tv_sec * 1000) + ((long double) time.tv_usec / 1000)) - millis;
     BOOST_ASSERT_MSG(test_ok,"Current time could not be set to first block of index!");
@@ -673,7 +673,7 @@ BOOST_AUTO_TEST_CASE(get_info_set_time_test)
     auto block_info2 = t1.get_info(std::get<1>(*first_el));
     BOOST_ASSERT_MSG(std::get<0>(block_info) < std::get<0>(block_info2), "Block time reset was not successful internally!");
 }
-/*
+
 BOOST_AUTO_TEST_CASE(delete_test)
 {
     //tests for any linux machine
@@ -685,10 +685,19 @@ BOOST_AUTO_TEST_CASE(delete_test)
     //from index take 2 blocks of the same chunk and copy them to RAM
     //delete one block over its reference and check if the block of the retured local reference is the same
 
-    std::ranges::for_each(index_list.begin(),std::advance(index_list.begin(),3),[&to_del](auto &a){
-        to_del.push_back(std::get<1>(a));
+    std::size_t count{};
+
+    std::ranges::for_each(index_list.begin(),index_list.end(),[&to_del,&count](auto &a){
+        if(count >= 2)return;
+        if(std::get<1>(a).size() == 5 && !count){
+            to_del.push_back(std::get<1>(a));
+            count++;
+        }
+        if(std::get<1>(a).size() == 5 && count == 1 && std::get<1>(a)[0] == (*to_del.cbegin())[0]){
+            to_del.push_back(std::get<1>(a));
+            count++;
+        }
     });
 
     t1.delete_recursive();
 }
- */

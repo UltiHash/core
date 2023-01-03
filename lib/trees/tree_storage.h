@@ -559,6 +559,7 @@ namespace uh::trees {
          * The index reads the entire information of the tree storage and calculates SHA512 hashes for every single block
          * matching a local storage reference
          * By running index on startup of a DB node it can scans information about the existence and validity of all blocks
+         * returns hash, local block reference and the block last visited time
          */
         std::list<std::tuple<std::vector<unsigned char>, std::vector<unsigned char>, unsigned long>>
         index(unsigned short num_threads = std::thread::hardware_concurrency()) {
@@ -1033,14 +1034,14 @@ namespace uh::trees {
          * returns success on changing touch time of a block, giving the function a valid block code
          * WARNING: Wrong block references will cause data loss!!!
          */
-        bool set_time(const std::vector<unsigned char> &block_code,
+        bool set_block_time(const std::vector<unsigned char> &block_code,
                       unsigned long current_time = (unsigned long) std::chrono::nanoseconds(
                               std::chrono::high_resolution_clock::now().time_since_epoch()).count()) {
             if (block_code.empty()) {
                 return false;
             }
             if (block_code.size() > 5) {
-                //size encoding is not reached yet, set_time along tree path
+                //size encoding is not reached yet, set_block_time along tree path
                 std::shared_lock read_children(children_protect);
                 if ((short) children->size() - 1 < (short) block_code[0] ||
                     !std::get<0>(children->at(block_code[0]))) {
@@ -1055,7 +1056,7 @@ namespace uh::trees {
                     auto tree_ptr = std::get<1>(children->at(block_code[0]));
                     read_children.unlock();
                     std::vector<unsigned char> sub_block_code{block_code.cbegin() + 1, block_code.cend()};
-                    auto out_vec = tree_ptr->set_time(sub_block_code,current_time);
+                    auto out_vec = tree_ptr->set_block_time(sub_block_code,current_time);
                     if (!out_vec) {
                         std::string not_found((const char *) block_code.data(), block_code.size());
                         std::shared_lock read_path(combined_path_protect);
