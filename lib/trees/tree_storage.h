@@ -1490,7 +1490,8 @@ namespace uh::trees {
                                             if(error_flag.test())return;//break thread in case error is there
                                         }
                                         cur_pos += count;
-                                        multithreading_factory.load()->emplace_back(tmp_buf,write_back_size,out_vec,cur_pos-write_back_size-delete_size);
+                                        std::lock_guard write_multithreading_f(multithreading_factory_protect);
+                                        multithreading_factory->emplace_back(tmp_buf,write_back_size,out_vec,cur_pos-write_back_size-delete_size);
                                     }
                                 }
                                 read_end_sequence();
