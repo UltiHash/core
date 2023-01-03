@@ -914,7 +914,7 @@ namespace uh::trees {
                     FATAL << "<Block error trace>: Block code " + boost::algorithm::hex(not_found) +
                              " was too short for storage tree \"" +
                              combined_path->string() + "\".";
-                    std::exit(EXIT_FAILURE);
+                    return {};
                 }
                 //the block code should have a size of 5; one chunk index and 4 bytes of encoding for the offset
                 std::shared_lock read_size(size_protect);
@@ -954,16 +954,23 @@ namespace uh::trees {
                     }
 
                     FILE *reader = std::fopen(read_path.make_preferred().c_str(), "rb");
+                    auto read_end_sequence = [&](){
+                        std::fclose(reader);
+                        *read_ptr -= 1;
+                        if (!read_ptr->load())write_ptr->notify_one();
+                    };
                     if (!reader) {
                         ERROR << "File get_info opening failed at \"" + read_path.string() + "\"";
-                        std::exit(EXIT_FAILURE);
+                        read_end_sequence();
+                        return {};
                     }
                     //File should have been opened or created here
                     std::fseek(reader, static_cast<long>(offset), SEEK_SET);
 
                     if (std::ferror(reader)) {
                         FATAL << "I/O error when seeking \"" + read_path.string() + "\"";
-                        std::exit(EXIT_FAILURE);
+                        read_end_sequence();
+                        return {};
                     }
 
                     unsigned char time_buf[sizeof(unsigned long)];
@@ -972,12 +979,14 @@ namespace uh::trees {
                         FATAL
                             << "I/O time first 8 bytes reading was not completed on path \"" + read_path.string() +
                                "\"";
-                        std::exit(EXIT_FAILURE);
+                        read_end_sequence();
+                        return {};
                     }
 
                     if (std::ferror(reader)) {
                         FATAL << "I/O error when reading time of block at path \"" + read_path.string() + "\"";
-                        std::exit(EXIT_FAILURE);
+                        read_end_sequence();
+                        return {};
                     }
                     unsigned long block_time{};
                     for (unsigned char i = 0; i < (unsigned char) sizeof(unsigned long); i++) {
@@ -989,28 +998,29 @@ namespace uh::trees {
                     if (count != 1) {
                         FATAL
                             << "I/O prefix first byte reading was not completed on path \"" + read_path.string() + "\"";
-                        std::exit(EXIT_FAILURE);
+                        read_end_sequence();
+                        return {};
                     }
 
                     if (std::ferror(reader)) {
                         FATAL << "I/O error when reading prefix at path \"" + read_path.string() + "\"";
-                        std::exit(EXIT_FAILURE);
+                        read_end_sequence();
+                        return {};
                     }
                     unsigned char buffer_in[buf_size + 1];
                     count = std::fread(&buffer_in, sizeof(char), buf_size + 1, reader);
                     if (count != buf_size + 1) {
                         FATAL
                             << "I/O prefix first byte reading was not completed on path \"" + read_path.string() + "\"";
-                        std::exit(EXIT_FAILURE);
+                        read_end_sequence();
+                        return {};
                     }
                     std::size_t output_size{};
                     for (unsigned char buf_count = 0; buf_count <= buf_size; buf_count++) {
                         output_size += (((std::size_t) buffer_in[buf_count]) << (buf_count * 8));
                     }
 
-                    std::fclose(reader);
-                    *read_ptr -= 1;
-                    if (!read_ptr->load())write_ptr->notify_one();
+                    read_end_sequence();
 
                     return {block_time, output_size, sizeof(time_buf)+1+sizeof(buffer_in)+output_size};
                 }
