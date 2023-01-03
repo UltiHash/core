@@ -1153,7 +1153,7 @@ namespace uh::trees {
             }
         }
 
-        //TODO: integrate delete blocks, maintain valid time
+        //TODO: integrate delete blocks, maintain valid time, introduce block max age
         //after deletion some blocks are de-fragmented in descending order. Behind the deleted block(s) all blocks need to be re-mapped
         //returns the deleted total size and a list of tuple<old_block_reference with first element tree reference, new_block_reference with first element tree reference,reference to tree_storage of change>
         //maintaining the system can be done in 2 steps: delete_blocks_copy and after that we need to re-map all local block references
@@ -1170,6 +1170,7 @@ namespace uh::trees {
                 std::vector<std::vector<unsigned char>> &block_codes,
                 unsigned short num_threads = std::thread::hardware_concurrency()) {
             if (block_codes.empty() || !num_threads)return {};
+            std::atomic_flag error_flag{ATOMIC_FLAG_INIT};
             std::atomic<std::shared_ptr<std::size_t>> active_threads{};
             active_threads.store(std::make_shared<std::size_t>());
             std::atomic<std::size_t> out_size{};
@@ -1268,16 +1269,31 @@ namespace uh::trees {
 
                                 //read chunk at index (*cur_tmp)[0]
                                 FILE *reader = std::fopen(chunk.make_preferred().c_str(), "rb");
+                                std::atomic_flag write_control{ATOMIC_FLAG_INIT};
+                                auto read_end_sequence = [&](){
+                                    std::fclose(reader);
+                                    *read_ptr -= 1;
+                                    std::atomic_flag_clear_explicit(&write_control, std::memory_order_release);
+                                };
+                                auto error_thread_sequence = [&](){
+                                    while (std::atomic_flag_test_and_set_explicit(&error_flag, std::memory_order_acquire)) {
+                                        return;
+                                    }
+                                };
                                 if (!reader) {
                                     ERROR << "File read opening failed at \"" + chunk.string() + "\"";
-                                    std::exit(EXIT_FAILURE);
+                                    read_end_sequence();
+                                    error_thread_sequence();
+                                    if(error_flag.test())return;
                                 }
                                 std::size_t cur_pos = offset_calc(block_step_beg->cbegin(),block_step_beg->cend());
 
                                 std::fseek(reader, static_cast<long>(cur_pos), SEEK_SET);
                                 if (std::ferror(reader)) {
                                     FATAL << "I/O error when seeking \"" + chunk.string() + "\"";
-                                    std::exit(EXIT_FAILURE);
+                                    read_end_sequence();
+                                    error_thread_sequence();
+                                    if(error_flag.test())return;
                                 }
 
                                 std::size_t trunc_at = cur_pos;
@@ -1285,8 +1301,7 @@ namespace uh::trees {
                                 //producer consumer queue for reading and writing; contains RAM pointer; size of RAM pointer; local tree storage reference of;
                                 // *this tree where the referring chunk is stored; truncate size for the chunk; new storage reference after append
                                 std::atomic<std::shared_ptr<std::list<std::tuple<unsigned char*,std::size_t,std::vector<unsigned char>, std::size_t>>>> multithreading_factory{};
-                                multithreading_factory.store(std::make_shared<std::list<std::tuple<unsigned char*,std::size_t,std::vector<unsigned char>, std::size_t>>>());
-                                std::atomic_flag write_control{ATOMIC_FLAG_INIT};
+                                multithreading_factory.store(std::make_shared<std::list<std::tuple<unsigned char*,std::size_t,std::vector<unsigned char>, std::size_t>>>());//TODO: mutex protect
 
                                 while (std::atomic_flag_test_and_set_explicit(&write_control, std::memory_order_acquire)) {
                                     write_control.wait(true);
@@ -1294,9 +1309,17 @@ namespace uh::trees {
 
                                 if(std::filesystem::exists(chunk_maintain))std::filesystem::remove(chunk_maintain);
                                 FILE *writer = std::fopen(chunk_maintain.make_preferred().c_str(), "ab");
+                                auto io_end_sequence = [&](){
+                                    std::fclose(reader);
+                                    std::fclose(writer);
+                                    *read_ptr -= 1;
+                                    std::atomic_flag_clear_explicit(&write_control, std::memory_order_release);
+                                };
                                 if (!writer) {
                                     ERROR << "File write opening failed at \"" + chunk_maintain.string() + "\"";
-                                    std::exit(EXIT_FAILURE);
+                                    io_end_sequence();
+                                    error_thread_sequence();
+                                    if(error_flag.test())return;
                                 }
 
                                 auto consumer_function = [&](){
@@ -1312,14 +1335,27 @@ namespace uh::trees {
 
                                             std::fwrite(std::get<0>(*multithreading_factory.load()->cbegin()), std::get<1>(*multithreading_factory.load()->cbegin()), sizeof(unsigned char), writer);
                                             if (std::ferror(writer)) {
-                                                FATAL << "I/O error when writing \"" + chunk_maintain.string() + "\"";
-                                                std::exit(EXIT_FAILURE);
+                                                FATAL << "I/O error when deleting block writing \"" + chunk_maintain.string() + "\"";
+                                                io_end_sequence();
+                                                error_thread_sequence();
+                                                if(error_flag.test()){
+                                                    for(const auto &it:*multithreading_factory.load()){
+                                                        std::free(std::get<0>(it));
+                                                    }
+                                                    return;
+                                                }
                                             }
                                             std::free(std::get<0>(*multithreading_factory.load()->begin()));
                                             //tmp_buf,write_back_size,out_vec,this,trunc_at
                                             //std::vector<unsigned char>, std::vector<unsigned char>, tree_storage *, std::size_t>>>
                                             out_change_list.load()->emplace_back(std::get<2>(*multithreading_factory.load()->cbegin()),out_vec);
                                             multithreading_factory.load()->pop_front();
+                                        }
+                                        if(error_flag.test()){
+                                            FATAL << "I/O extern error when deleting block writing \"" + chunk_maintain.string() + "\"";
+                                            io_end_sequence();
+                                            error_thread_sequence();
+                                            return;
                                         }
 #ifdef _WIN32
                                         Sleep(10);
@@ -1332,6 +1368,7 @@ namespace uh::trees {
                                 std::thread w1(consumer_function);
 
                                 while (!std::feof(reader)) {
+                                    if(error_flag.test())break;//break thread in case error is there
                                     //File should have been opened or created here, seek for first block
                                     //start position of the block for seeking it later on is the old size
                                     std::vector<unsigned char> out_vec{};
@@ -1344,17 +1381,26 @@ namespace uh::trees {
 
                                     unsigned char time_buf[sizeof(unsigned long)];
                                     std::size_t count = std::fread(&time_buf, sizeof(char), sizeof(unsigned long), reader);
+
+                                    auto factory_io_sequence_end = [&](){
+                                        std::atomic_flag_test_and_set_explicit(&error_flag, std::memory_order_acquire);//put error flag on
+                                        if(w1.joinable())w1.join();//write out remaining blocks to prevent data loss
+                                        read_end_sequence();//reset reader flags
+                                    };
+
                                     if (count != sizeof(unsigned long)) {
                                         FATAL
                                             << "I/O time first 8 bytes reading was not completed on path \"" + chunk.string() +
                                                "\"";
-                                        std::exit(EXIT_FAILURE);
+                                        factory_io_sequence_end();
+                                        if(error_flag.test())return;//break thread in case error is there
                                     }
                                     cur_pos += count;
 
                                     if (std::ferror(reader)) {
                                         FATAL << "I/O error when reading time of block at path \"" + chunk.string() + "\"";
-                                        std::exit(EXIT_FAILURE);
+                                        factory_io_sequence_end();
+                                        if(error_flag.test())return;//break thread in case error is there
                                     }
 
                                     unsigned char buf_size = 0;
@@ -1362,20 +1408,23 @@ namespace uh::trees {
                                     if (count != 1) {
                                         FATAL
                                             << "I/O prefix first byte reading was not completed on path \"" + chunk.string() + "\"";
-                                        std::exit(EXIT_FAILURE);
+                                        factory_io_sequence_end();
+                                        if(error_flag.test())return;//break thread in case error is there
                                     }
                                     cur_pos += count;
 
                                     if (std::ferror(reader)) {
                                         FATAL << "I/O error when reading prefix at path \"" + chunk.string() + "\"";
-                                        std::exit(EXIT_FAILURE);
+                                        factory_io_sequence_end();
+                                        if(error_flag.test())return;//break thread in case error is there
                                     }
                                     unsigned char buffer_in[buf_size + 1];
                                     count = std::fread(&buffer_in, sizeof(char), buf_size + 1, reader);
                                     if (count != buf_size + 1) {
                                         FATAL
                                             << "I/O prefix first byte reading was not completed on path \"" + chunk.string() + "\"";
-                                        std::exit(EXIT_FAILURE);
+                                        factory_io_sequence_end();
+                                        if(error_flag.test())return;//break thread in case error is there
                                     }
                                     cur_pos += count;
                                     std::size_t output_size{};
@@ -1390,7 +1439,8 @@ namespace uh::trees {
                                         std::fseek(reader, static_cast<long>(output_size), SEEK_CUR);
                                         if (std::ferror(reader)) {
                                             FATAL << "I/O error when seeking \"" + chunk.string() + "\"";
-                                            std::exit(EXIT_FAILURE);
+                                            factory_io_sequence_end();
+                                            if(error_flag.test())return;//break thread in case error is there
                                         }
                                         cur_pos += output_size;
                                         delete_size += write_back_size;
@@ -1416,20 +1466,24 @@ namespace uh::trees {
 
                                         if (count != output_size) {
                                             FATAL << "I/O was not completed on path \"" + chunk.string() + "\"";
-                                            std::exit(EXIT_FAILURE);
+                                            factory_io_sequence_end();
+                                            if(error_flag.test())return;//break thread in case error is there
                                         }
                                         if (std::ferror(reader)) {
                                             FATAL << "I/O error when reading prefix at path \"" + chunk.string() + "\"";
-                                            std::exit(EXIT_FAILURE);
+                                            factory_io_sequence_end();
+                                            if(error_flag.test())return;//break thread in case error is there
                                         }
                                         cur_pos += count;
                                         multithreading_factory.load()->emplace_back(tmp_buf,write_back_size,out_vec,cur_pos-write_back_size-delete_size);
                                     }
                                 }
-                                std::fclose(reader);
-                                *read_ptr -= 1;
-                                std::atomic_flag_clear_explicit(&write_control, std::memory_order_release);
+                                read_end_sequence();
                                 if(w1.joinable())w1.join();
+                                if(error_flag.test()){
+                                    FATAL << "Block deleting reader thread quit unexpectedly!";
+                                    return;
+                                }
 
                                 for(auto it = block_step_beg; it < delete_here_codes.cend(); it++){
                                     DEBUG << "Block code \""+boost::algorithm::hex(std::string{it->cbegin(),it->cend()})+"\" could not be deleted. Please check for bugs.";
@@ -1454,24 +1508,40 @@ namespace uh::trees {
                                 auto buf = mem_wait<unsigned char>(maintain_size_append);
 
                                 FILE* source = fopen(chunk_maintain.make_preferred().c_str(), "rb");
+                                auto ptr_release_sequence = [&](){
+                                    std::atomic_flag_clear_explicit(write_ptr, std::memory_order_release);
+                                    if(!write_ptr->test())write_ptr->notify_one();
+                                    std::atomic_flag_clear_explicit(maintain_ptr, std::memory_order_release);
+                                    if(!maintain_ptr->test())maintain_ptr->notify_one();
+                                };
                                 if (!source) {
                                     ERROR << "File read opening failed at \"" + chunk_maintain.string() + "\"";
-                                    std::exit(EXIT_FAILURE);
+                                    fclose(source);
+                                    ptr_release_sequence();
+                                    return;
                                 }
                                 fread(buf, sizeof(unsigned char), maintain_size_append, source);
                                 if (std::ferror(source)) {
                                     FATAL << "I/O error when reading \"" + chunk_maintain.string() + "\"";
-                                    std::exit(EXIT_FAILURE);
+                                    fclose(source);
+                                    ptr_release_sequence();
+                                    return;
                                 }
                                 FILE* dest = fopen(chunk.make_preferred().c_str(), "ab");
                                 if (!dest) {
                                     ERROR << "File append opening failed at \"" + chunk_maintain.string() + "\"";
-                                    std::exit(EXIT_FAILURE);
+                                    fclose(source);
+                                    fclose(dest);
+                                    ptr_release_sequence();
+                                    return;
                                 }
                                 fwrite(buf, sizeof(unsigned char), maintain_size_append, dest);
                                 if (std::ferror(dest)) {
                                     FATAL << "I/O error when appending \"" + chunk_maintain.string() + "\"";
-                                    std::exit(EXIT_FAILURE);
+                                    fclose(source);
+                                    fclose(dest);
+                                    ptr_release_sequence();
+                                    return;
                                 }
 
                                 fclose(source);
@@ -1483,10 +1553,7 @@ namespace uh::trees {
                                 std::get<0>(size->at((*cur_tmp)[0])) -= delete_size;
                                 size_read.unlock();
 
-                                std::atomic_flag_clear_explicit(write_ptr, std::memory_order_release);
-                                if(!write_ptr->test())write_ptr->notify_one();
-                                std::atomic_flag_clear_explicit(maintain_ptr, std::memory_order_release);
-                                if(!maintain_ptr->test())maintain_ptr->notify_one();
+                                ptr_release_sequence();
                             }
                             else{
                                 size_read.unlock();
