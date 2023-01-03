@@ -336,8 +336,10 @@ namespace uh::trees {
                 }
                 lock_size.lock();
                 std::size_t size_tmp = std::get<0>(size->at(min_pos));
-                std::get<0>(size->at(min_pos)) += total_size;
                 lock_size.unlock();
+                std::unique_lock write_size(size_protect);
+                std::get<0>(size->at(min_pos)) += total_size;
+                write_size.unlock();
 
                 FILE *writer = std::fopen(read_chunk.make_preferred().c_str(), "ab");
                 if (!writer) {
