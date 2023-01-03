@@ -1069,7 +1069,7 @@ namespace uh::trees {
                     FATAL << "<Block error trace>: Block code " + boost::algorithm::hex(not_found) +
                              " was too short for storage tree \"" +
                              combined_path->string() + "\".";
-                    std::exit(EXIT_FAILURE);
+                    return false;
                 }
                 //the block code should have a size of 5; one chunk index and 4 bytes of encoding for the offset
                 std::shared_lock size_read(size_protect);
@@ -1120,27 +1120,33 @@ namespace uh::trees {
                     }
 
                     FILE *writer = std::fopen(read_path.make_preferred().c_str(), "wb");
+                    auto set_time_end_sequence = [&](){
+                        std::fclose(writer);
+                        std::atomic_flag_clear_explicit(write_ptr, std::memory_order_release);
+                        if (!write_ptr->test())write_ptr->notify_all();
+                    };
                     if (!writer) {
                         ERROR << "File write opening failed at \"" + read_path.string() + "\"";
-                        std::exit(EXIT_FAILURE);
+                        set_time_end_sequence();
+                        return false;
                     }
                     //File should have been opened or created here
                     std::fseek(writer, static_cast<long>(offset), SEEK_SET);
 
                     if (std::ferror(writer)) {
                         FATAL << "I/O error when seeking \"" + read_path.string() + "\"";
-                        std::exit(EXIT_FAILURE);
+                        set_time_end_sequence();
+                        return false;
                     }
                     //File should have been opened or created here
                     std::fwrite(bin_time.data(), bin_time.size(), sizeof(unsigned char), writer);
 
                     if (std::ferror(writer)) {
                         FATAL << "I/O error when writing \"" + read_path.string() + "\"";
-                        std::exit(EXIT_FAILURE);
+                        set_time_end_sequence();
+                        return false;
                     }
-                    std::fclose(writer);
-                    std::atomic_flag_clear_explicit(write_ptr, std::memory_order_release);
-                    if (!write_ptr->test())write_ptr->notify_all();
+                    set_time_end_sequence();
 
                     return true;
                 }
