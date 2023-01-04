@@ -3,7 +3,7 @@
 
 /* #undef TINY_TREE */
 
-#ifdef TINY_TREE
+#ifndef TINY_TREE
 #define LATENCY_TEST_SIZE (std::size_t) std::pow(2, 21)
 #define PERFORMANCE_TEST_SIZE (std::size_t) (std::pow(2,25))
 #define STORE_MAX (unsigned int) std::numeric_limits<unsigned char>::max() * 4

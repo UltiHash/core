@@ -5,7 +5,7 @@ project(uhLibTrees)
 message(STATUS "Using ${PROJECT_NAME}...")
 
 #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -fsanitize=address")
-
+#TODO: flag does not move
 option(TINY_TREE "Use a tiny chunk maximum size that also limits the writeable maximum block size for testing." ON)
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/tree_storage_config.h.in ${CMAKE_CURRENT_SOURCE_DIR}/tree_storage_config.h)
