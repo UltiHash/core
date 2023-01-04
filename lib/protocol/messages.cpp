@@ -152,4 +152,36 @@ void read(std::istream& in, read_chunk::response& response)
 
 // ---------------------------------------------------------------------
 
+void write(std::ostream& out, const quit::request& request)
+{
+    write(out, quit::request_id);
+    write(out, request.reason);
+}
+
+// ---------------------------------------------------------------------
+
+void read(std::istream& in, quit::request& request)
+{
+    quit::request tmp;
+
+    read(in, tmp.reason);
+
+    std::swap(tmp, request);
+}
+
+// ---------------------------------------------------------------------
+
+void write(std::ostream&, const quit::response&)
+{
+}
+
+// ---------------------------------------------------------------------
+
+void read(std::istream& in, quit::response&)
+{
+    check_status(in);
+}
+
+// ---------------------------------------------------------------------
+
 } // namespace uh::protocol

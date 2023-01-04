@@ -14,6 +14,12 @@ namespace uh::protocol
 
 // ---------------------------------------------------------------------
 
+void server::on_quit(const std::string&)
+{
+}
+
+// ---------------------------------------------------------------------
+
 void server::handle(std::shared_ptr<net::socket> client)
 {
     boost::iostreams::stream<net::socket_device> io(client);
@@ -38,6 +44,12 @@ void server::handle(std::shared_ptr<net::socket> client)
                 case hello::request_id: handle_hello(io); break;
                 case write_chunk::request_id: handle_write_chunk(io); break;
                 case read_chunk::request_id: handle_read_chunk(io); break;
+
+                case quit::request_id:
+                    handle_quit(io);
+                    io.close();
+                    return;
+
                 default: throw std::runtime_error("unsupported command");
             }
         }
@@ -90,6 +102,26 @@ void server::handle_read_chunk(std::iostream& io)
 
     write(io, status{ status::OK });
     write(io, read_chunk::response{ std::move(content) });
+    io.flush();
+}
+
+// ---------------------------------------------------------------------
+
+void server::handle_quit(std::iostream& io)
+{
+    quit::request req;
+    read(io, req);
+
+    try
+    {
+        on_quit(req.reason);
+    }
+    catch (...)
+    {
+        // ignore
+    }
+
+    write(io, status{ status::OK });
     io.flush();
 }
 

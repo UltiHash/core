@@ -4,8 +4,10 @@ set(CMAKE_CXX_STANDARD 20)
 project(uhLibUtil)
 message(STATUS "Using ${PROJECT_NAME}...")
 
+find_package(Boost 1.80 COMPONENTS system unit_test_framework REQUIRED)
+
 set(${PROJECT_NAME}_INCLUDE_DIRS "")
-set(${PROJECT_NAME}_LINK_LIBRARIES "")
+set(${PROJECT_NAME}_LINK_LIBRARIES ${Boost_LIBRARIES})
 
 # adding all the .h files of the current project
 file(GLOB HEADER_FILE_LIST ${CMAKE_CURRENT_SOURCE_DIR}/*.h)
@@ -18,4 +20,4 @@ target_include_directories(${PROJECT_NAME} PUBLIC ${${PROJECT_NAME}_INCLUDE_DIRS
 target_link_libraries(${PROJECT_NAME} PUBLIC ${${PROJECT_NAME}_LINK_LIBRARIES})
 
 # create testing targets
-#include(${CMAKE_CURRENT_SOURCE_DIR}/../cmake/testing/CMakeLists.txt)
+include(${CMAKE_CURRENT_SOURCE_DIR}/../cmake/testing/CMakeLists.txt)

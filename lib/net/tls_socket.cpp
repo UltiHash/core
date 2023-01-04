@@ -17,20 +17,6 @@ tls_socket::tls_socket(ssl::stream<ip::tcp::socket>&& sock)
 
 // ---------------------------------------------------------------------
 
-std::streamsize tls_socket::write(std::span<const char> buffer)
-{
-    return m_sock.write_some(const_buffer{ buffer.data(), buffer.size() });
-}
-
-// ---------------------------------------------------------------------
-
-std::streamsize tls_socket::read(std::span<char> buffer)
-{
-    return m_sock.read_some(mutable_buffer{ buffer.data(), buffer.size() });
-}
-
-// ---------------------------------------------------------------------
-
 std::unique_ptr<tls_socket> tls_socket::connect(io_context& ctx,
                                                 ssl::context& ssl,
                                                 const std::string& hostname,
@@ -53,6 +39,20 @@ std::unique_ptr<tls_socket> tls_socket::connect(io_context& ctx,
     sock.handshake(ssl::stream<ip::tcp::socket>::client);
 
     return std::make_unique<tls_socket>(std::move(sock));
+}
+
+// ---------------------------------------------------------------------
+
+std::streamsize tls_socket::write_impl(std::span<const char> buffer)
+{
+    return m_sock.write_some(const_buffer{ buffer.data(), buffer.size() });
+}
+
+// ---------------------------------------------------------------------
+
+std::streamsize tls_socket::read_impl(std::span<char> buffer)
+{
+    return m_sock.read_some(mutable_buffer{ buffer.data(), buffer.size() });
 }
 
 // ---------------------------------------------------------------------
