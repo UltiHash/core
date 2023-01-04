@@ -14,6 +14,7 @@
 #include <thread>
 #include <atomic>
 #include <execution>
+#include <mutex>
 #include "util/exception.h"
 
 #ifdef _WIN32
