@@ -90,8 +90,7 @@ BOOST_AUTO_TEST_CASE(write_read_test)
         mode ? BOOST_TEST_MESSAGE("---Entering short block latency measurement write read mode:---\n") :
         BOOST_TEST_MESSAGE("---Entering normal write read mode:---\n");
         //total size is the total write size that the database tests
-        while (total_size < (mode ? (std::size_t) std::pow(2, 22) : (std::size_t) (std::pow(2,
-                                                                                            34)))) {// for performance test on mode == 0 use a size of 4TB std::pow(1024, 4) * 4
+        while (total_size < (mode ? LATENCY_TEST_SIZE : PERFORMANCE_TEST_SIZE)) {// for performance test on mode == 0 use a size of 4TB std::pow(1024, 4) * 4
             //(std::size_t) std::pow(2, 35))
             std::vector<unsigned char> test_bin = binary_generator(mode ? 32 : STORE_MAX);
             //write test

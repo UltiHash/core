@@ -4,6 +4,12 @@ set(CMAKE_CXX_STANDARD 20)
 project(uhLibTrees)
 message(STATUS "Using ${PROJECT_NAME}...")
 
+#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -fsanitize=address")
+
+option(TINY_TREE "Use a tiny chunk maximum size that also limits the writeable maximum block size for testing." ON)
+
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/tree_storage_config.h.in ${CMAKE_CURRENT_SOURCE_DIR}/tree_storage_config.h)
+
 # external dependencies
 find_package(Boost 1.80 COMPONENTS log unit_test_framework thread system REQUIRED)
 find_package(OpenSSL REQUIRED)

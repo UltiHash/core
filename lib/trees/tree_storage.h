@@ -16,6 +16,8 @@
 #include <execution>
 #include <mutex>
 #include "util/exception.h"
+#include "trees/tree_storage_config.h"
+#include "trees/tree_storage_config.h.in"
 
 #ifdef _WIN32
 #include <windows.h>
@@ -31,9 +33,8 @@
 namespace uh::trees {
     DEFINE_EXCEPTION(out_of_memory);
 
-#define N 256
-#define STORE_MAX (unsigned int) std::numeric_limits<unsigned int>::max()
-#define STORE_HARD_LIMIT (unsigned long) (std::numeric_limits<unsigned int>::max() * 2)
+#define N (unsigned int) std::numeric_limits<unsigned char>::max()
+
     typedef struct tree_storage tree_storage;
 
     /*
