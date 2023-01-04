@@ -66,13 +66,13 @@ namespace uh::trees {
                 total_bit_count++;
                 h_bit >>= 1;
             }
-            unsigned char byte_count = total_bit_count / 8;
+            unsigned char byte_count = total_bit_count / 8 + std::min(1,total_bit_count % 8);
             std::vector<unsigned char> prefix{};
-            for (unsigned char i = 0; i < byte_count + std::min(1,total_bit_count % 8); i++) {
+            for (unsigned char i = 0; i < byte_count; i++) {
                 prefix.push_back((unsigned char) (input_size >> (i * 8)));
             }
             if (prefix.empty())prefix.push_back(0);
-            prefix.insert(prefix.cbegin(), byte_count);
+            prefix.insert(prefix.cbegin(), byte_count-1);
             return prefix;
         }
 
@@ -81,7 +81,7 @@ namespace uh::trees {
     ALLOC* mem_wait(std::size_t mem) {
         long pages = sysconf(_SC_PHYS_PAGES);
         long page_size = sysconf(_SC_PAGE_SIZE);
-        unsigned long totalFreeVirtualMem = static_cast<unsigned long>(pages * page_size);
+        auto totalFreeVirtualMem = static_cast<unsigned long>(pages * page_size);
 
         do {
             std::unique_lock lock(mem_protect);
