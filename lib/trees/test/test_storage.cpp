@@ -70,7 +70,7 @@ BOOST_AUTO_TEST_CASE(constructor_test)
 {
     //tests for any linux machine
     uh::trees::tree_storage t1(std::filesystem::path("/home") / std::string(getenv("USER")),
-                               1);//A test folder reserved for tree storage
+                               );//A test folder reserved for tree storage
     //for strong laptops with SSD extension (configure test db server to run this??)
     //uh::trees::tree_storage t1("/mnt/md0");//A test folder reserved for tree storage for performance tests
 }
@@ -79,7 +79,7 @@ BOOST_AUTO_TEST_CASE(write_read_test)
 {
     //tests for any linux machine
     uh::trees::tree_storage t1(std::filesystem::path("/home") / std::string(getenv("USER")),
-                               1);//A test folder reserved for tree storage
+                               );//A test folder reserved for tree storage
     //for strong laptops with SSD extension (configure test db server to run this??)
     //uh::trees::tree_storage t1("/mnt/md0");//A test folder reserved for tree storage for performance tests
 
@@ -629,7 +629,7 @@ BOOST_AUTO_TEST_CASE(index_read_test)
 
     gettimeofday(&time, nullptr);
     millis = ((long double) time.tv_sec * 1000) + ((long double) time.tv_usec / 1000);
-    auto index_list = t1.index(1);
+    auto index_list = t1.index();
     gettimeofday(&time, nullptr);
     long double index_time = (((long double) time.tv_sec * 1000) + ((long double) time.tv_usec / 1000)) - millis;
 
@@ -643,8 +643,10 @@ BOOST_AUTO_TEST_CASE(index_read_test)
         std::vector<unsigned char> read_result = std::get<1>(all_results);
         unsigned char hash_buf[SHA512_DIGEST_LENGTH];//HASH GENERATION
         SHA512(read_result.data(), read_result.size(), hash_buf);
-        BOOST_CHECK_EQUAL_COLLECTIONS(std::get<0>(el).cbegin(), std::get<1>(el).cend(), hash_buf,
-                                      hash_buf + SHA512_DIGEST_LENGTH);
+        std::string old_ref = boost::algorithm::hex(
+                std::string().assign(std::get<1>(el).cbegin(), std::get<1>(el).cend()));
+        BOOST_ASSERT_MSG(std::equal(std::get<0>(el).cbegin(), std::get<0>(el).cend(), hash_buf,
+                                      hash_buf + SHA512_DIGEST_LENGTH), "The SHA512 of an indexed block \""+old_ref+"\" could not be verified!");
     }
 }
 
