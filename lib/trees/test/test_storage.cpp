@@ -41,16 +41,11 @@ std::vector<unsigned char> binary_generator(std::size_t max_len) {
             for (std::size_t i = 0; i < len / sizeof(std::size_t); i++) {
                 out_fast[i] = (std::size_t) dist2(rng2);
             }
-        } else {
-#pragma omp parallel for simd schedule(dynamic)
-            for (std::size_t i = 0; i < len / sizeof(std::size_t); i++) {
-                out_fast[i] = (std::size_t) dist2(rng2);
-            }
         }
 
         //copy out_fast to out_return
         out_return.assign(out_fast_cheat, out_fast_cheat + (len / sizeof(std::size_t)) * sizeof(std::size_t));
-        std::free(out_fast);
+        std::free(out_fast);//TODO: SEGFAULT
     }
 
     //complete
@@ -92,7 +87,7 @@ BOOST_AUTO_TEST_CASE(write_read_test)
         //total size is the total write size that the database tests
         while (total_size < (mode ? LATENCY_TEST_SIZE : PERFORMANCE_TEST_SIZE)) {
             //(std::size_t) std::pow(2, 35))
-            std::vector<unsigned char> test_bin = binary_generator(mode ? 0 : STORE_MAX);
+            std::vector<unsigned char> test_bin = binary_generator(mode ? 0 : STORE_MAX-1);
             //write test
             gettimeofday(&time, nullptr);
             long double millis = ((long double) time.tv_sec * 1000) + ((long double) time.tv_usec / 1000);

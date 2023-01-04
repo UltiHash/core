@@ -4,7 +4,7 @@ set(CMAKE_CXX_STANDARD 20)
 project(uhLibTrees)
 message(STATUS "Using ${PROJECT_NAME}...")
 
-#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -fsanitize=address")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -g -fsanitize=address")
 
 SET(USE_TINY_TREE ON CACHE BOOL "Override 'USE_TINY_TREE' option" FORCE)
 
