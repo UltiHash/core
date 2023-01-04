@@ -802,7 +802,7 @@ namespace uh::trees {
                 }
             };
 
-            if (num_threads >= 2) {
+            if (num_threads <= 2) {
                 multithread_index();
             } else {
                 std::vector<std::thread> workers;
