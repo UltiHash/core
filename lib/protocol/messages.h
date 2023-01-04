@@ -106,6 +106,30 @@ void read(std::istream& in, read_chunk::response& response);
 
 // ---------------------------------------------------------------------
 
+struct quit
+{
+    struct request
+    {
+        std::string reason;
+    };
+
+    struct response
+    {
+    };
+
+    constexpr static uint8_t request_id = 0x04;
+};
+
+// ---------------------------------------------------------------------
+
+void write(std::ostream& out, const quit::request& request);
+void read(std::istream& in, quit::request& request);
+
+void write(std::ostream& out, const quit::response& response);
+void read(std::istream& in, quit::response& response);
+
+// ---------------------------------------------------------------------
+
 } // namespace uh::protocol
 
 #endif

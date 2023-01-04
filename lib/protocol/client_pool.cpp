@@ -61,7 +61,15 @@ void client_pool::put_back(std::unique_ptr<client> c)
 {
     std::unique_lock lk(m_mutex);
 
-    m_clients.push_back(std::move(c));
+    if (c->valid())
+    {
+        m_clients.push_back(std::move(c));
+    }
+    else
+    {
+        m_clients.push_back(m_factory.create());
+    }
+
     m_cv.notify_all();
 }
 

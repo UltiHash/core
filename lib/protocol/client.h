@@ -19,6 +19,8 @@ class client
 public:
     client(std::unique_ptr<net::socket> sock);
 
+    ~client();
+
     /**
      * Send client version information to the server. This must be the first
      * command in a client session. The server returns it's version and the
@@ -44,6 +46,18 @@ public:
      * @throw on error status
      */
     blob read_chunk(const blob& hash);
+
+    /**
+     * End the connection by sending the `quit` command, optionally with a
+     * reason.
+     */
+    void quit(const std::string& reason);
+
+    /**
+     * Return true, if there is a working underlying connection. False indicates
+     * that there was an I/O error before.
+     */
+    bool valid() const;
 
 private:
     std::shared_ptr<net::socket> m_sock;

@@ -5,7 +5,11 @@
 #ifndef SCHOOL_PROJECT_PREFIX_H
 #define SCHOOL_PROJECT_PREFIX_H
 
+#include <sys/stat.h>
+
 #include "EnDecoder.h"
+
+
 
 class Prefix{
 protected:

@@ -17,6 +17,7 @@
 #define DEFINE_EXCEPTION(name) DEFINE_SUB_EXCEPTION(name, uh::util::exception)
 
 #define THROW(exception, message) throw exception(FILELINE, message)
+#define THROW_FROM_ERRNO() throw_from_syserror(FILELINE)
 
 namespace uh::util
 {
@@ -34,6 +35,14 @@ public:
 private:
     std::string m_message;
 };
+
+// ---------------------------------------------------------------------
+
+DEFINE_EXCEPTION(system_error);
+
+// ---------------------------------------------------------------------
+
+[[noreturn]] void throw_from_syserror(const std::string& file, std::size_t line);
 
 // ---------------------------------------------------------------------
 
