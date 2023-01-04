@@ -69,8 +69,7 @@ std::vector<unsigned char> binary_generator(std::size_t max_len) {
 BOOST_AUTO_TEST_CASE(constructor_test)
 {
     //tests for any linux machine
-    uh::trees::tree_storage t1(std::filesystem::path("/home") / std::string(getenv("USER")),
-                               );//A test folder reserved for tree storage
+    uh::trees::tree_storage t1(std::filesystem::path("/home") / std::string(getenv("USER")));//A test folder reserved for tree storage
     //for strong laptops with SSD extension (configure test db server to run this??)
     //uh::trees::tree_storage t1("/mnt/md0");//A test folder reserved for tree storage for performance tests
 }
@@ -78,8 +77,7 @@ BOOST_AUTO_TEST_CASE(constructor_test)
 BOOST_AUTO_TEST_CASE(write_read_test)
 {
     //tests for any linux machine
-    uh::trees::tree_storage t1(std::filesystem::path("/home") / std::string(getenv("USER")),
-                               );//A test folder reserved for tree storage
+    uh::trees::tree_storage t1(std::filesystem::path("/home") / std::string(getenv("USER")));//A test folder reserved for tree storage
     //for strong laptops with SSD extension (configure test db server to run this??)
     //uh::trees::tree_storage t1("/mnt/md0");//A test folder reserved for tree storage for performance tests
 
