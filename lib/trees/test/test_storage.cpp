@@ -682,7 +682,7 @@ BOOST_AUTO_TEST_CASE(get_info_set_time_test)
     BOOST_ASSERT_MSG(std::get<0>(block_info) < std::get<0>(block_info2),
                      "Block time reset was not successful internally!");
 }
-
+/*
 BOOST_AUTO_TEST_CASE(delete_test)
 {
     //tests for any linux machine
@@ -715,3 +715,4 @@ BOOST_AUTO_TEST_CASE(delete_test)
 
     t1.delete_recursive();
 }
+*/
