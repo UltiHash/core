@@ -1346,50 +1346,64 @@ namespace uh::trees {
                                     if (error_flag.test())return;
                                 }
 
+                                auto write_once_to_maintain_file = [&](){
+                                    std::shared_lock multithread_f_read(multithreading_factory_protect);
+                                    auto new_offset = std::get<3>(*multithreading_factory->cbegin());
+                                    auto old_block_code = std::get<2>(*multithreading_factory->cbegin());
+                                    auto size_of_block = std::get<1>(*multithreading_factory->cbegin());
+                                    auto current_storage_ptr = std::get<0>(*multithreading_factory->cbegin());
+                                    multithread_f_read.unlock();
+                                    std::vector<unsigned char> out_vec{};
+                                    out_vec.reserve(sizeof(unsigned int));
+                                    //offset of blocks have been changed, take the first byte for chunk ordering and the last 4 bytes for offset;
+                                    for (unsigned char i = 0;
+                                         i <
+                                         (unsigned char) sizeof(unsigned int); i++) {//STORE_MAX will fit in 4 bytes
+                                        out_vec.push_back((unsigned char) (new_offset) >> (i * 8));
+                                    }
+                                    out_vec.insert(out_vec.cbegin(), old_block_code[0]);
+
+                                    std::fwrite(current_storage_ptr, size_of_block, sizeof(unsigned char),
+                                                writer);
+                                    if (std::ferror(writer)) {
+                                        FATAL << "I/O error when deleting block writing \"" +
+                                                 chunk_maintain.string() + "\"";
+                                        io_end_sequence();
+                                        error_thread_sequence();
+                                        if (error_flag.test()) {
+                                            multithread_f_read.lock();
+                                            for (const auto &it: *multithreading_factory) {
+                                                std::free(std::get<0>(it));
+                                            }
+                                            multithread_f_read.unlock();
+                                            return;
+                                        }
+                                    }
+                                    std::free(current_storage_ptr);
+                                    //tmp_buf,write_back_size,out_vec,this,trunc_at
+                                    //std::vector<unsigned char>, std::vector<unsigned char>, tree_storage *, std::size_t>>>
+                                    std::unique_lock lock_output(out_change_list_protect);
+                                    out_change_list->emplace_back(old_block_code, out_vec);
+                                    lock_output.unlock();
+                                    std::unique_lock write_multithreading_f(multithreading_factory_protect);
+                                    multithreading_factory->pop_front();
+                                    write_multithreading_f.unlock();
+                                    if (error_flag.test()) {
+                                        FATAL << "I/O extern error when deleting block writing \"" +
+                                                 chunk_maintain.string() + "\"";
+                                        io_end_sequence();
+                                        error_thread_sequence();
+                                        return;
+                                    }
+
+                                };
+
                                 auto consumer_function = [&]() {
                                     while (write_control.test()) {
                                         std::shared_lock multithread_f_read(multithreading_factory_protect);
                                         while (!multithreading_factory->empty()) {
-                                            auto new_offset = std::get<3>(*multithreading_factory->cbegin());
-                                            auto old_block_code = std::get<2>(*multithreading_factory->cbegin());
-                                            auto size_of_block = std::get<1>(*multithreading_factory->cbegin());
-                                            auto current_storage_ptr = std::get<0>(*multithreading_factory->cbegin());
                                             multithread_f_read.unlock();
-                                            std::vector<unsigned char> out_vec{};
-                                            out_vec.reserve(sizeof(unsigned int));
-                                            //offset of blocks have been changed, take the first byte for chunk ordering and the last 4 bytes for offset;
-                                            for (unsigned char i = 0;
-                                                 i <
-                                                 (unsigned char) sizeof(unsigned int); i++) {//STORE_MAX will fit in 4 bytes
-                                                out_vec.push_back((unsigned char) (new_offset) >> (i * 8));
-                                            }
-                                            out_vec.insert(out_vec.cbegin(), old_block_code[0]);
-
-                                            std::fwrite(current_storage_ptr, size_of_block, sizeof(unsigned char),
-                                                        writer);
-                                            if (std::ferror(writer)) {
-                                                FATAL << "I/O error when deleting block writing \"" +
-                                                         chunk_maintain.string() + "\"";
-                                                io_end_sequence();
-                                                error_thread_sequence();
-                                                if (error_flag.test()) {
-                                                    multithread_f_read.lock();
-                                                    for (const auto &it: *multithreading_factory) {
-                                                        std::free(std::get<0>(it));
-                                                    }
-                                                    multithread_f_read.unlock();
-                                                    return;
-                                                }
-                                            }
-                                            std::free(current_storage_ptr);
-                                            //tmp_buf,write_back_size,out_vec,this,trunc_at
-                                            //std::vector<unsigned char>, std::vector<unsigned char>, tree_storage *, std::size_t>>>
-                                            std::unique_lock lock_output(out_change_list_protect);
-                                            out_change_list->emplace_back(old_block_code, out_vec);
-                                            lock_output.unlock();
-                                            std::unique_lock write_multithreading_f(multithreading_factory_protect);
-                                            multithreading_factory->pop_front();
-                                            write_multithreading_f.unlock();
+                                            write_once_to_maintain_file();
                                             multithread_f_read.lock();
                                         }
                                         if (error_flag.test()) {
@@ -1407,7 +1421,8 @@ namespace uh::trees {
                                     }
                                     std::fclose(writer);
                                 };
-                                std::thread w1(consumer_function);
+                                std::thread w1;
+                                if(num_threads > 1)w1=std::thread(consumer_function);
 
                                 while (!std::feof(reader) && cur_pos < total_file_size) {
                                     if (error_flag.test())break;//break thread in case error is there
@@ -1428,7 +1443,11 @@ namespace uh::trees {
                                     auto factory_io_sequence_end = [&]() {
                                         std::atomic_flag_test_and_set_explicit(&error_flag,
                                                                                std::memory_order_acquire);//put error flag on
-                                        if (w1.joinable())w1.join();//write out remaining blocks to prevent data loss
+                                       if(num_threads >1){
+                                           if (w1.joinable())w1.join();//write out remaining blocks to prevent data loss
+                                       }
+                                       else write_once_to_maintain_file();
+
                                         read_end_sequence();//reset reader flags
                                     };
 
@@ -1532,7 +1551,13 @@ namespace uh::trees {
                                     }
                                 }
                                 read_end_sequence();
-                                if (w1.joinable())w1.join();
+                                if(num_threads > 1){
+                                    if (w1.joinable())w1.join();
+                                }
+                                else{
+                                    write_once_to_maintain_file();
+                                }
+
                                 if (error_flag.test()) {
                                     FATAL << "Block deleting reader thread quit unexpectedly!";
                                     return;

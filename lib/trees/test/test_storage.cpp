@@ -632,7 +632,7 @@ BOOST_AUTO_TEST_CASE(index_read_test)
     long double index_time = (((long double) time.tv_sec * 1000) + ((long double) time.tv_usec / 1000)) - millis;
 
     BOOST_TEST_MESSAGE("The constructor of tree storage took " + std::to_string(constructor_time) +
-                       " ms in a full state. The index time of that tree took" + std::to_string(index_time) +
+                       " ms in a full state. The index time of that tree took " + std::to_string(index_time) +
                        " ms. The total time to bring the database back to life was " +
                        std::to_string(constructor_time + index_time) + " ms.");
 
