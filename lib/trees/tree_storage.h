@@ -223,7 +223,15 @@ namespace uh::trees {
                 }
                 lock2.unlock();
                 std::lock(lock1, lock2);
-                if (i >= size->size() && i >= children->size())break;
+                if (i >= size->size() && i >= children->size()){
+                    lock1.unlock();
+                    lock2.unlock();
+                    break;
+                }
+                else{
+                    lock1.unlock();
+                    lock2.unlock();
+                }
             }
             return s;
         }
@@ -781,7 +789,15 @@ namespace uh::trees {
                         children_lock.unlock();
                     }
                     std::lock(size_lock, children_lock);
-                    if (i >= size->size() && i >= children->size())break;
+                    if (i >= size->size() && i >= children->size()){
+                        size_lock.unlock();
+                        children_lock.unlock();
+                        break;
+                    }
+                    else{
+                        size_lock.unlock();
+                        children_lock.unlock();
+                    }
                     i = (i_constructor += 1);
                 }
             };
@@ -854,8 +870,15 @@ namespace uh::trees {
                     }
 
                     std::lock(size_lock, children_lock);
-                    if (i >= size->size() && i >= children->size())break;
-
+                    if (i >= size->size() && i >= children->size()){
+                        size_lock.unlock();
+                        children_lock.unlock();
+                        break;
+                    }
+                    else{
+                        size_lock.unlock();
+                        children_lock.unlock();
+                    }
                     i = (i_constructor += 1);
                 }
             };
@@ -1623,12 +1646,18 @@ namespace uh::trees {
 
                             std::lock(size_read, children_read);
                             if ((*cur_tmp)[0] >= size->size() || (*cur_tmp)[0] >= children->size()) {
+                                size_read.unlock();
+                                children_read.unlock();
                                 std::string not_found((const char *) cur_tmp->data(), cur_tmp->size());
                                 std::shared_lock path_read(combined_path_protect);
                                 DEBUG << "<Block error trace>: Block code " + boost::algorithm::hex(not_found) +
                                          " was exceeding limits of storage tree \"" +
                                          combined_path->string() +
                                          "\" and was skipped!.";
+                            }
+                            else{
+                                size_read.unlock();
+                                children_read.unlock();
                             }
                             //parallel end
                             active_threads -= 1;
