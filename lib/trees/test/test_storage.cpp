@@ -69,7 +69,8 @@ std::vector<unsigned char> binary_generator(std::size_t max_len) {
 BOOST_AUTO_TEST_CASE(constructor_test)
 {
     //tests for any linux machine
-    uh::trees::tree_storage t1(std::filesystem::path("/home")/std::string(getenv("USER")),1);//A test folder reserved for tree storage
+    uh::trees::tree_storage t1(std::filesystem::path("/home") / std::string(getenv("USER")),
+                               1);//A test folder reserved for tree storage
     //for strong laptops with SSD extension (configure test db server to run this??)
     //uh::trees::tree_storage t1("/mnt/md0");//A test folder reserved for tree storage for performance tests
 }
@@ -77,7 +78,8 @@ BOOST_AUTO_TEST_CASE(constructor_test)
 BOOST_AUTO_TEST_CASE(write_read_test)
 {
     //tests for any linux machine
-    uh::trees::tree_storage t1(std::filesystem::path("/home")/std::string(getenv("USER")),1);//A test folder reserved for tree storage
+    uh::trees::tree_storage t1(std::filesystem::path("/home") / std::string(getenv("USER")),
+                               1);//A test folder reserved for tree storage
     //for strong laptops with SSD extension (configure test db server to run this??)
     //uh::trees::tree_storage t1("/mnt/md0");//A test folder reserved for tree storage for performance tests
 
@@ -90,7 +92,8 @@ BOOST_AUTO_TEST_CASE(write_read_test)
         mode ? BOOST_TEST_MESSAGE("---Entering short block latency measurement write read mode:---\n") :
         BOOST_TEST_MESSAGE("---Entering normal write read mode:---\n");
         //total size is the total write size that the database tests
-        while (total_size < (mode ? (std::size_t) std::pow(2, 22) : (std::size_t) (std::pow(2, 34)))) {// for performance test on mode == 0 use a size of 4TB std::pow(1024, 4) * 4
+        while (total_size < (mode ? (std::size_t) std::pow(2, 22) : (std::size_t) (std::pow(2,
+                                                                                            34)))) {// for performance test on mode == 0 use a size of 4TB std::pow(1024, 4) * 4
             //(std::size_t) std::pow(2, 35))
             std::vector<unsigned char> test_bin = binary_generator(mode ? 32 : STORE_MAX);
             //write test
@@ -144,7 +147,8 @@ BOOST_AUTO_TEST_CASE(write_read_test)
         std::random_device dev;
         std::mt19937 rng(dev());
         std::uniform_int_distribution<std::mt19937::result_type> dist(0, write_times.size() - 1);
-        while (total_size < (mode ? (std::size_t) std::pow(2, 22) : (std::size_t) (std::pow(2, 36)))) { //(std::size_t) (std::pow(1024, 4) * 4)) Performance test size for mode ß
+        while (total_size < (mode ? (std::size_t) std::pow(2, 22) : (std::size_t) (std::pow(2,
+                                                                                            36)))) { //(std::size_t) (std::pow(1024, 4) * 4)) Performance test size for mode ß
             std::size_t access_point = dist(rng);
             gettimeofday(&time, nullptr);
             long double millis = ((long double) time.tv_sec * 1000) + ((long double) time.tv_usec / 1000);
@@ -616,7 +620,8 @@ BOOST_AUTO_TEST_CASE(index_read_test)
     gettimeofday(&time, nullptr);
     long double millis = ((long double) time.tv_sec * 1000) + ((long double) time.tv_usec / 1000);
     //for any machine
-    uh::trees::tree_storage t1(std::filesystem::path("/home")/std::string(getenv("USER")),1);//A test folder reserved for tree storage
+    uh::trees::tree_storage t1(std::filesystem::path("/home") / std::string(getenv("USER")),
+                               1);//A test folder reserved for tree storage
     //for strong laptops with SSD extension (configure test db server to run this??)
     //uh::trees::tree_storage t1("/mnt/md0");//A test folder reserved for tree storage for performance tests
     gettimeofday(&time, nullptr);
@@ -647,7 +652,8 @@ BOOST_AUTO_TEST_CASE(get_info_set_time_test)
 {
     struct timeval time{};
     //tests for any linux machine
-    uh::trees::tree_storage t1(std::filesystem::path("/home")/std::string(getenv("USER")),1);//A test folder reserved for tree storage
+    uh::trees::tree_storage t1(std::filesystem::path("/home") / std::string(getenv("USER")),
+                               1);//A test folder reserved for tree storage
     //for strong laptops with SSD extension (configure test db server to run this??)
     //uh::trees::tree_storage t1("/mnt/md0");//A test folder reserved for tree storage for performance tests
     auto index_list = t1.index(1);
@@ -658,26 +664,30 @@ BOOST_AUTO_TEST_CASE(get_info_set_time_test)
     gettimeofday(&time, nullptr);
     long double write_time =
             (((long double) time.tv_sec * 1000) + ((long double) time.tv_usec / 1000)) - millis;
-    BOOST_TEST_MESSAGE("\nThe get_info test to seek the information of one block took "+std::to_string(write_time)+" ms.");
+    BOOST_TEST_MESSAGE(
+            "\nThe get_info test to seek the information of one block took " + std::to_string(write_time) + " ms.");
     BOOST_ASSERT_MSG(std::get<0>(block_info) < (unsigned long) std::chrono::nanoseconds(
             std::chrono::high_resolution_clock::now().time_since_epoch()).count(),
                      "Block was not older than current time");
-    BOOST_ASSERT_MSG(std::get<1>(block_info) < std::get<2>(block_info), "The total size must always be larger than the block size!");
+    BOOST_ASSERT_MSG(std::get<1>(block_info) < std::get<2>(block_info),
+                     "The total size must always be larger than the block size!");
     gettimeofday(&time, nullptr);
     millis = ((long double) time.tv_sec * 1000) + ((long double) time.tv_usec / 1000);
     bool test_ok = t1.set_block_time(std::get<1>(*first_el));
     gettimeofday(&time, nullptr);
     write_time = (((long double) time.tv_sec * 1000) + ((long double) time.tv_usec / 1000)) - millis;
-    BOOST_ASSERT_MSG(test_ok,"Current time could not be set to first block of index!");
-    BOOST_TEST_MESSAGE("\nSetting a new block time took "+std::to_string(write_time)+" ms.");
+    BOOST_ASSERT_MSG(test_ok, "Current time could not be set to first block of index!");
+    BOOST_TEST_MESSAGE("\nSetting a new block time took " + std::to_string(write_time) + " ms.");
     auto block_info2 = t1.get_info(std::get<1>(*first_el));
-    BOOST_ASSERT_MSG(std::get<0>(block_info) < std::get<0>(block_info2), "Block time reset was not successful internally!");
+    BOOST_ASSERT_MSG(std::get<0>(block_info) < std::get<0>(block_info2),
+                     "Block time reset was not successful internally!");
 }
 
 BOOST_AUTO_TEST_CASE(delete_test)
 {
     //tests for any linux machine
-    uh::trees::tree_storage t1(std::filesystem::path("/home")/std::string(getenv("USER")));//A test folder reserved for tree storage
+    uh::trees::tree_storage t1(
+            std::filesystem::path("/home") / std::string(getenv("USER")));//A test folder reserved for tree storage
     //for strong laptops with SSD extension (configure test db server to run this??)
     //uh::trees::tree_storage t1("/mnt/md0");//A test folder reserved for tree storage for performance tests
     auto index_list = t1.index(1);
@@ -686,18 +696,21 @@ BOOST_AUTO_TEST_CASE(delete_test)
     //delete one block over its reference and check if the block of the retured local reference is the same
     std::tuple<std::size_t, std::list<std::tuple<std::vector<unsigned char>, std::vector<unsigned char>>>> delete_list{};
 
-    do{
+    do {
         auto del_list = std::vector<std::vector<unsigned char>>{std::get<1>(*index_list.cbegin())};
         delete_list = t1.delete_blocks(del_list);
         index_list.pop_front();
-    }while(std::get<1>(delete_list).empty());
+    } while (std::get<1>(delete_list).empty());
 
-    for(const auto &i:std::get<1>(delete_list)){
-        std::string old_ref = boost::algorithm::hex(std::string().assign(std::get<0>(i).cbegin(),std::get<0>(i).cend()));
-        std::string new_ref = boost::algorithm::hex(std::string().assign(std::get<1>(i).cbegin(),std::get<1>(i).cend()));
+    for (const auto &i: std::get<1>(delete_list)) {
+        std::string old_ref = boost::algorithm::hex(
+                std::string().assign(std::get<0>(i).cbegin(), std::get<0>(i).cend()));
+        std::string new_ref = boost::algorithm::hex(
+                std::string().assign(std::get<1>(i).cbegin(), std::get<1>(i).cend()));
         auto read_result = t1.read(std::get<1>(i));
         bool test_ok = !std::get<1>(read_result).empty();
-        BOOST_ASSERT_MSG(test_ok,std::string("Block with old reference " + old_ref + " and new reference "+new_ref+" could not be read back after deletion!").c_str());
+        BOOST_ASSERT_MSG(test_ok, std::string("Block with old reference " + old_ref + " and new reference " + new_ref +
+                                              " could not be read back after deletion!").c_str());
     }
 
     t1.delete_recursive();
