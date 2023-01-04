@@ -723,7 +723,8 @@ namespace uh::trees {
                             };
 
                             if (rt.joinable())rt.join();
-                            rt = std::thread(read_func);
+                            if(num_threads > 1) rt = std::thread(read_func);
+                            else read_func();
 
                             auto hash_func = [&]() {
                                 std::unique_lock lock(m1);
@@ -749,11 +750,14 @@ namespace uh::trees {
                                 return;
                             }
                             if (ht.joinable())ht.join();
-                            ht = std::thread(hash_func);
+                            if(num_threads > 1)ht = std::thread(hash_func);
+                            else hash_func();
 
                             if (std::feof(reader)) {
-                                if (rt.joinable())rt.join();
-                                if (ht.joinable())ht.join();
+                                if(num_threads > 1){
+                                    if (rt.joinable())rt.join();
+                                    if (ht.joinable())ht.join();
+                                }
                                 std::free(*tmp_buf[0]);
                                 std::free(*tmp_buf[1]);
                             }
