@@ -1203,7 +1203,7 @@ namespace uh::trees {
             std::shared_mutex out_change_list_protect{};
             std::shared_ptr<std::list<std::tuple<std::vector<unsigned char>, std::vector<unsigned char>>>> out_change_list = std::make_shared<std::list<std::tuple<std::vector<unsigned char>, std::vector<unsigned char>>>>();
             //sort for lexicographic to find blocks within the same chunks that all need to be deleted
-            std::sort(std::execution::par_unseq, block_codes.begin(), block_codes.end(), [](auto &a, auto &b) {
+            std::sort(block_codes.begin(), block_codes.end(), [](auto &a, auto &b) {
                 return std::lexicographical_compare(a.begin(), a.end(), b.begin(), b.end());
             });
             //scan and filter for size == 5 and delete blocks from chunks, deliver deleted size and changed local block codes via chunk level indexing after change spot
