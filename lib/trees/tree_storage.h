@@ -755,7 +755,7 @@ namespace uh::trees {
                             if (num_threads > 1)ht = std::thread(hash_func);
                             else hash_func();
 
-                            if (std::feof(reader)) {
+                            if (std::feof(reader) || *cur_pos >= total_file_size) {
                                 if (num_threads > 1) {
                                     if (rt.joinable())rt.join();
                                     if (ht.joinable())ht.join();
