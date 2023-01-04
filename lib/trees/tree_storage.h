@@ -478,7 +478,9 @@ namespace uh::trees {
                     }
 
                     unsigned char time_buf[sizeof(unsigned long)];
+                    std::size_t total_read{};
                     std::size_t count = std::fread(&time_buf, sizeof(char), sizeof(unsigned long), reader);
+                    total_read += count;
                     if (count != sizeof(unsigned long)) {
                         FATAL
                             << "I/O time first 8 bytes reading was not completed on path \"" + read_path.string() +
@@ -499,6 +501,7 @@ namespace uh::trees {
 
                     unsigned char buf_size = 0;
                     count = std::fread(&buf_size, sizeof(char), 1, reader);
+                    total_read += count;
                     if (count != 1) {
                         FATAL
                             << "I/O prefix first byte reading was not completed on path \"" + read_path.string() + "\"";
@@ -513,6 +516,7 @@ namespace uh::trees {
                     }
                     unsigned char buffer_in[buf_size + 1];
                     count = std::fread(&buffer_in, sizeof(char), buf_size + 1, reader);
+                    total_read += count;
                     if (count != buf_size + 1) {
                         FATAL
                             << "I/O prefix first byte reading was not completed on path \"" + read_path.string() + "\"";
@@ -525,6 +529,7 @@ namespace uh::trees {
                     }
                     auto *tmp_buf = mem_wait<unsigned char>(output_size);
                     count = std::fread(tmp_buf, sizeof(char), output_size, reader);
+                    total_read += count;
 
                     if (count != output_size) {
                         FATAL << "I/O was not completed on path \"" + read_path.string() + "\"";
@@ -541,9 +546,7 @@ namespace uh::trees {
 
                     read_end_sequence();
 
-                    std::vector<unsigned char> out_vec{};
-                    out_vec.reserve(output_size);
-                    std::copy(tmp_buf, tmp_buf + output_size, out_vec.end());
+                    std::vector<unsigned char> out_vec{tmp_buf, tmp_buf + output_size};
                     delete[] tmp_buf;
 
                     return {block_time, out_vec};

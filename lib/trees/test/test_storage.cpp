@@ -144,7 +144,7 @@ BOOST_AUTO_TEST_CASE(write_read_test)
         std::random_device dev;
         std::mt19937 rng(dev());
         std::uniform_int_distribution<std::mt19937::result_type> dist(0, write_times.size() - 1);
-        while (total_size < (mode ? (std::size_t) std::pow(2, 22) : (std::size_t) (std::pow(1024, 4) * 4))) {
+        while (total_size < (mode ? (std::size_t) std::pow(2, 22) : (std::size_t) (std::pow(2, 36)))) { //(std::size_t) (std::pow(1024, 4) * 4)) Performance test size for mode ß
             std::size_t access_point = dist(rng);
             gettimeofday(&time, nullptr);
             long double millis = ((long double) time.tv_sec * 1000) + ((long double) time.tv_usec / 1000);
