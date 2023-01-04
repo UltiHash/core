@@ -779,7 +779,7 @@ namespace uh::trees {
                     if (i < children->size() && std::get<0>(children->at(i)) > 0) {
                         auto tree_ptr = std::get<1>(children->at(i));
                         children_lock.unlock();
-                        auto append_list = tree_ptr->index(1);
+                        auto append_list = tree_ptr->index(std::min((unsigned short)2, num_threads));
                         for (auto &el: append_list) {
                             std::get<1>(el).insert(std::get<1>(el).cbegin(), i);
                         }
@@ -802,11 +802,11 @@ namespace uh::trees {
                 }
             };
 
-            if (num_threads == 1) {
+            if (num_threads >= 2) {
                 multithread_index();
             } else {
                 std::vector<std::thread> workers;
-                for (unsigned short i = 0; i < num_threads; i++) {
+                for (unsigned short i = 0; i < num_threads/2; i++) {
                     std::thread w(multithread_index);
                     workers.push_back(std::move(w));
                 }
