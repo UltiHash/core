@@ -644,7 +644,7 @@ BOOST_AUTO_TEST_CASE(index_read_test)
         std::string old_ref = boost::algorithm::hex(
                 std::string().assign(std::get<1>(el).cbegin(), std::get<1>(el).cend()));
         bool test_ok = std::equal(std::get<0>(el).cbegin(), std::get<0>(el).cend(), hash_buf, hash_buf + SHA512_DIGEST_LENGTH);
-        BOOST_ASSERT_MSG(test_ok,std::string("The SHA512 of an indexed block \""+old_ref.c_str()+"\" could not be verified!").c_str());
+        BOOST_ASSERT_MSG(test_ok,std::string("The SHA512 of an indexed block \""+old_ref+"\" could not be verified!").c_str());
     }
 }
 
