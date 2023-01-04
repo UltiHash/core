@@ -367,15 +367,15 @@ namespace uh::trees {
                 end_write_sequence();
 
                 //start position of the block for seeking it later on is the old size
-                std::vector<unsigned char> out_vec{};
-                out_vec.reserve(sizeof(unsigned int));
+                std::vector<unsigned char> local_block_ref{};
+                local_block_ref.reserve(sizeof(unsigned int));
                 for (unsigned char i = 0;
                      i < (unsigned char) sizeof(unsigned int); i++) {//STORE_MAX will fit in 4 bytes
-                    out_vec.push_back((unsigned char) (size_tmp >> (i * 8)));
+                    local_block_ref.push_back((unsigned char) (size_tmp >> (i * 8)));
                 }
-                out_vec.insert(out_vec.cbegin(), min_pos);
+                local_block_ref.insert(local_block_ref.cbegin(), min_pos);
 
-                return out_vec;//structure: BIN,OFFSET * 4 BYTES
+                return local_block_ref;//structure: BIN,OFFSET * 4 BYTES
             }
         }
 
@@ -594,6 +594,7 @@ namespace uh::trees {
                         }
 
                         FILE *reader = std::fopen(read_path.make_preferred().c_str(), "rb");
+                        std::size_t total_file_size = std::filesystem::file_size(read_path.make_preferred().c_str());
                         auto read_end_sequence = [&]() {
                             std::fclose(reader);
                             *read_ptr -= 1;
@@ -629,7 +630,7 @@ namespace uh::trees {
                         std::shared_ptr<std::size_t> output_size = std::make_shared<std::size_t>();
                         std::shared_ptr<bool> parallel_switch = std::make_shared<bool>();
                         std::shared_mutex m1{};
-                        while (!std::feof(reader)) {
+                        while (!std::feof(reader) && *cur_pos < total_file_size) {
                             auto read_func = [&]() {
                                 std::unique_lock lock(m1);
                                 local_block_ref->reserve(sizeof(unsigned int));
@@ -1274,6 +1275,7 @@ namespace uh::trees {
 
                                 //read chunk at index (*cur_tmp)[0]
                                 FILE *reader = std::fopen(chunk.make_preferred().c_str(), "rb");
+                                std::size_t total_file_size = std::filesystem::file_size(chunk.make_preferred().c_str());
                                 std::atomic_flag write_control{ATOMIC_FLAG_INIT};
                                 auto read_end_sequence = [&]() {
                                     std::fclose(reader);
@@ -1392,7 +1394,7 @@ namespace uh::trees {
                                 };
                                 std::thread w1(consumer_function);
 
-                                while (!std::feof(reader)) {
+                                while (!std::feof(reader) && cur_pos < total_file_size) {
                                     if (error_flag.test())break;//break thread in case error is there
                                     //File should have been opened or created here, seek for first block
                                     //start position of the block for seeking it later on is the old size
