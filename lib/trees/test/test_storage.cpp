@@ -698,7 +698,7 @@ BOOST_AUTO_TEST_CASE(delete_test)
 
     do {
         auto del_list = std::vector<std::vector<unsigned char>>{std::get<1>(*index_list.cbegin())};
-        delete_list = t1.delete_blocks(del_list);
+        delete_list = t1.delete_blocks(del_list,1);
         index_list.pop_front();
     } while (std::get<1>(delete_list).empty());
 

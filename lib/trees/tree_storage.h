@@ -55,8 +55,6 @@ namespace uh::trees {
         std::shared_ptr<std::vector<std::tuple<std::size_t, tree_storage *, unsigned char>>> children = std::make_shared<std::vector<std::tuple<std::size_t, tree_storage *, unsigned char>>>();
         std::shared_mutex combined_path_protect = std::shared_mutex();
         std::shared_ptr<std::filesystem::path> combined_path = std::make_shared<std::filesystem::path>();
-        std::shared_mutex mem_protect = std::shared_mutex();
-        std::atomic<std::size_t> count_request{};
 
         //returns wrapped string
         static std::vector<unsigned char> prefix_wrap(std::size_t input_size) {
@@ -80,29 +78,27 @@ namespace uh::trees {
     private:
         template<typename ALLOC>
         ALLOC *mem_wait(std::size_t mem) {
-            long pages = sysconf(_SC_PHYS_PAGES);
-            long page_size = sysconf(_SC_PAGE_SIZE);
-            auto totalFreeVirtualMem = static_cast<unsigned long>(pages * page_size);
+            //long pages = sysconf(_SC_PHYS_PAGES);
+            //long page_size = sysconf(_SC_PAGE_SIZE);
+            std::size_t count{};
+            //auto totalMem = static_cast<unsigned long>(pages * page_size);
+            std::size_t freeMem;
 
             do {
-                std::unique_lock lock(mem_protect);
-                if (totalFreeVirtualMem >= mem) {
-                    count_request = 0;
-                    lock.unlock();
+                struct sysinfo info{};
+                sysinfo(&info);
+                freeMem = info.freeram;
+
+                if (freeMem >= mem) {
                     return new ALLOC[mem];
                 }
-                count_request += 1;
-                if (count_request.load() >= 1000) {// tolerance is 10 seconds for timeout
-                    lock.unlock();
-                    THROW(out_of_memory, "The largest block of " + std::to_string(mem) +
-                                         "could not aquire memory anymore for a time span of 60 seconds!");
-                } else lock.unlock();
 #ifdef _WIN32
                 Sleep(10);
 #else
                 usleep(10 * 1000);
 #endif // _WIN32
-            } while (totalFreeVirtualMem < mem);
+                count++;
+            } while (freeMem < mem);
 
             return new ALLOC[mem];
         }
