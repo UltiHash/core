@@ -624,9 +624,9 @@ namespace uh::trees {
 
                         std::shared_ptr<std::vector<unsigned char>> local_block_ref = std::make_shared<std::vector<unsigned char>>();
                         std::shared_ptr<unsigned long> block_time_current = std::make_shared<unsigned long>();
-                        std::shared_ptr<unsigned char *> tmp_buf[2];
-                        tmp_buf[0] = std::make_shared<unsigned char *>();
-                        tmp_buf[1] = std::make_shared<unsigned char *>();
+                        unsigned char * tmp_buf[2];
+                        tmp_buf[0] = nullptr;
+                        tmp_buf[1] = nullptr;
                         std::shared_ptr<std::size_t> output_size = std::make_shared<std::size_t>();
                         std::shared_ptr<bool> parallel_switch = std::make_shared<bool>();
                         std::shared_mutex m1{};
@@ -702,22 +702,22 @@ namespace uh::trees {
                                 }
                                 lock.unlock();
 
-                                *tmp_buf[parallel_switch_tmp] = mem_wait<unsigned char>(*output_size);
-                                count = std::fread(*tmp_buf[parallel_switch_tmp], sizeof(char), *output_size, reader);
+                                tmp_buf[parallel_switch_tmp] = mem_wait<unsigned char>(*output_size);
+                                count = std::fread(tmp_buf[parallel_switch_tmp], sizeof(char), *output_size, reader);
                                 *cur_pos += count;
 
                                 if (count != *output_size) {
                                     FATAL << "I/O was not completed on path \"" + read_path.string() + "\"";
-                                    delete[] *tmp_buf[0];
-                                    delete[] *tmp_buf[1];
+                                    delete[] tmp_buf[0];
+                                    delete[] tmp_buf[1];
                                     read_end_sequence();
                                     error_thread_sequence();
                                     if (error_flag.test())return;
                                 }
                                 if (std::ferror(reader)) {
                                     FATAL << "I/O error when reading prefix at path \"" + read_path.string() + "\"";
-                                    delete[] *tmp_buf[0];
-                                    delete[] *tmp_buf[1];
+                                    delete[] tmp_buf[0];
+                                    delete[] tmp_buf[1];
                                     read_end_sequence();
                                     error_thread_sequence();
                                     if (error_flag.test())return;
@@ -738,8 +738,8 @@ namespace uh::trees {
                                 auto block_time_cpy = *block_time_current;
                                 auto output_tmp = *output_size;
                                 lock.unlock();
-                                SHA512(*tmp_buf[parallel_switch_copy], output_tmp, hash_buf);
-                                delete[] *tmp_buf[parallel_switch_copy];
+                                SHA512(tmp_buf[parallel_switch_copy], output_tmp, hash_buf);
+                                delete[] tmp_buf[parallel_switch_copy];
 
                                 std::vector<unsigned char> hash{hash_buf, hash_buf + SHA512_DIGEST_LENGTH};
                                 std::lock_guard lock_emplace(search_index_protect);
@@ -761,8 +761,8 @@ namespace uh::trees {
                                     if (ht.joinable())ht.join();
                                 }
                                 std::unique_lock lock(m1);
-                                if(*tmp_buf[0] != nullptr)std::free(*tmp_buf[0]);
-                                if(*tmp_buf[1] != nullptr)std::free(*tmp_buf[1]);
+                                if(tmp_buf[0] != nullptr)std::free(tmp_buf[0]);
+                                if(tmp_buf[1] != nullptr)std::free(tmp_buf[1]);
                                 lock.unlock();
                             }
                         }
