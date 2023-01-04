@@ -19,7 +19,7 @@
 std::vector<unsigned char> binary_generator(std::size_t max_len) {
     std::random_device dev;
     std::mt19937 rng(dev());
-    std::uniform_int_distribution<std::mt19937::result_type> dist(16, max_len);
+    std::uniform_int_distribution<std::mt19937::result_type> dist(0, max_len);
 
     std::size_t len = dist(rng);
 
@@ -90,9 +90,9 @@ BOOST_AUTO_TEST_CASE(write_read_test)
         mode ? BOOST_TEST_MESSAGE("---Entering short block latency measurement write read mode:---\n") :
         BOOST_TEST_MESSAGE("---Entering normal write read mode:---\n");
         //total size is the total write size that the database tests
-        while (total_size < (mode ? LATENCY_TEST_SIZE : PERFORMANCE_TEST_SIZE)) {// for performance test on mode == 0 use a size of 4TB std::pow(1024, 4) * 4
+        while (total_size < (mode ? LATENCY_TEST_SIZE : PERFORMANCE_TEST_SIZE)) {
             //(std::size_t) std::pow(2, 35))
-            std::vector<unsigned char> test_bin = binary_generator(mode ? 32 : STORE_MAX);
+            std::vector<unsigned char> test_bin = binary_generator(mode ? 0 : STORE_MAX);
             //write test
             gettimeofday(&time, nullptr);
             long double millis = ((long double) time.tv_sec * 1000) + ((long double) time.tv_usec / 1000);
@@ -144,8 +144,7 @@ BOOST_AUTO_TEST_CASE(write_read_test)
         std::random_device dev;
         std::mt19937 rng(dev());
         std::uniform_int_distribution<std::mt19937::result_type> dist(0, write_times.size() - 1);
-        while (total_size < (mode ? (std::size_t) std::pow(2, 22) : (std::size_t) (std::pow(2,
-                                                                                            36)))) { //(std::size_t) (std::pow(1024, 4) * 4)) Performance test size for mode ß
+        while (total_size < (mode ? LATENCY_TEST_SIZE : PERFORMANCE_TEST_SIZE)) {
             std::size_t access_point = dist(rng);
             gettimeofday(&time, nullptr);
             long double millis = ((long double) time.tv_sec * 1000) + ((long double) time.tv_usec / 1000);
