@@ -23,36 +23,15 @@ std::vector<unsigned char> binary_generator(std::size_t max_len) {
 
     std::size_t len = dist(rng);
 
-    std::random_device dev2;
-    std::mt19937 rng2(dev2());
-    std::uniform_int_distribution<std::mt19937::result_type> dist2(0, UINT64_MAX);
-
     std::random_device dev3;
     std::mt19937 rng3(dev3());
     std::uniform_int_distribution<std::mt19937::result_type> dist3(0, UINT8_MAX);
 
     std::vector<unsigned char> out_return;
-    out_return.reserve(len);
-    if ((len / sizeof(std::size_t)) > 0) {
-        auto *out_fast = new std::size_t[len / sizeof(std::size_t)];
-        auto *out_fast_cheat = reinterpret_cast<unsigned char *>(out_fast);
-
-        if (len < (std::size_t) std::pow(2, 24)) {
-            for (std::size_t i = 0; i < len / sizeof(std::size_t); i++) {
-                out_fast[i] = (std::size_t) dist2(rng2);
-            }
-        }
-
-        //copy out_fast to out_return
-        out_return.assign(out_fast_cheat, out_fast_cheat + (len / sizeof(std::size_t)) * sizeof(std::size_t));
-        std::free(out_fast);//TODO: SEGFAULT
-    }
-
-    //complete
-    for (std::size_t i1 = (len / sizeof(std::size_t)) * sizeof(std::size_t);
-         i1 < (len / sizeof(std::size_t)) * sizeof(std::size_t) + len % sizeof(std::size_t); i1++) {
-        out_return[i1] = dist3(rng3);
-    }
+    out_return.resize(len);
+    std::for_each(std::execution::par, out_return.begin(),out_return.end(),[&dist3,&rng3](auto &a){
+        a = dist3(rng3);
+    });
 
     return out_return;
 }
