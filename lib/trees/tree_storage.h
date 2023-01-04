@@ -1207,10 +1207,11 @@ namespace uh::trees {
             auto end = beg;
             auto cur = end;
             for (; end < block_codes.end(); end++) {
-                if (first) {
+                if (first && block_codes.size() > 1) {
                     first = false;
                     current = (*end)[0];
                 } else {
+                    if(block_codes.size() == 1)current = (*end)[0];
                     if (current != (*end)[0] || end == block_codes.end() - 1) {
                         //first filter all blocks with size 5 from the incoming sequence and delete them within this tree level
                         std::shared_mutex m1{};
