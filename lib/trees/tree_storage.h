@@ -760,8 +760,10 @@ namespace uh::trees {
                                     if (rt.joinable())rt.join();
                                     if (ht.joinable())ht.join();
                                 }
-                                std::free(*tmp_buf[0]);
-                                std::free(*tmp_buf[1]);
+                                std::unique_lock lock(m1);
+                                if(*tmp_buf[0] != nullptr)std::free(*tmp_buf[0]);
+                                if(*tmp_buf[1] != nullptr)std::free(*tmp_buf[1]);
+                                lock.unlock();
                             }
                         }
                         read_end_sequence();
