@@ -626,33 +626,32 @@ namespace uh::trees {
                             error_thread_sequence();
                             if (error_flag.test())return;
                         }
-                        std::shared_ptr<std::size_t> cur_pos = std::make_shared<std::size_t>();
+                        std::atomic<std::size_t> cur_pos{};
 
                         std::thread rt, ht;
 
                         std::shared_ptr<std::vector<unsigned char>> local_block_ref = std::make_shared<std::vector<unsigned char>>();
-                        std::shared_ptr<unsigned long> block_time_current = std::make_shared<unsigned long>();
+                        std::atomic<unsigned long> block_time_current{};
                         unsigned char * tmp_buf[2];
                         tmp_buf[0] = nullptr;
                         tmp_buf[1] = nullptr;
-                        std::shared_ptr<std::size_t> output_size = std::make_shared<std::size_t>();
-                        std::shared_ptr<bool> parallel_switch = std::make_shared<bool>();
+                        std::atomic<std::size_t> output_size{};
+                        std::atomic<bool> parallel_switch{};
                         std::shared_mutex m1{};
-                        while (!std::feof(reader) && *cur_pos < total_file_size) {
+                        while (!std::feof(reader) && cur_pos.load() < total_file_size) {
                             auto read_func = [&]() {
                                 std::unique_lock lock(m1);
                                 local_block_ref->reserve(sizeof(unsigned int));
 
                                 for (unsigned char i1 = 0;
                                      i1 < (unsigned char) sizeof(unsigned int); i1++) {//STORE_MAX will fit in 4 bytes
-                                    local_block_ref->push_back((unsigned char) (*cur_pos >> (i1 * 8)));
+                                    local_block_ref->push_back((unsigned char) (cur_pos.load() >> (i1 * 8)));
                                 }
                                 local_block_ref->insert(local_block_ref->cbegin(), i);
-                                bool parallel_switch_tmp = *parallel_switch;
 
                                 unsigned char time_buf[sizeof(unsigned long)];
                                 std::size_t count = std::fread(&time_buf, sizeof(char), sizeof(unsigned long), reader);
-                                *cur_pos += count;
+                                cur_pos += count;
                                 if (count != sizeof(unsigned long)) {
                                     FATAL
                                         << "I/O time first 8 bytes reading was not completed on path \"" +
@@ -673,11 +672,11 @@ namespace uh::trees {
                                 for (unsigned char i4 = 0; i4 < (unsigned char) sizeof(unsigned long); i4++) {
                                     block_time += (((std::size_t) time_buf[i4]) << (i4 * 8));
                                 }
-                                *block_time_current = block_time;
+                                block_time_current = block_time;
 
                                 unsigned char buf_size = 0;
                                 count = std::fread(&buf_size, sizeof(char), 1, reader);
-                                *cur_pos += count;
+                                cur_pos += count;
                                 if (count != 1) {
                                     FATAL << "I/O prefix first byte reading was not completed on path \"" +
                                              read_path.string() +
@@ -695,7 +694,7 @@ namespace uh::trees {
                                 }
                                 unsigned char buffer_for_size[buf_size + 1];
                                 count = std::fread(&buffer_for_size, sizeof(char), buf_size + 1, reader);
-                                *cur_pos += count;
+                                cur_pos += count;
                                 if (count != buf_size + 1) {
                                     FATAL << "I/O prefix first byte reading was not completed on path \"" +
                                              read_path.string() +
@@ -704,17 +703,17 @@ namespace uh::trees {
                                     error_thread_sequence();
                                     if (error_flag.test())return;
                                 }
-                                *output_size = 0;
+                                output_size = 0;
                                 for (unsigned char buf_count = 0; buf_count <= buf_size; buf_count++) {
-                                    *output_size += (((std::size_t) buffer_for_size[buf_count]) << (buf_count * 8));
+                                    output_size += (((std::size_t) buffer_for_size[buf_count]) << (buf_count * 8));
                                 }
                                 lock.unlock();
 
-                                tmp_buf[parallel_switch_tmp] = mem_wait<unsigned char>(*output_size);
-                                count = std::fread(tmp_buf[parallel_switch_tmp], sizeof(char), *output_size, reader);
-                                *cur_pos += count;
+                                tmp_buf[parallel_switch.load()] = mem_wait<unsigned char>(output_size.load());
+                                count = std::fread(tmp_buf[parallel_switch.load()], sizeof(char), output_size.load(), reader);
+                                cur_pos += count;
 
-                                if (count != *output_size) {
+                                if (count != output_size.load()) {
                                     FATAL << "I/O was not completed on path \"" + read_path.string() + "\"";
                                     delete[] tmp_buf[0];
                                     delete[] tmp_buf[1];
@@ -739,15 +738,14 @@ namespace uh::trees {
                             auto hash_func = [&]() {
                                 std::unique_lock lock(m1);
                                 unsigned char hash_buf[SHA512_DIGEST_LENGTH];//HASH GENERATION
-                                bool parallel_switch_copy = *parallel_switch;
-                                *parallel_switch = !*parallel_switch;
                                 auto tmp_local_block_ref = *local_block_ref;
                                 local_block_ref->clear();
-                                auto block_time_cpy = *block_time_current;
-                                auto output_tmp = *output_size;
+                                auto block_time_cpy = block_time_current.load();
+                                auto output_tmp = output_size.load();
                                 lock.unlock();
-                                SHA512(tmp_buf[parallel_switch_copy], output_tmp, hash_buf);
-                                delete[] tmp_buf[parallel_switch_copy];
+                                SHA512(tmp_buf[parallel_switch], output_tmp, hash_buf);
+                                delete[] tmp_buf[parallel_switch];
+                                parallel_switch = !parallel_switch.load();
 
                                 std::vector<unsigned char> hash{hash_buf, hash_buf + SHA512_DIGEST_LENGTH};
                                 std::lock_guard lock_emplace(search_index_protect);
@@ -763,7 +761,7 @@ namespace uh::trees {
                             if (num_threads > 1)ht = std::thread(hash_func);
                             else hash_func();
 
-                            if (std::feof(reader) || *cur_pos >= total_file_size) {
+                            if (std::feof(reader) || cur_pos.load() >= total_file_size) {
                                 if (num_threads > 1) {
                                     if (rt.joinable())rt.join();
                                     if (ht.joinable())ht.join();
