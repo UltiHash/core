@@ -610,7 +610,7 @@ BOOST_AUTO_TEST_CASE(write_read_test)
                            std::to_string(random_access_read_total_time) + " ms");
     }
 }
-
+//TODO: make thread safe
 BOOST_AUTO_TEST_CASE(index_read_test)
 {
     //get entire index, read block with local_block_reference and finally calculate the hash if it matches
@@ -627,7 +627,7 @@ BOOST_AUTO_TEST_CASE(index_read_test)
 
     gettimeofday(&time, nullptr);
     millis = ((long double) time.tv_sec * 1000) + ((long double) time.tv_usec / 1000);
-    auto index_list = t1.index();
+    auto index_list = t1.index(1);
     gettimeofday(&time, nullptr);
     long double index_time = (((long double) time.tv_sec * 1000) + ((long double) time.tv_usec / 1000)) - millis;
 
