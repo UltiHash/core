@@ -79,21 +79,19 @@ namespace uh::trees {
     private:
     template<typename ALLOC>
     ALLOC* mem_wait(std::size_t mem) {
-        unsigned long totalFreeVirtualMem;
+        long pages = sysconf(_SC_PHYS_PAGES);
+        long page_size = sysconf(_SC_PAGE_SIZE);
+        unsigned long totalFreeVirtualMem = static_cast<unsigned long>(pages * page_size);
+
         do {
             std::unique_lock lock(mem_protect);
-            struct sysinfo memInfo{};
-            sysinfo (&memInfo);
-            totalFreeVirtualMem = memInfo.freeram;
-            totalFreeVirtualMem += memInfo.freeswap;
-            totalFreeVirtualMem *= memInfo.mem_unit;
             if(totalFreeVirtualMem >= mem){
                 count_request = 0;
                 lock.unlock();
                 return new ALLOC[mem];
             }
             count_request += 1;
-            if(count_request.load() >= 12000){// since a block of 4GB may take 2 minutes to be written back we need to wait for that time
+            if(count_request.load() >= 1000){// tolerance is 10 seconds for timeout
                 lock.unlock();
                 THROW(out_of_memory,"The largest block of " + std::to_string(mem) + "could not aquire memory anymore for a time span of 60 seconds!");
             }
