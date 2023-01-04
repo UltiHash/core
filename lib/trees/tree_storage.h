@@ -5,7 +5,6 @@
 #ifndef UHLIBCOMMON_TREE_STORAGE_H
 #define UHLIBCOMMON_TREE_STORAGE_H
 
-#include "conceptTypes/conceptTypes.h"
 #include "logging/logging_boost.h"
 #include <filesystem>
 #include "boost/algorithm/hex.hpp"
