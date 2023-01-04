@@ -29,7 +29,7 @@ std::vector<unsigned char> binary_generator(std::size_t max_len) {
 
     std::vector<unsigned char> out_return;
     out_return.resize(len);
-    std::for_each(std::execution::par, out_return.begin(),out_return.end(),[&dist3,&rng3](auto &a){
+    std::for_each(out_return.begin(),out_return.end(),[&dist3,&rng3](auto &a){
         a = dist3(rng3);
     });
 
