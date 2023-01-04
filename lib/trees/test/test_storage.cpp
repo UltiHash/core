@@ -652,11 +652,11 @@ BOOST_AUTO_TEST_CASE(get_info_set_time_test)
 {
     struct timeval time{};
     //tests for any linux machine
-    uh::trees::tree_storage t1(std::filesystem::path("/home") / std::string(getenv("USER")),
-                               1);//A test folder reserved for tree storage
+    uh::trees::tree_storage t1(std::filesystem::path("/home") / std::string(getenv("USER")));//A test folder reserved for tree storage
     //for strong laptops with SSD extension (configure test db server to run this??)
     //uh::trees::tree_storage t1("/mnt/md0");//A test folder reserved for tree storage for performance tests
     auto index_list = t1.index(1);
+    BOOST_ASSERT_MSG(!index_list.empty(),"Index list was empty!");
     auto first_el = index_list.begin();
     gettimeofday(&time, nullptr);
     long double millis = ((long double) time.tv_sec * 1000) + ((long double) time.tv_usec / 1000);

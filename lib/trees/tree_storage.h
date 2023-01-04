@@ -1142,7 +1142,7 @@ namespace uh::trees {
 #endif // _WIN32
                     }
 
-                    FILE *writer = std::fopen(read_path.make_preferred().c_str(), "wb");
+                    FILE *writer = std::fopen(read_path.make_preferred().c_str(), "rb+");
                     auto set_time_end_sequence = [&]() {
                         std::fclose(writer);
                         std::atomic_flag_clear_explicit(write_ptr, std::memory_order_release);
