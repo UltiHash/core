@@ -683,7 +683,7 @@ BOOST_AUTO_TEST_CASE(get_info_set_time_test)
                      "Block time reset was not successful internally!");
     t1.delete_recursive();
 }
-/*
+
 BOOST_AUTO_TEST_CASE(delete_test)
 {
     //tests for any linux machine
@@ -716,4 +716,3 @@ BOOST_AUTO_TEST_CASE(delete_test)
 
 
 }
-*/

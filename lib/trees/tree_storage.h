@@ -55,6 +55,7 @@ namespace uh::trees {
         std::shared_ptr<std::vector<std::tuple<std::size_t, tree_storage *, unsigned char>>> children = std::make_shared<std::vector<std::tuple<std::size_t, tree_storage *, unsigned char>>>();
         std::shared_mutex combined_path_protect = std::shared_mutex();
         std::shared_ptr<std::filesystem::path> combined_path = std::make_shared<std::filesystem::path>();
+        std::shared_mutex work_steal_protect{};
 
         //returns wrapped string
         static std::vector<unsigned char> prefix_wrap(std::size_t input_size) {
@@ -166,7 +167,9 @@ namespace uh::trees {
                             children->emplace_back(tmp_tree->get_size(), tmp_tree, i);
                         }
                     }
+                    std::unique_lock step_lock(work_steal_protect);
                     i = (i_constructor += 1);
+                    step_lock.unlock();
                 }
             };
 
@@ -792,7 +795,9 @@ namespace uh::trees {
                         size_lock.unlock();
                         children_lock.unlock();
                     }
+                    std::unique_lock step_lock(work_steal_protect);
                     i = (i_constructor += 1);
+                    step_lock.unlock();
                 }
             };
 
@@ -873,7 +878,9 @@ namespace uh::trees {
                         size_lock.unlock();
                         children_lock.unlock();
                     }
+                    std::unique_lock step_lock(work_steal_protect);
                     i = (i_constructor += 1);
+                    step_lock.unlock();
                 }
             };
 
