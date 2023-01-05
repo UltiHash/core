@@ -178,7 +178,7 @@ namespace uh::trees {
                             children->emplace_back(tmp_tree->get_size(), tmp_tree, i);
                         }
                     }
-                    else //filesystem_lock.unlock();
+                    //else filesystem_lock.unlock();
                     std::unique_lock step_lock(work_steal_protect);
                     i = (i_constructor += 1);
                     step_lock.unlock();
