@@ -838,10 +838,12 @@ namespace uh::trees {
                 std::size_t i = i_constructor.load();
                 if (i >= N)return;
                 for (; i < N;) {
-                    std::unique_lock size_lock(size_protect);
+                    std::shared_lock size_lock(size_protect);
                     if (i < size->size() && std::get<0>(size->at(i)) > 0) {
                         std::string ref_name{boost::algorithm::hex(std::string{(char) i})};
+                        std::shared_lock lock_path(combined_path_protect);
                         std::filesystem::path read_path = *combined_path / ref_name;
+                        lock_path.unlock();
                         std::size_t vanish_size = std::filesystem::file_size(read_path);
                         out_size += vanish_size;
                         std::get<0>(size->at(i)) -= vanish_size;
