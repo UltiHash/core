@@ -1,4 +1,5 @@
 #include <logging/logging_boost.h>
+#include <metrics/service.h>
 
 #include <config.hpp>
 #include "options.h"
@@ -84,9 +85,13 @@ int main(int argc, const char** argv)
     }
 
     try {
+        INFO << "Setting up metrics";
+        uh::metrics::service metrics_service(options.metrics().config());
+        uh::dbn::metrics metrics(metrics_service);
+
         auto uhsb = create_ultihash_storage_backend(options);
         INFO << "starting server";
-        uh::dbn::protocol_factory pf(uhsb);
+        uh::dbn::protocol_factory pf(uhsb, metrics);
         uh::net::server srv(options.server().config(), pf);
         srv.run();
     }
