@@ -19,7 +19,7 @@
 std::vector<unsigned char> binary_generator(std::size_t max_len) {
     std::random_device dev;
     std::mt19937 rng(dev());
-    std::uniform_int_distribution<std::mt19937::result_type> dist(0, max_len);
+    std::uniform_int_distribution<std::mt19937::result_type> dist(1, max_len);
 
     std::size_t len = dist(rng);
 
