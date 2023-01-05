@@ -132,7 +132,7 @@ namespace uh::trees {
                 if (!valid_root) {
                     combined_path->operator/=("0000");
                 }
-                std::unique_lock filesystem_lock(std_filesystem_protect);
+                std::shared_lock filesystem_lock(std_filesystem_protect);
                 std::filesystem::create_directories(combined_path->string());
                 filesystem_lock.unlock();
             }
@@ -147,7 +147,7 @@ namespace uh::trees {
                     std::filesystem::path chunk = *combined_path / s_tmp;
                     lock.unlock();
 
-                    std::unique_lock filesystem_lock(std_filesystem_protect);
+                    std::shared_lock filesystem_lock(std_filesystem_protect);
                     if (std::filesystem::exists(chunk)) {
                         filesystem_lock.unlock();
                         std::shared_ptr<std::atomic_flag> f1 = std::make_shared<std::atomic_flag>(), f3 = std::make_shared<std::atomic_flag>();
@@ -613,7 +613,7 @@ namespace uh::trees {
                         }
 
                         FILE *reader = std::fopen(read_path.make_preferred().c_str(), "rb");
-                        std::unique_lock filesystem_lock(std_filesystem_protect);
+                        std::shared_lock filesystem_lock(std_filesystem_protect);
                         std::size_t total_file_size = std::filesystem::file_size(read_path.make_preferred().c_str());
                         filesystem_lock.unlock();
                         auto read_end_sequence = [&]() {
@@ -857,7 +857,7 @@ namespace uh::trees {
                         std::shared_lock lock_path(combined_path_protect);
                         std::filesystem::path read_path = *combined_path / ref_name;
                         lock_path.unlock();
-                        std::unique_lock filesystem_lock(std_filesystem_protect);
+                        std::shared_lock filesystem_lock(std_filesystem_protect);
                         std::size_t vanish_size = std::filesystem::exists(read_path)?std::filesystem::file_size(read_path):0;
                         filesystem_lock.unlock();
                         out_size += vanish_size;
@@ -1316,7 +1316,7 @@ namespace uh::trees {
 
                                 //read chunk at index (*cur_tmp)[0]
                                 FILE *reader = std::fopen(chunk.make_preferred().c_str(), "rb");
-                                std::unique_lock filesystem_lock(std_filesystem_protect);
+                                std::shared_lock filesystem_lock(std_filesystem_protect);
                                 std::size_t total_file_size = std::filesystem::exists(chunk.make_preferred().c_str())?std::filesystem::file_size(chunk.make_preferred().c_str()):0;
                                 filesystem_lock.unlock();
                                 std::atomic_flag write_control{ATOMIC_FLAG_INIT};
