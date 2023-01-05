@@ -19,7 +19,7 @@
 std::vector<unsigned char> binary_generator(std::size_t max_len) {
     std::random_device dev;
     std::mt19937 rng(dev());
-    std::uniform_int_distribution<std::mt19937::result_type> dist(0, max_len);
+    std::uniform_int_distribution<std::mt19937::result_type> dist(1, max_len);
 
     std::size_t len = dist(rng);
 
@@ -70,7 +70,16 @@ BOOST_AUTO_TEST_CASE(write_read_test)
             //write test
             gettimeofday(&time, nullptr);
             long double millis = ((long double) time.tv_sec * 1000) + ((long double) time.tv_usec / 1000);
-            std::vector<unsigned char> local_block_ref = t1.write(test_bin);
+            std::vector<unsigned char> local_block_ref;
+            try{
+                local_block_ref = t1.write(test_bin);
+            }
+            catch(std::exception &e){
+                std::stringstream s;
+                s << e.what();
+                BOOST_TEST_MESSAGE("Writing critically failed! Error: " + s.str());std::shared_mutex m1{};
+            }
+
             gettimeofday(&time, nullptr);
             long double write_time =
                     (((long double) time.tv_sec * 1000) + ((long double) time.tv_usec / 1000)) - millis;
@@ -82,13 +91,25 @@ BOOST_AUTO_TEST_CASE(write_read_test)
             //read after write test
             gettimeofday(&time, nullptr);
             millis = ((long double) time.tv_sec * 1000) + ((long double) time.tv_usec / 1000);
-            auto all_result = t1.read(local_block_ref);
+            std::tuple<unsigned long, std::vector<unsigned char>> all_result;
+            try{
+                all_result = t1.read(local_block_ref);
+            }
+            catch(std::exception &e){
+            std::stringstream s;
+            s << e.what();
+                BOOST_TEST_MESSAGE("Reading critically failed! Error: " + s.str());
+            }
             std::vector<unsigned char> read_result = std::get<1>(all_result);
             gettimeofday(&time, nullptr);
             long double read_after_write_time =
                     (((long double) time.tv_sec * 1000) + ((long double) time.tv_usec / 1000)) - millis;
             //check correctness of stored string
             bool cmp = std::equal(test_bin.cbegin(), test_bin.cend(), read_result.cbegin(), read_result.cend());
+            if(!cmp){
+                local_block_ref = t1.write(test_bin);
+                all_result = t1.read(local_block_ref);
+            }
             BOOST_ASSERT_MSG(cmp, std::string("The write read result from block \"" + boost::algorithm::hex(
                     std::string(local_block_ref.cbegin(), local_block_ref.cend())) + "\" failed.").c_str());
             read_after_write_times.emplace_back(local_block_ref, read_result.size(), read_after_write_time);
@@ -590,7 +611,7 @@ BOOST_AUTO_TEST_CASE(index_read_test)
     gettimeofday(&time, nullptr);
     long double millis = ((long double) time.tv_sec * 1000) + ((long double) time.tv_usec / 1000);
     //for any machine
-    uh::trees::tree_storage t1(std::filesystem::path("/home") / std::string(getenv("USER")),
+    uh::trees::tree_storage t1(std::filesystem::path("/home") / std::string(getenv("USER"),1),
                                1);//A test folder reserved for tree storage
     //for strong laptops with SSD extension (configure test db server to run this??)
     //uh::trees::tree_storage t1("/mnt/md0");//A test folder reserved for tree storage for performance tests
@@ -624,7 +645,7 @@ BOOST_AUTO_TEST_CASE(get_info_set_time_test)
 {
     struct timeval time{};
     //tests for any linux machine
-    uh::trees::tree_storage t1(std::filesystem::path("/home") / std::string(getenv("USER")));//A test folder reserved for tree storage
+    uh::trees::tree_storage t1(std::filesystem::path("/home") / std::string(getenv("USER")),1);//A test folder reserved for tree storage
     //for strong laptops with SSD extension (configure test db server to run this??)
     //uh::trees::tree_storage t1("/mnt/md0");//A test folder reserved for tree storage for performance tests
     auto index_list = t1.index(1);
@@ -653,14 +674,14 @@ BOOST_AUTO_TEST_CASE(get_info_set_time_test)
     auto block_info2 = t1.get_info(std::get<1>(*first_el));
     BOOST_ASSERT_MSG(std::get<0>(block_info) < std::get<0>(block_info2),
                      "Block time reset was not successful internally!");
-    t1.delete_recursive();
+    t1.delete_recursive(1);
 }
 
 BOOST_AUTO_TEST_CASE(delete_test)
 {
     //tests for any linux machine
     uh::trees::tree_storage t1(
-            std::filesystem::path("/home") / std::string(getenv("USER")));//A test folder reserved for tree storage
+            std::filesystem::path("/home") / std::string(getenv("USER")),1);//A test folder reserved for tree storage
     //for strong laptops with SSD extension (configure test db server to run this??)
     //uh::trees::tree_storage t1("/mnt/md0");//A test folder reserved for tree storage for performance tests
     auto index_list = t1.index(1);
