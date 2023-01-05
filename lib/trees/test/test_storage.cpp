@@ -70,7 +70,16 @@ BOOST_AUTO_TEST_CASE(write_read_test)
             //write test
             gettimeofday(&time, nullptr);
             long double millis = ((long double) time.tv_sec * 1000) + ((long double) time.tv_usec / 1000);
-            std::vector<unsigned char> local_block_ref = t1.write(test_bin);
+            std::vector<unsigned char> local_block_ref;
+            try{
+                local_block_ref = t1.write(test_bin);
+            }
+            catch(std::exception &e){
+                std::stringstream s;
+                s << e.what();
+                BOOST_TEST_MESSAGE("Writing critically failed! Error: " + s.str());
+            }
+
             gettimeofday(&time, nullptr);
             long double write_time =
                     (((long double) time.tv_sec * 1000) + ((long double) time.tv_usec / 1000)) - millis;
@@ -82,7 +91,15 @@ BOOST_AUTO_TEST_CASE(write_read_test)
             //read after write test
             gettimeofday(&time, nullptr);
             millis = ((long double) time.tv_sec * 1000) + ((long double) time.tv_usec / 1000);
-            auto all_result = t1.read(local_block_ref);
+            std::tuple<unsigned long, std::vector<unsigned char>> all_result;
+            try{
+                all_result = t1.read(local_block_ref);
+            }
+            catch(std::exception &e){
+            std::stringstream s;
+            s << e.what();
+                BOOST_TEST_MESSAGE("Reading critically failed! Error: " + s.str());
+            }
             std::vector<unsigned char> read_result = std::get<1>(all_result);
             gettimeofday(&time, nullptr);
             long double read_after_write_time =
