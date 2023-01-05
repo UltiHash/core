@@ -89,6 +89,7 @@ BOOST_AUTO_TEST_CASE(write_read_test)
                     (((long double) time.tv_sec * 1000) + ((long double) time.tv_usec / 1000)) - millis;
             //check correctness of stored string
             bool cmp = std::equal(test_bin.cbegin(), test_bin.cend(), read_result.cbegin(), read_result.cend());
+            if(!cmp)all_result = t1.read(local_block_ref);
             BOOST_ASSERT_MSG(cmp, std::string("The write read result from block \"" + boost::algorithm::hex(
                     std::string(local_block_ref.cbegin(), local_block_ref.cend())) + "\" failed.").c_str());
             read_after_write_times.emplace_back(local_block_ref, read_result.size(), read_after_write_time);

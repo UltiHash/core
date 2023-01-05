@@ -488,7 +488,7 @@ namespace uh::trees {
 
                     unsigned char time_buf[sizeof(unsigned long)];
                     std::size_t total_read{};
-                    std::size_t count = std::fread(&time_buf, sizeof(char), sizeof(unsigned long), reader);
+                    std::size_t count = std::fread(&time_buf, sizeof(unsigned char), sizeof(unsigned long), reader);
                     total_read += count;
                     if (count != sizeof(unsigned long)) {
                         FATAL
@@ -509,7 +509,7 @@ namespace uh::trees {
                     }
 
                     unsigned char buf_size = 0;
-                    count = std::fread(&buf_size, sizeof(char), 1, reader);
+                    count = std::fread(&buf_size, sizeof(unsigned char), 1, reader);
                     total_read += count;
                     if (count != 1) {
                         FATAL
@@ -524,7 +524,7 @@ namespace uh::trees {
                         return {0, std::vector<unsigned char>{}};
                     }
                     unsigned char buffer_in[buf_size + 1];
-                    count = std::fread(&buffer_in, sizeof(char), buf_size + 1, reader);
+                    count = std::fread(&buffer_in, sizeof(unsigned char), buf_size + 1, reader);
                     total_read += count;
                     if (count != buf_size + 1) {
                         FATAL
@@ -537,7 +537,7 @@ namespace uh::trees {
                         output_size += (((std::size_t) buffer_in[buf_count]) << (buf_count * 8));
                     }
                     auto *tmp_buf = mem_wait<unsigned char>(output_size);
-                    count = std::fread(tmp_buf, sizeof(char), output_size, reader);
+                    count = std::fread(tmp_buf, sizeof(unsigned char), output_size, reader);
                     total_read += count;
 
                     if (count != output_size) {
@@ -650,7 +650,7 @@ namespace uh::trees {
                                 local_block_ref->insert(local_block_ref->cbegin(), i);
 
                                 unsigned char time_buf[sizeof(unsigned long)];
-                                std::size_t count = std::fread(&time_buf, sizeof(char), sizeof(unsigned long), reader);
+                                std::size_t count = std::fread(&time_buf, sizeof(unsigned char), sizeof(unsigned long), reader);
                                 cur_pos += count;
                                 if (count != sizeof(unsigned long)) {
                                     FATAL
@@ -675,7 +675,7 @@ namespace uh::trees {
                                 block_time_current = block_time;
 
                                 unsigned char buf_size = 0;
-                                count = std::fread(&buf_size, sizeof(char), 1, reader);
+                                count = std::fread(&buf_size, sizeof(unsigned char), 1, reader);
                                 cur_pos += count;
                                 if (count != 1) {
                                     FATAL << "I/O prefix first byte reading was not completed on path \"" +
@@ -693,7 +693,7 @@ namespace uh::trees {
                                     if (error_flag.test())return;
                                 }
                                 unsigned char buffer_for_size[buf_size + 1];
-                                count = std::fread(&buffer_for_size, sizeof(char), buf_size + 1, reader);
+                                count = std::fread(&buffer_for_size, sizeof(unsigned char), buf_size + 1, reader);
                                 cur_pos += count;
                                 if (count != buf_size + 1) {
                                     FATAL << "I/O prefix first byte reading was not completed on path \"" +
@@ -710,7 +710,7 @@ namespace uh::trees {
                                 lock.unlock();
 
                                 tmp_buf[parallel_switch.load()] = mem_wait<unsigned char>(output_size.load());
-                                count = std::fread(tmp_buf[parallel_switch.load()], sizeof(char), output_size.load(), reader);
+                                count = std::fread(tmp_buf[parallel_switch.load()], sizeof(unsigned char), output_size.load(), reader);
                                 cur_pos += count;
 
                                 if (count != output_size.load()) {
@@ -1001,7 +1001,7 @@ namespace uh::trees {
                     }
 
                     unsigned char time_buf[sizeof(unsigned long)];
-                    std::size_t count = std::fread(&time_buf, sizeof(char), sizeof(unsigned long), reader);
+                    std::size_t count = std::fread(&time_buf, sizeof(unsigned char), sizeof(unsigned long), reader);
                     if (count != sizeof(unsigned long)) {
                         FATAL
                             << "I/O time first 8 bytes reading was not completed on path \"" + read_path.string() +
@@ -1021,7 +1021,7 @@ namespace uh::trees {
                     }
 
                     unsigned char buf_size = 0;
-                    count = std::fread(&buf_size, sizeof(char), 1, reader);
+                    count = std::fread(&buf_size, sizeof(unsigned char), 1, reader);
                     if (count != 1) {
                         FATAL
                             << "I/O prefix first byte reading was not completed on path \"" + read_path.string() + "\"";
@@ -1035,7 +1035,7 @@ namespace uh::trees {
                         return {};
                     }
                     unsigned char buffer_in[buf_size + 1];
-                    count = std::fread(&buffer_in, sizeof(char), buf_size + 1, reader);
+                    count = std::fread(&buffer_in, sizeof(unsigned char), buf_size + 1, reader);
                     if (count != buf_size + 1) {
                         FATAL
                             << "I/O prefix first byte reading was not completed on path \"" + read_path.string() + "\"";
@@ -1446,7 +1446,7 @@ namespace uh::trees {
                                     out_vec.insert(out_vec.cbegin(), (*cur_tmp)[0]);
 
                                     unsigned char time_buf[sizeof(unsigned long)];
-                                    std::size_t count = std::fread(&time_buf, sizeof(char), sizeof(unsigned long),
+                                    std::size_t count = std::fread(&time_buf, sizeof(unsigned char), sizeof(unsigned long),
                                                                    reader);
 
                                     auto factory_io_sequence_end = [&]() {
@@ -1478,7 +1478,7 @@ namespace uh::trees {
                                     }
 
                                     unsigned char buf_size = 0;
-                                    count = std::fread(&buf_size, sizeof(char), 1, reader);
+                                    count = std::fread(&buf_size, sizeof(unsigned char), 1, reader);
                                     if (count != 1) {
                                         FATAL
                                             << "I/O prefix first byte reading was not completed on path \"" +
@@ -1494,7 +1494,7 @@ namespace uh::trees {
                                         if (error_flag.test())return;//break thread in case error is there
                                     }
                                     unsigned char buffer_in[buf_size + 1];
-                                    count = std::fread(&buffer_in, sizeof(char), buf_size + 1, reader);
+                                    count = std::fread(&buffer_in, sizeof(unsigned char), buf_size + 1, reader);
                                     if (count != buf_size + 1) {
                                         FATAL
                                             << "I/O prefix first byte reading was not completed on path \"" +
@@ -1540,7 +1540,7 @@ namespace uh::trees {
                                             tmp_buf[i + meta_offset] = buffer_in[i];
                                         }
 
-                                        count = std::fread(tmp_buf + (write_back_size - output_size), sizeof(char),
+                                        count = std::fread(tmp_buf + (write_back_size - output_size), sizeof(unsigned char),
                                                            output_size, reader);
 
                                         if (count != output_size) {
