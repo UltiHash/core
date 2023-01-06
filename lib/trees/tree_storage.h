@@ -262,7 +262,7 @@ namespace uh::trees {
 
             std::unique_lock lock_size(size_protect, std::defer_lock);
             lock_size.lock();
-            unsigned char min_pos;
+            unsigned short min_pos;
             std::size_t min_val;
             if (size->size() <= N) {
                 min_pos = size->size();
@@ -328,7 +328,7 @@ namespace uh::trees {
 
                 //calculate binary of timestamp
                 std::vector<unsigned char> bin_time;
-                for (unsigned char i = 0; i < (unsigned char) sizeof(current_time); i++) {
+                for (unsigned char i = 0; i < (unsigned short) sizeof(current_time); i++) {
                     bin_time.push_back((unsigned char) (current_time >> (i * 8)));
                 }
                 lock_size.lock();
@@ -391,7 +391,7 @@ namespace uh::trees {
                 std::vector<unsigned char> local_block_ref{};
                 local_block_ref.reserve(sizeof(unsigned int));
                 for (unsigned char i = 0;
-                     i < (unsigned char) sizeof(unsigned int); i++) {//STORE_MAX will fit in 4 bytes
+                     i < (unsigned short) sizeof(unsigned int); i++) {//STORE_MAX will fit in 4 bytes
                     local_block_ref.push_back((unsigned char) (size_tmp >> (i * 8)));
                 }
                 local_block_ref.insert(local_block_ref.cbegin(), min_pos);
@@ -462,7 +462,7 @@ namespace uh::trees {
                     std::vector<unsigned char> sub_block_code{block_code.cbegin() + 1,
                                                               block_code.cend()}; //copy offset code and rebuild
                     std::size_t offset{};
-                    for (unsigned char i = 0; i < (unsigned char) sizeof(unsigned int); i++) {
+                    for (unsigned char i = 0; i < (unsigned short) sizeof(unsigned int); i++) {
                         offset += (((std::size_t) sub_block_code[i]) << (i * 8));
                     }
                     std::string ref_name{boost::algorithm::hex(std::string{(char) block_code[0]})};
@@ -519,7 +519,7 @@ namespace uh::trees {
                         return {0, std::vector<unsigned char>{}};
                     }
                     unsigned long block_time{};
-                    for (unsigned char i = 0; i < (unsigned char) sizeof(unsigned long); i++) {
+                    for (unsigned char i = 0; i < (unsigned short) sizeof(unsigned long); i++) {
                         block_time += (((std::size_t) time_buf[i]) << (i * 8));
                     }
 
@@ -664,7 +664,7 @@ namespace uh::trees {
                                 local_block_ref->reserve(sizeof(unsigned int));
 
                                 for (unsigned char i1 = 0;
-                                     i1 < (unsigned char) sizeof(unsigned int); i1++) {//STORE_MAX will fit in 4 bytes
+                                     i1 < (unsigned short) sizeof(unsigned int); i1++) {//STORE_MAX will fit in 4 bytes
                                     local_block_ref->push_back((unsigned char) (cur_pos.load() >> (i1 * 8)));
                                 }
                                 local_block_ref->insert(local_block_ref->cbegin(), i);
@@ -690,7 +690,7 @@ namespace uh::trees {
                                     if (error_flag.test())return;
                                 }
                                 unsigned long block_time{};
-                                for (unsigned char i4 = 0; i4 < (unsigned char) sizeof(unsigned long); i4++) {
+                                for (unsigned char i4 = 0; i4 < (unsigned short) sizeof(unsigned long); i4++) {
                                     block_time += (((std::size_t) time_buf[i4]) << (i4 * 8));
                                 }
                                 block_time_current = block_time;
@@ -995,7 +995,7 @@ namespace uh::trees {
                     std::vector<unsigned char> sub_block_code{block_code.cbegin() + 1,
                                                               block_code.cend()}; //copy offset code and rebuild
                     std::size_t offset{};
-                    for (unsigned char i = 0; i < (unsigned char) sizeof(unsigned int); i++) {
+                    for (unsigned char i = 0; i < (unsigned short) sizeof(unsigned int); i++) {
                         offset += (((std::size_t) sub_block_code[i]) << (i * 8));
                     }
                     std::string ref_name{boost::algorithm::hex(std::string{(char) block_code[0]})};
@@ -1050,7 +1050,7 @@ namespace uh::trees {
                         return {};
                     }
                     unsigned long block_time{};
-                    for (unsigned char i = 0; i < (unsigned char) sizeof(unsigned long); i++) {
+                    for (unsigned char i = 0; i < (unsigned short) sizeof(unsigned long); i++) {
                         block_time += (((std::size_t) time_buf[i]) << (i * 8));
                     }
 
@@ -1151,7 +1151,7 @@ namespace uh::trees {
                     std::vector<unsigned char> sub_block_code{block_code.cbegin() + 1,
                                                               block_code.cend()}; //copy offset code and rebuild
                     std::size_t offset{};
-                    for (unsigned char i = 0; i < (unsigned char) sizeof(unsigned int); i++) {
+                    for (unsigned char i = 0; i < (unsigned short) sizeof(unsigned int); i++) {
                         offset += (((std::size_t) sub_block_code[i]) << (i * 8));
                     }
                     std::string ref_name{boost::algorithm::hex(std::string{(char) block_code[0]})};
@@ -1161,7 +1161,7 @@ namespace uh::trees {
 
                     //calculate binary of timestamp
                     std::vector<unsigned char> bin_time;
-                    for (unsigned char i = 0; i < (unsigned char) sizeof(current_time); i++) {
+                    for (unsigned char i = 0; i < (unsigned short) sizeof(current_time); i++) {
                         bin_time.push_back((unsigned char) (current_time >> (i * 8)));
                     }
 
@@ -1321,7 +1321,7 @@ namespace uh::trees {
                                                                                a.cend()}, sub_block_code2{
                                             b.cbegin() + 1, b.cend()};
                                     std::size_t offset1{}, offset2{};
-                                    for (unsigned char i = 0; i < (unsigned char) sizeof(unsigned int); i++) {
+                                    for (unsigned char i = 0; i < (unsigned short) sizeof(unsigned int); i++) {
                                         offset1 += (((std::size_t) sub_block_code1[i]) << (i * 8));
                                         offset2 += (((std::size_t) sub_block_code2[i]) << (i * 8));
                                     }
@@ -1335,7 +1335,7 @@ namespace uh::trees {
                                     std::vector<unsigned char> sub_block_code{a_ref + 1,
                                                                               b_ref}; //copy offset code and rebuild
                                     std::size_t offset{};
-                                    for (unsigned char i = 0; i < (unsigned char) sizeof(unsigned int); i++) {
+                                    for (unsigned char i = 0; i < (unsigned short) sizeof(unsigned int); i++) {
                                         offset += (((std::size_t) sub_block_code[i]) << (i * 8));
                                     }
                                     return offset;
@@ -1492,7 +1492,7 @@ namespace uh::trees {
                                     std::vector<unsigned char> out_vec{};
                                     out_vec.reserve(sizeof(unsigned int));
                                     for (unsigned char i = 0;
-                                         i < (unsigned char) sizeof(unsigned int); i++) {//STORE_MAX will fit in 4 bytes
+                                         i < (unsigned short) sizeof(unsigned int); i++) {//STORE_MAX will fit in 4 bytes
                                         out_vec.push_back((unsigned char) (cur_pos >> (i * 8)));
                                     }
                                     out_vec.insert(out_vec.cbegin(), (*cur_tmp)[0]);
@@ -1581,14 +1581,14 @@ namespace uh::trees {
                                         //copy block to maintain file
                                         auto *tmp_buf = mem_wait<unsigned char>(write_back_size);
                                         unsigned char i = 0;
-                                        for (; i < (unsigned char) sizeof(time_buf); i++) {
+                                        for (; i < (unsigned short) sizeof(time_buf); i++) {
                                             tmp_buf[i] = time_buf[i];
                                         }
                                         tmp_buf[i] = buf_size;
                                         i++;
                                         unsigned char meta_offset = i;
                                         i = 0;
-                                        for (; i < (unsigned char) sizeof(buffer_in); i++) {
+                                        for (; i < (unsigned short) sizeof(buffer_in); i++) {
                                             tmp_buf[i + meta_offset] = buffer_in[i];
                                         }
 
