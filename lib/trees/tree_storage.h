@@ -441,7 +441,7 @@ namespace uh::trees {
             } else {
                 if (block_code.size() < 5) {
                     std::string not_found((const char *) block_code.data(), block_code.size());
-                    std::shared_lock read_path(combined_path_protect);
+                    std::scoped_lock read_path(combined_path_protect);
                     FATAL << "<Block error trace>: Block code " + boost::algorithm::hex(not_found) +
                              " was too short for storage tree \"" +
                              combined_path->string() + "\".";
