@@ -765,10 +765,11 @@ namespace uh::trees {
                                 local_block_ref->clear();
                                 auto block_time_cpy = block_time_current.load();
                                 auto output_tmp = output_size.load();
-                                lock.unlock();
-                                SHA512(tmp_buf[parallel_switch], output_tmp, hash_buf);
-                                delete[] tmp_buf[parallel_switch];
+                                auto parallel_switch_cpy = parallel_switch.load();
                                 parallel_switch = !parallel_switch.load();
+                                lock.unlock();
+                                SHA512(tmp_buf[parallel_switch_cpy], output_tmp, hash_buf);
+                                delete[] tmp_buf[parallel_switch_cpy];
 
                                 std::vector<unsigned char> hash{hash_buf, hash_buf + SHA512_DIGEST_LENGTH};
                                 std::scoped_lock lock_emplace(search_index_protect);
