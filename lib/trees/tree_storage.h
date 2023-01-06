@@ -1810,10 +1810,10 @@ namespace uh::trees {
                     delete std::get<1>(i);
                 }
                 child_write.lock();
+                std::scoped_lock i_lock(work_steal_protect);
+                i_constructor += 1;
             }
             child_write.unlock();
-            std::scoped_lock i_lock(work_steal_protect);
-            i_constructor += 1;
         }
     };
 }
