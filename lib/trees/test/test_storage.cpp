@@ -651,7 +651,7 @@ BOOST_AUTO_TEST_CASE(get_info_set_time_test)
     uh::trees::tree_storage t1(target);//A test folder reserved for tree storage
     //for strong laptops with SSD extension (configure test db server to run this??)
     //uh::trees::tree_storage t1("/mnt/md0");//A test folder reserved for tree storage for performance tests
-    auto index_list = t1.index(1);
+    auto index_list = t1.index();
     BOOST_ASSERT_MSG(!index_list.empty(),"Index list was empty!");
     auto first_el = index_list.begin();
     gettimeofday(&time, nullptr);
@@ -687,7 +687,7 @@ BOOST_AUTO_TEST_CASE(delete_test)
     uh::trees::tree_storage t1(target);//A test folder reserved for tree storage
     //for strong laptops with SSD extension (configure test db server to run this??)
     //uh::trees::tree_storage t1("/mnt/md0");//A test folder reserved for tree storage for performance tests
-    auto index_list = t1.index(1);
+    auto index_list = t1.index();
     std::vector<std::vector<unsigned char>> to_del;
     //from index take 2 blocks of the same chunk and copy them to RAM
     //delete one block over its reference and check if the block of the retured local reference is the same

@@ -897,6 +897,15 @@ namespace uh::trees {
                         auto tree_ptr = std::get<1>(children->at(i));
                         children_lock.unlock();
                         std::size_t vanish_size = tree_ptr->delete_recursive(1);
+                        std::unique_lock filesystem_lock(std_filesystem_protect, std::defer_lock);
+                        filesystem_lock.lock();
+                        std::shared_lock path_protect(combined_path_protect,std::defer_lock);
+                        path_protect.lock();
+                        if(std::filesystem::exists(*combined_path) && std::filesystem::is_empty(*combined_path)){
+                            std::filesystem::remove(*combined_path);
+                        }
+                        path_protect.unlock();
+                        filesystem_lock.unlock();
                         out_size += vanish_size;
                         std::scoped_lock lg(size_protect);
                         std::get<0>(size->at(i)) -= vanish_size;
