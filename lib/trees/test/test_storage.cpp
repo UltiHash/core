@@ -693,7 +693,13 @@ BOOST_AUTO_TEST_CASE(delete_test)
     std::tuple<std::size_t, std::list<std::tuple<std::vector<unsigned char>, std::vector<unsigned char>>>> delete_list{};
 
     do {
-        auto del_list = std::vector<std::vector<unsigned char>>{std::get<1>(*index_list.cbegin())};
+        auto del_list = std::vector<std::vector<unsigned char>>{};
+        std::size_t count{};
+        std::for_each(index_list.cbegin(),index_list.cend(),[&del_list,&count](auto &item){
+            if(count==9)return;
+            del_list.push_back(std::get<1>(item));
+            count++;
+        });
         delete_list = t1.delete_blocks(del_list,1);
         index_list.pop_front();
     } while (std::get<1>(delete_list).empty());
