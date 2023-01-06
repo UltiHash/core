@@ -117,7 +117,7 @@ namespace uh::trees {
             if (!num_threads)return;
             std::atomic<std::size_t> i_constructor{};
 
-            std::unique_lock lock5(combined_path_protect);
+            std::unique_lock lock5(combined_path_protect,std::defer_lock);
             lock5.lock();
             if (combined_path->empty()) {
                 std::string parent_name = root.filename().string();
