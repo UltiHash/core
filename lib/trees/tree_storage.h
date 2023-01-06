@@ -265,7 +265,7 @@ namespace uh::trees {
             unsigned short min_pos;
             std::size_t min_val;
             if (size->size() <= N) {
-                min_pos = size->size()-1;
+                min_pos = size->size();
                 lock_size.unlock();
                 min_val = 0;
                 std::shared_ptr<std::atomic_flag> f1 = std::make_shared<std::atomic_flag>(), f3 = std::make_shared<std::atomic_flag>();
@@ -290,7 +290,7 @@ namespace uh::trees {
                 std::unique_lock lock_children(children_protect, std::defer_lock);
                 lock_children.lock();
                 if ((unsigned short) children->size() <= (unsigned short) N) {
-                    min_pos = (unsigned short) children->size()-1;
+                    min_pos = (unsigned short) children->size();
                     std::string ref_name{boost::algorithm::hex(std::string{(char) min_pos})};
                     std::shared_lock lock_path1(combined_path_protect);
                     std::string fname = combined_path->filename().string();
