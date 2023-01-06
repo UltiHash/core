@@ -739,16 +739,14 @@ namespace uh::trees {
 
                                 if (count != output_size.load()) {
                                     FATAL << "I/O was not completed on path \"" + read_path.string() + "\"";
-                                    delete[] tmp_buf[0];
-                                    delete[] tmp_buf[1];
+                                    delete[] tmp_buf[parallel_switch_cpy];
                                     read_end_sequence();
                                     error_thread_sequence();
                                     if (error_flag.test())return;
                                 }
                                 if (std::ferror(reader)) {
                                     FATAL << "I/O error when reading prefix at path \"" + read_path.string() + "\"";
-                                    delete[] tmp_buf[0];
-                                    delete[] tmp_buf[1];
+                                    delete[] tmp_buf[parallel_switch_cpy];
                                     read_end_sequence();
                                     error_thread_sequence();
                                     if (error_flag.test())return;
