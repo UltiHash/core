@@ -622,7 +622,7 @@ BOOST_AUTO_TEST_CASE(index_read_test)
 
     gettimeofday(&time, nullptr);
     millis = ((long double) time.tv_sec * 1000) + ((long double) time.tv_usec / 1000);
-    auto index_list = t1.index(1);
+    auto index_list = t1.index();
     gettimeofday(&time, nullptr);
     long double index_time = (((long double) time.tv_sec * 1000) + ((long double) time.tv_usec / 1000)) - millis;
 
