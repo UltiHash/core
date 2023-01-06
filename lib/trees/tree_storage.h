@@ -292,7 +292,7 @@ namespace uh::trees {
                 //find or create balanced deeper tree node to store
                 std::unique_lock lock_children(children_protect,std::defer_lock);
                 lock_children.lock();
-                if ((unsigned short) children->size() < (unsigned short) N) {
+                if ((unsigned short) children->size() <= (unsigned short) N) {
                     min_pos = (unsigned short) children->size();
                     std::string ref_name{boost::algorithm::hex(std::string{(char) min_pos})};
                     std::shared_lock lock_path1(combined_path_protect);
