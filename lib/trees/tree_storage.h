@@ -264,7 +264,7 @@ namespace uh::trees {
             lock_size.lock();
             unsigned char min_pos;
             std::size_t min_val;
-            if (size->size() < N) {
+            if (size->size() <= N) {
                 min_pos = size->size();
                 lock_size.unlock();
                 min_val = 0;
