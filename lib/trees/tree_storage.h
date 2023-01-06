@@ -115,7 +115,7 @@ namespace uh::trees {
         explicit tree_storage(const std::filesystem::path &root,
                               unsigned short num_threads = std::thread::hardware_concurrency()) {
             if (!num_threads)return;
-            std::atomic<std::size_t> i_constructor{};
+            std::atomic<long> i_constructor{-1};
 
             std::unique_lock lock5(combined_path_protect, std::defer_lock);
             lock5.lock();
@@ -139,7 +139,11 @@ namespace uh::trees {
             lock5.unlock();
 
             auto multithread_constructor = [&]() {
-                std::size_t i = i_constructor.load();
+                std::unique_lock step_lock_init(work_steal_protect,std::defer_lock);
+                step_lock_init.lock();
+                std::size_t i = (i_constructor += 1);
+                step_lock_init.unlock();
+
                 if (i >= N)return;
                 for (; i < N;) {
                     std::string s_tmp = boost::algorithm::hex(std::string{(char) i});
@@ -589,11 +593,15 @@ namespace uh::trees {
             if (!num_threads)return {};
             std::shared_ptr<std::list<std::tuple<std::vector<unsigned char>, std::vector<unsigned char>, unsigned long>>> search_index = std::make_shared<std::list<std::tuple<std::vector<unsigned char>, std::vector<unsigned char>, unsigned long>>>();
             std::shared_mutex search_index_protect{};
-            std::atomic<std::size_t> i_constructor{};
+            std::atomic<long> i_constructor{-1};
             std::atomic_flag error_flag{ATOMIC_FLAG_INIT};
 
             auto multithread_index = [&]() {
-                std::size_t i = i_constructor.load();
+                std::unique_lock step_lock_init(work_steal_protect,std::defer_lock);
+                step_lock_init.lock();
+                std::size_t i = (i_constructor += 1);
+                step_lock_init.unlock();
+
                 if (i >= N)return;
                 for (; i < N;) {
                     std::unique_lock size_lock(size_protect, std::defer_lock);
@@ -854,12 +862,16 @@ namespace uh::trees {
          */
         std::size_t delete_recursive(unsigned short num_threads = std::thread::hardware_concurrency()) {
             if (!num_threads)return {};
-            std::atomic<std::size_t> i_constructor{};
+            std::atomic<long> i_constructor{-1};
             std::atomic<std::size_t> out_size{};
             std::atomic_flag error_flag{ATOMIC_FLAG_INIT};
 
             auto multithread_index = [&]() {
-                std::size_t i = i_constructor.load();
+                std::unique_lock step_lock_init(work_steal_protect,std::defer_lock);
+                step_lock_init.lock();
+                std::size_t i = (i_constructor += 1);
+                step_lock_init.unlock();
+
                 if (i >= N)return;
                 for (; i < N;) {
                     std::unique_lock size_lock(size_protect, std::defer_lock);
