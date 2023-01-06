@@ -147,7 +147,7 @@ namespace uh::trees {
                     std::filesystem::path chunk = *combined_path / s_tmp;
                     lock4.unlock();
 
-                    std::unique_lock filesystem_lock(std_filesystem_protect);
+                    std::unique_lock filesystem_lock(std_filesystem_protect,std::defer_lock);
                     filesystem_lock.lock();
                     if (std::filesystem::exists(chunk)) {
                         filesystem_lock.unlock();
@@ -196,7 +196,7 @@ namespace uh::trees {
                 for (auto &th: workers)
                     th.join();
             }
-            std::unique_lock lock_size(size_protect);
+            std::unique_lock lock_size(size_protect,std::defer_lock);
             lock_size.lock();
             if (!std::is_sorted(std::execution::par_unseq, size->begin(), size->end(),
                                 [](const auto &a, const auto &b) {
@@ -225,7 +225,7 @@ namespace uh::trees {
         std::size_t get_size() {
             std::size_t s{};
             for (unsigned short i = 0; i < (unsigned short) N; i++) {
-                std::unique_lock lock1(size_protect), lock2(children_protect);
+                std::unique_lock lock1(size_protect,std::defer_lock), lock2(children_protect,std::defer_lock);
                 lock1.lock();
                 s += size->size() > i ? std::get<0>(size->at(i)) : 0;
                 lock1.unlock();
@@ -263,7 +263,7 @@ namespace uh::trees {
             std::size_t total_size = input.size() + prefix.size() + sizeof(unsigned long);
             //check block fill of this node, look for free space
 
-            std::unique_lock lock_size(size_protect);
+            std::unique_lock lock_size(size_protect,std::defer_lock);
             lock_size.lock();
             unsigned char min_pos;
             std::size_t min_val;
@@ -290,7 +290,7 @@ namespace uh::trees {
             lock_size.unlock();
             if (!no_deeper) {
                 //find or create balanced deeper tree node to store
-                std::unique_lock lock_children(children_protect);
+                std::unique_lock lock_children(children_protect,std::defer_lock);
                 lock_children.lock();
                 if ((unsigned short) children->size() < (unsigned short) N) {
                     min_pos = (unsigned short) children->size();
@@ -315,7 +315,7 @@ namespace uh::trees {
                 std::get<0>(children->at(min_pos)) += total_size;
                 lock_children.unlock();
 
-                std::unique_lock read_children(children_protect);
+                std::unique_lock read_children(children_protect,std::defer_lock);
                 read_children.lock();
                 auto tree_ptr2 = std::get<1>(children->at(min_pos));
                 read_children.unlock();
@@ -357,7 +357,7 @@ namespace uh::trees {
                 lock_size.lock();
                 std::size_t size_tmp = std::get<0>(size->at(min_pos));
                 lock_size.unlock();
-                std::unique_lock write_size(size_protect);
+                std::unique_lock write_size(size_protect,std::defer_lock);
                 write_size.lock();
                 std::get<0>(size->at(min_pos)) += total_size;
                 write_size.unlock();
@@ -413,7 +413,7 @@ namespace uh::trees {
             }
             if (block_code.size() > 5) {
                 //size encoding is not reached yet, read along tree path
-                std::unique_lock read_children(children_protect);
+                std::unique_lock read_children(children_protect,std::defer_lock);
                 read_children.lock();
                 if ((short) children->size() - 1 < (short) block_code[0] ||
                     !std::get<0>(children->at(block_code[0]))) {
@@ -448,7 +448,7 @@ namespace uh::trees {
                     return {0, std::vector<unsigned char>{}};
                 }
                 //the block code should have a size of 5; one chunk index and 4 bytes of encoding for the offset
-                std::unique_lock size_lock(size_protect);
+                std::unique_lock size_lock(size_protect,std::defer_lock);
                 size_lock.lock();
                 if ((short) size->size() - 1 < (short) block_code[0] ||
                     !std::get<0>(size->at(block_code[0]))) {
@@ -599,7 +599,7 @@ namespace uh::trees {
                 std::size_t i = i_constructor.load();
                 if (i >= N)return;
                 for (; i < N;) {
-                    std::unique_lock size_lock(size_protect);
+                    std::unique_lock size_lock(size_protect,std::defer_lock);
                     size_lock.lock();
                     if (i < size->size() && std::get<0>(size->at(i)) > 0) {
                         size_lock.unlock();
@@ -621,7 +621,7 @@ namespace uh::trees {
                         }
 
                         FILE *reader = std::fopen(read_path.make_preferred().c_str(), "rb");
-                        std::unique_lock filesystem_lock(std_filesystem_protect);
+                        std::unique_lock filesystem_lock(std_filesystem_protect,std::defer_lock);
                         filesystem_lock.lock();
                         std::size_t total_file_size = std::filesystem::file_size(read_path.make_preferred().c_str());
                         filesystem_lock.unlock();
@@ -662,7 +662,7 @@ namespace uh::trees {
                         std::shared_mutex m1{};
                         while (!std::feof(reader) && cur_pos.load() < total_file_size) {
                             auto read_func = [&]() {
-                                std::unique_lock lock(m1);
+                                std::unique_lock lock(m1,std::defer_lock);
                                 lock.lock();
                                 local_block_ref->reserve(sizeof(unsigned int));
 
@@ -759,7 +759,7 @@ namespace uh::trees {
                             else read_func();
 
                             auto hash_func = [&]() {
-                                std::unique_lock lock(m1);
+                                std::unique_lock lock(m1,std::defer_lock);
                                 lock.lock();
                                 unsigned char hash_buf[SHA512_DIGEST_LENGTH];//HASH GENERATION
                                 auto tmp_local_block_ref = *local_block_ref;
@@ -797,7 +797,7 @@ namespace uh::trees {
                         size_lock.unlock();
                     }
                     //splice indexes of children plus the min_pos to decide local_block_ref of children array
-                    std::unique_lock children_lock(children_protect);
+                    std::unique_lock children_lock(children_protect,std::defer_lock);
                     children_lock.lock();
                     if (i < children->size() && std::get<0>(children->at(i)) > 0) {
                         auto tree_ptr = std::get<1>(children->at(i));
@@ -862,14 +862,14 @@ namespace uh::trees {
                 std::size_t i = i_constructor.load();
                 if (i >= N)return;
                 for (; i < N;) {
-                    std::unique_lock size_lock(size_protect);
+                    std::unique_lock size_lock(size_protect,std::defer_lock);
                     size_lock.lock();
                     if (i < size->size() && std::get<0>(size->at(i)) > 0) {
                         std::string ref_name{boost::algorithm::hex(std::string{(char) i})};
                         std::shared_lock lock_path(combined_path_protect);
                         std::filesystem::path read_path = *combined_path / ref_name;
                         lock_path.unlock();
-                        std::unique_lock filesystem_lock(std_filesystem_protect);
+                        std::unique_lock filesystem_lock(std_filesystem_protect,std::defer_lock);
                         filesystem_lock.lock();
                         std::size_t vanish_size = std::filesystem::exists(read_path)?std::filesystem::file_size(read_path):0;
                         filesystem_lock.unlock();
@@ -890,7 +890,7 @@ namespace uh::trees {
                         size_lock.unlock();
                     }
                     //splice indexes of children plus the min_pos to decide local_block_ref of children array
-                    std::unique_lock children_lock(children_protect);
+                    std::unique_lock children_lock(children_protect,std::defer_lock);
                     children_lock.lock();
                     if (i < children->size() && std::get<0>(children->at(i)) > 0) {
                         auto tree_ptr = std::get<1>(children->at(i));
@@ -943,7 +943,7 @@ namespace uh::trees {
             }
             if (block_code.size() > 5) {
                 //size encoding is not reached yet, get_info along tree path
-                std::unique_lock read_children(children_protect);
+                std::unique_lock read_children(children_protect,std::defer_lock);
                 read_children.lock();
                 if ((short) children->size() - 1 < (short) block_code[0] ||
                     !std::get<0>(children->at(block_code[0]))) {
@@ -978,7 +978,7 @@ namespace uh::trees {
                     return {};
                 }
                 //the block code should have a size of 5; one chunk index and 4 bytes of encoding for the offset
-                std::unique_lock read_size(size_protect);
+                std::unique_lock read_size(size_protect,std::defer_lock);
                 read_size.lock();
                 if ((short) size->size() - 1 < (short) block_code[0] ||
                     !std::get<0>(size->at(block_code[0]))) {
@@ -1101,7 +1101,7 @@ namespace uh::trees {
             }
             if (block_code.size() > 5) {
                 //size encoding is not reached yet, set_block_time along tree path
-                std::unique_lock read_children(children_protect);
+                std::unique_lock read_children(children_protect,std::defer_lock);
                 read_children.lock();
                 if ((short) children->size() - 1 < (short) block_code[0] ||
                     !std::get<0>(children->at(block_code[0]))) {
@@ -1135,7 +1135,7 @@ namespace uh::trees {
                     return false;
                 }
                 //the block code should have a size of 5; one chunk index and 4 bytes of encoding for the offset
-                std::unique_lock size_read(size_protect);
+                std::unique_lock size_read(size_protect,std::defer_lock);
                 size_read.lock();
                 if ((short) size->size() - 1 < (short) block_code[0] ||
                     !std::get<0>(size->at(block_code[0]))) {
@@ -1266,7 +1266,7 @@ namespace uh::trees {
                             }
                         };
                         std::shared_mutex m1{};
-                        std::unique_lock lock(m1);
+                        std::unique_lock lock(m1,std::defer_lock);
                         auto first_index_exe_function = [&]() {
                             lock.lock();
                             //parallel start
@@ -1288,7 +1288,7 @@ namespace uh::trees {
                                     } else delete_here_codes.emplace_back(a.begin(), a.end());
                                 }
                             });
-                            std::unique_lock size_read(size_protect);
+                            std::unique_lock size_read(size_protect,std::defer_lock);
                             size_read.lock();
                             if (!delete_here_codes.empty() && (*cur_tmp)[0] < size->size() &&
                                 std::get<0>(size->at((*cur_tmp)[0])) > 0) {
@@ -1344,7 +1344,7 @@ namespace uh::trees {
 
                                 //read chunk at index (*cur_tmp)[0]
                                 FILE *reader = std::fopen(chunk.make_preferred().c_str(), "rb");
-                                std::unique_lock filesystem_lock(std_filesystem_protect);
+                                std::unique_lock filesystem_lock(std_filesystem_protect,std::defer_lock);
                                 filesystem_lock.lock();
                                 std::size_t total_file_size = std::filesystem::exists(chunk.make_preferred().c_str())?std::filesystem::file_size(chunk.make_preferred().c_str()):0;
                                 filesystem_lock.unlock();
@@ -1399,7 +1399,7 @@ namespace uh::trees {
                                 }
 
                                 auto write_once_to_maintain_file = [&](){
-                                    std::unique_lock multithread_f_read(multithreading_factory_protect);
+                                    std::unique_lock multithread_f_read(multithreading_factory_protect,std::defer_lock);
                                     multithread_f_read.lock();
                                     auto new_offset = std::get<3>(*multithreading_factory->cbegin());
                                     auto old_block_code = std::get<2>(*multithreading_factory->cbegin());
@@ -1435,11 +1435,11 @@ namespace uh::trees {
                                     std::free(current_storage_ptr);
                                     //tmp_buf,write_back_size,out_vec,this,trunc_at
                                     //std::vector<unsigned char>, std::vector<unsigned char>, tree_storage *, std::size_t>>>
-                                    std::unique_lock lock_output(out_change_list_protect);
+                                    std::unique_lock lock_output(out_change_list_protect,std::defer_lock);
                                     lock_output.lock();
                                     out_change_list->emplace_back(old_block_code, out_vec);
                                     lock_output.unlock();
-                                    std::unique_lock write_multithreading_f(multithreading_factory_protect);
+                                    std::unique_lock write_multithreading_f(multithreading_factory_protect,std::defer_lock);
                                     write_multithreading_f.lock();
                                     multithreading_factory->pop_front();
                                     write_multithreading_f.unlock();
@@ -1455,7 +1455,7 @@ namespace uh::trees {
 
                                 auto consumer_function = [&]() {
                                     while (write_control.test()) {
-                                        std::unique_lock multithread_f_read(multithreading_factory_protect);
+                                        std::unique_lock multithread_f_read(multithreading_factory_protect,std::defer_lock);
                                         multithread_f_read.lock();
                                         while (!multithreading_factory->empty()) {
                                             multithread_f_read.unlock();
@@ -1700,7 +1700,7 @@ namespace uh::trees {
                             }
 
                             //delete deeper codes
-                            std::unique_lock children_read(children_protect);
+                            std::unique_lock children_read(children_protect,std::defer_lock);
                             children_read.lock();
                             if (!deeper_codes.empty() && (*cur_tmp)[0] < children->size() &&
                                 std::get<0>(children->at((*cur_tmp)[0])) > 0) {
@@ -1783,7 +1783,7 @@ namespace uh::trees {
             std::unique_lock child_write(children_protect);
             for (auto &i: *children) {
                 child_write.unlock();
-                std::unique_lock lock_size(size_protect);
+                std::unique_lock lock_size(size_protect,std::defer_lock);
                 lock_size.lock();
                 //stop all reading and writing operations on this tree node and reserve all rights before destroying itself
                 auto write_ptr = &(*std::get<2>(size->at(std::get<2>(i))));
