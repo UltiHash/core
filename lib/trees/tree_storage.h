@@ -1783,16 +1783,13 @@ namespace uh::trees {
          * for their operation since the struct will disassemble, but no dataloss can occur
          */
         ~tree_storage() {
-            std::atomic<std::size_t> i_constructor{};
-            std::unique_lock child_write(children_protect);
-            for (auto &i: *children) {
-                child_write.unlock();
-                std::unique_lock lock_size(size_protect, std::defer_lock);
+            std::unique_lock lock_size(size_protect, std::defer_lock);
+            for(auto &s:*size){
                 lock_size.lock();
                 //stop all reading and writing operations on this tree node and reserve all rights before destroying itself
-                auto write_ptr = &(*std::get<2>(size->at(i_constructor.load())));
-                auto read_ptr = &(*std::get<3>(size->at(i_constructor.load())));
-                auto maintain_ptr = &(*std::get<4>(size->at(i_constructor.load())));
+                auto write_ptr = &(*std::get<2>(s));
+                auto read_ptr = &(*std::get<3>(s));
+                auto maintain_ptr = &(*std::get<4>(s));
                 lock_size.unlock();
 
                 while (std::atomic_flag_test_and_set_explicit(maintain_ptr, std::memory_order_acquire)) {
@@ -1809,12 +1806,15 @@ namespace uh::trees {
                     usleep(10 * 1000);
 #endif // _WIN32
                 }
+            }
+            std::unique_lock child_write(children_protect);
+            for (auto &i: *children) {
+                child_write.unlock();
+
                 if (std::get<1>(i) != nullptr) {
                     delete std::get<1>(i);
                 }
                 child_write.lock();
-                std::scoped_lock i_lock(work_steal_protect);
-                i_constructor += 1;
             }
             child_write.unlock();
         }
