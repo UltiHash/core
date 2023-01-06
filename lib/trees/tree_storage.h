@@ -33,7 +33,7 @@
 namespace uh::trees {
     DEFINE_EXCEPTION(out_of_memory);
 
-#define N (unsigned int) std::numeric_limits<unsigned char>::max() + 1
+#define N (unsigned int) (std::numeric_limits<unsigned char>::max() + 1)
 
     typedef struct tree_storage tree_storage;
 
