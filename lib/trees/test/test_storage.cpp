@@ -77,7 +77,7 @@ BOOST_AUTO_TEST_CASE(write_read_test)
             catch(std::exception &e){
                 std::stringstream s;
                 s << e.what();
-                BOOST_TEST_MESSAGE("Writing critically failed! Error: " + s.str());std::shared_mutex m1{};
+                BOOST_TEST_MESSAGE("Writing critically failed! Error: " + s.str());
             }
 
             gettimeofday(&time, nullptr);
