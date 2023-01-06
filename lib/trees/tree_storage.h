@@ -651,7 +651,7 @@ namespace uh::trees {
 
                         std::shared_ptr<std::vector<unsigned char>> local_block_ref = std::make_shared<std::vector<unsigned char>>();
                         std::atomic<unsigned long> block_time_current{};
-                        unsigned char *tmp_buf[2];
+                        std::atomic<unsigned char *>tmp_buf[2];
                         tmp_buf[0] = nullptr;
                         tmp_buf[1] = nullptr;
                         std::atomic<std::size_t> output_size{};
@@ -728,10 +728,12 @@ namespace uh::trees {
                                 for (unsigned char buf_count = 0; buf_count <= buf_size; buf_count++) {
                                     output_size += (((std::size_t) buffer_for_size[buf_count]) << (buf_count * 8));
                                 }
+                                auto parallel_switch_cpy = parallel_switch.load();
+                                parallel_switch = !parallel_switch.load();
                                 lock.unlock();
 
-                                tmp_buf[parallel_switch.load()] = mem_wait<unsigned char>(output_size.load());
-                                count = std::fread(tmp_buf[parallel_switch.load()], sizeof(unsigned char),
+                                tmp_buf[parallel_switch_cpy] = mem_wait<unsigned char>(output_size.load());
+                                count = std::fread(tmp_buf[parallel_switch_cpy].load(), sizeof(unsigned char),
                                                    output_size.load(), reader);
                                 cur_pos += count;
 
@@ -766,10 +768,9 @@ namespace uh::trees {
                                 auto block_time_cpy = block_time_current.load();
                                 auto output_tmp = output_size.load();
                                 auto parallel_switch_cpy = parallel_switch.load();
-                                parallel_switch = !parallel_switch.load();
                                 lock.unlock();
-                                SHA512(tmp_buf[parallel_switch_cpy], output_tmp, hash_buf);
-                                delete[] tmp_buf[parallel_switch_cpy];
+                                SHA512(tmp_buf[!parallel_switch_cpy].load(), output_tmp, hash_buf);
+                                delete[] tmp_buf[!parallel_switch_cpy].load();
 
                                 std::vector<unsigned char> hash{hash_buf, hash_buf + SHA512_DIGEST_LENGTH};
                                 std::scoped_lock lock_emplace(search_index_protect);
