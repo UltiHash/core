@@ -1644,13 +1644,19 @@ namespace uh::trees {
                                     usleep(10 * 1000);
 #endif // _WIN32
                                 }
-                                truncate64(chunk.c_str(), static_cast<long>(trunc_at));
+
+                                if (truncate64(chunk.c_str(), static_cast<long>(trunc_at)) != 0) {
+                                    ERROR << "File truncate failed at \"" + chunk_maintain.string() + "\"";
+                                    error_thread_sequence();
+                                    return;
+                                }
 
                                 std::size_t maintain_size_append = cur_pos - delete_size;
                                 auto buf = mem_wait<unsigned char>(maintain_size_append);
 
                                 FILE *source = fopen(chunk_maintain.make_preferred().c_str(), "rb");
                                 auto ptr_release_sequence = [&]() {
+                                    error_thread_sequence();
                                     std::atomic_flag_clear_explicit(write_ptr, std::memory_order_release);
                                     if (!write_ptr->test())write_ptr->notify_one();
                                     std::atomic_flag_clear_explicit(maintain_ptr, std::memory_order_release);
@@ -1662,7 +1668,12 @@ namespace uh::trees {
                                     ptr_release_sequence();
                                     return;
                                 }
-                                fread(buf, sizeof(unsigned char), maintain_size_append, source);
+                                if (fread(buf, sizeof(unsigned char), maintain_size_append, source) != maintain_size_append) {
+                                    ERROR << "File read opening for append failed at \"" + chunk_maintain.string() + "\"";
+                                    fclose(source);
+                                    ptr_release_sequence();
+                                    return;
+                                }
                                 if (std::ferror(source)) {
                                     FATAL << "I/O error when reading \"" + chunk_maintain.string() + "\"";
                                     fclose(source);

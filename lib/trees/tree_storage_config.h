@@ -4,8 +4,8 @@
 #define USE_TINY_TREE
 
 #ifdef USE_TINY_TREE
-#define LATENCY_TEST_SIZE (std::size_t) std::pow(2, 18)
-#define PERFORMANCE_TEST_SIZE (std::size_t) (std::pow(2,22))
+#define LATENCY_TEST_SIZE (std::size_t) std::pow(2, 21)
+#define PERFORMANCE_TEST_SIZE (std::size_t) (std::pow(2,25))
 #define STORE_MAX (unsigned int) (std::numeric_limits<unsigned char>::max() / 4)
 #else
 #define LATENCY_TEST_SIZE (std::size_t) std::pow(2, 22)
