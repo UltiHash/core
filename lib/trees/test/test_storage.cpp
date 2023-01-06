@@ -43,7 +43,8 @@ std::vector<unsigned char> binary_generator(std::size_t max_len) {
 BOOST_AUTO_TEST_CASE(constructor_test)
 {
     //tests for any linux machine
-    uh::trees::tree_storage t1(std::filesystem::path("/home") / std::string(getenv("USER")));//A test folder reserved for tree storage
+    std::filesystem::path target = std::filesystem::path("/home") / std::string(getenv("USER"));
+    uh::trees::tree_storage t1(target,1);//A test folder reserved for tree storage
     //for strong laptops with SSD extension (configure test db server to run this??)
     //uh::trees::tree_storage t1("/mnt/md0");//A test folder reserved for tree storage for performance tests
 }
@@ -51,7 +52,8 @@ BOOST_AUTO_TEST_CASE(constructor_test)
 BOOST_AUTO_TEST_CASE(write_read_test)
 {
     //tests for any linux machine
-    uh::trees::tree_storage t1(std::filesystem::path("/home") / std::string(getenv("USER")));//A test folder reserved for tree storage
+    std::filesystem::path target = std::filesystem::path("/home") / std::string(getenv("USER"));
+    uh::trees::tree_storage t1(target,1);//A test folder reserved for tree storage
     //for strong laptops with SSD extension (configure test db server to run this??)
     //uh::trees::tree_storage t1("/mnt/md0");//A test folder reserved for tree storage for performance tests
 
@@ -611,8 +613,8 @@ BOOST_AUTO_TEST_CASE(index_read_test)
     gettimeofday(&time, nullptr);
     long double millis = ((long double) time.tv_sec * 1000) + ((long double) time.tv_usec / 1000);
     //for any machine
-    uh::trees::tree_storage t1(std::filesystem::path("/home") / std::string(getenv("USER"),1),
-                               1);//A test folder reserved for tree storage
+    std::filesystem::path target = std::filesystem::path("/home") / std::string(getenv("USER"));
+    uh::trees::tree_storage t1(target,1);//A test folder reserved for tree storage
     //for strong laptops with SSD extension (configure test db server to run this??)
     //uh::trees::tree_storage t1("/mnt/md0");//A test folder reserved for tree storage for performance tests
     gettimeofday(&time, nullptr);
@@ -645,7 +647,8 @@ BOOST_AUTO_TEST_CASE(get_info_set_time_test)
 {
     struct timeval time{};
     //tests for any linux machine
-    uh::trees::tree_storage t1(std::filesystem::path("/home") / std::string(getenv("USER")),1);//A test folder reserved for tree storage
+    std::filesystem::path target = std::filesystem::path("/home") / std::string(getenv("USER"));
+    uh::trees::tree_storage t1(target,1);//A test folder reserved for tree storage
     //for strong laptops with SSD extension (configure test db server to run this??)
     //uh::trees::tree_storage t1("/mnt/md0");//A test folder reserved for tree storage for performance tests
     auto index_list = t1.index(1);
@@ -680,8 +683,8 @@ BOOST_AUTO_TEST_CASE(get_info_set_time_test)
 BOOST_AUTO_TEST_CASE(delete_test)
 {
     //tests for any linux machine
-    uh::trees::tree_storage t1(
-            std::filesystem::path("/home") / std::string(getenv("USER")),1);//A test folder reserved for tree storage
+    std::filesystem::path target = std::filesystem::path("/home") / std::string(getenv("USER"));
+    uh::trees::tree_storage t1(target,1);//A test folder reserved for tree storage
     //for strong laptops with SSD extension (configure test db server to run this??)
     //uh::trees::tree_storage t1("/mnt/md0");//A test folder reserved for tree storage for performance tests
     auto index_list = t1.index(1);
