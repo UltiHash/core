@@ -677,7 +677,6 @@ BOOST_AUTO_TEST_CASE(get_info_set_time_test)
     auto block_info2 = t1.get_info(std::get<1>(*first_el));
     BOOST_ASSERT_MSG(std::get<0>(block_info) < std::get<0>(block_info2),
                      "Block time reset was not successful internally!");
-    t1.delete_recursive();
 }
 
 BOOST_AUTO_TEST_CASE(delete_test)
@@ -710,5 +709,5 @@ BOOST_AUTO_TEST_CASE(delete_test)
                                               " could not be read back after deletion!").c_str());
     }
 
-
+    t1.delete_recursive();
 }
