@@ -96,8 +96,8 @@ BOOST_AUTO_TEST_CASE(write_read_test)
                 all_result = t1.read(local_block_ref);
             }
             catch(std::exception &e){
-            std::stringstream s;
-            s << e.what();
+                std::stringstream s;
+                s << e.what();
                 BOOST_TEST_MESSAGE("Reading critically failed! Error: " + s.str());
             }
             std::vector<unsigned char> read_result = std::get<1>(all_result);
