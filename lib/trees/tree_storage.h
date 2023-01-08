@@ -209,14 +209,6 @@ namespace uh::trees {
             }
             std::unique_lock lock_size(size_protect, std::defer_lock);
             lock_size.lock();
-            if (!std::is_sorted(std::execution::par_unseq, size->begin(), size->end(),
-                                [](const auto &a, const auto &b) {
-                                    return std::get<1>(a) < std::get<1>(b);
-                                }))
-                std::sort(std::execution::par, size->begin(), size->end(),
-                          [](const auto &a, const auto &b) {
-                              return std::get<1>(a) < std::get<1>(b);
-                          });
             //fill holes of size
             if(!size->empty()){
                 auto size_max = std::max_element(size->begin(),size->end(),[](auto &item1,auto& item2){
@@ -233,17 +225,17 @@ namespace uh::trees {
                     }
                 }
             }
-            lock_size.unlock();
-
-            std::scoped_lock lock_children(children_protect);
-            if (!std::is_sorted(std::execution::par_unseq, children->begin(), children->end(),
+            if (!std::is_sorted(std::execution::par_unseq, size->begin(), size->end(),
                                 [](const auto &a, const auto &b) {
                                     return std::get<1>(a) < std::get<1>(b);
                                 }))
-                std::sort(std::execution::par, children->begin(), children->end(),
+                std::sort(std::execution::par, size->begin(), size->end(),
                           [](const auto &a, const auto &b) {
                               return std::get<1>(a) < std::get<1>(b);
                           });
+            lock_size.unlock();
+
+            std::scoped_lock lock_children(children_protect);
             //fill holes of children
             if(!children->empty()){
                 auto children_max = std::max_element(children->begin(),children->end(),[](auto &item1,auto& item2){
@@ -267,6 +259,14 @@ namespace uh::trees {
                     }
                 }
             }
+            if (!std::is_sorted(std::execution::par_unseq, children->begin(), children->end(),
+                                [](const auto &a, const auto &b) {
+                                    return std::get<1>(a) < std::get<1>(b);
+                                }))
+                std::sort(std::execution::par, children->begin(), children->end(),
+                          [](const auto &a, const auto &b) {
+                              return std::get<1>(a) < std::get<1>(b);
+                          });
         }
 
         /*
