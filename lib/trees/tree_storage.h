@@ -218,17 +218,19 @@ namespace uh::trees {
                               return std::get<1>(a) < std::get<1>(b);
                           });
             //fill holes of size
-            auto size_max = std::max_element(size->begin(),size->end(),[](auto &item1,auto& item2){
-                return std::get<1>(item1)<std::get<1>(item2);
-            });
-            auto max_i = std::get<1>(*size_max);
-            for(unsigned short i6=0; i6<max_i;i6++){
-                if(!std::any_of(std::execution::par, size->begin(),size->end(),[&i6](auto &item){
-                    return std::get<1>(item) == i6;
-                })){
-                    std::shared_ptr<std::atomic_flag> f1 = std::make_shared<std::atomic_flag>(), f3 = std::make_shared<std::atomic_flag>();
-                    std::shared_ptr<std::atomic<std::size_t>> f2 = std::make_shared<std::atomic<std::size_t>>();
-                    size->emplace_back(0, i6, f1, f2, f3);
+            if(!size->empty()){
+                auto size_max = std::max_element(size->begin(),size->end(),[](auto &item1,auto& item2){
+                    return std::get<1>(item1)<std::get<1>(item2);
+                });
+                unsigned char max_i = std::get<1>(*size_max);
+                for(unsigned short i6=0; i6<max_i;i6++){
+                    if(!std::any_of(std::execution::par, size->begin(),size->end(),[&i6](auto &item){
+                        return std::get<1>(item) == i6;
+                    })){
+                        std::shared_ptr<std::atomic_flag> f1 = std::make_shared<std::atomic_flag>(), f3 = std::make_shared<std::atomic_flag>();
+                        std::shared_ptr<std::atomic<std::size_t>> f2 = std::make_shared<std::atomic<std::size_t>>();
+                        size->emplace_back(0, i6, f1, f2, f3);
+                    }
                 }
             }
             lock_size.unlock();
@@ -243,24 +245,26 @@ namespace uh::trees {
                               return std::get<1>(a) < std::get<1>(b);
                           });
             //fill holes of children
-            auto children_max = std::max_element(children->begin(),children->end(),[](auto &item1,auto& item2){
-                return std::get<2>(item1)<std::get<2>(item2);
-            });
-            max_i = std::get<1>(*size_max);
-            for(unsigned short i6=0; i6<max_i;i6++){
-                if(!std::any_of(std::execution::par, children->begin(),children->end(),[&i6](auto &item){
-                    return std::get<2>(item) == i6;
-                })){
-                    std::string ref_name{boost::algorithm::hex(std::string{(char) i6})};
-                    std::shared_lock lock_path1(combined_path_protect);
-                    std::string fname = combined_path->filename().string();
-                    lock_path1.unlock();
-                    ref_name.insert(ref_name.cbegin(), fname.cbegin() + 2, fname.cbegin() + 4);
-                    lock_path1.lock();
-                    std::filesystem::path deeper_tree = *combined_path / ref_name;
-                    lock_path1.unlock();
-                    auto *tmp_tree = new tree_storage(deeper_tree);
-                    children->emplace_back(0, tmp_tree, i6);
+            if(!children->empty()){
+                auto children_max = std::max_element(children->begin(),children->end(),[](auto &item1,auto& item2){
+                    return std::get<2>(item1)<std::get<2>(item2);
+                });
+                unsigned char max_i = std::get<2>(*children_max);
+                for(unsigned short i6=0; i6<max_i;i6++){
+                    if(!std::any_of(std::execution::par, children->begin(),children->end(),[&i6](auto &item){
+                        return std::get<2>(item) == i6;
+                    })){
+                        std::string ref_name{boost::algorithm::hex(std::string{(char) i6})};
+                        std::shared_lock lock_path1(combined_path_protect);
+                        std::string fname = combined_path->filename().string();
+                        lock_path1.unlock();
+                        ref_name.insert(ref_name.cbegin(), fname.cbegin() + 2, fname.cbegin() + 4);
+                        lock_path1.lock();
+                        std::filesystem::path deeper_tree = *combined_path / ref_name;
+                        lock_path1.unlock();
+                        auto *tmp_tree = new tree_storage(deeper_tree);
+                        children->emplace_back(0, tmp_tree, i6);
+                    }
                 }
             }
         }
