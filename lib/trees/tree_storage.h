@@ -766,9 +766,8 @@ namespace uh::trees {
                             if (num_threads > 1) rt = std::thread(read_func);
                             else read_func();
 
+                            std::unique_lock lock(m1, std::defer_lock);
                             auto hash_func = [&]() {
-                                std::unique_lock lock(m1, std::defer_lock);
-                                lock.lock();
                                 unsigned char hash_buf[SHA512_DIGEST_LENGTH];//HASH GENERATION
                                 auto block_time_cpy = block_time_current.load();
                                 auto parallel_switch_cpy = parallel_switch.load();
@@ -786,7 +785,10 @@ namespace uh::trees {
                                 return;
                             }
                             if (ht.joinable())ht.join();
-                            if (num_threads > 1)ht = std::thread(hash_func);
+                            lock.lock();
+                            if (num_threads > 1){
+                                ht = std::thread(hash_func);
+                            }
                             else hash_func();
 
                             if (std::feof(reader) || cur_pos.load() >= total_file_size) {
