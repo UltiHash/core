@@ -1833,7 +1833,7 @@ namespace uh::trees {
                         size_read.unlock();
                     }
                     //parallel end
-                    active_threads -= 2;
+                    active_threads -= (num_threads % 2)?1:2;
                 };
                 if (num_threads == 1)first_index_exe_function();
                 else {
@@ -1850,7 +1850,7 @@ namespace uh::trees {
                         usleep(10 * 1000);
 #endif // _WIN32
                     }
-                    active_threads += 2;
+                    active_threads += (num_threads % 2)?1:2;
                     std::thread(first_index_exe_function).detach();
                     if (error_flag.test()) {
                         FATAL << "Delete_blocks threading engine crashed unexpectedly!";
