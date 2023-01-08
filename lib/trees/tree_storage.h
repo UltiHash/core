@@ -1349,7 +1349,6 @@ namespace uh::trees {
                                     return offset1 < offset2;
                                 });
 
-
                                 auto block_step_beg = delete_here_codes.cbegin();
 
                                 auto offset_calc = [](const auto &a_ref, const auto &b_ref) {
@@ -1511,7 +1510,7 @@ namespace uh::trees {
                                     //File should have been opened or created here, seek for first block
                                     //start position of the block for seeking it later on is the old size
                                     std::vector<unsigned char> out_vec{};
-                                    out_vec.reserve(sizeof(unsigned int));
+                                    out_vec.reserve(sizeof(unsigned int));//reconstruct current local reference
                                     for (unsigned short i = 0;
                                          i < (unsigned short) sizeof(unsigned int); i++) {//STORE_MAX will fit in 4 bytes
                                         out_vec.push_back((unsigned char) (cur_pos >> (i * 8)));
