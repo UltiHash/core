@@ -223,7 +223,7 @@ namespace uh::trees {
             });
             auto max_i = std::get<1>(*size_max);
             for(unsigned short i6=0; i6<max_i;i6++){
-                if(!std::any_of(size->begin(),size->end(),[&i6](auto &item){
+                if(!std::any_of(std::execution::par, size->begin(),size->end(),[&i6](auto &item){
                     return std::get<1>(item) == i6;
                 })){
                     std::shared_ptr<std::atomic_flag> f1 = std::make_shared<std::atomic_flag>(), f3 = std::make_shared<std::atomic_flag>();
@@ -248,7 +248,7 @@ namespace uh::trees {
             });
             max_i = std::get<1>(*size_max);
             for(unsigned short i6=0; i6<max_i;i6++){
-                if(!std::any_of(children->begin(),children->end(),[&i6](auto &item){
+                if(!std::any_of(std::execution::par, children->begin(),children->end(),[&i6](auto &item){
                     return std::get<2>(item) == i6;
                 })){
                     std::string ref_name{boost::algorithm::hex(std::string{(char) i6})};
