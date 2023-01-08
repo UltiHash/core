@@ -1341,7 +1341,6 @@ namespace uh::trees {
             }
             sorted_block_codes.push_back(buffer);
 
-            std::mutex m1{};
             for(auto &item:sorted_block_codes){
                 auto error_thread_sequence = [&]() {
                     while (std::atomic_flag_test_and_set_explicit(&error_flag,
@@ -1351,7 +1350,6 @@ namespace uh::trees {
                 };
 
                 auto first_index_exe_function = [&]() {
-                    std::unique_lock lock(m1);
                     //parallel start
                     std::vector<std::vector<unsigned char>> deeper_codes{}, delete_here_codes{};
                     //take a branch to delete multiple blocks within
@@ -1377,7 +1375,6 @@ namespace uh::trees {
                         auto read_ptr = &(*std::get<3>(size->at((*item.begin())[0])));
                         auto write_ptr = &(*std::get<2>(size->at((*item.begin())[0])));
                         size_read.unlock();
-                        lock.unlock();
 
                         while (std::atomic_flag_test_and_set_explicit(&(*maintain_ptr),
                                                                       std::memory_order_acquire)) {
@@ -1792,7 +1789,6 @@ namespace uh::trees {
                         if (!maintain_ptr->test())maintain_ptr->notify_one();
                     } else {
                         size_read.unlock();
-                        lock.unlock();
                     }
 
                     //delete deeper codes
