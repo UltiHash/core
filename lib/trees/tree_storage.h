@@ -667,11 +667,11 @@ namespace uh::trees {
 
                         std::atomic<std::size_t> output_size{};
                         std::atomic<bool> parallel_switch{};
-                        std::shared_mutex m1{};
-                        std::unique_lock lock(m1, std::defer_lock);
+                        std::mutex m1{};
+                        std::unique_lock global_thread_lock(m1, std::defer_lock);
                         while (!std::feof(reader) && cur_pos.load() < total_file_size) {
                             auto read_func = [&]() {
-                                lock.lock();
+                                std::unique_lock local_thread_lock(m1);
                                 auto parallel_switch_cpy = parallel_switch.load();
                                 parallel_switch = !parallel_switch.load();
                                 local_block_ref[parallel_switch_cpy].clear();
@@ -741,7 +741,7 @@ namespace uh::trees {
                                 for (unsigned char buf_count = 0; buf_count <= buf_size; buf_count++) {
                                     output_size += (((std::size_t) buffer_for_size[buf_count]) << (buf_count * 8));
                                 }
-                                lock.unlock();
+                                local_thread_lock.unlock();
 
                                 tmp_buf[parallel_switch_cpy] = mem_wait<unsigned char>(output_size.load());
                                 count = std::fread(tmp_buf[parallel_switch_cpy].data(), sizeof(unsigned char),
@@ -770,7 +770,7 @@ namespace uh::trees {
                                 unsigned char hash_buf[SHA512_DIGEST_LENGTH];//HASH GENERATION
                                 auto block_time_cpy = block_time_current.load();
                                 auto parallel_switch_cpy = parallel_switch.load();
-                                lock.unlock();
+                                global_thread_lock.unlock();
                                 SHA512(tmp_buf[!parallel_switch_cpy].data(), tmp_buf[!parallel_switch_cpy].size(), hash_buf);
 
                                 std::vector<unsigned char> hash{hash_buf, hash_buf + SHA512_DIGEST_LENGTH};
@@ -784,7 +784,7 @@ namespace uh::trees {
                                 return;
                             }
                             if (ht.joinable())ht.join();
-                            lock.lock();
+                            global_thread_lock.lock();
                             if (num_threads > 1){
                                 ht = std::thread(hash_func);
                             }
