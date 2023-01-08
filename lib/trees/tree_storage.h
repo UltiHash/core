@@ -123,7 +123,10 @@ namespace uh::trees {
          */
         explicit tree_storage(const std::filesystem::path &root,
                               unsigned short num_threads = std::thread::hardware_concurrency()) {
-            if (!num_threads)return;
+            if (!num_threads || root.empty()){
+                ERROR << "No root as input or there was a lack of threading resources!";
+                return;
+            }
             std::atomic<long> i_constructor{-1};
 
             std::unique_lock lock5(combined_path_protect, std::defer_lock);
@@ -302,7 +305,10 @@ namespace uh::trees {
         std::vector<unsigned char> write(const std::vector<unsigned char> &input,
                                          unsigned long current_time = (unsigned long) std::chrono::nanoseconds(
                                                  std::chrono::high_resolution_clock::now().time_since_epoch()).count()) {
-            if (input.empty())return std::vector<unsigned char>{};
+            if (input.empty()){
+                ERROR << "No input given to write!";
+                return std::vector<unsigned char>{};
+            }
             if (input.size() > STORE_MAX) {
                 FATAL << "A block could not be written because it exceeded maximum size of blocks \"" +
                          std::to_string(STORE_MAX) +
@@ -459,6 +465,7 @@ namespace uh::trees {
          */
         std::tuple<unsigned long, std::vector<unsigned char>> read(const std::vector<unsigned char> &block_code) {
             if (block_code.empty()) {
+                ERROR << "No input given to read!";
                 return {};
             }
             if (block_code.size() > 5) {
@@ -634,7 +641,10 @@ namespace uh::trees {
          */
         std::list<std::tuple<std::vector<unsigned char>, std::vector<unsigned char>, unsigned long>>
         index(unsigned short num_threads = std::thread::hardware_concurrency()) {
-            if (!num_threads)return {};
+            if (!num_threads) {
+                ERROR << "Not enough threading resources!";
+                return {};
+            }
             std::shared_ptr<std::list<std::tuple<std::vector<unsigned char>, std::vector<unsigned char>, unsigned long>>> search_index = std::make_shared<std::list<std::tuple<std::vector<unsigned char>, std::vector<unsigned char>, unsigned long>>>();
             std::shared_mutex search_index_protect{};
             std::atomic<long> i_constructor{-1};
@@ -899,7 +909,10 @@ namespace uh::trees {
          * missing blocks still persist
          */
         std::size_t delete_recursive(unsigned short num_threads = std::thread::hardware_concurrency()) {
-            if (!num_threads)return {};
+            if (!num_threads){
+                ERROR << "No input given to write!";
+                return {};
+            }
             std::atomic<long> i_constructor{-1};
             std::atomic<std::size_t> out_size{};
             std::atomic_flag error_flag{ATOMIC_FLAG_INIT};
@@ -1000,6 +1013,7 @@ namespace uh::trees {
         //returns a tuple with block time and block size from disk and total size on disk on request of local block reference
         std::tuple<unsigned long, std::size_t, std::size_t> get_info(const std::vector<unsigned char> &block_code) {
             if (block_code.empty()) {
+                ERROR << "No input given to get info of block!";
                 return {};
             }
             if (block_code.size() > 5) {
@@ -1158,6 +1172,7 @@ namespace uh::trees {
                             unsigned long current_time = (unsigned long) std::chrono::nanoseconds(
                                     std::chrono::high_resolution_clock::now().time_since_epoch()).count()) {
             if (block_code.empty()) {
+                ERROR << "No input given to set block time!";
                 return false;
             }
             if (block_code.size() > 5) {
@@ -1294,7 +1309,10 @@ namespace uh::trees {
         delete_blocks(
                 std::vector<std::vector<unsigned char>> &block_codes,
                 unsigned short num_threads = std::thread::hardware_concurrency()) {
-            if (block_codes.empty() || !num_threads)return {};
+            if (block_codes.empty() || !num_threads){
+                ERROR << "No block codes as input or there was a lack of threading resources!";
+                return {};
+            }
             std::atomic_flag error_flag(ATOMIC_FLAG_INIT);
             std::atomic<std::size_t> active_threads{};
             std::atomic<std::size_t> out_size{};
@@ -1307,7 +1325,26 @@ namespace uh::trees {
             //scan and filter for size == 5 and delete blocks from chunks, deliver deleted size and changed local block codes via chunk level indexing after change spot
             //use multithreading with a thread management system so that threads from deleting go on to deeper delete
 
-            unsigned char current;
+            //presort local block reference groups
+            std::vector<std::vector<std::vector<unsigned char>>> sorted_block_codes{};
+            unsigned char current = (*block_codes.begin())[0];
+            std::vector<std::vector<unsigned char>> buffer{};
+            for(auto it = block_codes.begin(); it < block_codes.end();it++){
+                if((*it)[0] != current){
+                    sorted_block_codes.push_back(buffer);
+                    buffer.clear();
+                    current = (*it)[0];
+                }
+                else{
+                    buffer.push_back(*it);
+                }
+            }
+            sorted_block_codes.push_back(buffer);
+
+            for(auto &item:sorted_block_codes){
+
+            }
+
             bool first = true;
             auto beg = block_codes.begin();
             auto end = beg;
