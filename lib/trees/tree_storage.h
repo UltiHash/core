@@ -1518,7 +1518,10 @@ namespace uh::trees {
                                                                                std::memory_order_acquire);//put error flag on
                                         if (num_threads > 1) {
                                             if (w1.joinable())w1.join();//write out remaining blocks to prevent data loss
-                                        } else write_once_to_maintain_file();
+                                        } else{
+                                            write_once_to_maintain_file();
+                                            std::fclose(writer);
+                                        }
 
                                         read_end_sequence();//reset reader flags
                                     };
@@ -1628,6 +1631,7 @@ namespace uh::trees {
                                     if (w1.joinable())w1.join();
                                 } else {
                                     write_once_to_maintain_file();
+                                    std::fclose(writer);
                                 }
 
                                 if (error_flag.test()) {
