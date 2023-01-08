@@ -1719,7 +1719,7 @@ namespace uh::trees {
                                 fclose(source);
 
                                 filesystem_lock.lock();
-                                //std::filesystem::remove(chunk_maintain);
+                                std::filesystem::remove(chunk_maintain);
                                 filesystem_lock.unlock();
 
                                 size_read.lock();
