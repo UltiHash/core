@@ -261,11 +261,11 @@ namespace uh::trees {
             }
             if (!std::is_sorted(std::execution::par_unseq, children->begin(), children->end(),
                                 [](const auto &a, const auto &b) {
-                                    return std::get<1>(a) < std::get<1>(b);
+                                    return std::get<2>(a) < std::get<2>(b);
                                 }))
                 std::sort(std::execution::par, children->begin(), children->end(),
                           [](const auto &a, const auto &b) {
-                              return std::get<1>(a) < std::get<1>(b);
+                              return std::get<2>(a) < std::get<2>(b);
                           });
         }
 
