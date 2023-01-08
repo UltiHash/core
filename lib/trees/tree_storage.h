@@ -58,6 +58,7 @@ namespace uh::trees {
         std::shared_ptr<std::filesystem::path> combined_path = std::make_shared<std::filesystem::path>();
         std::shared_mutex work_steal_protect{};
         std::shared_mutex std_filesystem_protect{};
+        std::shared_mutex memory_protect{};
 
         //returns wrapped string
         static std::vector<unsigned char> prefix_wrap(std::size_t input_size) {
@@ -80,7 +81,7 @@ namespace uh::trees {
 
     private:
         template<typename ALLOC>
-        ALLOC *mem_wait(std::size_t mem) {
+        std::vector<ALLOC> mem_wait(std::size_t mem) {
             //long pages = sysconf(_SC_PHYS_PAGES);
             //long page_size = sysconf(_SC_PAGE_SIZE);
             std::size_t count{};
@@ -88,22 +89,30 @@ namespace uh::trees {
             std::size_t freeMem;
 
             do {
+                std::unique_lock lock_mem(memory_protect,std::defer_lock);
+                lock_mem.lock();
                 struct sysinfo info{};
                 sysinfo(&info);
                 freeMem = info.freeram;
 
-                if (freeMem >= mem) {
-                    return new ALLOC[mem];
+                if (freeMem >= mem * sizeof(ALLOC)) {
+                    auto out_vec = std::vector<ALLOC>();
+                    out_vec.reserve(mem);
+                    lock_mem.unlock();
+                    return out_vec;
                 }
+                lock_mem.unlock();
 #ifdef _WIN32
                 Sleep(10);
 #else
                 usleep(10 * 1000);
 #endif // _WIN32
                 count++;
-            } while (freeMem < mem);
-
-            return new ALLOC[mem];
+            } while (freeMem < mem * sizeof(ALLOC));
+            std::scoped_lock lock_mem2(memory_protect);
+            auto out_vec = std::vector<ALLOC>();
+            out_vec.reserve(mem);
+            return out_vec;
         }
 
     public:
@@ -555,29 +564,24 @@ namespace uh::trees {
                     for (unsigned char buf_count = 0; buf_count <= buf_size; buf_count++) {
                         output_size += (((std::size_t) buffer_in[buf_count]) << (buf_count * 8));
                     }
-                    auto *tmp_buf = mem_wait<unsigned char>(output_size);
-                    count = std::fread(tmp_buf, sizeof(unsigned char), output_size, reader);
+                    auto tmp_buf = mem_wait<unsigned char>(output_size);
+                    count = std::fread(tmp_buf.data(), sizeof(unsigned char), output_size, reader);
                     total_read += count;
 
                     if (count != output_size) {
                         FATAL << "I/O was not completed on path \"" + read_path.string() + "\"";
-                        delete[] tmp_buf;
                         read_end_sequence();
                         return {0, std::vector<unsigned char>{}};
                     }
                     if (std::ferror(reader)) {
                         FATAL << "I/O error when reading prefix at path \"" + read_path.string() + "\"";
-                        delete[] tmp_buf;
                         read_end_sequence();
                         return {0, std::vector<unsigned char>{}};
                     }
 
                     read_end_sequence();
 
-                    std::vector<unsigned char> out_vec{tmp_buf, tmp_buf + output_size};
-                    delete[] tmp_buf;
-
-                    return {block_time, out_vec};
+                    return {block_time, tmp_buf};
                 }
             }
         }
@@ -659,9 +663,8 @@ namespace uh::trees {
 
                         std::shared_ptr<std::vector<unsigned char>> local_block_ref = std::make_shared<std::vector<unsigned char>>();
                         std::atomic<unsigned long> block_time_current{};
-                        std::atomic<unsigned char *>tmp_buf[2];
-                        tmp_buf[0] = nullptr;
-                        tmp_buf[1] = nullptr;
+                        std::vector<unsigned char>tmp_buf[2];
+
                         std::atomic<std::size_t> output_size{};
                         std::atomic<bool> parallel_switch{};
                         std::shared_mutex m1{};
@@ -741,20 +744,18 @@ namespace uh::trees {
                                 lock.unlock();
 
                                 tmp_buf[parallel_switch_cpy] = mem_wait<unsigned char>(output_size.load());
-                                count = std::fread(tmp_buf[parallel_switch_cpy].load(), sizeof(unsigned char),
-                                                   output_size.load(), reader);
+                                count = std::fread(tmp_buf[parallel_switch_cpy].data(), sizeof(unsigned char),
+                                                   tmp_buf[parallel_switch_cpy].size(), reader);
                                 cur_pos += count;
 
                                 if (count != output_size.load()) {
                                     FATAL << "I/O was not completed on path \"" + read_path.string() + "\"";
-                                    delete[] tmp_buf[parallel_switch_cpy];
                                     read_end_sequence();
                                     error_thread_sequence();
                                     if (error_flag.test())return;
                                 }
                                 if (std::ferror(reader)) {
                                     FATAL << "I/O error when reading prefix at path \"" + read_path.string() + "\"";
-                                    delete[] tmp_buf[parallel_switch_cpy];
                                     read_end_sequence();
                                     error_thread_sequence();
                                     if (error_flag.test())return;
@@ -772,11 +773,9 @@ namespace uh::trees {
                                 auto tmp_local_block_ref = *local_block_ref;
                                 local_block_ref->clear();
                                 auto block_time_cpy = block_time_current.load();
-                                auto output_tmp = output_size.load();
                                 auto parallel_switch_cpy = parallel_switch.load();
                                 lock.unlock();
-                                SHA512(tmp_buf[!parallel_switch_cpy].load(), output_tmp, hash_buf);
-                                delete[] tmp_buf[!parallel_switch_cpy].load();
+                                SHA512(tmp_buf[!parallel_switch_cpy].data(), tmp_buf[!parallel_switch_cpy].size(), hash_buf);
 
                                 std::vector<unsigned char> hash{hash_buf, hash_buf + SHA512_DIGEST_LENGTH};
                                 std::scoped_lock lock_emplace(search_index_protect);
@@ -1395,7 +1394,7 @@ namespace uh::trees {
                                 std::size_t delete_size{};
                                 //producer consumer queue for reading and writing; contains RAM pointer; size of RAM pointer; local tree storage reference of;
                                 // *this tree where the referring chunk is stored; truncate size for the chunk; new storage reference after append
-                                std::shared_ptr<std::list<std::tuple<unsigned char *, std::size_t, std::vector<unsigned char>, std::size_t>>> multithreading_factory = std::make_shared<std::list<std::tuple<unsigned char *, std::size_t, std::vector<unsigned char>, std::size_t>>>();
+                                std::shared_ptr<std::list<std::tuple<std::vector<unsigned char>, std::vector<unsigned char>, std::size_t>>> multithreading_factory = std::make_shared<std::list<std::tuple<std::vector<unsigned char>, std::vector<unsigned char>, std::size_t>>>();
                                 std::shared_mutex multithreading_factory_protect{};
 
                                 while (std::atomic_flag_test_and_set_explicit(&write_control,
@@ -1423,9 +1422,8 @@ namespace uh::trees {
                                     std::unique_lock multithread_f_read(multithreading_factory_protect,
                                                                         std::defer_lock);
                                     multithread_f_read.lock();
-                                    auto new_offset = std::get<3>(*multithreading_factory->cbegin());
-                                    auto old_block_code = std::get<2>(*multithreading_factory->cbegin());
-                                    auto size_of_block = std::get<1>(*multithreading_factory->cbegin());
+                                    auto new_offset = std::get<2>(*multithreading_factory->cbegin());
+                                    auto old_block_code = std::get<1>(*multithreading_factory->cbegin());
                                     auto current_storage_ptr = std::get<0>(*multithreading_factory->cbegin());
                                     multithread_f_read.unlock();
                                     std::vector<unsigned char> out_vec{};
@@ -1438,7 +1436,7 @@ namespace uh::trees {
                                     }
                                     out_vec.insert(out_vec.cbegin(), old_block_code[0]);
 
-                                    std::fwrite(current_storage_ptr, size_of_block, sizeof(unsigned char),
+                                    std::fwrite(current_storage_ptr.data(), current_storage_ptr.size(), sizeof(unsigned char),
                                                 writer);
                                     if (std::ferror(writer)) {
                                         FATAL << "I/O error when deleting block writing \"" +
@@ -1446,15 +1444,9 @@ namespace uh::trees {
                                         io_end_sequence();
                                         error_thread_sequence();
                                         if (error_flag.test()) {
-                                            multithread_f_read.lock();
-                                            for (const auto &it: *multithreading_factory) {
-                                                std::free(std::get<0>(it));
-                                            }
-                                            multithread_f_read.unlock();
                                             return;
                                         }
                                     }
-                                    std::free(current_storage_ptr);
                                     //tmp_buf,write_back_size,out_vec,this,trunc_at
                                     //std::vector<unsigned char>, std::vector<unsigned char>, tree_storage *, std::size_t>>>
                                     std::unique_lock lock_output(out_change_list_protect, std::defer_lock);
@@ -1599,7 +1591,7 @@ namespace uh::trees {
                                         block_step_beg++;
                                     } else {
                                         //copy block to maintain file
-                                        auto *tmp_buf = mem_wait<unsigned char>(write_back_size);
+                                        auto tmp_buf = mem_wait<unsigned char>(write_back_size);
                                         unsigned short i = 0;
                                         for (; i < (unsigned short) sizeof(time_buf); i++) {
                                             tmp_buf[i] = time_buf[i];
@@ -1612,7 +1604,7 @@ namespace uh::trees {
                                             tmp_buf[i + meta_offset] = buffer_in[i];
                                         }
 
-                                        count = std::fread(tmp_buf + (write_back_size - output_size),
+                                        count = std::fread(tmp_buf.data() + (write_back_size - output_size),
                                                            sizeof(unsigned char),
                                                            output_size, reader);
 
@@ -1628,7 +1620,7 @@ namespace uh::trees {
                                         }
                                         cur_pos += count;
                                         std::scoped_lock write_multithreading_f(multithreading_factory_protect);
-                                        multithreading_factory->emplace_back(tmp_buf, write_back_size, out_vec,
+                                        multithreading_factory->emplace_back(tmp_buf, out_vec,
                                                                              cur_pos - write_back_size - delete_size);
                                     }
                                 }
@@ -1688,7 +1680,7 @@ namespace uh::trees {
                                     ptr_release_sequence();
                                     return;
                                 }
-                                if (fread(buf, sizeof(unsigned char), maintain_size_append, source) != maintain_size_append) {
+                                if (fread(buf.data(), sizeof(unsigned char), buf.size(), source) != maintain_size_append) {
                                     ERROR << "File read opening for append failed at \"" + chunk_maintain.string() + "\"";
                                     fclose(source);
                                     ptr_release_sequence();
@@ -1708,7 +1700,7 @@ namespace uh::trees {
                                     ptr_release_sequence();
                                     return;
                                 }
-                                fwrite(buf, sizeof(unsigned char), maintain_size_append, dest);
+                                fwrite(buf.data(), sizeof(unsigned char), buf.size(), dest);
                                 if (std::ferror(dest)) {
                                     FATAL << "I/O error when appending \"" + chunk_maintain.string() + "\"";
                                     fclose(source);
