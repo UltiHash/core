@@ -213,7 +213,7 @@ namespace uh::trees {
                                 [](const auto &a, const auto &b) {
                                     return std::get<1>(a) < std::get<1>(b);
                                 }))
-                std::sort(std::execution::par_unseq, size->begin(), size->end(),
+                std::sort(std::execution::par, size->begin(), size->end(),
                           [](const auto &a, const auto &b) {
                               return std::get<1>(a) < std::get<1>(b);
                           });
@@ -223,7 +223,7 @@ namespace uh::trees {
                                 [](const auto &a, const auto &b) {
                                     return std::get<1>(a) < std::get<1>(b);
                                 }))
-                std::sort(std::execution::par_unseq, children->begin(), children->end(),
+                std::sort(std::execution::par, children->begin(), children->end(),
                           [](const auto &a, const auto &b) {
                               return std::get<1>(a) < std::get<1>(b);
                           });
@@ -910,8 +910,8 @@ namespace uh::trees {
                         filesystem_lock.lock();
                         std::shared_lock path_protect(combined_path_protect,std::defer_lock);
                         path_protect.lock();
-                        if(std::filesystem::exists(*combined_path) && std::filesystem::is_empty(*combined_path)){
-                            std::filesystem::remove(*combined_path);
+                        if(std::filesystem::exists(*combined_path)){
+                            std::filesystem::remove_all(*combined_path);
                         }
                         path_protect.unlock();
                         filesystem_lock.unlock();
@@ -1258,7 +1258,7 @@ namespace uh::trees {
             std::shared_mutex out_change_list_protect{};
             std::list<std::tuple<std::vector<unsigned char>, std::vector<unsigned char>>> out_change_list{};
             //sort for lexicographic to find blocks within the same chunks that all need to be deleted
-            std::sort(block_codes.begin(), block_codes.end(), [](auto &a, auto &b) {
+            std::sort(std::execution::par, block_codes.begin(), block_codes.end(), [](auto &a, auto &b) {
                 return std::lexicographical_compare(a.begin(), a.end(), b.begin(), b.end());
             });
             //scan and filter for size == 5 and delete blocks from chunks, deliver deleted size and changed local block codes via chunk level indexing after change spot
@@ -1283,7 +1283,7 @@ namespace uh::trees {
                                 return;
                             }
                         };
-                        std::shared_mutex m1{};
+                        std::mutex m1{};
                         std::unique_lock lock(m1, std::defer_lock);
                         auto first_index_exe_function = [&]() {
                             lock.lock();
