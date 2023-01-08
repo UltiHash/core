@@ -674,7 +674,7 @@ namespace uh::trees {
                                 lock.lock();
                                 auto parallel_switch_cpy = parallel_switch.load();
                                 parallel_switch = !parallel_switch.load();
-                                local_block_ref[parallel_switch_cpy].reserve(sizeof(unsigned int));
+                                local_block_ref[parallel_switch_cpy].clear();
 
                                 for (unsigned short i1 = 0;
                                      i1 < (unsigned short) sizeof(unsigned int); i1++) {//STORE_MAX will fit in 4 bytes
@@ -778,7 +778,6 @@ namespace uh::trees {
                                 std::vector<unsigned char> hash{hash_buf, hash_buf + SHA512_DIGEST_LENGTH};
                                 std::scoped_lock lock_emplace(search_index_protect);
                                 search_index->emplace_back(hash, local_block_ref[!parallel_switch_cpy], block_time_cpy);
-                                local_block_ref[!parallel_switch_cpy].clear();
                             };
 
                             if (rt.joinable())rt.join();
