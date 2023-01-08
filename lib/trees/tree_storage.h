@@ -1256,7 +1256,7 @@ namespace uh::trees {
             std::atomic<std::size_t> active_threads{};
             std::atomic<std::size_t> out_size{};
             std::shared_mutex out_change_list_protect{};
-            std::shared_ptr<std::list<std::tuple<std::vector<unsigned char>, std::vector<unsigned char>>>> out_change_list = std::make_shared<std::list<std::tuple<std::vector<unsigned char>, std::vector<unsigned char>>>>();
+            std::list<std::tuple<std::vector<unsigned char>, std::vector<unsigned char>>> out_change_list{};
             //sort for lexicographic to find blocks within the same chunks that all need to be deleted
             std::sort(block_codes.begin(), block_codes.end(), [](auto &a, auto &b) {
                 return std::lexicographical_compare(a.begin(), a.end(), b.begin(), b.end());
@@ -1393,8 +1393,8 @@ namespace uh::trees {
                                 std::size_t delete_size{};
                                 //producer consumer queue for reading and writing; contains RAM pointer; size of RAM pointer; local tree storage reference of;
                                 // *this tree where the referring chunk is stored; truncate size for the chunk; new storage reference after append
-                                std::shared_ptr<std::list<std::tuple<std::vector<unsigned char>, std::vector<unsigned char>, std::size_t>>> multithreading_factory = std::make_shared<std::list<std::tuple<std::vector<unsigned char>, std::vector<unsigned char>, std::size_t>>>();
-                                std::shared_mutex multithreading_factory_protect{};
+                                std::list<std::tuple<std::vector<unsigned char>, std::vector<unsigned char>, std::size_t>> multithreading_factory{};
+                                std::mutex multithreading_factory_protect{};
 
                                 while (std::atomic_flag_test_and_set_explicit(&write_control,
                                                                               std::memory_order_acquire)) {
@@ -1421,9 +1421,9 @@ namespace uh::trees {
                                     std::unique_lock multithread_f_read(multithreading_factory_protect,
                                                                         std::defer_lock);
                                     multithread_f_read.lock();
-                                    auto new_offset = std::get<2>(*multithreading_factory->cbegin());
-                                    auto old_block_code = std::get<1>(*multithreading_factory->cbegin());
-                                    auto current_storage_ptr = std::get<0>(*multithreading_factory->cbegin());
+                                    auto new_offset = std::get<2>(*multithreading_factory.cbegin());
+                                    auto old_block_code = std::get<1>(*multithreading_factory.cbegin());
+                                    auto current_storage_ptr = std::get<0>(*multithreading_factory.cbegin());
                                     multithread_f_read.unlock();
                                     std::vector<unsigned char> out_vec{};
                                     out_vec.reserve(sizeof(unsigned int));
@@ -1450,12 +1450,12 @@ namespace uh::trees {
                                     //std::vector<unsigned char>, std::vector<unsigned char>, tree_storage *, std::size_t>>>
                                     std::unique_lock lock_output(out_change_list_protect, std::defer_lock);
                                     lock_output.lock();
-                                    out_change_list->emplace_back(old_block_code, out_vec);
+                                    out_change_list.emplace_back(old_block_code, out_vec);
                                     lock_output.unlock();
                                     std::unique_lock write_multithreading_f(multithreading_factory_protect,
                                                                             std::defer_lock);
                                     write_multithreading_f.lock();
-                                    multithreading_factory->pop_front();
+                                    multithreading_factory.pop_front();
                                     write_multithreading_f.unlock();
                                     if (error_flag.test()) {
                                         FATAL << "I/O extern error when deleting block writing \"" +
@@ -1472,7 +1472,7 @@ namespace uh::trees {
                                         std::unique_lock multithread_f_read(multithreading_factory_protect,
                                                                             std::defer_lock);
                                         multithread_f_read.lock();
-                                        while (!multithreading_factory->empty()) {
+                                        while (!multithreading_factory.empty()) {
                                             multithread_f_read.unlock();
                                             write_once_to_maintain_file();
                                             multithread_f_read.lock();
@@ -1519,7 +1519,7 @@ namespace uh::trees {
                                         if (num_threads > 1) {
                                             if (w1.joinable())w1.join();//write out remaining blocks to prevent data loss
                                         } else{
-                                            write_once_to_maintain_file();
+                                            if(!multithreading_factory.empty())write_once_to_maintain_file();
                                             std::fclose(writer);
                                         }
 
@@ -1622,7 +1622,7 @@ namespace uh::trees {
                                         }
                                         cur_pos += count;
                                         std::scoped_lock write_multithreading_f(multithreading_factory_protect);
-                                        multithreading_factory->emplace_back(tmp_buf, out_vec,
+                                        multithreading_factory.emplace_back(tmp_buf, out_vec,
                                                                              cur_pos - write_back_size - delete_size);
                                     }
                                 }
@@ -1753,7 +1753,7 @@ namespace uh::trees {
                                 }
 
                                 std::scoped_lock lock_splice(out_change_list_protect);
-                                out_change_list->splice(out_change_list->cend(), std::get<1>(deeper_delete));
+                                out_change_list.splice(out_change_list.cend(), std::get<1>(deeper_delete));
                             } else children_read.unlock();
 
                             std::lock(size_read, children_read);
@@ -1803,7 +1803,7 @@ namespace uh::trees {
                 cur = end;
             }
             std::scoped_lock out_return_lock(out_change_list_protect);
-            return {out_size.load(), *out_change_list};
+            return {out_size.load(), out_change_list};
         }
 
         /*
