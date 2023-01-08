@@ -1671,7 +1671,7 @@ namespace uh::trees {
 
                                 FILE *source = fopen(chunk_maintain.make_preferred().c_str(), "rb");
                                 auto ptr_release_sequence = [&]() {
-                                    error_thread_sequence();
+                                    fclose(source);
                                     std::atomic_flag_clear_explicit(write_ptr, std::memory_order_release);
                                     if (!write_ptr->test())write_ptr->notify_one();
                                     std::atomic_flag_clear_explicit(maintain_ptr, std::memory_order_release);
@@ -1679,36 +1679,36 @@ namespace uh::trees {
                                 };
                                 if (!source) {
                                     ERROR << "File read opening failed at \"" + chunk_maintain.string() + "\"";
-                                    fclose(source);
+                                    error_thread_sequence();
                                     ptr_release_sequence();
                                     return;
                                 }
                                 if (fread(buf.data(), sizeof(unsigned char), buf.size(), source) != maintain_size_append) {
                                     ERROR << "File read opening for append failed at \"" + chunk_maintain.string() + "\"";
-                                    fclose(source);
+                                    error_thread_sequence();
                                     ptr_release_sequence();
                                     return;
                                 }
                                 if (std::ferror(source)) {
                                     FATAL << "I/O error when reading \"" + chunk_maintain.string() + "\"";
-                                    fclose(source);
+                                    error_thread_sequence();
                                     ptr_release_sequence();
                                     return;
                                 }
                                 FILE *dest = fopen(chunk.make_preferred().c_str(), "ab");
                                 if (!dest) {
                                     ERROR << "File append opening failed at \"" + chunk_maintain.string() + "\"";
-                                    fclose(source);
                                     fclose(dest);
                                     ptr_release_sequence();
+                                    error_thread_sequence();
                                     return;
                                 }
                                 fwrite(buf.data(), sizeof(unsigned char), buf.size(), dest);
                                 if (std::ferror(dest)) {
                                     FATAL << "I/O error when appending \"" + chunk_maintain.string() + "\"";
-                                    fclose(source);
                                     fclose(dest);
                                     ptr_release_sequence();
+                                    error_thread_sequence();
                                     return;
                                 }
 
@@ -1723,7 +1723,10 @@ namespace uh::trees {
                                 std::get<0>(size->at((*cur_tmp)[0])) -= delete_size;
                                 size_read.unlock();
 
-                                ptr_release_sequence();
+                                std::atomic_flag_clear_explicit(write_ptr, std::memory_order_release);
+                                if (!write_ptr->test())write_ptr->notify_one();
+                                std::atomic_flag_clear_explicit(maintain_ptr, std::memory_order_release);
+                                if (!maintain_ptr->test())maintain_ptr->notify_one();
                             } else {
                                 size_read.unlock();
                                 lock.unlock();
@@ -1737,7 +1740,7 @@ namespace uh::trees {
                                 auto tmp_deeper_tree_ptr = std::get<1>(children->at((*cur_tmp)[0]));
                                 children_read.unlock();
                                 //parallel start
-                                auto deeper_delete = tmp_deeper_tree_ptr->delete_blocks(deeper_codes, 1);
+                                auto deeper_delete = tmp_deeper_tree_ptr->delete_blocks(deeper_codes, 2);
                                 children_read.lock();
                                 std::get<0>(children->at((*cur_tmp)[0])) -= std::get<0>(
                                         deeper_delete);//subtract deleted size from deeper node
