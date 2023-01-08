@@ -1797,7 +1797,7 @@ namespace uh::trees {
                         auto tmp_deeper_tree_ptr = std::get<1>(children->at((*item.begin())[0]));
                         children_read.unlock();
                         //parallel start
-                        auto deeper_delete = tmp_deeper_tree_ptr->delete_blocks(deeper_codes, 2);
+                        auto deeper_delete = tmp_deeper_tree_ptr->delete_blocks(deeper_codes, (num_threads % 2)?1:2);
                         children_read.lock();
                         std::get<0>(children->at((*item.begin())[0])) -= std::get<0>(
                                 deeper_delete);//subtract deleted size from deeper node
