@@ -661,7 +661,7 @@ namespace uh::trees {
 
                         std::thread rt, ht;
 
-                        std::shared_ptr<std::vector<unsigned char>> local_block_ref = std::make_shared<std::vector<unsigned char>>();
+                        std::vector<unsigned char> local_block_ref[2];
                         std::atomic<unsigned long> block_time_current{};
                         std::vector<unsigned char>tmp_buf[2];
 
@@ -672,13 +672,15 @@ namespace uh::trees {
                             auto read_func = [&]() {
                                 std::unique_lock lock(m1, std::defer_lock);
                                 lock.lock();
-                                local_block_ref->reserve(sizeof(unsigned int));
+                                auto parallel_switch_cpy = parallel_switch.load();
+                                parallel_switch = !parallel_switch.load();
+                                local_block_ref[parallel_switch_cpy].reserve(sizeof(unsigned int));
 
                                 for (unsigned short i1 = 0;
                                      i1 < (unsigned short) sizeof(unsigned int); i1++) {//STORE_MAX will fit in 4 bytes
-                                    local_block_ref->push_back((unsigned char) (cur_pos.load() >> (i1 * 8)));
+                                    local_block_ref[parallel_switch_cpy].push_back((unsigned char) (cur_pos.load() >> (i1 * 8)));
                                 }
-                                local_block_ref->insert(local_block_ref->cbegin(), i);
+                                local_block_ref[parallel_switch_cpy].insert(local_block_ref[parallel_switch_cpy].cbegin(), i);
 
                                 unsigned char time_buf[sizeof(unsigned long)];
                                 std::size_t count = std::fread(&time_buf, sizeof(unsigned char), sizeof(unsigned long),
@@ -739,8 +741,6 @@ namespace uh::trees {
                                 for (unsigned char buf_count = 0; buf_count <= buf_size; buf_count++) {
                                     output_size += (((std::size_t) buffer_for_size[buf_count]) << (buf_count * 8));
                                 }
-                                auto parallel_switch_cpy = parallel_switch.load();
-                                parallel_switch = !parallel_switch.load();
                                 lock.unlock();
 
                                 tmp_buf[parallel_switch_cpy] = mem_wait<unsigned char>(output_size.load());
@@ -770,8 +770,6 @@ namespace uh::trees {
                                 std::unique_lock lock(m1, std::defer_lock);
                                 lock.lock();
                                 unsigned char hash_buf[SHA512_DIGEST_LENGTH];//HASH GENERATION
-                                auto tmp_local_block_ref = *local_block_ref;
-                                local_block_ref->clear();
                                 auto block_time_cpy = block_time_current.load();
                                 auto parallel_switch_cpy = parallel_switch.load();
                                 lock.unlock();
@@ -779,7 +777,8 @@ namespace uh::trees {
 
                                 std::vector<unsigned char> hash{hash_buf, hash_buf + SHA512_DIGEST_LENGTH};
                                 std::scoped_lock lock_emplace(search_index_protect);
-                                search_index->emplace_back(hash, tmp_local_block_ref, block_time_cpy);
+                                search_index->emplace_back(hash, local_block_ref[!parallel_switch_cpy], block_time_cpy);
+                                local_block_ref[!parallel_switch_cpy].clear();
                             };
 
                             if (rt.joinable())rt.join();
