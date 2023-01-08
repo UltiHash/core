@@ -1833,7 +1833,7 @@ namespace uh::trees {
                         size_read.unlock();
                     }
                     //parallel end
-                    active_threads -= (num_threads % 2)?1:2;
+                    if (num_threads > 1)active_threads -= (num_threads % 2)?1:2;
                 };
                 if (num_threads == 1)first_index_exe_function();
                 else {
