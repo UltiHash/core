@@ -97,7 +97,7 @@ namespace uh::trees {
 
                 if (freeMem >= mem * sizeof(ALLOC)) {
                     auto out_vec = std::vector<ALLOC>();
-                    out_vec.reserve(mem);
+                    out_vec.resize(mem,0);
                     lock_mem.unlock();
                     return out_vec;
                 }
@@ -111,7 +111,7 @@ namespace uh::trees {
             } while (freeMem < mem * sizeof(ALLOC));
             std::scoped_lock lock_mem2(memory_protect);
             auto out_vec = std::vector<ALLOC>();
-            out_vec.reserve(mem);
+            out_vec.resize(mem,0);
             return out_vec;
         }
 
@@ -565,7 +565,7 @@ namespace uh::trees {
                         output_size += (((std::size_t) buffer_in[buf_count]) << (buf_count * 8));
                     }
                     auto tmp_buf = mem_wait<unsigned char>(output_size);
-                    count = std::fread(tmp_buf.data(), sizeof(unsigned char), output_size, reader);
+                    count = std::fread(tmp_buf.data(), sizeof(unsigned char), tmp_buf.size(), reader);
                     total_read += count;
 
                     if (count != output_size) {
