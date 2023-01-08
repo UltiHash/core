@@ -1688,7 +1688,7 @@ namespace uh::trees {
                         if (num_threads > 1) {
                             if (w1.joinable())w1.join();
                         } else {
-                            write_once_to_maintain_file();
+                            if(!multithreading_factory.empty())write_once_to_maintain_file();
                             std::fclose(writer);
                         }
 
