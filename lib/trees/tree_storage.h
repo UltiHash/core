@@ -668,9 +668,9 @@ namespace uh::trees {
                         std::atomic<std::size_t> output_size{};
                         std::atomic<bool> parallel_switch{};
                         std::shared_mutex m1{};
+                        std::unique_lock lock(m1, std::defer_lock);
                         while (!std::feof(reader) && cur_pos.load() < total_file_size) {
                             auto read_func = [&]() {
-                                std::unique_lock lock(m1, std::defer_lock);
                                 lock.lock();
                                 auto parallel_switch_cpy = parallel_switch.load();
                                 parallel_switch = !parallel_switch.load();
@@ -766,7 +766,6 @@ namespace uh::trees {
                             if (num_threads > 1) rt = std::thread(read_func);
                             else read_func();
 
-                            std::unique_lock lock(m1, std::defer_lock);
                             auto hash_func = [&]() {
                                 unsigned char hash_buf[SHA512_DIGEST_LENGTH];//HASH GENERATION
                                 auto block_time_cpy = block_time_current.load();
