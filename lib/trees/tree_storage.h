@@ -217,7 +217,22 @@ namespace uh::trees {
                           [](const auto &a, const auto &b) {
                               return std::get<1>(a) < std::get<1>(b);
                           });
+            //fill holes of size
+            auto size_max = std::max_element(size->begin(),size->end(),[](auto &item1,auto& item2){
+                return std::get<1>(item1)<std::get<1>(item2);
+            });
+            auto max_i = std::get<1>(*size_max);
+            for(unsigned short i6=0; i6<max_i;i6++){
+                if(!std::any_of(size->begin(),size->end(),[&i6](auto &item){
+                    return std::get<1>(item) == i6;
+                })){
+                    std::shared_ptr<std::atomic_flag> f1 = std::make_shared<std::atomic_flag>(), f3 = std::make_shared<std::atomic_flag>();
+                    std::shared_ptr<std::atomic<std::size_t>> f2 = std::make_shared<std::atomic<std::size_t>>();
+                    size->emplace_back(0, i6, f1, f2, f3);
+                }
+            }
             lock_size.unlock();
+
             std::scoped_lock lock_children(children_protect);
             if (!std::is_sorted(std::execution::par_unseq, children->begin(), children->end(),
                                 [](const auto &a, const auto &b) {
@@ -227,6 +242,27 @@ namespace uh::trees {
                           [](const auto &a, const auto &b) {
                               return std::get<1>(a) < std::get<1>(b);
                           });
+            //fill holes of children
+            auto children_max = std::max_element(children->begin(),children->end(),[](auto &item1,auto& item2){
+                return std::get<2>(item1)<std::get<2>(item2);
+            });
+            max_i = std::get<1>(*size_max);
+            for(unsigned short i6=0; i6<max_i;i6++){
+                if(!std::any_of(children->begin(),children->end(),[&i6](auto &item){
+                    return std::get<2>(item) == i6;
+                })){
+                    std::string ref_name{boost::algorithm::hex(std::string{(char) i6})};
+                    std::shared_lock lock_path1(combined_path_protect);
+                    std::string fname = combined_path->filename().string();
+                    lock_path1.unlock();
+                    ref_name.insert(ref_name.cbegin(), fname.cbegin() + 2, fname.cbegin() + 4);
+                    lock_path1.lock();
+                    std::filesystem::path deeper_tree = *combined_path / ref_name;
+                    lock_path1.unlock();
+                    auto *tmp_tree = new tree_storage(deeper_tree);
+                    children->emplace_back(0, tmp_tree, i6);
+                }
+            }
         }
 
         /*
@@ -632,7 +668,7 @@ namespace uh::trees {
                         FILE *reader = std::fopen(read_path.make_preferred().c_str(), "rb");
                         std::unique_lock filesystem_lock(std_filesystem_protect, std::defer_lock);
                         filesystem_lock.lock();
-                        std::size_t total_file_size = std::filesystem::file_size(read_path.make_preferred().c_str());
+                        std::size_t total_file_size = std::filesystem::exists(read_path.make_preferred())?std::filesystem::file_size(read_path.make_preferred()):0;
                         filesystem_lock.unlock();
                         auto read_end_sequence = [&]() {
                             std::fclose(reader);
