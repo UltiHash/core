@@ -19,7 +19,7 @@
 std::vector<unsigned char> binary_generator(std::size_t max_len) {
     std::random_device dev;
     std::mt19937 rng(dev());
-    std::uniform_int_distribution<std::mt19937::result_type> dist(16, max_len);
+    std::uniform_int_distribution<std::mt19937::result_type> dist(1, max_len);
 
     std::size_t len = dist(rng);
 
@@ -68,7 +68,7 @@ BOOST_AUTO_TEST_CASE(write_read_test)
         //total size is the total write size that the database tests
         while (total_size < (mode ? LATENCY_TEST_SIZE : PERFORMANCE_TEST_SIZE)) {
             //(std::size_t) std::pow(2, 35))
-            std::vector<unsigned char> test_bin = binary_generator(mode ? 32 : 16);
+            std::vector<unsigned char> test_bin = binary_generator(mode ? 32 : STORE_MAX);
             //write test
             gettimeofday(&time, nullptr);
             long double millis = ((long double) time.tv_sec * 1000) + ((long double) time.tv_usec / 1000);
