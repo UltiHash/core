@@ -1660,12 +1660,6 @@ namespace uh::trees {
 #endif // _WIN32
                                 }
 
-                                if (truncate64(chunk.c_str(), static_cast<long>(trunc_at)) != 0) {
-                                    ERROR << "File truncate failed at \"" + chunk_maintain.string() + "\"";
-                                    error_thread_sequence();
-                                    return;
-                                }
-
                                 std::size_t maintain_size_append = cur_pos - delete_size;
                                 auto buf = mem_wait<unsigned char>(maintain_size_append);
 
@@ -1695,6 +1689,12 @@ namespace uh::trees {
                                     ptr_release_sequence();
                                     return;
                                 }
+                                if (truncate64(chunk.c_str(), static_cast<long>(trunc_at)) != 0) {
+                                    ERROR << "File truncate failed at \"" + chunk_maintain.string() + "\"";
+                                    error_thread_sequence();
+                                    ptr_release_sequence();
+                                    return;
+                                }
                                 FILE *dest = fopen(chunk.make_preferred().c_str(), "ab");
                                 if (!dest) {
                                     ERROR << "File append opening failed at \"" + chunk_maintain.string() + "\"";
@@ -1712,11 +1712,11 @@ namespace uh::trees {
                                     return;
                                 }
 
-                                fclose(source);
                                 fclose(dest);
+                                fclose(source);
 
                                 filesystem_lock.lock();
-                                std::filesystem::remove(chunk_maintain);
+                                //std::filesystem::remove(chunk_maintain);
                                 filesystem_lock.unlock();
 
                                 size_read.lock();
