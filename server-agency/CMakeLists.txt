@@ -33,7 +33,8 @@ if(GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/.git")
     endif()
 endif()
 
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/config.hpp.in ${CMAKE_CURRENT_SOURCE_DIR}/src/config.hpp)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/config.hpp.in ${CMAKE_CURRENT_BINARY_DIR}/config.hpp)
+include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
 add_subdirectory(lib)
 
@@ -41,10 +42,10 @@ set(${PROJECT_NAME}_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/lib ${CMAKE_CURRENT
 set(${PROJECT_NAME}_LINK_LIBRARIES ${Boost_LIBRARIES} uhLibOptions uhLibLogging uhLibProtocol uhLibNet uhLibMetrics)
 
 # adding all the .h files of the current project
-file(GLOB HEADER_FILE_LIST ${CMAKE_CURRENT_SOURCE_DIR}/src/*.h)
+file(GLOB_RECURSE HEADER_FILE_LIST ${CMAKE_CURRENT_SOURCE_DIR}/src/*.h)
 
 # adding all the .h files of the current project
-file(GLOB SOURCE_FILE_LIST ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp)
+file(GLOB_RECURSE SOURCE_FILE_LIST ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp)
 
 add_executable(${PROJECT_NAME} ${HEADER_FILE_LIST} ${SOURCE_FILE_LIST})
 target_include_directories(${PROJECT_NAME} PRIVATE ${${PROJECT_NAME}_INCLUDE_DIRS})

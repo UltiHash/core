@@ -1,10 +1,10 @@
-#ifndef SERVER_AGENCY_METRICS_H
-#define SERVER_AGENCY_METRICS_H
+#ifndef SERVER_AGENCY_METRICS_METRICS_H
+#define SERVER_AGENCY_METRICS_METRICS_H
 
 #include <metrics/service.h>
 
 
-namespace uh::an
+namespace uh::an::metrics
 {
 
 // ---------------------------------------------------------------------
@@ -27,6 +27,6 @@ private:
 
 // ---------------------------------------------------------------------
 
-} // namespace uh::an
+} // namespace uh::an::metrics
 
 #endif

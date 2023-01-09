@@ -1,5 +1,5 @@
-#ifndef SERVER_AGENCY_OPTIONS_H
-#define SERVER_AGENCY_OPTIONS_H
+#ifndef SERVER_AGENCY_CONFIG_OPTIONS_H
+#define SERVER_AGENCY_CONFIG_OPTIONS_H
 
 #include <options/basic_options.h>
 #include <options/logging_options.h>
@@ -7,7 +7,7 @@
 #include <options/server_options.h>
 
 
-namespace uh::an
+namespace uh::an::config
 {
 
 // ---------------------------------------------------------------------
@@ -19,10 +19,11 @@ public:
 
     virtual void evaluate(const boost::program_options::variables_map& vars) override;
 
-    uh::options::basic_options& basic();
-    uh::options::server_options& server();
-    uh::options::logging_options& logging();
-    uh::options::metrics_options& metrics();
+    const uh::options::basic_options& basic() const;
+    const uh::options::server_options& server() const;
+    const uh::options::logging_options& logging() const;
+    const uh::options::metrics_options& metrics() const;
+
 private:
     uh::options::basic_options m_basic;
     uh::options::server_options m_server;
@@ -32,5 +33,6 @@ private:
 
 // ---------------------------------------------------------------------
 
-} // namespace uh::an
+} // namespace uh::an::config
+
 #endif

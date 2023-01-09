@@ -1,7 +1,7 @@
 #include "metrics.h"
 
 
-namespace uh::an
+namespace uh::an::metrics
 {
 
 // ---------------------------------------------------------------------
@@ -38,4 +38,4 @@ prometheus::Counter& metrics::reqs_read_chunk() const
 
 // ---------------------------------------------------------------------
 
-} // namespace uh::an
+} // namespace uh::an::metrics
