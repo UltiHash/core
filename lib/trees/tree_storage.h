@@ -915,9 +915,8 @@ namespace uh::trees {
             std::atomic<std::size_t> out_size{};
             std::atomic_flag error_flag{ATOMIC_FLAG_INIT};
 
+            std::unique_lock step_lock_init(work_steal_protect,std::defer_lock);
             auto multithread_index = [&]() {
-                std::unique_lock step_lock_init(work_steal_protect,std::defer_lock);
-                step_lock_init.lock();
                 std::size_t i = (i_constructor += 1);
                 step_lock_init.unlock();
 
@@ -948,7 +947,7 @@ namespace uh::trees {
                             if (error_flag.test())return;
                         } else filesystem_lock.unlock();
                     } else {
-                        size_lock.unlock();
+                        filesystem_lock.unlock();
                     }
                     //splice indexes of children plus the min_pos to decide local_block_ref of children array
                     std::unique_lock children_lock(children_protect, std::defer_lock);
@@ -991,10 +990,12 @@ namespace uh::trees {
             };
 
             if (num_threads == 1) {
+                step_lock_init.lock();
                 multithread_index();
             } else {
                 std::vector<std::thread> workers;
                 for (unsigned short i = 0; i < num_threads; i++) {
+                    step_lock_init.lock();
                     std::thread w(multithread_index);
                     workers.push_back(std::move(w));
                 }
@@ -1343,6 +1344,10 @@ namespace uh::trees {
             std::unique_lock item_lock(m1,std::defer_lock);
 
             for(auto &item_now:sorted_block_codes){
+                if(item_now.empty()){
+                    ERROR << "Internal Error on deleting: empty block!";
+                    return {};
+                }
                 auto error_thread_sequence = [&]() {
                     while (std::atomic_flag_test_and_set_explicit(&error_flag,
                                                                   std::memory_order_acquire)) {

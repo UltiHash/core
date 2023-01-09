@@ -45,7 +45,7 @@ BOOST_AUTO_TEST_CASE(constructor_test)
     //tests for any linux machine
     std::filesystem::path target = std::filesystem::path("/home") / std::string(getenv("USER"));
     uh::trees::tree_storage t1(target);//A test folder reserved for tree storage
-    t1.delete_recursive();
+    t1.delete_recursive(1);
     //for strong laptops with SSD extension (configure test db server to run this??)
     //uh::trees::tree_storage t1("/mnt/md0");//A test folder reserved for tree storage for performance tests
 }
