@@ -1342,7 +1342,7 @@ uh::trees::tree_storage::delete_blocks(
                 std::size_t cur_pos = offset_calc(block_step_beg->cbegin(), block_step_beg->cend());
 
                 if (std::fseek(reader, static_cast<long>(cur_pos), SEEK_SET)) {
-                    ERROR << "File seek failed at \"" + read_path.string() + ", position "+std::to_string(cur_pos)+"\"";
+                    ERROR << "File seek failed at \"" + chunk.string() + ", position "+std::to_string(cur_pos)+"\"";
                     read_end_sequence();
                     error_thread_sequence();
                     if (error_flag.test())return;
