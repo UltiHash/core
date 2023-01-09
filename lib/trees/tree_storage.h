@@ -938,7 +938,7 @@ namespace uh::trees {
                         std::get<0>(size->at(i)) -= vanish_size;
                         size_lock.unlock();
                         filesystem_lock.lock();
-                        if (std::remove(read_path.c_str()) != 0) {
+                        if (!std::remove(read_path)) {
                             filesystem_lock.unlock();
                             FATAL << "Removing was not completed on path \"" + read_path.string() + "\"";
                             while (std::atomic_flag_test_and_set_explicit(&error_flag, std::memory_order_acquire)) {
@@ -947,7 +947,7 @@ namespace uh::trees {
                             if (error_flag.test())return;
                         } else filesystem_lock.unlock();
                     } else {
-                        filesystem_lock.unlock();
+                        size_lock.unlock();
                     }
                     //splice indexes of children plus the min_pos to decide local_block_ref of children array
                     std::unique_lock children_lock(children_protect, std::defer_lock);
@@ -965,7 +965,14 @@ namespace uh::trees {
                         std::unique_lock filesystem_lock(std_filesystem_protect, std::defer_lock);
                         filesystem_lock.lock();
                         if(std::filesystem::exists(ref_name) && std::filesystem::is_empty(ref_name)){
-                            std::filesystem::remove(ref_name);
+                            if (!std::remove(ref_name)) {
+                                filesystem_lock.unlock();
+                                FATAL << "Removing was not completed on path \"" + read_path.string() + "\"";
+                                while (std::atomic_flag_test_and_set_explicit(&error_flag, std::memory_order_acquire)) {
+                                    return;
+                                }
+                                if (error_flag.test())return;
+                            } else filesystem_lock.unlock();
                         }
                         filesystem_lock.unlock();
                         out_size += vanish_size;
