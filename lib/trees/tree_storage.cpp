@@ -1703,11 +1703,12 @@ uh::trees::tree_storage::delete_blocks(
 
                 filesystem_lock.lock();
                 if (!std::filesystem::remove(chunk_maintain)) {
+                    filesystem_lock.unlock();
                     FATAL << "Could not remove old maintainance file \"" + chunk_maintain.string() + "\"";
                     error_thread_sequence();
                     return;
                 }
-                filesystem_lock.unlock();
+                else filesystem_lock.unlock();
 
                 size_read.lock();
                 std::get<0>(size->at((*item.begin())[0])) -= delete_size;
