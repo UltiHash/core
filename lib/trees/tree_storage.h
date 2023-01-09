@@ -958,9 +958,8 @@ namespace uh::trees {
                         auto tree_ptr = std::get<1>(children->at(i));
                         children_lock.unlock();
                         std::size_t vanish_size = tree_ptr->delete_recursive(1);
-                        std::shared_lock path_protect(combined_path_protect,std::defer_lock);
-                        path_protect.lock();
                         std::string ref_name{boost::algorithm::hex(std::string{(char) i})};
+                        std::shared_lock path_protect(combined_path_protect,std::defer_lock);
                         path_protect.lock();
                         std::filesystem::path read_path = *combined_path / ref_name;
                         path_protect.unlock();
@@ -984,15 +983,6 @@ namespace uh::trees {
                         children_lock.unlock();
                     }
 
-                    std::lock(size_lock, children_lock);
-                    if (i >= size->size() && i >= children->size()) {
-                        size_lock.unlock();
-                        children_lock.unlock();
-                        break;
-                    } else {
-                        size_lock.unlock();
-                        children_lock.unlock();
-                    }
                     std::scoped_lock step_lock(work_steal_protect);
                     i = (i_constructor += 1);
                 }
