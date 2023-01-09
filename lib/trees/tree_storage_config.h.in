@@ -13,5 +13,6 @@
 #define STORE_MAX (unsigned int) std::numeric_limits<unsigned int>::max()
 #endif
 #define STORE_HARD_LIMIT (unsigned long) (STORE_MAX * 2)
+#define STORE_MAX_LATENCY 32
 
 #endif
