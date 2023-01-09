@@ -8,12 +8,12 @@
 
 using namespace uh::protocol;
 
-namespace uh::an
+namespace uh::an::server
 {
 
 // ---------------------------------------------------------------------
 
-protocol::protocol(uh::protocol::client_pool& clients, const metrics& metrics)
+protocol::protocol(uh::protocol::client_pool& clients, const metrics::metrics& metrics)
     : m_clients(clients),
       m_metrics(metrics)
 {
@@ -51,4 +51,4 @@ blob protocol::on_read_chunk(blob&& hash)
 
 // ---------------------------------------------------------------------
 
-} // namespace uh::an
+} // namespace uh::an::server

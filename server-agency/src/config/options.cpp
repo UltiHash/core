@@ -1,7 +1,7 @@
 #include "options.h"
 
 
-namespace uh::an
+namespace uh::an::config
 {
 
 // ---------------------------------------------------------------------
@@ -26,32 +26,32 @@ void options::evaluate(const boost::program_options::variables_map& vars)
 
 // ---------------------------------------------------------------------
 
-uh::options::basic_options& options::basic()
+const uh::options::basic_options& options::basic() const
 {
     return m_basic;
 }
 
 // ---------------------------------------------------------------------
 
-uh::options::server_options& options::server()
+const uh::options::server_options& options::server() const
 {
     return m_server;
 }
 
 // ---------------------------------------------------------------------
 
-uh::options::logging_options& options::logging()
+const uh::options::logging_options& options::logging() const
 {
     return m_logging;
 }
 
 // ---------------------------------------------------------------------
 
-uh::options::metrics_options& options::metrics()
+const uh::options::metrics_options& options::metrics() const
 {
     return m_metrics;
 }
 
 // ---------------------------------------------------------------------
 
-} // namespace uh::an
+} // namespace uh::an::config
