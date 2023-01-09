@@ -1,6 +1,7 @@
 #include <exception>
 
 #include <config/mod.h>
+#include <cluster/mod.h>
 #include <server/mod.h>
 #include <metrics/mod.h>
 #include <logging/logging_boost.h>
@@ -27,7 +28,20 @@ int main(int argc, const char** argv)
         INFO << "Setting up metrics";
         metrics::mod metrics_module(options);
 
-        server::mod server_module(options, metrics_module.metrics());
+        cluster::config cluster_config {
+            .nodes = {
+                { .hostname = "localhost", .port = 12345 },
+                { .hostname = "localhost", .port = 12346 },
+                { .hostname = "localhost", .port = 12347 },
+            }
+        };
+
+        cluster::mod cluster_module(cluster_config);
+        cluster_module.start();
+
+        server::mod server_module(options,
+                                  cluster_module,
+                                  metrics_module.metrics());
         server_module.start();
     }
     catch (const std::exception& e)

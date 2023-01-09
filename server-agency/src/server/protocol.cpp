@@ -2,6 +2,7 @@
 
 #include <config.hpp>
 #include <logging/logging_boost.h>
+#include <util/exception.h>
 
 #include <vector>
 
@@ -13,8 +14,8 @@ namespace uh::an::server
 
 // ---------------------------------------------------------------------
 
-protocol::protocol(uh::protocol::client_pool& clients, const metrics::metrics& metrics)
-    : m_clients(clients),
+protocol::protocol(cluster::mod& cluster, const metrics::metrics& metrics)
+    : m_cluster(cluster),
       m_metrics(metrics)
 {
 }
@@ -38,7 +39,18 @@ server_information protocol::on_hello(const std::string& client_version)
 blob protocol::on_write_chunk(blob&& data)
 {
     m_metrics.reqs_write_chunk().Increment();
-    return m_clients.get()->write_chunk(data);
+
+    auto free_space = m_cluster.bc_free_space();
+    if (free_space.empty())
+    {
+        THROW(util::exception, "no storage back-end configured");
+    }
+
+    free_space.sort([](auto& l, auto& r) { return l.second > r.second; });
+
+    auto node_ref = free_space.front().first;
+
+    return m_cluster.node(node_ref).get()->write_chunk(data);
 }
 
 // ---------------------------------------------------------------------
@@ -46,7 +58,8 @@ blob protocol::on_write_chunk(blob&& data)
 blob protocol::on_read_chunk(blob&& hash)
 {
     m_metrics.reqs_read_chunk().Increment();
-    return m_clients.get()->read_chunk(hash);
+
+    return m_cluster.bc_read_chunk(hash);
 }
 
 // ---------------------------------------------------------------------

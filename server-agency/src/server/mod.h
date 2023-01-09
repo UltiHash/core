@@ -3,6 +3,7 @@
 
 #include <config/options.h>
 #include <metrics/metrics.h>
+#include <cluster/mod.h>
 
 #include <memory>
 
@@ -16,6 +17,7 @@ class mod
 {
 public:
     mod(const config::options& options,
+        an::cluster::mod& cluster,
         an::metrics::metrics& metrics);
 
     ~mod();
