@@ -887,7 +887,6 @@ std::size_t uh::trees::tree_storage::delete_recursive(unsigned short num_threads
     };
 
     if (num_threads == 1) {
-        step_lock_init.lock();
         multithread_index();
     } else {
         std::vector<std::thread> workers;
