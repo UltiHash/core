@@ -1057,7 +1057,7 @@ std::tuple<unsigned long, std::size_t, std::size_t> uh::trees::tree_storage::get
 
             read_end_sequence();
 
-            return {block_time, output_size, sizeof(time_buf) + 1 + sizeof(buffer_in) + output_size};
+            return {block_time, output_size, time_buf.size()+ 1 + buffer_in.size() + output_size};
         }
     }
 }
@@ -1546,7 +1546,7 @@ uh::trees::tree_storage::delete_blocks(
                     }
 
                     std::size_t const write_back_size =
-                            sizeof(time_buf) + 1 + sizeof(buffer_in) + output_size;
+                            time_buf.size() + 1 + buffer_in.size() + output_size;
 
                     if (block_step_beg < delete_here_codes.cend() &&
                         std::equal(out_vec.cbegin(), out_vec.cend(), block_step_beg->cbegin(),
@@ -1571,14 +1571,14 @@ uh::trees::tree_storage::delete_blocks(
                         //copy block to maintain file
                         auto tmp_buf = mem_wait<unsigned char>(write_back_size);
                         unsigned short i = 0;
-                        for (; i < (unsigned short) sizeof(time_buf); i++) {
+                        for (; i < (unsigned short) time_buf.size(); i++) {
                             tmp_buf[i] = time_buf[i];
                         }
                         tmp_buf[i] = buf_size;
                         i++;
                         unsigned short const meta_offset = i;
                         i = 0;
-                        for (; i < (unsigned short) sizeof(buffer_in); i++) {
+                        for (; i < (unsigned short) buffer_in.size(); i++) {
                             tmp_buf[i + meta_offset] = buffer_in[i];
                         }
 
