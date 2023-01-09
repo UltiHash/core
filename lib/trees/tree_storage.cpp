@@ -1748,7 +1748,7 @@ uh::trees::tree_storage::delete_blocks(
             }
 
             std::lock(size_read, children_read);
-            if ((*item.begin())[0] >= size->size() || (*item.begin())[0] >= children->size()) {
+            if ((*item.begin())[0] >= size->size() && (*item.begin())[0] >= children->size()) {
                 children_read.unlock();
                 size_read.unlock();
 
