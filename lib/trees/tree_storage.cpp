@@ -47,8 +47,7 @@ std::size_t uh::trees::tree_storage::get_size() {
 }
 
 std::vector<unsigned char> uh::trees::tree_storage::write(const std::vector<unsigned char> &input,
-                                 unsigned long current_time = (unsigned long) std::chrono::nanoseconds(
-                                         std::chrono::high_resolution_clock::now().time_since_epoch()).count()) {
+                                 unsigned long current_time) {
     if (input.empty()){
         ERROR << "No input given to write!";
         return std::vector<unsigned char>{};
@@ -374,7 +373,7 @@ std::tuple<unsigned long, std::vector<unsigned char>> uh::trees::tree_storage::r
 }
 
 std::list<std::tuple<std::vector<unsigned char>, std::vector<unsigned char>, unsigned long>>
-uh::trees::tree_storage::index(unsigned short num_threads = std::thread::hardware_concurrency()) {
+uh::trees::tree_storage::index(unsigned short num_threads) {
     if (num_threads == 0) {
         ERROR << "Not enough threading resources!";
         return {};
@@ -789,8 +788,7 @@ std::tuple<unsigned long, std::size_t, std::size_t> uh::trees::tree_storage::get
 }
 
 bool uh::trees::tree_storage::set_block_time(const std::vector<unsigned char> &block_code,
-                    unsigned long current_time = (unsigned long) std::chrono::nanoseconds(
-                            std::chrono::high_resolution_clock::now().time_since_epoch()).count()) {
+                    unsigned long current_time) {
     if (block_code.empty()) {
         ERROR << "No input given to set block time!";
         return false;
