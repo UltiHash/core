@@ -13,7 +13,7 @@ uh::trees::tree_storage::tree_storage(const std::filesystem::path &root, unsigne
     std::unique_lock lock5(combined_path_protect, std::defer_lock);
     lock5.lock();
     if (combined_path->empty()) {
-        std::string parent_name = root.filename().string();
+        std::string const parent_name = root.filename().string();
         bool valid_root = parent_name.size() == 4 and root.extension().string().empty();
         if (valid_root)
             for (const char &i: parent_name) {
@@ -26,7 +26,7 @@ uh::trees::tree_storage::tree_storage(const std::filesystem::path &root, unsigne
         if (!valid_root) {
             combined_path->operator/=("0000");
         }
-        std::scoped_lock filesystem_lock(std_filesystem_protect);
+        std::scoped_lock const filesystem_lock(std_filesystem_protect);
         std::filesystem::create_directories(combined_path->string());
     }
     lock5.unlock();
@@ -41,7 +41,7 @@ uh::trees::tree_storage::tree_storage(const std::filesystem::path &root, unsigne
         for (; i < N;) {
             std::string s_tmp = boost::algorithm::hex(std::string{(char) i});
             std::shared_lock lock4(combined_path_protect);
-            std::filesystem::path chunk = *combined_path / s_tmp;
+            std::filesystem::path const chunk = *combined_path / s_tmp;
             lock4.unlock();
 
             std::unique_lock filesystem_lock(std_filesystem_protect, std::defer_lock);
@@ -50,16 +50,16 @@ uh::trees::tree_storage::tree_storage(const std::filesystem::path &root, unsigne
                 filesystem_lock.unlock();
                 std::shared_ptr<std::atomic_flag> f1 = std::make_shared<std::atomic_flag>(), f3 = std::make_shared<std::atomic_flag>();
                 std::shared_ptr<std::atomic<std::size_t>> f2 = std::make_shared<std::atomic<std::size_t>>();
-                std::scoped_lock lock1(size_protect);
+                std::scoped_lock const lock1(size_protect);
                 size->emplace_back(std::filesystem::file_size(chunk), i, f1, f2, f3);
             } else filesystem_lock.unlock();
 
             lock4.lock();
-            std::string fname = combined_path->filename().string();
+            std::string const fname = combined_path->filename().string();
             lock4.unlock();
             s_tmp.insert(s_tmp.cbegin(), fname.cbegin() + 2, fname.cbegin() + 4);
             lock4.lock();
-            std::filesystem::path deeper_tree = *combined_path / s_tmp;
+            std::filesystem::path const deeper_tree = *combined_path / s_tmp;
             lock4.unlock();
             //check if sub folder in tree exists
 
@@ -71,11 +71,11 @@ uh::trees::tree_storage::tree_storage(const std::filesystem::path &root, unsigne
                 } else {
                     filesystem_lock.unlock();
                     auto *tmp_tree = new tree_storage(deeper_tree, 1);
-                    std::scoped_lock lock2(children_protect);
+                    std::scoped_lock const lock2(children_protect);
                     children->emplace_back(tmp_tree->get_size(), tmp_tree, i);
                 }
             } else filesystem_lock.unlock();
-            std::scoped_lock step_lock(work_steal_protect);
+            std::scoped_lock const step_lock(work_steal_protect);
             i = (i_constructor += 1);
         }
     };
@@ -98,7 +98,7 @@ uh::trees::tree_storage::tree_storage(const std::filesystem::path &root, unsigne
         auto size_max = std::max_element(size->begin(),size->end(),[](auto &item1,auto& item2){
             return std::get<1>(item1)<std::get<1>(item2);
         });
-        unsigned char max_i = std::get<1>(*size_max);
+        unsigned char const max_i = std::get<1>(*size_max);
         for(unsigned short i6=0; i6<max_i;i6++){
             if(!std::any_of(std::execution::par, size->begin(),size->end(),[&i6](auto &item){
                 return std::get<1>(item) == i6;
@@ -119,24 +119,24 @@ uh::trees::tree_storage::tree_storage(const std::filesystem::path &root, unsigne
                   });
     lock_size.unlock();
 
-    std::scoped_lock lock_children(children_protect);
+    std::scoped_lock const lock_children(children_protect);
     //fill holes of children
     if(!children->empty()){
         auto children_max = std::max_element(children->begin(),children->end(),[](auto &item1,auto& item2){
             return std::get<2>(item1)<std::get<2>(item2);
         });
-        unsigned char max_i = std::get<2>(*children_max);
+        unsigned char const max_i = std::get<2>(*children_max);
         for(unsigned short i6=0; i6<max_i;i6++){
             if(!std::any_of(std::execution::par, children->begin(),children->end(),[&i6](auto &item){
                 return std::get<2>(item) == i6;
             })){
                 std::string ref_name{boost::algorithm::hex(std::string{(char) i6})};
                 std::shared_lock lock_path1(combined_path_protect);
-                std::string fname = combined_path->filename().string();
+                std::string const fname = combined_path->filename().string();
                 lock_path1.unlock();
                 ref_name.insert(ref_name.cbegin(), fname.cbegin() + 2, fname.cbegin() + 4);
                 lock_path1.lock();
-                std::filesystem::path deeper_tree = *combined_path / ref_name;
+                std::filesystem::path const deeper_tree = *combined_path / ref_name;
                 lock_path1.unlock();
                 auto *tmp_tree = new tree_storage(deeper_tree);
                 children->emplace_back(0, tmp_tree, i6);
@@ -161,10 +161,10 @@ std::vector<unsigned char> uh::trees::tree_storage::prefix_wrap(std::size_t inpu
         total_bit_count++;
         h_bit >>= 1;
     }
-    unsigned char byte_count = total_bit_count / 8 + std::min(1, total_bit_count % 8);
+    unsigned char const byte_count = total_bit_count / CHAR_BITS + std::min(1, total_bit_count % CHAR_BITS);
     std::vector<unsigned char> prefix{};
     for (unsigned char i = 0; i < byte_count; i++) {
-        prefix.push_back((unsigned char) (input_size >> (i * 8)));
+        prefix.push_back((unsigned char) (input_size >> (i * CHAR_BITS)));
     }
     if (prefix.empty())prefix.push_back(0);
     prefix.insert(prefix.cbegin(), byte_count - 1);
@@ -209,20 +209,20 @@ std::vector<unsigned char> uh::trees::tree_storage::write(const std::vector<unsi
         return std::vector<unsigned char>{};
     }
     std::vector<unsigned char> prefix = prefix_wrap(input.size());
-    std::size_t total_size = input.size() + prefix.size() + sizeof(unsigned long);
+    std::size_t const total_size = input.size() + prefix.size() + sizeof(unsigned long);
     //check block fill of this node, look for free space
 
     std::unique_lock lock_size(size_protect, std::defer_lock);
     lock_size.lock();
-    unsigned short min_pos;
-    std::size_t min_val;
+    unsigned short min_pos = 0;
+    std::size_t min_val = 0;
     if (size->size() < N) {
         min_pos = size->size();
         lock_size.unlock();
         min_val = 0;
         std::shared_ptr<std::atomic_flag> f1 = std::make_shared<std::atomic_flag>(), f3 = std::make_shared<std::atomic_flag>();
-        std::shared_ptr<std::atomic<std::size_t>> f2 = std::make_shared<std::atomic<std::size_t>>();
-        std::scoped_lock size_own1(size_protect);
+        std::shared_ptr<std::atomic<std::size_t>> const f2 = std::make_shared<std::atomic<std::size_t>>();
+        std::scoped_lock const size_own1(size_protect);
         size->emplace_back(min_val, min_pos, f1, f2, f3);
     } else {
         auto min_el = *std::min_element(size->begin(), size->end(), [](auto &a, auto &b) {
@@ -234,7 +234,7 @@ std::vector<unsigned char> uh::trees::tree_storage::write(const std::vector<unsi
         lock_size.unlock();
     }
     lock_size.lock();
-    bool no_deeper = min_val < STORE_MAX && min_val + total_size < STORE_HARD_LIMIT &&
+    bool const no_deeper = min_val < STORE_MAX && min_val + total_size < STORE_HARD_LIMIT &&
                      !(std::get<4>(size->at(min_pos))->test());
     lock_size.unlock();
     if (!no_deeper) {
@@ -245,11 +245,11 @@ std::vector<unsigned char> uh::trees::tree_storage::write(const std::vector<unsi
             min_pos = (unsigned short) children->size();
             std::string ref_name{boost::algorithm::hex(std::string{(char) min_pos})};
             std::shared_lock lock_path1(combined_path_protect);
-            std::string fname = combined_path->filename().string();
+            std::string const fname = combined_path->filename().string();
             lock_path1.unlock();
             ref_name.insert(ref_name.cbegin(), fname.cbegin() + 2, fname.cbegin() + 4);
             lock_path1.lock();
-            std::filesystem::path deeper_tree = *combined_path / ref_name;
+            std::filesystem::path const deeper_tree = *combined_path / ref_name;
             lock_path1.unlock();
             auto *tmp_tree = new tree_storage(deeper_tree);
             min_val = tmp_tree->get_size();
@@ -273,7 +273,7 @@ std::vector<unsigned char> uh::trees::tree_storage::write(const std::vector<unsi
         return out_vec;
     } else {
         //store block to this position
-        std::string ref_name{boost::algorithm::hex(std::string{(char) min_pos})};
+        std::string const ref_name{boost::algorithm::hex(std::string{(char) min_pos})};
         std::shared_lock path_lock2(combined_path_protect);
         std::filesystem::path read_chunk = *combined_path / ref_name;
         path_lock2.unlock();
@@ -281,7 +281,7 @@ std::vector<unsigned char> uh::trees::tree_storage::write(const std::vector<unsi
         //calculate binary of timestamp
         std::vector<unsigned char> bin_time;
         for (unsigned short i = 0; i < (unsigned short) sizeof(current_time); i++) {
-            bin_time.push_back((unsigned char) (current_time >> (i * 8)));
+            bin_time.push_back((unsigned char) (current_time >> (i * CHAR_BITS)));
         }
         lock_size.lock();
         auto write_ptr = &(*std::get<2>(size->at(min_pos)));
@@ -298,13 +298,13 @@ std::vector<unsigned char> uh::trees::tree_storage::write(const std::vector<unsi
 
         while (read_ptr->load() > 0) {
 #ifdef _WIN32
-            Sleep(10);
+            Sleep(TEN_MS);
 #else
-            usleep(10 * 1000);
+            usleep(TEN_MS * ONE_MILLISECOND);
 #endif // _WIN32
         }
         lock_size.lock();
-        std::size_t size_tmp = std::get<0>(size->at(min_pos));
+        std::size_t const size_tmp = std::get<0>(size->at(min_pos));
         lock_size.unlock();
         std::unique_lock write_size(size_protect, std::defer_lock);
         write_size.lock();
@@ -313,7 +313,7 @@ std::vector<unsigned char> uh::trees::tree_storage::write(const std::vector<unsi
 
         FILE *writer = std::fopen(read_chunk.make_preferred().c_str(), "ab");
         auto end_write_sequence = [&]() {
-            std::fclose(writer);
+            if(std::fclose(writer))ERROR << "Write stream was not open!";
 
             std::atomic_flag_clear_explicit(write_ptr, std::memory_order_release);
             if (!write_ptr->test())write_ptr->notify_all();
@@ -327,9 +327,21 @@ std::vector<unsigned char> uh::trees::tree_storage::write(const std::vector<unsi
             return std::vector<unsigned char>{};
         }
         //File should have been opened or created here
-        std::fwrite(bin_time.data(), bin_time.size(), sizeof(unsigned char), writer);
-        std::fwrite(prefix.data(), prefix.size(), sizeof(unsigned char), writer);
-        std::fwrite(input.data(), input.size(), sizeof(unsigned char), writer);
+        if (std::fwrite(bin_time.data(), bin_time.size(), sizeof(unsigned char), writer) != bin_time.size()) {
+            ERROR << "File write binary time opening failed at \"" + read_chunk.string() + "\"";
+            end_write_sequence();
+            return std::vector<unsigned char>{};
+        }
+        if (std::fwrite(prefix.data(), prefix.size(), sizeof(unsigned char), writer) != prefix.size()) {
+            ERROR << "File write prefix data opening failed at \"" + read_chunk.string() + "\"";
+            end_write_sequence();
+            return std::vector<unsigned char>{};
+        }
+        if (std::fwrite(input.data(), input.size(), sizeof(unsigned char), writer) != input.size()) {
+            ERROR << "File write input data opening failed at \"" + read_chunk.string() + "\"";
+            end_write_sequence();
+            return std::vector<unsigned char>{};
+        }
 
         if (std::ferror(writer)) {
             FATAL << "I/O error when writing \"" + read_chunk.string() + "\"";
@@ -344,7 +356,7 @@ std::vector<unsigned char> uh::trees::tree_storage::write(const std::vector<unsi
         local_block_ref.reserve(sizeof(unsigned int));
         for (unsigned short i = 0;
              i < (unsigned short) sizeof(unsigned int); i++) {//STORE_MAX will fit in 4 bytes
-            local_block_ref.push_back((unsigned char) (size_tmp >> (i * 8)));
+            local_block_ref.push_back((unsigned char) (size_tmp >> (i * CHAR_BITS)));
         }
         local_block_ref.insert(local_block_ref.cbegin(), min_pos);
 
@@ -357,15 +369,15 @@ std::tuple<unsigned long, std::vector<unsigned char>> uh::trees::tree_storage::r
         ERROR << "No input given to read!";
         return {};
     }
-    if (block_code.size() > 5) {
+    if (block_code.size() > SMALLEST_LOCAL_BLOCK_SIZE) {
         //size encoding is not reached yet, read along tree path
         std::unique_lock read_children(children_protect, std::defer_lock);
         read_children.lock();
         if ((short) children->size() - 1 < (short) block_code[0] ||
             !std::get<0>(children->at(block_code[0]))) {
             read_children.unlock();
-            std::string not_found((const char *) block_code.data(), block_code.size());
-            std::scoped_lock read_path(combined_path_protect);
+            std::string const not_found((const char *) block_code.data(), block_code.size());
+            std::scoped_lock const read_path(combined_path_protect);
             DEBUG << "<Block error trace>: Block code " + boost::algorithm::hex(not_found) +
                      " could not be found in storage tree \"" +
                      combined_path->string() + "\".";
@@ -373,11 +385,11 @@ std::tuple<unsigned long, std::vector<unsigned char>> uh::trees::tree_storage::r
         } else {
             auto tree_ptr3 = std::get<1>(children->at(block_code[0]));
             read_children.unlock();
-            std::vector<unsigned char> sub_block_code{block_code.cbegin() + 1, block_code.cend()};
+            std::vector<unsigned char> const sub_block_code{block_code.cbegin() + 1, block_code.cend()};
             auto out_vec = tree_ptr3->read(sub_block_code);
             if (std::get<1>(out_vec).empty()) {
-                std::string not_found((const char *) block_code.data(), block_code.size());
-                std::scoped_lock read_path(combined_path_protect);
+                std::string const not_found((const char *) block_code.data(), block_code.size());
+                std::scoped_lock const read_path(combined_path_protect);
                 DEBUG << "<Block error trace on return>: Block code " + boost::algorithm::hex(not_found) +
                          " could not be found in storage tree \"" +
                          combined_path->string() + "\".";
@@ -385,9 +397,9 @@ std::tuple<unsigned long, std::vector<unsigned char>> uh::trees::tree_storage::r
             return out_vec;
         }
     } else {
-        if (block_code.size() < 5) {
-            std::string not_found((const char *) block_code.data(), block_code.size());
-            std::scoped_lock read_path(combined_path_protect);
+        if (block_code.size() < SMALLEST_LOCAL_BLOCK_SIZE) {
+            std::string const not_found((const char *) block_code.data(), block_code.size());
+            std::scoped_lock const read_path(combined_path_protect);
             FATAL << "<Block error trace>: Block code " + boost::algorithm::hex(not_found) +
                      " was too short for storage tree \"" +
                      combined_path->string() + "\".";
@@ -399,8 +411,8 @@ std::tuple<unsigned long, std::vector<unsigned char>> uh::trees::tree_storage::r
         if ((short) size->size() - 1 < (short) block_code[0] ||
             !std::get<0>(size->at(block_code[0]))) {
             size_lock.unlock();
-            std::string not_found((const char *) block_code.data(), block_code.size());
-            std::scoped_lock read_path(combined_path_protect);
+            std::string const not_found((const char *) block_code.data(), block_code.size());
+            std::scoped_lock const read_path(combined_path_protect);
             DEBUG
                 << "<Block error trace on return, final tree>: Block code " + boost::algorithm::hex(not_found) +
                    " could not be found in storage tree \"" + combined_path->string() +
@@ -412,9 +424,9 @@ std::tuple<unsigned long, std::vector<unsigned char>> uh::trees::tree_storage::r
                                                       block_code.cend()}; //copy offset code and rebuild
             std::size_t offset{};
             for (unsigned short i = 0; i < (unsigned short) sizeof(unsigned int); i++) {
-                offset += (((std::size_t) sub_block_code[i]) << (i * 8));
+                offset += (((std::size_t) sub_block_code[i]) << (i * CHAR_BITS));
             }
-            std::string ref_name{boost::algorithm::hex(std::string{(char) block_code[0]})};
+            std::string const ref_name{boost::algorithm::hex(std::string{(char) block_code[0]})};
             std::shared_lock read_path_lock(combined_path_protect);
             std::filesystem::path read_path = *combined_path / ref_name;
             read_path_lock.unlock();
@@ -432,7 +444,7 @@ std::tuple<unsigned long, std::vector<unsigned char>> uh::trees::tree_storage::r
 
             FILE *reader = std::fopen(read_path.make_preferred().c_str(), "rb");
             auto read_end_sequence = [&]() {
-                std::fclose(reader);
+                if(std::fclose(reader))ERROR << "Read stream was not open on "+read_path.string()+"!";
                 *read_ptr -= 1;
                 if (!read_ptr->load())write_ptr->notify_one();
             };
@@ -442,7 +454,11 @@ std::tuple<unsigned long, std::vector<unsigned char>> uh::trees::tree_storage::r
                 return {0, std::vector<unsigned char>{}};
             }
             //File should have been opened or created here
-            std::fseek(reader, static_cast<long>(offset), SEEK_SET);
+            if (std::fseek(reader, static_cast<long>(offset), SEEK_SET)) {
+                ERROR << "File seek failed at \"" + read_path.string() + ", position "+std::to_string(offset)+"\"";
+                read_end_sequence();
+                return {0, std::vector<unsigned char>{}};
+            }
 
             if (std::ferror(reader)) {
                 FATAL << "I/O error when seeking \"" + read_path.string() + "\"";
@@ -450,7 +466,7 @@ std::tuple<unsigned long, std::vector<unsigned char>> uh::trees::tree_storage::r
                 return {0, std::vector<unsigned char>{}};
             }
 
-            unsigned char time_buf[sizeof(unsigned long)];
+            std::array<unsigned char, sizeof(unsigned long)> time_buf;
             std::size_t total_read{};
             std::size_t count = std::fread(&time_buf, sizeof(unsigned char), sizeof(unsigned long), reader);
             total_read += count;
@@ -469,7 +485,7 @@ std::tuple<unsigned long, std::vector<unsigned char>> uh::trees::tree_storage::r
             }
             unsigned long block_time{};
             for (unsigned short i = 0; i < (unsigned short) sizeof(unsigned long); i++) {
-                block_time += (((std::size_t) time_buf[i]) << (i * 8));
+                block_time += (((std::size_t) time_buf[i]) << (i * CHAR_BITS));
             }
 
             unsigned char buf_size = 0;
@@ -487,7 +503,7 @@ std::tuple<unsigned long, std::vector<unsigned char>> uh::trees::tree_storage::r
                 read_end_sequence();
                 return {0, std::vector<unsigned char>{}};
             }
-            unsigned char buffer_in[buf_size + 1];
+            std::array<unsigned char,buf_size + 1> buffer_in;
             count = std::fread(&buffer_in, sizeof(unsigned char), buf_size + 1, reader);
             total_read += count;
             if (count != buf_size + 1) {
@@ -498,7 +514,7 @@ std::tuple<unsigned long, std::vector<unsigned char>> uh::trees::tree_storage::r
             }
             std::size_t output_size{};
             for (unsigned char buf_count = 0; buf_count <= buf_size; buf_count++) {
-                output_size += (((std::size_t) buffer_in[buf_count]) << (buf_count * 8));
+                output_size += (((std::size_t) buffer_in[buf_count]) << (buf_count * CHAR_BITS));
             }
             auto tmp_buf = mem_wait<unsigned char>(output_size);
             count = std::fread(tmp_buf.data(), sizeof(unsigned char), tmp_buf.size(), reader);
@@ -546,7 +562,7 @@ uh::trees::tree_storage::index(unsigned short num_threads) {
             if (i < size->size() && std::get<0>(size->at(i)) > 0) {
                 size_lock.unlock();
                 //read entire block generating hashes and block references
-                std::string ref_name{boost::algorithm::hex(std::string{(char) i})};
+                std::string const ref_name{boost::algorithm::hex(std::string{(char) i})};
                 std::shared_lock read_path_lock(combined_path_protect);
                 std::filesystem::path read_path = *combined_path / ref_name;
                 read_path_lock.unlock();
@@ -565,10 +581,10 @@ uh::trees::tree_storage::index(unsigned short num_threads) {
                 FILE *reader = std::fopen(read_path.make_preferred().c_str(), "rb");
                 std::unique_lock filesystem_lock(std_filesystem_protect, std::defer_lock);
                 filesystem_lock.lock();
-                std::size_t total_file_size = std::filesystem::exists(read_path.make_preferred())?std::filesystem::file_size(read_path.make_preferred()):0;
+                std::size_t const total_file_size = std::filesystem::exists(read_path.make_preferred())?std::filesystem::file_size(read_path.make_preferred()):0;
                 filesystem_lock.unlock();
                 auto read_end_sequence = [&]() {
-                    std::fclose(reader);
+                    if(std::fclose(reader))ERROR << "Read stream was not open!";
                     *read_ptr -= 1;
                     if (!read_ptr->load())write_ptr->notify_one();
                 };
@@ -594,9 +610,9 @@ uh::trees::tree_storage::index(unsigned short num_threads) {
 
                 std::thread rt, ht;
 
-                std::vector<unsigned char> local_block_ref[2];
+                std::array<std::vector<unsigned char>,2> local_block_ref;
                 std::atomic<unsigned long> block_time_current{};
-                std::vector<unsigned char>tmp_buf[2];
+                std::array<std::vector<unsigned char>,2> tmp_buf;
 
                 std::atomic<std::size_t> output_size{};
                 std::atomic<bool> parallel_switch{};
@@ -611,11 +627,11 @@ uh::trees::tree_storage::index(unsigned short num_threads) {
 
                         for (unsigned short i1 = 0;
                              i1 < (unsigned short) sizeof(unsigned int); i1++) {//STORE_MAX will fit in 4 bytes
-                            local_block_ref[parallel_switch_cpy].push_back((unsigned char) (cur_pos.load() >> (i1 * 8)));
+                            local_block_ref[parallel_switch_cpy].push_back((unsigned char) (cur_pos.load() >> (i1 * CHAR_BITS)));
                         }
                         local_block_ref[parallel_switch_cpy].insert(local_block_ref[parallel_switch_cpy].cbegin(), i);
 
-                        unsigned char time_buf[sizeof(unsigned long)];
+                        std::array<unsigned char, sizeof(unsigned long)> time_buf;
                         std::size_t count = std::fread(&time_buf, sizeof(unsigned char), sizeof(unsigned long),
                                                        reader);
                         cur_pos += count;
@@ -637,7 +653,7 @@ uh::trees::tree_storage::index(unsigned short num_threads) {
                         }
                         unsigned long block_time{};
                         for (unsigned short i4 = 0; i4 < (unsigned short) sizeof(unsigned long); i4++) {
-                            block_time += (((std::size_t) time_buf[i4]) << (i4 * 8));
+                            block_time += (((std::size_t) time_buf[i4]) << (i4 * CHAR_BITS));
                         }
                         block_time_current = block_time;
 
@@ -659,7 +675,7 @@ uh::trees::tree_storage::index(unsigned short num_threads) {
                             error_thread_sequence();
                             if (error_flag.test())return;
                         }
-                        unsigned char buffer_for_size[buf_size + 1];
+                        std::array<unsigned char, buf_size + 1> buffer_for_size;
                         count = std::fread(&buffer_for_size, sizeof(unsigned char), buf_size + 1, reader);
                         cur_pos += count;
                         if (count != buf_size + 1) {
@@ -672,7 +688,7 @@ uh::trees::tree_storage::index(unsigned short num_threads) {
                         }
                         output_size = 0;
                         for (unsigned char buf_count = 0; buf_count <= buf_size; buf_count++) {
-                            output_size += (((std::size_t) buffer_for_size[buf_count]) << (buf_count * 8));
+                            output_size += (((std::size_t) buffer_for_size[buf_count]) << (buf_count * CHAR_BITS));
                         }
                         local_thread_lock.unlock();
 
@@ -700,14 +716,14 @@ uh::trees::tree_storage::index(unsigned short num_threads) {
                     else read_func();
 
                     auto hash_func = [&]() {
-                        unsigned char hash_buf[SHA512_DIGEST_LENGTH];//HASH GENERATION
+                        std::array<unsigned char, SHA512_DIGEST_LENGTH> hash_buf;//HASH GENERATION
                         auto block_time_cpy = block_time_current.load();
                         auto parallel_switch_cpy = parallel_switch.load();
                         global_thread_lock.unlock();
-                        SHA512(tmp_buf[!parallel_switch_cpy].data(), tmp_buf[!parallel_switch_cpy].size(), hash_buf);
+                        SHA512(tmp_buf[!parallel_switch_cpy].begin(), tmp_buf[!parallel_switch_cpy].size(), hash_buf.begin());
 
-                        std::vector<unsigned char> hash{hash_buf, hash_buf + SHA512_DIGEST_LENGTH};
-                        std::scoped_lock lock_emplace(search_index_protect);
+                        std::vector<unsigned char> hash{hash_buf.cbegin(), hash_buf.cend()};
+                        std::scoped_lock const lock_emplace(search_index_protect);
                         search_index->emplace_back(hash, local_block_ref[!parallel_switch_cpy], block_time_cpy);
                     };
 
@@ -744,7 +760,7 @@ uh::trees::tree_storage::index(unsigned short num_threads) {
                 for (auto &el: append_list) {
                     std::get<1>(el).insert(std::get<1>(el).cbegin(), i);
                 }
-                std::scoped_lock lock_splice(search_index_protect);
+                std::scoped_lock const lock_splice(search_index_protect);
                 search_index->splice(search_index->cend(), append_list);
             } else {
                 children_lock.unlock();
@@ -758,7 +774,7 @@ uh::trees::tree_storage::index(unsigned short num_threads) {
                 size_lock.unlock();
                 children_lock.unlock();
             }
-            std::scoped_lock step_lock(work_steal_protect);
+            std::scoped_lock const step_lock(work_steal_protect);
             i = (i_constructor += 1);
         }
     };
@@ -780,7 +796,7 @@ uh::trees::tree_storage::index(unsigned short num_threads) {
         return {};
     }
 
-    std::scoped_lock lock_return(search_index_protect);
+    std::scoped_lock const lock_return(search_index_protect);
     return *search_index;
 }
 
@@ -803,13 +819,13 @@ std::size_t uh::trees::tree_storage::delete_recursive(unsigned short num_threads
             std::unique_lock size_lock(size_protect, std::defer_lock);
             size_lock.lock();
             if (i < size->size() && std::get<0>(size->at(i)) > 0) {
-                std::string ref_name{boost::algorithm::hex(std::string{(char) i})};
+                std::string const ref_name{boost::algorithm::hex(std::string{(char) i})};
                 std::shared_lock lock_path(combined_path_protect);
-                std::filesystem::path read_path = *combined_path / ref_name;
+                std::filesystem::path const read_path = *combined_path / ref_name;
                 lock_path.unlock();
                 std::unique_lock filesystem_lock(std_filesystem_protect, std::defer_lock);
                 filesystem_lock.lock();
-                std::size_t vanish_size = std::filesystem::exists(read_path) ? std::filesystem::file_size(
+                std::size_t const vanish_size = std::filesystem::exists(read_path) ? std::filesystem::file_size(
                         read_path) : 0;
                 filesystem_lock.unlock();
                 out_size += vanish_size;
@@ -835,13 +851,13 @@ std::size_t uh::trees::tree_storage::delete_recursive(unsigned short num_threads
             if (i < children->size() && std::get<0>(children->at(i)) > 0) {
                 auto tree_ptr = std::get<1>(children->at(i));
                 children_lock.unlock();
-                std::size_t vanish_size = tree_ptr->delete_recursive(1);
+                std::size_t const vanish_size = tree_ptr->delete_recursive(1);
                 std::string ref_name{boost::algorithm::hex(std::string{(char) i})};
                 std::shared_lock path_protect(combined_path_protect,std::defer_lock);
                 path_protect.lock();
-                std::string fname = combined_path->filename().string();
+                std::string const fname = combined_path->filename().string();
                 ref_name.insert(ref_name.cbegin(), fname.cbegin() + 2, fname.cbegin() + 4);
-                std::filesystem::path read_path = *combined_path / ref_name;
+                std::filesystem::path const read_path = *combined_path / ref_name;
                 path_protect.unlock();
                 std::unique_lock filesystem_lock(std_filesystem_protect, std::defer_lock);
                 filesystem_lock.lock();
@@ -857,13 +873,13 @@ std::size_t uh::trees::tree_storage::delete_recursive(unsigned short num_threads
                 }
                 filesystem_lock.unlock();
                 out_size += vanish_size;
-                std::scoped_lock lg(size_protect);
+                std::scoped_lock const lg(size_protect);
                 std::get<0>(size->at(i)) -= vanish_size;
             } else {
                 children_lock.unlock();
             }
 
-            std::scoped_lock step_lock(work_steal_protect);
+            std::scoped_lock const step_lock(work_steal_protect);
             i = (i_constructor += 1);
         }
     };
@@ -893,15 +909,15 @@ std::tuple<unsigned long, std::size_t, std::size_t> uh::trees::tree_storage::get
         ERROR << "No input given to get info of block!";
         return {};
     }
-    if (block_code.size() > 5) {
+    if (block_code.size() > SMALLEST_LOCAL_BLOCK_SIZE) {
         //size encoding is not reached yet, get_info along tree path
         std::unique_lock read_children(children_protect, std::defer_lock);
         read_children.lock();
         if ((short) children->size() - 1 < (short) block_code[0] ||
             !std::get<0>(children->at(block_code[0]))) {
             read_children.unlock();
-            std::string not_found((const char *) block_code.data(), block_code.size());
-            std::scoped_lock read_path(combined_path_protect);
+            std::string const not_found((const char *) block_code.data(), block_code.size());
+            std::scoped_lock const read_path(combined_path_protect);
             DEBUG << "<Block error trace>: Block code " + boost::algorithm::hex(not_found) +
                      " could not be found in storage tree \"" +
                      combined_path->string() + "\".";
@@ -909,11 +925,11 @@ std::tuple<unsigned long, std::size_t, std::size_t> uh::trees::tree_storage::get
         } else {
             auto tree_ptr = std::get<1>(children->at(block_code[0]));
             read_children.unlock();
-            std::vector<unsigned char> sub_block_code{block_code.cbegin() + 1, block_code.cend()};
+            std::vector<unsigned char> const sub_block_code{block_code.cbegin() + 1, block_code.cend()};
             auto out_vec = tree_ptr->get_info(sub_block_code);
             if (std::get<1>(out_vec) == 0) {
-                std::string not_found((const char *) block_code.data(), block_code.size());
-                std::scoped_lock read_path(combined_path_protect);
+                std::string const not_found((const char *) block_code.data(), block_code.size());
+                std::scoped_lock const read_path(combined_path_protect);
                 DEBUG << "<Block error trace on return>: Block code " + boost::algorithm::hex(not_found) +
                          " could not be found in storage tree \"" +
                          combined_path->string() + "\".";
@@ -921,9 +937,9 @@ std::tuple<unsigned long, std::size_t, std::size_t> uh::trees::tree_storage::get
             return out_vec;
         }
     } else {
-        if (block_code.size() < 5) {
-            std::string not_found((const char *) block_code.data(), block_code.size());
-            std::scoped_lock read_path(combined_path_protect);
+        if (block_code.size() < SMALLEST_LOCAL_BLOCK_SIZE) {
+            std::string const not_found((const char *) block_code.data(), block_code.size());
+            std::scoped_lock const read_path(combined_path_protect);
             FATAL << "<Block error trace>: Block code " + boost::algorithm::hex(not_found) +
                      " was too short for storage tree \"" +
                      combined_path->string() + "\".";
@@ -935,8 +951,8 @@ std::tuple<unsigned long, std::size_t, std::size_t> uh::trees::tree_storage::get
         if ((short) size->size() - 1 < (short) block_code[0] ||
             !std::get<0>(size->at(block_code[0]))) {
             read_size.unlock();
-            std::string not_found((const char *) block_code.data(), block_code.size());
-            std::scoped_lock read_path(combined_path_protect);
+            std::string const not_found((const char *) block_code.data(), block_code.size());
+            std::scoped_lock const read_path(combined_path_protect);
             DEBUG
                 << "<Block error trace on return, final tree>: Block code " + boost::algorithm::hex(not_found) +
                    " could not be found in storage tree \"" +
@@ -949,9 +965,9 @@ std::tuple<unsigned long, std::size_t, std::size_t> uh::trees::tree_storage::get
                                                       block_code.cend()}; //copy offset code and rebuild
             std::size_t offset{};
             for (unsigned short i = 0; i < (unsigned short) sizeof(unsigned int); i++) {
-                offset += (((std::size_t) sub_block_code[i]) << (i * 8));
+                offset += (((std::size_t) sub_block_code[i]) << (i * CHAR_BITS));
             }
-            std::string ref_name{boost::algorithm::hex(std::string{(char) block_code[0]})};
+            std::string const ref_name{boost::algorithm::hex(std::string{(char) block_code[0]})};
             std::shared_lock read_path2(combined_path_protect);
             std::filesystem::path read_path = *combined_path / ref_name;
             read_path2.unlock();
@@ -969,7 +985,7 @@ std::tuple<unsigned long, std::size_t, std::size_t> uh::trees::tree_storage::get
 
             FILE *reader = std::fopen(read_path.make_preferred().c_str(), "rb");
             auto read_end_sequence = [&]() {
-                std::fclose(reader);
+                if(std::fclose(reader))ERROR << "Read stream was not open!";
                 *read_ptr -= 1;
                 if (!read_ptr->load())write_ptr->notify_one();
             };
@@ -979,7 +995,11 @@ std::tuple<unsigned long, std::size_t, std::size_t> uh::trees::tree_storage::get
                 return {};
             }
             //File should have been opened or created here
-            std::fseek(reader, static_cast<long>(offset), SEEK_SET);
+            if (std::fseek(reader, static_cast<long>(offset), SEEK_SET)) {
+                ERROR << "File seek failed at \"" + read_path.string() + ", position "+std::to_string(offset)+"\"";
+                read_end_sequence();
+                return {};
+            }
 
             if (std::ferror(reader)) {
                 FATAL << "I/O error when seeking \"" + read_path.string() + "\"";
@@ -987,7 +1007,7 @@ std::tuple<unsigned long, std::size_t, std::size_t> uh::trees::tree_storage::get
                 return {};
             }
 
-            unsigned char time_buf[sizeof(unsigned long)];
+            std::array<unsigned char, sizeof(unsigned long)> time_buf;
             std::size_t count = std::fread(&time_buf, sizeof(unsigned char), sizeof(unsigned long), reader);
             if (count != sizeof(unsigned long)) {
                 FATAL
@@ -1004,7 +1024,7 @@ std::tuple<unsigned long, std::size_t, std::size_t> uh::trees::tree_storage::get
             }
             unsigned long block_time{};
             for (unsigned short i = 0; i < (unsigned short) sizeof(unsigned long); i++) {
-                block_time += (((std::size_t) time_buf[i]) << (i * 8));
+                block_time += (((std::size_t) time_buf[i]) << (i * CHAR_BITS));
             }
 
             unsigned char buf_size = 0;
@@ -1031,7 +1051,7 @@ std::tuple<unsigned long, std::size_t, std::size_t> uh::trees::tree_storage::get
             }
             std::size_t output_size{};
             for (unsigned char buf_count = 0; buf_count <= buf_size; buf_count++) {
-                output_size += (((std::size_t) buffer_in[buf_count]) << (buf_count * 8));
+                output_size += (((std::size_t) buffer_in[buf_count]) << (buf_count * CHAR_BITS));
             }
 
             read_end_sequence();
@@ -1047,15 +1067,15 @@ bool uh::trees::tree_storage::set_block_time(const std::vector<unsigned char> &b
         ERROR << "No input given to set block time!";
         return false;
     }
-    if (block_code.size() > 5) {
+    if (block_code.size() > SMALLEST_LOCAL_BLOCK_SIZE) {
         //size encoding is not reached yet, set_block_time along tree path
         std::unique_lock read_children(children_protect, std::defer_lock);
         read_children.lock();
         if ((short) children->size() - 1 < (short) block_code[0] ||
             !std::get<0>(children->at(block_code[0]))) {
             read_children.unlock();
-            std::string not_found((const char *) block_code.data(), block_code.size());
-            std::scoped_lock read_path(combined_path_protect);
+            std::string const not_found((const char *) block_code.data(), block_code.size());
+            std::scoped_lock const read_path(combined_path_protect);
             DEBUG << "<Block error trace>: Block code " + boost::algorithm::hex(not_found) +
                      " could not be found in storage tree \"" +
                      combined_path->string() + "\".";
@@ -1063,20 +1083,20 @@ bool uh::trees::tree_storage::set_block_time(const std::vector<unsigned char> &b
         } else {
             auto tree_ptr = std::get<1>(children->at(block_code[0]));
             read_children.unlock();
-            std::vector<unsigned char> sub_block_code{block_code.cbegin() + 1, block_code.cend()};
+            std::vector<unsigned char> const sub_block_code{block_code.cbegin() + 1, block_code.cend()};
             auto out_vec = tree_ptr->set_block_time(sub_block_code, current_time);
             if (!out_vec) {
-                std::string not_found((const char *) block_code.data(), block_code.size());
-                std::scoped_lock read_path(combined_path_protect);
+                std::string const not_found((const char *) block_code.data(), block_code.size());
+                std::scoped_lock const read_path(combined_path_protect);
                 DEBUG << "<Block error trace on return>: Block code " + boost::algorithm::hex(not_found) +
                          " could not be found in storage tree \"" + combined_path->string() + "\".";
             }
             return out_vec;
         }
     } else {
-        if (block_code.size() < 5) {
-            std::string not_found((const char *) block_code.data(), block_code.size());
-            std::scoped_lock read_path(combined_path_protect);
+        if (block_code.size() < SMALLEST_LOCAL_BLOCK_SIZE) {
+            std::string const not_found((const char *) block_code.data(), block_code.size());
+            std::scoped_lock const read_path(combined_path_protect);
             FATAL << "<Block error trace>: Block code " + boost::algorithm::hex(not_found) +
                      " was too short for storage tree \"" +
                      combined_path->string() + "\".";
@@ -1088,8 +1108,8 @@ bool uh::trees::tree_storage::set_block_time(const std::vector<unsigned char> &b
         if ((short) size->size() - 1 < (short) block_code[0] ||
             !std::get<0>(size->at(block_code[0]))) {
             size_read.unlock();
-            std::string not_found((const char *) block_code.data(), block_code.size());
-            std::scoped_lock read_path(combined_path_protect);
+            std::string const not_found((const char *) block_code.data(), block_code.size());
+            std::scoped_lock const read_path(combined_path_protect);
             DEBUG
                 << "<Block error trace on return, final tree>: Block code " + boost::algorithm::hex(not_found) +
                    " could not be found in storage tree \"" + combined_path->string() +
@@ -1101,9 +1121,9 @@ bool uh::trees::tree_storage::set_block_time(const std::vector<unsigned char> &b
                                                       block_code.cend()}; //copy offset code and rebuild
             std::size_t offset{};
             for (unsigned short i = 0; i < (unsigned short) sizeof(unsigned int); i++) {
-                offset += (((std::size_t) sub_block_code[i]) << (i * 8));
+                offset += (((std::size_t) sub_block_code[i]) << (i * CHAR_BITS));
             }
-            std::string ref_name{boost::algorithm::hex(std::string{(char) block_code[0]})};
+            std::string const ref_name{boost::algorithm::hex(std::string{(char) block_code[0]})};
             std::shared_lock read_path2(combined_path_protect);
             std::filesystem::path read_path = *combined_path / ref_name;
             read_path2.unlock();
@@ -1111,7 +1131,7 @@ bool uh::trees::tree_storage::set_block_time(const std::vector<unsigned char> &b
             //calculate binary of timestamp
             std::vector<unsigned char> bin_time;
             for (unsigned short i = 0; i < (unsigned short) sizeof(current_time); i++) {
-                bin_time.push_back((unsigned char) (current_time >> (i * 8)));
+                bin_time.push_back((unsigned char) (current_time >> (i * CHAR_BITS)));
             }
 
             size_read.lock();
@@ -1125,15 +1145,15 @@ bool uh::trees::tree_storage::set_block_time(const std::vector<unsigned char> &b
 
             while (read_ptr->load() > 0) {
 #ifdef _WIN32
-                Sleep(10);
+                Sleep(TEN_MS);
 #else
-                usleep(10 * 1000);
+                usleep(TEN_MS * ONE_MILLISECOND);
 #endif // _WIN32
             }
 
             FILE *writer = std::fopen(read_path.make_preferred().c_str(), "rb+");
             auto set_time_end_sequence = [&]() {
-                std::fclose(writer);
+                if(std::fclose(writer))ERROR << "Write stream was not open!";
                 std::atomic_flag_clear_explicit(write_ptr, std::memory_order_release);
                 if (!write_ptr->test())write_ptr->notify_all();
             };
@@ -1143,7 +1163,11 @@ bool uh::trees::tree_storage::set_block_time(const std::vector<unsigned char> &b
                 return false;
             }
             //File should have been opened or created here
-            std::fseek(writer, static_cast<long>(offset), SEEK_SET);
+            if (std::fseek(writer, static_cast<long>(offset), SEEK_SET)) {
+                ERROR << "File seek failed at \"" + read_path.string() + ", position "+std::to_string(offset)+"\"";
+                set_time_end_sequence();
+                return false;
+            }
 
             if (std::ferror(writer)) {
                 FATAL << "I/O error when seeking \"" + read_path.string() + "\"";
@@ -1151,7 +1175,11 @@ bool uh::trees::tree_storage::set_block_time(const std::vector<unsigned char> &b
                 return false;
             }
             //File should have been opened or created here
-            std::fwrite(bin_time.data(), bin_time.size(), sizeof(unsigned char), writer);
+            if (std::fwrite(bin_time.data(), bin_time.size(), sizeof(unsigned char), writer) != bin_time.size()) {
+                FATAL << "I/O error when writing binary time sequence at \"" + read_path.string() + "\"";
+                set_time_end_sequence();
+                return false;
+            }
 
             if (std::ferror(writer)) {
                 FATAL << "I/O error when writing \"" + read_path.string() + "\"";
@@ -1223,11 +1251,11 @@ uh::trees::tree_storage::delete_blocks(
             std::vector<std::vector<unsigned char>> deeper_codes{}, delete_here_codes{};
             //take a branch to delete multiple blocks within
             std::for_each(item.begin(), item.end(), [&](auto &a) {
-                if (a.size() > 5)deeper_codes.emplace_back(a.begin() + 1, a.end());
+                if (a.size() > SMALLEST_LOCAL_BLOCK_SIZE)deeper_codes.emplace_back(a.begin() + 1, a.end());
                 else {
-                    if (a.size() < 5) {
-                        std::string not_found((const char *) a.data(), a.size());
-                        std::scoped_lock read_path(combined_path_protect);
+                    if (a.size() < SMALLEST_LOCAL_BLOCK_SIZE) {
+                        std::string const not_found((const char *) a.data(), a.size());
+                        std::scoped_lock const read_path(combined_path_protect);
                         FATAL << "<Block error trace>: Block code " + boost::algorithm::hex(not_found) +
                                  " was too short for storage tree \"" +
                                  combined_path->string() + "\".";
@@ -1257,7 +1285,7 @@ uh::trees::tree_storage::delete_blocks(
                 }
 
                 //sort blocks to be deleted here after their offset on the chunk
-                std::string ref_name{boost::algorithm::hex(std::string{(char) (*item.begin())[0]})};
+                std::string const ref_name{boost::algorithm::hex(std::string{(char) (*item.begin())[0]})};
                 std::shared_lock path_read(combined_path_protect);
                 std::filesystem::path chunk = *combined_path / ref_name;
                 path_read.unlock();
@@ -1270,8 +1298,8 @@ uh::trees::tree_storage::delete_blocks(
                             b.cbegin() + 1, b.cend()};
                     std::size_t offset1{}, offset2{};
                     for (unsigned short i = 0; i < (unsigned short) sizeof(unsigned int); i++) {
-                        offset1 += (((std::size_t) sub_block_code1[i]) << (i * 8));
-                        offset2 += (((std::size_t) sub_block_code2[i]) << (i * 8));
+                        offset1 += (((std::size_t) sub_block_code1[i]) << (i * CHAR_BITS));
+                        offset2 += (((std::size_t) sub_block_code2[i]) << (i * CHAR_BITS));
                     }
                     return offset1 < offset2;
                 });
@@ -1283,7 +1311,7 @@ uh::trees::tree_storage::delete_blocks(
                                                               b_ref}; //copy offset code and rebuild
                     std::size_t offset{};
                     for (unsigned short i = 0; i < (unsigned short) sizeof(unsigned int); i++) {
-                        offset += (((std::size_t) sub_block_code[i]) << (i * 8));
+                        offset += (((std::size_t) sub_block_code[i]) << (i * CHAR_BITS));
                     }
                     return offset;
                 };
@@ -1292,13 +1320,13 @@ uh::trees::tree_storage::delete_blocks(
                 FILE *reader = std::fopen(chunk.make_preferred().c_str(), "rb");
                 std::unique_lock filesystem_lock(std_filesystem_protect, std::defer_lock);
                 filesystem_lock.lock();
-                std::size_t total_file_size = std::filesystem::exists(chunk.make_preferred().c_str())
+                std::size_t const total_file_size = std::filesystem::exists(chunk.make_preferred().c_str())
                                               ? std::filesystem::file_size(
                                 chunk.make_preferred().c_str()) : 0;
                 filesystem_lock.unlock();
                 std::atomic_flag write_control(ATOMIC_FLAG_INIT);
                 auto read_end_sequence = [&]() {
-                    std::fclose(reader);
+                    if(std::fclose(reader))ERROR << "Read stream was not open!";
                     *read_ptr -= 1;
                     std::atomic_flag_clear_explicit(&write_control, std::memory_order_release);
                 };
@@ -1310,7 +1338,13 @@ uh::trees::tree_storage::delete_blocks(
                 }
                 std::size_t cur_pos = offset_calc(block_step_beg->cbegin(), block_step_beg->cend());
 
-                std::fseek(reader, static_cast<long>(cur_pos), SEEK_SET);
+                if (std::fseek(reader, static_cast<long>(cur_pos), SEEK_SET)) {
+                    ERROR << "File seek failed at \"" + read_path.string() + ", position "+std::to_string(cur_pos)+"\"";
+                    read_end_sequence();
+                    error_thread_sequence();
+                    if (error_flag.test())return;
+                }
+
                 if (std::ferror(reader)) {
                     FATAL << "I/O error when seeking \"" + chunk.string() + "\"";
                     read_end_sequence();
@@ -1318,7 +1352,7 @@ uh::trees::tree_storage::delete_blocks(
                     if (error_flag.test())return;
                 }
 
-                std::size_t trunc_at = cur_pos;
+                std::size_t const trunc_at = cur_pos;
                 std::size_t delete_size{};
                 //producer consumer queue for reading and writing; contains RAM pointer; size of RAM pointer; local tree storage reference of;
                 // *this tree where the referring chunk is stored; truncate size for the chunk; new storage reference after append
@@ -1334,8 +1368,8 @@ uh::trees::tree_storage::delete_blocks(
                 filesystem_lock.unlock();
                 FILE *writer = std::fopen(chunk_maintain.make_preferred().c_str(), "ab");
                 auto io_end_sequence = [&]() {
-                    std::fclose(reader);
-                    std::fclose(writer);
+                    if(std::fclose(reader))ERROR << "Read stream was not open!";
+                    if(std::fclose(writer))ERROR << "Write stream was not open!";
                     *read_ptr -= 1;
                     std::atomic_flag_clear_explicit(&write_control, std::memory_order_release);
                 };
@@ -1360,12 +1394,18 @@ uh::trees::tree_storage::delete_blocks(
                     for (unsigned char i = 0;
                          i <
                          (unsigned char) sizeof(unsigned int); i++) {//STORE_MAX will fit in 4 bytes
-                        out_vec.push_back((unsigned char) (new_offset) >> (i * 8));
+                        out_vec.push_back((unsigned char) (new_offset) >> (i * CHAR_BITS));
                     }
                     out_vec.insert(out_vec.cbegin(), old_block_code[0]);
 
-                    std::fwrite(current_storage_ptr.data(), current_storage_ptr.size(), sizeof(unsigned char),
-                                writer);
+                    if (std::fwrite(current_storage_ptr.data(), current_storage_ptr.size(), sizeof(unsigned char), writer) != current_storage_ptr.size()) {
+                        ERROR << "File write thread failed to put down a line at \"" + chunk_maintain.string() + "\"";
+                        io_end_sequence();
+                        error_thread_sequence();
+                        if (error_flag.test()) {
+                            return;
+                        }
+                    }
                     if (std::ferror(writer)) {
                         FATAL << "I/O error when deleting block writing \"" +
                                  chunk_maintain.string() + "\"";
@@ -1415,12 +1455,12 @@ uh::trees::tree_storage::delete_blocks(
                             return;
                         }
 #ifdef _WIN32
-                        Sleep(10);
+                        Sleep(TEN_MS);
 #else
-                        usleep(10 * 1000);
+                        usleep(TEN_MS * ONE_MILLISECOND);
 #endif // _WIN32
                     }
-                    std::fclose(writer);
+                    if(std::fclose(writer))ERROR << "Write stream was not open!";
                 };
                 std::thread w1;
                 if (num_threads > 1)w1 = std::thread(consumer_function);
@@ -1433,11 +1473,11 @@ uh::trees::tree_storage::delete_blocks(
                     out_vec.reserve(sizeof(unsigned int));//reconstruct current local reference
                     for (unsigned short i = 0;
                          i < (unsigned short) sizeof(unsigned int); i++) {//STORE_MAX will fit in 4 bytes
-                        out_vec.push_back((unsigned char) (cur_pos >> (i * 8)));
+                        out_vec.push_back((unsigned char) (cur_pos >> (i * CHAR_BITS)));
                     }
                     out_vec.insert(out_vec.cbegin(), (*item.begin())[0]);
 
-                    unsigned char time_buf[sizeof(unsigned long)];
+                    std::array<unsigned char, sizeof(unsigned long)> time_buf;
                     std::size_t count = std::fread(&time_buf, sizeof(unsigned char),
                                                    sizeof(unsigned long),
                                                    reader);
@@ -1449,7 +1489,7 @@ uh::trees::tree_storage::delete_blocks(
                             if (w1.joinable())w1.join();//write out remaining blocks to prevent data loss
                         } else{
                             if(!multithreading_factory.empty())write_once_to_maintain_file();
-                            std::fclose(writer);
+                            if(std::fclose(writer))ERROR << "Write stream was not open!";
                         }
 
                         read_end_sequence();//reset reader flags
@@ -1488,7 +1528,7 @@ uh::trees::tree_storage::delete_blocks(
                         factory_io_sequence_end();
                         if (error_flag.test())return;//break thread in case error is there
                     }
-                    unsigned char buffer_in[buf_size + 1];
+                    std::array<unsigned char, buf_size + 1> buffer_in;
                     count = std::fread(&buffer_in, sizeof(unsigned char), buf_size + 1, reader);
                     if (count != buf_size + 1) {
                         FATAL
@@ -1500,17 +1540,22 @@ uh::trees::tree_storage::delete_blocks(
                     cur_pos += count;
                     std::size_t output_size{};
                     for (unsigned char buf_count = 0; buf_count <= buf_size; buf_count++) {
-                        output_size += (((std::size_t) buffer_in[buf_count]) << (buf_count * 8));
+                        output_size += (((std::size_t) buffer_in[buf_count]) << (buf_count * CHAR_BITS));
                     }
 
-                    std::size_t write_back_size =
+                    std::size_t const write_back_size =
                             sizeof(time_buf) + 1 + sizeof(buffer_in) + output_size;
 
                     if (block_step_beg < delete_here_codes.cend() &&
                         std::equal(out_vec.cbegin(), out_vec.cend(), block_step_beg->cbegin(),
                                    block_step_beg->cend())) {
                         //skip block copy and seek over it
-                        std::fseek(reader, static_cast<long>(output_size), SEEK_CUR);
+                        if (std::fseek(reader, static_cast<long>(output_size), SEEK_CUR)) {
+                            ERROR << "File seek failed at \"" + chunk.string() + ", position "+std::to_string(output_size)+"\"";
+                            factory_io_sequence_end();
+                            if (error_flag.test())return;//break thread in case error is there
+                        }
+
                         if (std::ferror(reader)) {
                             FATAL << "I/O error when seeking \"" + chunk.string() + "\"";
                             factory_io_sequence_end();
@@ -1529,13 +1574,13 @@ uh::trees::tree_storage::delete_blocks(
                         }
                         tmp_buf[i] = buf_size;
                         i++;
-                        unsigned short meta_offset = i;
+                        unsigned short const meta_offset = i;
                         i = 0;
                         for (; i < (unsigned short) sizeof(buffer_in); i++) {
                             tmp_buf[i + meta_offset] = buffer_in[i];
                         }
 
-                        count = std::fread(tmp_buf.data() + (write_back_size - output_size),
+                        count = std::fread(tmp_buf.begin() + (write_back_size - output_size),
                                            sizeof(unsigned char),
                                            output_size, reader);
 
@@ -1550,7 +1595,7 @@ uh::trees::tree_storage::delete_blocks(
                             if (error_flag.test())return;//break thread in case error is there
                         }
                         cur_pos += count;
-                        std::scoped_lock write_multithreading_f(multithreading_factory_protect);
+                        std::scoped_lock const write_multithreading_f(multithreading_factory_protect);
                         multithreading_factory.emplace_back(tmp_buf, out_vec,
                                                             cur_pos - write_back_size - delete_size);
                     }
@@ -1560,7 +1605,7 @@ uh::trees::tree_storage::delete_blocks(
                     if (w1.joinable())w1.join();
                 } else {
                     if(!multithreading_factory.empty())write_once_to_maintain_file();
-                    std::fclose(writer);
+                    if(std::fclose(writer))ERROR << "Write stream was not open!";
                 }
 
                 if (error_flag.test()) {
@@ -1583,18 +1628,18 @@ uh::trees::tree_storage::delete_blocks(
 
                 while (read_ptr->load() > 0) {
 #ifdef _WIN32
-                    Sleep(10);
+                    Sleep(TEN_MS);
 #else
-                    usleep(10 * 1000);
+                    usleep(TEN_MS * ONE_MILLISECOND);
 #endif // _WIN32
                 }
 
-                std::size_t maintain_size_append = cur_pos - delete_size;
+                std::size_t const maintain_size_append = cur_pos - delete_size;
                 auto buf = mem_wait<unsigned char>(maintain_size_append);
 
                 FILE *source = fopen(chunk_maintain.make_preferred().c_str(), "rb");
                 auto ptr_release_sequence = [&]() {
-                    fclose(source);
+                    if(std::fclose(source))ERROR << "Source stream was not open!";
                     std::atomic_flag_clear_explicit(write_ptr, std::memory_order_release);
                     if (!write_ptr->test())write_ptr->notify_one();
                     std::atomic_flag_clear_explicit(maintain_ptr, std::memory_order_release);
@@ -1627,22 +1672,29 @@ uh::trees::tree_storage::delete_blocks(
                 FILE *dest = fopen(chunk.make_preferred().c_str(), "ab");
                 if (!dest) {
                     ERROR << "File append opening failed at \"" + chunk_maintain.string() + "\"";
-                    fclose(dest);
+                    if(std::fclose(dest))ERROR << "Destination stream was not open!";
                     ptr_release_sequence();
                     error_thread_sequence();
                     return;
                 }
-                fwrite(buf.data(), sizeof(unsigned char), buf.size(), dest);
-                if (std::ferror(dest)) {
-                    FATAL << "I/O error when appending \"" + chunk_maintain.string() + "\"";
-                    fclose(dest);
+                if (std::fwrite(buf.data(), buf.size(), sizeof(unsigned char), writer) != buf.size()) {
+                    FATAL << "I/O error when writing binary time sequence at \"" + read_path.string() + "\"";
+                    if(std::fclose(dest))ERROR << "Destination stream was not open!";
                     ptr_release_sequence();
                     error_thread_sequence();
                     return;
                 }
 
-                fclose(dest);
-                fclose(source);
+                if (std::ferror(dest)) {
+                    FATAL << "I/O error when appending \"" + chunk_maintain.string() + "\"";
+                    if(std::fclose(dest))ERROR << "Destination stream was not open!";
+                    ptr_release_sequence();
+                    error_thread_sequence();
+                    return;
+                }
+
+                if(std::fclose(dest))ERROR << "Destination stream was not open!";
+                if(std::fclose(source))ERROR << "Source stream was not open!";
 
                 filesystem_lock.lock();
                 std::filesystem::remove(chunk_maintain);
@@ -1680,7 +1732,7 @@ uh::trees::tree_storage::delete_blocks(
                     std::get<1>(it).insert(std::get<1>(it).cbegin(), (*item.begin())[0]);
                 }
 
-                std::scoped_lock lock_splice(out_change_list_protect);
+                std::scoped_lock const lock_splice(out_change_list_protect);
                 out_change_list.splice(out_change_list.cend(), std::get<1>(deeper_delete));
             } else children_read.unlock();
 
@@ -1689,13 +1741,13 @@ uh::trees::tree_storage::delete_blocks(
                 children_read.unlock();
                 size_read.unlock();
 
-                std::scoped_lock path_read(combined_path_protect);
+                std::scoped_lock const path_read(combined_path_protect);
                 std::string out_error = "<Block error trace>: The following local block codes were exceeding limits of storage tree \"" +
                                         combined_path->string() +
                                         "\" and were skipped:\n";
 
                 for(const auto &item1:item){
-                    std::string not_found((const char *) item1.data(), item1.size());
+                    std::string const not_found((const char *) item1.data(), item1.size());
                     out_error += boost::algorithm::hex(not_found) + "\n";
                 }
                 DEBUG << out_error;
@@ -1720,9 +1772,9 @@ uh::trees::tree_storage::delete_blocks(
                     return {};
                 }
 #ifdef _WIN32
-                Sleep(10);
+                Sleep(TEN_MS);
 #else
-                usleep(10 * 1000);
+                usleep(TEN_MS * ONE_MILLISECOND);
 #endif // _WIN32
             }
             active_threads += (num_threads % 2)?1:2;
@@ -1742,13 +1794,13 @@ uh::trees::tree_storage::delete_blocks(
             return {};
         }
 #ifdef _WIN32
-        Sleep(10);
+        Sleep(TEN_MS);
 #else
-        usleep(10 * 1000);
+        usleep(TEN_MS * ONE_MILLISECOND);
 #endif // _WIN32
     }
 
-    std::scoped_lock out_return_lock(out_change_list_protect);
+    std::scoped_lock const out_return_lock(out_change_list_protect);
     return {out_size.load(), out_change_list};
 }
 
@@ -1771,9 +1823,9 @@ uh::trees::tree_storage::~tree_storage() {
 
         while (read_ptr->load() > 0) {
 #ifdef _WIN32
-            Sleep(10);
+            Sleep(TEN_MS);
 #else
-            usleep(10 * 1000);
+            usleep(TEN_MS * ONE_MILLISECOND);
 #endif // _WIN32
         }
     }
