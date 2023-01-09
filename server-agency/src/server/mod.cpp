@@ -3,10 +3,8 @@
 #include <config.hpp>
 
 #include <server/protocol_factory.h>
-#include <protocol/client_factory.h>
 #include <net/server.h>
 #include <net/tls_server.h>
-#include <net/plain_socket.h>
 
 
 namespace uh::an::server
@@ -14,17 +12,6 @@ namespace uh::an::server
 
 namespace
 {
-
-// ---------------------------------------------------------------------
-
-uh::protocol::client_factory_config make_cf_config()
-{
-    std::stringstream s;
-
-    s << PROJECT_NAME << " " << PROJECT_VERSION;
-
-    return uh::protocol::client_factory_config{ .client_version = s.str() };
-}
 
 // ---------------------------------------------------------------------
 
@@ -51,13 +38,10 @@ std::unique_ptr<net::server> make_server(
 struct mod::impl
 {
     impl(const config::options& options,
+         an::cluster::mod& cluster,
          an::metrics::metrics& metrics);
 
     boost::asio::io_context io;
-    net::plain_socket_factory socket_factory;
-    protocol::client_factory_config cf_config;
-    protocol::client_factory client_factory;
-    protocol::client_pool clients;
     protocol_factory pf;
     std::unique_ptr<net::server> server;
 };
@@ -65,13 +49,10 @@ struct mod::impl
 // ---------------------------------------------------------------------
 
 mod::impl::impl(const config::options& options,
+                an::cluster::mod& cluster,
                 an::metrics::metrics& metrics)
     : io(),
-      socket_factory(io, "localhost", 12345),
-      cf_config(make_cf_config()),
-      client_factory(socket_factory, cf_config),
-      clients(client_factory, 10),
-      pf(clients, metrics),
+      pf(cluster, metrics),
       server(make_server(options.server().config(), pf))
 {
 }
@@ -79,8 +60,9 @@ mod::impl::impl(const config::options& options,
 // ---------------------------------------------------------------------
 
 mod::mod(const config::options& options,
+         an::cluster::mod& cluster,
          an::metrics::metrics& metrics)
-    : m_impl(std::make_unique<mod::impl>(options, metrics))
+    : m_impl(std::make_unique<mod::impl>(options, cluster, metrics))
 {
 }
 
