@@ -1479,7 +1479,7 @@ uh::trees::tree_storage::delete_blocks(
                     out_vec.insert(out_vec.cbegin(), (*item.begin())[0]);
 
                     std::array<unsigned char, sizeof(unsigned long)> time_buf;
-                    std::size_t count = std::fread(&time_buf, sizeof(unsigned char),
+                    std::size_t count = std::fread(time_buf.data(), sizeof(unsigned char),
                                                    sizeof(unsigned long),
                                                    reader);
 
@@ -1699,7 +1699,11 @@ uh::trees::tree_storage::delete_blocks(
                 if(std::fclose(source))ERROR << "Source stream was not open!";
 
                 filesystem_lock.lock();
-                std::filesystem::remove(chunk_maintain);
+                if (!std::filesystem::remove(chunk_maintain)) {
+                    FATAL << "Could not remove old maintainance file \"" + chunk_maintain.string() + "\"";
+                    error_thread_sequence();
+                    return;
+                }
                 filesystem_lock.unlock();
 
                 size_read.lock();
