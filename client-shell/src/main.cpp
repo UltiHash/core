@@ -1,5 +1,6 @@
 #include "config.h"
 #include <serialization/Recompilation.h>
+#include <net/plain_socket.h>
 
 /*translate --help or other explicit flags to their not explicit letter -h
  */
@@ -359,12 +360,11 @@ int main(int argc, char *argv[]) {
                     std::stringstream s;
                     s << PROJECT_NAME << " " << PROJECT_VERSION;
                     uh::protocol::client_factory_config cf_config
-                            {
-                                    .hostname = "localhost",
-                                    .port = 0x5548,
-                                    .client_version = s.str()
-                            };
-                    uh::protocol::client_factory client_factory(io, cf_config);
+                        {
+                            .client_version = s.str()
+                        };
+                    uh::net::plain_socket_factory socket_factory(io, "localhost", 0x5548);
+                    uh::protocol::client_factory client_factory(socket_factory, cf_config);
                     auto start = std::chrono::steady_clock::now();
                     auto client = client_factory.create();
                     auto end = std::chrono::steady_clock::now();
@@ -378,18 +378,18 @@ int main(int argc, char *argv[]) {
                     if (commands_todo.at("write")) {
                         //write first
                         std::cout << "writing...\n";
-                        Recompilation(true, input_commands, flag_check, *client);
+                        Recompilation('w', input_commands, flag_check, *client);
                     }
                     if (commands_todo.at("read")) {
                         //read second
                         std::cout << "reading...\n";
-                        Recompilation(false, input_commands, flag_check, *client);
+                        Recompilation('r', input_commands, flag_check, *client);
                     }
                     if (commands_todo.at("cd")) {
-                        throw std::runtime_error("cd function is not implemented yet!");
+                        Recompilation('c', input_commands, flag_check, *client);
                     }
                     if (commands_todo.at("ls")) {
-                        throw std::runtime_error("ls function is not implemented yet!");
+                        Recompilation('l', input_commands, flag_check, *client);
                     }
                 }
                 catch (const std::exception& exc)
