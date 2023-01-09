@@ -1337,7 +1337,7 @@ namespace uh::trees {
                     buffer.push_back(*it);
                 }
             }
-            sorted_block_codes.push_back(buffer);
+            if(!sorted_block_codes.empty())sorted_block_codes.push_back(buffer);
 
             std::mutex m1;
             std::unique_lock item_lock(m1,std::defer_lock);
