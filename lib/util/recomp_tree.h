@@ -4,7 +4,6 @@
 
 #ifndef CLIENT_SHELL_RECOMP_TREE_H
 #define CLIENT_SHELL_RECOMP_TREE_H
-#include "conceptTypes/conceptTypes.h"
 #include "logging/logging_boost.h"
 
 // TODO: Test the tree structure
