@@ -1869,6 +1869,19 @@ namespace uh::trees {
                 }
             }
 
+            while (active_threads.load() >= 0) {
+                if (error_flag.test()) {
+                    FATAL
+                        << "Delete_blocks threading engine crashed unexpectedly while waiting for CPU cores!";
+                    return {};
+                }
+#ifdef _WIN32
+                Sleep(10);
+#else
+                usleep(10 * 1000);
+#endif // _WIN32
+            }
+
             std::scoped_lock out_return_lock(out_change_list_protect);
             return {out_size.load(), out_change_list};
         }
