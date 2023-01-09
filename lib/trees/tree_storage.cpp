@@ -1743,7 +1743,10 @@ uh::trees::tree_storage::delete_blocks(
 
                 std::scoped_lock const lock_splice(out_change_list_protect);
                 out_change_list.splice(out_change_list.cend(), std::get<1>(deeper_delete));
-            } else children_read.unlock();
+            } else{
+                active_threads -= (num_threads % 2)?1:2;
+                children_read.unlock();
+            }
 
             std::lock(size_read, children_read);
             if ((*item.begin())[0] >= size->size() || (*item.begin())[0] >= children->size()) {
@@ -1764,12 +1767,11 @@ uh::trees::tree_storage::delete_blocks(
                 children_read.unlock();
                 size_read.unlock();
             }
-            //parallel end
-            if (num_threads > 1)active_threads -= (num_threads % 2)?1:2;
         };
 
         if (num_threads == 1){
             item_lock.lock();
+            active_threads += (num_threads % 2)?1:2;
             first_index_exe_function();
         }
         else {
