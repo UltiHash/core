@@ -89,7 +89,7 @@ uh::trees::tree_storage::tree_storage(const std::filesystem::path &root, unsigne
             workers.push_back(std::move(w));
         }
         for (auto &th: workers)
-            th.join();
+            if(th.joinable())th.join();
     }
     std::unique_lock lock_size(size_protect, std::defer_lock);
     lock_size.lock();
@@ -789,9 +789,9 @@ uh::trees::tree_storage::index(unsigned short num_threads) {
             std::thread w(multithread_index);
             workers.push_back(std::move(w));
         }
-        for (auto &th: workers) {
-            th.join();
-        }
+        for (auto &th: workers)
+            if(th.joinable())th.join();
+
     }
     if (error_flag.test()) {
         FATAL << "Indexing threading engine crashed unexpectedly!";
