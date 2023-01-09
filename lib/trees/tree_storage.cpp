@@ -1604,7 +1604,7 @@ uh::trees::tree_storage::delete_blocks(
                 if (num_threads > 1) {
                     if (w1.joinable())w1.join();
                 } else {
-                    if(!multithreading_factory.empty())write_once_to_maintain_file();
+                    while(!multithreading_factory.empty())write_once_to_maintain_file();
                     if(std::fclose(writer))ERROR << "Write stream was not open!";
                 }
 
