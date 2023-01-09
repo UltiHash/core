@@ -961,6 +961,8 @@ namespace uh::trees {
                         std::string ref_name{boost::algorithm::hex(std::string{(char) i})};
                         std::shared_lock path_protect(combined_path_protect,std::defer_lock);
                         path_protect.lock();
+                        std::string fname = combined_path->filename().string();
+                        ref_name.insert(ref_name.cbegin(), fname.cbegin() + 2, fname.cbegin() + 4);
                         std::filesystem::path read_path = *combined_path / ref_name;
                         path_protect.unlock();
                         std::unique_lock filesystem_lock(std_filesystem_protect, std::defer_lock);
