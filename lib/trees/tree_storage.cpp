@@ -811,8 +811,9 @@ std::size_t uh::trees::tree_storage::delete_recursive(unsigned short num_threads
     std::atomic<std::size_t> out_size{};
     std::atomic_flag error_flag{ATOMIC_FLAG_INIT};
 
-    std::unique_lock step_lock_init(work_steal_protect,std::defer_lock);
+
     auto multithread_index = [&]() {
+        std::unique_lock step_lock_init(work_steal_protect);
         std::size_t i = (i_constructor += 1);
         step_lock_init.unlock();
 
@@ -891,7 +892,6 @@ std::size_t uh::trees::tree_storage::delete_recursive(unsigned short num_threads
     } else {
         std::vector<std::thread> workers;
         for (unsigned short i = 0; i < num_threads; i++) {
-            step_lock_init.lock();
             std::thread w(multithread_index);
             workers.push_back(std::move(w));
         }
