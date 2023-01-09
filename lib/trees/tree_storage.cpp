@@ -722,7 +722,7 @@ uh::trees::tree_storage::index(unsigned short num_threads) {
                         auto block_time_cpy = block_time_current.load();
                         auto parallel_switch_cpy = parallel_switch.load();
                         global_thread_lock.unlock();
-                        SHA512(tmp_buf[!parallel_switch_cpy].begin(), tmp_buf[!parallel_switch_cpy].size(), hash_buf.begin());
+                        SHA512(tmp_buf[!parallel_switch_cpy].data(), tmp_buf[!parallel_switch_cpy].size(), hash_buf.data());
 
                         std::vector<unsigned char> hash{hash_buf.cbegin(), hash_buf.cend()};
                         std::scoped_lock const lock_emplace(search_index_protect);
@@ -1584,7 +1584,7 @@ uh::trees::tree_storage::delete_blocks(
                             tmp_buf[i + meta_offset] = buffer_in[i];
                         }
 
-                        count = std::fread(tmp_buf.begin() + (write_back_size - output_size),
+                        count = std::fread(tmp_buf.data() + (write_back_size - output_size),
                                            sizeof(unsigned char),
                                            output_size, reader);
 
@@ -1682,7 +1682,7 @@ uh::trees::tree_storage::delete_blocks(
                     return;
                 }
                 if (std::fwrite(buf.data(), buf.size(), sizeof(unsigned char), writer) != buf.size()) {
-                    FATAL << "I/O error when writing binary time sequence at \"" + read_path.string() + "\"";
+                    FATAL << "I/O error when writing binary time sequence at \"" + chunk_maintain.string() + "\"";
                     if(std::fclose(dest))ERROR << "Destination stream was not open!";
                     ptr_release_sequence();
                     error_thread_sequence();
