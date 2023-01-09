@@ -61,7 +61,52 @@ namespace uh::trees {
         std::shared_mutex memory_protect{};
 
         //returns wrapped string
-        static std::vector<unsigned char> prefix_wrap(std::size_t input_size){
+        static std::vector<unsigned char> prefix_wrap(std::size_t input_size);
+
+    private:
+        template<typename ALLOC>
+        std::vector<ALLOC> mem_wait(std::size_t mem) {
+            //long pages = sysconf(_SC_PHYS_PAGES);
+            //long page_size = sysconf(_SC_PAGE_SIZE);
+            std::size_t count{};
+            //auto totalMem = static_cast<unsigned long>(pages * page_size);
+            std::size_t freeMem;
+
+            do {
+                std::unique_lock lock_mem(memory_protect,std::defer_lock);
+                lock_mem.lock();
+                struct sysinfo info{};
+                sysinfo(&info);
+                freeMem = info.freeram;
+
+                if (freeMem >= mem * sizeof(ALLOC)) {
+                    auto out_vec = std::vector<ALLOC>();
+                    out_vec.resize(mem,0);
+                    lock_mem.unlock();
+                    return out_vec;
+                }
+                lock_mem.unlock();
+#ifdef _WIN32
+                Sleep(10);
+#else
+                usleep(10 * 1000);
+#endif // _WIN32
+                count++;
+            } while (freeMem < mem * sizeof(ALLOC));
+            std::scoped_lock lock_mem2(memory_protect);
+            auto out_vec = std::vector<ALLOC>();
+            out_vec.resize(mem,0);
+            return out_vec;
+        }
+
+    public:
+        /*
+         * tell a root folder, if another root is detected it is loaded into a loose substructure that is not indexed yet
+         * the module will not know the blocks within the storage chunks, reading will fail
+         * call the index function after crating the tree_storage to proceed
+         */
+        explicit tree_storage(const std::filesystem::path &root,
+                              unsigned short num_threads = std::thread::hardware_concurrency()) {
             if (!num_threads || root.empty()){
                 ERROR << "No root as input or there was a lack of threading resources!";
                 return;
@@ -210,51 +255,6 @@ namespace uh::trees {
                               return std::get<2>(a) < std::get<2>(b);
                           });
         }
-
-    private:
-        template<typename ALLOC>
-        std::vector<ALLOC> mem_wait(std::size_t mem) {
-            //long pages = sysconf(_SC_PHYS_PAGES);
-            //long page_size = sysconf(_SC_PAGE_SIZE);
-            std::size_t count{};
-            //auto totalMem = static_cast<unsigned long>(pages * page_size);
-            std::size_t freeMem;
-
-            do {
-                std::unique_lock lock_mem(memory_protect,std::defer_lock);
-                lock_mem.lock();
-                struct sysinfo info{};
-                sysinfo(&info);
-                freeMem = info.freeram;
-
-                if (freeMem >= mem * sizeof(ALLOC)) {
-                    auto out_vec = std::vector<ALLOC>();
-                    out_vec.resize(mem,0);
-                    lock_mem.unlock();
-                    return out_vec;
-                }
-                lock_mem.unlock();
-#ifdef _WIN32
-                Sleep(10);
-#else
-                usleep(10 * 1000);
-#endif // _WIN32
-                count++;
-            } while (freeMem < mem * sizeof(ALLOC));
-            std::scoped_lock lock_mem2(memory_protect);
-            auto out_vec = std::vector<ALLOC>();
-            out_vec.resize(mem,0);
-            return out_vec;
-        }
-
-    public:
-        /*
-         * tell a root folder, if another root is detected it is loaded into a loose substructure that is not indexed yet
-         * the module will not know the blocks within the storage chunks, reading will fail
-         * call the index function after crating the tree_storage to proceed
-         */
-        explicit tree_storage(const std::filesystem::path &root,
-                              unsigned short num_threads = std::thread::hardware_concurrency());
 
         /*
          * get the size of the entire tree, so the size of all contained information in total, the tree always maintains total size
