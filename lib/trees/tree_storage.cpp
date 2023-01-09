@@ -1646,12 +1646,15 @@ uh::trees::tree_storage::delete_blocks(
                     ptr_release_sequence();
                     return;
                 }
-                if (fread(buf.data(), sizeof(unsigned char), buf.size(), source) != maintain_size_append) {
+                filesystem_lock.lock();
+                if (fread(buf.data(), sizeof(unsigned char), buf.size(), source) != maintain_size_append && std::filesystem::exists(chunk_maintain.make_preferred())
+                    && std::filesystem::file_size(chunk_maintain.make_preferred()) != 0) {
+                    filesystem_lock.unlock();
                     ERROR << "File read opening for append failed at \"" + chunk_maintain.string() + "\"";
                     error_thread_sequence();
                     ptr_release_sequence();
                     return;
-                }
+                } else filesystem_lock.unlock();
                 if (std::ferror(source)) {
                     FATAL << "I/O error when reading \"" + chunk_maintain.string() + "\"";
                     error_thread_sequence();
