@@ -834,7 +834,7 @@ std::size_t uh::trees::tree_storage::delete_recursive(unsigned short num_threads
                 std::get<0>(size->at(i)) -= vanish_size;
                 size_lock.unlock();
                 filesystem_lock.lock();
-                if(std::filesystem::exists(ref_name)){
+                if(std::filesystem::exists(read_path)){
                     if (!std::remove(read_path.c_str())) {
                         filesystem_lock.unlock();
                         FATAL << "Removing was not completed on path \"" + read_path.string() + "\"";
