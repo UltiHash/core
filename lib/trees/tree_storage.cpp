@@ -1213,7 +1213,7 @@ uh::trees::tree_storage::delete_blocks(
     });
     //scan and filter for size == 5 and delete blocks from chunks, deliver deleted size and changed local block codes via chunk level indexing after change spot
     //use multithreading with a thread management system so that threads from deleting go on to deeper delete
-
+    std::list<std::thread> workers;
     //presort local block reference groups
     std::vector<std::vector<std::vector<unsigned char>>> sorted_block_codes{};
     unsigned char current = (*block_codes.begin())[0];
@@ -1228,9 +1228,6 @@ uh::trees::tree_storage::delete_blocks(
     }
     if(!buffer.empty())sorted_block_codes.push_back(buffer);
 
-    std::mutex m1;
-    std::unique_lock item_lock(m1,std::defer_lock);
-
     for(auto &item_now:sorted_block_codes){
         if(item_now.empty()){
             ERROR << "Internal Error on deleting: empty block!";
@@ -1243,9 +1240,7 @@ uh::trees::tree_storage::delete_blocks(
             }
         };
 
-        auto first_index_exe_function = [&]() {
-            auto item = item_now;
-            item_lock.unlock();
+        auto first_index_exe_function = [&](auto item) {
             //parallel start
             std::vector<std::vector<unsigned char>> deeper_codes{}, delete_here_codes{};
             //take a branch to delete multiple blocks within
@@ -1766,16 +1761,21 @@ uh::trees::tree_storage::delete_blocks(
                 children_read.unlock();
                 size_read.unlock();
             }
-            active_threads -= (num_threads % 2)?1:2;
         };
 
         if (num_threads == 1){
-            item_lock.lock();
             active_threads += (num_threads % 2)?1:2;
-            first_index_exe_function();
+            first_index_exe_function(item_now);
+            active_threads -= (num_threads % 2)?1:2;
         }
         else {
             //threading manager
+            for(auto it_w = workers.begin(); it_w != workers.end();it_w++){
+                if(!it_w->joinable()){
+                    workers.erase(it_w);
+                    active_threads -= (num_threads % 2)?1:2;
+                }
+            }
             while (active_threads.load() >= num_threads) {
                 if (error_flag.test()) {
                     FATAL
@@ -1789,8 +1789,8 @@ uh::trees::tree_storage::delete_blocks(
 #endif // _WIN32
             }
             active_threads += (num_threads % 2)?1:2;
-            item_lock.lock();
-            std::thread(first_index_exe_function).detach();
+            std::thread w(first_index_exe_function,item_now);
+            workers.push_back(std::move(w));
             if (error_flag.test()) {
                 FATAL << "Delete_blocks threading engine crashed unexpectedly!";
                 return {};
@@ -1798,17 +1798,18 @@ uh::trees::tree_storage::delete_blocks(
         }
     }
 
-    while (active_threads.load() > 0) {
+    for(auto it_w = workers.begin(); it_w != workers.end();it_w++){
         if (error_flag.test()) {
             FATAL
                 << "Delete_blocks threading engine crashed unexpectedly while waiting for CPU cores!";
             return {};
         }
-#ifdef _WIN32
-        Sleep(TEN_MS);
-#else
-        usleep(TEN_MS * ONE_MILLISECOND);
-#endif // _WIN32
+        if(it_w->joinable())it_w->join();
+    }
+    if (error_flag.test()) {
+        FATAL
+            << "Delete_blocks threading engine crashed unexpectedly while waiting for CPU cores!";
+        return {};
     }
 
     std::scoped_lock const out_return_lock(out_change_list_protect);
