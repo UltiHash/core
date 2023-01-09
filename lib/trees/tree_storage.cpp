@@ -327,17 +327,17 @@ std::vector<unsigned char> uh::trees::tree_storage::write(const std::vector<unsi
             return std::vector<unsigned char>{};
         }
         //File should have been opened or created here
-        if (std::fwrite(bin_time.data(), bin_time.size(), sizeof(unsigned char), writer) != bin_time.size()) {
+        if (!std::fwrite(bin_time.data(), bin_time.size(), sizeof(unsigned char), writer)) {
             ERROR << "File write binary time opening failed at \"" + read_chunk.string() + "\"";
             end_write_sequence();
             return std::vector<unsigned char>{};
         }
-        if (std::fwrite(prefix.data(), prefix.size(), sizeof(unsigned char), writer) != prefix.size()) {
+        if (!std::fwrite(prefix.data(), prefix.size(), sizeof(unsigned char), writer)) {
             ERROR << "File write prefix data opening failed at \"" + read_chunk.string() + "\"";
             end_write_sequence();
             return std::vector<unsigned char>{};
         }
-        if (std::fwrite(input.data(), input.size(), sizeof(unsigned char), writer) != input.size()) {
+        if (!std::fwrite(input.data(), input.size(), sizeof(unsigned char), writer)) {
             ERROR << "File write input data opening failed at \"" + read_chunk.string() + "\"";
             end_write_sequence();
             return std::vector<unsigned char>{};
@@ -1178,7 +1178,7 @@ bool uh::trees::tree_storage::set_block_time(const std::vector<unsigned char> &b
                 return false;
             }
             //File should have been opened or created here
-            if (std::fwrite(bin_time.data(), bin_time.size(), sizeof(unsigned char), writer) != bin_time.size()) {
+            if (!std::fwrite(bin_time.data(), bin_time.size(), sizeof(unsigned char), writer)) {
                 FATAL << "I/O error when writing binary time sequence at \"" + read_path.string() + "\"";
                 set_time_end_sequence();
                 return false;
@@ -1401,7 +1401,7 @@ uh::trees::tree_storage::delete_blocks(
                     }
                     out_vec.insert(out_vec.cbegin(), old_block_code[0]);
 
-                    if (std::fwrite(current_storage_ptr.data(), current_storage_ptr.size(), sizeof(unsigned char), writer) != current_storage_ptr.size()) {
+                    if (!std::fwrite(current_storage_ptr.data(), current_storage_ptr.size(), sizeof(unsigned char), writer)) {
                         ERROR << "File write thread failed to put down a line at \"" + chunk_maintain.string() + "\"";
                         io_end_sequence();
                         error_thread_sequence();
@@ -1681,7 +1681,7 @@ uh::trees::tree_storage::delete_blocks(
                     error_thread_sequence();
                     return;
                 }
-                if (std::fwrite(buf.data(), buf.size(), sizeof(unsigned char), writer) != buf.size()) {
+                if (!std::fwrite(buf.data(), buf.size(), sizeof(unsigned char), writer)) {
                     FATAL << "I/O error when writing binary time sequence at \"" + chunk_maintain.string() + "\"";
                     if(std::fclose(dest))ERROR << "Destination stream was not open!";
                     ptr_release_sequence();
