@@ -1679,13 +1679,16 @@ uh::trees::tree_storage::delete_blocks(
                     error_thread_sequence();
                     return;
                 }
-                if (!std::fwrite(buf.data(), buf.size(), sizeof(unsigned char), writer)) {
+                filesystem_lock.lock();
+                if (!std::fwrite(buf.data(), buf.size(), sizeof(unsigned char), writer) && !std::filesystem::is_empty(chunk_maintain.make_preferred())) {
+                    filesystem_lock.unlock();
                     FATAL << "I/O error when writing binary time sequence at \"" + chunk_maintain.string() + "\"";
                     if(std::fclose(dest))ERROR << "Destination stream was not open!";
                     ptr_release_sequence();
                     error_thread_sequence();
                     return;
                 }
+                else filesystem_lock.unlock();
 
                 if (std::ferror(dest)) {
                     FATAL << "I/O error when appending \"" + chunk_maintain.string() + "\"";
