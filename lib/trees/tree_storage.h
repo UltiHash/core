@@ -1339,7 +1339,10 @@ namespace uh::trees {
             }
             sorted_block_codes.push_back(buffer);
 
-            for(auto &item:sorted_block_codes){
+            std::mutex m1;
+            std::unique_lock item_lock(m1,std::defer_lock);
+
+            for(auto &item_now:sorted_block_codes){
                 auto error_thread_sequence = [&]() {
                     while (std::atomic_flag_test_and_set_explicit(&error_flag,
                                                                   std::memory_order_acquire)) {
@@ -1348,6 +1351,8 @@ namespace uh::trees {
                 };
 
                 auto first_index_exe_function = [&]() {
+                    auto item = item_now;
+                    item_lock.unlock();
                     //parallel start
                     std::vector<std::vector<unsigned char>> deeper_codes{}, delete_here_codes{};
                     //take a branch to delete multiple blocks within
@@ -1835,7 +1840,11 @@ namespace uh::trees {
                     //parallel end
                     if (num_threads > 1)active_threads -= (num_threads % 2)?1:2;
                 };
-                if (num_threads == 1)first_index_exe_function();
+
+                if (num_threads == 1){
+                    item_lock.lock();
+                    first_index_exe_function();
+                }
                 else {
                     //threading manager
                     while (active_threads.load() >= num_threads) {
@@ -1851,6 +1860,7 @@ namespace uh::trees {
 #endif // _WIN32
                     }
                     active_threads += (num_threads % 2)?1:2;
+                    item_lock.lock();
                     std::thread(first_index_exe_function).detach();
                     if (error_flag.test()) {
                         FATAL << "Delete_blocks threading engine crashed unexpectedly!";
