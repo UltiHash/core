@@ -468,7 +468,7 @@ std::tuple<unsigned long, std::vector<unsigned char>> uh::trees::tree_storage::r
 
             std::array<unsigned char, sizeof(unsigned long)> time_buf;
             std::size_t total_read{};
-            std::size_t count = std::fread(&time_buf, sizeof(unsigned char), sizeof(unsigned long), reader);
+            std::size_t count = std::fread(time_buf.data(), sizeof(unsigned char), sizeof(unsigned long), reader);
             total_read += count;
             if (count != sizeof(unsigned long)) {
                 FATAL
@@ -503,8 +503,9 @@ std::tuple<unsigned long, std::vector<unsigned char>> uh::trees::tree_storage::r
                 read_end_sequence();
                 return {0, std::vector<unsigned char>{}};
             }
-            std::array<unsigned char,buf_size + 1> buffer_in;
-            count = std::fread(&buffer_in, sizeof(unsigned char), buf_size + 1, reader);
+            std::vector<unsigned char> buffer_in;
+            buffer_in.resize(buf_size + 1, 0);
+            count = std::fread(buffer_in.data(), sizeof(unsigned char), buf_size + 1, reader);
             total_read += count;
             if (count != buf_size + 1) {
                 FATAL
@@ -632,7 +633,7 @@ uh::trees::tree_storage::index(unsigned short num_threads) {
                         local_block_ref[parallel_switch_cpy].insert(local_block_ref[parallel_switch_cpy].cbegin(), i);
 
                         std::array<unsigned char, sizeof(unsigned long)> time_buf;
-                        std::size_t count = std::fread(&time_buf, sizeof(unsigned char), sizeof(unsigned long),
+                        std::size_t count = std::fread(time_buf.data(), sizeof(unsigned char), sizeof(unsigned long),
                                                        reader);
                         cur_pos += count;
                         if (count != sizeof(unsigned long)) {
@@ -675,8 +676,9 @@ uh::trees::tree_storage::index(unsigned short num_threads) {
                             error_thread_sequence();
                             if (error_flag.test())return;
                         }
-                        std::array<unsigned char, buf_size + 1> buffer_for_size;
-                        count = std::fread(&buffer_for_size, sizeof(unsigned char), buf_size + 1, reader);
+                        std::vector<unsigned char> buffer_for_size;
+                        buffer_for_size.resize(buf_size + 1, 0);
+                        count = std::fread(buffer_for_size.data(), sizeof(unsigned char), buf_size + 1, reader);
                         cur_pos += count;
                         if (count != buf_size + 1) {
                             FATAL << "I/O prefix first byte reading was not completed on path \"" +
@@ -1008,7 +1010,7 @@ std::tuple<unsigned long, std::size_t, std::size_t> uh::trees::tree_storage::get
             }
 
             std::array<unsigned char, sizeof(unsigned long)> time_buf;
-            std::size_t count = std::fread(&time_buf, sizeof(unsigned char), sizeof(unsigned long), reader);
+            std::size_t count = std::fread(time_buf.data(), sizeof(unsigned char), sizeof(unsigned long), reader);
             if (count != sizeof(unsigned long)) {
                 FATAL
                     << "I/O time first 8 bytes reading was not completed on path \"" + read_path.string() +
@@ -1041,8 +1043,9 @@ std::tuple<unsigned long, std::size_t, std::size_t> uh::trees::tree_storage::get
                 read_end_sequence();
                 return {};
             }
-            unsigned char buffer_in[buf_size + 1];
-            count = std::fread(&buffer_in, sizeof(unsigned char), buf_size + 1, reader);
+            std::vector<unsigned char> buffer_in;
+            buffer_in.resize(buf_size+1,0);
+            count = std::fread(buffer_in.data(), sizeof(unsigned char), buf_size + 1, reader);
             if (count != buf_size + 1) {
                 FATAL
                     << "I/O prefix first byte reading was not completed on path \"" + read_path.string() + "\"";
@@ -1528,8 +1531,9 @@ uh::trees::tree_storage::delete_blocks(
                         factory_io_sequence_end();
                         if (error_flag.test())return;//break thread in case error is there
                     }
-                    std::array<unsigned char, buf_size + 1> buffer_in;
-                    count = std::fread(&buffer_in, sizeof(unsigned char), buf_size + 1, reader);
+                    std::vector<unsigned char> buffer_in;
+                    buffer_in.resize(buf_size+1,0);
+                    count = std::fread(buffer_in.data(), sizeof(unsigned char), buf_size + 1, reader);
                     if (count != buf_size + 1) {
                         FATAL
                             << "I/O prefix first byte reading was not completed on path \"" +
