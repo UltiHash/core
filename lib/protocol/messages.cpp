@@ -184,4 +184,39 @@ void read(std::istream& in, quit::response&)
 
 // ---------------------------------------------------------------------
 
+void write(std::ostream& out, const free_space::request& request)
+{
+    write(out, free_space::request_id);
+}
+
+// ---------------------------------------------------------------------
+
+void read(std::istream& in, free_space::request& request)
+{
+    free_space::request tmp;
+    std::swap(tmp, request);
+}
+
+// ---------------------------------------------------------------------
+
+void write(std::ostream& out, const free_space::response& response)
+{
+    write(out, response.space_available);
+}
+
+// ---------------------------------------------------------------------
+
+void read(std::istream& in, free_space::response& response)
+{
+    check_status(in);
+
+    free_space::response tmp;
+
+    read(in, tmp.space_available);
+
+    std::swap(tmp, response);
+}
+
+// ---------------------------------------------------------------------
+
 } // namespace uh::protocol

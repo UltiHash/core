@@ -22,13 +22,13 @@ struct client_factory_config
 class client_factory : public util::factory<client>
 {
 public:
-    client_factory(util::factory<net::socket>& socket_factory,
+    client_factory(std::unique_ptr<util::factory<net::socket>>&& socket_factory,
                    const client_factory_config& config);
 
     virtual std::unique_ptr<client> create() override;
 
 private:
-    util::factory<net::socket>& m_sf;
+    std::unique_ptr<util::factory<net::socket>> m_sf;
     std::string m_client_version;
 };
 
