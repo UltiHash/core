@@ -873,7 +873,6 @@ std::size_t uh::trees::tree_storage::delete_recursive(unsigned short num_threads
                         if (error_flag.test())return;
                     } else filesystem_lock.unlock();
                 }
-                filesystem_lock.unlock();
                 out_size += vanish_size;
                 std::scoped_lock const lg(size_protect);
                 std::get<0>(size->at(i)) -= vanish_size;
