@@ -41,6 +41,9 @@ void read(std::istream& in, uint32_t& value);
 void write(std::ostream& out, int32_t value);
 void read(std::istream& in, int32_t& value);
 
+void write(std::ostream& out, uint64_t value);
+void read(std::istream& in, uint64_t& value);
+
 // ---------------------------------------------------------------------
 
 } // namespace uh::protocol

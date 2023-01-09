@@ -11,6 +11,7 @@ namespace uh::protocol
 
 DEFINE_EXCEPTION(read_error);
 DEFINE_EXCEPTION(write_limit_exceeded);
+DEFINE_EXCEPTION(unsupported);
 
 // ---------------------------------------------------------------------
 

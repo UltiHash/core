@@ -18,6 +18,8 @@ public:
     virtual server_information on_hello(const std::string& client_version) = 0;
     virtual blob on_write_chunk(blob&& data) = 0;
     virtual blob on_read_chunk(blob&& hash) = 0;
+    virtual std::size_t on_free_space();
+
     virtual void on_quit(const std::string& reason);
 
     virtual void handle(std::shared_ptr<net::socket> client) override;
@@ -26,6 +28,7 @@ public:
     void handle_write_chunk(std::iostream& io);
     void handle_read_chunk(std::iostream& io);
     void handle_quit(std::iostream& io);
+    void handle_free_space(std::iostream& io);
 };
 
 // ---------------------------------------------------------------------

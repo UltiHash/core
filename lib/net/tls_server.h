@@ -2,6 +2,7 @@
 #define UH_NET_TLS_SERVER_H
 
 #include <net/server.h>
+#include <net/plain_server.h>
 
 #include <boost/asio/ssl.hpp>
 #include <boost/asio.hpp>
@@ -14,13 +15,13 @@ namespace uh::net
 
 // ---------------------------------------------------------------------
 
-class tls_server
+class tls_server : public server
 {
 public:
     tls_server(const server_config& config,
                util::factory<uh::protocol::protocol>& protocol_factory);
 
-    void run();
+    void run() override;
 
 private:
     struct connection_state;

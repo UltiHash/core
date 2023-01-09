@@ -54,6 +54,11 @@ public:
     void quit(const std::string& reason);
 
     /**
+     * Returns free space on the peer in bytes.
+     */
+    std::size_t free_space();
+
+    /**
      * Return true, if there is a working underlying connection. False indicates
      * that there was an I/O error before.
      */

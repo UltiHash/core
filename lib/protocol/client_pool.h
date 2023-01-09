@@ -33,7 +33,7 @@ public:
         std::unique_ptr<client> m_client;
     };
 
-    client_pool(util::factory<client>& factory,
+    client_pool(std::unique_ptr<util::factory<client>>&& factory,
                 std::size_t pool_size);
 
     handle get();
@@ -43,7 +43,7 @@ private:
     void put_back(std::unique_ptr<client> c);
 
     std::list<std::unique_ptr<client>> m_clients;
-    util::factory<client>& m_factory;
+    std::unique_ptr<util::factory<client>> m_factory;
     std::size_t m_pool_size;
 
     std::mutex m_mutex;
