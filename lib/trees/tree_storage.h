@@ -938,7 +938,7 @@ namespace uh::trees {
                         std::get<0>(size->at(i)) -= vanish_size;
                         size_lock.unlock();
                         filesystem_lock.lock();
-                        if(std::filesystem::exists(ref_name) && std::filesystem::is_empty(ref_name)){
+                        if(std::filesystem::exists(ref_name)){
                             if (!std::remove(read_path.c_str())) {
                                 filesystem_lock.unlock();
                                 FATAL << "Removing was not completed on path \"" + read_path.string() + "\"";
@@ -965,7 +965,7 @@ namespace uh::trees {
                         path_protect.unlock();
                         std::unique_lock filesystem_lock(std_filesystem_protect, std::defer_lock);
                         filesystem_lock.lock();
-                        if(std::filesystem::exists(ref_name) && std::filesystem::is_empty(ref_name)){
+                        if(std::filesystem::exists(ref_name)){
                             if (!std::remove(ref_name.c_str())) {
                                 filesystem_lock.unlock();
                                 FATAL << "Removing was not completed on path \"" + read_path.string() + "\"";
