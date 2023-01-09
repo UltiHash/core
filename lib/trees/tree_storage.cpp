@@ -1224,9 +1224,7 @@ uh::trees::tree_storage::delete_blocks(
             buffer.clear();
             current = (*it)[0];
         }
-        else{
-            buffer.push_back(*it);
-        }
+        buffer.push_back(*it);
     }
     if(!sorted_block_codes.empty())sorted_block_codes.push_back(buffer);
 
