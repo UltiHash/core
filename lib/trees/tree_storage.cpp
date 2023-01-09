@@ -896,7 +896,7 @@ std::size_t uh::trees::tree_storage::delete_recursive(unsigned short num_threads
             workers.push_back(std::move(w));
         }
         for (auto &th: workers)
-            th.join();
+            if(th.joinable())th.join();
     }
     if (error_flag.test()) {
         FATAL << "Delete_recursive threading engine crashed unexpectedly!";
