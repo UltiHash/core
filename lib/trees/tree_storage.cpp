@@ -835,7 +835,7 @@ std::size_t uh::trees::tree_storage::delete_recursive(unsigned short num_threads
                 size_lock.unlock();
                 filesystem_lock.lock();
                 if(std::filesystem::exists(read_path)){
-                    if (!std::filesystem::remove(read_path.c_str())) {
+                    if (!std::filesystem::remove(read_path)) {
                         filesystem_lock.unlock();
                         FATAL << "Removing was not completed on path \"" + read_path.string() + "\". Check inconsistent maintain files!";
                         while (std::atomic_flag_test_and_set_explicit(&error_flag, std::memory_order_acquire)) {
@@ -863,8 +863,8 @@ std::size_t uh::trees::tree_storage::delete_recursive(unsigned short num_threads
                 path_protect.unlock();
                 std::unique_lock filesystem_lock(std_filesystem_protect, std::defer_lock);
                 filesystem_lock.lock();
-                if(std::filesystem::exists(ref_name)){
-                    if (!std::filesystem::remove_all(ref_name.c_str())) {
+                if(std::filesystem::exists(read_path)){
+                    if (!std::filesystem::remove(read_path)) {
                         filesystem_lock.unlock();
                         FATAL << "Removing was not completed on path \"" + read_path.string() + "\". Check inconsistent maintain files!";
                         while (std::atomic_flag_test_and_set_explicit(&error_flag, std::memory_order_acquire)) {
