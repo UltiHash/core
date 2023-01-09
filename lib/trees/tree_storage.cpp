@@ -1798,7 +1798,7 @@ uh::trees::tree_storage::delete_blocks(
         }
     }
 
-    while (active_threads.load() >= 0) {
+    while (active_threads.load() > 0) {
         if (error_flag.test()) {
             FATAL
                 << "Delete_blocks threading engine crashed unexpectedly while waiting for CPU cores!";
