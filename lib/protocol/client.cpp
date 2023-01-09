@@ -88,6 +88,19 @@ void client::quit(const std::string& reason)
 
 // ---------------------------------------------------------------------
 
+std::size_t client::free_space()
+{
+    write(m_io, free_space::request{});
+    m_io.flush();
+
+    free_space::response response;
+    read(m_io, response);
+
+    return response.space_available;
+}
+
+// ---------------------------------------------------------------------
+
 bool client::valid() const
 {
     return m_sock->valid();;

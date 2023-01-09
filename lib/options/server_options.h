@@ -1,7 +1,7 @@
 #ifndef OPTIONS_SERVER_OPTIONS_H
 #define OPTIONS_SERVER_OPTIONS_H
 
-#include <net/server.h>
+#include <net/plain_server.h>
 #include <options/basic_options.h>
 
 

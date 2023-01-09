@@ -14,7 +14,9 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get update \
         g++-12 \
         libssl-dev \
         libgmp3-dev \
-        libpqxx-dev
+        libpqxx-dev \
+        zlib1g-dev \
+        libcurl4-openssl-dev
 
 # Update alternatives
 RUN update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-12 20 && \
@@ -29,16 +31,16 @@ RUN update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-12 20 && \
 
 
 
-# Download, compile and install Boost 1.80
-RUN wget -O /tmp/boost_1_80_0.tar.gz https://sourceforge.net/projects/boost/files/boost/1.80.0/boost_1_80_0.tar.gz/download \
+# Download, compile and install Boost 1.81
+RUN wget -O /tmp/boost_1_81_0.tar.gz https://sourceforge.net/projects/boost/files/boost/1.81.0/boost_1_81_0.tar.gz/download \
     && cd /tmp/ \
-	&& tar -xzf boost_1_80_0.tar.gz \
-	&& cd /tmp/boost_1_80_0 \
+	&& tar -xzf boost_1_81_0.tar.gz \
+	&& cd /tmp/boost_1_81_0 \
 	&& ./bootstrap.sh --with-libraries=all --with-toolset=gcc \
 	&& ./b2 -j $(nproc) --target=shared,static --toolset=gcc --link=shared\
 	&& ./b2 install --target=shared,static --toolset=gcc --link=shared\
 	&& cd /tmp \
-	&& rm -Rf /tmp/boost_1_80_0
+	&& rm -Rf /tmp/boost_1_81_0
 
 
 COPY . /uhLibCommon
