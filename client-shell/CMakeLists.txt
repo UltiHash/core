@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.22.0 FATAL_ERROR)
 
-project(uhClientShell VERSION 0.1.0)
+project(uhClient VERSION 0.1.0)
 set(CMAKE_CXX_STANDARD 20)
 message(STATUS "Using ${PROJECT_NAME}...")
 
@@ -13,8 +13,9 @@ find_package(Boost 1.80 COMPONENTS unit_test_framework REQUIRED)
 find_package(OpenSSL REQUIRED)
 
 # putting internal project repository LIBUH_DEP in a variable
-set(LIBUH_DEP "lib")
-add_subdirectory(${LIBUH_DEP})
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/lib)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/lib)
+add_subdirectory(src/serialization)
 
 find_package(Git REQUIRED)
 if(GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/.git")
@@ -49,8 +50,8 @@ if(GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/.git")
 endif()
 
 # configuring library dependencies for cmake and linker
-set(${PROJECT_NAME}_INCLUDE_DIRS ${PROJECT_BINARY_DIR} ${PROJECT_SOURCE_DIR}/${LIBUH_DEP})
-set(${PROJECT_NAME}_LINK_LIBRARIES uhLibSerialization uhLibProtocol ${OPENSSL_LIBRARIES})
+set(${PROJECT_NAME}_INCLUDE_DIRS ${PROJECT_BINARY_DIR} ${PROJECT_SOURCE_DIR}/src)
+set(${PROJECT_NAME}_LINK_LIBRARIES uhLibProtocol uhLibSerialization ${OPENSSL_LIBRARIES})
 
 # adding all the .h files of the current project
 file(GLOB HEADER_FILE_LIST
@@ -58,6 +59,10 @@ file(GLOB HEADER_FILE_LIST
 # adding all the .h files of the current project
 file(GLOB SOURCE_FILE_LIST
         ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp)
+
+# setting flags for optimizations
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O0")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0")
 
 # creating a target executable
 add_executable(${PROJECT_NAME} ${HEADER_FILE_LIST} ${SOURCE_FILE_LIST})
@@ -102,6 +107,6 @@ endforeach(testSrc)
 
 # creating a single test executable facilitates a better integration between boost.test and CLion
 add_executable (${PROJECT_NAME}_allTests ${HEADER_FILE_LIST} ${SOURCE_FILE_LIST} ${testSrcFiles} test/testRunner.cpp)
-target_compile_definitions(${PROJECT_NAME}_allTests PUBLIC SINGLE_TEST_RUNNER=1)
-target_include_directories(${PROJECT_NAME}_allTests PUBLIC ${${PROJECT_NAME}_INCLUDE_DIRS})
-target_link_libraries (${PROJECT_NAME}_allTests ${${PROJECT_NAME}_LINK_LIBRARIES})
+target_compile_definitions(${PROJECT_NAME}_allTests PRIVATE SINGLE_TEST_RUNNER=1)
+target_include_directories(${PROJECT_NAME}_allTests PRIVATE ${${PROJECT_NAME}_INCLUDE_DIRS})
+target_link_libraries (${PROJECT_NAME}_allTests PRIVATE ${${PROJECT_NAME}_LINK_LIBRARIES})
