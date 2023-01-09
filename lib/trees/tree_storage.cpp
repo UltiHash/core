@@ -1678,7 +1678,7 @@ uh::trees::tree_storage::delete_blocks(
                     return;
                 }
                 filesystem_lock.lock();
-                if (!std::fwrite(buf.data(), buf.size(), sizeof(unsigned char), writer) && std::filesystem::exists(chunk_maintain.make_preferred())
+                if (!std::fwrite(buf.data(), buf.size(), sizeof(unsigned char), dest) && std::filesystem::exists(chunk_maintain.make_preferred())
                 && std::filesystem::file_size(chunk_maintain.make_preferred()) != 0) {
                     filesystem_lock.unlock();
                     FATAL << "I/O error when writing binary time sequence at \"" + chunk_maintain.string() + "\"";
