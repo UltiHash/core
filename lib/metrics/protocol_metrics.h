@@ -22,6 +22,7 @@ public:
     prometheus::Counter& reqs_read_block() const;
     prometheus::Counter& reqs_free_space() const;
     prometheus::Counter& reqs_quit() const;
+    prometheus::Counter& reqs_reset() const;
 private:
     prometheus::Family<prometheus::Counter>& m_counters;
     prometheus::Counter& m_reqs_hello;
@@ -29,6 +30,7 @@ private:
     prometheus::Counter& m_reqs_read_block;
     prometheus::Counter& m_reqs_free_space;
     prometheus::Counter& m_reqs_quit;
+    prometheus::Counter& m_reqs_reset;
 };
 
 // ---------------------------------------------------------------------
@@ -45,6 +47,7 @@ public:
     virtual uh::protocol::blob on_read_block(uh::protocol::blob&& hash) override;
     virtual std::size_t on_free_space() override;
     virtual void on_quit(const std::string& reason) override;
+    virtual void on_reset() override;
 
 private:
     const protocol_metrics& m_metrics;

@@ -37,6 +37,7 @@ public:
     virtual std::size_t on_free_space();
 
     virtual void on_quit(const std::string& reason);
+    virtual void on_reset();
 
     virtual void handle(std::shared_ptr<net::socket> client) override;
 
@@ -49,6 +50,7 @@ public:
     void handle_read_block(iostream& io);
     void handle_quit(iostream& io);
     void handle_free_space(iostream& io);
+    void handle_reset(iostream& io);
 
 private:
     server_state m_state = server_state::disconnected;
