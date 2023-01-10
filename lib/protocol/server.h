@@ -4,9 +4,25 @@
 #include "common.h"
 #include "protocol.h"
 
+#include <boost/iostreams/stream.hpp>
+
 
 namespace uh::protocol
 {
+
+// ---------------------------------------------------------------------
+
+enum class server_state
+{
+    disconnected,
+    setup,
+    normal,
+    reading,
+};
+
+// ---------------------------------------------------------------------
+
+using iostream = boost::iostreams::stream<net::socket_device>;
 
 // ---------------------------------------------------------------------
 
@@ -24,11 +40,18 @@ public:
 
     virtual void handle(std::shared_ptr<net::socket> client) override;
 
-    void handle_hello(std::iostream& io);
-    void handle_write_block(std::iostream& io);
-    void handle_read_block(std::iostream& io);
-    void handle_quit(std::iostream& io);
-    void handle_free_space(std::iostream& io);
+    void handle_setup_request(iostream& io, uint8_t request_id);
+    void handle_normal_request(iostream& io, uint8_t request_id);
+    void handle_reading_request(iostream& io, uint8_t request_id);
+
+    void handle_hello(iostream& io);
+    void handle_write_block(iostream& io);
+    void handle_read_block(iostream& io);
+    void handle_quit(iostream& io);
+    void handle_free_space(iostream& io);
+
+private:
+    server_state m_state = server_state::disconnected;
 };
 
 // ---------------------------------------------------------------------
