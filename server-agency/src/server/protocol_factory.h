@@ -3,9 +3,9 @@
 
 #include <net/server.h>
 #include <protocol/protocol.h>
+#include <metrics/protocol_metrics.h>
 
 #include <cluster/mod.h>
-#include <metrics/metrics.h>
 
 
 namespace uh::an::server
@@ -18,13 +18,13 @@ class protocol_factory : public util::factory<uh::protocol::protocol>
 public:
     protocol_factory(
         cluster::mod& cluster,
-        const an::metrics::metrics& metrics);
+        const uh::metrics::protocol_metrics& metrics);
 
     virtual std::unique_ptr<uh::protocol::protocol> create() override;
 
 private:
     cluster::mod& m_cluster;
-    const an::metrics::metrics& m_metrics;
+    const uh::metrics::protocol_metrics& m_metrics;
 };
 
 // ---------------------------------------------------------------------
