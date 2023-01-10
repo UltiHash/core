@@ -51,12 +51,12 @@ server_information client::hello(const std::string& client_version)
 
 // ---------------------------------------------------------------------
 
-blob client::write_chunk(const blob& data)
+blob client::write_block(const blob& data)
 {
-    write(m_io, write_chunk::request{ .content = std::move(data) });
+    write(m_io, write_block::request{ .content = std::move(data) });
     m_io.flush();
 
-    write_chunk::response response;
+    write_block::response response;
     read(m_io, response);
 
     return std::move(response.hash);
@@ -64,12 +64,12 @@ blob client::write_chunk(const blob& data)
 
 // ---------------------------------------------------------------------
 
-blob client::read_chunk(const blob& hash)
+blob client::read_block(const blob& hash)
 {
-    write(m_io, read_chunk::request{ .hash = std::move(hash) });
+    write(m_io, read_block::request{ .hash = std::move(hash) });
     m_io.flush();
 
-    read_chunk::response response;
+    read_block::response response;
     read(m_io, response);
 
     return std::move(response.content);

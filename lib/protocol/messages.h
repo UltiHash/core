@@ -56,7 +56,7 @@ void read(std::istream& in, hello::response& request);
 
 // ---------------------------------------------------------------------
 
-struct write_chunk
+struct write_block
 {
     struct request
     {
@@ -73,15 +73,15 @@ struct write_chunk
 
 // ---------------------------------------------------------------------
 
-void write(std::ostream& out, const write_chunk::request& request);
-void read(std::istream& in, write_chunk::request& request);
+void write(std::ostream& out, const write_block::request& request);
+void read(std::istream& in, write_block::request& request);
 
-void read(std::istream& in, write_chunk::response& response);
-void write(std::ostream& out, const write_chunk::response& response);
+void read(std::istream& in, write_block::response& response);
+void write(std::ostream& out, const write_block::response& response);
 
 // ---------------------------------------------------------------------
 
-struct read_chunk
+struct read_block
 {
     struct request
     {
@@ -98,11 +98,11 @@ struct read_chunk
 
 // ---------------------------------------------------------------------
 
-void write(std::ostream& out, const read_chunk::request& request);
-void read(std::istream& in, read_chunk::request& request);
+void write(std::ostream& out, const read_block::request& request);
+void read(std::istream& in, read_block::request& request);
 
-void write(std::ostream& out, const read_chunk::response& response);
-void read(std::istream& in, read_chunk::response& response);
+void write(std::ostream& out, const read_block::response& response);
+void read(std::istream& in, read_block::response& response);
 
 // ---------------------------------------------------------------------
 
