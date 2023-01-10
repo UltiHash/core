@@ -154,6 +154,29 @@ void read(std::istream& in, free_space::response& response);
 
 // ---------------------------------------------------------------------
 
+struct reset
+{
+    struct request
+    {
+    };
+
+    struct response
+    {
+    };
+
+    constexpr static uint8_t request_id = 0x06;
+};
+
+// ---------------------------------------------------------------------
+
+void write(std::ostream& out, const reset::request& request);
+void read(std::istream& in, reset::request& request);
+
+void write(std::ostream& out, const reset::response& response);
+void read(std::istream& in, reset::response& response);
+
+// ---------------------------------------------------------------------
+
 } // namespace uh::protocol
 
 #endif

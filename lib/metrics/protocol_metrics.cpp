@@ -14,7 +14,8 @@ protocol_metrics::protocol_metrics(uh::metrics::service& service)
       m_reqs_write_block(m_counters.Add({{ "type", "write_block" }})),
       m_reqs_read_block(m_counters.Add({{ "type", "read_block" }})),
       m_reqs_free_space(m_counters.Add({{ "type", "free_space" }})),
-      m_reqs_quit(m_counters.Add({{ "type", "quit" }}))
+      m_reqs_quit(m_counters.Add({{ "type", "quit" }})),
+      m_reqs_reset(m_counters.Add({{ "type", "reset" }}))
 {
 }
 
@@ -51,6 +52,13 @@ prometheus::Counter& protocol_metrics::reqs_free_space() const
 prometheus::Counter& protocol_metrics::reqs_quit() const
 {
     return m_reqs_quit;
+}
+
+// ---------------------------------------------------------------------
+
+prometheus::Counter& protocol_metrics::reqs_reset() const
+{
+    return m_reqs_reset;
 }
 
 // ---------------------------------------------------------------------
@@ -101,6 +109,14 @@ void protocol_metrics_wrapper::on_quit(const std::string& reason)
 {
     m_metrics.reqs_quit().Increment();
     return m_base->on_quit(reason);
+}
+
+// ---------------------------------------------------------------------
+
+void protocol_metrics_wrapper::on_reset()
+{
+    m_metrics.reqs_reset().Increment();
+    return m_base->on_reset();
 }
 
 // ---------------------------------------------------------------------

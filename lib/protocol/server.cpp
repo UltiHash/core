@@ -27,6 +27,12 @@ void server::on_quit(const std::string&)
 
 // ---------------------------------------------------------------------
 
+void server::on_reset()
+{
+}
+
+// ---------------------------------------------------------------------
+
 void server::handle(std::shared_ptr<net::socket> client)
 {
     boost::iostreams::stream<net::socket_device> io(client);
@@ -42,8 +48,8 @@ void server::handle(std::shared_ptr<net::socket> client)
 
             switch (m_state)
             {
-                case server_state::setup:   handle_setup_request(io, request_id); break;
-                case server_state::normal:  handle_normal_request(io, request_id); break;
+                case server_state::setup: handle_setup_request(io, request_id); break;
+                case server_state::normal: handle_normal_request(io, request_id); break;
                 case server_state::reading: handle_reading_request(io, request_id); break;
 
                 default:
@@ -90,6 +96,7 @@ void server::handle_normal_request(iostream& io, uint8_t request_id)
         case read_block::request_id: return handle_read_block(io);
         case quit::request_id: return handle_quit(io);
         case free_space::request_id: return handle_free_space(io);
+        case reset::request_id: return handle_reset(io);
 
         default: throw std::runtime_error("unsupported command");
     }
@@ -102,6 +109,7 @@ void server::handle_reading_request(iostream& io, uint8_t request_id)
     switch (request_id)
     {
         case quit::request_id: return handle_quit(io);
+        case reset::request_id: return handle_reset(io);
 
         default: throw std::runtime_error("unsupported command");
     }
@@ -204,6 +212,21 @@ void server::handle_free_space(iostream& io)
 
     write(io, status{ status::OK });
     write(io, free_space::response{ .space_available = space });
+    io.flush();
+}
+
+// ---------------------------------------------------------------------
+
+void server::handle_reset(iostream& io)
+{
+    reset::request req;
+    read(io, req);
+
+    on_reset();
+
+    m_state = server_state::normal;
+
+    write(io, status{ status::OK });
     io.flush();
 }
 

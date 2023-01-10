@@ -219,4 +219,35 @@ void read(std::istream& in, free_space::response& response)
 
 // ---------------------------------------------------------------------
 
+void write(std::ostream& out, const reset::request& request)
+{
+    write(out, reset::request_id);
+}
+
+// ---------------------------------------------------------------------
+
+void read(std::istream& in, reset::request& request)
+{
+    reset::request tmp;
+    std::swap(tmp, request);
+}
+
+// ---------------------------------------------------------------------
+
+void write(std::ostream& out, const reset::response&)
+{
+}
+
+// ---------------------------------------------------------------------
+
+void read(std::istream& in, reset::response& response)
+{
+    check_status(in);
+
+    reset::response tmp;
+    std::swap(tmp, response);
+}
+
+// ---------------------------------------------------------------------
+
 } // namespace uh::protocol
