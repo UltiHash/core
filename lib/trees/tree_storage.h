@@ -432,11 +432,169 @@ namespace uh::trees {
               std::array<unsigned long, TIME_STAMPS_ON_BLOCK> times);
 
         /*
-         * returns a tuple with block time and binary vector of block when entering a block reference (as far as it exists)
-         * WARNING: not existing blocks will still crash the procedure, a radix tree for block existence is needed
+         * returns a tuple with binary block, local binary block reference, block times (create,valid duration,last touch), global hash
+         * if "only_info" flag is set, it will not return the block, only all the other information as a "get_info" function
          */
-        std::tuple<std::vector<unsigned char>, std::vector<unsigned char>, std::array<unsigned long, TIME_STAMPS_ON_BLOCK>, std::array<unsigned char,
-                SHA512_DIGEST_LENGTH + sizeof(unsigned long)>> read(const std::vector<unsigned char> &block_code);
+        //returns block,local block reference, timestamps and global hash reference
+        template<const bool only_info = false>
+        auto read(const std::vector<unsigned char> &block_code) {
+            if (block_code.empty()) {
+                ERROR << "No input given to read!";
+                if constexpr (only_info){
+                    return std::tuple<std::vector<unsigned char>, std::array<unsigned long, TIME_STAMPS_ON_BLOCK>, std::array<unsigned char,
+                            SHA512_DIGEST_LENGTH + sizeof(unsigned long)>>{};
+                }
+                else{
+                    return std::tuple<std::vector<unsigned char>, std::vector<unsigned char>, std::array<unsigned long, TIME_STAMPS_ON_BLOCK>, std::array<unsigned char,
+                            SHA512_DIGEST_LENGTH + sizeof(unsigned long)>>{};
+                }
+            }
+            if (block_code.size() > SMALLEST_LOCAL_BLOCK_SIZE) {
+                //size encoding is not reached yet, read along tree path
+                std::unique_lock read_children(children_protect, std::defer_lock);
+                read_children.lock();
+                if ((short) children->size() - 1 < (short) block_code[0] ||
+                    !std::get<0>(children->at(block_code[0]))) {
+                    read_children.unlock();
+                    std::string const not_found((const char *) block_code.data(), block_code.size());
+                    std::scoped_lock const read_path(combined_path_protect);
+                    DEBUG << "<Block error trace>: Block code " + boost::algorithm::hex(not_found) +
+                             " could not be found in storage tree \"" +
+                             combined_path->string() + "\".";
+                    if constexpr (only_info){
+                        return std::tuple<std::vector<unsigned char>, std::array<unsigned long, TIME_STAMPS_ON_BLOCK>, std::array<unsigned char,
+                                SHA512_DIGEST_LENGTH + sizeof(unsigned long)>>{};
+                    }
+                    else{
+                        return std::tuple<std::vector<unsigned char>, std::vector<unsigned char>, std::array<unsigned long, TIME_STAMPS_ON_BLOCK>, std::array<unsigned char,
+                                SHA512_DIGEST_LENGTH + sizeof(unsigned long)>>{};
+                    }
+                } else {
+                    auto tree_ptr3 = std::get<1>(children->at(block_code[0]));
+                    read_children.unlock();
+                    std::vector<unsigned char> const sub_block_code{block_code.cbegin() + 1, block_code.cend()};
+                    auto out_vec = tree_ptr3->read<only_info>(sub_block_code);
+                    if (std::get<1-only_info>(out_vec).empty()) {
+                        std::string const not_found((const char *) block_code.data(), block_code.size());
+                        std::scoped_lock const read_path(combined_path_protect);
+                        DEBUG << "<Block error trace on return>: Block code " + boost::algorithm::hex(not_found) +
+                                 " could not be found in storage tree \"" +
+                                 combined_path->string() + "\".";
+                    }
+                    return out_vec;
+                }
+            } else {
+                if (block_code.size() < SMALLEST_LOCAL_BLOCK_SIZE) {
+                    std::string const not_found((const char *) block_code.data(), block_code.size());
+                    std::scoped_lock const read_path(combined_path_protect);
+                    FATAL << "<Block error trace>: Block code " + boost::algorithm::hex(not_found) +
+                             " was too short for storage tree \"" +
+                             combined_path->string() + "\".";
+                    return std::tuple<std::vector<unsigned char>, std::vector<unsigned char>, std::array<unsigned long, TIME_STAMPS_ON_BLOCK>, std::array<unsigned char,
+                            SHA512_DIGEST_LENGTH + sizeof(unsigned long)>>{};
+                }
+                //the block code should have a size of 5; one chunk index and 4 bytes of encoding for the offset
+                std::unique_lock size_lock(size_protect, std::defer_lock);
+                size_lock.lock();
+                if ((short) size->size() - 1 < (short) block_code[0] ||
+                    !std::get<0>(size->at(block_code[0]))) {
+                    size_lock.unlock();
+                    std::string const not_found((const char *) block_code.data(), block_code.size());
+                    std::scoped_lock const read_path(combined_path_protect);
+                    DEBUG
+                        << "<Block error trace on return, final tree>: Block code " + boost::algorithm::hex(not_found) +
+                           " could not be found in storage tree \"" + combined_path->string() +
+                           "\" and size of storage chunk was 0.";
+                    if constexpr (only_info){
+                        return std::tuple<std::vector<unsigned char>, std::array<unsigned long, TIME_STAMPS_ON_BLOCK>, std::array<unsigned char,
+                                SHA512_DIGEST_LENGTH + sizeof(unsigned long)>>{};
+                    }
+                    else{
+                        return std::tuple<std::vector<unsigned char>, std::vector<unsigned char>, std::array<unsigned long, TIME_STAMPS_ON_BLOCK>, std::array<unsigned char,
+                                SHA512_DIGEST_LENGTH + sizeof(unsigned long)>>{};
+                    }
+                } else {
+                    size_lock.unlock();
+                    std::vector<unsigned char> sub_block_code{block_code.cbegin() + 1,
+                                                              block_code.cend()}; //copy offset code and rebuild
+                    std::size_t offset{};
+                    for (unsigned short i = 0; i < (unsigned short) sizeof(unsigned int); i++) {
+                        offset += (((std::size_t) sub_block_code[i]) << (i * CHAR_BITS));
+                    }
+                    std::string const ref_name{boost::algorithm::hex(std::string{(char) block_code[0]})};
+                    std::shared_lock read_path_lock(combined_path_protect);
+                    std::filesystem::path read_path = *combined_path / ref_name;
+                    read_path_lock.unlock();
+
+                    size_lock.lock();
+                    auto write_ptr = &(*std::get<2>(size->at(block_code[0])));
+                    auto read_ptr = &(*std::get<3>(size->at(block_code[0])));
+                    size_lock.unlock();
+
+                    *read_ptr += 1;
+
+                    while (write_ptr->test()) {
+                        write_ptr->wait(true);
+                    }
+
+                    FILE *reader = std::fopen(read_path.make_preferred().c_str(), "rb");
+                    auto read_end_sequence = [&reader, &read_ptr, &write_ptr, &read_path]() {
+                        if (std::fclose(reader))ERROR << "Read stream was not open on " + read_path.string() + "!";
+                        *read_ptr -= 1;
+                        if (!read_ptr->load())write_ptr->notify_one();
+                    };
+                    //File should have been opened or created here
+                    if (std::fseek(reader, static_cast<long>(offset), SEEK_SET)) {
+                        ERROR << "File seek failed at \"" + read_path.string() + ", position " + std::to_string(offset) + "\"";
+                        read_end_sequence();
+                        if constexpr (only_info){
+                            return std::tuple<std::vector<unsigned char>, std::array<unsigned long, TIME_STAMPS_ON_BLOCK>, std::array<unsigned char,
+                                    SHA512_DIGEST_LENGTH + sizeof(unsigned long)>>{};
+                        }
+                        else{
+                            return std::tuple<std::vector<unsigned char>, std::vector<unsigned char>, std::array<unsigned long, TIME_STAMPS_ON_BLOCK>, std::array<unsigned char,
+                                    SHA512_DIGEST_LENGTH + sizeof(unsigned long)>>{};
+                        }
+                    }
+
+                    const auto block_read_tup = this->read_block_base(reader, read_path.make_preferred(), block_code,
+                                                                      read_end_sequence,only_info);
+
+                    if (std::get<4>(block_read_tup)) {
+                        ERROR << "File error at \"" + read_path.string() + ", position " + std::to_string(offset) + "\"";
+                        if constexpr (only_info){
+                            return std::tuple<std::vector<unsigned char>, std::array<unsigned long, TIME_STAMPS_ON_BLOCK>, std::array<unsigned char,
+                                    SHA512_DIGEST_LENGTH + sizeof(unsigned long)>>{};
+                        }
+                        else{
+                            return std::tuple<std::vector<unsigned char>, std::vector<unsigned char>, std::array<unsigned long, TIME_STAMPS_ON_BLOCK>, std::array<unsigned char,
+                                    SHA512_DIGEST_LENGTH + sizeof(unsigned long)>>{};
+                        }
+                    }
+
+                    if (!std::get<5>(block_read_tup)) {
+                        ERROR << "File block is broken at \"" + read_path.string() + ", position " + std::to_string(offset) +
+                                 "\"";
+                        if constexpr (only_info){
+                            return std::tuple<std::vector<unsigned char>, std::array<unsigned long, TIME_STAMPS_ON_BLOCK>, std::array<unsigned char,
+                                    SHA512_DIGEST_LENGTH + sizeof(unsigned long)>>{};
+                        }
+                        else{
+                            return std::tuple<std::vector<unsigned char>, std::vector<unsigned char>, std::array<unsigned long, TIME_STAMPS_ON_BLOCK>, std::array<unsigned char,
+                                    SHA512_DIGEST_LENGTH + sizeof(unsigned long)>>{};
+                        }
+                    }
+                    //std::tuple<std::vector<unsigned char>, std::vector<unsigned char>, std::array<unsigned long, TIME_STAMPS_ON_BLOCK>, std::array<unsigned char,
+                    //        SHA512_DIGEST_LENGTH + sizeof(unsigned long)>>
+                    if constexpr (only_info){
+                        return std::make_tuple(block_code, std::get<2>(block_read_tup), std::get<3>(block_read_tup));
+                    }
+                    else{
+                        return std::make_tuple(std::get<1>(block_read_tup), block_code, std::get<2>(block_read_tup), std::get<3>(block_read_tup));
+                    }
+                }
+            }
+        }
 
         /*
          * The index reads the entire information of the tree storage and calculates SHA512 hashes with creation time extension for every single block
@@ -455,9 +613,6 @@ namespace uh::trees {
          * missing blocks still persist
          */
         std::size_t delete_recursive(unsigned short num_threads = std::thread::hardware_concurrency());
-
-        //returns a tuple with block time and block size from disk and total size on disk on request of local block reference
-        std::tuple<unsigned long, std::size_t, std::size_t> get_info(const std::vector<unsigned char> &block_code);
 
         /*
          * returns success on changing touch time of a block, giving the function a valid block code
