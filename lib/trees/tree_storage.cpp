@@ -364,7 +364,7 @@ std::vector<unsigned char> uh::trees::tree_storage::write(const std::vector<unsi
     }
 }
 
-//returns block, timestamps and global hash reference
+//returns block,local block reference, timestamps and global hash reference
 std::tuple<std::vector<unsigned char>, std::vector<unsigned char>, std::array<unsigned long, TIME_STAMPS_ON_BLOCK>, std::array<unsigned char,
         SHA512_DIGEST_LENGTH + sizeof(unsigned long)>> uh::trees::tree_storage::read(const std::vector<unsigned char> &block_code) {
     if (block_code.empty()) {
@@ -459,7 +459,14 @@ std::tuple<std::vector<unsigned char>, std::vector<unsigned char>, std::array<un
 
             auto block_read_tup = this->read_block_base(reader,read_path.make_preferred(),block_code,read_end_sequence);
 
-            return {block_time, tmp_buf};
+            if (std::get<4>(block_read_tup) || !std::get<5>(block_read_tup)) {
+                ERROR << "File block is broken at \"" + read_path.string() + ", position "+std::to_string(offset)+"\"";
+                read_end_sequence();
+                return {};
+            }
+            //std::tuple<std::vector<unsigned char>, std::vector<unsigned char>, std::array<unsigned long, TIME_STAMPS_ON_BLOCK>, std::array<unsigned char,
+            //        SHA512_DIGEST_LENGTH + sizeof(unsigned long)>>
+            return {std::get<1>(block_read_tup), block_code,std::get<2>(block_read_tup),std::get<3>(block_read_tup)};
         }
     }
 }
