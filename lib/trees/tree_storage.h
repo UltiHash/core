@@ -170,11 +170,11 @@ namespace uh::trees {
             };
 
             if(block_buf.size() != total_block_size){
-                ERROR << "File write opening failed at \"" + write_at.string() + "\" at block reference\"" + block_path.string() + "\"";
+                ERROR << "File write opening failed at \"" + write_at.string() + "\" at block reference\"" + block_path().string() + "\"";
             }
 
             if (!writer) {
-                ERROR << "File write opening failed at \"" + write_at.string() + "\" at block reference\"" + block_path.string() + "\"";
+                ERROR << "File write opening failed at \"" + write_at.string() + "\" at block reference\"" + block_path().string() + "\"";
                 return error_sequence();
             }
             //File should have been opened or created here
@@ -185,17 +185,17 @@ namespace uh::trees {
                 }
                 std::size_t jump_prefix_block = prefix.size() + block.size();
                 if (std::fseek(writer, static_cast<long>(jump_prefix_block), SEEK_CUR)) {
-                    ERROR << "File seek failed at \"" + write_at.string() + ", position "+std::to_string(jump_prefix_block) + "\" at block reference\"" + block_path.string() + "\"";
+                    ERROR << "File seek failed at \"" + write_at.string() + ", position "+std::to_string(jump_prefix_block) + "\" at block reference\"" + block_path().string() + "\"";
                     return error_sequence();
                 }
                 if (!std::fwrite(checksum.data(), SHA256_DIGEST_LENGTH, sizeof(unsigned char), writer)) {
-                    ERROR << "File write binary time opening failed at \"" + write_at.string() + "\" at block reference\"" + block_path.string() + "\"";
+                    ERROR << "File write binary time opening failed at \"" + write_at.string() + "\" at block reference\"" + block_path().string() + "\"";
                     return error_sequence();
                 }
             }
             else{
                 if (!std::fwrite(block_buf.data(), block_buf.size(), sizeof(unsigned char), writer)) {
-                    ERROR << "File write binary time opening failed at \"" + write_at.string() + "\" at block reference\"" + block_path.string() + "\"";
+                    ERROR << "File write binary time opening failed at \"" + write_at.string() + "\" at block reference\"" + block_path().string() + "\"";
                     return error_sequence();
                 }
                 return std::make_tuple(total_block_size,block.size(),global_block_reference,false);
@@ -204,9 +204,10 @@ namespace uh::trees {
 
         //returns total size of block plus information, the received block as vector, the total block with information as vector, the times in normal unsigned long form,
         //the global hash of SHA512 with creation time extend, bool error occurred, bool block description valid
-        std::tuple<std::size_t,std::vector<unsigned char>,std::array<unsigned long,TIME_STAMPS_ON_BLOCK>,std::array<unsigned char,SHA512_DIGEST_LENGTH + sizeof(unsigned long)>, bool, bool> read_block_base(
+        std::tuple<std::size_t,std::vector<unsigned char>,std::array<unsigned long,TIME_STAMPS_ON_BLOCK>,
+        std::array<unsigned char,SHA512_DIGEST_LENGTH + sizeof(unsigned long)>, bool, bool> read_block_base(
                 FILE* reader, const std::filesystem::path &read_at, const std::vector<unsigned char> &local_block_ref,
-                auto &end_sequence, bool skip_read_block, bool check_valid){
+                auto &end_sequence, bool skip_read_block=false, bool check_valid=false){
 
             const std::size_t read_info_block_size = SHA512_DIGEST_LENGTH + TIME_STAMPS_ON_BLOCK * sizeof(unsigned long);
             std::vector<unsigned char> first_section = mem_wait<unsigned char>(read_info_block_size);
@@ -229,18 +230,18 @@ namespace uh::trees {
             };
 
             if (!reader) {
-                ERROR << "File read opening failed at \"" + read_at.string() + "\" at block reference\"" + block_path.string() + "\"";
+                ERROR << "File read opening failed at \"" + read_at.string() + "\" at block reference\"" + block_path().string() + "\"";
                 return error_sequence();
             }
 
             if (std::fread(first_section.data(), sizeof(unsigned char), first_section.size(), reader) != first_section.size()) {
                 FATAL
-                    << "I/O first info section reading was not completed on path \"" + read_at.string() + "\" at block reference\"" + block_path.string() + "\"";
+                    << "I/O first info section reading was not completed on path \"" + read_at.string() + "\" at block reference\"" + block_path().string() + "\"";
                 return error_sequence();
             }
 
             if (std::ferror(reader)) {
-                FATAL << "I/O error when reading \"" + read_at.string() + "\" at block reference\"" + block_path.string() + "\"";
+                FATAL << "I/O error when reading \"" + read_at.string() + "\" at block reference\"" + block_path().string() + "\"";
                 return error_sequence();
             }
 
@@ -271,14 +272,14 @@ namespace uh::trees {
             unsigned char buf_size = 0;
             if (std::fread(&buf_size, sizeof(unsigned char), BUF_LEN_SIZE_FOR_SIZE_BLOCK, reader) != BUF_LEN_SIZE_FOR_SIZE_BLOCK) {
                 FATAL
-                    << "I/O prefix first byte reading was not completed on path \"" + read_at.string() + "\" at block reference\"" + block_path.string() + "\"";
+                    << "I/O prefix first byte reading was not completed on path \"" + read_at.string() + "\" at block reference\"" + block_path().string() + "\"";
                 return error_sequence();
             }
             std::vector<unsigned char> buffer_in;
             buffer_in.reserve(buf_size + BUF_LEN_SIZE_FOR_SIZE_BLOCK);
             if (std::fread(buffer_in.data(), sizeof(unsigned char), buf_size + BUF_LEN_SIZE_FOR_SIZE_BLOCK, reader) != buf_size + BUF_LEN_SIZE_FOR_SIZE_BLOCK) {
                 FATAL
-                    << "I/O prefix size buffer reading was not completed on path \"" + read_at.string() + "\" at block reference\"" + block_path.string() + "\"";
+                    << "I/O prefix size buffer reading was not completed on path \"" + read_at.string() + "\" at block reference\"" + block_path().string() + "\"";
                 return error_sequence();
             }
             std::size_t block_size{};
@@ -293,7 +294,7 @@ namespace uh::trees {
 
             if(skip_read_block){
                 if (std::fseek(reader, static_cast<long>(block_size+SHA256_DIGEST_LENGTH), SEEK_CUR)) {
-                    ERROR << "File seek for skipping validity test failed at \"" + read_at.string() + ", jump "+std::to_string(block_size+SHA256_DIGEST_LENGTH) + "\" at block reference\"" + block_path.string() + "\"";
+                    ERROR << "File seek for skipping validity test failed at \"" + read_at.string() + ", jump "+std::to_string(block_size+SHA256_DIGEST_LENGTH) + "\" at block reference\"" + block_path().string() + "\"";
                     return error_sequence();
                 }
             }
@@ -301,7 +302,7 @@ namespace uh::trees {
                 block = mem_wait<unsigned char>(block_size);
                 if (std::fread(block.data(), sizeof(unsigned char), block_size, reader) != block_size) {
                     FATAL
-                        << "I/O block reading not completed on path \"" + read_at.string() + "\" at block reference\"" + block_path.string() + "\"";
+                        << "I/O block reading not completed on path \"" + read_at.string() + "\" at block reference\"" + block_path().string() + "\"";
                     return error_sequence();
                 }
                 if(check_valid){
@@ -322,25 +323,26 @@ namespace uh::trees {
 
                         if (std::fread(checksum_read.data(), sizeof(unsigned char), checksum_read.size(), reader) != checksum_read.size()) {
                             FATAL
-                                << "I/O checksum reading for validity testnot completed on path \"" + read_at.string() + "\" at block reference\"" + block_path.string() + "\"";
+                                << "I/O checksum reading for validity testnot completed on path \"" + read_at.string() + "\" at block reference\"" + block_path().string() + "\"";
                             return error_sequence();
                         }
                         valid = std::equal(checksum_test.cbegin(),checksum_test.cend(),checksum_read.cbegin(),checksum_read.cend());
                     }
                     else{
                         if (std::fseek(reader, static_cast<long>(SHA256_DIGEST_LENGTH), SEEK_CUR)) {
-                            ERROR << "File seek for validity test after broken block failed at \"" + read_at.string() + ", jump "+std::to_string(SHA256_DIGEST_LENGTH) + "\" at block reference\"" + block_path.string() + "\"";
+                            ERROR << "File seek for validity test after broken block failed at \"" + read_at.string() + ", jump "+std::to_string(SHA256_DIGEST_LENGTH) + "\" at block reference\"" + block_path().string() + "\"";
                             return error_sequence();
                         }
                     }
                 }
                 else{
                     if (std::fseek(reader, static_cast<long>(SHA256_DIGEST_LENGTH), SEEK_CUR)) {
-                        ERROR << "File seek for skipping validity test failed at \"" + read_at.string() + ", jump "+std::to_string(SHA256_DIGEST_LENGTH) + "\" at block reference\"" + block_path.string() + "\"";
+                        ERROR << "File seek for skipping validity test failed at \"" + read_at.string() + ", jump "+std::to_string(SHA256_DIGEST_LENGTH) + "\" at block reference\"" + block_path().string() + "\"";
                         return error_sequence();
                     }
                 }
             }
+            end_sequence();
             //<std::size_t,std::vector<unsigned char>,std::array<unsigned long,TIME_STAMPS_ON_BLOCK>,std::array<unsigned long,SHA512_DIGEST_LENGTH + sizeof(unsigned long)>, bool, bool>
             return std::make_tuple(total_block_size,block,times,global_block_reference,false,valid);
         }
@@ -369,7 +371,8 @@ namespace uh::trees {
          * returns a tuple with block time and binary vector of block when entering a block reference (as far as it exists)
          * WARNING: not existing blocks will still crash the procedure, a radix tree for block existence is needed
          */
-        std::tuple<unsigned long, std::vector<unsigned char>> read(const std::vector<unsigned char> &block_code);
+        std::tuple<std::vector<unsigned char>, std::vector<unsigned char>, std::array<unsigned long, TIME_STAMPS_ON_BLOCK>, std::array<unsigned char,
+                SHA512_DIGEST_LENGTH + sizeof(unsigned long)>> read(const std::vector<unsigned char> &block_code);
 
         /*
          * The index reads the entire information of the tree storage and calculates SHA512 hashes for every single block
