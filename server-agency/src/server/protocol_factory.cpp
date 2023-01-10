@@ -9,7 +9,7 @@ namespace uh::an::server
 // ---------------------------------------------------------------------
 
 protocol_factory::protocol_factory(cluster::mod& cluster,
-                                   const uh::an::metrics::metrics& metrics)
+                                   const uh::metrics::protocol_metrics& metrics)
     : m_cluster(cluster),
       m_metrics(metrics)
 {
@@ -19,7 +19,9 @@ protocol_factory::protocol_factory(cluster::mod& cluster,
 
 std::unique_ptr<uh::protocol::protocol> protocol_factory::create()
 {
-    return std::make_unique<protocol>(m_cluster, m_metrics);
+    return std::make_unique<metrics::protocol_metrics_wrapper>(
+        m_metrics,
+        std::make_unique<protocol>(m_cluster));
 }
 
 // ---------------------------------------------------------------------

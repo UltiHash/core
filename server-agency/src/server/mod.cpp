@@ -39,7 +39,7 @@ struct mod::impl
 {
     impl(const config::options& options,
          an::cluster::mod& cluster,
-         an::metrics::metrics& metrics);
+         an::metrics::mod& metrics);
 
     boost::asio::io_context io;
     protocol_factory pf;
@@ -50,9 +50,9 @@ struct mod::impl
 
 mod::impl::impl(const config::options& options,
                 an::cluster::mod& cluster,
-                an::metrics::metrics& metrics)
+                an::metrics::mod& metrics)
     : io(),
-      pf(cluster, metrics),
+      pf(cluster, metrics.protocol()),
       server(make_server(options.server().config(), pf))
 {
 }
@@ -61,7 +61,7 @@ mod::impl::impl(const config::options& options,
 
 mod::mod(const config::options& options,
          an::cluster::mod& cluster,
-         an::metrics::metrics& metrics)
+         an::metrics::mod& metrics)
     : m_impl(std::make_unique<mod::impl>(options, cluster, metrics))
 {
 }

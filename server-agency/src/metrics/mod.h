@@ -2,7 +2,7 @@
 #define SERVER_AGENCY_METRICS_MOD_H
 
 #include <config/options.h>
-#include <metrics/metrics.h>
+#include <metrics/protocol_metrics.h>
 
 #include <memory>
 
@@ -19,7 +19,7 @@ public:
 
     ~mod();
 
-    uh::an::metrics::metrics& metrics();
+    uh::metrics::protocol_metrics& protocol();
 
 private:
     struct impl;

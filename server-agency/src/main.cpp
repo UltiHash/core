@@ -39,9 +39,7 @@ int main(int argc, const char** argv)
         cluster::mod cluster_module(cluster_config);
         cluster_module.start();
 
-        server::mod server_module(options,
-                                  cluster_module,
-                                  metrics_module.metrics());
+        server::mod server_module(options, cluster_module, metrics_module);
         server_module.start();
     }
     catch (const std::exception& e)

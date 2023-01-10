@@ -13,14 +13,14 @@ struct mod::impl
     impl(const config::options& options);
 
     uh::metrics::service metrics_service;
-    uh::an::metrics::metrics metrics;
+    protocol_metrics protocol;
 };
 
 // ---------------------------------------------------------------------
 
 mod::impl::impl(const config::options& options)
     : metrics_service(options.metrics().config()),
-      metrics(metrics_service)
+      protocol(metrics_service)
 {
 }
 
@@ -37,9 +37,9 @@ mod::~mod() = default;
 
 // ---------------------------------------------------------------------
 
-uh::an::metrics::metrics& mod::metrics()
+protocol_metrics& mod::protocol()
 {
-    return m_impl->metrics;
+    return m_impl->protocol;
 }
 
 // ---------------------------------------------------------------------
