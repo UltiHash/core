@@ -76,17 +76,17 @@ void read(std::istream& in, hello::response& request)
 
 // ---------------------------------------------------------------------
 
-void write(std::ostream& out, const write_chunk::request& request)
+void write(std::ostream& out, const write_block::request& request)
 {
-    write(out, write_chunk::request_id);
+    write(out, write_block::request_id);
     write(out, request.content);
 }
 
 // ---------------------------------------------------------------------
 
-void read(std::istream& in, write_chunk::request& request)
+void read(std::istream& in, write_block::request& request)
 {
-    write_chunk::request tmp;
+    write_block::request tmp;
     read(in, tmp.content);
 
     std::swap(tmp, request);
@@ -94,18 +94,18 @@ void read(std::istream& in, write_chunk::request& request)
 
 // ---------------------------------------------------------------------
 
-void write(std::ostream& out, const write_chunk::response& response)
+void write(std::ostream& out, const write_block::response& response)
 {
     write(out, response.hash);
 }
 
 // ---------------------------------------------------------------------
 
-void read(std::istream& in, write_chunk::response& response)
+void read(std::istream& in, write_block::response& response)
 {
     check_status(in);
 
-    write_chunk::response tmp;
+    write_block::response tmp;
     read(in, tmp.hash);
 
     std::swap(tmp, response);
@@ -113,17 +113,17 @@ void read(std::istream& in, write_chunk::response& response)
 
 // ---------------------------------------------------------------------
 
-void write(std::ostream& out, const read_chunk::request& request)
+void write(std::ostream& out, const read_block::request& request)
 {
-    write(out, read_chunk::request_id);
+    write(out, read_block::request_id);
     write(out, request.hash);
 }
 
 // ---------------------------------------------------------------------
 
-void read(std::istream& in, read_chunk::request& request)
+void read(std::istream& in, read_block::request& request)
 {
-    read_chunk::request tmp;
+    read_block::request tmp;
 
     read(in, tmp.hash);
 
@@ -132,18 +132,18 @@ void read(std::istream& in, read_chunk::request& request)
 
 // ---------------------------------------------------------------------
 
-void write(std::ostream& out, const read_chunk::response& response)
+void write(std::ostream& out, const read_block::response& response)
 {
     write(out, response.content);
 }
 
 // ---------------------------------------------------------------------
 
-void read(std::istream& in, read_chunk::response& response)
+void read(std::istream& in, read_block::response& response)
 {
     check_status(in);
 
-    read_chunk::response tmp;
+    read_block::response tmp;
     // TODO streaming for content transfer
     read(in, tmp.content);
 

@@ -33,7 +33,7 @@ server_information protocol::on_hello(const std::string& client_version)
 
 // ---------------------------------------------------------------------
 
-blob protocol::on_write_chunk(blob&& data) 
+blob protocol::on_write_block(blob&& data)
 {
     auto free_space = m_storage.free_space();
     if (free_space == 0)
@@ -41,14 +41,14 @@ blob protocol::on_write_chunk(blob&& data)
         THROW(util::exception, "No free space on storage backend");
     }
 
-    return m_storage.write_chunk(data);
+    return m_storage.write_block(data);
 }
 
 // ---------------------------------------------------------------------
 
-blob protocol::on_read_chunk(blob&& hash)
+blob protocol::on_read_block(blob&& hash)
 {
-    return m_storage.read_chunk(hash);
+    return m_storage.read_block(hash);
 }
 
 // ---------------------------------------------------------------------

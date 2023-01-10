@@ -33,7 +33,7 @@ server_information protocol::on_hello(const std::string& client_version)
 
 // ---------------------------------------------------------------------
 
-blob protocol::on_write_chunk(blob&& data)
+blob protocol::on_write_block(blob&& data)
 {
     auto free_space = m_cluster.bc_free_space();
     if (free_space.empty())
@@ -45,14 +45,14 @@ blob protocol::on_write_chunk(blob&& data)
 
     auto node_ref = free_space.front().first;
 
-    return m_cluster.node(node_ref).get()->write_chunk(data);
+    return m_cluster.node(node_ref).get()->write_block(data);
 }
 
 // ---------------------------------------------------------------------
 
-blob protocol::on_read_chunk(blob&& hash)
+blob protocol::on_read_block(blob&& hash)
 {
-    return m_cluster.bc_read_chunk(hash);
+    return m_cluster.bc_read_block(hash);
 }
 
 // ---------------------------------------------------------------------

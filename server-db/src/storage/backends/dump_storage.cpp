@@ -33,10 +33,10 @@ void dump_storage::start(){
 
 // ---------------------------------------------------------------------
 
-uh::protocol::blob dump_storage::write_chunk(const uh::protocol::blob& some_data){
+uh::protocol::blob dump_storage::write_block(const uh::protocol::blob& some_data){
 
     uh::protocol::blob hash_blob = this->hashing_function(some_data);
-    
+
     // DEBUG
     // std::string printable_blob(hash_blob.begin(), hash_blob.end());
     // DEBUG << "hash string (should look like binary rubish):" << printable_blob;
@@ -49,7 +49,7 @@ uh::protocol::blob dump_storage::write_chunk(const uh::protocol::blob& some_data
 
 
     if(maybe_write_data_to_filepath(some_data, filepath)){
-        INFO << "Data chunk written to " << filepath;
+        INFO << "Data block written to " << filepath;
         this->update_space_consumption();
     }
     else{
@@ -59,7 +59,7 @@ uh::protocol::blob dump_storage::write_chunk(const uh::protocol::blob& some_data
     return  hash_blob;
 }
 
-uh::protocol::blob dump_storage::read_chunk(const uh::protocol::blob& some_hash){
+uh::protocol::blob dump_storage::read_block(const uh::protocol::blob& some_hash){
 
     std::string hash_string(some_hash.begin(), some_hash.end());
 

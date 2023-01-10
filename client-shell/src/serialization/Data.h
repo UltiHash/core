@@ -55,7 +55,7 @@ public:
                 for (auto &i: hash_blocks) {
                     // time measurement statistics for reading blocks from the agency server
                     auto start = std::chrono::steady_clock::now();
-                    auto hash = m_client->write_chunk(std::vector<char>(i.begin(),i.end()));
+                    auto hash = m_client->write_block(std::vector<char>(i.begin(),i.end()));
                     m_encoded_size += i.size();
                     auto end = std::chrono::steady_clock::now();
 
@@ -121,7 +121,7 @@ public:
 
                     // time measurement statistics for reading blocks from the agency server
                     auto start = std::chrono::steady_clock::now();
-                    auto data = m_client->read_chunk(vecHash);
+                    auto data = m_client->read_block(vecHash);
                     m_decoded_size += data.size();
                     auto end = std::chrono::steady_clock::now();
 

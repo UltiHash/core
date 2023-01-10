@@ -50,8 +50,8 @@ void server::handle(std::shared_ptr<net::socket> client)
             switch (request_id)
             {
                 case hello::request_id: handle_hello(io); break;
-                case write_chunk::request_id: handle_write_chunk(io); break;
-                case read_chunk::request_id: handle_read_chunk(io); break;
+                case write_block::request_id: handle_write_block(io); break;
+                case read_block::request_id: handle_read_block(io); break;
                 case free_space::request_id: handle_free_space(io); break;
 
                 case quit::request_id:
@@ -88,29 +88,29 @@ void server::handle_hello(std::iostream& io)
 
 // ---------------------------------------------------------------------
 
-void server::handle_write_chunk(std::iostream& io)
+void server::handle_write_block(std::iostream& io)
 {
-    write_chunk::request req;
+    write_block::request req;
     read(io, req);
 
-    blob hash = on_write_chunk(std::move(req.content));
+    blob hash = on_write_block(std::move(req.content));
 
     write(io, status{ status::OK });
-    write(io, write_chunk::response{ std::move(hash) });
+    write(io, write_block::response{ std::move(hash) });
     io.flush();
 }
 
 // ---------------------------------------------------------------------
 
-void server::handle_read_chunk(std::iostream& io)
+void server::handle_read_block(std::iostream& io)
 {
-    read_chunk::request req;
+    read_block::request req;
     read(io, req);
 
-    blob content = on_read_chunk(std::move(req.hash));
+    blob content = on_read_block(std::move(req.hash));
 
     write(io, status{ status::OK });
-    write(io, read_chunk::response{ std::move(content) });
+    write(io, read_block::response{ std::move(content) });
     io.flush();
 }
 

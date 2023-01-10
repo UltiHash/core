@@ -31,21 +31,21 @@ public:
     server_information hello(const std::string& client_version);
 
     /**
-     * Send a `write_chunk` request to the server. The chunk will be stored
+     * Send a `write_block` request to the server. The block will be stored
      * in the UltiHash storage back-end. The server returns a hash that can
-     * be used to identify the chunk in the cloud.
+     * be used to identify the block in the cloud.
      *
      * @throw on error status
      */
-    blob write_chunk(const blob& data);
+    blob write_block(const blob& data);
 
     /**
-     * Send a `read_chunk` request to the server. The server will look up
+     * Send a `read_block` request to the server. The server will look up
      * the hash and return the associated data, if available.
      *
      * @throw on error status
      */
-    blob read_chunk(const blob& hash);
+    blob read_block(const blob& hash);
 
     /**
      * End the connection by sending the `quit` command, optionally with a

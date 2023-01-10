@@ -74,11 +74,11 @@ bool test_storage_backend_io(uh::dbn::storage::mod &mod){
     std::ifstream infile(input_filepath, std::ios::binary);
     uh::protocol::blob x(std::istreambuf_iterator<char>(infile), {});
 
-    // Write chunk.
-    uh::protocol::blob hash_key = mod.write_chunk(x);
+    // Write block.
+    uh::protocol::blob hash_key = mod.write_block(x);
 
-    // Read chunk.
-    uh::protocol::blob y = mod.read_chunk(hash_key);
+    // Read block.
+    uh::protocol::blob y = mod.read_block(hash_key);
 
     // Check that what was read is the same as what was written.
     if(y == x){
@@ -88,14 +88,14 @@ bool test_storage_backend_io(uh::dbn::storage::mod &mod){
     return tf;
 }
 
-uh::protocol::blob write_chunk_from_file(std::filesystem::path input_filepath, uh::dbn::storage::mod &mod){
+uh::protocol::blob write_block_from_file(std::filesystem::path input_filepath, uh::dbn::storage::mod &mod){
 
     std::cout << "original filepath: " << input_filepath << std::endl;
     std::ifstream infile(input_filepath, std::ios::binary);
     uh::protocol::blob x(std::istreambuf_iterator<char>(infile), {});
 
-    // Write chunk.
-    uh::protocol::blob hash_key = mod.write_chunk(x);
+    // Write block.
+    uh::protocol::blob hash_key = mod.write_block(x);
     return hash_key;
 }
 
@@ -145,8 +145,8 @@ BOOST_AUTO_TEST_CASE( dump_storage_no_duplicates )
 
     // File 1 and file 2 should produce the same hash key. Since teh hash key is in 1-1 correspondence with the contents
     // of the written file, no duplicates will be written.
-    uh::protocol::blob x = write_chunk_from_file(c.test_input_filepath, storage_module);
-    uh::protocol::blob y = write_chunk_from_file(c.test_input_filepath_2, storage_module);
+    uh::protocol::blob x = write_block_from_file(c.test_input_filepath, storage_module);
+    uh::protocol::blob y = write_block_from_file(c.test_input_filepath_2, storage_module);
 
     BOOST_CHECK(x == y);
 }
@@ -164,7 +164,7 @@ BOOST_AUTO_TEST_CASE( dump_storage_expected_hash )
     uh::dbn::storage::mod storage_module(cfg, metrics_module.storage());
     storage_module.start();
 
-    uh::protocol::blob x = write_chunk_from_file(c.test_input_filepath, storage_module);
+    uh::protocol::blob x = write_block_from_file(c.test_input_filepath, storage_module);
     std::string x_str = uh::dbn::storage::to_hex_string(x.begin(), x.end());
 
     BOOST_CHECK(x_str == c.expected_sha512_hash);
