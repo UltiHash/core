@@ -29,7 +29,7 @@ std::vector<unsigned char> binary_generator(std::size_t max_len) {
 
     std::vector<unsigned char> out_return;
     out_return.resize(len);
-    std::for_each(out_return.begin(),out_return.end(),[&dist3,&rng3](auto &a){
+    std::for_each(out_return.begin(), out_return.end(), [&dist3, &rng3](auto &a) {
         a = dist3(rng3);
     });
 
@@ -72,12 +72,20 @@ BOOST_AUTO_TEST_CASE(write_read_test)
             std::vector<unsigned char> test_bin = binary_generator(mode ? STORE_MAX_LATENCY : STORE_MAX);
             //write test
             gettimeofday(&time, nullptr);
-            long double millis = ((long double) time.tv_sec * ONE_MILLISECOND) + ((long double) time.tv_usec / ONE_MILLISECOND);
+            long double millis =
+                    ((long double) time.tv_sec * ONE_MILLISECOND) + ((long double) time.tv_usec / ONE_MILLISECOND);
             std::vector<unsigned char> local_block_ref;
-            try{
-                local_block_ref = t1.write(test_bin);
+            std::array<unsigned long, TIME_STAMPS_ON_BLOCK> times{
+                    (unsigned long) std::chrono::nanoseconds(
+                            std::chrono::high_resolution_clock::now().time_since_epoch()).count(),//creation time in ns
+                    (unsigned long) std::chrono::nanoseconds(std::chrono::days(365)).count(),//keep duration in ns
+                    (unsigned long) std::chrono::nanoseconds(
+                            std::chrono::high_resolution_clock::now().time_since_epoch()).count()};//last visited time in ns
+
+            try {
+                local_block_ref = std::get<1>(t1.write(test_bin, times));
             }
-            catch(std::exception &e){
+            catch (std::exception &e) {
                 std::stringstream s;
                 s << e.what();
                 BOOST_TEST_MESSAGE("Writing critically failed! Error: " + s.str());
@@ -85,7 +93,8 @@ BOOST_AUTO_TEST_CASE(write_read_test)
 
             gettimeofday(&time, nullptr);
             long double write_time =
-                    (((long double) time.tv_sec * ONE_MILLISECOND) + ((long double) time.tv_usec / ONE_MILLISECOND)) - millis;
+                    (((long double) time.tv_sec * ONE_MILLISECOND) + ((long double) time.tv_usec / ONE_MILLISECOND)) -
+                    millis;
             BOOST_ASSERT_MSG(!local_block_ref.empty(), std::string(
                     "Database writing failed at block size " + std::to_string(test_bin.size()) + " at total size " +
                     std::to_string(total_size) + " . No reference retrieved!").c_str());
@@ -94,11 +103,13 @@ BOOST_AUTO_TEST_CASE(write_read_test)
             //read after write test
             gettimeofday(&time, nullptr);
             millis = ((long double) time.tv_sec * ONE_MILLISECOND) + ((long double) time.tv_usec / ONE_MILLISECOND);
-            std::tuple<unsigned long, std::vector<unsigned char>> all_result;
-            try{
+            std::tuple<std::vector<unsigned char>, std::vector<unsigned char>, std::array<unsigned long, TIME_STAMPS_ON_BLOCK>, std::array<unsigned char,
+                    SHA512_DIGEST_LENGTH + sizeof(unsigned long)>> all_result;
+            try {
                 all_result = t1.read(local_block_ref);
+                BOOST_ASSERT_MSG(std::get<2>(all_result) == times, "Times were not written and read back correctly!");
             }
-            catch(std::exception &e){
+            catch (std::exception &e) {
                 std::stringstream s;
                 s << e.what();
                 BOOST_TEST_MESSAGE("Reading critically failed! Error: " + s.str());
@@ -106,11 +117,12 @@ BOOST_AUTO_TEST_CASE(write_read_test)
             std::vector<unsigned char> read_result = std::get<1>(all_result);
             gettimeofday(&time, nullptr);
             long double read_after_write_time =
-                    (((long double) time.tv_sec * ONE_MILLISECOND) + ((long double) time.tv_usec / ONE_MILLISECOND)) - millis;
+                    (((long double) time.tv_sec * ONE_MILLISECOND) + ((long double) time.tv_usec / ONE_MILLISECOND)) -
+                    millis;
             //check correctness of stored string
             bool cmp = std::equal(test_bin.cbegin(), test_bin.cend(), read_result.cbegin(), read_result.cend());
-            if(!cmp){
-                local_block_ref = t1.write(test_bin);
+            if (!cmp) {
+                local_block_ref = std::get<1>(t1.write(test_bin,times));
                 all_result = t1.read(local_block_ref);
             }
             BOOST_ASSERT_MSG(cmp, std::string("The write read result from block \"" + boost::algorithm::hex(
@@ -124,12 +136,14 @@ BOOST_AUTO_TEST_CASE(write_read_test)
         //test sequential read from beginning on
         for (const auto &i: write_times) {
             gettimeofday(&time, nullptr);
-            long double millis = ((long double) time.tv_sec * ONE_MILLISECOND) + ((long double) time.tv_usec / ONE_MILLISECOND);
+            long double millis =
+                    ((long double) time.tv_sec * ONE_MILLISECOND) + ((long double) time.tv_usec / ONE_MILLISECOND);
             auto all_results = t1.read(std::get<0>(i));
             std::vector<unsigned char> read_result = std::get<1>(all_results);
             gettimeofday(&time, nullptr);
             long double read_sequential =
-                    (((long double) time.tv_sec * ONE_MILLISECOND) + ((long double) time.tv_usec / ONE_MILLISECOND)) - millis;
+                    (((long double) time.tv_sec * ONE_MILLISECOND) + ((long double) time.tv_usec / ONE_MILLISECOND)) -
+                    millis;
             BOOST_ASSERT_MSG(!read_result.empty(), std::string(
                     "Database sequential reading failed at block reference " +
                     boost::algorithm::hex(std::string{std::get<0>(i).cbegin(), std::get<0>(i).cend()}) +
@@ -145,12 +159,14 @@ BOOST_AUTO_TEST_CASE(write_read_test)
         while (total_size < (mode ? LATENCY_TEST_SIZE : PERFORMANCE_TEST_SIZE)) {
             std::size_t access_point = dist(rng);
             gettimeofday(&time, nullptr);
-            long double millis = ((long double) time.tv_sec * ONE_MILLISECOND) + ((long double) time.tv_usec / ONE_MILLISECOND);
+            long double millis =
+                    ((long double) time.tv_sec * ONE_MILLISECOND) + ((long double) time.tv_usec / ONE_MILLISECOND);
             auto all_results = t1.read(std::get<0>(write_times[access_point]));
             std::vector<unsigned char> read_result = std::get<1>(all_results);
             gettimeofday(&time, nullptr);
             long double read_sequential =
-                    (((long double) time.tv_sec * ONE_MILLISECOND) + ((long double) time.tv_usec / ONE_MILLISECOND)) - millis;
+                    (((long double) time.tv_sec * ONE_MILLISECOND) + ((long double) time.tv_usec / ONE_MILLISECOND)) -
+                    millis;
             BOOST_ASSERT_MSG(!read_result.empty(), std::string(
                     "Database random access reading failed at block reference " +
                     boost::algorithm::hex(std::string{std::get<0>(write_times[access_point]).cbegin(),
@@ -250,7 +266,8 @@ BOOST_AUTO_TEST_CASE(write_read_test)
         write_avg_block_ref_size /= write_times.size();
         write_avg_time /= write_times.size();
 
-        long double write_integration_speed_MB = (write_avg_size / std::pow(2, 20)) / (write_avg_time / ONE_MILLISECOND);
+        long double write_integration_speed_MB =
+                (write_avg_size / std::pow(2, 20)) / (write_avg_time / ONE_MILLISECOND);
 
         BOOST_TEST_MESSAGE("Average writing results:");
         BOOST_TEST_MESSAGE("Average integration time is " + std::to_string(write_avg_time) +
@@ -619,29 +636,34 @@ BOOST_AUTO_TEST_CASE(index_read_test)
     //for strong laptops with SSD extension (configure test db server to run this??)
     //uh::trees::tree_storage t1("/mnt/md0");//A test folder reserved for tree storage for performance tests
     gettimeofday(&time, nullptr);
-    long double constructor_time = (((long double) time.tv_sec * ONE_MILLISECOND) + ((long double) time.tv_usec / ONE_MILLISECOND)) - millis;
+    long double constructor_time =
+            (((long double) time.tv_sec * ONE_MILLISECOND) + ((long double) time.tv_usec / ONE_MILLISECOND)) - millis;
 
     gettimeofday(&time, nullptr);
     millis = ((long double) time.tv_sec * ONE_MILLISECOND) + ((long double) time.tv_usec / ONE_MILLISECOND);
     auto index_list = t1.index();
     gettimeofday(&time, nullptr);
-    long double index_time = (((long double) time.tv_sec * ONE_MILLISECOND) + ((long double) time.tv_usec / ONE_MILLISECOND)) - millis;
+    long double index_time =
+            (((long double) time.tv_sec * ONE_MILLISECOND) + ((long double) time.tv_usec / ONE_MILLISECOND)) - millis;
 
     BOOST_TEST_MESSAGE("The constructor of tree storage took " + std::to_string(constructor_time) +
                        " ms in a full state. The index time of that tree took " + std::to_string(index_time) +
                        " ms. The total time to bring the database back to life was " +
                        std::to_string(constructor_time + index_time) + " ms.");
 
-    for (const auto &el: index_list) {
+    for (const auto &el: std::get<0>(index_list)) {
         auto all_results = t1.read(std::get<1>(el));
-        std::vector<unsigned char> read_result = std::get<1>(all_results);
+        std::vector<unsigned char> read_result = std::get<0>(all_results);
         unsigned char hash_buf[SHA512_DIGEST_LENGTH];//HASH GENERATION
         SHA512(read_result.data(), read_result.size(), hash_buf);
         std::string old_ref = boost::algorithm::hex(
-                std::string().assign(std::get<1>(el).cbegin(), std::get<1>(el).cend()));
-        bool test_ok = std::equal(std::get<0>(el).cbegin(), std::get<0>(el).cend(), hash_buf, hash_buf + SHA512_DIGEST_LENGTH);
-        BOOST_ASSERT_MSG(test_ok,std::string("The SHA512 of an indexed block \""+old_ref+"\" could not be verified!").c_str());
+                std::string().assign(std::get<1>(el).cbegin(), std::get<1>(el).cbegin()+SHA512_DIGEST_LENGTH));
+        bool test_ok = std::equal(std::get<0>(el).cbegin(), std::get<0>(el).cbegin()+SHA512_DIGEST_LENGTH, hash_buf,
+                                  hash_buf + SHA512_DIGEST_LENGTH);
+        BOOST_ASSERT_MSG(!test_ok, std::string(
+                "The SHA512 without time extend of an indexed block \"" + old_ref + "\" could not be verified!").c_str());
     }
+    BOOST_ASSERT_MSG(!std::get<1>(index_list).empty(),"The list of damaged blocks was not empty!");
 }
 
 BOOST_AUTO_TEST_CASE(get_info_set_time_test)
@@ -653,8 +675,8 @@ BOOST_AUTO_TEST_CASE(get_info_set_time_test)
     //for strong laptops with SSD extension (configure test db server to run this??)
     //uh::trees::tree_storage t1("/mnt/md0");//A test folder reserved for tree storage for performance tests
     auto index_list = t1.index();
-    BOOST_ASSERT_MSG(!index_list.empty(),"Index list was empty!");
-    auto first_el = index_list.begin();
+    BOOST_ASSERT_MSG(!std::get<0>(index_list).empty(), "Index list was empty!");
+    auto first_el = std::get<0>(index_list).begin();
     gettimeofday(&time, nullptr);
     long double millis = ((long double) time.tv_sec * ONE_MILLISECOND) + ((long double) time.tv_usec / ONE_MILLISECOND);
     auto block_info = t1.get_info(std::get<1>(*first_el));
@@ -672,7 +694,8 @@ BOOST_AUTO_TEST_CASE(get_info_set_time_test)
     millis = ((long double) time.tv_sec * ONE_MILLISECOND) + ((long double) time.tv_usec / ONE_MILLISECOND);
     bool test_ok = t1.set_block_time(std::get<1>(*first_el));
     gettimeofday(&time, nullptr);
-    write_time = (((long double) time.tv_sec * ONE_MILLISECOND) + ((long double) time.tv_usec / ONE_MILLISECOND)) - millis;
+    write_time =
+            (((long double) time.tv_sec * ONE_MILLISECOND) + ((long double) time.tv_usec / ONE_MILLISECOND)) - millis;
     BOOST_ASSERT_MSG(test_ok, "Current time could not be set to first block of index!");
     BOOST_TEST_MESSAGE("\nSetting a new block time took " + std::to_string(write_time) + " ms.");
     auto block_info2 = t1.get_info(std::get<1>(*first_el));
@@ -695,8 +718,8 @@ BOOST_AUTO_TEST_CASE(delete_test)
     do {
         auto del_list = std::vector<std::vector<unsigned char>>{};
         std::size_t count{};
-        std::for_each(index_list.cbegin(),index_list.cend(),[&del_list,&count](auto &item){
-            if(count==10)return;
+        std::for_each(index_list.cbegin(), index_list.cend(), [&del_list, &count](auto &item) {
+            if (count == 10)return;
             del_list.push_back(std::get<1>(item));
             count++;
         });

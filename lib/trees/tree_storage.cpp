@@ -1283,7 +1283,7 @@ uh::trees::tree_storage::delete_blocks(
                     }
                     out_vec.insert(out_vec.cbegin(), (*item.begin())[0]);
 
-                    std::array<unsigned char, sizeof(unsigned long)> time_buf;
+                    std::array<unsigned char, sizeof(unsigned long)> time_buf{};
                     std::size_t count = std::fread(time_buf.data(), sizeof(unsigned char),
                                                    sizeof(unsigned long),
                                                    reader);

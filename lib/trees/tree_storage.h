@@ -190,15 +190,20 @@ namespace uh::trees {
                          block_path().string() + "\"";
                 return error_sequence();
             }
+            //action if input creation time is set 0: assume the writer wants to update and skip writing the creation time
+            std::size_t update_dist{};
+            if(times[0] == 0){
+                update_dist += sizeof(unsigned long);
+            }
             //File should have been opened or created here
             if (skip_prefix_and_block) {
-                if (!std::fwrite(block_buf.data(), SHA512_DIGEST_LENGTH + TIME_STAMPS_ON_BLOCK * sizeof(unsigned long),
+                if (!std::fwrite(block_buf.data()+update_dist, SHA512_DIGEST_LENGTH + TIME_STAMPS_ON_BLOCK * sizeof(unsigned long)-update_dist,
                                  sizeof(unsigned char), writer)) {
                     ERROR << "File write binary time opening failed at \"" + write_at.string() + "\"";
                     return error_sequence();
                 }
                 std::size_t jump_prefix_block = prefix.size() + block.size();
-                if (std::fseek(writer, static_cast<long>(jump_prefix_block), SEEK_CUR)) {
+                if (std::fseek(writer, static_cast<long>(jump_prefix_block), SEEK_CUR)) {//skip prefix and block
                     ERROR << "File seek failed at \"" + write_at.string() + ", position " +
                              std::to_string(jump_prefix_block) + "\" at block reference\"" + block_path().string() +
                              "\"";
@@ -212,7 +217,7 @@ namespace uh::trees {
                 end_sequence();
                 return std::make_tuple(total_block_size, block.size(), global_block_reference, false);
             } else {
-                if (!std::fwrite(block_buf.data(), block_buf.size(), sizeof(unsigned char), writer)) {
+                if (!std::fwrite(block_buf.data()+update_dist, block_buf.size()-update_dist, sizeof(unsigned char), writer)) {//write block in a single stream
                     ERROR << "File write binary time opening failed at \"" + write_at.string() +
                              "\" at block reference\"" + block_path().string() + "\"";
                     return error_sequence();
@@ -249,7 +254,7 @@ namespace uh::trees {
                 end_sequence();
                 auto err_tuple = std::tuple<std::size_t, std::vector<unsigned char>, std::array<unsigned long, TIME_STAMPS_ON_BLOCK>,
                         std::array<unsigned char, SHA512_DIGEST_LENGTH + sizeof(unsigned long)>, bool, bool>{};
-                std::get<3>(err_tuple) = true;
+                std::get<4>(err_tuple) = true;
                 return err_tuple;
             };
 
@@ -291,7 +296,7 @@ namespace uh::trees {
                     block_time += (((std::size_t) vector_time[i]) << (i * CHAR_BITS));
                 }
                 time_shifter++;
-                times[time_shifter] = block_time;
+                t = block_time;
             }
 
             std::array<unsigned char, SHA512_DIGEST_LENGTH + sizeof(unsigned long)> global_block_reference{};
