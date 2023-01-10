@@ -2,7 +2,6 @@
 // Created by max on 02.11.22.
 //
 
-#define BOOST_TEST_DYN_LINK
 #ifdef SINGLE_TEST_RUNNER
 #define BOOST_TEST_NO_MAIN
 #else
