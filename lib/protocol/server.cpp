@@ -75,7 +75,6 @@ void server::handle(std::shared_ptr<net::socket> client)
         {
             write(io, status{ .code = status::FAILED, .message = e.what() });
             io.flush();
-
             m_block.reset();
             m_state = server_state::normal;
         }
