@@ -466,7 +466,7 @@ std::tuple<unsigned long, std::vector<unsigned char>> uh::trees::tree_storage::r
                 return {0, std::vector<unsigned char>{}};
             }
 
-            std::array<unsigned char, sizeof(unsigned long)> time_buf;
+            std::array<unsigned char, sizeof(unsigned long)> time_buf{};
             std::size_t total_read{};
             std::size_t count = std::fread(time_buf.data(), sizeof(unsigned char), sizeof(unsigned long), reader);
             total_read += count;
@@ -718,7 +718,7 @@ uh::trees::tree_storage::index(unsigned short num_threads) {
                     else read_func();
 
                     auto hash_func = [&]() {
-                        std::array<unsigned char, SHA512_DIGEST_LENGTH> hash_buf;//HASH GENERATION
+                        std::array<unsigned char, SHA512_DIGEST_LENGTH> hash_buf{};//HASH GENERATION
                         auto block_time_cpy = block_time_current.load();
                         auto parallel_switch_cpy = parallel_switch.load();
                         global_thread_lock.unlock();
@@ -1007,7 +1007,7 @@ std::tuple<unsigned long, std::size_t, std::size_t> uh::trees::tree_storage::get
                 return {};
             }
 
-            std::array<unsigned char, sizeof(unsigned long)> time_buf;
+            std::array<unsigned char, sizeof(unsigned long)> time_buf{};
             std::size_t count = std::fread(time_buf.data(), sizeof(unsigned char), sizeof(unsigned long), reader);
             if (count != sizeof(unsigned long)) {
                 FATAL

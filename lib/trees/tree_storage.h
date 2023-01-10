@@ -18,6 +18,8 @@
 #include "util/exception.h"
 #include "trees/tree_storage_config.h"
 #include "trees/tree_storage_config.h.in"
+#include "sys/types.h"
+#include "sys/sysinfo.h"
 
 #ifdef _WIN32
 #include <windows.h>
@@ -27,9 +29,6 @@
 
 #endif // _WIN32
 
-#include "sys/types.h"
-#include "sys/sysinfo.h"
-
 namespace uh::trees {
     DEFINE_EXCEPTION(out_of_memory);
 
@@ -38,6 +37,7 @@ namespace uh::trees {
 #define ONE_MILLISECOND 1000
 #define TEN_MS 10
 #define SMALLEST_LOCAL_BLOCK_SIZE 5
+#define TIME_STAMPS_ON_BLOCK 3
 
     typedef struct tree_storage tree_storage;
 
@@ -101,6 +101,96 @@ namespace uh::trees {
             auto out_vec = std::vector<ALLOC>();
             out_vec.resize(mem,0);
             return out_vec;
+        }
+
+    protected:
+        //returns total size, block_size, (optional valid) SHA512 with an ending of creation time as hash extend reordered vector, error occurred
+        //for efficiency SHA512 hash calculation can be skipped and an external hash can be written
+        //for updating efficiency writing prefix and block again can be skipped
+        std::tuple<std::size_t,std::size_t,std::vector<unsigned char>, bool> write_block_base(
+                FILE* writer, const std::filesystem::path &write_at, const std::vector<unsigned char> &block, const std::array<unsigned long,TIME_STAMPS_ON_BLOCK> &times,
+                auto &end_sequence, bool skip_write_block,
+                bool calc_SHA512, const std::array<unsigned char,SHA512_DIGEST_LENGTH> SHA_input_optional = std::array<unsigned char,SHA512_DIGEST_LENGTH>{}){
+            auto time_binary_calc = [](auto current_time){
+                std::vector<unsigned char> bin_time;
+                bin_time.reserve(sizeof(current_time));
+                for (unsigned short i = 0; i < (unsigned short) sizeof(current_time); i++) {
+                    bin_time.push_back((unsigned char) (current_time >> (i * CHAR_BITS)));
+                }
+                return bin_time;
+            };
+
+            std::array<unsigned char, SHA512_DIGEST_LENGTH> hash_buf{};//HASH GENERATION
+            if(calc_SHA512)SHA512(block.data(), block.size(), hash_buf.data());
+            else hash_buf=SHA_input_optional;
+
+            auto prefix = prefix_wrap(block.size());
+            std::array<std::vector<unsigned char>,TIME_STAMPS_ON_BLOCK> convert_time{};//creation time, last visited time, maximum valid
+            auto t_beg = convert_time.begin();
+            for (const auto &t:times) {
+                *t_beg = time_binary_calc(t);
+                t_beg++;
+            }
+
+            std::vector<unsigned char> block_buf{};
+            std::size_t total_block_size = SHA512_DIGEST_LENGTH + TIME_STAMPS_ON_BLOCK * sizeof(unsigned long) +
+                    prefix.size() + block.size() + SHA256_DIGEST_LENGTH;
+            block_buf.reserve(total_block_size);
+
+            //fill block buf with write down sequence
+            block_buf.insert(block_buf.cend(),hash_buf.cbegin(),hash_buf.cend());//SHA512
+            for(const auto &t_c:convert_time){//times
+                block_buf.insert(block_buf.cend(),t_c.cbegin(),t_c.cend());
+            }
+            block_buf.insert(block_buf.cend(),prefix.cbegin(),prefix.cend());//prefix
+            block_buf.insert(block_buf.cend(),block.cbegin(),block.cend());
+
+            std::array<unsigned char,SHA256_DIGEST_LENGTH> checksum{};
+            SHA256(block_buf.data(),block_buf.size(),checksum.data());
+
+            block_buf.insert(block_buf.cend(),checksum.cbegin(),checksum.cend());
+
+            std::vector<unsigned char> global_block_reference{};
+            global_block_reference.reserve(SHA512_DIGEST_LENGTH + convert_time[0].size());
+            global_block_reference.assign(hash_buf.cbegin(),hash_buf.cend());
+            global_block_reference.insert(global_block_reference.cend(),convert_time[0].cbegin(),convert_time[0].cend());
+
+            auto error_sequence = [&](){
+                end_sequence();
+                return std::make_tuple(total_block_size,block.size(),hash_buf,global_block_reference,true);
+            };
+
+            if(block_buf.size() != total_block_size){
+                ERROR << "File write opening failed at \"" + write_at.string() + "\"";
+            }
+
+            if (!writer) {
+                ERROR << "File write opening failed at \"" + write_at.string() + "\"";
+                return error_sequence();
+            }
+            //File should have been opened or created here
+            if(skip_write_block){
+                if (!std::fwrite(block_buf.data(), SHA512_DIGEST_LENGTH + TIME_STAMPS_ON_BLOCK * sizeof(unsigned long), sizeof(unsigned char), writer)) {
+                    ERROR << "File write binary time opening failed at \"" + write_at.string() + "\"";
+                    return error_sequence();
+                }
+                std::size_t jump_prefix_block = prefix.size() + block.size();
+                if (std::fseek(writer, static_cast<long>(jump_prefix_block), SEEK_CUR)) {
+                    ERROR << "File seek failed at \"" + write_at.string() + ", position "+std::to_string(jump_prefix_block)+"\"";
+                    return error_sequence();
+                }
+                if (!std::fwrite(checksum.data(), SHA256_DIGEST_LENGTH, sizeof(unsigned char), writer)) {
+                    ERROR << "File write binary time opening failed at \"" + write_at.string() + "\"";
+                    return error_sequence();
+                }
+            }
+            else{
+                if (!std::fwrite(block_buf.data(), block_buf.size(), sizeof(unsigned char), writer)) {
+                    ERROR << "File write binary time opening failed at \"" + write_at.string() + "\"";
+                    return error_sequence();
+                }
+                return std::make_tuple(total_block_size,block.size(),global_block_reference,false);
+            }
         }
 
     public:
