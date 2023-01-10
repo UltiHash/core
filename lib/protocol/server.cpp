@@ -5,7 +5,6 @@
 #include "serializer.h"
 
 #include <logging/logging_boost.h>
-#include <boost/iostreams/stream.hpp>
 
 
 using namespace boost::asio;
@@ -32,68 +31,121 @@ void server::handle(std::shared_ptr<net::socket> client)
 {
     boost::iostreams::stream<net::socket_device> io(client);
 
-    while (io)
-    {
-        uint8_t request_id;
+    m_state = server_state::setup;
 
+    while (io.is_open() && m_state != server_state::disconnected)
+    {
         try
         {
+            uint8_t request_id;
             read(io, request_id);
+
+            switch (m_state)
+            {
+                case server_state::setup:   handle_setup_request(io, request_id); break;
+                case server_state::normal:  handle_normal_request(io, request_id); break;
+                case server_state::reading: handle_reading_request(io, request_id); break;
+
+                default:
+                    write(io, status{ .code = status::FAILED, .message = "unsupported state" });
+                    io.close();
+                    ERROR << "unsupported state";
+                    return;
+            }
         }
-        catch (const std::exception& e)
+        catch (const read_error& e)
         {
             ERROR << e.what();
-        }
-
-        try
-        {
-            switch (request_id)
-            {
-                case hello::request_id: handle_hello(io); break;
-                case write_block::request_id: handle_write_block(io); break;
-                case read_block::request_id: handle_read_block(io); break;
-                case free_space::request_id: handle_free_space(io); break;
-
-                case quit::request_id:
-                    handle_quit(io);
-                    io.close();
-                    return;
-
-                default: throw std::runtime_error("unsupported command");
-            }
+            break;
         }
         catch (const std::exception& e)
         {
             write(io, status{ .code = status::FAILED, .message = e.what() });
             io.flush();
+            m_state = server_state::normal;
         }
     }
 }
 
 // ---------------------------------------------------------------------
 
-void server::handle_hello(std::iostream& io)
+void server::handle_setup_request(iostream& io, uint8_t request_id)
+{
+    switch (request_id)
+    {
+        case hello::request_id: return handle_hello(io);
+        case quit::request_id: return handle_quit(io);
+
+        default: throw std::runtime_error("unsupported command");
+    }
+}
+
+// ---------------------------------------------------------------------
+
+void server::handle_normal_request(iostream& io, uint8_t request_id)
+{
+    switch (request_id)
+    {
+        case write_block::request_id: return handle_write_block(io);
+        case read_block::request_id: return handle_read_block(io);
+        case quit::request_id: return handle_quit(io);
+        case free_space::request_id: return handle_free_space(io);
+
+        default: throw std::runtime_error("unsupported command");
+    }
+}
+
+// ---------------------------------------------------------------------
+
+void server::handle_reading_request(iostream& io, uint8_t request_id)
+{
+    switch (request_id)
+    {
+        case quit::request_id: return handle_quit(io);
+
+        default: throw std::runtime_error("unsupported command");
+    }
+}
+
+// ---------------------------------------------------------------------
+
+void server::handle_hello(iostream& io)
 {
     hello::request req;
     read(io, req);
 
-    server_information info = on_hello(req.client_version);
+    server_information info;
+
+    try
+    {
+        info = on_hello(req.client_version);
+    }
+    catch (const std::exception& e)
+    {
+        write(io, status{ .code = status::FAILED, .message = e.what() });
+        m_state = server_state::disconnected;
+        return;
+    }
 
     write(io, status{ status::OK });
     write(io, hello::response{
         .server_version = info.version,
         .protocol_version = info.protocol });
     io.flush();
+
+    m_state = server_state::normal;
 }
 
 // ---------------------------------------------------------------------
 
-void server::handle_write_block(std::iostream& io)
+void server::handle_write_block(iostream& io)
 {
     write_block::request req;
     read(io, req);
 
     blob hash = on_write_block(std::move(req.content));
+
+    m_state = server_state::normal;
 
     write(io, status{ status::OK });
     write(io, write_block::response{ std::move(hash) });
@@ -102,12 +154,14 @@ void server::handle_write_block(std::iostream& io)
 
 // ---------------------------------------------------------------------
 
-void server::handle_read_block(std::iostream& io)
+void server::handle_read_block(iostream& io)
 {
     read_block::request req;
     read(io, req);
 
     blob content = on_read_block(std::move(req.hash));
+
+    m_state = server_state::normal;
 
     write(io, status{ status::OK });
     write(io, read_block::response{ std::move(content) });
@@ -116,7 +170,7 @@ void server::handle_read_block(std::iostream& io)
 
 // ---------------------------------------------------------------------
 
-void server::handle_quit(std::iostream& io)
+void server::handle_quit(iostream& io)
 {
     quit::request req;
     read(io, req);
@@ -130,18 +184,23 @@ void server::handle_quit(std::iostream& io)
         // ignore
     }
 
+    m_state = server_state::disconnected;
+
     write(io, status{ status::OK });
     io.flush();
+    io.close();
 }
 
 // ---------------------------------------------------------------------
 
-void server::handle_free_space(std::iostream& io)
+void server::handle_free_space(iostream& io)
 {
     free_space::request req;
     read(io, req);
 
     auto space = on_free_space();
+
+    m_state = server_state::normal;
 
     write(io, status{ status::OK });
     write(io, free_space::response{ .space_available = space });
