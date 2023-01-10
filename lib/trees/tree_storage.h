@@ -207,7 +207,7 @@ namespace uh::trees {
         std::tuple<std::size_t,std::vector<unsigned char>,std::array<unsigned long,TIME_STAMPS_ON_BLOCK>,
         std::array<unsigned char,SHA512_DIGEST_LENGTH + sizeof(unsigned long)>, bool, bool> read_block_base(
                 FILE* reader, const std::filesystem::path &read_at, const std::vector<unsigned char> &local_block_ref,
-                auto &end_sequence, bool skip_read_block=false, bool check_valid=false){
+                auto end_sequence, bool skip_read_block=false, bool check_valid=false){
 
             const std::size_t read_info_block_size = SHA512_DIGEST_LENGTH + TIME_STAMPS_ON_BLOCK * sizeof(unsigned long);
             std::vector<unsigned char> first_section = mem_wait<unsigned char>(read_info_block_size);
@@ -224,7 +224,8 @@ namespace uh::trees {
 
             auto error_sequence = [&](){
                 end_sequence();
-                auto err_tuple = std::tuple<std::size_t,std::vector<unsigned char>,std::array<unsigned long,TIME_STAMPS_ON_BLOCK>, bool>{};
+                auto err_tuple = std::tuple<std::size_t,std::vector<unsigned char>,std::array<unsigned long,TIME_STAMPS_ON_BLOCK>,
+                        std::array<unsigned char,SHA512_DIGEST_LENGTH + sizeof(unsigned long)>, bool, bool>{};
                 std::get<3>(err_tuple) = true;
                 return err_tuple;
             };
@@ -293,6 +294,9 @@ namespace uh::trees {
                                          (BUF_LEN_SIZE_FOR_SIZE_BLOCK + buffer_in.size()) + block.size() + SHA256_DIGEST_LENGTH;
 
             if(skip_read_block){
+                if (check_valid) {
+                    DEBUG << "Validity could not be checked because block and checksum were skipped at \"" + read_at.string() + ", jump "+std::to_string(block_size+SHA256_DIGEST_LENGTH) + "\" at block reference\"" + block_path().string() + "\"";
+                }
                 if (std::fseek(reader, static_cast<long>(block_size+SHA256_DIGEST_LENGTH), SEEK_CUR)) {
                     ERROR << "File seek for skipping validity test failed at \"" + read_at.string() + ", jump "+std::to_string(block_size+SHA256_DIGEST_LENGTH) + "\" at block reference\"" + block_path().string() + "\"";
                     return error_sequence();
@@ -309,6 +313,10 @@ namespace uh::trees {
                     std::array<unsigned char,SHA512_DIGEST_LENGTH> hash_test{};
                     SHA512(block.data(),block.size(),hash_test.data());
                     valid = std::equal(hash.cbegin(),hash.cend(),hash_test.cbegin(),hash_test.cend());
+                    if (!valid) {
+                        TRACE
+                            << "Block did not fit it's hash on path \"" + read_at.string() + "\" at block reference\"" + block_path().string() + "\"";
+                    }
                     if(valid){
                         std::vector<unsigned char> block_buf = mem_wait<unsigned char>(total_block_size-SHA256_DIGEST_LENGTH);
                         block_buf.insert(block_buf.cend(),hash.cbegin(),hash.cend());
@@ -327,6 +335,10 @@ namespace uh::trees {
                             return error_sequence();
                         }
                         valid = std::equal(checksum_test.cbegin(),checksum_test.cend(),checksum_read.cbegin(),checksum_read.cend());
+                        if (!valid) {
+                            TRACE
+                                << "Block meta data was invalid on path \"" + read_at.string() + "\" at block reference\"" + block_path().string() + "\"";
+                        }
                     }
                     else{
                         if (std::fseek(reader, static_cast<long>(SHA256_DIGEST_LENGTH), SEEK_CUR)) {
@@ -375,12 +387,12 @@ namespace uh::trees {
                 SHA512_DIGEST_LENGTH + sizeof(unsigned long)>> read(const std::vector<unsigned char> &block_code);
 
         /*
-         * The index reads the entire information of the tree storage and calculates SHA512 hashes for every single block
-         * matching a local storage reference
-         * By running index on startup of a DB node it can scans information about the existence and validity of all blocks
-         * returns hash, local block reference and the block last visited time
+         * The index reads the entire information of the tree storage and calculates SHA512 hashes with creation time extension for every single block
+         * matching a local storage reference and delivering the time stamps of the block
+         * The first list carries valid blocks, the second one carries corrupted blocks that need to be deleted or repaired
          */
-        std::list<std::tuple<std::vector<unsigned char>, std::vector<unsigned char>, unsigned long>>
+        std::tuple<std::list<std::tuple<std::array<unsigned char,SHA512_DIGEST_LENGTH + sizeof(unsigned long)>,std::vector<unsigned char>,std::array<unsigned long,TIME_STAMPS_ON_BLOCK>>>,
+                std::list<std::tuple<std::array<unsigned char,SHA512_DIGEST_LENGTH + sizeof(unsigned long)>,std::vector<unsigned char>,std::array<unsigned long,TIME_STAMPS_ON_BLOCK>>>>
         index(unsigned short num_threads = std::thread::hardware_concurrency());
 
         /*

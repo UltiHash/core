@@ -445,7 +445,7 @@ std::tuple<std::vector<unsigned char>, std::vector<unsigned char>, std::array<un
             }
 
             FILE *reader = std::fopen(read_path.make_preferred().c_str(), "rb");
-            auto read_end_sequence = [&]() {
+            auto read_end_sequence = [&reader,&read_ptr,&write_ptr,&read_path]() {
                 if(std::fclose(reader))ERROR << "Read stream was not open on "+read_path.string()+"!";
                 *read_ptr -= 1;
                 if (!read_ptr->load())write_ptr->notify_one();
@@ -457,11 +457,15 @@ std::tuple<std::vector<unsigned char>, std::vector<unsigned char>, std::array<un
                 return {};
             }
 
-            auto block_read_tup = this->read_block_base(reader,read_path.make_preferred(),block_code,read_end_sequence);
+            const auto block_read_tup = this->read_block_base(reader,read_path.make_preferred(),block_code,read_end_sequence);
 
-            if (std::get<4>(block_read_tup) || !std::get<5>(block_read_tup)) {
+            if (std::get<4>(block_read_tup)) {
+                ERROR << "File error at \"" + read_path.string() + ", position "+std::to_string(offset)+"\"";
+                return {};
+            }
+
+            if (!std::get<5>(block_read_tup)) {
                 ERROR << "File block is broken at \"" + read_path.string() + ", position "+std::to_string(offset)+"\"";
-                read_end_sequence();
                 return {};
             }
             //std::tuple<std::vector<unsigned char>, std::vector<unsigned char>, std::array<unsigned long, TIME_STAMPS_ON_BLOCK>, std::array<unsigned char,
@@ -471,13 +475,14 @@ std::tuple<std::vector<unsigned char>, std::vector<unsigned char>, std::array<un
     }
 }
 
-std::list<std::tuple<std::vector<unsigned char>, std::vector<unsigned char>, unsigned long>>
+std::tuple<std::list<std::tuple<std::array<unsigned char,SHA512_DIGEST_LENGTH + sizeof(unsigned long)>,std::vector<unsigned char>,std::array<unsigned long,TIME_STAMPS_ON_BLOCK>>>,
+        std::list<std::tuple<std::array<unsigned char,SHA512_DIGEST_LENGTH + sizeof(unsigned long)>,std::vector<unsigned char>,std::array<unsigned long,TIME_STAMPS_ON_BLOCK>>>>
 uh::trees::tree_storage::index(unsigned short num_threads) {
     if (num_threads == 0) {
         ERROR << "Not enough threading resources!";
         return {};
     }
-    std::shared_ptr<std::list<std::tuple<std::vector<unsigned char>, std::vector<unsigned char>, unsigned long>>> search_index = std::make_shared<std::list<std::tuple<std::vector<unsigned char>, std::vector<unsigned char>, unsigned long>>>();
+    std::list<std::tuple<std::array<unsigned char,SHA512_DIGEST_LENGTH + sizeof(unsigned long)>,std::vector<unsigned char>,std::array<unsigned long,TIME_STAMPS_ON_BLOCK>>> search_index{},damaged_blocks_index{};
     std::shared_mutex search_index_protect{};
     std::atomic<long> i_constructor{-1};
     std::atomic_flag error_flag{ATOMIC_FLAG_INIT};
@@ -516,169 +521,42 @@ uh::trees::tree_storage::index(unsigned short num_threads) {
                 filesystem_lock.lock();
                 std::size_t const total_file_size = std::filesystem::exists(read_path.make_preferred())?std::filesystem::file_size(read_path.make_preferred()):0;
                 filesystem_lock.unlock();
-                auto read_end_sequence = [&]() {
+                auto read_end_sequence = [&reader,&read_ptr,&write_ptr]() {
                     if(std::fclose(reader))ERROR << "Read stream was not open!";
                     *read_ptr -= 1;
                     if (!read_ptr->load())write_ptr->notify_one();
                 };
-                auto error_thread_sequence = [&]() {
+                auto error_thread_sequence = [&error_flag]() {
                     while (std::atomic_flag_test_and_set_explicit(&error_flag, std::memory_order_acquire)) {
                         return;
                     }
                 };
-                if (!reader) {
-                    ERROR << "File read opening failed at \"" + read_path.string() + "\"";
+                auto total_end_sequence = [&]{
                     read_end_sequence();
                     error_thread_sequence();
                     if (error_flag.test())return;
-                }
-                //File should have been opened or created here
-                if (std::ferror(reader)) {
-                    FATAL << "I/O error when seeking \"" + read_path.string() + "\"";
-                    read_end_sequence();
-                    error_thread_sequence();
-                    if (error_flag.test())return;
-                }
+                };
                 std::atomic<std::size_t> cur_pos{};
-
-                std::thread rt, ht;
-
-                std::array<std::vector<unsigned char>,2> local_block_ref;
-                std::atomic<unsigned long> block_time_current{};
-                std::array<std::vector<unsigned char>,2> tmp_buf;
 
                 std::atomic<std::size_t> output_size{};
                 std::atomic<bool> parallel_switch{};
-                std::mutex m1{};
-                std::unique_lock global_thread_lock(m1, std::defer_lock);
                 while (!std::feof(reader) && cur_pos.load() < total_file_size) {
-                    auto read_func = [&]() {
-                        std::unique_lock local_thread_lock(m1);
-                        auto parallel_switch_cpy = parallel_switch.load();
-                        parallel_switch = !parallel_switch.load();
-                        local_block_ref[parallel_switch_cpy].clear();
-
-                        for (unsigned short i1 = 0;
-                             i1 < (unsigned short) sizeof(unsigned int); i1++) {//STORE_MAX will fit in 4 bytes
-                            local_block_ref[parallel_switch_cpy].push_back((unsigned char) (cur_pos.load() >> (i1 * CHAR_BITS)));
-                        }
-                        local_block_ref[parallel_switch_cpy].insert(local_block_ref[parallel_switch_cpy].cbegin(), i);
-
-                        std::array<unsigned char, sizeof(unsigned long)> time_buf;
-                        std::size_t count = std::fread(time_buf.data(), sizeof(unsigned char), sizeof(unsigned long),
-                                                       reader);
-                        cur_pos += count;
-                        if (count != sizeof(unsigned long)) {
-                            FATAL
-                                << "I/O time first 8 bytes reading was not completed on path \"" +
-                                   read_path.string() + "\"";
-                            read_end_sequence();
-                            error_thread_sequence();
-                            if (error_flag.test())return;
-                        }
-
-                        if (std::ferror(reader)) {
-                            FATAL << "I/O error when reading time of block at path \"" + read_path.string() +
-                                     "\"";
-                            read_end_sequence();
-                            error_thread_sequence();
-                            if (error_flag.test())return;
-                        }
-                        unsigned long block_time{};
-                        for (unsigned short i4 = 0; i4 < (unsigned short) sizeof(unsigned long); i4++) {
-                            block_time += (((std::size_t) time_buf[i4]) << (i4 * CHAR_BITS));
-                        }
-                        block_time_current = block_time;
-
-                        unsigned char buf_size = 0;
-                        count = std::fread(&buf_size, sizeof(unsigned char), 1, reader);
-                        cur_pos += count;
-                        if (count != 1) {
-                            FATAL << "I/O prefix first byte reading was not completed on path \"" +
-                                     read_path.string() +
-                                     "\"";
-                            read_end_sequence();
-                            error_thread_sequence();
-                            if (error_flag.test())return;
-                        }
-
-                        if (std::ferror(reader)) {
-                            FATAL << "I/O error when reading prefix at path \"" + read_path.string() + "\"";
-                            read_end_sequence();
-                            error_thread_sequence();
-                            if (error_flag.test())return;
-                        }
-                        std::vector<unsigned char> buffer_for_size;
-                        buffer_for_size.resize(buf_size + 1, 0);
-                        count = std::fread(buffer_for_size.data(), sizeof(unsigned char), buf_size + 1, reader);
-                        cur_pos += count;
-                        if (count != buf_size + 1) {
-                            FATAL << "I/O prefix first byte reading was not completed on path \"" +
-                                     read_path.string() +
-                                     "\"";
-                            read_end_sequence();
-                            error_thread_sequence();
-                            if (error_flag.test())return;
-                        }
-                        output_size = 0;
-                        for (unsigned char buf_count = 0; buf_count <= buf_size; buf_count++) {
-                            output_size += (((std::size_t) buffer_for_size[buf_count]) << (buf_count * CHAR_BITS));
-                        }
-                        local_thread_lock.unlock();
-
-                        tmp_buf[parallel_switch_cpy] = mem_wait<unsigned char>(output_size.load());
-                        count = std::fread(tmp_buf[parallel_switch_cpy].data(), sizeof(unsigned char),
-                                           tmp_buf[parallel_switch_cpy].size(), reader);
-                        cur_pos += count;
-
-                        if (count != output_size.load()) {
-                            FATAL << "I/O was not completed on path \"" + read_path.string() + "\"";
-                            read_end_sequence();
-                            error_thread_sequence();
-                            if (error_flag.test())return;
-                        }
-                        if (std::ferror(reader)) {
-                            FATAL << "I/O error when reading prefix at path \"" + read_path.string() + "\"";
-                            read_end_sequence();
-                            error_thread_sequence();
-                            if (error_flag.test())return;
-                        }
-                    };
-
-                    if (rt.joinable())rt.join();
-                    if (num_threads > 1) rt = std::thread(read_func);
-                    else read_func();
-
-                    auto hash_func = [&]() {
-                        std::array<unsigned char, SHA512_DIGEST_LENGTH> hash_buf{};//HASH GENERATION
-                        auto block_time_cpy = block_time_current.load();
-                        auto parallel_switch_cpy = parallel_switch.load();
-                        global_thread_lock.unlock();
-                        SHA512(tmp_buf[!parallel_switch_cpy].data(), tmp_buf[!parallel_switch_cpy].size(), hash_buf.data());
-
-                        std::vector<unsigned char> hash{hash_buf.cbegin(), hash_buf.cend()};
-                        std::scoped_lock const lock_emplace(search_index_protect);
-                        search_index->emplace_back(hash, local_block_ref[!parallel_switch_cpy], block_time_cpy);
-                    };
-
-                    if (rt.joinable())rt.join();
-                    if (error_flag.test()) {
-                        FATAL << "Indexing reader thread quit unexpectedly!";
-                        return;
+                    std::vector<unsigned char> local_block_ref{};
+                    for (unsigned short i1 = 0;
+                         i1 < (unsigned short) sizeof(unsigned int); i1++) {//STORE_MAX will fit in 4 bytes
+                        local_block_ref.push_back((unsigned char) (cur_pos.load() >> (i1 * CHAR_BITS)));
                     }
-                    if (ht.joinable())ht.join();
-                    global_thread_lock.lock();
-                    if (num_threads > 1){
-                        ht = std::thread(hash_func);
+                    local_block_ref.insert(local_block_ref.cbegin(), i);
+                    auto read_tup = this->read_block_base(reader,read_path.make_preferred(),local_block_ref,total_end_sequence,false,true);
+                    if(std::get<5>(read_tup) && std::get<0>(read_tup) > 0){//if valid
+                        std::scoped_lock const lock_here(search_index_protect);
+                        search_index.emplace_back(std::get<3>(read_tup),std::get<1>(read_tup),std::get<2>(read_tup));
                     }
-                    else hash_func();
-
-                    if (std::feof(reader) || cur_pos.load() >= total_file_size) {
-                        if (num_threads > 1) {
-                            if (rt.joinable())rt.join();
-                            if (ht.joinable())ht.join();
-                        }
+                    else{
+                        std::scoped_lock const lock_here(search_index_protect);//bit flip detect
+                        damaged_blocks_index.emplace_back(std::get<3>(read_tup),std::get<1>(read_tup),std::get<2>(read_tup));
                     }
+                    cur_pos += std::get<0>(read_tup);
                 }
                 read_end_sequence();
             } else {
@@ -690,12 +568,16 @@ uh::trees::tree_storage::index(unsigned short num_threads) {
             if (i < children->size() && std::get<0>(children->at(i)) > 0) {
                 auto tree_ptr = std::get<1>(children->at(i));
                 children_lock.unlock();
-                auto append_list = tree_ptr->index((num_threads % 2)?1:2);
-                for (auto &el: append_list) {
+                auto append_list = tree_ptr->index(1);
+                for (auto &el: std::get<0>(append_list)) {
+                    std::get<1>(el).insert(std::get<1>(el).cbegin(), i);
+                }
+                for (auto &el: std::get<1>(append_list)) {
                     std::get<1>(el).insert(std::get<1>(el).cbegin(), i);
                 }
                 std::scoped_lock const lock_splice(search_index_protect);
-                search_index->splice(search_index->cend(), append_list);
+                search_index.splice(search_index.cend(), std::get<0>(append_list));
+                damaged_blocks_index.splice(damaged_blocks_index.cend(), std::get<1>(append_list));
             } else {
                 children_lock.unlock();
             }
@@ -713,11 +595,11 @@ uh::trees::tree_storage::index(unsigned short num_threads) {
         }
     };
 
-    if (num_threads <= 2) {
+    if (num_threads == 1) {
         multithread_index();
     } else {
         std::vector<std::thread> workers;
-        for (unsigned short i = 0; (unsigned short) i < num_threads / ((num_threads % 2)?1:2); i++) {
+        for (unsigned short i = 0; i<num_threads; i++) {
             std::thread w(multithread_index);
             workers.push_back(std::move(w));
         }
@@ -731,7 +613,7 @@ uh::trees::tree_storage::index(unsigned short num_threads) {
     }
 
     std::scoped_lock const lock_return(search_index_protect);
-    return *search_index;
+    return {search_index,damaged_blocks_index};
 }
 
 std::size_t uh::trees::tree_storage::delete_recursive(unsigned short num_threads) {
