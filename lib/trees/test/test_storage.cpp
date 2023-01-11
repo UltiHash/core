@@ -733,7 +733,26 @@ BOOST_AUTO_TEST_CASE(delete_test)
             count++;
         });
         delete_list = t1.delete_blocks(del_list,1);
-        std::get<0>(index_list).pop_front();
+        //delete list shows changes that have to be thrown at the del list carrying local block references to be deleted
+        //since the block references by changing offsets we need to update them
+        std::for_each(del_list.begin(),del_list.end(),[&delete_list,&index_list](auto &item){
+            if(!std::any_of(std::get<1>(delete_list).begin(),std::get<1>(delete_list).end(),[&item,&index_list](auto &item2){
+                return item == std::get<0>(item2);//check if original local block ref hit
+            })){
+                //erase from index
+                std::erase_if(std::get<0>(index_list),[&item](auto &item3){
+                    return std::get<1>(item3) == item;
+                });
+            }//clean index from deleted
+        });
+        //transform changes
+        std::for_each(std::get<1>(delete_list).begin(),std::get<1>(delete_list).end(),[&index_list](auto &item2){
+            std::for_each(std::get<0>(index_list).begin(),std::get<0>(index_list).end(),[&item2](auto &item4){
+                if(std::get<1>(item4) == std::get<0>(item2)){
+                    std::get<1>(item4) = std::get<1>(item2);
+                }
+            });
+        });
     } while (std::get<1>(delete_list).empty());
 
     for (const auto &i: std::get<1>(delete_list)) {
