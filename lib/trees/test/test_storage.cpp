@@ -663,7 +663,7 @@ BOOST_AUTO_TEST_CASE(index_read_test)
         BOOST_ASSERT_MSG(test_ok, std::string(
                 "The SHA512 without time extend of an indexed block \"" + old_ref + "\" could not be verified!").c_str());
     }
-    BOOST_ASSERT_MSG(!std::get<1>(index_list).empty(),"The list of damaged blocks was not empty!");
+    BOOST_ASSERT_MSG(std::get<1>(index_list).empty(),"The list of damaged blocks was not empty!");
 }
 
 BOOST_AUTO_TEST_CASE(get_info_set_time_test)
