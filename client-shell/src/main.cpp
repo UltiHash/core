@@ -14,8 +14,8 @@ std::string explicitCommandTranslate(const std::string &s) {
  * find all flags of one kind and delete them since every flag can only be used once
  * function works for one character or template overload for an entire string using lambda construction
  */
-template<template<class> class H, typename text>
-void flag_delete(H<std::string> &flags, text t) {
+template<class Container, typename text>
+void flag_delete(Container &flags, text t) {
     while (std::any_of(flags.begin(), flags.end(),
                        [t](const std::string &c) { return c.find(t) != std::string::npos; })) {
         std::string tmp;
@@ -30,8 +30,8 @@ void flag_delete(H<std::string> &flags, text t) {
 /*
  * on error message separate wrong commands with comma
  */
-template<template<class> class H>
-std::string enlist(H<std::string> &st) {
+template<class Container>
+std::string enlist(Container &st) {
     std::string enlist;
     unsigned short count = 0;
     for (const auto &item: st) {
