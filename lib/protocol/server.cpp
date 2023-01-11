@@ -33,6 +33,13 @@ void server::on_reset()
 
 // ---------------------------------------------------------------------
 
+std::size_t server::on_next_chunk(std::span<char>)
+{
+    THROW(unsupported, "this call is not supported by this node type");
+}
+
+// ---------------------------------------------------------------------
+
 void server::handle(std::shared_ptr<net::socket> client)
 {
     boost::iostreams::stream<io::boost_device> io(client);
@@ -68,6 +75,8 @@ void server::handle(std::shared_ptr<net::socket> client)
         {
             write(io, status{ .code = status::FAILED, .message = e.what() });
             io.flush();
+
+            m_block.reset();
             m_state = server_state::normal;
         }
     }
@@ -110,6 +119,7 @@ void server::handle_reading_request(iostream& io, uint8_t request_id)
     {
         case quit::request_id: return handle_quit(io);
         case reset::request_id: return handle_reset(io);
+        case next_chunk::request_id: return handle_next_chunk(io);
 
         default: throw std::runtime_error("unsupported command");
     }
@@ -167,12 +177,11 @@ void server::handle_read_block(iostream& io)
     read_block::request req;
     read(io, req);
 
-    blob content = on_read_block(std::move(req.hash));
+    m_block = on_read_block(std::move(req.hash));
 
     m_state = server_state::normal;
 
     write(io, status{ status::OK });
-    write(io, read_block::response{ std::move(content) });
     io.flush();
 }
 
@@ -225,8 +234,29 @@ void server::handle_reset(iostream& io)
     on_reset();
 
     m_state = server_state::normal;
+    m_block.reset();
 
     write(io, status{ status::OK });
+    io.flush();
+}
+
+// ---------------------------------------------------------------------
+
+void server::handle_next_chunk(iostream& io)
+{
+    next_chunk::request req;
+    read(io, req);
+
+    if (req.max_size < MINIMUM_CHUNK_SIZE || req.max_size > MAXIMUM_CHUNK_SIZE)
+    {
+        THROW(illegal_args, "buffer size out of range");
+    }
+
+    std::vector<char> buffer(req.max_size);
+    auto count = m_block->read(std::span<char>(buffer.begin(), buffer.end()));
+
+    write(io, status{ status::OK });
+    write(io, next_chunk::response{ .content = std::span<char>(buffer.begin(), count) });
     io.flush();
 }
 

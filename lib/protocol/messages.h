@@ -3,6 +3,7 @@
 
 #include "common.h"
 
+#include <span>
 #include <string>
 
 
@@ -90,7 +91,6 @@ struct read_block
 
     struct response
     {
-        blob content;
     };
 
     constexpr static uint8_t request_id = 0x03;
@@ -174,6 +174,31 @@ void read(std::istream& in, reset::request& request);
 
 void write(std::ostream& out, const reset::response& response);
 void read(std::istream& in, reset::response& response);
+
+// ---------------------------------------------------------------------
+
+struct next_chunk
+{
+    struct request
+    {
+        uint32_t max_size;
+    };
+
+    struct response
+    {
+        std::span<char> content;
+    };
+
+    constexpr static uint8_t request_id = 0x07;
+};
+
+// ---------------------------------------------------------------------
+
+void write(std::ostream& out, const next_chunk::request& request);
+void read(std::istream& in, next_chunk::request& request);
+
+void write(std::ostream& out, const next_chunk::response& response);
+void read(std::istream& in, next_chunk::response& response);
 
 // ---------------------------------------------------------------------
 

@@ -50,7 +50,7 @@ blob protocol::on_write_block(blob&& data)
 
 // ---------------------------------------------------------------------
 
-blob protocol::on_read_block(blob&& hash)
+std::unique_ptr<io::device> protocol::on_read_block(blob&& hash)
 {
     return m_cluster.bc_read_block(hash);
 }

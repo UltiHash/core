@@ -134,7 +134,6 @@ void read(std::istream& in, read_block::request& request)
 
 void write(std::ostream& out, const read_block::response& response)
 {
-    write(out, response.content);
 }
 
 // ---------------------------------------------------------------------
@@ -144,9 +143,6 @@ void read(std::istream& in, read_block::response& response)
     check_status(in);
 
     read_block::response tmp;
-    // TODO streaming for content transfer
-    read(in, tmp.content);
-
     std::swap(tmp, response);
 }
 
@@ -245,6 +241,44 @@ void read(std::istream& in, reset::response& response)
     check_status(in);
 
     reset::response tmp;
+    std::swap(tmp, response);
+}
+
+// ---------------------------------------------------------------------
+
+void write(std::ostream& out, const next_chunk::request& request)
+{
+    write(out, next_chunk::request_id);
+    write(out, request.max_size);
+}
+
+// ---------------------------------------------------------------------
+
+void read(std::istream& in, next_chunk::request& request)
+{
+    next_chunk::request tmp;
+
+    read(in, tmp.max_size);
+
+    std::swap(tmp, request);
+}
+
+// ---------------------------------------------------------------------
+
+void write(std::ostream& out, const next_chunk::response& response)
+{
+    write(out, response.content);
+}
+
+// ---------------------------------------------------------------------
+
+void read(std::istream& in, next_chunk::response& response)
+{
+    check_status(in);
+
+    next_chunk::response tmp;
+    read(in, tmp.content);
+
     std::swap(tmp, response);
 }
 

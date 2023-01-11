@@ -1,5 +1,8 @@
 #include "dump_storage.h"
 
+#include <io/file.h>
+
+
 namespace uh::dbn::storage {
 
 
@@ -59,21 +62,12 @@ uh::protocol::blob dump_storage::write_block(const uh::protocol::blob& some_data
     return  hash_blob;
 }
 
-uh::protocol::blob dump_storage::read_block(const uh::protocol::blob& some_hash){
+std::unique_ptr<io::device> dump_storage::read_block(const uh::protocol::blob& hash) {
 
-    std::string hash_string(some_hash.begin(), some_hash.end());
+    std::string hash_string(hash.begin(), hash.end());
 
-    std::filesystem::path filepath = this->get_filepath_from_hash(some_hash);
-    std::ifstream infile(filepath, std::ios::binary);
-
-    if(!infile.is_open()) {
-        std::string msg("Error opening file: " + filepath.string());
-        throw std::ifstream::failure(msg);
-    }
-
-    uh::protocol::blob buffer(std::istreambuf_iterator<char>(infile), {});
-
-    return buffer;
+    std::filesystem::path filepath = this->get_filepath_from_hash(hash);
+    return std::make_unique<io::file>(filepath);
 }
 
 

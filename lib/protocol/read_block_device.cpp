@@ -1,0 +1,47 @@
+#include "read_block_device.h"
+
+#include "client.h"
+#include "exception.h"
+
+
+namespace uh::protocol
+{
+
+// ---------------------------------------------------------------------
+
+read_block_device::read_block_device(client& c)
+    : m_client(c)
+{
+}
+
+// ---------------------------------------------------------------------
+
+read_block_device::~read_block_device()
+{
+    m_client.reset();
+}
+
+// ---------------------------------------------------------------------
+
+std::streamsize read_block_device::write(std::span<const char> buffer)
+{
+    THROW(unsupported, "write call not supported on read_block_device");
+}
+
+// ---------------------------------------------------------------------
+
+std::streamsize read_block_device::read(std::span<char> buffer)
+{
+    return m_client.next_chunk(buffer);
+}
+
+// ---------------------------------------------------------------------
+
+bool read_block_device::valid() const
+{
+    return m_client.valid();
+}
+
+// ---------------------------------------------------------------------
+
+} // namespace uh::protocol

@@ -89,7 +89,7 @@ blob protocol_metrics_wrapper::on_write_block(blob&& data)
 
 // ---------------------------------------------------------------------
 
-blob protocol_metrics_wrapper::on_read_block(blob&& hash)
+std::unique_ptr<io::device> protocol_metrics_wrapper::on_read_block(blob&& hash)
 {
     m_metrics.reqs_read_block().Increment();
     return m_base->on_read_block(std::move(hash));

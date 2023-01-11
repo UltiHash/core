@@ -121,8 +121,11 @@ public:
 
                     // time measurement statistics for reading blocks from the agency server
                     auto start = std::chrono::steady_clock::now();
+
                     auto data = m_client->read_block(vecHash);
-                    m_decoded_size += data.size();
+                    auto buffer = uh::io::read_to_buffer(*data);
+                    m_decoded_size += buffer.size();
+
                     auto end = std::chrono::steady_clock::now();
 
                     auto nanoSec = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
@@ -134,13 +137,13 @@ public:
                     totalMicroSec+=microSec;
                     totalMilliSec+=milliSec;
                     totalSec+=Sec;
-                    totalBlockSize+=data.size();
-                    INFO << "Block-" << i+1  << ": " << "Size " << data.size() << " Bytes - RTT " << nanoSec << " ns, "
+                    totalBlockSize+=buffer.size();
+                    INFO << "Block-" << i+1  << ": " << "Size " << buffer.size() << " Bytes - RTT " << nanoSec << " ns, "
                          << microSec << " µs, "
                          << milliSec << " ms, "
                          << Sec << " sec";
 
-                    hash_blocks.emplace_back(data.begin(), data.end());
+                    hash_blocks.emplace_back(buffer.begin(), buffer.end());
                 }
 
                 // total block time
