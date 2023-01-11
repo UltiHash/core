@@ -609,6 +609,7 @@ namespace uh::trees {
          * The index reads the entire information of the tree storage and calculates SHA512 hashes with creation time extension for every single block
          * matching a local storage reference and delivering the time stamps of the block
          * The first list carries valid blocks, the second one carries corrupted blocks that need to be deleted or repaired
+         * in each list: returns global_hash, local_block_reference and block timestamps
          */
         std::tuple<std::list<std::tuple<std::array<unsigned char, SHA512_DIGEST_LENGTH +
                                                                   sizeof(unsigned long)>, std::vector<unsigned char>, std::array<unsigned long, TIME_STAMPS_ON_BLOCK>>>,

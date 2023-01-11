@@ -439,10 +439,11 @@ uh::trees::tree_storage::index(unsigned short num_threads) {
 
                     if (std::get<5>(read_tup) && std::get<0>(read_tup) > 0) {//if valid
                         std::scoped_lock const lock_here(search_index_protect);
-                        search_index.emplace_back(std::get<3>(read_tup), std::get<1>(read_tup), std::get<2>(read_tup));
+                        search_index.emplace_back(std::get<3>(read_tup), local_block_ref,
+                                std::get<2>(read_tup));
                     } else {
                         std::scoped_lock const lock_here(search_index_protect);//bit flip detect
-                        damaged_blocks_index.emplace_back(std::get<3>(read_tup), std::get<1>(read_tup),
+                        damaged_blocks_index.emplace_back(std::get<3>(read_tup), local_block_ref,
                                                           std::get<2>(read_tup));
                     }
                     cur_pos += std::get<0>(read_tup);
