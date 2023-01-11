@@ -916,12 +916,6 @@ uh::trees::tree_storage::delete_blocks(
                     *read_ptr -= 1;
                     std::atomic_flag_clear_explicit(&write_control, std::memory_order_release);
                 };
-                if (!writer) {
-                    ERROR << "File write opening failed at \"" + chunk_maintain.string() + "\"";
-                    io_end_sequence();
-                    error_thread_sequence();
-                    if (error_flag.test())return;
-                }
 
                 auto write_once_to_maintain_file = [&]() {
                     std::unique_lock multithread_f_read(multithreading_factory_protect,

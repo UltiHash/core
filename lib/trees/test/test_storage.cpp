@@ -690,7 +690,7 @@ BOOST_AUTO_TEST_CASE(get_info_set_time_test)
                      "Block was not older than current time");
 
     BOOST_ASSERT_MSG(std::get<3>(block_info) < SHA512_DIGEST_LENGTH + TIME_STAMPS_ON_BLOCK * sizeof(unsigned long) +
-                                                      t1.prefix_wrap(std::get<0>(block_info).size()).size() + std::get<0>(block_info).size() +
+                                                      t1.prefix_wrap(std::get<0>(block_info).size()).size() + std::get<3>(block_info) +
                                                       SHA256_DIGEST_LENGTH,
                      "The total size must always be larger than the block size!");
     gettimeofday(&time, nullptr);
@@ -732,7 +732,7 @@ BOOST_AUTO_TEST_CASE(delete_test)
             del_list.push_back(std::get<1>(item));
             count++;
         });
-        delete_list = t1.delete_blocks(del_list);
+        delete_list = t1.delete_blocks(del_list,1);
         std::get<0>(index_list).pop_front();
     } while (std::get<1>(delete_list).empty());
 
