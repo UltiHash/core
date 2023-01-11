@@ -4,6 +4,7 @@ message(STATUS "Building ${PROJECT_NAME}...")
 
 set(CMAKE_CXX_STANDARD 20)
 
+set(Boost_USE_STATIC_LIBS ON)
 find_package(Boost 1.80 COMPONENTS unit_test_framework REQUIRED)
 
 find_package(Git REQUIRED)

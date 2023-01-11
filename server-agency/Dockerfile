@@ -1,4 +1,4 @@
-FROM ubuntu:22.04
+FROM ubuntu:22.04 as build
 
 # Install dependencies
 RUN DEBIAN_FRONTEND=noninteractive apt-get update \
@@ -12,9 +12,8 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get update \
         ca-certificates \
         gcc-12 \
         g++-12 \
-        libssl-dev \
         libgmp3-dev \
-        libpqxx-dev \
+        libssl-dev \
         zlib1g-dev \
         libcurl4-openssl-dev
 
@@ -48,11 +47,18 @@ WORKDIR /uhServerAgency
 
 # Configure and compile lib-common
 RUN mkdir build \
-    && cmake -B build -DCMAKE_BUILD_TYPE=Release -DUPDATE_GIT_SUBMODULE=Off -DPROTOCOL_USE_SMALL_CHUNKS=On \
+    && cmake -B build -DCMAKE_BUILD_TYPE=Release \
     && cmake --build build -j $(nproc) --config Release
 
-ENV LD_LIBRARY_PATH="${LD_LIBRARY_PATH}:/usr/local/lib/"
-WORKDIR /uhServerAgency/build
+RUN cd /uhServerAgency/build && ctest -C Release --output-on-failure
 
-# Execute tests
-CMD ctest -C Release --output-on-failure
+FROM ubuntu:22.04 as deploy
+LABEL org.opencontainers.image.description "This container image contains the agency node server role. \
+Right now, the image does not have a pre-defined entry-point, so upon instantiating a container from this image, \
+the uhServerAgency binary has to be launched using container parameters."
+
+COPY --from=build /uhServerAgency/build/uhServerAgency /usr/local/bin
+RUN useradd -m ultihash
+
+USER ultihash
+WORKDIR /home/ultihash
