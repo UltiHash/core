@@ -319,7 +319,7 @@ uh::trees::tree_storage::write(const std::vector<unsigned char> &input,
             std::filesystem::path read_path =
                     *combined_path / boost::algorithm::hex(std::string{(char) local_block_ref[0]}) / ref_name;
             read_path_lock.unlock();
-            return read_path;
+            return read_path.make_preferred();
         };
 
         std::unique_lock write_size(size_protect, std::defer_lock);
@@ -341,7 +341,6 @@ uh::trees::tree_storage::write(const std::vector<unsigned char> &input,
         if(std::get<3>(write_tup)){
             ERROR << "File error at \"" + read_chunk.make_preferred().string() + "\" at block reference\"" +
                      block_path().string() + "\"";
-            end_write_sequence();
             return {};
         }
 
@@ -599,32 +598,31 @@ std::size_t uh::trees::tree_storage::delete_recursive(unsigned short num_threads
     return out_size.load();
 }
 
-bool uh::trees::tree_storage::set_block_time(const std::vector<unsigned char> &block_code,
-                                             unsigned long current_time) {
-    if (block_code.empty()) {
+bool uh::trees::tree_storage::set_block_time(const std::vector<unsigned char> &local_block_reference, std::array<unsigned long, TIME_STAMPS_ON_BLOCK - 1> times) {
+    if (local_block_reference.empty()) {
         ERROR << "No input given to set block time!";
         return false;
     }
-    if (block_code.size() > SMALLEST_LOCAL_BLOCK_SIZE) {
+    if (local_block_reference.size() > SMALLEST_LOCAL_BLOCK_SIZE) {
         //size encoding is not reached yet, set_block_time along tree path
         std::unique_lock read_children(children_protect, std::defer_lock);
         read_children.lock();
-        if ((short) children->size() - 1 < (short) block_code[0] ||
-            !std::get<0>(children->at(block_code[0]))) {
+        if ((short) children->size() - 1 < (short) local_block_reference[0] ||
+            !std::get<0>(children->at(local_block_reference[0]))) {
             read_children.unlock();
-            std::string const not_found((const char *) block_code.data(), block_code.size());
+            std::string const not_found((const char *) local_block_reference.data(), local_block_reference.size());
             std::scoped_lock const read_path(combined_path_protect);
             DEBUG << "<Block error trace>: Block code " + boost::algorithm::hex(not_found) +
                      " could not be found in storage tree \"" +
                      combined_path->string() + "\".";
             return false;
         } else {
-            auto tree_ptr = std::get<1>(children->at(block_code[0]));
+            auto tree_ptr = std::get<1>(children->at(local_block_reference[0]));
             read_children.unlock();
-            std::vector<unsigned char> const sub_block_code{block_code.cbegin() + 1, block_code.cend()};
-            auto out_vec = tree_ptr->set_block_time(sub_block_code, current_time);
+            std::vector<unsigned char> const sub_block_code{local_block_reference.cbegin() + 1, local_block_reference.cend()};
+            auto out_vec = tree_ptr->set_block_time(sub_block_code, times);
             if (!out_vec) {
-                std::string const not_found((const char *) block_code.data(), block_code.size());
+                std::string const not_found((const char *) local_block_reference.data(), local_block_reference.size());
                 std::scoped_lock const read_path(combined_path_protect);
                 DEBUG << "<Block error trace on return>: Block code " + boost::algorithm::hex(not_found) +
                          " could not be found in storage tree \"" + combined_path->string() + "\".";
@@ -632,8 +630,8 @@ bool uh::trees::tree_storage::set_block_time(const std::vector<unsigned char> &b
             return out_vec;
         }
     } else {
-        if (block_code.size() < SMALLEST_LOCAL_BLOCK_SIZE) {
-            std::string const not_found((const char *) block_code.data(), block_code.size());
+        if (local_block_reference.size() < SMALLEST_LOCAL_BLOCK_SIZE) {
+            std::string const not_found((const char *) local_block_reference.data(), local_block_reference.size());
             std::scoped_lock const read_path(combined_path_protect);
             FATAL << "<Block error trace>: Block code " + boost::algorithm::hex(not_found) +
                      " was too short for storage tree \"" +
@@ -643,10 +641,10 @@ bool uh::trees::tree_storage::set_block_time(const std::vector<unsigned char> &b
         //the block code should have a size of 5; one chunk index and 4 bytes of encoding for the offset
         std::unique_lock size_read(size_protect, std::defer_lock);
         size_read.lock();
-        if ((short) size->size() - 1 < (short) block_code[0] ||
-            !std::get<0>(size->at(block_code[0]))) {
+        if ((short) size->size() - 1 < (short) local_block_reference[0] ||
+            !std::get<0>(size->at(local_block_reference[0]))) {
             size_read.unlock();
-            std::string const not_found((const char *) block_code.data(), block_code.size());
+            std::string const not_found((const char *) local_block_reference.data(), local_block_reference.size());
             std::scoped_lock const read_path(combined_path_protect);
             DEBUG
                 << "<Block error trace on return, final tree>: Block code " + boost::algorithm::hex(not_found) +
@@ -655,27 +653,31 @@ bool uh::trees::tree_storage::set_block_time(const std::vector<unsigned char> &b
             return false;
         } else {
             size_read.unlock();
-            std::vector<unsigned char> sub_block_code{block_code.cbegin() + 1,
-                                                      block_code.cend()}; //copy offset code and rebuild
+
+            std::vector<unsigned char> sub_block_code{local_block_reference.cbegin() + 1,
+                                                      local_block_reference.cend()}; //copy offset code and rebuild
             std::size_t offset{};
             for (unsigned short i = 0; i < (unsigned short) sizeof(unsigned int); i++) {
                 offset += (((std::size_t) sub_block_code[i]) << (i * CHAR_BITS));
             }
-            std::string const ref_name{boost::algorithm::hex(std::string{(char) block_code[0]})};
+            std::string const ref_name{boost::algorithm::hex(std::string{(char) local_block_reference[0]})};
             std::shared_lock read_path2(combined_path_protect);
             std::filesystem::path read_path = *combined_path / ref_name;
             read_path2.unlock();
 
-            //calculate binary of timestamp
-            std::vector<unsigned char> bin_time;
-            for (unsigned short i = 0; i < (unsigned short) sizeof(current_time); i++) {
-                bin_time.push_back((unsigned char) (current_time >> (i * CHAR_BITS)));
-            }
-
             size_read.lock();
-            auto write_ptr = &(*std::get<2>(size->at(block_code[0])));
-            auto read_ptr = &(*std::get<3>(size->at(block_code[0])));
+            auto write_ptr = &(*std::get<2>(size->at(local_block_reference[0])));
+            auto read_ptr = &(*std::get<3>(size->at(local_block_reference[0])));
+            auto maintain_ptr = &(*std::get<4>(size->at(local_block_reference[0])));
             size_read.unlock();
+
+            while (std::atomic_flag_test_and_set_explicit(maintain_ptr, std::memory_order_acquire)) {
+                maintain_ptr->wait(true);
+            }
+            //protect interaction of reading and unlocking before writing the valid hash, so put behind maintain barrier
+            std::array<unsigned char, SHA512_DIGEST_LENGTH>hash{};
+            std::array<unsigned char, SHA512_DIGEST_LENGTH + sizeof(unsigned long)>global_hash = std::get<2>(read<true>(local_block_reference));
+            std::ranges::copy(global_hash.cbegin(),global_hash.cbegin()+SHA512_DIGEST_LENGTH,hash.begin());
 
             while (std::atomic_flag_test_and_set_explicit(write_ptr, std::memory_order_acquire)) {
                 write_ptr->wait(true);
@@ -689,42 +691,44 @@ bool uh::trees::tree_storage::set_block_time(const std::vector<unsigned char> &b
 #endif // _WIN32
             }
 
+            auto block_path = [&] {
+                std::string const ref_name{
+                        boost::algorithm::hex(std::string{local_block_reference.cbegin() + 1, local_block_reference.cend()})};
+                std::shared_lock read_path_lock(combined_path_protect);
+                std::filesystem::path read_path =
+                        *combined_path / boost::algorithm::hex(std::string{(char) local_block_reference[0]}) / ref_name;
+                read_path_lock.unlock();
+                return read_path.make_preferred();
+            };
+
             FILE *writer = std::fopen(read_path.make_preferred().c_str(), "rb+");
             auto set_time_end_sequence = [&]() {
                 if (std::fclose(writer))ERROR << "Write stream was not open!";
+
                 std::atomic_flag_clear_explicit(write_ptr, std::memory_order_release);
                 if (!write_ptr->test())write_ptr->notify_all();
+                std::atomic_flag_clear_explicit(maintain_ptr, std::memory_order_release);
+                if (!maintain_ptr->test())maintain_ptr->notify_one();
             };
-            if (!writer) {
-                ERROR << "File write opening failed at \"" + read_path.string() + "\"";
-                set_time_end_sequence();
-                return false;
-            }
             //File should have been opened or created here
             if (std::fseek(writer, static_cast<long>(offset), SEEK_SET)) {
-                ERROR << "File seek failed at \"" + read_path.string() + ", position " + std::to_string(offset) + "\"";
+                ERROR << "File seek failed at \"" + read_path.make_preferred().string() + ", position " + std::to_string(offset) + "\"";
                 set_time_end_sequence();
                 return false;
             }
 
-            if (std::ferror(writer)) {
-                FATAL << "I/O error when seeking \"" + read_path.string() + "\"";
-                set_time_end_sequence();
-                return false;
-            }
-            //File should have been opened or created here
-            if (!std::fwrite(bin_time.data(), bin_time.size(), sizeof(unsigned char), writer)) {
-                FATAL << "I/O error when writing binary time sequence at \"" + read_path.string() + "\"";
-                set_time_end_sequence();
-                return false;
-            }
+            std::array<unsigned long, TIME_STAMPS_ON_BLOCK> times_not_creation{};
+            times_not_creation[0] = 0;
+            times_not_creation[1] = times[0];
+            times_not_creation[2] = times[1];
 
-            if (std::ferror(writer)) {
-                FATAL << "I/O error when writing \"" + read_path.string() + "\"";
-                set_time_end_sequence();
-                return false;
+            auto write_tup = write_block_base(writer,read_path.make_preferred(),std::vector<unsigned char>{},
+                                              local_block_reference,times_not_creation,set_time_end_sequence,true,false,hash);
+            if(std::get<3>(write_tup)){
+                ERROR << "File error at \"" + read_path.make_preferred().string() + "\" at block reference\"" +
+                         block_path().string() + "\"";
+                return {};
             }
-            set_time_end_sequence();
 
             return true;
         }

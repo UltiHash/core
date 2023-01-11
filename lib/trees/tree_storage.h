@@ -108,6 +108,7 @@ namespace uh::trees {
         //returns total size, block_size, (optional valid) SHA512 with an ending of creation time as hash extend reordered vector, error occurred
         //for efficiency SHA512 hash calculation can be skipped and an external hash can be written
         //for updating efficiency writing prefix and block again can be skipped
+        //writes times,SHA512,prefix,block,checksum
         std::tuple<std::size_t, std::size_t, std::array<unsigned char,
                 SHA512_DIGEST_LENGTH + sizeof(unsigned long)>, bool> write_block_base(
                 FILE *writer, const std::filesystem::path &write_at, const std::vector<unsigned char> &block,
@@ -142,10 +143,10 @@ namespace uh::trees {
             std::vector<unsigned char> block_buf = mem_wait<unsigned char>(total_block_size);
 
             //fill block buf with write down sequence
-            block_buf.insert(block_buf.cend(), hash_buf.cbegin(), hash_buf.cend());//SHA512
             for (const auto &t_c: convert_time) {//times
                 block_buf.insert(block_buf.cend(), t_c.cbegin(), t_c.cend());
             }
+            block_buf.insert(block_buf.cend(), hash_buf.cbegin(), hash_buf.cend());//SHA512
             block_buf.insert(block_buf.cend(), prefix.cbegin(), prefix.cend());//prefix
             block_buf.insert(block_buf.cend(), block.cbegin(), block.cend());
 
@@ -168,7 +169,7 @@ namespace uh::trees {
                 std::filesystem::path read_path =
                         *combined_path / boost::algorithm::hex(std::string{(char) local_block_ref[0]}) / ref_name;
                 read_path_lock.unlock();
-                return read_path;
+                return read_path.make_preferred();
             };
 
             auto error_sequence = [&]() {
@@ -235,7 +236,7 @@ namespace uh::trees {
                 auto end_sequence, bool skip_read_block = false, bool check_valid = false) {
 
             const std::size_t read_info_block_size =
-                    SHA512_DIGEST_LENGTH + TIME_STAMPS_ON_BLOCK * sizeof(unsigned long);
+                    TIME_STAMPS_ON_BLOCK * sizeof(unsigned long) + SHA512_DIGEST_LENGTH;
             std::vector<unsigned char> first_section = mem_wait<unsigned char>(read_info_block_size);
 
             auto block_path = [&] {
@@ -247,7 +248,7 @@ namespace uh::trees {
                 std::filesystem::path read_path =
                         *combined_path / boost::algorithm::hex(std::string{(char) local_block_ref[0]}) / ref_name;
                 read_path_lock.unlock();
-                return read_path;
+                return read_path.make_preferred();
             };
 
             auto error_sequence = [&]() {
@@ -278,13 +279,10 @@ namespace uh::trees {
                 return error_sequence();
             }
 
-            std::array<unsigned char, SHA512_DIGEST_LENGTH> hash{};
-            std::ranges::copy(first_section.cbegin(), first_section.cbegin() + SHA512_DIGEST_LENGTH, hash.begin());
-
             std::array<unsigned long, TIME_STAMPS_ON_BLOCK> times{};
             std::array<std::vector<unsigned char>, TIME_STAMPS_ON_BLOCK> convert_time{};
             long time_shifter{};
-            auto beg_time = first_section.cbegin() + SHA512_DIGEST_LENGTH + time_shifter * (long) sizeof(unsigned long);
+            auto beg_time = first_section.cbegin() + time_shifter * (long) sizeof(unsigned long);
             auto end_time = beg_time + sizeof(unsigned long);
             for (auto &t: times) {
                 std::vector<unsigned char> vector_time = mem_wait<unsigned char>(sizeof(unsigned long));
@@ -298,6 +296,9 @@ namespace uh::trees {
                 time_shifter++;
                 t = block_time;
             }
+
+            std::array<unsigned char, SHA512_DIGEST_LENGTH> hash{};
+            std::ranges::copy(first_section.cbegin() + time_shifter * (long) sizeof(unsigned long), first_section.cbegin() + SHA512_DIGEST_LENGTH + time_shifter * (long) sizeof(unsigned long), hash.begin());
 
             std::array<unsigned char, SHA512_DIGEST_LENGTH + sizeof(unsigned long)> global_block_reference{};
             std::ranges::copy(hash.cbegin(), hash.cend(), global_block_reference.begin());
@@ -490,8 +491,14 @@ namespace uh::trees {
                     FATAL << "<Block error trace>: Block code " + boost::algorithm::hex(not_found) +
                              " was too short for storage tree \"" +
                              combined_path->string() + "\".";
-                    return std::tuple<std::vector<unsigned char>, std::vector<unsigned char>, std::array<unsigned long, TIME_STAMPS_ON_BLOCK>, std::array<unsigned char,
-                            SHA512_DIGEST_LENGTH + sizeof(unsigned long)>>{};
+                    if constexpr (only_info){
+                        return std::tuple<std::vector<unsigned char>, std::array<unsigned long, TIME_STAMPS_ON_BLOCK>, std::array<unsigned char,
+                                SHA512_DIGEST_LENGTH + sizeof(unsigned long)>>{};
+                    }
+                    else{
+                        return std::tuple<std::vector<unsigned char>, std::vector<unsigned char>, std::array<unsigned long, TIME_STAMPS_ON_BLOCK>, std::array<unsigned char,
+                                SHA512_DIGEST_LENGTH + sizeof(unsigned long)>>{};
+                    }
                 }
                 //the block code should have a size of 5; one chunk index and 4 bytes of encoding for the offset
                 std::unique_lock size_lock(size_protect, std::defer_lock);
@@ -539,13 +546,13 @@ namespace uh::trees {
 
                     FILE *reader = std::fopen(read_path.make_preferred().c_str(), "rb");
                     auto read_end_sequence = [&reader, &read_ptr, &write_ptr, &read_path]() {
-                        if (std::fclose(reader))ERROR << "Read stream was not open on " + read_path.string() + "!";
+                        if (std::fclose(reader))ERROR << "Read stream was not open on " + read_path.make_preferred().string() + "!";
                         *read_ptr -= 1;
                         if (!read_ptr->load())write_ptr->notify_one();
                     };
                     //File should have been opened or created here
                     if (std::fseek(reader, static_cast<long>(offset), SEEK_SET)) {
-                        ERROR << "File seek failed at \"" + read_path.string() + ", position " + std::to_string(offset) + "\"";
+                        ERROR << "File seek failed at \"" + read_path.make_preferred().string() + ", position " + std::to_string(offset) + "\"";
                         read_end_sequence();
                         if constexpr (only_info){
                             return std::tuple<std::vector<unsigned char>, std::array<unsigned long, TIME_STAMPS_ON_BLOCK>, std::array<unsigned char,
@@ -561,7 +568,7 @@ namespace uh::trees {
                                                                       read_end_sequence,only_info);
 
                     if (std::get<4>(block_read_tup)) {
-                        ERROR << "File error at \"" + read_path.string() + ", position " + std::to_string(offset) + "\"";
+                        ERROR << "File error at \"" + read_path.make_preferred().string() + ", position " + std::to_string(offset) + "\"";
                         if constexpr (only_info){
                             return std::tuple<std::vector<unsigned char>, std::array<unsigned long, TIME_STAMPS_ON_BLOCK>, std::array<unsigned char,
                                     SHA512_DIGEST_LENGTH + sizeof(unsigned long)>>{};
@@ -573,7 +580,7 @@ namespace uh::trees {
                     }
 
                     if (!std::get<5>(block_read_tup)) {
-                        ERROR << "File block is broken at \"" + read_path.string() + ", position " + std::to_string(offset) +
+                        ERROR << "File block is broken at \"" + read_path.make_preferred().string() + ", position " + std::to_string(offset) +
                                  "\"";
                         if constexpr (only_info){
                             return std::tuple<std::vector<unsigned char>, std::array<unsigned long, TIME_STAMPS_ON_BLOCK>, std::array<unsigned char,
@@ -615,12 +622,10 @@ namespace uh::trees {
         std::size_t delete_recursive(unsigned short num_threads = std::thread::hardware_concurrency());
 
         /*
-         * returns success on changing touch time of a block, giving the function a valid block code
+         * returns success on changing storage duration and touch time (NOT creation time)
          * WARNING: Wrong block references will cause data loss!!!
          */
-        bool set_block_time(const std::vector<unsigned char> &block_code,
-                            unsigned long current_time = (unsigned long) std::chrono::nanoseconds(
-                                    std::chrono::high_resolution_clock::now().time_since_epoch()).count());
+        bool set_block_time(const std::vector<unsigned char> &local_block_reference, std::array<unsigned long, TIME_STAMPS_ON_BLOCK - 1> times);
 
         //TODO: integrate delete blocks, maintain valid time, introduce block max age
         //after deletion some blocks are de-fragmented in descending order. Behind the deleted block(s) all blocks need to be re-mapped
