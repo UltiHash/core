@@ -66,7 +66,7 @@ public:
 
 private:
     std::shared_ptr<net::socket> m_sock;
-    boost::iostreams::stream<net::socket_device> m_io;
+    boost::iostreams::stream<io::boost_device> m_io;
 };
 
 // ---------------------------------------------------------------------

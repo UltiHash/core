@@ -9,7 +9,7 @@ find_package(Boost 1.80 COMPONENTS thread system unit_test_framework REQUIRED)
 find_package(OpenSSL REQUIRED)
 
 # internal dependencies
-set(${PROJECT_NAME}_INTERNAL_DEPS uhLibLogging uhLibUtil)
+set(${PROJECT_NAME}_INTERNAL_DEPS uhLibLogging uhLibUtil uhLibIo)
 
 # configuring library dependencies for cmake and linker
 set(${PROJECT_NAME}_INCLUDE_DIRS ${${PROJECT_NAME}_INTERNAL_DEPS} ${OPENSSL_INCLUDE_DIRS})

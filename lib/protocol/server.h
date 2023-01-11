@@ -22,7 +22,7 @@ enum class server_state
 
 // ---------------------------------------------------------------------
 
-using iostream = boost::iostreams::stream<net::socket_device>;
+using iostream = boost::iostreams::stream<io::boost_device>;
 
 // ---------------------------------------------------------------------
 
