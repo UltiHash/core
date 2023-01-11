@@ -158,7 +158,7 @@ namespace uh::trees {
             std::array<unsigned char, SHA512_DIGEST_LENGTH + sizeof(unsigned long)> global_block_reference{};
             std::ranges::copy(hash_buf.cbegin(), hash_buf.cend(), global_block_reference.begin());
             std::ranges::copy(convert_time[0].cbegin(), convert_time[0].cend(),
-                              global_block_reference.begin() + hash_buf.size());
+                              global_block_reference.begin() + SHA512_DIGEST_LENGTH);
 
             auto block_path = [&] {
                 std::vector<unsigned char> sub_block_code{local_block_ref.cbegin() + 1,
@@ -236,6 +236,7 @@ namespace uh::trees {
             const std::size_t read_info_block_size =
                     TIME_STAMPS_ON_BLOCK * sizeof(unsigned long) + SHA512_DIGEST_LENGTH;
             std::vector<unsigned char> first_section = mem_wait<unsigned char>(read_info_block_size);
+            first_section.resize(read_info_block_size,0);
 
             auto block_path = [&] {
                 std::vector<unsigned char> sub_block_code{local_block_ref.cbegin() + 1,
@@ -345,6 +346,7 @@ namespace uh::trees {
                 }
             } else {
                 block = mem_wait<unsigned char>(block_size);
+                block.resize(block_size,0);
                 if (std::fread(block.data(), sizeof(unsigned char), block_size, reader) != block_size) {
                     FATAL
                         << "I/O block reading not completed on path \"" + read_at.string() + "\" at block reference\"" +

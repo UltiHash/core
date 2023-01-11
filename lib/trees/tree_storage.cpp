@@ -1079,6 +1079,7 @@ uh::trees::tree_storage::delete_blocks(
 
                 std::size_t const maintain_size_append = cur_pos - delete_size;
                 auto buf = mem_wait<unsigned char>(maintain_size_append);
+                buf.resize(maintain_size_append,0);
 
                 FILE *source = fopen(chunk_maintain.make_preferred().c_str(), "rb");
                 auto ptr_release_sequence = [&]() {
