@@ -688,8 +688,8 @@ bool uh::trees::tree_storage::set_block_time(const std::vector<unsigned char> &l
             }
             //protect interaction of reading and unlocking before writing the valid hash, so put behind maintain barrier
             std::array<unsigned char, SHA512_DIGEST_LENGTH>hash{};
-            auto read_result = read<true>(local_block_reference);
-            std::array<unsigned char, SHA512_DIGEST_LENGTH + sizeof(unsigned long)>global_hash = std::get<2>(read_result);
+            auto read_result = read(local_block_reference);
+            std::array<unsigned char, SHA512_DIGEST_LENGTH + sizeof(unsigned long)>global_hash = std::get<3>(read_result);
             std::ranges::copy(global_hash.cbegin(),global_hash.cbegin()+SHA512_DIGEST_LENGTH,hash.begin());
 
             while (std::atomic_flag_test_and_set_explicit(write_ptr, std::memory_order_acquire)) {
@@ -735,9 +735,9 @@ bool uh::trees::tree_storage::set_block_time(const std::vector<unsigned char> &l
             times_not_creation[1] = times[0];
             times_not_creation[2] = times[1];
 
-            auto write_tup = write_block_base(writer,read_path.make_preferred(),std::vector<unsigned char>{},
+            auto write_tup = write_block_base(writer,read_path.make_preferred(),std::get<0>(read_result),
                                               local_block_reference,times_not_creation,set_time_end_sequence,
-                                              true,false,hash, std::get<3>(read_result));
+                                              true,false,hash, std::get<4>(read_result));
             set_time_end_sequence();
             if(std::get<3>(write_tup)){
                 ERROR << "File error at \"" + read_path.make_preferred().string() + "\" at block reference\"" +

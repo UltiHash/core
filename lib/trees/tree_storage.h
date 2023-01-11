@@ -114,7 +114,7 @@ namespace uh::trees {
                 FILE *writer, const std::filesystem::path &write_at, const std::vector<unsigned char> &block,
                 const std::vector<unsigned char> &local_block_ref,
                 std::array<unsigned long, TIME_STAMPS_ON_BLOCK> times, auto end_sequence,
-                bool skip_prefix_and_block = false,
+                bool update_times = false,
                 bool calc_SHA512 = true,
                 const std::array<unsigned char, SHA512_DIGEST_LENGTH> SHA_input_optional = std::array<unsigned char, SHA512_DIGEST_LENGTH>{},
                 std::size_t placeholder_block_size = 0) {
@@ -143,21 +143,19 @@ namespace uh::trees {
             const std::size_t total_block_size = SHA512_DIGEST_LENGTH + TIME_STAMPS_ON_BLOCK * sizeof(unsigned long) +
                                                  prefix.size() + std::max(block.size(),placeholder_block_size) + SHA256_DIGEST_LENGTH;
             std::vector<unsigned char> block_buf = mem_wait<unsigned char>(total_block_size);
-
+            std::array<unsigned char, SHA256_DIGEST_LENGTH> checksum{};
+            std::array<unsigned char, SHA512_DIGEST_LENGTH + sizeof(unsigned long)> global_block_reference{};
             //fill block buf with write down sequence
             for (const auto &t_c: convert_time) {//times
                 block_buf.insert(block_buf.cend(), t_c.cbegin(), t_c.cend());
             }
+
             block_buf.insert(block_buf.cend(), hash_buf.cbegin(), hash_buf.cend());//SHA512
             block_buf.insert(block_buf.cend(), prefix.cbegin(), prefix.cend());//prefix
             block_buf.insert(block_buf.cend(), block.cbegin(), block.cend());
-
-            std::array<unsigned char, SHA256_DIGEST_LENGTH> checksum{};
             SHA256(block_buf.data(), block_buf.size(), checksum.data());
-
             block_buf.insert(block_buf.cend(), checksum.cbegin(), checksum.cend());
 
-            std::array<unsigned char, SHA512_DIGEST_LENGTH + sizeof(unsigned long)> global_block_reference{};
             std::ranges::copy(hash_buf.cbegin(), hash_buf.cend(), global_block_reference.begin());
             std::ranges::copy(convert_time[0].cbegin(), convert_time[0].cend(),
                               global_block_reference.begin() + SHA512_DIGEST_LENGTH);
@@ -199,16 +197,22 @@ namespace uh::trees {
                 update_dist += sizeof(unsigned long);
             }
             //File should have been opened or created here
-            if (skip_prefix_and_block) {
-                if (!std::fwrite(block_buf.data()+update_dist, SHA512_DIGEST_LENGTH + TIME_STAMPS_ON_BLOCK * sizeof(unsigned long)-update_dist,
+            if (update_times) {
+                if (std::fseek(writer, static_cast<long>(update_dist), SEEK_CUR)) {//skip prefix and block
+                    ERROR << "File seek for skipping creation time failed at \"" + write_at.string() + ", position " +
+                             std::to_string(update_dist) + "\" at block reference\"" + block_path().string() +
+                             "\"";
+                    return error_sequence();
+                }
+                if (!std::fwrite(block_buf.data()+update_dist, TIME_STAMPS_ON_BLOCK * sizeof(unsigned long) - update_dist,
                                  sizeof(unsigned char), writer)) {
                     ERROR << "File write binary time opening failed at \"" + write_at.string() + "\"";
                     return error_sequence();
                 }
-                std::size_t jump_prefix_block = prefix.size() + std::max(block.size(),placeholder_block_size);
-                if (std::fseek(writer, static_cast<long>(jump_prefix_block), SEEK_CUR)) {//skip prefix and block
+                std::size_t jump_hash_prefix_block = SHA512_DIGEST_LENGTH + prefix.size() + std::max(block.size(),placeholder_block_size);
+                if (std::fseek(writer, static_cast<long>(jump_hash_prefix_block), SEEK_CUR)) {//skip prefix and block
                     ERROR << "File seek failed at \"" + write_at.string() + ", position " +
-                             std::to_string(jump_prefix_block) + "\" at block reference\"" + block_path().string() +
+                             std::to_string(jump_hash_prefix_block) + "\" at block reference\"" + block_path().string() +
                              "\"";
                     return error_sequence();
                 }

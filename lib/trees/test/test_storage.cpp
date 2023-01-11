@@ -679,17 +679,17 @@ BOOST_AUTO_TEST_CASE(get_info_set_time_test)
     auto first_el = std::get<0>(index_list).begin();
     gettimeofday(&time, nullptr);
     long double millis = ((long double) time.tv_sec * ONE_MILLISECOND) + ((long double) time.tv_usec / ONE_MILLISECOND);
-    auto block_info = t1.read(std::get<1>(*first_el));
+    auto block_info = t1.read<true>(std::get<1>(*first_el));//reduced reader skips block saving 95% overhead
     gettimeofday(&time, nullptr);
     long double write_time =
             (((long double) time.tv_sec * ONE_MILLISECOND) + ((long double) time.tv_usec / ONE_MILLISECOND)) - millis;
     BOOST_TEST_MESSAGE(
             "\nThe get_info test to seek the information of one block took " + std::to_string(write_time) + " ms.");
-    BOOST_ASSERT_MSG(std::get<2>(block_info)[2] < (unsigned long) std::chrono::nanoseconds(
+    BOOST_ASSERT_MSG(std::get<1>(block_info)[2] < (unsigned long) std::chrono::nanoseconds(
             std::chrono::high_resolution_clock::now().time_since_epoch()).count(),
                      "Block was not older than current time");
 
-    BOOST_ASSERT_MSG(std::get<0>(block_info).size() < SHA512_DIGEST_LENGTH + TIME_STAMPS_ON_BLOCK * sizeof(unsigned long) +
+    BOOST_ASSERT_MSG(std::get<3>(block_info) < SHA512_DIGEST_LENGTH + TIME_STAMPS_ON_BLOCK * sizeof(unsigned long) +
                                                       t1.prefix_wrap(std::get<0>(block_info).size()).size() + std::get<0>(block_info).size() +
                                                       SHA256_DIGEST_LENGTH,
                      "The total size must always be larger than the block size!");
