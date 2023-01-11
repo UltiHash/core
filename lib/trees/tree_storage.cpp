@@ -163,7 +163,7 @@ std::vector<unsigned char> uh::trees::tree_storage::prefix_wrap(std::size_t inpu
     }
     unsigned char const byte_count = total_bit_count / CHAR_BITS + std::min(1, total_bit_count % CHAR_BITS);
     std::vector<unsigned char> prefix{};
-    for (unsigned char i = 0; i < byte_count; i++) {
+    for (unsigned short i = 0; i < byte_count; i++) {
         prefix.push_back((unsigned char) (input_size >> (i * CHAR_BITS)));
     }
     if (prefix.empty())prefix.push_back(0);
@@ -934,7 +934,7 @@ uh::trees::tree_storage::delete_blocks(
                     std::vector<unsigned char> new_block_reference{};
                     new_block_reference.reserve(sizeof(unsigned int));
                     //offset of blocks have been changed, take the first byte for chunk ordering and the last 4 bytes for offset;
-                    for (unsigned char i = 0;
+                    for (unsigned short i = 0;
                          i <
                          (unsigned char) sizeof(unsigned int); i++) {//STORE_MAX will fit in 4 bytes
                         new_block_reference.push_back((unsigned char) (new_offset) >> (i * CHAR_BITS));

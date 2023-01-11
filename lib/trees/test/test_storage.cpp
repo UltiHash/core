@@ -674,7 +674,7 @@ BOOST_AUTO_TEST_CASE(get_info_set_time_test)
     uh::trees::tree_storage t1(target);//A test folder reserved for tree storage
     //for strong laptops with SSD extension (configure test db server to run this??)
     //uh::trees::tree_storage t1("/mnt/md0");//A test folder reserved for tree storage for performance tests
-    auto index_list = t1.index();
+    auto index_list = t1.index(1);
     BOOST_ASSERT_MSG(!std::get<0>(index_list).empty(), "Index list was empty!");
     auto first_el = std::get<0>(index_list).begin();
     gettimeofday(&time, nullptr);

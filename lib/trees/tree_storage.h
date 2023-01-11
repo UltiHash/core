@@ -322,7 +322,7 @@ namespace uh::trees {
                 return error_sequence();
             }
             std::size_t block_size{};
-            for (unsigned char buf_count = 0; buf_count < buf_size + BUF_LEN_SIZE_FOR_SIZE_BLOCK; buf_count++) {
+            for (unsigned short buf_count = 0; buf_count < buf_size + BUF_LEN_SIZE_FOR_SIZE_BLOCK; buf_count++) {
                 block_size += (((std::size_t) buffer_in[buf_count]) << (buf_count * CHAR_BITS));
             }
 
