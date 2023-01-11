@@ -171,6 +171,316 @@ std::vector<unsigned char> uh::trees::tree_storage::prefix_wrap(std::size_t inpu
     return prefix;
 }
 
+std::tuple<std::size_t, std::size_t, std::array<unsigned char,
+        SHA512_DIGEST_LENGTH + sizeof(unsigned long)>, bool> uh::trees::tree_storage::write_block_base(
+        FILE *writer, const std::filesystem::path &write_at, const std::vector<unsigned char> &block,
+        const std::vector<unsigned char> &local_block_ref,
+        std::array<unsigned long, TIME_STAMPS_ON_BLOCK> times,
+        bool update_times,
+        bool calc_SHA512,
+        const std::array<unsigned char, SHA512_DIGEST_LENGTH> SHA_input_optional,
+        std::size_t placeholder_block_size) {
+
+    auto time_binary_calc = [](auto current_time) {
+        std::vector<unsigned char> bin_time;
+        bin_time.reserve(sizeof(current_time));
+        for (unsigned short i = 0; i < (unsigned short) sizeof(current_time); i++) {
+            bin_time.push_back((unsigned char) (current_time >> (i * CHAR_BITS)));
+        }
+        return bin_time;
+    };
+
+    std::array<unsigned char, SHA512_DIGEST_LENGTH> hash_buf{};//HASH GENERATION
+    if (calc_SHA512)SHA512(block.data(), std::max(block.size(), placeholder_block_size), hash_buf.data());
+    else hash_buf = SHA_input_optional;
+
+    auto prefix = prefix_wrap(std::max(block.size(), placeholder_block_size));
+    std::array<std::vector<unsigned char>, TIME_STAMPS_ON_BLOCK> convert_time{};//creation time, last visited time, maximum valid
+    auto t_beg = convert_time.begin();
+    for (const auto &t: times) {
+        *t_beg = time_binary_calc(t);
+        t_beg++;
+    }
+
+    const std::size_t total_block_size = SHA512_DIGEST_LENGTH + TIME_STAMPS_ON_BLOCK * sizeof(unsigned long) +
+                                         prefix.size() + std::max(block.size(), placeholder_block_size) +
+                                         SHA256_DIGEST_LENGTH;
+    std::vector<unsigned char> block_buf = mem_wait<unsigned char>(total_block_size);
+    std::array<unsigned char, SHA256_DIGEST_LENGTH> checksum{};
+    std::array<unsigned char, SHA512_DIGEST_LENGTH + sizeof(unsigned long)> global_block_reference{};
+//fill block buf with write down sequence
+    for (const auto &t_c: convert_time) {//times
+        block_buf.insert(block_buf.cend(), t_c.cbegin(), t_c.cend());
+    }
+
+    block_buf.insert(block_buf.cend(), hash_buf.cbegin(), hash_buf.cend());//SHA512
+    block_buf.insert(block_buf.cend(), prefix.cbegin(), prefix.cend());//prefix
+    block_buf.insert(block_buf.cend(), block.cbegin(), block.cend());
+    SHA256(block_buf.data(), block_buf.size(), checksum.data());
+    block_buf.insert(block_buf.cend(), checksum.cbegin(), checksum.cend());
+
+    std::ranges::copy(hash_buf.cbegin(), hash_buf.cend(), global_block_reference.begin());
+    std::ranges::copy(convert_time[0].cbegin(), convert_time[0].cend(),
+                      global_block_reference.begin() + SHA512_DIGEST_LENGTH);
+
+    auto block_path = [&] {
+        std::vector<unsigned char> sub_block_code{local_block_ref.cbegin() + 1,
+                                                  local_block_ref.cend()}; //copy offset code and rebuild
+        std::string const ref_name{
+                boost::algorithm::hex(std::string{local_block_ref.cbegin() + 1, local_block_ref.cend()})};
+        std::shared_lock read_path_lock(combined_path_protect);
+        std::filesystem::path read_path =
+                *combined_path / boost::algorithm::hex(std::string{(char) local_block_ref[0]}) / ref_name;
+        read_path_lock.unlock();
+        return read_path.make_preferred();
+    };
+
+    auto error_sequence = [&]() {
+        return std::make_tuple(total_block_size, std::max(block.size(), placeholder_block_size), global_block_reference,
+                               true);
+    };
+
+    if (block_buf.size() != total_block_size) {
+        ERROR << "File write opening failed at \"" + write_at.string() + "\" at block reference\"" +
+                 block_path().string() + "\"";
+        return error_sequence();
+    }
+
+    if (!writer) {
+        ERROR << "File write opening failed at \"" + write_at.string() + "\" at block reference\"" +
+                 block_path().string() + "\"";
+        return error_sequence();
+    }
+//action if input creation time is set 0: assume the writer wants to update and skip writing the creation time
+    std::size_t update_dist{};
+    if (times[0] == 0) {
+        update_dist += sizeof(unsigned long);
+    }
+//File should have been opened or created here
+    if (update_times) {
+        if (std::fseek(writer, static_cast<long>(update_dist), SEEK_CUR)) {//skip prefix and block
+            ERROR << "File seek for skipping creation time failed at \"" + write_at.string() + ", position " +
+                     std::to_string(update_dist) + "\" at block reference\"" + block_path().string() +
+                     "\"";
+            return error_sequence();
+        }
+        if (!std::fwrite(block_buf.data() + update_dist, TIME_STAMPS_ON_BLOCK * sizeof(unsigned long) - update_dist,
+                         sizeof(unsigned char), writer)) {
+            ERROR << "File write binary time opening failed at \"" + write_at.string() + "\"";
+            return error_sequence();
+        }
+        std::size_t jump_hash_prefix_block =
+                SHA512_DIGEST_LENGTH + prefix.size() + std::max(block.size(), placeholder_block_size);
+        if (std::fseek(writer, static_cast<long>(jump_hash_prefix_block), SEEK_CUR)) {//skip prefix and block
+            ERROR << "File seek failed at \"" + write_at.string() + ", position " +
+                     std::to_string(jump_hash_prefix_block) + "\" at block reference\"" + block_path().string() +
+                     "\"";
+            return error_sequence();
+        }
+        if (!std::fwrite(checksum.data(), SHA256_DIGEST_LENGTH, sizeof(unsigned char), writer)) {
+            ERROR << "File write binary time opening failed at \"" + write_at.string() +
+                     "\" at block reference\"" + block_path().string() + "\"";
+            return error_sequence();
+        }
+        return std::make_tuple(total_block_size, std::max(block.size(), placeholder_block_size), global_block_reference,
+                               false);
+    } else {
+        if (!std::fwrite(block_buf.data() + update_dist, block_buf.size() - update_dist, sizeof(unsigned char),
+                         writer)) {//write block in a single stream
+            ERROR << "File write binary time opening failed at \"" + write_at.string() +
+                     "\" at block reference\"" + block_path().string() + "\"";
+            return error_sequence();
+        }
+        return std::make_tuple(total_block_size, std::max(block.size(), placeholder_block_size), global_block_reference,
+                               false);
+    }
+}
+
+std::tuple<std::size_t, std::vector<unsigned char>, std::array<unsigned long, TIME_STAMPS_ON_BLOCK>,
+        std::array<unsigned char, SHA512_DIGEST_LENGTH + sizeof(unsigned long)>, bool, bool, std::size_t>
+uh::trees::tree_storage::read_block_base(
+        FILE *reader, const std::filesystem::path &read_at, const std::vector<unsigned char> &local_block_ref,
+        bool skip_read_block, bool check_valid) {
+
+    const std::size_t read_info_block_size =
+            TIME_STAMPS_ON_BLOCK * sizeof(unsigned long) + SHA512_DIGEST_LENGTH;
+    std::vector<unsigned char> first_section = mem_wait<unsigned char>(read_info_block_size);
+    first_section.resize(read_info_block_size, 0);
+
+    auto block_path = [&] {
+        std::vector<unsigned char> sub_block_code{local_block_ref.cbegin() + 1,
+                                                  local_block_ref.cend()}; //copy offset code and rebuild
+        std::string const ref_name{
+                boost::algorithm::hex(std::string{local_block_ref.cbegin() + 1, local_block_ref.cend()})};
+        std::shared_lock read_path_lock(combined_path_protect);
+        std::filesystem::path read_path =
+                *combined_path / boost::algorithm::hex(std::string{(char) local_block_ref[0]}) / ref_name;
+        read_path_lock.unlock();
+        return read_path.make_preferred();
+    };
+
+    auto error_sequence = [&]() {
+        auto err_tuple = std::tuple<std::size_t, std::vector<unsigned char>, std::array<unsigned long, TIME_STAMPS_ON_BLOCK>,
+                std::array<unsigned char,
+                        SHA512_DIGEST_LENGTH + sizeof(unsigned long)>, bool, bool, std::size_t>{};
+        std::get<4>(err_tuple) = true;
+        return err_tuple;
+    };
+
+    if (!reader) {
+        ERROR << "File read opening failed at \"" + read_at.string() + "\" at block reference\"" +
+                 block_path().string() + "\"";
+        return error_sequence();
+    }
+
+    if (std::fread(first_section.data(), sizeof(unsigned char), first_section.size(), reader) !=
+        first_section.size()) {
+        FATAL
+            << "I/O first info section reading was not completed on path \"" + read_at.string() +
+               "\" at block reference\"" + block_path().string() + "\"";
+        return error_sequence();
+    }
+
+    if (std::ferror(reader)) {
+        FATAL << "I/O error when reading \"" + read_at.string() + "\" at block reference\"" +
+                 block_path().string() + "\"";
+        return error_sequence();
+    }
+
+    std::array<unsigned long, TIME_STAMPS_ON_BLOCK> times{};
+    std::array<std::vector<unsigned char>, TIME_STAMPS_ON_BLOCK> convert_time{};
+    long time_shifter{};
+    auto beg_time = first_section.cbegin() + time_shifter * (long) sizeof(unsigned long);
+    auto end_time = beg_time + sizeof(unsigned long);
+    for (auto &t: times) {
+        std::vector<unsigned char> vector_time = mem_wait<unsigned char>(sizeof(unsigned long));
+        vector_time.assign(beg_time + time_shifter * (long) sizeof(unsigned long),
+                           end_time + time_shifter * (long) sizeof(unsigned long));
+        convert_time[time_shifter] = vector_time;
+        unsigned long block_time{};
+        for (unsigned short i = 0; i < (unsigned short) sizeof(unsigned long); i++) {
+            block_time += (((std::size_t) vector_time[i]) << (i * CHAR_BITS));
+        }
+        time_shifter++;
+        t = block_time;
+    }
+
+    std::array<unsigned char, SHA512_DIGEST_LENGTH> hash{};
+    std::ranges::copy(first_section.cbegin() + time_shifter * (long) sizeof(unsigned long),
+                      first_section.cbegin() + SHA512_DIGEST_LENGTH +
+                      time_shifter * (long) sizeof(unsigned long), hash.begin());
+
+    std::array<unsigned char, SHA512_DIGEST_LENGTH + sizeof(unsigned long)> global_block_reference{};
+    std::ranges::copy(hash.cbegin(), hash.cend(), global_block_reference.begin());
+    std::ranges::copy(convert_time[0].cbegin(), convert_time[0].cend(),
+                      global_block_reference.begin() + SHA512_DIGEST_LENGTH);
+
+    unsigned char buf_size = 0;
+    if (std::fread(&buf_size, sizeof(unsigned char), BUF_LEN_SIZE_FOR_SIZE_BLOCK, reader) !=
+        BUF_LEN_SIZE_FOR_SIZE_BLOCK) {
+        FATAL
+            << "I/O prefix first byte reading was not completed on path \"" + read_at.string() +
+               "\" at block reference\"" + block_path().string() + "\"";
+        return error_sequence();
+    }
+    std::vector<unsigned char> buffer_in;
+    buffer_in.resize(buf_size + BUF_LEN_SIZE_FOR_SIZE_BLOCK, 0);
+    if (std::fread(buffer_in.data(), sizeof(unsigned char), buf_size + BUF_LEN_SIZE_FOR_SIZE_BLOCK, reader) !=
+        buf_size + BUF_LEN_SIZE_FOR_SIZE_BLOCK) {
+        FATAL
+            << "I/O prefix size buffer reading was not completed on path \"" + read_at.string() +
+               "\" at block reference\"" + block_path().string() + "\"";
+        return error_sequence();
+    }
+    std::size_t block_size{};
+    for (unsigned short buf_count = 0; buf_count < buf_size + BUF_LEN_SIZE_FOR_SIZE_BLOCK; buf_count++) {
+        block_size += (((std::size_t) buffer_in[buf_count]) << (buf_count * CHAR_BITS));
+    }
+
+    std::vector<unsigned char> block = mem_wait<unsigned char>(block_size);
+    block.resize(block_size, 0);
+    bool valid = true;
+    std::size_t total_block_size = SHA512_DIGEST_LENGTH + TIME_STAMPS_ON_BLOCK * sizeof(unsigned long) +
+                                   (BUF_LEN_SIZE_FOR_SIZE_BLOCK + buffer_in.size()) + block.size() +
+                                   SHA256_DIGEST_LENGTH;
+
+    if (skip_read_block) {
+        if (check_valid) {
+            DEBUG << "Validity could not be checked because block and checksum were skipped at \"" +
+                     read_at.string() + ", jump " + std::to_string(block_size + SHA256_DIGEST_LENGTH) +
+                     "\" at block reference\"" + block_path().string() + "\"";
+        }
+        if (std::fseek(reader, static_cast<long>(block_size + SHA256_DIGEST_LENGTH), SEEK_CUR)) {
+            ERROR << "File seek for skipping validity test failed at \"" + read_at.string() + ", jump " +
+                     std::to_string(block_size + SHA256_DIGEST_LENGTH) + "\" at block reference\"" +
+                     block_path().string() + "\"";
+            return error_sequence();
+        }
+    } else {
+        if (std::fread(block.data(), sizeof(unsigned char), block_size, reader) != block_size) {
+            FATAL
+                << "I/O block reading not completed on path \"" + read_at.string() + "\" at block reference\"" +
+                   block_path().string() + "\"";
+            return error_sequence();
+        }
+        if (check_valid) {
+            std::array<unsigned char, SHA512_DIGEST_LENGTH> hash_test{};
+            SHA512(block.data(), block.size(), hash_test.data());
+            valid = std::equal(hash.cbegin(), hash.cend(), hash_test.cbegin(), hash_test.cend());
+            if (!valid) {
+                TRACE
+                    << "Block did not fit it's hash on path \"" + read_at.string() + "\" at block reference\"" +
+                       block_path().string() + "\"";
+            }
+            if (valid) {
+                std::vector<unsigned char> block_buf = mem_wait<unsigned char>(
+                        total_block_size - SHA256_DIGEST_LENGTH);
+                for (const auto &t_c: convert_time) {
+                    block_buf.insert(block_buf.cend(), t_c.cbegin(), t_c.cend());
+                }
+                block_buf.insert(block_buf.cend(), hash.cbegin(), hash.cend());
+                block_buf.insert(block_buf.cend(), buf_size);
+                block_buf.insert(block_buf.cend(), buffer_in.cbegin(), buffer_in.cend());
+                block_buf.insert(block_buf.cend(), block.cbegin(), block.cend());
+
+                std::array<unsigned char, SHA256_DIGEST_LENGTH> checksum_test{}, checksum_read{};
+                SHA256(block_buf.data(), block_buf.size(), checksum_test.data());
+
+                if (std::fread(checksum_read.data(), sizeof(unsigned char), checksum_read.size(), reader) !=
+                    checksum_read.size()) {
+                    FATAL
+                        << "I/O checksum reading for validity testnot completed on path \"" + read_at.string() +
+                           "\" at block reference\"" + block_path().string() + "\"";
+                    return error_sequence();
+                }
+                valid = std::equal(checksum_test.cbegin(), checksum_test.cend(), checksum_read.cbegin(),
+                                   checksum_read.cend());
+                if (!valid) {
+                    TRACE
+                        << "Block meta data was invalid on path \"" + read_at.string() +
+                           "\" at block reference\"" + block_path().string() + "\"";
+                }
+            } else {
+                if (std::fseek(reader, static_cast<long>(SHA256_DIGEST_LENGTH), SEEK_CUR)) {
+                    ERROR << "File seek for validity test after broken block failed at \"" + read_at.string() +
+                             ", jump " + std::to_string(SHA256_DIGEST_LENGTH) + "\" at block reference\"" +
+                             block_path().string() + "\"";
+                    return error_sequence();
+                }
+            }
+        } else {
+            if (std::fseek(reader, static_cast<long>(SHA256_DIGEST_LENGTH), SEEK_CUR)) {
+                ERROR << "File seek for skipping validity test failed at \"" + read_at.string() + ", jump " +
+                         std::to_string(SHA256_DIGEST_LENGTH) + "\" at block reference\"" +
+                         block_path().string() + "\"";
+                return error_sequence();
+            }
+        }
+    }
+    //<std::size_t,std::vector<unsigned char>,std::array<unsigned long,TIME_STAMPS_ON_BLOCK>,std::array<unsigned long,SHA512_DIGEST_LENGTH + sizeof(unsigned long)>, bool, bool>
+    return std::make_tuple(total_block_size, block, times, global_block_reference, false, valid, block_size);
+}
+
 std::size_t uh::trees::tree_storage::get_size() {
     std::size_t s{};
     for (unsigned short i = 0; i < (unsigned short) N; i++) {
@@ -196,7 +506,8 @@ std::size_t uh::trees::tree_storage::get_size() {
     return s;
 }
 
-std::tuple<std::array<unsigned char, SHA512_DIGEST_LENGTH + sizeof(unsigned long)>, std::vector<unsigned char>, std::size_t, std::size_t>
+std::tuple<std::array<unsigned char,
+        SHA512_DIGEST_LENGTH + sizeof(unsigned long)>, std::vector<unsigned char>, std::size_t, std::size_t>
 uh::trees::tree_storage::write(const std::vector<unsigned char> &input,
                                std::array<unsigned long, TIME_STAMPS_ON_BLOCK> times) {
     if (input.empty()) {
@@ -211,9 +522,9 @@ uh::trees::tree_storage::write(const std::vector<unsigned char> &input,
     }
     std::vector<unsigned char> prefix = prefix_wrap(input.size());
     std::size_t const total_size = SHA512_DIGEST_LENGTH +
-            TIME_STAMPS_ON_BLOCK * sizeof(unsigned long) +
-            prefix.size() + input.size() +
-            SHA256_DIGEST_LENGTH;
+                                   TIME_STAMPS_ON_BLOCK * sizeof(unsigned long) +
+                                   prefix.size() + input.size() +
+                                   SHA256_DIGEST_LENGTH;
     //check block fill of this node, look for free space
 
     std::unique_lock lock_size(size_protect, std::defer_lock);
@@ -331,7 +642,7 @@ uh::trees::tree_storage::write(const std::vector<unsigned char> &input,
         write_size.unlock();
 
         FILE *writer = std::fopen(read_chunk.make_preferred().c_str(), "ab");
-        auto end_write_sequence = [&writer,&write_ptr,&maintain_ptr]() {
+        auto end_write_sequence = [&writer, &write_ptr, &maintain_ptr]() {
             if (std::fclose(writer))ERROR << "Write stream was not open!";
 
             std::atomic_flag_clear_explicit(write_ptr, std::memory_order_release);
@@ -340,15 +651,15 @@ uh::trees::tree_storage::write(const std::vector<unsigned char> &input,
             if (!maintain_ptr->test())maintain_ptr->notify_one();
         };
 
-        auto write_tup = write_block_base(writer,read_chunk,input,local_block_ref,times,end_write_sequence);
+        auto write_tup = write_block_base(writer, read_chunk, input, local_block_ref, times);
         end_write_sequence();
-        if(std::get<3>(write_tup)){
+        if (std::get<3>(write_tup)) {
             ERROR << "File error at \"" + read_chunk.make_preferred().string() + "\" at block reference\"" +
                      block_path().string() + "\"";
             return {};
         }
 
-        return {std::get<2>(write_tup),local_block_ref,std::get<0>(write_tup),std::get<1>(write_tup)};
+        return {std::get<2>(write_tup), local_block_ref, std::get<0>(write_tup), std::get<1>(write_tup)};
     }
 }
 
@@ -429,10 +740,10 @@ uh::trees::tree_storage::index(unsigned short num_threads) {
                         local_block_ref.push_back((unsigned char) (cur_pos.load() >> (i1 * CHAR_BITS)));
                     }
                     local_block_ref.insert(local_block_ref.cbegin(), i);
-                    auto read_tup = this->read_block_base(reader, read_path.make_preferred(), local_block_ref,
-                                                          total_end_sequence, false, true);
+                    auto read_tup = this->read_block_base(reader, read_path.make_preferred(), local_block_ref, false, true);
 
-                    if(error_flag.test()){
+                    if (error_flag.test() || std::get<4>(read_tup)) {
+                        total_end_sequence();
                         ERROR << "Unexpected error. Quitting.";
                         return;
                     }
@@ -440,7 +751,7 @@ uh::trees::tree_storage::index(unsigned short num_threads) {
                     if (std::get<5>(read_tup) && std::get<0>(read_tup) > 0) {//if valid
                         std::scoped_lock const lock_here(search_index_protect);
                         search_index.emplace_back(std::get<3>(read_tup), local_block_ref,
-                                std::get<2>(read_tup));
+                                                  std::get<2>(read_tup));
                     } else {
                         std::scoped_lock const lock_here(search_index_protect);//bit flip detect
                         damaged_blocks_index.emplace_back(std::get<3>(read_tup), local_block_ref,
@@ -610,7 +921,8 @@ std::size_t uh::trees::tree_storage::delete_recursive(unsigned short num_threads
     return out_size.load();
 }
 
-bool uh::trees::tree_storage::set_block_time(const std::vector<unsigned char> &local_block_reference, std::array<unsigned long, TIME_STAMPS_ON_BLOCK - 1> times) {
+bool uh::trees::tree_storage::set_block_time(const std::vector<unsigned char> &local_block_reference,
+                                             std::array<unsigned long, TIME_STAMPS_ON_BLOCK - 1> times) {
     if (local_block_reference.empty()) {
         ERROR << "No input given to set block time!";
         return false;
@@ -631,7 +943,8 @@ bool uh::trees::tree_storage::set_block_time(const std::vector<unsigned char> &l
         } else {
             auto tree_ptr = std::get<1>(children->at(local_block_reference[0]));
             read_children.unlock();
-            std::vector<unsigned char> const sub_block_code{local_block_reference.cbegin() + 1, local_block_reference.cend()};
+            std::vector<unsigned char> const sub_block_code{local_block_reference.cbegin() + 1,
+                                                            local_block_reference.cend()};
             auto out_vec = tree_ptr->set_block_time(sub_block_code, times);
             if (!out_vec) {
                 std::string const not_found((const char *) local_block_reference.data(), local_block_reference.size());
@@ -687,10 +1000,11 @@ bool uh::trees::tree_storage::set_block_time(const std::vector<unsigned char> &l
                 maintain_ptr->wait(true);
             }
             //protect interaction of reading and unlocking before writing the valid hash, so put behind maintain barrier
-            std::array<unsigned char, SHA512_DIGEST_LENGTH>hash{};
+            std::array<unsigned char, SHA512_DIGEST_LENGTH> hash{};
             auto read_result = read(local_block_reference);
-            std::array<unsigned char, SHA512_DIGEST_LENGTH + sizeof(unsigned long)>global_hash = std::get<3>(read_result);
-            std::ranges::copy(global_hash.cbegin(),global_hash.cbegin()+SHA512_DIGEST_LENGTH,hash.begin());
+            std::array<unsigned char, SHA512_DIGEST_LENGTH + sizeof(unsigned long)> global_hash = std::get<3>(
+                    read_result);
+            std::ranges::copy(global_hash.cbegin(), global_hash.cbegin() + SHA512_DIGEST_LENGTH, hash.begin());
 
             while (std::atomic_flag_test_and_set_explicit(write_ptr, std::memory_order_acquire)) {
                 write_ptr->wait(true);
@@ -706,7 +1020,8 @@ bool uh::trees::tree_storage::set_block_time(const std::vector<unsigned char> &l
 
             auto block_path = [&] {
                 std::string const ref_name{
-                        boost::algorithm::hex(std::string{local_block_reference.cbegin() + 1, local_block_reference.cend()})};
+                        boost::algorithm::hex(
+                                std::string{local_block_reference.cbegin() + 1, local_block_reference.cend()})};
                 std::shared_lock read_path_lock(combined_path_protect);
                 std::filesystem::path read_path =
                         *combined_path / boost::algorithm::hex(std::string{(char) local_block_reference[0]}) / ref_name;
@@ -725,7 +1040,8 @@ bool uh::trees::tree_storage::set_block_time(const std::vector<unsigned char> &l
             };
             //File should have been opened or created here
             if (std::fseek(writer, static_cast<long>(offset), SEEK_SET)) {
-                ERROR << "File seek failed at \"" + read_path.make_preferred().string() + ", position " + std::to_string(offset) + "\"";
+                ERROR << "File seek failed at \"" + read_path.make_preferred().string() + ", position " +
+                         std::to_string(offset) + "\"";
                 set_time_end_sequence();
                 return false;
             }
@@ -735,11 +1051,11 @@ bool uh::trees::tree_storage::set_block_time(const std::vector<unsigned char> &l
             times_not_creation[1] = times[0];
             times_not_creation[2] = times[1];
 
-            auto write_tup = write_block_base(writer,read_path.make_preferred(),std::get<0>(read_result),
-                                              local_block_reference,times_not_creation,set_time_end_sequence,
-                                              true,false,hash, std::get<4>(read_result));
+            auto write_tup = write_block_base(writer, read_path.make_preferred(), std::get<0>(read_result),
+                                              local_block_reference, times_not_creation,
+                                              true, false, hash, std::get<4>(read_result));
             set_time_end_sequence();
-            if(std::get<3>(write_tup)){
+            if (std::get<3>(write_tup)) {
                 ERROR << "File error at \"" + read_path.make_preferred().string() + "\" at block reference\"" +
                          block_path().string() + "\"";
                 return {};
@@ -876,8 +1192,9 @@ uh::trees::tree_storage::delete_blocks(
                 //read chunk at index (*cur_tmp)[0]
                 FILE *reader = std::fopen(chunk.make_preferred().c_str(), "rb");
 
-                std::atomic_flag write_control(ATOMIC_FLAG_INIT);//extra write thread to stream to maintain file while scanning
-                auto read_end_sequence = [&reader,&read_ptr,&write_control]() {
+                std::atomic_flag write_control(
+                        ATOMIC_FLAG_INIT);//extra write thread to stream to maintain file while scanning
+                auto read_end_sequence = [&reader, &read_ptr, &write_control]() {
                     if (std::fclose(reader))ERROR << "Read stream was not open!";
                     *read_ptr -= 1;
                     std::atomic_flag_clear_explicit(&write_control, std::memory_order_release);
@@ -897,7 +1214,7 @@ uh::trees::tree_storage::delete_blocks(
                 // *this tree where the referring chunk is stored; truncate size for the chunk; new storage reference after append
                 //stores block, old offset vector, new offset number, block SHA512 and times
                 std::list<std::tuple<std::vector<unsigned char>, std::vector<unsigned char>, std::size_t, std::array<unsigned char,
-                        SHA512_DIGEST_LENGTH>,std::array<unsigned long, TIME_STAMPS_ON_BLOCK>>> multithreading_factory{};
+                        SHA512_DIGEST_LENGTH>, std::array<unsigned long, TIME_STAMPS_ON_BLOCK>>> multithreading_factory{};
                 std::mutex multithreading_factory_protect{};
                 //clear old mainain file
                 filesystem_lock.lock();
@@ -910,7 +1227,7 @@ uh::trees::tree_storage::delete_blocks(
                 }
                 //transmission from chunk to maintain file
                 FILE *writer = std::fopen(chunk_maintain.make_preferred().c_str(), "ab");
-                auto io_end_sequence = [&reader,&writer,&read_ptr,&write_control]() {
+                auto io_end_sequence = [&reader, &writer, &read_ptr, &write_control]() {
                     if (std::fclose(reader))ERROR << "Read stream was not open!";
                     if (std::fclose(writer))ERROR << "Write stream was not open!";
                     *read_ptr -= 1;
@@ -937,7 +1254,7 @@ uh::trees::tree_storage::delete_blocks(
                     }
                     new_block_reference.insert(new_block_reference.cbegin(), old_block_code[0]);
 
-                    auto write_total_end = [&io_end_sequence,&error_thread_sequence,&error_flag,&chunk_maintain]{
+                    auto write_total_end = [&io_end_sequence, &error_thread_sequence, &error_flag, &chunk_maintain] {
                         ERROR << "File write thread failed to put down a line at \"" + chunk_maintain.string() + "\"";
                         io_end_sequence();
                         error_thread_sequence();
@@ -946,8 +1263,14 @@ uh::trees::tree_storage::delete_blocks(
                         }
                     };
 
-                    auto write_tup = write_block_base(writer,chunk_maintain.make_preferred(),current_storage_block,new_block_reference,
-                                                      old_times,write_total_end,false,false,old_SHA);
+                    auto write_tup = write_block_base(writer, chunk_maintain.make_preferred(), current_storage_block,
+                                                      new_block_reference,
+                                                      old_times, false, false, old_SHA);
+
+                    if (std::get<3>(write_tup)) {
+                        write_total_end();
+                    }
+
                     std::unique_lock lock_output(out_change_list_protect, std::defer_lock);
                     lock_output.lock();
                     out_change_list.emplace_back(old_block_code, new_block_reference);
@@ -994,8 +1317,8 @@ uh::trees::tree_storage::delete_blocks(
                 std::thread w1;
                 if (num_threads > 1)w1 = std::thread(consumer_function);
 
-                auto factory_io_sequence_end = [&error_flag,&num_threads,&w1,&multithreading_factory,&io_end_sequence,&write_once_to_maintain_file,&read_end_sequence]() {
-                    std::atomic_flag_test_and_set_explicit(&error_flag,std::memory_order_acquire);//put error flag on
+                auto factory_io_sequence_end = [&error_flag, &num_threads, &w1, &multithreading_factory, &io_end_sequence, &write_once_to_maintain_file, &read_end_sequence]() {
+                    std::atomic_flag_test_and_set_explicit(&error_flag, std::memory_order_acquire);//put error flag on
                     if (num_threads > 1) {
                         if (w1.joinable())w1.join();//write out remaining blocks to prevent data loss
                     } else {
@@ -1020,22 +1343,33 @@ uh::trees::tree_storage::delete_blocks(
                         std::equal(local_block_test_ref.cbegin(), local_block_test_ref.cend(), block_step_beg->cbegin(),
                                    block_step_beg->cend())) {
                         //skip block copy and seek over it if to delete
-                        auto read_tup = read_block_base(reader,chunk.make_preferred(),local_block_test_ref,factory_io_sequence_end,true);
-                        if (error_flag.test())return;//break thread in case error is there
+                        auto read_tup = read_block_base(reader, chunk.make_preferred(), local_block_test_ref, true);
+                        if (error_flag.test() || std::get<4>(read_tup)){
+                            ERROR << "Unexpected error. Quitting.";
+                            factory_io_sequence_end();
+                            return;//break thread in case error is there
+                        }
                         cur_pos += std::get<0>(read_tup);
                         delete_size += std::get<0>(read_tup);
                         out_size += std::get<0>(read_tup);
                         block_step_beg++;
                     } else {
                         //copy block to maintain file
-                        auto read_tup = read_block_base(reader,chunk.make_preferred(),local_block_test_ref,factory_io_sequence_end);
-                        std::array<unsigned char, SHA512_DIGEST_LENGTH + sizeof(unsigned long)>global_hash = std::get<3>(read_tup);
-                        std::array<unsigned char, SHA512_DIGEST_LENGTH>hash{};
-                        std::ranges::copy(global_hash.cbegin(),global_hash.cbegin()+SHA512_DIGEST_LENGTH,hash.begin());
+                        auto read_tup = read_block_base(reader, chunk.make_preferred(), local_block_test_ref);
+                        if (error_flag.test() || std::get<4>(read_tup)){
+                            ERROR << "Unexpected error. Quitting.";
+                            factory_io_sequence_end();
+                            return;//break thread in case error is there
+                        }
+                        std::array<unsigned char,
+                                SHA512_DIGEST_LENGTH + sizeof(unsigned long)> global_hash = std::get<3>(read_tup);
+                        std::array<unsigned char, SHA512_DIGEST_LENGTH> hash{};
+                        std::ranges::copy(global_hash.cbegin(), global_hash.cbegin() + SHA512_DIGEST_LENGTH,
+                                          hash.begin());
                         std::unique_lock write_multithreading_f(multithreading_factory_protect);
                         //stores block, old offset vector, new offset number, block SHA512 and times
                         multithreading_factory.emplace_back(std::get<1>(read_tup), local_block_test_ref,
-                                                            cur_pos - delete_size,hash,std::get<2>(read_tup));
+                                                            cur_pos - delete_size, hash, std::get<2>(read_tup));
                         write_multithreading_f.unlock();
                         cur_pos += std::get<0>(read_tup);
                     }
@@ -1076,7 +1410,7 @@ uh::trees::tree_storage::delete_blocks(
 
                 std::size_t const maintain_size_append = cur_pos - delete_size;
                 auto buf = mem_wait<unsigned char>(maintain_size_append);
-                buf.resize(maintain_size_append,0);
+                buf.resize(maintain_size_append, 0);
 
                 FILE *source = fopen(chunk_maintain.make_preferred().c_str(), "rb");
                 auto ptr_release_sequence = [&]() {

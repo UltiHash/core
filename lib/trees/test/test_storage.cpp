@@ -107,7 +107,8 @@ BOOST_AUTO_TEST_CASE(write_read_test)
                     SHA512_DIGEST_LENGTH + sizeof(unsigned long)>,std::size_t,bool> all_result;
             try {
                 all_result = t1.read(local_block_ref,true);
-                BOOST_ASSERT_MSG(std::get<5>(all_result), std::string(" Block \"" + boost::algorithm::hex(
+                bool test_ok = std::get<5>(all_result);
+                BOOST_ASSERT_MSG(test_ok, std::string(" Block \"" + boost::algorithm::hex(
                         std::string(local_block_ref.cbegin(), local_block_ref.cend())) + "\" was damaged on write.").c_str());
                 BOOST_ASSERT_MSG(std::get<2>(all_result) == times, "Times were not written and read back correctly!");
             }
