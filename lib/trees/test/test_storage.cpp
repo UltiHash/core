@@ -679,28 +679,37 @@ BOOST_AUTO_TEST_CASE(get_info_set_time_test)
     auto first_el = std::get<0>(index_list).begin();
     gettimeofday(&time, nullptr);
     long double millis = ((long double) time.tv_sec * ONE_MILLISECOND) + ((long double) time.tv_usec / ONE_MILLISECOND);
-    auto block_info = t1.get_info(std::get<1>(*first_el));
+    auto block_info = t1.read(std::get<1>(*first_el));
     gettimeofday(&time, nullptr);
     long double write_time =
             (((long double) time.tv_sec * ONE_MILLISECOND) + ((long double) time.tv_usec / ONE_MILLISECOND)) - millis;
     BOOST_TEST_MESSAGE(
             "\nThe get_info test to seek the information of one block took " + std::to_string(write_time) + " ms.");
-    BOOST_ASSERT_MSG(std::get<0>(block_info) < (unsigned long) std::chrono::nanoseconds(
+    BOOST_ASSERT_MSG(std::get<2>(block_info)[2] < (unsigned long) std::chrono::nanoseconds(
             std::chrono::high_resolution_clock::now().time_since_epoch()).count(),
                      "Block was not older than current time");
-    BOOST_ASSERT_MSG(std::get<1>(block_info) < std::get<2>(block_info),
+
+    BOOST_ASSERT_MSG(std::get<0>(block_info).size() < SHA512_DIGEST_LENGTH + TIME_STAMPS_ON_BLOCK * sizeof(unsigned long) +
+                                                      t1.prefix_wrap(std::get<0>(block_info).size()).size() + std::get<0>(block_info).size() +
+                                                      SHA256_DIGEST_LENGTH,
                      "The total size must always be larger than the block size!");
     gettimeofday(&time, nullptr);
     millis = ((long double) time.tv_sec * ONE_MILLISECOND) + ((long double) time.tv_usec / ONE_MILLISECOND);
-    bool test_ok = t1.set_block_time(std::get<1>(*first_el));
+
+    std::array<unsigned long, TIME_STAMPS_ON_BLOCK-1> set_new_times{std::get<2>(block_info)[1],(unsigned long) std::chrono::nanoseconds(
+            std::chrono::high_resolution_clock::now().time_since_epoch()).count()};
+
+    bool test_ok = t1.set_block_time(std::get<1>(*first_el),set_new_times);
     gettimeofday(&time, nullptr);
     write_time =
             (((long double) time.tv_sec * ONE_MILLISECOND) + ((long double) time.tv_usec / ONE_MILLISECOND)) - millis;
     BOOST_ASSERT_MSG(test_ok, "Current time could not be set to first block of index!");
     BOOST_TEST_MESSAGE("\nSetting a new block time took " + std::to_string(write_time) + " ms.");
-    auto block_info2 = t1.get_info(std::get<1>(*first_el));
-    BOOST_ASSERT_MSG(std::get<0>(block_info) < std::get<0>(block_info2),
-                     "Block time reset was not successful internally!");
+    auto block_info2 = t1.read(std::get<1>(*first_el));
+    BOOST_ASSERT_MSG(std::get<2>(block_info2)[2] == set_new_times[1],
+                     "Block touch time was not successful set internally!");
+    BOOST_ASSERT_MSG(std::get<2>(block_info2)[1] == set_new_times[0],
+                     "Block validity duration could not be read!");
 }
 
 BOOST_AUTO_TEST_CASE(delete_test)

@@ -51,6 +51,9 @@ namespace uh::trees {
 
     struct tree_storage {
 
+        //returns wrapped string
+        static std::vector<unsigned char> prefix_wrap(std::size_t input_size);
+
     protected:
         //every file storage level contains a maximum of 256 storage chunks and 256 folders to deeper levels
         //different storage chunks with write, read and maintain protection flags
@@ -64,9 +67,6 @@ namespace uh::trees {
         std::shared_mutex work_steal_protect{};
         std::shared_mutex std_filesystem_protect{};
         std::shared_mutex memory_protect{};
-
-        //returns wrapped string
-        static std::vector<unsigned char> prefix_wrap(std::size_t input_size);
 
     private:
         template<typename ALLOC>
@@ -543,7 +543,9 @@ namespace uh::trees {
 
                     FILE *reader = std::fopen(read_path.make_preferred().c_str(), "rb");
                     auto read_end_sequence = [&reader, &read_ptr, &write_ptr, &read_path]() {
-                        if (std::fclose(reader))ERROR << "Read stream was not open on " + read_path.make_preferred().string() + "!";
+                        if (std::fclose(reader)){
+                            ERROR << "Read stream was not open on " + read_path.make_preferred().string() + "!";
+                        }
                         *read_ptr -= 1;
                         if (!read_ptr->load())write_ptr->notify_one();
                     };
