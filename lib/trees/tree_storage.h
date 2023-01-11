@@ -566,6 +566,7 @@ namespace uh::trees {
 
                     const auto block_read_tup = this->read_block_base(reader, read_path.make_preferred(), block_code,
                                                                       read_end_sequence,only_info);
+                    read_end_sequence();
 
                     if (std::get<4>(block_read_tup)) {
                         ERROR << "File error at \"" + read_path.make_preferred().string() + ", position " + std::to_string(offset) + "\"";
