@@ -570,7 +570,7 @@ std::size_t uh::trees::tree_storage::delete_recursive(unsigned short num_threads
                 std::unique_lock filesystem_lock(std_filesystem_protect, std::defer_lock);
                 filesystem_lock.lock();
                 if (std::filesystem::exists(read_path)) {
-                    if (!std::filesystem::remove(read_path)) {
+                    if (!std::filesystem::remove_all(read_path)) {
                         filesystem_lock.unlock();
                         FATAL << "Removing was not completed on path \"" + read_path.string() +
                                  "\". Check inconsistent maintain files!";
