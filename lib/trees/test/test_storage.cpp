@@ -743,8 +743,10 @@ BOOST_AUTO_TEST_CASE(delete_test)
                 std::string().assign(std::get<1>(i).cbegin(), std::get<1>(i).cend()));
         auto read_result = t1.read(std::get<1>(i));
         bool test_ok = !std::get<1>(read_result).empty();
-        BOOST_ASSERT_MSG(test_ok, std::string("Block with old reference " + old_ref + " and new reference " + new_ref +
-                                              " could not be read back after deletion!").c_str());
+        std::string test_str;
+        test_str += "Block with old reference " + old_ref + " and new reference " + new_ref +
+                    " could not be read back after deletion!";
+        BOOST_ASSERT_MSG(test_ok, test_str.c_str());
     }
 
     t1.delete_recursive();
