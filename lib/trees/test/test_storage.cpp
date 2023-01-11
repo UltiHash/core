@@ -657,7 +657,7 @@ BOOST_AUTO_TEST_CASE(index_read_test)
         unsigned char hash_buf[SHA512_DIGEST_LENGTH];//HASH GENERATION
         SHA512(read_result.data(), read_result.size(), hash_buf);
         std::string old_ref = boost::algorithm::hex(
-                std::string().assign(std::get<1>(el).cbegin(), std::get<1>(el).cbegin()+SHA512_DIGEST_LENGTH));
+                std::string().assign(std::get<1>(el).cbegin(), std::get<1>(el).cend()));
         bool test_ok = std::equal(std::get<0>(el).cbegin(), std::get<0>(el).cbegin()+SHA512_DIGEST_LENGTH, hash_buf,
                                   hash_buf + SHA512_DIGEST_LENGTH);
         BOOST_ASSERT_MSG(!test_ok, std::string(
