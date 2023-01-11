@@ -5,6 +5,7 @@
 #include <options/logging_options.h>
 #include <options/metrics_options.h>
 #include <options/server_options.h>
+#include <cluster/options.h>
 
 
 namespace uh::an::config
@@ -23,12 +24,14 @@ public:
     const uh::options::server_options& server() const;
     const uh::options::logging_options& logging() const;
     const uh::options::metrics_options& metrics() const;
+    const cluster::options& cluster() const;
 
 private:
     uh::options::basic_options m_basic;
     uh::options::server_options m_server;
     uh::options::logging_options m_logging;
     uh::options::metrics_options m_metrics;
+    cluster::options m_cluster;
 };
 
 // ---------------------------------------------------------------------

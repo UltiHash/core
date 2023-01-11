@@ -28,15 +28,7 @@ int main(int argc, const char** argv)
         INFO << "Setting up metrics";
         metrics::mod metrics_module(options);
 
-        cluster::config cluster_config {
-            .nodes = {
-                { .hostname = "localhost", .port = 12345 },
-                { .hostname = "localhost", .port = 12346 },
-                { .hostname = "localhost", .port = 12347 },
-            }
-        };
-
-        cluster::mod cluster_module(cluster_config);
+        cluster::mod cluster_module(options.cluster().config());
         cluster_module.start();
 
         server::mod server_module(options, cluster_module, metrics_module);

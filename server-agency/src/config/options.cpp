@@ -12,6 +12,7 @@ options::options()
     m_server.apply(*this);
     m_logging.apply(*this);
     m_metrics.apply(*this);
+    m_cluster.apply(*this);
 }
 
 // ---------------------------------------------------------------------
@@ -22,6 +23,7 @@ void options::evaluate(const boost::program_options::variables_map& vars)
     m_server.evaluate(vars);
     m_logging.evaluate(vars);
     m_metrics.evaluate(vars);
+    m_cluster.evaluate(vars);
 }
 
 // ---------------------------------------------------------------------
@@ -50,6 +52,13 @@ const uh::options::logging_options& options::logging() const
 const uh::options::metrics_options& options::metrics() const
 {
     return m_metrics;
+}
+
+// ---------------------------------------------------------------------
+
+const cluster::options& options::cluster() const
+{
+    return m_cluster;
 }
 
 // ---------------------------------------------------------------------
