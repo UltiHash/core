@@ -364,14 +364,14 @@ namespace uh::trees {
                     if (valid) {
                         std::vector<unsigned char> block_buf = mem_wait<unsigned char>(
                                 total_block_size - SHA256_DIGEST_LENGTH);
-                        block_buf.insert(block_buf.cend(), hash.cbegin(), hash.cend());
                         for (const auto &t_c: convert_time) {
                             block_buf.insert(block_buf.cend(), t_c.cbegin(), t_c.cend());
                         }
+                        block_buf.insert(block_buf.cend(), hash.cbegin(), hash.cend());
                         block_buf.insert(block_buf.cend(), buf_size);
                         block_buf.insert(block_buf.cend(), block.cbegin(), block.cend());
 
-                        std::array<unsigned char, SHA512_DIGEST_LENGTH> checksum_test{}, checksum_read{};
+                        std::array<unsigned char, SHA256_DIGEST_LENGTH> checksum_test{}, checksum_read{};
                         SHA256(block_buf.data(), block_buf.size(), checksum_test.data());
 
                         if (std::fread(checksum_read.data(), sizeof(unsigned char), checksum_read.size(), reader) !=
