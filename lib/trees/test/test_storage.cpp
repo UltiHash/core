@@ -114,7 +114,7 @@ BOOST_AUTO_TEST_CASE(write_read_test)
                 s << e.what();
                 BOOST_TEST_MESSAGE("Reading critically failed! Error: " + s.str());
             }
-            std::vector<unsigned char> read_result = std::get<1>(all_result);
+            std::vector<unsigned char> read_result = std::get<0>(all_result);
             gettimeofday(&time, nullptr);
             long double read_after_write_time =
                     (((long double) time.tv_sec * ONE_MILLISECOND) + ((long double) time.tv_usec / ONE_MILLISECOND)) -
