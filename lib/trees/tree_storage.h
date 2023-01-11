@@ -326,7 +326,8 @@ namespace uh::trees {
                 block_size += (((std::size_t) buffer_in[buf_count]) << (buf_count * CHAR_BITS));
             }
 
-            std::vector<unsigned char> block{};
+            std::vector<unsigned char> block = mem_wait<unsigned char>(block_size);
+            block.resize(block_size,0);
             bool valid = true;
             std::size_t total_block_size = SHA512_DIGEST_LENGTH + TIME_STAMPS_ON_BLOCK * sizeof(unsigned long) +
                                            (BUF_LEN_SIZE_FOR_SIZE_BLOCK + buffer_in.size()) + block.size() +
@@ -345,8 +346,6 @@ namespace uh::trees {
                     return error_sequence();
                 }
             } else {
-                block = mem_wait<unsigned char>(block_size);
-                block.resize(block_size,0);
                 if (std::fread(block.data(), sizeof(unsigned char), block_size, reader) != block_size) {
                     FATAL
                         << "I/O block reading not completed on path \"" + read_at.string() + "\" at block reference\"" +
