@@ -35,7 +35,7 @@ void server::on_reset()
 
 void server::handle(std::shared_ptr<net::socket> client)
 {
-    boost::iostreams::stream<net::socket_device> io(client);
+    boost::iostreams::stream<io::boost_device> io(client);
 
     m_state = server_state::setup;
 

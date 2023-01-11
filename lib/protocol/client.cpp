@@ -3,6 +3,7 @@
 #include "messages.h"
 
 
+using namespace uh::io;
 using namespace uh::net;
 
 namespace uh::protocol
@@ -12,7 +13,7 @@ namespace uh::protocol
 
 client::client(std::unique_ptr<net::socket> sock)
     : m_sock(std::move(sock)),
-      m_io(socket_device(m_sock))
+      m_io(boost_device(m_sock))
 {
 }
 
