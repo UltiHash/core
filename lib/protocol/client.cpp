@@ -1,5 +1,6 @@
 #include "client.h"
 
+#include "read_block_device.h"
 #include "messages.h"
 
 
@@ -65,7 +66,7 @@ blob client::write_block(const blob& data)
 
 // ---------------------------------------------------------------------
 
-blob client::read_block(const blob& hash)
+std::unique_ptr<io::device> client::read_block(const blob& hash)
 {
     write(m_io, read_block::request{ .hash = std::move(hash) });
     m_io.flush();
@@ -73,7 +74,7 @@ blob client::read_block(const blob& hash)
     read_block::response response;
     read(m_io, response);
 
-    return std::move(response.content);
+    return std::make_unique<read_block_device>(*this);
 }
 
 // ---------------------------------------------------------------------
@@ -98,6 +99,30 @@ std::size_t client::free_space()
     read(m_io, response);
 
     return response.space_available;
+}
+
+// ---------------------------------------------------------------------
+
+void client::reset()
+{
+    write(m_io, reset::request{});
+    m_io.flush();
+
+    reset::response response;
+    read(m_io, response);
+}
+
+// ---------------------------------------------------------------------
+
+std::streamsize client::next_chunk(std::span<char> buffer)
+{
+    write(m_io, next_chunk::request{ .max_size = static_cast<uint32_t>(buffer.size()) });
+    m_io.flush();
+
+    next_chunk::response response{ .content = buffer };
+    read(m_io, response);
+
+    return response.content.size();
 }
 
 // ---------------------------------------------------------------------

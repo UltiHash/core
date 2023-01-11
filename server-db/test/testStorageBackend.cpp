@@ -78,7 +78,7 @@ bool test_storage_backend_io(uh::dbn::storage::mod &mod){
     uh::protocol::blob hash_key = mod.write_block(x);
 
     // Read block.
-    uh::protocol::blob y = mod.read_block(hash_key);
+    uh::protocol::blob y = uh::io::read_to_buffer(*mod.read_block(hash_key));
 
     // Check that what was read is the same as what was written.
     if(y == x){

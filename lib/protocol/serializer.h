@@ -4,6 +4,7 @@
 #include <istream>
 #include <limits>
 #include <ostream>
+#include <span>
 #include <vector>
 
 
@@ -28,6 +29,9 @@ constexpr std::size_t MAX_BLOB_LENGTH = std::numeric_limits<uint32_t>::max();
 
 void write(std::ostream& out, const std::vector<char>& b);
 void read(std::istream& in, std::vector<char>& b);
+
+void write(std::ostream& out, std::span<const char> b);
+void read(std::istream& in, std::span<char>& b);
 
 void write(std::ostream& out, const std::string& s);
 void read(std::istream& in, std::string& s);

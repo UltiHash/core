@@ -120,11 +120,10 @@ BOOST_AUTO_TEST_CASE( read_block_response )
 {
     std::stringstream s;
     write(s, status{ .code = status::OK });
-    write(s, read_block::response{ .content = to_blob("lorem ipsum") });
+    write(s, read_block::response{});
 
     read_block::response res;
     read(s, res);
-    BOOST_TEST(res.content == to_blob("lorem ipsum"));
 }
 
 // ---------------------------------------------------------------------

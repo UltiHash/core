@@ -125,7 +125,7 @@ size_t mod::free_space()
 
 // ---------------------------------------------------------------------
 
-uh::protocol::blob mod::read_block(const uh::protocol::blob& hash)
+std::unique_ptr<io::device> mod::read_block(const uh::protocol::blob& hash)
 {
     return m_impl->some_storage_backend->read_block(hash);
 }

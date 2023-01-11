@@ -35,7 +35,7 @@ namespace uh::dbn::storage {
          * @return the data block
          * @throw may throw any derivative of exception on error
          */
-        virtual uh::protocol::blob read_block(const uh::protocol::blob &hash) = 0;
+        virtual std::unique_ptr<io::device> read_block(const uh::protocol::blob& hash) = 0;
 
         /**
          * Return free space in this storage back-end in bytes.

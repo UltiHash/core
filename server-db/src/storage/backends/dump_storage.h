@@ -51,7 +51,7 @@ class dump_storage : public storage_backend {
          * @return the data block
          * @throw may throw any derivative of exception on error
          */
-        virtual uh::protocol::blob read_block(const uh::protocol::blob &hash) override;
+        virtual std::unique_ptr<io::device> read_block(const uh::protocol::blob& hash) override;
 
 
         virtual size_t free_space() override {return m_free;}

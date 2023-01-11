@@ -6,6 +6,7 @@
 #include <ios>
 #include <memory>
 #include <span>
+#include <vector>
 
 
 namespace uh::io
@@ -61,6 +62,20 @@ public:
 private:
     std::shared_ptr<device> m_dev;
 };
+
+// ---------------------------------------------------------------------
+
+static constexpr std::streamsize DEFAULT_CHUNK_SIZE = 64 * 1024;
+
+// ---------------------------------------------------------------------
+
+/**
+ * Read the complete device into memory and return it in a vector. `chunk_size`
+ * defines how many bytes are read at a time.
+ */
+std::vector<char> read_to_buffer(
+    device& dev,
+    std::streamsize chunk_size = DEFAULT_CHUNK_SIZE);
 
 // ---------------------------------------------------------------------
 
