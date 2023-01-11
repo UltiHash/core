@@ -68,7 +68,7 @@ void read(std::istream& in, std::span<char>& b)
     uint32_t count;
     read(in, count);
 
-    if (count > b.size())
+    if (count >= b.size())
     {
         THROW(read_error, "remote returned buffer too big");
     }
