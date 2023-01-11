@@ -313,7 +313,7 @@ namespace uh::trees {
                 return error_sequence();
             }
             std::vector<unsigned char> buffer_in;
-            buffer_in.reserve(buf_size + BUF_LEN_SIZE_FOR_SIZE_BLOCK);
+            buffer_in.resize(buf_size + BUF_LEN_SIZE_FOR_SIZE_BLOCK,0);
             if (std::fread(buffer_in.data(), sizeof(unsigned char), buf_size + BUF_LEN_SIZE_FOR_SIZE_BLOCK, reader) !=
                 buf_size + BUF_LEN_SIZE_FOR_SIZE_BLOCK) {
                 FATAL
