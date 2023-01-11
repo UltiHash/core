@@ -215,7 +215,6 @@ namespace uh::trees {
                              "\" at block reference\"" + block_path().string() + "\"";
                     return error_sequence();
                 }
-                end_sequence();
                 return std::make_tuple(total_block_size, block.size(), global_block_reference, false);
             } else {
                 if (!std::fwrite(block_buf.data()+update_dist, block_buf.size()-update_dist, sizeof(unsigned char), writer)) {//write block in a single stream
@@ -223,7 +222,6 @@ namespace uh::trees {
                              "\" at block reference\"" + block_path().string() + "\"";
                     return error_sequence();
                 }
-                end_sequence();
                 return std::make_tuple(total_block_size, block.size(), global_block_reference, false);
             }
         }
@@ -406,7 +404,6 @@ namespace uh::trees {
                     }
                 }
             }
-            end_sequence();
             //<std::size_t,std::vector<unsigned char>,std::array<unsigned long,TIME_STAMPS_ON_BLOCK>,std::array<unsigned long,SHA512_DIGEST_LENGTH + sizeof(unsigned long)>, bool, bool>
             return std::make_tuple(total_block_size, block, times, global_block_reference, false, valid);
         }

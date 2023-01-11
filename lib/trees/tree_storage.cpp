@@ -210,7 +210,10 @@ uh::trees::tree_storage::write(const std::vector<unsigned char> &input,
         return {};
     }
     std::vector<unsigned char> prefix = prefix_wrap(input.size());
-    std::size_t const total_size = input.size() + prefix.size() + sizeof(unsigned long);
+    std::size_t const total_size = SHA512_DIGEST_LENGTH +
+            TIME_STAMPS_ON_BLOCK * sizeof(unsigned long) +
+            prefix.size() + input.size() +
+            SHA256_DIGEST_LENGTH;
     //check block fill of this node, look for free space
 
     std::unique_lock lock_size(size_protect, std::defer_lock);
@@ -338,6 +341,7 @@ uh::trees::tree_storage::write(const std::vector<unsigned char> &input,
         };
 
         auto write_tup = write_block_base(writer,read_chunk,input,local_block_ref,times,end_write_sequence);
+        end_write_sequence();
         if(std::get<3>(write_tup)){
             ERROR << "File error at \"" + read_chunk.make_preferred().string() + "\" at block reference\"" +
                      block_path().string() + "\"";
@@ -392,12 +396,13 @@ uh::trees::tree_storage::index(unsigned short num_threads) {
                     write_ptr->wait(true);
                 }
 
-                FILE *reader = std::fopen(read_path.make_preferred().c_str(), "rb");
                 std::unique_lock filesystem_lock(std_filesystem_protect, std::defer_lock);
                 filesystem_lock.lock();
                 std::size_t const total_file_size = std::filesystem::exists(read_path.make_preferred())
                                                     ? std::filesystem::file_size(read_path.make_preferred()) : 0;
                 filesystem_lock.unlock();
+                FILE *reader = std::fopen(read_path.make_preferred().c_str(), "rb");
+
                 auto read_end_sequence = [&reader, &read_ptr, &write_ptr]() {
                     if (std::fclose(reader))ERROR << "Read stream was not open!";
                     *read_ptr -= 1;
@@ -426,6 +431,12 @@ uh::trees::tree_storage::index(unsigned short num_threads) {
                     local_block_ref.insert(local_block_ref.cbegin(), i);
                     auto read_tup = this->read_block_base(reader, read_path.make_preferred(), local_block_ref,
                                                           total_end_sequence, false, true);
+
+                    if(error_flag.test()){
+                        ERROR << "Unexpected error. Quitting.";
+                        return;
+                    }
+
                     if (std::get<5>(read_tup) && std::get<0>(read_tup) > 0) {//if valid
                         std::scoped_lock const lock_here(search_index_protect);
                         search_index.emplace_back(std::get<3>(read_tup), std::get<1>(read_tup), std::get<2>(read_tup));
@@ -724,6 +735,7 @@ bool uh::trees::tree_storage::set_block_time(const std::vector<unsigned char> &l
 
             auto write_tup = write_block_base(writer,read_path.make_preferred(),std::vector<unsigned char>{},
                                               local_block_reference,times_not_creation,set_time_end_sequence,true,false,hash);
+            set_time_end_sequence();
             if(std::get<3>(write_tup)){
                 ERROR << "File error at \"" + read_path.make_preferred().string() + "\" at block reference\"" +
                          block_path().string() + "\"";
@@ -774,7 +786,7 @@ uh::trees::tree_storage::delete_blocks(
             ERROR << "Internal Error on deleting: empty block!";
             return {};
         }
-        auto error_thread_sequence = [&]() {
+        auto error_thread_sequence = [&error_flag]() {
             while (std::atomic_flag_test_and_set_explicit(&error_flag,
                                                           std::memory_order_acquire)) {
                 return;
@@ -820,7 +832,7 @@ uh::trees::tree_storage::delete_blocks(
                     write_ptr->wait(true);
                 }
 
-                //sort blocks to be deleted here after their offset on the chunk
+                //sort blocks to be deleted here after their offset on the chunk to delete in order
                 std::string const ref_name{boost::algorithm::hex(std::string{(char) (*item.begin())[0]})};
                 std::shared_lock path_read(combined_path_protect);
                 std::filesystem::path chunk = *combined_path / ref_name;
@@ -852,37 +864,25 @@ uh::trees::tree_storage::delete_blocks(
                     return offset;
                 };
 
-                //read chunk at index (*cur_tmp)[0]
-                FILE *reader = std::fopen(chunk.make_preferred().c_str(), "rb");
                 std::unique_lock filesystem_lock(std_filesystem_protect, std::defer_lock);
                 filesystem_lock.lock();
                 std::size_t const total_file_size = std::filesystem::exists(chunk.make_preferred().c_str())
                                                     ? std::filesystem::file_size(
                                 chunk.make_preferred().c_str()) : 0;
                 filesystem_lock.unlock();
-                std::atomic_flag write_control(ATOMIC_FLAG_INIT);
-                auto read_end_sequence = [&]() {
+                //read chunk at index (*cur_tmp)[0]
+                FILE *reader = std::fopen(chunk.make_preferred().c_str(), "rb");
+
+                std::atomic_flag write_control(ATOMIC_FLAG_INIT);//extra write thread to stream to maintain file while scanning
+                auto read_end_sequence = [&reader,&read_ptr,&write_control]() {
                     if (std::fclose(reader))ERROR << "Read stream was not open!";
                     *read_ptr -= 1;
                     std::atomic_flag_clear_explicit(&write_control, std::memory_order_release);
                 };
-                if (!reader) {
-                    ERROR << "File read opening failed at \"" + chunk.string() + "\"";
-                    read_end_sequence();
-                    error_thread_sequence();
-                    if (error_flag.test())return;
-                }
                 std::size_t cur_pos = offset_calc(block_step_beg->cbegin(), block_step_beg->cend());
 
-                if (std::fseek(reader, static_cast<long>(cur_pos), SEEK_SET)) {
+                if (std::fseek(reader, static_cast<long>(cur_pos), SEEK_SET)) {//lowest offset block is start indicator
                     ERROR << "File seek failed at \"" + chunk.string() + ", position " + std::to_string(cur_pos) + "\"";
-                    read_end_sequence();
-                    error_thread_sequence();
-                    if (error_flag.test())return;
-                }
-
-                if (std::ferror(reader)) {
-                    FATAL << "I/O error when seeking \"" + chunk.string() + "\"";
                     read_end_sequence();
                     error_thread_sequence();
                     if (error_flag.test())return;
@@ -892,18 +892,22 @@ uh::trees::tree_storage::delete_blocks(
                 std::size_t delete_size{};
                 //producer consumer queue for reading and writing; contains RAM pointer; size of RAM pointer; local tree storage reference of;
                 // *this tree where the referring chunk is stored; truncate size for the chunk; new storage reference after append
-                std::list<std::tuple<std::vector<unsigned char>, std::vector<unsigned char>, std::size_t>> multithreading_factory{};
+                //stores block, old offset vector, new offset number, block SHA512 and times
+                std::list<std::tuple<std::vector<unsigned char>, std::vector<unsigned char>, std::size_t, std::array<unsigned char,
+                        SHA512_DIGEST_LENGTH>,std::array<unsigned long, TIME_STAMPS_ON_BLOCK>>> multithreading_factory{};
                 std::mutex multithreading_factory_protect{};
-
+                //clear old mainain file
+                filesystem_lock.lock();
+                if (std::filesystem::exists(chunk_maintain))std::filesystem::remove(chunk_maintain);
+                filesystem_lock.unlock();
+                //enable write thread
                 while (std::atomic_flag_test_and_set_explicit(&write_control,
                                                               std::memory_order_acquire)) {
                     write_control.wait(true);
                 }
-                filesystem_lock.lock();
-                if (std::filesystem::exists(chunk_maintain))std::filesystem::remove(chunk_maintain);
-                filesystem_lock.unlock();
+                //transmission from chunk to maintain file
                 FILE *writer = std::fopen(chunk_maintain.make_preferred().c_str(), "ab");
-                auto io_end_sequence = [&]() {
+                auto io_end_sequence = [&reader,&writer,&read_ptr,&write_control]() {
                     if (std::fclose(reader))ERROR << "Read stream was not open!";
                     if (std::fclose(writer))ERROR << "Write stream was not open!";
                     *read_ptr -= 1;
@@ -920,49 +924,40 @@ uh::trees::tree_storage::delete_blocks(
                     std::unique_lock multithread_f_read(multithreading_factory_protect,
                                                         std::defer_lock);
                     multithread_f_read.lock();
-                    auto new_offset = std::get<2>(*multithreading_factory.cbegin());
+                    auto current_storage_block = std::get<0>(*multithreading_factory.cbegin());
                     auto old_block_code = std::get<1>(*multithreading_factory.cbegin());
-                    auto current_storage_ptr = std::get<0>(*multithreading_factory.cbegin());
+                    auto new_offset = std::get<2>(*multithreading_factory.cbegin());
+                    auto old_SHA = std::get<3>(*multithreading_factory.cbegin());
+                    auto old_times = std::get<4>(*multithreading_factory.cbegin());
                     multithread_f_read.unlock();
-                    std::vector<unsigned char> out_vec{};
-                    out_vec.reserve(sizeof(unsigned int));
+                    std::vector<unsigned char> new_block_reference{};
+                    new_block_reference.reserve(sizeof(unsigned int));
                     //offset of blocks have been changed, take the first byte for chunk ordering and the last 4 bytes for offset;
                     for (unsigned char i = 0;
                          i <
                          (unsigned char) sizeof(unsigned int); i++) {//STORE_MAX will fit in 4 bytes
-                        out_vec.push_back((unsigned char) (new_offset) >> (i * CHAR_BITS));
+                        new_block_reference.push_back((unsigned char) (new_offset) >> (i * CHAR_BITS));
                     }
-                    out_vec.insert(out_vec.cbegin(), old_block_code[0]);
+                    new_block_reference.insert(new_block_reference.cbegin(), old_block_code[0]);
 
-                    if (!std::fwrite(current_storage_ptr.data(), current_storage_ptr.size(), sizeof(unsigned char),
-                                     writer)) {
+                    auto write_total_end = [&io_end_sequence,&error_thread_sequence,&error_flag,&chunk_maintain]{
                         ERROR << "File write thread failed to put down a line at \"" + chunk_maintain.string() + "\"";
                         io_end_sequence();
                         error_thread_sequence();
                         if (error_flag.test()) {
                             return;
                         }
-                    }
-                    if (std::ferror(writer)) {
-                        FATAL << "I/O error when deleting block writing \"" +
-                                 chunk_maintain.string() + "\"";
-                        io_end_sequence();
-                        error_thread_sequence();
-                        if (error_flag.test()) {
-                            return;
-                        }
-                    }
-                    //tmp_buf,write_back_size,out_vec,this,trunc_at
-                    //std::vector<unsigned char>, std::vector<unsigned char>, tree_storage *, std::size_t>>>
+                    };
+
+                    auto write_tup = write_block_base(writer,chunk_maintain.make_preferred(),current_storage_block,new_block_reference,
+                                                      old_times,write_total_end,false,false,old_SHA);
                     std::unique_lock lock_output(out_change_list_protect, std::defer_lock);
                     lock_output.lock();
-                    out_change_list.emplace_back(old_block_code, out_vec);
+                    out_change_list.emplace_back(old_block_code, new_block_reference);
                     lock_output.unlock();
-                    std::unique_lock write_multithreading_f(multithreading_factory_protect,
-                                                            std::defer_lock);
-                    write_multithreading_f.lock();
+                    multithread_f_read.lock();
                     multithreading_factory.pop_front();
-                    write_multithreading_f.unlock();
+                    multithread_f_read.unlock();
                     if (error_flag.test()) {
                         FATAL << "I/O extern error when deleting block writing \"" +
                                  chunk_maintain.string() + "\"";
@@ -1002,150 +997,59 @@ uh::trees::tree_storage::delete_blocks(
                 std::thread w1;
                 if (num_threads > 1)w1 = std::thread(consumer_function);
 
+                auto factory_io_sequence_end = [&error_flag,&num_threads,&w1,&multithreading_factory,&io_end_sequence,&write_once_to_maintain_file,&read_end_sequence]() {
+                    std::atomic_flag_test_and_set_explicit(&error_flag,std::memory_order_acquire);//put error flag on
+                    if (num_threads > 1) {
+                        if (w1.joinable())w1.join();//write out remaining blocks to prevent data loss
+                    } else {
+                        while (!multithreading_factory.empty())write_once_to_maintain_file();
+                    }
+                    io_end_sequence();
+                };
+
                 while (!std::feof(reader) && cur_pos < total_file_size) {
                     if (error_flag.test())break;//break thread in case error is there
                     //File should have been opened or created here, seek for first block
                     //start position of the block for seeking it later on is the old size
-                    std::vector<unsigned char> out_vec{};
-                    out_vec.reserve(sizeof(unsigned int));//reconstruct current local reference
+                    std::vector<unsigned char> local_block_test_ref{};
+                    local_block_test_ref.reserve(sizeof(unsigned int));//reconstruct current local reference
                     for (unsigned short i = 0;
                          i < (unsigned short) sizeof(unsigned int); i++) {//STORE_MAX will fit in 4 bytes
-                        out_vec.push_back((unsigned char) (cur_pos >> (i * CHAR_BITS)));
+                        local_block_test_ref.push_back((unsigned char) (cur_pos >> (i * CHAR_BITS)));
                     }
-                    out_vec.insert(out_vec.cbegin(), (*item.begin())[0]);
-
-                    std::array<unsigned char, sizeof(unsigned long)> time_buf{};
-                    std::size_t count = std::fread(time_buf.data(), sizeof(unsigned char),
-                                                   sizeof(unsigned long),
-                                                   reader);
-
-                    auto factory_io_sequence_end = [&]() {
-                        std::atomic_flag_test_and_set_explicit(&error_flag,
-                                                               std::memory_order_acquire);//put error flag on
-                        if (num_threads > 1) {
-                            if (w1.joinable())w1.join();//write out remaining blocks to prevent data loss
-                        } else {
-                            while (!multithreading_factory.empty())write_once_to_maintain_file();
-                            if (std::fclose(writer))ERROR << "Write stream was not open!";
-                        }
-
-                        read_end_sequence();//reset reader flags
-                    };
-
-                    if (count != sizeof(unsigned long)) {
-                        FATAL
-                            << "I/O time first 8 bytes reading was not completed on path \"" +
-                               chunk.string() +
-                               "\"";
-                        factory_io_sequence_end();
-                        if (error_flag.test())return;//break thread in case error is there
-                    }
-                    cur_pos += count;
-
-                    if (std::ferror(reader)) {
-                        FATAL << "I/O error when reading time of block at path \"" + chunk.string() +
-                                 "\"";
-                        factory_io_sequence_end();
-                        if (error_flag.test())return;//break thread in case error is there
-                    }
-
-                    unsigned char buf_size = 0;
-                    count = std::fread(&buf_size, sizeof(unsigned char), 1, reader);
-                    if (count != 1) {
-                        FATAL
-                            << "I/O prefix first byte reading was not completed on path \"" +
-                               chunk.string() + "\"";
-                        factory_io_sequence_end();
-                        if (error_flag.test())return;//break thread in case error is there
-                    }
-                    cur_pos += count;
-
-                    if (std::ferror(reader)) {
-                        FATAL << "I/O error when reading prefix at path \"" + chunk.string() + "\"";
-                        factory_io_sequence_end();
-                        if (error_flag.test())return;//break thread in case error is there
-                    }
-                    std::vector<unsigned char> buffer_in;
-                    buffer_in.resize(buf_size + 1, 0);
-                    count = std::fread(buffer_in.data(), sizeof(unsigned char), buf_size + 1, reader);
-                    if (count != buf_size + 1) {
-                        FATAL
-                            << "I/O prefix first byte reading was not completed on path \"" +
-                               chunk.string() + "\"";
-                        factory_io_sequence_end();
-                        if (error_flag.test())return;//break thread in case error is there
-                    }
-                    cur_pos += count;
-                    std::size_t output_size{};
-                    for (unsigned char buf_count = 0; buf_count <= buf_size; buf_count++) {
-                        output_size += (((std::size_t) buffer_in[buf_count]) << (buf_count * CHAR_BITS));
-                    }
-
-                    std::size_t const write_back_size =
-                            time_buf.size() + 1 + buffer_in.size() + output_size;
-
+                    local_block_test_ref.insert(local_block_test_ref.cbegin(), (*item.begin())[0]);
+                    //read a block from current chunk
                     if (block_step_beg < delete_here_codes.cend() &&
-                        std::equal(out_vec.cbegin(), out_vec.cend(), block_step_beg->cbegin(),
+                        std::equal(local_block_test_ref.cbegin(), local_block_test_ref.cend(), block_step_beg->cbegin(),
                                    block_step_beg->cend())) {
-                        //skip block copy and seek over it
-                        if (std::fseek(reader, static_cast<long>(output_size), SEEK_CUR)) {
-                            ERROR << "File seek failed at \"" + chunk.string() + ", position " +
-                                     std::to_string(output_size) + "\"";
-                            factory_io_sequence_end();
-                            if (error_flag.test())return;//break thread in case error is there
-                        }
-
-                        if (std::ferror(reader)) {
-                            FATAL << "I/O error when seeking \"" + chunk.string() + "\"";
-                            factory_io_sequence_end();
-                            if (error_flag.test())return;//break thread in case error is there
-                        }
-                        cur_pos += output_size;
-                        delete_size += write_back_size;
-                        out_size += write_back_size;
+                        //skip block copy and seek over it if to delete
+                        auto read_tup = read_block_base(reader,chunk.make_preferred(),local_block_test_ref,factory_io_sequence_end,true);
+                        if (error_flag.test())return;//break thread in case error is there
+                        cur_pos += std::get<0>(read_tup);
+                        delete_size += std::get<0>(read_tup);
+                        out_size += std::get<0>(read_tup);
                         block_step_beg++;
                     } else {
                         //copy block to maintain file
-                        auto tmp_buf = mem_wait<unsigned char>(write_back_size);
-                        unsigned short i = 0;
-                        for (; i < (unsigned short) time_buf.size(); i++) {
-                            tmp_buf[i] = time_buf[i];
-                        }
-                        tmp_buf[i] = buf_size;
-                        i++;
-                        unsigned short const meta_offset = i;
-                        i = 0;
-                        for (; i < (unsigned short) buffer_in.size(); i++) {
-                            tmp_buf[i + meta_offset] = buffer_in[i];
-                        }
-
-                        count = std::fread(tmp_buf.data() + (write_back_size - output_size),
-                                           sizeof(unsigned char),
-                                           output_size, reader);
-
-                        if (count != output_size) {
-                            FATAL << "I/O was not completed on path \"" + chunk.string() + "\"";
-                            factory_io_sequence_end();
-                            if (error_flag.test())return;//break thread in case error is there
-                        }
-                        if (std::ferror(reader)) {
-                            FATAL << "I/O error when reading prefix at path \"" + chunk.string() + "\"";
-                            factory_io_sequence_end();
-                            if (error_flag.test())return;//break thread in case error is there
-                        }
-                        cur_pos += count;
-                        std::scoped_lock const write_multithreading_f(multithreading_factory_protect);
-                        multithreading_factory.emplace_back(tmp_buf, out_vec,
-                                                            cur_pos - write_back_size - delete_size);
+                        auto read_tup = read_block_base(reader,chunk.make_preferred(),local_block_test_ref,factory_io_sequence_end);
+                        std::array<unsigned char, SHA512_DIGEST_LENGTH + sizeof(unsigned long)>global_hash = std::get<3>(read_tup);
+                        std::array<unsigned char, SHA512_DIGEST_LENGTH>hash{};
+                        std::ranges::copy(global_hash.cbegin(),global_hash.cbegin()+SHA512_DIGEST_LENGTH,hash.begin());
+                        std::unique_lock write_multithreading_f(multithreading_factory_protect);
+                        //stores block, old offset vector, new offset number, block SHA512 and times
+                        multithreading_factory.emplace_back(std::get<1>(read_tup), local_block_test_ref,
+                                                            cur_pos - delete_size,hash,std::get<2>(read_tup));
+                        write_multithreading_f.unlock();
+                        cur_pos += std::get<0>(read_tup);
                     }
                 }
-                read_end_sequence();
+
                 if (num_threads > 1) {
                     if (w1.joinable())w1.join();
                 } else {
                     while (!multithreading_factory.empty())write_once_to_maintain_file();
-                    if (std::fclose(writer))ERROR << "Write stream was not open!";
                 }
+                io_end_sequence();
 
                 if (error_flag.test()) {
                     FATAL << "Block deleting reader thread quit unexpectedly!";
