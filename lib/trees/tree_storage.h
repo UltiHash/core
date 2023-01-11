@@ -369,6 +369,7 @@ namespace uh::trees {
                         }
                         block_buf.insert(block_buf.cend(), hash.cbegin(), hash.cend());
                         block_buf.insert(block_buf.cend(), buf_size);
+                        block_buf.insert(block_buf.cend(), buffer_in.cbegin(),buffer_in.cend());
                         block_buf.insert(block_buf.cend(), block.cbegin(), block.cend());
 
                         std::array<unsigned char, SHA256_DIGEST_LENGTH> checksum_test{}, checksum_read{};
