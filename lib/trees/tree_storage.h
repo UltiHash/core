@@ -116,7 +116,9 @@ namespace uh::trees {
                 std::array<unsigned long, TIME_STAMPS_ON_BLOCK> times, auto end_sequence,
                 bool skip_prefix_and_block = false,
                 bool calc_SHA512 = true,
-                const std::array<unsigned char, SHA512_DIGEST_LENGTH> SHA_input_optional = std::array<unsigned char, SHA512_DIGEST_LENGTH>{}) {
+                const std::array<unsigned char, SHA512_DIGEST_LENGTH> SHA_input_optional = std::array<unsigned char, SHA512_DIGEST_LENGTH>{},
+                std::size_t placeholder_block_size = 0) {
+
             auto time_binary_calc = [](auto current_time) {
                 std::vector<unsigned char> bin_time;
                 bin_time.reserve(sizeof(current_time));
@@ -127,10 +129,10 @@ namespace uh::trees {
             };
 
             std::array<unsigned char, SHA512_DIGEST_LENGTH> hash_buf{};//HASH GENERATION
-            if (calc_SHA512)SHA512(block.data(), block.size(), hash_buf.data());
+            if (calc_SHA512)SHA512(block.data(), std::max(block.size(),placeholder_block_size), hash_buf.data());
             else hash_buf = SHA_input_optional;
 
-            auto prefix = prefix_wrap(block.size());
+            auto prefix = prefix_wrap(std::max(block.size(),placeholder_block_size));
             std::array<std::vector<unsigned char>, TIME_STAMPS_ON_BLOCK> convert_time{};//creation time, last visited time, maximum valid
             auto t_beg = convert_time.begin();
             for (const auto &t: times) {
@@ -139,7 +141,7 @@ namespace uh::trees {
             }
 
             const std::size_t total_block_size = SHA512_DIGEST_LENGTH + TIME_STAMPS_ON_BLOCK * sizeof(unsigned long) +
-                                                 prefix.size() + block.size() + SHA256_DIGEST_LENGTH;
+                                                 prefix.size() + std::max(block.size(),placeholder_block_size) + SHA256_DIGEST_LENGTH;
             std::vector<unsigned char> block_buf = mem_wait<unsigned char>(total_block_size);
 
             //fill block buf with write down sequence
@@ -177,7 +179,7 @@ namespace uh::trees {
                 //std::tuple<std::size_t, std::size_t, std::array<unsigned char,
                 //                SHA512_DIGEST_LENGTH + sizeof(unsigned long)>, bool> write_block_base(
                 //                FILE *writer, const std::filesystem::path &write_at, const std::vector<unsigned char>
-                return std::make_tuple(total_block_size, block.size(), global_block_reference, true);
+                return std::make_tuple(total_block_size, std::max(block.size(),placeholder_block_size), global_block_reference, true);
             };
 
             if (block_buf.size() != total_block_size) {
@@ -203,7 +205,7 @@ namespace uh::trees {
                     ERROR << "File write binary time opening failed at \"" + write_at.string() + "\"";
                     return error_sequence();
                 }
-                std::size_t jump_prefix_block = prefix.size() + block.size();
+                std::size_t jump_prefix_block = prefix.size() + std::max(block.size(),placeholder_block_size);
                 if (std::fseek(writer, static_cast<long>(jump_prefix_block), SEEK_CUR)) {//skip prefix and block
                     ERROR << "File seek failed at \"" + write_at.string() + ", position " +
                              std::to_string(jump_prefix_block) + "\" at block reference\"" + block_path().string() +
@@ -215,21 +217,21 @@ namespace uh::trees {
                              "\" at block reference\"" + block_path().string() + "\"";
                     return error_sequence();
                 }
-                return std::make_tuple(total_block_size, block.size(), global_block_reference, false);
+                return std::make_tuple(total_block_size, std::max(block.size(),placeholder_block_size), global_block_reference, false);
             } else {
                 if (!std::fwrite(block_buf.data()+update_dist, block_buf.size()-update_dist, sizeof(unsigned char), writer)) {//write block in a single stream
                     ERROR << "File write binary time opening failed at \"" + write_at.string() +
                              "\" at block reference\"" + block_path().string() + "\"";
                     return error_sequence();
                 }
-                return std::make_tuple(total_block_size, block.size(), global_block_reference, false);
+                return std::make_tuple(total_block_size, std::max(block.size(),placeholder_block_size), global_block_reference, false);
             }
         }
 
         //returns total size of block plus information, the received block as vector, the total block with information as vector, the times in normal unsigned long form,
-        //the global hash of SHA512 with creation time extend, bool error occurred, bool block description valid
+        //the global hash of SHA512 with creation time extend, bool error occurred, bool block description valid, block size
         std::tuple<std::size_t, std::vector<unsigned char>, std::array<unsigned long, TIME_STAMPS_ON_BLOCK>,
-                std::array<unsigned char, SHA512_DIGEST_LENGTH + sizeof(unsigned long)>, bool, bool> read_block_base(
+                std::array<unsigned char, SHA512_DIGEST_LENGTH + sizeof(unsigned long)>, bool, bool,std::size_t> read_block_base(
                 FILE *reader, const std::filesystem::path &read_at, const std::vector<unsigned char> &local_block_ref,
                 auto end_sequence, bool skip_read_block = false, bool check_valid = false) {
 
@@ -253,7 +255,7 @@ namespace uh::trees {
             auto error_sequence = [&]() {
                 end_sequence();
                 auto err_tuple = std::tuple<std::size_t, std::vector<unsigned char>, std::array<unsigned long, TIME_STAMPS_ON_BLOCK>,
-                        std::array<unsigned char, SHA512_DIGEST_LENGTH + sizeof(unsigned long)>, bool, bool>{};
+                        std::array<unsigned char, SHA512_DIGEST_LENGTH + sizeof(unsigned long)>, bool, bool, std::size_t>{};
                 std::get<4>(err_tuple) = true;
                 return err_tuple;
             };
@@ -407,7 +409,7 @@ namespace uh::trees {
                 }
             }
             //<std::size_t,std::vector<unsigned char>,std::array<unsigned long,TIME_STAMPS_ON_BLOCK>,std::array<unsigned long,SHA512_DIGEST_LENGTH + sizeof(unsigned long)>, bool, bool>
-            return std::make_tuple(total_block_size, block, times, global_block_reference, false, valid);
+            return std::make_tuple(total_block_size, block, times, global_block_reference, false, valid, block_size);
         }
 
     public:
@@ -435,18 +437,18 @@ namespace uh::trees {
          * returns a tuple with binary block, local binary block reference, block times (create,valid duration,last touch), global hash
          * if "only_info" flag is set, it will not return the block, only all the other information as a "get_info" function
          */
-        //returns block,local block reference, timestamps and global hash reference
+        //returns block,local block reference, timestamps, global hash reference,block size
         template<const bool only_info = false>
         auto read(const std::vector<unsigned char> &block_code) {
             if (block_code.empty()) {
                 ERROR << "No input given to read!";
                 if constexpr (only_info){
                     return std::tuple<std::vector<unsigned char>, std::array<unsigned long, TIME_STAMPS_ON_BLOCK>, std::array<unsigned char,
-                            SHA512_DIGEST_LENGTH + sizeof(unsigned long)>>{};
+                            SHA512_DIGEST_LENGTH + sizeof(unsigned long)>,std::size_t>{};
                 }
                 else{
                     return std::tuple<std::vector<unsigned char>, std::vector<unsigned char>, std::array<unsigned long, TIME_STAMPS_ON_BLOCK>, std::array<unsigned char,
-                            SHA512_DIGEST_LENGTH + sizeof(unsigned long)>>{};
+                            SHA512_DIGEST_LENGTH + sizeof(unsigned long)>,std::size_t>{};
                 }
             }
             if (block_code.size() > SMALLEST_LOCAL_BLOCK_SIZE) {
@@ -463,11 +465,11 @@ namespace uh::trees {
                              combined_path->string() + "\".";
                     if constexpr (only_info){
                         return std::tuple<std::vector<unsigned char>, std::array<unsigned long, TIME_STAMPS_ON_BLOCK>, std::array<unsigned char,
-                                SHA512_DIGEST_LENGTH + sizeof(unsigned long)>>{};
+                                SHA512_DIGEST_LENGTH + sizeof(unsigned long)>,std::size_t>{};
                     }
                     else{
                         return std::tuple<std::vector<unsigned char>, std::vector<unsigned char>, std::array<unsigned long, TIME_STAMPS_ON_BLOCK>, std::array<unsigned char,
-                                SHA512_DIGEST_LENGTH + sizeof(unsigned long)>>{};
+                                SHA512_DIGEST_LENGTH + sizeof(unsigned long)>,std::size_t>{};
                     }
                 } else {
                     auto tree_ptr3 = std::get<1>(children->at(block_code[0]));
@@ -492,11 +494,11 @@ namespace uh::trees {
                              combined_path->string() + "\".";
                     if constexpr (only_info){
                         return std::tuple<std::vector<unsigned char>, std::array<unsigned long, TIME_STAMPS_ON_BLOCK>, std::array<unsigned char,
-                                SHA512_DIGEST_LENGTH + sizeof(unsigned long)>>{};
+                                SHA512_DIGEST_LENGTH + sizeof(unsigned long)>,std::size_t>{};
                     }
                     else{
                         return std::tuple<std::vector<unsigned char>, std::vector<unsigned char>, std::array<unsigned long, TIME_STAMPS_ON_BLOCK>, std::array<unsigned char,
-                                SHA512_DIGEST_LENGTH + sizeof(unsigned long)>>{};
+                                SHA512_DIGEST_LENGTH + sizeof(unsigned long)>,std::size_t>{};
                     }
                 }
                 //the block code should have a size of 5; one chunk index and 4 bytes of encoding for the offset
@@ -513,11 +515,11 @@ namespace uh::trees {
                            "\" and size of storage chunk was 0.";
                     if constexpr (only_info){
                         return std::tuple<std::vector<unsigned char>, std::array<unsigned long, TIME_STAMPS_ON_BLOCK>, std::array<unsigned char,
-                                SHA512_DIGEST_LENGTH + sizeof(unsigned long)>>{};
+                                SHA512_DIGEST_LENGTH + sizeof(unsigned long)>,std::size_t>{};
                     }
                     else{
                         return std::tuple<std::vector<unsigned char>, std::vector<unsigned char>, std::array<unsigned long, TIME_STAMPS_ON_BLOCK>, std::array<unsigned char,
-                                SHA512_DIGEST_LENGTH + sizeof(unsigned long)>>{};
+                                SHA512_DIGEST_LENGTH + sizeof(unsigned long)>,std::size_t>{};
                     }
                 } else {
                     size_lock.unlock();
@@ -557,11 +559,11 @@ namespace uh::trees {
                         read_end_sequence();
                         if constexpr (only_info){
                             return std::tuple<std::vector<unsigned char>, std::array<unsigned long, TIME_STAMPS_ON_BLOCK>, std::array<unsigned char,
-                                    SHA512_DIGEST_LENGTH + sizeof(unsigned long)>>{};
+                                    SHA512_DIGEST_LENGTH + sizeof(unsigned long)>,std::size_t>{};
                         }
                         else{
                             return std::tuple<std::vector<unsigned char>, std::vector<unsigned char>, std::array<unsigned long, TIME_STAMPS_ON_BLOCK>, std::array<unsigned char,
-                                    SHA512_DIGEST_LENGTH + sizeof(unsigned long)>>{};
+                                    SHA512_DIGEST_LENGTH + sizeof(unsigned long)>,std::size_t>{};
                         }
                     }
 
@@ -573,11 +575,11 @@ namespace uh::trees {
                         ERROR << "File error at \"" + read_path.make_preferred().string() + ", position " + std::to_string(offset) + "\"";
                         if constexpr (only_info){
                             return std::tuple<std::vector<unsigned char>, std::array<unsigned long, TIME_STAMPS_ON_BLOCK>, std::array<unsigned char,
-                                    SHA512_DIGEST_LENGTH + sizeof(unsigned long)>>{};
+                                    SHA512_DIGEST_LENGTH + sizeof(unsigned long)>,std::size_t>{};
                         }
                         else{
                             return std::tuple<std::vector<unsigned char>, std::vector<unsigned char>, std::array<unsigned long, TIME_STAMPS_ON_BLOCK>, std::array<unsigned char,
-                                    SHA512_DIGEST_LENGTH + sizeof(unsigned long)>>{};
+                                    SHA512_DIGEST_LENGTH + sizeof(unsigned long)>,std::size_t>{};
                         }
                     }
 
@@ -586,20 +588,20 @@ namespace uh::trees {
                                  "\"";
                         if constexpr (only_info){
                             return std::tuple<std::vector<unsigned char>, std::array<unsigned long, TIME_STAMPS_ON_BLOCK>, std::array<unsigned char,
-                                    SHA512_DIGEST_LENGTH + sizeof(unsigned long)>>{};
+                                    SHA512_DIGEST_LENGTH + sizeof(unsigned long)>,std::size_t>{};
                         }
                         else{
                             return std::tuple<std::vector<unsigned char>, std::vector<unsigned char>, std::array<unsigned long, TIME_STAMPS_ON_BLOCK>, std::array<unsigned char,
-                                    SHA512_DIGEST_LENGTH + sizeof(unsigned long)>>{};
+                                    SHA512_DIGEST_LENGTH + sizeof(unsigned long)>,std::size_t>{};
                         }
                     }
                     //std::tuple<std::vector<unsigned char>, std::vector<unsigned char>, std::array<unsigned long, TIME_STAMPS_ON_BLOCK>, std::array<unsigned char,
                     //        SHA512_DIGEST_LENGTH + sizeof(unsigned long)>>
                     if constexpr (only_info){
-                        return std::make_tuple(block_code, std::get<2>(block_read_tup), std::get<3>(block_read_tup));
+                        return std::make_tuple(block_code, std::get<2>(block_read_tup), std::get<3>(block_read_tup),std::get<6>(block_read_tup));
                     }
                     else{
-                        return std::make_tuple(std::get<1>(block_read_tup), block_code, std::get<2>(block_read_tup), std::get<3>(block_read_tup));
+                        return std::make_tuple(std::get<1>(block_read_tup), block_code, std::get<2>(block_read_tup), std::get<3>(block_read_tup),std::get<6>(block_read_tup));
                     }
                 }
             }

@@ -104,7 +104,7 @@ BOOST_AUTO_TEST_CASE(write_read_test)
             gettimeofday(&time, nullptr);
             millis = ((long double) time.tv_sec * ONE_MILLISECOND) + ((long double) time.tv_usec / ONE_MILLISECOND);
             std::tuple<std::vector<unsigned char>, std::vector<unsigned char>, std::array<unsigned long, TIME_STAMPS_ON_BLOCK>, std::array<unsigned char,
-                    SHA512_DIGEST_LENGTH + sizeof(unsigned long)>> all_result;
+                    SHA512_DIGEST_LENGTH + sizeof(unsigned long)>,std::size_t> all_result;
             try {
                 all_result = t1.read(local_block_ref);
                 BOOST_ASSERT_MSG(std::get<2>(all_result) == times, "Times were not written and read back correctly!");
