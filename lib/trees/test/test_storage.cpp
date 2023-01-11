@@ -104,7 +104,7 @@ BOOST_AUTO_TEST_CASE(write_read_test)
             gettimeofday(&time, nullptr);
             millis = ((long double) time.tv_sec * ONE_MILLISECOND) + ((long double) time.tv_usec / ONE_MILLISECOND);
             std::tuple<std::vector<unsigned char>, std::vector<unsigned char>, std::array<unsigned long, TIME_STAMPS_ON_BLOCK>, std::array<unsigned char,
-                    SHA512_DIGEST_LENGTH + sizeof(unsigned long)>,std::size_t> all_result;
+                    SHA512_DIGEST_LENGTH + sizeof(unsigned long)>,std::size_t,bool> all_result;
             try {
                 all_result = t1.read(local_block_ref);
                 BOOST_ASSERT_MSG(std::get<2>(all_result) == times, "Times were not written and read back correctly!");
@@ -641,7 +641,7 @@ BOOST_AUTO_TEST_CASE(index_read_test)
 
     gettimeofday(&time, nullptr);
     millis = ((long double) time.tv_sec * ONE_MILLISECOND) + ((long double) time.tv_usec / ONE_MILLISECOND);
-    auto index_list = t1.index();
+    auto index_list = t1.index(1);
     gettimeofday(&time, nullptr);
     long double index_time =
             (((long double) time.tv_sec * ONE_MILLISECOND) + ((long double) time.tv_usec / ONE_MILLISECOND)) - millis;
@@ -719,7 +719,7 @@ BOOST_AUTO_TEST_CASE(delete_test)
     uh::trees::tree_storage t1(target);//A test folder reserved for tree storage
     //for strong laptops with SSD extension (configure test db server to run this??)
     //uh::trees::tree_storage t1("/mnt/md0");//A test folder reserved for tree storage for performance tests
-    auto index_list = t1.index();
+    auto index_list = t1.index(1);
     //from index take 2 blocks of the same chunk and copy them to RAM
     //delete one block over its reference and check if the block of the retured local reference is the same
     std::tuple<std::size_t, std::list<std::tuple<std::vector<unsigned char>, std::vector<unsigned char>>>> delete_list{};
