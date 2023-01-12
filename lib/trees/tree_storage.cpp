@@ -296,8 +296,7 @@ std::tuple<std::size_t, std::size_t, std::array<unsigned char,
     }
 }
 
-std::tuple<std::size_t, std::vector<unsigned char>, std::array<unsigned long, TIME_STAMPS_ON_BLOCK>,
-        std::array<unsigned char, SHA512_DIGEST_LENGTH + sizeof(unsigned long)>, bool, bool, std::size_t>
+std::tuple<std::size_t, std::size_t, std::vector<unsigned char>, std::array<unsigned long, TIME_STAMPS_ON_BLOCK>, std::array<unsigned char, SHA512_DIGEST_LENGTH + sizeof(unsigned long)>, bool, bool>
 uh::trees::tree_storage::read_block_base(
         FILE *reader, const std::filesystem::path &read_at, const std::vector<unsigned char> &local_block_ref,
         bool skip_read_block, bool check_valid) {
@@ -320,10 +319,10 @@ uh::trees::tree_storage::read_block_base(
     };
 
     auto error_sequence = [&]() {
-        auto err_tuple = std::tuple<std::size_t, std::vector<unsigned char>, std::array<unsigned long, TIME_STAMPS_ON_BLOCK>,
+        auto err_tuple = std::tuple<std::size_t, std::size_t, std::vector<unsigned char>, std::array<unsigned long, TIME_STAMPS_ON_BLOCK>,
                 std::array<unsigned char,
-                        SHA512_DIGEST_LENGTH + sizeof(unsigned long)>, bool, bool, std::size_t>{};
-        std::get<4>(err_tuple) = true;
+                        SHA512_DIGEST_LENGTH + sizeof(unsigned long)>, bool, bool>{};
+        std::get<5>(err_tuple) = true;
         return err_tuple;
     };
 
@@ -478,7 +477,7 @@ uh::trees::tree_storage::read_block_base(
         }
     }
     //<std::size_t,std::vector<unsigned char>,std::array<unsigned long,TIME_STAMPS_ON_BLOCK>,std::array<unsigned long,SHA512_DIGEST_LENGTH + sizeof(unsigned long)>, bool, bool>
-    return std::make_tuple(total_block_size, block, times, global_block_reference, false, valid, block_size);
+    return std::make_tuple(total_block_size,block_size, block, times, global_block_reference, false, valid);
 }
 
 std::size_t uh::trees::tree_storage::get_size() {
@@ -742,7 +741,7 @@ uh::trees::tree_storage::index(unsigned short num_threads) {
                     local_block_ref.insert(local_block_ref.cbegin(), i);
                     auto read_tup = this->read_block_base(reader, read_path.make_preferred(), local_block_ref, false, true);
 
-                    if (error_flag.test() || std::get<4>(read_tup)) {
+                    if (error_flag.test() || std::get<5>(read_tup)) {
                         total_end_sequence();
                         ERROR << "Unexpected error. Quitting.";
                         return;
@@ -750,12 +749,12 @@ uh::trees::tree_storage::index(unsigned short num_threads) {
 
                     if (std::get<5>(read_tup) && std::get<0>(read_tup) > 0) {//if valid
                         std::scoped_lock const lock_here(search_index_protect);
-                        search_index.emplace_back(std::get<3>(read_tup), local_block_ref,
-                                                  std::get<2>(read_tup));
+                        search_index.emplace_back(std::get<4>(read_tup), local_block_ref,
+                                                  std::get<3>(read_tup));
                     } else {
                         std::scoped_lock const lock_here(search_index_protect);//bit flip detect
-                        damaged_blocks_index.emplace_back(std::get<3>(read_tup), local_block_ref,
-                                                          std::get<2>(read_tup));
+                        damaged_blocks_index.emplace_back(std::get<4>(read_tup), local_block_ref,
+                                                          std::get<3>(read_tup));
                     }
                     cur_pos += std::get<0>(read_tup);
                 }
@@ -1317,7 +1316,7 @@ uh::trees::tree_storage::delete_blocks(
                 std::thread w1;
                 if (num_threads > 1)w1 = std::thread(consumer_function);
 
-                auto factory_io_sequence_end = [&error_flag, &num_threads, &w1, &multithreading_factory, &io_end_sequence, &write_once_to_maintain_file, &read_end_sequence]() {
+                auto factory_io_sequence_end = [&error_flag, &num_threads, &w1, &multithreading_factory, &io_end_sequence, &write_once_to_maintain_file]() {
                     std::atomic_flag_test_and_set_explicit(&error_flag, std::memory_order_acquire);//put error flag on
                     if (num_threads > 1) {
                         if (w1.joinable())w1.join();//write out remaining blocks to prevent data loss
@@ -1344,7 +1343,7 @@ uh::trees::tree_storage::delete_blocks(
                                    block_step_beg->cend())) {
                         //skip block copy and seek over it if to delete
                         auto read_tup = read_block_base(reader, chunk.make_preferred(), local_block_test_ref, true);
-                        if (error_flag.test() || std::get<4>(read_tup)){
+                        if (error_flag.test() || std::get<5>(read_tup)){
                             ERROR << "Unexpected error. Quitting.";
                             factory_io_sequence_end();
                             return;//break thread in case error is there
@@ -1356,20 +1355,20 @@ uh::trees::tree_storage::delete_blocks(
                     } else {
                         //copy block to maintain file
                         auto read_tup = read_block_base(reader, chunk.make_preferred(), local_block_test_ref);
-                        if (error_flag.test() || std::get<4>(read_tup)){
+                        if (error_flag.test() || std::get<5>(read_tup)){
                             ERROR << "Unexpected error. Quitting.";
                             factory_io_sequence_end();
                             return;//break thread in case error is there
                         }
                         std::array<unsigned char,
-                                SHA512_DIGEST_LENGTH + sizeof(unsigned long)> global_hash = std::get<3>(read_tup);
+                                SHA512_DIGEST_LENGTH + sizeof(unsigned long)> global_hash = std::get<4>(read_tup);
                         std::array<unsigned char, SHA512_DIGEST_LENGTH> hash{};
                         std::ranges::copy(global_hash.cbegin(), global_hash.cbegin() + SHA512_DIGEST_LENGTH,
                                           hash.begin());
                         std::unique_lock write_multithreading_f(multithreading_factory_protect);
                         //stores block, old offset vector, new offset number, block SHA512 and times
-                        multithreading_factory.emplace_back(std::get<1>(read_tup), local_block_test_ref,
-                                                            cur_pos - delete_size, hash, std::get<2>(read_tup));
+                        multithreading_factory.emplace_back(std::get<2>(read_tup), local_block_test_ref,
+                                                            cur_pos - delete_size, hash, std::get<3>(read_tup));
                         write_multithreading_f.unlock();
                         cur_pos += std::get<0>(read_tup);
                     }

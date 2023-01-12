@@ -104,7 +104,7 @@ namespace uh::trees {
             return out_vec;
         }
 
-    protected:
+    public:
         //returns total size, block_size, (optional valid) SHA512 with an ending of creation time as hash extend reordered vector, error occurred
         //for efficiency SHA512 hash calculation can be skipped and an external hash can be written
         //for updating efficiency writing prefix and block again can be skipped
@@ -116,18 +116,16 @@ namespace uh::trees {
                 std::array<unsigned long, TIME_STAMPS_ON_BLOCK> times,
                 bool update_times = false,
                 bool calc_SHA512 = true,
-                const std::array<unsigned char, SHA512_DIGEST_LENGTH> SHA_input_optional = std::array<unsigned char, SHA512_DIGEST_LENGTH>{},
+                std::array<unsigned char, SHA512_DIGEST_LENGTH> SHA_input_optional = std::array<unsigned char, SHA512_DIGEST_LENGTH>{},
                 std::size_t placeholder_block_size = 0);
 
         //returns total size of block plus information, the received block as vector, the total block with information as vector, the times in normal unsigned long form,
         //the global hash of SHA512 with creation time extend, bool error occurred, bool block description valid, block size
-        std::tuple<std::size_t, std::vector<unsigned char>, std::array<unsigned long, TIME_STAMPS_ON_BLOCK>,
-                std::array<unsigned char, SHA512_DIGEST_LENGTH + sizeof(unsigned long)>, bool, bool, std::size_t>
+        std::tuple<std::size_t, std::size_t, std::vector<unsigned char>, std::array<unsigned long, TIME_STAMPS_ON_BLOCK>, std::array<unsigned char, SHA512_DIGEST_LENGTH + sizeof(unsigned long)>, bool, bool>
         read_block_base(
                 FILE *reader, const std::filesystem::path &read_at, const std::vector<unsigned char> &local_block_ref,
                 bool skip_read_block = false, bool check_valid = false);
 
-    public:
         /*
          * tell a root folder, if another root is detected it is loaded into a loose substructure that is not indexed yet
          * the module will not know the blocks within the storage chunks, reading will fail
@@ -150,7 +148,8 @@ namespace uh::trees {
 
         /*
          * returns a tuple with binary block, local binary block reference, block times (create,valid duration,last touch), global hash
-         * if "only_info" flag is set, it will not return the block, only all the other information as a "get_info" function
+         * if "only_info" flag is set, it will not return the block, only all the other information as a "get_info" function,
+         * pushing up all results left by 1
          */
         //returns block,local block reference, timestamps, global hash reference,block size, block is valid on valid_check
         template<const bool only_info = false>
@@ -281,7 +280,7 @@ namespace uh::trees {
                     const auto block_read_tup = this->read_block_base(reader, read_path.make_preferred(), block_code, only_info, valid_check);
                     read_end_sequence();
 
-                    if (std::get<4>(block_read_tup)) {
+                    if (std::get<5>(block_read_tup)) {
                         ERROR << "File error at \"" + read_path.make_preferred().string() + ", position " +
                                  std::to_string(offset) + "\"";
                         if constexpr (only_info) {
@@ -293,7 +292,7 @@ namespace uh::trees {
                         }
                     }
 
-                    if (!std::get<5>(block_read_tup)) {
+                    if (!std::get<6>(block_read_tup)) {
                         ERROR << "File block is broken at \"" + read_path.make_preferred().string() + ", position " +
                                  std::to_string(offset) +
                                  "\"";
@@ -308,12 +307,12 @@ namespace uh::trees {
                     //std::tuple<std::vector<unsigned char>, std::vector<unsigned char>, std::array<unsigned long, TIME_STAMPS_ON_BLOCK>, std::array<unsigned char,
                     //        SHA512_DIGEST_LENGTH + sizeof(unsigned long)>>
                     if constexpr (only_info) {
-                        return std::make_tuple(block_code, std::get<2>(block_read_tup), std::get<3>(block_read_tup),
-                                               std::get<6>(block_read_tup), std::get<5>(block_read_tup));
+                        return std::make_tuple(block_code, std::get<3>(block_read_tup), std::get<4>(block_read_tup),
+                                               std::get<1>(block_read_tup), std::get<6>(block_read_tup));
                     } else {
-                        return std::make_tuple(std::get<1>(block_read_tup), block_code, std::get<2>(block_read_tup),
-                                               std::get<3>(block_read_tup), std::get<6>(block_read_tup),
-                                               std::get<5>(block_read_tup));
+                        return std::make_tuple(std::get<2>(block_read_tup), block_code, std::get<3>(block_read_tup),
+                                               std::get<4>(block_read_tup), std::get<1>(block_read_tup),
+                                               std::get<6>(block_read_tup));
                     }
                 }
             }

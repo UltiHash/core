@@ -46,8 +46,50 @@ BOOST_AUTO_TEST_CASE(constructor_test)
     std::filesystem::path target = std::filesystem::path("/home") / std::string(getenv("USER"));
     uh::trees::tree_storage t1(target);//A test folder reserved for tree storage
     t1.delete_recursive();
+    auto to_remove = target / "0000";
+    if(std::filesystem::exists(to_remove)){
+        std::filesystem::remove_all(to_remove);
+    }
     //for strong laptops with SSD extension (configure test db server to run this??)
     //uh::trees::tree_storage t1("/mnt/md0");//A test folder reserved for tree storage for performance tests
+}
+
+BOOST_AUTO_TEST_CASE(write_read_base_test)
+{
+    //tests for any linux machine
+    std::filesystem::path target = std::filesystem::path("/home") / std::string(getenv("USER"));
+    auto base_test = target / "0000";
+    uh::trees::tree_storage t1(base_test);//A test folder reserved for tree storage
+
+    //test file
+    auto base_bin = target / "00";
+    //check read and write base algorithms
+    std::vector<unsigned char> test_bin = binary_generator(STORE_MAX);
+
+    //test write
+    FILE *writer = std::fopen(base_bin.make_preferred().c_str(), "ab");
+    auto local_block_ref = std::vector<unsigned char>{0,0,0,0,0};//for feedback purposes
+    auto times = std::array<unsigned long,TIME_STAMPS_ON_BLOCK>{
+        //difference between current time and last time touched should not exceed time span to keep
+            (unsigned long)std::chrono::nanoseconds(std::chrono::high_resolution_clock::now().time_since_epoch()).count(),//creation time global
+            (unsigned long)std::chrono::nanoseconds(std::chrono::years(1)).count(),//maximum untouched time before delete
+            (unsigned long)std::chrono::nanoseconds(std::chrono::high_resolution_clock::now().time_since_epoch()).count()//last time touched
+    };
+    auto write_tup = t1.write_block_base(writer, base_bin.make_preferred(), test_bin, local_block_ref, times);
+    BOOST_ASSERT_MSG(std::fclose(writer) == 0,"Write stream was not open!");
+    auto total_size = std::get<0>(write_tup);
+    auto block_size = std::get<1>(write_tup);
+    auto global_hash = std::get<2>(write_tup);
+    auto error_occured = std::get<3>(write_tup);
+    BOOST_ASSERT_MSG(!error_occured,"An internal error occurred!");
+    //test read
+    FILE *reader = std::fopen(base_bin.make_preferred().c_str(), "rb");
+    auto read_tup = t1.read_block_base(reader,base_bin.make_preferred(),local_block_ref);
+
+
+    if(std::filesystem::exists(base_test)){
+        std::filesystem::remove_all(base_test);
+    }
 }
 
 BOOST_AUTO_TEST_CASE(write_read_test)
@@ -739,7 +781,7 @@ BOOST_AUTO_TEST_CASE(delete_test)
         //delete list shows changes that have to be thrown at the del list carrying local block references to be deleted
         //since the block references by changing offsets we need to update them
         std::for_each(del_list.begin(),del_list.end(),[&delete_list,&index_list](auto &item){
-            if(!std::any_of(std::get<1>(delete_list).begin(),std::get<1>(delete_list).end(),[&item,&index_list](auto &item2){
+            if(!std::any_of(std::get<1>(delete_list).begin(),std::get<1>(delete_list).end(),[&item](auto &item2){
                 return item == std::get<0>(item2);//check if original local block ref hit
             })){
                 //erase from index
