@@ -370,6 +370,7 @@ std::tuple<std::size_t, std::size_t, std::array<unsigned char,
     //generate global hash from reading or calculation or read update it from outside or the file
     std::array<unsigned char, SHA512_DIGEST_LENGTH + sizeof(unsigned long)> global_block_reference{};
     //hash read on updating or try if no block input was given
+    bool hash_read_error = false;
     auto hash_read = [&]{
         if(hash_buf.size() == SHA512_DIGEST_LENGTH){
             if(update_times){
@@ -380,7 +381,7 @@ std::tuple<std::size_t, std::size_t, std::array<unsigned char,
                     ERROR << "File seek for skipping hash read at writing operation failed at \"" + write_at.string() + ", position " +
                              std::to_string(sizeof(unsigned long)) + "\" at block reference\"" + block_path().string() +
                              "\"";
-                    return error_sequence_empty();
+                    hash_read_error = true;
                 }
             }
             else{
@@ -388,7 +389,7 @@ std::tuple<std::size_t, std::size_t, std::array<unsigned char,
                 if (!std::fwrite(hash_buf.data(), sizeof(unsigned char),hash_buf.size(), writer)) {
                     ERROR << "File write hash from extern source failed while writing to path \"" + write_at.string() +
                              "\" at block reference\"" + block_path().string() + "\"";
-                    return error_sequence_empty();
+                    hash_read_error = true;
                 }
             }
         }
@@ -400,14 +401,14 @@ std::tuple<std::size_t, std::size_t, std::array<unsigned char,
                 FATAL
                     << "I/O hash reading was not completed while writing to path \"" + write_at.string() +
                        "\" at block reference\"" + block_path().string() + "\"";
-                return std::make_tuple(total_block_size, block_size, std::array<unsigned char,
-                        SHA512_DIGEST_LENGTH + sizeof(unsigned long)>{},true);
+                hash_read_error = true;
             }
             std::ranges::copy(hash_buf.cbegin(), hash_buf.cend(), global_block_reference.begin());
             std::ranges::copy(convert_time[0].cbegin(), convert_time[0].cend(), global_block_reference.begin() + SHA512_DIGEST_LENGTH);
         }
     };
 
+    bool calc_SHA_and_write_error = false;
     auto calc_SHA_and_write = [&]{
         //calculate hash
         if(hash_buf.size() != SHA512_DIGEST_LENGTH){
@@ -421,7 +422,7 @@ std::tuple<std::size_t, std::size_t, std::array<unsigned char,
         if (!std::fwrite(hash_buf.data(), sizeof(unsigned char),hash_buf.size(), writer)) {
             ERROR << "File write hash failed at writing to path \"" + write_at.string() +
                      "\" at block reference\"" + block_path().string() + "\"";
-            return error_sequence_empty();
+            calc_SHA_and_write_error = true;
         }
     };
     //decide if to read, seek or write the hash on operation
@@ -432,9 +433,16 @@ std::tuple<std::size_t, std::size_t, std::array<unsigned char,
         //HASH GENERATION
         if (calc_SHA512) {
             calc_SHA_and_write();
+            if(calc_SHA_and_write_error){
+                return error_sequence_empty();
+            }
         }
         else{
             hash_read();
+            if(hash_read_error){
+                return std::make_tuple(total_block_size, block_size, std::array<unsigned char,
+                        SHA512_DIGEST_LENGTH + sizeof(unsigned long)>{},true);
+            }
         }
     }
     else{
@@ -442,6 +450,9 @@ std::tuple<std::size_t, std::size_t, std::array<unsigned char,
             if (calc_SHA512) {
                 if(!block.empty()){
                     calc_SHA_and_write();
+                    if(calc_SHA_and_write_error){
+                        return error_sequence_empty();
+                    }
                 }
                 else{
                     ERROR << "Cannot calculate SHA without block input!";
@@ -451,6 +462,10 @@ std::tuple<std::size_t, std::size_t, std::array<unsigned char,
             }
             else{
                 hash_read();
+                if(hash_read_error){
+                    return std::make_tuple(total_block_size, block_size, std::array<unsigned char,
+                            SHA512_DIGEST_LENGTH + sizeof(unsigned long)>{},true);
+                }
             }
         }
         else{
