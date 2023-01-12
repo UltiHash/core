@@ -1452,7 +1452,7 @@ uh::trees::tree_storage::delete_blocks(
 
                     auto write_tup = write_block_base(writer, chunk_maintain.make_preferred(), current_storage_block,
                                                       new_block_reference,
-                                                      old_times, false, false, old_SHA);
+                                                      old_times, false, false, std::vector<unsigned char>{old_SHA.cbegin(),old_SHA.cend()});
 
                     if (std::get<3>(write_tup)) {
                         write_total_end();
