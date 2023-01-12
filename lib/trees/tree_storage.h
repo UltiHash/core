@@ -111,7 +111,7 @@ namespace uh::trees {
         //writes times,SHA512,prefix,block,checksum
         std::tuple<std::size_t, std::size_t, std::array<unsigned char,
                 SHA512_DIGEST_LENGTH + sizeof(unsigned long)>, bool> write_block_base(
-                FILE *writer, const std::filesystem::path &write_at, const std::vector<unsigned char> &block,
+                FILE *writer, const std::filesystem::path &write_at, std::vector<unsigned char> block,
                 const std::vector<unsigned char> &local_block_ref,
                 std::array<unsigned long, TIME_STAMPS_ON_BLOCK> times,
                 bool update_times = false,

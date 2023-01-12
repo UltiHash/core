@@ -173,7 +173,7 @@ std::vector<unsigned char> uh::trees::tree_storage::prefix_wrap(std::size_t inpu
 
 std::tuple<std::size_t, std::size_t, std::array<unsigned char,
         SHA512_DIGEST_LENGTH + sizeof(unsigned long)>, bool> uh::trees::tree_storage::write_block_base(
-        FILE *writer, const std::filesystem::path &write_at, const std::vector<unsigned char> &block,
+        FILE *writer, const std::filesystem::path &write_at, std::vector<unsigned char> block,
         const std::vector<unsigned char> &local_block_ref,
         std::array<unsigned long, TIME_STAMPS_ON_BLOCK> times,
         bool update_times,
@@ -230,7 +230,7 @@ std::tuple<std::size_t, std::size_t, std::array<unsigned char,
         if(skip_first_time && first_time){
             first_time = false;
             //read creation time if skipped to handle global hash creation
-            if((update_times && block_input)||(update_times&&!block_input&&!calc_SHA512)||(!update_times&&block_input)){
+            if((block_input)||(update_times&&!block_input&&!calc_SHA512)||(!block_input&&update_times&&calc_SHA512&&block.empty())){
                 if (std::fread(c_t.data(), sizeof(unsigned char), sizeof(unsigned long), writer) != sizeof(unsigned long)) {
                     FATAL
                         << "I/O creation time read to create global hash was not completed while writing to path \"" + write_at.string() +
@@ -262,6 +262,7 @@ std::tuple<std::size_t, std::size_t, std::array<unsigned char,
     //somehow generate prefix; first try to generate from block size, then from placeholder_block_size else try to read it from disk and get block size
     std::vector<unsigned char> prefix{};
     std::size_t block_size{};
+    bool seek_prefix = true;
     if(block_input){
         prefix = prefix_wrap(block.size());
         block_size = block.size();
@@ -295,22 +296,73 @@ std::tuple<std::size_t, std::size_t, std::array<unsigned char,
                 block_size += (((std::size_t) buffer_in[buf_count]) << (buf_count * CHAR_BITS));
             }
             prefix = prefix_wrap(block_size);
+            seek_prefix = false;
         }
     }
-    //if we could generate the prefix, we write it down else we will have read over it
-    if (!std::fwrite(prefix.data(), sizeof(unsigned char),prefix.size(), writer)) {
-        ERROR << "File write prefix failed while writing to path \"" + write_at.string() +
-                 "\" at block reference\"" + block_path().string() + "\"";
-        return error_sequence_empty();
+    if(seek_prefix && update_times){
+        //prefix was calculated but not read, so skip it
+        if (std::fseek(writer, static_cast<long>(prefix.size()), SEEK_CUR)) {//skip prefix and block
+            ERROR << "File seek for skipping prefix read at writing operation failed at \"" + write_at.string() + ", position " +
+                     std::to_string(sizeof(unsigned long)) + "\" at block reference\"" + block_path().string() +
+                     "\"";
+            return error_sequence_empty();
+        }
     }
+    else{
+        //if we could generate the prefix, we write it down else we will have read over it
+        if (!std::fwrite(prefix.data(), sizeof(unsigned char),prefix.size(), writer)) {
+            ERROR << "File write prefix failed while writing to path \"" + write_at.string() +
+                     "\" at block reference\"" + block_path().string() + "\"";
+            return error_sequence_empty();
+        }
+    }
+
     //total size
     const std::size_t total_block_size = SHA512_DIGEST_LENGTH + TIME_STAMPS_ON_BLOCK * sizeof(unsigned long) +
                                          prefix.size() + block_size +
                                          SHA256_DIGEST_LENGTH;
 
+    //continue to write block or get it from elsewhere
+    if(update_times){
+        if(block_input){
+            //seek over block on file and take this block input in
+            if (std::fseek(writer, static_cast<long>(block.size()), SEEK_CUR)) {//skip prefix and block
+                ERROR << "File seek for skipping block read at writing operation failed at \"" + write_at.string() + ", position " +
+                         std::to_string(sizeof(unsigned long)) + "\" at block reference\"" + block_path().string() +
+                         "\"";
+                return error_sequence_empty();
+            }
+        }
+        else{
+            //read block from file
+            block.resize(block_size,0);
+            if (std::fread(block.data(), sizeof(unsigned char), block.size(), writer) != block.size()) {
+                FATAL
+                    << "I/O block reading was not completed while writing to path \"" + write_at.string() +
+                       "\" at block reference\"" + block_path().string() + "\"";
+                return std::make_tuple(total_block_size, block_size, std::array<unsigned char,
+                        SHA512_DIGEST_LENGTH + sizeof(unsigned long)>{},true);
+            }
+        }
+    }
+    else{
+        if(block_input){
+            if (!std::fwrite(block.data(), sizeof(unsigned char),block.size(), writer)) {
+                ERROR << "File write block failed while writing to path \"" + write_at.string() +
+                         "\" at block reference\"" + block_path().string() + "\"";
+                return error_sequence_empty();
+            }
+        }
+        else{
+            ERROR << "File write block failed while writing to path \"" + write_at.string() +
+                     "\" at block reference\"" + block_path().string() + "\", because the given block was empty!";
+            return error_sequence_empty();
+        }
+    }
+
     //generate global hash from reading or calculation or read update it from outside or the file
     std::array<unsigned char, SHA512_DIGEST_LENGTH + sizeof(unsigned long)> global_hash{};
-    //hash read on on updating or try if no block input was given
+    //hash read on updating or try if no block input was given
     auto hash_read = [&]{
         if(hash_buf.size() == SHA512_DIGEST_LENGTH){
             //if hash_buf is filled we use it and calculate the global hash with creation time
@@ -358,31 +410,27 @@ std::tuple<std::size_t, std::size_t, std::array<unsigned char,
     //decide if to read, seek or write the hash on operation
     //on update_times: get hash from outside or from reading if input block is empty, if input block exists generate SHA and overwrite
     //else: get hash from outside or from calculating SHA block input and write, block input is required
-    if(update_times){
-        if(block_input){
-            //HASH GENERATION
-            if (calc_SHA512) {
-                calc_SHA_and_write();
-            }
-            else{
-                hash_read();
-            }
+
+    if(block_input){
+        //HASH GENERATION
+        if (calc_SHA512) {
+            calc_SHA_and_write();
         }
         else{
-            if (calc_SHA512) {
-                ERROR << "Cannot calculate SHA without block input!";
-                return std::make_tuple(total_block_size, block_size, std::array<unsigned char,
-                        SHA512_DIGEST_LENGTH + sizeof(unsigned long)>{},true);
-            }
-            else{
-                hash_read();
-            }
+            hash_read();
         }
     }
     else{
-        if(block_input){
+        if(update_times){
             if (calc_SHA512) {
-                calc_SHA_and_write();
+                if(!block.empty()){
+                    calc_SHA_and_write();
+                }
+                else{
+                    ERROR << "Cannot calculate SHA without block input!";
+                    return std::make_tuple(total_block_size, block_size, std::array<unsigned char,
+                            SHA512_DIGEST_LENGTH + sizeof(unsigned long)>{},true);
+                }
             }
             else{
                 hash_read();
@@ -394,9 +442,6 @@ std::tuple<std::size_t, std::size_t, std::array<unsigned char,
                     SHA512_DIGEST_LENGTH + sizeof(unsigned long)>{},true);
         }
     }
-
-    //now we have a hash and a global hash; continue to write block
-
 
     auto prefix = prefix_wrap(std::max(block.size(), placeholder_block_size));
     std::vector<unsigned char> block_buf = mem_wait<unsigned char>(total_block_size);
