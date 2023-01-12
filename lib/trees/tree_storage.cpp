@@ -200,7 +200,7 @@ std::tuple<std::size_t, std::size_t, std::array<unsigned char,
         }
         return bin_time;
     };
-    auto error_sequence_empty = [&]{
+    auto error_sequence_empty = [&] {
         std::tuple<std::size_t, std::size_t, std::array<unsigned char,
                 SHA512_DIGEST_LENGTH + sizeof(unsigned long)>, bool> empty_tup{};
         std::get<3>(empty_tup) = true;
@@ -216,10 +216,8 @@ std::tuple<std::size_t, std::size_t, std::array<unsigned char,
     bool block_input = !block.empty();
     bool placeholder_size_available = placeholder_block_size > 0;
     //action if input creation time is set 0: assume the writer wants to update and skip writing the creation time
-    bool skip_first_time = false;
-    if (times[0] == 0 && update_times) skip_first_time = true;
-    if(times[0] == 0 && !update_times){
-        ERROR << "First time was empty even if you did not use update_times mode!";
+    if (times[0] == 0 && !update_times) {
+        ERROR << "Creation time was empty even if you did not use update_times mode!";
         return error_sequence_empty();
     }
     //write times, prefix, block, block_hash checksum
@@ -232,16 +230,18 @@ std::tuple<std::size_t, std::size_t, std::array<unsigned char,
     }
     //write times
     bool first_time = true;
-    for(auto &c_t:convert_time){
-        c_t.resize(sizeof(unsigned long),0);
-        if(skip_first_time && first_time){
+    for (auto &c_t: convert_time) {
+        c_t.resize(sizeof(unsigned long), 0);
+        if (!(block_input && !update_times && calc_SHA512 && hash_buf.empty()) &&
+            first_time) {//if not the clear writing only case we always only modify the block
             first_time = false;
             //read creation time if skipped to handle global hash creation
-            if(((block_input)||(update_times&&!block_input&&!calc_SHA512)||(!block_input&&update_times&&calc_SHA512&&block.empty()))&&
-            !(block_input&&!calc_SHA512&&hash_buf.size() != SHA512_DIGEST_LENGTH&&!update_times)){
-                if (std::fread(c_t.data(), sizeof(unsigned char), sizeof(unsigned long), writer) != sizeof(unsigned long)) {
+            if (times[0] == 0) {
+                if (std::fread(c_t.data(), sizeof(unsigned char), sizeof(unsigned long), writer) !=
+                    sizeof(unsigned long)) {
                     FATAL
-                        << "I/O creation time read to create global hash was not completed while writing to path \"" + write_at.string() +
+                        << "I/O creation time read to create global hash was not completed while writing to path \"" +
+                           write_at.string() +
                            "\" at block reference\"" + block_path().string() + "\"";
                     return error_sequence_empty();
                 }
@@ -251,8 +251,7 @@ std::tuple<std::size_t, std::size_t, std::array<unsigned char,
                     block_creation += (((std::size_t) c_t[i]) << (i * CHAR_BITS));
                 }
                 times[0] = block_creation;
-            }
-            else{
+            } else {
                 if (std::fseek(writer, static_cast<long>(sizeof(unsigned long)), SEEK_CUR)) {//skip prefix and block
                     ERROR << "File seek for skipping creation time failed at \"" + write_at.string() + ", position " +
                              std::to_string(sizeof(unsigned long)) + "\" at block reference\"" + block_path().string() +
@@ -262,7 +261,7 @@ std::tuple<std::size_t, std::size_t, std::array<unsigned char,
             }
             continue;
         }
-        if (!std::fwrite(c_t.data(), sizeof(unsigned char),sizeof(unsigned long), writer)) {
+        if (!std::fwrite(c_t.data(), sizeof(unsigned char), sizeof(unsigned long), writer)) {
             ERROR << "File write binary time opening failed writing time at \"" + write_at.string() + "\"";
             return error_sequence_empty();
         }
@@ -271,16 +270,14 @@ std::tuple<std::size_t, std::size_t, std::array<unsigned char,
     std::vector<unsigned char> prefix{};
     std::size_t block_size{};
     bool seeked_prefix = false;
-    if(block_input){
+    if (block_input) {
         prefix = prefix_wrap(block.size());
         block_size = block.size();
-    }
-    else{
-        if(placeholder_size_available){
+    } else {
+        if (placeholder_size_available) {
             prefix = prefix_wrap(placeholder_block_size);
             block_size = placeholder_block_size;
-        }
-        else{
+        } else {
             //read block size from disk
             unsigned char buf_size = 0;
             if (std::fread(&buf_size, sizeof(unsigned char), BUF_LEN_SIZE_FOR_SIZE_BLOCK, writer) !=
@@ -307,21 +304,21 @@ std::tuple<std::size_t, std::size_t, std::array<unsigned char,
             seeked_prefix = true;
         }
     }
-    if(update_times){
+    if (update_times) {
         //prefix was calculated but not read, so skip it
-        if(!seeked_prefix){
+        if (!seeked_prefix) {
             if (std::fseek(writer, static_cast<long>(prefix.size()), SEEK_CUR)) {//skip prefix and block
-                ERROR << "File seek for skipping prefix read at writing operation failed at \"" + write_at.string() + ", position " +
+                ERROR << "File seek for skipping prefix read at writing operation failed at \"" + write_at.string() +
+                         ", position " +
                          std::to_string(prefix.size()) + "\" at block reference\"" + block_path().string() +
                          "\"";
                 return error_sequence_empty();
             }
         }
-    }
-    else{
+    } else {
         //if we could generate the prefix, we write it down else we will have read over it
-        if(!seeked_prefix){
-            if (!std::fwrite(prefix.data(), sizeof(unsigned char),prefix.size(), writer)) {
+        if (!seeked_prefix) {
+            if (!std::fwrite(prefix.data(), sizeof(unsigned char), prefix.size(), writer)) {
                 ERROR << "File write prefix failed while writing to path \"" + write_at.string() +
                          "\" at block reference\"" + block_path().string() + "\"";
                 return error_sequence_empty();
@@ -335,37 +332,35 @@ std::tuple<std::size_t, std::size_t, std::array<unsigned char,
                                          SHA256_DIGEST_LENGTH;
 
     //continue to write block or get it from elsewhere
-    if(update_times){
-        if(block_input){
+    if (update_times) {
+        if (block_input) {
             //seek over block on file and take this block input in
             if (std::fseek(writer, static_cast<long>(block.size()), SEEK_CUR)) {//skip prefix and block
-                ERROR << "File seek for skipping block read at writing operation failed at \"" + write_at.string() + ", position " +
+                ERROR << "File seek for skipping block read at writing operation failed at \"" + write_at.string() +
+                         ", position " +
                          std::to_string(block.size()) + "\" at block reference\"" + block_path().string() +
                          "\"";
                 return error_sequence_empty();
             }
-        }
-        else{
+        } else {
             //read block from file
-            block.resize(block_size,0);
+            block.resize(block_size, 0);
             if (std::fread(block.data(), sizeof(unsigned char), block.size(), writer) != block.size()) {
                 FATAL
                     << "I/O block reading was not completed while writing to path \"" + write_at.string() +
                        "\" at block reference\"" + block_path().string() + "\"";
                 return std::make_tuple(total_block_size, block_size, std::array<unsigned char,
-                        SHA512_DIGEST_LENGTH + sizeof(unsigned long)>{},true);
+                        SHA512_DIGEST_LENGTH + sizeof(unsigned long)>{}, true);
             }
         }
-    }
-    else{
-        if(block_input){
-            if (!std::fwrite(block.data(), sizeof(unsigned char),block.size(), writer)) {
+    } else {
+        if (block_input) {
+            if (!std::fwrite(block.data(), sizeof(unsigned char), block.size(), writer)) {
                 ERROR << "File write block failed while writing to path \"" + write_at.string() +
                          "\" at block reference\"" + block_path().string() + "\"";
                 return error_sequence_empty();
             }
-        }
-        else{
+        } else {
             ERROR << "File write block failed while writing to path \"" + write_at.string() +
                      "\" at block reference\"" + block_path().string() + "\", because the given block was empty!";
             return error_sequence_empty();
@@ -376,30 +371,29 @@ std::tuple<std::size_t, std::size_t, std::array<unsigned char,
     std::array<unsigned char, SHA512_DIGEST_LENGTH + sizeof(unsigned long)> global_block_reference{};
     //hash read on updating or try if no block input was given
     bool hash_read_error = false;
-    auto hash_read = [&]{
-        if(hash_buf.size() == SHA512_DIGEST_LENGTH){
-            if(update_times){
+    auto hash_read = [&] {
+        if (hash_buf.size() == SHA512_DIGEST_LENGTH) {
+            if (update_times) {
                 //if hash_buf is filled we use it and calculate the global hash with creation time
                 if (std::fseek(writer, static_cast<long>(hash_buf.size()), SEEK_CUR)) {//skip prefix and block
-                    ERROR << "File seek for skipping hash read at writing operation failed at \"" + write_at.string() + ", position " +
+                    ERROR << "File seek for skipping hash read at writing operation failed at \"" + write_at.string() +
+                             ", position " +
                              std::to_string(hash_buf.size()) + "\" at block reference\"" + block_path().string() +
                              "\"";
                     hash_read_error = true;
                 }
-            }
-            else{
+            } else {
                 //write hash input to file
-                if (!std::fwrite(hash_buf.data(), sizeof(unsigned char),hash_buf.size(), writer)) {
+                if (!std::fwrite(hash_buf.data(), sizeof(unsigned char), hash_buf.size(), writer)) {
                     ERROR << "File write hash from extern source failed while writing to path \"" + write_at.string() +
                              "\" at block reference\"" + block_path().string() + "\"";
                     hash_read_error = true;
                 }
             }
-        }
-        else{
+        } else {
             //try to read hash_buf and the global_block_reference from disk
             hash_buf.clear();
-            hash_buf.resize(SHA512_DIGEST_LENGTH,0);
+            hash_buf.resize(SHA512_DIGEST_LENGTH, 0);
             if (std::fread(hash_buf.data(), sizeof(unsigned char), hash_buf.size(), writer) != hash_buf.size()) {
                 FATAL
                     << "I/O hash reading was not completed while writing to path \"" + write_at.string() +
@@ -410,25 +404,25 @@ std::tuple<std::size_t, std::size_t, std::array<unsigned char,
     };
 
     bool calc_SHA_and_write_error = false;
-    auto calc_SHA_and_write = [&]{
+    auto calc_SHA_and_write = [&] {
         //calculate hash
-        if(hash_buf.size() != SHA512_DIGEST_LENGTH){
+        if (hash_buf.size() != SHA512_DIGEST_LENGTH) {
             hash_buf.clear();
-            hash_buf.resize(SHA512_DIGEST_LENGTH,0);
+            hash_buf.resize(SHA512_DIGEST_LENGTH, 0);
         }
         SHA512(block.data(), block_size, hash_buf.data());
 
-        if(block_input){
+        if (block_input) {
             //write hash
-            if (!std::fwrite(hash_buf.data(), sizeof(unsigned char),hash_buf.size(), writer)) {
+            if (!std::fwrite(hash_buf.data(), sizeof(unsigned char), hash_buf.size(), writer)) {
                 ERROR << "File write hash failed at writing to path \"" + write_at.string() +
                          "\" at block reference\"" + block_path().string() + "\"";
                 calc_SHA_and_write_error = true;
             }
-        }
-        else{
+        } else {
             if (std::fseek(writer, static_cast<long>(hash_buf.size()), SEEK_CUR)) {//skip prefix and block
-                ERROR << "File seek for skipping hash write at writing operation failed at \"" + write_at.string() + ", position " +
+                ERROR << "File seek for skipping hash write at writing operation failed at \"" + write_at.string() +
+                         ", position " +
                          std::to_string(hash_buf.size()) + "\" at block reference\"" + block_path().string() +
                          "\"";
                 hash_read_error = true;
@@ -440,60 +434,57 @@ std::tuple<std::size_t, std::size_t, std::array<unsigned char,
     //on update_times: get hash from outside or from reading if input block is empty, if input block exists generate SHA and overwrite
     //else: get hash from outside or from calculating SHA block input and write, block input is required
 
-    if(block_input){
+    if (block_input) {
         //HASH GENERATION
         if (calc_SHA512) {
             calc_SHA_and_write();
-            if(calc_SHA_and_write_error){
+            if (calc_SHA_and_write_error) {
                 return error_sequence_empty();
             }
-        }
-        else{
+        } else {
             hash_read();
-            if(hash_read_error){
+            if (hash_read_error) {
                 return std::make_tuple(total_block_size, block_size, std::array<unsigned char,
-                        SHA512_DIGEST_LENGTH + sizeof(unsigned long)>{},true);
+                        SHA512_DIGEST_LENGTH + sizeof(unsigned long)>{}, true);
             }
         }
-    }
-    else{
-        if(update_times){
+    } else {
+        if (update_times) {
             if (calc_SHA512) {
-                if(!block.empty()){
+                if (!block.empty()) {
                     calc_SHA_and_write();
-                    if(calc_SHA_and_write_error){
+                    if (calc_SHA_and_write_error) {
                         return error_sequence_empty();
                     }
-                }
-                else{
+                } else {
                     ERROR << "Cannot calculate SHA without block input!";
                     return std::make_tuple(total_block_size, block_size, std::array<unsigned char,
-                            SHA512_DIGEST_LENGTH + sizeof(unsigned long)>{},true);
+                            SHA512_DIGEST_LENGTH + sizeof(unsigned long)>{}, true);
                 }
-            }
-            else{
+            } else {
                 hash_read();
-                if(hash_read_error){
+                if (hash_read_error) {
                     return std::make_tuple(total_block_size, block_size, std::array<unsigned char,
-                            SHA512_DIGEST_LENGTH + sizeof(unsigned long)>{},true);
+                            SHA512_DIGEST_LENGTH + sizeof(unsigned long)>{}, true);
                 }
             }
-        }
-        else{
+        } else {
             ERROR << "Block input is needed if not updating!";
             return std::make_tuple(total_block_size, block_size, std::array<unsigned char,
-                    SHA512_DIGEST_LENGTH + sizeof(unsigned long)>{},true);
+                    SHA512_DIGEST_LENGTH + sizeof(unsigned long)>{}, true);
         }
     }
     //calculate global hash reference
     std::ranges::copy(hash_buf.cbegin(), hash_buf.cend(), global_block_reference.begin());
-    std::ranges::copy(convert_time[0].cbegin(), convert_time[0].cend(), global_block_reference.begin() + SHA512_DIGEST_LENGTH);
+    std::ranges::copy(convert_time[0].cbegin(), convert_time[0].cend(),
+                      global_block_reference.begin() + SHA512_DIGEST_LENGTH);
     //finally always calculate and update checksum
     std::vector<unsigned char> block_buf = mem_wait<unsigned char>(total_block_size);
     std::array<unsigned char, SHA256_DIGEST_LENGTH> checksum{};
     //all values should be complete here so we can give most information on error
     auto error_sequence = [&]() {
-        return std::make_tuple(total_block_size, std::max(block.size(), placeholder_block_size), global_block_reference,true);
+        return std::make_tuple(total_block_size, std::max(block.size(), placeholder_block_size), global_block_reference,
+                               true);
     };
     //fill block_buf to simulate a complete model of the block on RAM and calculate checksum
     for (const auto &t_c: convert_time) {//times
@@ -504,18 +495,18 @@ std::tuple<std::size_t, std::size_t, std::array<unsigned char,
     block_buf.insert(block_buf.cend(), hash_buf.cbegin(), hash_buf.cend());//SHA512
     SHA256(block_buf.data(), block_buf.size(), checksum.data());
 
-    if (block_buf.size()+SHA256_DIGEST_LENGTH != total_block_size) {
+    if (block_buf.size() + SHA256_DIGEST_LENGTH != total_block_size) {
         ERROR << "File write opening failed at \"" + write_at.string() + "\" at block reference\"" +
                  block_path().string() + "\"";
         return error_sequence();
     }
-    if (!std::fwrite(checksum.data(),  sizeof(unsigned char), checksum.size(), writer)) {
+    if (!std::fwrite(checksum.data(), sizeof(unsigned char), checksum.size(), writer)) {
         ERROR << "File write binary time opening failed at \"" + write_at.string() +
                  "\" at block reference\"" + block_path().string() + "\"";
         return error_sequence();
     }
 //done
-    return std::make_tuple(total_block_size, block_size, global_block_reference,false);
+    return std::make_tuple(total_block_size, block_size, global_block_reference, false);
 }
 
 std::tuple<std::size_t, std::size_t, std::vector<unsigned char>, std::array<unsigned long, TIME_STAMPS_ON_BLOCK>, std::array<unsigned char,
@@ -575,7 +566,7 @@ uh::trees::tree_storage::read_block_base(
         auto beg_time = first_section.cbegin() + time_shifter * (long) sizeof(unsigned long);
         auto end_time = beg_time + sizeof(unsigned long);
         std::vector<unsigned char> vector_time = mem_wait<unsigned char>(sizeof(unsigned long));
-        vector_time.assign(beg_time,end_time);
+        vector_time.assign(beg_time, end_time);
         convert_time[time_shifter] = vector_time;
         unsigned long block_time{};
         for (unsigned short i = 0; i < (unsigned short) sizeof(unsigned long); i++) {
@@ -610,7 +601,8 @@ uh::trees::tree_storage::read_block_base(
     std::vector<unsigned char> block = mem_wait<unsigned char>(block_size);
     bool valid = true;
     std::size_t total_block_size = TIME_STAMPS_ON_BLOCK * sizeof(unsigned long) +
-                                   (BUF_LEN_SIZE_FOR_SIZE_BLOCK + buffer_in.size()) + SHA512_DIGEST_LENGTH + block_size +
+                                   (BUF_LEN_SIZE_FOR_SIZE_BLOCK + buffer_in.size()) + SHA512_DIGEST_LENGTH +
+                                   block_size +
                                    SHA256_DIGEST_LENGTH;
     //read block optional
     if (skip_read_block) {
@@ -619,8 +611,7 @@ uh::trees::tree_storage::read_block_base(
                      read_at.string() + ", jump " + std::to_string(block_size + SHA256_DIGEST_LENGTH) +
                      "\" at block reference\"" + block_path().string() + "\"";
             return error_sequence();
-        }
-        else{
+        } else {
             if (std::fseek(reader, static_cast<long>(block_size), SEEK_CUR)) {
                 ERROR << "File seek for skipping block failed at \"" + read_at.string() + ", jump " +
                          std::to_string(block_size) + "\" at block reference\"" +
@@ -647,7 +638,7 @@ uh::trees::tree_storage::read_block_base(
                block_path().string() + "\"";
         return error_sequence();
     }
-    if(check_valid){
+    if (check_valid) {
         std::array<unsigned char, SHA512_DIGEST_LENGTH> hash_test{};
         SHA512(block.data(), block.size(), hash_test.data());
         valid = std::equal(hash_buf.cbegin(), hash_buf.cend(), hash_test.cbegin(), hash_test.cend());
@@ -692,8 +683,7 @@ uh::trees::tree_storage::read_block_base(
                 return error_sequence();
             }
         }
-    }
-    else{
+    } else {
         if (std::fseek(reader, static_cast<long>(SHA256_DIGEST_LENGTH), SEEK_CUR)) {
             ERROR << "File seek for validity test after broken block failed at \"" + read_at.string() +
                      ", jump " + std::to_string(SHA256_DIGEST_LENGTH) + "\" at block reference\"" +
@@ -704,7 +694,8 @@ uh::trees::tree_storage::read_block_base(
 
     //generate global hash
     std::ranges::copy(hash_buf.cbegin(), hash_buf.cend(), global_block_reference.begin());
-    std::ranges::copy(convert_time[0].cbegin(), convert_time[0].cend(), global_block_reference.begin() + SHA512_DIGEST_LENGTH);
+    std::ranges::copy(convert_time[0].cbegin(), convert_time[0].cend(),
+                      global_block_reference.begin() + SHA512_DIGEST_LENGTH);
 
     //<std::size_t,std::vector<unsigned char>,std::array<unsigned long,TIME_STAMPS_ON_BLOCK>,std::array<unsigned long,SHA512_DIGEST_LENGTH + sizeof(unsigned long)>, bool, bool>
     return std::make_tuple(total_block_size, block_size, block, times, global_block_reference, false, valid);
@@ -1488,7 +1479,8 @@ uh::trees::tree_storage::delete_blocks(
 
                     auto write_tup = write_block_base(writer, chunk_maintain.make_preferred(), current_storage_block,
                                                       new_block_reference,
-                                                      old_times, false, false, std::vector<unsigned char>{old_SHA.cbegin(),old_SHA.cend()});
+                                                      old_times, false, false,
+                                                      std::vector<unsigned char>{old_SHA.cbegin(), old_SHA.cend()});
 
                     if (std::get<3>(write_tup)) {
                         write_total_end();
