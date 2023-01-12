@@ -174,7 +174,7 @@ BOOST_AUTO_TEST_CASE(write_read_base_test)
 
     //write again in update mode and check again if all results are the same; block can be empty as it already exists
     //expected behaviour: block and times were given, but only times and checksum are updated by reading hash and block from disk calculating the checksum
-    writer = std::fopen(base_bin.make_preferred().c_str(), "wb+");
+    writer = std::fopen(base_bin.make_preferred().c_str(), "rb+");
     write_tup = t1.write_block_base(writer, base_bin.make_preferred(), std::vector<unsigned char>{}, local_block_ref, times, true);
     BOOST_ASSERT_MSG(std::fclose(writer) == 0,"Write stream was not open!");
     total_size_write = std::get<0>(write_tup);
@@ -188,7 +188,7 @@ BOOST_AUTO_TEST_CASE(write_read_base_test)
     BOOST_ASSERT_MSG(read_tup == read_tup2,"The results after reading were not the same!");
     //write again in update mode and try to use already known sha to block for speed, result should still be the same,
     // only update times and checksum, skipping read block for hash if block is not empty or placeholder_block_size is set
-    writer = std::fopen(base_bin.make_preferred().c_str(), "wb+");
+    writer = std::fopen(base_bin.make_preferred().c_str(), "rb+");
     write_tup = t1.write_block_base(writer, base_bin.make_preferred(), test_bin, local_block_ref, times, true, false, std::vector<unsigned char>{block_hash.cbegin(),block_hash.cend()});
     BOOST_ASSERT_MSG(std::fclose(writer) == 0,"Write stream was not open!");
     total_size_write = std::get<0>(write_tup);
@@ -201,7 +201,7 @@ BOOST_AUTO_TEST_CASE(write_read_base_test)
     read_tests();
     BOOST_ASSERT_MSG(read_tup == read_tup2,"The results after reading were not the same!");
     //same with placeholder_block_size
-    writer = std::fopen(base_bin.make_preferred().c_str(), "wb+");
+    writer = std::fopen(base_bin.make_preferred().c_str(), "rb+");
     write_tup = t1.write_block_base(writer, base_bin.make_preferred(), std::vector<unsigned char>{}, local_block_ref, times, true, false, std::vector<unsigned char>{block_hash.cbegin(),block_hash.cend()}, block_size_read);
     BOOST_ASSERT_MSG(std::fclose(writer) == 0,"Write stream was not open!");
     total_size_write = std::get<0>(write_tup);
@@ -215,7 +215,7 @@ BOOST_AUTO_TEST_CASE(write_read_base_test)
     BOOST_ASSERT_MSG(read_tup == read_tup2,"The results after reading were not the same!");
     //skip creation time update
     times[0] = 0;
-    writer = std::fopen(base_bin.make_preferred().c_str(), "wb+");
+    writer = std::fopen(base_bin.make_preferred().c_str(), "rb+");
     write_tup = t1.write_block_base(writer, base_bin.make_preferred(), std::vector<unsigned char>{}, local_block_ref, times, true, false, std::vector<unsigned char>{block_hash.cbegin(),block_hash.cend()}, block_size_read);
     BOOST_ASSERT_MSG(std::fclose(writer) == 0,"Write stream was not open!");
     total_size_write = std::get<0>(write_tup);
