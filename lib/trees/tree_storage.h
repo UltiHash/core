@@ -116,7 +116,7 @@ namespace uh::trees {
                 std::array<unsigned long, TIME_STAMPS_ON_BLOCK> times,
                 bool update_times = false,
                 bool calc_SHA512 = true,
-                std::array<unsigned char, SHA512_DIGEST_LENGTH> SHA_input_optional = std::array<unsigned char, SHA512_DIGEST_LENGTH>{},
+                std::array<unsigned char, SHA512_DIGEST_LENGTH> hash_buf = std::array<unsigned char, SHA512_DIGEST_LENGTH>{},
                 std::size_t placeholder_block_size = 0);
 
         //returns total size of block plus information, the received block as vector, the total block with information as vector, the times in normal unsigned long form,

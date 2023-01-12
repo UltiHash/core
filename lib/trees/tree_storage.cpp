@@ -178,9 +178,20 @@ std::tuple<std::size_t, std::size_t, std::array<unsigned char,
         std::array<unsigned long, TIME_STAMPS_ON_BLOCK> times,
         bool update_times,
         bool calc_SHA512,
-        const std::array<unsigned char, SHA512_DIGEST_LENGTH> SHA_input_optional,
+        std::array<unsigned char, SHA512_DIGEST_LENGTH> hash_buf,
         std::size_t placeholder_block_size) {
-
+    //generic functions
+    auto block_path = [&] {
+        std::vector<unsigned char> sub_block_code{local_block_ref.cbegin() + 1,
+                                                  local_block_ref.cend()}; //copy offset code and rebuild
+        std::string const ref_name{
+                boost::algorithm::hex(std::string{local_block_ref.cbegin() + 1, local_block_ref.cend()})};
+        std::shared_lock read_path_lock(combined_path_protect);
+        std::filesystem::path read_path =
+                *combined_path / boost::algorithm::hex(std::string{(char) local_block_ref[0]}) / ref_name;
+        read_path_lock.unlock();
+        return read_path.make_preferred();
+    };
     auto time_binary_calc = [](auto current_time) {
         std::vector<unsigned char> bin_time;
         bin_time.reserve(sizeof(current_time));
@@ -189,18 +200,94 @@ std::tuple<std::size_t, std::size_t, std::array<unsigned char,
         }
         return bin_time;
     };
-
-    std::array<unsigned char, SHA512_DIGEST_LENGTH> hash_buf{};//HASH GENERATION
-    if (calc_SHA512)SHA512(block.data(), std::max(block.size(), placeholder_block_size), hash_buf.data());
-    else hash_buf = SHA_input_optional;
-
-    auto prefix = prefix_wrap(std::max(block.size(), placeholder_block_size));
+    auto error_sequence_empty = [&]{
+        std::tuple<std::size_t, std::size_t, std::array<unsigned char,
+                SHA512_DIGEST_LENGTH + sizeof(unsigned long)>, bool> empty_tup{};
+        std::get<3>(empty_tup) = true;
+        return empty_tup;
+    };
+    //flags
+    bool block_input = !block.empty();
+    bool placeholder_size_available = placeholder_block_size > 0;
+    //action if input creation time is set 0: assume the writer wants to update and skip writing the creation time
+    bool skip_first_time = false;
+    if (times[0] == 0 && update_times) skip_first_time = true;
+    if(times[0] == 0 && !update_times){
+        DEBUG << "First time was empty even if you did not use update_times mode!";
+    }
+    //write times, prefix, block, block_hash, checksum
+    //times
     std::array<std::vector<unsigned char>, TIME_STAMPS_ON_BLOCK> convert_time{};//creation time, last visited time, maximum valid
     auto t_beg = convert_time.begin();
     for (const auto &t: times) {
         *t_beg = time_binary_calc(t);
         t_beg++;
     }
+    //write times
+    bool first_time = true;
+    for(const auto &c_t:convert_time){
+        if(skip_first_time && first_time){
+            first_time = false;
+            if (std::fseek(writer, static_cast<long>(sizeof(unsigned long)), SEEK_CUR)) {//skip prefix and block
+                ERROR << "File seek for skipping creation time failed at \"" + write_at.string() + ", position " +
+                         std::to_string(sizeof(unsigned long)) + "\" at block reference\"" + block_path().string() +
+                         "\"";
+                return error_sequence_empty();
+            }
+        }
+        if (!std::fwrite(c_t.data(), sizeof(unsigned long),sizeof(unsigned char), writer)) {
+            ERROR << "File write binary time opening failed writing time at \"" + write_at.string() + "\"";
+            return error_sequence_empty();
+        }
+    }
+    //somehow generate prefix; first try to generate from block size, then from placeholder_block_size else try to read it from disk and get block size
+    std::vector<unsigned char> prefix{};
+    std::size_t block_size{};
+    if(block_input){
+        prefix = prefix_wrap(block.size());
+        block_size = block.size();
+    }
+    else{
+        if(placeholder_size_available){
+            prefix = prefix_wrap(placeholder_block_size);
+            block_size = placeholder_block_size;
+        }
+        else{
+            //read block size from disk
+            unsigned char buf_size = 0;
+            if (std::fread(&buf_size, sizeof(unsigned char), BUF_LEN_SIZE_FOR_SIZE_BLOCK, writer) !=
+                BUF_LEN_SIZE_FOR_SIZE_BLOCK) {
+                FATAL
+                    << "I/O prefix first byte reading was not completed on path \"" + write_at.string() +
+                       "\" at block reference\"" + block_path().string() + "\"";
+                return error_sequence_empty();
+            }
+            std::vector<unsigned char> buffer_in;
+            buffer_in.resize(buf_size + BUF_LEN_SIZE_FOR_SIZE_BLOCK, 0);
+            if (std::fread(buffer_in.data(), sizeof(unsigned char), buf_size + BUF_LEN_SIZE_FOR_SIZE_BLOCK, writer) !=
+                buf_size + BUF_LEN_SIZE_FOR_SIZE_BLOCK) {
+                FATAL
+                    << "I/O prefix size buffer reading was not completed on path \"" + write_at.string() +
+                       "\" at block reference\"" + block_path().string() + "\"";
+                return error_sequence_empty();
+            }
+
+            for (unsigned short buf_count = 0; buf_count < buf_size + BUF_LEN_SIZE_FOR_SIZE_BLOCK; buf_count++) {
+                block_size += (((std::size_t) buffer_in[buf_count]) << (buf_count * CHAR_BITS));
+            }
+            prefix = prefix_wrap(block_size);
+        }
+    }
+    //write block if needed and not in update mode; important is here if a block is given or not and if a hash has to be calculated
+
+
+    //HASH GENERATION
+    if (calc_SHA512) {
+        SHA512(block.data(), std::max(block.size(), placeholder_block_size), hash_buf.data());
+    }
+
+    auto prefix = prefix_wrap(std::max(block.size(), placeholder_block_size));
+
 
     const std::size_t total_block_size = SHA512_DIGEST_LENGTH + TIME_STAMPS_ON_BLOCK * sizeof(unsigned long) +
                                          prefix.size() + std::max(block.size(), placeholder_block_size) +
@@ -223,18 +310,6 @@ std::tuple<std::size_t, std::size_t, std::array<unsigned char,
     std::ranges::copy(convert_time[0].cbegin(), convert_time[0].cend(),
                       global_block_reference.begin() + SHA512_DIGEST_LENGTH);
 
-    auto block_path = [&] {
-        std::vector<unsigned char> sub_block_code{local_block_ref.cbegin() + 1,
-                                                  local_block_ref.cend()}; //copy offset code and rebuild
-        std::string const ref_name{
-                boost::algorithm::hex(std::string{local_block_ref.cbegin() + 1, local_block_ref.cend()})};
-        std::shared_lock read_path_lock(combined_path_protect);
-        std::filesystem::path read_path =
-                *combined_path / boost::algorithm::hex(std::string{(char) local_block_ref[0]}) / ref_name;
-        read_path_lock.unlock();
-        return read_path.make_preferred();
-    };
-
     auto error_sequence = [&]() {
         return std::make_tuple(total_block_size, std::max(block.size(), placeholder_block_size), global_block_reference,
                                true);
@@ -251,24 +326,11 @@ std::tuple<std::size_t, std::size_t, std::array<unsigned char,
                  block_path().string() + "\"";
         return error_sequence();
     }
-//action if input creation time is set 0: assume the writer wants to update and skip writing the creation time
-    std::size_t update_dist{};
-    if (times[0] == 0) {
-        update_dist += sizeof(unsigned long);
-    }
+
 //File should have been opened or created here
     if (update_times) {
-        if (std::fseek(writer, static_cast<long>(update_dist), SEEK_CUR)) {//skip prefix and block
-            ERROR << "File seek for skipping creation time failed at \"" + write_at.string() + ", position " +
-                     std::to_string(update_dist) + "\" at block reference\"" + block_path().string() +
-                     "\"";
-            return error_sequence();
-        }
-        if (!std::fwrite(block_buf.data() + update_dist, TIME_STAMPS_ON_BLOCK * sizeof(unsigned long) - update_dist,
-                         sizeof(unsigned char), writer)) {
-            ERROR << "File write binary time opening failed at \"" + write_at.string() + "\"";
-            return error_sequence();
-        }
+        //relevant cases for updating are
+
         std::size_t jump_hash_prefix_block =
                 SHA512_DIGEST_LENGTH + prefix.size() + std::max(block.size(), placeholder_block_size);
         if (std::fseek(writer, static_cast<long>(jump_hash_prefix_block), SEEK_CUR)) {//skip prefix and block
@@ -296,7 +358,8 @@ std::tuple<std::size_t, std::size_t, std::array<unsigned char,
     }
 }
 
-std::tuple<std::size_t, std::size_t, std::vector<unsigned char>, std::array<unsigned long, TIME_STAMPS_ON_BLOCK>, std::array<unsigned char, SHA512_DIGEST_LENGTH + sizeof(unsigned long)>, bool, bool>
+std::tuple<std::size_t, std::size_t, std::vector<unsigned char>, std::array<unsigned long, TIME_STAMPS_ON_BLOCK>, std::array<unsigned char,
+        SHA512_DIGEST_LENGTH + sizeof(unsigned long)>, bool, bool>
 uh::trees::tree_storage::read_block_base(
         FILE *reader, const std::filesystem::path &read_at, const std::vector<unsigned char> &local_block_ref,
         bool skip_read_block, bool check_valid) {
@@ -477,7 +540,7 @@ uh::trees::tree_storage::read_block_base(
         }
     }
     //<std::size_t,std::vector<unsigned char>,std::array<unsigned long,TIME_STAMPS_ON_BLOCK>,std::array<unsigned long,SHA512_DIGEST_LENGTH + sizeof(unsigned long)>, bool, bool>
-    return std::make_tuple(total_block_size,block_size, block, times, global_block_reference, false, valid);
+    return std::make_tuple(total_block_size, block_size, block, times, global_block_reference, false, valid);
 }
 
 std::size_t uh::trees::tree_storage::get_size() {
@@ -739,7 +802,8 @@ uh::trees::tree_storage::index(unsigned short num_threads) {
                         local_block_ref.push_back((unsigned char) (cur_pos.load() >> (i1 * CHAR_BITS)));
                     }
                     local_block_ref.insert(local_block_ref.cbegin(), i);
-                    auto read_tup = this->read_block_base(reader, read_path.make_preferred(), local_block_ref, false, true);
+                    auto read_tup = this->read_block_base(reader, read_path.make_preferred(), local_block_ref, false,
+                                                          true);
 
                     if (error_flag.test() || std::get<5>(read_tup)) {
                         total_end_sequence();
@@ -1343,7 +1407,7 @@ uh::trees::tree_storage::delete_blocks(
                                    block_step_beg->cend())) {
                         //skip block copy and seek over it if to delete
                         auto read_tup = read_block_base(reader, chunk.make_preferred(), local_block_test_ref, true);
-                        if (error_flag.test() || std::get<5>(read_tup)){
+                        if (error_flag.test() || std::get<5>(read_tup)) {
                             ERROR << "Unexpected error. Quitting.";
                             factory_io_sequence_end();
                             return;//break thread in case error is there
@@ -1355,7 +1419,7 @@ uh::trees::tree_storage::delete_blocks(
                     } else {
                         //copy block to maintain file
                         auto read_tup = read_block_base(reader, chunk.make_preferred(), local_block_test_ref);
-                        if (error_flag.test() || std::get<5>(read_tup)){
+                        if (error_flag.test() || std::get<5>(read_tup)) {
                             ERROR << "Unexpected error. Quitting.";
                             factory_io_sequence_end();
                             return;//break thread in case error is there
