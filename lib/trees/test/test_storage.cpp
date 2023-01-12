@@ -109,10 +109,10 @@ BOOST_AUTO_TEST_CASE(write_read_base_test)
         BOOST_ASSERT_MSG(valid_read,"Block was invalid!");
 
         BOOST_ASSERT_MSG(total_size_write == total_size_read,"Block total size was wrong!");
-        BOOST_ASSERT_MSG(block_size_write == block_size_read,"Block total size was wrong!");
-        BOOST_ASSERT_MSG(global_hash_write == global_hash_read,"Block total size was wrong!");
-        BOOST_ASSERT_MSG(test_bin == block_read,"Block total size was wrong!");
-        BOOST_ASSERT_MSG(times == times_read,"Block total size was wrong!");
+        BOOST_ASSERT_MSG(block_size_write == block_size_read,"Block size was wrong!");
+        BOOST_ASSERT_MSG(global_hash_write == global_hash_read,"Global hash was wrong!");
+        BOOST_ASSERT_MSG(test_bin == block_read,"Test binary was wrong!");
+        BOOST_ASSERT_MSG(times == times_read,"Times did not match!");
         //test read valid check
         reader = std::fopen(base_bin.make_preferred().c_str(), "rb");
         read_tup = t1.read_block_base(reader,base_bin.make_preferred(),local_block_ref,false,true);
@@ -128,10 +128,10 @@ BOOST_AUTO_TEST_CASE(write_read_base_test)
         BOOST_ASSERT_MSG(valid_read,"Block was invalid!");
 
         BOOST_ASSERT_MSG(total_size_write == total_size_read,"Block total size was wrong!");
-        BOOST_ASSERT_MSG(block_size_write == block_size_read,"Block total size was wrong!");
-        BOOST_ASSERT_MSG(global_hash_write == global_hash_read,"Block total size was wrong!");
-        BOOST_ASSERT_MSG(test_bin == block_read,"Block total size was wrong!");
-        BOOST_ASSERT_MSG(times == times_read,"Block total size was wrong!");
+        BOOST_ASSERT_MSG(block_size_write == block_size_read,"Block size was wrong!");
+        BOOST_ASSERT_MSG(global_hash_write == global_hash_read,"Global hash was wrong!");
+        BOOST_ASSERT_MSG(test_bin == block_read,"Test binary was wrong!");
+        BOOST_ASSERT_MSG(times == times_read,"Times did not match!");
         //test read with skipping the block itself
         reader = std::fopen(base_bin.make_preferred().c_str(), "rb");
         read_tup = t1.read_block_base(reader,base_bin.make_preferred(),local_block_ref,true);
@@ -147,10 +147,10 @@ BOOST_AUTO_TEST_CASE(write_read_base_test)
         BOOST_ASSERT_MSG(valid_read,"Block was invalid!");
 
         BOOST_ASSERT_MSG(total_size_write == total_size_read,"Block total size was wrong!");
-        BOOST_ASSERT_MSG(block_size_write == block_size_read,"Block total size was wrong!");
-        BOOST_ASSERT_MSG(global_hash_write == global_hash_read,"Block total size was wrong!");
+        BOOST_ASSERT_MSG(block_size_write == block_size_read,"Block size was wrong!");
+        BOOST_ASSERT_MSG(global_hash_write == global_hash_read,"Global hash was wrong!");
         BOOST_ASSERT_MSG(block_read.empty(),"Block should not be read here!");
-        BOOST_ASSERT_MSG(times == times_read,"Block total size was wrong!");
+        BOOST_ASSERT_MSG(times == times_read,"Times did not match!");
     };
     read_tests();
 
