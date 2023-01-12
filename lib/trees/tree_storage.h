@@ -113,7 +113,7 @@ namespace uh::trees {
                 SHA512_DIGEST_LENGTH + sizeof(unsigned long)>, bool> write_block_base(
                 FILE *writer, const std::filesystem::path &write_at, std::vector<unsigned char> block,
                 const std::vector<unsigned char> &local_block_ref,
-                std::array<unsigned long, TIME_STAMPS_ON_BLOCK> times,
+                std::array<unsigned long, TIME_STAMPS_ON_BLOCK> &times,
                 bool update_times = false,
                 bool calc_SHA512 = true,
                 std::vector<unsigned char> hash_buf = std::vector<unsigned char>{},
