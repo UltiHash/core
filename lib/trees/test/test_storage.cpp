@@ -226,8 +226,18 @@ BOOST_AUTO_TEST_CASE(write_read_base_test)
     //once more read tests on that
     read_tup2 = read_tup;
     read_tests();
-    BOOST_ASSERT_MSG(read_tup == read_tup2,"The results after reading were not the same!");
+    BOOST_ASSERT_MSG(std::get<0>(read_tup) == std::get<0>(read_tup2),"Total size was not the same!");
+    BOOST_ASSERT_MSG(std::get<1>(read_tup) == std::get<1>(read_tup2),"Block size was not the same!");
+    BOOST_ASSERT_MSG(std::get<2>(read_tup) == std::get<2>(read_tup2),"Block read was not the same!");
+    BOOST_ASSERT_MSG(std::get<3>(read_tup)[0] != 0,"Creation time was not read!");
+    BOOST_ASSERT_MSG(std::get<3>(read_tup)[1] == std::get<3>(read_tup)[1],"Storage duration was not equal!");
+    BOOST_ASSERT_MSG(std::get<3>(read_tup)[2] == std::get<3>(read_tup)[2],"Last visited was not equal!");
+    BOOST_ASSERT_MSG(std::get<4>(read_tup) == std::get<4>(read_tup2),"Global hash was not the same!");
+    BOOST_ASSERT_MSG(std::get<5>(read_tup) == std::get<5>(read_tup2),"Error occurred was not the same!");
+    BOOST_ASSERT_MSG(std::get<6>(read_tup) == std::get<6>(read_tup2),"Valid read was not the same!");
+
     //check more difficult case if also the block hash is not given while updating
+    times[0] = 0;
     writer = std::fopen(base_bin.make_preferred().c_str(), "rb+");
     write_tup = t1.write_block_base(writer, base_bin.make_preferred(), std::vector<unsigned char>{}, local_block_ref, times, true, false);
     BOOST_ASSERT_MSG(std::fclose(writer) == 0,"Write stream was not open!");
@@ -239,7 +249,15 @@ BOOST_AUTO_TEST_CASE(write_read_base_test)
     //once more read tests on that
     read_tup2 = read_tup;
     read_tests();
-    BOOST_ASSERT_MSG(read_tup == read_tup2,"The results after reading were not the same!");
+    BOOST_ASSERT_MSG(std::get<0>(read_tup) == std::get<0>(read_tup2),"Total size was not the same!");
+    BOOST_ASSERT_MSG(std::get<1>(read_tup) == std::get<1>(read_tup2),"Block size was not the same!");
+    BOOST_ASSERT_MSG(std::get<2>(read_tup) == std::get<2>(read_tup2),"Block read was not the same!");
+    BOOST_ASSERT_MSG(std::get<3>(read_tup)[0] != 0,"Creation time was not read!");
+    BOOST_ASSERT_MSG(std::get<3>(read_tup)[1] == std::get<3>(read_tup)[1],"Storage duration was not equal!");
+    BOOST_ASSERT_MSG(std::get<3>(read_tup)[2] == std::get<3>(read_tup)[2],"Last visited was not equal!");
+    BOOST_ASSERT_MSG(std::get<4>(read_tup) == std::get<4>(read_tup2),"Global hash was not the same!");
+    BOOST_ASSERT_MSG(std::get<5>(read_tup) == std::get<5>(read_tup2),"Error occurred was not the same!");
+    BOOST_ASSERT_MSG(std::get<6>(read_tup) == std::get<6>(read_tup2),"Valid read was not the same!");
 
     if(std::filesystem::exists(base_test)){
         std::filesystem::remove_all(base_test);
