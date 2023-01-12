@@ -269,7 +269,7 @@ std::tuple<std::size_t, std::size_t, std::array<unsigned char,
     //somehow generate prefix; first try to generate from block size, then from placeholder_block_size else try to read it from disk and get block size
     std::vector<unsigned char> prefix{};
     std::size_t block_size{};
-    bool seek_prefix = true;
+    bool seeked_prefix = false;
     if(block_input){
         prefix = prefix_wrap(block.size());
         block_size = block.size();
@@ -303,24 +303,28 @@ std::tuple<std::size_t, std::size_t, std::array<unsigned char,
                 block_size += (((std::size_t) buffer_in[buf_count]) << (buf_count * CHAR_BITS));
             }
             prefix = prefix_wrap(block_size);
-            seek_prefix = false;
+            seeked_prefix = true;
         }
     }
-    if(seek_prefix && update_times){
+    if(update_times){
         //prefix was calculated but not read, so skip it
-        if (std::fseek(writer, static_cast<long>(prefix.size()), SEEK_CUR)) {//skip prefix and block
-            ERROR << "File seek for skipping prefix read at writing operation failed at \"" + write_at.string() + ", position " +
-                     std::to_string(sizeof(unsigned long)) + "\" at block reference\"" + block_path().string() +
-                     "\"";
-            return error_sequence_empty();
+        if(!seeked_prefix){
+            if (std::fseek(writer, static_cast<long>(prefix.size()), SEEK_CUR)) {//skip prefix and block
+                ERROR << "File seek for skipping prefix read at writing operation failed at \"" + write_at.string() + ", position " +
+                         std::to_string(prefix.size()) + "\" at block reference\"" + block_path().string() +
+                         "\"";
+                return error_sequence_empty();
+            }
         }
     }
     else{
         //if we could generate the prefix, we write it down else we will have read over it
-        if (!std::fwrite(prefix.data(), sizeof(unsigned char),prefix.size(), writer)) {
-            ERROR << "File write prefix failed while writing to path \"" + write_at.string() +
-                     "\" at block reference\"" + block_path().string() + "\"";
-            return error_sequence_empty();
+        if(!seeked_prefix){
+            if (!std::fwrite(prefix.data(), sizeof(unsigned char),prefix.size(), writer)) {
+                ERROR << "File write prefix failed while writing to path \"" + write_at.string() +
+                         "\" at block reference\"" + block_path().string() + "\"";
+                return error_sequence_empty();
+            }
         }
     }
 
@@ -335,7 +339,7 @@ std::tuple<std::size_t, std::size_t, std::array<unsigned char,
             //seek over block on file and take this block input in
             if (std::fseek(writer, static_cast<long>(block.size()), SEEK_CUR)) {//skip prefix and block
                 ERROR << "File seek for skipping block read at writing operation failed at \"" + write_at.string() + ", position " +
-                         std::to_string(sizeof(unsigned long)) + "\" at block reference\"" + block_path().string() +
+                         std::to_string(block.size()) + "\" at block reference\"" + block_path().string() +
                          "\"";
                 return error_sequence_empty();
             }
@@ -377,7 +381,7 @@ std::tuple<std::size_t, std::size_t, std::array<unsigned char,
                 //if hash_buf is filled we use it and calculate the global hash with creation time
                 if (std::fseek(writer, static_cast<long>(hash_buf.size()), SEEK_CUR)) {//skip prefix and block
                     ERROR << "File seek for skipping hash read at writing operation failed at \"" + write_at.string() + ", position " +
-                             std::to_string(sizeof(unsigned long)) + "\" at block reference\"" + block_path().string() +
+                             std::to_string(hash_buf.size()) + "\" at block reference\"" + block_path().string() +
                              "\"";
                     hash_read_error = true;
                 }
@@ -412,12 +416,24 @@ std::tuple<std::size_t, std::size_t, std::array<unsigned char,
             hash_buf.resize(SHA512_DIGEST_LENGTH,0);
         }
         SHA512(block.data(), block_size, hash_buf.data());
-        //write hash
-        if (!std::fwrite(hash_buf.data(), sizeof(unsigned char),hash_buf.size(), writer)) {
-            ERROR << "File write hash failed at writing to path \"" + write_at.string() +
-                     "\" at block reference\"" + block_path().string() + "\"";
-            calc_SHA_and_write_error = true;
+
+        if(block_input){
+            //write hash
+            if (!std::fwrite(hash_buf.data(), sizeof(unsigned char),hash_buf.size(), writer)) {
+                ERROR << "File write hash failed at writing to path \"" + write_at.string() +
+                         "\" at block reference\"" + block_path().string() + "\"";
+                calc_SHA_and_write_error = true;
+            }
         }
+        else{
+            if (std::fseek(writer, static_cast<long>(hash_buf.size()), SEEK_CUR)) {//skip prefix and block
+                ERROR << "File seek for skipping hash write at writing operation failed at \"" + write_at.string() + ", position " +
+                         std::to_string(hash_buf.size()) + "\" at block reference\"" + block_path().string() +
+                         "\"";
+                hash_read_error = true;
+            }
+        }
+
     };
     //decide if to read, seek or write the hash on operation
     //on update_times: get hash from outside or from reading if input block is empty, if input block exists generate SHA and overwrite
