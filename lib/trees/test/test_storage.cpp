@@ -96,7 +96,7 @@ BOOST_AUTO_TEST_CASE(write_read_base_test)
     //test read normal mode
     auto read_tests = [&]{
         reader = std::fopen(base_bin.make_preferred().c_str(), "rb");
-        auto read_tup = t1.read_block_base(reader,base_bin.make_preferred(),local_block_ref);
+        read_tup = t1.read_block_base(reader,base_bin.make_preferred(),local_block_ref);
         BOOST_ASSERT_MSG(std::fclose(reader) == 0,"Read stream was not open!");
         total_size_read = std::get<0>(read_tup);
         block_size_read = std::get<1>(read_tup);
