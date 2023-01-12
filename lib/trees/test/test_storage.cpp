@@ -211,6 +211,20 @@ BOOST_AUTO_TEST_CASE(write_read_base_test)
     read_tup2 = read_tup;
     read_tests();
     BOOST_ASSERT_MSG(read_tup == read_tup2,"The results after reading were not the same!");
+    //skip creation time update
+    times[0] = 0
+    writer = std::fopen(base_bin.make_preferred().c_str(), "wb+");
+    write_tup = t1.write_block_base(writer, base_bin.make_preferred(), std::vector<unsigned char>{}, local_block_ref, times, true, false, std::vector<unsigned char>{block_hash.cbegin(),block_hash.cend()}, block_size_read);
+    BOOST_ASSERT_MSG(std::fclose(writer) == 0,"Write stream was not open!");
+    total_size_write = std::get<0>(write_tup);
+    block_size_write = std::get<1>(write_tup);
+    global_hash_write = std::get<2>(write_tup);
+    error_occured_write = std::get<3>(write_tup);
+    BOOST_ASSERT_MSG(!error_occured_write,"An internal error occurred!");
+    //once more read tests on that
+    read_tup2 = read_tup;
+    read_tests();
+    BOOST_ASSERT_MSG(read_tup == read_tup2,"The results after reading were not the same!");
 
     if(std::filesystem::exists(base_test)){
         std::filesystem::remove_all(base_test);
