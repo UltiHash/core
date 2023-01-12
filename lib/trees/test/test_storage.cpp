@@ -62,7 +62,7 @@ BOOST_AUTO_TEST_CASE(write_read_base_test)
     uh::trees::tree_storage t1(base_test);//A test folder reserved for tree storage
 
     //test file
-    auto base_bin = target / "00";
+    auto base_bin = base_test / "00";
     //check read and write base algorithms
     std::vector<unsigned char> test_bin = binary_generator(STORE_MAX);
 
