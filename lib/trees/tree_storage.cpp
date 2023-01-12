@@ -1028,7 +1028,7 @@ bool uh::trees::tree_storage::set_block_time(const std::vector<unsigned char> &l
                 return read_path.make_preferred();
             };
 
-            FILE *writer = std::fopen(read_path.make_preferred().c_str(), "rb+");
+            FILE *writer = std::fopen(read_path.make_preferred().c_str(), "wb+");
             auto set_time_end_sequence = [&]() {
                 if (std::fclose(writer))ERROR << "Write stream was not open!";
 
