@@ -82,130 +82,135 @@ BOOST_AUTO_TEST_CASE(write_read_base_test)
     auto global_hash_write = std::get<2>(write_tup);
     auto error_occured_write = std::get<3>(write_tup);
     BOOST_ASSERT_MSG(!error_occured_write,"An internal error occurred!");
+
+    decltype(std::fopen(base_bin.make_preferred().c_str(), "rb")) reader;
+    decltype(t1.read_block_base(reader,base_bin.make_preferred(),local_block_ref)) read_tup{};
+    std::size_t total_size_read{};
+    std::size_t block_size_read{};
+    std::vector<unsigned char> block_read{};
+    std::array<unsigned long, TIME_STAMPS_ON_BLOCK> times_read{};
+    std::array<unsigned char, SHA512_DIGEST_LENGTH + sizeof(unsigned long)> global_hash_read{};
+    bool error_occurred_read{};
+    bool valid_read{};
     //test read normal mode
-    FILE *reader = std::fopen(base_bin.make_preferred().c_str(), "rb");
-    auto read_tup = t1.read_block_base(reader,base_bin.make_preferred(),local_block_ref);
-    BOOST_ASSERT_MSG(std::fclose(reader) == 0,"Read stream was not open!");
-    auto total_size_read = std::get<0>(read_tup);
-    auto block_size_read = std::get<1>(read_tup);
-    auto block_read = std::get<2>(read_tup);
-    auto times_read = std::get<3>(read_tup);
-    auto global_hash_read = std::get<4>(read_tup);
-    auto error_occurred_read = std::get<5>(read_tup);
-    auto valid_read = std::get<6>(read_tup);
-    BOOST_ASSERT_MSG(!error_occurred_read,"An internal error occurred!");
-    BOOST_ASSERT_MSG(valid_read,"Block was invalid!");
+    auto read_tests = [&]{
+        reader = std::fopen(base_bin.make_preferred().c_str(), "rb");
+        auto read_tup = t1.read_block_base(reader,base_bin.make_preferred(),local_block_ref);
+        BOOST_ASSERT_MSG(std::fclose(reader) == 0,"Read stream was not open!");
+        total_size_read = std::get<0>(read_tup);
+        block_size_read = std::get<1>(read_tup);
+        block_read = std::get<2>(read_tup);
+        times_read = std::get<3>(read_tup);
+        global_hash_read = std::get<4>(read_tup);
+        error_occurred_read = std::get<5>(read_tup);
+        valid_read = std::get<6>(read_tup);
+        BOOST_ASSERT_MSG(!error_occurred_read,"An internal error occurred!");
+        BOOST_ASSERT_MSG(valid_read,"Block was invalid!");
 
-    BOOST_ASSERT_MSG(total_size_write == total_size_read,"Block total size was wrong!");
-    BOOST_ASSERT_MSG(block_size_write == block_size_read,"Block total size was wrong!");
-    BOOST_ASSERT_MSG(global_hash_write == global_hash_read,"Block total size was wrong!");
-    BOOST_ASSERT_MSG(test_bin == block_read,"Block total size was wrong!");
-    BOOST_ASSERT_MSG(times == times_read,"Block total size was wrong!");
-    //test read valid check
-    reader = std::fopen(base_bin.make_preferred().c_str(), "rb");
-    read_tup = t1.read_block_base(reader,base_bin.make_preferred(),local_block_ref,false,true);
-    BOOST_ASSERT_MSG(std::fclose(reader) == 0,"Read stream was not open!");
-    total_size_read = std::get<0>(read_tup);
-    block_size_read = std::get<1>(read_tup);
-    block_read = std::get<2>(read_tup);
-    times_read = std::get<3>(read_tup);
-    global_hash_read = std::get<4>(read_tup);
-    error_occurred_read = std::get<5>(read_tup);
-    valid_read = std::get<6>(read_tup);
-    BOOST_ASSERT_MSG(!error_occurred_read,"An internal error occurred!");
-    BOOST_ASSERT_MSG(valid_read,"Block was invalid!");
+        BOOST_ASSERT_MSG(total_size_write == total_size_read,"Block total size was wrong!");
+        BOOST_ASSERT_MSG(block_size_write == block_size_read,"Block total size was wrong!");
+        BOOST_ASSERT_MSG(global_hash_write == global_hash_read,"Block total size was wrong!");
+        BOOST_ASSERT_MSG(test_bin == block_read,"Block total size was wrong!");
+        BOOST_ASSERT_MSG(times == times_read,"Block total size was wrong!");
+        //test read valid check
+        reader = std::fopen(base_bin.make_preferred().c_str(), "rb");
+        read_tup = t1.read_block_base(reader,base_bin.make_preferred(),local_block_ref,false,true);
+        BOOST_ASSERT_MSG(std::fclose(reader) == 0,"Read stream was not open!");
+        total_size_read = std::get<0>(read_tup);
+        block_size_read = std::get<1>(read_tup);
+        block_read = std::get<2>(read_tup);
+        times_read = std::get<3>(read_tup);
+        global_hash_read = std::get<4>(read_tup);
+        error_occurred_read = std::get<5>(read_tup);
+        valid_read = std::get<6>(read_tup);
+        BOOST_ASSERT_MSG(!error_occurred_read,"An internal error occurred!");
+        BOOST_ASSERT_MSG(valid_read,"Block was invalid!");
 
-    BOOST_ASSERT_MSG(total_size_write == total_size_read,"Block total size was wrong!");
-    BOOST_ASSERT_MSG(block_size_write == block_size_read,"Block total size was wrong!");
-    BOOST_ASSERT_MSG(global_hash_write == global_hash_read,"Block total size was wrong!");
-    BOOST_ASSERT_MSG(test_bin == block_read,"Block total size was wrong!");
-    BOOST_ASSERT_MSG(times == times_read,"Block total size was wrong!");
-    //test read with skipping the block itself
-    reader = std::fopen(base_bin.make_preferred().c_str(), "rb");
-    read_tup = t1.read_block_base(reader,base_bin.make_preferred(),local_block_ref,true);
-    BOOST_ASSERT_MSG(std::fclose(reader) == 0,"Read stream was not open!");
-    total_size_read = std::get<0>(read_tup);
-    block_size_read = std::get<1>(read_tup);
-    block_read = std::get<2>(read_tup);
-    times_read = std::get<3>(read_tup);
-    global_hash_read = std::get<4>(read_tup);
-    error_occurred_read = std::get<5>(read_tup);
-    valid_read = std::get<6>(read_tup);
-    BOOST_ASSERT_MSG(!error_occurred_read,"An internal error occurred!");
-    BOOST_ASSERT_MSG(valid_read,"Block was invalid!");
+        BOOST_ASSERT_MSG(total_size_write == total_size_read,"Block total size was wrong!");
+        BOOST_ASSERT_MSG(block_size_write == block_size_read,"Block total size was wrong!");
+        BOOST_ASSERT_MSG(global_hash_write == global_hash_read,"Block total size was wrong!");
+        BOOST_ASSERT_MSG(test_bin == block_read,"Block total size was wrong!");
+        BOOST_ASSERT_MSG(times == times_read,"Block total size was wrong!");
+        //test read with skipping the block itself
+        reader = std::fopen(base_bin.make_preferred().c_str(), "rb");
+        read_tup = t1.read_block_base(reader,base_bin.make_preferred(),local_block_ref,true);
+        BOOST_ASSERT_MSG(std::fclose(reader) == 0,"Read stream was not open!");
+        total_size_read = std::get<0>(read_tup);
+        block_size_read = std::get<1>(read_tup);
+        block_read = std::get<2>(read_tup);
+        times_read = std::get<3>(read_tup);
+        global_hash_read = std::get<4>(read_tup);
+        error_occurred_read = std::get<5>(read_tup);
+        valid_read = std::get<6>(read_tup);
+        BOOST_ASSERT_MSG(!error_occurred_read,"An internal error occurred!");
+        BOOST_ASSERT_MSG(valid_read,"Block was invalid!");
 
-    BOOST_ASSERT_MSG(total_size_write == total_size_read,"Block total size was wrong!");
-    BOOST_ASSERT_MSG(block_size_write == block_size_read,"Block total size was wrong!");
-    BOOST_ASSERT_MSG(global_hash_write == global_hash_read,"Block total size was wrong!");
-    BOOST_ASSERT_MSG(block_read.empty(),"Block should not be read here!");
-    BOOST_ASSERT_MSG(times == times_read,"Block total size was wrong!");
+        BOOST_ASSERT_MSG(total_size_write == total_size_read,"Block total size was wrong!");
+        BOOST_ASSERT_MSG(block_size_write == block_size_read,"Block total size was wrong!");
+        BOOST_ASSERT_MSG(global_hash_write == global_hash_read,"Block total size was wrong!");
+        BOOST_ASSERT_MSG(block_read.empty(),"Block should not be read here!");
+        BOOST_ASSERT_MSG(times == times_read,"Block total size was wrong!");
+    };
+    read_tests();
 
-    //write again in update mode and check again if all results are the same
+    std::array<unsigned char,SHA512_DIGEST_LENGTH> block_hash{};
+    std::ranges::copy(global_hash_read.cbegin(),global_hash_read.cbegin()+SHA512_DIGEST_LENGTH,block_hash.begin());
+    //write again in update mode and try to use already known sha to block for speed, result should still be the same,
+    // update entire block; block cannot be empty as it needs to be written
     writer = std::fopen(base_bin.make_preferred().c_str(), "wb+");
-    write_tup = t1.write_block_base(writer, base_bin.make_preferred(), test_bin, local_block_ref, times,true);
+    write_tup = t1.write_block_base(writer, base_bin.make_preferred(), test_bin, local_block_ref, times, false, false, block_hash);
     BOOST_ASSERT_MSG(std::fclose(writer) == 0,"Write stream was not open!");
     total_size_write = std::get<0>(write_tup);
     block_size_write = std::get<1>(write_tup);
     global_hash_write = std::get<2>(write_tup);
     error_occured_write = std::get<3>(write_tup);
     BOOST_ASSERT_MSG(!error_occured_write,"An internal error occurred!");
-    //test read normal mode
-    reader = std::fopen(base_bin.make_preferred().c_str(), "rb");
-    read_tup = t1.read_block_base(reader,base_bin.make_preferred(),local_block_ref);
-    BOOST_ASSERT_MSG(std::fclose(reader) == 0,"Read stream was not open!");
-    total_size_read = std::get<0>(read_tup);
-    block_size_read = std::get<1>(read_tup);
-    block_read = std::get<2>(read_tup);
-    times_read = std::get<3>(read_tup);
-    global_hash_read = std::get<4>(read_tup);
-    error_occurred_read = std::get<5>(read_tup);
-    valid_read = std::get<6>(read_tup);
-    BOOST_ASSERT_MSG(!error_occurred_read,"An internal error occurred!");
-    BOOST_ASSERT_MSG(valid_read,"Block was invalid!");
+    //once more read tests on that
+    auto read_tup2 = read_tup;
+    read_tests();
+    BOOST_ASSERT_MSG(read_tup == read_tup2,"The results after reading were not the same!");
 
-    BOOST_ASSERT_MSG(total_size_write == total_size_read,"Block total size was wrong!");
-    BOOST_ASSERT_MSG(block_size_write == block_size_read,"Block total size was wrong!");
-    BOOST_ASSERT_MSG(global_hash_write == global_hash_read,"Block total size was wrong!");
-    BOOST_ASSERT_MSG(test_bin == block_read,"Block total size was wrong!");
-    BOOST_ASSERT_MSG(times == times_read,"Block total size was wrong!");
-    //test read valid check
-    reader = std::fopen(base_bin.make_preferred().c_str(), "rb");
-    read_tup = t1.read_block_base(reader,base_bin.make_preferred(),local_block_ref,false,true);
-    BOOST_ASSERT_MSG(std::fclose(reader) == 0,"Read stream was not open!");
-    total_size_read = std::get<0>(read_tup);
-    block_size_read = std::get<1>(read_tup);
-    block_read = std::get<2>(read_tup);
-    times_read = std::get<3>(read_tup);
-    global_hash_read = std::get<4>(read_tup);
-    error_occurred_read = std::get<5>(read_tup);
-    valid_read = std::get<6>(read_tup);
-    BOOST_ASSERT_MSG(!error_occurred_read,"An internal error occurred!");
-    BOOST_ASSERT_MSG(valid_read,"Block was invalid!");
-
-    BOOST_ASSERT_MSG(total_size_write == total_size_read,"Block total size was wrong!");
-    BOOST_ASSERT_MSG(block_size_write == block_size_read,"Block total size was wrong!");
-    BOOST_ASSERT_MSG(global_hash_write == global_hash_read,"Block total size was wrong!");
-    BOOST_ASSERT_MSG(test_bin == block_read,"Block total size was wrong!");
-    BOOST_ASSERT_MSG(times == times_read,"Block total size was wrong!");
-    //test read with skipping the block itself
-    reader = std::fopen(base_bin.make_preferred().c_str(), "rb");
-    read_tup = t1.read_block_base(reader,base_bin.make_preferred(),local_block_ref,true);
-    BOOST_ASSERT_MSG(std::fclose(reader) == 0,"Read stream was not open!");
-    total_size_read = std::get<0>(read_tup);
-    block_size_read = std::get<1>(read_tup);
-    block_read = std::get<2>(read_tup);
-    times_read = std::get<3>(read_tup);
-    global_hash_read = std::get<4>(read_tup);
-    error_occurred_read = std::get<5>(read_tup);
-    valid_read = std::get<6>(read_tup);
-    BOOST_ASSERT_MSG(!error_occurred_read,"An internal error occurred!");
-    BOOST_ASSERT_MSG(valid_read,"Block was invalid!");
-
-    BOOST_ASSERT_MSG(total_size_write == total_size_read,"Block total size was wrong!");
-    BOOST_ASSERT_MSG(block_size_write == block_size_read,"Block total size was wrong!");
-    BOOST_ASSERT_MSG(global_hash_write == global_hash_read,"Block total size was wrong!");
-    BOOST_ASSERT_MSG(block_read.empty(),"Block should not be read here!");
-    BOOST_ASSERT_MSG(times == times_read,"Block total size was wrong!");
+    //write again in update mode and check again if all results are the same; block can be empty as it already exists
+    //expected behaviour: block and times were given, but only times and checksum are updated by reading hash and block from disk calculating the checksum
+    writer = std::fopen(base_bin.make_preferred().c_str(), "wb+");
+    write_tup = t1.write_block_base(writer, base_bin.make_preferred(), std::vector<unsigned char>{}, local_block_ref, times, true);
+    BOOST_ASSERT_MSG(std::fclose(writer) == 0,"Write stream was not open!");
+    total_size_write = std::get<0>(write_tup);
+    block_size_write = std::get<1>(write_tup);
+    global_hash_write = std::get<2>(write_tup);
+    error_occured_write = std::get<3>(write_tup);
+    BOOST_ASSERT_MSG(!error_occured_write,"An internal error occurred!");
+    //once more read tests on that
+    read_tup2 = read_tup;
+    read_tests();
+    BOOST_ASSERT_MSG(read_tup == read_tup2,"The results after reading were not the same!");
+    //write again in update mode and try to use already known sha to block for speed, result should still be the same,
+    // only update times and checksum, skipping read block for hash if block is not empty or placeholder_block_size is set
+    writer = std::fopen(base_bin.make_preferred().c_str(), "wb+");
+    write_tup = t1.write_block_base(writer, base_bin.make_preferred(), test_bin, local_block_ref, times, true, false, block_hash);
+    BOOST_ASSERT_MSG(std::fclose(writer) == 0,"Write stream was not open!");
+    total_size_write = std::get<0>(write_tup);
+    block_size_write = std::get<1>(write_tup);
+    global_hash_write = std::get<2>(write_tup);
+    error_occured_write = std::get<3>(write_tup);
+    BOOST_ASSERT_MSG(!error_occured_write,"An internal error occurred!");
+    //once more read tests on that
+    read_tup2 = read_tup;
+    read_tests();
+    BOOST_ASSERT_MSG(read_tup == read_tup2,"The results after reading were not the same!");
+    //same with placeholder_block_size
+    writer = std::fopen(base_bin.make_preferred().c_str(), "wb+");
+    write_tup = t1.write_block_base(writer, base_bin.make_preferred(), std::vector<unsigned char>{}, local_block_ref, times, true, false, block_hash, block_size_read);
+    BOOST_ASSERT_MSG(std::fclose(writer) == 0,"Write stream was not open!");
+    total_size_write = std::get<0>(write_tup);
+    block_size_write = std::get<1>(write_tup);
+    global_hash_write = std::get<2>(write_tup);
+    error_occured_write = std::get<3>(write_tup);
+    BOOST_ASSERT_MSG(!error_occured_write,"An internal error occurred!");
+    //once more read tests on that
+    read_tup2 = read_tup;
+    read_tests();
+    BOOST_ASSERT_MSG(read_tup == read_tup2,"The results after reading were not the same!");
 
     if(std::filesystem::exists(base_test)){
         std::filesystem::remove_all(base_test);
