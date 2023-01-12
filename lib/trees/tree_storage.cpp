@@ -236,7 +236,8 @@ std::tuple<std::size_t, std::size_t, std::array<unsigned char,
         if(skip_first_time && first_time){
             first_time = false;
             //read creation time if skipped to handle global hash creation
-            if((block_input)||(update_times&&!block_input&&!calc_SHA512)||(!block_input&&update_times&&calc_SHA512&&block.empty())){
+            if(((block_input)||(update_times&&!block_input&&!calc_SHA512)||(!block_input&&update_times&&calc_SHA512&&block.empty()))&&
+            !(block_input&&!calc_SHA512&&hash_buf.size() != SHA512_DIGEST_LENGTH&&!update_times)){
                 if (std::fread(c_t.data(), sizeof(unsigned char), sizeof(unsigned long), writer) != sizeof(unsigned long)) {
                     FATAL
                         << "I/O creation time read to create global hash was not completed while writing to path \"" + write_at.string() +
@@ -371,14 +372,24 @@ std::tuple<std::size_t, std::size_t, std::array<unsigned char,
     //hash read on updating or try if no block input was given
     auto hash_read = [&]{
         if(hash_buf.size() == SHA512_DIGEST_LENGTH){
-            //if hash_buf is filled we use it and calculate the global hash with creation time
-            std::ranges::copy(hash_buf.cbegin(), hash_buf.cend(), global_block_reference.begin());
-            std::ranges::copy(convert_time[0].cbegin(), convert_time[0].cend(), global_block_reference.begin() + SHA512_DIGEST_LENGTH);
-            if (std::fseek(writer, static_cast<long>(hash_buf.size()), SEEK_CUR)) {//skip prefix and block
-                ERROR << "File seek for skipping hash read at writing operation failed at \"" + write_at.string() + ", position " +
-                         std::to_string(sizeof(unsigned long)) + "\" at block reference\"" + block_path().string() +
-                         "\"";
-                return error_sequence_empty();
+            if(update_times){
+                //if hash_buf is filled we use it and calculate the global hash with creation time
+                std::ranges::copy(hash_buf.cbegin(), hash_buf.cend(), global_block_reference.begin());
+                std::ranges::copy(convert_time[0].cbegin(), convert_time[0].cend(), global_block_reference.begin() + SHA512_DIGEST_LENGTH);
+                if (std::fseek(writer, static_cast<long>(hash_buf.size()), SEEK_CUR)) {//skip prefix and block
+                    ERROR << "File seek for skipping hash read at writing operation failed at \"" + write_at.string() + ", position " +
+                             std::to_string(sizeof(unsigned long)) + "\" at block reference\"" + block_path().string() +
+                             "\"";
+                    return error_sequence_empty();
+                }
+            }
+            else{
+                //write hash input to file
+                if (!std::fwrite(hash_buf.data(), sizeof(unsigned char),hash_buf.size(), writer)) {
+                    ERROR << "File write hash from extern source failed while writing to path \"" + write_at.string() +
+                             "\" at block reference\"" + block_path().string() + "\"";
+                    return error_sequence_empty();
+                }
             }
         }
         else{
@@ -1182,13 +1193,7 @@ bool uh::trees::tree_storage::set_block_time(const std::vector<unsigned char> &l
             while (std::atomic_flag_test_and_set_explicit(maintain_ptr, std::memory_order_acquire)) {
                 maintain_ptr->wait(true);
             }
-            //protect interaction of reading and unlocking before writing the valid hash, so put behind maintain barrier
-            std::array<unsigned char, SHA512_DIGEST_LENGTH> hash{};
-            auto read_result = read(local_block_reference);
-            std::array<unsigned char, SHA512_DIGEST_LENGTH + sizeof(unsigned long)> global_hash = std::get<3>(
-                    read_result);
-            std::ranges::copy(global_hash.cbegin(), global_hash.cbegin() + SHA512_DIGEST_LENGTH, hash.begin());
-
+            //protect interaction of reading and unlocking before writing the block, also keep track of maintaining the file
             while (std::atomic_flag_test_and_set_explicit(write_ptr, std::memory_order_acquire)) {
                 write_ptr->wait(true);
             }
@@ -1234,9 +1239,8 @@ bool uh::trees::tree_storage::set_block_time(const std::vector<unsigned char> &l
             times_not_creation[1] = times[0];
             times_not_creation[2] = times[1];
 
-            auto write_tup = write_block_base(writer, read_path.make_preferred(), std::get<0>(read_result),
-                                              local_block_reference, times_not_creation,
-                                              true, false, hash, std::get<4>(read_result));
+            auto write_tup = write_block_base(writer, read_path.make_preferred(), std::vector<unsigned char>{},
+                                              local_block_reference, times_not_creation, true);
             set_time_end_sequence();
             if (std::get<3>(write_tup)) {
                 ERROR << "File error at \"" + read_path.make_preferred().string() + "\" at block reference\"" +
