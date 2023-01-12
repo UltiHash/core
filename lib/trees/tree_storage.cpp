@@ -495,7 +495,7 @@ std::tuple<std::size_t, std::size_t, std::array<unsigned char,
                  block_path().string() + "\"";
         return error_sequence();
     }
-    if (!std::fwrite(checksum.data(),  sizeof(unsigned char), SHA256_DIGEST_LENGTH, writer)) {
+    if (!std::fwrite(checksum.data(),  sizeof(unsigned char), checksum.size(), writer)) {
         ERROR << "File write binary time opening failed at \"" + write_at.string() +
                  "\" at block reference\"" + block_path().string() + "\"";
         return error_sequence();
@@ -627,7 +627,7 @@ uh::trees::tree_storage::read_block_base(
     std::array<unsigned char, SHA512_DIGEST_LENGTH> hash_buf{};
     std::array<unsigned char, SHA512_DIGEST_LENGTH + sizeof(unsigned long)> global_block_reference{};
     //read hash
-    if (std::fread(hash_buf.data(), sizeof(unsigned char), hash_buf.size(), reader) != block_size) {
+    if (std::fread(hash_buf.data(), sizeof(unsigned char), hash_buf.size(), reader) != hash_buf.size()) {
         FATAL
             << "I/O hash reading not completed on path \"" + read_at.string() + "\" at block reference\"" +
                block_path().string() + "\"";
