@@ -375,8 +375,6 @@ std::tuple<std::size_t, std::size_t, std::array<unsigned char,
         if(hash_buf.size() == SHA512_DIGEST_LENGTH){
             if(update_times){
                 //if hash_buf is filled we use it and calculate the global hash with creation time
-                std::ranges::copy(hash_buf.cbegin(), hash_buf.cend(), global_block_reference.begin());
-                std::ranges::copy(convert_time[0].cbegin(), convert_time[0].cend(), global_block_reference.begin() + SHA512_DIGEST_LENGTH);
                 if (std::fseek(writer, static_cast<long>(hash_buf.size()), SEEK_CUR)) {//skip prefix and block
                     ERROR << "File seek for skipping hash read at writing operation failed at \"" + write_at.string() + ", position " +
                              std::to_string(sizeof(unsigned long)) + "\" at block reference\"" + block_path().string() +
@@ -403,8 +401,6 @@ std::tuple<std::size_t, std::size_t, std::array<unsigned char,
                        "\" at block reference\"" + block_path().string() + "\"";
                 hash_read_error = true;
             }
-            std::ranges::copy(hash_buf.cbegin(), hash_buf.cend(), global_block_reference.begin());
-            std::ranges::copy(convert_time[0].cbegin(), convert_time[0].cend(), global_block_reference.begin() + SHA512_DIGEST_LENGTH);
         }
     };
 
@@ -416,8 +412,6 @@ std::tuple<std::size_t, std::size_t, std::array<unsigned char,
             hash_buf.resize(SHA512_DIGEST_LENGTH,0);
         }
         SHA512(block.data(), block_size, hash_buf.data());
-        std::ranges::copy(hash_buf.cbegin(), hash_buf.cend(), global_block_reference.begin());
-        std::ranges::copy(convert_time[0].cbegin(), convert_time[0].cend(), global_block_reference.begin() + SHA512_DIGEST_LENGTH);
         //write hash
         if (!std::fwrite(hash_buf.data(), sizeof(unsigned char),hash_buf.size(), writer)) {
             ERROR << "File write hash failed at writing to path \"" + write_at.string() +
@@ -474,6 +468,9 @@ std::tuple<std::size_t, std::size_t, std::array<unsigned char,
                     SHA512_DIGEST_LENGTH + sizeof(unsigned long)>{},true);
         }
     }
+    //calculate global hash reference
+    std::ranges::copy(hash_buf.cbegin(), hash_buf.cend(), global_block_reference.begin());
+    std::ranges::copy(convert_time[0].cbegin(), convert_time[0].cend(), global_block_reference.begin() + SHA512_DIGEST_LENGTH);
     //finally always calculate and update checksum
     std::vector<unsigned char> block_buf = mem_wait<unsigned char>(total_block_size);
     std::array<unsigned char, SHA256_DIGEST_LENGTH> checksum{};
