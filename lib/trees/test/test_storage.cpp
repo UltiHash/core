@@ -74,6 +74,7 @@ BOOST_AUTO_TEST_CASE(write_read_base_test)
             (unsigned long)std::chrono::nanoseconds(std::chrono::years(1)).count(),//maximum untouched time before delete
             (unsigned long)std::chrono::nanoseconds(std::chrono::high_resolution_clock::now().time_since_epoch()).count()//last time touched
     };
+    if(std::filesystem::exists(base_bin))std::filesystem::remove(base_bin);
     FILE *writer = std::fopen(base_bin.make_preferred().c_str(), "ab");
     auto write_tup = t1.write_block_base(writer, base_bin.make_preferred(), test_bin, local_block_ref, times);
     BOOST_ASSERT_MSG(std::fclose(writer) == 0,"Write stream was not open!");
@@ -157,6 +158,7 @@ BOOST_AUTO_TEST_CASE(write_read_base_test)
     std::ranges::copy(global_hash_read.cbegin(),global_hash_read.cbegin()+SHA512_DIGEST_LENGTH,block_hash.begin());
     //write again in update mode and try to use already known sha to block for speed, result should still be the same,
     // update entire block; block cannot be empty as it needs to be written
+    if(std::filesystem::exists(base_bin))std::filesystem::remove(base_bin);
     writer = std::fopen(base_bin.make_preferred().c_str(), "wb+");
     write_tup = t1.write_block_base(writer, base_bin.make_preferred(), test_bin, local_block_ref, times, false, false, std::vector<unsigned char>{block_hash.cbegin(),block_hash.cend()});
     BOOST_ASSERT_MSG(std::fclose(writer) == 0,"Write stream was not open!");
