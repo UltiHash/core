@@ -219,7 +219,8 @@ std::tuple<std::size_t, std::size_t, std::array<unsigned char,
     bool skip_first_time = false;
     if (times[0] == 0 && update_times) skip_first_time = true;
     if(times[0] == 0 && !update_times){
-        DEBUG << "First time was empty even if you did not use update_times mode!";
+        ERROR << "First time was empty even if you did not use update_times mode!";
+        return error_sequence_empty();
     }
     //write times, prefix, block, block_hash checksum
     //times
