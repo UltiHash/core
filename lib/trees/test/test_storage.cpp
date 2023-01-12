@@ -933,7 +933,8 @@ BOOST_AUTO_TEST_CASE(delete_test)
         auto read_result = t1.read(std::get<1>(i));
         bool test_ok = !std::get<1>(read_result).empty();
         std::string test_str;
-        test_str += "Block with old reference " + old_ref + " and new reference " + new_ref +
+        test_str += "Block with old reference ";
+        test_str += old_ref + " and new reference " + new_ref +
                     " could not be read back after deletion!";
         BOOST_ASSERT_MSG(test_ok, test_str.c_str());
     }

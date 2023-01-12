@@ -475,7 +475,7 @@ std::tuple<std::size_t, std::size_t, std::array<unsigned char,
     block_buf.insert(block_buf.cend(), hash_buf.cbegin(), hash_buf.cend());//SHA512
     SHA256(block_buf.data(), block_buf.size(), checksum.data());
 
-    if (block_buf.size() != total_block_size) {
+    if (block_buf.size()+SHA256_DIGEST_LENGTH != total_block_size) {
         ERROR << "File write opening failed at \"" + write_at.string() + "\" at block reference\"" +
                  block_path().string() + "\"";
         return error_sequence();
