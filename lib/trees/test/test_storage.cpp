@@ -212,7 +212,7 @@ BOOST_AUTO_TEST_CASE(write_read_base_test)
     read_tests();
     BOOST_ASSERT_MSG(read_tup == read_tup2,"The results after reading were not the same!");
     //skip creation time update
-    times[0] = 0
+    times[0] = 0;
     writer = std::fopen(base_bin.make_preferred().c_str(), "wb+");
     write_tup = t1.write_block_base(writer, base_bin.make_preferred(), std::vector<unsigned char>{}, local_block_ref, times, true, false, std::vector<unsigned char>{block_hash.cbegin(),block_hash.cend()}, block_size_read);
     BOOST_ASSERT_MSG(std::fclose(writer) == 0,"Write stream was not open!");
