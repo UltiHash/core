@@ -1449,7 +1449,9 @@ uh::trees::tree_storage::delete_blocks(
                     std::atomic_flag_clear_explicit(&write_control, std::memory_order_release);
                 };
 
-                auto write_once_to_maintain_file = [&]() {
+                auto write_once_to_maintain_file = [&multithreading_factory_protect,&multithreading_factory,
+                                                    &io_end_sequence,&error_thread_sequence,&error_flag,&chunk_maintain,&writer,
+                                                    &out_change_list_protect,&out_change_list,this]() {
                     std::unique_lock multithread_f_read(multithreading_factory_protect,
                                                         std::defer_lock);
                     multithread_f_read.lock();
@@ -1504,7 +1506,9 @@ uh::trees::tree_storage::delete_blocks(
 
                 };
 
-                auto consumer_function = [&]() {
+                auto consumer_function = [&write_control,&multithreading_factory_protect,&multithreading_factory,
+                                          &write_once_to_maintain_file,&error_flag,&chunk_maintain,&io_end_sequence,&error_thread_sequence,
+                                          &writer]() {
                     while (write_control.test()) {
                         std::unique_lock multithread_f_read(multithreading_factory_protect,
                                                             std::defer_lock);
