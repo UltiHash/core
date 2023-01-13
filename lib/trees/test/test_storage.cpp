@@ -970,8 +970,7 @@ BOOST_AUTO_TEST_CASE(delete_test)
         std::size_t count{};
         std::for_each(std::get<0>(index_list).cbegin(), std::get<0>(index_list).cend(), [&del_list, &count](auto &item) {
             if (count == 10)return;
-            if (!del_list.empty()&&std::get<1>(item)[0]==del_list.back()[0])continue;
-            del_list.push_back(std::get<1>(item));
+            if (del_list.empty()||std::get<1>(item)[0]!=del_list.back()[0])del_list.push_back(std::get<1>(item));
             count++;
         });
         delete_list = t1.delete_blocks(del_list,1);
