@@ -1766,8 +1766,18 @@ uh::trees::tree_storage::delete_blocks(
             //threading manager
             for (auto it_w = workers.begin(); it_w != workers.end(); it_w++) {
                 if (!it_w->joinable()) {
-                    workers.erase(it_w);
-                    active_threads -= 2;
+                    if(active_threads < num_threads){
+                        std::thread w(first_index_exe_function, item_now);
+                        *it_w=std::move(w);
+                        if (error_flag.test()) {
+                            FATAL << "Delete_blocks threading engine crashed unexpectedly!";
+                            return {};
+                        }
+                    }
+                    else{
+                        workers.erase(it_w);
+                        active_threads -= 2;
+                    }
                 }
             }
             while (active_threads.load() >= num_threads) {
