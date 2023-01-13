@@ -2,7 +2,6 @@
 // Created by benjamin on 18.12.22.
 //
 
-#define BOOST_TEST_DYN_LINK
 #ifdef SINGLE_TEST_RUNNER
 #define BOOST_TEST_NO_MAIN
 #else
@@ -81,8 +80,8 @@ BOOST_AUTO_TEST_CASE(write_read_base_test)
     auto total_size_write = std::get<0>(write_tup);
     auto block_size_write = std::get<1>(write_tup);
     auto global_hash_write = std::get<2>(write_tup);
-    auto error_occured_write = std::get<3>(write_tup);
-    BOOST_ASSERT_MSG(!error_occured_write,"An internal error occurred!");
+    auto error_occurred_write = std::get<3>(write_tup);
+    BOOST_ASSERT_MSG(!error_occurred_write, "An internal error occurred!");
 
     decltype(std::fopen(base_bin.make_preferred().c_str(), "rb")) reader;
     decltype(t1.read_block_base(reader,base_bin.make_preferred(),local_block_ref)) read_tup{};
@@ -165,8 +164,8 @@ BOOST_AUTO_TEST_CASE(write_read_base_test)
     total_size_write = std::get<0>(write_tup);
     block_size_write = std::get<1>(write_tup);
     global_hash_write = std::get<2>(write_tup);
-    error_occured_write = std::get<3>(write_tup);
-    BOOST_ASSERT_MSG(!error_occured_write,"An internal error occurred!");
+    error_occurred_write = std::get<3>(write_tup);
+    BOOST_ASSERT_MSG(!error_occurred_write, "An internal error occurred!");
     //once more read tests on that
     auto read_tup2 = read_tup;
     read_tests();
@@ -180,8 +179,8 @@ BOOST_AUTO_TEST_CASE(write_read_base_test)
     total_size_write = std::get<0>(write_tup);
     block_size_write = std::get<1>(write_tup);
     global_hash_write = std::get<2>(write_tup);
-    error_occured_write = std::get<3>(write_tup);
-    BOOST_ASSERT_MSG(!error_occured_write,"An internal error occurred!");
+    error_occurred_write = std::get<3>(write_tup);
+    BOOST_ASSERT_MSG(!error_occurred_write, "An internal error occurred!");
     //once more read tests on that
     read_tup2 = read_tup;
     read_tests();
@@ -194,8 +193,8 @@ BOOST_AUTO_TEST_CASE(write_read_base_test)
     total_size_write = std::get<0>(write_tup);
     block_size_write = std::get<1>(write_tup);
     global_hash_write = std::get<2>(write_tup);
-    error_occured_write = std::get<3>(write_tup);
-    BOOST_ASSERT_MSG(!error_occured_write,"An internal error occurred!");
+    error_occurred_write = std::get<3>(write_tup);
+    BOOST_ASSERT_MSG(!error_occurred_write, "An internal error occurred!");
     //once more read tests on that
     read_tup2 = read_tup;
     read_tests();
@@ -207,8 +206,8 @@ BOOST_AUTO_TEST_CASE(write_read_base_test)
     total_size_write = std::get<0>(write_tup);
     block_size_write = std::get<1>(write_tup);
     global_hash_write = std::get<2>(write_tup);
-    error_occured_write = std::get<3>(write_tup);
-    BOOST_ASSERT_MSG(!error_occured_write,"An internal error occurred!");
+    error_occurred_write = std::get<3>(write_tup);
+    BOOST_ASSERT_MSG(!error_occurred_write, "An internal error occurred!");
     //once more read tests on that
     read_tup2 = read_tup;
     read_tests();
@@ -221,8 +220,8 @@ BOOST_AUTO_TEST_CASE(write_read_base_test)
     total_size_write = std::get<0>(write_tup);
     block_size_write = std::get<1>(write_tup);
     global_hash_write = std::get<2>(write_tup);
-    error_occured_write = std::get<3>(write_tup);
-    BOOST_ASSERT_MSG(!error_occured_write,"An internal error occurred!");
+    error_occurred_write = std::get<3>(write_tup);
+    BOOST_ASSERT_MSG(!error_occurred_write, "An internal error occurred!");
     //once more read tests on that
     read_tup2 = read_tup;
     read_tests();
@@ -245,8 +244,8 @@ BOOST_AUTO_TEST_CASE(write_read_base_test)
     total_size_write = std::get<0>(write_tup);
     block_size_write = std::get<1>(write_tup);
     global_hash_write = std::get<2>(write_tup);
-    error_occured_write = std::get<3>(write_tup);
-    BOOST_ASSERT_MSG(!error_occured_write,"An internal error occurred!");
+    error_occurred_write = std::get<3>(write_tup);
+    BOOST_ASSERT_MSG(!error_occurred_write, "An internal error occurred!");
     //once more read tests on that
     read_tup2 = read_tup;
     read_tests();
@@ -267,8 +266,8 @@ BOOST_AUTO_TEST_CASE(write_read_base_test)
     total_size_write = std::get<0>(write_tup);
     block_size_write = std::get<1>(write_tup);
     global_hash_write = std::get<2>(write_tup);
-    error_occured_write = std::get<3>(write_tup);
-    BOOST_ASSERT_MSG(!error_occured_write,"An internal error occurred!");
+    error_occurred_write = std::get<3>(write_tup);
+    BOOST_ASSERT_MSG(!error_occurred_write, "An internal error occurred!");
     //once more read tests on that
     read_tup2 = read_tup;
     read_tests();
@@ -300,7 +299,7 @@ BOOST_AUTO_TEST_CASE(write_read_test)
     for (unsigned char mode = 0; mode < 2; mode++) {
         std::size_t total_size{};
         //list of write times with local_block_ref, integrated block size and milliseconds
-        std::vector<std::tuple<std::vector<unsigned char>, std::size_t, long double>> write_times, read_after_write_times, linear_read_times, randam_access_read_times;
+        std::vector<std::tuple<std::vector<unsigned char>, std::size_t, long double>> write_times, read_after_write_times, linear_read_times, random_access_read_times;
         //retrieved block size, local_block_ref size and time taken
         mode ? BOOST_TEST_MESSAGE("---Entering short block latency measurement write read mode:---\n") :
         BOOST_TEST_MESSAGE("---Entering normal write read mode:---\n");
@@ -413,7 +412,7 @@ BOOST_AUTO_TEST_CASE(write_read_test)
                     boost::algorithm::hex(std::string{std::get<0>(write_times[access_point]).cbegin(),
                                                       std::get<0>(write_times[access_point]).cend()}) +
                     " . No block retrieved!").c_str());
-            randam_access_read_times.emplace_back(std::get<0>(write_times[access_point]), read_result.size(),
+            random_access_read_times.emplace_back(std::get<0>(write_times[access_point]), read_result.size(),
                                                   read_sequential);
             total_size += read_result.size();
         }
@@ -746,120 +745,120 @@ BOOST_AUTO_TEST_CASE(write_read_test)
         BOOST_TEST_MESSAGE("\nTest results for random access read:\n");
         BOOST_TEST_MESSAGE("Minimum results:");
         //minimum size
-        auto randam_access_read_min_size = std::min_element(randam_access_read_times.cbegin(),
-                                                            randam_access_read_times.cend(),
+        auto random_access_read_min_size = std::min_element(random_access_read_times.cbegin(),
+                                                            random_access_read_times.cend(),
                                                             [](const auto &a, const auto &b) {
                                                                 return std::get<1>(a) < std::get<1>(b);
                                                             });
-        BOOST_TEST_MESSAGE("Minimum size is " + std::to_string(std::get<1>(*randam_access_read_min_size)) +
+        BOOST_TEST_MESSAGE("Minimum size is " + std::to_string(std::get<1>(*random_access_read_min_size)) +
                            " from Block reference \"" + boost::algorithm::hex(
-                std::string{std::get<0>(*randam_access_read_min_size).cbegin(),
-                            std::get<0>(*randam_access_read_min_size).cend()}) + "\" with a block reference size of " +
-                           std::to_string(std::get<0>(*randam_access_read_min_size).size()) +
+                std::string{std::get<0>(*random_access_read_min_size).cbegin(),
+                            std::get<0>(*random_access_read_min_size).cend()}) + "\" with a block reference size of " +
+                           std::to_string(std::get<0>(*random_access_read_min_size).size()) +
                            " with a random access read time of " +
-                           std::to_string(std::get<2>(*randam_access_read_min_size)) + " ms");
+                           std::to_string(std::get<2>(*random_access_read_min_size)) + " ms");
         //minimum block ref size
-        auto randam_access_read_min_block_ref_size = std::min_element(randam_access_read_times.cbegin(),
-                                                                      randam_access_read_times.cend(),
+        auto random_access_read_min_block_ref_size = std::min_element(random_access_read_times.cbegin(),
+                                                                      random_access_read_times.cend(),
                                                                       [](const auto &a, const auto &b) {
                                                                           return std::get<0>(a).size() <
                                                                                  std::get<0>(b).size();
                                                                       });
         BOOST_TEST_MESSAGE("Minimum block reference size is " +
-                           std::to_string(std::get<0>(*randam_access_read_min_block_ref_size).size()) +
+                           std::to_string(std::get<0>(*random_access_read_min_block_ref_size).size()) +
                            " from Block reference \"" + boost::algorithm::hex(
-                std::string{std::get<0>(*randam_access_read_min_block_ref_size).cbegin(),
-                            std::get<0>(*randam_access_read_min_block_ref_size).cend()}) +
+                std::string{std::get<0>(*random_access_read_min_block_ref_size).cbegin(),
+                            std::get<0>(*random_access_read_min_block_ref_size).cend()}) +
                            "\" with a total block size of " +
-                           std::to_string(std::get<1>(*randam_access_read_min_block_ref_size)) +
+                           std::to_string(std::get<1>(*random_access_read_min_block_ref_size)) +
                            " with a random access read time of " +
-                           std::to_string(std::get<2>(*randam_access_read_min_block_ref_size)) + " ms");
+                           std::to_string(std::get<2>(*random_access_read_min_block_ref_size)) + " ms");
         //minimum time taken
-        auto randam_access_read_min_time_taken = std::min_element(randam_access_read_times.cbegin(),
-                                                                  randam_access_read_times.cend(),
+        auto random_access_read_min_time_taken = std::min_element(random_access_read_times.cbegin(),
+                                                                  random_access_read_times.cend(),
                                                                   [](const auto &a, const auto &b) {
                                                                       return std::get<2>(a) < std::get<2>(b);
                                                                   });
         BOOST_TEST_MESSAGE("Minimum random access read time is " +
-                           std::to_string(std::get<2>(*randam_access_read_min_time_taken)) +
+                           std::to_string(std::get<2>(*random_access_read_min_time_taken)) +
                            " ms from Block reference \"" + boost::algorithm::hex(
-                std::string{std::get<0>(*randam_access_read_min_time_taken).cbegin(),
-                            std::get<0>(*randam_access_read_min_time_taken).cend()}) +
+                std::string{std::get<0>(*random_access_read_min_time_taken).cbegin(),
+                            std::get<0>(*random_access_read_min_time_taken).cend()}) +
                            "\" with a block reference size of " +
-                           std::to_string(std::get<0>(*randam_access_read_min_time_taken).size()) +
+                           std::to_string(std::get<0>(*random_access_read_min_time_taken).size()) +
                            " with a total block size of " +
-                           std::to_string(std::get<1>(*randam_access_read_min_time_taken)) + "\n");
+                           std::to_string(std::get<1>(*random_access_read_min_time_taken)) + "\n");
 
         BOOST_TEST_MESSAGE("Maximum results:");
         //maximum size
-        auto randam_access_read_max_size = std::max_element(randam_access_read_times.cbegin(),
-                                                            randam_access_read_times.cend(),
+        auto random_access_read_max_size = std::max_element(random_access_read_times.cbegin(),
+                                                            random_access_read_times.cend(),
                                                             [](const auto &a, const auto &b) {
                                                                 return std::get<1>(a) < std::get<1>(b);
                                                             });
-        BOOST_TEST_MESSAGE("Maximum size is " + std::to_string(std::get<1>(*randam_access_read_max_size)) +
+        BOOST_TEST_MESSAGE("Maximum size is " + std::to_string(std::get<1>(*random_access_read_max_size)) +
                            " from Block reference \"" + boost::algorithm::hex(
-                std::string{std::get<0>(*randam_access_read_max_size).cbegin(),
-                            std::get<0>(*randam_access_read_max_size).cend()}) + "\" with a block reference size of " +
-                           std::to_string(std::get<0>(*randam_access_read_max_size).size()) +
+                std::string{std::get<0>(*random_access_read_max_size).cbegin(),
+                            std::get<0>(*random_access_read_max_size).cend()}) + "\" with a block reference size of " +
+                           std::to_string(std::get<0>(*random_access_read_max_size).size()) +
                            " with a random access read time of " +
-                           std::to_string(std::get<2>(*randam_access_read_max_size)) + " ms");
+                           std::to_string(std::get<2>(*random_access_read_max_size)) + " ms");
         //maximum block ref size
-        auto randam_access_read_max_block_ref_size = std::max_element(randam_access_read_times.cbegin(),
-                                                                      randam_access_read_times.cend(),
+        auto random_access_read_max_block_ref_size = std::max_element(random_access_read_times.cbegin(),
+                                                                      random_access_read_times.cend(),
                                                                       [](const auto &a, const auto &b) {
                                                                           return std::get<0>(a).size() <
                                                                                  std::get<0>(b).size();
                                                                       });
         BOOST_TEST_MESSAGE("Maximum block reference size is " +
-                           std::to_string(std::get<0>(*randam_access_read_max_block_ref_size).size()) +
+                           std::to_string(std::get<0>(*random_access_read_max_block_ref_size).size()) +
                            " from Block reference \"" + boost::algorithm::hex(
-                std::string{std::get<0>(*randam_access_read_max_block_ref_size).cbegin(),
-                            std::get<0>(*randam_access_read_max_block_ref_size).cend()}) +
+                std::string{std::get<0>(*random_access_read_max_block_ref_size).cbegin(),
+                            std::get<0>(*random_access_read_max_block_ref_size).cend()}) +
                            "\" with a total block size of " +
-                           std::to_string(std::get<1>(*randam_access_read_max_block_ref_size)) +
+                           std::to_string(std::get<1>(*random_access_read_max_block_ref_size)) +
                            " with a random access read time of " +
-                           std::to_string(std::get<2>(*randam_access_read_max_block_ref_size)) + " ms");
+                           std::to_string(std::get<2>(*random_access_read_max_block_ref_size)) + " ms");
         //maximum time taken
-        auto randam_access_read_max_time_taken = std::max_element(randam_access_read_times.cbegin(),
-                                                                  randam_access_read_times.cend(),
+        auto random_access_read_max_time_taken = std::max_element(random_access_read_times.cbegin(),
+                                                                  random_access_read_times.cend(),
                                                                   [](const auto &a, const auto &b) {
                                                                       return std::get<2>(a) < std::get<2>(b);
                                                                   });
         BOOST_TEST_MESSAGE("Maximum random access read time is " +
-                           std::to_string(std::get<2>(*randam_access_read_max_time_taken)) +
+                           std::to_string(std::get<2>(*random_access_read_max_time_taken)) +
                            " ms from Block reference \"" + boost::algorithm::hex(
-                std::string{std::get<0>(*randam_access_read_max_time_taken).cbegin(),
-                            std::get<0>(*randam_access_read_max_time_taken).cend()}) +
+                std::string{std::get<0>(*random_access_read_max_time_taken).cbegin(),
+                            std::get<0>(*random_access_read_max_time_taken).cend()}) +
                            "\" with a block reference size of " +
-                           std::to_string(std::get<0>(*randam_access_read_max_time_taken).size()) +
+                           std::to_string(std::get<0>(*random_access_read_max_time_taken).size()) +
                            " with a total block size of " +
-                           std::to_string(std::get<1>(*randam_access_read_max_time_taken)) + "\n");
+                           std::to_string(std::get<1>(*random_access_read_max_time_taken)) + "\n");
 
-        long double randam_access_read_avg_size = 0;
-        long double randam_access_read_avg_block_ref_size = 0;
-        long double randam_access_read_avg_time = 0;
-        for (const auto &i: randam_access_read_times) {
-            randam_access_read_avg_size += std::get<1>(i);
-            randam_access_read_avg_block_ref_size += std::get<0>(i).size();
-            randam_access_read_avg_time += std::get<2>(i);
+        long double random_access_read_avg_size = 0;
+        long double random_access_read_avg_block_ref_size = 0;
+        long double random_access_read_avg_time = 0;
+        for (const auto &i: random_access_read_times) {
+            random_access_read_avg_size += std::get<1>(i);
+            random_access_read_avg_block_ref_size += std::get<0>(i).size();
+            random_access_read_avg_time += std::get<2>(i);
         }
-        long double random_access_read_total_time = randam_access_read_avg_time;
-        randam_access_read_avg_size /= randam_access_read_times.size();
-        randam_access_read_avg_block_ref_size /= randam_access_read_times.size();
-        randam_access_read_avg_time /= randam_access_read_times.size();
+        long double random_access_read_total_time = random_access_read_avg_time;
+        random_access_read_avg_size /= random_access_read_times.size();
+        random_access_read_avg_block_ref_size /= random_access_read_times.size();
+        random_access_read_avg_time /= random_access_read_times.size();
 
-        long double randam_access_read_integration_speed_MB =
-                (randam_access_read_avg_size / std::pow(2, 20)) / (randam_access_read_avg_time / ONE_MILLISECOND);
+        long double random_access_read_integration_speed_MB =
+                (random_access_read_avg_size / std::pow(2, 20)) / (random_access_read_avg_time / ONE_MILLISECOND);
 
         BOOST_TEST_MESSAGE("Average random access read results:");
-        BOOST_TEST_MESSAGE("Average random access read time is " + std::to_string(randam_access_read_avg_time) +
+        BOOST_TEST_MESSAGE("Average random access read time is " + std::to_string(random_access_read_avg_time) +
                            " ms with an average block reference size of " +
-                           std::to_string(randam_access_read_avg_block_ref_size) +
+                           std::to_string(random_access_read_avg_block_ref_size) +
                            " with an average total block size of " +
-                           std::to_string(randam_access_read_avg_size) +
+                           std::to_string(random_access_read_avg_size) +
                            ". This results in an average random access read speed of " +
-                           std::to_string(randam_access_read_integration_speed_MB) + " MB per second\n");
+                           std::to_string(random_access_read_integration_speed_MB) + " MB per second\n");
         BOOST_TEST_MESSAGE("The total time taken to random access read " + std::to_string(total_size) + " bytes was " +
                            std::to_string(random_access_read_total_time) + " ms");
     }
@@ -962,7 +961,7 @@ BOOST_AUTO_TEST_CASE(delete_test)
     //uh::trees::tree_storage t1("/mnt/md0");//A test folder reserved for tree storage for performance tests
     auto index_list = t1.index();
     //from index take 2 blocks of the same chunk and copy them to RAM
-    //delete one block over its reference and check if the block of the retured local reference is the same
+    //delete one block over its reference and check if the block of the returned local reference is the same
     std::tuple<std::size_t, std::list<std::tuple<std::vector<unsigned char>, std::vector<unsigned char>>>> delete_list{};
 
     do {
