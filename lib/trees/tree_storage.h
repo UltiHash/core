@@ -359,7 +359,7 @@ namespace uh::trees {
         std::tuple<std::size_t, std::list<std::tuple<std::vector<unsigned char>, std::vector<unsigned char>>>>
         delete_blocks(
                 std::vector<std::vector<unsigned char>> &block_codes,
-                unsigned short num_threads = 1;//std::thread::hardware_concurrency());
+                unsigned short num_threads = 1);//std::thread::hardware_concurrency());
 
         /*
          * the deconstructor should also let all writing processes and reading processes end before it deletes the tree node
