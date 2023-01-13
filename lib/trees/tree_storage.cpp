@@ -1764,15 +1764,18 @@ uh::trees::tree_storage::delete_blocks(
             active_threads -= 2;
         } else {
             //threading manager
+            bool work_was_started = false;
             for (auto it_w = workers.begin(); it_w != workers.end(); it_w++) {
                 if (!it_w->joinable()) {
                     if(active_threads <= num_threads){
+                        if(work_was_started)break;
                         std::thread w(first_index_exe_function, item_now);
                         *it_w=std::move(w);
                         if (error_flag.test()) {
                             FATAL << "Delete_blocks threading engine crashed unexpectedly!";
                             return {};
                         }
+                        work_was_started = true;
                     }
                     else{
                         workers.erase(it_w);
@@ -1792,12 +1795,14 @@ uh::trees::tree_storage::delete_blocks(
                 usleep(TEN_MS * ONE_MILLISECOND);
 #endif // _WIN32
             }
-            active_threads += 2;
-            std::thread w(first_index_exe_function, item_now);
-            workers.push_back(std::move(w));
-            if (error_flag.test()) {
-                FATAL << "Delete_blocks threading engine crashed unexpectedly!";
-                return {};
+            if(!work_was_started){
+                active_threads += 2;
+                std::thread w(first_index_exe_function, item_now);
+                workers.push_back(std::move(w));
+                if (error_flag.test()) {
+                    FATAL << "Delete_blocks threading engine crashed unexpectedly!";
+                    return {};
+                }
             }
         }
     }
