@@ -1435,7 +1435,7 @@ uh::trees::tree_storage::delete_blocks(
                 if (std::filesystem::exists(chunk_maintain))std::filesystem::remove(chunk_maintain);
                 filesystem_lock.unlock();
                 //enable write thread
-                std::atomic_flag_test_and_set_explicit(&write_control,std::memory_order_acquire)
+                std::atomic_flag_test_and_set_explicit(&write_control,std::memory_order_acquire);
                 //transmission from chunk to maintain file
                 FILE *writer = std::fopen(chunk_maintain.make_preferred().c_str(), "ab");
                 auto io_end_sequence = [&reader, &writer, &read_ptr, &write_control]() {
