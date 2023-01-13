@@ -232,7 +232,8 @@ std::tuple<std::size_t, std::size_t, std::array<unsigned char,
     bool first_time = true;
     for (auto &c_t: convert_time) {
         c_t.resize(sizeof(unsigned long), 0);
-        if (!((block_input && !update_times && calc_SHA512 && hash_buf.empty())||(!block_input&&update_times&&calc_SHA512&&!block.empty())) &&
+        if (!((block_input && !update_times && calc_SHA512 && hash_buf.empty())||(!block_input&&update_times&&calc_SHA512&&!block.empty())||
+                (!update_times&&!calc_SHA512&&!hash_buf.empty()&&times[0]>0)) &&
             first_time) {//if not the clear writing only case we always only modify the block
             first_time = false;
             //read creation time if skipped to handle global hash creation
