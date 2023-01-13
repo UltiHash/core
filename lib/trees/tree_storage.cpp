@@ -1434,12 +1434,13 @@ uh::trees::tree_storage::delete_blocks(
             auto write_once_to_maintain_file = [&multithreading_factory_protect,&multithreading_factory,
                                                 &io_end_sequence,&error_thread_sequence,&error_flag,&chunk_maintain,&writer,
                                                 &out_change_list_protect,&out_change_list,this]() {
-
+                std::unique_lock multithread_f_read(multithreading_factory_protect);
                 auto current_storage_block = std::get<0>(*multithreading_factory.cbegin());
                 auto old_block_code = std::get<1>(*multithreading_factory.cbegin());
                 auto new_offset = std::get<2>(*multithreading_factory.cbegin());
                 auto old_SHA = std::get<3>(*multithreading_factory.cbegin());
                 auto old_times = std::get<4>(*multithreading_factory.cbegin());
+                multithread_f_read.unlock();
 
                 std::vector<unsigned char> new_block_reference{};
                 new_block_reference.reserve(sizeof(unsigned int));
@@ -1473,7 +1474,9 @@ uh::trees::tree_storage::delete_blocks(
                 lock_output.lock();
                 out_change_list.emplace_back(old_block_code, new_block_reference);
                 lock_output.unlock();
+                multithread_f_read.lock();
                 if(!multithreading_factory.empty())multithreading_factory.pop_front();
+                multithread_f_read.unlock();
                 if (error_flag.test()) {
                     FATAL << "I/O extern error when deleting block writing \"" +
                              chunk_maintain.string() + "\"";
@@ -1487,10 +1490,7 @@ uh::trees::tree_storage::delete_blocks(
             auto factory_io_sequence_end = [&error_flag, &num_threads, &multithreading_factory,
                                             &io_end_sequence, &write_once_to_maintain_file,&multithreading_factory_protect]() {
                 std::atomic_flag_test_and_set_explicit(&error_flag, std::memory_order_acquire);//put error flag on
-
-                std::unique_lock multithread_f_read(multithreading_factory_protect);
                 while (!multithreading_factory.empty())write_once_to_maintain_file();
-                multithread_f_read.unlock();
                 io_end_sequence();
             };
 
@@ -1541,9 +1541,7 @@ uh::trees::tree_storage::delete_blocks(
                     cur_pos += std::get<0>(read_tup);
                 }
             }
-            std::unique_lock multithread_f_read(multithreading_factory_protect);
             while (!multithreading_factory.empty())write_once_to_maintain_file();
-            multithread_f_read.unlock();
             io_end_sequence();
 
             if (error_flag.test()) {
