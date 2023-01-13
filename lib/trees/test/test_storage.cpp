@@ -993,6 +993,7 @@ BOOST_AUTO_TEST_CASE(delete_test)
             std::for_each(std::get<0>(index_list).begin(),std::get<0>(index_list).end(),[&item2](auto &item4){
                 if(std::get<1>(item4) == std::get<0>(item2)){
                     std::get<1>(item4) = std::get<1>(item2);
+                    return;
                 }
             });
         });
