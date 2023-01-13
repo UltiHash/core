@@ -1318,16 +1318,10 @@ uh::trees::tree_storage::delete_blocks(
     };
 
     //use multithreading with a thread management system so that threads from deleting go on to deeper delete
-    std::mutex worker_protect{};
-    std::list<std::tuple<std::size_t,std::shared_ptr<std::atomic_flag>>> workers;
+    std::shared_mutex worker_protect{};
+    std::list<std::tuple<std::size_t,std::shared_ptr<std::atomic_flag>,std::thread>> workers;
 
     auto first_index_exe_function = [&](auto item,std::size_t worker_number) {
-        //register multithreading
-        std::unique_lock worker_lock(worker_protect);
-        std::shared_ptr<std::atomic_flag> flag_worker = std::make_shared<std::atomic_flag>();
-        std::tuple<std::size_t,std::shared_ptr<std::atomic_flag>>worker_tup{worker_number,flag_worker};
-        workers.push_back(worker_tup);
-        worker_lock.unlock();
         //parallel start
         std::vector<std::vector<unsigned char>> deeper_codes{}, delete_here_codes{};
         //take a branch to delete multiple blocks within
@@ -1782,6 +1776,7 @@ uh::trees::tree_storage::delete_blocks(
         } else {
             //threading manager
             bool work_was_started = false;
+            std::size_t currently_at_work{};
             std::unique_lock manage_lock(worker_protect);
             for (auto it_w = workers.begin(); it_w != workers.end();) {
                 if (!std::get<1>(*it_w)->test()) {
@@ -1789,13 +1784,12 @@ uh::trees::tree_storage::delete_blocks(
                         if(work_was_started){
                             break;
                         }
-                        std::thread(first_index_exe_function, item_now,worker_count).detach();
+                        std::thread w(first_index_exe_function, item_now,worker_count);
                         std::shared_ptr<std::atomic_flag> flag_worker = std::make_shared<std::atomic_flag>();
                         while (std::atomic_flag_test_and_set_explicit(&(*flag_worker), std::memory_order_acquire)) {
                             flag_worker->wait(true);
                         }
-                        std::tuple<std::size_t,std::shared_ptr<std::atomic_flag>>worker_tup{worker_count,flag_worker};
-                        *it_w = worker_tup;
+                        *it_w = std::tuple<std::size_t,std::shared_ptr<std::atomic_flag>,std::thread>{worker_count,flag_worker,std::move(w)};
                         worker_count++;
                         if (error_flag.test()) {
                             FATAL << "Delete_blocks threading engine crashed unexpectedly!";
@@ -1810,9 +1804,20 @@ uh::trees::tree_storage::delete_blocks(
                         workers.erase(it_w);
                     }
                 }
-                else it_w++;
+                else{
+                    it_w++;
+                }
             }
             manage_lock.unlock();
+            if(active_threads.load()==num_threads){
+                //work off the first joinable on the list to prevent overload
+                for(auto &items:workers){
+                    if(std::get<2>(items).joinable()){
+                        std::get<2>(items).join();
+                        break;
+                    }
+                }
+            }
             while (active_threads.load() >= num_threads) {
                 if (error_flag.test()) {
                     FATAL
@@ -1827,14 +1832,14 @@ uh::trees::tree_storage::delete_blocks(
             }
             if(!work_was_started){
                 active_threads += 2;
-                std::unique_lock manage_lock2(worker_protect);
-                std::thread(first_index_exe_function, item_now,worker_count).detach();
+
+                std::thread w(first_index_exe_function, item_now,worker_count);
                 std::shared_ptr<std::atomic_flag> flag_worker = std::make_shared<std::atomic_flag>();
                 while (std::atomic_flag_test_and_set_explicit(&(*flag_worker), std::memory_order_acquire)) {
                     flag_worker->wait(true);
                 }
-                std::tuple<std::size_t,std::shared_ptr<std::atomic_flag>>worker_tup{worker_count,flag_worker};
-                workers.push_back(worker_tup);
+                std::unique_lock manage_lock2(worker_protect);
+                workers.emplace_back(worker_count,flag_worker,std::move(w));
                 manage_lock2.unlock();
                 worker_count++;
                 if (error_flag.test()) {
@@ -1854,6 +1859,7 @@ uh::trees::tree_storage::delete_blocks(
         while (std::atomic_flag_test_and_set_explicit(&(*std::get<1>(worker)), std::memory_order_acquire)) {
             std::get<1>(worker)->wait(true);
         }
+        if(std::get<2>(worker).joinable())std::get<2>(worker).join();
     }
     if (error_flag.test()) {
         FATAL
