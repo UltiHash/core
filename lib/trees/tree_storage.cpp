@@ -1818,21 +1818,23 @@ uh::trees::tree_storage::delete_blocks(
         }
     }
 
-    for (auto & worker : workers) {
-        if (error_flag.test()) {
-            FATAL
-                << "Delete_blocks threading engine crashed unexpectedly while waiting for CPU cores!";
-            return {};
+    auto it_w = workers.begin();
+    while(it_w != workers.end() && !std::get<1>(*it_w)->test()){
+        if(std::get<2>(*it_w).joinable()){
+            while (std::atomic_flag_test_and_set_explicit(&(*std::get<1>(*it_w)), std::memory_order_acquire)) {
+                std::get<1>(*it_w)->wait(true);
+            }
+            std::get<2>(*it_w).join();
+            auto tmp_cur = it_w++;
+            workers.erase(tmp_cur);
+            active_threads -= 1;
+            if (error_flag.test()) {
+                FATAL
+                    << "Delete_blocks threading engine crashed unexpectedly while waiting for CPU cores!";
+                return {};
+            }
         }
-        while (std::atomic_flag_test_and_set_explicit(&(*std::get<1>(worker)), std::memory_order_acquire)) {
-            std::get<1>(worker)->wait(true);
-        }
-        if(std::get<2>(worker).joinable())std::get<2>(worker).join();
-    }
-    if (error_flag.test()) {
-        FATAL
-            << "Delete_blocks threading engine crashed unexpectedly while waiting for CPU cores!";
-        return {};
+        else it_w++;
     }
 
     std::scoped_lock const out_return_lock(out_change_list_protect);
