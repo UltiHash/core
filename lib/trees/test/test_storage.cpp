@@ -1017,4 +1017,5 @@ BOOST_AUTO_TEST_CASE(delete_test)
     }
 
     t1.delete_recursive();
+    if(std::filesystem::exists(target / "0000"))std::filesystem::remove_all(target / "0000");
 }
