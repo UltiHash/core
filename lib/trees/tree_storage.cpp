@@ -1398,7 +1398,7 @@ uh::trees::tree_storage::delete_blocks(
             //read chunk at index (*cur_tmp)[0]
             FILE *reader = std::fopen(chunk.make_preferred().c_str(), "rb");
 
-            auto read_end_sequence = [&reader, &read_ptr, &write_control]() {
+            auto read_end_sequence = [&reader, &read_ptr]() {
                 if (std::fclose(reader))ERROR << "Read stream was not open!";
                 *read_ptr -= 1;
             };
@@ -1433,7 +1433,7 @@ uh::trees::tree_storage::delete_blocks(
 
             auto write_once_to_maintain_file = [&multithreading_factory_protect,&multithreading_factory,
                                                 &io_end_sequence,&error_thread_sequence,&error_flag,&chunk_maintain,&writer,
-                                                &out_change_list_protect,&out_change_list,&write_control,this]() {
+                                                &out_change_list_protect,&out_change_list,this]() {
 
                 auto current_storage_block = std::get<0>(*multithreading_factory.cbegin());
                 auto old_block_code = std::get<1>(*multithreading_factory.cbegin());
@@ -1485,7 +1485,7 @@ uh::trees::tree_storage::delete_blocks(
             };
 
             auto factory_io_sequence_end = [&error_flag, &num_threads, &multithreading_factory,
-                                            &io_end_sequence, &write_once_to_maintain_file,&write_control,&multithreading_factory_protect]() {
+                                            &io_end_sequence, &write_once_to_maintain_file,&multithreading_factory_protect]() {
                 std::atomic_flag_test_and_set_explicit(&error_flag, std::memory_order_acquire);//put error flag on
 
                 std::unique_lock multithread_f_read(multithreading_factory_protect);
