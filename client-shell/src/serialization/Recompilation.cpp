@@ -67,6 +67,7 @@ bool Recompilation::encode() {
                         parentPtr = parentPtr->getParent();
                 }
                 Data d(current_path, diff_go_up_levels, m_client);
+                m_upload_size += d.size();
                 SequentialContainer auto d_loop_encode=d.encodeD<std::vector<unsigned char>>();
                 std::for_each(d_loop_encode.cbegin(),d_loop_encode.cend(),[&recomp_stream](const unsigned char character){recomp_stream<<character;});
             }while(!fileTreeStack.empty());

@@ -16,6 +16,8 @@ class Data : virtual public Prefix{
     std::size_t numBlocks{};
     uh::protocol::client& m_client;
 
+    std::size_t m_size = 0u;
+
 private:
     static std::string demo_perms(std::filesystem::perms p){
         std::stringstream out;
@@ -159,6 +161,8 @@ public:
     [[nodiscard]] unsigned short folderEnd() const override;
 
     [[nodiscard]] bool is_regular_file() const override;
+
+    std::size_t size() const { return m_size; }
 
     inline std::string getObjectName();
 

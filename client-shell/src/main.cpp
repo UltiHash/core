@@ -2,6 +2,8 @@
 #include <serialization/Recompilation.h>
 #include <net/plain_socket.h>
 
+#include <iomanip>
+
 /*translate --help or other explicit flags to their not explicit letter -h
  */
 std::string explicitCommandTranslate(const std::string &s) {
@@ -378,7 +380,20 @@ int main(int argc, char *argv[]) {
                     if (commands_todo.at("write")) {
                         //write first
                         std::cout << "writing...\n";
-                        Recompilation('w', input_commands, flag_check, *client);
+                        auto start = std::chrono::steady_clock::now();
+                        Recompilation r('w', input_commands, flag_check, *client);
+                        auto end = std::chrono::steady_clock::now();
+
+                        std::size_t bytes = r.upload_size();
+                        double mb = static_cast<double>(bytes) / (1024*1024);
+                        auto msec = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+                        auto mb_ms = mb / msec;
+
+                        auto mb_s = mb_ms * 1000.;
+                        auto sec = msec / 1000.;
+
+                        std::cout << std::setprecision(2) << std::fixed
+                                  << "Uploaded " << mb << " MB (" << bytes << " b) of data in " << sec << " s: " << mb_s << " MB/s\n";
                     }
                     if (commands_todo.at("read")) {
                         //read second

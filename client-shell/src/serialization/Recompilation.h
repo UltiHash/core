@@ -26,6 +26,8 @@ private:
     uh::protocol::client& m_client;
     std::shared_ptr<treeNode<std::string,std::uint64_t>> rootShrPtr;
 
+    std::size_t m_upload_size = 0u;
+
 protected:
     //file tree to recompilation file
     bool encode();
@@ -36,6 +38,8 @@ public:
     Recompilation(unsigned char in_type, std::list<std::string> input,std::map<std::string, bool> flags, uh::protocol::client& client);
 
     ~Recompilation() final;
+
+    std::size_t upload_size() const { return m_upload_size; }
 
     static bool valid();
 

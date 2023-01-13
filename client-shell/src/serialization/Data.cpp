@@ -40,7 +40,8 @@ Data::Data(const std::string &in, unsigned short folderE, uh::protocol::client& 
             ss << myFile.rdbuf();
             ss.flush();
             auto end = std::chrono::steady_clock::now();
-            INFO << "Read to string stream: Size " << myFile.tellg()  <<  "Bytes - Time " << std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count() << " ns, "
+            m_size = myFile.tellg();
+            INFO << "Read to string stream: Size " << m_size  <<  "Bytes - Time " << std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count() << " ns, "
                 << std::chrono::duration_cast<std::chrono::microseconds>(end - start).count() << " µs, "
                 << std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << " ms, "
                 << std::chrono::duration_cast<std::chrono::seconds>(end - start).count() << " sec";
