@@ -1762,9 +1762,7 @@ uh::trees::tree_storage::delete_blocks(
         std::scoped_lock worker_lock2(worker_protect);
         for(auto &it:workers){
             if(worker_number == std::get<0>(it)){
-                while (std::atomic_flag_test_and_set_explicit(&(*std::get<1>(it)), std::memory_order_acquire)) {
-                    std::get<1>(it)->wait(true);
-                }
+                std::atomic_flag_clear_explicit(&(*std::get<1>(it)), std::memory_order_release);
                 break;
             }
         }
@@ -1794,6 +1792,9 @@ uh::trees::tree_storage::delete_blocks(
                         }
                         std::thread(first_index_exe_function, item_now,worker_count).detach();
                         std::shared_ptr<std::atomic_flag> flag_worker = std::make_shared<std::atomic_flag>();
+                        while (std::atomic_flag_test_and_set_explicit(&(*flag_worker), std::memory_order_acquire)) {
+                            flag_worker->wait(true);
+                        }
                         std::tuple<std::size_t,std::shared_ptr<std::atomic_flag>>worker_tup{worker_count,flag_worker};
                         workers.push_back(worker_tup);
                         worker_count++;
@@ -1827,6 +1828,9 @@ uh::trees::tree_storage::delete_blocks(
                 std::unique_lock manage_lock2(worker_protect);
                 std::thread(first_index_exe_function, item_now,worker_count).detach();
                 std::shared_ptr<std::atomic_flag> flag_worker = std::make_shared<std::atomic_flag>();
+                while (std::atomic_flag_test_and_set_explicit(&(*flag_worker), std::memory_order_acquire)) {
+                    flag_worker->wait(true);
+                }
                 std::tuple<std::size_t,std::shared_ptr<std::atomic_flag>>worker_tup{worker_count,flag_worker};
                 workers.push_back(worker_tup);
                 manage_lock2.unlock();
@@ -1845,7 +1849,9 @@ uh::trees::tree_storage::delete_blocks(
                 << "Delete_blocks threading engine crashed unexpectedly while waiting for CPU cores!";
             return {};
         }
-        if (worker.joinable())worker.join();
+        while (std::atomic_flag_test_and_set_explicit(&(*std::get<1>(worker)), std::memory_order_acquire)) {
+            std::get<1>(worker)->wait(true);
+        }
     }
     if (error_flag.test()) {
         FATAL
