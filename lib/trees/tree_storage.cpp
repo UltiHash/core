@@ -1776,9 +1776,10 @@ uh::trees::tree_storage::delete_blocks(
         } else {
             //threading manager
             bool work_was_started = false;
-            std::size_t currently_at_work{};
+
+
             std::unique_lock manage_lock(worker_protect);
-            for (auto it_w = workers.begin(); it_w != workers.end();) {
+            for (auto it_w = workers.begin(); it_w < workers.end();) {
                 if (!std::get<1>(*it_w)->test()) {
                     if(active_threads <= num_threads){
                         if(work_was_started){
@@ -1800,8 +1801,8 @@ uh::trees::tree_storage::delete_blocks(
                     }
                     else{
                         active_threads -= 2;
-                        auto tmp_it = it_w++;
                         workers.erase(it_w);
+                        it_w = workers.begin();
                     }
                 }
                 else{
@@ -1811,25 +1812,21 @@ uh::trees::tree_storage::delete_blocks(
             manage_lock.unlock();
             if(active_threads.load()==num_threads){
                 //work off the first joinable on the list to prevent overload
+                std::unique_lock manage_lock2(worker_protect);
                 for(auto &items:workers){
-                    if(std::get<2>(items).joinable()){
+                    if(std::get<2>(items).joinable() && !std::get<1>(items)->test()){
                         std::get<2>(items).join();
                         break;
                     }
                 }
+                manage_lock2.unlock();
             }
-            while (active_threads.load() >= num_threads) {
-                if (error_flag.test()) {
-                    FATAL
-                        << "Delete_blocks threading engine crashed unexpectedly while waiting for CPU cores!";
-                    return {};
-                }
-#ifdef _WIN32
-                Sleep(TEN_MS);
-#else
-                usleep(TEN_MS * ONE_MILLISECOND);
-#endif // _WIN32
+            if (error_flag.test()) {
+                FATAL
+                    << "Delete_blocks threading engine crashed unexpectedly while waiting for CPU cores!";
+                return {};
             }
+
             if(!work_was_started){
                 active_threads += 2;
 
