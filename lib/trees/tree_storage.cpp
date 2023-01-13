@@ -1412,7 +1412,6 @@ uh::trees::tree_storage::delete_blocks(
                 auto read_end_sequence = [&reader, &read_ptr, &write_control]() {
                     if (std::fclose(reader))ERROR << "Read stream was not open!";
                     *read_ptr -= 1;
-                    std::atomic_flag_clear_explicit(&write_control, std::memory_order_release);
                 };
                 std::size_t cur_pos = offset_calc(block_step_beg->cbegin(), block_step_beg->cend());
 
