@@ -1435,10 +1435,7 @@ uh::trees::tree_storage::delete_blocks(
                 if (std::filesystem::exists(chunk_maintain))std::filesystem::remove(chunk_maintain);
                 filesystem_lock.unlock();
                 //enable write thread
-                while (std::atomic_flag_test_and_set_explicit(&write_control,
-                                                              std::memory_order_acquire)) {
-                    write_control.wait(true);
-                }
+                std::atomic_flag_test_and_set_explicit(&write_control,std::memory_order_acquire)
                 //transmission from chunk to maintain file
                 FILE *writer = std::fopen(chunk_maintain.make_preferred().c_str(), "ab");
                 auto io_end_sequence = [&reader, &writer, &read_ptr, &write_control]() {
@@ -1493,7 +1490,7 @@ uh::trees::tree_storage::delete_blocks(
                     out_change_list.emplace_back(old_block_code, new_block_reference);
                     lock_output.unlock();
                     multithread_f_read.lock();
-                    multithreading_factory.pop_front();
+                    if(!multithreading_factory.empty())multithreading_factory.pop_front();
                     multithread_f_read.unlock();
                     if (error_flag.test()) {
                         FATAL << "I/O extern error when deleting block writing \"" +
@@ -1539,14 +1536,15 @@ uh::trees::tree_storage::delete_blocks(
                 if (num_threads > 1)w1 = std::thread(consumer_function);
 
                 auto factory_io_sequence_end = [&error_flag, &num_threads, &w1, &multithreading_factory,
-                                                &io_end_sequence, &write_once_to_maintain_file,&write_control]() {
+                                                &io_end_sequence, &write_once_to_maintain_file,&write_control,&multithreading_factory_protect]() {
                     std::atomic_flag_test_and_set_explicit(&error_flag, std::memory_order_acquire);//put error flag on
+                    std::atomic_flag_clear_explicit(&write_control, std::memory_order_release);
                     if (num_threads > 1) {
-                        std::atomic_flag_clear_explicit(&write_control, std::memory_order_release);
-                        if(w1.joinable())w1.join();//write out remaining blocks to prevent data loss
-                    } else {
-                        while (!multithreading_factory.empty())write_once_to_maintain_file();
+                        if(w1.joinable())w1.join();
                     }
+                    std::unique_lock multithread_f_read(multithreading_factory_protect);
+                    while (!multithreading_factory.empty())write_once_to_maintain_file();
+                    multithread_f_read.unlock();
                     io_end_sequence();
                 };
 
@@ -1597,13 +1595,13 @@ uh::trees::tree_storage::delete_blocks(
                         cur_pos += std::get<0>(read_tup);
                     }
                 }
-
+                std::atomic_flag_clear_explicit(&write_control, std::memory_order_release);
                 if (num_threads > 1) {
-                    std::atomic_flag_clear_explicit(&write_control, std::memory_order_release);
                     if(w1.joinable())w1.join();
-                } else {
-                    while (!multithreading_factory.empty())write_once_to_maintain_file();
                 }
+                std::unique_lock multithread_f_read(multithreading_factory_protect);
+                while (!multithreading_factory.empty())write_once_to_maintain_file();
+                multithread_f_read.unlock();
                 io_end_sequence();
 
                 if (error_flag.test()) {
