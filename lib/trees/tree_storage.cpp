@@ -1398,8 +1398,6 @@ uh::trees::tree_storage::delete_blocks(
             //read chunk at index (*cur_tmp)[0]
             FILE *reader = std::fopen(chunk.make_preferred().c_str(), "rb");
 
-            std::atomic_flag write_control(
-                    ATOMIC_FLAG_INIT);//extra write thread to stream to maintain file while scanning
             auto read_end_sequence = [&reader, &read_ptr, &write_control]() {
                 if (std::fclose(reader))ERROR << "Read stream was not open!";
                 *read_ptr -= 1;
@@ -1425,11 +1423,9 @@ uh::trees::tree_storage::delete_blocks(
             filesystem_lock.lock();
             if (std::filesystem::exists(chunk_maintain))std::filesystem::remove(chunk_maintain);
             filesystem_lock.unlock();
-            //enable write thread
-            std::atomic_flag_test_and_set_explicit(&write_control,std::memory_order_acquire);
             //transmission from chunk to maintain file
             FILE *writer = std::fopen(chunk_maintain.make_preferred().c_str(), "ab");
-            auto io_end_sequence = [&reader, &writer, &read_ptr, &write_control]() {
+            auto io_end_sequence = [&reader, &writer, &read_ptr]() {
                 if (std::fclose(reader))ERROR << "Read stream was not open!";
                 if (std::fclose(writer))ERROR << "Write stream was not open!";
                 *read_ptr -= 1;
@@ -1455,9 +1451,8 @@ uh::trees::tree_storage::delete_blocks(
                 }
                 new_block_reference.insert(new_block_reference.cbegin(), old_block_code[0]);
 
-                auto write_total_end = [&io_end_sequence, &error_thread_sequence, &error_flag, &chunk_maintain,&write_control] {
+                auto write_total_end = [&io_end_sequence, &error_thread_sequence, &error_flag, &chunk_maintain] {
                     ERROR << "File write thread failed to put down a line at \"" + chunk_maintain.string() + "\"";
-                    std::atomic_flag_clear_explicit(&write_control, std::memory_order_release);
                     io_end_sequence();
                     error_thread_sequence();
                     if (error_flag.test()) {
@@ -1482,7 +1477,6 @@ uh::trees::tree_storage::delete_blocks(
                 if (error_flag.test()) {
                     FATAL << "I/O extern error when deleting block writing \"" +
                              chunk_maintain.string() + "\"";
-                    std::atomic_flag_clear_explicit(&write_control, std::memory_order_release);
                     io_end_sequence();
                     error_thread_sequence();
                     return;
@@ -1490,44 +1484,10 @@ uh::trees::tree_storage::delete_blocks(
 
             };
 
-            auto consumer_function = [&write_control,&multithreading_factory_protect,&multithreading_factory,
-                                      &write_once_to_maintain_file,&error_flag,&chunk_maintain,&io_end_sequence,&error_thread_sequence,
-                                      &writer]() {
-                while (write_control.test()) {
-                    std::unique_lock multithread_f_read(multithreading_factory_protect,
-                                                        std::defer_lock);
-                    multithread_f_read.lock();
-                    while (!multithreading_factory.empty()) {
-                        multithread_f_read.unlock();
-                        write_once_to_maintain_file();
-                        multithread_f_read.lock();
-                    }
-                    multithread_f_read.unlock();
-                    if (error_flag.test()) {
-                        FATAL << "I/O extern error when deleting block writing \"" +
-                                 chunk_maintain.string() + "\"";
-                        std::atomic_flag_clear_explicit(&write_control, std::memory_order_release);
-                        io_end_sequence();
-                        error_thread_sequence();
-                        return;
-                    }
-#ifdef _WIN32
-                    Sleep(TEN_MS);
-#else
-                    usleep(TEN_MS * ONE_MILLISECOND);
-#endif // _WIN32
-                }
-            };
-            std::thread w1;
-            if (num_threads > 1)w1 = std::thread(consumer_function);
-
-            auto factory_io_sequence_end = [&error_flag, &num_threads, &w1, &multithreading_factory,
+            auto factory_io_sequence_end = [&error_flag, &num_threads, &multithreading_factory,
                                             &io_end_sequence, &write_once_to_maintain_file,&write_control,&multithreading_factory_protect]() {
                 std::atomic_flag_test_and_set_explicit(&error_flag, std::memory_order_acquire);//put error flag on
-                std::atomic_flag_clear_explicit(&write_control, std::memory_order_release);
-                if (num_threads > 1) {
-                    if(w1.joinable())w1.join();
-                }
+
                 std::unique_lock multithread_f_read(multithreading_factory_protect);
                 while (!multithreading_factory.empty())write_once_to_maintain_file();
                 multithread_f_read.unlock();
@@ -1580,10 +1540,6 @@ uh::trees::tree_storage::delete_blocks(
                     write_multithreading_f.unlock();
                     cur_pos += std::get<0>(read_tup);
                 }
-            }
-            std::atomic_flag_clear_explicit(&write_control, std::memory_order_release);
-            if (num_threads > 1) {
-                if(w1.joinable())w1.join();
             }
             std::unique_lock multithread_f_read(multithreading_factory_protect);
             while (!multithreading_factory.empty())write_once_to_maintain_file();
