@@ -1355,7 +1355,7 @@ uh::trees::tree_storage::delete_blocks(
                 auto write_ptr = &(*std::get<2>(size->at((*item.begin())[0])));
                 size_read.unlock();
 
-                while (std::atomic_flag_test_and_set_explicit(&(*maintain_ptr),
+                while (std::atomic_flag_test_and_set_explicit(maintain_ptr,
                                                               std::memory_order_acquire)) {
                     maintain_ptr->wait(true);
                 }
@@ -1619,7 +1619,7 @@ uh::trees::tree_storage::delete_blocks(
 
                 //after the truncate position are known and the following blocks are filtered, truncation and append need to take place under atomic flag protection
                 //write and truncate
-                while (std::atomic_flag_test_and_set_explicit(&(*write_ptr),
+                while (std::atomic_flag_test_and_set_explicit(write_ptr,
                                                               std::memory_order_acquire)) {
                     write_ptr->wait(true);
                 }
