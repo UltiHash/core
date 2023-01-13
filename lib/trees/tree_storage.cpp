@@ -1319,7 +1319,7 @@ uh::trees::tree_storage::delete_blocks(
 
     //use multithreading with a thread management system so that threads from deleting go on to deeper delete
     std::shared_mutex worker_protect{};
-    std::vector<std::tuple<std::size_t,std::shared_ptr<std::atomic_flag>,std::thread>> workers;
+    std::list<std::tuple<std::size_t,std::shared_ptr<std::atomic_flag>,std::jthread>> workers{};
 
     auto first_index_exe_function = [&](auto item,std::size_t worker_number) {
         //parallel start
@@ -1775,71 +1775,51 @@ uh::trees::tree_storage::delete_blocks(
             active_threads -= 2;
         } else {
             //threading manager
-            bool work_was_started = false;
 
-
-            std::unique_lock manage_lock(worker_protect);
-            for (auto it_w = workers.begin(); it_w < workers.end();) {
-                if (!std::get<1>(*it_w)->test()) {
-                    if(active_threads <= num_threads){
-                        if(work_was_started){
-                            break;
-                        }
-                        std::shared_ptr<std::atomic_flag> flag_worker = std::make_shared<std::atomic_flag>();
-                        while (std::atomic_flag_test_and_set_explicit(&(*flag_worker), std::memory_order_acquire)) {
-                            flag_worker->wait(true);
-                        }
-                        workers.emplace_back(worker_count,flag_worker,std::thread(first_index_exe_function, item_now,worker_count));
-                        worker_count++;
-                        if (error_flag.test()) {
-                            FATAL << "Delete_blocks threading engine crashed unexpectedly!";
-                            return {};
-                        }
-                        work_was_started = true;
-                    }
-                    else{
+            while (active_threads.load()>=num_threads) {
+                std::unique_lock manage_lock(worker_protect);
+                auto it_w = workers.begin();
+                while(it_w != workers.end() && !std::get<1>(*it_w)->test()){
+                    if(!std::get<1>(*it_w)->test()&&std::get<2>(*it_w).joinable()){
+                        std::get<2>(*it_w).join();
+                        auto tmp_cur = it_w++;
+                        workers.erase(tmp_cur);
                         active_threads -= 2;
-                    }
-                    if(std::get<2>(*it_w).joinable())std::get<2>(*it_w).join();
-                    workers.erase(it_w);
-                    it_w = workers.begin();
-                }
-                else{
-                    it_w++;
-                }
-            }
-            manage_lock.unlock();
-            if(active_threads.load()==num_threads){
-                //work off the first joinable on the list to prevent overload
-                std::unique_lock manage_lock2(worker_protect);
-                for(auto &items:workers){
-                    if(std::get<2>(items).joinable() && !std::get<1>(items)->test()){
-                        std::get<2>(items).join();
                         break;
                     }
+                    else it_w++;
                 }
-                manage_lock2.unlock();
+                manage_lock.unlock();
+                if (error_flag.test()) {
+                    FATAL
+                        << "Delete_blocks threading engine crashed unexpectedly while waiting for CPU cores!";
+                    return {};
+                }
+#ifdef _WIN32
+                Sleep(TEN_MS);
+#else
+                usleep(TEN_MS * ONE_MILLISECOND);
+#endif // _WIN32
             }
+
             if (error_flag.test()) {
                 FATAL
                     << "Delete_blocks threading engine crashed unexpectedly while waiting for CPU cores!";
                 return {};
             }
 
-            if(!work_was_started){
-                active_threads += 2;
-                std::shared_ptr<std::atomic_flag> flag_worker = std::make_shared<std::atomic_flag>();
-                while (std::atomic_flag_test_and_set_explicit(&(*flag_worker), std::memory_order_acquire)) {
-                    flag_worker->wait(true);
-                }
-                std::unique_lock manage_lock2(worker_protect);
-                workers.emplace_back(worker_count,flag_worker,std::thread(first_index_exe_function, item_now,worker_count));
-                manage_lock2.unlock();
-                worker_count++;
-                if (error_flag.test()) {
-                    FATAL << "Delete_blocks threading engine crashed unexpectedly!";
-                    return {};
-                }
+            active_threads += 2;
+            std::shared_ptr<std::atomic_flag> flag_worker = std::make_shared<std::atomic_flag>();
+            while (std::atomic_flag_test_and_set_explicit(&(*flag_worker), std::memory_order_acquire)) {
+                flag_worker->wait(true);
+            }
+            std::unique_lock manage_lock2(worker_protect);
+            workers.emplace_back(worker_count,flag_worker,std::jthread(first_index_exe_function, item_now,worker_count));
+            manage_lock2.unlock();
+            worker_count++;
+            if (error_flag.test()) {
+                FATAL << "Delete_blocks threading engine crashed unexpectedly!";
+                return {};
             }
         }
     }
