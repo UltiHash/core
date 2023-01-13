@@ -970,7 +970,7 @@ uh::trees::tree_storage::index(unsigned short num_threads) {
                         return;
                     }
 
-                    if (std::get<5>(read_tup) && std::get<0>(read_tup) > 0) {//if valid
+                    if (!std::get<5>(read_tup)&&std::get<6>(read_tup) && std::get<0>(read_tup) > 0) {//if valid
                         std::scoped_lock const lock_here(search_index_protect);
                         search_index.emplace_back(std::get<4>(read_tup), local_block_ref,
                                                   std::get<3>(read_tup));

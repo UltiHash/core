@@ -119,8 +119,8 @@ namespace uh::trees {
                 std::vector<unsigned char> hash_buf = std::vector<unsigned char>{},
                 std::size_t placeholder_block_size = 0);
 
-        //returns total size of block plus information, the received block as vector, the total block with information as vector, the times in normal unsigned long form,
-        //the global hash of SHA512 with creation time extend, bool error occurred, bool block description valid, block size
+        //returns total size of block plus information, block size, the received block as vector, the total block with information as vector, the times in normal unsigned long form,
+        //the global hash of SHA512 with creation time extend, bool error occurred, bool block description valid
         std::tuple<std::size_t, std::size_t, std::vector<unsigned char>, std::array<unsigned long, TIME_STAMPS_ON_BLOCK>, std::array<unsigned char, SHA512_DIGEST_LENGTH + sizeof(unsigned long)>, bool, bool>
         read_block_base(
                 FILE *reader, const std::filesystem::path &read_at, const std::vector<unsigned char> &local_block_ref,
