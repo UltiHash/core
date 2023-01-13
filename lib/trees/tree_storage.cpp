@@ -1321,10 +1321,7 @@ uh::trees::tree_storage::delete_blocks(
             return {};
         }
         auto error_thread_sequence = [&error_flag]() {
-            while (std::atomic_flag_test_and_set_explicit(&error_flag,
-                                                          std::memory_order_acquire)) {
-                return;
-            }
+            std::atomic_flag_test_and_set_explicit(&error_flag,std::memory_order_acquire);
         };
 
         auto first_index_exe_function = [&](auto item) {
@@ -1355,10 +1352,7 @@ uh::trees::tree_storage::delete_blocks(
                 auto write_ptr = &(*std::get<2>(size->at((*item.begin())[0])));
                 size_read.unlock();
 
-                while (std::atomic_flag_test_and_set_explicit(maintain_ptr,
-                                                              std::memory_order_acquire)) {
-                    maintain_ptr->wait(true);
-                }
+                std::atomic_flag_test_and_set_explicit(maintain_ptr,std::memory_order_acquire);
 
                 *read_ptr += 1;
 
@@ -1770,15 +1764,15 @@ uh::trees::tree_storage::delete_blocks(
         };
 
         if (num_threads == 1) {
-            active_threads += (num_threads % 2) ? 1 : 2;
+            active_threads += 2;
             first_index_exe_function(item_now);
-            active_threads -= (num_threads % 2) ? 1 : 2;
+            active_threads -= 2;
         } else {
             //threading manager
             for (auto it_w = workers.begin(); it_w != workers.end(); it_w++) {
                 if (!it_w->joinable()) {
                     workers.erase(it_w);
-                    active_threads -= (num_threads % 2) ? 1 : 2;
+                    active_threads -= 2;
                 }
             }
             while (active_threads.load() >= num_threads) {
@@ -1793,7 +1787,7 @@ uh::trees::tree_storage::delete_blocks(
                 usleep(TEN_MS * ONE_MILLISECOND);
 #endif // _WIN32
             }
-            active_threads += (num_threads % 2) ? 1 : 2;
+            active_threads += 2;
             std::thread w(first_index_exe_function, item_now);
             workers.push_back(std::move(w));
             if (error_flag.test()) {
