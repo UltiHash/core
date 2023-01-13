@@ -1766,7 +1766,7 @@ uh::trees::tree_storage::delete_blocks(
             //threading manager
             for (auto it_w = workers.begin(); it_w != workers.end(); it_w++) {
                 if (!it_w->joinable()) {
-                    if(active_threads <= num_threads){
+                    if(active_threads < num_threads){
                         std::thread w(first_index_exe_function, item_now);
                         *it_w=std::move(w);
                         if (error_flag.test()) {
