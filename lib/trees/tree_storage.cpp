@@ -1770,13 +1770,13 @@ uh::trees::tree_storage::delete_blocks(
             return {};
         }
         if (num_threads == 1) {
-            active_threads += 2;
+            active_threads += 1;
             first_index_exe_function(item_now,worker_count);
-            active_threads -= 2;
+            active_threads -= 1;
         } else {
             //threading manager
 
-            while (active_threads.load()>=num_threads) {
+            while (active_threads.load() >= num_threads || workers.size() >= num_threads) {
                 std::unique_lock manage_lock(worker_protect);
                 auto it_w = workers.begin();
                 while(it_w != workers.end() && !std::get<1>(*it_w)->test()){
@@ -1784,8 +1784,7 @@ uh::trees::tree_storage::delete_blocks(
                         std::get<2>(*it_w).join();
                         auto tmp_cur = it_w++;
                         workers.erase(tmp_cur);
-                        active_threads -= 2;
-                        break;
+                        active_threads -= 1;
                     }
                     else it_w++;
                 }
@@ -1795,11 +1794,6 @@ uh::trees::tree_storage::delete_blocks(
                         << "Delete_blocks threading engine crashed unexpectedly while waiting for CPU cores!";
                     return {};
                 }
-#ifdef _WIN32
-                Sleep(TEN_MS);
-#else
-                usleep(TEN_MS * ONE_MILLISECOND);
-#endif // _WIN32
             }
 
             if (error_flag.test()) {
@@ -1808,7 +1802,7 @@ uh::trees::tree_storage::delete_blocks(
                 return {};
             }
 
-            active_threads += 2;
+            active_threads += 1;
             std::shared_ptr<std::atomic_flag> flag_worker = std::make_shared<std::atomic_flag>();
             while (std::atomic_flag_test_and_set_explicit(&(*flag_worker), std::memory_order_acquire)) {
                 flag_worker->wait(true);
