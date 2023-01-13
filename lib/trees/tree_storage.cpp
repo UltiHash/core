@@ -1520,7 +1520,6 @@ uh::trees::tree_storage::delete_blocks(
                         usleep(TEN_MS * ONE_MILLISECOND);
 #endif // _WIN32
                     }
-                    if (std::fclose(writer))ERROR << "Write stream was not open!";
                 };
                 std::thread w1;
                 if (num_threads > 1)w1 = std::thread(consumer_function);

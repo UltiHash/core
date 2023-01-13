@@ -975,7 +975,7 @@ BOOST_AUTO_TEST_CASE(delete_test)
                 count++;
             }
         });
-        delete_list = t1.delete_blocks(del_list);
+        delete_list = t1.delete_blocks(del_list,1);
         //delete list shows changes that have to be thrown at the del list carrying local block references to be deleted
         //since the block references by changing offsets we need to update them
         //REFERENCE REPLACEMENT ALGORITHM
