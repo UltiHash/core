@@ -993,10 +993,10 @@ uh::trees::tree_storage::index(unsigned short num_threads) {
                 children_lock.unlock();
                 auto append_list = tree_ptr->index(1);
                 for (auto &el: std::get<0>(append_list)) {
-                    std::get<1>(el).insert(std::get<1>(el).cbegin(), i);
+                    std::get<1>(el).insert(std::get<1>(el).begin(), i);
                 }
                 for (auto &el: std::get<1>(append_list)) {
-                    std::get<1>(el).insert(std::get<1>(el).cbegin(), i);
+                    std::get<1>(el).insert(std::get<1>(el).begin(), i);
                 }
                 std::scoped_lock const lock_splice(search_index_protect);
                 search_index.splice(search_index.cend(), std::get<0>(append_list));
