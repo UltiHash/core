@@ -1802,6 +1802,7 @@ uh::trees::tree_storage::delete_blocks(
                             return {};
                         }
                         work_was_started = true;
+                        it_w++;
                     }
                     else{
                         active_threads -= 2;
@@ -1809,6 +1810,7 @@ uh::trees::tree_storage::delete_blocks(
                         workers.erase(it_w);
                     }
                 }
+                it_w++;
             }
             manage_lock.unlock();
             while (active_threads.load() >= num_threads) {
