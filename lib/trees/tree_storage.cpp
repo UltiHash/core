@@ -1810,7 +1810,7 @@ uh::trees::tree_storage::delete_blocks(
                         workers.erase(it_w);
                     }
                 }
-                it_w++;
+                else it_w++;
             }
             manage_lock.unlock();
             while (active_threads.load() >= num_threads) {
