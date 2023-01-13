@@ -1785,19 +1785,20 @@ uh::trees::tree_storage::delete_blocks(
                         if(work_was_started){
                             break;
                         }
-                        std::thread w(first_index_exe_function, item_now,worker_count);
                         std::shared_ptr<std::atomic_flag> flag_worker = std::make_shared<std::atomic_flag>();
                         while (std::atomic_flag_test_and_set_explicit(&(*flag_worker), std::memory_order_acquire)) {
                             flag_worker->wait(true);
                         }
-                        *it_w = std::tuple<std::size_t,std::shared_ptr<std::atomic_flag>,std::thread>{worker_count,flag_worker,std::move(w)};
+                        workers.emplace_back(worker_count,flag_worker,std::thread(first_index_exe_function, item_now,worker_count));
                         worker_count++;
                         if (error_flag.test()) {
                             FATAL << "Delete_blocks threading engine crashed unexpectedly!";
                             return {};
                         }
                         work_was_started = true;
-                        it_w++;
+                        if(std::get<2>(*it_w).joinable())std::get<2>(*it_w).join();
+                        workers.erase(it_w);
+                        it_w = workers.begin();
                     }
                     else{
                         active_threads -= 2;
@@ -1829,14 +1830,12 @@ uh::trees::tree_storage::delete_blocks(
 
             if(!work_was_started){
                 active_threads += 2;
-
-                std::thread w(first_index_exe_function, item_now,worker_count);
                 std::shared_ptr<std::atomic_flag> flag_worker = std::make_shared<std::atomic_flag>();
                 while (std::atomic_flag_test_and_set_explicit(&(*flag_worker), std::memory_order_acquire)) {
                     flag_worker->wait(true);
                 }
                 std::unique_lock manage_lock2(worker_protect);
-                workers.emplace_back(worker_count,flag_worker,std::move(w));
+                workers.emplace_back(worker_count,flag_worker,std::thread(first_index_exe_function, item_now,worker_count));
                 manage_lock2.unlock();
                 worker_count++;
                 if (error_flag.test()) {
