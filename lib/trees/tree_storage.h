@@ -344,7 +344,6 @@ namespace uh::trees {
         bool set_block_time(const std::vector<unsigned char> &local_block_reference,
                             std::array<unsigned long, TIME_STAMPS_ON_BLOCK - 1> times);
 
-        //TODO: maintain valid time, introduce block max age
         //after deletion some blocks are de-fragmented in descending order. Behind the deleted block(s) all blocks need to be re-mapped
         //returns the deleted total size and a list of tuple<old_block_reference with first element tree reference, new_block_reference with first element tree reference,reference to tree_storage of change>
         //maintaining the system can be done in 2 steps: delete_blocks_copy and after that we need to re-map all local block references
@@ -356,6 +355,7 @@ namespace uh::trees {
          * The function can delete multiple blocks at once, giving back changed offsets of other blocks it contained
          * which need to be internally reconfigured to be read
          */
+        //WARNING: not yet thread safe
         std::tuple<std::size_t, std::list<std::tuple<std::vector<unsigned char>, std::vector<unsigned char>>>>
         delete_blocks(
                 std::vector<std::vector<unsigned char>> &block_codes,
