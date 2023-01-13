@@ -1796,15 +1796,13 @@ uh::trees::tree_storage::delete_blocks(
                             return {};
                         }
                         work_was_started = true;
-                        if(std::get<2>(*it_w).joinable())std::get<2>(*it_w).join();
-                        workers.erase(it_w);
-                        it_w = workers.begin();
                     }
                     else{
                         active_threads -= 2;
-                        workers.erase(it_w);
-                        it_w = workers.begin();
                     }
+                    if(std::get<2>(*it_w).joinable())std::get<2>(*it_w).join();
+                    workers.erase(it_w);
+                    it_w = workers.begin();
                 }
                 else{
                     it_w++;
