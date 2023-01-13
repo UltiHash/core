@@ -1783,10 +1783,9 @@ uh::trees::tree_storage::delete_blocks(
             //threading manager
             bool work_was_started = false;
             std::unique_lock manage_lock(worker_protect);
-            for (auto it_w = workers.begin(); it_w != workers.end(); it_w++) {
+            for (auto it_w = workers.begin(); it_w != workers.end();) {
                 if (!std::get<1>(*it_w)->test()) {
                     if(active_threads <= num_threads){
-                        workers.erase(it_w);
                         if(work_was_started){
                             break;
                         }
@@ -1796,7 +1795,7 @@ uh::trees::tree_storage::delete_blocks(
                             flag_worker->wait(true);
                         }
                         std::tuple<std::size_t,std::shared_ptr<std::atomic_flag>>worker_tup{worker_count,flag_worker};
-                        workers.push_back(worker_tup);
+                        *it_w = worker_tup;
                         worker_count++;
                         if (error_flag.test()) {
                             FATAL << "Delete_blocks threading engine crashed unexpectedly!";
@@ -1805,8 +1804,9 @@ uh::trees::tree_storage::delete_blocks(
                         work_was_started = true;
                     }
                     else{
-                        workers.erase(it_w);
                         active_threads -= 2;
+                        auto tmp_it = it_w++;
+                        workers.erase(it_w);
                     }
                 }
             }
