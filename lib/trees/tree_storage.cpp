@@ -1446,12 +1446,11 @@ uh::trees::tree_storage::delete_blocks(
                     if (std::fclose(reader))ERROR << "Read stream was not open!";
                     if (std::fclose(writer))ERROR << "Write stream was not open!";
                     *read_ptr -= 1;
-                    std::atomic_flag_clear_explicit(&write_control, std::memory_order_release);
                 };
 
                 auto write_once_to_maintain_file = [&multithreading_factory_protect,&multithreading_factory,
                                                     &io_end_sequence,&error_thread_sequence,&error_flag,&chunk_maintain,&writer,
-                                                    &out_change_list_protect,&out_change_list,this]() {
+                                                    &out_change_list_protect,&out_change_list,&write_control,this]() {
                     std::unique_lock multithread_f_read(multithreading_factory_protect,
                                                         std::defer_lock);
                     multithread_f_read.lock();
@@ -1471,8 +1470,9 @@ uh::trees::tree_storage::delete_blocks(
                     }
                     new_block_reference.insert(new_block_reference.cbegin(), old_block_code[0]);
 
-                    auto write_total_end = [&io_end_sequence, &error_thread_sequence, &error_flag, &chunk_maintain] {
+                    auto write_total_end = [&io_end_sequence, &error_thread_sequence, &error_flag, &chunk_maintain,&write_control] {
                         ERROR << "File write thread failed to put down a line at \"" + chunk_maintain.string() + "\"";
+                        std::atomic_flag_clear_explicit(&write_control, std::memory_order_release);
                         io_end_sequence();
                         error_thread_sequence();
                         if (error_flag.test()) {
@@ -1499,6 +1499,7 @@ uh::trees::tree_storage::delete_blocks(
                     if (error_flag.test()) {
                         FATAL << "I/O extern error when deleting block writing \"" +
                                  chunk_maintain.string() + "\"";
+                        std::atomic_flag_clear_explicit(&write_control, std::memory_order_release);
                         io_end_sequence();
                         error_thread_sequence();
                         return;
@@ -1522,6 +1523,7 @@ uh::trees::tree_storage::delete_blocks(
                         if (error_flag.test()) {
                             FATAL << "I/O extern error when deleting block writing \"" +
                                      chunk_maintain.string() + "\"";
+                            std::atomic_flag_clear_explicit(&write_control, std::memory_order_release);
                             io_end_sequence();
                             error_thread_sequence();
                             return;
@@ -1537,10 +1539,12 @@ uh::trees::tree_storage::delete_blocks(
                 std::thread w1;
                 if (num_threads > 1)w1 = std::thread(consumer_function);
 
-                auto factory_io_sequence_end = [&error_flag, &num_threads, &w1, &multithreading_factory, &io_end_sequence, &write_once_to_maintain_file]() {
+                auto factory_io_sequence_end = [&error_flag, &num_threads, &w1, &multithreading_factory,
+                                                &io_end_sequence, &write_once_to_maintain_file,&write_control]() {
                     std::atomic_flag_test_and_set_explicit(&error_flag, std::memory_order_acquire);//put error flag on
                     if (num_threads > 1) {
-                        if (w1.joinable())w1.join();//write out remaining blocks to prevent data loss
+                        std::atomic_flag_clear_explicit(&write_control, std::memory_order_release);
+                        if(w1.joinable())w1.join();//write out remaining blocks to prevent data loss
                     } else {
                         while (!multithreading_factory.empty())write_once_to_maintain_file();
                     }
@@ -1596,7 +1600,8 @@ uh::trees::tree_storage::delete_blocks(
                 }
 
                 if (num_threads > 1) {
-                    if (w1.joinable())w1.join();
+                    std::atomic_flag_clear_explicit(&write_control, std::memory_order_release);
+                    if(w1.joinable())w1.join();
                 } else {
                     while (!multithreading_factory.empty())write_once_to_maintain_file();
                 }
@@ -1801,13 +1806,13 @@ uh::trees::tree_storage::delete_blocks(
         }
     }
 
-    for (auto it_w = workers.begin(); it_w != workers.end(); it_w++) {
+    for (auto & worker : workers) {
         if (error_flag.test()) {
             FATAL
                 << "Delete_blocks threading engine crashed unexpectedly while waiting for CPU cores!";
             return {};
         }
-        if (it_w->joinable())it_w->join();
+        if (worker.joinable())worker.join();
     }
     if (error_flag.test()) {
         FATAL
