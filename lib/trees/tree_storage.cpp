@@ -1319,7 +1319,7 @@ uh::trees::tree_storage::delete_blocks(
 
     //use multithreading with a thread management system so that threads from deleting go on to deeper delete
     std::shared_mutex worker_protect{};
-    std::list<std::tuple<std::size_t,std::shared_ptr<std::atomic_flag>,std::thread>> workers;
+    std::vector<std::tuple<std::size_t,std::shared_ptr<std::atomic_flag>,std::thread>> workers;
 
     auto first_index_exe_function = [&](auto item,std::size_t worker_number) {
         //parallel start
