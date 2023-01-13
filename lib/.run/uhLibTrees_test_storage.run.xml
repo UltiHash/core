@@ -1,8 +1,0 @@
-<component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="uhLibTrees_test_storage" type="CMakeBoostTestRunConfigurationType" factoryName="Boost Test" REDIRECT_INPUT="false" ELEVATE="false" USE_EXTERNAL_CONSOLE="false" PASS_PARENT_ENVS_2="true" PROJECT_NAME="uhLibCommon" TARGET_NAME="uhLibTrees_test_storage" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="uhLibCommon" RUN_TARGET_NAME="uhLibTrees_test_storage" TEST_MODE="SUITE_TEST">
-    <method v="2">
-      <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
-      <option name="BeforeTestRunTask" enabled="true" />
-    </method>
-  </configuration>
-</component>
