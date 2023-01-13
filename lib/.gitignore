@@ -4,3 +4,5 @@ cmake-build-*/*
 .idea/
 .idea/*
 /numbers/BigInteger.h
+.run/
+.run/*
