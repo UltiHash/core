@@ -43,7 +43,7 @@ std::vector<unsigned char> binary_generator(std::size_t max_len) {
 BOOST_AUTO_TEST_CASE(constructor_test)
 {
     //tests for any linux machine
-    std::filesystem::path target = std::filesystem::path("/home") / std::string(getenv("USER"));
+    std::filesystem::path target = std::filesystem::path("/tmp");
     uh::trees::tree_storage t1(target);//A test folder reserved for tree storage
     t1.delete_recursive();
     auto to_remove = target / "0000";
@@ -57,7 +57,7 @@ BOOST_AUTO_TEST_CASE(constructor_test)
 BOOST_AUTO_TEST_CASE(write_read_base_test)
 {
     //tests for any linux machine
-    std::filesystem::path target = std::filesystem::path("/home") / std::string(getenv("USER"));
+    std::filesystem::path target = std::filesystem::path("/tmp");
     auto base_test = target / "0000";
     uh::trees::tree_storage t1(base_test);//A test folder reserved for tree storage
 
@@ -291,7 +291,7 @@ BOOST_AUTO_TEST_CASE(write_read_base_test)
 BOOST_AUTO_TEST_CASE(write_read_test)
 {
     //tests for any linux machine
-    std::filesystem::path target = std::filesystem::path("/home") / std::string(getenv("USER"));
+    std::filesystem::path target = std::filesystem::path("/tmp");
     uh::trees::tree_storage t1(target);//A test folder reserved for tree storage
     //for strong laptops with SSD extension (configure test db server to run this??)
     //uh::trees::tree_storage t1("/mnt/md0");//A test folder reserved for tree storage for performance tests
@@ -872,7 +872,7 @@ BOOST_AUTO_TEST_CASE(index_read_test)
     gettimeofday(&time, nullptr);
     long double millis = ((long double) time.tv_sec * ONE_MILLISECOND) + ((long double) time.tv_usec / ONE_MILLISECOND);
     //for any machine
-    std::filesystem::path target = std::filesystem::path("/home") / std::string(getenv("USER"));
+    std::filesystem::path target = std::filesystem::path("/tmp");
     uh::trees::tree_storage t1(target);//A test folder reserved for tree storage
     //for strong laptops with SSD extension (configure test db server to run this??)
     //uh::trees::tree_storage t1("/mnt/md0");//A test folder reserved for tree storage for performance tests
@@ -911,7 +911,7 @@ BOOST_AUTO_TEST_CASE(get_info_set_time_test)
 {
     struct timeval time{};
     //tests for any linux machine
-    std::filesystem::path target = std::filesystem::path("/home") / std::string(getenv("USER"));
+    std::filesystem::path target = std::filesystem::path("/tmp");
     uh::trees::tree_storage t1(target);//A test folder reserved for tree storage
     //for strong laptops with SSD extension (configure test db server to run this??)
     //uh::trees::tree_storage t1("/mnt/md0");//A test folder reserved for tree storage for performance tests
@@ -956,7 +956,7 @@ BOOST_AUTO_TEST_CASE(get_info_set_time_test)
 BOOST_AUTO_TEST_CASE(delete_test)
 {
     //tests for any linux machine
-    std::filesystem::path target = std::filesystem::path("/home") / std::string(getenv("USER"));
+    std::filesystem::path target = std::filesystem::path("/tmp");
     uh::trees::tree_storage t1(target);//A test folder reserved for tree storage
     //for strong laptops with SSD extension (configure test db server to run this??)
     //uh::trees::tree_storage t1("/mnt/md0");//A test folder reserved for tree storage for performance tests
