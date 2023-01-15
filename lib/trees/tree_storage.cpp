@@ -100,7 +100,7 @@ uh::trees::tree_storage::tree_storage(const std::filesystem::path &root, unsigne
         });
         unsigned char const max_i = std::get<1>(*size_max);
         for (unsigned short i6 = 0; i6 < max_i; i6++) {
-            if (!std::any_of(std::execution::par, size->begin(), size->end(), [&i6](auto &item) {
+            if (!std::any_of(size->begin(), size->end(), [&i6](auto &item) {
                 return std::get<1>(item) == i6;
             })) {
                 std::shared_ptr<std::atomic_flag> f1 = std::make_shared<std::atomic_flag>(), f3 = std::make_shared<std::atomic_flag>();
@@ -109,11 +109,11 @@ uh::trees::tree_storage::tree_storage(const std::filesystem::path &root, unsigne
             }
         }
     }
-    if (!std::is_sorted(std::execution::par_unseq, size->begin(), size->end(),
+    if (!std::is_sorted(size->begin(), size->end(),
                         [](const auto &a, const auto &b) {
                             return std::get<1>(a) < std::get<1>(b);
                         }))
-        std::sort(std::execution::par, size->begin(), size->end(),
+        std::sort(size->begin(), size->end(),
                   [](const auto &a, const auto &b) {
                       return std::get<1>(a) < std::get<1>(b);
                   });
@@ -127,7 +127,7 @@ uh::trees::tree_storage::tree_storage(const std::filesystem::path &root, unsigne
         });
         unsigned char const max_i = std::get<2>(*children_max);
         for (unsigned short i6 = 0; i6 < max_i; i6++) {
-            if (!std::any_of(std::execution::par, children->begin(), children->end(), [&i6](auto &item) {
+            if (!std::any_of(children->begin(), children->end(), [&i6](auto &item) {
                 return std::get<2>(item) == i6;
             })) {
                 std::string ref_name{boost::algorithm::hex(std::string{(char) i6})};
@@ -143,11 +143,11 @@ uh::trees::tree_storage::tree_storage(const std::filesystem::path &root, unsigne
             }
         }
     }
-    if (!std::is_sorted(std::execution::par_unseq, children->begin(), children->end(),
+    if (!std::is_sorted(children->begin(), children->end(),
                         [](const auto &a, const auto &b) {
                             return std::get<2>(a) < std::get<2>(b);
                         }))
-        std::sort(std::execution::par, children->begin(), children->end(),
+        std::sort(children->begin(), children->end(),
                   [](const auto &a, const auto &b) {
                       return std::get<2>(a) < std::get<2>(b);
                   });
@@ -1295,7 +1295,7 @@ uh::trees::tree_storage::delete_blocks(
     std::shared_mutex out_change_list_protect{};
     std::list<std::tuple<std::vector<unsigned char>, std::vector<unsigned char>>> out_change_list{};
     //sort for lexicographic to find blocks within the same chunks that all need to be deleted
-    std::sort(std::execution::par, block_codes.begin(), block_codes.end(), [](auto &a, auto &b) {
+    std::sort(block_codes.begin(), block_codes.end(), [](auto &a, auto &b) {
         return std::lexicographical_compare(a.begin(), a.end(), b.begin(), b.end());
     });
     //scan and filter for size == 5 and delete blocks from chunks, deliver deleted size and changed local block codes via chunk level indexing after change spot
@@ -1729,11 +1729,12 @@ uh::trees::tree_storage::delete_blocks(
             active_threads -= 1;
         } else {
             //threading manager
-
+            std::unique_lock manage_lock1(worker_protect);
             while (active_threads.load() >= num_threads || workers.size() >= num_threads) {
-                std::unique_lock manage_lock(worker_protect);
                 auto it_w = workers.begin();
-                while(it_w != workers.end() && !std::get<1>(*it_w)->test()){
+                manage_lock1.unlock();
+                std::unique_lock manage_lock2(worker_protect);
+                while(it_w != workers.end()){
                     if(!std::get<1>(*it_w)->test()&&std::get<2>(*it_w).joinable()){
                         std::get<2>(*it_w).join();
                         auto tmp_cur = it_w++;
@@ -1742,13 +1743,15 @@ uh::trees::tree_storage::delete_blocks(
                     }
                     else it_w++;
                 }
-                manage_lock.unlock();
+                manage_lock2.unlock();
                 if (error_flag.test()) {
                     FATAL
                         << "Delete_blocks threading engine crashed unexpectedly while waiting for CPU cores!";
                     return {};
                 }
+                manage_lock1.lock();
             }
+            manage_lock1.unlock();
 
             if (error_flag.test()) {
                 FATAL
@@ -1772,15 +1775,21 @@ uh::trees::tree_storage::delete_blocks(
         }
     }
 
+    std::unique_lock manage_lock3(worker_protect);
     auto it_w = workers.begin();
-    while(it_w != workers.end() && !std::get<1>(*it_w)->test()){
+    while(it_w != workers.end()){
+        manage_lock3.unlock();
+        std::unique_lock manage_lock4(worker_protect);
         if(std::get<2>(*it_w).joinable()){
+            manage_lock4.unlock();
+            std::unique_lock manage_lock5(worker_protect);
             while (std::atomic_flag_test_and_set_explicit(&(*std::get<1>(*it_w)), std::memory_order_acquire)) {
                 std::get<1>(*it_w)->wait(true);
             }
-            std::get<2>(*it_w).join();
+            if(std::get<1>(*it_w)->test())std::get<2>(*it_w).join();
             auto tmp_cur = it_w++;
             workers.erase(tmp_cur);
+            manage_lock5.unlock();
             active_threads -= 1;
             if (error_flag.test()) {
                 FATAL
@@ -1788,8 +1797,13 @@ uh::trees::tree_storage::delete_blocks(
                 return {};
             }
         }
-        else it_w++;
+        else{
+            it_w++;
+            manage_lock4.unlock();
+        }
+        manage_lock3.lock();
     }
+    manage_lock3.unlock();
 
     std::scoped_lock const out_return_lock(out_change_list_protect);
     return {out_size.load(), out_change_list};
