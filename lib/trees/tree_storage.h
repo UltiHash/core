@@ -247,6 +247,7 @@ namespace uh::trees {
                     size_lock.lock();
                     auto write_ptr = &(*std::get<2>(size->at(block_code[0])));
                     auto read_ptr = &(*std::get<3>(size->at(block_code[0])));
+                    auto maintain_ptr = &(*std::get<4>(size->at((*item.begin())[0])));
                     size_lock.unlock();
 
                     *read_ptr += 1;
@@ -255,13 +256,20 @@ namespace uh::trees {
                         write_ptr->wait(true);
                     }
 
+                    while (maintain_ptr->test()) {
+                        maintain_ptr->wait(true);
+                    }
+
                     FILE *reader = std::fopen(read_path.make_preferred().c_str(), "rb");
                     auto read_end_sequence = [&reader, &read_ptr, &write_ptr, &read_path]() {
                         if (std::fclose(reader)) {
                             ERROR << "Read stream was not open on " + read_path.make_preferred().string() + "!";
                         }
                         *read_ptr -= 1;
-                        if (!read_ptr->load())write_ptr->notify_one();
+                        if (!read_ptr->load()){
+                            write_ptr->notify_one();
+                            maintain_ptr->notify_one();
+                        }
                     };
                     //File should have been opened or created here
                     if (std::fseek(reader, static_cast<long>(offset), SEEK_SET)) {
