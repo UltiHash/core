@@ -996,7 +996,7 @@ BOOST_AUTO_TEST_CASE(delete_test)
         delete_list = t1.delete_blocks(del_list);
         //delete list shows changes that have to be thrown at the del list carrying local block references to be deleted
         //since the block references by changing offsets we need to update them
-        //REFERENCE REPLACEMENT ALGORITHM
+        //REFERENCE REPLACEMENT ALGORITHM FOR INDEX ON NEXT HIGHER LEVEL
         std::for_each(del_list.begin(), del_list.end(), [&delete_list, &index_list](auto &item) {
             if (!std::any_of(std::get<1>(delete_list).begin(), std::get<1>(delete_list).end(), [&item](auto &item2) {
                 return item == std::get<0>(item2);//check if original local block ref hit
