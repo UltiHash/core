@@ -797,17 +797,21 @@ uh::trees::tree_storage::write(const std::vector<unsigned char> &input,
                 size->emplace_back(min_val, min_pos, f1, f2, f3);
             }
         } else {
+            if(count_loop){
+                auto maintain_ptr = &(*std::get<4>(size->at(min_pos_old)));
+                maintain_unlock(maintain_ptr);
+            }
             auto min_el = *std::min_element(size->begin(), size->end(), [&count_loop](auto &a, auto &b) {
-                return std::get<0>(a) < std::get<0>(b) && !std::get<4>(a)->test() && (count_loop || !std::get<4>(b)->test());//skip maintain chunks for smaller check
+                return std::get<0>(a) < std::get<0>(b) && !std::get<4>(a)->test() && !std::get<4>(b)->test();//skip maintain chunks for smaller check
             });
             min_pos = std::get<1>(min_el);
             min_val = std::get<0>(size->at(min_pos));
         }
-        if((min_pos != min_pos_old || size->size() >= N) && count_loop){
+        if(min_pos != min_pos_old && count_loop){
             //unlock old chunk again because of update
             auto maintain_ptr = &(*std::get<4>(size->at(min_pos_old)));
             maintain_unlock(maintain_ptr);
-            if(min_pos != min_pos_old)count_loop = false;
+            count_loop = false;
         }
         deeper = min_val >= STORE_MAX || min_val + total_size >= STORE_HARD_LIMIT || size->size() <= min_pos || std::get<4>(size->at(min_pos))->test();
 
