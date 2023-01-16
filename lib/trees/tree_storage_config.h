@@ -14,5 +14,6 @@
 #endif
 #define STORE_HARD_LIMIT (unsigned long) (STORE_MAX * 2)
 #define STORE_MAX_LATENCY 32
+#define N (unsigned int) (std::numeric_limits<unsigned char>::max() + 1)
 
 #endif
