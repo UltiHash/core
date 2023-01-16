@@ -810,13 +810,13 @@ uh::trees::tree_storage::write(const std::vector<unsigned char> &input,
         deeper = !(min_val < STORE_MAX && min_val + total_size < STORE_HARD_LIMIT &&
                    !(std::get<4>(size->at(min_pos))->test()));
 
-        auto maintain_ptr = &(*std::get<4>(size->at(min_pos)));
-        maintain_lock(maintain_ptr);
-
         if(count_loop > 1){
             lock_size.unlock();
             break;
         }
+
+        auto maintain_ptr = &(*std::get<4>(size->at(min_pos)));
+        maintain_lock(maintain_ptr);
 
         count_loop++;
         min_pos_old = min_pos;
