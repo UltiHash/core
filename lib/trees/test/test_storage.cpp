@@ -874,15 +874,13 @@ BOOST_AUTO_TEST_CASE(index_read_test)
     //for any machine
     std::filesystem::path target = std::filesystem::path("/tmp");
     uh::trees::tree_storage t1(target);//A test folder reserved for tree storage
-    //for strong laptops with SSD extension (configure test db server to run this??)
-    //uh::trees::tree_storage t1("/mnt/md0");//A test folder reserved for tree storage for performance tests
     gettimeofday(&time, nullptr);
     long double constructor_time =
             (((long double) time.tv_sec * ONE_MILLISECOND) + ((long double) time.tv_usec / ONE_MILLISECOND)) - millis;
 
     gettimeofday(&time, nullptr);
     millis = ((long double) time.tv_sec * ONE_MILLISECOND) + ((long double) time.tv_usec / ONE_MILLISECOND);
-    auto index_list = t1.index();
+    auto index_list = t1.index(1);
     gettimeofday(&time, nullptr);
     long double index_time =
             (((long double) time.tv_sec * ONE_MILLISECOND) + ((long double) time.tv_usec / ONE_MILLISECOND)) - millis;
@@ -915,7 +913,7 @@ BOOST_AUTO_TEST_CASE(get_info_set_time_test)
     uh::trees::tree_storage t1(target);//A test folder reserved for tree storage
     //for strong laptops with SSD extension (configure test db server to run this??)
     //uh::trees::tree_storage t1("/mnt/md0");//A test folder reserved for tree storage for performance tests
-    auto index_list = t1.index();
+    auto index_list = t1.index(1);
     BOOST_ASSERT_MSG(!std::get<0>(index_list).empty(), "Index list was empty!");
     auto first_el = std::get<0>(index_list).begin();
     gettimeofday(&time, nullptr);
@@ -960,7 +958,7 @@ BOOST_AUTO_TEST_CASE(delete_test)
     uh::trees::tree_storage t1(target);//A test folder reserved for tree storage
     //for strong laptops with SSD extension (configure test db server to run this??)
     //uh::trees::tree_storage t1("/mnt/md0");//A test folder reserved for tree storage for performance tests
-    auto index_list = t1.index();
+    auto index_list = t1.index(1);
     //from index take 2 blocks of the same chunk and copy them to RAM
     //delete one block over its reference and check if the block of the returned local reference is the same
     std::tuple<std::size_t, std::list<std::tuple<std::vector<unsigned char>, std::vector<unsigned char>>>> delete_list{};
