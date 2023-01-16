@@ -97,6 +97,7 @@ namespace uh::trees {
                 usleep(10 * 1000);
 #endif // _WIN32
                 count++;
+                if(count >=1000)THROW(out_of_memory, "No memory! "+std::to_string(mem)+" bytes were needed!");;
             } while (freeMem < mem * sizeof(ALLOC));
             std::scoped_lock lock_mem2(memory_protect);
             auto out_vec = std::vector<ALLOC>();
