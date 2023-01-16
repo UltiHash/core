@@ -10,8 +10,8 @@ basic_options::basic_options()
     : m_desc("General Options")
 {
     m_desc.add_options()
-        ("help", "print help screen")
-        ("version", "output program version")
+        ("help,h", "print help screen")
+        ("version,v", "output program version")
         ("vcsid", "output VCS revision ID");
 }
 

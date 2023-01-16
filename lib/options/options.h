@@ -15,13 +15,12 @@ namespace uh::options
 class options
 {
 public:
-    void parse(int argc, const char** argv);
+    virtual void parse(int argc, const char** argv);
     virtual void evaluate(const boost::program_options::variables_map& vars);
-
     void add(boost::program_options::options_description& desc);
-
     void dump(std::ostream& out) const;
-private:
+
+protected:
     boost::program_options::options_description m_desc;
     boost::program_options::variables_map m_vars;
 };
