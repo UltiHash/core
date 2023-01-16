@@ -1743,7 +1743,7 @@ uh::trees::tree_storage::delete_blocks(
             while ((workers.size() >= num_threads || sorted_block_codes.size() <= active_threads.load()) && it_w != workers.end()) {
                 manage_lock1.unlock();
                 std::unique_lock manage_lock2(worker_protect);
-                if(!std::get<1>(*it_w)->test()&&std::get<2>(*it_w).joinable()){
+                while(!std::get<1>(*it_w)->test()&&std::get<2>(*it_w).joinable()){
                     std::get<2>(*it_w).join();
                     auto tmp_cur = it_w++;
                     workers.erase(tmp_cur);
