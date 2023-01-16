@@ -1480,8 +1480,9 @@ uh::trees::tree_storage::delete_blocks(
                 if (std::fclose(writer))ERROR << "Write stream was not open!";
                 write_unlock(write_ptr);
             };
-            auto write_total_end = [&io_end_sequence, &error_thread_sequence, &error_flag, &chunk_maintain,&maintain_ptr,&maintain_unlock] {
-                ERROR << "File write thread failed to put down a line at \"" + chunk_maintain.string() + "\"";
+            auto write_total_end = [&io_end_sequence, &error_thread_sequence, &error_flag, &chunk_maintain,&maintain_ptr,&maintain_unlock,&cur_pos,&delete_size] {
+                ERROR << "File write thread failed to put down a line at \"" + chunk_maintain.string() + "\" at position "+std::string(cur_pos)+" and deleting postion "+
+                std::string(cur_pos - delete_size);
                 io_end_sequence();
                 error_thread_sequence();
                 maintain_unlock(maintain_ptr);
@@ -1490,17 +1491,22 @@ uh::trees::tree_storage::delete_blocks(
                 }
             };
 
-            while (!std::feof(reader) && cur_pos < total_file_size) {
-                if (error_flag.test())break;//break thread in case error is there
-                //File should have been opened or created here, seek for first block
-                //start position of the block for seeking it later on is the old size
+            auto block_code_generate = [](std::size_t pos, unsigned char first_el){
                 std::vector<unsigned char> local_block_test_ref{};
                 local_block_test_ref.reserve(sizeof(unsigned int));//reconstruct current local reference
                 for (unsigned short i = 0;
                      i < (unsigned short) sizeof(unsigned int); i++) {//STORE_MAX will fit in 4 bytes
-                    local_block_test_ref.push_back((unsigned char) (cur_pos >> (i * CHAR_BITS)));
+                    local_block_test_ref.push_back((unsigned char) (pos >> (i * CHAR_BITS)));
                 }
-                local_block_test_ref.insert(local_block_test_ref.cbegin(), (*item.begin())[0]);
+                local_block_test_ref.insert(local_block_test_ref.cbegin(), first_el);
+                return local_block_test_ref;
+            };
+
+            while (!std::feof(reader) && cur_pos < total_file_size) {
+                if (error_flag.test())break;//break thread in case error is there
+                //File should have been opened or created here, seek for first block
+                //start position of the block for seeking it later on is the old size
+                std::vector<unsigned char> local_block_test_ref = block_code_generate(cur_pos, (*item.begin())[0]);
                 //read a block from current chunk
                 if (block_step_beg < delete_here_codes.cend() &&
                     std::equal(local_block_test_ref.cbegin(), local_block_test_ref.cend(), block_step_beg->cbegin(),
@@ -1532,11 +1538,8 @@ uh::trees::tree_storage::delete_blocks(
                                       hash.begin());
                     //stores block, old offset vector, new offset number, block SHA512 and times
                     auto write_tup = write_block_base(writer, chunk_maintain.make_preferred(), std::get<2>(read_tup),
-                                                      local_block_test_ref,
-                                                      std::get<3>(read_tup), false, false,//TODO: count new offset
+                                                      local_block_test_ref,std::get<3>(read_tup), false, false,
                                                       hash);
-
-                    //TODO: check if calculated new offset matches measured
 
                     if (std::get<3>(write_tup)) {
                         write_total_end();
