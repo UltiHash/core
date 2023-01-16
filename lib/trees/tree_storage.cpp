@@ -232,8 +232,9 @@ std::tuple<std::size_t, std::size_t, std::array<unsigned char,
     bool first_time = true;
     for (auto &c_t: convert_time) {
         c_t.resize(sizeof(unsigned long), 0);
-        if (!((block_input && !update_times && calc_SHA512 && hash_buf.empty())||(!block_input&&update_times&&calc_SHA512&&!block.empty())||
-                (!update_times&&!calc_SHA512&&!hash_buf.empty()&&times[0]>0)) &&
+        if (!((block_input && !update_times && calc_SHA512 && hash_buf.empty()) ||
+              (!block_input && update_times && calc_SHA512 && !block.empty()) ||
+              (!update_times && !calc_SHA512 && !hash_buf.empty() && times[0] > 0)) &&
             first_time) {//if not the clear writing only case we always only modify the block
             first_time = false;
             //read creation time if skipped to handle global hash creation
@@ -750,7 +751,7 @@ uh::trees::tree_storage::write(const std::vector<unsigned char> &input,
     //check block fill of this node, look for free space
     std::unique_lock lock_size(size_protect, std::defer_lock);
 
-    auto IO_lock = [&](auto &write_ptr, auto &read_ptr){
+    auto IO_lock = [&](auto &write_ptr, auto &read_ptr) {
         while (std::atomic_flag_test_and_set_explicit(write_ptr, std::memory_order_acquire)) {
             write_ptr->wait(true);
         }
@@ -764,64 +765,66 @@ uh::trees::tree_storage::write(const std::vector<unsigned char> &input,
         }
     };
 
-    auto maintain_lock = [&](auto &maintain_ptr){
+    auto maintain_lock = [&](auto &maintain_ptr) {
         while (std::atomic_flag_test_and_set_explicit(maintain_ptr, std::memory_order_acquire)) {
             maintain_ptr->wait(true);
         }
     };
 
-    auto IO_unlock = [&](auto &write_ptr){
+    auto IO_unlock = [&](auto &write_ptr) {
         std::atomic_flag_clear_explicit(write_ptr, std::memory_order_release);
         if (!write_ptr->test())write_ptr->notify_all();
     };
 
-    auto maintain_unlock = [&](auto &maintain_ptr){
+    auto maintain_unlock = [&](auto &maintain_ptr) {
         std::atomic_flag_clear_explicit(maintain_ptr, std::memory_order_release);
         if (!maintain_ptr->test())maintain_ptr->notify_one();
     };
 
-    unsigned short min_pos = 0,min_pos_old = 0;
+    unsigned short min_pos = 0, min_pos_old = 0;
     std::size_t min_val = 0;
     bool deeper{};
     bool count_loop{};
     std::size_t size_tmp{};
     //search loop to find free space and adapt on changes
-    do{
+    do {
         lock_size.lock();
         if (size->size() < N) {
             min_pos = size->size();
             min_val = 0;
-            if(min_pos == min_pos_old && count_loop) {
+            if (min_pos == min_pos_old && count_loop) {
                 std::shared_ptr<std::atomic_flag> f1 = std::make_shared<std::atomic_flag>(), f3 = std::make_shared<std::atomic_flag>();
                 std::shared_ptr<std::atomic<std::size_t>> const f2 = std::make_shared<std::atomic<std::size_t>>();
                 size->emplace_back(min_val, min_pos, f1, f2, f3);
             }
         } else {
-            if(count_loop){
+            if (count_loop) {
                 auto maintain_ptr = &(*std::get<4>(size->at(min_pos_old)));
                 maintain_unlock(maintain_ptr);
             }
             auto min_el = *std::min_element(size->begin(), size->end(), [&count_loop](auto &a, auto &b) {
-                return std::get<0>(a) < std::get<0>(b) && !std::get<4>(a)->test() && !std::get<4>(b)->test();//skip maintain chunks for smaller check
+                return std::get<0>(a) < std::get<0>(b) && !std::get<4>(a)->test() &&
+                       !std::get<4>(b)->test();//skip maintain chunks for smaller check
             });
             min_pos = std::get<1>(min_el);
             min_val = std::get<0>(size->at(min_pos));
         }
-        if(min_pos != min_pos_old && count_loop){
+        if (min_pos != min_pos_old && count_loop) {
             //unlock old chunk again because of update
             auto maintain_ptr = &(*std::get<4>(size->at(min_pos_old)));
             maintain_unlock(maintain_ptr);
             count_loop = false;
         }
-        deeper = min_val >= STORE_MAX || min_val + total_size >= STORE_HARD_LIMIT || size->size() <= min_pos || std::get<4>(size->at(min_pos))->test();
+        deeper = min_val >= STORE_MAX || min_val + total_size >= STORE_HARD_LIMIT || size->size() <= min_pos ||
+                 std::get<4>(size->at(min_pos))->test();
 
-        if(size->size() > min_pos){
+        if (size->size() > min_pos) {
             auto maintain_ptr = &(*std::get<4>(size->at(min_pos)));
             maintain_lock(maintain_ptr);
         }
 
-        if(count_loop){
-            if(!deeper){
+        if (count_loop) {
+            if (!deeper) {
                 size_tmp = std::get<0>(size->at(min_pos));
                 std::get<0>(size->at(min_pos)) += total_size;
             }
@@ -832,8 +835,7 @@ uh::trees::tree_storage::write(const std::vector<unsigned char> &input,
         count_loop = true;
         min_pos_old = min_pos;
         lock_size.unlock();
-    }
-    while(count_loop);
+    } while (count_loop);
 
     lock_size.lock();
     auto maintain_ptr = &(*std::get<4>(size->at(min_pos)));
@@ -885,7 +887,7 @@ uh::trees::tree_storage::write(const std::vector<unsigned char> &input,
         std::filesystem::path read_chunk = *combined_path / ref_name;
         path_lock2.unlock();
 
-        IO_lock(write_ptr,read_ptr);
+        IO_lock(write_ptr, read_ptr);
 
         std::vector<unsigned char> local_block_ref{};
         local_block_ref.reserve(sizeof(unsigned int));
@@ -908,7 +910,7 @@ uh::trees::tree_storage::write(const std::vector<unsigned char> &input,
         };
 
         FILE *writer = std::fopen(read_chunk.make_preferred().c_str(), "ab");
-        auto end_write_sequence = [&writer, &write_ptr, &IO_unlock,&maintain_ptr,&maintain_unlock]() {
+        auto end_write_sequence = [&writer, &write_ptr, &IO_unlock, &maintain_ptr, &maintain_unlock]() {
             if (std::fclose(writer))ERROR << "Write stream was not open!";
             IO_unlock(write_ptr);
             maintain_unlock(maintain_ptr);
@@ -1017,7 +1019,7 @@ uh::trees::tree_storage::index(unsigned short num_threads) {
                         return;
                     }
 
-                    if (!std::get<5>(read_tup)&&std::get<6>(read_tup) && std::get<0>(read_tup) > 0) {//if valid
+                    if (!std::get<5>(read_tup) && std::get<6>(read_tup) && std::get<0>(read_tup) > 0) {//if valid
                         std::scoped_lock const lock_here(search_index_protect);
                         search_index.emplace_back(std::get<4>(read_tup), local_block_ref,
                                                   std::get<3>(read_tup));
@@ -1119,7 +1121,7 @@ std::size_t uh::trees::tree_storage::delete_recursive(unsigned short num_threads
                 std::get<0>(size->at(i)) -= vanish_size;
                 size_lock.unlock();
                 filesystem_lock.lock();
-                if (std::filesystem::exists(read_path)||std::filesystem::is_empty(read_path)) {
+                if (std::filesystem::exists(read_path) || std::filesystem::is_empty(read_path)) {
                     if (!std::filesystem::remove(read_path)) {
                         filesystem_lock.unlock();
                         FATAL << "Removing was not completed on path \"" + read_path.string() +
@@ -1337,24 +1339,24 @@ uh::trees::tree_storage::delete_blocks(
         return {};
     }
 
-    auto maintain_lock = [&](auto &maintain_ptr){
+    auto maintain_lock = [&](auto &maintain_ptr) {
         while (std::atomic_flag_test_and_set_explicit(maintain_ptr, std::memory_order_acquire)) {
             maintain_ptr->wait(true);
         }
     };
 
-    auto maintain_unlock = [](auto &maintain_ptr){
+    auto maintain_unlock = [](auto &maintain_ptr) {
         std::atomic_flag_clear_explicit(maintain_ptr, std::memory_order_release);
         if (!maintain_ptr->test())maintain_ptr->notify_one();
     };
 
-    auto write_lock = [&](auto &write_ptr){
+    auto write_lock = [&](auto &write_ptr) {
         while (std::atomic_flag_test_and_set_explicit(write_ptr, std::memory_order_acquire)) {
             write_ptr->wait(true);
         }
     };
 
-    auto write_unlock = [](auto &write_ptr){
+    auto write_unlock = [](auto &write_ptr) {
         std::atomic_flag_clear_explicit(write_ptr, std::memory_order_release);
         if (!write_ptr->test())write_ptr->notify_one();
     };
@@ -1384,14 +1386,14 @@ uh::trees::tree_storage::delete_blocks(
     if (!buffer.empty())sorted_block_codes.push_back(buffer);
 
     auto error_thread_sequence = [&error_flag]() {
-        std::atomic_flag_test_and_set_explicit(&error_flag,std::memory_order_acquire);
+        std::atomic_flag_test_and_set_explicit(&error_flag, std::memory_order_acquire);
     };
 
     //use multithreading with a thread management system so that threads from deleting go on to deeper delete
     std::shared_mutex worker_protect{};
-    std::list<std::tuple<std::size_t,std::shared_ptr<std::atomic_flag>,std::jthread>> workers{};
+    std::list<std::tuple<std::size_t, std::shared_ptr<std::atomic_flag>, std::jthread>> workers{};
 
-    auto index_main_func = [&](const std::vector<std::vector<unsigned char>>& item,std::size_t worker_number){
+    auto index_main_func = [&](const std::vector<std::vector<unsigned char>> &item, std::size_t worker_number) {
         //parallel start, sort codes that are at this level and codes that are deeper down the tree
         std::vector<std::vector<unsigned char>> deeper_codes{}, delete_here_codes{};
         //take a branch to delete multiple blocks within
@@ -1440,7 +1442,7 @@ uh::trees::tree_storage::delete_blocks(
                     chunk.parent_path() / (chunk.filename().string() + "_maintain");
 
             std::sort(delete_here_codes.begin(), delete_here_codes.end(), [&offset_calc](auto &a, auto &b) {
-                return offset_calc(a.cbegin(),a.cend()) < offset_calc(b.cbegin(),b.cend());
+                return offset_calc(a.cbegin(), a.cend()) < offset_calc(b.cbegin(), b.cend());
             });
 
             auto block_step_beg = delete_here_codes.cbegin();
@@ -1481,14 +1483,15 @@ uh::trees::tree_storage::delete_blocks(
             filesystem_lock.unlock();
             //transmission from chunk to maintain file
             FILE *writer = std::fopen(chunk_maintain.make_preferred().c_str(), "ab");
-            auto io_end_sequence = [&writer,&read_end_sequence,&write_ptr,&write_unlock]() {
+            auto io_end_sequence = [&writer, &read_end_sequence, &write_ptr, &write_unlock]() {
                 read_end_sequence();
                 if (std::fclose(writer))ERROR << "Write stream was not open!";
                 write_unlock(write_ptr);
             };
-            auto write_total_end = [&io_end_sequence, &error_thread_sequence, &error_flag, &chunk_maintain,&maintain_ptr,&maintain_unlock,&cur_pos,&delete_size] {
-                ERROR << "File write thread failed to put down a line at \"" + chunk_maintain.string() + "\" at position "+std::to_string(cur_pos)+" and deleting postion "+
-                std::to_string(cur_pos - delete_size);
+            auto write_total_end = [&io_end_sequence, &error_thread_sequence, &error_flag, &chunk_maintain, &maintain_ptr, &maintain_unlock, &cur_pos, &delete_size] {
+                ERROR << "File write thread failed to put down a line at \"" + chunk_maintain.string() +
+                         "\" at position " + std::to_string(cur_pos) + " and deleting postion " +
+                         std::to_string(cur_pos - delete_size);
                 io_end_sequence();
                 error_thread_sequence();
                 maintain_unlock(maintain_ptr);
@@ -1497,7 +1500,7 @@ uh::trees::tree_storage::delete_blocks(
                 }
             };
 
-            auto block_code_generate = [](std::size_t pos, unsigned char first_el){
+            auto block_code_generate = [](std::size_t pos, unsigned char first_el) {
                 std::vector<unsigned char> local_block_test_ref{};
                 local_block_test_ref.reserve(sizeof(unsigned int));//reconstruct current local reference
                 for (unsigned short i = 0;
@@ -1539,19 +1542,20 @@ uh::trees::tree_storage::delete_blocks(
                     std::array<unsigned char,
                             SHA512_DIGEST_LENGTH + sizeof(unsigned long)> global_hash = std::get<4>(read_tup);
                     std::vector<unsigned char> hash{};
-                    hash.resize(SHA512_DIGEST_LENGTH,0);
+                    hash.resize(SHA512_DIGEST_LENGTH, 0);
                     std::ranges::copy(global_hash.cbegin(), global_hash.cbegin() + SHA512_DIGEST_LENGTH,
                                       hash.begin());
                     //stores block, old offset vector, new offset number, block SHA512 and times
                     auto write_tup = write_block_base(writer, chunk_maintain.make_preferred(), std::get<2>(read_tup),
-                                                      local_block_test_ref,std::get<3>(read_tup), false, false,
+                                                      local_block_test_ref, std::get<3>(read_tup), false, false,
                                                       hash);
 
                     if (std::get<3>(write_tup)) {
                         write_total_end();
                     }
                     std::unique_lock lock_change(out_change_list_protect);
-                    out_change_list.emplace_back(local_block_test_ref,block_code_generate(cur_pos - delete_size,(*item.begin())[0]));
+                    out_change_list.emplace_back(local_block_test_ref,
+                                                 block_code_generate(cur_pos - delete_size, (*item.begin())[0]));
                     lock_change.unlock();
                     cur_pos += std::get<0>(read_tup);
                 }
@@ -1718,8 +1722,8 @@ uh::trees::tree_storage::delete_blocks(
             size_read.unlock();
         }
         std::scoped_lock worker_lock2(worker_protect);
-        for(auto &it:workers){
-            if(worker_number == std::get<0>(it)){
+        for (auto &it: workers) {
+            if (worker_number == std::get<0>(it)) {
                 std::atomic_flag_clear_explicit(&(*std::get<1>(it)), std::memory_order_release);
                 break;
             }
@@ -1734,22 +1738,25 @@ uh::trees::tree_storage::delete_blocks(
         }
         if (num_threads == 1) {
             active_threads += 1;
-            index_main_func(item_now,worker_count);
+            index_main_func(item_now, worker_count);
             active_threads -= 1;
         } else {
             //threading manager
             std::unique_lock manage_lock1(worker_protect);
             auto it_w = workers.begin();
-            while ((workers.size() >= num_threads || sorted_block_codes.size() <= active_threads.load()) && it_w != workers.end()) {
+            while ((workers.size() >= num_threads || sorted_block_codes.size() <= active_threads.load()) &&
+                   it_w != workers.end()) {
                 manage_lock1.unlock();
                 std::unique_lock manage_lock2(worker_protect);
-                while(!std::get<1>(*it_w)->test()&&std::get<2>(*it_w).joinable()){
+                bool advanced = false;
+                while (!std::get<1>(*it_w)->test() && std::get<2>(*it_w).joinable()) {
                     std::get<2>(*it_w).join();
                     auto tmp_cur = it_w++;
                     workers.erase(tmp_cur);
                     active_threads -= 1;
+                    advanced = true;
                 }
-                else it_w++;
+                if (!advanced)it_w++;
                 manage_lock2.unlock();
                 if (error_flag.test()) {
                     FATAL
@@ -1772,7 +1779,7 @@ uh::trees::tree_storage::delete_blocks(
                 flag_worker->wait(true);
             }
             std::unique_lock manage_lock2(worker_protect);
-            workers.emplace_back(worker_count,flag_worker,std::jthread(index_main_func, item_now,worker_count));
+            workers.emplace_back(worker_count, flag_worker, std::jthread(index_main_func, item_now, worker_count));
             manage_lock2.unlock();
             worker_count++;
             if (error_flag.test()) {
@@ -1782,19 +1789,19 @@ uh::trees::tree_storage::delete_blocks(
         }
     }
 
-    if(num_threads > 1){
+    if (num_threads > 1) {
         std::unique_lock manage_lock3(worker_protect);
         auto it_w = workers.begin();
-        while(it_w != workers.end()){
+        while (it_w != workers.end()) {
             manage_lock3.unlock();
             std::unique_lock manage_lock4(worker_protect);
-            if(std::get<2>(*it_w).joinable()){
+            if (std::get<2>(*it_w).joinable()) {
                 manage_lock4.unlock();
                 std::unique_lock manage_lock5(worker_protect);
                 while (std::atomic_flag_test_and_set_explicit(&(*std::get<1>(*it_w)), std::memory_order_acquire)) {
                     std::get<1>(*it_w)->wait(true);
                 }
-                if(std::get<1>(*it_w)->test())std::get<2>(*it_w).join();
+                if (std::get<1>(*it_w)->test())std::get<2>(*it_w).join();
                 auto tmp_cur = it_w++;
                 workers.erase(tmp_cur);
                 manage_lock5.unlock();
@@ -1804,8 +1811,7 @@ uh::trees::tree_storage::delete_blocks(
                         << "Delete_blocks threading engine crashed unexpectedly while waiting for CPU cores!";
                     return {};
                 }
-            }
-            else{
+            } else {
                 it_w++;
                 manage_lock4.unlock();
             }

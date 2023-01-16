@@ -47,7 +47,7 @@ BOOST_AUTO_TEST_CASE(constructor_test)
     uh::trees::tree_storage t1(target);//A test folder reserved for tree storage
     t1.delete_recursive();
     auto to_remove = target / "0000";
-    if(std::filesystem::exists(to_remove)){
+    if (std::filesystem::exists(to_remove)) {
         std::filesystem::remove_all(to_remove);
     }
     //for strong laptops with SSD extension (configure test db server to run this??)
@@ -67,17 +67,20 @@ BOOST_AUTO_TEST_CASE(write_read_base_test)
     std::vector<unsigned char> test_bin = binary_generator(STORE_MAX);
 
     //test write normal mode
-    auto local_block_ref = std::vector<unsigned char>{0,0,0,0,0};//for feedback purposes
-    auto times = std::array<unsigned long,TIME_STAMPS_ON_BLOCK>{
-        //difference between current time and last time touched should not exceed time span to keep
-            (unsigned long)std::chrono::nanoseconds(std::chrono::high_resolution_clock::now().time_since_epoch()).count(),//creation time global
-            (unsigned long)std::chrono::nanoseconds(std::chrono::years(1)).count(),//maximum untouched time before delete
-            (unsigned long)std::chrono::nanoseconds(std::chrono::high_resolution_clock::now().time_since_epoch()).count()//last time touched
+    auto local_block_ref = std::vector<unsigned char>{0, 0, 0, 0, 0};//for feedback purposes
+    auto times = std::array<unsigned long, TIME_STAMPS_ON_BLOCK>{
+            //difference between current time and last time touched should not exceed time span to keep
+            (unsigned long) std::chrono::nanoseconds(
+                    std::chrono::high_resolution_clock::now().time_since_epoch()).count(),//creation time global
+            (unsigned long) std::chrono::nanoseconds(
+                    std::chrono::years(1)).count(),//maximum untouched time before delete
+            (unsigned long) std::chrono::nanoseconds(
+                    std::chrono::high_resolution_clock::now().time_since_epoch()).count()//last time touched
     };
-    if(std::filesystem::exists(base_bin))std::filesystem::remove(base_bin);
+    if (std::filesystem::exists(base_bin))std::filesystem::remove(base_bin);
     FILE *writer = std::fopen(base_bin.make_preferred().c_str(), "ab");
     auto write_tup = t1.write_block_base(writer, base_bin.make_preferred(), test_bin, local_block_ref, times);
-    BOOST_ASSERT_MSG(std::fclose(writer) == 0,"Write stream was not open!");
+    BOOST_ASSERT_MSG(std::fclose(writer) == 0, "Write stream was not open!");
     auto total_size_write = std::get<0>(write_tup);
     auto block_size_write = std::get<1>(write_tup);
     auto global_hash_write = std::get<2>(write_tup);
@@ -85,7 +88,7 @@ BOOST_AUTO_TEST_CASE(write_read_base_test)
     BOOST_ASSERT_MSG(!error_occurred_write, "An internal error occurred!");
 
     decltype(std::fopen(base_bin.make_preferred().c_str(), "rb")) reader;
-    decltype(t1.read_block_base(reader,base_bin.make_preferred(),local_block_ref)) read_tup{};
+    decltype(t1.read_block_base(reader, base_bin.make_preferred(), local_block_ref)) read_tup{};
     std::size_t total_size_read{};
     std::size_t block_size_read{};
     std::vector<unsigned char> block_read{};
@@ -94,10 +97,10 @@ BOOST_AUTO_TEST_CASE(write_read_base_test)
     bool error_occurred_read{};
     bool valid_read{};
     //test read normal mode
-    auto read_tests = [&]{
+    auto read_tests = [&] {
         reader = std::fopen(base_bin.make_preferred().c_str(), "rb");
-        read_tup = t1.read_block_base(reader,base_bin.make_preferred(),local_block_ref);
-        BOOST_ASSERT_MSG(std::fclose(reader) == 0,"Read stream was not open!");
+        read_tup = t1.read_block_base(reader, base_bin.make_preferred(), local_block_ref);
+        BOOST_ASSERT_MSG(std::fclose(reader) == 0, "Read stream was not open!");
         total_size_read = std::get<0>(read_tup);
         block_size_read = std::get<1>(read_tup);
         block_read = std::get<2>(read_tup);
@@ -105,18 +108,18 @@ BOOST_AUTO_TEST_CASE(write_read_base_test)
         global_hash_read = std::get<4>(read_tup);
         error_occurred_read = std::get<5>(read_tup);
         valid_read = std::get<6>(read_tup);
-        BOOST_ASSERT_MSG(!error_occurred_read,"An internal error occurred!");
-        BOOST_ASSERT_MSG(valid_read,"Block was invalid!");
+        BOOST_ASSERT_MSG(!error_occurred_read, "An internal error occurred!");
+        BOOST_ASSERT_MSG(valid_read, "Block was invalid!");
 
-        BOOST_ASSERT_MSG(total_size_write == total_size_read,"Block total size was wrong!");
-        BOOST_ASSERT_MSG(block_size_write == block_size_read,"Block size was wrong!");
-        BOOST_ASSERT_MSG(global_hash_write == global_hash_read,"Global hash was wrong!");
-        BOOST_ASSERT_MSG(test_bin == block_read,"Test binary was wrong!");
-        BOOST_ASSERT_MSG(times == times_read,"Times did not match!");
+        BOOST_ASSERT_MSG(total_size_write == total_size_read, "Block total size was wrong!");
+        BOOST_ASSERT_MSG(block_size_write == block_size_read, "Block size was wrong!");
+        BOOST_ASSERT_MSG(global_hash_write == global_hash_read, "Global hash was wrong!");
+        BOOST_ASSERT_MSG(test_bin == block_read, "Test binary was wrong!");
+        BOOST_ASSERT_MSG(times == times_read, "Times did not match!");
         //test read valid check
         reader = std::fopen(base_bin.make_preferred().c_str(), "rb");
-        read_tup = t1.read_block_base(reader,base_bin.make_preferred(),local_block_ref,false,true);
-        BOOST_ASSERT_MSG(std::fclose(reader) == 0,"Read stream was not open!");
+        read_tup = t1.read_block_base(reader, base_bin.make_preferred(), local_block_ref, false, true);
+        BOOST_ASSERT_MSG(std::fclose(reader) == 0, "Read stream was not open!");
         total_size_read = std::get<0>(read_tup);
         block_size_read = std::get<1>(read_tup);
         block_read = std::get<2>(read_tup);
@@ -124,18 +127,18 @@ BOOST_AUTO_TEST_CASE(write_read_base_test)
         global_hash_read = std::get<4>(read_tup);
         error_occurred_read = std::get<5>(read_tup);
         valid_read = std::get<6>(read_tup);
-        BOOST_ASSERT_MSG(!error_occurred_read,"An internal error occurred!");
-        BOOST_ASSERT_MSG(valid_read,"Block was invalid!");
+        BOOST_ASSERT_MSG(!error_occurred_read, "An internal error occurred!");
+        BOOST_ASSERT_MSG(valid_read, "Block was invalid!");
 
-        BOOST_ASSERT_MSG(total_size_write == total_size_read,"Block total size was wrong!");
-        BOOST_ASSERT_MSG(block_size_write == block_size_read,"Block size was wrong!");
-        BOOST_ASSERT_MSG(global_hash_write == global_hash_read,"Global hash was wrong!");
-        BOOST_ASSERT_MSG(test_bin == block_read,"Test binary was wrong!");
-        BOOST_ASSERT_MSG(times == times_read,"Times did not match!");
+        BOOST_ASSERT_MSG(total_size_write == total_size_read, "Block total size was wrong!");
+        BOOST_ASSERT_MSG(block_size_write == block_size_read, "Block size was wrong!");
+        BOOST_ASSERT_MSG(global_hash_write == global_hash_read, "Global hash was wrong!");
+        BOOST_ASSERT_MSG(test_bin == block_read, "Test binary was wrong!");
+        BOOST_ASSERT_MSG(times == times_read, "Times did not match!");
         //test read with skipping the block itself
         reader = std::fopen(base_bin.make_preferred().c_str(), "rb");
-        read_tup = t1.read_block_base(reader,base_bin.make_preferred(),local_block_ref,true);
-        BOOST_ASSERT_MSG(std::fclose(reader) == 0,"Read stream was not open!");
+        read_tup = t1.read_block_base(reader, base_bin.make_preferred(), local_block_ref, true);
+        BOOST_ASSERT_MSG(std::fclose(reader) == 0, "Read stream was not open!");
         total_size_read = std::get<0>(read_tup);
         block_size_read = std::get<1>(read_tup);
         block_read = std::get<2>(read_tup);
@@ -143,25 +146,26 @@ BOOST_AUTO_TEST_CASE(write_read_base_test)
         global_hash_read = std::get<4>(read_tup);
         error_occurred_read = std::get<5>(read_tup);
         valid_read = std::get<6>(read_tup);
-        BOOST_ASSERT_MSG(!error_occurred_read,"An internal error occurred!");
-        BOOST_ASSERT_MSG(valid_read,"Block was invalid!");
+        BOOST_ASSERT_MSG(!error_occurred_read, "An internal error occurred!");
+        BOOST_ASSERT_MSG(valid_read, "Block was invalid!");
 
-        BOOST_ASSERT_MSG(total_size_write == total_size_read,"Block total size was wrong!");
-        BOOST_ASSERT_MSG(block_size_write == block_size_read,"Block size was wrong!");
-        BOOST_ASSERT_MSG(global_hash_write == global_hash_read,"Global hash was wrong!");
-        BOOST_ASSERT_MSG(block_read.empty(),"Block should not be read here!");
-        BOOST_ASSERT_MSG(times == times_read,"Times did not match!");
+        BOOST_ASSERT_MSG(total_size_write == total_size_read, "Block total size was wrong!");
+        BOOST_ASSERT_MSG(block_size_write == block_size_read, "Block size was wrong!");
+        BOOST_ASSERT_MSG(global_hash_write == global_hash_read, "Global hash was wrong!");
+        BOOST_ASSERT_MSG(block_read.empty(), "Block should not be read here!");
+        BOOST_ASSERT_MSG(times == times_read, "Times did not match!");
     };
     read_tests();
 
-    std::array<unsigned char,SHA512_DIGEST_LENGTH> block_hash{};
-    std::ranges::copy(global_hash_read.cbegin(),global_hash_read.cbegin()+SHA512_DIGEST_LENGTH,block_hash.begin());
+    std::array<unsigned char, SHA512_DIGEST_LENGTH> block_hash{};
+    std::ranges::copy(global_hash_read.cbegin(), global_hash_read.cbegin() + SHA512_DIGEST_LENGTH, block_hash.begin());
     //write again in update mode and try to use already known sha to block for speed, result should still be the same,
     // update entire block; block cannot be empty as it needs to be written
-    if(std::filesystem::exists(base_bin))std::filesystem::remove(base_bin);
+    if (std::filesystem::exists(base_bin))std::filesystem::remove(base_bin);
     writer = std::fopen(base_bin.make_preferred().c_str(), "wb+");
-    write_tup = t1.write_block_base(writer, base_bin.make_preferred(), test_bin, local_block_ref, times, false, false, std::vector<unsigned char>{block_hash.cbegin(),block_hash.cend()});
-    BOOST_ASSERT_MSG(std::fclose(writer) == 0,"Write stream was not open!");
+    write_tup = t1.write_block_base(writer, base_bin.make_preferred(), test_bin, local_block_ref, times, false, false,
+                                    std::vector<unsigned char>{block_hash.cbegin(), block_hash.cend()});
+    BOOST_ASSERT_MSG(std::fclose(writer) == 0, "Write stream was not open!");
     total_size_write = std::get<0>(write_tup);
     block_size_write = std::get<1>(write_tup);
     global_hash_write = std::get<2>(write_tup);
@@ -170,13 +174,14 @@ BOOST_AUTO_TEST_CASE(write_read_base_test)
     //once more read tests on that
     auto read_tup2 = read_tup;
     read_tests();
-    BOOST_ASSERT_MSG(read_tup == read_tup2,"The results after reading were not the same!");
+    BOOST_ASSERT_MSG(read_tup == read_tup2, "The results after reading were not the same!");
 
     //write again in update mode and check again if all results are the same; block can be empty as it already exists
     //expected behaviour: block and times were given, but only times and checksum are updated by reading hash and block from disk calculating the checksum
     writer = std::fopen(base_bin.make_preferred().c_str(), "rb+");
-    write_tup = t1.write_block_base(writer, base_bin.make_preferred(), std::vector<unsigned char>{}, local_block_ref, times, true);
-    BOOST_ASSERT_MSG(std::fclose(writer) == 0,"Write stream was not open!");
+    write_tup = t1.write_block_base(writer, base_bin.make_preferred(), std::vector<unsigned char>{}, local_block_ref,
+                                    times, true);
+    BOOST_ASSERT_MSG(std::fclose(writer) == 0, "Write stream was not open!");
     total_size_write = std::get<0>(write_tup);
     block_size_write = std::get<1>(write_tup);
     global_hash_write = std::get<2>(write_tup);
@@ -185,12 +190,13 @@ BOOST_AUTO_TEST_CASE(write_read_base_test)
     //once more read tests on that
     read_tup2 = read_tup;
     read_tests();
-    BOOST_ASSERT_MSG(read_tup == read_tup2,"The results after reading were not the same!");
+    BOOST_ASSERT_MSG(read_tup == read_tup2, "The results after reading were not the same!");
     //write again in update mode and try to use already known sha to block for speed, result should still be the same,
     // only update times and checksum, skipping read block for hash if block is not empty or placeholder_block_size is set
     writer = std::fopen(base_bin.make_preferred().c_str(), "rb+");
-    write_tup = t1.write_block_base(writer, base_bin.make_preferred(), test_bin, local_block_ref, times, true, false, std::vector<unsigned char>{block_hash.cbegin(),block_hash.cend()});
-    BOOST_ASSERT_MSG(std::fclose(writer) == 0,"Write stream was not open!");
+    write_tup = t1.write_block_base(writer, base_bin.make_preferred(), test_bin, local_block_ref, times, true, false,
+                                    std::vector<unsigned char>{block_hash.cbegin(), block_hash.cend()});
+    BOOST_ASSERT_MSG(std::fclose(writer) == 0, "Write stream was not open!");
     total_size_write = std::get<0>(write_tup);
     block_size_write = std::get<1>(write_tup);
     global_hash_write = std::get<2>(write_tup);
@@ -199,11 +205,14 @@ BOOST_AUTO_TEST_CASE(write_read_base_test)
     //once more read tests on that
     read_tup2 = read_tup;
     read_tests();
-    BOOST_ASSERT_MSG(read_tup == read_tup2,"The results after reading were not the same!");
+    BOOST_ASSERT_MSG(read_tup == read_tup2, "The results after reading were not the same!");
     //same with placeholder_block_size
     writer = std::fopen(base_bin.make_preferred().c_str(), "rb+");
-    write_tup = t1.write_block_base(writer, base_bin.make_preferred(), std::vector<unsigned char>{}, local_block_ref, times, true, false, std::vector<unsigned char>{block_hash.cbegin(),block_hash.cend()}, block_size_read);
-    BOOST_ASSERT_MSG(std::fclose(writer) == 0,"Write stream was not open!");
+    write_tup = t1.write_block_base(writer, base_bin.make_preferred(), std::vector<unsigned char>{}, local_block_ref,
+                                    times, true, false,
+                                    std::vector<unsigned char>{block_hash.cbegin(), block_hash.cend()},
+                                    block_size_read);
+    BOOST_ASSERT_MSG(std::fclose(writer) == 0, "Write stream was not open!");
     total_size_write = std::get<0>(write_tup);
     block_size_write = std::get<1>(write_tup);
     global_hash_write = std::get<2>(write_tup);
@@ -212,12 +221,15 @@ BOOST_AUTO_TEST_CASE(write_read_base_test)
     //once more read tests on that
     read_tup2 = read_tup;
     read_tests();
-    BOOST_ASSERT_MSG(read_tup == read_tup2,"The results after reading were not the same!");
+    BOOST_ASSERT_MSG(read_tup == read_tup2, "The results after reading were not the same!");
     //skip creation time update
     times[0] = 0;
     writer = std::fopen(base_bin.make_preferred().c_str(), "rb+");
-    write_tup = t1.write_block_base(writer, base_bin.make_preferred(), std::vector<unsigned char>{}, local_block_ref, times, true, false, std::vector<unsigned char>{block_hash.cbegin(),block_hash.cend()}, block_size_read);
-    BOOST_ASSERT_MSG(std::fclose(writer) == 0,"Write stream was not open!");
+    write_tup = t1.write_block_base(writer, base_bin.make_preferred(), std::vector<unsigned char>{}, local_block_ref,
+                                    times, true, false,
+                                    std::vector<unsigned char>{block_hash.cbegin(), block_hash.cend()},
+                                    block_size_read);
+    BOOST_ASSERT_MSG(std::fclose(writer) == 0, "Write stream was not open!");
     total_size_write = std::get<0>(write_tup);
     block_size_write = std::get<1>(write_tup);
     global_hash_write = std::get<2>(write_tup);
@@ -226,22 +238,23 @@ BOOST_AUTO_TEST_CASE(write_read_base_test)
     //once more read tests on that
     read_tup2 = read_tup;
     read_tests();
-    BOOST_ASSERT_MSG(std::get<0>(read_tup) == std::get<0>(read_tup2),"Total size was not the same!");
-    BOOST_ASSERT_MSG(std::get<1>(read_tup) == std::get<1>(read_tup2),"Block size was not the same!");
-    BOOST_ASSERT_MSG(std::get<2>(read_tup) == std::get<2>(read_tup2),"Block read was not the same!");
-    BOOST_ASSERT_MSG(std::get<3>(read_tup)[0] != 0,"Creation time was not read!");
-    BOOST_ASSERT_MSG(std::get<3>(read_tup)[0] == std::get<3>(read_tup2)[0],"Storage duration was not equal!");
-    BOOST_ASSERT_MSG(std::get<3>(read_tup)[1] == std::get<3>(read_tup2)[1],"Storage duration was not equal!");
-    BOOST_ASSERT_MSG(std::get<3>(read_tup)[2] == std::get<3>(read_tup2)[2],"Last visited was not equal!");
-    BOOST_ASSERT_MSG(std::get<4>(read_tup) == std::get<4>(read_tup2),"Global hash was not the same!");
-    BOOST_ASSERT_MSG(std::get<5>(read_tup) == std::get<5>(read_tup2),"Error occurred was not the same!");
-    BOOST_ASSERT_MSG(std::get<6>(read_tup) == std::get<6>(read_tup2),"Valid read was not the same!");
+    BOOST_ASSERT_MSG(std::get<0>(read_tup) == std::get<0>(read_tup2), "Total size was not the same!");
+    BOOST_ASSERT_MSG(std::get<1>(read_tup) == std::get<1>(read_tup2), "Block size was not the same!");
+    BOOST_ASSERT_MSG(std::get<2>(read_tup) == std::get<2>(read_tup2), "Block read was not the same!");
+    BOOST_ASSERT_MSG(std::get<3>(read_tup)[0] != 0, "Creation time was not read!");
+    BOOST_ASSERT_MSG(std::get<3>(read_tup)[0] == std::get<3>(read_tup2)[0], "Storage duration was not equal!");
+    BOOST_ASSERT_MSG(std::get<3>(read_tup)[1] == std::get<3>(read_tup2)[1], "Storage duration was not equal!");
+    BOOST_ASSERT_MSG(std::get<3>(read_tup)[2] == std::get<3>(read_tup2)[2], "Last visited was not equal!");
+    BOOST_ASSERT_MSG(std::get<4>(read_tup) == std::get<4>(read_tup2), "Global hash was not the same!");
+    BOOST_ASSERT_MSG(std::get<5>(read_tup) == std::get<5>(read_tup2), "Error occurred was not the same!");
+    BOOST_ASSERT_MSG(std::get<6>(read_tup) == std::get<6>(read_tup2), "Valid read was not the same!");
 
     //check more difficult case if also the block hash is not given while updating
     times[0] = 0;
     writer = std::fopen(base_bin.make_preferred().c_str(), "rb+");
-    write_tup = t1.write_block_base(writer, base_bin.make_preferred(), std::vector<unsigned char>{}, local_block_ref, times, true, false);
-    BOOST_ASSERT_MSG(std::fclose(writer) == 0,"Write stream was not open!");
+    write_tup = t1.write_block_base(writer, base_bin.make_preferred(), std::vector<unsigned char>{}, local_block_ref,
+                                    times, true, false);
+    BOOST_ASSERT_MSG(std::fclose(writer) == 0, "Write stream was not open!");
     total_size_write = std::get<0>(write_tup);
     block_size_write = std::get<1>(write_tup);
     global_hash_write = std::get<2>(write_tup);
@@ -250,20 +263,21 @@ BOOST_AUTO_TEST_CASE(write_read_base_test)
     //once more read tests on that
     read_tup2 = read_tup;
     read_tests();
-    BOOST_ASSERT_MSG(std::get<0>(read_tup) == std::get<0>(read_tup2),"Total size was not the same!");
-    BOOST_ASSERT_MSG(std::get<1>(read_tup) == std::get<1>(read_tup2),"Block size was not the same!");
-    BOOST_ASSERT_MSG(std::get<2>(read_tup) == std::get<2>(read_tup2),"Block read was not the same!");
-    BOOST_ASSERT_MSG(std::get<3>(read_tup)[0] != 0,"Creation time was not read!");
-    BOOST_ASSERT_MSG(std::get<3>(read_tup)[0] == std::get<3>(read_tup2)[0],"Storage duration was not equal!");
-    BOOST_ASSERT_MSG(std::get<3>(read_tup)[1] == std::get<3>(read_tup2)[1],"Storage duration was not equal!");
-    BOOST_ASSERT_MSG(std::get<3>(read_tup)[2] == std::get<3>(read_tup2)[2],"Last visited was not equal!");
-    BOOST_ASSERT_MSG(std::get<4>(read_tup) == std::get<4>(read_tup2),"Global hash was not the same!");
-    BOOST_ASSERT_MSG(std::get<5>(read_tup) == std::get<5>(read_tup2),"Error occurred was not the same!");
-    BOOST_ASSERT_MSG(std::get<6>(read_tup) == std::get<6>(read_tup2),"Valid read was not the same!");
+    BOOST_ASSERT_MSG(std::get<0>(read_tup) == std::get<0>(read_tup2), "Total size was not the same!");
+    BOOST_ASSERT_MSG(std::get<1>(read_tup) == std::get<1>(read_tup2), "Block size was not the same!");
+    BOOST_ASSERT_MSG(std::get<2>(read_tup) == std::get<2>(read_tup2), "Block read was not the same!");
+    BOOST_ASSERT_MSG(std::get<3>(read_tup)[0] != 0, "Creation time was not read!");
+    BOOST_ASSERT_MSG(std::get<3>(read_tup)[0] == std::get<3>(read_tup2)[0], "Storage duration was not equal!");
+    BOOST_ASSERT_MSG(std::get<3>(read_tup)[1] == std::get<3>(read_tup2)[1], "Storage duration was not equal!");
+    BOOST_ASSERT_MSG(std::get<3>(read_tup)[2] == std::get<3>(read_tup2)[2], "Last visited was not equal!");
+    BOOST_ASSERT_MSG(std::get<4>(read_tup) == std::get<4>(read_tup2), "Global hash was not the same!");
+    BOOST_ASSERT_MSG(std::get<5>(read_tup) == std::get<5>(read_tup2), "Error occurred was not the same!");
+    BOOST_ASSERT_MSG(std::get<6>(read_tup) == std::get<6>(read_tup2), "Valid read was not the same!");
     //seek over creation time if not 0
     writer = std::fopen(base_bin.make_preferred().c_str(), "rb+");
-    write_tup = t1.write_block_base(writer, base_bin.make_preferred(), std::vector<unsigned char>{}, local_block_ref, times, true, false);
-    BOOST_ASSERT_MSG(std::fclose(writer) == 0,"Write stream was not open!");
+    write_tup = t1.write_block_base(writer, base_bin.make_preferred(), std::vector<unsigned char>{}, local_block_ref,
+                                    times, true, false);
+    BOOST_ASSERT_MSG(std::fclose(writer) == 0, "Write stream was not open!");
     total_size_write = std::get<0>(write_tup);
     block_size_write = std::get<1>(write_tup);
     global_hash_write = std::get<2>(write_tup);
@@ -272,18 +286,18 @@ BOOST_AUTO_TEST_CASE(write_read_base_test)
     //once more read tests on that
     read_tup2 = read_tup;
     read_tests();
-    BOOST_ASSERT_MSG(std::get<0>(read_tup) == std::get<0>(read_tup2),"Total size was not the same!");
-    BOOST_ASSERT_MSG(std::get<1>(read_tup) == std::get<1>(read_tup2),"Block size was not the same!");
-    BOOST_ASSERT_MSG(std::get<2>(read_tup) == std::get<2>(read_tup2),"Block read was not the same!");
-    BOOST_ASSERT_MSG(std::get<3>(read_tup)[0] != 0,"Creation time was not read!");
-    BOOST_ASSERT_MSG(std::get<3>(read_tup)[0] == std::get<3>(read_tup2)[0],"Storage duration was not equal!");
-    BOOST_ASSERT_MSG(std::get<3>(read_tup)[1] == std::get<3>(read_tup2)[1],"Storage duration was not equal!");
-    BOOST_ASSERT_MSG(std::get<3>(read_tup)[2] == std::get<3>(read_tup2)[2],"Last visited was not equal!");
-    BOOST_ASSERT_MSG(std::get<4>(read_tup) == std::get<4>(read_tup2),"Global hash was not the same!");
-    BOOST_ASSERT_MSG(std::get<5>(read_tup) == std::get<5>(read_tup2),"Error occurred was not the same!");
-    BOOST_ASSERT_MSG(std::get<6>(read_tup) == std::get<6>(read_tup2),"Valid read was not the same!");
+    BOOST_ASSERT_MSG(std::get<0>(read_tup) == std::get<0>(read_tup2), "Total size was not the same!");
+    BOOST_ASSERT_MSG(std::get<1>(read_tup) == std::get<1>(read_tup2), "Block size was not the same!");
+    BOOST_ASSERT_MSG(std::get<2>(read_tup) == std::get<2>(read_tup2), "Block read was not the same!");
+    BOOST_ASSERT_MSG(std::get<3>(read_tup)[0] != 0, "Creation time was not read!");
+    BOOST_ASSERT_MSG(std::get<3>(read_tup)[0] == std::get<3>(read_tup2)[0], "Storage duration was not equal!");
+    BOOST_ASSERT_MSG(std::get<3>(read_tup)[1] == std::get<3>(read_tup2)[1], "Storage duration was not equal!");
+    BOOST_ASSERT_MSG(std::get<3>(read_tup)[2] == std::get<3>(read_tup2)[2], "Last visited was not equal!");
+    BOOST_ASSERT_MSG(std::get<4>(read_tup) == std::get<4>(read_tup2), "Global hash was not the same!");
+    BOOST_ASSERT_MSG(std::get<5>(read_tup) == std::get<5>(read_tup2), "Error occurred was not the same!");
+    BOOST_ASSERT_MSG(std::get<6>(read_tup) == std::get<6>(read_tup2), "Valid read was not the same!");
 
-    if(std::filesystem::exists(base_test)){
+    if (std::filesystem::exists(base_test)) {
         std::filesystem::remove_all(base_test);
     }
 }
@@ -342,12 +356,13 @@ BOOST_AUTO_TEST_CASE(write_read_test)
             gettimeofday(&time, nullptr);
             millis = ((long double) time.tv_sec * ONE_MILLISECOND) + ((long double) time.tv_usec / ONE_MILLISECOND);
             std::tuple<std::vector<unsigned char>, std::vector<unsigned char>, std::array<unsigned long, TIME_STAMPS_ON_BLOCK>, std::array<unsigned char,
-                    SHA512_DIGEST_LENGTH + sizeof(unsigned long)>,std::size_t,bool> all_result;
+                    SHA512_DIGEST_LENGTH + sizeof(unsigned long)>, std::size_t, bool> all_result;
             try {
-                all_result = t1.read(local_block_ref,true);
+                all_result = t1.read(local_block_ref, true);
                 bool test_ok = std::get<5>(all_result);
                 BOOST_ASSERT_MSG(test_ok, std::string(" Block \"" + boost::algorithm::hex(
-                        std::string(local_block_ref.cbegin(), local_block_ref.cend())) + "\" was damaged on write.").c_str());
+                        std::string(local_block_ref.cbegin(), local_block_ref.cend())) +
+                                                      "\" was damaged on write.").c_str());
                 BOOST_ASSERT_MSG(std::get<2>(all_result) == times, "Times were not written and read back correctly!");
             }
             catch (std::exception &e) {
@@ -363,7 +378,7 @@ BOOST_AUTO_TEST_CASE(write_read_test)
             //check correctness of stored string
             bool cmp = std::equal(test_bin.cbegin(), test_bin.cend(), read_result.cbegin(), read_result.cend());
             if (!cmp) {
-                local_block_ref = std::get<1>(t1.write(test_bin,times));
+                local_block_ref = std::get<1>(t1.write(test_bin, times));
                 all_result = t1.read(local_block_ref);
             }
             BOOST_ASSERT_MSG(cmp, std::string("The write read result from block \"" + boost::algorithm::hex(
@@ -897,12 +912,13 @@ BOOST_AUTO_TEST_CASE(index_read_test)
         SHA512(read_result.data(), read_result.size(), hash_buf);
         std::string old_ref = boost::algorithm::hex(
                 std::string().assign(std::get<1>(el).cbegin(), std::get<1>(el).cend()));
-        bool test_ok = std::equal(std::get<0>(el).cbegin(), std::get<0>(el).cbegin()+SHA512_DIGEST_LENGTH, hash_buf,
+        bool test_ok = std::equal(std::get<0>(el).cbegin(), std::get<0>(el).cbegin() + SHA512_DIGEST_LENGTH, hash_buf,
                                   hash_buf + SHA512_DIGEST_LENGTH);
         BOOST_ASSERT_MSG(test_ok, std::string(
-                "The SHA512 without time extend of an indexed block \"" + old_ref + "\" could not be verified!").c_str());
+                "The SHA512 without time extend of an indexed block \"" + old_ref +
+                "\" could not be verified!").c_str());
     }
-    BOOST_ASSERT_MSG(std::get<1>(index_list).empty(),"The list of damaged blocks was not empty!");
+    BOOST_ASSERT_MSG(std::get<1>(index_list).empty(), "The list of damaged blocks was not empty!");
 }
 
 BOOST_AUTO_TEST_CASE(get_info_set_time_test)
@@ -929,16 +945,18 @@ BOOST_AUTO_TEST_CASE(get_info_set_time_test)
                      "Block was not older than current time");
 
     BOOST_ASSERT_MSG(std::get<3>(block_info) < SHA512_DIGEST_LENGTH + TIME_STAMPS_ON_BLOCK * sizeof(unsigned long) +
-                                                      t1.prefix_wrap(std::get<0>(block_info).size()).size() + std::get<3>(block_info) +
-                                                      SHA256_DIGEST_LENGTH,
+                                               t1.prefix_wrap(std::get<0>(block_info).size()).size() +
+                                               std::get<3>(block_info) +
+                                               SHA256_DIGEST_LENGTH,
                      "The total size must always be larger than the block size!");
     gettimeofday(&time, nullptr);
     millis = ((long double) time.tv_sec * ONE_MILLISECOND) + ((long double) time.tv_usec / ONE_MILLISECOND);
 
-    std::array<unsigned long, TIME_STAMPS_ON_BLOCK-1> set_new_times{std::get<2>(block_info)[1],(unsigned long) std::chrono::nanoseconds(
-            std::chrono::high_resolution_clock::now().time_since_epoch()).count()};
+    std::array<unsigned long, TIME_STAMPS_ON_BLOCK - 1> set_new_times{std::get<2>(block_info)[1],
+                                                                      (unsigned long) std::chrono::nanoseconds(
+                                                                              std::chrono::high_resolution_clock::now().time_since_epoch()).count()};
 
-    bool test_ok = t1.set_block_time(std::get<1>(*first_el),set_new_times);
+    bool test_ok = t1.set_block_time(std::get<1>(*first_el), set_new_times);
     gettimeofday(&time, nullptr);
     write_time =
             (((long double) time.tv_sec * ONE_MILLISECOND) + ((long double) time.tv_usec / ONE_MILLISECOND)) - millis;
@@ -966,31 +984,33 @@ BOOST_AUTO_TEST_CASE(delete_test)
     do {
         auto del_list = std::vector<std::vector<unsigned char>>{};
         std::size_t count{};
-        std::for_each(std::get<0>(index_list).cbegin(), std::get<0>(index_list).cend(), [&del_list, &count](auto &item) {
-            if (count == 30)return;
-            if (del_list.empty()||std::get<1>(item)[0]!=del_list.back()[0]||std::get<1>(item).size()!=del_list.back().size()){
-                del_list.push_back(std::get<1>(item));
-                count++;
-            }
-        });
+        std::for_each(std::get<0>(index_list).cbegin(), std::get<0>(index_list).cend(),
+                      [&del_list, &count](auto &item) {
+                          if (count == 30)return;
+                          if (del_list.empty() || std::get<1>(item)[0] != del_list.back()[0] ||
+                              std::get<1>(item).size() != del_list.back().size()) {
+                              del_list.push_back(std::get<1>(item));
+                              count++;
+                          }
+                      });
         delete_list = t1.delete_blocks(del_list);
         //delete list shows changes that have to be thrown at the del list carrying local block references to be deleted
         //since the block references by changing offsets we need to update them
         //REFERENCE REPLACEMENT ALGORITHM
-        std::for_each(del_list.begin(),del_list.end(),[&delete_list,&index_list](auto &item){
-            if(!std::any_of(std::get<1>(delete_list).begin(),std::get<1>(delete_list).end(),[&item](auto &item2){
+        std::for_each(del_list.begin(), del_list.end(), [&delete_list, &index_list](auto &item) {
+            if (!std::any_of(std::get<1>(delete_list).begin(), std::get<1>(delete_list).end(), [&item](auto &item2) {
                 return item == std::get<0>(item2);//check if original local block ref hit
-            })){
+            })) {
                 //erase from index
-                std::erase_if(std::get<0>(index_list),[&item](auto &item3){
+                std::erase_if(std::get<0>(index_list), [&item](auto &item3) {
                     return std::get<1>(item3) == item;
                 });
             }//clean index from deleted
         });
         //transform changes
-        std::for_each(std::get<1>(delete_list).begin(),std::get<1>(delete_list).end(),[&index_list](auto &item2){
-            std::for_each(std::get<0>(index_list).begin(),std::get<0>(index_list).end(),[&item2](auto &item4){
-                if(std::get<1>(item4) == std::get<0>(item2)){
+        std::for_each(std::get<1>(delete_list).begin(), std::get<1>(delete_list).end(), [&index_list](auto &item2) {
+            std::for_each(std::get<0>(index_list).begin(), std::get<0>(index_list).end(), [&item2](auto &item4) {
+                if (std::get<1>(item4) == std::get<0>(item2)) {
                     std::get<1>(item4) = std::get<1>(item2);
                     return;
                 }
@@ -1015,5 +1035,5 @@ BOOST_AUTO_TEST_CASE(delete_test)
     }
 
     t1.delete_recursive();
-    if(std::filesystem::exists(target / "0000"))std::filesystem::remove_all(target / "0000");
+    if (std::filesystem::exists(target / "0000"))std::filesystem::remove_all(target / "0000");
 }

@@ -121,7 +121,8 @@ namespace uh::trees {
 
         //returns total size of block plus information, block size, the received block as vector, the total block with information as vector, the times in normal unsigned long form,
         //the global hash of SHA512 with creation time extend, bool error occurred, bool block description valid
-        std::tuple<std::size_t, std::size_t, std::vector<unsigned char>, std::array<unsigned long, TIME_STAMPS_ON_BLOCK>, std::array<unsigned char, SHA512_DIGEST_LENGTH + sizeof(unsigned long)>, bool, bool>
+        std::tuple<std::size_t, std::size_t, std::vector<unsigned char>, std::array<unsigned long, TIME_STAMPS_ON_BLOCK>, std::array<unsigned char,
+                SHA512_DIGEST_LENGTH + sizeof(unsigned long)>, bool, bool>
         read_block_base(
                 FILE *reader, const std::filesystem::path &read_at, const std::vector<unsigned char> &local_block_ref,
                 bool skip_read_block = false, bool check_valid = false);
@@ -261,12 +262,12 @@ namespace uh::trees {
                     }
 
                     FILE *reader = std::fopen(read_path.make_preferred().c_str(), "rb");
-                    auto read_end_sequence = [&reader, &read_ptr, &write_ptr, &read_path,&maintain_ptr]() {
+                    auto read_end_sequence = [&reader, &read_ptr, &write_ptr, &read_path, &maintain_ptr]() {
                         if (std::fclose(reader)) {
                             ERROR << "Read stream was not open on " + read_path.make_preferred().string() + "!";
                         }
                         *read_ptr -= 1;
-                        if (!read_ptr->load()){
+                        if (!read_ptr->load()) {
                             write_ptr->notify_one();
                             maintain_ptr->notify_one();
                         }
@@ -285,7 +286,8 @@ namespace uh::trees {
                         }
                     }
 
-                    const auto block_read_tup = this->read_block_base(reader, read_path.make_preferred(), block_code, only_info, valid_check);
+                    const auto block_read_tup = this->read_block_base(reader, read_path.make_preferred(), block_code,
+                                                                      only_info, valid_check);
                     read_end_sequence();
 
                     if (std::get<5>(block_read_tup)) {
