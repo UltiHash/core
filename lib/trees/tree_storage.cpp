@@ -1481,8 +1481,8 @@ uh::trees::tree_storage::delete_blocks(
                 write_unlock(write_ptr);
             };
             auto write_total_end = [&io_end_sequence, &error_thread_sequence, &error_flag, &chunk_maintain,&maintain_ptr,&maintain_unlock,&cur_pos,&delete_size] {
-                ERROR << "File write thread failed to put down a line at \"" + chunk_maintain.string() + "\" at position "+std::string(cur_pos)+" and deleting postion "+
-                std::string(cur_pos - delete_size);
+                ERROR << "File write thread failed to put down a line at \"" + chunk_maintain.string() + "\" at position "+std::to_string(cur_pos)+" and deleting postion "+
+                std::to_string(cur_pos - delete_size);
                 io_end_sequence();
                 error_thread_sequence();
                 maintain_unlock(maintain_ptr);
