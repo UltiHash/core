@@ -130,4 +130,21 @@ void read(std::istream& in, int32_t& value)
 
 // ---------------------------------------------------------------------
 
+void write(std::ostream& out, uint64_t value)
+{
+    int64_t nbo = htonl(value);
+    out.write(reinterpret_cast<const char*>(&nbo), sizeof(nbo));
+}
+
+// ---------------------------------------------------------------------
+
+void read(std::istream& in, uint64_t& value)
+{
+    int64_t nbo;
+    read(in, reinterpret_cast<char*>(&nbo), sizeof(nbo));
+    value = ntohl(nbo);
+}
+
+// ---------------------------------------------------------------------
+
 } // namespace uh::protocol

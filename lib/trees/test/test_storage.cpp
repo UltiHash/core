@@ -2,7 +2,7 @@
 // Created by benjamin on 18.12.22.
 //
 
-#define BOOST_TEST_DYN_LINK
+//#define BOOST_TEST_DYN_LINK
 #ifdef SINGLE_TEST_RUNNER
 #define BOOST_TEST_NO_MAIN
 #else
@@ -19,83 +19,334 @@
 std::vector<unsigned char> binary_generator(std::size_t max_len) {
     std::random_device dev;
     std::mt19937 rng(dev());
-    std::uniform_int_distribution<std::mt19937::result_type> dist(16, max_len);
+    std::uniform_int_distribution<std::mt19937::result_type> dist(1, max_len);
 
     std::size_t len = dist(rng);
-
-    std::random_device dev2;
-    std::mt19937 rng2(dev2());
-    std::uniform_int_distribution<std::mt19937::result_type> dist2(0, UINT64_MAX);
 
     std::random_device dev3;
     std::mt19937 rng3(dev3());
     std::uniform_int_distribution<std::mt19937::result_type> dist3(0, UINT8_MAX);
 
     std::vector<unsigned char> out_return;
-    out_return.reserve(len);
-    if((len / sizeof(std::size_t))>0){
-        auto *out_fast = new std::size_t[len / sizeof(std::size_t)];
-        auto *out_fast_cheat = reinterpret_cast<unsigned char *>(out_fast);
-
-        if(len<(std::size_t)std::pow(2,24)){
-            for (std::size_t i = 0; i < len / sizeof(std::size_t); i++) {
-                out_fast[i] = (std::size_t) dist2(rng2);
-            }
-        }
-        else{
-            #pragma omp parallel for simd schedule(dynamic)
-            for (std::size_t i = 0; i < len / sizeof(std::size_t); i++) {
-                out_fast[i] = (std::size_t) dist2(rng2);
-            }
-        }
-
-        //copy out_fast to out_return
-        out_return.assign(out_fast_cheat, out_fast_cheat + (len / sizeof(std::size_t)) * sizeof(std::size_t));
-        std::free(out_fast);
-    }
-
-    //complete
-    for (std::size_t i1 = (len / sizeof(std::size_t)) * sizeof(std::size_t); i1 < (len / sizeof(std::size_t)) * sizeof(std::size_t) + len % sizeof(std::size_t); i1++) {
-        out_return[i1] = dist3(rng3);
-    }
+    out_return.resize(len);
+    std::for_each(out_return.begin(), out_return.end(), [&dist3, &rng3](auto &a) {
+        a = dist3(rng3);
+    });
 
     return out_return;
 }
 
 // ------------- Tests Follow --------------
+/*
+ * test setting up a tree storage at a given location
+ */
 BOOST_AUTO_TEST_CASE(constructor_test)
 {
-    //for any machine
-    //uh::trees::tree_storage t1(std::filesystem::path("/home")/std::string(getenv("USER")));//A test folder reserved for tree storage
+    //tests for any linux machine
+    std::filesystem::path target = std::filesystem::path("/tmp");
+    uh::trees::tree_storage t1(target);//A test folder reserved for tree storage
+    t1.delete_recursive();
+    auto to_remove = target / "0000";
+    if (std::filesystem::exists(to_remove)) {
+        std::filesystem::remove_all(to_remove);
+    }
     //for strong laptops with SSD extension (configure test db server to run this??)
-    uh::trees::tree_storage t1("/mnt/md0");//A test folder reserved for tree storage
+    //uh::trees::tree_storage t1("/mnt/md0");//A test folder reserved for tree storage for performance tests
+}
+
+BOOST_AUTO_TEST_CASE(write_read_base_test)
+{
+    //tests for any linux machine
+    std::filesystem::path target = std::filesystem::path("/tmp");
+    auto base_test = target / "0000";
+    uh::trees::tree_storage t1(base_test);//A test folder reserved for tree storage
+
+    //test file
+    auto base_bin = base_test / "00";
+    //check read and write base algorithms
+    std::vector<unsigned char> test_bin = binary_generator(STORE_MAX);
+
+    //test write normal mode
+    auto local_block_ref = std::vector<unsigned char>{0, 0, 0, 0, 0};//for feedback purposes
+    auto times = std::array<unsigned long, TIME_STAMPS_ON_BLOCK>{
+            //difference between current time and last time touched should not exceed time span to keep
+            (unsigned long) std::chrono::nanoseconds(
+                    std::chrono::high_resolution_clock::now().time_since_epoch()).count(),//creation time global
+            (unsigned long) std::chrono::nanoseconds(
+                    std::chrono::years(1)).count(),//maximum untouched time before delete
+            (unsigned long) std::chrono::nanoseconds(
+                    std::chrono::high_resolution_clock::now().time_since_epoch()).count()//last time touched
+    };
+    if (std::filesystem::exists(base_bin))std::filesystem::remove(base_bin);
+    FILE *writer = std::fopen(base_bin.make_preferred().c_str(), "ab");
+    auto write_tup = t1.write_block_base(writer, base_bin.make_preferred(), test_bin, local_block_ref, times);
+    BOOST_ASSERT_MSG(std::fclose(writer) == 0, "Write stream was not open!");
+    auto total_size_write = std::get<0>(write_tup);
+    auto block_size_write = std::get<1>(write_tup);
+    auto global_hash_write = std::get<2>(write_tup);
+    auto error_occurred_write = std::get<3>(write_tup);
+    BOOST_ASSERT_MSG(!error_occurred_write, "An internal error occurred!");
+
+    decltype(std::fopen(base_bin.make_preferred().c_str(), "rb")) reader;
+    decltype(t1.read_block_base(reader, base_bin.make_preferred(), local_block_ref)) read_tup{};
+    std::size_t total_size_read{};
+    std::size_t block_size_read{};
+    std::vector<unsigned char> block_read{};
+    std::array<unsigned long, TIME_STAMPS_ON_BLOCK> times_read{};
+    std::array<unsigned char, SHA512_DIGEST_LENGTH + sizeof(unsigned long)> global_hash_read{};
+    bool error_occurred_read{};
+    bool valid_read{};
+    //test read normal mode
+    auto read_tests = [&] {
+        reader = std::fopen(base_bin.make_preferred().c_str(), "rb");
+        read_tup = t1.read_block_base(reader, base_bin.make_preferred(), local_block_ref);
+        BOOST_ASSERT_MSG(std::fclose(reader) == 0, "Read stream was not open!");
+        total_size_read = std::get<0>(read_tup);
+        block_size_read = std::get<1>(read_tup);
+        block_read = std::get<2>(read_tup);
+        times_read = std::get<3>(read_tup);
+        global_hash_read = std::get<4>(read_tup);
+        error_occurred_read = std::get<5>(read_tup);
+        valid_read = std::get<6>(read_tup);
+        BOOST_ASSERT_MSG(!error_occurred_read, "An internal error occurred!");
+        BOOST_ASSERT_MSG(valid_read, "Block was invalid!");
+
+        BOOST_ASSERT_MSG(total_size_write == total_size_read, "Block total size was wrong!");
+        BOOST_ASSERT_MSG(block_size_write == block_size_read, "Block size was wrong!");
+        BOOST_ASSERT_MSG(global_hash_write == global_hash_read, "Global hash was wrong!");
+        BOOST_ASSERT_MSG(test_bin == block_read, "Test binary was wrong!");
+        BOOST_ASSERT_MSG(times == times_read, "Times did not match!");
+        //test read valid check
+        reader = std::fopen(base_bin.make_preferred().c_str(), "rb");
+        read_tup = t1.read_block_base(reader, base_bin.make_preferred(), local_block_ref, false, true);
+        BOOST_ASSERT_MSG(std::fclose(reader) == 0, "Read stream was not open!");
+        total_size_read = std::get<0>(read_tup);
+        block_size_read = std::get<1>(read_tup);
+        block_read = std::get<2>(read_tup);
+        times_read = std::get<3>(read_tup);
+        global_hash_read = std::get<4>(read_tup);
+        error_occurred_read = std::get<5>(read_tup);
+        valid_read = std::get<6>(read_tup);
+        BOOST_ASSERT_MSG(!error_occurred_read, "An internal error occurred!");
+        BOOST_ASSERT_MSG(valid_read, "Block was invalid!");
+
+        BOOST_ASSERT_MSG(total_size_write == total_size_read, "Block total size was wrong!");
+        BOOST_ASSERT_MSG(block_size_write == block_size_read, "Block size was wrong!");
+        BOOST_ASSERT_MSG(global_hash_write == global_hash_read, "Global hash was wrong!");
+        BOOST_ASSERT_MSG(test_bin == block_read, "Test binary was wrong!");
+        BOOST_ASSERT_MSG(times == times_read, "Times did not match!");
+        //test read with skipping the block itself
+        reader = std::fopen(base_bin.make_preferred().c_str(), "rb");
+        read_tup = t1.read_block_base(reader, base_bin.make_preferred(), local_block_ref, true);
+        BOOST_ASSERT_MSG(std::fclose(reader) == 0, "Read stream was not open!");
+        total_size_read = std::get<0>(read_tup);
+        block_size_read = std::get<1>(read_tup);
+        block_read = std::get<2>(read_tup);
+        times_read = std::get<3>(read_tup);
+        global_hash_read = std::get<4>(read_tup);
+        error_occurred_read = std::get<5>(read_tup);
+        valid_read = std::get<6>(read_tup);
+        BOOST_ASSERT_MSG(!error_occurred_read, "An internal error occurred!");
+        BOOST_ASSERT_MSG(valid_read, "Block was invalid!");
+
+        BOOST_ASSERT_MSG(total_size_write == total_size_read, "Block total size was wrong!");
+        BOOST_ASSERT_MSG(block_size_write == block_size_read, "Block size was wrong!");
+        BOOST_ASSERT_MSG(global_hash_write == global_hash_read, "Global hash was wrong!");
+        BOOST_ASSERT_MSG(block_read.empty(), "Block should not be read here!");
+        BOOST_ASSERT_MSG(times == times_read, "Times did not match!");
+    };
+    read_tests();
+
+    std::array<unsigned char, SHA512_DIGEST_LENGTH> block_hash{};
+    std::ranges::copy(global_hash_read.cbegin(), global_hash_read.cbegin() + SHA512_DIGEST_LENGTH, block_hash.begin());
+    //write again in update mode and try to use already known sha to block for speed, result should still be the same,
+    // update entire block; block cannot be empty as it needs to be written
+    if (std::filesystem::exists(base_bin))std::filesystem::remove(base_bin);
+    writer = std::fopen(base_bin.make_preferred().c_str(), "wb+");
+    write_tup = t1.write_block_base(writer, base_bin.make_preferred(), test_bin, local_block_ref, times, false, false,
+                                    std::vector<unsigned char>{block_hash.cbegin(), block_hash.cend()});
+    BOOST_ASSERT_MSG(std::fclose(writer) == 0, "Write stream was not open!");
+    total_size_write = std::get<0>(write_tup);
+    block_size_write = std::get<1>(write_tup);
+    global_hash_write = std::get<2>(write_tup);
+    error_occurred_write = std::get<3>(write_tup);
+    BOOST_ASSERT_MSG(!error_occurred_write, "An internal error occurred!");
+    //once more read tests on that
+    auto read_tup2 = read_tup;
+    read_tests();
+    BOOST_ASSERT_MSG(read_tup == read_tup2, "The results after reading were not the same!");
+
+    //write again in update mode and check again if all results are the same; block can be empty as it already exists
+    //expected behaviour: block and times were given, but only times and checksum are updated by reading hash and block from disk calculating the checksum
+    writer = std::fopen(base_bin.make_preferred().c_str(), "rb+");
+    write_tup = t1.write_block_base(writer, base_bin.make_preferred(), std::vector<unsigned char>{}, local_block_ref,
+                                    times, true);
+    BOOST_ASSERT_MSG(std::fclose(writer) == 0, "Write stream was not open!");
+    total_size_write = std::get<0>(write_tup);
+    block_size_write = std::get<1>(write_tup);
+    global_hash_write = std::get<2>(write_tup);
+    error_occurred_write = std::get<3>(write_tup);
+    BOOST_ASSERT_MSG(!error_occurred_write, "An internal error occurred!");
+    //once more read tests on that
+    read_tup2 = read_tup;
+    read_tests();
+    BOOST_ASSERT_MSG(read_tup == read_tup2, "The results after reading were not the same!");
+    //write again in update mode and try to use already known sha to block for speed, result should still be the same,
+    // only update times and checksum, skipping read block for hash if block is not empty or placeholder_block_size is set
+    writer = std::fopen(base_bin.make_preferred().c_str(), "rb+");
+    write_tup = t1.write_block_base(writer, base_bin.make_preferred(), test_bin, local_block_ref, times, true, false,
+                                    std::vector<unsigned char>{block_hash.cbegin(), block_hash.cend()});
+    BOOST_ASSERT_MSG(std::fclose(writer) == 0, "Write stream was not open!");
+    total_size_write = std::get<0>(write_tup);
+    block_size_write = std::get<1>(write_tup);
+    global_hash_write = std::get<2>(write_tup);
+    error_occurred_write = std::get<3>(write_tup);
+    BOOST_ASSERT_MSG(!error_occurred_write, "An internal error occurred!");
+    //once more read tests on that
+    read_tup2 = read_tup;
+    read_tests();
+    BOOST_ASSERT_MSG(read_tup == read_tup2, "The results after reading were not the same!");
+    //same with placeholder_block_size
+    writer = std::fopen(base_bin.make_preferred().c_str(), "rb+");
+    write_tup = t1.write_block_base(writer, base_bin.make_preferred(), std::vector<unsigned char>{}, local_block_ref,
+                                    times, true, false,
+                                    std::vector<unsigned char>{block_hash.cbegin(), block_hash.cend()},
+                                    block_size_read);
+    BOOST_ASSERT_MSG(std::fclose(writer) == 0, "Write stream was not open!");
+    total_size_write = std::get<0>(write_tup);
+    block_size_write = std::get<1>(write_tup);
+    global_hash_write = std::get<2>(write_tup);
+    error_occurred_write = std::get<3>(write_tup);
+    BOOST_ASSERT_MSG(!error_occurred_write, "An internal error occurred!");
+    //once more read tests on that
+    read_tup2 = read_tup;
+    read_tests();
+    BOOST_ASSERT_MSG(read_tup == read_tup2, "The results after reading were not the same!");
+    //skip creation time update
+    times[0] = 0;
+    writer = std::fopen(base_bin.make_preferred().c_str(), "rb+");
+    write_tup = t1.write_block_base(writer, base_bin.make_preferred(), std::vector<unsigned char>{}, local_block_ref,
+                                    times, true, false,
+                                    std::vector<unsigned char>{block_hash.cbegin(), block_hash.cend()},
+                                    block_size_read);
+    BOOST_ASSERT_MSG(std::fclose(writer) == 0, "Write stream was not open!");
+    total_size_write = std::get<0>(write_tup);
+    block_size_write = std::get<1>(write_tup);
+    global_hash_write = std::get<2>(write_tup);
+    error_occurred_write = std::get<3>(write_tup);
+    BOOST_ASSERT_MSG(!error_occurred_write, "An internal error occurred!");
+    //once more read tests on that
+    read_tup2 = read_tup;
+    read_tests();
+    BOOST_ASSERT_MSG(std::get<0>(read_tup) == std::get<0>(read_tup2), "Total size was not the same!");
+    BOOST_ASSERT_MSG(std::get<1>(read_tup) == std::get<1>(read_tup2), "Block size was not the same!");
+    BOOST_ASSERT_MSG(std::get<2>(read_tup) == std::get<2>(read_tup2), "Block read was not the same!");
+    BOOST_ASSERT_MSG(std::get<3>(read_tup)[0] != 0, "Creation time was not read!");
+    BOOST_ASSERT_MSG(std::get<3>(read_tup)[0] == std::get<3>(read_tup2)[0], "Storage duration was not equal!");
+    BOOST_ASSERT_MSG(std::get<3>(read_tup)[1] == std::get<3>(read_tup2)[1], "Storage duration was not equal!");
+    BOOST_ASSERT_MSG(std::get<3>(read_tup)[2] == std::get<3>(read_tup2)[2], "Last visited was not equal!");
+    BOOST_ASSERT_MSG(std::get<4>(read_tup) == std::get<4>(read_tup2), "Global hash was not the same!");
+    BOOST_ASSERT_MSG(std::get<5>(read_tup) == std::get<5>(read_tup2), "Error occurred was not the same!");
+    BOOST_ASSERT_MSG(std::get<6>(read_tup) == std::get<6>(read_tup2), "Valid read was not the same!");
+
+    //check more difficult case if also the block hash is not given while updating
+    times[0] = 0;
+    writer = std::fopen(base_bin.make_preferred().c_str(), "rb+");
+    write_tup = t1.write_block_base(writer, base_bin.make_preferred(), std::vector<unsigned char>{}, local_block_ref,
+                                    times, true, false);
+    BOOST_ASSERT_MSG(std::fclose(writer) == 0, "Write stream was not open!");
+    total_size_write = std::get<0>(write_tup);
+    block_size_write = std::get<1>(write_tup);
+    global_hash_write = std::get<2>(write_tup);
+    error_occurred_write = std::get<3>(write_tup);
+    BOOST_ASSERT_MSG(!error_occurred_write, "An internal error occurred!");
+    //once more read tests on that
+    read_tup2 = read_tup;
+    read_tests();
+    BOOST_ASSERT_MSG(std::get<0>(read_tup) == std::get<0>(read_tup2), "Total size was not the same!");
+    BOOST_ASSERT_MSG(std::get<1>(read_tup) == std::get<1>(read_tup2), "Block size was not the same!");
+    BOOST_ASSERT_MSG(std::get<2>(read_tup) == std::get<2>(read_tup2), "Block read was not the same!");
+    BOOST_ASSERT_MSG(std::get<3>(read_tup)[0] != 0, "Creation time was not read!");
+    BOOST_ASSERT_MSG(std::get<3>(read_tup)[0] == std::get<3>(read_tup2)[0], "Storage duration was not equal!");
+    BOOST_ASSERT_MSG(std::get<3>(read_tup)[1] == std::get<3>(read_tup2)[1], "Storage duration was not equal!");
+    BOOST_ASSERT_MSG(std::get<3>(read_tup)[2] == std::get<3>(read_tup2)[2], "Last visited was not equal!");
+    BOOST_ASSERT_MSG(std::get<4>(read_tup) == std::get<4>(read_tup2), "Global hash was not the same!");
+    BOOST_ASSERT_MSG(std::get<5>(read_tup) == std::get<5>(read_tup2), "Error occurred was not the same!");
+    BOOST_ASSERT_MSG(std::get<6>(read_tup) == std::get<6>(read_tup2), "Valid read was not the same!");
+    //seek over creation time if not 0
+    writer = std::fopen(base_bin.make_preferred().c_str(), "rb+");
+    write_tup = t1.write_block_base(writer, base_bin.make_preferred(), std::vector<unsigned char>{}, local_block_ref,
+                                    times, true, false);
+    BOOST_ASSERT_MSG(std::fclose(writer) == 0, "Write stream was not open!");
+    total_size_write = std::get<0>(write_tup);
+    block_size_write = std::get<1>(write_tup);
+    global_hash_write = std::get<2>(write_tup);
+    error_occurred_write = std::get<3>(write_tup);
+    BOOST_ASSERT_MSG(!error_occurred_write, "An internal error occurred!");
+    //once more read tests on that
+    read_tup2 = read_tup;
+    read_tests();
+    BOOST_ASSERT_MSG(std::get<0>(read_tup) == std::get<0>(read_tup2), "Total size was not the same!");
+    BOOST_ASSERT_MSG(std::get<1>(read_tup) == std::get<1>(read_tup2), "Block size was not the same!");
+    BOOST_ASSERT_MSG(std::get<2>(read_tup) == std::get<2>(read_tup2), "Block read was not the same!");
+    BOOST_ASSERT_MSG(std::get<3>(read_tup)[0] != 0, "Creation time was not read!");
+    BOOST_ASSERT_MSG(std::get<3>(read_tup)[0] == std::get<3>(read_tup2)[0], "Storage duration was not equal!");
+    BOOST_ASSERT_MSG(std::get<3>(read_tup)[1] == std::get<3>(read_tup2)[1], "Storage duration was not equal!");
+    BOOST_ASSERT_MSG(std::get<3>(read_tup)[2] == std::get<3>(read_tup2)[2], "Last visited was not equal!");
+    BOOST_ASSERT_MSG(std::get<4>(read_tup) == std::get<4>(read_tup2), "Global hash was not the same!");
+    BOOST_ASSERT_MSG(std::get<5>(read_tup) == std::get<5>(read_tup2), "Error occurred was not the same!");
+    BOOST_ASSERT_MSG(std::get<6>(read_tup) == std::get<6>(read_tup2), "Valid read was not the same!");
+
+    if (std::filesystem::exists(base_test)) {
+        std::filesystem::remove_all(base_test);
+    }
 }
 
 BOOST_AUTO_TEST_CASE(write_read_test)
 {
-    //for any machine
-    //uh::trees::tree_storage t1(std::filesystem::path("/home")/std::string(getenv("USER")));//A test folder reserved for tree storage
+    //tests for any linux machine
+    std::filesystem::path target = std::filesystem::path("/tmp");
+    uh::trees::tree_storage t1(target);//A test folder reserved for tree storage
     //for strong laptops with SSD extension (configure test db server to run this??)
-    uh::trees::tree_storage t1("/mnt/md0");//A test folder reserved for tree storage
+    //uh::trees::tree_storage t1("/mnt/md0");//A test folder reserved for tree storage for performance tests
 
     struct timeval time{};
     for (unsigned char mode = 0; mode < 2; mode++) {
         std::size_t total_size{};
         //list of write times with local_block_ref, integrated block size and milliseconds
-        std::vector<std::tuple<std::vector<unsigned char>, std::size_t, long double>> write_times, read_after_write_times, linear_read_times, randam_access_read_times;
+        std::vector<std::tuple<std::vector<unsigned char>, std::size_t, long double>> write_times, read_after_write_times, linear_read_times, random_access_read_times;
         //retrieved block size, local_block_ref size and time taken
         mode ? BOOST_TEST_MESSAGE("---Entering short block latency measurement write read mode:---\n") :
         BOOST_TEST_MESSAGE("---Entering normal write read mode:---\n");
-        while (total_size < (mode?(std::size_t) std::pow(2, 22):(std::size_t) (std::pow(1024, 4) * 4))){
+        //total size is the total write size that the database tests
+        while (total_size < (mode ? LATENCY_TEST_SIZE : PERFORMANCE_TEST_SIZE)) {
             //(std::size_t) std::pow(2, 35))
-            std::vector<unsigned char> test_bin = binary_generator(mode ? 32 : STORE_MAX);
+            std::vector<unsigned char> test_bin = binary_generator(mode ? STORE_MAX_LATENCY : STORE_MAX);
             //write test
             gettimeofday(&time, nullptr);
-            long double millis = ((long double) time.tv_sec * 1000) + ((long double) time.tv_usec / 1000);
-            std::vector<unsigned char> local_block_ref = t1.write(test_bin);
+            long double millis =
+                    ((long double) time.tv_sec * ONE_MILLISECOND) + ((long double) time.tv_usec / ONE_MILLISECOND);
+            std::vector<unsigned char> local_block_ref;
+            std::array<unsigned long, TIME_STAMPS_ON_BLOCK> times{
+                    (unsigned long) std::chrono::nanoseconds(
+                            std::chrono::high_resolution_clock::now().time_since_epoch()).count(),//creation time in ns
+                    (unsigned long) std::chrono::nanoseconds(std::chrono::days(365)).count(),//keep duration in ns
+                    (unsigned long) std::chrono::nanoseconds(
+                            std::chrono::high_resolution_clock::now().time_since_epoch()).count()};//last visited time in ns
+
+            try {
+                local_block_ref = std::get<1>(t1.write(test_bin, times));
+            }
+            catch (std::exception &e) {
+                std::stringstream s;
+                s << e.what();
+                BOOST_TEST_MESSAGE("Writing critically failed! Error: " + s.str());
+            }
+
             gettimeofday(&time, nullptr);
             long double write_time =
-                    (((long double) time.tv_sec * 1000) + ((long double) time.tv_usec / 1000)) - millis;
+                    (((long double) time.tv_sec * ONE_MILLISECOND) + ((long double) time.tv_usec / ONE_MILLISECOND)) -
+                    millis;
             BOOST_ASSERT_MSG(!local_block_ref.empty(), std::string(
                     "Database writing failed at block size " + std::to_string(test_bin.size()) + " at total size " +
                     std::to_string(total_size) + " . No reference retrieved!").c_str());
@@ -103,14 +354,35 @@ BOOST_AUTO_TEST_CASE(write_read_test)
             write_times.emplace_back(local_block_ref, test_bin.size(), write_time);
             //read after write test
             gettimeofday(&time, nullptr);
-            millis = ((long double) time.tv_sec * 1000) + ((long double) time.tv_usec / 1000);
-            std::vector<unsigned char> read_result = t1.read(local_block_ref);
+            millis = ((long double) time.tv_sec * ONE_MILLISECOND) + ((long double) time.tv_usec / ONE_MILLISECOND);
+            std::tuple<std::vector<unsigned char>, std::vector<unsigned char>, std::array<unsigned long, TIME_STAMPS_ON_BLOCK>, std::array<unsigned char,
+                    SHA512_DIGEST_LENGTH + sizeof(unsigned long)>, std::size_t, bool> all_result;
+            try {
+                all_result = t1.read(local_block_ref, true);
+                bool test_ok = std::get<5>(all_result);
+                BOOST_ASSERT_MSG(test_ok, std::string(" Block \"" + boost::algorithm::hex(
+                        std::string(local_block_ref.cbegin(), local_block_ref.cend())) +
+                                                      "\" was damaged on write.").c_str());
+                BOOST_ASSERT_MSG(std::get<2>(all_result) == times, "Times were not written and read back correctly!");
+            }
+            catch (std::exception &e) {
+                std::stringstream s;
+                s << e.what();
+                BOOST_TEST_MESSAGE("Reading critically failed! Error: " + s.str());
+            }
+            std::vector<unsigned char> read_result = std::get<0>(all_result);
             gettimeofday(&time, nullptr);
             long double read_after_write_time =
-                    (((long double) time.tv_sec * 1000) + ((long double) time.tv_usec / 1000)) - millis;
+                    (((long double) time.tv_sec * ONE_MILLISECOND) + ((long double) time.tv_usec / ONE_MILLISECOND)) -
+                    millis;
             //check correctness of stored string
-            bool cmp = std::equal(test_bin.cbegin(),test_bin.cend(),read_result.cbegin(),read_result.cend());
-            BOOST_ASSERT_MSG(cmp,std::string("The write read result from block \""+boost::algorithm::hex(std::string(local_block_ref.cbegin(),local_block_ref.cend()))+"\" failed.").c_str());
+            bool cmp = std::equal(test_bin.cbegin(), test_bin.cend(), read_result.cbegin(), read_result.cend());
+            if (!cmp) {
+                local_block_ref = std::get<1>(t1.write(test_bin, times));
+                all_result = t1.read(local_block_ref);
+            }
+            BOOST_ASSERT_MSG(cmp, std::string("The write read result from block \"" + boost::algorithm::hex(
+                    std::string(local_block_ref.cbegin(), local_block_ref.cend())) + "\" failed.").c_str());
             read_after_write_times.emplace_back(local_block_ref, read_result.size(), read_after_write_time);
 
             total_size += test_bin.size();
@@ -120,11 +392,14 @@ BOOST_AUTO_TEST_CASE(write_read_test)
         //test sequential read from beginning on
         for (const auto &i: write_times) {
             gettimeofday(&time, nullptr);
-            long double millis = ((long double) time.tv_sec * 1000) + ((long double) time.tv_usec / 1000);
-            std::vector<unsigned char> read_result = t1.read(std::get<0>(i));
+            long double millis =
+                    ((long double) time.tv_sec * ONE_MILLISECOND) + ((long double) time.tv_usec / ONE_MILLISECOND);
+            auto all_results = t1.read(std::get<0>(i));
+            std::vector<unsigned char> read_result = std::get<1>(all_results);
             gettimeofday(&time, nullptr);
             long double read_sequential =
-                    (((long double) time.tv_sec * 1000) + ((long double) time.tv_usec / 1000)) - millis;
+                    (((long double) time.tv_sec * ONE_MILLISECOND) + ((long double) time.tv_usec / ONE_MILLISECOND)) -
+                    millis;
             BOOST_ASSERT_MSG(!read_result.empty(), std::string(
                     "Database sequential reading failed at block reference " +
                     boost::algorithm::hex(std::string{std::get<0>(i).cbegin(), std::get<0>(i).cend()}) +
@@ -136,21 +411,24 @@ BOOST_AUTO_TEST_CASE(write_read_test)
         total_size = 0;
         std::random_device dev;
         std::mt19937 rng(dev());
-        std::uniform_int_distribution<std::mt19937::result_type> dist(0, write_times.size()-1);
-        while (total_size < (mode?(std::size_t) std::pow(2, 22):(std::size_t) (std::pow(1024, 4) * 4))) {
+        std::uniform_int_distribution<std::mt19937::result_type> dist(0, write_times.size() - 1);
+        while (total_size < (mode ? LATENCY_TEST_SIZE : PERFORMANCE_TEST_SIZE)) {
             std::size_t access_point = dist(rng);
             gettimeofday(&time, nullptr);
-            long double millis = ((long double) time.tv_sec * 1000) + ((long double) time.tv_usec / 1000);
-            std::vector<unsigned char> read_result = t1.read(std::get<0>(write_times[access_point]));
+            long double millis =
+                    ((long double) time.tv_sec * ONE_MILLISECOND) + ((long double) time.tv_usec / ONE_MILLISECOND);
+            auto all_results = t1.read(std::get<0>(write_times[access_point]));
+            std::vector<unsigned char> read_result = std::get<1>(all_results);
             gettimeofday(&time, nullptr);
             long double read_sequential =
-                    (((long double) time.tv_sec * 1000) + ((long double) time.tv_usec / 1000)) - millis;
+                    (((long double) time.tv_sec * ONE_MILLISECOND) + ((long double) time.tv_usec / ONE_MILLISECOND)) -
+                    millis;
             BOOST_ASSERT_MSG(!read_result.empty(), std::string(
                     "Database random access reading failed at block reference " +
                     boost::algorithm::hex(std::string{std::get<0>(write_times[access_point]).cbegin(),
                                                       std::get<0>(write_times[access_point]).cend()}) +
                     " . No block retrieved!").c_str());
-            randam_access_read_times.emplace_back(std::get<0>(write_times[access_point]), read_result.size(),
+            random_access_read_times.emplace_back(std::get<0>(write_times[access_point]), read_result.size(),
                                                   read_sequential);
             total_size += read_result.size();
         }
@@ -244,7 +522,8 @@ BOOST_AUTO_TEST_CASE(write_read_test)
         write_avg_block_ref_size /= write_times.size();
         write_avg_time /= write_times.size();
 
-        long double write_integration_speed_MB = (write_avg_size / std::pow(2, 20)) / (write_avg_time / 1000);
+        long double write_integration_speed_MB =
+                (write_avg_size / std::pow(2, 20)) / (write_avg_time / ONE_MILLISECOND);
 
         BOOST_TEST_MESSAGE("Average writing results:");
         BOOST_TEST_MESSAGE("Average integration time is " + std::to_string(write_avg_time) +
@@ -360,7 +639,7 @@ BOOST_AUTO_TEST_CASE(write_read_test)
         read_after_write_avg_time /= read_after_write_times.size();
 
         long double read_after_write_integration_speed_MB =
-                (read_after_write_avg_size / std::pow(2, 20)) / (read_after_write_avg_time / 1000);
+                (read_after_write_avg_size / std::pow(2, 20)) / (read_after_write_avg_time / ONE_MILLISECOND);
 
         BOOST_TEST_MESSAGE("Average read after write results:");
         BOOST_TEST_MESSAGE("Average read after write time is " + std::to_string(read_after_write_avg_time) +
@@ -468,7 +747,7 @@ BOOST_AUTO_TEST_CASE(write_read_test)
         linear_read_avg_time /= linear_read_times.size();
 
         long double linear_read_integration_speed_MB =
-                (linear_read_avg_size / std::pow(2, 20)) / (linear_read_avg_time / 1000);
+                (linear_read_avg_size / std::pow(2, 20)) / (linear_read_avg_time / ONE_MILLISECOND);
 
         BOOST_TEST_MESSAGE("Average linear read results:");
         BOOST_TEST_MESSAGE("Average linear read time is " + std::to_string(linear_read_avg_time) +
@@ -482,120 +761,120 @@ BOOST_AUTO_TEST_CASE(write_read_test)
         BOOST_TEST_MESSAGE("\nTest results for random access read:\n");
         BOOST_TEST_MESSAGE("Minimum results:");
         //minimum size
-        auto randam_access_read_min_size = std::min_element(randam_access_read_times.cbegin(),
-                                                            randam_access_read_times.cend(),
+        auto random_access_read_min_size = std::min_element(random_access_read_times.cbegin(),
+                                                            random_access_read_times.cend(),
                                                             [](const auto &a, const auto &b) {
                                                                 return std::get<1>(a) < std::get<1>(b);
                                                             });
-        BOOST_TEST_MESSAGE("Minimum size is " + std::to_string(std::get<1>(*randam_access_read_min_size)) +
+        BOOST_TEST_MESSAGE("Minimum size is " + std::to_string(std::get<1>(*random_access_read_min_size)) +
                            " from Block reference \"" + boost::algorithm::hex(
-                std::string{std::get<0>(*randam_access_read_min_size).cbegin(),
-                            std::get<0>(*randam_access_read_min_size).cend()}) + "\" with a block reference size of " +
-                           std::to_string(std::get<0>(*randam_access_read_min_size).size()) +
+                std::string{std::get<0>(*random_access_read_min_size).cbegin(),
+                            std::get<0>(*random_access_read_min_size).cend()}) + "\" with a block reference size of " +
+                           std::to_string(std::get<0>(*random_access_read_min_size).size()) +
                            " with a random access read time of " +
-                           std::to_string(std::get<2>(*randam_access_read_min_size)) + " ms");
+                           std::to_string(std::get<2>(*random_access_read_min_size)) + " ms");
         //minimum block ref size
-        auto randam_access_read_min_block_ref_size = std::min_element(randam_access_read_times.cbegin(),
-                                                                      randam_access_read_times.cend(),
+        auto random_access_read_min_block_ref_size = std::min_element(random_access_read_times.cbegin(),
+                                                                      random_access_read_times.cend(),
                                                                       [](const auto &a, const auto &b) {
                                                                           return std::get<0>(a).size() <
                                                                                  std::get<0>(b).size();
                                                                       });
         BOOST_TEST_MESSAGE("Minimum block reference size is " +
-                           std::to_string(std::get<0>(*randam_access_read_min_block_ref_size).size()) +
+                           std::to_string(std::get<0>(*random_access_read_min_block_ref_size).size()) +
                            " from Block reference \"" + boost::algorithm::hex(
-                std::string{std::get<0>(*randam_access_read_min_block_ref_size).cbegin(),
-                            std::get<0>(*randam_access_read_min_block_ref_size).cend()}) +
+                std::string{std::get<0>(*random_access_read_min_block_ref_size).cbegin(),
+                            std::get<0>(*random_access_read_min_block_ref_size).cend()}) +
                            "\" with a total block size of " +
-                           std::to_string(std::get<1>(*randam_access_read_min_block_ref_size)) +
+                           std::to_string(std::get<1>(*random_access_read_min_block_ref_size)) +
                            " with a random access read time of " +
-                           std::to_string(std::get<2>(*randam_access_read_min_block_ref_size)) + " ms");
+                           std::to_string(std::get<2>(*random_access_read_min_block_ref_size)) + " ms");
         //minimum time taken
-        auto randam_access_read_min_time_taken = std::min_element(randam_access_read_times.cbegin(),
-                                                                  randam_access_read_times.cend(),
+        auto random_access_read_min_time_taken = std::min_element(random_access_read_times.cbegin(),
+                                                                  random_access_read_times.cend(),
                                                                   [](const auto &a, const auto &b) {
                                                                       return std::get<2>(a) < std::get<2>(b);
                                                                   });
         BOOST_TEST_MESSAGE("Minimum random access read time is " +
-                           std::to_string(std::get<2>(*randam_access_read_min_time_taken)) +
+                           std::to_string(std::get<2>(*random_access_read_min_time_taken)) +
                            " ms from Block reference \"" + boost::algorithm::hex(
-                std::string{std::get<0>(*randam_access_read_min_time_taken).cbegin(),
-                            std::get<0>(*randam_access_read_min_time_taken).cend()}) +
+                std::string{std::get<0>(*random_access_read_min_time_taken).cbegin(),
+                            std::get<0>(*random_access_read_min_time_taken).cend()}) +
                            "\" with a block reference size of " +
-                           std::to_string(std::get<0>(*randam_access_read_min_time_taken).size()) +
+                           std::to_string(std::get<0>(*random_access_read_min_time_taken).size()) +
                            " with a total block size of " +
-                           std::to_string(std::get<1>(*randam_access_read_min_time_taken)) + "\n");
+                           std::to_string(std::get<1>(*random_access_read_min_time_taken)) + "\n");
 
         BOOST_TEST_MESSAGE("Maximum results:");
         //maximum size
-        auto randam_access_read_max_size = std::max_element(randam_access_read_times.cbegin(),
-                                                            randam_access_read_times.cend(),
+        auto random_access_read_max_size = std::max_element(random_access_read_times.cbegin(),
+                                                            random_access_read_times.cend(),
                                                             [](const auto &a, const auto &b) {
                                                                 return std::get<1>(a) < std::get<1>(b);
                                                             });
-        BOOST_TEST_MESSAGE("Maximum size is " + std::to_string(std::get<1>(*randam_access_read_max_size)) +
+        BOOST_TEST_MESSAGE("Maximum size is " + std::to_string(std::get<1>(*random_access_read_max_size)) +
                            " from Block reference \"" + boost::algorithm::hex(
-                std::string{std::get<0>(*randam_access_read_max_size).cbegin(),
-                            std::get<0>(*randam_access_read_max_size).cend()}) + "\" with a block reference size of " +
-                           std::to_string(std::get<0>(*randam_access_read_max_size).size()) +
+                std::string{std::get<0>(*random_access_read_max_size).cbegin(),
+                            std::get<0>(*random_access_read_max_size).cend()}) + "\" with a block reference size of " +
+                           std::to_string(std::get<0>(*random_access_read_max_size).size()) +
                            " with a random access read time of " +
-                           std::to_string(std::get<2>(*randam_access_read_max_size)) + " ms");
+                           std::to_string(std::get<2>(*random_access_read_max_size)) + " ms");
         //maximum block ref size
-        auto randam_access_read_max_block_ref_size = std::max_element(randam_access_read_times.cbegin(),
-                                                                      randam_access_read_times.cend(),
+        auto random_access_read_max_block_ref_size = std::max_element(random_access_read_times.cbegin(),
+                                                                      random_access_read_times.cend(),
                                                                       [](const auto &a, const auto &b) {
                                                                           return std::get<0>(a).size() <
                                                                                  std::get<0>(b).size();
                                                                       });
         BOOST_TEST_MESSAGE("Maximum block reference size is " +
-                           std::to_string(std::get<0>(*randam_access_read_max_block_ref_size).size()) +
+                           std::to_string(std::get<0>(*random_access_read_max_block_ref_size).size()) +
                            " from Block reference \"" + boost::algorithm::hex(
-                std::string{std::get<0>(*randam_access_read_max_block_ref_size).cbegin(),
-                            std::get<0>(*randam_access_read_max_block_ref_size).cend()}) +
+                std::string{std::get<0>(*random_access_read_max_block_ref_size).cbegin(),
+                            std::get<0>(*random_access_read_max_block_ref_size).cend()}) +
                            "\" with a total block size of " +
-                           std::to_string(std::get<1>(*randam_access_read_max_block_ref_size)) +
+                           std::to_string(std::get<1>(*random_access_read_max_block_ref_size)) +
                            " with a random access read time of " +
-                           std::to_string(std::get<2>(*randam_access_read_max_block_ref_size)) + " ms");
+                           std::to_string(std::get<2>(*random_access_read_max_block_ref_size)) + " ms");
         //maximum time taken
-        auto randam_access_read_max_time_taken = std::max_element(randam_access_read_times.cbegin(),
-                                                                  randam_access_read_times.cend(),
+        auto random_access_read_max_time_taken = std::max_element(random_access_read_times.cbegin(),
+                                                                  random_access_read_times.cend(),
                                                                   [](const auto &a, const auto &b) {
                                                                       return std::get<2>(a) < std::get<2>(b);
                                                                   });
         BOOST_TEST_MESSAGE("Maximum random access read time is " +
-                           std::to_string(std::get<2>(*randam_access_read_max_time_taken)) +
+                           std::to_string(std::get<2>(*random_access_read_max_time_taken)) +
                            " ms from Block reference \"" + boost::algorithm::hex(
-                std::string{std::get<0>(*randam_access_read_max_time_taken).cbegin(),
-                            std::get<0>(*randam_access_read_max_time_taken).cend()}) +
+                std::string{std::get<0>(*random_access_read_max_time_taken).cbegin(),
+                            std::get<0>(*random_access_read_max_time_taken).cend()}) +
                            "\" with a block reference size of " +
-                           std::to_string(std::get<0>(*randam_access_read_max_time_taken).size()) +
+                           std::to_string(std::get<0>(*random_access_read_max_time_taken).size()) +
                            " with a total block size of " +
-                           std::to_string(std::get<1>(*randam_access_read_max_time_taken)) + "\n");
+                           std::to_string(std::get<1>(*random_access_read_max_time_taken)) + "\n");
 
-        long double randam_access_read_avg_size = 0;
-        long double randam_access_read_avg_block_ref_size = 0;
-        long double randam_access_read_avg_time = 0;
-        for (const auto &i: randam_access_read_times) {
-            randam_access_read_avg_size += std::get<1>(i);
-            randam_access_read_avg_block_ref_size += std::get<0>(i).size();
-            randam_access_read_avg_time += std::get<2>(i);
+        long double random_access_read_avg_size = 0;
+        long double random_access_read_avg_block_ref_size = 0;
+        long double random_access_read_avg_time = 0;
+        for (const auto &i: random_access_read_times) {
+            random_access_read_avg_size += std::get<1>(i);
+            random_access_read_avg_block_ref_size += std::get<0>(i).size();
+            random_access_read_avg_time += std::get<2>(i);
         }
-        long double random_access_read_total_time = randam_access_read_avg_time;
-        randam_access_read_avg_size /= randam_access_read_times.size();
-        randam_access_read_avg_block_ref_size /= randam_access_read_times.size();
-        randam_access_read_avg_time /= randam_access_read_times.size();
+        long double random_access_read_total_time = random_access_read_avg_time;
+        random_access_read_avg_size /= random_access_read_times.size();
+        random_access_read_avg_block_ref_size /= random_access_read_times.size();
+        random_access_read_avg_time /= random_access_read_times.size();
 
-        long double randam_access_read_integration_speed_MB =
-                (randam_access_read_avg_size / std::pow(2, 20)) / (randam_access_read_avg_time / 1000);
+        long double random_access_read_integration_speed_MB =
+                (random_access_read_avg_size / std::pow(2, 20)) / (random_access_read_avg_time / ONE_MILLISECOND);
 
         BOOST_TEST_MESSAGE("Average random access read results:");
-        BOOST_TEST_MESSAGE("Average random access read time is " + std::to_string(randam_access_read_avg_time) +
+        BOOST_TEST_MESSAGE("Average random access read time is " + std::to_string(random_access_read_avg_time) +
                            " ms with an average block reference size of " +
-                           std::to_string(randam_access_read_avg_block_ref_size) +
+                           std::to_string(random_access_read_avg_block_ref_size) +
                            " with an average total block size of " +
-                           std::to_string(randam_access_read_avg_size) +
+                           std::to_string(random_access_read_avg_size) +
                            ". This results in an average random access read speed of " +
-                           std::to_string(randam_access_read_integration_speed_MB) + " MB per second\n");
+                           std::to_string(random_access_read_integration_speed_MB) + " MB per second\n");
         BOOST_TEST_MESSAGE("The total time taken to random access read " + std::to_string(total_size) + " bytes was " +
                            std::to_string(random_access_read_total_time) + " ms");
     }
@@ -606,27 +885,155 @@ BOOST_AUTO_TEST_CASE(index_read_test)
     //get entire index, read block with local_block_reference and finally calculate the hash if it matches
     struct timeval time{};
     gettimeofday(&time, nullptr);
-    long double millis = ((long double) time.tv_sec * 1000) + ((long double) time.tv_usec / 1000);
+    long double millis = ((long double) time.tv_sec * ONE_MILLISECOND) + ((long double) time.tv_usec / ONE_MILLISECOND);
     //for any machine
-    //uh::trees::tree_storage t1(std::filesystem::path("/home")/std::string(getenv("USER")));//A test folder reserved for tree storage
-    //for strong laptops with SSD extension (configure test db server to run this??)
-    uh::trees::tree_storage t1("/mnt/md0");//A test folder reserved for tree storage
+    std::filesystem::path target = std::filesystem::path("/tmp");
+    uh::trees::tree_storage t1(target);//A test folder reserved for tree storage
     gettimeofday(&time, nullptr);
-    long double constructor_time = (((long double) time.tv_sec * 1000) + ((long double) time.tv_usec / 1000)) - millis;
+    long double constructor_time =
+            (((long double) time.tv_sec * ONE_MILLISECOND) + ((long double) time.tv_usec / ONE_MILLISECOND)) - millis;
 
     gettimeofday(&time, nullptr);
-    millis = ((long double) time.tv_sec * 1000) + ((long double) time.tv_usec / 1000);
+    millis = ((long double) time.tv_sec * ONE_MILLISECOND) + ((long double) time.tv_usec / ONE_MILLISECOND);
     auto index_list = t1.index();
     gettimeofday(&time, nullptr);
-    long double index_time = (((long double) time.tv_sec * 1000) + ((long double) time.tv_usec / 1000)) - millis;
+    long double index_time =
+            (((long double) time.tv_sec * ONE_MILLISECOND) + ((long double) time.tv_usec / ONE_MILLISECOND)) - millis;
 
-    BOOST_TEST_MESSAGE("The constructor of tree storage took "+std::to_string(constructor_time)+" ms in a full state. The index time of that tree took"+std::to_string(index_time)+" ms. The total time to bring the database back to life was "+std::to_string(constructor_time+index_time)+" ms.");
+    BOOST_TEST_MESSAGE("The constructor of tree storage took " + std::to_string(constructor_time) +
+                       " ms in a full state. The index time of that tree took " + std::to_string(index_time) +
+                       " ms. The total time to bring the database back to life was " +
+                       std::to_string(constructor_time + index_time) + " ms.");
 
-    for(const auto &el:index_list){
-        std::vector<unsigned char> read_result = t1.read(std::get<1>(el));
+    for (const auto &el: std::get<0>(index_list)) {
+        auto all_results = t1.read(std::get<1>(el));
+        std::vector<unsigned char> read_result = std::get<0>(all_results);
         unsigned char hash_buf[SHA512_DIGEST_LENGTH];//HASH GENERATION
         SHA512(read_result.data(), read_result.size(), hash_buf);
-        BOOST_CHECK_EQUAL_COLLECTIONS(std::get<0>(el).cbegin(),std::get<1>(el).cend(),hash_buf,hash_buf+SHA512_DIGEST_LENGTH);
+        std::string old_ref = boost::algorithm::hex(
+                std::string().assign(std::get<1>(el).cbegin(), std::get<1>(el).cend()));
+        bool test_ok = std::equal(std::get<0>(el).cbegin(), std::get<0>(el).cbegin() + SHA512_DIGEST_LENGTH, hash_buf,
+                                  hash_buf + SHA512_DIGEST_LENGTH);
+        BOOST_ASSERT_MSG(test_ok, std::string(
+                "The SHA512 without time extend of an indexed block \"" + old_ref +
+                "\" could not be verified!").c_str());
     }
+    BOOST_ASSERT_MSG(std::get<1>(index_list).empty(), "The list of damaged blocks was not empty!");
+}
+
+BOOST_AUTO_TEST_CASE(get_info_set_time_test)
+{
+    struct timeval time{};
+    //tests for any linux machine
+    std::filesystem::path target = std::filesystem::path("/tmp");
+    uh::trees::tree_storage t1(target);//A test folder reserved for tree storage
+    //for strong laptops with SSD extension (configure test db server to run this??)
+    //uh::trees::tree_storage t1("/mnt/md0");//A test folder reserved for tree storage for performance tests
+    auto index_list = t1.index();
+    BOOST_ASSERT_MSG(!std::get<0>(index_list).empty(), "Index list was empty!");
+    auto first_el = std::get<0>(index_list).begin();
+    gettimeofday(&time, nullptr);
+    long double millis = ((long double) time.tv_sec * ONE_MILLISECOND) + ((long double) time.tv_usec / ONE_MILLISECOND);
+    auto block_info = t1.read<true>(std::get<1>(*first_el));//reduced reader skips block saving 95% overhead
+    gettimeofday(&time, nullptr);
+    long double write_time =
+            (((long double) time.tv_sec * ONE_MILLISECOND) + ((long double) time.tv_usec / ONE_MILLISECOND)) - millis;
+    BOOST_TEST_MESSAGE(
+            "\nThe get_info test to seek the information of one block took " + std::to_string(write_time) + " ms.");
+    BOOST_ASSERT_MSG(std::get<1>(block_info)[2] < (unsigned long) std::chrono::nanoseconds(
+            std::chrono::high_resolution_clock::now().time_since_epoch()).count(),
+                     "Block was not older than current time");
+
+    BOOST_ASSERT_MSG(std::get<3>(block_info) < SHA512_DIGEST_LENGTH + TIME_STAMPS_ON_BLOCK * sizeof(unsigned long) +
+                                               t1.prefix_wrap(std::get<0>(block_info).size()).size() +
+                                               std::get<3>(block_info) +
+                                               SHA256_DIGEST_LENGTH,
+                     "The total size must always be larger than the block size!");
+    gettimeofday(&time, nullptr);
+    millis = ((long double) time.tv_sec * ONE_MILLISECOND) + ((long double) time.tv_usec / ONE_MILLISECOND);
+
+    std::array<unsigned long, TIME_STAMPS_ON_BLOCK - 1> set_new_times{std::get<2>(block_info)[1],
+                                                                      (unsigned long) std::chrono::nanoseconds(
+                                                                              std::chrono::high_resolution_clock::now().time_since_epoch()).count()};
+
+    bool test_ok = t1.set_block_time(std::get<1>(*first_el), set_new_times);
+    gettimeofday(&time, nullptr);
+    write_time =
+            (((long double) time.tv_sec * ONE_MILLISECOND) + ((long double) time.tv_usec / ONE_MILLISECOND)) - millis;
+    BOOST_ASSERT_MSG(test_ok, "Current time could not be set to first block of index!");
+    BOOST_TEST_MESSAGE("\nSetting a new block time took " + std::to_string(write_time) + " ms.");
+    auto block_info2 = t1.read(std::get<1>(*first_el));
+    BOOST_ASSERT_MSG(std::get<2>(block_info2)[2] == set_new_times[1],
+                     "Block touch time was not successful set internally!");
+    BOOST_ASSERT_MSG(std::get<2>(block_info2)[1] == set_new_times[0],
+                     "Block validity duration could not be read!");
+}
+
+BOOST_AUTO_TEST_CASE(delete_test)
+{
+    //tests for any linux machine
+    std::filesystem::path target = std::filesystem::path("/tmp");
+    uh::trees::tree_storage t1(target);//A test folder reserved for tree storage
+    //for strong laptops with SSD extension (configure test db server to run this??)
+    //uh::trees::tree_storage t1("/mnt/md0");//A test folder reserved for tree storage for performance tests
+    auto index_list = t1.index();
+    //from index take 2 blocks of the same chunk and copy them to RAM
+    //delete one block over its reference and check if the block of the returned local reference is the same
+    std::tuple<std::size_t, std::list<std::tuple<std::vector<unsigned char>, std::vector<unsigned char>>>> delete_list{};
+
+    do {
+        auto del_list = std::vector<std::vector<unsigned char>>{};
+        std::size_t count{};
+        std::for_each(std::get<0>(index_list).cbegin(), std::get<0>(index_list).cend(),
+                      [&del_list, &count](auto &item) {
+                          if (count == 30)return;
+                          if (del_list.empty() || std::get<1>(item)[0] != del_list.back()[0] ||
+                              std::get<1>(item).size() != del_list.back().size()) {
+                              del_list.push_back(std::get<1>(item));
+                              count++;
+                          }
+                      });
+        delete_list = t1.delete_blocks(del_list);
+        //delete list shows changes that have to be thrown at the del list carrying local block references to be deleted
+        //since the block references by changing offsets we need to update them
+        //REFERENCE REPLACEMENT ALGORITHM FOR INDEX ON NEXT HIGHER LEVEL
+        std::for_each(del_list.begin(), del_list.end(), [&delete_list, &index_list](auto &item) {
+            if (!std::any_of(std::get<1>(delete_list).begin(), std::get<1>(delete_list).end(), [&item](auto &item2) {
+                return item == std::get<0>(item2);//check if original local block ref hit
+            })) {
+                //erase from index
+                std::erase_if(std::get<0>(index_list), [&item](auto &item3) {
+                    return std::get<1>(item3) == item;
+                });
+            }//clean index from deleted
+        });
+        //transform changes
+        std::for_each(std::get<1>(delete_list).begin(), std::get<1>(delete_list).end(), [&index_list](auto &item2) {
+            std::for_each(std::get<0>(index_list).begin(), std::get<0>(index_list).end(), [&item2](auto &item4) {
+                if (std::get<1>(item4) == std::get<0>(item2)) {
+                    std::get<1>(item4) = std::get<1>(item2);
+                    return;
+                }
+            });
+        });
+    } while (std::get<1>(delete_list).empty());
+
+    for (const auto &i: std::get<1>(delete_list)) {
+        std::string old_ref = boost::algorithm::hex(
+                std::string().assign(std::get<0>(i).cbegin(), std::get<0>(i).cend()));
+        std::string new_ref = boost::algorithm::hex(
+                std::string().assign(std::get<1>(i).cbegin(), std::get<1>(i).cend()));
+        auto read_result = t1.read(std::get<1>(i));
+        bool test_ok = !std::get<1>(read_result).empty();
+        std::string test_str;
+        test_str += "Block with old reference ";
+        test_str += old_ref;
+        test_str += " and new reference ";
+        test_str += new_ref;
+        test_str += " could not be read back after deletion!";
+        BOOST_ASSERT_MSG(test_ok, test_str.c_str());
+    }
+
     t1.delete_recursive();
+    if (std::filesystem::exists(target / "0000"))std::filesystem::remove_all(target / "0000");
 }

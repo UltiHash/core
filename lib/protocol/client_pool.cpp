@@ -28,13 +28,13 @@ client_pool::handle::handle(client_pool& pool, std::unique_ptr<client>&& c)
 
 // ---------------------------------------------------------------------
 
-client_pool::client_pool(util::factory<client>& factory, std::size_t pool_size)
-    : m_factory(factory),
+client_pool::client_pool(std::unique_ptr<util::factory<client>>&& factory, std::size_t pool_size)
+    : m_factory(std::move(factory)),
       m_pool_size(pool_size)
 {
     while (m_clients.size() < m_pool_size)
     {
-        m_clients.push_back(m_factory.create());
+        m_clients.push_back(m_factory->create());
     }
 }
 
@@ -61,7 +61,15 @@ void client_pool::put_back(std::unique_ptr<client> c)
 {
     std::unique_lock lk(m_mutex);
 
-    m_clients.push_back(std::move(c));
+    if (c->valid())
+    {
+        m_clients.push_back(std::move(c));
+    }
+    else
+    {
+        m_clients.push_back(m_factory->create());
+    }
+
     m_cv.notify_all();
 }
 

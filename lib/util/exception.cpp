@@ -1,5 +1,7 @@
 #include "exception.h"
 
+#include <system_error>
+#include <errno.h>
 #include <sstream>
 
 
@@ -42,6 +44,15 @@ exception::exception(const std::string& file, std::size_t line,
 const char* exception::what() const noexcept
 {
     return m_message.c_str();
+}
+
+// ---------------------------------------------------------------------
+
+[[noreturn]] void throw_from_syserror(const std::string& file, std::size_t line)
+{
+    auto cond = std::generic_category().default_error_condition(errno);
+
+    throw system_error(file, line, cond.message());
 }
 
 // ---------------------------------------------------------------------

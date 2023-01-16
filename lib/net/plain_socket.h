@@ -17,13 +17,14 @@ class plain_socket : public socket
 public:
     plain_socket(boost::asio::ip::tcp::socket&& sock);
 
-    virtual std::streamsize write(std::span<const char> buffer) override;
-    virtual std::streamsize read(std::span<char> buffer) override;
-
     static std::unique_ptr<plain_socket> connect(
         boost::asio::io_context& ctx,
         const std::string& hostname,
         uint16_t port);
+
+protected:
+    virtual std::streamsize write_impl(std::span<const char> buffer) override;
+    virtual std::streamsize read_impl(std::span<char> buffer) override;
 
 private:
     boost::asio::ip::tcp::socket m_sock;

@@ -1,5 +1,6 @@
 #include "server.h"
 
+#include "exception.h"
 #include "messages.h"
 #include "serializer.h"
 
@@ -11,6 +12,19 @@ using namespace boost::asio;
 
 namespace uh::protocol
 {
+
+// ---------------------------------------------------------------------
+
+std::size_t server::on_free_space()
+{
+    THROW(unsupported, "this call is not supported by this node type");
+}
+
+// ---------------------------------------------------------------------
+
+void server::on_quit(const std::string&)
+{
+}
 
 // ---------------------------------------------------------------------
 
@@ -38,12 +52,18 @@ void server::handle(std::shared_ptr<net::socket> client)
                 case hello::request_id: handle_hello(io); break;
                 case write_chunk::request_id: handle_write_chunk(io); break;
                 case read_chunk::request_id: handle_read_chunk(io); break;
+
+                case quit::request_id:
+                    handle_quit(io);
+                    io.close();
+                    return;
+
                 default: throw std::runtime_error("unsupported command");
             }
         }
         catch (const std::exception& e)
         {
-            write(io, status{ .code = status::OK, .message = e.what() });
+            write(io, status{ .code = status::FAILED, .message = e.what() });
             io.flush();
         }
     }
@@ -90,6 +110,40 @@ void server::handle_read_chunk(std::iostream& io)
 
     write(io, status{ status::OK });
     write(io, read_chunk::response{ std::move(content) });
+    io.flush();
+}
+
+// ---------------------------------------------------------------------
+
+void server::handle_quit(std::iostream& io)
+{
+    quit::request req;
+    read(io, req);
+
+    try
+    {
+        on_quit(req.reason);
+    }
+    catch (...)
+    {
+        // ignore
+    }
+
+    write(io, status{ status::OK });
+    io.flush();
+}
+
+// ---------------------------------------------------------------------
+
+void server::handle_free_space(std::iostream& io)
+{
+    free_space::request req;
+    read(io, req);
+
+    auto space = on_free_space();
+
+    write(io, status{ status::OK });
+    write(io, free_space::response{ .space_available = space });
     io.flush();
 }
 

@@ -4,6 +4,26 @@ This repository is home to all functionality that is used by multiple components
 
 # libraries
 
+## logging
+
+Everything related to logging messages.
+
+## net
+
+Networking, clients and servers.
+
 ## option
 
 Configuration loaders for shared classes
+
+## protocol
+
+Basic implementation of UH protocol used for communication between components and transfer of files.
+
+## third-party
+
+Collects submodules to third-party library repositories.
+
+## util
+
+Utility classes

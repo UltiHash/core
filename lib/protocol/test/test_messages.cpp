@@ -1,4 +1,3 @@
-#define BOOST_TEST_DYN_LINK
 #ifdef SINGLE_TEST_RUNNER
 #define BOOST_TEST_NO_MAIN
 #else
@@ -126,6 +125,33 @@ BOOST_AUTO_TEST_CASE( read_chunk_response )
     read_chunk::response res;
     read(s, res);
     BOOST_TEST(res.content == to_blob("lorem ipsum"));
+}
+
+// ---------------------------------------------------------------------
+
+BOOST_AUTO_TEST_CASE( quit_request )
+{
+    std::stringstream s;
+    write(s, quit::request{ .reason = "bye" });
+
+    auto ch = s.get();
+    BOOST_TEST(ch == quit::request_id);
+
+    quit::request req;
+    read(s, req);
+    BOOST_TEST(req.reason == "bye");
+}
+
+// ---------------------------------------------------------------------
+
+BOOST_AUTO_TEST_CASE( quit_response )
+{
+    std::stringstream s;
+    write(s, status{ .code = status::OK });
+    write(s, quit::response{});
+
+    quit::response res;
+    read(s, res);
 }
 
 // ---------------------------------------------------------------------
