@@ -6,23 +6,19 @@
 #define UHLIBCOMMON_TREE_RADIX_CUSTOM_H
 
 #include "logging/logging_boost.h"
-#include <shared_mutex>
+#include "trees/tree_storage_config.h"
+#include <vector>
+#include <ranges>
 
 namespace uh::trees {
-#define N 256
-#define MIN_REDUCTION_STRING 8
     typedef struct tree_radix_custom tree_radix_custom;
 
     struct tree_radix_custom {
     protected:
-        tree_radix_custom *children[N]{};
+        std::vector<std::tuple<tree_radix_custom*,unsigned char>>children{};
         std::vector<unsigned char> data{};//any binary vector string
     public:
-        tree_radix_custom() {
-            for (auto &i: children) {
-                i = nullptr;
-            }
-        }
+        tree_radix_custom() = default;
 
         explicit tree_radix_custom(std::vector<unsigned char> &bin) : tree_radix_custom() {
             add(bin);
@@ -32,14 +28,64 @@ namespace uh::trees {
             return data.size();
         }
 
-        std::vector<unsigned char> data_blob() {
+        std::vector<unsigned char> data_vector() {
             return data;
         }
 
-        tree_radix_custom *child(char i) {
-            return children[(unsigned char) i];
+        tree_radix_custom *child(unsigned char i) {
+            for(const auto &item:children){
+                if(std::get<1>(item) == i){
+                    return std::get<0>(item);
+                }
+            }
+            return nullptr;
         }
 
+        std::tuple<std::size_t,std::size_t,std::list<std::tuple<tree_radix_custom*,unsigned char>>> add(std::vector<unsigned char> &bin,
+                                                                                                        std::tuple<std::size_t,std::size_t,std::list<std::tuple<tree_radix_custom*,unsigned char>>> input_list =
+                                                                                                        std::tuple<std::size_t,std::size_t,std::list<std::tuple<tree_radix_custom*,unsigned char>>>{}){
+
+            auto input_to_data_compare = [&](const auto& input){
+                //if input does only fit to a shorter string as a subset of data, count becomes negative, else positive including ß
+                long equal_count{},diff_count{};
+                auto beg_data = data.begin();
+                auto beg_input = input.begin();
+
+                bool begin_equal = true;
+                while(beg_data != data.end() && beg_input != input.end()){
+                    if(*beg_data == *beg_input){
+                        equal_count++;
+                    }
+                    else{
+                        begin_equal = false;
+                        break;
+                    }
+                }
+                diff_count = beg_input==input.end()?input.size():std::distance(input.begin(),beg_input)-data.size();
+
+                return std::make_tuple(equal_count,diff_count);
+            };
+
+            if(data.empty()){
+                if(children.empty()){
+
+                }
+                else{
+
+                }
+            }
+            else{
+                if(children.empty()){
+
+                }
+                else{
+
+                }
+            }
+
+            return input_list;
+        }
+        /*
         //add some string into the radix tree, returning the tree nodes where it was compressed and stored along the way
         std::tuple<std::list<tree_radix_custom *>> add(std::vector<unsigned char> &bin,
             std::list<tree_radix_custom *> enlist = std::list<tree_radix_custom *>{}) {
@@ -120,7 +166,7 @@ namespace uh::trees {
             }
             return enlist;
         }
-
+*/
 /*
         //copy one node without children
         tree_radix_custom *copy() {
