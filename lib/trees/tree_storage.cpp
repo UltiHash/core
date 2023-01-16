@@ -1739,19 +1739,17 @@ uh::trees::tree_storage::delete_blocks(
         } else {
             //threading manager
             std::unique_lock manage_lock1(worker_protect);
-            while (workers.size() >= num_threads || sorted_block_codes.size() <= active_threads.load()) {
-                auto it_w = workers.begin();
+            auto it_w = workers.begin();
+            while ((workers.size() >= num_threads || sorted_block_codes.size() <= active_threads.load()) && it_w != workers.end()) {
                 manage_lock1.unlock();
                 std::unique_lock manage_lock2(worker_protect);
-                while(it_w != workers.end()){
-                    if(!std::get<1>(*it_w)->test()&&std::get<2>(*it_w).joinable()){
-                        std::get<2>(*it_w).join();
-                        auto tmp_cur = it_w++;
-                        workers.erase(tmp_cur);
-                        active_threads -= 1;
-                    }
-                    else it_w++;
+                if(!std::get<1>(*it_w)->test()&&std::get<2>(*it_w).joinable()){
+                    std::get<2>(*it_w).join();
+                    auto tmp_cur = it_w++;
+                    workers.erase(tmp_cur);
+                    active_threads -= 1;
                 }
+                else it_w++;
                 manage_lock2.unlock();
                 if (error_flag.test()) {
                     FATAL
