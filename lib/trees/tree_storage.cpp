@@ -1772,7 +1772,7 @@ uh::trees::tree_storage::delete_blocks(
 
             active_threads += 1;
             std::unique_lock manage_lock2(worker_protect);
-            workers.emplace_back(std::jthread(index_main_func, item_now));
+            workers.emplace_back(index_main_func, item_now);
             manage_lock2.unlock();
             if (error_flag.test()) {
                 FATAL << "Delete_blocks threading engine crashed unexpectedly!";
