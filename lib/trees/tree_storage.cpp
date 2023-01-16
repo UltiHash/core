@@ -1748,12 +1748,12 @@ uh::trees::tree_storage::delete_blocks(
                     active_threads -= 1;
                     advanced = true;
                 }
-                if(!it_w->joinable()){
+                if(it_w != workers.end() && !it_w->joinable()){
                     FATAL
                         << "Delete_blocks threading engine crashed unexpectedly while trying to remove a crashed thread!";
                     return {};
                 }
-                if (!advanced)it_w++;
+                if (!advanced && it_w != workers.end())it_w++;
                 manage_lock2.unlock();
                 if (error_flag.test()) {
                     FATAL
