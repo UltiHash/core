@@ -782,7 +782,7 @@ uh::trees::tree_storage::write(const std::vector<unsigned char> &input,
 
     unsigned short min_pos = 0,min_pos_old = 0;
     std::size_t min_val = 0;
-    bool deeper;
+    bool deeper{};
     bool count_loop{};
     //search loop to find free space and adapt on changes
     do{
@@ -796,9 +796,8 @@ uh::trees::tree_storage::write(const std::vector<unsigned char> &input,
                 size->emplace_back(min_val, min_pos, f1, f2, f3);
             }
         } else {
-            auto min_el = *std::min_element(size->begin(), size->end(), [](auto &a, auto &b) {
-                return std::get<0>(a) < std::get<0>(b) && !std::get<4>(a)->test() &&
-                       !std::get<4>(b)->test();//skip maintain chunks for smaller check
+            auto min_el = *std::min_element(size->begin(), size->end(), [&count_loop](auto &a, auto &b) {
+                return std::get<0>(a) < std::get<0>(b) && !std::get<4>(a)->test() && (count_loop || !std::get<4>(b)->test());//skip maintain chunks for smaller check
             });
             min_pos = std::get<1>(min_el);
             if(min_pos != min_pos_old && count_loop){
@@ -809,7 +808,7 @@ uh::trees::tree_storage::write(const std::vector<unsigned char> &input,
             }
             min_val = std::get<0>(size->at(min_pos));
         }
-        deeper = !(min_val < STORE_MAX && min_val + total_size < STORE_HARD_LIMIT);
+        deeper = !(min_val < STORE_MAX && min_val + total_size < STORE_HARD_LIMIT && (count_loop || !std::get<4>(size->at(min_pos))->test()));
 
         if(count_loop){
             lock_size.unlock();
