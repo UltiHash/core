@@ -808,7 +808,7 @@ uh::trees::tree_storage::write(const std::vector<unsigned char> &input,
             }
             min_val = std::get<0>(size->at(min_pos));
         }
-        deeper = !(min_val < STORE_MAX && min_val + total_size < STORE_HARD_LIMIT && (count_loop || size->size() >= min_pos || !std::get<4>(size->at(min_pos))->test()));
+        deeper = !(min_val < STORE_MAX && min_val + total_size < STORE_HARD_LIMIT && (count_loop || size->size() <= min_pos || !std::get<4>(size->at(min_pos))->test()));
 
         if(count_loop){
             lock_size.unlock();
