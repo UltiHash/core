@@ -831,9 +831,11 @@ uh::trees::tree_storage::write(const std::vector<unsigned char> &input,
     }
     while(count_loop);
 
+    lock_size.lock();
     auto maintain_ptr = &(*std::get<4>(size->at(min_pos)));
     auto read_ptr = &(*std::get<3>(size->at(min_pos)));
     auto write_ptr = &(*std::get<2>(size->at(min_pos)));
+    lock_size.unlock();
 
     if (deeper) {
         //no maintain needed
