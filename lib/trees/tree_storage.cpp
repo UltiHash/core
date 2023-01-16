@@ -1526,14 +1526,15 @@ uh::trees::tree_storage::delete_blocks(
                     }
                     std::array<unsigned char,
                             SHA512_DIGEST_LENGTH + sizeof(unsigned long)> global_hash = std::get<4>(read_tup);
-                    std::array<unsigned char, SHA512_DIGEST_LENGTH> hash{};
+                    std::vector<unsigned char> hash{};
+                    hash.resize(SHA512_DIGEST_LENGTH,0);
                     std::ranges::copy(global_hash.cbegin(), global_hash.cbegin() + SHA512_DIGEST_LENGTH,
                                       hash.begin());
                     //stores block, old offset vector, new offset number, block SHA512 and times
-                    auto write_tup = write_block_base(writer, chunk_maintain.make_preferred(), *block_step_beg,
-                                                      new_block_reference,
-                                                      old_times, false, false,//TODO: count new offset
-                                                      std::vector<unsigned char>{hash.cbegin(), hash.cend()});
+                    auto write_tup = write_block_base(writer, chunk_maintain.make_preferred(), std::get<2>(read_tup),
+                                                      local_block_test_ref,
+                                                      std::get<3>(read_tup), false, false,//TODO: count new offset
+                                                      hash);
 
                     //TODO: check if calculated new offset matches measured
 
