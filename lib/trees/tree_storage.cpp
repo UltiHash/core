@@ -1550,6 +1550,9 @@ uh::trees::tree_storage::delete_blocks(
                     if (std::get<3>(write_tup)) {
                         write_total_end();
                     }
+                    std::unique_lock lock_change(out_change_list_protect);
+                    out_change_list.emplace_back(local_block_test_ref,block_code_generate(cur_pos - delete_size,(*item.begin())[0]));
+                    lock_change.unlock();
                     cur_pos += std::get<0>(read_tup);
                 }
             }
@@ -1590,8 +1593,8 @@ uh::trees::tree_storage::delete_blocks(
             };
             if (!source) {
                 ERROR << "File read opening failed at \"" + chunk_maintain.string() + "\"";
-                error_thread_sequence();
                 ptr_release_sequence();
+                error_thread_sequence();
                 return;
             }
             filesystem_lock.lock();
@@ -1600,20 +1603,20 @@ uh::trees::tree_storage::delete_blocks(
                 && std::filesystem::file_size(chunk_maintain.make_preferred()) != 0) {
                 filesystem_lock.unlock();
                 ERROR << "File read opening for append failed at \"" + chunk_maintain.string() + "\"";
-                error_thread_sequence();
                 ptr_release_sequence();
+                error_thread_sequence();
                 return;
             } else filesystem_lock.unlock();
             if (std::ferror(source)) {
                 FATAL << "I/O error when reading \"" + chunk_maintain.string() + "\"";
-                error_thread_sequence();
                 ptr_release_sequence();
+                error_thread_sequence();
                 return;
             }
             if (truncate64(chunk.c_str(), static_cast<long>(trunc_at)) != 0) {
                 ERROR << "File truncate failed at \"" + chunk_maintain.string() + "\"";
-                error_thread_sequence();
                 ptr_release_sequence();
+                error_thread_sequence();
                 return;
             }
             FILE *dest = fopen(chunk.make_preferred().c_str(), "ab");
@@ -1676,7 +1679,7 @@ uh::trees::tree_storage::delete_blocks(
             auto tmp_deeper_tree_ptr = std::get<1>(children->at((*item.begin())[0]));
             children_read.unlock();
             //parallel start
-            auto deeper_delete = tmp_deeper_tree_ptr->delete_blocks(deeper_codes, (num_threads % 2) ? 1 : 2);
+            auto deeper_delete = tmp_deeper_tree_ptr->delete_blocks(deeper_codes, 1);
             children_read.lock();
             std::get<0>(children->at((*item.begin())[0])) -= std::get<0>(
                     deeper_delete);//subtract deleted size from deeper node
