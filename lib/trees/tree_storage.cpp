@@ -807,7 +807,7 @@ uh::trees::tree_storage::write(const std::vector<unsigned char> &input,
             //unlock old chunk again because of update
             auto maintain_ptr = &(*std::get<4>(size->at(min_pos_old)));
             maintain_unlock(maintain_ptr);
-            count_loop = false;
+            if(min_pos != min_pos_old)count_loop = false;
         }
         deeper = min_val >= STORE_MAX || min_val + total_size >= STORE_HARD_LIMIT || size->size() <= min_pos || std::get<4>(size->at(min_pos))->test();
 
