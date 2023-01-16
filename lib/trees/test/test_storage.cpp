@@ -967,7 +967,7 @@ BOOST_AUTO_TEST_CASE(delete_test)
         auto del_list = std::vector<std::vector<unsigned char>>{};
         std::size_t count{};
         std::for_each(std::get<0>(index_list).cbegin(), std::get<0>(index_list).cend(), [&del_list, &count](auto &item) {
-            if (count == 10)return;
+            if (count == 30)return;
             if (del_list.empty()||std::get<1>(item)[0]!=del_list.back()[0]||std::get<1>(item).size()!=del_list.back().size()){
                 del_list.push_back(std::get<1>(item));
                 count++;
