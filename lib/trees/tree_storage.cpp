@@ -1790,11 +1790,6 @@ uh::trees::tree_storage::delete_blocks(
             if (it_w->joinable()) {
                 manage_lock4.unlock();
                 std::unique_lock manage_lock5(worker_protect);
-                if(!it_w->joinable()){
-                    FATAL
-                        << "Delete_blocks threading engine crashed unexpectedly while trying to remove a crashed thread!";
-                    return {};
-                }
                 it_w->join();
                 auto tmp_cur = it_w++;
                 workers.erase(tmp_cur);
@@ -1806,8 +1801,10 @@ uh::trees::tree_storage::delete_blocks(
                     return {};
                 }
             } else {
-                it_w++;
                 manage_lock4.unlock();
+                FATAL
+                    << "Delete_blocks threading engine crashed unexpectedly while trying to remove a crashed thread!";
+                return {};
             }
             manage_lock3.lock();
         }
