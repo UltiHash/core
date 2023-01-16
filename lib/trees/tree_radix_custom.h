@@ -66,20 +66,47 @@ namespace uh::trees {
                 return std::make_tuple(equal_count,diff_count);
             };
 
-            if(data.empty()){
-                if(children.empty()){
+            auto compare = input_to_data_compare(bin);
 
+            if(data.empty()){//checks or not
+                if(children.empty()){//simple append else search recursive append
+                    if(std::get<0>(compare) == data.size()){//append action
+                        if(std::get<1>(compare) < 0){//split data action
+
+                        }
+                        else{
+
+                        }
+                    }
+                    else{
+
+                    }
                 }
                 else{
+                    if(std::get<0>(compare) == data.size()){
 
+                    }
+                    else{
+
+                    }
                 }
             }
             else{
                 if(children.empty()){
+                    if(std::get<0>(compare) == data.size()){
 
+                    }
+                    else{
+
+                    }
                 }
                 else{
+                    if(std::get<0>(compare) == data.size()){
 
+                    }
+                    else{
+
+                    }
                 }
             }
 
