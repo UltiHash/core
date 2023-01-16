@@ -1391,9 +1391,9 @@ uh::trees::tree_storage::delete_blocks(
 
     //use multithreading with a thread management system so that threads from deleting go on to deeper delete
     std::shared_mutex worker_protect{};
-    std::list<std::tuple<std::size_t, std::shared_ptr<std::atomic_flag>, std::jthread>> workers{};
+    std::list<std::jthread> workers{};
 
-    auto index_main_func = [&](const std::vector<std::vector<unsigned char>> &item, std::size_t worker_number) {
+    auto index_main_func = [&](const std::vector<std::vector<unsigned char>> &item) {
         //parallel start, sort codes that are at this level and codes that are deeper down the tree
         std::vector<std::vector<unsigned char>> deeper_codes{}, delete_here_codes{};
         //take a branch to delete multiple blocks within
@@ -1721,16 +1721,8 @@ uh::trees::tree_storage::delete_blocks(
             children_read.unlock();
             size_read.unlock();
         }
-        std::scoped_lock worker_lock2(worker_protect);
-        for (auto &it: workers) {
-            if (worker_number == std::get<0>(it)) {
-                std::atomic_flag_clear_explicit(&(*std::get<1>(it)), std::memory_order_release);
-                break;
-            }
-        }
     };
 
-    std::size_t worker_count{};
     for (auto &item_now: sorted_block_codes) {
         if (item_now.empty()) {
             ERROR << "Internal Error on deleting: empty block!";
@@ -1738,7 +1730,7 @@ uh::trees::tree_storage::delete_blocks(
         }
         if (num_threads == 1) {
             active_threads += 1;
-            index_main_func(item_now, worker_count);
+            index_main_func(item_now);
             active_threads -= 1;
         } else {
             //threading manager
@@ -1749,12 +1741,17 @@ uh::trees::tree_storage::delete_blocks(
                 manage_lock1.unlock();
                 std::unique_lock manage_lock2(worker_protect);
                 bool advanced = false;
-                while (it_w != workers.end() && !std::get<1>(*it_w)->test() && std::get<2>(*it_w).joinable()) {
-                    std::get<2>(*it_w).join();
+                if (it_w != workers.end() && it_w->joinable()) {
+                    it_w->join();
                     auto tmp_cur = it_w++;
                     workers.erase(tmp_cur);
                     active_threads -= 1;
                     advanced = true;
+                }
+                if(!it_w->joinable()){
+                    FATAL
+                        << "Delete_blocks threading engine crashed unexpectedly while trying to remove a crashed thread!";
+                    return {};
                 }
                 if (!advanced)it_w++;
                 manage_lock2.unlock();
@@ -1774,14 +1771,9 @@ uh::trees::tree_storage::delete_blocks(
             }
 
             active_threads += 1;
-            std::shared_ptr<std::atomic_flag> flag_worker = std::make_shared<std::atomic_flag>();
-            while (std::atomic_flag_test_and_set_explicit(&(*flag_worker), std::memory_order_acquire)) {
-                flag_worker->wait(true);
-            }
             std::unique_lock manage_lock2(worker_protect);
-            workers.emplace_back(worker_count, flag_worker, std::jthread(index_main_func, item_now, worker_count));
+            workers.emplace_back(std::jthread(index_main_func, item_now));
             manage_lock2.unlock();
-            worker_count++;
             if (error_flag.test()) {
                 FATAL << "Delete_blocks threading engine crashed unexpectedly!";
                 return {};
@@ -1795,13 +1787,15 @@ uh::trees::tree_storage::delete_blocks(
         while (it_w != workers.end()) {
             manage_lock3.unlock();
             std::unique_lock manage_lock4(worker_protect);
-            if (std::get<2>(*it_w).joinable()) {
+            if (it_w->joinable()) {
                 manage_lock4.unlock();
                 std::unique_lock manage_lock5(worker_protect);
-                while (std::atomic_flag_test_and_set_explicit(&(*std::get<1>(*it_w)), std::memory_order_acquire)) {
-                    std::get<1>(*it_w)->wait(true);
+                if(!it_w->joinable()){
+                    FATAL
+                        << "Delete_blocks threading engine crashed unexpectedly while trying to remove a crashed thread!";
+                    return {};
                 }
-                if (std::get<1>(*it_w)->test())std::get<2>(*it_w).join();
+                it_w->join();
                 auto tmp_cur = it_w++;
                 workers.erase(tmp_cur);
                 manage_lock5.unlock();
