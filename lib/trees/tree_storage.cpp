@@ -1739,7 +1739,7 @@ uh::trees::tree_storage::delete_blocks(
         } else {
             //threading manager
             std::unique_lock manage_lock1(worker_protect);
-            while (active_threads.load() >= num_threads || workers.size() >= num_threads) {
+            while (workers.size() >= num_threads || sorted_block_codes.size() <= active_threads.load()) {
                 auto it_w = workers.begin();
                 manage_lock1.unlock();
                 std::unique_lock manage_lock2(worker_protect);
