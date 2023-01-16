@@ -1440,7 +1440,7 @@ uh::trees::tree_storage::delete_blocks(
                     chunk.parent_path() / (chunk.filename().string() + "_maintain");
 
             std::sort(delete_here_codes.begin(), delete_here_codes.end(), [&offset_calc](auto &a, auto &b) {
-                return offset_calc(a.cbegin() + 1,a.cend()) < offset_calc(b.cbegin() + 1,b.cend());
+                return offset_calc(a.cbegin(),a.cend()) < offset_calc(b.cbegin(),b.cend());
             });
 
             auto block_step_beg = delete_here_codes.cbegin();
