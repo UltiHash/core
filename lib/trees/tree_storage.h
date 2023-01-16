@@ -247,7 +247,7 @@ namespace uh::trees {
                     size_lock.lock();
                     auto write_ptr = &(*std::get<2>(size->at(block_code[0])));
                     auto read_ptr = &(*std::get<3>(size->at(block_code[0])));
-                    auto maintain_ptr = &(*std::get<4>(size->at((*item.begin())[0])));
+                    auto maintain_ptr = &(*std::get<4>(size->at(block_code[0])));
                     size_lock.unlock();
 
                     *read_ptr += 1;
@@ -261,7 +261,7 @@ namespace uh::trees {
                     }
 
                     FILE *reader = std::fopen(read_path.make_preferred().c_str(), "rb");
-                    auto read_end_sequence = [&reader, &read_ptr, &write_ptr, &read_path]() {
+                    auto read_end_sequence = [&reader, &read_ptr, &write_ptr, &read_path,&maintain_ptr]() {
                         if (std::fclose(reader)) {
                             ERROR << "Read stream was not open on " + read_path.make_preferred().string() + "!";
                         }
@@ -353,21 +353,22 @@ namespace uh::trees {
                             std::array<unsigned long, TIME_STAMPS_ON_BLOCK - 1> times);
 
         //after deletion some blocks are de-fragmented in descending order. Behind the deleted block(s) all blocks need to be re-mapped
-        //returns the deleted total size and a list of tuple<old_block_reference with first element tree reference, new_block_reference with first element tree reference,reference to tree_storage of change>
+        //returns the deleted total size and a list of tuple<old_block_reference with first element tree reference, new_block_reference with first element tree reference,reference to tree_storage of change
         //maintaining the system can be done in 2 steps: delete_blocks_copy and after that we need to re-map all local block references
-        //after function delete_blocks_copy was called the atomic_flag securing write on the chunk will be active and we need to re-map all blocks of a chunk before setting the write flag back to false
-        //it is wise to call a delete on blocks on the same chunk, one at a time
+        //after function delete_blocks_copy was called the atomic_flag securing write and maintain on the chunk will be active
+        //we need to re-map all blocks of a chunk before setting the writing flag back to false
+        //it is wise to call a delete function on blocks on the same chunk, one at a time
         ///WARNING: deleting is not fully thread safe since references are re-mapped, so make sure no reading is scheduled on the chunks carrying the blocks while calling delete!!
-        ///Recommended: delete as many blocks as you have CPU cores so one core handles one block delete at a time
+        ///Recommended: delete as many blocks referring to the number of chunks they are deleted from as you have CPU cores so one core handles one block delete at a time
+        ///DO NOT MIX READING AND WRITING WITH DELETING WITHOUT UPDATING THE INDEX
         /*
          * The function can delete multiple blocks at once, giving back changed offsets of other blocks it contained
          * which need to be internally reconfigured to be read
          */
-        //WARNING: not yet thread safe
         std::tuple<std::size_t, std::list<std::tuple<std::vector<unsigned char>, std::vector<unsigned char>>>>
         delete_blocks(
                 std::vector<std::vector<unsigned char>> &block_codes,
-                unsigned short num_threads = 1);//std::thread::hardware_concurrency());
+                unsigned short num_threads = std::thread::hardware_concurrency())
 
         /*
          * the deconstructor should also let all writing processes and reading processes end before it deletes the tree node
