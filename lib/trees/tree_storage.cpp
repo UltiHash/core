@@ -783,34 +783,36 @@ uh::trees::tree_storage::write(const std::vector<unsigned char> &input,
     unsigned short min_pos = 0,min_pos_old = 0;
     std::size_t min_val = 0;
     bool deeper;
-    std::size_t count_loop{};
+    bool count_loop{};
     //search loop to find free space and adapt on changes
     do{
         lock_size.lock();
         if (size->size() < N) {
             min_pos = size->size();
             min_val = 0;
-            std::shared_ptr<std::atomic_flag> f1 = std::make_shared<std::atomic_flag>(), f3 = std::make_shared<std::atomic_flag>();
-            std::shared_ptr<std::atomic<std::size_t>> const f2 = std::make_shared<std::atomic<std::size_t>>();
-            size->emplace_back(min_val, min_pos, f1, f2, f3);
+            if(min_pos == min_pos_old && count_loop) {
+                std::shared_ptr<std::atomic_flag> f1 = std::make_shared<std::atomic_flag>(), f3 = std::make_shared<std::atomic_flag>();
+                std::shared_ptr<std::atomic<std::size_t>> const f2 = std::make_shared<std::atomic<std::size_t>>();
+                size->emplace_back(min_val, min_pos, f1, f2, f3);
+            }
         } else {
             auto min_el = *std::min_element(size->begin(), size->end(), [](auto &a, auto &b) {
                 return std::get<0>(a) < std::get<0>(b) && !std::get<4>(a)->test() &&
                        !std::get<4>(b)->test();//skip maintain chunks for smaller check
             });
             min_pos = std::get<1>(min_el);
-            if(min_pos != min_pos_old && count_loop>1){
+            if(min_pos != min_pos_old && count_loop){
                 //unlock old chunk again because of update
                 auto maintain_ptr = &(*std::get<4>(size->at(min_pos)));
                 maintain_unlock(maintain_ptr);
-                count_loop--;
+                count_loop = false;
             }
             min_val = std::get<0>(size->at(min_pos));
         }
         deeper = !(min_val < STORE_MAX && min_val + total_size < STORE_HARD_LIMIT &&
                    !(std::get<4>(size->at(min_pos))->test()));
 
-        if(count_loop > 1){
+        if(count_loop){
             lock_size.unlock();
             break;
         }
@@ -818,11 +820,11 @@ uh::trees::tree_storage::write(const std::vector<unsigned char> &input,
         auto maintain_ptr = &(*std::get<4>(size->at(min_pos)));
         maintain_lock(maintain_ptr);
 
-        count_loop++;
+        count_loop = true;
         min_pos_old = min_pos;
         lock_size.unlock();
     }
-    while(count_loop == 1);
+    while(count_loop);
 
     auto maintain_ptr = &(*std::get<4>(size->at(min_pos)));
     auto read_ptr = &(*std::get<3>(size->at(min_pos)));
