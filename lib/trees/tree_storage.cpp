@@ -796,7 +796,6 @@ uh::trees::tree_storage::write(const std::vector<unsigned char> &input,
             min_val = 0;
             std::shared_ptr<std::atomic_flag> f1 = std::make_shared<std::atomic_flag>(), f3 = std::make_shared<std::atomic_flag>();
             std::shared_ptr<std::atomic<std::size_t>> const f2 = std::make_shared<std::atomic<std::size_t>>();
-            std::scoped_lock const size_own1(size_protect);
             size->emplace_back(min_val, min_pos, f1, f2, f3);
         } else {
             auto min_el = *std::min_element(size->begin(), size->end(), [](auto &a, auto &b) {
