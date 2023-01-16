@@ -1749,7 +1749,7 @@ uh::trees::tree_storage::delete_blocks(
                 manage_lock1.unlock();
                 std::unique_lock manage_lock2(worker_protect);
                 bool advanced = false;
-                while (!std::get<1>(*it_w)->test() && std::get<2>(*it_w).joinable()) {
+                while (it_w != workers.end() && !std::get<1>(*it_w)->test() && std::get<2>(*it_w).joinable()) {
                     std::get<2>(*it_w).join();
                     auto tmp_cur = it_w++;
                     workers.erase(tmp_cur);
