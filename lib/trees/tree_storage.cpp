@@ -784,15 +784,11 @@ uh::trees::tree_storage::write(const std::vector<unsigned char> &input,
     std::size_t min_val = 0;
     bool deeper;
     std::size_t count_loop{};
+    //search loop to find free space and adapt on changes
     do{
         lock_size.lock();
         if (size->size() < N) {
             min_pos = size->size();
-            if(min_pos != min_pos_old && count_loop>1){
-                //unlock old chunk again because of update
-                auto maintain_ptr = &(*std::get<4>(size->at(min_pos)));
-                maintain_unlock(maintain_ptr);
-            }
             min_val = 0;
             std::shared_ptr<std::atomic_flag> f1 = std::make_shared<std::atomic_flag>(), f3 = std::make_shared<std::atomic_flag>();
             std::shared_ptr<std::atomic<std::size_t>> const f2 = std::make_shared<std::atomic<std::size_t>>();
@@ -807,19 +803,21 @@ uh::trees::tree_storage::write(const std::vector<unsigned char> &input,
                 //unlock old chunk again because of update
                 auto maintain_ptr = &(*std::get<4>(size->at(min_pos)));
                 maintain_unlock(maintain_ptr);
+                count_loop--;
             }
             min_val = std::get<0>(size->at(min_pos));
         }
         deeper = !(min_val < STORE_MAX && min_val + total_size < STORE_HARD_LIMIT &&
                    !(std::get<4>(size->at(min_pos))->test()));
 
+        auto maintain_ptr = &(*std::get<4>(size->at(min_pos)));
+        maintain_lock(maintain_ptr);
+
         if(count_loop > 1){
             lock_size.unlock();
             break;
         }
 
-        auto maintain_ptr = &(*std::get<4>(size->at(min_pos)));
-        maintain_lock(maintain_ptr);
         count_loop++;
         min_pos_old = min_pos;
         lock_size.unlock();
