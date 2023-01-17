@@ -88,40 +88,58 @@ namespace uh::trees {
             return add(c.begin(),c.end());
         }
         //returns total size integrated, new space used uncompressed, new space used compressed, reference tree list
+        template<typename IteratorIn>
         std::tuple<std::size_t,std::size_t,std::size_t,std::list<tree_radix_custom*>>
-        add(auto bin_beg,auto bin_end,
+        add(IteratorIn bin_beg,IteratorIn bin_end,
             std::tuple<std::size_t,std::size_t,std::size_t,std::list<tree_radix_custom*>> input_list =
                     std::tuple<std::size_t,std::size_t,std::size_t,std::list<tree_radix_custom*>>{}){
 
             if(bin_beg == bin_end)return input_list;
 
+            auto tree_construction_sequence = [](tree_radix_custom* cur_tree,auto bin_beg,auto bin_end){
+                bool match_start = std::get<1>(cur_tree) == bin_beg;//determine how to build the tree in case of binary fit in
+                bool match_end = std::get<2>(cur_tree) == bin_end;
+
+                auto child_vec = cur_tree->child_vector(*bin_beg);
+
+                //simple insert, check children
+                if(child_vec.empty()){//no children, simple return after insert
+                    if(cur_tree->data_vector.empty()){//how to insert, either empty simple insert or some tree construction anywhere
+                        //simple insert into data
+                        data = std::vector<unsigned char>{bin_beg,bin_end};
+                        return {data.size(),data.size(),data.size(),std::list<tree_radix_custom*>>{this}};
+                    }
+                    else{
+
+                    }
+                }
+                else{//if there is a child we search there for some deeper match first in case that helps; we are not sure, we had a total match anymore
+                    if(cur_tree->data_vector.empty()){//how to insert, either empty simple insert or some tree construction anywhere
+
+                    }
+                    else{
+
+                    }
+                }
+            };
+
             //first search existing structure and add into the last tree to insert potentially missing information
             auto search_index = search(bin_beg,bin_end);
             //cases for search index: its empty or it has content and with that a last tree element
-            //cases for last tree if it exists: match from the beginning on, match in the middle, match until the end, total match
+            //cases for last tree if it exists, binary fit in: match from the beginning on, match in the middle, match until the end, total match
 
+            std::tuple<std::size_t,std::size_t,std::size_t,std::list<tree_radix_custom*>> append_list{};
 
-            if(data.empty()){
-                auto tree_vec = child_vector(*bin_beg);
-                if(tree_vec.empty()){
-                    if(children.empty()){
-                        //simple setup
-                        data = std::vector<unsigned char>{bin_beg,bin_end};
-                        std::size_t input_size = std::distance(bin_beg,bin_end);
-                        return {input_size,input_size,input_size,std::list<tree_radix_custom*>{this}};
-                    }
-                    else{
-                        //matching child was found, so fill it into the best option of a child
-                        //search best match to add on this pointer
-                        //return tree_ptr->add(bin_beg+1,bin_end);
-                    }
-                }
+            if(std::get<0>(search_index).empty() && std::get<1>(search_index) == 0){
+                append_list = tree_construction_sequence(this, bin_beg, bin_end);//insert into this tree
             }
             else{
-
+                auto last_tree = search_index.back();
+                append_list = tree_construction_sequence(std::get<0>(last_tree),std::get<1>(last_tree),std::get<2>(last_tree));//insert into another tree
             }
-
-            return input_list;
+            std::get<3>(input_list).splice(std::get<3>(input_list).cend(),std::get<3>(append_list));
+            return {std::get<0>(input_list)+std::get<0>(append_list),std::get<1>(input_list)+std::get<1>(append_list),
+                    std::get<2>(input_list)+std::get<2>(append_list),std::get<3>(input_list)};
         }
 
         //returns the path of maximum fit and the match size
