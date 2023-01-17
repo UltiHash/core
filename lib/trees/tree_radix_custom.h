@@ -33,7 +33,7 @@ namespace uh::trees {
         }
 
         std::vector<unsigned char> &data_vector() {
-            return &data;
+            return data;
         }
 
         std::vector<tree_radix_custom*> child_vector(unsigned char i) {
@@ -50,7 +50,7 @@ namespace uh::trees {
             if(std::distance(input_beg,input_end)>std::distance(data_beg,data_end))input_end = input_beg + std::distance(data_beg,data_end);
             //if input does only fit to a shorter string as a subset of data, count becomes negative, else positive including ß
             //data offset iterator and start and end of input
-            std::vector<std::tuple<decltype(data),decltype(input_beg),decltype(input_end)>> matches{};
+            std::vector<std::tuple<decltype(data_beg),decltype(input_beg),decltype(input_end)>> matches{};
 
             //advance search scope over data
             //increase data start to the beginning of the input match +1
@@ -180,12 +180,12 @@ namespace uh::trees {
                             best_search_list.erase(best_beg,best_search_list.end());
                         }
                         //duplicates are possible and should be sorted to get the smallest offset on the largest matches, this reduces tree depth
-                        std::vector<std::tuple<std::tuple<std::list<tree_radix_custom *>, std::size_t>>,std::size_t>> lowest_offset_list{};
+                        std::vector<std::tuple<std::tuple<std::list<tree_radix_custom *>, std::size_t>,std::size_t>> lowest_offset_list{};
 
                         for(const auto&item:best_search_list){
                             auto* tree_ptr = std::get<0>(item).back();
-                            auto other_tree_vec_beg = (tree_ptr->data_vector)->begin();
-                            auto local_matches = compare_ultihash(other_tree_vec_beg,(tree_ptr->data_vector)->end(),in_end_tmp+1,bin_end);//do the compare again within this perspective
+                            auto other_tree_vec_beg = (tree_ptr->data_vector()).begin();
+                            auto local_matches = compare_ultihash(other_tree_vec_beg,(tree_ptr->data_vector()).end(),bin_end_tmp+1,bin_end);//do the compare again within this perspective
                             auto start_offset_match_other_tree_beg = std::get<0>(local_matches[0]);
                             std::size_t offset_dist = std::distance(other_tree_vec_beg,start_offset_match_other_tree_beg);
                             lowest_offset_list.emplace_back(item,offset_dist);
@@ -210,13 +210,15 @@ namespace uh::trees {
             }
             else{
                 //either it matches at the beginning, with an offset or not at all
-                auto matches = compare_ultihash(bin_beg,bin_end);
+                auto matches = compare_ultihash(data.begin(),data.end(),bin_beg,bin_end);
                 if(matches.empty()){
                     return input_list;
                 }
                 else{
                     //get the biggest match and return
-
+                    auto max_match = std::max_element(matches.begin(),matches.end(),[](auto &a, auto &b){
+                        return std::distance(std::get<1>(a),std::get<2>(a)) < std::distance(std::get<1>(b),std::get<2>(b));
+                    });
                 }
             }
 
