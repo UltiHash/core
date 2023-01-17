@@ -95,6 +95,12 @@ namespace uh::trees {
 
             if(bin_beg == bin_end)return input_list;
 
+            //first search existing structure and add into the last tree to insert potentially missing information
+            auto search_index = search(bin_beg,bin_end);
+            //cases for search index: its empty or it has content and with that a last tree element
+            //cases for last tree if it exists: match from the beginning on, match in the middle, match until the end, total match
+
+
             if(data.empty()){
                 auto tree_vec = child_vector(*bin_beg);
                 if(tree_vec.empty()){
@@ -112,27 +118,18 @@ namespace uh::trees {
                 }
             }
             else{
-                auto compare = compare_ultihash(data.begin(),data.end(), bin_beg,bin_end);
 
-                for(const auto&cv:compare){
-                    //operation bool
-                    /*
-                    bool no_match = std::get<0>(compare) == 0;
-                    bool compare_full_success = std::get<0>(compare) == data.size();
-                    bool split_operation = !no_match && !compare_full_success;
-                     */
-                    //input analysis
-                }
             }
 
             return input_list;
         }
 
         //returns the path of maximum fit and the match size
-        std::tuple<std::list<tree_radix_custom *>, std::size_t>
-        search(auto bin_beg,auto bin_end,
-               std::tuple<std::list<tree_radix_custom *>, std::size_t> input_list =
-               std::tuple<std::list<tree_radix_custom *>, std::size_t>{}){
+        template<typename IteratorIn>
+        std::tuple<std::list<std::tuple<tree_radix_custom *,IteratorIn,IteratorIn>>, std::size_t>
+        search(IteratorIn bin_beg,IteratorIn bin_end,
+               std::tuple<std::list<std::tuple<tree_radix_custom *,IteratorIn,IteratorIn>>, std::size_t> input_list =
+               std::tuple<std::list<std::tuple<tree_radix_custom *,IteratorIn,IteratorIn>>, std::size_t>{}){
             if(bin_beg==bin_end){
                 return input_list;
             }
@@ -143,7 +140,7 @@ namespace uh::trees {
             if(input_size>data_size)bin_end_tmp = bin_beg + data_size;//limit to max fit if possible
 
             if(std::ranges::equal(bin_beg,bin_end_tmp,data.begin(),data.end())){//if the input range is too large we else would not get a match
-                std::get<0>(input_list).emplace_back(this);
+                std::get<0>(input_list).emplace_back(this,bin_beg,bin_end_tmp);
                 std::get<1>(input_list)+=data_size;
                 //full match, look for children
                 //either precise match or subset
@@ -156,7 +153,7 @@ namespace uh::trees {
                         return input_list;
                     }
                     else{//if there is a child we search there
-                        std::vector<std::tuple<std::list<tree_radix_custom *>, std::size_t>> best_search_list{};
+                        std::vector<std::tuple<std::list<std::tuple<tree_radix_custom *,IteratorIn,IteratorIn>>, std::size_t>> best_search_list{};
                         for(const auto&item:child_vec){
                             best_search_list.push_back(item->search(bin_end_tmp+1,bin_end,input_list));
                         }
@@ -180,7 +177,7 @@ namespace uh::trees {
                             best_search_list.erase(best_beg,best_search_list.end());
                         }
                         //duplicates are possible and should be sorted to get the smallest offset on the largest matches, this reduces tree depth
-                        std::vector<std::tuple<std::tuple<std::list<tree_radix_custom *>, std::size_t>,std::size_t>> lowest_offset_list{};
+                        std::vector<std::tuple<std::tuple<std::list<std::tuple<tree_radix_custom *,IteratorIn,IteratorIn>>, std::size_t>,std::size_t>> lowest_offset_list{};
 
                         for(const auto&item:best_search_list){
                             auto* tree_ptr = std::get<0>(item).back();
@@ -217,7 +214,7 @@ namespace uh::trees {
                         return std::distance(std::get<1>(a),std::get<2>(a)) < std::distance(std::get<1>(b),std::get<2>(b));
                     });
                     //use max match to return the size
-                    std::get<0>(input_list).emplace_back(this);
+                    std::get<0>(input_list).emplace_back(this,std::get<1>(*max_match),std::get<2>(*max_match));
                     //add max match size, this is the last element to be searched since this is not a total match and the fit sequence ends
                     std::get<1>(input_list)+=std::distance(std::get<1>(*max_match),std::get<2>(*max_match));
                 }
