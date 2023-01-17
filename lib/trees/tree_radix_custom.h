@@ -211,17 +211,18 @@ namespace uh::trees {
             else{
                 //either it matches at the beginning, with an offset or not at all
                 auto matches = compare_ultihash(data.begin(),data.end(),bin_beg,bin_end);
-                if(matches.empty()){
-                    return input_list;
-                }
-                else{
+                if(!matches.empty()){
                     //get the biggest match and return
                     auto max_match = std::max_element(matches.begin(),matches.end(),[](auto &a, auto &b){
                         return std::distance(std::get<1>(a),std::get<2>(a)) < std::distance(std::get<1>(b),std::get<2>(b));
                     });
+                    //use max match to return the size
+                    std::get<0>(input_list).emplace_back(this);
+                    //add max match size, this is the last element to be searched since this is not a total match and the fit sequence ends
+                    std::get<1>(input_list)+=std::distance(std::get<1>(*max_match),std::get<2>(*max_match));
                 }
+                return input_list;
             }
-
             //on a total match find the largest search match on the children, in case there is a fitting child
         }
         /*
