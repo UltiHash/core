@@ -9,8 +9,11 @@
 #include "trees/tree_storage_config.h"
 #include <vector>
 #include <ranges>
+#include <algorithm>
 
 namespace uh::trees {
+    //because it takes at least 2 bytes to describe a deeper encoding action
+#define MINIMUM_MATCH_SIZE 3
     typedef struct tree_radix_custom tree_radix_custom;
 
     struct tree_radix_custom {
@@ -45,70 +48,49 @@ namespace uh::trees {
                                                                                                         std::tuple<std::size_t,std::size_t,std::list<std::tuple<tree_radix_custom*,unsigned char>>> input_list =
                                                                                                         std::tuple<std::size_t,std::size_t,std::list<std::tuple<tree_radix_custom*,unsigned char>>>{}){
 
-            auto input_to_data_compare = [&](const auto& input){
+            auto input_to_data_compare = [this](const auto& input){
                 //if input does only fit to a shorter string as a subset of data, count becomes negative, else positive including ß
-                long equal_count{},diff_count{};
-                auto beg_data = data.begin();
-                auto beg_input = input.begin();
+                //data offset iterator and start and end of input
+                std::vector<std::tuple<decltype(data)::iterator,decltype(input)::iterator,decltype(input)::iterator>> matches{};
 
-                bool begin_equal = true;
-                while(beg_data != data.end() && beg_input != input.end()){
-                    if(*beg_data == *beg_input){
-                        equal_count++;
+                //advance search scope over data
+                decltype(data)::iterator data_beg = data.begin();//increase data start to the beginning of the input match +1
+                decltype(input)::iterator input_end;
+                //search forward through data
+                do{
+                    input_end = input.begin();//increase end of input to possibly find a prefix match
+                    //first element match
+                    while(*data_beg != *input.cbegin() && data_beg != data.end()){
+                        data_beg++;
                     }
-                    else{
-                        begin_equal = false;
-                        break;
+                    if(data_beg == data.end())break;
+                    //search how long input matches
+                    decltype(std::ranges::search(data_beg,data.end(),input.begin(),input_end)) found;
+                    do{
+                        found = std::ranges::search(data_beg,data.end(),input.begin(),input_end);
+                        input_end++;
                     }
+                    while(input_end != input.end() && std::distance(found.begin(),found.end())==std::distance(input.begin(),input.end()));
+                    //last input count reversed
+                    if(std::distance(input.begin(),input_end)>=MINIMUM_MATCH_SIZE){
+                        input_end--;
+                        matches.emplace_back(data_beg,input.begin(),input_end);
+                    }
+                    data_beg++;
                 }
-                diff_count = beg_input==input.end()?input.size():std::distance(input.begin(),beg_input)-data.size();
+                while(data_beg != data.end());
 
-                return std::make_tuple(equal_count,diff_count);
+                return equal_count;
             };
 
             auto compare = input_to_data_compare(bin);
 
-            if(data.empty()){//checks or not
-                if(children.empty()){//simple append else search recursive append
-                    if(std::get<0>(compare) == data.size()){//append action
-                        if(std::get<1>(compare) < 0){//split data action
+            //operation bool
+            bool no_match = std::get<0>(compare) == 0;
+            bool compare_full_success = std::get<0>(compare) == data.size();
+            bool split_operation = !no_match && !compare_full_success;
+            //input analysis
 
-                        }
-                        else{
-
-                        }
-                    }
-                    else{
-
-                    }
-                }
-                else{
-                    if(std::get<0>(compare) == data.size()){
-
-                    }
-                    else{
-
-                    }
-                }
-            }
-            else{
-                if(children.empty()){
-                    if(std::get<0>(compare) == data.size()){
-
-                    }
-                    else{
-
-                    }
-                }
-                else{
-                    if(std::get<0>(compare) == data.size()){
-
-                    }
-                    else{
-
-                    }
-                }
-            }
 
             return input_list;
         }
