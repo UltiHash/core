@@ -96,18 +96,25 @@ namespace uh::trees {
 
             if(bin_beg == bin_end || std::distance(bin_beg,bin_end)<1)return input_list;//some element and an end element at least required
 
-            auto tree_construction_sequence = [](tree_radix_custom* cur_tree,auto bin_beg_intern,auto bin_end_intern,const std::vector<unsigned char>::iterator data_beg_intern) {
-                std::vector<unsigned char>::iterator data_end_intern = data_beg_intern + std::distance(bin_beg_intern,bin_end_intern);
-                //checking oversize
-                bool oversize = std::distance(bin_beg_intern,bin_end_intern) > cur_tree->data_vector().size() || data_end_intern > cur_tree->data_vector().end();
-                bool total_match = std::distance(bin_beg_intern,bin_end_intern) == std::distance(data_beg_intern,data_end_intern) && data_beg_intern == cur_tree->data_vector().begin() && data_end_intern == cur_tree->data_vector().end();
+            auto tree_construction_sequence = [](tree_radix_custom* cur_tree,auto bin_beg_incoming,auto bin_end_incoming,auto bin_beg_found,auto bin_end_found,const std::vector<unsigned char>::iterator data_beg_intern) {
+                std::size_t already_matching_size_before_tree = std::distance(bin_beg_incoming,bin_beg_found);
+                std::size_t total_possible_match_size = already_matching_size_before_tree + std::distance(bin_beg_found,bin_end_found);
+
+                std::vector<unsigned char>::iterator data_end_intern = data_beg_intern + std::distance(bin_beg_found,bin_end_found);
+                //checking oversize on children
+                auto child_beg = bin_end_found;//child to child node
+                auto child_end = bin_end_incoming;
+
+                bool oversize = std::distance(child_beg,child_end)>0;//end of input information may exceed limits, left out space at the front is still possible
+                bool total_match = std::distance(bin_beg_found,bin_end_found) == std::distance(data_beg_intern,data_end_intern) && data_beg_intern == cur_tree->data_vector().begin() && data_end_intern == cur_tree->data_vector().end();
+
 
                 //search function already determined that this is the tree that needs to fill in the data or to split somehow
                 //cases: no tree, insert front tree, insert middle tree (same case as having a back insert because the end tree will just be empty
                 auto out_list = std::list<tree_radix_custom *>{ cur_tree };
                 if (cur_tree->data_vector().empty()) {//how to insert, either empty simple insert or some tree construction anywhere
                     //simple insert into data since this seems to be a new node that can contain simple information
-                    cur_tree->data_vector() = std::vector<unsigned char>{bin_beg_intern, bin_end_intern};
+                    cur_tree->data_vector() = std::vector<unsigned char>{bin_beg_found, bin_end_found};
                     return std::make_tuple(cur_tree->data_vector().size(), cur_tree->data_vector().size(), cur_tree->data_vector().size(),out_list);
                 } else {
                     if(total_match){
@@ -115,9 +122,13 @@ namespace uh::trees {
                         return std::make_tuple(cur_tree->data_vector().size(), (decltype(cur_tree->data_vector().size()))0, (decltype(cur_tree->data_vector().size()))0, out_list);//nothing to add, only reference
                     }
                     //insert into the data of the incoming tree and split into multiple nodes
-                    if(oversize){
+                    if(oversize{
+                        //how much oversize to create a child?
+                        std::size_t child_size = std::distance(cur_tree->data_vector().end(),data_end_intern);
+                        //get input limits for child
+
                         data_end_intern = cur_tree->data_vector().end();
-                        auto child_vec = cur_tree->child_vector(*bin_beg_intern);
+                        auto child_vec = cur_tree->child_vector(*bin_beg_found);
                     }
                     else{
 
@@ -134,12 +145,12 @@ namespace uh::trees {
             std::tuple<std::size_t,std::size_t,std::size_t,std::list<tree_radix_custom*>> append_list{};
 
             if(std::get<0>(search_index).empty() && std::get<1>(search_index) == 0){
-                append_list = tree_construction_sequence(this, bin_beg, bin_end, data.end());//insert into this tree, no matches
+                append_list = tree_construction_sequence(this,bin_beg,bin_beg, bin_beg, bin_end, data.end());//insert into this tree, no matches, only first character must match
             }
             else{
                 auto last_tree = std::get<0>(search_index).back();
                 //check if we have a full match and the input is larger than the data of the last tree
-                append_list = tree_construction_sequence(std::get<0>(last_tree),std::get<1>(last_tree),std::get<2>(last_tree),std::get<3>(last_tree));//insert into another tree
+                append_list = tree_construction_sequence(std::get<0>(last_tree),bin_beg,bin_end,std::get<1>(last_tree),std::get<2>(last_tree),std::get<3>(last_tree));//insert into another tree
             }
 
             std::get<3>(input_list).splice(std::get<3>(input_list).cend(),std::get<3>(append_list));
