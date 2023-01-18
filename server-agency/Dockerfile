@@ -1,64 +1,27 @@
-FROM ubuntu:22.04 as build
-
-# Install dependencies
-RUN DEBIAN_FRONTEND=noninteractive apt-get update \
-    && apt install --yes software-properties-common \
-    && add-apt-repository --yes ppa:ubuntu-toolchain-r/test \
-    && apt-get install --yes --no-install-recommends \
-        build-essential \
-        git \
-        cmake \
-        wget \
-        ca-certificates \
-        gcc-12 \
-        g++-12 \
-        libgmp3-dev \
-        libssl-dev \
-        zlib1g-dev \
-        libcurl4-openssl-dev
-
-# Update alternatives
-RUN update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-12 20 && \
-    update-alternatives --install /usr/bin/g++ g++ /usr/bin/g++-12 20 && \
-    update-alternatives --install /usr/bin/cpp cpp /usr/bin/cpp-12 20 && \
-    update-alternatives --install /usr/bin/gcov c++ /usr/bin/gcov-12 20 && \
-    update-alternatives --install /usr/bin/gcov-dump c++ /usr/bin/gcov-dump-12 20 && \
-    update-alternatives --install /usr/bin/gcov-tool c++ /usr/bin/gcov-tool-12 20 && \
-    update-alternatives --install /usr/bin/gcc-ar gcc-ar /usr/bin/gcc-ar-12 20 && \
-    update-alternatives --install /usr/bin/gcc-nm gcc-nm /usr/bin/gcc-nm-12 20 && \
-    update-alternatives --install /usr/bin/gcc-ranlib gcc-ranlib /usr/bin/gcc-ranlib-12 20
-
-
-
-# Download, compile and install Boost 1.81
-RUN wget -O /tmp/boost_1_81_0.tar.gz https://sourceforge.net/projects/boost/files/boost/1.81.0/boost_1_81_0.tar.gz/download \
-    && cd /tmp/ \
-	&& tar -xzf boost_1_81_0.tar.gz \
-	&& cd /tmp/boost_1_81_0 \
-	&& ./bootstrap.sh --with-libraries=all --with-toolset=gcc \
-	&& ./b2 -j $(nproc) --target=shared,static --toolset=gcc --link=shared\
-	&& ./b2 install --target=shared,static --toolset=gcc --link=shared\
-	&& cd /tmp \
-	&& rm -Rf /tmp/boost_1_81_0
-
+FROM ghcr.io/ultihash/build-base:20230118 as build
 
 COPY . /uhServerAgency
 WORKDIR /uhServerAgency
 
 # Configure and compile lib-common
 RUN mkdir build \
-    && cmake -B build -DCMAKE_BUILD_TYPE=Release \
-    && cmake --build build -j $(nproc) --config Release
+    && cmake -B build -DCMAKE_BUILD_TYPE=Debug \
+    && cmake --build build -j $(nproc) --config Debug
 
-RUN cd /uhServerAgency/build && ctest -C Release --output-on-failure
+RUN cd /uhServerAgency/build && ctest -C Debug --output-on-failure
 
 FROM ubuntu:22.04 as deploy
 LABEL org.opencontainers.image.description "This container image contains the agency node server role. \
-Right now, the image does not have a pre-defined entry-point, so upon instantiating a container from this image, \
-the uhServerAgency binary has to be launched using container parameters."
+The ```uhServerAgency``` binary is used as the default entry point with no additional parameters specified. \
+With this, the AN server role listens on port 21832, and the prometheus-cpp exporter listens on port 8080."
 
 COPY --from=build /uhServerAgency/build/uhServerAgency /usr/local/bin
-RUN useradd -m ultihash
 
+RUN useradd -m ultihash
 USER ultihash
 WORKDIR /home/ultihash
+
+EXPOSE 21832
+EXPOSE 8080
+
+ENTRYPOINT ["uhServerAgency"]
