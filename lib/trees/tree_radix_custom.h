@@ -152,7 +152,7 @@ namespace uh::trees {
                 if (cur_tree->data_vector().empty()) {//how to insert, either empty simple insert or some tree construction anywhere
                     //simple insert into data since this seems to be a new node that can contain simple information
                     cur_tree->data_vector() = std::vector<unsigned char>{bin_beg_found, bin_end_found};
-                    return std::make_tuple(std::distance(bin_beg,bin_end), std::distance(bin_beg,bin_end),uh::util::compression_custom::compress(bin_beg_found, bin_end_found).size());
+                    return std::make_tuple(std::distance(bin_beg,bin_end), std::distance(bin_beg,bin_end),uh::util::compression_custom::compress(bin_beg_found, bin_end_found).size(),out_list);
                 } else {
                     if(total_match){
                         //a total match can still have appending structure
@@ -169,20 +169,21 @@ namespace uh::trees {
                                 //the reason why there is the correct character available but no match detected by search is the MINIMUM_MATCH_SIZE that failed, we will respect that
                                 child_vec_append.push_back(tree_ptr_tmp);
                             }
+                            out_list.push_back(tree_ptr_tmp);
                         }
                         //return implicit 0 with unsigned long
-                        return std::make_tuple((decltype(cur_tree->data_vector().size()))std::distance(bin_beg,bin_end), (decltype(cur_tree->data_vector().size()))0, (decltype(cur_tree->data_vector().size()))0);//nothing to add, only reference
+                        return std::make_tuple((decltype(cur_tree->data_vector().size()))std::distance(bin_beg,bin_end), (decltype(cur_tree->data_vector().size()))0, (decltype(cur_tree->data_vector().size()))0,out_list);//nothing to add, only reference
                     }
                     else{
                         //data will split into a maximum of 3 parts and by that will add 2 more tree nodes on front and/or back
                         if(append_tree){
                             //as on total match in this case
                             return std::make_tuple((decltype(cur_tree->data_vector().size()))std::distance(bin_beg,bin_end), (decltype(cur_tree->data_vector().size()))std::distance(child_beg_append,child_end_append),
-                                                   (decltype(cur_tree->data_vector().size()))uh:::util::compression_custom::compress(child_beg_append,child_end_append).size());
+                                                   (decltype(cur_tree->data_vector().size()))uh:::util::compression_custom::compress(child_beg_append,child_end_append).size(),out_list);
                         }
                         //return implicit 0 with unsigned long
                         //nothing to add on RAM, only splitting up the blocks on disk
-                        return std::make_tuple((decltype(cur_tree->data_vector().size()))std::distance(bin_beg,bin_end), (decltype(cur_tree->data_vector().size()))0, (decltype(cur_tree->data_vector().size()))0);
+                        return std::make_tuple((decltype(cur_tree->data_vector().size()))std::distance(bin_beg,bin_end), (decltype(cur_tree->data_vector().size()))0, (decltype(cur_tree->data_vector().size()))0,out_list);
                     }
                 }
             };
