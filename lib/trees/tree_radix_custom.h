@@ -351,8 +351,8 @@ namespace uh::trees {
             auto data_size = std::distance(data.begin(),data.end());
             if(input_size>data_size)bin_end_tmp = bin_beg + data_size;//limit to max fit if possible
 
-            auto vanilla_match_last_tree = [&](auto bin_beg,auto bin_end){
-                auto local_matches = compare_ultihash(data.begin(),data.end(),bin_beg,bin_end);
+            auto vanilla_match_last_tree = [&](auto data_beg,auto data_end, auto bin_beg,auto bin_end){
+                auto local_matches = compare_ultihash(data_beg,data_end,bin_beg,bin_end);
                 //LEGAL MATCH FILTER
                 //on empty or partial match make new list in list, else append the match results on total match
                 bool legal_split;
@@ -362,11 +362,11 @@ namespace uh::trees {
                 bool broken_legal = false;
                 auto legal_check = [&data,&local_matches,&legal_split,&end_size,&begin_reached,&end_reached,&broken_legal](std::vector<unsigned char>::iterator current_match){
                     do{
-                        bool start_size = MINIMUM_MATCH_SIZE < std::distance(data.begin(),std::get<0>(*current_match);
-                        end_size = MINIMUM_MATCH_SIZE < std::distance(std::get<0>(*current_match)+std::distance(std::get<1>(*current_match),std::get<2>(*current_match)),data.end());
+                        bool start_size = MINIMUM_MATCH_SIZE < std::distance(data_beg,std::get<0>(*current_match);
+                        end_size = MINIMUM_MATCH_SIZE < std::distance(std::get<0>(*current_match)+std::distance(std::get<1>(*current_match),std::get<2>(*current_match)),data_end);
                         bool total_found_size = MINIMUM_MATCH_SIZE < std::distance(std::get<1>(*current_match),std::get<2>(*current_match)));
-                        begin_reached = data.begin()==std::get<0>(*current_match);
-                        end_reached = data.end()==std::get<0>(*current_match)+std::distance(std::get<1>(*current_match),std::get<2>(*current_match));
+                        begin_reached = data_beg==std::get<0>(*current_match);
+                        end_reached = data_end==std::get<0>(*current_match)+std::distance(std::get<1>(*current_match),std::get<2>(*current_match));
                         legal_split = (start_size && end_size && total_found_size) || begin_reached || end_reached;//legal if on split there cannot be a segment that is smaller than the match size
                         if(!end_size && !end_reached){
                             std::get<2>(*current_match)--;
@@ -412,7 +412,7 @@ namespace uh::trees {
                 }
                 //sort the smallest offset out of the largest match results in case the match sizes are equal
                 std::sort(local_matches.begin(),local_matches.end(),[this](auto &a,auto &b){
-                    return std::distance(data.begin(),std::get<0>(a))<std::distance(data.begin(),std::get<0>(b));
+                    return std::distance(data_beg,std::get<0>(a))<std::distance(data_beg,std::get<0>(b));
                 });
 
                 if(local_matches.empty())return std::make_tuple(std::get<0>(input_list),std::get<1>(input_list));
@@ -438,13 +438,14 @@ namespace uh::trees {
 
                 }
                 std::get<1>(input_list)+=std::distance(std::get<1>(local_matches[0]),std::get<2>(local_matches[0]));
-                return input_list;
             };
 
             auto child_vec = child_vector(*(++bin_end_tmp));
 
+            //TODO: continous search through data of this tree node
+            auto matches = vanilla_match_last_tree(data.begin(),data.end(),bin_beg,bin_end_tmp-1);
             if(!child_vec.empty()){//if the input range is too large we else would not get a match
-                auto matches = vanilla_match_last_tree(bin_beg,bin_end_tmp-1);
+
 
                 std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *,IteratorIn,IteratorIn,std::vector<unsigned char>::iterator>>>, std::size_t>> best_search_list{};
                 for(const auto&item:child_vec){
@@ -471,11 +472,8 @@ namespace uh::trees {
 
                 std::get<0>(input_list).splice(std::get<0>(input_list).cend(),std::get<0>(best_search_list[0]));
                 std::get<1>(input_list)+=std::get<1>(best_search_list[0]);
-                return input_list;
             }
-            else{
-                return vanilla_match_last_tree(bin_beg,bin_end_tmp-1);
-            }
+            return input_list;
         }
         /*
         //add some string into the radix tree, returning the tree nodes where it was compressed and stored along the way
