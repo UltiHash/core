@@ -468,27 +468,36 @@ namespace uh::trees {
 
                 if (local_matches.empty())return std::make_tuple(std::get<0>(input_list), std::get<1>(input_list));
 
-                legal_check(data_beg,data_end,local_matches.begin());
+                std::vector<decltype(input_list)> out_possibilities{};
 
-                std::vector<std::tuple<IteratorIn, IteratorIn, std::vector<unsigned char>::iterator>> found_vec{};
-                found_vec.emplace_back(std::get<1>(local_matches[0]), std::get<2>(local_matches[0]),
-                                       std::get<0>(local_matches[0]));
+                auto match_beginning = local_matches.begin();
+                while(match_beginning != local_matches.end()){
+                    auto input_list_tmp = input_list;
+                    legal_check(data_beg,data_end,local_matches.begin());
 
-                if (input_list.empty() || !legal_split) {
-                    std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<IteratorIn, IteratorIn, std::vector<unsigned char>::iterator>>>> tmp_list{};
-                    tmp_list.emplace_back(this, found_vec);
-                    std::get<0>(input_list).push_back(tmp_list);
-                } else {
-                    //if the tree element of the last element is still the same as "this" we append to the vector, else we append a new list
-                    auto last_it_outer_list = (--(std::get<0>(input_list).end()));
-                    auto last_it_inner_list = (--(last_it_outer_list->end()));
-                    if (std::get<0>(*last_it_inner_list) == this) {//check if tree pointer is the same
-                        std::get<1>(*last_it_inner_list).push_back(found_vec[0]);
+                    std::vector<std::tuple<IteratorIn, IteratorIn, std::vector<unsigned char>::iterator>> found_vec{};
+                    found_vec.emplace_back(std::get<1>(local_matches[0]), std::get<2>(local_matches[0]),
+                                           std::get<0>(local_matches[0]));
+
+                    if (input_list_tmp.empty() || !legal_split) {
+                        std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<IteratorIn, IteratorIn, std::vector<unsigned char>::iterator>>>> tmp_list{};
+                        tmp_list.emplace_back(this, found_vec);
+                        std::get<0>(input_list_tmp).push_back(tmp_list);
                     } else {
-                        last_it_outer_list->emplace_back(this, found_vec);
+                        //if the tree element of the last element is still the same as "this" we append to the vector, else we append a new list
+                        auto last_it_outer_list = (--(std::get<0>(input_list_tmp).end()));
+                        auto last_it_inner_list = (--(last_it_outer_list->end()));
+                        if (std::get<0>(*last_it_inner_list) == this) {//check if tree pointer is the same
+                            std::get<1>(*last_it_inner_list).push_back(found_vec[0]);
+                        } else {
+                            last_it_outer_list->emplace_back(this, found_vec);
+                        }
                     }
+                    std::get<1>(input_list_tmp) += std::distance(std::get<1>(local_matches[0]), std::get<2>(local_matches[0]));
+                    out_possibilities.push_back(input_list_tmp);
+                    match_beginning++;
                 }
-                std::get<1>(input_list) += std::distance(std::get<1>(local_matches[0]), std::get<2>(local_matches[0]));
+                return out_possibilities;
             };
 
             auto data_beg = data.begin();
