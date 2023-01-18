@@ -60,9 +60,11 @@ namespace uh::trees {
 
             //advance search scope over data
             //increase data start to the beginning of the input match +1
-            decltype(input_end) input_end_tmp;
+            decltype(input_end) input_end_tmp,re_enter;
             //search forward through data
             do{
+                bool re_enter_hit = false;
+                re_enter = data_beg+1;
                 input_end_tmp = input_beg;//increase end of input to possibly find a prefix match
                 //first element match
                 while(*data_beg != *input_beg && data_beg != data_end){
@@ -74,6 +76,10 @@ namespace uh::trees {
                 do{
                     found = std::ranges::search(data_beg,data_end,input_beg,input_end_tmp);
                     input_end_tmp++;
+                    if(*input_input_end == *input_beg && !re_enter_hit){
+                        re_enter_hit = true;
+                        re_enter = data_beg + std::distance(input_beg,input_end_tmp);
+                    }
                 }
                 while(input_end_tmp != input_end && std::distance(found.begin(),found.end())==std::distance(input_beg,input_end_tmp));
                 //last input count reversed
@@ -81,7 +87,7 @@ namespace uh::trees {
                     input_end_tmp--;
                     matches.emplace_back(data_beg,input_beg,input_end_tmp);
                 }
-                data_beg++;
+                data_beg=re_enter;
             }
             while(data_beg != data_end);
 
