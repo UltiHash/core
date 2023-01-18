@@ -10,8 +10,6 @@
 
 class compression_custom {
 
-    compression_custom = default;
-
     std::vector<unsigned char> compress(const std::vector<unsigned char> &input){
         return compress(input.begin(),input.end());
     }
