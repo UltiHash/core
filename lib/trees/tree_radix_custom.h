@@ -199,7 +199,7 @@ namespace uh::trees {
                     } else {
                         //first section tree, after split try
                         //data will split into a maximum of 3 parts and by that will add 2 more tree nodes on front and/or back; start with first section
-                        tree_radix_custom *tree_ptr_first;
+                        tree_radix_custom *tree_ptr_first;//TODO: recursively set parent node children pointers to the ones that we know too
                         std::size_t offset{};
                         if (first_section_tree) {
                             tree_ptr_first = new tree_radix_custom(child_beg_beg, child_end_beg);
@@ -495,20 +495,35 @@ namespace uh::trees {
             auto data_beg_tmp = data_beg;
             auto bin_beg_tmp = bin_beg;
             do{
+                auto input_list_tmp = input_list;
                 vanilla_match_last_tree(data_beg, data.end(), bin_beg_tmp, bin_end);
                 //advance data_beg behind the offset of the last found binary sequence and advance bin_beg behind the size of the found subset
                 //stop the loop if manually searching matches for the range fails
-                auto last_it_outer_list = (--(std::get<0>(input_list).end()));
-                auto last_it_inner_list = (--(last_it_outer_list->end()));
+                if(!std::get<0>(input_list).empty() && input_list_tmp != input_list){
+                    auto last_it_outer_list = (--(std::get<0>(input_list).end()));
+                    auto last_it_inner_list = (--(last_it_outer_list->end()));
 
-                if (std::get<0>(*last_it_inner_list) == this) {//check if tree pointer is the same
-                    std::get<1>(*last_it_inner_list).push_back(found_vec[0]);
-                } else {
-                    last_it_outer_list->emplace_back(this, found_vec);
+                    if (std::get<0>(*last_it_inner_list) == this) {//check if tree pointer is the same
+                        //we still found a match on this data so continue advancing data and binary beginning
+                        //set data begin to the position where a subset of the input was found to make sure it advances >=0
+                        auto last_position_tuple = std::get<1>(*last_it_inner_list).back();
+                        data_beg_tmp = std::get<2>(last_position_tuple)+1;
+                        bin_beg_tmp += std::distance(std::get<0>(last_position_tuple),std::get<1>(last_position_tuple))+1;
+                        if(data_beg_tmp>=data_end)break;
+                        if(bin_beg_tmp>=bin_end)break;
+                    }
+                    else {
+                        break;//we can only advance from the perspective of this tree; there was nothing found and the last tree parent is still in charge
+                    }
+                }
+                else{
+                    //the list is empty or unchanged after matching, so we did not find anything
+                    break;
                 }
 
                 //check child that deals with searching the far most rest in direction of end to skip the not matching rest
-                auto child_vec = child_vector(*(++bin_end));
+                auto child_vec = child_vector(*bin_beg_tmp);
+
                 if (!child_vec.empty()) {//if the input range is too large we else would not get a match
                     std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, IteratorIn, IteratorIn, std::vector<unsigned char>::iterator>>>, std::size_t>> best_search_list{};
                     for (const auto &item: child_vec) {
