@@ -338,10 +338,10 @@ namespace uh::trees {
 
         //returns the path of maximum fit and the match size
         template<typename IteratorIn>
-        std::tuple<std::list<std::list<std::tuple<tree_radix_custom *,IteratorIn,IteratorIn,std::vector<unsigned char>::iterator>>>, std::size_t>
+        std::tuple<std::list<std::list<std::tuple<tree_radix_custom *,std::vector<std::tuple<IteratorIn,IteratorIn,std::vector<unsigned char>::iterator>>>>>, std::size_t>
         search(IteratorIn bin_beg,IteratorIn bin_end,
-               std::tuple<std::list<std::list<std::tuple<tree_radix_custom *,IteratorIn,IteratorIn,std::vector<unsigned char>::iterator>>>, std::size_t> input_list =
-               std::tuple<std::list<std::list<std::tuple<tree_radix_custom *,IteratorIn,IteratorIn,std::vector<unsigned char>::iterator>>>, std::size_t>{}){
+               std::tuple<std::list<std::list<std::tuple<tree_radix_custom *,std::vector<std::tuple<IteratorIn,IteratorIn,std::vector<unsigned char>::iterator>>>>>, std::size_t> input_list =
+               std::tuple<std::list<std::list<std::tuple<tree_radix_custom *,std::vector<std::tuple<IteratorIn,IteratorIn,std::vector<unsigned char>::iterator>>>>>, std::size_t>{}){
             if(bin_beg==bin_end){
                 return input_list;
             }
@@ -377,12 +377,12 @@ namespace uh::trees {
                 //on empty or partial match make new list in list, else append the match results on total match
                 bool legal_split;
                 //if the end was matched too long we can do something about that, but else the algorithm is prefix oriented
-                bool end_size,end_reached;
+                bool end_size,begin_reached,end_reached;
                 do{
                     bool start_size = MINIMUM_MATCH_SIZE < std::distance(data.begin(),std::get<0>(local_matches[0]);
                     end_size = MINIMUM_MATCH_SIZE < std::distance(std::get<0>(local_matches[0])+std::distance(std::get<1>(local_matches[0]),std::get<2>(local_matches[0])),data.end());
                     bool total_found_size = MINIMUM_MATCH_SIZE < std::distance(std::get<1>(local_matches[0]),std::get<2>(local_matches[0])));
-                    bool begin_reached = data.begin()==std::get<0>(local_matches[0]);
+                    begin_reached = data.begin()==std::get<0>(local_matches[0]);
                     end_reached = data.end()==std::get<0>(local_matches[0])+std::distance(std::get<1>(local_matches[0]),std::get<2>(local_matches[0]));
                     legal_split = (start_size && end_size && total_found_size) || begin_reached || end_reached;//legal if on split there cannot be a segment that is smaller than the match size
                     if(!end_size && !end_reached){
@@ -398,13 +398,25 @@ namespace uh::trees {
 
                 if(local_matches.empty())return std::make_tuple(std::get<0>(input_list),std::get<1>(input_list));
 
+                std::vector<std::tuple<IteratorIn,IteratorIn,std::vector<unsigned char>::iterator>> found_vec{};
+                found_vec.emplace_back(std::get<1>(local_matches[0]),std::get<2>(local_matches[0]),std::get<0>(local_matches[0]));
+
                 if(input_list.empty()||!legal_split){
-                    std::list<std::tuple<tree_radix_custom *,IteratorIn,IteratorIn,std::vector<unsigned char>::iterator>>tmp_list{};
-                    tmp_list.emplace_back(this,std::get<1>(local_matches[0]),std::get<2>(local_matches[0]),std::get<0>(local_matches[0]));
+                    std::list<std::tuple<tree_radix_custom *,std::vector<std::tuple<IteratorIn,IteratorIn,std::vector<unsigned char>::iterator>>>>tmp_list{};
+                    tmp_list.emplace_back(this,found_vec);
                     std::get<0>(input_list).push_back(tmp_list);
                 }
                 else{
-                    (--(std::get<0>(input_list).end()))->emplace_back(this,std::get<1>(local_matches[0]),std::get<2>(local_matches[0]),std::get<0>(local_matches[0]));
+                    //if the tree element of the last element is still the same as "this" we append to the vector, else we append a new list
+                    auto last_it_outer_list = (--(std::get<0>(input_list).end()));
+                    auto last_it_inner_list = (--(last_it_outer_list->end()));
+                    if(std::get<0>(*last_it_inner_list) == this){//check if tree pointer is the same
+                        std::get<1>(*last_it_inner_list).push_back(found_vec[0]);
+                    }
+                    else{
+                        last_it_outer_list->emplace_back(this,found_vec);
+                    }
+
                 }
                 std::get<1>(input_list)+=std::distance(std::get<1>(local_matches[0]),std::get<2>(local_matches[0]));
                 return input_list;
@@ -413,10 +425,9 @@ namespace uh::trees {
             auto child_vec = child_vector(*(++bin_end_tmp));
 
             if(!child_vec.empty()){//if the input range is too large we else would not get a match
-                //TODO: first search vanilla match in this tree and find any matches; create list of lists where in every list the last element needs to
-                // be split before proceed
+                auto matches = vanilla_match_last_tree(bin_beg,bin_end_tmp-1);
 
-                std::vector<std::tuple<std::list<std::tuple<tree_radix_custom *,IteratorIn,IteratorIn,std::vector<unsigned char>::iterator>>, std::size_t>> best_search_list{};
+                std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *,IteratorIn,IteratorIn,std::vector<unsigned char>::iterator>>>, std::size_t>> best_search_list{};
                 for(const auto&item:child_vec){
                     best_search_list.push_back(item->search(bin_end_tmp,bin_end,input_list));
                 }
