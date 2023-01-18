@@ -232,11 +232,13 @@ namespace uh::trees {
                     else{
                         //data will split into a maximum of 3 parts and by that will add 2 more tree nodes on front and/or back
                         if(append_tree){
-
+                            //as on total match in this case
+                            return std::make_tuple((decltype(cur_tree->data_vector().size()))std::distance(bin_beg,bin_end), (decltype(cur_tree->data_vector().size()))std::distance(child_beg_append,child_end_append),
+                                                   (decltype(cur_tree->data_vector().size()))uh:::util::compression_custom::compress(child_beg_append,child_end_append).size());
                         }
-                        else{
-
-                        }
+                        //return implicit 0 with unsigned long
+                        //nothing to add on RAM, only splitting up the blocks on disk
+                        return std::make_tuple((decltype(cur_tree->data_vector().size()))std::distance(bin_beg,bin_end), (decltype(cur_tree->data_vector().size()))0, (decltype(cur_tree->data_vector().size()))0);
                     }
                 }
             };
