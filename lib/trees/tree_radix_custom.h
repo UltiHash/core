@@ -98,7 +98,7 @@ namespace uh::trees {
         add(IteratorIn bin_beg,IteratorIn bin_end,
                  std::tuple<std::size_t,std::size_t,std::size_t,std::list<tree_radix_custom*>> input_list =
                  std::tuple<std::size_t,std::size_t,std::size_t,std::list<tree_radix_custom*>>{}){
-
+            //uncompressed input
             if(bin_beg == bin_end || std::distance(bin_beg,bin_end)<1)return input_list;//some element and an end element at least required
 
             auto tree_test_sequence = [](tree_radix_custom* cur_tree,auto bin_beg_incoming,auto bin_end_incoming,auto bin_beg_found,auto bin_end_found,const std::vector<unsigned char>::iterator data_beg_intern) {
@@ -116,11 +116,13 @@ namespace uh::trees {
                 //child after found, reference new input
                 auto child_beg_append = std::min(bin_end_found+1,bin_end_incoming);
                 auto child_end_append = bin_end_incoming;
+                //only the new append part may be compressed
+                //before splitting or modifying a block it needs to be uncompressed
 
                 bool first_section_tree = std::distance(child_beg_beg,child_end_beg)>1;
                 bool last_section_tree = child_beg_end == child_end_end && child_end_end == cur_tree->data_vector().end();
                 bool append_tree = std::distance(child_beg_append,child_end_append)>0 && child_beg_append != bin_end_incoming;
-                bool total_match = !first_section_tree && !last_section_tree;
+                bool total_match = !first_section_tree && !last_section_tree && std::distance(child_beg_mid,child_end_mid) == cur_tree->data_vector().size();
 
                 //TODO: introduce compressed vector and measure size on what has been added
 
@@ -130,11 +132,11 @@ namespace uh::trees {
                 if (cur_tree->data_vector().empty()) {//how to insert, either empty simple insert or some tree construction anywhere
                     //simple insert into data since this seems to be a new node that can contain simple information
                     cur_tree->data_vector() = std::vector<unsigned char>{bin_beg_found, bin_end_found};
-                    return std::make_tuple(cur_tree->data_vector().size(), cur_tree->data_vector().size(), cur_tree->data_vector().size(),out_list);
+                    return std::make_tuple((decltype(cur_tree->data_vector().size()))std::distance(bin_beg,bin_end), cur_tree->data_vector().size(), cur_tree->data_vector().size(),out_list);
                 } else {
                     if(total_match){
                         //return implicit 0 with unsigned long
-                        return std::make_tuple(cur_tree->data_vector().size(), (decltype(cur_tree->data_vector().size()))0, (decltype(cur_tree->data_vector().size()))0,out_list);//nothing to add, only reference
+                        return std::make_tuple((decltype(cur_tree->data_vector().size()))std::distance(bin_beg,bin_end), (decltype(cur_tree->data_vector().size()))0, (decltype(cur_tree->data_vector().size()))0,out_list);//nothing to add, only reference
                     }
 
                 }
@@ -168,8 +170,8 @@ namespace uh::trees {
         template<typename IteratorIn>
         std::tuple<std::size_t,std::size_t,std::size_t>
         add_test(IteratorIn bin_beg,IteratorIn bin_end){
-
-            if(bin_beg == bin_end || std::distance(bin_beg,bin_end)<1)return input_list;//some element and an end element at least required
+            //uncompressed input
+            if(bin_beg == bin_end || std::distance(bin_beg,bin_end)<1)return {};//some element and an end element at least required
 
             auto tree_test_sequence = [](tree_radix_custom* cur_tree,auto bin_beg_incoming,auto bin_end_incoming,auto bin_beg_found,auto bin_end_found,const std::vector<unsigned char>::iterator data_beg_intern) {
                 std::size_t matched_size = std::distance(bin_beg_incoming,bin_end_found);
@@ -186,26 +188,50 @@ namespace uh::trees {
                 //child after found, reference new input
                 auto child_beg_append = std::min(bin_end_found+1,bin_end_incoming);
                 auto child_end_append = bin_end_incoming;
+                //only the new append part may be compressed
+                //before splitting or modifying a block it needs to be uncompressed
 
                 bool first_section_tree = std::distance(child_beg_beg,child_end_beg)>1;
                 bool last_section_tree = child_beg_end == child_end_end && child_end_end == cur_tree->data_vector().end();
                 bool append_tree = std::distance(child_beg_append,child_end_append)>0 && child_beg_append != bin_end_incoming;
-                bool total_match = !first_section_tree && !last_section_tree;
-
-                //TODO: introduce compressed vector and measure size on what has been added
+                bool total_match = !first_section_tree && !last_section_tree && std::distance(child_beg_mid,child_end_mid) == cur_tree->data_vector().size();
 
                 //search function already determined that this is the tree that needs to fill in the data or to split somehow
                 //cases: no tree, insert front tree, insert middle tree (same case as having a back insert because the end tree will just be empty
                 if (cur_tree->data_vector().empty()) {//how to insert, either empty simple insert or some tree construction anywhere
                     //simple insert into data since this seems to be a new node that can contain simple information
                     cur_tree->data_vector() = std::vector<unsigned char>{bin_beg_found, bin_end_found};
-                    return std::make_tuple(cur_tree->data_vector().size(), cur_tree->data_vector().size(), cur_tree->data_vector().size());
+                    return std::make_tuple(std::distance(bin_beg,bin_end), std::distance(bin_beg,bin_end),uh::util::compression_custom::compress(bin_beg_found, bin_end_found).size());
                 } else {
                     if(total_match){
+                        //a total match can still have appending structure
+                        if(append_tree){
+                            /*
+                            //either find child is empty and test add tree or add_test to another child tree
+                            auto child_vec = child_vector(*child_beg_append);
+                            if(child_vec.empty()){
+                                //child would have been created and the append size would have been added to a new tree
+                            }
+                            else{
+                                //on search there was no match on the tree node, so we assume that a new node will be created carrying append
+                            }
+                             */
+                            //either way the appending size will be added and new space will be needed
+                            return std::make_tuple((decltype(cur_tree->data_vector().size()))std::distance(bin_beg,bin_end), (decltype(cur_tree->data_vector().size()))std::distance(child_beg_append,child_end_append),
+                                                   (decltype(cur_tree->data_vector().size()))uh:::util::compression_custom::compress(child_beg_append,child_end_append).size());
+                        }
                         //return implicit 0 with unsigned long
-                        return std::make_tuple(cur_tree->data_vector().size(), (decltype(cur_tree->data_vector().size()))0, (decltype(cur_tree->data_vector().size()))0);//nothing to add, only reference
+                        return std::make_tuple((decltype(cur_tree->data_vector().size()))std::distance(bin_beg,bin_end), (decltype(cur_tree->data_vector().size()))0, (decltype(cur_tree->data_vector().size()))0);//nothing to add, only reference
                     }
+                    else{
+                        //data will split into a maximum of 3 parts and by that will add 2 more tree nodes on front and/or back
+                        if(append_tree){
 
+                        }
+                        else{
+
+                        }
+                    }
                 }
             };
 
