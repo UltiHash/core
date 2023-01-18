@@ -97,26 +97,31 @@ namespace uh::trees {
             if(bin_beg == bin_end || std::distance(bin_beg,bin_end)<1)return input_list;//some element and an end element at least required
 
             auto tree_construction_sequence = [](tree_radix_custom* cur_tree,auto bin_beg_intern,auto bin_end_intern,const std::vector<unsigned char>::iterator data_beg_intern) {
-                const std::vector<unsigned char>::iterator data_end = data_beg_intern + std::max(std::distance(bin_beg_intern,big_end_intern),cur_tree->data_vector.size());
-
-                bool match_start = std::get<1>(cur_tree) == bin_beg_intern;//determine how to build the tree in case of binary fit in
-                bool match_end = std::get<2>(cur_tree) == bin_end_intern;
+                std::vector<unsigned char>::iterator data_end_intern = data_beg_intern + std::distance(bin_beg_intern,bin_end_intern);
                 //checking oversize
-                bool oversize = std::distance(bin_beg_intern,bin_end_intern) > cur_tree->data_vector.size();
-
-                //auto child_vec = cur_tree->child_vector(*bin_beg_intern);
+                bool oversize = std::distance(bin_beg_intern,bin_end_intern) > cur_tree->data_vector().size() || data_end_intern > cur_tree->data_vector().end();
+                bool total_match = std::distance(bin_beg_intern,bin_end_intern) == std::distance(data_beg_intern,data_end_intern) && data_beg_intern == cur_tree->data_vector().begin() && data_end_intern == cur_tree->data_vector().end();
 
                 //search function already determined that this is the tree that needs to fill in the data or to split somehow
                 //cases: no tree, insert front tree, insert middle tree (same case as having a back insert because the end tree will just be empty
-
-                if (cur_tree->data_vector.empty()&&child_vec.empty()) {//how to insert, either empty simple insert or some tree construction anywhere
+                auto out_list = std::list<tree_radix_custom *>{ cur_tree };
+                if (cur_tree->data_vector().empty()) {//how to insert, either empty simple insert or some tree construction anywhere
                     //simple insert into data since this seems to be a new node that can contain simple information
-                    cur_tree->data_vector = std::vector<unsigned char>{bin_beg_intern, bin_end_intern};
-                    return {cur_tree->data_vector.size(), cur_tree->data_vector.size(), cur_tree->data_vector.size(),
-                            std::list<tree_radix_custom *>>{ cur_tree }};
+                    cur_tree->data_vector() = std::vector<unsigned char>{bin_beg_intern, bin_end_intern};
+                    return std::make_tuple(cur_tree->data_vector().size(), cur_tree->data_vector().size(), cur_tree->data_vector().size(),out_list);
                 } else {
+                    if(total_match){
+                        //return implicit 0 with unsigned long
+                        return std::make_tuple(cur_tree->data_vector().size(), (decltype(cur_tree->data_vector().size()))0, (decltype(cur_tree->data_vector().size()))0, out_list);//nothing to add, only reference
+                    }
                     //insert into the data of the incoming tree and split into multiple nodes
-                    //search bin vector
+                    if(oversize){
+                        data_end_intern = cur_tree->data_vector().end();
+                        auto child_vec = cur_tree->child_vector(*bin_beg_intern);
+                    }
+                    else{
+
+                    }
 
                 }
             };
@@ -129,7 +134,7 @@ namespace uh::trees {
             std::tuple<std::size_t,std::size_t,std::size_t,std::list<tree_radix_custom*>> append_list{};
 
             if(std::get<0>(search_index).empty() && std::get<1>(search_index) == 0){
-                append_list = tree_construction_sequence(this, bin_beg, bin_end, data.end());//insert into this tree, no matches so insert into a child
+                append_list = tree_construction_sequence(this, bin_beg, bin_end, data.end());//insert into this tree, no matches
             }
             else{
                 auto last_tree = std::get<0>(search_index).back();
@@ -167,23 +172,24 @@ namespace uh::trees {
                     std::size_t max_fit{};
                     auto best_beg = local_matches.begin();
                     while(best_beg!=local_matches.end()){
-                        max_fit = std::max(max_fit,std::distance(std::get<1>(*best_beg),std::get<2>(*best_beg)));
+                        max_fit = std::max(max_fit,(std::size_t)std::distance(std::get<1>(*best_beg),std::get<2>(*best_beg)));
                         if(std::distance(std::get<1>(*best_beg),std::get<2>(*best_beg))<max_fit){
                             //break and delete until end
                             break;
                         }
                         best_beg++;
                     }
-                    best_search_list.erase(best_beg,local_matches.end());
+                    local_matches.erase(best_beg,local_matches.end());
                 }
                 //sort smallest offset
-                std::sort(local_matches.begin(),local_matches.end(),[&data](auto &a,auto &b){
+                std::sort(local_matches.begin(),local_matches.end(),[this](auto &a,auto &b){
                     return std::distance(data.begin(),std::get<0>(a))<std::distance(data.begin(),std::get<0>(b));
                 });
                 //single search find
-                if(local_matches.empty())return {std::get<0>(input_list),std::get<1>(input_list)};
+                if(local_matches.empty())return std::make_tuple(std::get<0>(input_list),std::get<1>(input_list));
                 std::get<0>(input_list).emplace_back(this,std::get<1>(local_matches[0]),std::get<2>(local_matches[0]),std::get<0>(local_matches[0]));
-                return {std::get<0>(input_list),std::get<1>(input_list)+std::distance(std::get<1>(local_matches[0]),std::get<2>(local_matches[0]))};
+                std::get<1>(input_list)+=std::distance(std::get<1>(local_matches[0]),std::get<2>(local_matches[0]));
+                return input_list;
             };
 
             auto child_vec = child_vector(*(++bin_end_tmp));
@@ -211,25 +217,10 @@ namespace uh::trees {
                     }
                     best_search_list.erase(best_beg,best_search_list.end());
                 }
-                //duplicates are possible and should be sorted to get the smallest offset on the largest matches, this reduces tree depth
-                std::vector<std::tuple<std::tuple<std::list<std::tuple<tree_radix_custom *,IteratorIn,IteratorIn,std::vector<unsigned char>::iterator>>, std::size_t>,std::size_t>> lowest_offset_list{};
 
-                for(const auto&item:best_search_list){
-                    auto* tree_ptr = std::get<0>(item).back();
-                    auto other_tree_vec_beg = (tree_ptr->data_vector()).begin();
-                    auto local_matches = compare_ultihash(other_tree_vec_beg,(tree_ptr->data_vector()).end(),bin_end_tmp,bin_end);//do the compare again within this perspective
-                    auto start_offset_match_other_tree_beg = std::get<0>(local_matches[0]);
-                    std::size_t offset_dist = std::distance(other_tree_vec_beg,start_offset_match_other_tree_beg);
-                    lowest_offset_list.emplace_back(item,offset_dist);//save the input range and the tree it was checked with, the successful offset and the start pointer on the data that the input points at
-                }
-
-                std::sort(lowest_offset_list.begin(),lowest_offset_list.end(),[](auto &a,auto &b){
-                    return std::get<1>(a) < std::get<1>(b);//sort in ascending order on search match size
-                });
-
-                std::get<0>(input_list).splice(std::get<0>(input_list).cend(),std::get<0>(std::get<0>(lowest_offset_list[0])));
-                std::get<1>(input_list)+=std::get<1>(std::get<0>(lowest_offset_list[0]));
-                return {std::get<0>(input_list),std::get<1>(input_list),std::get<2>(lowest_offset_list[0])};
+                std::get<0>(input_list).splice(std::get<0>(input_list).cend(),std::get<0>(best_search_list[0]));
+                std::get<1>(input_list)+=std::get<1>(best_search_list[0]);
+                return input_list;
             }
             else{
                 return vanilla_match_last_tree(bin_beg,bin_end_tmp-1);
