@@ -42,7 +42,7 @@ namespace uh::trees {
             return data;
         }
 
-        std::vector<tree_radix_custom*> child_vector(unsigned char i) {
+        std::vector<tree_radix_custom*> &child_vector(unsigned char i) {
             if(children.empty())return {};
             for(const auto &item:children){
                 if(std::get<1>(item) == i){
@@ -158,12 +158,16 @@ namespace uh::trees {
                         //a total match can still have appending structure
                         if(append_tree){
                             //either find child is empty and test add tree or add_test to another child tree
-                            auto child_vec = child_vector(*child_beg_append);
+                            auto child_vec_append = child_vector(*child_beg_append);
+                            auto* tree_ptr_tmp = new tree_radix_custom(child_beg_append,child_end_append);
                             if(child_vec.empty()){
                                 //child would have been created and the append size would have been added to a new tree
+                                children.emplace_back(std::vector<tree_radix_custom*>{tree_ptr_tmp},*child_beg_append);
                             }
                             else{
-                                //on search there was no match on the tree node, so we assume that a new node will be created carrying append
+                                //on search there was no match on the tree node, so we assume that a new node referenced by this node will be created carrying append
+                                //the reason why there is the correct character available but no match detected by search is the MINIMUM_MATCH_SIZE that failed, we will respect that
+                                child_vec_append.push_back(tree_ptr_tmp);
                             }
                         }
                         //return implicit 0 with unsigned long
