@@ -466,7 +466,7 @@ namespace uh::trees {
                     return std::distance(data_beg, std::get<0>(a)) < std::distance(data_beg, std::get<0>(b));
                 });
 
-                if (local_matches.empty())return std::make_tuple(std::get<0>(input_list), std::get<1>(input_list));
+                if (local_matches.empty())return std::vector<decltype(input_list)>{input_list};
 
                 std::vector<decltype(input_list)> out_possibilities{};
 
@@ -505,7 +505,7 @@ namespace uh::trees {
             auto bin_beg_tmp = bin_beg;
             do{
                 auto input_list_tmp = input_list;
-                vanilla_match_last_tree(data_beg, data.end(), bin_beg_tmp, bin_end);
+                auto possibilities = vanilla_match_last_tree(data_beg, data.end(), bin_beg_tmp, bin_end);
                 //advance data_beg behind the offset of the last found binary sequence and advance bin_beg behind the size of the found subset
                 //stop the loop if manually searching matches for the range fails
                 if(!std::get<0>(input_list).empty() && input_list_tmp != input_list){
