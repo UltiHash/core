@@ -353,6 +353,42 @@ namespace uh::trees {
 
             auto vanilla_match_last_tree = [&](auto bin_beg,auto bin_end){
                 auto local_matches = compare_ultihash(data.begin(),data.end(),bin_beg,bin_end);
+                //LEGAL MATCH FILTER
+                //on empty or partial match make new list in list, else append the match results on total match
+                bool legal_split;
+                //if the end was matched too long we can do something about that, but else the algorithm is prefix oriented
+                bool end_size,begin_reached,end_reached;
+                //control
+                bool broken_legal = false;
+                auto legal_check = [&data,&local_matches,&legal_split,&end_size,&begin_reached,&end_reached,&broken_legal](std::vector<unsigned char>::iterator current_match){
+                    do{
+                        bool start_size = MINIMUM_MATCH_SIZE < std::distance(data.begin(),std::get<0>(*current_match);
+                        end_size = MINIMUM_MATCH_SIZE < std::distance(std::get<0>(*current_match)+std::distance(std::get<1>(*current_match),std::get<2>(*current_match)),data.end());
+                        bool total_found_size = MINIMUM_MATCH_SIZE < std::distance(std::get<1>(*current_match),std::get<2>(*current_match)));
+                        begin_reached = data.begin()==std::get<0>(*current_match);
+                        end_reached = data.end()==std::get<0>(*current_match)+std::distance(std::get<1>(*current_match),std::get<2>(*current_match));
+                        legal_split = (start_size && end_size && total_found_size) || begin_reached || end_reached;//legal if on split there cannot be a segment that is smaller than the match size
+                        if(!end_size && !end_reached){
+                            std::get<2>(*current_match)--;
+                            if(std::distance(std::get<1>(*current_match)<std::get<2>(*current_match)) <= MINIMUM_MATCH_SIZE){
+                                local_matches.erase(*current_match);
+                                broken_legal = true;
+                                return;
+                            }
+                            std::sort(local_matches.begin(),local_matches.end(),[](auto &a,auto &b){
+                                return std::distance(std::get<1>(a),std::get<2>(a))>std::distance(std::get<1>(b),std::get<2>(b));
+                            });
+                        }
+                    }while(!end_size && !end_reached && !local_matches.empty());
+                };
+
+                auto match_beg = local_matches.begin();
+                while(match_beg != match_end){
+                    legal_check(match_beg);
+                    if(broken_legal)match_beg = local_matches.begin();
+                    else match_beg++;
+                }
+
                 std::sort(local_matches.begin(),local_matches.end(),[](auto &a,auto &b){
                     return std::distance(std::get<1>(a),std::get<2>(a))>std::distance(std::get<1>(b),std::get<2>(b));
                 });
@@ -374,27 +410,6 @@ namespace uh::trees {
                 std::sort(local_matches.begin(),local_matches.end(),[this](auto &a,auto &b){
                     return std::distance(data.begin(),std::get<0>(a))<std::distance(data.begin(),std::get<0>(b));
                 });
-                //on empty or partial match make new list in list, else append the match results on total match
-                bool legal_split;
-                //if the end was matched too long we can do something about that, but else the algorithm is prefix oriented
-                bool end_size,begin_reached,end_reached;
-                do{
-                    bool start_size = MINIMUM_MATCH_SIZE < std::distance(data.begin(),std::get<0>(local_matches[0]);
-                    end_size = MINIMUM_MATCH_SIZE < std::distance(std::get<0>(local_matches[0])+std::distance(std::get<1>(local_matches[0]),std::get<2>(local_matches[0])),data.end());
-                    bool total_found_size = MINIMUM_MATCH_SIZE < std::distance(std::get<1>(local_matches[0]),std::get<2>(local_matches[0])));
-                    begin_reached = data.begin()==std::get<0>(local_matches[0]);
-                    end_reached = data.end()==std::get<0>(local_matches[0])+std::distance(std::get<1>(local_matches[0]),std::get<2>(local_matches[0]));
-                    legal_split = (start_size && end_size && total_found_size) || begin_reached || end_reached;//legal if on split there cannot be a segment that is smaller than the match size
-                    if(!end_size && !end_reached){
-                        std::get<2>(local_matches[0])--;
-                        if(std::distance(std::get<1>(local_matches[0])<std::get<2>(local_matches[0])) <= MINIMUM_MATCH_SIZE){
-                            local_matches.erase(local_matches.begin());
-                        }
-                        std::sort(local_matches.begin(),local_matches.end(),[](auto &a,auto &b){
-                            return std::distance(std::get<1>(a),std::get<2>(a))>std::distance(std::get<1>(b),std::get<2>(b));
-                        });
-                    }
-                }while(!end_size && !end_reached && !local_matches.empty());
 
                 if(local_matches.empty())return std::make_tuple(std::get<0>(input_list),std::get<1>(input_list));
 
