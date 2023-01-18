@@ -383,10 +383,14 @@ namespace uh::trees {
                 };
 
                 auto match_beg = local_matches.begin();
+                std::size_t count_match_pos{};
                 while(match_beg != match_end){
                     legal_check(match_beg);
-                    if(broken_legal)match_beg = local_matches.begin();
-                    else match_beg++;
+                    if(broken_legal)match_beg = local_matches.begin()+count_match_pos;
+                    else{
+                        match_beg++;
+                        count_match_pos++;
+                    }
                 }
 
                 std::sort(local_matches.begin(),local_matches.end(),[](auto &a,auto &b){
@@ -406,7 +410,7 @@ namespace uh::trees {
                     }
                     local_matches.erase(best_beg,local_matches.end());
                 }
-                //sort smallest offset
+                //sort the smallest offset out of the largest match results in case the match sizes are equal
                 std::sort(local_matches.begin(),local_matches.end(),[this](auto &a,auto &b){
                     return std::distance(data.begin(),std::get<0>(a))<std::distance(data.begin(),std::get<0>(b));
                 });
