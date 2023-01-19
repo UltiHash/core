@@ -33,7 +33,7 @@ namespace uh::trees {
             }
         }
 
-        explicit tree_radix_custom(std::vector<unsigned char> &bin) : tree_radix_custom() {
+        explicit tree_radix_custom(std::vector<unsigned char> &bin) : tree_radix_custom() {//TODO: add links to parents
             add(bin);
         }
 
@@ -239,7 +239,7 @@ namespace uh::trees {
                     }
                 }
             };
-
+            //TODO: add the case where the offset on data find is not behind the added distance of the found input
             //first search existing structure and add into the last tree to insert potentially missing information
             auto search_index = search(bin_beg, bin_end);
 
@@ -616,10 +616,7 @@ namespace uh::trees {
                 return std::get<0>(std::get<0>(a)).size() > std::get<1>(std::get<0>(b)).size();//sort in descending order on search match size
             });
 
-            std::get<0>(input_list).splice(std::get<0>(input_list).cend(), std::get<0>(best_search_list[0]));
-            std::get<1>(input_list) += std::get<1>(best_search_list[0]);
-
-            return input_list;
+            return std::get<0>(possibilities[0]);
         }
         /*
         //add some string into the radix tree, returning the tree nodes where it was compressed and stored along the way
