@@ -397,7 +397,7 @@ namespace uh::trees {
             if (bin_beg == bin_end) {
                 return input_list;
             }
-
+            //TODO: total match can be detected if the search length matches input distance, immidiately return
             auto vanilla_match_last_tree = [&](auto data_beg, auto data_end, auto bin_beg, auto bin_end) {
                 auto local_matches = compare_ultihash(data_beg, data_end, bin_beg, bin_end);
                 //LEGAL MATCH FILTER
@@ -508,6 +508,7 @@ namespace uh::trees {
             };
 
             auto possibilities = vanilla_match_last_tree(data_beg, data.end(), bin_beg_tmp, bin_end);
+            auto bin_beg_old = bin_beg;
 
             auto pos_begin = possibilities.begin();
             while(pos_begin != possibilities.end()){
@@ -551,6 +552,15 @@ namespace uh::trees {
                     possibilities.insert(possibilities.cend(),sub_possibilities.begin(),sub_possibilities.end());//after various match cases as various positions
                     pos_begin = possibilities.begin()+std::distance(possibilities.begin(),pos_begin);
 
+                    std::sort(possibilities.begin(), possibilities.end(), [](auto &a, auto &b) {
+                        return std::get<1>(a) > std::get<1>(b);//sort in descending order on search match size
+                    });
+
+                    //if first possibility is same length as binary input, we have a total match and return
+                    if(std::get<1>(possibilities[0]) == std::distance(bin_beg_old,bin_end)){
+                        return possibilities[0];
+                    }
+
                     //check child that deals with searching the far most rest in direction of end to skip the not matching rest
                     auto child_vec = child_vector(*bin_beg_tmp);
 
@@ -561,6 +571,16 @@ namespace uh::trees {
                             pos_begin = possibilities.begin()+std::distance(possibilities.begin(),pos_begin);
                         }
                     }
+
+                    std::sort(possibilities.begin(), possibilities.end(), [](auto &a, auto &b) {
+                        return std::get<1>(a) > std::get<1>(b);//sort in descending order on search match size
+                    });
+
+                    //if first possibility is same length as binary input, we have a total match and return
+                    if(std::get<1>(possibilities[0]) == std::distance(bin_beg_old,bin_end)){
+                        return possibilities[0];
+                    }
+                    //TODO: sorting required keeping track of already managed possibilities of matching
                 }
 
                 pos_begin++;
