@@ -397,7 +397,7 @@ namespace uh::trees {
             if (bin_beg == bin_end) {
                 return input_list;
             }
-            //TODO: total match can be detected if the search length matches input distance, immidiately return
+
             auto vanilla_match_last_tree = [&](auto data_beg, auto data_end, auto bin_beg, auto bin_end) {
                 auto local_matches = compare_ultihash(data_beg, data_end, bin_beg, bin_end);
                 //LEGAL MATCH FILTER
@@ -507,21 +507,38 @@ namespace uh::trees {
                 return out_possibilities;
             };
 
-            auto possibilities = vanilla_match_last_tree(data_beg, data.end(), bin_beg_tmp, bin_end);
-            auto bin_beg_old = bin_beg;
+            auto possibilities_init = vanilla_match_last_tree(data_beg, data.end(), bin_beg, bin_end);
+            auto possibilities = std::vector<std::tuple<decltype(possibilities),decltype(data_beg),decltype(bin_beg),bool>>{};//check if the possibility was already checked and save the worked on binary input offset and data offset
+            for(const auto&item:possibilities_init){
+                possibilities.emplace_back(item,data_beg,bin_beg,false);
+            }
+            possibilities_init.clear();
 
             auto pos_begin = possibilities.begin();
-            while(pos_begin != possibilities.end()){
+            std::size_t delete_count{};
 
-                auto data_beg = data.begin();
-                auto data_beg_tmp = data_beg;
-                auto bin_beg_tmp = bin_beg;
+            while(!possibilities.empty()){
+                if(std::get<3>(*pos_begin)){
+                    delete_count++;
+                    continue;
+                }
+                if(delete_count > 0){
+                    possibilities.erase(possibilities.begin(),possibilities.begin()+(delete_count-1));
+                    pos_begin = possibilities.begin();
+                    delete_count=0;
+                    continue;
+                }
+                std::get<3>(*pos_beginning)=true;
+
+                auto data_beg_tmp = std::get<1>(*pos_begin);
+                auto bin_beg_tmp = std::get<2>(*pos_begin);
 
                 bool first_time = true;
-                while(data_beg_tmp!=data_beg||bin_beg_tmp != bin_beg||first_time){
+                bool pos_begin_reset = false;
+                while(data_beg_tmp!=std::get<1>(*pos_begin)||bin_beg_tmp != std::get<2>(*pos_begin)||first_time){
+                    if(std::get<1>(*pos_begin)>=data_end)break;
+                    if(std::get<2>(*pos_begin)>=bin_end)break;
                     first_time = false;
-                    data_beg = data_beg_tmp;
-                    bin_beg = bin_beg_tmp;
 
                     //advance data_beg behind the offset of the last found binary sequence and advance bin_beg behind the size of the found subset
                     //stop the loop if manually searching matches for the range fails
@@ -529,14 +546,12 @@ namespace uh::trees {
                         auto last_it_outer_list = (--(std::get<0>(*pos_begin).end()));
                         auto last_it_inner_list = (--(last_it_outer_list->end()));
 
-                        if (std::get<0>(*last_it_inner_list) == this) {//check if tree pointer is the same of the last element so we can continue to append results
+                        if (std::get<0>(*last_it_inner_list) == this) {//check if tree pointer is the same of the last element, so we can continue to append results
                             //we still found a match on this data so continue advancing data and binary beginning
                             //set data begin to the position where a subset of the input was found to make sure it advances >=0
                             auto last_position_tuple = std::get<1>(*last_it_inner_list).back();
-                            data_beg_tmp = std::get<2>(last_position_tuple)+MINIMUM_MATCH_SIZE;//if we do not skip by the minimum match size, we may ultra fragment data
-                            bin_beg_tmp += std::distance(std::get<0>(last_position_tuple),std::get<1>(last_position_tuple))+1;
-                            if(data_beg_tmp>=data_end)break;
-                            if(bin_beg_tmp>=bin_end)break;
+                            std::get<1>(*pos_begin) = std::get<2>(last_position_tuple)+MINIMUM_MATCH_SIZE;//if we do not skip by the minimum match size, we may ultra fragment data
+                            std::get<2>(*pos_begin) += std::distance(std::get<0>(last_position_tuple),std::get<1>(last_position_tuple))+1;
                         }
                         else {
                             break;//we can only advance from the perspective of this tree; there was nothing found and the last tree parent is still in charge
@@ -548,41 +563,40 @@ namespace uh::trees {
                     }
 
                     //do work on matching again for subset of data and input
-                    auto sub_possibilities = vanilla_match_last_tree(data_beg_tmp, data.end(), bin_beg_tmp, bin_end);//search here
-                    possibilities.insert(possibilities.cend(),sub_possibilities.begin(),sub_possibilities.end());//after various match cases as various positions
-                    pos_begin = possibilities.begin()+std::distance(possibilities.begin(),pos_begin);
-
-                    std::sort(possibilities.begin(), possibilities.end(), [](auto &a, auto &b) {
-                        return std::get<1>(a) > std::get<1>(b);//sort in descending order on search match size
-                    });
-
-                    //if first possibility is same length as binary input, we have a total match and return
-                    if(std::get<1>(possibilities[0]) == std::distance(bin_beg_old,bin_end)){
-                        return possibilities[0];
+                    //after various match cases as various positions
+                    possibilities_init = vanilla_match_last_tree(std::get<1>(*pos_begin), data.end(), std::get<2>(*pos_begin), bin_end);//search here
+                    for(const auto&item:possibilities_init){
+                        possibilities.emplace_back(item,std::get<1>(*pos_begin),std::get<2>(*pos_begin),false);
                     }
+                    possibilities_init.clear();
 
                     //check child that deals with searching the far most rest in direction of end to skip the not matching rest
-                    auto child_vec = child_vector(*bin_beg_tmp);
+                    auto child_vec = child_vector(*std::get<2>(*pos_begin));
 
-                    if (!child_vec.empty()) {//if the input range is too large we else would not get a match
+                    if (!child_vec.empty()) {//recursove search
                         for (const auto &item: child_vec) {
-                            auto deep_possibilities = item->search(bin_beg_tmp, bin_end, *pos_begin);
-                            possibilities.insert(possibilities.cend(),deep_possibilities.begin(),deep_possibilities.end());//after various match cases as various positions
-                            pos_begin = possibilities.begin()+std::distance(possibilities.begin(),pos_begin);
+                            for(const auto&item:(item->search(std::get<2>(*pos_begin), bin_end, *pos_begin))){
+                                possibilities.emplace_back(item,std::get<1>(*pos_begin),std::get<2>(*pos_begin),false);
+                            }
                         }
                     }
-
+                    //total match optimization to get it to front
                     std::sort(possibilities.begin(), possibilities.end(), [](auto &a, auto &b) {
-                        return std::get<1>(a) > std::get<1>(b);//sort in descending order on search match size
+                        return std::get<1>(std::get<0>(a)) > std::get<1>(std::get<0>(b));//sort in descending order on search match size
                     });
 
                     //if first possibility is same length as binary input, we have a total match and return
-                    if(std::get<1>(possibilities[0]) == std::distance(bin_beg_old,bin_end)){
+                    if(std::get<1>(possibilities[0]) == std::distance(std::get<2>(*pos_begin),bin_end)){
                         return possibilities[0];
                     }
-                    //TODO: sorting required keeping track of already managed possibilities of matching
-                }
 
+                    if(!std::get<3>(*pos_begin)){
+                        pos_begin = possibilities.begin();
+                        pos_begin_reset = true;
+                        break;
+                    }
+                }
+                if(pos_begin_reset)continue;
                 pos_begin++;
             }
 
