@@ -14,7 +14,7 @@
 
 namespace uh::trees {
     //because it takes at least 2 bytes to describe a deeper encoding action
-#define MINIMUM_MATCH_SIZE 3
+#define MINIMUM_MATCH_SIZE 4
     typedef struct tree_radix_custom tree_radix_custom;
 
     struct tree_radix_custom {
@@ -109,7 +109,7 @@ namespace uh::trees {
                 } while (input_beg_tmp != input_end);
                 re_enter = std::max(data_beg + 1, re_enter);
                 //last input count reversed
-                if (std::distance(input_beg, input_end_tmp - broken) > MINIMUM_MATCH_SIZE) {
+                if (std::distance(input_beg, input_end_tmp - broken) >= MINIMUM_MATCH_SIZE) {
                     matches.emplace_back(data_beg, input_beg, input_end_tmp - broken);
                 }
                 data_beg = re_enter;
@@ -382,10 +382,10 @@ namespace uh::trees {
 
         //returns the path of maximum fit and the match size
         template<typename IteratorIn>
-        std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<IteratorIn, IteratorIn, std::vector<unsigned char>::iterator>>>>>, std::size_t>
+        std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<IteratorIn, IteratorIn, std::vector<unsigned char>::iterator>>>>, std::size_t>
         search(IteratorIn bin_beg, IteratorIn bin_end,
-               std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<IteratorIn, IteratorIn, std::vector<unsigned char>::iterator>>>>>, std::size_t> input_list =
-               std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<IteratorIn, IteratorIn, std::vector<unsigned char>::iterator>>>>>, std::size_t>{}) {
+               std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<IteratorIn, IteratorIn, std::vector<unsigned char>::iterator>>>>, std::size_t> input_list =
+               std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<IteratorIn, IteratorIn, std::vector<unsigned char>::iterator>>>>, std::size_t>{}) {
             if (bin_beg == bin_end) {
                 return input_list;
             }
@@ -402,22 +402,21 @@ namespace uh::trees {
                 auto legal_check = [&local_matches, &legal_split, &end_size, &begin_reached, &end_reached, &broken_legal](
                         auto data_beg, auto data_end, std::vector<unsigned char>::iterator current_match) {
                     do {
-                        bool start_size = MINIMUM_MATCH_SIZE < std::distance(data_beg, std::get<0>(*current_match);
-                        end_size = MINIMUM_MATCH_SIZE < std::distance(std::get<0>(*current_match) +
+                        bool start_size = MINIMUM_MATCH_SIZE <= std::distance(data_beg, std::get<0>(*current_match);
+                        end_size = MINIMUM_MATCH_SIZE <= std::distance(std::get<0>(*current_match) +
                                                                       std::distance(std::get<1>(*current_match),
                                                                                     std::get<2>(*current_match)),
                                                                       data_end);
-                        bool total_found_size = MINIMUM_MATCH_SIZE < std::distance(std::get<1>(*current_match),
+                        bool total_found_size = MINIMUM_MATCH_SIZE <= std::distance(std::get<1>(*current_match),
                                                                                    std::get<2>(*current_match)));
                         begin_reached = data_beg == std::get<0>(*current_match);
                         end_reached = data_end == std::get<0>(*current_match) +
                                                   std::distance(std::get<1>(*current_match),
                                                                 std::get<2>(*current_match));
-                        legal_split = (start_size && end_size && total_found_size) || begin_reached ||
-                                      end_reached;//legal if on split there cannot be a segment that is smaller than the match size
+                        legal_split = ((start_size||begin_reached) && (end_size||end_reached) && total_found_size);//legal if on split there cannot be a segment that is smaller than the match size
                         if (!end_size && !end_reached) {
                             std::get<2>(*current_match)--;
-                            if (std::distance(std::get<1>(*current_match) < std::get<2>(*current_match)) <=
+                            if (std::distance(std::get<1>(*current_match) < std::get<2>(*current_match)) <
                                 MINIMUM_MATCH_SIZE) {
                                 local_matches.erase(*current_match);
                                 broken_legal = true;
@@ -501,7 +500,6 @@ namespace uh::trees {
             };
 
             auto possibilities = vanilla_match_last_tree(data_beg, data.end(), bin_beg_tmp, bin_end);
-            std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, IteratorIn, IteratorIn, std::vector<unsigned char>::iterator>>>, std::size_t>> best_search_list{};
 
             auto pos_begin = possibilities.begin();
             while(pos_begin != possibilities.end()){
@@ -518,15 +516,15 @@ namespace uh::trees {
 
                     //advance data_beg behind the offset of the last found binary sequence and advance bin_beg behind the size of the found subset
                     //stop the loop if manually searching matches for the range fails
-                    if(!std::get<0>(input_list).empty() && input_list_tmp != input_list){
-                        auto last_it_outer_list = (--(std::get<0>(input_list).end()));
+                    if(!std::get<0>(*pos_begin).empty()){
+                        auto last_it_outer_list = (--(std::get<0>(*pos_begin).end()));
                         auto last_it_inner_list = (--(last_it_outer_list->end()));
 
-                        if (std::get<0>(*last_it_inner_list) == this) {//check if tree pointer is the same
+                        if (std::get<0>(*last_it_inner_list) == this) {//check if tree pointer is the same of the last element so we can continue to append results
                             //we still found a match on this data so continue advancing data and binary beginning
                             //set data begin to the position where a subset of the input was found to make sure it advances >=0
                             auto last_position_tuple = std::get<1>(*last_it_inner_list).back();
-                            data_beg_tmp = std::get<2>(last_position_tuple)+1;
+                            data_beg_tmp = std::get<2>(last_position_tuple)+MINIMUM_MATCH_SIZE;//if we do not skip by the minimum match size, we may ultra fragment data
                             bin_beg_tmp += std::distance(std::get<0>(last_position_tuple),std::get<1>(last_position_tuple))+1;
                             if(data_beg_tmp>=data_end)break;
                             if(bin_beg_tmp>=bin_end)break;
@@ -540,20 +538,21 @@ namespace uh::trees {
                         break;
                     }
 
+                    //do work on matching again for subset of data and input
+                    auto sub_possibilities = vanilla_match_last_tree(data_beg_tmp, data.end(), bin_beg_tmp, bin_end);//search here
+                    possibilities.insert(possibilities.cend(),sub_possibilities.begin(),sub_possibilities.end());//after various match cases as various positions
+                    pos_begin = possibilities.begin()+std::distance(possibilities.begin(),pos_begin);
+
                     //check child that deals with searching the far most rest in direction of end to skip the not matching rest
                     auto child_vec = child_vector(*bin_beg_tmp);
 
                     if (!child_vec.empty()) {//if the input range is too large we else would not get a match
                         for (const auto &item: child_vec) {
-                            best_search_list.push_back(item->search(bin_beg_tmp, bin_end, *pos_begin));
+                            auto deep_possibilities = item->search(bin_beg_tmp, bin_end, *pos_begin);
+                            possibilities.insert(possibilities.cend(),deep_possibilities.begin(),deep_possibilities.end());//after various match cases as various positions
+                            pos_begin = possibilities.begin()+std::distance(possibilities.begin(),pos_begin);
                         }
                     }
-                    //else there is no continueation of searching
-
-                    //do work on matching again for subset of data and input
-                    auto sub_possibilities = vanilla_match_last_tree(data_beg_tmp, data.end(), bin_beg_tmp, bin_end);
-                    possibilities.insert(possibilities.cend(),sub_possibilities.begin(),sub_possibilities.end());//after various match cases as various positions
-                    pos_begin = possibilities.begin()+std::distance(possibilities.begin(),pos_begin);//TODO: check issue with finding correct offset of input
                 }
 
                 pos_begin++;
@@ -564,8 +563,8 @@ namespace uh::trees {
                 return std::get<1>(a) > std::get<1>(b);//sort in descending order on search match size
             });
 
-            std::get<0>(*pos_begin).splice(std::get<0>(*pos_begin).cend(), std::get<0>(best_search_list[0]));
-            std::get<1>(*pos_begin) += std::get<1>(best_search_list[0]);
+            std::get<0>(input_list).splice(std::get<0>(input_list).cend(), std::get<0>(best_search_list[0]));
+            std::get<1>(input_list) += std::get<1>(best_search_list[0]);
 
             return input_list;
         }
