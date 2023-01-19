@@ -209,7 +209,7 @@ namespace uh::trees {
                     } else {
                         //first section tree, after split try
                         //data will split into a maximum of 3 parts and by that will add 2 more tree nodes on front and/or back; start with first section
-                        tree_radix_custom *tree_ptr_first;//TODO: recursively set parent node children pointers to the ones that we know too
+                        tree_radix_custom *tree_ptr_first;
                         std::size_t offset{};
                         std::size_t size_integrated{},size_compressed{},size_uncompressed{};
 
@@ -317,6 +317,7 @@ namespace uh::trees {
                 }
             };
             //TODO: always search on from cur_tree base if the rest behind it has changed and always recursively search
+            //TODO: recursively set parent node children pointers to the ones that we know too
             //first search existing structure and add into the last tree to insert potentially missing information
             auto search_index = search(bin_beg, bin_end);
 
@@ -346,6 +347,7 @@ namespace uh::trees {
         }
 
         //returns total size integrated, new space used uncompressed, new space used compressed
+        //calculates exact size of data to be integrated to be communicated to agency to determine optimal storage location
         template<typename IteratorIn>
         std::tuple<std::size_t, std::size_t, std::size_t>
         add_test(IteratorIn bin_beg, IteratorIn bin_end) {
@@ -629,7 +631,7 @@ namespace uh::trees {
                     //check child that deals with searching the far most rest in direction of end to skip the not matching rest
                     auto child_vec = child_vector(*std::get<2>(*pos_begin));
 
-                    if (!child_vec.empty()) {//recursove search
+                    if (!child_vec.empty()) {//recursive search
                         for (const auto &item: child_vec) {
                             for(const auto&item:(item->search(std::get<2>(*pos_begin), bin_end, std::get<0>(*pos_begin)))){
                                 possibilities.emplace_back(item,std::get<1>(*pos_begin),std::get<2>(*pos_begin),false);
@@ -692,7 +694,7 @@ namespace uh::trees {
 
             std::sort(possibilities.begin(), possibilities.end(), [](auto &a, auto &b) {
                 return std::get<0>(std::get<0>(a)).size() > std::get<1>(std::get<0>(b)).size();//sort in descending order on search match size
-            });//TODO: handle rare case where still multiple searches are valid: add to all and return all; multiple recombinations for one block are possible
+            });//TODO: handle rare case where still multiple searches are valid: add to all and return all; multiple recombination for one block are possible
 
             return std::get<0>(possibilities[0]);
         }
