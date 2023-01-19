@@ -183,7 +183,10 @@ namespace uh::trees {
                 } else {
                     if (total_match) {//only a maximum of 1 tree creation or just 0 in case of reference
                         //a total match can still have appending structure
+                        std::size_t append_size_compressed{},append_size_uncompressed{};
                         if (append_tree) {
+                            append_size_compressed = uh::util::compression_custom::compress(bin_beg_found, bin_end_found).size();
+                            append_size_uncompressed = std::distance(bin_beg_found, bin_end_found);
                             //either find child is empty and test add tree or add_test to another child tree
                             auto child_vec_append = child_vector(*child_beg_append);
                             auto *tree_ptr_tmp = new tree_radix_custom(child_beg_append, child_end_append);
@@ -200,9 +203,9 @@ namespace uh::trees {
                         }
                         //return implicit 0 with unsigned long
                         return std::make_tuple(
-                                (decltype(cur_tree->data_vector().size())) std::distance(bin_beg, bin_end),
-                                (decltype(cur_tree->data_vector().size())) 0,
-                                (decltype(cur_tree->data_vector().size())) 0, out_list);//nothing to add, only reference
+                                (decltype(cur_tree->data_vector().size())) std::distance(bin_beg, bin_end)+append_size_uncompressed,
+                                (decltype(cur_tree->data_vector().size())) append_size_uncompressed,
+                                (decltype(cur_tree->data_vector().size())) append_size_compressed, out_list);//nothing to add, only reference
                     } else {
                         //first section tree, after split try
                         //data will split into a maximum of 3 parts and by that will add 2 more tree nodes on front and/or back; start with first section
