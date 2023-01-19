@@ -540,28 +540,6 @@ namespace uh::trees {
                     if(std::get<2>(*pos_begin)>=bin_end)break;
                     first_time = false;
 
-                    //advance data_beg behind the offset of the last found binary sequence and advance bin_beg behind the size of the found subset
-                    //stop the loop if manually searching matches for the range fails
-                    if(!std::get<0>(*pos_begin).empty()){
-                        auto last_it_outer_list = (--(std::get<0>(*pos_begin).end()));
-                        auto last_it_inner_list = (--(last_it_outer_list->end()));
-
-                        if (std::get<0>(*last_it_inner_list) == this) {//check if tree pointer is the same of the last element, so we can continue to append results
-                            //we still found a match on this data so continue advancing data and binary beginning
-                            //set data begin to the position where a subset of the input was found to make sure it advances >=0
-                            auto last_position_tuple = std::get<1>(*last_it_inner_list).back();
-                            std::get<1>(*pos_begin) = std::get<2>(last_position_tuple)+1;//if we do not skip by the minimum match size, we may ultra fragment data
-                            std::get<2>(*pos_begin) += std::distance(std::get<0>(last_position_tuple),std::get<1>(last_position_tuple))+1;
-                        }
-                        else {
-                            break;//we can only advance from the perspective of this tree; there was nothing found and the last tree parent is still in charge
-                        }
-                    }
-                    else{
-                        //the list is empty or unchanged after matching, so we did not find anything
-                        break;
-                    }
-
                     //do work on matching again for subset of data and input
                     //after various match cases as various positions
                     possibilities_init = vanilla_match_last_tree(std::get<1>(*pos_begin), data.end(), std::get<2>(*pos_begin), bin_end);//search here
@@ -575,19 +553,35 @@ namespace uh::trees {
 
                     if (!child_vec.empty()) {//recursove search
                         for (const auto &item: child_vec) {
-                            for(const auto&item:(item->search(std::get<2>(*pos_begin), bin_end, *pos_begin))){
+                            for(const auto&item:(item->search(std::get<2>(*pos_begin), bin_end, std::get<0>(*pos_begin)))){
                                 possibilities.emplace_back(item,std::get<1>(*pos_begin),std::get<2>(*pos_begin),false);
                             }
                         }
                     }
+
+                    if(!std::get<0>(std::get<0>(*pos_begin)).empty()){
+                        auto last_it_outer_list = (--(std::get<0>(std::get<0>(*pos_begin)).end()));
+                        auto last_it_inner_list = (--(last_it_outer_list->end()));
+
+                        if (std::get<0>(*last_it_inner_list) == this) {//check if tree pointer is the same of the last element, so we can continue to append results
+                            //we still found a match on this data so continue advancing data and binary beginning
+                            //set data begin to the position where a subset of the input was found to make sure it advances >=0
+                            auto last_position_tuple = std::get<1>(*last_it_inner_list).back();
+                            std::get<1>(*pos_begin) = std::get<2>(last_position_tuple)+1;//if we do not skip by the minimum match size, we may ultra fragment data
+                            std::size_t matched_size = std::distance(std::get<0>(last_position_tuple),std::get<1>(last_position_tuple))+1
+                            std::get<2>(*pos_begin) += matched_size;
+                            std::get<1>(std::get<0>(*pos_begin))+=matched_size;
+                        }
+                    }
+
                     //total match optimization to get it to front
                     std::sort(possibilities.begin(), possibilities.end(), [](auto &a, auto &b) {
                         return std::get<1>(std::get<0>(a)) > std::get<1>(std::get<0>(b));//sort in descending order on search match size
                     });
 
                     //if first possibility is same length as binary input, we have a total match and return
-                    if(std::get<1>(possibilities[0]) == std::distance(std::get<2>(*pos_begin),bin_end)){
-                        return possibilities[0];
+                    if(std::get<1>(std::get<0>(possibilities[0])) == std::distance(std::get<2>(*pos_begin),bin_end)){
+                        return std::get<0>(possibilities[0]);
                     }
 
                     if(!std::get<3>(*pos_begin)){
@@ -604,13 +598,13 @@ namespace uh::trees {
 
             //return the largest match with the lowest offset on the last tree, as far as there is a last tree...
             std::sort(possibilities.begin(), possibilities.end(), [](auto &a, auto &b) {
-                return std::get<1>(a) > std::get<1>(b);//sort in descending order on search match size
+                return std::get<1>(std::get<0>(a)) > std::get<1>(std::get<0>(b));//sort in descending order on search match size
             });
 
             std::size_t max_val{};
             auto poss_beg = possibilities.begin();
             while(poss_beg != possibilities.end()){
-                max_val = std::max(max_val,std::get<1>(*poss_beg));
+                max_val = std::max(max_val,std::get<1>(std::get<0>(*poss_beg)));
                 if(std::get<1>(*poss_beg) < max_val){
                     possibilities.erase(poss_beg,possibilities.end());
                     break;
@@ -619,7 +613,7 @@ namespace uh::trees {
             }
 
             std::sort(possibilities.begin(), possibilities.end(), [](auto &a, auto &b) {
-                return std::get<0>(a).size() > std::get<0>(b).size();//sort in descending order on search match size
+                return std::get<0>(std::get<0>(a)).size() > std::get<1>(std::get<0>(b)).size();//sort in descending order on search match size
             });
 
             std::get<0>(input_list).splice(std::get<0>(input_list).cend(), std::get<0>(best_search_list[0]));
