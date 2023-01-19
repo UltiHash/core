@@ -550,7 +550,7 @@ namespace uh::trees {
                             //we still found a match on this data so continue advancing data and binary beginning
                             //set data begin to the position where a subset of the input was found to make sure it advances >=0
                             auto last_position_tuple = std::get<1>(*last_it_inner_list).back();
-                            std::get<1>(*pos_begin) = std::get<2>(last_position_tuple)+MINIMUM_MATCH_SIZE;//if we do not skip by the minimum match size, we may ultra fragment data
+                            std::get<1>(*pos_begin) = std::get<2>(last_position_tuple)+1;//if we do not skip by the minimum match size, we may ultra fragment data
                             std::get<2>(*pos_begin) += std::distance(std::get<0>(last_position_tuple),std::get<1>(last_position_tuple))+1;
                         }
                         else {
