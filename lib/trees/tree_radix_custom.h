@@ -134,7 +134,7 @@ namespace uh::trees {
             if (bin_beg == bin_end || std::distance(bin_beg, bin_end) < 1)
                 return input_list;//some element and an end element at least required
 
-            auto tree_test_sequence = [&input_list](tree_radix_custom *cur_tree, auto bin_beg_incoming,
+            auto tree_test_sequence = [](tree_radix_custom *cur_tree, auto bin_beg_incoming,
                                                     auto bin_end_incoming, auto bin_beg_found, auto bin_end_found,
                                                     const std::vector<unsigned char>::iterator data_beg_intern) {
                 std::size_t matched_size = std::distance(bin_beg_incoming, bin_end_found);
@@ -364,17 +364,25 @@ namespace uh::trees {
 
             //cases for search index: its empty or it has content and with that a last tree element
             //cases for last tree if it exists, binary fit in: match from the beginning on, match in the middle, match until the end, total match
-            std::tuple<std::size_t, std::size_t, std::size_t> append_list{};
+            //all lists contain lists with a last element that had multiple matches; add up all matches
+            auto outer_most_level = [&](std::tuple<std::size_t, std::size_t, std::size_t> tup, auto list){
+                auto inner_list_level = [&](std::tuple<std::size_t, std::size_t, std::size_t> tup2, auto tree_tuple){
+                    for(const auto&pos_tup:std::get<1>(tree_tup)){
+                        auto last_tree = std::get<0>(search_index).back();
+                        //check if we have a full match and the input is larger than the data of the last tree
+                        auto add_list = tree_test_sequence(std::get<0>(last_tree), bin_beg, bin_end, std::get<0>(pos_tup), std::get<1>(pos_tup), std::get<2>(pos_tup));//insert into another tree
+                        std::get<0>(tup2) += std::get<0>(add_list);
+                        std::get<1>(tup2) += std::get<1>(add_list);
+                        std::get<2>(tup2) += std::get<2>(add_list);
+                    }
+                };
+                return std::accumulate(list.begin(),list.end(),tup,inner_list_level);
+            };
+            std::tuple<std::size_t, std::size_t, std::size_t> append_list = std::accumulate(search_index.begin(),search_index.end(),std::tuple<std::size_t, std::size_t, std::size_t>{},outer_most_level);
 
             if (std::get<0>(search_index).empty() && std::get<1>(search_index) == 0) {
-                append_list = tree_test_sequence(this, bin_beg, bin_beg, bin_beg, bin_end,
+                append_list = tree_test_sequence(this, bin_beg, bin_beg, data.begin(), data.end(),
                                                  data.end());//insert into this tree, no matches, only first character must match
-            } else {
-                auto last_tree = std::get<0>(search_index).back();
-                //check if we have a full match and the input is larger than the data of the last tree
-                append_list = tree_test_sequence(std::get<0>(last_tree), bin_beg, bin_end, std::get<1>(last_tree),
-                                                 std::get<2>(last_tree),
-                                                 std::get<3>(last_tree));//insert into another tree
             }
 
             return append_list;
