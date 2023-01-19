@@ -36,7 +36,6 @@ namespace uh::trees {
 #define ONE_MILLISECOND 1000
 #define TEN_MS 10
 #define SMALLEST_LOCAL_BLOCK_SIZE 5
-#define TIME_STAMPS_ON_BLOCK 3
 #define BUF_LEN_SIZE_FOR_SIZE_BLOCK 1
 
     typedef struct tree_storage tree_storage;
