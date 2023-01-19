@@ -558,9 +558,26 @@ namespace uh::trees {
                 pos_begin++;
             }
 
+            if(possibilities.empty())return input_list;
+
             //return the largest match with the lowest offset on the last tree, as far as there is a last tree...
-            std::sort(best_search_list.begin(), best_search_list.end(), [](auto &a, auto &b) {
+            std::sort(possibilities.begin(), possibilities.end(), [](auto &a, auto &b) {
                 return std::get<1>(a) > std::get<1>(b);//sort in descending order on search match size
+            });
+
+            std::size_t max_val{};
+            auto poss_beg = possibilities.begin();
+            while(poss_beg != possibilities.end()){
+                max_val = std::max(max_val,std::get<1>(*poss_beg));
+                if(std::get<1>(*poss_beg) < max_val){
+                    possibilities.erase(poss_beg,possibilities.end());
+                    break;
+                }
+                poss_beg++;
+            }
+
+            std::sort(possibilities.begin(), possibilities.end(), [](auto &a, auto &b) {
+                return std::get<0>(a).size() > std::get<0>(b).size();//sort in descending order on search match size
             });
 
             std::get<0>(input_list).splice(std::get<0>(input_list).cend(), std::get<0>(best_search_list[0]));
