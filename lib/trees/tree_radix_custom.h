@@ -500,67 +500,73 @@ namespace uh::trees {
                 return out_possibilities;
             };
 
-            auto data_beg = data.begin();
-            auto data_beg_tmp = data_beg;
-            auto bin_beg_tmp = bin_beg;
-            do{
-                auto input_list_tmp = input_list;
-                auto possibilities = vanilla_match_last_tree(data_beg, data.end(), bin_beg_tmp, bin_end);
-                //advance data_beg behind the offset of the last found binary sequence and advance bin_beg behind the size of the found subset
-                //stop the loop if manually searching matches for the range fails
-                if(!std::get<0>(input_list).empty() && input_list_tmp != input_list){
-                    auto last_it_outer_list = (--(std::get<0>(input_list).end()));
-                    auto last_it_inner_list = (--(last_it_outer_list->end()));
+            auto possibilities = vanilla_match_last_tree(data_beg, data.end(), bin_beg_tmp, bin_end);
+            std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, IteratorIn, IteratorIn, std::vector<unsigned char>::iterator>>>, std::size_t>> best_search_list{};
 
-                    if (std::get<0>(*last_it_inner_list) == this) {//check if tree pointer is the same
-                        //we still found a match on this data so continue advancing data and binary beginning
-                        //set data begin to the position where a subset of the input was found to make sure it advances >=0
-                        auto last_position_tuple = std::get<1>(*last_it_inner_list).back();
-                        data_beg_tmp = std::get<2>(last_position_tuple)+1;
-                        bin_beg_tmp += std::distance(std::get<0>(last_position_tuple),std::get<1>(last_position_tuple))+1;
-                        if(data_beg_tmp>=data_end)break;
-                        if(bin_beg_tmp>=bin_end)break;
-                    }
-                    else {
-                        break;//we can only advance from the perspective of this tree; there was nothing found and the last tree parent is still in charge
-                    }
-                }
-                else{
-                    //the list is empty or unchanged after matching, so we did not find anything
-                    break;
-                }
+            auto pos_begin = possibilities.begin();
+            while(pos_begin != possibilities.end()){
 
-                //check child that deals with searching the far most rest in direction of end to skip the not matching rest
-                auto child_vec = child_vector(*bin_beg_tmp);
+                auto data_beg = data.begin();
+                auto data_beg_tmp = data_beg;
+                auto bin_beg_tmp = bin_beg;
 
-                if (!child_vec.empty()) {//if the input range is too large we else would not get a match
-                    std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, IteratorIn, IteratorIn, std::vector<unsigned char>::iterator>>>, std::size_t>> best_search_list{};
-                    for (const auto &item: child_vec) {
-                        best_search_list.push_back(item->search(bin_beg_tmp, bin_end, input_list));
-                    }
-                    //return the largest match with the lowest offset on the last tree, as far as there is a last tree...
-                    std::sort(best_search_list.begin(), best_search_list.end(), [](auto &a, auto &b) {
-                        return std::get<1>(a) > std::get<1>(b);//sort in descending order on search match size
-                    });
-                    //erase after the matches decrease
-                    if (best_search_list.size() > 1) {
-                        std::size_t max_fit{};
-                        auto best_beg = best_search_list.begin();
-                        while (best_beg != best_search_list.end()) {
-                            max_fit = std::max(max_fit, std::get<1>(*best_beg));
-                            if (std::get<1>(*best_beg) < max_fit) {
-                                //break and delete until end
-                                break;
-                            }
-                            best_beg++;
+                bool first_time = true;
+                while(data_beg_tmp!=data_beg||bin_beg_tmp != bin_beg||first_time){
+                    first_time = false;
+                    data_beg = data_beg_tmp;
+                    bin_beg = bin_beg_tmp;
+
+                    //advance data_beg behind the offset of the last found binary sequence and advance bin_beg behind the size of the found subset
+                    //stop the loop if manually searching matches for the range fails
+                    if(!std::get<0>(input_list).empty() && input_list_tmp != input_list){
+                        auto last_it_outer_list = (--(std::get<0>(input_list).end()));
+                        auto last_it_inner_list = (--(last_it_outer_list->end()));
+
+                        if (std::get<0>(*last_it_inner_list) == this) {//check if tree pointer is the same
+                            //we still found a match on this data so continue advancing data and binary beginning
+                            //set data begin to the position where a subset of the input was found to make sure it advances >=0
+                            auto last_position_tuple = std::get<1>(*last_it_inner_list).back();
+                            data_beg_tmp = std::get<2>(last_position_tuple)+1;
+                            bin_beg_tmp += std::distance(std::get<0>(last_position_tuple),std::get<1>(last_position_tuple))+1;
+                            if(data_beg_tmp>=data_end)break;
+                            if(bin_beg_tmp>=bin_end)break;
                         }
-                        best_search_list.erase(best_beg, best_search_list.end());
+                        else {
+                            break;//we can only advance from the perspective of this tree; there was nothing found and the last tree parent is still in charge
+                        }
+                    }
+                    else{
+                        //the list is empty or unchanged after matching, so we did not find anything
+                        break;
                     }
 
-                    std::get<0>(input_list).splice(std::get<0>(input_list).cend(), std::get<0>(best_search_list[0]));
-                    std::get<1>(input_list) += std::get<1>(best_search_list[0]);
+                    //check child that deals with searching the far most rest in direction of end to skip the not matching rest
+                    auto child_vec = child_vector(*bin_beg_tmp);
+
+                    if (!child_vec.empty()) {//if the input range is too large we else would not get a match
+                        for (const auto &item: child_vec) {
+                            best_search_list.push_back(item->search(bin_beg_tmp, bin_end, *pos_begin));
+                        }
+                    }
+                    //else there is no continueation of searching
+
+                    //do work on matching again for subset of data and input
+                    auto sub_possibilities = vanilla_match_last_tree(data_beg_tmp, data.end(), bin_beg_tmp, bin_end);
+                    possibilities.insert(possibilities.cend(),sub_possibilities.begin(),sub_possibilities.end());//after various match cases as various positions
+                    pos_begin = possibilities.begin()+std::distance(possibilities.begin(),pos_begin);//TODO: check issue with finding correct offset of input
                 }
-            }while (data_beg != data.end());//size of data is at least 1
+
+                pos_begin++;
+            }
+
+            //return the largest match with the lowest offset on the last tree, as far as there is a last tree...
+            std::sort(best_search_list.begin(), best_search_list.end(), [](auto &a, auto &b) {
+                return std::get<1>(a) > std::get<1>(b);//sort in descending order on search match size
+            });
+
+            std::get<0>(*pos_begin).splice(std::get<0>(*pos_begin).cend(), std::get<0>(best_search_list[0]));
+            std::get<1>(*pos_begin) += std::get<1>(best_search_list[0]);
+
             return input_list;
         }
         /*
