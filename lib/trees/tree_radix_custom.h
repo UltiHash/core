@@ -363,15 +363,20 @@ namespace uh::trees {
                 //the inner list carries elements with a tuple holding the tree pointer and a list of valid matches that should be transformed into a sequence of trees
                 //we need to crawl the data of each tree and advance that many new trees until we would match the coming data offset of the original tree
 
-                auto match_beg = std::get<1>(*one_node_analysis).end();
-                auto* tree_ptr_current = std::get<0>(*one_node_analysis);
-                do{
-                    auto out_size = tree_building_sequence(tree_ptr_current,bin_beg,bin_end,std::get<0>(*match_beg),std::get<1>(*match_beg),std::get<2>(*match_beg));
-                    match_beg++;
+                auto match_beg = std::get<1>(*one_node_analysis).begin();
+                while(match_beg != std::get<1>(*one_node_analysis).end()){
+                    auto out_size = tree_building_sequence(std::get<0>(*one_node_analysis),bin_beg,bin_end,std::get<0>(*match_beg),std::get<1>(*match_beg),std::get<2>(*match_beg));
+
+
+                    /*
                     //first case: one match follows the other in a non overlapping manner -> crawl trees and succeed, second case: overlapping -> search again from next tree on and try again
                     if(match_beg != std::get<1>(*one_node_analysis).end()){
-                        if(std::get<2>(*(match_beg-1))+std::distance(std::get<0>(*(match_beg-1)),std::get<1>(*(match_beg-1)))+1>=std::get<2>(*match_beg)){
+                        auto last_find_end_on_data = std::get<2>(*(match_beg-1))+std::distance(std::get<0>(*(match_beg-1)),std::get<1>(*(match_beg-1)))+1;
+                        if(last_find_end_on_data>=std::get<2>(*match_beg)){
                             //overlap -> search on from middle tree
+                            //modify match data pointer by checking tree building flags -> new data offset is now on the middle tree
+                            std::get<0>(*one_node_analysis) = middle_tree_out;
+                            std::get<2>(*match_beg)=std::get<0>(*one_node_analysis)->data_vector().begin()+std::distance(std::get<2>(*(match_beg-1)),std::get<2>(*match_beg));
                         }
                         else{
                             //no overlap, sequential
@@ -379,11 +384,12 @@ namespace uh::trees {
                     }
                     else{
 
-                    }
+                    }*/
 
+                    match_beg = std::get<1>(*one_node_analysis).begin();
                     modified.clear();
                     added.clear();
-                }while(match_beg != std::get<1>(*one_node_analysis).end());
+                }
                 search_element++;
             }
 
