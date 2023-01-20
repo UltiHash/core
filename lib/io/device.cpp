@@ -4,6 +4,17 @@
 namespace uh::io
 {
 
+namespace
+{
+
+// ---------------------------------------------------------------------
+
+constexpr std::streamsize BUFFER_SIZE = 1024 * 1024;
+
+// ---------------------------------------------------------------------
+
+} // namespace
+
 // ---------------------------------------------------------------------
 
 boost_device::boost_device(std::shared_ptr<device> dev)
@@ -44,6 +55,21 @@ std::vector<char> read_to_buffer(device& dev, std::streamsize chunk_size)
     while (read != 0);
 
     return buffer;
+}
+
+// ---------------------------------------------------------------------
+
+std::ostream& operator<<(std::ostream& out, device& d)
+{
+    std::array<char, BUFFER_SIZE> buffer;
+
+    while (d.valid())
+    {
+        auto written = d.read(buffer);
+        out.write(buffer.data(), written);
+    }
+
+    return out;
 }
 
 // ---------------------------------------------------------------------

@@ -79,6 +79,10 @@ std::vector<char> read_to_buffer(
 
 // ---------------------------------------------------------------------
 
+std::ostream& operator<<(std::ostream& out, device& d);
+
+// ---------------------------------------------------------------------
+
 } // namespace uh::io
 
 #endif
