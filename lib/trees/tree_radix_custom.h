@@ -174,6 +174,8 @@ namespace uh::trees {
                 bool total_match = !first_section_tree && !last_section_tree &&
                                    std::distance(child_beg_mid, child_end_mid) == cur_tree->data_vector().size();
 
+                uh::util::compression_custom comp{};
+
                 //search function already determined that this is the tree that needs to fill in the data or to split somehow
                 //cases: insert front tree, insert end tree (same case as having a back insert because the end tree will just have at least 1 element in case of overflow)
                 if (cur_tree->data_vector().empty()) {//how to insert, either empty simple insert or some tree construction anywhere
@@ -182,13 +184,13 @@ namespace uh::trees {
                     middle_tree_out = cur_tree;
                     return std::make_tuple(std::distance(child_beg_mid, child_end_mid),
                                            std::distance(child_beg_mid, child_end_mid),
-                                           uh::util::compression_custom::compress(std::vector<unsigned char>{child_beg_mid, child_end_mid}).size());
+                                           comp.compress(child_beg_mid, child_end_mid).size());
                 } else {
                     if (total_match) {//only a maximum of 1 tree creation or just 0 in case of reference
                         //a total match can still have appending structure
                         std::size_t append_size_compressed{}, append_size_uncompressed{};
                         if (append_tree) {
-                            append_size_compressed = uh::util::compression_custom::compress(std::vector<unsigned char>{child_beg_mid,child_end_mid}).size();
+                            append_size_compressed = comp.compress(child_beg_mid,child_end_mid).size();
                             append_size_uncompressed = std::distance(child_beg_mid, child_end_mid);
                             //either find child is empty and test add tree or add_test to another child tree
                             auto child_vec_append = cur_tree->child_vector(*child_beg_append);
@@ -260,6 +262,8 @@ namespace uh::trees {
                             added.push_back(tree_ptr_last);
 
                             size_integrated += std::distance(child_beg_end, child_end_end) + 1;
+
+                            uh::util::compression_custom comp{};
                             //the last tree is the last tree and may append
                             //appending will be added after middle section in case it is available
                             if (append_tree) {
@@ -268,7 +272,7 @@ namespace uh::trees {
 
                                 size_integrated += std::distance(child_beg_append, child_end_append) + 1;
                                 size_uncompressed += std::distance(child_beg_append, child_end_append) + 1;
-                                size_compressed += uh::util::compression_custom::compress(std::vector<unsigned char>{child_beg_append,child_end_append}).size();
+                                size_compressed += comp.compress(child_beg_append,child_end_append).size();
                                 //put this append tree to the middle tree manually
                                 tree_ptr_last->children.emplace_back(std::vector<tree_radix_custom *>{tree_ptr_append},
                                                                      *child_beg_append);
@@ -297,7 +301,7 @@ namespace uh::trees {
 
                                 size_integrated += std::distance(child_beg_append, child_end_append) + 1;
                                 size_uncompressed += std::distance(child_beg_append, child_end_append) + 1;
-                                size_compressed += uh::util::compression_custom::compress(std::vector<unsigned char>{child_beg_append,child_end_append}).size();
+                                size_compressed += comp.compress(child_beg_append,child_end_append).size();
                                 //put this append tree to the middle tree manually
                                 auto mid_child_vec = tree_ptr_mid->child_vector(*child_beg_append);
                                 if (!mid_child_vec.empty()) {
@@ -455,13 +459,15 @@ namespace uh::trees {
                 bool total_match = !first_section_tree && !last_section_tree &&
                                    std::distance(child_beg_mid, child_end_mid) == cur_tree->data_vector().size();
 
+                uh::util::compression_custom comp{};
+
                 //search function already determined that this is the tree that needs to fill in the data or to split somehow
                 //cases: insert front tree, insert end tree (same case as having a back insert because the end tree will just have at least 1 element in case of overflow)
                 if (cur_tree->data_vector().empty()) {//how to insert, either empty simple insert or some tree construction anywhere
                     //simple insert into data since this seems to be a new node that can contain simple information
                     cur_tree->data_vector() = std::vector<unsigned char>{bin_beg_found, bin_end_found};
                     return std::make_tuple(std::distance(bin_beg, bin_end), std::distance(bin_beg, bin_end),
-                                           uh::util::compression_custom::compress(std::vector<unsigned char>{bin_beg_found, bin_end_found}).size());
+                                           comp.compress(bin_beg_found, bin_end_found).size());
                 } else {
                     if (total_match) {
                         //a total match can still have appending structure
@@ -481,8 +487,8 @@ namespace uh::trees {
                                     (decltype(cur_tree->data_vector().size())) std::distance(bin_beg, bin_end),
                                     (decltype(cur_tree->data_vector().size())) std::distance(child_beg_append,
                                                                                              child_end_append),
-                                    (decltype(cur_tree->data_vector().size())) uh::util::compression_custom::compress(
-                                            std::vector<unsigned char>{child_beg_append, child_end_append}).size());
+                                    (decltype(cur_tree->data_vector().size())) comp.compress(
+                                            child_beg_append, child_end_append).size());
                         }
                         //return implicit 0 with unsigned long
                         return std::make_tuple(
@@ -497,8 +503,8 @@ namespace uh::trees {
                                     (decltype(cur_tree->data_vector().size())) std::distance(bin_beg, bin_end),
                                     (decltype(cur_tree->data_vector().size())) std::distance(child_beg_append,
                                                                                              child_end_append),
-                                    (decltype(cur_tree->data_vector().size())) uh::util::compression_custom::compress(
-                                            std::vector<unsigned char>{child_beg_append, child_end_append}).size());
+                                    (decltype(cur_tree->data_vector().size())) comp.compress(
+                                            child_beg_append, child_end_append).size());
                         }
                         //return implicit 0 with unsigned long
                         //nothing to add on RAM, only splitting up the blocks on disk

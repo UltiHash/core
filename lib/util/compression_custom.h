@@ -18,13 +18,11 @@ namespace uh::util{
             return decompress(input.begin(),input.end());
         }
 
-        template<typename IteratorType>
-        std::vector<unsigned char> compress(IteratorType beg, IteratorType end){
+        std::vector<unsigned char> compress(auto beg, auto end){
             return std::vector<unsigned char>{beg,end};
         }
 
-        template<typename IteratorType>
-        std::vector<unsigned char> decompress(IteratorType beg, IteratorType end){
+        std::vector<unsigned char> decompress(auto beg, auto end){
             return std::vector<unsigned char>{beg,end};
         }
     };
