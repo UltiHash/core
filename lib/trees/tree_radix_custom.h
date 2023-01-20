@@ -516,26 +516,24 @@ namespace uh::trees {
             //cases for search index: its empty or it has content and with that a last tree element
             //cases for last tree if it exists, binary fit in: match from the beginning on, match in the middle, match until the end, total match
             //all lists contain lists with a last element that had multiple matches; add up all matches
-
-            auto outer_most_level = [&](std::tuple<std::size_t, std::size_t, std::size_t> tup, auto list) {
-                auto inner_list_level = [&](std::tuple<std::size_t, std::size_t, std::size_t> tup2, auto tree_tuple) {
+            std::tuple<std::size_t, std::size_t, std::size_t>add_tup{};
+            auto outer_most_level = [&](auto list) {
+                auto inner_list_level = [&](auto tree_tuple) {
                     for (const auto &pos_tup: std::get<1>(tree_tuple)) {
                         auto last_tree = std::get<0>(search_index).back();
                         //check if we have a full match and the input is larger than the data of the last tree
                         auto add_list = tree_test_sequence(std::get<0>(last_tree), bin_beg, bin_end,
                                                            std::get<0>(pos_tup), std::get<1>(pos_tup),
                                                            std::get<2>(pos_tup));//insert into another tree
-                        std::get<0>(tup2) += std::get<0>(add_list);
-                        std::get<1>(tup2) += std::get<1>(add_list);
-                        std::get<2>(tup2) += std::get<2>(add_list);
+                        std::get<0>(add_tup) += std::get<0>(add_list);
+                        std::get<1>(add_tup) += std::get<1>(add_list);
+                        std::get<2>(add_tup) += std::get<2>(add_list);
                     }
-                    return tup2;
                 };
-                return std::accumulate(list.begin(), list.end(), tup, inner_list_level);
+                std::for_each(list.begin(), list.end(), inner_list_level);
             };
             std::tuple<std::size_t, std::size_t, std::size_t> append_list = std::for_each(search_index.begin(),
                                                                                             search_index.end(),
-                                                                                            std::tuple<std::size_t, std::size_t, std::size_t>{},
                                                                                             outer_most_level);
 
             if (std::get<0>(search_index).empty() && std::get<1>(search_index) == 0) {
