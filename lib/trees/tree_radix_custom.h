@@ -558,10 +558,10 @@ namespace uh::trees {
         }
 
         //returns the path of maximum fit and the match size
-        std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::vector<unsigned char>::iterator, std::vector<unsigned char>::iterator, std::vector<unsigned char>::iterator>>>>>, std::size_t>
+        std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::vector<unsigned char>::iterator, std::vector<unsigned char>::iterator, std::vector<unsigned char>::iterator>>>>>, std::size_t>>
                 search(std::vector<unsigned char>::iterator &bin_beg, std::vector<unsigned char>::iterator &bin_end,
-                       std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::vector<unsigned char>::iterator, std::vector<unsigned char>::iterator, std::vector<unsigned char>::iterator>>>>>, std::size_t> input_list =
-                       std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::vector<unsigned char>::iterator, std::vector<unsigned char>::iterator, std::vector<unsigned char>::iterator>>>>>, std::size_t>{}) {
+                       std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::vector<unsigned char>::iterator, std::vector<unsigned char>::iterator, std::vector<unsigned char>::iterator>>>>>>, std::size_t> input_list =
+                       std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::vector<unsigned char>::iterator, std::vector<unsigned char>::iterator, std::vector<unsigned char>::iterator>>>>>>, std::size_t>{}) {
             if (bin_beg == bin_end) {
                 return input_list;
             }
@@ -725,10 +725,12 @@ namespace uh::trees {
 
                     if (!child_vec.empty()) {//recursive search
                         for (const auto &item: child_vec) {
-                            for (const auto &item: (item->search(std::get<2>(*pos_begin), bin_end,
+                            for (const auto &item2: (item->search(std::get<2>(*pos_begin), bin_end,
                                                                  std::get<0>(*pos_begin)))) {
-                                possibilities.emplace_back(item, std::get<1>(*pos_begin), std::get<2>(*pos_begin),
-                                                           false);
+                                for(const auto &route:item2){
+                                    possibilities.emplace_back(route, std::get<1>(*pos_begin), std::get<2>(*pos_begin),
+                                                               false);
+                                }
                             }
                         }
                     }
@@ -794,9 +796,14 @@ namespace uh::trees {
             std::sort(possibilities.begin(), possibilities.end(), [](auto &a, auto &b) {
                 return std::get<0>(std::get<0>(a)).size() >
                        std::get<1>(std::get<0>(b)).size();//sort in descending order on search match size
-            });//TODO: handle rare case where still multiple searches are valid: add to all and return all; multiple recombination for one block are possible
+            });
 
-            return std::get<0>(possibilities[0]);
+            std::vector<decltype(std::get<0>(possibilities[0]))> multi_routing{};
+            std::for_each(possibilities.begin(), possibilities.end(), [&multi_routing](auto &item){
+                multi_routing.push_back(std::get<0>(item));
+            });
+
+            return multi_routing;
         }
         /*
         //add some string into the radix tree, returning the tree nodes where it was compressed and stored along the way
