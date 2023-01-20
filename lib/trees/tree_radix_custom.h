@@ -432,7 +432,7 @@ namespace uh::trees {
         std::tuple<std::size_t, std::size_t, std::size_t>
         add_test(std::vector<unsigned char>::iterator &bin_beg,std::vector<unsigned char>::iterator &bin_end) {
             //first search existing structure and add into the last tree to insert potentially missing information
-            std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::vector<unsigned char>::iterator, std::vector<unsigned char>::iterator, std::vector<unsigned char>::iterator>>>>>, std::size_t> search_index = search(
+            std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::vector<unsigned char>::iterator, std::vector<unsigned char>::iterator, std::vector<unsigned char>::iterator>>>>>, std::size_t>> search_index = search(
                     bin_beg, bin_end);
             //uncompressed input
             if (bin_beg == bin_end || std::distance(bin_beg, bin_end) < 1){
@@ -530,28 +530,31 @@ namespace uh::trees {
             //cases for last tree if it exists, binary fit in: match from the beginning on, match in the middle, match until the end, total match
             //all lists contain lists with a last element that had multiple matches; add up all matches
             std::tuple<std::size_t, std::size_t, std::size_t>add_tup{};
-            auto outer_most_level = [&](auto list) {
-                auto inner_list_level = [&](auto tree_tuple) {
-                    for (const auto &pos_tup: std::get<1>(tree_tuple)) {
-                        auto last_tree = std::get<0>(search_index).back();
-                        //check if we have a full match and the input is larger than the data of the last tree
-                        auto add_list = tree_test_sequence(std::get<0>(last_tree), bin_beg, bin_end,
-                                                           std::get<0>(pos_tup), std::get<1>(pos_tup),
-                                                           std::get<2>(pos_tup));//insert into another tree
-                        std::get<0>(add_tup) += std::get<0>(add_list);
-                        std::get<1>(add_tup) += std::get<1>(add_list);
-                        std::get<2>(add_tup) += std::get<2>(add_list);
-                    }
+            for(const single_route:search_index){
+                auto outer_most_level = [&](auto list) {
+                    auto inner_list_level = [&](auto tree_tuple) {
+                        for (const auto &pos_tup: std::get<1>(tree_tuple)) {
+                            auto last_tree = std::get<0>(single_route).back();
+                            //check if we have a full match and the input is larger than the data of the last tree
+                            auto add_list = tree_test_sequence(std::get<0>(last_tree), bin_beg, bin_end,
+                                                               std::get<0>(pos_tup), std::get<1>(pos_tup),
+                                                               std::get<2>(pos_tup));//insert into another tree
+                            std::get<0>(add_tup) += std::get<0>(add_list);
+                            std::get<1>(add_tup) += std::get<1>(add_list);
+                            std::get<2>(add_tup) += std::get<2>(add_list);
+                        }
+                    };
+                    std::for_each(list.begin(), list.end(), inner_list_level);
                 };
-                std::for_each(list.begin(), list.end(), inner_list_level);
-            };
-            std::tuple<std::size_t, std::size_t, std::size_t> append_list = std::for_each(search_index.begin(),
-                                                                                            search_index.end(),
-                                                                                            outer_most_level);
+                std::for_each(single_route.begin(),single_route.end(),outer_most_level);
 
-            if (std::get<0>(search_index).empty() && std::get<1>(search_index) == 0) {
-                append_list = tree_test_sequence(this, bin_beg, bin_beg, data.begin(), data.end(),
-                                                 data.end());//insert into this tree, no matches, only first character must match
+                if (std::get<0>(single_route).empty() && std::get<1>(single_route) == 0) {
+                    auto append_list = tree_test_sequence(this, bin_beg, bin_beg, data.begin(), data.end(),
+                                                          data.end());//insert into this tree, no matches, only first character must match
+                    std::get<0>(add_tup) += std::get<0>(append_list);
+                    std::get<1>(add_tup) += std::get<1>(append_list);
+                    std::get<2>(add_tup) += std::get<2>(append_list);
+                }
             }
 
             return append_list;
@@ -560,8 +563,8 @@ namespace uh::trees {
         //returns the path of maximum fit and the match size
         std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::vector<unsigned char>::iterator, std::vector<unsigned char>::iterator, std::vector<unsigned char>::iterator>>>>>, std::size_t>>
                 search(std::vector<unsigned char>::iterator &bin_beg, std::vector<unsigned char>::iterator &bin_end,
-                       std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::vector<unsigned char>::iterator, std::vector<unsigned char>::iterator, std::vector<unsigned char>::iterator>>>>>>, std::size_t> input_list =
-                       std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::vector<unsigned char>::iterator, std::vector<unsigned char>::iterator, std::vector<unsigned char>::iterator>>>>>>, std::size_t>{}) {
+                       std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::vector<unsigned char>::iterator, std::vector<unsigned char>::iterator, std::vector<unsigned char>::iterator>>>>>, std::size_t>> input_list =
+                       std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::vector<unsigned char>::iterator, std::vector<unsigned char>::iterator, std::vector<unsigned char>::iterator>>>>>, std::size_t>>{}) {
             if (bin_beg == bin_end) {
                 return input_list;
             }
