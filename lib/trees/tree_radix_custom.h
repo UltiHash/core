@@ -24,7 +24,6 @@ namespace uh::trees {
         std::vector<std::tuple<std::vector<tree_radix_custom *>, unsigned char>> children{};//multiple targets that can follow a node for each letter
         std::vector<unsigned char> data{};//any binary vector string
         DataReference data_ref{};
-        //TODO: add block pos depth describing how deep the block was matched into the system
         std::size_t block_swarm_offset{};//offset of block beginning from root
     public:
         tree_radix_custom() = default;
@@ -78,8 +77,14 @@ namespace uh::trees {
                 //the reason why there is the correct character available but no match detected by search is the MINIMUM_MATCH_SIZE that failed, we will respect that
                 if(std::ranges::find(child_vec_append.begin(),child_vec_append.end(),input_tree)==child_vec_append.end()){
                     child_vec_append.emplace_back(input_tree);
+                    std::sort(child_vec_append.begin(),child_vec.end(),[](&auto a,&auto b){
+                        return lexicographical_compare(a->data_vector().begin(),a->data_vector().end(),b->data_vector().begin(),b->data_vector().end());
+                    });
                 }
             }
+            std::sort(children.begin(),children.end(),[](auto &a, auto &b){
+                return std::get<1>(a)<std::get<1>(b);
+            });
         }
 
         bool child_delete(tree_radix_custom* input_tree,unsigned char first_letter){
@@ -221,6 +226,7 @@ namespace uh::trees {
                                    std::distance(child_beg_mid, child_end_mid) == cur_tree->data_vector().size();
 
                 uh::util::compression_custom comp{};
+                auto out_list = std::list<tree_radix_custom *>{};
 
                 //search function already determined that this is the tree that needs to fill in the data or to split somehow
                 //cases: insert front tree, insert end tree (same case as having a back insert because the end tree will just have at least 1 element in case of overflow)
@@ -228,19 +234,22 @@ namespace uh::trees {
                     //simple insert into data since this seems to be a new node that can contain simple information
                     cur_tree->data_vector() = std::vector<unsigned char>{child_beg_mid, child_end_mid};
                     middle_tree_out = cur_tree;
+                    out_list.push_back(middle_tree_out);
                     return std::make_tuple(std::distance(child_beg_mid, child_end_mid),
                                            std::distance(child_beg_mid, child_end_mid),
-                                           comp.compress(child_beg_mid, child_end_mid).size());
+                                           comp.compress(child_beg_mid, child_end_mid).size(),out_list);
                 } else {
                     if (total_match) {//only a maximum of 1 tree creation or just 0 in case of reference
                         //a total match can still have appending structure
                         std::size_t append_size_compressed{}, append_size_uncompressed{};
+                        out_list.push_back(cur_tree);
                         if (append_tree) {
                             append_size_compressed = comp.compress(child_beg_mid,child_end_mid).size();
                             append_size_uncompressed = std::distance(child_beg_mid, child_end_mid);
                             //either find child is empty and test add tree or add_test to another child tree
 
                             auto *tree_ptr_tmp = new tree_radix_custom(child_beg_append, child_end_append);
+                            out_list.push_back(tree_ptr_tmp);
                             tree_ptr_tmp->block_swarm_offset = cur_tree->block_swarm_offset + cur_tree->data_vector().size();
                             cur_tree->child_put(tree_ptr_tmp,*child_beg_append);
                             added.push_back(tree_ptr_tmp);
@@ -250,7 +259,7 @@ namespace uh::trees {
                         return std::make_tuple(
                                 (decltype(cur_tree->data_vector().size())) append_size_uncompressed,
                                 (decltype(cur_tree->data_vector().size())) append_size_uncompressed,
-                                (decltype(cur_tree->data_vector().size())) append_size_compressed);//nothing to add, only reference
+                                (decltype(cur_tree->data_vector().size())) append_size_compressed,out_list);//nothing to add, only reference
                     } else {
                         //first section tree, after split try
                         //data will split into a maximum of 3 parts and by that will add 2 more tree nodes on front and/or back; start with first section
@@ -266,6 +275,7 @@ namespace uh::trees {
                             //new middle tree required
                             tree_ptr_mid = new tree_radix_custom(child_beg_mid, child_end_mid);
                             tree_ptr_first = cur_tree;
+                            out_list.push_back(tree_ptr_first);
                             tree_ptr_mid->block_swarm_offset = tree_ptr_first->block_swarm_offset + tree_ptr_first->data_vector().size();
                             tree_ptr_mid->children = cur_tree->children;
                             cur_tree->children.clear();
@@ -282,6 +292,7 @@ namespace uh::trees {
                             modified.push_back(tree_ptr_mid);
                             size_integrated += std::distance(child_beg_mid, child_end_mid) + 1;
                         }
+                        out_list.push_back(tree_ptr_mid);
                         middle_tree_out = tree_ptr_mid;
 
                         tree_radix_custom *tree_ptr_last;
@@ -289,6 +300,7 @@ namespace uh::trees {
                             //create last tree
                             tree_ptr_last = new tree_radix_custom(child_beg_end, child_end_end);
                             //transfer information of middle tree to last tree and copy the children also to append tree in case it exists
+                            out_list.push_back(tree_ptr_last);
                             tree_ptr_last->block_swarm_offset = tree_ptr_mid->block_swarm_offset + tree_ptr_mid->data_vector().size();
                             tree_ptr_last->children = tree_ptr_mid->children;
                             tree_ptr_mid->children.clear();
@@ -303,6 +315,7 @@ namespace uh::trees {
                             //appending will be added after middle section in case it is available
                             if (append_tree) {
                                 tree_ptr_append = new tree_radix_custom(child_beg_append, child_end_append);
+                                out_list.push_back(tree_ptr_append);
                                 tree_ptr_append->block_swarm_offset = tree_ptr_mid->block_swarm_offset + tree_ptr_mid->data_vector().size();
                                 added.push_back(tree_ptr_append);
 
@@ -319,6 +332,7 @@ namespace uh::trees {
                             //appending will be added after middle section in case it is available
                             if (append_tree) {
                                 tree_ptr_append = new tree_radix_custom(child_beg_append, child_end_append);
+                                out_list.push_back(tree_ptr_append);
                                 tree_ptr_append->block_swarm_offset = tree_ptr_mid->block_swarm_offset + tree_ptr_mid->data_vector().size();
                                 added.push_back(tree_ptr_append);
 
@@ -395,46 +409,33 @@ namespace uh::trees {
                         continue;
                     }
 
-                    auto match_beg = std::get<1>(*one_node_analysis).begin();
-                    if(first_time){
-                        tree_offset = std::get<0>(*one_node_analysis);
-                        first_time = false;
-                    }
+                    tree_offset = std::get<0>(*one_node_analysis);
 
-                    while(match_beg != std::get<1>(*one_node_analysis).end()){
+                    auto match_beg = std::get<1>(*one_node_analysis).begin();
+                    while(match_beg != std::get<1>(*one_node_analysis).end()){//update loop for
                         auto out_size = tree_building_sequence(std::get<0>(*one_node_analysis),bin_beg,bin_end,std::get<0>(*match_beg),std::get<1>(*match_beg),std::get<2>(*match_beg));
                         std::get<0>(out_change_tuple)+=std::get<0>(out_size);
                         std::get<1>(out_change_tuple)+=std::get<1>(out_size);
                         std::get<2>(out_change_tuple)+=std::get<2>(out_size);
+                        auto out_list = std::get<3>(out_size);
 
-                        std::get<1>(*one_node_analysis).erase(match_beg);
                         binary_advance+=std::distance(std::get<0>(*match_beg),std::get<1>(*match_beg))+1;
 
-                        match_beg = std::get<1>(*one_node_analysis).begin();
-                        if(match_beg != std::get<1>(*one_node_analysis).end()){//can be optimized
-                            //search again and break
-                            auto search_index_to_modify = middle_tree_out->search(bin_beg+binary_advance, bin_end);
-                            //TODO: stop children should be any of the children of the first tree of the next sublist hinted by the first character of that tree,
-                            // find the original last tree pointer of the sublist on search_index_to_modify and extract new following tree nodes; if any of those nodes is the beginning of the next sublist
-                            // concatenate both and search from middle tree until the end tree pointer of that list, repeat
+                        //search again and break
+                        auto search_index_to_modify = middle_tree_out->search(bin_beg+binary_advance, bin_end);
+                        //TODO: stop children should be any of the children of the first tree of the next sublist hinted by the first character of that tree,
+                        // find the original last tree pointer of the sublist on search_index_to_modify and extract new following tree nodes; if any of those nodes is the beginning of the next sublist
+                        // concatenate both and search from middle tree until the end tree pointer of that list, repeat
 
-                            //einfach den middle tree bis zu den Kindern von last tree so lange bearbeiten, bis er sich nicht mehr verändert oder sich in weitere baumkinder aufspaltet
-                            //Ersetzungen eines endbaums muss auf allen search_index parteien aktualisiert werden
-                            broken_loop = true;
-                            break;
-                        }
-                    }
-                    if(!broken_loop){
-                        first_time = true;
+                        //einfach den middle tree bis zu den Kindern von last tree so lange bearbeiten, bis er sich nicht mehr verändert oder sich in weitere baumkinder aufspaltet
+                        //Ersetzungen eines endbaums muss auf allen search_index parteien aktualisiert werden
+
                         std::get<3>(out_change_tuple).emplace_back(tree_offset,modified,added);
                         modified.clear();
                         added.clear();
-                        search_element++;
+                        match_beg++;
                     }
-                    else{
-                        search_element = std::get<0>(search_index).begin();
-                    }
-                    broken_loop = false;
+                    search_element++;
                 }
                 if(std::get<0>(out_change_list)>0)out_change_tuple_out.push_back(out_change_tuple);//only add change list if there was anything integrated
 
