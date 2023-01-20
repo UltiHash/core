@@ -260,6 +260,11 @@ void server::handle_next_chunk(iostream& io)
 
     std::vector<char> buffer(req.max_size);
     auto count = m_block->read(std::span<char>(buffer.begin(), buffer.end()));
+    if (count == 0)
+    {
+        m_state = server_state::normal;
+        m_block.reset();
+    }
 
     write(io, status{ status::OK });
     write(io, next_chunk::response{ .content = std::span<char>(buffer.begin(), count) });
