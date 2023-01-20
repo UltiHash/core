@@ -66,6 +66,50 @@ namespace uh::trees {
             return {};
         }
 
+        void child_put(tree_radix_custom* input_tree,unsigned char first_letter){
+            auto child_vec_append = child_vector(first_letter);
+            if (child_vec_append.empty()) {
+                //child would have been created and the append size would have been added to a new tree
+                children.emplace_back(std::vector<tree_radix_custom *>{input_tree},first_letter);
+            } else {
+                //on search there was no match on the tree node, so we assume that a new node referenced by this node will be created carrying append
+                //the reason why there is the correct character available but no match detected by search is the MINIMUM_MATCH_SIZE that failed, we will respect that
+                if(std::ranges::find(child_vec_append.begin(),child_vec_append.end(),input_tree)==child_vec_append.end()){
+                    child_vec_append.push_back(tree_ptr_tmp);
+                }
+            }
+        }
+
+        bool child_delete(tree_radix_custom* input_tree,unsigned char first_letter){
+            auto child_vec_append = child_vector(first_letter);
+            if (child_vec_append.empty()) {
+                return false;
+            } else {
+                //on search there was no match on the tree node, so we assume that a new node referenced by this node will be created carrying append
+                //the reason why there is the correct character available but no match detected by search is the MINIMUM_MATCH_SIZE that failed, we will respect that
+                auto find_beg = std::ranges::find(child_vec_append.begin(),child_vec_append.end(),input_tree);
+                if(find_beg==child_vec_append.end()){
+                    child_vec_append.erase(find_beg);
+                    if(child_vec_append.empty()){
+                        return child_delete_letter(first_letter);
+                    }
+                    return true;
+                }
+                else return false;
+            }
+        }
+
+        bool child_delete_letter(unsigned char delete_letter){
+            auto item_beg = children.begin();
+            while (item_beg != children.end()) {
+                if (std::get<1>(*item_beg) == delete_letter) {
+                    children.erase(item_beg);
+                    return true;
+                }
+            }
+            return false;
+        }
+
     private:
         std::vector<std::tuple<std::vector<unsigned char>::iterator,std::vector<unsigned char>::iterator,std::vector<unsigned char>::iterator>> compare_ultihash(std::vector<unsigned char>::iterator &data_beg, std::vector<unsigned char>::iterator &data_end, std::vector<unsigned char>::iterator &input_beg, std::vector<unsigned char>::iterator &input_end) {
             if (std::distance(input_beg, input_end) > std::distance(data_beg, data_end))
