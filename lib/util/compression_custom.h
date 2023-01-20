@@ -9,6 +9,7 @@
 
 namespace uh::util{
     class compression_custom {
+    public:
 
         std::vector<unsigned char> compress(const std::vector<unsigned char> &input){
             return compress(input.begin(),input.end());
