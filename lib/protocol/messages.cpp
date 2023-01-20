@@ -275,11 +275,7 @@ void write(std::ostream& out, const next_chunk::response& response)
 void read(std::istream& in, next_chunk::response& response)
 {
     check_status(in);
-
-    next_chunk::response tmp;
-    read(in, tmp.content);
-
-    std::swap(tmp, response);
+    read(in, response.content);
 }
 
 // ---------------------------------------------------------------------

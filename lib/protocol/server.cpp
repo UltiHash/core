@@ -185,7 +185,7 @@ void server::handle_read_block(iostream& io)
 
     m_block = on_read_block(std::move(req.hash));
 
-    m_state = server_state::normal;
+    m_state = server_state::reading;
 
     write(io, status{ status::OK });
     io.flush();

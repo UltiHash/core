@@ -18,7 +18,13 @@ read_block_device::read_block_device(client& c)
 
 read_block_device::~read_block_device()
 {
-    m_client.reset();
+    try
+    {
+        m_client.reset();
+    }
+    catch (...)
+    {
+    }
 }
 
 // ---------------------------------------------------------------------
