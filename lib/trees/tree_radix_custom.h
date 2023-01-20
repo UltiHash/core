@@ -357,40 +357,53 @@ namespace uh::trees {
             //std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<IteratorIn, IteratorIn, std::vector<unsigned char>::iterator>>>>, std::size_t>
             std::list<std::tuple<tree_radix_custom *,std::list<tree_radix_custom *>,std::list<tree_radix_custom *>>>out_change_list{};
             auto search_element = std::get<0>(search_index).begin();
-            for (search_element != std::get<0>(search_index).end()) {
+            std::size_t binary_advance{};
+            tree_radix_custom* tree_offset;
+            bool broken_loop = false;
+            bool first_time = true;
+            while (search_element != std::get<0>(search_index).end()) {
                 //master list element contains a list containing tree pointers with vectors that totally matched, last element did not completely match anymore; inner list carries at least one element
                 auto one_node_analysis = search_element->end()-1;//last element did not match completely
                 //the inner list carries elements with a tuple holding the tree pointer and a list of valid matches that should be transformed into a sequence of trees
                 //we need to crawl the data of each tree and advance that many new trees until we would match the coming data offset of the original tree
 
+                if(std::get<1>(*one_node_analysis).empty()){
+                    //delete the containing list, we are done here
+                    std::get<0>(search_index).erase(one_node_analysis);
+                    search_element = std::get<0>(search_index).begin();
+                    continue;
+                }
+
                 auto match_beg = std::get<1>(*one_node_analysis).begin();
+                if(first_time||broken_loop){
+                    tree_offset = std::get<0>(*one_node_analysis);
+                    first_time = false;
+                    broken_loop = false;
+                }
+
                 while(match_beg != std::get<1>(*one_node_analysis).end()){
                     auto out_size = tree_building_sequence(std::get<0>(*one_node_analysis),bin_beg,bin_end,std::get<0>(*match_beg),std::get<1>(*match_beg),std::get<2>(*match_beg));
-
-
-                    /*
-                    //first case: one match follows the other in a non overlapping manner -> crawl trees and succeed, second case: overlapping -> search again from next tree on and try again
-                    if(match_beg != std::get<1>(*one_node_analysis).end()){
-                        auto last_find_end_on_data = std::get<2>(*(match_beg-1))+std::distance(std::get<0>(*(match_beg-1)),std::get<1>(*(match_beg-1)))+1;
-                        if(last_find_end_on_data>=std::get<2>(*match_beg)){
-                            //overlap -> search on from middle tree
-                            //modify match data pointer by checking tree building flags -> new data offset is now on the middle tree
-                            std::get<0>(*one_node_analysis) = middle_tree_out;
-                            std::get<2>(*match_beg)=std::get<0>(*one_node_analysis)->data_vector().begin()+std::distance(std::get<2>(*(match_beg-1)),std::get<2>(*match_beg));
-                        }
-                        else{
-                            //no overlap, sequential
-                        }
-                    }
-                    else{
-
-                    }*/
+                    std::get<1>(*one_node_analysis).erase(match_beg);
+                    binary_advance+=std::distance(std::get<0>(*match_beg),std::get<1>(*match_beg))+1;
 
                     match_beg = std::get<1>(*one_node_analysis).begin();
+                    if(match_beg != std::get<1>(*one_node_analysis).end()){//can be optimized
+                        //search again and break
+                        search_index = middle_tree_out->search(bin_beg+binary_advance, bin_end);
+                        broken_loop = true;
+                        break;
+                    }
+                }
+                if(!broken_loop){
+                    first_time = true;
+                    out_change_list.emplace_back(tree_offset,modified,added);
                     modified.clear();
                     added.clear();
+                    search_element++;
                 }
-                search_element++;
+                else{
+                    search_element = std::get<0>(search_index).begin();
+                }
             }
 
             //tree_building_sequence
@@ -431,7 +444,7 @@ namespace uh::trees {
         }
 
         //returns total size integrated, new space used uncompressed, new space used compressed
-        //calculates EXACT size of data to be integrated to be communicated to agency to determine optimal storage location
+        //calculates ESTIMATE size of data to be integrated to be communicated to agency to determine optimal storage location
         template<typename IteratorIn>
         std::tuple<std::size_t, std::size_t, std::size_t>
         add_test(IteratorIn bin_beg,
