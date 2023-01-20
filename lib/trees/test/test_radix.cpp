@@ -14,7 +14,7 @@
 // ------------- Tests Follow --------------
 BOOST_AUTO_TEST_CASE( constructor )
 {
-    uh::trees::tree_radix_custom t;
+    uh::trees::tree_radix_custom<std::vector<unsigned char>> t;
     /*
     BOOST_CHECK(!t.has_children());
     uh::trees::tree_radix_custom t_hello("Hello World");
@@ -117,8 +117,8 @@ BOOST_AUTO_TEST_CASE( search_test )
 
 BOOST_AUTO_TEST_CASE( insert_test )
 {
-    uh::trees::tree_radix_custom t_nil1;
-    uh::trees::tree_radix_custom t_nil2;
+    uh::trees::tree_radix_custom<std::vector<unsigned char>> t_nil1;
+    uh::trees::tree_radix_custom<std::vector<unsigned char>> t_nil2;
     //check search on empty tree
     //check search on filled tree
     /*

@@ -16,10 +16,9 @@
 namespace uh::trees {
     //because it takes at least 2 bytes to describe a deeper encoding action
 #define MINIMUM_MATCH_SIZE SHA512_DIGEST_LENGTH+sizeof(unsigned long)*TIME_STAMPS_ON_BLOCK+SHA256_DIGEST_LENGTH+3+5//the overhead of storing the block plus the size of basic storage pointer
-    typedef struct tree_radix_custom tree_radix_custom;
 
-    template<typename DataReference>
-    struct tree_radix_custom {
+    template<class DataReference>
+    class tree_radix_custom {
     protected:
         //the first element of data is cut off to children except on root if it's a new tree
         std::vector<std::tuple<std::vector<tree_radix_custom *>, unsigned char>> children{};//multiple targets that can follow a node for each letter
@@ -116,8 +115,8 @@ namespace uh::trees {
                 } while (input_beg_tmp != input_end);
                 re_enter = std::max(data_beg + 1, re_enter);
                 //last input count reversed
-                if (std::distance(input_beg, input_end_tmp - broken) >= MINIMUM_MATCH_SIZE) {
-                    matches.emplace_back(data_beg, input_beg, input_end_tmp - broken);
+                if (std::distance(input_beg, input_beg_tmp - broken) >= MINIMUM_MATCH_SIZE) {
+                    matches.emplace_back(data_beg, input_beg, input_beg_tmp - broken);
                 }
                 data_beg = re_enter;
             } while (data_beg != data_end);
@@ -139,7 +138,7 @@ namespace uh::trees {
                     bin_beg, bin_end)) {
             //uncompressed input
             if (bin_beg == bin_end || std::distance(bin_beg, bin_end) < 1) {
-                return input_list;
+                return {};
             }
             //some element and an end element at least required
             bool first_section_tree,last_section_tree,append_tree,total_match;
@@ -193,12 +192,12 @@ namespace uh::trees {
                                                                                             child_end_mid).size();
                             append_size_uncompressed = std::distance(child_beg_mid, child_end_mid);
                             //either find child is empty and test add tree or add_test to another child tree
-                            auto child_vec_append = child_vector(*child_beg_append);
+                            auto child_vec_append = cur_tree->child_vector(*child_beg_append);
                             auto *tree_ptr_tmp = new tree_radix_custom(child_beg_append, child_end_append);
                             added.push_back(tree_ptr_tmp);
-                            if (child_vec.empty()) {
+                            if (child_vec_append.empty()) {
                                 //child would have been created and the append size would have been added to a new tree
-                                children.emplace_back(std::vector<tree_radix_custom *>{tree_ptr_tmp},
+                                cur_tree->children.emplace_back(std::vector<tree_radix_custom *>{tree_ptr_tmp},
                                                       *child_beg_append);
                             } else {
                                 //on search there was no match on the tree node, so we assume that a new node referenced by this node will be created carrying append
@@ -342,8 +341,8 @@ namespace uh::trees {
 
                         return std::make_tuple(
                                 (decltype(cur_tree->data_vector().size())) size_integrated,
-                                (decltype(cur_tree->data_vector().size())) append_size_uncompressed,
-                                (decltype(cur_tree->data_vector().size())) append_size_compressed, out_list);
+                                (decltype(cur_tree->data_vector().size())) size_uncompressed,
+                                (decltype(cur_tree->data_vector().size())) size_compressed);
                     }
                 }
             };
@@ -353,8 +352,8 @@ namespace uh::trees {
             //all lists contain lists with a last element that had multiple matches; add up all matches
 
             //std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<IteratorIn, IteratorIn, std::vector<unsigned char>::iterator>>>>, std::size_t>
-            std::list<std::tuple<tree_radix_custom *,std::list<tree_radix_custom *>,std::list<tree_radix_custom *>>>out_change_list{};
             auto search_element = std::get<0>(search_index).begin();
+            std::tuple<std::size_t, std::size_t, std::size_t, std::list<std::tuple<tree_radix_custom *,std::list<tree_radix_custom *>,std::list<tree_radix_custom *>>>> out_change_tuple{};
             std::size_t binary_advance{};
             tree_radix_custom* tree_offset;
             bool broken_loop = false;
@@ -373,14 +372,17 @@ namespace uh::trees {
                 }
 
                 auto match_beg = std::get<1>(*one_node_analysis).begin();
-                if(first_time||broken_loop){
+                if(first_time){
                     tree_offset = std::get<0>(*one_node_analysis);
                     first_time = false;
-                    broken_loop = false;
                 }
 
                 while(match_beg != std::get<1>(*one_node_analysis).end()){
                     auto out_size = tree_building_sequence(std::get<0>(*one_node_analysis),bin_beg,bin_end,std::get<0>(*match_beg),std::get<1>(*match_beg),std::get<2>(*match_beg));
+                    std::get<0>(out_change_tuple)+=std::get<0>(out_size);
+                    std::get<1>(out_change_tuple)+=std::get<1>(out_size);
+                    std::get<2>(out_change_tuple)+=std::get<2>(out_size);
+
                     std::get<1>(*one_node_analysis).erase(match_beg);
                     binary_advance+=std::distance(std::get<0>(*match_beg),std::get<1>(*match_beg))+1;
 
@@ -394,7 +396,7 @@ namespace uh::trees {
                 }
                 if(!broken_loop){
                     first_time = true;
-                    out_change_list.emplace_back(tree_offset,modified,added);
+                    std::get<3>(out_change_tup).emplace_back(tree_offset,modified,added);
                     modified.clear();
                     added.clear();
                     search_element++;
@@ -402,37 +404,10 @@ namespace uh::trees {
                 else{
                     search_element = std::get<0>(search_index).begin();
                 }
+                broken_loop = false;
             }
 
-            //tree_building_sequence
-
-            if (std::get<0>(search_index).empty() && std::get<1>(search_index) == 0) {
-                append_list = tree_test_sequence(this, bin_beg, bin_beg, data.begin(), data.end(),
-                                                 data.end());//insert into this tree, no matches, only first character must match
-            }
-
-            auto outer_most_level = [&](std::tuple<std::size_t, std::size_t, std::size_t> tup, auto list) {
-                auto inner_list_level = [&](std::tuple<std::size_t, std::size_t, std::size_t> tup2, auto tree_tuple) {
-                    for (const auto &pos_tup: std::get<1>(tree_tup)) {
-                        auto last_tree = std::get<0>(search_index).back();
-                        //check if we have a full match and the input is larger than the data of the last tree
-                        auto add_list = tree_test_sequence(std::get<0>(last_tree), bin_beg, bin_end,
-                                                           std::get<0>(pos_tup), std::get<1>(pos_tup),
-                                                           std::get<2>(pos_tup));//insert into another tree
-                        std::get<0>(tup2) += std::get<0>(add_list);
-                        std::get<1>(tup2) += std::get<1>(add_list);
-                        std::get<2>(tup2) += std::get<2>(add_list);
-                    }
-                };
-                return std::accumulate(list.begin(), list.end(), tup, inner_list_level);
-            };
-            std::tuple<std::size_t, std::size_t, std::size_t> append_list = std::accumulate(search_index.begin(),
-                                                                                            search_index.end(),
-                                                                                            std::tuple<std::size_t, std::size_t, std::size_t>{},
-                                                                                            outer_most_level);
-
-
-            return append_list;
+            return out_change_tuple;
         }
 
     protected:
