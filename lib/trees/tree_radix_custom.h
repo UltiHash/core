@@ -237,18 +237,10 @@ namespace uh::trees {
                             append_size_compressed = comp.compress(child_beg_mid,child_end_mid).size();
                             append_size_uncompressed = std::distance(child_beg_mid, child_end_mid);
                             //either find child is empty and test add tree or add_test to another child tree
-                            auto child_vec_append = cur_tree->child_vector(*child_beg_append);
+
                             auto *tree_ptr_tmp = new tree_radix_custom(child_beg_append, child_end_append);
+                            cur_tree->child_put(tree_ptr_tmp,*child_beg_append);
                             added.push_back(tree_ptr_tmp);
-                            if (child_vec_append.empty()) {
-                                //child would have been created and the append size would have been added to a new tree
-                                cur_tree->children.emplace_back(std::vector<tree_radix_custom *>{tree_ptr_tmp},
-                                                      *child_beg_append);
-                            } else {
-                                //on search there was no match on the tree node, so we assume that a new node referenced by this node will be created carrying append
-                                //the reason why there is the correct character available but no match detected by search is the MINIMUM_MATCH_SIZE that failed, we will respect that
-                                child_vec_append.push_back(tree_ptr_tmp);
-                            }
                         }
                         middle_tree_out = cur_tree;
                         //return implicit 0 with unsigned long
@@ -278,13 +270,7 @@ namespace uh::trees {
 
                             size_integrated += std::distance(child_beg_beg, child_end_beg) + 1;
                             //try to add the reference entry to middle tree on first tree
-                            auto first_child_vec = tree_ptr_first->child_vector(*child_beg_mid);
-                            if (!first_child_vec.empty()) {
-                                first_child_vec.push_back(tree_ptr_mid);
-                            } else {
-                                tree_ptr_first->children.emplace_back(std::vector<tree_radix_custom *>{tree_ptr_mid},
-                                                                      *child_beg_mid);
-                            }
+                            tree_ptr_first->child_put(tree_ptr_mid,*child_beg_mid);
                             added.push_back(tree_ptr_mid);
                         } else {
                             //the current tree stays fundament
@@ -318,24 +304,10 @@ namespace uh::trees {
                                 size_uncompressed += std::distance(child_beg_append, child_end_append) + 1;
                                 size_compressed += comp.compress(child_beg_append,child_end_append).size();
                                 //put this append tree to the middle tree manually
-                                tree_ptr_last->children.emplace_back(std::vector<tree_radix_custom *>{tree_ptr_append},
-                                                                     *child_beg_append);
-                                auto mid_child_vec = tree_ptr_mid->child_vector(*child_beg_append);
-                                if (!mid_child_vec.empty()) {
-                                    mid_child_vec.push_back(tree_ptr_append);
-                                } else {
-                                    tree_ptr_mid->children.emplace_back(
-                                            std::vector<tree_radix_custom *>{tree_ptr_append}, *child_beg_append);
-                                }
+                                tree_ptr_mid->child_put(tree_ptr_append,*child_beg_append);
                             }
                             //the last tree is still following the middle tree
-                            auto mid_child_vec = tree_ptr_mid->child_vector(*child_beg_end);
-                            if (!mid_child_vec.empty()) {
-                                mid_child_vec.push_back(tree_ptr_last);
-                            } else {
-                                tree_ptr_mid->children.emplace_back(std::vector<tree_radix_custom *>{tree_ptr_last},
-                                                                    *child_beg_end);
-                            }
+                            tree_ptr_mid->child_put(tree_ptr_last,*child_beg_end);
                         } else {
                             //the middle tree is the last tree and may append
                             //appending will be added after middle section in case it is available
@@ -347,13 +319,7 @@ namespace uh::trees {
                                 size_uncompressed += std::distance(child_beg_append, child_end_append) + 1;
                                 size_compressed += comp.compress(child_beg_append,child_end_append).size();
                                 //put this append tree to the middle tree manually
-                                auto mid_child_vec = tree_ptr_mid->child_vector(*child_beg_append);
-                                if (!mid_child_vec.empty()) {
-                                    mid_child_vec.push_back(tree_ptr_append);
-                                } else {
-                                    tree_ptr_mid->children.emplace_back(
-                                            std::vector<tree_radix_custom *>{tree_ptr_append}, *child_beg_append);
-                                }
+                                tree_ptr_mid->child_put(tree_ptr_append,*child_beg_append);
                             }
                         }
 
