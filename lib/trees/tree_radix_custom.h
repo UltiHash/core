@@ -194,9 +194,9 @@ namespace uh::trees {
             //some element and an end element at least required
             bool first_section_tree,last_section_tree,append_tree,total_match;
             std::list<tree_radix_custom*>modified{},added{};
-            tree_radix_custom* middle_tree_out;
+            tree_radix_custom* middle_tree_out,last_tree_out;
 
-            auto tree_building_sequence = [&first_section_tree,&last_section_tree,&append_tree,&total_match,&modified,&added,&middle_tree_out](tree_radix_custom *cur_tree, std::vector<unsigned char>::iterator bin_beg_incoming,
+            auto tree_building_sequence = [&first_section_tree,&last_section_tree,&append_tree,&total_match,&modified,&added,&middle_tree_out,&last_tree_out](tree_radix_custom *cur_tree, std::vector<unsigned char>::iterator bin_beg_incoming,
                                              std::vector<unsigned char>::iterator bin_end_incoming, std::vector<unsigned char>::iterator bin_beg_found, std::vector<unsigned char>::iterator bin_end_found,
                                              const std::vector<unsigned char>::iterator data_beg_intern) {
                 std::size_t matched_size = std::distance(bin_beg_incoming, bin_end_found);
@@ -234,7 +234,8 @@ namespace uh::trees {
                     //simple insert into data since this seems to be a new node that can contain simple information
                     cur_tree->data_vector() = std::vector<unsigned char>{child_beg_mid, child_end_mid};
                     middle_tree_out = cur_tree;
-                    out_list.push_back(middle_tree_out);
+                    last_tree_out = cur_tree;
+                    out_list.push_back(cur_tree);
                     return std::make_tuple(std::distance(child_beg_mid, child_end_mid),
                                            std::distance(child_beg_mid, child_end_mid),
                                            comp.compress(child_beg_mid, child_end_mid).size(),out_list);
@@ -255,6 +256,7 @@ namespace uh::trees {
                             added.push_back(tree_ptr_tmp);
                         }
                         middle_tree_out = cur_tree;
+                        last_tree_out = cur_tree;
                         //return implicit 0 with unsigned long
                         return std::make_tuple(
                                 (decltype(cur_tree->data_vector().size())) append_size_uncompressed,
@@ -294,11 +296,13 @@ namespace uh::trees {
                         }
                         out_list.push_back(tree_ptr_mid);
                         middle_tree_out = tree_ptr_mid;
+                        last_tree_out = tree_ptr_mid;
 
                         tree_radix_custom *tree_ptr_last;
                         if (last_section_tree) {
                             //create last tree
                             tree_ptr_last = new tree_radix_custom(child_beg_end, child_end_end);
+                            last_tree_out = tree_ptr_last;
                             //transfer information of middle tree to last tree and copy the children also to append tree in case it exists
                             out_list.push_back(tree_ptr_last);
                             tree_ptr_last->block_swarm_offset = tree_ptr_mid->block_swarm_offset + tree_ptr_mid->data_vector().size();
@@ -419,9 +423,21 @@ namespace uh::trees {
                         binary_advance+=std::distance(std::get<0>(*match_beg),std::get<1>(*match_beg))+1;
 
                         //search again from middle tree until the maximum of all children limit of the new tree last and tree append, recursive tree building sequence on both again with replacement
-                        auto search_index_to_modify = middle_tree_out->search(bin_beg+binary_advance, bin_end);
-                        //TODO: stop children should be any of the children of the first tree of the next sublist hinted by the first character of that tree,
-                        // find the original last tree pointer of the sublist on search_index_to_modify and extract new following tree nodes; if any of those nodes is the beginning of the next sublist
+                        //since append tree has no children in case it's build we only care about the middle tree or the last tree as search limiter and the first tree as search start
+                        std::vector<tree_radix_custom *> children_limit{};
+                        for(const auto&c:last_tree_out->children){//limit children so search stops after the last modified tree, only merge the adjusted search index with the current one
+                            children_limit.insert(children_limit.cend(),std::get<0>(c).begin(),std::get<0>(c).end());
+                        }
+                        //stop children should be any of the children of the first tree of the next sublist hinted by the first character of that tree
+                        auto search_index_to_modify = middle_tree_out->search(bin_beg+binary_advance, bin_end,decltype(search_index){},children_limit);//results are linear, one node has one child because fresh created
+
+                        // find the original last tree pointer of the sublist on search_index_to_modify and extract new following tree nodes; if any of those nodes is the beginning of the next sublist; changes should be empty else push to front of match beg
+                        //since we may have multiple index results we will merge the current search index in all variations of those; there must be only one inner list per definition that we can copy and splice before the current inner list
+                        for(const auto&new_search:search_index_to_modify){
+                            //if the only inner list has a vector with more changes, we should filter the better result and append the list to front inner list if it has changes
+                            search_index.push_back();
+                        }
+
                         // concatenate both and search from middle tree until the end tree pointer of that list, repeat
 
                         //einfach den middle tree bis zu den Kindern von last tree so lange bearbeiten, bis er sich nicht mehr verändert oder sich in weitere baumkinder aufspaltet
@@ -589,7 +605,8 @@ namespace uh::trees {
         std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::vector<unsigned char>::iterator, std::vector<unsigned char>::iterator, std::vector<unsigned char>::iterator>>>>>, std::size_t>>
                 search(std::vector<unsigned char>::iterator &bin_beg, std::vector<unsigned char>::iterator &bin_end,
                        std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::vector<unsigned char>::iterator, std::vector<unsigned char>::iterator, std::vector<unsigned char>::iterator>>>>>, std::size_t>> input_list =
-                       std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::vector<unsigned char>::iterator, std::vector<unsigned char>::iterator, std::vector<unsigned char>::iterator>>>>>, std::size_t>>{}) {
+                       std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::vector<unsigned char>::iterator, std::vector<unsigned char>::iterator, std::vector<unsigned char>::iterator>>>>>, std::size_t>>{},
+                       std::vector<tree_radix_custom*> limiter_children = std::vector<tree_radix_custom*>{}) {
             if (bin_beg == bin_end) {
                 return input_list;
             }
@@ -672,7 +689,7 @@ namespace uh::trees {
 
                 if (local_matches.empty())return std::vector<decltype(input_list)>{input_list};
 
-                std::vector<decltype(input_list)> out_possibilities{};
+                std::vector<decltype(input_list)> out_possibilities{};//TODO: index list was not fitting to vector adjustment to multiple solutions
 
                 auto match_beginning = local_matches.begin();
                 while (match_beginning != local_matches.end()) {
@@ -751,8 +768,9 @@ namespace uh::trees {
                     //check child that deals with searching the far most rest in direction of end to skip the not matching rest
                     auto child_vec = child_vector(*std::get<2>(*pos_begin));
 
-                    //TODO: on tree limit do not run this loop to recursively search if this node is any of the children limit input
-                    if (!child_vec.empty()) {//recursive search
+                    if (!child_vec.empty() && std::none_of(limiter_children.begin(),limiter_children.end(),[this](auto &item_limit){
+                        return item_limit == this;
+                    })) {//recursive search
                         for (const auto &item: child_vec) {
                             for (const auto &item2: (item->search(std::get<2>(*pos_begin), bin_end,
                                                                  std::get<0>(*pos_begin)))) {
