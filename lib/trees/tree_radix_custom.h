@@ -383,20 +383,17 @@ namespace uh::trees {
             //cases for last tree if it exists, binary fit in: match from the beginning on, match in the middle, match until the end, total match
             //all lists contain lists with a last element that had multiple matches; add up all matches
 
-            //std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::vector<unsigned char>::iterator, std::vector<unsigned char>::iterator, std::vector<unsigned char>::iterator>>>>, std::size_t>
             std::vector<std::tuple<std::size_t, std::size_t, std::size_t, std::list<std::tuple<tree_radix_custom *,std::list<tree_radix_custom *>,std::list<tree_radix_custom *>>>>> out_change_tuple_out{};
 
             auto single_beg = single_search.begin();
             while(single_beg!=search_index.end()){
                 std::tuple<std::size_t, std::size_t, std::size_t, std::list<std::tuple<tree_radix_custom *,std::list<tree_radix_custom *>,std::list<tree_radix_custom *>>>> out_change_tuple{};
 
-                auto search_element = std::get<0>(search_index).begin();
+                auto search_element = std::get<0>(search_index).begin();//std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::vector<unsigned char>::iterator, std::vector<unsigned char>::iterator, std::vector<unsigned char>::iterator>>>>, std::size_t>
 
                 std::size_t binary_advance{};
                 tree_radix_custom* tree_offset;
-                bool broken_loop = false;
-                bool first_time = true;
-                while (search_element != std::get<0>(search_index).end()) {
+                while (search_element != std::get<0>(*single_beg).end()) {//std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::vector<unsigned char>::iterator, std::vector<unsigned char>::iterator, std::vector<unsigned char>::iterator>>>
                     //master list element contains a list containing tree pointers with vectors that totally matched, last element did not completely match anymore; inner list carries at least one element
                     auto one_node_analysis = search_element->end()-1;//last element did not match completely
                     //the inner list carries elements with a tuple holding the tree pointer and a list of valid matches that should be transformed into a sequence of trees
@@ -404,15 +401,15 @@ namespace uh::trees {
 
                     if(std::get<1>(*one_node_analysis).empty()){
                         //delete the containing list, we are done here
-                        std::get<0>(search_index).erase(one_node_analysis);
-                        search_element = std::get<0>(search_index).begin();
+                        std::get<0>(*single_beg).erase(one_node_analysis);
+                        search_element = std::get<0>(*single_beg).begin();
                         continue;
                     }
 
                     tree_offset = std::get<0>(*one_node_analysis);
 
-                    auto match_beg = std::get<1>(*one_node_analysis).begin();
-                    while(match_beg != std::get<1>(*one_node_analysis).end()){//update loop for
+                    auto match_beg = std::get<1>(*one_node_analysis).begin();//                                         found begin                             found end                           data on tree begin at found begin
+                    while(match_beg != std::get<1>(*one_node_analysis).end()){//update loop on std::vector<std::tuple<std::vector<unsigned char>::iterator, std::vector<unsigned char>::iterator, std::vector<unsigned char>::iterator>>
                         auto out_size = tree_building_sequence(std::get<0>(*one_node_analysis),bin_beg,bin_end,std::get<0>(*match_beg),std::get<1>(*match_beg),std::get<2>(*match_beg));
                         std::get<0>(out_change_tuple)+=std::get<0>(out_size);
                         std::get<1>(out_change_tuple)+=std::get<1>(out_size);
@@ -421,7 +418,7 @@ namespace uh::trees {
 
                         binary_advance+=std::distance(std::get<0>(*match_beg),std::get<1>(*match_beg))+1;
 
-                        //search again and break
+                        //search again from middle tree until the maximum of all children limit of the new tree last and tree append, recursive tree building sequence on both again with replacement
                         auto search_index_to_modify = middle_tree_out->search(bin_beg+binary_advance, bin_end);
                         //TODO: stop children should be any of the children of the first tree of the next sublist hinted by the first character of that tree,
                         // find the original last tree pointer of the sublist on search_index_to_modify and extract new following tree nodes; if any of those nodes is the beginning of the next sublist
