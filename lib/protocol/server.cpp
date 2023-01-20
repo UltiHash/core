@@ -91,7 +91,9 @@ void server::handle_setup_request(iostream& io, uint8_t request_id)
         case hello::request_id: return handle_hello(io);
         case quit::request_id: return handle_quit(io);
 
-        default: throw std::runtime_error("unsupported command");
+        default:
+            throw std::runtime_error("setup, unsupported command: "
+                + std::to_string(request_id));
     }
 }
 
@@ -107,7 +109,9 @@ void server::handle_normal_request(iostream& io, uint8_t request_id)
         case free_space::request_id: return handle_free_space(io);
         case reset::request_id: return handle_reset(io);
 
-        default: throw std::runtime_error("unsupported command");
+        default:
+            throw std::runtime_error("normal, unsupported command: "
+                + std::to_string(request_id));
     }
 }
 
@@ -121,7 +125,9 @@ void server::handle_reading_request(iostream& io, uint8_t request_id)
         case reset::request_id: return handle_reset(io);
         case next_chunk::request_id: return handle_next_chunk(io);
 
-        default: throw std::runtime_error("unsupported command");
+        default:
+            throw std::runtime_error("reading, unsupported command: "
+                + std::to_string(request_id));
     }
 }
 
