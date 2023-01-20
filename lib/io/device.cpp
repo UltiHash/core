@@ -65,8 +65,12 @@ std::ostream& operator<<(std::ostream& out, device& d)
 
     while (d.valid())
     {
-        auto written = d.read(buffer);
-        out.write(buffer.data(), written);
+        auto read = d.read(buffer);
+        if (!read)
+        {
+            break;
+        }
+        out.write(buffer.data(), read);
     }
 
     return out;
