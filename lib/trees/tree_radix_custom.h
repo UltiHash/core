@@ -18,7 +18,7 @@ namespace uh::trees {
 #define MINIMUM_MATCH_SIZE SHA512_DIGEST_LENGTH+sizeof(unsigned long)*TIME_STAMPS_ON_BLOCK+SHA256_DIGEST_LENGTH+3+5//the overhead of storing the block plus the size of basic storage pointer
 
     template<class DataReference>
-    class tree_radix_custom {
+    struct tree_radix_custom {
     protected:
         //the first element of data is cut off to children except on root if it's a new tree
         std::vector<std::tuple<std::vector<tree_radix_custom *>, unsigned char>> children{};//multiple targets that can follow a node for each letter
@@ -67,7 +67,7 @@ namespace uh::trees {
         }
 
     private:
-        auto compare_ultihash(auto data_beg, auto data_end, auto input_beg, auto input_end) {
+        auto compare_ultihash(std::vector<unsigned char>::iterator data_beg, std::vector<unsigned char>::iterator data_end, std::vector<unsigned char>::iterator input_beg, std::vector<unsigned char>::iterator input_end) {
             if (std::distance(input_beg, input_end) > std::distance(data_beg, data_end))
                 input_end = input_beg + std::distance(data_beg, data_end);
             //if input does only fit to a shorter string as a subset of data, count becomes negative, else positive including ß
@@ -98,7 +98,7 @@ namespace uh::trees {
                 }
                 if (data_beg == data_end || input_beg_tmp == input_end)break;
                 //search how long input matches
-                auto data_beg_tmp = data_beg;
+                std::vector<unsigned char>::iterator data_beg_tmp = data_beg;
                 bool broken = false;
                 do {
                     if (*input_beg_tmp != *data_beg_tmp) {
@@ -131,11 +131,11 @@ namespace uh::trees {
         }
 
         //returns total size integrated, new space used uncompressed, new space used compressed, list of tree references of <offset_ELEMENT,modified_LIST,added_LIST> tree nodes
-        template<typename IteratorIn>
         std::tuple<std::size_t, std::size_t, std::size_t, std::list<std::tuple<tree_radix_custom *,std::list<tree_radix_custom *>,std::list<tree_radix_custom *>>>>
-        add(IteratorIn bin_beg, IteratorIn bin_end,//first search existing structure and add into the last tree to insert potentially missing information
-            std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<IteratorIn, IteratorIn, std::vector<unsigned char>::iterator>>>>, std::size_t> search_index = search(
-                    bin_beg, bin_end)) {
+        add(std::vector<unsigned char>::iterator bin_beg, std::vector<unsigned char>::iterator bin_end) {
+            //first search existing structure and add into the last tree to insert potentially missing information
+            std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::vector<unsigned char>::iterator, std::vector<unsigned char>::iterator, std::vector<unsigned char>::iterator>>>>, std::size_t> search_index = search(
+                    bin_beg, bin_end)
             //uncompressed input
             if (bin_beg == bin_end || std::distance(bin_beg, bin_end) < 1) {
                 return {};
@@ -145,24 +145,24 @@ namespace uh::trees {
             std::list<tree_radix_custom*>modified{},added{};
             tree_radix_custom* middle_tree_out;
 
-            auto tree_building_sequence = [&first_section_tree,&last_section_tree,&append_tree,&total_match,&modified,&added,&middle_tree_out](tree_radix_custom *cur_tree, auto bin_beg_incoming,
-                                             auto bin_end_incoming, auto bin_beg_found, auto bin_end_found,
+            auto tree_building_sequence = [&first_section_tree,&last_section_tree,&append_tree,&total_match,&modified,&added,&middle_tree_out](tree_radix_custom *cur_tree, std::vector<unsigned char>::iterator bin_beg_incoming,
+                                             std::vector<unsigned char>::iterator bin_end_incoming, std::vector<unsigned char>::iterator bin_beg_found, std::vector<unsigned char>::iterator bin_end_found,
                                              const std::vector<unsigned char>::iterator data_beg_intern) {
                 std::size_t matched_size = std::distance(bin_beg_incoming, bin_end_found);
                 //checking if children need to be generated before and after the found input peace, reference to data of tree required
                 //child before found, reference data
-                auto child_beg_beg = cur_tree->data_vector().begin();
-                auto child_end_beg = std::max(data_beg_intern - 1, child_beg_beg);
+                std::vector<unsigned char>::iterator child_beg_beg = cur_tree->data_vector().begin();
+                std::vector<unsigned char>::iterator child_end_beg = std::max(data_beg_intern - 1, child_beg_beg);
                 //child data sequence middle, reference data
-                auto child_beg_mid = data_beg_intern;
-                auto child_end_mid = std::min(cur_tree->data_vector().end(),
+                std::vector<unsigned char>::iterator child_beg_mid = data_beg_intern;
+                std::vector<unsigned char>::iterator child_end_mid = std::min(cur_tree->data_vector().end(),
                                               child_beg_mid + std::distance(bin_beg_found, bin_end_found));
                 //child data sequence end, reference data
-                auto child_beg_end = std::min(cur_tree->data_vector().end(), child_end_mid + 1);
-                auto child_end_end = cur_tree->data_vector().end();
+                std::vector<unsigned char>::iterator child_beg_end = std::min(cur_tree->data_vector().end(), child_end_mid + 1);
+                std::vector<unsigned char>::iterator child_end_end = cur_tree->data_vector().end();
                 //child after found, reference new input
-                auto child_beg_append = std::min(bin_end_found + 1, bin_end_incoming);
-                auto child_end_append = bin_end_incoming;
+                std::vector<unsigned char>::iterator child_beg_append = std::min(bin_end_found + 1, bin_end_incoming);
+                std::vector<unsigned char>::iterator child_end_append = bin_end_incoming;
                 //only the new append part may be compressed
                 //before splitting or modifying a block it needs to be uncompressed
 
@@ -283,7 +283,7 @@ namespace uh::trees {
                                 }
                             }
                             //the last tree is still following the middle tree
-                            auto mid_child_vec = tree_ptr_mid->child_vector(*child_beg_last);
+                            auto mid_child_vec = tree_ptr_mid->child_vector(*child_beg_end);
                             if (!mid_child_vec.empty()) {
                                 mid_child_vec.push_back(tree_ptr_last);
                             } else {
@@ -318,22 +318,22 @@ namespace uh::trees {
                         if (first_section_tree) {
                             if(last_section_tree){
                                 //delete the referenced data size of middle and end from tree pointer first
-                                auto del_beg = tree_ptr_first->data_vector().begin()+std::distance(child_beg_beg,child_end_beg)+1;
-                                auto del_end = del_beg + std::distance(child_beg_mid,child_end_mid) + std::distance(child_beg_end,child_end_end);
+                                std::vector<unsigned char>::iterator del_beg = tree_ptr_first->data_vector().begin()+std::distance(child_beg_beg,child_end_beg)+1;
+                                std::vector<unsigned char>::iterator del_end = del_beg + std::distance(child_beg_mid,child_end_mid) + std::distance(child_beg_end,child_end_end);
                                 tree_ptr_first->data_vector().erase(del_beg,del_end);
                             }
                             else{
                                 //delete middle data reference size from tree pointer first
-                                auto del_beg = tree_ptr_first->data_vector().begin()+std::distance(child_beg_beg,child_end_beg)+1;
-                                auto del_end = del_beg + std::distance(child_beg_mid,child_end_mid);
+                                std::vector<unsigned char>::iterator del_beg = tree_ptr_first->data_vector().begin()+std::distance(child_beg_beg,child_end_beg)+1;
+                                std::vector<unsigned char>::iterator del_end = del_beg + std::distance(child_beg_mid,child_end_mid);
                                 tree_ptr_first->data_vector().erase(del_beg,del_end);
                             }
                         }
                         else{
                             if(last_section_tree){
                                 //delete last tree reference size from tree pointer middle
-                                auto del_beg = tree_ptr_mid->data_vector().begin()+std::distance(child_beg_mid,child_end_mid)+1;
-                                auto del_end = del_beg + std::distance(child_beg_end,child_end_end);
+                                std::vector<unsigned char>::iterator del_beg = tree_ptr_mid->data_vector().begin()+std::distance(child_beg_mid,child_end_mid)+1;
+                                std::vector<unsigned char>::iterator del_end = del_beg + std::distance(child_beg_end,child_end_end);
                                 tree_ptr_mid->data_vector().erase(del_beg,del_end);
                             }
                             //else do not delete
@@ -351,7 +351,7 @@ namespace uh::trees {
             //cases for last tree if it exists, binary fit in: match from the beginning on, match in the middle, match until the end, total match
             //all lists contain lists with a last element that had multiple matches; add up all matches
 
-            //std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<IteratorIn, IteratorIn, std::vector<unsigned char>::iterator>>>>, std::size_t>
+            //std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::vector<unsigned char>::iterator, std::vector<unsigned char>::iterator, std::vector<unsigned char>::iterator>>>>, std::size_t>
             auto search_element = std::get<0>(search_index).begin();
             std::tuple<std::size_t, std::size_t, std::size_t, std::list<std::tuple<tree_radix_custom *,std::list<tree_radix_custom *>,std::list<tree_radix_custom *>>>> out_change_tuple{};
             std::size_t binary_advance{};
@@ -396,7 +396,7 @@ namespace uh::trees {
                 }
                 if(!broken_loop){
                     first_time = true;
-                    std::get<3>(out_change_tup).emplace_back(tree_offset,modified,added);
+                    std::get<3>(out_change_tuple).emplace_back(tree_offset,modified,added);
                     modified.clear();
                     added.clear();
                     search_element++;
@@ -418,34 +418,35 @@ namespace uh::trees {
 
         //returns total size integrated, new space used uncompressed, new space used compressed
         //calculates ESTIMATE size of data to be integrated to be communicated to agency to determine optimal storage location
-        template<typename IteratorIn>
         std::tuple<std::size_t, std::size_t, std::size_t>
-        add_test(IteratorIn bin_beg,
-                 IteratorIn bin_end,//first search existing structure and add into the last tree to insert potentially missing information
-                 std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<IteratorIn, IteratorIn, std::vector<unsigned char>::iterator>>>>, std::size_t> search_index = search(
-                         bin_beg, bin_end)) {
+        add_test(std::vector<unsigned char>::iterator bin_beg,std::vector<unsigned char>::iterator bin_end) {
+            //first search existing structure and add into the last tree to insert potentially missing information
+            std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::vector<unsigned char>::iterator, std::vector<unsigned char>::iterator, std::vector<unsigned char>::iterator>>>>, std::size_t> search_index = search(
+                    bin_beg, bin_end)
             //uncompressed input
-            if (bin_beg == bin_end || std::distance(bin_beg, bin_end) < 1)
-                return {};//some element and an end element at least required
+            if (bin_beg == bin_end || std::distance(bin_beg, bin_end) < 1){
+                return {};
+            }
+            //some element and an end element at least required
 
-            auto tree_test_sequence = [](tree_radix_custom *cur_tree, auto bin_beg_incoming, auto bin_end_incoming,
-                                         auto bin_beg_found, auto bin_end_found,
+            auto tree_test_sequence = [&](tree_radix_custom *cur_tree, std::vector<unsigned char>::iterator bin_beg_incoming, std::vector<unsigned char>::iterator bin_end_incoming,
+                                         std::vector<unsigned char>::iterator bin_beg_found, std::vector<unsigned char>::iterator bin_end_found,
                                          const std::vector<unsigned char>::iterator data_beg_intern) {
                 std::size_t matched_size = std::distance(bin_beg_incoming, bin_end_found);
                 //checking if children need to be generated before and after the found input peace, reference to data of tree required
                 //child before found, reference data
-                auto child_beg_beg = cur_tree->data_vector().begin();
-                auto child_end_beg = std::max(data_beg_intern - 1, child_beg_beg);
+                std::vector<unsigned char>::iterator child_beg_beg = cur_tree->data_vector().begin();
+                std::vector<unsigned char>::iterator child_end_beg = std::max(data_beg_intern - 1, child_beg_beg);
                 //child data sequence middle, reference data
-                auto child_beg_mid = data_beg_intern;
-                auto child_end_mid = std::min(cur_tree->data_vector().end(),
+                std::vector<unsigned char>::iterator child_beg_mid = data_beg_intern;
+                std::vector<unsigned char>::iterator child_end_mid = std::min(cur_tree->data_vector().end(),
                                               child_beg_mid + std::distance(bin_beg_found, bin_end_found));
                 //child data sequence end, reference data
-                auto child_beg_end = std::min(cur_tree->data_vector().end(), child_end_mid + 1);
-                auto child_end_end = cur_tree->data_vector().end();
+                std::vector<unsigned char>::iterator child_beg_end = std::min(cur_tree->data_vector().end(), child_end_mid + 1);
+                std::vector<unsigned char>::iterator child_end_end = cur_tree->data_vector().end();
                 //child after found, reference new input
-                auto child_beg_append = std::min(bin_end_found + 1, bin_end_incoming);
-                auto child_end_append = bin_end_incoming;
+                std::vector<unsigned char>::iterator child_beg_append = std::min(bin_end_found + 1, bin_end_incoming);
+                std::vector<unsigned char>::iterator child_end_append = bin_end_incoming;
                 //only the new append part may be compressed
                 //before splitting or modifying a block it needs to be uncompressed
 
@@ -483,7 +484,7 @@ namespace uh::trees {
                                     (decltype(cur_tree->data_vector().size())) std::distance(bin_beg, bin_end),
                                     (decltype(cur_tree->data_vector().size())) std::distance(child_beg_append,
                                                                                              child_end_append),
-                                    (decltype(cur_tree->data_vector().size())) uh:::util::compression_custom::compress(
+                                    (decltype(cur_tree->data_vector().size())) uh::util::compression_custom::compress(
                                     child_beg_append, child_end_append).size());
                         }
                         //return implicit 0 with unsigned long
@@ -499,7 +500,7 @@ namespace uh::trees {
                                     (decltype(cur_tree->data_vector().size())) std::distance(bin_beg, bin_end),
                                     (decltype(cur_tree->data_vector().size())) std::distance(child_beg_append,
                                                                                              child_end_append),
-                                    (decltype(cur_tree->data_vector().size())) uh:::util::compression_custom::compress(
+                                    (decltype(cur_tree->data_vector().size())) uh::util::compression_custom::compress(
                                     child_beg_append, child_end_append).size());
                         }
                         //return implicit 0 with unsigned long
@@ -517,7 +518,7 @@ namespace uh::trees {
             //all lists contain lists with a last element that had multiple matches; add up all matches
             auto outer_most_level = [&](std::tuple<std::size_t, std::size_t, std::size_t> tup, auto list) {
                 auto inner_list_level = [&](std::tuple<std::size_t, std::size_t, std::size_t> tup2, auto tree_tuple) {
-                    for (const auto &pos_tup: std::get<1>(tree_tup)) {
+                    for (const auto &pos_tup: std::get<1>(tree_tuple)) {
                         auto last_tree = std::get<0>(search_index).back();
                         //check if we have a full match and the input is larger than the data of the last tree
                         auto add_list = tree_test_sequence(std::get<0>(last_tree), bin_beg, bin_end,
@@ -544,16 +545,15 @@ namespace uh::trees {
         }
 
         //returns the path of maximum fit and the match size
-        template<typename IteratorIn>
-        std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<IteratorIn, IteratorIn, std::vector<unsigned char>::iterator>>>>, std::size_t>
-                search(IteratorIn bin_beg, IteratorIn bin_end,
-                       std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<IteratorIn, IteratorIn, std::vector<unsigned char>::iterator>>>>, std::size_t> input_list =
-                       std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<IteratorIn, IteratorIn, std::vector<unsigned char>::iterator>>>>, std::size_t>{}) {
+        std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::vector<unsigned char>::iterator, std::vector<unsigned char>::iterator, std::vector<unsigned char>::iterator>>>>>, std::size_t>
+                search(std::vector<unsigned char>::iterator bin_beg, std::vector<unsigned char>::iterator bin_end,
+                       std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::vector<unsigned char>::iterator, std::vector<unsigned char>::iterator, std::vector<unsigned char>::iterator>>>>>, std::size_t> input_list =
+                       std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::vector<unsigned char>::iterator, std::vector<unsigned char>::iterator, std::vector<unsigned char>::iterator>>>>>, std::size_t>{}) {
             if (bin_beg == bin_end) {
                 return input_list;
             }
 
-            auto vanilla_match_last_tree = [&](auto data_beg, auto data_end, auto bin_beg, auto bin_end) {
+            auto vanilla_match_last_tree = [&](std::vector<unsigned char>::iterator data_beg, std::vector<unsigned char>::iterator data_end, std::vector<unsigned char>::iterator bin_beg, std::vector<unsigned char>::iterator bin_end) {
                 auto local_matches = compare_ultihash(data_beg, data_end, bin_beg, bin_end);
                 //LEGAL MATCH FILTER
                 //on empty or partial match make new list in list, else append the match results on total match
@@ -563,7 +563,7 @@ namespace uh::trees {
                 //control
                 bool broken_legal = false;
                 auto legal_check = [&local_matches, &legal_split, &end_size, &begin_reached, &end_reached, &broken_legal](
-                        auto data_beg, auto data_end, std::vector<unsigned char>::iterator current_match) {
+                        std::vector<unsigned char>::iterator data_beg, std::vector<unsigned char>::iterator data_end, std::vector<unsigned char>::iterator current_match) {
                     do {
                         bool start_size = MINIMUM_MATCH_SIZE <= std::distance(data_beg, std::get<0>(*current_match);
                         end_size = MINIMUM_MATCH_SIZE <= std::distance(std::get<0>(*current_match) +
@@ -638,12 +638,12 @@ namespace uh::trees {
                     auto input_list_tmp = input_list;
                     legal_check(data_beg, data_end, match_beginning);
 
-                    std::vector<std::tuple<IteratorIn, IteratorIn, std::vector<unsigned char>::iterator>> found_vec{};
+                    std::vector<std::tuple<std::vector<unsigned char>::iterator, std::vector<unsigned char>::iterator, std::vector<unsigned char>::iterator>> found_vec{};
                     found_vec.emplace_back(std::get<1>(*match_beginning), std::get<2>(*match_beginning),
                                            std::get<0>(*match_beginning));
 
                     if (input_list_tmp.empty() || !legal_split) {
-                        std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<IteratorIn, IteratorIn, std::vector<unsigned char>::iterator>>>> tmp_list{};
+                        std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::vector<unsigned char>::iterator, std::vector<unsigned char>::iterator, std::vector<unsigned char>::iterator>>>> tmp_list{};
                         tmp_list.emplace_back(this, found_vec);
                         std::get<0>(input_list_tmp).push_back(tmp_list);
                     } else {
@@ -687,8 +687,8 @@ namespace uh::trees {
                 }
                 std::get<3>(*pos_beginning) = true;
 
-                auto data_beg_tmp = std::get<1>(*pos_begin);
-                auto bin_beg_tmp = std::get<2>(*pos_begin);
+                std::vector<unsigned char>::iterator data_beg_tmp = std::get<1>(*pos_begin);
+                std::vector<unsigned char>::iterator bin_beg_tmp = std::get<2>(*pos_begin);
 
                 bool first_time = true;
                 bool pos_begin_reset = false;
