@@ -36,7 +36,7 @@ namespace uh::trees {
             }
         }
 
-        explicit tree_radix_custom(std::vector<unsigned char> &bin) : tree_radix_custom() {//TODO: add links to parents
+        explicit tree_radix_custom(std::vector<unsigned char> &bin) : tree_radix_custom() {
             add(bin);
         }
 
@@ -316,7 +316,7 @@ namespace uh::trees {
                         std::size_t del_beg{};
                         std::size_t del_end{};
 
-                        if (first_section_tree) {//TODO: delete last_section_tree
+                        if (first_section_tree) {
                             if(last_section_tree){
                                 //delete the referenced data size of middle and end from tree pointer first
                                 auto del_beg = tree_ptr_first->data_vector().begin()+std::distance(child_beg_beg,child_end_beg)+1;
@@ -347,8 +347,6 @@ namespace uh::trees {
                     }
                 }
             };
-            //TODO: always search on from cur_tree base if the rest behind it has changed and always recursively search
-            //TODO: recursively set parent node children pointers to the ones that we know too
 
             //cases for search index: its empty or it has content and with that a last tree element
             //cases for last tree if it exists, binary fit in: match from the beginning on, match in the middle, match until the end, total match
