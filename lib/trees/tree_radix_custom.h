@@ -75,7 +75,7 @@ namespace uh::trees {
                 //on search there was no match on the tree node, so we assume that a new node referenced by this node will be created carrying append
                 //the reason why there is the correct character available but no match detected by search is the MINIMUM_MATCH_SIZE that failed, we will respect that
                 if(std::ranges::find(child_vec_append.begin(),child_vec_append.end(),input_tree)==child_vec_append.end()){
-                    child_vec_append.push_back(tree_ptr_tmp);
+                    child_vec_append.emplace_back(input_tree);
                 }
             }
         }
