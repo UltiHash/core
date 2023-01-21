@@ -197,6 +197,7 @@ namespace uh::trees {
             auto tree_building_sequence = [&first_section_tree,&last_section_tree,&append_tree,&total_match](tree_radix_custom *cur_tree, std::vector<unsigned char>::iterator bin_beg_incoming,
                                              std::vector<unsigned char>::iterator bin_end_incoming, std::vector<unsigned char>::iterator bin_beg_found, std::vector<unsigned char>::iterator bin_end_found,
                                              const std::vector<unsigned char>::iterator data_beg_intern) {
+                std::size_t tree_front_data_front_absolute = std::distance(cur_tree->data_vector().begin(),data_beg_intern)+1;
                 std::size_t matched_size = std::distance(bin_beg_incoming, bin_end_found);
                 //checking if children need to be generated before and after the found input peace, reference to data of tree required
                 //child before found, reference data
@@ -234,7 +235,7 @@ namespace uh::trees {
                     out_list.push_back(cur_tree);
                     return std::make_tuple(std::distance(child_beg_mid, child_end_mid),
                                            std::distance(child_beg_mid, child_end_mid),
-                                           comp.compress(child_beg_mid, child_end_mid).size(),out_list,first_section_tree,last_section_tree,append_tree,total_match);
+                                           comp.compress(child_beg_mid, child_end_mid).size(),out_list,first_section_tree,last_section_tree,append_tree,total_match,tree_front_data_front_absolute);
                 } else {
                     if (total_match) {//only a maximum of 1 tree creation or just 0 in case of reference
                         //a total match can still have appending structure
@@ -254,7 +255,7 @@ namespace uh::trees {
                         return std::make_tuple(
                                 (decltype(cur_tree->data_vector().size())) append_size_uncompressed,
                                 (decltype(cur_tree->data_vector().size())) append_size_uncompressed,
-                                (decltype(cur_tree->data_vector().size())) append_size_compressed,out_list,first_section_tree,last_section_tree,append_tree,total_match);//nothing to add, only reference
+                                (decltype(cur_tree->data_vector().size())) append_size_compressed,out_list,first_section_tree,last_section_tree,append_tree,total_match,tree_front_data_front_absolute);//nothing to add, only reference
                     } else {
                         //first section tree, after split try
                         //data will split into a maximum of 3 parts and by that will add 2 more tree nodes on front and/or back; start with first section
@@ -363,7 +364,7 @@ namespace uh::trees {
                         return std::make_tuple(
                                 (decltype(cur_tree->data_vector().size())) size_integrated,
                                 (decltype(cur_tree->data_vector().size())) size_uncompressed,
-                                (decltype(cur_tree->data_vector().size())) size_compressed,out_list,first_section_tree,last_section_tree,append_tree,total_match);
+                                (decltype(cur_tree->data_vector().size())) size_compressed,out_list,first_section_tree,last_section_tree,append_tree,total_match,tree_front_data_front_absolute);
                     }
                 }
             };
@@ -381,7 +382,6 @@ namespace uh::trees {
                 auto search_element = std::get<0>(search_index).begin();//std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::vector<unsigned char>::iterator, std::vector<unsigned char>::iterator, std::vector<unsigned char>::iterator>>>>, std::size_t>
 
                 std::size_t binary_advance{};
-                tree_radix_custom* tree_match_pointer;
                 while (search_element != std::get<0>(*single_beg).end()) {//std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::vector<unsigned char>::iterator, std::vector<unsigned char>::iterator, std::vector<unsigned char>::iterator>>>
                     //master list element contains a list containing tree pointers with vectors that totally matched, last element did not completely match anymore; inner list carries at least one element
                     auto one_node_analysis = search_element->end()-1;//last element did not match completely
@@ -395,14 +395,16 @@ namespace uh::trees {
                         continue;
                     }
 
-                    tree_match_pointer = std::get<0>(*one_node_analysis);
+                    tree_radix_custom* tree_match_pointer; = std::get<0>(*one_node_analysis);
                     std::set<tree_radix_custom*>modified{},added{};//changes to be written to disk in the form of tree pointers
+                    std::vector<std::tuple<std::tuple<std::vector<unsigned char>::iterator, std::vector<unsigned char>::iterator, std::vector<unsigned char>::iterator,tree_radix_custom *> actively_changing_trees{};
+                    std::for_each(std::get<1>(*one_node_analysis).begin(),std::get<1>(*one_node_analysis).end(),[&actively_changing_trees,&tree_match_pointer](auto &item){
+                        actively_changing_trees.emplace_back(std::get<0>(item),std::get<1>(item),std::get<2>(item),tree_match_pointer);
+                    })
 
                     auto match_beg = std::get<1>(*one_node_analysis).begin();//                                         found beginning                             found end                        data on tree begin at found begin
                     while(match_beg != std::get<1>(*one_node_analysis).end()){//update loop on std::vector<std::tuple<std::vector<unsigned char>::iterator, std::vector<unsigned char>::iterator, std::vector<unsigned char>::iterator>>
-
-
-                        auto out_size = tree_building_sequence(std::get<0>(*one_node_analysis),bin_beg,bin_end,std::get<0>(*match_beg),std::get<1>(*match_beg),std::get<2>(*match_beg));
+                        auto out_size = tree_building_sequence(std::get<3>(*match_beg),bin_beg,bin_end,std::get<0>(*match_beg),std::get<1>(*match_beg),std::get<2>(*match_beg));
                         std::get<0>(out_change_tuple)+=std::get<0>(out_size);
                         std::get<1>(out_change_tuple)+=std::get<1>(out_size);
                         std::get<2>(out_change_tuple)+=std::get<2>(out_size);
@@ -411,6 +413,7 @@ namespace uh::trees {
                         bool last_section_tree = std::get<5>(out_size);
                         bool append_tree = std::get<6>(out_size);
                         bool total_match = std::get<7>(out_size);
+                        std::size_t tree_front_data_front_absolute = std::get<8>(out_size);
 
                         decltype(out_vector.begin()) first_tree_out,middle_tree_out,last_tree_out,append_tree_out;
                         first_section_tree,last_section_tree,append_tree,total_match;
@@ -441,11 +444,26 @@ namespace uh::trees {
                             //this must be the only match so nothing happens
                         }
                         else{
-                            auto pointer_maintain = [&current_advance](auto match_beg_intern, auto match_end_intern,auto tree_front,auto tree_back,auto tree_match_pointer_intern){
-                                if(match_beg_intern+1>=match_end_intern)return;
-                                std::size_t data_offset_between = std::distance(std::get<2>(*match_beg),std::get<2>(*(match_beg+1)));
-                                if(data_offset_between<current_advance){
-                                    //overlapping match,
+                            auto pointer_maintain = [&tree_front_data_front_absolute](auto match_beg_intern, auto match_end_intern,auto* tree_front,auto* tree_back){
+                                if(match_beg_intern+1>=match_end_intern)return tree_match_pointer_intern;
+                                //update matches offset
+                                auto first_data_offset = std::get<2>(*match_beg_intern);
+                                std::size_t first_match_size = std::distance(std::get<0>(*match_beg_intern),std::get<1>(*match_beg_intern))+1;
+                                while(match_beg_intern+1 != match_end_intern){
+                                    std::size_t data_offset_between = std::distance(first_data_offset,std::get<2>(*(match_beg_intern+1)));
+                                    std::size_t total_offset_front_for_this_node = tree_front_data_front_absolute+data_offset_between;
+                                    if(data_offset_between<tree_front_data_front_absolute+first_match_size){
+                                        //overlapping match, tree pointer stays at this tree, one to one reference tree front at tree_front_data_front_absolute; re-reference to data due to erase
+                                        std::get<2>(*(match_beg_intern+1)) = tree_front->data_vector().begin()+total_offset_front_for_this_node;
+                                        std::get<3>(*(match_beg_intern+1)) = tree_front;
+                                        //TODO: front and end of overlapping must fragment 2 more spots instead of one, manually create 2 more trees
+                                    }
+                                    else{
+                                        //total match, new calculated reference on tree_back
+                                        std::get<2>(*(match_beg_intern+1)) = tree_back->data_vector().begin()+(total_offset_front_for_this_node-tree_front->data_vector().size());
+                                        std::get<3>(*(match_beg_intern+1)) = tree_back;
+                                    }
+                                    match_beg_intern++;
                                 }
 
                                 return tree_match_pointer_intern;
@@ -454,7 +472,7 @@ namespace uh::trees {
                                 modified.emplace(*first_tree_out);
                                 added.emplace(*middle_tree_out);
                                 //tree_match_pointer must move from first tree to middle tree, and we adjust offsets of all other matches
-                                std::get<0>(*one_node_analysis) = pointer_maintain(match_beg,std::get<1>(*one_node_analysis).end(),*first_tree_out,*middle_tree_out,std::get<0>(*one_node_analysis));//update current tree pointer
+                                pointer_maintain(match_beg,std::get<1>(*one_node_analysis).end(),*first_tree_out,*middle_tree_out);//update current tree pointer
                             }
                             else{
                                 modified.emplace(*middle_tree_out);
@@ -463,11 +481,10 @@ namespace uh::trees {
                             if(last_section_tree){
                                 added.emplace(*last_tree_out);//section of inner list must be over due to incomplete match
                                 //tree_match_pointer must move from middle tree to last tree, and we adjust offsets of all other matches
-                                std::get<0>(*one_node_analysis) = pointer_maintain(match_beg,std::get<1>(*one_node_analysis).end(),*middle_tree_out,*last_tree_out,std::get<0>(*one_node_analysis));//update current tree pointer
+                                pointer_maintain(match_beg,std::get<1>(*one_node_analysis).end(),*middle_tree_out,*last_tree_out);//update current tree pointer
                             }
                             if(append_tree)added.emplace(*append_tree_out);
                         }
-
                         match_beg++;
                     }
                     auto added_contains_it = [&added](&auto item){
