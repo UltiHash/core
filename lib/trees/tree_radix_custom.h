@@ -18,6 +18,9 @@
 namespace uh::trees {
     //because it takes at least 2 bytes to describe a deeper encoding action
 #define MINIMUM_MATCH_SIZE SHA512_DIGEST_LENGTH+sizeof(unsigned long)*TIME_STAMPS_ON_BLOCK+SHA256_DIGEST_LENGTH+3+5//the overhead of storing the block plus the size of basic storage pointer
+#define AVX_UNITS 2
+
+std::atomic<std::size_t> avx_count{};
 
     template<class DataReference>
     struct tree_radix_custom {
@@ -138,40 +141,34 @@ namespace uh::trees {
                 DEBUG << "Compare ultihash failed because data was empty!";
                 return matches;
             }
-            //advance search scope over data
-            //increase data start to the beginning of the input match +1
-            decltype(input_end) input_beg_tmp, re_enter;
             //search forward through data
             do {
-                bool re_enter_hit = false;
-                input_beg_tmp = input_beg;//increase end of input to possibly find a prefix match
                 //first element match
-                while (*data_beg != *input_beg_tmp && data_beg != data_end) {
-                    data_beg++;
+                if(avx_count.load<AVX_UNITS){
+                    avx_count += 1;
+                    data_beg = std::ranges::find(std::execution::unseq,data_beg,data_end,*input_beg_tmp);
+                    avx_count -= 1;
                 }
+                else{
+                    data_beg = std::ranges::find(data_beg,data_end,*input_beg_tmp);
+                }
+
                 if (data_beg == data_end || input_beg_tmp == input_end)break;
                 //search how long input matches
-                std::vector<unsigned char>::iterator data_beg_tmp = data_beg;
-                bool broken = false;
-                do {
-                    if (*input_beg_tmp != *data_beg_tmp) {
-                        broken = true;
-                        break;
-                    }
-                    input_beg_tmp++;
-                    data_beg_tmp++;
-
-                    if (!re_enter_hit) {
-                        if (*input_beg_tmp != *input_beg)re_enter_hit = true;
-                        else re_enter = data_beg + std::distance(input_beg, input_beg_tmp);
-                    }
-                } while (input_beg_tmp != input_end);
-                re_enter = std::max(data_beg + 1, re_enter);
+                std::pair<decltype(data_beg),decltype(data_end)> found;
+                if(avx_count.load<AVX_UNITS){
+                    avx_count += 1;
+                    found = std::ranges::mismatch(std::execution::unseq,data_beg,data_end,input_beg,input_end);
+                    avx_count -= 1;
+                }
+                else{
+                    found = std::ranges::mismatch(data_beg,data_end,input_beg,input_end);
+                }
                 //last input count reversed
-                if (std::distance(input_beg, input_beg_tmp - broken) >= MINIMUM_MATCH_SIZE) {
+                if (std::distance(found.first,found.second) >= MINIMUM_MATCH_SIZE) {
                     matches.emplace_back(data_beg, input_beg, input_beg_tmp - broken);
                 }
-                data_beg = re_enter;
+                data_beg++;
             } while (data_beg != data_end);
 
             return matches;
@@ -450,7 +447,7 @@ namespace uh::trees {
                                 modified.emplace(*first_tree_out);
                                 added.emplace(*middle_tree_out);
                                 //tree_match_pointer must move from first tree to middle tree, and we adjust offsets of all other matches
-                                pointer_maintain(match_beg,std::get<1>(*one_node_analysis).end(),*first_tree_out,*middle_tree_out);//update current tree pointer
+                                overlap_update(match_beg,std::get<1>(*one_node_analysis).end(),*first_tree_out,*middle_tree_out);//update current tree pointer
                             }
                             else{
                                 modified.emplace(*middle_tree_out);
@@ -459,7 +456,7 @@ namespace uh::trees {
                             if(last_section_tree){
                                 added.emplace(*last_tree_out);//section of inner list must be over due to incomplete match
                                 //tree_match_pointer must move from middle tree to last tree, and we adjust offsets of all other matches
-                                pointer_maintain(match_beg,std::get<1>(*one_node_analysis).end(),*middle_tree_out,*last_tree_out);//update current tree pointer
+                                overlap_update(match_beg,std::get<1>(*one_node_analysis).end(),*middle_tree_out,*last_tree_out);//update current tree pointer
                             }
                             if(append_tree)added.emplace(*append_tree_out);
                         }
@@ -488,7 +485,7 @@ namespace uh::trees {
         }
     private:
         //stack helper function for overlapping creation of trees
-        void pointer_maintain(std::size_t tree_front_data_front_absolute,auto &actively_changing_trees,auto match_beg_intern_copy, auto match_end_intern,tree_radix_custom * tree_front,tree_radix_custom * tree_back){
+        void overlap_update(std::size_t tree_front_data_front_absolute,auto &actively_changing_trees,auto match_beg_intern_copy, auto match_end_intern,tree_radix_custom * tree_front,tree_radix_custom * tree_back){
             auto match_beg_intern = match_beg_intern_copy;
             if(match_beg_intern+1>=match_end_intern)return;
             //update matches offset
@@ -496,13 +493,17 @@ namespace uh::trees {
             std::size_t first_match_size = std::distance(std::get<0>(*match_beg_intern),std::get<1>(*match_beg_intern))+1;
             std::size_t first_end = tree_front_data_front_absolute+first_match_size;
             while(match_beg_intern+1 != match_end_intern){
-                auto overlap_mismatch = std::mismatch(std::get<0>(match_beg_intern),std::get<1>(match_beg_intern),std::get<0>(match_beg_intern+1),std::get<1>(match_beg_intern+1));
+                auto overlap_mismatch = std::ranges::mismatch(std::get<0>(match_beg_intern),std::get<1>(match_beg_intern),std::get<0>(match_beg_intern+1),std::get<1>(match_beg_intern+1));
                 std::size_t found_size = std::distance(overlap_mismatch.first,overlap_mismatch.second);
-                std::size_t match_size = std::distance(std::get<0>(*(match_beg_intern+1)),std::get<1>(*(match_beg_intern+1)))+1;
+
                 if(found_size>=MINIMUM_MATCH_SIZE){
                     //the next match needs to shrink; if it's eaten up we need to delete it
                     auto begin_match_old = std::get<0>(match_beg_intern+1);
-                    std::get<0>(match_beg_intern+1)+=std::min(found_size,std::max((long)0,(long)match_size-MINIMUM_MATCH_SIZE));
+
+                    std::size_t match_size = std::distance(std::get<0>(*(match_beg_intern+1)),std::get<1>(*(match_beg_intern+1)))+1;
+                    found_size=std::min(found_size,std::max((long)0,(long)match_size-MINIMUM_MATCH_SIZE));
+
+                    std::get<0>(match_beg_intern+1)+=found_size;
                     if(std::get<0>(match_beg_intern+1)>std::get<1>(match_beg_intern+1)){
                         //delete
                         actively_changing_trees.erase(match_beg_intern+1);
@@ -520,6 +521,7 @@ namespace uh::trees {
                 std::size_t total_offset_front_for_this_node = tree_front_data_front_absolute+data_offset_between_start_and_current;
                 if(data_offset_between_start_and_current<first_end){
                     //overlapping match, tree pointer stays at this tree, one to one reference tree front at tree_front_data_front_absolute; re-reference to data due to erase
+                    std::size_t match_size = std::distance(std::get<0>(*(match_beg_intern+1)),std::get<1>(*(match_beg_intern+1)))+1;
                     std::size_t data_offset_between_start_and_last_node = std::distance(first_data_offset,std::get<2>(*(match_beg_intern)));
                     std::size_t total_offset_front_for_last_node = tree_front_data_front_absolute+data_offset_between_start_and_last_node;
                     if(data_offset_between_start_and_current+match_size>=first_end){
