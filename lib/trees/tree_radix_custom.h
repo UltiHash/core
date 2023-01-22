@@ -496,11 +496,30 @@ namespace uh::trees {
             std::size_t first_match_size = std::distance(std::get<0>(*match_beg_intern),std::get<1>(*match_beg_intern))+1;
             std::size_t first_end = tree_front_data_front_absolute+first_match_size;
             while(match_beg_intern+1 != match_end_intern){
+                auto overlap_mismatch = std::mismatch(std::get<0>(match_beg_intern),std::get<1>(match_beg_intern),std::get<0>(match_beg_intern+1),std::get<1>(match_beg_intern+1));
+                std::size_t found_size = std::distance(overlap_mismatch.first,overlap_mismatch.second);
+                std::size_t match_size = std::distance(std::get<0>(*(match_beg_intern+1)),std::get<1>(*(match_beg_intern+1)))+1;
+                if(found_size>=MINIMUM_MATCH_SIZE){
+                    //the next match needs to shrink; if it's eaten up we need to delete it
+                    auto begin_match_old = std::get<0>(match_beg_intern+1);
+                    std::get<0>(match_beg_intern+1)+=std::min(found_size,std::max((long)0,(long)match_size-MINIMUM_MATCH_SIZE));
+                    if(std::get<0>(match_beg_intern+1)>std::get<1>(match_beg_intern+1)){
+                        //delete
+                        actively_changing_trees.erase(match_beg_intern+1);
+                        //vector pointer reset
+                        std::size_t active_tree_offset = std::distance(actively_changing_trees.begin(),match_beg_intern_copy);
+                        match_beg_intern = actively_changing_trees.begin()+active_tree_offset+std::distance(match_beg_intern_copy,match_beg_intern);
+                        match_beg_intern_copy = actively_changing_trees.begin()+active_tree_offset;
+                        continue;
+                    }
+                    else{
+                        std::get<2>(match_beg_intern+1)+=found_size;//TODO: cascade match size check and get minimum over all remaining matches!!
+                    }
+                }
                 std::size_t data_offset_between_start_and_current = std::distance(first_data_offset,std::get<2>(*(match_beg_intern+1)));
                 std::size_t total_offset_front_for_this_node = tree_front_data_front_absolute+data_offset_between_start_and_current;
                 if(data_offset_between_start_and_current<first_end){
                     //overlapping match, tree pointer stays at this tree, one to one reference tree front at tree_front_data_front_absolute; re-reference to data due to erase
-                    std::size_t match_size = std::distance(std::get<0>(*(match_beg_intern+1)),std::get<1>(*(match_beg_intern+1)))+1;
                     std::size_t data_offset_between_start_and_last_node = std::distance(first_data_offset,std::get<2>(*(match_beg_intern)));
                     std::size_t total_offset_front_for_last_node = tree_front_data_front_absolute+data_offset_between_start_and_last_node;
                     if(data_offset_between_start_and_current+match_size>=first_end){
@@ -541,7 +560,6 @@ namespace uh::trees {
                     std::get<2>(*(match_beg_intern+1)) = tree_back->data_vector().begin()+(total_offset_front_for_this_node-tree_front->data_vector().size());
                     std::get<3>(*(match_beg_intern+1)) = tree_back;
                 }
-                //TODO: if last match is a subset from the front of the next match, advance found_beg of the next match behind the prefix (minimum prefix length is match size); if the next match turns zero in size, delete it
                 match_beg_intern++;
             }
         };
