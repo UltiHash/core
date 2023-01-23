@@ -63,6 +63,10 @@ std::shared_mutex avx_protect{};
             return data;
         }
 
+        auto &children_reference(bool backward=false){
+            return children;//[backward]
+        }
+
         std::size_t size(){
             return data_vector().size();
         }
