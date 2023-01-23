@@ -215,7 +215,7 @@ std::shared_mutex avx_protect{};
                 std::size_t matched_size = std::distance(bin_beg_incoming, bin_end_found);
                 //checking if children need to be generated before and after the found input peace, reference to data of tree required
                 //child before found, reference data
-                if constexpr(std::is_same<std::vector<unsigned char>::iterator,decltype(bin_end_found)>::value || std::is_same<std::list<unsigned char>::iterator,decltype(bin_end_found)>::value || std::is_same<std::deque<unsigned char>::iterator,decltype(bin_end_found)>::value){
+                if constexpr(std::is_same<std::vector<unsigned char>::iterator,decltype(bin_beg_found)>::value || std::is_same<std::list<unsigned char>::iterator,decltype(bin_beg_found)>::value || std::is_same<std::deque<unsigned char>::iterator,decltype(bin_beg_found)>::value){
                     auto  child_beg_beg = cur_tree->data_vector().begin();
                     auto  child_end_beg = std::max(data_beg_intern - 1, child_beg_beg);
                     //child data sequence middle, reference data
@@ -385,7 +385,7 @@ std::shared_mutex avx_protect{};
                     }
                 }
                 else{
-                    static_assert(std::is_same<std::vector<unsigned char>::reverse_iterator,decltype(bin_end_found)>::value || std::is_same<std::list<unsigned char>::reverse_iterator,decltype(bin_end_found)>::value || std::is_same<std::deque<unsigned char>::reverse_iterator,decltype(bin_end_found)>::value,"Illegal reverse iterator provided!");
+                    static_assert(std::is_same<std::vector<unsigned char>::reverse_iterator,decltype(bin_beg_found)>::value || std::is_same<std::list<unsigned char>::reverse_iterator,decltype(bin_beg_found)>::value || std::is_same<std::deque<unsigned char>::reverse_iterator,decltype(bin_beg_found)>::value,"Illegal reverse iterator provided!");
                     auto  child_beg_beg = cur_tree->data_vector().rbegin();
                     auto  child_end_beg = std::max(data_beg_intern - 1, child_beg_beg);
                     //child data sequence middle, reference data
@@ -561,7 +561,7 @@ std::shared_mutex avx_protect{};
 
             std::vector<std::tuple<std::size_t, std::size_t, std::size_t, std::list<std::tuple<std::list<tree_radix_custom *>,std::list<tree_radix_custom *>>>>> out_change_tuple_out{};
 
-            auto single_beg = single_search.begin();
+            auto single_beg = search_index.begin();
             while(single_beg!=search_index.end()){
                 std::tuple<std::size_t, std::size_t, std::size_t, std::list<std::tuple<std::list<tree_radix_custom *>,std::list<tree_radix_custom *>>>> out_change_tuple{};
 
@@ -581,12 +581,12 @@ std::shared_mutex avx_protect{};
                         continue;
                     }
 
-                    tree_radix_custom* tree_match_pointer; = std::get<0>(*one_node_analysis);
+                    tree_radix_custom* tree_match_pointer = std::get<0>(*one_node_analysis);
                     std::set<tree_radix_custom*>modified{},added{};//changes to be written to disk in the form of tree pointers
-                    std::vector<std::tuple<std::tuple<decltype(bin_beg_found), decltype(bin_end_found), decltype(bin_beg_found),tree_radix_custom *> actively_changing_trees{};
+                    std::vector<std::tuple<std::tuple<decltype(bin_beg), decltype(bin_end), decltype(bin_beg),decltype(tree_match_pointer)> actively_changing_trees{};//TODO:fix
                     std::for_each(std::get<1>(*one_node_analysis).begin(),std::get<1>(*one_node_analysis).end(),[&actively_changing_trees,&tree_match_pointer](auto &item){
                         actively_changing_trees.emplace_back(std::get<0>(item),std::get<1>(item),std::get<2>(item),tree_match_pointer);
-                    })
+                    });
 
                     auto match_beg = actively_changing_trees.begin();//                                         found beginning                             found end                        data on tree begin at found begin
                     auto match_beg_copy = match_beg;
@@ -662,7 +662,7 @@ std::shared_mutex avx_protect{};
                     }
                     search_element++;
                 }
-                if(std::get<0>(out_change_list)>0)out_change_tuple_out.push_back(out_change_tuple);//only add change list if there was anything integrated
+                if(std::get<0>(out_change_tuple)>0)out_change_tuple_out.push_back(out_change_tuple);//only add change list if there was anything integrated
             }
 
             //deduplicate change list out
@@ -735,7 +735,7 @@ std::shared_mutex avx_protect{};
 
         //returns total size integrated, new space used uncompressed, new space used compressed
         //calculates ESTIMATE size of data to be integrated to be communicated to agency to determine optimal storage location
-        std::tuple<std::size_t, std::size_t, std::size_t>
+        std::vector<std::tuple<std::size_t, std::size_t, std::size_t>>
         add_test(auto bin_beg,auto bin_end) {
             //first search existing structure and add into the last tree to insert potentially missing information
             std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<decltype(bin_beg), decltype(bin_end), decltype(bin_end)>>>>>, std::size_t>> search_index = search(
@@ -752,7 +752,7 @@ std::shared_mutex avx_protect{};
                 std::size_t matched_size = std::distance(bin_beg_incoming, bin_end_found);
                 //checking if children need to be generated before and after the found input peace, reference to data of tree required
                 //child before found, reference data
-                if constexpr(std::is_same<std::vector<unsigned char>::reverse_iterator,decltype(bin_end_found)>::value || std::is_same<std::list<unsigned char>::reverse_iterator,decltype(bin_end_found)>::value || std::is_same<std::deque<unsigned char>::reverse_iterator,decltype(bin_end_found)>::value){
+                if constexpr(std::is_same<std::vector<unsigned char>::reverse_iterator,decltype(bin_beg_found)>::value || std::is_same<std::list<unsigned char>::reverse_iterator,decltype(bin_beg_found)>::value || std::is_same<std::deque<unsigned char>::reverse_iterator,decltype(bin_beg_found)>::value){
                     auto child_beg_beg = cur_tree->data_vector().begin();
                     auto child_end_beg = std::max(data_beg_intern - 1, child_beg_beg);
                     //child data sequence middle, reference data
@@ -833,7 +833,7 @@ std::shared_mutex avx_protect{};
                     }
                 }
                 else{
-                    static_assert(std::is_same<std::vector<unsigned char>::reverse_iterator,decltype(bin_end_found)>::value || std::is_same<std::list<unsigned char>::reverse_iterator,decltype(bin_end_found)>::value || std::is_same<std::deque<unsigned char>::reverse_iterator,decltype(bin_end_found)>::value,"Illegal reverse iterator provided!");
+                    static_assert(std::is_same<std::vector<unsigned char>::reverse_iterator,decltype(bin_beg_found)>::value || std::is_same<std::list<unsigned char>::reverse_iterator,decltype(bin_beg_found)>::value || std::is_same<std::deque<unsigned char>::reverse_iterator,decltype(bin_beg_found)>::value,"Illegal reverse iterator provided!");
                     auto child_beg_beg = cur_tree->data_vector().rbegin();
                     auto child_end_beg = std::max(data_beg_intern - 1, child_beg_beg);
                     //child data sequence middle, reference data
@@ -919,7 +919,7 @@ std::shared_mutex avx_protect{};
             //cases for last tree if it exists, binary fit in: match from the beginning on, match in the middle, match until the end, total match
             //all lists contain lists with a last element that had multiple matches; add up all matches
             std::vector<std::tuple<std::size_t, std::size_t, std::size_t>>add_tup_out{};
-            for(const single_route:search_index){
+            for(auto single_route:search_index){
                 std::tuple<std::size_t, std::size_t, std::size_t>add_tup{};
                 auto outer_most_level = [&](auto list) {
                     auto inner_list_level = [&](auto tree_tuple) {
@@ -1073,7 +1073,7 @@ std::shared_mutex avx_protect{};
                 return out_possibilities;
             };
 
-            if constexpr(std::is_same<std::vector<unsigned char>::reverse_iterator,bin_beg>::value || std::is_same<std::list<unsigned char>::reverse_iterator,bin_beg>::value || std::is_same<std::deque<unsigned char>::reverse_iterator,bin_beg>::value){
+            if constexpr(std::is_same<std::vector<unsigned char>::reverse_iterator,decltype(bin_beg)>::value || std::is_same<std::list<unsigned char>::reverse_iterator,decltype(bin_beg)>::value || std::is_same<std::deque<unsigned char>::reverse_iterator,decltype(bin_beg)>::value){
                 auto possibilities_init = vanilla_match_last_tree(data.begin(), data.end(), bin_beg, bin_end);
                 auto possibilities = std::vector<std::tuple<decltype(possibilities), decltype(bin_beg),decltype(bin_end), bool>>{};//check if the possibility was already checked and save the worked on binary input offset and data offset
                 for (const auto &item: possibilities_init) {
@@ -1202,6 +1202,7 @@ std::shared_mutex avx_protect{};
                 return multi_routing;
             }
             else{
+                static_assert(std::is_same<std::vector<unsigned char>::reverse_iterator,decltype(bin_beg)>::value || std::is_same<std::list<unsigned char>::reverse_iterator,decltype(bin_beg)>::value || std::is_same<std::deque<unsigned char>::reverse_iterator,decltype(bin_beg)>::value,"Illegal reverse iterator provided!");
                 auto possibilities_init = vanilla_match_last_tree(data.rbegin(), data.rend(), bin_beg, bin_end);
                 auto possibilities = std::vector<std::tuple<decltype(possibilities), decltype(bin_beg),decltype(bin_end), bool>>{};//check if the possibility was already checked and save the worked on binary input offset and data offset
                 for (const auto &item: possibilities_init) {
