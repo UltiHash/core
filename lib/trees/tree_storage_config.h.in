@@ -7,14 +7,19 @@
 #define LATENCY_TEST_SIZE (std::size_t) std::pow(2, 20)
 #define PERFORMANCE_TEST_SIZE (std::size_t) (std::pow(2,21))
 #define STORE_MAX (unsigned int) (std::numeric_limits<unsigned char>::max())
+//the overhead of storing the block plus the size of basic storage pointer
+#define MINIMUM_MATCH_SIZE 2
 #else
 #define LATENCY_TEST_SIZE (std::size_t) std::pow(2, 22)
 #define PERFORMANCE_TEST_SIZE std::pow(1024, 4) * 4
 #define STORE_MAX (unsigned int) std::numeric_limits<unsigned int>::max()
+//the overhead of storing the block plus the size of basic storage pointer
+#define MINIMUM_MATCH_SIZE (std::size_t)std::round((long double)(SHA512_DIGEST_LENGTH+sizeof(unsigned long)*TIME_STAMPS_ON_BLOCK+SHA256_DIGEST_LENGTH+3+5)/5)
 #endif
 #define STORE_HARD_LIMIT (unsigned long) (STORE_MAX * 2)
 #define STORE_MAX_LATENCY 32
 #define N (unsigned int) (std::numeric_limits<unsigned char>::max() + 1)
 #define TIME_STAMPS_ON_BLOCK 3
+#define AVX_UNITS 2
 
 #endif

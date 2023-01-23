@@ -15,19 +15,12 @@
 BOOST_AUTO_TEST_CASE( constructor )
 {
     uh::trees::tree_radix_custom<std::vector<unsigned char>> t;
-    /*
-    BOOST_CHECK(!t.has_children());
-    uh::trees::tree_radix_custom t_hello("Hello World");
-    BOOST_CHECK(!t_hello.has_children());
+    BOOST_CHECK(t.children.empty());
+    std::string hello_string = "Hello World";
+    uh::trees::tree_radix_custom t_hello(std::vector<unsigned char>{hello_string.begin(),hello_string.end});
+    BOOST_CHECK(t_hello.children.empty());
     BOOST_CHECK(t_hello.size()==11);
-    BOOST_CHECK(std::strncmp(t_hello.data_blob(),"Hello World",11)==0);
-
-    char input[11];
-    std::strncpy(input,"Hello World",11);
-    uh::trees::tree_radix_custom t_hello2(input,11);
-    BOOST_CHECK(!t_hello2.has_children());
-    BOOST_CHECK(t_hello2.size()==11);
-    BOOST_CHECK(std::strncmp(t_hello2.data_blob(),"Hello World",11)==0);*/
+    BOOST_CHECK(std::strncmp(t_hello.data_vector(),"Hello World",11)==0);
 }
 
 BOOST_AUTO_TEST_CASE( add_test )

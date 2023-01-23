@@ -19,12 +19,10 @@
 #include <openssl/sha.h>
 #include <type_traits>
 #include <execution>
+#include <cmath>
 
 namespace uh::trees {
     //because it takes at least 2 bytes to describe a deeper encoding action
-#define MINIMUM_MATCH_SIZE SHA512_DIGEST_LENGTH+sizeof(unsigned long)*TIME_STAMPS_ON_BLOCK+SHA256_DIGEST_LENGTH+3+5//the overhead of storing the block plus the size of basic storage pointer
-#define AVX_UNITS 2
-
 std::size_t avx_count{};
 std::shared_mutex avx_protect{};
 
@@ -32,6 +30,7 @@ std::shared_mutex avx_protect{};
     struct tree_radix_custom {
     protected:
         //the first element of data is cut off to children except on root if it's a new tree
+        //TODO: use two children and block_swarm_offsets to scan forward and backward
         std::vector<std::tuple<std::vector<tree_radix_custom *>, unsigned char>> children{};//multiple targets that can follow a node for each letter
         std::vector<unsigned char> data{};//any binary vector string
         DataReference data_ref{};
@@ -62,6 +61,10 @@ std::shared_mutex avx_protect{};
 
         std::vector<unsigned char> &data_vector() {
             return data;
+        }
+
+        std::size_t size(){
+            return data_vector().size();
         }
 
         DataReference &data_reference() {
