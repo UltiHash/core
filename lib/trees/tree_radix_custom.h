@@ -136,19 +136,9 @@ std::shared_mutex avx_protect{};
 
     private:
         /*std::vector<std::tuple<std::vector<unsigned char>::iterator,std::vector<unsigned char>::iterator,std::vector<unsigned char>::iterator>>*/ auto compare_ultihash(auto data_beg, auto data_end, auto input_beg, auto input_end) {
-            if (std::distance(input_beg, input_end) > std::distance(data_beg, data_end))
-                input_end = input_beg + std::distance(data_beg, data_end);
             //if input does only fit to a shorter string as a subset of data, count becomes negative, else positive including ß
             //data offset iterator and start and end of input
             std::vector<std::tuple<decltype(input_beg),decltype(input_end),decltype(data_beg)>> matches{};
-            if (std::distance(data_beg, data_end) > std::distance(input_beg, input_end)) {
-                DEBUG << "Compare ultihash failed because input was larger than data!";
-                return matches;
-            }
-            if (!std::distance(data_beg, data_end)) {
-                DEBUG << "Compare ultihash failed because data was empty!";
-                return matches;
-            }
             if (!std::distance(input_beg, input_end)) {
                 DEBUG << "Compare ultihash failed because data was empty!";
                 return matches;
@@ -391,7 +381,7 @@ std::shared_mutex avx_protect{};
                     }
                 }
                 else{
-                    static_assert(std::is_same<std::vector<unsigned char>::reverse_iterator,decltype(bin_beg_found)>::value || std::is_same<std::list<unsigned char>::reverse_iterator,decltype(bin_beg_found)>::value || std::is_same<std::deque<unsigned char>::reverse_iterator,decltype(bin_beg_found)>::value,"Illegal reverse iterator provided!");
+                    static_assert(!std::is_same<std::vector<unsigned char>::reverse_iterator,decltype(bin_beg_found)>::value && !std::is_same<std::list<unsigned char>::reverse_iterator,decltype(bin_beg_found)>::value && !std::is_same<std::deque<unsigned char>::reverse_iterator,decltype(bin_beg_found)>::value,"Illegal reverse iterator provided!");
                     auto  child_beg_beg = cur_tree->data_vector().rbegin();
                     auto  child_end_beg = std::max(data_beg_intern - 1, child_beg_beg);
                     //child data sequence middle, reference data
@@ -758,7 +748,7 @@ std::shared_mutex avx_protect{};
                 std::size_t matched_size = std::distance(bin_beg_incoming, bin_end_found);
                 //checking if children need to be generated before and after the found input peace, reference to data of tree required
                 //child before found, reference data
-                if constexpr(std::is_same<std::vector<unsigned char>::reverse_iterator,decltype(bin_beg_found)>::value || std::is_same<std::list<unsigned char>::reverse_iterator,decltype(bin_beg_found)>::value || std::is_same<std::deque<unsigned char>::reverse_iterator,decltype(bin_beg_found)>::value){
+                if constexpr(std::is_same<std::vector<unsigned char>::iterator,decltype(bin_beg_found)>::value || std::is_same<std::list<unsigned char>::iterator,decltype(bin_beg_found)>::value || std::is_same<std::deque<unsigned char>::iterator,decltype(bin_beg_found)>::value){
                     auto child_beg_beg = cur_tree->data_vector().begin();
                     auto child_end_beg = std::max(data_beg_intern - 1, child_beg_beg);
                     //child data sequence middle, reference data
@@ -839,7 +829,7 @@ std::shared_mutex avx_protect{};
                     }
                 }
                 else{
-                    static_assert(std::is_same<std::vector<unsigned char>::reverse_iterator,decltype(bin_beg_found)>::value || std::is_same<std::list<unsigned char>::reverse_iterator,decltype(bin_beg_found)>::value || std::is_same<std::deque<unsigned char>::reverse_iterator,decltype(bin_beg_found)>::value,"Illegal reverse iterator provided!");
+                    static_assert(!std::is_same<std::vector<unsigned char>::reverse_iterator,decltype(bin_beg_found)>::value && !std::is_same<std::list<unsigned char>::reverse_iterator,decltype(bin_beg_found)>::value && !std::is_same<std::deque<unsigned char>::reverse_iterator,decltype(bin_beg_found)>::value,"Illegal reverse iterator provided!");
                     auto child_beg_beg = cur_tree->data_vector().rbegin();
                     auto child_end_beg = std::max(data_beg_intern - 1, child_beg_beg);
                     //child data sequence middle, reference data
@@ -1046,7 +1036,7 @@ std::shared_mutex avx_protect{};
 
                 if (local_matches.empty())return input_list;
 
-                std::vector<decltype(input_list[0])> out_possibilities{};
+                std::vector<decltype(*input_list.begin())> out_possibilities{};
 
                 auto match_beginning = local_matches.begin();
                 while (match_beginning != local_matches.end()) {
@@ -1079,7 +1069,7 @@ std::shared_mutex avx_protect{};
                 return out_possibilities;
             };
 
-            if constexpr(std::is_same<std::vector<unsigned char>::reverse_iterator,decltype(bin_beg)>::value || std::is_same<std::list<unsigned char>::reverse_iterator,decltype(bin_beg)>::value || std::is_same<std::deque<unsigned char>::reverse_iterator,decltype(bin_beg)>::value){
+            if constexpr(std::is_same<std::vector<unsigned char>::iterator,decltype(bin_beg)>::value || std::is_same<std::list<unsigned char>::iterator,decltype(bin_beg)>::value || std::is_same<std::deque<unsigned char>::iterator,decltype(bin_beg)>::value){
                 auto possibilities_init = vanilla_match_last_tree(data.begin(), data.end(), bin_beg, bin_end);
                 auto possibilities = std::vector<std::tuple<decltype(possibilities), decltype(bin_beg),decltype(bin_end), bool>>{};//check if the possibility was already checked and save the worked on binary input offset and data offset
                 for (const auto &item: possibilities_init) {
@@ -1208,7 +1198,7 @@ std::shared_mutex avx_protect{};
                 return multi_routing;
             }
             else{
-                static_assert(std::is_same<std::vector<unsigned char>::reverse_iterator,decltype(bin_beg)>::value || std::is_same<std::list<unsigned char>::reverse_iterator,decltype(bin_beg)>::value || std::is_same<std::deque<unsigned char>::reverse_iterator,decltype(bin_beg)>::value,"Illegal reverse iterator provided!");
+                static_assert(!std::is_same<std::vector<unsigned char>::reverse_iterator,decltype(bin_beg)>::value && !std::is_same<std::list<unsigned char>::reverse_iterator,decltype(bin_beg)>::value && !std::is_same<std::deque<unsigned char>::reverse_iterator,decltype(bin_beg)>::value,"Illegal reverse iterator provided!");
                 auto possibilities_init = vanilla_match_last_tree(data.rbegin(), data.rend(), bin_beg, bin_end);
                 auto possibilities = std::vector<std::tuple<decltype(possibilities), decltype(bin_beg),decltype(bin_end), bool>>{};//check if the possibility was already checked and save the worked on binary input offset and data offset
                 for (const auto &item: possibilities_init) {
