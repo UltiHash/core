@@ -220,7 +220,7 @@ std::shared_mutex avx_protect{};
                     found = std::mismatch(data_beg,data_end,input_beg,input_end);
                 }
                 //last input count reversed
-                std::size_t found_dist = std::distance(found.first,found.second);
+                std::size_t found_dist = std::distance(data_beg,found.first);
                 if (found_dist >= MINIMUM_MATCH_SIZE) {
                     matches.emplace_back(data_beg, input_beg, input_beg+found_dist);
                 }
@@ -1115,7 +1115,7 @@ std::shared_mutex avx_protect{};
 
             if constexpr(std::is_same<std::vector<unsigned char>::iterator,decltype(bin_beg)>::value || std::is_same<std::list<unsigned char>::iterator,decltype(bin_beg)>::value || std::is_same<std::deque<unsigned char>::iterator,decltype(bin_beg)>::value){
                 auto possibilities_init = vanilla_match_last_tree(data.begin(), data.end(), bin_beg, bin_end);
-                auto possibilities = std::vector<std::tuple<decltype(possibilities), decltype(bin_beg),decltype(bin_end), bool>>{};//check if the possibility was already checked and save the worked on binary input offset and data offset
+                auto possibilities = std::vector<std::tuple<decltype(possibilities_init), decltype(bin_beg),decltype(bin_end), bool>>{};//check if the possibility was already checked and save the worked on binary input offset and data offset
                 for (const auto &item: possibilities_init) {
                     possibilities.emplace_back(item, data.begin(), bin_beg, false);
                 }
@@ -1244,7 +1244,7 @@ std::shared_mutex avx_protect{};
             else{
                 static_assert(!std::is_same<std::vector<unsigned char>::reverse_iterator,decltype(bin_beg)>::value && !std::is_same<std::list<unsigned char>::reverse_iterator,decltype(bin_beg)>::value && !std::is_same<std::deque<unsigned char>::reverse_iterator,decltype(bin_beg)>::value,"Illegal reverse iterator provided!");
                 auto possibilities_init = vanilla_match_last_tree(data.rbegin(), data.rend(), bin_beg, bin_end);
-                auto possibilities = std::vector<std::tuple<decltype(possibilities), decltype(bin_beg),decltype(bin_end), bool>>{};//check if the possibility was already checked and save the worked on binary input offset and data offset
+                auto possibilities = std::vector<std::tuple<decltype(possibilities_init), decltype(bin_beg),decltype(bin_end), bool>>{};//check if the possibility was already checked and save the worked on binary input offset and data offset
                 for (const auto &item: possibilities_init) {
                     possibilities.emplace_back(item, data.rbegin(), bin_beg, false);
                 }
