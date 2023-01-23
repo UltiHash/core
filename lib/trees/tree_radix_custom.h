@@ -637,7 +637,7 @@ std::shared_mutex simd_protect{};
                         }
                         else{
                             middle_tree_out = out_vector.begin();
-                            first_tree_out = middle_tree_out;
+                            //first_tree_out = middle_tree_out;
                         }
                         if(last_section_tree){
                             last_tree_out = middle_tree_out+1;
@@ -775,7 +775,6 @@ std::shared_mutex simd_protect{};
             auto tree_test_sequence = [](tree_radix_custom *cur_tree, auto bin_beg_incoming, auto bin_end_incoming,
                                          auto bin_beg_found, auto bin_end_found,
                                          const auto data_beg_intern) {
-                std::size_t matched_size = std::distance(bin_beg_incoming, bin_end_found);
                 //checking if children need to be generated before and after the found input peace, reference to data of tree required
                 //child before found, reference data
                 if constexpr(std::is_same<std::vector<unsigned char>::const_iterator,decltype(bin_beg_found)>::value || std::is_same<std::list<unsigned char>::const_iterator,decltype(bin_beg_found)>::value || std::is_same<std::deque<unsigned char>::const_iterator,decltype(bin_beg_found)>::value){
@@ -1135,10 +1134,10 @@ std::shared_mutex simd_protect{};
             };
 
             if constexpr(std::is_same<std::vector<unsigned char>::const_iterator,decltype(bin_beg)>::value || std::is_same<std::list<unsigned char>::const_iterator,decltype(bin_beg)>::value || std::is_same<std::deque<unsigned char>::const_iterator,decltype(bin_beg)>::value){
-                auto possibilities_init = vanilla_match_last_tree(data.begin(), data.end(), bin_beg, bin_end);
+                auto possibilities_init = vanilla_match_last_tree(data.cbegin(), data.cend(), bin_beg, bin_end);
                 auto possibilities = std::vector<std::tuple<decltype(possibilities_init), decltype(bin_beg),decltype(bin_end), bool>>{};//check if the possibility was already checked and save the worked on binary input offset and data offset
                 for (const auto &item: possibilities_init) {
-                    possibilities.emplace_back(item, data.begin(), bin_beg, false);
+                    possibilities.emplace_back(item, data.cbegin(), bin_beg, false);
                 }
                 possibilities_init.clear();
 
@@ -1171,7 +1170,7 @@ std::shared_mutex simd_protect{};
 
                         //do work on matching again for subset of data and input
                         //after various match cases as various positions
-                        possibilities_init = vanilla_match_last_tree(std::get<1>(*pos_begin), data.end(),
+                        possibilities_init = vanilla_match_last_tree(std::get<1>(*pos_begin), data.cend(),
                                                                      std::get<2>(*pos_begin), bin_end);//search here
                         for (const auto &item: possibilities_init) {
                             possibilities.emplace_back(item, std::get<1>(*pos_begin), std::get<2>(*pos_begin), false);
@@ -1264,10 +1263,10 @@ std::shared_mutex simd_protect{};
             }
             else{
                 static_assert(!std::is_same<std::vector<unsigned char>::const_reverse_iterator,decltype(bin_beg)>::value && !std::is_same<std::list<unsigned char>::const_reverse_iterator,decltype(bin_beg)>::value && !std::is_same<std::deque<unsigned char>::const_reverse_iterator,decltype(bin_beg)>::value,"Illegal reverse const_iterator provided!");
-                auto possibilities_init = vanilla_match_last_tree(data.rbegin(), data.rend(), bin_beg, bin_end);
+                auto possibilities_init = vanilla_match_last_tree(data.crbegin(), data.crend(), bin_beg, bin_end);
                 auto possibilities = std::vector<std::tuple<decltype(possibilities_init), decltype(bin_beg),decltype(bin_end), bool>>{};//check if the possibility was already checked and save the worked on binary input offset and data offset
                 for (const auto &item: possibilities_init) {
-                    possibilities.emplace_back(item, data.rbegin(), bin_beg, false);
+                    possibilities.emplace_back(item, data.crbegin(), bin_beg, false);
                 }
                 possibilities_init.clear();
 
@@ -1300,7 +1299,7 @@ std::shared_mutex simd_protect{};
 
                         //do work on matching again for subset of data and input
                         //after various match cases as various positions
-                        possibilities_init = vanilla_match_last_tree(std::get<1>(*pos_begin), data.rend(),
+                        possibilities_init = vanilla_match_last_tree(std::get<1>(*pos_begin), data.crend(),
                                                                      std::get<2>(*pos_begin), bin_end);//search here
                         for (const auto &item: possibilities_init) {
                             possibilities.emplace_back(item, std::get<1>(*pos_begin), std::get<2>(*pos_begin), false);
