@@ -27,16 +27,18 @@ void options::evaluate(const boost::program_options::variables_map&)
 
 // ---------------------------------------------------------------------
 
-void options::add(boost::program_options::options_description& desc)
+void options::add(const boost::program_options::options_description& desc, const visibility& vis)
 {
     m_desc.add(desc);
+    if (vis == visibility::visible)
+        m_visible.add(desc);
 }
 
 // ---------------------------------------------------------------------
 
 void options::dump(std::ostream& out) const
 {
-    out << m_desc;
+    out << m_visible;
 }
 
 // ---------------------------------------------------------------------

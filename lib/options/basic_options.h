@@ -22,6 +22,7 @@ public:
 
 private:
     boost::program_options::options_description m_desc;
+    boost::program_options::options_description m_hiddenDesc;
 
     bool m_help = false;
     bool m_version = false;
