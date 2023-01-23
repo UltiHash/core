@@ -26,13 +26,13 @@ BOOST_AUTO_TEST_CASE( compare_test )
     auto result1 = t.compare_ultihash(data_string_long.cbegin(),data_string_long.cend(),data_string.cbegin(),data_string.cend());
     auto result2 = t.compare_ultihash(data_string_late.cbegin(),data_string_late.cend(),data_string_long.cbegin(),data_string_long.cend());
 
-    BOOST_CHECK(std::get<0>(result1[0])==data_string.cbegin());
-    BOOST_CHECK(std::get<1>(result1[0])==data_string.cbegin()+11);
-    BOOST_CHECK(std::get<2>(result1[0])==data_string_long.cbegin());
+    BOOST_CHECK(std::get<0>(result1[0])==data_string_long.cbegin());
+    BOOST_CHECK(std::get<1>(result1[0])==data_string.cbegin());
+    BOOST_CHECK(std::get<2>(result1[0])==data_string.cbegin()+11);
 
-    BOOST_CHECK(std::get<0>(result2[0])==data_string_long.cbegin());
-    BOOST_CHECK(std::get<1>(result2[0])==data_string_long.cbegin()+11);
-    BOOST_CHECK(std::get<2>(result2[0])==data_string_late.cbegin()+12);
+    BOOST_CHECK(std::get<0>(result2[0])==data_string_late.cbegin()+12);
+    BOOST_CHECK(std::get<1>(result2[0])==data_string_long.cbegin());
+    BOOST_CHECK(std::get<2>(result2[0])==data_string_long.cbegin()+11);
 }
 BOOST_AUTO_TEST_CASE( constructor )
 {
