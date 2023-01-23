@@ -16,10 +16,12 @@
 #include <set>
 #include <ranges>
 #include <algorithm>
+#include <algorithm>
 #include <openssl/sha.h>
 #include <type_traits>
 #include <execution>
 #include <cmath>
+#include <iterator>
 
 namespace uh::trees {
     //because it takes at least 2 bytes to describe a deeper encoding action
@@ -92,11 +94,39 @@ std::shared_mutex avx_protect{};
             } else {
                 //on search there was no match on the tree node, so we assume that a new node referenced by this node will be created carrying append
                 //the reason why there is the correct character available but no match detected by search is the MINIMUM_MATCH_SIZE that failed, we will respect that
-                if(std::ranges::find(child_vec_append.begin(),child_vec_append.end(),input_tree)==child_vec_append.end()){
+                decltype(child_vec_append.begin()) find_it;
+                std::unique_lock lock(avx_protect);
+                if(avx_count<AVX_UNITS){
+                    avx_count += 1;
+                    lock.unlock();
+                    find_it = std::find(std::execution::unseq,child_vec_append.begin(),child_vec_append.end(),input_tree);
+                    lock.lock();
+                    avx_count -= 1;
+                    lock.unlock();
+                }
+                else{
+                    lock.unlock();
+                    find_it = std::find(child_vec_append.begin(),child_vec_append.end(),input_tree);
+                }
+                if(find_it==child_vec_append.end()){
                     child_vec_append.emplace_back(input_tree);
-                    std::sort(child_vec_append.begin(),child_vec_append.end(),[](auto& a,auto& b){
-                        return lexicographical_compare(a->data_vector().begin(),a->data_vector().end(),b->data_vector().begin(),b->data_vector().end());
-                    });
+                    std::unique_lock lock(avx_protect);
+                    if(avx_count<AVX_UNITS){
+                        avx_count += 1;
+                        lock.unlock();
+                        std::sort(child_vec_append.begin(),child_vec_append.end(),[](auto& a,auto& b){
+                            return lexicographical_compare(std::execution::unseq,a->data_vector().begin(),a->data_vector().end(),b->data_vector().begin(),b->data_vector().end());
+                        });
+                        lock.lock();
+                        avx_count -= 1;
+                        lock.unlock();
+                    }
+                    else{
+                        lock.unlock();
+                        std::sort(child_vec_append.begin(),child_vec_append.end(),[](auto& a,auto& b){
+                            return lexicographical_compare(a->data_vector().begin(),a->data_vector().end(),b->data_vector().begin(),b->data_vector().end());
+                        });
+                    }
                 }
             }
             std::sort(children.begin(),children.end(),[](auto &a, auto &b){
@@ -111,7 +141,20 @@ std::shared_mutex avx_protect{};
             } else {
                 //on search there was no match on the tree node, so we assume that a new node referenced by this node will be created carrying append
                 //the reason why there is the correct character available but no match detected by search is the MINIMUM_MATCH_SIZE that failed, we will respect that
-                auto find_beg = std::ranges::find(child_vec_append.begin(),child_vec_append.end(),input_tree);
+                decltype(child_vec_append.begin()) find_beg;
+                std::unique_lock lock(avx_protect);
+                if(avx_count<AVX_UNITS){
+                    avx_count += 1;
+                    lock.unlock();
+                    find_beg = std::find(std::execution::unseq,child_vec_append.begin(),child_vec_append.end(),input_tree);
+                    lock.lock();
+                    avx_count -= 1;
+                    lock.unlock();
+                }
+                else{
+                    lock.unlock();
+                    find_beg = std::find(child_vec_append.begin(),child_vec_append.end(),input_tree);
+                }
                 if(find_beg==child_vec_append.end()){
                     child_vec_append.erase(find_beg);
                     if(child_vec_append.empty()){
@@ -134,8 +177,8 @@ std::shared_mutex avx_protect{};
             return false;
         }
 
-    private:
-        /*std::vector<std::tuple<std::vector<unsigned char>::iterator,std::vector<unsigned char>::iterator,std::vector<unsigned char>::iterator>>*/ auto compare_ultihash(auto data_beg, auto data_end, auto input_beg, auto input_end) {
+        /*std::vector<std::tuple<std::vector<unsigned char>::iterator,std::vector<unsigned char>::iterator,std::vector<unsigned char>::iterator>>*/
+        auto compare_ultihash(std::bidirectional_iterator auto &data_beg, std::bidirectional_iterator auto &data_end, std::bidirectional_iterator auto &input_beg, std::bidirectional_iterator auto &input_end) {
             //if input does only fit to a shorter string as a subset of data, count becomes negative, else positive including ß
             //data offset iterator and start and end of input
             std::vector<std::tuple<decltype(input_beg),decltype(input_end),decltype(data_beg)>> matches{};
@@ -150,14 +193,14 @@ std::shared_mutex avx_protect{};
                 if(avx_count<AVX_UNITS){
                     avx_count += 1;
                     lock.unlock();
-                    data_beg = std::ranges::find(std::execution::unseq,data_beg,data_end,*input_beg);
+                    data_beg = std::find(std::execution::unseq,data_beg,data_end,*input_beg);
                     lock.lock();
                     avx_count -= 1;
                     lock.unlock();
                 }
                 else{
                     lock.unlock();
-                    data_beg = std::ranges::find(data_beg,data_end,*input_beg);
+                    data_beg = std::find(data_beg,data_end,*input_beg);
                 }
 
                 if (data_beg == data_end)break;
@@ -167,14 +210,14 @@ std::shared_mutex avx_protect{};
                 if(avx_count<AVX_UNITS){
                     avx_count += 1;
                     lock.unlock();
-                    found = std::ranges::mismatch(std::execution::unseq,data_beg,data_end,input_beg,input_end);
+                    found = std::mismatch(std::execution::unseq,data_beg,data_end,input_beg,input_end);
                     lock.lock();
                     avx_count -= 1;
                     lock.unlock();
                 }
                 else{
                     lock.unlock();
-                    found = std::ranges::mismatch(data_beg,data_end,input_beg,input_end);
+                    found = std::mismatch(data_beg,data_end,input_beg,input_end);
                 }
                 //last input count reversed
                 std::size_t found_dist = std::distance(found.first,found.second);
@@ -197,7 +240,8 @@ std::shared_mutex avx_protect{};
         std::vector<std::tuple<std::size_t, std::size_t, std::size_t, std::list<std::tuple<std::list<tree_radix_custom *>,std::list<tree_radix_custom *>>>>>
         add(auto bin_beg, auto bin_end) {//TODO:check duplicate matches and eliminate
             //first search existing structure and add into the last tree to insert potentially missing information
-            /*std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::vector<unsigned char>::iterator, std::vector<unsigned char>::iterator, std::vector<unsigned char>::iterator>>>>>, std::size_t>>*/auto search_index = search(
+            /*std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::vector<unsigned char>::iterator, std::vector<unsigned char>::iterator, std::vector<unsigned char>::iterator>>>>>, std::size_t>>*/
+            auto search_index = search(
                     bin_beg, bin_end);
             //uncompressed input
             if (bin_beg == bin_end || std::distance(bin_beg, bin_end) < 1) {
@@ -665,7 +709,7 @@ std::shared_mutex avx_protect{};
 
             return out_change_tuple_out;
         }
-    private:
+
         //stack helper function for overlapping creation of trees
         void overlap_update(std::size_t tree_front_data_front_absolute,auto &actively_changing_trees,auto match_beg_intern_copy, auto match_end_intern,tree_radix_custom * tree_front,tree_radix_custom * tree_back){
             auto match_beg_intern = match_beg_intern_copy;
