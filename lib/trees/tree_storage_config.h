@@ -20,6 +20,6 @@
 #define STORE_MAX_LATENCY 32
 #define N (unsigned int) (std::numeric_limits<unsigned char>::max() + 1)
 #define TIME_STAMPS_ON_BLOCK 3
-#define AVX_UNITS 2
+#define SIMD_UNITS 2
 
 #endif

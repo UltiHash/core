@@ -25,8 +25,8 @@
 
 namespace uh::trees {
     //because it takes at least 2 bytes to describe a deeper encoding action
-std::size_t avx_count{};
-std::shared_mutex avx_protect{};
+std::size_t simd_count{};
+std::shared_mutex simd_protect{};
 
     template<class DataReference>
     struct tree_radix_custom {
@@ -43,7 +43,7 @@ std::shared_mutex avx_protect{};
         ~tree_radix_custom() {
             for (auto &item1: children) {
                 for (auto &item2: std::get<0>(item1)) {
-                    if (item2 != nullptr) delete item2;
+                    delete item2;
                 }
             }
         }
@@ -95,13 +95,13 @@ std::shared_mutex avx_protect{};
                 //on search there was no match on the tree node, so we assume that a new node referenced by this node will be created carrying append
                 //the reason why there is the correct character available but no match detected by search is the MINIMUM_MATCH_SIZE that failed, we will respect that
                 decltype(child_vec_append.begin()) find_it;
-                std::unique_lock lock(avx_protect);
-                if(avx_count<AVX_UNITS){
-                    avx_count += 1;
+                std::unique_lock lock(simd_protect);
+                if(simd_count < SIMD_UNITS){
+                    simd_count += 1;
                     lock.unlock();
                     find_it = std::find(std::execution::unseq,child_vec_append.begin(),child_vec_append.end(),input_tree);
                     lock.lock();
-                    avx_count -= 1;
+                    simd_count -= 1;
                     lock.unlock();
                 }
                 else{
@@ -110,15 +110,15 @@ std::shared_mutex avx_protect{};
                 }
                 if(find_it==child_vec_append.end()){
                     child_vec_append.emplace_back(input_tree);
-                    std::unique_lock lock(avx_protect);
-                    if(avx_count<AVX_UNITS){
-                        avx_count += 1;
+                    lock.lock();
+                    if(simd_count < SIMD_UNITS){
+                        simd_count += 1;
                         lock.unlock();
                         std::sort(child_vec_append.begin(),child_vec_append.end(),[](auto& a,auto& b){
                             return lexicographical_compare(std::execution::unseq,a->data_vector().begin(),a->data_vector().end(),b->data_vector().begin(),b->data_vector().end());
                         });
                         lock.lock();
-                        avx_count -= 1;
+                        simd_count -= 1;
                         lock.unlock();
                     }
                     else{
@@ -142,13 +142,13 @@ std::shared_mutex avx_protect{};
                 //on search there was no match on the tree node, so we assume that a new node referenced by this node will be created carrying append
                 //the reason why there is the correct character available but no match detected by search is the MINIMUM_MATCH_SIZE that failed, we will respect that
                 decltype(child_vec_append.begin()) find_beg;
-                std::unique_lock lock(avx_protect);
-                if(avx_count<AVX_UNITS){
-                    avx_count += 1;
+                std::unique_lock lock(simd_protect);
+                if(simd_count < SIMD_UNITS){
+                    simd_count += 1;
                     lock.unlock();
                     find_beg = std::find(std::execution::unseq,child_vec_append.begin(),child_vec_append.end(),input_tree);
                     lock.lock();
-                    avx_count -= 1;
+                    simd_count -= 1;
                     lock.unlock();
                 }
                 else{
@@ -177,7 +177,7 @@ std::shared_mutex avx_protect{};
             return false;
         }
 
-        /*std::vector<std::tuple<std::vector<unsigned char>::iterator,std::vector<unsigned char>::iterator,std::vector<unsigned char>::iterator>>*/
+        /*std::vector<std::tuple<std::vector<unsigned char>::const_iterator,std::vector<unsigned char>::const_iterator,std::vector<unsigned char>::const_iterator>>*/
         auto compare_ultihash(auto data_beg, auto data_end, auto input_beg, auto input_end) {
             //if input does only fit to a shorter string as a subset of data, count becomes negative, else positive including ß
             //data offset iterator and start and end of input
@@ -189,13 +189,13 @@ std::shared_mutex avx_protect{};
             //search forward through data
             do {
                 //first element match
-                std::unique_lock lock(avx_protect);
-                if(avx_count<AVX_UNITS){
-                    avx_count += 1;
+                std::unique_lock lock(simd_protect);
+                if(simd_count < SIMD_UNITS){
+                    simd_count += 1;
                     lock.unlock();
                     data_beg = std::find(std::execution::unseq,data_beg,data_end,*input_beg);
                     lock.lock();
-                    avx_count -= 1;
+                    simd_count -= 1;
                     lock.unlock();
                 }
                 else{
@@ -207,12 +207,12 @@ std::shared_mutex avx_protect{};
                 //search how long input matches
                 std::pair<decltype(data_beg),decltype(data_end)> found;
                 lock.lock();
-                if(avx_count<AVX_UNITS){
-                    avx_count += 1;
+                if(simd_count < SIMD_UNITS){
+                    simd_count += 1;
                     lock.unlock();
                     found = std::mismatch(std::execution::unseq,data_beg,data_end,input_beg,input_end);
                     lock.lock();
-                    avx_count -= 1;
+                    simd_count -= 1;
                     lock.unlock();
                 }
                 else{
@@ -240,7 +240,7 @@ std::shared_mutex avx_protect{};
         std::vector<std::tuple<std::size_t, std::size_t, std::size_t, std::list<std::tuple<std::list<tree_radix_custom *>,std::list<tree_radix_custom *>>>>>
         add(auto bin_beg, auto bin_end) {//TODO:check duplicate matches and eliminate
             //first search existing structure and add into the last tree to insert potentially missing information
-            /*std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::vector<unsigned char>::iterator, std::vector<unsigned char>::iterator, std::vector<unsigned char>::iterator>>>>>, std::size_t>>*/
+            /*std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::vector<unsigned char>::const_iterator, std::vector<unsigned char>::const_iterator, std::vector<unsigned char>::const_iterator>>>>>, std::size_t>>*/
             auto search_index = search(
                     bin_beg, bin_end);
             //uncompressed input
@@ -252,10 +252,9 @@ std::shared_mutex avx_protect{};
             auto tree_building_sequence = [](tree_radix_custom *cur_tree,
                     auto bin_beg_incoming,auto bin_end_incoming, auto bin_beg_found, auto bin_end_found,const auto data_beg_intern) {
                 std::size_t tree_front_data_front_absolute = std::distance(cur_tree->data_vector().begin(),data_beg_intern)+1;
-                std::size_t matched_size = std::distance(bin_beg_incoming, bin_end_found);
                 //checking if children need to be generated before and after the found input peace, reference to data of tree required
                 //child before found, reference data
-                if constexpr(std::is_same<std::vector<unsigned char>::iterator,decltype(bin_beg_found)>::value || std::is_same<std::list<unsigned char>::iterator,decltype(bin_beg_found)>::value || std::is_same<std::deque<unsigned char>::iterator,decltype(bin_beg_found)>::value){
+                if constexpr(std::is_same<std::vector<unsigned char>::const_iterator,decltype(bin_beg_found)>::value || std::is_same<std::list<unsigned char>::const_iterator,decltype(bin_beg_found)>::value || std::is_same<std::deque<unsigned char>::const_iterator,decltype(bin_beg_found)>::value){
                     auto  child_beg_beg = cur_tree->data_vector().begin();
                     auto  child_end_beg = std::max(data_beg_intern - 1, child_beg_beg);
                     //child data sequence middle, reference data
@@ -316,7 +315,6 @@ std::shared_mutex avx_protect{};
                             //first section tree, after split try
                             //data will split into a maximum of 3 parts and by that will add 2 more tree nodes on front and/or back; start with first section
                             tree_radix_custom *tree_ptr_first;
-                            std::size_t offset{};
                             std::size_t size_integrated{}, size_compressed{}, size_uncompressed{};
 
                             tree_radix_custom *tree_ptr_mid;
@@ -357,8 +355,6 @@ std::shared_mutex avx_protect{};
                                 tree_ptr_mid->data_ref.clear();
 
                                 size_integrated += std::distance(child_beg_end, child_end_end) + 1;
-
-                                uh::util::compression_custom comp{};
                                 //the last tree is the last tree and may append
                                 //appending will be added after middle section in case it is available
                                 if (append_tree) {
@@ -389,9 +385,6 @@ std::shared_mutex avx_protect{};
                                     tree_ptr_mid->child_put(tree_ptr_append,*child_beg_append);
                                 }
                             }
-
-                            std::size_t del_beg{};
-                            std::size_t del_end{};
 
                             if (first_section_tree) {
                                 if(last_section_tree){
@@ -425,7 +418,7 @@ std::shared_mutex avx_protect{};
                     }
                 }
                 else{
-                    static_assert(!std::is_same<std::vector<unsigned char>::reverse_iterator,decltype(bin_beg_found)>::value && !std::is_same<std::list<unsigned char>::reverse_iterator,decltype(bin_beg_found)>::value && !std::is_same<std::deque<unsigned char>::reverse_iterator,decltype(bin_beg_found)>::value,"Illegal reverse iterator provided!");
+                    static_assert(!std::is_same<std::vector<unsigned char>::const_reverse_iterator,decltype(bin_beg_found)>::value && !std::is_same<std::list<unsigned char>::const_reverse_iterator,decltype(bin_beg_found)>::value && !std::is_same<std::deque<unsigned char>::const_reverse_iterator,decltype(bin_beg_found)>::value,"Illegal reverse const_iterator provided!");
                     auto  child_beg_beg = cur_tree->data_vector().rbegin();
                     auto  child_end_beg = std::max(data_beg_intern - 1, child_beg_beg);
                     //child data sequence middle, reference data
@@ -485,7 +478,6 @@ std::shared_mutex avx_protect{};
                             //first section tree, after split try
                             //data will split into a maximum of 3 parts and by that will add 2 more tree nodes on front and/or back; start with first section
                             tree_radix_custom *tree_ptr_first;
-                            std::size_t offset{};
                             std::size_t size_integrated{}, size_compressed{}, size_uncompressed{};
 
                             tree_radix_custom *tree_ptr_mid;
@@ -526,8 +518,6 @@ std::shared_mutex avx_protect{};
                                 tree_ptr_mid->data_ref.clear();
 
                                 size_integrated += std::distance(child_beg_end, child_end_end) + 1;
-
-                                uh::util::compression_custom comp{};
                                 //the last tree is the last tree and may append
                                 //appending will be added after middle section in case it is available
                                 if (append_tree) {
@@ -558,9 +548,6 @@ std::shared_mutex avx_protect{};
                                     tree_ptr_mid->child_put(tree_ptr_append,*child_beg_append);
                                 }
                             }
-
-                            std::size_t del_beg{};
-                            std::size_t del_end{};
 
                             if (first_section_tree) {
                                 if(last_section_tree){
@@ -605,10 +592,10 @@ std::shared_mutex avx_protect{};
             while(single_beg!=search_index.end()){
                 std::tuple<std::size_t, std::size_t, std::size_t, std::list<std::tuple<std::list<tree_radix_custom *>,std::list<tree_radix_custom *>>>> out_change_tuple{};
 
-                auto search_element = std::get<0>(search_index).begin();//std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::vector<unsigned char>::iterator, std::vector<unsigned char>::iterator, std::vector<unsigned char>::iterator>>>>, std::size_t>
+                auto search_element = std::get<0>(search_index).begin();//std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::vector<unsigned char>::const_iterator, std::vector<unsigned char>::const_iterator, std::vector<unsigned char>::const_iterator>>>>, std::size_t>
 
                 std::size_t binary_advance{};
-                while (search_element != std::get<0>(*single_beg).end()) {//std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::vector<unsigned char>::iterator, std::vector<unsigned char>::iterator, std::vector<unsigned char>::iterator>>>
+                while (search_element != std::get<0>(*single_beg).end()) {//std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::vector<unsigned char>::const_iterator, std::vector<unsigned char>::const_iterator, std::vector<unsigned char>::const_iterator>>>
                     //master list element contains a list containing tree pointers with vectors that totally matched, last element did not completely match anymore; inner list carries at least one element
                     auto one_node_analysis = search_element->end()-1;//last element did not match completely
                     //the inner list carries elements with a tuple holding the tree pointer and a list of valid matches that should be transformed into a sequence of trees
@@ -630,7 +617,7 @@ std::shared_mutex avx_protect{};
 
                     auto match_beg = actively_changing_trees.begin();//                                         found beginning                             found end                        data on tree begin at found begin
                     auto match_beg_copy = match_beg;
-                    while(match_beg != actively_changing_trees.end()){//update loop on std::vector<std::tuple<std::vector<unsigned char>::iterator, std::vector<unsigned char>::iterator, std::vector<unsigned char>::iterator>>
+                    while(match_beg != actively_changing_trees.end()){//update loop on std::vector<std::tuple<std::vector<unsigned char>::const_iterator, std::vector<unsigned char>::const_iterator, std::vector<unsigned char>::const_iterator>>
                         auto out_size = tree_building_sequence(std::get<3>(*match_beg),bin_beg,bin_end,std::get<0>(*match_beg),std::get<1>(*match_beg),std::get<2>(*match_beg));
                         std::get<0>(out_change_tuple)+=std::get<0>(out_size);
                         std::get<1>(out_change_tuple)+=std::get<1>(out_size);
@@ -643,7 +630,7 @@ std::shared_mutex avx_protect{};
                         std::size_t tree_front_data_front_absolute = std::get<8>(out_size);
 
                         decltype(out_vector.begin()) first_tree_out,middle_tree_out,last_tree_out,append_tree_out;
-                        first_section_tree,last_section_tree,append_tree,total_match;
+
                         if(first_section_tree){
                             first_tree_out = out_vector.begin();
                             middle_tree_out = first_tree_out+1;
@@ -662,7 +649,6 @@ std::shared_mutex avx_protect{};
                         //use sets to distinguish what nodes are added and what are modified; note that write back does not happen yet
                         std::size_t current_advance = std::distance(std::get<0>(*match_beg),std::get<1>(*match_beg))+1;
                         binary_advance+=current_advance;
-                        std::size_t subtract_tree_data_offset{};//offset adjustment to other matches
                         //find out on what tree the data offset should move to
                         if(total_match){
                             if(append_tree){
@@ -675,7 +661,7 @@ std::shared_mutex avx_protect{};
                                 modified.emplace(*first_tree_out);
                                 added.emplace(*middle_tree_out);
                                 //tree_match_pointer must move from first tree to middle tree, and we adjust offsets of all other matches
-                                overlap_update(match_beg,std::get<1>(*one_node_analysis).end(),*first_tree_out,*middle_tree_out);//update current tree pointer
+                                overlap_update(tree_front_data_front_absolute,actively_changing_trees,match_beg,std::get<1>(*one_node_analysis).end(),*first_tree_out,*middle_tree_out);//update current tree pointer
                             }
                             else{
                                 modified.emplace(*middle_tree_out);
@@ -684,7 +670,7 @@ std::shared_mutex avx_protect{};
                             if(last_section_tree){
                                 added.emplace(*last_tree_out);//section of inner list must be over due to incomplete match
                                 //tree_match_pointer must move from middle tree to last tree, and we adjust offsets of all other matches
-                                overlap_update(match_beg,std::get<1>(*one_node_analysis).end(),*middle_tree_out,*last_tree_out);//update current tree pointer
+                                overlap_update(tree_front_data_front_absolute,actively_changing_trees,match_beg,std::get<1>(*one_node_analysis).end(),*middle_tree_out,*last_tree_out);//update current tree pointer
                             }
                             if(append_tree)added.emplace(*append_tree_out);
                         }
@@ -703,6 +689,7 @@ std::shared_mutex avx_protect{};
                     search_element++;
                 }
                 if(std::get<0>(out_change_tuple)>0)out_change_tuple_out.push_back(out_change_tuple);//only add change list if there was anything integrated
+                single_beg++;
             }
 
             //deduplicate change list out
@@ -743,7 +730,6 @@ std::shared_mutex avx_protect{};
                                                                                                        tree_front->data_vector().begin()+(total_offset_front_for_this_node-(tree_front->data_vector().size()-new_match_size)),
                                                                                                        tree_front);//second tree match
                         // update until end
-                        auto insert_beg = std::get<2>(match_beg_intern);
                         auto match_insert_check = match_beg_intern;
                         while(std::get<2>(match_insert_check)<std::get<2>(new_partial_match)&&match_insert_check!=match_end_intern)match_insert_check++;
                         actively_changing_trees.insert(match_insert_check,new_partial_match);
@@ -792,7 +778,7 @@ std::shared_mutex avx_protect{};
                 std::size_t matched_size = std::distance(bin_beg_incoming, bin_end_found);
                 //checking if children need to be generated before and after the found input peace, reference to data of tree required
                 //child before found, reference data
-                if constexpr(std::is_same<std::vector<unsigned char>::iterator,decltype(bin_beg_found)>::value || std::is_same<std::list<unsigned char>::iterator,decltype(bin_beg_found)>::value || std::is_same<std::deque<unsigned char>::iterator,decltype(bin_beg_found)>::value){
+                if constexpr(std::is_same<std::vector<unsigned char>::const_iterator,decltype(bin_beg_found)>::value || std::is_same<std::list<unsigned char>::const_iterator,decltype(bin_beg_found)>::value || std::is_same<std::deque<unsigned char>::const_iterator,decltype(bin_beg_found)>::value){
                     auto child_beg_beg = cur_tree->data_vector().begin();
                     auto child_end_beg = std::max(data_beg_intern - 1, child_beg_beg);
                     //child data sequence middle, reference data
@@ -873,7 +859,7 @@ std::shared_mutex avx_protect{};
                     }
                 }
                 else{
-                    static_assert(!std::is_same<std::vector<unsigned char>::reverse_iterator,decltype(bin_beg_found)>::value && !std::is_same<std::list<unsigned char>::reverse_iterator,decltype(bin_beg_found)>::value && !std::is_same<std::deque<unsigned char>::reverse_iterator,decltype(bin_beg_found)>::value,"Illegal reverse iterator provided!");
+                    static_assert(!std::is_same<std::vector<unsigned char>::const_reverse_iterator,decltype(bin_beg_found)>::value && !std::is_same<std::list<unsigned char>::const_reverse_iterator,decltype(bin_beg_found)>::value && !std::is_same<std::deque<unsigned char>::const_reverse_iterator,decltype(bin_beg_found)>::value,"Illegal reverse const_iterator provided!");
                     auto child_beg_beg = cur_tree->data_vector().rbegin();
                     auto child_end_beg = std::max(data_beg_intern - 1, child_beg_beg);
                     //child data sequence middle, reference data
@@ -991,7 +977,7 @@ std::shared_mutex avx_protect{};
         }
 
         //returns the path of maximum fit and the match size
-        /*std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::vector<unsigned char>::iterator, std::vector<unsigned char>::iterator, std::vector<unsigned char>::iterator>>>>>, std::size_t>>*/
+        /*std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::vector<unsigned char>::const_iterator, std::vector<unsigned char>::const_iterator, std::vector<unsigned char>::const_iterator>>>>>, std::size_t>>*/
                 auto search(auto bin_beg, auto bin_end,
                        std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<decltype(bin_beg), decltype(bin_end), decltype(bin_beg)>>>>>, std::size_t>> input_list =
                        std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<decltype(bin_beg), decltype(bin_end), decltype(bin_beg)>>>>>, std::size_t>>{},
@@ -1113,7 +1099,7 @@ std::shared_mutex avx_protect{};
                 return out_possibilities;
             };
 
-            if constexpr(std::is_same<std::vector<unsigned char>::iterator,decltype(bin_beg)>::value || std::is_same<std::list<unsigned char>::iterator,decltype(bin_beg)>::value || std::is_same<std::deque<unsigned char>::iterator,decltype(bin_beg)>::value){
+            if constexpr(std::is_same<std::vector<unsigned char>::const_iterator,decltype(bin_beg)>::value || std::is_same<std::list<unsigned char>::const_iterator,decltype(bin_beg)>::value || std::is_same<std::deque<unsigned char>::const_iterator,decltype(bin_beg)>::value){
                 auto possibilities_init = vanilla_match_last_tree(data.begin(), data.end(), bin_beg, bin_end);
                 auto possibilities = std::vector<std::tuple<decltype(possibilities_init), decltype(bin_beg),decltype(bin_end), bool>>{};//check if the possibility was already checked and save the worked on binary input offset and data offset
                 for (const auto &item: possibilities_init) {
@@ -1242,7 +1228,7 @@ std::shared_mutex avx_protect{};
                 return multi_routing;
             }
             else{
-                static_assert(!std::is_same<std::vector<unsigned char>::reverse_iterator,decltype(bin_beg)>::value && !std::is_same<std::list<unsigned char>::reverse_iterator,decltype(bin_beg)>::value && !std::is_same<std::deque<unsigned char>::reverse_iterator,decltype(bin_beg)>::value,"Illegal reverse iterator provided!");
+                static_assert(!std::is_same<std::vector<unsigned char>::const_reverse_iterator,decltype(bin_beg)>::value && !std::is_same<std::list<unsigned char>::const_reverse_iterator,decltype(bin_beg)>::value && !std::is_same<std::deque<unsigned char>::const_reverse_iterator,decltype(bin_beg)>::value,"Illegal reverse const_iterator provided!");
                 auto possibilities_init = vanilla_match_last_tree(data.rbegin(), data.rend(), bin_beg, bin_end);
                 auto possibilities = std::vector<std::tuple<decltype(possibilities_init), decltype(bin_beg),decltype(bin_end), bool>>{};//check if the possibility was already checked and save the worked on binary input offset and data offset
                 for (const auto &item: possibilities_init) {
