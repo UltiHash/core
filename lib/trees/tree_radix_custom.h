@@ -1047,7 +1047,7 @@ std::shared_mutex simd_protect{};
                         }
                         std::sort(local_matches.begin(), local_matches.end(), [](auto &a, auto &b) {
                             return std::distance(std::get<1>(a), std::get<2>(a)) >
-                                   std::distance(std::get<1>(b), std::get<2>(b));
+                                   std::distance(std::get<1>(b), std::get<2>(b));//TODO: if front is not legal iterate beginning, if end is not matching iterate end
                         });
                     }
                 } while (!end_size && !end_reached && !local_matches.empty());

@@ -48,6 +48,7 @@ BOOST_AUTO_TEST_CASE( search_match_filter_test )
     uh::trees::tree_radix_custom<std::vector<unsigned char>> t;
     auto result = t.search_match_filter(data_string.cbegin(),data_string.cend(),input_string_begin.cbegin(),input_string_begin.cend());
     BOOST_CHECK(result.size()==1);
+
 }
 
 BOOST_AUTO_TEST_CASE( constructor_test )
