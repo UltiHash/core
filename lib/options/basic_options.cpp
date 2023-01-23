@@ -11,8 +11,9 @@ basic_options::basic_options()
 {
     m_desc.add_options()
         ("help,h", "print help screen")
-        ("version,v", "output program version")
-        ("vcsid", "output VCS revision ID");
+        ("version,v", "output program version");
+    m_hiddenDesc.add_options()
+            ("vcsid", "output VCS revision ID");
 }
 
 // ---------------------------------------------------------------------
@@ -20,6 +21,7 @@ basic_options::basic_options()
 void basic_options::apply(options& opts)
 {
     opts.add(m_desc);
+    opts.add(m_hiddenDesc, visibility::hidden);
 }
 
 // ---------------------------------------------------------------------
