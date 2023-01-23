@@ -660,54 +660,6 @@ std::atomic<std::size_t> avx_count{};
             std::size_t first_match_size = std::distance(std::get<0>(*match_beg_intern),std::get<1>(*match_beg_intern))+1;
             std::size_t first_end = tree_front_data_front_absolute+first_match_size;
             while(match_beg_intern+1 != match_end_intern){
-                decltype(std::ranges::mismatch(std::get<0>(match_beg_intern),std::get<1>(match_beg_intern),std::get<0>(match_beg_intern+1),std::get<1>(match_beg_intern+1))) overlap_mismatch;
-                if(avx_count.load<AVX_UNITS){
-                    avx_count += 1;
-                    overlap_mismatch = std::ranges::mismatch(std::execution::unseq,std::get<0>(match_beg_intern),std::get<1>(match_beg_intern),std::get<0>(match_beg_intern+1),std::get<1>(match_beg_intern+1));
-                    avx_count -= 1;
-                }
-                else{
-                    overlap_mismatch = std::ranges::mismatch(std::get<0>(match_beg_intern),std::get<1>(match_beg_intern),std::get<0>(match_beg_intern+1),std::get<1>(match_beg_intern+1));
-                }
-                std::size_t found_size = std::distance(overlap_mismatch.first,overlap_mismatch.second);
-
-                if(found_size>=MINIMUM_MATCH_SIZE){
-                    //the next match needs to shrink; if it's eaten up we need to delete it
-                    auto begin_match_old = std::get<0>(match_beg_intern+1);
-                    std::size_t advance_buffer{};
-
-                    auto advance_match = match_beg_intern;
-                    while(advance_match+1!=match_end_intern&&found_size>=MINIMUM_MATCH_SIZE){
-                        if(avx_count.load<AVX_UNITS){
-                            avx_count += 1;
-                            overlap_mismatch = std::ranges::mismatch(std::execution::unseq,std::get<0>(advance_match),std::get<1>(advance_match),std::get<0>(advance_match+1),std::get<1>(advance_match+1));
-                            avx_count -= 1;
-                        }
-                        else{
-                            overlap_mismatch = std::ranges::mismatch(std::get<0>(advance_match),std::get<1>(advance_match),std::get<0>(advance_match+1),std::get<1>(advance_match+1));
-                        }
-                        found_size = std::distance(overlap_mismatch.first,overlap_mismatch.second);
-                        std::size_t match_size = std::distance(std::get<0>(*(advance_match+1)),std::get<1>(*(advance_match+1)))+1;
-                        found_size=std::min(found_size,std::max((long)0,(long)match_size-MINIMUM_MATCH_SIZE));
-                        //TODO: check distance of first and last point is "legal", either total match or match size distance
-                        advance_match++;
-                    }
-
-
-                    std::get<0>(match_beg_intern+1)+=found_size;
-                    if(std::get<0>(match_beg_intern+1)>std::get<1>(match_beg_intern+1)){
-                        //delete
-                        actively_changing_trees.erase(match_beg_intern+1);
-                        //vector pointer reset
-                        std::size_t active_tree_offset = std::distance(actively_changing_trees.begin(),match_beg_intern_copy);
-                        match_beg_intern = actively_changing_trees.begin()+active_tree_offset+std::distance(match_beg_intern_copy,match_beg_intern);
-                        match_beg_intern_copy = actively_changing_trees.begin()+active_tree_offset;
-                        continue;
-                    }
-                    else{
-                        std::get<2>(match_beg_intern+1)+=found_size;
-                    }
-                }
                 std::size_t data_offset_between_start_and_current = std::distance(first_data_offset,std::get<2>(*(match_beg_intern+1)));
                 std::size_t total_offset_front_for_this_node = tree_front_data_front_absolute+data_offset_between_start_and_current;
                 if(data_offset_between_start_and_current<first_end){
