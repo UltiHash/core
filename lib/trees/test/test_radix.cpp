@@ -18,9 +18,9 @@ BOOST_AUTO_TEST_CASE( compare_test )
     BOOST_CHECK(t.children_reference().empty());
     std::string hello_string = "Hello World";
     std::string hello_string_long = "Hello World of tomorrow!";
-    auto data_string = std::vector<unsigned char>{hello_string.begin(),hello_string.end()};
-    auto data_string_long = std::vector<unsigned char>{hello_string_long.begin(),hello_string_long.end()};
-    auto result = t.compare_ultihash(data_string_long.begin(),data_string_long.end(),data_string.begin(),data_string.end());
+    const auto data_string = std::vector<unsigned char>{hello_string.begin(),hello_string.end()};
+    const auto data_string_long = std::vector<unsigned char>{hello_string_long.begin(),hello_string_long.end()};
+    auto result = t.compare_ultihash(data_string_long.cbegin(),data_string_long.cend(),data_string.cbegin(),data_string.cend());
 }
 BOOST_AUTO_TEST_CASE( constructor )
 {

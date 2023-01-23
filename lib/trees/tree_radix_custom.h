@@ -178,7 +178,7 @@ std::shared_mutex avx_protect{};
         }
 
         /*std::vector<std::tuple<std::vector<unsigned char>::iterator,std::vector<unsigned char>::iterator,std::vector<unsigned char>::iterator>>*/
-        auto compare_ultihash(std::bidirectional_iterator auto &data_beg, std::bidirectional_iterator auto &data_end, std::bidirectional_iterator auto &input_beg, std::bidirectional_iterator auto &input_end) {
+        auto compare_ultihash(auto data_beg, auto data_end, auto input_beg, auto input_end) {
             //if input does only fit to a shorter string as a subset of data, count becomes negative, else positive including ß
             //data offset iterator and start and end of input
             std::vector<std::tuple<decltype(input_beg),decltype(input_end),decltype(data_beg)>> matches{};
