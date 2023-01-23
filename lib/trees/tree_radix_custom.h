@@ -215,7 +215,7 @@ std::shared_mutex avx_protect{};
                 std::size_t matched_size = std::distance(bin_beg_incoming, bin_end_found);
                 //checking if children need to be generated before and after the found input peace, reference to data of tree required
                 //child before found, reference data
-                if constexpr(std::is_same<std::vector<unsigned char>::iterator,bin_beg_found>::value || std::is_same<std::list<unsigned char>::iterator,bin_beg_found>::value || std::is_same<std::deque<unsigned char>::iterator,bin_beg_found>::value){
+                if constexpr(std::is_same<std::vector<unsigned char>::iterator,decltype(bin_end_found)>::value || std::is_same<std::list<unsigned char>::iterator,decltype(bin_end_found)>::value || std::is_same<std::deque<unsigned char>::iterator,decltype(bin_end_found)>::value){
                     auto  child_beg_beg = cur_tree->data_vector().begin();
                     auto  child_end_beg = std::max(data_beg_intern - 1, child_beg_beg);
                     //child data sequence middle, reference data
@@ -385,7 +385,7 @@ std::shared_mutex avx_protect{};
                     }
                 }
                 else{
-                    static_assert(std::is_same<std::vector<unsigned char>::reverse_iterator,bin_beg_found>::value || std::is_same<std::list<unsigned char>::reverse_iterator,bin_beg_found>::value || std::is_same<std::deque<unsigned char>::reverse_iterator,bin_beg_found>::value,"Illegal reverse iterator provided!");
+                    static_assert(std::is_same<std::vector<unsigned char>::reverse_iterator,decltype(bin_end_found)>::value || std::is_same<std::list<unsigned char>::reverse_iterator,decltype(bin_end_found)>::value || std::is_same<std::deque<unsigned char>::reverse_iterator,decltype(bin_end_found)>::value,"Illegal reverse iterator provided!");
                     auto  child_beg_beg = cur_tree->data_vector().rbegin();
                     auto  child_end_beg = std::max(data_beg_intern - 1, child_beg_beg);
                     //child data sequence middle, reference data
@@ -752,7 +752,7 @@ std::shared_mutex avx_protect{};
                 std::size_t matched_size = std::distance(bin_beg_incoming, bin_end_found);
                 //checking if children need to be generated before and after the found input peace, reference to data of tree required
                 //child before found, reference data
-                if constexpr(std::is_same<std::vector<unsigned char>::reverse_iterator,bin_beg_found>::value || std::is_same<std::list<unsigned char>::reverse_iterator,bin_beg_found>::value || std::is_same<std::deque<unsigned char>::reverse_iterator,bin_beg_found>::value){
+                if constexpr(std::is_same<std::vector<unsigned char>::reverse_iterator,decltype(bin_end_found)>::value || std::is_same<std::list<unsigned char>::reverse_iterator,decltype(bin_end_found)>::value || std::is_same<std::deque<unsigned char>::reverse_iterator,decltype(bin_end_found)>::value){
                     auto child_beg_beg = cur_tree->data_vector().begin();
                     auto child_end_beg = std::max(data_beg_intern - 1, child_beg_beg);
                     //child data sequence middle, reference data
@@ -833,7 +833,7 @@ std::shared_mutex avx_protect{};
                     }
                 }
                 else{
-                    static_assert(std::is_same<std::vector<unsigned char>::reverse_iterator,bin_beg_found>::value || std::is_same<std::list<unsigned char>::reverse_iterator,bin_beg_found>::value || std::is_same<std::deque<unsigned char>::reverse_iterator,bin_beg_found>::value,"Illegal reverse iterator provided!");
+                    static_assert(std::is_same<std::vector<unsigned char>::reverse_iterator,decltype(bin_end_found)>::value || std::is_same<std::list<unsigned char>::reverse_iterator,decltype(bin_end_found)>::value || std::is_same<std::deque<unsigned char>::reverse_iterator,decltype(bin_end_found)>::value,"Illegal reverse iterator provided!");
                     auto child_beg_beg = cur_tree->data_vector().rbegin();
                     auto child_end_beg = std::max(data_beg_intern - 1, child_beg_beg);
                     //child data sequence middle, reference data
