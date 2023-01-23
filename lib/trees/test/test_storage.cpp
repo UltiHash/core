@@ -162,7 +162,7 @@ BOOST_AUTO_TEST_CASE(write_read_base_test)
     //write again in update mode and try to use already known sha to block for speed, result should still be the same,
     // update entire block; block cannot be empty as it needs to be written
     if (std::filesystem::exists(base_bin))std::filesystem::remove(base_bin);
-    writer = std::fopen(base_bin.make_preferred().c_str(), "wb+");
+    writer = std::fopen(base_bin.make_preferred().c_str(), "rb+");
     write_tup = t1.write_block_base(writer, base_bin.make_preferred(), test_bin, local_block_ref, times, false, false,
                                     std::vector<unsigned char>{block_hash.cbegin(), block_hash.cend()});
     BOOST_ASSERT_MSG(std::fclose(writer) == 0, "Write stream was not open!");
