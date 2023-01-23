@@ -1010,6 +1010,117 @@ std::shared_mutex simd_protect{};
             }
         }
 
+        auto search_match_filter(auto data_beg, auto data_end, auto bin_beg, auto bin_end,std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<decltype(bin_beg), decltype(bin_end), decltype(bin_beg)>>>>>, std::size_t>> input_list){
+            auto local_matches = compare_ultihash(data_beg, data_end, bin_beg, bin_end);
+            //LEGAL MATCH FILTER
+            //on empty or partial match make new list in list, else append the match results on total match
+            bool legal_split;
+            //if the end was matched too long we can do something about that, but else the algorithm is prefix oriented
+            bool end_size, begin_reached, end_reached;
+            //control
+            bool broken_legal = false;
+            auto legal_check = [&local_matches, &legal_split, &end_size, &begin_reached, &end_reached, &broken_legal](
+                    auto data_beg, auto data_end, auto current_match) {
+                do {
+                    bool start_size = MINIMUM_MATCH_SIZE <= std::distance(data_beg, std::get<0>(*current_match));
+                    end_size = MINIMUM_MATCH_SIZE <= std::distance(std::get<0>(*current_match) +
+                                                                   std::distance(std::get<1>(*current_match),
+                                                                                 std::get<2>(*current_match)),
+                                                                   data_end);
+                    bool total_found_size = MINIMUM_MATCH_SIZE <= std::distance(std::get<1>(*current_match),
+                                                                                std::get<2>(*current_match));
+                    begin_reached = data_beg == std::get<0>(*current_match);
+                    end_reached = data_end == std::get<0>(*current_match) +
+                                              std::distance(std::get<1>(*current_match),
+                                                            std::get<2>(*current_match));
+                    legal_split = ((start_size || begin_reached) && (end_size || end_reached) &&
+                                   total_found_size);//legal if on split there cannot be a segment that is smaller than the match size
+                    if (!end_size && !end_reached) {
+                        std::get<2>(*current_match)--;
+                        if (std::distance(std::get<1>(*current_match) < std::get<2>(*current_match)) <
+                            MINIMUM_MATCH_SIZE) {
+                            local_matches.erase(*current_match);
+                            broken_legal = true;
+                            return;
+                        }
+                        std::sort(local_matches.begin(), local_matches.end(), [](auto &a, auto &b) {
+                            return std::distance(std::get<1>(a), std::get<2>(a)) >
+                                   std::distance(std::get<1>(b), std::get<2>(b));
+                        });
+                    }
+                } while (!end_size && !end_reached && !local_matches.empty());
+            };
+
+            auto match_beg = local_matches.begin();
+            std::size_t count_match_pos{};
+            while (match_beg != local_matches.end()) {
+                legal_check(data_beg, data_end, match_beg);
+                if (broken_legal)match_beg = local_matches.begin() + count_match_pos;
+                else {
+                    match_beg++;
+                    count_match_pos++;
+                }
+            }
+
+            std::sort(local_matches.begin(), local_matches.end(), [](auto &a, auto &b) {
+                return std::distance(std::get<1>(a), std::get<2>(a)) >
+                       std::distance(std::get<1>(b), std::get<2>(b));
+            });
+
+            if (local_matches.size() > 1) {
+                std::size_t max_fit{};
+                auto best_beg = local_matches.begin();
+                while (best_beg != local_matches.end()) {
+                    max_fit = std::max(max_fit,
+                                       (std::size_t) std::distance(std::get<1>(*best_beg), std::get<2>(*best_beg)));
+                    if (std::distance(std::get<1>(*best_beg), std::get<2>(*best_beg)) < max_fit) {
+                        //break and delete until end
+                        break;
+                    }
+                    best_beg++;
+                }
+                local_matches.erase(best_beg, local_matches.end());
+            }
+            //sort the smallest offset out of the largest match results in case the match sizes are equal
+            std::sort(local_matches.begin(), local_matches.end(), [&data_beg](auto &a, auto &b) {
+                return std::distance(data_beg, std::get<0>(a)) < std::distance(data_beg, std::get<0>(b));
+            });
+
+            if (local_matches.empty())return input_list;
+
+            std::vector<decltype(*input_list.begin())> out_possibilities{};
+
+            auto match_beginning = local_matches.begin();
+            while (match_beginning != local_matches.end()) {
+                legal_check(data_beg, data_end, match_beginning);
+                for(auto input_list_tmp:input_list){//COPY input list and create different path calculation
+                    std::vector<std::tuple<decltype(bin_beg), decltype(bin_end), decltype(data_beg)>> found_vec{};
+                    found_vec.emplace_back(std::get<1>(*match_beginning), std::get<2>(*match_beginning),
+                                           std::get<0>(*match_beginning));
+
+                    if (input_list_tmp.empty() || !legal_split) {
+                        std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<decltype(bin_beg), decltype(bin_end), decltype(data_beg)>>>> tmp_list{};
+                        tmp_list.emplace_back(this, found_vec);
+                        std::get<0>(input_list_tmp).push_back(tmp_list);
+                    } else {
+                        //if the tree element of the last element is still the same as "this" we append to the vector, else we append a new list
+                        auto last_it_outer_list = (--(std::get<0>(input_list_tmp).end()));
+                        auto last_it_inner_list = (--(last_it_outer_list->end()));
+                        if (std::get<0>(*last_it_inner_list) == this) {//check if tree pointer is the same
+                            std::get<1>(*last_it_inner_list).push_back(found_vec[0]);
+                        } else {
+                            last_it_outer_list->emplace_back(this, found_vec);
+                        }
+                    }
+                    std::get<1>(input_list_tmp) += std::distance(std::get<1>(*match_beginning),
+                                                                 std::get<2>(*match_beginning));
+                    out_possibilities.push_back(input_list_tmp);
+                }
+                match_beginning++;
+            }
+            return out_possibilities;
+        }
+
         //returns the path of maximum fit and the match size
         /*std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::vector<unsigned char>::const_iterator, std::vector<unsigned char>::const_iterator, std::vector<unsigned char>::const_iterator>>>>>, std::size_t>>*/
                 auto search(auto bin_beg, auto bin_end,
@@ -1022,119 +1133,8 @@ std::shared_mutex simd_protect{};
                 return input_list;
             }
 
-            auto vanilla_match_last_tree = [&](auto data_beg, auto data_end, auto bin_beg, auto bin_end) {
-                auto local_matches = compare_ultihash(data_beg, data_end, bin_beg, bin_end);
-                //LEGAL MATCH FILTER
-                //on empty or partial match make new list in list, else append the match results on total match
-                bool legal_split;
-                //if the end was matched too long we can do something about that, but else the algorithm is prefix oriented
-                bool end_size, begin_reached, end_reached;
-                //control
-                bool broken_legal = false;
-                auto legal_check = [&local_matches, &legal_split, &end_size, &begin_reached, &end_reached, &broken_legal](
-                        auto data_beg, auto data_end, auto current_match) {
-                    do {
-                        bool start_size = MINIMUM_MATCH_SIZE <= std::distance(data_beg, std::get<0>(*current_match));
-                        end_size = MINIMUM_MATCH_SIZE <= std::distance(std::get<0>(*current_match) +
-                                                                       std::distance(std::get<1>(*current_match),
-                                                                                     std::get<2>(*current_match)),
-                                                                       data_end);
-                        bool total_found_size = MINIMUM_MATCH_SIZE <= std::distance(std::get<1>(*current_match),
-                        std::get<2>(*current_match));
-                        begin_reached = data_beg == std::get<0>(*current_match);
-                        end_reached = data_end == std::get<0>(*current_match) +
-                                                  std::distance(std::get<1>(*current_match),
-                                                                std::get<2>(*current_match));
-                        legal_split = ((start_size || begin_reached) && (end_size || end_reached) &&
-                                       total_found_size);//legal if on split there cannot be a segment that is smaller than the match size
-                        if (!end_size && !end_reached) {
-                            std::get<2>(*current_match)--;
-                            if (std::distance(std::get<1>(*current_match) < std::get<2>(*current_match)) <
-                                MINIMUM_MATCH_SIZE) {
-                                local_matches.erase(*current_match);
-                                broken_legal = true;
-                                return;
-                            }
-                            std::sort(local_matches.begin(), local_matches.end(), [](auto &a, auto &b) {
-                                return std::distance(std::get<1>(a), std::get<2>(a)) >
-                                       std::distance(std::get<1>(b), std::get<2>(b));
-                            });
-                        }
-                    } while (!end_size && !end_reached && !local_matches.empty());
-                };
-
-                auto match_beg = local_matches.begin();
-                std::size_t count_match_pos{};
-                while (match_beg != local_matches.end()) {
-                    legal_check(data_beg, data_end, match_beg);
-                    if (broken_legal)match_beg = local_matches.begin() + count_match_pos;
-                    else {
-                        match_beg++;
-                        count_match_pos++;
-                    }
-                }
-
-                std::sort(local_matches.begin(), local_matches.end(), [](auto &a, auto &b) {
-                    return std::distance(std::get<1>(a), std::get<2>(a)) >
-                           std::distance(std::get<1>(b), std::get<2>(b));
-                });
-
-                if (local_matches.size() > 1) {
-                    std::size_t max_fit{};
-                    auto best_beg = local_matches.begin();
-                    while (best_beg != local_matches.end()) {
-                        max_fit = std::max(max_fit,
-                                           (std::size_t) std::distance(std::get<1>(*best_beg), std::get<2>(*best_beg)));
-                        if (std::distance(std::get<1>(*best_beg), std::get<2>(*best_beg)) < max_fit) {
-                            //break and delete until end
-                            break;
-                        }
-                        best_beg++;
-                    }
-                    local_matches.erase(best_beg, local_matches.end());
-                }
-                //sort the smallest offset out of the largest match results in case the match sizes are equal
-                std::sort(local_matches.begin(), local_matches.end(), [&data_beg](auto &a, auto &b) {
-                    return std::distance(data_beg, std::get<0>(a)) < std::distance(data_beg, std::get<0>(b));
-                });
-
-                if (local_matches.empty())return input_list;
-
-                std::vector<decltype(*input_list.begin())> out_possibilities{};
-
-                auto match_beginning = local_matches.begin();
-                while (match_beginning != local_matches.end()) {
-                    legal_check(data_beg, data_end, match_beginning);
-                    for(auto input_list_tmp:input_list){//COPY input list and create different path calculation
-                        std::vector<std::tuple<decltype(bin_beg), decltype(bin_end), decltype(data_beg)>> found_vec{};
-                        found_vec.emplace_back(std::get<1>(*match_beginning), std::get<2>(*match_beginning),
-                                               std::get<0>(*match_beginning));
-
-                        if (input_list_tmp.empty() || !legal_split) {
-                            std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<decltype(bin_beg), decltype(bin_end), decltype(data_beg)>>>> tmp_list{};
-                            tmp_list.emplace_back(this, found_vec);
-                            std::get<0>(input_list_tmp).push_back(tmp_list);
-                        } else {
-                            //if the tree element of the last element is still the same as "this" we append to the vector, else we append a new list
-                            auto last_it_outer_list = (--(std::get<0>(input_list_tmp).end()));
-                            auto last_it_inner_list = (--(last_it_outer_list->end()));
-                            if (std::get<0>(*last_it_inner_list) == this) {//check if tree pointer is the same
-                                std::get<1>(*last_it_inner_list).push_back(found_vec[0]);
-                            } else {
-                                last_it_outer_list->emplace_back(this, found_vec);
-                            }
-                        }
-                        std::get<1>(input_list_tmp) += std::distance(std::get<1>(*match_beginning),
-                                                                     std::get<2>(*match_beginning));
-                        out_possibilities.push_back(input_list_tmp);
-                    }
-                    match_beginning++;
-                }
-                return out_possibilities;
-            };
-
             if constexpr(std::is_same<std::vector<unsigned char>::const_iterator,decltype(bin_beg)>::value || std::is_same<std::list<unsigned char>::const_iterator,decltype(bin_beg)>::value || std::is_same<std::deque<unsigned char>::const_iterator,decltype(bin_beg)>::value){
-                auto possibilities_init = vanilla_match_last_tree(data.cbegin(), data.cend(), bin_beg, bin_end);
+                auto possibilities_init = search_match_filter(data.cbegin(), data.cend(), bin_beg, bin_end,input_list);
                 auto possibilities = std::vector<std::tuple<decltype(possibilities_init), decltype(bin_beg),decltype(bin_end), bool>>{};//check if the possibility was already checked and save the worked on binary input offset and data offset
                 for (const auto &item: possibilities_init) {
                     possibilities.emplace_back(item, data.cbegin(), bin_beg, false);
@@ -1170,8 +1170,8 @@ std::shared_mutex simd_protect{};
 
                         //do work on matching again for subset of data and input
                         //after various match cases as various positions
-                        possibilities_init = vanilla_match_last_tree(std::get<1>(*pos_begin), data.cend(),
-                                                                     std::get<2>(*pos_begin), bin_end);//search here
+                        possibilities_init = search_match_filter(std::get<1>(*pos_begin), data.cend(),
+                                                                     std::get<2>(*pos_begin), bin_end, input_list);//search here
                         for (const auto &item: possibilities_init) {
                             possibilities.emplace_back(item, std::get<1>(*pos_begin), std::get<2>(*pos_begin), false);
                         }
@@ -1263,7 +1263,7 @@ std::shared_mutex simd_protect{};
             }
             else{
                 static_assert(!std::is_same<std::vector<unsigned char>::const_reverse_iterator,decltype(bin_beg)>::value && !std::is_same<std::list<unsigned char>::const_reverse_iterator,decltype(bin_beg)>::value && !std::is_same<std::deque<unsigned char>::const_reverse_iterator,decltype(bin_beg)>::value,"Illegal reverse const_iterator provided!");
-                auto possibilities_init = vanilla_match_last_tree(data.crbegin(), data.crend(), bin_beg, bin_end);
+                auto possibilities_init = search_match_filter(data.crbegin(), data.crend(), bin_beg, bin_end,input_list);
                 auto possibilities = std::vector<std::tuple<decltype(possibilities_init), decltype(bin_beg),decltype(bin_end), bool>>{};//check if the possibility was already checked and save the worked on binary input offset and data offset
                 for (const auto &item: possibilities_init) {
                     possibilities.emplace_back(item, data.crbegin(), bin_beg, false);
@@ -1299,8 +1299,8 @@ std::shared_mutex simd_protect{};
 
                         //do work on matching again for subset of data and input
                         //after various match cases as various positions
-                        possibilities_init = vanilla_match_last_tree(std::get<1>(*pos_begin), data.crend(),
-                                                                     std::get<2>(*pos_begin), bin_end);//search here
+                        possibilities_init = search_match_filter(std::get<1>(*pos_begin), data.crend(),
+                                                                     std::get<2>(*pos_begin), bin_end,input_list);//search here
                         for (const auto &item: possibilities_init) {
                             possibilities.emplace_back(item, std::get<1>(*pos_begin), std::get<2>(*pos_begin), false);
                         }
