@@ -46,8 +46,9 @@ std::shared_mutex avx_protect{};
             }
         }
 
-        explicit tree_radix_custom(std::vector<unsigned char> &bin) : tree_radix_custom() {
-            add(bin);
+        template<class ContainerType>
+        explicit tree_radix_custom(Container_Type &bin) : tree_radix_custom() {
+            add(bin.begin(),bin.end());
         }
 
         template<typename IteratorType>
@@ -63,7 +64,7 @@ std::shared_mutex avx_protect{};
             return data;
         }
 
-        auto &children_reference(bool backward=false){
+        std::vector<std::tuple<std::vector<tree_radix_custom *>, unsigned char>> &children_reference(/*bool backward=false*/){
             return children;//[backward]
         }
 
