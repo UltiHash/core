@@ -209,13 +209,13 @@ std::shared_mutex avx_protect{};
             }
             //some element and an end element at least required
             //TODO: add cross update from forward and backward children
-            auto tree_building_sequence = [&first_section_tree,&last_section_tree,&append_tree,&total_match](tree_radix_custom *cur_tree,
-                    auto bin_beg_incoming,auto bin_end_incoming, auto bin_beg_found, auto bin_end_found,const auto data_beg_intern,auto &added_intern,auto &modified_intern) {
+            auto tree_building_sequence = [](tree_radix_custom *cur_tree,
+                    auto bin_beg_incoming,auto bin_end_incoming, auto bin_beg_found, auto bin_end_found,const auto data_beg_intern) {
                 std::size_t tree_front_data_front_absolute = std::distance(cur_tree->data_vector().begin(),data_beg_intern)+1;
                 std::size_t matched_size = std::distance(bin_beg_incoming, bin_end_found);
                 //checking if children need to be generated before and after the found input peace, reference to data of tree required
                 //child before found, reference data
-                if constexpr(std::is_same<std::vector<unsigned char>::iterator,bin_beg>::value || std::is_same<std::list<unsigned char>::iterator,bin_beg>::value || std::is_same<std::deque<unsigned char>::iterator,bin_beg>::value){
+                if constexpr(std::is_same<std::vector<unsigned char>::iterator,bin_beg_found>::value || std::is_same<std::list<unsigned char>::iterator,bin_beg_found>::value || std::is_same<std::deque<unsigned char>::iterator,bin_beg_found>::value){
                     auto  child_beg_beg = cur_tree->data_vector().begin();
                     auto  child_end_beg = std::max(data_beg_intern - 1, child_beg_beg);
                     //child data sequence middle, reference data
@@ -385,7 +385,7 @@ std::shared_mutex avx_protect{};
                     }
                 }
                 else{
-                    static_assert(std::is_same<std::vector<unsigned char>::reverse_iterator,bin_beg>::value || std::is_same<std::list<unsigned char>::reverse_iterator,bin_beg>::value || std::is_same<std::deque<unsigned char>::reverse_iterator,bin_beg>::value,"Illegal reverse iterator provided!");
+                    static_assert(std::is_same<std::vector<unsigned char>::reverse_iterator,bin_beg_found>::value || std::is_same<std::list<unsigned char>::reverse_iterator,bin_beg_found>::value || std::is_same<std::deque<unsigned char>::reverse_iterator,bin_beg_found>::value,"Illegal reverse iterator provided!");
                     auto  child_beg_beg = cur_tree->data_vector().rbegin();
                     auto  child_end_beg = std::max(data_beg_intern - 1, child_beg_beg);
                     //child data sequence middle, reference data
@@ -583,7 +583,7 @@ std::shared_mutex avx_protect{};
 
                     tree_radix_custom* tree_match_pointer; = std::get<0>(*one_node_analysis);
                     std::set<tree_radix_custom*>modified{},added{};//changes to be written to disk in the form of tree pointers
-                    std::vector<std::tuple<std::tuple<decltype(bin_beg), decltype(bin_end), decltype(bin_beg),tree_radix_custom *> actively_changing_trees{};
+                    std::vector<std::tuple<std::tuple<decltype(bin_beg_found), decltype(bin_end_found), decltype(bin_beg_found),tree_radix_custom *> actively_changing_trees{};
                     std::for_each(std::get<1>(*one_node_analysis).begin(),std::get<1>(*one_node_analysis).end(),[&actively_changing_trees,&tree_match_pointer](auto &item){
                         actively_changing_trees.emplace_back(std::get<0>(item),std::get<1>(item),std::get<2>(item),tree_match_pointer);
                     })
@@ -591,7 +591,7 @@ std::shared_mutex avx_protect{};
                     auto match_beg = actively_changing_trees.begin();//                                         found beginning                             found end                        data on tree begin at found begin
                     auto match_beg_copy = match_beg;
                     while(match_beg != actively_changing_trees.end()){//update loop on std::vector<std::tuple<std::vector<unsigned char>::iterator, std::vector<unsigned char>::iterator, std::vector<unsigned char>::iterator>>
-                        auto out_size = tree_building_sequence(std::get<3>(*match_beg),bin_beg,bin_end,std::get<0>(*match_beg),std::get<1>(*match_beg),std::get<2>(*match_beg),added,modified);
+                        auto out_size = tree_building_sequence(std::get<3>(*match_beg),bin_beg,bin_end,std::get<0>(*match_beg),std::get<1>(*match_beg),std::get<2>(*match_beg));
                         std::get<0>(out_change_tuple)+=std::get<0>(out_size);
                         std::get<1>(out_change_tuple)+=std::get<1>(out_size);
                         std::get<2>(out_change_tuple)+=std::get<2>(out_size);
@@ -746,13 +746,13 @@ std::shared_mutex avx_protect{};
             }
             //some element and an end element at least required
 
-            auto tree_test_sequence = [&](tree_radix_custom *cur_tree, auto bin_beg_incoming, auto bin_end_incoming,
+            auto tree_test_sequence = [](tree_radix_custom *cur_tree, auto bin_beg_incoming, auto bin_end_incoming,
                                          auto bin_beg_found, auto bin_end_found,
                                          const auto data_beg_intern) {
                 std::size_t matched_size = std::distance(bin_beg_incoming, bin_end_found);
                 //checking if children need to be generated before and after the found input peace, reference to data of tree required
                 //child before found, reference data
-                if constexpr(std::is_same<std::vector<unsigned char>::reverse_iterator,bin_beg>::value || std::is_same<std::list<unsigned char>::reverse_iterator,bin_beg>::value || std::is_same<std::deque<unsigned char>::reverse_iterator,bin_beg>::value){
+                if constexpr(std::is_same<std::vector<unsigned char>::reverse_iterator,bin_beg_found>::value || std::is_same<std::list<unsigned char>::reverse_iterator,bin_beg_found>::value || std::is_same<std::deque<unsigned char>::reverse_iterator,bin_beg_found>::value){
                     auto child_beg_beg = cur_tree->data_vector().begin();
                     auto child_end_beg = std::max(data_beg_intern - 1, child_beg_beg);
                     //child data sequence middle, reference data
@@ -783,7 +783,7 @@ std::shared_mutex avx_protect{};
                     if (cur_tree->data_vector().empty()) {//how to insert, either empty simple insert or some tree construction anywhere
                         //simple insert into data since this seems to be a new node that can contain simple information
                         cur_tree->data_vector() = std::vector<unsigned char>{bin_beg_found, bin_end_found};
-                        return std::make_tuple(std::distance(bin_beg, bin_end), std::distance(bin_beg, bin_end),
+                        return std::make_tuple(std::distance(bin_beg_found, bin_end_found), std::distance(bin_beg_found, bin_end_found),
                                                comp.compress(bin_beg_found, bin_end_found).size());
                     } else {
                         if (total_match) {
@@ -801,7 +801,7 @@ std::shared_mutex avx_protect{};
                                  */
                                 //either way the appending size will be added and new space will be needed
                                 return std::make_tuple(
-                                        (decltype(cur_tree->data_vector().size())) std::distance(bin_beg, bin_end),
+                                        (decltype(cur_tree->data_vector().size())) std::distance(bin_beg_found, bin_end_found),
                                         (decltype(cur_tree->data_vector().size())) std::distance(child_beg_append,
                                                                                                  child_end_append),
                                         (decltype(cur_tree->data_vector().size())) comp.compress(
@@ -809,7 +809,7 @@ std::shared_mutex avx_protect{};
                             }
                             //return implicit 0 with unsigned long
                             return std::make_tuple(
-                                    (decltype(cur_tree->data_vector().size())) std::distance(bin_beg, bin_end),
+                                    (decltype(cur_tree->data_vector().size())) std::distance(bin_beg_found, bin_end_found),
                                     (decltype(cur_tree->data_vector().size())) 0,
                                     (decltype(cur_tree->data_vector().size())) 0);//nothing to add, only reference
                         } else {
@@ -817,7 +817,7 @@ std::shared_mutex avx_protect{};
                             if (append_tree) {
                                 //as on total match in this case
                                 return std::make_tuple(
-                                        (decltype(cur_tree->data_vector().size())) std::distance(bin_beg, bin_end),
+                                        (decltype(cur_tree->data_vector().size())) std::distance(bin_beg_found, bin_end_found),
                                         (decltype(cur_tree->data_vector().size())) std::distance(child_beg_append,
                                                                                                  child_end_append),
                                         (decltype(cur_tree->data_vector().size())) comp.compress(
@@ -826,14 +826,14 @@ std::shared_mutex avx_protect{};
                             //return implicit 0 with unsigned long
                             //nothing to add on RAM, only splitting up the blocks on disk
                             return std::make_tuple(
-                                    (decltype(cur_tree->data_vector().size())) std::distance(bin_beg, bin_end),
+                                    (decltype(cur_tree->data_vector().size())) std::distance(bin_beg_found, bin_end_found),
                                     (decltype(cur_tree->data_vector().size())) 0,
                                     (decltype(cur_tree->data_vector().size())) 0);
                         }
                     }
                 }
                 else{
-                    static_assert(std::is_same<std::vector<unsigned char>::reverse_iterator,bin_beg>::value || std::is_same<std::list<unsigned char>::reverse_iterator,bin_beg>::value || std::is_same<std::deque<unsigned char>::reverse_iterator,bin_beg>::value,"Illegal reverse iterator provided!");
+                    static_assert(std::is_same<std::vector<unsigned char>::reverse_iterator,bin_beg_found>::value || std::is_same<std::list<unsigned char>::reverse_iterator,bin_beg_found>::value || std::is_same<std::deque<unsigned char>::reverse_iterator,bin_beg_found>::value,"Illegal reverse iterator provided!");
                     auto child_beg_beg = cur_tree->data_vector().rbegin();
                     auto child_end_beg = std::max(data_beg_intern - 1, child_beg_beg);
                     //child data sequence middle, reference data
@@ -864,7 +864,7 @@ std::shared_mutex avx_protect{};
                     if (cur_tree->data_vector().empty()) {//how to insert, either empty simple insert or some tree construction anywhere
                         //simple insert into data since this seems to be a new node that can contain simple information
                         cur_tree->data_vector() = std::vector<unsigned char>{bin_beg_found, bin_end_found};
-                        return std::make_tuple(std::distance(bin_beg, bin_end), std::distance(bin_beg, bin_end),
+                        return std::make_tuple(std::distance(bin_beg_found, bin_end_found), std::distance(bin_beg_found, bin_end_found),
                                                comp.compress(bin_beg_found, bin_end_found).size());
                     } else {
                         if (total_match) {
@@ -882,7 +882,7 @@ std::shared_mutex avx_protect{};
                                  */
                                 //either way the appending size will be added and new space will be needed
                                 return std::make_tuple(
-                                        (decltype(cur_tree->data_vector().size())) std::distance(bin_beg, bin_end),
+                                        (decltype(cur_tree->data_vector().size())) std::distance(bin_beg_found, bin_end_found),
                                         (decltype(cur_tree->data_vector().size())) std::distance(child_beg_append,
                                                                                                  child_end_append),
                                         (decltype(cur_tree->data_vector().size())) comp.compress(
@@ -890,7 +890,7 @@ std::shared_mutex avx_protect{};
                             }
                             //return implicit 0 with unsigned long
                             return std::make_tuple(
-                                    (decltype(cur_tree->data_vector().size())) std::distance(bin_beg, bin_end),
+                                    (decltype(cur_tree->data_vector().size())) std::distance(bin_beg_found, bin_end_found),
                                     (decltype(cur_tree->data_vector().size())) 0,
                                     (decltype(cur_tree->data_vector().size())) 0);//nothing to add, only reference
                         } else {
@@ -898,7 +898,7 @@ std::shared_mutex avx_protect{};
                             if (append_tree) {
                                 //as on total match in this case
                                 return std::make_tuple(
-                                        (decltype(cur_tree->data_vector().size())) std::distance(bin_beg, bin_end),
+                                        (decltype(cur_tree->data_vector().size())) std::distance(bin_beg_found, bin_end_found),
                                         (decltype(cur_tree->data_vector().size())) std::distance(child_beg_append,
                                                                                                  child_end_append),
                                         (decltype(cur_tree->data_vector().size())) comp.compress(
@@ -907,7 +907,7 @@ std::shared_mutex avx_protect{};
                             //return implicit 0 with unsigned long
                             //nothing to add on RAM, only splitting up the blocks on disk
                             return std::make_tuple(
-                                    (decltype(cur_tree->data_vector().size())) std::distance(bin_beg, bin_end),
+                                    (decltype(cur_tree->data_vector().size())) std::distance(bin_beg_found, bin_end_found),
                                     (decltype(cur_tree->data_vector().size())) 0,
                                     (decltype(cur_tree->data_vector().size())) 0);
                         }
