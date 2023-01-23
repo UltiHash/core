@@ -1010,7 +1010,9 @@ std::shared_mutex simd_protect{};
             }
         }
 
-        auto search_match_filter(auto data_beg, auto data_end, auto bin_beg, auto bin_end,std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<decltype(bin_beg), decltype(bin_end), decltype(bin_beg)>>>>>, std::size_t>> input_list){
+        auto search_match_filter(auto data_beg, auto data_end, auto bin_beg, auto bin_end,
+                                 std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<decltype(bin_beg), decltype(bin_end), decltype(bin_beg)>>>>>, std::size_t>> input_list =
+                                         std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<decltype(bin_beg), decltype(bin_end), decltype(bin_beg)>>>>>, std::size_t>>{}){
             auto local_matches = compare_ultihash(data_beg, data_end, bin_beg, bin_end);
             //LEGAL MATCH FILTER
             //on empty or partial match make new list in list, else append the match results on total match
@@ -1037,9 +1039,9 @@ std::shared_mutex simd_protect{};
                                    total_found_size);//legal if on split there cannot be a segment that is smaller than the match size
                     if (!end_size && !end_reached) {
                         std::get<2>(*current_match)--;
-                        if (std::distance(std::get<1>(*current_match) < std::get<2>(*current_match)) <
+                        if (std::distance(std::get<1>(*current_match),std::get<2>(*current_match)) <
                             MINIMUM_MATCH_SIZE) {
-                            local_matches.erase(*current_match);
+                            local_matches.erase(current_match);
                             broken_legal = true;
                             return;
                         }
@@ -1088,7 +1090,7 @@ std::shared_mutex simd_protect{};
 
             if (local_matches.empty())return input_list;
 
-            std::vector<decltype(*input_list.begin())> out_possibilities{};
+            decltype(input_list) out_possibilities{};
 
             auto match_beginning = local_matches.begin();
             while (match_beginning != local_matches.end()) {
@@ -1098,7 +1100,7 @@ std::shared_mutex simd_protect{};
                     found_vec.emplace_back(std::get<1>(*match_beginning), std::get<2>(*match_beginning),
                                            std::get<0>(*match_beginning));
 
-                    if (input_list_tmp.empty() || !legal_split) {
+                    if (std::get<0>(input_list_tmp).empty() || !legal_split) {
                         std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<decltype(bin_beg), decltype(bin_end), decltype(data_beg)>>>> tmp_list{};
                         tmp_list.emplace_back(this, found_vec);
                         std::get<0>(input_list_tmp).push_back(tmp_list);
