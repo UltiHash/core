@@ -9,6 +9,8 @@
 #include "trees/tree_storage_config.h"
 #include "util/compression_custom.h"
 #include <vector>
+#include <shared_mutex>
+#include <mutex>
 #include <list>
 #include <deque>
 #include <set>
@@ -16,13 +18,15 @@
 #include <algorithm>
 #include <openssl/sha.h>
 #include <type_traits>
+#include <execution>
 
 namespace uh::trees {
     //because it takes at least 2 bytes to describe a deeper encoding action
 #define MINIMUM_MATCH_SIZE SHA512_DIGEST_LENGTH+sizeof(unsigned long)*TIME_STAMPS_ON_BLOCK+SHA256_DIGEST_LENGTH+3+5//the overhead of storing the block plus the size of basic storage pointer
 #define AVX_UNITS 2
 
-std::atomic<std::size_t> avx_count{};
+std::size_t avx_count{};
+std::shared_mutex avx_protect{};
 
     template<class DataReference>
     struct tree_radix_custom {
@@ -84,7 +88,7 @@ std::atomic<std::size_t> avx_count{};
                 //the reason why there is the correct character available but no match detected by search is the MINIMUM_MATCH_SIZE that failed, we will respect that
                 if(std::ranges::find(child_vec_append.begin(),child_vec_append.end(),input_tree)==child_vec_append.end()){
                     child_vec_append.emplace_back(input_tree);
-                    std::sort(child_vec_append.begin(),child_vec.end(),[](&auto a,&auto b){
+                    std::sort(child_vec_append.begin(),child_vec_append.end(),[](auto& a,auto& b){
                         return lexicographical_compare(a->data_vector().begin(),a->data_vector().end(),b->data_vector().begin(),b->data_vector().end());
                     });
                 }
@@ -146,29 +150,40 @@ std::atomic<std::size_t> avx_count{};
             //search forward through data
             do {
                 //first element match
-                if(avx_count.load<AVX_UNITS){
+                std::unique_lock lock(avx_protect);
+                if(avx_count<AVX_UNITS){
                     avx_count += 1;
-                    data_beg = std::ranges::find(std::execution::unseq,data_beg,data_end,*input_beg_tmp);
+                    lock.unlock();
+                    data_beg = std::ranges::find(std::execution::unseq,data_beg,data_end,*input_beg);
+                    lock.lock();
                     avx_count -= 1;
+                    lock.unlock();
                 }
                 else{
-                    data_beg = std::ranges::find(data_beg,data_end,*input_beg_tmp);
+                    lock.unlock();
+                    data_beg = std::ranges::find(data_beg,data_end,*input_beg);
                 }
 
-                if (data_beg == data_end || input_beg_tmp == input_end)break;
+                if (data_beg == data_end)break;
                 //search how long input matches
                 std::pair<decltype(data_beg),decltype(data_end)> found;
-                if(avx_count.load<AVX_UNITS){
+                lock.lock();
+                if(avx_count<AVX_UNITS){
                     avx_count += 1;
+                    lock.unlock();
                     found = std::ranges::mismatch(std::execution::unseq,data_beg,data_end,input_beg,input_end);
+                    lock.lock();
                     avx_count -= 1;
+                    lock.unlock();
                 }
                 else{
+                    lock.unlock();
                     found = std::ranges::mismatch(data_beg,data_end,input_beg,input_end);
                 }
                 //last input count reversed
-                if (std::distance(found.first,found.second) >= MINIMUM_MATCH_SIZE) {
-                    matches.emplace_back(data_beg, input_beg, input_beg_tmp - broken);
+                std::size_t found_dist = std::distance(found.first,found.second);
+                if (found_dist >= MINIMUM_MATCH_SIZE) {
+                    matches.emplace_back(data_beg, input_beg, input_beg+found_dist);
                 }
                 data_beg++;
             } while (data_beg != data_end);
@@ -194,7 +209,7 @@ std::atomic<std::size_t> avx_count{};
             }
             //some element and an end element at least required
             //TODO: add cross update from forward and backward children
-            auto tree_building_sequence = [&first_section_tree,&last_section_tree,&append_tree,&total_match,&avx_count](tree_radix_custom *cur_tree,
+            auto tree_building_sequence = [&first_section_tree,&last_section_tree,&append_tree,&total_match](tree_radix_custom *cur_tree,
                     auto bin_beg_incoming,auto bin_end_incoming, auto bin_beg_found, auto bin_end_found,const auto data_beg_intern,auto &added_intern,auto &modified_intern) {
                 std::size_t tree_front_data_front_absolute = std::distance(cur_tree->data_vector().begin(),data_beg_intern)+1;
                 std::size_t matched_size = std::distance(bin_beg_incoming, bin_end_found);
