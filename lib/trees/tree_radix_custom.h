@@ -46,13 +46,11 @@ std::shared_mutex avx_protect{};
             }
         }
 
-        template<class ContainerType>
-        explicit tree_radix_custom(ContainerType &bin) : tree_radix_custom() {
+        explicit tree_radix_custom(auto &bin) {
             add(bin.begin(),bin.end());
         }
 
-        template<typename IteratorType>
-        tree_radix_custom(IteratorType beg, IteratorType end) : tree_radix_custom() {
+        tree_radix_custom(auto beg, auto end) {
             add(beg, end);
         }
 
