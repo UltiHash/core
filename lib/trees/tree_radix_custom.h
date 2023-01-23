@@ -47,7 +47,7 @@ std::shared_mutex avx_protect{};
         }
 
         template<class ContainerType>
-        explicit tree_radix_custom(Container_Type &bin) : tree_radix_custom() {
+        explicit tree_radix_custom(ContainerType &bin) : tree_radix_custom() {
             add(bin.begin(),bin.end());
         }
 
