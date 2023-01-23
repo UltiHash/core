@@ -17,7 +17,8 @@ BOOST_AUTO_TEST_CASE( constructor )
     uh::trees::tree_radix_custom<std::vector<unsigned char>> t;
     BOOST_CHECK(t.children_reference().empty());
     std::string hello_string = "Hello World";
-    uh::trees::tree_radix_custom<std::vector<unsigned char>> t_hello(std::vector<unsigned char>{hello_string.begin(),hello_string.end()});
+    auto data_string = std::vector<unsigned char>{hello_string.begin(),hello_string.end()};
+    uh::trees::tree_radix_custom<std::vector<unsigned char>> t_hello(data_string.begin(),data_string.end());
     BOOST_CHECK(t_hello.children_reference().empty());
     BOOST_CHECK(t_hello.size()==11);
     BOOST_CHECK_EQUAL_COLLECTIONS(hello_string.begin(),hello_string.end(),t_hello.data_vector().begin(),t_hello.data_vector().end());
