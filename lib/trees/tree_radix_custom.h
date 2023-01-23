@@ -583,7 +583,7 @@ std::shared_mutex avx_protect{};
 
                     tree_radix_custom* tree_match_pointer = std::get<0>(*one_node_analysis);
                     std::set<tree_radix_custom*>modified{},added{};//changes to be written to disk in the form of tree pointers
-                    std::vector<std::tuple<std::tuple<decltype(bin_beg), decltype(bin_end), decltype(bin_beg),decltype(tree_match_pointer)> actively_changing_trees{};//TODO:fix
+                    std::vector<std::tuple<decltype(bin_beg), decltype(bin_end), decltype(bin_beg),decltype(tree_match_pointer)>> actively_changing_trees{};//TODO:fix
                     std::for_each(std::get<1>(*one_node_analysis).begin(),std::get<1>(*one_node_analysis).end(),[&actively_changing_trees,&tree_match_pointer](auto &item){
                         actively_changing_trees.emplace_back(std::get<0>(item),std::get<1>(item),std::get<2>(item),tree_match_pointer);
                     });
