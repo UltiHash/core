@@ -1017,51 +1017,51 @@ std::shared_mutex simd_protect{};
             //LEGAL MATCH FILTER
             //on empty or partial match make new list in list, else append the match results on total match
             bool legal_split;
-            //if the end was matched too long we can do something about that, but else the algorithm is prefix oriented
-            bool end_size, begin_reached, end_reached;
-            //control
-            bool broken_legal = false;
-            auto legal_check = [&local_matches, &legal_split, &end_size, &begin_reached, &end_reached, &broken_legal](
-                    auto data_beg, auto data_end, auto current_match) {
-                do {
-                    bool start_size = MINIMUM_MATCH_SIZE <= std::distance(data_beg, std::get<0>(*current_match));
-                    end_size = MINIMUM_MATCH_SIZE <= std::distance(std::get<0>(*current_match) +
-                                                                   std::distance(std::get<1>(*current_match),
-                                                                                 std::get<2>(*current_match)),
-                                                                   data_end);
-                    bool total_found_size = MINIMUM_MATCH_SIZE <= std::distance(std::get<1>(*current_match),
-                                                                                std::get<2>(*current_match));
-                    begin_reached = data_beg == std::get<0>(*current_match);
-                    end_reached = data_end == std::get<0>(*current_match) +
-                                              std::distance(std::get<1>(*current_match),
-                                                            std::get<2>(*current_match));
-                    legal_split = ((start_size || begin_reached) && (end_size || end_reached) &&
-                                   total_found_size);//legal if on split there cannot be a segment that is smaller than the match size
-                    if (!end_size && !end_reached) {
-                        std::get<2>(*current_match)--;
-                        if (std::distance(std::get<1>(*current_match),std::get<2>(*current_match)) <
-                            MINIMUM_MATCH_SIZE) {
-                            local_matches.erase(current_match);
-                            broken_legal = true;
-                            return;
-                        }
-                        std::sort(local_matches.begin(), local_matches.end(), [](auto &a, auto &b) {
-                            return std::distance(std::get<1>(a), std::get<2>(a)) >
-                                   std::distance(std::get<1>(b), std::get<2>(b));//TODO: if front is not legal iterate beginning, if end is not matching iterate end
-                        });
-                    }
-                } while (!end_size && !end_reached && !local_matches.empty());
-            };
 
             auto match_beg = local_matches.begin();
-            std::size_t count_match_pos{};
+
+            bool broken_loop = false;
+
+            auto legal_check = [&local_matches, &legal_split, &match_beg,&broken_loop](
+                    auto data_beg, auto data_end) {
+                //if the end was matched too long we can do something about that, but else the algorithm is prefix oriented
+                bool start_size, end_size, begin_reached, end_reached;
+                do {
+                    start_size = MINIMUM_MATCH_SIZE <= std::distance(data_beg, std::get<0>(*match_beg));
+                    end_size = MINIMUM_MATCH_SIZE <= std::distance(std::get<0>(*match_beg) +
+                                                                   std::distance(std::get<1>(*match_beg),
+                                                                                 std::get<2>(*match_beg)),
+                                                                   data_end);
+                    bool total_found_size = MINIMUM_MATCH_SIZE <= std::distance(std::get<1>(*match_beg),
+                                                                                std::get<2>(*match_beg));
+                    begin_reached = data_beg == std::get<0>(*match_beg);
+                    end_reached = data_end == std::get<0>(*match_beg) +
+                                              std::distance(std::get<1>(*match_beg),
+                                                            std::get<2>(*match_beg));
+                    legal_split = ((start_size || begin_reached) && (end_size || end_reached) && total_found_size);//legal if on split there cannot be a segment that is smaller than the match size
+
+                    if (!start_size && !begin_reached) {
+                        std::get<0>(*match_beg)++;
+                        std::get<1>(*match_beg)++;
+                        std::get<2>(*match_beg)--;
+                    }
+                    if (!end_size && !end_reached) {
+                        std::get<2>(*match_beg)--;
+                    }
+                    if (std::distance(std::get<1>(*match_beg),std::get<2>(*match_beg)) <
+                        MINIMUM_MATCH_SIZE) {
+                        local_matches.erase(match_beg);
+                        match_beg = local_matches.begin();
+                        broken_loop = true;
+                        return;
+                    }
+                } while (((!end_size && !end_reached)||(!start_size && !begin_reached)) && !local_matches.empty());
+            };
+
             while (match_beg != local_matches.end()) {
-                legal_check(data_beg, data_end, match_beg);
-                if (broken_legal)match_beg = local_matches.begin() + count_match_pos;
-                else {
-                    match_beg++;
-                    count_match_pos++;
-                }
+                legal_check(data_beg, data_end);
+                if(!broken_loop)match_beg++;
+                else broken_loop = false;
             }
 
             std::sort(local_matches.begin(), local_matches.end(), [](auto &a, auto &b) {
@@ -1092,13 +1092,13 @@ std::shared_mutex simd_protect{};
 
             decltype(input_list) out_possibilities{};
 
-            auto match_beginning = local_matches.begin();
-            while (match_beginning != local_matches.end()) {
-                legal_check(data_beg, data_end, match_beginning);
+            match_beg = local_matches.begin();
+            while (match_beg != local_matches.end()) {
+                legal_check(data_beg, data_end);
                 for(auto input_list_tmp:input_list){//COPY input list and create different path calculation
                     std::vector<std::tuple<decltype(bin_beg), decltype(bin_end), decltype(data_beg)>> found_vec{};
-                    found_vec.emplace_back(std::get<1>(*match_beginning), std::get<2>(*match_beginning),
-                                           std::get<0>(*match_beginning));
+                    found_vec.emplace_back(std::get<1>(*match_beg), std::get<2>(*match_beg),
+                                           std::get<0>(*match_beg));
 
                     if (std::get<0>(input_list_tmp).empty() || !legal_split) {
                         std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<decltype(bin_beg), decltype(bin_end), decltype(data_beg)>>>> tmp_list{};
@@ -1114,11 +1114,11 @@ std::shared_mutex simd_protect{};
                             last_it_outer_list->emplace_back(this, found_vec);
                         }
                     }
-                    std::get<1>(input_list_tmp) += std::distance(std::get<1>(*match_beginning),
-                                                                 std::get<2>(*match_beginning));
+                    std::get<1>(input_list_tmp) += std::distance(std::get<1>(*match_beg),
+                                                                 std::get<2>(*match_beg));
                     out_possibilities.push_back(input_list_tmp);
                 }
-                match_beginning++;
+                match_beg++;
             }
             return out_possibilities;
         }
