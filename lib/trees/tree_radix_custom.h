@@ -236,8 +236,7 @@ std::shared_mutex simd_protect{};
         add(auto bin_beg, auto bin_end) {//TODO:check duplicate matches and eliminate
             //first search existing structure and add into the last tree to insert potentially missing information
             /*std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::vector<unsigned char>::const_iterator, std::vector<unsigned char>::const_iterator, std::vector<unsigned char>::const_iterator>>>>>, std::size_t>>*/
-            auto search_index = search(
-                    bin_beg, bin_end);
+            auto search_index = search(bin_beg, bin_end);
             //uncompressed input
             if (bin_beg == bin_end || std::distance(bin_beg, bin_end) < 1) {
                 return {};

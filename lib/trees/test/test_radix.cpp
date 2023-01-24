@@ -96,7 +96,8 @@ BOOST_AUTO_TEST_CASE( search_empty_test )
     uh::trees::tree_radix_custom<std::vector<unsigned char>> t;
     std::string hello_string = "Hello";
     auto data_string = std::vector<unsigned char>{hello_string.begin(),hello_string.end()};
-    t.search(data_string.cbegin(),data_string.cend());
+    auto result = t.search(data_string.cbegin(),data_string.cend());
+    BOOST_CHECK(result.empty());
 }
 
 BOOST_AUTO_TEST_CASE( radix_constructor_test )
