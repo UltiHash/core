@@ -1146,7 +1146,7 @@ std::shared_mutex simd_protect{};
             if (bin_beg == bin_end || std::any_of(limiter_children.begin(),limiter_children.end(),[this](auto &item_limit){
                 return item_limit == this;
             })) {
-                return input_list;
+                return possibilities;
             }
 
             if constexpr(std::is_same<std::vector<unsigned char>::const_iterator,decltype(bin_beg)>::value || std::is_same<std::list<unsigned char>::const_iterator,decltype(bin_beg)>::value || std::is_same<std::deque<unsigned char>::const_iterator,decltype(bin_beg)>::value){
