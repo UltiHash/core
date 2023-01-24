@@ -1015,15 +1015,15 @@ std::shared_mutex simd_protect{};
                                          std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<decltype(bin_beg), decltype(bin_end), decltype(bin_beg)>>>>>, std::size_t>>{}){
             auto local_matches = compare_ultihash(data_beg, data_end, bin_beg, bin_end);
             //LEGAL MATCH FILTER
-            //on empty or partial match make new list in list, else append the match results on total match
-            bool legal_split;
 
             auto match_beg = local_matches.begin();
 
             bool broken_loop = false;
 
-            auto legal_check = [&local_matches, &legal_split, &match_beg,&broken_loop](
+            auto legal_check = [&local_matches, &match_beg,&broken_loop](
                     auto data_beg, auto data_end) {
+                //on empty or partial match make new list in list, else append the match results on total match
+                bool legal_split;
                 //if the end was matched too long we can do something about that, but else the algorithm is prefix oriented
                 bool start_size, end_size, begin_reached, end_reached;
                 do {
@@ -1053,9 +1053,10 @@ std::shared_mutex simd_protect{};
                         local_matches.erase(match_beg);
                         match_beg = local_matches.begin();
                         broken_loop = true;
-                        return;
+                        return false;
                     }
                 } while (((!end_size && !end_reached)||(!start_size && !begin_reached)) && !local_matches.empty());
+                return legal_split;
             };
 
             while (match_beg != local_matches.end()) {
@@ -1094,13 +1095,12 @@ std::shared_mutex simd_protect{};
 
             match_beg = local_matches.begin();
             while (match_beg != local_matches.end()) {
-                legal_check(data_beg, data_end);
                 for(auto input_list_tmp:input_list){//COPY input list and create different path calculation
                     std::vector<std::tuple<decltype(bin_beg), decltype(bin_end), decltype(data_beg)>> found_vec{};
                     found_vec.emplace_back(std::get<1>(*match_beg), std::get<2>(*match_beg),
                                            std::get<0>(*match_beg));
 
-                    if (std::get<0>(input_list_tmp).empty() || !legal_split) {
+                    if (std::get<0>(input_list_tmp).empty()) {
                         std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<decltype(bin_beg), decltype(bin_end), decltype(data_beg)>>>> tmp_list{};
                         tmp_list.emplace_back(this, found_vec);
                         std::get<0>(input_list_tmp).push_back(tmp_list);
@@ -1118,7 +1118,8 @@ std::shared_mutex simd_protect{};
                                                                  std::get<2>(*match_beg));
                     out_possibilities.push_back(input_list_tmp);
                 }
-                match_beg++;
+                if(!broken_loop)match_beg++;
+                else broken_loop = false;
             }
             return out_possibilities;
         }
