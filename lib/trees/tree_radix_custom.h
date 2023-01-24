@@ -940,10 +940,10 @@ std::shared_mutex simd_protect{};
             //all lists contain lists with a last element that had multiple matches; add up all matches
             if constexpr(std::is_same<std::vector<unsigned char>::const_iterator,decltype(bin_beg)>::value || std::is_same<std::list<unsigned char>::const_iterator,decltype(bin_beg)>::value || std::is_same<std::deque<unsigned char>::const_iterator,decltype(bin_beg)>::value){
                 std::vector<std::tuple<std::size_t, std::size_t, std::size_t>>add_tup_out{};
-                for(auto single_route:search_index){
+                for(auto &single_route:search_index){
                     std::tuple<std::size_t, std::size_t, std::size_t>add_tup{};
-                    auto outer_most_level = [&](auto list) {
-                        auto inner_list_level = [&](auto tree_tuple) {
+                    auto outer_most_level = [&](auto &list) {
+                        auto inner_list_level = [&](auto &tree_tuple) {
                             for (const auto &pos_tup: std::get<1>(tree_tuple)) {
                                 auto last_tree = std::get<0>(single_route).back();
                                 //check if we have a full match and the input is larger than the data of the last tree
@@ -957,7 +957,7 @@ std::shared_mutex simd_protect{};
                         };
                         std::for_each(list.begin(), list.end(), inner_list_level);
                     };
-                    std::for_each(single_route.begin(),single_route.end(),outer_most_level);
+                    std::for_each(std::get<0>(single_route).begin(),std::get<0>(single_route).end(),outer_most_level);
 
                     if (std::get<0>(single_route).empty() && std::get<1>(single_route) == 0) {
                         auto append_list = tree_test_sequence(this, bin_beg, bin_beg, data.cbegin(), data.cend(),
@@ -973,10 +973,10 @@ std::shared_mutex simd_protect{};
             else{
                 static_assert(!std::is_same<std::vector<unsigned char>::const_reverse_iterator,decltype(bin_beg)>::value && !std::is_same<std::list<unsigned char>::const_reverse_iterator,decltype(bin_beg)>::value && !std::is_same<std::deque<unsigned char>::const_reverse_iterator,decltype(bin_beg)>::value,"Illegal reverse const_iterator provided!");
                 std::vector<std::tuple<std::size_t, std::size_t, std::size_t>>add_tup_out{};
-                for(auto single_route:search_index){
+                for(auto &single_route:search_index){
                     std::tuple<std::size_t, std::size_t, std::size_t>add_tup{};
-                    auto outer_most_level = [&](auto list) {
-                        auto inner_list_level = [&](auto tree_tuple) {
+                    auto outer_most_level = [&](auto &list) {
+                        auto inner_list_level = [&](auto &tree_tuple) {
                             for (const auto &pos_tup: std::get<1>(tree_tuple)) {
                                 auto last_tree = std::get<0>(single_route).back();
                                 //check if we have a full match and the input is larger than the data of the last tree
@@ -990,7 +990,7 @@ std::shared_mutex simd_protect{};
                         };
                         std::for_each(list.begin(), list.end(), inner_list_level);
                     };
-                    std::for_each(single_route.begin(),single_route.end(),outer_most_level);
+                    std::for_each(std::get<0>(single_route).begin(),std::get<0>(single_route).end(),outer_most_level);
 
                     if (std::get<0>(single_route).empty() && std::get<1>(single_route) == 0) {
                         auto append_list = tree_test_sequence(this, bin_beg, bin_beg, data.crbegin(), data.crend(),
@@ -1000,6 +1000,8 @@ std::shared_mutex simd_protect{};
                         std::get<2>(add_tup) += std::get<2>(append_list);
                     }
                 }
+
+                return add_tup_out;
 
                 return add_tup_out;
             }
