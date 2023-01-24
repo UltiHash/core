@@ -1039,11 +1039,11 @@ std::shared_mutex simd_protect{};
 
                     if (!start_size && !begin_reached) {
                         std::get<0>(*match_beg)++;
-                        std::get<1>(*match_beg)--;
-                        std::get<2>(*match_beg)++;
+                        std::get<1>(*match_beg)++;
+                        std::get<2>(*match_beg)--;
                     }
                     if (!end_size && !end_reached) {
-                        std::get<1>(*match_beg)--;
+                        std::get<2>(*match_beg)--;
                     }
                     if (std::distance(std::get<1>(*match_beg),std::get<2>(*match_beg)) <
                         MINIMUM_MATCH_SIZE) {
@@ -1094,12 +1094,12 @@ std::shared_mutex simd_protect{};
 
             match_beg = local_matches.begin();
             auto possebilities_manage = [&](auto &input_list_tmp){
-                std::vector<std::tuple<decltype(bin_beg), decltype(bin_end), decltype(data_beg)>> found_vec{};
+                std::vector<std::tuple<decltype(data_beg), decltype(bin_end), decltype(bin_beg)>> found_vec{};
                 found_vec.emplace_back(std::get<1>(*match_beg), std::get<2>(*match_beg),
                                        std::get<0>(*match_beg));
 
                 if (std::get<0>(input_list_tmp).empty()) {
-                    std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<decltype(bin_beg), decltype(bin_end), decltype(data_beg)>>>> tmp_list{};
+                    std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<decltype(data_beg), decltype(bin_end), decltype(bin_beg)>>>> tmp_list{};
                     tmp_list.emplace_back(this, found_vec);
                     std::get<0>(input_list_tmp).push_back(tmp_list);
                 } else {
@@ -1119,14 +1119,14 @@ std::shared_mutex simd_protect{};
 
             while (match_beg != local_matches.end()) {
                 if(input_list.empty()){
-                    std::vector<std::tuple<decltype(bin_beg), decltype(bin_end), decltype(data_beg)>> found_vec{};
-                    found_vec.emplace_back(std::get<1>(*match_beg), std::get<2>(*match_beg),
-                                           std::get<0>(*match_beg));
+                    std::vector<std::tuple<decltype(data_beg), decltype(bin_end), decltype(bin_beg)>> found_vec{};
+                    found_vec.emplace_back(std::get<0>(*match_beg), std::get<1>(*match_beg),
+                                           std::get<2>(*match_beg));
                     std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<decltype(bin_beg), decltype(bin_end), decltype(bin_beg)>>>> tmp_list{};
                     tmp_list.emplace_back(this, found_vec);
                     std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<decltype(bin_beg), decltype(bin_end), decltype(bin_beg)>>>>>outer_list{tmp_list};
 
-                    out_possibilities.emplace_back(outer_list,(std::size_t)std::distance(std::get<1>(*match_beg),std::get<2>(*match_beg)));
+                    out_possibilities.emplace_back(outer_list,(std::size_t)std::distance(std::get<1>(*match_beg),std::get<2>(*match_beg))+(std::get<2>(*match_beg)!=bin_end));
                 }
                 else for(auto &input_list_tmp:input_list){//COPY input list and create different path calculation
                     possebilities_manage(input_list_tmp);

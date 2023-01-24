@@ -70,9 +70,9 @@ BOOST_AUTO_TEST_CASE( search_match_filter_test )
     auto last_it_outer_list = (--(std::get<0>(result[0]).end()));
     auto last_it_inner_list = (--(last_it_outer_list->end()));
 
-    BOOST_CHECK(std::get<0>(std::get<1>(*last_it_inner_list)[0])==input_string_begin.cbegin());//input iterator begin
-    BOOST_CHECK(std::get<1>(std::get<1>(*last_it_inner_list)[0])==input_string_begin.cbegin()+5);//input iterator end
-    BOOST_CHECK(std::get<2>(std::get<1>(*last_it_inner_list)[0])==data_string.cbegin()+2);//data iterator
+    BOOST_CHECK(std::get<0>(std::get<1>(*last_it_inner_list)[0])==data_string.cbegin()+2);//data iterator
+    BOOST_CHECK(std::get<1>(std::get<1>(*last_it_inner_list)[0])==input_string_begin.cbegin());//input iterator begin
+    BOOST_CHECK(std::get<2>(std::get<1>(*last_it_inner_list)[0])==input_string_begin.cbegin()+5);//input iterator end
 
     data_string.erase(data_string.cbegin());
     data_string.erase(data_string.cend()-1);
@@ -86,9 +86,9 @@ BOOST_AUTO_TEST_CASE( search_match_filter_test )
     last_it_outer_list = (--(std::get<0>(result[0]).end()));
     last_it_inner_list = (--(last_it_outer_list->end()));
 
-    BOOST_CHECK(std::get<0>(std::get<1>(*last_it_inner_list)[0])==input_string_begin.cbegin()+1);//input iterator begin
-    BOOST_CHECK(std::get<1>(std::get<1>(*last_it_inner_list)[0])==input_string_begin.cbegin()+10);//input iterator end
-    BOOST_CHECK(std::get<2>(std::get<1>(*last_it_inner_list)[0])==data_string.cbegin()+MINIMUM_MATCH_SIZE);//data iterator
+    BOOST_CHECK(std::get<0>(std::get<1>(*last_it_inner_list)[0])==data_string.cbegin()+MINIMUM_MATCH_SIZE);//data iterator
+    BOOST_CHECK(std::get<1>(std::get<1>(*last_it_inner_list)[0])==input_string_begin.cbegin()+1);//input iterator begin
+    BOOST_CHECK(std::get<2>(std::get<1>(*last_it_inner_list)[0])==input_string_begin.cend()-2);//input iterator end
 }
 
 BOOST_AUTO_TEST_CASE( radix_constructor_test )
