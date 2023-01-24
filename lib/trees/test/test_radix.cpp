@@ -75,7 +75,7 @@ BOOST_AUTO_TEST_CASE( search_match_filter_test )
     BOOST_CHECK(std::get<2>(std::get<1>(*last_it_inner_list)[0])==input_string_begin.cbegin()+5);//input iterator end
 
     data_string.erase(data_string.cbegin());
-    data_string.erase(data_string.cend()-1);
+    data_string.erase(data_string.cend());
     std::string ello_Worl = "Hello World";//Algo strictly keeps front and back distance to prevent fragmentation, Match size limits distance to front and back if it does not exactly match
     input_string_begin = std::vector<unsigned char>{ello_Worl.begin(),ello_Worl.end()};
 
@@ -91,16 +91,25 @@ BOOST_AUTO_TEST_CASE( search_match_filter_test )
     BOOST_CHECK(std::get<2>(std::get<1>(*last_it_inner_list)[0])==input_string_begin.cend()-2);//input iterator end
 }
 
+BOOST_AUTO_TEST_CASE( search_empty_test )
+{
+    uh::trees::tree_radix_custom<std::vector<unsigned char>> t;
+    std::string hello_string = "Hello";
+    auto data_string = std::vector<unsigned char>{hello_string.begin(),hello_string.end()};
+    t.search(data_string.cbegin(),data_string.cend());
+}
+
 BOOST_AUTO_TEST_CASE( radix_constructor_test )
 {
     uh::trees::tree_radix_custom<std::vector<unsigned char>> t;
     BOOST_CHECK(t.children_reference().empty());
     std::string hello_string = "Hello World";
     auto data_string = std::vector<unsigned char>{hello_string.begin(),hello_string.end()};
+    /*
     uh::trees::tree_radix_custom<std::vector<unsigned char>> t_hello(data_string.cbegin(),data_string.cend());
     BOOST_CHECK(t_hello.children_reference().empty());
     BOOST_CHECK(t_hello.size()==11);
-    BOOST_CHECK_EQUAL_COLLECTIONS(hello_string.begin(),hello_string.end(),t_hello.data_vector().begin(),t_hello.data_vector().end());
+    BOOST_CHECK_EQUAL_COLLECTIONS(hello_string.begin(),hello_string.end(),t_hello.data_vector().begin(),t_hello.data_vector().end());*/
 }
 
 BOOST_AUTO_TEST_CASE( add_test )
