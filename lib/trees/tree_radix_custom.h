@@ -965,8 +965,8 @@ std::shared_mutex simd_protect{};
                     std::for_each(single_route.begin(),single_route.end(),outer_most_level);
 
                     if (std::get<0>(single_route).empty() && std::get<1>(single_route) == 0) {
-                        auto append_list = tree_test_sequence(this, bin_beg, bin_beg, data.cbegin(), data.cend(),
-                                                              data.cend());//insert into this tree, no matches, only first character must match
+                        auto append_list = tree_test_sequence(this, bin_beg, bin_beg, data.cbegin(), data.cend()-1,
+                                                              data.cend()-1);//insert into this tree, no matches, only first character must match
                         std::get<0>(add_tup) += std::get<0>(append_list);
                         std::get<1>(add_tup) += std::get<1>(append_list);
                         std::get<2>(add_tup) += std::get<2>(append_list);
@@ -1126,7 +1126,7 @@ std::shared_mutex simd_protect{};
                     tmp_list.emplace_back(this, found_vec);
                     std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<decltype(bin_beg), decltype(bin_end), decltype(bin_beg)>>>>>outer_list{tmp_list};
 
-                    out_possibilities.emplace_back(outer_list,(std::size_t)std::distance(std::get<1>(*match_beg),std::get<2>(*match_beg))+(std::get<2>(*match_beg)!=bin_end));
+                    out_possibilities.emplace_back(outer_list,(std::size_t)abs(std::distance(std::get<1>(*match_beg),std::get<2>(*match_beg))+(std::get<2>(*match_beg)!=bin_end)));
                 }
                 else for(auto &input_list_tmp:input_list){//COPY input list and create different path calculation
                     possebilities_manage(input_list_tmp);
@@ -1149,7 +1149,7 @@ std::shared_mutex simd_protect{};
             }
 
             if constexpr(std::is_same<std::vector<unsigned char>::const_iterator,decltype(bin_beg)>::value || std::is_same<std::list<unsigned char>::const_iterator,decltype(bin_beg)>::value || std::is_same<std::deque<unsigned char>::const_iterator,decltype(bin_beg)>::value){
-                auto possibilities_init = search_match_filter(data.cbegin(), data.cend(), bin_beg, bin_end,input_list);
+                auto possibilities_init = search_match_filter(data.cbegin(), data.cend()-1, bin_beg, bin_end,input_list);
                 auto possibilities = std::vector<std::tuple<decltype(possibilities_init), decltype(bin_beg),decltype(bin_end), bool>>{};//check if the possibility was already checked and save the worked on binary input offset and data offset
                 for (const auto &item: possibilities_init) {
                     possibilities.emplace_back(item, data.cbegin(), bin_beg, false);
@@ -1179,13 +1179,13 @@ std::shared_mutex simd_protect{};
                     bool pos_begin_reset = false;
                     while (data_beg_tmp != std::get<1>(*pos_begin) || bin_beg_tmp != std::get<2>(*pos_begin) ||
                            first_time) {
-                        if (std::get<1>(*pos_begin) >= data.end())break;
+                        if (std::get<1>(*pos_begin) >= data.cend()-1)break;
                         if (std::get<2>(*pos_begin) >= bin_end)break;
                         first_time = false;
 
                         //do work on matching again for subset of data and input
                         //after various match cases as various positions
-                        possibilities_init = search_match_filter(std::get<1>(*pos_begin), data.cend(),
+                        possibilities_init = search_match_filter(std::get<1>(*pos_begin), data.cend()-1,
                                                                      std::get<2>(*pos_begin), bin_end, input_list);//search here
                         for (const auto &item: possibilities_init) {
                             possibilities.emplace_back(item, std::get<1>(*pos_begin), std::get<2>(*pos_begin), false);
@@ -1278,7 +1278,7 @@ std::shared_mutex simd_protect{};
             }
             else{
                 static_assert(!std::is_same<std::vector<unsigned char>::const_reverse_iterator,decltype(bin_beg)>::value && !std::is_same<std::list<unsigned char>::const_reverse_iterator,decltype(bin_beg)>::value && !std::is_same<std::deque<unsigned char>::const_reverse_iterator,decltype(bin_beg)>::value,"Illegal reverse const_iterator provided!");
-                auto possibilities_init = search_match_filter(data.crbegin(), data.crend(), bin_beg, bin_end,input_list);
+                auto possibilities_init = search_match_filter(data.crbegin(), data.crend()-1, bin_beg, bin_end,input_list);
                 auto possibilities = std::vector<std::tuple<decltype(possibilities_init), decltype(bin_beg),decltype(bin_end), bool>>{};//check if the possibility was already checked and save the worked on binary input offset and data offset
                 for (const auto &item: possibilities_init) {
                     possibilities.emplace_back(item, data.crbegin(), bin_beg, false);
@@ -1308,13 +1308,13 @@ std::shared_mutex simd_protect{};
                     bool pos_begin_reset = false;
                     while (data_beg_tmp != std::get<1>(*pos_begin) || bin_beg_tmp != std::get<2>(*pos_begin) ||
                            first_time) {
-                        if (std::get<1>(*pos_begin) >= data.end())break;
+                        if (std::get<1>(*pos_begin) >= data.crend()-1)break;
                         if (std::get<2>(*pos_begin) >= bin_end)break;
                         first_time = false;
 
                         //do work on matching again for subset of data and input
                         //after various match cases as various positions
-                        possibilities_init = search_match_filter(std::get<1>(*pos_begin), data.crend(),
+                        possibilities_init = search_match_filter(std::get<1>(*pos_begin), data.crend()-1,
                                                                      std::get<2>(*pos_begin), bin_end,input_list);//search here
                         for (const auto &item: possibilities_init) {
                             possibilities.emplace_back(item, std::get<1>(*pos_begin), std::get<2>(*pos_begin), false);
