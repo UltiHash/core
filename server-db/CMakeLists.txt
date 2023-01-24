@@ -1,10 +1,11 @@
 cmake_minimum_required(VERSION 3.22.0)
 project(uhServerDB VERSION 0.2.0)
-message(STATUS "Using ${PROJECT_NAME}...")
+message(STATUS "Building ${PROJECT_NAME}...")
 
 set(CMAKE_CXX_STANDARD 20)
 
-find_package(Boost 1.80 COMPONENTS regex date_time system filesystem unit_test_framework program_options REQUIRED)
+set(Boost_USE_STATIC_LIBS ON)
+find_package(Boost 1.80 COMPONENTS unit_test_framework REQUIRED)
 
 find_package(Git REQUIRED)
 if(GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/.git")
@@ -26,7 +27,7 @@ if(GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/.git")
     endif()
 
     # Update submodules as needed
-    option(UPDATE_GIT_SUBMODULE "Check submodules during build" OFF)
+    option(UPDATE_GIT_SUBMODULE "Update submodules during build" OFF)
     if(UPDATE_GIT_SUBMODULE)
         message(STATUS "Updating submodules...")
         execute_process(COMMAND ${GIT_EXECUTABLE} submodule update --init --recursive --remote
@@ -38,18 +39,19 @@ if(GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/.git")
     endif()
 endif()
 
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/config.hpp.in ${CMAKE_CURRENT_SOURCE_DIR}/src/config.hpp)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/config.hpp.in ${CMAKE_CURRENT_BINARY_DIR}/config.hpp)
+include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
 add_subdirectory(lib)
 
-set(${PROJECT_NAME}_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/lib ${CMAKE_CURRENT_SOURCE_DIR}/src ${Boost_INCLUDE_DIRS})
+set(${PROJECT_NAME}_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/lib ${CMAKE_CURRENT_SOURCE_DIR}/src ${Boost_INCLUDE_DIRS} uhLibOptions uhLibLogging uhLibProtocol uhLibNet)
 set(${PROJECT_NAME}_LINK_LIBRARIES ${Boost_LIBRARIES} uhLibOptions uhLibLogging uhLibProtocol uhLibNet uhLibMetrics)
 
 # adding all the .h files of the current project
-file(GLOB HEADER_FILE_LIST ${CMAKE_CURRENT_SOURCE_DIR}/src/*.h)
+file(GLOB_RECURSE HEADER_FILE_LIST ${CMAKE_CURRENT_SOURCE_DIR}/src/*.h)
 
 # adding all the .h files of the current project
-file(GLOB SOURCE_FILE_LIST ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp)
+file(GLOB_RECURSE SOURCE_FILE_LIST ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp)
 
 add_executable(${PROJECT_NAME} ${HEADER_FILE_LIST} ${SOURCE_FILE_LIST})
 target_include_directories(${PROJECT_NAME} PRIVATE ${${PROJECT_NAME}_INCLUDE_DIRS})
@@ -97,3 +99,4 @@ add_executable (${PROJECT_NAME}_allTests ${HEADER_FILE_LIST} ${SOURCE_FILE_LIST}
 target_compile_definitions(${PROJECT_NAME}_allTests PUBLIC SINGLE_TEST_RUNNER=1)
 target_include_directories(${PROJECT_NAME}_allTests PUBLIC ${${PROJECT_NAME}_INCLUDE_DIRS})
 target_link_libraries (${PROJECT_NAME}_allTests ${${PROJECT_NAME}_LINK_LIBRARIES})
+

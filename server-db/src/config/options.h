@@ -1,14 +1,14 @@
-#ifndef SERVER_DB_OPTIONS_H
-#define SERVER_DB_OPTIONS_H
+#ifndef SERVER_DATABASE_CONFIG_OPTIONS_H
+#define SERVER_DATABASE_CONFIG_OPTIONS_H
 
 #include <options/basic_options.h>
 #include <options/logging_options.h>
 #include <options/metrics_options.h>
 #include <options/server_options.h>
-#include "database_options.h"
+#include <storage/options.h>
 
 
-namespace uh::dbn
+namespace uh::dbn::config
 {
 
 // ---------------------------------------------------------------------
@@ -20,21 +20,22 @@ public:
 
     virtual void evaluate(const boost::program_options::variables_map& vars) override;
 
-    uh::options::basic_options& basic();
-    uh::options::server_options& server();
-    uh::options::database_options& database();
-    uh::options::logging_options& logging();
-    uh::options::metrics_options& metrics();
+    const uh::options::basic_options& basic() const;
+    const uh::options::server_options& server() const;
+    const uh::options::logging_options& logging() const;
+    const uh::options::metrics_options& metrics() const;
+    const storage::options& storage() const;
+
 private:
     uh::options::basic_options m_basic;
     uh::options::server_options m_server;
-    uh::options::database_options m_database;
     uh::options::logging_options m_logging;
     uh::options::metrics_options m_metrics;
+    storage::options m_storage;
 };
 
 // ---------------------------------------------------------------------
 
-} // namespace uh::dbn
+} // namespace uh::dbn::config
 
 #endif
