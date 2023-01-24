@@ -75,7 +75,7 @@ BOOST_AUTO_TEST_CASE( search_match_filter_test )
     BOOST_CHECK(std::get<2>(std::get<1>(*last_it_inner_list)[0])==input_string_begin.cbegin()+5);//input iterator end
 
     data_string.erase(data_string.cbegin());
-    data_string.erase(data_string.cend());
+    data_string.erase(data_string.cend()-1);
     std::string ello_Worl = "Hello World";//Algo strictly keeps front and back distance to prevent fragmentation, Match size limits distance to front and back if it does not exactly match
     input_string_begin = std::vector<unsigned char>{ello_Worl.begin(),ello_Worl.end()};
 
