@@ -11,11 +11,18 @@ RUN mkdir build \
 RUN cd /uhServerAgency/build && ctest -C Debug --output-on-failure
 
 FROM ubuntu:22.04 as deploy
-LABEL org.opencontainers.image.description "This container image contains the agency node server role. \
-The ```uhServerAgency``` binary is used as the default entry point with no additional parameters specified. \
+LABEL org.opencontainers.image.description "This container image contains a nightly snapshot of the agency node server role. \
+The ```start.sh``` script is used as the default entry point with no additional parameters specified. \
 With this, the AN server role listens on port 21832, and the prometheus-cpp exporter listens on port 8080."
 
+# Install curl to test if dependencies are already available (temporary workaround)
+RUN DEBIAN_FRONTEND=noninteractive apt-get update \
+    && apt-get upgrade --yes \
+    && apt-get install --yes --no-install-recommends curl
+
 COPY --from=build /uhServerAgency/build/uhServerAgency /usr/local/bin
+COPY --from=build /uhServerAgency/start.sh /usr/local/bin
+RUN chmod +x /usr/local/bin/start.sh
 
 RUN useradd -m ultihash
 USER ultihash
@@ -24,4 +31,4 @@ WORKDIR /home/ultihash
 EXPOSE 21832
 EXPOSE 8080
 
-ENTRYPOINT ["uhServerAgency"]
+ENTRYPOINT ["start.sh"]
