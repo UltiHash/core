@@ -33,13 +33,26 @@ BOOST_AUTO_TEST_CASE( compare_test )
     BOOST_CHECK(std::get<0>(result2[0])==data_string_late.cbegin()+12);
     BOOST_CHECK(std::get<1>(result2[0])==data_string_long.cbegin());
     BOOST_CHECK(std::get<2>(result2[0])==data_string_long.cbegin()+11);
+
+    std::string hello_world_string = "Hello World";
+    while(hello_world_string.size()<2*MINIMUM_MATCH_SIZE+11){
+        hello_world_string.insert(hello_world_string.begin(),'-');
+        hello_world_string.insert(hello_world_string.end(),'-');
+    }
+    std::string hello_string2 = "Hello";//totally matches at front
+    auto data_string2 = std::vector<unsigned char>{hello_world_string.begin(),hello_world_string.end()};
+    auto input_string_begin2 = std::vector<unsigned char>{hello_string2.begin(),hello_string2.end()};
+    auto result3 = t.compare_ultihash(data_string2.cbegin(),data_string2.cend(),input_string_begin2.cbegin(),input_string_begin2.cend());
+    BOOST_CHECK(std::get<0>(result3[0])==data_string2.cbegin()+2);//data iterator
+    BOOST_CHECK(std::get<1>(result3[0])==input_string_begin2.cbegin());//input iterator begin
+    BOOST_CHECK(std::get<2>(result3[0])==input_string_begin2.cbegin()+5);//input iterator end
 }
 
 BOOST_AUTO_TEST_CASE( search_match_filter_test )
 {
     //Test if the algorithm only detects matches that have an offset from 0 to front or back or a distance of match size
     std::string hello_world_string = "Hello World";
-    while(hello_world_string.size()<=MINIMUM_MATCH_SIZE+11){
+    while(hello_world_string.size()<2*MINIMUM_MATCH_SIZE+11){
         hello_world_string.insert(hello_world_string.begin(),'-');
         hello_world_string.insert(hello_world_string.end(),'-');
     }
@@ -52,7 +65,30 @@ BOOST_AUTO_TEST_CASE( search_match_filter_test )
     uh::trees::tree_radix_custom<std::vector<unsigned char>> t;
     auto result = t.search_match_filter(data_string.cbegin(),data_string.cend(),input_string_begin.cbegin(),input_string_begin.cend());
     BOOST_CHECK(result.size()==1);
+    BOOST_CHECK(std::get<1>(result[0])==5);
 
+    auto last_it_outer_list = (--(std::get<0>(result[0]).end()));
+    auto last_it_inner_list = (--(last_it_outer_list->end()));
+
+    BOOST_CHECK(std::get<0>(std::get<1>(*last_it_inner_list)[0])==input_string_begin.cbegin());//input iterator begin
+    BOOST_CHECK(std::get<1>(std::get<1>(*last_it_inner_list)[0])==input_string_begin.cbegin()+5);//input iterator end
+    BOOST_CHECK(std::get<2>(std::get<1>(*last_it_inner_list)[0])==data_string.cbegin()+2);//data iterator
+
+    data_string.erase(data_string.cbegin());
+    data_string.erase(data_string.cend()-1);
+    std::string ello_Worl = "Hello World";//Algo strictly keeps front and back distance to prevent fragmentation, Match size limits distance to front and back if it does not exactly match
+    input_string_begin = std::vector<unsigned char>{ello_Worl.begin(),ello_Worl.end()};
+
+    result = t.search_match_filter(data_string.cbegin(),data_string.cend(),input_string_begin.cbegin(),input_string_begin.cend());
+    BOOST_CHECK(result.size()==1);
+    BOOST_CHECK(std::get<1>(result[0])==9);
+
+    last_it_outer_list = (--(std::get<0>(result[0]).end()));
+    last_it_inner_list = (--(last_it_outer_list->end()));
+
+    BOOST_CHECK(std::get<0>(std::get<1>(*last_it_inner_list)[0])==input_string_begin.cbegin()+1);//input iterator begin
+    BOOST_CHECK(std::get<1>(std::get<1>(*last_it_inner_list)[0])==input_string_begin.cbegin()+10);//input iterator end
+    BOOST_CHECK(std::get<2>(std::get<1>(*last_it_inner_list)[0])==data_string.cbegin()+MINIMUM_MATCH_SIZE);//data iterator
 }
 
 BOOST_AUTO_TEST_CASE( radix_constructor_test )

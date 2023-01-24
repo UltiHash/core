@@ -181,7 +181,7 @@ std::shared_mutex simd_protect{};
         auto compare_ultihash(auto data_beg, auto data_end, auto input_beg, auto input_end) {
             //if input does only fit to a shorter string as a subset of data, count becomes negative, else positive including ß
             //data offset iterator and start and end of input
-            std::vector<std::tuple<decltype(input_beg),decltype(input_end),decltype(data_beg)>> matches{};
+            std::vector<std::tuple<decltype(data_beg),decltype(input_end),decltype(input_beg)>> matches{};
             if (!std::distance(input_beg, input_end)) {
                 DEBUG << "Compare ultihash failed because data was empty!";
                 return matches;
@@ -222,7 +222,7 @@ std::shared_mutex simd_protect{};
                 //last input count reversed
                 std::size_t found_dist = std::distance(data_beg,found.first);
                 if (found_dist >= MINIMUM_MATCH_SIZE) {
-                    matches.emplace_back(data_beg, input_beg, input_beg+found_dist);
+                    matches.emplace_back(data_beg,input_beg, input_beg+found_dist);
                 }
                 data_beg++;
             } while (data_beg != data_end);
