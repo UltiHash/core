@@ -1005,6 +1005,7 @@ std::shared_mutex simd_protect{};
             }
         }
 
+        //returns std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<decltype(bin_beg), decltype(bin_end), decltype(bin_beg)>>>>>, std::size_t>>
         auto search_match_filter(auto data_beg, auto data_end, auto bin_beg, auto bin_end,
                                  std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<decltype(bin_beg), decltype(bin_end), decltype(bin_beg)>>>>>, std::size_t>> input_list =
                                          std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<decltype(bin_beg), decltype(bin_end), decltype(bin_beg)>>>>>, std::size_t>>{}){
@@ -1144,12 +1145,13 @@ std::shared_mutex simd_protect{};
             }
 
             if constexpr(std::is_same<std::vector<unsigned char>::const_iterator,decltype(bin_beg)>::value || std::is_same<std::list<unsigned char>::const_iterator,decltype(bin_beg)>::value || std::is_same<std::deque<unsigned char>::const_iterator,decltype(bin_beg)>::value){
-                auto possibilities_init = search_match_filter(data.cbegin(), data.cend(), bin_beg, bin_end,input_list);
-                auto possibilities = std::vector<std::tuple<decltype(possibilities_init), decltype(bin_beg),decltype(bin_end), bool>>{};//check if the possibility was already checked and save the worked on binary input offset and data offset
+                std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<decltype(bin_beg), decltype(bin_end), decltype(bin_beg)>>>>>, std::size_t>> possibilities_init =
+                        search_match_filter(data.cbegin(), data.cend(), bin_beg, bin_end,input_list);
+                auto possibilities = std::vector<std::tuple<decltype(possibilities_init), decltype(data.cbegin()),decltype(bin_end), bool>>{};//check if the possibility was already checked and save the worked on binary input offset and data offset
                 for (auto &item: possibilities_init) {
                     possibilities.emplace_back(item, data.cbegin(), bin_beg, false);
                 }
-                possibilities_init.clear();
+                bool very_first_init = true;
 
                 auto pos_begin = possibilities.begin();
                 std::size_t delete_count{};
@@ -1167,7 +1169,7 @@ std::shared_mutex simd_protect{};
                     }
                     std::get<3>(*pos_begin) = true;
 
-                    decltype(bin_beg) data_beg_tmp = std::get<1>(*pos_begin);
+                    decltype(data.cbegin()) data_beg_tmp = std::get<1>(*pos_begin);
                     decltype(bin_beg) bin_beg_tmp = std::get<2>(*pos_begin);
 
                     bool first_time = true;
@@ -1180,30 +1182,28 @@ std::shared_mutex simd_protect{};
 
                         //do work on matching again for subset of data and input
                         //after various match cases as various positions
-                        possibilities_init = search_match_filter(std::get<1>(*pos_begin), data.cend(),
+                        if(!very_first_init){
+                            possibilities_init = search_match_filter(std::get<1>(*pos_begin), data.cend(),
                                                                      std::get<2>(*pos_begin), bin_end, input_list);//search here
-                        for (const auto &item: possibilities_init) {
-                            possibilities.emplace_back(item, std::get<1>(*pos_begin), std::get<2>(*pos_begin), false);
+                            for (const auto &item: possibilities_init) {
+                                possibilities.emplace_back(item, std::get<1>(*pos_begin), std::get<2>(*pos_begin), false);
+                            }
                         }
-                        possibilities_init.clear();
+                        very_first_init = false;
 
                         //check child that deals with searching the far most rest in direction of end to skip the not matching rest
                         auto child_vec = child_vector(*std::get<2>(*pos_begin));
 
                         if (!child_vec.empty()) {//recursive search
-                            for (const auto &item: child_vec) {
-                                for (const auto &item2: (item->search(std::get<2>(*pos_begin), bin_end,
-                                                                      std::get<0>(*pos_begin)))) {
-                                    for(const auto &route:item2){
-                                        possibilities.emplace_back(route, std::get<1>(*pos_begin), std::get<2>(*pos_begin),
-                                                                   false);
-                                    }
-                                }
+                            for (auto &item: child_vec) {//vector of tree pointers
+                                auto new_search_results_recursive = item->search(std::get<2>(*pos_begin), bin_end,
+                                                                                 std::get<0>(*pos_begin));
+                                possibilities.insert(possibilities.cend(),new_search_results_recursive.begin(),new_search_results_recursive.end());
                             }
                         }
 
-                        if (!std::get<0>(std::get<0>(*pos_begin)).empty()) {
-                            auto last_it_outer_list = (--(std::get<0>(std::get<0>(*pos_begin)).end()));
+                        if (!std::get<0>(*pos_begin).empty()) {
+                            auto last_it_outer_list = (--(std::get<0>(*pos_begin).end()));
                             auto last_it_inner_list = (--(last_it_outer_list->end()));
 
                             if (std::get<0>(*last_it_inner_list) ==
@@ -1273,12 +1273,13 @@ std::shared_mutex simd_protect{};
             }
             else{
                 static_assert(!std::is_same<std::vector<unsigned char>::const_reverse_iterator,decltype(bin_beg)>::value && !std::is_same<std::list<unsigned char>::const_reverse_iterator,decltype(bin_beg)>::value && !std::is_same<std::deque<unsigned char>::const_reverse_iterator,decltype(bin_beg)>::value,"Illegal reverse const_iterator provided!");
-                auto possibilities_init = search_match_filter(data.crbegin(), data.crend(), bin_beg, bin_end,input_list);
-                auto possibilities = std::vector<std::tuple<decltype(possibilities_init), decltype(bin_beg),decltype(bin_end), bool>>{};//check if the possibility was already checked and save the worked on binary input offset and data offset
+                std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<decltype(bin_beg), decltype(bin_end), decltype(bin_beg)>>>>>, std::size_t>> possibilities_init =
+                        search_match_filter(data.crbegin(), data.crend(), bin_beg, bin_end,input_list);
+                auto possibilities = std::vector<std::tuple<decltype(possibilities_init), decltype(data.crbegin()),decltype(bin_end), bool>>{};//check if the possibility was already checked and save the worked on binary input offset and data offset
                 for (auto &item: possibilities_init) {
                     possibilities.emplace_back(item, data.crbegin(), bin_beg, false);
                 }
-                possibilities_init.clear();
+                bool very_first_init = true;
 
                 auto pos_begin = possibilities.begin();
                 std::size_t delete_count{};
@@ -1296,7 +1297,7 @@ std::shared_mutex simd_protect{};
                     }
                     std::get<3>(*pos_begin) = true;
 
-                    decltype(bin_beg) data_beg_tmp = std::get<1>(*pos_begin);
+                    decltype(data.cbegin()) data_beg_tmp = std::get<1>(*pos_begin);
                     decltype(bin_beg) bin_beg_tmp = std::get<2>(*pos_begin);
 
                     bool first_time = true;
@@ -1309,30 +1310,28 @@ std::shared_mutex simd_protect{};
 
                         //do work on matching again for subset of data and input
                         //after various match cases as various positions
-                        possibilities_init = search_match_filter(std::get<1>(*pos_begin), data.crend(),
-                                                                     std::get<2>(*pos_begin), bin_end,input_list);//search here
-                        for (const auto &item: possibilities_init) {
-                            possibilities.emplace_back(item, std::get<1>(*pos_begin), std::get<2>(*pos_begin), false);
+                        if(!very_first_init){
+                            possibilities_init = search_match_filter(std::get<1>(*pos_begin), data.cend(),
+                                                                     std::get<2>(*pos_begin), bin_end, input_list);//search here
+                            for (const auto &item: possibilities_init) {
+                                possibilities.emplace_back(item, std::get<1>(*pos_begin), std::get<2>(*pos_begin), false);
+                            }
                         }
-                        possibilities_init.clear();
+                        very_first_init = false;
 
                         //check child that deals with searching the far most rest in direction of end to skip the not matching rest
                         auto child_vec = child_vector(*std::get<2>(*pos_begin));
 
                         if (!child_vec.empty()) {//recursive search
-                            for (const auto &item: child_vec) {
-                                for (const auto &item2: (item->search(std::get<2>(*pos_begin), bin_end,
-                                                                      std::get<0>(*pos_begin)))) {
-                                    for(const auto &route:item2){
-                                        possibilities.emplace_back(route, std::get<1>(*pos_begin), std::get<2>(*pos_begin),
-                                                                   false);
-                                    }
-                                }
+                            for (auto &item: child_vec) {
+                                auto new_search_results_recursive = item->search(std::get<2>(*pos_begin), bin_end,
+                                                                                 std::get<0>(*pos_begin));
+                                possibilities.insert(possibilities.cend(),new_search_results_recursive.begin(),new_search_results_recursive.end());
                             }
                         }
 
-                        if (!std::get<0>(std::get<0>(*pos_begin)).empty()) {
-                            auto last_it_outer_list = (--(std::get<0>(std::get<0>(*pos_begin)).end()));
+                        if (!std::get<0>(*pos_begin).empty()) {
+                            auto last_it_outer_list = (--(std::get<0>(*pos_begin).end()));
                             auto last_it_inner_list = (--(last_it_outer_list->end()));
 
                             if (std::get<0>(*last_it_inner_list) ==
