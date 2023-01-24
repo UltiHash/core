@@ -1158,19 +1158,16 @@ std::shared_mutex simd_protect{};
             if constexpr(std::is_same<std::vector<unsigned char>::const_iterator,decltype(bin_beg)>::value || std::is_same<std::list<unsigned char>::const_iterator,decltype(bin_beg)>::value || std::is_same<std::deque<unsigned char>::const_iterator,decltype(bin_beg)>::value){
                 /*std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<decltype(bin_beg), decltype(bin_end), decltype(bin_beg)>>>>>, std::size_t,decltype(bin_end), decltype(bin_beg)>>*/
                 //while a possibility still changes on search_match filter, it is continued to be executed
-                auto old_possibilities = possibilities;
-                do{
-                    old_possibilities = possibilities;
-                    possibilities = search_match_filter(data.cbegin(), data.cend(), bin_beg, bin_end,possibilities);
-                }while(old_possibilities != possibilities);
-
-                if (possibilities.empty())return possibilities;
-
-                //check child that deals with searching the far most rest in direction of end to skip the not matching rest
-                //only check children with correct continue letter first in case we get a total match
+                possibilities = search_match_filter(data.cbegin(), data.cend(), bin_beg, bin_end,possibilities);
 
                 decltype(possibilities) new_recursive{};
 
+                for(auto &single_pos:possibilities){
+                    auto new_search_results = search_match_filter(std::get<2>(single_pos), data.cend(), std::get<3>(single_pos), bin_end,possibilities);
+                    new_recursive.insert(new_recursive.cend(),new_search_results.begin(),new_search_results.end());
+                }
+                //check child that deals with searching the far most rest in direction of end to skip the not matching rest
+                //only check children with correct continue letter first in case we get a total match
                 for(auto pos_begin:possibilities){
                     auto child_vec = child_vector(*std::get<3>(pos_begin));
                     if (!child_vec.empty()) {//recursive search
@@ -1217,19 +1214,16 @@ std::shared_mutex simd_protect{};
                 static_assert(!std::is_same<std::vector<unsigned char>::const_reverse_iterator,decltype(bin_beg)>::value && !std::is_same<std::list<unsigned char>::const_reverse_iterator,decltype(bin_beg)>::value && !std::is_same<std::deque<unsigned char>::const_reverse_iterator,decltype(bin_beg)>::value,"Illegal reverse const_iterator provided!");
                 /*std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<decltype(bin_beg), decltype(bin_end), decltype(bin_beg)>>>>>, std::size_t,decltype(bin_end), decltype(bin_beg)>>*/
                 //while a possibility still changes on search_match filter, it is continued to be executed
-                auto old_possibilities = possibilities;
-                do{
-                    old_possibilities = possibilities;
-                    possibilities = search_match_filter(data.cbegin(), data.cend(), bin_beg, bin_end,possibilities);
-                }while(old_possibilities != possibilities);
-
-                if (possibilities.empty())return possibilities;
-
-                //check child that deals with searching the far most rest in direction of end to skip the not matching rest
-                //only check children with correct continue letter first in case we get a total match
+                possibilities = search_match_filter(data.crbegin(), data.crend(), bin_beg, bin_end,possibilities);
 
                 decltype(possibilities) new_recursive{};
 
+                for(auto &single_pos:possibilities){
+                    auto new_search_results = search_match_filter(std::get<2>(single_pos), data.crend(), std::get<3>(single_pos), bin_end,possibilities);
+                    new_recursive.insert(new_recursive.cend(),new_search_results.begin(),new_search_results.end());
+                }
+                //check child that deals with searching the far most rest in direction of end to skip the not matching rest
+                //only check children with correct continue letter first in case we get a total match
                 for(auto pos_begin:possibilities){
                     auto child_vec = child_vector(*std::get<3>(pos_begin));
                     if (!child_vec.empty()) {//recursive search
