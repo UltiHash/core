@@ -1252,8 +1252,8 @@ std::shared_mutex simd_protect{};
                 std::size_t max_val{};
                 auto poss_beg = possibilities.begin();
                 while (poss_beg != possibilities.end()) {
-                    max_val = std::max(max_val, std::get<1>(*poss_beg));
-                    if (std::get<1>(*poss_beg) < max_val) {
+                    max_val = std::max(max_val, std::get<1>(std::get<0>(*poss_beg)));
+                    if (std::get<1>(std::get<0>(*poss_beg)) < max_val) {
                         possibilities.erase(poss_beg, possibilities.end());
                         break;
                     }
@@ -1380,8 +1380,8 @@ std::shared_mutex simd_protect{};
                 std::size_t max_val{};
                 auto poss_beg = possibilities.begin();
                 while (poss_beg != possibilities.end()) {
-                    max_val = std::max(max_val, std::get<1>(*poss_beg));
-                    if (std::get<1>(*poss_beg) < max_val) {
+                    max_val = std::max(max_val, std::get<1>(std::get<0>(*poss_beg)));
+                    if (std::get<1>(std::get<0>(*poss_beg)) < max_val) {
                         possibilities.erase(poss_beg, possibilities.end());
                         break;
                     }
