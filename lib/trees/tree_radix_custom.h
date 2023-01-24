@@ -1012,7 +1012,7 @@ std::shared_mutex simd_protect{};
                                          std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<decltype(data_beg), decltype(bin_end), decltype(bin_beg)>>>>>, std::size_t,decltype(bin_end), decltype(bin_beg)>>{}){
             auto local_matches = compare_ultihash(data_beg, data_end, bin_beg, bin_end);
 
-            auto legal_match_integration = [](auto local matches){
+            auto legal_match_integration = [&data_beg,&data_end](auto local_matches){
                 std::sort(local_matches.begin(), local_matches.end(), [](auto &a, auto &b) {
                     return std::distance(std::get<1>(a), std::get<2>(a)) <
                            std::distance(std::get<1>(b), std::get<2>(b));
