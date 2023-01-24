@@ -1,103 +1,48 @@
-#include <logging/logging_boost.h>
-#include <metrics/service.h>
-
-#include <config.hpp>
-#include "options.h"
-#include "protocol_factory.h"
-#include "storage_backend.h"
-
 #include <exception>
-#include <iostream>
-#include <string>
+
+#include <config/mod.h>
+#include <storage/mod.h>
+#include <server/mod.h>
+#include <metrics/mod.h>
+#include <logging/logging_boost.h>
 
 
-using namespace uh::dbn;
 using namespace uh::log;
+using namespace uh::dbn;
 
-dump_storage create_ultihash_storage_backend(options &options){
-    uh::dbn::db_config config = options.database().config();
-    if(!(std::filesystem::exists(config.db_root))) {
-        // The root path does not exist. Should we create a new one?
-        if(!config.create_new_root) {
-            // We don't want to create a new root for the db;
-            // throw an error if the root requested does not exist
-            std::string msg("Path does not exist: " + config.db_root.string());
-            throw std::runtime_error(msg);
-        }else{
-            // We want to create a new root.
-            // If the root fails to be created, throw an error.
-            if(!std::filesystem::create_directories(config.db_root)){
-                std::string msg("Unable to create path for database root: " + config.db_root.string());
-                throw std::runtime_error(msg);
-            }
-            else{
-                INFO << "Created new database root at " << config.db_root;
-            }
-        }
-    }
-    else{
-        //The root path exists, inform about it:
-        INFO << "Found existing database root at " << config.db_root;
-    }
-    dump_storage uhsb(config);
-    return uhsb;
-}
-
-//TODO - Consider using mmap
 int main(int argc, const char** argv)
 {
-    uh::dbn::options options;
-
     try
     {
-        options.parse(argc, argv);
+        uh::dbn::config::mod config_module(argc, argv); 
 
-        bool exit = false;
-
-        if (options.basic().print_help())
-        {
-            options.dump(std::cout);
-            std::cout << "\n";
-            exit = true;
-        }
-
-        if (options.basic().print_version())
-        {
-            std::cout << "version: " << PROJECT_NAME << " " << PROJECT_VERSION << "\n";
-            exit = true;
-        }
-
-        if (options.basic().print_vcsid())
-        {
-            std::cout << "vcsid: " << PROJECT_REPOSITORY << " - " << PROJECT_VCSID << "\n";
-            exit = true;
-        }
-
-        if (exit)
+        if (config_module.handle())
         {
             return 0;
         }
+
+        const auto& options = config_module.options();
+
         init_logging(options.logging().config());
-    }
-    catch (const std::exception& e)
-    {
-        FATAL << e.what() << "\n";
-    }
 
-    try {
         INFO << "Setting up metrics";
-        uh::metrics::service metrics_service(options.metrics().config());
-        uh::dbn::metrics metrics(metrics_service);
+        metrics::mod metrics_module(options); //TODO add storage metrics
 
-        auto uhsb = create_ultihash_storage_backend(options);
-        INFO << "starting server";
-        uh::dbn::protocol_factory pf(uhsb, metrics);
-        uh::net::server srv(options.server().config(), pf);
-        srv.run();
+        storage::mod storage_module(options.storage().config());
+        storage_module.start();
+
+        server::mod server_module(options, storage_module, metrics_module); //TODO server module --added todos...
+        server_module.start();
     }
     catch (const std::exception& e)
     {
-        FATAL << e.what() << "\n";
+        FATAL << e.what();
+        return 1;
+    }
+    catch (...)
+    {
+        FATAL << "unknown exception occured";
+        return 1;
     }
 
     return 0;
