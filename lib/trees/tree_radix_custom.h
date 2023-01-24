@@ -1039,11 +1039,11 @@ std::shared_mutex simd_protect{};
 
                     if (!start_size && !begin_reached) {
                         std::get<0>(*match_beg)++;
-                        std::get<1>(*match_beg)++;
-                        std::get<2>(*match_beg)--;
+                        std::get<1>(*match_beg)--;
+                        std::get<2>(*match_beg)++;
                     }
                     if (!end_size && !end_reached) {
-                        std::get<2>(*match_beg)--;
+                        std::get<1>(*match_beg)--;
                     }
                     if (std::distance(std::get<1>(*match_beg),std::get<2>(*match_beg)) <
                         MINIMUM_MATCH_SIZE) {
