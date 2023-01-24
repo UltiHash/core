@@ -76,7 +76,7 @@ std::shared_mutex simd_protect{};
             return data_ref;
         }
 
-        std::vector<tree_radix_custom *> &child_vector(unsigned char i) {
+        std::vector<tree_radix_custom *> child_vector(unsigned char i) {
             if (children.empty())return {};
             for (const auto &item: children) {
                 if (std::get<1>(item) == i) {
@@ -1152,8 +1152,11 @@ std::shared_mutex simd_protect{};
             if constexpr(std::is_same<std::vector<unsigned char>::const_iterator,decltype(bin_beg)>::value || std::is_same<std::list<unsigned char>::const_iterator,decltype(bin_beg)>::value || std::is_same<std::deque<unsigned char>::const_iterator,decltype(bin_beg)>::value){
                 /*std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<decltype(bin_beg), decltype(bin_end), decltype(bin_beg)>>>>>, std::size_t,decltype(bin_end), decltype(bin_beg)>>*/
                 //while a possibility still changes on search_match filter, it is continued to be executed
-
-                possibilities = search_match_filter(data.cbegin(), data.cend(), bin_beg, bin_end,possibilities);
+                auto old_possibilities = possibilities;
+                do{
+                    old_possibilities = possibilities;
+                    possibilities = search_match_filter(data.cbegin(), data.cend(), bin_beg, bin_end,possibilities);
+                }while(old_possibilities != possibilities);
 
                 if (possibilities.empty())return possibilities;
 
@@ -1162,12 +1165,11 @@ std::shared_mutex simd_protect{};
 
                 decltype(possibilities) new_recursive{};
 
-                for(auto &pos_begin:possibilities){
+                for(auto pos_begin:possibilities){
                     auto child_vec = child_vector(*std::get<3>(pos_begin));
                     if (!child_vec.empty()) {//recursive search
                         for (auto &item: child_vec) {//vector of tree pointers
-                            auto new_search_results_recursive = item->search(std::get<3>(pos_begin), bin_end,
-                                                                             std::vector<decltype(possibilities[0])>{pos_begin});
+                            auto new_search_results_recursive = item->search(std::get<3>(pos_begin), bin_end,possibilities);
                             new_recursive.insert(new_recursive.cend(),new_search_results_recursive.begin(),new_search_results_recursive.end());
                         }
                     }
@@ -1175,8 +1177,7 @@ std::shared_mutex simd_protect{};
                     for(auto&c:children){
                         if(!child_vec.empty() && std::get<1>(c)==*std::get<3>(pos_begin))continue;
                         for (auto &item: std::get<0>(c)) {//vector of tree pointers
-                            auto new_search_results_recursive = item->search(std::get<3>(pos_begin), bin_end,
-                                                                             std::vector<decltype(possibilities[0])>{pos_begin});
+                            auto new_search_results_recursive = item->search(std::get<3>(pos_begin), bin_end,possibilities);
                             new_recursive.insert(new_recursive.cend(),new_search_results_recursive.begin(),new_search_results_recursive.end());
                         }
                     }
@@ -1210,8 +1211,11 @@ std::shared_mutex simd_protect{};
                 static_assert(!std::is_same<std::vector<unsigned char>::const_reverse_iterator,decltype(bin_beg)>::value && !std::is_same<std::list<unsigned char>::const_reverse_iterator,decltype(bin_beg)>::value && !std::is_same<std::deque<unsigned char>::const_reverse_iterator,decltype(bin_beg)>::value,"Illegal reverse const_iterator provided!");
                 /*std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<decltype(bin_beg), decltype(bin_end), decltype(bin_beg)>>>>>, std::size_t,decltype(bin_end), decltype(bin_beg)>>*/
                 //while a possibility still changes on search_match filter, it is continued to be executed
-
-                possibilities = search_match_filter(data.crbegin(), data.crend(), bin_beg, bin_end,possibilities);
+                auto old_possibilities = possibilities;
+                do{
+                    old_possibilities = possibilities;
+                    possibilities = search_match_filter(data.cbegin(), data.cend(), bin_beg, bin_end,possibilities);
+                }while(old_possibilities != possibilities);
 
                 if (possibilities.empty())return possibilities;
 
@@ -1220,22 +1224,20 @@ std::shared_mutex simd_protect{};
 
                 decltype(possibilities) new_recursive{};
 
-                for(auto &pos_begin:possibilities){
+                for(auto pos_begin:possibilities){
                     auto child_vec = child_vector(*std::get<3>(pos_begin));
                     if (!child_vec.empty()) {//recursive search
                         for (auto &item: child_vec) {//vector of tree pointers
-                            auto new_search_results_recursive = item->search(std::get<3>(pos_begin), bin_end,
-                                                                             std::vector<decltype(possibilities[0])>{pos_begin});
-                            new_recursive.insert(new_recursive.crend(),new_search_results_recursive.begin(),new_search_results_recursive.end());
+                            auto new_search_results_recursive = item->search(std::get<3>(pos_begin), bin_end,possibilities);
+                            new_recursive.insert(new_recursive.cend(),new_search_results_recursive.begin(),new_search_results_recursive.end());
                         }
                     }
 
                     for(auto&c:children){
                         if(!child_vec.empty() && std::get<1>(c)==*std::get<3>(pos_begin))continue;
                         for (auto &item: std::get<0>(c)) {//vector of tree pointers
-                            auto new_search_results_recursive = item->search(std::get<3>(pos_begin), bin_end,
-                                                                             std::vector<decltype(possibilities[0])>{pos_begin});
-                            new_recursive.insert(new_recursive.crend(),new_search_results_recursive.begin(),new_search_results_recursive.end());
+                            auto new_search_results_recursive = item->search(std::get<3>(pos_begin), bin_end,possibilities);
+                            new_recursive.insert(new_recursive.cend(),new_search_results_recursive.begin(),new_search_results_recursive.end());
                         }
                     }
                 }
