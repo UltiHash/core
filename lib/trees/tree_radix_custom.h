@@ -282,9 +282,9 @@ std::shared_mutex simd_protect{};
 
                         cur_tree->data_vector() = std::vector<unsigned char>{child_beg_mid, child_end_mid};
                         out_list.push_back(cur_tree);
-                        return std::make_tuple(std::distance(child_beg_mid, child_end_mid),
-                                               std::distance(child_beg_mid, child_end_mid),
-                                               comp.compress(child_beg_mid, child_end_mid).size(),out_list,first_section_tree,last_section_tree,append_tree,total_match,tree_front_data_front_absolute);
+                        return std::make_tuple((std::size_t)std::distance(child_beg_mid, child_end_mid),
+                                               (std::size_t)std::distance(child_beg_mid, child_end_mid),
+                                               (std::size_t)comp.compress(child_beg_mid, child_end_mid).size(),out_list,first_section_tree,last_section_tree,append_tree,total_match,tree_front_data_front_absolute);
                     } else {
                         if (total_match) {//only a maximum of 1 tree creation or just 0 in case of reference
                             //a total match can still have appending structure
