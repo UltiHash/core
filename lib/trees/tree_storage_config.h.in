@@ -14,7 +14,7 @@
 #define PERFORMANCE_TEST_SIZE std::pow(1024, 4) * 4
 #define STORE_MAX (unsigned int) std::numeric_limits<unsigned int>::max()
 //the overhead of storing the block plus the size of basic storage pointer
-#define MINIMUM_MATCH_SIZE (std::size_t)std::round((long double)(SHA512_DIGEST_LENGTH+sizeof(unsigned long)*TIME_STAMPS_ON_BLOCK+SHA256_DIGEST_LENGTH+3+5)/5)
+#define MINIMUM_MATCH_SIZE 4
 #endif
 #define STORE_HARD_LIMIT (unsigned long) (STORE_MAX * 2)
 #define STORE_MAX_LATENCY 32

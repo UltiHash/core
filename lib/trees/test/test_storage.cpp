@@ -40,7 +40,7 @@ std::vector<unsigned char> binary_generator(std::size_t max_len) {
 /*
  * test setting up a tree storage at a given location
  */
-BOOST_AUTO_TEST_CASE(constructor_test)
+BOOST_AUTO_TEST_CASE(storage_constructor_test)
 {
     //tests for any linux machine
     std::filesystem::path target = std::filesystem::path("/tmp");

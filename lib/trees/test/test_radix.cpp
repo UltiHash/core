@@ -39,6 +39,10 @@ BOOST_AUTO_TEST_CASE( search_match_filter_test )
 {
     //Test if the algorithm only detects matches that have an offset from 0 to front or back or a distance of match size
     std::string hello_world_string = "Hello World";
+    while(hello_world_string.size()<=MINIMUM_MATCH_SIZE+11){
+        hello_world_string.insert(hello_world_string.begin(),'-');
+        hello_world_string.insert(hello_world_string.end(),'-');
+    }
     std::string hello_string = "Hello";//totally matches at front
     std::string world_string = "World";//totally matches at back
     auto data_string = std::vector<unsigned char>{hello_world_string.begin(),hello_world_string.end()};
@@ -51,7 +55,7 @@ BOOST_AUTO_TEST_CASE( search_match_filter_test )
 
 }
 
-BOOST_AUTO_TEST_CASE( constructor_test )
+BOOST_AUTO_TEST_CASE( radix_constructor_test )
 {
     uh::trees::tree_radix_custom<std::vector<unsigned char>> t;
     BOOST_CHECK(t.children_reference().empty());
