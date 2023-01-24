@@ -1171,7 +1171,7 @@ std::shared_mutex simd_protect{};
                             new_recursive.insert(new_recursive.cend(),new_search_results_recursive.begin(),new_search_results_recursive.end());
                         }
                     }
-                    std::vector<std::tuple<std::vector<tree_radix_custom *>, unsigned char>>
+
                     for(auto&c:children){
                         if(!child_vec.empty() && std::get<1>(c)==*std::get<3>(pos_begin))continue;
                         for (auto &item: std::get<0>(c)) {//vector of tree pointers
@@ -1229,7 +1229,7 @@ std::shared_mutex simd_protect{};
                             new_recursive.insert(new_recursive.crend(),new_search_results_recursive.begin(),new_search_results_recursive.end());
                         }
                     }
-                    std::vector<std::tuple<std::vector<tree_radix_custom *>, unsigned char>>
+
                     for(auto&c:children){
                         if(!child_vec.empty() && std::get<1>(c)==*std::get<3>(pos_begin))continue;
                         for (auto &item: std::get<0>(c)) {//vector of tree pointers
