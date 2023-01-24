@@ -1166,7 +1166,7 @@ std::shared_mutex simd_protect{};
                     auto child_vec = child_vector(*std::get<3>(pos_begin));
                     if (!child_vec.empty()) {//recursive search
                         for (auto &item: child_vec) {//vector of tree pointers
-                            auto new_search_results_recursive = item->search(std::get<3>(*pos_begin), bin_end,
+                            auto new_search_results_recursive = item->search(std::get<3>(pos_begin), bin_end,
                                                                              std::vector<decltype(possibilities[0])>{pos_begin});
                             new_recursive.insert(new_recursive.cend(),new_search_results_recursive.begin(),new_search_results_recursive.end());
                         }
@@ -1175,7 +1175,7 @@ std::shared_mutex simd_protect{};
                     for(auto&c:children){
                         if(!child_vec.empty() && std::get<1>(c)==*std::get<3>(pos_begin))continue;
                         for (auto &item: std::get<0>(c)) {//vector of tree pointers
-                            auto new_search_results_recursive = item->search(std::get<3>(*pos_begin), bin_end,
+                            auto new_search_results_recursive = item->search(std::get<3>(pos_begin), bin_end,
                                                                              std::vector<decltype(possibilities[0])>{pos_begin});
                             new_recursive.insert(new_recursive.cend(),new_search_results_recursive.begin(),new_search_results_recursive.end());
                         }
@@ -1224,7 +1224,7 @@ std::shared_mutex simd_protect{};
                     auto child_vec = child_vector(*std::get<3>(pos_begin));
                     if (!child_vec.empty()) {//recursive search
                         for (auto &item: child_vec) {//vector of tree pointers
-                            auto new_search_results_recursive = item->search(std::get<3>(*pos_begin), bin_end,
+                            auto new_search_results_recursive = item->search(std::get<3>(pos_begin), bin_end,
                                                                              std::vector<decltype(possibilities[0])>{pos_begin});
                             new_recursive.insert(new_recursive.crend(),new_search_results_recursive.begin(),new_search_results_recursive.end());
                         }
@@ -1233,7 +1233,7 @@ std::shared_mutex simd_protect{};
                     for(auto&c:children){
                         if(!child_vec.empty() && std::get<1>(c)==*std::get<3>(pos_begin))continue;
                         for (auto &item: std::get<0>(c)) {//vector of tree pointers
-                            auto new_search_results_recursive = item->search(std::get<3>(*pos_begin), bin_end,
+                            auto new_search_results_recursive = item->search(std::get<3>(pos_begin), bin_end,
                                                                              std::vector<decltype(possibilities[0])>{pos_begin});
                             new_recursive.insert(new_recursive.crend(),new_search_results_recursive.begin(),new_search_results_recursive.end());
                         }
