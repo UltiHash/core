@@ -1007,8 +1007,8 @@ std::shared_mutex simd_protect{};
 
         //returns std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<decltype(bin_beg), decltype(bin_end), decltype(bin_beg)>>>>>, std::size_t>>
         auto search_match_filter(auto data_beg, auto data_end, auto bin_beg, auto bin_end,
-                                 std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<decltype(bin_beg), decltype(bin_end), decltype(bin_beg)>>>>>, std::size_t>> input_list =
-                                         std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<decltype(bin_beg), decltype(bin_end), decltype(bin_beg)>>>>>, std::size_t>>{}){
+                                 std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<decltype(data_beg), decltype(bin_end), decltype(bin_beg)>>>>>, std::size_t,decltype(bin_end), decltype(bin_beg)>> input_list =
+                                         std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<decltype(data_beg), decltype(bin_end), decltype(bin_beg)>>>>>, std::size_t,decltype(bin_end), decltype(bin_beg)>>{}){
             auto local_matches = compare_ultihash(data_beg, data_end, bin_beg, bin_end);
             std::sort(local_matches.begin(), local_matches.end(), [](auto &a, auto &b) {
                 return std::distance(std::get<1>(a), std::get<2>(a)) <
@@ -1108,8 +1108,10 @@ std::shared_mutex simd_protect{};
                         last_it_outer_list->emplace_back(this, found_vec);
                     }
                 }
-                std::get<1>(input_list_tmp) += std::distance(std::get<1>(*match_beg),
-                                                             std::get<2>(*match_beg));
+                std::size_t advance = (std::size_t)abs(std::distance(std::get<1>(*match_beg),std::get<2>(*match_beg)))+(std::get<2>(*match_beg)!=bin_end);
+                std::get<1>(input_list_tmp) += advance;
+                std::get<2>(input_list_tmp) ++;
+                std::get<3>(input_list_tmp) += advance;
                 out_possibilities.push_back(input_list_tmp);
             };
 
@@ -1122,7 +1124,8 @@ std::shared_mutex simd_protect{};
                     tmp_list.emplace_back(this, found_vec);
                     std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<decltype(bin_beg), decltype(bin_end), decltype(bin_beg)>>>>>outer_list{tmp_list};
 
-                    out_possibilities.emplace_back(outer_list,(std::size_t)abs(std::distance(std::get<1>(*match_beg),std::get<2>(*match_beg)))+(std::get<2>(*match_beg)!=bin_end));
+                    std::size_t advance = (std::size_t)abs(std::distance(std::get<1>(*match_beg),std::get<2>(*match_beg)))+(std::get<2>(*match_beg)!=bin_end);
+                    out_possibilities.emplace_back(outer_list,advance,std::get<0>(*match_beg)+1,std::get<1>(*match_beg)+advance);
                 }
                 else for(auto &input_list_tmp:input_list){//COPY input list and create different path calculation
                     possebilities_manage(input_list_tmp);
@@ -1135,8 +1138,8 @@ std::shared_mutex simd_protect{};
         //returns the path of maximum fit and the match size
         /*std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::vector<unsigned char>::const_iterator, std::vector<unsigned char>::const_iterator, std::vector<unsigned char>::const_iterator>>>>>, std::size_t>>*/
                 auto search(auto bin_beg, auto bin_end,
-                       std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<decltype(bin_beg), decltype(bin_end), decltype(bin_beg)>>>>>, std::size_t>> input_list =
-                       std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<decltype(bin_beg), decltype(bin_end), decltype(bin_beg)>>>>>, std::size_t>>{},
+                       std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<decltype(bin_beg), decltype(bin_end), decltype(bin_beg)>>>>>, std::size_t,decltype(bin_end), decltype(bin_beg)>> input_list =
+                       std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<decltype(bin_beg), decltype(bin_end), decltype(bin_beg)>>>>>, std::size_t,decltype(bin_end), decltype(bin_beg)>>{},
                        std::vector<tree_radix_custom*> limiter_children = std::vector<tree_radix_custom*>{}) {
             if (bin_beg == bin_end || std::any_of(limiter_children.begin(),limiter_children.end(),[this](auto &item_limit){
                 return item_limit == this;
@@ -1145,100 +1148,36 @@ std::shared_mutex simd_protect{};
             }
 
             if constexpr(std::is_same<std::vector<unsigned char>::const_iterator,decltype(bin_beg)>::value || std::is_same<std::list<unsigned char>::const_iterator,decltype(bin_beg)>::value || std::is_same<std::deque<unsigned char>::const_iterator,decltype(bin_beg)>::value){
-                std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<decltype(bin_beg), decltype(bin_end), decltype(bin_beg)>>>>>, std::size_t>> possibilities_init =
-                        search_match_filter(data.cbegin(), data.cend(), bin_beg, bin_end,input_list);
-                auto possibilities = std::vector<std::tuple<decltype(possibilities_init), decltype(data.cbegin()),decltype(bin_end), bool>>{};//check if the possibility was already checked and save the worked on binary input offset and data offset
-                for (auto &item: possibilities_init) {
-                    possibilities.emplace_back(item, data.cbegin(), bin_beg, false);
+                /*std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<decltype(bin_beg), decltype(bin_end), decltype(bin_beg)>>>>>, std::size_t,decltype(bin_end), decltype(bin_beg)>>*/
+                auto possibilities = search_match_filter(data.cbegin(), data.cend(), bin_beg, bin_end,input_list);
+
+                //check child that deals with searching the far most rest in direction of end to skip the not matching rest
+                auto child_vec = child_vector(*std::get<2>(*pos_begin));
+
+                if (!child_vec.empty()) {//recursive search
+                    for (auto &item: child_vec) {//vector of tree pointers
+                        auto new_search_results_recursive = item->search(std::get<2>(*pos_begin), bin_end,
+                                                                         std::get<0>(*pos_begin));
+                        possibilities.insert(possibilities.cend(),new_search_results_recursive.begin(),new_search_results_recursive.end());
+                    }
                 }
-                bool very_first_init = true;
 
-                auto pos_begin = possibilities.begin();
-                std::size_t delete_count{};
+                if (!std::get<0>(*pos_begin).empty()) {
+                    auto last_it_outer_list = (--(std::get<0>(*pos_begin).end()));
+                    auto last_it_inner_list = (--(last_it_outer_list->end()));
 
-                while (!possibilities.empty()) {
-                    if (std::get<3>(*pos_begin)) {
-                        delete_count++;
-                        continue;
+                    if (std::get<0>(*last_it_inner_list) ==
+                        this) {//check if tree pointer is the same of the last element, so we can continue to append results
+                        //we still found a match on this data so continue advancing data and binary beginning
+                        //set data begin to the position where a subset of the input was found to make sure it advances >=0
+                        auto last_position_tuple = std::get<1>(*last_it_inner_list).back();
+                        std::get<1>(*pos_begin) = std::get<2>(last_position_tuple) +
+                                                  1;//if we do not skip by the minimum match size, we may ultra fragment data
+                        std::size_t matched_size =
+                                std::distance(std::get<0>(last_position_tuple), std::get<1>(last_position_tuple)) + 1;
+                        std::get<2>(*pos_begin) += matched_size;
+                        std::get<1>(std::get<0>(*pos_begin)) += matched_size;
                     }
-                    if (delete_count > 0) {
-                        possibilities.erase(possibilities.begin(), possibilities.begin() + (delete_count - 1));
-                        pos_begin = possibilities.begin();
-                        delete_count = 0;
-                        continue;
-                    }
-                    std::get<3>(*pos_begin) = true;
-
-                    decltype(data.cbegin()) data_beg_tmp = std::get<1>(*pos_begin);
-                    decltype(bin_beg) bin_beg_tmp = std::get<2>(*pos_begin);
-
-                    bool first_time = true;
-                    bool pos_begin_reset = false;
-                    while (data_beg_tmp != std::get<1>(*pos_begin) || bin_beg_tmp != std::get<2>(*pos_begin) ||
-                           first_time) {
-                        if (std::get<1>(*pos_begin) >= data.cend())break;
-                        if (std::get<2>(*pos_begin) >= bin_end)break;
-                        first_time = false;
-
-                        //do work on matching again for subset of data and input
-                        //after various match cases as various positions
-                        if(!very_first_init){
-                            possibilities_init = search_match_filter(std::get<1>(*pos_begin), data.cend(),
-                                                                     std::get<2>(*pos_begin), bin_end, input_list);//search here
-                            for (const auto &item: possibilities_init) {
-                                possibilities.emplace_back(item, std::get<1>(*pos_begin), std::get<2>(*pos_begin), false);
-                            }
-                        }
-                        very_first_init = false;
-
-                        //check child that deals with searching the far most rest in direction of end to skip the not matching rest
-                        auto child_vec = child_vector(*std::get<2>(*pos_begin));
-
-                        if (!child_vec.empty()) {//recursive search
-                            for (auto &item: child_vec) {//vector of tree pointers
-                                auto new_search_results_recursive = item->search(std::get<2>(*pos_begin), bin_end,
-                                                                                 std::get<0>(*pos_begin));
-                                possibilities.insert(possibilities.cend(),new_search_results_recursive.begin(),new_search_results_recursive.end());
-                            }
-                        }
-
-                        if (!std::get<0>(*pos_begin).empty()) {
-                            auto last_it_outer_list = (--(std::get<0>(*pos_begin).end()));
-                            auto last_it_inner_list = (--(last_it_outer_list->end()));
-
-                            if (std::get<0>(*last_it_inner_list) ==
-                                this) {//check if tree pointer is the same of the last element, so we can continue to append results
-                                //we still found a match on this data so continue advancing data and binary beginning
-                                //set data begin to the position where a subset of the input was found to make sure it advances >=0
-                                auto last_position_tuple = std::get<1>(*last_it_inner_list).back();
-                                std::get<1>(*pos_begin) = std::get<2>(last_position_tuple) +
-                                                          1;//if we do not skip by the minimum match size, we may ultra fragment data
-                                std::size_t matched_size =
-                                        std::distance(std::get<0>(last_position_tuple), std::get<1>(last_position_tuple)) + 1;
-                                std::get<2>(*pos_begin) += matched_size;
-                                std::get<1>(std::get<0>(*pos_begin)) += matched_size;
-                            }
-                        }
-
-                        //total match optimization to get it to front
-                        std::sort(possibilities.begin(), possibilities.end(), [](auto &a, auto &b) {
-                            return std::get<1>(std::get<0>(a)) >
-                                   std::get<1>(std::get<0>(b));//sort in descending order on search match size
-                        });
-
-                        //if first possibility is same length as binary input, we have a total match and return
-                        if (std::get<1>(std::get<0>(possibilities[0])) == std::distance(std::get<2>(*pos_begin), bin_end)) {
-                            return std::get<0>(possibilities[0]);
-                        }
-
-                        if (!std::get<3>(*pos_begin)) {
-                            pos_begin = possibilities.begin();
-                            pos_begin_reset = true;
-                            break;
-                        }
-                    }
-                    if (pos_begin_reset)continue;
-                    pos_begin++;
                 }
 
                 if (possibilities.empty())return input_list;
@@ -1261,112 +1200,44 @@ std::shared_mutex simd_protect{};
                 }
 
                 std::sort(possibilities.begin(), possibilities.end(), [](auto &a, auto &b) {
-                    return std::get<0>(std::get<0>(a)).size() >
+                    return std::get<1>(std::get<0>(a)).size() >
                            std::get<1>(std::get<0>(b)).size();//sort in descending order on search match size
                 });
 
-                std::vector<decltype(std::get<0>(possibilities[0]))> multi_routing{};
-                std::for_each(possibilities.begin(), possibilities.end(), [&multi_routing](auto &item){
-                    multi_routing.push_back(std::get<0>(item));
-                });
-                return multi_routing;
+                return possibilities;
             }
             else{
                 static_assert(!std::is_same<std::vector<unsigned char>::const_reverse_iterator,decltype(bin_beg)>::value && !std::is_same<std::list<unsigned char>::const_reverse_iterator,decltype(bin_beg)>::value && !std::is_same<std::deque<unsigned char>::const_reverse_iterator,decltype(bin_beg)>::value,"Illegal reverse const_iterator provided!");
-                std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<decltype(bin_beg), decltype(bin_end), decltype(bin_beg)>>>>>, std::size_t>> possibilities_init =
-                        search_match_filter(data.crbegin(), data.crend(), bin_beg, bin_end,input_list);
-                auto possibilities = std::vector<std::tuple<decltype(possibilities_init), decltype(data.crbegin()),decltype(bin_end), bool>>{};//check if the possibility was already checked and save the worked on binary input offset and data offset
-                for (auto &item: possibilities_init) {
-                    possibilities.emplace_back(item, data.crbegin(), bin_beg, false);
+                /*std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<decltype(bin_beg), decltype(bin_end), decltype(bin_beg)>>>>>, std::size_t,decltype(bin_end), decltype(bin_beg)>>*/
+                auto possibilities = search_match_filter(data.crbegin(), data.crend(), bin_beg, bin_end,input_list);
+
+                //check child that deals with searching the far most rest in direction of end to skip the not matching rest
+                auto child_vec = child_vector(*std::get<2>(*pos_begin));
+
+                if (!child_vec.empty()) {//recursive search
+                    for (auto &item: child_vec) {//vector of tree pointers
+                        auto new_search_results_recursive = item->search(std::get<2>(*pos_begin), bin_end,
+                                                                         std::get<0>(*pos_begin));
+                        possibilities.insert(possibilities.crend(),new_search_results_recursive.begin(),new_search_results_recursive.end());
+                    }
                 }
-                bool very_first_init = true;
 
-                auto pos_begin = possibilities.begin();
-                std::size_t delete_count{};
+                if (!std::get<0>(*pos_begin).empty()) {
+                    auto last_it_outer_list = (--(std::get<0>(*pos_begin).end()));
+                    auto last_it_inner_list = (--(last_it_outer_list->end()));
 
-                while (!possibilities.empty()) {
-                    if (std::get<3>(*pos_begin)) {
-                        delete_count++;
-                        continue;
+                    if (std::get<0>(*last_it_inner_list) ==
+                        this) {//check if tree pointer is the same of the last element, so we can continue to append results
+                        //we still found a match on this data so continue advancing data and binary beginning
+                        //set data begin to the position where a subset of the input was found to make sure it advances >=0
+                        auto last_position_tuple = std::get<1>(*last_it_inner_list).back();
+                        std::get<1>(*pos_begin) = std::get<2>(last_position_tuple) +
+                                                  1;//if we do not skip by the minimum match size, we may ultra fragment data
+                        std::size_t matched_size =
+                                std::distance(std::get<0>(last_position_tuple), std::get<1>(last_position_tuple)) + 1;
+                        std::get<2>(*pos_begin) += matched_size;
+                        std::get<1>(std::get<0>(*pos_begin)) += matched_size;
                     }
-                    if (delete_count > 0) {
-                        possibilities.erase(possibilities.begin(), possibilities.begin() + (delete_count - 1));
-                        pos_begin = possibilities.begin();
-                        delete_count = 0;
-                        continue;
-                    }
-                    std::get<3>(*pos_begin) = true;
-
-                    decltype(data.cbegin()) data_beg_tmp = std::get<1>(*pos_begin);
-                    decltype(bin_beg) bin_beg_tmp = std::get<2>(*pos_begin);
-
-                    bool first_time = true;
-                    bool pos_begin_reset = false;
-                    while (data_beg_tmp != std::get<1>(*pos_begin) || bin_beg_tmp != std::get<2>(*pos_begin) ||
-                           first_time) {
-                        if (std::get<1>(*pos_begin) >= data.crend())break;
-                        if (std::get<2>(*pos_begin) >= bin_end)break;
-                        first_time = false;
-
-                        //do work on matching again for subset of data and input
-                        //after various match cases as various positions
-                        if(!very_first_init){
-                            possibilities_init = search_match_filter(std::get<1>(*pos_begin), data.cend(),
-                                                                     std::get<2>(*pos_begin), bin_end, input_list);//search here
-                            for (const auto &item: possibilities_init) {
-                                possibilities.emplace_back(item, std::get<1>(*pos_begin), std::get<2>(*pos_begin), false);
-                            }
-                        }
-                        very_first_init = false;
-
-                        //check child that deals with searching the far most rest in direction of end to skip the not matching rest
-                        auto child_vec = child_vector(*std::get<2>(*pos_begin));
-
-                        if (!child_vec.empty()) {//recursive search
-                            for (auto &item: child_vec) {
-                                auto new_search_results_recursive = item->search(std::get<2>(*pos_begin), bin_end,
-                                                                                 std::get<0>(*pos_begin));
-                                possibilities.insert(possibilities.cend(),new_search_results_recursive.begin(),new_search_results_recursive.end());
-                            }
-                        }
-
-                        if (!std::get<0>(*pos_begin).empty()) {
-                            auto last_it_outer_list = (--(std::get<0>(*pos_begin).end()));
-                            auto last_it_inner_list = (--(last_it_outer_list->end()));
-
-                            if (std::get<0>(*last_it_inner_list) ==
-                                this) {//check if tree pointer is the same of the last element, so we can continue to append results
-                                //we still found a match on this data so continue advancing data and binary beginning
-                                //set data begin to the position where a subset of the input was found to make sure it advances >=0
-                                auto last_position_tuple = std::get<1>(*last_it_inner_list).back();
-                                std::get<1>(*pos_begin) = std::get<2>(last_position_tuple) +
-                                                          1;//if we do not skip by the minimum match size, we may ultra fragment data
-                                std::size_t matched_size =
-                                        std::distance(std::get<0>(last_position_tuple), std::get<1>(last_position_tuple)) + 1;
-                                std::get<2>(*pos_begin) += matched_size;
-                                std::get<1>(std::get<0>(*pos_begin)) += matched_size;
-                            }
-                        }
-
-                        //total match optimization to get it to front
-                        std::sort(possibilities.begin(), possibilities.end(), [](auto &a, auto &b) {
-                            return std::get<1>(std::get<0>(a)) >
-                                   std::get<1>(std::get<0>(b));//sort in descending order on search match size
-                        });
-
-                        //if first possibility is same length as binary input, we have a total match and return
-                        if (std::get<1>(std::get<0>(possibilities[0])) == std::distance(std::get<2>(*pos_begin), bin_end)) {
-                            return std::get<0>(possibilities[0]);
-                        }
-
-                        if (!std::get<3>(*pos_begin)) {
-                            pos_begin = possibilities.begin();
-                            pos_begin_reset = true;
-                            break;
-                        }
-                    }
-                    if (pos_begin_reset)continue;
-                    pos_begin++;
                 }
 
                 if (possibilities.empty())return input_list;
@@ -1389,15 +1260,11 @@ std::shared_mutex simd_protect{};
                 }
 
                 std::sort(possibilities.begin(), possibilities.end(), [](auto &a, auto &b) {
-                    return std::get<0>(std::get<0>(a)).size() >
+                    return std::get<1>(std::get<0>(a)).size() >
                            std::get<1>(std::get<0>(b)).size();//sort in descending order on search match size
                 });
 
-                std::vector<decltype(std::get<0>(possibilities[0]))> multi_routing{};
-                std::for_each(possibilities.begin(), possibilities.end(), [&multi_routing](auto &item){
-                    multi_routing.push_back(std::get<0>(item));
-                });
-                return multi_routing;
+                return possibilities;
             }
         }
     };
