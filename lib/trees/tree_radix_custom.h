@@ -245,19 +245,19 @@ std::shared_mutex simd_protect{};
             //TODO: add cross update from forward and backward children
             auto tree_building_sequence = [](tree_radix_custom *cur_tree,
                     auto bin_beg_incoming,auto bin_end_incoming, auto bin_beg_found, auto bin_end_found,const auto data_beg_intern) {
-                std::size_t tree_front_data_front_absolute = std::distance(cur_tree->data_vector().begin(),data_beg_intern)+1;
+                std::size_t tree_front_data_front_absolute = std::distance(cur_tree->data_vector().cbegin(),data_beg_intern)+1;
                 //checking if children need to be generated before and after the found input peace, reference to data of tree required
                 //child before found, reference data
                 if constexpr(std::is_same<std::vector<unsigned char>::const_iterator,decltype(bin_beg_found)>::value || std::is_same<std::list<unsigned char>::const_iterator,decltype(bin_beg_found)>::value || std::is_same<std::deque<unsigned char>::const_iterator,decltype(bin_beg_found)>::value){
-                    auto  child_beg_beg = cur_tree->data_vector().begin();
+                    auto  child_beg_beg = cur_tree->data_vector().cbegin();
                     auto  child_end_beg = std::max(data_beg_intern - 1, child_beg_beg);
                     //child data sequence middle, reference data
                     auto  child_beg_mid = data_beg_intern;
-                    auto  child_end_mid = std::min(cur_tree->data_vector().end(),
+                    auto  child_end_mid = std::min(cur_tree->data_vector().cend(),
                                                    child_beg_mid + std::distance(bin_beg_found, bin_end_found));
-                    //child data sequence end, reference data
-                    auto  child_beg_end = std::min(cur_tree->data_vector().end(), child_end_mid + 1);
-                    auto  child_end_end = cur_tree->data_vector().end();
+                    //child data sequence cend, reference data
+                    auto  child_beg_end = std::min(cur_tree->data_vector().cend(), child_end_mid + 1);
+                    auto  child_end_end = cur_tree->data_vector().cend();
                     //child after found, reference new input
                     auto  child_beg_append = std::min(bin_end_found + 1, bin_end_incoming);
                     auto  child_end_append = bin_end_incoming;
@@ -266,7 +266,7 @@ std::shared_mutex simd_protect{};
 
                     bool first_section_tree = std::distance(child_beg_beg, child_end_beg) > 1;
                     bool last_section_tree =
-                            child_beg_end == child_end_end && child_end_end == cur_tree->data_vector().end();
+                            child_beg_end == child_end_end && child_end_end == cur_tree->data_vector().cend();
                     bool append_tree =
                             std::distance(child_beg_append, child_end_append) > 0 && child_beg_append != bin_end_incoming;
                     bool total_match = !first_section_tree && !last_section_tree &&
@@ -276,7 +276,7 @@ std::shared_mutex simd_protect{};
                     auto out_list = std::vector<tree_radix_custom *>{};
 
                     //search function already determined that this is the tree that needs to fill in the data or to split somehow
-                    //cases: insert front tree, insert end tree (same case as having a back insert because the end tree will just have at least 1 element in case of overflow)
+                    //cases: insert front tree, insert cend tree (same case as having a back insert because the cend tree will just have at least 1 element in case of overflow)
                     if (cur_tree->data_vector().empty()) {//how to insert, either empty simple insert or some tree construction anywhere
                         //simple insert into data since this seems to be a new node that can contain simple information
 
@@ -382,14 +382,14 @@ std::shared_mutex simd_protect{};
 
                             if (first_section_tree) {
                                 if(last_section_tree){
-                                    //delete the referenced data size of middle and end from tree pointer first
-                                    auto del_beg = tree_ptr_first->data_vector().begin()+std::distance(child_beg_beg,child_end_beg)+1;
+                                    //delete the referenced data size of middle and cend from tree pointer first
+                                    auto del_beg = tree_ptr_first->data_vector().cbegin()+std::distance(child_beg_beg,child_end_beg)+1;
                                     auto del_end = del_beg + std::distance(child_beg_mid,child_end_mid) + std::distance(child_beg_end,child_end_end);
                                     tree_ptr_first->data_vector().erase(del_beg,del_end);
                                 }
                                 else{
                                     //delete middle data reference size from tree pointer first
-                                    auto del_beg = tree_ptr_first->data_vector().begin()+std::distance(child_beg_beg,child_end_beg)+1;
+                                    auto del_beg = tree_ptr_first->data_vector().cbegin()+std::distance(child_beg_beg,child_end_beg)+1;
                                     auto del_end = del_beg + std::distance(child_beg_mid,child_end_mid);
                                     tree_ptr_first->data_vector().erase(del_beg,del_end);
                                 }
@@ -397,7 +397,7 @@ std::shared_mutex simd_protect{};
                             else{
                                 if(last_section_tree){
                                     //delete last tree reference size from tree pointer middle
-                                    auto del_beg = tree_ptr_mid->data_vector().begin()+std::distance(child_beg_mid,child_end_mid)+1;
+                                    auto del_beg = tree_ptr_mid->data_vector().cbegin()+std::distance(child_beg_mid,child_end_mid)+1;
                                     auto del_end = del_beg + std::distance(child_beg_end,child_end_end);
                                     tree_ptr_mid->data_vector().erase(del_beg,del_end);
                                 }
@@ -413,15 +413,15 @@ std::shared_mutex simd_protect{};
                 }
                 else{
                     static_assert(!std::is_same<std::vector<unsigned char>::const_reverse_iterator,decltype(bin_beg_found)>::value && !std::is_same<std::list<unsigned char>::const_reverse_iterator,decltype(bin_beg_found)>::value && !std::is_same<std::deque<unsigned char>::const_reverse_iterator,decltype(bin_beg_found)>::value,"Illegal reverse const_iterator provided!");
-                    auto  child_beg_beg = cur_tree->data_vector().rbegin();
+                    auto  child_beg_beg = cur_tree->data_vector().crbegin();
                     auto  child_end_beg = std::max(data_beg_intern - 1, child_beg_beg);
                     //child data sequence middle, reference data
                     auto  child_beg_mid = data_beg_intern;
-                    auto  child_end_mid = std::min(cur_tree->data_vector().rend(),
+                    auto  child_end_mid = std::min(cur_tree->data_vector().crend(),
                                                    child_beg_mid + std::distance(bin_beg_found, bin_end_found));
-                    //child data sequence rend, reference data
-                    auto  child_beg_end = std::min(cur_tree->data_vector().rend(), child_end_mid + 1);
-                    auto  child_end_end = cur_tree->data_vector().rend();
+                    //child data sequence crend, reference data
+                    auto  child_beg_end = std::min(cur_tree->data_vector().crend(), child_end_mid + 1);
+                    auto  child_end_end = cur_tree->data_vector().crend();
                     //child after found, reference new input
                     auto  child_beg_append = std::min(bin_end_found + 1, bin_end_incoming);
                     auto  child_end_append = bin_end_incoming;
@@ -430,7 +430,7 @@ std::shared_mutex simd_protect{};
 
                     bool first_section_tree = std::distance(child_beg_beg, child_end_beg) > 1;
                     bool last_section_tree =
-                            child_beg_end == child_end_end && child_end_end == cur_tree->data_vector().rend();
+                            child_beg_end == child_end_end && child_end_end == cur_tree->data_vector().crend();
                     bool append_tree =
                             std::distance(child_beg_append, child_end_append) > 0 && child_beg_append != bin_end_incoming;
                     bool total_match = !first_section_tree && !last_section_tree &&
@@ -440,7 +440,7 @@ std::shared_mutex simd_protect{};
                     auto out_list = std::vector<tree_radix_custom *>{};
 
                     //search function already determined that this is the tree that needs to fill in the data or to split somehow
-                    //cases: insert front tree, insert rend tree (same case as having a back insert because the rend tree will just have at least 1 element in case of overflow)
+                    //cases: insert front tree, insert crend tree (same case as having a back insert because the crend tree will just have at least 1 element in case of overflow)
                     if (cur_tree->data_vector().empty()) {//how to insert, either empty simple insert or some tree construction anywhere
                         //simple insert into data since this seems to be a new node that can contain simple information
                         cur_tree->data_vector() = std::vector<unsigned char>{child_beg_mid, child_end_mid};
@@ -545,14 +545,14 @@ std::shared_mutex simd_protect{};
 
                             if (first_section_tree) {
                                 if(last_section_tree){
-                                    //delete the referenced data size of middle and rend from tree pointer first
-                                    auto del_beg = tree_ptr_first->data_vector().rbegin()+std::distance(child_beg_beg,child_end_beg)+1;
+                                    //delete the referenced data size of middle and crend from tree pointer first
+                                    auto del_beg = tree_ptr_first->data_vector().crbegin()+std::distance(child_beg_beg,child_end_beg)+1;
                                     auto del_end = del_beg + std::distance(child_beg_mid,child_end_mid) + std::distance(child_beg_end,child_end_end);
                                     tree_ptr_first->data_vector().erase(del_beg,del_end);
                                 }
                                 else{
                                     //delete middle data reference size from tree pointer first
-                                    auto del_beg = tree_ptr_first->data_vector().rbegin()+std::distance(child_beg_beg,child_end_beg)+1;
+                                    auto del_beg = tree_ptr_first->data_vector().crbegin()+std::distance(child_beg_beg,child_end_beg)+1;
                                     auto del_end = del_beg + std::distance(child_beg_mid,child_end_mid);
                                     tree_ptr_first->data_vector().erase(del_beg,del_end);
                                 }
@@ -560,7 +560,7 @@ std::shared_mutex simd_protect{};
                             else{
                                 if(last_section_tree){
                                     //delete last tree reference size from tree pointer middle
-                                    auto del_beg = tree_ptr_mid->data_vector().rbegin()+std::distance(child_beg_mid,child_end_mid)+1;
+                                    auto del_beg = tree_ptr_mid->data_vector().crbegin()+std::distance(child_beg_mid,child_end_mid)+1;
                                     auto del_end = del_beg + std::distance(child_beg_end,child_end_end);
                                     tree_ptr_mid->data_vector().erase(del_beg,del_end);
                                 }
@@ -591,13 +591,14 @@ std::shared_mutex simd_protect{};
                 std::size_t binary_advance{};
                 while (search_element != std::get<0>(*single_beg).end()) {//std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::vector<unsigned char>::const_iterator, std::vector<unsigned char>::const_iterator, std::vector<unsigned char>::const_iterator>>>
                     //master list element contains a list containing tree pointers with vectors that totally matched, last element did not completely match anymore; inner list carries at least one element
-                    auto one_node_analysis = search_element->end()-1;//last element did not match completely
+                    auto one_node_analysis = (*search_element).end();//first sublist
+                    std::advance(one_node_analysis,-1);//last element did not match completely
                     //the inner list carries elements with a tuple holding the tree pointer and a list of valid matches that should be transformed into a sequence of trees
                     //we need to crawl the data of each tree and advance that many new trees until we would match the coming data offset of the original tree
 
                     if(std::get<1>(*one_node_analysis).empty()){
                         //delete the containing list, we are done here
-                        std::get<0>(*single_beg).erase(one_node_analysis);
+                        (*search_element).erase(one_node_analysis);
                         search_element = std::get<0>(*single_beg).begin();
                         continue;
                     }
@@ -853,15 +854,15 @@ std::shared_mutex simd_protect{};
                 }
                 else{
                     static_assert(!std::is_same<std::vector<unsigned char>::const_reverse_iterator,decltype(bin_beg_found)>::value && !std::is_same<std::list<unsigned char>::const_reverse_iterator,decltype(bin_beg_found)>::value && !std::is_same<std::deque<unsigned char>::const_reverse_iterator,decltype(bin_beg_found)>::value,"Illegal reverse const_iterator provided!");
-                    auto child_beg_beg = cur_tree->data_vector().rbegin();
+                    auto child_beg_beg = cur_tree->data_vector().crbegin();
                     auto child_end_beg = std::max(data_beg_intern - 1, child_beg_beg);
                     //child data sequence middle, reference data
                     auto child_beg_mid = data_beg_intern;
-                    auto child_end_mid = std::min(cur_tree->data_vector().rend(),
+                    auto child_end_mid = std::min(cur_tree->data_vector().crend(),
                                                   child_beg_mid + std::distance(bin_beg_found, bin_end_found));
-                    //child data sequence rend, reference data
-                    auto child_beg_end = std::min(cur_tree->data_vector().rend(), child_end_mid + 1);
-                    auto child_end_end = cur_tree->data_vector().rend();
+                    //child data sequence crend, reference data
+                    auto child_beg_end = std::min(cur_tree->data_vector().crend(), child_end_mid + 1);
+                    auto child_end_end = cur_tree->data_vector().crend();
                     //child after found, reference new input
                     auto child_beg_append = std::min(bin_end_found + 1, bin_end_incoming);
                     auto child_end_append = bin_end_incoming;
@@ -870,7 +871,7 @@ std::shared_mutex simd_protect{};
 
                     bool first_section_tree = std::distance(child_beg_beg, child_end_beg) > 1;
                     bool last_section_tree =
-                            child_beg_end == child_end_end && child_end_end == cur_tree->data_vector().rend();
+                            child_beg_end == child_end_end && child_end_end == cur_tree->data_vector().crend();
                     bool append_tree =
                             std::distance(child_beg_append, child_end_append) > 0 && child_beg_append != bin_end_incoming;
                     bool total_match = !first_section_tree && !last_section_tree &&
@@ -879,7 +880,7 @@ std::shared_mutex simd_protect{};
                     uh::util::compression_custom comp{};
 
                     //search function already determined that this is the tree that needs to fill in the data or to split somehow
-                    //cases: insert front tree, insert rend tree (same case as having a back insert because the rend tree will just have at least 1 element in case of overflow)
+                    //cases: insert front tree, insert crend tree (same case as having a back insert because the crend tree will just have at least 1 element in case of overflow)
                     if (cur_tree->data_vector().empty()) {//how to insert, either empty simple insert or some tree construction anywhere
                         //simple insert into data since this seems to be a new node that can contain simple information
                         cur_tree->data_vector() = std::vector<unsigned char>{bin_beg_found, bin_end_found};
