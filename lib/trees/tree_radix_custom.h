@@ -1093,13 +1093,13 @@ std::shared_mutex simd_protect{};
             decltype(input_list) out_possibilities;
 
             match_beg = local_matches.begin();
-            auto empty_possebilities_or_not = [this,&out_possibilities,&match_beg](auto& input_list_tmp){
+            auto possebilities_manage = [&](auto &input_list_tmp){
                 std::vector<std::tuple<decltype(bin_beg), decltype(bin_end), decltype(data_beg)>> found_vec{};
                 found_vec.emplace_back(std::get<1>(*match_beg), std::get<2>(*match_beg),
                                        std::get<0>(*match_beg));
 
                 if (std::get<0>(input_list_tmp).empty()) {
-                    std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<decltype(bin_beg), decltype(bin_end), decltype(data_beg)>>>> tmp_list{};
+                    std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::tuple<decltype(bin_beg), decltype(bin_end), decltype(data_beg)>>>>> tmp_list{};
                     tmp_list.emplace_back(this, found_vec);
                     std::get<0>(input_list_tmp).push_back(tmp_list);
                 } else {
@@ -1119,12 +1119,20 @@ std::shared_mutex simd_protect{};
 
             while (match_beg != local_matches.end()) {
                 if(input_list.empty()){
-                    decltype(out_possibilities[0]) single_input{};//TODO: wrong type
-                    empty_possebilities_or_not(single_input);
-                    out_possibilities.push_back(single_input);
+                    std::vector<std::tuple<decltype(bin_beg), decltype(bin_end), decltype(data_beg)>> found_vec{};
+                    found_vec.emplace_back(std::get<1>(*match_beg), std::get<2>(*match_beg),
+                                           std::get<0>(*match_beg));
+                    std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::tuple<decltype(bin_beg), decltype(bin_end), decltype(data_beg)>>>>> tmp_list{};
+                    tmp_list.emplace_back(this, found_vec);
+
+                    decltype(out_possibilities[0]) input_list_tmp{};
+                    std::get<0>(input_list_tmp).push_back(tmp_list);
+                    std::get<1>(input_list_tmp) += std::distance(std::get<1>(*match_beg),
+                                                                 std::get<2>(*match_beg));
+                    out_possibilities.push_back(input_list_tmp);
                 }
                 else for(auto &input_list_tmp:input_list){//COPY input list and create different path calculation
-                    empty_possebilities_or_not(input_list_tmp);
+                    possebilities_manage(input_list_tmp);
                 }
                 match_beg++;
             }
