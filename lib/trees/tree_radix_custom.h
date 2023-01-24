@@ -1009,7 +1009,7 @@ std::shared_mutex simd_protect{};
 
         //returns std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<decltype(bin_beg), decltype(bin_end), decltype(bin_beg)>>>>>, std::size_t>>
         auto search_match_filter(auto data_beg, auto data_end, auto bin_beg, auto bin_end,
-                                 std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<decltype(data_beg), decltype(bin_end), decltype(bin_beg)>>>>>, std::size_t,decltype(bin_end), decltype(bin_beg)>> input_list =
+                                 std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<decltype(data_beg), decltype(bin_end), decltype(bin_beg)>>>>>, std::size_t,decltype(bin_end), decltype(bin_beg)>> possibilities =
                                          std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<decltype(data_beg), decltype(bin_end), decltype(bin_beg)>>>>>, std::size_t,decltype(bin_end), decltype(bin_beg)>>{}){
             auto local_matches = compare_ultihash(data_beg, data_end, bin_beg, bin_end);
             std::sort(local_matches.begin(), local_matches.end(), [](auto &a, auto &b) {
@@ -1086,9 +1086,9 @@ std::shared_mutex simd_protect{};
                 return std::distance(data_beg, std::get<0>(a)) < std::distance(data_beg, std::get<0>(b));
             });
 
-            if (local_matches.empty())return input_list;
+            if (local_matches.empty())return possibilities;
 
-            decltype(input_list) out_possibilities;
+            decltype(possibilities) out_possibilities;
 
             match_beg = local_matches.begin();
             auto possebilities_manage = [&](auto &input_list_tmp){
@@ -1118,7 +1118,7 @@ std::shared_mutex simd_protect{};
             };
 
             while (match_beg != local_matches.end()) {
-                if(input_list.empty()){
+                if(possibilities.empty()){
                     std::vector<std::tuple<decltype(data_beg), decltype(bin_end), decltype(bin_beg)>> found_vec{};
                     found_vec.emplace_back(std::get<0>(*match_beg), std::get<1>(*match_beg),
                                            std::get<2>(*match_beg));
@@ -1129,7 +1129,7 @@ std::shared_mutex simd_protect{};
                     std::size_t advance = (std::size_t)abs(std::distance(std::get<1>(*match_beg),std::get<2>(*match_beg)))+(std::get<2>(*match_beg)!=bin_end);
                     out_possibilities.emplace_back(outer_list,advance,std::get<0>(*match_beg)+1,std::get<1>(*match_beg)+advance);
                 }
-                else for(auto &input_list_tmp:input_list){//COPY input list and create different path calculation
+                else for(auto &input_list_tmp:possibilities){//COPY input list and create different path calculation
                     possebilities_manage(input_list_tmp);
                 }
                 match_beg++;
@@ -1155,7 +1155,7 @@ std::shared_mutex simd_protect{};
 
                 possibilities = search_match_filter(data.cbegin(), data.cend(), bin_beg, bin_end,possibilities);
 
-                if (possibilities.empty())return input_list;
+                if (possibilities.empty())return possibilities;
 
                 //check child that deals with searching the far most rest in direction of end to skip the not matching rest
                 //only check children with correct continue letter first in case we get a total match
@@ -1213,7 +1213,7 @@ std::shared_mutex simd_protect{};
 
                 possibilities = search_match_filter(data.crbegin(), data.crend(), bin_beg, bin_end,possibilities);
 
-                if (possibilities.empty())return input_list;
+                if (possibilities.empty())return possibilities;
 
                 //check child that deals with searching the far most rest in direction of end to skip the not matching rest
                 //only check children with correct continue letter first in case we get a total match
