@@ -140,7 +140,7 @@ namespace uh::trees {
          */
         std::size_t get_size();
 
-        //write a binary block to a certain creation date and get a global block reference, a local block reference, binary block size and total storage used on disk with block encapsulation in return
+        //write a binary block to a certain creation date and get a global block reference, a local block reference, total storage used on disk with block encapsulation and finally binary block size in return
         std::tuple<std::array<unsigned char,
                 SHA512_DIGEST_LENGTH + sizeof(unsigned long)>, std::vector<unsigned char>, std::size_t, std::size_t>
         write(const std::vector<unsigned char> &input,
