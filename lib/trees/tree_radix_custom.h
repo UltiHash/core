@@ -653,9 +653,8 @@ std::shared_mutex simd_protect{};
                         }
                         else{
                             //stack helper function for overlapping creation of trees
-                            auto overlap_update = [&bin_beg](std::size_t tree_front_data_front_absolute,auto &actively_changing_trees,auto match_beg_intern_copy, auto match_end_intern,tree_radix_custom* tree_front,tree_radix_custom* tree_back){
-                                constexpr bool reverse = !(std::is_same<std::vector<unsigned char>::const_iterator,decltype(bin_beg)>::value || std::is_same<std::list<unsigned char>::const_iterator,decltype(bin_beg)>::value || std::is_same<std::deque<unsigned char>::const_iterator,decltype(bin_beg)>::value);
-
+                            constexpr bool reverse = !(std::is_same<std::vector<unsigned char>::const_iterator,decltype(bin_beg)>::value || std::is_same<std::list<unsigned char>::const_iterator,decltype(bin_beg)>::value || std::is_same<std::deque<unsigned char>::const_iterator,decltype(bin_beg)>::value);
+                            auto overlap_update = [&reverse](std::size_t tree_front_data_front_absolute,auto &actively_changing_trees,auto match_beg_intern_copy, auto match_end_intern,tree_radix_custom* tree_front,tree_radix_custom* tree_back){
                                 auto match_beg_intern = match_beg_intern_copy;
                                 if(match_beg_intern+1>=match_end_intern)return;
                                 //update matches offset
@@ -1199,9 +1198,13 @@ std::shared_mutex simd_protect{};
 
                 decltype(possibilities) new_recursive{};
 
-                for(auto &single_pos:possibilities){
-                    auto new_search_results = search_match_filter(std::get<2>(single_pos), data.cend(), std::get<3>(single_pos), bin_end,possibilities);
-                    new_recursive.insert(new_recursive.cend(),new_search_results.begin(),new_search_results.end());
+                auto single_pos = possibilities.begin();
+                std::size_t single_count{};
+                while(single_pos != possibilities.end()){
+                    auto new_search_results = search_match_filter(std::get<2>(*single_pos), data.cend(), std::get<3>(*single_pos), bin_end,possibilities);
+                    possibilities.insert(possibilities.cend(),new_search_results.begin(),new_search_results.end());
+                    single_pos = possibilities.begin()+single_count;
+                    single_count++;
                 }
                 //check child that deals with searching the far most rest in direction of end to skip the not matching rest
                 //only check children with correct continue letter first in case we get a total match
@@ -1255,9 +1258,13 @@ std::shared_mutex simd_protect{};
 
                 decltype(possibilities) new_recursive{};
 
-                for(auto &single_pos:possibilities){
-                    auto new_search_results = search_match_filter(std::get<2>(single_pos), data.crend(), std::get<3>(single_pos), bin_end,possibilities);
-                    new_recursive.insert(new_recursive.cend(),new_search_results.begin(),new_search_results.end());
+                auto single_pos = possibilities.begin();
+                std::size_t single_count{};
+                while(single_pos != possibilities.end()){
+                    auto new_search_results = search_match_filter(std::get<2>(*single_pos), data.crend(), std::get<3>(*single_pos), bin_end,possibilities);
+                    possibilities.insert(possibilities.cend(),new_search_results.begin(),new_search_results.end());
+                    single_pos = possibilities.begin()+single_count;
+                    single_count++;
                 }
                 //check child that deals with searching the far most rest in direction of end to skip the not matching rest
                 //only check children with correct continue letter first in case we get a total match
