@@ -69,7 +69,7 @@ std::shared_mutex simd_protect{};
         }
 
         std::size_t size(){
-            return data_vector().size();
+            return data.size();
         }
 
         DataReference &data_reference() {
@@ -117,12 +117,12 @@ std::shared_mutex simd_protect{};
                         lock.unlock();
                         if constexpr (!reverse){
                             std::sort(child_vec_append.begin(),child_vec_append.end(),[](auto& a,auto& b){
-                                return lexicographical_compare(std::execution::unseq,a->data_vector().cbegin(),a->data_vector().cend(),b->data_vector().cbegin(),b->data_vector().cend());
+                                return lexicographical_compare(std::execution::unseq,a->data.cbegin(),a->data.cend(),b->data.cbegin(),b->data.cend());
                             });
                         }
                         else{
                             std::sort(child_vec_append.begin(),child_vec_append.end(),[](auto& a,auto& b){
-                                return lexicographical_compare(std::execution::unseq,a->data_vector().crbegin(),a->data_vector().crend(),b->data_vector().crbegin(),b->data_vector().crend());
+                                return lexicographical_compare(std::execution::unseq,a->data.crbegin(),a->data.crend(),b->data.crbegin(),b->data.crend());
                             });
                         }
                         lock.lock();
@@ -133,12 +133,12 @@ std::shared_mutex simd_protect{};
                         lock.unlock();
                         if constexpr (!reverse){
                             std::sort(child_vec_append.begin(),child_vec_append.end(),[](auto& a,auto& b){
-                                return lexicographical_compare(a->data_vector().cbegin(),a->data_vector().cend(),b->data_vector().cbegin(),b->data_vector().cend());
+                                return lexicographical_compare(a->data.cbegin(),a->data.cend(),b->data.cbegin(),b->data.cend());
                             });
                         }
                         else{
                             std::sort(child_vec_append.begin(),child_vec_append.end(),[](auto& a,auto& b){
-                                return lexicographical_compare(a->data_vector().crbegin(),a->data_vector().crend(),b->data_vector().crbegin(),b->data_vector().crend());
+                                return lexicographical_compare(a->data.crbegin(),a->data.crend(),b->data.crbegin(),b->data.crend());
                             });
                         }
                     }
@@ -275,35 +275,36 @@ std::shared_mutex simd_protect{};
 
             //some element and an end element at least required
             //TODO: add cross update from forward and backward children
-            auto tree_building_sequence = [&reverse](tree_radix_custom *cur_tree,
+            auto tree_building_sequence = [](tree_radix_custom *cur_tree,
                     auto bin_beg_incoming,auto bin_end_incoming, const auto data_beg_intern,auto bin_beg_found, auto bin_end_found) {
-                std::size_t tree_front_data_front_absolute = std::distance(cur_tree->data_vector().cbegin(),data_beg_intern)+(cur_tree->data_vector().cend()!=data_beg_intern);
+                constexpr bool reverse = (std::is_same<std::vector<unsigned char>::const_reverse_iterator,decltype(bin_beg_incoming)>::value || std::is_same<std::list<unsigned char>::const_reverse_iterator,decltype(bin_beg_incoming)>::value || std::is_same<std::deque<unsigned char>::const_reverse_iterator,decltype(bin_beg_incoming)>::value);
+                std::size_t tree_front_data_front_absolute = std::distance(cur_tree->data.cbegin(),data_beg_intern)+(cur_tree->data.cend()!=data_beg_intern);
                 //checking if children need to be generated before and after the found input peace, reference to data of tree required
                 //child before found, reference data
                 decltype(bin_beg_found) child_beg_beg,child_beg_mid,child_beg_end;
                 decltype(bin_end_found) child_end_beg,child_end_mid,child_end_end;
 
                 if constexpr (!reverse){
-                    child_beg_beg = cur_tree->data_vector().cbegin();
+                    child_beg_beg = cur_tree->data.cbegin();
                     child_end_beg = std::max(data_beg_intern, child_beg_beg);
                     //child data sequence middle, reference data
                     child_beg_mid = data_beg_intern;
-                    child_end_mid = std::min(cur_tree->data_vector().cend(),
+                    child_end_mid = std::min(cur_tree->data.cend(),
                                              child_beg_mid + std::distance(bin_beg_found, bin_end_found));
                     //child data sequence end, reference data
-                    child_beg_end = std::min(cur_tree->data_vector().cend(), child_end_mid + 1);
-                    child_end_end = cur_tree->data_vector().cend();
+                    child_beg_end = std::min(cur_tree->data.cend(), child_end_mid + 1);
+                    child_end_end = cur_tree->data.cend();
                 }
                 else{
-                    child_beg_beg = cur_tree->data_vector().crbegin();
+                    child_beg_beg = cur_tree->data.crbegin();
                     child_end_beg = std::max(data_beg_intern, child_beg_beg);
                     //child data sequence middle, reference data
                     child_beg_mid = data_beg_intern;
-                    child_end_mid = std::min(cur_tree->data_vector().crend(),
+                    child_end_mid = std::min(cur_tree->data.crend(),
                                              child_beg_mid + std::distance(bin_beg_found, bin_end_found));
                     //child data sequence end, reference data
-                    child_beg_end = std::min(cur_tree->data_vector().crend(), child_end_mid + 1);
-                    child_end_end = cur_tree->data_vector().crend();
+                    child_beg_end = std::min(cur_tree->data.crend(), child_end_mid + 1);
+                    child_end_end = cur_tree->data.crend();
                 }
                 //child after found, reference new input
                 decltype(bin_beg_found) child_beg_append = std::min(bin_end_found + 1, bin_end_incoming);
@@ -315,33 +316,33 @@ std::shared_mutex simd_protect{};
                 bool last_section_tree;
                 if constexpr (!reverse){
                     last_section_tree =
-                            child_beg_end == child_end_end && child_end_end == cur_tree->data_vector().cend();
+                            child_beg_end == child_end_end && child_end_end == cur_tree->data.cend();
                 }
                 else{
                     last_section_tree =
-                            child_beg_end == child_end_end && child_end_end == cur_tree->data_vector().crend();
+                            child_beg_end == child_end_end && child_end_end == cur_tree->data.crend();
                 }
                 bool append_tree =
                         std::distance(child_beg_append, child_end_append) > 0 && child_beg_append != bin_end_incoming;
                 bool total_match = !first_section_tree && !last_section_tree &&
-                                   std::distance(child_beg_mid, child_end_mid) == cur_tree->data_vector().size();
+                                   std::distance(child_beg_mid, child_end_mid) == cur_tree->data.size();
 
                 uh::util::compression_custom comp{};
                 auto out_list = std::vector<tree_radix_custom *>{};
 
                 //search function already determined that this is the tree that needs to fill in the data or to split somehow
                 //cases: insert front tree, insert cend tree (same case as having a back insert because the cend tree will just have at least 1 element in case of overflow)
-                if (cur_tree->data_vector().empty()) {//how to insert, either empty simple insert or some tree construction anywhere
+                if (cur_tree->data.empty()) {//how to insert, either empty simple insert or some tree construction anywhere
                     //simple insert into data since this seems to be a new node that can contain simple information
 
                     auto set_vector = std::vector<unsigned char>{bin_beg_found, bin_end_found};
 
                     if constexpr (!reverse){
-                        cur_tree->data_vector() = set_vector;
+                        cur_tree->data = set_vector;
                     }
                     else{
                         std::reverse(set_vector.begin(),set_vector.end());
-                        cur_tree->data_vector() = set_vector;
+                        cur_tree->data = set_vector;
                     }
                     out_list.push_back(cur_tree);
                     return std::make_tuple((std::size_t)std::distance(bin_beg_found, bin_end_found),
@@ -359,14 +360,14 @@ std::shared_mutex simd_protect{};
 
                             auto *tree_ptr_tmp = new tree_radix_custom(child_beg_append, child_end_append);
                             out_list.push_back(tree_ptr_tmp);
-                            tree_ptr_tmp->block_swarm_offset = cur_tree->block_swarm_offset + cur_tree->data_vector().size();
+                            tree_ptr_tmp->block_swarm_offset = cur_tree->block_swarm_offset + cur_tree->data.size();
                             cur_tree->child_put(tree_ptr_tmp,*child_beg_append);
                         }
                         //return implicit 0 with unsigned long
                         return std::make_tuple(
-                                (decltype(cur_tree->data_vector().size())) append_size_uncompressed,
-                                (decltype(cur_tree->data_vector().size())) append_size_uncompressed,
-                                (decltype(cur_tree->data_vector().size())) append_size_compressed,out_list,first_section_tree,last_section_tree,append_tree,total_match,tree_front_data_front_absolute);//nothing to add, only reference
+                                (decltype(cur_tree->data.size())) append_size_uncompressed,
+                                (decltype(cur_tree->data.size())) append_size_uncompressed,
+                                (decltype(cur_tree->data.size())) append_size_compressed,out_list,first_section_tree,last_section_tree,append_tree,total_match,tree_front_data_front_absolute);//nothing to add, only reference
                     } else {
                         //first section tree, after split try
                         //data will split into a maximum of 3 parts and by that will add 2 more tree nodes on front and/or back; start with first section
@@ -382,7 +383,7 @@ std::shared_mutex simd_protect{};
                             tree_ptr_mid = new tree_radix_custom(child_beg_mid, child_end_mid);
                             tree_ptr_first = cur_tree;
                             out_list.push_back(tree_ptr_first);
-                            tree_ptr_mid->block_swarm_offset = tree_ptr_first->block_swarm_offset + tree_ptr_first->data_vector().size();
+                            tree_ptr_mid->block_swarm_offset = tree_ptr_first->block_swarm_offset + tree_ptr_first->data.size();
                             tree_ptr_mid->children = cur_tree->children;
                             cur_tree->children.clear();
                             tree_ptr_mid->data_ref = cur_tree->data_ref;
@@ -404,7 +405,7 @@ std::shared_mutex simd_protect{};
                             tree_ptr_last = new tree_radix_custom(child_beg_end, child_end_end);
                             //transfer information of middle tree to last tree and copy the children also to append tree in case it exists
                             out_list.push_back(tree_ptr_last);
-                            tree_ptr_last->block_swarm_offset = tree_ptr_mid->block_swarm_offset + tree_ptr_mid->data_vector().size();
+                            tree_ptr_last->block_swarm_offset = tree_ptr_mid->block_swarm_offset + tree_ptr_mid->data.size();
                             tree_ptr_last->children = tree_ptr_mid->children;
                             tree_ptr_mid->children.clear();
                             tree_ptr_last->data_ref = tree_ptr_mid->data_ref;
@@ -416,7 +417,7 @@ std::shared_mutex simd_protect{};
                             if (append_tree) {
                                 tree_ptr_append = new tree_radix_custom(child_beg_append, child_end_append);
                                 out_list.push_back(tree_ptr_append);
-                                tree_ptr_append->block_swarm_offset = tree_ptr_mid->block_swarm_offset + tree_ptr_mid->data_vector().size();
+                                tree_ptr_append->block_swarm_offset = tree_ptr_mid->block_swarm_offset + tree_ptr_mid->data.size();
 
                                 size_integrated += std::distance(child_beg_append, child_end_append);
                                 size_uncompressed += std::distance(child_beg_append, child_end_append);
@@ -432,7 +433,7 @@ std::shared_mutex simd_protect{};
                             if (append_tree) {
                                 tree_ptr_append = new tree_radix_custom(child_beg_append, child_end_append);
                                 out_list.push_back(tree_ptr_append);
-                                tree_ptr_append->block_swarm_offset = tree_ptr_mid->block_swarm_offset + tree_ptr_mid->data_vector().size();
+                                tree_ptr_append->block_swarm_offset = tree_ptr_mid->block_swarm_offset + tree_ptr_mid->data.size();
 
                                 size_integrated += std::distance(child_beg_append, child_end_append);
                                 size_uncompressed += std::distance(child_beg_append, child_end_append);
@@ -446,27 +447,27 @@ std::shared_mutex simd_protect{};
                             if(last_section_tree){
                                 //delete the referenced data size of middle and cend from tree pointer first
                                 if constexpr (!reverse){
-                                    auto del_beg = tree_ptr_first->data_vector().cbegin()+std::distance(child_beg_beg,child_end_beg);
+                                    auto del_beg = tree_ptr_first->data.cbegin()+std::distance(child_beg_beg,child_end_beg);
                                     auto del_end = del_beg + std::distance(child_beg_mid,child_end_mid) + std::distance(child_beg_end,child_end_end);
-                                    tree_ptr_first->data_vector().erase(del_beg,del_end);
+                                    tree_ptr_first->data.erase(del_beg,del_end);
                                 }
                                 else{
-                                    auto del_beg = tree_ptr_first->data_vector().crbegin()+std::distance(child_beg_beg,child_end_beg);
+                                    auto del_beg = tree_ptr_first->data.crbegin()+std::distance(child_beg_beg,child_end_beg);
                                     auto del_end = del_beg + std::distance(child_beg_mid,child_end_mid) + std::distance(child_beg_end,child_end_end);
-                                    tree_ptr_first->data_vector().erase(del_beg,del_end);
+                                    tree_ptr_first->data.erase(del_beg,del_end);
                                 }
                             }
                             else{
                                 //delete middle data reference size from tree pointer first
                                 if constexpr (!reverse){
-                                    auto del_beg = tree_ptr_first->data_vector().cbegin()+std::distance(child_beg_beg,child_end_beg);
+                                    auto del_beg = tree_ptr_first->data.cbegin()+std::distance(child_beg_beg,child_end_beg);
                                     auto del_end = del_beg + std::distance(child_beg_mid,child_end_mid);
-                                    tree_ptr_first->data_vector().erase(del_beg,del_end);
+                                    tree_ptr_first->data.erase(del_beg,del_end);
                                 }
                                 else{
-                                    auto del_beg = tree_ptr_first->data_vector().crbegin()+std::distance(child_beg_beg,child_end_beg);
+                                    auto del_beg = tree_ptr_first->data.crbegin()+std::distance(child_beg_beg,child_end_beg);
                                     auto del_end = del_beg + std::distance(child_beg_mid,child_end_mid);
-                                    tree_ptr_first->data_vector().erase(del_beg,del_end);
+                                    tree_ptr_first->data.erase(del_beg,del_end);
                                 }
                             }
                         }
@@ -474,23 +475,23 @@ std::shared_mutex simd_protect{};
                             if(last_section_tree){
                                 //delete last tree reference size from tree pointer middle
                                 if constexpr (!reverse){
-                                    auto del_beg = tree_ptr_mid->data_vector().cbegin()+std::distance(child_beg_mid,child_end_mid);
+                                    auto del_beg = tree_ptr_mid->data.cbegin()+std::distance(child_beg_mid,child_end_mid);
                                     auto del_end = del_beg + std::distance(child_beg_end,child_end_end);
-                                    tree_ptr_mid->data_vector().erase(del_beg,del_end);
+                                    tree_ptr_mid->data.erase(del_beg,del_end);
                                 }
                                 else{
-                                    auto del_beg = tree_ptr_mid->data_vector().crbegin()+std::distance(child_beg_mid,child_end_mid);
+                                    auto del_beg = tree_ptr_mid->data.crbegin()+std::distance(child_beg_mid,child_end_mid);
                                     auto del_end = del_beg + std::distance(child_beg_end,child_end_end);
-                                    tree_ptr_mid->data_vector().erase(del_beg,del_end);
+                                    tree_ptr_mid->data.erase(del_beg,del_end);
                                 }
                             }
                             //else do not delete
                         }
 
                         return std::make_tuple(
-                                (decltype(cur_tree->data_vector().size())) size_integrated,
-                                (decltype(cur_tree->data_vector().size())) size_uncompressed,
-                                (decltype(cur_tree->data_vector().size())) size_compressed,out_list,first_section_tree,last_section_tree,append_tree,total_match,tree_front_data_front_absolute);
+                                (decltype(cur_tree->data.size())) size_integrated,
+                                (decltype(cur_tree->data.size())) size_uncompressed,
+                                (decltype(cur_tree->data.size())) size_compressed,out_list,first_section_tree,last_section_tree,append_tree,total_match,tree_front_data_front_absolute);
                     }
                 }
             };
@@ -602,13 +603,13 @@ std::shared_mutex simd_protect{};
                                             std::size_t new_match_size = std::distance(std::get<1>(*(match_beg_intern+1)),std::get<2>(*(match_beg_intern+1)))+1;//first tree match
                                             auto new_match_begin = std::get<2>(*(match_beg_intern+1))+1;
                                             auto new_match_end = new_match_begin + (match_size-new_match_size);
-                                            //std::get<2>(*(match_beg_intern+1)) = tree_front->data_vector().begin()+total_offset_end_for_last_node;
+                                            //std::get<2>(*(match_beg_intern+1)) = tree_front->data.begin()+total_offset_end_for_last_node;
                                             //std::get<3>(*(match_beg_intern+1)) = tree_front;
 
                                             if constexpr(!reverse){
                                                 auto new_partial_match = std::make_tuple(new_match_begin,
                                                                                          new_match_end,
-                                                                                         tree_front->data_vector().cbegin()+(total_offset_front_for_this_node-(tree_front->data_vector().size()-new_match_size)),
+                                                                                         tree_front->data.cbegin()+(total_offset_front_for_this_node-(tree_front->data.size()-new_match_size)),
                                                                                          tree_front);//second tree match
 
                                                 // update until end
@@ -619,7 +620,7 @@ std::shared_mutex simd_protect{};
                                             else{
                                                 auto new_partial_match = std::make_tuple(new_match_begin,
                                                                                          new_match_end,
-                                                                                         tree_front->data_vector().crbegin()+(total_offset_front_for_this_node-(tree_front->data_vector().size()-new_match_size)),
+                                                                                         tree_front->data.crbegin()+(total_offset_front_for_this_node-(tree_front->data.size()-new_match_size)),
                                                                                          tree_front);//second tree match
 
                                                 // update until end
@@ -645,10 +646,10 @@ std::shared_mutex simd_protect{};
                                         else{
                                             //simple build in tree front
                                             if constexpr(!reverse){
-                                                std::get<0>(*(match_beg_intern+1)) = tree_front->data_vector().cbegin()+total_offset_front_for_this_node/*-distance from the last node until the current node start*/;
+                                                std::get<0>(*(match_beg_intern+1)) = tree_front->data.cbegin()+total_offset_front_for_this_node/*-distance from the last node until the current node start*/;
                                             }
                                             else{
-                                                std::get<0>(*(match_beg_intern+1)) = tree_front->data_vector().crbegin()+total_offset_front_for_this_node/*-distance from the last node until the current node start*/;
+                                                std::get<0>(*(match_beg_intern+1)) = tree_front->data.crbegin()+total_offset_front_for_this_node/*-distance from the last node until the current node start*/;
                                             }
                                             //std::get<3>(*(match_beg_intern+1)) = tree_front;
                                         }
@@ -656,10 +657,10 @@ std::shared_mutex simd_protect{};
                                     else{
                                         //total match, new calculated reference on tree_back
                                         if constexpr(!reverse){
-                                            std::get<0>(*(match_beg_intern+1)) = tree_back->data_vector().cbegin()+(total_offset_front_for_this_node-tree_front->data_vector().size());
+                                            std::get<0>(*(match_beg_intern+1)) = tree_back->data.cbegin()+(total_offset_front_for_this_node-tree_front->data.size());
                                         }
                                         else{
-                                            std::get<0>(*(match_beg_intern+1)) = tree_back->data_vector().crbegin()+(total_offset_front_for_this_node-tree_front->data_vector().size());
+                                            std::get<0>(*(match_beg_intern+1)) = tree_back->data.crbegin()+(total_offset_front_for_this_node-tree_front->data.size());
                                         }
                                         std::get<3>(*(match_beg_intern+1)) = tree_back;
                                     }
@@ -742,26 +743,26 @@ std::shared_mutex simd_protect{};
                 decltype(bin_beg_found) child_beg_beg,child_beg_mid,child_beg_end;
                 decltype(bin_end_found) child_end_beg,child_end_mid,child_end_end;
                 if constexpr (!reverse){
-                    child_beg_beg = cur_tree->data_vector().cbegin();
+                    child_beg_beg = cur_tree->data.cbegin();
                     child_end_beg = std::max(data_beg_intern, child_beg_beg);
                     //child data sequence middle, reference data
                     child_beg_mid = data_beg_intern;
-                    child_end_mid = std::min(cur_tree->data_vector().cend(),
+                    child_end_mid = std::min(cur_tree->data.cend(),
                                                                      child_beg_mid + std::distance(bin_beg_found, bin_end_found));
                     //child data sequence end, reference data
-                    child_beg_end = std::min(cur_tree->data_vector().cend(), child_end_mid + 1);
-                    child_end_end = cur_tree->data_vector().cend();
+                    child_beg_end = std::min(cur_tree->data.cend(), child_end_mid + 1);
+                    child_end_end = cur_tree->data.cend();
                 }
                 else{
-                    child_beg_beg = cur_tree->data_vector().crbegin();
+                    child_beg_beg = cur_tree->data.crbegin();
                     child_end_beg = std::max(data_beg_intern, child_beg_beg);
                     //child data sequence middle, reference data
                     child_beg_mid = data_beg_intern;
-                    child_end_mid = std::min(cur_tree->data_vector().crend(),
+                    child_end_mid = std::min(cur_tree->data.crend(),
                                                                      child_beg_mid + std::distance(bin_beg_found, bin_end_found));
                     //child data sequence end, reference data
-                    child_beg_end = std::min(cur_tree->data_vector().crend(), child_end_mid + 1);
-                    child_end_end = cur_tree->data_vector().crend();
+                    child_beg_end = std::min(cur_tree->data.crend(), child_end_mid + 1);
+                    child_end_end = cur_tree->data.crend();
                 }
                 //child after found, reference new input
                 decltype(bin_beg_found) child_beg_append = std::min(bin_end_found + 1, bin_end_incoming);
@@ -773,31 +774,31 @@ std::shared_mutex simd_protect{};
                 bool last_section_tree;
                 if constexpr (!reverse){
                     last_section_tree =
-                            child_beg_end == child_end_end && child_end_end == cur_tree->data_vector().cend();
+                            child_beg_end == child_end_end && child_end_end == cur_tree->data.cend();
                 }
                 else{
                     last_section_tree =
-                            child_beg_end == child_end_end && child_end_end == cur_tree->data_vector().crend();
+                            child_beg_end == child_end_end && child_end_end == cur_tree->data.crend();
                 }
                 bool append_tree =
                         std::distance(child_beg_append, child_end_append) > 0 && child_beg_append != bin_end_incoming;
                 bool total_match = !first_section_tree && !last_section_tree &&
-                                   std::distance(child_beg_mid, child_end_mid) == cur_tree->data_vector().size();
+                                   std::distance(child_beg_mid, child_end_mid) == cur_tree->data.size();
 
                 uh::util::compression_custom comp{};
 
                 //search function already determined that this is the tree that needs to fill in the data or to split somehow
                 //cases: insert front tree, insert end tree (same case as having a back insert because the end tree will just have at least 1 element in case of overflow)
-                if (cur_tree->data_vector().empty()) {//how to insert, either empty simple insert or some tree construction anywhere
+                if (cur_tree->data.empty()) {//how to insert, either empty simple insert or some tree construction anywhere
                     //simple insert into data since this seems to be a new node that can contain simple information
                     auto set_vector = std::vector<unsigned char>{bin_beg_found, bin_end_found};
 
                     if constexpr (!reverse){
-                        cur_tree->data_vector() = set_vector;
+                        cur_tree->data = set_vector;
                     }
                     else{
                         std::reverse(set_vector.begin(),set_vector.end());
-                        cur_tree->data_vector() = set_vector;
+                        cur_tree->data = set_vector;
                     }
 
                     return std::make_tuple(std::distance(bin_beg_found, bin_end_found), std::distance(bin_beg_found, bin_end_found),
@@ -818,34 +819,34 @@ std::shared_mutex simd_protect{};
                              */
                             //either way the appending size will be added and new space will be needed
                             return std::make_tuple(
-                                    (decltype(cur_tree->data_vector().size())) std::distance(bin_beg_found, bin_end_found),
-                                    (decltype(cur_tree->data_vector().size())) std::distance(child_beg_append,
+                                    (decltype(cur_tree->data.size())) std::distance(bin_beg_found, bin_end_found),
+                                    (decltype(cur_tree->data.size())) std::distance(child_beg_append,
                                                                                              child_end_append),
-                                    (decltype(cur_tree->data_vector().size())) comp.compress(
+                                    (decltype(cur_tree->data.size())) comp.compress(
                                             child_beg_append, child_end_append).size());
                         }
                         //return implicit 0 with unsigned long
                         return std::make_tuple(
-                                (decltype(cur_tree->data_vector().size())) std::distance(bin_beg_found, bin_end_found),
-                                (decltype(cur_tree->data_vector().size())) 0,
-                                (decltype(cur_tree->data_vector().size())) 0);//nothing to add, only reference
+                                (decltype(cur_tree->data.size())) std::distance(bin_beg_found, bin_end_found),
+                                (decltype(cur_tree->data.size())) 0,
+                                (decltype(cur_tree->data.size())) 0);//nothing to add, only reference
                     } else {
                         //data will split into a maximum of 3 parts and by that will add 2 more tree nodes on front and/or back
                         if (append_tree) {
                             //as on total match in this case
                             return std::make_tuple(
-                                    (decltype(cur_tree->data_vector().size())) std::distance(bin_beg_found, bin_end_found),
-                                    (decltype(cur_tree->data_vector().size())) std::distance(child_beg_append,
+                                    (decltype(cur_tree->data.size())) std::distance(bin_beg_found, bin_end_found),
+                                    (decltype(cur_tree->data.size())) std::distance(child_beg_append,
                                                                                              child_end_append),
-                                    (decltype(cur_tree->data_vector().size())) comp.compress(
+                                    (decltype(cur_tree->data.size())) comp.compress(
                                             child_beg_append, child_end_append).size());
                         }
                         //return implicit 0 with unsigned long
                         //nothing to add on RAM, only splitting up the blocks on disk
                         return std::make_tuple(
-                                (decltype(cur_tree->data_vector().size())) std::distance(bin_beg_found, bin_end_found),
-                                (decltype(cur_tree->data_vector().size())) 0,
-                                (decltype(cur_tree->data_vector().size())) 0);
+                                (decltype(cur_tree->data.size())) std::distance(bin_beg_found, bin_end_found),
+                                (decltype(cur_tree->data.size())) 0,
+                                (decltype(cur_tree->data.size())) 0);
                     }
                 }
             };
@@ -990,7 +991,7 @@ std::shared_mutex simd_protect{};
             decltype(possibilities) out_possibilities;
 
             auto match_beg = local_matches.begin();
-            auto possebilities_manage = [&](auto &input_list_tmp){
+            auto possibilities_manage = [&](auto &input_list_tmp){
                 std::vector<std::tuple<decltype(data_beg), decltype(bin_end), decltype(bin_beg)>> found_vec{};
                 found_vec.emplace_back(std::get<1>(*match_beg), std::get<2>(*match_beg),
                                        std::get<0>(*match_beg));
@@ -1030,7 +1031,7 @@ std::shared_mutex simd_protect{};
                     out_possibilities.emplace_back(outer_list,advance,std::get<0>(*match_beg)+1,std::get<1>(*match_beg)+advance);
                 }
                 else for(auto &input_list_tmp:possibilities){//COPY input list and create different path calculation
-                    possebilities_manage(input_list_tmp);
+                    possibilities_manage(input_list_tmp);
                 }
                 match_beg++;
             }

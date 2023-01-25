@@ -110,6 +110,8 @@ BOOST_AUTO_TEST_CASE( radix_constructor_test )
     BOOST_CHECK(t_hello.children_reference().empty());
     BOOST_CHECK(t_hello.size()==11);
     BOOST_CHECK_EQUAL_COLLECTIONS(hello_string.begin(),hello_string.end(),t_hello.data_vector().begin(),t_hello.data_vector().end());
+    auto result = t.add(data_string.cbegin(),data_string.cend());
+    BOOST_CHECK(std::get<0>(result[0])==11 && std::get<1>(result[0])==0);//total match
 }
 
 BOOST_AUTO_TEST_CASE( add_test )
