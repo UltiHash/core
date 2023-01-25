@@ -907,8 +907,8 @@ std::shared_mutex simd_protect{};
                     bool start_size, end_size, begin_reached, end_reached,total_found_size;
                     do {
 
-                        start_size = MINIMUM_MATCH_SIZE <= abs(std::distance(data_beg, std::get<0>(*match_beg)));
-                        end_size = MINIMUM_MATCH_SIZE <= abs(std::distance(std::get<0>(*match_beg) + std::distance(std::get<1>(*match_beg), std::get<2>(*match_beg)), data_end));
+                        start_size = MINIMUM_MATCH_SIZE <= llabs(std::distance(data_beg, std::get<0>(*match_beg)));
+                        end_size = MINIMUM_MATCH_SIZE <= llabs(std::distance(std::get<0>(*match_beg) + std::distance(std::get<1>(*match_beg), std::get<2>(*match_beg)), data_end));
                         total_found_size = MINIMUM_MATCH_SIZE <= std::distance(std::get<1>(*match_beg),
                                                                                std::get<2>(*match_beg));
                         begin_reached = data_beg == std::get<0>(*match_beg);
@@ -995,7 +995,7 @@ std::shared_mutex simd_protect{};
                         last_it_outer_list->emplace_back(this, found_vec);
                     }
                 }
-                std::size_t advance = (std::size_t)abs(std::distance(std::get<1>(*match_beg),std::get<2>(*match_beg)))+(std::get<2>(*match_beg)!=bin_end);
+                std::size_t advance = (std::size_t)llabs(std::distance(std::get<1>(*match_beg),std::get<2>(*match_beg)))+(std::get<2>(*match_beg)!=bin_end);
                 std::get<1>(input_list_tmp) += advance;
                 std::get<2>(input_list_tmp) ++;
                 std::get<3>(input_list_tmp) += advance;
@@ -1011,7 +1011,7 @@ std::shared_mutex simd_protect{};
                     tmp_list.emplace_back(this, found_vec);
                     std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<decltype(bin_beg), decltype(bin_end), decltype(bin_beg)>>>>>outer_list{tmp_list};
 
-                    std::size_t advance = (std::size_t)abs(std::distance(std::get<1>(*match_beg),std::get<2>(*match_beg)))+(std::get<2>(*match_beg)!=bin_end);
+                    std::size_t advance = (std::size_t)llabs(std::distance(std::get<1>(*match_beg),std::get<2>(*match_beg)))+(std::get<2>(*match_beg)!=bin_end);
                     out_possibilities.emplace_back(outer_list,advance,std::get<0>(*match_beg)+1,std::get<1>(*match_beg)+advance);
                 }
                 else for(auto &input_list_tmp:possibilities){//COPY input list and create different path calculation

@@ -24,6 +24,10 @@ Basic implementation of UH protocol used for communication between components an
 
 Collects submodules to third-party library repositories.
 
+## trees
+
+Fast tree data structures, deduplication and storage, as well as search trees
+
 ## util
 
 Utility classes
