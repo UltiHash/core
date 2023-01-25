@@ -1080,7 +1080,7 @@ std::shared_mutex simd_protect{};
                 else{
                     new_search_results = search_match_filter(std::get<2>(*single_pos), data.crend(), std::get<3>(*single_pos), bin_end,possibilities);
                 }
-                possibilities.insert(possibilities.cend(),new_search_results.begin(),new_search_results.end());
+                if(!new_search_results.empty())possibilities.insert(possibilities.cend(),new_search_results.begin(),new_search_results.end());
                 single_pos = possibilities.begin()+single_count;
                 single_count++;
             }
