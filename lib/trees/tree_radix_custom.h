@@ -30,12 +30,13 @@ std::shared_mutex simd_protect{};
 
     template<class DataReference>
     struct tree_radix_custom {
+        std::vector<unsigned char> data{};
+        //any binary vector string
+        DataReference data_ref{};
     protected:
         //the first element of data is cut off to children except on root if it's a new tree
         //TODO: use two children and block_swarm_offsets to scan forward and backward
         std::vector<std::tuple<std::vector<tree_radix_custom *>, unsigned char>> children{};//multiple targets that can follow a node for each letter
-        std::vector<unsigned char> data{};//any binary vector string
-        DataReference data_ref{};
         std::size_t block_swarm_offset{};//offset of block beginning from root
     public:
         tree_radix_custom() = default;
