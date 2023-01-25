@@ -652,7 +652,7 @@ std::shared_mutex simd_protect{};
                             //this must be the only match so nothing happens
                         }
                         else{
-                            constexpr bool reverse = std::is_same<std::vector<unsigned char>::const_iterator,decltype(bin_beg)>::value || std::is_same<std::list<unsigned char>::const_iterator,decltype(bin_beg)>::value || std::is_same<std::deque<unsigned char>::const_iterator,decltype(bin_beg)>::value;
+                            constexpr bool reverse = !(std::is_same<std::vector<unsigned char>::const_iterator,decltype(bin_beg)>::value || std::is_same<std::list<unsigned char>::const_iterator,decltype(bin_beg)>::value || std::is_same<std::deque<unsigned char>::const_iterator,decltype(bin_beg)>::value);
                             if(first_section_tree){
                                 modified.emplace(*first_tree_out);
                                 added.emplace(*middle_tree_out);
@@ -730,7 +730,7 @@ std::shared_mutex simd_protect{};
 
                             // update until end
                             auto match_insert_check = match_beg_intern;
-                            while(std::get<0>(match_insert_check)<std::get<0>(new_partial_match)&&match_insert_check!=match_end_intern)match_insert_check++;
+                            while(std::get<0>(*match_insert_check)<std::get<0>(new_partial_match)&&match_insert_check!=match_end_intern)match_insert_check++;
                             actively_changing_trees.insert(match_insert_check,new_partial_match);
                         }
                         else{
@@ -741,7 +741,7 @@ std::shared_mutex simd_protect{};
 
                             // update until end
                             auto match_insert_check = match_beg_intern;
-                            while(std::get<0>(match_insert_check)<std::get<0>(new_partial_match)&&match_insert_check!=match_end_intern)match_insert_check++;
+                            while(std::get<0>(*match_insert_check)<std::get<0>(new_partial_match)&&match_insert_check!=match_end_intern)match_insert_check++;
                             actively_changing_trees.insert(match_insert_check,new_partial_match);
                         }
 
