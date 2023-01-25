@@ -474,11 +474,20 @@ std::shared_mutex simd_protect{};
                 }
             };
 
+            std::vector<std::tuple<std::size_t, std::size_t, std::size_t, std::list<std::tuple<std::set<tree_radix_custom *>,std::set<tree_radix_custom *>>>>> out_change_tuple_out{};
             //cases for search index: its empty or it has content and with that a last tree element
+            if(search_index.empty()){
+                std::tuple<std::size_t, std::size_t, std::size_t, std::list<std::tuple<std::set<tree_radix_custom *>,std::set<tree_radix_custom *>>>> out_change_tuple{};
+                auto out_size = tree_building_sequence(this,bin_beg,bin_end,data.cbegin(),bin_beg,bin_end);
+                std::get<0>(out_change_tuple)+=std::get<0>(out_size);
+                std::get<1>(out_change_tuple)+=std::get<1>(out_size);
+                std::get<2>(out_change_tuple)+=std::get<2>(out_size);
+                auto out_vector = std::get<3>(out_size);
+                std::get<3>(out_change_tuple).emplace_back(std::set<tree_radix_custom *>{},std::set<tree_radix_custom *>{out_vector[0]});//only add a new tree
+                out_change_tuple_out.push_back(out_change_tuple);
+            }
             //cases for last tree if it exists, binary fit in: match from the beginning on, match in the middle, match until the end, total match
             //all lists contain lists with a last element that had multiple matches; add up all matches
-
-            std::vector<std::tuple<std::size_t, std::size_t, std::size_t, std::list<std::tuple<std::set<tree_radix_custom *>,std::set<tree_radix_custom *>>>>> out_change_tuple_out{};
 
             auto single_beg = search_index.begin();
             while(single_beg!=search_index.end()){
@@ -486,7 +495,6 @@ std::shared_mutex simd_protect{};
 
                 auto search_element = std::get<0>(*single_beg).begin();//std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::vector<unsigned char>::const_iterator, std::vector<unsigned char>::const_iterator, std::vector<unsigned char>::const_iterator>>>>, std::size_t>
 
-                std::size_t binary_advance{};
                 while (search_element != std::get<0>(*single_beg).end()) {//std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::vector<unsigned char>::const_iterator, std::vector<unsigned char>::const_iterator, std::vector<unsigned char>::const_iterator>>>
                     //master list element contains a list containing tree pointers with vectors that totally matched, last element did not completely match anymore; inner list carries at least one element
                     auto one_node_analysis = (*search_element).end();//first sublist
@@ -540,11 +548,9 @@ std::shared_mutex simd_protect{};
                         }
                         append_tree_out = last_tree_out+1;//end pointer or valid reference
                         //use sets to distinguish what nodes are added and what are modified; note that write back does not happen yet
-                        std::size_t current_advance = std::distance(std::get<0>(*match_beg),std::get<1>(*match_beg))+1;
-                        binary_advance+=current_advance;
                         //find out on what tree the data offset should move to
                         if(total_match){
-                            if(append_tree){
+                            if(append_tree){//DO NOT "DEBUG"
                                 added.emplace(*append_tree_out);
                             }
                             //this must be the only match so nothing happens
