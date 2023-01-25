@@ -87,7 +87,7 @@ std::shared_mutex simd_protect{};
         }
 
         template<bool reverse=false>
-        void child_put(tree_radix_custom* input_tree,unsigned char first_letter){
+        void child_put(tree_radix_custom* input_tree,unsigned char first_letter){//TODO: choose reverse children
             auto child_vec_append = child_vector(first_letter);
             if (child_vec_append.empty()) {
                 //child would have been created and the append size would have been added to a new tree
@@ -95,33 +95,33 @@ std::shared_mutex simd_protect{};
             } else {
                 //on search there was no match on the tree node, so we assume that a new node referenced by this node will be created carrying append
                 //the reason why there is the correct character available but no match detected by search is the MINIMUM_MATCH_SIZE that failed, we will respect that
-                decltype(child_vec_append.cbegin()) find_it;
+                decltype(child_vec_append.begin()) find_it;
                 std::unique_lock lock(simd_protect);
                 if(simd_count < SIMD_UNITS){
                     simd_count += 1;
                     lock.unlock();
-                    find_it = std::find(std::execution::unseq,child_vec_append.cbegin(),child_vec_append.cend(),input_tree);
+                    find_it = std::find(std::execution::unseq,child_vec_append.begin(),child_vec_append.end(),input_tree);
                     lock.lock();
                     simd_count -= 1;
                     lock.unlock();
                 }
                 else{
                     lock.unlock();
-                    find_it = std::find(child_vec_append.cbegin(),child_vec_append.cend(),input_tree);
+                    find_it = std::find(child_vec_append.begin(),child_vec_append.end(),input_tree);
                 }
-                if(find_it==child_vec_append.cend()){
+                if(find_it==child_vec_append.end()){
                     child_vec_append.emplace_back(input_tree);
                     lock.lock();
                     if(simd_count < SIMD_UNITS){
                         simd_count += 1;
                         lock.unlock();
                         if constexpr (!reverse){
-                            std::sort(child_vec_append.cbegin(),child_vec_append.cend(),[](auto& a,auto& b){
+                            std::sort(child_vec_append.begin(),child_vec_append.end(),[](auto& a,auto& b){
                                 return lexicographical_compare(std::execution::unseq,a->data_vector().cbegin(),a->data_vector().cend(),b->data_vector().cbegin(),b->data_vector().cend());
                             });
                         }
                         else{
-                            std::sort(child_vec_append.cbegin(),child_vec_append.cend(),[](auto& a,auto& b){
+                            std::sort(child_vec_append.begin(),child_vec_append.end(),[](auto& a,auto& b){
                                 return lexicographical_compare(std::execution::unseq,a->data_vector().crbegin(),a->data_vector().crend(),b->data_vector().crbegin(),b->data_vector().crend());
                             });
                         }
@@ -132,12 +132,12 @@ std::shared_mutex simd_protect{};
                     else{
                         lock.unlock();
                         if constexpr (!reverse){
-                            std::sort(child_vec_append.cbegin(),child_vec_append.cend(),[](auto& a,auto& b){
+                            std::sort(child_vec_append.begin(),child_vec_append.end(),[](auto& a,auto& b){
                                 return lexicographical_compare(a->data_vector().cbegin(),a->data_vector().cend(),b->data_vector().cbegin(),b->data_vector().cend());
                             });
                         }
                         else{
-                            std::sort(child_vec_append.cbegin(),child_vec_append.cend(),[](auto& a,auto& b){
+                            std::sort(child_vec_append.begin(),child_vec_append.end(),[](auto& a,auto& b){
                                 return lexicographical_compare(a->data_vector().crbegin(),a->data_vector().crend(),b->data_vector().crbegin(),b->data_vector().crend());
                             });
                         }
