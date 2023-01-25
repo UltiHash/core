@@ -610,9 +610,9 @@ std::shared_mutex simd_protect{};
                         actively_changing_trees.emplace_back(std::get<0>(item),std::get<1>(item),std::get<2>(item),tree_match_pointer);
                     });
 
-                    auto match_beg = actively_changing_trees.begin();//                                         found beginning                             found end                        data on tree begin at found begin
+                    auto match_beg = actively_changing_trees.cbegin();//                                         found beginning                             found end                        data on tree begin at found begin
                     auto match_beg_copy = match_beg;
-                    while(match_beg != actively_changing_trees.end()){//update loop on std::vector<std::tuple<std::vector<unsigned char>::const_iterator, std::vector<unsigned char>::const_iterator, std::vector<unsigned char>::const_iterator>>
+                    while(match_beg != actively_changing_trees.cend()){//update loop on std::vector<std::tuple<std::vector<unsigned char>::const_iterator, std::vector<unsigned char>::const_iterator, std::vector<unsigned char>::const_iterator>>
                         auto out_size = tree_building_sequence(std::get<3>(*match_beg),bin_beg,bin_end,std::get<0>(*match_beg),std::get<1>(*match_beg),std::get<2>(*match_beg));
                         std::get<0>(out_change_tuple)+=std::get<0>(out_size);
                         std::get<1>(out_change_tuple)+=std::get<1>(out_size);
@@ -679,7 +679,7 @@ std::shared_mutex simd_protect{};
                         modified.clear();
                         added.clear();
                         std::size_t vector_reset_dist = std::distance(match_beg_copy,match_beg);
-                        match_beg=actively_changing_trees.begin()+vector_reset_dist+1;
+                        match_beg=actively_changing_trees.cbegin()+vector_reset_dist+1;
                         match_beg_copy = actively_changing_trees.begin();
                     }
                     search_element++;
