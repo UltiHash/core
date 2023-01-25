@@ -178,7 +178,13 @@ std::shared_mutex simd_protect{};
         }
 
         /*std::vector<std::tuple<std::vector<unsigned char>::const_iterator,std::vector<unsigned char>::const_iterator,std::vector<unsigned char>::const_iterator>>*/
-        auto compare_ultihash(auto data_beg, auto data_end, auto input_beg, auto input_end) {
+        template <typename Const_iterator_data,typename Const_iterator_binary,
+                std::enable_if_t<(((std::is_same<std::vector<unsigned char>::const_iterator,Const_iterator_data>::value || std::is_same<std::list<unsigned char>::const_iterator,Const_iterator_data>::value || std::is_same<std::deque<unsigned char>::const_iterator,Const_iterator_data>::value) ||
+                                   (std::is_same<std::vector<unsigned char>::const_reverse_iterator,Const_iterator_data>::value || std::is_same<std::list<unsigned char>::const_reverse_iterator,Const_iterator_data>::value || std::is_same<std::deque<unsigned char>::const_reverse_iterator,Const_iterator_data>::value))) &&
+                                 (((std::is_same<std::vector<unsigned char>::const_iterator,Const_iterator_binary>::value || std::is_same<std::list<unsigned char>::const_iterator,Const_iterator_binary>::value || std::is_same<std::deque<unsigned char>::const_iterator,Const_iterator_binary>::value) ||
+                                   (std::is_same<std::vector<unsigned char>::const_reverse_iterator,Const_iterator_binary>::value || std::is_same<std::list<unsigned char>::const_reverse_iterator,Const_iterator_binary>::value || std::is_same<std::deque<unsigned char>::const_reverse_iterator,Const_iterator_binary>::value))), bool> = true
+        >
+        auto compare_ultihash(Const_iterator_data data_beg, Const_iterator_data data_end, Const_iterator_binary input_beg, Const_iterator_binary input_end) {
             //if input does only fit to a shorter string as a subset of data, count becomes negative, else positive including ß
             //data offset iterator and start and end of input
             std::vector<std::tuple<decltype(data_beg),decltype(input_end),decltype(input_beg)>> matches{};
