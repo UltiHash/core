@@ -204,6 +204,7 @@ std::shared_mutex simd_protect{};
             //if input does only fit to a shorter string as a subset of data, count becomes negative, else positive including ß
             //data offset iterator and start and end of input
             std::vector<std::tuple<decltype(data_beg),decltype(input_end),decltype(input_beg)>> matches{};
+            if(data_beg == data_end)return matches;
             //search forward through data
             do {
                 //first element match
@@ -241,7 +242,7 @@ std::shared_mutex simd_protect{};
                 if (found_dist >= MINIMUM_MATCH_SIZE) {
                     matches.emplace_back(data_beg,input_beg, input_beg+found_dist);
                 }
-                data_beg++;
+                if(data_beg!=data_end)data_beg++;
             } while (data_beg < data_end);
 
             return matches;
