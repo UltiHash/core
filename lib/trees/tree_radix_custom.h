@@ -584,7 +584,7 @@ std::shared_mutex simd_protect{};
 
             auto single_beg = search_index.begin();
             while(single_beg!=search_index.end()){
-                std::tuple<std::size_t, std::size_t, std::size_t, std::list<std::tuple<std::list<tree_radix_custom *>,std::list<tree_radix_custom *>>>> out_change_tuple{};
+                std::tuple<std::size_t, std::size_t, std::size_t, std::list<std::tuple<std::set<tree_radix_custom *>,std::set<tree_radix_custom *>>>> out_change_tuple{};
 
                 auto search_element = std::get<0>(*single_beg).begin();//std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::vector<unsigned char>::const_iterator, std::vector<unsigned char>::const_iterator, std::vector<unsigned char>::const_iterator>>>>, std::size_t>
 
