@@ -285,7 +285,7 @@ std::shared_mutex simd_protect{};
 
                 if constexpr (!reverse){
                     child_beg_beg = cur_tree->data_vector().cbegin();
-                    child_end_beg = std::max(data_beg_intern - 1, child_beg_beg);
+                    child_end_beg = std::max(data_beg_intern, child_beg_beg);
                     //child data sequence middle, reference data
                     child_beg_mid = data_beg_intern;
                     child_end_mid = std::min(cur_tree->data_vector().cend(),
@@ -296,7 +296,7 @@ std::shared_mutex simd_protect{};
                 }
                 else{
                     child_beg_beg = cur_tree->data_vector().crbegin();
-                    child_end_beg = std::max(data_beg_intern - 1, child_beg_beg);
+                    child_end_beg = std::max(data_beg_intern, child_beg_beg);
                     //child data sequence middle, reference data
                     child_beg_mid = data_beg_intern;
                     child_end_mid = std::min(cur_tree->data_vector().crend(),
@@ -344,9 +344,9 @@ std::shared_mutex simd_protect{};
                         cur_tree->data_vector() = set_vector;
                     }
                     out_list.push_back(cur_tree);
-                    return std::make_tuple((std::size_t)std::distance(child_beg_mid, child_end_mid),
-                                           (std::size_t)std::distance(child_beg_mid, child_end_mid),
-                                           (std::size_t)comp.compress(child_beg_mid, child_end_mid).size(),out_list,first_section_tree,last_section_tree,append_tree,total_match,tree_front_data_front_absolute);
+                    return std::make_tuple((std::size_t)std::distance(bin_beg_found, bin_end_found),
+                                           (std::size_t)std::distance(bin_beg_found, bin_end_found),
+                                           (std::size_t)comp.compress(bin_beg_found, bin_end_found).size(),out_list,first_section_tree,last_section_tree,append_tree,total_match,tree_front_data_front_absolute);
                 } else {
                     if (total_match) {//only a maximum of 1 tree creation or just 0 in case of reference
                         //a total match can still have appending structure
@@ -743,7 +743,7 @@ std::shared_mutex simd_protect{};
                 decltype(bin_end_found) child_end_beg,child_end_mid,child_end_end;
                 if constexpr (!reverse){
                     child_beg_beg = cur_tree->data_vector().cbegin();
-                    child_end_beg = std::max(data_beg_intern - 1, child_beg_beg);
+                    child_end_beg = std::max(data_beg_intern, child_beg_beg);
                     //child data sequence middle, reference data
                     child_beg_mid = data_beg_intern;
                     child_end_mid = std::min(cur_tree->data_vector().cend(),
@@ -754,7 +754,7 @@ std::shared_mutex simd_protect{};
                 }
                 else{
                     child_beg_beg = cur_tree->data_vector().crbegin();
-                    child_end_beg = std::max(data_beg_intern - 1, child_beg_beg);
+                    child_end_beg = std::max(data_beg_intern, child_beg_beg);
                     //child data sequence middle, reference data
                     child_beg_mid = data_beg_intern;
                     child_end_mid = std::min(cur_tree->data_vector().crend(),
