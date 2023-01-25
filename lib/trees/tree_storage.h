@@ -140,7 +140,7 @@ namespace uh::trees {
          */
         std::size_t get_size();
 
-        //write a binary block to a certain creation date and get a local block reference in return
+        //write a binary block to a certain creation date and get a global block reference, a local block reference, binary block size and total storage used on disk with block encapsulation in return
         std::tuple<std::array<unsigned char,
                 SHA512_DIGEST_LENGTH + sizeof(unsigned long)>, std::vector<unsigned char>, std::size_t, std::size_t>
         write(const std::vector<unsigned char> &input,
@@ -151,7 +151,7 @@ namespace uh::trees {
          * if "only_info" flag is set, it will not return the block, only all the other information as a "get_info" function,
          * pushing up all results left by 1
          */
-        //returns block,local block reference, timestamps, global hash reference,block size, block is valid on valid_check
+        //returns block,local block reference, timestamps, global hash reference,block size, block's content is valid on valid_check
         template<const bool only_info = false>
         auto read(const std::vector<unsigned char> &block_code, bool valid_check = false) {
             if (block_code.empty()) {
