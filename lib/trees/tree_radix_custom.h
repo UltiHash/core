@@ -580,7 +580,7 @@ std::shared_mutex simd_protect{};
             //cases for last tree if it exists, binary fit in: match from the beginning on, match in the middle, match until the end, total match
             //all lists contain lists with a last element that had multiple matches; add up all matches
 
-            std::vector<std::tuple<std::size_t, std::size_t, std::size_t, std::list<std::tuple<std::list<tree_radix_custom *>,std::list<tree_radix_custom *>>>>> out_change_tuple_out{};
+            std::vector<std::tuple<std::size_t, std::size_t, std::size_t, std::list<std::tuple<std::set<tree_radix_custom *>,std::set<tree_radix_custom *>>>>> out_change_tuple_out{};
 
             auto single_beg = search_index.begin();
             while(single_beg!=search_index.end()){
