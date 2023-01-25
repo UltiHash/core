@@ -722,25 +722,28 @@ std::shared_mutex simd_protect{};
                         //std::get<2>(*(match_beg_intern+1)) = tree_front->data_vector().begin()+total_offset_end_for_last_node;
                         //std::get<3>(*(match_beg_intern+1)) = tree_front;
 
-                        decltype(*actively_changing_trees.begin()) new_partial_match;
-
                         if constexpr(!reverse){
-                            new_partial_match = std::make_tuple(new_match_begin,
+                            auto new_partial_match = std::make_tuple(new_match_begin,
                                                                 new_match_end,
                                                                 tree_front->data_vector().cbegin()+(total_offset_front_for_this_node-(tree_front->data_vector().size()-new_match_size)),
                                                                 tree_front);//second tree match
+
+                            // update until end
+                            auto match_insert_check = match_beg_intern;
+                            while(std::get<0>(match_insert_check)<std::get<0>(new_partial_match)&&match_insert_check!=match_end_intern)match_insert_check++;
+                            actively_changing_trees.insert(match_insert_check,new_partial_match);
                         }
                         else{
-                            new_partial_match = std::make_tuple(new_match_begin,
+                            auto new_partial_match = std::make_tuple(new_match_begin,
                                                                 new_match_end,
                                                                 tree_front->data_vector().crbegin()+(total_offset_front_for_this_node-(tree_front->data_vector().size()-new_match_size)),
                                                                 tree_front);//second tree match
-                        }
 
-                        // update until end
-                        auto match_insert_check = match_beg_intern;
-                        while(std::get<0>(match_insert_check)<std::get<0>(new_partial_match)&&match_insert_check!=match_end_intern)match_insert_check++;
-                        actively_changing_trees.insert(match_insert_check,new_partial_match);
+                            // update until end
+                            auto match_insert_check = match_beg_intern;
+                            while(std::get<0>(match_insert_check)<std::get<0>(new_partial_match)&&match_insert_check!=match_end_intern)match_insert_check++;
+                            actively_changing_trees.insert(match_insert_check,new_partial_match);
+                        }
 
                         //vector pointer reset
                         std::size_t active_tree_offset;
