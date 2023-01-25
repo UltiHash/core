@@ -784,15 +784,24 @@ std::shared_mutex simd_protect{};
         }
 
     public:
-        template<class ContainerType>
+        template<class ContainerType,bool reverse=false>
         std::tuple<std::size_t, std::size_t, std::size_t> add_test(const ContainerType &c) {
-            return add_test(c.begin(), c.end());
+            if constexpr (!reverse){
+                return add_test(c.cbegin(), c.cend());
+            }
+            else{
+                return add_test(c.crbegin(), c.crend());
+            }
         }
 
         //returns total size integrated, new space used uncompressed, new space used compressed
         //calculates ESTIMATE size of data to be integrated to be communicated to agency to determine optimal storage location
+        template <typename Const_iterator,
+                std::enable_if_t<((std::is_same<std::vector<unsigned char>::const_iterator,Const_iterator>::value || std::is_same<std::list<unsigned char>::const_iterator,Const_iterator>::value || std::is_same<std::deque<unsigned char>::const_iterator,Const_iterator>::value)||
+                                  (std::is_same<std::vector<unsigned char>::const_reverse_iterator,Const_iterator>::value || std::is_same<std::list<unsigned char>::const_reverse_iterator,Const_iterator>::value || std::is_same<std::deque<unsigned char>::const_reverse_iterator,Const_iterator>::value)), bool> = true
+        >
         std::vector<std::tuple<std::size_t, std::size_t, std::size_t>>
-        add_test(auto bin_beg,auto bin_end) {
+        add_test(Const_iterator bin_beg,Const_iterator bin_end) {
             //first search existing structure and add into the last tree to insert potentially missing information
             std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<decltype(bin_beg), decltype(bin_end), decltype(bin_end)>>>>>, std::size_t>> search_index = search(
                     bin_beg, bin_end);
@@ -800,172 +809,113 @@ std::shared_mutex simd_protect{};
             if (bin_beg == bin_end || std::distance(bin_beg, bin_end) < 1){
                 return {};
             }
-            //some element and an end element at least required
+            constexpr bool reverse = (std::is_same<std::vector<unsigned char>::const_reverse_iterator,decltype(bin_beg)>::value || std::is_same<std::list<unsigned char>::const_reverse_iterator,decltype(bin_beg)>::value || std::is_same<std::deque<unsigned char>::const_reverse_iterator,decltype(bin_beg)>::value);
 
-            auto tree_test_sequence = [](tree_radix_custom *cur_tree, auto bin_beg_incoming, auto bin_end_incoming,
+            auto tree_test_sequence = [&reverse](tree_radix_custom *cur_tree, auto bin_beg_incoming, auto bin_end_incoming,
                                          auto bin_beg_found, auto bin_end_found,
                                          const auto data_beg_intern) {
                 //checking if children need to be generated before and after the found input peace, reference to data of tree required
                 //child before found, reference data
-                if constexpr(std::is_same<std::vector<unsigned char>::const_iterator,decltype(bin_beg_found)>::value || std::is_same<std::list<unsigned char>::const_iterator,decltype(bin_beg_found)>::value || std::is_same<std::deque<unsigned char>::const_iterator,decltype(bin_beg_found)>::value){
-                    auto child_beg_beg = cur_tree->data_vector().begin();
-                    auto child_end_beg = std::max(data_beg_intern - 1, child_beg_beg);
+                decltype(bin_beg_found) child_beg_beg,child_beg_mid,child_beg_end;
+                decltype(bin_end_found) child_end_beg,child_end_mid,child_end_end;
+                if constexpr (!reverse){
+                    child_beg_beg = cur_tree->data_vector().cbegin();
+                    child_end_beg = std::max(data_beg_intern - 1, child_beg_beg);
                     //child data sequence middle, reference data
-                    auto child_beg_mid = data_beg_intern;
-                    auto child_end_mid = std::min(cur_tree->data_vector().end(),
-                                                  child_beg_mid + std::distance(bin_beg_found, bin_end_found));
+                    child_beg_mid = data_beg_intern;
+                    child_end_mid = std::min(cur_tree->data_vector().cend(),
+                                                                     child_beg_mid + std::distance(bin_beg_found, bin_end_found));
                     //child data sequence end, reference data
-                    auto child_beg_end = std::min(cur_tree->data_vector().end(), child_end_mid + 1);
-                    auto child_end_end = cur_tree->data_vector().end();
-                    //child after found, reference new input
-                    auto child_beg_append = std::min(bin_end_found + 1, bin_end_incoming);
-                    auto child_end_append = bin_end_incoming;
-                    //only the new append part may be compressed
-                    //before splitting or modifying a block it needs to be uncompressed
-
-                    bool first_section_tree = std::distance(child_beg_beg, child_end_beg) > 1;
-                    bool last_section_tree =
-                            child_beg_end == child_end_end && child_end_end == cur_tree->data_vector().end();
-                    bool append_tree =
-                            std::distance(child_beg_append, child_end_append) > 0 && child_beg_append != bin_end_incoming;
-                    bool total_match = !first_section_tree && !last_section_tree &&
-                                       std::distance(child_beg_mid, child_end_mid) == cur_tree->data_vector().size();
-
-                    uh::util::compression_custom comp{};
-
-                    //search function already determined that this is the tree that needs to fill in the data or to split somehow
-                    //cases: insert front tree, insert end tree (same case as having a back insert because the end tree will just have at least 1 element in case of overflow)
-                    if (cur_tree->data_vector().empty()) {//how to insert, either empty simple insert or some tree construction anywhere
-                        //simple insert into data since this seems to be a new node that can contain simple information
-                        cur_tree->data_vector() = std::vector<unsigned char>{bin_beg_found, bin_end_found};
-                        return std::make_tuple(std::distance(bin_beg_found, bin_end_found), std::distance(bin_beg_found, bin_end_found),
-                                               comp.compress(bin_beg_found, bin_end_found).size());
-                    } else {
-                        if (total_match) {
-                            //a total match can still have appending structure
-                            if (append_tree) {
-                                /*
-                                //either find child is empty and test add tree or add_test to another child tree
-                                auto child_vec = child_vector(*child_beg_append);
-                                if(child_vec.empty()){
-                                    //child would have been created and the append size would have been added to a new tree
-                                }
-                                else{
-                                    //on search there was no match on the tree node, so we assume that a new node will be created carrying append
-                                }
-                                 */
-                                //either way the appending size will be added and new space will be needed
-                                return std::make_tuple(
-                                        (decltype(cur_tree->data_vector().size())) std::distance(bin_beg_found, bin_end_found),
-                                        (decltype(cur_tree->data_vector().size())) std::distance(child_beg_append,
-                                                                                                 child_end_append),
-                                        (decltype(cur_tree->data_vector().size())) comp.compress(
-                                                child_beg_append, child_end_append).size());
-                            }
-                            //return implicit 0 with unsigned long
-                            return std::make_tuple(
-                                    (decltype(cur_tree->data_vector().size())) std::distance(bin_beg_found, bin_end_found),
-                                    (decltype(cur_tree->data_vector().size())) 0,
-                                    (decltype(cur_tree->data_vector().size())) 0);//nothing to add, only reference
-                        } else {
-                            //data will split into a maximum of 3 parts and by that will add 2 more tree nodes on front and/or back
-                            if (append_tree) {
-                                //as on total match in this case
-                                return std::make_tuple(
-                                        (decltype(cur_tree->data_vector().size())) std::distance(bin_beg_found, bin_end_found),
-                                        (decltype(cur_tree->data_vector().size())) std::distance(child_beg_append,
-                                                                                                 child_end_append),
-                                        (decltype(cur_tree->data_vector().size())) comp.compress(
-                                                child_beg_append, child_end_append).size());
-                            }
-                            //return implicit 0 with unsigned long
-                            //nothing to add on RAM, only splitting up the blocks on disk
-                            return std::make_tuple(
-                                    (decltype(cur_tree->data_vector().size())) std::distance(bin_beg_found, bin_end_found),
-                                    (decltype(cur_tree->data_vector().size())) 0,
-                                    (decltype(cur_tree->data_vector().size())) 0);
-                        }
-                    }
+                    child_beg_end = std::min(cur_tree->data_vector().cend(), child_end_mid + 1);
+                    child_end_end = cur_tree->data_vector().cend();
                 }
                 else{
-                    static_assert(!std::is_same<std::vector<unsigned char>::const_reverse_iterator,decltype(bin_beg_found)>::value && !std::is_same<std::list<unsigned char>::const_reverse_iterator,decltype(bin_beg_found)>::value && !std::is_same<std::deque<unsigned char>::const_reverse_iterator,decltype(bin_beg_found)>::value,"Illegal reverse const_iterator provided!");
-                    auto child_beg_beg = cur_tree->data_vector().crbegin();
-                    auto child_end_beg = std::max(data_beg_intern - 1, child_beg_beg);
+                    child_beg_beg = cur_tree->data_vector().crbegin();
+                    child_end_beg = std::max(data_beg_intern - 1, child_beg_beg);
                     //child data sequence middle, reference data
-                    auto child_beg_mid = data_beg_intern;
-                    auto child_end_mid = std::min(cur_tree->data_vector().crend(),
-                                                  child_beg_mid + std::distance(bin_beg_found, bin_end_found));
-                    //child data sequence crend, reference data
-                    auto child_beg_end = std::min(cur_tree->data_vector().crend(), child_end_mid + 1);
-                    auto child_end_end = cur_tree->data_vector().crend();
-                    //child after found, reference new input
-                    auto child_beg_append = std::min(bin_end_found + 1, bin_end_incoming);
-                    auto child_end_append = bin_end_incoming;
-                    //only the new append part may be compressed
-                    //before splitting or modifying a block it needs to be uncompressed
+                    child_beg_mid = data_beg_intern;
+                    child_end_mid = std::min(cur_tree->data_vector().crend(),
+                                                                     child_beg_mid + std::distance(bin_beg_found, bin_end_found));
+                    //child data sequence end, reference data
+                    child_beg_end = std::min(cur_tree->data_vector().crend(), child_end_mid + 1);
+                    child_end_end = cur_tree->data_vector().crend();
+                }
+                //child after found, reference new input
+                decltype(bin_beg_found) child_beg_append = std::min(bin_end_found + 1, bin_end_incoming);
+                decltype(bin_end_found) child_end_append = bin_end_incoming;
+                //only the new append part may be compressed
+                //before splitting or modifying a block it needs to be uncompressed
 
-                    bool first_section_tree = std::distance(child_beg_beg, child_end_beg) > 1;
-                    bool last_section_tree =
-                            child_beg_end == child_end_end && child_end_end == cur_tree->data_vector().crend();
-                    bool append_tree =
-                            std::distance(child_beg_append, child_end_append) > 0 && child_beg_append != bin_end_incoming;
-                    bool total_match = !first_section_tree && !last_section_tree &&
-                                       std::distance(child_beg_mid, child_end_mid) == cur_tree->data_vector().size();
+                bool first_section_tree = std::distance(child_beg_beg, child_end_beg) > 1;
+                bool last_section_tree =
+                        child_beg_end == child_end_end && child_end_end == cur_tree->data_vector().end();
+                bool append_tree =
+                        std::distance(child_beg_append, child_end_append) > 0 && child_beg_append != bin_end_incoming;
+                bool total_match = !first_section_tree && !last_section_tree &&
+                                   std::distance(child_beg_mid, child_end_mid) == cur_tree->data_vector().size();
 
-                    uh::util::compression_custom comp{};
+                uh::util::compression_custom comp{};
 
-                    //search function already determined that this is the tree that needs to fill in the data or to split somehow
-                    //cases: insert front tree, insert crend tree (same case as having a back insert because the crend tree will just have at least 1 element in case of overflow)
-                    if (cur_tree->data_vector().empty()) {//how to insert, either empty simple insert or some tree construction anywhere
-                        //simple insert into data since this seems to be a new node that can contain simple information
-                        cur_tree->data_vector() = std::vector<unsigned char>{bin_beg_found, bin_end_found};
-                        return std::make_tuple(std::distance(bin_beg_found, bin_end_found), std::distance(bin_beg_found, bin_end_found),
-                                               comp.compress(bin_beg_found, bin_end_found).size());
-                    } else {
-                        if (total_match) {
-                            //a total match can still have appending structure
-                            if (append_tree) {
-                                /*
-                                //either find child is empty and test add tree or add_test to another child tree
-                                auto child_vec = child_vector(*child_beg_append);
-                                if(child_vec.empty()){
-                                    //child would have been created and the append size would have been added to a new tree
-                                }
-                                else{
-                                    //on search there was no match on the tree node, so we assume that a new node will be created carrying append
-                                }
-                                 */
-                                //either way the appending size will be added and new space will be needed
-                                return std::make_tuple(
-                                        (decltype(cur_tree->data_vector().size())) std::distance(bin_beg_found, bin_end_found),
-                                        (decltype(cur_tree->data_vector().size())) std::distance(child_beg_append,
-                                                                                                 child_end_append),
-                                        (decltype(cur_tree->data_vector().size())) comp.compress(
-                                                child_beg_append, child_end_append).size());
+                //search function already determined that this is the tree that needs to fill in the data or to split somehow
+                //cases: insert front tree, insert end tree (same case as having a back insert because the end tree will just have at least 1 element in case of overflow)
+                if (cur_tree->data_vector().empty()) {//how to insert, either empty simple insert or some tree construction anywhere
+                    //simple insert into data since this seems to be a new node that can contain simple information
+                    auto set_vector = std::vector<unsigned char>{bin_beg_found, bin_end_found};
+
+                    if constexpr (!reverse){
+                        cur_tree->data_vector() = set_vector;
+                    }
+                    else{
+                        std::reverse(set_vector.begin(),set_vector.end());
+                        cur_tree->data_vector() = set_vector;
+                    }
+
+                    return std::make_tuple(std::distance(bin_beg_found, bin_end_found), std::distance(bin_beg_found, bin_end_found),
+                                           comp.compress(bin_beg_found, bin_end_found).size());
+                } else {
+                    if (total_match) {
+                        //a total match can still have appending structure
+                        if (append_tree) {
+                            /*
+                            //either find child is empty and test add tree or add_test to another child tree
+                            auto child_vec = child_vector(*child_beg_append);
+                            if(child_vec.empty()){
+                                //child would have been created and the append size would have been added to a new tree
                             }
-                            //return implicit 0 with unsigned long
+                            else{
+                                //on search there was no match on the tree node, so we assume that a new node will be created carrying append
+                            }
+                             */
+                            //either way the appending size will be added and new space will be needed
                             return std::make_tuple(
                                     (decltype(cur_tree->data_vector().size())) std::distance(bin_beg_found, bin_end_found),
-                                    (decltype(cur_tree->data_vector().size())) 0,
-                                    (decltype(cur_tree->data_vector().size())) 0);//nothing to add, only reference
-                        } else {
-                            //data will split into a maximum of 3 parts and by that will add 2 more tree nodes on front and/or back
-                            if (append_tree) {
-                                //as on total match in this case
-                                return std::make_tuple(
-                                        (decltype(cur_tree->data_vector().size())) std::distance(bin_beg_found, bin_end_found),
-                                        (decltype(cur_tree->data_vector().size())) std::distance(child_beg_append,
-                                                                                                 child_end_append),
-                                        (decltype(cur_tree->data_vector().size())) comp.compress(
-                                                child_beg_append, child_end_append).size());
-                            }
-                            //return implicit 0 with unsigned long
-                            //nothing to add on RAM, only splitting up the blocks on disk
-                            return std::make_tuple(
-                                    (decltype(cur_tree->data_vector().size())) std::distance(bin_beg_found, bin_end_found),
-                                    (decltype(cur_tree->data_vector().size())) 0,
-                                    (decltype(cur_tree->data_vector().size())) 0);
+                                    (decltype(cur_tree->data_vector().size())) std::distance(child_beg_append,
+                                                                                             child_end_append),
+                                    (decltype(cur_tree->data_vector().size())) comp.compress(
+                                            child_beg_append, child_end_append).size());
                         }
+                        //return implicit 0 with unsigned long
+                        return std::make_tuple(
+                                (decltype(cur_tree->data_vector().size())) std::distance(bin_beg_found, bin_end_found),
+                                (decltype(cur_tree->data_vector().size())) 0,
+                                (decltype(cur_tree->data_vector().size())) 0);//nothing to add, only reference
+                    } else {
+                        //data will split into a maximum of 3 parts and by that will add 2 more tree nodes on front and/or back
+                        if (append_tree) {
+                            //as on total match in this case
+                            return std::make_tuple(
+                                    (decltype(cur_tree->data_vector().size())) std::distance(bin_beg_found, bin_end_found),
+                                    (decltype(cur_tree->data_vector().size())) std::distance(child_beg_append,
+                                                                                             child_end_append),
+                                    (decltype(cur_tree->data_vector().size())) comp.compress(
+                                            child_beg_append, child_end_append).size());
+                        }
+                        //return implicit 0 with unsigned long
+                        //nothing to add on RAM, only splitting up the blocks on disk
+                        return std::make_tuple(
+                                (decltype(cur_tree->data_vector().size())) std::distance(bin_beg_found, bin_end_found),
+                                (decltype(cur_tree->data_vector().size())) 0,
+                                (decltype(cur_tree->data_vector().size())) 0);
                     }
                 }
             };
@@ -973,61 +923,35 @@ std::shared_mutex simd_protect{};
             //cases for search index: its empty or it has content and with that a last tree element
             //cases for last tree if it exists, binary fit in: match from the beginning on, match in the middle, match until the end, total match
             //all lists contain lists with a last element that had multiple matches; add up all matches
-            if constexpr(std::is_same<std::vector<unsigned char>::const_iterator,decltype(bin_beg)>::value || std::is_same<std::list<unsigned char>::const_iterator,decltype(bin_beg)>::value || std::is_same<std::deque<unsigned char>::const_iterator,decltype(bin_beg)>::value){
-                std::vector<std::tuple<std::size_t, std::size_t, std::size_t>>add_tup_out{};
-                for(auto &single_route:search_index){
-                    std::tuple<std::size_t, std::size_t, std::size_t>add_tup{};
-                    auto outer_most_level = [&](auto &list) {
-                        auto inner_list_level = [&](auto &tree_tuple) {
-                            for (const auto &pos_tup: std::get<1>(tree_tuple)) {
-                                auto last_tree = std::get<0>(single_route).back();
-                                //check if we have a full match and the input is larger than the data of the last tree
-                                auto add_list = tree_test_sequence(std::get<0>(last_tree), bin_beg, bin_end,
-                                                                   std::get<0>(pos_tup), std::get<1>(pos_tup),
-                                                                   std::get<2>(pos_tup));//insert into another tree
-                                std::get<0>(add_tup) += std::get<0>(add_list);
-                                std::get<1>(add_tup) += std::get<1>(add_list);
-                                std::get<2>(add_tup) += std::get<2>(add_list);
-                            }
-                        };
-                        std::for_each(list.begin(), list.end(), inner_list_level);
+            std::vector<std::tuple<std::size_t, std::size_t, std::size_t>>add_tup_out{};
+            for(auto &single_route:search_index){
+                std::tuple<std::size_t, std::size_t, std::size_t>add_tup{};
+                auto outer_most_level = [&](auto &list) {
+                    auto inner_list_level = [&](auto &tree_tuple) {
+                        for (const auto &pos_tup: std::get<1>(tree_tuple)) {
+                            auto last_tree = std::get<0>(single_route).back();
+                            //check if we have a full match and the input is larger than the data of the last tree
+                            auto add_list = tree_test_sequence(std::get<0>(last_tree), bin_beg, bin_end,
+                                                               std::get<0>(pos_tup), std::get<1>(pos_tup),
+                                                               std::get<2>(pos_tup));//insert into another tree
+                            std::get<0>(add_tup) += std::get<0>(add_list);
+                            std::get<1>(add_tup) += std::get<1>(add_list);
+                            std::get<2>(add_tup) += std::get<2>(add_list);
+                        }
                     };
-                    std::for_each(std::get<0>(single_route).begin(),std::get<0>(single_route).end(),outer_most_level);
+                    std::for_each(list.begin(), list.end(), inner_list_level);
+                };
+                std::for_each(std::get<0>(single_route).begin(),std::get<0>(single_route).end(),outer_most_level);
 
-                    if (std::get<0>(single_route).empty() && std::get<1>(single_route) == 0) {
+                if (std::get<0>(single_route).empty() && std::get<1>(single_route) == 0) {
+                    if constexpr (!reverse){
                         auto append_list = tree_test_sequence(this, bin_beg, bin_beg, data.cbegin(), data.cend(),
                                                               data.cend());//insert into this tree, no matches, only first character must match
                         std::get<0>(add_tup) += std::get<0>(append_list);
                         std::get<1>(add_tup) += std::get<1>(append_list);
                         std::get<2>(add_tup) += std::get<2>(append_list);
                     }
-                }
-
-                return add_tup_out;
-            }
-            else{
-                static_assert(!std::is_same<std::vector<unsigned char>::const_reverse_iterator,decltype(bin_beg)>::value && !std::is_same<std::list<unsigned char>::const_reverse_iterator,decltype(bin_beg)>::value && !std::is_same<std::deque<unsigned char>::const_reverse_iterator,decltype(bin_beg)>::value,"Illegal reverse const_iterator provided!");
-                std::vector<std::tuple<std::size_t, std::size_t, std::size_t>>add_tup_out{};
-                for(auto &single_route:search_index){
-                    std::tuple<std::size_t, std::size_t, std::size_t>add_tup{};
-                    auto outer_most_level = [&](auto &list) {
-                        auto inner_list_level = [&](auto &tree_tuple) {
-                            for (const auto &pos_tup: std::get<1>(tree_tuple)) {
-                                auto last_tree = std::get<0>(single_route).back();
-                                //check if we have a full match and the input is larger than the data of the last tree
-                                auto add_list = tree_test_sequence(std::get<0>(last_tree), bin_beg, bin_end,
-                                                                   std::get<0>(pos_tup), std::get<1>(pos_tup),
-                                                                   std::get<2>(pos_tup));//insert into another tree
-                                std::get<0>(add_tup) += std::get<0>(add_list);
-                                std::get<1>(add_tup) += std::get<1>(add_list);
-                                std::get<2>(add_tup) += std::get<2>(add_list);
-                            }
-                        };
-                        std::for_each(list.begin(), list.end(), inner_list_level);
-                    };
-                    std::for_each(std::get<0>(single_route).begin(),std::get<0>(single_route).end(),outer_most_level);
-
-                    if (std::get<0>(single_route).empty() && std::get<1>(single_route) == 0) {
+                    else{
                         auto append_list = tree_test_sequence(this, bin_beg, bin_beg, data.crbegin(), data.crend(),
                                                               data.crend());//insert into this tree, no matches, only first character must match
                         std::get<0>(add_tup) += std::get<0>(append_list);
@@ -1035,15 +959,19 @@ std::shared_mutex simd_protect{};
                         std::get<2>(add_tup) += std::get<2>(append_list);
                     }
                 }
-
-                return add_tup_out;
-
-                return add_tup_out;
             }
+
+            return add_tup_out;
         }
 
         //returns std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<decltype(bin_beg), decltype(bin_end), decltype(bin_beg)>>>>>, std::size_t>>
-        auto search_match_filter(auto data_beg, auto data_end, auto bin_beg, auto bin_end,
+        template <typename Const_iterator_data,typename Const_iterator_binary,
+                std::enable_if_t<(((std::is_same<std::vector<unsigned char>::const_iterator,Const_iterator_data>::value || std::is_same<std::list<unsigned char>::const_iterator,Const_iterator_data>::value || std::is_same<std::deque<unsigned char>::const_iterator,Const_iterator_data>::value) ||
+                                   (std::is_same<std::vector<unsigned char>::const_reverse_iterator,Const_iterator_data>::value || std::is_same<std::list<unsigned char>::const_reverse_iterator,Const_iterator_data>::value || std::is_same<std::deque<unsigned char>::const_reverse_iterator,Const_iterator_data>::value))) &&
+                        (((std::is_same<std::vector<unsigned char>::const_iterator,Const_iterator_binary>::value || std::is_same<std::list<unsigned char>::const_iterator,Const_iterator_binary>::value || std::is_same<std::deque<unsigned char>::const_iterator,Const_iterator_binary>::value) ||
+                          (std::is_same<std::vector<unsigned char>::const_reverse_iterator,Const_iterator_binary>::value || std::is_same<std::list<unsigned char>::const_reverse_iterator,Const_iterator_binary>::value || std::is_same<std::deque<unsigned char>::const_reverse_iterator,Const_iterator_binary>::value))), bool> = true
+        >
+        auto search_match_filter(Const_iterator_data data_beg, Const_iterator_data data_end, Const_iterator_binary bin_beg, Const_iterator_binary bin_end,
                                  std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<decltype(data_beg), decltype(bin_end), decltype(bin_beg)>>>>>, std::size_t,decltype(bin_end), decltype(bin_beg)>> possibilities =
                                          std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<decltype(data_beg), decltype(bin_end), decltype(bin_beg)>>>>>, std::size_t,decltype(bin_end), decltype(bin_beg)>>{}){
             auto local_matches = compare_ultihash(data_beg, data_end, bin_beg, bin_end);
