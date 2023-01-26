@@ -1206,9 +1206,15 @@ namespace uh::trees {
                         if(std::any_of(tmp.begin(),tmp.end(),[&bin_beg,&bin_end](auto &item){
                             return std::get<3>(item) == bin_end;
                         }))total_match = true;
-                        if (tmp != possibilities)
-                            new_recursive.insert(new_recursive.cend(), tmp.begin(),
-                                                 tmp.end());
+                        if (tmp != possibilities){
+                            std::for_each(tmp.begin(), tmp.end(), [&tmp, &new_recursive](auto &item1) {
+                                if (std::none_of(new_recursive.begin(), new_recursive.end(), [&item1](auto &item2) {
+                                    return item2 == item1;
+                                })) {
+                                    new_recursive.push_back(item1);
+                                }
+                            });
+                        }
                     }
                 }
 
@@ -1223,8 +1229,15 @@ namespace uh::trees {
                             continue;
                         }
                         auto tmp = item->search(std::get<3>(pos_begin), bin_end,possibilities);
-                        if (tmp != possibilities)
-                            new_recursive.insert(new_recursive.cend(), tmp.begin(), tmp.end());
+                        if (tmp != possibilities){
+                            std::for_each(tmp.begin(), tmp.end(), [&tmp, &new_recursive](auto &item1) {
+                                if (std::none_of(new_recursive.begin(), new_recursive.end(), [&item1](auto &item2) {
+                                    return item2 == item1;
+                                })) {
+                                    new_recursive.push_back(item1);
+                                }
+                            });
+                        }
                     }
                 }
             }
