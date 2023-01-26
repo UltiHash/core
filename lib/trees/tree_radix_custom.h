@@ -875,9 +875,9 @@ namespace uh::trees {
                              */
                             //either way the appending size will be added and new space will be needed
                             return std::make_tuple(
-                                    (std::size_t) std::distance(bin_beg_found, bin_end_found),
-                                    (std::size_t) std::distance(bin_beg_found, bin_end_found),
-                                    (std::size_t) comp.compress(bin_beg_found, bin_end_found).size());
+                                    (std::size_t) std::distance(child_beg_mid, child_end_mid)+std::distance(child_beg_append,child_end_append),
+                                    (std::size_t) std::distance(child_beg_append,child_end_append),
+                                    (std::size_t) comp.compress(child_beg_append,child_end_append).size());
                         }
                         //return implicit 0 with unsigned long
                         return std::make_tuple((std::size_t) std::distance(bin_beg_found, bin_end_found),
@@ -942,12 +942,6 @@ namespace uh::trees {
                     std::for_each(list.begin(), list.end(), inner_list_level);
                 };
                 std::for_each(std::get<0>(single_route).begin(), std::get<0>(single_route).end(), outer_most_level);
-                if(bin_beg+advance_count != bin_end){
-                    auto comp = util::compression_custom{};
-                    std::get<0>(add_tup) += std::distance(bin_beg+advance_count, bin_end);
-                    std::get<1>(add_tup) += std::distance(bin_beg+advance_count, bin_end);
-                    std::get<2>(add_tup) += comp.compress(bin_beg+advance_count, bin_end).size();
-                }
                 add_tup_out.push_back(add_tup);
             }
 
@@ -1112,8 +1106,7 @@ namespace uh::trees {
                             tmp_list};
 
                     std::size_t advance =
-                            (std::size_t) llabs(std::distance(std::get<1>(*match_beg), std::get<2>(*match_beg))) +
-                            (std::get<2>(*match_beg) != bin_end);
+                            (std::size_t) llabs(std::distance(std::get<1>(*match_beg), std::get<2>(*match_beg)));
                     out_possibilities.emplace_back(outer_list, advance, std::get<0>(*match_beg) + 1,
                                                    std::get<1>(*match_beg) + advance);
                 } else
