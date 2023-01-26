@@ -949,6 +949,13 @@ namespace uh::trees {
                         }
                     }
                 }
+                if(bin_beg+advance_count!=bin_end)advance_count++;
+                if(bin_beg+advance_count!=bin_end){
+                    uh::util::compression_custom c{};
+                    std::get<0>(add_tup) += std::distance(bin_beg+advance_count,bin_end);
+                    std::get<1>(add_tup) += std::distance(bin_beg+advance_count,bin_end);
+                    std::get<2>(add_tup) += c.compress(bin_beg+advance_count,bin_end).size();
+                }
                 add_tup_out.push_back(add_tup);
             }
 
