@@ -13,6 +13,7 @@
 #include <mutex>
 #include <list>
 #include <deque>
+#include <array>
 #include <set>
 #include <ranges>
 #include <algorithm>
@@ -914,7 +915,7 @@ namespace uh::trees {
                         end_size = MINIMUM_MATCH_SIZE <= llabs(std::distance(std::get<0>(*match_beg) +
                                                                              std::distance(std::get<1>(*match_beg),
                                                                                            std::get<2>(*match_beg)),
-                                                                             data_end));
+                                                                             data_end))+1;
                         total_found_size = MINIMUM_MATCH_SIZE <= std::distance(std::get<1>(*match_beg),
                                                                                std::get<2>(*match_beg));
                         begin_reached = data_beg == std::get<0>(*match_beg);
@@ -1009,9 +1010,9 @@ namespace uh::trees {
                         last_it_outer_list->emplace_back(this, found_vec);
                     }
                 }
-                std::size_t advance =
-                        (std::size_t) llabs(std::distance(std::get<1>(*match_beg), std::get<2>(*match_beg)));
-                if(std::get<3>(input_list_tmp) + advance < bin_end)advance++;
+                std::size_t advance = (std::size_t) llabs(std::distance(std::get<1>(*match_beg), std::get<2>(*match_beg)));
+                        //(std::size_t) llabs(std::distance(std::get<1>(*match_beg), std::get<2>(*match_beg)));
+                //if(std::distance(std::get<1>(*match_beg), std::get<2>(*match_beg))!=std::distance(bin_beg, bin_end))advance++;
                 std::get<1>(input_list_tmp) += advance;
                 std::get<2>(input_list_tmp)++;
                 std::get<3>(input_list_tmp) = std::min(std::get<3>(input_list_tmp) + advance, bin_end);
@@ -1029,9 +1030,8 @@ namespace uh::trees {
                     std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<decltype(bin_beg), decltype(bin_end), decltype(bin_beg)>>>>> outer_list{
                             tmp_list};
 
-                    std::size_t advance =
-                            (std::size_t) llabs(std::distance(std::get<1>(*match_beg), std::get<2>(*match_beg)));
-                    if(bin_beg + advance < bin_end)advance++;
+                    std::size_t advance = (std::size_t) llabs(std::distance(std::get<1>(*match_beg), std::get<2>(*match_beg)));
+                    //if(std::distance(std::get<1>(*match_beg), std::get<2>(*match_beg))!=std::distance(bin_beg, bin_end))advance++;
                     out_possibilities.emplace_back(outer_list, advance, std::get<0>(*match_beg) + 1,
                                                    std::min(std::get<1>(*match_beg) + advance, bin_end));
                 } else

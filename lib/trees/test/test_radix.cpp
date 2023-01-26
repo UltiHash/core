@@ -96,7 +96,7 @@ BOOST_AUTO_TEST_CASE(search_match_filter_test)
                 data_string.cbegin() + MINIMUM_MATCH_SIZE);//data iterator
     BOOST_CHECK(
             std::get<1>(std::get<1>(*last_it_inner_list)[0]) == input_string_begin.cbegin() + 1);//input iterator begin
-    BOOST_CHECK(std::get<2>(std::get<1>(*last_it_inner_list)[0]) == input_string_begin.cend() - 2);//input iterator end
+    BOOST_CHECK(std::get<2>(std::get<1>(*last_it_inner_list)[0]) == input_string_begin.cend() - 1);//input iterator end
 }
 
 BOOST_AUTO_TEST_CASE(search_empty_test)
