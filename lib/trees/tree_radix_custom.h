@@ -48,7 +48,7 @@ namespace uh::trees {
             delete data;
             delete data_ref;
 
-            for (auto &item1: children) {
+            for (auto &item1: *children) {
                 for (auto &item2: std::get<0>(item1)) {
                     delete item2;
                 }
@@ -70,7 +70,7 @@ namespace uh::trees {
 
         std::vector<tree_radix_custom *> child_vector(unsigned char i) {
             if (children->empty())return {};
-            for (const auto &item: children) {
+            for (const auto &item: *children) {
                 if (std::get<1>(item) == i) {
                     return std::get<0>(item);
                 }
@@ -454,7 +454,7 @@ namespace uh::trees {
                                     out_vector.push_back(tree_ptr_first);
                                     tree_ptr_mid->block_swarm_offset =
                                             tree_ptr_first->block_swarm_offset + tree_ptr_first->data->size();
-                                    tree_ptr_mid->children = std::get<3>(*match_beg)->children;
+                                    *tree_ptr_mid->children = *std::get<3>(*match_beg)->children;
                                     std::get<3>(*match_beg)->children->clear();
                                     *tree_ptr_mid->data_ref = *std::get<3>(*match_beg)->data_ref;
                                     tree_ptr_first->data_ref->clear();
@@ -477,7 +477,7 @@ namespace uh::trees {
                                     out_vector.push_back(tree_ptr_last);
                                     tree_ptr_last->block_swarm_offset =
                                             tree_ptr_mid->block_swarm_offset + tree_ptr_mid->data->size();
-                                    tree_ptr_last->children = tree_ptr_mid->children;
+                                    *tree_ptr_last->children = *tree_ptr_mid->children;
                                     tree_ptr_mid->children->clear();
                                     *tree_ptr_last->data_ref = *tree_ptr_mid->data_ref;
                                     tree_ptr_mid->data_ref->clear();
@@ -1133,7 +1133,7 @@ namespace uh::trees {
                 //do not search other children if a directed match has been found --> fast
 
                 //slow search
-                for (auto &c: children) {
+                for (auto &c: *children) {
                     if (!child_vec.empty() && std::get<1>(c) == *std::get<3>(pos_begin))continue;
                     for (auto &item: std::get<0>(c)) {//vector of tree pointers
                         if (std::get<3>(pos_begin) >= bin_end) {
