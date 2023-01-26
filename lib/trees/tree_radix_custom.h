@@ -333,9 +333,6 @@ namespace uh::trees {
                     auto match_beg_copy = match_beg;
                     while (match_beg !=
                            actively_changing_trees.end()) {//update loop on std::vector<std::tuple<std::vector<unsigned char>::const_iterator, std::vector<unsigned char>::const_iterator, std::vector<unsigned char>::const_iterator>>
-                        auto out_size = tree_building_sequence(std::get<3>(*match_beg), bin_beg, bin_end,
-                                                               std::get<0>(*match_beg), std::get<1>(*match_beg),
-                                                               std::get<2>(*match_beg));
 
                         std::size_t tree_front_data_front_absolute;
                         if constexpr (!reverse){
