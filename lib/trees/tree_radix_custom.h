@@ -898,14 +898,14 @@ namespace uh::trees {
                         if (append_tree) {
                             //as on total match in this case
                             return std::make_tuple(
-                                    (std::size_t) std::distance(bin_beg_found, bin_end_found),
-                                    (std::size_t) std::distance(child_beg_append, child_end_append),
-                                    (std::size_t) comp.compress(child_beg_append, child_end_append).size());
+                                    (std::size_t) std::distance(child_beg_mid, child_end_mid)+std::distance(child_beg_append,child_end_append),
+                                    (std::size_t) std::distance(child_beg_append,child_end_append),
+                                    (std::size_t) comp.compress(child_beg_append,child_end_append).size());
                         }
                         //return implicit 0 with unsigned long
                         //nothing to add on RAM, only splitting up the blocks on disk
                         return std::make_tuple(
-                                (std::size_t) std::distance(bin_beg_found, bin_end_found),
+                                (std::size_t) std::distance(child_beg_mid, child_end_mid),
                                 (std::size_t) 0,
                                 (std::size_t) 0);
                     }
