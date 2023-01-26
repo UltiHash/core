@@ -1204,7 +1204,7 @@ namespace uh::trees {
                     for (auto &item: child_vec) {//vector of tree pointers
                         auto tmp = item->search(std::get<3>(pos_begin), bin_end, possibilities);
                         if(std::any_of(tmp.begin(),tmp.end(),[&bin_beg,&bin_end](auto &item){
-                            std::get<1>(item) == std::distance(bin_beg,bin_end);
+                            return std::get<1>(item) == std::distance(bin_beg,bin_end);
                         }))total_match = true;
                         if (tmp != possibilities)
                             new_recursive.insert(new_recursive.cend(), tmp.begin(),
