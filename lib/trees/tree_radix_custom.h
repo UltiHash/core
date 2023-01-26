@@ -833,8 +833,10 @@ namespace uh::trees {
             for (auto &single_route: search_index) {
                 std::tuple<std::size_t, std::size_t, std::size_t> add_tup{};
 
+                tree_radix_custom* last_tree;
                 for(auto &list:std::get<0>(single_route)){
                     for(auto &tree_tuple:list){
+                        last_tree = std::get<0>(tree_tuple);
                         for(auto &pos_tup:std::get<1>(tree_tuple)){
                             //auto add_list = tree_test_sequence(std::get<0>(tree_tuple), bin_beg, bin_beg,std::get<0>(pos_tup),
                             //                                   std::get<1>(pos_tup), std::get<2>(pos_tup));//insert into another tree
@@ -854,10 +856,10 @@ namespace uh::trees {
                         }
                     }
                 }
-                if(bin_beg+std::get<2>(add_tup)<bin_end){
-                    std::get<0>(add_tup) += std::distance(bin_beg+std::get<2>(add_tup),bin_end);
-                    std::get<1>(add_tup) += std::distance(bin_beg+std::get<2>(add_tup),bin_end);
-                    std::get<2>(add_tup) += comp.compress(bin_beg+std::get<2>(add_tup),bin_end).size();
+                if(bin_beg+std::get<0>(add_tup)+1<bin_end){
+                    std::get<2>(add_tup) += comp.compress(bin_beg+std::get<0>(add_tup)+1,bin_end).size();
+                    std::get<1>(add_tup) += std::distance(bin_beg+std::get<0>(add_tup)+1,bin_end);
+                    std::get<0>(add_tup) += std::distance(bin_beg+std::get<0>(add_tup)+1,bin_end);
                 }
                 add_tup_out.push_back(add_tup);
             }
