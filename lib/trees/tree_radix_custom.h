@@ -1231,6 +1231,9 @@ namespace uh::trees {
             //check child that deals with searching the far most rest in direction of end to skip the not matching rest
             //only check children with correct continue letter first in case we get a total match
             for (auto pos_begin: possibilities) {
+                if (std::get<3>(single_pos) == bin_end) {
+                    continue;
+                }
                 auto child_vec = child_vector(*std::get<3>(pos_begin));
                 if (!child_vec.empty()) {//recursive search
                     for (auto &item: child_vec) {//vector of tree pointers
@@ -1244,6 +1247,9 @@ namespace uh::trees {
                 for (auto &c: children) {
                     if (!child_vec.empty() && std::get<1>(c) == *std::get<3>(pos_begin))continue;
                     for (auto &item: std::get<0>(c)) {//vector of tree pointers
+                        if (std::get<3>(pos_begin) == bin_end) {
+                            continue;
+                        }
                         auto new_search_results_recursive = item->search(std::get<3>(pos_begin), bin_end,
                                                                          possibilities);
                         new_recursive.insert(new_recursive.cend(), new_search_results_recursive.begin(),
