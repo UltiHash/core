@@ -330,8 +330,7 @@ namespace uh::trees {
 
                 if(bin_beg_incoming == bin_end_incoming){
                     return std::make_tuple((std::size_t)0,(std::size_t)0,(std::size_t)0,out_list,first_section_tree,
-                                           last_section_tree, append_tree, total_match,
-                                           tree_front_data_front_absolute);
+                                           last_section_tree, append_tree, total_match,0);
                 }
 
                 //search function already determined that this is the tree that needs to fill in the data or to split somehow
