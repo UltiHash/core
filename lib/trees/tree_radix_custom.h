@@ -282,7 +282,7 @@ namespace uh::trees {
                         std::is_same<std::vector<unsigned char>::const_reverse_iterator, decltype(bin_beg_incoming)>::value ||
                         std::is_same<std::list<unsigned char>::const_reverse_iterator, decltype(bin_beg_incoming)>::value ||
                         std::is_same<std::deque<unsigned char>::const_reverse_iterator, decltype(bin_beg_incoming)>::value);
-                std::size_t tree_front_data_front_absolute = std::distance(cur_tree->data.cbegin(), data_beg_intern) +
+                std::size_t tree_front_data_front_absolute = std::distance(cur_tree->data.cbegin(), data_beg_intern) - 1 +
                                                              (cur_tree->data.cend() != data_beg_intern);
                 //checking if children need to be generated before and after the found input peace, reference to data of tree required
                 //child before found, reference data
