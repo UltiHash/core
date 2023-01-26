@@ -265,7 +265,7 @@ namespace uh::trees {
             /*std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::vector<unsigned char>::const_iterator, std::vector<unsigned char>::const_iterator, std::vector<unsigned char>::const_iterator>>>>>, std::size_t>>*/
 
             //uncompressed input
-            if (bin_beg == bin_end) {
+            if (bin_beg >= bin_end) {
                 return {};
             }
             auto search_index = search(bin_beg, bin_end);
@@ -277,15 +277,19 @@ namespace uh::trees {
             //some element and an end element at least required
             //TODO: add cross update from forward and backward children
             auto tree_building_sequence = [](tree_radix_custom *cur_tree,
-                                             auto bin_beg_incoming, auto bin_end_incoming, const auto data_beg_intern,
+                                             auto bin_beg_incoming, auto bin_end_incoming, auto data_beg_intern,
                                              auto bin_beg_found, auto bin_end_found) {
                 constexpr bool reverse = (
                         std::is_same<std::vector<unsigned char>::const_reverse_iterator, decltype(bin_beg_incoming)>::value ||
                         std::is_same<std::list<unsigned char>::const_reverse_iterator, decltype(bin_beg_incoming)>::value ||
                         std::is_same<std::deque<unsigned char>::const_reverse_iterator, decltype(bin_beg_incoming)>::value);
-                std::size_t tree_front_data_front_absolute =
-                        std::distance(cur_tree->data.cbegin(), data_beg_intern) - 1 +
-                        (cur_tree->data.cend() != data_beg_intern);
+                std::size_t tree_front_data_front_absolute;
+                if constexpr (!reverse){
+                    tree_front_data_front_absolute=std::distance(cur_tree->data.cbegin(), data_beg_intern) - 1;
+                }
+                else{
+                    tree_front_data_front_absolute=std::distance(cur_tree->data.crbegin(), data_beg_intern) - 1;
+                }
                 //checking if children need to be generated before and after the found input peace, reference to data of tree required
                 //child before found, reference data
                 decltype(bin_beg_found) child_beg_beg, child_beg_mid, child_beg_end;
@@ -515,15 +519,28 @@ namespace uh::trees {
             //cases for search index: its empty or it has content and with that a last tree element
             if (search_index.empty()) {
                 std::tuple<std::size_t, std::size_t, std::size_t, std::list<std::tuple<std::set<tree_radix_custom *>, std::set<tree_radix_custom *>>>> out_change_tuple{};
-                auto out_size = tree_building_sequence(this, bin_beg, bin_end, data.cbegin(), bin_beg, bin_end);
-                std::get<0>(out_change_tuple) += std::get<0>(out_size);
-                std::get<1>(out_change_tuple) += std::get<1>(out_size);
-                std::get<2>(out_change_tuple) += std::get<2>(out_size);
-                auto out_vector = std::get<3>(out_size);
-                std::get<3>(out_change_tuple).emplace_back(std::set<tree_radix_custom *>{},
-                                                           std::set<tree_radix_custom *>{
-                                                                   out_vector[0]});//only add a new tree
-                out_change_tuple_out.push_back(out_change_tuple);
+                if(!reverse){
+                    auto out_size = tree_building_sequence(this, bin_beg, bin_end, data.cbegin(), bin_beg, bin_end);
+                    std::get<0>(out_change_tuple) += std::get<0>(out_size);
+                    std::get<1>(out_change_tuple) += std::get<1>(out_size);
+                    std::get<2>(out_change_tuple) += std::get<2>(out_size);
+                    auto out_vector = std::get<3>(out_size);
+                    std::get<3>(out_change_tuple).emplace_back(std::set<tree_radix_custom *>{},
+                                                               std::set<tree_radix_custom *>{
+                                                                       out_vector[0]});//only add a new tree
+                    out_change_tuple_out.push_back(out_change_tuple);
+                }
+                else{
+                    auto out_size = tree_building_sequence(this, bin_beg, bin_end, data.crbegin(), bin_beg, bin_end);
+                    std::get<0>(out_change_tuple) += std::get<0>(out_size);
+                    std::get<1>(out_change_tuple) += std::get<1>(out_size);
+                    std::get<2>(out_change_tuple) += std::get<2>(out_size);
+                    auto out_vector = std::get<3>(out_size);
+                    std::get<3>(out_change_tuple).emplace_back(std::set<tree_radix_custom *>{},
+                                                               std::set<tree_radix_custom *>{
+                                                                       out_vector[0]});//only add a new tree
+                    out_change_tuple_out.push_back(out_change_tuple);
+                }
             }
             //cases for last tree if it exists, binary fit in: match from the beginning on, match in the middle, match until the end, total match
             //all lists contain lists with a last element that had multiple matches; add up all matches
@@ -1006,10 +1023,10 @@ namespace uh::trees {
                     }
                 }
                 std::size_t advance =
-                        (std::size_t) llabs(std::distance(std::get<1>(*match_beg), std::get<2>(*match_beg)))-1;
+                        (std::size_t) llabs(std::distance(std::get<1>(*match_beg), std::get<2>(*match_beg)));
                 std::get<1>(input_list_tmp) += advance;
                 std::get<2>(input_list_tmp)++;
-                std::get<3>(input_list_tmp) += advance;
+                std::get<3>(input_list_tmp) = std::min(std::get<3>(input_list_tmp)+advance,bin_end);
 
                 out_possibilities.push_back(input_list_tmp);
             };
@@ -1027,7 +1044,7 @@ namespace uh::trees {
                     std::size_t advance =
                             (std::size_t) llabs(std::distance(std::get<1>(*match_beg), std::get<2>(*match_beg)))-1;
                     out_possibilities.emplace_back(outer_list, advance, std::get<0>(*match_beg) + 1,
-                                                   std::get<1>(*match_beg) + advance);
+                                                   std::min(std::get<1>(*match_beg) + advance,bin_end));
                 } else
                     for (auto &input_list_tmp: possibilities) {//COPY input list and create different path calculation
                         possibilities_manage(input_list_tmp);
