@@ -183,50 +183,89 @@ namespace uh::trees {
         }
 
         /*std::vector<std::tuple<std::vector<unsigned char>::const_iterator,std::vector<unsigned char>::const_iterator,std::vector<unsigned char>::const_iterator>>*/
-        template<class ContainerData,class ContainerBinary>
+        template<class ContainerData,class ContainerBinary,bool reverse=false>
         auto
         compare_ultihash(ContainerData &data_cont, ContainerBinary &binary_cont) {
             //if input does only fit to a shorter string as a subset of data, count becomes negative, else positive including ß
             //data offset iterator and start and end of input
-            std::vector<std::tuple<std::size_t, std::size_t, std::size_t>> matches{};
+            std::vector<std::tuple<std::size_t, std::size_t>> matches{};//data offset beginning found, end offset from beginning
             if (data_cont.empty() || binary_cont.empty())return matches;
             std::size_t current_offset = 0;
             //search forward through data
-            do {
-                //first element match
-                std::unique_lock lock(simd_protect);
-                if (simd_count < SIMD_UNITS) {
-                    simd_count += 1;
-                    lock.unlock();
-                    current_offset = std::distance(data_cont.begin(),std::find(std::execution::unseq, data_cont.begin()+current_offset, data_cont.end(), *binary_cont.begin()));
-                    lock.lock();
-                    simd_count -= 1;
-                    lock.unlock();
-                } else {
-                    lock.unlock();
-                    current_offset = std::distance(data_cont.begin(),std::find(data_cont.begin()+current_offset, data_cont.end(), *binary_cont.begin()));
-                }
+            if constexpr (!reverse){
+                do {
+                    //first element match
+                    std::unique_lock lock(simd_protect);
+                    if (simd_count < SIMD_UNITS) {
+                        simd_count += 1;
+                        lock.unlock();
+                        current_offset = std::distance(data_cont.begin(),std::find(std::execution::unseq, data_cont.begin()+current_offset, data_cont.end(), *binary_cont.begin()));
+                        lock.lock();
+                        simd_count -= 1;
+                        lock.unlock();
+                    } else {
+                        lock.unlock();
+                        current_offset = std::distance(data_cont.begin(),std::find(data_cont.begin()+current_offset, data_cont.end(), *binary_cont.begin()));
+                    }
 
-                //search how long input matches
-                std::pair<decltype(data_cont.begin()), decltype(data_cont.end())> found;
-                lock.lock();
-                if (simd_count < SIMD_UNITS) {
-                    simd_count += 1;
-                    lock.unlock();
-                    found = std::mismatch(std::execution::unseq, data_cont.begin()+current_offset, data_cont.end(), binary_cont.begin(), binary_cont.end());
+                    //search how long input matches
+                    std::pair<decltype(data_cont.begin()), decltype(data_cont.end())> found;
                     lock.lock();
-                    simd_count -= 1;
-                    lock.unlock();
-                } else {
-                    lock.unlock();
-                    found = std::mismatch(data_cont.begin()+current_offset, data_cont.end(), binary_cont.begin(), binary_cont.end());
-                }
+                    if (simd_count < SIMD_UNITS) {
+                        simd_count += 1;
+                        lock.unlock();
+                        found = std::mismatch(std::execution::unseq, data_cont.begin()+current_offset, data_cont.end(), binary_cont.begin(), binary_cont.end());
+                        lock.lock();
+                        simd_count -= 1;
+                        lock.unlock();
+                    } else {
+                        lock.unlock();
+                        found = std::mismatch(data_cont.begin()+current_offset, data_cont.end(), binary_cont.begin(), binary_cont.end());
+                    }
 
-                if (std::distance(found.first,found.second) >= MINIMUM_MATCH_SIZE) {
-                    matches.emplace_back(data_cont.begin()+current_offset, binary_cont.begin(), binary_cont.begin() + std::distance(found.first,found.second));
-                }
-                if (data_cont.begin()+current_offset != data_cont.end())current_offset++;
-            } while (data_cont.begin()+current_offset != data_cont.end());
+                    if (std::distance(data_cont.begin(),found.first) >= MINIMUM_MATCH_SIZE) {
+                        matches.emplace_back(current_offset, current_offset + std::distance(data_cont.begin(),found.first));
+                    }
+                    if (data_cont.begin()+current_offset != data_cont.end())current_offset++;
+                } while (data_cont.begin()+current_offset != data_cont.end());
+            }
+            else{
+                do {
+                    //first element match
+                    std::unique_lock lock(simd_protect);
+                    if (simd_count < SIMD_UNITS) {
+                        simd_count += 1;
+                        lock.unlock();
+                        current_offset = std::distance(data_cont.rbegin(),std::find(std::execution::unseq, data_cont.rbegin()+current_offset, data_cont.rend(), *binary_cont.begin()));
+                        lock.lock();
+                        simd_count -= 1;
+                        lock.unlock();
+                    } else {
+                        lock.unlock();
+                        current_offset = std::distance(data_cont.rbegin(),std::find(data_cont.rbegin()+current_offset, data_cont.rend(), *binary_cont.begin()));
+                    }
+
+                    //search how long input matches
+                    std::pair<decltype(data_cont.rbegin()), decltype(data_cont.rend())> found;
+                    lock.lock();
+                    if (simd_count < SIMD_UNITS) {
+                        simd_count += 1;
+                        lock.unlock();
+                        found = std::mismatch(std::execution::unseq, data_cont.rbegin()+current_offset, data_cont.rend(), binary_cont.begin(), binary_cont.end());
+                        lock.lock();
+                        simd_count -= 1;
+                        lock.unlock();
+                    } else {
+                        lock.unlock();
+                        found = std::mismatch(data_cont.rbegin()+current_offset, data_cont.rend(), binary_cont.begin(), binary_cont.end());
+                    }
+
+                    if (std::distance(data_cont.rbegin(),found.first) >= MINIMUM_MATCH_SIZE) {
+                        matches.emplace_back(current_offset, current_offset + std::distance(data_cont.rbegin(),found.first));
+                    }
+                    if (data_cont.rbegin()+current_offset != data_cont.rend())current_offset++;
+                } while (data_cont.rbegin()+current_offset != data_cont.rend());
+            }
 
             return matches;
         }
@@ -234,21 +273,17 @@ namespace uh::trees {
     public:
 
         //returns total size integrated, new space used uncompressed, new space used compressed, list of tree references of <offset_ELEMENT,modified_LIST,added_LIST> tree nodes
-        template<class ContainerData>
+        template<class ContainerBinary,bool reverse=false>
         std::vector<std::tuple<std::size_t, std::size_t, std::size_t, std::list<std::tuple<std::set<tree_radix_custom *>, std::set<tree_radix_custom *>>>>>
-        add(ContainerData &data_cont) {//TODO:check duplicate matches and eliminate
+        add(ContainerBinary &binary_cont) {//TODO:check duplicate matches and eliminate
             //first search existing structure and add into the last tree to insert potentially missing information
             /*std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::vector<unsigned char>::const_iterator, std::vector<unsigned char>::const_iterator, std::vector<unsigned char>::const_iterator>>>>>, std::size_t>>*/
 
             //uncompressed input
-            if (bin_beg >= bin_end) {
+            if (binary_cont.empty()) {
                 return {};
             }
-            auto search_index = search(bin_beg, bin_end);
-            constexpr bool reverse = (
-                    std::is_same<std::vector<unsigned char>::const_reverse_iterator, decltype(bin_beg)>::value ||
-                    std::is_same<std::list<unsigned char>::const_reverse_iterator, decltype(bin_beg)>::value ||
-                    std::is_same<std::deque<unsigned char>::const_reverse_iterator, decltype(bin_beg)>::value);
+            auto search_index = search<reverse>(binary_cont);
 
             //some element and an end element at least required
             //TODO: add cross update from forward and backward children
@@ -258,16 +293,16 @@ namespace uh::trees {
             //empty should never happen since it stacks new information to the end
             if (search_index.empty()) {
                 std::tuple<std::size_t, std::size_t, std::size_t, std::list<std::tuple<std::set<tree_radix_custom *>, std::set<tree_radix_custom *>>>> out_change_tuple{};
-                auto tmp_vec = std::vector<unsigned char>{bin_beg, bin_end};
-                std::get<0>(out_change_tuple) += std::distance(bin_beg, bin_end);
-                std::get<1>(out_change_tuple) += std::distance(bin_beg, bin_end);
+                auto tmp_vec = std::vector<unsigned char>{binary_cont.begin(), binary_cont.end()};
+                std::get<0>(out_change_tuple) += binary_cont.size();
+                std::get<1>(out_change_tuple) += binary_cont.size();
                 if constexpr (!reverse) {
                     uh::util::compression_custom comp{};
-                    std::get<2>(out_change_tuple) += comp.compress(bin_beg, bin_end).size();
+                    std::get<2>(out_change_tuple) += comp.compress(tmp_vec).size();
                 } else {
                     std::reverse(tmp_vec.begin(), tmp_vec.end());
                     uh::util::compression_custom comp{};
-                    std::get<2>(out_change_tuple) += comp.compress(tmp_vec.begin(), tmp_vec.end()).size();
+                    std::get<2>(out_change_tuple) += comp.compress(tmp_vec).size();
                 }
                 auto *new_tree = new tree_radix_custom{tmp_vec};
                 new_tree->block_swarm_offset += block_swarm_offset + 1;
@@ -303,11 +338,10 @@ namespace uh::trees {
 
                     tree_radix_custom *tree_match_pointer = std::get<0>(*one_node_analysis);
                     std::set<tree_radix_custom *> modified{}, added{};//changes to be written to disk in the form of tree pointers
-                    std::vector<std::tuple<decltype(bin_beg), decltype(bin_end), decltype(bin_beg), decltype(tree_match_pointer)>> actively_changing_trees{};
+                    std::vector<std::tuple<std::size_t, std::size_t, decltype(tree_match_pointer)>> actively_changing_trees{};//data offset and binary range from offset
                     std::for_each(std::get<1>(*one_node_analysis).begin(), std::get<1>(*one_node_analysis).end(),
                                   [&actively_changing_trees, &tree_match_pointer](auto &item) {
-                                      actively_changing_trees.emplace_back(std::get<0>(item), std::get<1>(item),
-                                                                           std::get<2>(item), tree_match_pointer);
+                                      actively_changing_trees.emplace_back(std::get<0>(item), std::get<1>(item), tree_match_pointer);
                                   });
 
                     auto match_beg = actively_changing_trees.begin();//                                         found beginning                             found end                        data on tree begin at found begin
@@ -847,13 +881,13 @@ namespace uh::trees {
         template<class ContainerData,class ContainerBinary>
         auto
         search_match_filter(ContainerData &data_cont, ContainerBinary &binary_cont,
-                            std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t, std::size_t>>>>>, std::size_t, std::size_t, std::size_t>> possibilities =
-                            std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t, std::size_t>>>>>, std::size_t, std::size_t, std::size_t>> {}) {
-            auto local_matches = compare_ultihash(data_beg, data_end, bin_beg, bin_end);
+                            std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>>>>>, std::size_t,std::size_t>> possibilities =
+                            std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>>>>>, std::size_t,std::size_t>>{}) {
+            auto local_matches = compare_ultihash(data_cont,binary_cont);
 
-            auto legal_match_integration = [&data_beg, &data_end](auto local_matches) {
+            auto legal_match_integration = [](auto local_matches) {
                 std::sort(local_matches.begin(), local_matches.end(), [](auto &a, auto &b) {
-                    return std::distance(std::get<1>(a), std::get<2>(a)) <
+                    return std::get<2>(a) - std::get<1>(a) <
                            std::distance(std::get<1>(b), std::get<2>(b));
                 });
                 //LEGAL MATCH FILTER
@@ -1001,13 +1035,13 @@ namespace uh::trees {
 
         //returns the path of maximum fit and the match size
         /*std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::vector<unsigned char>::const_iterator, std::vector<unsigned char>::const_iterator, std::vector<unsigned char>::const_iterator>>>>>, std::size_t>>*/
-        template<class Container,bool reverse=false>
-        auto search(Container &cont,
-                    std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t, std::size_t>>>>>, std::size_t, std::size_t, std::size_t>> possibilities =
-                    std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t, std::size_t>>>>>, std::size_t, std::size_t, std::size_t>> {},
+        template<class ContainerBinary,bool reverse=false>
+        auto search(ContainerBinary &cont_binary,
+                    std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>>>>>, std::size_t,std::size_t>> possibilities =
+                    std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>>>>>, std::size_t,std::size_t>>{},
                     std::vector<tree_radix_custom *> limiter_children = std::vector<tree_radix_custom *>{}) {
 
-            if (cont.empty() ||
+            if (cont_binary.empty() ||
                 std::any_of(limiter_children.begin(), limiter_children.end(), [this](auto &item_limit) {
                     return item_limit == this;
                 })) {
@@ -1017,9 +1051,9 @@ namespace uh::trees {
             /*std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<decltype(bin_beg), decltype(bin_end), decltype(bin_beg)>>>>>, std::size_t,decltype(bin_end), decltype(bin_beg)>>*/
             //while a possibility still changes on search_match filter, it is continued to be executed
             if constexpr (!reverse) {
-                possibilities = search_match_filter(data->cbegin(), data->cend(), bin_beg, bin_end, possibilities);
+                possibilities = search_match_filter(data, cont_binary, possibilities);
             } else {
-                possibilities = search_match_filter(data->crbegin(), data->crend(), bin_beg, bin_end, possibilities);
+                possibilities = search_match_filter(data, cont_binary, possibilities);
             }
 
             decltype(possibilities) new_recursive{};
@@ -1028,26 +1062,26 @@ namespace uh::trees {
             std::size_t single_count{};
             while (single_pos != possibilities.end()) {
                 if constexpr (!reverse) {
-                    if (std::get<2>(*single_pos) == data->cend() || std::get<3>(*single_pos) == bin_end) {
+                    if (data->begin()+std::get<1>(*single_pos) == data->end() || cont_binary.begin()+std::get<2>(*single_pos) == cont_binary.end()) {
                         single_count++;
                         single_pos++;
                         continue;
                     }
                 } else {
-                    if (std::get<2>(*single_pos) == data->crend() || std::get<3>(*single_pos) == bin_end) {
+                    if (data->rbegin()+std::get<1>(*single_pos) == data->rend() || cont_binary.begin()+std::get<2>(*single_pos) == cont_binary.end()) {
                         single_count++;
                         single_pos++;
                         continue;
                     }
                 }
                 decltype(possibilities) tmp;
+                std::vector<unsigned char> binary_subset{cont_binary.begin()+std::get<2>(*single_pos), cont_binary.end()};
                 if constexpr (!reverse) {
-                    tmp = search_match_filter(std::get<2>(*single_pos), data->cend(), std::get<3>(*single_pos), bin_end,
-                                              possibilities);
+                    std::vector<unsigned char> data_subset{data->begin()+std::get<1>(*single_pos), data->end()};
+                    tmp = search_match_filter(data_subset, binary_subset ,possibilities);
                 } else {
-                    tmp = search_match_filter(std::get<2>(*single_pos), data->crend(), std::get<3>(*single_pos),
-                                              bin_end,
-                                              possibilities);
+                    std::vector<unsigned char> data_subset{data->begin(), data->end()-(std::get<1>(*single_pos)+1)};
+                    tmp = search_match_filter(data_subset, binary_subset ,possibilities);
                 }
                 std::for_each(tmp.begin(), tmp.end(), [&tmp, &new_recursive](auto &item1) {
                     if (std::none_of(new_recursive.begin(), new_recursive.end(), [&item1](auto &item2) {
@@ -1063,18 +1097,25 @@ namespace uh::trees {
             //check child that deals with searching the far most rest in direction of end to skip the not matching rest
             //only check children with correct continue letter first in case we get a total match
             for (auto pos_begin: possibilities) {
-                if (std::get<3>(pos_begin) == bin_end) {
-                    continue;
+                if constexpr (!reverse){
+                    if (data->begin()+std::get<1>(*pos_begin)==data->end()||cont_binary.begin()+std::get<2>(*pos_begin) == cont_binary.end()) {
+                        continue;
+                    }
                 }
+                else{
+                    if (data->rbegin()+std::get<1>(*pos_begin)==data->rend()||cont_binary.begin()+std::get<2>(*pos_begin) == cont_binary.end()) {
+                        continue;
+                    }
+                }
+                std::vector<unsigned char> binary_subset{cont_binary.begin()+std::get<2>(*pos_begin), cont_binary.end()};
                 bool total_match = false;
-                auto child_vec = child_vector(*std::get<3>(pos_begin));
+                auto child_vec = child_vector(*(cont_binary.begin()+std::get<2>(pos_begin)));
                 if (!child_vec.empty()) {//recursive search
                     for (auto &item: child_vec) {//vector of tree pointers
-                        auto tmp = item->search(std::get<3>(pos_begin), bin_end, possibilities);
-                        if (std::any_of(tmp.begin(), tmp.end(), [&bin_beg, &bin_end](auto &item) {
-                            return std::get<3>(item) == bin_end;
-                        }))
-                            total_match = true;
+                        auto tmp = item->search(binary_subset, possibilities);
+                        if (std::any_of(tmp.begin(), tmp.end(), [&cont_binary](auto &item) {
+                            return cont_binary.begin()+std::get<2>(item) == cont_binary.end();
+                        }))total_match = true;
                         if (tmp != possibilities) {
                             std::for_each(tmp.begin(), tmp.end(), [&tmp, &new_recursive](auto &item1) {
                                 if (std::none_of(new_recursive.begin(), new_recursive.end(), [&item1](auto &item2) {
@@ -1092,12 +1133,12 @@ namespace uh::trees {
 
                 //slow search
                 for (auto &c: *children) {
-                    if (!child_vec.empty() && std::get<1>(c) == *std::get<3>(pos_begin))continue;
+                    if (!child_vec.empty() && std::get<1>(c) == *(cont_binary.begin()+std::get<2>(pos_begin)))continue;
                     for (auto &item: std::get<0>(c)) {//vector of tree pointers
-                        if (std::get<3>(pos_begin) >= bin_end) {
+                        if (cont_binary.begin()+std::get<2>(pos_begin) == cont_binary.end()) {
                             continue;
                         }
-                        auto tmp = item->search(std::get<3>(pos_begin), bin_end, possibilities);
+                        auto tmp = item->search(binary_subset, possibilities);
                         if (tmp != possibilities) {
                             std::for_each(tmp.begin(), tmp.end(), [&tmp, &new_recursive](auto &item1) {
                                 if (std::none_of(new_recursive.begin(), new_recursive.end(), [&item1](auto &item2) {

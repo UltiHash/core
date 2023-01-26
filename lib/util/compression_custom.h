@@ -11,20 +11,14 @@ namespace uh::util{
     class compression_custom {
     public:
 
-        std::vector<unsigned char> compress(const std::vector<unsigned char> &input){
-            return compress(input.begin(),input.end());
+        template<class Container>
+        std::vector<unsigned char> compress(const Container &input){
+            return std::vector<unsigned char>{input.cbegin(),input.cend()};
         }
 
-        std::vector<unsigned char> decompress(const std::vector<unsigned char> &input){
-            return decompress(input.begin(),input.end());
-        }
-
-        std::vector<unsigned char> compress(auto beg, auto end){
-            return std::vector<unsigned char>{beg,end};
-        }
-
-        std::vector<unsigned char> decompress(auto beg, auto end){
-            return std::vector<unsigned char>{beg,end};
+        template<class Container>
+        std::vector<unsigned char> decompress(const Container &input){
+            return std::vector<unsigned char>{input.cbegin(),input.cend()};
         }
     };
 }
