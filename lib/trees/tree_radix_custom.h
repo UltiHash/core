@@ -328,7 +328,7 @@ namespace uh::trees {
                 uh::util::compression_custom comp{};
                 auto out_list = std::vector<tree_radix_custom *>{};
 
-                if(bin_beg_incoming == bin_end_incoming){
+                if(bin_beg_incoming >= bin_end_incoming){
                     return std::make_tuple((std::size_t)0,(std::size_t)0,(std::size_t)0,out_list,first_section_tree,
                                            last_section_tree, append_tree, total_match,(std::size_t )0);
                 }
@@ -812,7 +812,7 @@ namespace uh::trees {
             auto tree_test_sequence = [&reverse](tree_radix_custom *cur_tree, auto bin_beg_incoming,
                                                  auto bin_end_incoming,const auto data_beg_intern,
                                                  auto bin_beg_found, auto bin_end_found) {
-                if(bin_beg_incoming == bin_end_incoming){
+                if(bin_beg_incoming >= bin_end_incoming){
                     return std::make_tuple((std::size_t)0,(std::size_t)0,(std::size_t)0);
                 }
                 //checking if children need to be generated before and after the found input peace, reference to data of tree required
@@ -847,12 +847,12 @@ namespace uh::trees {
                 //only the new append part may be compressed
                 //before splitting or modifying a block it needs to be uncompressed
 
-                bool first_section_tree = std::distance(child_beg_beg, child_end_beg) > 1;
-                bool last_section_tree = child_beg_end != child_end_end;
+                //bool first_section_tree = std::distance(child_beg_beg, child_end_beg) > 1;
+                //bool last_section_tree = child_beg_end != child_end_end;
 
                 bool append_tree =
                         std::distance(child_beg_append, child_end_append) > 0 && child_beg_append != bin_end_incoming;
-                bool total_match = std::distance(child_beg_mid, child_end_mid) == cur_tree->data.size();
+                //bool total_match = std::distance(child_beg_mid, child_end_mid) == cur_tree->data.size();
 
                 uh::util::compression_custom comp{};
 
@@ -870,45 +870,28 @@ namespace uh::trees {
                                            set_vector.size(),
                                            comp.compress(set_vector.cbegin(), set_vector.cend()).size());
                 } else {
-                    if (total_match) {
-                        //a total match can still have appending structure
-                        if (append_tree) {
-                            /*
-                            //either find child is empty and test add tree or add_test to another child tree
-                            auto child_vec = child_vector(*child_beg_append);
-                            if(child_vec.empty()){
-                                //child would have been created and the append size would have been added to a new tree
-                            }
-                            else{
-                                //on search there was no match on the tree node, so we assume that a new node will be created carrying append
-                            }
-                             */
-                            //either way the appending size will be added and new space will be needed
-                            return std::make_tuple(
-                                    (std::size_t) std::distance(child_beg_mid, child_end_mid)+std::distance(child_beg_append,child_end_append),
-                                    (std::size_t) std::distance(child_beg_append,child_end_append),
-                                    (std::size_t) comp.compress(child_beg_append,child_end_append).size());
+                    //a total match can still have appending structure
+                    if (append_tree) {
+                        /*
+                        //either find child is empty and test add tree or add_test to another child tree
+                        auto child_vec = child_vector(*child_beg_append);
+                        if(child_vec.empty()){
+                            //child would have been created and the append size would have been added to a new tree
                         }
-                        //return implicit 0 with unsigned long
-                        return std::make_tuple((std::size_t) std::distance(bin_beg_found, bin_end_found),
-                                               (std::size_t) 0,
-                                               (std::size_t) 0);//nothing to add, only reference
-                    } else {
-                        //data will split into a maximum of 3 parts and by that will add 2 more tree nodes on front and/or back
-                        if (append_tree) {
-                            //as on total match in this case
-                            return std::make_tuple(
-                                    (std::size_t) std::distance(child_beg_mid, child_end_mid)+std::distance(child_beg_append,child_end_append),
-                                    (std::size_t) std::distance(child_beg_append,child_end_append),
-                                    (std::size_t) comp.compress(child_beg_append,child_end_append).size());
+                        else{
+                            //on search there was no match on the tree node, so we assume that a new node will be created carrying append
                         }
-                        //return implicit 0 with unsigned long
-                        //nothing to add on RAM, only splitting up the blocks on disk
+                         */
+                        //either way the appending size will be added and new space will be needed
                         return std::make_tuple(
-                                (std::size_t) std::distance(child_beg_mid, child_end_mid),
-                                (std::size_t) 0,
-                                (std::size_t) 0);
+                                (std::size_t) std::distance(child_beg_mid, child_end_mid)+std::distance(child_beg_append,child_end_append),
+                                (std::size_t) std::distance(child_beg_append,child_end_append),
+                                (std::size_t) comp.compress(child_beg_append,child_end_append).size());
                     }
+                    //return implicit 0 with unsigned long
+                    return std::make_tuple((std::size_t) std::distance(bin_beg_found, bin_end_found),
+                                           (std::size_t) 0,
+                                           (std::size_t) 0);//nothing to add, only reference
                 }
             };
 
