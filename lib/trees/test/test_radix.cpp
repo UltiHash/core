@@ -12,110 +12,118 @@
 #include <trees/tree_radix_custom.h>
 
 // ------------- Tests Follow --------------
-BOOST_AUTO_TEST_CASE( compare_test )
+BOOST_AUTO_TEST_CASE(compare_test)
 {
     uh::trees::tree_radix_custom<std::vector<unsigned char>> t;
     BOOST_CHECK(t.children_reference().empty());
     std::string hello_string = "Hello World";
     std::string hello_string_long = "Hello World of tomorrow!";
     std::string hello_string_late = "Do not say \"Hello World!\"";
-    auto data_string = std::vector<unsigned char>{hello_string.begin(),hello_string.end()};
-    auto data_string_long = std::vector<unsigned char>{hello_string_long.begin(),hello_string_long.end()};
-    auto data_string_late = std::vector<unsigned char>{hello_string_late.begin(),hello_string_late.end()};
+    auto data_string = std::vector<unsigned char>{hello_string.begin(), hello_string.end()};
+    auto data_string_long = std::vector<unsigned char>{hello_string_long.begin(), hello_string_long.end()};
+    auto data_string_late = std::vector<unsigned char>{hello_string_late.begin(), hello_string_late.end()};
 
-    auto result1 = t.compare_ultihash(data_string_long.cbegin(),data_string_long.cend(),data_string.cbegin(),data_string.cend());
-    auto result2 = t.compare_ultihash(data_string_late.cbegin(),data_string_late.cend(),data_string_long.cbegin(),data_string_long.cend());
+    auto result1 = t.compare_ultihash(data_string_long.cbegin(), data_string_long.cend(), data_string.cbegin(),
+                                      data_string.cend());
+    auto result2 = t.compare_ultihash(data_string_late.cbegin(), data_string_late.cend(), data_string_long.cbegin(),
+                                      data_string_long.cend());
 
-    BOOST_CHECK(std::get<0>(result1[0])==data_string_long.cbegin());
-    BOOST_CHECK(std::get<1>(result1[0])==data_string.cbegin());
-    BOOST_CHECK(std::get<2>(result1[0])==data_string.cbegin()+11);
+    BOOST_CHECK(std::get<0>(result1[0]) == data_string_long.cbegin());
+    BOOST_CHECK(std::get<1>(result1[0]) == data_string.cbegin());
+    BOOST_CHECK(std::get<2>(result1[0]) == data_string.cbegin() + 11);
 
-    BOOST_CHECK(std::get<0>(result2[0])==data_string_late.cbegin()+12);
-    BOOST_CHECK(std::get<1>(result2[0])==data_string_long.cbegin());
-    BOOST_CHECK(std::get<2>(result2[0])==data_string_long.cbegin()+11);
+    BOOST_CHECK(std::get<0>(result2[0]) == data_string_late.cbegin() + 12);
+    BOOST_CHECK(std::get<1>(result2[0]) == data_string_long.cbegin());
+    BOOST_CHECK(std::get<2>(result2[0]) == data_string_long.cbegin() + 11);
 
     std::string hello_world_string = "Hello World";
-    while(hello_world_string.size()<2*MINIMUM_MATCH_SIZE+11){
-        hello_world_string.insert(hello_world_string.begin(),'-');
-        hello_world_string.insert(hello_world_string.end(),'-');
+    while (hello_world_string.size() < 2 * MINIMUM_MATCH_SIZE + 11) {
+        hello_world_string.insert(hello_world_string.begin(), '-');
+        hello_world_string.insert(hello_world_string.end(), '-');
     }
     std::string hello_string2 = "Hello";//totally matches at front
-    auto data_string2 = std::vector<unsigned char>{hello_world_string.begin(),hello_world_string.end()};
-    auto input_string_begin2 = std::vector<unsigned char>{hello_string2.begin(),hello_string2.end()};
-    auto result3 = t.compare_ultihash(data_string2.cbegin(),data_string2.cend(),input_string_begin2.cbegin(),input_string_begin2.cend());
-    BOOST_CHECK(std::get<0>(result3[0])==data_string2.cbegin()+2);//data iterator
-    BOOST_CHECK(std::get<1>(result3[0])==input_string_begin2.cbegin());//input iterator begin
-    BOOST_CHECK(std::get<2>(result3[0])==input_string_begin2.cbegin()+5);//input iterator end
+    auto data_string2 = std::vector<unsigned char>{hello_world_string.begin(), hello_world_string.end()};
+    auto input_string_begin2 = std::vector<unsigned char>{hello_string2.begin(), hello_string2.end()};
+    auto result3 = t.compare_ultihash(data_string2.cbegin(), data_string2.cend(), input_string_begin2.cbegin(),
+                                      input_string_begin2.cend());
+    BOOST_CHECK(std::get<0>(result3[0]) == data_string2.cbegin() + 2);//data iterator
+    BOOST_CHECK(std::get<1>(result3[0]) == input_string_begin2.cbegin());//input iterator begin
+    BOOST_CHECK(std::get<2>(result3[0]) == input_string_begin2.cbegin() + 5);//input iterator end
 }
 
-BOOST_AUTO_TEST_CASE( search_match_filter_test )
+BOOST_AUTO_TEST_CASE(search_match_filter_test)
 {
     //Test if the algorithm only detects matches that have an offset from 0 to front or back or a distance of match size
     std::string hello_world_string = "Hello World";
-    while(hello_world_string.size()<2*MINIMUM_MATCH_SIZE+11){
-        hello_world_string.insert(hello_world_string.begin(),'-');
-        hello_world_string.insert(hello_world_string.end(),'-');
+    while (hello_world_string.size() < 2 * MINIMUM_MATCH_SIZE + 11) {
+        hello_world_string.insert(hello_world_string.begin(), '-');
+        hello_world_string.insert(hello_world_string.end(), '-');
     }
     std::string hello_string = "Hello";//totally matches at front
     std::string world_string = "World";//totally matches at back
-    auto data_string = std::vector<unsigned char>{hello_world_string.begin(),hello_world_string.end()};
-    auto input_string_begin = std::vector<unsigned char>{hello_string.begin(),hello_string.end()};
-    auto input_string_end = std::vector<unsigned char>{world_string.begin(),world_string.end()};
+    auto data_string = std::vector<unsigned char>{hello_world_string.begin(), hello_world_string.end()};
+    auto input_string_begin = std::vector<unsigned char>{hello_string.begin(), hello_string.end()};
+    auto input_string_end = std::vector<unsigned char>{world_string.begin(), world_string.end()};
 
     uh::trees::tree_radix_custom<std::vector<unsigned char>> t;
-    auto result = t.search_match_filter(data_string.cbegin(),data_string.cend(),input_string_begin.cbegin(),input_string_begin.cend());
-    BOOST_CHECK(result.size()==1);
-    BOOST_CHECK(std::get<1>(result[0])==5);
+    auto result = t.search_match_filter(data_string.cbegin(), data_string.cend(), input_string_begin.cbegin(),
+                                        input_string_begin.cend());
+    BOOST_CHECK(result.size() == 1);
+    BOOST_CHECK(std::get<1>(result[0]) == 5);
 
     auto last_it_outer_list = (--(std::get<0>(result[0]).end()));
     auto last_it_inner_list = (--(last_it_outer_list->end()));
 
-    BOOST_CHECK(std::get<0>(std::get<1>(*last_it_inner_list)[0])==data_string.cbegin()+2);//data iterator
-    BOOST_CHECK(std::get<1>(std::get<1>(*last_it_inner_list)[0])==input_string_begin.cbegin());//input iterator begin
-    BOOST_CHECK(std::get<2>(std::get<1>(*last_it_inner_list)[0])==input_string_begin.cbegin()+5);//input iterator end
+    BOOST_CHECK(std::get<0>(std::get<1>(*last_it_inner_list)[0]) == data_string.cbegin() + 2);//data iterator
+    BOOST_CHECK(std::get<1>(std::get<1>(*last_it_inner_list)[0]) == input_string_begin.cbegin());//input iterator begin
+    BOOST_CHECK(
+            std::get<2>(std::get<1>(*last_it_inner_list)[0]) == input_string_begin.cbegin() + 5);//input iterator end
 
     data_string.erase(data_string.cbegin());
-    data_string.erase(data_string.cend()-1);
+    data_string.erase(data_string.cend() - 1);
     std::string ello_Worl = "Hello World";//Algo strictly keeps front and back distance to prevent fragmentation, Match size limits distance to front and back if it does not exactly match
-    input_string_begin = std::vector<unsigned char>{ello_Worl.begin(),ello_Worl.end()};
+    input_string_begin = std::vector<unsigned char>{ello_Worl.begin(), ello_Worl.end()};
 
-    result = t.search_match_filter(data_string.cbegin(),data_string.cend(),input_string_begin.cbegin(),input_string_begin.cend());
-    BOOST_CHECK(result.size()==1);
-    BOOST_CHECK(std::get<1>(result[0])==9);
+    result = t.search_match_filter(data_string.cbegin(), data_string.cend(), input_string_begin.cbegin(),
+                                   input_string_begin.cend());
+    BOOST_CHECK(result.size() == 1);
+    BOOST_CHECK(std::get<1>(result[0]) == 9);
 
     last_it_outer_list = (--(std::get<0>(result[0]).end()));
     last_it_inner_list = (--(last_it_outer_list->end()));
 
-    BOOST_CHECK(std::get<0>(std::get<1>(*last_it_inner_list)[0])==data_string.cbegin()+MINIMUM_MATCH_SIZE);//data iterator
-    BOOST_CHECK(std::get<1>(std::get<1>(*last_it_inner_list)[0])==input_string_begin.cbegin()+1);//input iterator begin
-    BOOST_CHECK(std::get<2>(std::get<1>(*last_it_inner_list)[0])==input_string_begin.cend()-2);//input iterator end
+    BOOST_CHECK(std::get<0>(std::get<1>(*last_it_inner_list)[0]) ==
+                data_string.cbegin() + MINIMUM_MATCH_SIZE);//data iterator
+    BOOST_CHECK(
+            std::get<1>(std::get<1>(*last_it_inner_list)[0]) == input_string_begin.cbegin() + 1);//input iterator begin
+    BOOST_CHECK(std::get<2>(std::get<1>(*last_it_inner_list)[0]) == input_string_begin.cend() - 2);//input iterator end
 }
 
-BOOST_AUTO_TEST_CASE( search_empty_test )
+BOOST_AUTO_TEST_CASE(search_empty_test)
 {
     uh::trees::tree_radix_custom<std::vector<unsigned char>> t;
     std::string hello_string = "Hello";
-    auto data_string = std::vector<unsigned char>{hello_string.begin(),hello_string.end()};
-    auto result = t.search(data_string.cbegin(),data_string.cend());
+    auto data_string = std::vector<unsigned char>{hello_string.begin(), hello_string.end()};
+    auto result = t.search(data_string.cbegin(), data_string.cend());
     BOOST_CHECK(result.empty());
 }
 
-BOOST_AUTO_TEST_CASE( radix_constructor_test )
+BOOST_AUTO_TEST_CASE(radix_constructor_test)
 {
-    auto* t = new uh::trees::tree_radix_custom<std::vector<unsigned char>>{};
+    auto *t = new uh::trees::tree_radix_custom<std::vector<unsigned char>>{};
     BOOST_CHECK(t->children_reference().empty());
     std::string hello_string = "Hello World";
-    auto data_string = std::vector<unsigned char>{hello_string.begin(),hello_string.end()};
+    auto data_string = std::vector<unsigned char>{hello_string.begin(), hello_string.end()};
     delete t;
-    t = new uh::trees::tree_radix_custom<std::vector<unsigned char>>(data_string.cbegin(),data_string.cend());
+    t = new uh::trees::tree_radix_custom<std::vector<unsigned char>>(data_string.cbegin(), data_string.cend());
     BOOST_CHECK(t->children_reference().empty());
-    BOOST_CHECK(t->size()==11);
-    BOOST_CHECK_EQUAL_COLLECTIONS(hello_string.begin(),hello_string.end(),t->data.begin(),t->data.end());
-    auto result = t->add(data_string.cbegin(),data_string.cend());
-    BOOST_CHECK(std::get<0>(result[0])==11 && std::get<1>(result[0])==0);//total match
+    BOOST_CHECK(t->size() == 11);
+    BOOST_CHECK_EQUAL_COLLECTIONS(hello_string.begin(), hello_string.end(), t->data.begin(), t->data.end());
+    auto result = t->add(data_string.cbegin(), data_string.cend());
+    BOOST_CHECK(std::get<0>(result[0]) == 11 && std::get<1>(result[0]) == 0);//total match
 }
 
-BOOST_AUTO_TEST_CASE( add_test )
+BOOST_AUTO_TEST_CASE(add_test)
 {
     /*
     uh::trees::tree_radix_custom t_nil1;
@@ -166,7 +174,7 @@ BOOST_AUTO_TEST_CASE( add_test )
     delete t_nil2;*/
 }
 
-BOOST_AUTO_TEST_CASE( search_test )
+BOOST_AUTO_TEST_CASE(search_test)
 {
     /*
     uh::trees::tree_radix_custom t_nil1;
@@ -200,7 +208,7 @@ BOOST_AUTO_TEST_CASE( search_test )
      */
 }
 
-BOOST_AUTO_TEST_CASE( insert_test )
+BOOST_AUTO_TEST_CASE(insert_test)
 {
     uh::trees::tree_radix_custom<std::vector<unsigned char>> t_nil1;
     uh::trees::tree_radix_custom<std::vector<unsigned char>> t_nil2;
