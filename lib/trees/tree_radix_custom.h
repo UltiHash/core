@@ -404,12 +404,7 @@ namespace uh::trees {
                             auto set_vector = std::vector<unsigned char>{std::get<1>(*match_beg),
                                                                          std::get<2>(*match_beg)};
 
-                            if constexpr (!reverse) {
-                                std::get<3>(*match_beg)->data = set_vector;
-                            } else {
-                                std::reverse(set_vector.begin(), set_vector.end());
-                                std::get<3>(*match_beg)->data = set_vector;
-                            }
+                            std::get<3>(*match_beg)->data->assign(set_vector.cbegin(),set_vector.cend());
                             out_vector.push_back(std::get<3>(*match_beg));
                             std::get<0>(out_change_tuple) += (std::size_t) std::distance(std::get<1>(*match_beg),
                                                                                          std::get<2>(*match_beg));
