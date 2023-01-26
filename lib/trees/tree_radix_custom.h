@@ -276,20 +276,9 @@ namespace uh::trees {
 
             //some element and an end element at least required
             //TODO: add cross update from forward and backward children
-            auto tree_building_sequence = [](tree_radix_custom *cur_tree,
+            auto tree_building_sequence = [&reverse](tree_radix_custom *cur_tree,
                                              auto bin_beg_incoming, auto bin_end_incoming, auto data_beg_intern,
                                              auto bin_beg_found, auto bin_end_found) {
-                constexpr bool reverse = (
-                        std::is_same<std::vector<unsigned char>::const_reverse_iterator, decltype(bin_beg_incoming)>::value ||
-                        std::is_same<std::list<unsigned char>::const_reverse_iterator, decltype(bin_beg_incoming)>::value ||
-                        std::is_same<std::deque<unsigned char>::const_reverse_iterator, decltype(bin_beg_incoming)>::value);
-                std::size_t tree_front_data_front_absolute;
-                if constexpr (!reverse){
-                    tree_front_data_front_absolute=std::distance(cur_tree->data.cbegin(), data_beg_intern) - 1;
-                }
-                else{
-                    tree_front_data_front_absolute=std::distance(cur_tree->data.crbegin(), data_beg_intern) - 1;
-                }
                 //checking if children need to be generated before and after the found input peace, reference to data of tree required
                 //child before found, reference data
                 decltype(bin_beg_found) child_beg_beg, child_beg_mid, child_beg_end;
@@ -334,7 +323,7 @@ namespace uh::trees {
 
                 if(bin_beg_incoming >= bin_end_incoming){
                     return std::make_tuple((std::size_t)0,(std::size_t)0,(std::size_t)0,out_list,first_section_tree,
-                                           last_section_tree, append_tree, total_match,(std::size_t )0);
+                                           last_section_tree, append_tree, total_match);
                 }
 
                 //search function already determined that this is the tree that needs to fill in the data or to split somehow
@@ -354,8 +343,7 @@ namespace uh::trees {
                     return std::make_tuple((std::size_t) std::distance(bin_beg_found, bin_end_found),
                                            (std::size_t) std::distance(bin_beg_found, bin_end_found),
                                            (std::size_t) comp.compress(bin_beg_found, bin_end_found).size(), out_list,
-                                           first_section_tree, last_section_tree, append_tree, total_match,
-                                           tree_front_data_front_absolute);
+                                           first_section_tree, last_section_tree, append_tree, total_match);
                 } else {
                     std::size_t size_integrated{}, size_compressed{}, size_uncompressed{};
                     if (total_match) {//only a maximum of 1 tree creation or just 0 in case of reference
@@ -378,8 +366,7 @@ namespace uh::trees {
                                 (decltype(cur_tree->data.size())) size_integrated,
                                 (decltype(cur_tree->data.size())) size_uncompressed,
                                 (decltype(cur_tree->data.size())) size_compressed, out_list, first_section_tree,
-                                last_section_tree, append_tree, total_match,
-                                tree_front_data_front_absolute);//nothing to add, only reference
+                                last_section_tree, append_tree, total_match);//nothing to add, only reference
                     } else {
                         //first section tree, after split try
                         //data will split into a maximum of 3 parts and by that will add 2 more tree nodes on front and/or back; start with first section
@@ -510,7 +497,7 @@ namespace uh::trees {
                                 (decltype(cur_tree->data.size())) size_integrated,
                                 (decltype(cur_tree->data.size())) size_uncompressed,
                                 (decltype(cur_tree->data.size())) size_compressed, out_list, first_section_tree,
-                                last_section_tree, append_tree, total_match, tree_front_data_front_absolute);
+                                last_section_tree, append_tree, total_match);
                     }
                 }
             };
@@ -591,7 +578,13 @@ namespace uh::trees {
                         bool last_section_tree = std::get<5>(out_size);
                         bool append_tree = std::get<6>(out_size);
                         bool total_match = std::get<7>(out_size);
-                        std::size_t tree_front_data_front_absolute = std::get<8>(out_size);
+                        std::size_t tree_front_data_front_absolute;
+                        if constexpr (!reverse){
+                            tree_front_data_front_absolute=std::distance(std::get<3>(*match_beg)->data.cbegin(), std::get<0>(*match_beg)) - 1;
+                        }
+                        else{
+                            tree_front_data_front_absolute=std::distance(std::get<3>(*match_beg)->data.crbegin(), std::get<0>(*match_beg)) - 1;
+                        }
 
                         decltype(out_vector.begin()) first_tree_out, middle_tree_out, last_tree_out, append_tree_out;
 
