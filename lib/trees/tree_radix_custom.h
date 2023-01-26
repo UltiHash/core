@@ -876,8 +876,8 @@ namespace uh::trees {
                             //either way the appending size will be added and new space will be needed
                             return std::make_tuple(
                                     (std::size_t) std::distance(bin_beg_found, bin_end_found),
-                                    (std::size_t) std::distance(child_beg_append, child_end_append),
-                                    (std::size_t) comp.compress(child_beg_append, child_end_append).size());
+                                    (std::size_t) std::distance(bin_beg_found, bin_end_found),
+                                    (std::size_t) comp.compress(bin_beg_found, bin_end_found).size());
                         }
                         //return implicit 0 with unsigned long
                         return std::make_tuple((std::size_t) std::distance(bin_beg_found, bin_end_found),
