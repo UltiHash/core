@@ -1257,7 +1257,13 @@ namespace uh::trees {
                 }
             }
 
-            possibilities.insert(possibilities.end(), new_recursive.begin(), new_recursive.end());
+            std::for_each(new_recursive.begin(), new_recursive.end(), [&possibilities, &new_recursive](auto &item1) {
+                if (std::none_of(possibilities.begin(), possibilities.end(), [&item1](auto &item2) {
+                    return item2 == item1;
+                })) {
+                    possibilities.push_back(item1);
+                }
+            });
 
             //return the largest match with the lowest offset on the last tree, as far as there is a last tree...
             std::sort(possibilities.begin(), possibilities.end(), [](auto &a, auto &b) {
