@@ -1198,16 +1198,22 @@ namespace uh::trees {
                 if (std::get<3>(pos_begin) == bin_end) {
                     continue;
                 }
+                bool total_match = false;
                 auto child_vec = child_vector(*std::get<3>(pos_begin));
                 if (!child_vec.empty()) {//recursive search
                     for (auto &item: child_vec) {//vector of tree pointers
-                        auto new_search_results_recursive = item->search(std::get<3>(pos_begin), bin_end,
-                                                                         possibilities);
-                        if (new_search_results_recursive != possibilities)
-                            new_recursive.insert(new_recursive.cend(), new_search_results_recursive.begin(),
-                                                 new_search_results_recursive.end());
+                        auto tmp = item->search(std::get<3>(pos_begin), bin_end, possibilities);
+                        if(std::any_of(tmp.begin(),tmp.end(),[&bin_beg,&bin_end](auto &item){
+                            std::get<1>(item) == std::distance(bin_beg,bin_end);
+                        }))total_match = true;
+                        if (tmp != possibilities)
+                            new_recursive.insert(new_recursive.cend(), tmp.begin(),
+                                                 tmp.end());
                     }
                 }
+
+                if(total_match)break;
+                //do not search other children if a directed match has been found --> fast
 
                 for (auto &c: children) {
                     if (!child_vec.empty() && std::get<1>(c) == *std::get<3>(pos_begin))continue;
@@ -1215,11 +1221,9 @@ namespace uh::trees {
                         if (std::get<3>(pos_begin) == bin_end) {
                             continue;
                         }
-                        auto new_search_results_recursive = item->search(std::get<3>(pos_begin), bin_end,
-                                                                         possibilities);
-                        if (new_search_results_recursive != possibilities)
-                            new_recursive.insert(new_recursive.cend(), new_search_results_recursive.begin(),
-                                                 new_search_results_recursive.end());
+                        auto tmp = item->search(std::get<3>(pos_begin), bin_end,possibilities);
+                        if (tmp != possibilities)
+                            new_recursive.insert(new_recursive.cend(), tmp.begin(), tmp.end());
                     }
                 }
             }
