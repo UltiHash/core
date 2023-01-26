@@ -116,13 +116,15 @@ BOOST_AUTO_TEST_CASE(radix_constructor_test)
     auto data_string = std::vector<unsigned char>{hello_string.begin(), hello_string.end()};
     delete t;
     //total match test
+    t = new uh::trees::tree_radix_custom<std::vector<unsigned char>>();
+    //empty add test
+    auto result_test = t->add_test(data_string.cbegin(), data_string.cend());
+    BOOST_CHECK(std::get<0>(result_test[0]) == 11 && std::get<1>(result_test[0]) == 11);
+    delete t;
     t = new uh::trees::tree_radix_custom<std::vector<unsigned char>>(data_string.cbegin(), data_string.cend());
     BOOST_CHECK(t->children.empty());
     BOOST_CHECK(t->size() == 11);
     BOOST_CHECK_EQUAL_COLLECTIONS(hello_string.begin(), hello_string.end(), t->data.begin(), t->data.end());
-    //empty add test
-    auto result_test = t->add_test(data_string.cbegin(), data_string.cend());
-    BOOST_CHECK(std::get<0>(result_test[0]) == 11 && std::get<1>(result_test[0]) == 11);
     //adding
     auto result = t->add(data_string.cbegin(), data_string.cend());
     BOOST_CHECK(std::get<0>(result[0]) == 11 && std::get<1>(result[0]) == 0);

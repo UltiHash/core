@@ -850,7 +850,7 @@ namespace uh::trees {
                 //cases: insert front tree, insert end tree (same case as having a back insert because the end tree will just have at least 1 element in case of overflow)
                 if (cur_tree->data.empty()) {//how to insert, either empty simple insert or some tree construction anywhere
                     //simple insert into data since this seems to be a new node that can contain simple information
-                    auto set_vector = std::vector<unsigned char>{bin_beg_found, bin_end_found};
+                    auto set_vector = std::vector<unsigned char>{bin_beg_incoming, bin_end_incoming};
 
                     if constexpr (!reverse) {
                         cur_tree->data = set_vector;
@@ -859,9 +859,9 @@ namespace uh::trees {
                         cur_tree->data = set_vector;
                     }
 
-                    return std::make_tuple((std::size_t) std::distance(bin_beg_found, bin_end_found),
-                                           (std::size_t) std::distance(bin_beg_found, bin_end_found),
-                                           comp.compress(bin_beg_found, bin_end_found).size());
+                    return std::make_tuple(cur_tree->data.size(),
+                                           cur_tree->data.size(),
+                                           comp.compress(cur_tree->data.cbegin(), cur_tree->data.cend()).size());
                 } else {
                     if (total_match) {
                         //a total match can still have appending structure
