@@ -281,7 +281,6 @@ namespace uh::trees {
             //cases for search index: its empty or it has content and with that a last tree element
             if (search_index.empty()) {
                 std::tuple<std::size_t, std::size_t, std::size_t, std::list<std::tuple<std::set<tree_radix_custom *>, std::set<tree_radix_custom *>>>> out_change_tuple{};
-                auto out_size = tree_building_sequence(this, bin_beg, bin_end, data.cbegin(), bin_beg, bin_end);
                 std::get<0>(out_change_tuple) += data.size();
                 std::get<1>(out_change_tuple) += data.size();
                 if constexpr (!reverse){
