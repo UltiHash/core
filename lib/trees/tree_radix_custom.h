@@ -926,20 +926,28 @@ namespace uh::trees {
 
             for (auto &single_route: search_index) {
                 std::tuple<std::size_t, std::size_t, std::size_t> add_tup{};
+                std::size_t advance_count{};
                 auto outer_most_level = [&](auto &list) {
                     auto inner_list_level = [&](auto &tree_tuple) {
                         for (const auto &pos_tup: std::get<1>(tree_tuple)) {
                             //check if we have a full match and the input is larger than the data of the last tree
-                            auto add_list = tree_test_sequence(std::get<0>(tree_tuple), bin_beg, bin_end,std::get<0>(pos_tup),
+                            auto add_list = tree_test_sequence(std::get<0>(tree_tuple), bin_beg+advance_count, bin_end,std::get<0>(pos_tup),
                                                                std::get<1>(pos_tup), std::get<2>(pos_tup));//insert into another tree
                             std::get<0>(add_tup) += std::get<0>(add_list);
                             std::get<1>(add_tup) += std::get<1>(add_list);
                             std::get<2>(add_tup) += std::get<2>(add_list);
+                            advance_count+=std::get<0>(add_list);
                         }
                     };
                     std::for_each(list.begin(), list.end(), inner_list_level);
                 };
                 std::for_each(std::get<0>(single_route).begin(), std::get<0>(single_route).end(), outer_most_level);
+                if(bin_beg+advance_count != bin_end){
+                    auto comp = util::compression_custom{};
+                    std::get<0>(add_tup) += std::distance(bin_beg+advance_count, bin_end);
+                    std::get<1>(add_tup) += std::distance(bin_beg+advance_count, bin_end);
+                    std::get<2>(add_tup) += comp.compress(bin_beg+advance_count, bin_end).size();
+                }
                 add_tup_out.push_back(add_tup);
             }
 
