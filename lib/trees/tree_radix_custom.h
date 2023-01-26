@@ -57,7 +57,7 @@ namespace uh::trees {
             delete children;
         }
 
-        explicit tree_radix_custom(const auto &bin) : tree_radix_custom() {
+        explicit tree_radix_custom(auto &bin) : tree_radix_custom() {
             data->assign(bin.begin(), bin.end());
         }
 
@@ -183,28 +183,14 @@ namespace uh::trees {
         }
 
         /*std::vector<std::tuple<std::vector<unsigned char>::const_iterator,std::vector<unsigned char>::const_iterator,std::vector<unsigned char>::const_iterator>>*/
-        template<typename Const_iterator_data, typename Const_iterator_binary,
-                std::enable_if_t<
-                        (((std::is_same<std::vector<unsigned char>::const_iterator, Const_iterator_data>::value ||
-                           std::is_same<std::list<unsigned char>::const_iterator, Const_iterator_data>::value ||
-                           std::is_same<std::deque<unsigned char>::const_iterator, Const_iterator_data>::value) ||
-                          (std::is_same<std::vector<unsigned char>::const_reverse_iterator, Const_iterator_data>::value ||
-                           std::is_same<std::list<unsigned char>::const_reverse_iterator, Const_iterator_data>::value ||
-                           std::is_same<std::deque<unsigned char>::const_reverse_iterator, Const_iterator_data>::value))) &&
-                        (((std::is_same<std::vector<unsigned char>::const_iterator, Const_iterator_binary>::value ||
-                           std::is_same<std::list<unsigned char>::const_iterator, Const_iterator_binary>::value ||
-                           std::is_same<std::deque<unsigned char>::const_iterator, Const_iterator_binary>::value) ||
-                          (std::is_same<std::vector<unsigned char>::const_reverse_iterator, Const_iterator_binary>::value ||
-                           std::is_same<std::list<unsigned char>::const_reverse_iterator, Const_iterator_binary>::value ||
-                           std::is_same<std::deque<unsigned char>::const_reverse_iterator, Const_iterator_binary>::value))), bool> = true
-        >
+        template<class ContainerData,class ContainerBinary>
         auto
-        compare_ultihash(Const_iterator_data data_beg, Const_iterator_data data_end, Const_iterator_binary input_beg,
-                         Const_iterator_binary input_end) {
+        compare_ultihash(ContainerData &data_cont, ContainerBinary &binary_cont) {
             //if input does only fit to a shorter string as a subset of data, count becomes negative, else positive including ß
             //data offset iterator and start and end of input
-            std::vector<std::tuple<decltype(data_beg), decltype(input_end), decltype(input_beg)>> matches{};
-            if (data_beg == data_end || input_beg == input_end)return matches;
+            std::vector<std::tuple<std::size_t, std::size_t, std::size_t>> matches{};
+            if (data_cont.empty() || binary_cont.empty())return matches;
+            std::size_t current_offset = 0;
             //search forward through data
             do {
                 //first element match
@@ -212,61 +198,45 @@ namespace uh::trees {
                 if (simd_count < SIMD_UNITS) {
                     simd_count += 1;
                     lock.unlock();
-                    data_beg = std::find(std::execution::unseq, data_beg, data_end, *input_beg);
+                    current_offset = std::distance(data_cont.begin(),std::find(std::execution::unseq, data_cont.begin()+current_offset, data_cont.end(), *binary_cont.begin()));
                     lock.lock();
                     simd_count -= 1;
                     lock.unlock();
                 } else {
                     lock.unlock();
-                    data_beg = std::find(data_beg, data_end, *input_beg);
+                    current_offset = std::distance(data_cont.begin(),std::find(data_cont.begin()+current_offset, data_cont.end(), *binary_cont.begin()));
                 }
 
                 //search how long input matches
-                std::pair<decltype(data_beg), decltype(data_end)> found;
+                std::pair<decltype(data_cont.begin()), decltype(data_cont.end())> found;
                 lock.lock();
                 if (simd_count < SIMD_UNITS) {
                     simd_count += 1;
                     lock.unlock();
-                    found = std::mismatch(std::execution::unseq, data_beg, data_end, input_beg, input_end);
+                    found = std::mismatch(std::execution::unseq, data_cont.begin()+current_offset, data_cont.end(), binary_cont.begin(), binary_cont.end());
                     lock.lock();
                     simd_count -= 1;
                     lock.unlock();
                 } else {
                     lock.unlock();
-                    found = std::mismatch(data_beg, data_end, input_beg, input_end);
+                    found = std::mismatch(data_cont.begin()+current_offset, data_cont.end(), binary_cont.begin(), binary_cont.end());
                 }
-                //last input count reversed
-                std::size_t found_dist = std::distance(data_beg, found.first);
-                if (found_dist >= MINIMUM_MATCH_SIZE) {
-                    matches.emplace_back(data_beg, input_beg, input_beg + found_dist);
+
+                if (std::distance(found.first,found.second) >= MINIMUM_MATCH_SIZE) {
+                    matches.emplace_back(data_cont.begin()+current_offset, binary_cont.begin(), binary_cont.begin() + std::distance(found.first,found.second));
                 }
-                if (data_beg != data_end)data_beg++;
-            } while (data_beg < data_end);
+                if (data_cont.begin()+current_offset != data_cont.end())current_offset++;
+            } while (data_cont.begin()+current_offset != data_cont.end());
 
             return matches;
         }
 
     public:
-        template<class ContainerType, bool reverse = false>
-        std::tuple<std::size_t, std::size_t, std::size_t> add(const ContainerType &c) {
-            if constexpr (!reverse) {
-                return add(c.cbegin(), c.cend());
-            } else {
-                return add(c.crbegin(), c.crend());
-            }
-        }
 
         //returns total size integrated, new space used uncompressed, new space used compressed, list of tree references of <offset_ELEMENT,modified_LIST,added_LIST> tree nodes
-        template<typename Const_iterator,
-                std::enable_if_t<((std::is_same<std::vector<unsigned char>::const_iterator, Const_iterator>::value ||
-                                   std::is_same<std::list<unsigned char>::const_iterator, Const_iterator>::value ||
-                                   std::is_same<std::deque<unsigned char>::const_iterator, Const_iterator>::value) ||
-                                  (std::is_same<std::vector<unsigned char>::const_reverse_iterator, Const_iterator>::value ||
-                                   std::is_same<std::list<unsigned char>::const_reverse_iterator, Const_iterator>::value ||
-                                   std::is_same<std::deque<unsigned char>::const_reverse_iterator, Const_iterator>::value)), bool> = true
-        >
+        template<class ContainerData>
         std::vector<std::tuple<std::size_t, std::size_t, std::size_t, std::list<std::tuple<std::set<tree_radix_custom *>, std::set<tree_radix_custom *>>>>>
-        add(Const_iterator bin_beg, Const_iterator bin_end) {//TODO:check duplicate matches and eliminate
+        add(ContainerData &data_cont) {//TODO:check duplicate matches and eliminate
             //first search existing structure and add into the last tree to insert potentially missing information
             /*std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::vector<unsigned char>::const_iterator, std::vector<unsigned char>::const_iterator, std::vector<unsigned char>::const_iterator>>>>>, std::size_t>>*/
 
@@ -425,7 +395,8 @@ namespace uh::trees {
                                 out_vector.push_back(std::get<3>(*match_beg));
                                 size_integrated += std::get<3>(*match_beg)->data->size();
                                 if (append_tree) {
-                                    auto *tree_ptr_tmp = new tree_radix_custom(std::vector<unsigned char>{child_beg_append, child_end_append});
+                                    auto tmp_vec = std::vector<unsigned char>{child_beg_append, child_end_append};
+                                    auto *tree_ptr_tmp = new tree_radix_custom(tmp_vec);
                                     size_compressed = comp.compress(tree_ptr_tmp->data->cbegin(),
                                                                     tree_ptr_tmp->data->cend()).size();
                                     size_uncompressed += tree_ptr_tmp->data->size();
@@ -450,7 +421,8 @@ namespace uh::trees {
                                 if (first_section_tree) {
                                     //children contents need to be copied to middle tree and any references to this node need to be moved to middle tree
                                     //new middle tree required
-                                    tree_ptr_mid = new tree_radix_custom(std::vector<unsigned char>{child_beg_mid, child_end_mid});
+                                    auto tmp_vec = std::vector<unsigned char>{child_beg_mid, child_end_mid};
+                                    tree_ptr_mid = new tree_radix_custom(tmp_vec);
                                     tree_ptr_first = std::get<3>(*match_beg);
                                     out_vector.push_back(tree_ptr_first);
                                     tree_ptr_mid->block_swarm_offset =
@@ -473,7 +445,8 @@ namespace uh::trees {
                                 tree_radix_custom *tree_ptr_last;
                                 if (last_section_tree) {
                                     //create last tree
-                                    tree_ptr_last = new tree_radix_custom(std::vector<unsigned char>{child_beg_end, child_end_end});
+                                    auto tmp_vec2 = std::vector<unsigned char>{child_beg_end, child_end_end};
+                                    tree_ptr_last = new tree_radix_custom(tmp_vec2);
                                     //transfer information of middle tree to last tree and copy the children also to append tree in case it exists
                                     out_vector.push_back(tree_ptr_last);
                                     tree_ptr_last->block_swarm_offset =
@@ -487,7 +460,8 @@ namespace uh::trees {
                                     //the last tree is the last tree and may append
                                     //appending will be added after middle section in case it is available
                                     if (append_tree) {
-                                        tree_ptr_append = new tree_radix_custom(std::vector<unsigned char>{child_beg_append, child_end_append});
+                                        auto tmp_vec3 = std::vector<unsigned char>{child_beg_append, child_end_append};
+                                        tree_ptr_append = new tree_radix_custom(tmp_vec3);
                                         out_vector.push_back(tree_ptr_append);
                                         tree_ptr_append->block_swarm_offset =
                                                 tree_ptr_mid->block_swarm_offset + 1;
@@ -504,7 +478,8 @@ namespace uh::trees {
                                     //the middle tree is the last tree and may append
                                     //appending will be added after middle section in case it is available
                                     if (append_tree) {
-                                        tree_ptr_append = new tree_radix_custom(std::vector<unsigned char>{child_beg_append, child_end_append});
+                                        auto tmp_vec4 = std::vector<unsigned char>{child_beg_append, child_end_append};
+                                        tree_ptr_append = new tree_radix_custom(tmp_vec4);
                                         out_vector.push_back(tree_ptr_append);
                                         tree_ptr_append->block_swarm_offset =
                                                 tree_ptr_mid->block_swarm_offset + 1;
@@ -869,26 +844,11 @@ namespace uh::trees {
         }
 
         //returns std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<decltype(bin_beg), decltype(bin_end), decltype(bin_beg)>>>>>, std::size_t>>
-        template<typename Const_iterator_data, typename Const_iterator_binary,
-                std::enable_if_t<
-                        (((std::is_same<std::vector<unsigned char>::const_iterator, Const_iterator_data>::value ||
-                           std::is_same<std::list<unsigned char>::const_iterator, Const_iterator_data>::value ||
-                           std::is_same<std::deque<unsigned char>::const_iterator, Const_iterator_data>::value) ||
-                          (std::is_same<std::vector<unsigned char>::const_reverse_iterator, Const_iterator_data>::value ||
-                           std::is_same<std::list<unsigned char>::const_reverse_iterator, Const_iterator_data>::value ||
-                           std::is_same<std::deque<unsigned char>::const_reverse_iterator, Const_iterator_data>::value))) &&
-                        (((std::is_same<std::vector<unsigned char>::const_iterator, Const_iterator_binary>::value ||
-                           std::is_same<std::list<unsigned char>::const_iterator, Const_iterator_binary>::value ||
-                           std::is_same<std::deque<unsigned char>::const_iterator, Const_iterator_binary>::value) ||
-                          (std::is_same<std::vector<unsigned char>::const_reverse_iterator, Const_iterator_binary>::value ||
-                           std::is_same<std::list<unsigned char>::const_reverse_iterator, Const_iterator_binary>::value ||
-                           std::is_same<std::deque<unsigned char>::const_reverse_iterator, Const_iterator_binary>::value))), bool> = true
-        >
+        template<class ContainerData,class ContainerBinary>
         auto
-        search_match_filter(Const_iterator_data data_beg, Const_iterator_data data_end, Const_iterator_binary bin_beg,
-                            Const_iterator_binary bin_end,
-                            std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<decltype(data_beg), decltype(bin_end), decltype(bin_beg)>>>>>, std::size_t, decltype(bin_end), decltype(bin_beg)>> possibilities =
-                            std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<decltype(data_beg), decltype(bin_end), decltype(bin_beg)>>>>>, std::size_t, decltype(bin_end), decltype(bin_beg)>>{}) {
+        search_match_filter(ContainerData &data_cont, ContainerBinary &binary_cont,
+                            std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t, std::size_t>>>>>, std::size_t, std::size_t, std::size_t>> possibilities =
+                            std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t, std::size_t>>>>>, std::size_t, std::size_t, std::size_t>> {}) {
             auto local_matches = compare_ultihash(data_beg, data_end, bin_beg, bin_end);
 
             auto legal_match_integration = [&data_beg, &data_end](auto local_matches) {
@@ -1041,30 +1001,18 @@ namespace uh::trees {
 
         //returns the path of maximum fit and the match size
         /*std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::vector<unsigned char>::const_iterator, std::vector<unsigned char>::const_iterator, std::vector<unsigned char>::const_iterator>>>>>, std::size_t>>*/
-        template<typename Const_iterator,
-                std::enable_if_t<((std::is_same<std::vector<unsigned char>::const_iterator, Const_iterator>::value ||
-                                   std::is_same<std::list<unsigned char>::const_iterator, Const_iterator>::value ||
-                                   std::is_same<std::deque<unsigned char>::const_iterator, Const_iterator>::value) ||
-                                  (std::is_same<std::vector<unsigned char>::const_reverse_iterator, Const_iterator>::value ||
-                                   std::is_same<std::list<unsigned char>::const_reverse_iterator, Const_iterator>::value ||
-                                   std::is_same<std::deque<unsigned char>::const_reverse_iterator, Const_iterator>::value)), bool> = true
-        >
-        auto search(Const_iterator bin_beg, Const_iterator bin_end,
-                    std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<decltype(bin_beg), decltype(bin_end), decltype(bin_beg)>>>>>, std::size_t, decltype(bin_end), decltype(bin_beg)>> possibilities =
-                    std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<decltype(bin_beg), decltype(bin_end), decltype(bin_beg)>>>>>, std::size_t, decltype(bin_end), decltype(bin_beg)>>{},
+        template<class Container,bool reverse=false>
+        auto search(Container &cont,
+                    std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t, std::size_t>>>>>, std::size_t, std::size_t, std::size_t>> possibilities =
+                    std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t, std::size_t>>>>>, std::size_t, std::size_t, std::size_t>> {},
                     std::vector<tree_radix_custom *> limiter_children = std::vector<tree_radix_custom *>{}) {
 
-            if (bin_beg == bin_end ||
+            if (cont.empty() ||
                 std::any_of(limiter_children.begin(), limiter_children.end(), [this](auto &item_limit) {
                     return item_limit == this;
                 })) {
                 return possibilities;
             }
-
-            constexpr bool reverse = (
-                    std::is_same<std::vector<unsigned char>::const_reverse_iterator, decltype(bin_beg)>::value ||
-                    std::is_same<std::list<unsigned char>::const_reverse_iterator, decltype(bin_beg)>::value ||
-                    std::is_same<std::deque<unsigned char>::const_reverse_iterator, decltype(bin_beg)>::value);
 
             /*std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<decltype(bin_beg), decltype(bin_end), decltype(bin_beg)>>>>>, std::size_t,decltype(bin_end), decltype(bin_beg)>>*/
             //while a possibility still changes on search_match filter, it is continued to be executed
