@@ -809,135 +809,55 @@ namespace uh::trees {
                     std::is_same<std::list<unsigned char>::const_reverse_iterator, decltype(bin_beg)>::value ||
                     std::is_same<std::deque<unsigned char>::const_reverse_iterator, decltype(bin_beg)>::value);
 
-            auto tree_test_sequence = [&reverse](tree_radix_custom *cur_tree, auto bin_beg_incoming,
-                                                 auto bin_end_incoming,const auto data_beg_intern,
-                                                 auto bin_beg_found, auto bin_end_found) {
-                if(bin_beg_incoming >= bin_end_incoming){
-                    return std::make_tuple((std::size_t)0,(std::size_t)0,(std::size_t)0);
-                }
-                //checking if children need to be generated before and after the found input peace, reference to data of tree required
-                //child before found, reference data
-                decltype(bin_beg_found) child_beg_beg, child_beg_mid, child_beg_end;
-                decltype(bin_end_found) child_end_beg, child_end_mid, child_end_end;
-
-                if constexpr (!reverse) {
-                    child_beg_beg = cur_tree->data.cbegin();
-                    child_end_beg = std::max(data_beg_intern, child_beg_beg);
-                    //child data sequence middle, reference data
-                    child_beg_mid = data_beg_intern;
-                    child_end_mid = std::min(cur_tree->data.cend(),
-                                             child_beg_mid + std::distance(bin_beg_found, bin_end_found));
-                    //child data sequence end, reference data
-                    child_beg_end = std::min(cur_tree->data.cend(), child_end_mid + 1);
-                    child_end_end = cur_tree->data.cend();
-                } else {
-                    child_beg_beg = cur_tree->data.crbegin();
-                    child_end_beg = std::max(data_beg_intern, child_beg_beg);
-                    //child data sequence middle, reference data
-                    child_beg_mid = data_beg_intern;
-                    child_end_mid = std::min(cur_tree->data.crend(),
-                                             child_beg_mid + std::distance(bin_beg_found, bin_end_found));
-                    //child data sequence end, reference data
-                    child_beg_end = std::min(cur_tree->data.crend(), child_end_mid + 1);
-                    child_end_end = cur_tree->data.crend();
-                }
-                //child after found, reference new input
-                decltype(bin_beg_found) child_beg_append = std::min(bin_end_found + 1, bin_end_incoming);
-                decltype(bin_end_found) child_end_append = bin_end_incoming;
-                //only the new append part may be compressed
-                //before splitting or modifying a block it needs to be uncompressed
-
-                //bool first_section_tree = std::distance(child_beg_beg, child_end_beg) > 1;
-                //bool last_section_tree = child_beg_end != child_end_end;
-
-                bool append_tree =
-                        std::distance(child_beg_append, child_end_append) > 0 && child_beg_append != bin_end_incoming;
-                //bool total_match = std::distance(child_beg_mid, child_end_mid) == cur_tree->data.size();
-
-                uh::util::compression_custom comp{};
-
-                //search function already determined that this is the tree that needs to fill in the data or to split somehow
-                //cases: insert front tree, insert end tree (same case as having a back insert because the end tree will just have at least 1 element in case of overflow)
-                if (cur_tree->data.empty()) {//how to insert, either empty simple insert or some tree construction anywhere
-                    //simple insert into data since this seems to be a new node that can contain simple information
-                    auto set_vector = std::vector<unsigned char>{bin_beg_incoming, bin_end_incoming};
-
-                    if constexpr (reverse) {
-                        std::reverse(set_vector.begin(), set_vector.end());
-                    }
-
-                    return std::make_tuple(set_vector.size(),
-                                           set_vector.size(),
-                                           comp.compress(set_vector.cbegin(), set_vector.cend()).size());
-                } else {
-                    //a total match can still have appending structure
-                    if (append_tree) {
-                        /*
-                        //either find child is empty and test add tree or add_test to another child tree
-                        auto child_vec = child_vector(*child_beg_append);
-                        if(child_vec.empty()){
-                            //child would have been created and the append size would have been added to a new tree
-                        }
-                        else{
-                            //on search there was no match on the tree node, so we assume that a new node will be created carrying append
-                        }
-                         */
-                        //either way the appending size will be added and new space will be needed
-                        return std::make_tuple(
-                                (std::size_t) std::distance(child_beg_mid, child_end_mid)+std::distance(child_beg_append,child_end_append),
-                                (std::size_t) std::distance(child_beg_append,child_end_append),
-                                (std::size_t) comp.compress(child_beg_append,child_end_append).size());
-                    }
-                    //return implicit 0 with unsigned long
-                    return std::make_tuple((std::size_t) std::distance(bin_beg_found, bin_end_found),
-                                           (std::size_t) 0,
-                                           (std::size_t) 0);//nothing to add, only reference
-                }
-            };
 
             //cases for search index: its empty or it has content and with that a last tree element
             //cases for last tree if it exists, binary fit in: match from the beginning on, match in the middle, match until the end, total match
             //all lists contain lists with a last element that had multiple matches; add up all matches
             //std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<decltype(bin_beg), decltype(bin_end), decltype(bin_beg)>>>>>, std::size_t, decltype(bin_end), decltype(bin_beg)>>
+            uh::util::compression_custom comp{};
             std::vector<std::tuple<std::size_t, std::size_t, std::size_t>> add_tup_out{};
             if (search_index.empty()) {
                 std::tuple<std::size_t, std::size_t, std::size_t> add_tup{};
-                if constexpr (!reverse) {
-                    auto append_list = tree_test_sequence(this, bin_beg, bin_end, data.cend(), data.cbegin(), data.cend());//insert into this tree, no matches, only first character must match
-                    std::get<0>(add_tup) += std::get<0>(append_list);
-                    std::get<1>(add_tup) += std::get<1>(append_list);
-                    std::get<2>(add_tup) += std::get<2>(append_list);
-                } else {
-                    auto append_list = tree_test_sequence(this, bin_beg, bin_end, data.crend(), data.crbegin(), data.crend());//insert into this tree, no matches, only first character must match
-                    std::get<0>(add_tup) += std::get<0>(append_list);
-                    std::get<1>(add_tup) += std::get<1>(append_list);
-                    std::get<2>(add_tup) += std::get<2>(append_list);
+                auto set_vector = std::vector<unsigned char>{bin_beg, bin_end};
+
+                if constexpr (reverse) {
+                    std::reverse(set_vector.begin(), set_vector.end());
                 }
+                std::get<0>(add_tup) += set_vector.size();
+                std::get<1>(add_tup) += set_vector.size();
+                std::get<2>(add_tup) += comp.compress(set_vector.cbegin(),set_vector.cend()).size();
                 add_tup_out.push_back(add_tup);
                 return add_tup_out;
             }
 
             for (auto &single_route: search_index) {
                 std::tuple<std::size_t, std::size_t, std::size_t> add_tup{};
-                std::size_t advance_count{};
+
                 for(auto &list:std::get<0>(single_route)){
                     for(auto &tree_tuple:list){
                         for(auto &pos_tup:std::get<1>(tree_tuple)){
-                            auto add_list = tree_test_sequence(std::get<0>(tree_tuple), bin_beg+advance_count, bin_beg+advance_count+std::distance(std::get<1>(pos_tup),std::get<2>(pos_tup)),std::get<0>(pos_tup),
-                                                               std::get<1>(pos_tup), std::get<2>(pos_tup));//insert into another tree
-                            std::get<0>(add_tup) += std::get<0>(add_list);
-                            std::get<1>(add_tup) += std::get<1>(add_list);
-                            std::get<2>(add_tup) += std::get<2>(add_list);
-                            advance_count+=std::get<0>(add_list);
+                            //auto add_list = tree_test_sequence(std::get<0>(tree_tuple), bin_beg, bin_beg,std::get<0>(pos_tup),
+                            //                                   std::get<1>(pos_tup), std::get<2>(pos_tup));//insert into another tree
+                            if (std::get<0>(tree_tuple)->data.empty()) {//how to insert, either empty simple insert or some tree construction anywhere
+                                //simple insert into data since this seems to be a new node that can contain simple information
+                                auto set_vector = std::vector<unsigned char>{std::get<1>(pos_tup), std::get<2>(pos_tup)};
+
+                                if constexpr (reverse) {
+                                    std::reverse(set_vector.begin(), set_vector.end());
+                                }
+                                std::get<0>(add_tup) += std::distance(std::get<1>(pos_tup),std::get<2>(pos_tup));
+                                std::get<1>(add_tup) += std::distance(std::get<1>(pos_tup),std::get<2>(pos_tup));
+                                std::get<2>(add_tup) += comp.compress(set_vector.cbegin(),set_vector.cend()).size();
+                            } else {
+                                std::get<0>(add_tup) += std::distance(std::get<1>(pos_tup),std::get<2>(pos_tup));
+                            }
                         }
                     }
                 }
-                if(bin_beg+advance_count!=bin_end)advance_count++;
-                if(bin_beg+advance_count!=bin_end){
-                    uh::util::compression_custom c{};
-                    std::get<0>(add_tup) += std::distance(bin_beg+advance_count,bin_end);
-                    std::get<1>(add_tup) += std::distance(bin_beg+advance_count,bin_end);
-                    std::get<2>(add_tup) += c.compress(bin_beg+advance_count,bin_end).size();
+                if(bin_beg+std::get<2>(add_tup)<bin_end){
+                    std::get<0>(add_tup) += std::distance(bin_beg+std::get<2>(add_tup),bin_end);
+                    std::get<1>(add_tup) += std::distance(bin_beg+std::get<2>(add_tup),bin_end);
+                    std::get<2>(add_tup) += comp.compress(bin_beg+std::get<2>(add_tup),bin_end).size();
                 }
                 add_tup_out.push_back(add_tup);
             }
