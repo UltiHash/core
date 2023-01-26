@@ -1011,6 +1011,7 @@ namespace uh::trees {
                 }
                 std::size_t advance =
                         (std::size_t) llabs(std::distance(std::get<1>(*match_beg), std::get<2>(*match_beg)));
+                if(std::get<3>(input_list_tmp) + advance < bin_end)advance++;
                 std::get<1>(input_list_tmp) += advance;
                 std::get<2>(input_list_tmp)++;
                 std::get<3>(input_list_tmp) = std::min(std::get<3>(input_list_tmp) + advance, bin_end);
@@ -1029,7 +1030,8 @@ namespace uh::trees {
                             tmp_list};
 
                     std::size_t advance =
-                            (std::size_t) llabs(std::distance(std::get<1>(*match_beg), std::get<2>(*match_beg))) - 1;
+                            (std::size_t) llabs(std::distance(std::get<1>(*match_beg), std::get<2>(*match_beg)));
+                    if(bin_beg + advance < bin_end)advance++;
                     out_possibilities.emplace_back(outer_list, advance, std::get<0>(*match_beg) + 1,
                                                    std::min(std::get<1>(*match_beg) + advance, bin_end));
                 } else
