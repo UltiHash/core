@@ -57,12 +57,8 @@ namespace uh::trees {
             delete children;
         }
 
-        explicit tree_radix_custom(auto &bin) : tree_radix_custom() {
+        explicit tree_radix_custom(const auto &bin) : tree_radix_custom() {
             data->assign(bin.begin(), bin.end());
-        }
-
-        tree_radix_custom(auto beg, auto end) : tree_radix_custom() {
-            data->assign(beg, end);
         }
 
         [[nodiscard]] std::size_t size() const {
@@ -303,7 +299,7 @@ namespace uh::trees {
                     uh::util::compression_custom comp{};
                     std::get<2>(out_change_tuple) += comp.compress(tmp_vec.begin(), tmp_vec.end()).size();
                 }
-                auto *new_tree = new tree_radix_custom{tmp_vec.begin(), tmp_vec.end()};
+                auto *new_tree = new tree_radix_custom{tmp_vec};
                 new_tree->block_swarm_offset += block_swarm_offset + 1;
                 std::get<3>(out_change_tuple).emplace_back(std::set<tree_radix_custom *>{},
                                                            std::set<tree_radix_custom *>{
@@ -429,7 +425,7 @@ namespace uh::trees {
                                 out_vector.push_back(std::get<3>(*match_beg));
                                 size_integrated += std::get<3>(*match_beg)->data->size();
                                 if (append_tree) {
-                                    auto *tree_ptr_tmp = new tree_radix_custom(child_beg_append, child_end_append);
+                                    auto *tree_ptr_tmp = new tree_radix_custom(std::vector<unsigned char>{child_beg_append, child_end_append});
                                     size_compressed = comp.compress(tree_ptr_tmp->data->cbegin(),
                                                                     tree_ptr_tmp->data->cend()).size();
                                     size_uncompressed += tree_ptr_tmp->data->size();
@@ -454,7 +450,7 @@ namespace uh::trees {
                                 if (first_section_tree) {
                                     //children contents need to be copied to middle tree and any references to this node need to be moved to middle tree
                                     //new middle tree required
-                                    tree_ptr_mid = new tree_radix_custom(child_beg_mid, child_end_mid);
+                                    tree_ptr_mid = new tree_radix_custom(std::vector<unsigned char>{child_beg_mid, child_end_mid});
                                     tree_ptr_first = std::get<3>(*match_beg);
                                     out_vector.push_back(tree_ptr_first);
                                     tree_ptr_mid->block_swarm_offset =
@@ -477,7 +473,7 @@ namespace uh::trees {
                                 tree_radix_custom *tree_ptr_last;
                                 if (last_section_tree) {
                                     //create last tree
-                                    tree_ptr_last = new tree_radix_custom(child_beg_end, child_end_end);
+                                    tree_ptr_last = new tree_radix_custom(std::vector<unsigned char>{child_beg_end, child_end_end});
                                     //transfer information of middle tree to last tree and copy the children also to append tree in case it exists
                                     out_vector.push_back(tree_ptr_last);
                                     tree_ptr_last->block_swarm_offset =
@@ -491,7 +487,7 @@ namespace uh::trees {
                                     //the last tree is the last tree and may append
                                     //appending will be added after middle section in case it is available
                                     if (append_tree) {
-                                        tree_ptr_append = new tree_radix_custom(child_beg_append, child_end_append);
+                                        tree_ptr_append = new tree_radix_custom(std::vector<unsigned char>{child_beg_append, child_end_append});
                                         out_vector.push_back(tree_ptr_append);
                                         tree_ptr_append->block_swarm_offset =
                                                 tree_ptr_mid->block_swarm_offset + 1;
@@ -508,7 +504,7 @@ namespace uh::trees {
                                     //the middle tree is the last tree and may append
                                     //appending will be added after middle section in case it is available
                                     if (append_tree) {
-                                        tree_ptr_append = new tree_radix_custom(child_beg_append, child_end_append);
+                                        tree_ptr_append = new tree_radix_custom(std::vector<unsigned char>{child_beg_append, child_end_append});
                                         out_vector.push_back(tree_ptr_append);
                                         tree_ptr_append->block_swarm_offset =
                                                 tree_ptr_mid->block_swarm_offset + 1;
