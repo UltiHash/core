@@ -370,13 +370,15 @@ namespace uh::trees {
                                            first_section_tree, last_section_tree, append_tree, total_match,
                                            tree_front_data_front_absolute);
                 } else {
+                    std::size_t size_integrated{}, size_compressed{}, size_uncompressed{};
                     if (total_match) {//only a maximum of 1 tree creation or just 0 in case of reference
                         //a total match can still have appending structure
-                        std::size_t append_size_compressed{}, append_size_uncompressed{};
                         out_list.push_back(cur_tree);
+                        size_integrated += cur_tree->data.size();
                         if (append_tree) {
-                            append_size_compressed = comp.compress(child_beg_mid, child_end_mid).size();
-                            append_size_uncompressed = std::distance(child_beg_mid, child_end_mid);
+                            size_compressed = comp.compress(child_beg_mid, child_end_mid).size();
+                            size_uncompressed += std::distance(child_beg_mid, child_end_mid);
+                            size_integrated+=size_uncompressed;
                             //either find child is empty and test add tree or add_test to another child tree
 
                             auto *tree_ptr_tmp = new tree_radix_custom(child_beg_append, child_end_append);
@@ -386,16 +388,15 @@ namespace uh::trees {
                         }
                         //return implicit 0 with unsigned long
                         return std::make_tuple(
-                                (decltype(cur_tree->data.size())) append_size_uncompressed,
-                                (decltype(cur_tree->data.size())) append_size_uncompressed,
-                                (decltype(cur_tree->data.size())) append_size_compressed, out_list, first_section_tree,
+                                (decltype(cur_tree->data.size())) size_integrated,
+                                (decltype(cur_tree->data.size())) size_uncompressed,
+                                (decltype(cur_tree->data.size())) size_compressed, out_list, first_section_tree,
                                 last_section_tree, append_tree, total_match,
                                 tree_front_data_front_absolute);//nothing to add, only reference
                     } else {
                         //first section tree, after split try
                         //data will split into a maximum of 3 parts and by that will add 2 more tree nodes on front and/or back; start with first section
                         tree_radix_custom *tree_ptr_first;
-                        std::size_t size_integrated{}, size_compressed{}, size_uncompressed{};
 
                         tree_radix_custom *tree_ptr_mid;
                         tree_radix_custom *tree_ptr_append;
