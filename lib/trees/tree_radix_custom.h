@@ -1006,11 +1006,11 @@ namespace uh::trees {
                     }
                 }
                 std::size_t advance =
-                        (std::size_t) llabs(std::distance(std::get<1>(*match_beg), std::get<2>(*match_beg)));
+                        (std::size_t) llabs(std::distance(std::get<1>(*match_beg), std::get<2>(*match_beg)))-1;
                 std::get<1>(input_list_tmp) += advance;
                 std::get<2>(input_list_tmp)++;
                 std::get<3>(input_list_tmp) += advance;
-                if(std::get<3>(input_list_tmp)!=bin_end)std::get<3>(input_list_tmp)++;
+
                 out_possibilities.push_back(input_list_tmp);
             };
 
@@ -1025,9 +1025,9 @@ namespace uh::trees {
                             tmp_list};
 
                     std::size_t advance =
-                            (std::size_t) llabs(std::distance(std::get<1>(*match_beg), std::get<2>(*match_beg)));
+                            (std::size_t) llabs(std::distance(std::get<1>(*match_beg), std::get<2>(*match_beg)))-1;
                     out_possibilities.emplace_back(outer_list, advance, std::get<0>(*match_beg) + 1,
-                                                   std::get<1>(*match_beg) + advance + (std::get<1>(*match_beg) + advance != bin_end));
+                                                   std::get<1>(*match_beg) + advance);
                 } else
                     for (auto &input_list_tmp: possibilities) {//COPY input list and create different path calculation
                         possibilities_manage(input_list_tmp);
@@ -1142,7 +1142,7 @@ namespace uh::trees {
                 for (auto &c: children) {
                     if (!child_vec.empty() && std::get<1>(c) == *std::get<3>(pos_begin))continue;
                     for (auto &item: std::get<0>(c)) {//vector of tree pointers
-                        if (std::get<3>(pos_begin) == bin_end) {
+                        if (std::get<3>(pos_begin) >= bin_end) {
                             continue;
                         }
                         auto tmp = item->search(std::get<3>(pos_begin), bin_end,possibilities);
