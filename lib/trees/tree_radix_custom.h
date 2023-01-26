@@ -328,6 +328,12 @@ namespace uh::trees {
                 uh::util::compression_custom comp{};
                 auto out_list = std::vector<tree_radix_custom *>{};
 
+                if(bin_beg_incoming == bin_end_incoming){
+                    return std::make_tuple((std::size_t)0,(std::size_t)0,(std::size_t)0,out_list,first_section_tree,
+                                           last_section_tree, append_tree, total_match,
+                                           tree_front_data_front_absolute);
+                }
+
                 //search function already determined that this is the tree that needs to fill in the data or to split somehow
                 //cases: insert front tree, insert cend tree (same case as having a back insert because the cend tree will just have at least 1 element in case of overflow)
                 if (cur_tree->data.empty()) {//how to insert, either empty simple insert or some tree construction anywhere
@@ -807,6 +813,9 @@ namespace uh::trees {
             auto tree_test_sequence = [&reverse](tree_radix_custom *cur_tree, auto bin_beg_incoming,
                                                  auto bin_end_incoming,const auto data_beg_intern,
                                                  auto bin_beg_found, auto bin_end_found) {
+                if(bin_beg_incoming == bin_end_incoming){
+                    return std::make_tuple((std::size_t)0,(std::size_t)0,(std::size_t)0);
+                }
                 //checking if children need to be generated before and after the found input peace, reference to data of tree required
                 //child before found, reference data
                 decltype(bin_beg_found) child_beg_beg, child_beg_mid, child_beg_end;
