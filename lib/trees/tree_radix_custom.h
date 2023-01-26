@@ -335,14 +335,8 @@ namespace uh::trees {
                 //before splitting or modifying a block it needs to be uncompressed
 
                 bool first_section_tree = std::distance(child_beg_beg, child_end_beg) > 1;
-                bool last_section_tree;
-                if constexpr (!reverse) {
-                    last_section_tree =
-                            child_beg_end == child_end_end && child_end_end == cur_tree->data.cend();
-                } else {
-                    last_section_tree =
-                            child_beg_end == child_end_end && child_end_end == cur_tree->data.crend();
-                }
+                bool last_section_tree = child_beg_end != child_end_end;
+
                 bool append_tree =
                         std::distance(child_beg_append, child_end_append) > 0 && child_beg_append != bin_end_incoming;
                 bool total_match = std::distance(child_beg_mid, child_end_mid) == cur_tree->data.size();

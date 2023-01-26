@@ -123,8 +123,10 @@ BOOST_AUTO_TEST_CASE(radix_constructor_test)
     BOOST_CHECK(std::get<0>(result[0]) == 11 && std::get<1>(result[0]) == 0);//total match
 }
 
+//test the function add and the function add_test and if they calculate the correct
 BOOST_AUTO_TEST_CASE(add_test)
 {
+
     /*
     uh::trees::tree_radix_custom t_nil1;
     auto address_list1 = t_nil1.add("Hello World",11);
