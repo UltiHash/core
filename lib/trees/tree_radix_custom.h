@@ -1074,9 +1074,17 @@ std::shared_mutex simd_protect{};
             std::size_t single_count{};
             decltype(possibilities) new_find{};
             while(single_pos != possibilities.end()){
-                if(std::get<2>(*single_pos)== data.cend()|| std::get<3>(*single_pos) == bin_end){
-                    single_count++;
-                    continue;
+                if constexpr (!reverse){
+                    if(std::get<2>(*single_pos)== data.cend()|| std::get<3>(*single_pos) == bin_end){
+                        single_count++;
+                        continue;
+                    }
+                }
+                else{
+                    if(std::get<2>(*single_pos)== data.crend()|| std::get<3>(*single_pos) == bin_end){
+                        single_count++;
+                        continue;
+                    }
                 }
                 decltype(possibilities) tmp;
                 if constexpr (!reverse){
