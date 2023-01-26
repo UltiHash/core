@@ -15,7 +15,7 @@
 BOOST_AUTO_TEST_CASE(compare_test)
 {
     uh::trees::tree_radix_custom<std::vector<unsigned char>> t;
-    BOOST_CHECK(t.children_reference().empty());
+    BOOST_CHECK(t.children.empty());
     std::string hello_string = "Hello World";
     std::string hello_string_long = "Hello World of tomorrow!";
     std::string hello_string_late = "Do not say \"Hello World!\"";
@@ -111,21 +111,46 @@ BOOST_AUTO_TEST_CASE(search_empty_test)
 BOOST_AUTO_TEST_CASE(radix_constructor_test)
 {
     auto *t = new uh::trees::tree_radix_custom<std::vector<unsigned char>>{};
-    BOOST_CHECK(t->children_reference().empty());
+    BOOST_CHECK(t->children.empty());
     std::string hello_string = "Hello World";
     auto data_string = std::vector<unsigned char>{hello_string.begin(), hello_string.end()};
     delete t;
+    //total match test
     t = new uh::trees::tree_radix_custom<std::vector<unsigned char>>(data_string.cbegin(), data_string.cend());
-    BOOST_CHECK(t->children_reference().empty());
+    BOOST_CHECK(t->children.empty());
     BOOST_CHECK(t->size() == 11);
     BOOST_CHECK_EQUAL_COLLECTIONS(hello_string.begin(), hello_string.end(), t->data.begin(), t->data.end());
     auto result = t->add(data_string.cbegin(), data_string.cend());
-    BOOST_CHECK(std::get<0>(result[0]) == 11 && std::get<1>(result[0]) == 0);//total match
+    BOOST_CHECK(std::get<0>(result[0]) == 11 && std::get<1>(result[0]) == 0);
+    BOOST_CHECK(std::get<0>(*std::get<3>(result[0]).begin()).empty() && std::get<1>(*std::get<3>(result[0]).begin()).empty());//tree modified and added stay empty
+    //total match and append test
+    std::string tomorrow_string = "Hello World of tomorrow!";
+    data_string = std::vector<unsigned char>{tomorrow_string.begin(), tomorrow_string.end()};
+    result = t->add(data_string.cbegin(), data_string.cend());
+    BOOST_CHECK(std::get<0>(result[0]) == 11 && std::get<1>(result[0]) == 0);
+    BOOST_CHECK(std::get<0>(result[1]) == 13 && std::get<1>(result[1]) == 13);
+    BOOST_CHECK(std::get<0>(*std::get<3>(result[1]).begin()).empty() && std::get<1>(*std::get<3>(result[1]).begin()).size()==1);//tree modified empty and added with one new tree
+
+    delete t;
 }
 
 //test the function add and the function add_test and if they calculate the correct
 BOOST_AUTO_TEST_CASE(add_test)
 {
+    auto data_string1 = std::string{"Hello World!"};
+    auto data1 = std::vector<unsigned char>{data_string1.begin(),data_string1.end()};
+    auto data_string2 = std::string{"Hello World!"};
+    auto data2 = std::vector<unsigned char>{data_string2.begin(),data_string2.end()};
+    auto data_string3 = std::string{"Hello World!"};
+    auto data3 = std::vector<unsigned char>{data_string3.begin(),data_string3.end()};
+    auto data_string4 = std::string{"Hello World!"};
+    auto data4 = std::vector<unsigned char>{data_string4.begin(),data_string4.end()};
+    auto data_string5 = std::string{"Hello World!"};
+    auto data5 = std::vector<unsigned char>{data_string5.begin(),data_string5.end()};
+
+
+    auto *t = new uh::trees::tree_radix_custom<std::vector<unsigned char>>{data1.cbegin(),data1.cend()};
+
 
     /*
     uh::trees::tree_radix_custom t_nil1;
