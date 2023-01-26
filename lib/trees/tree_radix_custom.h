@@ -281,6 +281,7 @@ namespace uh::trees {
             //cases for search index: its empty or it has content and with that a last tree element
             if (search_index.empty()) {
                 std::tuple<std::size_t, std::size_t, std::size_t, std::list<std::tuple<std::set<tree_radix_custom *>, std::set<tree_radix_custom *>>>> out_change_tuple{};
+                data = std::vector<unsigned char>{bin_beg,bin_end};
                 std::get<0>(out_change_tuple) += std::distance(bin_beg,bin_end);
                 std::get<1>(out_change_tuple) += std::distance(bin_beg,bin_end);
                 if constexpr (!reverse){
@@ -288,8 +289,9 @@ namespace uh::trees {
                     std::get<2>(out_change_tuple) += comp.compress(bin_beg,bin_end).size();
                 }
                 else{
+                    std::reverse(data.begin(),data.end());
                     uh::util::compression_custom comp{};
-                    std::get<2>(out_change_tuple) += comp.compress(bin_beg,bin_end).size();
+                    std::get<2>(out_change_tuple) += comp.compress(data.begin(),data.end()).size();
                 }
                 std::get<3>(out_change_tuple).emplace_back(std::set<tree_radix_custom *>{},
                                                            std::set<tree_radix_custom *>{this});//only add a new tree
