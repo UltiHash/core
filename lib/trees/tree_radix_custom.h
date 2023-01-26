@@ -943,6 +943,7 @@ namespace uh::trees {
                     std::for_each(list.begin(), list.end(), inner_list_level);
                 };
                 std::for_each(std::get<0>(single_route).begin(), std::get<0>(single_route).end(), outer_most_level);
+                add_tup_out.push_back(add_tup);
             }
 
             return add_tup_out;

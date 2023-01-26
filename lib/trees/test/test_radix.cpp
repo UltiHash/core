@@ -120,10 +120,14 @@ BOOST_AUTO_TEST_CASE(radix_constructor_test)
     BOOST_CHECK(t->children.empty());
     BOOST_CHECK(t->size() == 11);
     BOOST_CHECK_EQUAL_COLLECTIONS(hello_string.begin(), hello_string.end(), t->data.begin(), t->data.end());
+    //empty add test
+    auto result_test = t->add_test(data_string.cbegin(), data_string.cend());
+    BOOST_CHECK(std::get<0>(result_test[0]) == 11 && std::get<1>(result_test[0]) == 11);
+    //adding
     auto result = t->add(data_string.cbegin(), data_string.cend());
     BOOST_CHECK(std::get<0>(result[0]) == 11 && std::get<1>(result[0]) == 0);
     BOOST_CHECK(std::get<0>(*std::get<3>(result[0]).begin()).empty() && std::get<1>(*std::get<3>(result[0]).begin()).empty());//tree modified and added stay empty
-    auto result_test = t->add_test(data_string.cbegin(), data_string.cend());
+    result_test = t->add_test(data_string.cbegin(), data_string.cend());
     BOOST_CHECK(std::get<0>(result_test[0]) == 11 && std::get<1>(result_test[0]) == 0);
     //total match and append test
     std::string tomorrow_string = "Hello World of tomorrow!";
