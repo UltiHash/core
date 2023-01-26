@@ -352,12 +352,11 @@ namespace uh::trees {
                         out_list.push_back(cur_tree);
                         size_integrated += cur_tree->data.size();
                         if (append_tree) {
-                            size_compressed = comp.compress(child_beg_mid, child_end_mid).size();
-                            size_uncompressed += std::distance(child_beg_mid, child_end_mid);
-                            size_integrated+=size_uncompressed;
-                            //either find child is empty and test add tree or add_test to another child tree
-
                             auto *tree_ptr_tmp = new tree_radix_custom(child_beg_append, child_end_append);
+                            size_compressed = comp.compress(tree_ptr_tmp->data.cbegin(), tree_ptr_tmp->data.cend()).size();
+                            size_uncompressed += tree_ptr_tmp->data.size();
+                            size_integrated += size_uncompressed;
+                            //either find child is empty and test add tree or add_test to another child tree
                             out_list.push_back(tree_ptr_tmp);
                             tree_ptr_tmp->block_swarm_offset = cur_tree->block_swarm_offset + cur_tree->data.size();
                             cur_tree->child_put(tree_ptr_tmp, *child_beg_append);
@@ -789,7 +788,7 @@ namespace uh::trees {
                                    std::is_same<std::deque<unsigned char>::const_reverse_iterator, Const_iterator>::value)), bool> = true
         >
         std::vector<std::tuple<std::size_t, std::size_t, std::size_t>>
-        add_test(Const_iterator bin_beg, Const_iterator bin_end) {
+        add_test(Const_iterator bin_beg, Const_iterator bin_end) {//add test should copy
             //first search existing structure and add into the last tree to insert potentially missing information
             std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<decltype(bin_beg), decltype(bin_end), decltype(bin_end)>>>>>, std::size_t>> search_index = search(
                     bin_beg, bin_end);
@@ -810,6 +809,7 @@ namespace uh::trees {
                 //child before found, reference data
                 decltype(bin_beg_found) child_beg_beg, child_beg_mid, child_beg_end;
                 decltype(bin_end_found) child_end_beg, child_end_mid, child_end_end;
+
                 if constexpr (!reverse) {
                     child_beg_beg = cur_tree->data.cbegin();
                     child_end_beg = std::max(data_beg_intern, child_beg_beg);
@@ -838,14 +838,8 @@ namespace uh::trees {
                 //before splitting or modifying a block it needs to be uncompressed
 
                 bool first_section_tree = std::distance(child_beg_beg, child_end_beg) > 1;
-                bool last_section_tree;
-                if constexpr (!reverse) {
-                    last_section_tree =
-                            child_beg_end == child_end_end && child_end_end == cur_tree->data.cend();
-                } else {
-                    last_section_tree =
-                            child_beg_end == child_end_end && child_end_end == cur_tree->data.crend();
-                }
+                bool last_section_tree = child_beg_end != child_end_end;
+
                 bool append_tree =
                         std::distance(child_beg_append, child_end_append) > 0 && child_beg_append != bin_end_incoming;
                 bool total_match = std::distance(child_beg_mid, child_end_mid) == cur_tree->data.size();

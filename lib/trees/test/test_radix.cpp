@@ -127,9 +127,8 @@ BOOST_AUTO_TEST_CASE(radix_constructor_test)
     std::string tomorrow_string = "Hello World of tomorrow!";
     data_string = std::vector<unsigned char>{tomorrow_string.begin(), tomorrow_string.end()};
     result = t->add(data_string.cbegin(), data_string.cend());
-    BOOST_CHECK(std::get<0>(result[0]) == 11 && std::get<1>(result[0]) == 0);
-    BOOST_CHECK(std::get<0>(result[1]) == 13 && std::get<1>(result[1]) == 13);
-    BOOST_CHECK(std::get<0>(*std::get<3>(result[1]).begin()).empty() && std::get<1>(*std::get<3>(result[1]).begin()).size()==1);//tree modified empty and added with one new tree
+    BOOST_CHECK(std::get<0>(result[0]) == 23 && std::get<1>(result[0]) == 12);
+    BOOST_CHECK(std::get<0>(*std::get<3>(result[0]).begin()).empty() && std::get<1>(*std::get<3>(result[0]).begin()).size()==1);//tree modified empty and added with one new tree
 
     delete t;
 }
