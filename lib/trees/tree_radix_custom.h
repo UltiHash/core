@@ -263,11 +263,12 @@ namespace uh::trees {
         add(Const_iterator bin_beg, Const_iterator bin_end) {//TODO:check duplicate matches and eliminate
             //first search existing structure and add into the last tree to insert potentially missing information
             /*std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::vector<unsigned char>::const_iterator, std::vector<unsigned char>::const_iterator, std::vector<unsigned char>::const_iterator>>>>>, std::size_t>>*/
-            auto search_index = search(bin_beg, bin_end);
+
             //uncompressed input
             if (bin_beg == bin_end) {
                 return {};
             }
+            auto search_index = search(bin_beg, bin_end);
             constexpr bool reverse = (
                     std::is_same<std::vector<unsigned char>::const_reverse_iterator, decltype(bin_beg)>::value ||
                     std::is_same<std::list<unsigned char>::const_reverse_iterator, decltype(bin_beg)>::value ||
@@ -792,11 +793,12 @@ namespace uh::trees {
         std::vector<std::tuple<std::size_t, std::size_t, std::size_t>>
         add_test(Const_iterator bin_beg, Const_iterator bin_end) {//add test should copy
             //first search existing structure and add into the last tree to insert potentially missing information
-            auto search_index = search(bin_beg, bin_end);
+
             //uncompressed input
             if (bin_beg == bin_end) {
                 return {};
             }
+            auto search_index = search(bin_beg, bin_end);
             constexpr bool reverse = (
                     std::is_same<std::vector<unsigned char>::const_reverse_iterator, decltype(bin_beg)>::value ||
                     std::is_same<std::list<unsigned char>::const_reverse_iterator, decltype(bin_beg)>::value ||
