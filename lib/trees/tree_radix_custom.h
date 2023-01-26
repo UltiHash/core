@@ -1085,7 +1085,7 @@ std::shared_mutex simd_protect{};
                 else{
                     tmp = search_match_filter(std::get<2>(*single_pos), data.crend(), std::get<3>(*single_pos), bin_end,possibilities);
                 }
-                std::for_each(tmp.begin(),tmp.end(),[&tmp](auto &item1){
+                std::for_each(tmp.begin(),tmp.end(),[&tmp,&new_find](auto &item1){
                     if(std::none_of(new_find.begin(),new_find.end(),[&item1](auto &item2){
                         return item2 == item1;
                     })){
