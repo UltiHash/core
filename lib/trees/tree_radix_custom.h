@@ -850,7 +850,7 @@ namespace uh::trees {
                 //cases: insert front tree, insert end tree (same case as having a back insert because the end tree will just have at least 1 element in case of overflow)
                 if (cur_tree->data.empty()) {//how to insert, either empty simple insert or some tree construction anywhere
                     //simple insert into data since this seems to be a new node that can contain simple information
-                    auto set_vector = std::vector<unsigned char>{bin_beg_found, bin_end_found};
+                    auto set_vector = std::vector<unsigned char>{bin_beg_incoming, bin_end_incoming};
 
                     if constexpr (reverse) {
                         std::reverse(set_vector.begin(), set_vector.end());
@@ -910,12 +910,12 @@ namespace uh::trees {
             if (search_index.empty()) {
                 std::tuple<std::size_t, std::size_t, std::size_t> add_tup{};
                 if constexpr (!reverse) {
-                    auto append_list = tree_test_sequence(this, bin_beg, bin_beg, data.cend(), data.cbegin(), data.cend());//insert into this tree, no matches, only first character must match
+                    auto append_list = tree_test_sequence(this, bin_beg, bin_end, data.cend(), data.cbegin(), data.cend());//insert into this tree, no matches, only first character must match
                     std::get<0>(add_tup) += std::get<0>(append_list);
                     std::get<1>(add_tup) += std::get<1>(append_list);
                     std::get<2>(add_tup) += std::get<2>(append_list);
                 } else {
-                    auto append_list = tree_test_sequence(this, bin_beg, bin_beg, data.crend(), data.crbegin(), data.crend());//insert into this tree, no matches, only first character must match
+                    auto append_list = tree_test_sequence(this, bin_beg, bin_end, data.crend(), data.crbegin(), data.crend());//insert into this tree, no matches, only first character must match
                     std::get<0>(add_tup) += std::get<0>(append_list);
                     std::get<1>(add_tup) += std::get<1>(append_list);
                     std::get<2>(add_tup) += std::get<2>(append_list);
