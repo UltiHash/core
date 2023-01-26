@@ -1089,11 +1089,10 @@ namespace uh::trees {
                     }
                 }
                 std::size_t advance =
-                        (std::size_t) llabs(std::distance(std::get<1>(*match_beg), std::get<2>(*match_beg))) +
-                        (std::get<2>(*match_beg) != bin_end);
+                        (std::size_t) llabs(std::distance(std::get<1>(*match_beg), std::get<2>(*match_beg)));
                 std::get<1>(input_list_tmp) += advance;
                 std::get<2>(input_list_tmp)++;
-                std::get<3>(input_list_tmp) += advance;
+                std::get<3>(input_list_tmp) += advance+1;
                 out_possibilities.push_back(input_list_tmp);
             };
 
@@ -1110,7 +1109,7 @@ namespace uh::trees {
                     std::size_t advance =
                             (std::size_t) llabs(std::distance(std::get<1>(*match_beg), std::get<2>(*match_beg)));
                     out_possibilities.emplace_back(outer_list, advance, std::get<0>(*match_beg) + 1,
-                                                   std::get<1>(*match_beg) + advance);
+                                                   std::get<1>(*match_beg) + advance+1);
                 } else
                     for (auto &input_list_tmp: possibilities) {//COPY input list and create different path calculation
                         possibilities_manage(input_list_tmp);

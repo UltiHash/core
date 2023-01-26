@@ -142,7 +142,7 @@ BOOST_AUTO_TEST_CASE(radix_constructor_test)
     BOOST_CHECK(std::get<0>(result[0]) == 23 && std::get<1>(result[0]) == 12);
     BOOST_CHECK(std::get<0>(*std::get<3>(result[0]).begin()).empty() && std::get<1>(*std::get<3>(result[0]).begin()).size()==1);//tree modified empty and added with one new tree
     result_test = t->add_test(data_string.cbegin(), data_string.cend());
-    BOOST_CHECK(std::get<0>(result_test[0]) == 23 && std::get<1>(result_test[0]) == 0);
+    BOOST_CHECK(std::get<0>(result_test[0]) == 23 && std::get<1>(result_test[0]) == 0);//total match expected recursively
 
     delete t;
 }
