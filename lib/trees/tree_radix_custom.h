@@ -1199,11 +1199,13 @@ namespace uh::trees {
                 if constexpr (!reverse) {
                     if (std::get<2>(*single_pos) == data.cend() || std::get<3>(*single_pos) == bin_end) {
                         single_count++;
+                        single_pos++;
                         continue;
                     }
                 } else {
                     if (std::get<2>(*single_pos) == data.crend() || std::get<3>(*single_pos) == bin_end) {
                         single_count++;
+                        single_pos++;
                         continue;
                     }
                 }
