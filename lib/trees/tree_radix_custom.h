@@ -345,8 +345,7 @@ namespace uh::trees {
                 }
                 bool append_tree =
                         std::distance(child_beg_append, child_end_append) > 0 && child_beg_append != bin_end_incoming;
-                bool total_match = !first_section_tree && !last_section_tree &&
-                                   std::distance(child_beg_mid, child_end_mid) == cur_tree->data.size();
+                bool total_match = std::distance(child_beg_mid, child_end_mid) == cur_tree->data.size();
 
                 uh::util::compression_custom comp{};
                 auto out_list = std::vector<tree_radix_custom *>{};
@@ -872,8 +871,7 @@ namespace uh::trees {
                 }
                 bool append_tree =
                         std::distance(child_beg_append, child_end_append) > 0 && child_beg_append != bin_end_incoming;
-                bool total_match = !first_section_tree && !last_section_tree &&
-                                   std::distance(child_beg_mid, child_end_mid) == cur_tree->data.size();
+                bool total_match = std::distance(child_beg_mid, child_end_mid) == cur_tree->data.size();
 
                 uh::util::compression_custom comp{};
 
