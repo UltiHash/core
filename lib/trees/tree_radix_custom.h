@@ -281,28 +281,20 @@ namespace uh::trees {
             //cases for search index: its empty or it has content and with that a last tree element
             if (search_index.empty()) {
                 std::tuple<std::size_t, std::size_t, std::size_t, std::list<std::tuple<std::set<tree_radix_custom *>, std::set<tree_radix_custom *>>>> out_change_tuple{};
-                if(!reverse){
-                    auto out_size = tree_building_sequence(this, bin_beg, bin_end, data.cbegin(), bin_beg, bin_end);
-                    std::get<0>(out_change_tuple) += std::get<0>(out_size);
-                    std::get<1>(out_change_tuple) += std::get<1>(out_size);
-                    std::get<2>(out_change_tuple) += std::get<2>(out_size);
-                    auto out_vector = std::get<3>(out_size);
-                    std::get<3>(out_change_tuple).emplace_back(std::set<tree_radix_custom *>{},
-                                                               std::set<tree_radix_custom *>{
-                                                                       out_vector[0]});//only add a new tree
-                    out_change_tuple_out.push_back(out_change_tuple);
+                auto out_size = tree_building_sequence(this, bin_beg, bin_end, data.cbegin(), bin_beg, bin_end);
+                std::get<0>(out_change_tuple) += data.size();
+                std::get<1>(out_change_tuple) += data.size();
+                if constexpr (!reverse){
+                    uh::util::compression_custom comp{};
+                    std::get<2>(out_change_tuple) += comp.compress(data.cbegin(),data.cend()).size();
                 }
                 else{
-                    auto out_size = tree_building_sequence(this, bin_beg, bin_end, data.crbegin(), bin_beg, bin_end);
-                    std::get<0>(out_change_tuple) += std::get<0>(out_size);
-                    std::get<1>(out_change_tuple) += std::get<1>(out_size);
-                    std::get<2>(out_change_tuple) += std::get<2>(out_size);
-                    auto out_vector = std::get<3>(out_size);
-                    std::get<3>(out_change_tuple).emplace_back(std::set<tree_radix_custom *>{},
-                                                               std::set<tree_radix_custom *>{
-                                                                       out_vector[0]});//only add a new tree
-                    out_change_tuple_out.push_back(out_change_tuple);
+                    uh::util::compression_custom comp{};
+                    std::get<2>(out_change_tuple) += comp.compress(data.cbegin(),data.cend()).size();
                 }
+                std::get<3>(out_change_tuple).emplace_back(std::set<tree_radix_custom *>{},
+                                                           std::set<tree_radix_custom *>{this});//only add a new tree
+                out_change_tuple_out.push_back(out_change_tuple);
             }
             //cases for last tree if it exists, binary fit in: match from the beginning on, match in the middle, match until the end, total match
             //all lists contain lists with a last element that had multiple matches; add up all matches
