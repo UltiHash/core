@@ -1072,15 +1072,27 @@ std::shared_mutex simd_protect{};
 
             auto single_pos = possibilities.begin();
             std::size_t single_count{};
+            decltype(possibilities) new_find{};
             while(single_pos != possibilities.end()){
-                decltype(possibilities) new_search_results;
+                if(std::get<2>(*single_pos)== data.cend()|| std::get<3>(*single_pos) == bin_end){
+                    single_count++;
+                    continue;
+                }
+                decltype(possibilities) tmp;
                 if constexpr (!reverse){
-                    new_search_results = search_match_filter(std::get<2>(*single_pos), data.cend(), std::get<3>(*single_pos), bin_end,possibilities);
+                    tmp = search_match_filter(std::get<2>(*single_pos), data.cend(), std::get<3>(*single_pos), bin_end,possibilities);
                 }
                 else{
-                    new_search_results = search_match_filter(std::get<2>(*single_pos), data.crend(), std::get<3>(*single_pos), bin_end,possibilities);
+                    tmp = search_match_filter(std::get<2>(*single_pos), data.crend(), std::get<3>(*single_pos), bin_end,possibilities);
                 }
-                if(!new_search_results.empty())possibilities.insert(possibilities.cend(),new_search_results.begin(),new_search_results.end());
+                std::for_each(tmp.begin(),tmp.end(),[&tmp](auto &item1){
+                    if(std::none_of(new_find.begin(),new_find.end(),[&item1](auto &item2){
+                        return item2 == item1;
+                    })){
+                        new_find.push_back(item1);
+                    }
+                });
+
                 single_pos = possibilities.begin()+single_count;
                 single_count++;
             }
