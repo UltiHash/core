@@ -1231,7 +1231,7 @@ namespace uh::trees {
             //check child that deals with searching the far most rest in direction of end to skip the not matching rest
             //only check children with correct continue letter first in case we get a total match
             for (auto pos_begin: possibilities) {
-                if (std::get<3>(single_pos) == bin_end) {
+                if (std::get<3>(pos_begin) == bin_end) {
                     continue;
                 }
                 auto child_vec = child_vector(*std::get<3>(pos_begin));
