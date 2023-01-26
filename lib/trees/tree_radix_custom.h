@@ -885,80 +885,72 @@ namespace uh::trees {
                             std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>>>>>, std::size_t,std::size_t>>{}) {
             auto local_matches = compare_ultihash(data_cont,binary_cont);
 
-            auto legal_match_integration = [](auto local_matches) {
+            auto legal_match_integration = [&data_cont](auto local_matches) {
                 std::sort(local_matches.begin(), local_matches.end(), [](auto &a, auto &b) {
-                    return std::get<2>(a) - std::get<1>(a) <
-                           std::distance(std::get<1>(b), std::get<2>(b));
+                    return std::get<1>(a) < std::get<1>(b);
                 });
                 //LEGAL MATCH FILTER
                 auto match_beg = local_matches.begin();
 
-                auto legal_check = [&local_matches](
-                        auto data_beg, auto data_end, auto &match_beg, auto returning_offset) {
+                auto legal_check = [&local_matches,&data_cont](auto &match_beg,std::size_t start_val, std::size_t end_val) {
                     //on empty or partial match make new list in list, else append the match results on total match
                     bool legal_split;
                     //if the end was matched too long we can do something about that, but else the algorithm is prefix oriented
                     bool start_size, end_size, begin_reached, end_reached, total_found_size;
                     do {
 
-                        start_size = MINIMUM_MATCH_SIZE <= llabs(std::distance(data_beg, std::get<0>(*match_beg)));
-                        end_size = MINIMUM_MATCH_SIZE <= llabs(std::distance(std::get<0>(*match_beg) +
-                                                                             std::distance(std::get<1>(*match_beg),
-                                                                                           std::get<2>(*match_beg)),
-                                                                             data_end))+1;
-                        total_found_size = MINIMUM_MATCH_SIZE <= std::distance(std::get<1>(*match_beg),
-                                                                               std::get<2>(*match_beg));
-                        begin_reached = data_beg == std::get<0>(*match_beg);
-                        end_reached = data_end == std::get<0>(*match_beg) +
-                                                  std::distance(std::get<1>(*match_beg), std::get<2>(*match_beg));
+                        start_size = std::get<0>(*match_beg) <= (long)start_val-MINIMUM_MATCH_SIZE || start_val+MINIMUM_MATCH_SIZE <= std::get<0>(*match_beg);
+                        end_size = data_cont.size()-(std::get<0>(*match_beg)+std::get<1>(*match_beg)) <= (long)end_val-MINIMUM_MATCH_SIZE <= (long)start_val-MINIMUM_MATCH_SIZE || MINIMUM_MATCH_SIZE <= data_cont.size()-(std::get<0>(*match_beg)+std::get<1>(*match_beg));
+                        total_found_size = MINIMUM_MATCH_SIZE <= std::get<1>(*match_beg);
+                        begin_reached = std::get<0>(*match_beg) == start_val;
+                        end_reached = data_cont.size()-(std::get<0>(*match_beg)+std::get<1>(*match_beg)) == end_val;
                         legal_split = ((start_size || begin_reached) && (end_size || end_reached) && total_found_size);
 
                         if (!start_size && !begin_reached) {
-                            std::get<0>(*match_beg)++;
-                            std::get<1>(*match_beg)++;
-                            std::get<2>(*match_beg)--;
+                            std::get<0>(*match_beg)++;//relative offset changes
+                            std::get<1>(*match_beg)--;
                         }
                         if (!end_size && !end_reached) {
-                            std::get<2>(*match_beg)--;
+                            std::get<1>(*match_beg)--;
                         }
-                        if (std::distance(std::get<1>(*match_beg), std::get<2>(*match_beg)) <
-                            MINIMUM_MATCH_SIZE) {
-                            local_matches.erase(match_beg);
-                            match_beg = returning_offset;
+                        if (std::get<1>(*match_beg) < MINIMUM_MATCH_SIZE) {
                             return false;
                         }
                     } while (((!end_size && !end_reached) || (!start_size && !begin_reached)) &&
                              !local_matches.empty());
-                    match_beg++;
+
                     return legal_split;
                 };
 
-                while (match_beg !=
-                       local_matches.end()) {//shrink all matches until the total result is legal, shrink smaller matches first until they vanish
-                    legal_check(data_beg, data_end, match_beg, local_matches.begin());
+                while (match_beg != local_matches.end()) {//shrink all matches until the total result is legal, shrink smaller matches first until they vanish
+                    bool legal_general = legal_check(match_beg,0,data_cont.size());
+                    if(!legal_general){
+                        local_matches.erase(match_beg);
+                        match_beg = local_matches.begin();
+                        continue;
+                    }
                     auto match_begin_legal_shift = local_matches.begin();
                     while (match_begin_legal_shift != local_matches.end()) {
-                        legal_check(std::get<0>(*match_begin_legal_shift), std::get<0>(*match_begin_legal_shift) +
-                                                                           std::distance(std::get<1>(
-                                                                                                 *match_begin_legal_shift),
-                                                                                         std::get<2>(
-                                                                                                 *match_begin_legal_shift)),
-                                    match_begin_legal_shift, local_matches.begin());
+                        bool legal = legal_check(match_begin_legal_shift,std::get<0>(*match_beg),std::get<0>(*match_beg)+std::get<1>(*match_beg));
+                        if(!legal){
+                            local_matches.erase(match_begin_legal_shift);
+                            match_begin_legal_shift = local_matches.begin();
+                        }
+                        else match_begin_legal_shift++;
                     }
+                    match_beg++;
                 }
 
                 std::sort(local_matches.begin(), local_matches.end(), [](auto &a, auto &b) {
-                    return std::distance(std::get<1>(a), std::get<2>(a)) >
-                           std::distance(std::get<1>(b), std::get<2>(b));
+                    return std::get<1>(a) > std::get<1>(b);
                 });
 
                 if (local_matches.size() > 1) {
                     std::size_t max_fit{};
                     auto best_beg = local_matches.begin();
                     while (best_beg != local_matches.end()) {
-                        max_fit = std::max(max_fit,
-                                           (std::size_t) std::distance(std::get<1>(*best_beg), std::get<2>(*best_beg)));
-                        if (std::distance(std::get<1>(*best_beg), std::get<2>(*best_beg)) < max_fit) {
+                        max_fit = std::max(max_fit,std::get<0>(*best_beg));
+                        if (std::get<1>(*best_beg) < max_fit) {
                             //break and delete until end
                             break;
                         }
@@ -967,8 +959,8 @@ namespace uh::trees {
                     local_matches.erase(best_beg, local_matches.end());
                 }
                 //sort the smallest offset out of the largest match results in case the match sizes are equal
-                std::sort(local_matches.begin(), local_matches.end(), [&data_beg](auto &a, auto &b) {
-                    return std::distance(data_beg, std::get<0>(a)) < std::distance(data_beg, std::get<0>(b));
+                std::sort(local_matches.begin(), local_matches.end(), [](auto &a, auto &b) {
+                    return std::get<0>(a) < std::get<0>(b);
                 });
                 return local_matches;
             };
@@ -980,13 +972,10 @@ namespace uh::trees {
             decltype(possibilities) out_possibilities;
 
             auto match_beg = local_matches.begin();
-            auto possibilities_manage = [&](auto &input_list_tmp) {
-                std::vector<std::tuple<decltype(data_beg), decltype(bin_end), decltype(bin_beg)>> found_vec{};
-                found_vec.emplace_back(std::get<1>(*match_beg), std::get<2>(*match_beg),
-                                       std::get<0>(*match_beg));
-
+            auto possibilities_manage = [&](auto &input_list_tmp,auto &found_vec) {
+                //continue match stream
                 if (std::get<0>(input_list_tmp).empty()) {
-                    std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<decltype(data_beg), decltype(bin_end), decltype(bin_beg)>>>> tmp_list{};
+                    std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t,std::size_t>>>> tmp_list{};
                     tmp_list.emplace_back(this, found_vec);
                     std::get<0>(input_list_tmp).push_back(tmp_list);
                 } else {
@@ -1000,33 +989,28 @@ namespace uh::trees {
                         last_it_outer_list->emplace_back(this, found_vec);
                     }
                 }
-                std::size_t advance = (std::size_t) llabs(std::distance(std::get<1>(*match_beg), std::get<2>(*match_beg)));
-                        //(std::size_t) llabs(std::distance(std::get<1>(*match_beg), std::get<2>(*match_beg)));
-                //if(std::distance(std::get<1>(*match_beg), std::get<2>(*match_beg))!=std::distance(bin_beg, bin_end))advance++;
-                std::get<1>(input_list_tmp) += advance;
-                std::get<2>(input_list_tmp)++;
-                std::get<3>(input_list_tmp) = std::min(std::get<3>(input_list_tmp) + advance, bin_end);
+                std::size_t advance = std::get<1>(*match_beg);
+                std::get<1>(input_list_tmp)++;
+                std::get<2>(input_list_tmp) += advance;//binary advance
 
                 out_possibilities.push_back(input_list_tmp);
             };
 
             while (match_beg != local_matches.end()) {
+                std::vector<std::tuple<std::size_t,std::size_t>> found_vec{};
+                found_vec.emplace_back(std::get<0>(*match_beg),std::get<1>(*match_beg));
                 if (possibilities.empty()) {
-                    std::vector<std::tuple<decltype(data_beg), decltype(bin_end), decltype(bin_beg)>> found_vec{};
-                    found_vec.emplace_back(std::get<0>(*match_beg), std::get<1>(*match_beg),
-                                           std::get<2>(*match_beg));
-                    std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<decltype(bin_beg), decltype(bin_end), decltype(bin_beg)>>>> tmp_list{};
+                    //new start of possibilities
+                    std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t,std::size_t>>>> tmp_list{};
                     tmp_list.emplace_back(this, found_vec);
-                    std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<decltype(bin_beg), decltype(bin_end), decltype(bin_beg)>>>>> outer_list{
+                    std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t,std::size_t>>>>> outer_list{
                             tmp_list};
 
-                    std::size_t advance = (std::size_t) llabs(std::distance(std::get<1>(*match_beg), std::get<2>(*match_beg)));
-                    //if(std::distance(std::get<1>(*match_beg), std::get<2>(*match_beg))!=std::distance(bin_beg, bin_end))advance++;
-                    out_possibilities.emplace_back(outer_list, advance, std::get<0>(*match_beg) + 1,
-                                                   std::min(std::get<1>(*match_beg) + advance, bin_end));
+                    std::size_t advance = std::get<1>(*match_beg);
+                    out_possibilities.emplace_back(outer_list, 0, advance);
                 } else
                     for (auto &input_list_tmp: possibilities) {//COPY input list and create different path calculation
-                        possibilities_manage(input_list_tmp);
+                        possibilities_manage(input_list_tmp,found_vec);
                     }
                 match_beg++;
             }
@@ -1036,7 +1020,7 @@ namespace uh::trees {
         //returns the path of maximum fit and the match size
         /*std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::vector<unsigned char>::const_iterator, std::vector<unsigned char>::const_iterator, std::vector<unsigned char>::const_iterator>>>>>, std::size_t>>*/
         template<class ContainerBinary,bool reverse=false>
-        auto search(ContainerBinary &cont_binary,
+        auto search(ContainerBinary &cont_binary,//                                                                                                  data offset,binary offset after node integration
                     std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>>>>>, std::size_t,std::size_t>> possibilities =
                     std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>>>>>, std::size_t,std::size_t>>{},
                     std::vector<tree_radix_custom *> limiter_children = std::vector<tree_radix_custom *>{}) {
