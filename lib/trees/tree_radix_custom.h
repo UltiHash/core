@@ -223,7 +223,7 @@ namespace uh::trees {
                         found = std::mismatch(data_cont.begin()+current_offset, data_cont.end(), binary_cont.begin(), binary_cont.end());
                     }
 
-                    if (std::distance(data_cont.begin()+current_offset,found.first) - current_offset >= MINIMUM_MATCH_SIZE) {
+                    if (std::distance(data_cont.begin()+current_offset,found.first) >= MINIMUM_MATCH_SIZE) {
                         matches.emplace_back(current_offset, std::distance(data_cont.begin()+current_offset,found.first));
                     }
                     if (data_cont.begin()+current_offset != data_cont.end())current_offset++;

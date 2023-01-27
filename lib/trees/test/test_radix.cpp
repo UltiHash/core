@@ -30,7 +30,7 @@ BOOST_AUTO_TEST_CASE(compare_test)
     BOOST_CHECK(std::get<1>(result1[0]) == 11);
 
     BOOST_CHECK(std::get<0>(result2[0]) == 12);
-    BOOST_CHECK(std::get<1>(result2[0]) == 23);
+    BOOST_CHECK(std::get<1>(result2[0]) == 11);
 
     std::string hello_world_string = "Hello World";
     while (hello_world_string.size() < 2 * MINIMUM_MATCH_SIZE + 11) {
