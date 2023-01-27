@@ -129,3 +129,4 @@ public:
 
 //BOOST_CLASS_VERSION(Prefix, 1)
 #endif //SCHOOL_PROJECT_PREFIX_H
+

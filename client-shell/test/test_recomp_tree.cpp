@@ -1,19 +1,16 @@
 //
 // Created by ankit on 14.12.22.
 //
-
-#define BOOST_TEST_DYN_LINK
 #ifdef SINGLE_TEST_RUNNER
 #define BOOST_TEST_NO_MAIN
 #else
 #define BOOST_TEST_MODULE "uhLibUtil Recompilation Tree Tests"
 #endif
-
 #include <boost/test/unit_test.hpp>
-#include "../src/recomp_tree.h"
+#include <serialization/recomp_tree.h>
 
 // ------------- Tests Suites Follow --------------
-using namespace uh::recomp;
+using namespace uh::client::serialization;
 
 BOOST_AUTO_TEST_SUITE( RecompilationTreeSuite )
 

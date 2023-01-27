@@ -7,14 +7,13 @@
 
 #include "Prefix.h"
 #include "Identifier.h"
-#include "protocol/client_factory.h"
-#include "protocol/client_pool.h"
+#include "protocol/client.h"
 #include <fstream>
 
 class Data : virtual public Prefix{
     std::vector<Block> hash_blocks;
     std::size_t numBlocks{};
-    uh::protocol::client& m_client;
+    const std::unique_ptr<uh::protocol::client>& m_client;
 
     std::size_t m_size = 0u;
 
@@ -53,7 +52,7 @@ public:
                 for (auto &i: hash_blocks) {
                     // time measurement statistics for reading blocks from the agency server
                     auto start = std::chrono::steady_clock::now();
-                    auto hash = m_client.write_chunk(std::vector<char>(i.get().begin(),i.get().end()));
+                    auto hash = m_client->write_chunk(std::vector<char>(i.get().begin(),i.get().end()));
                     auto end = std::chrono::steady_clock::now();
 
                     auto nanoSec = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
@@ -118,7 +117,7 @@ public:
 
                     // time measurement statistics for reading blocks from the agency server
                     auto start = std::chrono::steady_clock::now();
-                    auto data = m_client.read_chunk(vecHash);
+                    auto data = m_client->read_chunk(vecHash);
                     auto end = std::chrono::steady_clock::now();
 
                     auto nanoSec = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
@@ -177,7 +176,6 @@ public:
         if(not is_regular_file()){
             if(not std::filesystem::exists(std::get<0>(stepper)))[[likely]]{
                 std::filesystem::create_directory(std::get<0>(stepper));
-                //this->advancedError=stat64(std::get<0>(stepper).c_str(), &advancedFileInfo);
             }
         }
         else{
@@ -195,14 +193,6 @@ public:
                 of.flush();
                 of.close();
             }
-            /*
-             * if(not exist)[[likely]]{
-                if(stat64(std::get<0>(stepper).c_str(), &advancedFileInfo)){
-                    DEBUG << "The file stat64 of \"" << std::get<0>(stepper).c_str() << "\" could not be read and updated!" << std::endl;
-                    std::exit(EXIT_FAILURE);
-                }
-            }
-             */
         }
         std::filesystem::perms test_perms=std::filesystem::status(std::get<0>(stepper)).permissions();
         if(test_perms!=pe)[[unlikely]]{
@@ -245,8 +235,8 @@ public:
         return stepper;
     }
 
-    Data(const std::string &in, unsigned short folderE, uh::protocol::client& client);
-    explicit Data(uh::protocol::client& client);
+    Data(const std::string &in, unsigned short folderE, const std::unique_ptr<uh::protocol::client>& client);
+    explicit Data(const std::unique_ptr<uh::protocol::client>& client);
 };
 //BOOST_CLASS_VERSION(Data, 1)
 #endif //SCHOOL_PROJECT_DATA_H
