@@ -115,7 +115,7 @@ BOOST_AUTO_TEST_CASE(radix_constructor_test)
     BOOST_CHECK_EQUAL_COLLECTIONS(hello_string.begin(), hello_string.end(), t->data.begin(), t->data.end());
     //adding
     auto result = t->add<std::vector<unsigned char>,false>(data_string);
-    BOOST_CHECK(std::get<2>(result[0]) == 10 && std::get<1>(result[0]) == 0);
+    BOOST_CHECK(std::get<0>(result[0]) == 11 && std::get<1>(result[0]) == 0);
     BOOST_CHECK(std::get<0>(*std::get<3>(result[0]).begin()).empty() && std::get<1>(*std::get<3>(result[0]).begin()).empty());//tree modified and added stay empty
     result_test = t->add_test<std::vector<unsigned char>,false>(data_string);
     BOOST_CHECK(std::get<0>(result_test[0]) == 11 && std::get<1>(result_test[0]) == 0);
