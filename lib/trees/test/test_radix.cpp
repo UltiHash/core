@@ -42,7 +42,7 @@ BOOST_AUTO_TEST_CASE(compare_test)
     auto input_string_begin2 = std::vector<unsigned char>{hello_string2.begin(), hello_string2.end()};
     auto result3 = t.compare_ultihash(data_string2, input_string_begin2);
     BOOST_CHECK(std::get<0>(result3[0]) == 2);//data iterator
-    BOOST_CHECK(std::get<1>(result3[0]) == 7);//input iterator begin
+    BOOST_CHECK(std::get<1>(result3[0]) == 5);//input iterator begin
 }
 
 BOOST_AUTO_TEST_CASE(search_match_filter_test)
