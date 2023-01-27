@@ -877,7 +877,7 @@ namespace uh::trees {
                         last_it_outer_list->emplace_back(this, found_vec);
                     }
                 }
-                std::size_t advance = std::get<1>(*match_beg)+1;
+                std::size_t advance = std::get<1>(*match_beg);
                 std::get<1>(input_list_tmp)++;
                 std::get<2>(input_list_tmp) += advance;//binary advance
 
@@ -894,7 +894,7 @@ namespace uh::trees {
                     std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t,std::size_t>>>>> outer_list{
                             tmp_list};
 
-                    std::size_t advance = std::get<1>(*match_beg)+1;
+                    std::size_t advance = std::get<1>(*match_beg);
                     out_possibilities.emplace_back(outer_list, 0, advance);
                 } else
                     for (auto &input_list_tmp: possibilities) {//COPY input list and create different path calculation
@@ -930,13 +930,13 @@ namespace uh::trees {
             std::size_t single_count{};
             while (single_pos != possibilities.end()) {
                 if constexpr (!reverse) {
-                    if (data->begin()+std::get<1>(*single_pos) == data->end() || cont_binary.begin()+std::get<2>(*single_pos) == cont_binary.end()) {
+                    if (data->begin()+std::get<1>(*single_pos)+1 == data->end() || cont_binary.begin()+std::get<2>(*single_pos) == cont_binary.end()) {
                         single_count++;
                         single_pos++;
                         continue;
                     }
                 } else {
-                    if (data->rbegin()+std::get<1>(*single_pos) == data->rend() || cont_binary.begin()+std::get<2>(*single_pos) == cont_binary.end()) {
+                    if (data->rbegin()+std::get<1>(*single_pos)+1 == data->rend() || cont_binary.begin()+std::get<2>(*single_pos) == cont_binary.end()) {
                         single_count++;
                         single_pos++;
                         continue;
@@ -945,10 +945,10 @@ namespace uh::trees {
                 decltype(possibilities) tmp;
                 std::vector<unsigned char> binary_subset{cont_binary.begin()+std::get<2>(*single_pos), cont_binary.end()};
                 if constexpr (!reverse) {
-                    std::vector<unsigned char> data_subset{data->begin()+std::get<1>(*single_pos), data->end()};
+                    std::vector<unsigned char> data_subset{data->begin()+std::get<1>(*single_pos)+1, data->end()};
                     tmp = search_match_filter<decltype(*data),ContainerBinary,reverse>(data_subset, binary_subset ,possibilities);
                 } else {
-                    std::vector<unsigned char> data_subset{data->begin(), data->end()-(std::get<1>(*single_pos)+1)};
+                    std::vector<unsigned char> data_subset{data->begin(), data->end()-(std::get<1>(*single_pos)+1+1)};
                     tmp = search_match_filter<decltype(*data),ContainerBinary,reverse>(data_subset, binary_subset ,possibilities);
                 }
                 std::for_each(tmp.begin(), tmp.end(), [&new_recursive](auto &item1) {
