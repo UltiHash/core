@@ -10,7 +10,7 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/project_config.h.in ${CMAKE_CURRE
 
 # external dependencies
 set(Boost_USE_STATIC_LIBS ON)
-find_package(Boost 1.80 COMPONENTS program_options REQUIRED)
+find_package(Boost 1.80 COMPONENTS program_options unit_test_framework REQUIRED)
 find_package(OpenSSL REQUIRED)
 
 # putting internal project repository LIBUH_DEP in a variable
