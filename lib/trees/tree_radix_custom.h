@@ -950,21 +950,22 @@ namespace uh::trees {
                 else{
                     std::copy(cont_binary.begin()+1, cont_binary.end(),std::back_inserter(binary_subset));//slow inspection, check every beginning of input
                 }
+                auto pos_vector = std::vector<decltype(*single_pos)>{*single_pos};
                 if constexpr (!reverse) {
                     if constexpr (fast_forward){
                         std::vector<unsigned char> data_subset{data.begin()+std::get<1>(*single_pos)+1, data.end()};
-                        tmp = search_match_filter<decltype(data),ContainerBinary,reverse>(data_subset, binary_subset ,std::vector<decltype(*single_pos)>{*single_pos});
+                        tmp = search_match_filter<decltype(data),ContainerBinary,reverse>(data_subset, binary_subset ,pos_vector);
                     }
                     else{
-                        tmp = search_match_filter<decltype(data),ContainerBinary,reverse>(data, binary_subset ,std::vector<decltype(*single_pos)>{*single_pos});
+                        tmp = search_match_filter<decltype(data),ContainerBinary,reverse>(data, binary_subset ,pos_vector);
                     }
                 } else {
                     if constexpr (fast_forward){
                         std::vector<unsigned char> data_subset{data.begin(), data.end()-(std::get<1>(*single_pos)+1+1)};
-                        tmp = search_match_filter<decltype(data),ContainerBinary,reverse>(data_subset, binary_subset ,std::vector<decltype(*single_pos)>{*single_pos});
+                        tmp = search_match_filter<decltype(data),ContainerBinary,reverse>(data_subset, binary_subset ,pos_vector);
                     }
                     else{
-                        tmp = search_match_filter<decltype(data),ContainerBinary,reverse>(data, binary_subset ,std::vector<decltype(*single_pos)>{*single_pos});
+                        tmp = search_match_filter<decltype(data),ContainerBinary,reverse>(data, binary_subset ,pos_vector);
                     }
                 }
                 std::for_each(tmp.begin(), tmp.end(), [&new_recursive](auto &item1) {
