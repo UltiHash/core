@@ -877,7 +877,7 @@ namespace uh::trees {
                         last_it_outer_list->emplace_back(this, found_vec);
                     }
                 }
-                std::size_t advance = std::get<1>(*match_beg);
+                std::size_t advance = std::get<1>(*match_beg)+1;
                 std::get<1>(input_list_tmp)++;
                 std::get<2>(input_list_tmp) += advance;//binary advance
 
@@ -894,7 +894,7 @@ namespace uh::trees {
                     std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t,std::size_t>>>>> outer_list{
                             tmp_list};
 
-                    std::size_t advance = std::get<1>(*match_beg);
+                    std::size_t advance = std::get<1>(*match_beg)+1;
                     out_possibilities.emplace_back(outer_list, 0, advance);
                 } else
                     for (auto &input_list_tmp: possibilities) {//COPY input list and create different path calculation
