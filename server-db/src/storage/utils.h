@@ -10,6 +10,7 @@
 #include <string>
 #include <util/temp_file.h>
 #include <vector>
+#include <util/exception.h>
 
 //TODO 
 //This include is only needed because of the blob definition; otherwise is irrelevant.
@@ -46,6 +47,14 @@ namespace uh::dbn::storage {
 // ---------------------------------------------------------------------
 
     uh::protocol::blob sha512(const uh::protocol::blob& some_data);
+
+// ---------------------------------------------------------------------
+
+    size_t get_dir_size(const std::string& root_dir);
+
+// ---------------------------------------------------------------------
+
+    size_t max_configurable_capacity(const std::filesystem::path& dir);
 
 // ---------------------------------------------------------------------
 } // uh::dbn::storage

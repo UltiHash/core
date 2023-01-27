@@ -16,18 +16,19 @@ namespace uh::dbn::storage
 
 enum class BackendTypeEnum {DumpStorage, OtherStorage};
 
-static std::unordered_map<std::string, BackendTypeEnum> const available_backend_types = {
-    {"DumpStorage", BackendTypeEnum::DumpStorage },
-    {"OtherStorage", BackendTypeEnum::OtherStorage}
+static std::unordered_map<std::string, BackendTypeEnum> string2backendtype = {
+  {"DumpStorage", BackendTypeEnum::DumpStorage},
+  {"OtherStorage", BackendTypeEnum::OtherStorage}
 };
 
 // ---------------------------------------------------------------------
 
 struct storage_config
 {
-    constexpr static std::string_view default_db_root = "./default/db/root";
+    constexpr static std::string_view default_db_root = "./DEFAULT_DB_ROOT";
     constexpr static std::string_view default_backend_type = "DumpStorage";
-    std::size_t size_bytes = 1e9;
+    constexpr static size_t default_allocated_size = 0;
+    size_t allocate_bytes = 0;
     std::filesystem::path db_root = std::string(default_db_root);
     std::string backend_type = std::string(default_backend_type);
     bool create_new_root = false;

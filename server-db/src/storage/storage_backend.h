@@ -11,6 +11,7 @@ namespace uh::dbn::storage {
     public:
         virtual ~storage_backend() = default;
 
+        virtual void start() = 0;
 
         /**
          * Write a data chunk and return it's hash.
@@ -37,13 +38,34 @@ namespace uh::dbn::storage {
         virtual uh::protocol::blob read_chunk(const uh::protocol::blob &hash) = 0;
 
 
-        size_t free_space(){return m_total - m_used;}
+        /**
+         * Return free space in this storage back-end in bytes.
+         */
+        virtual size_t free_space() = 0;
+        virtual size_t free_space_percentage() = 0;
 
 
-        size_t used_space(){return m_used;}
+        /**
+         * Return space already in use in this storage back-end in bytes.
+         */
+        virtual size_t used_space() = 0;
+        virtual size_t used_space_percentage() = 0;
 
+        /**
+         * Return total space allocated in this storage back-end in bytes.
+         */
+        virtual size_t allocated_space() = 0;
 
-        size_t total_space(){return m_total;}
+        /**
+         * Return the name of the storage backend type as a std::string.
+         */
+        virtual std::string backend_type() = 0;
+
+        /**
+         * Updates the storage metrics: used space, free space.
+         */
+        virtual void update_space_consumption() = 0;
+
 
     private:
 
@@ -68,10 +90,11 @@ namespace uh::dbn::storage {
 
     protected:
 
-        std::filesystem::path m_root; //root path of the db
-        size_t m_total; //total space
-        size_t m_free;  //free space
-        size_t m_used;  //used space
+        constexpr static std::string_view m_type = "DumpStorage";
+        std::filesystem::path m_root = ""; //root path of the db
+        size_t m_alloc = 0; //total space
+        size_t m_free  = 0;  //free space
+        size_t m_used  = 0;  //used space
     };
 
 // ---------------------------------------------------------------------

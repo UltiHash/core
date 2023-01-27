@@ -21,6 +21,18 @@ uh::protocol::blob dump_storage::hashing_function(const uh::protocol::blob &data
 
 // ---------------------------------------------------------------------
 
+void dump_storage::start(){
+
+    INFO << "--- Storage backend initialized --- " << std::filesystem::absolute(this->m_root);
+    INFO << "        backend type   : " << backend_type();
+    INFO << "        root diretcory : " << std::filesystem::absolute(this->m_root);
+    INFO << "        space allocated: " << allocated_space();
+    INFO << "        space available: " << free_space();
+    INFO << "        space consumed : " << used_space();
+}
+
+// ---------------------------------------------------------------------
+
 uh::protocol::blob dump_storage::write_chunk(const uh::protocol::blob& some_data){
 
     uh::protocol::blob hash_blob = this->hashing_function(some_data);
@@ -31,8 +43,15 @@ uh::protocol::blob dump_storage::write_chunk(const uh::protocol::blob& some_data
 
     std::filesystem::path filepath = this->get_filepath_from_hash(hash_blob);
 
+    //TODO check that there is available space before writing
+    if(m_free < size(some_data)){
+        THROW(util::exception, "Not enough space in node.");
+    }
+
+
     if(maybe_write_data_to_filepath(some_data, filepath)){
         INFO << "Data chunk written to " << filepath;
+        this->update_space_consumption();
     }
     else{
         INFO << "Skipped writing to existing filepath: " << filepath;
@@ -57,5 +76,19 @@ uh::protocol::blob dump_storage::read_chunk(const uh::protocol::blob& some_hash)
 
     return buffer;
 }
+
+
+void dump_storage::update_space_consumption(){
+    m_used = get_dir_size(m_root);
+    m_free = m_alloc - m_used;
+
+    if(m_free <= 0){
+        THROW(util::exception, "database node is full");
+    }
+    else if(m_free < 0.1 * m_alloc){
+        WARNING << "DB NODE ALMOST FULL. CURRENTLY USED: " << used_space_percentage() << "%";
+    }
+}
+
 
 } //namespace uh::dbn::storage

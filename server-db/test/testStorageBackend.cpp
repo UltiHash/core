@@ -22,6 +22,7 @@ struct db_test_config{
     std::filesystem::path test_incoming_file_name_2 = "test_input_file_2.txt";
     std::filesystem::path test_input_filepath = test_input_dir / test_incoming_file_name;
     std::filesystem::path test_input_filepath_2 = test_input_dir / test_incoming_file_name_2;
+    std::size_t test_allocated_bytes = 1e6;
     std::string contents_str = "These are the contents of test_input_file.txt and test_input_file_2.txt";
     //std::string expected_sha512_hash = "57579fadafb55d4fe92f84c699d8cce55d238a1b1747914f56c9f1c35fbb35f6ba41b986f071ef1da60f0f4482339860d4bbcccf7b24336c5ae44f47c73acdbe";
     //std::string expected_sha512_hash = "8a5cc075bbca891c91a1000b5fc5858d96c79bae07eb3498569df2ed9fa5def8d205d717e117bcbeeab18cc061072687c93e6203f267e691dfb8053d62653878";
@@ -117,6 +118,7 @@ BOOST_AUTO_TEST_CASE( dump_storage_io )
     db_test_config c;
     uh::dbn::storage::storage_config cfg;
     cfg.db_root = c.test_db_dir;
+    cfg.allocate_bytes = c.test_allocated_bytes;
     create_test_db_and_file();
 
     uh::dbn::storage::mod storage_module(cfg);
@@ -132,6 +134,7 @@ BOOST_AUTO_TEST_CASE( dump_storage_no_duplicates )
     db_test_config c;
     uh::dbn::storage::storage_config cfg;
     cfg.db_root = c.test_db_dir;
+    cfg.allocate_bytes = c.test_allocated_bytes;
     create_test_db_and_file();
 
     // Create backend.
@@ -151,6 +154,7 @@ BOOST_AUTO_TEST_CASE( dump_storage_expected_hash )
     db_test_config c;
     uh::dbn::storage::storage_config cfg;
     cfg.db_root = c.test_db_dir;
+    cfg.allocate_bytes = c.test_allocated_bytes;
     create_test_db_and_file();
 
     // Create backend.
