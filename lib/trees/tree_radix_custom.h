@@ -496,49 +496,25 @@ namespace uh::trees {
                                     if (last_section_tree) {
                                         //delete the referenced data size of middle and cend from tree pointer first
                                         if constexpr (!reverse) {
-                                            auto del_beg =
-                                                    tree_ptr_first->data->cbegin() +
-                                                    std::distance(child_beg_beg, child_end_beg);
-                                            auto del_end = del_beg + std::distance(child_beg_mid, child_end_mid) +
-                                                           std::distance(child_beg_end, child_end_end);
-                                            tree_ptr_first->data->erase(del_beg, del_end);
+                                            tree_ptr_first->data->erase(tree_ptr_first->data->cbegin()+child_beg.size(), tree_ptr_first->data->cbegin()+child_beg.size()+child_mid.size()+child_end.size());
                                         } else {
-                                            auto del_beg = tree_ptr_first->data->crbegin() +
-                                                           std::distance(child_beg_beg, child_end_beg);
-                                            auto del_end = del_beg + std::distance(child_beg_mid, child_end_mid) +
-                                                           std::distance(child_beg_end, child_end_end);
-                                            tree_ptr_first->data->erase(del_beg, del_end);
+                                            tree_ptr_first->data->erase(tree_ptr_first->data->crbegin()+child_beg.size(), tree_ptr_first->data->crbegin()+child_beg.size()+child_mid.size()+child_end.size());
                                         }
                                     } else {
                                         //delete middle data reference size from tree pointer first
                                         if constexpr (!reverse) {
-                                            auto del_beg =
-                                                    tree_ptr_first->data->cbegin() +
-                                                    std::distance(child_beg_beg, child_end_beg);
-                                            auto del_end = del_beg + std::distance(child_beg_mid, child_end_mid);
-                                            tree_ptr_first->data->erase(del_beg, del_end);
+                                            tree_ptr_first->data->erase(tree_ptr_first->data->cbegin()+child_beg.size(), tree_ptr_first->data->cbegin()+child_beg.size()+child_mid.size());
                                         } else {
-                                            auto del_beg = tree_ptr_first->data->crbegin() +
-                                                           std::distance(child_beg_beg, child_end_beg);
-                                            auto del_end = del_beg + std::distance(child_beg_mid, child_end_mid);
-                                            tree_ptr_first->data->erase(del_beg, del_end);
+                                            tree_ptr_first->data->erase(tree_ptr_first->data->crbegin()+child_beg.size(), tree_ptr_first->data->crbegin()+child_beg.size()+child_mid.size());
                                         }
                                     }
                                 } else {
                                     if (last_section_tree) {
                                         //delete last tree reference size from tree pointer middle
                                         if constexpr (!reverse) {
-                                            auto del_beg =
-                                                    tree_ptr_mid->data->cbegin() +
-                                                    std::distance(child_beg_mid, child_end_mid);
-                                            auto del_end = del_beg + std::distance(child_beg_end, child_end_end);
-                                            tree_ptr_mid->data->erase(del_beg, del_end);
+                                            tree_ptr_mid->data->erase(tree_ptr_mid->data->cbegin()+child_mid.size(),tree_ptr_mid->data->cbegin()+child_mid.size()+child_end.size());
                                         } else {
-                                            auto del_beg =
-                                                    tree_ptr_mid->data->crbegin() +
-                                                    std::distance(child_beg_mid, child_end_mid);
-                                            auto del_end = del_beg + std::distance(child_beg_end, child_end_end);
-                                            tree_ptr_mid->data->erase(del_beg, del_end);
+                                            tree_ptr_mid->data->erase(tree_ptr_mid->data->crbegin()+child_mid.size(),tree_ptr_mid->data->crbegin()+child_mid.size()+child_end.size());
                                         }
                                     }
                                     //else do not delete
