@@ -737,17 +737,17 @@ namespace uh::trees {
                         last_tree = std::get<0>(tree_tuple);
                         for (auto &pos_tup: std::get<1>(tree_tuple)) {
                             //auto add_list = tree_test_sequence(std::get<0>(tree_tuple), bin_beg, bin_beg,std::get<0>(pos_tup),
-                            //                                   std::get<1>(pos_tup), std::get<2>(pos_tup));//insert into another tree
+                            //                                   std::get<1>(pos_tup)+1, std::get<2>(pos_tup));//insert into another tree
                             if (std::get<0>(
                                     tree_tuple)->data.empty()) {//how to insert, either empty simple insert or some tree construction anywhere
                                 //simple insert into data since this seems to be a new node that can contain simple information
-                                auto set_vector = std::vector<unsigned char>{cont_binary.begin()+std::get<0>(pos_tup),cont_binary.begin()+std::get<0>(pos_tup)+std::get<1>(pos_tup)};
+                                auto set_vector = std::vector<unsigned char>{cont_binary.begin()+std::get<0>(pos_tup),cont_binary.begin()+std::get<0>(pos_tup)+std::get<1>(pos_tup)+1};
 
-                                std::get<0>(add_tup) += std::get<1>(pos_tup);
-                                std::get<1>(add_tup) += std::get<1>(pos_tup);
+                                std::get<0>(add_tup) += std::get<1>(pos_tup)+1;
+                                std::get<1>(add_tup) += std::get<1>(pos_tup)+1;
                                 std::get<2>(add_tup) += comp.compress(set_vector).size();
                             } else {
-                                std::get<0>(add_tup) += std::get<1>(pos_tup);
+                                std::get<0>(add_tup) += std::get<1>(pos_tup)+1;
                             }
                         }
                     }
