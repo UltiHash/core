@@ -370,7 +370,7 @@ namespace uh::trees {
                         }
                         //child after found, reference new input
                         child_append = std::vector<unsigned char>{};
-                        std::copy(std::min(binary_cont.begin()+std::get<1>(*match_beg)+1,binary_cont.end()),std::back_inserter(child_append));
+                        std::copy(binary_cont.begin()+std::get<1>(*match_beg)+1,binary_cont.end(),std::back_inserter(child_append));
                         //only the new append part may be compressed
                         //before splitting or modifying a block it needs to be uncompressed
 
