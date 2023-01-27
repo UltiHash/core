@@ -950,7 +950,8 @@ namespace uh::trees {
                 else{
                     std::copy(cont_binary.begin()+1, cont_binary.end(),std::back_inserter(binary_subset));//slow inspection, check every beginning of input
                 }
-                auto pos_vector = std::vector<decltype(*single_pos)>{*single_pos};
+                auto pos_vector = decltype(possibilities){};
+                pos_vector.push_back(*single_pos);
                 if constexpr (!reverse) {
                     if constexpr (fast_forward){
                         std::vector<unsigned char> data_subset{data.begin()+std::get<1>(*single_pos)+1, data.end()};
