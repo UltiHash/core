@@ -266,7 +266,7 @@ namespace uh::trees {
     public:
 
         //returns total size integrated, new space used uncompressed, new space used compressed, list of tree references of <offset_ELEMENT,modified_LIST,added_LIST> tree nodes
-        template<class ContainerBinary,bool reverse=false,bool fast_forward=false>
+        template<class ContainerBinary,bool reverse=false>
         std::vector<std::tuple<std::size_t, std::size_t, std::size_t, std::list<std::tuple<std::set<tree_radix_custom *>, std::set<tree_radix_custom *>>>>>
         add(ContainerBinary &binary_cont) {//TODO:check duplicate matches and eliminate
             //first search existing structure and add into the last tree to insert potentially missing information
@@ -276,7 +276,7 @@ namespace uh::trees {
             if (binary_cont.empty()) {
                 return {};
             }
-            auto search_index = search<ContainerBinary,reverse,fast_forward>(binary_cont);
+            auto search_index = search<ContainerBinary,reverse>(binary_cont);
 
             //some element and an end element at least required
             //TODO: add cross update from forward and backward children
@@ -702,7 +702,7 @@ namespace uh::trees {
 
         //returns total size integrated, new space used uncompressed, new space used compressed
         //calculates ESTIMATE size of data to be integrated to be communicated to agency to determine optimal storage location
-        template<class ContainerBinary,bool reverse = false,bool fast_forward=true>
+        template<class ContainerBinary,bool reverse = false>
         std::vector<std::tuple<std::size_t, std::size_t, std::size_t>>
         add_test(ContainerBinary &cont_binary) {//add test should copy
             //first search existing structure and add into the last tree to insert potentially missing information
@@ -711,7 +711,7 @@ namespace uh::trees {
             if (cont_binary.empty()) {
                 return {};
             }
-            auto search_index = search<ContainerBinary,reverse,fast_forward>(cont_binary);
+            auto search_index = search<ContainerBinary,reverse>(cont_binary);
 
             //cases for search index: its empty or it has content and with that a last tree element
             //cases for last tree if it exists, binary fit in: match from the beginning on, match in the middle, match until the end, total match
@@ -907,7 +907,7 @@ namespace uh::trees {
 
         //returns the path of maximum fit and the match size
         /*std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::vector<unsigned char>::const_iterator, std::vector<unsigned char>::const_iterator, std::vector<unsigned char>::const_iterator>>>>>, std::size_t>>*/
-        template<class ContainerBinary,bool reverse=false,bool fast_forward=false>
+        template<class ContainerBinary,bool reverse=false>
         auto search(ContainerBinary &cont_binary,//                                                                                                  data offset,binary offset after node integration
                     std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>>>>>, std::size_t,std::size_t>> possibilities =
                     std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>>>>>, std::size_t,std::size_t>>{},
@@ -944,31 +944,11 @@ namespace uh::trees {
                 }
                 decltype(possibilities) tmp;
                 std::vector<unsigned char> binary_subset{};
-                if constexpr (fast_forward){
-                    std::copy(cont_binary.begin()+std::get<2>(*single_pos)+1, cont_binary.end(),std::back_inserter(binary_subset));//quick search on
-                }
-                else{
-                    std::copy(cont_binary.begin()+1, cont_binary.end(),std::back_inserter(binary_subset));//slow inspection, check every beginning of input
-                }
+                std::copy(cont_binary.begin()+std::get<2>(*single_pos)+1, cont_binary.end(),std::back_inserter(binary_subset));//quick search on
+
                 auto pos_vector = decltype(possibilities){};
                 pos_vector.push_back(*single_pos);
-                if constexpr (!reverse) {
-                    if constexpr (fast_forward){
-                        std::vector<unsigned char> data_subset{data.begin()+std::get<1>(*single_pos)+1, data.end()};
-                        tmp = search_match_filter<decltype(data),ContainerBinary,reverse>(data_subset, binary_subset ,pos_vector);
-                    }
-                    else{
-                        tmp = search_match_filter<decltype(data),ContainerBinary,reverse>(data, binary_subset ,pos_vector);
-                    }
-                } else {
-                    if constexpr (fast_forward){
-                        std::vector<unsigned char> data_subset{data.begin(), data.end()-(std::get<1>(*single_pos)+1+1)};
-                        tmp = search_match_filter<decltype(data),ContainerBinary,reverse>(data_subset, binary_subset ,pos_vector);
-                    }
-                    else{
-                        tmp = search_match_filter<decltype(data),ContainerBinary,reverse>(data, binary_subset ,pos_vector);
-                    }
-                }
+                tmp = search_match_filter<decltype(data),ContainerBinary,reverse>(data, binary_subset ,pos_vector);
                 std::for_each(tmp.begin(), tmp.end(), [&new_recursive](auto &item1) {
                     if (std::none_of(new_recursive.begin(), new_recursive.end(), [&item1](auto &item2) {
                         return item2 == item1;
@@ -998,7 +978,7 @@ namespace uh::trees {
                 auto child_vec = child_vector(*(cont_binary.begin()+std::get<2>(pos_begin)));
                 if (!child_vec.empty()) {//recursive search
                     for (auto &item: child_vec) {//vector of tree pointers
-                        auto tmp = item->template search<ContainerBinary,reverse,fast_forward>(binary_subset, possibilities);
+                        auto tmp = item->template search<ContainerBinary,reverse>(binary_subset, possibilities);
                         if (std::any_of(tmp.begin(), tmp.end(), [&cont_binary](auto &item) {
                             return cont_binary.begin()+std::get<2>(item) == cont_binary.end();
                         }))total_match = true;
@@ -1024,7 +1004,7 @@ namespace uh::trees {
                         if (cont_binary.begin()+std::get<2>(pos_begin) == cont_binary.end()) {
                             continue;
                         }
-                        auto tmp = item->template search<ContainerBinary,reverse,fast_forward>(binary_subset, possibilities);
+                        auto tmp = item->template search<ContainerBinary,reverse>(binary_subset, possibilities);
                         if (tmp != possibilities) {
                             std::for_each(tmp.begin(), tmp.end(), [&new_recursive](auto &item1) {
                                 if (std::none_of(new_recursive.begin(), new_recursive.end(), [&item1](auto &item2) {
