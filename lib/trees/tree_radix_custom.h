@@ -753,7 +753,8 @@ namespace uh::trees {
                     }
                 }
                 if (cont_binary.begin() + std::get<0>(add_tup) < cont_binary.end()) {
-                    auto set_vector = std::vector<unsigned char>{cont_binary.begin() + std::get<0>(add_tup),cont_binary.end()};
+                    auto set_vector = std::vector<unsigned char>{};
+                    std::copy(cont_binary.begin() + std::get<0>(add_tup),cont_binary.end(),std::back_inserter(set_vector));
                     std::get<2>(add_tup) += comp.compress(set_vector).size();
                     std::get<1>(add_tup) += set_vector.size();
                     std::get<0>(add_tup) += set_vector.size();
