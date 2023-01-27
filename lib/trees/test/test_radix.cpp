@@ -60,35 +60,30 @@ BOOST_AUTO_TEST_CASE(search_match_filter_test)
     auto input_string_end = std::vector<unsigned char>{world_string.begin(), world_string.end()};
 
     uh::trees::tree_radix_custom<std::vector<unsigned char>> t{};
-    auto result = t.search_match_filter<false>(data_string, input_string_begin);
+    auto result = t.search_match_filter<std::vector<unsigned char>,std::vector<unsigned char>,false>(data_string, input_string_begin);
     BOOST_CHECK(result.size() == 1);
     BOOST_CHECK(std::get<1>(result[0]) == 5);
 
     auto last_it_outer_list = (--(std::get<0>(result[0]).end()));
     auto last_it_inner_list = (--(last_it_outer_list->end()));
 
-    BOOST_CHECK(std::get<0>(std::get<1>(*last_it_inner_list)[0]) == data_string.cbegin() + 2);//data iterator
-    BOOST_CHECK(std::get<1>(std::get<1>(*last_it_inner_list)[0]) == input_string_begin.cbegin());//input iterator begin
-    BOOST_CHECK(
-            std::get<2>(std::get<1>(*last_it_inner_list)[0]) == input_string_begin.cbegin() + 5);//input iterator end
+    BOOST_CHECK(std::get<0>(std::get<1>(*last_it_inner_list)[0]) == 2);//data iterator
+    BOOST_CHECK(std::get<1>(std::get<1>(*last_it_inner_list)[0]) == 7);//input iterator begin
 
     data_string.erase(data_string.cbegin());
     data_string.erase(data_string.cend() - 1);
     std::string ello_Worl = "Hello World";//Algo strictly keeps front and back distance to prevent fragmentation, Match size limits distance to front and back if it does not exactly match
     input_string_begin = std::vector<unsigned char>{ello_Worl.begin(), ello_Worl.end()};
 
-    result = t.search_match_filter<false>(data_string, input_string_begin);
+    result = t.search_match_filter<std::vector<unsigned char>,std::vector<unsigned char>,false>(data_string, input_string_begin);
     BOOST_CHECK(result.size() == 1);
     BOOST_CHECK(std::get<1>(result[0]) == 9);
 
     last_it_outer_list = (--(std::get<0>(result[0]).end()));
     last_it_inner_list = (--(last_it_outer_list->end()));
 
-    BOOST_CHECK(std::get<0>(std::get<1>(*last_it_inner_list)[0]) ==
-                data_string.cbegin() + MINIMUM_MATCH_SIZE);//data iterator
-    BOOST_CHECK(
-            std::get<1>(std::get<1>(*last_it_inner_list)[0]) == input_string_begin.cbegin() + 1);//input iterator begin
-    BOOST_CHECK(std::get<2>(std::get<1>(*last_it_inner_list)[0]) == input_string_begin.cend() - 1);//input iterator end
+    BOOST_CHECK(std::get<0>(std::get<1>(*last_it_inner_list)[0]) == 1);//data iterator
+    BOOST_CHECK(std::get<1>(std::get<1>(*last_it_inner_list)[0]) == 10);//input iterator begin
 }
 
 BOOST_AUTO_TEST_CASE(search_empty_test)
@@ -96,7 +91,7 @@ BOOST_AUTO_TEST_CASE(search_empty_test)
     uh::trees::tree_radix_custom<std::vector<unsigned char>> t;
     std::string hello_string = "Hello";
     auto data_string = std::vector<unsigned char>{hello_string.begin(), hello_string.end()};
-    auto result = t.search<false>(data_string));
+    auto result = t.search<std::vector<unsigned char>,false>(data_string);
     BOOST_CHECK(result.empty());
 }
 
@@ -110,7 +105,7 @@ BOOST_AUTO_TEST_CASE(radix_constructor_test)
     //total match test
     t = new uh::trees::tree_radix_custom<std::vector<unsigned char>>();
     //empty add test
-    auto result_test = t->add_test<false>(data_string);
+    auto result_test = t->add_test<std::vector<unsigned char>,std::vector<unsigned char>,false>(data_string);
     BOOST_CHECK(std::get<0>(result_test[0]) == 11 && std::get<1>(result_test[0]) == 11);
     delete t;
     t = new uh::trees::tree_radix_custom<std::vector<unsigned char>>(data_string);
@@ -118,7 +113,7 @@ BOOST_AUTO_TEST_CASE(radix_constructor_test)
     BOOST_CHECK(t->size() == 11);
     BOOST_CHECK_EQUAL_COLLECTIONS(hello_string.begin(), hello_string.end(), t->data->begin(), t->data->end());
     //adding
-    auto result = t->add<false>(data_string);
+    auto result = t->add<std::vector<unsigned char>,std::vector<unsigned char>,false>(data_string);
     BOOST_CHECK(std::get<0>(result[0]) == 11 && std::get<1>(result[0]) == 0);
     BOOST_CHECK(std::get<0>(*std::get<3>(result[0]).begin()).empty() && std::get<1>(*std::get<3>(result[0]).begin()).empty());//tree modified and added stay empty
     result_test = t->add_test<false>(data_string);

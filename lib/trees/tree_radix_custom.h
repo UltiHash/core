@@ -803,7 +803,7 @@ namespace uh::trees {
         search_match_filter(ContainerData &data_cont, ContainerBinary &binary_cont,
                             std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>>>>>, std::size_t,std::size_t>> possibilities =
                             std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>>>>>, std::size_t,std::size_t>>{}) {
-            auto local_matches = compare_ultihash<reverse>(data_cont,binary_cont);
+            auto local_matches = compare_ultihash<ContainerData,ContainerBinary,reverse>(data_cont,binary_cont);
 
             auto legal_match_integration = [&data_cont](auto local_matches) {
                 std::sort(local_matches.begin(), local_matches.end(), [](auto &a, auto &b) {
@@ -954,7 +954,7 @@ namespace uh::trees {
 
             /*std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<decltype(bin_beg), decltype(bin_end), decltype(bin_beg)>>>>>, std::size_t,decltype(bin_end), decltype(bin_beg)>>*/
             //while a possibility still changes on search_match filter, it is continued to be executed
-            possibilities = search_match_filter<reverse>(data, cont_binary, possibilities);
+            possibilities = search_match_filter<std::vector<unsigned char>,ContainerBinary,reverse>(*data, cont_binary, possibilities);
 
             decltype(possibilities) new_recursive{};
 
@@ -978,12 +978,12 @@ namespace uh::trees {
                 std::vector<unsigned char> binary_subset{cont_binary.begin()+std::get<2>(*single_pos), cont_binary.end()};
                 if constexpr (!reverse) {
                     std::vector<unsigned char> data_subset{data->begin()+std::get<1>(*single_pos), data->end()};
-                    tmp = search_match_filter<reverse>(data_subset, binary_subset ,possibilities);
+                    tmp = search_match_filter<decltype(*data),ContainerBinary,reverse>(data_subset, binary_subset ,possibilities);
                 } else {
                     std::vector<unsigned char> data_subset{data->begin(), data->end()-(std::get<1>(*single_pos)+1)};
-                    tmp = search_match_filter<reverse>(data_subset, binary_subset ,possibilities);
+                    tmp = search_match_filter<decltype(*data),ContainerBinary,reverse>(data_subset, binary_subset ,possibilities);
                 }
-                std::for_each(tmp.begin(), tmp.end(), [&tmp, &new_recursive](auto &item1) {
+                std::for_each(tmp.begin(), tmp.end(), [&new_recursive](auto &item1) {
                     if (std::none_of(new_recursive.begin(), new_recursive.end(), [&item1](auto &item2) {
                         return item2 == item1;
                     })) {
@@ -996,28 +996,28 @@ namespace uh::trees {
             }
             //check child that deals with searching the far most rest in direction of end to skip the not matching rest
             //only check children with correct continue letter first in case we get a total match
-            for (auto pos_begin: possibilities) {
+            for (auto &pos_begin: possibilities) {
                 if constexpr (!reverse){
-                    if (data->begin()+std::get<1>(*pos_begin)==data->end()||cont_binary.begin()+std::get<2>(*pos_begin) == cont_binary.end()) {
+                    if (data->begin()+std::get<1>(pos_begin)==data->end()||cont_binary.begin()+std::get<2>(pos_begin) == cont_binary.end()) {
                         continue;
                     }
                 }
                 else{
-                    if (data->rbegin()+std::get<1>(*pos_begin)==data->rend()||cont_binary.begin()+std::get<2>(*pos_begin) == cont_binary.end()) {
+                    if (data->rbegin()+std::get<1>(pos_begin)==data->rend()||cont_binary.begin()+std::get<2>(pos_begin) == cont_binary.end()) {
                         continue;
                     }
                 }
-                std::vector<unsigned char> binary_subset{cont_binary.begin()+std::get<2>(*pos_begin), cont_binary.end()};
+                std::vector<unsigned char> binary_subset{cont_binary.begin()+std::get<2>(pos_begin), cont_binary.end()};
                 bool total_match = false;
                 auto child_vec = child_vector(*(cont_binary.begin()+std::get<2>(pos_begin)));
                 if (!child_vec.empty()) {//recursive search
                     for (auto &item: child_vec) {//vector of tree pointers
-                        auto tmp = item->template search<reverse>(binary_subset, possibilities);
+                        auto tmp = item->template search<ContainerBinary,reverse>(binary_subset, possibilities);
                         if (std::any_of(tmp.begin(), tmp.end(), [&cont_binary](auto &item) {
                             return cont_binary.begin()+std::get<2>(item) == cont_binary.end();
                         }))total_match = true;
                         if (tmp != possibilities) {
-                            std::for_each(tmp.begin(), tmp.end(), [&tmp, &new_recursive](auto &item1) {
+                            std::for_each(tmp.begin(), tmp.end(), [&new_recursive](auto &item1) {
                                 if (std::none_of(new_recursive.begin(), new_recursive.end(), [&item1](auto &item2) {
                                     return item2 == item1;
                                 })) {
@@ -1038,9 +1038,9 @@ namespace uh::trees {
                         if (cont_binary.begin()+std::get<2>(pos_begin) == cont_binary.end()) {
                             continue;
                         }
-                        auto tmp = item->template search<reverse>(binary_subset, possibilities);
+                        auto tmp = item->template search<ContainerBinary,reverse>(binary_subset, possibilities);
                         if (tmp != possibilities) {
-                            std::for_each(tmp.begin(), tmp.end(), [&tmp, &new_recursive](auto &item1) {
+                            std::for_each(tmp.begin(), tmp.end(), [&new_recursive](auto &item1) {
                                 if (std::none_of(new_recursive.begin(), new_recursive.end(), [&item1](auto &item2) {
                                     return item2 == item1;
                                 })) {
