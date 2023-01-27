@@ -15,7 +15,7 @@
 BOOST_AUTO_TEST_CASE(compare_test)
 {
     uh::trees::tree_radix_custom<std::vector<unsigned char>> t;
-    BOOST_CHECK(t.children->empty());
+    BOOST_CHECK(t.children.empty());
     std::string hello_string = "Hello World";
     std::string hello_string_long = "Hello World of tomorrow!";
     std::string hello_string_late = "Do not say \"Hello World!\"";
@@ -99,7 +99,7 @@ BOOST_AUTO_TEST_CASE(search_empty_test)
 BOOST_AUTO_TEST_CASE(radix_constructor_test)
 {
     auto *t = new uh::trees::tree_radix_custom<std::vector<unsigned char>>{};
-    BOOST_CHECK(t->children->empty());
+    BOOST_CHECK(t->children.empty());
     std::string hello_string = "Hello World";
     auto data_string = std::vector<unsigned char>{hello_string.begin(), hello_string.end()};
     delete t;
@@ -110,9 +110,9 @@ BOOST_AUTO_TEST_CASE(radix_constructor_test)
     BOOST_CHECK(std::get<0>(result_test[0]) == 11 && std::get<1>(result_test[0]) == 11);
     delete t;
     t = new uh::trees::tree_radix_custom<std::vector<unsigned char>>(data_string);
-    BOOST_CHECK(t->children->empty());
+    BOOST_CHECK(t->children.empty());
     BOOST_CHECK(t->size() == 11);
-    BOOST_CHECK_EQUAL_COLLECTIONS(hello_string.begin(), hello_string.end(), t->data->begin(), t->data->end());
+    BOOST_CHECK_EQUAL_COLLECTIONS(hello_string.begin(), hello_string.end(), t->data.begin(), t->data.end());
     //adding
     auto result = t->add<std::vector<unsigned char>,false>(data_string);
     BOOST_CHECK(std::get<2>(result[0]) == 10 && std::get<1>(result[0]) == 0);
