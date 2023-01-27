@@ -503,16 +503,16 @@ namespace uh::trees {
                                     if (last_section_tree) {
                                         //delete the referenced data size of middle and cend from tree pointer first
                                         if constexpr (!reverse) {
-                                            tree_ptr_first->data->erase(tree_ptr_first->data->cbegin()+child_beg.size(), tree_ptr_first->data->cbegin()+child_beg.size()+child_mid.size()+child_end.size());
+                                            tree_ptr_first->data->erase(tree_ptr_first->data->begin()+child_beg.size(), tree_ptr_first->data->begin()+child_beg.size()+child_mid.size()+child_end.size());
                                         } else {
-                                            tree_ptr_first->data->erase(tree_ptr_first->data->rbegin()+child_beg.size(), tree_ptr_first->data->rbegin()+child_beg.size()+child_mid.size()+child_end.size());
+                                            tree_ptr_first->data->erase(tree_ptr_first->data->begin(), tree_ptr_first->data->begin()+child_mid.size()+child_end.size());
                                         }
                                     } else {
                                         //delete middle data reference size from tree pointer first
                                         if constexpr (!reverse) {
                                             tree_ptr_first->data->erase(tree_ptr_first->data->begin()+child_beg.size(), tree_ptr_first->data->begin()+child_beg.size()+child_mid.size());
                                         } else {
-                                            tree_ptr_first->data->erase(tree_ptr_first->data->rbegin()+child_beg.size(), tree_ptr_first->data->rbegin()+child_beg.size()+child_mid.size());
+                                            tree_ptr_first->data->erase(tree_ptr_first->data->begin(), tree_ptr_first->data->begin()+child_mid.size());
                                         }
                                     }
                                 } else {
@@ -521,7 +521,7 @@ namespace uh::trees {
                                         if constexpr (!reverse) {
                                             tree_ptr_mid->data->erase(tree_ptr_mid->data->begin()+child_mid.size(),tree_ptr_mid->data->begin()+child_mid.size()+child_end.size());
                                         } else {
-                                            tree_ptr_mid->data->erase(tree_ptr_mid->data->rbegin()+child_mid.size(),tree_ptr_mid->data->rbegin()+child_mid.size()+child_end.size());
+                                            tree_ptr_mid->data->erase(tree_ptr_mid->data->begin(),tree_ptr_mid->data->begin()+child_end.size());
                                         }
                                     }
                                     //else do not delete
