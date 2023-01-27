@@ -78,7 +78,7 @@ BOOST_AUTO_TEST_CASE(search_match_filter_test)
 
     result = t.search_match_filter<std::vector<unsigned char>,std::vector<unsigned char>,false>(data_string, input_string_begin);
     BOOST_CHECK(result.size() == 1);
-    BOOST_CHECK(std::get<1>(result[0]) == 9);
+    BOOST_CHECK(std::get<2>(result[0]) == 10);
 
     last_it_outer_list = (--(std::get<0>(result[0]).end()));
     last_it_inner_list = (--(last_it_outer_list->end()));
