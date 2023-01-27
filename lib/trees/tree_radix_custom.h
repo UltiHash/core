@@ -389,7 +389,7 @@ namespace uh::trees {
                             //simple insert into data since this seems to be a new node that can contain simple information
 
                             std::get<2>(*match_beg)->data->assign(binary_cont.begin(), binary_cont.end());
-                            out_vector.push_back(std::get<3>(*match_beg));
+                            out_vector.push_back(std::get<2>(*match_beg));
                             std::get<0>(out_change_tuple) += std::get<1>(*match_beg);
                             std::get<1>(out_change_tuple) += std::get<1>(*match_beg);
                             std::get<2>(out_change_tuple) += comp.compress(binary_cont).size();
@@ -565,30 +565,20 @@ namespace uh::trees {
                                 if (match_beg_intern + 1 >= match_end_intern)return;
                                 //update matches offset
                                 auto first_data_offset = std::get<0>(*match_beg_intern);
-                                std::size_t first_match_size =
-                                        std::distance(std::get<1>(*match_beg_intern), std::get<2>(*match_beg_intern)) +
-                                        1;
+                                std::size_t first_match_size = std::get<1>(*match_beg_intern);
                                 std::size_t first_end = tree_front_data_front_absolute + first_match_size;
                                 while (match_beg_intern < match_end_intern) {
-                                    std::size_t data_offset_between_start_and_current = std::distance(first_data_offset,
-                                                                                                      std::get<0>(
-                                                                                                              *(match_beg_intern +
-                                                                                                                1)));
+                                    std::size_t data_offset_between_start_and_current = std::get<0>(*(match_beg_intern +1))-first_data_offset;
                                     std::size_t total_offset_front_for_this_node =
                                             tree_front_data_front_absolute + data_offset_between_start_and_current;
                                     if (data_offset_between_start_and_current < first_end) {
                                         //overlapping match, tree pointer stays at this tree, one to one reference tree front at tree_front_data_front_absolute; re-reference to data due to erase
-                                        std::size_t match_size = std::distance(std::get<1>(*(match_beg_intern + 1)),
-                                                                               std::get<2>(*(match_beg_intern + 1))) +
-                                                                 1;
-                                        std::size_t data_offset_between_start_and_last_node = std::distance(
-                                                first_data_offset, std::get<0>(*(match_beg_intern)));
+                                        std::size_t match_size = std::get<1>(*(match_beg_intern + 1));
+                                        std::size_t data_offset_between_start_and_last_node = std::get<0>(*(match_beg_intern))-first_data_offset;
                                         std::size_t total_offset_front_for_last_node = tree_front_data_front_absolute +
                                                                                        data_offset_between_start_and_last_node;
                                         if (data_offset_between_start_and_current + match_size >= first_end) {
-                                            std::size_t match_size_last =
-                                                    std::distance(std::get<1>(*(match_beg_intern)),
-                                                                  std::get<2>(*(match_beg_intern))) + 1;
+                                            std::size_t match_size_last = std::get<1>(*(match_beg_intern));
                                             std::size_t total_offset_end_for_last_node =
                                                     total_offset_front_for_last_node + match_size_last;
 
@@ -596,10 +586,7 @@ namespace uh::trees {
                                             std::get<2>(*(match_beg_intern + 1)) -= total_offset_end_for_last_node -
                                                                                     (total_offset_front_for_this_node +
                                                                                      match_size);
-                                            std::size_t new_match_size =
-                                                    std::distance(std::get<1>(*(match_beg_intern + 1)),
-                                                                  std::get<2>(*(match_beg_intern + 1))) +
-                                                    1;//first tree match
+                                            std::size_t new_match_size = std::get<1>(*(match_beg_intern + 1));//first tree match
                                             auto new_match_begin = std::get<2>(*(match_beg_intern + 1)) + 1;
                                             auto new_match_end = new_match_begin + (match_size - new_match_size);
                                             //std::get<2>(*(match_beg_intern+1)) = tree_front->data->begin()+total_offset_end_for_last_node;
