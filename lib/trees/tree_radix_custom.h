@@ -354,7 +354,7 @@ namespace uh::trees {
                             std::copy(std::get<2>(*match_beg)->data.begin(),std::get<2>(*match_beg)->data.begin()+std::get<0>(*match_beg),std::back_inserter(child_beg));
                             //child data sequence middle, reference data
                             child_mid = std::vector<unsigned char>{};
-                            std::copy(std::get<2>(*match_beg)->data.begin()+std::get<0>(*match_beg),std::get<2>(*match_beg)->data.begin()+std::get<0>(*match_beg)+std::get<1>(*match_beg),std::back_inserter(child_mid));
+                            std::copy(std::get<2>(*match_beg)->data.begin()+std::get<0>(*match_beg),std::get<2>(*match_beg)->data.begin()+std::get<0>(*match_beg)+std::get<1>(*match_beg)+1,std::back_inserter(child_mid));
                             //child data sequence end, reference data
                             child_end = std::vector<unsigned char>{};
                             std::copy(std::get<2>(*match_beg)->data.begin()+std::get<0>(*match_beg)+std::get<1>(*match_beg)+1,std::get<2>(*match_beg)->data.end(),std::back_inserter(child_end));
@@ -363,7 +363,7 @@ namespace uh::trees {
                             std::copy(std::get<2>(*match_beg)->data.rbegin(),std::get<2>(*match_beg)->data.rbegin()+std::get<0>(*match_beg),std::back_inserter(child_beg));
                             //child data sequence middle, reference data
                             child_mid = std::vector<unsigned char>{};
-                            std::copy(std::get<2>(*match_beg)->data.rbegin()+std::get<0>(*match_beg),std::get<2>(*match_beg)->data.rbegin()+std::get<0>(*match_beg)+std::get<1>(*match_beg),std::back_inserter(child_mid));
+                            std::copy(std::get<2>(*match_beg)->data.rbegin()+std::get<0>(*match_beg),std::get<2>(*match_beg)->data.rbegin()+std::get<0>(*match_beg)+std::get<1>(*match_beg)+1,std::back_inserter(child_mid));
                             //child data sequence end, reference data
                             child_end = std::vector<unsigned char>{};
                             std::copy(std::get<2>(*match_beg)->data.rbegin()+std::get<0>(*match_beg)+std::get<1>(*match_beg)+1,std::get<2>(*match_beg)->data.rend(),std::back_inserter(child_end));
