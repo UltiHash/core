@@ -733,15 +733,6 @@ namespace uh::trees {
             return out_change_tuple_out;
         }
 
-        template<class ContainerType, bool reverse = false>
-        std::tuple<std::size_t, std::size_t, std::size_t> add_test(const ContainerType &c) {
-            if constexpr (!reverse) {
-                return add_test(c.cbegin(), c.cend());
-            } else {
-                return add_test(c.crbegin(), c.crend());
-            }
-        }
-
         //returns total size integrated, new space used uncompressed, new space used compressed
         //calculates ESTIMATE size of data to be integrated to be communicated to agency to determine optimal storage location
         template<class ContainerBinary,bool reverse = false>
@@ -879,7 +870,7 @@ namespace uh::trees {
                     auto best_beg = local_matches.begin();
                     while (best_beg != local_matches.end()) {
                         max_fit = std::max(max_fit,std::get<0>(*best_beg));
-                        if (std::get<1>(*best_beg) < max_fit) {
+                        if (std::get<0>(*best_beg) < max_fit) {
                             //break and delete until end
                             break;
                         }
@@ -1021,7 +1012,7 @@ namespace uh::trees {
                 auto child_vec = child_vector(*(cont_binary.begin()+std::get<2>(pos_begin)));
                 if (!child_vec.empty()) {//recursive search
                     for (auto &item: child_vec) {//vector of tree pointers
-                        auto tmp = item->search<reverse>(binary_subset, possibilities);
+                        auto tmp = item->template search<reverse>(binary_subset, possibilities);
                         if (std::any_of(tmp.begin(), tmp.end(), [&cont_binary](auto &item) {
                             return cont_binary.begin()+std::get<2>(item) == cont_binary.end();
                         }))total_match = true;
@@ -1047,7 +1038,7 @@ namespace uh::trees {
                         if (cont_binary.begin()+std::get<2>(pos_begin) == cont_binary.end()) {
                             continue;
                         }
-                        auto tmp = item->search<reverse>(binary_subset, possibilities);
+                        auto tmp = item->template search<reverse>(binary_subset, possibilities);
                         if (tmp != possibilities) {
                             std::for_each(tmp.begin(), tmp.end(), [&tmp, &new_recursive](auto &item1) {
                                 if (std::none_of(new_recursive.begin(), new_recursive.end(), [&item1](auto &item2) {
