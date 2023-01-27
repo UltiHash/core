@@ -27,10 +27,10 @@ BOOST_AUTO_TEST_CASE(compare_test)
     auto result2 = t.compare_ultihash(data_string_late, data_string_long);
 
     BOOST_CHECK(std::get<0>(result1[0]) == 0);
-    BOOST_CHECK(std::get<1>(result1[0]) == 11);
+    BOOST_CHECK(std::get<1>(result1[0]) == 10);
 
     BOOST_CHECK(std::get<0>(result2[0]) == 12);
-    BOOST_CHECK(std::get<1>(result2[0]) == 11);
+    BOOST_CHECK(std::get<1>(result2[0]) == 10);
 
     std::string hello_world_string = "Hello World";
     while (hello_world_string.size() < 2 * MINIMUM_MATCH_SIZE + 11) {
@@ -42,7 +42,7 @@ BOOST_AUTO_TEST_CASE(compare_test)
     auto input_string_begin2 = std::vector<unsigned char>{hello_string2.begin(), hello_string2.end()};
     auto result3 = t.compare_ultihash(data_string2, input_string_begin2);
     BOOST_CHECK(std::get<0>(result3[0]) == 2);//data iterator
-    BOOST_CHECK(std::get<1>(result3[0]) == 5);//input iterator begin
+    BOOST_CHECK(std::get<1>(result3[0]) == 4);//input iterator begin
 }
 
 BOOST_AUTO_TEST_CASE(search_match_filter_test)
@@ -63,13 +63,13 @@ BOOST_AUTO_TEST_CASE(search_match_filter_test)
     auto result = t.search_match_filter<std::vector<unsigned char>,std::vector<unsigned char>,false>(data_string, input_string_begin);
     BOOST_CHECK(result.size() == 1);
     BOOST_CHECK(std::get<1>(result[0]) == 0);
-    BOOST_CHECK(std::get<2>(result[0]) == 5);
+    BOOST_CHECK(std::get<2>(result[0]) == 4);
 
     auto last_it_outer_list = (--(std::get<0>(result[0]).end()));
     auto last_it_inner_list = (--(last_it_outer_list->end()));
 
     BOOST_CHECK(std::get<0>(std::get<1>(*last_it_inner_list)[0]) == 2);//data iterator
-    BOOST_CHECK(std::get<1>(std::get<1>(*last_it_inner_list)[0]) == 5);//input iterator begin
+    BOOST_CHECK(std::get<1>(std::get<1>(*last_it_inner_list)[0]) == 4);//input iterator begin
 
     data_string.erase(data_string.cbegin());
     data_string.erase(data_string.cend() - 1);
