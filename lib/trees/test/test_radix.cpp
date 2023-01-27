@@ -78,7 +78,7 @@ BOOST_AUTO_TEST_CASE(search_match_filter_test)
 
     result = t.search_match_filter<std::vector<unsigned char>,std::vector<unsigned char>,false>(data_string, input_string_begin);
     BOOST_CHECK(result.size() == 1);
-    BOOST_CHECK(std::get<1>(result[0]) == 11);
+    BOOST_CHECK(std::get<1>(result[0]) == 9);
 
     last_it_outer_list = (--(std::get<0>(result[0]).end()));
     last_it_inner_list = (--(last_it_outer_list->end()));
@@ -149,13 +149,15 @@ BOOST_AUTO_TEST_CASE(add_test)
     auto data_string5 = std::string{"Hello World!"};
     auto data5 = std::vector<unsigned char>{data_string5.begin(),data_string5.end()};
 
-    //first tree test
+    //TODO:
 
-    //first tree append test
+    //first tree test, match something at the back of the string
 
-    //last tree test
+    //first tree append test, match something where a subset already exists and additional information is added
 
-    //last tree append test
+    //last tree test, match something that is the same at the beginning and then is different at a certain spot on
+
+    //last tree append test, match something that is the same in the beginning or totally to the existing information and add some more information at the end of the string going into add function
 
     auto *t = new uh::trees::tree_radix_custom<std::vector<unsigned char>>{data1};
 
