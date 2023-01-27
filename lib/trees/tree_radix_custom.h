@@ -788,10 +788,10 @@ namespace uh::trees {
                     do {
 
                         start_size = std::get<0>(*match_beg) <= (long)start_val-MINIMUM_MATCH_SIZE || start_val+MINIMUM_MATCH_SIZE <= std::get<0>(*match_beg);
-                        end_size = data_cont.size()-1-(std::get<0>(*match_beg)+std::get<1>(*match_beg)) <= (long)end_val-MINIMUM_MATCH_SIZE <= (long)start_val-MINIMUM_MATCH_SIZE || MINIMUM_MATCH_SIZE <= data_cont.size()-1-(std::get<0>(*match_beg)+std::get<1>(*match_beg));
+                        end_size = data_cont.size()-(std::get<0>(*match_beg)+std::get<1>(*match_beg)) <= (long)end_val-MINIMUM_MATCH_SIZE <= (long)start_val-MINIMUM_MATCH_SIZE || MINIMUM_MATCH_SIZE <= data_cont.size()-(std::get<0>(*match_beg)+std::get<1>(*match_beg));
                         total_found_size = MINIMUM_MATCH_SIZE <= std::get<1>(*match_beg);
                         begin_reached = std::get<0>(*match_beg) == start_val;
-                        end_reached = data_cont.size()-1-(std::get<0>(*match_beg)+std::get<1>(*match_beg)) == end_val;
+                        end_reached = data_cont.size()-(std::get<0>(*match_beg)+std::get<1>(*match_beg)) == end_val;
                         legal_split = ((start_size || begin_reached) && (end_size || end_reached) && total_found_size);
 
                         if (!start_size && !begin_reached) {
