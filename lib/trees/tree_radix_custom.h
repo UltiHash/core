@@ -199,7 +199,7 @@ namespace uh::trees {
                     if (simd_count < SIMD_UNITS) {
                         simd_count += 1;
                         lock.unlock();
-                        current_offset = std::distance(data_cont.begin(),std::find(std::execution::unseq, data_cont.begin()+current_offset, data_cont.end(), *binary_cont.begin()));
+                        current_offset = std::distance(data_cont.begin(),std::find(std::execution::unseq, data_cont.begin()+current_offset, data_cont.end(), *binary_cont.begin()))-1;
                         lock.lock();
                         simd_count -= 1;
                         lock.unlock();
@@ -224,7 +224,7 @@ namespace uh::trees {
                     }
 
                     if (std::distance(data_cont.begin(),found.first) >= MINIMUM_MATCH_SIZE) {
-                        matches.emplace_back(current_offset, current_offset + std::distance(data_cont.begin(),found.first));
+                        matches.emplace_back(current_offset, current_offset + std::distance(data_cont.begin()+current_offset,found.first));
                     }
                     if (data_cont.begin()+current_offset != data_cont.end())current_offset++;
                 } while (data_cont.begin()+current_offset != data_cont.end());
