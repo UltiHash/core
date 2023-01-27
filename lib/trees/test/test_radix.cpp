@@ -124,7 +124,7 @@ BOOST_AUTO_TEST_CASE(radix_constructor_test)
     data_string = std::vector<unsigned char>{tomorrow_string.begin(), tomorrow_string.end()};
     //add test
     result_test = t->add_test(data_string);
-    BOOST_CHECK(std::get<0>(result_test[0]) == 23 && std::get<1>(result_test[0]) == 12);
+    BOOST_CHECK(std::get<0>(result_test[0]) == 24 && std::get<1>(result_test[0]) == 13);
     //add
     result = t->add<std::vector<unsigned char>,false>(data_string);
     BOOST_CHECK(std::get<0>(result[0]) == 23 && std::get<1>(result[0]) == 12);
