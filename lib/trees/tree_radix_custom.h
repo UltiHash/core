@@ -283,7 +283,7 @@ namespace uh::trees {
             if (binary_cont.empty()) {
                 return {};
             }
-            auto search_index = search<reverse>(binary_cont);
+            auto search_index = search<ContainerBinary,reverse>(binary_cont);
 
             //some element and an end element at least required
             //TODO: add cross update from forward and backward children
@@ -359,15 +359,15 @@ namespace uh::trees {
                         if constexpr (!reverse) {
                             child_beg = std::vector<unsigned char>{std::get<2>(*match_beg)->data->cbegin(),std::max(std::get<2>(*match_beg)->data->cbegin()+((long)std::get<0>(*match_beg)-1), std::get<2>(*match_beg)->data->cbegin())};
                             //child data sequence middle, reference data
-                            child_mid = std::vector<unsigned char>{std::get<2>(*match_beg)->data->cbegin()+std::get<1>(*match_beg),std::min(std::get<2>(*match_beg)->data->cend(),std::get<2>(*match_beg)->data->cbegin()+std::get<1>(*match_beg)+std::get<2>(*match_beg))};
+                            child_mid = std::vector<unsigned char>{std::get<2>(*match_beg)->data->cbegin()+std::get<1>(*match_beg),std::min(std::get<2>(*match_beg)->data->cend(),std::get<2>(*match_beg)->data->cbegin()+std::get<1>(*match_beg)+std::get<0>(*match_beg))};
                             //child data sequence end, reference data
-                            child_end = std::vector<unsigned char>{std::min(std::get<2>(*match_beg)->data->cend(), std::min(std::get<2>(*match_beg)->data->cend(),std::get<2>(*match_beg)->data->cbegin()+std::get<1>(*match_beg)+std::get<2>(*match_beg)) + 1),std::get<2>(*match_beg)->data->cend()};
+                            child_end = std::vector<unsigned char>{std::min(std::get<2>(*match_beg)->data->cend(), std::min(std::get<2>(*match_beg)->data->cend(),std::get<2>(*match_beg)->data->cbegin()+std::get<1>(*match_beg)+std::get<0>(*match_beg)) + 1),std::get<2>(*match_beg)->data->cend()};
                         } else {
                             child_beg = std::vector<unsigned char>{std::get<2>(*match_beg)->data->crbegin(),std::max(std::get<2>(*match_beg)->data->crbegin()+((long)std::get<0>(*match_beg)-1), std::get<2>(*match_beg)->data->crbegin())};
                             //child data sequence middle, reference data
-                            child_mid = std::vector<unsigned char>{std::get<2>(*match_beg)->data->crbegin()+std::get<1>(*match_beg),std::min(std::get<2>(*match_beg)->data->crend(),std::get<2>(*match_beg)->data->crbegin()+std::get<1>(*match_beg)+std::get<2>(*match_beg))};
+                            child_mid = std::vector<unsigned char>{std::get<2>(*match_beg)->data->crbegin()+std::get<1>(*match_beg),std::min(std::get<2>(*match_beg)->data->crend(),std::get<2>(*match_beg)->data->crbegin()+std::get<1>(*match_beg)+std::get<0>(*match_beg))};
                             //child data sequence end, reference data
-                            child_end = std::vector<unsigned char>{std::min(std::get<2>(*match_beg)->data->crend(), std::min(std::get<2>(*match_beg)->data->crend(),std::get<2>(*match_beg)->data->crbegin()+std::get<1>(*match_beg)+std::get<2>(*match_beg)) + 1),std::get<2>(*match_beg)->data->crend()};
+                            child_end = std::vector<unsigned char>{std::min(std::get<2>(*match_beg)->data->crend(), std::min(std::get<2>(*match_beg)->data->crend(),std::get<2>(*match_beg)->data->crbegin()+std::get<1>(*match_beg)+std::get<0>(*match_beg)) + 1),std::get<2>(*match_beg)->data->crend()};
                         }
                         //child after found, reference new input
                         child_beg = std::vector<unsigned char>{std::min(binary_cont.begin()+std::get<1>(*match_beg)+1,binary_cont.end()),binary_cont.end()};
@@ -642,23 +642,13 @@ namespace uh::trees {
                                             //vector pointer reset
                                             std::size_t active_tree_offset;
 
-                                            if constexpr (!reverse) {
-                                                active_tree_offset = std::distance(actively_changing_trees.begin(),
-                                                                                   match_beg_intern_copy);
-                                                match_beg_intern =
-                                                        actively_changing_trees.begin() + active_tree_offset +
-                                                        std::distance(match_beg_intern_copy, match_beg_intern);
-                                                match_beg_intern_copy =
-                                                        actively_changing_trees.begin() + active_tree_offset;
-                                            } else {
-                                                active_tree_offset = std::distance(actively_changing_trees.crbegin(),
-                                                                                   match_beg_intern_copy);
-                                                match_beg_intern =
-                                                        actively_changing_trees.crbegin() + active_tree_offset +
-                                                        std::distance(match_beg_intern_copy, match_beg_intern);
-                                                match_beg_intern_copy =
-                                                        actively_changing_trees.crbegin() + active_tree_offset;
-                                            }
+                                            active_tree_offset = std::distance(actively_changing_trees.begin(),
+                                                                               match_beg_intern_copy);
+                                            match_beg_intern =
+                                                    actively_changing_trees.begin() + active_tree_offset +
+                                                    std::distance(match_beg_intern_copy, match_beg_intern);
+                                            match_beg_intern_copy =
+                                                    actively_changing_trees.begin() + active_tree_offset;
                                         } else {
                                             //simple build in tree front
                                             if constexpr (!reverse) {
@@ -744,7 +734,7 @@ namespace uh::trees {
             if (cont_binary.empty()) {
                 return {};
             }
-            auto search_index = search<reverse>(cont_binary);
+            auto search_index = search<ContainerBinary,reverse>(cont_binary);
 
             //cases for search index: its empty or it has content and with that a last tree element
             //cases for last tree if it exists, binary fit in: match from the beginning on, match in the middle, match until the end, total match
@@ -780,7 +770,7 @@ namespace uh::trees {
                                 std::get<1>(add_tup) += std::get<1>(pos_tup);
                                 std::get<2>(add_tup) += comp.compress(set_vector).size();
                             } else {
-                                std::get<0>(add_tup) += std::distance(std::get<1>(pos_tup), std::get<2>(pos_tup));
+                                std::get<0>(add_tup) += std::get<1>(pos_tup);
                             }
                         }
                     }
@@ -1052,7 +1042,7 @@ namespace uh::trees {
                 }
             }
 
-            std::for_each(new_recursive.begin(), new_recursive.end(), [&possibilities, &new_recursive](auto &item1) {
+            std::for_each(new_recursive.begin(), new_recursive.end(), [&possibilities](auto &item1) {
                 if (std::none_of(possibilities.begin(), possibilities.end(), [&item1](auto &item2) {
                     return item2 == item1;
                 })) {
