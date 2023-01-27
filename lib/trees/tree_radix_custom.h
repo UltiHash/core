@@ -402,7 +402,7 @@ namespace uh::trees {
                                 if (append_tree) {
                                     auto *tree_ptr_tmp = new tree_radix_custom(child_append);
                                     if constexpr (!reverse){
-                                        size_compressed = comp.compress(tree_ptr_tmp->data).size();
+                                        size_compressed = comp.compress(*(tree_ptr_tmp->data)).size();
                                     }
                                     else{
                                         auto tmp_vec = *tree_ptr_tmp->data;
