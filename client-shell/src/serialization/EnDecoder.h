@@ -5,7 +5,7 @@
 #define CMAKE_BUILD_DEBUG_ULTIHASH_ENCODER_H
 
 #include <logging/logging_boost.h>
-#include "client_common.h"
+#include "serialization_common.h"
 
 class EnDecoder {
     enum signedness{unsigned_type,signed_type};

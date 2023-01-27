@@ -6,10 +6,11 @@ message(STATUS "Using ${PROJECT_NAME}...")
 
 # configure a header file to pass some of the CMake settings
 # to the source code
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/config.h.in ${CMAKE_CURRENT_SOURCE_DIR}/src/config.h)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/project_config.h.in ${CMAKE_CURRENT_SOURCE_DIR}/src/project_config.h)
 
 # external dependencies
-find_package(Boost 1.80 COMPONENTS unit_test_framework REQUIRED)
+set(Boost_USE_STATIC_LIBS ON)
+find_package(Boost 1.80 COMPONENTS program_options REQUIRED)
 find_package(OpenSSL REQUIRED)
 
 # putting internal project repository LIBUH_DEP in a variable
@@ -50,15 +51,15 @@ if(GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/.git")
 endif()
 
 # configuring library dependencies for cmake and linker
-set(${PROJECT_NAME}_INCLUDE_DIRS ${PROJECT_BINARY_DIR} ${PROJECT_SOURCE_DIR}/src)
-set(${PROJECT_NAME}_LINK_LIBRARIES uhLibProtocol uhLibSerialization ${OPENSSL_LIBRARIES})
+set(${PROJECT_NAME}_INCLUDE_DIRS ${PROJECT_BINARY_DIR} ${PROJECT_SOURCE_DIR}/src ${Boost_INCLUDE_DIRS} uhLibLogging uhLibOptions)
+set(${PROJECT_NAME}_LINK_LIBRARIES ${Boost_LIBRARIES} uhLibLogging uhLibProtocol uhLibOptions uhLibSerialization ${OPENSSL_LIBRARIES})
 
 # adding all the .h files of the current project
 file(GLOB HEADER_FILE_LIST
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/*.h)
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/*.h ${CMAKE_CURRENT_SOURCE_DIR}/src/client_options/*.h)
 # adding all the .h files of the current project
 file(GLOB SOURCE_FILE_LIST
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp)
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp ${CMAKE_CURRENT_SOURCE_DIR}/src/client_options/*.cpp)
 
 # setting flags for optimizations
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O0")
@@ -107,6 +108,6 @@ endforeach(testSrc)
 
 # creating a single test executable facilitates a better integration between boost.test and CLion
 add_executable (${PROJECT_NAME}_allTests ${HEADER_FILE_LIST} ${SOURCE_FILE_LIST} ${testSrcFiles} test/testRunner.cpp)
-target_compile_definitions(${PROJECT_NAME}_allTests PRIVATE SINGLE_TEST_RUNNER=1)
-target_include_directories(${PROJECT_NAME}_allTests PRIVATE ${${PROJECT_NAME}_INCLUDE_DIRS})
-target_link_libraries (${PROJECT_NAME}_allTests PRIVATE ${${PROJECT_NAME}_LINK_LIBRARIES})
+target_compile_definitions(${PROJECT_NAME}_allTests PUBLIC SINGLE_TEST_RUNNER=1)
+target_include_directories(${PROJECT_NAME}_allTests PUBLIC ${${PROJECT_NAME}_INCLUDE_DIRS})
+target_link_libraries (${PROJECT_NAME}_allTests ${${PROJECT_NAME}_LINK_LIBRARIES})

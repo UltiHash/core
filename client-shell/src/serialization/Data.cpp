@@ -24,10 +24,10 @@ std::string Data::getObjectName() {
     return this->object_name;
 }
 
-Data::Data(uh::protocol::client& client) : m_client(client) {
+Data::Data(const std::unique_ptr<uh::protocol::client>& client) : m_client(client) {
 }
 
-Data::Data(const std::string &in, unsigned short folderE, uh::protocol::client& client) : Prefix(in, folderE), m_client(client) {
+Data::Data(const std::string &in, unsigned short folderE, const std::unique_ptr<uh::protocol::client>& client) : Prefix(in, folderE), m_client(client) {
     std::cout << "Write to recompilation file: " << in <<  "\n\n";
     if(this->is_regular_file() and not this->emptyObject())[[likely]]{
         std::ifstream myFile(in,std::ios::in | std::ios::binary);
@@ -78,4 +78,3 @@ Data::Data(const std::string &in, unsigned short folderE, uh::protocol::client& 
         }
     }
 }
-
