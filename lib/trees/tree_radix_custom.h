@@ -791,7 +791,7 @@ namespace uh::trees {
                         end_size = data_cont.size()-(std::get<0>(*match_beg)+std::get<1>(*match_beg)) <= (long)end_val-MINIMUM_MATCH_SIZE <= (long)start_val-MINIMUM_MATCH_SIZE || MINIMUM_MATCH_SIZE <= data_cont.size()-(std::get<0>(*match_beg)+std::get<1>(*match_beg));
                         total_found_size = MINIMUM_MATCH_SIZE <= std::get<1>(*match_beg);
                         begin_reached = std::get<0>(*match_beg) == start_val;
-                        end_reached = data_cont.size()-(std::get<0>(*match_beg)+std::get<1>(*match_beg)) == end_val;
+                        end_reached = data_cont.begin()+(std::get<0>(*match_beg)+std::get<1>(*match_beg))+1 == data_cont.begin()+end_val+1;
                         legal_split = ((start_size || begin_reached) && (end_size || end_reached) && total_found_size);
 
                         if (!start_size && !begin_reached) {
@@ -811,7 +811,7 @@ namespace uh::trees {
                 };
 
                 while (match_beg != local_matches.end()) {//shrink all matches until the total result is legal, shrink smaller matches first until they vanish
-                    bool legal_general = legal_check(match_beg,0,data_cont.size()-1);
+                    bool legal_general = legal_check(match_beg,(std::size_t)0,std::max(data_cont.size()-1,(std::size_t)0));
                     if(!legal_general){
                         local_matches.erase(match_beg);
                         match_beg = local_matches.begin();
