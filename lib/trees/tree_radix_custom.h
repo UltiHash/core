@@ -401,8 +401,15 @@ namespace uh::trees {
                                 size_integrated += std::get<2>(*match_beg)->data->size();
                                 if (append_tree) {
                                     auto *tree_ptr_tmp = new tree_radix_custom(append_tree);
-                                    size_compressed = comp.compress(tree_ptr_tmp->data->cbegin(),
-                                                                    tree_ptr_tmp->data->cend()).size();
+                                    if constexpr (!reverse){
+                                        size_compressed = comp.compress(tree_ptr_tmp->data).size();
+                                    }
+                                    else{
+                                        auto tmp_vec = *tree_ptr_tmp->data;
+                                        std::reverse(tmp_vec.begin(),tmp_vec.end());
+                                        size_compressed = comp.compress(tmp_vec).size();
+                                    }
+
                                     size_uncompressed += tree_ptr_tmp->data->size();
                                     size_integrated += size_uncompressed;
                                     //either find child is empty and test add tree or add_test to another child tree
@@ -498,23 +505,23 @@ namespace uh::trees {
                                         if constexpr (!reverse) {
                                             tree_ptr_first->data->erase(tree_ptr_first->data->cbegin()+child_beg.size(), tree_ptr_first->data->cbegin()+child_beg.size()+child_mid.size()+child_end.size());
                                         } else {
-                                            tree_ptr_first->data->erase(tree_ptr_first->data->crbegin()+child_beg.size(), tree_ptr_first->data->crbegin()+child_beg.size()+child_mid.size()+child_end.size());
+                                            tree_ptr_first->data->erase(tree_ptr_first->data->rbegin()+child_beg.size(), tree_ptr_first->data->rbegin()+child_beg.size()+child_mid.size()+child_end.size());
                                         }
                                     } else {
                                         //delete middle data reference size from tree pointer first
                                         if constexpr (!reverse) {
-                                            tree_ptr_first->data->erase(tree_ptr_first->data->cbegin()+child_beg.size(), tree_ptr_first->data->cbegin()+child_beg.size()+child_mid.size());
+                                            tree_ptr_first->data->erase(tree_ptr_first->data->begin()+child_beg.size(), tree_ptr_first->data->begin()+child_beg.size()+child_mid.size());
                                         } else {
-                                            tree_ptr_first->data->erase(tree_ptr_first->data->crbegin()+child_beg.size(), tree_ptr_first->data->crbegin()+child_beg.size()+child_mid.size());
+                                            tree_ptr_first->data->erase(tree_ptr_first->data->rbegin()+child_beg.size(), tree_ptr_first->data->rbegin()+child_beg.size()+child_mid.size());
                                         }
                                     }
                                 } else {
                                     if (last_section_tree) {
                                         //delete last tree reference size from tree pointer middle
                                         if constexpr (!reverse) {
-                                            tree_ptr_mid->data->erase(tree_ptr_mid->data->cbegin()+child_mid.size(),tree_ptr_mid->data->cbegin()+child_mid.size()+child_end.size());
+                                            tree_ptr_mid->data->erase(tree_ptr_mid->data->begin()+child_mid.size(),tree_ptr_mid->data->begin()+child_mid.size()+child_end.size());
                                         } else {
-                                            tree_ptr_mid->data->erase(tree_ptr_mid->data->crbegin()+child_mid.size(),tree_ptr_mid->data->crbegin()+child_mid.size()+child_end.size());
+                                            tree_ptr_mid->data->erase(tree_ptr_mid->data->rbegin()+child_mid.size(),tree_ptr_mid->data->rbegin()+child_mid.size()+child_end.size());
                                         }
                                     }
                                     //else do not delete
@@ -550,7 +557,7 @@ namespace uh::trees {
                             //this must be the only match so nothing happens
                         } else {
                             //stack helper function for overlapping creation of trees
-                            auto overlap_update = [&reverse](std::size_t tree_front_data_front_absolute,
+                            auto overlap_update = [](std::size_t tree_front_data_front_absolute,
                                                              auto &actively_changing_trees, auto match_beg_intern_copy,
                                                              auto match_end_intern, tree_radix_custom *tree_front,
                                                              tree_radix_custom *tree_back) {
