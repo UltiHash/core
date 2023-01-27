@@ -12,12 +12,12 @@ namespace uh::util{
     public:
 
         template<class Container>
-        std::vector<unsigned char> compress(const Container &input){
+        std::vector<unsigned char> compress(Container &input){
             return std::vector<unsigned char>{input.begin(),input.end()};
         }
 
         template<class Container>
-        std::vector<unsigned char> decompress(const Container &input){
+        std::vector<unsigned char> decompress(Container &input){
             return std::vector<unsigned char>{input.begin(),input.end()};
         }
     };

@@ -57,7 +57,7 @@ namespace uh::trees {
             delete children;
         }
 
-        explicit tree_radix_custom(auto &bin) : tree_radix_custom() {
+        explicit tree_radix_custom(const std::vector<unsigned char> &bin) : tree_radix_custom() {
             data->assign(bin.begin(), bin.end());
         }
 
@@ -370,7 +370,7 @@ namespace uh::trees {
                             child_end = std::vector<unsigned char>{std::min(std::get<2>(*match_beg)->data->crend(), std::min(std::get<2>(*match_beg)->data->crend(),std::get<2>(*match_beg)->data->crbegin()+std::get<1>(*match_beg)+std::get<0>(*match_beg)) + 1),std::get<2>(*match_beg)->data->crend()};
                         }
                         //child after found, reference new input
-                        child_beg = std::vector<unsigned char>{std::min(binary_cont.begin()+std::get<1>(*match_beg)+1,binary_cont.end()),binary_cont.end()};
+                        child_append = std::vector<unsigned char>{std::min(binary_cont.begin()+std::get<1>(*match_beg)+1,binary_cont.end()),binary_cont.end()};
                         //only the new append part may be compressed
                         //before splitting or modifying a block it needs to be uncompressed
 
