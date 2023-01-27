@@ -583,30 +583,34 @@ namespace uh::trees {
                                                     total_offset_front_for_last_node + match_size_last;
 
                                             //recursive overlap reconstruction
-                                            std::get<2>(*(match_beg_intern + 1)) -= total_offset_end_for_last_node -
+                                            std::get<1>(*(match_beg_intern + 1)) -= total_offset_end_for_last_node -
                                                                                     (total_offset_front_for_this_node +
                                                                                      match_size);
                                             std::size_t new_match_size = std::get<1>(*(match_beg_intern + 1));//first tree match
-                                            auto new_match_begin = std::get<2>(*(match_beg_intern + 1)) + 1;
+                                            auto new_match_begin = std::get<2>(*(match_beg_intern + 1))->data->begin()+std::get<0>(*(match_beg_intern + 1))+std::get<1>(*(match_beg_intern + 1))+1;
                                             auto new_match_end = new_match_begin + (match_size - new_match_size);
                                             //std::get<2>(*(match_beg_intern+1)) = tree_front->data->begin()+total_offset_end_for_last_node;
                                             //std::get<3>(*(match_beg_intern+1)) = tree_front;
 
                                             if constexpr (!reverse) {
+                                                /*
                                                 auto new_partial_match = std::make_tuple(new_match_begin,
                                                                                          new_match_end,
                                                                                          tree_front->data->cbegin() +
                                                                                          (total_offset_front_for_this_node -
                                                                                           (tree_front->data->size() -
                                                                                            new_match_size)),
-                                                                                         tree_front);//second tree match
+                                                                                         tree_front);//second tree match*/
+                                                auto new_partial_match = std::make_tuple((std::size_t)std::distance(std::get<2>(*(match_beg_intern + 1))->data->begin(),new_match_begin),
+                                                                                         (std::size_t)std::distance(new_match_begin,new_match_end),
+                                                                                                          tree_front);
 
                                                 // update until end
                                                 auto match_insert_check = match_beg_intern;
-                                                while (std::get<0>(*match_insert_check) <
-                                                       std::get<0>(new_partial_match) &&
-                                                       match_insert_check != match_end_intern)
+                                                while (std::get<0>(*match_insert_check) < std::get<0>(new_partial_match) &&
+                                                       match_insert_check != match_end_intern){
                                                     match_insert_check++;
+                                                }
                                                 actively_changing_trees.insert(match_insert_check, new_partial_match);
                                             } else {
                                                 auto new_partial_match = std::make_tuple(new_match_begin,
@@ -638,27 +642,14 @@ namespace uh::trees {
                                                     actively_changing_trees.begin() + active_tree_offset;
                                         } else {
                                             //simple build in tree front
-                                            if constexpr (!reverse) {
-                                                std::get<0>(*(match_beg_intern + 1)) = tree_front->data->cbegin() +
-                                                                                       total_offset_front_for_this_node/*-distance from the last node until the current node start*/;
-                                            } else {
-                                                std::get<0>(*(match_beg_intern + 1)) = tree_front->data->crbegin() +
-                                                                                       total_offset_front_for_this_node/*-distance from the last node until the current node start*/;
-                                            }
+                                            std::get<0>(*(match_beg_intern + 1)) = total_offset_front_for_this_node/*-distance from the last node until the current node start*/;
                                             //std::get<3>(*(match_beg_intern+1)) = tree_front;
                                         }
                                     } else {
                                         //total match, new calculated reference on tree_back
-                                        if constexpr (!reverse) {
-                                            std::get<0>(*(match_beg_intern + 1)) = tree_back->data->cbegin() +
-                                                                                   (total_offset_front_for_this_node -
-                                                                                    tree_front->data->size());
-                                        } else {
-                                            std::get<0>(*(match_beg_intern + 1)) = tree_back->data->crbegin() +
-                                                                                   (total_offset_front_for_this_node -
-                                                                                    tree_front->data->size());
-                                        }
-                                        std::get<3>(*(match_beg_intern + 1)) = tree_back;
+                                        std::get<0>(*(match_beg_intern + 1)) = total_offset_front_for_this_node -
+                                                                               tree_front->data->size();
+                                        std::get<2>(*(match_beg_intern + 1)) = tree_back;
                                     }
                                     match_beg_intern++;
                                 }
