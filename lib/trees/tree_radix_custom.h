@@ -400,7 +400,7 @@ namespace uh::trees {
                                 out_vector.push_back(std::get<2>(*match_beg));
                                 size_integrated += std::get<2>(*match_beg)->data->size();
                                 if (append_tree) {
-                                    auto *tree_ptr_tmp = new tree_radix_custom(append_tree);
+                                    auto *tree_ptr_tmp = new tree_radix_custom(child_append);
                                     if constexpr (!reverse){
                                         size_compressed = comp.compress(tree_ptr_tmp->data).size();
                                     }
