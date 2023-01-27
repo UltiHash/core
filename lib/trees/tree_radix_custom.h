@@ -357,17 +357,17 @@ namespace uh::trees {
                         std::vector<unsigned char> child_beg,child_mid,child_end,child_append;
 
                         if constexpr (!reverse) {
-                            child_beg = std::vector<unsigned char>{std::get<2>(*match_beg)->data->cbegin(),std::max(std::get<2>(*match_beg)->data->cbegin()+((long)std::get<0>(*match_beg)-1), std::get<2>(*match_beg)->data->cbegin())};
+                            child_beg = std::vector<unsigned char>{std::get<2>(*match_beg)->data->begin(),std::get<2>(*match_beg)->data->begin()+std::get<0>(*match_beg)-1};
                             //child data sequence middle, reference data
-                            child_mid = std::vector<unsigned char>{std::get<2>(*match_beg)->data->cbegin()+std::get<1>(*match_beg),std::min(std::get<2>(*match_beg)->data->cend(),std::get<2>(*match_beg)->data->cbegin()+std::get<1>(*match_beg)+std::get<0>(*match_beg))};
+                            child_mid = std::vector<unsigned char>{std::get<2>(*match_beg)->data->begin()+std::get<0>(*match_beg),std::get<2>(*match_beg)->data->begin()+std::get<0>(*match_beg)+std::get<1>(*match_beg)};
                             //child data sequence end, reference data
-                            child_end = std::vector<unsigned char>{std::min(std::get<2>(*match_beg)->data->cend(), std::min(std::get<2>(*match_beg)->data->cend(),std::get<2>(*match_beg)->data->cbegin()+std::get<1>(*match_beg)+std::get<0>(*match_beg)) + 1),std::get<2>(*match_beg)->data->cend()};
+                            child_end = std::vector<unsigned char>{std::get<2>(*match_beg)->data->begin()+std::get<0>(*match_beg)+std::get<1>(*match_beg)+1,std::get<2>(*match_beg)->data->end()};
                         } else {
-                            child_beg = std::vector<unsigned char>{std::get<2>(*match_beg)->data->crbegin(),std::max(std::get<2>(*match_beg)->data->crbegin()+((long)std::get<0>(*match_beg)-1), std::get<2>(*match_beg)->data->crbegin())};
+                            child_beg = std::vector<unsigned char>{std::get<2>(*match_beg)->data->rbegin(),std::get<2>(*match_beg)->data->rbegin()+std::get<0>(*match_beg)-1};
                             //child data sequence middle, reference data
-                            child_mid = std::vector<unsigned char>{std::get<2>(*match_beg)->data->crbegin()+std::get<1>(*match_beg),std::min(std::get<2>(*match_beg)->data->crend(),std::get<2>(*match_beg)->data->crbegin()+std::get<1>(*match_beg)+std::get<0>(*match_beg))};
+                            child_mid = std::vector<unsigned char>{std::get<2>(*match_beg)->data->rbegin()+std::get<0>(*match_beg),std::get<2>(*match_beg)->data->rbegin()+std::get<0>(*match_beg)+std::get<1>(*match_beg)};
                             //child data sequence end, reference data
-                            child_end = std::vector<unsigned char>{std::min(std::get<2>(*match_beg)->data->crend(), std::min(std::get<2>(*match_beg)->data->crend(),std::get<2>(*match_beg)->data->crbegin()+std::get<1>(*match_beg)+std::get<0>(*match_beg)) + 1),std::get<2>(*match_beg)->data->crend()};
+                            child_end = std::vector<unsigned char>{std::get<2>(*match_beg)->data->rbegin()+std::get<0>(*match_beg)+std::get<1>(*match_beg)+1,std::get<2>(*match_beg)->data->rend()};
                         }
                         //child after found, reference new input
                         child_append = std::vector<unsigned char>{std::min(binary_cont.begin()+std::get<1>(*match_beg)+1,binary_cont.end()),binary_cont.end()};
