@@ -953,18 +953,18 @@ namespace uh::trees {
                 if constexpr (!reverse) {
                     if constexpr (fast_forward){
                         std::vector<unsigned char> data_subset{data.begin()+std::get<1>(*single_pos)+1, data.end()};
-                        tmp = search_match_filter<decltype(data),ContainerBinary,reverse>(data_subset, binary_subset ,possibilities);
+                        tmp = search_match_filter<decltype(data),ContainerBinary,reverse>(data_subset, binary_subset ,std::vector<decltype(*single_pos)>{*single_pos});
                     }
                     else{
-                        tmp = search_match_filter<decltype(data),ContainerBinary,reverse>(data, binary_subset ,possibilities);
+                        tmp = search_match_filter<decltype(data),ContainerBinary,reverse>(data, binary_subset ,std::vector<decltype(*single_pos)>{*single_pos});
                     }
                 } else {
                     if constexpr (fast_forward){
                         std::vector<unsigned char> data_subset{data.begin(), data.end()-(std::get<1>(*single_pos)+1+1)};
-                        tmp = search_match_filter<decltype(data),ContainerBinary,reverse>(data_subset, binary_subset ,possibilities);
+                        tmp = search_match_filter<decltype(data),ContainerBinary,reverse>(data_subset, binary_subset ,std::vector<decltype(*single_pos)>{*single_pos});
                     }
                     else{
-                        tmp = search_match_filter<decltype(data),ContainerBinary,reverse>(data, binary_subset ,possibilities);
+                        tmp = search_match_filter<decltype(data),ContainerBinary,reverse>(data, binary_subset ,std::vector<decltype(*single_pos)>{*single_pos});
                     }
                 }
                 std::for_each(tmp.begin(), tmp.end(), [&new_recursive](auto &item1) {
