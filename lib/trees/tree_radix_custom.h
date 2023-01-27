@@ -140,7 +140,7 @@ namespace uh::trees {
             });
         }
 
-        bool child_delete(tree_radix_custom *input_tree, unsigned char first_letter) {
+        [[maybe_unused]] bool child_delete(tree_radix_custom *input_tree, unsigned char first_letter) {
             auto child_vec_append = child_vector(first_letter);
             if (child_vec_append.empty()) {
                 return false;
@@ -338,7 +338,7 @@ namespace uh::trees {
 
                     tree_radix_custom *tree_match_pointer = std::get<0>(*one_node_analysis);
                     std::set<tree_radix_custom *> modified{}, added{};//changes to be written to disk in the form of tree pointers
-                    std::vector<std::tuple<std::size_t, std::size_t, decltype(tree_match_pointer)>> actively_changing_trees{};//data offset and binary range from offset
+                    std::vector<std::tuple<std::size_t, std::size_t, tree_radix_custom *>> actively_changing_trees{};//data offset and binary range from offset
                     std::for_each(std::get<1>(*one_node_analysis).begin(), std::get<1>(*one_node_analysis).end(),
                                   [&actively_changing_trees, &tree_match_pointer](auto &item) {
                                       actively_changing_trees.emplace_back(std::get<0>(item), std::get<1>(item), tree_match_pointer);
@@ -349,96 +349,66 @@ namespace uh::trees {
                     while (match_beg !=
                            actively_changing_trees.end()) {//update loop on std::vector<std::tuple<std::vector<unsigned char>::const_iterator, std::vector<unsigned char>::const_iterator, std::vector<unsigned char>::const_iterator>>
 
-                        std::size_t tree_front_data_front_absolute;
-                        if constexpr (!reverse) {
-                            tree_front_data_front_absolute =
-                                    std::distance(std::get<3>(*match_beg)->data->cbegin(), std::get<0>(*match_beg)) - 1;
-                        } else {
-                            tree_front_data_front_absolute =
-                                    std::distance(std::get<3>(*match_beg)->data->crbegin(), std::get<0>(*match_beg)) -
-                                    1;
-                        }
+                        std::size_t tree_front_data_front_absolute = std::get<0>(*match_beg);
 
                         ///////////////////////////////////////////////Tree building sequence////////////////////////////////////////////
 //checking if children need to be generated before and after the found input peace, reference to data of tree required
                         //child before found, reference data
-                        decltype(bin_beg) child_beg_beg, child_beg_mid, child_beg_end;
-                        decltype(bin_end) child_end_beg, child_end_mid, child_end_end;
+                        std::vector<unsigned char> child_beg,child_mid,child_end,child_append;
 
                         if constexpr (!reverse) {
-                            child_beg_beg = std::get<3>(*match_beg)->data->cbegin();
-                            child_end_beg = std::max(std::get<0>(*match_beg) - 1, child_beg_beg);
+                            child_beg = std::vector<unsigned char>{std::get<2>(*match_beg)->data->cbegin(),std::max(std::get<2>(*match_beg)->data->cbegin()+((long)std::get<0>(*match_beg)-1), std::get<2>(*match_beg)->data->cbegin())};
                             //child data sequence middle, reference data
-                            child_beg_mid = std::get<0>(*match_beg);
-                            child_end_mid = std::min(std::get<3>(*match_beg)->data->cend(),
-                                                     child_beg_mid + std::distance(std::get<1>(*match_beg),
-                                                                                   std::get<2>(*match_beg)));
+                            child_mid = std::vector<unsigned char>{std::get<2>(*match_beg)->data->cbegin()+std::get<1>(*match_beg),std::min(std::get<2>(*match_beg)->data->cend(),std::get<2>(*match_beg)->data->cbegin()+std::get<1>(*match_beg)+std::get<2>(*match_beg))};
                             //child data sequence end, reference data
-                            child_beg_end = std::min(std::get<3>(*match_beg)->data->cend(), child_end_mid + 1);
-                            child_end_end = std::get<3>(*match_beg)->data->cend();
+                            child_end = std::vector<unsigned char>{std::min(std::get<2>(*match_beg)->data->cend(), std::min(std::get<2>(*match_beg)->data->cend(),std::get<2>(*match_beg)->data->cbegin()+std::get<1>(*match_beg)+std::get<2>(*match_beg)) + 1),std::get<2>(*match_beg)->data->cend()};
                         } else {
-                            child_beg_beg = std::get<3>(*match_beg)->data->crbegin();
-                            child_end_beg = std::max(std::get<0>(*match_beg) - 1, child_beg_beg);
+                            child_beg = std::vector<unsigned char>{std::get<2>(*match_beg)->data->crbegin(),std::max(std::get<2>(*match_beg)->data->crbegin()+((long)std::get<0>(*match_beg)-1), std::get<2>(*match_beg)->data->crbegin())};
                             //child data sequence middle, reference data
-                            child_beg_mid = std::get<0>(*match_beg);
-                            child_end_mid = std::min(std::get<3>(*match_beg)->data->crend(),
-                                                     child_beg_mid + std::distance(std::get<1>(*match_beg),
-                                                                                   std::get<2>(*match_beg)));
+                            child_mid = std::vector<unsigned char>{std::get<2>(*match_beg)->data->crbegin()+std::get<1>(*match_beg),std::min(std::get<2>(*match_beg)->data->crend(),std::get<2>(*match_beg)->data->crbegin()+std::get<1>(*match_beg)+std::get<2>(*match_beg))};
                             //child data sequence end, reference data
-                            child_beg_end = std::min(std::get<3>(*match_beg)->data->crend(), child_end_mid + 1);
-                            child_end_end = std::get<3>(*match_beg)->data->crend();
+                            child_end = std::vector<unsigned char>{std::min(std::get<2>(*match_beg)->data->crend(), std::min(std::get<2>(*match_beg)->data->crend(),std::get<2>(*match_beg)->data->crbegin()+std::get<1>(*match_beg)+std::get<2>(*match_beg)) + 1),std::get<2>(*match_beg)->data->crend()};
                         }
                         //child after found, reference new input
-                        decltype(bin_beg) child_beg_append = std::min(std::get<2>(*match_beg) + 1, bin_end);
-                        decltype(bin_end) child_end_append = bin_end;
+                        child_beg = std::vector<unsigned char>{std::min(binary_cont.begin()+std::get<1>(*match_beg)+1,binary_cont.end()),binary_cont.end()};
                         //only the new append part may be compressed
                         //before splitting or modifying a block it needs to be uncompressed
 
-                        bool first_section_tree = std::distance(child_beg_beg, child_end_beg) > 1;
-                        bool last_section_tree = child_beg_end != child_end_end;
+                        bool first_section_tree = !child_beg.empty();
+                        bool last_section_tree = !child_end.empty();
 
-                        bool append_tree = child_beg_append != bin_end;
-                        bool total_match =
-                                std::distance(child_beg_mid, child_end_mid) == std::get<3>(*match_beg)->data->size();
+                        bool append_tree = !child_append.empty();
+                        bool total_match = child_mid.size() == std::get<2>(*match_beg)->data->size();
 
                         uh::util::compression_custom comp{};
                         auto out_vector = std::vector<tree_radix_custom *>{};
 
                         //search function already determined that this is the tree that needs to fill in the data or to split somehow
                         //cases: insert front tree, insert cend tree (same case as having a back insert because the cend tree will just have at least 1 element in case of overflow)
-                        if (std::get<3>(
-                                *match_beg)->data->empty()) {//how to insert, either empty simple insert or some tree construction anywhere
+                        if (std::get<2>(*match_beg)->data->empty()) {//how to insert, either empty simple insert or some tree construction anywhere
                             //simple insert into data since this seems to be a new node that can contain simple information
 
-                            auto set_vector = std::vector<unsigned char>{std::get<1>(*match_beg),
-                                                                         std::get<2>(*match_beg)};
-
-                            std::get<3>(*match_beg)->data->assign(set_vector.cbegin(), set_vector.cend());
+                            std::get<2>(*match_beg)->data->assign(binary_cont.begin(), binary_cont.end());
                             out_vector.push_back(std::get<3>(*match_beg));
-                            std::get<0>(out_change_tuple) += (std::size_t) std::distance(std::get<1>(*match_beg),
-                                                                                         std::get<2>(*match_beg));
-                            std::get<1>(out_change_tuple) += (std::size_t) std::distance(std::get<1>(*match_beg),
-                                                                                         std::get<2>(*match_beg));
-                            std::get<2>(out_change_tuple) += (std::size_t) comp.compress(std::get<1>(*match_beg),
-                                                                                         std::get<2>(
-                                                                                                 *match_beg)).size();
+                            std::get<0>(out_change_tuple) += std::get<1>(*match_beg);
+                            std::get<1>(out_change_tuple) += std::get<1>(*match_beg);
+                            std::get<2>(out_change_tuple) += comp.compress(binary_cont).size();
                         } else {
                             std::size_t size_integrated{}, size_compressed{}, size_uncompressed{};
                             if (total_match) {//only a maximum of 1 tree creation or just 0 in case of reference
                                 //a total match can still have appending structure
-                                out_vector.push_back(std::get<3>(*match_beg));
-                                size_integrated += std::get<3>(*match_beg)->data->size();
+                                out_vector.push_back(std::get<2>(*match_beg));
+                                size_integrated += std::get<2>(*match_beg)->data->size();
                                 if (append_tree) {
-                                    auto tmp_vec = std::vector<unsigned char>{child_beg_append, child_end_append};
-                                    auto *tree_ptr_tmp = new tree_radix_custom(tmp_vec);
+                                    auto *tree_ptr_tmp = new tree_radix_custom(append_tree);
                                     size_compressed = comp.compress(tree_ptr_tmp->data->cbegin(),
                                                                     tree_ptr_tmp->data->cend()).size();
                                     size_uncompressed += tree_ptr_tmp->data->size();
                                     size_integrated += size_uncompressed;
                                     //either find child is empty and test add tree or add_test to another child tree
                                     out_vector.push_back(tree_ptr_tmp);
-                                    tree_ptr_tmp->block_swarm_offset = std::get<3>(*match_beg)->block_swarm_offset + 1;
-                                    std::get<3>(*match_beg)->child_put(tree_ptr_tmp, *child_beg_append);
+                                    tree_ptr_tmp->block_swarm_offset = std::get<2>(*match_beg)->block_swarm_offset + 1;
+                                    std::get<2>(*match_beg)->child_put(tree_ptr_tmp, *child_append.begin());
                                 }
                                 //return implicit 0 with unsigned long
                                 std::get<0>(out_change_tuple) += size_integrated;
@@ -455,32 +425,30 @@ namespace uh::trees {
                                 if (first_section_tree) {
                                     //children contents need to be copied to middle tree and any references to this node need to be moved to middle tree
                                     //new middle tree required
-                                    auto tmp_vec = std::vector<unsigned char>{child_beg_mid, child_end_mid};
-                                    tree_ptr_mid = new tree_radix_custom(tmp_vec);
-                                    tree_ptr_first = std::get<3>(*match_beg);
+                                    tree_ptr_mid = new tree_radix_custom(child_mid);
+                                    tree_ptr_first = std::get<2>(*match_beg);
                                     out_vector.push_back(tree_ptr_first);
                                     tree_ptr_mid->block_swarm_offset =
                                             tree_ptr_first->block_swarm_offset + 1;
-                                    *tree_ptr_mid->children = *std::get<3>(*match_beg)->children;
-                                    std::get<3>(*match_beg)->children->clear();
-                                    *tree_ptr_mid->data_ref = *std::get<3>(*match_beg)->data_ref;
+                                    *tree_ptr_mid->children = *std::get<2>(*match_beg)->children;
+                                    std::get<2>(*match_beg)->children->clear();
+                                    *tree_ptr_mid->data_ref = *std::get<2>(*match_beg)->data_ref;
                                     tree_ptr_first->data_ref->clear();
 
-                                    size_integrated += std::distance(child_beg_beg, child_end_beg);
+                                    size_integrated += child_beg.size();
                                     //try to add the reference entry to middle tree on first tree
-                                    tree_ptr_first->child_put(tree_ptr_mid, *child_beg_mid);
+                                    tree_ptr_first->child_put(tree_ptr_mid, *child_mid.begin());
                                 } else {
                                     //the current tree stays fundament
-                                    tree_ptr_mid = std::get<3>(*match_beg);
-                                    size_integrated += std::distance(child_beg_mid, child_end_mid);
+                                    tree_ptr_mid = std::get<2>(*match_beg);
+                                    size_integrated += child_mid.size();
                                 }
                                 out_vector.push_back(tree_ptr_mid);
 
                                 tree_radix_custom *tree_ptr_last;
                                 if (last_section_tree) {
                                     //create last tree
-                                    auto tmp_vec2 = std::vector<unsigned char>{child_beg_end, child_end_end};
-                                    tree_ptr_last = new tree_radix_custom(tmp_vec2);
+                                    tree_ptr_last = new tree_radix_custom(child_end);
                                     //transfer information of middle tree to last tree and copy the children also to append tree in case it exists
                                     out_vector.push_back(tree_ptr_last);
                                     tree_ptr_last->block_swarm_offset =
@@ -490,39 +458,37 @@ namespace uh::trees {
                                     *tree_ptr_last->data_ref = *tree_ptr_mid->data_ref;
                                     tree_ptr_mid->data_ref->clear();
 
-                                    size_integrated += std::distance(child_beg_end, child_end_end);
+                                    size_integrated += child_end.size();
                                     //the last tree is the last tree and may append
                                     //appending will be added after middle section in case it is available
                                     if (append_tree) {
-                                        auto tmp_vec3 = std::vector<unsigned char>{child_beg_append, child_end_append};
-                                        tree_ptr_append = new tree_radix_custom(tmp_vec3);
+                                        tree_ptr_append = new tree_radix_custom(child_append);
                                         out_vector.push_back(tree_ptr_append);
                                         tree_ptr_append->block_swarm_offset =
                                                 tree_ptr_mid->block_swarm_offset + 1;
 
-                                        size_integrated += std::distance(child_beg_append, child_end_append);
-                                        size_uncompressed += std::distance(child_beg_append, child_end_append);
-                                        size_compressed += comp.compress(child_beg_append, child_end_append).size();
+                                        size_integrated += child_append.size();
+                                        size_uncompressed += child_append.size();
+                                        size_compressed += comp.compress(child_append).size();
                                         //put this append tree to the middle tree manually
-                                        tree_ptr_mid->child_put(tree_ptr_append, *child_beg_append);
+                                        tree_ptr_mid->child_put(tree_ptr_append, *child_append.begin());
                                     }
                                     //the last tree is still following the middle tree
-                                    tree_ptr_mid->child_put(tree_ptr_last, *child_beg_end);
+                                    tree_ptr_mid->child_put(tree_ptr_last, *child_end.begin());
                                 } else {
                                     //the middle tree is the last tree and may append
                                     //appending will be added after middle section in case it is available
                                     if (append_tree) {
-                                        auto tmp_vec4 = std::vector<unsigned char>{child_beg_append, child_end_append};
-                                        tree_ptr_append = new tree_radix_custom(tmp_vec4);
+                                        tree_ptr_append = new tree_radix_custom(child_append);
                                         out_vector.push_back(tree_ptr_append);
                                         tree_ptr_append->block_swarm_offset =
                                                 tree_ptr_mid->block_swarm_offset + 1;
 
-                                        size_integrated += std::distance(child_beg_append, child_end_append);
-                                        size_uncompressed += std::distance(child_beg_append, child_end_append);
-                                        size_compressed += comp.compress(child_beg_append, child_end_append).size();
+                                        size_integrated += child_append.size();
+                                        size_uncompressed += child_append.size();
+                                        size_compressed += comp.compress(child_append).size();
                                         //put this append tree to the middle tree manually
-                                        tree_ptr_mid->child_put(tree_ptr_append, *child_beg_append);
+                                        tree_ptr_mid->child_put(tree_ptr_append, *child_append.begin());
                                     }
                                 }
 
