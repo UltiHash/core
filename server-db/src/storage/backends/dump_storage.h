@@ -12,15 +12,20 @@ class dump_storage : public storage_backend {
     public:
         dump_storage(std::filesystem::path db_root, size_t size_bytes):
         m_root(db_root),
-        m_total(size_bytes),
+        m_alloc(size_bytes),
         m_free(size_bytes),
         m_used(0)
         {
-            if(!(std::filesystem::exists(db_root))) {
+            if( !std::filesystem::is_directory(db_root) ) {
                 std::string msg("Path does not exist: " + db_root.string());
                 throw std::runtime_error(msg);
             }
+            else{
+                update_space_consumption();
+            }
         }
+
+        virtual void start() override;
 
         /**
          * Write a data chunk and return it's hash.
@@ -47,6 +52,21 @@ class dump_storage : public storage_backend {
         virtual uh::protocol::blob read_chunk(const uh::protocol::blob &hash) override;
 
 
+        virtual size_t free_space() override {return m_free;}
+        virtual size_t free_space_percentage() override { return 100 * static_cast<float>(m_free) / static_cast<float>(m_alloc);};
+
+
+        virtual size_t used_space() override {return m_used;}
+        virtual size_t used_space_percentage() override { return 100 * static_cast<float>(m_used) / static_cast<float>(m_alloc);};
+
+
+        virtual size_t allocated_space() override {return m_alloc;}
+
+        virtual std::string backend_type() override {return std::string(m_type);}
+
+        virtual void update_space_consumption() override;
+
+
     private:
 
         /**
@@ -69,11 +89,11 @@ class dump_storage : public storage_backend {
 
     protected:
 
+        constexpr static std::string_view m_type = "DumpStorage";
         std::filesystem::path m_root = ""; //root path of the db
-        size_t m_total = 0; //total space
+        size_t m_alloc = 0; //total space
         size_t m_free = 0;  //free space
         size_t m_used = 0;  //used space
-
     };
 
 } // namespace uh::dbn::storage
