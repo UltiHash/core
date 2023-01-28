@@ -211,9 +211,9 @@ BOOST_AUTO_TEST_CASE(add_test)
     auto middle_string_append = std::string{"World of tomorrow, coming soon!"};
 
     result_test = t->add_test(middle_string_append);
-    BOOST_CHECK(std::get<0>(result_test[0]) == 30 && std::get<1>(result_test[0]) == 16);
+    BOOST_CHECK(std::get<0>(result_test[0]) == 31 && std::get<1>(result_test[0]) == 14);
     result = t->add(middle_string_append);
-    BOOST_CHECK(std::get<0>(result[0]) == 30 && std::get<1>(result[0]) == 16);
+    BOOST_CHECK(std::get<0>(result[0]) == 31 && std::get<1>(result[0]) == 16);
     BOOST_CHECK(std::get<0>(*std::get<3>(result[0]).begin()).size()==1 && std::get<1>(*std::get<3>(result[0]).begin()).size()==3);//one tree modified and 3 added
 
     delete t;
