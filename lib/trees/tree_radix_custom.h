@@ -51,7 +51,7 @@ namespace uh::trees {
         }
 
         template<class Container>
-        explicit tree_radix_custom(const Container &bin) : tree_radix_custom() {
+        explicit tree_radix_custom(const Container &bin){
             std::copy(bin.begin(), bin.end(),std::back_inserter(data));
         }
 
@@ -727,8 +727,7 @@ namespace uh::trees {
                             }
                             //only tree_match_pointer changes and offset changes to last tree if the end of the match exceeds limits and last tree exists
                             if (last_section_tree) {
-                                added.emplace(
-                                        *last_tree_out);//section of inner list must be over due to incomplete match
+                                added.emplace(*last_tree_out);//section of inner list must be over due to incomplete match
                                 //tree_match_pointer must move from middle tree to last tree, and we adjust offsets of all other matches
                                 overlap_update(tree_front_data_front_absolute, actively_changing_trees, match_beg,
                                                match_beg_copy, *middle_tree_out,
