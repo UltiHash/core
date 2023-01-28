@@ -603,18 +603,43 @@ namespace uh::trees {
                             //this must be the only match so nothing happens
                         } else {
                             //stack helper function for overlapping creation of trees
-                            auto overlap_update = [](auto &actively_changing_trees, auto match_beg_intern,tree_radix_custom *tree_front,
+                            auto overlap_update = [](auto &actively_changing_trees, auto &match_beg_intern,tree_radix_custom *tree_front,
                                                      tree_radix_custom *tree_back) {
                                 //TODO: goals to be reached: matches on tree front need to be moved to tree back,
                                 // if the offset is exceeding the current data size limit of the first tree, we set it to
                                 // the second tree and subtract the first data size from the offset
                                 //std::vector<std::tuple<std::size_t, std::size_t, tree_radix_custom *>>
-                                //first from current match begin start to update all entries of matches until the end
+
+                                //first check if any of the matches are scaling into the back tree; build two matches and insert
+                                auto match_overlap = match_beg_intern;
+                                while(match_beg_intern<actively_changing_trees.end()){
+                                    std::size_t initial_offset_range_end = std::get<0>(*match_overlap) + std::get<1>(*match_overlap);
+                                    if(initial_offset_range_end >= tree_front->data.size()){
+                                        std::size_t first_match_offset = std::get<0>(*match_overlap);
+                                        std::size_t first_match_size = std::min(tree_front->data.size()-1, initial_offset_range_end);
+                                        std::size_t second_match_offset = first_match_size + 1;
+                                        std::size_t second_match_size = std::get<1>(*match_overlap) - first_match_size;
+
+                                        std::get<0>(*match_overlap) = first_match_offset;
+                                        std::get<1>(*match_overlap) = first_match_size;
+
+                                        std::size_t reinvoke_offset = std::distance(actively_changing_trees.begin(),match_overlap);
+                                        actively_changing_trees.insert(match_overlap+1,std::make_tuple(second_match_offset,second_match_size));
+                                        match_overlap = actively_changing_trees.begin()+reinvoke_offset+1;
+                                    }
+                                    match_overlap;
+                                }
+
+                                //from current match begin start update all entries of matches until the end
                                 auto match_shifter = match_beg_intern;
                                 while(match_shifter<actively_changing_trees.end()){
-
+                                    if(std::get<0>(match_shifter)>=tree_front->data.size()){
+                                        std::get<0>(*match_shifter) -= tree_front->data.size();
+                                        std::get<2>(*match_shifter) = tree_back;
+                                    }
                                     match_shifter++;
                                 }
+
 
                                 /*
                                 //auto match_beg_intern = match_beg_intern;
