@@ -1032,7 +1032,7 @@ namespace uh::trees {
 
             //return the largest match with the lowest offset on the last tree, as far as there is a last tree...
             std::sort(possibilities.begin(), possibilities.end(), [](auto &a, auto &b) {
-                return std::get<1>(a) > std::get<1>(b);//sort in descending order on search match size
+                return std::get<2>(a) > std::get<2>(b);//sort in descending order on search match size
             });
 
             std::size_t max_val{};
@@ -1047,7 +1047,7 @@ namespace uh::trees {
             }
 
             std::sort(possibilities.begin(), possibilities.end(), [](auto &a, auto &b) {
-                return std::get<1>(a) > std::get<1>(b);//sort in descending order on search match size
+                return std::get<1>(a) < std::get<1>(b);//sort in descending order on search match size
             });
 
             return possibilities;
