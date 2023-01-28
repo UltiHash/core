@@ -1083,8 +1083,8 @@ namespace uh::trees {
             std::size_t max_val{};
             auto poss_beg_size = sort_found.begin();
             while (poss_beg_size != sort_found.end()) {
-                max_val = std::max(max_val, std::get<2>(*poss_beg_size));
-                if (std::get<2>(*poss_beg_size) < max_val) {
+                max_val = std::max(max_val, std::get<1>(*poss_beg_size));
+                if (std::get<1>(*poss_beg_size) < max_val) {
                     sort_found.erase(poss_beg_size, sort_found.end());
                     break;
                 }
