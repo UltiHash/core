@@ -277,7 +277,7 @@ namespace uh::trees {
         //returns total size integrated, new space used uncompressed, new space used compressed, list of tree references of <offset_ELEMENT,modified_LIST,added_LIST> tree nodes
         template<class ContainerBinary,bool reverse=false,
                 std::enable_if_t<!std::is_same<std::string,ContainerBinary>::value, bool> = true>
-        std::vector<std::tuple<std::size_t,std::size_t, std::size_t, std::size_t, std::list<std::tuple<std::set<tree_radix_custom *>, std::set<tree_radix_custom *>>>>>
+        std::vector<std::tuple<std::size_t, std::size_t, std::size_t, std::list<std::tuple<std::set<tree_radix_custom *>, std::set<tree_radix_custom *>>>>>
         add(ContainerBinary &binary_cont) {
             //first search existing structure and add into the last tree to insert potentially missing information
             /*std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::vector<unsigned char>::const_iterator, std::vector<unsigned char>::const_iterator, std::vector<unsigned char>::const_iterator>>>>>, std::size_t>>*/
@@ -291,25 +291,25 @@ namespace uh::trees {
             //some element and an end element at least required
             //TODO: add cross update from forward and backward children
 
-            std::vector<std::tuple<std::size_t,std::size_t, std::size_t, std::size_t, std::list<std::tuple<std::set<tree_radix_custom *>, std::set<tree_radix_custom *>>>>> out_change_tuple_out{};
+            std::vector<std::tuple<std::size_t, std::size_t, std::size_t, std::list<std::tuple<std::set<tree_radix_custom *>, std::set<tree_radix_custom *>>>>> out_change_tuple_out{};
             //cases for search index: its empty or it has content and with that a last tree element
             //empty should never happen since it stacks new information to the end
             if (search_index.empty()) {
-                std::tuple<std::size_t,std::size_t, std::size_t, std::size_t, std::list<std::tuple<std::set<tree_radix_custom *>, std::set<tree_radix_custom *>>>> out_change_tuple{};
+                std::tuple<std::size_t, std::size_t, std::size_t, std::list<std::tuple<std::set<tree_radix_custom *>, std::set<tree_radix_custom *>>>> out_change_tuple{};
                 auto tmp_vec = std::vector<unsigned char>{binary_cont.begin(), binary_cont.end()};
                 std::get<0>(out_change_tuple) += binary_cont.size();
-                std::get<2>(out_change_tuple) += binary_cont.size();
+                std::get<1>(out_change_tuple) += binary_cont.size();
                 if constexpr (!reverse) {
                     uh::util::compression_custom comp{};
-                    std::get<3>(out_change_tuple) += comp.compress(tmp_vec).size();
+                    std::get<2>(out_change_tuple) += comp.compress(tmp_vec).size();
                 } else {
                     std::reverse(tmp_vec.begin(), tmp_vec.end());
                     uh::util::compression_custom comp{};
-                    std::get<3>(out_change_tuple) += comp.compress(tmp_vec).size();
+                    std::get<2>(out_change_tuple) += comp.compress(tmp_vec).size();
                 }
                 auto *new_tree = new tree_radix_custom{tmp_vec};
                 new_tree->block_swarm_offset += block_swarm_offset + 1;
-                std::get<4>(out_change_tuple).emplace_back(std::set<tree_radix_custom *>{},
+                std::get<3>(out_change_tuple).emplace_back(std::set<tree_radix_custom *>{},
                                                            std::set<tree_radix_custom *>{
                                                                    new_tree});//only add a new tree
                 out_change_tuple_out.push_back(out_change_tuple);
@@ -319,7 +319,7 @@ namespace uh::trees {
 
             auto single_beg = search_index.begin();
             while (single_beg != search_index.end()) {
-                std::tuple<std::size_t,std::size_t, std::size_t, std::size_t, std::list<std::tuple<std::set<tree_radix_custom *>, std::set<tree_radix_custom *>>>> out_change_tuple{};
+                std::tuple<std::size_t, std::size_t, std::size_t, std::list<std::tuple<std::set<tree_radix_custom *>, std::set<tree_radix_custom *>>>> out_change_tuple{};
 
                 auto search_element = std::get<0>(
                         *single_beg).begin();//std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::vector<unsigned char>::const_iterator, std::vector<unsigned char>::const_iterator, std::vector<unsigned char>::const_iterator>>>>, std::size_t>
@@ -401,8 +401,8 @@ namespace uh::trees {
                             std::get<2>(*match_beg)->data.assign(binary_cont.begin(), binary_cont.end());
                             out_vector.push_back(std::get<2>(*match_beg));
                             std::get<0>(out_change_tuple) += std::get<1>(*match_beg);
-                            std::get<2>(out_change_tuple) += std::get<1>(*match_beg);
-                            std::get<3>(out_change_tuple) += comp.compress(binary_cont).size();
+                            std::get<1>(out_change_tuple) += std::get<1>(*match_beg);
+                            std::get<2>(out_change_tuple) += comp.compress(binary_cont).size();
                         } else {
                             std::size_t size_integrated{}, size_compressed{}, size_uncompressed{};
                             if (total_match) {//only a maximum of 1 tree creation or just 0 in case of reference
@@ -429,8 +429,8 @@ namespace uh::trees {
                                 }
                                 //return implicit 0 with unsigned long
                                 std::get<0>(out_change_tuple) += size_integrated;
-                                std::get<2>(out_change_tuple) += size_uncompressed;
-                                std::get<3>(out_change_tuple) += size_compressed;
+                                std::get<1>(out_change_tuple) += size_uncompressed;
+                                std::get<2>(out_change_tuple) += size_compressed;
                             } else {
                                 //first section tree, after split try
                                 //data will split into a maximum of 3 parts and by that will add 2 more tree nodes on front and/or back; start with first section
@@ -534,8 +534,8 @@ namespace uh::trees {
                                     //else do not delete
                                 }
                                 std::get<0>(out_change_tuple) += size_integrated;
-                                std::get<2>(out_change_tuple) += size_uncompressed;
-                                std::get<3>(out_change_tuple) += size_compressed;
+                                std::get<1>(out_change_tuple) += size_uncompressed;
+                                std::get<2>(out_change_tuple) += size_compressed;
                             }
                         }
                         ///////////////////////////////////////////////Tree building sequence end////////////////////////////////////////
@@ -686,7 +686,7 @@ namespace uh::trees {
                         };
                         std::erase_if(modified, added_contains_it);
 
-                        std::get<4>(out_change_tuple).emplace_back(modified, added);
+                        std::get<3>(out_change_tuple).emplace_back(modified, added);
                         modified.clear();
                         added.clear();
                         std::size_t vector_reset_dist = std::distance(match_beg_copy, match_beg);
@@ -695,10 +695,7 @@ namespace uh::trees {
                     }
                     search_element++;
                 }
-                if (std::get<0>(out_change_tuple) > 0){
-                    std::get<1>(out_change_tuple)+=std::min((long)std::get<0>(out_change_tuple)-(long)binary_cont.size(),(long)0);
-                    out_change_tuple_out.push_back(out_change_tuple);//only add change list if there was anything integrated
-                }
+                if (std::get<0>(out_change_tuple) > 0)out_change_tuple_out.push_back(out_change_tuple);//only add change list if there was anything integrated
                 single_beg++;
             }
 
@@ -715,7 +712,7 @@ namespace uh::trees {
             return add_test(input);
         }
 
-        //returns total size integrated,extra storage saved by action on database, new space used uncompressed, new space used compressed
+        //returns total size integrated, new space used uncompressed, new space used compressed
         //calculates exact size for a single integration of data, this could be communicated to agency to determine optimal storage location
         template<class ContainerBinary,bool reverse = false,
                 std::enable_if_t<!std::is_same<std::string,ContainerBinary>::value, bool> = true>
@@ -759,9 +756,8 @@ namespace uh::trees {
                                 std::copy(std::get<0>(tree_tuple)->data.begin()+std::get<0>(pos_tup),std::get<0>(tree_tuple)->data.begin()+std::get<0>(pos_tup)+std::get<1>(pos_tup)+1,std::back_inserter(set_vector));
 
                                 std::get<0>(add_tup) += std::get<1>(pos_tup)+1;
-                                std::get<1>(add_tup) += std::min((long)std::get<0>(add_tup)-(long)cont_binary.size(),(long)0);
-                                std::get<2>(add_tup) += std::get<1>(pos_tup)+1;
-                                std::get<3>(add_tup) += comp.compress(set_vector).size();
+                                std::get<1>(add_tup) += std::get<1>(pos_tup)+1;
+                                std::get<2>(add_tup) += comp.compress(set_vector).size();
                             } else {
                                 std::get<0>(add_tup) += std::get<1>(pos_tup)+1;
                             }
@@ -771,10 +767,9 @@ namespace uh::trees {
                 if (cont_binary.begin() + std::get<0>(add_tup) < cont_binary.end()) {
                     auto set_vector = std::vector<unsigned char>{};
                     std::copy(cont_binary.begin() + std::get<0>(add_tup),cont_binary.end(),std::back_inserter(set_vector));
-                    std::get<3>(add_tup) += comp.compress(set_vector).size();
-                    std::get<2>(add_tup) += set_vector.size();
+                    std::get<2>(add_tup) += comp.compress(set_vector).size();
+                    std::get<1>(add_tup) += set_vector.size();
                     std::get<0>(add_tup) += set_vector.size();
-                    std::get<1>(add_tup) += std::min((long)std::get<0>(add_tup)-(long)set_vector.size(),(long)0);
                 }
                 add_tup_out.push_back(add_tup);
             }
