@@ -52,7 +52,7 @@ namespace uh::trees {
 
         template<class Container>
         explicit tree_radix_custom(const Container &bin) : tree_radix_custom() {
-            data.assign(bin.begin(), bin.end());
+            std::copy(bin.begin(), bin.end(),std::back_inserter(data));
         }
 
         [[nodiscard]] std::size_t size() const {
