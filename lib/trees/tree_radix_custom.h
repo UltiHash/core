@@ -450,16 +450,15 @@ namespace uh::trees {
                                     std::get<2>(*match_beg)->children.clear();
                                     tree_ptr_mid->data_ref = std::get<2>(*match_beg)->data_ref;
                                     tree_ptr_first->data_ref.clear();
-
-                                    size_integrated += child_mid.size();
                                     //try to add the reference entry to middle tree on first tree
                                     tree_ptr_first->child_put(tree_ptr_mid, *child_mid.begin());
                                 } else {
                                     //the current tree stays fundament
                                     tree_ptr_mid = std::get<2>(*match_beg);
-                                    size_integrated += child_mid.size();
+
                                 }
                                 out_vector.push_back(tree_ptr_mid);
+                                size_integrated += child_mid.size();
 
                                 tree_radix_custom *tree_ptr_last;
                                 if (last_section_tree) {
@@ -474,7 +473,6 @@ namespace uh::trees {
                                     tree_ptr_last->data_ref = tree_ptr_mid->data_ref;
                                     tree_ptr_mid->data_ref.clear();
 
-                                    size_integrated += child_mid.size();
                                     //the last tree is the last tree and may append
                                     //appending will be added after middle section in case it is available
                                     if (append_tree) {

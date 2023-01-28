@@ -193,7 +193,7 @@ BOOST_AUTO_TEST_CASE(add_test)
     delete t;
 
     //middle tree test, match something at the middle of the string
-    t = new uh::trees::tree_radix_custom(data_string1);//TODO: check char count
+    t = new uh::trees::tree_radix_custom(data_string1);
 
     auto middle_string = std::string{"World of tomorrow"};
 
