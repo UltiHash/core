@@ -150,19 +150,41 @@ BOOST_AUTO_TEST_CASE(add_test)
     auto back_string = std::string{"a lot of data!"};
 
     auto result_test = t->add_test(back_string);
-    BOOST_CHECK(std::get<0>(result_test[0]) == 24 && std::get<1>(result_test[0]) == 13);
+    BOOST_CHECK(std::get<0>(result_test[0]) == 14 && std::get<1>(result_test[0]) == 0);
     auto result = t->add(back_string);
-    BOOST_CHECK(std::get<0>(result[0]) == 11 && std::get<1>(result[0]) == 0);
-    BOOST_CHECK(std::get<0>(*std::get<3>(result[0]).begin()).empty() && std::get<1>(*std::get<3>(result[0]).begin()).empty());
+    BOOST_CHECK(std::get<0>(result[0]) == 14 && std::get<1>(result[0]) == 0);
+    BOOST_CHECK(std::get<0>(*std::get<3>(result[0]).begin()).size()==1 && std::get<1>(*std::get<3>(result[0]).begin()).size()==1);//one tree modified and one added
 
-
-
-    auto back_string_append = std::string{"a lot of data! And I can code."};
-    auto back_append = std::vector<unsigned char>{data_string1.begin(),data_string1.end()};
+    delete t;
 
     //first tree append test, match something where a subset already exists and additional information is added
+    t = new uh::trees::tree_radix_custom(data_string1);
+
+    auto back_string_append = std::string{"a lot of data! And I can code."};
+
+    result_test = t->add_test(back_string);
+    BOOST_CHECK(std::get<0>(result_test[0]) == 30 && std::get<1>(result_test[0]) == 16);
+    result = t->add(back_string);
+    BOOST_CHECK(std::get<0>(result[0]) == 30 && std::get<1>(result[0]) == 16);
+    BOOST_CHECK(std::get<0>(*std::get<3>(result[0]).begin()).size()==1 && std::get<1>(*std::get<3>(result[0]).begin()).size()==2);//one tree modified and 2 added
+
+    delete t;
 
     //last tree test, match something that is the same at the beginning and then is different at a certain spot on
+    t = new uh::trees::tree_radix_custom(data_string1);
+
+    auto front_string = std::string{"Hello World"};
+
+    result_test = t->add_test(front_string);
+    BOOST_CHECK(std::get<0>(result_test[0]) == 11 && std::get<1>(result_test[0]) == 0);
+    result = t->add(front_string);
+    BOOST_CHECK(std::get<0>(result[0]) == 11 && std::get<1>(result[0]) == 0);
+    BOOST_CHECK(std::get<0>(*std::get<3>(result[0]).begin()).size()==1 && std::get<1>(*std::get<3>(result[0]).begin()).size()==1);//one tree modified and one added
+
+    delete t;
+
+
+
 
     //last tree append test, match something that is the same in the beginning or totally to the existing information and add some more information at the end of the string going into add function
 
