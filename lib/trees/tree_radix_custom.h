@@ -862,11 +862,11 @@ namespace uh::trees {
                     }
                     local_matches.erase(best_beg, local_matches.end());
                 }
-                //sort the smallest offset out of the largest match results in case the match sizes are equal
+                //sort the smallest offset out of the largest match results in case the match sizes are equal*/
                 std::sort(local_matches.begin(), local_matches.end(), [](auto &a, auto &b) {
                     return std::get<0>(a) < std::get<0>(b);
                 });
-
+                /*
                 match_beg = local_matches.begin();//deduplicate matches
                 while(match_beg != local_matches.end()){
                     if(std::count(match_beg+1,local_matches.end(),*match_beg)>1){
