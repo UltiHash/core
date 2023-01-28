@@ -604,9 +604,9 @@ namespace uh::trees {
                             auto match_overlap = match_beg_intern;
                             while(match_overlap<actively_changing_trees.end()){
                                 std::size_t initial_offset_range_end = std::get<0>(*match_overlap) + std::get<1>(*match_overlap);
-                                if(initial_offset_range_end >= tree_front->data.size() && std::get<0>(*match_overlap) >tree_front->data.size()){
+                                if(initial_offset_range_end+1 > tree_front->data.size() && std::get<0>(*match_overlap) < tree_front->data.size()){
                                     std::size_t first_match_offset = std::get<0>(*match_overlap);
-                                    std::size_t first_match_size = std::min(tree_front->data.size(), initial_offset_range_end);
+                                    std::size_t first_match_size = std::min(tree_front->data.size(), initial_offset_range_end+1);
                                     std::size_t second_match_offset = first_match_size + 1;
                                     std::size_t second_match_size = std::get<1>(*match_overlap) - first_match_size;
 
