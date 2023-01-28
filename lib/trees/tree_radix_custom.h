@@ -287,7 +287,8 @@ namespace uh::trees {
                 std::enable_if_t<std::is_same<std::string, ContainerString>::value, bool> = true>
         auto
         add(ContainerString &cont_string) {
-            std::vector<unsigned char> input{cont_string.begin(), cont_string.end()};
+            std::vector<unsigned char> input{};
+            std::copy(cont_string.begin(), cont_string.end(),std::back_inserter(input));
             return add(input);
         }
 
@@ -764,7 +765,8 @@ namespace uh::trees {
                 std::enable_if_t<std::is_same<std::string, ContainerString>::value, bool> = true>
         auto
         add_test(ContainerString &cont_string) {
-            std::vector<unsigned char> input{cont_string.begin(), cont_string.end()};
+            std::vector<unsigned char> input{};
+            std::copy(cont_string.begin(), cont_string.end(),std::back_inserter(input));
             return add_test(input);
         }
 

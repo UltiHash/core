@@ -206,7 +206,7 @@ BOOST_AUTO_TEST_CASE(add_test)
     auto middle_string = std::string{"World of tomorrow"};
 
     result_test = t->add_test(middle_string);
-    BOOST_CHECK(std::get<0>(result_test[0]) == 24 && std::get<0>(result_test[0]) == 7 &&
+    BOOST_CHECK(std::get<0>(result_test[0]) == 17 && std::get<0>(result_test[0]) == 7 &&
                 std::get<2>(result_test[0]) == 0);//extra storage saved by action
     result = t->add(middle_string);
     BOOST_CHECK(std::get<0>(result[0]) == 17 && std::get<1>(result[0]) == 0);
