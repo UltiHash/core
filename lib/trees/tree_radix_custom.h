@@ -940,10 +940,7 @@ namespace uh::trees {
                     std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>>>>>, std::size_t,std::size_t>>{},
                     std::vector<tree_radix_custom *> limiter_children = std::vector<tree_radix_custom *>{}) {
 
-            if (cont_binary.empty() ||
-                std::any_of(limiter_children.begin(), limiter_children.end(), [this](auto &item_limit) {
-                    return item_limit == this;
-                })) {
+            if (cont_binary.empty()) {
                 return possibilities;
             }
 
@@ -1009,6 +1006,10 @@ namespace uh::trees {
                 auto child_vec = child_vector(*(cont_binary.begin()+std::get<2>(pos_begin)-1));
                 if (!child_vec.empty()) {//recursive search
                     for (auto &item: child_vec) {//vector of tree pointers
+                        if(std::any_of(limiter_children.begin(), limiter_children.end(), [&item](auto &item_limit) {
+                            return item_limit == item;
+                        }))
+                            continue;
                         auto tmp = item->template search<ContainerBinary,reverse>(binary_subset, possibilities);
                         if (std::any_of(tmp.begin(), tmp.end(), [&cont_binary](auto &item) {
                             return cont_binary.begin()+std::get<2>(item)-1 == cont_binary.end();
@@ -1032,7 +1033,9 @@ namespace uh::trees {
                 for (auto &c: children) {
                     if (!child_vec.empty() && std::get<1>(c) == *(cont_binary.begin()+std::get<2>(pos_begin)-1))continue;
                     for (auto &item: std::get<0>(c)) {//vector of tree pointers
-                        if (cont_binary.begin()+std::get<2>(pos_begin)-1 == cont_binary.end()) {
+                        if (cont_binary.begin()+std::get<2>(pos_begin)-1 == cont_binary.end()||std::any_of(limiter_children.begin(), limiter_children.end(), [&item](auto &item_limit) {
+                            return item_limit == item;
+                        })) {
                             continue;
                         }
                         auto tmp = item->template search<ContainerBinary,reverse>(binary_subset, possibilities);
