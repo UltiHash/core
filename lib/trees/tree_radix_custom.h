@@ -1062,30 +1062,41 @@ namespace uh::trees {
 
             //return the largest match with the lowest offset on the last tree, as far as there is a last tree...
             //filter to sum up match internals
-            std::vector<std::tuple<decltype(possibilities),std::size_t>> sort_found{};
+            std::vector<std::tuple<decltype(possibilities[0]),std::size_t>> sort_found{};
 
-            std::for_each(possibilities.begin(),possibilities.end(),[&sort_found](std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>>>>>, std::size_t,std::size_t> &item){
-                //std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>>>>>, std::size_t,std::size_t>>
-                sort_found.emplace_back(item,std::accumulate(std::get<0>(item).begin(),std::get<0>(item).end(),(std::size_t)0,
-                                                             [](std::size_t current_sum,std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>>>>> &item4){//sum up elements of all outer lists
-                    return current_sum+std::accumulate(item4.begin(),item4.end(),(std::size_t)0,[](std::size_t current_sum_outer_list,std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>>>> &item2){//sum up innermost vector
-                        return current_sum_outer_list+std::accumulate(std::get<1>(item2).begin(),std::get<1>(item2).end(),(std::size_t)0,[](std::size_t current_sum_inner_list, std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>>> &item3){
-                            return current_sum_inner_list+std::accumulate(std::get<1>(item3),std::get<1>(item3),(std::size_t)0,[](std::size_t current_sum_offset_vector,std::tuple<std::size_t, std::size_t> &item5){
-                                return current_sum_offset_vector+std::get<1>(item5)+1;
-                            });
-                        });
-                    });
-                }));
-            });
+            for(auto&item1:possibilities){//sum up match size from possibilities
+                std::size_t found_size{};
+                for(const auto&item2:std::get<0>(item1)){
+                    for(const auto&item3:item2){
+                        for(const auto&item4:std::get<1>(item3)){
+                            found_size+=std::get<1>(item4);
+                        }
+                    }
+                }
+                sort_found.emplace_back(item1,found_size);
+            }
 
             std::sort(sort_found.begin(), sort_found.end(), [](auto &a, auto &b) {
                 return std::get<1>(a) > std::get<1>(b);//sort in descending order on search match size
             });
 
-            possibilities.clear();
-
-
             std::size_t max_val{};
+            auto poss_beg_size = sort_found.begin();
+            while (poss_beg_size != sort_found.end()) {
+                max_val = std::max(max_val, std::get<2>(*poss_beg_size));
+                if (std::get<2>(*poss_beg_size) < max_val) {
+                    sort_found.erase(poss_beg_size, sort_found.end());
+                    break;
+                }
+                poss_beg_size++;
+            }
+
+            possibilities.clear();
+            std::for_each(sort_found.begin(),sort_found.end(),[&possibilities](auto &item){
+                possibilities.push_back(std::get<0>(item));
+            });
+
+            max_val = 0;
             auto poss_beg = possibilities.begin();
             while (poss_beg != possibilities.end()) {
                 max_val = std::max(max_val, std::get<2>(*poss_beg));
