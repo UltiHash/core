@@ -603,7 +603,7 @@ namespace uh::trees {
                             //this must be the only match so nothing happens
                         } else {
                             //stack helper function for overlapping creation of trees
-                            auto overlap_update = [](auto &actively_changing_trees, auto &match_beg_intern,tree_radix_custom *tree_front,
+                            auto overlap_update = [](std::vector<std::tuple<std::size_t, std::size_t, tree_radix_custom *>> &actively_changing_trees, auto &match_beg_intern,tree_radix_custom *tree_front,
                                                      tree_radix_custom *tree_back) {
                                 //TODO: goals to be reached: matches on tree front need to be moved to tree back,
                                 // if the offset is exceeding the current data size limit of the first tree, we set it to
@@ -624,7 +624,7 @@ namespace uh::trees {
                                         std::get<1>(*match_overlap) = first_match_size;
 
                                         std::size_t reinvoke_offset = std::distance(actively_changing_trees.begin(),match_overlap);
-                                        actively_changing_trees.insert(match_overlap+1,std::make_tuple(second_match_offset,second_match_size));
+                                        actively_changing_trees.insert(match_overlap+1,std::make_tuple(second_match_offset, second_match_size,tree_back));
                                         match_overlap = actively_changing_trees.begin()+reinvoke_offset+1;
                                     }
                                     match_overlap;
@@ -633,12 +633,13 @@ namespace uh::trees {
                                 //from current match begin start update all entries of matches until the end
                                 auto match_shifter = match_beg_intern;
                                 while(match_shifter<actively_changing_trees.end()){
-                                    if(std::get<0>(match_shifter)>=tree_front->data.size()){
+                                    if(std::get<0>(*match_shifter)>=tree_front->data.size()){
                                         std::get<0>(*match_shifter) -= tree_front->data.size();
                                         std::get<2>(*match_shifter) = tree_back;
                                     }
                                     match_shifter++;
                                 }
+                                return actively_changing_trees;
 
 
                                 /*
@@ -754,7 +755,9 @@ namespace uh::trees {
                                 modified.emplace(*first_tree_out);
                                 added.emplace(*middle_tree_out);
                                 //tree_match_pointer must move from first tree to middle tree, and we adjust offsets of all other matches
+                                std::size_t reinvoke_count = std::distance(actively_changing_trees.begin(),match_beg);
                                 overlap_update(actively_changing_trees, match_beg, *first_tree_out,*middle_tree_out);//update current tree pointer
+                                match_beg = actively_changing_trees.begin()+reinvoke_count;
                             } else {
                                 modified.emplace(*middle_tree_out);
                             }
@@ -762,7 +765,9 @@ namespace uh::trees {
                             if (last_section_tree) {
                                 added.emplace(*last_tree_out);//section of inner list must be over due to incomplete match
                                 //tree_match_pointer must move from middle tree to last tree, and we adjust offsets of all other matches
+                                std::size_t reinvoke_count = std::distance(actively_changing_trees.begin(),match_beg);
                                 overlap_update(actively_changing_trees, match_beg,*middle_tree_out,*last_tree_out);//update current tree pointer
+                                match_beg = actively_changing_trees.begin()+reinvoke_count;
                             }
                             if (append_tree)added.emplace(*append_tree_out);
                         }
