@@ -451,7 +451,7 @@ namespace uh::trees {
                                     tree_ptr_mid->data_ref = std::get<2>(*match_beg)->data_ref;
                                     tree_ptr_first->data_ref.clear();
 
-                                    size_integrated += child_beg.size();
+                                    size_integrated += child_mid.size();
                                     //try to add the reference entry to middle tree on first tree
                                     tree_ptr_first->child_put(tree_ptr_mid, *child_mid.begin());
                                 } else {
@@ -474,7 +474,7 @@ namespace uh::trees {
                                     tree_ptr_last->data_ref = tree_ptr_mid->data_ref;
                                     tree_ptr_mid->data_ref.clear();
 
-                                    size_integrated += child_end.size();
+                                    size_integrated += child_mid.size();
                                     //the last tree is the last tree and may append
                                     //appending will be added after middle section in case it is available
                                     if (append_tree) {
