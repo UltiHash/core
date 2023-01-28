@@ -693,7 +693,7 @@ namespace uh::trees {
                         std::get<3>(out_change_tuple).emplace_back(modified, added);
                         modified.clear();
                         added.clear();
-                        std::size_t vector_reset_dist = std::distance(match_beg_copy, match_beg)-1;
+                        std::size_t vector_reset_dist = std::distance(match_beg_copy, match_beg);
                         match_beg = actively_changing_trees.begin() + vector_reset_dist + 1;
                         match_beg_copy = actively_changing_trees.begin();
                     }
