@@ -878,8 +878,8 @@ namespace uh::trees {
                     }
                 }
                 std::size_t advance = std::get<1>(*match_beg);
-                std::get<1>(input_list_tmp)++;
-                std::get<2>(input_list_tmp) += advance;//binary advance
+                //std::get<1>(input_list_tmp)++;
+                std::get<2>(input_list_tmp) += advance + 1;//binary advance
 
                 out_possibilities.push_back(input_list_tmp);
             };
@@ -895,7 +895,7 @@ namespace uh::trees {
                             tmp_list};
 
                     std::size_t advance = std::get<1>(*match_beg);
-                    out_possibilities.emplace_back(outer_list, 0, advance);
+                    out_possibilities.emplace_back(outer_list, 0, advance + 1);
                 } else
                     for (auto &input_list_tmp: possibilities) {//COPY input list and create different path calculation
                         possibilities_manage(input_list_tmp,found_vec);
@@ -930,13 +930,13 @@ namespace uh::trees {
             std::size_t single_count{};
             while (single_pos != possibilities.end()) {
                 if constexpr (!reverse) {
-                    if (data.begin()+std::get<1>(*single_pos)+1 == data.end() || cont_binary.begin()+std::get<2>(*single_pos) == cont_binary.end()) {
+                    if (data.begin()+std::get<1>(*single_pos)+1 == data.end() || cont_binary.begin()+std::get<2>(*single_pos)-1 == cont_binary.end()) {
                         single_count++;
                         single_pos++;
                         continue;
                     }
                 } else {
-                    if (data.rbegin()+std::get<1>(*single_pos)+1 == data.rend() || cont_binary.begin()+std::get<2>(*single_pos) == cont_binary.end()) {
+                    if (data.rbegin()+std::get<1>(*single_pos)+1 == data.rend() || cont_binary.begin()+std::get<2>(*single_pos)-1 == cont_binary.end()) {
                         single_count++;
                         single_pos++;
                         continue;
@@ -944,7 +944,7 @@ namespace uh::trees {
                 }
                 decltype(possibilities) tmp;
                 std::vector<unsigned char> binary_subset{};
-                std::copy(cont_binary.begin()+std::get<2>(*single_pos)+1, cont_binary.end(),std::back_inserter(binary_subset));//quick search on
+                std::copy(cont_binary.begin()+std::get<2>(*single_pos), cont_binary.end(),std::back_inserter(binary_subset));//quick search on
 
                 auto pos_vector = decltype(possibilities){};
                 pos_vector.push_back(*single_pos);
@@ -964,23 +964,26 @@ namespace uh::trees {
             //only check children with correct continue letter first in case we get a total match
             for (auto &pos_begin: possibilities) {
                 if constexpr (!reverse){
-                    if (data.begin()+std::get<1>(pos_begin)==data.end()||cont_binary.begin()+std::get<2>(pos_begin) == cont_binary.end()) {
+                    if (data.begin()+std::get<1>(pos_begin)==data.end()||cont_binary.begin()+std::get<2>(pos_begin)-1 == cont_binary.end()) {
                         continue;
                     }
                 }
                 else{
-                    if (data.rbegin()+std::get<1>(pos_begin)==data.rend()||cont_binary.begin()+std::get<2>(pos_begin) == cont_binary.end()) {
+                    if (data.rbegin()+std::get<1>(pos_begin)==data.rend()||cont_binary.begin()+std::get<2>(pos_begin)-1 == cont_binary.end()) {
                         continue;
                     }
                 }
                 std::vector<unsigned char> binary_subset{cont_binary.begin()+std::get<2>(pos_begin), cont_binary.end()};
+                if(binary_subset.empty()){
+                    continue;
+                }
                 bool total_match = false;
-                auto child_vec = child_vector(*(cont_binary.begin()+std::get<2>(pos_begin)));
+                auto child_vec = child_vector(*(cont_binary.begin()+std::get<2>(pos_begin)-1));
                 if (!child_vec.empty()) {//recursive search
                     for (auto &item: child_vec) {//vector of tree pointers
                         auto tmp = item->template search<ContainerBinary,reverse>(binary_subset, possibilities);
                         if (std::any_of(tmp.begin(), tmp.end(), [&cont_binary](auto &item) {
-                            return cont_binary.begin()+std::get<2>(item) == cont_binary.end();
+                            return cont_binary.begin()+std::get<2>(item)-1 == cont_binary.end();
                         }))total_match = true;
                         if (tmp != possibilities) {
                             std::for_each(tmp.begin(), tmp.end(), [&new_recursive](auto &item1) {
@@ -999,9 +1002,9 @@ namespace uh::trees {
 
                 //slow search
                 for (auto &c: children) {
-                    if (!child_vec.empty() && std::get<1>(c) == *(cont_binary.begin()+std::get<2>(pos_begin)))continue;
+                    if (!child_vec.empty() && std::get<1>(c) == *(cont_binary.begin()+std::get<2>(pos_begin)-1))continue;
                     for (auto &item: std::get<0>(c)) {//vector of tree pointers
-                        if (cont_binary.begin()+std::get<2>(pos_begin) == cont_binary.end()) {
+                        if (cont_binary.begin()+std::get<2>(pos_begin)-1 == cont_binary.end()) {
                             continue;
                         }
                         auto tmp = item->template search<ContainerBinary,reverse>(binary_subset, possibilities);
