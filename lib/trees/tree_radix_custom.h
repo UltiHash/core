@@ -878,7 +878,7 @@ namespace uh::trees {
                     }
                 }
                 std::size_t advance = std::get<1>(*match_beg);
-                //std::get<1>(input_list_tmp)++;
+                std::get<1>(input_list_tmp)++;//increase the number of matches found
                 std::get<2>(input_list_tmp) += advance + 1;//binary advance
 
                 out_possibilities.push_back(input_list_tmp);
@@ -895,7 +895,7 @@ namespace uh::trees {
                             tmp_list};
 
                     std::size_t advance = std::get<1>(*match_beg);
-                    out_possibilities.emplace_back(outer_list, 0, advance + 1);
+                    out_possibilities.emplace_back(outer_list, 1, advance + 1);
                 } else
                     for (auto &input_list_tmp: possibilities) {//COPY input list and create different path calculation
                         possibilities_manage(input_list_tmp,found_vec);
