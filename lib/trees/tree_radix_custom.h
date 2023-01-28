@@ -275,7 +275,8 @@ namespace uh::trees {
         }
 
         //returns total size integrated, new space used uncompressed, new space used compressed, list of tree references of <offset_ELEMENT,modified_LIST,added_LIST> tree nodes
-        template<class ContainerBinary,bool reverse=false>
+        template<class ContainerBinary,bool reverse=false,
+                std::enable_if_t<!std::is_same<std::string,ContainerBinary>::value, bool> = true>
         std::vector<std::tuple<std::size_t, std::size_t, std::size_t, std::list<std::tuple<std::set<tree_radix_custom *>, std::set<tree_radix_custom *>>>>>
         add(ContainerBinary &binary_cont) {//TODO:check duplicate matches and eliminate
             //first search existing structure and add into the last tree to insert potentially missing information
