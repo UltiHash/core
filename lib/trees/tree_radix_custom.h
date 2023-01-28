@@ -967,7 +967,7 @@ namespace uh::trees {
                     }
                 }
                 decltype(possibilities) tmp;
-                std::vector<unsigned char> binary_subset{};
+                std::vector<unsigned char> binary_subset{};//TODO: add slow test where every binary position is checked
                 std::copy(cont_binary.begin()+std::get<2>(*single_pos), cont_binary.end(),std::back_inserter(binary_subset));//quick search on
 
                 auto pos_vector = decltype(possibilities){};
@@ -1061,9 +1061,29 @@ namespace uh::trees {
             });
 
             //return the largest match with the lowest offset on the last tree, as far as there is a last tree...
-            std::sort(possibilities.begin(), possibilities.end(), [](auto &a, auto &b) {
-                return std::get<2>(a) > std::get<2>(b);//sort in descending order on search match size
+            //filter to sum up match internals
+            std::vector<std::tuple<decltype(possibilities),std::size_t>> sort_found{};
+
+            std::for_each(possibilities.begin(),possibilities.end(),[&sort_found](std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>>>>>, std::size_t,std::size_t> &item){
+                //std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>>>>>, std::size_t,std::size_t>>
+                sort_found.emplace_back(item,std::accumulate(std::get<0>(item).begin(),std::get<0>(item).end(),(std::size_t)0,
+                                                             [](std::size_t current_sum,std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>>>>> &item4){//sum up elements of all outer lists
+                    return current_sum+std::accumulate(item4.begin(),item4.end(),(std::size_t)0,[](std::size_t current_sum_outer_list,std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>>>> &item2){//sum up innermost vector
+                        return current_sum_outer_list+std::accumulate(std::get<1>(item2).begin(),std::get<1>(item2).end(),(std::size_t)0,[](std::size_t current_sum_inner_list, std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>>> &item3){
+                            return current_sum_inner_list+std::accumulate(std::get<1>(item3),std::get<1>(item3),(std::size_t)0,[](std::size_t current_sum_offset_vector,std::tuple<std::size_t, std::size_t> &item5){
+                                return current_sum_offset_vector+std::get<1>(item5)+1;
+                            });
+                        });
+                    });
+                }));
             });
+
+            std::sort(sort_found.begin(), sort_found.end(), [](auto &a, auto &b) {
+                return std::get<1>(a) > std::get<1>(b);//sort in descending order on search match size
+            });
+
+            possibilities.clear();
+
 
             std::size_t max_val{};
             auto poss_beg = possibilities.begin();
