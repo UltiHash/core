@@ -222,7 +222,6 @@ BOOST_AUTO_TEST_CASE(add_test)
     auto data_string2 = std::string{"World of tomorrow"};
     auto data_string3 = std::string{"tomorrow, I am superman"};
     auto data_string4 = std::string{" of tomorrow, I am superman of the World and"};
-    auto data_string5 = std::string{" of "};
 
 
 

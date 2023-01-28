@@ -610,8 +610,8 @@ namespace uh::trees {
                                                                                           (tree_front->data.size() -
                                                                                            new_match_size)),
                                                                                          tree_front);//second tree match*/
-                                                auto new_partial_match = std::make_tuple((std::size_t)std::distance(std::get<2>(*(match_beg_intern + 1))->data.begin(),new_match_begin),
-                                                                                         (std::size_t)std::distance(new_match_begin,new_match_end),
+                                                auto new_partial_match = std::make_tuple((std::size_t)std::distance(std::get<2>(*(match_beg_intern + 1))->data.begin(),new_match_begin)-1,
+                                                                                         (std::size_t)std::distance(new_match_begin,new_match_end)-1,
                                                                                                           tree_front);
 
                                                 // update until end
@@ -643,10 +643,10 @@ namespace uh::trees {
                                             std::size_t active_tree_offset;
 
                                             active_tree_offset = std::distance(actively_changing_trees.begin(),
-                                                                               match_beg_intern_copy);
+                                                                               match_beg_intern_copy)-1;
                                             match_beg_intern =
                                                     actively_changing_trees.begin() + active_tree_offset +
-                                                    std::distance(match_beg_intern_copy, match_beg_intern);
+                                                    std::distance(match_beg_intern_copy, match_beg_intern)-1;
                                             match_beg_intern_copy =
                                                     actively_changing_trees.begin() + active_tree_offset;
                                         } else {
@@ -693,7 +693,7 @@ namespace uh::trees {
                         std::get<3>(out_change_tuple).emplace_back(modified, added);
                         modified.clear();
                         added.clear();
-                        std::size_t vector_reset_dist = std::distance(match_beg_copy, match_beg);
+                        std::size_t vector_reset_dist = std::distance(match_beg_copy, match_beg)-1;
                         match_beg = actively_changing_trees.begin() + vector_reset_dist + 1;
                         match_beg_copy = actively_changing_trees.begin();
                     }
@@ -869,6 +869,18 @@ namespace uh::trees {
                 std::sort(local_matches.begin(), local_matches.end(), [](auto &a, auto &b) {
                     return std::get<0>(a) < std::get<0>(b);
                 });
+
+                match_beg = local_matches.begin();//deduplicate matches
+                while(match_beg != local_matches.end()){
+                    if(std::count(match_beg+1,local_matches.end(),*match_beg)>1){
+                        std::size_t reinvoke_count = std::distance(match_beg,local_matches.end())-1;
+                        local_matches.erase(match_beg);
+                        match_beg = local_matches.begin()+reinvoke_count;
+                        continue;
+                    }
+                    match_beg++;
+                }
+
                 return local_matches;
             };
 
