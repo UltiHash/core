@@ -1091,6 +1091,10 @@ namespace uh::trees {
                 poss_beg_size++;
             }
 
+            std::sort(possibilities.begin(), possibilities.end(), [](auto &a, auto &b) {
+                return std::get<1>(a) < std::get<1>(b);//sort in ascending order the number of matches, lesser matches with less fragmentation are better for same match size
+            });
+
             max_val = 0;
             auto poss_beg = possibilities.begin();
             while (poss_beg != possibilities.end()) {
@@ -1101,10 +1105,6 @@ namespace uh::trees {
                 }
                 poss_beg++;
             }
-
-            std::sort(possibilities.begin(), possibilities.end(), [](auto &a, auto &b) {
-                return std::get<1>(a) < std::get<1>(b);//sort in descending order on search match size
-            });
 
             return possibilities;
         }
