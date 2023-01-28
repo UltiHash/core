@@ -245,17 +245,17 @@ namespace uh::trees {
                     if (simd_count < SIMD_UNITS) {
                         simd_count += 1;
                         lock.unlock();
-                        found = std::mismatch(std::execution::unseq, data_cont.rbegin()+current_offset, data_cont.rend(), binary_cont.rbegin(), binary_cont.rend());
+                        found = std::mismatch(std::execution::unseq, data_cont.rbegin()+current_offset, data_cont.rend(), binary_cont.begin(), binary_cont.end());
                         lock.lock();
                         simd_count -= 1;
                         lock.unlock();
                     } else {
                         lock.unlock();
-                        found = std::mismatch(data_cont.rbegin()+current_offset, data_cont.rend(), binary_cont.rbegin(), binary_cont.rend());
+                        found = std::mismatch(data_cont.rbegin()+current_offset, data_cont.rend(), binary_cont.begin(), binary_cont.end());
                     }
 
-                    if (std::distance(data_cont.rbegin(),found.first) >= MINIMUM_MATCH_SIZE) {
-                        matches.emplace_back(current_offset, std::distance(data_cont.rbegin()+current_offset,found.first));
+                    if (std::max((long)std::distance(data_cont.rbegin()+current_offset,found.first)-1,(long)0) >= MINIMUM_MATCH_SIZE) {
+                        matches.emplace_back(current_offset, std::max((long)std::distance(data_cont.rbegin()+current_offset,found.first)-1,(long)0));
                     }
                     if (data_cont.rbegin()+current_offset != data_cont.rend())current_offset++;
                 } while (data_cont.rbegin()+current_offset != data_cont.rend());
@@ -771,7 +771,7 @@ namespace uh::trees {
                     std::get<2>(add_tup) += set_vector.size();
                     std::get<0>(add_tup) += set_vector.size();
                 }
-                std::get<1>(add_tup) = std::min((long)std::get<1>(add_tup)-(long)cont_binary.size(),(long)0);
+                std::get<1>(add_tup) = std::min(static_cast<long>(std::get<1>(add_tup))-static_cast<long>(cont_binary.size()),(long)0);
                 std::get<0>(add_tup) -= std::get<1>(add_tup);
                 add_tup_out.push_back(add_tup);
             }
