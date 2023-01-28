@@ -756,8 +756,8 @@ namespace uh::trees {
                                 std::copy(std::get<0>(tree_tuple)->data.begin()+std::get<0>(pos_tup),std::get<0>(tree_tuple)->data.begin()+std::get<0>(pos_tup)+std::get<1>(pos_tup)+1,std::back_inserter(set_vector));
 
                                 std::get<0>(add_tup) += std::get<1>(pos_tup)+1;
-                                std::get<1>(add_tup) += std::get<1>(pos_tup)+1;
-                                std::get<2>(add_tup) += comp.compress(set_vector).size();
+                                std::get<2>(add_tup) += std::get<1>(pos_tup)+1;
+                                std::get<3>(add_tup) += comp.compress(set_vector).size();
                             } else {
                                 std::get<0>(add_tup) += std::get<1>(pos_tup)+1;
                             }
@@ -767,10 +767,12 @@ namespace uh::trees {
                 if (cont_binary.begin() + std::get<0>(add_tup) < cont_binary.end()) {
                     auto set_vector = std::vector<unsigned char>{};
                     std::copy(cont_binary.begin() + std::get<0>(add_tup),cont_binary.end(),std::back_inserter(set_vector));
-                    std::get<2>(add_tup) += comp.compress(set_vector).size();
-                    std::get<1>(add_tup) += set_vector.size();
+                    std::get<3>(add_tup) += comp.compress(set_vector).size();
+                    std::get<2>(add_tup) += set_vector.size();
                     std::get<0>(add_tup) += set_vector.size();
                 }
+                std::get<1>(add_tup) = std::min((long)std::get<1>(add_tup)-(long)cont_binary.size(),(long)0);
+                std::get<0>(add_tup) -= std::get<1>(add_tup);
                 add_tup_out.push_back(add_tup);
             }
 
