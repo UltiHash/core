@@ -59,8 +59,8 @@ BOOST_AUTO_TEST_CASE(search_match_filter_test)
     auto input_string_begin = std::vector<unsigned char>{hello_string.begin(), hello_string.end()};
     auto input_string_end = std::vector<unsigned char>{world_string.begin(), world_string.end()};
 
-    uh::trees::tree_radix_custom<std::vector<unsigned char>> t{};
-    auto result = t.search_match_filter<std::vector<unsigned char>,std::vector<unsigned char>,false>(data_string, input_string_begin);
+    uh::trees::tree_radix_custom t{};
+    auto result = t.search_match_filter(data_string, input_string_begin);
     BOOST_CHECK(result.size() == 1);
     BOOST_CHECK(std::get<1>(result[0]) == 1);//number of matches is 1
     BOOST_CHECK(std::get<2>(result[0]) == 5);
@@ -76,7 +76,7 @@ BOOST_AUTO_TEST_CASE(search_match_filter_test)
     std::string ello_Worl = "Hello World";//Algo strictly keeps front and back distance to prevent fragmentation, Match size limits distance to front and back if it does not exactly match
     input_string_begin = std::vector<unsigned char>{ello_Worl.begin(), ello_Worl.end()};
 
-    result = t.search_match_filter<std::vector<unsigned char>,std::vector<unsigned char>,false>(data_string, input_string_begin);
+    result = t.search_match_filter(data_string, input_string_begin);
     BOOST_CHECK(result.size() == 1);
     BOOST_CHECK(std::get<2>(result[0]) == 11);
 
@@ -89,35 +89,35 @@ BOOST_AUTO_TEST_CASE(search_match_filter_test)
 
 BOOST_AUTO_TEST_CASE(search_empty_test)
 {
-    uh::trees::tree_radix_custom<std::vector<unsigned char>> t;
+    uh::trees::tree_radix_custom t;
     std::string hello_string = "Hello";
     auto data_string = std::vector<unsigned char>{hello_string.begin(), hello_string.end()};
-    auto result = t.search<std::vector<unsigned char>,false>(data_string);
+    auto result = t.search(data_string);
     BOOST_CHECK(result.empty());
 }
 
 BOOST_AUTO_TEST_CASE(radix_constructor_test)
 {
-    auto *t = new uh::trees::tree_radix_custom<std::vector<unsigned char>>{};
+    auto *t = new uh::trees::tree_radix_custom{};
     BOOST_CHECK(t->children.empty());
     std::string hello_string = "Hello World";
     auto data_string = std::vector<unsigned char>{hello_string.begin(), hello_string.end()};
     delete t;
     //total match test
-    t = new uh::trees::tree_radix_custom<std::vector<unsigned char>>();
+    t = new uh::trees::tree_radix_custom();
     //empty add test
-    auto result_test = t->add_test<std::vector<unsigned char>,false>(data_string);
+    auto result_test = t->add_test(data_string);
     BOOST_CHECK(std::get<0>(result_test[0]) == 11 && std::get<1>(result_test[0]) == 11);
     delete t;
-    t = new uh::trees::tree_radix_custom<std::vector<unsigned char>>(data_string);
+    t = new uh::trees::tree_radix_custom(data_string);
     BOOST_CHECK(t->children.empty());
     BOOST_CHECK(t->size() == 11);
     BOOST_CHECK_EQUAL_COLLECTIONS(hello_string.begin(), hello_string.end(), t->data.begin(), t->data.end());
     //adding
-    auto result = t->add<std::vector<unsigned char>,false>(data_string);
+    auto result = t->add(data_string);
     BOOST_CHECK(std::get<0>(result[0]) == 11 && std::get<1>(result[0]) == 0);
     BOOST_CHECK(std::get<0>(*std::get<3>(result[0]).begin()).empty() && std::get<1>(*std::get<3>(result[0]).begin()).empty());//tree modified and added stay empty
-    result_test = t->add_test<std::vector<unsigned char>,false>(data_string);
+    result_test = t->add_test(data_string);
     BOOST_CHECK(std::get<0>(result_test[0]) == 11 && std::get<1>(result_test[0]) == 0);
     //total match and append test
     std::string tomorrow_string = "Hello World of tomorrow!";
@@ -126,10 +126,10 @@ BOOST_AUTO_TEST_CASE(radix_constructor_test)
     result_test = t->add_test(data_string);
     BOOST_CHECK(std::get<0>(result_test[0]) == 24 && std::get<1>(result_test[0]) == 13);
     //add
-    result = t->add<std::vector<unsigned char>,false>(data_string);
+    result = t->add(data_string);
     BOOST_CHECK(std::get<0>(result[0]) == 24 && std::get<1>(result[0]) == 13);
     BOOST_CHECK(std::get<0>(*std::get<3>(result[0]).begin()).empty() && std::get<1>(*std::get<3>(result[0]).begin()).size()==1);//tree modified empty and added with one new tree
-    result_test = t->add_test<std::vector<unsigned char>,false>(data_string);
+    result_test = t->add_test(data_string);
     BOOST_CHECK(std::get<0>(result_test[0]) == 24 && std::get<1>(result_test[0]) == 0);//total match expected recursively
 
     delete t;
@@ -138,20 +138,27 @@ BOOST_AUTO_TEST_CASE(radix_constructor_test)
 //test the function add and the function add_test and if they calculate the correct
 BOOST_AUTO_TEST_CASE(add_test)
 {
-    auto data_string1 = std::string{"Hello World!"};
-    auto data1 = std::vector<unsigned char>{data_string1.begin(),data_string1.end()};
-    auto data_string2 = std::string{"Hello World!"};
-    auto data2 = std::vector<unsigned char>{data_string2.begin(),data_string2.end()};
-    auto data_string3 = std::string{"Hello World!"};
-    auto data3 = std::vector<unsigned char>{data_string3.begin(),data_string3.end()};
-    auto data_string4 = std::string{"Hello World!"};
-    auto data4 = std::vector<unsigned char>{data_string4.begin(),data_string4.end()};
-    auto data_string5 = std::string{"Hello World!"};
-    auto data5 = std::vector<unsigned char>{data_string5.begin(),data_string5.end()};
-
-    //TODO:
+    auto data_string1 = std::string{"Hello World of tomorrow, I am superman of the World and I deduplicate a lot of data!"};
+    auto data_string2 = std::string{"World of tomorrow"};
+    auto data_string3 = std::string{"tomorrow, I am superman"};
+    auto data_string4 = std::string{" of tomorrow, I am superman of the World and"};
+    auto data_string5 = std::string{" of "};
 
     //first tree test, match something at the back of the string
+    auto* t = new uh::trees::tree_radix_custom(data_string1);
+
+    auto back_string = std::string{"a lot of data!"};
+
+    auto result_test = t->add_test(back_string);
+    BOOST_CHECK(std::get<0>(result_test[0]) == 24 && std::get<1>(result_test[0]) == 13);
+    auto result = t->add(back_string);
+    BOOST_CHECK(std::get<0>(result[0]) == 11 && std::get<1>(result[0]) == 0);
+    BOOST_CHECK(std::get<0>(*std::get<3>(result[0]).begin()).empty() && std::get<1>(*std::get<3>(result[0]).begin()).empty());
+
+
+
+    auto back_string_append = std::string{"a lot of data! And I can code."};
+    auto back_append = std::vector<unsigned char>{data_string1.begin(),data_string1.end()};
 
     //first tree append test, match something where a subset already exists and additional information is added
 
@@ -159,7 +166,9 @@ BOOST_AUTO_TEST_CASE(add_test)
 
     //last tree append test, match something that is the same in the beginning or totally to the existing information and add some more information at the end of the string going into add function
 
-    auto *t = new uh::trees::tree_radix_custom<std::vector<unsigned char>>{data1};
+    //cascading add
+
+
 
 
     /*

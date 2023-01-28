@@ -29,7 +29,7 @@ namespace uh::trees {
     std::size_t simd_count{};
     std::shared_mutex simd_protect{};
 
-    template<class DataReference>
+    template<class DataReference = std::vector<unsigned char>>
     struct tree_radix_custom {
     public:
         std::vector<unsigned char> data{};
@@ -50,7 +50,8 @@ namespace uh::trees {
             }
         }
 
-        explicit tree_radix_custom(const std::vector<unsigned char> &bin) : tree_radix_custom() {
+        template<class Container>
+        explicit tree_radix_custom(const Container &bin) : tree_radix_custom() {
             data.assign(bin.begin(), bin.end());
         }
 
@@ -264,6 +265,14 @@ namespace uh::trees {
         }
 
     public:
+
+        template<class ContainerString,bool reverse = false,
+                std::enable_if_t<std::is_same<std::string,ContainerString>::value, bool> = true>
+        auto
+        add(ContainerString &cont_string) {
+            std::vector<unsigned char> input{cont_string.begin(),cont_string.end()};
+            return add(input);
+        }
 
         //returns total size integrated, new space used uncompressed, new space used compressed, list of tree references of <offset_ELEMENT,modified_LIST,added_LIST> tree nodes
         template<class ContainerBinary,bool reverse=false>
@@ -700,9 +709,18 @@ namespace uh::trees {
             return out_change_tuple_out;
         }
 
+        template<class ContainerString,bool reverse = false,
+                std::enable_if_t<std::is_same<std::string,ContainerString>::value, bool> = true>
+        auto
+        add_test(ContainerString &cont_string) {
+            std::vector<unsigned char> input{cont_string.begin(),cont_string.end()};
+            return add_test(input);
+        }
+
         //returns total size integrated, new space used uncompressed, new space used compressed
         //calculates ESTIMATE size of data to be integrated to be communicated to agency to determine optimal storage location
-        template<class ContainerBinary,bool reverse = false>
+        template<class ContainerBinary,bool reverse = false,
+                std::enable_if_t<!std::is_same<std::string,ContainerBinary>::value, bool> = true>
         std::vector<std::tuple<std::size_t, std::size_t, std::size_t>>
         add_test(ContainerBinary &cont_binary) {//add test should copy
             //first search existing structure and add into the last tree to insert potentially missing information
