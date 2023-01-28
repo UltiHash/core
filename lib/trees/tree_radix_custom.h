@@ -844,6 +844,7 @@ namespace uh::trees {
                     match_beg++;
                 }
 
+                /*
                 std::sort(local_matches.begin(), local_matches.end(), [](auto &a, auto &b) {
                     return std::get<1>(a) > std::get<1>(b);
                 });
@@ -876,7 +877,8 @@ namespace uh::trees {
                     }
                     match_beg++;
                 }
-
+                */
+                //all matches are valid as long as they do not collide
                 return local_matches;
             };
 
