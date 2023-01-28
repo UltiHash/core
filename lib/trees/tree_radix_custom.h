@@ -981,8 +981,8 @@ namespace uh::trees {
                     }
                 });
 
-                single_pos = possibilities.begin() + single_count;
                 single_count++;
+                single_pos = possibilities.begin() + single_count;
             }
             //check child that deals with searching the far most rest in direction of end to skip the not matching rest
             //only check children with correct continue letter first in case we get a total match
