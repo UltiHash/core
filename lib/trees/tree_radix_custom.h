@@ -973,7 +973,8 @@ namespace uh::trees {
                         continue;
                     }
                 }
-                std::vector<unsigned char> binary_subset{cont_binary.begin()+std::get<2>(pos_begin), cont_binary.end()};
+                std::vector<unsigned char> binary_subset{};
+                std::copy(cont_binary.begin()+std::get<2>(*pos_begin), cont_binary.end(),std::back_inserter(binary_subset));//quick search on
                 if(binary_subset.empty()){
                     continue;
                 }
