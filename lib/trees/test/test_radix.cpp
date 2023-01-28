@@ -62,7 +62,7 @@ BOOST_AUTO_TEST_CASE(search_match_filter_test)
     uh::trees::tree_radix_custom<std::vector<unsigned char>> t{};
     auto result = t.search_match_filter<std::vector<unsigned char>,std::vector<unsigned char>,false>(data_string, input_string_begin);
     BOOST_CHECK(result.size() == 1);
-    BOOST_CHECK(std::get<1>(result[0]) == 0);
+    BOOST_CHECK(std::get<1>(result[0]) == 1);//number of matches is 1
     BOOST_CHECK(std::get<2>(result[0]) == 5);
 
     auto last_it_outer_list = (--(std::get<0>(result[0]).end()));
