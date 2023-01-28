@@ -627,7 +627,7 @@ namespace uh::trees {
                                         actively_changing_trees.insert(match_overlap+1,std::make_tuple(second_match_offset, second_match_size,tree_back));
                                         match_overlap = actively_changing_trees.begin()+reinvoke_offset+1;
                                     }
-                                    match_overlap;
+                                    match_overlap++;
                                 }
 
                                 //from current match begin start update all entries of matches until the end
