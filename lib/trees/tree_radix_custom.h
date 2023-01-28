@@ -177,7 +177,7 @@ namespace uh::trees {
         }
 
         /*std::vector<std::tuple<std::vector<unsigned char>::const_iterator,std::vector<unsigned char>::const_iterator,std::vector<unsigned char>::const_iterator>>*/
-        template<class ContainerData,class ContainerBinary,bool reverse=false>
+        template<class ContainerData, class ContainerBinary, bool reverse = false>
         auto
         compare_ultihash(ContainerData &data_cont, ContainerBinary &binary_cont) {
             //if input does only fit to a shorter string as a subset of data, count becomes negative, else positive including ß
@@ -186,20 +186,25 @@ namespace uh::trees {
             if (data_cont.empty() || binary_cont.empty())return matches;
             std::size_t current_offset = 0;
             //search forward through data
-            if constexpr (!reverse){
+            if constexpr (!reverse) {
                 do {
                     //first element match
                     std::unique_lock lock(simd_protect);
                     if (simd_count < SIMD_UNITS) {
                         simd_count += 1;
                         lock.unlock();
-                        current_offset = std::distance(data_cont.begin(),std::find(std::execution::unseq, data_cont.begin()+current_offset, data_cont.end(), *binary_cont.begin()));
+                        current_offset = std::distance(data_cont.begin(), std::find(std::execution::unseq,
+                                                                                    data_cont.begin() + current_offset,
+                                                                                    data_cont.end(),
+                                                                                    *binary_cont.begin()));
                         lock.lock();
                         simd_count -= 1;
                         lock.unlock();
                     } else {
                         lock.unlock();
-                        current_offset = std::distance(data_cont.begin(),std::find(data_cont.begin()+current_offset, data_cont.end(), *binary_cont.begin()));
+                        current_offset = std::distance(data_cont.begin(),
+                                                       std::find(data_cont.begin() + current_offset, data_cont.end(),
+                                                                 *binary_cont.begin()));
                     }
 
                     //search how long input matches
@@ -208,35 +213,43 @@ namespace uh::trees {
                     if (simd_count < SIMD_UNITS) {
                         simd_count += 1;
                         lock.unlock();
-                        found = std::mismatch(std::execution::unseq, data_cont.begin()+current_offset, data_cont.end(), binary_cont.begin(), binary_cont.end());
+                        found = std::mismatch(std::execution::unseq, data_cont.begin() + current_offset,
+                                              data_cont.end(), binary_cont.begin(), binary_cont.end());
                         lock.lock();
                         simd_count -= 1;
                         lock.unlock();
                     } else {
                         lock.unlock();
-                        found = std::mismatch(data_cont.begin()+current_offset, data_cont.end(), binary_cont.begin(), binary_cont.end());
+                        found = std::mismatch(data_cont.begin() + current_offset, data_cont.end(), binary_cont.begin(),
+                                              binary_cont.end());
                     }
 
-                    if (std::max((long)std::distance(data_cont.begin()+current_offset,found.first)-1,(long)0) >= MINIMUM_MATCH_SIZE) {
-                        matches.emplace_back(current_offset, std::max((long)std::distance(data_cont.begin()+current_offset,found.first)-1,(long)0));
+                    if (std::max((long) std::distance(data_cont.begin() + current_offset, found.first) - 1, (long) 0) >=
+                        MINIMUM_MATCH_SIZE) {
+                        matches.emplace_back(current_offset, std::max(
+                                (long) std::distance(data_cont.begin() + current_offset, found.first) - 1, (long) 0));
                     }
-                    if (data_cont.begin()+current_offset != data_cont.end())current_offset++;
-                } while (data_cont.begin()+current_offset != data_cont.end());
-            }
-            else{
+                    if (data_cont.begin() + current_offset != data_cont.end())current_offset++;
+                } while (data_cont.begin() + current_offset != data_cont.end());
+            } else {
                 do {
                     //first element match
                     std::unique_lock lock(simd_protect);
                     if (simd_count < SIMD_UNITS) {
                         simd_count += 1;
                         lock.unlock();
-                        current_offset = std::distance(data_cont.rbegin(),std::find(std::execution::unseq, data_cont.rbegin()+current_offset, data_cont.rend(), *binary_cont.begin()));
+                        current_offset = std::distance(data_cont.rbegin(), std::find(std::execution::unseq,
+                                                                                     data_cont.rbegin() +
+                                                                                     current_offset, data_cont.rend(),
+                                                                                     *binary_cont.begin()));
                         lock.lock();
                         simd_count -= 1;
                         lock.unlock();
                     } else {
                         lock.unlock();
-                        current_offset = std::distance(data_cont.rbegin(),std::find(data_cont.rbegin()+current_offset, data_cont.rend(), *binary_cont.begin()));
+                        current_offset = std::distance(data_cont.rbegin(),
+                                                       std::find(data_cont.rbegin() + current_offset, data_cont.rend(),
+                                                                 *binary_cont.begin()));
                     }
 
                     //search how long input matches
@@ -245,20 +258,24 @@ namespace uh::trees {
                     if (simd_count < SIMD_UNITS) {
                         simd_count += 1;
                         lock.unlock();
-                        found = std::mismatch(std::execution::unseq, data_cont.rbegin()+current_offset, data_cont.rend(), binary_cont.begin(), binary_cont.end());
+                        found = std::mismatch(std::execution::unseq, data_cont.rbegin() + current_offset,
+                                              data_cont.rend(), binary_cont.begin(), binary_cont.end());
                         lock.lock();
                         simd_count -= 1;
                         lock.unlock();
                     } else {
                         lock.unlock();
-                        found = std::mismatch(data_cont.rbegin()+current_offset, data_cont.rend(), binary_cont.begin(), binary_cont.end());
+                        found = std::mismatch(data_cont.rbegin() + current_offset, data_cont.rend(),
+                                              binary_cont.begin(), binary_cont.end());
                     }
 
-                    if (std::max((long)std::distance(data_cont.rbegin()+current_offset,found.first)-1,(long)0) >= MINIMUM_MATCH_SIZE) {
-                        matches.emplace_back(current_offset, std::max((long)std::distance(data_cont.rbegin()+current_offset,found.first)-1,(long)0));
+                    if (std::max((long) std::distance(data_cont.rbegin() + current_offset, found.first) - 1,
+                                 (long) 0) >= MINIMUM_MATCH_SIZE) {
+                        matches.emplace_back(current_offset, std::max(
+                                (long) std::distance(data_cont.rbegin() + current_offset, found.first) - 1, (long) 0));
                     }
-                    if (data_cont.rbegin()+current_offset != data_cont.rend())current_offset++;
-                } while (data_cont.rbegin()+current_offset != data_cont.rend());
+                    if (data_cont.rbegin() + current_offset != data_cont.rend())current_offset++;
+                } while (data_cont.rbegin() + current_offset != data_cont.rend());
             }
 
             return matches;
@@ -266,17 +283,17 @@ namespace uh::trees {
 
     public:
 
-        template<class ContainerString,bool reverse = false,
-                std::enable_if_t<std::is_same<std::string,ContainerString>::value, bool> = true>
+        template<class ContainerString, bool reverse = false,
+                std::enable_if_t<std::is_same<std::string, ContainerString>::value, bool> = true>
         auto
         add(ContainerString &cont_string) {
-            std::vector<unsigned char> input{cont_string.begin(),cont_string.end()};
+            std::vector<unsigned char> input{cont_string.begin(), cont_string.end()};
             return add(input);
         }
 
         //returns total size integrated, new space used uncompressed, new space used compressed, list of tree references of <offset_ELEMENT,modified_LIST,added_LIST> tree nodes
-        template<class ContainerBinary,bool reverse=false,
-                std::enable_if_t<!std::is_same<std::string,ContainerBinary>::value, bool> = true>
+        template<class ContainerBinary, bool reverse = false,
+                std::enable_if_t<!std::is_same<std::string, ContainerBinary>::value, bool> = true>
         std::vector<std::tuple<std::size_t, std::size_t, std::size_t, std::list<std::tuple<std::set<tree_radix_custom *>, std::set<tree_radix_custom *>>>>>
         add(ContainerBinary &binary_cont) {
             //first search existing structure and add into the last tree to insert potentially missing information
@@ -286,7 +303,7 @@ namespace uh::trees {
             if (binary_cont.empty()) {
                 return {};
             }
-            auto search_index = search<ContainerBinary,reverse>(binary_cont);
+            auto search_index = search<ContainerBinary, reverse>(binary_cont);
 
             //some element and an end element at least required
             //TODO: add cross update from forward and backward children
@@ -344,7 +361,8 @@ namespace uh::trees {
                     std::vector<std::tuple<std::size_t, std::size_t, tree_radix_custom *>> actively_changing_trees{};//data offset and binary range from offset
                     std::for_each(std::get<1>(*one_node_analysis).begin(), std::get<1>(*one_node_analysis).end(),
                                   [&actively_changing_trees, &tree_match_pointer](auto &item) {
-                                      actively_changing_trees.emplace_back(std::get<0>(item), std::get<1>(item), tree_match_pointer);
+                                      actively_changing_trees.emplace_back(std::get<0>(item), std::get<1>(item),
+                                                                           tree_match_pointer);
                                   });
 
                     auto match_beg = actively_changing_trees.begin();//                                         found beginning                             found end                        data on tree begin at found begin
@@ -357,34 +375,47 @@ namespace uh::trees {
                         ///////////////////////////////////////////////Tree building sequence////////////////////////////////////////////
 //checking if children need to be generated before and after the found input peace, reference to data of tree required
                         //child before found, reference data
-                        std::vector<unsigned char> child_beg,child_mid,child_end,child_append;
+                        std::vector<unsigned char> child_beg, child_mid, child_end, child_append;
 
                         if constexpr (!reverse) {
                             child_beg = std::vector<unsigned char>{};
-                            std::copy(std::get<2>(*match_beg)->data.begin(),std::get<2>(*match_beg)->data.begin()+std::get<0>(*match_beg),std::back_inserter(child_beg));
+                            std::copy(std::get<2>(*match_beg)->data.begin(),
+                                      std::get<2>(*match_beg)->data.begin() + std::get<0>(*match_beg),
+                                      std::back_inserter(child_beg));
                             //child data sequence middle, reference data
                             child_mid = std::vector<unsigned char>{};
-                            std::copy(std::get<2>(*match_beg)->data.begin()+std::get<0>(*match_beg),std::get<2>(*match_beg)->data.begin()+std::get<0>(*match_beg)+std::get<1>(*match_beg)+1,std::back_inserter(child_mid));
+                            std::copy(std::get<2>(*match_beg)->data.begin() + std::get<0>(*match_beg),
+                                      std::get<2>(*match_beg)->data.begin() + std::get<0>(*match_beg) +
+                                      std::get<1>(*match_beg) + 1, std::back_inserter(child_mid));
                             //child data sequence end, reference data
                             child_end = std::vector<unsigned char>{};
-                            std::copy(std::get<2>(*match_beg)->data.begin()+std::get<0>(*match_beg)+std::get<1>(*match_beg)+1,std::get<2>(*match_beg)->data.end(),std::back_inserter(child_end));
+                            std::copy(std::get<2>(*match_beg)->data.begin() + std::get<0>(*match_beg) +
+                                      std::get<1>(*match_beg) + 1, std::get<2>(*match_beg)->data.end(),
+                                      std::back_inserter(child_end));
                         } else {
                             child_beg = std::vector<unsigned char>{};
-                            std::copy(std::get<2>(*match_beg)->data.rbegin(),std::get<2>(*match_beg)->data.rbegin()+std::get<0>(*match_beg),std::back_inserter(child_beg));
+                            std::copy(std::get<2>(*match_beg)->data.rbegin(),
+                                      std::get<2>(*match_beg)->data.rbegin() + std::get<0>(*match_beg),
+                                      std::back_inserter(child_beg));
                             //child data sequence middle, reference data
                             child_mid = std::vector<unsigned char>{};
-                            std::copy(std::get<2>(*match_beg)->data.rbegin()+std::get<0>(*match_beg),std::get<2>(*match_beg)->data.rbegin()+std::get<0>(*match_beg)+std::get<1>(*match_beg)+1,std::back_inserter(child_mid));
+                            std::copy(std::get<2>(*match_beg)->data.rbegin() + std::get<0>(*match_beg),
+                                      std::get<2>(*match_beg)->data.rbegin() + std::get<0>(*match_beg) +
+                                      std::get<1>(*match_beg) + 1, std::back_inserter(child_mid));
                             //child data sequence end, reference data
                             child_end = std::vector<unsigned char>{};
-                            std::copy(std::get<2>(*match_beg)->data.rbegin()+std::get<0>(*match_beg)+std::get<1>(*match_beg)+1,std::get<2>(*match_beg)->data.rend(),std::back_inserter(child_end));
+                            std::copy(std::get<2>(*match_beg)->data.rbegin() + std::get<0>(*match_beg) +
+                                      std::get<1>(*match_beg) + 1, std::get<2>(*match_beg)->data.rend(),
+                                      std::back_inserter(child_end));
                         }
                         //child after found, reference new input
                         child_append = std::vector<unsigned char>{};
-                        std::copy(binary_cont.begin()+std::get<1>(*match_beg)+1,binary_cont.end(),std::back_inserter(child_append));
+                        std::copy(binary_cont.begin() + std::get<1>(*match_beg) + 1, binary_cont.end(),
+                                  std::back_inserter(child_append));
                         //only the new append part may be compressed
                         //before splitting or modifying a block it needs to be uncompressed
 
-                        bool first_section_tree = child_beg.size()>1;
+                        bool first_section_tree = child_beg.size() > 1;
                         bool last_section_tree = !child_end.empty();
 
                         bool append_tree = !child_append.empty();
@@ -395,7 +426,8 @@ namespace uh::trees {
 
                         //search function already determined that this is the tree that needs to fill in the data or to split somehow
                         //cases: insert front tree, insert cend tree (same case as having a back insert because the cend tree will just have at least 1 element in case of overflow)
-                        if (std::get<2>(*match_beg)->data.empty()) {//how to insert, either empty simple insert or some tree construction anywhere
+                        if (std::get<2>(
+                                *match_beg)->data.empty()) {//how to insert, either empty simple insert or some tree construction anywhere
                             //simple insert into data since this seems to be a new node that can contain simple information
 
                             std::get<2>(*match_beg)->data.assign(binary_cont.begin(), binary_cont.end());
@@ -411,12 +443,11 @@ namespace uh::trees {
                                 size_integrated += std::get<2>(*match_beg)->data.size();
                                 if (append_tree) {
                                     auto *tree_ptr_tmp = new tree_radix_custom(child_append);
-                                    if constexpr (!reverse){
+                                    if constexpr (!reverse) {
                                         size_compressed = comp.compress((tree_ptr_tmp->data)).size();
-                                    }
-                                    else{
+                                    } else {
                                         auto tmp_vec = *tree_ptr_tmp->data;
-                                        std::reverse(tmp_vec.begin(),tmp_vec.end());
+                                        std::reverse(tmp_vec.begin(), tmp_vec.end());
                                         size_compressed = comp.compress(tmp_vec).size();
                                     }
 
@@ -510,25 +541,35 @@ namespace uh::trees {
                                     if (last_section_tree) {
                                         //delete the referenced data size of middle and cend from tree pointer first
                                         if constexpr (!reverse) {
-                                            tree_ptr_first->data.erase(tree_ptr_first->data.begin()+child_beg.size(), tree_ptr_first->data.begin()+child_beg.size()+child_mid.size()+child_end.size());
+                                            tree_ptr_first->data.erase(tree_ptr_first->data.begin() + child_beg.size(),
+                                                                       tree_ptr_first->data.begin() + child_beg.size() +
+                                                                       child_mid.size() + child_end.size());
                                         } else {
-                                            tree_ptr_first->data.erase(tree_ptr_first->data.begin(), tree_ptr_first->data.begin()+child_mid.size()+child_end.size());
+                                            tree_ptr_first->data.erase(tree_ptr_first->data.begin(),
+                                                                       tree_ptr_first->data.begin() + child_mid.size() +
+                                                                       child_end.size());
                                         }
                                     } else {
                                         //delete middle data reference size from tree pointer first
                                         if constexpr (!reverse) {
-                                            tree_ptr_first->data.erase(tree_ptr_first->data.begin()+child_beg.size(), tree_ptr_first->data.begin()+child_beg.size()+child_mid.size());
+                                            tree_ptr_first->data.erase(tree_ptr_first->data.begin() + child_beg.size(),
+                                                                       tree_ptr_first->data.begin() + child_beg.size() +
+                                                                       child_mid.size());
                                         } else {
-                                            tree_ptr_first->data.erase(tree_ptr_first->data.begin(), tree_ptr_first->data.begin()+child_mid.size());
+                                            tree_ptr_first->data.erase(tree_ptr_first->data.begin(),
+                                                                       tree_ptr_first->data.begin() + child_mid.size());
                                         }
                                     }
                                 } else {
                                     if (last_section_tree) {
                                         //delete last tree reference size from tree pointer middle
                                         if constexpr (!reverse) {
-                                            tree_ptr_mid->data.erase(tree_ptr_mid->data.begin()+child_mid.size(),tree_ptr_mid->data.begin()+child_mid.size()+child_end.size());
+                                            tree_ptr_mid->data.erase(tree_ptr_mid->data.begin() + child_mid.size(),
+                                                                     tree_ptr_mid->data.begin() + child_mid.size() +
+                                                                     child_end.size());
                                         } else {
-                                            tree_ptr_mid->data.erase(tree_ptr_mid->data.begin(),tree_ptr_mid->data.begin()+child_end.size());
+                                            tree_ptr_mid->data.erase(tree_ptr_mid->data.begin(),
+                                                                     tree_ptr_mid->data.begin() + child_end.size());
                                         }
                                     }
                                     //else do not delete
@@ -565,9 +606,9 @@ namespace uh::trees {
                         } else {
                             //stack helper function for overlapping creation of trees
                             auto overlap_update = [](std::size_t tree_front_data_front_absolute,
-                                                             auto &actively_changing_trees, auto match_beg_intern_copy,
-                                                             auto match_end_intern, tree_radix_custom *tree_front,
-                                                             tree_radix_custom *tree_back) {
+                                                     auto &actively_changing_trees, auto match_beg_intern_copy,
+                                                     auto match_end_intern, tree_radix_custom *tree_front,
+                                                     tree_radix_custom *tree_back) {
                                 auto match_beg_intern = match_beg_intern_copy;
                                 if (match_beg_intern + 1 >= match_end_intern)return;
                                 //update matches offset
@@ -575,13 +616,15 @@ namespace uh::trees {
                                 std::size_t first_match_size = std::get<1>(*match_beg_intern);
                                 std::size_t first_end = tree_front_data_front_absolute + first_match_size;
                                 while (match_beg_intern < match_end_intern) {
-                                    std::size_t data_offset_between_start_and_current = std::get<0>(*(match_beg_intern +1))-first_data_offset;
+                                    std::size_t data_offset_between_start_and_current =
+                                            std::get<0>(*(match_beg_intern + 1)) - first_data_offset;
                                     std::size_t total_offset_front_for_this_node =
                                             tree_front_data_front_absolute + data_offset_between_start_and_current;
                                     if (data_offset_between_start_and_current < first_end) {
                                         //overlapping match, tree pointer stays at this tree, one to one reference tree front at tree_front_data_front_absolute; re-reference to data due to erase
                                         std::size_t match_size = std::get<1>(*(match_beg_intern + 1));
-                                        std::size_t data_offset_between_start_and_last_node = std::get<0>(*(match_beg_intern))-first_data_offset;
+                                        std::size_t data_offset_between_start_and_last_node =
+                                                std::get<0>(*(match_beg_intern)) - first_data_offset;
                                         std::size_t total_offset_front_for_last_node = tree_front_data_front_absolute +
                                                                                        data_offset_between_start_and_last_node;
                                         if (data_offset_between_start_and_current + match_size >= first_end) {
@@ -593,8 +636,11 @@ namespace uh::trees {
                                             std::get<1>(*(match_beg_intern + 1)) -= total_offset_end_for_last_node -
                                                                                     (total_offset_front_for_this_node +
                                                                                      match_size);
-                                            std::size_t new_match_size = std::get<1>(*(match_beg_intern + 1));//first tree match
-                                            auto new_match_begin = std::get<2>(*(match_beg_intern + 1))->data.begin()+std::get<0>(*(match_beg_intern + 1))+std::get<1>(*(match_beg_intern + 1))+1;
+                                            std::size_t new_match_size = std::get<1>(
+                                                    *(match_beg_intern + 1));//first tree match
+                                            auto new_match_begin = std::get<2>(*(match_beg_intern + 1))->data.begin() +
+                                                                   std::get<0>(*(match_beg_intern + 1)) +
+                                                                   std::get<1>(*(match_beg_intern + 1)) + 1;
                                             auto new_match_end = new_match_begin + (match_size - new_match_size);
                                             //std::get<2>(*(match_beg_intern+1)) = tree_front->data.begin()+total_offset_end_for_last_node;
                                             //std::get<3>(*(match_beg_intern+1)) = tree_front;
@@ -608,14 +654,19 @@ namespace uh::trees {
                                                                                           (tree_front->data.size() -
                                                                                            new_match_size)),
                                                                                          tree_front);//second tree match*/
-                                                auto new_partial_match = std::make_tuple((std::size_t)std::distance(std::get<2>(*(match_beg_intern + 1))->data.begin(),new_match_begin)-1,
-                                                                                         (std::size_t)std::distance(new_match_begin,new_match_end)-1,
-                                                                                                          tree_front);
+                                                auto new_partial_match = std::make_tuple((std::size_t) std::distance(
+                                                                                                 std::get<2>(*(match_beg_intern + 1))->data.begin(),
+                                                                                                 new_match_begin) - 1,
+                                                                                         (std::size_t) std::distance(
+                                                                                                 new_match_begin,
+                                                                                                 new_match_end) - 1,
+                                                                                         tree_front);
 
                                                 // update until end
                                                 auto match_insert_check = match_beg_intern;
-                                                while (std::get<0>(*match_insert_check) < std::get<0>(new_partial_match) &&
-                                                       match_insert_check != match_end_intern){
+                                                while (std::get<0>(*match_insert_check) <
+                                                       std::get<0>(new_partial_match) &&
+                                                       match_insert_check != match_end_intern) {
                                                     match_insert_check++;
                                                 }
                                                 actively_changing_trees.insert(match_insert_check, new_partial_match);
@@ -641,15 +692,16 @@ namespace uh::trees {
                                             std::size_t active_tree_offset;
 
                                             active_tree_offset = std::distance(actively_changing_trees.begin(),
-                                                                               match_beg_intern_copy)-1;
+                                                                               match_beg_intern_copy) - 1;
                                             match_beg_intern =
                                                     actively_changing_trees.begin() + active_tree_offset +
-                                                    std::distance(match_beg_intern_copy, match_beg_intern)-1;
+                                                    std::distance(match_beg_intern_copy, match_beg_intern) - 1;
                                             match_beg_intern_copy =
                                                     actively_changing_trees.begin() + active_tree_offset;
                                         } else {
                                             //simple build in tree front
-                                            std::get<0>(*(match_beg_intern + 1)) = total_offset_front_for_this_node/*-distance from the last node until the current node start*/;
+                                            std::get<0>(*(match_beg_intern +
+                                                          1)) = total_offset_front_for_this_node/*-distance from the last node until the current node start*/;
                                             //std::get<3>(*(match_beg_intern+1)) = tree_front;
                                         }
                                     } else {
@@ -674,10 +726,12 @@ namespace uh::trees {
                             }
                             //only tree_match_pointer changes and offset changes to last tree if the end of the match exceeds limits and last tree exists
                             if (last_section_tree) {
-                                added.emplace(*last_tree_out);//section of inner list must be over due to incomplete match
+                                added.emplace(
+                                        *last_tree_out);//section of inner list must be over due to incomplete match
                                 //tree_match_pointer must move from middle tree to last tree, and we adjust offsets of all other matches
                                 overlap_update(tree_front_data_front_absolute, actively_changing_trees, match_beg,
-                                               match_beg_copy, *middle_tree_out, *last_tree_out);//update current tree pointer
+                                               match_beg_copy, *middle_tree_out,
+                                               *last_tree_out);//update current tree pointer
                             }
                             if (append_tree)added.emplace(*append_tree_out);
                         }
@@ -695,7 +749,9 @@ namespace uh::trees {
                     }
                     search_element++;
                 }
-                if (std::get<0>(out_change_tuple) > 0)out_change_tuple_out.push_back(out_change_tuple);//only add change list if there was anything integrated
+                if (std::get<0>(out_change_tuple) > 0)
+                    out_change_tuple_out.push_back(
+                            out_change_tuple);//only add change list if there was anything integrated
                 single_beg++;
             }
 
@@ -704,18 +760,18 @@ namespace uh::trees {
             return out_change_tuple_out;
         }
 
-        template<class ContainerString,bool reverse = false,
-                std::enable_if_t<std::is_same<std::string,ContainerString>::value, bool> = true>
+        template<class ContainerString, bool reverse = false,
+                std::enable_if_t<std::is_same<std::string, ContainerString>::value, bool> = true>
         auto
         add_test(ContainerString &cont_string) {
-            std::vector<unsigned char> input{cont_string.begin(),cont_string.end()};
+            std::vector<unsigned char> input{cont_string.begin(), cont_string.end()};
             return add_test(input);
         }
 
         //returns total size integrated, new space used uncompressed, new space used compressed
         //calculates exact size for a single integration of data, this could be communicated to agency to determine optimal storage location
-        template<class ContainerBinary,bool reverse = false,
-                std::enable_if_t<!std::is_same<std::string,ContainerBinary>::value, bool> = true>
+        template<class ContainerBinary, bool reverse = false,
+                std::enable_if_t<!std::is_same<std::string, ContainerBinary>::value, bool> = true>
         std::vector<std::tuple<std::size_t, std::size_t, std::size_t, std::size_t>>
         add_test(ContainerBinary &cont_binary) {//add test should copy
             //first search existing structure and add into the last tree to insert potentially missing information
@@ -724,14 +780,14 @@ namespace uh::trees {
             if (cont_binary.empty()) {
                 return {};
             }
-            auto search_index = search<ContainerBinary,reverse>(cont_binary);
+            auto search_index = search<ContainerBinary, reverse>(cont_binary);
 
             //cases for search index: its empty or it has content and with that a last tree element
             //cases for last tree if it exists, binary fit in: match from the beginning on, match in the middle, match until the end, total match
             //all lists contain lists with a last element that had multiple matches; add up all matches
             //std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<decltype(bin_beg), decltype(bin_end), decltype(bin_beg)>>>>>, std::size_t, decltype(bin_end), decltype(bin_beg)>>
             uh::util::compression_custom comp{};
-            std::vector<std::tuple<std::size_t, std::size_t, std::size_t,std::size_t>> add_tup_out{};
+            std::vector<std::tuple<std::size_t, std::size_t, std::size_t, std::size_t>> add_tup_out{};
             if (search_index.empty()) {
                 std::tuple<std::size_t, std::size_t, std::size_t, std::size_t> add_tup{};
                 std::get<0>(add_tup) += cont_binary.size();
@@ -742,7 +798,7 @@ namespace uh::trees {
             }
 
             for (auto &single_route: search_index) {
-                std::tuple<std::size_t, std::size_t, std::size_t,std::size_t> add_tup{};
+                std::tuple<std::size_t, std::size_t, std::size_t, std::size_t> add_tup{};
 
                 tree_radix_custom *last_tree;
                 for (auto &list: std::get<0>(single_route)) {
@@ -750,28 +806,35 @@ namespace uh::trees {
                         for (auto &pos_tup: std::get<1>(tree_tuple)) {
                             //auto add_list = tree_test_sequence(std::get<0>(tree_tuple), bin_beg, bin_beg,std::get<0>(pos_tup),
                             //                                   std::get<1>(pos_tup), std::get<2>(pos_tup));//insert into another tree
-                            if (std::get<0>(tree_tuple)->data.empty()) {//how to insert, either empty simple insert or some tree construction anywhere
+                            if (std::get<0>(
+                                    tree_tuple)->data.empty()) {//how to insert, either empty simple insert or some tree construction anywhere
                                 //simple insert into data since this seems to be a new node that can contain simple information
                                 auto set_vector = std::vector<unsigned char>{};
-                                std::copy(std::get<0>(tree_tuple)->data.begin()+std::get<0>(pos_tup),std::get<0>(tree_tuple)->data.begin()+std::get<0>(pos_tup)+std::get<1>(pos_tup)+1,std::back_inserter(set_vector));
+                                std::copy(std::get<0>(tree_tuple)->data.begin() + std::get<0>(pos_tup),
+                                          std::get<0>(tree_tuple)->data.begin() + std::get<0>(pos_tup) +
+                                          std::get<1>(pos_tup) + 1, std::back_inserter(set_vector));
 
-                                std::get<0>(add_tup) += std::get<1>(pos_tup)+1;
-                                std::get<2>(add_tup) += std::get<1>(pos_tup)+1;
+                                std::get<0>(add_tup) += std::get<1>(pos_tup) + 1;
+                                std::get<2>(add_tup) += std::get<1>(pos_tup) + 1;
                                 std::get<3>(add_tup) += comp.compress(set_vector).size();
                             } else {
-                                std::get<0>(add_tup) += std::get<1>(pos_tup)+1;
+                                std::get<0>(add_tup) += std::get<1>(pos_tup) + 1;
                             }
                         }
                     }
                 }
                 if (cont_binary.begin() + std::get<0>(add_tup) < cont_binary.end()) {
                     auto set_vector = std::vector<unsigned char>{};
-                    std::copy(cont_binary.begin() + std::get<0>(add_tup),cont_binary.end(),std::back_inserter(set_vector));
+                    std::copy(cont_binary.begin() + std::get<0>(add_tup), cont_binary.end(),
+                              std::back_inserter(set_vector));
                     std::get<3>(add_tup) += comp.compress(set_vector).size();
                     std::get<2>(add_tup) += set_vector.size();
                     std::get<0>(add_tup) += set_vector.size();
                 }
-                std::get<1>(add_tup) = std::min(static_cast<long>(std::get<1>(add_tup))-static_cast<long>(cont_binary.size()),(long)0);
+                long extra_savings = std::get<0>(add_tup);
+                extra_savings -= cont_binary.size();
+                extra_savings = std::min(extra_savings, (long) 0);
+                std::get<1>(add_tup) = (std::size_t) extra_savings;
                 std::get<0>(add_tup) -= std::get<1>(add_tup);
                 add_tup_out.push_back(add_tup);
             }
@@ -780,12 +843,12 @@ namespace uh::trees {
         }
 
         //returns std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<decltype(bin_beg), decltype(bin_end), decltype(bin_beg)>>>>>, std::size_t>>
-        template<class ContainerData,class ContainerBinary,bool reverse = false>
+        template<class ContainerData, class ContainerBinary, bool reverse = false>
         auto
         search_match_filter(ContainerData &data_cont, ContainerBinary &binary_cont,
-                            std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>>>>>, std::size_t,std::size_t>> possibilities =
-                            std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>>>>>, std::size_t,std::size_t>>{}) {
-            auto local_matches = compare_ultihash<ContainerData,ContainerBinary,reverse>(data_cont,binary_cont);
+                            std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>>>>>, std::size_t, std::size_t>> possibilities =
+                            std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>>>>>, std::size_t, std::size_t>>{}) {
+            auto local_matches = compare_ultihash<ContainerData, ContainerBinary, reverse>(data_cont, binary_cont);
 
             auto legal_match_integration = [&data_cont](auto local_matches) {
                 std::sort(local_matches.begin(), local_matches.end(), [](auto &a, auto &b) {
@@ -794,18 +857,24 @@ namespace uh::trees {
                 //LEGAL MATCH FILTER
                 auto match_beg = local_matches.begin();
 
-                auto legal_check = [&local_matches,&data_cont](auto &match_beg,std::size_t start_val, std::size_t end_val) {
+                auto legal_check = [&local_matches, &data_cont](auto &match_beg, std::size_t start_val,
+                                                                std::size_t end_val) {
                     //on empty or partial match make new list in list, else append the match results on total match
                     bool legal_split;
                     //if the end was matched too long we can do something about that, but else the algorithm is prefix oriented
                     bool start_size, end_size, begin_reached, end_reached, total_found_size;
                     do {
 
-                        start_size = std::get<0>(*match_beg) <= (long)start_val-MINIMUM_MATCH_SIZE || start_val+MINIMUM_MATCH_SIZE <= std::get<0>(*match_beg);
-                        end_size = data_cont.size()-(std::get<0>(*match_beg)+std::get<1>(*match_beg)) <= (long)end_val-MINIMUM_MATCH_SIZE <= (long)start_val-MINIMUM_MATCH_SIZE || MINIMUM_MATCH_SIZE <= data_cont.size()-(std::get<0>(*match_beg)+std::get<1>(*match_beg));
+                        start_size = std::get<0>(*match_beg) <= (long) start_val - MINIMUM_MATCH_SIZE ||
+                                     start_val + MINIMUM_MATCH_SIZE <= std::get<0>(*match_beg);
+                        end_size = data_cont.size() - (std::get<0>(*match_beg) + std::get<1>(*match_beg)) <=
+                                   (long) end_val - MINIMUM_MATCH_SIZE <= (long) start_val - MINIMUM_MATCH_SIZE ||
+                                   MINIMUM_MATCH_SIZE <=
+                                   data_cont.size() - (std::get<0>(*match_beg) + std::get<1>(*match_beg));
                         total_found_size = MINIMUM_MATCH_SIZE <= std::get<1>(*match_beg);
                         begin_reached = std::get<0>(*match_beg) == start_val;
-                        end_reached = data_cont.begin()+(std::get<0>(*match_beg)+std::get<1>(*match_beg))+1 == data_cont.begin()+end_val+1;
+                        end_reached = data_cont.begin() + (std::get<0>(*match_beg) + std::get<1>(*match_beg)) + 1 ==
+                                      data_cont.begin() + end_val + 1;
                         legal_split = ((start_size || begin_reached) && (end_size || end_reached) && total_found_size);
 
                         if (!start_size && !begin_reached) {
@@ -824,21 +893,23 @@ namespace uh::trees {
                     return legal_split;
                 };
 
-                while (match_beg != local_matches.end()) {//shrink all matches until the total result is legal, shrink smaller matches first until they vanish
-                    bool legal_general = legal_check(match_beg,(std::size_t)0,std::max(data_cont.size()-1,(std::size_t)0));
-                    if(!legal_general){
+                while (match_beg !=
+                       local_matches.end()) {//shrink all matches until the total result is legal, shrink smaller matches first until they vanish
+                    bool legal_general = legal_check(match_beg, (std::size_t) 0,
+                                                     std::max(data_cont.size() - 1, (std::size_t) 0));
+                    if (!legal_general) {
                         local_matches.erase(match_beg);
                         match_beg = local_matches.begin();
                         continue;
                     }
                     auto match_begin_legal_shift = local_matches.begin();
                     while (match_begin_legal_shift != local_matches.end()) {
-                        bool legal = legal_check(match_begin_legal_shift,std::get<0>(*match_beg),std::get<0>(*match_beg)+std::get<1>(*match_beg));
-                        if(!legal){
+                        bool legal = legal_check(match_begin_legal_shift, std::get<0>(*match_beg),
+                                                 std::get<0>(*match_beg) + std::get<1>(*match_beg));
+                        if (!legal) {
                             local_matches.erase(match_begin_legal_shift);
                             match_begin_legal_shift = local_matches.begin();
-                        }
-                        else match_begin_legal_shift++;
+                        } else match_begin_legal_shift++;
                     }
                     match_beg++;
                 }
@@ -888,10 +959,10 @@ namespace uh::trees {
             decltype(possibilities) out_possibilities;
 
             auto match_beg = local_matches.begin();
-            auto possibilities_manage = [&](auto &input_list_tmp,auto &found_vec) {
+            auto possibilities_manage = [&](auto &input_list_tmp, auto &found_vec) {
                 //continue match stream
                 if (std::get<0>(input_list_tmp).empty()) {
-                    std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t,std::size_t>>>> tmp_list{};
+                    std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>>>> tmp_list{};
                     tmp_list.emplace_back(this, found_vec);
                     std::get<0>(input_list_tmp).push_back(tmp_list);
                 } else {
@@ -913,20 +984,20 @@ namespace uh::trees {
             };
 
             while (match_beg != local_matches.end()) {
-                std::vector<std::tuple<std::size_t,std::size_t>> found_vec{};
-                found_vec.emplace_back(std::get<0>(*match_beg),std::get<1>(*match_beg));
+                std::vector<std::tuple<std::size_t, std::size_t>> found_vec{};
+                found_vec.emplace_back(std::get<0>(*match_beg), std::get<1>(*match_beg));
                 if (possibilities.empty()) {
                     //new start of possibilities
-                    std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t,std::size_t>>>> tmp_list{};
+                    std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>>>> tmp_list{};
                     tmp_list.emplace_back(this, found_vec);
-                    std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t,std::size_t>>>>> outer_list{
+                    std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>>>>> outer_list{
                             tmp_list};
 
                     std::size_t advance = std::get<1>(*match_beg);
                     out_possibilities.emplace_back(outer_list, 1, advance + 1);
                 } else
                     for (auto &input_list_tmp: possibilities) {//COPY input list and create different path calculation
-                        possibilities_manage(input_list_tmp,found_vec);
+                        possibilities_manage(input_list_tmp, found_vec);
                     }
                 match_beg++;
             }
@@ -935,11 +1006,12 @@ namespace uh::trees {
 
         //returns the path of maximum fit and the match size
         /*std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::vector<unsigned char>::const_iterator, std::vector<unsigned char>::const_iterator, std::vector<unsigned char>::const_iterator>>>>>, std::size_t>>*/
-        template<class ContainerBinary,bool reverse=false>
-        auto search(ContainerBinary &cont_binary,//                                                                                                  data offset,binary offset after node integration
-                    std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>>>>>, std::size_t,std::size_t>> possibilities =
-                    std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>>>>>, std::size_t,std::size_t>>{},
-                    std::vector<tree_radix_custom *> limiter_children = std::vector<tree_radix_custom *>{}) {
+        template<class ContainerBinary, bool reverse = false>
+        auto
+        search(ContainerBinary &cont_binary,//                                                                                                  data offset,binary offset after node integration
+               std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>>>>>, std::size_t, std::size_t>> possibilities =
+               std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>>>>>, std::size_t, std::size_t>>{},
+               std::vector<tree_radix_custom *> limiter_children = std::vector<tree_radix_custom *>{}) {
 
             if (cont_binary.empty()) {
                 return possibilities;
@@ -947,7 +1019,8 @@ namespace uh::trees {
 
             /*std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<decltype(bin_beg), decltype(bin_end), decltype(bin_beg)>>>>>, std::size_t,decltype(bin_end), decltype(bin_beg)>>*/
             //while a possibility still changes on search_match filter, it is continued to be executed
-            possibilities = search_match_filter<std::vector<unsigned char>,ContainerBinary,reverse>(data, cont_binary, possibilities);
+            possibilities = search_match_filter<std::vector<unsigned char>, ContainerBinary, reverse>(data, cont_binary,
+                                                                                                      possibilities);
 
             decltype(possibilities) new_recursive{};
 
@@ -955,13 +1028,15 @@ namespace uh::trees {
             std::size_t single_count{};
             while (single_pos != possibilities.end()) {
                 if constexpr (!reverse) {
-                    if (data.begin()+std::get<1>(*single_pos)+1 == data.end() || cont_binary.begin()+std::get<2>(*single_pos)-1 == cont_binary.end()) {
+                    if (data.begin() + std::get<1>(*single_pos) + 1 == data.end() ||
+                        cont_binary.begin() + std::get<2>(*single_pos) - 1 == cont_binary.end()) {
                         single_count++;
                         single_pos++;
                         continue;
                     }
                 } else {
-                    if (data.rbegin()+std::get<1>(*single_pos)+1 == data.rend() || cont_binary.begin()+std::get<2>(*single_pos)-1 == cont_binary.end()) {
+                    if (data.rbegin() + std::get<1>(*single_pos) + 1 == data.rend() ||
+                        cont_binary.begin() + std::get<2>(*single_pos) - 1 == cont_binary.end()) {
                         single_count++;
                         single_pos++;
                         continue;
@@ -969,11 +1044,12 @@ namespace uh::trees {
                 }
                 decltype(possibilities) tmp;
                 std::vector<unsigned char> binary_subset{};//TODO: add slow test where every binary position is checked
-                std::copy(cont_binary.begin()+std::get<2>(*single_pos), cont_binary.end(),std::back_inserter(binary_subset));//quick search on
+                std::copy(cont_binary.begin() + std::get<2>(*single_pos), cont_binary.end(),
+                          std::back_inserter(binary_subset));//quick search on
 
                 auto pos_vector = decltype(possibilities){};
                 pos_vector.push_back(*single_pos);
-                tmp = search_match_filter<decltype(data),ContainerBinary,reverse>(data, binary_subset ,pos_vector);
+                tmp = search_match_filter<decltype(data), ContainerBinary, reverse>(data, binary_subset, pos_vector);
                 std::for_each(tmp.begin(), tmp.end(), [&new_recursive](auto &item1) {
                     if (std::none_of(new_recursive.begin(), new_recursive.end(), [&item1](auto &item2) {
                         return item2 == item1;
@@ -988,33 +1064,36 @@ namespace uh::trees {
             //check child that deals with searching the far most rest in direction of end to skip the not matching rest
             //only check children with correct continue letter first in case we get a total match
             for (auto &pos_begin: possibilities) {
-                if constexpr (!reverse){
-                    if (data.begin()+std::get<1>(pos_begin)==data.end()||cont_binary.begin()+std::get<2>(pos_begin)-1 == cont_binary.end()) {
+                if constexpr (!reverse) {
+                    if (data.begin() + std::get<1>(pos_begin) == data.end() ||
+                        cont_binary.begin() + std::get<2>(pos_begin) - 1 == cont_binary.end()) {
                         continue;
                     }
-                }
-                else{
-                    if (data.rbegin()+std::get<1>(pos_begin)==data.rend()||cont_binary.begin()+std::get<2>(pos_begin)-1 == cont_binary.end()) {
+                } else {
+                    if (data.rbegin() + std::get<1>(pos_begin) == data.rend() ||
+                        cont_binary.begin() + std::get<2>(pos_begin) - 1 == cont_binary.end()) {
                         continue;
                     }
                 }
                 std::vector<unsigned char> binary_subset{};
-                std::copy(cont_binary.begin()+std::get<2>(pos_begin), cont_binary.end(),std::back_inserter(binary_subset));//quick search on
-                if(binary_subset.empty()){
+                std::copy(cont_binary.begin() + std::get<2>(pos_begin), cont_binary.end(),
+                          std::back_inserter(binary_subset));//quick search on
+                if (binary_subset.empty()) {
                     continue;
                 }
                 bool total_match = false;
-                auto child_vec = child_vector(*(cont_binary.begin()+std::get<2>(pos_begin)-1));
+                auto child_vec = child_vector(*(cont_binary.begin() + std::get<2>(pos_begin) - 1));
                 if (!child_vec.empty()) {//recursive search
                     for (auto &item: child_vec) {//vector of tree pointers
-                        if(std::any_of(limiter_children.begin(), limiter_children.end(), [&item](auto &item_limit) {
+                        if (std::any_of(limiter_children.begin(), limiter_children.end(), [&item](auto &item_limit) {
                             return item_limit == item;
                         }))
                             continue;
-                        auto tmp = item->template search<ContainerBinary,reverse>(binary_subset, possibilities);
+                        auto tmp = item->template search<ContainerBinary, reverse>(binary_subset, possibilities);
                         if (std::any_of(tmp.begin(), tmp.end(), [&cont_binary](auto &item) {
-                            return cont_binary.begin()+std::get<2>(item)-1 == cont_binary.end();
-                        }))total_match = true;
+                            return cont_binary.begin() + std::get<2>(item) - 1 == cont_binary.end();
+                        }))
+                            total_match = true;
                         if (tmp != possibilities) {
                             std::for_each(tmp.begin(), tmp.end(), [&new_recursive](auto &item1) {
                                 if (std::none_of(new_recursive.begin(), new_recursive.end(), [&item1](auto &item2) {
@@ -1032,14 +1111,17 @@ namespace uh::trees {
 
                 //slow search
                 for (auto &c: children) {
-                    if (!child_vec.empty() && std::get<1>(c) == *(cont_binary.begin()+std::get<2>(pos_begin)-1))continue;
+                    if (!child_vec.empty() &&
+                        std::get<1>(c) == *(cont_binary.begin() + std::get<2>(pos_begin) - 1))
+                        continue;
                     for (auto &item: std::get<0>(c)) {//vector of tree pointers
-                        if (cont_binary.begin()+std::get<2>(pos_begin)-1 == cont_binary.end()||std::any_of(limiter_children.begin(), limiter_children.end(), [&item](auto &item_limit) {
-                            return item_limit == item;
-                        })) {
+                        if (cont_binary.begin() + std::get<2>(pos_begin) - 1 == cont_binary.end() ||
+                            std::any_of(limiter_children.begin(), limiter_children.end(), [&item](auto &item_limit) {
+                                return item_limit == item;
+                            })) {
                             continue;
                         }
-                        auto tmp = item->template search<ContainerBinary,reverse>(binary_subset, possibilities);
+                        auto tmp = item->template search<ContainerBinary, reverse>(binary_subset, possibilities);
                         if (tmp != possibilities) {
                             std::for_each(tmp.begin(), tmp.end(), [&new_recursive](auto &item1) {
                                 if (std::none_of(new_recursive.begin(), new_recursive.end(), [&item1](auto &item2) {
@@ -1064,12 +1146,13 @@ namespace uh::trees {
             //return the largest match with the lowest offset on the last tree, as far as there is a last tree...
             //filter to sum up match internals
 
-            auto sum_up = [](auto &input_outer_list){//there is a COMPILER BUG that forces us to sort possibilities directly!!
+            auto sum_up = [](
+                    auto &input_outer_list) {//there is a COMPILER BUG that forces us to sort possibilities directly!!
                 std::size_t found_size{};
-                for(const auto&item2:input_outer_list){
-                    for(const auto&item3:item2){
-                        for(const auto&item4:std::get<1>(item3)){
-                            found_size+=std::get<1>(item4)+1;
+                for (const auto &item2: input_outer_list) {
+                    for (const auto &item3: item2) {
+                        for (const auto &item4: std::get<1>(item3)) {
+                            found_size += std::get<1>(item4) + 1;
                         }
                     }
                 }
@@ -1093,7 +1176,8 @@ namespace uh::trees {
             }
 
             std::sort(possibilities.begin(), possibilities.end(), [](auto &a, auto &b) {
-                return std::get<1>(a) < std::get<1>(b);//sort in ascending order the number of matches, lesser matches with less fragmentation are better for same match size
+                return std::get<1>(a) < std::get<1>(
+                        b);//sort in ascending order the number of matches, lesser matches with less fragmentation are better for same match size
             });
 
             max_val = 0;
