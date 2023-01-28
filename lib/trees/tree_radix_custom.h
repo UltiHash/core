@@ -833,7 +833,7 @@ namespace uh::trees {
                 }
                 long extra_savings = std::get<0>(add_tup);
                 extra_savings -= cont_binary.size();
-                extra_savings = std::min(extra_savings, (long) 0);
+                extra_savings = std::max(extra_savings, (long) 0);
                 std::get<1>(add_tup) = (std::size_t) extra_savings;
                 std::get<0>(add_tup) -= std::get<1>(add_tup);
                 add_tup_out.push_back(add_tup);
