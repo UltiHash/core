@@ -139,10 +139,6 @@ BOOST_AUTO_TEST_CASE(radix_constructor_test)
 BOOST_AUTO_TEST_CASE(add_test)
 {
     auto data_string1 = std::string{"Hello World of tomorrow, I am superman of the World and I deduplicate a lot of data!"};
-    auto data_string2 = std::string{"World of tomorrow"};
-    auto data_string3 = std::string{"tomorrow, I am superman"};
-    auto data_string4 = std::string{" of tomorrow, I am superman of the World and"};
-    auto data_string5 = std::string{" of "};
 
     //first tree test, match something at the back of the string
     auto* t = new uh::trees::tree_radix_custom(data_string1);
@@ -162,9 +158,9 @@ BOOST_AUTO_TEST_CASE(add_test)
 
     auto back_string_append = std::string{"a lot of data! And I can code."};
 
-    result_test = t->add_test(back_string);
+    result_test = t->add_test(back_string_append);
     BOOST_CHECK(std::get<0>(result_test[0]) == 30 && std::get<1>(result_test[0]) == 16);
-    result = t->add(back_string);
+    result = t->add(back_string_append);
     BOOST_CHECK(std::get<0>(result[0]) == 30 && std::get<1>(result[0]) == 16);
     BOOST_CHECK(std::get<0>(*std::get<3>(result[0]).begin()).size()==1 && std::get<1>(*std::get<3>(result[0]).begin()).size()==2);//one tree modified and 2 added
 
@@ -183,13 +179,50 @@ BOOST_AUTO_TEST_CASE(add_test)
 
     delete t;
 
-
-
-
     //last tree append test, match something that is the same in the beginning or totally to the existing information and add some more information at the end of the string going into add function
+    t = new uh::trees::tree_radix_custom(data_string1);
+
+    auto front_string_append = std::string{"Hello World from yesterday"};
+
+    result_test = t->add_test(front_string_append);
+    BOOST_CHECK(std::get<0>(result_test[0]) == 26 && std::get<1>(result_test[0]) == 14);
+    result = t->add(front_string_append);
+    BOOST_CHECK(std::get<0>(result[0]) == 26 && std::get<1>(result[0]) == 14);
+    BOOST_CHECK(std::get<0>(*std::get<3>(result[0]).begin()).size()==1 && std::get<1>(*std::get<3>(result[0]).begin()).size()==2);//one tree modified and 2 added
+
+    delete t;
+
+    //middle tree test, match something at the middle of the string
+    t = new uh::trees::tree_radix_custom(data_string1);//TODO: check char count
+
+    auto middle_string = std::string{"World of tomorrow"};
+
+    result_test = t->add_test(middle_string);
+    BOOST_CHECK(std::get<0>(result_test[0]) == 17 && std::get<1>(result_test[0]) == 0);
+    result = t->add(middle_string);
+    BOOST_CHECK(std::get<0>(result[0]) == 17 && std::get<1>(result[0]) == 0);
+    BOOST_CHECK(std::get<0>(*std::get<3>(result[0]).begin()).size()==1 && std::get<1>(*std::get<3>(result[0]).begin()).size()==2);//one tree modified and two added
+
+    delete t;
+
+    //middle tree append test, match something in the middle where a subset already exists and additional information is added
+    t = new uh::trees::tree_radix_custom(data_string1);
+
+    auto middle_string_append = std::string{"World of tomorrow, coming soon!"};
+
+    result_test = t->add_test(middle_string_append);
+    BOOST_CHECK(std::get<0>(result_test[0]) == 30 && std::get<1>(result_test[0]) == 16);
+    result = t->add(middle_string_append);
+    BOOST_CHECK(std::get<0>(result[0]) == 30 && std::get<1>(result[0]) == 16);
+    BOOST_CHECK(std::get<0>(*std::get<3>(result[0]).begin()).size()==1 && std::get<1>(*std::get<3>(result[0]).begin()).size()==3);//one tree modified and 3 added
+
+    delete t;
 
     //cascading add
-
+    auto data_string2 = std::string{"World of tomorrow"};
+    auto data_string3 = std::string{"tomorrow, I am superman"};
+    auto data_string4 = std::string{" of tomorrow, I am superman of the World and"};
+    auto data_string5 = std::string{" of "};
 
 
 
