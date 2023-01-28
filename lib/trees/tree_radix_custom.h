@@ -1062,39 +1062,34 @@ namespace uh::trees {
 
             //return the largest match with the lowest offset on the last tree, as far as there is a last tree...
             //filter to sum up match internals
-            std::vector<std::tuple<decltype(possibilities[0]),std::size_t>> sort_found{};
 
-            for(auto&item1:possibilities){//sum up match size from possibilities
+            auto sum_up = [](auto &input_outer_list){//there is a COMPILER BUG that forces us to sort possibilities directly!!
                 std::size_t found_size{};
-                for(const auto&item2:std::get<0>(item1)){
+                for(const auto&item2:input_outer_list){
                     for(const auto&item3:item2){
                         for(const auto&item4:std::get<1>(item3)){
-                            found_size+=std::get<1>(item4);
+                            found_size+=std::get<1>(item4)+1;
                         }
                     }
                 }
-                sort_found.emplace_back(item1,found_size);
-            }
+                return found_size;
+            };
 
-            std::sort(sort_found.begin(), sort_found.end(), [](auto &a, auto &b) {
-                return std::get<1>(a) > std::get<1>(b);//sort in descending order on search match size
+            std::sort(possibilities.begin(), possibilities.end(), [&sum_up](auto &a, auto &b) {
+                return sum_up(std::get<0>(a)) > sum_up(std::get<0>(b));//sort in descending order on search match size
             });
 
             std::size_t max_val{};
-            auto poss_beg_size = sort_found.begin();
-            while (poss_beg_size != sort_found.end()) {
-                max_val = std::max(max_val, std::get<1>(*poss_beg_size));
-                if (std::get<1>(*poss_beg_size) < max_val) {
-                    sort_found.erase(poss_beg_size, sort_found.end());
+            auto poss_beg_size = possibilities.begin();
+            while (poss_beg_size != possibilities.end()) {
+                auto sum_current = sum_up(std::get<0>(*poss_beg_size));
+                max_val = std::max(max_val, sum_current);
+                if (sum_current < max_val) {
+                    possibilities.erase(poss_beg_size, possibilities.end());
                     break;
                 }
                 poss_beg_size++;
             }
-
-            possibilities.clear();
-            std::for_each(sort_found.begin(),sort_found.end(),[&possibilities](auto &item){
-                possibilities.push_back(std::get<0>(item));
-            });
 
             max_val = 0;
             auto poss_beg = possibilities.begin();
