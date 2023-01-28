@@ -278,7 +278,7 @@ namespace uh::trees {
         template<class ContainerBinary,bool reverse=false,
                 std::enable_if_t<!std::is_same<std::string,ContainerBinary>::value, bool> = true>
         std::vector<std::tuple<std::size_t, std::size_t, std::size_t, std::list<std::tuple<std::set<tree_radix_custom *>, std::set<tree_radix_custom *>>>>>
-        add(ContainerBinary &binary_cont) {//TODO:check duplicate matches and eliminate
+        add(ContainerBinary &binary_cont) {
             //first search existing structure and add into the last tree to insert potentially missing information
             /*std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::vector<unsigned char>::const_iterator, std::vector<unsigned char>::const_iterator, std::vector<unsigned char>::const_iterator>>>>>, std::size_t>>*/
 
