@@ -138,7 +138,7 @@ BOOST_AUTO_TEST_CASE(radix_constructor_test)
 //test the function add and the function add_test and if they calculate the correct
 BOOST_AUTO_TEST_CASE(add_test)
 {
-    auto data_string1 = std::string{"Hello World of tomorrow, I am superman of the World and I deduplicate a lot of data!"};
+    auto data_string1 = std::string{"Hello World of tomorrow, I am nemo of the World and I deduplicate a lot of data!"};
 
     //first tree test, match something at the back of the string
     auto* t = new uh::trees::tree_radix_custom(data_string1);
@@ -220,9 +220,18 @@ BOOST_AUTO_TEST_CASE(add_test)
 
     //cascading add
     auto data_string2 = std::string{"World of tomorrow"};
-    auto data_string3 = std::string{"tomorrow, I am superman"};
-    auto data_string4 = std::string{" of tomorrow, I am superman of the World and"};
+    auto data_string3 = std::string{"tomorrow, I am nemo"};
+    auto data_string4 = std::string{" of tomorrow, I am nemo of the World and"};
 
+    t = new uh::trees::tree_radix_custom(data_string1);
+
+    result_test = t->add_test(data_string2);
+    BOOST_CHECK(std::get<0>(result_test[0]) == 17 && std::get<1>(result_test[0]) == 0);
+    result = t->add(data_string2);
+    BOOST_CHECK(std::get<0>(result[0]) == 17 && std::get<1>(result[0]) == 0);
+    BOOST_CHECK(std::get<0>(*std::get<3>(result[0]).begin()).size()==1 && std::get<1>(*std::get<3>(result[0]).begin()).size()==3);//one tree modified and 3 added
+
+    //overlap add
 
 
     /*
