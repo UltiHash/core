@@ -367,11 +367,8 @@ namespace uh::trees {
                                   });
 
                     auto match_beg = actively_changing_trees.begin();//                                         found beginning                             found end                        data on tree begin at found begin
-                    auto match_beg_copy = match_beg;
                     while (match_beg !=
                            actively_changing_trees.end()) {//update loop on std::vector<std::tuple<std::vector<unsigned char>::const_iterator, std::vector<unsigned char>::const_iterator, std::vector<unsigned char>::const_iterator>>
-
-                        std::size_t tree_front_data_front_absolute = std::get<0>(*match_beg);
 
                         ///////////////////////////////////////////////Tree building sequence////////////////////////////////////////////
 //checking if children need to be generated before and after the found input peace, reference to data of tree required
@@ -606,11 +603,21 @@ namespace uh::trees {
                             //this must be the only match so nothing happens
                         } else {
                             //stack helper function for overlapping creation of trees
-                            auto overlap_update = [](std::size_t tree_front_data_front_absolute,
-                                                     auto &actively_changing_trees, auto match_beg_intern_copy,
-                                                     auto match_end_intern, tree_radix_custom *tree_front,
+                            auto overlap_update = [](auto &actively_changing_trees, auto match_beg_intern,tree_radix_custom *tree_front,
                                                      tree_radix_custom *tree_back) {
-                                auto match_beg_intern = match_beg_intern_copy;
+                                //TODO: goals to be reached: matches on tree front need to be moved to tree back,
+                                // if the offset is exceeding the current data size limit of the first tree, we set it to
+                                // the second tree and subtract the first data size from the offset
+                                //std::vector<std::tuple<std::size_t, std::size_t, tree_radix_custom *>>
+                                //first from current match begin start to update all entries of matches until the end
+                                auto match_shifter = match_beg_intern;
+                                while(match_shifter<actively_changing_trees.end()){
+
+                                    match_shifter++;
+                                }
+
+                                /*
+                                //auto match_beg_intern = match_beg_intern;
                                 if (match_beg_intern + 1 >= match_end_intern)return;
                                 //update matches offset
                                 auto first_data_offset = std::get<0>(*match_beg_intern);
@@ -645,8 +652,8 @@ namespace uh::trees {
                                             auto new_match_end = new_match_begin + (match_size - new_match_size);
                                             //std::get<2>(*(match_beg_intern+1)) = tree_front->data.begin()+total_offset_end_for_last_node;
                                             //std::get<3>(*(match_beg_intern+1)) = tree_front;
-
-                                            if constexpr (!reverse) {
+                                            */
+                                            //if constexpr (!reverse) {
                                                 /*
                                                 auto new_partial_match = std::make_tuple(new_match_begin,
                                                                                          new_match_end,
@@ -655,6 +662,7 @@ namespace uh::trees {
                                                                                           (tree_front->data.size() -
                                                                                            new_match_size)),
                                                                                          tree_front);//second tree match*/
+                                                /*
                                                 auto new_partial_match = std::make_tuple((std::size_t) std::distance(
                                                                                                  std::get<2>(*(match_beg_intern + 1))->data.begin(),
                                                                                                  new_match_begin) - 1,
@@ -693,17 +701,19 @@ namespace uh::trees {
                                             std::size_t active_tree_offset;
 
                                             active_tree_offset = std::distance(actively_changing_trees.begin(),
-                                                                               match_beg_intern_copy) - 1;
+                                                                               match_beg_intern) - 1;
                                             match_beg_intern =
                                                     actively_changing_trees.begin() + active_tree_offset +
-                                                    std::distance(match_beg_intern_copy, match_beg_intern) - 1;
-                                            match_beg_intern_copy =
+                                                    std::distance(match_beg_intern, match_beg_intern) - 1;
+                                            match_beg_intern =
                                                     actively_changing_trees.begin() + active_tree_offset;
                                         } else {
                                             //simple build in tree front
                                             std::get<0>(*(match_beg_intern +
-                                                          1)) = total_offset_front_for_this_node/*-distance from the last node until the current node start*/;
+                                                          1)) = total_offset_front_for_this_node;*/
+                                                /*-distance from the last node until the current node start*/
                                             //std::get<3>(*(match_beg_intern+1)) = tree_front;
+                                            /*
                                         }
                                     } else {
                                         //total match, new calculated reference on tree_back
@@ -712,16 +722,14 @@ namespace uh::trees {
                                         std::get<2>(*(match_beg_intern + 1)) = tree_back;
                                     }
                                     match_beg_intern++;
-                                }
+                                }*/
                             };
 
                             if (first_section_tree) {
                                 modified.emplace(*first_tree_out);
                                 added.emplace(*middle_tree_out);
                                 //tree_match_pointer must move from first tree to middle tree, and we adjust offsets of all other matches
-                                overlap_update(tree_front_data_front_absolute, actively_changing_trees, match_beg,
-                                               match_beg_copy, *first_tree_out,
-                                               *middle_tree_out);//update current tree pointer
+                                overlap_update(actively_changing_trees, match_beg, *first_tree_out,*middle_tree_out);//update current tree pointer
                             } else {
                                 modified.emplace(*middle_tree_out);
                             }
@@ -729,9 +737,7 @@ namespace uh::trees {
                             if (last_section_tree) {
                                 added.emplace(*last_tree_out);//section of inner list must be over due to incomplete match
                                 //tree_match_pointer must move from middle tree to last tree, and we adjust offsets of all other matches
-                                overlap_update(tree_front_data_front_absolute, actively_changing_trees, match_beg,
-                                               match_beg_copy, *middle_tree_out,
-                                               *last_tree_out);//update current tree pointer
+                                overlap_update(actively_changing_trees, match_beg,*middle_tree_out,*last_tree_out);//update current tree pointer
                             }
                             if (append_tree)added.emplace(*append_tree_out);
                         }
@@ -743,9 +749,7 @@ namespace uh::trees {
                         std::get<3>(out_change_tuple).emplace_back(modified, added);
                         modified.clear();
                         added.clear();
-                        std::size_t vector_reset_dist = std::distance(match_beg_copy, match_beg);
-                        match_beg = actively_changing_trees.begin() + vector_reset_dist + 1;
-                        match_beg_copy = actively_changing_trees.begin();
+                        match_beg++;
                     }
                     search_element++;
                 }
