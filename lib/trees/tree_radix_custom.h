@@ -862,7 +862,12 @@ namespace uh::trees {
             }
 
             std::sort(possibilities_out.begin(),possibilities_out.end(),[](auto &a, auto &b){//sort for biggest match combination
-                std::get<3>(a) > std::get<3>(b);
+                auto sum_match_size = [](std::vector<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>>,std::size_t, std::size_t>> &input){
+                    return std::accumulate(input.begin(),input.end(),(std::size_t)0,[](std::size_t last_sum,std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>>,std::size_t, std::size_t> &item){
+                        return last_sum+std::get<3>(item);
+                    });
+                };
+                sum_match_size(a) > sum_match_size(b);
             });
 
             auto poss_out = possibilities_out.begin();
@@ -875,8 +880,13 @@ namespace uh::trees {
                 poss_out++;
             }
 
-            std::sort(possibilities_out.begin(),possibilities_out.end(),[](auto &a, auto &b){//sort for bigger matches, less fragments
-                std::get<2>(a) < std::get<2>(b);
+            std::sort(possibilities_out.begin(),possibilities_out.end(),[](auto &a, auto &b){//sort for bigger matches, not a lot of fragments
+                auto sum_match_count = [](std::vector<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>>,std::size_t, std::size_t>> &input){
+                    return std::accumulate(input.begin(),input.end(),(std::size_t)0,[](std::size_t last_sum,std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>>,std::size_t, std::size_t> &item){
+                        return last_sum+std::get<2>(item);
+                    });
+                };
+                sum_match_count(a) < sum_match_count(b);
             });
 
             return possibilities_out[0];
