@@ -185,7 +185,7 @@ namespace uh::trees {
             std::vector<std::tuple<std::size_t, std::size_t,std::size_t,std::size_t>> matches{};//data offset beginning found, end offset from beginning
             if (data_cont.empty() || binary_cont.empty())return matches;
 
-            std::set<std::size_t> advancements_binary{0};
+            std::set<std::size_t> advancements_binary{binary_offset};
             std::size_t match_index{};
 
 
@@ -193,6 +193,7 @@ namespace uh::trees {
             if constexpr (!reverse) {
 
                 for(auto adv:advancements_binary){
+                    if(adv > binary_cont.size())continue;
                     std::size_t current_offset = 0;
                     do {
                         //first element match
@@ -235,7 +236,7 @@ namespace uh::trees {
                             MINIMUM_MATCH_SIZE) {
                             long integrate_offset =  std::max(
                                     (long) std::distance(data_cont.begin() + current_offset, found.first) - 1, (long) 0);
-                            matches.emplace_back(current_offset,integrate_offset,adv+binary_offset,match_index);
+                            matches.emplace_back(current_offset,integrate_offset,adv,match_index);
                             advancements_binary.emplace(integrate_offset);
                             match_index++;
                         }
@@ -287,7 +288,7 @@ namespace uh::trees {
                             MINIMUM_MATCH_SIZE) {
                             long integrate_offset =  std::max(
                                     (long) std::distance(data_cont.rbegin() + current_offset, found.first) - 1, (long) 0);
-                            matches.emplace_back(current_offset,integrate_offset,adv+binary_offset,match_index);
+                            matches.emplace_back(current_offset,integrate_offset,adv,match_index);
                             advancements_binary.emplace(integrate_offset);
                             match_index++;
                         }
@@ -931,6 +932,7 @@ namespace uh::trees {
                     auto binary_subset = std::vector<unsigned char>{cont_binary.begin()+new_base_advance,cont_binary.end()};
                     std::size_t matches_before = std::get<1>(*search_within).size();
                     //std::vector<std::tuple<std::size_t, std::size_t, std::size_t, std::size_t,std::size_t, std::size_t>>
+                    //filter best binary advancement on a single node
                     std::get<1>(*search_within) = search_match_filter(std::get<0>(*search_within)->data,binary_subset,std::get<1>(*search_within));
 
                     std::size_t more_found = std::get<1>(*search_within).size()-matches_before;
