@@ -703,13 +703,22 @@ namespace uh::trees {
 
                     std::get<0>(add_tup) += set_vector.size();
                     std::size_t current_new_space = set_vector.size() - (std::get<1>(pos_tup)+1);
-                    std::get<1>(add_tup) += current_new_space;
                     if(set_vector.empty()||current_new_space == 0){
                         continue;
                     }
+                    std::get<1>(add_tup) += current_new_space;
                     std::get<2>(add_tup) += comp.compress(set_vector).size();
                 }
                 count++;
+            }
+
+            if(cont_binary.size()>std::get<0>(add_tup)){
+                auto set_vector = std::vector<unsigned char>{};
+                std::copy(cont_binary.begin() + std::get<0>(add_tup), cont_binary.end(),
+                          std::back_inserter(set_vector));
+                std::get<0>(add_tup) += set_vector.size();
+                std::get<1>(add_tup) += set_vector.size();
+                std::get<2>(add_tup) += comp.compress(set_vector).size();
             }
 
             return add_tup;
