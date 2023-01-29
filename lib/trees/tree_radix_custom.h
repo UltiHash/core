@@ -836,9 +836,19 @@ namespace uh::trees {
             std::vector<std::size_t> advancements{0};
 
             auto sum_match_size = [](std::vector<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>>,std::size_t, std::size_t>> &input){
+                auto last_element = input.end();
+                std::advance(last_element,-1);
+
+                return std::get<3>(*last_element);
+                /*
                 return std::accumulate(input.begin(),input.end(),(std::size_t)0,[](std::size_t last_sum,std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>>,std::size_t, std::size_t> &item){
                     return last_sum+std::get<3>(item);
                 });
+                 */
+            };
+
+            auto max_match_sort = [&sum_match_size](std::vector<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>>,std::size_t, std::size_t>> &a,std::vector<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>>,std::size_t, std::size_t>>&b){
+                return sum_match_size(a) > sum_match_size(b);
             };
 
             auto poss_beg = possibilities_work.begin();
@@ -857,33 +867,62 @@ namespace uh::trees {
                 std::advance(search_within,-1);
 
                 //search data within with all possible advancements on the last node and its children
+                auto current_new_advancements = advancements;
+
                 for(const auto&adv:advancements){
                     //search
                     auto binary_subset = std::vector<unsigned char>{cont_binary.begin()+adv,cont_binary.end()};
+                    std::size_t matches_before = std::get<1>(*search_within).size();
                     std::get<1>(*search_within) = search_match_filter(std::get<0>(*search_within)->data,binary_subset,std::get<1>(*search_within));
+                    std::get<2>(*search_within)+=std::get<1>(*search_within).size()-matches_before;
 
                     //from results add likely advancements of binary input
                     for(const auto s:std::get<1>(*search_within)){
                         std::size_t new_advancement = adv + std::get<1>(s)+1;
+                        if(new_advancement>=cont_binary.size()){
+                            continue;
+                        }
                         if(!std::count(advancements.begin(),advancements.end(),new_advancement)){
-                            advancements.push_back(new_advancement);
-                            std::sort(advancements.begin(),advancements.end());
+                            current_new_advancements.push_back(new_advancement);
+                        }
+                    }
+                    //child search
+                    if(std::get<0>(*search_within)->children.empty()){
+                        //this path reached an end, store
+                        possibilities_out.push_back(current_path);
+                    }
+                    else{
+                        //append fresh search requests to the back of the list for all children
+                        auto child_vec_append = child_vector(*(cont_binary.begin()+adv));
+                        if(!child_vec_append.empty()){
+                            for(const auto &tree:child_vec_append){
+                                auto current_copy = current_path;
+                                current_copy.emplace_back(tree, std::vector<std::tuple<std::size_t,std::size_t>>{},std::get<2>(*search_within),std::get<3>(*search_within));
+                                possibilities_work.push_back(current_copy);
+                            }
+                        }
+                        //also search all the other children
+                        for(const auto &heristic:children){
+                            if(child_vec_append.empty() && *(cont_binary.begin()+adv) == std::get<1>(heristic))continue;
+                            for(const auto &tree:std::get<0>(heristic)){
+                                auto current_copy = current_path;
+                                current_copy.emplace_back(tree, std::vector<std::tuple<std::size_t,std::size_t>>{},std::get<2>(*search_within),std::get<3>(*search_within));
+                                possibilities_work.push_back(current_copy);
+                            }
                         }
                     }
                 }
 
-                if(std::get<0>(*search_within)->children.empty()){
-                    //this path reached an end, store
-                    possibilities_out.push_back(current_path);
-                }
-                else{
-                    //append fresh search requests to the back of the list for all children
-
-                }
-
+                //union of advancements
+                std::vector<std::size_t> adv_dest{};
+                std::sort(advancements.begin(),advancements.end());
+                std::sort(current_new_advancements.begin(),current_new_advancements.end());
+                std::set_union(advancements.begin(),advancements.end(),current_new_advancements.begin(),current_new_advancements.end(),std::back_inserter(adv_dest));
+                advancements = adv_dest;
 
                 poss_beg++;
                 possibilities_work.pop_front();
+                possibilities_work.sort(max_match_sort);
             }
 
             if (possibilities_work.empty()) {
