@@ -756,12 +756,8 @@ namespace uh::trees {
                 bool start_size, end_size, begin_reached, end_reached, total_found_size;
                 do {
 
-                    start_size = std::get<0>(*match_beg) <= (long) start_val - MINIMUM_MATCH_SIZE ||
-                                 start_val + MINIMUM_MATCH_SIZE <= std::get<0>(*match_beg);
-                    end_size = data_cont.size() - (std::get<0>(*match_beg) + std::get<1>(*match_beg)) <=
-                               (long) end_val - MINIMUM_MATCH_SIZE <= (long) start_val - MINIMUM_MATCH_SIZE ||
-                               MINIMUM_MATCH_SIZE <=
-                               data_cont.size() - (std::get<0>(*match_beg) + std::get<1>(*match_beg));
+                    start_size = llabs((long)std::get<0>(*match_beg) - (long) start_val) >= llabs((long)MINIMUM_MATCH_SIZE - (long) start_val);
+                    end_size = llabs((long) end_val-(long)std::get<0>(*match_beg)) >= llabs((long) end_val-(long)MINIMUM_MATCH_SIZE);
                     total_found_size = MINIMUM_MATCH_SIZE <= std::get<1>(*match_beg);
                     begin_reached = std::get<0>(*match_beg) == start_val;
                     end_reached = data_cont.begin() + (std::get<0>(*match_beg) + std::get<1>(*match_beg)) + 1 ==
@@ -786,8 +782,7 @@ namespace uh::trees {
             auto match_beg = possibilities.begin();
 
             while (match_beg != possibilities.end()) {//shrink all matches until the total result is legal, shrink smaller matches first until they vanish
-                bool legal_general = legal_check(match_beg, (std::size_t) 0,
-                                                 std::max(data_cont.size() - 1, (std::size_t) 0));
+                bool legal_general = legal_check(match_beg, (std::size_t) 0,data_cont.size());
                 if (!legal_general) {
                     possibilities.erase(match_beg);
                     match_beg = possibilities.begin();

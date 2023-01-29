@@ -49,7 +49,7 @@ BOOST_AUTO_TEST_CASE(search_match_filter_test)
 {
     //Test if the algorithm only detects matches that have an offset from 0 to front or back or a distance of match size
     std::string hello_world_string = "Hello World";
-    while (hello_world_string.size() < 2 * MINIMUM_MATCH_SIZE + 11) {
+    while (2 * MINIMUM_MATCH_SIZE + 11 > hello_world_string.size()) {
         hello_world_string.insert(hello_world_string.begin(), '-');
         hello_world_string.insert(hello_world_string.end(), '-');
     }
