@@ -698,7 +698,7 @@ namespace uh::trees {
             for (auto &single_route: search_index) {
                 for (auto &pos_tup: std::get<1>(single_route)) {
                     auto set_vector = std::vector<unsigned char>{};
-                    std::copy(cont_binary.begin() + std::get<0>(pos_tup), cont_binary.begin()+ std::get<0>(pos_tup)+ std::get<1>(pos_tup)+1,
+                    std::copy(std::get<0>(single_route).begin() + std::get<0>(pos_tup), std::min(std::get<0>(single_route).end(),std::get<0>(single_route).begin() + std::get<0>(pos_tup)+ std::get<1>(pos_tup)+1),
                               std::back_inserter(set_vector));
 
                     std::get<0>(add_tup) += set_vector.size();
