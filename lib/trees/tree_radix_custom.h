@@ -672,7 +672,7 @@ namespace uh::trees {
         //calculates exact size for a single integration of data, this could be communicated to agency to determine optimal storage location
         template<class ContainerBinary, bool reverse = false,
                 std::enable_if_t<!std::is_same<std::string, ContainerBinary>::value, bool> = true>
-        std::vector<std::tuple<std::size_t, std::size_t, std::size_t, std::size_t>>
+        std::vector<std::tuple<std::size_t, std::size_t, std::size_t>>
         add_test(ContainerBinary &cont_binary) {//add test should copy
             //first search existing structure and add into the last tree to insert potentially missing information
 
@@ -686,35 +686,34 @@ namespace uh::trees {
             //cases for last tree if it exists, binary fit in: match from the beginning on, match in the middle, match until the end, total match
             //all lists contain lists with a last element that had multiple matches; add up all matches
             uh::util::compression_custom comp{};
-            std::vector<std::tuple<std::size_t, std::size_t, std::size_t, std::size_t>> add_tup_out{};
+            std::vector<std::tuple<std::size_t, std::size_t,  std::size_t>> add_tup_out{};
             if (search_index.empty()) {
-                std::tuple<std::size_t, std::size_t, std::size_t, std::size_t> add_tup{};
+                std::tuple<std::size_t, std::size_t, std::size_t> add_tup{};
                 std::get<0>(add_tup) += cont_binary.size();
-                std::get<2>(add_tup) += cont_binary.size();
-                std::get<3>(add_tup) += comp.compress(cont_binary).size();
+                std::get<1>(add_tup) += cont_binary.size();
+                std::get<2>(add_tup) += comp.compress(cont_binary).size();
                 add_tup_out.push_back(add_tup);
                 return add_tup_out;
             }
 
+            std::size_t count{};
             for (auto &single_route: search_index) {
-                std::tuple<std::size_t, std::size_t, std::size_t, std::size_t> add_tup{};
+                std::tuple<std::size_t, std::size_t, std::size_t> add_tup{};
                 for (auto &pos_tup: std::get<1>(single_route)) {
                     std::get<0>(add_tup) += std::get<1>(pos_tup) + 1;
                 }
+
                 if (cont_binary.begin() + std::get<0>(add_tup) < cont_binary.end()) {
                     auto set_vector = std::vector<unsigned char>{};
                     std::copy(cont_binary.begin() + std::get<0>(add_tup), cont_binary.end(),
                               std::back_inserter(set_vector));
-                    std::get<3>(add_tup) += comp.compress(set_vector).size();
-                    std::get<2>(add_tup) += set_vector.size();
+                    std::get<2>(add_tup) += comp.compress(set_vector).size();
+                    std::get<1>(add_tup) += set_vector.size();
                     std::get<0>(add_tup) += set_vector.size();
                 }
-                long extra_savings = std::get<0>(add_tup);
-                extra_savings -= cont_binary.size();
-                extra_savings = std::max(extra_savings, (long) 0);
-                std::get<1>(add_tup) = (std::size_t) extra_savings;
-                std::get<0>(add_tup) -= std::get<1>(add_tup);
+
                 add_tup_out.push_back(add_tup);
+                count++;
             }
 
             return add_tup_out;
@@ -818,9 +817,11 @@ namespace uh::trees {
         //returns the path of maximum fit and the match size
         template<class ContainerBinary, bool reverse = false>
         std::vector<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>>,std::size_t, std::size_t>>
-        search(ContainerBinary &cont_binary) {
+        search(ContainerBinary &cont_binary, std::vector<tree_radix_custom*> limiter_children = std::vector<tree_radix_custom*>{}) {
 
-            if (cont_binary.empty()) {
+            if (cont_binary.empty()||std::any_of(limiter_children.begin(),limiter_children.end(),[this](auto &item){
+                return item == this;
+            })) {
                 return std::vector<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>>,std::size_t, std::size_t>>{};
             }
 
