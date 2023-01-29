@@ -697,13 +697,17 @@ namespace uh::trees {
             std::size_t count{};
             for (auto &single_route: search_index) {
                 for (auto &pos_tup: std::get<1>(single_route)) {
-                    std::get<0>(add_tup) += std::get<1>(pos_tup) + 1;
                     auto set_vector = std::vector<unsigned char>{};
-                    std::copy(cont_binary.begin() + std::get<0>(add_tup), cont_binary.begin()+ std::get<0>(add_tup)+ std::get<1>(add_tup),
+                    std::copy(cont_binary.begin() + std::get<0>(pos_tup), cont_binary.begin()+ std::get<0>(pos_tup)+ std::get<1>(pos_tup)+1,
                               std::back_inserter(set_vector));
-                    std::get<2>(add_tup) += comp.compress(set_vector).size();
-                    std::get<1>(add_tup) += set_vector.size() - (std::get<1>(add_tup)+1);
+
                     std::get<0>(add_tup) += set_vector.size();
+                    std::size_t current_new_space = set_vector.size() - (std::get<1>(pos_tup)+1);
+                    std::get<1>(add_tup) += current_new_space;
+                    if(set_vector.empty()||current_new_space == 0){
+                        continue;
+                    }
+                    std::get<2>(add_tup) += comp.compress(set_vector).size();
                 }
                 count++;
             }
