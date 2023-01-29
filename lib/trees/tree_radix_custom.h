@@ -835,8 +835,18 @@ namespace uh::trees {
 
             std::vector<std::size_t> advancements{0};
 
+            auto sum_match_size = [](std::vector<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>>,std::size_t, std::size_t>> &input){
+                return std::accumulate(input.begin(),input.end(),(std::size_t)0,[](std::size_t last_sum,std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>>,std::size_t, std::size_t> &item){
+                    return last_sum+std::get<3>(item);
+                });
+            };
+
             auto poss_beg = possibilities_work.begin();
             while(poss_beg != possibilities_work.end()){
+                if(sum_match_size(*poss_beg) == cont_binary.size()){
+                    //immediate total match return
+                    return *poss_beg;
+                }
                 std::set<std::size_t> advancements_already_checked{};
                 //read first entry, search with permutation of advancement and append the results to the end of work list
 
@@ -879,12 +889,6 @@ namespace uh::trees {
             if (possibilities_work.empty()) {
                 return std::vector<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>>,std::size_t, std::size_t>>{};
             }
-
-            auto sum_match_size = [](std::vector<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>>,std::size_t, std::size_t>> &input){
-                return std::accumulate(input.begin(),input.end(),(std::size_t)0,[](std::size_t last_sum,std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>>,std::size_t, std::size_t> &item){
-                    return last_sum+std::get<3>(item);
-                });
-            };
 
             std::sort(possibilities_out.begin(),possibilities_out.end(),[&sum_match_size](auto &a, auto &b){//sort for biggest match combination
                 return sum_match_size(a) > sum_match_size(b);
