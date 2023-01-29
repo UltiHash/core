@@ -179,7 +179,7 @@ namespace uh::trees {
         //returns match position on data of tree node, relative until end of string, binary advancement, match index (order match was found)
         template<class ContainerData, class ContainerBinary, bool reverse = false>
         std::vector<std::tuple<std::size_t, std::size_t, std::size_t,std::size_t>>
-        compare_ultihash(ContainerData &data_cont, ContainerBinary &binary_cont) {
+        compare_ultihash(ContainerData &data_cont, ContainerBinary &binary_cont,std::size_t binary_offset = 0) {
             //if input does only fit to a shorter string as a subset of data, count becomes negative, else positive including ß
             //data offset iterator and start and end of input
             std::vector<std::tuple<std::size_t, std::size_t,std::size_t,std::size_t>> matches{};//data offset beginning found, end offset from beginning
@@ -235,7 +235,7 @@ namespace uh::trees {
                             MINIMUM_MATCH_SIZE) {
                             long integrate_offset =  std::max(
                                     (long) std::distance(data_cont.begin() + current_offset, found.first) - 1, (long) 0);
-                            matches.emplace_back(current_offset,integrate_offset,adv,match_index);
+                            matches.emplace_back(current_offset,integrate_offset,adv+binary_offset,match_index);
                             advancements_binary.emplace(integrate_offset);
                             match_index++;
                         }
@@ -287,7 +287,7 @@ namespace uh::trees {
                             MINIMUM_MATCH_SIZE) {
                             long integrate_offset =  std::max(
                                     (long) std::distance(data_cont.rbegin() + current_offset, found.first) - 1, (long) 0);
-                            matches.emplace_back(current_offset,integrate_offset,adv,match_index);
+                            matches.emplace_back(current_offset,integrate_offset,adv+binary_offset,match_index);
                             advancements_binary.emplace(integrate_offset);
                             match_index++;
                         }
@@ -747,9 +747,15 @@ namespace uh::trees {
         std::vector<std::tuple<std::size_t, std::size_t,std::size_t, std::size_t>>
         search_match_filter(ContainerData &data_cont,ContainerBinary &binary_cont,
                             std::vector<std::tuple<std::size_t, std::size_t,std::size_t, std::size_t>> possibilities =
-                            std::vector<std::tuple<std::size_t, std::size_t,std::size_t, std::size_t>>{}) {
+                            std::vector<std::tuple<std::size_t, std::size_t,std::size_t, std::size_t>>{},std::size_t binary_offset = 0) {
 
-            auto local_matches = compare_ultihash<ContainerData,ContainerBinary,reverse>(data_cont, binary_cont);//std::vector<std::tuple<std::size_t, std::size_t, std::size_t,std::size_t>>
+            auto local_matches = compare_ultihash<ContainerData,ContainerBinary,reverse>(data_cont, binary_cont,binary_offset);//std::vector<std::tuple<std::size_t, std::size_t, std::size_t,std::size_t>>
+
+            //add maximum match index of possibilities onto local matches
+            std::size_t max_match_index = std::max((std::size_t)0,(std::size_t)std::get<3>(
+                    *std::max_element(possibilities.begin(),possibilities.end(),[](auto &a,auto &b){
+                        return std::get<3>(a)<std::get<3>(b);
+                    })));
 
             auto match_duplicate = local_matches.begin();
             while(match_duplicate!=local_matches.end()){
@@ -767,6 +773,7 @@ namespace uh::trees {
                     continue;
                 }
                 else{
+                    std::get<3>(*match_duplicate)+=max_match_index;//add up match index so the new matches have higher index for sorting
                     possibilities.push_back(*match_duplicate);
                 }
                 match_duplicate++;
@@ -925,6 +932,7 @@ namespace uh::trees {
                     std::size_t matches_before = std::get<1>(*search_within).size();
                     //std::vector<std::tuple<std::size_t, std::size_t, std::size_t, std::size_t,std::size_t, std::size_t>>
                     std::get<1>(*search_within) = search_match_filter(std::get<0>(*search_within)->data,binary_subset,std::get<1>(*search_within));
+
                     std::size_t more_found = std::get<1>(*search_within).size()-matches_before;
                     if(!more_found)continue;
                     std::get<2>(*search_within)+=more_found;
