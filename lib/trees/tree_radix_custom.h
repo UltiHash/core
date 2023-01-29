@@ -836,16 +836,10 @@ namespace uh::trees {
             //                              tree of results                     matches with offset and size       num matches  binary advance
             std::list<std::vector<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>>,std::size_t, std::size_t>>>possibilities_work{};
             std::vector<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>>,std::size_t, std::size_t>> start_node{};
-            auto first_finds = search_match_filter(data,cont_binary);
             std::set<std::size_t> advancements{0};
-            for(const auto f: first_finds){
-                advancements.emplace(std::get<1>(f)+1);
-            }
 
-            start_node.emplace_back(this,first_finds,first_finds.size(),0);
+            start_node.emplace_back(this,std::vector<std::tuple<std::size_t, std::size_t>>{},0,0);
             possibilities_work.push_back(start_node);
-
-
 
             auto sum_match_size = [](std::vector<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>>,std::size_t, std::size_t>> &input){
                 auto last_element = input.end();
