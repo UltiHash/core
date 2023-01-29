@@ -857,17 +857,15 @@ namespace uh::trees {
                     //immediate total match return
                     return *poss_beg;
                 }
-                std::set<std::size_t> advancements_already_checked{};
-                //read first entry, search with permutation of advancement and append the results to the end of work list
-
-                std::vector<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>>,std::size_t, std::size_t>> current_path = *poss_beg;
-
-                //search within last node of that path
-                auto search_within = current_path.end();//std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>>,std::size_t, std::size_t>
-                std::advance(search_within,-1);
 
                 //search data within with all possible advancements on the last node and its children
                 for(auto adv:advancements){
+                    //read first entry, search with permutation of advancement and append the results to the end of work list
+                    std::vector<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>>,std::size_t, std::size_t>> current_path = *poss_beg;
+
+                    //search within last node of that path
+                    auto search_within = current_path.end();//std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>>,std::size_t, std::size_t>
+                    std::advance(search_within,-1);
                     //search
                     auto binary_subset = std::vector<unsigned char>{cont_binary.begin()+adv,cont_binary.end()};
                     std::size_t matches_before = std::get<1>(*search_within).size();
