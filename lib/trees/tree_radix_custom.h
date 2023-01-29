@@ -850,15 +850,15 @@ namespace uh::trees {
                 for(const auto&adv:advancements){
                     //search
                     auto binary_subset = std::vector<unsigned char>{cont_binary.begin()+adv,cont_binary.end()};
-                    std::get<1>(search_within) = search_match_filter(std::get<0>(*search_within)->data,binary_subset,std::get<1>(search_within));
-                }
+                    std::get<1>(*search_within) = search_match_filter(std::get<0>(*search_within)->data,binary_subset,std::get<1>(*search_within));
 
-                //from results add likely advancements of binary input
-                for(const auto s:std::get<1>(search_within)){
-                    std::size_t new_advancement = adv + std::get<1>(s)+1;
-                    if(!std::count(advancements.begin(),advancements.end(),new_advancement)){
-                        advancements.push_back(new_advancement);
-                        std::sort(advancements.begin(),advancements.end());
+                    //from results add likely advancements of binary input
+                    for(const auto s:std::get<1>(*search_within)){
+                        std::size_t new_advancement = adv + std::get<1>(s)+1;
+                        if(!std::count(advancements.begin(),advancements.end(),new_advancement)){
+                            advancements.push_back(new_advancement);
+                            std::sort(advancements.begin(),advancements.end());
+                        }
                     }
                 }
 
