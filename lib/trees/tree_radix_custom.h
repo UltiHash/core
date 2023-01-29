@@ -876,7 +876,7 @@ namespace uh::trees {
             }
 
             std::sort(possibilities_out.begin(),possibilities_out.end(),[](auto &a, auto &b){//sort for bigger matches, less fragments
-                std::get<2>(a) > std::get<2>(b);
+                std::get<2>(a) < std::get<2>(b);
             });
 
             return possibilities_out[0];
