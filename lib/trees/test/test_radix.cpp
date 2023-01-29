@@ -98,7 +98,7 @@ BOOST_AUTO_TEST_CASE(radix_constructor_test)
     t = new uh::trees::tree_radix_custom();
     //empty add test
     auto result_test = t->add_test(data_string);
-    BOOST_CHECK(std::get<0>(result_test[0]) == 11 && std::get<1>(result_test[0]) == 11);
+    BOOST_CHECK(std::get<0>(result_test) == 11 && std::get<1>(result_test) == 11);
     delete t;
     t = new uh::trees::tree_radix_custom(data_string);
     BOOST_CHECK(t->children.empty());
@@ -110,13 +110,13 @@ BOOST_AUTO_TEST_CASE(radix_constructor_test)
     BOOST_CHECK(std::get<0>(*std::get<3>(result[0]).begin()).empty() &&
                 std::get<1>(*std::get<3>(result[0]).begin()).empty());//tree modified and added stay empty
     result_test = t->add_test(data_string);
-    BOOST_CHECK(std::get<0>(result_test[0]) == 11 && std::get<1>(result_test[0]) == 0);
+    BOOST_CHECK(std::get<0>(result_test) == 11 && std::get<1>(result_test) == 0);
     //total match and append test
     std::string tomorrow_string = "Hello World of tomorrow!";
     data_string = std::vector<unsigned char>{tomorrow_string.begin(), tomorrow_string.end()};
     //add test
     result_test = t->add_test(data_string);
-    BOOST_CHECK(std::get<0>(result_test[0]) == 24 && std::get<1>(result_test[0]) == 13);
+    BOOST_CHECK(std::get<0>(result_test) == 24 && std::get<1>(result_test) == 13);
     //add
     result = t->add(data_string);
     BOOST_CHECK(std::get<0>(result[0]) == 24 && std::get<1>(result[0]) == 13);
@@ -125,7 +125,7 @@ BOOST_AUTO_TEST_CASE(radix_constructor_test)
                 1);//tree modified empty and added with one new tree
     result_test = t->add_test(data_string);
     BOOST_CHECK(
-            std::get<0>(result_test[0]) == 24 && std::get<1>(result_test[0]) == 0);//total match expected recursively
+            std::get<0>(result_test) == 24 && std::get<1>(result_test) == 0);//total match expected recursively
 
     delete t;
 }
@@ -141,7 +141,7 @@ BOOST_AUTO_TEST_CASE(add_test)
     auto back_string = std::string{"a lot of data!"};
 
     auto result_test = t->add_test(back_string);
-    BOOST_CHECK(std::get<0>(result_test[0]) == 14 && std::get<1>(result_test[0]) == 0);
+    BOOST_CHECK(std::get<0>(result_test) == 14 && std::get<1>(result_test) == 0);
     auto result = t->add(back_string);
     BOOST_CHECK(std::get<0>(result[0]) == 14 && std::get<1>(result[0]) == 0);
     BOOST_CHECK(std::get<0>(*std::get<3>(result[0]).begin()).size() == 1 &&
@@ -155,7 +155,7 @@ BOOST_AUTO_TEST_CASE(add_test)
     auto back_string_append = std::string{"a lot of data! And I can code."};
 
     result_test = t->add_test(back_string_append);
-    BOOST_CHECK(std::get<0>(result_test[0]) == 30 && std::get<1>(result_test[0]) == 16);
+    BOOST_CHECK(std::get<0>(result_test) == 30 && std::get<1>(result_test) == 16);
     result = t->add(back_string_append);
     BOOST_CHECK(std::get<0>(result[0]) == 30 && std::get<1>(result[0]) == 16);
     BOOST_CHECK(std::get<0>(*std::get<3>(result[0]).begin()).size() == 1 &&
@@ -169,7 +169,7 @@ BOOST_AUTO_TEST_CASE(add_test)
     auto front_string = std::string{"Hello World"};
 
     result_test = t->add_test(front_string);
-    BOOST_CHECK(std::get<0>(result_test[0]) == 11 && std::get<1>(result_test[0]) == 0);
+    BOOST_CHECK(std::get<0>(result_test) == 11 && std::get<1>(result_test) == 0);
     result = t->add(front_string);
     BOOST_CHECK(std::get<0>(result[0]) == 11 && std::get<1>(result[0]) == 0);
     BOOST_CHECK(std::get<0>(*std::get<3>(result[0]).begin()).size() == 1 &&
@@ -183,7 +183,7 @@ BOOST_AUTO_TEST_CASE(add_test)
     auto front_string_append = std::string{"Hello World from yesterday"};
 
     result_test = t->add_test(front_string_append);
-    BOOST_CHECK(std::get<0>(result_test[0]) == 26 && std::get<1>(result_test[0]) == 14);
+    BOOST_CHECK(std::get<0>(result_test) == 26 && std::get<1>(result_test) == 14);
     result = t->add(front_string_append);
     BOOST_CHECK(std::get<0>(result[0]) == 26 && std::get<1>(result[0]) == 14);
     BOOST_CHECK(std::get<0>(*std::get<3>(result[0]).begin()).size() == 1 &&
@@ -197,8 +197,8 @@ BOOST_AUTO_TEST_CASE(add_test)
     auto middle_string = std::string{"World of tomorrow"};
 
     result_test = t->add_test(middle_string);
-    BOOST_CHECK(std::get<0>(result_test[0]) == 17 && std::get<1>(result_test[0]) == 7 &&
-                std::get<2>(result_test[0]) == 0);//extra storage saved by action
+    BOOST_CHECK(std::get<0>(result_test) == 17 && std::get<1>(result_test) == 7 &&
+                std::get<2>(result_test) == 0);//extra storage saved by action
     result = t->add(middle_string);
     BOOST_CHECK(std::get<0>(result[0]) == 17 && std::get<1>(result[0]) == 0);
     BOOST_CHECK(std::get<0>(*std::get<3>(result[0]).begin()).size() == 1 &&
@@ -212,7 +212,7 @@ BOOST_AUTO_TEST_CASE(add_test)
     auto middle_string_append = std::string{"World of tomorrow, coming soon!"};
 
     result_test = t->add_test(middle_string_append);
-    BOOST_CHECK(std::get<0>(result_test[0]) == 31 && std::get<1>(result_test[0]) == 14);
+    BOOST_CHECK(std::get<0>(result_test) == 31 && std::get<1>(result_test) == 14);
     result = t->add(middle_string_append);
     BOOST_CHECK(std::get<0>(result[0]) == 31 && std::get<1>(result[0]) == 16);
     BOOST_CHECK(std::get<0>(*std::get<3>(result[0]).begin()).size() == 1 &&
@@ -228,21 +228,21 @@ BOOST_AUTO_TEST_CASE(add_test)
     t = new uh::trees::tree_radix_custom(data_string1);
 
     result_test = t->add_test(data_string2);
-    BOOST_CHECK(std::get<0>(result_test[0]) == 17 && std::get<1>(result_test[0]) == 0);
+    BOOST_CHECK(std::get<0>(result_test) == 17 && std::get<1>(result_test) == 0);
     result = t->add(data_string2);
     BOOST_CHECK(std::get<0>(result[0]) == 17 && std::get<1>(result[0]) == 0);
     BOOST_CHECK(std::get<0>(*std::get<3>(result[0]).begin()).size() == 1 &&
                 std::get<1>(*std::get<3>(result[0]).begin()).size() == 3);//one tree modified and 3 added
 
     result_test = t->add_test(data_string3);
-    BOOST_CHECK(std::get<0>(result_test[0]) == 19 && std::get<1>(result_test[0]) == 0);
+    BOOST_CHECK(std::get<0>(result_test) == 19 && std::get<1>(result_test) == 0);
     result = t->add(data_string3);
     BOOST_CHECK(std::get<0>(result[0]) == 19 && std::get<1>(result[0]) == 0);
     BOOST_CHECK(std::get<0>(*std::get<3>(result[0]).begin()).size() == 2 &&
                 std::get<1>(*std::get<3>(result[0]).begin()).size() == 2);//2 trees modified and 2 added
 
     result_test = t->add_test(data_string4);
-    BOOST_CHECK(std::get<0>(result_test[0]) == 40 && std::get<1>(result_test[0]) == 0);
+    BOOST_CHECK(std::get<0>(result_test) == 40 && std::get<1>(result_test) == 0);
     result = t->add(data_string4);
     BOOST_CHECK(std::get<0>(result[0]) == 40 && std::get<1>(result[0]) == 0);
     BOOST_CHECK(std::get<0>(*std::get<3>(result[0]).begin()).size() == 3 &&
@@ -256,7 +256,7 @@ BOOST_AUTO_TEST_CASE(add_test)
     auto overlap_string = std::string{"aaaaabbbbbaaaaabbbbbaaaaa"};
 
     result_test = t->add_test(overlap_string);
-    BOOST_CHECK(std::get<0>(result_test[0]) == 27 && std::get<1>(result_test[0]) == 0);
+    BOOST_CHECK(std::get<0>(result_test) == 27 && std::get<1>(result_test) == 0);
     result = t->add(overlap_string);
     BOOST_CHECK(std::get<0>(result[0]) == 27 && std::get<1>(result[0]) == 0);
     BOOST_CHECK(std::get<0>(*std::get<3>(result[0]).begin()).size() == 1 &&
