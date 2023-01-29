@@ -917,7 +917,7 @@ namespace uh::trees {
                 std::vector<std::size_t> adv_dest{};
                 std::sort(advancements.begin(),advancements.end());
                 std::sort(current_new_advancements.begin(),current_new_advancements.end());
-                std::set_union(advancements.begin(),advancements.end(),current_new_advancements.begin(),current_new_advancements.end(),std::back_inserter(adv_dest));
+                (void)std::set_union(advancements.begin(),advancements.end(),current_new_advancements.begin(),current_new_advancements.end(),std::back_inserter(adv_dest));
                 advancements = adv_dest;
 
                 poss_beg++;
