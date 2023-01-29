@@ -870,6 +870,10 @@ namespace uh::trees {
                     auto binary_subset = std::vector<unsigned char>{cont_binary.begin()+adv,cont_binary.end()};
                     std::size_t matches_before = std::get<1>(*search_within).size();
                     std::get<1>(*search_within) = search_match_filter(std::get<0>(*search_within)->data,binary_subset,std::get<1>(*search_within));
+                    for(auto &item:std::get<1>(*search_within)){
+                        //add advancement to detect match on data correlating to different trees on the path
+                        std::get<0>(item)+=std::get<1>(*search_within);
+                    }
                     std::size_t more_found = std::get<1>(*search_within).size()-matches_before;
                     if(!more_found)continue;
                     std::get<2>(*search_within)+=more_found;
