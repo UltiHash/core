@@ -321,7 +321,7 @@ namespace uh::trees {
             if (binary_cont.empty()) {
                 return {};
             }
-            std::vector<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>>,std::size_t, std::size_t>> search_index = search<ContainerBinary, reverse>(binary_cont);//std::vector<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>,std::size_t, std::size_t>>>
+            std::vector<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t, std::size_t, std::size_t>>,std::size_t, std::size_t>> search_index = search<ContainerBinary, reverse>(binary_cont);//std::vector<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t, std::size_t, std::size_t>,std::size_t, std::size_t>>>
 
             //some element and an end element at least required
             //TODO: add cross update from forward and backward children
@@ -698,7 +698,7 @@ namespace uh::trees {
             if (cont_binary.empty()) {
                 return {};
             }
-            std::vector<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>>,std::size_t, std::size_t>> search_index = search<ContainerBinary, reverse>(cont_binary);//std::vector<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>,std::size_t, std::size_t>>>
+            std::vector<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t, std::size_t, std::size_t>>,std::size_t, std::size_t>> search_index = search<ContainerBinary, reverse>(cont_binary);//std::vector<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t, std::size_t, std::size_t>,std::size_t, std::size_t>>>
 
             //cases for search index: its empty or it has content and with that a last tree element
             //cases for last tree if it exists, binary fit in: match from the beginning on, match in the middle, match until the end, total match
@@ -814,9 +814,9 @@ namespace uh::trees {
             auto match_beg = possibilities.begin();
 
             auto change_delete = [&possibilities](auto &match_beg){
-                std::size_t delete_binary_shift_higher = std::get<2>(match_beg);
-                std::size_t element_match_index = std::get<3>(match_beg);
-                std::erase_if(possibilities.begin(),possibilities.end(),[&delete_binary_shift_higher,&element_match_index](auto &item){
+                std::size_t delete_binary_shift_higher = std::get<2>(*match_beg);
+                std::size_t element_match_index = std::get<3>(*match_beg);
+                std::erase_if(possibilities,[&delete_binary_shift_higher,&element_match_index](auto &item){
                     return std::get<2>(item)>delete_binary_shift_higher && std::get<3>(item)>element_match_index;
                 });
                 match_beg = possibilities.begin();
@@ -867,39 +867,39 @@ namespace uh::trees {
 
         //returns the path of maximum fit and the match size
         template<class ContainerBinary, bool reverse = false>
-        std::vector<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>>,std::size_t, std::size_t>>
+        std::vector<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t, std::size_t, std::size_t>>,std::size_t, std::size_t>>
         search(ContainerBinary &cont_binary, std::vector<tree_radix_custom*> limiter_children = std::vector<tree_radix_custom*>{}) {
 
             if (cont_binary.empty()||std::any_of(limiter_children.begin(),limiter_children.end(),[this](auto &item){
                 return item == this;
             })) {
-                return std::vector<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>>,std::size_t, std::size_t>>{};
+                return std::vector<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t, std::size_t, std::size_t>>,std::size_t, std::size_t>>{};
             }
 
-            std::vector<std::vector<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>>,std::size_t, std::size_t>>>possibilities_out{};
+            std::vector<std::vector<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t, std::size_t, std::size_t>>,std::size_t, std::size_t>>>possibilities_out{};
 
             //a list holding possibilities of paths of matches
             //                              tree of results                     matches with offset and size       num matches  binary advance
-            std::list<std::vector<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>>,std::size_t, std::size_t>>>possibilities_work{};
-            std::vector<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>>,std::size_t, std::size_t>> start_node{};
+            std::list<std::vector<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t, std::size_t, std::size_t>>,std::size_t, std::size_t>>>possibilities_work{};
+            std::vector<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t, std::size_t, std::size_t>>,std::size_t, std::size_t>> start_node{};
             std::set<std::size_t> advancements{0};
 
-            start_node.emplace_back(this,std::vector<std::tuple<std::size_t, std::size_t>>{},0,0);
+            start_node.emplace_back(this,std::vector<std::tuple<std::size_t, std::size_t, std::size_t, std::size_t>>{},0,0);
             possibilities_work.push_back(start_node);
 
-            auto sum_match_size = [](std::vector<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>>,std::size_t, std::size_t>> &input){
+            auto sum_match_size = [](std::vector<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t, std::size_t, std::size_t>>,std::size_t, std::size_t>> &input){
                 auto last_element = input.end();
                 std::advance(last_element,-1);
 
                 return std::get<3>(*last_element);
                 /*
-                return std::accumulate(input.begin(),input.end(),(std::size_t)0,[](std::size_t last_sum,std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>>,std::size_t, std::size_t> &item){
+                return std::accumulate(input.begin(),input.end(),(std::size_t)0,[](std::size_t last_sum,std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t, std::size_t, std::size_t>>,std::size_t, std::size_t> &item){
                     return last_sum+std::get<3>(item);
                 });
                  */
             };
 
-            auto max_match_sort = [&sum_match_size](std::vector<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>>,std::size_t, std::size_t>> &a,std::vector<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>>,std::size_t, std::size_t>>&b){
+            auto max_match_sort = [&sum_match_size](std::vector<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t, std::size_t, std::size_t>>,std::size_t, std::size_t>> &a,std::vector<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t, std::size_t, std::size_t>>,std::size_t, std::size_t>>&b){
                 return sum_match_size(a) > sum_match_size(b);
             };
 
@@ -913,16 +913,17 @@ namespace uh::trees {
                 //search data within with all possible advancements on the last node and its children
                 for(auto adv:advancements){
                     //read first entry, search with permutation of advancement and append the results to the end of work list
-                    std::vector<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>>,std::size_t, std::size_t>> current_path = *poss_beg;
+                    std::vector<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t, std::size_t, std::size_t>>,std::size_t, std::size_t>> current_path = *poss_beg;
 
                     //search within last node of that path
-                    auto search_within = current_path.end();//std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>>,std::size_t, std::size_t>
+                    auto search_within = current_path.end();//std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t, std::size_t, std::size_t>>,std::size_t, std::size_t>
                     std::advance(search_within,-1);
                     //search
                     std::size_t new_base_advance = adv + std::get<3>(*search_within);
                     if(new_base_advance>cont_binary.size())continue;
                     auto binary_subset = std::vector<unsigned char>{cont_binary.begin()+new_base_advance,cont_binary.end()};
                     std::size_t matches_before = std::get<1>(*search_within).size();
+                    //std::vector<std::tuple<std::size_t, std::size_t, std::size_t, std::size_t,std::size_t, std::size_t>>
                     std::get<1>(*search_within) = search_match_filter(std::get<0>(*search_within)->data,binary_subset,std::get<1>(*search_within));
                     std::size_t more_found = std::get<1>(*search_within).size()-matches_before;
                     if(!more_found)continue;
@@ -947,7 +948,7 @@ namespace uh::trees {
                         if(!child_vec_append.empty()){
                             for(const auto &tree:child_vec_append){
                                 auto current_copy = current_path;
-                                current_copy.emplace_back(tree, std::vector<std::tuple<std::size_t,std::size_t>>{},std::get<2>(*search_within),new_base_advance);
+                                current_copy.emplace_back(tree, std::vector<std::tuple<std::size_t, std::size_t, std::size_t, std::size_t>>{},std::get<2>(*search_within),new_base_advance);
                                 possibilities_work.push_back(current_copy);
                             }
                         }
@@ -956,7 +957,7 @@ namespace uh::trees {
                             if(child_vec_append.empty() && *(cont_binary.begin()+new_base_advance) == std::get<1>(heristic))continue;
                             for(const auto &tree:std::get<0>(heristic)){
                                 auto current_copy = current_path;
-                                current_copy.emplace_back(tree, std::vector<std::tuple<std::size_t,std::size_t>>{},std::get<2>(*search_within),new_base_advance);
+                                current_copy.emplace_back(tree, std::vector<std::tuple<std::size_t, std::size_t, std::size_t, std::size_t>>{},std::get<2>(*search_within),new_base_advance);
                                 possibilities_work.push_back(current_copy);
                             }
                         }
@@ -969,7 +970,7 @@ namespace uh::trees {
             }
 
             if (possibilities_out.empty()) {
-                return std::vector<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>>,std::size_t, std::size_t>>{};
+                return std::vector<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t, std::size_t, std::size_t>>,std::size_t, std::size_t>>{};
             }
 
             std::sort(possibilities_out.begin(),possibilities_out.end(),[&sum_match_size](auto &a, auto &b){//sort for biggest match combination
@@ -987,8 +988,8 @@ namespace uh::trees {
             }
 
             std::sort(possibilities_out.begin(),possibilities_out.end(),[](auto &a, auto &b){//sort for bigger matches, not a lot of fragments
-                auto sum_match_count = [](std::vector<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>>,std::size_t, std::size_t>> &input){
-                    return std::accumulate(input.begin(),input.end(),(std::size_t)0,[](std::size_t last_sum,std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>>,std::size_t, std::size_t> &item){
+                auto sum_match_count = [](std::vector<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t, std::size_t, std::size_t>>,std::size_t, std::size_t>> &input){
+                    return std::accumulate(input.begin(),input.end(),(std::size_t)0,[](std::size_t last_sum,std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t, std::size_t, std::size_t>>,std::size_t, std::size_t> &item){
                         return last_sum+std::get<2>(item);
                     });
                 };
