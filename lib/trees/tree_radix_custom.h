@@ -853,12 +853,33 @@ namespace uh::trees {
                     //this path reached an end, store
                     possibilities_out.push_back(current_path);
                 }
-                //TODO: always clear out paths if there is a longer path coming in still having children
                 poss_begin++;
                 possibilities_work.pop_front();
             }
 
-            return std::vector<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>>,std::size_t, std::size_t>>{};
+            if (possibilities_work.empty()) {
+                return std::vector<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>>,std::size_t, std::size_t>>{};
+            }
+
+            std::sort(possibilities_out.begin(),possibilities_out.end(),[](auto &a, auto &b){//sort for biggest match combination
+                std::get<3>(a) > std::get<3>(b);
+            });
+
+            auto poss_out = possibilities_out.begin();
+            std::size_t max_advance = std::get<3>(*poss_out);
+            while(poss_out != possibilities_out.end()){
+                if(std::get<3>(*poss_out)<max_advance){
+                    possibilities_out.erase(poss_out,possibilities_out.end());
+                    break;
+                }
+                poss_out++;
+            }
+
+            std::sort(possibilities_out.begin(),possibilities_out.end(),[](auto &a, auto &b){//sort for bigger matches, less fragments
+                std::get<2>(a) > std::get<2>(b);
+            });
+
+            return possibilities_out[0];
         }
     };
 }
