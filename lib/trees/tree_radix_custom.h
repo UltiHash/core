@@ -867,9 +867,7 @@ namespace uh::trees {
                 std::advance(search_within,-1);
 
                 //search data within with all possible advancements on the last node and its children
-                auto current_new_advancements = advancements;
-
-                for(const auto&adv:advancements){
+                for(auto adv:advancements){
                     //search
                     auto binary_subset = std::vector<unsigned char>{cont_binary.begin()+adv,cont_binary.end()};
                     std::size_t matches_before = std::get<1>(*search_within).size();
@@ -882,8 +880,8 @@ namespace uh::trees {
                         if(new_advancement>=cont_binary.size()){
                             continue;
                         }
-                        if(!std::count(advancements.begin(),advancements.end(),new_advancement)){
-                            current_new_advancements.push_back(new_advancement);
+                        if(!std::count(advancements.begin(),advancements.end(),adv)){
+                            advancements.push_back(new_advancement);
                         }
                     }
                     //child search
@@ -912,13 +910,6 @@ namespace uh::trees {
                         }
                     }
                 }
-
-                //union of advancements
-                std::vector<std::size_t> adv_dest{};
-                std::sort(advancements.begin(),advancements.end());
-                std::sort(current_new_advancements.begin(),current_new_advancements.end());
-                (void)std::set_union(advancements.begin(),advancements.end(),current_new_advancements.begin(),current_new_advancements.end(),std::back_inserter(adv_dest));
-                advancements = adv_dest;
 
                 poss_beg++;
                 possibilities_work.pop_front();
