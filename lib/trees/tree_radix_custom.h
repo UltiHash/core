@@ -722,16 +722,16 @@ namespace uh::trees {
 
         //returns std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<decltype(bin_beg), decltype(bin_end), decltype(bin_beg)>>>>>, std::size_t>>
         template<class ContainerData, class ContainerBinary, bool reverse = false>
-        auto
+        std::vector<std::tuple<std::size_t, std::size_t>>
         search_match_filter(ContainerData &data_cont,ContainerBinary &binary_cont,
-                            std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>>> possibilities =
-                            std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>>>{}) {
+                            std::vector<std::tuple<std::size_t, std::size_t>> possibilities =
+                            std::vector<std::tuple<std::size_t, std::size_t>>{}) {
 
             auto local_matches = compare_ultihash<ContainerData,ContainerBinary,reverse>(data_cont, binary_cont);//std::vector<std::tuple<std::size_t, std::size_t, tree_radix_custom *>>
 
             auto match_duplicate = local_matches.begin();
             while(match_duplicate!=local_matches.end()){
-                if(std::count(std::get<1>(possibilities).begin(),std::get<1>(possibilities).end(),*match_duplicate)){
+                if(std::count(possibilities.begin(),possibilities.end(),*match_duplicate)){
                     std::size_t reinvoke_count = std::distance(local_matches.begin(),match_duplicate);
                     local_matches.erase(match_duplicate);
                     match_duplicate = local_matches.begin()+reinvoke_count;
@@ -740,9 +740,9 @@ namespace uh::trees {
                 match_duplicate++;
             }
 
-            if (local_matches.empty() && std::get<1>(possibilities).empty())return possibilities;
+            if (local_matches.empty() && possibilities.empty())return possibilities;
 
-            std::get<1>(possibilities).insert(std::get<1>(possibilities).end(),local_matches.begin(),local_matches.end());
+            possibilities.insert(possibilities.end(),local_matches.begin(),local_matches.end());
 
             std::sort(local_matches.begin(), local_matches.end(), [](auto &a, auto &b) {
                 return std::get<1>(a) < std::get<1>(b);
@@ -783,31 +783,30 @@ namespace uh::trees {
                 return legal_split;
             };
 
-            auto match_beg = std::get<1>(possibilities).begin();
+            auto match_beg = possibilities.begin();
 
-            while (match_beg !=
-                    std::get<1>(possibilities).end()) {//shrink all matches until the total result is legal, shrink smaller matches first until they vanish
+            while (match_beg != possibilities.end()) {//shrink all matches until the total result is legal, shrink smaller matches first until they vanish
                 bool legal_general = legal_check(match_beg, (std::size_t) 0,
                                                  std::max(data_cont.size() - 1, (std::size_t) 0));
                 if (!legal_general) {
-                    std::get<1>(possibilities).erase(match_beg);
-                    match_beg = std::get<1>(possibilities).begin();
+                    possibilities.erase(match_beg);
+                    match_beg = possibilities.begin();
                     continue;
                 }
-                auto match_begin_legal_shift = std::get<1>(possibilities).begin();
-                while (match_begin_legal_shift != std::get<1>(possibilities).end()) {
+                auto match_begin_legal_shift = possibilities.begin();
+                while (match_begin_legal_shift != possibilities.end()) {
                     bool legal = legal_check(match_begin_legal_shift, std::get<0>(*match_beg),
                                              std::get<0>(*match_beg) + std::get<1>(*match_beg));
                     if (!legal) {
-                        std::get<1>(possibilities).erase(match_begin_legal_shift);
-                        match_begin_legal_shift = std::get<1>(possibilities).begin();
+                        possibilities.erase(match_begin_legal_shift);
+                        match_begin_legal_shift = possibilities.begin();
                     } else match_begin_legal_shift++;
                 }
                 match_beg++;
             }
 
             //sort the smallest offset out of the largest match results in case the match sizes are equal*/
-            std::sort(std::get<1>(possibilities).begin(), std::get<1>(possibilities).end(), [](auto &a, auto &b) {
+            std::sort(possibilities.begin(), possibilities.end(), [](auto &a, auto &b) {
                 return std::get<0>(a) < std::get<0>(b);
             });
             //all matches are valid as long as they do not collide
@@ -834,7 +833,7 @@ namespace uh::trees {
             start_node.emplace_back(this,std::vector<std::tuple<std::size_t, std::size_t>>{},0,0);
             possibilities_work.push_back(start_node);
 
-            std::set<std::size_t> advancements{0};
+            std::vector<std::size_t> advancements{0};
 
             auto poss_beg = possibilities_work.begin();
             while(poss_beg != possibilities_work.end()){
@@ -847,12 +846,32 @@ namespace uh::trees {
                 auto search_within = current_path.end();//std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>>,std::size_t, std::size_t>
                 std::advance(search_within,-1);
 
-                //TODO: search data within with all possible advancements
+                //search data within with all possible advancements on the last node and its children
+                for(const auto&adv:advancements){
+                    //search
+                    auto binary_subset = std::vector<unsigned char>{cont_binary.begin()+adv,cont_binary.end()};
+                    std::get<1>(search_within) = search_match_filter(std::get<0>(*search_within)->data,binary_subset,std::get<1>(search_within));
+                }
+
+                //from results add likely advancements of binary input
+                for(const auto s:std::get<1>(search_within)){
+                    std::size_t new_advancement = adv + std::get<1>(s)+1;
+                    if(!std::count(advancements.begin(),advancements.end(),new_advancement)){
+                        advancements.push_back(new_advancement);
+                        std::sort(advancements.begin(),advancements.end());
+                    }
+                }
 
                 if(std::get<0>(*search_within)->children.empty()){
                     //this path reached an end, store
                     possibilities_out.push_back(current_path);
                 }
+                else{
+                    //append fresh search requests to the back of the list for all children
+
+                }
+
+
                 poss_beg++;
                 possibilities_work.pop_front();
             }
