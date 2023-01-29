@@ -833,7 +833,7 @@ namespace uh::trees {
             start_node.emplace_back(this,std::vector<std::tuple<std::size_t, std::size_t>>{},0,0);
             possibilities_work.push_back(start_node);
 
-            std::vector<std::size_t> advancements{0};
+            std::set<std::size_t> advancements{0};
 
             auto sum_match_size = [](std::vector<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>>,std::size_t, std::size_t>> &input){
                 auto last_element = input.end();
@@ -880,9 +880,7 @@ namespace uh::trees {
                         if(new_advancement>=cont_binary.size()){
                             continue;
                         }
-                        if(!std::count(advancements.begin(),advancements.end(),adv)){
-                            advancements.push_back(new_advancement);
-                        }
+                        advancements.emplace(new_advancement);
                     }
                     //child search
                     if(std::get<0>(*search_within)->children.empty()){
