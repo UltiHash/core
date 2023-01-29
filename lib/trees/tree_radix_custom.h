@@ -303,7 +303,7 @@ namespace uh::trees {
             if (binary_cont.empty()) {
                 return {};
             }
-            auto search_index = search<ContainerBinary, reverse>(binary_cont);//std::vector<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>,std::size_t, std::size_t>>>
+            std::vector<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>>,std::size_t, std::size_t>> search_index = search<ContainerBinary, reverse>(binary_cont);//std::vector<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>,std::size_t, std::size_t>>>
 
             //some element and an end element at least required
             //TODO: add cross update from forward and backward children
@@ -680,7 +680,7 @@ namespace uh::trees {
             if (cont_binary.empty()) {
                 return {};
             }
-            auto search_index = search<ContainerBinary, reverse>(cont_binary);//std::vector<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>,std::size_t, std::size_t>>>
+            std::vector<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>>,std::size_t, std::size_t>> search_index = search<ContainerBinary, reverse>(cont_binary);//std::vector<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>,std::size_t, std::size_t>>>
 
             //cases for search index: its empty or it has content and with that a last tree element
             //cases for last tree if it exists, binary fit in: match from the beginning on, match in the middle, match until the end, total match
@@ -740,7 +740,7 @@ namespace uh::trees {
         auto
         search_match_filter(ContainerData &data_cont,ContainerBinary &binary_cont,
                             std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>>> possibilities =
-                            std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>>>{this,std::vector<std::tuple<std::size_t, std::size_t>>{}}) {
+                            std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>>>{}) {
 
             auto local_matches = compare_ultihash<ContainerData,ContainerBinary,reverse>(data_cont, binary_cont);//std::vector<std::tuple<std::size_t, std::size_t, tree_radix_custom *>>
 
@@ -830,10 +830,10 @@ namespace uh::trees {
             return possibilities;
         }
 
+
         //returns the path of maximum fit and the match size
-        /*std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::vector<unsigned char>::const_iterator, std::vector<unsigned char>::const_iterator, std::vector<unsigned char>::const_iterator>>>>>, std::size_t>>*/
         template<class ContainerBinary, bool reverse = false>
-        std::vector<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>,std::size_t, std::size_t>>>
+        std::vector<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>>,std::size_t, std::size_t>>
         search(ContainerBinary &cont_binary,std::vector<tree_radix_custom *> limiter_children = std::vector<tree_radix_custom *>{}) {
 
             if (cont_binary.empty()) {
@@ -842,11 +842,11 @@ namespace uh::trees {
 
             //a list holding possibilities of paths of matches
             //                              tree of results                     matches with offset and size       num matches  binary advance
-            std::list<std::vector<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>,std::size_t, std::size_t>>>>possibilities{};
+            std::list<std::vector<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>,std::size_t, std::size_t>>>possibilities{};
 
 
 
-            return std::vector<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>,std::size_t, std::size_t>>>{};
+            return std::vector<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>,std::size_t, std::size_t>>{};
         }
     };
 }
