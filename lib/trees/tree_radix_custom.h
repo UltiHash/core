@@ -700,12 +700,11 @@ namespace uh::trees {
             if (cont_binary.empty()) {
                 return {};
             }
-            auto search_index = search<ContainerBinary, reverse>(cont_binary);
+            auto search_index = search<ContainerBinary, reverse>(cont_binary);//std::vector<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>,std::size_t, std::size_t>>>
 
             //cases for search index: its empty or it has content and with that a last tree element
             //cases for last tree if it exists, binary fit in: match from the beginning on, match in the middle, match until the end, total match
             //all lists contain lists with a last element that had multiple matches; add up all matches
-            //std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<decltype(bin_beg), decltype(bin_end), decltype(bin_beg)>>>>>, std::size_t, decltype(bin_end), decltype(bin_beg)>>
             uh::util::compression_custom comp{};
             std::vector<std::tuple<std::size_t, std::size_t, std::size_t, std::size_t>> add_tup_out{};
             if (search_index.empty()) {
@@ -719,28 +718,22 @@ namespace uh::trees {
 
             for (auto &single_route: search_index) {
                 std::tuple<std::size_t, std::size_t, std::size_t, std::size_t> add_tup{};
+                for (auto &pos_tup: std::get<1>(single_route)) {
+                    //auto add_list = tree_test_sequence(std::get<0>(tree_tuple), bin_beg, bin_beg,std::get<0>(pos_tup),
+                    //                                   std::get<1>(pos_tup), std::get<2>(pos_tup));//insert into another tree
+                    if (std::get<0>(
+                            tree_tuple)->data.empty()) {//how to insert, either empty simple insert or some tree construction anywhere
+                        //simple insert into data since this seems to be a new node that can contain simple information
+                        auto set_vector = std::vector<unsigned char>{};
+                        std::copy(std::get<0>(tree_tuple)->data.begin() + std::get<0>(pos_tup),
+                                  std::get<0>(tree_tuple)->data.begin() + std::get<0>(pos_tup) +
+                                  std::get<1>(pos_tup) + 1, std::back_inserter(set_vector));
 
-                tree_radix_custom *last_tree;
-                for (auto &list: std::get<0>(single_route)) {
-                    for (auto &tree_tuple: list) {
-                        for (auto &pos_tup: std::get<1>(tree_tuple)) {
-                            //auto add_list = tree_test_sequence(std::get<0>(tree_tuple), bin_beg, bin_beg,std::get<0>(pos_tup),
-                            //                                   std::get<1>(pos_tup), std::get<2>(pos_tup));//insert into another tree
-                            if (std::get<0>(
-                                    tree_tuple)->data.empty()) {//how to insert, either empty simple insert or some tree construction anywhere
-                                //simple insert into data since this seems to be a new node that can contain simple information
-                                auto set_vector = std::vector<unsigned char>{};
-                                std::copy(std::get<0>(tree_tuple)->data.begin() + std::get<0>(pos_tup),
-                                          std::get<0>(tree_tuple)->data.begin() + std::get<0>(pos_tup) +
-                                          std::get<1>(pos_tup) + 1, std::back_inserter(set_vector));
-
-                                std::get<0>(add_tup) += std::get<1>(pos_tup) + 1;
-                                std::get<2>(add_tup) += std::get<1>(pos_tup) + 1;
-                                std::get<3>(add_tup) += comp.compress(set_vector).size();
-                            } else {
-                                std::get<0>(add_tup) += std::get<1>(pos_tup) + 1;
-                            }
-                        }
+                        std::get<0>(add_tup) += std::get<1>(pos_tup) + 1;
+                        std::get<2>(add_tup) += std::get<1>(pos_tup) + 1;
+                        std::get<3>(add_tup) += comp.compress(set_vector).size();
+                    } else {
+                        std::get<0>(add_tup) += std::get<1>(pos_tup) + 1;
                     }
                 }
                 if (cont_binary.begin() + std::get<0>(add_tup) < cont_binary.end()) {
@@ -769,7 +762,7 @@ namespace uh::trees {
                             std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>>> possibilities =
                             std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>>>{}) {
 
-            auto local_matches = compare_ultihash<reverse>(data_cont, binary_cont);//std::vector<std::tuple<std::size_t, std::size_t, tree_radix_custom *>>
+            auto local_matches = compare_ultihash<ContainerData,ContainerBinary,reverse>(data_cont, binary_cont);//std::vector<std::tuple<std::size_t, std::size_t, tree_radix_custom *>>
 
             auto match_duplicate = local_matches.begin();
             while(match_duplicate!=local_matches.end()){
@@ -860,19 +853,27 @@ namespace uh::trees {
         //returns the path of maximum fit and the match size
         /*std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::vector<unsigned char>::const_iterator, std::vector<unsigned char>::const_iterator, std::vector<unsigned char>::const_iterator>>>>>, std::size_t>>*/
         template<class ContainerBinary, bool reverse = false>
-        auto
-        search(ContainerBinary &cont_binary,//                                                                                                  data offset,binary offset after node integration
-               std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>>>>>, std::size_t, std::size_t>> possibilities =
-               std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>>>>>, std::size_t, std::size_t>>{},
-               std::vector<tree_radix_custom *> limiter_children = std::vector<tree_radix_custom *>{}) {
+        std::vector<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>,std::size_t, std::size_t>>>
+        search(ContainerBinary &cont_binary,std::vector<tree_radix_custom *> limiter_children = std::vector<tree_radix_custom *>{}) {
 
             if (cont_binary.empty()) {
                 return possibilities;
             }
 
+            //a list holding possibilities of paths of matches
+            //                              tree of results                     matches with offset and size       num matches  binary advance
+            std::list<std::vector<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>,std::size_t, std::size_t>>>>possibilities{};
+
+
+
             //while a possibility still changes on search_match filter, it is continued to be executed
+            /*
             possibilities = search_match_filter<std::vector<unsigned char>, ContainerBinary, reverse>(data, cont_binary,
-                                                                                                      possibilities);
+                                                                                                      possibilities);*/
+            //std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>>>
+            //std::vector<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>,std::size_t, std::size_t>>>{}
+
+            /*
             if(possibilities.empty()){
                 return possibilities;
             }
@@ -882,13 +883,13 @@ namespace uh::trees {
                 std::advance(last_list_it,-1);
 
             }
-
-
+            */
+            /*
 
             decltype(possibilities) new_recursive{};
 
             auto single_pos = possibilities.begin();
-            std::size_t single_count{};//TODO: least fragments against
+            std::size_t single_count{};//least fragments against
             while (single_pos != possibilities.end()) {
                 if constexpr (!reverse) {
                     if (data.begin() + std::get<1>(*single_pos) + 1 == data.end() ||
@@ -1054,7 +1055,7 @@ namespace uh::trees {
                 poss_beg++;
             }
 
-            return possibilities;
+            return possibilities;*/
         }
     };
 }
