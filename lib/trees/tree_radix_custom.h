@@ -889,7 +889,7 @@ namespace uh::trees {
                     //child search
                     if(std::get<0>(*search_within)->children.empty()){
                         //this path reached an end, store
-                        possibilities_out.push_back(current_path);
+                        if(!std::get<1>(current_path).empty())possibilities_out.push_back(current_path);
                     }
                     else{
                         //append fresh search requests to the back of the list for all children
