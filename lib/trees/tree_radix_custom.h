@@ -765,163 +765,96 @@ namespace uh::trees {
         //returns std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<decltype(bin_beg), decltype(bin_end), decltype(bin_beg)>>>>>, std::size_t>>
         template<class ContainerData, class ContainerBinary, bool reverse = false>
         auto
-        search_match_filter(ContainerData &data_cont, ContainerBinary &binary_cont,
-                            std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>>>>>, std::size_t, std::size_t>> possibilities =
-                            std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>>>>>, std::size_t, std::size_t>>{}) {
-            auto local_matches = compare_ultihash<ContainerData, ContainerBinary, reverse>(data_cont, binary_cont);
+        search_match_filter(ContainerData &data_cont,ContainerBinary &binary_cont,
+                            std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>>> possibilities =
+                            std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>>>{}) {
 
-            auto legal_match_integration = [&data_cont](auto local_matches) {
-                std::sort(local_matches.begin(), local_matches.end(), [](auto &a, auto &b) {
-                    return std::get<1>(a) < std::get<1>(b);
-                });
-                //LEGAL MATCH FILTER
-                auto match_beg = local_matches.begin();
+            auto local_matches = compare_ultihash<reverse>(data_cont, binary_cont);//std::vector<std::tuple<std::size_t, std::size_t, tree_radix_custom *>>
 
-                auto legal_check = [&local_matches, &data_cont](auto &match_beg, std::size_t start_val,
-                                                                std::size_t end_val) {
-                    //on empty or partial match make new list in list, else append the match results on total match
-                    bool legal_split;
-                    //if the end was matched too long we can do something about that, but else the algorithm is prefix oriented
-                    bool start_size, end_size, begin_reached, end_reached, total_found_size;
-                    do {
-
-                        start_size = std::get<0>(*match_beg) <= (long) start_val - MINIMUM_MATCH_SIZE ||
-                                     start_val + MINIMUM_MATCH_SIZE <= std::get<0>(*match_beg);
-                        end_size = data_cont.size() - (std::get<0>(*match_beg) + std::get<1>(*match_beg)) <=
-                                   (long) end_val - MINIMUM_MATCH_SIZE <= (long) start_val - MINIMUM_MATCH_SIZE ||
-                                   MINIMUM_MATCH_SIZE <=
-                                   data_cont.size() - (std::get<0>(*match_beg) + std::get<1>(*match_beg));
-                        total_found_size = MINIMUM_MATCH_SIZE <= std::get<1>(*match_beg);
-                        begin_reached = std::get<0>(*match_beg) == start_val;
-                        end_reached = data_cont.begin() + (std::get<0>(*match_beg) + std::get<1>(*match_beg)) + 1 ==
-                                      data_cont.begin() + end_val + 1;
-                        legal_split = ((start_size || begin_reached) && (end_size || end_reached) && total_found_size);
-
-                        if (!start_size && !begin_reached) {
-                            std::get<0>(*match_beg)++;//relative offset changes
-                            std::get<1>(*match_beg)--;
-                        }
-                        if (!end_size && !end_reached) {
-                            std::get<1>(*match_beg)--;
-                        }
-                        if (std::get<1>(*match_beg) < MINIMUM_MATCH_SIZE) {
-                            return false;
-                        }
-                    } while (((!end_size && !end_reached) || (!start_size && !begin_reached)) &&
-                             !local_matches.empty());
-
-                    return legal_split;
-                };
-
-                while (match_beg !=
-                       local_matches.end()) {//shrink all matches until the total result is legal, shrink smaller matches first until they vanish
-                    bool legal_general = legal_check(match_beg, (std::size_t) 0,
-                                                     std::max(data_cont.size() - 1, (std::size_t) 0));
-                    if (!legal_general) {
-                        local_matches.erase(match_beg);
-                        match_beg = local_matches.begin();
-                        continue;
-                    }
-                    auto match_begin_legal_shift = local_matches.begin();
-                    while (match_begin_legal_shift != local_matches.end()) {
-                        bool legal = legal_check(match_begin_legal_shift, std::get<0>(*match_beg),
-                                                 std::get<0>(*match_beg) + std::get<1>(*match_beg));
-                        if (!legal) {
-                            local_matches.erase(match_begin_legal_shift);
-                            match_begin_legal_shift = local_matches.begin();
-                        } else match_begin_legal_shift++;
-                    }
-                    match_beg++;
+            auto match_duplicate = local_matches.begin();
+            while(match_duplicate!=local_matches.end()){
+                if(std::count(std::get<1>(possibilities).begin(),std::get<1>(possibilities).end(),*match_duplicate)){
+                    std::size_t reinvoke_count = std::distance(local_matches.begin(),match_duplicate);
+                    local_matches.erase(match_duplicate);
+                    match_duplicate = local_matches.begin()+reinvoke_count;
+                    continue;
                 }
+                match_duplicate++;
+            }
 
-                /*
-                std::sort(local_matches.begin(), local_matches.end(), [](auto &a, auto &b) {
-                    return std::get<1>(a) > std::get<1>(b);
-                });
+            if (local_matches.empty() && std::get<1>(possibilities).empty())return possibilities;
 
-                if (local_matches.size() > 1) {
-                    std::size_t max_fit{};
-                    auto best_beg = local_matches.begin();
-                    while (best_beg != local_matches.end()) {
-                        max_fit = std::max(max_fit,std::get<0>(*best_beg));
-                        if (std::get<0>(*best_beg) < max_fit) {
-                            //break and delete until end
-                            break;
-                        }
-                        best_beg++;
+            std::get<1>(possibilities).insert(std::get<1>(possibilities).end(),local_matches.begin(),local_matches.end());
+
+            std::sort(local_matches.begin(), local_matches.end(), [](auto &a, auto &b) {
+                return std::get<1>(a) < std::get<1>(b);
+            });
+            //LEGAL MATCH FILTER
+            auto legal_check = [&data_cont](auto &match_beg, std::size_t start_val,
+                                                            std::size_t end_val) {
+                //on empty or partial match make new list in list, else append the match results on total match
+                bool legal_split;
+                //if the end was matched too long we can do something about that, but else the algorithm is prefix oriented
+                bool start_size, end_size, begin_reached, end_reached, total_found_size;
+                do {
+
+                    start_size = std::get<0>(*match_beg) <= (long) start_val - MINIMUM_MATCH_SIZE ||
+                                 start_val + MINIMUM_MATCH_SIZE <= std::get<0>(*match_beg);
+                    end_size = data_cont.size() - (std::get<0>(*match_beg) + std::get<1>(*match_beg)) <=
+                               (long) end_val - MINIMUM_MATCH_SIZE <= (long) start_val - MINIMUM_MATCH_SIZE ||
+                               MINIMUM_MATCH_SIZE <=
+                               data_cont.size() - (std::get<0>(*match_beg) + std::get<1>(*match_beg));
+                    total_found_size = MINIMUM_MATCH_SIZE <= std::get<1>(*match_beg);
+                    begin_reached = std::get<0>(*match_beg) == start_val;
+                    end_reached = data_cont.begin() + (std::get<0>(*match_beg) + std::get<1>(*match_beg)) + 1 ==
+                                  data_cont.begin() + end_val + 1;
+                    legal_split = ((start_size || begin_reached) && (end_size || end_reached) && total_found_size);
+
+                    if (!start_size && !begin_reached) {
+                        std::get<0>(*match_beg)++;//relative offset changes
+                        std::get<1>(*match_beg)--;
                     }
-                    local_matches.erase(best_beg, local_matches.end());
-                }
-                //sort the smallest offset out of the largest match results in case the match sizes are equal*/
-                std::sort(local_matches.begin(), local_matches.end(), [](auto &a, auto &b) {
-                    return std::get<0>(a) < std::get<0>(b);
-                });
-                /*
-                match_beg = local_matches.begin();//deduplicate matches
-                while(match_beg != local_matches.end()){
-                    if(std::count(match_beg+1,local_matches.end(),*match_beg)>1){
-                        std::size_t reinvoke_count = std::distance(match_beg,local_matches.end())-1;
-                        local_matches.erase(match_beg);
-                        match_beg = local_matches.begin()+reinvoke_count;
-                        continue;
+                    if (!end_size && !end_reached) {
+                        std::get<1>(*match_beg)--;
                     }
-                    match_beg++;
-                }
-                */
-                //all matches are valid as long as they do not collide
-                return local_matches;
+                    if (std::get<1>(*match_beg) < MINIMUM_MATCH_SIZE) {
+                        return false;
+                    }
+                } while (((!end_size && !end_reached) || (!start_size && !begin_reached)));
+
+                return legal_split;
             };
 
-            if (local_matches.empty())return possibilities;
+            auto match_beg = std::get<1>(possibilities).begin();
 
-            local_matches = legal_match_integration(local_matches);
-
-            decltype(possibilities) out_possibilities;
-
-            auto match_beg = local_matches.begin();
-            auto possibilities_manage = [&](auto &input_list_tmp, auto &found_vec) {
-                //continue match stream
-                if (std::get<0>(input_list_tmp).empty()) {
-                    std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>>>> tmp_list{};
-                    tmp_list.emplace_back(this, found_vec);
-                    std::get<0>(input_list_tmp).push_back(tmp_list);
-                } else {
-                    //if the tree element of the last element is still the same as "this" we append to the vector, else we append a new list
-                    auto last_it_outer_list = (--(std::get<0>(input_list_tmp).end()));
-                    auto last_it_inner_list = (--(last_it_outer_list->end()));
-                    if (std::get<0>(*last_it_inner_list) == this) {//check if tree pointer is the same
-                        std::get<1>(*last_it_inner_list).push_back(found_vec[0]);
-                        std::get<1>(*last_it_inner_list) = legal_match_integration(std::get<1>(*last_it_inner_list));
-                    } else {
-                        last_it_outer_list->emplace_back(this, found_vec);
-                    }
+            while (match_beg !=
+                    std::get<1>(possibilities).end()) {//shrink all matches until the total result is legal, shrink smaller matches first until they vanish
+                bool legal_general = legal_check(match_beg, (std::size_t) 0,
+                                                 std::max(data_cont.size() - 1, (std::size_t) 0));
+                if (!legal_general) {
+                    std::get<1>(possibilities).erase(match_beg);
+                    match_beg = std::get<1>(possibilities).begin();
+                    continue;
                 }
-                std::size_t advance = std::get<1>(*match_beg);
-                std::get<1>(input_list_tmp)++;//increase the number of matches found
-                std::get<2>(input_list_tmp) += advance + 1;//binary advance
-
-                out_possibilities.push_back(input_list_tmp);
-            };
-
-            while (match_beg != local_matches.end()) {
-                std::vector<std::tuple<std::size_t, std::size_t>> found_vec{};
-                found_vec.emplace_back(std::get<0>(*match_beg), std::get<1>(*match_beg));
-                if (possibilities.empty()) {
-                    //new start of possibilities
-                    std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>>>> tmp_list{};
-                    tmp_list.emplace_back(this, found_vec);
-                    std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>>>>> outer_list{
-                            tmp_list};
-
-                    std::size_t advance = std::get<1>(*match_beg);
-                    out_possibilities.emplace_back(outer_list, 1, advance + 1);
-                } else
-                    for (auto &input_list_tmp: possibilities) {//COPY input list and create different path calculation
-                        possibilities_manage(input_list_tmp, found_vec);
-                    }
+                auto match_begin_legal_shift = std::get<1>(possibilities).begin();
+                while (match_begin_legal_shift != std::get<1>(possibilities).end()) {
+                    bool legal = legal_check(match_begin_legal_shift, std::get<0>(*match_beg),
+                                             std::get<0>(*match_beg) + std::get<1>(*match_beg));
+                    if (!legal) {
+                        std::get<1>(possibilities).erase(match_begin_legal_shift);
+                        match_begin_legal_shift = std::get<1>(possibilities).begin();
+                    } else match_begin_legal_shift++;
+                }
                 match_beg++;
             }
-            return out_possibilities;
+
+            //sort the smallest offset out of the largest match results in case the match sizes are equal*/
+            std::sort(std::get<1>(possibilities).begin(), std::get<1>(possibilities).end(), [](auto &a, auto &b) {
+                return std::get<0>(a) < std::get<0>(b);
+            });
+            //all matches are valid as long as they do not collide
+
+            return possibilities;
         }
 
         //returns the path of maximum fit and the match size
@@ -937,15 +870,25 @@ namespace uh::trees {
                 return possibilities;
             }
 
-            /*std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<decltype(bin_beg), decltype(bin_end), decltype(bin_beg)>>>>>, std::size_t,decltype(bin_end), decltype(bin_beg)>>*/
             //while a possibility still changes on search_match filter, it is continued to be executed
             possibilities = search_match_filter<std::vector<unsigned char>, ContainerBinary, reverse>(data, cont_binary,
                                                                                                       possibilities);
+            if(possibilities.empty()){
+                return possibilities;
+            }
+            //TODO: permutate over the matches that are taken in and remove outer list
+            for(auto&item:possibilities){
+                auto last_list_it = std::get<0>(item).end();
+                std::advance(last_list_it,-1);
+
+            }
+
+
 
             decltype(possibilities) new_recursive{};
 
             auto single_pos = possibilities.begin();
-            std::size_t single_count{};
+            std::size_t single_count{};//TODO: least fragments against
             while (single_pos != possibilities.end()) {
                 if constexpr (!reverse) {
                     if (data.begin() + std::get<1>(*single_pos) + 1 == data.end() ||
@@ -971,7 +914,7 @@ namespace uh::trees {
                 pos_vector.push_back(*single_pos);
                 tmp = search_match_filter<decltype(data), ContainerBinary, reverse>(data, binary_subset, pos_vector);
                 std::for_each(tmp.begin(), tmp.end(), [&new_recursive](auto &item1) {
-                    if (std::none_of(new_recursive.begin(), new_recursive.end(), [&item1](auto &item2) {
+                    if (std::none_of(new_recursive.begin(), new_recursive.end(), [&item1](auto &item2) {//TODO: try to merge into the inner list of the last outer list
                         return item2 == item1;
                     })) {
                         new_recursive.push_back(item1);
