@@ -699,22 +699,7 @@ namespace uh::trees {
             for (auto &single_route: search_index) {
                 std::tuple<std::size_t, std::size_t, std::size_t, std::size_t> add_tup{};
                 for (auto &pos_tup: std::get<1>(single_route)) {
-                    //auto add_list = tree_test_sequence(std::get<0>(tree_tuple), bin_beg, bin_beg,std::get<0>(pos_tup),
-                    //                                   std::get<1>(pos_tup), std::get<2>(pos_tup));//insert into another tree
-                    if (std::get<0>(
-                            tree_tuple)->data.empty()) {//how to insert, either empty simple insert or some tree construction anywhere
-                        //simple insert into data since this seems to be a new node that can contain simple information
-                        auto set_vector = std::vector<unsigned char>{};
-                        std::copy(std::get<0>(tree_tuple)->data.begin() + std::get<0>(pos_tup),
-                                  std::get<0>(tree_tuple)->data.begin() + std::get<0>(pos_tup) +
-                                  std::get<1>(pos_tup) + 1, std::back_inserter(set_vector));
-
-                        std::get<0>(add_tup) += std::get<1>(pos_tup) + 1;
-                        std::get<2>(add_tup) += std::get<1>(pos_tup) + 1;
-                        std::get<3>(add_tup) += comp.compress(set_vector).size();
-                    } else {
-                        std::get<0>(add_tup) += std::get<1>(pos_tup) + 1;
-                    }
+                    std::get<0>(add_tup) += std::get<1>(pos_tup) + 1;
                 }
                 if (cont_binary.begin() + std::get<0>(add_tup) < cont_binary.end()) {
                     auto set_vector = std::vector<unsigned char>{};
@@ -837,16 +822,16 @@ namespace uh::trees {
         search(ContainerBinary &cont_binary,std::vector<tree_radix_custom *> limiter_children = std::vector<tree_radix_custom *>{}) {
 
             if (cont_binary.empty()) {
-                return possibilities;
+                return std::vector<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>>,std::size_t, std::size_t>>{};
             }
 
             //a list holding possibilities of paths of matches
             //                              tree of results                     matches with offset and size       num matches  binary advance
-            std::list<std::vector<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>,std::size_t, std::size_t>>>possibilities{};
+            std::list<std::vector<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>>,std::size_t, std::size_t>>>possibilities{};
 
 
 
-            return std::vector<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>,std::size_t, std::size_t>>{};
+            return std::vector<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>>,std::size_t, std::size_t>>{};
         }
     };
 }
