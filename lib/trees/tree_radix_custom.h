@@ -760,8 +760,7 @@ namespace uh::trees {
                     end_size = llabs((long) end_val-((long)std::get<0>(*match_beg)+(long)std::get<1>(*match_beg)+1)) >= MINIMUM_MATCH_SIZE;
                     total_found_size = MINIMUM_MATCH_SIZE <= std::get<1>(*match_beg);
                     begin_reached = std::get<0>(*match_beg) == start_val;
-                    end_reached = data_cont.begin() + (std::get<0>(*match_beg) + std::get<1>(*match_beg)) + 1 ==
-                                  data_cont.begin() + end_val + 1;
+                    end_reached = std::get<0>(*match_beg)+std::get<1>(*match_beg) + 1 == end_val;
                     legal_split = ((start_size || begin_reached) && (end_size || end_reached) && total_found_size);
 
                     if (!start_size && !begin_reached) {

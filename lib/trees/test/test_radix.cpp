@@ -71,8 +71,8 @@ BOOST_AUTO_TEST_CASE(search_match_filter_test)
     input_string_begin = std::vector<unsigned char>{ello_Worl.begin(), ello_Worl.end()};
 
     result = t.search_match_filter(data_string, input_string_begin);
-    BOOST_CHECK(std::get<0>(result[0]) == 0);
-    BOOST_CHECK(std::get<1>(result[0]) == 10);
+    BOOST_CHECK(std::get<0>(result[0]) == 2);
+    BOOST_CHECK(std::get<1>(result[0]) == 8);
 }
 
 BOOST_AUTO_TEST_CASE(search_empty_test)
@@ -86,7 +86,7 @@ BOOST_AUTO_TEST_CASE(search_empty_test)
 
 BOOST_AUTO_TEST_CASE(radix_constructor_test)
 {
-    auto *t = new uh::trees::tree_radix_custom{};
+    auto *t = new uh::trees::tree_radix_custom();
     BOOST_CHECK(t->children.empty());
     std::string hello_string = "Hello World";
     auto data_string = std::vector<unsigned char>{hello_string.begin(), hello_string.end()};
