@@ -61,15 +61,9 @@ BOOST_AUTO_TEST_CASE(search_match_filter_test)
 
     uh::trees::tree_radix_custom t{};
     auto result = t.search_match_filter(data_string, input_string_begin);
-    BOOST_CHECK(result.size() == 1);
-    BOOST_CHECK(std::get<1>(result[0]) == 1);//number of matches is 1
-    BOOST_CHECK(std::get<2>(result[0]) == 5);
-
-    auto last_it_outer_list = (--(std::get<0>(result[0]).end()));
-    auto last_it_inner_list = (--(last_it_outer_list->end()));
-
-    BOOST_CHECK(std::get<0>(std::get<1>(*last_it_inner_list)[0]) == 2);//data iterator
-    BOOST_CHECK(std::get<1>(std::get<1>(*last_it_inner_list)[0]) == 4);//input iterator begin
+    BOOST_CHECK(std::get<1>(result).size() == 1);
+    BOOST_CHECK(std::get<0>(std::get<1>(result)) == 0);//number of matches is 1
+    BOOST_CHECK(std::get<1>(std::get<1>(result)) == 4);
 
     data_string.erase(data_string.cbegin());
     data_string.erase(data_string.cend() - 1);
@@ -77,14 +71,8 @@ BOOST_AUTO_TEST_CASE(search_match_filter_test)
     input_string_begin = std::vector<unsigned char>{ello_Worl.begin(), ello_Worl.end()};
 
     result = t.search_match_filter(data_string, input_string_begin);
-    BOOST_CHECK(result.size() == 1);
-    BOOST_CHECK(std::get<2>(result[0]) == 11);
-
-    last_it_outer_list = (--(std::get<0>(result[0]).end()));
-    last_it_inner_list = (--(last_it_outer_list->end()));
-
-    BOOST_CHECK(std::get<0>(std::get<1>(*last_it_inner_list)[0]) == 1);//data iterator
-    BOOST_CHECK(std::get<1>(std::get<1>(*last_it_inner_list)[0]) == 10);//input iterator begin
+    BOOST_CHECK(std::get<0>(std::get<1>(result)) == 0);
+    BOOST_CHECK(std::get<1>(std::get<1>(result)) == 10);
 }
 
 BOOST_AUTO_TEST_CASE(search_empty_test)
