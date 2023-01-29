@@ -176,106 +176,124 @@ namespace uh::trees {
             return false;
         }
 
-        /*std::vector<std::tuple<std::vector<unsigned char>::const_iterator,std::vector<unsigned char>::const_iterator,std::vector<unsigned char>::const_iterator>>*/
+        //returns match position on data of tree node, relative until end of string, binary advancement, match index (order match was found)
         template<class ContainerData, class ContainerBinary, bool reverse = false>
-        auto
+        std::vector<std::tuple<std::size_t, std::size_t, std::size_t,std::size_t>>
         compare_ultihash(ContainerData &data_cont, ContainerBinary &binary_cont) {
             //if input does only fit to a shorter string as a subset of data, count becomes negative, else positive including ß
             //data offset iterator and start and end of input
-            std::vector<std::tuple<std::size_t, std::size_t>> matches{};//data offset beginning found, end offset from beginning
+            std::vector<std::tuple<std::size_t, std::size_t,std::size_t,std::size_t>> matches{};//data offset beginning found, end offset from beginning
             if (data_cont.empty() || binary_cont.empty())return matches;
-            std::size_t current_offset = 0;
+
+            std::set<std::size_t> advancements_binary{0};
+            std::size_t match_index{};
+
+
             //search forward through data
             if constexpr (!reverse) {
-                do {
-                    //first element match
-                    std::unique_lock lock(simd_protect);
-                    if (simd_count < SIMD_UNITS) {
-                        simd_count += 1;
-                        lock.unlock();
-                        current_offset = std::distance(data_cont.begin(), std::find(std::execution::unseq,
-                                                                                    data_cont.begin() + current_offset,
-                                                                                    data_cont.end(),
-                                                                                    *binary_cont.begin()));
-                        lock.lock();
-                        simd_count -= 1;
-                        lock.unlock();
-                    } else {
-                        lock.unlock();
-                        current_offset = std::distance(data_cont.begin(),
-                                                       std::find(data_cont.begin() + current_offset, data_cont.end(),
-                                                                 *binary_cont.begin()));
-                    }
 
-                    //search how long input matches
-                    std::pair<decltype(data_cont.begin()), decltype(data_cont.end())> found;
-                    lock.lock();
-                    if (simd_count < SIMD_UNITS) {
-                        simd_count += 1;
-                        lock.unlock();
-                        found = std::mismatch(std::execution::unseq, data_cont.begin() + current_offset,
-                                              data_cont.end(), binary_cont.begin(), binary_cont.end());
-                        lock.lock();
-                        simd_count -= 1;
-                        lock.unlock();
-                    } else {
-                        lock.unlock();
-                        found = std::mismatch(data_cont.begin() + current_offset, data_cont.end(), binary_cont.begin(),
-                                              binary_cont.end());
-                    }
+                for(auto adv:advancements_binary){
+                    std::size_t current_offset = 0;
+                    do {
+                        //first element match
+                        std::unique_lock lock(simd_protect);
+                        if (simd_count < SIMD_UNITS) {
+                            simd_count += 1;
+                            lock.unlock();
+                            current_offset = std::distance(data_cont.begin(), std::find(std::execution::unseq,
+                                                                                        data_cont.begin() + current_offset,
+                                                                                        data_cont.end(),
+                                                                                        *(binary_cont.begin()+adv)));
+                            lock.lock();
+                            simd_count -= 1;
+                            lock.unlock();
+                        } else {
+                            lock.unlock();
+                            current_offset = std::distance(data_cont.begin(),
+                                                           std::find(data_cont.begin() + current_offset, data_cont.end(),
+                                                                     *(binary_cont.begin()+adv)));
+                        }
 
-                    if (std::max((long) std::distance(data_cont.begin() + current_offset, found.first) - 1, (long) 0) >=
-                        MINIMUM_MATCH_SIZE) {
-                        matches.emplace_back(current_offset, std::max(
-                                (long) std::distance(data_cont.begin() + current_offset, found.first) - 1, (long) 0));
-                    }
-                    if (data_cont.begin() + current_offset != data_cont.end())current_offset++;
-                } while (data_cont.begin() + current_offset != data_cont.end());
+                        //search how long input matches
+                        std::pair<decltype(data_cont.begin()), decltype(data_cont.end())> found;
+                        lock.lock();
+                        if (simd_count < SIMD_UNITS) {
+                            simd_count += 1;
+                            lock.unlock();
+                            found = std::mismatch(std::execution::unseq, data_cont.begin() + current_offset,
+                                                  data_cont.end(), binary_cont.begin()+adv, binary_cont.end());
+                            lock.lock();
+                            simd_count -= 1;
+                            lock.unlock();
+                        } else {
+                            lock.unlock();
+                            found = std::mismatch(data_cont.begin() + current_offset, data_cont.end(), binary_cont.begin()+adv,
+                                                  binary_cont.end());
+                        }
+
+                        if (std::max((long) std::distance(data_cont.begin() + current_offset, found.first) - 1, (long) 0) >=
+                            MINIMUM_MATCH_SIZE) {
+                            long integrate_offset =  std::max(
+                                    (long) std::distance(data_cont.begin() + current_offset, found.first) - 1, (long) 0);
+                            matches.emplace_back(current_offset,integrate_offset,adv,match_index);
+                            advancements_binary.emplace(integrate_offset);
+                            match_index++;
+                        }
+                        if (data_cont.begin() + current_offset != data_cont.end())current_offset++;
+                    } while (data_cont.begin() + current_offset != data_cont.end());
+                }
             } else {
-                do {
-                    //first element match
-                    std::unique_lock lock(simd_protect);
-                    if (simd_count < SIMD_UNITS) {
-                        simd_count += 1;
-                        lock.unlock();
-                        current_offset = std::distance(data_cont.rbegin(), std::find(std::execution::unseq,
-                                                                                     data_cont.rbegin() +
-                                                                                     current_offset, data_cont.rend(),
-                                                                                     *binary_cont.begin()));
-                        lock.lock();
-                        simd_count -= 1;
-                        lock.unlock();
-                    } else {
-                        lock.unlock();
-                        current_offset = std::distance(data_cont.rbegin(),
-                                                       std::find(data_cont.rbegin() + current_offset, data_cont.rend(),
-                                                                 *binary_cont.begin()));
-                    }
+                for(auto adv:advancements_binary){
+                    std::size_t current_offset = 0;
 
-                    //search how long input matches
-                    std::pair<decltype(data_cont.rbegin()), decltype(data_cont.rend())> found;
-                    lock.lock();
-                    if (simd_count < SIMD_UNITS) {
-                        simd_count += 1;
-                        lock.unlock();
-                        found = std::mismatch(std::execution::unseq, data_cont.rbegin() + current_offset,
-                                              data_cont.rend(), binary_cont.begin(), binary_cont.end());
-                        lock.lock();
-                        simd_count -= 1;
-                        lock.unlock();
-                    } else {
-                        lock.unlock();
-                        found = std::mismatch(data_cont.rbegin() + current_offset, data_cont.rend(),
-                                              binary_cont.begin(), binary_cont.end());
-                    }
+                    do {
+                        //first element match
+                        std::unique_lock lock(simd_protect);
+                        if (simd_count < SIMD_UNITS) {
+                            simd_count += 1;
+                            lock.unlock();
+                            current_offset = std::distance(data_cont.rbegin(), std::find(std::execution::unseq,
+                                                                                        data_cont.rbegin() + current_offset,
+                                                                                        data_cont.rend(),
+                                                                                        *(binary_cont.begin()+adv)));
+                            lock.lock();
+                            simd_count -= 1;
+                            lock.unlock();
+                        } else {
+                            lock.unlock();
+                            current_offset = std::distance(data_cont.rbegin(),
+                                                           std::find(data_cont.rbegin() + current_offset, data_cont.rend(),
+                                                                     *(binary_cont.begin()+adv)));
+                        }
 
-                    if (std::max((long) std::distance(data_cont.rbegin() + current_offset, found.first) - 1,
-                                 (long) 0) >= MINIMUM_MATCH_SIZE) {
-                        matches.emplace_back(current_offset, std::max(
-                                (long) std::distance(data_cont.rbegin() + current_offset, found.first) - 1, (long) 0));
-                    }
-                    if (data_cont.rbegin() + current_offset != data_cont.rend())current_offset++;
-                } while (data_cont.rbegin() + current_offset != data_cont.rend());
+                        //search how long input matches
+                        std::pair<decltype(data_cont.begin()), decltype(data_cont.end())> found;
+                        lock.lock();
+                        if (simd_count < SIMD_UNITS) {
+                            simd_count += 1;
+                            lock.unlock();
+                            found = std::mismatch(std::execution::unseq, data_cont.rbegin() + current_offset,
+                                                  data_cont.rend(), binary_cont.begin()+adv, binary_cont.end());
+                            lock.lock();
+                            simd_count -= 1;
+                            lock.unlock();
+                        } else {
+                            lock.unlock();
+                            found = std::mismatch(data_cont.rbegin() + current_offset, data_cont.rend(), binary_cont.begin()+adv,
+                                                  binary_cont.end());
+                        }
+
+                        if (std::max((long) std::distance(data_cont.rbegin() + current_offset, found.first) - 1, (long) 0) >=
+                            MINIMUM_MATCH_SIZE) {
+                            long integrate_offset =  std::max(
+                                    (long) std::distance(data_cont.rbegin() + current_offset, found.first) - 1, (long) 0);
+                            matches.emplace_back(current_offset,integrate_offset,adv,match_index);
+                            advancements_binary.emplace(integrate_offset);
+                            match_index++;
+                        }
+                        if (data_cont.rbegin() + current_offset != data_cont.end())current_offset++;
+                    } while (data_cont.rbegin() + current_offset != data_cont.end());
+                }
             }
 
             return matches;
@@ -726,27 +744,35 @@ namespace uh::trees {
 
         //returns std::vector<std::tuple<std::list<std::list<std::tuple<tree_radix_custom *, std::vector<std::tuple<decltype(bin_beg), decltype(bin_end), decltype(bin_beg)>>>>>, std::size_t>>
         template<class ContainerData, class ContainerBinary, bool reverse = false>
-        std::vector<std::tuple<std::size_t, std::size_t>>
+        std::vector<std::tuple<std::size_t, std::size_t,std::size_t, std::size_t>>
         search_match_filter(ContainerData &data_cont,ContainerBinary &binary_cont,
-                            std::vector<std::tuple<std::size_t, std::size_t>> possibilities =
-                            std::vector<std::tuple<std::size_t, std::size_t>>{}) {
+                            std::vector<std::tuple<std::size_t, std::size_t,std::size_t, std::size_t>> possibilities =
+                            std::vector<std::tuple<std::size_t, std::size_t,std::size_t, std::size_t>>{}) {
 
-            auto local_matches = compare_ultihash<ContainerData,ContainerBinary,reverse>(data_cont, binary_cont);//std::vector<std::tuple<std::size_t, std::size_t, tree_radix_custom *>>
+            auto local_matches = compare_ultihash<ContainerData,ContainerBinary,reverse>(data_cont, binary_cont);//std::vector<std::tuple<std::size_t, std::size_t, std::size_t,std::size_t>>
 
             auto match_duplicate = local_matches.begin();
             while(match_duplicate!=local_matches.end()){
-                if(std::count(possibilities.begin(),possibilities.end(),*match_duplicate)){
+                bool dup_found = false;
+                for(const auto &dup:possibilities){
+                    if(std::get<0>(*match_duplicate)==std::get<0>(dup) && std::get<1>(*match_duplicate)==std::get<1>(dup)){
+                        dup_found = true;
+                        break;
+                    }
+                }
+                if(dup_found){
                     std::size_t reinvoke_count = std::distance(local_matches.begin(),match_duplicate);
                     local_matches.erase(match_duplicate);
                     match_duplicate = local_matches.begin()+reinvoke_count;
                     continue;
                 }
+                else{
+                    possibilities.push_back(*match_duplicate);
+                }
                 match_duplicate++;
             }
 
             if (local_matches.empty() && possibilities.empty())return possibilities;
-
-            possibilities.insert(possibilities.end(),local_matches.begin(),local_matches.end());
 
             std::sort(local_matches.begin(), local_matches.end(), [](auto &a, auto &b) {
                 return std::get<1>(a) < std::get<1>(b);
