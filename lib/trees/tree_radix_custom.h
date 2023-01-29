@@ -793,7 +793,7 @@ namespace uh::trees {
                 auto match_begin_legal_shift = possibilities.begin();
                 while (match_begin_legal_shift != possibilities.end()) {
                     bool legal = legal_check(match_begin_legal_shift, std::get<0>(*match_beg),
-                                             std::get<0>(*match_beg) + std::get<1>(*match_beg));
+                                             std::get<0>(*match_beg) + std::get<1>(*match_beg) + 1);
                     if (!legal) {
                         possibilities.erase(match_begin_legal_shift);
                         std::sort(possibilities.begin(),possibilities.end(),[](auto &a,auto &b){
