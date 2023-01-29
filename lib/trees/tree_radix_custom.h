@@ -819,17 +819,44 @@ namespace uh::trees {
         //returns the path of maximum fit and the match size
         template<class ContainerBinary, bool reverse = false>
         std::vector<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>>,std::size_t, std::size_t>>
-        search(ContainerBinary &cont_binary,std::vector<tree_radix_custom *> limiter_children = std::vector<tree_radix_custom *>{}) {
+        search(ContainerBinary &cont_binary) {
 
             if (cont_binary.empty()) {
                 return std::vector<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>>,std::size_t, std::size_t>>{};
             }
 
+            std::vector<std::vector<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>>,std::size_t, std::size_t>>>possibilities_out{};
+
             //a list holding possibilities of paths of matches
             //                              tree of results                     matches with offset and size       num matches  binary advance
-            std::list<std::vector<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>>,std::size_t, std::size_t>>>possibilities{};
+            std::list<std::vector<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>>,std::size_t, std::size_t>>>possibilities_work{};
+            std::vector<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>>,std::size_t, std::size_t>> start_node{};
+            start_node.emplace_back(this,std::vector<std::tuple<std::size_t, std::size_t>>{},0,0);
+            possibilities_work.push_back(start_node);
 
+            std::set<std::size_t> advancements{0};
 
+            auto poss_beg = possibilities_work.begin();
+            while(possibilities_work.end()){
+                std::set<std::size_t> advancements_already_checked{};
+                //read first entry, search with permutation of advancement and append the results to the end of work list
+
+                std::vector<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>>,std::size_t, std::size_t>> current_path = *poss_beg;
+
+                //search within last node of that path
+                auto search_within = current_path.end();//std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>>,std::size_t, std::size_t>
+                std::advance(search_within,-1);
+
+                //TODO: search data within with all possible advancements
+
+                if(std::get<0>(*search_within)->children.empty()){
+                    //this path reached an end, store
+                    possibilities_out.push_back(current_path);
+                }
+                //TODO: always clear out paths if there is a longer path coming in still having children
+                poss_begin++;
+                possibilities_work.pop_front();
+            }
 
             return std::vector<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>>,std::size_t, std::size_t>>{};
         }
