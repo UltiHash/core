@@ -785,6 +785,9 @@ namespace uh::trees {
                 bool legal_general = legal_check(match_beg, (std::size_t) 0,data_cont.size());
                 if (!legal_general) {
                     possibilities.erase(match_beg);
+                    std::sort(possibilities.begin(),possibilities.end(),[](auto &a,auto &b){
+                        return std::get<0>(a) < std::get<1>(b);
+                    });
                     match_beg = possibilities.begin();
                     continue;
                 }
@@ -794,6 +797,9 @@ namespace uh::trees {
                                              std::get<0>(*match_beg) + std::get<1>(*match_beg));
                     if (!legal) {
                         possibilities.erase(match_begin_legal_shift);
+                        std::sort(possibilities.begin(),possibilities.end(),[](auto &a,auto &b){
+                            return std::get<0>(a) < std::get<1>(b);
+                        });
                         match_begin_legal_shift = possibilities.begin();
                     } else match_begin_legal_shift++;
                 }
