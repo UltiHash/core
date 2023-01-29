@@ -782,6 +782,7 @@ namespace uh::trees {
                                                             std::size_t end_val) {
                 //on empty or partial match make new list in list, else append the match results on total match
                 bool legal_split;
+                bool changed = false;
                 //if the end was matched too long we can do something about that, but else the algorithm is prefix oriented
                 bool start_size, end_size, begin_reached, end_reached, total_found_size;
                 do {
@@ -796,23 +797,38 @@ namespace uh::trees {
                     if (!start_size && !begin_reached) {
                         std::get<0>(*match_beg)++;//relative offset changes
                         std::get<1>(*match_beg)--;
+                        changed = true;
                     }
                     if (!end_size && !end_reached) {
                         std::get<1>(*match_beg)--;
+                        changed = true;
                     }
                     if (std::get<1>(*match_beg) < MINIMUM_MATCH_SIZE) {
-                        return false;
+                        return std::make_tuple(legal_split,changed);
                     }
                 } while (((!end_size && !end_reached) || (!start_size && !begin_reached)));
 
-                return legal_split;
+                return std::make_tuple(legal_split,changed);
             };
 
             auto match_beg = possibilities.begin();
 
+            auto change_delete = [&possibilities](auto &match_beg){
+                std::size_t delete_binary_shift_higher = std::get<2>(match_beg);
+                std::size_t element_match_index = std::get<3>(match_beg);
+                std::erase_if(possibilities.begin(),possibilities.end(),[&delete_binary_shift_higher,&element_match_index](auto &item){
+                    return std::get<2>(item)>delete_binary_shift_higher && std::get<3>(item)>element_match_index;
+                });
+                match_beg = possibilities.begin();
+            };
+
             while (match_beg != possibilities.end()) {//shrink all matches until the total result is legal, shrink smaller matches first until they vanish
-                bool legal_general = legal_check(match_beg, (std::size_t) 0,data_cont.size());
-                if (!legal_general) {
+                auto legal_general = legal_check(match_beg, (std::size_t) 0,data_cont.size());
+                if(!std::get<1>(legal_general)){
+                    change_delete(match_beg);
+                    continue;
+                }
+                if (!std::get<0>(legal_general)) {
                     possibilities.erase(match_beg);
                     std::sort(possibilities.begin(),possibilities.end(),[](auto &a,auto &b){
                         return std::get<0>(a) < std::get<1>(b);
@@ -822,9 +838,13 @@ namespace uh::trees {
                 }
                 auto match_begin_legal_shift = possibilities.begin();
                 while (match_begin_legal_shift != possibilities.end()) {
-                    bool legal = legal_check(match_begin_legal_shift, std::get<0>(*match_beg),
+                    auto legal = legal_check(match_begin_legal_shift, std::get<0>(*match_beg),
                                              std::get<0>(*match_beg) + std::get<1>(*match_beg) + 1);
-                    if (!legal) {
+                    if(!std::get<1>(legal)){
+                        change_delete(match_begin_legal_shift);
+                        continue;
+                    }
+                    if (!std::get<0>(legal)) {
                         possibilities.erase(match_begin_legal_shift);
                         std::sort(possibilities.begin(),possibilities.end(),[](auto &a,auto &b){
                             return std::get<0>(a) < std::get<1>(b);
