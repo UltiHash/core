@@ -77,11 +77,14 @@ BOOST_AUTO_TEST_CASE(search_match_filter_test)
 
 BOOST_AUTO_TEST_CASE(search_empty_test)
 {
-    uh::trees::tree_radix_custom t;
+    auto* t = new uh::trees::tree_radix_custom();
     std::string hello_string = "Hello";
     auto data_string = std::vector<unsigned char>{hello_string.begin(), hello_string.end()};
-    auto result = t.search(data_string);
+    auto result = t->search(data_string);
+
     BOOST_CHECK(result.empty());
+
+    delete t;
 }
 
 BOOST_AUTO_TEST_CASE(radix_constructor_test)

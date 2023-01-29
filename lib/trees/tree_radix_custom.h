@@ -925,7 +925,7 @@ namespace uh::trees {
                 possibilities_work.sort(max_match_sort);
             }
 
-            if (possibilities_work.empty()) {
+            if (possibilities_out.empty()) {
                 return std::vector<std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t>>,std::size_t, std::size_t>>{};
             }
 
