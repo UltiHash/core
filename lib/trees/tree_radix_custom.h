@@ -906,7 +906,7 @@ namespace uh::trees {
                             if(child_vec_append.empty() && *(cont_binary.begin()+adv) == std::get<1>(heristic))continue;
                             for(const auto &tree:std::get<0>(heristic)){
                                 auto current_copy = current_path;
-                                current_copy.emplace_back(tree, std::vector<std::tuple<std::size_t,std::size_t>>{},std::get<2>(*search_within),std::get<3>(*search_within));
+                                current_copy.emplace_back(tree, std::vector<std::tuple<std::size_t,std::size_t>>{},std::get<2>(*search_within),adv);
                                 possibilities_work.push_back(current_copy);
                             }
                         }
