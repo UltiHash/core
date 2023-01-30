@@ -1058,7 +1058,7 @@ namespace uh::trees {
                     }
 
                     //write back if path does not exist
-                    if(std::get<0>(*search_within)->children.empty() && !std::get<0>(*search_within).empty()){
+                    if(std::get<0>(*search_within)->children.empty() && !std::get<1>(*search_within).empty()){
                         possibilities_out.push_back(current_path);
                     }
 
