@@ -926,20 +926,30 @@ namespace uh::trees {
                     //on advancement match append to correct path ending
                     bool found = false;
                     for(auto &m:micro_paths){
-                        auto last_match = m.end();
-                        std::advance(last_match,-1);
-                        //if same data offset duplicate the path at the back
-                        if(std::get<1>(*last_match) == std::get<1>(*input_micro_beg) && std::get<2>(*last_match) != std::get<2>(*input_micro_beg)){//offset is the same but size is not
-                            auto copy_m = m;
-                            copy_m.push_back(*input_micro_beg);
-                            micro_paths.push_back(copy_m);
-                            found = true;
-                            continue;
-                        }
-                        //only add to filter list if the size matches the difference of advancement
-                        if(std::get<2>(*input_micro_beg) == std::get<2>(*last_match)+std::get<1>(*input_micro_beg)+1){
-                            m.push_back(*input_micro_beg);
-                            found = true;
+                        //for all paths in m try to check if the input element matches either a predecessor or next element and insert
+
+                        auto tup_next_check_beg = m.begin();
+                        while(tup_next_check_beg!=m.end()){
+                            //only add to filter list if the size matches the difference of advancement
+
+                            //append before
+                            if(std::get<2>(*tup_next_check_beg) == std::get<2>(*input_micro_beg)+std::get<1>(*tup_next_check_beg)+1 &&
+                               std::get<3>(*tup_next_check_beg) > std::get<3>(*input_micro_beg)){
+                                m.push_back(*input_micro_beg);
+                                found = true;
+                            }
+                            //append after
+                            if(std::get<2>(*input_micro_beg) == std::get<2>(*tup_next_check_beg)+std::get<1>(*input_micro_beg)+1 && !found &&
+                               std::get<3>(*input_micro_beg) > std::get<3>(*tup_next_check_beg)){
+                                m.push_back(*(input_micro_beg+1));
+                                found = true;
+                            }
+                            if(found){
+                                (void)input2.erase(input_micro_beg);
+                                input_micro_beg = input2.begin();
+                                break;
+                            }
+                            tup_next_check_beg++;
                         }
                     }
                     if(!found || micro_paths.empty()){
