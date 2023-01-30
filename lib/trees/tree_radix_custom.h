@@ -1042,7 +1042,7 @@ namespace uh::trees {
                     auto search_within = current_path.end();//std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t, std::size_t, std::size_t>>,std::size_t, std::size_t>
                     std::advance(search_within,-1);
                     //search
-                    std::size_t new_base_advance = adv + std::get<2>(search_within);
+                    std::size_t new_base_advance = adv + std::get<2>(*search_within);
                     if(new_base_advance>cont_binary.size())continue;
                     //std::vector<std::tuple<std::size_t, std::size_t, std::size_t, std::size_t,std::size_t, std::size_t>>
                     //filter best binary advancement on a single node
