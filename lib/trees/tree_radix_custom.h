@@ -1014,7 +1014,7 @@ namespace uh::trees {
                     });
                 }
 
-                std::erase_if(micro_paths.begin(),micro_paths.end(),[](auto &a){
+                std::ranges::remove_if(micro_paths.begin(),micro_paths.end(),[](auto &a){
                     return a.empty();
                 });
 
