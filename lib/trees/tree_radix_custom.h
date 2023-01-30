@@ -1064,7 +1064,7 @@ namespace uh::trees {
                     if(!child_vec_append.empty()){
                         for(const auto &tree:child_vec_append){
                             if(std::none_of(current_path.begin(),current_path.end(),[&tree](auto &item){
-                                return tree == std::get<0>(current_path);
+                                return tree == std::get<0>(item);
                             })){
                                 current_path.emplace_back(tree, optimal_multiadvance(search_match_filter(std::get<0>(*search_within)->data,cont_binary,std::vector<std::tuple<std::size_t, std::size_t, std::size_t, std::size_t>>{},new_base_advance)),new_base_advance,std::get<3>(*search_within));
                                 possibilities_work.push_back(current_path);
@@ -1076,7 +1076,7 @@ namespace uh::trees {
                         if(child_vec_append.empty() && *(cont_binary.begin()+new_base_advance) == std::get<1>(heristic))continue;
                         for(const auto &tree:std::get<0>(heristic)){
                             if(std::none_of(current_path.begin(),current_path.end(),[&tree](auto &item){
-                                return tree == std::get<0>(current_path);
+                                return tree == std::get<0>(item);
                             })){
                                 current_path.emplace_back(tree, optimal_multiadvance(search_match_filter(std::get<0>(*search_within)->data,cont_binary,std::vector<std::tuple<std::size_t, std::size_t, std::size_t, std::size_t>>{},new_base_advance)),new_base_advance,std::get<3>(*search_within));
                                 possibilities_work.push_back(current_path);
