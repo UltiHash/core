@@ -1058,14 +1058,14 @@ namespace uh::trees {
                     }
 
                     //write back if path does not exist
-                    if(std::get<1>(*search_within)->children.empty()){
+                    if(std::get<0>(*search_within)->children.empty() && !std::get<0>(*search_within).empty()){
                         possibilities_out.push_back(current_path);
                     }
 
                     //child search
                     //advancement shall not be 0
                     //append fresh search requests to the back of the list for all children
-                    auto child_vec_append = child_vector(*(cont_binary.begin()+new_base_advance));
+                    auto child_vec_append = std::get<0>(*search_within)->child_vector(*(cont_binary.begin()+new_base_advance));
                     if(!child_vec_append.empty()){
                         for(const auto &tree:child_vec_append){
                             if(std::none_of(current_path.begin(),current_path.end(),[&tree](auto &item){
@@ -1077,7 +1077,7 @@ namespace uh::trees {
                         }
                     }
                     //also search all the other children
-                    for(const auto &heristic:children){
+                    for(const auto &heristic:std::get<0>(*search_within)->children){
                         if(child_vec_append.empty() && *(cont_binary.begin()+new_base_advance) == std::get<1>(heristic))continue;
                         for(const auto &tree:std::get<0>(heristic)){
                             if(std::none_of(current_path.begin(),current_path.end(),[&tree](auto &item){
