@@ -856,7 +856,6 @@ namespace uh::trees {
                     if(std::get<1>(legal)){
                         std::size_t old_size_poss = possibilities.size();
                         change_delete(match_begin_legal_shift);
-
                         if(old_size_poss!=possibilities.size()){
                             match_begin_legal_shift = possibilities.begin();
                             continue;
