@@ -1044,14 +1044,9 @@ namespace uh::trees {
                     //search
                     std::size_t new_base_advance = adv;
                     if(new_base_advance>cont_binary.size())continue;
-                    std::size_t matches_before = std::get<1>(*search_within).size();
                     //std::vector<std::tuple<std::size_t, std::size_t, std::size_t, std::size_t,std::size_t, std::size_t>>
                     //filter best binary advancement on a single node
                     std::get<1>(*search_within) = optimal_multiadvance(search_match_filter(std::get<0>(*search_within)->data,cont_binary,std::get<1>(*search_within),new_base_advance));
-
-                    std::size_t more_found = std::get<1>(*search_within).size()-matches_before;
-                    if(!more_found)continue;
-                    std::get<2>(*search_within)+=more_found;
 
                     //from results add likely advancements of binary input
                     for(const auto s:std::get<1>(*search_within)){
