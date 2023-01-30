@@ -911,43 +911,90 @@ namespace uh::trees {
                 return sum_match_size(a) > sum_match_size(b);
             };
 
-            auto optimal_multiadvance = [](std::vector<std::tuple<std::size_t, std::size_t,std::size_t, std::size_t>> input){
-                std::sort(input.begin(),input.end(),[](auto &a, auto &b){
-                    return std::get<2>(a)<std::get<2>(b);
-                });
-                //ordered after advancement, take the best result of each advancement
-                auto input_beg = input.begin();
-                std::size_t current_advance = std::get<2>(*input_beg);
+            auto optimal_multiadvance = [](std::vector<std::tuple<std::size_t, std::size_t,std::size_t, std::size_t>> input2){
+                if(input2.empty())return input2;
 
-                decltype(input) filter_list{};
-                std::set<std::tuple<std::size_t, std::size_t,std::size_t, std::size_t>> out_list{};
+                //paths must follow each other so that size and advancement are aligned
+                std::vector<std::vector<std::tuple<std::size_t, std::size_t,std::size_t, std::size_t>>> micro_paths{};//second tuple element is current advancement
+                //link the paths that match advancements, duplicate path with new ending if there are multiple paths for that offset
+                auto input_micro_beg = input2.begin();
+                while(input_micro_beg!=input2.end()){
+                    if(micro_paths.empty()){
+                        micro_paths.push_back(std::vector<std::tuple<std::size_t, std::size_t,std::size_t, std::size_t>>{*input_micro_beg});
+                        continue;
+                    }
+                    //if same data offset duplicate the path at the back
 
-                while(input_beg != input.end()){
-                    if(std::get<2>(*input_beg)!= current_advance){
+                    //on advancement match append to correct path ending
+                    for(auto &m:micro_paths){
+                        auto last_match = m.end();
+                        std::advance(last_match,-1);
+                        //only add to filter list if the size matches the difference of advancement
+                        if(std::get<2>(*input_micro_beg) == std::get<2>(*last_match)+std::get<1>(*input_micro_beg)+1){
+                            m.push_back(*input_micro_beg);
+                        }
+                    }
+
+                }
+
+                for(auto &input:micro_paths){
+                    std::sort(input.begin(),input.end(),[](auto &a, auto &b){
+                        return std::get<2>(a)<std::get<2>(b);
+                    });
+                    //ordered after advancement, take the best result of each advancement
+                    auto input_beg = input.begin();
+                    std::size_t current_advance = std::get<2>(*input_beg);
+
+                    std::vector<std::tuple<std::size_t, std::size_t,std::size_t, std::size_t>> filter_list{};
+                    std::set<std::tuple<std::size_t, std::size_t,std::size_t, std::size_t>> out_list{};
+                    //filter large matches for each advancement layer
+                    while(input_beg != input.end()){
+                        if(std::get<2>(*input_beg)!= current_advance){
+                            std::sort(filter_list.begin(),filter_list.end(),[](auto &a, auto &b){
+                                return std::get<1>(a)>std::get<1>(b);//sort for largest matches
+                            });
+                            if(!filter_list.empty()){
+                                (void)out_list.emplace(filter_list.front());
+                            }
+                            filter_list.clear();
+                            (void)input.erase(input.begin(), input_beg-1);
+                            std::sort(input.begin(),input.end(),[](auto &a, auto &b){
+                                return std::get<2>(a)<std::get<2>(b);
+                            });
+                            input_beg = input.begin();
+                            current_advance = std::get<2>(*input_beg);
+                        }
+                        if(input_beg==input.end())continue;
+
+                        filter_list.push_back(*input_beg);
+                        input_beg++;
+                    }
+
+                    if(!filter_list.empty()){
                         std::sort(filter_list.begin(),filter_list.end(),[](auto &a, auto &b){
                             return std::get<1>(a)>std::get<1>(b);//sort for largest matches
                         });
                         (void)out_list.emplace(filter_list.front());
                         filter_list.clear();
-                        (void)input.erase(input.begin(), input_beg-1);
-                        input_beg = input.begin();
-                        current_advance = std::get<2>(*input_beg);
                     }
-                    if(input_beg==input.end())continue;
-                    filter_list.push_back(*input_beg);
-                    input_beg++;
-                }
 
-                if(!filter_list.empty()){
-                    std::sort(filter_list.begin(),filter_list.end(),[](auto &a, auto &b){
-                        return std::get<1>(a)>std::get<1>(b);//sort for largest matches
+                    input.assign(out_list.begin(),out_list.end());
+                    out_list.clear();
+
+                    std::sort(input.begin(),input.end(),[](auto &a, auto &b){
+                        return std::get<1>(a)<std::get<1>(b);//sort for largest matches
                     });
-                    (void)out_list.emplace(filter_list.front());
                 }
 
-                input.assign(out_list.begin(),out_list.end());
+                //return biggest advancement difference
+                auto max_diff = std::max_element(micro_paths.begin(),micro_paths.end(),[](auto &a,auto &b){
+                    auto last_a = a.back();
+                    auto last_b = b.back();
 
-                return input;
+                    return (long)std::get<2>(last_a) < (long)std::get<2>(last_b);
+                });
+
+                return *max_diff;//return path with maximum advancement
             };
 
             auto poss_beg = possibilities_work.begin();
