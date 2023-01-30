@@ -185,116 +185,108 @@ namespace uh::trees {
             std::vector<std::tuple<std::size_t, std::size_t,std::size_t,std::size_t>> matches{};//data offset beginning found, end offset from beginning
             if (data_cont.empty() || binary_cont.empty())return matches;
 
-            std::set<std::size_t> advancements_binary{binary_offset};
             std::size_t match_index{};
+            std::size_t current_offset = 0;
 
 
             //search forward through data
             if constexpr (!reverse) {
 
-                for(auto adv:advancements_binary){
-                    if(adv > binary_cont.size())continue;
-                    std::size_t current_offset = 0;
-                    do {
-                        //first element match
-                        std::unique_lock lock(simd_protect);
-                        if (simd_count < SIMD_UNITS) {
-                            simd_count += 1;
-                            lock.unlock();
-                            current_offset = std::distance(data_cont.begin(), std::find(std::execution::unseq,
-                                                                                        data_cont.begin() + current_offset,
-                                                                                        data_cont.end(),
-                                                                                        *(binary_cont.begin()+adv)));
-                            lock.lock();
-                            simd_count -= 1;
-                            lock.unlock();
-                        } else {
-                            lock.unlock();
-                            current_offset = std::distance(data_cont.begin(),
-                                                           std::find(data_cont.begin() + current_offset, data_cont.end(),
-                                                                     *(binary_cont.begin()+adv)));
-                        }
-
-                        //search how long input matches
-                        std::pair<decltype(data_cont.begin()), decltype(data_cont.end())> found;
+                do {
+                    //first element match
+                    std::unique_lock lock(simd_protect);
+                    if (simd_count < SIMD_UNITS) {
+                        simd_count += 1;
+                        lock.unlock();
+                        current_offset = std::distance(data_cont.begin(), std::find(std::execution::unseq,
+                                                                                    data_cont.begin() + current_offset,
+                                                                                    data_cont.end(),
+                                                                                    *(binary_cont.begin()+binary_offset)));
                         lock.lock();
-                        if (simd_count < SIMD_UNITS) {
-                            simd_count += 1;
-                            lock.unlock();
-                            found = std::mismatch(std::execution::unseq, data_cont.begin() + current_offset,
-                                                  data_cont.end(), binary_cont.begin()+adv, binary_cont.end());
-                            lock.lock();
-                            simd_count -= 1;
-                            lock.unlock();
-                        } else {
-                            lock.unlock();
-                            found = std::mismatch(data_cont.begin() + current_offset, data_cont.end(), binary_cont.begin()+adv,
-                                                  binary_cont.end());
-                        }
+                        simd_count -= 1;
+                        lock.unlock();
+                    } else {
+                        lock.unlock();
+                        current_offset = std::distance(data_cont.begin(),
+                                                       std::find(data_cont.begin() + current_offset, data_cont.end(),
+                                                                 *(binary_cont.begin()+binary_offset)));
+                    }
 
-                        if (std::max((long) std::distance(data_cont.begin() + current_offset, found.first) - 1, (long) 0) >=
-                            MINIMUM_MATCH_SIZE) {
-                            long integrate_offset =  std::max(
-                                    (long) std::distance(data_cont.begin() + current_offset, found.first) - 1, (long) 0);
-                            matches.emplace_back(current_offset,integrate_offset,adv,match_index);
-                            advancements_binary.emplace(integrate_offset);
-                            match_index++;
-                        }
-                        if (data_cont.begin() + current_offset != data_cont.end())current_offset++;
-                    } while (data_cont.begin() + current_offset != data_cont.end());
-                }
+                    //search how long input matches
+                    std::pair<decltype(data_cont.begin()), decltype(data_cont.end())> found;
+                    lock.lock();
+                    if (simd_count < SIMD_UNITS) {
+                        simd_count += 1;
+                        lock.unlock();
+                        found = std::mismatch(std::execution::unseq, data_cont.begin() + current_offset,
+                                              data_cont.end(), binary_cont.begin()+binary_offset, binary_cont.end());
+                        lock.lock();
+                        simd_count -= 1;
+                        lock.unlock();
+                    } else {
+                        lock.unlock();
+                        found = std::mismatch(data_cont.begin() + current_offset, data_cont.end(), binary_cont.begin()+binary_offset,
+                                              binary_cont.end());
+                    }
+
+                    if (std::max((long) std::distance(data_cont.begin() + current_offset, found.first) - 1, (long) 0) >=
+                        MINIMUM_MATCH_SIZE) {
+                        long integrate_offset =  std::max(
+                                (long) std::distance(data_cont.begin() + current_offset, found.first) - 1, (long) 0);
+                        matches.emplace_back(current_offset,integrate_offset,binary_offset,match_index);
+
+                        match_index++;
+                    }
+                    if (data_cont.begin() + current_offset != data_cont.end())current_offset++;
+                } while (data_cont.begin() + current_offset != data_cont.end());
             } else {
-                for(auto adv:advancements_binary){
-                    std::size_t current_offset = 0;
-
-                    do {
-                        //first element match
-                        std::unique_lock lock(simd_protect);
-                        if (simd_count < SIMD_UNITS) {
-                            simd_count += 1;
-                            lock.unlock();
-                            current_offset = std::distance(data_cont.rbegin(), std::find(std::execution::unseq,
-                                                                                        data_cont.rbegin() + current_offset,
-                                                                                        data_cont.rend(),
-                                                                                        *(binary_cont.begin()+adv)));
-                            lock.lock();
-                            simd_count -= 1;
-                            lock.unlock();
-                        } else {
-                            lock.unlock();
-                            current_offset = std::distance(data_cont.rbegin(),
-                                                           std::find(data_cont.rbegin() + current_offset, data_cont.rend(),
-                                                                     *(binary_cont.begin()+adv)));
-                        }
-
-                        //search how long input matches
-                        std::pair<decltype(data_cont.begin()), decltype(data_cont.end())> found;
+                do {
+                    //first element match
+                    std::unique_lock lock(simd_protect);
+                    if (simd_count < SIMD_UNITS) {
+                        simd_count += 1;
+                        lock.unlock();
+                        current_offset = std::distance(data_cont.rbegin(), std::find(std::execution::unseq,
+                                                                                    data_cont.rbegin() + current_offset,
+                                                                                    data_cont.rend(),
+                                                                                    *(binary_cont.begin()+binary_offset)));
                         lock.lock();
-                        if (simd_count < SIMD_UNITS) {
-                            simd_count += 1;
-                            lock.unlock();
-                            found = std::mismatch(std::execution::unseq, data_cont.rbegin() + current_offset,
-                                                  data_cont.rend(), binary_cont.begin()+adv, binary_cont.end());
-                            lock.lock();
-                            simd_count -= 1;
-                            lock.unlock();
-                        } else {
-                            lock.unlock();
-                            found = std::mismatch(data_cont.rbegin() + current_offset, data_cont.rend(), binary_cont.begin()+adv,
-                                                  binary_cont.end());
-                        }
+                        simd_count -= 1;
+                        lock.unlock();
+                    } else {
+                        lock.unlock();
+                        current_offset = std::distance(data_cont.rbegin(),
+                                                       std::find(data_cont.rbegin() + current_offset, data_cont.rend(),
+                                                                 *(binary_cont.begin()+binary_offset)));
+                    }
 
-                        if (std::max((long) std::distance(data_cont.rbegin() + current_offset, found.first) - 1, (long) 0) >=
-                            MINIMUM_MATCH_SIZE) {
-                            long integrate_offset =  std::max(
-                                    (long) std::distance(data_cont.rbegin() + current_offset, found.first) - 1, (long) 0);
-                            matches.emplace_back(current_offset,integrate_offset,adv,match_index);
-                            advancements_binary.emplace(integrate_offset);
-                            match_index++;
-                        }
-                        if (data_cont.rbegin() + current_offset != data_cont.end())current_offset++;
-                    } while (data_cont.rbegin() + current_offset != data_cont.end());
-                }
+                    //search how long input matches
+                    std::pair<decltype(data_cont.begin()), decltype(data_cont.end())> found;
+                    lock.lock();
+                    if (simd_count < SIMD_UNITS) {
+                        simd_count += 1;
+                        lock.unlock();
+                        found = std::mismatch(std::execution::unseq, data_cont.rbegin() + current_offset,
+                                              data_cont.rend(), binary_cont.begin()+binary_offset, binary_cont.end());
+                        lock.lock();
+                        simd_count -= 1;
+                        lock.unlock();
+                    } else {
+                        lock.unlock();
+                        found = std::mismatch(data_cont.rbegin() + current_offset, data_cont.rend(), binary_cont.begin()+binary_offset,
+                                              binary_cont.end());
+                    }
+
+                    if (std::max((long) std::distance(data_cont.rbegin() + current_offset, found.first) - 1, (long) 0) >=
+                        MINIMUM_MATCH_SIZE) {
+                        long integrate_offset =  std::max(
+                                (long) std::distance(data_cont.rbegin() + current_offset, found.first) - 1, (long) 0);
+                        matches.emplace_back(current_offset,integrate_offset,binary_offset,match_index);
+
+                        match_index++;
+                    }
+                    if (data_cont.rbegin() + current_offset != data_cont.end())current_offset++;
+                } while (data_cont.rbegin() + current_offset != data_cont.end());
             }
 
             return matches;
