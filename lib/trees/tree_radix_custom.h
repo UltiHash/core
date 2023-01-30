@@ -833,8 +833,12 @@ namespace uh::trees {
             while (match_beg != possibilities.end()) {//shrink all matches until the total result is legal, shrink smaller matches first until they vanish
                 auto legal_general = legal_check(match_beg, (std::size_t) 0,data_cont.size());
                 if(std::get<1>(legal_general)){
+                    std::size_t old_size_poss = possibilities.size();
                     change_delete(match_beg);
-                    continue;
+                    if(old_size_poss!=possibilities.size()){
+                        match_beg = possibilities.begin();
+                        continue;
+                    }
                 }
                 if (!std::get<0>(legal_general)) {
                     possibilities.erase(match_beg);
@@ -844,13 +848,19 @@ namespace uh::trees {
                     match_beg = possibilities.begin();
                     continue;
                 }
+
                 auto match_begin_legal_shift = possibilities.begin();
                 while (match_begin_legal_shift != possibilities.end()) {
                     auto legal = legal_check(match_begin_legal_shift, std::get<0>(*match_beg),
                                              std::get<0>(*match_beg) + std::get<1>(*match_beg) + 1);
                     if(std::get<1>(legal)){
+                        std::size_t old_size_poss = possibilities.size();
                         change_delete(match_begin_legal_shift);
-                        continue;
+
+                        if(old_size_poss!=possibilities.size()){
+                            match_begin_legal_shift = possibilities.begin();
+                            continue;
+                        }
                     }
                     if (!std::get<0>(legal)) {
                         possibilities.erase(match_begin_legal_shift);
