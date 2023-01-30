@@ -1046,8 +1046,7 @@ namespace uh::trees {
                     if(new_base_advance>cont_binary.size())continue;
                     //std::vector<std::tuple<std::size_t, std::size_t, std::size_t, std::size_t,std::size_t, std::size_t>>
                     //filter best binary advancement on a single node
-                    std::get<1>(*search_within) = optimal_multiadvance(search_match_filter(std::get<0>(*search_within)->data,cont_binary,std::get<1>(*search_within),new_base_advance));
-
+                    std::get<1>(*search_within) = optimal_multiadvance(search_match_filter(std::get<0>(*search_within)->data,cont_binary,std::vector<std::tuple<std::size_t, std::size_t, std::size_t, std::size_t>>{},new_base_advance));
                     //from results add likely advancements of binary input
                     for(const auto s:std::get<1>(*search_within)){
                         std::size_t new_advancement = new_base_advance + std::get<1>(s)+1;
@@ -1068,8 +1067,10 @@ namespace uh::trees {
                         if(!child_vec_append.empty()){
                             for(const auto &tree:child_vec_append){
                                 auto current_copy = current_path;
-                                current_copy.emplace_back(tree, std::vector<std::tuple<std::size_t, std::size_t, std::size_t, std::size_t>>{},new_base_advance,std::get<3>(*search_within));
-                                possibilities_work.push_back(current_copy);
+                                current_copy.emplace_back(tree, optimal_multiadvance(search_match_filter(std::get<0>(*search_within)->data,cont_binary,std::vector<std::tuple<std::size_t, std::size_t, std::size_t, std::size_t>>{},new_base_advance)),new_base_advance,std::get<3>(*search_within));
+                                if(std::count(possibilities_work.begin(),possibilities_work.end(),current_copy)==0){
+                                    possibilities_work.push_back(current_copy);
+                                }
                             }
                         }
                         //also search all the other children
@@ -1077,8 +1078,10 @@ namespace uh::trees {
                             if(child_vec_append.empty() && *(cont_binary.begin()+new_base_advance) == std::get<1>(heristic))continue;
                             for(const auto &tree:std::get<0>(heristic)){
                                 auto current_copy = current_path;
-                                current_copy.emplace_back(tree, std::vector<std::tuple<std::size_t, std::size_t, std::size_t, std::size_t>>{},new_base_advance,std::get<3>(*search_within));
-                                possibilities_work.push_back(current_copy);
+                                current_copy.emplace_back(tree, optimal_multiadvance(search_match_filter(std::get<0>(*search_within)->data,cont_binary,std::get<1>(*search_within),new_base_advance)),new_base_advance,std::get<3>(*search_within));
+                                if(std::count(possibilities_work.begin(),possibilities_work.end(),current_copy)==0){
+                                    possibilities_work.push_back(current_copy);
+                                }
                             }
                         }
                     }
@@ -1086,7 +1089,7 @@ namespace uh::trees {
 
                 poss_beg++;
                 possibilities_work.pop_front();
-                possibilities_work.sort(max_match_sort);
+                //possibilities_work.sort(max_match_sort);
             }
 
             if (possibilities_out.empty()) {
