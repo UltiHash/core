@@ -1047,6 +1047,7 @@ namespace uh::trees {
                     //std::vector<std::tuple<std::size_t, std::size_t, std::size_t, std::size_t,std::size_t, std::size_t>>
                     //filter best binary advancement on a single node
                     std::get<1>(*search_within) = optimal_multiadvance(search_match_filter(std::get<0>(*search_within)->data,cont_binary,std::vector<std::tuple<std::size_t, std::size_t, std::size_t, std::size_t>>{},new_base_advance));
+
                     //from results add likely advancements of binary input
                     for(const auto s:std::get<1>(*search_within)){
                         std::size_t new_advancement = new_base_advance + std::get<1>(s)+1;
@@ -1055,41 +1056,38 @@ namespace uh::trees {
                         }
                         advancements.emplace(new_advancement);
                     }
+
                     //child search
-                    if(std::get<0>(*search_within)->children.empty()){
-                        //this path reached an end, store
-                        if(!std::get<1>(*search_within).empty())possibilities_out.push_back(current_path);
-                    }
-                    else{
-                        //advancement shall not be 0
-                        //append fresh search requests to the back of the list for all children
-                        auto child_vec_append = child_vector(*(cont_binary.begin()+new_base_advance));
-                        if(!child_vec_append.empty()){
-                            for(const auto &tree:child_vec_append){
-                                auto current_copy = current_path;
-                                current_copy.emplace_back(tree, optimal_multiadvance(search_match_filter(std::get<0>(*search_within)->data,cont_binary,std::vector<std::tuple<std::size_t, std::size_t, std::size_t, std::size_t>>{},new_base_advance)),new_base_advance,std::get<3>(*search_within));
-                                if(std::count(possibilities_work.begin(),possibilities_work.end(),current_copy)==0){
-                                    possibilities_work.push_back(current_copy);
-                                }
+                    //advancement shall not be 0
+                    //append fresh search requests to the back of the list for all children
+                    auto child_vec_append = child_vector(*(cont_binary.begin()+new_base_advance));
+                    if(!child_vec_append.empty()){
+                        for(const auto &tree:child_vec_append){
+                            if(std::none_of(current_path.begin(),current_path.end(),[&tree](auto &item){
+                                return tree == std::get<0>(current_path);
+                            })){
+                                current_path.emplace_back(tree, optimal_multiadvance(search_match_filter(std::get<0>(*search_within)->data,cont_binary,std::vector<std::tuple<std::size_t, std::size_t, std::size_t, std::size_t>>{},new_base_advance)),new_base_advance,std::get<3>(*search_within));
+                                possibilities_work.push_back(current_path);
                             }
                         }
-                        //also search all the other children
-                        for(const auto &heristic:children){
-                            if(child_vec_append.empty() && *(cont_binary.begin()+new_base_advance) == std::get<1>(heristic))continue;
-                            for(const auto &tree:std::get<0>(heristic)){
-                                auto current_copy = current_path;
-                                current_copy.emplace_back(tree, optimal_multiadvance(search_match_filter(std::get<0>(*search_within)->data,cont_binary,std::get<1>(*search_within),new_base_advance)),new_base_advance,std::get<3>(*search_within));
-                                if(std::count(possibilities_work.begin(),possibilities_work.end(),current_copy)==0){
-                                    possibilities_work.push_back(current_copy);
-                                }
+                    }
+                    //also search all the other children
+                    for(const auto &heristic:children){
+                        if(child_vec_append.empty() && *(cont_binary.begin()+new_base_advance) == std::get<1>(heristic))continue;
+                        for(const auto &tree:std::get<0>(heristic)){
+                            if(std::none_of(current_path.begin(),current_path.end(),[&tree](auto &item){
+                                return tree == std::get<0>(current_path);
+                            })){
+                                current_path.emplace_back(tree, optimal_multiadvance(search_match_filter(std::get<0>(*search_within)->data,cont_binary,std::vector<std::tuple<std::size_t, std::size_t, std::size_t, std::size_t>>{},new_base_advance)),new_base_advance,std::get<3>(*search_within));
+                                possibilities_work.push_back(current_path);
                             }
                         }
                     }
                 }
 
-                poss_beg++;
                 possibilities_work.pop_front();
-                //possibilities_work.sort(max_match_sort);
+                possibilities_work.sort(max_match_sort);
+                poss_beg = possibilities_work.begin();
             }
 
             if (possibilities_out.empty()) {
