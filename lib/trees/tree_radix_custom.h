@@ -1057,6 +1057,11 @@ namespace uh::trees {
                         advancements.emplace(new_advancement);
                     }
 
+                    //write back if path does not exist
+                    if(std::get<1>(*search_within)->children.empty()){
+                        possibilities_out.push_back(current_path);
+                    }
+
                     //child search
                     //advancement shall not be 0
                     //append fresh search requests to the back of the list for all children
