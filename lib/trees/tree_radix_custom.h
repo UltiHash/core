@@ -1005,16 +1005,18 @@ namespace uh::trees {
                             return std::get<1>(a)>std::get<1>(b);//sort for largest matches
                         });
                         (void)out_list.emplace(filter_list.front());
-                        filter_list.clear();
                     }
 
                     input.assign(out_list.begin(),out_list.end());
-                    out_list.clear();
 
                     std::sort(input.begin(),input.end(),[](auto &a, auto &b){
                         return std::get<1>(a)<std::get<1>(b);//sort for largest matches
                     });
                 }
+
+                std::erase_if(micro_paths.begin(),micro_paths.end(),[](auto &a){
+                    return a.empty();
+                });
 
                 //return biggest advancement difference
                 auto max_diff = std::max_element(micro_paths.begin(),micro_paths.end(),[](auto &a,auto &b){
