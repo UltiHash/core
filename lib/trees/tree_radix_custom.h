@@ -753,10 +753,10 @@ namespace uh::trees {
             auto local_matches = compare_ultihash<ContainerData,ContainerBinary,reverse>(data_cont, binary_cont,binary_offset);//std::vector<std::tuple<std::size_t, std::size_t, std::size_t,std::size_t>>
 
             //add maximum match index of possibilities onto local matches
-            std::size_t max_match_index = std::max((std::size_t)0,(std::size_t)std::get<3>(
-                    *std::max_element(possibilities.begin(),possibilities.end(),[](auto &a,auto &b){
-                        return std::get<3>(a)<std::get<3>(b);
-                    })));
+            std::size_t max_match_index{};
+            for(const auto &index_item:possibilities){
+                max_match_index = std::max(std::get<3>(index_item),max_match_index);
+            }
 
             auto match_duplicate = local_matches.begin();
             while(match_duplicate!=local_matches.end()){
