@@ -1042,7 +1042,7 @@ namespace uh::trees {
                     auto search_within = current_path.end();//std::tuple<tree_radix_custom *, std::vector<std::tuple<std::size_t, std::size_t, std::size_t, std::size_t>>,std::size_t, std::size_t>
                     std::advance(search_within,-1);
                     //search
-                    std::size_t new_base_advance = adv;
+                    std::size_t new_base_advance = adv + std::get<2>(search_within);
                     if(new_base_advance>cont_binary.size())continue;
                     //std::vector<std::tuple<std::size_t, std::size_t, std::size_t, std::size_t,std::size_t, std::size_t>>
                     //filter best binary advancement on a single node
@@ -1062,12 +1062,13 @@ namespace uh::trees {
                         if(!std::get<1>(*search_within).empty())possibilities_out.push_back(current_path);
                     }
                     else{
+                        //advancement shall not be 0
                         //append fresh search requests to the back of the list for all children
                         auto child_vec_append = child_vector(*(cont_binary.begin()+new_base_advance));
                         if(!child_vec_append.empty()){
                             for(const auto &tree:child_vec_append){
                                 auto current_copy = current_path;
-                                current_copy.emplace_back(tree, std::vector<std::tuple<std::size_t, std::size_t, std::size_t, std::size_t>>{},std::get<2>(*search_within),new_base_advance);
+                                current_copy.emplace_back(tree, std::vector<std::tuple<std::size_t, std::size_t, std::size_t, std::size_t>>{},new_base_advance,std::get<3>(*search_within));
                                 possibilities_work.push_back(current_copy);
                             }
                         }
@@ -1076,7 +1077,7 @@ namespace uh::trees {
                             if(child_vec_append.empty() && *(cont_binary.begin()+new_base_advance) == std::get<1>(heristic))continue;
                             for(const auto &tree:std::get<0>(heristic)){
                                 auto current_copy = current_path;
-                                current_copy.emplace_back(tree, std::vector<std::tuple<std::size_t, std::size_t, std::size_t, std::size_t>>{},std::get<2>(*search_within),new_base_advance);
+                                current_copy.emplace_back(tree, std::vector<std::tuple<std::size_t, std::size_t, std::size_t, std::size_t>>{},new_base_advance,std::get<3>(*search_within));
                                 possibilities_work.push_back(current_copy);
                             }
                         }
