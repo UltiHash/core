@@ -827,7 +827,6 @@ namespace uh::trees {
                 std::erase_if(possibilities,[&delete_binary_shift_higher,&element_match_index](auto &item){
                     return std::get<2>(item)>delete_binary_shift_higher && std::get<3>(item)>element_match_index;
                 });
-                match_beg = possibilities.begin();
             };
 
             while (match_beg != possibilities.end()) {//shrink all matches until the total result is legal, shrink smaller matches first until they vanish
