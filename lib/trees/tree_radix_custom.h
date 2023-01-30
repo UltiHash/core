@@ -914,27 +914,38 @@ namespace uh::trees {
             auto optimal_multiadvance = [](std::vector<std::tuple<std::size_t, std::size_t,std::size_t, std::size_t>> input2){
                 if(input2.empty())return input2;
 
+                std::sort(input2.begin(),input2.end(),[](auto &a, auto &b){
+                    return std::get<3>(a)<std::get<3>(b);
+                });
+
                 //paths must follow each other so that size and advancement are aligned
                 std::vector<std::vector<std::tuple<std::size_t, std::size_t,std::size_t, std::size_t>>> micro_paths{};//second tuple element is current advancement
                 //link the paths that match advancements, duplicate path with new ending if there are multiple paths for that offset
                 auto input_micro_beg = input2.begin();
                 while(input_micro_beg!=input2.end()){
-                    if(micro_paths.empty()){
-                        micro_paths.push_back(std::vector<std::tuple<std::size_t, std::size_t,std::size_t, std::size_t>>{*input_micro_beg});
-                        continue;
-                    }
-                    //if same data offset duplicate the path at the back
-
                     //on advancement match append to correct path ending
+                    bool found = false;
                     for(auto &m:micro_paths){
                         auto last_match = m.end();
                         std::advance(last_match,-1);
+                        //if same data offset duplicate the path at the back
+                        if(std::get<1>(*last_match) == std::get<1>(*input_micro_beg) && std::get<2>(*last_match) != std::get<2>(*input_micro_beg)){//offset is the same but size is not
+                            auto copy_m = m;
+                            copy_m.push_back(*input_micro_beg);
+                            micro_paths.push_back(copy_m);
+                            found = true;
+                            continue;
+                        }
                         //only add to filter list if the size matches the difference of advancement
                         if(std::get<2>(*input_micro_beg) == std::get<2>(*last_match)+std::get<1>(*input_micro_beg)+1){
                             m.push_back(*input_micro_beg);
+                            found = true;
+                            break;
                         }
                     }
-
+                    if(!found || micro_paths.empty()){
+                        micro_paths.push_back(std::vector<std::tuple<std::size_t, std::size_t,std::size_t, std::size_t>>{*input_micro_beg});
+                    }
                 }
 
                 for(auto &input:micro_paths){
