@@ -780,9 +780,9 @@ namespace uh::trees {
                 match_duplicate++;
             }
 
-            if (local_matches.empty() && possibilities.empty())return possibilities;
+            if (possibilities.empty())return possibilities;
 
-            std::sort(local_matches.begin(), local_matches.end(), [](auto &a, auto &b) {
+            std::sort(possibilities.begin(), possibilities.end(), [](auto &a, auto &b) {
                 return std::get<1>(a) < std::get<1>(b);
             });
             //LEGAL MATCH FILTER
@@ -832,7 +832,7 @@ namespace uh::trees {
 
             while (match_beg != possibilities.end()) {//shrink all matches until the total result is legal, shrink smaller matches first until they vanish
                 auto legal_general = legal_check(match_beg, (std::size_t) 0,data_cont.size());
-                if(!std::get<1>(legal_general)){
+                if(std::get<1>(legal_general)){
                     change_delete(match_beg);
                     continue;
                 }
@@ -848,7 +848,7 @@ namespace uh::trees {
                 while (match_begin_legal_shift != possibilities.end()) {
                     auto legal = legal_check(match_begin_legal_shift, std::get<0>(*match_beg),
                                              std::get<0>(*match_beg) + std::get<1>(*match_beg) + 1);
-                    if(!std::get<1>(legal)){
+                    if(std::get<1>(legal)){
                         change_delete(match_begin_legal_shift);
                         continue;
                     }
