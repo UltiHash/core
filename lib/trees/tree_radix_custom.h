@@ -962,6 +962,8 @@ namespace uh::trees {
                     }
                     if(!found || micro_paths.empty()){
                         micro_paths.push_back(std::vector<std::tuple<std::size_t, std::size_t,std::size_t, std::size_t>>{*input_micro_beg});
+                        (void)input2.erase(input_micro_beg);
+                        input_micro_beg = input2.begin();
                     }
                 }
 
