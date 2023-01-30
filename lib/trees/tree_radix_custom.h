@@ -911,6 +911,45 @@ namespace uh::trees {
                 return sum_match_size(a) > sum_match_size(b);
             };
 
+            auto optimal_multiadvance = [](std::vector<std::tuple<std::size_t, std::size_t,std::size_t, std::size_t>> input){
+                std::sort(input.begin(),input.end(),[](auto &a, auto &b){
+                    return std::get<2>(a)<std::get<2>(b);
+                });
+                //ordered after advancement, take the best result of each advancement
+                auto input_beg = input.begin();
+                std::size_t current_advance = std::get<2>(*input_beg);
+
+                decltype(input) filter_list{};
+                std::set<std::tuple<std::size_t, std::size_t,std::size_t, std::size_t>> out_list{};
+
+                while(input_beg != input.end()){
+                    if(std::get<2>(*input_beg)!= current_advance){
+                        std::sort(filter_list.begin(),filter_list.end(),[](auto &a, auto &b){
+                            return std::get<1>(a)>std::get<1>(b);//sort for largest matches
+                        });
+                        (void)out_list.emplace(filter_list.front());
+                        filter_list.clear();
+                        (void)input.erase(input.begin(), input_beg-1);
+                        input_beg = input.begin();
+                        current_advance = std::get<2>(*input_beg);
+                    }
+                    if(input_beg==input.end())continue;
+                    filter_list.push_back(*input_beg);
+                    input_beg++;
+                }
+
+                if(!filter_list.empty()){
+                    std::sort(filter_list.begin(),filter_list.end(),[](auto &a, auto &b){
+                        return std::get<1>(a)>std::get<1>(b);//sort for largest matches
+                    });
+                    (void)out_list.emplace(filter_list.front());
+                }
+
+                input.assign(out_list.begin(),out_list.end());
+
+                return input;
+            };
+
             auto poss_beg = possibilities_work.begin();
             while(poss_beg != possibilities_work.end()){
                 if(sum_match_size(*poss_beg) == cont_binary.size()){
@@ -929,11 +968,10 @@ namespace uh::trees {
                     //search
                     std::size_t new_base_advance = adv + std::get<3>(*search_within);
                     if(new_base_advance>cont_binary.size())continue;
-                    auto binary_subset = std::vector<unsigned char>{cont_binary.begin()+new_base_advance,cont_binary.end()};
                     std::size_t matches_before = std::get<1>(*search_within).size();
                     //std::vector<std::tuple<std::size_t, std::size_t, std::size_t, std::size_t,std::size_t, std::size_t>>
                     //filter best binary advancement on a single node
-                    std::get<1>(*search_within) = search_match_filter(std::get<0>(*search_within)->data,binary_subset,std::get<1>(*search_within));
+                    std::get<1>(*search_within) = optimal_multiadvance(search_match_filter(std::get<0>(*search_within)->data,cont_binary,std::get<1>(*search_within),new_base_advance));
 
                     std::size_t more_found = std::get<1>(*search_within).size()-matches_before;
                     if(!more_found)continue;
