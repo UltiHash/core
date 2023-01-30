@@ -940,7 +940,6 @@ namespace uh::trees {
                         if(std::get<2>(*input_micro_beg) == std::get<2>(*last_match)+std::get<1>(*input_micro_beg)+1){
                             m.push_back(*input_micro_beg);
                             found = true;
-                            break;
                         }
                     }
                     if(!found || micro_paths.empty()){
