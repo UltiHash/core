@@ -943,15 +943,15 @@ namespace uh::trees {
                             //only add to filter list if the size matches the difference of advancement
                             std::size_t old_integrate_count = num_integrated;
                             //append before
-                            if(std::get<2>(*tup_next_check_beg) == std::get<2>(*input_micro_beg)+std::get<1>(*tup_next_check_beg)+1 &&
-                               std::get<3>(*tup_next_check_beg) > std::get<3>(*input_micro_beg)){
-                                m.push_back(*input_micro_beg);
+                            if(std::get<3>(*tup_next_check_beg)-std::get<2>(*tup_next_check_beg) == std::get<1>(*input_micro_beg)+std::get<2>(*input_micro_beg)+1 && old_integrate_count==num_integrated &&
+                               std::get<3>(*tup_next_check_beg)+1 == std::get<3>(*input_micro_beg)){
+                                m.push_back(*tup_next_check_beg);
                                 num_integrated++;
                             }
                             //append after
-                            if(std::get<2>(*input_micro_beg) == std::get<2>(*tup_next_check_beg)+std::get<1>(*input_micro_beg)+1 && old_integrate_count==num_integrated &&
-                               std::get<3>(*input_micro_beg) > std::get<3>(*tup_next_check_beg)){
-                                m.push_back(*(input_micro_beg+1));
+                            if(std::get<3>(*input_micro_beg)-std::get<2>(*input_micro_beg) == std::get<1>(*tup_next_check_beg)+std::get<2>(*tup_next_check_beg)+1 && old_integrate_count==num_integrated &&
+                               std::get<3>(*input_micro_beg)+1 == std::get<3>(*tup_next_check_beg)){
+                                m.push_back(*input_micro_beg);
                                 num_integrated++;
                             }
                             if(old_integrate_count!=num_integrated){
