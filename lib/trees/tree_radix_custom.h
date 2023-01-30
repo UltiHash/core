@@ -934,6 +934,7 @@ namespace uh::trees {
                 while(input_micro_beg!=input2.end()){
                     //on advancement match append to correct path ending
                     std::size_t num_integrated{};
+                    bool integrated = false;
                     for(auto &m:micro_paths){
                         //for all paths in m try to check if the input element matches either a predecessor or next element and insert
 
@@ -956,10 +957,12 @@ namespace uh::trees {
                             if(old_integrate_count!=num_integrated){
                                 (void)input2.erase(input_micro_beg);
                                 input_micro_beg = input2.begin();
+                                integrated = true;
                                 break;
                             }
                             tup_next_check_beg++;
                         }
+                        if(integrated)break;
                     }
                     if(!num_integrated || micro_paths.empty()){
                         micro_paths.push_back(std::vector<std::tuple<std::size_t, std::size_t,std::size_t, std::size_t>>{*input_micro_beg});
