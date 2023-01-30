@@ -956,6 +956,7 @@ namespace uh::trees {
                             if(found){
                                 (void)input2.erase(input_micro_beg);
                                 input_micro_beg = input2.begin();
+                                found = false;
                                 break;
                             }
                             tup_next_check_beg++;
