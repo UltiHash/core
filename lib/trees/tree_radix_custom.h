@@ -948,7 +948,7 @@ namespace uh::trees {
                                 num_integrated++;
                             }
                             //append after
-                            if(std::get<2>(*input_micro_beg) == std::get<2>(*tup_next_check_beg)+std::get<1>(*input_micro_beg)+1 && !found &&
+                            if(std::get<2>(*input_micro_beg) == std::get<2>(*tup_next_check_beg)+std::get<1>(*input_micro_beg)+1 && old_integrate_count==num_integrated &&
                                std::get<3>(*input_micro_beg) > std::get<3>(*tup_next_check_beg)){
                                 m.push_back(*(input_micro_beg+1));
                                 num_integrated++;
