@@ -933,38 +933,35 @@ namespace uh::trees {
                 auto input_micro_beg = input2.begin();
                 while(input_micro_beg!=input2.end()){
                     //on advancement match append to correct path ending
-                    bool found = false;
-                    bool skip = false;
+                    std::size_t num_integrated{};
                     for(auto &m:micro_paths){
                         //for all paths in m try to check if the input element matches either a predecessor or next element and insert
 
                         auto tup_next_check_beg = m.begin();
                         while(tup_next_check_beg!=m.end()){
                             //only add to filter list if the size matches the difference of advancement
-
+                            std::size_t old_integrate_count = num_integrated;
                             //append before
                             if(std::get<2>(*tup_next_check_beg) == std::get<2>(*input_micro_beg)+std::get<1>(*tup_next_check_beg)+1 &&
                                std::get<3>(*tup_next_check_beg) > std::get<3>(*input_micro_beg)){
                                 m.push_back(*input_micro_beg);
-                                found = true;
+                                num_integrated++;
                             }
                             //append after
                             if(std::get<2>(*input_micro_beg) == std::get<2>(*tup_next_check_beg)+std::get<1>(*input_micro_beg)+1 && !found &&
                                std::get<3>(*input_micro_beg) > std::get<3>(*tup_next_check_beg)){
                                 m.push_back(*(input_micro_beg+1));
-                                found = true;
+                                num_integrated++;
                             }
-                            if(found){
+                            if(old_integrate_count!=num_integrated){
                                 (void)input2.erase(input_micro_beg);
                                 input_micro_beg = input2.begin();
-                                skip = true;
-                                found = false;
                                 break;
                             }
                             tup_next_check_beg++;
                         }
                     }
-                    if((!found || micro_paths.empty())&&!skip){
+                    if(!num_integrated || micro_paths.empty()){
                         micro_paths.push_back(std::vector<std::tuple<std::size_t, std::size_t,std::size_t, std::size_t>>{*input_micro_beg});
                         (void)input2.erase(input_micro_beg);
                         input_micro_beg = input2.begin();
