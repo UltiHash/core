@@ -783,7 +783,7 @@ namespace uh::trees {
             if (possibilities.empty())return possibilities;
 
             std::sort(possibilities.begin(), possibilities.end(), [](auto &a, auto &b) {
-                return std::get<1>(a) < std::get<1>(b);
+                return std::get<0>(a) > std::get<0>(b);//for legal checks we try to start from the end to mostly shrink not fitting overlapping beginnings of matches
             });
             //LEGAL MATCH FILTER
             auto legal_check = [&data_cont](auto &match_beg, std::size_t start_val,
