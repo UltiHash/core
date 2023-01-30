@@ -786,6 +786,7 @@ namespace uh::trees {
                 return std::get<0>(a) > std::get<0>(b);//for legal checks we try to start from the end to mostly shrink not fitting overlapping beginnings of matches
             });
             //LEGAL MATCH FILTER
+            //TODO: also permutate submatches
             auto legal_check = [&data_cont](auto &match_beg, std::size_t start_val,
                                                             std::size_t end_val) {
                 //on empty or partial match make new list in list, else append the match results on total match
@@ -991,6 +992,7 @@ namespace uh::trees {
                             std::sort(input.begin(),input.end(),[](auto &a, auto &b){
                                 return std::get<2>(a)<std::get<2>(b);
                             });
+                            (void)input.erase(input_beg);
                             input_beg = input.begin();
                             current_advance = std::get<2>(*input_beg);
                         }
