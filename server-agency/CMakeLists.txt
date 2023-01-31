@@ -37,7 +37,6 @@ endif()
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/config.hpp.in ${CMAKE_CURRENT_BINARY_DIR}/config.hpp)
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
-add_subdirectory(lib)
 
 set(${PROJECT_NAME}_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/lib ${CMAKE_CURRENT_SOURCE_DIR}/src ${Boost_INCLUDE_DIRS} uhLibOptions uhLibLogging uhLibProtocol uhLibNet)
 set(${PROJECT_NAME}_LINK_LIBRARIES ${Boost_LIBRARIES} uhLibOptions uhLibLogging uhLibProtocol uhLibNet uhLibMetrics)
