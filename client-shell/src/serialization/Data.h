@@ -11,7 +11,7 @@
 #include <fstream>
 
 class Data : virtual public Prefix{
-    std::vector<Block> hash_blocks;
+    std::vector<std::string> hash_blocks;
     std::size_t numBlocks{};
     const std::unique_ptr<uh::protocol::client>& m_client;
 
@@ -52,14 +52,14 @@ public:
                 for (auto &i: hash_blocks) {
                     // time measurement statistics for reading blocks from the agency server
                     auto start = std::chrono::steady_clock::now();
-                    auto hash = m_client->write_chunk(std::vector<char>(i.get().begin(),i.get().end()));
+                    auto hash = m_client->write_chunk(std::vector<char>(i.begin(),i.end()));
                     auto end = std::chrono::steady_clock::now();
 
                     auto nanoSec = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
                     auto microSec = std::chrono::duration_cast<std::chrono::microseconds>(end - start).count();
                     auto milliSec = std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
                     auto Sec = std::chrono::duration_cast<std::chrono::seconds>(end - start).count();
-                    auto blockSize = i.get().size();
+                    auto blockSize = i.size();
                     totalNanoSec+=nanoSec;
                     totalMicroSec+=microSec;
                     totalMilliSec+=milliSec;
@@ -135,7 +135,7 @@ public:
                          << milliSec << " ms, "
                          << Sec << " sec";
 
-                    hash_blocks.emplace_back(std::string(data.begin(), data.end()));
+                    hash_blocks.emplace_back(data.begin(), data.end());
                 }
 
                 // total block time
@@ -161,7 +161,7 @@ public:
 
     [[nodiscard]] bool is_regular_file() const override;
 
-    std::size_t size() const { return m_size; }
+    [[nodiscard]] std::size_t size() const { return m_size; }
 
     inline std::string getObjectName();
 
@@ -187,8 +187,8 @@ public:
                     ERROR << "Could not open and write to file path " << std::get<0>(stepper) << " " << std::endl;
                     std::exit(EXIT_FAILURE);
                 }
-                for(auto &b:hash_blocks){
-                    of<<b.get();
+                for(const auto &b:hash_blocks){
+                    of<<b;
                 }
                 of.flush();
                 of.close();

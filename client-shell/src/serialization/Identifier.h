@@ -5,7 +5,6 @@
 #ifndef CMAKE_BUILD_DEBUG_ULTIHASH_IDENTIFIER_H
 #define CMAKE_BUILD_DEBUG_ULTIHASH_IDENTIFIER_H
 
-#include "Block.h"
 #include "protocol/common.h"
 #include <openssl/sha.h>
 
@@ -39,15 +38,12 @@ public:
         hash = std::string(nm_hash.begin(), nm_hash.end());
     }
 
-    explicit Identifier(Block &input){
+    explicit Identifier(std::string& input){
         //generate sha512 to hash with openSSL library
         hash.clear();
         unsigned char hash_buf[SHA512_DIGEST_LENGTH];
-        SHA512(reinterpret_cast<const unsigned char *>(input.get().c_str()), input.get().size(), hash_buf);
-        for(unsigned char & i : hash_buf){
-            hash += reinterpret_cast<char &>(i);
-        }
-        //TODO: dynamic Gray encoding
+        SHA512(reinterpret_cast<const unsigned char *>(input.c_str()), input.size(), hash_buf);
+        hash = std::string(hash_buf, hash_buf + sizeof hash_buf / sizeof hash_buf[0]);
     }
 };
 
