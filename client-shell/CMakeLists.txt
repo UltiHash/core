@@ -15,7 +15,6 @@ find_package(OpenSSL REQUIRED)
 
 # putting internal project repository LIBUH_DEP in a variable
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/lib)
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/lib)
 add_subdirectory(src/serialization)
 
 find_package(Git REQUIRED)
