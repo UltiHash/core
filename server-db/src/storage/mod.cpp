@@ -51,7 +51,7 @@ BackendTypeEnum define_storage_backend_type(std::string backend_type){
     }
 }
 
-std::unique_ptr<storage_backend> make_storage_backend(const storage_config& cfg){
+std::unique_ptr<storage_backend> make_storage_backend(const storage_config& cfg, metrics::storage_metrics& storage_metrics){
 
     maybe_create_database_root_directory(cfg.db_root, cfg.create_new_root);
 
@@ -67,7 +67,7 @@ std::unique_ptr<storage_backend> make_storage_backend(const storage_config& cfg)
     switch (backend_type)
     {
         case BackendTypeEnum::DumpStorage:
-            return std::make_unique<storage::dump_storage>(cfg.db_root, size_needed);
+            return std::make_unique<storage::dump_storage>(cfg.db_root, size_needed, storage_metrics);
         case BackendTypeEnum::OtherStorage:
             THROW(util::exception, "Not implemented yet");
     }
@@ -86,21 +86,21 @@ std::unique_ptr<storage_backend> make_storage_backend(const storage_config& cfg)
 
 struct mod::impl
 {
-    impl(const storage_config& cfg);
+    impl(const storage_config& cfg, metrics::storage_metrics& storage_metrics);
     std::unique_ptr<storage_backend> some_storage_backend;
 };
 
 // ---------------------------------------------------------------------
 
-mod::impl::impl(const storage_config& cfg)
-    : some_storage_backend(make_storage_backend(cfg))
+mod::impl::impl(const storage_config& cfg, metrics::storage_metrics& storage_metrics)
+    : some_storage_backend(make_storage_backend(cfg, storage_metrics))
 {
 }
 
 // ---------------------------------------------------------------------
 
-mod::mod(const storage_config& cfg)
-    : m_impl(std::make_unique<impl>(cfg))
+mod::mod(const storage_config& cfg, metrics::storage_metrics& storage_metrics)
+    : m_impl(std::make_unique<impl>(cfg, storage_metrics))
 {
 }
 

@@ -2,6 +2,7 @@
 #define SERVER_DATABASE_STORAGE_MOD_H
 
 #include <protocol/client_pool.h>
+#include <metrics/storage_metrics.h>
 
 #include <unordered_map>
 #include <memory>
@@ -39,7 +40,7 @@ struct storage_config
 class mod
 {
 public:
-    mod(const storage_config& cfg);
+    mod(const storage_config& cfg, metrics::storage_metrics& storage_metrics);
     ~mod();
 
     void start();

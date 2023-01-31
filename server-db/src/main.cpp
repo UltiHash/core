@@ -28,10 +28,10 @@ int main(int argc, const char** argv)
         INFO << "Setting up metrics";
         metrics::mod metrics_module(options); //TODO add storage metrics
 
-        storage::mod storage_module(options.storage().config());
+        storage::mod storage_module(options.storage().config(), metrics_module.storage());
         storage_module.start();
 
-        server::mod server_module(options, storage_module, metrics_module); //TODO server module --added todos...
+        server::mod server_module(options, storage_module, metrics_module);
         server_module.start();
     }
     catch (const std::exception& e)

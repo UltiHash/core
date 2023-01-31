@@ -53,4 +53,10 @@ blob protocol::on_read_chunk(blob&& hash)
 
 // ---------------------------------------------------------------------
 
+std::size_t protocol::on_free_space(){
+    return m_storage.free_space();
+}
+
+// ---------------------------------------------------------------------
+
 } // namespace uh::dbn::server

@@ -23,7 +23,7 @@ void options::evaluate(const boost::program_options::variables_map& vars)
     m_server.evaluate(vars);
     m_logging.evaluate(vars);
     m_metrics.evaluate(vars);
-    m_storage.evaluate(vars); //TODO storage options
+    m_storage.evaluate(vars);
 }
 
 // ---------------------------------------------------------------------
