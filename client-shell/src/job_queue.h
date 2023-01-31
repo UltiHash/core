@@ -3,7 +3,7 @@
 
 #include <condition_variable>
 #include <mutex>
-#include <deque>
+#include <list>
 
 namespace uh::client
 {
@@ -23,7 +23,7 @@ namespace uh::client
     protected:
         std::mutex m_mutex;
         std::condition_variable m_cv;
-        std::deque<T> m_list;
+        std::list<T> m_list;
     };
 
 // ---------------------------------------------------------------------
