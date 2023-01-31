@@ -43,7 +43,6 @@ uh::protocol::blob dump_storage::write_chunk(const uh::protocol::blob& some_data
 
     std::filesystem::path filepath = this->get_filepath_from_hash(hash_blob);
 
-    //TODO check that there is available space before writing
     if(m_free < size(some_data)){
         THROW(util::exception, "Not enough space in node.");
     }
@@ -81,6 +80,7 @@ uh::protocol::blob dump_storage::read_chunk(const uh::protocol::blob& some_hash)
 void dump_storage::update_space_consumption(){
     m_used = get_dir_size(m_root);
     m_free = m_alloc - m_used;
+    m_storage_metrics.free_space().Set(m_free);
 
     if(m_free <= 0){
         THROW(util::exception, "database node is full");

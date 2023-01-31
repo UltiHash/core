@@ -12,7 +12,9 @@
 #include <iostream>
 #include <sys/stat.h>
 #include <sys/types.h>
-#include <../src/storage/mod.h>
+#include <metrics/mod.h>
+#include <config/mod.h>
+#include <storage/mod.h>
 
 
 struct db_test_config{
@@ -121,9 +123,12 @@ BOOST_AUTO_TEST_CASE( dump_storage_io )
     cfg.allocate_bytes = c.test_allocated_bytes;
     create_test_db_and_file();
 
-    uh::dbn::storage::mod storage_module(cfg);
+    // Create backend.
+    uh::dbn::config::mod config_module(1, {});
+    const auto& options = config_module.options();
+    uh::dbn::metrics::mod metrics_module(options);
+    uh::dbn::storage::mod storage_module(cfg, metrics_module.storage());
     storage_module.start();
-
     success = test_storage_backend_io(storage_module);
 
     BOOST_CHECK(success);
@@ -138,7 +143,10 @@ BOOST_AUTO_TEST_CASE( dump_storage_no_duplicates )
     create_test_db_and_file();
 
     // Create backend.
-    uh::dbn::storage::mod storage_module(cfg);
+    uh::dbn::config::mod config_module(1, {});
+    const auto& options = config_module.options();
+    uh::dbn::metrics::mod metrics_module(options);
+    uh::dbn::storage::mod storage_module(cfg, metrics_module.storage());
     storage_module.start();
 
     // File 1 and file 2 should produce the same hash key. Since teh hash key is in 1-1 correspondence with the contents
@@ -158,8 +166,12 @@ BOOST_AUTO_TEST_CASE( dump_storage_expected_hash )
     create_test_db_and_file();
 
     // Create backend.
-    uh::dbn::storage::mod storage_module(cfg);
+    uh::dbn::config::mod config_module(1, {});
+    const auto& options = config_module.options();
+    uh::dbn::metrics::mod metrics_module(options);
+    uh::dbn::storage::mod storage_module(cfg, metrics_module.storage());
     storage_module.start();
+
 
     uh::protocol::blob x = write_chunk_from_file(c.test_input_filepath, storage_module);
     std::string x_str = uh::dbn::storage::to_hex_string(x.begin(), x.end());

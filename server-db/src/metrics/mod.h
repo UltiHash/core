@@ -3,6 +3,7 @@
 
 #include <config/options.h>
 #include <metrics/protocol_metrics.h>
+#include <metrics/storage_metrics.h>
 
 #include <memory>
 
@@ -20,7 +21,7 @@ public:
     ~mod();
 
     uh::metrics::protocol_metrics& protocol();
-
+    uh::dbn::metrics::storage_metrics& storage();
 private:
     struct impl;
     std::unique_ptr<impl> m_impl;

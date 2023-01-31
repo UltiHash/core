@@ -19,7 +19,7 @@ protocol_factory::protocol_factory(storage::mod& storage,
 
 std::unique_ptr<uh::protocol::protocol> protocol_factory::create()
 {
-    return std::make_unique<metrics::protocol_metrics_wrapper>(
+    return std::make_unique<uh::metrics::protocol_metrics_wrapper>(
         m_metrics,
         std::make_unique<protocol>(m_storage));
 }

@@ -6,8 +6,6 @@ using namespace boost::program_options;
 namespace uh::dbn::storage
 {
 
-//TODO - I'd like to use the following enum to define options,
-// in order to avoid hard-coding them many times around.
 enum class OptionsEnum {DbRoot, CreateNewRoot, DbStorageAlgorithm, AllocateStorage};
 
 constexpr const char* optionString(OptionsEnum n)
@@ -53,12 +51,12 @@ void options::apply(uh::options::options& opts)
 void options::evaluate(const boost::program_options::variables_map& vars)
 {
     storage_config c;
-    c.db_root = vars["db-root"].as<std::string>();
-    c.backend_type = vars["db-storage-algorithm"].as<std::string>();
+    c.db_root = vars[optionString(OptionsEnum::DbRoot)].as<std::string>();
+    c.backend_type = vars[optionString(OptionsEnum::DbStorageAlgorithm)].as<std::string>();
 
     size_t size_to_allocate = vars[optionString(OptionsEnum::AllocateStorage)].as<std::size_t>();
 
-    if (vars.count("create-new-root") > 0)
+    if (vars.count(optionString(OptionsEnum::CreateNewRoot)) > 0)
     {
         c.create_new_root = true;
     }

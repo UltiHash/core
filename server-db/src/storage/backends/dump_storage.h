@@ -4,24 +4,26 @@
 
 #include <storage/utils.h>
 #include <storage/storage_backend.h>
+#include <metrics/storage_metrics.h>
 
 
 namespace uh::dbn::storage {
 
 class dump_storage : public storage_backend {
     public:
-        dump_storage(std::filesystem::path db_root, size_t size_bytes):
+        dump_storage(std::filesystem::path db_root, size_t size_bytes, uh::dbn::metrics::storage_metrics& storage_metrics):
         m_root(db_root),
         m_alloc(size_bytes),
         m_free(size_bytes),
-        m_used(0)
+        m_used(0),
+        m_storage_metrics(storage_metrics)
         {
             if( !std::filesystem::is_directory(db_root) ) {
                 std::string msg("Path does not exist: " + db_root.string());
                 throw std::runtime_error(msg);
             }
             else{
-                update_space_consumption();
+                update_space_consumption(); //storage metrics initialized here.
             }
         }
 
@@ -53,18 +55,18 @@ class dump_storage : public storage_backend {
 
 
         virtual size_t free_space() override {return m_free;}
-        virtual size_t free_space_percentage() override { return 100 * static_cast<float>(m_free) / static_cast<float>(m_alloc);};
+        size_t free_space_percentage() { return 100 * static_cast<float>(m_free) / static_cast<float>(m_alloc);};
 
 
         virtual size_t used_space() override {return m_used;}
-        virtual size_t used_space_percentage() override { return 100 * static_cast<float>(m_used) / static_cast<float>(m_alloc);};
+        size_t used_space_percentage() { return 100 * static_cast<float>(m_used) / static_cast<float>(m_alloc);};
 
 
         virtual size_t allocated_space() override {return m_alloc;}
 
         virtual std::string backend_type() override {return std::string(m_type);}
 
-        virtual void update_space_consumption() override;
+        void update_space_consumption();
 
 
     private:
@@ -77,7 +79,7 @@ class dump_storage : public storage_backend {
          * @return the hash
          * @throw may throw any derivative of exception on error
          */
-        virtual uh::protocol::blob hashing_function(const uh::protocol::blob &data) override;
+        uh::protocol::blob hashing_function(const uh::protocol::blob &data);
 
         /**
          * Given a hash string as a uh::protocol::blob, return the file path
@@ -94,6 +96,7 @@ class dump_storage : public storage_backend {
         size_t m_alloc = 0; //total space
         size_t m_free = 0;  //free space
         size_t m_used = 0;  //used space
+        uh::dbn::metrics::storage_metrics& m_storage_metrics;
     };
 
 } // namespace uh::dbn::storage

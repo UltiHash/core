@@ -13,14 +13,16 @@ struct mod::impl
     impl(const config::options& options);
 
     uh::metrics::service metrics_service;
-    protocol_metrics protocol; //TODO protocol metrics... keep? Add storage metrics.
+    protocol_metrics protocol;
+    storage_metrics storage;
 };
 
 // ---------------------------------------------------------------------
 
 mod::impl::impl(const config::options& options)
     : metrics_service(options.metrics().config()),
-      protocol(metrics_service)
+      protocol(metrics_service),
+      storage(metrics_service)
 {
 }
 
@@ -40,6 +42,13 @@ mod::~mod() = default;
 protocol_metrics& mod::protocol()
 {
     return m_impl->protocol;
+}
+
+// ---------------------------------------------------------------------
+
+storage_metrics& mod::storage()
+{
+    return m_impl->storage;
 }
 
 // ---------------------------------------------------------------------
