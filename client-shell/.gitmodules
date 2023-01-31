@@ -1,0 +1,3 @@
+[submodule "lib-common"]
+	path = lib
+	url = org-104891910@github.com:UltiHash/lib-common.git
