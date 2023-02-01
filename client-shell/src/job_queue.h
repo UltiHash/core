@@ -19,10 +19,7 @@ namespace uh::client
         {
             std::unique_lock lk(m_mutex);
 
-            if (m_jobs.empty())
-            {
-                m_cv.wait(lk, [this](){ return !m_jobs.empty(); });
-            }
+            m_cv.wait(lk, [this](){ return !m_jobs.empty(); });
 
             auto job = std::move(m_jobs.front());
             m_jobs.pop_front();
@@ -36,6 +33,7 @@ namespace uh::client
             std::unique_lock lk(m_mutex);
 
             m_jobs.push_back(std::move(elem));
+            lk.unlock();
             m_cv.notify_all();
         }
 
