@@ -40,7 +40,7 @@ namespace uh::client
     protected:
         std::mutex m_mutex;
         std::condition_variable m_cv;
-        std::list<T> m_jobs;
+        std::list<std::unique_ptr<T>> m_jobs;
     };
 
 // ---------------------------------------------------------------------
