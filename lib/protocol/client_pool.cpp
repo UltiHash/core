@@ -68,7 +68,7 @@ void client_pool::put_back(std::unique_ptr<client> c)
     }
 
     lk.unlock();
-    m_cv.notify_all();
+    m_cv.notify_one();
 }
 
 // ---------------------------------------------------------------------
