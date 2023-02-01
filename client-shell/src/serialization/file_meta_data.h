@@ -1,5 +1,5 @@
-#ifndef SERIALIZATION_FILE_INFO_H
-#define SERIALIZATION_FILE_INFO_H
+#ifndef SERIALIZATION_FILE_META_DATA_H
+#define SERIALIZATION_FILE_META_DATA_H
 
 #include <iostream>
 #include <vector>
