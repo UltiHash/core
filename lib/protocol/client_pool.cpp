@@ -44,10 +44,7 @@ client_pool::handle client_pool::get()
 {
     std::unique_lock lk(m_mutex);
 
-    if (m_clients.empty())
-    {
-        m_cv.wait(lk, [this](){ return !m_clients.empty(); });
-    }
+    m_cv.wait(lk, [this](){ return !m_clients.empty(); });
 
     auto client = std::move(m_clients.front());
     m_clients.pop_front();
@@ -70,6 +67,7 @@ void client_pool::put_back(std::unique_ptr<client> c)
         m_clients.push_back(m_factory->create());
     }
 
+    lk.unlock();
     m_cv.notify_all();
 }
 
