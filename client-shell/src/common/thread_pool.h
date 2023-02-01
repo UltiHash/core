@@ -3,6 +3,7 @@
 
 #include <thread>
 #include <vector>
+#include <functional>
 #include "job_queue.h"
 
 namespace uh::client
@@ -16,12 +17,13 @@ namespace uh::client
     public:
 
         // ------------------------------------------------- CLASS FUNCTIONS
-        thread_manager(int num_threads, job_queue<T>& jq) : m_job_queue(jq)
+        thread_manager(const std::function<void(T)>& consume_job ,job_queue<T>& jq, size_t num_threads=1) : m_job_queue(jq), m_num_threads(num_threads), m_consume_job(consume_job)
         {
 
         }
 
-        ~thread_manager() {
+        ~thread_manager()
+        {
             for (auto& worker : m_worker_threads)
             {
                 worker.join();
@@ -36,8 +38,9 @@ namespace uh::client
 
     private:
         job_queue<T>& m_job_queue;
+        size_t m_num_threads;
         std::vector<std::thread> m_worker_threads;
-
+        std::function<void(T)>& m_consume_job;
     };
 
 // ---------------------------------------------------------------------
