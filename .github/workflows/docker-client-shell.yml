@@ -1,0 +1,24 @@
+name: Docker Image CI (client-shell)
+
+on:
+  schedule:
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        token: ${{ secrets.PAT }}
+        submodules: recursive
+    - uses: docker/login-action@v2
+      with:
+        registry: ghcr.io
+        username: plauth
+        password: ${{ secrets.PAT }}
+    - name: Build the Docker image
+      run: docker build --file Dockerfile --build-arg CMAKE_OPTION=BUILD_CLIENT_SHELL --build-arg SRC_PATH=client-shell --build-arg TARGET=uhClient --tag ghcr.io/ultihash/client-shell:$(printf '%(%Y%m%d)T' -1) .
+    - name: Push the Docker image
+      run: docker push ghcr.io/ultihash/client-shell:$(printf '%(%Y%m%d)T' -1)
