@@ -18,13 +18,14 @@ jobs:
         with:
           token: ${{ secrets.PAT }}
           submodules: recursive
-      - name: Install boost
-        run: brew install boost
+
+      - name: Install dependencies
+        run: brew install boost openssl
 
       - name: Configure CMake
         # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
         # See https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html?highlight=cmake_build_type
-        run: cmake -B ${{github.workspace}}/build -DCMAKE_C_COMPILER=gcc-11 -DCMAKE_CXX_COMPILER=g++-11 -DCMAKE_BUILD_TYPE=Debug
+        run: cmake -B ${{github.workspace}}/build -DOPENSSL_ROOT_DIR=$(brew --prefix openssl@3) -DCMAKE_C_COMPILER=gcc-11 -DCMAKE_CXX_COMPILER=g++-11 -DCMAKE_BUILD_TYPE=Debug
 
       - name: Build
         # Build your program with the given configuration
