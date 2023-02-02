@@ -20,14 +20,9 @@ service::service(const config& cfg)
 prometheus::Family<Counter>& service::add_counter_family(const std::string& name,
                                                          const std::string& help)
 {
-    auto& family = BuildCounter().Name(name);
+    auto builder = BuildCounter().Name(name).Help(help);
 
-    if (!help.empty())
-    {
-        family.Help(help);
-    }
-
-    return family.Register(*m_registry);
+    return builder.Register(*m_registry);
 }
 
 // ---------------------------------------------------------------------
@@ -35,14 +30,9 @@ prometheus::Family<Counter>& service::add_counter_family(const std::string& name
 prometheus::Family<Gauge>& service::add_gauge_family(const std::string& name,
                                                      const std::string& help)
 {
-    auto& family = BuildGauge().Name(name);
+    auto builder = BuildGauge().Name(name).Help(help);
 
-    if (!help.empty())
-    {
-        family.Help(help);
-    }
-
-    return family.Register(*m_registry);
+    return builder.Register(*m_registry);
 }
 
 // ---------------------------------------------------------------------
