@@ -13,6 +13,14 @@ if((NOT BUILD_SERVER_DB) AND (NOT BUILD_SERVER_AGENCY) AND (NOT BUILD_CLIENT_SHE
     SET(BUILD_CLIENT_SHELL ON CACHE BOOL    "Building the server-client component" FORCE)
 endif()
 
+find_package(Git REQUIRED)
+if(GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/.git")
+    # auto-ignore build directory
+    if(NOT EXISTS ${PROJECT_BINARY_DIR}/.gitignore)
+        file(WRITE ${PROJECT_BINARY_DIR}/.gitignore "*")
+    endif()
+endif()
+
 add_subdirectory(lib)
 if(BUILD_SERVER_DB)
 add_subdirectory(server-db)
