@@ -19,9 +19,7 @@ FROM ubuntu:22.04 as deploy
 ARG SRC_PATH
 ARG TARGET
 
-LABEL org.opencontainers.image.description="This container image contains a nightly snapshot of the agency node server role. \
-The ```start.sh``` script is used as the default entry point with no additional parameters specified. \
-With this, the AN server role listens on port 21832, and the prometheus-cpp exporter listens on port 8080."
+LABEL org.opencontainers.image.description="This container image contains a nightly snapshot of the ${SRC_PATH} role."
 
 # Install curl to test if dependencies are already available (temporary workaround)
 ENV DEBIAN_FRONTEND=noninteractive
