@@ -34,6 +34,7 @@ public:
         std::unique_lock lk(m_mutex);
 
         m_jobs.push_back(std::move(elem));
+
         lk.unlock();
         m_cv.notify_one();
     }

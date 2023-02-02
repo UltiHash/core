@@ -55,10 +55,10 @@ set(${PROJECT_NAME}_LINK_LIBRARIES ${Boost_LIBRARIES} uhLibLogging uhLibProtocol
 
 # adding all the .h files of the current project
 file(GLOB HEADER_FILE_LIST
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/*.h ${CMAKE_CURRENT_SOURCE_DIR}/src/client_options/*.h)
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/*.h ${CMAKE_CURRENT_SOURCE_DIR}/src/client_options/*.h ${CMAKE_CURRENT_SOURCE_DIR}/src/common/*.h)
 # adding all the .h files of the current project
 file(GLOB SOURCE_FILE_LIST
-        ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp ${CMAKE_CURRENT_SOURCE_DIR}/src/client_options/*.cpp)
+        ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp ${CMAKE_CURRENT_SOURCE_DIR}/src/client_options/*.cpp ${CMAKE_CURRENT_SOURCE_DIR}/src/common/*.cpp)
 
 # creating a target executable
 add_executable(${PROJECT_NAME} ${HEADER_FILE_LIST} ${SOURCE_FILE_LIST})

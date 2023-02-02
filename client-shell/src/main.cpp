@@ -3,6 +3,7 @@
 #include "protocol/client_factory.h"
 #include <net/plain_socket.h>
 #include <serialization/Recompilation.h>
+#include <logging/logging_boost.h>
 
 int main(int argc, const char *argv[])
 {
@@ -29,7 +30,7 @@ int main(int argc, const char *argv[])
                 cf_config);
 
         // recompilation
-        uh::client::serialization::Recompilation(cli_options.m_config, client_factory.create());
+//        uh::client::serialization::Recompilation(cli_options.m_config, client_factory.create());
 
     }
     catch (const std::exception &exc)

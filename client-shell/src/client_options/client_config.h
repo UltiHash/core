@@ -2,6 +2,7 @@
 #define CLIENT_OPTIONS_CLIENT_CONFIG_H
 
 #include <filesystem>
+#include <vector>
 
 namespace uh::client
 {
