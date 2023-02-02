@@ -31,7 +31,7 @@ sha512sum test/uhClient > checksum.txt
 uhClient -i test.uh test -a uh-server-agency:21832 -M
 
 rm -Rf test
-yes | uhClient read -r ./test.uh -a localhost:21832 -M
+yes | uhClient -r ./test.uh -a uh-server-agency:21832 -M
 mv test test_reconstructed
 mv test_reconstructed/test .
 rm -Rf test_reconstructed
