@@ -13,7 +13,7 @@ jobs:
   build:
     strategy:
       matrix:
-        build: [Release, Debug]
+        build: [Debug]
         os: [uh-x86_64-ubuntu-18.04, uh-x86_64-ubuntu-20.04, uh-x86_64-ubuntu-22.04]
     runs-on: ${{ matrix.os }}
 
