@@ -1,6 +1,0 @@
-cmake-build-*/
-cmake-build-*/*
-*.log
-.idea/
-.idea/*
-src/config.hpp
