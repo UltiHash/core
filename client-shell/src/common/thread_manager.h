@@ -36,9 +36,9 @@ namespace uh::client::common
 
         ~thread_manager()
         {
+            m_job_queue.stop();
             for (auto& thread : m_thread_pool)
             {
-                m_job_queue.stop();
                 INFO << "Joining Threads";
                 if (thread.joinable())
                     thread.join();
