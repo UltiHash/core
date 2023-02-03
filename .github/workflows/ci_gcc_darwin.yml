@@ -20,7 +20,9 @@ jobs:
           submodules: recursive
 
       - name: Install dependencies
-        run: brew install boost openssl
+        run: |
+          brew install boost openssl
+          ln -s /usr/local/opt/openssl/include/openssl /usr/local/include
 
       - name: Configure CMake
         # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
