@@ -14,6 +14,7 @@ class file_meta_data
 
     private:
         std::string m_file_path;
+        // TODO: a lot of other file meta data
         std::vector<std::string> m_hashes;
 
 };

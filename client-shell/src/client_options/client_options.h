@@ -8,7 +8,7 @@
 #include "client_config.h"
 #include "agency_connection.h"
 
-namespace uh::client
+namespace uh::client::option
 {
 
 // ---------------------------------------------------------------------

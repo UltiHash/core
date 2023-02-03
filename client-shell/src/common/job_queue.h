@@ -5,8 +5,9 @@
 #include <mutex>
 #include <list>
 #include <atomic>
+#include <optional>
 
-namespace uh::client
+namespace uh::client::common
 {
 
 // ---------------------------------------------------------------------
@@ -17,14 +18,14 @@ class job_queue
 public:
 
     // ------------------------------------------------- CLASS FUNCTIONS
-    job_queue() : m_stop(false)
+    job_queue() : m_stop_queue(false)
     {
     }
 
     // ------------------------------------------------- LOGIC FUNCTIONS
     void stop()
     {
-        stop_queue = true;
+        m_stop_queue = true;
         m_cv.notify_all();
     }
 
@@ -33,8 +34,8 @@ public:
     {
         std::unique_lock lk(m_mutex);
 
-        m_cv.wait(lk, [&](){ return !m_jobs.empty() || stop_queue; });
-        if (stop_queue)
+        m_cv.wait(lk, [&](){ return !m_jobs.empty() || m_stop_queue; });
+        if (m_stop_queue)
         {
             return std::nullopt;
         }
@@ -60,7 +61,7 @@ private:
     std::mutex m_mutex;
     std::condition_variable m_cv;
     std::list<std::unique_ptr<T>> m_jobs;
-    std::atomic<bool> m_stop;
+    std::atomic<bool> m_stop_queue;
 };
 
 // ---------------------------------------------------------------------

@@ -4,7 +4,7 @@
 #include <options/options.h>
 #include "client_config.h"
 
-namespace uh::client
+namespace uh::client::option
 {
 
 // ---------------------------------------------------------------------

@@ -3,7 +3,7 @@
 
 namespace po = boost::program_options;
 
-namespace uh::client
+namespace uh::client::option
 {
 
 // ---------------------------------------------------------------------

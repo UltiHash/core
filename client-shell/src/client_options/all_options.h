@@ -7,7 +7,7 @@
 #include "client_config.h"
 
 
-namespace uh::client
+namespace uh::client::option
 {
 
 // ---------------------------------------------------------------------
@@ -31,7 +31,7 @@ public:
     [[nodiscard]] bool handle();
 
 public:
-    client_config m_config{0x5548};
+    client_config m_config{1, 0x5548};
 
 private:
     uh::options::basic_options m_basic;
