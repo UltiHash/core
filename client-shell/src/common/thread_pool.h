@@ -19,17 +19,27 @@ namespace uh::client
         // ------------------------------------------------- CLASS FUNCTIONS
         thread_manager(const std::function<void(T)>& consume_job ,job_queue<T>& jq, size_t num_threads=1) : m_job_queue(jq), m_num_threads(num_threads), m_consume_job(consume_job)
         {
-            for (size_t i = 0; i < m_num)
+            for (size_t i = 0; i < m_num_threads; i++)
             {
-
+                m_thread_pool.emplace_back([&](){
+                    while (auto item = m_job_queue.get_job())
+                    {
+                        if (item == std::nullopt)
+                            break;
+                        else
+                            m_consume_job(item);
+                    }
+                });
             }
         }
 
         ~thread_manager()
         {
-            for (auto& worker : m_worker_threads)
+            for (auto& thread : m_thread_pool)
             {
-                worker.join();
+                m_job_queue.stop();
+                if (thread.joinable())
+                    thread.join();
             }
         }
 
@@ -40,9 +50,9 @@ namespace uh::client
 
 
     private:
-        job_queue<T>& m_job_queue;
         size_t m_num_threads;
-        std::vector<std::thread> m_worker_threads;
+        job_queue<std::unique_ptr<T>>& m_job_queue;
+        std::vector<std::thread> m_thread_pool;
         std::function<void(T)>& m_consume_job;
     };
 

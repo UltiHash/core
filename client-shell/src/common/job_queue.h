@@ -4,6 +4,7 @@
 #include <condition_variable>
 #include <mutex>
 #include <list>
+#include <atomic>
 
 namespace uh::client
 {
@@ -15,12 +16,28 @@ class job_queue
 {
 public:
 
+    // ------------------------------------------------- CLASS FUNCTIONS
+    job_queue() : m_stop(false)
+    {
+    }
+
+    // ------------------------------------------------- LOGIC FUNCTIONS
+    void stop()
+    {
+        stop_queue = true;
+        m_cv.notify_all();
+    }
+
     // ------------------------------------------------- GETTERS
-    T&& get_job()
+    std::optional<T&&> get_job()
     {
         std::unique_lock lk(m_mutex);
 
-        m_cv.wait(lk, [&](){ return !m_jobs.empty(); });
+        m_cv.wait(lk, [&](){ return !m_jobs.empty() || stop_queue; });
+        if (stop_queue)
+        {
+            return std::nullopt;
+        }
 
         auto job = std::move(m_jobs.front());
         m_jobs.pop_front();
@@ -42,7 +59,8 @@ public:
 private:
     std::mutex m_mutex;
     std::condition_variable m_cv;
-    std::list<T> m_jobs;
+    std::list<std::unique_ptr<T>> m_jobs;
+    std::atomic<bool> m_stop;
 };
 
 // ---------------------------------------------------------------------
