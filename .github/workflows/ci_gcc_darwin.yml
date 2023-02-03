@@ -19,10 +19,23 @@ jobs:
           token: ${{ secrets.PAT }}
           submodules: recursive
 
-      - name: Install dependencies
+      - name: Install dependencies from Homebrew
         run: |
-          brew install boost openssl
+          brew install wget openssl gcc cmake
           ln -s /usr/local/opt/openssl/include/openssl /usr/local/include
+
+      - name: Compile Boost with gcc
+        run: |
+          wget -O /tmp/boost_1_81_0.tar.gz https://sourceforge.net/projects/boost/files/boost/1.81.0/boost_1_81_0.tar.gz/download
+          cd /tmp/
+          tar -xzf boost_1_81_0.tar.gz
+          cd /tmp/boost_1_81_0
+          ./bootstrap.sh --with-libraries=all --with-toolset=gcc-12
+          sed '10,15d' project-config.jam > project-config.jam.custom 
+          echo "using gcc : 12.2 : /usr/local/bin/g++-12 ;" >> project-config.jam.custom
+          mv project-config.jam.custom project-config.jam
+          ./b2 --target=shared,static --link=shared
+          sudo ./b2 install --target=shared,static --link=shared
 
       - name: Configure CMake
         # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
@@ -34,9 +47,6 @@ jobs:
         run: cmake --build ${{github.workspace}}/build --config Debug --parallel $(nproc)
 
       - name: Test
-        env:
-          MALLOC_CHECK_: 2
-          LD_LIBRARY_PATH: /usr/local/lib
         working-directory: ${{github.workspace}}/build
         # Execute tests defined by the CMake configuration.
         # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
