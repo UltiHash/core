@@ -23,7 +23,7 @@ namespace uh::client::common
             for (size_t i = 0; i < m_num_threads; i++)
             {
                 m_thread_pool.emplace_back([&](){
-                    while (auto item = m_job_queue.get_job())
+                    while (auto&& item = m_job_queue.get_job())
                     {
                         if (item == std::nullopt)
                             break;
