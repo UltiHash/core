@@ -29,7 +29,7 @@ public:
     }
 
     // ------------------------------------------------- GETTERS
-    std::optional<std::unique_ptr<T&&>> get_job()
+    std::optional<std::unique_ptr<T>&&> get_job()
     {
         std::unique_lock lk(m_mutex);
 
