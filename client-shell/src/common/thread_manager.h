@@ -17,7 +17,7 @@ class thread_manager
 public:
 
     // ------------------------------------------------- CLASS FUNCTIONS
-    thread_manager(job_queue& jq, size_t num_threads);
+    explicit thread_manager(size_t num_threads);
     virtual ~thread_manager();
 
     // ------------------------------------------------- SPECIAL FUNCTIONS
@@ -25,7 +25,6 @@ public:
 
 protected:
     size_t m_num_threads;
-    job_queue& m_job_queue;
     std::vector<std::thread> m_thread_pool;
 };
 

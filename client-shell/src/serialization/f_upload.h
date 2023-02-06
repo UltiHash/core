@@ -4,6 +4,7 @@
 #include "../common/thread_manager.h"
 #include "common/f_meta_data.h"
 #include "../common/job_queue.h"
+#include <protocol/client_pool.h>
 
 namespace uh::client::serialization
 {
@@ -15,10 +16,10 @@ class f_upload : public common::thread_manager
 public:
 
     // ------------------------------------------------- CLASS FUNCTIONS
-    explicit f_upload(common::job_queue& jq, size_t num_threads=1);
+    f_upload(std::unique_ptr<protocol::client_pool>&& cl_pool, common::job_queue<std::unique_ptr<common::f_meta_data>>& in_jq, common::job_queue<std::unique_ptr<common::f_meta_data>>& out_jq, size_t num_threads=1);
     ~f_upload() override;
     void spawn_threads() override;
-    void fupload();
+    void upload_files();
 
     // ------------------------------------------------- GETTERS
 
@@ -27,8 +28,9 @@ public:
 
 
 private:
-    common::job_queue& m_input_jq;
-    common::job_queue& m_output_jq;
+    common::job_queue<std::unique_ptr<common::f_meta_data>>& m_input_jq;
+    common::job_queue<std::unique_ptr<common::f_meta_data>>& m_output_jq;
+    std::unique_ptr<uh::protocol::client_pool> m_client_pool;
 };
 
 // ---------------------------------------------------------------------

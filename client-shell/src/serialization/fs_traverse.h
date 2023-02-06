@@ -15,8 +15,8 @@ class fs_traverse : public common::thread_manager
 public:
 
     // ------------------------------------------------- CLASS FUNCTIONS
-    explicit fs_traverse(const std::vector<std::filesystem::path>& traverse_Path, common::job_queue& jq, size_t num_threads=1);
-    ~fs_traverse() override = default;
+    fs_traverse(std::vector<std::filesystem::path> traverse_Path, common::job_queue<std::unique_ptr<common::f_meta_data>>& jq, size_t num_threads=1);
+    ~fs_traverse() override;
     void spawn_threads() override;
 
     // ------------------------------------------------- GETTERS
@@ -26,8 +26,8 @@ public:
 
 
 private:
-    std::vector<std::filesystem::path> m_traversePaths;
-    common::job_queue& m_output_jq;
+    common::job_queue<std::filesystem::path> m_fs_jq;
+    common::job_queue<std::unique_ptr<common::f_meta_data>>& m_output_jq;
 };
 
 // ---------------------------------------------------------------------
