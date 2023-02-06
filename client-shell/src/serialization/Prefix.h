@@ -5,7 +5,6 @@
 #ifndef SCHOOL_PROJECT_PREFIX_H
 #define SCHOOL_PROJECT_PREFIX_H
 
-#include <boost/predef.h>
 #include "EnDecoder.h"
 
 class Prefix{
