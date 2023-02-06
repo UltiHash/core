@@ -12,13 +12,13 @@ namespace uh::client::common
 {
 
 // ---------------------------------------------------------------------
-class thread_basics
+class thread_manager
 {
 public:
 
     // ------------------------------------------------- CLASS FUNCTIONS
-    thread_basics(job_queue& jq, size_t num_threads);
-    virtual ~thread_basics();
+    thread_manager(job_queue& jq, size_t num_threads);
+    virtual ~thread_manager();
 
     // ------------------------------------------------- SPECIAL FUNCTIONS
     virtual void spawn_threads();
