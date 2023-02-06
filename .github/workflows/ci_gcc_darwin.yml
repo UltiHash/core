@@ -1,4 +1,4 @@
-name: CI Pipeline (MacOS Monterey)
+name: CI Pipeline (MacOS Monterey, GCC)
 
 on:
   push:
