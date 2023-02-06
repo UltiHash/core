@@ -6,66 +6,39 @@
 #include <list>
 #include <atomic>
 #include <optional>
+#include "file_meta_data.h"
 
 namespace uh::client::common
 {
 
 // ---------------------------------------------------------------------
 
-template <typename T>
 class job_queue
 {
 public:
 
     // ------------------------------------------------- CLASS FUNCTIONS
-    job_queue() : m_stop_queue(false)
-    {
-    }
+    job_queue();
+    ~job_queue() = default;
 
-    // ------------------------------------------------- LOGIC FUNCTIONS
-    void stop()
-    {
-        m_stop_queue = true;
-        m_cv.notify_all();
-    }
+    // ------------------------------------------------- SPECIAL FUNCTIONS
+    void stop();
 
     // ------------------------------------------------- GETTERS
-    std::optional<std::unique_ptr<T>&&> get_job()
-    {
-        std::unique_lock lk(m_mutex);
-
-        m_cv.wait(lk, [&](){ return !m_jobs.empty() || m_stop_queue; });
-        if (m_stop_queue)
-        {
-            return std::nullopt;
-        }
-
-        auto job = std::move(m_jobs.front());
-        m_jobs.pop_front();
-
-        return (std::move(job));
-    }
+    std::optional<std::unique_ptr<file_meta_data>> get_job();
 
     // ------------------------------------------------- SETTERS
-    void put_back_job(T&& elem)
-    {
-        std::unique_lock lk(m_mutex);
-
-        m_jobs.push_back(std::move(elem));
-
-        lk.unlock();
-        m_cv.notify_one();
-    }
+    void put_back_job(std::unique_ptr<file_meta_data>&& elem);
 
 private:
     std::mutex m_mutex;
     std::condition_variable m_cv;
-    std::list<std::unique_ptr<T>> m_jobs;
+    std::list<std::unique_ptr<file_meta_data>> m_jobs;
     std::atomic<bool> m_stop_queue;
 };
 
 // ---------------------------------------------------------------------
 
-} // namespace uh::client
+} // namespace uh::client::common
 
 #endif

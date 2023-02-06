@@ -4,7 +4,7 @@
 #include "../client_options/client_config.h"
 #include "protocol/client_factory.h"
 #include "protocol/client_pool.h"
-#include "file_meta_data.h"
+#include "common/file_meta_data.h"
 #include "common/job_queue.h"
 
 namespace co = uh::client::option;

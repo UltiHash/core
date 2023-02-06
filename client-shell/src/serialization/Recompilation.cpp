@@ -21,6 +21,7 @@ Recompilation::Recompilation(const uh::client::option::client_config &config, st
 void Recompilation::integrate()
 {
     //TODO:
+
 }
 
 // ---------------------------------------------------------------------

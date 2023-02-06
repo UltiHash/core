@@ -5,58 +5,29 @@
 #include <vector>
 #include <functional>
 #include "job_queue.h"
+#include "file_meta_data.h"
 #include <logging/logging_boost.h>
 
 namespace uh::client::common
 {
 
 // ---------------------------------------------------------------------
+class thread_basics
+{
+public:
 
-    template <typename T>
-    class thread_manager
-    {
-    public:
+    // ------------------------------------------------- CLASS FUNCTIONS
+    thread_basics(job_queue& jq, size_t num_threads);
+    virtual ~thread_basics();
 
-        // ------------------------------------------------- CLASS FUNCTIONS
-        thread_manager(const std::function<void(std::unique_ptr<T>)>& consume_job ,job_queue<T>& jq, size_t num_threads=1) : m_consume_job(consume_job), m_job_queue(jq), m_num_threads(num_threads)
-        {
-            for (size_t i = 0; i < m_num_threads; i++)
-            {
-                m_thread_pool.emplace_back([&](){
-                    while (auto&& item = m_job_queue.get_job())
-                    {
-                        if (item == std::nullopt)
-                            break;
-                        else
-                            m_consume_job(item);
-                    }
-                });
-            }
-        }
+    // ------------------------------------------------- SPECIAL FUNCTIONS
+    virtual void spawn_threads();
 
-        ~thread_manager()
-        {
-            m_job_queue.stop();
-            for (auto& thread : m_thread_pool)
-            {
-                INFO << "Joining Threads";
-                if (thread.joinable())
-                    thread.join();
-            }
-        }
-
-        // ------------------------------------------------- GETTERS
-
-
-        // ------------------------------------------------- SETTERS
-
-
-    private:
-        size_t m_num_threads;
-        job_queue<std::unique_ptr<T>>& m_job_queue;
-        std::vector<std::thread> m_thread_pool;
-        std::function<void(std::unique_ptr<T>)>& m_consume_job;
-    };
+protected:
+    size_t m_num_threads;
+    job_queue& m_job_queue;
+    std::vector<std::thread> m_thread_pool;
+};
 
 // ---------------------------------------------------------------------
 

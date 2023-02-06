@@ -4,7 +4,7 @@
 #include <iostream>
 #include <vector>
 
-namespace uh::client::serialization
+namespace uh::client::common
 {
 
 // ---------------------------------------------------------------------
