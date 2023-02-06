@@ -5,6 +5,9 @@
 #ifndef SCHOOL_PROJECT_PREFIX_H
 #define SCHOOL_PROJECT_PREFIX_H
 
+#if (defined(__unix__) || defined(unix)) && !defined(USG)
+#include <sys/param.h>
+#endif
 #include <boost/predef.h>
 #include "EnDecoder.h"
 
@@ -15,7 +18,11 @@ public:
     std::filesystem::file_type ft{};
     std::filesystem::perms pe{};
     std::string object_name;
+#if defined(BSD)
+    struct stat advancedFileInfo{};
+#else
     struct stat64 advancedFileInfo{};
+#endif
     struct timeval newTimes[2]{};
 protected:
 
