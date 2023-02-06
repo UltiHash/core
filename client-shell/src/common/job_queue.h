@@ -6,7 +6,7 @@
 #include <list>
 #include <atomic>
 #include <optional>
-#include "file_meta_data.h"
+#include "f_meta_data.h"
 
 namespace uh::client::common
 {
@@ -25,15 +25,15 @@ public:
     void stop();
 
     // ------------------------------------------------- GETTERS
-    std::optional<std::unique_ptr<file_meta_data>> get_job();
+    std::optional<std::unique_ptr<f_meta_data>> get_job();
 
     // ------------------------------------------------- SETTERS
-    void put_back_job(std::unique_ptr<file_meta_data>&& elem);
+    void put_back_job(std::unique_ptr<f_meta_data>&& elem);
 
 private:
     std::mutex m_mutex;
     std::condition_variable m_cv;
-    std::list<std::unique_ptr<file_meta_data>> m_jobs;
+    std::list<std::unique_ptr<f_meta_data>> m_jobs;
     std::atomic<bool> m_stop_queue;
 };
 

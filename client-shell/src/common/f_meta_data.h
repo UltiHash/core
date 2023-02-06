@@ -9,7 +9,7 @@ namespace uh::client::common
 
 // ---------------------------------------------------------------------
 
-class file_meta_data
+class f_meta_data
 {
 
     private:

@@ -21,8 +21,7 @@ void fs_traverse::spawn_threads()
             for (size_t i = 0; i < m_traversePaths.size(); ++i)
             {
                 // do traversal of each path
-                // generate file meta data for each in heap
-                m_job_queue.put_back_job();
+
             }
         });
     }

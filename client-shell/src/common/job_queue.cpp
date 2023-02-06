@@ -19,7 +19,7 @@ void job_queue::stop()
 
 // ---------------------------------------------------------------------
 
-std::optional<std::unique_ptr<file_meta_data>> job_queue::get_job()
+std::optional<std::unique_ptr<f_meta_data>> job_queue::get_job()
 {
     std::unique_lock lk(m_mutex);
 
@@ -37,7 +37,7 @@ std::optional<std::unique_ptr<file_meta_data>> job_queue::get_job()
 
 // ---------------------------------------------------------------------
 
-void job_queue::put_back_job(std::unique_ptr<file_meta_data>&& elem)
+void job_queue::put_back_job(std::unique_ptr<f_meta_data>&& elem)
 {
     std::unique_lock lk(m_mutex);
 
