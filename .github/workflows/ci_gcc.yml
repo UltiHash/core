@@ -1,4 +1,4 @@
-name: CI Pipeline (GCC)
+name: CI Pipeline (Linux, GCC)
 
 on:
   push:

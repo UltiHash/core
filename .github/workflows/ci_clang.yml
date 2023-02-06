@@ -1,4 +1,4 @@
-name: CI Pipeline (Clang)
+name: CI Pipeline (Linux, Clang)
 
 on:
   push:

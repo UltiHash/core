@@ -28,7 +28,11 @@ Prefix::Prefix(const std::string &in, unsigned short folderE) {//data to info
     std::filesystem::path tmpPath(std::filesystem::canonical(std::filesystem::path(in).make_preferred()));
     object_name=tmpPath.filename().string();
 
-    if(stat64(tmpPath.c_str(), &advancedFileInfo)){
+#if defined(BSD)
+    if(stat(tmpPath.c_str(), &advancedFileInfo)) {
+#else
+    if(stat64(tmpPath.c_str(), &advancedFileInfo)) {
+#endif
         DEBUG << "The file stat64 of \"" << tmpPath << "\" could not be read!" << std::endl;
     }
 }

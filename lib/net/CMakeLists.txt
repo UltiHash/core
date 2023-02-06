@@ -18,14 +18,5 @@ add_library(${PROJECT_NAME} ${HEADER_FILE_LIST} plain_server.cpp scheduler.cpp s
 target_include_directories(${PROJECT_NAME} INTERFACE ${${PROJECT_NAME}_INCLUDE_DIRS})
 target_link_libraries(${PROJECT_NAME} ${${PROJECT_NAME}_LINK_LIBRARIES})
 
-# special case for building executables for test server / client executables
-add_executable(${PROJECT_NAME}_simple_server ${HEADER_FILE_LIST} simple_server.cpp)
-target_include_directories(${PROJECT_NAME}_simple_server PUBLIC ${${PROJECT_NAME}_INCLUDE_DIRS})
-target_link_libraries(${PROJECT_NAME}_simple_server PUBLIC ${${PROJECT_NAME}_LINK_LIBRARIES} ${DEPENDENCIES})
-
-add_executable(${PROJECT_NAME}_simple_client ${HEADER_FILE_LIST} simple_client.cpp)
-target_include_directories(${PROJECT_NAME}_simple_client PUBLIC ${${PROJECT_NAME}_INCLUDE_DIRS})
-target_link_libraries(${PROJECT_NAME}_simple_client PUBLIC ${${PROJECT_NAME}_LINK_LIBRARIES} ${DEPENDENCIES})
-
 # create testing targets
 include(${CMAKE_CURRENT_SOURCE_DIR}/../cmake/testing/CMakeLists.txt)
