@@ -8,7 +8,6 @@
 #endif
 
 #include <boost/test/unit_test.hpp>
-#include <bits/stdc++.h>
 #include <iostream>
 #include <sys/stat.h>
 #include <sys/types.h>

@@ -138,7 +138,7 @@ struct free_space
 
     struct response
     {
-        std::size_t space_available;
+        uint64_t space_available;
     };
 
     constexpr static uint8_t request_id = 0x05;
