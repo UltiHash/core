@@ -21,7 +21,7 @@ public:
     virtual ~thread_manager();
 
     // ------------------------------------------------- SPECIAL FUNCTIONS
-    virtual void spawn_threads();
+    virtual void spawn_threads()=0;
 
 protected:
     size_t m_num_threads;
