@@ -1,11 +1,11 @@
 #ifdef SINGLE_TEST_RUNNER
 #define BOOST_TEST_NO_MAIN
 #else
-#define BOOST_TEST_MODULE "bplus"
+#define BOOST_TEST_MODULE "ultitree"
 #endif
 
 #include <boost/test/unit_test.hpp>
-#include <trees/bplus.h>
+#include <trees/ultitree.h>
 
 
 using namespace uh::trees;
@@ -17,7 +17,7 @@ std::string to_string(std::span<const char> buffer)
 
 BOOST_AUTO_TEST_CASE(paths)
 {
-    bplus bp;
+    ultitree bp;
 
     std::string text1 = "QWERFDSA";
     auto path1 = bp.insert({text1.begin(), text1.end()});
