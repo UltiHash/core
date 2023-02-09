@@ -15,7 +15,7 @@ class ultitree_list
 {
 public:
 
-    std::list<const fragment*> insert(std::span<const char> buffer);
+    path insert(std::span<const char> buffer);
 
 private:
     std::list<fragment> m_fragments;

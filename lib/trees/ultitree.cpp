@@ -9,9 +9,9 @@ namespace uh::trees
 
 // ---------------------------------------------------------------------
 
-std::list<const fragment*> ultitree_list::insert(std::span<const char> buffer)
+path ultitree_list::insert(std::span<const char> buffer)
 {
-    std::list<const fragment*> rv;
+    path rv;
 
     while (!buffer.empty())
     {

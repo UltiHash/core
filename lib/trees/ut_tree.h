@@ -18,18 +18,17 @@ class ultitree_tree
 {
 public:
 
-    struct treenode
+    struct treenode : public fragment
     {
-        std::span<const char> data;
         std::map<char, std::vector<treenode>> children;
 
-        std::list<const treenode*> insert(std::span<const char> buffer);
+        path insert(std::span<const char> buffer);
         treenode* insert_child(std::span<const char> buffer);
     };
 
     ultitree_tree();
 
-    std::list<const treenode*> insert(std::span<const char> buffer);
+    path insert(std::span<const char> buffer);
 
     static constexpr std::size_t MINIMUM_FRAGMENT = 2;
 private:

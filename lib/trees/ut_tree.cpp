@@ -8,8 +8,7 @@ namespace uh::trees
 
 // ---------------------------------------------------------------------
 
-std::list<const ultitree_tree::treenode*>
-ultitree_tree::treenode::insert(std::span<const char> buffer)
+path ultitree_tree::treenode::insert(std::span<const char> buffer)
 {
     if (buffer.empty())
     {
@@ -64,7 +63,7 @@ ultitree_tree::ultitree_tree()
 
 // ---------------------------------------------------------------------
 
-std::list<const ultitree_tree::treenode*> ultitree_tree::insert(std::span<const char> buffer)
+path ultitree_tree::insert(std::span<const char> buffer)
 {
     return m_root->insert(buffer);
 }

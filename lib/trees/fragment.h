@@ -1,7 +1,10 @@
 #ifndef TREES_FRAGMENT_H
 #define TREES_FRAGMENT_H
 
+#include <list>
 #include <span>
+#include <string>
+
 
 namespace uh::trees
 {
@@ -11,7 +14,17 @@ namespace uh::trees
 struct fragment
 {
     std::span<const char> data;
+
+    std::string to_string() const;
 };
+
+// ---------------------------------------------------------------------
+
+typedef std::list<fragment*> path;
+
+// ---------------------------------------------------------------------
+
+std::string join(const path& p);
 
 // ---------------------------------------------------------------------
 
