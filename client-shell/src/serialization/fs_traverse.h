@@ -1,23 +1,26 @@
 #ifndef SERIALIZATION_FS_TRAVERSE_H
 #define SERIALIZATION_FS_TRAVERSE_H
 
-#include "../common/thread_manager.h"
-#include "common/f_meta_data.h"
+#include "../common/f_meta_data.h"
 #include "../common/job_queue.h"
+#include <queue>
+#include <filesystem>
 
 namespace uh::client::serialization
 {
 
 // ---------------------------------------------------------------------
 
-class fs_traverse : public common::thread_manager
+class fs_traverse
 {
 public:
 
     // ------------------------------------------------- CLASS FUNCTIONS
-    fs_traverse(std::vector<std::filesystem::path> traverse_Path, common::job_queue<std::unique_ptr<common::f_meta_data>>& jq, size_t num_threads=1);
-    ~fs_traverse() override;
-    void spawn_threads() override;
+    fs_traverse(std::vector<std::filesystem::path> traverse_Paths, common::job_queue<std::unique_ptr<common::f_meta_data>>& jq);
+    ~fs_traverse() = default;
+
+    // ------------------------------------------------- SPECIAL FUNCTIONS
+    void traverse();
 
     // ------------------------------------------------- GETTERS
 
@@ -26,7 +29,7 @@ public:
 
 
 private:
-    common::job_queue<std::filesystem::path> m_fs_jq;
+    std::queue<std::filesystem::path> m_fs_jq;
     common::job_queue<std::unique_ptr<common::f_meta_data>>& m_output_jq;
 };
 

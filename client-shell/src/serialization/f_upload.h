@@ -2,8 +2,8 @@
 #define SERIALIZATION_F_UPLOAD_H
 
 #include "../common/thread_manager.h"
-#include "common/f_meta_data.h"
 #include "../common/job_queue.h"
+#include "../common/f_meta_data.h"
 #include <protocol/client_pool.h>
 
 namespace uh::client::serialization
@@ -19,7 +19,7 @@ public:
     f_upload(std::unique_ptr<protocol::client_pool>&& cl_pool, common::job_queue<std::unique_ptr<common::f_meta_data>>& in_jq, common::job_queue<std::unique_ptr<common::f_meta_data>>& out_jq, size_t num_threads=1);
     ~f_upload() override;
     void spawn_threads() override;
-    void upload_files();
+    void upload_files() const;
 
     // ------------------------------------------------- GETTERS
 
