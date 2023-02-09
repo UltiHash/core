@@ -23,35 +23,7 @@ ultitree_tree::treenode::insert(std::span<const char> buffer)
     }
 
     std::vector<treenode>& child_vec = childs->second;
-    std::vector<treenode>::iterator best = child_vec.end();
-    std::size_t max_common = 0u;
-    for (auto it = child_vec.begin(); it != child_vec.end(); ++it)
-    {
-        auto mismatch = std::mismatch(buffer.begin(), buffer.end(),
-                                      it->data.begin(), it->data.end());
-
-        auto common_length = std::distance(buffer.begin(), mismatch.first);
-        if (common_length < ultitree_tree::MINIMUM_FRAGMENT)
-        {
-            continue;
-        }
-
-        if (buffer.size() - common_length < ultitree_tree::MINIMUM_FRAGMENT)
-        {
-            continue;
-        }
-
-        if (it->data.size() - common_length < ultitree_tree::MINIMUM_FRAGMENT)
-        {
-            continue;
-        }
-
-        if (common_length > max_common)
-        {
-            max_common = common_length;
-            best = it;
-        }
-    }
+    auto [best, max_common] = find_most_common(child_vec, buffer, ultitree_tree::MINIMUM_FRAGMENT);
 
     if (best == child_vec.end())
     {

@@ -15,60 +15,30 @@ std::list<const fragment*> ultitree_list::insert(std::span<const char> buffer)
 
     while (!buffer.empty())
     {
-        auto match = find_most_common(buffer);
-        if (match.first == m_fragments.end())
+        auto [best, max_common] = find_most_common(m_fragments, buffer, m_minimum_fragment);
+        if (best == m_fragments.end())
         {
             auto last = m_fragments.insert(m_fragments.end(), fragment{ buffer });
             rv.push_back(&*last);
             break;
         }
 
-        if (match.second >= buffer.size())
+        if (max_common >= buffer.size())
         {
             auto frag = m_fragments.insert(m_fragments.end(), fragment{ buffer });
             rv.push_back(&*frag);
             break;
         }
 
-        fragment& f = *match.first;
-        auto head = m_fragments.insert(m_fragments.end(), fragment{ f.data.subspan(0, match.second) });
-        m_fragments.push_back(fragment{ f.data.subspan(match.second) });
+        fragment& f = *best;
+        auto head = m_fragments.insert(m_fragments.end(), fragment{ f.data.subspan(0, max_common) });
+        m_fragments.push_back(fragment{ f.data.subspan(max_common) });
 
         rv.push_back(&*head);
-        buffer = buffer.subspan(match.second);
+        buffer = buffer.subspan(max_common);
     }
 
     return rv;
-}
-
-// ---------------------------------------------------------------------
-
-std::pair<std::list<fragment>::iterator, std::size_t>
-ultitree_list::find_most_common(std::span<const char> buffer)
-{
-    std::size_t length = 0;
-    std::list<fragment>::iterator rv = m_fragments.end();
-
-    for (auto it = m_fragments.begin(); it != m_fragments.end(); ++it)
-    {
-        auto mismatch = std::mismatch(buffer.begin(), buffer.end(),
-                                      it->data.begin(), it->data.end());
-
-        std::size_t common_length = std::distance(buffer.begin(), mismatch.first);
-
-        if (common_length < m_minimum_fragment)
-        {
-            continue;
-        }
-
-        if (common_length > length)
-        {
-            length = common_length;
-            rv = it;
-        }
-    }
-
-    return std::make_pair(rv, length);
 }
 
 // ---------------------------------------------------------------------
