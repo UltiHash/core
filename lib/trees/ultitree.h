@@ -15,10 +15,6 @@ class ultitree_list
 {
 public:
 
-    /**
-     * Insert a buffer into the ultitree_list and return a list of fragments to
-     * recover the buffer.
-     */
     std::list<const fragment*> insert(std::span<const char> buffer);
 
 private:
