@@ -9,7 +9,7 @@ namespace uh::trees
 
 // ---------------------------------------------------------------------
 
-path ultitree_list::insert(std::span<const char> buffer)
+hash ultitree_list::insert(std::span<const char> buffer)
 {
     path rv;
 
@@ -32,13 +32,23 @@ path ultitree_list::insert(std::span<const char> buffer)
 
         fragment& f = *best;
         auto head = m_fragments.insert(m_fragments.end(), fragment{ f.data.subspan(0, max_common) });
-        m_fragments.push_back(fragment{ f.data.subspan(max_common) });
+        auto tail = m_fragments.insert(m_fragments.end(), fragment{ f.data.subspan(max_common) });
+
+        m_ind.update(&*best, { &*head, &*tail });
+        m_fragments.erase(best);
 
         rv.push_back(&*head);
         buffer = buffer.subspan(max_common);
     }
 
-    return rv;
+    return m_ind.add_path(rv);
+}
+
+// ---------------------------------------------------------------------
+
+std::string ultitree_list::find(const hash& h)
+{
+    return join(m_ind.to_path(h));
 }
 
 // ---------------------------------------------------------------------

@@ -2,6 +2,7 @@
 #define TREES_UT_TREE_H
 
 #include "fragment.h"
+#include "indirect.h"
 
 #include <list>
 #include <map>
@@ -22,17 +23,20 @@ public:
     {
         std::map<char, std::vector<treenode>> children;
 
-        path insert(std::span<const char> buffer);
+        path insert(std::span<const char> buffer, indirection& ind);
         treenode* insert_child(std::span<const char> buffer);
     };
 
     ultitree_tree();
 
-    path insert(std::span<const char> buffer);
+    hash insert(std::span<const char> buffer);
+
+    std::string find(const hash& h);
 
     static constexpr std::size_t MINIMUM_FRAGMENT = 2;
 private:
     std::unique_ptr<treenode> m_root;
+    indirection m_ind;
 };
 
 // ---------------------------------------------------------------------

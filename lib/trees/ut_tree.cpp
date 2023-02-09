@@ -8,7 +8,7 @@ namespace uh::trees
 
 // ---------------------------------------------------------------------
 
-path ultitree_tree::treenode::insert(std::span<const char> buffer)
+path ultitree_tree::treenode::insert(std::span<const char> buffer, indirection& ind)
 {
     if (buffer.empty())
     {
@@ -31,7 +31,7 @@ path ultitree_tree::treenode::insert(std::span<const char> buffer)
 
     if (best->data.size() == max_common)
     {
-        auto rv = best->insert(buffer.subspan(max_common));
+        auto rv = best->insert(buffer.subspan(max_common), ind);
         rv.push_front(&*best);
         return rv;
     }
@@ -40,8 +40,10 @@ path ultitree_tree::treenode::insert(std::span<const char> buffer)
     auto buffer_remains = buffer.subspan(max_common);
 
     best->data = best->data.subspan(0, max_common);
-    best->insert_child(best_remains);
+    auto best2nd = best->insert_child(best_remains);
     auto last = best->insert_child(buffer_remains);
+
+    ind.update(&*best, { &*best, best2nd });
 
     return { &*best, last };
 }
@@ -63,9 +65,16 @@ ultitree_tree::ultitree_tree()
 
 // ---------------------------------------------------------------------
 
-path ultitree_tree::insert(std::span<const char> buffer)
+hash ultitree_tree::insert(std::span<const char> buffer)
 {
-    return m_root->insert(buffer);
+    return m_ind.add_path(m_root->insert(buffer, m_ind));
+}
+
+// ---------------------------------------------------------------------
+
+std::string ultitree_tree::find(const hash& h)
+{
+    return join(m_ind.to_path(h));
 }
 
 // ---------------------------------------------------------------------
