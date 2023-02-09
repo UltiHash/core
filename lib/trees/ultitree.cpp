@@ -9,7 +9,7 @@ namespace uh::trees
 
 // ---------------------------------------------------------------------
 
-std::list<const fragment*> ultitree::insert(std::span<const char> buffer)
+std::list<const fragment*> ultitree_list::insert(std::span<const char> buffer)
 {
     std::list<const fragment*> rv;
 
@@ -44,7 +44,7 @@ std::list<const fragment*> ultitree::insert(std::span<const char> buffer)
 // ---------------------------------------------------------------------
 
 std::pair<std::list<fragment>::iterator, std::size_t>
-ultitree::find_most_common(std::span<const char> buffer)
+ultitree_list::find_most_common(std::span<const char> buffer)
 {
     std::size_t length = 0;
     std::list<fragment>::iterator rv = m_fragments.end();

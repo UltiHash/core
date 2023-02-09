@@ -17,7 +17,7 @@ std::string to_string(std::span<const char> buffer)
 
 BOOST_AUTO_TEST_CASE(paths)
 {
-    ultitree bp;
+    ultitree_list bp;
 
     std::string text1 = "QWERFDSA";
     auto path1 = bp.insert({text1.begin(), text1.end()});

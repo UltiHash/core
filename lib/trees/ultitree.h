@@ -1,8 +1,9 @@
 #ifndef TREES_ULTITREE_H
 #define TREES_ULTITREE_H
 
+#include "fragment.h"
+
 #include <list>
-#include <span>
 
 
 namespace uh::trees
@@ -10,19 +11,12 @@ namespace uh::trees
 
 // ---------------------------------------------------------------------
 
-struct fragment
-{
-    std::span<const char> data;
-};
-
-// ---------------------------------------------------------------------
-
-class ultitree
+class ultitree_list
 {
 public:
 
     /**
-     * Insert a buffer into the ultitree and return a list of fragments to
+     * Insert a buffer into the ultitree_list and return a list of fragments to
      * recover the buffer.
      */
     std::list<const fragment*> insert(std::span<const char> buffer);
