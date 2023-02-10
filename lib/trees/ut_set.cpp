@@ -1,4 +1,4 @@
-#include "bplus.h"
+#include "ut_set.h"
 
 #include <algorithm>
 #include <cassert>
@@ -9,18 +9,9 @@ namespace uh::trees
 
 // ---------------------------------------------------------------------
 
-bool fragment::operator<(const fragment& other) const
+hash ultitree_set::insert(std::span<const char> buffer)
 {
-    return std::lexicographical_compare(
-        data.begin(), data.end(),
-        other.data.begin(), other.data.end());
-}
-
-// ---------------------------------------------------------------------
-
-std::list<const fragment*> bplus::insert(std::span<const char> buffer)
-{
-    std::list<const fragment*> rv;
+    path rv;
 
     while (!buffer.empty())
     {
@@ -43,12 +34,19 @@ std::list<const fragment*> bplus::insert(std::span<const char> buffer)
         break;
     }
 
-    return rv;
+    return m_ind.add_path(rv);
 }
 
 // ---------------------------------------------------------------------
 
-bool bplus::insert_at(std::set<fragment>::iterator pos,
+std::string ultitree_set::find(const hash& h)
+{
+    return join(m_ind.to_path(h));
+}
+
+// ---------------------------------------------------------------------
+
+bool ultitree_set::insert_at(std::set<fragment>::iterator pos,
                       std::span<const char>& buffer,
                       std::list<const fragment*>& path)
 {
@@ -77,8 +75,6 @@ bool bplus::insert_at(std::set<fragment>::iterator pos,
     auto first = m_fragments.insert(fragment{ pos->data.subspan(0, length) });
     auto second = m_fragments.insert(fragment{ pos->data.subspan(length) });
 
-    assert(first.second && second.second);
-
     path.push_back(&*first.first);
     buffer = buffer.subspan(length);
     return true;
@@ -86,7 +82,7 @@ bool bplus::insert_at(std::set<fragment>::iterator pos,
 
 // ---------------------------------------------------------------------
 
-std::set<fragment>::iterator bplus::greatest_less_than(std::span<const char> buffer)
+std::set<fragment>::iterator ultitree_set::greatest_less_than(std::span<const char> buffer)
 {
     if (m_fragments.empty())
     {
@@ -110,7 +106,7 @@ std::set<fragment>::iterator bplus::greatest_less_than(std::span<const char> buf
 
 // ---------------------------------------------------------------------
 
-std::set<fragment>::iterator bplus::least_greater_or_equal(std::span<const char> buffer)
+std::set<fragment>::iterator ultitree_set::least_greater_or_equal(std::span<const char> buffer)
 {
     return m_fragments.lower_bound(fragment{ buffer });
 }

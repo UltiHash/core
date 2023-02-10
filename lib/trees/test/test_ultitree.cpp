@@ -6,6 +6,7 @@
 
 #include <boost/test/unit_test.hpp>
 #include <trees/ultitree.h>
+#include <trees/ut_set.h>
 #include <trees/ut_tree.h>
 
 
@@ -47,6 +48,13 @@ void generic_test_paths(ultitree& ut)
 BOOST_AUTO_TEST_CASE(list_paths)
 {
     ultitree_list ut;
+    generic_test_paths(ut);
+    generic_path_validity(ut);
+}
+
+BOOST_AUTO_TEST_CASE(set_paths)
+{
+    ultitree_set ut;
     generic_test_paths(ut);
     generic_path_validity(ut);
 }

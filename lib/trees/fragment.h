@@ -16,11 +16,12 @@ struct fragment
     std::span<const char> data;
 
     std::string to_string() const;
+    bool operator<(const fragment& other) const;
 };
 
 // ---------------------------------------------------------------------
 
-typedef std::list<fragment*> path;
+typedef std::list<const fragment*> path;
 
 // ---------------------------------------------------------------------
 

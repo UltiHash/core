@@ -1,6 +1,9 @@
 #ifndef TREES_BPLUS_H
 #define TREES_BPLUS_H
 
+#include "fragment.h"
+#include "indirect.h"
+
 #include <list>
 #include <set>
 #include <span>
@@ -11,24 +14,13 @@ namespace uh::trees
 
 // ---------------------------------------------------------------------
 
-struct fragment
-{
-    std::span<const char> data;
-
-    bool operator<(const fragment& other) const;
-};
-
-// ---------------------------------------------------------------------
-
-class bplus
+class ultitree_set
 {
 public:
 
-    /**
-     * Insert a buffer into the bplus and return a list of fragments to
-     * recover the buffer.
-     */
-    std::list<const fragment*> insert(std::span<const char> buffer);
+    hash insert(std::span<const char> buffer);
+
+    std::string find(const hash& h);
 
 private:
     std::set<fragment>::iterator greatest_less_than(std::span<const char> buffer);
@@ -39,6 +31,7 @@ private:
                    std::list<const fragment*>& path);
 
     std::set<fragment> m_fragments;
+    indirection m_ind;
     std::size_t m_minimum_fragment = 2;
 };
 
