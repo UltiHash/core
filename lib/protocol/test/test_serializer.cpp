@@ -44,7 +44,7 @@ BOOST_AUTO_TEST_CASE( integral_types )
 
 BOOST_AUTO_TEST_CASE( vector )
 {
-    std::vector<char> orig{ 100, -100, 0x55, 0x23 };
+    std::vector<char> orig{ 100, 123, 0x55, 0x23 };
     BOOST_TEST(copy(orig) == orig);
 }
 

@@ -1,0 +1,74 @@
+version: "3.9"
+services:
+  web:
+    image: juanjoseguevara/server-web-web
+    working_dir: "/uh-management-console/uh-web-client"
+    ports:
+      - "3000:3000"
+    environment:
+      - WATCHPACK_POLLING=true
+      - REACT_APP_ANONYMOUS_ACCESS_ENABLED=true
+      - REACT_APP_DASHBOARD_URI=http://localhost:3001/d-solo/ERNvb7o4k/ultihash-monitoring
+      - REACT_APP_DASHBOARD_PANEL_IDS=[4, 2]
+  grafana:
+    image: grafana/grafana-enterprise
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_SECURITY_ALLOW_EMBEDDING=true
+    links:
+      - prometheus
+    volumes:
+      - grafana-storage:/var/lib/grafana grafana/grafana-enterprise
+  prometheus:
+    image: prom/prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - type: bind
+        source: ./prometheus.yml
+        target: /etc/prometheus/prometheus.yml
+  uh-server-db:
+    image: uh-server-db
+    build:
+      context: ./
+      dockerfile: Dockerfile
+      args:
+        - CMAKE_OPTION=BUILD_SERVER_DB
+        - SRC_PATH=server-db
+        - TARGET=uhServerDB
+    links:
+      - prometheus
+  uh-server-agency:
+    image: uh-server-agency
+    build:
+      context: ./
+      dockerfile: Dockerfile
+      args:
+        - CMAKE_OPTION=BUILD_SERVER_AGENCY
+        - SRC_PATH=server-agency
+        - TARGET=uhServerAgency
+    ports:
+      - "21832:21832"
+    depends_on:
+      - uh-server-db
+    links:
+      - prometheus
+      - uh-server-db
+  uh-client-shell:
+    image: uh-client-shell
+    build:
+      context: ./
+      dockerfile: Dockerfile
+      args:
+        - CMAKE_OPTION=BUILD_CLIENT_SHELL
+        - SRC_PATH=client-shell
+        - TARGET=uhClient
+    depends_on:
+      - uh-server-db
+      - uh-server-agency
+    links:
+      - uh-server-agency
+volumes:
+  grafana-storage:
