@@ -7,38 +7,6 @@ set(CMAKE_CXX_STANDARD 20)
 set(Boost_USE_STATIC_LIBS ON)
 find_package(Boost 1.80 COMPONENTS regex date_time system filesystem unit_test_framework program_options REQUIRED)
 
-find_package(Git REQUIRED)
-if(GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/.git")
-    message(STATUS "Reading git revision")
-
-    execute_process(COMMAND ${GIT_EXECUTABLE} rev-parse HEAD
-            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-            OUTPUT_VARIABLE GIT_REVISION)
-    string(STRIP "${GIT_REVISION}" PROJECT_VCSID)
-
-    execute_process(COMMAND ${GIT_EXECUTABLE} remote get-url origin
-            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-            OUTPUT_VARIABLE GIT_REPOSITORY)
-    string(STRIP "${GIT_REPOSITORY}" PROJECT_REPOSITORY)
-
-    # auto-ignore build directory
-    if(NOT EXISTS ${PROJECT_BINARY_DIR}/.gitignore)
-        file(WRITE ${PROJECT_BINARY_DIR}/.gitignore "*")
-    endif()
-
-    # Update submodules as needed
-    option(UPDATE_GIT_SUBMODULE "Update submodules during build" OFF)
-    if(UPDATE_GIT_SUBMODULE)
-        message(STATUS "Updating submodules...")
-        execute_process(COMMAND ${GIT_EXECUTABLE} submodule update --init --recursive --remote
-                WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-                RESULT_VARIABLE GIT_SUBMOD_RESULT)
-        if(NOT GIT_SUBMOD_RESULT EQUAL "0")
-            message(FATAL_ERROR "git submodule update --init --recursive --remote failed with ${GIT_SUBMOD_RESULT}, please checkout submodules")
-        endif()
-    endif()
-endif()
-
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/config.hpp.in ${CMAKE_CURRENT_BINARY_DIR}/config.hpp)
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
