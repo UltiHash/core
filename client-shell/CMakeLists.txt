@@ -6,7 +6,7 @@ message(STATUS "Using ${PROJECT_NAME}...")
 
 # configure a header file to pass some of the CMake settings
 # to the source code
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/project_config.h.in ${CMAKE_CURRENT_SOURCE_DIR}/src/project_config.h)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/project_config.h.in ${CMAKE_CURRENT_BINARY_DIR}/project_config.h)
 
 # external dependencies
 set(Boost_USE_STATIC_LIBS ON)
