@@ -34,7 +34,7 @@ int main(int argc, const char *argv[])
 
         const auto& client_config = config.client();
         uh::protocol::client_factory client_factory(
-                std::make_unique<uh::net::plain_socket_factory>(io, config.agency().m_hostname, config.agency().m_port),
+                std::make_unique<uh::net::plain_socket_factory>(io, config.agency().hostname, config.agency().port),
                 cf_config);
 
         // recompilation

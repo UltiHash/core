@@ -32,16 +32,16 @@ bool agency_connection::isMetrics() const {
 
 // ---------------------------------------------------------------------
 
-void agency_connection::handle(const boost::program_options::variables_map& vars, client_config& config)
+void agency_connection::handle(const boost::program_options::variables_map& vars, host_port& config)
 {
     if (vars.count("agency-node") > 0 )
     {
         auto agency_opt = vars["agency-node"].as<std::string>();
         auto colon = agency_opt.find(':');
-        config.m_hostname = agency_opt.substr(0, colon);
+        config.hostname = agency_opt.substr(0, colon);
         if (colon != std::string::npos)
         {
-            config.m_port = std::stoi(agency_opt.substr(colon + 1));
+            config.port = std::stoi(agency_opt.substr(colon + 1));
         }
     }
     else
@@ -52,7 +52,7 @@ void agency_connection::handle(const boost::program_options::variables_map& vars
 
 // ---------------------------------------------------------------------
 
-const client_config& agency_connection::config() const
+const host_port& agency_connection::config() const
 {
     return m_config;
 }

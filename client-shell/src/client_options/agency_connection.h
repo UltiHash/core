@@ -9,6 +9,14 @@ namespace uh::client
 
 // ---------------------------------------------------------------------
 
+struct host_port
+{
+    std::string hostname;
+    uint16_t port;
+};
+
+// ---------------------------------------------------------------------
+
 class agency_connection : public options::options
 {
 public:
@@ -21,13 +29,13 @@ public:
 
     // LOGIC FUNCTIONS
     virtual uh::options::action evaluate(const boost::program_options::variables_map& vars) override;
-    void handle(const boost::program_options::variables_map& vars, client_config& config);
+    void handle(const boost::program_options::variables_map& vars, host_port& config);
 
-    const client_config& config() const;
+    const host_port& config() const;
 
 private:
     bool m_metrics = false;
-    client_config m_config;
+    host_port m_config;
 };
 
 // ---------------------------------------------------------------------
