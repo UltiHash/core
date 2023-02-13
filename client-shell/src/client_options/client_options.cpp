@@ -9,25 +9,17 @@ namespace uh::client
 // ---------------------------------------------------------------------
 
 client_options::client_options()
-        : m_desc("Client Options"), m_hiddenDesc("Hidden Client Options")
+    : options("Client Options")
 {
-    m_desc.add_options()
+    visible().add_options()
             ("retrieve,r","read the recompilation file and put the contents to the target destination")
             ("integrate,i","write the contents of the sources provided and generate the recompilation file at the target")
             ("list,l", "list the path inside the given recompilation file")
             ("exclude,E", value<std::vector<std::string>>(&m_operateStrPaths)->multitoken(), "exclude directories when integrating [optional]")
             ("target,T", value<std::string>(&m_targetDirectory), "destination of the target directory for --retrieve(-r) operation [optional]")
             ("verbose,V" , "shows details about the results of running the command [optional]");
-    m_hiddenDesc.add_options()
+    hidden().add_options()
             ("positional,p", value<std::vector<std::string>>(&m_posPaths)->multitoken(),"[default] positional arguments given");
-}
-
-// ---------------------------------------------------------------------
-
-void client_options::apply(uh::options::options& opts)
-{
-    opts.add(m_desc);
-    opts.add(m_hiddenDesc, options::visibility::hidden);
 }
 
 // ---------------------------------------------------------------------
@@ -50,7 +42,7 @@ void option_dependency(const boost::program_options::variables_map & vm,
 
 // ---------------------------------------------------------------------
 
-void client_options::evaluate(const boost::program_options::variables_map& vars)
+uh::options::action client_options::evaluate(const boost::program_options::variables_map& vars)
 {
     option_dependency(vars,"target", "retrieve");
     option_dependency(vars,"exclude", "integrate");
@@ -59,6 +51,8 @@ void client_options::evaluate(const boost::program_options::variables_map& vars)
     m_list = vars.count("list") != 0;
     m_exclude = vars.count("exclude") != 0;
     conflictingOptions();
+    handle(vars, m_config);
+    return uh::options::action::proceed;
 }
 
 // ---------------------------------------------------------------------
@@ -69,6 +63,13 @@ void client_options::conflictingOptions() const
     {
         throw std::logic_error("Multiple conflicting client options chosen. See --help for more information.");
     }
+}
+
+// ---------------------------------------------------------------------
+
+const client_config& client_options::config() const
+{
+    return m_config;
 }
 
 // ---------------------------------------------------------------------

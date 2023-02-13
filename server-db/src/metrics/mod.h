@@ -1,7 +1,6 @@
 #ifndef SERVER_DATABASE_METRICS_MOD_H
 #define SERVER_DATABASE_METRICS_MOD_H
 
-#include <config/options.h>
 #include <metrics/protocol_metrics.h>
 #include <metrics/storage_metrics.h>
 
@@ -16,7 +15,7 @@ namespace uh::dbn::metrics
 class mod
 {
 public:
-    mod(const config::options& options);
+    mod(const uh::metrics::config& config);
 
     ~mod();
 

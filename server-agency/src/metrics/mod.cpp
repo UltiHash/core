@@ -10,7 +10,7 @@ namespace uh::an::metrics
 
 struct mod::impl
 {
-    impl(const config::options& options);
+    impl(const uh::metrics::config& config);
 
     uh::metrics::service metrics_service;
     protocol_metrics protocol;
@@ -18,16 +18,16 @@ struct mod::impl
 
 // ---------------------------------------------------------------------
 
-mod::impl::impl(const config::options& options)
-    : metrics_service(options.metrics().config()),
+mod::impl::impl(const uh::metrics::config& config)
+    : metrics_service(config),
       protocol(metrics_service)
 {
 }
 
 // ---------------------------------------------------------------------
 
-mod::mod(const config::options& options)
-    : m_impl(std::make_unique<impl>(options))
+mod::mod(const uh::metrics::config& config)
+    : m_impl(std::make_unique<impl>(config))
 {
 }
 

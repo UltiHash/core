@@ -1,57 +1,35 @@
 #include "basic_options.h"
 
 
+using namespace boost::program_options;
+
 namespace uh::options
 {
 
 // ---------------------------------------------------------------------
 
 basic_options::basic_options()
-    : m_desc("General Options")
+    : options("General Options")
 {
-    m_desc.add_options()
-        ("help,h", "print help screen")
-        ("version,v", "output program version");
-    m_hiddenDesc.add_options()
-            ("vcsid", "output VCS revision ID");
+    visible().add_options()
+        ("help,h", value<bool>(&m_config.help)->implicit_value(true), "print help screen")
+        ("version,v", value<bool>(&m_config.version)->implicit_value(true), "output program version");
+    hidden().add_options()
+        ("vcsid", value<bool>(&m_config.vcsid)->implicit_value(true), "output VCS revision ID");
 }
 
 // ---------------------------------------------------------------------
 
-void basic_options::apply(options& opts)
+action basic_options::evaluate(const boost::program_options::variables_map&)
 {
-    opts.add(m_desc);
-    opts.add(m_hiddenDesc, visibility::hidden);
+    return (m_config.help || m_config.version || m_config.vcsid) ? action::exit : action::proceed;
 }
 
 // ---------------------------------------------------------------------
 
-void basic_options::evaluate(const boost::program_options::variables_map& vars)
+const uh::options::config& basic_options::config() const
 {
-    m_help = vars.count("help") != 0;
-    m_version = vars.count("version") != 0;
-    m_vcsid = vars.count("vcsid") != 0;
-}
-
-// ---------------------------------------------------------------------
-
-bool basic_options::print_help() const
-{
-    return m_help;
-}
-
-// ---------------------------------------------------------------------
-
-bool basic_options::print_version() const
-{
-    return m_version;
-}
-
-// ---------------------------------------------------------------------
-
-bool basic_options::print_vcsid() const
-{
-    return m_vcsid;
+    return m_config;
 }
 
 // ---------------------------------------------------------------------

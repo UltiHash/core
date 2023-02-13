@@ -6,6 +6,7 @@
 
 #include <boost/test/unit_test.hpp>
 #include <options/metrics_options.h>
+#include <options/loader.h>
 
 
 using namespace uh::options;
@@ -36,9 +37,7 @@ BOOST_AUTO_TEST_CASE(parse)
                            "--metrics-path", "/foo" };
 
     metrics_options opts;
-    opts.apply(opts);
-    opts.parse(sizeof(args) / sizeof(char*), args);
-
+    loader().add(opts).evaluate(sizeof(args) / sizeof(char*), args);
     const auto& cfg = opts.config();
 
     BOOST_CHECK_EQUAL(cfg.address, "1.2.3.4:1234");

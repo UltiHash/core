@@ -4,31 +4,36 @@
 #include <boost/program_options/options_description.hpp>
 #include <boost/program_options/variables_map.hpp>
 
-#include <iosfwd>
-
 
 namespace uh::options
 {
 
 // ---------------------------------------------------------------------
 
-// tagging option descriptions for visibility
-enum class visibility { hidden, visible };
+enum class action
+{
+    exit,
+    proceed
+};
 
 // ---------------------------------------------------------------------
 
 class options
 {
 public:
-    virtual void parse(int argc, const char** argv);
-    virtual void evaluate(const boost::program_options::variables_map& vars);
-    void add(const boost::program_options::options_description& desc, const visibility& vis = visibility::visible);
-    void dump(std::ostream& out) const;
+    options(const std::string& caption);
 
-protected:
-    boost::program_options::options_description m_desc;
+    virtual action evaluate(const boost::program_options::variables_map& vars);
+
+    const boost::program_options::options_description& hidden() const;
+    const boost::program_options::options_description& visible() const;
+
+    boost::program_options::options_description& hidden();
+    boost::program_options::options_description& visible();
+
+private:
+    boost::program_options::options_description m_hidden;
     boost::program_options::options_description m_visible;
-    boost::program_options::variables_map m_vars;
 };
 
 // ---------------------------------------------------------------------

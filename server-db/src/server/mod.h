@@ -1,7 +1,8 @@
 #ifndef SERVER_DATABASE_SERVER_MOD_H
 #define SERVER_DATABASE_SERVER_MOD_H
 
-#include <config/options.h>
+#include <options/server_options.h>
+
 #include <metrics/mod.h>
 #include <storage/mod.h>
 
@@ -16,7 +17,7 @@ namespace uh::dbn::server
 class mod
 {
 public:
-    mod(const config::options& options,
+    mod(const net::server_config& options,
         dbn::storage::mod& storage,
         dbn::metrics::mod& metrics);
 

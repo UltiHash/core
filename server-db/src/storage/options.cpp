@@ -23,9 +23,9 @@ constexpr const char* optionString(OptionsEnum n)
 // ---------------------------------------------------------------------
 
 options::options()
-    : m_desc("Storage Options")
+    : uh::options::options("Storage Options")
 {
-    m_desc.add_options()
+    visible().add_options()
         (optionString(OptionsEnum::DbRoot),
             value<std::string>()->default_value(std::string(uh::dbn::storage::storage_config::default_db_root)),
                 "Directory where the database root is located")
@@ -41,14 +41,7 @@ options::options()
 
 // ---------------------------------------------------------------------
 
-void options::apply(uh::options::options& opts)
-{
-    opts.add(m_desc);
-}
-
-// ---------------------------------------------------------------------
-
-void options::evaluate(const boost::program_options::variables_map& vars)
+uh::options::action options::evaluate(const boost::program_options::variables_map& vars)
 {
     storage_config c;
     c.db_root = vars[optionString(OptionsEnum::DbRoot)].as<std::string>();
@@ -62,6 +55,7 @@ void options::evaluate(const boost::program_options::variables_map& vars)
     }
 
     std::swap(m_config, c);
+    return uh::options::action::proceed;
 }
 
 // ---------------------------------------------------------------------

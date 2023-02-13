@@ -13,21 +13,23 @@ namespace uh::client
 
 // ---------------------------------------------------------------------
 
-class client_options
+class client_options : public uh::options::options
     {
     public:
 
         // CLASS FUNCTIONS
         client_options();
 
+        virtual uh::options::action evaluate(const boost::program_options::variables_map& vars) override;
+
         // GETTERS
         [[nodiscard]] bool optDisabled() const;
 
         // LOGIC FUNCTIONS
-        void apply(uh::options::options& opts);
-        void evaluate(const boost::program_options::variables_map& vars);
         void handle(const boost::program_options::variables_map& vars, client_config& config) const;
         void conflictingOptions() const;
+
+        const client_config& config() const;
 
     private:
         bool m_retrieve = false;
@@ -36,8 +38,7 @@ class client_options
         bool m_exclude = false;
 
     private:
-        boost::program_options::options_description m_desc;
-        boost::program_options::options_description m_hiddenDesc;
+        client_config m_config;
         std::vector<std::string> m_posPaths;
         std::vector<std::string> m_operateStrPaths;
         std::string m_targetDirectory;
