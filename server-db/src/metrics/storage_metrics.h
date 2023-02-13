@@ -14,9 +14,11 @@ public:
     storage_metrics(uh::metrics::service& service);
 
     prometheus::Gauge& free_space() const;
+    prometheus::Gauge& used_space() const;
 private:
     prometheus::Family<prometheus::Gauge>& m_gauges;
     prometheus::Gauge& m_free_space;
+    prometheus::Gauge& m_used_space;
 };
 
 // ---------------------------------------------------------------------

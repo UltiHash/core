@@ -81,6 +81,7 @@ void dump_storage::update_space_consumption(){
     m_used = get_dir_size(m_root);
     m_free = m_alloc - m_used;
     m_storage_metrics.free_space().Set(m_free);
+    m_storage_metrics.used_space().Set(m_used);
 
     if(m_free <= 0){
         THROW(util::exception, "database node is full");
