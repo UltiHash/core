@@ -15,8 +15,7 @@ class logging_options : public options
 public:
     logging_options();
 
-    void apply(options& opts);
-    virtual void evaluate(const boost::program_options::variables_map& vars) override;
+    virtual action evaluate(const boost::program_options::variables_map& vars) override;
 
     const log::config& config() const;
 

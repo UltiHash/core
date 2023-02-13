@@ -1,18 +1,25 @@
 #include "project_config.h"
-#include "client_options/all_options.h"
+#include "client_options/client_options.h"
+#include "client_options/agency_connection.h"
 #include "protocol/client_factory.h"
 #include <net/plain_socket.h>
 #include <serialization/Recompilation.h>
+
+#include <options/app_config.h>
+
+
+APPLICATION_CONFIG(
+    (client, uh::client::client_options),
+    (agency, uh::client::agency_connection));
+
 
 int main(int argc, const char *argv[])
 {
     try
     {
-        // parse cli
-        uh::client::all_options cli_options{};
-        cli_options.parse(argc,argv);
-
-        if (cli_options.handle()) {
+        application_config config;
+        if (config.evaluate(argc, argv) == uh::options::action::exit)
+        {
             return 0;
         }
 
@@ -24,12 +31,14 @@ int main(int argc, const char *argv[])
             {
                 .client_version = s.str()
             };
+
+        const auto& client_config = config.client();
         uh::protocol::client_factory client_factory(
-                std::make_unique<uh::net::plain_socket_factory>(io, cli_options.m_config.m_hostname, cli_options.m_config.m_port),
+                std::make_unique<uh::net::plain_socket_factory>(io, config.agency().hostname, config.agency().port),
                 cf_config);
 
         // recompilation
-        uh::client::serialization::Recompilation(cli_options.m_config, client_factory.create());
+        uh::client::serialization::Recompilation(client_config, client_factory.create());
 
     }
     catch (const std::exception &exc)

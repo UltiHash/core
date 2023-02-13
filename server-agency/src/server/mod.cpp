@@ -5,6 +5,7 @@
 #include <server/protocol_factory.h>
 #include <net/server.h>
 #include <net/tls_server.h>
+#include <logging/logging_boost.h>
 
 
 namespace uh::an::server
@@ -37,7 +38,7 @@ std::unique_ptr<net::server> make_server(
 
 struct mod::impl
 {
-    impl(const config::options& options,
+    impl(const net::server_config& config,
          an::cluster::mod& cluster,
          an::metrics::mod& metrics);
 
@@ -48,21 +49,21 @@ struct mod::impl
 
 // ---------------------------------------------------------------------
 
-mod::impl::impl(const config::options& options,
+mod::impl::impl(const net::server_config& config,
                 an::cluster::mod& cluster,
                 an::metrics::mod& metrics)
     : io(),
       pf(cluster, metrics.protocol()),
-      server(make_server(options.server().config(), pf))
+      server(make_server(config, pf))
 {
 }
 
 // ---------------------------------------------------------------------
 
-mod::mod(const config::options& options,
+mod::mod(const net::server_config& config,
          an::cluster::mod& cluster,
          an::metrics::mod& metrics)
-    : m_impl(std::make_unique<mod::impl>(options, cluster, metrics))
+    : m_impl(std::make_unique<mod::impl>(config, cluster, metrics))
 {
 }
 

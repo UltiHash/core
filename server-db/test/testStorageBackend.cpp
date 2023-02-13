@@ -12,7 +12,6 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <metrics/mod.h>
-#include <config/mod.h>
 #include <storage/mod.h>
 
 
@@ -123,9 +122,7 @@ BOOST_AUTO_TEST_CASE( dump_storage_io )
     create_test_db_and_file();
 
     // Create backend.
-    uh::dbn::config::mod config_module(1, {});
-    const auto& options = config_module.options();
-    uh::dbn::metrics::mod metrics_module(options);
+    uh::dbn::metrics::mod metrics_module({});
     uh::dbn::storage::mod storage_module(cfg, metrics_module.storage());
     storage_module.start();
     success = test_storage_backend_io(storage_module);
@@ -142,9 +139,7 @@ BOOST_AUTO_TEST_CASE( dump_storage_no_duplicates )
     create_test_db_and_file();
 
     // Create backend.
-    uh::dbn::config::mod config_module(1, {});
-    const auto& options = config_module.options();
-    uh::dbn::metrics::mod metrics_module(options);
+    uh::dbn::metrics::mod metrics_module({});
     uh::dbn::storage::mod storage_module(cfg, metrics_module.storage());
     storage_module.start();
 
@@ -165,12 +160,9 @@ BOOST_AUTO_TEST_CASE( dump_storage_expected_hash )
     create_test_db_and_file();
 
     // Create backend.
-    uh::dbn::config::mod config_module(1, {});
-    const auto& options = config_module.options();
-    uh::dbn::metrics::mod metrics_module(options);
+    uh::dbn::metrics::mod metrics_module({});
     uh::dbn::storage::mod storage_module(cfg, metrics_module.storage());
     storage_module.start();
-
 
     uh::protocol::blob x = write_chunk_from_file(c.test_input_filepath, storage_module);
     std::string x_str = uh::dbn::storage::to_hex_string(x.begin(), x.end());

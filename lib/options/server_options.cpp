@@ -9,9 +9,9 @@ namespace uh::options
 // ---------------------------------------------------------------------
 
 server_options::server_options()
-    : m_desc("Server Options")
+    : options("Server Options")
 {
-    m_desc.add_options()
+    visible().add_options()
         ("port", value<uint16_t>()->default_value(net::server_config::DEFAULT_PORT), "start the server listening on this port")
         ("tls-chain", value<std::string>(), "certificate chain to use for TLS connections")
         ("tls-key", value<std::string>(), "private key to use for TLS connections")
@@ -20,14 +20,7 @@ server_options::server_options()
 
 // ---------------------------------------------------------------------
 
-void server_options::apply(options& opts)
-{
-    opts.add(m_desc);
-}
-
-// ---------------------------------------------------------------------
-
-void server_options::evaluate(const boost::program_options::variables_map& vars)
+action server_options::evaluate(const boost::program_options::variables_map& vars)
 {
     m_config.port = vars["port"].as<uint16_t>();
     m_config.threads = vars["threads"].as<std::size_t>();
@@ -40,6 +33,8 @@ void server_options::evaluate(const boost::program_options::variables_map& vars)
     {
         m_config.tls_pkey = vars["tls-key"].as<std::string>();
     }
+
+    return action::proceed;
 }
 
 // ---------------------------------------------------------------------
