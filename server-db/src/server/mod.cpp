@@ -37,7 +37,7 @@ std::unique_ptr<net::server> make_server(
 
 struct mod::impl
 {
-    impl(const config::options& options,
+    impl(const net::server_config& config,
          dbn::storage::mod& storage,
          dbn::metrics::mod& metrics);
 
@@ -48,21 +48,21 @@ struct mod::impl
 
 // ---------------------------------------------------------------------
 
-mod::impl::impl(const config::options& options,
+mod::impl::impl(const net::server_config& config,
                 dbn::storage::mod& storage,
                 dbn::metrics::mod& metrics)
     : io(),
       pf(storage, metrics.protocol()),
-      server(make_server(options.server().config(), pf))
+      server(make_server(config, pf))
 {
 }
 
 // ---------------------------------------------------------------------
 
-mod::mod(const config::options& options,
-         dbn::storage::mod& storage, 
+mod::mod(const net::server_config& config,
+         dbn::storage::mod& storage,
          dbn::metrics::mod& metrics)
-    : m_impl(std::make_unique<mod::impl>(options, storage, metrics))
+    : m_impl(std::make_unique<mod::impl>(config, storage, metrics))
 {
 }
 

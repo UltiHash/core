@@ -11,9 +11,9 @@ namespace uh::options
 // ---------------------------------------------------------------------
 
 logging_options::logging_options()
-    : m_desc("Logging Options")
+    : options("Logging Options")
 {
-    m_desc.add_options()
+    visible().add_options()
         ("log-stdout,O", value< std::string >(), "write log messages to stdout, specify log level")
         ("log-stderr,E", value< std::string >()->implicit_value("INFO"), "write log messages to stderr, specify log level")
         ("log-file,F", value< std::vector<std::string> >(), "write log messages to file, specify path and level");
@@ -21,14 +21,7 @@ logging_options::logging_options()
 
 // ---------------------------------------------------------------------
 
-void logging_options::apply(options& opts)
-{
-    opts.add(m_desc);
-}
-
-// ---------------------------------------------------------------------
-
-void logging_options::evaluate(const boost::program_options::variables_map& vars)
+action logging_options::evaluate(const boost::program_options::variables_map& vars)
 {
     log::config config;
 
@@ -89,6 +82,7 @@ void logging_options::evaluate(const boost::program_options::variables_map& vars
     }
 
     std::swap(config, m_config);
+    return action::proceed;
 }
 
 // ---------------------------------------------------------------------
