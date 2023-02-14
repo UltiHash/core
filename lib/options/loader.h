@@ -25,6 +25,8 @@ private:
     std::list<options*> m_opts;
     boost::program_options::options_description m_hidden;
     boost::program_options::options_description m_visible;
+
+    std::list<options::positional> m_positional_mappings;
 };
 
 // ---------------------------------------------------------------------

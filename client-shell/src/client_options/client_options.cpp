@@ -20,6 +20,8 @@ client_options::client_options()
             ("verbose,V" , "shows details about the results of running the command [optional]");
     hidden().add_options()
             ("positional,p", value<std::vector<std::string>>(&m_posPaths)->multitoken(),"[default] positional arguments given");
+
+    positional_mapping("positional", -1);
 }
 
 // ---------------------------------------------------------------------
