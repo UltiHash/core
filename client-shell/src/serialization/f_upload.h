@@ -1,10 +1,12 @@
 #ifndef SERIALIZATION_F_UPLOAD_H
 #define SERIALIZATION_F_UPLOAD_H
 
+#include <fstream>
+#include <protocol/client_pool.h>
 #include "../common/thread_manager.h"
 #include "../common/job_queue.h"
 #include "../common/f_meta_data.h"
-#include <protocol/client_pool.h>
+
 
 namespace uh::client::serialization
 {
@@ -16,16 +18,12 @@ class f_upload : public common::thread_manager
 public:
 
     // ------------------------------------------------- CLASS FUNCTIONS
-    f_upload(std::unique_ptr<protocol::client_pool>&& cl_pool, common::job_queue<std::unique_ptr<common::f_meta_data>>& in_jq, common::job_queue<std::unique_ptr<common::f_meta_data>>& out_jq, size_t num_threads=1);
+    f_upload(std::unique_ptr<protocol::client_pool>&&, common::job_queue<std::unique_ptr<common::f_meta_data>>&, common::job_queue<std::unique_ptr<common::f_meta_data>>&, size_t num_threads=1);
     ~f_upload() override;
+
+    // ------------------------------------------------- SPECIAL FUNCTIONS
     void spawn_threads() override;
-    void upload_files() const;
-
-    // ------------------------------------------------- GETTERS
-
-
-    // ------------------------------------------------- SETTERS
-
+    void upload_files(std::unique_ptr<common::f_meta_data>&&, protocol::client_pool::handle&);
 
 private:
     common::job_queue<std::unique_ptr<common::f_meta_data>>& m_input_jq;

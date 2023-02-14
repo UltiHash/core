@@ -6,6 +6,8 @@
 #include "protocol/client_pool.h"
 #include "common/f_meta_data.h"
 #include "common/job_queue.h"
+#include "f_upload.h"
+#include "fs_traverse.h"
 
 namespace co = uh::client::option;
 
@@ -17,7 +19,7 @@ namespace uh::client::serialization
 class Recompilation
 {
     public:
-        Recompilation(const co::client_config& config, std::unique_ptr<uh::protocol::client_pool>&& factory);
+        Recompilation(const co::client_config&, std::unique_ptr<uh::protocol::client_pool>&&);
 
     private:
         void integrate();

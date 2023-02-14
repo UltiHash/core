@@ -14,7 +14,7 @@ class thread_manager
 public:
 
     // ------------------------------------------------- CLASS FUNCTIONS
-    explicit thread_manager(size_t num_threads);
+    explicit thread_manager(size_t);
     virtual ~thread_manager();
 
     // ------------------------------------------------- SPECIAL FUNCTIONS
