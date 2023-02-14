@@ -53,4 +53,18 @@ boost::program_options::options_description& options::visible()
 
 // ---------------------------------------------------------------------
 
+void options::positional_mapping(const std::string& name, int max_count)
+{
+    m_positional_mappings.push_back({ name, max_count });
+}
+
+// ---------------------------------------------------------------------
+
+const std::list<options::positional>& options::positional_mappings() const
+{
+    return m_positional_mappings;
+}
+
+// ---------------------------------------------------------------------
+
 } // namespace uh::options
