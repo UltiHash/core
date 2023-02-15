@@ -38,12 +38,14 @@ void f_upload::upload_files(std::unique_ptr<common::f_meta_data>&& f_meta_data,
                                  std::ios::in | std::ios::binary);
 
         if (!input_file.is_open())
-            throw std::runtime_error("Error: Could not open file " + f_meta_data->get_f_path().string() + "\n");
+            throw std::runtime_error("Error: Could not open file "
+            + f_meta_data->get_f_path().string() + "\n");
 
         if (input_file.peek() != std::ifstream::traits_type::eof())
         {
             constexpr std::size_t buf_size = 1 << 22;
-            std::vector<char> tmp_buffer(std::min(std::size_t(input_file.tellg()), buf_size));
+            std::vector<char> tmp_buffer(std::min(std::size_t(input_file.tellg()),
+                                                  buf_size));
 
             while (true)
             {
@@ -83,7 +85,8 @@ void f_upload::spawn_threads()
                    if (item == std::nullopt)
                        break;
                    else
-                       upload_files(std::move(item.value()), client_connection_handle);
+                       upload_files(std::move(item.value()),
+                                    client_connection_handle);
 
                }
 
