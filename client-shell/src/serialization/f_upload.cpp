@@ -57,7 +57,6 @@ void f_upload::upload_files(std::unique_ptr<common::f_meta_data>&& f_meta_data,
 
                 auto recv_hash = client_handle.m_client->write_chunk(tmp_buffer);
                 f_meta_data->add_hash(recv_hash);
-
             }
 
         }
@@ -89,7 +88,6 @@ void f_upload::spawn_threads()
                }
 
                client_connection_handle.m_pool.put_back(std::move(client_connection_handle.m_client));
-
            });
     }
 }
