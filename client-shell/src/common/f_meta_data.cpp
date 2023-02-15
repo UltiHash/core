@@ -8,10 +8,12 @@ namespace uh::client::common
 f_meta_data::f_meta_data(const std::filesystem::path& eval_path) :
     m_f_path(eval_path), m_f_type(std::filesystem::status(m_f_path).type()), m_f_hashes(nullptr)
 {
+
     if(stat_t(m_f_path.c_str(), &m_f_stat))
     {
-        DEBUG << "The file stat64 of \"" << m_f_path << "\" could not be read!" << std::endl;
+        DEBUG << "The file stat of \"" << m_f_path << "\" could not be read!" << std::endl;
     }
+
 }
 
 // ---------------------------------------------------------------------

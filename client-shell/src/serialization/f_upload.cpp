@@ -23,22 +23,33 @@ f_upload::~f_upload()
 
 void f_upload::upload_files(std::unique_ptr<common::f_meta_data>&& f_meta_data, protocol::client_pool::handle& client_handle)
 {
-    if (!S_ISDIR(f_meta_data->get_f_stat().st_mode))
+    if (S_ISREG(f_meta_data->get_f_stat().st_mode))
     {
 
-        std::ifstream input_file(f_meta_data->get_f_path(), f_meta_data->get_f_type() == std::filesystem::file_type::regular ? std::ios::in : std::ios::binary);
+        std::ifstream input_file(f_meta_data->get_f_path(),std::ios::in | std::ios::binary);
         if (!input_file.is_open())
-        {
             throw std::runtime_error("Error: Could not open file " + f_meta_data->get_f_path().string() + "\n");
+
+        if (input_file.peek() != std::ifstream::traits_type::eof())
+        {
+
+            constexpr std::size_t buf_size = 1 << 22;
+            std::vector<char> tmp_buffer(std::min(std::size_t(input_file.tellg()), buf_size));
+            while (true)
+            {
+                input_file.read((tmp_buffer.data()), buf_size);
+                std::streamsize bytes_read = input_file.gcount();
+                if (bytes_read == 0)
+                {
+                    break;
+                }
+                auto recv_hash = client_handle.m_client->write_chunk(tmp_buffer);
+                f_meta_data->add_hash(recv_hash);
+
+            }
         }
 
-        std::vector<char> tmp_buffer(4 * 1024 * 1024);
-        while (!input_file.eof())
-        {
-            input_file.read((tmp_buffer.data()), tmp_buffer.size());
-            auto recv_hash = client_handle.m_client->write_chunk(tmp_buffer);
-            f_meta_data->add_hash(recv_hash);
-        }
+        input_file.close();
     }
     m_output_jq.put_back_job(std::move(f_meta_data));
 }
@@ -54,6 +65,7 @@ void f_upload::spawn_threads()
                protocol::client_pool::handle&& client_connection_handle = m_client_pool->get();
                while (auto&& item = m_input_jq.get_job())
                {
+
                    if (item == std::nullopt)
                    {
                        break;
@@ -62,6 +74,7 @@ void f_upload::spawn_threads()
                    {
                        upload_files(std::move(item.value()), client_connection_handle);
                    }
+
                }
                client_connection_handle.m_pool.put_back(std::move(client_connection_handle.m_client));
            });
