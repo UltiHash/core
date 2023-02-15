@@ -51,6 +51,7 @@ void f_upload::upload_files(std::unique_ptr<common::f_meta_data>&& f_meta_data, 
 
         input_file.close();
     }
+
     m_output_jq.put_back_job(std::move(f_meta_data));
 }
 
@@ -62,21 +63,19 @@ void f_upload::spawn_threads()
     {
         m_thread_pool.emplace_back([&]()
            {
+
                protocol::client_pool::handle&& client_connection_handle = m_client_pool->get();
                while (auto&& item = m_input_jq.get_job())
                {
 
                    if (item == std::nullopt)
-                   {
                        break;
-                   }
                    else
-                   {
                        upload_files(std::move(item.value()), client_connection_handle);
-                   }
 
                }
                client_connection_handle.m_pool.put_back(std::move(client_connection_handle.m_client));
+
            });
     }
 }
