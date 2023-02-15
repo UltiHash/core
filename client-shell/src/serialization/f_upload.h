@@ -18,7 +18,10 @@ class f_upload : public common::thread_manager
 public:
 
     // ------------------------------------------------- CLASS FUNCTIONS
-    f_upload(std::unique_ptr<protocol::client_pool>&&, common::job_queue<std::unique_ptr<common::f_meta_data>>&, common::job_queue<std::unique_ptr<common::f_meta_data>>&, size_t num_threads=1);
+    f_upload(std::unique_ptr<protocol::client_pool>&&,
+            common::job_queue<std::unique_ptr<common::f_meta_data>>&,
+            common::job_queue<std::unique_ptr<common::f_meta_data>>&,
+            size_t num_threads=1);
     ~f_upload() override;
 
     // ------------------------------------------------- SPECIAL FUNCTIONS
