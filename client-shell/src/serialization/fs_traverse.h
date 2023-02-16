@@ -16,13 +16,12 @@ class fs_traverse
 {
 public:
 
-    // ------------------------------------------------- CLASS FUNCTIONS
-    fs_traverse(std::vector<std::filesystem::path>, std::vector<std::filesystem::path>, common::job_queue<std::unique_ptr<common::f_meta_data>>&);
+    fs_traverse(std::vector<std::filesystem::path>,
+                std::vector<std::filesystem::path>,
+                common::job_queue<std::unique_ptr<common::f_meta_data>>&);
     ~fs_traverse() = default;
 
-    // ------------------------------------------------- SPECIAL FUNCTIONS
     void traverse();
-
 
 private:
     std::queue<std::filesystem::path> m_fs_jq;

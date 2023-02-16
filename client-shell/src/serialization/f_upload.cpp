@@ -9,12 +9,11 @@ namespace uh::client::serialization
 f_upload::f_upload(std::unique_ptr<protocol::client_pool>&& cl_pool,
                    common::job_queue<std::unique_ptr<common::f_meta_data>>& in_jq,
                    common::job_queue<std::unique_ptr<common::f_meta_data>>& out_jq,
-                   size_t num_threads)
-                   :
-                    m_client_pool(std::move(cl_pool)),
-                    m_input_jq(in_jq),
-                    m_output_jq(out_jq),
-                    common::thread_manager(num_threads)
+                   size_t num_threads) :
+                   m_client_pool(std::move(cl_pool)),
+                   m_input_jq(in_jq),
+                   m_output_jq(out_jq),
+                   common::thread_manager(num_threads)
 {
 
 }
@@ -44,8 +43,7 @@ void f_upload::upload_files(std::unique_ptr<common::f_meta_data>&& f_meta_data,
         if (input_file.peek() != std::ifstream::traits_type::eof())
         {
             constexpr std::size_t buf_size = 1 << 22;
-            std::vector<char> tmp_buffer(std::min(std::size_t(input_file.tellg()),
-                                                  buf_size));
+            std::vector<char> tmp_buffer(std::min(std::size_t(input_file.tellg()), buf_size));
 
             while (true)
             {

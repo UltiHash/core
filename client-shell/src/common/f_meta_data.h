@@ -16,26 +16,23 @@
 namespace uh::client::common
 {
 
-// ---------------------------------------------------------------------
+// ---------------------------------------------------------------------------------------------------------------------
 
 class f_meta_data
 {
 public:
 
-    // ------------------------------------------------- CLASS FUNCTIONS
+    // -------------------------------------------------
     f_meta_data() = default;
     explicit f_meta_data(const std::filesystem::path&);
 
-    // ------------------------------------------------- SPECIAL FUNCTIONS
-    // write serializer and deserializer since it is the meta_data that is being serialized at the end
-
-    // ------------------------------------------------- SETTER FUNCTIONS
-    void add_hash(const std::vector<char>&);
-
-    // ------------------------------------------------- GETTER FUNCTIONS
+    // -------------------------------------------------
     [[nodiscard]] const std::filesystem::path& get_f_path() const;
     [[nodiscard]] const struct stat_t& get_f_stat() const;
     [[nodiscard]] const std::filesystem::file_type& get_f_type() const;
+
+    // -------------------------------------------------
+    void add_hash(const std::vector<char>&);
 
 private:
     std::filesystem::path m_f_path;
@@ -44,7 +41,7 @@ private:
     std::unique_ptr<std::vector<std::vector<char>>> m_f_hashes;
 };
 
-// ---------------------------------------------------------------------
+// ---------------------------------------------------------------------------------------------------------------------
 
 } // namespace uh::client::serialization
 
