@@ -6,6 +6,8 @@
 #include <serialization/Recompilation.h>
 #include <logging/logging_boost.h>
 
+// ---------------------------------------------------------------------------------------------------------------------
+
 int main(int argc, const char *argv[])
 {
     try
@@ -49,3 +51,5 @@ int main(int argc, const char *argv[])
     }
     return EXIT_SUCCESS;
 }
+
+// ---------------------------------------------------------------------------------------------------------------------
