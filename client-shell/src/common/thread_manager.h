@@ -13,11 +13,9 @@ class thread_manager
 {
 public:
 
-    // -------------------------------------------------
     explicit thread_manager(size_t);
     virtual ~thread_manager();
-
-    // -------------------------------------------------
+    
     virtual void spawn_threads()=0;
 
 protected:
