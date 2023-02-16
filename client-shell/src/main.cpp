@@ -28,10 +28,10 @@ int main(int argc, const char *argv[])
             };
         std::unique_ptr<uh::protocol::client_pool> client_pool =
             std::make_unique<uh::protocol::client_pool>(
-        std::make_unique<uh::protocol::client_factory>(
-        std::make_unique<uh::net::plain_socket_factory>(
-                                io, cli_options.m_config.m_hostname, cli_options.m_config.m_port),
-                                    cf_config), cli_options.m_config.m_pool_size);
+                std::make_unique<uh::protocol::client_factory>(
+                std::make_unique<uh::net::plain_socket_factory>(
+                                    io, cli_options.m_config.m_hostname, cli_options.m_config.m_port),
+                                        cf_config), cli_options.m_config.m_pool_size);
 
         // recompilation
         uh::client::serialization::Recompilation(cli_options.m_config, std::move(client_pool));
