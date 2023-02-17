@@ -22,12 +22,12 @@ class f_meta_data
 {
 public:
 
-    f_meta_data() = default;
     explicit f_meta_data(const std::filesystem::path&);
 
     [[nodiscard]] const std::filesystem::path& get_f_path() const;
     [[nodiscard]] const struct stat_t& get_f_stat() const;
     [[nodiscard]] const std::filesystem::file_type& get_f_type() const;
+    [[nodiscard]] std::string print_hashes() const;
 
     void add_hash(const std::vector<char>&);
 
@@ -40,6 +40,6 @@ private:
 
 // ---------------------------------------------------------------------------------------------------------------------
 
-} // namespace uh::client::serialization
+} // namespace uh::client::common
 
 #endif

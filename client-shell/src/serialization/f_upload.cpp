@@ -43,11 +43,15 @@ void f_upload::upload_files(std::unique_ptr<common::f_meta_data>&& f_meta_data,
         if (input_file.peek() != std::ifstream::traits_type::eof())
         {
             constexpr std::size_t buf_size = 1 << 22;
-            std::vector<char> tmp_buffer(std::min(std::size_t(input_file.tellg()), buf_size));
+            std::vector<char> tmp_buffer;
+            tmp_buffer.reserve(std::min<std::size_t>(f_meta_data->get_f_stat().st_size, buf_size));
 
-            while (true)
+            while (input_file)
             {
-                input_file.read((tmp_buffer.data()), buf_size);
+                auto remaining_size = f_meta_data->get_f_stat().st_size - input_file.tellg();
+                tmp_buffer.resize(std::min<std::size_t>(remaining_size, buf_size));
+
+                input_file.read((tmp_buffer.data()), tmp_buffer.size());
                 std::streamsize bytes_read = input_file.gcount();
 
                 if (bytes_read == 0)

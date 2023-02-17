@@ -12,14 +12,14 @@ namespace uh::client::serialization
 
 // ---------------------------------------------------------------------------------------------------------------------
 
-class fs_traverse
+class f_traverse
 {
 public:
 
-    fs_traverse(std::vector<std::filesystem::path>,
-                std::vector<std::filesystem::path>,
-                common::job_queue<std::unique_ptr<common::f_meta_data>>&);
-    ~fs_traverse() = default;
+    f_traverse(std::vector<std::filesystem::path>,
+               std::vector<std::filesystem::path>,
+               common::job_queue<std::unique_ptr<common::f_meta_data>>&);
+    ~f_traverse() = default;
 
     void traverse();
 

@@ -46,5 +46,23 @@ const struct stat_t& f_meta_data::get_f_stat() const
 
 // ---------------------------------------------------------------------------------------------------------------------
 
-} // namespace uh::client::serialization
+std::string f_meta_data::print_hashes() const
+{
+    std::stringstream ss;
+
+    for (const auto& hash : *m_f_hashes)
+    {
+        for (const auto& ch : hash)
+        {
+            ss << ch;
+        }
+        ss << '\n';
+    }
+
+    return ss.str();
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+
+} // namespace uh::client::common
 
