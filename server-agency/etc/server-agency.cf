@@ -1,0 +1,19 @@
+#
+# Configuration of included metrics server.
+#
+[metrics]
+
+#
+# Listening address of metrics HTTP server. (default = 0.0.0.0:8008)
+#
+address = 0.0.0.0:8081
+
+#
+# Number of threads for metrics server. (default = 2)
+#
+threads = 2
+
+#
+# HTTP path to access server metrics. (default: /metrics)
+#
+path = /metrics

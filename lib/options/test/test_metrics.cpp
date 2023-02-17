@@ -29,7 +29,7 @@ BOOST_AUTO_TEST_CASE(defaults)
 
 // ---------------------------------------------------------------------
 
-BOOST_AUTO_TEST_CASE(parse)
+BOOST_AUTO_TEST_CASE(parse_cli)
 {
     const char* args[] = { "test-program",
                            "--metrics-address", "1.2.3.4:1234",
@@ -40,6 +40,26 @@ BOOST_AUTO_TEST_CASE(parse)
     loader().add(opts).parse(sizeof(args) / sizeof(char*), args);
     const auto& cfg = opts.config();
 
+    BOOST_CHECK_EQUAL(cfg.address, "1.2.3.4:1234");
+    BOOST_CHECK_EQUAL(cfg.threads, 5u);
+    BOOST_CHECK_EQUAL(cfg.path, "/foo");
+}
+
+// ---------------------------------------------------------------------
+
+BOOST_AUTO_TEST_CASE(parse_config_file)
+{
+    const char* config_file =
+        "[metrics]\n"
+        "address = 1.2.3.4:1234\n"
+        "threads = 5\n"
+        "path = /foo\n";
+
+    std::stringstream file(config_file);
+    metrics_options opts;
+    loader().add(opts).parse(file);
+
+    const auto& cfg = opts.config();
     BOOST_CHECK_EQUAL(cfg.address, "1.2.3.4:1234");
     BOOST_CHECK_EQUAL(cfg.threads, 5u);
     BOOST_CHECK_EQUAL(cfg.path, "/foo");
