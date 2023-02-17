@@ -28,11 +28,15 @@ struct test_opts : public options
             ("test-string,S", po::value<std::string>(&string));
         hidden().add_options()
             ("positional", po::value<std::vector<std::string>>(&positionals)->multitoken());
+        file().add_options()
+            ("test.test-string", po::value<std::string>(&string))
+            ("global-string", po::value<std::string>(&global));
 
         positional_mapping("positional", -1);
     }
 
     std::string string = "default value";
+    std::string global = "global default value";
     std::vector<std::string> positionals;
 };
 
@@ -58,7 +62,7 @@ BOOST_FIXTURE_TEST_CASE(loader_command_line, fixture)
                            "pos1", "pos2", "pos3"
                          };
 
-    loader.evaluate(sizeof(args) / sizeof(char*), args);
+    loader.parse(sizeof(args) / sizeof(char*), args);
     BOOST_CHECK_EQUAL(options.string, "lorem ipsum");
 
     BOOST_CHECK_EQUAL(options.positionals.size(), 3u);
@@ -75,8 +79,64 @@ BOOST_FIXTURE_TEST_CASE(loader_cli_failure, fixture)
                            "--unsupported-value", "lorem ipsum",
                          };
 
-    BOOST_CHECK_THROW(loader.evaluate(sizeof(args) / sizeof(char*), args), std::exception);
+    BOOST_CHECK_THROW(loader.parse(sizeof(args) / sizeof(char*), args), std::exception);
     BOOST_CHECK_EQUAL(options.string, "default value");
+}
+
+// ---------------------------------------------------------------------
+
+BOOST_FIXTURE_TEST_CASE(loader_config_file, fixture)
+{
+    const char* config_file =
+        "global-string = global ipsum\n"
+        "[test]\n"
+        "test-string = lorem ipsum\n";
+
+    std::stringstream cfg(config_file);
+    loader.parse(cfg);
+
+    BOOST_CHECK_EQUAL(options.string, "lorem ipsum");
+    BOOST_CHECK_EQUAL(options.global, "global ipsum");
+}
+
+// ---------------------------------------------------------------------
+
+BOOST_FIXTURE_TEST_CASE(mixed_config_first, fixture)
+{
+    const char* config_file =
+        "[test]\n"
+        "test-string = config file wins\n";
+
+    const char* args[] = { "test-program",
+                           "--test-string", "cli wins",
+                         };
+
+    std::stringstream cfg(config_file);
+    loader.parse(cfg);
+    auto act = loader.parse(sizeof(args) / sizeof(char*), args);
+
+    BOOST_CHECK_EQUAL(act, action::proceed);
+    BOOST_CHECK_EQUAL(options.string, "cli wins");
+}
+
+// ---------------------------------------------------------------------
+
+BOOST_FIXTURE_TEST_CASE(mixed_cli_first, fixture)
+{
+    const char* config_file =
+        "[test]\n"
+        "test-string = config file wins\n";
+
+    const char* args[] = { "test-program",
+                           "--test-string", "cli wins",
+                         };
+
+    std::stringstream cfg(config_file);
+    auto act = loader.parse(sizeof(args) / sizeof(char*), args);
+    loader.parse(cfg);
+
+    BOOST_CHECK_EQUAL(act, action::proceed);
+    BOOST_CHECK_EQUAL(options.string, "config file wins");
 }
 
 // ---------------------------------------------------------------------

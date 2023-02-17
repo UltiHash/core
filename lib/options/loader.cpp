@@ -11,9 +11,8 @@ namespace uh::options
 
 // ---------------------------------------------------------------------
 
-action loader::evaluate(int argc, const char** argv)
+action loader::parse(int argc, const char** argv)
 {
-    po::variables_map vars;
     po::options_description options;
     options.add(m_visible);
     options.add(m_hidden);
@@ -29,7 +28,39 @@ action loader::evaluate(int argc, const char** argv)
     parser.positional(pos);
     auto parsed = parser.run();
 
+    boost::program_options::variables_map vars;
     po::store(parsed, vars);
+    return finalize(vars);
+}
+
+// ---------------------------------------------------------------------
+
+void loader::parse(const std::filesystem::path& path)
+{
+    po::options_description options;
+    options.add(m_file);
+
+    boost::program_options::variables_map vars;
+    po::store(po::parse_config_file(path.c_str(), options), vars);
+    finalize(vars);
+}
+
+// ---------------------------------------------------------------------
+
+void loader::parse(std::istream& in)
+{
+    po::options_description options;
+    options.add(m_file);
+
+    boost::program_options::variables_map vars;
+    po::store(po::parse_config_file(in, options), vars);
+    finalize(vars);
+}
+
+// ---------------------------------------------------------------------
+
+action loader::finalize(boost::program_options::variables_map& vars)
+{
     po::notify(vars);
 
     bool errors = false;
@@ -65,6 +96,7 @@ loader& loader::add(options& opt)
     m_opts.push_back(&opt);
     m_visible.add(opt.visible());
     m_hidden.add(opt.hidden());
+    m_file.add(opt.file());
 
     const auto& ps = opt.positional_mappings();
     m_positional_mappings.insert(m_positional_mappings.end(), ps.begin(), ps.end());

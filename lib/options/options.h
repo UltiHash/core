@@ -20,6 +20,10 @@ enum class action
 
 // ---------------------------------------------------------------------
 
+std::ostream& operator<<(std::ostream& out, const action& a);
+
+// ---------------------------------------------------------------------
+
 class options
 {
 public:
@@ -35,15 +39,18 @@ public:
 
     const boost::program_options::options_description& hidden() const;
     const boost::program_options::options_description& visible() const;
+    const boost::program_options::options_description& file() const;
 
     boost::program_options::options_description& hidden();
     boost::program_options::options_description& visible();
+    boost::program_options::options_description& file();
 
     void positional_mapping(const std::string& name, int max_count);
     const std::list<positional>& positional_mappings() const;
 private:
     boost::program_options::options_description m_hidden;
     boost::program_options::options_description m_visible;
+    boost::program_options::options_description m_file;
 
     std::list<positional> m_positional_mappings;
 };
@@ -51,5 +58,18 @@ private:
 // ---------------------------------------------------------------------
 
 } // namespace uh::options
+
+// ---------------------------------------------------------------------
+
+namespace std
+{
+
+// ---------------------------------------------------------------------
+
+std::string to_string(uh::options::action action);
+
+// ---------------------------------------------------------------------
+
+} // namespace std
 
 #endif

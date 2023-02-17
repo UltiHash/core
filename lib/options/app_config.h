@@ -5,6 +5,7 @@
 #include <boost/preprocessor/variadic/to_seq.hpp>
 
 #include <options/loader.h>
+#include <options/config_file.h>
 #include <options/basic_options.h>
 
 #include <iostream>
@@ -68,19 +69,23 @@ namespace uh::options
 
 // ---------------------------------------------------------------------
 
-class application_config_base : public loader
+class application_config_base
 {
 public:
     application_config_base();
+    virtual ~application_config_base() = default;
 
-    virtual action evaluate(int argc, const char** argv) override;
+    virtual action evaluate(int argc, const char** argv);
 
     void print_help();
     virtual void print_version() = 0;
     virtual void print_vcsid() = 0;
 
+    void add(options& opts);
 private:
     basic_options m_basic;
+    config_file m_config_file;
+    loader m_loader;
 };
 
 // ---------------------------------------------------------------------

@@ -24,7 +24,7 @@ BOOST_AUTO_TEST_CASE( stderr_sink )
                            "--log-stderr", "DEBUG" };
 
     logging_options opts;
-    loader().add(opts).evaluate(sizeof(args) / sizeof(char*), args);
+    loader().add(opts).parse(sizeof(args) / sizeof(char*), args);
     const auto& cfg = opts.config();
 
     BOOST_CHECK_EQUAL(cfg.sinks.size(), 1);
@@ -41,7 +41,7 @@ BOOST_AUTO_TEST_CASE( stderr_sink_short )
                            "-E", "DEBUG" };
 
     logging_options opts;
-    loader().add(opts).evaluate(sizeof(args) / sizeof(char*), args);
+    loader().add(opts).parse(sizeof(args) / sizeof(char*), args);
     const auto& cfg = opts.config();
 
     BOOST_CHECK_EQUAL(cfg.sinks.size(), 1);
@@ -58,7 +58,7 @@ BOOST_AUTO_TEST_CASE( stdout_sink )
                            "--log-stdout", "DEBUG" };
 
     logging_options opts;
-    loader().add(opts).evaluate(sizeof(args) / sizeof(char*), args);
+    loader().add(opts).parse(sizeof(args) / sizeof(char*), args);
     const auto& cfg = opts.config();
 
     BOOST_CHECK_EQUAL(cfg.sinks.size(), 1);
@@ -75,7 +75,7 @@ BOOST_AUTO_TEST_CASE( stdout_sink_short )
                            "-O", "DEBUG" };
 
     logging_options opts;
-    loader().add(opts).evaluate(sizeof(args) / sizeof(char*), args);
+    loader().add(opts).parse(sizeof(args) / sizeof(char*), args);
     const auto& cfg = opts.config();
 
     BOOST_CHECK_EQUAL(cfg.sinks.size(), 1);
@@ -93,7 +93,7 @@ BOOST_AUTO_TEST_CASE( multiple_file_sinks )
                            "--log-file", "/var/log/uh/info.log" };
 
     logging_options opts;
-    loader().add(opts).evaluate(sizeof(args) / sizeof(char*), args);
+    loader().add(opts).parse(sizeof(args) / sizeof(char*), args);
     const auto& cfg = opts.config();
 
     BOOST_CHECK_EQUAL(cfg.sinks.size(), 2);
@@ -116,7 +116,7 @@ BOOST_AUTO_TEST_CASE( multiple_file_sinks_short )
                            "-F", "/var/log/uh/info.log" };
 
     logging_options opts;
-    loader().add(opts).evaluate(sizeof(args) / sizeof(char*), args);
+    loader().add(opts).parse(sizeof(args) / sizeof(char*), args);
     const auto& cfg = opts.config();
 
     BOOST_CHECK_EQUAL(cfg.sinks.size(), 2);
