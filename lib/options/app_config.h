@@ -43,6 +43,7 @@
     {                                                                               \
     public:                                                                         \
         application_config()                                                        \
+            : application_config_base(PROJECT_NAME)                                 \
         {                                                                           \
             BOOST_PP_SEQ_FOR_EACH(APPLY, APP_CONFIG_REGISTER, __VA_ARGS__)          \
         }                                                                           \
@@ -72,7 +73,7 @@ namespace uh::options
 class application_config_base
 {
 public:
-    application_config_base();
+    application_config_base(const std::string& project);
     virtual ~application_config_base() = default;
 
     virtual action evaluate(int argc, const char** argv);
@@ -83,6 +84,7 @@ public:
 
     void add(options& opts);
 private:
+    std::string m_project;
     basic_options m_basic;
     config_file m_config_file;
     loader m_loader;

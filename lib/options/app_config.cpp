@@ -1,5 +1,8 @@
 #include "app_config.h"
 
+#include <util/system.h>
+#include <util/user.h>
+
 #include <boost/program_options/variables_map.hpp>
 
 
@@ -10,7 +13,8 @@ namespace uh::options
 
 // ---------------------------------------------------------------------
 
-application_config_base::application_config_base()
+application_config_base::application_config_base(const std::string& project)
+    : m_project(project)
 {
     m_loader.add(m_basic);
     m_loader.add(m_config_file);
@@ -43,12 +47,23 @@ action application_config_base::evaluate(int argc, const char** argv)
         return rv;
     }
 
-    for (const auto& path : m_config_file.paths())
+    if (m_config_file.paths().empty())
     {
-        m_loader.parse(path);
+        m_loader.try_parse(util::system::config_dir(m_project) / (m_project + ".ini"));
+        m_loader.try_parse(util::user::home() / ("." + m_project + "rc"));
+    }
+    else
+    {
+        for (const auto& path : m_config_file.paths())
+        {
+            m_loader.parse(path);
+        }
     }
 
-    return rv;
+    // CLI wins over configuration file as flags given via command line args are
+    // directly given by the user. We parse again in order to overwrite values
+    // written from the configuration file.
+    return m_loader.parse(argc, argv);
 }
 
 // ---------------------------------------------------------------------

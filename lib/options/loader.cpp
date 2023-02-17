@@ -59,6 +59,43 @@ void loader::parse(std::istream& in)
 
 // ---------------------------------------------------------------------
 
+bool loader::try_parse(const std::filesystem::path& path)
+{
+    try
+    {
+        parse(path);
+    }
+    catch (const std::exception&)
+    {
+        return false;
+    }
+
+    return true;
+}
+
+// ---------------------------------------------------------------------
+
+loader& loader::add(options& opt)
+{
+    m_opts.push_back(&opt);
+    m_visible.add(opt.visible());
+    m_hidden.add(opt.hidden());
+    m_file.add(opt.file());
+
+    const auto& ps = opt.positional_mappings();
+    m_positional_mappings.insert(m_positional_mappings.end(), ps.begin(), ps.end());
+    return *this;
+}
+
+// ---------------------------------------------------------------------
+
+const boost::program_options::options_description& loader::visible() const
+{
+    return m_visible;
+}
+
+// ---------------------------------------------------------------------
+
 action loader::finalize(boost::program_options::variables_map& vars)
 {
     po::notify(vars);
@@ -87,27 +124,6 @@ action loader::finalize(boost::program_options::variables_map& vars)
     }
 
     return rv;
-}
-
-// ---------------------------------------------------------------------
-
-loader& loader::add(options& opt)
-{
-    m_opts.push_back(&opt);
-    m_visible.add(opt.visible());
-    m_hidden.add(opt.hidden());
-    m_file.add(opt.file());
-
-    const auto& ps = opt.positional_mappings();
-    m_positional_mappings.insert(m_positional_mappings.end(), ps.begin(), ps.end());
-    return *this;
-}
-
-// ---------------------------------------------------------------------
-
-const boost::program_options::options_description& loader::visible() const
-{
-    return m_visible;
 }
 
 // ---------------------------------------------------------------------

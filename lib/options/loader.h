@@ -22,6 +22,8 @@ public:
     void parse(const std::filesystem::path& path);
     void parse(std::istream& in);
 
+    bool try_parse(const std::filesystem::path& path);
+
     loader& add(options& opt);
 
     const boost::program_options::options_description& visible() const;
