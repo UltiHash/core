@@ -18,7 +18,7 @@ class f_upload : public common::thread_manager
 {
 public:
 
-    f_upload(std::unique_ptr<protocol::client_pool>&&,
+    f_upload(std::unique_ptr<protocol::client_pool>&,
             common::job_queue<std::unique_ptr<common::f_meta_data>>&,
             common::job_queue<std::unique_ptr<common::f_meta_data>>&,
             unsigned int num_threads=1);
@@ -30,7 +30,7 @@ public:
 private:
     common::job_queue<std::unique_ptr<common::f_meta_data>>& m_input_jq;
     common::job_queue<std::unique_ptr<common::f_meta_data>>& m_output_jq;
-    std::unique_ptr<uh::protocol::client_pool> m_client_pool;
+    std::unique_ptr<uh::protocol::client_pool>& m_client_pool;
 };
 
 // ---------------------------------------------------------------------------------------------------------------------

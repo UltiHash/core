@@ -81,7 +81,7 @@ public:
         for (const auto& metadata_ptr : m_jobs)
         {
             std::cout << metadata_ptr->get_f_path() << std::endl;
-            std::cout << metadata_ptr->print_hashes();
+//            std::cout << metadata_ptr->print_hashes();
         }
 
         lk.unlock();

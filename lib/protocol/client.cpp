@@ -103,7 +103,7 @@ std::size_t client::free_space()
 
 bool client::valid() const
 {
-    return m_sock->valid();;
+    return m_sock->valid();
 }
 
 // ---------------------------------------------------------------------

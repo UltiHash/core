@@ -15,7 +15,7 @@ thread_manager::~thread_manager ()
 {
     for (auto& thread : m_thread_pool)
     {
-        INFO << "Joining Threads";
+        INFO << "Joining Thread " << thread.get_id();
         if (thread.joinable())
             thread.join();
     }
