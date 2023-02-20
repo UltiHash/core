@@ -9,7 +9,16 @@ namespace uh::client::option
 
 // ---------------------------------------------------------------------
 
-class agency_connection
+struct host_port
+{
+    uint16_t port;
+    unsigned int pool_size;
+    std::string hostname;
+};
+
+// ---------------------------------------------------------------------
+
+class agency_connection : public options::options
 {
 public:
 
@@ -20,13 +29,14 @@ public:
     [[nodiscard]] bool isMetrics() const;
 
     // LOGIC FUNCTIONS
-    void apply(uh::options::options& opts);
-    void evaluate(const boost::program_options::variables_map& vars);
-    void handle(const boost::program_options::variables_map& vars, client_config& config);
+    virtual uh::options::action evaluate(const boost::program_options::variables_map& vars) override;
+    void handle(const boost::program_options::variables_map& vars, host_port& config);
+
+    const host_port& config() const;
 
 private:
-    boost::program_options::options_description m_desc;
     bool m_metrics = false;
+    host_port m_config{0x5548,3};
 };
 
 // ---------------------------------------------------------------------

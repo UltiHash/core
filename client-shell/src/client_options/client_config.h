@@ -21,8 +21,6 @@ enum class options_chosen : char
 typedef struct
 {
     unsigned int m_pool_size;
-    uint16_t m_port;
-    std::string m_hostname;
     options_chosen m_option;
     std::vector<std::filesystem::path> m_inputPaths;
     std::filesystem::path m_outputPath;

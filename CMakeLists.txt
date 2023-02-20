@@ -19,6 +19,21 @@ if(GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/.git")
     if(NOT EXISTS ${PROJECT_BINARY_DIR}/.gitignore)
         file(WRITE ${PROJECT_BINARY_DIR}/.gitignore "*")
     endif()
+
+    message(STATUS "Reading git revision")
+
+    execute_process(COMMAND ${GIT_EXECUTABLE} rev-parse HEAD
+            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+            OUTPUT_VARIABLE GIT_REVISION)
+    string(STRIP "${GIT_REVISION}" PROJECT_VCSID)
+
+    execute_process(COMMAND ${GIT_EXECUTABLE} remote get-url origin
+            WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+            OUTPUT_VARIABLE GIT_REPOSITORY)
+    string(STRIP "${GIT_REPOSITORY}" PROJECT_REPOSITORY)
+
+    message(STATUS "Using revision ${PROJECT_REPOSITORY} -- ${PROJECT_VCSID}")
+
 endif()
 
 add_subdirectory(lib)

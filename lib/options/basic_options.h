@@ -9,24 +9,25 @@ namespace uh::options
 
 // ---------------------------------------------------------------------
 
-class basic_options
+struct config
+{
+    bool help = false;
+    bool version = false;
+    bool vcsid = false;
+};
+
+// ---------------------------------------------------------------------
+
+class basic_options : public options
 {
 public:
     basic_options();
-    void apply(options& opts);
-    virtual void evaluate(const boost::program_options::variables_map& vars);
+    virtual action evaluate(const boost::program_options::variables_map&) override;
 
-    bool print_help() const;
-    bool print_version() const;
-    bool print_vcsid() const;
+    const uh::options::config& config() const;
 
 private:
-    boost::program_options::options_description m_desc;
-    boost::program_options::options_description m_hiddenDesc;
-
-    bool m_help = false;
-    bool m_version = false;
-    bool m_vcsid = false;
+    uh::options::config m_config;
 };
 
 // ---------------------------------------------------------------------

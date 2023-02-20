@@ -1,7 +1,8 @@
 #ifndef SERVER_AGENCY_SERVER_MOD_H
 #define SERVER_AGENCY_SERVER_MOD_H
 
-#include <config/options.h>
+#include <net/plain_server.h>
+
 #include <metrics/mod.h>
 #include <cluster/mod.h>
 
@@ -16,7 +17,7 @@ namespace uh::an::server
 class mod
 {
 public:
-    mod(const config::options& options,
+    mod(const net::server_config& config,
         an::cluster::mod& cluster,
         an::metrics::mod& metrics);
 

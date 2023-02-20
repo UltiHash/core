@@ -1,11 +1,23 @@
 #include <exception>
 
-#include <config/mod.h>
+#include <config.hpp>
 #include <cluster/mod.h>
+#include <cluster/options.h>
 #include <server/mod.h>
 #include <metrics/mod.h>
 #include <logging/logging_boost.h>
 
+#include <options/app_config.h>
+#include <options/metrics_options.h>
+#include <options/logging_options.h>
+#include <options/server_options.h>
+
+
+APPLICATION_CONFIG(
+    (server, uh::options::server_options),
+    (logging, uh::options::logging_options),
+    (metrics, uh::options::metrics_options),
+    (cluster, uh::an::cluster::options));
 
 using namespace uh::log;
 using namespace uh::an;
@@ -14,24 +26,21 @@ int main(int argc, const char** argv)
 {
     try
     {
-        uh::an::config::mod config_module(argc, argv);
-
-        if (config_module.handle())
+        application_config config;
+        if (config.evaluate(argc, argv) == uh::options::action::exit)
         {
             return 0;
         }
 
-        const auto& options = config_module.options();
-
-        init_logging(options.logging().config());
+        init_logging(config.logging());
 
         INFO << "Setting up metrics";
-        metrics::mod metrics_module(options);
+        metrics::mod metrics_module(config.metrics());
 
-        cluster::mod cluster_module(options.cluster().config());
+        cluster::mod cluster_module(config.cluster());
         cluster_module.start();
 
-        server::mod server_module(options, cluster_module, metrics_module);
+        server::mod server_module(config.server(), cluster_module, metrics_module);
         server_module.start();
     }
     catch (const std::exception& e)

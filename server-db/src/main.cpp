@@ -1,11 +1,22 @@
 #include <exception>
 
-#include <config/mod.h>
+#include <config.hpp>
 #include <storage/mod.h>
+#include <storage/options.h>
 #include <server/mod.h>
 #include <metrics/mod.h>
 #include <logging/logging_boost.h>
 
+#include <options/app_config.h>
+#include <options/metrics_options.h>
+#include <options/logging_options.h>
+
+
+APPLICATION_CONFIG(
+    (server, uh::options::server_options),
+    (logging, uh::options::logging_options),
+    (metrics, uh::options::metrics_options),
+    (storage, uh::dbn::storage::options));
 
 using namespace uh::log;
 using namespace uh::dbn;
@@ -14,24 +25,21 @@ int main(int argc, const char** argv)
 {
     try
     {
-        uh::dbn::config::mod config_module(argc, argv); 
-
-        if (config_module.handle())
+        application_config config;
+        if (config.evaluate(argc, argv) == uh::options::action::exit)
         {
             return 0;
         }
 
-        const auto& options = config_module.options();
-
-        init_logging(options.logging().config());
+        init_logging(config.logging());
 
         INFO << "Setting up metrics";
-        metrics::mod metrics_module(options); //TODO add storage metrics
+        metrics::mod metrics_module(config.metrics()); //TODO add storage metrics
 
-        storage::mod storage_module(options.storage().config(), metrics_module.storage());
+        storage::mod storage_module(config.storage(), metrics_module.storage());
         storage_module.start();
 
-        server::mod server_module(options, storage_module, metrics_module);
+        server::mod server_module(config.server(), storage_module, metrics_module);
         server_module.start();
     }
     catch (const std::exception& e)
