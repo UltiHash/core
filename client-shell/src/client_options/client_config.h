@@ -20,7 +20,7 @@ enum class options_chosen : char
 
 typedef struct
 {
-    unsigned int m_pool_size;
+    unsigned int m_thread_size;
     options_chosen m_option;
     std::vector<std::filesystem::path> m_inputPaths;
     std::filesystem::path m_outputPath;

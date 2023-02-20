@@ -27,7 +27,7 @@ void Recompilation::integrate()
 
     {
         f_upload upload_class(std::move(m_client_pool), q_f_meta_data,
-                              q_f_mdata_w_hash, m_config.m_pool_size);
+                              q_f_mdata_w_hash, m_config.m_thread_size);
         upload_class.spawn_threads();
         f_traverse traverse_class(m_config.m_inputPaths, m_config.m_operatePaths, q_f_meta_data);
     }
