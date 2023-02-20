@@ -82,7 +82,6 @@ void f_upload::spawn_threads()
 
                while (auto&& item = m_input_jq.get_job())
                {
-
                    if (item == std::nullopt)
                        break;
                    else
@@ -90,6 +89,7 @@ void f_upload::spawn_threads()
                                     client_connection_handle);
 
                }
+
            });
     }
 }

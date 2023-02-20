@@ -22,7 +22,7 @@ class f_meta_data
 {
 public:
 
-    explicit f_meta_data(const std::filesystem::path&);
+    explicit f_meta_data(std::filesystem::path );
 
     [[nodiscard]] const std::filesystem::path& get_f_path() const;
     [[nodiscard]] const struct stat_t& get_f_stat() const;

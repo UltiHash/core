@@ -1,12 +1,14 @@
 #include "f_meta_data.h"
 
+#include <utility>
+
 namespace uh::client::common
 {
 
 // ---------------------------------------------------------------------------------------------------------------------
 
-f_meta_data::f_meta_data(const std::filesystem::path& eval_path) :
-    m_f_path(eval_path), m_f_type(std::filesystem::status(m_f_path).type())
+f_meta_data::f_meta_data(std::filesystem::path eval_path) :
+    m_f_path(std::move(eval_path)), m_f_type(std::filesystem::status(m_f_path).type())
 {
 
     if(stat_t(m_f_path.c_str(), &m_f_stat))
