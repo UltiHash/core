@@ -11,8 +11,8 @@ namespace uh::options
 // ---------------------------------------------------------------------
 
 options::options(const std::string& caption)
-    : m_visible(caption),
-      m_hidden(caption)
+        : m_visible(caption),
+          m_hidden(caption)
 {
 }
 
@@ -49,6 +49,20 @@ boost::program_options::options_description& options::hidden()
 boost::program_options::options_description& options::visible()
 {
     return m_visible;
+}
+
+// ---------------------------------------------------------------------
+
+void options::positional_mapping(const std::string& name, int max_count)
+{
+    m_positional_mappings.push_back({ name, max_count });
+}
+
+// ---------------------------------------------------------------------
+
+const std::list<options::positional>& options::positional_mappings() const
+{
+    return m_positional_mappings;
 }
 
 // ---------------------------------------------------------------------
