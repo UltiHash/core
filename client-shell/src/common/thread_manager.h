@@ -13,13 +13,13 @@ class thread_manager
 {
 public:
 
-    explicit thread_manager(size_t);
+    explicit thread_manager(unsigned int);
     virtual ~thread_manager();
     
     virtual void spawn_threads()=0;
 
 protected:
-    size_t m_num_threads;
+    unsigned int m_num_threads;
     std::vector<std::thread> m_thread_pool;
 };
 

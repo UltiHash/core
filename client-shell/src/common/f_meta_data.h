@@ -35,7 +35,7 @@ private:
     std::filesystem::path m_f_path;
     std::filesystem::file_type m_f_type;
     struct stat_t m_f_stat{};
-    std::unique_ptr<std::vector<std::vector<char>>> m_f_hashes;
+    std::vector<std::vector<char>> m_f_hashes;
 };
 
 // ---------------------------------------------------------------------------------------------------------------------

@@ -35,7 +35,7 @@ public:
         std::unique_lock lk(m_mutex);
 
         m_cv.wait(lk, [&](){ return !m_jobs.empty() || m_stop_queue; });
-        if (m_stop_queue)
+        if (m_stop_queue && m_jobs.empty())
         {
             return std::nullopt;
         }
@@ -44,6 +44,7 @@ public:
         m_jobs.pop_front();
 
         return (std::move(job));
+
     }
 
     // -------------------------------------------------

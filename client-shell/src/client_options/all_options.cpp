@@ -56,8 +56,8 @@ bool all_options::handle()
 
     if (this->basic().print_help())
     {
-        std::cout << PROJECT_NAME << " is the UltiHash's command line interface. It can be used to integrate or read data from the UltiHash cluster.\n\n"
-                                     << "General Usage:\n\n  " << PROJECT_NAME << " <--CLIENT_OPTION> <Path to UltiHash Volume> [Other Paths]... <--CONNECTION_OPTION arg>" << "\n\n  <> = required, [] = optional \n";
+        std::cout << PROJECT_NAME << "\033[33;36m is UltiHash's command line interface. It can be used to integrate or retrieve data from UltiHash clusters.\033[0m\n\n"
+                                     << "This is the standard structure for a command:\n\n  " << PROJECT_NAME << " <--CLIENT_OPTION> <Path to UltiHash Volume> [Other Paths]... <--CONNECTION_OPTION arg>" << "\n\n  <> = required, [] = optional \n";
         boost::program_options::options_description visible;
         this->dump(std::cout);
         std::cout << '\n';

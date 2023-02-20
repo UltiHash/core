@@ -2,6 +2,7 @@
 #define SERIALIZATION_F_UPLOAD_H
 
 #include <fstream>
+#include <latch>
 #include <protocol/client_pool.h>
 #include "../common/thread_manager.h"
 #include "../common/job_queue.h"
@@ -20,7 +21,7 @@ public:
     f_upload(std::unique_ptr<protocol::client_pool>&&,
             common::job_queue<std::unique_ptr<common::f_meta_data>>&,
             common::job_queue<std::unique_ptr<common::f_meta_data>>&,
-            size_t num_threads=1);
+            unsigned int num_threads=1);
     ~f_upload() override;
 
     void spawn_threads() override;

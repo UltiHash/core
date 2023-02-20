@@ -9,13 +9,12 @@ namespace uh::client::serialization
 f_upload::f_upload(std::unique_ptr<protocol::client_pool>&& cl_pool,
                    common::job_queue<std::unique_ptr<common::f_meta_data>>& in_jq,
                    common::job_queue<std::unique_ptr<common::f_meta_data>>& out_jq,
-                   size_t num_threads) :
+                   unsigned int num_threads) :
                    m_client_pool(std::move(cl_pool)),
                    m_input_jq(in_jq),
                    m_output_jq(out_jq),
                    common::thread_manager(num_threads)
 {
-
 }
 
 // ---------------------------------------------------------------------------------------------------------------------

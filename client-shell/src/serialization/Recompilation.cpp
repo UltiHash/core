@@ -25,12 +25,16 @@ void Recompilation::integrate()
     common::job_queue<std::unique_ptr<common::f_meta_data>> q_f_meta_data;
     common::job_queue<std::unique_ptr<common::f_meta_data>> q_f_mdata_w_hash;
 
-    f_upload upload_class(std::move(m_client_pool), q_f_meta_data,
-                          q_f_mdata_w_hash, m_config.m_pool_size);
-    f_traverse traverse_class(m_config.m_inputPaths, m_config.m_operatePaths, q_f_meta_data);
-    std::this_thread::sleep_for(std::chrono::seconds(30));
+    {
+        f_upload upload_class(std::move(m_client_pool), q_f_meta_data,
+                              q_f_mdata_w_hash, m_config.m_pool_size);
+        upload_class.spawn_threads();
+        f_traverse traverse_class(m_config.m_inputPaths, m_config.m_operatePaths, q_f_meta_data);
+    }
+
     q_f_mdata_w_hash.sort();
     q_f_mdata_w_hash.print();
+
 }
 
 // ---------------------------------------------------------------------------------------------------------------------

@@ -20,7 +20,7 @@ enum class options_chosen : char
 
 typedef struct
 {
-    std::size_t m_pool_size;
+    unsigned int m_pool_size;
     uint16_t m_port;
     std::string m_hostname;
     options_chosen m_option;

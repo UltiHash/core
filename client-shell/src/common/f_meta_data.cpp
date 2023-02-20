@@ -6,7 +6,7 @@ namespace uh::client::common
 // ---------------------------------------------------------------------------------------------------------------------
 
 f_meta_data::f_meta_data(const std::filesystem::path& eval_path) :
-    m_f_path(eval_path), m_f_type(std::filesystem::status(m_f_path).type()), m_f_hashes(nullptr)
+    m_f_path(eval_path), m_f_type(std::filesystem::status(m_f_path).type())
 {
 
     if(stat_t(m_f_path.c_str(), &m_f_stat))
@@ -20,7 +20,7 @@ f_meta_data::f_meta_data(const std::filesystem::path& eval_path) :
 
 void f_meta_data::add_hash(const std::vector<char>& hash)
 {
-    m_f_hashes->push_back(hash);
+    m_f_hashes.push_back(hash);
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -50,7 +50,7 @@ std::string f_meta_data::print_hashes() const
 {
     std::stringstream ss;
 
-    for (const auto& hash : *m_f_hashes)
+    for (const auto& hash : m_f_hashes)
     {
         for (const auto& ch : hash)
         {

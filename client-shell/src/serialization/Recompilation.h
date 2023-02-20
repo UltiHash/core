@@ -1,6 +1,7 @@
 #ifndef SERIALIZATION_RECOMPILATION_H
 #define SERIALIZATION_RECOMPILATION_H
 
+#include <latch>
 #include "../client_options/client_config.h"
 #include "protocol/client_factory.h"
 #include "protocol/client_pool.h"

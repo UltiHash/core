@@ -9,7 +9,7 @@ namespace uh::client::option
 // ---------------------------------------------------------------------
 
 client_options::client_options()
-        : m_desc("Client Options"), m_hiddenDesc("Hidden Client Options")
+        : m_desc("\033[0;36mClient Options\033[0m"), m_hiddenDesc("Hidden Client Options")
 {
     m_desc.add_options()
             ("retrieve,r","read the recompilation file and put the contents to the target destination")

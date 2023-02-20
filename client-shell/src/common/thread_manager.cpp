@@ -5,7 +5,7 @@ namespace uh::client::common
 
 // ---------------------------------------------------------------------------------------------------------------------
 
-thread_manager::thread_manager(size_t num_threads) : m_num_threads(num_threads), m_thread_pool()
+thread_manager::thread_manager(unsigned int num_threads) : m_num_threads(num_threads), m_thread_pool()
 {
 }
 
