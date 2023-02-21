@@ -59,6 +59,19 @@ public:
     }
 
     // -------------------------------------------------
+    void print()
+    {
+        std::unique_lock lk(m_mutex);
+
+        for (const auto& metadata_ptr : m_jobs)
+        {
+            std::cout << metadata_ptr->get_f_path() << std::endl;
+        }
+
+        lk.unlock();
+    }
+
+    // -------------------------------------------------
     void sort()
     {
         std::unique_lock lk(m_mutex);
@@ -74,17 +87,11 @@ public:
     }
 
     // -------------------------------------------------
-    void print()
+    bool is_Empty()
     {
         std::unique_lock lk(m_mutex);
 
-        for (const auto& metadata_ptr : m_jobs)
-        {
-            std::cout << metadata_ptr->get_f_path() << std::endl;
-//            std::cout << metadata_ptr->print_hashes();
-        }
-
-        lk.unlock();
+        return m_jobs.empty();
     }
 
 private:

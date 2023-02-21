@@ -32,13 +32,8 @@ void Recompilation::integrate()
         f_traverse traverse_class(m_config.m_inputPaths, m_config.m_operatePaths, q_f_meta_data);
     }
 
-    std::cout << "\n\nBefore sorting: \n";
-    q_f_mdata_w_hash.print();
     q_f_mdata_w_hash.sort();
-    std::cout << "\n\nAfter sorting: \n";
-    q_f_mdata_w_hash.print();
-
-    // serialize everything in a recompilation file
+    f_serialization serializer(m_config.m_outputPath, q_f_mdata_w_hash);
 
 }
 

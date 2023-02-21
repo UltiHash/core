@@ -22,18 +22,16 @@ class f_meta_data
 {
 public:
 
-    explicit f_meta_data(std::filesystem::path );
+    explicit f_meta_data(std::filesystem::path);
 
     [[nodiscard]] const std::filesystem::path& get_f_path() const;
     [[nodiscard]] const struct stat_t& get_f_stat() const;
-    [[nodiscard]] const std::filesystem::file_type& get_f_type() const;
     [[nodiscard]] std::string print_hashes() const;
 
     void add_hash(const std::vector<char>&);
 
 private:
     std::filesystem::path m_f_path;
-    std::filesystem::file_type m_f_type;
     struct stat_t m_f_stat{};
     std::vector<std::vector<char>> m_f_hashes;
 };
