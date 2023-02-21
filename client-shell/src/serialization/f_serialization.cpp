@@ -5,7 +5,6 @@ namespace uh::client::serialization
 
 // ---------------------------------------------------------------------------------------------------------------------
 
-// Serializes a struct stat64 into a vector of bytes.
 void serialize_stat(const struct stat_t& file_stat, std::vector<uint8_t>& bytes)
 {
 
