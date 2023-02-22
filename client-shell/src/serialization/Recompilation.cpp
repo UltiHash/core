@@ -14,8 +14,6 @@ Recompilation::Recompilation(const uh::client::option::client_config &config,
         integrate();
     else if (m_config.m_option == co::options_chosen::retrieve)
         retrieve();
-    else if (m_config.m_option == co::options_chosen::list)
-        list();
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -33,7 +31,9 @@ void Recompilation::integrate()
     }
 
     q_f_mdata_w_hash.sort();
-    f_serialization serializer(m_config.m_outputPath, q_f_mdata_w_hash);
+
+    f_serialization serializer(m_config.m_outputPath, q_f_mdata_w_hash, m_config.m_inputPaths);
+    serializer.serialize();
 
 }
 
@@ -41,14 +41,12 @@ void Recompilation::integrate()
 
 void Recompilation::retrieve()
 {
-    //TODO:
-}
-
-// ---------------------------------------------------------------------------------------------------------------------
-
-void Recompilation::list()
-{
-    //TODO:
+//    common::job_queue<std::unique_ptr<common::f_meta_data>> q_f_meta_data;
+//
+//    {
+//        f_download download_class(m_client_pool, q_f_meta_data, m_config.m_outputPath,m_config.m_thread_size);
+//        download_class.spawn_threads();
+//    }
 }
 
 // ---------------------------------------------------------------------------------------------------------------------

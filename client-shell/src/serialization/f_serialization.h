@@ -24,7 +24,7 @@ class f_serialization
 {
 public:
 
-    f_serialization(const std::filesystem::path& UHV_path, common::job_queue<std::unique_ptr<common::f_meta_data>>&);
+    f_serialization(std::filesystem::path, common::job_queue<std::unique_ptr<common::f_meta_data>>&, const std::vector<std::filesystem::path>&);
     ~f_serialization() = default;
 
     void serialize();
@@ -33,7 +33,7 @@ public:
 private:
     std::filesystem::path m_UHV_path;
     common::job_queue<std::unique_ptr<common::f_meta_data>>& m_job_queue;
-
+    std::vector<std::filesystem::path> m_root_paths;
 };
 
 // ---------------------------------------------------------------------------------------------------------------------

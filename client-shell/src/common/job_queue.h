@@ -78,7 +78,8 @@ public:
 
         auto f_path_compare = [](const auto& a, const auto& b)
         {
-            return (std::is_same<T, std::unique_ptr<f_meta_data>>::value) ? a->get_f_path() < b->get_f_path() : a < b ;
+            return (std::is_same<T, std::unique_ptr<f_meta_data>>::value) ?
+                        a->get_f_path() < b->get_f_path() : a < b ;
         };
 
         m_jobs.sort(f_path_compare);

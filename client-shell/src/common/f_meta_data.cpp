@@ -1,7 +1,5 @@
 #include "f_meta_data.h"
 
-#include <utility>
-
 namespace uh::client::common
 {
 
@@ -22,7 +20,7 @@ f_meta_data::f_meta_data(std::filesystem::path eval_path) :
 
 void f_meta_data::add_hash(const std::vector<char>& hash)
 {
-    m_f_hashes.push_back(hash);
+    std::copy(hash.begin(), hash.end(), std::back_inserter(m_f_hashes));
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -41,23 +39,11 @@ const struct stat_t& f_meta_data::get_f_stat() const
 
 // ---------------------------------------------------------------------------------------------------------------------
 
-std::string f_meta_data::print_hashes() const
+const std::vector<char>& f_meta_data::get_f_hashes() const
 {
-    std::stringstream ss;
-
-    for (const auto& hash : m_f_hashes)
-    {
-        for (const auto& ch : hash)
-        {
-            ss << ch;
-        }
-        ss << '\n';
-    }
-
-    return ss.str();
+    return m_f_hashes;
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
 
 } // namespace uh::client::common
-

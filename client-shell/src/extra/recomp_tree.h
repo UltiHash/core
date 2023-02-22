@@ -5,7 +5,7 @@
 #ifndef CLIENT_SHELL_RECOMP_TREE_H
 #define CLIENT_SHELL_RECOMP_TREE_H
 
-#include "EnDecoder.h"
+#include "serialization/EnDecoder.h"
 
 namespace uh::client::serialization
 {

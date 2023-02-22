@@ -29,10 +29,10 @@ public:
     [[nodiscard]] bool isMetrics() const;
 
     // LOGIC FUNCTIONS
-    virtual uh::options::action evaluate(const boost::program_options::variables_map& vars) override;
-    void handle(const boost::program_options::variables_map& vars, host_port& config);
+    uh::options::action evaluate(const boost::program_options::variables_map& vars) override;
+    static void handle(const boost::program_options::variables_map& vars, host_port& config);
 
-    const host_port& config() const;
+    [[nodiscard]] const host_port& config() const;
 
 private:
     bool m_metrics = false;

@@ -7,6 +7,7 @@
 #include "common/f_meta_data.h"
 #include "common/job_queue.h"
 #include "f_upload.h"
+#include "f_download.h"
 #include "f_traverse.h"
 #include "f_serialization.h"
 
@@ -24,7 +25,6 @@ class Recompilation
 
     private:
         void integrate();
-        void list();
         void retrieve();
 
     private:

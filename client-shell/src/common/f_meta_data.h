@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include <vector>
+#include <algorithm>
 #include <filesystem>
 #include <sys/stat.h>
 #include <logging/logging_boost.h>
@@ -26,14 +27,14 @@ public:
 
     [[nodiscard]] const std::filesystem::path& get_f_path() const;
     [[nodiscard]] const struct stat_t& get_f_stat() const;
-    [[nodiscard]] std::string print_hashes() const;
+    [[nodiscard]] const std::vector<char>& get_f_hashes() const;
 
     void add_hash(const std::vector<char>&);
 
 private:
     std::filesystem::path m_f_path;
     struct stat_t m_f_stat{};
-    std::vector<std::vector<char>> m_f_hashes;
+    std::vector<char> m_f_hashes;
 };
 
 // ---------------------------------------------------------------------------------------------------------------------

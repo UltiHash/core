@@ -26,7 +26,7 @@ f_upload::~f_upload()
 
 // ---------------------------------------------------------------------------------------------------------------------
 
-void f_upload::upload_files(std::unique_ptr<common::f_meta_data>&& f_meta_data,
+void f_upload::upload_files(std::unique_ptr<common::f_meta_data>& f_meta_data,
                             protocol::client_pool::handle& client_handle)
 {
     if (S_ISREG(f_meta_data->get_f_stat().st_mode))
@@ -85,7 +85,7 @@ void f_upload::spawn_threads()
                    if (item == std::nullopt)
                        break;
                    else
-                       upload_files(std::move(item.value()),
+                       upload_files(item.value(),
                                     client_connection_handle);
 
                }
