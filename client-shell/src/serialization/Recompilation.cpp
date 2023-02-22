@@ -33,6 +33,9 @@ Recompilation::~Recompilation()
 
 void Recompilation::encode()
 {
+    auto time_start = std::chrono::system_clock::now();
+    std::size_t size = 0u;
+
     for (const auto &input_Path : m_config.m_inputPaths)
     {
         this->open(m_config.m_outputPath, std::ios::out | std::ios::app | std::ios::binary);
@@ -63,6 +66,7 @@ void Recompilation::encode()
         Data d_first(current_path, (is_empty and is_dir), m_client);
         SequentialContainer auto d_first_encode = d_first.encodeD < std::vector < unsigned char >> ();
 
+        size += d_first.encoded_size();
         std::for_each(d_first_encode.cbegin(), d_first_encode.cend(),
                       [&recomp_stream](const unsigned char character)
                       {
@@ -112,6 +116,7 @@ void Recompilation::encode()
                 }
                 Data d(current_path, diff_go_up_levels, m_client);
                 SequentialContainer auto d_loop_encode = d.encodeD < std::vector < unsigned char >> ();
+                size += d.encoded_size();
                 std::for_each(d_loop_encode.cbegin(), d_loop_encode.cend(),
                               [&recomp_stream](const unsigned char character) { recomp_stream << character; });
             } while (!fileTreeStack.empty());
@@ -135,11 +140,22 @@ void Recompilation::encode()
         this->flush();
         this->close();
     }
+
+    auto time_end = std::chrono::system_clock::now();
+
+    auto time_diff = std::chrono::duration<double>(time_end - time_start);
+    double seconds = time_diff.count();
+    double mbytes = static_cast<double>(size) / (1024*1024);
+
+    std::cout << "encoding speed: " << (mbytes / seconds) << " Mb/s\n";
 }
 
 // ---------------------------------------------------------------------
 
 void Recompilation::decode() {
+    auto time_start = std::chrono::system_clock::now();
+    std::size_t size = 0u;
+
     std::cout << "Start decoding..." << std::endl;
     for(const auto &input_Path : m_config.m_inputPaths){
         try{
@@ -176,12 +192,21 @@ void Recompilation::decode() {
                 root_folder_current_it = d.write_from_stream_vector(input,root_folder_current_it);
             } while(m_config.m_outputPath!=std::get<0>(root_folder_current_it));
 
+            size += d.decoded_size();
             std::cout << "Successfully read existing recompilation file!"<<std::endl;
         }
         catch(const std::exception &e){
             FATAL << "Reading recompilation file failed due to this reason: " << e.what() << std::endl;
         }
     }
+
+    auto time_end = std::chrono::system_clock::now();
+
+    auto time_diff = std::chrono::duration<double>(time_end - time_start);
+    double seconds = time_diff.count();
+    double mbytes = static_cast<double>(size) / (1024*1024);
+
+    std::cout << "decoding speed: " << (mbytes / seconds) << " Mb/s\n";
 }
 
 // ---------------------------------------------------------------------
