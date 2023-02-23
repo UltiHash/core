@@ -65,7 +65,7 @@ private:
 
 // ---------------------------------------------------------------------
 
-static constexpr std::streamsize DEFAULT_CHUNK_SIZE = 64 * 1024;
+static constexpr std::streamsize DEFAULT_CHUNK_SIZE = 16 * 1024 * 1024;
 
 // ---------------------------------------------------------------------
 
