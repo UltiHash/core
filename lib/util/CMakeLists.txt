@@ -1,8 +1,8 @@
 cmake_minimum_required(VERSION 3.22.0 FATAL_ERROR)
-set(CMAKE_CXX_STANDARD 20)
-
 project(uhLibUtil)
-message(STATUS "Using ${PROJECT_NAME}...")
+message(STATUS "Building ${PROJECT_NAME}...")
+
+set(CMAKE_CXX_STANDARD 20)
 
 find_package(Boost 1.80 COMPONENTS system unit_test_framework REQUIRED)
 
