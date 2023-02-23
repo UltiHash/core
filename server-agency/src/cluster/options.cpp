@@ -9,11 +9,11 @@ namespace uh::an::cluster
 // ---------------------------------------------------------------------
 
 options::options()
-    : uh::options::options("Cluster Options")
+    : uh::options::options("Database Cluster Options")
 {
     visible().add_options()
         ("db-node,D", value< std::vector<std::string> > (), "<HOSTNAME[:PORT]> of database node to connect to (port defaults to 21833)")
-        ("node-threads", value<std::size_t>()->default_value(3), "number of threads per node");
+        ("db-node-threads", value<std::size_t>()->default_value(3), "number of threads per node");
 }
 
 // ---------------------------------------------------------------------
@@ -22,7 +22,7 @@ uh::options::action options::evaluate(const boost::program_options::variables_ma
 {
     cluster::config c;
 
-    auto node_threads = vars["node-threads"].as<std::size_t>();
+    auto node_threads = vars["db-node-threads"].as<std::size_t>();
 
     if (vars.count("db-node") > 0)
     {
