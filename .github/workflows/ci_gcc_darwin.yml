@@ -24,7 +24,15 @@ jobs:
           brew install wget openssl gcc cmake
           ln -s /usr/local/opt/openssl/include/openssl /usr/local/include
 
+      - name: Cache boost
+        id: cache-boost
+        uses: actions/cache@v3
+        with:
+          path: "/tmp/boost_1_81_0"
+          key: ${{ runner.os }}-boost_1_81_0
+
       - name: Compile Boost with gcc
+        if: steps.cache-boost.outputs.cache-hit != 'true'
         run: |
           wget -O /tmp/boost_1_81_0.tar.gz https://sourceforge.net/projects/boost/files/boost/1.81.0/boost_1_81_0.tar.gz/download
           cd /tmp/
@@ -35,6 +43,10 @@ jobs:
           echo "using gcc : 12.2 : /usr/local/bin/g++-12 ;" >> project-config.jam.custom
           mv project-config.jam.custom project-config.jam
           ./b2 -j $(sysctl -n hw.logicalcpu) --target=shared,static --link=shared
+
+      - name: Install Boost
+        run: |
+          cd /tmp/boost_1_81_0
           sudo ./b2 install --target=shared,static --link=shared
 
       - name: Configure CMake
