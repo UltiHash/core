@@ -17,6 +17,9 @@ class Data : virtual public Prefix{
 
     std::size_t m_size = 0u;
 
+    std::size_t m_encoded_size = 0u;
+    std::size_t m_decoded_size = 0u;
+
 private:
     static std::string demo_perms(std::filesystem::perms p){
         std::stringstream out;
@@ -53,6 +56,7 @@ public:
                     // time measurement statistics for reading blocks from the agency server
                     auto start = std::chrono::steady_clock::now();
                     auto hash = m_client->write_chunk(std::vector<char>(i.begin(),i.end()));
+                    m_encoded_size += i.size();
                     auto end = std::chrono::steady_clock::now();
 
                     auto nanoSec = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
@@ -118,6 +122,7 @@ public:
                     // time measurement statistics for reading blocks from the agency server
                     auto start = std::chrono::steady_clock::now();
                     auto data = m_client->read_chunk(vecHash);
+                    m_decoded_size += data.size();
                     auto end = std::chrono::steady_clock::now();
 
                     auto nanoSec = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start).count();
@@ -162,6 +167,9 @@ public:
     [[nodiscard]] bool is_regular_file() const override;
 
     [[nodiscard]] std::size_t size() const { return m_size; }
+
+    std::size_t encoded_size() const { return m_encoded_size; }
+    std::size_t decoded_size() const { return m_decoded_size; }
 
     inline std::string getObjectName();
 
