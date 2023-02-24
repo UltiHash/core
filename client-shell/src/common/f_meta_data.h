@@ -33,7 +33,6 @@ public:
     void set_f_path(const std::string&);
     void set_f_hashes(const std::string&);
     void set_f_stat_t(const struct stat_t&);
-
     void add_hash(const std::vector<char>&);
 
 private:

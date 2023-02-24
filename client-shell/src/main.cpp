@@ -43,7 +43,7 @@ int main(int argc, const char *argv[])
                         std::make_unique<uh::protocol::client_factory>(
                                 std::make_unique<uh::net::plain_socket_factory>(
                                         io, config.agency().hostname, config.agency().port),
-                                cf_config), config.agency().pool_size);
+                                            cf_config), config.agency().pool_size);
 
         // recompilation
         uh::client::serialization::Recompilation(config.client(), std::move(client_pool));
