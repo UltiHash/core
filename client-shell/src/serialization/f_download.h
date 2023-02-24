@@ -1,6 +1,7 @@
 #ifndef SERIALIZATION_F_DOWNLOAD_H
 #define SERIALIZATION_F_DOWNLOAD_H
 
+#include <fstream>
 #include <protocol/client_pool.h>
 #include "../common/job_queue.h"
 #include "../common/f_meta_data.h"

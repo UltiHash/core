@@ -66,6 +66,11 @@ public:
         for (const auto& metadata_ptr : m_jobs)
         {
             std::cout << metadata_ptr->get_f_path() << std::endl;
+            if (S_ISDIR(metadata_ptr->get_f_stat().st_mode)) {
+                std::cout << "d\n";
+            } else {
+                std::cout << "f\n";
+            }
         }
 
         lk.unlock();

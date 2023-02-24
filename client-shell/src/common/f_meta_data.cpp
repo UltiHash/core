@@ -46,4 +46,25 @@ const std::vector<char>& f_meta_data::get_f_hashes() const
 
 // ---------------------------------------------------------------------------------------------------------------------
 
+void f_meta_data::set_f_path(const std::string& path_str)
+{
+    m_f_path = std::filesystem::path(path_str);
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+
+void f_meta_data::set_f_hashes(const std::string& vec_hashes)
+{
+    m_f_hashes = std::vector<char>(vec_hashes.begin(), vec_hashes.end());
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+
+void f_meta_data::set_f_stat_t(const struct stat_t& f_stat)
+{
+    m_f_stat = f_stat;
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+
 } // namespace uh::client::common

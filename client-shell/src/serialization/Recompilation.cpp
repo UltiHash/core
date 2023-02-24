@@ -32,8 +32,8 @@ void Recompilation::integrate()
 
     q_f_mdata_w_hash.sort();
 
-    f_serialization serializer(m_config.m_outputPath, q_f_mdata_w_hash, m_config.m_inputPaths);
-    serializer.serialize();
+    f_serialization serializer(m_config.m_outputPath, q_f_mdata_w_hash);
+    serializer.serialize(m_config.m_inputPaths);
 
 }
 
@@ -41,12 +41,20 @@ void Recompilation::integrate()
 
 void Recompilation::retrieve()
 {
-//    common::job_queue<std::unique_ptr<common::f_meta_data>> q_f_meta_data;
-//
+    std::filesystem::create_directories(m_config.m_outputPath);
+    common::job_queue<std::unique_ptr<common::f_meta_data>> q_f_meta_data;
+
 //    {
 //        f_download download_class(m_client_pool, q_f_meta_data, m_config.m_outputPath,m_config.m_thread_size);
 //        download_class.spawn_threads();
 //    }
+
+    for (const auto& uhv_file_path: m_config.m_inputPaths)
+    {
+        f_serialization deserializer(uhv_file_path, q_f_meta_data);
+        deserializer.deserialize();
+    }
+
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
