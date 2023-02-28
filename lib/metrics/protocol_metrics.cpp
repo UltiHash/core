@@ -16,6 +16,7 @@ protocol_metrics::protocol_metrics(uh::metrics::service& service)
       m_reqs_free_space(m_counters.Add({{ "type", "free_space" }})),
       m_reqs_quit(m_counters.Add({{ "type", "quit" }})),
       m_reqs_reset(m_counters.Add({{ "type", "reset" }})),
+      m_reqs_next_chunk(m_counters.Add({{ "type", "next_chunk" }})),
       m_reqs_allocate_chunk(m_counters.Add({{ "type", "allocate_chunk" }}))
 {
 }
@@ -60,6 +61,13 @@ prometheus::Counter& protocol_metrics::reqs_quit() const
 prometheus::Counter& protocol_metrics::reqs_reset() const
 {
     return m_reqs_reset;
+}
+
+// ---------------------------------------------------------------------
+
+prometheus::Counter& protocol_metrics::reqs_next_chunk() const
+{
+    return m_reqs_next_chunk;
 }
 
 // ---------------------------------------------------------------------
@@ -125,6 +133,14 @@ void protocol_metrics_wrapper::on_reset()
 {
     m_metrics.reqs_reset().Increment();
     return m_base->on_reset();
+}
+
+// ---------------------------------------------------------------------
+
+std::size_t protocol_metrics_wrapper::on_next_chunk(std::span<char> buffer)
+{
+    m_metrics.reqs_next_chunk().Increment();
+    return m_base->on_next_chunk(buffer);
 }
 
 // ---------------------------------------------------------------------
