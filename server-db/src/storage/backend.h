@@ -8,9 +8,9 @@
 namespace uh::dbn::storage {
 
 
-    class storage_backend {
+    class backend {
     public:
-        virtual ~storage_backend() = default;
+        virtual ~backend() = default;
 
         virtual void start() = 0;
 

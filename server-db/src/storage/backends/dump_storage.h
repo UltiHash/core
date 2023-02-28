@@ -1,15 +1,14 @@
-#ifndef SERVER_DB_STORAGE_BACKEND_DUMP_H
-#define SERVER_DB_STORAGE_BACKEND_DUMP_H
-
+#ifndef SERVER_DB_STORAGE_BACKENDS_DUMP_STORAGE_H
+#define SERVER_DB_STORAGE_BACKENDS_DUMP_STORAGE_H
 
 #include <storage/utils.h>
-#include <storage/storage_backend.h>
+#include <storage/backend.h>
 #include <metrics/storage_metrics.h>
 
 
 namespace uh::dbn::storage {
 
-class dump_storage : public storage_backend {
+class dump_storage : public backend {
     public:
         dump_storage(std::filesystem::path db_root, size_t size_bytes, uh::dbn::metrics::storage_metrics& storage_metrics):
         m_root(db_root),

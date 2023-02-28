@@ -66,7 +66,7 @@ void create_test_db_and_file(){
     write_input_test_file(c.test_input_filepath_2);
 }
 
-bool test_storage_backend_io(uh::dbn::storage::mod &mod){
+bool test_backend_io(uh::dbn::storage::mod &mod){
     db_test_config c;
     bool tf = false;
     std::filesystem::path input_filepath = c.test_input_filepath;
@@ -125,7 +125,7 @@ BOOST_AUTO_TEST_CASE( dump_storage_io )
     uh::dbn::metrics::mod metrics_module({});
     uh::dbn::storage::mod storage_module(cfg, metrics_module.storage());
     storage_module.start();
-    success = test_storage_backend_io(storage_module);
+    success = test_backend_io(storage_module);
 
     BOOST_CHECK(success);
 }

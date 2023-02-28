@@ -5,7 +5,6 @@
 #include <unistd.h> //rmdir
 #include <logging/logging_boost.h>
 #include <util/exception.h>
-#include "storage_backend.h"
 #include <storage/backends/dump_storage.h>
 
 
@@ -41,7 +40,9 @@ void maybe_create_database_root_directory(std::filesystem::path db_root,
     }
 }
 
-BackendTypeEnum define_storage_backend_type(std::string backend_type){
+// ---------------------------------------------------------------------
+
+BackendTypeEnum define_backend_type(std::string backend_type){
     auto it = string2backendtype.find(backend_type);
     if (it != string2backendtype.end()) {
         return it->second;
@@ -51,7 +52,9 @@ BackendTypeEnum define_storage_backend_type(std::string backend_type){
     }
 }
 
-std::unique_ptr<storage_backend> make_storage_backend(const storage_config& cfg, metrics::storage_metrics& storage_metrics){
+// ---------------------------------------------------------------------
+
+std::unique_ptr<backend> make_backend(const storage_config& cfg, metrics::storage_metrics& storage_metrics){
 
     maybe_create_database_root_directory(cfg.db_root, cfg.create_new_root);
 
@@ -62,7 +65,7 @@ std::unique_ptr<storage_backend> make_storage_backend(const storage_config& cfg,
         THROW(util::exception, "Requesting to allocate more space than available. Unable to make a storage backend");
     }
 
-    auto backend_type = define_storage_backend_type(cfg.backend_type);
+    auto backend_type = define_backend_type(cfg.backend_type);
 
     switch (backend_type)
     {
@@ -77,7 +80,6 @@ std::unique_ptr<storage_backend> make_storage_backend(const storage_config& cfg,
 
 }
 
-
 // ---------------------------------------------------------------------
 
 } // namespace
@@ -87,13 +89,13 @@ std::unique_ptr<storage_backend> make_storage_backend(const storage_config& cfg,
 struct mod::impl
 {
     impl(const storage_config& cfg, metrics::storage_metrics& storage_metrics);
-    std::unique_ptr<storage_backend> some_storage_backend;
+    std::unique_ptr<backend> m_backend;
 };
 
 // ---------------------------------------------------------------------
 
 mod::impl::impl(const storage_config& cfg, metrics::storage_metrics& storage_metrics)
-    : some_storage_backend(make_storage_backend(cfg, storage_metrics))
+    : m_backend(make_backend(cfg, storage_metrics))
 {
 }
 
@@ -113,35 +115,35 @@ mod::~mod() = default;
 void mod::start()
 {
     INFO << "starting storage module";
-    m_impl->some_storage_backend->start();
+    m_impl->m_backend->start();
 }
 
 // ---------------------------------------------------------------------
 
 size_t mod::free_space()
 {
-    return m_impl->some_storage_backend->free_space();
+    return m_impl->m_backend->free_space();
 }
 
 // ---------------------------------------------------------------------
 
 std::unique_ptr<io::device> mod::read_block(const uh::protocol::blob& hash)
 {
-    return m_impl->some_storage_backend->read_block(hash);
+    return m_impl->m_backend->read_block(hash);
 }
 
 // ---------------------------------------------------------------------
 
 uh::protocol::block_meta_data mod::write_block(const uh::protocol::blob& hash)
 {
-    return m_impl->some_storage_backend->write_block(hash);
+    return m_impl->m_backend->write_block(hash);
 }
 
 // ---------------------------------------------------------------------
 
 std::unique_ptr<uh::protocol::allocation> mod::allocate(std::size_t size)
 {
-    return m_impl->some_storage_backend->allocate(size);
+    return m_impl->m_backend->allocate(size);
 }
 
 // ---------------------------------------------------------------------
