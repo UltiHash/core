@@ -48,7 +48,7 @@ public:
     }
 
     // -------------------------------------------------
-    void put_back_job(T&& elem)
+    void append_job(T&& elem)
     {
         std::unique_lock lk(m_mutex);
 
@@ -59,42 +59,23 @@ public:
     }
 
     // -------------------------------------------------
-    // for testing purposes since components were not fully developed
-    void print()
-    {
-        std::unique_lock lk(m_mutex);
-
-        for (const auto& metadata_ptr : m_jobs)
-        {
-            std::cout << metadata_ptr->get_f_path() << std::endl;
-            if (S_ISDIR(metadata_ptr->get_f_stat().st_mode)) {
-                std::cout << "d\n";
-            } else {
-                std::cout << "f\n";
-            }
-        }
-
-        lk.unlock();
-    }
-
-    // -------------------------------------------------
     void sort()
     {
         std::unique_lock lk(m_mutex);
 
-        auto f_path_compare = [](const auto& a, const auto& b)
+        auto compare = [](const auto& a, const auto& b)
         {
             return (std::is_same<T, std::unique_ptr<f_meta_data>>::value) ?
                         a->get_f_path() < b->get_f_path() : a < b ;
         };
 
-        m_jobs.sort(f_path_compare);
+        m_jobs.sort(compare);
 
         lk.unlock();
     }
 
     // -------------------------------------------------
-    bool is_Empty()
+    bool empty()
     {
         std::unique_lock lk(m_mutex);
 

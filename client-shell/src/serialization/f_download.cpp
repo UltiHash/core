@@ -22,14 +22,20 @@ f_download::f_download(std::unique_ptr<protocol::client_pool>& cl_pool,
 f_download::~f_download()
 {
     m_input_jq.stop();
+    for (auto& thread : m_thread_pool)
+    {
+        INFO << "Joining Thread ";
+        if (thread.joinable())
+            thread.join();
+    }
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
 
 void f_download::download_files(std::unique_ptr<common::f_meta_data>& f_meta_data,
-                            protocol::client_pool::handle& client_handle)
+                            protocol::client_pool::handle& client_handle, std::filesystem::path dest_path)
 {
-    std::filesystem::path new_f_path = m_dest_path / f_meta_data->get_f_path();
+    std::filesystem::path new_f_path = dest_path / f_meta_data->get_f_path();
     if (S_ISDIR(f_meta_data->get_f_stat().st_mode))
     {
         if (!std::filesystem::exists(new_f_path))
@@ -48,13 +54,13 @@ void f_download::download_files(std::unique_ptr<common::f_meta_data>& f_meta_dat
 
         std::vector<char> buffer(64);
 
-        for (size_t i = 0; i < f_meta_data->get_f_hashes().size(); i += 64)
+        for (auto i = 0; i < f_meta_data->get_f_hashes().size(); i += 64)
         {
             std::copy(f_meta_data->get_f_hashes().begin() + i,
                       f_meta_data->get_f_hashes().begin() + i + 64, buffer.begin());
 
             auto data = client_handle->read_chunk(buffer);
-            new_file.write(&data[0], data.size());
+            new_file.write(&data[0], static_cast<std::streamsize>(data.size()));
         }
 
         new_file.flush();
@@ -100,7 +106,7 @@ void f_download::spawn_threads()
                        break;
                    else
                        download_files(item.value(),
-                                    client_connection_handle);
+                                    client_connection_handle, m_dest_path);
 
                }
 

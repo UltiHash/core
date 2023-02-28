@@ -24,7 +24,7 @@ public:
     void traverse();
 
 private:
-    std::queue<std::filesystem::path> m_fs_jq;
+    std::queue<std::filesystem::path> m_fs_queue;
     std::vector<std::filesystem::path> m_operate_paths;
     common::job_queue<std::unique_ptr<common::f_meta_data>>& m_output_jq;
 };

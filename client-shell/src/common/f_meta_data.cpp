@@ -46,9 +46,9 @@ const std::vector<char>& f_meta_data::get_f_hashes() const
 
 // ---------------------------------------------------------------------------------------------------------------------
 
-void f_meta_data::set_f_path(const std::string& path_str)
+void f_meta_data::set_f_path(std::string path_str)
 {
-    m_f_path = std::filesystem::path(path_str);
+    m_f_path = std::filesystem::path(std::move(path_str));
 }
 
 // ---------------------------------------------------------------------------------------------------------------------

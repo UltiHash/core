@@ -30,13 +30,13 @@ public:
     [[nodiscard]] const struct stat_t& get_f_stat() const;
     [[nodiscard]] const std::vector<char>& get_f_hashes() const;
 
-    void set_f_path(const std::string&);
+    void set_f_path(std::string);
     void set_f_hashes(const std::string&);
     void set_f_stat_t(const struct stat_t&);
     void add_hash(const std::vector<char>&);
 
 private:
-    std::filesystem::path m_f_path{};
+    std::filesystem::path m_f_path;
     struct stat_t m_f_stat{};
     std::vector<char> m_f_hashes;
 };

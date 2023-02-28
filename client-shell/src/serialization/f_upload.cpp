@@ -22,6 +22,12 @@ f_upload::f_upload(std::unique_ptr<protocol::client_pool>& cl_pool,
 f_upload::~f_upload()
 {
     m_input_jq.stop();
+    for (auto& thread : m_thread_pool)
+    {
+        INFO << "Joining Thread ";
+        if (thread.joinable())
+            thread.join();
+    }
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -67,7 +73,7 @@ void f_upload::upload_files(std::unique_ptr<common::f_meta_data>& f_meta_data,
         input_file.close();
     }
 
-    m_output_jq.put_back_job(std::move(f_meta_data));
+    m_output_jq.append_job(std::move(f_meta_data));
 }
 
 // ---------------------------------------------------------------------------------------------------------------------

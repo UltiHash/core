@@ -14,7 +14,6 @@ find_package(Boost 1.80 COMPONENTS program_options unit_test_framework REQUIRED)
 find_package(OpenSSL REQUIRED)
 
 # putting internal project repository LIBUH_DEP in a variable
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/lib)
 add_subdirectory(src/serialization)
 
 # configuring library dependencies for cmake and linker
@@ -27,10 +26,6 @@ file(GLOB HEADER_FILE_LIST
 # adding all the .h files of the current project
 file(GLOB SOURCE_FILE_LIST
         ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp ${CMAKE_CURRENT_SOURCE_DIR}/src/client_options/*.cpp ${CMAKE_CURRENT_SOURCE_DIR}/src/common/*.cpp)
-
-# setting flags for optimizations
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O0")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0")
 
 # creating a target executable
 add_executable(${PROJECT_NAME} ${HEADER_FILE_LIST} ${SOURCE_FILE_LIST})
