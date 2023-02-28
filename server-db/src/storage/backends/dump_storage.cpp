@@ -40,10 +40,6 @@ uh::protocol::block_meta_data dump_storage::write_block(const uh::protocol::blob
 
     uh::protocol::blob hash_blob = this->hashing_function(some_data);
 
-    // DEBUG
-    // std::string printable_blob(hash_blob.begin(), hash_blob.end());
-    // DEBUG << "hash string (should look like binary rubish):" << printable_blob;
-
     std::filesystem::path filepath = this->get_filepath_from_hash(hash_blob);
 
     if(m_free < size(some_data)){
