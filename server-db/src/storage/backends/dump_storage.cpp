@@ -67,6 +67,8 @@ uh::protocol::block_meta_data dump_storage::write_block(const uh::protocol::blob
     };
 }
 
+// ---------------------------------------------------------------------
+
 std::unique_ptr<io::device> dump_storage::read_block(const uh::protocol::blob& hash) {
 
     std::string hash_string(hash.begin(), hash.end());
@@ -75,6 +77,14 @@ std::unique_ptr<io::device> dump_storage::read_block(const uh::protocol::blob& h
     return std::make_unique<io::file>(filepath);
 }
 
+// ---------------------------------------------------------------------
+
+std::unique_ptr<uh::protocol::allocation> dump_storage::allocate(std::size_t size)
+{
+    THROW(util::exception, "not implemented");
+}
+
+// ---------------------------------------------------------------------
 
 void dump_storage::update_space_consumption(){
     m_used = get_dir_size(m_root);

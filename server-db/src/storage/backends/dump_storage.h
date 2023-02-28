@@ -66,6 +66,8 @@ class dump_storage : public storage_backend {
 
         virtual std::string backend_type() override {return std::string(m_type);}
 
+        virtual std::unique_ptr<uh::protocol::allocation> allocate(std::size_t size);
+
         void update_space_consumption();
 
 

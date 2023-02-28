@@ -23,6 +23,7 @@ public:
     prometheus::Counter& reqs_free_space() const;
     prometheus::Counter& reqs_quit() const;
     prometheus::Counter& reqs_reset() const;
+    prometheus::Counter& reqs_allocate_chunk() const;
 private:
     prometheus::Family<prometheus::Counter>& m_counters;
     prometheus::Counter& m_reqs_hello;
@@ -31,6 +32,7 @@ private:
     prometheus::Counter& m_reqs_free_space;
     prometheus::Counter& m_reqs_quit;
     prometheus::Counter& m_reqs_reset;
+    prometheus::Counter& m_reqs_allocate_chunk;
 };
 
 // ---------------------------------------------------------------------
@@ -48,6 +50,8 @@ public:
     virtual std::size_t on_free_space() override;
     virtual void on_quit(const std::string& reason) override;
     virtual void on_reset() override;
+    virtual std::unique_ptr<uh::protocol::allocation>
+        on_allocate_chunk(std::size_t size) override;
 
 private:
     const protocol_metrics& m_metrics;

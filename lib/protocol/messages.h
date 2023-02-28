@@ -203,6 +203,30 @@ void read(std::istream& in, next_chunk::response& response);
 
 // ---------------------------------------------------------------------
 
+struct allocate_chunk
+{
+    struct request
+    {
+        uint32_t size;
+    };
+
+    struct response
+    {
+    };
+
+    constexpr static uint8_t request_id = 0x08;
+};
+
+// ---------------------------------------------------------------------
+
+void write(std::ostream& out, const allocate_chunk::request& request);
+void read(std::istream& in, allocate_chunk::request& request);
+
+void write(std::ostream& out, const allocate_chunk::response& response);
+void read(std::istream& in, allocate_chunk::response& response);
+
+// ---------------------------------------------------------------------
+
 } // namespace uh::protocol
 
 #endif

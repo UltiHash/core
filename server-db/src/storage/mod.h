@@ -50,6 +50,7 @@ public:
     std::unique_ptr<io::device> read_block(const uh::protocol::blob& hash);
 
     uh::protocol::block_meta_data write_block(const uh::protocol::blob& hash);
+    std::unique_ptr<uh::protocol::allocation> allocate(std::size_t size);
 
 private:
     struct impl;

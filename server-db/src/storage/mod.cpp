@@ -139,4 +139,11 @@ uh::protocol::block_meta_data mod::write_block(const uh::protocol::blob& hash)
 
 // ---------------------------------------------------------------------
 
+std::unique_ptr<uh::protocol::allocation> mod::allocate(std::size_t size)
+{
+    return m_impl->some_storage_backend->allocate(size);
+}
+
+// ---------------------------------------------------------------------
+
 } // namespace uh::dbn::storage

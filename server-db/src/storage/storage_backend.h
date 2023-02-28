@@ -1,11 +1,12 @@
 #ifndef SERVER_DB_STORAGE_BACKEND_H
 #define SERVER_DB_STORAGE_BACKEND_H
 
-
+#include <protocol/server.h>
 #include "utils.h"
 
 
 namespace uh::dbn::storage {
+
 
     class storage_backend {
     public:
@@ -56,6 +57,11 @@ namespace uh::dbn::storage {
          * Return the name of the storage backend type as a std::string.
          */
         virtual std::string backend_type() = 0;
+
+        /**
+         * Reserve data storage of given `size` and return an allocation for it.
+         */
+        virtual std::unique_ptr<uh::protocol::allocation> allocate(std::size_t size) = 0;
     };
 
 // ---------------------------------------------------------------------

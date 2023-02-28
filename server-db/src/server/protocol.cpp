@@ -59,4 +59,11 @@ std::size_t protocol::on_free_space(){
 
 // ---------------------------------------------------------------------
 
+std::unique_ptr<uh::protocol::allocation> protocol::on_allocate_chunk(std::size_t size)
+{
+    return m_storage.allocate(size);
+}
+
+// ---------------------------------------------------------------------
+
 } // namespace uh::dbn::server
