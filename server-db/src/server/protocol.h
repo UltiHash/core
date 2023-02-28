@@ -17,7 +17,7 @@ namespace uh::dbn::server
 class protocol : public uh::protocol::server
 {
 public:
-    protocol(storage::mod& storage);
+    protocol(storage::backend& storage);
 
     virtual uh::protocol::server_information on_hello(const std::string& client_version) override;
     virtual uh::protocol::block_meta_data on_write_block(uh::protocol::blob&& data) override;
@@ -26,7 +26,7 @@ public:
     virtual std::unique_ptr<uh::protocol::allocation> on_allocate_chunk(std::size_t size) override;
 
 private:
-    storage::mod& m_storage;
+    storage::backend& m_storage;
 };
 
 // ---------------------------------------------------------------------

@@ -89,7 +89,7 @@ std::unique_ptr<backend> make_backend(const storage_config& cfg, metrics::storag
 struct mod::impl
 {
     impl(const storage_config& cfg, metrics::storage_metrics& storage_metrics);
-    std::unique_ptr<backend> m_backend;
+    std::unique_ptr<storage::backend> m_backend;
 };
 
 // ---------------------------------------------------------------------
@@ -120,30 +120,9 @@ void mod::start()
 
 // ---------------------------------------------------------------------
 
-size_t mod::free_space()
+storage::backend& mod::backend()
 {
-    return m_impl->m_backend->free_space();
-}
-
-// ---------------------------------------------------------------------
-
-std::unique_ptr<io::device> mod::read_block(const uh::protocol::blob& hash)
-{
-    return m_impl->m_backend->read_block(hash);
-}
-
-// ---------------------------------------------------------------------
-
-uh::protocol::block_meta_data mod::write_block(const uh::protocol::blob& hash)
-{
-    return m_impl->m_backend->write_block(hash);
-}
-
-// ---------------------------------------------------------------------
-
-std::unique_ptr<uh::protocol::allocation> mod::allocate(std::size_t size)
-{
-    return m_impl->m_backend->allocate(size);
+    return *m_impl->m_backend;
 }
 
 // ---------------------------------------------------------------------
