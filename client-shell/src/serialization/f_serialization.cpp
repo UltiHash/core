@@ -1,5 +1,6 @@
 #include <utility>
 #include <arpa/inet.h>
+#include <endian.h>
 #include "f_serialization.h"
 
 namespace
@@ -7,36 +8,37 @@ namespace
 
 // ---------------------------------------------------------------------------------------------------------------------
 
-void serialize_stat_t(const struct stat_t& file_stat, std::vector<std::uint8_t>& bytes)
+void serialize_f_meta_data(const std::unique_ptr<uh::client::common::f_meta_data>& ptr_f_meta_data, std::vector<std::uint8_t>& bytes)
 {
 
-    uint16_t mode = htons(file_stat.st_mode);
-    std::copy_n(reinterpret_cast<const std::uint8_t*>(&mode), 2, std::back_inserter(bytes));
+    // Serialize the file type
+    auto file_type = static_cast<std::uint8_t>(ptr_f_meta_data->f_type());
+    bytes.push_back(file_type);
 
-    uint64_t size = file_stat.st_size;
-    std::copy_n(reinterpret_cast<const std::uint8_t*>(&size), 8, std::back_inserter(bytes));
+    // Serialize the file permissions
+    std::uint16_t permissions = htons(static_cast<std::uint16_t>(file_status.permissions()));
+    std::copy_n(reinterpret_cast<const std::uint8_t*>(&permissions), 2, std::back_inserter(bytes));
 
-#ifdef BSD
-    auto mtime = static_cast<std::uint64_t>(file_stat.st_mtime);
-    auto atime = static_cast<std::uint64_t>(file_stat.st_atime);
-#else
-    auto mtime = static_cast<std::uint64_t>(file_stat.st_mtim.tv_sec);
-    auto atime = static_cast<std::uint64_t>(file_stat.st_atim.tv_sec);
-#endif
+    // Serialize the last write time
+    auto write_time = static_cast<std::uint64_t>(file_status.last_write_time().time_since_epoch().count());
+    write_time = htobe64(write_time);
+    std::copy_n(reinterpret_cast<const std::uint8_t*>(&write_time), 8, std::back_inserter(bytes));
 
-    std::copy_n(reinterpret_cast<const std::uint8_t*>(&mtime), 8, std::back_inserter(bytes));
-    std::copy_n(reinterpret_cast<const std::uint8_t*>(&atime), 8, std::back_inserter(bytes));
+    // Serialize the file size
+    std::uint64_t file_size = htobe64(static_cast<std::uint64_t>(file_status.file_size()));
+    std::copy_n(reinterpret_cast<const std::uint8_t*>(&file_size), 8, std::back_inserter(bytes));
 
-    auto uid = htonl(static_cast<uint32_t>(file_stat.st_uid));
-    std::copy_n(reinterpret_cast<const std::uint8_t*>(&uid), 4, std::back_inserter(bytes));
-    auto gid = htonl(static_cast<uint32_t>(file_stat.st_gid));
-    std::copy_n(reinterpret_cast<const std::uint8_t*>(&gid), 4, std::back_inserter(bytes));
+    // Serialize the user ID and group ID
+    std::uint32_t user_id = htonl(static_cast<std::uint32_t>(file_status.uid()));
+    std::copy_n(reinterpret_cast<const std::uint8_t*>(&user_id), 4, std::back_inserter(bytes));
+    std::uint32_t group_id = htonl(static_cast<std::uint32_t>(file_status.gid()));
+    std::copy_n(reinterpret_cast<const std::uint8_t*>(&group_id), 4, std::back_inserter(bytes));
 
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
 
-void deserialize_stat_t(struct stat_t& file_stat, const std::vector<std::uint8_t>& bytes,
+void deserialize_f_meta_data(struct stat_t& file_stat, const std::vector<std::uint8_t>& bytes,
                         std::vector<std::uint8_t>::iterator& it)
 {
 
@@ -144,7 +146,7 @@ void f_serialization::serialize(const std::vector<std::filesystem::path>& root_p
                 coder.encode<std::vector<std::uint8_t>>(relative_path.string());
         bytes.insert(bytes.cend(),obj_name_vec.begin(),obj_name_vec.end());
 
-        serialize_stat_t(item.value()->get_f_stat(), bytes);
+        serialize_f_meta_data(item.value(), bytes);
 
         // only files have hash vector to be serialized
         if (S_ISREG(item.value()->get_f_stat().st_mode))

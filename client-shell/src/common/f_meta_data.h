@@ -4,15 +4,9 @@
 #include <iostream>
 #include <vector>
 #include <algorithm>
-#include <filesystem>
-#include <sys/stat.h>
+#include <boost/filesystem.hpp>
 #include <logging/logging_boost.h>
 
-#if defined(BSD)
-#define stat_t stat
-#else
-#define stat_t stat64
-#endif
 
 namespace uh::client::common
 {
@@ -27,17 +21,23 @@ public:
     explicit f_meta_data(std::filesystem::path);
 
     [[nodiscard]] const std::filesystem::path& get_f_path() const;
-    [[nodiscard]] const struct stat_t& get_f_stat() const;
     [[nodiscard]] const std::vector<char>& get_f_hashes() const;
+    [[nodiscard]] const std::filesystem::file_type& f_type() const;
 
     void set_f_path(std::string);
     void set_f_hashes(const std::string&);
-    void set_f_stat_t(const struct stat_t&);
     void add_hash(const std::vector<char>&);
 
 private:
     std::filesystem::path m_f_path;
-    struct stat_t m_f_stat{};
+    std::filesystem::file_type m_f_type;
+    std::filesystem::perms m_f_permissions;
+    std::uintmax_t m_f_size;
+    std::timespec m_f_atime;
+    std::timespec m_f_mtime;
+    std::timespec m_f_ctime;
+    std::uint_least32_t uid;
+    std::uint_least32_t gid;
     std::vector<char> m_f_hashes;
 };
 
