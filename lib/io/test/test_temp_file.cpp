@@ -55,14 +55,14 @@ BOOST_AUTO_TEST_CASE( read_write )
 {
     temp_file tf(TEMP_DIR);
 
-    auto written = tf.write(LOREM_IPSUM.c_str(), LOREM_IPSUM.size());
+    auto written = tf.write({LOREM_IPSUM.c_str(), LOREM_IPSUM.size()});
     BOOST_CHECK_EQUAL(written, LOREM_IPSUM.size());
 
     auto seekpos = tf.seek(0, std::ios_base::beg);
     BOOST_CHECK_EQUAL(seekpos, 0);
 
     std::string copy(LOREM_IPSUM.size(), 0);
-    auto read = tf.read(copy.data(), copy.size());
+    auto read = tf.read({copy.data(), copy.size()});
     BOOST_CHECK_EQUAL(read, LOREM_IPSUM.size());
 
     BOOST_CHECK_EQUAL(copy, LOREM_IPSUM);

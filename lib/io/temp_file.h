@@ -1,6 +1,8 @@
 #ifndef UH_IO_TEMPFILE_H
 #define UH_IO_TEMPFILE_H
 
+#include <io/device.h>
+
 #include <filesystem>
 #include <boost/iostreams/categories.hpp>
 #include <boost/iostreams/positioning.hpp>
@@ -19,7 +21,7 @@ using boost::iostreams::stream_offset;
  * Temporary file with self-cleanup. The file implements Boost's seekable device
  * interface.
  */
-class temp_file
+class temp_file : public io::device
 {
 public:
     /**
@@ -35,6 +37,26 @@ public:
     ~temp_file();
 
     /**
+     * Write the contents of the span and return the number of bytes written.
+     *
+     * @throw writing fails for any reason
+     */
+    virtual std::streamsize write(std::span<const char> buffer) override;
+
+    /**
+     * Read from the device and store it in the buffer. Return the number of
+     * bytes read.
+     *
+     * @throw error while reading
+     */
+    virtual std::streamsize read(std::span<char> buffer) override;
+
+    /**
+     * Return whether this device still can be used.
+     */
+    virtual bool valid() const override;
+
+    /**
      * Rename the file to `path` and make it a permanent file.
      *
      * @throw a file with the given name already exists
@@ -46,11 +68,6 @@ public:
      */
     const std::filesystem::path& path() const;
 
-    typedef char char_type;
-    typedef boost::iostreams::bidirectional_device_tag category;
-
-    std::streamsize write(const char* s, std::streamsize n);
-    std::streamsize read(char* s, std::streamsize n);
     std::streampos seek(stream_offset off, std::ios_base::seekdir way);
 
     const static std::string FILENAME_TEMPLATE;

@@ -15,7 +15,7 @@ bool maybe_write_data_to_filepath(const uh::protocol::blob &some_data,
     io::temp_file tmp(filepath.parent_path());
 
     DEBUG << "Block written to " << filepath;
-    tmp.write(some_data.data(), some_data.size());
+    tmp.write({some_data.data(), some_data.size()});
 
     tmp.release_to(filepath);
     return true;
