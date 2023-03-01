@@ -169,3 +169,26 @@ BOOST_AUTO_TEST_CASE( dump_storage_expected_hash )
 
     BOOST_CHECK(x_str == c.expected_sha512_hash);
 }
+
+BOOST_AUTO_TEST_CASE( dump_storage_allocation )
+{
+    db_test_config c;
+    uh::dbn::storage::storage_config cfg;
+    cfg.db_root = c.test_db_dir;
+    cfg.allocate_bytes = c.test_allocated_bytes;
+    create_test_db_and_file();
+
+    // Create backend.
+    uh::dbn::metrics::mod metrics_module({});
+    uh::dbn::storage::mod storage_module(cfg, metrics_module.storage());
+    storage_module.start();
+
+    auto& backend = storage_module.backend();
+    BOOST_CHECK_THROW(backend.allocate(cfg.allocate_bytes + 1), uh::util::exception);
+
+    auto allocation = backend.allocate(cfg.allocate_bytes - 1);
+    BOOST_CHECK_THROW(backend.allocate(2), std::exception);
+
+    allocation.reset();
+    backend.allocate(2);
+}

@@ -22,7 +22,11 @@ class dump_storage : public backend {
             }
             else{
                 m_used = get_dir_size(m_root);
-                update_space_consumption(); //storage metrics initialized here.
+                if (m_used >= m_alloc)
+                {
+                    THROW(util::exception, "database used over limit");
+                }
+                update_space_consumption();
             }
         }
 
@@ -93,9 +97,11 @@ class dump_storage : public backend {
     protected:
 
         constexpr static std::string_view m_type = "DumpStorage";
-        std::filesystem::path m_root = ""; //root path of the db
-        size_t m_alloc = 0; //total space
-        size_t m_used = 0;  //used space
+        std::filesystem::path m_root = "";
+
+        // invariant: m_used < m_alloc
+        size_t m_alloc = 0;
+        std::atomic<size_t> m_used = 0;
         uh::dbn::metrics::storage_metrics& m_storage_metrics;
     };
 
