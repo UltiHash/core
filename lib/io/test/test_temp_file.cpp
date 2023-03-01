@@ -6,10 +6,11 @@
 
 #include <boost/test/unit_test.hpp>
 #include <util/exception.h>
-#include <util/temp_file.h>
+#include <io/temp_file.h>
 
 
 using namespace uh::util;
+using namespace uh::io;
 
 namespace
 {

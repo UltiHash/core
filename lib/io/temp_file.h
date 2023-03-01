@@ -1,11 +1,12 @@
-#ifndef UH_UTIL_TEMPFILE_H
-#define UH_UTIL_TEMPFILE_H
+#ifndef UH_IO_TEMPFILE_H
+#define UH_IO_TEMPFILE_H
 
 #include <filesystem>
 #include <boost/iostreams/categories.hpp>
 #include <boost/iostreams/positioning.hpp>
 
-namespace uh::util
+
+namespace uh::io
 {
 
 // ---------------------------------------------------------------------
@@ -61,6 +62,6 @@ private:
 
 // ---------------------------------------------------------------------
 
-} // namespace uh::util
+} // namespace uh::io
 
 #endif
