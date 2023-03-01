@@ -13,6 +13,62 @@ namespace uh::client::common
 
 // ---------------------------------------------------------------------------------------------------------------------
 
+enum uh_file_type : uint8_t
+{
+    none = 0,
+    regular = 1,
+    directory = 2,
+};
+
+// ---------------------------------------------------------------------------------------------------------------------
+
+const std::unordered_map<std::filesystem::file_type, uh_file_type> u_map_file_type =
+{
+
+    {std::filesystem::file_type::none, uh_file_type::none},
+    {std::filesystem::file_type::regular, uh_file_type::regular},
+    {std::filesystem::file_type::directory, uh_file_type::directory}
+
+};
+
+// ---------------------------------------------------------------------------------------------------------------------
+
+template <typename T, typename Y>
+T map_file_type(const Y& y)
+{
+    if (std::is_same<T, uh_file_type>::value)
+    {
+        auto iter = u_map_file_type.find(y);
+
+        if (iter != u_map_file_type.end())
+        {
+            return iter->second;
+        }
+        else
+        {
+            return uh_file_type::none;
+        }
+    }
+    else
+    {
+        auto iter = std::find_if(u_map_file_type.begin(), u_map_file_type.end(),
+                    [&](const auto& pair)
+                    {
+                        return pair.second == y;
+                    });
+        if (iter != u_map_file_type.end())
+        {
+            return iter->first;
+        }
+        else
+        {
+            return std::filesystem::file_type::not_found;
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+
 class f_meta_data
 {
 public:
@@ -23,22 +79,18 @@ public:
     [[nodiscard]] const std::filesystem::path& get_f_path() const;
     [[nodiscard]] const std::vector<char>& get_f_hashes() const;
     [[nodiscard]] const std::filesystem::file_type& f_type() const;
+    [[nodiscard]] const std::filesystem::perms& permissions() const;
 
     void set_f_path(std::string);
     void set_f_hashes(const std::string&);
     void add_hash(const std::vector<char>&);
 
 private:
-    std::filesystem::path m_f_path;
-    std::filesystem::file_type m_f_type;
-    std::filesystem::perms m_f_permissions;
-    std::uintmax_t m_f_size;
-    std::timespec m_f_atime;
-    std::timespec m_f_mtime;
-    std::timespec m_f_ctime;
-    std::uint_least32_t uid;
-    std::uint_least32_t gid;
-    std::vector<char> m_f_hashes;
+    std::filesystem::path m_f_path{};
+    uint8_t m_f_type{};
+    std::uint32_t m_f_permissions{};
+    std::uint64_t m_f_size{};
+    std::vector<char> m_f_hashes{};
 };
 
 // ---------------------------------------------------------------------------------------------------------------------

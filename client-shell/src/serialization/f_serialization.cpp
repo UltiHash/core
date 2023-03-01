@@ -8,32 +8,25 @@ namespace
 
 // ---------------------------------------------------------------------------------------------------------------------
 
-void serialize_f_meta_data(const std::unique_ptr<uh::client::common::f_meta_data>& ptr_f_meta_data, std::vector<std::uint8_t>& bytes)
+void serialize_f_meta_data(const std::unique_ptr<uh::client::common::f_meta_data>& ptr_f_meta_data,
+                           std::vector<std::uint8_t>& bytes)
 {
+    bytes.reserve(100);
+    serialize_to_vector(ptr_f_meta_data->f_type(), bytes);
 
-    // Serialize the file type
-    auto file_type = static_cast<std::uint8_t>(ptr_f_meta_data->f_type());
-    bytes.push_back(file_type);
+    // !! use endecoder to encode integers
 
     // Serialize the file permissions
-    std::uint16_t permissions = htons(static_cast<std::uint16_t>(file_status.permissions()));
+    std::uint16_t permissions = htons(static_cast<std::uint16_t>(ptr_f_meta_data->permissions()));
     std::copy_n(reinterpret_cast<const std::uint8_t*>(&permissions), 2, std::back_inserter(bytes));
 
-    // Serialize the last write time
-    auto write_time = static_cast<std::uint64_t>(file_status.last_write_time().time_since_epoch().count());
-    write_time = htobe64(write_time);
-    std::copy_n(reinterpret_cast<const std::uint8_t*>(&write_time), 8, std::back_inserter(bytes));
+    // w/o seri
+    std::uint16_t test;
+    const auto*p = reinterpret_cast<uint8_t *>(&test);
+    std::memcpy(dest, src, sizeof(test));
 
-    // Serialize the file size
-    std::uint64_t file_size = htobe64(static_cast<std::uint64_t>(file_status.file_size()));
-    std::copy_n(reinterpret_cast<const std::uint8_t*>(&file_size), 8, std::back_inserter(bytes));
-
-    // Serialize the user ID and group ID
-    std::uint32_t user_id = htonl(static_cast<std::uint32_t>(file_status.uid()));
-    std::copy_n(reinterpret_cast<const std::uint8_t*>(&user_id), 4, std::back_inserter(bytes));
-    std::uint32_t group_id = htonl(static_cast<std::uint32_t>(file_status.gid()));
-    std::copy_n(reinterpret_cast<const std::uint8_t*>(&group_id), 4, std::back_inserter(bytes));
-
+    // w/ ser
+    s.write(test);
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -42,53 +35,7 @@ void deserialize_f_meta_data(struct stat_t& file_stat, const std::vector<std::ui
                         std::vector<std::uint8_t>::iterator& it)
 {
 
-    std::uint16_t mode;
-    std::memcpy(&mode, &(*it), sizeof(mode));
-    it += sizeof(mode);
-    file_stat.st_mode = ntohs(mode);
 
-    std::uint64_t size;
-    std::memcpy(&size, &(*it), sizeof(size));
-    it += sizeof(size);
-    file_stat.st_size = static_cast<decltype(file_stat.st_size)>(size);
-
-    std::uint64_t mtime;
-    std::memcpy(&mtime, &(*it), sizeof(mtime));
-    it += sizeof(mtime);
-#if defined(BSD)
-    // On BSD-based systems, st_mtime is a time_t value
-    file_stat.st_mtime = static_cast<decltype(file_stat.st_mtime)>(mtime);
-#else
-    // On other systems, st_mtime is a timespec structure
-    std::timespec mtime_spec;
-    mtime_spec.tv_sec = static_cast<decltype(mtime_spec.tv_sec)>(mtime);
-    mtime_spec.tv_nsec = 0;
-    file_stat.st_mtim = mtime_spec;
-#endif
-
-    std::uint64_t atime;
-    std::memcpy(&atime, &(*it), sizeof(atime));
-    it += sizeof(atime);
-#if defined(BSD)
-    // On BSD-based systems, st_atime is a time_t value
-    file_stat.st_atime = static_cast<decltype(file_stat.st_atime)>(atime);
-#else
-    // On other systems, st_atime is a timespec structure
-    std::timespec atime_spec;
-    atime_spec.tv_sec = static_cast<decltype(atime_spec.tv_sec)>(atime);
-    atime_spec.tv_nsec = 0;
-    file_stat.st_atim = atime_spec;
-#endif
-
-    std::uint32_t uid;
-    std::memcpy(&uid, &(*it), sizeof(uid));
-    it += sizeof(uid);
-    file_stat.st_uid = ntohl(static_cast<decltype(file_stat.st_uid)>(uid));
-
-    std::uint32_t gid;
-    std::memcpy(&gid, &(*it), sizeof(gid));
-    it += sizeof(gid);
-    file_stat.st_gid = ntohl(static_cast<decltype(file_stat.st_gid)>(gid));
 
 }
 
@@ -128,7 +75,6 @@ void f_serialization::serialize(const std::vector<std::filesystem::path>& root_p
             break;
 
         std::vector<std::uint8_t> bytes;
-        bytes.reserve(200);
 
         // !!! Problem when multiple input paths are given
         std::filesystem::path relative_path;
