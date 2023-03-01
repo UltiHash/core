@@ -13,7 +13,6 @@ class dump_storage : public backend {
         dump_storage(std::filesystem::path db_root, size_t size_bytes, uh::dbn::metrics::storage_metrics& storage_metrics):
         m_root(db_root),
         m_alloc(size_bytes),
-        m_free(size_bytes),
         m_used(0),
         m_storage_metrics(storage_metrics)
         {
@@ -53,8 +52,8 @@ class dump_storage : public backend {
         virtual std::unique_ptr<io::device> read_block(const uh::protocol::blob& hash) override;
 
 
-        virtual size_t free_space() override {return m_free;}
-        size_t free_space_percentage() { return 100 * static_cast<float>(m_free) / static_cast<float>(m_alloc);};
+        virtual size_t free_space() override {return m_alloc - m_used;}
+        size_t free_space_percentage() { return 100 * static_cast<float>(free_space()) / static_cast<float>(m_alloc);};
 
 
         virtual size_t used_space() override {return m_used;}
@@ -95,7 +94,6 @@ class dump_storage : public backend {
         constexpr static std::string_view m_type = "DumpStorage";
         std::filesystem::path m_root = ""; //root path of the db
         size_t m_alloc = 0; //total space
-        size_t m_free = 0;  //free space
         size_t m_used = 0;  //used space
         uh::dbn::metrics::storage_metrics& m_storage_metrics;
     };
