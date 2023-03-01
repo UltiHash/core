@@ -21,6 +21,7 @@ class dump_storage : public backend {
                 throw std::runtime_error(msg);
             }
             else{
+                m_used = get_dir_size(m_root);
                 update_space_consumption(); //storage metrics initialized here.
             }
         }

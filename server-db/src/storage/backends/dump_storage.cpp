@@ -50,6 +50,7 @@ uh::protocol::block_meta_data dump_storage::write_block(const uh::protocol::blob
     if(maybe_write_data_to_filepath(some_data, filepath)){
         INFO << "Data block written to " << filepath;
         effective_size = some_data.size();
+        m_used = m_used - size(some_data);
         this->update_space_consumption();
     }
     else{
@@ -83,8 +84,6 @@ std::unique_ptr<uh::protocol::allocation> dump_storage::allocate(std::size_t siz
 // ---------------------------------------------------------------------
 
 void dump_storage::update_space_consumption(){
-    m_used = get_dir_size(m_root);
-
     auto free = m_alloc - m_used;
     m_storage_metrics.free_space().Set(free);
     m_storage_metrics.alloc_space().Set(m_alloc);
