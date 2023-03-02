@@ -8,187 +8,109 @@
 #endif
 
 #include <boost/test/unit_test.hpp>
-#include <iostream>
-#include <sys/stat.h>
-#include <sys/types.h>
 #include <metrics/mod.h>
-#include <storage/mod.h>
+#include <storage/backends/dump_storage.h>
+#include <util/temp_dir.h>
 
+namespace
+{
 
-struct db_test_config{
-    std::filesystem::path test_db_dir = "./TEST_DB_DIR";
-    std::filesystem::path test_input_dir = "./TEST_INPUT_DIR";
-    std::filesystem::path test_incoming_file_name = "test_input_file.txt";
-    std::filesystem::path test_incoming_file_name_2 = "test_input_file_2.txt";
-    std::filesystem::path test_input_filepath = test_input_dir / test_incoming_file_name;
-    std::filesystem::path test_input_filepath_2 = test_input_dir / test_incoming_file_name_2;
-    std::size_t test_allocated_bytes = 1e6;
-    std::string contents_str = "These are the contents of test_input_file.txt and test_input_file_2.txt";
-    //std::string expected_sha512_hash = "57579fadafb55d4fe92f84c699d8cce55d238a1b1747914f56c9f1c35fbb35f6ba41b986f071ef1da60f0f4482339860d4bbcccf7b24336c5ae44f47c73acdbe";
-    //std::string expected_sha512_hash = "8a5cc075bbca891c91a1000b5fc5858d96c79bae07eb3498569df2ed9fa5def8d205d717e117bcbeeab18cc061072687c93e6203f267e691dfb8053d62653878";
-    std::string expected_sha512_hash = "2610fa1ed2dc40f92a3e44cb894b757e4e4469a053b5b2ccf69179b577cfac29403aed645ecab45e10c5db2d9c6bbb0916b0b7c9caa635d271f5274b3e868011";
+// ---------------------------------------------------------------------
+
+class storage_fixture
+{
+public:
+    static constexpr std::size_t ALLOCATED_BYTES = 1e6;
+
+    storage_fixture()
+        : m_metrics_service({}),
+          m_metrics(m_metrics_service),
+          m_dump(m_tmp.path(), ALLOCATED_BYTES, m_metrics)
+    {
+    }
+
+    uh::dbn::storage::backend& backend()
+    {
+        return m_dump;
+    }
+
+private:
+    uh::util::temp_directory m_tmp;
+    uh::metrics::service m_metrics_service;
+    uh::dbn::metrics::storage_metrics m_metrics;
+    uh::dbn::storage::dump_storage m_dump;
 };
 
-void create_dir(std::filesystem::path dirpath){
-    if(!(std::filesystem::exists(dirpath))) {
-        if (mkdir(dirpath.c_str(), 0777) == -1)
-            std::cerr << "Error :  " << strerror(errno) << std::endl;
-        else
-            std::cerr << "Directory created: " << dirpath.string();
-    }
+// ---------------------------------------------------------------------
+
+static const std::string CONTENTS_STR = "These are the contents of test_input_file.txt and test_input_file_2.txt";
+static const std::string EXPECTED_SHA512_HASH = "2610fa1ed2dc40f92a3e44cb894b757e4e4469a053b5b2ccf69179b577cfac29403aed645ecab45e10c5db2d9c6bbb0916b0b7c9caa635d271f5274b3e868011";
+
+// ---------------------------------------------------------------------
+
+std::vector<char> to_vector(const std::string& s)
+{
+    return std::vector<char>(s.begin(), s.end());
 }
 
-void write_input_test_file(std::filesystem::path test_input_filepath){
-    db_test_config c;
-    std::filesystem::path filepath = test_input_filepath;
-    if(!(std::filesystem::exists(filepath))) {
-
-        std::string msg("Path does not exist: " + filepath.string());
-
-        std::ofstream outfile(filepath, std::ios::out | std::ios::binary);
-        if(!outfile.is_open()) {
-            std::string msg("Error opening file: " + filepath.string());
-            throw std::ofstream::failure(msg);
-        }
-
-        std::string contents_str = c.contents_str;
-        uh::protocol::blob some_data(contents_str.begin(), contents_str.end());
-        outfile.write(some_data.data(), some_data.size());
-        std::cerr << "Test file written: " << filepath.string();
-    }
-}
-
-void create_test_db_and_file(){
-    db_test_config c;
-    create_dir(c.test_db_dir);
-    create_dir(c.test_input_dir);
-    write_input_test_file(c.test_input_filepath);
-    write_input_test_file(c.test_input_filepath_2);
-}
-
-bool test_backend_io(uh::dbn::storage::backend& backend){
-    db_test_config c;
-    bool tf = false;
-    std::filesystem::path input_filepath = c.test_input_filepath;
-    std::cout << "original filepath: " << input_filepath << std::endl;
-    std::ifstream infile(input_filepath, std::ios::binary);
-    uh::protocol::blob x(std::istreambuf_iterator<char>(infile), {});
-
-    // Write block.
-    uh::protocol::blob hash_key = backend.write_block(x);
-
-    // Read block.
-    uh::protocol::blob y = uh::io::read_to_buffer(*backend.read_block(hash_key));
-
-    // Check that what was read is the same as what was written.
-    if(y == x){
-        tf = true;
-    }
-
-    return tf;
-}
-
-uh::protocol::blob write_block_from_file(std::filesystem::path input_filepath, uh::dbn::storage::backend& backend){
-
-    std::cout << "original filepath: " << input_filepath << std::endl;
-    std::ifstream infile(input_filepath, std::ios::binary);
-    uh::protocol::blob x(std::istreambuf_iterator<char>(infile), {});
-
-    // Write block.
-    uh::protocol::blob hash_key = backend.write_block(x);
-    return hash_key;
-}
-
-// ------------- Tests Follow --------------
+// ---------------------------------------------------------------------
 
 BOOST_AUTO_TEST_CASE( hashing_function_expected_hash )
 {
-    db_test_config c;
-    uh::protocol::blob vec_input(c.contents_str.begin(), c.contents_str.end());
-    uh::protocol::blob vec_hash = uh::dbn::storage::sha512(vec_input);
+    uh::protocol::blob vec_hash = uh::dbn::storage::sha512(to_vector(CONTENTS_STR));
     std::string hash_string = uh::dbn::storage::to_hex_string(vec_hash.begin(), vec_hash.end());
 
-    BOOST_CHECK(hash_string == c.expected_sha512_hash);
+    BOOST_CHECK(hash_string == EXPECTED_SHA512_HASH);
 }
 
-BOOST_AUTO_TEST_CASE( dump_storage_io )
+// ---------------------------------------------------------------------
+
+BOOST_FIXTURE_TEST_CASE( dump_storage_io, storage_fixture )
 {
-    bool success = false;
+    uh::protocol::blob x = to_vector(CONTENTS_STR);
 
-    db_test_config c;
-    uh::dbn::storage::storage_config cfg;
-    cfg.db_root = c.test_db_dir;
-    cfg.allocate_bytes = c.test_allocated_bytes;
-    create_test_db_and_file();
+    // Write block.
+    uh::protocol::blob hash_key = backend().write_block(x);
 
-    // Create backend.
-    uh::dbn::metrics::mod metrics_module({});
-    uh::dbn::storage::mod storage_module(cfg, metrics_module.storage());
-    storage_module.start();
-    success = test_backend_io(storage_module.backend());
-
-    BOOST_CHECK(success);
-}
-
-BOOST_AUTO_TEST_CASE( dump_storage_no_duplicates )
-{
-    db_test_config c;
-    uh::dbn::storage::storage_config cfg;
-    cfg.db_root = c.test_db_dir;
-    cfg.allocate_bytes = c.test_allocated_bytes;
-    create_test_db_and_file();
-
-    // Create backend.
-    uh::dbn::metrics::mod metrics_module({});
-    uh::dbn::storage::mod storage_module(cfg, metrics_module.storage());
-    storage_module.start();
-
-    // File 1 and file 2 should produce the same hash key. Since teh hash key is in 1-1 correspondence with the contents
-    // of the written file, no duplicates will be written.
-    uh::protocol::blob x = write_block_from_file(c.test_input_filepath, storage_module.backend());
-    uh::protocol::blob y = write_block_from_file(c.test_input_filepath_2, storage_module.backend());
+    // Read block.
+    uh::protocol::blob y = uh::io::read_to_buffer(*backend().read_block(hash_key));
 
     BOOST_CHECK(x == y);
 }
 
-BOOST_AUTO_TEST_CASE( dump_storage_expected_hash )
+// ---------------------------------------------------------------------
+
+BOOST_FIXTURE_TEST_CASE( dump_storage_no_duplicates, storage_fixture )
 {
-    db_test_config c;
-    uh::dbn::storage::storage_config cfg;
-    cfg.db_root = c.test_db_dir;
-    cfg.allocate_bytes = c.test_allocated_bytes;
-    create_test_db_and_file();
+    uh::protocol::blob x = backend().write_block(to_vector(CONTENTS_STR));
+    uh::protocol::blob y = backend().write_block(to_vector(CONTENTS_STR));
 
-    // Create backend.
-    uh::dbn::metrics::mod metrics_module({});
-    uh::dbn::storage::mod storage_module(cfg, metrics_module.storage());
-    storage_module.start();
+    BOOST_CHECK(x == y);
+}
 
-    uh::protocol::blob x = write_block_from_file(c.test_input_filepath, storage_module.backend());
+// ---------------------------------------------------------------------
+
+BOOST_FIXTURE_TEST_CASE( dump_storage_expected_hash, storage_fixture )
+{
+    uh::protocol::blob x = backend().write_block(to_vector(CONTENTS_STR));
     std::string x_str = uh::dbn::storage::to_hex_string(x.begin(), x.end());
 
-    BOOST_CHECK(x_str == c.expected_sha512_hash);
+    BOOST_CHECK(x_str == EXPECTED_SHA512_HASH);
 }
 
-BOOST_AUTO_TEST_CASE( dump_storage_allocation )
+// ---------------------------------------------------------------------
+
+BOOST_FIXTURE_TEST_CASE( dump_storage_allocation, storage_fixture )
 {
-    db_test_config c;
-    uh::dbn::storage::storage_config cfg;
-    cfg.db_root = c.test_db_dir;
-    cfg.allocate_bytes = c.test_allocated_bytes;
-    create_test_db_and_file();
+    BOOST_CHECK_THROW(backend().allocate(ALLOCATED_BYTES + 1), uh::util::exception);
 
-    // Create backend.
-    uh::dbn::metrics::mod metrics_module({});
-    uh::dbn::storage::mod storage_module(cfg, metrics_module.storage());
-    storage_module.start();
-
-    auto& backend = storage_module.backend();
-    BOOST_CHECK_THROW(backend.allocate(cfg.allocate_bytes + 1), uh::util::exception);
-
-    auto allocation = backend.allocate(cfg.allocate_bytes - 1);
-    BOOST_CHECK_THROW(backend.allocate(2), std::exception);
+    auto allocation = backend().allocate(ALLOCATED_BYTES - 1);
+    BOOST_CHECK_THROW(backend().allocate(2), std::exception);
 
     allocation.reset();
-    backend.allocate(2);
+    backend().allocate(2);
 }
+
+// ---------------------------------------------------------------------
+
+} // namespace
