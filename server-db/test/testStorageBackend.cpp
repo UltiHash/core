@@ -104,11 +104,22 @@ BOOST_FIXTURE_TEST_CASE( dump_storage_allocation, storage_fixture )
 {
     BOOST_CHECK_THROW(backend().allocate(ALLOCATED_BYTES + 1), uh::util::exception);
 
-    auto allocation = backend().allocate(ALLOCATED_BYTES - 1);
-    BOOST_CHECK_THROW(backend().allocate(2), std::exception);
+    {
+        auto allocation = backend().allocate(ALLOCATED_BYTES - 1);
+        BOOST_CHECK_THROW(backend().allocate(2), std::exception);
 
-    allocation.reset();
-    backend().allocate(2);
+        allocation.reset();
+        backend().allocate(2);
+    }
+
+    {
+        auto allocation = backend().allocate(ALLOCATED_BYTES - 1);
+        BOOST_CHECK_THROW(backend().allocate(2), std::exception);
+
+        allocation->persist();
+        allocation.reset();
+        BOOST_CHECK_THROW(backend().allocate(2), std::exception);
+    }
 }
 
 // ---------------------------------------------------------------------
