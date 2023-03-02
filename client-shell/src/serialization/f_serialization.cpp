@@ -3,45 +3,90 @@
 #include <endian.h>
 #include "f_serialization.h"
 
-namespace
-{
+namespace {
 
 // ---------------------------------------------------------------------------------------------------------------------
 
-void serialize_f_meta_data(const std::unique_ptr<uh::client::common::f_meta_data>& ptr_f_meta_data,
-                           std::vector<std::uint8_t>& bytes)
+std::vector<std::uint8_t> serialize_f_meta_data(const std::unique_ptr<uh::client::common::f_meta_data>& ptr_f_meta_data,
+                                    const std::filesystem::path& relative_path)
 {
-    bytes.reserve(100);
-    serialize_to_vector(ptr_f_meta_data->f_type(), bytes);
 
-    // !! use endecoder to encode integers
+    std::vector<std::uint8_t> bytes;
+    bytes.reserve(400);
 
-    // Serialize the file permissions
-    std::uint16_t permissions = htons(static_cast<std::uint16_t>(ptr_f_meta_data->permissions()));
-    std::copy_n(reinterpret_cast<const std::uint8_t*>(&permissions), 2, std::back_inserter(bytes));
+    uh::client::serialization::EnDecoder coder{};
 
-    // w/o seri
-    std::uint16_t test;
-    const auto*p = reinterpret_cast<uint8_t *>(&test);
-    std::memcpy(dest, src, sizeof(test));
+    SequentialContainer auto f_path_vec=
+            coder.encode<std::vector<std::uint8_t>>(relative_path.string());
+    bytes.insert(bytes.cend(),f_path_vec.begin(),f_path_vec.end());
 
-    // w/ ser
-    s.write(test);
+
+    bytes.push_back(ptr_f_meta_data->f_type());
+
+    auto ptr_perm_byte = reinterpret_cast<const std::uint8_t*>(&(ptr_f_meta_data->f_permissions()));
+    bytes.insert(bytes.end(), ptr_perm_byte, ptr_perm_byte+sizeof(ptr_f_meta_data->f_permissions()));
+
+
+    if (ptr_f_meta_data->f_type() == uh::client::common::uh_file_type::regular)
+    {
+
+        auto ptr_size_byte = reinterpret_cast<const std::uint8_t*>(&(ptr_f_meta_data->f_size()));
+        bytes.insert(bytes.end(), ptr_size_byte, ptr_size_byte+sizeof(ptr_f_meta_data->f_size()));
+
+        SequentialContainer auto obj_name_vec2 =
+                coder.encode<std::vector<std::uint8_t>>(ptr_f_meta_data->f_hashes());
+        bytes.insert(bytes.cend(),obj_name_vec2.begin(),obj_name_vec2.end());
+
+    }
+
+    return bytes; // RVO optimization
+
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
 
-void deserialize_f_meta_data(struct stat_t& file_stat, const std::vector<std::uint8_t>& bytes,
-                        std::vector<std::uint8_t>::iterator& it)
+std::unique_ptr<uh::client::common::f_meta_data> deserialize_f_meta_data(std::vector<std::uint8_t>& uhv_container, std::vector<std::uint8_t>::iterator& it)
 {
 
+    std::unique_ptr<uh::client::common::f_meta_data> p_f_meta_data = std::make_unique<uh::client::common::f_meta_data>();
+    uh::client::serialization::EnDecoder coder{};
 
+    auto f_path_tuple = coder.decoder<std::string>(uhv_container, it);
+    p_f_meta_data->set_f_path(std::get<0>(f_path_tuple));
+    it = std::get<1>(f_path_tuple);
+
+
+    std::uint8_t decoded_f_type = *it;
+    p_f_meta_data->set_f_type(*it);
+    std::advance(it, 1);
+
+    std::uint32_t decoded_f_permissions;
+    std::memcpy(&decoded_f_permissions, &(*it), sizeof(std::uint32_t));
+    p_f_meta_data->set_f_permissions(decoded_f_permissions);
+    std::advance(it, 4);
+
+
+    if (p_f_meta_data->f_type() == uh::client::common::uh_file_type::regular)
+    {
+
+        std::uint64_t decoded_f_size;
+        std::memcpy(&decoded_f_size, &(*it), sizeof(std::uint64_t));
+        p_f_meta_data->set_f_size(decoded_f_size);
+        std::advance(it, 8);
+
+        auto decoded_hashes = coder.decoder<std::string>(uhv_container, it);
+        p_f_meta_data->set_f_hashes(std::get<0>(decoded_hashes));
+        it = std::get<1>(decoded_hashes);
+
+    }
+
+    return p_f_meta_data; // RVO optimization
 
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
 
-} // namespace
+}
 
 namespace uh::client::serialization
 {
@@ -59,6 +104,7 @@ f_serialization::f_serialization(std::filesystem::path UHV_path,
 
 void f_serialization::serialize(const std::vector<std::filesystem::path>& root_paths)
 {
+
     std::ofstream UHV_file(m_UHV_path, std::ios::app | std::ios::binary);
 
     if (!UHV_file.is_open())
@@ -74,41 +120,26 @@ void f_serialization::serialize(const std::vector<std::filesystem::path>& root_p
         if (item == std::nullopt)
             break;
 
-        std::vector<std::uint8_t> bytes;
-
         // !!! Problem when multiple input paths are given
         std::filesystem::path relative_path;
-        if (root_paths[0] != item.value()->get_f_path()) [[likely]]
+        if (root_paths[0] != item.value()->f_path()) [[likely]]
         {
-            relative_path = std::filesystem::relative(item.value()->get_f_path(), root_paths[0].parent_path());
+            relative_path = std::filesystem::relative(item.value()->f_path(), root_paths[0].parent_path());
         }
         else
         {
             relative_path = root_paths[0].filename();
         }
 
-        EnDecoder coder{};
-        SequentialContainer auto obj_name_vec=
-                coder.encode<std::vector<std::uint8_t>>(relative_path.string());
-        bytes.insert(bytes.cend(),obj_name_vec.begin(),obj_name_vec.end());
+        auto bytes = serialize_f_meta_data(item.value(), relative_path);
 
-        serialize_f_meta_data(item.value(), bytes);
-
-        // only files have hash vector to be serialized
-        if (S_ISREG(item.value()->get_f_stat().st_mode))
-        {
-            SequentialContainer auto obj_name_vec2 =
-                    coder.encode<std::vector<std::uint8_t>>(item.value()->get_f_hashes());
-            bytes.insert(bytes.cend(),obj_name_vec2.begin(),obj_name_vec2.end());
-        }
-
-        std::for_each(bytes.cbegin(), bytes.cend(),
-                      [&](const unsigned char character) { UHV_file << character; });
+        UHV_file.write(reinterpret_cast<const char*>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
 
     }
 
     UHV_file.flush();
     UHV_file.close();
+
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -135,29 +166,10 @@ void f_serialization::deserialize()
 
     while(step != UHV_container.end())
     {
-        EnDecoder coder{};
-        struct stat_t f_stat{};
-        std::unique_ptr<common::f_meta_data> p_f_meta_data = std::make_unique<common::f_meta_data>();
-
-        // object name
-        auto decoded_f_path = coder.decoder<std::string>(UHV_container, step);
-        step = std::get<1>(decoded_f_path);
-        p_f_meta_data->set_f_path(std::get<0>(decoded_f_path));
-
-        // struct_t meta data
-        deserialize_stat_t(f_stat, UHV_container, step);
-        p_f_meta_data->set_f_stat_t(f_stat);
-
-        if (S_ISREG(f_stat.st_mode))
-        {
-            auto decoded_hashes = coder.decoder<std::string>(UHV_container, step);
-            p_f_meta_data->set_f_hashes(std::get<0>(decoded_hashes));
-            step = std::get<1>(decoded_hashes);
-        }
-
+        auto p_f_meta_data = deserialize_f_meta_data(UHV_container, step);
         m_job_queue.append_job(std::move(p_f_meta_data));
-
     }
+
 }
 
 // ---------------------------------------------------------------------------------------------------------------------

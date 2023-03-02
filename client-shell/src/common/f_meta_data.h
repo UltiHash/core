@@ -33,12 +33,13 @@ const std::unordered_map<std::filesystem::file_type, uh_file_type> u_map_file_ty
 
 // ---------------------------------------------------------------------------------------------------------------------
 
-template <typename T, typename Y>
-T map_file_type(const Y& y)
+template <typename T, typename Z>
+T convert_file_type(const Z& z)
 {
+
     if (std::is_same<T, uh_file_type>::value)
     {
-        auto iter = u_map_file_type.find(y);
+        auto iter = u_map_file_type.find(z);
 
         if (iter != u_map_file_type.end())
         {
@@ -49,22 +50,7 @@ T map_file_type(const Y& y)
             return uh_file_type::none;
         }
     }
-    else
-    {
-        auto iter = std::find_if(u_map_file_type.begin(), u_map_file_type.end(),
-                    [&](const auto& pair)
-                    {
-                        return pair.second == y;
-                    });
-        if (iter != u_map_file_type.end())
-        {
-            return iter->first;
-        }
-        else
-        {
-            return std::filesystem::file_type::not_found;
-        }
-    }
+
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -76,20 +62,24 @@ public:
     f_meta_data() = default;
     explicit f_meta_data(std::filesystem::path);
 
-    [[nodiscard]] const std::filesystem::path& get_f_path() const;
-    [[nodiscard]] const std::vector<char>& get_f_hashes() const;
-    [[nodiscard]] const std::filesystem::file_type& f_type() const;
-    [[nodiscard]] const std::filesystem::perms& permissions() const;
+    [[nodiscard]] const std::filesystem::path& f_path() const;
+    [[nodiscard]] const std::vector<char>& f_hashes() const;
+    [[nodiscard]] const std::uint8_t& f_type() const;
+    [[nodiscard]] const std::uint32_t& f_permissions() const;
+    [[nodiscard]] const std::uint64_t& f_size() const;
 
     void set_f_path(std::string);
+    void set_f_type(const std::uint8_t&);
+    void set_f_permissions(const std::uint32_t&);
+    void set_f_size(const std::optional<std::uint64_t>&);
     void set_f_hashes(const std::string&);
     void add_hash(const std::vector<char>&);
 
 private:
     std::filesystem::path m_f_path{};
-    uint8_t m_f_type{};
+    std::uint8_t m_f_type{};
     std::uint32_t m_f_permissions{};
-    std::uint64_t m_f_size{};
+    std::optional<std::uint64_t> m_f_size{};
     std::vector<char> m_f_hashes{};
 };
 

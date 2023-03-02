@@ -19,6 +19,7 @@ f_traverse::f_traverse(std::vector<std::filesystem::path> traverse_Paths,
 
 void f_traverse::traverse()
 {
+
     while(!m_fs_queue.empty())
     {
         auto path = m_fs_queue.front();
@@ -35,6 +36,7 @@ void f_traverse::traverse()
             }
         }
     }
+
 }
 
 // ---------------------------------------------------------------------------------------------------------------------

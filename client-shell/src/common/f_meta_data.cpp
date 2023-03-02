@@ -7,13 +7,14 @@ namespace uh::client::common
 // ---------------------------------------------------------------------------------------------------------------------
 
 f_meta_data::f_meta_data(std::filesystem::path eval_path) :
-    m_f_path(std::move(eval_path))
+    m_f_path(std::move(eval_path)), m_f_size(std::nullopt)
 {
 
     std::filesystem::file_status f_status = std::filesystem::status(m_f_path);
-    m_f_type = map_file_type<uh_file_type>(f_status.type());
+    m_f_type = convert_file_type<uh_file_type>(f_status.type());
     m_f_permissions = static_cast<uint32_t>(f_status.permissions());
-    m_f_size = static_cast<std::uint64_t>(std::filesystem::file_size(m_f_path));
+    if (m_f_type == uh_file_type::regular)
+        m_f_size = static_cast<std::uint64_t>(std::filesystem::file_size(m_f_path));
 
 }
 
@@ -26,30 +27,37 @@ void f_meta_data::add_hash(const std::vector<char>& hash)
 
 // ---------------------------------------------------------------------------------------------------------------------
 
-const std::filesystem::path& f_meta_data::get_f_path() const
+const std::filesystem::path& f_meta_data::f_path() const
 {
     return m_f_path;
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
 
-const std::vector<char>& f_meta_data::get_f_hashes() const
+const std::vector<char>& f_meta_data::f_hashes() const
 {
     return m_f_hashes;
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
 
-const std::filesystem::file_type& f_meta_data::f_type() const
+const std::uint8_t& f_meta_data::f_type() const
 {
     return m_f_type;
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
 
-const std::filesystem::perms& f_meta_data::permissions() const
+const std::uint32_t& f_meta_data::f_permissions() const
 {
     return m_f_permissions;
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+
+const std::uint64_t& f_meta_data::f_size() const
+{
+    return m_f_size.value();
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -64,6 +72,27 @@ void f_meta_data::set_f_path(std::string path_str)
 void f_meta_data::set_f_hashes(const std::string& vec_hashes)
 {
     m_f_hashes = std::vector<char>(vec_hashes.begin(), vec_hashes.end());
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+
+void f_meta_data::set_f_type(const std::uint8_t& f_type)
+{
+    m_f_type = f_type;
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+
+void f_meta_data::set_f_permissions(const std::uint32_t& f_permissions)
+{
+    m_f_permissions = f_permissions;
+}
+
+// ---------------------------------------------------------------------------------------------------------------------
+
+void f_meta_data::set_f_size(const std::optional<std::uint64_t>& f_size)
+{
+    m_f_size = f_size;
 }
 
 // ---------------------------------------------------------------------------------------------------------------------

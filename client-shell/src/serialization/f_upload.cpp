@@ -21,6 +21,7 @@ f_upload::f_upload(std::unique_ptr<protocol::client_pool>& cl_pool,
 
 f_upload::~f_upload()
 {
+
     m_input_jq.stop();
     for (auto& thread : m_thread_pool)
     {
@@ -28,6 +29,7 @@ f_upload::~f_upload()
         if (thread.joinable())
             thread.join();
     }
+
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -35,29 +37,36 @@ f_upload::~f_upload()
 void f_upload::upload_files(std::unique_ptr<common::f_meta_data>& f_meta_data,
                             protocol::client_pool::handle& client_handle)
 {
-    if (S_ISREG(f_meta_data->get_f_stat().st_mode))
-    {
 
-        std::ifstream input_file(f_meta_data->get_f_path(),
+    if ( f_meta_data->f_type() == common::uh_file_type::regular )
+    {
+        std::ifstream input_file(f_meta_data->f_path(),
                                  std::ios::in | std::ios::binary);
 
         if (!input_file.is_open())
-            throw std::runtime_error("Error: Could not open file "
-            + f_meta_data->get_f_path().string() + "\n");
+            throw std::ios_base::failure("Error: Could not open file "
+            + f_meta_data->f_path().string() + "\n");
 
         if (input_file.peek() != std::ifstream::traits_type::eof())
         {
-            constexpr std::size_t buf_size = 1 << 22;
+
+            constexpr std::uint64_t buf_size = 1 << 22;
             std::vector<char> tmp_buffer;
-            tmp_buffer.reserve(std::min<std::size_t>(f_meta_data->get_f_stat().st_size, buf_size));
+            tmp_buffer.reserve(std::min<std::uint64_t>(f_meta_data->f_size(), buf_size));
+
+            std::uint64_t remaining_size = f_meta_data->f_size();
 
             while (input_file)
             {
-                auto remaining_size = f_meta_data->get_f_stat().st_size - input_file.tellg();
+                auto remaining_size = f_meta_data->f_size() - input_file.tellg();
                 tmp_buffer.resize(std::min<std::size_t>(remaining_size, buf_size));
 
                 input_file.read((tmp_buffer.data()), tmp_buffer.size());
                 std::streamsize bytes_read = input_file.gcount();
+
+                for (const auto& i: tmp_buffer)
+                    std::cout << i;
+                std::cout << std::endl;
 
                 if (bytes_read == 0)
                 {
@@ -74,6 +83,7 @@ void f_upload::upload_files(std::unique_ptr<common::f_meta_data>& f_meta_data,
     }
 
     m_output_jq.append_job(std::move(f_meta_data));
+
 }
 
 // ---------------------------------------------------------------------------------------------------------------------
@@ -103,3 +113,26 @@ void f_upload::spawn_threads()
 // ---------------------------------------------------------------------------------------------------------------------
 
 } // namespace uh::client::serialization
+
+
+
+//            while (input_file)
+//            {
+//                input_file.read(reinterpret_cast<char*>(tmp_buffer.data()), static_cast<std::streamsize>(std::min(buf_size, remaining_size)));
+//
+//                if (input_file.fail() || input_file.bad())
+//                {
+//                    throw std::ios_base::failure("Error reading from file");
+//                }
+//
+//                for (const auto& i: tmp_buffer)
+//                    std::cout << i << ' ';
+//                std::cout << std::endl;
+//
+//                auto recv_hash = client_handle.m_client->write_chunk(tmp_buffer);
+//                f_meta_data->add_hash(recv_hash);
+//
+//                remaining_size -= input_file.gcount();
+//                tmp_buffer.resize(std::min(remaining_size, buf_size));
+//
+//            }
