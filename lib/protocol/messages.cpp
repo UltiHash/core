@@ -317,4 +317,39 @@ void read(std::istream& in, allocate_chunk::response& response)
 
 // ---------------------------------------------------------------------
 
+void write(std::ostream& out, const write_chunk::request& request)
+{
+    write(out, write_chunk::request_id);
+    write(out, request.data);
+}
+
+// ---------------------------------------------------------------------
+
+void read(std::istream& in, write_chunk::request& request)
+{
+    write_chunk::request tmp;
+
+    read(in, tmp.data);
+
+    std::swap(tmp, request);
+}
+
+// ---------------------------------------------------------------------
+
+void write(std::ostream& out, const write_chunk::response& response)
+{
+}
+
+// ---------------------------------------------------------------------
+
+void read(std::istream& in, write_chunk::response& response)
+{
+    check_status(in);
+
+    write_chunk::response tmp;
+    std::swap(tmp, response);
+}
+
+// ---------------------------------------------------------------------
+
 } // namespace uh::protocol

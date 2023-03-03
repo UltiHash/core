@@ -227,6 +227,30 @@ void read(std::istream& in, allocate_chunk::response& response);
 
 // ---------------------------------------------------------------------
 
+struct write_chunk
+{
+    struct request
+    {
+        blob data;
+    };
+
+    struct response
+    {
+    };
+
+    constexpr static uint8_t request_id = 0x09;
+};
+
+// ---------------------------------------------------------------------
+
+void write(std::ostream& out, const write_chunk::request& request);
+void read(std::istream& in, write_chunk::request& request);
+
+void write(std::ostream& out, const write_chunk::response& response);
+void read(std::istream& in, write_chunk::response& response);
+
+// ---------------------------------------------------------------------
+
 } // namespace uh::protocol
 
 #endif

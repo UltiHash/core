@@ -70,6 +70,7 @@ public:
     virtual void on_quit(const std::string& reason);
     virtual void on_reset();
     virtual std::size_t on_next_chunk(std::span<char> buffer);
+    virtual void on_write_chunk(std::span<char> buffer);
     virtual std::unique_ptr<allocation> on_allocate_chunk(std::size_t size);
 
     virtual void handle(std::shared_ptr<net::socket> client) override;
@@ -87,6 +88,7 @@ public:
     void handle_reset(iostream& io);
     void handle_next_chunk(iostream& io);
     void handle_allocate_chunk(iostream& io);
+    void handle_write_chunk(iostream& io);
 
 private:
     server_state m_state = server_state::disconnected;

@@ -40,6 +40,12 @@ std::size_t server::on_next_chunk(std::span<char>)
 
 // ---------------------------------------------------------------------
 
+void server::on_write_chunk(std::span<char>)
+{
+}
+
+// ---------------------------------------------------------------------
+
 std::unique_ptr<allocation> server::on_allocate_chunk(std::size_t size)
 {
     THROW(unsupported, "this call is not supported by this node type");
@@ -148,6 +154,7 @@ void server::handle_writing_request(iostream& io, uint8_t request_id)
     {
         case quit::request_id: return handle_quit(io);
         case reset::request_id: return handle_reset(io);
+        case write_chunk::request_id: return handle_write_chunk(io);
 
         default:
             throw std::runtime_error("writing, unsupported command: "
@@ -312,6 +319,22 @@ void server::handle_allocate_chunk(iostream& io)
     m_state = server_state::writing;
 
     write(io, status{ status::OK });
+}
+
+// ---------------------------------------------------------------------
+
+void server::handle_write_chunk(iostream& io)
+{
+    write_chunk::request req;
+    read(io, req);
+
+    if (!m_write_alloc)
+    {
+        THROW(internal_error, "no space allocated");
+    }
+
+    on_write_chunk(req.data);
+    m_write_alloc->device().write(req.data);
 }
 
 // ---------------------------------------------------------------------
