@@ -168,7 +168,7 @@ void f_serialization::deserialize(const std::filesystem::path& dest_path)
 
         // creating paths serially to avoid race condition - !!!
         if (p_f_meta_data->f_type() == uh::client::common::uh_file_type::regular)
-            std::ofstream(p_f_meta_data->f_path());
+            std::ofstream(p_f_meta_data->f_path()).close();
         else
             std::filesystem::create_directory(p_f_meta_data->f_path());
 
