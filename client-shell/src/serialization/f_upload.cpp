@@ -64,10 +64,6 @@ void f_upload::upload_files(std::unique_ptr<common::f_meta_data>& f_meta_data,
                 input_file.read((tmp_buffer.data()), tmp_buffer.size());
                 std::streamsize bytes_read = input_file.gcount();
 
-                for (const auto& i: tmp_buffer)
-                    std::cout << i;
-                std::cout << std::endl;
-
                 if (bytes_read == 0)
                 {
                     break;

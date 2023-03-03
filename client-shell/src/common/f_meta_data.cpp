@@ -1,5 +1,4 @@
 #include "f_meta_data.h"
-#include <sys/stat.h>
 
 namespace uh::client::common
 {

@@ -38,7 +38,7 @@ class client_options : public uh::options::options
         bool m_exclude = false;
 
     private:
-        client_config m_config{1};
+        client_config m_config{15};
         std::vector<std::string> m_posPaths;
         std::vector<std::string> m_operateStrPaths;
         std::string m_targetDirectory;

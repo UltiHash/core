@@ -33,10 +33,11 @@ f_download::~f_download()
 // ---------------------------------------------------------------------------------------------------------------------
 
 void f_download::download_files(std::unique_ptr<common::f_meta_data>& f_meta_data,
-                            protocol::client_pool::handle& client_handle, std::filesystem::path dest_path)
+                            protocol::client_pool::handle& client_handle)
 {
 
-    std::filesystem::path new_f_path = dest_path / f_meta_data->f_path();
+    std::filesystem::path new_f_path = m_dest_path / f_meta_data->f_path();
+    std::cout << new_f_path << std::endl;
     if (f_meta_data->f_type() == uh::client::common::uh_file_type::directory)
     {
         if (!std::filesystem::exists(new_f_path))
@@ -93,7 +94,7 @@ void f_download::spawn_threads()
                        break;
                    else
                        download_files(item.value(),
-                                    client_connection_handle, m_dest_path);
+                                    client_connection_handle);
 
                }
 

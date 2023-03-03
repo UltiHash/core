@@ -23,7 +23,7 @@ public:
     ~f_download() override;
 
     void spawn_threads() override;
-    static void download_files(std::unique_ptr<common::f_meta_data>&, protocol::client_pool::handle&, std::filesystem::path);
+    void download_files(std::unique_ptr<common::f_meta_data>&, protocol::client_pool::handle&);
 
 private:
     common::job_queue<std::unique_ptr<common::f_meta_data>>& m_input_jq;

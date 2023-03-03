@@ -1,6 +1,4 @@
 #include <utility>
-#include <arpa/inet.h>
-#include <endian.h>
 #include "f_serialization.h"
 
 namespace {
