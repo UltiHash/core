@@ -14,7 +14,7 @@ client_options::client_options()
     visible().add_options()
             ("retrieve,r","read the recompilation file and put the contents to the target destination")
             ("integrate,i","write the contents of the sources provided and generate the recompilation file at the target")
-            ("list,l", "list the path inside the given recompilation file")
+            ("workers,w",  value<std::uint16_t>(&m_config.m_worker_count), "size of the worker threads when uploading and downloading")
             ("exclude,E", value<std::vector<std::string>>(&m_operateStrPaths)->multitoken(), "exclude directories when integrating [optional]")
             ("target,T", value<std::string>(&m_targetDirectory), "destination of the target directory for --retrieve(-r) operation [optional]")
             ("verbose,V" , "shows details about the results of running the command [optional]");

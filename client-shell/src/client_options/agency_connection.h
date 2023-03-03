@@ -11,8 +11,8 @@ namespace uh::client::option
 
 struct host_port
 {
-    uint16_t port;
-    unsigned int pool_size;
+    std::uint16_t port;
+    std::uint16_t pool_size;
     std::string hostname;
 };
 

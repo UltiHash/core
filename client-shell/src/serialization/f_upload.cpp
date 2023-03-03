@@ -54,8 +54,6 @@ void f_upload::upload_files(std::unique_ptr<common::f_meta_data>& f_meta_data,
             std::vector<char> tmp_buffer;
             tmp_buffer.reserve(std::min<std::uint64_t>(f_meta_data->f_size(), buf_size));
 
-            std::uint64_t remaining_size = f_meta_data->f_size();
-
             while (input_file)
             {
                 auto remaining_size = f_meta_data->f_size() - input_file.tellg();

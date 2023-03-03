@@ -12,7 +12,7 @@ agency_connection::agency_connection()
 {
     visible().add_options()
             ("agency-node,a", value<std::string>(), "<HOSTNAME[:PORT]> of agency node to connect to (port defaults to 8565)")
-            ("pool-size,P", value<unsigned int>(), "pool size of connections to the agency node [optional]")
+            ("pool-size,P", value<std::uint16_t>(&m_config.pool_size), "pool size of connections to the agency node [optional]")
             ("metrics,M", "display connection statistics [optional]");
 }
 
@@ -48,10 +48,6 @@ void agency_connection::handle(const boost::program_options::variables_map& vars
     else
     {
         throw std::runtime_error("Agency node option missing.");
-    }
-    if (vars.count("pool-size") > 0 )
-    {
-        config.pool_size = vars["pool-size"].as<unsigned int>();
     }
 }
 
