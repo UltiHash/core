@@ -43,14 +43,14 @@ std::vector<std::uint8_t> serialize_f_meta_data(const std::unique_ptr<uh::client
 
 // ---------------------------------------------------------------------------------------------------------------------
 
-std::unique_ptr<uh::client::common::f_meta_data> deserialize_f_meta_data(std::vector<std::uint8_t>& uhv_container, std::vector<std::uint8_t>::iterator& it)
+std::unique_ptr<uh::client::common::f_meta_data> deserialize_f_meta_data(std::vector<std::uint8_t>& uhv_container, std::vector<std::uint8_t>::iterator& it, const std::filesystem::path& dest_path)
 {
 
     std::unique_ptr<uh::client::common::f_meta_data> p_f_meta_data = std::make_unique<uh::client::common::f_meta_data>();
     uh::client::serialization::EnDecoder coder{};
 
     auto f_path_tuple = coder.decoder<std::string>(uhv_container, it);
-    p_f_meta_data->set_f_path(std::get<0>(f_path_tuple));
+    p_f_meta_data->set_f_path( dest_path.string() + '/' + std::get<0>(f_path_tuple));
     it = std::get<1>(f_path_tuple);
 
 
@@ -142,7 +142,7 @@ void f_serialization::serialize(const std::vector<std::filesystem::path>& root_p
 
 // ---------------------------------------------------------------------------------------------------------------------
 
-void f_serialization::deserialize()
+void f_serialization::deserialize(const std::filesystem::path& dest_path)
 {
     std::ifstream UHV_file(m_UHV_path, std::ios::binary);
 
@@ -164,7 +164,14 @@ void f_serialization::deserialize()
 
     while(step != UHV_container.end())
     {
-        auto p_f_meta_data = deserialize_f_meta_data(UHV_container, step);
+        auto p_f_meta_data = deserialize_f_meta_data(UHV_container, step, dest_path);
+
+        // creating paths serially to avoid race condition - !!!
+        if (p_f_meta_data->f_type() == uh::client::common::uh_file_type::regular)
+            std::ofstream(p_f_meta_data->f_path());
+        else
+            std::filesystem::create_directory(p_f_meta_data->f_path());
+
         m_job_queue.append_job(std::move(p_f_meta_data));
     }
 

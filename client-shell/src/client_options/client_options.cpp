@@ -145,6 +145,10 @@ void client_options::handle(const boost::program_options::variables_map& vars, c
         if (vars.contains("target"))
         {
             auto targetDirectory = weakly_canonical(std::filesystem::path(m_targetDirectory));
+
+            if (!std::filesystem::exists(targetDirectory))
+                throw std::runtime_error("--target(-T) :" + targetDirectory.string() + " doesn't exists.");
+
             if (!is_directory(targetDirectory))
                 throw std::runtime_error("--target(-T) requires a directory path.");
 

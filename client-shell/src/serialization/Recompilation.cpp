@@ -25,7 +25,7 @@ void Recompilation::integrate()
 
     {
         f_upload upload_class(m_client_pool, q_f_meta_data,
-                              q_f_mdata_w_hash, m_config.m_thread_size);
+                              q_f_mdata_w_hash, m_config.m_worker_count);
         upload_class.spawn_threads();
         f_traverse traverse_class(m_config.m_inputPaths, m_config.m_operatePaths, q_f_meta_data);
     }
@@ -45,11 +45,11 @@ void Recompilation::retrieve()
     common::job_queue<std::unique_ptr<common::f_meta_data>> q_f_meta_data;
 
     {
-        f_download download_class(m_client_pool, q_f_meta_data, m_config.m_outputPath, m_config.m_thread_size);
+        f_download download_class(m_client_pool, q_f_meta_data, m_config.m_outputPath, m_config.m_worker_count);
         download_class.spawn_threads();
         // !!! consider for multiple recompilation elements
         f_serialization deserializer(m_config.m_inputPaths[0], q_f_meta_data);
-        deserializer.deserialize();
+        deserializer.deserialize(m_config.m_outputPath);
     }
 
 }

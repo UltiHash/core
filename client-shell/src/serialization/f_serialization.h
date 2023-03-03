@@ -21,7 +21,7 @@ public:
     ~f_serialization() = default;
 
     void serialize(const std::vector<std::filesystem::path>&);
-    void deserialize();
+    void deserialize(const std::filesystem::path&);
 
 private:
     std::filesystem::path m_UHV_path;

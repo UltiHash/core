@@ -35,19 +35,9 @@ f_download::~f_download()
 void f_download::download_files(std::unique_ptr<common::f_meta_data>& f_meta_data,
                             protocol::client_pool::handle& client_handle)
 {
-
-    std::filesystem::path new_f_path = m_dest_path / f_meta_data->f_path();
-    std::cout << new_f_path << std::endl;
-    if (f_meta_data->f_type() == uh::client::common::uh_file_type::directory)
+    if (f_meta_data->f_type() == uh::client::common::uh_file_type::regular)
     {
-        if (!std::filesystem::exists(new_f_path))
-        {
-            std::filesystem::create_directories(new_f_path);
-        }
-    }
-    else if (f_meta_data->f_type() == uh::client::common::uh_file_type::regular)
-    {
-        std::ofstream new_file(new_f_path,
+        std::ofstream new_file(f_meta_data->f_path(),
                                  std::ios::app | std::ios::binary);
 
         if (!new_file.is_open())
@@ -68,13 +58,14 @@ void f_download::download_files(std::unique_ptr<common::f_meta_data>& f_meta_dat
         new_file.flush();
         new_file.close();
     }
-    else
+    else if (f_meta_data->f_type() == uh::client::common::uh_file_type::none)
     {
-        throw std::runtime_error("Unknown file type encountered." + f_meta_data->f_path().string());
+        throw std::runtime_error("Unknown file type encountered: " + f_meta_data->f_path().string());
     }
 
-    std::filesystem::permissions(new_f_path,
-                                 static_cast<std::filesystem::perms>(f_meta_data->f_permissions()), std::filesystem::perm_options::replace);
+    std::filesystem::permissions(f_meta_data->f_path(),
+                                 static_cast<std::filesystem::perms>(f_meta_data->f_permissions()),
+                                 std::filesystem::perm_options::replace);
 
 }
 
