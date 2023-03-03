@@ -155,6 +155,7 @@ void server::handle_writing_request(iostream& io, uint8_t request_id)
         case quit::request_id: return handle_quit(io);
         case reset::request_id: return handle_reset(io);
         case write_chunk::request_id: return handle_write_chunk(io);
+        case finalize_block::request_id: return handle_finalize_block(io);
 
         default:
             throw std::runtime_error("writing, unsupported command: "
@@ -335,6 +336,27 @@ void server::handle_write_chunk(iostream& io)
 
     on_write_chunk(req.data);
     m_write_alloc->device().write(req.data);
+}
+
+// ---------------------------------------------------------------------
+
+void server::handle_finalize_block(iostream& io)
+{
+    finalize_block::request req;
+    read(io, req);
+
+    if (!m_write_alloc)
+    {
+        THROW(internal_error, "no space allocated");
+    }
+
+    auto hash = m_write_alloc->persist();
+    m_write_alloc->reset();
+
+    write(io, status{ status::OK });
+    write(io, finalize_block::response{ .hash = std::move(hash) });
+
+    m_state = server_state::normal;
 }
 
 // ---------------------------------------------------------------------

@@ -251,6 +251,30 @@ void read(std::istream& in, write_chunk::response& response);
 
 // ---------------------------------------------------------------------
 
+struct finalize_block
+{
+    struct request
+    {
+    };
+
+    struct response
+    {
+        blob hash;
+    };
+
+    constexpr static uint8_t request_id = 0x0a;
+};
+
+// ---------------------------------------------------------------------
+
+void write(std::ostream& out, const finalize_block::request& request);
+void read(std::istream& in, finalize_block::request& request);
+
+void write(std::ostream& out, const finalize_block::response& response);
+void read(std::istream& in, finalize_block::response& response);
+
+// ---------------------------------------------------------------------
+
 } // namespace uh::protocol
 
 #endif

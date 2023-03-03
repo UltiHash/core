@@ -352,4 +352,37 @@ void read(std::istream& in, write_chunk::response& response)
 
 // ---------------------------------------------------------------------
 
+void write(std::ostream& out, const finalize_block::request& request)
+{
+    write(out, finalize_block::request_id);
+}
+
+// ---------------------------------------------------------------------
+
+void read(std::istream& in, finalize_block::request& request)
+{
+    finalize_block::request tmp;
+    std::swap(tmp, request);
+}
+
+// ---------------------------------------------------------------------
+
+void write(std::ostream& out, const finalize_block::response& response)
+{
+    write(out, response.hash);
+}
+
+// ---------------------------------------------------------------------
+
+void read(std::istream& in, finalize_block::response& response)
+{
+    check_status(in);
+
+    finalize_block::response tmp;
+    read(in, tmp.hash);
+    std::swap(tmp, response);
+}
+
+// ---------------------------------------------------------------------
+
 } // namespace uh::protocol

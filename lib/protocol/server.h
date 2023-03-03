@@ -89,6 +89,7 @@ public:
     void handle_next_chunk(iostream& io);
     void handle_allocate_chunk(iostream& io);
     void handle_write_chunk(iostream& io);
+    void handle_finalize_block(iostream& io);
 
 private:
     server_state m_state = server_state::disconnected;
