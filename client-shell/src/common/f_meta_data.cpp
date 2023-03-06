@@ -10,8 +10,10 @@ f_meta_data::f_meta_data(std::filesystem::path eval_path) :
 {
 
     std::filesystem::file_status f_status = std::filesystem::status(m_f_path);
+
     m_f_type = convert_file_type<uh_file_type>(f_status.type());
     m_f_permissions = static_cast<uint32_t>(f_status.permissions());
+
     if (m_f_type == uh_file_type::regular)
         m_f_size = static_cast<std::uint64_t>(std::filesystem::file_size(m_f_path));
 
