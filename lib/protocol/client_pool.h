@@ -22,7 +22,6 @@ public:
     {
     public:
         ~handle();
-
         client* operator->();
 
     private:
@@ -31,6 +30,7 @@ public:
 
         client_pool& m_pool;
         std::unique_ptr<client> m_client;
+
     };
 
     client_pool(std::unique_ptr<util::factory<client>>&& factory,

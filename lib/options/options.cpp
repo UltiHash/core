@@ -11,8 +11,8 @@ namespace uh::options
 // ---------------------------------------------------------------------
 
 options::options(const std::string& caption)
-    : m_visible(caption),
-      m_hidden(caption)
+        : m_visible(caption),
+          m_hidden(caption)
 {
 }
 
