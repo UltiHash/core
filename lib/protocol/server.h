@@ -1,6 +1,7 @@
 #ifndef PROTOCOL_SERVER_H
 #define PROTOCOL_SERVER_H
 
+#include "allocation.h"
 #include "common.h"
 #include "protocol.h"
 
@@ -19,31 +20,6 @@ enum class server_state
     normal,
     reading,
     writing,
-};
-
-// ---------------------------------------------------------------------
-
-/**
- * Interface for memory allocation: the allocated memory is reserved for the
- * lifetime of this object. When the object is destructed the reserved memory
- * is freed *unless* `persist` was called on the object.
- */
-class allocation
-{
-public:
-    virtual ~allocation() = default;
-
-    /**
-     * Return a reference to the underlying device, allowing direct write
-     * to allocated memory.
-     */
-    virtual io::device& device() = 0;
-
-    /**
-     * Make the allocation persistent and return a hash code for the written
-     * block.
-     */
-    virtual uh::protocol::blob persist() = 0;
 };
 
 // ---------------------------------------------------------------------

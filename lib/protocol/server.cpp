@@ -351,7 +351,7 @@ void server::handle_finalize_block(iostream& io)
     }
 
     auto hash = m_write_alloc->persist();
-    m_write_alloc->reset();
+    m_write_alloc.reset();
 
     write(io, status{ status::OK });
     write(io, finalize_block::response{ .hash = std::move(hash) });

@@ -1,5 +1,6 @@
 #include "client.h"
 
+#include "client_allocation.h"
 #include "read_block_device.h"
 #include "messages.h"
 
@@ -82,6 +83,19 @@ std::unique_ptr<io::device> client::read_block(const blob& hash)
 
 // ---------------------------------------------------------------------
 
+std::unique_ptr<allocation> client::allocate(std::size_t size)
+{
+    write(m_io, allocate_chunk::request{ .size = size });
+    m_io.flush();
+
+    allocate_chunk::response response;
+    read(m_io, response);
+
+    return std::make_unique<client_allocation>(*this);
+}
+
+// ---------------------------------------------------------------------
+
 void client::quit(const std::string& reason)
 {
     write(m_io, quit::request{ .reason = reason });
@@ -126,6 +140,34 @@ std::streamsize client::next_chunk(std::span<char> buffer)
     read(m_io, response);
 
     return response.content.size();
+}
+
+// ---------------------------------------------------------------------
+
+blob client::finalize()
+{
+    write(m_io, finalize_block::request{});
+    m_io.flush();
+
+    finalize_block::response response;
+    read(m_io, response);
+
+    return std::move(response.hash);
+}
+
+// ---------------------------------------------------------------------
+
+std::streamsize client::write_chunk(std::span<const char> buffer)
+{
+    std::span<char> non_const(const_cast<char*>(buffer.data()), buffer.size());
+
+    write(m_io, write_chunk::request{ .data = non_const });
+    m_io.flush();
+
+    write_chunk::response response;
+    read(m_io, response);
+
+    return buffer.size();
 }
 
 // ---------------------------------------------------------------------

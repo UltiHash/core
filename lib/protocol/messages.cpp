@@ -327,11 +327,7 @@ void write(std::ostream& out, const write_chunk::request& request)
 
 void read(std::istream& in, write_chunk::request& request)
 {
-    write_chunk::request tmp;
-
-    read(in, tmp.data);
-
-    std::swap(tmp, request);
+    read(in, request.data);
 }
 
 // ---------------------------------------------------------------------

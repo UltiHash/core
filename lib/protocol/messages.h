@@ -207,7 +207,7 @@ struct allocate_chunk
 {
     struct request
     {
-        uint32_t size;
+        uint64_t size;
     };
 
     struct response
@@ -231,7 +231,7 @@ struct write_chunk
 {
     struct request
     {
-        blob data;
+        std::span<char> data;
     };
 
     struct response
