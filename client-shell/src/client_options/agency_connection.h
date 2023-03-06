@@ -2,7 +2,6 @@
 #define CLIENT_OPTIONS_AGENCY_CONNECTION_H
 
 #include <options/options.h>
-#include "client_config.h"
 
 namespace uh::client::option
 {
