@@ -8,7 +8,7 @@
 #include "client_config.h"
 #include "agency_connection.h"
 
-namespace uh::client
+namespace uh::client::option
 {
 
 // ---------------------------------------------------------------------
@@ -20,7 +20,7 @@ class client_options : public uh::options::options
         // CLASS FUNCTIONS
         client_options();
 
-        virtual uh::options::action evaluate(const boost::program_options::variables_map& vars) override;
+        uh::options::action evaluate(const boost::program_options::variables_map& vars) override;
 
         // GETTERS
         [[nodiscard]] bool optDisabled() const;
@@ -29,7 +29,7 @@ class client_options : public uh::options::options
         void handle(const boost::program_options::variables_map& vars, client_config& config) const;
         void conflictingOptions() const;
 
-        const client_config& config() const;
+        [[nodiscard]] const client_config& config() const;
 
     private:
         bool m_retrieve = false;
@@ -38,7 +38,7 @@ class client_options : public uh::options::options
         bool m_exclude = false;
 
     private:
-        client_config m_config;
+        client_config m_config{5};
         std::vector<std::string> m_posPaths;
         std::vector<std::string> m_operateStrPaths;
         std::string m_targetDirectory;

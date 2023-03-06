@@ -4,15 +4,16 @@
 #include <options/options.h>
 #include "client_config.h"
 
-namespace uh::client
+namespace uh::client::option
 {
 
 // ---------------------------------------------------------------------
 
 struct host_port
 {
+    std::uint16_t port;
+    std::uint16_t pool_size;
     std::string hostname;
-    uint16_t port;
 };
 
 // ---------------------------------------------------------------------
@@ -28,14 +29,14 @@ public:
     [[nodiscard]] bool isMetrics() const;
 
     // LOGIC FUNCTIONS
-    virtual uh::options::action evaluate(const boost::program_options::variables_map& vars) override;
-    void handle(const boost::program_options::variables_map& vars, host_port& config);
+    uh::options::action evaluate(const boost::program_options::variables_map& vars) override;
+    static void handle(const boost::program_options::variables_map& vars, host_port& config);
 
-    const host_port& config() const;
+    [[nodiscard]] const host_port& config() const;
 
 private:
     bool m_metrics = false;
-    host_port m_config;
+    host_port m_config{0x5548,1};
 };
 
 // ---------------------------------------------------------------------

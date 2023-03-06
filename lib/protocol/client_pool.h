@@ -22,25 +22,24 @@ public:
     {
     public:
         ~handle();
-
         client* operator->();
+        client_pool& m_pool;
+        std::unique_ptr<client> m_client;
 
     private:
         friend client_pool;
         handle(client_pool& pool, std::unique_ptr<client>&& c);
 
-        client_pool& m_pool;
-        std::unique_ptr<client> m_client;
     };
 
     client_pool(std::unique_ptr<util::factory<client>>&& factory,
                 std::size_t pool_size);
 
     handle get();
+    void put_back(std::unique_ptr<client> c);
 
 private:
     friend class handle;
-    void put_back(std::unique_ptr<client> c);
 
     std::list<std::unique_ptr<client>> m_clients;
     std::unique_ptr<util::factory<client>> m_factory;
