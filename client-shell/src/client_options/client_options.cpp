@@ -156,7 +156,8 @@ void client_options::handle(const boost::program_options::variables_map& vars, c
         }
         else
         {
-            destPaths.emplace_back(std::filesystem::current_path().string()+"/Output");
+            destPaths.emplace_back(std::filesystem::current_path().string()+"/UHOutput");
+            std::filesystem::create_directory(destPaths[0]);
         }
         try
         {
@@ -215,23 +216,6 @@ void client_options::handle(const boost::program_options::variables_map& vars, c
     }
     std::cout << "\nOUTPUT: ";
     std::cout << config.m_outputPath << "\n";
-    if (m_exclude)
-    {
-        std::cout << "EXCLUDE: ";
-    }
-    if (m_retrieve)
-    {
-        std::cout << "EXTRACT: ";
-    }
-    if (m_list)
-    {
-        std::cout << "LIST PATHS: ";
-    }
-    for (const auto& path: config.m_operatePaths)
-    {
-        std::cout << path << " ";
-    }
-    std::cout << "\n";
 }
 
 // ---------------------------------------------------------------------

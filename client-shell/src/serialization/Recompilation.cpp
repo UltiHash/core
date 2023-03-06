@@ -4,19 +4,32 @@
 namespace uh::client::serialization
 {
 
-// ---------------------------------------------------------------------------------------------------------------------
+// ---------------------------------------------------------------------
 
 Recompilation::Recompilation(const uh::client::option::client_config &config,
                              std::unique_ptr<uh::protocol::client_pool>&& pool) :
                              m_config(config), m_client_pool(std::move(pool))
 {
-    if (m_config.m_option == co::options_chosen::integrate)
-        integrate();
+
+
+    if (m_config.m_option == co::options_chosen::integrate) {
+        try
+        {
+            integrate();
+        }
+        catch (const std::exception &exc)
+        {
+            std::filesystem::remove(m_config.m_outputPath);
+            throw exc;
+        }
+    }
     else if (m_config.m_option == co::options_chosen::retrieve)
         retrieve();
+
+
 }
 
-// ---------------------------------------------------------------------------------------------------------------------
+// ---------------------------------------------------------------------
 
 void Recompilation::integrate()
 {
@@ -37,7 +50,7 @@ void Recompilation::integrate()
 
 }
 
-// ---------------------------------------------------------------------------------------------------------------------
+// ---------------------------------------------------------------------
 
 void Recompilation::retrieve()
 {
@@ -45,16 +58,17 @@ void Recompilation::retrieve()
     common::job_queue<std::unique_ptr<common::f_meta_data>> q_f_meta_data;
 
     {
-        f_download download_class(m_client_pool, q_f_meta_data, m_config.m_outputPath, m_config.m_worker_count);
+        f_download download_class(m_client_pool, q_f_meta_data, m_config.m_outputPath,
+                                  m_config.m_worker_count);
         download_class.spawn_threads();
-        // !!! consider for multiple recompilation elements
+
         f_serialization deserializer(m_config.m_inputPaths[0], q_f_meta_data);
         deserializer.deserialize(m_config.m_outputPath);
     }
 
 }
 
-// ---------------------------------------------------------------------------------------------------------------------
+// ---------------------------------------------------------------------
 
 } // namespace uh::client::serialization
 

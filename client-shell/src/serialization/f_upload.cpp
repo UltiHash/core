@@ -4,7 +4,7 @@
 namespace uh::client::serialization
 {
 
-// ---------------------------------------------------------------------------------------------------------------------
+// ---------------------------------------------------------------------
 
 f_upload::f_upload(std::unique_ptr<protocol::client_pool>& cl_pool,
                    common::job_queue<std::unique_ptr<common::f_meta_data>>& in_jq,
@@ -17,7 +17,7 @@ f_upload::f_upload(std::unique_ptr<protocol::client_pool>& cl_pool,
 {
 }
 
-// ---------------------------------------------------------------------------------------------------------------------
+// ---------------------------------------------------------------------
 
 f_upload::~f_upload()
 {
@@ -32,7 +32,7 @@ f_upload::~f_upload()
 
 }
 
-// ---------------------------------------------------------------------------------------------------------------------
+// ---------------------------------------------------------------------
 
 void f_upload::upload_files(std::unique_ptr<common::f_meta_data>& f_meta_data,
                             protocol::client_pool::handle& client_handle)
@@ -62,7 +62,11 @@ void f_upload::upload_files(std::unique_ptr<common::f_meta_data>& f_meta_data,
                 input_file.read((tmp_buffer.data()), tmp_buffer.size());
                 std::streamsize bytes_read = input_file.gcount();
 
-                if (bytes_read == 0)
+                if (input_file.fail() || input_file.bad())
+                {
+                    throw std::ios_base::failure("Error reading from file");
+                }
+                else if (bytes_read == 0)
                 {
                     break;
                 }
@@ -80,7 +84,7 @@ void f_upload::upload_files(std::unique_ptr<common::f_meta_data>& f_meta_data,
 
 }
 
-// ---------------------------------------------------------------------------------------------------------------------
+// ---------------------------------------------------------------------
 
 void f_upload::spawn_threads()
 {
@@ -104,29 +108,6 @@ void f_upload::spawn_threads()
     }
 }
 
-// ---------------------------------------------------------------------------------------------------------------------
+// ---------------------------------------------------------------------
 
 } // namespace uh::client::serialization
-
-
-
-//            while (input_file)
-//            {
-//                input_file.read(reinterpret_cast<char*>(tmp_buffer.data()), static_cast<std::streamsize>(std::min(buf_size, remaining_size)));
-//
-//                if (input_file.fail() || input_file.bad())
-//                {
-//                    throw std::ios_base::failure("Error reading from file");
-//                }
-//
-//                for (const auto& i: tmp_buffer)
-//                    std::cout << i << ' ';
-//                std::cout << std::endl;
-//
-//                auto recv_hash = client_handle.m_client->write_chunk(tmp_buffer);
-//                f_meta_data->add_hash(recv_hash);
-//
-//                remaining_size -= input_file.gcount();
-//                tmp_buffer.resize(std::min(remaining_size, buf_size));
-//
-//            }

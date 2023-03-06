@@ -8,11 +8,13 @@
 #include <logging/logging_boost.h>
 #include <options/app_config.h>
 
-// ---------------------------------------------------------------------------------------------------------------------
+// ---------------------------------------------------------------------
 
 APPLICATION_CONFIG(
     (client, uh::client::option::client_options),
     (agency, uh::client::option::agency_connection));
+
+
 
 
 int main(int argc, const char *argv[])
@@ -52,6 +54,7 @@ int main(int argc, const char *argv[])
     catch (const std::exception &exc)
     {
         FATAL << exc.what() << '\n';
+
         return 1;
     }
     catch (...)
@@ -62,4 +65,4 @@ int main(int argc, const char *argv[])
     return EXIT_SUCCESS;
 }
 
-// ---------------------------------------------------------------------------------------------------------------------
+// ---------------------------------------------------------------------

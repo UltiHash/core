@@ -3,7 +3,7 @@
 
 namespace {
 
-// ---------------------------------------------------------------------------------------------------------------------
+// ---------------------------------------------------------------------
 
 std::vector<std::uint8_t> serialize_f_meta_data(const std::unique_ptr<uh::client::common::f_meta_data>& ptr_f_meta_data,
                                     const std::filesystem::path& relative_path)
@@ -41,9 +41,11 @@ std::vector<std::uint8_t> serialize_f_meta_data(const std::unique_ptr<uh::client
 
 }
 
-// ---------------------------------------------------------------------------------------------------------------------
+// ---------------------------------------------------------------------
 
-std::unique_ptr<uh::client::common::f_meta_data> deserialize_f_meta_data(std::vector<std::uint8_t>& uhv_container, std::vector<std::uint8_t>::iterator& it, const std::filesystem::path& dest_path)
+std::unique_ptr<uh::client::common::f_meta_data> deserialize_f_meta_data(std::vector<std::uint8_t>& uhv_container,
+                                                                         std::vector<std::uint8_t>::iterator& it,
+                                                                         const std::filesystem::path& dest_path)
 {
 
     std::unique_ptr<uh::client::common::f_meta_data> p_f_meta_data = std::make_unique<uh::client::common::f_meta_data>();
@@ -82,14 +84,14 @@ std::unique_ptr<uh::client::common::f_meta_data> deserialize_f_meta_data(std::ve
 
 }
 
-// ---------------------------------------------------------------------------------------------------------------------
+// ---------------------------------------------------------------------
 
 }
 
 namespace uh::client::serialization
 {
 
-// ---------------------------------------------------------------------------------------------------------------------
+// ---------------------------------------------------------------------
 
 f_serialization::f_serialization(std::filesystem::path UHV_path,
                                  common::job_queue<std::unique_ptr<common::f_meta_data>>& jq) :
@@ -98,7 +100,7 @@ f_serialization::f_serialization(std::filesystem::path UHV_path,
 
 }
 
-// ---------------------------------------------------------------------------------------------------------------------
+// ---------------------------------------------------------------------
 
 void f_serialization::serialize(const std::vector<std::filesystem::path>& root_paths)
 {
@@ -140,7 +142,7 @@ void f_serialization::serialize(const std::vector<std::filesystem::path>& root_p
 
 }
 
-// ---------------------------------------------------------------------------------------------------------------------
+// ---------------------------------------------------------------------
 
 void f_serialization::deserialize(const std::filesystem::path& dest_path)
 {
@@ -177,6 +179,6 @@ void f_serialization::deserialize(const std::filesystem::path& dest_path)
 
 }
 
-// ---------------------------------------------------------------------------------------------------------------------
+// ---------------------------------------------------------------------
 
 } // namespace uh::client::serialization
