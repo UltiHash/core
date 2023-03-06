@@ -3,10 +3,8 @@
 
 #include <iostream>
 #include <filesystem>
-#include <list>
 #include <options/options.h>
 #include "client_config.h"
-#include "agency_connection.h"
 
 namespace uh::client::option
 {

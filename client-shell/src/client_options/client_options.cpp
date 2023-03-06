@@ -220,4 +220,4 @@ void client_options::handle(const boost::program_options::variables_map& vars, c
 
 // ---------------------------------------------------------------------
 
-} // namespace uh::client
+} // namespace uh::client::option
