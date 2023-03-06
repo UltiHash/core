@@ -39,7 +39,6 @@ public:
     virtual ~server() = default;
 
     virtual server_information on_hello(const std::string& client_version) = 0;
-    virtual block_meta_data on_write_block(blob&& data) = 0;
     virtual std::unique_ptr<io::device> on_read_block(blob&& hash) = 0;
     virtual std::size_t on_free_space();
 
@@ -47,7 +46,7 @@ public:
     virtual void on_reset();
     virtual std::size_t on_next_chunk(std::span<char> buffer);
     virtual void on_write_chunk(std::span<char> buffer);
-    virtual std::unique_ptr<allocation> on_allocate_chunk(std::size_t size);
+    virtual std::unique_ptr<allocation> on_allocate_chunk(std::size_t size) = 0;
 
     virtual void handle(std::shared_ptr<net::socket> client) override;
 
@@ -57,7 +56,6 @@ public:
     void handle_writing_request(iostream& io, uint8_t request_id);
 
     void handle_hello(iostream& io);
-    void handle_write_block(iostream& io);
     void handle_read_block(iostream& io);
     void handle_quit(iostream& io);
     void handle_free_space(iostream& io);

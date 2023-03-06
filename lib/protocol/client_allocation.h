@@ -17,7 +17,7 @@ public:
     client_allocation(client& c);
 
     virtual io::device& device() override;
-    virtual blob persist() override;
+    virtual block_meta_data persist() override;
 
 private:
     client& m_client;

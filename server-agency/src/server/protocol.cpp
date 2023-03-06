@@ -33,26 +33,16 @@ server_information protocol::on_hello(const std::string& client_version)
 
 // ---------------------------------------------------------------------
 
-block_meta_data protocol::on_write_block(blob&& data)
+std::unique_ptr<io::device> protocol::on_read_block(blob&& hash)
 {
-    auto free_space = m_cluster.bc_free_space();
-    if (free_space.empty())
-    {
-        THROW(util::exception, "no storage back-end configured");
-    }
-
-    free_space.sort([](auto& l, auto& r) { return l.second > r.second; });
-
-    auto node_ref = free_space.front().first;
-
-    return m_cluster.node(node_ref).get()->write_block(data);
+    return m_cluster.bc_read_block(hash);
 }
 
 // ---------------------------------------------------------------------
 
-std::unique_ptr<io::device> protocol::on_read_block(blob&& hash)
+std::unique_ptr<uh::protocol::allocation> protocol::on_allocate_chunk(std::size_t size)
 {
-    return m_cluster.bc_read_block(hash);
+    return m_cluster.allocate(size);
 }
 
 // ---------------------------------------------------------------------

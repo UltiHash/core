@@ -30,7 +30,7 @@ public:
      * Make the allocation persistent and return a hash code for the written
      * block.
      */
-    virtual uh::protocol::blob persist() = 0;
+    virtual block_meta_data persist() = 0;
 };
 
 // ---------------------------------------------------------------------

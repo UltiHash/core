@@ -57,32 +57,6 @@ void read(std::istream& in, hello::response& request);
 
 // ---------------------------------------------------------------------
 
-struct write_block
-{
-    struct request
-    {
-        blob content;
-    };
-
-    struct response
-    {
-        blob hash;
-        uint64_t effective_size;
-    };
-
-    constexpr static uint8_t request_id = 0x02;
-};
-
-// ---------------------------------------------------------------------
-
-void write(std::ostream& out, const write_block::request& request);
-void read(std::istream& in, write_block::request& request);
-
-void read(std::istream& in, write_block::response& response);
-void write(std::ostream& out, const write_block::response& response);
-
-// ---------------------------------------------------------------------
-
 struct read_block
 {
     struct request
@@ -260,6 +234,7 @@ struct finalize_block
     struct response
     {
         blob hash;
+        uint64_t effective_size;
     };
 
     constexpr static uint8_t request_id = 0x0a;

@@ -30,13 +30,6 @@ server_information protocol::on_hello(const std::string& client_version)
 
 // ---------------------------------------------------------------------
 
-block_meta_data protocol::on_write_block(blob&& data)
-{
-    return m_storage.write_block(data);
-}
-
-// ---------------------------------------------------------------------
-
 std::unique_ptr<io::device> protocol::on_read_block(uh::protocol::blob&& hash)
 {
     return m_storage.read_block(hash);

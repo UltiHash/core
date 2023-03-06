@@ -21,7 +21,7 @@ io::device& client_allocation::device()
 
 // ---------------------------------------------------------------------
 
-blob client_allocation::persist()
+block_meta_data client_allocation::persist()
 {
     return m_client.finalize();
 }

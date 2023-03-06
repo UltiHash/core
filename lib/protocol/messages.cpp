@@ -76,45 +76,6 @@ void read(std::istream& in, hello::response& request)
 
 // ---------------------------------------------------------------------
 
-void write(std::ostream& out, const write_block::request& request)
-{
-    write(out, write_block::request_id);
-    write(out, request.content);
-}
-
-// ---------------------------------------------------------------------
-
-void read(std::istream& in, write_block::request& request)
-{
-    write_block::request tmp;
-    read(in, tmp.content);
-
-    std::swap(tmp, request);
-}
-
-// ---------------------------------------------------------------------
-
-void write(std::ostream& out, const write_block::response& response)
-{
-    write(out, response.hash);
-    write(out, response.effective_size);
-}
-
-// ---------------------------------------------------------------------
-
-void read(std::istream& in, write_block::response& response)
-{
-    check_status(in);
-
-    write_block::response tmp;
-    read(in, tmp.hash);
-    read(in, tmp.effective_size);
-
-    std::swap(tmp, response);
-}
-
-// ---------------------------------------------------------------------
-
 void write(std::ostream& out, const read_block::request& request)
 {
     write(out, read_block::request_id);
@@ -366,6 +327,7 @@ void read(std::istream& in, finalize_block::request& request)
 void write(std::ostream& out, const finalize_block::response& response)
 {
     write(out, response.hash);
+    write(out, response.effective_size);
 }
 
 // ---------------------------------------------------------------------
@@ -376,6 +338,8 @@ void read(std::istream& in, finalize_block::response& response)
 
     finalize_block::response tmp;
     read(in, tmp.hash);
+    read(in, tmp.effective_size);
+
     std::swap(tmp, response);
 }
 

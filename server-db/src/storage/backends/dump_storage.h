@@ -33,18 +33,6 @@ class dump_storage : public backend {
         virtual void start() override;
 
         /**
-         * Write a data block and return it's hash.
-         *
-         * This function stores the block contained in `data` in an permanent
-         * storage and returns a hash that can be used to retrieve the data
-         * at a later point of time.
-         *
-         * @return the hash
-         * @throw may throw any derivative of exception on error
-         */
-        virtual uh::protocol::block_meta_data write_block(const uh::protocol::blob &data) override;
-
-        /**
          * Read a data block identified by it's hash from the storage.
          *
          * This function reads the block identified by `hash` from the storage and

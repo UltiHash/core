@@ -37,7 +37,7 @@ public:
         return m_sha;
     }
 
-    virtual uh::protocol::blob persist() override
+    virtual uh::protocol::block_meta_data persist() override
     {
         auto hash = m_sha.finalize();
 
@@ -45,9 +45,19 @@ public:
         boost::algorithm::hex(hash.begin(), hash.end(), std::back_inserter(string_hash));
         boost::algorithm::to_lower(string_hash);
 
-        m_tmp->release_to(m_target_dir / string_hash);
+        std::uint64_t effective_size = m_size;
+        try
+        {
+            m_tmp->release_to(m_target_dir / string_hash);
+        }
+        catch (const util::file_exists&)
+        {
+            m_used -= m_size;
+            effective_size = 0u;
+        }
+
         m_dangling = false;
-        return hash;
+        return { hash, effective_size };
     }
 
 private:
@@ -87,36 +97,6 @@ void dump_storage::start(){
     INFO << "        space allocated: " << allocated_space();
     INFO << "        space available: " << free_space();
     INFO << "        space consumed : " << used_space();
-}
-
-// ---------------------------------------------------------------------
-
-uh::protocol::block_meta_data dump_storage::write_block(const uh::protocol::blob& some_data){
-
-    uh::protocol::blob hash_blob = this->hashing_function(some_data);
-
-    std::filesystem::path filepath = this->get_filepath_from_hash(hash_blob);
-
-    if(m_alloc - m_used < size(some_data)){
-        THROW(util::exception, "Not enough space in node.");
-    }
-
-    std::uint64_t effective_size;
-    if(maybe_write_data_to_filepath(some_data, filepath)){
-        INFO << "Data block written to " << filepath;
-        effective_size = some_data.size();
-        m_used = m_used - size(some_data);
-        this->update_space_consumption();
-    }
-    else{
-        INFO << "Skipped writing to existing filepath: " << filepath;
-        effective_size = 0;
-    };
-
-    return  {
-        .hash = std::move(hash_blob),
-        .effective_size = effective_size,
-    };
 }
 
 // ---------------------------------------------------------------------
