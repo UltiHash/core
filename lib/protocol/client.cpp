@@ -129,7 +129,7 @@ std::streamsize client::next_chunk(std::span<char> buffer)
 
 bool client::valid() const
 {
-    return m_sock->valid();;
+    return m_sock->valid();
 }
 
 // ---------------------------------------------------------------------

@@ -36,7 +36,7 @@ BOOST_AUTO_TEST_CASE(serialize_size_len)  {
 BOOST_AUTO_TEST_CASE(serialize_size) {
     struct test_serialize_size_len: serializer, deserializer {
         static void test () {
-            for (int size = 0; size < 128; ++size) {
+            for (unsigned long size = 0; size < 128l; ++size) {
                 std::vector <char> buffer (1);
                 set_nl_size(buffer.data (), size, 1);
                 BOOST_TEST (get_nl_size (buffer, 1) == size);

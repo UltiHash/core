@@ -80,13 +80,13 @@ namespace uh::serialization {
             constexpr auto data_size_len = 1;
 
             //const auto nl_data = sized_hton (data);
-            const auto nl_data_size = sized_hton (data_size);
+            //const auto nl_data_size = sized_hton (data_size);
 
             char buffer [1 + data_size_len + data_size];   // control byte + size byte (size len = 1) + data size
             buffer [0] = control_byte;
 
             set_size_length (buffer[0], data_size_len);
-            std::memcpy (buffer + 1, &nl_data_size, data_size_len);
+            set_nl_size (buffer + 1, data_size, data_size_len);
             std::memcpy (buffer + data_size_len + 1, &data, data_size);
 
             dev_.write (buffer);

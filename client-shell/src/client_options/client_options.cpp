@@ -3,18 +3,18 @@
 
 using namespace boost::program_options;
 
-namespace uh::client
+namespace uh::client::option
 {
 
 // ---------------------------------------------------------------------
 
 client_options::client_options()
-    : options("Client Options")
+        : options("Client Options")
 {
     visible().add_options()
             ("retrieve,r","read the recompilation file and put the contents to the target destination")
             ("integrate,i","write the contents of the sources provided and generate the recompilation file at the target")
-            ("list,l", "list the path inside the given recompilation file")
+            ("workers,w",  value<std::uint16_t>(&m_config.m_worker_count), "size of the worker threads when uploading and downloading")
             ("exclude,E", value<std::vector<std::string>>(&m_operateStrPaths)->multitoken(), "exclude directories when integrating [optional]")
             ("target,T", value<std::string>(&m_targetDirectory), "destination of the target directory for --retrieve(-r) operation [optional]")
             ("verbose,V" , "shows details about the results of running the command [optional]");
@@ -98,13 +98,13 @@ void client_options::handle(const boost::program_options::variables_map& vars, c
 
     //lamda function for checking UltiHash Volume
     auto is_UHV = [](const std::vector<std::filesystem::path>& input, const std::string& chosenOpt)
-            {
-                for (const auto& m_path: input)
-                {
-                    if (m_path.extension()!=".uh")
-                        throw std::logic_error(chosenOpt);
-                }
-            };
+    {
+        for (const auto& m_path: input)
+        {
+            if (m_path.extension()!=".uh")
+                throw std::logic_error(chosenOpt);
+        }
+    };
     //------------------------------------------------ END OF LAMDA FUNCTIONS
 
     //------------------------------------------------ SANITY CHECKS ACCORDING TO OPTION
@@ -145,6 +145,10 @@ void client_options::handle(const boost::program_options::variables_map& vars, c
         if (vars.contains("target"))
         {
             auto targetDirectory = weakly_canonical(std::filesystem::path(m_targetDirectory));
+
+            if (!std::filesystem::exists(targetDirectory))
+                throw std::runtime_error("--target(-T) :" + targetDirectory.string() + " doesn't exists.");
+
             if (!is_directory(targetDirectory))
                 throw std::runtime_error("--target(-T) requires a directory path.");
 
@@ -152,7 +156,8 @@ void client_options::handle(const boost::program_options::variables_map& vars, c
         }
         else
         {
-            destPaths.emplace_back(std::filesystem::current_path().string()+"/Output");
+            destPaths.emplace_back(std::filesystem::current_path().string()+"/UHOutput");
+            std::filesystem::create_directory(destPaths[0]);
         }
         try
         {
@@ -211,25 +216,8 @@ void client_options::handle(const boost::program_options::variables_map& vars, c
     }
     std::cout << "\nOUTPUT: ";
     std::cout << config.m_outputPath << "\n";
-    if (m_exclude)
-    {
-        std::cout << "EXCLUDE: ";
-    }
-    if (m_retrieve)
-    {
-        std::cout << "EXTRACT: ";
-    }
-    if (m_list)
-    {
-        std::cout << "LIST PATHS: ";
-    }
-    for (const auto& path: config.m_operatePaths)
-    {
-        std::cout << path << " ";
-    }
-    std::cout << "\n";
 }
 
 // ---------------------------------------------------------------------
 
-} // namespace uh::client
+} // namespace uh::client::option
