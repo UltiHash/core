@@ -68,10 +68,10 @@ public:
 
     /**
      * Send a read request for a given hash to all nodes.
-     * @return the chunk for the given hash
-     * @throw the chunk was not found
+     * @return the block for the given hash
+     * @throw the block was not found
      */
-    uh::protocol::blob bc_read_chunk(const uh::protocol::blob& hash);
+    std::unique_ptr<io::device> bc_read_block(const uh::protocol::blob& hash);
 
 private:
     struct impl;

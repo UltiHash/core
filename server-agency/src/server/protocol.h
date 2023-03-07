@@ -22,8 +22,8 @@ public:
     protocol(cluster::mod& cluster);
 
     virtual uh::protocol::server_information on_hello(const std::string& client_version) override;
-    virtual uh::protocol::blob on_write_chunk(uh::protocol::blob&& data) override;
-    virtual uh::protocol::blob on_read_chunk(uh::protocol::blob&& hash) override;
+    virtual uh::protocol::blob on_write_block(uh::protocol::blob&& data) override;
+    virtual std::unique_ptr<io::device> on_read_block(uh::protocol::blob&& hash) override;
 
 private:
     cluster::mod& m_cluster;

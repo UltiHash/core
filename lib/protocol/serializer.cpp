@@ -10,12 +10,14 @@ namespace uh::protocol
 
 // ---------------------------------------------------------------------
 
-void read(std::istream& in, char* buffer, std::size_t count)
+std::streamsize read(std::istream& in, char* buffer, std::size_t count)
 {
     if (!in.read(buffer, count))
     {
         THROW(read_error, "error reading buffer");
     }
+
+    return in.gcount();
 }
 
 // ---------------------------------------------------------------------
@@ -44,6 +46,38 @@ void read(std::istream& in, std::vector<char>& b)
     read(in, &tmp[0], count);
 
     std::swap(tmp, b);
+}
+
+// ---------------------------------------------------------------------
+
+void write(std::ostream& out, std::span<const char> b)
+{
+    if (b.size() > MAX_BLOB_LENGTH)
+    {
+        THROW(write_limit_exceeded, "maximum supported buffer length exceeded");
+    }
+
+    write(out, static_cast<uint32_t>(b.size()));
+    out.write(&b[0], b.size());
+}
+
+// ---------------------------------------------------------------------
+
+void read(std::istream& in, std::span<char>& b)
+{
+    uint32_t count;
+    read(in, count);
+
+    if (count > b.size())
+    {
+        THROW(read_error, "remote returned buffer too big");
+    }
+
+    auto bytes = read(in, &b[0], count);
+    if (bytes < b.size())
+    {
+        b = b.subspan(0, bytes);
+    }
 }
 
 // ---------------------------------------------------------------------

@@ -73,58 +73,57 @@ BOOST_AUTO_TEST_CASE( hello_response )
 
 // ---------------------------------------------------------------------
 
-BOOST_AUTO_TEST_CASE( write_chunk_request )
+BOOST_AUTO_TEST_CASE( write_block_request )
 {
     std::stringstream s;
-    write(s, write_chunk::request{ .content = to_blob("lorem ipsum") });
+    write(s, write_block::request{ .content = to_blob("lorem ipsum") });
 
     auto ch = s.get();
-    BOOST_TEST(ch == write_chunk::request_id);
+    BOOST_TEST(ch == write_block::request_id);
 
-    write_chunk::request req;
+    write_block::request req;
     read(s, req);
     BOOST_TEST(req.content == to_blob("lorem ipsum"));
 }
 
 // ---------------------------------------------------------------------
 
-BOOST_AUTO_TEST_CASE( write_chunk_response )
+BOOST_AUTO_TEST_CASE( write_block_response )
 {
     std::stringstream s;
     write(s, status{ .code = status::OK });
-    write(s, write_chunk::response{ .hash = to_blob("hashed data") });
+    write(s, write_block::response{ .hash = to_blob("hashed data") });
 
-    write_chunk::response res;
+    write_block::response res;
     read(s, res);
     BOOST_TEST(res.hash == to_blob("hashed data"));
 }
 
 // ---------------------------------------------------------------------
 
-BOOST_AUTO_TEST_CASE( read_chunk_request )
+BOOST_AUTO_TEST_CASE( read_block_request )
 {
     std::stringstream s;
-    write(s, read_chunk::request{ .hash = to_blob("hashed data") });
+    write(s, read_block::request{ .hash = to_blob("hashed data") });
 
     auto ch = s.get();
-    BOOST_TEST(ch == read_chunk::request_id);
+    BOOST_TEST(ch == read_block::request_id);
 
-    read_chunk::request req;
+    read_block::request req;
     read(s, req);
     BOOST_TEST(req.hash == to_blob("hashed data"));
 }
 
 // ---------------------------------------------------------------------
 
-BOOST_AUTO_TEST_CASE( read_chunk_response )
+BOOST_AUTO_TEST_CASE( read_block_response )
 {
     std::stringstream s;
     write(s, status{ .code = status::OK });
-    write(s, read_chunk::response{ .content = to_blob("lorem ipsum") });
+    write(s, read_block::response{});
 
-    read_chunk::response res;
+    read_block::response res;
     read(s, res);
-    BOOST_TEST(res.content == to_blob("lorem ipsum"));
 }
 
 // ---------------------------------------------------------------------

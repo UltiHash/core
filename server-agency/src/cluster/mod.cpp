@@ -163,13 +163,13 @@ std::list< std::pair<node_ref, std::size_t> > mod::bc_free_space()
 
 // ---------------------------------------------------------------------
 
-blob mod::bc_read_chunk(const blob& hash)
+std::unique_ptr<io::device> mod::bc_read_block(const blob& hash)
 {
     for (const auto& node : m_impl->nodes)
     {
         try
         {
-            return node.second->get()->read_chunk(hash);
+            return node.second->get()->read_block(hash);
         }
         catch (const std::exception& e)
         {

@@ -30,28 +30,28 @@ class dump_storage : public storage_backend {
         virtual void start() override;
 
         /**
-         * Write a data chunk and return it's hash.
+         * Write a data block and return it's hash.
          *
-         * This function stores the chunk contained in `data` in an permanent
+         * This function stores the block contained in `data` in an permanent
          * storage and returns a hash that can be used to retrieve the data
          * at a later point of time.
          *
          * @return the hash
          * @throw may throw any derivative of exception on error
          */
-        virtual uh::protocol::blob write_chunk(const uh::protocol::blob &data) override;
+        virtual uh::protocol::blob write_block(const uh::protocol::blob &data) override;
 
         /**
-         * Read a data chunk identified by it's hash from the storage.
+         * Read a data block identified by it's hash from the storage.
          *
-         * This function reads the chunk identified by `hash` from the storage and
-         * returns it in a vector. If the chunk is not known the function will
+         * This function reads the block identified by `hash` from the storage and
+         * returns it in a vector. If the block is not known the function will
          * throw.
          *
-         * @return the data chunk
+         * @return the data block
          * @throw may throw any derivative of exception on error
          */
-        virtual uh::protocol::blob read_chunk(const uh::protocol::blob &hash) override;
+        virtual std::unique_ptr<io::device> read_block(const uh::protocol::blob& hash) override;
 
 
         virtual size_t free_space() override {return m_free;}
@@ -72,9 +72,9 @@ class dump_storage : public storage_backend {
     private:
 
         /**
-         * Given a chunk of data, return its hash
+         * Given a block of data, return its hash
          *
-         * This function computes a hash string givena chunk of binary data
+         * This function computes a hash string givena block of binary data
          *
          * @return the hash
          * @throw may throw any derivative of exception on error
@@ -83,7 +83,7 @@ class dump_storage : public storage_backend {
 
         /**
          * Given a hash string as a uh::protocol::blob, return the file path
-         * to the corresponding data chunk
+         * to the corresponding data block
          * @param hash: the hash as a std::vector
          * @return a file path as a boost::filesystem::path
          */

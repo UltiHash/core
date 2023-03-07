@@ -19,7 +19,7 @@ namespace
 
 void maybe_create_database_root_directory(std::filesystem::path db_root,
                                              bool ok_create_new_root){
-                                            
+
 
     //Check whether the directory already exists:
     bool no_db_root = !std::filesystem::is_directory(db_root);
@@ -47,7 +47,7 @@ BackendTypeEnum define_storage_backend_type(std::string backend_type){
         return it->second;
     } else {
         std::string msg("Not a storage backend type: " + backend_type);
-        THROW(util::exception, msg); 
+        THROW(util::exception, msg);
     }
 }
 
@@ -71,12 +71,12 @@ std::unique_ptr<storage_backend> make_storage_backend(const storage_config& cfg,
         case BackendTypeEnum::OtherStorage:
             THROW(util::exception, "Not implemented yet");
     }
-    
+
     std::string msg("Not a storage backend type: " + cfg.backend_type);
-    THROW(util::exception, msg); 
+    THROW(util::exception, msg);
 
 }
-    
+
 
 // ---------------------------------------------------------------------
 
@@ -125,16 +125,16 @@ size_t mod::free_space()
 
 // ---------------------------------------------------------------------
 
-uh::protocol::blob mod::read_chunk(const uh::protocol::blob& hash)
+std::unique_ptr<io::device> mod::read_block(const uh::protocol::blob& hash)
 {
-    return m_impl->some_storage_backend->read_chunk(hash);
+    return m_impl->some_storage_backend->read_block(hash);
 }
 
 // ---------------------------------------------------------------------
 
-uh::protocol::blob mod::write_chunk(const uh::protocol::blob& hash)
+uh::protocol::blob mod::write_block(const uh::protocol::blob& hash)
 {
-    return m_impl->some_storage_backend->write_chunk(hash);
+    return m_impl->some_storage_backend->write_block(hash);
 }
 
 // ---------------------------------------------------------------------

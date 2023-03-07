@@ -47,9 +47,9 @@ public:
 
     size_t free_space();
 
-    uh::protocol::blob read_chunk(const uh::protocol::blob& hash);
+    std::unique_ptr<io::device> read_block(const uh::protocol::blob& hash);
 
-    uh::protocol::blob write_chunk(const uh::protocol::blob& hash);
+    uh::protocol::blob write_block(const uh::protocol::blob& hash);
 
 private:
     struct impl;
