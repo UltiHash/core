@@ -98,7 +98,7 @@ BOOST_AUTO_TEST_CASE(range_types) {
     std::vector <long> lvec1 {1, 5, 3, 5,3 ,5, 3, 6, 2, 23, 24};
     std::vector <double> dvec1 {1.1, 3.2, 4.45, 3.76};
     std::vector <std::uint8_t> emptyvec {};
-    std::vector <std::uint64_t> largevec (1024l*1024l*256l);
+    std::vector <std::uint64_t> largevec (1024ul*1024ul*256ul);
 
 
     test_range_serialization (str1);
