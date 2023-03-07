@@ -71,7 +71,7 @@ void f_upload::upload_files(std::unique_ptr<common::f_meta_data>& f_meta_data,
                     break;
                 }
 
-                auto recv_hash = client_handle->write_chunk(tmp_buffer);
+                auto recv_hash = client_handle->write_block(tmp_buffer);
                 f_meta_data->add_hash(recv_hash);
             }
 
