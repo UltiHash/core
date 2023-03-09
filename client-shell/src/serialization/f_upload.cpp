@@ -21,15 +21,16 @@ f_upload::f_upload(std::unique_ptr<protocol::client_pool>& cl_pool,
 
 f_upload::~f_upload()
 {
-
     m_input_jq.stop();
-    for (auto& thread : m_thread_pool)
+    for (auto& thread : std::ranges::reverse_view(m_thread_pool))
     {
         INFO << "Joining Thread ";
         if (thread.joinable())
+        {
             thread.join();
+            m_thread_pool.pop_back();
+        }
     }
-
 }
 
 // ---------------------------------------------------------------------

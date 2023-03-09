@@ -14,7 +14,7 @@ scheduler::scheduler(std::size_t threads)
 {
     while (threads--)
     {
-        m_threads.push_back(std::thread([this](){ this->worker(); }));
+        m_threads.emplace_back([this](){ this->worker(); });
     }
 }
 
@@ -27,10 +27,10 @@ scheduler::~scheduler()
 
 // ---------------------------------------------------------------------
 
-void scheduler::spawn(std::function<void()> f)
+void scheduler::spawn(const std::function<void()>& f)
 {
     {
-        std::unique_lock lk(m_mutex);
+        std::lock_guard lk(m_mutex);
 
         m_jobs.push_back(f);
     }
@@ -51,29 +51,25 @@ void scheduler::worker()
             break;
         }
 
-        if (m_jobs.empty())
-        {
-            m_cv.wait(lk);
-        }
-        else
-        {
-            auto job = m_jobs.front();
-            m_jobs.pop_front();
-            lk.unlock();
+        m_cv.wait(lk, [&](){ return !m_jobs.empty(); });
 
-            try
-            {
-                job();
-            }
-            catch (const std::exception& e)
-            {
-                ERROR << "job failed: " << e.what();
-            }
-            catch (...)
-            {
-                ERROR << "job failed with unknown exception";
-            }
+        auto job = m_jobs.front();
+        m_jobs.pop_front();
+        lk.unlock();
+
+        try
+        {
+            job();
         }
+        catch (const std::exception& e)
+        {
+            ERROR << "job failed: " << e.what();
+        }
+        catch (...)
+        {
+            ERROR << "job failed with unknown exception";
+        }
+
     }
 }
 
