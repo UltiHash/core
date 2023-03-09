@@ -35,7 +35,7 @@ void scheduler::spawn(const std::function<void()>& f)
         m_jobs.push_back(f);
     }
 
-    m_cv.notify_all();
+    m_cv.notify_one();
 }
 
 // ---------------------------------------------------------------------
