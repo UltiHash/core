@@ -51,25 +51,29 @@ void scheduler::worker()
             break;
         }
 
-        m_cv.wait(lk, [&](){ return !m_jobs.empty(); });
-
-        auto job = m_jobs.front();
-        m_jobs.pop_front();
-        lk.unlock();
-
-        try
+        if (m_jobs.empty())
         {
-            job();
+            m_cv.wait(lk);
         }
-        catch (const std::exception& e)
+        else
         {
-            ERROR << "job failed: " << e.what();
-        }
-        catch (...)
-        {
-            ERROR << "job failed with unknown exception";
-        }
+            auto job = m_jobs.front();
+            m_jobs.pop_front();
+            lk.unlock();
 
+            try
+            {
+                job();
+            }
+            catch (const std::exception& e)
+            {
+                ERROR << "job failed: " << e.what();
+            }
+            catch (...)
+            {
+                ERROR << "job failed with unknown exception";
+            }
+        }
     }
 }
 
