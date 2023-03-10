@@ -33,7 +33,7 @@ server_information protocol::on_hello(const std::string& client_version)
 
 // ---------------------------------------------------------------------
 
-blob protocol::on_write_block(blob&& data)
+block_meta_data protocol::on_write_block(blob&& data)
 {
     auto free_space = m_cluster.bc_free_space();
     if (free_space.empty())

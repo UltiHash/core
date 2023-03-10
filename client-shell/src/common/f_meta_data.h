@@ -67,6 +67,7 @@ public:
     [[nodiscard]] const std::uint8_t& f_type() const;
     [[nodiscard]] const std::uint32_t& f_permissions() const;
     [[nodiscard]] const std::uint64_t& f_size() const;
+    [[nodiscard]] const std::uint64_t& f_effective_size() const;
 
     void set_f_path(std::string);
     void set_f_type(const std::uint8_t&);
@@ -74,12 +75,14 @@ public:
     void set_f_size(const std::optional<std::uint64_t>&);
     void set_f_hashes(const std::string&);
     void add_hash(const std::vector<char>&);
+    void add_effective_size(const std::uint64_t&);
 
 private:
     std::filesystem::path m_f_path{};
     std::uint8_t m_f_type{};
     std::uint32_t m_f_permissions{};
     std::optional<std::uint64_t> m_f_size{};
+    std::uint64_t m_f_effective_size{};
     std::vector<char> m_f_hashes{};
 };
 

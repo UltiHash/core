@@ -28,6 +28,13 @@ void f_meta_data::add_hash(const std::vector<char>& hash)
 
 // ---------------------------------------------------------------------
 
+void f_meta_data::add_effective_size(const std::uint64_t& size)
+{
+    m_f_effective_size += size;
+}
+
+// ---------------------------------------------------------------------
+
 const std::filesystem::path& f_meta_data::f_path() const
 {
     return m_f_path;
@@ -59,6 +66,13 @@ const std::uint32_t& f_meta_data::f_permissions() const
 const std::uint64_t& f_meta_data::f_size() const
 {
     return m_f_size.value();
+}
+
+// ---------------------------------------------------------------------
+
+const std::uint64_t& f_meta_data::f_effective_size() const
+{
+    return m_f_effective_size;
 }
 
 // ---------------------------------------------------------------------
