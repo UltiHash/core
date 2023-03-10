@@ -97,6 +97,7 @@ void read(std::istream& in, write_block::request& request)
 void write(std::ostream& out, const write_block::response& response)
 {
     write(out, response.hash);
+    write(out, response.effective_size);
 }
 
 // ---------------------------------------------------------------------
@@ -107,6 +108,7 @@ void read(std::istream& in, write_block::response& response)
 
     write_block::response tmp;
     read(in, tmp.hash);
+    read(in, tmp.effective_size);
 
     std::swap(tmp, response);
 }

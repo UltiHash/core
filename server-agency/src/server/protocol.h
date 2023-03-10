@@ -22,7 +22,7 @@ public:
     protocol(cluster::mod& cluster);
 
     virtual uh::protocol::server_information on_hello(const std::string& client_version) override;
-    virtual uh::protocol::blob on_write_block(uh::protocol::blob&& data) override;
+    virtual std::pair<uh::protocol::blob, std::uint64_t> on_write_block(uh::protocol::blob&& data) override;
     virtual std::unique_ptr<io::device> on_read_block(uh::protocol::blob&& hash) override;
 
 private:

@@ -105,6 +105,8 @@ f_serialization::f_serialization(std::filesystem::path UHV_path,
 void f_serialization::serialize(const std::vector<std::filesystem::path>& root_paths)
 {
 
+    std::uint64_t raw_size = 0;
+    std::uint64_t effective_size = 0;
     std::ofstream UHV_file(m_UHV_path, std::ios::app | std::ios::binary);
 
     if (!UHV_file.is_open())
@@ -130,13 +132,19 @@ void f_serialization::serialize(const std::vector<std::filesystem::path>& root_p
         {
             relative_path = root_paths[0].filename();
         }
+        if (item.value()->f_type() == uh::client::common::uh_file_type::regular)
+        {
+            raw_size += item.value()->f_size();
+            effective_size += item.value()->f_effective_size();
 
+        }
         auto bytes = serialize_f_meta_data(item.value(), relative_path);
 
         UHV_file.write(reinterpret_cast<const char*>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
 
     }
 
+    INFO << "De-duplication ratio: " << (double) effective_size / (double) raw_size;
     UHV_file.flush();
     UHV_file.close();
 

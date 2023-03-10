@@ -33,7 +33,7 @@ server_information protocol::on_hello(const std::string& client_version)
 
 // ---------------------------------------------------------------------
 
-blob protocol::on_write_block(blob&& data)
+std::pair<blob, std::uint64_t> protocol::on_write_block(blob&& data)
 {
     auto free_space = m_storage.free_space();
     if (free_space == 0)

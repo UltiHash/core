@@ -167,12 +167,12 @@ void server::handle_write_block(iostream& io)
     write_block::request req;
     read(io, req);
 
-    blob hash = on_write_block(std::move(req.content));
+    std::pair<blob, std::uint64_t> response = on_write_block(std::move(req.content));
 
     m_state = server_state::normal;
 
     write(io, status{ status::OK });
-    write(io, write_block::response{ std::move(hash) });
+    write(io, write_block::response{ std::move(response.first), response.second });
     io.flush();
 }
 

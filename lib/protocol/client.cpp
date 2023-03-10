@@ -53,7 +53,7 @@ server_information client::hello(const std::string& client_version)
 
 // ---------------------------------------------------------------------
 
-blob client::write_block(const blob& data)
+std::pair<blob, std::uint64_t> client::write_block(const blob& data)
 {
     write(m_io, write_block::request{ .content = std::move(data) });
     m_io.flush();
@@ -61,7 +61,7 @@ blob client::write_block(const blob& data)
     write_block::response response;
     read(m_io, response);
 
-    return std::move(response.hash);
+    return std::make_pair(std::move(response.hash), response.effective_size);
 }
 
 // ---------------------------------------------------------------------
