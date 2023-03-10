@@ -25,7 +25,8 @@ public:
     ~f_upload() override;
 
     void spawn_threads() override;
-    void upload_files(std::unique_ptr<common::f_meta_data>&, protocol::client_pool::handle&);
+    void chunk_and_upload(std::unique_ptr<common::f_meta_data>&, protocol::client_pool::handle&);
+    std::vector<uh::protocol::blob> chunk_files(std::unique_ptr<common::f_meta_data>&);
 
 private:
     common::job_queue<std::unique_ptr<common::f_meta_data>>& m_input_jq;

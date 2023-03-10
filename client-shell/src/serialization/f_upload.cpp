@@ -34,12 +34,9 @@ f_upload::~f_upload()
 
 // ---------------------------------------------------------------------
 
-void f_upload::upload_files(std::unique_ptr<common::f_meta_data>& f_meta_data,
-                            protocol::client_pool::handle& client_handle)
+std::vector<uh::protocol::blob> f_upload::chunk_files(std::unique_ptr<common::f_meta_data>& f_meta_data)
 {
-
-    if ( f_meta_data->f_type() == common::uh_file_type::regular )
-    {
+        std::vector<uh::protocol::blob> chunks;
         std::ifstream input_file(f_meta_data->f_path(),
                                  std::ios::in | std::ios::binary);
 
@@ -49,39 +46,51 @@ void f_upload::upload_files(std::unique_ptr<common::f_meta_data>& f_meta_data,
 
         if (input_file.peek() != std::ifstream::traits_type::eof())
         {
-
-            constexpr std::uint64_t buf_size = 1 << 22;
-            std::vector<char> tmp_buffer;
-            tmp_buffer.reserve(std::min<std::uint64_t>(f_meta_data->f_size(), buf_size));
+            constexpr std::uint64_t buf_size = 1 << 22; //2^22 bytes = 4MB //replace by chunk_markers
+            uh::protocol::blob tmp_buffer (std::min<std::uint64_t>(f_meta_data->f_size(), buf_size));
+            unsigned long total = 0;
 
             while (input_file)
             {
-                auto remaining_size = f_meta_data->f_size() - input_file.tellg();
-                tmp_buffer.resize(std::min<std::size_t>(remaining_size, buf_size));
+                const auto remaining_size = f_meta_data->f_size() - total;
+                if (remaining_size < tmp_buffer.size())
+                    tmp_buffer.resize(std::min<std::size_t>(remaining_size, buf_size));
 
-                input_file.read((tmp_buffer.data()), tmp_buffer.size());
+                input_file.read((tmp_buffer.data()),
+                                    static_cast<std::streamsize>(tmp_buffer.size())
+                                    );
                 std::streamsize bytes_read = input_file.gcount();
 
-                if (input_file.fail() || input_file.bad())
+                if (input_file.bad() || input_file.fail())
                 {
                     throw std::ios_base::failure("Error reading from file");
                 }
-                else if (bytes_read == 0)
+                else if (!bytes_read)
                 {
                     break;
                 }
 
-                auto recv_hash = client_handle->write_block(tmp_buffer);
-                f_meta_data->add_hash(recv_hash);
+                total += bytes_read;
+                chunks.push_back(tmp_buffer);
             }
-
         }
-
         input_file.close();
+        return chunks;
+}
+
+// ---------------------------------------------------------------------
+
+void f_upload::chunk_and_upload(std::unique_ptr<common::f_meta_data>& f_meta_data, protocol::client_pool::handle& client_handle)
+{
+    if ( f_meta_data->f_type() == common::uh_file_type::regular )
+    {
+        auto chunks = chunk_files(f_meta_data);
+        for (auto & chunk : chunks){
+            auto recv_hash = client_handle->write_block(chunk);
+            f_meta_data->add_hash(recv_hash);
+        }
     }
-
     m_output_jq.append_job(std::move(f_meta_data));
-
 }
 
 // ---------------------------------------------------------------------
@@ -91,20 +100,20 @@ void f_upload::spawn_threads()
     for (size_t i = 0; i < m_num_threads; i++)
     {
         m_thread_pool.emplace_back([&]()
-           {
+        {
                protocol::client_pool::handle&& client_connection_handle = m_client_pool->get();
 
-               while (auto&& item = m_input_jq.get_job())
+               while (auto&& job = m_input_jq.get_job())
                {
-                   if (item == std::nullopt)
+                    if (job == std::nullopt){
                        break;
-                   else
-                       upload_files(item.value(),
-                                    client_connection_handle);
-
+                    }
+                    else{
+                        chunk_and_upload(job.value(),
+                            client_connection_handle);
+                    }
                }
-
-           });
+        });
     }
 }
 
