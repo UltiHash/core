@@ -20,8 +20,8 @@ public:
     f_serialization(std::filesystem::path, common::job_queue<std::unique_ptr<common::f_meta_data>>&);
     ~f_serialization() = default;
 
-    void serialize(const std::vector<std::filesystem::path>&);
-    void deserialize(const std::filesystem::path&);
+    uint64_t serialize(const std::vector<std::filesystem::path>&);
+    uint64_t deserialize(const std::filesystem::path&);
 
 private:
     std::filesystem::path m_UHV_path;
