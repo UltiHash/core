@@ -49,7 +49,7 @@ public:
 
     std::unique_ptr<io::device> read_block(const uh::protocol::blob& hash);
 
-    uh::protocol::blob write_block(const uh::protocol::blob& hash);
+    uh::protocol::block_meta_data write_block(const uh::protocol::blob& hash);
 
 private:
     struct impl;

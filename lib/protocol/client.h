@@ -37,11 +37,12 @@ public:
     /**
      * Send a `write_block` request to the server. The block will be stored
      * in the UltiHash storage back-end. The server returns a hash that can
-     * be used to identify the block in the cloud.
+     * be used to identify the block in the cloud and the effective space
+     * used to store the block.
      *
      * @throw on error status
      */
-    blob write_block(const blob& data);
+    block_meta_data write_block(const blob& data);
 
     /**
      * Send a `read_block` request to the server. The server will look up

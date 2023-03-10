@@ -36,7 +36,7 @@ void dump_storage::start(){
 
 // ---------------------------------------------------------------------
 
-uh::protocol::blob dump_storage::write_block(const uh::protocol::blob& some_data){
+uh::protocol::block_meta_data dump_storage::write_block(const uh::protocol::blob& some_data){
 
     uh::protocol::blob hash_blob = this->hashing_function(some_data);
 
@@ -50,16 +50,21 @@ uh::protocol::blob dump_storage::write_block(const uh::protocol::blob& some_data
         THROW(util::exception, "Not enough space in node.");
     }
 
-
+    std::uint64_t effective_size;
     if(maybe_write_data_to_filepath(some_data, filepath)){
         INFO << "Data block written to " << filepath;
+        effective_size = some_data.size();
         this->update_space_consumption();
     }
     else{
         INFO << "Skipped writing to existing filepath: " << filepath;
+        effective_size = 0;
     };
 
-    return  hash_blob;
+    return  {
+        .hash = std::move(hash_blob),
+        .effective_size = effective_size,
+    };
 }
 
 std::unique_ptr<io::device> dump_storage::read_block(const uh::protocol::blob& hash) {
