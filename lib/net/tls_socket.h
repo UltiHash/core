@@ -15,7 +15,7 @@ namespace uh::net
 class tls_socket : public socket
 {
 public:
-    tls_socket(boost::asio::ssl::stream<boost::asio::ip::tcp::socket>&& sock);
+    explicit tls_socket(boost::asio::ssl::stream<boost::asio::ip::tcp::socket>&& sock);
 
     static std::unique_ptr<tls_socket> connect(
         boost::asio::io_context& ctx,
@@ -42,7 +42,7 @@ public:
         const std::string& hostname,
         uint16_t port);
 
-    virtual std::unique_ptr<socket> create() override;
+    std::unique_ptr<socket> create() override;
 
 private:
     boost::asio::io_context& m_ctx;

@@ -3,8 +3,8 @@ project(Core)
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/lib)
 
-option(BUILD_SERVER_DB      "Build the server-db component"     OFF)
-option(BUILD_SERVER_AGENCY  "Build the server-agency component" OFF)
+option(BUILD_SERVER_DB      "Build the server-db component"     ON)
+option(BUILD_SERVER_AGENCY  "Build the server-agency component" ON)
 option(BUILD_CLIENT_SHELL   "Build the client-shell component"  ON)
 
 if((NOT BUILD_SERVER_DB) AND (NOT BUILD_SERVER_AGENCY) AND (NOT BUILD_CLIENT_SHELL))
