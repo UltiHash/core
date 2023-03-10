@@ -11,15 +11,7 @@ thread_manager::thread_manager(unsigned int num_threads) : m_num_threads(num_thr
 
 // ---------------------------------------------------------------------
 
-thread_manager::~thread_manager ()
-{
-    for (auto& thread : m_thread_pool)
-    {
-        INFO << "Joining Thread ";
-        if (thread.joinable())
-            thread.join();
-    }
-}
+thread_manager::~thread_manager () = default;
 
 // ---------------------------------------------------------------------
 
