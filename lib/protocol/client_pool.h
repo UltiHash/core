@@ -45,7 +45,7 @@ private:
     std::list<std::unique_ptr<client>> m_clients;
     std::unique_ptr<util::factory<client>> m_factory;
     std::size_t m_pool_size;
-    std::uint16_t m_available_connection;
+    std::size_t m_available_connection;
 
     std::mutex m_mutex;
     std::condition_variable m_cv;
