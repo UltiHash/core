@@ -92,11 +92,12 @@ BOOST_AUTO_TEST_CASE( write_block_response )
 {
     std::stringstream s;
     write(s, status{ .code = status::OK });
-    write(s, write_block::response{ .hash = to_blob("hashed data") });
+    write(s, write_block::response{ .hash = to_blob("hashed data"), .effective_size = 11});
 
     write_block::response res;
     read(s, res);
     BOOST_TEST(res.hash == to_blob("hashed data"));
+    BOOST_TEST(res.effective_size == 11);
 }
 
 // ---------------------------------------------------------------------

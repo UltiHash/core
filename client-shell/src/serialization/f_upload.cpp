@@ -69,8 +69,9 @@ void f_upload::upload_files(std::unique_ptr<common::f_meta_data>& f_meta_data,
                     break;
                 }
 
-                auto recv_hash = client_handle->write_block(tmp_buffer);
-                f_meta_data->add_hash(recv_hash);
+                auto response = client_handle->write_block(tmp_buffer);
+                f_meta_data->add_hash(response.hash);
+                f_meta_data->add_effective_size(response.effective_size);
             }
 
         }
