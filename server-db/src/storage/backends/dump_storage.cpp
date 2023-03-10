@@ -145,18 +145,11 @@ std::unique_ptr<uh::protocol::allocation> dump_storage::allocate(std::size_t siz
 
 // ---------------------------------------------------------------------
 
-void dump_storage::update_space_consumption(){
-    auto free = m_alloc - m_used;
-    m_storage_metrics.free_space().Set(free);
+void dump_storage::update_space_consumption()
+{
     m_storage_metrics.alloc_space().Set(m_alloc);
+    m_storage_metrics.free_space().Set(m_alloc - m_used);
     m_storage_metrics.used_space().Set(m_used);
-
-    if(free <= 0){
-        THROW(util::exception, "database node is full");
-    }
-    else if(free < 0.1 * m_alloc){
-        WARNING << "DB NODE ALMOST FULL. CURRENTLY USED: " << used_space_percentage() << "%";
-    }
 }
 
 // ---------------------------------------------------------------------
