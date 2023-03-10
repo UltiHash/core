@@ -42,7 +42,7 @@ public:
      *
      * @throw on error status
      */
-    std::pair<blob, std::uint64_t> write_block(const blob& data);
+    block_meta_data write_block(const blob& data);
 
     /**
      * Send a `read_block` request to the server. The server will look up

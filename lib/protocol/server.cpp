@@ -167,12 +167,12 @@ void server::handle_write_block(iostream& io)
     write_block::request req;
     read(io, req);
 
-    std::pair<blob, std::uint64_t> response = on_write_block(std::move(req.content));
+    block_meta_data blockMetaData = on_write_block(std::move(req.content));
 
     m_state = server_state::normal;
 
     write(io, status{ status::OK });
-    write(io, write_block::response{ std::move(response.first), response.second });
+    write(io, write_block::response{ std::move(blockMetaData.hash), blockMetaData.effective_size });
     io.flush();
 }
 

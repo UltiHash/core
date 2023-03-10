@@ -132,6 +132,7 @@ void f_serialization::serialize(const std::vector<std::filesystem::path>& root_p
         {
             relative_path = root_paths[0].filename();
         }
+
         if (item.value()->f_type() == uh::client::common::uh_file_type::regular)
         {
             raw_size += item.value()->f_size();

@@ -36,7 +36,7 @@ void dump_storage::start(){
 
 // ---------------------------------------------------------------------
 
-std::pair<uh::protocol::blob, std::uint64_t> dump_storage::write_block(const uh::protocol::blob& some_data){
+uh::protocol::block_meta_data dump_storage::write_block(const uh::protocol::blob& some_data){
 
     uh::protocol::blob hash_blob = this->hashing_function(some_data);
 
@@ -61,7 +61,10 @@ std::pair<uh::protocol::blob, std::uint64_t> dump_storage::write_block(const uh:
         effective_size = 0;
     };
 
-    return  std::make_pair(std::move(hash_blob), effective_size);
+    return  {
+        .hash = std::move(hash_blob),
+        .effective_size = effective_size,
+    };
 }
 
 std::unique_ptr<io::device> dump_storage::read_block(const uh::protocol::blob& hash) {
