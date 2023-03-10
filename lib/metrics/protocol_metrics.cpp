@@ -81,7 +81,7 @@ server_information protocol_metrics_wrapper::on_hello(const std::string& client_
 
 // ---------------------------------------------------------------------
 
-blob protocol_metrics_wrapper::on_write_block(blob&& data)
+block_meta_data protocol_metrics_wrapper::on_write_block(blob&& data)
 {
     m_metrics.reqs_write_block().Increment();
     return m_base->on_write_block(std::move(data));

@@ -35,7 +35,7 @@ public:
     virtual ~server() = default;
 
     virtual server_information on_hello(const std::string& client_version) = 0;
-    virtual blob on_write_block(blob&& data) = 0;
+    virtual block_meta_data on_write_block(blob&& data) = 0;
     virtual std::unique_ptr<io::device> on_read_block(blob&& hash) = 0;
     virtual std::size_t on_free_space();
 

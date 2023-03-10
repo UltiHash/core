@@ -132,7 +132,7 @@ std::unique_ptr<io::device> mod::read_block(const uh::protocol::blob& hash)
 
 // ---------------------------------------------------------------------
 
-uh::protocol::blob mod::write_block(const uh::protocol::blob& hash)
+uh::protocol::block_meta_data mod::write_block(const uh::protocol::blob& hash)
 {
     return m_impl->some_storage_backend->write_block(hash);
 }
