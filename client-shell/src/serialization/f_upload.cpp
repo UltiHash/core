@@ -21,7 +21,6 @@ f_upload::f_upload(std::unique_ptr<protocol::client_pool>& cl_pool,
 
 f_upload::~f_upload()
 {
-
     m_input_jq.stop();
     for (auto& thread : m_thread_pool)
     {
@@ -29,7 +28,6 @@ f_upload::~f_upload()
         if (thread.joinable())
             thread.join();
     }
-
 }
 
 // ---------------------------------------------------------------------

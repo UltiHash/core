@@ -20,7 +20,7 @@ public:
     scheduler(std::size_t threads);
     ~scheduler();
 
-    void spawn(std::function<void()> f);
+    void spawn(const std::function<void()>& f);
 
     void worker();
 

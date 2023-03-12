@@ -14,7 +14,7 @@ scheduler::scheduler(std::size_t threads)
 {
     while (threads--)
     {
-        m_threads.push_back(std::thread([this](){ this->worker(); }));
+        m_threads.emplace_back([this](){ this->worker(); });
     }
 }
 
@@ -27,15 +27,15 @@ scheduler::~scheduler()
 
 // ---------------------------------------------------------------------
 
-void scheduler::spawn(std::function<void()> f)
+void scheduler::spawn(const std::function<void()>& f)
 {
     {
-        std::unique_lock lk(m_mutex);
+        std::lock_guard lk(m_mutex);
 
         m_jobs.push_back(f);
     }
 
-    m_cv.notify_all();
+    m_cv.notify_one();
 }
 
 // ---------------------------------------------------------------------
