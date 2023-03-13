@@ -1,5 +1,6 @@
 #include "client.h"
 
+#include "client_allocation.h"
 #include "read_block_device.h"
 #include "messages.h"
 
@@ -53,22 +54,6 @@ server_information client::hello(const std::string& client_version)
 
 // ---------------------------------------------------------------------
 
-block_meta_data client::write_block(const blob& data)
-{
-    write(m_io, write_block::request{ .content = std::move(data) });
-    m_io.flush();
-
-    write_block::response response;
-    read(m_io, response);
-
-    return {
-        .hash = std::move(response.hash),
-        .effective_size = response.effective_size,
-    };
-}
-
-// ---------------------------------------------------------------------
-
 std::unique_ptr<io::device> client::read_block(const blob& hash)
 {
     write(m_io, read_block::request{ .hash = std::move(hash) });
@@ -78,6 +63,19 @@ std::unique_ptr<io::device> client::read_block(const blob& hash)
     read(m_io, response);
 
     return std::make_unique<read_block_device>(*this);
+}
+
+// ---------------------------------------------------------------------
+
+std::unique_ptr<allocation> client::allocate(std::size_t size)
+{
+    write(m_io, allocate_chunk::request{ .size = size });
+    m_io.flush();
+
+    allocate_chunk::response response;
+    read(m_io, response);
+
+    return std::make_unique<client_allocation>(*this);
 }
 
 // ---------------------------------------------------------------------
@@ -126,6 +124,34 @@ std::streamsize client::next_chunk(std::span<char> buffer)
     read(m_io, response);
 
     return response.content.size();
+}
+
+// ---------------------------------------------------------------------
+
+block_meta_data client::finalize()
+{
+    write(m_io, finalize_block::request{});
+    m_io.flush();
+
+    finalize_block::response response;
+    read(m_io, response);
+
+    return { std::move(response.hash), response.effective_size };
+}
+
+// ---------------------------------------------------------------------
+
+std::streamsize client::write_chunk(std::span<const char> buffer)
+{
+    std::span<char> non_const(const_cast<char*>(buffer.data()), buffer.size());
+
+    write(m_io, write_chunk::request{ .data = non_const });
+    m_io.flush();
+
+    write_chunk::response response;
+    read(m_io, response);
+
+    return buffer.size();
 }
 
 // ---------------------------------------------------------------------

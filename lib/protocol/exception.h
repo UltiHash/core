@@ -13,6 +13,7 @@ DEFINE_EXCEPTION(read_error);
 DEFINE_EXCEPTION(write_limit_exceeded);
 DEFINE_EXCEPTION(illegal_args);
 DEFINE_EXCEPTION(unsupported);
+DEFINE_EXCEPTION(internal_error);
 
 // ---------------------------------------------------------------------
 

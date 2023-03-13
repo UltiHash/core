@@ -1,20 +1,18 @@
-#ifndef SERVER_DB_STORAGE_BACKEND_DUMP_H
-#define SERVER_DB_STORAGE_BACKEND_DUMP_H
-
+#ifndef SERVER_DB_STORAGE_BACKENDS_DUMP_STORAGE_H
+#define SERVER_DB_STORAGE_BACKENDS_DUMP_STORAGE_H
 
 #include <storage/utils.h>
-#include <storage/storage_backend.h>
+#include <storage/backend.h>
 #include <metrics/storage_metrics.h>
 
 
 namespace uh::dbn::storage {
 
-class dump_storage : public storage_backend {
+class dump_storage : public backend {
     public:
         dump_storage(std::filesystem::path db_root, size_t size_bytes, uh::dbn::metrics::storage_metrics& storage_metrics):
         m_root(db_root),
         m_alloc(size_bytes),
-        m_free(size_bytes),
         m_used(0),
         m_storage_metrics(storage_metrics)
         {
@@ -23,23 +21,16 @@ class dump_storage : public storage_backend {
                 throw std::runtime_error(msg);
             }
             else{
-                update_space_consumption(); //storage metrics initialized here.
+                m_used = get_dir_size(m_root);
+                if (m_used >= m_alloc)
+                {
+                    THROW(util::exception, "database used over limit");
+                }
+                update_space_consumption();
             }
         }
 
         virtual void start() override;
-
-        /**
-         * Write a data block and return it's hash.
-         *
-         * This function stores the block contained in `data` in an permanent
-         * storage and returns a hash that can be used to retrieve the data
-         * at a later point of time.
-         *
-         * @return the hash
-         * @throw may throw any derivative of exception on error
-         */
-        virtual uh::protocol::block_meta_data write_block(const uh::protocol::blob &data) override;
 
         /**
          * Read a data block identified by it's hash from the storage.
@@ -54,8 +45,8 @@ class dump_storage : public storage_backend {
         virtual std::unique_ptr<io::device> read_block(const uh::protocol::blob& hash) override;
 
 
-        virtual size_t free_space() override {return m_free;}
-        size_t free_space_percentage() { return 100 * static_cast<float>(m_free) / static_cast<float>(m_alloc);};
+        virtual size_t free_space() override {return m_alloc - m_used;}
+        size_t free_space_percentage() { return 100 * static_cast<float>(free_space()) / static_cast<float>(m_alloc);};
 
 
         virtual size_t used_space() override {return m_used;}
@@ -65,6 +56,8 @@ class dump_storage : public storage_backend {
         virtual size_t allocated_space() override {return m_alloc;}
 
         virtual std::string backend_type() override {return std::string(m_type);}
+
+        virtual std::unique_ptr<uh::protocol::allocation> allocate(std::size_t size);
 
         void update_space_consumption();
 
@@ -92,10 +85,11 @@ class dump_storage : public storage_backend {
     protected:
 
         constexpr static std::string_view m_type = "DumpStorage";
-        std::filesystem::path m_root = ""; //root path of the db
-        size_t m_alloc = 0; //total space
-        size_t m_free = 0;  //free space
-        size_t m_used = 0;  //used space
+        std::filesystem::path m_root = "";
+
+        // invariant: m_used < m_alloc
+        size_t m_alloc = 0;
+        std::atomic<size_t> m_used = 0;
         uh::dbn::metrics::storage_metrics& m_storage_metrics;
     };
 

@@ -73,35 +73,6 @@ BOOST_AUTO_TEST_CASE( hello_response )
 
 // ---------------------------------------------------------------------
 
-BOOST_AUTO_TEST_CASE( write_block_request )
-{
-    std::stringstream s;
-    write(s, write_block::request{ .content = to_blob("lorem ipsum") });
-
-    auto ch = s.get();
-    BOOST_TEST(ch == write_block::request_id);
-
-    write_block::request req;
-    read(s, req);
-    BOOST_TEST(req.content == to_blob("lorem ipsum"));
-}
-
-// ---------------------------------------------------------------------
-
-BOOST_AUTO_TEST_CASE( write_block_response )
-{
-    std::stringstream s;
-    write(s, status{ .code = status::OK });
-    write(s, write_block::response{ .hash = to_blob("hashed data"), .effective_size = 11});
-
-    write_block::response res;
-    read(s, res);
-    BOOST_TEST(res.hash == to_blob("hashed data"));
-    BOOST_TEST(res.effective_size == 11);
-}
-
-// ---------------------------------------------------------------------
-
 BOOST_AUTO_TEST_CASE( read_block_request )
 {
     std::stringstream s;

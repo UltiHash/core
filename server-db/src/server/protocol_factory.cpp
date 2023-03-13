@@ -21,7 +21,7 @@ std::unique_ptr<uh::protocol::protocol> protocol_factory::create()
 {
     return std::make_unique<uh::metrics::protocol_metrics_wrapper>(
         m_metrics,
-        std::make_unique<protocol>(m_storage));
+        std::make_unique<protocol>(m_storage.backend()));
 }
 
 // ---------------------------------------------------------------------

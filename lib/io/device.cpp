@@ -59,6 +59,15 @@ std::vector<char> read_to_buffer(device& dev, std::streamsize chunk_size)
 
 // ---------------------------------------------------------------------
 
+std::size_t write_from_buffer(
+    device& dev,
+    std::span<char> buffer)
+{
+    return dev.write(buffer);
+}
+
+// ---------------------------------------------------------------------
+
 std::ostream& operator<<(std::ostream& out, device& d)
 {
     std::array<char, BUFFER_SIZE> buffer;

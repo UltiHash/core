@@ -182,4 +182,31 @@ std::unique_ptr<io::device> mod::bc_read_block(const blob& hash)
 
 // ---------------------------------------------------------------------
 
+std::unique_ptr<uh::protocol::allocation> mod::allocate(std::size_t size)
+{
+    auto free_space = bc_free_space();
+    if (free_space.empty())
+    {
+        THROW(util::exception, "no storage back-end configured");
+    }
+
+    free_space.sort([](auto& l, auto& r) { return l.second > r.second; });
+
+    for (const auto& fs : free_space)
+    {
+        try
+        {
+            return node(fs.first).get()->allocate(size);
+        }
+        catch (const std::exception& e)
+        {
+            INFO << "allocation failed for `" << fs.first << "': " << e.what();
+        }
+    }
+
+    THROW(util::exception, "insufficient space in back-end");
+}
+
+// ---------------------------------------------------------------------
+
 } // namespace uh::an::cluster
