@@ -13,7 +13,7 @@ set(${PROJECT_NAME}_LINK_LIBRARIES ${Boost_LIBRARIES})
 # adding all the .h files of the current project
 file(GLOB HEADER_FILE_LIST ${CMAKE_CURRENT_SOURCE_DIR}/*.h)
 
-add_library(${PROJECT_NAME} ${HEADER_FILE_LIST} device.cpp file.cpp)
+add_library(${PROJECT_NAME} ${HEADER_FILE_LIST} device.cpp file.cpp sstream_device.cpp)
 target_include_directories(${PROJECT_NAME} INTERFACE ${${PROJECT_NAME}_INCLUDE_DIRS})
 target_link_libraries(${PROJECT_NAME} ${${PROJECT_NAME}_LINK_LIBRARIES})
 

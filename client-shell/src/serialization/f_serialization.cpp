@@ -72,7 +72,7 @@ uint64_t f_serialization::deserialize(const std::filesystem::path& dest_path)
     std::uint64_t raw_size = 0;
 
     io::file f (m_UHV_path);
-    uh::serialization::deserializer deserialize {f};
+    uh::serialization::sl_deserializer deserialize {f};
     const auto count = deserialize.read <unsigned long> ();
 
     for (auto i = 0; i < count; ++i) {

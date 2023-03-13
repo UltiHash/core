@@ -57,7 +57,7 @@ void plain_server::spawn_client(std::shared_ptr<net::socket> sock)
 {
     m_scheduler.spawn([this, sock] ()
     {
-        m_protocol_factory.create()->handle(sock);
+        m_protocol_factory.create()->handle();
     });
 }
 

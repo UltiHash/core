@@ -11,7 +11,7 @@
 
 namespace uh::serialization {
 
-    class serializer: protected serialization_common {
+    class sl_serializer: protected serialization_common {
     protected:
 
         constexpr static char control_byte =  is_big_endian << 7;
@@ -39,7 +39,7 @@ namespace uh::serialization {
 
         // ---------------------------------------------------------------------
 
-        explicit serializer (io::device &dev): serialization_common (dev) {
+        explicit sl_serializer (io::device &dev): serialization_common (dev) {
         }
 
         // ---------------------------------------------------------------------

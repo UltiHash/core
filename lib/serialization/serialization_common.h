@@ -9,6 +9,8 @@
 #include <byteswap.h>
 #include <type_traits>
 #include <cstring>
+#include <utility>
+#include <vector>
 #include "io/device.h"
 
 namespace uh::serialization {
@@ -37,6 +39,29 @@ namespace uh::serialization {
         explicit serialization_common (io::device &dev) : dev_(dev) {
         }
     };
+
+    template <typename T>
+    struct is_serializer: std::bool_constant <
+            requires (T t) {
+                t.write (std::declval <int> ());
+                t.write (std::declval <std::vector <long>> ());
+            }>
+    {};
+
+    template <typename T>
+    struct is_deserializer: std::bool_constant <
+            requires (T t) {
+                t.template read <int> ();
+                t.template read <double> ();
+                t.template read <std::vector <int>> ();
+            }>
+    {};
+
+    template <typename T>
+    struct is_serialization_type: std::conjunction <is_serializer <T>, is_deserializer <T>>
+    {};
+
+
 
 } // namespace uh::serialization
 

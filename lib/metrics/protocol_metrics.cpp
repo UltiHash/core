@@ -63,11 +63,9 @@ prometheus::Counter& protocol_metrics::reqs_reset() const
 
 // ---------------------------------------------------------------------
 
-protocol_metrics_wrapper::protocol_metrics_wrapper(
-    const protocol_metrics& metrics,
-    std::unique_ptr<server>&& base)
-    : m_base(std::move(base)),
-      m_metrics(metrics)
+protocol_metrics_wrapper::protocol_metrics_wrapper(std::shared_ptr<net::socket> client,
+                                                   const protocol_metrics &metrics, std::unique_ptr<server> &&base)
+    : server(client), m_base(std::move(base)), m_metrics(metrics)
 {
 }
 

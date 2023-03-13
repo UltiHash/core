@@ -38,9 +38,8 @@ private:
 class protocol_metrics_wrapper : public protocol::server
 {
 public:
-    protocol_metrics_wrapper(
-        const protocol_metrics& metrics,
-        std::unique_ptr<uh::protocol::server>&& base);
+    protocol_metrics_wrapper(std::shared_ptr<net::socket> client,
+                             const protocol_metrics &metrics, std::unique_ptr<server> &&base);
 
     virtual uh::protocol::server_information on_hello(const std::string& client_version) override;
     virtual uh::protocol::block_meta_data on_write_block(uh::protocol::blob&& data) override;

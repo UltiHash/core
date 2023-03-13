@@ -42,8 +42,11 @@ namespace uh::io {
             return dev_.valid();
         }
 
-        void sync() {
-            dev_.write({buffer, pointer});
+        inline void sync() {
+            if (pointer > 0) {
+                dev_.write({buffer, pointer});
+                pointer = 0;
+            }
         }
 
 

@@ -9,7 +9,7 @@
 
 namespace uh::serialization {
 
-    class deserializer: protected serialization_common {
+    class sl_deserializer: protected serialization_common {
 
     protected:
 
@@ -41,7 +41,7 @@ namespace uh::serialization {
         // ---------------------------------------------------------------------
 
     public:
-        explicit deserializer(io::device &dev) : serialization_common (dev) {
+        explicit sl_deserializer (io::device &dev) : serialization_common (dev) {
         }
 
         // ---------------------------------------------------------------------

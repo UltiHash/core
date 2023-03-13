@@ -14,10 +14,16 @@
 namespace uh::serialization {
 
 
-    class buffered_serializer: public serializer {
+    template <typename Serializer = sl_serializer>
+    requires is_serializer <Serializer>::value
+    class buffered_serializer: public Serializer {
         uh::io::buffered_device <io::device> dev_;
     public:
-        explicit buffered_serializer (io::device &dev): dev_(dev), serializer(dev_){}
+        explicit buffered_serializer (io::device &dev): dev_(dev), Serializer(dev_){}
+
+        void sync () {
+            dev_.sync();
+        }
     };
 
 
