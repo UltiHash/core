@@ -79,6 +79,7 @@ std::unique_ptr<io::device> dump_storage::read_block(const uh::protocol::blob& h
 void dump_storage::update_space_consumption(){
     m_used = get_dir_size(m_root);
     m_free = m_alloc - m_used;
+    m_storage_metrics.alloc_space().Set(m_alloc);
     m_storage_metrics.free_space().Set(m_free);
     m_storage_metrics.used_space().Set(m_used);
 
