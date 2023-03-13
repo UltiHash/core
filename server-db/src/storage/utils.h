@@ -8,11 +8,11 @@
 #include <logging/logging_boost.h>
 #include <openssl/sha.h>
 #include <string>
-#include <util/temp_file.h>
+#include <io/temp_file.h>
 #include <vector>
 #include <util/exception.h>
 
-//TODO 
+//TODO
 //This include is only needed because of the blob definition; otherwise is irrelevant.
 //Can we define blob at a larget scope?
 #include <protocol/client_pool.h>
@@ -33,7 +33,7 @@ namespace uh::dbn::storage {
         // }
         // hash_string = ss.str();
         // return hash_string;
-    
+
         std::string legible_hash;
         boost::algorithm::hex(begin, end, std::back_inserter(legible_hash));
         boost::algorithm::to_lower(legible_hash);

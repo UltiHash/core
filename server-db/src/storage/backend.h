@@ -1,29 +1,18 @@
 #ifndef SERVER_DB_STORAGE_BACKEND_H
 #define SERVER_DB_STORAGE_BACKEND_H
 
-
+#include <protocol/server.h>
 #include "utils.h"
 
 
 namespace uh::dbn::storage {
 
-    class storage_backend {
+
+    class backend {
     public:
-        virtual ~storage_backend() = default;
+        virtual ~backend() = default;
 
         virtual void start() = 0;
-
-        /**
-         * Write a data block and return it's hash.
-         *
-         * This function stores the block contained in `data` in an permanent
-         * storage and returns a hash that can be used to retrieve the data
-         * at a later point of time.
-         *
-         * @return the hash
-         * @throw may throw any derivative of exception on error
-         */
-        virtual uh::protocol::block_meta_data write_block(const uh::protocol::blob &data) = 0;
 
         /**
          * Read a data block identified by it's hash from the storage.
@@ -56,6 +45,11 @@ namespace uh::dbn::storage {
          * Return the name of the storage backend type as a std::string.
          */
         virtual std::string backend_type() = 0;
+
+        /**
+         * Reserve data storage of given `size` and return an allocation for it.
+         */
+        virtual std::unique_ptr<uh::protocol::allocation> allocate(std::size_t size) = 0;
     };
 
 // ---------------------------------------------------------------------

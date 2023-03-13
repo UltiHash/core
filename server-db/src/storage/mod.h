@@ -9,7 +9,7 @@
 #include <string>
 #include <filesystem>
 #include "utils.h"
-#include "storage_backend.h"
+#include <storage/backend.h>
 
 
 namespace uh::dbn::storage
@@ -45,11 +45,7 @@ public:
 
     void start();
 
-    size_t free_space();
-
-    std::unique_ptr<io::device> read_block(const uh::protocol::blob& hash);
-
-    uh::protocol::block_meta_data write_block(const uh::protocol::blob& hash);
+    storage::backend& backend();
 
 private:
     struct impl;

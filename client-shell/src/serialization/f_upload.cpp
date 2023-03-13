@@ -69,9 +69,12 @@ void f_upload::upload_files(std::unique_ptr<common::f_meta_data>& f_meta_data,
                     break;
                 }
 
-                auto response = client_handle->write_block(tmp_buffer);
-                f_meta_data->add_hash(response.hash);
-                f_meta_data->add_effective_size(response.effective_size);
+                auto alloc = client_handle->allocate(tmp_buffer.size());
+                io::write_from_buffer(alloc->device(), tmp_buffer);
+
+                auto meta_data = alloc->persist();
+                f_meta_data->add_hash(meta_data.hash);
+                f_meta_data->add_effective_size(meta_data.effective_size);
             }
 
         }
