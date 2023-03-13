@@ -22,6 +22,14 @@ struct server_information
 
 // ---------------------------------------------------------------------
 
+struct block_meta_data
+{
+    blob hash;
+    uint64_t effective_size;
+};
+
+// ---------------------------------------------------------------------
+
 } // namespace uh::protocol
 
 #endif

@@ -65,6 +65,7 @@ struct write_block
     struct response
     {
         blob hash;
+        uint64_t effective_size;
     };
 
     constexpr static uint8_t request_id = 0x02;

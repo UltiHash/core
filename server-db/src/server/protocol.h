@@ -20,7 +20,7 @@ public:
     protocol(storage::mod& storage);
 
     virtual uh::protocol::server_information on_hello(const std::string& client_version) override;
-    virtual uh::protocol::blob on_write_block(uh::protocol::blob&& data) override;
+    virtual uh::protocol::block_meta_data on_write_block(uh::protocol::blob&& data) override;
     virtual std::unique_ptr<io::device> on_read_block(uh::protocol::blob&& hash) override;
     virtual std::size_t on_free_space() override;
 

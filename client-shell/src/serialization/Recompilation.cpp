@@ -11,7 +11,6 @@ Recompilation::Recompilation(const uh::client::option::client_config &config,
                              m_config(config), m_client_pool(std::move(pool))
 {
 
-
     if (m_config.m_option == co::options_chosen::integrate) {
         try
         {
@@ -33,6 +32,8 @@ Recompilation::Recompilation(const uh::client::option::client_config &config,
 
 void Recompilation::integrate()
 {
+    auto time_start = std::chrono::system_clock::now();
+
     common::job_queue<std::unique_ptr<common::f_meta_data>> q_f_meta_data;
     common::job_queue<std::unique_ptr<common::f_meta_data>> q_f_mdata_w_hash;
 
@@ -46,7 +47,15 @@ void Recompilation::integrate()
     q_f_mdata_w_hash.sort();
 
     f_serialization serializer(m_config.m_outputPath, q_f_mdata_w_hash);
-    serializer.serialize(m_config.m_inputPaths);
+    uint64_t size = serializer.serialize(m_config.m_inputPaths);
+
+    auto time_end = std::chrono::system_clock::now();
+
+    auto time_diff = std::chrono::duration<double>(time_end - time_start);
+    double seconds = time_diff.count();
+    double mbytes = static_cast<double>(size) / (1024*1024);
+
+    std::cout << "encoding speed: " << (mbytes / seconds) << " Mb/s" << std::endl;
 
 }
 
@@ -54,6 +63,9 @@ void Recompilation::integrate()
 
 void Recompilation::retrieve()
 {
+    uint64_t size = 0;
+    auto time_start = std::chrono::system_clock::now();
+
     std::filesystem::create_directories(m_config.m_outputPath);
     common::job_queue<std::unique_ptr<common::f_meta_data>> q_f_meta_data;
 
@@ -63,8 +75,16 @@ void Recompilation::retrieve()
         download_class.spawn_threads();
 
         f_serialization deserializer(m_config.m_inputPaths[0], q_f_meta_data);
-        deserializer.deserialize(m_config.m_outputPath);
+        size = deserializer.deserialize(m_config.m_outputPath);
     }
+
+    auto time_end = std::chrono::system_clock::now();
+
+    auto time_diff = std::chrono::duration<double>(time_end - time_start);
+    double seconds = time_diff.count();
+    double mbytes = static_cast<double>(size) / (1024*1024);
+
+    std::cout << "decoding speed: " << (mbytes / seconds) << " Mb/s" << std::endl;
 
 }
 

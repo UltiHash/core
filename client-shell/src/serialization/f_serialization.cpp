@@ -15,9 +15,11 @@ f_serialization::f_serialization(std::filesystem::path UHV_path,
 
 // ---------------------------------------------------------------------
 
-void f_serialization::serialize(const std::vector<std::filesystem::path>& root_paths)
+uint64_t f_serialization::serialize(const std::vector<std::filesystem::path>& root_paths)
 {
 
+    std::uint64_t raw_size = 0;
+    std::uint64_t effective_size = 0;
     io::file f (m_UHV_path, std::ios::app | std::ios::binary);
     uh::serialization::buffered_serializer serialize (f);
 
@@ -42,23 +44,32 @@ void f_serialization::serialize(const std::vector<std::filesystem::path>& root_p
             relative_path = root_paths[0].filename();
         }
 
+
         serialize.write (relative_path.string());
         serialize.write (item.value ()->f_type());
         serialize.write (item.value ()->f_permissions());
 
-        if (item.value ()->f_type() == uh::client::common::uh_file_type::regular) {
+        if (item.value()->f_type() == uh::client::common::uh_file_type::regular)
+        {
+
             serialize.write (item.value ()->f_size());
             serialize.write (item.value ()->f_hashes());
+            raw_size += item.value()->f_size();
+            effective_size += item.value()->f_effective_size();
+
         }
 
-    }
 
+    std::cout << "de-duplication ratio: " << (double) effective_size / (double) raw_size << std::endl;
+
+    return raw_size;
 }
 
 // ---------------------------------------------------------------------
 
-void f_serialization::deserialize(const std::filesystem::path& dest_path)
+uint64_t f_serialization::deserialize(const std::filesystem::path& dest_path)
 {
+    std::uint64_t raw_size = 0;
 
     io::file f (m_UHV_path);
     uh::serialization::deserializer deserialize {f};
@@ -79,14 +90,17 @@ void f_serialization::deserialize(const std::filesystem::path& dest_path)
         }
 
         // creating paths serially to avoid race condition - !!!
-        if (p_f_meta_data->f_type() == uh::client::common::uh_file_type::regular)
+        if (p_f_meta_data->f_type() == uh::client::common::uh_file_type::regular) {
             std::ofstream(p_f_meta_data->f_path()).close();
-        else
+            raw_size += p_f_meta_data->f_size();
+        } else {
             std::filesystem::create_directory(p_f_meta_data->f_path());
+        }
 
         m_job_queue.append_job(std::move(p_f_meta_data));
     }
 
+    return raw_size;
 }
 
 // ---------------------------------------------------------------------

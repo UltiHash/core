@@ -15,10 +15,12 @@ public:
 
     prometheus::Gauge& free_space() const;
     prometheus::Gauge& used_space() const;
+    prometheus::Gauge& alloc_space() const;
 private:
     prometheus::Family<prometheus::Gauge>& m_gauges;
     prometheus::Gauge& m_free_space;
     prometheus::Gauge& m_used_space;
+    prometheus::Gauge& m_alloc_space;
 };
 
 // ---------------------------------------------------------------------

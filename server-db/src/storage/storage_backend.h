@@ -23,7 +23,7 @@ namespace uh::dbn::storage {
          * @return the hash
          * @throw may throw any derivative of exception on error
          */
-        virtual uh::protocol::blob write_block(const uh::protocol::blob &data) = 0;
+        virtual uh::protocol::block_meta_data write_block(const uh::protocol::blob &data) = 0;
 
         /**
          * Read a data block identified by it's hash from the storage.
