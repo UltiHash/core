@@ -3,7 +3,6 @@
 #include <boost/program_options/parsers.hpp>
 #include <iostream>
 
-
 namespace po = boost::program_options;
 
 namespace uh::options
@@ -13,10 +12,8 @@ namespace uh::options
 
 action loader::evaluate(int argc, const char** argv)
 {
-    po::variables_map vars;
-    po::options_description options;
-    options.add(m_visible);
-    options.add(m_hidden);
+    m_options.add(m_visible);
+    m_options.add(m_hidden);
 
     po::positional_options_description pos;
     for (const auto pm : m_positional_mappings)
@@ -25,37 +22,18 @@ action loader::evaluate(int argc, const char** argv)
     }
 
     po::command_line_parser parser(argc, argv);
-    parser.options(options);
+    parser.options(m_options);
     parser.positional(pos);
     auto parsed = parser.run();
+    po::store(parsed, m_vars);
 
-    po::store(parsed, vars);
-    po::notify(vars);
+}
 
-    bool errors = false;
-    action rv = action::proceed;
-    for (const auto& opt : m_opts)
-    {
-        try
-        {
-            if (opt->evaluate(vars) == action::exit)
-            {
-                rv = action::exit;
-            }
-        }
-        catch (const std::exception& e)
-        {
-            errors = true;
-            std::cout << "error: " << e.what() << "\n";
-        }
-    }
+// ---------------------------------------------------------------------
 
-    if (errors)
-    {
-        return action::exit;
-    }
-
-    return rv;
+void loader::parse_config(const std::filesystem::path& path)
+{
+    po::store(po::parse_config_file(path.c_str(), m_options), m_vars);
 }
 
 // ---------------------------------------------------------------------
@@ -76,6 +54,38 @@ loader& loader::add(options& opt)
 const boost::program_options::options_description& loader::visible() const
 {
     return m_visible;
+}
+
+// ---------------------------------------------------------------------
+
+action loader::finalize()
+{
+    po::notify(m_vars);
+
+    bool errors = false;
+    action rv = action::proceed;
+    for (const auto& opt : m_opts)
+    {
+        try
+        {
+            if (opt->evaluate(m_vars) == action::exit)
+            {
+                rv = action::exit;
+            }
+        }
+        catch (const std::exception& e)
+        {
+            errors = true;
+            std::cout << "error: " << e.what() << "\n";
+        }
+    }
+
+    if (errors)
+    {
+        return action::exit;
+    }
+
+    return rv;
 }
 
 // ---------------------------------------------------------------------
