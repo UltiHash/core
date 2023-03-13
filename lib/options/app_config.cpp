@@ -1,6 +1,4 @@
 #include "app_config.h"
-
-#include <boost/program_options/variables_map.hpp>
 #include <filesystem>
 #include <boost/program_options/parsers.hpp>
 
@@ -62,7 +60,7 @@ void application_config_base::handle_config()
     {
         for (const auto &conf_file: m_config.paths()) {
             std::filesystem::path config_file_path = canonical(std::filesystem::path(conf_file));
-            parse_config(config_file_path);
+            parse(config_file_path);
         }
     }
 }
