@@ -5,14 +5,13 @@
 #ifndef CORE_DESERIALIZER_H
 #define CORE_DESERIALIZER_H
 
+#include "serialization.h"
+
 namespace uh::serialization {
 
-    class deserializer {
+    class deserializer: protected serialization {
 
     protected:
-
-        io::device &dev_;
-        static constexpr bool is_big_endian = (std::endian::native == std::endian::big);
 
         constexpr inline static bool is_different_endian(const char control_byte) {
             return static_cast <bool> (control_byte & 0x80) != is_big_endian;
@@ -20,45 +19,29 @@ namespace uh::serialization {
 
         // ---------------------------------------------------------------------
 
-        static inline auto sized_ntoh(const auto value) {
-            if constexpr (sizeof(value) == 1) {
-                return value;
-            } else if constexpr (sizeof(value) == 2) {
-                return ntohs(value);
-            } else if constexpr (sizeof(value) <= 4) {
-                return ntohl(value);
-            } else {
-                auto *val = reinterpret_cast <const unsigned long *> (&value);
-                auto tmp = ((uint64_t) ntohl(*val & 0xFFFFFFFFLL) << 32) | ntohl(*val >> 32);
-                return *reinterpret_cast <decltype(value) *> (&tmp);
-            }
-        }
-
-        // ---------------------------------------------------------------------
-
-        [[nodiscard]] static inline auto get_size_length(const char control_byte) {
+        [[nodiscard]] static inline auto get_control_byte_size_length(const char control_byte) {
             unsigned long moved_least_significant_byte = 0;
             moved_least_significant_byte |= control_byte & 0x7;
             moved_least_significant_byte =
                     moved_least_significant_byte << (sizeof(moved_least_significant_byte) * 8 - 8);
-            unsigned long size_length = sized_ntoh(moved_least_significant_byte);
+            unsigned long size_length = endian_convert(moved_least_significant_byte);
             return size_length;
         }
 
         // ---------------------------------------------------------------------
 
-        static inline auto get_nl_size(std::vector<char> &buffer, auto data_size_len) {
+        static inline auto get_control_byte_size(std::vector<char> &buffer, auto data_size_len) {
             unsigned long nl_data_size = 0;
             std::memcpy(reinterpret_cast <char *> (&nl_data_size) + sizeof(unsigned long) - data_size_len,
                         buffer.data(), data_size_len);
-            const auto data_size = sized_ntoh(nl_data_size);
+            const auto data_size = endian_convert (nl_data_size);
             return data_size;
         }
 
         // ---------------------------------------------------------------------
 
     public:
-        explicit deserializer(io::device &dev) : dev_(dev) {
+        explicit deserializer(io::device &dev) : serialization (dev) {
         }
 
         // ---------------------------------------------------------------------
@@ -82,7 +65,7 @@ namespace uh::serialization {
             std::memcpy(&data, buffer + data_size_len + 1, data_size);
 
             if (is_different_endian(buffer[0])) {
-                data = sized_ntoh(data);
+                data = endian_convert (data);
             }
 
             return data;
@@ -105,13 +88,13 @@ namespace uh::serialization {
             char control_byte[1];
             dev_.read({control_byte, 1});
 
-            auto data_size_len = get_size_length(control_byte[0]);
+            auto data_size_len = get_control_byte_size_length(control_byte[0]);
             std::vector<char> data_size_bytes(data_size_len);
             dev_.read(data_size_bytes);
 
-            auto data_size = get_nl_size(data_size_bytes, data_size_len);
+            auto data_size = get_control_byte_size(data_size_bytes, data_size_len);
             if (is_different_endian(control_byte[0])) {
-                data_size = sized_ntoh(data_size);
+                data_size = endian_convert (data_size);
             }
 
             Range range;
@@ -124,7 +107,7 @@ namespace uh::serialization {
                 char data[sizeof(InnerType)];
                 for (long i = 0; i < data_size; i++) {
                     dev_.read(data);
-                    auto *val = reinterpret_cast <InnerType *> (sized_ntoh(data));
+                    auto *val = reinterpret_cast <InnerType *> (endian_convert (data));
                     range[i] = *val;
                 }
             }

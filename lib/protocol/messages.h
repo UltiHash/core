@@ -30,7 +30,15 @@ void write(std::ostream& out, const uh::protocol::status& status);
 void check_status(std::istream& in);
 
 // ---------------------------------------------------------------------
+/*
+template <typename MessageType>
+struct message: MessageType {
+    void write(std::ostream& out, const hello::request& request) {
 
+    }
+    void read(std::istream& out, hello::request& request);
+};
+*/
 struct hello
 {
     struct request

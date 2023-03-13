@@ -1,253 +1,74 @@
 #include "Recompilation.h"
 
+
 namespace uh::client::serialization
 {
 
 // ---------------------------------------------------------------------
 
-Recompilation::Recompilation(const client_config& config, std::unique_ptr<uh::protocol::client>&& client) : m_config(config), m_client(std::move(client))
+Recompilation::Recompilation(const uh::client::option::client_config &config,
+                             std::unique_ptr<uh::protocol::client_pool>&& pool) :
+                             m_config(config), m_client_pool(std::move(pool))
 {
-    if (m_config.m_option == options_chosen::integrate)
-    {
-        encode();
+
+
+    if (m_config.m_option == co::options_chosen::integrate) {
+        try
+        {
+            integrate();
+        }
+        catch (const std::exception &exc)
+        {
+            std::filesystem::remove(m_config.m_outputPath);
+            throw exc;
+        }
     }
-    else if (m_config.m_option == options_chosen::retrieve)
-    {
-        decode();
-    }
-    else if (m_config.m_option == options_chosen::list)
-    {
-        ls();
-    }
+    else if (m_config.m_option == co::options_chosen::retrieve)
+        retrieve();
+
+
 }
 
 // ---------------------------------------------------------------------
 
-Recompilation::~Recompilation()
+void Recompilation::integrate()
 {
-    this->flush();
-    this->close();
-}
+    common::job_queue<std::unique_ptr<common::f_meta_data>> q_f_meta_data;
+    common::job_queue<std::unique_ptr<common::f_meta_data>> q_f_mdata_w_hash;
 
-// ---------------------------------------------------------------------
-
-void Recompilation::encode()
-{
-    auto time_start = std::chrono::system_clock::now();
-    std::size_t size = 0u;
-
-    for (const auto &input_Path : m_config.m_inputPaths)
     {
-        this->open(m_config.m_outputPath, std::ios::out | std::ios::app | std::ios::binary);
-        if (this->is_open())[[likely]]
-        {
-            INFO << "Successfully created and opened the recompilation file at " << m_config.m_outputPath << "."
-                      << std::endl;
-        } else[[unlikely]]
-        {
-            throw std::runtime_error("Could not create recompilation file! Aborting!");
-        }
-        std::string current_path = input_Path;
-        auto root = std::filesystem::directory_iterator(current_path);
-        auto fileIt = std::filesystem::begin(root);
-        std::stack <std::tuple<decltype(root), decltype(fileIt)>> fileTreeStack;
-        fileTreeStack.emplace(root, fileIt);
-
-        bool is_dir = std::filesystem::is_directory(current_path);
-        bool is_empty = std::filesystem::is_empty(current_path);
-
-        //creating the tree structure to seek into a particular position in the recompilation file
-        //tellp might throw an exception, and also tellp return a integer which is not uint64_t
-        std::stringstream recomp_stream;
-        rootShrPtr = std::make_shared < treeNode < std::string, std::uint64_t
-                >> (current_path, recomp_stream.tellp(), nullptr);
-        treeNode <std::string, std::uint64_t> *parentPtr = rootShrPtr.get();
-
-        Data d_first(current_path, (is_empty and is_dir), m_client);
-        SequentialContainer auto d_first_encode = d_first.encodeD < std::vector < unsigned char >> ();
-
-        size += d_first.encoded_size();
-        std::for_each(d_first_encode.cbegin(), d_first_encode.cend(),
-                      [&recomp_stream](const unsigned char character)
-                      {
-                          recomp_stream << character;
-                      });
-
-        if (std::get<1>(fileTreeStack.top()) != std::filesystem::end(std::get<0>(fileTreeStack.top())))[[likely]]
-        {
-            do
-            {
-                current_path = std::get<1>(fileTreeStack.top())->path();
-                is_dir = std::filesystem::is_directory(current_path);
-                if (is_dir)
-                {
-                    parentPtr = parentPtr->addChild(std::get<1>(fileTreeStack.top())->path().filename().string(),
-                                                    static_cast<uint64_t>(recomp_stream.tellp()));
-                }
-                else
-                {
-                    parentPtr->addChild(std::get<1>(fileTreeStack.top())->path().filename().string(),
-                                        static_cast<uint64_t>(recomp_stream.tellp()));
-                }
-                if (parentPtr != nullptr)
-                {
-                    INFO << parentPtr->getData() << " added the child with path: " << current_path << " and seek: "
-                         << recomp_stream.tellp();
-                }
-                else
-                {
-                    throw std::runtime_error("Failed Making the tree structure.");
-                }
-                std::get<1>(fileTreeStack.top())++;
-                if (is_dir)[[unlikely]]
-                {
-                    root = std::filesystem::directory_iterator(current_path);
-                    fileIt = std::filesystem::begin(root);
-                    fileTreeStack.emplace(root, fileIt);
-                }
-                long int diff_go_up_levels = 0;
-                while (not fileTreeStack.empty() and
-                       std::get<1>(fileTreeStack.top()) == std::filesystem::end(std::get<0>(fileTreeStack.top())))
-                {
-                    diff_go_up_levels++;
-                    fileTreeStack.pop();
-                    if (parentPtr->getParent() != nullptr)
-                        parentPtr = parentPtr->getParent();
-                }
-                Data d(current_path, diff_go_up_levels, m_client);
-                SequentialContainer auto d_loop_encode = d.encodeD < std::vector < unsigned char >> ();
-                size += d.encoded_size();
-                std::for_each(d_loop_encode.cbegin(), d_loop_encode.cend(),
-                              [&recomp_stream](const unsigned char character) { recomp_stream << character; });
-            } while (!fileTreeStack.empty());
-        }
-
-        // wrap the whole recompilation data by using an encoder
-        EnDecoder encoder;
-        //TODO: optimize here since a copy of a stingstream buffer is made
-        SequentialContainer auto recomp_stream_encoding =
-                encoder.encode < std::vector < unsigned char >> (recomp_stream.str());
-        std::for_each(recomp_stream_encoding.cbegin(), recomp_stream_encoding.cend(),
-                      [this](const unsigned char character) { *this << character; });
-        recomp_stream.flush();
-
-        // encode the final tree structure that has the seek position of the recompilation file
-        auto serializedReconpTree =
-                BFSSerializer < std::vector < unsigned char >, std::string, std::uint64_t>(rootShrPtr.get());
-        std::for_each(serializedReconpTree.cbegin(), serializedReconpTree.cend(),
-                      [this](const unsigned char character) { *this << character; });
-
-        this->flush();
-        this->close();
+        f_upload upload_class(m_client_pool, q_f_meta_data,
+                              q_f_mdata_w_hash, m_config.m_worker_count);
+        upload_class.spawn_threads();
+        f_traverse traverse_class(m_config.m_inputPaths, m_config.m_operatePaths, q_f_meta_data);
     }
 
-    auto time_end = std::chrono::system_clock::now();
+    q_f_mdata_w_hash.sort();
 
-    auto time_diff = std::chrono::duration<double>(time_end - time_start);
-    double seconds = time_diff.count();
-    double mbytes = static_cast<double>(size) / (1024*1024);
+    f_serialization serializer(m_config.m_outputPath, q_f_mdata_w_hash);
+    serializer.serialize(m_config.m_inputPaths);
 
-    std::cout << "encoding speed: " << (mbytes / seconds) << " Mb/s\n";
 }
 
 // ---------------------------------------------------------------------
 
-void Recompilation::decode() {
-    auto time_start = std::chrono::system_clock::now();
-    std::size_t size = 0u;
+void Recompilation::retrieve()
+{
+    std::filesystem::create_directories(m_config.m_outputPath);
+    common::job_queue<std::unique_ptr<common::f_meta_data>> q_f_meta_data;
 
-    std::cout << "Start decoding..." << std::endl;
-    for(const auto &input_Path : m_config.m_inputPaths){
-        try{
-            this->open(input_Path, std::ios::in | std::ios::binary);
-            if (this->is_open())[[likely]] {
-                std::cout << "Successfully opened existing recompilation file!" <<std::endl;
-            } else[[unlikely]] {
-                std::cerr << "Could not open recompilation file! Aborting!"<<std::endl;
-                std::exit(EXIT_FAILURE);
-            }
-            std::vector<unsigned char>input;
-            char reader;
-            while(this->get(reader)){
-                input.push_back(reader);
-            }
-            this->flush();
-            this->close();
+    {
+        f_download download_class(m_client_pool, q_f_meta_data, m_config.m_outputPath,
+                                  m_config.m_worker_count);
+        download_class.spawn_threads();
 
-            // take the entire recompilation data that is wrapped with the encoding excluding the serialized tree data
-            EnDecoder coder{};
-            auto step=input.begin();
-            //TODO: can be optimized here since a copy is being made
-            auto internal= coder.decoder<std::vector<unsigned char>>(input,step);
-            step=std::get<1>(internal);
-            unsigned char offset = step - input.begin() - std::get<0>(internal).size();
-
-            //start from root folder and in parallel step input vector
-            auto root_folder_current_it = std::make_tuple(m_config.m_outputPath,input.begin()+offset);
-            std::filesystem::create_directories(std::get<0>(root_folder_current_it));
-
-            Data d(m_client);
-            do
-            {
-                root_folder_current_it = d.write_from_stream_vector(input,root_folder_current_it);
-            } while(m_config.m_outputPath!=std::get<0>(root_folder_current_it));
-
-            size += d.decoded_size();
-            std::cout << "Successfully read existing recompilation file!"<<std::endl;
-        }
-        catch(const std::exception &e){
-            FATAL << "Reading recompilation file failed due to this reason: " << e.what() << std::endl;
-        }
+        f_serialization deserializer(m_config.m_inputPaths[0], q_f_meta_data);
+        deserializer.deserialize(m_config.m_outputPath);
     }
 
-    auto time_end = std::chrono::system_clock::now();
-
-    auto time_diff = std::chrono::duration<double>(time_end - time_start);
-    double seconds = time_diff.count();
-    double mbytes = static_cast<double>(size) / (1024*1024);
-
-    std::cout << "decoding speed: " << (mbytes / seconds) << " Mb/s\n";
 }
 
 // ---------------------------------------------------------------------
 
-void Recompilation::ls() {
-    for (const auto &input_Path : m_config.m_inputPaths) {
-        try {
-            this->open(input_Path, std::ios::in | std::ios::binary);
-            if (this->is_open())[[likely]] {
-                std::cout << "Successfully opened existing recompilation file!\n" << std::endl;
-            } else[[unlikely]] {
-                std::cerr << "Could not open recompilation file! Aborting!" << std::endl;
-                std::exit(EXIT_FAILURE);
-            }
-            std::vector<unsigned char> input;
-            char reader;
-            while (this->get(reader)) {
-                input.push_back(reader);
-            }
-            this->flush();
-            this->close();
+} // namespace uh::client::serialization
 
-            // take the entire recompilation data that is wrapped with the encoding excluding the serialized tree data
-            EnDecoder coder{};
-            auto step = input.begin();
-            //TODO: can be optimized here since a copy is being made
-            auto internal = coder.decoder < std::vector < unsigned char >> (input, step);
-            step = std::get<1>(internal);
-            unsigned char offset = step - input.begin() - std::get<0>(internal).size();
-
-            // deserialize the tree structure in the recompilation file
-            BFSDeSerializer(rootShrPtr, input, step, offset);
-            auto childFound = rootShrPtr->getChildByRPath(m_config.m_outputPath);
-            std::cout << m_config.m_outputPath.string() << "/\n" << childFound;
-
-        } catch (const std::exception &e) {
-            FATAL << "Ls failed due to this reason: " << e.what() << std::endl;
-        }
-    };
-}
-
-// ---------------------------------------------------------------------
-
-} // namespace uh::client

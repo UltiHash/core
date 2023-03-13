@@ -9,7 +9,7 @@
 #endif
 
 #include <boost/test/unit_test.hpp>
-#include <serialization/recomp_tree.h>
+#include "extra/recomp_tree.h"
 
 // ------------- Tests Suites Follow --------------
 using namespace uh::client::serialization;

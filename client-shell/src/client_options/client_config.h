@@ -2,8 +2,9 @@
 #define CLIENT_OPTIONS_CLIENT_CONFIG_H
 
 #include <filesystem>
+#include <vector>
 
-namespace uh::client
+namespace uh::client::option
 {
 
 // ---------------------------------------------------------------------
@@ -19,8 +20,7 @@ enum class options_chosen : char
 
 typedef struct
 {
-    uint16_t m_port;
-    std::string m_hostname;
+    std::uint16_t m_worker_count;
     options_chosen m_option;
     std::vector<std::filesystem::path> m_inputPaths;
     std::filesystem::path m_outputPath;

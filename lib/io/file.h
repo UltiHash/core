@@ -21,7 +21,6 @@ public:
     virtual std::streamsize write(std::span<const char> buffer) override;
     virtual std::streamsize read(std::span<char> buffer) override;
     virtual bool valid() const override;
-
 private:
     std::fstream m_io;
 };
