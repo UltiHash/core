@@ -10,6 +10,9 @@ services:
     deploy:
       mode: replicated
       replicas: 1
+      placement:
+        constraints:
+          - node.labels.role == agency
     environment:
     - WATCHPACK_POLLING=true
     - REACT_APP_ANONYMOUS_ACCESS_ENABLED=true
@@ -24,6 +27,9 @@ services:
     deploy:
       mode: replicated
       replicas: 1
+      placement:
+        constraints:
+          - node.labels.role == agency
     environment:
       - GF_AUTH_ANONYMOUS_ENABLED=true
       - GF_SECURITY_ALLOW_EMBEDDING=true
@@ -38,39 +44,45 @@ services:
     deploy:
       mode: replicated
       replicas: 1
+      placement:
+        constraints:
+          - node.labels.role == agency
     volumes: 
       - type: bind
-        source: /tmp/prometheus.yml
+        source: prometheus.yml
         target: /etc/prometheus/prometheus.yml
   uh-server-db:
-    image: ghcr.io/ultihash/server-db:20220208
+    image: ghcr.io/ultihash/server-db:20230302
     networks:
       - uh-integration
     deploy:
       mode: replicated
       replicas: 1
       placement:
-        constraints:
+         constraints:
           - node.labels.role == database
   uh-server-agency:
-    image: ghcr.io/ultihash/server-agency:20220208
+    image: ghcr.io/ultihash/server-agency:20230302
     networks:
       - uh-integration
     ports:
       - "21832:21832"
-    deploy:
+    deploy: 
       mode: replicated
       replicas: 1
       placement:
         constraints:
           - node.labels.role == agency
   uh-client-shell:
-    image: ghcr.io/ultihash/client-shell:20220208
+    image: ghcr.io/ultihash/client-shell:20230302
     networks:
       - uh-integration
     deploy:
       mode: replicated
       replicas: 1
+      placement:
+        constraints:
+          - node.labels.role == agency
 volumes:
   grafana-storage:
 networks:

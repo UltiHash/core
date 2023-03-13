@@ -25,7 +25,7 @@ LABEL org.opencontainers.image.description="This container image contains a nigh
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update \
     && apt-get upgrade --yes \
-    && apt-get install --yes --no-install-recommends curl
+    && apt-get install --yes --no-install-recommends curl ncat
 
 COPY --from=build /core/build/${SRC_PATH}/${TARGET} /usr/local/bin
 COPY --from=build /core/${SRC_PATH}/start.sh /usr/local/bin
