@@ -73,6 +73,12 @@ public:
      */
     std::unique_ptr<io::device> bc_read_block(const uh::protocol::blob& hash);
 
+    /**
+     * Allocate a chunk of given side on a cluster node and return an allocation
+     * to it.
+     */
+    std::unique_ptr<uh::protocol::allocation> allocate(std::size_t size);
+
 private:
     struct impl;
     std::unique_ptr<impl> m_impl;

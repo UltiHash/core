@@ -52,6 +52,11 @@ const char* exception::what() const noexcept
 {
     auto cond = std::generic_category().default_error_condition(errno);
 
+    if (errno == EEXIST)
+    {
+        throw file_exists(file, line, cond.message());
+    }
+
     throw system_error(file, line, cond.message());
 }
 

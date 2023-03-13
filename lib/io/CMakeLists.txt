@@ -5,17 +5,21 @@ project(uhLibIo)
 message(STATUS "Using ${PROJECT_NAME}...")
 
 # external dependencies
-find_package(Boost 1.80 COMPONENTS system REQUIRED)
+find_package(Boost 1.80 COMPONENTS system unit_test_framework REQUIRED)
+find_package(OpenSSL REQUIRED)
 
 set(${PROJECT_NAME}_INCLUDE_DIRS ${Boost_INCLUDE_DIRS})
-set(${PROJECT_NAME}_LINK_LIBRARIES ${Boost_LIBRARIES})
+set(${PROJECT_NAME}_LINK_LIBRARIES ${Boost_LIBRARIES} ${OPENSSL_LIBRARIES} uhLibUtil)
 
 # adding all the .h files of the current project
 file(GLOB HEADER_FILE_LIST ${CMAKE_CURRENT_SOURCE_DIR}/*.h)
 
-add_library(${PROJECT_NAME} ${HEADER_FILE_LIST} device.cpp file.cpp)
+# adding all the .cpp files of the current project
+file(GLOB SOURCE_FILE_LIST ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp)
+
+add_library(${PROJECT_NAME} ${HEADER_FILE_LIST} ${SOURCE_FILE_LIST})
 target_include_directories(${PROJECT_NAME} INTERFACE ${${PROJECT_NAME}_INCLUDE_DIRS})
 target_link_libraries(${PROJECT_NAME} ${${PROJECT_NAME}_LINK_LIBRARIES})
 
 # create testing targets
-#include(${CMAKE_CURRENT_SOURCE_DIR}/../cmake/testing/CMakeLists.txt)
+include(${CMAKE_CURRENT_SOURCE_DIR}/../../cmake/testing/CMakeLists.txt)
