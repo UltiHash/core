@@ -57,32 +57,6 @@ void read(std::istream& in, hello::response& request);
 
 // ---------------------------------------------------------------------
 
-struct write_block
-{
-    struct request
-    {
-        blob content;
-    };
-
-    struct response
-    {
-        blob hash;
-        uint64_t effective_size;
-    };
-
-    constexpr static uint8_t request_id = 0x02;
-};
-
-// ---------------------------------------------------------------------
-
-void write(std::ostream& out, const write_block::request& request);
-void read(std::istream& in, write_block::request& request);
-
-void read(std::istream& in, write_block::response& response);
-void write(std::ostream& out, const write_block::response& response);
-
-// ---------------------------------------------------------------------
-
 struct read_block
 {
     struct request
@@ -200,6 +174,79 @@ void read(std::istream& in, next_chunk::request& request);
 
 void write(std::ostream& out, const next_chunk::response& response);
 void read(std::istream& in, next_chunk::response& response);
+
+// ---------------------------------------------------------------------
+
+struct allocate_chunk
+{
+    struct request
+    {
+        uint64_t size;
+    };
+
+    struct response
+    {
+    };
+
+    constexpr static uint8_t request_id = 0x08;
+};
+
+// ---------------------------------------------------------------------
+
+void write(std::ostream& out, const allocate_chunk::request& request);
+void read(std::istream& in, allocate_chunk::request& request);
+
+void write(std::ostream& out, const allocate_chunk::response& response);
+void read(std::istream& in, allocate_chunk::response& response);
+
+// ---------------------------------------------------------------------
+
+struct write_chunk
+{
+    struct request
+    {
+        std::span<char> data;
+    };
+
+    struct response
+    {
+    };
+
+    constexpr static uint8_t request_id = 0x09;
+};
+
+// ---------------------------------------------------------------------
+
+void write(std::ostream& out, const write_chunk::request& request);
+void read(std::istream& in, write_chunk::request& request);
+
+void write(std::ostream& out, const write_chunk::response& response);
+void read(std::istream& in, write_chunk::response& response);
+
+// ---------------------------------------------------------------------
+
+struct finalize_block
+{
+    struct request
+    {
+    };
+
+    struct response
+    {
+        blob hash;
+        uint64_t effective_size;
+    };
+
+    constexpr static uint8_t request_id = 0x0a;
+};
+
+// ---------------------------------------------------------------------
+
+void write(std::ostream& out, const finalize_block::request& request);
+void read(std::istream& in, finalize_block::request& request);
+
+void write(std::ostream& out, const finalize_block::response& response);
+void read(std::istream& in, finalize_block::response& response);
 
 // ---------------------------------------------------------------------
 

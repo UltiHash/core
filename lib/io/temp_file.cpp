@@ -5,7 +5,7 @@
 #include <unistd.h>
 
 
-namespace uh::util
+namespace uh::io
 {
 
 namespace
@@ -22,7 +22,7 @@ int seekdir_to_int(std::ios_base::seekdir way)
         case std::ios_base::end: return SEEK_END;
     }
 
-    THROW(exception, "unsupported seekdir value");
+    THROW(util::exception, "unsupported seekdir value");
 }
 
 // ---------------------------------------------------------------------
@@ -52,7 +52,7 @@ temp_file::temp_file(const std::filesystem::path& directory)
 {
     if (!std::filesystem::exists(directory))
     {
-        THROW(exception, "parent of temporary file does not exist");
+        THROW(util::exception, "parent of temporary file does not exist");
     }
 
     auto [fd, path] = open_temp_file(directory / FILENAME_TEMPLATE);
@@ -73,27 +73,12 @@ temp_file::~temp_file()
 
 // ---------------------------------------------------------------------
 
-void temp_file::release_to(const std::filesystem::path& path)
-{
-    if (link(m_path.c_str(), path.c_str()) == -1)
-    {
-        THROW_FROM_ERRNO();
-    }
-}
-
-// ---------------------------------------------------------------------
-
-const std::filesystem::path& temp_file::path() const
-{
-    return m_path;
-}
-
-// ---------------------------------------------------------------------
-
-std::streamsize temp_file::write(const char* s, std::streamsize n)
+std::streamsize temp_file::write(std::span<const char> buffer)
 {
     std::streamsize rv = 0;
 
+    std::size_t n = buffer.size();
+    const char* s = buffer.data();
     while (n > 0)
     {
         auto written = ::write(m_fd, s, n);
@@ -113,9 +98,9 @@ std::streamsize temp_file::write(const char* s, std::streamsize n)
 
 // ---------------------------------------------------------------------
 
-std::streamsize temp_file::read(char* s, std::streamsize n)
+std::streamsize temp_file::read(std::span<char> buffer)
 {
-    auto rv = ::read(m_fd, s, n);
+    auto rv = ::read(m_fd, buffer.data(), buffer.size());
 
     if (rv == -1)
     {
@@ -123,6 +108,30 @@ std::streamsize temp_file::read(char* s, std::streamsize n)
     }
 
     return rv;
+}
+
+// ---------------------------------------------------------------------
+
+bool temp_file::valid() const
+{
+    return m_fd != -1;
+}
+
+// ---------------------------------------------------------------------
+
+void temp_file::release_to(const std::filesystem::path& path)
+{
+    if (link(m_path.c_str(), path.c_str()) == -1)
+    {
+        THROW_FROM_ERRNO();
+    }
+}
+
+// ---------------------------------------------------------------------
+
+const std::filesystem::path& temp_file::path() const
+{
+    return m_path;
 }
 
 // ---------------------------------------------------------------------
@@ -146,4 +155,4 @@ const std::string temp_file::FILENAME_TEMPLATE = "tempfile-XXXXXX";
 
 // ---------------------------------------------------------------------
 
-} // namespace uh::util
+} // namespace uh::io

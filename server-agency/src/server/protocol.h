@@ -22,8 +22,8 @@ public:
     protocol(cluster::mod& cluster);
 
     virtual uh::protocol::server_information on_hello(const std::string& client_version) override;
-    virtual uh::protocol::block_meta_data on_write_block(uh::protocol::blob&& data) override;
     virtual std::unique_ptr<io::device> on_read_block(uh::protocol::blob&& hash) override;
+    virtual std::unique_ptr<uh::protocol::allocation> on_allocate_chunk(std::size_t size) override;
 
 private:
     cluster::mod& m_cluster;

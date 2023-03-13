@@ -2,6 +2,7 @@
 #define PROTOCOL_CLIENT_H
 
 #include <net/socket.h>
+#include "allocation.h"
 #include "common.h"
 
 #include <boost/iostreams/stream.hpp>
@@ -14,7 +15,9 @@ namespace uh::protocol
 
 // ---------------------------------------------------------------------
 
+class client_allocation;
 class read_block_device;
+class write_block_device;
 
 // ---------------------------------------------------------------------
 
@@ -35,16 +38,6 @@ public:
     server_information hello(const std::string& client_version);
 
     /**
-     * Send a `write_block` request to the server. The block will be stored
-     * in the UltiHash storage back-end. The server returns a hash that can
-     * be used to identify the block in the cloud and the effective space
-     * used to store the block.
-     *
-     * @throw on error status
-     */
-    block_meta_data write_block(const blob& data);
-
-    /**
      * Send a `read_block` request to the server. The server will look up
      * the hash and return the associated data, if available.
      *
@@ -55,6 +48,11 @@ public:
      * @throw on error status
      */
     std::unique_ptr<io::device> read_block(const blob& hash);
+
+    /**
+     * Allocate space for a given chunk
+     */
+    std::unique_ptr<allocation> allocate(std::size_t);
 
     /**
      * End the connection by sending the `quit` command, optionally with a
@@ -79,12 +77,24 @@ public:
     bool valid() const;
 
 private:
+    friend class client_allocation;
     friend class read_block_device;
+    friend class write_block_device;
 
     /**
      * Request next chunk from remote. This function is to be called by read_block_device only.
      */
     std::streamsize next_chunk(std::span<char> buffer);
+
+    /**
+     * Finalize chunk upload and end allocation.
+     */
+    block_meta_data finalize();
+
+    /**
+     * Send a chunk of the currently written block.
+     */
+    std::streamsize write_chunk(std::span<const char> buffer);
 
     std::shared_ptr<net::socket> m_sock;
     boost::iostreams::stream<io::boost_device> m_io;

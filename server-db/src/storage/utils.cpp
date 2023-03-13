@@ -12,10 +12,10 @@ bool maybe_write_data_to_filepath(const uh::protocol::blob &some_data,
         return false;
     }
 
-    util::temp_file tmp(filepath.parent_path());
+    io::temp_file tmp(filepath.parent_path());
 
     DEBUG << "Block written to " << filepath;
-    tmp.write(some_data.data(), some_data.size());
+    tmp.write({some_data.data(), some_data.size()});
 
     tmp.release_to(filepath);
     return true;
@@ -87,7 +87,7 @@ size_t max_configurable_capacity(const std::filesystem::path& dir)
     //
     //For example: We start a new db node with a configured capacity of 1TB and a si.available of 1TB;
     //             We store 0.3 TB and the node is shut down.
-    //             We start again the node, now si.available has dropped to 0.7 TB, but we still want 
+    //             We start again the node, now si.available has dropped to 0.7 TB, but we still want
     //                  to see it as a db of 1TB, thus we configure it as 1TB, since our data is
     //                  still there.
     return static_cast<size_t>(si.available) + get_dir_size(dir);
