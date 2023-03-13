@@ -10,11 +10,11 @@ namespace uh::protocol
 
 void write(std::ostream& out, const protocol::status& status)
 {
-    out.write(status.code);
+    write(out, status.code);
 
     if (status.code != status::OK)
     {
-        out.write(status.message);
+        write(out, status.message);
     }
 }
 
