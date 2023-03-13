@@ -45,6 +45,7 @@ public:
     virtual void on_quit(const std::string& reason);
     virtual void on_reset();
     virtual std::size_t on_next_chunk(std::span<char> buffer);
+    virtual void on_finalize();
     virtual void on_write_chunk(std::span<char> buffer);
     virtual std::unique_ptr<allocation> on_allocate_chunk(std::size_t size) = 0;
 

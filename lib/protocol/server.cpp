@@ -40,6 +40,12 @@ std::size_t server::on_next_chunk(std::span<char>)
 
 // ---------------------------------------------------------------------
 
+void server::on_finalize()
+{
+}
+
+// ---------------------------------------------------------------------
+
 void server::on_write_chunk(std::span<char>)
 {
 }
@@ -329,6 +335,8 @@ void server::handle_finalize_block(iostream& io)
     {
         THROW(internal_error, "no space allocated");
     }
+
+    on_finalize();
 
     auto meta_data = m_write_alloc->persist();
     m_write_alloc.reset();
