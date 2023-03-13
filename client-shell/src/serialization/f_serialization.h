@@ -4,9 +4,14 @@
 #include <filesystem>
 #include <fstream>
 #include <logging/logging_boost.h>
+#include <utility>
+
 #include "../common/f_meta_data.h"
 #include "../common/job_queue.h"
 #include "EnDecoder.h"
+#include "serialization/buffered_serializer.h"
+#include "serialization/deserializer.h"
+#include "io/file.h"
 
 namespace uh::client::serialization
 {
