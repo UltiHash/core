@@ -29,16 +29,6 @@ struct status
 void write(std::ostream& out, const uh::protocol::status& status);
 void check_status(std::istream& in);
 
-// ---------------------------------------------------------------------
-/*
-template <typename MessageType>
-struct message: MessageType {
-    void write(std::ostream& out, const hello::request& request) {
-
-    }
-    void read(std::istream& out, hello::request& request);
-};
-*/
 struct hello
 {
     struct request
@@ -82,7 +72,7 @@ struct write_block
 
 // ---------------------------------------------------------------------
 
-void write(std::ostream& out, const write_block::request& request);
+void write(int signal, std::ostream& out, const write_block::request& request);
 void read(std::istream& in, write_block::request& request);
 
 void read(std::istream& in, write_block::response& response);
