@@ -1,8 +1,5 @@
-#include <utility>
 #include "f_serialization.h"
-#include "serialization/serializer.h"
-#include "serialization/deserializer.h"
-#include "io/file.h"
+
 
 namespace uh::client::serialization
 {
@@ -22,7 +19,7 @@ void f_serialization::serialize(const std::vector<std::filesystem::path>& root_p
 {
 
     io::file f (m_UHV_path, std::ios::app | std::ios::binary);
-    uh::serialization::serializer serialize (f);
+    uh::serialization::buffered_serializer serialize (f);
 
     const auto count = m_job_queue.size();
     serialize.write(count);
