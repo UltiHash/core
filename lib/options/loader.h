@@ -26,7 +26,7 @@ protected:
     boost::program_options::options_description m_options;
     boost::program_options::variables_map m_vars;
 
-    void parse_config(const std::filesystem::path &path);
+    void parse(const std::filesystem::path &path);
     action finalize();
 
 private:

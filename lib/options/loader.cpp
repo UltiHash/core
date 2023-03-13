@@ -31,7 +31,7 @@ action loader::evaluate(int argc, const char** argv)
 
 // ---------------------------------------------------------------------
 
-void loader::parse_config(const std::filesystem::path& path)
+void loader::parse(const std::filesystem::path& path)
 {
     po::store(po::parse_config_file(path.c_str(), m_options), m_vars);
 }
