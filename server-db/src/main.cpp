@@ -37,7 +37,6 @@ int main(int argc, const char** argv)
         metrics::mod metrics_module(config.metrics()); //TODO add storage metrics
 
         storage::mod storage_module(config.storage(), metrics_module.storage());
-        storage_module.start();
 
         server::mod server_module(config.server(), storage_module, metrics_module);
         server_module.start();

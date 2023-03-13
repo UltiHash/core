@@ -43,8 +43,6 @@ public:
     mod(const storage_config& cfg, metrics::storage_metrics& storage_metrics);
     ~mod();
 
-    void start();
-
     storage::backend& backend();
 
 private:

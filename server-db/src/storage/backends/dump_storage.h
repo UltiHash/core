@@ -30,8 +30,6 @@ class dump_storage : public backend {
             }
         }
 
-        virtual void start() override;
-
         /**
          * Read a data block identified by it's hash from the storage.
          *
@@ -49,15 +47,13 @@ class dump_storage : public backend {
         size_t free_space_percentage() { return 100 * static_cast<float>(free_space()) / static_cast<float>(m_alloc);};
 
 
-        virtual size_t used_space() override {return m_used;}
+        size_t used_space() {return m_used;}
         size_t used_space_percentage() { return 100 * static_cast<float>(m_used) / static_cast<float>(m_alloc);};
 
 
-        virtual size_t allocated_space() override {return m_alloc;}
+        size_t allocated_space() {return m_alloc;}
 
-        virtual std::string backend_type() override {return std::string(m_type);}
-
-        virtual std::unique_ptr<uh::protocol::allocation> allocate(std::size_t size);
+        virtual std::unique_ptr<uh::protocol::allocation> allocate(std::size_t size) override;
 
         void update_space_consumption();
 

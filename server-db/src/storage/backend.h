@@ -12,8 +12,6 @@ namespace uh::dbn::storage {
     public:
         virtual ~backend() = default;
 
-        virtual void start() = 0;
-
         /**
          * Read a data block identified by it's hash from the storage.
          *
@@ -30,21 +28,6 @@ namespace uh::dbn::storage {
          * Return free space in this storage back-end in bytes.
          */
         virtual size_t free_space() = 0;
-
-        /**
-         * Return space already in use in this storage back-end in bytes.
-         */
-        virtual size_t used_space() = 0;
-
-        /**
-         * Return total space allocated in this storage back-end in bytes.
-         */
-        virtual size_t allocated_space() = 0;
-
-        /**
-         * Return the name of the storage backend type as a std::string.
-         */
-        virtual std::string backend_type() = 0;
 
         /**
          * Reserve data storage of given `size` and return an allocation for it.

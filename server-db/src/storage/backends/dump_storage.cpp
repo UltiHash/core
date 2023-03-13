@@ -89,18 +89,6 @@ uh::protocol::blob dump_storage::hashing_function(const uh::protocol::blob &data
 
 // ---------------------------------------------------------------------
 
-void dump_storage::start(){
-
-    INFO << "--- Storage backend initialized --- " << std::filesystem::absolute(this->m_root);
-    INFO << "        backend type   : " << backend_type();
-    INFO << "        root diretcory : " << std::filesystem::absolute(this->m_root);
-    INFO << "        space allocated: " << allocated_space();
-    INFO << "        space available: " << free_space();
-    INFO << "        space consumed : " << used_space();
-}
-
-// ---------------------------------------------------------------------
-
 std::unique_ptr<io::device> dump_storage::read_block(const uh::protocol::blob& hash) {
 
     std::string hash_string(hash.begin(), hash.end());

@@ -112,14 +112,6 @@ mod::~mod() = default;
 
 // ---------------------------------------------------------------------
 
-void mod::start()
-{
-    INFO << "starting storage module";
-    m_impl->m_backend->start();
-}
-
-// ---------------------------------------------------------------------
-
 storage::backend& mod::backend()
 {
     return *m_impl->m_backend;
