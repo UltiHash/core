@@ -30,7 +30,8 @@ client_pool::handle::handle(client_pool& pool, std::unique_ptr<client>&& c)
 
 client_pool::client_pool(std::unique_ptr<util::factory<client>>&& factory, std::size_t pool_size)
     : m_factory(std::move(factory)),
-      m_pool_size(pool_size)
+      m_pool_size(pool_size),
+      m_available_connection(pool_size)
 {
     while (m_clients.size() < m_pool_size)
     {
@@ -44,12 +45,23 @@ client_pool::handle client_pool::get()
 {
     std::unique_lock lk(m_mutex);
 
-    m_cv.wait(lk, [this](){ return !m_clients.empty(); });
+    while (m_available_connection == 0)
+    {
+        m_cv.wait(lk);
+    }
 
-    auto client = std::move(m_clients.front());
-    m_clients.pop_front();
+    m_available_connection--;
+    if (!m_clients.empty())
+    {
+        auto client = std::move(m_clients.front());
+        m_clients.pop_front();
+        return {*this, std::move(client)};
+    }
+    else
+    {
+        return {*this, m_factory->create()};
+    }
 
-    return handle(*this, std::move(client));
 }
 
 // ---------------------------------------------------------------------
@@ -62,13 +74,12 @@ void client_pool::put_back(std::unique_ptr<client> c)
     {
         m_clients.push_back(std::move(c));
     }
-    else
-    {
-        m_clients.push_back(m_factory->create());
-    }
+
+    m_available_connection++;
 
     lk.unlock();
     m_cv.notify_one();
+
 }
 
 // ---------------------------------------------------------------------

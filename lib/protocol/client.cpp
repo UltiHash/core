@@ -62,7 +62,7 @@ block_meta_data client::write_block(const blob& data)
     read(m_io, response);
 
     return {
-        .hash = std::move(data),
+        .hash = std::move(response.hash),
         .effective_size = response.effective_size,
     };
 }
