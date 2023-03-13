@@ -5,11 +5,11 @@
 #ifndef CORE_DESERIALIZER_H
 #define CORE_DESERIALIZER_H
 
-#include "serialization.h"
+#include "serialization_common.h"
 
 namespace uh::serialization {
 
-    class deserializer: protected serialization {
+    class deserializer: protected serialization_common {
 
     protected:
 
@@ -41,7 +41,7 @@ namespace uh::serialization {
         // ---------------------------------------------------------------------
 
     public:
-        explicit deserializer(io::device &dev) : serialization (dev) {
+        explicit deserializer(io::device &dev) : serialization_common (dev) {
         }
 
         // ---------------------------------------------------------------------

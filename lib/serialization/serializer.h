@@ -6,12 +6,12 @@
 #ifndef CORE_SERIALIZER_H
 #define CORE_SERIALIZER_H
 
-#include "serialization.h"
+#include "serialization_common.h"
 
 
 namespace uh::serialization {
 
-    class serializer: protected serialization {
+    class serializer: protected serialization_common {
     protected:
 
         constexpr static char control_byte =  is_big_endian << 7;
@@ -39,7 +39,7 @@ namespace uh::serialization {
 
         // ---------------------------------------------------------------------
 
-        explicit serializer (io::device &dev): serialization (dev) {
+        explicit serializer (io::device &dev): serialization_common (dev) {
         }
 
         // ---------------------------------------------------------------------

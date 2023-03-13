@@ -12,6 +12,7 @@
 #include "serialization/serializer.h"
 #include "serialization/deserializer.h"
 #include "serialization/buffered_serializer.h"
+#include "serialization/serialization.h"
 
 
 #include "io/file.h"
@@ -72,7 +73,7 @@ BOOST_AUTO_TEST_CASE(integral_types) {
 
 }
 
-template <typename T, typename Serializer = serializer>
+template <typename T, typename Serializer = serializer, typename Deserializer = deserializer>
 void test_range_serialization (const T& data) {
     {
         uh::io::file dev("data");
@@ -141,6 +142,35 @@ BOOST_AUTO_TEST_CASE(buffered_serializer_test) {
 
     test_range_serialization <unsigned long, buffered_serializer> (ov1);
     test_range_serialization <double, buffered_serializer> (ov2);
+
+
+}
+
+
+BOOST_AUTO_TEST_CASE(buffered_serialization_test) {
+
+    std::string str1 = "data1 data2 data3";
+    std::string str2 = "fsdfsdg data2 data3 data 5 da t asdasf gfdg ytg";
+    std::vector <long> lvec1 {1, 5, 3, 5,3 ,5, 3, 6, 2, 23, 24};
+    std::vector <double> dvec1 {1.1, 3.2, 4.45, 3.76};
+    std::vector <std::uint8_t> emptyvec {};
+    std::vector <std::uint64_t> largevec (1024ul*1024ul*256ul);
+    for (int i = 0; i < largevec.size(); i+=1024) {
+        largevec[i] = i;
+    }
+
+    unsigned long ov1 = 2, dv1;
+    double ov2 = 4.12, dv2;
+
+    test_range_serialization <std::string, buffered_serialization, buffered_serialization> (str1);
+    test_range_serialization < std::vector <long>, buffered_serialization, buffered_serialization> (lvec1);
+    test_range_serialization < std::vector <double>, buffered_serialization, buffered_serialization> (dvec1);
+    test_range_serialization <std::vector <std::uint8_t>, buffered_serialization, buffered_serialization> (emptyvec);
+    test_range_serialization <std::vector <std::uint64_t>, buffered_serialization, buffered_serialization> (largevec);
+    test_range_serialization <std::string, buffered_serialization, buffered_serialization> (str2);
+
+    test_range_serialization <unsigned long, buffered_serialization, buffered_serialization> (ov1);
+    test_range_serialization <double, buffered_serialization, buffered_serialization> (ov2);
 
 
 }
