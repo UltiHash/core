@@ -51,7 +51,7 @@ void f_download::download_files(std::unique_ptr<common::f_meta_data>& f_meta_dat
             std::copy(f_meta_data->f_hashes().begin() + i,
                       f_meta_data->f_hashes().begin() + i + 64, buffer.begin());
 
-            new_file << client_handle->read_block(buffer);
+            new_file << *client_handle->read_block(buffer);
         }
 
         new_file.flush();
