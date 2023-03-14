@@ -21,12 +21,9 @@ public:
 
     loader& add(options& opt);
 
-    const boost::program_options::options_description& visible() const;
+    [[nodiscard]] const boost::program_options::options_description& visible() const;
 
 protected:
-    boost::program_options::options_description m_options;
-    boost::program_options::variables_map m_vars;
-
     void parse(const std::filesystem::path &path);
 
 private:
@@ -34,6 +31,9 @@ private:
     boost::program_options::options_description m_hidden;
     boost::program_options::options_description m_visible;
     std::list<options::positional> m_positional_mappings;
+
+    boost::program_options::options_description m_options;
+    boost::program_options::variables_map m_vars;
 };
 
 // ---------------------------------------------------------------------
