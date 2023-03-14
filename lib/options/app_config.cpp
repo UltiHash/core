@@ -61,7 +61,7 @@ void application_config_base::handle_config()
     }
     else
     {
-        for (const auto &conf_file: m_config.paths())
+        for (const auto& conf_file: m_config.paths())
         {
             std::filesystem::path config_file_path = canonical(std::filesystem::path(conf_file));
             parse(config_file_path);
