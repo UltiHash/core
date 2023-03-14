@@ -10,6 +10,7 @@
 #include <boost/test/unit_test.hpp>
 #include <metrics/mod.h>
 #include <storage/backends/dump_storage.h>
+#include <hash/sha512.h>
 #include <util/temp_dir.h>
 
 namespace
@@ -32,6 +33,13 @@ public:
     uh::dbn::storage::backend& backend()
     {
         return m_dump;
+    }
+
+    uh::protocol::blob write_block(std::vector<char> block)
+    {
+        auto alloc = backend().allocate(block.size());
+        uh::io::write_from_buffer(alloc->device(), { block.begin(), block.end() });
+        return alloc->persist().hash;
     }
 
 private:
@@ -57,7 +65,7 @@ std::vector<char> to_vector(const std::string& s)
 
 BOOST_AUTO_TEST_CASE( hashing_function_expected_hash )
 {
-    uh::protocol::blob vec_hash = uh::dbn::storage::sha512(to_vector(CONTENTS_STR));
+    uh::protocol::blob vec_hash = uh::hash::sha512_digest(CONTENTS_STR);
     std::string hash_string = uh::dbn::storage::to_hex_string(vec_hash.begin(), vec_hash.end());
 
     BOOST_CHECK(hash_string == EXPECTED_SHA512_HASH);
@@ -70,7 +78,7 @@ BOOST_FIXTURE_TEST_CASE( dump_storage_io, storage_fixture )
     uh::protocol::blob x = to_vector(CONTENTS_STR);
 
     // Write block.
-    uh::protocol::blob hash_key = backend().write_block(x);
+    uh::protocol::blob hash_key = write_block(x);
 
     // Read block.
     uh::protocol::blob y = uh::io::read_to_buffer(*backend().read_block(hash_key));
@@ -82,8 +90,8 @@ BOOST_FIXTURE_TEST_CASE( dump_storage_io, storage_fixture )
 
 BOOST_FIXTURE_TEST_CASE( dump_storage_no_duplicates, storage_fixture )
 {
-    uh::protocol::blob x = backend().write_block(to_vector(CONTENTS_STR));
-    uh::protocol::blob y = backend().write_block(to_vector(CONTENTS_STR));
+    uh::protocol::blob x = write_block(to_vector(CONTENTS_STR));
+    uh::protocol::blob y = write_block(to_vector(CONTENTS_STR));
 
     BOOST_CHECK(x == y);
 }
@@ -92,7 +100,7 @@ BOOST_FIXTURE_TEST_CASE( dump_storage_no_duplicates, storage_fixture )
 
 BOOST_FIXTURE_TEST_CASE( dump_storage_expected_hash, storage_fixture )
 {
-    uh::protocol::blob x = backend().write_block(to_vector(CONTENTS_STR));
+    uh::protocol::blob x = write_block(to_vector(CONTENTS_STR));
     std::string x_str = uh::dbn::storage::to_hex_string(x.begin(), x.end());
 
     BOOST_CHECK(x_str == EXPECTED_SHA512_HASH);

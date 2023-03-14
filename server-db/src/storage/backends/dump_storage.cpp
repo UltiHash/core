@@ -1,7 +1,7 @@
 #include "dump_storage.h"
 
 #include <io/file.h>
-#include <io/sha512.h>
+#include <hash/sha512.h>
 
 
 namespace uh::dbn::storage {
@@ -65,7 +65,7 @@ private:
     std::filesystem::path m_target_dir;
     std::atomic<size_t>& m_used;
     std::size_t m_size;
-    io::sha512 m_sha;
+    hash::sha512 m_sha;
     bool m_dangling;
 };
 
@@ -79,12 +79,6 @@ std::filesystem::path dump_storage::get_filepath_from_hash(const uh::protocol::b
 
     std::filesystem::path filepath = this->m_root / hash_string;
     return filepath;
-}
-
-// ---------------------------------------------------------------------
-
-uh::protocol::blob dump_storage::hashing_function(const uh::protocol::blob &data) {
-    return uh::dbn::storage::sha512(data);
 }
 
 // ---------------------------------------------------------------------

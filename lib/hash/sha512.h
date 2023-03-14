@@ -1,20 +1,20 @@
-#ifndef IO_SHA512_H
-#define IO_SHA512_H
+#ifndef HASH_SHA512_H
+#define HASH_SHA512_H
 
 #include <io/device.h>
 
 #include <memory>
 
 
-namespace uh::io
+namespace uh::hash
 {
 
 // ---------------------------------------------------------------------
 
-class sha512 : public device
+class sha512 : public io::device
 {
 public:
-    sha512(device& base);
+    sha512(io::device& base);
     virtual ~sha512();
 
     virtual std::streamsize write(std::span<const char> buffer) override;
@@ -33,6 +33,10 @@ private:
 
 // ---------------------------------------------------------------------
 
-} // namespace uh::io
+std::vector<char> sha512_digest(std::span<const char> buffer);
+
+// ---------------------------------------------------------------------
+
+} // namespace uh::hash
 
 #endif

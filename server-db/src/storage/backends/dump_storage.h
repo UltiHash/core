@@ -42,10 +42,8 @@ class dump_storage : public backend {
          */
         virtual std::unique_ptr<io::device> read_block(const uh::protocol::blob& hash) override;
 
-
         virtual size_t free_space() override {return m_alloc - m_used;}
         size_t free_space_percentage() { return 100 * static_cast<float>(free_space()) / static_cast<float>(m_alloc);};
-
 
         size_t used_space() {return m_used;}
         size_t used_space_percentage() { return 100 * static_cast<float>(m_used) / static_cast<float>(m_alloc);};
@@ -59,17 +57,6 @@ class dump_storage : public backend {
 
 
     private:
-
-        /**
-         * Given a block of data, return its hash
-         *
-         * This function computes a hash string givena block of binary data
-         *
-         * @return the hash
-         * @throw may throw any derivative of exception on error
-         */
-        uh::protocol::blob hashing_function(const uh::protocol::blob &data);
-
         /**
          * Given a hash string as a uh::protocol::blob, return the file path
          * to the corresponding data block

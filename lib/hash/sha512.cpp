@@ -1,11 +1,13 @@
-#include <io/sha512.h>
+#include "sha512.h"
 
 #include <util/exception.h>
 #include <openssl/evp.h>
 #include <openssl/sha.h>
 
 
-namespace uh::io
+using namespace uh::io;
+
+namespace uh::hash
 {
 
 // ---------------------------------------------------------------------
@@ -33,7 +35,7 @@ sha512::~sha512() = default;
 sha512::sha512(device& base)
     : m_impl(std::make_unique<impl>(base, std::unique_ptr<EVP_MD_CTX, void(*)(EVP_MD_CTX*)>( EVP_MD_CTX_new(), EVP_MD_CTX_free ) ))
 {
-    if (EVP_DigestInit_ex(m_impl->ctx.get(), EVP_sha3_512(), nullptr) != 1)
+    if (EVP_DigestInit_ex(m_impl->ctx.get(), EVP_sha512(), nullptr) != 1)
     {
         THROW(util::exception, "EVP_DigestInit failed for EVP_sha3_512");
     }
@@ -81,4 +83,17 @@ std::vector<char> sha512::finalize()
 
 // ---------------------------------------------------------------------
 
-} // namespace uh::io
+std::vector<char> sha512_digest(std::span<const char> buffer)
+{
+    std::vector<char> rv(SHA512_DIGEST_LENGTH);
+
+    SHA512(
+        reinterpret_cast<const unsigned char*>(buffer.data()), buffer.size(),
+        reinterpret_cast<unsigned char*>(rv.data()));
+
+    return rv;
+}
+
+// ---------------------------------------------------------------------
+
+} // namespace uh::hash
