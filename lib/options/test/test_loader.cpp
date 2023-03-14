@@ -38,15 +38,15 @@ struct test_opts : public options
 
 // ---------------------------------------------------------------------
 
-struct fixture
+class fixture : public uh::options::loader
 {
+public:
     fixture()
     {
-        loader.add(options);
+        add(options);
     }
 
     test_opts options;
-    uh::options::loader loader;
 };
 
 // ---------------------------------------------------------------------
@@ -58,7 +58,8 @@ BOOST_FIXTURE_TEST_CASE(loader_command_line, fixture)
                            "pos1", "pos2", "pos3"
                          };
 
-    loader.evaluate(sizeof(args) / sizeof(char*), args);
+    evaluate(sizeof(args) / sizeof(char*), args);
+    finalize();
     BOOST_CHECK_EQUAL(options.string, "lorem ipsum");
 
     BOOST_CHECK_EQUAL(options.positionals.size(), 3u);
@@ -75,7 +76,7 @@ BOOST_FIXTURE_TEST_CASE(loader_cli_failure, fixture)
                            "--unsupported-value", "lorem ipsum",
                          };
 
-    BOOST_CHECK_THROW(loader.evaluate(sizeof(args) / sizeof(char*), args), std::exception);
+    BOOST_CHECK_THROW(evaluate(sizeof(args) / sizeof(char*), args), std::exception);
     BOOST_CHECK_EQUAL(options.string, "default value");
 }
 
