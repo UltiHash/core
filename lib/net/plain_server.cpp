@@ -13,7 +13,7 @@ namespace uh::net
 
 plain_server::plain_server(
     const server_config& config,
-    util::factory<uh::protocol::protocol>& protocol_factory)
+    uh::protocol::protocol_factory& protocol_factory)
     : m_context(),
       m_acceptor(m_context, tcp::endpoint(tcp::v4(), config.port)),
       m_protocol_factory(protocol_factory),
@@ -57,7 +57,7 @@ void plain_server::spawn_client(std::shared_ptr<net::socket> sock)
 {
     m_scheduler.spawn([this, sock] ()
     {
-        m_protocol_factory.create()->handle();
+        m_protocol_factory.create(sock)->handle();
     });
 }
 

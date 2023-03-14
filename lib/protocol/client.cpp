@@ -14,7 +14,7 @@ namespace uh::protocol
 
 client::client(std::unique_ptr<net::socket> sock)
     : m_sock(std::move(sock)),
-      m_io(boost_device(m_sock))
+      bs{*m_sock}
 {
 }
 
@@ -22,7 +22,7 @@ client::client(std::unique_ptr<net::socket> sock)
 
 client::~client()
 {
-    if (m_io)
+    if (m_sock->valid())
     {
         try
         {
@@ -39,11 +39,11 @@ client::~client()
 
 server_information client::hello(const std::string& client_version)
 {
-    write(m_io, hello::request{ .client_version = client_version });
-    m_io.flush();
-
+    write(bs, hello::request{ .client_version = client_version });
+    bs.sync();
+    
     hello::response resp;
-    read(m_io, resp);
+    read(bs, resp);
 
     return {
         .version = resp.server_version,
@@ -55,11 +55,11 @@ server_information client::hello(const std::string& client_version)
 
 block_meta_data client::write_block(const blob& data)
 {
-    write(m_io, write_block::request{ .content = std::move(data) });
-    m_io.flush();
+    write(bs, write_block::request{ .content = std::move(data) });
+    bs.sync();
 
     write_block::response response;
-    read(m_io, response);
+    read(bs, response);
 
     return {
         .hash = std::move(response.hash),
@@ -71,11 +71,11 @@ block_meta_data client::write_block(const blob& data)
 
 std::unique_ptr<io::device> client::read_block(const blob& hash)
 {
-    write(m_io, read_block::request{ .hash = std::move(hash) });
-    m_io.flush();
+    write(bs, read_block::request{ .hash = std::move(hash) });
+    bs.sync();
 
     read_block::response response;
-    read(m_io, response);
+    read(bs, response);
 
     return std::make_unique<read_block_device>(*this);
 }
@@ -84,22 +84,22 @@ std::unique_ptr<io::device> client::read_block(const blob& hash)
 
 void client::quit(const std::string& reason)
 {
-    write(m_io, quit::request{ .reason = reason });
-    m_io.flush();
+    write(bs, quit::request{ .reason = reason });
+    bs.sync();
 
     quit::response response;
-    read(m_io, response);
+    read(bs, response);
 }
 
 // ---------------------------------------------------------------------
 
 std::size_t client::free_space()
 {
-    write(m_io, free_space::request{});
-    m_io.flush();
+    write(bs, free_space::request{});
+    bs.sync();
 
     free_space::response response;
-    read(m_io, response);
+    read(bs, response);
 
     return response.space_available;
 }
@@ -108,22 +108,22 @@ std::size_t client::free_space()
 
 void client::reset()
 {
-    write(m_io, reset::request{});
-    m_io.flush();
+    write(bs, reset::request{});
+    bs.sync();
 
     reset::response response;
-    read(m_io, response);
+    read(bs, response);
 }
 
 // ---------------------------------------------------------------------
 
 std::streamsize client::next_chunk(std::span<char> buffer)
 {
-    write(m_io, next_chunk::request{ .max_size = static_cast<uint32_t>(buffer.size()) });
-    m_io.flush();
+    write(bs, next_chunk::request{ .max_size = static_cast<uint32_t>(buffer.size()) });
+    bs.sync();
 
     next_chunk::response response{ .content = buffer };
-    read(m_io, response);
+    read(bs, response);
 
     return response.content.size();
 }

@@ -165,7 +165,7 @@ void read(serialization::buffered_serialization& in, quit::request& request)
 
 // ---------------------------------------------------------------------
 
-void write(std::ostream&, const quit::response&)
+void write(serialization::buffered_serialization&, const quit::response&)
 {
 }
 
