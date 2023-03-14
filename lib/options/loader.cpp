@@ -1,7 +1,6 @@
 #include "loader.h"
 
 #include <boost/program_options/parsers.hpp>
-#include <iostream>
 
 namespace po = boost::program_options;
 
@@ -27,6 +26,7 @@ action loader::evaluate(int argc, const char** argv)
     auto parsed = parser.run();
     po::store(parsed, m_vars);
 
+    return action::proceed;
 }
 
 // ---------------------------------------------------------------------
@@ -62,27 +62,13 @@ action loader::finalize()
 {
     po::notify(m_vars);
 
-    bool errors = false;
     action rv = action::proceed;
     for (const auto& opt : m_opts)
     {
-        try
+        if (opt->evaluate(m_vars) == action::exit)
         {
-            if (opt->evaluate(m_vars) == action::exit)
-            {
-                rv = action::exit;
-            }
+            return action::exit;
         }
-        catch (const std::exception& e)
-        {
-            errors = true;
-            std::cout << "error: " << e.what() << "\n";
-        }
-    }
-
-    if (errors)
-    {
-        return action::exit;
     }
 
     return rv;
