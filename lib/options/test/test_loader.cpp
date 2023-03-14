@@ -58,8 +58,7 @@ BOOST_FIXTURE_TEST_CASE(loader_command_line, fixture)
                            "pos1", "pos2", "pos3"
                          };
 
-    evaluate(sizeof(args) / sizeof(char*), args);
-    finalize();
+    evaluate(sizeof(args) / sizeof(char*), args).finalize();
     BOOST_CHECK_EQUAL(options.string, "lorem ipsum");
 
     BOOST_CHECK_EQUAL(options.positionals.size(), 3u);
@@ -76,7 +75,7 @@ BOOST_FIXTURE_TEST_CASE(loader_cli_failure, fixture)
                            "--unsupported-value", "lorem ipsum",
                          };
 
-    BOOST_CHECK_THROW(evaluate(sizeof(args) / sizeof(char*), args), std::exception);
+    BOOST_CHECK_THROW(evaluate(sizeof(args) / sizeof(char*), args).finalize(), std::exception);
     BOOST_CHECK_EQUAL(options.string, "default value");
 }
 

@@ -9,7 +9,7 @@ namespace uh::options
 
 // ---------------------------------------------------------------------
 
-action loader::evaluate(int argc, const char** argv)
+loader& loader::evaluate(int argc, const char** argv)
 {
     m_options.add(m_visible);
     m_options.add(m_hidden);
@@ -26,7 +26,7 @@ action loader::evaluate(int argc, const char** argv)
     auto parsed = parser.run();
     po::store(parsed, m_vars);
 
-    return action::proceed;
+    return *this;
 }
 
 // ---------------------------------------------------------------------

@@ -74,7 +74,7 @@ class application_config_base : public loader
 public:
     application_config_base();
 
-    virtual action evaluate(int argc, const char** argv) override;
+    action evaluate(int argc, const char** argv);
 
     void print_help();
     virtual void print_version() = 0;
