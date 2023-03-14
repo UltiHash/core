@@ -53,9 +53,8 @@ BOOST_AUTO_TEST_CASE( hello_request )
     uh::serialization::buffered_serialization ser (dev);
     write(ser, hello::request{ .client_version = "0.0.1" });
 
-    char ch[1];
-    dev.read(ch);
-    BOOST_TEST(ch[0] == hello::request_id);
+    char ch = ser.read<char>();
+    BOOST_TEST(ch == hello::request_id);
 
     hello::request req;
     read(ser, req);
@@ -86,9 +85,8 @@ BOOST_AUTO_TEST_CASE( write_block_request )
     uh::serialization::buffered_serialization ser (dev);
     write(ser, write_block::request{ .content = to_blob("lorem ipsum") });
 
-    char ch[1];
-    dev.read(ch);
-    BOOST_TEST(ch[0] == write_block::request_id);
+    char ch = ser.read<char>();
+    BOOST_TEST(ch == write_block::request_id);
 
     write_block::request req;
     read(ser, req);
@@ -118,9 +116,8 @@ BOOST_AUTO_TEST_CASE( read_block_request )
     uh::serialization::buffered_serialization ser (dev);
     write(ser, read_block::request{ .hash = to_blob("hashed data") });
 
-    char ch[1];
-    dev.read(ch);
-    BOOST_TEST(ch[0] == read_block::request_id);
+    char ch = ser.read<char>();
+    BOOST_TEST(ch == read_block::request_id);
 
     read_block::request req;
     read(ser, req);
@@ -148,9 +145,8 @@ BOOST_AUTO_TEST_CASE( quit_request )
     uh::serialization::buffered_serialization ser (dev);
     write(ser, quit::request{ .reason = "bye" });
 
-    char ch[1];
-    dev.read(ch);
-    BOOST_TEST(ch[0] == quit::request_id);
+    char ch = ser.read<char>();
+    BOOST_TEST(ch == quit::request_id);
 
     quit::request req;
     read(ser, req);

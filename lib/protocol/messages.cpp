@@ -11,7 +11,6 @@ namespace uh::protocol
 void write(serialization::buffered_serialization& out, const protocol::status& status)
 {
     out.write(status.code);
-    out.write(status.code);
 
     if (status.code != status::OK)
     {
@@ -66,7 +65,7 @@ void read(serialization::buffered_serialization& in, hello::response& request)
     hello::response tmp;
 
     tmp.server_version = in.read<std::string> ();
-    tmp.server_version = in.read<unsigned> ();
+    tmp.protocol_version = in.read<unsigned> ();
 
     std::swap(tmp, request);
 }
