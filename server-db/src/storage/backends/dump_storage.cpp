@@ -24,7 +24,7 @@ public:
     {
     }
 
-    ~dump_storage_allocation()
+    virtual ~dump_storage_allocation()
     {
         if (m_dangling)
         {
