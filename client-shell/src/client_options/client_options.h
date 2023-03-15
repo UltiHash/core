@@ -24,7 +24,7 @@ class client_options : public uh::options::options
         [[nodiscard]] bool optDisabled() const;
 
         // LOGIC FUNCTIONS
-        void handle(const boost::program_options::variables_map& vars, client_config& config) const;
+        void handle(const boost::program_options::variables_map& vars);
         void conflictingOptions() const;
 
         [[nodiscard]] const client_config& config() const;
@@ -47,4 +47,3 @@ class client_options : public uh::options::options
 } // namespace uh::client
 
 #endif
-
