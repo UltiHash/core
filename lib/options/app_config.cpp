@@ -55,17 +55,10 @@ action application_config_base::evaluate(int argc, const char** argv)
 
 void application_config_base::handle_config()
 {
-    if (m_config.paths().empty())
+    for (const auto& conf_file: m_config.paths())
     {
-        // default config files
-    }
-    else
-    {
-        for (const auto& conf_file: m_config.paths())
-        {
-            std::filesystem::path config_file_path = canonical(std::filesystem::path(conf_file));
-            parse(config_file_path);
-        }
+        std::filesystem::path config_file_path = canonical(std::filesystem::path(conf_file));
+        parse(config_file_path);
     }
 }
 
