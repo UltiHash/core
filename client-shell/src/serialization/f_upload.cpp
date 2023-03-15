@@ -84,9 +84,12 @@ void f_upload::chunk_and_upload(std::unique_ptr<common::f_meta_data>& f_meta_dat
     {
         auto chunks = chunk_files(f_meta_data);
         for (auto & chunk : chunks){
-            auto response = client_handle->write_block(chunk);
-            f_meta_data->add_hash(response.hash);
-            f_meta_data->add_effective_size(response.effective_size);
+            auto alloc = client_handle->allocate(chunk.size());
+            io::write_from_buffer(alloc->device(), chunk);
+
+            auto meta_data = alloc->persist();
+            f_meta_data->add_hash(meta_data.hash);
+            f_meta_data->add_effective_size(meta_data.effective_size);
         }
     }
     m_output_jq.append_job(std::move(f_meta_data));
