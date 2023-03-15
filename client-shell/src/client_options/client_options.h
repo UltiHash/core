@@ -47,4 +47,3 @@ class client_options : public uh::options::options
 } // namespace uh::client
 
 #endif
-
