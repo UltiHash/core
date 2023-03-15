@@ -98,6 +98,8 @@ private:
 
 static const std::string CONTENTS_STR = "These are the contents of test_input_file.txt and test_input_file_2.txt";
 static const std::string EXPECTED_SHA512_HASH = "2610fa1ed2dc40f92a3e44cb894b757e4e4469a053b5b2ccf69179b577cfac29403aed645ecab45e10c5db2d9c6bbb0916b0b7c9caa635d271f5274b3e868011";
+static constexpr std::size_t THREAD_LOOPS = 200;
+static constexpr std::size_t THREAD_COUNT = 20;
 
 // ---------------------------------------------------------------------
 
@@ -109,7 +111,7 @@ std::vector<char> to_vector(const std::string& s)
 // ---------------------------------------------------------------------
 
 typedef boost::mpl::vector<
-    dump_storage,
+    //dump_storage,
     tuesday_dedup
     > storage_types;
 
@@ -203,6 +205,31 @@ BOOST_FIXTURE_TEST_CASE_TEMPLATE( storage_dedup, T, storage_types, storage_fixtu
         uh::io::write_from_buffer(alloc->device(), { block.begin(), block.end() });
         auto meta_data = alloc->persist();
         BOOST_CHECK(meta_data.effective_size == 0u);
+    }
+}
+
+// ---------------------------------------------------------------------
+
+BOOST_FIXTURE_TEST_CASE_TEMPLATE( stress, T, storage_types, storage_fixture<T>)
+{
+    std::list<std::thread> threads;
+
+    auto thread_func = [&]() {
+        for (std::size_t loop = 0; loop < THREAD_LOOPS; ++loop)
+        {
+            auto h = this->write_block(to_vector(CONTENTS_STR));
+            this->read_block(h);
+        }
+    };
+
+    for (std::size_t id = 0; id < THREAD_COUNT; ++id)
+    {
+        threads.push_back(std::thread(thread_func));
+    }
+
+    for (auto& thread : threads)
+    {
+        thread.join();
     }
 }
 

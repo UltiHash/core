@@ -71,7 +71,7 @@ std::unique_ptr<uh::protocol::allocation> tuesday_dedup::allocate(std::size_t si
 
     try
     {
-        return std::make_unique<tuesday_allocation>(m_impl->m_tree);
+        return std::make_unique<tuesday_allocation>(m_impl->m_tree, size, m_impl->m_used_size);
     }
     catch (...)
     {
