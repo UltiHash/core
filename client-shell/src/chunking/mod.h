@@ -21,7 +21,7 @@ struct chunking_config
     constexpr static std::string_view default_chunking_strategy = "FixedSize";
     std::string chunking_strategy = std::string(default_chunking_strategy);
 
-    constexpr static size_t default_chunk_size_in_bytes = 0;
+    constexpr static size_t default_chunk_size_in_bytes = 4194304; // = 2^22
     size_t chunk_size_in_bytes = 0;
 };
 
