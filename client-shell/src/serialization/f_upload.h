@@ -7,6 +7,7 @@
 #include "../common/thread_manager.h"
 #include "../common/job_queue.h"
 #include "../common/f_meta_data.h"
+#include <chunking/mod.h>
 
 
 namespace uh::client::serialization
@@ -21,17 +22,18 @@ public:
     f_upload(std::unique_ptr<protocol::client_pool>&,
             common::job_queue<std::unique_ptr<common::f_meta_data>>&,
             common::job_queue<std::unique_ptr<common::f_meta_data>>&,
+            uh::client::chunking::file_chunker&,
             unsigned int=1);
     ~f_upload() override;
 
     void spawn_threads() override;
     void chunk_and_upload(std::unique_ptr<common::f_meta_data>&, protocol::client_pool::handle&);
-    std::vector<uh::protocol::blob> chunk_files(std::unique_ptr<common::f_meta_data>&);
 
 private:
     common::job_queue<std::unique_ptr<common::f_meta_data>>& m_input_jq;
     common::job_queue<std::unique_ptr<common::f_meta_data>>& m_output_jq;
     std::unique_ptr<uh::protocol::client_pool>& m_client_pool;
+    uh::client::chunking::file_chunker& m_chunker;
 };
 
 // ---------------------------------------------------------------------
