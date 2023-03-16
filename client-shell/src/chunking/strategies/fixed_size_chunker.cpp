@@ -26,7 +26,7 @@ std::vector<uh::protocol::blob> fixed_size_chunker::chunk_files(std::unique_ptr<
 
         if (input_file.peek() != std::ifstream::traits_type::eof())
         {
-            constexpr std::uint64_t buf_size = 1 << 22; //2^22 bytes = 4MB //replace by chunk_markers
+            std::uint64_t buf_size = chunk_size();
             uh::protocol::blob tmp_buffer (std::min<std::uint64_t>(f_meta_data->f_size(), buf_size));
             unsigned long total = 0;
 
