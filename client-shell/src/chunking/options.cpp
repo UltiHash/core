@@ -24,7 +24,7 @@ constexpr const char* optionString(OptionsEnum n)
 // ---------------------------------------------------------------------
 
 options::options()
-    : uh::options::options("Storage Options")
+    : uh::options::options("Chunking Options")
 {
     visible().add_options()
         (optionString(OptionsEnum::ChunkingStrategy),
