@@ -7,6 +7,7 @@
 #include <list>
 #include <map>
 #include <memory>
+#include <mutex>
 #include <set>
 #include <span>
 #include <vector>
@@ -71,8 +72,13 @@ private:
     friend class tuesday_write_device;
     friend class tuesday_allocation;
 
+    void add_index(const uh::protocol::blob& b, const tree_path& path);
+
     treenode m_root;
-    std::map<uh::protocol::blob, tree_path> m_index;
+    mutable std::mutex m_mtx_hashes;
+    std::map<uh::protocol::blob, tree_path> m_hashes;
+
+    mutable std::mutex m_mtx_allocations;
     std::list< std::vector<char> > m_allocations;
 };
 

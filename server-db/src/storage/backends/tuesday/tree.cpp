@@ -12,6 +12,7 @@ namespace uh::dbn::storage
 
 std::shared_ptr<treenode> tree::allocate(std::span<const char> buffer)
 {
+    std::lock_guard<std::mutex> guard(m_mtx_allocations);
     m_allocations.emplace_back(buffer.begin(), buffer.end());
 
     auto& alloc = m_allocations.back();
@@ -53,7 +54,7 @@ uh::protocol::blob tree::put(std::span<char> buffer)
         }
     }
 
-    m_index[hash] = path;
+    add_index(hash, path);
     return hash;
 }
 
@@ -75,8 +76,10 @@ std::vector<char> tree::get(const uh::protocol::blob& hash) const
 
 const tree_path& tree::get_path(const uh::protocol::blob& hash) const
 {
-    auto iter = m_index.find(hash);
-    if (iter == m_index.end())
+    std::lock_guard<std::mutex> guard(m_mtx_hashes);
+
+    auto iter = m_hashes.find(hash);
+    if (iter == m_hashes.end())
     {
         throw std::runtime_error("unknown hash");
     }
@@ -112,7 +115,7 @@ treenode::match_result treenode::match(std::span<const char> buffer)
     size_t split_at = 0u;
     size_t length = 0u;
 
-    for (auto& s : succs->second)
+    for (const auto& s : succs->second)
     {
         auto mm = std::mismatch(buffer.begin(), buffer.end(),
                                 s->m_buffer.begin(), s->m_buffer.end());
@@ -144,7 +147,7 @@ treenode::match_result treenode::match(std::span<const char> buffer)
         if (longest.empty())
         {
             auto dist = std::distance(buffer.begin(), mm.first);
-            if (length != 0)
+            if (dist != 0)
             {
                 longest = { s };
                 split_at = dist;
@@ -167,6 +170,14 @@ std::pair<std::shared_ptr<treenode>, std::shared_ptr<treenode>> treenode::split(
     second->m_succs = m_succs;
 
     return std::make_pair(first, second);
+}
+
+// ---------------------------------------------------------------------
+
+void tree::add_index(const uh::protocol::blob& b, const tree_path& path)
+{
+    std::lock_guard<std::mutex> guard(m_mtx_hashes);
+    m_hashes[b] = path;
 }
 
 // ---------------------------------------------------------------------

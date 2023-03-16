@@ -13,6 +13,7 @@
 #include <storage/backends/dump_storage.h>
 #include <storage/backends/tuesday/tuesday_dedup.h>
 #include <hash/sha512.h>
+#include <util/random.h>
 #include <util/temp_dir.h>
 
 namespace
@@ -97,9 +98,10 @@ private:
 // ---------------------------------------------------------------------
 
 static const std::string CONTENTS_STR = "These are the contents of test_input_file.txt and test_input_file_2.txt";
+static const std::string CONTENTS_STR2 = "These are the contents of a simple string";
 static const std::string EXPECTED_SHA512_HASH = "2610fa1ed2dc40f92a3e44cb894b757e4e4469a053b5b2ccf69179b577cfac29403aed645ecab45e10c5db2d9c6bbb0916b0b7c9caa635d271f5274b3e868011";
-static constexpr std::size_t THREAD_LOOPS = 200;
-static constexpr std::size_t THREAD_COUNT = 20;
+static constexpr std::size_t THREAD_LOOPS = 2000;
+static constexpr std::size_t THREAD_COUNT = 50;
 
 // ---------------------------------------------------------------------
 
@@ -210,6 +212,20 @@ BOOST_FIXTURE_TEST_CASE_TEMPLATE( storage_dedup, T, storage_types, storage_fixtu
 
 // ---------------------------------------------------------------------
 
+BOOST_FIXTURE_TEST_CASE_TEMPLATE( multiple_values, T, storage_types, storage_fixture<T>)
+{
+    auto hash1 = this->write_block(to_vector(CONTENTS_STR));
+    auto hash2 = this->write_block(to_vector(CONTENTS_STR2));
+
+    auto result1 = this->read_block(hash1);
+    auto result2 = this->read_block(hash2);
+
+    BOOST_CHECK(result1 == to_vector(CONTENTS_STR));
+    BOOST_CHECK(result2 == to_vector(CONTENTS_STR2));
+}
+
+// ---------------------------------------------------------------------
+
 BOOST_FIXTURE_TEST_CASE_TEMPLATE( stress, T, storage_types, storage_fixture<T>)
 {
     std::list<std::thread> threads;
@@ -221,10 +237,26 @@ BOOST_FIXTURE_TEST_CASE_TEMPLATE( stress, T, storage_types, storage_fixture<T>)
             this->read_block(h);
         }
     };
+    auto thread_func2 = [&]() {
+        for (std::size_t loop = 0; loop < THREAD_LOOPS; ++loop)
+        {
+            auto h = this->write_block(to_vector(CONTENTS_STR2));
+            this->read_block(h);
+        }
+    };
+    auto thread_func3 = [&]() {
+        for (std::size_t loop = 0; loop < THREAD_LOOPS; ++loop)
+        {
+            auto h = this->write_block(to_vector(uh::util::random_string(32)));
+            this->read_block(h);
+        }
+    };
 
-    for (std::size_t id = 0; id < THREAD_COUNT; ++id)
+    for (std::size_t id = 0; id < THREAD_COUNT / 3; ++id)
     {
         threads.push_back(std::thread(thread_func));
+        threads.push_back(std::thread(thread_func2));
+        threads.push_back(std::thread(thread_func3));
     }
 
     for (auto& thread : threads)

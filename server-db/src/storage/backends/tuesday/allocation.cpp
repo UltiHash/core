@@ -30,7 +30,7 @@ io::device& tuesday_allocation::device()
 uh::protocol::block_meta_data tuesday_allocation::persist()
 {
     auto hash = m_sha.finalize();
-    m_tree.m_index[hash] = m_path;
+    m_tree.add_index(hash, m_path);
 
     std::size_t saved = m_allocated - m_size;
     m_used_size -= saved;
