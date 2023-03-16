@@ -20,6 +20,32 @@ namespace
 
 // ---------------------------------------------------------------------
 
+class alloc : public uh::protocol::allocation
+{
+public:
+    alloc(uh::protocol::client_pool::handle&& handle, std::size_t size)
+        : m_handle(std::move(handle)),
+          m_alloc(m_handle->allocate(size))
+    {
+    }
+
+    virtual io::device& device() override
+    {
+        return m_alloc->device();
+    }
+
+    virtual block_meta_data persist() override
+    {
+        return m_alloc->persist();
+    }
+
+private:
+    uh::protocol::client_pool::handle m_handle;
+    std::unique_ptr<uh::protocol::allocation> m_alloc;
+};
+
+// ---------------------------------------------------------------------
+
 client_factory_config make_cf_config()
 {
     std::stringstream s;
@@ -196,7 +222,7 @@ std::unique_ptr<uh::protocol::allocation> mod::allocate(std::size_t size)
     {
         try
         {
-            return node(fs.first).get()->allocate(size);
+            return std::make_unique<alloc>(node(fs.first).get(), size);
         }
         catch (const std::exception& e)
         {

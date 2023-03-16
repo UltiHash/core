@@ -15,7 +15,7 @@ class client_allocation : public allocation
 {
 public:
     client_allocation(client& c);
-    ~client_allocation();
+    virtual ~client_allocation();
 
     virtual io::device& device() override;
     virtual block_meta_data persist() override;
