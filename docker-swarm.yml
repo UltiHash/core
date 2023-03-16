@@ -8,8 +8,7 @@ services:
     ports:
       - "3000:3000"
     deploy:
-      mode: replicated
-      replicas: 1
+      mode: global
       placement:
         constraints:
           - node.labels.role == agency
@@ -25,8 +24,7 @@ services:
     ports:
       - "3001:3000"
     deploy:
-      mode: replicated
-      replicas: 1
+      mode: global
       placement:
         constraints:
           - node.labels.role == agency
@@ -34,16 +32,17 @@ services:
       - GF_AUTH_ANONYMOUS_ENABLED=true
       - GF_SECURITY_ALLOW_EMBEDDING=true
     volumes:
-      - grafana-storage:/var/lib/grafana grafana/grafana-enterprise
+      - type: bind
+        source: /data/grafana/
+        target: /var/lib/grafana
   prometheus:
     image: prom/prometheus
     networks:
       - uh-integration
     ports: 
-      - "9091:9090"
+      - "9090:9090"
     deploy:
-      mode: replicated
-      replicas: 1
+      mode: global
       placement:
         constraints:
           - node.labels.role == agency
@@ -51,40 +50,38 @@ services:
       - type: bind
         source: prometheus.yml
         target: /etc/prometheus/prometheus.yml
+      - type: bind
+        source: /data/prometheus
+        target: /prometheus
   uh-server-db:
-    image: ghcr.io/ultihash/server-db:20230302
+    image: ghcr.io/ultihash/server-db:20230316
     networks:
       - uh-integration
     deploy:
-      mode: replicated
-      replicas: 1
+      mode: global
       placement:
          constraints:
           - node.labels.role == database
   uh-server-agency:
-    image: ghcr.io/ultihash/server-agency:20230302
+    image: ghcr.io/ultihash/server-agency:20230316
     networks:
       - uh-integration
     ports:
       - "21832:21832"
     deploy: 
-      mode: replicated
-      replicas: 1
+      mode: global
       placement:
         constraints:
           - node.labels.role == agency
   uh-client-shell:
-    image: ghcr.io/ultihash/client-shell:20230302
+    image: ghcr.io/ultihash/client-shell:20230316
     networks:
       - uh-integration
     deploy:
-      mode: replicated
-      replicas: 1
+      mode: global
       placement:
         constraints:
           - node.labels.role == agency
-volumes:
-  grafana-storage:
 networks:
   uh-integration:
     driver: overlay
