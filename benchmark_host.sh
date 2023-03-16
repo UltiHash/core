@@ -1,54 +1,167 @@
 #!/bin/bash
 
-loops=5
-BENCH_NETWORK_NAME="nightlyBench_net"
-CREATE_NETWORK="docker network create --scope swarm --driver overlay ${BENCH_NETWORK_NAME}"
-CREATE_COMMON="docker service create --network ${BENCH_NETWORK_NAME} --mode global"
-
-CREATE_DB_SERVICE="${CREATE_COMMON} --name nightlyBench_database --hostname uh-server-db --constraint node.labels.role==database ghcr.io/ultihash/server-db:$(printf '%(%Y%m%d)T' -1)"
-CREATE_AGENCY_SERVICE="${CREATE_COMMON} --name nightlyBench_agency --hostname uh-server-agency --constraint node.labels.role==agency ghcr.io/ultihash/server-agency:$(printf '%(%Y%m%d)T' -1)"
-
 CORPORA_BASE_DIR="/data/corpora"
-WAIT_SCRIPT="./wait_for_benchmark.py"
+NUM_LOOPS=5
+SLACK_CHANNEL="#1_tech-dev"
 
-PRINT_LOG="docker service logs nightlyBench_client --raw"
+#
+# Tears down all remaining nightlyBench services
+#
+# Usage:
+#   rm_services
+#
+teardown()
+{
+  local services=$(docker service ls | grep nightlyBench_ | awk '{print $2}')
+  if [[ -n ${services} ]]; then
+    docker service rm ${services} >/dev/null 2>&1 
+    if [[ -n "$1" ]]; then
+      echo "Found left-over benchmark services that may interfere, cleaning up..."
+      sleep 15
+    fi
+  fi
 
+}
 
-RM_NETWORK="docker network rm ${BENCH_NETWORK_NAME}"
-RM_DB_SERVICE="docker service rm nightlyBench_database"
-RM_AGENCY_SERVICE="docker service rm nightlyBench_agency"
-RM_CLIENT_SERVICE="docker service rm nightlyBench_client"
+#
+# Sets up nightlyBench service instances of all UltiHash components involved in the integration test/benchmark
+#
+# Usage:
+#   setup <corpus>
+#
+setup()
+{
+  local corpus="$1"; shift;
+  local network=$(docker network ls | grep nightlyBench_net | awk '{print $2}')
+  if [[ -z ${network} ]]; then
+    echo "Docker network \"nightlyBench_net\" didn't exist yet, so it is created now..."
+    docker network create --scope swarm --driver overlay nightlyBench_net >/dev/null 2>&1
+    sleep 10
+  fi
+  docker service create --network nightlyBench_net --mode global --name nightlyBench_database --hostname uh-server-db --constraint node.labels.role==database ghcr.io/ultihash/server-db:$(printf '%(%Y%m%d)T' -1) >/dev/null 2>&1
+  docker service create --network nightlyBench_net --mode global --name nightlyBench_agency --hostname uh-server-agency --constraint node.labels.role==agency ghcr.io/ultihash/server-agency:$(printf '%(%Y%m%d)T' -1) >/dev/null 2>&1
+  docker service create --network nightlyBench_net --mode global --name nightlyBench_client --hostname uh-client-shell --mount type=bind,source=/data,destination=/data --entrypoint "/data/benchmark_container.sh ${corpus}" --publish 1337:1337/udp --constraint node.labels.role==agency ghcr.io/ultihash/client-shell:$(printf '%(%Y%m%d)T' -1) >/dev/null 2>&1
+}
 
+#
+# Returns the average throughput of the agency_fresh_upload metric from the log files
+#
+# Usage:
+#   get_agency_fresh_upload <corpus> <log_path_base>
+#
+get_agency_fresh_upload()
+{
+  local corpus="$1"; shift;
+  local log_path_base="$1"; shift;
+  local log_paths=${log_path_base}*
+  RESULT=$(jq -s "map(.agency_fresh_upload.${corpus}[0]) | add / length" ${log_paths})
+  EXIT_STATUS=$?
+  
+  if [ $EXIT_STATUS -eq 0 ]; then
+    printf "${RESULT}"
+    return 0
+  else
+    printf ""
+    return 1
+  fi
+	
+}
 
-#VERBOSITY=">/dev/null 2>&1"
+#
+# Returns the average throughput of the agency_fresh_upload metric from the log files
+#
+# Usage:
+#   get_agency_update_upload <corpus> <log_path_base>
+#
+get_agency_update_upload()
+{
+  local corpus="$1"; shift;
+  local log_path_base="$1"; shift;
+  local log_paths=${log_path_base}*
+  RESULT=$(jq -s "map(.agency_update_upload.${corpus}[0]) | add / length" ${log_paths})
+  EXIT_STATUS=$?
 
-echo "Make sure no old benchmark services may interfere..."
-eval ${RM_CLIENT_SERVICE} ${VERBOSITY}
-eval ${RM_AGENCY_SERVICE} ${VERBOSITY}
-eval ${RM_DB_SERVICE} ${VERBOSITY}
-eval ${RM_NETWORK} ${VERBOSITY}
-sleep 10
+  if [ $EXIT_STATUS -eq 0 ]; then
+    printf "${RESULT}"
+    return 0
+  else
+    printf ""
+    return 1
+  fi
 
-for CORPUS_PATH in "${CORPORA_BASE_DIR}"/*nightly/; do
+}
+
+#
+# Returns the average throughput of the agency_fresh_upload metric from the log files
+#
+# Usage:
+#   get_agency_download <corpus> <log_path_base>
+#
+get_agency_download()
+{
+  local corpus="$1"; shift;
+  local log_path_base="$1"; shift;
+  local log_paths=${log_path_base}*
+  RESULT=$(jq -s "map(.agency_download.${corpus}[0]) | add / length" ${log_paths})
+  EXIT_STATUS=$?
+
+  if [ $EXIT_STATUS -eq 0 ]; then
+    printf "${RESULT}"
+    return 0
+  else
+    printf ""
+    return 1
+  fi
+
+}
+
+#
+# Posts benchmark results to Slack channel
+#
+# Usage:
+#   report_results_to_slack <corpus> <log_path_base>
+#
+report_results_to_slack()
+{
+  local corpus="$1"; shift;
+  local log_path_base="$1"; shift;
+  local upload_fresh=$(get_agency_fresh_upload "${corpus}" "${log_path_base}")
+  local upload_fresh_exit=$?
+  local upload_update=$(get_agency_update_upload "${corpus}" "${log_path_base}")
+  local upload_update_exit=$?
+  local download_agency=$(get_agency_download "${corpus}" "${log_path_base}")
+  local download_agency_exit=$?
+  
+  if [ $upload_fresh_exit -eq 0 ] && [ $upload_update_exit -eq 0 ] && [ $download_agency_exit -eq 0 ]
+  then
+        printf %b "text=Tonight's benchmark results for the \"${corpus}\" corpus:\n\t-upload throughput (fresh upload via agency-node): ${upload_fresh} MByte/s.\n\t-upload throughput (updating upload via agency-node): ${upload_update} MByte/s.\n\t-download throughput (via agency-node): ${download_agency} MByte\s.\n" > message.txt
+        curl --data-binary @message.txt -d "channel=${SLACK_CHANNEL}" -H "Authorization: Bearer xoxb-2702783761651-4959893662113-aASbDCYEfMpCRgrnwvC4ZUUn" -X POST https://slack.com/api/chat.postMessage >/dev/null 2>&1
+        rm message.txt
+	echo "Successfully posted benchmark results for the current corpus to Slack."
+  else
+        curl -d "text=Tonight's benchmarks did not run properly or there was an error parsing their output." -d "channel=${SLACK_CHANNEL}" -H "Authorization: Bearer xoxb-2702783761651-4959893662113-aASbDCYEfMpCRgrnwvC4ZUUn" -X POST https://slack.com/api/chat.postMessage >/dev/null 2>&1
+	echo "Notified Slack channel that the benchmark run using the current corpus didn't appear to deliver valid results." 
+  fi
+
+}
+
+teardown "init"
+
+for CORPUS_PATH in "${CORPORA_BASE_DIR}"/*_nightly/; do
   CORPUS=$(basename $CORPUS_PATH)
-  CREATE_CLIENT_SERVICE="${CREATE_COMMON} --name nightlyBench_client --hostname uh-client-shell --mount type=bind,source=/data,destination=/data --entrypoint '/data/benchmark_container.sh ${CORPUS}' --publish 1337:1337/udp --constraint node.labels.role==agency ghcr.io/ultihash/client-shell:$(printf '%(%Y%m%d)T' -1)"
+  LOG_PATH_BASE="/data/logs/benchmark_$(printf '%(%Y%m%d)T' -1)_${CORPUS}_"
 
-  for (( i=0; i<${loops}; ++i)); do
-    echo "Initiating benchmark setup for corpus '${CORPUS}, iteration #${i}..."
-    eval ${CREATE_NETWORK} ${VERBOSITY}
-    eval ${CREATE_DB_SERVICE} ${VERBOSITY}
-    eval ${CREATE_AGENCY_SERVICE} ${VERBOSITY}
-    eval ${CREATE_CLIENT_SERVICE} ${VERBOSITY}
+  for (( i=1; i<=${NUM_LOOPS}; ++i)); do
+    echo "Setting up benchmark for corpus '${CORPUS}, iteration #${i}/${NUM_LOOPS}..."
+    setup "${CORPUS}"
 
-    echo "Instantiated benchmark setup, now waiting for benchmark to complete..."
-    eval ${WAIT_SCRIPT}
-    eval ${PRINT_LOG} > /data/logs/benchmark_$(printf '%(%Y%m%d)T' -1)_${CORPUS}_${i}.log
+    ./wait_for_benchmark.py
+    docker service logs nightlyBench_client --raw > ${LOG_PATH_BASE}${i}.log
 
-    echo "Benchmark complete, cleaning up setup..."
-    eval ${RM_CLIENT_SERVICE} ${VERBOSITY}
-    eval ${RM_AGENCY_SERVICE} ${VERBOSITY}
-    eval ${RM_DB_SERVICE} ${VERBOSITY}
-    eval ${RM_NETWORK} ${VERBOSITY}
-    sleep 30
+    echo "Benchmark run for corpus '${CORPUS}, iteration #${i}/${NUM_LOOPS} completed, cleaning up setup..."
+    teardown
+    sleep 15
   done
+
+  report_results_to_slack "${CORPUS}" "${LOG_PATH_BASE}"
 done

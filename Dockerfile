@@ -7,12 +7,12 @@ WORKDIR /core
 
 # Configure and compile
 RUN mkdir build \
-    && cmake -B build -D${CMAKE_OPTION}=ON -DCMAKE_BUILD_TYPE=Debug \
-    && cmake --build build -j $(nproc) --config Debug
+    && cmake -B build -D${CMAKE_OPTION}=ON -DCMAKE_BUILD_TYPE=Release \
+    && cmake --build build -j $(nproc) --config Release
 
 # Execute tests
 WORKDIR /core/build
-RUN ctest -C Debug --output-on-failure
+RUN ctest -C Release --output-on-failure
 
 FROM ubuntu:22.04 as deploy
 
