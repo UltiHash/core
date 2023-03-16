@@ -33,4 +33,3 @@ typedef struct
 } // namespace uh::client
 
 #endif
-

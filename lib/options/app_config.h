@@ -6,6 +6,7 @@
 
 #include <options/loader.h>
 #include <options/basic_options.h>
+#include <options/config_file.h>
 
 #include <iostream>
 
@@ -23,8 +24,8 @@
  * class application_config : public uh::options::application_config_base
  * {
  * public:
- *      const uh::options::logging_options& logging() const { return m_logging; }
- *      const uh::options::metrics_options& metrics() const { return m_metrics; }
+ *      const uh::options::logging_options& logging() const { return m_logging.config(); }
+ *      const uh::options::metrics_options& metrics() const { return m_metrics.config(); }
  *
  * private:
  *      uh::options::logging_options m_logging;
@@ -73,7 +74,7 @@ class application_config_base : public loader
 public:
     application_config_base();
 
-    virtual action evaluate(int argc, const char** argv) override;
+    action evaluate(int argc, const char** argv);
 
     void print_help();
     virtual void print_version() = 0;
@@ -81,6 +82,9 @@ public:
 
 private:
     basic_options m_basic;
+    config_file m_config;
+
+    void handle_config();
 };
 
 // ---------------------------------------------------------------------
