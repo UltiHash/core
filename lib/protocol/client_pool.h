@@ -21,6 +21,13 @@ public:
     class handle
     {
     public:
+        handle(handle&& other)
+            : m_pool(other.m_pool),
+              m_client(std::move(other.m_client))
+        {
+            other.owning = false;
+        }
+
         ~handle();
         client* operator->();
 
@@ -28,9 +35,9 @@ public:
         friend client_pool;
         handle(client_pool& pool, std::unique_ptr<client>&& c);
 
+        bool owning = true;
         client_pool& m_pool;
         std::unique_ptr<client> m_client;
-
     };
 
     client_pool(std::unique_ptr<util::factory<client>>&& factory,

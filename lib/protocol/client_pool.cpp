@@ -8,7 +8,10 @@ namespace uh::protocol
 
 client_pool::handle::~handle()
 {
-    m_pool.put_back(std::move(m_client));
+    if (owning)
+    {
+        m_pool.put_back(std::move(m_client));
+    }
 }
 
 // ---------------------------------------------------------------------
