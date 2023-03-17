@@ -15,10 +15,16 @@
 namespace uh::dbn::storage
 {
 
-enum class BackendTypeEnum {DumpStorage, OtherStorage};
+enum class BackendTypeEnum
+{
+    DumpStorage,
+    TuesdayDedup,
+    OtherStorage
+};
 
 static std::unordered_map<std::string, BackendTypeEnum> string2backendtype = {
   {"DumpStorage", BackendTypeEnum::DumpStorage},
+  {"TuesdayDedup", BackendTypeEnum::TuesdayDedup},
   {"OtherStorage", BackendTypeEnum::OtherStorage}
 };
 

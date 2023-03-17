@@ -6,6 +6,7 @@
 #include <logging/logging_boost.h>
 #include <util/exception.h>
 #include <storage/backends/dump_storage.h>
+#include <storage/backends/tuesday/tuesday_dedup.h>
 
 
 namespace uh::dbn::storage
@@ -71,6 +72,8 @@ std::unique_ptr<backend> make_backend(const storage_config& cfg, metrics::storag
     {
         case BackendTypeEnum::DumpStorage:
             return std::make_unique<storage::dump_storage>(cfg.db_root, size_needed, storage_metrics);
+        case BackendTypeEnum::TuesdayDedup:
+            return std::make_unique<storage::tuesday_dedup>(storage_metrics, size_needed);
         case BackendTypeEnum::OtherStorage:
             THROW(util::exception, "Not implemented yet");
     }
