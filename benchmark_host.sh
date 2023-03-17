@@ -14,7 +14,11 @@ teardown()
 {
   local services=$(docker service ls | grep nightlyBench_ | awk '{print $2}')
   if [[ -n ${services} ]]; then
+<<<<<<< HEAD
     docker service rm ${services} >/dev/null 2>&1 
+=======
+    docker service rm ${services} >/dev/null 2>&1
+>>>>>>> 7aa1f1d (merge/rebase with master)
     if [[ -n "$1" ]]; then
       echo "Found left-over benchmark services that may interfere, cleaning up..."
       sleep 15
@@ -56,6 +60,7 @@ get_agency_fresh_upload()
   local log_paths=${log_path_base}*
   RESULT=$(jq -s "map(.agency_fresh_upload.${corpus}[0]) | add / length" ${log_paths})
   EXIT_STATUS=$?
+<<<<<<< HEAD
   
   if [ $EXIT_STATUS -eq 0 ]; then
     printf "${RESULT}"
@@ -89,6 +94,41 @@ get_agency_update_upload()
     return 1
   fi
 
+=======
+
+  if [ $EXIT_STATUS -eq 0 ]; then
+    printf "${RESULT}"
+    return 0
+  else
+    printf ""
+    return 1
+  fi
+
+}
+
+#
+# Returns the average throughput of the agency_fresh_upload metric from the log files
+#
+# Usage:
+#   get_agency_update_upload <corpus> <log_path_base>
+#
+get_agency_update_upload()
+{
+  local corpus="$1"; shift;
+  local log_path_base="$1"; shift;
+  local log_paths=${log_path_base}*
+  RESULT=$(jq -s "map(.agency_update_upload.${corpus}[0]) | add / length" ${log_paths})
+  EXIT_STATUS=$?
+
+  if [ $EXIT_STATUS -eq 0 ]; then
+    printf "${RESULT}"
+    return 0
+  else
+    printf ""
+    return 1
+  fi
+
+>>>>>>> 7aa1f1d (merge/rebase with master)
 }
 
 #
@@ -131,7 +171,11 @@ report_results_to_slack()
   local upload_update_exit=$?
   local download_agency=$(get_agency_download "${corpus}" "${log_path_base}")
   local download_agency_exit=$?
+<<<<<<< HEAD
   
+=======
+
+>>>>>>> 7aa1f1d (merge/rebase with master)
   if [ $upload_fresh_exit -eq 0 ] && [ $upload_update_exit -eq 0 ] && [ $download_agency_exit -eq 0 ]
   then
         printf %b "text=Tonight's benchmark results for the \"${corpus}\" corpus:\n\t-upload throughput (fresh upload via agency-node): ${upload_fresh} MByte/s.\n\t-upload throughput (updating upload via agency-node): ${upload_update} MByte/s.\n\t-download throughput (via agency-node): ${download_agency} MByte\s.\n" > message.txt
@@ -140,7 +184,11 @@ report_results_to_slack()
 	echo "Successfully posted benchmark results for the current corpus to Slack."
   else
         curl -d "text=Tonight's benchmarks did not run properly or there was an error parsing their output." -d "channel=${SLACK_CHANNEL}" -H "Authorization: Bearer xoxb-2702783761651-4959893662113-aASbDCYEfMpCRgrnwvC4ZUUn" -X POST https://slack.com/api/chat.postMessage >/dev/null 2>&1
+<<<<<<< HEAD
 	echo "Notified Slack channel that the benchmark run using the current corpus didn't appear to deliver valid results." 
+=======
+	echo "Notified Slack channel that the benchmark run using the current corpus didn't appear to deliver valid results."
+>>>>>>> 7aa1f1d (merge/rebase with master)
   fi
 
 }
@@ -164,4 +212,8 @@ for CORPUS_PATH in "${CORPORA_BASE_DIR}"/*_nightly/; do
   done
 
   report_results_to_slack "${CORPUS}" "${LOG_PATH_BASE}"
+<<<<<<< HEAD
 done
+=======
+done
+>>>>>>> 7aa1f1d (merge/rebase with master)

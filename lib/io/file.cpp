@@ -13,6 +13,14 @@ file::file(const std::filesystem::path& path)
 
 // ---------------------------------------------------------------------
 
+file::file(const std::filesystem::path &path, std::ios_base::openmode mode)
+    : m_io(path, mode)
+{
+}
+
+
+// ---------------------------------------------------------------------
+
 std::streamsize file::write(std::span<const char> buffer)
 {
     m_io.write(buffer.data(), buffer.size());

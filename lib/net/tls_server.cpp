@@ -23,7 +23,7 @@ struct tls_server::connection_state
 // ---------------------------------------------------------------------
 
 tls_server::tls_server(const server_config& config,
-                       util::factory<uh::protocol::protocol>& protocol_factory)
+                       uh::protocol::protocol_factory& protocol_factory)
     : m_context(),
       m_acceptor(m_context, ip::tcp::endpoint(ip::tcp::v4(), config.port)),
       m_protocol_factory(protocol_factory),
@@ -49,7 +49,7 @@ void tls_server::spawn_client(std::shared_ptr<socket> sock)
 {
     m_scheduler.spawn([this, sock] ()
     {
-        m_protocol_factory.create()->handle(sock);
+        m_protocol_factory.create(sock)->handle();
     });
 }
 

@@ -37,7 +37,7 @@ class plain_server : public server
 {
 public:
     plain_server(const server_config& config,
-                 util::factory<uh::protocol::protocol>& protocol_factory);
+                 uh::protocol::protocol_factory& protocol_factory);
 
     void run() override;
 
@@ -47,7 +47,7 @@ private:
     boost::asio::io_context m_context;
     boost::asio::ip::tcp::acceptor m_acceptor;
 
-    util::factory<uh::protocol::protocol>& m_protocol_factory;
+    uh::protocol::protocol_factory & m_protocol_factory;
     scheduler m_scheduler;
 
     std::atomic<bool> m_running;

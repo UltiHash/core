@@ -15,7 +15,8 @@ namespace uh::io
 class file : public device
 {
 public:
-    file(const std::filesystem::path& path);
+    explicit file(const std::filesystem::path& path);
+    file(const std::filesystem::path& path, std::ios_base::openmode mode);
 
     virtual std::streamsize write(std::span<const char> buffer) override;
     virtual std::streamsize read(std::span<char> buffer) override;
