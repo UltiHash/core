@@ -1,5 +1,6 @@
 #include "client_options.h"
 #include <logging/logging_boost.h>
+#include <unordered_set>
 
 using namespace boost::program_options;
 
@@ -90,15 +91,6 @@ void client_options::handle(const boost::program_options::variables_map& vars)
     std::string errorPath;
 
     //------------------------------------------------ LAMDA FUNCTIONS
-    // lamda function for checking if path exists
-    auto is_Existing = [](std::vector<std::filesystem::path>& input)
-    {
-        for (const auto& Path : input)
-        {
-            if (std::filesystem::exists(Path))
-                throw std::runtime_error("'"+Path.string() + "' already exists.");
-        }
-    };
 
     //lamda function for checking UltiHash Volume
     auto is_UHV = [](const std::vector<std::filesystem::path>& input, const std::string& chosenOpt)
@@ -120,7 +112,34 @@ void client_options::handle(const boost::program_options::variables_map& vars)
     {
         destPaths.push_back(weakly_canonical(std::filesystem::path(m_posPaths.front())));
         is_UHV(destPaths, "destination on --integrate[-i] has wrong extensions. Please ensure that the destination ends with '.uh'.");
-        is_Existing(destPaths);
+
+        if (exists(destPaths.front()))
+        {
+            std::string user_response;
+            std::unordered_set<std::string> validResponses = {"y", "n", "yes", "no"};
+
+            std::cout << "The file already exists. Do you want to overwite it? (y/n) ";
+            std::cin >> user_response;
+
+            std::ranges::transform(user_response, user_response.begin(), [](char c){ return std::tolower(c); });
+
+            if (validResponses.count(user_response) > 0)
+            {
+                if (user_response == "y" || user_response == "yes")
+                {
+                    m_config.m_overwrite = true;
+                }
+                else
+                {
+                    throw std::logic_error("Please provide a new UltiHash Volume file.");
+                }
+            }
+            else
+            {
+                throw std::runtime_error("Invalid response. Please enter 'y' or 'n'.");
+            }
+        }
+
         if (m_posPaths.size()==1)
             throw std::runtime_error("--integrate[-i] requires a source and a target. Please refer to --help more for information.");
         if (m_exclude)

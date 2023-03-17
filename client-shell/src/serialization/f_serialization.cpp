@@ -94,8 +94,8 @@ namespace uh::client::serialization
 // ---------------------------------------------------------------------
 
 f_serialization::f_serialization(std::filesystem::path UHV_path,
-                                 common::job_queue<std::unique_ptr<common::f_meta_data>>& jq) :
-                                 m_UHV_path(std::move(UHV_path)), m_job_queue(jq)
+                                 common::job_queue<std::unique_ptr<common::f_meta_data>>& jq, bool overwrite) :
+                                 m_UHV_path(std::move(UHV_path)), m_job_queue(jq), m_overwrite(overwrite)
 {
 
 }
@@ -107,8 +107,17 @@ uint64_t f_serialization::serialize(const std::vector<std::filesystem::path>& ro
 
     std::uint64_t raw_size = 0;
     std::uint64_t effective_size = 0;
-    std::ofstream UHV_file(m_UHV_path, std::ios::app | std::ios::binary);
 
+    if (m_overwrite)
+    {
+        std::ofstream UHV_file(m_UHV_path, std::ios::trunc | std::ios::binary);
+        if (!UHV_file.is_open())
+        {
+            throw std::runtime_error("Failed to open file " + m_UHV_path.string() + " when serializing.\n");
+        }
+    }
+
+    std::ofstream UHV_file(m_UHV_path, std::ios::app | std::ios::binary);
     if (!UHV_file.is_open())
     {
         throw std::runtime_error("Failed to open file " + m_UHV_path.string() + " when serializing.\n");
@@ -122,7 +131,6 @@ uint64_t f_serialization::serialize(const std::vector<std::filesystem::path>& ro
         if (item == std::nullopt)
             break;
 
-        // !!! Problem when multiple input paths are given
         std::filesystem::path relative_path;
         if (root_paths[0] != item.value()->f_path()) [[likely]]
         {
