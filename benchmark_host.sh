@@ -3,6 +3,7 @@
 CORPORA_BASE_DIR="/data/corpora"
 NUM_LOOPS=5
 SLACK_CHANNEL="#1_tech-dev"
+#SLACK_CHANNEL="#harry_debug"
 
 #
 # Tears down all remaining nightlyBench services
@@ -119,9 +120,9 @@ get_agency_download()
 # Posts benchmark results to Slack channel
 #
 # Usage:
-#   report_results_to_slack <corpus> <log_path_base>
+#   post_results_to_slack <corpus> <log_path_base>
 #
-report_results_to_slack()
+post_results_to_slack()
 {
   local corpus="$1"; shift;
   local log_path_base="$1"; shift;
@@ -145,6 +146,44 @@ report_results_to_slack()
 
 }
 
+#
+# Posts benchmark results to Prometheus pushgateway
+#
+# Usage:
+#   post_results_to_prometheus <corpus> <log_path_base>
+#
+post_results_to_prometheus()
+{
+  local corpus="$1"; shift;
+  local log_path_base="$1"; shift;
+  local upload_fresh=$(get_agency_fresh_upload "${corpus}" "${log_path_base}")
+  local upload_fresh_exit=$?
+  local upload_update=$(get_agency_update_upload "${corpus}" "${log_path_base}")
+  local upload_update_exit=$?
+  local download_agency=$(get_agency_download "${corpus}" "${log_path_base}")
+  local download_agency_exit=$?
+  local temp_dir=$(mktemp -d)
+  
+  if [ $upload_fresh_exit -eq 0 ]; then
+    printf %b "# TYPE uh_nightly_throughput gauge\n# HELP uh_nightly_throughput  Average throughput obtained during nightly benchmarks.\nuh_nightly_throughput ${upload_fresh}\n" > ${temp_dir}/agency_fresh_upload.txt
+    curl --data-binary @${temp_dir}/agency_fresh_upload.txt http://localhost:9091/metrics/job/agency_fresh_upload/instance/${corpus}
+  fi
+ 
+  if [ $upload_update_exit -eq 0 ]; then
+    printf %b "# TYPE uh_nightly_throughput gauge\n# HELP uh_nightly_throughput  Average throughput obtained during nightly benchmarks.\nuh_nightly_throughput ${upload_update}\n" > ${temp_dir}/agency_update_upload.txt
+    curl --data-binary @${temp_dir}/agency_update_upload.txt http://localhost:9091/metrics/job/agency_update_upload/instance/${corpus}
+  fi
+
+  if [ $download_agency_exit -eq 0 ]; then
+    printf %b "# TYPE uh_nightly_throughput gauge\n# HELP uh_nightly_throughput  Average throughput obtained during nightly benchmarks.\nuh_nightly_throughput ${download_agency}\n" > ${temp_dir}/agency_download.txt
+    curl --data-binary @${temp_dir}/agency_download.txt http://localhost:9091/metrics/job/agency_download/instance/${corpus}
+  fi
+ 
+  rm -Rf ${temp_dir}
+
+  echo "Successfully posted benchmark results for the current corpus to Prometheus."
+}
+
 teardown "init"
 
 for CORPUS_PATH in "${CORPORA_BASE_DIR}"/*_nightly/; do
@@ -155,7 +194,7 @@ for CORPUS_PATH in "${CORPORA_BASE_DIR}"/*_nightly/; do
     echo "Setting up benchmark for corpus '${CORPUS}, iteration #${i}/${NUM_LOOPS}..."
     setup "${CORPUS}"
 
-    ./wait_for_benchmark.py
+    /home/max/core/wait_for_benchmark.py
     docker service logs nightlyBench_client --raw > ${LOG_PATH_BASE}${i}.log
 
     echo "Benchmark run for corpus '${CORPUS}, iteration #${i}/${NUM_LOOPS} completed, cleaning up setup..."
@@ -163,5 +202,6 @@ for CORPUS_PATH in "${CORPORA_BASE_DIR}"/*_nightly/; do
     sleep 15
   done
 
-  report_results_to_slack "${CORPUS}" "${LOG_PATH_BASE}"
+  post_results_to_slack "${CORPUS}" "${LOG_PATH_BASE}"
+  post_results_to_prometheus "${CORPUS}" "${LOG_PATH_BASE}"
 done
