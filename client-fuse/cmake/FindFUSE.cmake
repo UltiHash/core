@@ -46,9 +46,18 @@ PATHS
 ENV FUSE_ROOTDIR
 PATH_SUFFIXES "include")
 
+find_path(FUSE_OPT_INCLUDE_DIR
+NAMES
+"fuse_opt.h"
+"fuse/fuse_opt.h"
+PATHS
+"/usr/local"
+"/usr"
+ENV FUSE_ROOTDIR
+PATH_SUFFIXES "include")
 # header is found
 
-if (FUSE_INCLUDE_DIR)
+if (FUSE_INCLUDE_DIR AND FUSE_OPT_INCLUDE_DIR)
 set(FUSE_INCLUDE_DIR "${FUSE_INCLUDE_DIR}/fuse")
 
 # retrieve version information from the header
@@ -69,7 +78,7 @@ ENV FUSE_ROOTDIR
 PATH_SUFFIXES "lib")
 
 
-endif (FUSE_INCLUDE_DIR)
+endif (FUSE_INCLUDE_DIR AND FUSE_OPT_INCLUDE_DIR)
 
 # header is not found
 

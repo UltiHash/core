@@ -38,7 +38,7 @@ static const struct fuse_opt option_spec [] =
 
 int uh_getattr (const char *, struct stat *)
 {
-        return 0;
+    return 0;
 }
 
 void *uh_init (struct fuse_conn_info *conn)
