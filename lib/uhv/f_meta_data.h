@@ -1,14 +1,13 @@
-#ifndef SERIALIZATION_FILE_META_DATA_H
-#define SERIALIZATION_FILE_META_DATA_H
+#ifndef UHV_FILE_META_DATA_H
+#define UHV_FILE_META_DATA_H
 
-#include <iostream>
 #include <vector>
 #include <algorithm>
 #include <boost/filesystem.hpp>
 #include <logging/logging_boost.h>
 
 
-namespace uh::client::common
+namespace uh::uhv
 {
 
 // ---------------------------------------------------------------------
@@ -88,6 +87,6 @@ private:
 
 // ---------------------------------------------------------------------
 
-} // namespace uh::client::common
+} // namespace uh::uhv
 
 #endif
