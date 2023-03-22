@@ -16,14 +16,19 @@
 #include <fcntl.h>
 #include <stddef.h>
 #include <assert.h>
+#include <logging/logging_boost.h>
 
+#define OPTION(t, p)                           \
+    { t, offsetof(struct options, p), 1 }
+
+// ---------------------------------------------------------------------
 
 static struct options
 {
     const char *UHVpath;
     const char *agency_connection;
     const char *mountpoint;
-    int show_help;
+    bool show_help;
 } options;
 
 #define OPTION(t, p)                           \
@@ -36,8 +41,8 @@ static const struct fuse_opt option_spec[] =
         OPTION("-a=%s", agency_connection),
         OPTION("--mount=%s", mountpoint),
         OPTION("-m=%s", mountpoint),
-        OPTION("-h", show_help),
         OPTION("--help", show_help),
+        OPTION("-h", show_help),
         FUSE_OPT_END
     };
 
@@ -80,28 +85,27 @@ static void show_help(const char *progname)
 {
     printf("usage: %s [options] <mountpoint>\n\n", progname);
     printf("File-system specific options:\n"
-           "    --name=<s>          Name of the \"hello\" file\n"
-           "                        (default: \"hello\")\n"
-           "    --contents=<s>      Contents \"hello\" file\n"
-           "                        (default \"Hello, World!\\n\")\n"
+           "    -p or --path=<s>          Path of the \"UltiHash\" Volume\n"
+           "    -a or --agency=<s>        Contents \"hello\" file\n"
+           "    -m or --mount=<s>         Name of the \"hello\" file\n"
            "\n");
 }
 
 int main(int argc, char *argv[])
 {
+
     try
     {
-        int ret;
-
         struct fuse_args args = FUSE_ARGS_INIT(argc, argv);
 
-        options.UHVpath= strdup("/home/");
+        options.UHVpath = strdup("/home/ankit/Downloads/");
         options.agency_connection = strdup("localhost:8083");
+        options.mountpoint = strdup("/home/ankit/Downloads/");
+        options.show_help = true;
 
         /* Parse options */
-        if (fuse_opt_parse(&args, &options, option_spec, NULL) == -1)
-            return 1;
-
+        if (fuse_opt_parse(&args, &options, option_spec, NULL) == -1);
+            throw std::runtime_error("error: parsing failed");
         if (options.show_help)
         {
             show_help(argv[0]);
@@ -109,12 +113,23 @@ int main(int argc, char *argv[])
             args.argv[0][0] = '\0';
         }
 
-        ret = fuse_main(args.argc, args.argv, &uh_operations, NULL);
+        if (fuse_main(args.argc, args.argv, &uh_operations, NULL) == -1)
+            throw std::runtime_error("error: failed to start fuse service");
+
         fuse_opt_free_args(&args);
         return ret;
     }
     catch (const std::exception& exc)
     {
-        return 0;
+        FATAL << exc.what();
+        return EXIT_FAILURE;
     }
+    catch (...)
+    {
+        FATAL << "unknown exception occurred";
+        return EXIT_FAILURE;
+    }
+    return EXIT_SUCCESS;
 }
+
+// ---------------------------------------------------------------------

@@ -14,9 +14,6 @@ APPLICATION_CONFIG(
     (client, uh::client::option::client_options),
     (agency, uh::client::option::agency_connection));
 
-
-
-
 int main(int argc, const char *argv[])
 {
     try
