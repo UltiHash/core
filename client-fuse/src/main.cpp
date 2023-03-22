@@ -10,18 +10,9 @@
 
 #include <iostream>
 #include <fuse.h>
-#include <stdio.h>
-#include <string.h>
-#include <errno.h>
-#include <fcntl.h>
-#include <stddef.h>
-#include <assert.h>
+#include <cstring>
+#include <cassert>
 #include <logging/logging_boost.h>
-
-#define OPTION(t, p)                           \
-    { t, offsetof(struct options, p), 1 }
-
-// ---------------------------------------------------------------------
 
 static struct options
 {
@@ -43,6 +34,7 @@ static const struct fuse_opt option_spec[] =
         OPTION("-m=%s", mountpoint),
         OPTION("--help", show_help),
         OPTION("-h", show_help),
+        OPTION("--help", show_help),
         FUSE_OPT_END
     };
 
