@@ -4,7 +4,7 @@
 #include <filesystem>
 #include <fstream>
 #include <logging/logging_boost.h>
-#include "../common/f_meta_data.h"
+#include <uhv/f_meta_data.h>
 #include "../common/job_queue.h"
 #include "EnDecoder.h"
 
@@ -17,7 +17,7 @@ class f_serialization
 {
 public:
 
-    f_serialization(std::filesystem::path, common::job_queue<std::unique_ptr<common::f_meta_data>>&);
+    f_serialization(std::filesystem::path, common::job_queue<std::unique_ptr<uhv::f_meta_data>>&);
     ~f_serialization() = default;
 
     uint64_t serialize(const std::vector<std::filesystem::path>&);
@@ -25,7 +25,7 @@ public:
 
 private:
     std::filesystem::path m_UHV_path;
-    common::job_queue<std::unique_ptr<common::f_meta_data>>& m_job_queue;
+    common::job_queue<std::unique_ptr<uhv::f_meta_data>>& m_job_queue;
 };
 
 // ---------------------------------------------------------------------

@@ -7,8 +7,8 @@ namespace uh::client::serialization
 // ---------------------------------------------------------------------
 
 f_upload::f_upload(std::unique_ptr<protocol::client_pool>& cl_pool,
-                   common::job_queue<std::unique_ptr<common::f_meta_data>>& in_jq,
-                   common::job_queue<std::unique_ptr<common::f_meta_data>>& out_jq,
+                   common::job_queue<std::unique_ptr<uhv::f_meta_data>>& in_jq,
+                   common::job_queue<std::unique_ptr<uhv::f_meta_data>>& out_jq,
                    unsigned int num_threads) :
                    m_client_pool(cl_pool),
                    m_input_jq(in_jq),
@@ -32,11 +32,11 @@ f_upload::~f_upload()
 
 // ---------------------------------------------------------------------
 
-void f_upload::upload_files(std::unique_ptr<common::f_meta_data>& f_meta_data,
+void f_upload::upload_files(std::unique_ptr<uhv::f_meta_data>& f_meta_data,
                             protocol::client_pool::handle& client_handle)
 {
 
-    if ( f_meta_data->f_type() == common::uh_file_type::regular )
+    if ( f_meta_data->f_type() == uhv::uh_file_type::regular )
     {
         std::ifstream input_file(f_meta_data->f_path(),
                                  std::ios::in | std::ios::binary);

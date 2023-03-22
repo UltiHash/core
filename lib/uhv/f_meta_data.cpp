@@ -1,6 +1,6 @@
 #include "f_meta_data.h"
 
-namespace uh::client::common
+namespace uh::uhv
 {
 
 // ---------------------------------------------------------------------
@@ -112,4 +112,4 @@ void f_meta_data::set_f_size(const std::optional<std::uint64_t>& f_size)
 
 // ---------------------------------------------------------------------
 
-} // namespace uh::client::common
+} // namespace uh::uhv
