@@ -28,7 +28,8 @@ static struct options
 
 #define OPTION(t, p)                           \
     { t, offsetof(struct options, p), 1 }
-static const struct fuse_opt option_spec[] = {
+static const struct fuse_opt option_spec[] =
+    {
         OPTION("--path=%s", UHVpath),
         OPTION("-p=%s", UHVpath),
         OPTION("--agency=%s", agency_connection),
@@ -38,7 +39,7 @@ static const struct fuse_opt option_spec[] = {
         OPTION("-h", show_help),
         OPTION("--help", show_help),
         FUSE_OPT_END
-};
+    };
 
 static void *hello_init(struct fuse_conn_info *conn,
                         struct fuse_config *cfg)
@@ -55,10 +56,12 @@ static int hello_getattr(const char *path, struct stat *stbuf,
     int res = 0;
 
     memset(stbuf, 0, sizeof(struct stat));
-    if (strcmp(path, "/") == 0) {
+    if (strcmp(path, "/") == 0)
+    {
         stbuf->st_mode = S_IFDIR | 0755;
         stbuf->st_nlink = 2;
-    } else if (strcmp(path+1, options.filename) == 0) {
+    } else if (strcmp(path+1, options.filename) == 0)
+    {
         stbuf->st_mode = S_IFREG | 0444;
         stbuf->st_nlink = 1;
         stbuf->st_size = strlen(options.contents);
@@ -116,13 +119,14 @@ static int hello_read(const char *path, char *buf, size_t size, off_t offset,
     return size;
 }
 
-static const struct fuse_operations hello_oper = {
-        .init           = hello_init,
-        .getattr        = hello_getattr,
-        .readdir        = hello_readdir,
-        .open           = hello_open,
-        .read           = hello_read,
-};
+static const struct fuse_operations hello_oper =
+    {
+    .init           = hello_init,
+    .getattr        = hello_getattr,
+    .readdir        = hello_readdir,
+    .open           = hello_open,
+    .read           = hello_read,
+    };
 
 static void show_help(const char *progname)
 {
@@ -148,7 +152,8 @@ int main(int argc, char *argv[])
         if (fuse_opt_parse(&args, &options, option_spec, NULL) == -1)
             return 1;
 
-        if (options.show_help) {
+        if (options.show_help)
+        {
             show_help(argv[0]);
             assert(fuse_opt_add_arg(&args, "--help") == 0);
             args.argv[0][0] = '\0';
