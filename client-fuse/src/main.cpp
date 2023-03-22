@@ -26,6 +26,8 @@ static struct options
     bool show_help;
 } options;
 
+#define OPTION(t, p)                           \
+    { t, offsetof(struct options, p), 1 }
 static const struct fuse_opt option_spec[] =
     {
         OPTION("--path=%s", UHVpath),
@@ -59,8 +61,7 @@ int uh_open (const char *, struct fuse_file_info *)
     return 0;
 }
 
-int uh_read (const char *, char *, size_t, off_t,
-		     struct fuse_file_info *)
+int uh_read (const char *, char *, size_t, off_t, struct fuse_file_info *)
 {
     return 0;
 }
