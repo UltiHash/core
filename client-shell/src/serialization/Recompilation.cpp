@@ -34,8 +34,8 @@ void Recompilation::integrate()
 {
     auto time_start = std::chrono::system_clock::now();
 
-    common::job_queue<std::unique_ptr<common::f_meta_data>> q_f_meta_data;
-    common::job_queue<std::unique_ptr<common::f_meta_data>> q_f_mdata_w_hash;
+    uhv::job_queue<std::unique_ptr<uhv::f_meta_data>> q_f_meta_data;
+    uhv::job_queue<std::unique_ptr<uhv::f_meta_data>> q_f_mdata_w_hash;
 
     {
         f_upload upload_class(m_client_pool, q_f_meta_data,
@@ -67,7 +67,7 @@ void Recompilation::retrieve()
     auto time_start = std::chrono::system_clock::now();
 
     std::filesystem::create_directories(m_config.m_outputPath);
-    common::job_queue<std::unique_ptr<common::f_meta_data>> q_f_meta_data;
+    uhv::job_queue<std::unique_ptr<uhv::f_meta_data>> q_f_meta_data;
 
     {
         f_download download_class(m_client_pool, q_f_meta_data, m_config.m_outputPath,

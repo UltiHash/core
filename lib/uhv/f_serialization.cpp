@@ -5,7 +5,7 @@ namespace {
 
 // ---------------------------------------------------------------------
 
-std::vector<std::uint8_t> serialize_f_meta_data(const std::unique_ptr<uh::client::common::f_meta_data>& ptr_f_meta_data,
+std::vector<std::uint8_t> serialize_f_meta_data(const std::unique_ptr<uh::uhv::f_meta_data>& ptr_f_meta_data,
                                     const std::filesystem::path& relative_path)
 {
 
@@ -25,7 +25,7 @@ std::vector<std::uint8_t> serialize_f_meta_data(const std::unique_ptr<uh::client
     bytes.insert(bytes.end(), ptr_perm_byte, ptr_perm_byte+sizeof(ptr_f_meta_data->f_permissions()));
 
 
-    if (ptr_f_meta_data->f_type() == uh::client::common::uh_file_type::regular)
+    if (ptr_f_meta_data->f_type() == uh::uhv::uh_file_type::regular)
     {
 
         auto ptr_size_byte = reinterpret_cast<const std::uint8_t*>(&(ptr_f_meta_data->f_size()));
@@ -43,12 +43,12 @@ std::vector<std::uint8_t> serialize_f_meta_data(const std::unique_ptr<uh::client
 
 // ---------------------------------------------------------------------
 
-std::unique_ptr<uh::client::common::f_meta_data> deserialize_f_meta_data(std::vector<std::uint8_t>& uhv_container,
+std::unique_ptr<uh::uhv::f_meta_data> deserialize_f_meta_data(std::vector<std::uint8_t>& uhv_container,
                                                                          std::vector<std::uint8_t>::iterator& it,
                                                                          const std::filesystem::path& dest_path)
 {
 
-    std::unique_ptr<uh::client::common::f_meta_data> p_f_meta_data = std::make_unique<uh::client::common::f_meta_data>();
+    std::unique_ptr<uh::uhv::f_meta_data> p_f_meta_data = std::make_unique<uh::uhv::f_meta_data>();
     uh::client::serialization::EnDecoder coder{};
 
     auto f_path_tuple = coder.decoder<std::string>(uhv_container, it);
@@ -66,7 +66,7 @@ std::unique_ptr<uh::client::common::f_meta_data> deserialize_f_meta_data(std::ve
     std::advance(it, 4);
 
 
-    if (p_f_meta_data->f_type() == uh::client::common::uh_file_type::regular)
+    if (p_f_meta_data->f_type() == uh::uhv::uh_file_type::regular)
     {
 
         std::uint64_t decoded_f_size;
@@ -94,7 +94,7 @@ namespace uh::client::serialization
 // ---------------------------------------------------------------------
 
 f_serialization::f_serialization(std::filesystem::path UHV_path,
-                                 common::job_queue<std::unique_ptr<common::f_meta_data>>& jq) :
+                                 uhv::job_queue<std::unique_ptr<uh::uhv::f_meta_data>>& jq) :
                                  m_UHV_path(std::move(UHV_path)), m_job_queue(jq)
 {
 
@@ -133,7 +133,7 @@ uint64_t f_serialization::serialize(const std::vector<std::filesystem::path>& ro
             relative_path = root_paths[0].filename();
         }
 
-        if (item.value()->f_type() == uh::client::common::uh_file_type::regular)
+        if (item.value()->f_type() == uhv::uh_file_type::regular)
         {
             raw_size += item.value()->f_size();
             effective_size += item.value()->f_effective_size();
@@ -180,7 +180,7 @@ uint64_t f_serialization::deserialize(const std::filesystem::path& dest_path)
         auto p_f_meta_data = deserialize_f_meta_data(UHV_container, step, dest_path);
 
         // creating paths serially to avoid race condition - !!!
-        if (p_f_meta_data->f_type() == uh::client::common::uh_file_type::regular) {
+        if (p_f_meta_data->f_type() == uhv::uh_file_type::regular) {
             std::ofstream(p_f_meta_data->f_path()).close();
             raw_size += p_f_meta_data->f_size();
         } else {
