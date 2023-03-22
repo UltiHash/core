@@ -38,7 +38,8 @@ set(FUSE_FOUND TRUE)
 
 find_path(FUSE_INCLUDE_DIR
 NAMES
-"linux/fuse.h"
+"fuse.h"
+"fuse/fuse.h"
 PATHS
 "/usr/local"
 "/usr"
@@ -48,20 +49,20 @@ PATH_SUFFIXES "include")
 # header is found
 
 if (FUSE_INCLUDE_DIR)
-set(FUSE_INCLUDE_DIR "${FUSE_INCLUDE_DIR}/linux")
+set(FUSE_INCLUDE_DIR "${FUSE_INCLUDE_DIR}/fuse")
 
 # retrieve version information from the header
 
-#file(READ "${FUSE_INCLUDE_DIR}/fuse_common.h" FUSE_COMMON_H_FILE)
+file(READ "${FUSE_INCLUDE_DIR}/fuse_common.h" FUSE_COMMON_H_FILE)
 
-#string(REGEX REPLACE ".*#define[ \t]+FUSE_MAJOR_VERSION[ \t]+([0-9]+).*" "\\1" FUSE_VERSION_MAJOR "${FUSE_COMMON_H_FILE}")
-#string(REGEX REPLACE ".*#define[ \t]+FUSE_MINOR_VERSION[ \t]+([0-9]+).*" "\\1" FUSE_VERSION_MINOR "${FUSE_COMMON_H_FILE}")
+string(REGEX REPLACE ".*#define[ \t]+FUSE_MAJOR_VERSION[ \t]+([0-9]+).*" "\\1" FUSE_VERSION_MAJOR "${FUSE_COMMON_H_FILE}")
+string(REGEX REPLACE ".*#define[ \t]+FUSE_MINOR_VERSION[ \t]+([0-9]+).*" "\\1" FUSE_VERSION_MINOR "${FUSE_COMMON_H_FILE}")
 
 # search for library
 
 find_library(FUSE_LIBRARIES
 NAMES
-"x86_64-linux-gnu/libfuse.so.2"
+"x86_64-linux-gnu/libfuse.so"
 PATHS "/usr/local"
 "/usr"
 ENV FUSE_ROOTDIR
