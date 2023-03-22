@@ -10,7 +10,7 @@ message(${CMAKE_MODULE_PATH})
 
 find_package(FUSE REQUIRED)
 
-add_definitions (-D_FILE_OFFSET_BITS=64)
+add_definitions(-D_FILE_OFFSET_BITS=64)
 
 # generate config header file
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.hpp.in ${CMAKE_CURRENT_BINARY_DIR}/config.hpp)
