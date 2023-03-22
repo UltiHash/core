@@ -23,7 +23,7 @@ static struct options
 
 #define OPTION(t, p)                           \
     { t, offsetof(struct options, p), 1 }
-static const struct fuse_opt option_spec[] =
+static const struct fuse_opt option_spec [] =
     {
         OPTION("--path=%s", UHVpath),
         OPTION("-p=%s", UHVpath),
@@ -38,7 +38,7 @@ static const struct fuse_opt option_spec[] =
 
 int uh_getattr (const char *, struct stat *)
 {
-    return 0;
+        return 0;
 }
 
 void *uh_init (struct fuse_conn_info *conn)
@@ -56,8 +56,7 @@ int uh_open (const char *, struct fuse_file_info *)
     return 0;
 }
 
-int uh_read (const char *, char *, size_t, off_t,
-		     struct fuse_file_info *)
+int uh_read (const char *, char *, size_t, off_t, struct fuse_file_info *)
 {
     return 0;
 }
@@ -89,9 +88,6 @@ int main(int argc, char *argv[])
         int ret;
 
         struct fuse_args args = FUSE_ARGS_INIT(argc, argv);
-
-        options.UHVpath= strdup("/home/");
-        options.agency_connection = strdup("localhost:8083");
 
         /* Parse options */
         if (fuse_opt_parse(&args, &options, option_spec, NULL) == -1)
