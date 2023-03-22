@@ -1,11 +1,10 @@
 #ifndef SERIALIZATION_F_UPLOAD_H
 #define SERIALIZATION_F_UPLOAD_H
 
-#include <fstream>
-#include <latch>
+#include <uhv/job_queue.h>
 #include <protocol/client_pool.h>
 #include "../common/thread_manager.h"
-#include "../common/job_queue.h"
+#include <fstream>
 
 
 namespace uh::client::serialization
@@ -18,8 +17,8 @@ class f_upload : public common::thread_manager
 public:
 
     f_upload(std::unique_ptr<protocol::client_pool>&,
-            common::job_queue<std::unique_ptr<uhv::f_meta_data>>&,
-            common::job_queue<std::unique_ptr<uhv::f_meta_data>>&,
+            uhv::job_queue<std::unique_ptr<uhv::f_meta_data>>&,
+            uhv::job_queue<std::unique_ptr<uhv::f_meta_data>>&,
             unsigned int=1);
     ~f_upload() override;
 
@@ -27,8 +26,8 @@ public:
     void upload_files(std::unique_ptr<uhv::f_meta_data>&, protocol::client_pool::handle&);
 
 private:
-    common::job_queue<std::unique_ptr<uhv::f_meta_data>>& m_input_jq;
-    common::job_queue<std::unique_ptr<uhv::f_meta_data>>& m_output_jq;
+    uhv::job_queue<std::unique_ptr<uhv::f_meta_data>>& m_input_jq;
+    uhv::job_queue<std::unique_ptr<uhv::f_meta_data>>& m_output_jq;
     std::unique_ptr<uh::protocol::client_pool>& m_client_pool;
 };
 

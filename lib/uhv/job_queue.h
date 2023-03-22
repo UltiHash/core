@@ -2,6 +2,7 @@
 #define COMMON_JOB_QUEUE_H
 
 #include <uhv/f_meta_data.h>
+
 #include <condition_variable>
 #include <mutex>
 #include <list>
@@ -9,7 +10,7 @@
 #include <optional>
 
 
-namespace uh::client::common
+namespace uh::uhv
 {
 
 // ---------------------------------------------------------------------
@@ -66,7 +67,7 @@ public:
 
         auto compare = [](const auto& a, const auto& b)
         {
-            return (std::is_same<T, std::unique_ptr<uhv::f_meta_data>>::value) ?
+            return (std::is_same<T, std::unique_ptr<f_meta_data>>::value) ?
                         a->f_path() < b->f_path() : a < b ;
         };
 

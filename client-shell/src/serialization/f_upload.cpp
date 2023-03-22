@@ -7,8 +7,8 @@ namespace uh::client::serialization
 // ---------------------------------------------------------------------
 
 f_upload::f_upload(std::unique_ptr<protocol::client_pool>& cl_pool,
-                   common::job_queue<std::unique_ptr<uhv::f_meta_data>>& in_jq,
-                   common::job_queue<std::unique_ptr<uhv::f_meta_data>>& out_jq,
+                   uhv::job_queue<std::unique_ptr<uhv::f_meta_data>>& in_jq,
+                   uhv::job_queue<std::unique_ptr<uhv::f_meta_data>>& out_jq,
                    unsigned int num_threads) :
                    m_client_pool(cl_pool),
                    m_input_jq(in_jq),

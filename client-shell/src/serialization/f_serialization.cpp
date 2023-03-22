@@ -94,7 +94,7 @@ namespace uh::client::serialization
 // ---------------------------------------------------------------------
 
 f_serialization::f_serialization(std::filesystem::path UHV_path,
-                                 common::job_queue<std::unique_ptr<uh::uhv::f_meta_data>>& jq) :
+                                 uhv::job_queue<std::unique_ptr<uh::uhv::f_meta_data>>& jq) :
                                  m_UHV_path(std::move(UHV_path)), m_job_queue(jq)
 {
 

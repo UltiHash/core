@@ -6,7 +6,7 @@ namespace uh::client::serialization
 // ---------------------------------------------------------------------
 
 f_download::f_download(std::unique_ptr<protocol::client_pool>& cl_pool,
-                       common::job_queue<std::unique_ptr<uhv::f_meta_data>>& jq,
+                       uhv::job_queue<std::unique_ptr<uhv::f_meta_data>>& jq,
                        std::filesystem::path dest_path,
                        unsigned int num_threads) :
                        m_client_pool(cl_pool),
