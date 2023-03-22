@@ -6,7 +6,6 @@
   See the file COPYING.
 */
 
-
 #define FUSE_USE_VERSION 31
 
 #include <iostream>
