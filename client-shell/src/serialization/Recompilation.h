@@ -2,6 +2,7 @@
 #define SERIALIZATION_RECOMPILATION_H
 
 #include <uhv/f_meta_data.h>
+#include <uhv/f_serialization.h>
 #include <uhv/job_queue.h>
 #include "../client_options/client_config.h"
 #include "protocol/client_factory.h"
@@ -9,7 +10,6 @@
 #include "f_upload.h"
 #include "f_download.h"
 #include "f_traverse.h"
-#include "f_serialization.h"
 
 namespace co = uh::client::option;
 
