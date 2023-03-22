@@ -6,7 +6,7 @@ namespace uh::client::serialization
 // ---------------------------------------------------------------------
 
 f_download::f_download(std::unique_ptr<protocol::client_pool>& cl_pool,
-                       common::job_queue<std::unique_ptr<common::f_meta_data>>& jq,
+                       uhv::job_queue<std::unique_ptr<uhv::f_meta_data>>& jq,
                        std::filesystem::path dest_path,
                        unsigned int num_threads) :
                        m_client_pool(cl_pool),
@@ -32,10 +32,10 @@ f_download::~f_download()
 
 // ---------------------------------------------------------------------
 
-void f_download::download_files(std::unique_ptr<common::f_meta_data>& f_meta_data,
+void f_download::download_files(std::unique_ptr<uhv::f_meta_data>& f_meta_data,
                             protocol::client_pool::handle& client_handle)
 {
-    if (f_meta_data->f_type() == uh::client::common::uh_file_type::regular)
+    if (f_meta_data->f_type() == uhv::uh_file_type::regular)
     {
         std::ofstream new_file(f_meta_data->f_path(),
                                  std::ios::app | std::ios::binary);
@@ -57,7 +57,7 @@ void f_download::download_files(std::unique_ptr<common::f_meta_data>& f_meta_dat
         new_file.flush();
         new_file.close();
     }
-    else if (f_meta_data->f_type() == uh::client::common::uh_file_type::none)
+    else if (f_meta_data->f_type() == uhv::uh_file_type::none)
     {
         throw std::runtime_error("Unknown file type encountered: " + f_meta_data->f_path().string());
     }
