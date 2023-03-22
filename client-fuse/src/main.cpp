@@ -12,29 +12,30 @@
 #include <fuse.h>
 #include <cstring>
 #include <cassert>
+#include <filesystem>
 #include <logging/logging_boost.h>
+
+#define OPTION(t, p)                           \
+    { t, offsetof(struct options, p), 1 }
 
 static struct options
 {
     const char *UHVpath;
-    const char *agency_connection;
-    const char *mountpoint;
+    const char *agency_hostname;
+    const char *agency_port;
     bool show_help;
 } options;
 
-#define OPTION(t, p)                           \
-    { t, offsetof(struct options, p), 1 }
 static const struct fuse_opt option_spec[] =
     {
         OPTION("--path=%s", UHVpath),
         OPTION("-p=%s", UHVpath),
-        OPTION("--agency=%s", agency_connection),
-        OPTION("-a=%s", agency_connection),
-        OPTION("--mount=%s", mountpoint),
-        OPTION("-m=%s", mountpoint),
+        OPTION("--agency-hostname=%s", agency_hostname),
+        OPTION("-H=%s", agency_hostname),
+        OPTION("--agency-port=%s", agency_port),
+        OPTION("-P=%s", agency_port),
         OPTION("--help", show_help),
         OPTION("-h", show_help),
-        OPTION("--help", show_help),
         FUSE_OPT_END
     };
 
@@ -66,47 +67,55 @@ int uh_read (const char *, char *, size_t, off_t,
 
 static const struct fuse_operations uh_operations =
     {
-    .getattr        = uh_getattr,
-    .open           = uh_open,
-    .read           = uh_read,
-    .readdir        = uh_readdir,
-    .init           = uh_init,
+        .getattr        = uh_getattr,
+        .open           = uh_open,
+        .read           = uh_read,
+        .readdir        = uh_readdir,
+        .init           = uh_init,
     };
 
-static void show_help(const char *progname)
+static void show_help(const char *prog_name)
 {
-    printf("usage: %s [options] <mountpoint>\n\n", progname);
+    printf("\nusage: %s <mountpoint> [options]\n\n", prog_name);
     printf("File-system specific options:\n"
-           "    -p or --path=<s>          Path of the \"UltiHash\" Volume\n"
-           "    -a or --agency=<s>        Contents \"hello\" file\n"
-           "    -m or --mount=<s>         Name of the \"hello\" file\n"
+           "    -p or --path=<s>                    Path of the \"UltiHash\" Volume\n"
+           "    -a or --agency-hostname=<s>         Contents \"hello\" file\n"
            "\n");
+}
+
+void validate_options()
+{
+    canonical(std::filesystem::path(options.UHVpath));
+    uint16_t port = std::stoi(options.agency_port);
 }
 
 int main(int argc, char *argv[])
 {
-
     try
     {
+        int ret = 0;
         struct fuse_args args = FUSE_ARGS_INIT(argc, argv);
 
-        options.UHVpath = strdup("/home/ankit/Downloads/");
-        options.agency_connection = strdup("localhost:8083");
-        options.mountpoint = strdup("/home/ankit/Downloads/");
-        options.show_help = true;
+        /* Default Values */
+        options.UHVpath = strdup("/home/ankit/Downloads");
+        options.agency_hostname = strdup("localhost");
+        options.agency_port = strdup("5164");
+        options.show_help = false;
 
         /* Parse options */
-        if (fuse_opt_parse(&args, &options, option_spec, NULL) == -1);
+        if (fuse_opt_parse(&args, &options, option_spec, NULL) == -1)
             throw std::runtime_error("error: parsing failed");
+
         if (options.show_help)
         {
             show_help(argv[0]);
-            assert(fuse_opt_add_arg(&args, "--help") == 0);
             args.argv[0][0] = '\0';
         }
-
-        if (fuse_main(args.argc, args.argv, &uh_operations, NULL) == -1)
-            throw std::runtime_error("error: failed to start fuse service");
+        else
+        {
+            validate_options();
+            ret = fuse_main(args.argc, args.argv, &uh_operations, NULL);
+        }
 
         fuse_opt_free_args(&args);
         return ret;
@@ -121,7 +130,6 @@ int main(int argc, char *argv[])
         FATAL << "unknown exception occurred";
         return EXIT_FAILURE;
     }
-    return EXIT_SUCCESS;
 }
 
 // ---------------------------------------------------------------------
