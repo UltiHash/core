@@ -52,10 +52,11 @@ static void show_help(const char *prog_name)
 
 void validate_options()
 {
-    canonical(std::filesystem::path(uh::uhv::options.UHVpath));
-    if(uh::uhv::options.agency_port < 0 or uh::uhv::options.agency_port > USHRT_MAX)
+    auto& opt = uh::uhv::get_options();
+    canonical(std::filesystem::path(opt.UHVpath));
+    if(opt.agency_port < 0 or opt.agency_port > USHRT_MAX)
         THROW(uh::util::exception, "An invalid port number was specified.");
-    if(uh::uhv::options.agency_connections < 0 )
+    if(opt.agency_connections < 0 )
         THROW(uh::util::exception, "An invalid number of connections was specified.");
 }
 
@@ -66,18 +67,19 @@ int main(int argc, char *argv[])
         int ret = 0;
         struct fuse_args args = FUSE_ARGS_INIT(argc, argv);
 
+        auto& opt = uh::uhv::get_options();
         /* Default Values */
-        uh::uhv::options.UHVpath = strdup("volume.uh");
-        uh::uhv::options.agency_hostname = strdup("localhost");
-        uh::uhv::options.agency_port = 21832;
-        uh::uhv::options.agency_connections = 3;
-        uh::uhv::options.show_help = false;
+        opt.UHVpath = strdup("volume.uh");
+        opt.agency_hostname = strdup("localhost");
+        opt.agency_port = 21832;
+        opt.agency_connections = 3;
+        opt.show_help = false;
 
         /* Parse options */
-        if (fuse_opt_parse(&args, &uh::uhv::options, option_spec, NULL) == -1)
+        if (fuse_opt_parse(&args, &opt, option_spec, NULL) == -1)
             throw std::runtime_error("error: parsing failed");
 
-        if (uh::uhv::options.show_help)
+        if (opt.show_help)
         {
             show_help(argv[0]);
             args.argv[0][0] = '\0';

@@ -27,16 +27,16 @@ struct private_context
 };
 
 
-static struct options
+struct options
 {
     const char *UHVpath;
     const char *agency_hostname;
     int agency_port;
     int agency_connections;
     bool show_help;
-} options;
+};
 
-
+options& get_options();
 
 int uh_getattr (const char *path, struct stat *);
 
