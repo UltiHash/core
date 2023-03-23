@@ -19,6 +19,7 @@ class f_serialization
 public:
 
     f_serialization(std::filesystem::path, uhv::job_queue<std::unique_ptr<uhv::f_meta_data>>&);
+
     ~f_serialization() = default;
 
     uint64_t serialize(const std::vector<std::filesystem::path>&);

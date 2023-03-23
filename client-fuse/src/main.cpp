@@ -49,7 +49,7 @@ static const struct fuse_opt option_spec[] =
         FUSE_OPT_END
     };
 
-int uh_getattr (const char *, struct stat *)
+int uh_getattr (const char *path, struct stat *)
 {
     return 0;
 }
@@ -61,6 +61,7 @@ void *uh_init (struct fuse_conn_info *conn)
 
     uh::uhv::job_queue<std::unique_ptr<uh::uhv::f_meta_data>> metadata_list;
     uh::uhv::f_serialization serializer {std::filesystem::path (options.UHVpath), metadata_list};
+    serializer.deserialize("", false);
     while (const auto& metadata = metadata_list.get_job())
     {
         if (metadata == std::nullopt)
@@ -70,8 +71,37 @@ void *uh_init (struct fuse_conn_info *conn)
     return context;
 }
 
-int uh_readdir (const char *, void *, fuse_fill_dir_t, off_t, struct fuse_file_info *)
+std::vector <std::string> get_files (const std::string &directory, const std::unordered_map <std::string, uh::uhv::f_meta_data> &metadata_list) {
+    std::vector <std::string> files;
+    for (const auto& md: metadata_list) {
+        if (std::filesystem::path (md.first).parent_path() == directory) {
+            files.emplace_back (md.first);
+        }
+    }
+    return files;
+}
+
+int uh_readdir (const char *path, void *buf, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info *fi)
 {
+    (void) offset;
+    (void) fi;
+
+    const auto *fuse_context = fuse_get_context ();
+
+    const auto *pcontext = static_cast <private_context *> (fuse_context->private_data);
+    const auto metadata = pcontext->paths_metadata.at(path);
+    if (metadata.f_type() != uh::uhv::uh_file_type::directory) {
+        return -ENOENT;
+    }
+
+    filler(buf, ".", nullptr, 0);
+    filler(buf, "..", nullptr, 0);
+
+    for (const auto& file: get_files (metadata.f_path(), pcontext->paths_metadata)) {
+        struct stat uh_stat {};
+        uh_getattr(file.c_str(), &uh_stat);
+        filler(buf, file.c_str(), &uh_stat, 0);
+    }
     return 0;
 }
 
@@ -118,9 +148,6 @@ void validate_options()
 
 int main(int argc, char *argv[])
 {
-    uh::uhv::f_meta_data fm ("/home/masi/Workspace/legacy/Workshop/core/cmake-build-debug/client-shell/dd.uh");
-
-    std::cout << fm.f_permissions() << " " << fm.f_size() << " " << fm.f_path() << " " << fm.f_type() <<std::endl;
     try
     {
         int ret = 0;
