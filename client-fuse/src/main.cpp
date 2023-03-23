@@ -70,8 +70,35 @@ static const struct fuse_opt option_spec[] =
         FUSE_OPT_END
     };
 
-int uh_getattr (const char *path, struct stat *)
+int uh_getattr (const char *path, struct stat *stbuf)
 {
+    auto f_meta_data = get_context()->paths_metadata.find(path)->second;
+    memset(stbuf, 0, sizeof(struct stat));
+
+    std::uint16_t mode = 0777;
+    auto f_type = f_meta_data.f_type();
+    if (f_type == uh::uhv::uh_file_type::regular)
+    {
+        stbuf->st_size = f_meta_data.f_size();
+        mode |= S_IFREG;
+    }
+    if (f_type == uh::uhv::uh_file_type::directory)
+        mode |= S_IFDIR;
+
+//    /* Permissions for when it's needed */
+//    auto f_perms = std::filesystem::perms(f_meta_data.f_permissions());
+//    mode |= ( std::filesystem::perms::owner_read == (f_perms & std::filesystem::perms::owner_read) << 12);
+//    mode |= ( std::filesystem::perms::owner_write == (f_perms & std::filesystem::perms::owner_write) << 11 );
+//    mode |= ( std::filesystem::perms::owner_exec == (f_perms & std::filesystem::perms::owner_exec) << 10 );
+//    mode |= ( std::filesystem::perms::group_read == (f_perms & std::filesystem::perms::group_read) << 9 );
+//    mode |= ( std::filesystem::perms::group_write == (f_perms & std::filesystem::perms::group_write) << 8 );
+//    mode |= ( std::filesystem::perms::group_exec == (f_perms & std::filesystem::perms::group_exec) ) << 7 ;
+//    mode |= ( std::filesystem::perms::others_read == (f_perms & std::filesystem::perms::others_read) << 6 ) ;
+//    mode |= ( std::filesystem::perms::others_write == (f_perms & std::filesystem::perms::others_write) << 5 );
+//    mode |= ( std::filesystem::perms::others_exec == (f_perms & std::filesystem::perms::others_exec) ) << 4 ;
+
+    stbuf->st_mode = mode;
+
     return 0;
 }
 
@@ -143,7 +170,7 @@ int uh_readdir (const char *path, void *buf, fuse_fill_dir_t filler, off_t offse
     return 0;
 }
 
-int uh_open (const char* path, struct fuse_file_info* fi)
+int uh_open (const char *path, struct fuse_file_info *fi)
 {
     auto context = get_context();
     std::cout << "open(" << path << ", )\n";
