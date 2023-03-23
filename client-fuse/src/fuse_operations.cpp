@@ -129,9 +129,34 @@ int uh_open (const char *path, struct fuse_file_info *fi)
     return 0;
 }
 
-int uh_read (const char *, char *, size_t, off_t, struct fuse_file_info *)
+int uh_read (const char *path, char *buffer, size_t size, off_t offset, struct fuse_file_info *ffi)
 {
-    return 0;
+
+    std::cout << "uh_read(" << path << ", )\n";
+    auto context = get_context();
+    uh::protocol::client_pool::handle&& client_handle = context->client_pool->get();
+    uh::uhv::f_meta_data* fmd = reinterpret_cast<uh::uhv::f_meta_data*>(ffi->fh);
+    size_t curr_offset = 0;
+    std::stringstream recompiled_chunks;
+    if (fmd->f_type() == uh::uhv::uh_file_type::regular)
+    {
+        std::vector<char> current_hash(64);
+
+        for (auto i = 0; i < fmd->f_hashes().size(); i += 64)
+        {
+            std::copy(fmd->f_hashes().begin() + i,
+                      fmd->f_hashes().begin() + i + 64, current_hash.begin());
+
+
+            recompiled_chunks << *client_handle->read_block(current_hash);
+        }
+    }
+    std::string contents_read = recompiled_chunks.str();
+
+    size = std::min(size, contents_read.size() - offset);
+    memcpy(buffer, contents_read.c_str() + offset, size);
+
+    return size;
 }
 
 void uh_destroy (void *context) {
