@@ -31,9 +31,10 @@ COPY --from=build /core/build/${SRC_PATH}/${TARGET} /usr/local/bin
 COPY --from=build /core/${SRC_PATH}/start.sh /usr/local/bin
 RUN chmod +x /usr/local/bin/start.sh
 
-RUN useradd -m ultihash
-USER ultihash
-WORKDIR /home/ultihash
+RUN addgroup --system --gid 234 uh
+RUN adduser --system --uid 234 --gid 234 --shell /bin/bash uh
+USER uh
+WORKDIR /home/uh
 
 EXPOSE 21832
 EXPOSE 8080
