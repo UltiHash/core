@@ -72,10 +72,8 @@ static const struct fuse_opt option_spec[] =
 
 int uh_getattr (const char *path, struct stat *stbuf)
 {
-    auto f_meta_data = static_cast<private_context*>(fuse_get_context()->private_data)->paths_metadata
-            .find(path)->second;
+    auto f_meta_data = get_context()->paths_metadata.find(path)->second;
     memset(stbuf, 0, sizeof(struct stat));
-
 
     std::uint16_t mode = 0777;
     auto f_type = f_meta_data.f_type();
