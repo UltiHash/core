@@ -27,13 +27,13 @@ struct private_context
 };
 
 
-static struct options
+ struct options
 {
-    const char *UHVpath;
-    const char *agency_hostname;
-    int agency_port;
-    int agency_connections;
-    bool show_help;
+    static const char *UHVpath;
+    static const char *agency_hostname;
+    static int agency_port;
+    static int agency_connections;
+    static bool show_help;
 } options;
 
 

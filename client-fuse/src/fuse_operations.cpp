@@ -51,13 +51,13 @@ void *uh_init (struct fuse_conn_info *conn)
             {
                     .client_version = s.str()
             };
-
+/*
     context->client_pool = std::move(std::make_unique<uh::protocol::client_pool>(
         std::make_unique<uh::protocol::client_factory>(
                 std::make_unique<uh::net::plain_socket_factory>(
                         io, options.agency_hostname, options.agency_port),
                 cf_config), options.agency_connections));
-
+*/
     uh::uhv::job_queue<std::unique_ptr<uh::uhv::f_meta_data>> metadata_list;
     uh::uhv::f_serialization serializer {std::filesystem::path (options.UHVpath), metadata_list};
     serializer.deserialize("", false);
