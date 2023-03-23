@@ -145,9 +145,6 @@ void validate_options()
 
 int main(int argc, char *argv[])
 {
-    uh::uhv::f_meta_data fm ("/home/masi/Workspace/legacy/Workshop/core/cmake-build-debug/client-shell/dd.uh");
-
-    std::cout << fm.f_permissions() << " " << fm.f_size() << " " << fm.f_path() << " " << fm.f_type() <<std::endl;
     try
     {
         int ret = 0;
