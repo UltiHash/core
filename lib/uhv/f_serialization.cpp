@@ -88,7 +88,7 @@ std::unique_ptr<uh::uhv::f_meta_data> deserialize_f_meta_data(std::vector<std::u
 
 }
 
-namespace uh::client::serialization
+namespace uh::uhv
 {
 
 // ---------------------------------------------------------------------
@@ -154,7 +154,7 @@ uint64_t f_serialization::serialize(const std::vector<std::filesystem::path>& ro
 
 // ---------------------------------------------------------------------
 
-uint64_t f_serialization::deserialize(const std::filesystem::path& dest_path)
+uint64_t f_serialization::deserialize(const std::filesystem::path& dest_path, bool create_files)
 {
     std::uint64_t raw_size = 0;
     std::ifstream UHV_file(m_UHV_path, std::ios::binary);
@@ -179,12 +179,17 @@ uint64_t f_serialization::deserialize(const std::filesystem::path& dest_path)
     {
         auto p_f_meta_data = deserialize_f_meta_data(UHV_container, step, dest_path);
 
-        // creating paths serially to avoid race condition - !!!
-        if (p_f_meta_data->f_type() == uhv::uh_file_type::regular) {
-            std::ofstream(p_f_meta_data->f_path()).close();
-            raw_size += p_f_meta_data->f_size();
-        } else {
-            std::filesystem::create_directory(p_f_meta_data->f_path());
+        if (create_files) {
+            // creating paths serially to avoid race condition - !!!
+            if (p_f_meta_data->f_type() == uhv::uh_file_type::regular)
+            {
+                std::ofstream(p_f_meta_data->f_path()).close();
+                raw_size += p_f_meta_data->f_size();
+            }
+            else
+            {
+                std::filesystem::create_directory(p_f_meta_data->f_path());
+            }
         }
 
         m_job_queue.append_job(std::move(p_f_meta_data));
@@ -193,6 +198,7 @@ uint64_t f_serialization::deserialize(const std::filesystem::path& dest_path)
     return raw_size;
 }
 
+
 // ---------------------------------------------------------------------
 
-} // namespace uh::client::serialization
+} // namespace uh::uhv

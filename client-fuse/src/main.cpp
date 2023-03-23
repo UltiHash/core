@@ -11,9 +11,11 @@
 #include <iostream>
 #include <fuse.h>
 #include <cstring>
-#include <cassert>
 #include <filesystem>
 #include <logging/logging_boost.h>
+#include <unordered_map>
+#include "uhv/job_queue.h"
+#include "uhv/f_serialization.h"
 #include "uhv/f_meta_data.h"
 
 #define OPTION(t, p)                           \
@@ -29,7 +31,7 @@ static struct options
 
 struct private_context
 {
-    std::unordered_map <const char *, uh::uhv::f_meta_data> paths_metadata;
+    std::unordered_map <std::string, uh::uhv::f_meta_data> paths_metadata;
 };
 
 #define OPTION(t, p)                           \
@@ -54,7 +56,17 @@ int uh_getattr (const char *, struct stat *)
 
 void *uh_init (struct fuse_conn_info *conn)
 {
-    auto *context = new private_context {};
+
+    auto *context = new private_context;
+
+    uh::uhv::job_queue<std::unique_ptr<uh::uhv::f_meta_data>> metadata_list;
+    uh::uhv::f_serialization serializer {std::filesystem::path (options.UHVpath), metadata_list};
+    while (const auto& metadata = metadata_list.get_job())
+    {
+        if (metadata == std::nullopt)
+            break;
+        context->paths_metadata.emplace(metadata.value()->f_path(), *(*metadata));
+    }
     return context;
 }
 

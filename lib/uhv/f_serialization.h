@@ -9,7 +9,7 @@
 #include <fstream>
 
 
-namespace uh::client::serialization
+namespace uh::uhv
 {
 
 // ---------------------------------------------------------------------
@@ -22,7 +22,8 @@ public:
     ~f_serialization() = default;
 
     uint64_t serialize(const std::vector<std::filesystem::path>&);
-    uint64_t deserialize(const std::filesystem::path&);
+    uint64_t deserialize(const std::filesystem::path&, bool create_files = true);
+
 
 private:
     std::filesystem::path m_UHV_path;
@@ -31,6 +32,6 @@ private:
 
 // ---------------------------------------------------------------------
 
-} // namespace uh::client::serialization
+} // namespace uh::uhv
 
 #endif
