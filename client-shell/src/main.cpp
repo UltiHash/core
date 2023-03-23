@@ -33,10 +33,6 @@ int main(int argc, const char *argv[])
                 .client_version = s.str()
             };
 
-        const auto& client_config = config.client();
-        uh::protocol::client_factory client_factory(
-                std::make_unique<uh::net::plain_socket_factory>(io, config.agency().hostname, config.agency().port),
-                cf_config);
         std::unique_ptr<uh::protocol::client_pool> client_pool =
                 std::make_unique<uh::protocol::client_pool>(
                         std::make_unique<uh::protocol::client_factory>(

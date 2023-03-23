@@ -14,7 +14,6 @@ if((NOT BUILD_SERVER_DB) AND (NOT BUILD_SERVER_AGENCY) AND (NOT BUILD_CLIENT_SHE
     SET(BUILD_SERVER_AGENCY ON CACHE BOOL   "Building the server-agency component" FORCE)
     SET(BUILD_CLIENT_SHELL ON CACHE BOOL    "Building the server-client component" FORCE)
     SET(BUILD_CLIENT_FUSE ON CACHE BOOL    "Building the server-fuse component" FORCE)
-
 endif()
 
 find_package(Git REQUIRED)
