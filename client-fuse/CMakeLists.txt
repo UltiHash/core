@@ -16,7 +16,7 @@ add_definitions(-D_FILE_OFFSET_BITS=64)
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.hpp.in ${CMAKE_CURRENT_BINARY_DIR}/config.hpp)
 
 # internal dependencies
-set(${PROJECT_NAME}_INTERNAL_DEPS uhLibLogging uhLibUtil uhLibNet uhLibOptions uhLibProtocol)
+set(${PROJECT_NAME}_INTERNAL_DEPS uhLibLogging uhLibUtil uhLibNet uhLibOptions uhLibProtocol uhLibUhv)
 
 # configuring library dependencies for cmake and linker
 set(${PROJECT_NAME}_INCLUDE_DIRS ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/src ${${PROJECT_NAME}_INTERNAL_DEPS} ${FUSE_INCLUDE_DIR})

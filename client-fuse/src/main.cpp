@@ -14,6 +14,7 @@
 #include <cassert>
 #include <filesystem>
 #include <logging/logging_boost.h>
+#include "uhv/f_meta_data.h"
 
 #define OPTION(t, p)                           \
     { t, offsetof(struct options, p), 1 }
@@ -25,6 +26,11 @@ static struct options
     const char *agency_port;
     bool show_help;
 } options;
+
+struct private_context
+{
+    std::unordered_map <const char *, uh::uhv::f_meta_data> paths_metadata;
+};
 
 #define OPTION(t, p)                           \
     { t, offsetof(struct options, p), 1 }
@@ -48,7 +54,8 @@ int uh_getattr (const char *, struct stat *)
 
 void *uh_init (struct fuse_conn_info *conn)
 {
-    return NULL;
+    auto *context = new private_context {};
+    return context;
 }
 
 int uh_readdir (const char *, void *, fuse_fill_dir_t, off_t, struct fuse_file_info *)
@@ -92,13 +99,16 @@ void validate_options()
 
 int main(int argc, char *argv[])
 {
+    uh::uhv::f_meta_data fm ("/home/masi/Workspace/legacy/Workshop/core/cmake-build-debug/client-shell/dd.uh");
+
+    std::cout << fm.f_permissions() << " " << fm.f_size() << " " << fm.f_path() << " " << fm.f_type() <<std::endl;
     try
     {
         int ret = 0;
         struct fuse_args args = FUSE_ARGS_INIT(argc, argv);
 
         /* Default Values */
-        options.UHVpath = strdup("/home/ankit/Downloads");
+        options.UHVpath = strdup("volume.uh");
         options.agency_hostname = strdup("localhost");
         options.agency_port = strdup("5164");
         options.show_help = false;
