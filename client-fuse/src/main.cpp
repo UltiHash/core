@@ -18,6 +18,8 @@
 #include "uhv/f_serialization.h"
 #include "uhv/f_meta_data.h"
 
+using namespace uh::uhv;
+
 #define OPTION(t, p)                           \
     { t, offsetof(struct options, p), 1 }
 
@@ -33,6 +35,16 @@ struct private_context
 {
     std::unordered_map <std::string, uh::uhv::f_meta_data> paths_metadata;
 };
+
+private_context* get_context()
+{
+    return static_cast<private_context*>(fuse_get_context()->private_data);
+}
+
+f_meta_data* get_metadata(struct fuse_file_info* fi)
+{
+    return reinterpret_cast<f_meta_data*>(fi->fh);
+}
 
 #define OPTION(t, p)                           \
     { t, offsetof(struct options, p), 1 }
@@ -75,8 +87,23 @@ int uh_readdir (const char *, void *, fuse_fill_dir_t, off_t, struct fuse_file_i
     return 0;
 }
 
-int uh_open (const char *, struct fuse_file_info *)
+int uh_open (const char* path, struct fuse_file_info* fi)
 {
+    auto context = get_context();
+    std::cout << "open(" << path << ", )\n";
+
+    if ((fi->flags & O_ACCMODE) != O_RDONLY)
+    {
+        return -EACCES;
+    }
+
+    auto it = context->paths_metadata.find(path);
+    if (it == context->paths_metadata.end())
+    {
+        return -ENOENT;
+    }
+
+    fi->fh = reinterpret_cast<uint64_t>(&it->second);
     return 0;
 }
 
