@@ -6,6 +6,13 @@
 
 namespace uh::uhv {
 
+options& get_options()
+{
+    static options opt;
+
+    return opt;
+}
+
 int uh_getattr (const char *path, struct stat *stbuf)
 {
 
@@ -15,9 +22,6 @@ int uh_getattr (const char *path, struct stat *stbuf)
     auto it = get_context()->paths_metadata.find(path);
     if (it == get_context()->paths_metadata.end())
     {
-            if (strcmp (path, "/") == 0) {
-                int i;
-            }
         return 0;
     }
 
@@ -47,19 +51,20 @@ void *uh_init (struct fuse_conn_info *conn)
     boost::asio::io_context io;
     std::stringstream s;
     s << PROJECT_NAME << " " << PROJECT_VERSION;
+
     uh::protocol::client_factory_config cf_config
             {
                     .client_version = s.str()
             };
-/*
     context->client_pool = std::move(std::make_unique<uh::protocol::client_pool>(
         std::make_unique<uh::protocol::client_factory>(
                 std::make_unique<uh::net::plain_socket_factory>(
-                        io, options.agency_hostname, options.agency_port),
-                cf_config), options.agency_connections));
-*/
+                        io, get_options().agency_hostname, get_options().agency_port),
+                cf_config), get_options().agency_connections));
+
     uh::uhv::job_queue<std::unique_ptr<uh::uhv::f_meta_data>> metadata_list;
-    uh::uhv::f_serialization serializer {std::filesystem::path (options.UHVpath), metadata_list};
+    uh::uhv::f_serialization serializer {std::filesystem::path (get_options().UHVpath), metadata_list};
+
     serializer.deserialize("", false);
     metadata_list.stop();
     while (const auto& metadata = metadata_list.get_job())

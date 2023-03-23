@@ -20,8 +20,10 @@ f_meta_data* get_metadata(struct fuse_file_info* fi)
 std::vector <std::string> get_files (const std::string &directory, const std::unordered_map <std::string, uh::uhv::f_meta_data> &metadata_list) {
     std::vector <std::string> files;
     for (const auto& md: metadata_list) {
-        if (std::filesystem::path (md.first).parent_path() == directory) {
-            files.emplace_back (md.first);
+        auto path = std::filesystem::path(md.first);
+
+        if (path.parent_path() == directory && !path.filename().empty()) {
+            files.emplace_back(path.filename());
         }
     }
     return files;
