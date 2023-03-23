@@ -8,15 +8,22 @@
 
 #define FUSE_USE_VERSION 31
 
+#include "config.hpp"
 #include <iostream>
 #include <fuse.h>
 #include <cstring>
 #include <filesystem>
 #include <logging/logging_boost.h>
 #include <unordered_map>
-#include "uhv/job_queue.h"
-#include "uhv/f_serialization.h"
-#include "uhv/f_meta_data.h"
+#include <uhv/job_queue.h>
+#include <uhv/f_serialization.h>
+#include <uhv/f_meta_data.h>
+#include <protocol/client_factory.h>
+#include <protocol/client_pool.h>
+#include <net/plain_socket.h>
+#include <util/exception.h>
+
+using namespace uh::uhv;
 
 #define OPTION(t, p)                           \
     { t, offsetof(struct options, p), 1 }
@@ -25,14 +32,26 @@ static struct options
 {
     const char *UHVpath;
     const char *agency_hostname;
-    const char *agency_port;
+    int agency_port;
+    int agency_connections;
     bool show_help;
 } options;
 
 struct private_context
 {
+    std::unique_ptr<uh::protocol::client_pool> client_pool;
     std::unordered_map <std::string, uh::uhv::f_meta_data> paths_metadata;
 };
+
+private_context* get_context()
+{
+    return static_cast<private_context*>(fuse_get_context()->private_data);
+}
+
+f_meta_data* get_metadata(struct fuse_file_info* fi)
+{
+    return reinterpret_cast<f_meta_data*>(fi->fh);
+}
 
 #define OPTION(t, p)                           \
     { t, offsetof(struct options, p), 1 }
@@ -42,8 +61,10 @@ static const struct fuse_opt option_spec[] =
         OPTION("-p=%s", UHVpath),
         OPTION("--agency-hostname=%s", agency_hostname),
         OPTION("-H=%s", agency_hostname),
-        OPTION("--agency-port=%s", agency_port),
-        OPTION("-P=%s", agency_port),
+        OPTION("--agency-port=%i", agency_port),
+        OPTION("-P=%i", agency_port),
+        OPTION("--agency-connections=%i", agency_connections),
+        OPTION("-C=%i", agency_connections),
         OPTION("--help", show_help),
         OPTION("-h", show_help),
         FUSE_OPT_END
@@ -58,6 +79,21 @@ void *uh_init (struct fuse_conn_info *conn)
 {
 
     auto *context = new private_context;
+
+    // protocol
+    boost::asio::io_context io;
+    std::stringstream s;
+    s << PROJECT_NAME << " " << PROJECT_VERSION;
+    uh::protocol::client_factory_config cf_config
+            {
+                    .client_version = s.str()
+            };
+
+    context->client_pool = std::move(std::make_unique<uh::protocol::client_pool>(
+        std::make_unique<uh::protocol::client_factory>(
+                std::make_unique<uh::net::plain_socket_factory>(
+                        io, options.agency_hostname, options.agency_port),
+                cf_config), options.agency_connections));
 
     uh::uhv::job_queue<std::unique_ptr<uh::uhv::f_meta_data>> metadata_list;
     uh::uhv::f_serialization serializer {std::filesystem::path (options.UHVpath), metadata_list};
@@ -105,8 +141,23 @@ int uh_readdir (const char *path, void *buf, fuse_fill_dir_t filler, off_t offse
     return 0;
 }
 
-int uh_open (const char *, struct fuse_file_info *)
+int uh_open (const char* path, struct fuse_file_info* fi)
 {
+    auto context = get_context();
+    std::cout << "open(" << path << ", )\n";
+
+    if ((fi->flags & O_ACCMODE) != O_RDONLY)
+    {
+        return -EACCES;
+    }
+
+    auto it = context->paths_metadata.find(path);
+    if (it == context->paths_metadata.end())
+    {
+        return -ENOENT;
+    }
+
+    fi->fh = reinterpret_cast<uint64_t>(&it->second);
     return 0;
 }
 
@@ -143,7 +194,10 @@ static void show_help(const char *prog_name)
 void validate_options()
 {
     canonical(std::filesystem::path(options.UHVpath));
-    uint16_t port = std::stoi(options.agency_port);
+    if(options.agency_port < 0 or options.agency_port > USHRT_MAX)
+        THROW(uh::util::exception, "An invalid port number was specified.");
+    if(options.agency_connections < 0 )
+        THROW(uh::util::exception, "An invalid number of connections was specified.");
 }
 
 int main(int argc, char *argv[])
@@ -156,7 +210,8 @@ int main(int argc, char *argv[])
         /* Default Values */
         options.UHVpath = strdup("volume.uh");
         options.agency_hostname = strdup("localhost");
-        options.agency_port = strdup("5164");
+        options.agency_port = 21832;
+        options.agency_connections = 3;
         options.show_help = false;
 
         /* Parse options */
