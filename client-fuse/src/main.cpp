@@ -85,6 +85,12 @@ int uh_read (const char *, char *, size_t, off_t, struct fuse_file_info *)
     return 0;
 }
 
+void uh_destroy (void *context) {
+    auto pcontext = static_cast <private_context *> (context);
+    delete pcontext;
+}
+
+
 static const struct fuse_operations uh_operations =
     {
         .getattr        = uh_getattr,
@@ -92,6 +98,7 @@ static const struct fuse_operations uh_operations =
         .read           = uh_read,
         .readdir        = uh_readdir,
         .init           = uh_init,
+        .destroy        = uh_destroy,
     };
 
 static void show_help(const char *prog_name)
