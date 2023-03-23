@@ -1,6 +1,8 @@
 #include "Recompilation.h"
 
 
+using namespace uh::uhv;
+
 namespace uh::client::serialization
 {
 
