@@ -177,11 +177,12 @@ void __uh_destroy (void *context) {
 void *uh_init (struct fuse_conn_info *conn){
     try
     {
-        __uh_init(conn);
+        return __uh_init(conn);
     }
     catch(const std::exception& e)
     {
         std::cerr << e.what() << '\n';
+        return nullptr;
     }
 }
 
@@ -194,6 +195,7 @@ int uh_readdir (const char *path, void *buf, fuse_fill_dir_t filler, off_t offse
     catch(const std::exception& e)
     {
         std::cerr << e.what() << '\n';
+        return -ENOENT;
     }
 }
 
@@ -201,11 +203,12 @@ int uh_read (const char *path, char *buf, size_t size, off_t offset, struct fuse
 {
     try
     {
-        __uh_read(path, buf, size, offset, fi);
+        return __uh_read(path, buf, size, offset, fi);
     }
     catch(const std::exception& e)
     {
         std::cerr << e.what() << '\n';
+        return -ENOENT;
     }
 }
 
@@ -218,6 +221,7 @@ int uh_open (const char *path, struct fuse_file_info *fi)
     catch(const std::exception& e)
     {
         std::cerr << e.what() << '\n';
+        return -ENOENT;
     }
 }
 
@@ -231,13 +235,14 @@ int uh_getattr (const char *path, struct stat *stbuf)
     catch(const std::exception& e)
     {
         std::cerr << e.what() << '\n';
+        return -ENOENT;
     }
 }
 
 void uh_destroy (void *context){
     try
     {
-        __uh_destroy(context);
+        return __uh_destroy(context);
     }
     catch(const std::exception& e)
     {
