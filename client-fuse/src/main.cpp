@@ -8,7 +8,7 @@
 
 #define FUSE_USE_VERSION 31
 
-#include "fuse_operations.h"n
+#include "fuse_operations.h"
 
 static const struct fuse_operations uh_operations =
     {
