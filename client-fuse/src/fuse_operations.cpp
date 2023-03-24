@@ -13,7 +13,10 @@ options& get_options()
     return opt;
 }
 
-int uh_getattr (const char *path, struct stat *stbuf)
+
+/* --- fuse_operations core functionality --- */ 
+
+int __uh_getattr (const char *path, struct stat *stbuf)
 {
     std::cout << "uh_getattr(" << path << ", stbuf)\n";
 
@@ -33,24 +36,23 @@ int uh_getattr (const char *path, struct stat *stbuf)
     {
         stbuf->st_size = f_meta_data.f_size();
         stbuf->st_nlink = 1;
-	    stbuf->st_mode = S_IFREG | 0444;
+        stbuf->st_mode = S_IFREG | 0444;
     }
     if (f_type == uh::uhv::uh_file_type::directory)
     {
-	    stbuf->st_mode = S_IFDIR | 0755;
+        stbuf->st_mode = S_IFDIR | 0755;
         stbuf->st_nlink = 2;
     }
 
     return 0;
 }
 
-void *uh_init (struct fuse_conn_info *conn)
+void *__uh_init (struct fuse_conn_info *conn)
 {
     std::cout << "uh_init(conn)\n";
     auto *context = new private_context;
 
     // protocol
-    boost::asio::io_context io;
     std::stringstream s;
     s << PROJECT_NAME << " " << PROJECT_VERSION;
 
@@ -61,7 +63,7 @@ void *uh_init (struct fuse_conn_info *conn)
     context->client_pool = std::move(std::make_unique<uh::protocol::client_pool>(
         std::make_unique<uh::protocol::client_factory>(
                 std::make_unique<uh::net::plain_socket_factory>(
-                        io, get_options().agency_hostname, get_options().agency_port),
+                        context->io, get_options().agency_hostname, get_options().agency_port),
                 cf_config), get_options().agency_connections));
 
     uh::uhv::job_queue<std::unique_ptr<uh::uhv::f_meta_data>> metadata_list;
@@ -88,7 +90,7 @@ void *uh_init (struct fuse_conn_info *conn)
 
 
 
-int uh_readdir (const char *path, void *buf, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info *fi)
+int __uh_readdir (const char *path, void *buf, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info *fi)
 {
     (void) offset;
     (void) fi;
@@ -113,7 +115,7 @@ int uh_readdir (const char *path, void *buf, fuse_fill_dir_t filler, off_t offse
     return 0;
 }
 
-int uh_open (const char *path, struct fuse_file_info *fi)
+int __uh_open (const char *path, struct fuse_file_info *fi)
 {
     auto context = get_context();
     std::cout << "open(" << path << ", )\n";
@@ -133,7 +135,7 @@ int uh_open (const char *path, struct fuse_file_info *fi)
     return 0;
 }
 
-int uh_read (const char *path, char *buffer, size_t size, off_t offset, struct fuse_file_info *ffi)
+int __uh_read (const char *path, char *buffer, size_t size, off_t offset, struct fuse_file_info *ffi)
 {
 
     std::cout << "uh_read(" << path << ", )\n";
@@ -163,9 +165,87 @@ int uh_read (const char *path, char *buffer, size_t size, off_t offset, struct f
     return size;
 }
 
-void uh_destroy (void *context) {
+void __uh_destroy (void *context) {
     auto pcontext = static_cast <private_context *> (context);
     delete pcontext;
 }
 
+/*-----  fuse operations made safe -----*/
+
+
+void *uh_init (struct fuse_conn_info *conn){
+    try
+    {
+        return __uh_init(conn);
+    }
+    catch(const std::exception& e)
+    {
+        std::cerr << e.what() << '\n';
+        return nullptr;
+    }
+}
+
+int uh_readdir (const char *path, void *buf, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info *fi)
+{
+    try
+    {
+       return __uh_readdir(path, buf, filler, offset, fi);
+    }
+    catch(const std::exception& e)
+    {
+        std::cerr << e.what() << '\n';
+        return -ENOENT;
+    }
+}
+
+int uh_read (const char *path, char *buf, size_t size, off_t offset, struct fuse_file_info *fi)
+{
+    try
+    {
+        return __uh_read(path, buf, size, offset, fi);
+    }
+    catch(const std::exception& e)
+    {
+        std::cerr << e.what() << '\n';
+        return -ENOENT;
+    }
+}
+
+int uh_open (const char *path, struct fuse_file_info *fi)
+{
+    try
+    {
+        return __uh_open(path, fi);
+    }
+    catch(const std::exception& e)
+    {
+        std::cerr << e.what() << '\n';
+        return -ENOENT;
+    }
+}
+
+
+int uh_getattr (const char *path, struct stat *stbuf)
+{
+    try
+    {
+        return __uh_getattr(path, stbuf);
+    }
+    catch(const std::exception& e)
+    {
+        std::cerr << e.what() << '\n';
+        return -ENOENT;
+    }
+}
+
+void uh_destroy (void *context){
+    try
+    {
+        return __uh_destroy(context);
+    }
+    catch(const std::exception& e)
+    {
+        std::cerr << e.what() << '\n';
+    }
+}
 } // end namespace uh::uhv
