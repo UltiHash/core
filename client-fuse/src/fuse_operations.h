@@ -13,6 +13,7 @@
 #include <uhv/job_queue.h>
 #include <uhv/f_serialization.h>
 #include <uhv/f_meta_data.h>
+#include <fuse_f_meta_data.h>
 #include <protocol/client_factory.h>
 #include <protocol/client_pool.h>
 #include <net/plain_socket.h>
@@ -22,8 +23,9 @@ namespace uh::uhv {
 
 struct private_context
 {
+    boost::asio::io_context io;
     std::unique_ptr<uh::protocol::client_pool> client_pool;
-    std::unordered_map <std::string, uh::uhv::f_meta_data> paths_metadata;
+    std::unordered_map <std::string, uh::uhv::ts_f_meta_data> paths_metadata;
 };
 
 

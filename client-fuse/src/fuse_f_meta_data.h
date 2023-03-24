@@ -1,3 +1,6 @@
+#ifndef FUSE_F_META_DATA_H 
+#define FUSE_F_META_DATA_H
+
 #include <mutex>
 #include <uhv/f_meta_data.h>
 
@@ -26,8 +29,9 @@ namespace uh::uhv {
 
         };
 
-        explicit ts_f_meta_data(std::filesystem::path path);
+        ts_f_meta_data(uh::uhv::f_meta_data m_file_meta);
         meta_data_handle get();
+        uh::uhv::f_meta_data& n_ts_get();
 
     private:
         friend class meta_data_handle;
@@ -41,3 +45,5 @@ namespace uh::uhv {
 // ---------------------------------------------------------------------
 
 } // namespace uh::uhv
+
+#endif // FUSE_F_META_DATA_H

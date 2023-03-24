@@ -26,7 +26,8 @@ ts_f_meta_data::meta_data_handle::meta_data_handle(ts_f_meta_data &ts_fmeta_clas
 
 // ---------------------------------------------------------------------
 
-ts_f_meta_data::ts_f_meta_data(std::filesystem::path path) : m_file_meta(std::move(path))
+ts_f_meta_data::ts_f_meta_data(uh::uhv::f_meta_data file_meta_data): 
+    m_file_meta (std::move (file_meta_data))
 {
 }
 
@@ -36,6 +37,13 @@ ts_f_meta_data::meta_data_handle ts_f_meta_data::get()
 {
     m_mutex.lock();
     return {*this, m_file_meta};
+}
+
+// ---------------------------------------------------------------------
+
+uh::uhv::f_meta_data& ts_f_meta_data::n_ts_get()
+{
+    return m_file_meta;
 }
 
 // ---------------------------------------------------------------------
