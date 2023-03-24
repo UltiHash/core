@@ -18,8 +18,8 @@ std::unordered_map <std::string, uh::uhv::f_meta_data>& ts_container::container_
 
 // ---------------------------------------------------------------------
 
-ts_container::container_handle::container_handle(ts_container &container,
-                                                 std::unordered_map<std::string, uh::uhv::f_meta_data> &paths) :
+ts_container::container_handle::container_handle(ts_container& container,
+                                                 std::unordered_map<std::string, uh::uhv::f_meta_data>& paths) :
                                                  m_container(container), m_paths_metadata(paths)
 {
 }
