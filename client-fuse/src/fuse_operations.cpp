@@ -15,6 +15,7 @@ options& get_options()
 
 int uh_getattr (const char *path, struct stat *stbuf)
 {
+    std::cout << "uh_getattr(" << path << ", stbuf)\n";
 
     memset(stbuf, 0, sizeof(struct stat));
     uh::uhv::uh_file_type f_type;
@@ -28,23 +29,24 @@ int uh_getattr (const char *path, struct stat *stbuf)
     auto f_meta_data = it->second;
     f_type = static_cast <uh::uhv::uh_file_type> (f_meta_data.f_type());
 
-    std::uint16_t mode = 0777;
     if (f_type == uh::uhv::uh_file_type::regular)
     {
         stbuf->st_size = f_meta_data.f_size();
-        mode |= S_IFREG;
+        stbuf->st_nlink = 1;
+	stbuf->st_mode = S_IFREG | 0444;
     }
     if (f_type == uh::uhv::uh_file_type::directory)
-        mode |= S_IFDIR;
-
-    stbuf->st_mode = mode;
+    {
+	stbuf->st_mode = S_IFDIR | 0755;
+        stbuf->st_nlink = 2;
+    }
 
     return 0;
 }
 
 void *uh_init (struct fuse_conn_info *conn)
 {
-
+    std::cout << "uh_init(conn)\n";
     auto *context = new private_context;
 
     // protocol
@@ -78,6 +80,8 @@ void *uh_init (struct fuse_conn_info *conn)
     metadata.set_f_type(uh::uhv::directory);
     metadata.set_f_size(0u);
     context->paths_metadata["/"] = metadata;
+
+    std::cout << "leaving uh_init(conn)\n";
 
     return context;
 }
