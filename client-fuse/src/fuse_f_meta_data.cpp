@@ -40,6 +40,13 @@ ts_f_meta_data::meta_data_handle ts_f_meta_data::get()
 
 // ---------------------------------------------------------------------
 
+uh::uhv::f_meta_data& ts_f_meta_data::n_ts_get()
+{
+    return m_file_meta;
+}
+
+// ---------------------------------------------------------------------
+
 void ts_f_meta_data::unlock()
 {
     m_mutex.unlock();

@@ -28,6 +28,7 @@ namespace uh::uhv {
 
         explicit ts_f_meta_data(std::filesystem::path path);
         meta_data_handle get();
+        uh::uhv::f_meta_data& n_ts_get();
 
     private:
         friend class meta_data_handle;
