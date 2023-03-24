@@ -20,6 +20,38 @@ namespace
 
 // ---------------------------------------------------------------------
 
+class connection_device : public io::device
+{
+public:
+    connection_device(protocol::client_pool::handle&& h,
+                      std::unique_ptr<io::device>&& dev)
+        : m_dev(std::move(dev)),
+          m_handle(std::move(h))
+    {
+    }
+
+    std::streamsize write(std::span<const char> buffer) override
+    {
+        return m_dev->write(buffer);
+    }
+
+    std::streamsize read(std::span<char> buffer) override
+    {
+        return m_dev->read(buffer);
+    }
+
+    bool valid() const override
+    {
+        return m_dev->valid();
+    }
+
+private:
+    std::unique_ptr<io::device> m_dev;
+    protocol::client_pool::handle m_handle;
+};
+
+// ---------------------------------------------------------------------
+
 class alloc : public uh::protocol::allocation
 {
 public:
@@ -195,7 +227,9 @@ std::unique_ptr<io::device> mod::bc_read_block(const blob& hash)
     {
         try
         {
-            return node.second->get()->read_block(hash);
+            auto conn = node.second->get();
+            auto dev = conn->read_block(hash);
+            return std::make_unique<connection_device>(std::move(conn), std::move(dev));
         }
         catch (const std::exception& e)
         {
