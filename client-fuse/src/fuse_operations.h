@@ -26,7 +26,7 @@ struct private_context
 {
     boost::asio::io_context io;
     std::unique_ptr<uh::protocol::client_pool> client_pool;
-    ts_container container;
+    ts_container container {};
 };
 
 

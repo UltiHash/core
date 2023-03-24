@@ -23,15 +23,17 @@ int __uh_getattr (const char *path, struct stat *stbuf)
     memset(stbuf, 0, sizeof(struct stat));
     uh::uhv::uh_file_type f_type;
 
-    // !!! container should be released here since f_mera_data is found
-    auto container_handle = get_context()->container.get();
+    auto *ctx = get_context();
+    auto container_handle = ctx->container.get();
     auto& unordered_map = container_handle();
     auto it = unordered_map.find(path);
     if (it == unordered_map.end())
     {
+        std::cout << "leaving uh_getattr(" << path << ", )\n";
         return 0;
     }
 
+    // !!! container should be released here since f_mera_data is found
     auto meta_handle = it->second.get();
     auto& f_meta_data = meta_handle();
 
@@ -48,6 +50,7 @@ int __uh_getattr (const char *path, struct stat *stbuf)
         stbuf->st_mode = S_IFDIR | 0755;
         stbuf->st_nlink = 2;
     }
+    std::cout << "leaving uh_getattr(" << path << ", )\n";
 
     return 0;
 }
@@ -77,7 +80,7 @@ void *__uh_init (struct fuse_conn_info *conn)
     serializer.deserialize("", false);
     metadata_list.stop();
 
-    auto container_handle = get_context()->container.get();
+    auto container_handle = context->container.get();
     auto& unordered_map = container_handle();
 
     while (const auto& metadata = metadata_list.get_job())
@@ -101,29 +104,39 @@ void *__uh_init (struct fuse_conn_info *conn)
 
 int __uh_readdir (const char *path, void *buf, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info *fi)
 {
+    std::cout << "readdir(" << path << ", )\n";
+
     (void) offset;
     (void) fi;
 
-    const auto *fuse_context = fuse_get_context ();
-
-    auto container_handle = get_context()->container.get();
-    auto& unordered_map = container_handle();
-    auto meta_handle = unordered_map.at(path).get();
-    const auto& metadata = meta_handle();
-    if (metadata.f_type() != uh::uhv::uh_file_type::directory)
+    std::vector <std::string> files;
     {
-        return -ENOENT;
+        const auto *fuse_context = fuse_get_context ();
+        auto container_handle = get_context()->container.get();
+        auto& unordered_map = container_handle();
+        auto meta_handle = unordered_map.at(path).get();
+        const auto& metadata = meta_handle();
+
+        if (metadata.f_type() != uh::uhv::uh_file_type::directory)
+        {
+            std::cout << "leaving uh_readdir(" << path << ", )\n";
+            return -ENOENT;
+        }
+
+        files = get_files (metadata.f_path(), unordered_map);
     }
 
     filler(buf, ".", nullptr, 0);
     filler(buf, "..", nullptr, 0);
 
-    for (const auto& file: get_files (metadata.f_path(), unordered_map))
+    for (const auto& file: files)
     {
         struct stat uh_stat {};
         uh_getattr(file.c_str(), &uh_stat);
         filler(buf, file.c_str(), &uh_stat, 0);
     }
+    std::cout << "leaving uh_readdir(" << path << ", )\n";
+
     return 0;
 }
 
@@ -147,6 +160,8 @@ int __uh_open (const char *path, struct fuse_file_info *fi)
     auto meta_handle = it->second.get();
     auto& meta_data = meta_handle();
     fi->fh = reinterpret_cast<uint64_t>(&meta_data);
+    std::cout << "leaving uh_open(" << path << ", )\n";;
+
     return 0;
 }
 
@@ -156,7 +171,14 @@ int __uh_read (const char *path, char *buffer, size_t size, off_t offset, struct
     std::cout << "uh_read(" << path << ", )\n";
     auto context = get_context();
     uh::protocol::client_pool::handle&& client_handle = context->client_pool->get();
-    auto meta_handle = reinterpret_cast<uh::uhv::ts_f_meta_data*>(ffi->fh)->get();
+
+    std::cout << "uh_read(" << path << ", ) acquired client handle\n";
+
+    auto ffh = reinterpret_cast<uh::uhv::ts_f_meta_data*>(ffi->fh);
+    auto meta_handle = ffh->get ();
+
+    std::cout << "uh_read(" << path << ", ) acquired meta handle\n";
+
     auto & fmd = meta_handle();
     size_t curr_offset = 0;
     std::stringstream recompiled_chunks;
@@ -177,6 +199,7 @@ int __uh_read (const char *path, char *buffer, size_t size, off_t offset, struct
 
     size = std::min(size, contents_read.size() - offset);
     memcpy(buffer, contents_read.c_str() + offset, size);
+    std::cout << "leaving uh_read(" << path << ", )\n";
 
     return size;
 }
@@ -214,6 +237,7 @@ int __uh_write (const char *path, const char *buf, size_t size, off_t offset, st
         fmd.add_effective_size(meta_data.effective_size);
         write_offset += buf_size;
     }
+    std::cout << "leaving uh_write(" << path << ", )\n";
 
     return size;
 }
