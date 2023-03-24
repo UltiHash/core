@@ -21,7 +21,7 @@ jobs:
 
       - name: Install dependencies from Homebrew
         run: |
-          brew install wget openssl gcc cmake
+          brew install wget openssl gcc cmake macfuse
           ln -s /usr/local/opt/openssl/include/openssl /usr/local/include
 
       - name: Cache boost
