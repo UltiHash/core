@@ -31,7 +31,7 @@ namespace uh::uhv {
         std::unordered_map <std::string, uh::uhv::f_meta_data>& n_ts_get();
 
     private:
-        friend class meta_data_handle;
+        friend class container_handle;
 
         void unlock();
 
