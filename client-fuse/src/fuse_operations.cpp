@@ -14,7 +14,7 @@ options& get_options()
 }
 
 
-/* --- fuse_operations core functionality --- */ 
+/* --- fuse_operations core functionality --- */
 
 int __uh_getattr (const char *path, struct stat *stbuf)
 {
@@ -83,8 +83,6 @@ void *__uh_init (struct fuse_conn_info *conn)
     metadata.set_f_size(0u);
     context->paths_metadata.emplace ("/", std::move (metadata));
 
-    std::cout << "leaving uh_init(conn)\n";
-
     return context;
 }
 
@@ -92,6 +90,8 @@ void *__uh_init (struct fuse_conn_info *conn)
 
 int __uh_readdir (const char *path, void *buf, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info *fi)
 {
+    std::cout << "uh_readdir(" << path << ", buf, filler, " << offset << ", fi)\n";
+
     (void) offset;
     (void) fi;
 
@@ -118,7 +118,7 @@ int __uh_readdir (const char *path, void *buf, fuse_fill_dir_t filler, off_t off
 int __uh_open (const char *path, struct fuse_file_info *fi)
 {
     auto context = get_context();
-    std::cout << "open(" << path << ", )\n";
+    std::cout << "open(" << path << ", fi)\n";
 
     if ((fi->flags & O_ACCMODE) != O_RDONLY)
     {
@@ -137,8 +137,8 @@ int __uh_open (const char *path, struct fuse_file_info *fi)
 
 int __uh_read (const char *path, char *buffer, size_t size, off_t offset, struct fuse_file_info *ffi)
 {
+    std::cout << "uh_read(" << path << ", buffer, " << size << ", " << offset << ", ffi)\n";
 
-    std::cout << "uh_read(" << path << ", )\n";
     auto context = get_context();
     uh::protocol::client_pool::handle&& client_handle = context->client_pool->get();
     auto &fmd = reinterpret_cast<uh::uhv::ts_f_meta_data*>(ffi->fh)->n_ts_get ();
@@ -166,6 +166,8 @@ int __uh_read (const char *path, char *buffer, size_t size, off_t offset, struct
 }
 
 void __uh_destroy (void *context) {
+    std::cout << "uh_destroy(context)\n";
+
     auto pcontext = static_cast <private_context *> (context);
     delete pcontext;
 }
