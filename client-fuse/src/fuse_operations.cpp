@@ -33,11 +33,11 @@ int uh_getattr (const char *path, struct stat *stbuf)
     {
         stbuf->st_size = f_meta_data.f_size();
         stbuf->st_nlink = 1;
-	    stbuf->st_mode = S_IFREG | 0444;
+        stbuf->st_mode = S_IFREG | 0444;
     }
     if (f_type == uh::uhv::uh_file_type::directory)
     {
-	    stbuf->st_mode = S_IFDIR | 0755;
+        stbuf->st_mode = S_IFDIR | 0755;
         stbuf->st_nlink = 2;
     }
 
@@ -50,7 +50,6 @@ void *uh_init (struct fuse_conn_info *conn)
     auto *context = new private_context;
 
     // protocol
-    boost::asio::io_context io;
     std::stringstream s;
     s << PROJECT_NAME << " " << PROJECT_VERSION;
 
@@ -61,7 +60,7 @@ void *uh_init (struct fuse_conn_info *conn)
     context->client_pool = std::move(std::make_unique<uh::protocol::client_pool>(
         std::make_unique<uh::protocol::client_factory>(
                 std::make_unique<uh::net::plain_socket_factory>(
-                        io, get_options().agency_hostname, get_options().agency_port),
+                        context->io, get_options().agency_hostname, get_options().agency_port),
                 cf_config), get_options().agency_connections));
 
     uh::uhv::job_queue<std::unique_ptr<uh::uhv::f_meta_data>> metadata_list;
