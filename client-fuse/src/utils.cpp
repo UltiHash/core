@@ -14,7 +14,7 @@ private_context* get_context()
 
 f_meta_data &get_metadata(struct fuse_file_info* fi)
 {
-    return reinterpret_cast<ts_f_meta_data*>(fi->fh)->n_ts_get ();
+    return reinterpret_cast<ts_f_meta_data*>(fi->fh)->get()();
 }
 
 std::vector <std::string> get_files (const std::string &directory, const std::unordered_map <std::string, uh::uhv::ts_f_meta_data> &metadata_list) {

@@ -31,15 +31,14 @@ namespace uh::uhv {
 
         ts_container() = default;
         container_handle get();
-        std::unordered_map <std::string, uh::uhv::ts_f_meta_data>& n_ts_get();
 
     private:
-        friend class meta_data_handle;
+        friend class container_handle;
 
         void unlock();
 
         std::mutex m_mutex;
-        std::unordered_map <std::string, uh::uhv::ts_f_meta_data> m_paths_metadata;
+        std::unordered_map <std::string, uh::uhv::ts_f_meta_data> m_paths_metadata{};
     };
 
 // ---------------------------------------------------------------------

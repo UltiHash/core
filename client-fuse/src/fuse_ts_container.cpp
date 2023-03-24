@@ -11,7 +11,7 @@ ts_container::container_handle::~container_handle()
 
 // ---------------------------------------------------------------------
 
-std::unordered_map <std::string, uh::uhv::ts_f_meta_data>& ts_container::container_handle::operator()()
+std::unordered_map<std::string, uh::uhv::ts_f_meta_data>& ts_container::container_handle::operator()()
 {
     return m_paths_metadata;
 }
@@ -30,13 +30,6 @@ ts_container::container_handle ts_container::get()
 {
     m_mutex.lock();
     return {*this, m_paths_metadata};
-}
-
-// ---------------------------------------------------------------------
-
-std::unordered_map <std::string, uh::uhv::ts_f_meta_data>& ts_container::n_ts_get()
-{
-    return m_paths_metadata;
 }
 
 // ---------------------------------------------------------------------

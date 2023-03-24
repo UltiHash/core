@@ -22,18 +22,18 @@ int __uh_getattr (const char *path, struct stat *stbuf)
 
     memset(stbuf, 0, sizeof(struct stat));
     uh::uhv::uh_file_type f_type;
-    f_meta_data f_meta_data;
 
+    // !!! container should be released here since f_mera_data is found
+    auto container_handle = get_context()->container.get();
+    auto& unordered_map = container_handle();
+    auto it = unordered_map.find(path);
+    if (it == unordered_map.end())
     {
-        auto unordered_map = get_context()->container.get()();
-        auto it = unordered_map.find(path);
-        if (it == unordered_map.end())
-        {
-            return 0;
-        }
-
-        f_meta_data = it->second.n_ts_get();
+        return 0;
     }
+
+    auto meta_handle = it->second.get();
+    auto& f_meta_data = meta_handle();
 
     f_type = static_cast <uh::uhv::uh_file_type> (f_meta_data.f_type());
 
@@ -77,7 +77,8 @@ void *__uh_init (struct fuse_conn_info *conn)
     serializer.deserialize("", false);
     metadata_list.stop();
 
-    auto unordered_map = get_context()->container.get()();
+    auto container_handle = get_context()->container.get();
+    auto& unordered_map = container_handle();
 
     while (const auto& metadata = metadata_list.get_job())
     {
@@ -89,7 +90,7 @@ void *__uh_init (struct fuse_conn_info *conn)
     metadata.set_f_path("/");
     metadata.set_f_type(uh::uhv::directory);
     metadata.set_f_size(0u);
-    unordered_map.emplace ("/", std::move (metadata));
+    unordered_map.emplace("/", std::move (metadata));
 
     std::cout << "leaving uh_init(conn)\n";
 
@@ -105,8 +106,10 @@ int __uh_readdir (const char *path, void *buf, fuse_fill_dir_t filler, off_t off
 
     const auto *fuse_context = fuse_get_context ();
 
-    auto unordered_map = get_context()->container.get()();
-    const auto metadata = unordered_map.at(path).n_ts_get();
+    auto container_handle = get_context()->container.get();
+    auto& unordered_map = container_handle();
+    auto meta_handle = unordered_map.at(path).get();
+    const auto& metadata = meta_handle();
     if (metadata.f_type() != uh::uhv::uh_file_type::directory)
     {
         return -ENOENT;
@@ -133,14 +136,17 @@ int __uh_open (const char *path, struct fuse_file_info *fi)
         return -EACCES;
     }
 
-    auto unordered_map = get_context()->container.get()();
+    auto container_handle = get_context()->container.get();
+    auto& unordered_map = container_handle();
     auto it = unordered_map.find(path);
     if (it == unordered_map.end())
     {
         return -ENOENT;
     }
 
-    fi->fh = reinterpret_cast<uint64_t>(&it->second.n_ts_get());
+    auto meta_handle = it->second.get();
+    auto& meta_data = meta_handle();
+    fi->fh = reinterpret_cast<uint64_t>(&meta_data);
     return 0;
 }
 
@@ -150,7 +156,8 @@ int __uh_read (const char *path, char *buffer, size_t size, off_t offset, struct
     std::cout << "uh_read(" << path << ", )\n";
     auto context = get_context();
     uh::protocol::client_pool::handle&& client_handle = context->client_pool->get();
-    auto &fmd = reinterpret_cast<uh::uhv::ts_f_meta_data*>(ffi->fh)->n_ts_get ();
+    auto meta_handle = reinterpret_cast<uh::uhv::ts_f_meta_data*>(ffi->fh)->get();
+    auto & fmd = meta_handle();
     size_t curr_offset = 0;
     std::stringstream recompiled_chunks;
     if (fmd.f_type() == uh::uhv::uh_file_type::regular)
@@ -247,7 +254,8 @@ int uh_getattr (const char *path, struct stat *stbuf)
     }
 }
 
-void uh_destroy (void *context){
+void uh_destroy (void *context)
+{
     try
     {
         return __uh_destroy(context);
@@ -257,4 +265,5 @@ void uh_destroy (void *context){
         std::cerr << e.what() << '\n';
     }
 }
+
 } // end namespace uh::uhv
