@@ -5,12 +5,9 @@ message(STATUS "Building ${PROJECT_NAME}...")
 set(CMAKE_CXX_STANDARD 20)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
-message(${CMAKE_MODULE_PATH})
-
-
 find_package(FUSE REQUIRED)
 
-add_definitions(-D_FILE_OFFSET_BITS=64)
+add_definitions(-D_REENTRANT -D_FILE_OFFSET_BITS=64)
 
 # generate config header file
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.hpp.in ${CMAKE_CURRENT_BINARY_DIR}/config.hpp)
@@ -19,7 +16,7 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.hpp.in ${CMAKE_CURRENT_BINARY_
 set(${PROJECT_NAME}_INTERNAL_DEPS uhLibLogging uhLibUtil uhLibNet uhLibOptions uhLibProtocol uhLibUhv)
 
 # configuring library dependencies for cmake and linker
-set(${PROJECT_NAME}_INCLUDE_DIRS ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/src ${${PROJECT_NAME}_INTERNAL_DEPS} ${FUSE_INCLUDE_DIR})
+set(${PROJECT_NAME}_INCLUDE_DIRS ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/src ${${PROJECT_NAME}_INTERNAL_DEPS} ${FUSE_INCLUDE_DIRS})
 set(${PROJECT_NAME}_LINK_LIBRARIES ${${PROJECT_NAME}_INTERNAL_DEPS} ${FUSE_LIBRARIES})
 
 # adding all the .h files of the current project
