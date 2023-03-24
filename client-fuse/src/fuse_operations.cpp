@@ -19,14 +19,18 @@ int uh_getattr (const char *path, struct stat *stbuf)
 
     memset(stbuf, 0, sizeof(struct stat));
     uh::uhv::uh_file_type f_type;
+    f_meta_data f_meta_data;
 
-    auto it = get_context()->paths_metadata.find(path);
-    if (it == get_context()->paths_metadata.end())
     {
-        return 0;
-    }
+        auto unordered_map = get_context()->container.get()();
+        auto it = unordered_map.find(path);
+        if (it == unordered_map.end())
+        {
+            return 0;
+        }
 
-    auto f_meta_data = it->second;
+        f_meta_data = it->second;
+    }
     f_type = static_cast <uh::uhv::uh_file_type> (f_meta_data.f_type());
 
     if (f_type == uh::uhv::uh_file_type::regular)
@@ -68,17 +72,20 @@ void *uh_init (struct fuse_conn_info *conn)
 
     serializer.deserialize("", false);
     metadata_list.stop();
+
+    auto unordered_map = get_context()->container.get()();
+
     while (const auto& metadata = metadata_list.get_job())
     {
         if (metadata == std::nullopt)
             break;
-        context->paths_metadata.emplace(metadata.value()->f_path(), *(*metadata));
+        unordered_map.emplace(metadata.value()->f_path(), *(*metadata));
     }
     f_meta_data metadata;
     metadata.set_f_path("/");
     metadata.set_f_type(uh::uhv::directory);
     metadata.set_f_size(0u);
-    context->paths_metadata["/"] = metadata;
+    unordered_map["/"] = metadata;
 
     std::cout << "leaving uh_init(conn)\n";
 
@@ -94,17 +101,18 @@ int uh_readdir (const char *path, void *buf, fuse_fill_dir_t filler, off_t offse
 
     const auto *fuse_context = fuse_get_context ();
 
-    const auto *pcontext = static_cast <private_context *> (fuse_context->private_data);
-
-    const auto metadata = pcontext->paths_metadata.at(path);
-    if (metadata.f_type() != uh::uhv::uh_file_type::directory) {
+    auto unorderd_map = get_context()->container.get()();
+    const auto metadata = unorderd_map.at(path);
+    if (metadata.f_type() != uh::uhv::uh_file_type::directory)
+    {
         return -ENOENT;
     }
 
     filler(buf, ".", nullptr, 0);
     filler(buf, "..", nullptr, 0);
 
-    for (const auto& file: get_files (metadata.f_path(), pcontext->paths_metadata)) {
+    for (const auto& file: get_files (metadata.f_path(), unorderd_map))
+    {
         struct stat uh_stat {};
         uh_getattr(file.c_str(), &uh_stat);
         filler(buf, file.c_str(), &uh_stat, 0);
@@ -114,7 +122,6 @@ int uh_readdir (const char *path, void *buf, fuse_fill_dir_t filler, off_t offse
 
 int uh_open (const char *path, struct fuse_file_info *fi)
 {
-    auto context = get_context();
     std::cout << "open(" << path << ", )\n";
 
     if ((fi->flags & O_ACCMODE) != O_RDONLY)
@@ -122,8 +129,9 @@ int uh_open (const char *path, struct fuse_file_info *fi)
         return -EACCES;
     }
 
-    auto it = context->paths_metadata.find(path);
-    if (it == context->paths_metadata.end())
+    auto unordered_map = get_context()->container.get()();
+    auto it = unordered_map.find(path);
+    if (it == unordered_map.end())
     {
         return -ENOENT;
     }

@@ -17,6 +17,7 @@
 #include <protocol/client_pool.h>
 #include <net/plain_socket.h>
 #include <util/exception.h>
+#include "fuse_ts_container.h"
 
 namespace uh::uhv {
 
@@ -24,7 +25,7 @@ struct private_context
 {
     boost::asio::io_context io;
     std::unique_ptr<uh::protocol::client_pool> client_pool;
-    std::unordered_map <std::string, uh::uhv::f_meta_data> paths_metadata;
+    ts_container container;
 };
 
 

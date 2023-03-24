@@ -53,7 +53,7 @@ static void show_help(const char *prog_name)
 void validate_options()
 {
     auto& opt = uh::uhv::get_options();
-    canonical(std::filesystem::path(opt.UHVpath));
+    auto path = canonical(std::filesystem::path(opt.UHVpath));
     if(opt.agency_port < 0 or opt.agency_port > USHRT_MAX)
         THROW(uh::util::exception, "An invalid port number was specified.");
     if(opt.agency_connections < 0 )

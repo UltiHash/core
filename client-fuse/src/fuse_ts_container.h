@@ -1,3 +1,6 @@
+#ifndef CORE_FUSE_TS_CONTAINER_H
+#define CORE_FUSE_TS_CONTAINER_H
+
 #include <mutex>
 #include <uhv/f_meta_data.h>
 
@@ -42,3 +45,5 @@ namespace uh::uhv {
 // ---------------------------------------------------------------------
 
 } // namespace uh::uhv
+
+#endif
