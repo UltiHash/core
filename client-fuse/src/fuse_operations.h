@@ -13,6 +13,7 @@
 #include <uhv/job_queue.h>
 #include <uhv/f_serialization.h>
 #include <uhv/f_meta_data.h>
+#include <fuse_f_meta_data.h>
 #include <protocol/client_factory.h>
 #include <protocol/client_pool.h>
 #include <net/plain_socket.h>

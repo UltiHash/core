@@ -2,7 +2,7 @@
 #define CORE_FUSE_TS_CONTAINER_H
 
 #include <mutex>
-#include <uhv/f_meta_data.h>
+#include "fuse_f_meta_data.h"
 
 namespace uh::uhv {
 
@@ -17,21 +17,21 @@ namespace uh::uhv {
         public:
             ~container_handle();
 
-            std::unordered_map <std::string, uh::uhv::f_meta_data>& operator()();
+            std::unordered_map <std::string, uh::uhv::ts_f_meta_data>& operator()();
 
         private:
             friend ts_container;
 
-            container_handle(ts_container& container, std::unordered_map <std::string, uh::uhv::f_meta_data>& paths);
+            container_handle(ts_container& container, std::unordered_map <std::string, uh::uhv::ts_f_meta_data>& paths);
 
             ts_container &m_container;
-            std::unordered_map <std::string, uh::uhv::f_meta_data>& m_paths_metadata;
+            std::unordered_map <std::string, uh::uhv::ts_f_meta_data>& m_paths_metadata;
 
         };
 
         ts_container() = default;
         container_handle get();
-        std::unordered_map <std::string, uh::uhv::f_meta_data>& n_ts_get();
+        std::unordered_map <std::string, uh::uhv::ts_f_meta_data>& n_ts_get();
 
     private:
         friend class meta_data_handle;
@@ -39,7 +39,7 @@ namespace uh::uhv {
         void unlock();
 
         std::mutex m_mutex;
-        std::unordered_map <std::string, uh::uhv::f_meta_data> m_paths_metadata;
+        std::unordered_map <std::string, uh::uhv::ts_f_meta_data> m_paths_metadata;
     };
 
 // ---------------------------------------------------------------------

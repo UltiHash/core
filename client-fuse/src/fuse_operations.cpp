@@ -13,7 +13,10 @@ options& get_options()
     return opt;
 }
 
-int uh_getattr (const char *path, struct stat *stbuf)
+
+/* --- fuse_operations core functionality --- */ 
+
+int __uh_getattr (const char *path, struct stat *stbuf)
 {
     std::cout << "uh_getattr(" << path << ", stbuf)\n";
 
@@ -29,8 +32,9 @@ int uh_getattr (const char *path, struct stat *stbuf)
             return 0;
         }
 
-        f_meta_data = it->second;
+        f_meta_data = it->second.n_ts_get();
     }
+
     f_type = static_cast <uh::uhv::uh_file_type> (f_meta_data.f_type());
 
     if (f_type == uh::uhv::uh_file_type::regular)
@@ -48,7 +52,7 @@ int uh_getattr (const char *path, struct stat *stbuf)
     return 0;
 }
 
-void *uh_init (struct fuse_conn_info *conn)
+void *__uh_init (struct fuse_conn_info *conn)
 {
     std::cout << "uh_init(conn)\n";
     auto *context = new private_context;
@@ -85,7 +89,7 @@ void *uh_init (struct fuse_conn_info *conn)
     metadata.set_f_path("/");
     metadata.set_f_type(uh::uhv::directory);
     metadata.set_f_size(0u);
-    unordered_map["/"] = metadata;
+    unordered_map.emplace ("/", std::move (metadata));
 
     std::cout << "leaving uh_init(conn)\n";
 
@@ -94,15 +98,15 @@ void *uh_init (struct fuse_conn_info *conn)
 
 
 
-int uh_readdir (const char *path, void *buf, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info *fi)
+int __uh_readdir (const char *path, void *buf, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info *fi)
 {
     (void) offset;
     (void) fi;
 
     const auto *fuse_context = fuse_get_context ();
 
-    auto unorderd_map = get_context()->container.get()();
-    const auto metadata = unorderd_map.at(path);
+    auto unordered_map = get_context()->container.get()();
+    const auto metadata = unordered_map.at(path).n_ts_get();
     if (metadata.f_type() != uh::uhv::uh_file_type::directory)
     {
         return -ENOENT;
@@ -111,7 +115,7 @@ int uh_readdir (const char *path, void *buf, fuse_fill_dir_t filler, off_t offse
     filler(buf, ".", nullptr, 0);
     filler(buf, "..", nullptr, 0);
 
-    for (const auto& file: get_files (metadata.f_path(), unorderd_map))
+    for (const auto& file: get_files (metadata.f_path(), unordered_map))
     {
         struct stat uh_stat {};
         uh_getattr(file.c_str(), &uh_stat);
@@ -120,7 +124,7 @@ int uh_readdir (const char *path, void *buf, fuse_fill_dir_t filler, off_t offse
     return 0;
 }
 
-int uh_open (const char *path, struct fuse_file_info *fi)
+int __uh_open (const char *path, struct fuse_file_info *fi)
 {
     std::cout << "open(" << path << ", )\n";
 
@@ -136,27 +140,27 @@ int uh_open (const char *path, struct fuse_file_info *fi)
         return -ENOENT;
     }
 
-    fi->fh = reinterpret_cast<uint64_t>(&it->second);
+    fi->fh = reinterpret_cast<uint64_t>(&it->second.n_ts_get());
     return 0;
 }
 
-int uh_read (const char *path, char *buffer, size_t size, off_t offset, struct fuse_file_info *ffi)
+int __uh_read (const char *path, char *buffer, size_t size, off_t offset, struct fuse_file_info *ffi)
 {
 
     std::cout << "uh_read(" << path << ", )\n";
     auto context = get_context();
     uh::protocol::client_pool::handle&& client_handle = context->client_pool->get();
-    auto* fmd = reinterpret_cast<uh::uhv::f_meta_data*>(ffi->fh);
+    auto &fmd = reinterpret_cast<uh::uhv::ts_f_meta_data*>(ffi->fh)->n_ts_get ();
     size_t curr_offset = 0;
     std::stringstream recompiled_chunks;
-    if (fmd->f_type() == uh::uhv::uh_file_type::regular)
+    if (fmd.f_type() == uh::uhv::uh_file_type::regular)
     {
         std::vector<char> current_hash(64);
 
-        for (auto i = 0; i < fmd->f_hashes().size(); i += 64)
+        for (auto i = 0; i < fmd.f_hashes().size(); i += 64)
         {
-            std::copy(fmd->f_hashes().begin() + i,
-                      fmd->f_hashes().begin() + i + 64, current_hash.begin());
+            std::copy(fmd.f_hashes().begin() + i,
+                      fmd.f_hashes().begin() + i + 64, current_hash.begin());
 
 
             recompiled_chunks << *client_handle->read_block(current_hash);
@@ -170,9 +174,87 @@ int uh_read (const char *path, char *buffer, size_t size, off_t offset, struct f
     return size;
 }
 
-void uh_destroy (void *context) {
+void __uh_destroy (void *context) {
     auto pcontext = static_cast <private_context *> (context);
     delete pcontext;
 }
 
+/*-----  fuse operations made safe -----*/
+
+
+void *uh_init (struct fuse_conn_info *conn){
+    try
+    {
+        return __uh_init(conn);
+    }
+    catch(const std::exception& e)
+    {
+        std::cerr << e.what() << '\n';
+        return nullptr;
+    }
+}
+
+int uh_readdir (const char *path, void *buf, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info *fi)
+{
+    try
+    {
+       return __uh_readdir(path, buf, filler, offset, fi);
+    }
+    catch(const std::exception& e)
+    {
+        std::cerr << e.what() << '\n';
+        return -ENOENT;
+    }
+}
+
+int uh_read (const char *path, char *buf, size_t size, off_t offset, struct fuse_file_info *fi)
+{
+    try
+    {
+        return __uh_read(path, buf, size, offset, fi);
+    }
+    catch(const std::exception& e)
+    {
+        std::cerr << e.what() << '\n';
+        return -ENOENT;
+    }
+}
+
+int uh_open (const char *path, struct fuse_file_info *fi)
+{
+    try
+    {
+        return __uh_open(path, fi);
+    }
+    catch(const std::exception& e)
+    {
+        std::cerr << e.what() << '\n';
+        return -ENOENT;
+    }
+}
+
+
+int uh_getattr (const char *path, struct stat *stbuf)
+{
+    try
+    {
+        return __uh_getattr(path, stbuf);
+    }
+    catch(const std::exception& e)
+    {
+        std::cerr << e.what() << '\n';
+        return -ENOENT;
+    }
+}
+
+void uh_destroy (void *context){
+    try
+    {
+        return __uh_destroy(context);
+    }
+    catch(const std::exception& e)
+    {
+        std::cerr << e.what() << '\n';
+    }
+}
 } // end namespace uh::uhv

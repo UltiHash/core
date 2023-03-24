@@ -11,7 +11,7 @@ ts_container::container_handle::~container_handle()
 
 // ---------------------------------------------------------------------
 
-std::unordered_map <std::string, uh::uhv::f_meta_data>& ts_container::container_handle::operator()()
+std::unordered_map <std::string, uh::uhv::ts_f_meta_data>& ts_container::container_handle::operator()()
 {
     return m_paths_metadata;
 }
@@ -19,7 +19,7 @@ std::unordered_map <std::string, uh::uhv::f_meta_data>& ts_container::container_
 // ---------------------------------------------------------------------
 
 ts_container::container_handle::container_handle(ts_container& container,
-                                                 std::unordered_map<std::string, uh::uhv::f_meta_data>& paths) :
+                                                 std::unordered_map<std::string, uh::uhv::ts_f_meta_data>& paths) :
                                                  m_container(container), m_paths_metadata(paths)
 {
 }
@@ -34,7 +34,7 @@ ts_container::container_handle ts_container::get()
 
 // ---------------------------------------------------------------------
 
-std::unordered_map <std::string, uh::uhv::f_meta_data>& ts_container::n_ts_get()
+std::unordered_map <std::string, uh::uhv::ts_f_meta_data>& ts_container::n_ts_get()
 {
     return m_paths_metadata;
 }

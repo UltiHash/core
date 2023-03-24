@@ -26,9 +26,9 @@ ts_f_meta_data::meta_data_handle::meta_data_handle(ts_f_meta_data &ts_fmeta_clas
 
 // ---------------------------------------------------------------------
 
-ts_f_meta_data::ts_f_meta_data(uh::uhv::f_meta_data& file_meta_data)
+ts_f_meta_data::ts_f_meta_data(uh::uhv::f_meta_data file_meta_data): 
+    m_file_meta (std::move (file_meta_data))
 {
-    m_file_meta = file_meta_data;
 }
 
 // ---------------------------------------------------------------------
