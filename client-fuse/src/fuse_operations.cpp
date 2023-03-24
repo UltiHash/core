@@ -33,11 +33,11 @@ int uh_getattr (const char *path, struct stat *stbuf)
     {
         stbuf->st_size = f_meta_data.f_size();
         stbuf->st_nlink = 1;
-	stbuf->st_mode = S_IFREG | 0444;
+	    stbuf->st_mode = S_IFREG | 0444;
     }
     if (f_type == uh::uhv::uh_file_type::directory)
     {
-	stbuf->st_mode = S_IFDIR | 0755;
+	    stbuf->st_mode = S_IFDIR | 0755;
         stbuf->st_nlink = 2;
     }
 
