@@ -20,10 +20,6 @@ static const struct fuse_operations uh_operations =
         .destroy        = uh::uhv::uh_destroy,
     };
 
-
-#define OPTION(t, p)                           \
-    { t, offsetof(struct uh::uhv::options, p), 1 }
-
 #define OPTION(t, p)                           \
     { t, offsetof(struct uh::uhv::options, p), 1 }
 static const struct fuse_opt option_spec[] =

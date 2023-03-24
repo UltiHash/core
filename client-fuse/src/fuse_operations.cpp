@@ -181,6 +181,43 @@ int __uh_read (const char *path, char *buffer, size_t size, off_t offset, struct
     return size;
 }
 
+int __uh_write (const char *path, const char *buf, size_t size, off_t offset, struct fuse_file_info *fi) {
+
+
+    std::cout << "uh_write(" << path << ", )\n";
+    auto context = get_context();
+    uh::protocol::client_pool::handle&& client_handle = context->client_pool->get();
+    auto *tsfmd = reinterpret_cast<uh::uhv::ts_f_meta_data*>(fi->fh);
+    auto &fmd = tsfmd->get ()();
+    size_t curr_offset = 0;
+    std::stringstream recompiled_chunks;
+    if (fmd.f_type() != uh::uhv::uh_file_type::regular) {
+        return -ENOMEM;
+    }
+
+    constexpr std::uint64_t buf_size = 1 << 22;
+    std::size_t write_offset = 0ul;
+
+    while (write_offset < size)
+    {
+        auto write_size = buf_size;
+        if (write_offset + write_size > size) {
+            write_size = size - write_offset;
+        }
+
+        auto alloc = client_handle->allocate(write_size);
+        std::span <char> sbuf (const_cast <char *> (buf+write_offset), write_size);
+        io::write_from_buffer(alloc->device(), sbuf);
+
+        auto meta_data = alloc->persist();
+        fmd.add_hash(meta_data.hash);
+        fmd.add_effective_size(meta_data.effective_size);
+        write_offset += buf_size;
+    }
+
+    return size;
+}
+
 void __uh_destroy (void *context) {
     auto pcontext = static_cast <private_context *> (context);
     delete pcontext;
@@ -219,6 +256,19 @@ int uh_read (const char *path, char *buf, size_t size, off_t offset, struct fuse
     try
     {
         return __uh_read(path, buf, size, offset, fi);
+    }
+    catch(const std::exception& e)
+    {
+        std::cerr << e.what() << '\n';
+        return -ENOENT;
+    }
+}
+
+int uh_write (const char *path, char *buf, size_t size, off_t offset, struct fuse_file_info *fi)
+{
+    try
+    {
+        return __uh_write (path, buf, size, offset, fi);
     }
     catch(const std::exception& e)
     {
