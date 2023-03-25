@@ -211,72 +211,67 @@ int __uh_read (const char *path, char *buffer, size_t size, off_t offset, struct
 
 int __uh_write (const char *path, const char *buf, size_t size, off_t offset, struct fuse_file_info *fi) {
 
-
     std::cout << "uh_write(" << path << ", " << size << ", " << offset << ")\n";
-    std::cout << buf << std::endl;
 
     if ((fi->flags & O_ACCMODE) != O_RDWR and (fi->flags & O_ACCMODE) != O_WRONLY)
     {
         return -EACCES;
     }
-
-    auto context = get_context();
     auto &fmd = *reinterpret_cast<uh::uhv::f_meta_data*>(fi->fh);
     if (fmd.f_type() != uh::uhv::uh_file_type::regular) {
         return -ENOMEM;
     }
+
+    auto context = get_context();
     uh::protocol::client_pool::handle&& client_handle = context->client_pool->get();
 
-    constexpr std::uint64_t buf_size = 1 << 22;
+    constexpr std::uint64_t max_chunk_size = 1 << 22;
+    constexpr std::uint64_t min_chuck_size = 64 * 1024ul;
 
     // if this is append
     if (offset == fmd.f_size()) {
-        // ,read the last chunk of the file
-        std::vector<char> current_hash(64);
-        std::vector<char> last_chunk(std::max (fmd.f_size() % buf_size, 64 * 1024ul));
 
+        // read the last chunk of the file
+        std::vector<char> current_hash(64);
+        std::vector <char> last_chunk (std::max (fmd.f_size() % max_chunk_size, min_chuck_size) + size);
+        std::span<char> data = {last_chunk.data(), last_chunk.size() - size};
         std::copy(fmd.f_hashes().end() - 64, fmd.f_hashes().end (), current_hash.begin());
         fmd.remove_hash(fmd.f_hashes().size() - 64, fmd.f_hashes().size());
-        client_handle->read_block(current_hash)->read(last_chunk);
+        client_handle->read_block(current_hash)->read(data);
 
         // append the new data to the last chunk
-        last_chunk.resize(fmd.f_size() % buf_size + size);
-        std::copy(buf, buf + size, last_chunk.end() - size);
+        std::copy(buf, buf + size, last_chunk.begin() + fmd.f_size() % max_chunk_size);
+        data = {last_chunk.data(), fmd.f_size() % max_chunk_size + size};
 
         //write the extended last chunk
-        std::size_t write_offset = 0ul;
-        while (write_offset < last_chunk.size())
-        {
-            auto write_size = buf_size;
-            if (write_offset + write_size > last_chunk.size()) {
-                write_size = last_chunk.size() - write_offset;
-            }
-
-            auto alloc = client_handle->allocate(write_size);
-            std::span <char> sbuf (const_cast <char *> (last_chunk.data() + write_offset), write_size);
-            io::write_from_buffer(alloc->device(), sbuf);
-
-            auto meta_data = alloc->persist();
-            fmd.add_hash(meta_data.hash);
-            fmd.add_effective_size(meta_data.effective_size);
-            write_offset += write_size;
-        }
+        const auto effective_size = upload_data (client_handle, max_chunk_size, data, fmd.get_hashes());
+        fmd.add_effective_size(effective_size);
         fmd.set_f_size(fmd.f_size() + size);
-
-        // store the new metadata into the uh volume
-        std::ofstream UHV_file(get_options().UHVpath, std::ios::trunc | std::ios::out | std::ios::in | std::ios::binary);
-
-        for (auto &tsmd: context->container.get()()) {
-            auto &md = tsmd.second.get()();
-            auto relative_path = (md.f_path() == "/") ? "/":std::filesystem::relative(md.f_path(), "/");
-            auto bytes = uh::uhv::f_serialization::serialize_f_meta_data(std::make_unique <uh::uhv::f_meta_data> (md), relative_path);
-            UHV_file.write(reinterpret_cast<const char*>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
-        }
-        UHV_file.flush();
+    }
+    else if (offset == 0) {
+    // for now, we assume replace data
+        std::span<char> data = {const_cast <char*> (buf), size};
+        fmd.set_f_hashes({});
+        const auto effective_size = upload_data (client_handle, max_chunk_size, data, fmd.get_hashes());
+        fmd.set_effective_size(effective_size);
+        fmd.set_f_size(size);
     }
     else {
-    // this is not append
+        throw std::runtime_error("write operation not supported");
     }
+
+
+    // store the new metadata into the uh volume
+    std::ofstream UHV_file(get_options().UHVpath, std::ios::trunc | std::ios::out | std::ios::in | std::ios::binary);
+
+    for (auto &tsmd: context->container.get()()) {
+        auto &md = tsmd.second.get()();
+        auto relative_path = (md.f_path() == "/") ? "/":std::filesystem::relative(md.f_path(), "/");
+        auto bytes = uh::uhv::f_serialization::serialize_f_meta_data(std::make_unique <uh::uhv::f_meta_data> (md), relative_path);
+        UHV_file.write(reinterpret_cast<const char*>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
+    }
+    UHV_file.flush();
+
     std::cout << "leaving uh_write(" << path << ", )\n";
 
     return size;
