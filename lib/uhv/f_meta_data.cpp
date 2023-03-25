@@ -26,6 +26,10 @@ void f_meta_data::add_hash(const std::vector<char>& hash)
     std::copy(hash.begin(), hash.end(), std::back_inserter(m_f_hashes));
 }
 
+void f_meta_data::remove_hash (size_t start_index, size_t end_index) {
+    m_f_hashes.erase(m_f_hashes.begin() + start_index, m_f_hashes.begin() + end_index);
+}
+
 // ---------------------------------------------------------------------
 
 void f_meta_data::add_effective_size(const std::uint64_t& size)

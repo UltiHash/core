@@ -175,17 +175,21 @@ int __uh_open (const char *path, struct fuse_file_info *fi)
     return 0;
 }
 
-int __uh_read (const char *path, char *buffer, size_t size, off_t offset, struct fuse_file_info *ffi)
+int __uh_read (const char *path, char *buffer, size_t size, off_t offset, struct fuse_file_info *fi)
 {
 
     std::cout << "uh_read(" << path << ", " << size << ", " << offset << ")\n";
+
+    if ((fi->flags & O_ACCMODE) != O_RDONLY and (fi->flags & O_ACCMODE) != O_RDWR)
+    {
+        return -EACCES;
+    }
+
     auto context = get_context();
     uh::protocol::client_pool::handle client_handle = context->client_pool->get();
 
-    auto *ffh = reinterpret_cast<uh::uhv::f_meta_data*>(ffi->fh);
-    //auto meta_handle = ffh->get ();
+    auto *ffh = reinterpret_cast<uh::uhv::f_meta_data*>(fi->fh);
 
-    //auto & fmd = meta_handle();
     auto &fmd = *ffh;
     size_t curr_offset = 0;
     std::stringstream recompiled_chunks;
@@ -198,14 +202,10 @@ int __uh_read (const char *path, char *buffer, size_t size, off_t offset, struct
             std::copy(fmd.f_hashes().begin() + i,
                       fmd.f_hashes().begin() + i + 64, current_hash.begin());
 
-
-            recompiled_chunks << *client_handle->read_block(current_hash);
+            client_handle->read_block(current_hash)->read({buffer + curr_offset, 1024*1024});
+            curr_offset += 1024*1024;
         }
     }
-    std::string contents_read = recompiled_chunks.str();
-
-    size = std::min(size, contents_read.size() - offset);
-    memcpy(buffer, contents_read.c_str() + offset, size);
     std::cout << "leaving uh_read(" << path << ", )\n";
 
     return size;
@@ -216,9 +216,14 @@ int __uh_write (const char *path, const char *buf, size_t size, off_t offset, st
 
     std::cout << "uh_write(" << path << ", " << size << ", " << offset << ")\n";
     std::cout << buf << std::endl;
+
+    if ((fi->flags & O_ACCMODE) != O_RDWR and (fi->flags & O_ACCMODE) != O_WRONLY)
+    {
+        return -EACCES;
+    }
+
     auto context = get_context();
     auto *tsfmd = reinterpret_cast<uh::uhv::f_meta_data*>(fi->fh);
-    //auto &fmd = tsfmd->get ()();
     auto &fmd = *tsfmd;
     if (fmd.f_type() != uh::uhv::uh_file_type::regular) {
         return -ENOMEM;
@@ -226,39 +231,60 @@ int __uh_write (const char *path, const char *buf, size_t size, off_t offset, st
     uh::protocol::client_pool::handle&& client_handle = context->client_pool->get();
 
     constexpr std::uint64_t buf_size = 1 << 22;
-    std::size_t write_offset = 0ul;
 
-    while (write_offset < size)
-    {
-        auto write_size = buf_size;
-        if (write_offset + write_size > size) {
-            write_size = size - write_offset;
+    // if this is append
+    if (offset == fmd.f_size()) {
+        // ,read the last chunk of the file
+        std::vector<char> current_hash(64);
+        std::vector<char> last_chunk(std::max (fmd.f_size() % buf_size, 64 * 1024ul));
+
+        std::copy(fmd.f_hashes().end() - 64, fmd.f_hashes().end (), current_hash.begin());
+        fmd.remove_hash(fmd.f_hashes().size() - 64, fmd.f_hashes().size());
+        client_handle->read_block(current_hash)->read(last_chunk);
+
+        // append the new data to the last chunk
+        last_chunk.resize(fmd.f_size() % buf_size + size);
+        std::copy(buf, buf + size, last_chunk.end() - size);
+
+        //write the extended last chunk
+        std::size_t write_offset = 0ul;
+        while (write_offset < last_chunk.size())
+        {
+            auto write_size = buf_size;
+            if (write_offset + write_size > last_chunk.size()) {
+                write_size = last_chunk.size() - write_offset;
+            }
+
+            auto alloc = client_handle->allocate(write_size);
+            std::span <char> sbuf (const_cast <char *> (last_chunk.data() + write_offset), write_size);
+            io::write_from_buffer(alloc->device(), sbuf);
+
+            auto meta_data = alloc->persist();
+            fmd.add_hash(meta_data.hash);
+            fmd.add_effective_size(meta_data.effective_size);
+            write_offset += write_size;
         }
+        fmd.set_f_size(fmd.f_size() + size);
 
-        auto alloc = client_handle->allocate(write_size);
-        std::span <char> sbuf (const_cast <char *> (buf + write_offset), write_size);
-        io::write_from_buffer(alloc->device(), sbuf);
+        // store the new metadata into the uh volume
+        std::ofstream UHV_file(get_options().UHVpath, std::ios::trunc | std::ios::out | std::ios::in | std::ios::binary);
+        //std::ofstream UHV_file("/home/masi/Workspace/ultihash/tmp", std::ios::trunc | std::ios::out | std::ios::in | std::ios::binary);
 
-        auto meta_data = alloc->persist();
-        fmd.add_hash(meta_data.hash);
-        fmd.add_effective_size(meta_data.effective_size);
-        write_offset += buf_size;
+        for (auto &tsmd: context->container.get()()) {
+
+            auto &md = tsmd.second.get()();
+            auto relative_path = std::filesystem::relative(md.f_path(), "/");
+            auto bytes = uh::uhv::f_serialization::serialize_f_meta_data(std::make_unique <uh::uhv::f_meta_data> (md), relative_path);
+            //std::ofstream UHV_file("tmp", std::ios::trunc | std::ios::out | std::ios::in | std::ios::binary);
+            UHV_file.write(reinterpret_cast<const char*>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
+            //std::filesystem::remove(get_options().UHVpath);
+            //std::filesystem::rename("tmp", get_options().UHVpath);
+        }
+        UHV_file.flush();
     }
-
-
-    std::ofstream UHV_file(get_options().UHVpath, std::ios::trunc | std::ios::out | std::ios::in | std::ios::binary);
-
-    for (auto &tsmd: context->container.get()()) {
-
-        auto &md = tsmd.second.get()();
-
-        auto bytes = uh::uhv::f_serialization::serialize_f_meta_data(std::make_unique <uh::uhv::f_meta_data> (md), md.f_path());
-        //std::ofstream UHV_file("tmp", std::ios::trunc | std::ios::out | std::ios::in | std::ios::binary);
-        UHV_file.write(reinterpret_cast<const char*>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
-        //std::filesystem::remove(get_options().UHVpath);
-        //std::filesystem::rename("tmp", get_options().UHVpath);
+    else {
+    // this is not append
     }
-    UHV_file.flush();
     std::cout << "leaving uh_write(" << path << ", )\n";
 
     return size;
