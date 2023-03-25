@@ -228,8 +228,7 @@ int __uh_write (const char *path, const char *buf, size_t size, off_t offset, st
     constexpr std::uint64_t max_chunk_size = 1 << 22;
     constexpr std::uint64_t min_chuck_size = 64 * 1024ul;
 
-    // if this is append
-    if (offset == fmd.f_size()) {
+    if (offset == fmd.f_size()) {       // if this is an append
 
         // read the last chunk of the file
         std::vector<char> current_hash(64);
@@ -248,13 +247,14 @@ int __uh_write (const char *path, const char *buf, size_t size, off_t offset, st
         fmd.add_effective_size(effective_size);
         fmd.set_f_size(fmd.f_size() + size);
     }
-    else if (offset == 0) {
-    // for now, we assume replace data
+    else if (offset == 0) {         // for now, we assume replace data
+
         std::span<char> data = {const_cast <char*> (buf), size};
         fmd.set_f_hashes({});
         const auto effective_size = upload_data (client_handle, max_chunk_size, data, fmd.get_hashes());
         fmd.set_effective_size(effective_size);
         fmd.set_f_size(size);
+
     }
     else {
         throw std::runtime_error("write operation not supported");
