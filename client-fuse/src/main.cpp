@@ -13,11 +13,14 @@
 static const struct fuse_operations uh_operations =
     {
         .getattr        = uh::uhv::uh_getattr,
+        .truncate       = uh::uhv::truncate,
         .open           = uh::uhv::uh_open,
         .read           = uh::uhv::uh_read,
+        .write          = uh::uhv::uh_write,
         .readdir        = uh::uhv::uh_readdir,
         .init           = uh::uhv::uh_init,
         .destroy        = uh::uhv::uh_destroy,
+        .ftruncate      = uh::uhv::ftruncate
     };
 
 #define OPTION(t, p)                           \

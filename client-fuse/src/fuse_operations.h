@@ -51,9 +51,14 @@ int uh_open (const char *path, struct fuse_file_info *fi);
 
 int uh_read (const char *, char *, size_t, off_t, struct fuse_file_info *);
 
-int uh_write (const char *, char *, size_t, off_t, struct fuse_file_info *);
+int uh_write (const char *, const char *, size_t, off_t, struct fuse_file_info *);
 
 void uh_destroy (void *context);
+
+int truncate (const char *path, off_t off);
+
+int ftruncate (const char *path, off_t off, struct fuse_file_info *);
+
 
 } // end namespace uh::uhv
 

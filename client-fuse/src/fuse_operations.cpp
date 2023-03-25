@@ -43,11 +43,11 @@ int __uh_getattr (const char *path, struct stat *stbuf)
     {
         stbuf->st_size = f_meta_data.f_size();
         stbuf->st_nlink = 1;
-        stbuf->st_mode = S_IFREG | 0444;
+        stbuf->st_mode = S_IFREG | 0666;
     }
     if (f_type == uh::uhv::uh_file_type::directory)
     {
-        stbuf->st_mode = S_IFDIR | 0755;
+        stbuf->st_mode = S_IFDIR | 0766;
         stbuf->st_nlink = 2;
     }
     std::cout << "leaving uh_getattr(" << path << ", )\n";
@@ -100,6 +100,16 @@ void *__uh_init (struct fuse_conn_info *conn)
     return context;
 }
 
+int truncate (const char *path, off_t off) {
+    std::cout << "uh_truncate(" << path << ", " << off << ")\n";
+    return 0;
+}
+
+int ftruncate (const char *path, off_t off, struct fuse_file_info *fi) {
+    std::cout << "uh_ftruncate(" << path << ", " << off << ")\n";
+    return 0;
+}
+
 
 
 int __uh_readdir (const char *path, void *buf, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info *fi)
@@ -144,7 +154,7 @@ int __uh_open (const char *path, struct fuse_file_info *fi)
 {
     std::cout << "open(" << path << ", )\n";
 
-    if ((fi->flags & O_ACCMODE) != O_RDONLY)
+    if ((fi->flags & O_ACCMODE) != O_RDONLY and (fi->flags & O_ACCMODE) != O_RDWR and (fi->flags & O_ACCMODE) != O_WRONLY)
     {
         return -EACCES;
     }
@@ -168,18 +178,15 @@ int __uh_open (const char *path, struct fuse_file_info *fi)
 int __uh_read (const char *path, char *buffer, size_t size, off_t offset, struct fuse_file_info *ffi)
 {
 
-    std::cout << "uh_read(" << path << ", )\n";
+    std::cout << "uh_read(" << path << ", " << size << ", " << offset << ")\n";
     auto context = get_context();
-    uh::protocol::client_pool::handle&& client_handle = context->client_pool->get();
+    uh::protocol::client_pool::handle client_handle = context->client_pool->get();
 
-    std::cout << "uh_read(" << path << ", ) acquired client handle\n";
+    auto *ffh = reinterpret_cast<uh::uhv::f_meta_data*>(ffi->fh);
+    //auto meta_handle = ffh->get ();
 
-    auto ffh = reinterpret_cast<uh::uhv::ts_f_meta_data*>(ffi->fh);
-    auto meta_handle = ffh->get ();
-
-    std::cout << "uh_read(" << path << ", ) acquired meta handle\n";
-
-    auto & fmd = meta_handle();
+    //auto & fmd = meta_handle();
+    auto &fmd = *ffh;
     size_t curr_offset = 0;
     std::stringstream recompiled_chunks;
     if (fmd.f_type() == uh::uhv::uh_file_type::regular)
@@ -207,16 +214,16 @@ int __uh_read (const char *path, char *buffer, size_t size, off_t offset, struct
 int __uh_write (const char *path, const char *buf, size_t size, off_t offset, struct fuse_file_info *fi) {
 
 
-    std::cout << "uh_write(" << path << ", )\n";
+    std::cout << "uh_write(" << path << ", " << size << ", " << offset << ")\n";
+    std::cout << buf << std::endl;
     auto context = get_context();
-    uh::protocol::client_pool::handle&& client_handle = context->client_pool->get();
-    auto *tsfmd = reinterpret_cast<uh::uhv::ts_f_meta_data*>(fi->fh);
-    auto &fmd = tsfmd->get ()();
-    size_t curr_offset = 0;
-    std::stringstream recompiled_chunks;
+    auto *tsfmd = reinterpret_cast<uh::uhv::f_meta_data*>(fi->fh);
+    //auto &fmd = tsfmd->get ()();
+    auto &fmd = *tsfmd;
     if (fmd.f_type() != uh::uhv::uh_file_type::regular) {
         return -ENOMEM;
     }
+    uh::protocol::client_pool::handle&& client_handle = context->client_pool->get();
 
     constexpr std::uint64_t buf_size = 1 << 22;
     std::size_t write_offset = 0ul;
@@ -229,7 +236,7 @@ int __uh_write (const char *path, const char *buf, size_t size, off_t offset, st
         }
 
         auto alloc = client_handle->allocate(write_size);
-        std::span <char> sbuf (const_cast <char *> (buf+write_offset), write_size);
+        std::span <char> sbuf (const_cast <char *> (buf + write_offset), write_size);
         io::write_from_buffer(alloc->device(), sbuf);
 
         auto meta_data = alloc->persist();
@@ -237,6 +244,21 @@ int __uh_write (const char *path, const char *buf, size_t size, off_t offset, st
         fmd.add_effective_size(meta_data.effective_size);
         write_offset += buf_size;
     }
+
+
+    std::ofstream UHV_file(get_options().UHVpath, std::ios::trunc | std::ios::out | std::ios::in | std::ios::binary);
+
+    for (auto &tsmd: context->container.get()()) {
+
+        auto &md = tsmd.second.get()();
+
+        auto bytes = uh::uhv::f_serialization::serialize_f_meta_data(std::make_unique <uh::uhv::f_meta_data> (md), md.f_path());
+        //std::ofstream UHV_file("tmp", std::ios::trunc | std::ios::out | std::ios::in | std::ios::binary);
+        UHV_file.write(reinterpret_cast<const char*>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
+        //std::filesystem::remove(get_options().UHVpath);
+        //std::filesystem::rename("tmp", get_options().UHVpath);
+    }
+    UHV_file.flush();
     std::cout << "leaving uh_write(" << path << ", )\n";
 
     return size;
@@ -288,7 +310,7 @@ int uh_read (const char *path, char *buf, size_t size, off_t offset, struct fuse
     }
 }
 
-int uh_write (const char *path, char *buf, size_t size, off_t offset, struct fuse_file_info *fi)
+int uh_write (const char *path, const char *buf, size_t size, off_t offset, struct fuse_file_info *fi)
 {
     try
     {

@@ -1,11 +1,13 @@
 #include <utility>
 #include "f_serialization.h"
 
-namespace {
+
+namespace uh::uhv
+{
 
 // ---------------------------------------------------------------------
 
-std::vector<std::uint8_t> serialize_f_meta_data(const std::unique_ptr<uh::uhv::f_meta_data>& ptr_f_meta_data,
+std::vector<std::uint8_t> f_serialization::serialize_f_meta_data(const std::unique_ptr<uh::uhv::f_meta_data>& ptr_f_meta_data,
                                     const std::filesystem::path& relative_path)
 {
 
@@ -43,7 +45,7 @@ std::vector<std::uint8_t> serialize_f_meta_data(const std::unique_ptr<uh::uhv::f
 
 // ---------------------------------------------------------------------
 
-std::unique_ptr<uh::uhv::f_meta_data> deserialize_f_meta_data(std::vector<std::uint8_t>& uhv_container,
+std::unique_ptr<uh::uhv::f_meta_data> f_serialization::deserialize_f_meta_data(std::vector<std::uint8_t>& uhv_container,
                                                                          std::vector<std::uint8_t>::iterator& it,
                                                                          const std::filesystem::path& dest_path)
 {
@@ -84,12 +86,6 @@ std::unique_ptr<uh::uhv::f_meta_data> deserialize_f_meta_data(std::vector<std::u
 
 }
 
-// ---------------------------------------------------------------------
-
-}
-
-namespace uh::uhv
-{
 
 // ---------------------------------------------------------------------
 
