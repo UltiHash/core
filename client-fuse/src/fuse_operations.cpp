@@ -228,7 +228,7 @@ int __uh_write (const char *path, const char *buf, size_t size, off_t offset, st
     constexpr std::uint64_t max_chunk_size = 1 << 22;
     constexpr std::uint64_t min_chuck_size = 64 * 1024ul;
 
-    if (offset == fmd.f_size()) {       // if this is an append
+    if (offset == fmd.f_size()) {       // if this is an append, for instance when performing "echo data >> file"
 
         // read the last chunk of the file
         std::vector<char> current_hash(64);
@@ -247,7 +247,8 @@ int __uh_write (const char *path, const char *buf, size_t size, off_t offset, st
         fmd.add_effective_size(effective_size);
         fmd.set_f_size(fmd.f_size() + size);
     }
-    else if (offset == 0) {         // for now, we assume replace data
+    else if (offset == 0) {         // for now, we assume replace data which is usually the case
+                                    // since text editors write the whole file after modifications
 
         std::span<char> data = {const_cast <char*> (buf), size};
         fmd.set_f_hashes({});
