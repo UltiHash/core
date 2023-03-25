@@ -121,7 +121,6 @@ int __uh_readdir (const char *path, void *buf, fuse_fill_dir_t filler, off_t off
 
     std::vector <std::string> files;
     {
-        const auto *fuse_context = fuse_get_context ();
         auto container_handle = get_context()->container.get();
         auto& unordered_map = container_handle();
         auto meta_handle = unordered_map.at(path).get();
@@ -188,9 +187,8 @@ int __uh_read (const char *path, char *buffer, size_t size, off_t offset, struct
     auto context = get_context();
     uh::protocol::client_pool::handle client_handle = context->client_pool->get();
 
-    auto *ffh = reinterpret_cast<uh::uhv::f_meta_data*>(fi->fh);
+    auto &fmd = *reinterpret_cast<uh::uhv::f_meta_data*>(fi->fh);
 
-    auto &fmd = *ffh;
     size_t curr_offset = 0;
     std::stringstream recompiled_chunks;
     if (fmd.f_type() == uh::uhv::uh_file_type::regular)
@@ -223,8 +221,7 @@ int __uh_write (const char *path, const char *buf, size_t size, off_t offset, st
     }
 
     auto context = get_context();
-    auto *tsfmd = reinterpret_cast<uh::uhv::f_meta_data*>(fi->fh);
-    auto &fmd = *tsfmd;
+    auto &fmd = *reinterpret_cast<uh::uhv::f_meta_data*>(fi->fh);
     if (fmd.f_type() != uh::uhv::uh_file_type::regular) {
         return -ENOMEM;
     }
@@ -268,17 +265,12 @@ int __uh_write (const char *path, const char *buf, size_t size, off_t offset, st
 
         // store the new metadata into the uh volume
         std::ofstream UHV_file(get_options().UHVpath, std::ios::trunc | std::ios::out | std::ios::in | std::ios::binary);
-        //std::ofstream UHV_file("/home/masi/Workspace/ultihash/tmp", std::ios::trunc | std::ios::out | std::ios::in | std::ios::binary);
 
         for (auto &tsmd: context->container.get()()) {
-
             auto &md = tsmd.second.get()();
-            auto relative_path = std::filesystem::relative(md.f_path(), "/");
+            auto relative_path = (md.f_path() == "/") ? "/":std::filesystem::relative(md.f_path(), "/");
             auto bytes = uh::uhv::f_serialization::serialize_f_meta_data(std::make_unique <uh::uhv::f_meta_data> (md), relative_path);
-            //std::ofstream UHV_file("tmp", std::ios::trunc | std::ios::out | std::ios::in | std::ios::binary);
             UHV_file.write(reinterpret_cast<const char*>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
-            //std::filesystem::remove(get_options().UHVpath);
-            //std::filesystem::rename("tmp", get_options().UHVpath);
         }
         UHV_file.flush();
     }
