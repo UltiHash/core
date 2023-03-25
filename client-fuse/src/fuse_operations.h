@@ -18,6 +18,7 @@
 #include <protocol/client_pool.h>
 #include <net/plain_socket.h>
 #include <util/exception.h>
+#include "fuse_ts_container.h"
 
 namespace uh::uhv {
 
@@ -25,7 +26,7 @@ struct private_context
 {
     boost::asio::io_context io;
     std::unique_ptr<uh::protocol::client_pool> client_pool;
-    std::unordered_map <std::string, uh::uhv::ts_f_meta_data> paths_metadata;
+    ts_container container {};
 };
 
 
@@ -50,9 +51,14 @@ int uh_open (const char *path, struct fuse_file_info *fi);
 
 int uh_read (const char *, char *, size_t, off_t, struct fuse_file_info *);
 
-int uh_write (const char *, char *, size_t, off_t, struct fuse_file_info *);
+int uh_write (const char *, const char *, size_t, off_t, struct fuse_file_info *);
 
 void uh_destroy (void *context);
+
+int truncate (const char *path, off_t off);
+
+int ftruncate (const char *path, off_t off, struct fuse_file_info *);
+
 
 } // end namespace uh::uhv
 
