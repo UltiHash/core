@@ -55,6 +55,43 @@ int __uh_getattr (const char *path, struct stat *stbuf)
     return 0;
 }
 
+int uh_unlink(const char *path)
+{
+    std::cout << "uh_unlink(" << path << ")\n";
+
+    uh::uhv::uh_file_type f_type;
+
+    auto *ctx = get_context();
+    auto container_handle = ctx->container.get();
+    auto& unordered_map = container_handle();
+    auto it = unordered_map.find(path);
+    if (it == unordered_map.end())
+    {
+        std::cout << "leaving uh_unlink(" << path << ")\n";
+        return 0;
+    }
+
+    // !!! container should be released here since f_meta_data is found
+    auto meta_handle = it->second.get();
+    auto& f_meta_data = meta_handle();
+
+    f_type = static_cast <uh::uhv::uh_file_type> (f_meta_data.f_type());
+
+    if (f_type == uh::uhv::uh_file_type::regular)
+    {
+        unordered_map.erase(it);
+    }
+    std::cout << "leaving uh_unlink(" << path << ")\n";
+
+
+    return 0;
+}
+
+int uh_rmdir (const char *path)
+{
+    return 0;
+}
+
 void *__uh_init (struct fuse_conn_info *conn)
 {
     std::cout << "uh_init(conn)\n";

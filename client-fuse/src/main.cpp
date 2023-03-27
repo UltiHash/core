@@ -13,6 +13,7 @@
 static const struct fuse_operations uh_operations =
     {
         .getattr        = uh::uhv::uh_getattr,
+        .unlink         = uh::uhv::uh_unlink,
         .truncate       = uh::uhv::truncate,
         .open           = uh::uhv::uh_open,
         .read           = uh::uhv::uh_read,

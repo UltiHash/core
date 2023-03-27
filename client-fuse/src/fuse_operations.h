@@ -43,6 +43,10 @@ options& get_options();
 
 int uh_getattr (const char *path, struct stat *);
 
+int uh_unlink(const char *path);
+
+int uh_rmdir (const char *path);
+
 void *uh_init (struct fuse_conn_info *conn);
 
 int uh_readdir (const char *path, void *buf, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info *fi);
