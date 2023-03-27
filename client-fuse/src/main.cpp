@@ -13,16 +13,15 @@
 static const struct fuse_operations uh_operations =
     {
         .getattr        = uh::uhv::uh_getattr,
+        .truncate       = uh::uhv::truncate,
         .open           = uh::uhv::uh_open,
         .read           = uh::uhv::uh_read,
+        .write          = uh::uhv::uh_write,
         .readdir        = uh::uhv::uh_readdir,
         .init           = uh::uhv::uh_init,
         .destroy        = uh::uhv::uh_destroy,
+        .ftruncate      = uh::uhv::ftruncate
     };
-
-
-#define OPTION(t, p)                           \
-    { t, offsetof(struct uh::uhv::options, p), 1 }
 
 #define OPTION(t, p)                           \
     { t, offsetof(struct uh::uhv::options, p), 1 }
@@ -53,7 +52,7 @@ static void show_help(const char *prog_name)
 void validate_options()
 {
     auto& opt = uh::uhv::get_options();
-    canonical(std::filesystem::path(opt.UHVpath));
+    auto path = canonical(std::filesystem::path(opt.UHVpath));
     if(opt.agency_port < 0 or opt.agency_port > USHRT_MAX)
         THROW(uh::util::exception, "An invalid port number was specified.");
     if(opt.agency_connections < 0 )

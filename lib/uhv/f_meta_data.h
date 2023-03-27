@@ -68,13 +68,19 @@ public:
     [[nodiscard]] const std::uint64_t& f_size() const;
     [[nodiscard]] const std::uint64_t& f_effective_size() const;
 
+    [[nodiscard]] std::vector<char>& get_hashes();
+
+
     void set_f_path(std::string);
     void set_f_type(const std::uint8_t&);
     void set_f_permissions(const std::uint32_t&);
     void set_f_size(const std::optional<std::uint64_t>&);
     void set_f_hashes(const std::string&);
     void add_hash(const std::vector<char>&);
+    void remove_hash (size_t start_index, size_t end_index);
     void add_effective_size(const std::uint64_t&);
+    void set_effective_size(const std::uint64_t&);
+
 
 private:
     std::filesystem::path m_f_path{};

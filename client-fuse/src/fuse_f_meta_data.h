@@ -30,16 +30,15 @@ namespace uh::uhv {
         };
 
         ts_f_meta_data(uh::uhv::f_meta_data m_file_meta);
+        ts_f_meta_data() = default;
+        void unlock();
         meta_data_handle get();
-        uh::uhv::f_meta_data& n_ts_get();
 
     private:
         friend class meta_data_handle;
 
-        void unlock();
-
         std::mutex m_mutex;
-        uh::uhv::f_meta_data m_file_meta;
+        uh::uhv::f_meta_data m_file_meta{};
     };
 
 // ---------------------------------------------------------------------

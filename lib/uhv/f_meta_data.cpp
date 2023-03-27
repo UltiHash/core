@@ -26,11 +26,22 @@ void f_meta_data::add_hash(const std::vector<char>& hash)
     std::copy(hash.begin(), hash.end(), std::back_inserter(m_f_hashes));
 }
 
+void f_meta_data::remove_hash (size_t start_index, size_t end_index) {
+    m_f_hashes.erase(m_f_hashes.begin() + start_index, m_f_hashes.begin() + end_index);
+}
+
 // ---------------------------------------------------------------------
 
 void f_meta_data::add_effective_size(const std::uint64_t& size)
 {
     m_f_effective_size += size;
+}
+
+// ---------------------------------------------------------------------
+
+void f_meta_data::set_effective_size(const std::uint64_t& size)
+{
+    m_f_effective_size = size;
 }
 
 // ---------------------------------------------------------------------
@@ -43,6 +54,13 @@ const std::filesystem::path& f_meta_data::f_path() const
 // ---------------------------------------------------------------------
 
 const std::vector<char>& f_meta_data::f_hashes() const
+{
+    return m_f_hashes;
+}
+
+// ---------------------------------------------------------------------
+
+std::vector<char>& f_meta_data::get_hashes()
 {
     return m_f_hashes;
 }
