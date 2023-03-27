@@ -14,7 +14,7 @@ options& get_options()
 }
 
 
-/* --- fuse_operations core functionality --- */ 
+/* --- fuse_operations core functionality --- */
 
 int __uh_getattr (const char *path, struct stat *stbuf)
 {
@@ -95,8 +95,6 @@ void *__uh_init (struct fuse_conn_info *conn)
     metadata.set_f_size(0u);
     unordered_map.emplace("/", std::move (metadata));
 
-    std::cout << "leaving uh_init(conn)\n";
-
     return context;
 }
 
@@ -114,7 +112,7 @@ int ftruncate (const char *path, off_t off, struct fuse_file_info *fi) {
 
 int __uh_readdir (const char *path, void *buf, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info *fi)
 {
-    std::cout << "readdir(" << path << ", )\n";
+    std::cout << "uh_readdir(" << path << ", buf, filler, " << offset << ", fi)\n";
 
     (void) offset;
     (void) fi;
@@ -151,7 +149,9 @@ int __uh_readdir (const char *path, void *buf, fuse_fill_dir_t filler, off_t off
 
 int __uh_open (const char *path, struct fuse_file_info *fi)
 {
-    std::cout << "open(" << path << ", )\n";
+
+    auto context = get_context();
+    std::cout << "open(" << path << ", fi)\n";
 
     if ((fi->flags & O_ACCMODE) != O_RDONLY and (fi->flags & O_ACCMODE) != O_RDWR and (fi->flags & O_ACCMODE) != O_WRONLY)
     {
@@ -279,6 +279,8 @@ int __uh_write (const char *path, const char *buf, size_t size, off_t offset, st
 }
 
 void __uh_destroy (void *context) {
+    std::cout << "uh_destroy(context)\n";
+
     auto pcontext = static_cast <private_context *> (context);
     delete pcontext;
 }
