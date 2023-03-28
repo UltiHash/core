@@ -9,6 +9,13 @@ namespace uh::client::chunking
 {
 enum class ChunkingStrategyEnum {FixedSize, OtherChunkingStrategy};
 
+/*
+  Chunking can be done by following one of several strategies: For instance, Fixed size chunking
+  splits a file in several equal-sized chunks. For such a strategy, different chunk sizes can be
+  chosen. Another strategy is Content Defined Chunking (CDC), for which several algorithms exist.
+  A minimum chunk size and a maximum chunk size can be defined as well.
+*/
+
 static std::unordered_map<std::string, ChunkingStrategyEnum> string2backendtype = {
   {"FixedSize", ChunkingStrategyEnum::FixedSize},
   {"OtherChunkingStrategy", ChunkingStrategyEnum::OtherChunkingStrategy}
