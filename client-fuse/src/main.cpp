@@ -10,19 +10,23 @@
 
 #include "fuse_operations.h"
 
+
 static const struct fuse_operations uh_operations =
     {
-        .getattr        = uh::uhv::uh_getattr,
-        .unlink         = uh::uhv::uh_unlink,
-        .truncate       = uh::uhv::truncate,
-        .open           = uh::uhv::uh_open,
-        .read           = uh::uhv::uh_read,
-        .write          = uh::uhv::uh_write,
-        .readdir        = uh::uhv::uh_readdir,
-        .init           = uh::uhv::uh_init,
-        .destroy        = uh::uhv::uh_destroy,
-        .ftruncate      = uh::uhv::ftruncate
-    };
+    .getattr        = uh::uhv::uh_getattr,
+    .mkdir          = uh::uhv::uh_mkdir,
+    .unlink         = uh::uhv::uh_unlink,
+    .open           = uh::uhv::uh_open,
+    .read           = uh::uhv::uh_read,
+    .write          = uh::uhv::uh_write,
+    .readdir        = uh::uhv::uh_readdir,
+    .init           = uh::uhv::uh_init,
+    .destroy        = uh::uhv::uh_destroy,
+    .create         = uh::uhv::uh_create,
+    .ftruncate      = uh::uhv::uh_ftruncate,
+    .utimens        = uh::uhv::uh_utimens,
+
+        };
 
 #define OPTION(t, p)                           \
     { t, offsetof(struct uh::uhv::options, p), 1 }

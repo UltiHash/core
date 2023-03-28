@@ -39,6 +39,9 @@ struct options
     bool show_help;
 };
 
+constexpr std::uint64_t max_chunk_size = 1 << 22;
+constexpr std::uint64_t min_chuck_size = 64 * 1024ul;
+
 options& get_options();
 
 int uh_getattr (const char *path, struct stat *);
@@ -59,9 +62,13 @@ int uh_write (const char *, const char *, size_t, off_t, struct fuse_file_info *
 
 void uh_destroy (void *context);
 
-int truncate (const char *path, off_t off);
+int uh_ftruncate (const char *path, off_t off, struct fuse_file_info *);
 
-int ftruncate (const char *path, off_t off, struct fuse_file_info *);
+int uh_create (const char *path, mode_t mode, struct fuse_file_info *fi);
+
+int uh_utimens (const char *path, const struct timespec tv[2]);
+
+int uh_mkdir (const char *path, mode_t mode);
 
 
 } // end namespace uh::uhv
