@@ -35,7 +35,7 @@ void Recompilation::integrate()
 {
     auto time_start = std::chrono::system_clock::now();
 
-    common::job_queue<std::unique_ptr<common::f_meta_data>> q_f_meta_data;
+     common::job_queue<std::unique_ptr<common::f_meta_data>> q_f_meta_data;
     common::job_queue<std::unique_ptr<common::f_meta_data>> q_f_mdata_w_hash;
 
     {
@@ -47,7 +47,7 @@ void Recompilation::integrate()
 
     q_f_mdata_w_hash.sort();
 
-    f_serialization serializer(m_config.m_outputPath, q_f_mdata_w_hash);
+    f_serialization serializer(m_config.m_outputPath, q_f_mdata_w_hash, m_config.m_overwrite);
     uint64_t size = serializer.serialize(m_config.m_inputPaths);
 
     auto time_end = std::chrono::system_clock::now();

@@ -27,7 +27,8 @@ options::action agency_connection::evaluate(const boost::program_options::variab
 
 // ---------------------------------------------------------------------
 
-bool agency_connection::isMetrics() const {
+bool agency_connection::isMetrics() const
+{
     return m_metrics;
 }
 

@@ -17,7 +17,7 @@ class f_serialization
 {
 public:
 
-    f_serialization(std::filesystem::path, common::job_queue<std::unique_ptr<common::f_meta_data>>&);
+    f_serialization(std::filesystem::path, common::job_queue<std::unique_ptr<common::f_meta_data>>&, bool=false);
     ~f_serialization() = default;
 
     uint64_t serialize(const std::vector<std::filesystem::path>&);
@@ -26,6 +26,7 @@ public:
 private:
     std::filesystem::path m_UHV_path;
     common::job_queue<std::unique_ptr<common::f_meta_data>>& m_job_queue;
+    bool m_overwrite;
 };
 
 // ---------------------------------------------------------------------

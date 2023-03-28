@@ -67,6 +67,16 @@ void application_config_base::handle_config()
 void application_config_base::print_help()
 {
     std::cout << visible() << "\n";
+    if (!m_desc.empty())
+        std::cout << m_desc << "\n\n";
+}
+
+// ---------------------------------------------------------------------
+
+
+void application_config_base::add_desc(const std::string& description)
+{
+    m_desc = description;
 }
 
 // ---------------------------------------------------------------------
