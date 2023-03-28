@@ -97,7 +97,7 @@ int uh_rmdir (const char *path)
     if(pathString.ends_with("."))
     {
         std::cout << "leaving uh_unlink(" << pathString << ")\n";
-        return EINVAL;
+        return -EINVAL;
     }
 
     auto *ctx = get_context();
@@ -107,15 +107,15 @@ int uh_rmdir (const char *path)
     if (it == unordered_map.end())
     {
         std::cout << "leaving uh_unlink(" << pathString << ")\n";
-        return ENOENT;
+        return -ENOENT;
     }
 
     // check if the d
     for(auto& [key, value] : unordered_map) {
         // When a key starts with path but does not equal it, there are still sub-folders or files within that path
-        if(key.starts_with(path) and !key.compare(path)) {
+        if(key.starts_with(pathString) and key.compare(pathString)) {
             std::cout << "leaving uh_unlink(" << pathString << ")\n";
-            return ENOTEMPTY;
+            return -ENOTEMPTY;
         }
     }
 
@@ -128,7 +128,7 @@ int uh_rmdir (const char *path)
     if(f_type == uh::uhv::uh_file_type::regular)
     {
         std::cout << "leaving uh_unlink(" << pathString << ")\n";
-        return ENOTDIR;
+        return -ENOTDIR;
     }
     else if(f_type == uh::uhv::uh_file_type::directory)
     {

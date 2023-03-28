@@ -27,6 +27,7 @@ static const struct fuse_operations uh_operations =
 
 #define OPTION(t, p)                           \
     { t, offsetof(struct uh::uhv::options, p), 1 }
+
 static const struct fuse_opt option_spec[] =
     {
         OPTION("--path=%s", UHVpath),
@@ -47,7 +48,10 @@ static void show_help(const char *prog_name)
     printf("\nusage: %s <mountpoint> [options]\n\n", prog_name);
     printf("File-system specific options:\n"
            "    -p or --path=<s>                    Path of the \"UltiHash\" Volume\n"
-           "    -a or --agency-hostname=<s>         Contents \"hello\" file\n"
+           "    -H or --agency-hostname=<s>         IP address or hostname of the \"UltiHash\" agency node.\n"
+           "    -P or --agency-port=<i>             Port used to connect to the \"UltiHash\" agency node.\n"
+           "    -C or --agency-connections=<i>      Number of connections to be used to communicate with the \"UltiHash\" agency node.\n"
+           "    -h or --help                        Display this help message.\n"
            "\n");
 }
 
