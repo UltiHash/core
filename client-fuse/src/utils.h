@@ -13,6 +13,8 @@
 #include <fuse_f_meta_data.h>
 #include <fuse.h>
 #include "protocol/client_pool.h"
+#include "fuse_ts_container.h"
+#include "uhv/f_serialization.h"
 
 
 namespace uh::uhv {
@@ -26,6 +28,8 @@ std::size_t subfolders_count (const std::string &directory, std::unordered_map <
             uh::uhv::ts_f_meta_data> &metadata_list);
 uint64_t upload_data (uh::protocol::client_pool::handle& client_handle, size_t chunk_size, const std::span <char> &data, std::vector <char> &hashes);
 void write_metadata (std::ofstream &UHV_file, const uh::uhv::f_meta_data &md);
+void rewrite_uhv_file (const std::filesystem::path &uhv_file, std::unordered_map <std::string, ts_f_meta_data> &data);
+
 }
 
 #endif //CORE_UTILS_H

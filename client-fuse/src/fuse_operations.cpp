@@ -91,8 +91,11 @@ int uh_unlink(const char *path)
     {
         unordered_map.erase(it);
     }
-    std::cout << "leaving uh_unlink(" << path << ")\n";
 
+    // store the new metadata into the uh volume
+    rewrite_uhv_file(get_options().UHVpath, unordered_map);
+
+    std::cout << "leaving uh_unlink(" << path << ")\n";
 
     return 0;
 }
@@ -144,6 +147,9 @@ int uh_rmdir (const char *path)
     {
         unordered_map.erase(it);
     }
+
+    // store the new metadata into the uh volume
+    rewrite_uhv_file(get_options().UHVpath, unordered_map);
 
     return 0;
 }
@@ -211,13 +217,9 @@ int __uh_ftruncate (const char *path, off_t off, struct fuse_file_info *fi) {
         fmd.set_f_hashes({});
 
         // store the new metadata into the uh volume
-        std::ofstream UHV_file(get_options().UHVpath, std::ios::trunc | std::ios::out | std::ios::binary);
         auto container = get_context()->container.get();
         auto &handler = container();
-        for (auto &tsmd: handler) {
-            auto &md = tsmd.second.get()();
-            write_metadata(UHV_file, md);
-        }
+        rewrite_uhv_file(get_options().UHVpath, handler);
 
     }
     else {  // for now we do nothing
@@ -414,13 +416,9 @@ int __uh_write (const char *path, const char *buf, size_t size, off_t offset, st
 
 
     // store the new metadata into the uh volume
-    std::ofstream UHV_file(get_options().UHVpath, std::ios::trunc | std::ios::out | std::ios::binary);
     auto container = get_context()->container.get();
     auto &handler = container();
-    for (auto &tsmd: handler) {
-        auto &md = tsmd.second.get()();
-        write_metadata(UHV_file, md);
-    }
+    rewrite_uhv_file(get_options().UHVpath, handler);
 
     std::cout << "leaving uh_write(" << path << ", )\n";
 

@@ -3,7 +3,6 @@
 //
 
 #include "utils.h"
-#include "uhv/f_serialization.h"
 
 namespace uh::uhv {
 
@@ -71,6 +70,14 @@ void write_metadata (std::ofstream &UHV_file, const uh::uhv::f_meta_data &md) {
     auto bytes = uh::uhv::f_serialization::serialize_f_meta_data(std::make_unique<uh::uhv::f_meta_data>(md),
                                                                  relative_path);
     UHV_file.write(reinterpret_cast<const char *>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
+}
+
+void rewrite_uhv_file (const std::filesystem::path &uhv_file, std::unordered_map <std::string, ts_f_meta_data> &data) {
+    std::ofstream UHV_file(uhv_file, std::ios::trunc | std::ios::out | std::ios::binary);
+    for (auto &tsmd: data) {
+        auto &md = tsmd.second.get()();
+        write_metadata(UHV_file, md);
+    }
 }
 
 }
