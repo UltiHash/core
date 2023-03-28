@@ -21,6 +21,7 @@ ChunkingStrategyEnum define_chunking_strategy(std::string chunking_strategy){
         return it->second;
     } else {
         std::string msg("Not a chunking strategy: " + chunking_strategy);
+        ERROR << msg;
         THROW(util::exception, msg);
     }
 }
