@@ -78,7 +78,7 @@ int uh_unlink(const char *path)
     if (it == unordered_map.end())
     {
         std::cout << "leaving uh_unlink(" << path << ")\n";
-        return 0;
+        return ENOENT;
     }
 
     // !!! container should be released here since f_meta_data is found
@@ -99,6 +99,52 @@ int uh_unlink(const char *path)
 
 int uh_rmdir (const char *path)
 {
+    std::cout << "uh_rmdir(" << path << ")\n";
+
+    uh::uhv::uh_file_type f_type;
+    std::string pathString(path);
+
+    if(pathString.ends_with("."))
+    {
+        std::cout << "leaving uh_unlink(" << pathString << ")\n";
+        return -EINVAL;
+    }
+
+    auto *ctx = get_context();
+    auto container_handle = ctx->container.get();
+    auto& unordered_map = container_handle();
+    auto it = unordered_map.find(pathString);
+    if (it == unordered_map.end())
+    {
+        std::cout << "leaving uh_unlink(" << pathString << ")\n";
+        return -ENOENT;
+    }
+
+    // check if the d
+    for(auto& [key, value] : unordered_map) {
+        // When a key starts with path but does not equal it, there are still sub-folders or files within that path
+        if(key.starts_with(pathString) and key.compare(pathString)) {
+            std::cout << "leaving uh_unlink(" << pathString << ")\n";
+            return -ENOTEMPTY;
+        }
+    }
+
+    // !!! container should be released here since f_memeta_handleta_data is found
+    auto meta_handle = it->second.get();
+    auto& f_meta_data = meta_handle();
+
+    f_type = static_cast <uh::uhv::uh_file_type> (f_meta_data.f_type());
+
+    if(f_type == uh::uhv::uh_file_type::regular)
+    {
+        std::cout << "leaving uh_unlink(" << pathString << ")\n";
+        return -ENOTDIR;
+    }
+    else if(f_type == uh::uhv::uh_file_type::directory)
+    {
+        unordered_map.erase(it);
+    }
+
     return 0;
 }
 

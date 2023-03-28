@@ -16,6 +16,7 @@ static const struct fuse_operations uh_operations =
     .getattr        = uh::uhv::uh_getattr,
     .mkdir          = uh::uhv::uh_mkdir,
     .unlink         = uh::uhv::uh_unlink,
+    .rmdir          = uh::uhv::uh_rmdir,
     .open           = uh::uhv::uh_open,
     .read           = uh::uhv::uh_read,
     .write          = uh::uhv::uh_write,
@@ -25,11 +26,12 @@ static const struct fuse_operations uh_operations =
     .create         = uh::uhv::uh_create,
     .ftruncate      = uh::uhv::uh_ftruncate,
     .utimens        = uh::uhv::uh_utimens,
+    };
 
-        };
 
 #define OPTION(t, p)                           \
     { t, offsetof(struct uh::uhv::options, p), 1 }
+
 static const struct fuse_opt option_spec[] =
     {
         OPTION("--path=%s", UHVpath),
@@ -50,7 +52,10 @@ static void show_help(const char *prog_name)
     printf("\nusage: %s <mountpoint> [options]\n\n", prog_name);
     printf("File-system specific options:\n"
            "    -p or --path=<s>                    Path of the \"UltiHash\" Volume\n"
-           "    -a or --agency-hostname=<s>         Contents \"hello\" file\n"
+           "    -H or --agency-hostname=<s>         IP address or hostname of the \"UltiHash\" agency node.\n"
+           "    -P or --agency-port=<i>             Port used to connect to the \"UltiHash\" agency node.\n"
+           "    -C or --agency-connections=<i>      Number of connections to be used to communicate with the \"UltiHash\" agency node.\n"
+           "    -h or --help                        Display this help message.\n"
            "\n");
 }
 
