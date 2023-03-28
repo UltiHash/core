@@ -7,8 +7,9 @@ namespace uh::client::serialization
 // ---------------------------------------------------------------------
 
 Recompilation::Recompilation(const uh::client::option::client_config &config,
+                             client::chunking::mod& chunker_mod,
                              std::unique_ptr<uh::protocol::client_pool>&& pool) :
-                             m_config(config), m_client_pool(std::move(pool))
+                             m_config(config), m_chunker(chunker_mod.chunker()), m_client_pool(std::move(pool))
 {
 
     if (m_config.m_option == co::options_chosen::integrate) {
@@ -39,7 +40,7 @@ void Recompilation::integrate()
 
     {
         f_upload upload_class(m_client_pool, q_f_meta_data,
-                              q_f_mdata_w_hash, m_config.m_worker_count);
+                              q_f_mdata_w_hash, m_chunker, m_config.m_worker_count);
         upload_class.spawn_threads();
         f_traverse traverse_class(m_config.m_inputPaths, m_config.m_operatePaths, q_f_meta_data);
     }
