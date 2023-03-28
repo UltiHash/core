@@ -10,6 +10,7 @@
 #include "f_download.h"
 #include "f_traverse.h"
 #include "f_serialization.h"
+#include <chunking/mod.h>
 
 namespace co = uh::client::option;
 
@@ -21,7 +22,9 @@ namespace uh::client::serialization
 class Recompilation
 {
     public:
-        Recompilation(const co::client_config&, std::unique_ptr<uh::protocol::client_pool>&&);
+        Recompilation(const co::client_config&,
+        client::chunking::mod&,
+        std::unique_ptr<uh::protocol::client_pool>&&);
 
     private:
         void integrate();
@@ -30,6 +33,7 @@ class Recompilation
     private:
         const co::client_config& m_config;
         std::unique_ptr<uh::protocol::client_pool> m_client_pool;
+        client::chunking::file_chunker& m_chunker;
 
 };
 
