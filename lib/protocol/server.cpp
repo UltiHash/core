@@ -165,29 +165,36 @@ void server::handle_writing_request(iostream& io, uint8_t request_id)
 
 void server::handle_hello(iostream& io)
 {
-    hello::request req;
-    read(io, req);
-
-    server_information info;
-
-    try
+    if (m_connections == CONNECTION_LIMIT)
     {
-        info = on_hello(req.client_version);
+        write(io, status{ status::FAILED,  "server is busy"});
     }
-    catch (const std::exception& e)
+    else
     {
-        write(io, status{ .code = status::FAILED, .message = e.what() });
-        m_state = server_state::disconnected;
-        return;
+        hello::request req;
+        read(io, req);
+
+        server_information info;
+
+        try
+        {
+            info = on_hello(req.client_version);
+        }
+        catch (const std::exception& e)
+        {
+            write(io, status{ .code = status::FAILED, .message = e.what() });
+            m_state = server_state::disconnected;
+            return;
+        }
+
+        write(io, status{ status::OK });
+        write(io, hello::response{
+                .server_version = info.version,
+                .protocol_version = info.protocol });
+        io.flush();
+
+        m_state = server_state::normal;
     }
-
-    write(io, status{ status::OK });
-    write(io, hello::response{
-        .server_version = info.version,
-        .protocol_version = info.protocol });
-    io.flush();
-
-    m_state = server_state::normal;
 }
 
 // ---------------------------------------------------------------------

@@ -35,7 +35,7 @@ void Recompilation::integrate()
 {
     auto time_start = std::chrono::system_clock::now();
 
-     common::job_queue<std::unique_ptr<common::f_meta_data>> q_f_meta_data;
+    common::job_queue<std::unique_ptr<common::f_meta_data>> q_f_meta_data;
     common::job_queue<std::unique_ptr<common::f_meta_data>> q_f_mdata_w_hash;
 
     {
