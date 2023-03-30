@@ -47,7 +47,7 @@ namespace uh::io {
 
         inline void sync() {
             if (pointer > 0) {
-                dev_.write({buffer, pointer});
+                serialization::sync_write(dev_, {buffer, pointer});
                 pointer = 0;
             }
         }

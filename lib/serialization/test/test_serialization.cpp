@@ -11,12 +11,13 @@
 #include <boost/test/unit_test.hpp>
 #include "serialization/serializer.h"
 #include "serialization/deserializer.h"
-#include "serialization/buffered_serializer.h"
+#include "serialization/buffered_serializer_2.h"
 #include "serialization/serialization.h"
 
 
 #include "io/file.h"
 #include "io/sstream_device.h"
+#include "serialization/buffered_serializer.h"
 
 using namespace uh::serialization;
 
@@ -72,7 +73,7 @@ BOOST_AUTO_TEST_CASE(integral_types) {
 
 }
 
-template <typename T, typename Serializer = sl_serializer, typename Deserializer = sl_deserializer>
+template <typename T, typename Serializer = buffered_serializer <sl_serializer>, typename Deserializer = sl_deserializer>
 void test_range_serialization (const T& data, const std::string test_name = "") {
     uh::io::sstream_device dev;
     {
@@ -84,7 +85,7 @@ void test_range_serialization (const T& data, const std::string test_name = "") 
         auto decoded = deserialize.template read <T> ();
 
         if constexpr (std::ranges::contiguous_range <T>) {
-            BOOST_TEST (decoded.size() == data.size());
+            BOOST_TEST (decoded.size() == data.size(), test_name);
             if (data.size() > 0) {
                 BOOST_TEST(std::strncmp(reinterpret_cast<const char *> (data.data()),
                                    reinterpret_cast<const char *> (decoded.data()), data.size()) == 0, test_name);
@@ -133,7 +134,7 @@ BOOST_AUTO_TEST_CASE(buffered_serializer_test) {
     unsigned long ov1 = 2, dv1;
     double ov2 = 4.12, dv2;
 
-    test_range_serialization <std::string, buffered_serializer<sl_serializer>> (str1, "string test");
+    test_range_serialization <std::string, buffered_serializer <sl_serializer>> (str1, "string test");
     test_range_serialization < std::vector <long>, buffered_serializer<sl_serializer>> (lvec1, "long vector test");
     test_range_serialization < std::vector <double>, buffered_serializer<sl_serializer>> (dvec1, "double vector test");
     test_range_serialization <std::vector <std::uint8_t>, buffered_serializer<sl_serializer>> (emptyvec, "empty vector test");
@@ -212,7 +213,7 @@ BOOST_AUTO_TEST_CASE(buffered_serialization_test) {
 
 
 BOOST_AUTO_TEST_CASE(serialization_type_tests) {
-    typedef serialization <buffered_serializer <sl_serializer>, sl_deserializer> sertype;
+    typedef serialization <buffered_serializer<sl_serializer>, sl_deserializer> sertype;
 
     BOOST_ASSERT (is_serializer <sl_serializer>::value);
     BOOST_ASSERT (is_deserializer <sl_deserializer>::value);

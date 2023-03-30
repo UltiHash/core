@@ -19,10 +19,10 @@ namespace uh::serialization {
 
         // ---------------------------------------------------------------------
 
-        static constexpr inline void set_control_byte_size_length (char &control_byte, const auto size_length) {
+        static constexpr inline void set_control_byte_size_length (char &control_byte_v, const auto size_length) {
             const auto nl_data_size_len = endian_convert (size_length);
             const char size_len_bits = (static_cast <char> (size_length));
-            control_byte |= size_len_bits;
+            control_byte_v |= size_len_bits;
         }
 
         // ---------------------------------------------------------------------
@@ -34,6 +34,16 @@ namespace uh::serialization {
 
         // ---------------------------------------------------------------------
 
+        [[nodiscard]] static inline std::vector <char> get_header (size_t data_size) {
+            auto data_size_len = (std::bit_width (data_size) + 7) / 8;
+            std::vector <char> buffer (data_size_len + 1);
+            buffer [0] = control_byte;
+            set_control_byte_size_length (buffer[0], data_size_len);
+            set_data_size(buffer.data() + 1, data_size, data_size_len);
+            return buffer;
+        }
+
+        // ---------------------------------------------------------------------
 
     public:
 
@@ -55,16 +65,12 @@ namespace uh::serialization {
         void write (ValueType data) {
 
             constexpr auto data_size = sizeof (ValueType);
-            constexpr auto data_size_len = 1;
-
-            char buffer [1 + data_size_len + data_size];   // control byte + size byte (size len = 1) + data size
-            buffer [0] = control_byte;
-
-            set_control_byte_size_length (buffer[0], data_size_len);
-            set_data_size(buffer + 1, data_size, data_size_len);
-            std::memcpy (buffer + data_size_len + 1, &data, data_size);
-
-            dev_.write (buffer);
+            auto buffer = get_header(data_size);
+            const auto* data_ptr = reinterpret_cast <const char *> (&data);
+            std::copy (data_ptr,
+                       data_ptr + sizeof (data),
+                       std::back_inserter(buffer));
+            sync_write(dev_, buffer);
         }
 
         // ---------------------------------------------------------------------
@@ -80,20 +86,13 @@ namespace uh::serialization {
         requires std::ranges::contiguous_range <Range>
                 and (std::is_arithmetic_v <InnerType> or std::is_enum_v <InnerType>)
         void write (const Range &data) {
-            const auto data_size = std::ranges::size (data);
-            auto data_size_len = (std::bit_width (data_size) + 7) / 8;
-            data_size_len = (data_size_len == 0)? 1:data_size_len;
-            char buffer [1 + data_size_len];   // control byte + size byte
-            buffer [0] = control_byte;
+            const auto data_size = std::ranges::size (data) * sizeof (InnerType);
+            const auto header = get_header(data_size);
+            sync_write(dev_, header);
+            sync_write(dev_, {reinterpret_cast <const char *> (std::ranges::data(data)), data_size});
 
-            set_control_byte_size_length (buffer[0], data_size_len);
-            set_data_size(buffer + 1, data_size, data_size_len);
-
-            dev_.write({buffer, 1 + data_size_len});
-            dev_.write({reinterpret_cast <const char *> (std::ranges::data(data)), data_size * sizeof (InnerType)});
         }
 
-        // ---------------------------------------------------------------------
 
     };
 

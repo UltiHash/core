@@ -5,8 +5,10 @@
 #ifndef CORE_SERIALIZATION_H
 #define CORE_SERIALIZATION_H
 
-#include "buffered_serializer.h"
 #include "deserializer.h"
+#include "serializer.h"
+#include "buffered_serializer_2.h"
+#include "buffered_serializer.h"
 
 namespace uh::serialization {
 
@@ -21,12 +23,6 @@ namespace uh::serialization {
     class buffered_serialization: public serialization <buffered_serializer <sl_serializer>, sl_deserializer> {
     public:
         explicit buffered_serialization (io::device &dev):  serialization (dev) {}
-
-        template <typename T>
-        T read () {
-            sync();
-            return sl_deserializer::template read <T> ();
-        }
     };
 
 

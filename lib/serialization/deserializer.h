@@ -60,12 +60,12 @@ namespace uh::serialization {
             constexpr auto data_size_len = 1;
 
             char buffer[1 + data_size_len + data_size];
-            dev_.read(buffer);
+            sync_read (dev_, buffer);
 
-            Arithmetic data;
-            std::memcpy(&data, buffer + data_size_len + 1, data_size);
+            Arithmetic data = *reinterpret_cast <Arithmetic *> (buffer + data_size_len + 1);
+            //std::memcpy(&data, buffer + data_size_len + 1, data_size);
 
-            if (is_different_endian(buffer[0])) {
+            if (is_different_endian(buffer[0])) [[unlikely]] {
                 data = endian_convert (data);
             }
 
@@ -87,11 +87,11 @@ namespace uh::serialization {
         Range read() {
 
             char control_byte[1];
-            dev_.read({control_byte, 1});
+            sync_read (dev_, control_byte);
 
-            auto data_size_len = get_control_byte_size_length(control_byte[0]);
+            const auto data_size_len = get_control_byte_size_length(control_byte[0]);
             std::vector<char> data_size_bytes(data_size_len);
-            dev_.read(data_size_bytes);
+            sync_read (dev_, data_size_bytes);
 
             auto data_size = get_control_byte_size(data_size_bytes, data_size_len);
             if (is_different_endian(control_byte[0])) {
@@ -99,21 +99,41 @@ namespace uh::serialization {
             }
 
             Range range;
-            range.resize(data_size);
+            range.resize(data_size / sizeof (InnerType));
 
-            if (!is_different_endian(control_byte[0]) or sizeof(InnerType) == 1) {  // no need to convert
-                dev_.read({reinterpret_cast <char *> (std::ranges::data(range)), data_size * sizeof(InnerType)});
+            if (!is_different_endian(control_byte[0]) or sizeof(InnerType) == 1) [[likely]] {  // no need to convert
+                sync_read (dev_, {reinterpret_cast <char *> (std::ranges::data(range)), data_size});
             }
             else if constexpr (sizeof(InnerType) > 1) {  // different endian
                 char data[sizeof(InnerType)];
                 for (long i = 0; i < data_size; i++) {
-                    dev_.read(data);
-                    auto *val = reinterpret_cast <InnerType *> (endian_convert (data));
+                    sync_read (dev_, data);
+                    char *tmp_dat = endian_convert (data);
+                    auto *val = reinterpret_cast <InnerType *> (tmp_dat);
                     range[i] = *val;
                 }
             }
 
             return range;
+
+        }
+
+
+        void read(std::span <char> &range) {
+
+            char control_byte[1];
+            sync_read (dev_, control_byte);
+
+            auto data_size_len = get_control_byte_size_length(control_byte[0]);
+            std::vector<char> data_size_bytes(data_size_len);
+            sync_read (dev_, data_size_bytes);
+
+            auto data_size = get_control_byte_size(data_size_bytes, data_size_len);
+            if (is_different_endian(control_byte[0])) [[unlikely]] {
+                data_size = endian_convert (data_size);
+            }
+
+            sync_read (dev_, {reinterpret_cast <char *> (std::ranges::data(range)), data_size});
 
         }
 

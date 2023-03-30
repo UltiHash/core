@@ -229,9 +229,7 @@ void write(serialization::buffered_serialization& out, const next_chunk::respons
 void read(serialization::buffered_serialization& in, next_chunk::response& response)
 {
     check_status(in);
-
-    const auto tmp = in.read<std::vector <char> >();
-    std::memcpy(response.content.data(), tmp.data(), tmp.size());
+    in.read(response.content);
 }
 
 void write(serialization::buffered_serialization& out, const allocate_chunk::request& request)
@@ -278,8 +276,7 @@ void write(serialization::buffered_serialization& out, const write_chunk::reques
 
 void read(serialization::buffered_serialization& in, write_chunk::request& request)
 {
-    const auto tmp = in.read<std::vector <char> >();
-    std::memcpy(request.data.data (), tmp.data(), tmp.size());
+    in.read(request.data);
 }
 
 // ---------------------------------------------------------------------

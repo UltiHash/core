@@ -33,6 +33,10 @@ namespace uh::serialization {
         }
     }
 
+    std::streamsize sync_write(io::device &dev, const std::span<const char> buffer);
+
+    std::streamsize sync_read(io::device &dev, std::span<char> buffer);
+
 
     template <typename T>
     struct is_serializer: std::bool_constant <
