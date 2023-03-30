@@ -103,6 +103,7 @@ BOOST_AUTO_TEST_CASE( read_block_response )
     uh::serialization::buffered_serialization ser (dev);
     write(ser, status{ .code = status::OK });
     write(ser, read_block::response{});
+    ser.sync();
 
     read_block::response res;
     read(ser, res);
@@ -133,6 +134,7 @@ BOOST_AUTO_TEST_CASE( quit_response )
     uh::serialization::buffered_serialization ser (dev);
     write(ser, status{ .code = status::OK });
     write(ser, quit::response{});
+    ser.sync();
 
     quit::response res;
     read(ser, res);
