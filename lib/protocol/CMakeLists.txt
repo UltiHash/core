@@ -9,7 +9,7 @@ find_package(Boost 1.80 COMPONENTS unit_test_framework REQUIRED)
 
 option(PROTOCOL_USE_SMALL_CHUNKS "Enable small maximum chunk size to allow for testing protocol implementation in environments with restricted memory" OFF)
 
-set(${PROJECT_NAME}_INCLUDE_DIRS ${Boost_INCLUDE_DIRS} uhLibNet uhLibLogging uhLibUtil)
+set(${PROJECT_NAME}_INCLUDE_DIRS ${Boost_INCLUDE_DIRS} uhLibNet uhLibLogging uhLibUtil uhLibSerialization2)
 set(${PROJECT_NAME}_LINK_LIBRARIES ${Boost_LIBRARIES} uhLibNet uhLibLogging uhLibUtil uhLibSerialization2)
 
 # adding all the .h files of the current project
