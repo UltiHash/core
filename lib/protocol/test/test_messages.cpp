@@ -38,6 +38,7 @@ BOOST_AUTO_TEST_CASE( status_message )
         uh::io::sstream_device dev;
         uh::serialization::buffered_serialization ser (dev);
         write(ser, status{ .code = status::FAILED, .message = "error message" });
+        ser.sync();
 
         BOOST_CHECK_EXCEPTION(check_status(ser), std::exception,
                               [](const auto& e) { return std::string(e.what()).find("error message") != std::string::npos; });
@@ -51,7 +52,7 @@ BOOST_AUTO_TEST_CASE( hello_request )
     uh::io::sstream_device dev;
     uh::serialization::buffered_serialization ser (dev);
     write(ser, hello::request{ .client_version = "0.0.1" });
-
+    ser.sync();
     char ch = ser.read<char>();
     BOOST_TEST(ch == hello::request_id);
 
@@ -69,6 +70,7 @@ BOOST_AUTO_TEST_CASE( hello_response )
     write(ser, status{ .code = status::OK });
     write(ser, hello::response{ .server_version = "1.0.0",
             .protocol_version = 0x55 });
+    ser.sync();
 
     hello::response res;
     read(ser, res);
@@ -83,6 +85,7 @@ BOOST_AUTO_TEST_CASE( read_block_request )
     uh::io::sstream_device dev;
     uh::serialization::buffered_serialization ser (dev);
     write(ser, read_block::request{ .hash = to_blob("hashed data") });
+    ser.sync();
 
     char ch = ser.read<char>();
     BOOST_TEST(ch == read_block::request_id);
@@ -112,6 +115,7 @@ BOOST_AUTO_TEST_CASE( quit_request )
     uh::io::sstream_device dev;
     uh::serialization::buffered_serialization ser (dev);
     write(ser, quit::request{ .reason = "bye" });
+    ser.sync();
 
     char ch = ser.read<char>();
     BOOST_TEST(ch == quit::request_id);
