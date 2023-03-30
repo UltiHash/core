@@ -133,7 +133,8 @@ namespace uh::serialization {
                 data_size = endian_convert (data_size);
             }
 
-            sync_read (dev_, {reinterpret_cast <char *> (std::ranges::data(range)), data_size});
+            sync_read (dev_, {range.data (), data_size});
+            range = {range.data (), data_size};
 
         }
 
