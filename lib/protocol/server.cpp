@@ -56,7 +56,7 @@ void server::handle(std::shared_ptr<net::socket> client)
 {
     boost::iostreams::stream<io::boost_device> io(client);
 
-    m_state = server_state::setup;
+    handle_setup_request(io);
 
     while (io.is_open() && m_state != server_state::disconnected)
     {
@@ -67,7 +67,6 @@ void server::handle(std::shared_ptr<net::socket> client)
 
             switch (m_state)
             {
-                case server_state::setup: handle_setup_request(io, request_id); break;
                 case server_state::normal: handle_normal_request(io, request_id); break;
                 case server_state::reading: handle_reading_request(io, request_id); break;
                 case server_state::writing: handle_writing_request(io, request_id); break;
@@ -97,8 +96,11 @@ void server::handle(std::shared_ptr<net::socket> client)
 
 // ---------------------------------------------------------------------
 
-void server::handle_setup_request(iostream& io, uint8_t request_id)
+void server::handle_setup_request(iostream& io)
 {
+    uint8_t request_id;
+    read(io, request_id);
+
     switch (request_id)
     {
         case hello::request_id: return handle_hello(io);
@@ -165,39 +167,28 @@ void server::handle_writing_request(iostream& io, uint8_t request_id)
 
 void server::handle_hello(iostream& io)
 {
-    if (connections == CONNECTION_LIMIT)
+    hello::request req;
+    read(io, req);
+
+    server_information info;
+
+    try
     {
-        write(io, status{ .code = status::FAILED, .message = "server is busy" });
-        io.flush();
-
-        m_state = server_state::disconnected;
+        info = on_hello(req.client_version);
     }
-    else
+    catch (const std::exception& e)
     {
-        hello::request req;
-        read(io, req);
-
-        server_information info;
-
-        try
-        {
-            info = on_hello(req.client_version);
-        }
-        catch (const std::exception& e)
-        {
-            write(io, status{ .code = status::FAILED, .message = e.what() });
-            m_state = server_state::disconnected;
-            return;
-        }
-
-        write(io, status{ status::OK });
-        write(io, hello::response{
-                .server_version = info.version,
-                .protocol_version = info.protocol });
-        io.flush();
-
-        m_state = server_state::normal;
+        write(io, status{ .code = status::FAILED, .message = e.what() });
+        return;
     }
+
+    write(io, status{ status::OK });
+    write(io, hello::response{
+            .server_version = info.version,
+            .protocol_version = info.protocol });
+    io.flush();
+
+    m_state = server_state::normal;
 }
 
 // ---------------------------------------------------------------------

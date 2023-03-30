@@ -52,7 +52,6 @@ private:
     scheduler m_scheduler;
 
     std::atomic<bool> m_running;
-    std::atomic<std::size_t> m_connections;
 };
 
 // ---------------------------------------------------------------------
