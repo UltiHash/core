@@ -21,8 +21,14 @@ uint64_t f_serialization::serialize(const std::vector<std::filesystem::path>& ro
     std::uint64_t raw_size = 0;
     std::uint64_t effective_size = 0;
 
-    io::file f (m_UHV_path, std::ios::app | std::ios::binary);
+    auto mode = std::ios::app | std::ios::binary;
+    if (m_overwrite) {
+        mode = std::ios::trunc | std::ios::binary;
+    }
+
+    io::file f (m_UHV_path, mode);
     uh::serialization::buffered_serializer serialize (f);
+
 
     const auto count = m_job_queue.size();
     serialize.write(count);
