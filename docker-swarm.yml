@@ -53,8 +53,19 @@ services:
       - type: bind
         source: /data/prometheus
         target: /prometheus
+  pushgateway:
+    image: prom/pushgateway
+    networks:
+      - uh-integration
+    ports:
+      - "9091:9091"
+    deploy:
+      mode: global
+      placement:
+        constraints:
+          - node.labels.role == agency
   uh-server-db:
-    image: ghcr.io/ultihash/server-db:20230316
+    image: ghcr.io/ultihash/server-db:20230317
     networks:
       - uh-integration
     deploy:
@@ -63,7 +74,7 @@ services:
          constraints:
           - node.labels.role == database
   uh-server-agency:
-    image: ghcr.io/ultihash/server-agency:20230316
+    image: ghcr.io/ultihash/server-agency:20230317
     networks:
       - uh-integration
     ports:
@@ -74,7 +85,7 @@ services:
         constraints:
           - node.labels.role == agency
   uh-client-shell:
-    image: ghcr.io/ultihash/client-shell:20230316
+    image: ghcr.io/ultihash/client-shell:20230317
     networks:
       - uh-integration
     deploy:

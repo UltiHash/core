@@ -35,7 +35,7 @@ public:
 
 private:
     bool m_metrics = false;
-    host_port m_config{0x5548,1};
+    host_port m_config{0x5548,3, "localhost"};
 };
 
 // ---------------------------------------------------------------------

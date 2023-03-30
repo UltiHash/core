@@ -7,8 +7,8 @@ namespace uh::client::serialization
 // ---------------------------------------------------------------------
 
 f_serialization::f_serialization(std::filesystem::path UHV_path,
-                                 common::job_queue<std::unique_ptr<common::f_meta_data>>& jq) :
-                                 m_UHV_path(std::move(UHV_path)), m_job_queue(jq)
+                                 common::job_queue<std::unique_ptr<common::f_meta_data>>& jq, bool overwrite) :
+                                 m_UHV_path(std::move(UHV_path)), m_job_queue(jq), m_overwrite(overwrite)
 {
 
 }
@@ -20,11 +20,13 @@ uint64_t f_serialization::serialize(const std::vector<std::filesystem::path>& ro
 
     std::uint64_t raw_size = 0;
     std::uint64_t effective_size = 0;
+
     io::file f (m_UHV_path, std::ios::app | std::ios::binary);
     uh::serialization::buffered_serializer serialize (f);
 
     const auto count = m_job_queue.size();
     serialize.write(count);
+
 
     // stopping the queue to signal the thread not to wait
     // else the thread will be in a waiting state if the queue is empty
