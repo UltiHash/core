@@ -32,13 +32,14 @@ namespace uh::io {
                 pointer += data.size();
                 return data.size();
             } else {
-                return dev_.write(data);
+                return serialization::sync_write(dev_, data);
+
             }
         }
 
 
         std::streamsize read(std::span<char> data) override {
-            return dev_.read(data);
+            return serialization::sync_read(dev_, data);
         }
 
         [[nodiscard]] bool valid() const override {
