@@ -52,7 +52,7 @@ public:
 
     virtual void handle(std::shared_ptr<net::socket> client) override;
 
-    void handle_setup_request(iostream& io);
+    void handle_setup_request(iostream& io, uint8_t request_id);
     void handle_normal_request(iostream& io, uint8_t request_id);
     void handle_reading_request(iostream& io, uint8_t request_id);
     void handle_writing_request(iostream& io, uint8_t request_id);

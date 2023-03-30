@@ -56,7 +56,7 @@ void server::handle(std::shared_ptr<net::socket> client)
 {
     boost::iostreams::stream<io::boost_device> io(client);
 
-    handle_setup_request(io);
+    m_state = server_state::setup;
 
     while (io.is_open() && m_state != server_state::disconnected)
     {
@@ -67,6 +67,7 @@ void server::handle(std::shared_ptr<net::socket> client)
 
             switch (m_state)
             {
+                case server_state::setup: handle_setup_request(io, request_id); break;
                 case server_state::normal: handle_normal_request(io, request_id); break;
                 case server_state::reading: handle_reading_request(io, request_id); break;
                 case server_state::writing: handle_writing_request(io, request_id); break;
@@ -96,11 +97,8 @@ void server::handle(std::shared_ptr<net::socket> client)
 
 // ---------------------------------------------------------------------
 
-void server::handle_setup_request(iostream& io)
+void server::handle_setup_request(iostream& io, uint8_t request_id)
 {
-    uint8_t request_id;
-    read(io, request_id);
-
     switch (request_id)
     {
         case hello::request_id: return handle_hello(io);
@@ -179,6 +177,7 @@ void server::handle_hello(iostream& io)
     catch (const std::exception& e)
     {
         write(io, status{ .code = status::FAILED, .message = e.what() });
+        m_state = server_state::disconnected;
         return;
     }
 
