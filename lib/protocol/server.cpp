@@ -165,9 +165,12 @@ void server::handle_writing_request(iostream& io, uint8_t request_id)
 
 void server::handle_hello(iostream& io)
 {
-    if (m_connections == CONNECTION_LIMIT)
+    if (connections == CONNECTION_LIMIT)
     {
-        write(io, status{ status::FAILED,  "server is busy"});
+        write(io, status{ .code = status::FAILED, .message = "server is busy" });
+        io.flush();
+
+        m_state = server_state::disconnected;
     }
     else
     {

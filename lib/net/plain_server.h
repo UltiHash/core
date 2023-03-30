@@ -22,6 +22,7 @@ struct server_config
 {
     constexpr static uint16_t DEFAULT_PORT = 0x5548;
     constexpr static std::size_t DEFAULT_THREADS = 50;
+    constexpr static std::size_t CONNECTION_LIMIT = uh::net::server_config::DEFAULT_THREADS-1;
 
     uint16_t port = DEFAULT_PORT;
 
@@ -51,6 +52,7 @@ private:
     scheduler m_scheduler;
 
     std::atomic<bool> m_running;
+    std::atomic<std::size_t> m_connections;
 };
 
 // ---------------------------------------------------------------------

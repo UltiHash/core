@@ -18,7 +18,8 @@ plain_server::plain_server(
       m_acceptor(m_context, tcp::endpoint(tcp::v4(), config.port)),
       m_protocol_factory(protocol_factory),
       m_scheduler(config.threads),
-      m_running(false)
+      m_running(false),
+      m_connections(0)
 {
     m_acceptor.set_option(tcp::acceptor::reuse_address(true));
 }
@@ -57,7 +58,9 @@ void plain_server::spawn_client(std::shared_ptr<net::socket> sock)
 {
     m_scheduler.spawn([this, sock] ()
     {
+        m_connections++;
         m_protocol_factory.create()->handle(sock);
+        m_connections--;
     });
 }
 

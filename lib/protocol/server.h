@@ -34,7 +34,6 @@ class server : public protocol
 public:
     constexpr static std::size_t MINIMUM_CHUNK_SIZE = 64 * 1024;
     constexpr static std::size_t MAXIMUM_CHUNK_SIZE = 64 * 1024 * 1024;
-    constexpr static std::size_t CONNECTION_LIMIT = uh::net::server_config::DEFAULT_THREADS-1;
 
     constexpr static std::size_t MAXIMUM_BLOCK_SIZE = 2u * 1024 * 1024 * 1024;
 
@@ -70,7 +69,6 @@ public:
 
 private:
     server_state m_state = server_state::disconnected;
-    std::atomic<std::size_t> m_connections = 0;
 
     std::unique_ptr<io::device> m_read_block;        // invariant: (!m_read_block) == (m_state != reading)
     std::unique_ptr<allocation> m_write_alloc;        // invariant: (!m_write_alloc) == (m_state != writing)
