@@ -1,13 +1,12 @@
 #!/bin/bash
 
-ADDR_AGENCY_NODE=192.168.42.20:21832
+ADDR_AGENCY_NODE=uh-server-agency:21832
 ADDR_DB_NODE=uh-server-db:12345
 
-PATH_CLIENT="/home/max/CLionProjects/core/cmake-build-debug/client-shell/uhClient"
-#"/usr/local/bin/uhClient"
-CORPORA_BASE_DIR="/mnt/md0/corpora-light"
-#"/data/corpora"
-if [ $# -gt 0 ]; then 
+PATH_CLIENT="/usr/local/bin/uhClient"
+CORPORA_BASE_DIR="/data/corpora"
+
+if [ $# -gt 0 ]; then
   corpus="$1"
 else
   exit -1
