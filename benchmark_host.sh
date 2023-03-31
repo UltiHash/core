@@ -57,7 +57,7 @@ get_agency_fresh_upload()
   local log_paths=${log_path_base}*
   RESULT=$(jq -s "map(.agency_fresh_upload.${corpus}[0]) | add / length" ${log_paths})
   EXIT_STATUS=$?
-  
+
   if [ $EXIT_STATUS -eq 0 ]; then
     printf "${RESULT}"
     return 0
@@ -65,7 +65,7 @@ get_agency_fresh_upload()
     printf ""
     return 1
   fi
-	
+
 }
 
 #
@@ -132,7 +132,7 @@ post_results_to_slack()
   local upload_update_exit=$?
   local download_agency=$(get_agency_download "${corpus}" "${log_path_base}")
   local download_agency_exit=$?
-  
+
   if [ $upload_fresh_exit -eq 0 ] && [ $upload_update_exit -eq 0 ] && [ $download_agency_exit -eq 0 ]
   then
         printf %b "text=Tonight's benchmark results for the \"${corpus}\" corpus:\n\t-upload throughput (fresh upload via agency-node): ${upload_fresh} MByte/s.\n\t-upload throughput (updating upload via agency-node): ${upload_update} MByte/s.\n\t-download throughput (via agency-node): ${download_agency} MByte\s.\n" > message.txt
@@ -141,7 +141,7 @@ post_results_to_slack()
 	echo "Successfully posted benchmark results for the current corpus to Slack."
   else
         curl -d "text=Tonight's benchmarks did not run properly or there was an error parsing their output." -d "channel=${SLACK_CHANNEL}" -H "Authorization: Bearer xoxb-2702783761651-4959893662113-aASbDCYEfMpCRgrnwvC4ZUUn" -X POST https://slack.com/api/chat.postMessage >/dev/null 2>&1
-	echo "Notified Slack channel that the benchmark run using the current corpus didn't appear to deliver valid results." 
+	echo "Notified Slack channel that the benchmark run using the current corpus didn't appear to deliver valid results."
   fi
 
 }
