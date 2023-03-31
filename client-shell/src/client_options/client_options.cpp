@@ -131,7 +131,7 @@ void client_options::handle(const boost::program_options::variables_map& vars)
                 }
                 else
                 {
-                    throw std::logic_error("Please provide a new UltiHash Volume file.");
+                    throw std::logic_error("Please provide a new UHV file.");
                 }
             }
             else

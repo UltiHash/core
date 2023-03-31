@@ -13,14 +13,15 @@ namespace uh::dbn::server
 
 // ---------------------------------------------------------------------
 
-class protocol_factory : public util::factory<uh::protocol::protocol>
+class protocol_factory : public uh::protocol::protocol_factory
 {
 public:
     protocol_factory(
         storage::mod& storage,
         const uh::metrics::protocol_metrics& metrics);
 
-    virtual std::unique_ptr<uh::protocol::protocol> create() override;
+    std::unique_ptr<uh::protocol::protocol> create(std::shared_ptr<net::socket> client) override;
+
 
 private:
     storage::mod& m_storage;

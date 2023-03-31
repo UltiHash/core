@@ -57,7 +57,7 @@ get_agency_fresh_upload_throughput()
   local log_paths=${log_path_base}*
   RESULT=$(jq -s "map(.agency_fresh_upload.${corpus}.throughput) | add / length" ${log_paths})
   EXIT_STATUS=$?
-  
+
   if [ $EXIT_STATUS -eq 0 ]; then
     printf "${RESULT}"
     return 0
@@ -65,7 +65,7 @@ get_agency_fresh_upload_throughput()
     printf ""
     return 1
   fi
-	
+
 }
 
 #
@@ -158,7 +158,7 @@ post_results_to_slack()
   local upload_update_throughput_exit=$?
   local download_agency_throughput=$(get_agency_download_throughput "${corpus}" "${log_path_base}")
   local download_agency_throughput_exit=$?
-  
+
   if [ $upload_fresh_throughput_exit -eq 0 ] && [ $upload_update_throughput_exit -eq 0 ] && [ $download_agency_throughput_exit -eq 0 ]
   then
         printf %b "text=Tonight's benchmark results for the \"${corpus}\" corpus:\n\t-upload throughput (fresh upload via agency-node): ${upload_fresh_throughput} MByte/s.\n\t-de-duplication ratio (fresh upload via agency-node): ${upload_update_throughput}.\n\t-upload throughput (updating upload via agency-node): ${upload_update_throughput} MByte/s.\n\t-download throughput (via agency-node): ${download_agency_throughput} MByte\s.\n" > message.txt

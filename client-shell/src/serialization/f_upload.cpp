@@ -34,12 +34,15 @@ f_upload::~f_upload()
 
 // ---------------------------------------------------------------------
 
-void f_upload::chunk_and_upload(std::unique_ptr<common::f_meta_data>& f_meta_data, protocol::client_pool::handle& client_handle)
+void f_upload::chunk_and_upload(std::unique_ptr<common::f_meta_data>& f_meta_data,
+                                protocol::client_pool::handle& client_handle)
 {
     if ( f_meta_data->f_type() == common::uh_file_type::regular )
     {
         auto chunks = m_chunker.chunk_files(f_meta_data);
-        for (auto & chunk : chunks){
+
+        for (auto & chunk : chunks)
+        {
             auto alloc = client_handle->allocate(chunk.size());
             io::write_from_buffer(alloc->device(), chunk);
 
@@ -48,6 +51,7 @@ void f_upload::chunk_and_upload(std::unique_ptr<common::f_meta_data>& f_meta_dat
             f_meta_data->add_effective_size(meta_data.effective_size);
         }
     }
+
     m_output_jq.append_job(std::move(f_meta_data));
 }
 
@@ -59,18 +63,20 @@ void f_upload::spawn_threads()
     {
         m_thread_pool.emplace_back([&]()
         {
-               protocol::client_pool::handle&& client_connection_handle = m_client_pool->get();
+           protocol::client_pool::handle&& client_connection_handle = m_client_pool->get();
 
-               while (auto&& job = m_input_jq.get_job())
-               {
-                    if (job == std::nullopt){
-                       break;
-                    }
-                    else{
-                        chunk_and_upload(job.value(),
-                            client_connection_handle);
-                    }
-               }
+           while (auto job = m_input_jq.get_job())
+           {
+                if (job == std::nullopt)
+                {
+                   break;
+                }
+                else
+                {
+                    chunk_and_upload(job.value(),
+                        client_connection_handle);
+                }
+           }
         });
     }
 }

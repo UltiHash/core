@@ -7,6 +7,7 @@
 
 namespace uh::client::chunking
 {
+
 enum class ChunkingStrategyEnum {FixedSize, OtherChunkingStrategy};
 
 /*
@@ -16,7 +17,8 @@ enum class ChunkingStrategyEnum {FixedSize, OtherChunkingStrategy};
   A minimum chunk size and a maximum chunk size can be defined as well.
 */
 
-static std::unordered_map<std::string, ChunkingStrategyEnum> string2backendtype = {
+static std::unordered_map<std::string, ChunkingStrategyEnum> string2backendtype =
+{
   {"FixedSize", ChunkingStrategyEnum::FixedSize},
   {"OtherChunkingStrategy", ChunkingStrategyEnum::OtherChunkingStrategy}
 };
@@ -37,10 +39,10 @@ struct chunking_config
 class mod
 {
 public:
-    mod(const chunking_config& cfg);
+    explicit mod(const chunking_config& cfg);
     ~mod();
 
-    void start();
+    mod& start();
 
     chunking::file_chunker& chunker();
 

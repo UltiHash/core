@@ -73,7 +73,7 @@ public:
     void set_f_type(const std::uint8_t&);
     void set_f_permissions(const std::uint32_t&);
     void set_f_size(const std::optional<std::uint64_t>&);
-    void set_f_hashes(const std::string&);
+    void set_f_hashes(const std::vector <char>&);
     void add_hash(const std::vector<char>&);
     void add_effective_size(const std::uint64_t&);
 
