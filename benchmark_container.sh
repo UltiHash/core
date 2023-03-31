@@ -17,7 +17,7 @@ fi
 #
 # Usage:
 #   upload_corpus <volume> <path-to-corpus> <remote-address> <additional-flags>
-#
+#use pro
 upload_corpus ()
 {
     local volume="$1"; shift;
@@ -46,11 +46,17 @@ perform_upload_benchmark ()
     local throughput=$(echo -n "${upload_raw_output}" | \
       grep --extended-regexp '^encoding speed:\s+[0-9]+(\.[0-9]+) Mb/s' | \
       grep --extended-regexp --only-matching '[0-9]+(\.[0-9]+)')
+    if [ -z "${throughput}" ]; then
+      throughput=0
+    fi
     echo "      \"throughput\": ${throughput},"
 
     local deduplication=$(echo -n "${upload_raw_output}" | \
       grep --extended-regexp '^de-duplication ratio:\s+[0-9]+(\.[0-9]*)*' | \
       grep --extended-regexp --only-matching '[0-9]+(\.[0-9]*)*')
+    if [ -z "${deduplication}" ]; then
+      deduplication=0
+    fi
     echo "      \"deduplication\": ${deduplication}"
 
     rm -rf "${temp_dir}"
@@ -90,6 +96,9 @@ perform_download_benchmark ()
     local throughput=$(echo -n "${download_raw_output}" | \
       grep --extended-regexp '^decoding speed:\s+[0-9]+(\.[0-9]+) Mb/s' | \
       grep --extended-regexp --only-matching '[0-9]+(\.[0-9]+)')
+    if [ -z "${throughput}" ]; then
+      throughput=0
+    fi
     echo "      \"throughput\": ${throughput}"
 
     rm -rf "${temp_dir}"
