@@ -5,6 +5,7 @@
 
 #include <span>
 #include <string>
+#include "serialization/serialization.h"
 
 
 namespace uh::protocol
@@ -26,8 +27,8 @@ struct status
 
 // ---------------------------------------------------------------------
 
-void write(std::ostream& out, const uh::protocol::status& status);
-void check_status(std::istream& in);
+void write(serialization::buffered_serialization& out, const uh::protocol::status& status);
+void check_status(serialization::buffered_serialization& in);
 
 // ---------------------------------------------------------------------
 
@@ -49,11 +50,11 @@ struct hello
 
 // ---------------------------------------------------------------------
 
-void write(std::ostream& out, const hello::request& request);
-void read(std::istream& out, hello::request& request);
+void write(serialization::buffered_serialization& out, const hello::request& request);
+void read(serialization::buffered_serialization& out, hello::request& request);
 
-void write(std::ostream& out, const hello::response& response);
-void read(std::istream& in, hello::response& request);
+void write(serialization::buffered_serialization& out, const hello::response& response);
+void read(serialization::buffered_serialization& in, hello::response& request);
 
 // ---------------------------------------------------------------------
 
@@ -73,11 +74,11 @@ struct read_block
 
 // ---------------------------------------------------------------------
 
-void write(std::ostream& out, const read_block::request& request);
-void read(std::istream& in, read_block::request& request);
+void write(serialization::buffered_serialization& out, const read_block::request& request);
+void read(serialization::buffered_serialization& in, read_block::request& request);
 
-void write(std::ostream& out, const read_block::response& response);
-void read(std::istream& in, read_block::response& response);
+void write(serialization::buffered_serialization& out, const read_block::response& response);
+void read(serialization::buffered_serialization& in, read_block::response& response);
 
 // ---------------------------------------------------------------------
 
@@ -97,11 +98,11 @@ struct quit
 
 // ---------------------------------------------------------------------
 
-void write(std::ostream& out, const quit::request& request);
-void read(std::istream& in, quit::request& request);
+void write(serialization::buffered_serialization& out, const quit::request& request);
+void read(serialization::buffered_serialization& in, quit::request& request);
 
-void write(std::ostream& out, const quit::response& response);
-void read(std::istream& in, quit::response& response);
+void write(serialization::buffered_serialization& out, const quit::response& response);
+void read(serialization::buffered_serialization& in, quit::response& response);
 
 // ---------------------------------------------------------------------
 
@@ -121,11 +122,11 @@ struct free_space
 
 // ---------------------------------------------------------------------
 
-void write(std::ostream& out, const free_space::request& request);
-void read(std::istream& in, free_space::request& request);
+void write(serialization::buffered_serialization& out, const free_space::request& request);
+void read(serialization::buffered_serialization& in, free_space::request& request);
 
-void write(std::ostream& out, const free_space::response& response);
-void read(std::istream& in, free_space::response& response);
+void write(serialization::buffered_serialization& out, const free_space::response& response);
+void read(serialization::buffered_serialization& in, free_space::response& response);
 
 // ---------------------------------------------------------------------
 
@@ -144,11 +145,11 @@ struct reset
 
 // ---------------------------------------------------------------------
 
-void write(std::ostream& out, const reset::request& request);
-void read(std::istream& in, reset::request& request);
+void write(serialization::buffered_serialization& out, const reset::request& request);
+void read(serialization::buffered_serialization& in, reset::request& request);
 
-void write(std::ostream& out, const reset::response& response);
-void read(std::istream& in, reset::response& response);
+void write(serialization::buffered_serialization& out, const reset::response& response);
+void read(serialization::buffered_serialization& in, reset::response& response);
 
 // ---------------------------------------------------------------------
 
@@ -169,11 +170,11 @@ struct next_chunk
 
 // ---------------------------------------------------------------------
 
-void write(std::ostream& out, const next_chunk::request& request);
-void read(std::istream& in, next_chunk::request& request);
+void write(serialization::buffered_serialization& out, const next_chunk::request& request);
+void read(serialization::buffered_serialization& in, next_chunk::request& request);
 
-void write(std::ostream& out, const next_chunk::response& response);
-void read(std::istream& in, next_chunk::response& response);
+void write(serialization::buffered_serialization& out, const next_chunk::response& response);
+void read(serialization::buffered_serialization& in, next_chunk::response& response);
 
 // ---------------------------------------------------------------------
 
@@ -193,11 +194,11 @@ struct allocate_chunk
 
 // ---------------------------------------------------------------------
 
-void write(std::ostream& out, const allocate_chunk::request& request);
-void read(std::istream& in, allocate_chunk::request& request);
+void write(serialization::buffered_serialization& out, const allocate_chunk::request& request);
+void read(serialization::buffered_serialization& in, allocate_chunk::request& request);
 
-void write(std::ostream& out, const allocate_chunk::response& response);
-void read(std::istream& in, allocate_chunk::response& response);
+void write(serialization::buffered_serialization& out, const allocate_chunk::response& response);
+void read(serialization::buffered_serialization& in, allocate_chunk::response& response);
 
 // ---------------------------------------------------------------------
 
@@ -217,11 +218,11 @@ struct write_chunk
 
 // ---------------------------------------------------------------------
 
-void write(std::ostream& out, const write_chunk::request& request);
-void read(std::istream& in, write_chunk::request& request);
+void write(serialization::buffered_serialization& out, const write_chunk::request& request);
+void read(serialization::buffered_serialization& in, write_chunk::request& request);
 
-void write(std::ostream& out, const write_chunk::response& response);
-void read(std::istream& in, write_chunk::response& response);
+void write(serialization::buffered_serialization& out, const write_chunk::response& response);
+void read(serialization::buffered_serialization& in, write_chunk::response& response);
 
 // ---------------------------------------------------------------------
 
@@ -242,11 +243,11 @@ struct finalize_block
 
 // ---------------------------------------------------------------------
 
-void write(std::ostream& out, const finalize_block::request& request);
-void read(std::istream& in, finalize_block::request& request);
+void write(serialization::buffered_serialization& out, const finalize_block::request& request);
+void read(serialization::buffered_serialization& in, finalize_block::request& request);
 
-void write(std::ostream& out, const finalize_block::response& response);
-void read(std::istream& in, finalize_block::response& response);
+void write(serialization::buffered_serialization& out, const finalize_block::response& response);
+void read(serialization::buffered_serialization& in, finalize_block::response& response);
 
 // ---------------------------------------------------------------------
 

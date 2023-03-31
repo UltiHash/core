@@ -14,8 +14,8 @@ namespace uh::an::server
 
 // ---------------------------------------------------------------------
 
-protocol::protocol(cluster::mod& cluster)
-    : m_cluster(cluster)
+protocol::protocol(cluster::mod& cluster, std::shared_ptr<net::socket> client):
+        uh::protocol::server (client), m_cluster(cluster)
 {
 }
 
