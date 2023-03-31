@@ -197,7 +197,7 @@ post_results_to_prometheus()
     curl --data-binary @${temp_dir}/agency_fresh_upload.txt http://localhost:9091/metrics/job/agency_fresh_upload/instance/${corpus}
   fi
 
-  if [ upload_fresh_deduplication_exit -eq 0 ]; then
+  if [ $upload_fresh_deduplication_exit -eq 0 ]; then
     printf %b "# TYPE uh_nightly_deduplication gauge\n# HELP uh_nightly_deduplication  Average deduplication-ratio obtained during nightly benchmarks.\nuh_nightly_deduplication ${upload_fresh_deduplication}\n" > ${temp_dir}/upload_fresh_deduplication.txt
     curl --data-binary @${temp_dir}/upload_fresh_deduplication.txt http://localhost:9091/metrics/job/agency_fresh_upload/instance/${corpus}
   fi
