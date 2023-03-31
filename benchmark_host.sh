@@ -103,7 +103,7 @@ get_agency_update_upload_throughput()
   local corpus="$1"; shift;
   local log_path_base="$1"; shift;
   local log_paths=${log_path_base}*
-  RESULT=$(jq -s "map(.agency_update_upload.${corpus}[0]) | add / length" ${log_paths})
+  RESULT=$(jq -s "map(.agency_update_upload.${corpus}.throughput) | add / length" ${log_paths})
   EXIT_STATUS=$?
 
   if [ $EXIT_STATUS -eq 0 ]; then
@@ -127,7 +127,7 @@ get_agency_download_throughput()
   local corpus="$1"; shift;
   local log_path_base="$1"; shift;
   local log_paths=${log_path_base}*
-  RESULT=$(jq -s "map(.agency_download.${corpus}[0]) | add / length" ${log_paths})
+  RESULT=$(jq -s "map(.agency_download.${corpus}.throughput) | add / length" ${log_paths})
   EXIT_STATUS=$?
 
   if [ $EXIT_STATUS -eq 0 ]; then
