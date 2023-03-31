@@ -183,8 +183,8 @@ void server::handle_hello(iostream& io)
 
     write(io, status{ status::OK });
     write(io, hello::response{
-            .server_version = info.version,
-            .protocol_version = info.protocol });
+        .server_version = info.version,
+        .protocol_version = info.protocol });
     io.flush();
 
     m_state = server_state::normal;

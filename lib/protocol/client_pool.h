@@ -14,7 +14,7 @@ namespace uh::protocol
 
 // ---------------------------------------------------------------------
 
-class  client_pool
+class client_pool
 {
 public:
 

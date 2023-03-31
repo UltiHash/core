@@ -4,7 +4,6 @@
 #include "allocation.h"
 #include "common.h"
 #include "protocol.h"
-#include <net/plain_server.h>
 
 #include <boost/iostreams/stream.hpp>
 
