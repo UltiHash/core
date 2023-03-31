@@ -175,6 +175,7 @@ void server::handle_hello()
     catch (const std::exception& e)
     {
         write(m_bs, status{ .code = status::FAILED, .message = e.what() });
+        m_bs.sync ();
         m_state = server_state::disconnected;
         return;
     }

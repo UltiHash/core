@@ -32,6 +32,7 @@ uint64_t f_serialization::serialize(const std::vector<std::filesystem::path>& ro
 
     const auto count = m_job_queue.size();
     serialize.write(count);
+    serialize.sync();
 
 
     // stopping the queue to signal the thread not to wait
@@ -61,6 +62,8 @@ uint64_t f_serialization::serialize(const std::vector<std::filesystem::path>& ro
             effective_size += item.value()->f_effective_size();
 
         }
+
+        serialize.sync();
 
     }
     std::cout << "de-duplication ratio: " << (double) effective_size / (double) raw_size << std::endl;
