@@ -63,20 +63,20 @@ void f_upload::spawn_threads()
     {
         m_thread_pool.emplace_back([&]()
         {
-               protocol::client_pool::handle&& client_connection_handle = m_client_pool->get();
+           protocol::client_pool::handle&& client_connection_handle = m_client_pool->get();
 
-               while (auto job = m_input_jq.get_job())
-               {
-                    if (job == std::nullopt)
-                    {
-                       break;
-                    }
-                    else
-                    {
-                        chunk_and_upload(job.value(),
-                            client_connection_handle);
-                    }
-               }
+           while (auto job = m_input_jq.get_job())
+           {
+                if (job == std::nullopt)
+                {
+                   break;
+                }
+                else
+                {
+                    chunk_and_upload(job.value(),
+                        client_connection_handle);
+                }
+           }
         });
     }
 }
