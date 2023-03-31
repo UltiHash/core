@@ -44,7 +44,7 @@ private:
 class protocol_metrics_wrapper : public protocol::server
 {
 public:
-    protocol_metrics_wrapper(
+    protocol_metrics_wrapper(std::shared_ptr<net::socket> client,
         const protocol_metrics& metrics,
         std::unique_ptr<uh::protocol::server>&& base);
 

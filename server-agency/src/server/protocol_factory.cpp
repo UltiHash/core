@@ -17,11 +17,12 @@ protocol_factory::protocol_factory(cluster::mod& cluster,
 
 // ---------------------------------------------------------------------
 
-std::unique_ptr<uh::protocol::protocol> protocol_factory::create()
+std::unique_ptr<uh::protocol::protocol> protocol_factory::create(std::shared_ptr<net::socket> client)
 {
     return std::make_unique<metrics::protocol_metrics_wrapper>(
-        m_metrics,
-        std::make_unique<protocol>(m_cluster));
+            client,
+            m_metrics,
+        std::make_unique<protocol>(m_cluster, client));
 }
 
 // ---------------------------------------------------------------------

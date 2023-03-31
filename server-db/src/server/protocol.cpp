@@ -11,8 +11,8 @@ namespace uh::dbn::server
 
 // ---------------------------------------------------------------------
 
-protocol::protocol(storage::backend& storage)
-    : m_storage(storage)
+protocol::protocol(storage::backend& storage, std::shared_ptr<net::socket> client)
+    : uh::protocol::server (client), m_storage(storage)
 {
 }
 
