@@ -45,17 +45,17 @@ setup()
 }
 
 #
-# Returns the average throughput of the agency_fresh_upload metric from the log files
+# Returns the average throughput of the agency_fresh_upload condition from the log files
 #
 # Usage:
-#   get_agency_fresh_upload <corpus> <log_path_base>
+#   get_agency_fresh_upload_throughput <corpus> <log_path_base>
 #
-get_agency_fresh_upload()
+get_agency_fresh_upload_throughput()
 {
   local corpus="$1"; shift;
   local log_path_base="$1"; shift;
   local log_paths=${log_path_base}*
-  RESULT=$(jq -s "map(.agency_fresh_upload.${corpus}[0]) | add / length" ${log_paths})
+  RESULT=$(jq -s "map(.agency_fresh_upload.${corpus}.throughput) | add / length" ${log_paths})
   EXIT_STATUS=$?
   
   if [ $EXIT_STATUS -eq 0 ]; then
@@ -69,12 +69,36 @@ get_agency_fresh_upload()
 }
 
 #
+# Returns the average deduplication ratio of the agency_fresh_upload condition from the log files
+#
+# Usage:
+#   get_agency_fresh_upload_deduplication <corpus> <log_path_base>
+#
+get_agency_fresh_upload_deduplication()
+{
+  local corpus="$1"; shift;
+  local log_path_base="$1"; shift;
+  local log_paths=${log_path_base}*
+  RESULT=$(jq -s "map(.agency_fresh_upload.${corpus}.deduplication) | add / length" ${log_paths})
+  EXIT_STATUS=$?
+
+  if [ $EXIT_STATUS -eq 0 ]; then
+    printf "${RESULT}"
+    return 0
+  else
+    printf ""
+    return 1
+  fi
+
+}
+
+#
 # Returns the average throughput of the agency_fresh_upload metric from the log files
 #
 # Usage:
 #   get_agency_update_upload <corpus> <log_path_base>
 #
-get_agency_update_upload()
+get_agency_update_upload_throughput()
 {
   local corpus="$1"; shift;
   local log_path_base="$1"; shift;
@@ -98,7 +122,7 @@ get_agency_update_upload()
 # Usage:
 #   get_agency_download <corpus> <log_path_base>
 #
-get_agency_download()
+get_agency_download_throughput()
 {
   local corpus="$1"; shift;
   local log_path_base="$1"; shift;
@@ -126,16 +150,18 @@ post_results_to_slack()
 {
   local corpus="$1"; shift;
   local log_path_base="$1"; shift;
-  local upload_fresh=$(get_agency_fresh_upload "${corpus}" "${log_path_base}")
-  local upload_fresh_exit=$?
-  local upload_update=$(get_agency_update_upload "${corpus}" "${log_path_base}")
-  local upload_update_exit=$?
-  local download_agency=$(get_agency_download "${corpus}" "${log_path_base}")
-  local download_agency_exit=$?
+  local upload_fresh_throughput=$(get_agency_fresh_upload_throughput "${corpus}" "${log_path_base}")
+  local upload_fresh_throughput_exit=$?
+  local upload_fresh_deduplication=$(get_agency_fresh_upload_deduplication "${corpus}" "${log_path_base}")
+  local upload_fresh_deduplication_exit=$?
+  local upload_update_throughput=$(get_agency_update_upload_throughput "${corpus}" "${log_path_base}")
+  local upload_update_throughput_exit=$?
+  local download_agency_throughput=$(get_agency_download_throughput "${corpus}" "${log_path_base}")
+  local download_agency_throughput_exit=$?
   
-  if [ $upload_fresh_exit -eq 0 ] && [ $upload_update_exit -eq 0 ] && [ $download_agency_exit -eq 0 ]
+  if [ $upload_fresh_throughput_exit -eq 0 ] && [ $upload_update_throughput_exit -eq 0 ] && [ $download_agency_throughput_exit -eq 0 ]
   then
-        printf %b "text=Tonight's benchmark results for the \"${corpus}\" corpus:\n\t-upload throughput (fresh upload via agency-node): ${upload_fresh} MByte/s.\n\t-upload throughput (updating upload via agency-node): ${upload_update} MByte/s.\n\t-download throughput (via agency-node): ${download_agency} MByte\s.\n" > message.txt
+        printf %b "text=Tonight's benchmark results for the \"${corpus}\" corpus:\n\t-upload throughput (fresh upload via agency-node): ${upload_fresh_throughput} MByte/s.\n\t-de-duplication ratio (fresh upload via agency-node): ${upload_update_throughput}.\n\t-upload throughput (updating upload via agency-node): ${upload_update_throughput} MByte/s.\n\t-download throughput (via agency-node): ${download_agency_throughput} MByte\s.\n" > message.txt
         curl --data-binary @message.txt -d "channel=${SLACK_CHANNEL}" -H "Authorization: Bearer xoxb-2702783761651-4959893662113-aASbDCYEfMpCRgrnwvC4ZUUn" -X POST https://slack.com/api/chat.postMessage >/dev/null 2>&1
         rm message.txt
 	echo "Successfully posted benchmark results for the current corpus to Slack."
@@ -156,26 +182,34 @@ post_results_to_prometheus()
 {
   local corpus="$1"; shift;
   local log_path_base="$1"; shift;
-  local upload_fresh=$(get_agency_fresh_upload "${corpus}" "${log_path_base}")
-  local upload_fresh_exit=$?
-  local upload_update=$(get_agency_update_upload "${corpus}" "${log_path_base}")
-  local upload_update_exit=$?
-  local download_agency=$(get_agency_download "${corpus}" "${log_path_base}")
-  local download_agency_exit=$?
+  local upload_fresh_throughput=$(get_agency_fresh_upload_throughput "${corpus}" "${log_path_base}")
+  local upload_fresh_throughput_exit=$?
+  local upload_fresh_deduplication=$(get_agency_fresh_upload_deduplication "${corpus}" "${log_path_base}")
+  local upload_fresh_deduplication_exit=$?
+  local upload_update_throughput=$(get_agency_update_upload_throughput "${corpus}" "${log_path_base}")
+  local upload_update_throughput_exit=$?
+  local download_agency_throughput=$(get_agency_download_throughput "${corpus}" "${log_path_base}")
+  local download_agency_throughput_exit=$?
   local temp_dir=$(mktemp -d)
   
-  if [ $upload_fresh_exit -eq 0 ]; then
-    printf %b "# TYPE uh_nightly_throughput gauge\n# HELP uh_nightly_throughput  Average throughput obtained during nightly benchmarks.\nuh_nightly_throughput ${upload_fresh}\n" > ${temp_dir}/agency_fresh_upload.txt
+  if [ $upload_fresh_throughput_exit -eq 0 ]; then
+    printf %b "# TYPE uh_nightly_throughput gauge\n# HELP uh_nightly_throughput  Average throughput obtained during nightly benchmarks.\nuh_nightly_throughput ${upload_fresh_throughput}\n" > ${temp_dir}/agency_fresh_upload.txt
     curl --data-binary @${temp_dir}/agency_fresh_upload.txt http://localhost:9091/metrics/job/agency_fresh_upload/instance/${corpus}
   fi
- 
-  if [ $upload_update_exit -eq 0 ]; then
-    printf %b "# TYPE uh_nightly_throughput gauge\n# HELP uh_nightly_throughput  Average throughput obtained during nightly benchmarks.\nuh_nightly_throughput ${upload_update}\n" > ${temp_dir}/agency_update_upload.txt
+
+  if [ upload_fresh_deduplication_exit -eq 0 ]; then
+    printf %b "# TYPE uh_nightly_deduplication gauge\n# HELP uh_nightly_deduplication  Average deduplication-ratio obtained during nightly benchmarks.\nuh_nightly_deduplication ${upload_fresh_deduplication}\n" > ${temp_dir}/upload_fresh_deduplication.txt
+    curl --data-binary @${temp_dir}/upload_fresh_deduplication.txt http://localhost:9091/metrics/job/agency_fresh_upload/instance/${corpus}
+  fi
+
+
+  if [ $upload_update_throughput_exit -eq 0 ]; then
+    printf %b "# TYPE uh_nightly_throughput gauge\n# HELP uh_nightly_throughput  Average throughput obtained during nightly benchmarks.\nuh_nightly_throughput ${upload_update_throughput}\n" > ${temp_dir}/agency_update_upload.txt
     curl --data-binary @${temp_dir}/agency_update_upload.txt http://localhost:9091/metrics/job/agency_update_upload/instance/${corpus}
   fi
 
-  if [ $download_agency_exit -eq 0 ]; then
-    printf %b "# TYPE uh_nightly_throughput gauge\n# HELP uh_nightly_throughput  Average throughput obtained during nightly benchmarks.\nuh_nightly_throughput ${download_agency}\n" > ${temp_dir}/agency_download.txt
+  if [ $download_agency_throughput_exit -eq 0 ]; then
+    printf %b "# TYPE uh_nightly_throughput gauge\n# HELP uh_nightly_throughput  Average throughput obtained during nightly benchmarks.\nuh_nightly_throughput ${download_agency_throughput}\n" > ${temp_dir}/agency_download.txt
     curl --data-binary @${temp_dir}/agency_download.txt http://localhost:9091/metrics/job/agency_download/instance/${corpus}
   fi
  
