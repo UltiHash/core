@@ -10,7 +10,6 @@ f_serialization::f_serialization(std::filesystem::path UHV_path,
                                  common::job_queue<std::unique_ptr<common::f_meta_data>>& jq, bool overwrite) :
                                  m_UHV_path(std::move(UHV_path)), m_job_queue(jq), m_overwrite(overwrite)
 {
-
 }
 
 // ---------------------------------------------------------------------

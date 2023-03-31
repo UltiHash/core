@@ -15,7 +15,8 @@ namespace
 
 // ---------------------------------------------------------------------
 
-ChunkingStrategyEnum define_chunking_strategy(std::string chunking_strategy){
+ChunkingStrategyEnum define_chunking_strategy(const std::string& chunking_strategy)
+{
     auto it = string2backendtype.find(chunking_strategy);
     if (it != string2backendtype.end()) {
         return it->second;
@@ -54,7 +55,7 @@ std::unique_ptr<file_chunker> make_chunker(const chunking_config& cfg){
 
 struct mod::impl
 {
-    impl(const chunking_config& cfg);
+    explicit impl(const chunking_config& cfg);
     std::unique_ptr<chunking::file_chunker> m_chunker;
 };
 
@@ -78,10 +79,11 @@ mod::~mod() = default;
 
 // ---------------------------------------------------------------------
 
-void mod::start()
+mod& mod::start()
 {
     INFO << "starting file chunking module";
     m_impl->m_chunker->start();
+    return *this;
 }
 
 // ---------------------------------------------------------------------

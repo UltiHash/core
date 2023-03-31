@@ -18,9 +18,6 @@ constexpr const char* optionString(OptionsEnum n)
     }
 }
 
-
-
-
 // ---------------------------------------------------------------------
 
 options::options()

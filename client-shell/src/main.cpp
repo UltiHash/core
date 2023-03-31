@@ -7,17 +7,18 @@
 #include <serialization/Recompilation.h>
 #include <logging/logging_boost.h>
 #include <options/app_config.h>
-
-#include <chunking/mod.h>
 #include <chunking/options.h>
 
 // ---------------------------------------------------------------------
 
-APPLICATION_CONFIG(
+APPLICATION_CONFIG
+(
     (client, uh::client::option::client_options),
     (agency, uh::client::option::agency_connection),
     (chunking, uh::client::chunking::options)
-    );
+);
+
+// ---------------------------------------------------------------------
 
 int main(int argc, const char *argv[])
 {
@@ -40,10 +41,6 @@ int main(int argc, const char *argv[])
                 .client_version = s.str()
             };
 
-        const auto& client_config = config.client();
-        uh::protocol::client_factory client_factory(
-                std::make_unique<uh::net::plain_socket_factory>(io, config.agency().hostname,
-                                                                        config.agency().port),cf_config);
         std::unique_ptr<uh::protocol::client_pool> client_pool =
                 std::make_unique<uh::protocol::client_pool>(
                         std::make_unique<uh::protocol::client_factory>(
@@ -51,18 +48,13 @@ int main(int argc, const char *argv[])
                                         io, config.agency().hostname, config.agency().port),
                                             cf_config), config.agency().pool_size);
 
-
-        uh::client::chunking::mod chunking_module(config.chunking());
-        chunking_module.start();
-
         // recompilation
-        uh::client::serialization::Recompilation(config.client(), chunking_module, std::move(client_pool));
+        uh::client::serialization::Recompilation(config.client(), config.chunking(), std::move(client_pool));
 
     }
     catch (const std::exception &exc)
     {
         FATAL << exc.what() << '\n';
-
         return 1;
     }
     catch (...)

@@ -71,6 +71,7 @@ private:
     void handle_finalize_block();
 
     server_state m_state = server_state::disconnected;
+
     std::unique_ptr<io::device> m_read_block;        // invariant: (!m_read_block) == (m_state != reading)
     std::unique_ptr<allocation> m_write_alloc;        // invariant: (!m_write_alloc) == (m_state != writing)
     serialization::buffered_serialization m_bs;
