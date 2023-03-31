@@ -161,7 +161,7 @@ post_results_to_slack()
 
   if [ $upload_fresh_throughput_exit -eq 0 ] && [ $upload_update_throughput_exit -eq 0 ] && [ $download_agency_throughput_exit -eq 0 ]
   then
-        printf %b "text=Tonight's benchmark results for the \"${corpus}\" corpus:\n\t-upload throughput (fresh upload via agency-node): ${upload_fresh_throughput} MByte/s.\n\t-de-duplication ratio (fresh upload via agency-node): ${upload_update_throughput}.\n\t-upload throughput (updating upload via agency-node): ${upload_update_throughput} MByte/s.\n\t-download throughput (via agency-node): ${download_agency_throughput} MByte\s.\n" > message.txt
+        printf %b "text=Tonight's benchmark results for the \"${corpus}\" corpus:\n\t- upload throughput (fresh upload via agency-node): ${upload_fresh_throughput} MByte/s.\n\t- de-duplication ratio (fresh upload via agency-node): ${upload_update_throughput}.\n\t- upload throughput (updating upload via agency-node): ${upload_update_throughput} MByte/s.\n\t- download throughput (via agency-node): ${download_agency_throughput} MByte\s.\n" > message.txt
         curl --data-binary @message.txt -d "channel=${SLACK_CHANNEL}" -H "Authorization: Bearer xoxb-2702783761651-4959893662113-aASbDCYEfMpCRgrnwvC4ZUUn" -X POST https://slack.com/api/chat.postMessage >/dev/null 2>&1
         rm message.txt
 	echo "Successfully posted benchmark results for the current corpus to Slack."
