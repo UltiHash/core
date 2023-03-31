@@ -23,7 +23,7 @@ class Recompilation
 {
     public:
         Recompilation(const co::client_config&,
-        client::chunking::mod&,
+        const uh::client::chunking::chunking_config& ,
         std::unique_ptr<uh::protocol::client_pool>&&);
 
     private:
@@ -31,9 +31,9 @@ class Recompilation
         void retrieve();
 
     private:
-        const co::client_config& m_config;
+        const co::client_config& m_client_config;
+        const client::chunking::chunking_config& m_chunker_config;
         std::unique_ptr<uh::protocol::client_pool> m_client_pool;
-        client::chunking::file_chunker& m_chunker;
 
 };
 

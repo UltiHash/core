@@ -5,8 +5,8 @@ namespace uh::client::chunking {
 
 // ---------------------------------------------------------------------
 
-void fixed_size_chunker::start(){
-
+void fixed_size_chunker::start()
+{
     INFO << "------ Chunking strategy ------ ";
     INFO << "        backend type   : " << chunking_type();
     INFO << "        chunk size     : " << chunk_size();

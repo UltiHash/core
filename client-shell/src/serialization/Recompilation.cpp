@@ -7,25 +7,24 @@ namespace uh::client::serialization
 // ---------------------------------------------------------------------
 
 Recompilation::Recompilation(const uh::client::option::client_config &config,
-                             client::chunking::mod& chunker_mod,
+                             const client::chunking::chunking_config& chunker_config,
                              std::unique_ptr<uh::protocol::client_pool>&& pool) :
-                             m_config(config), m_chunker(chunker_mod.chunker()), m_client_pool(std::move(pool))
+                             m_client_config(config), m_chunker_config(chunker_config), m_client_pool(std::move(pool))
 {
 
-    if (m_config.m_option == co::options_chosen::integrate) {
+    if (m_client_config.m_option == co::options_chosen::integrate) {
         try
         {
             integrate();
         }
         catch (const std::exception &exc)
         {
-            std::filesystem::remove(m_config.m_outputPath);
+            std::filesystem::remove(m_client_config.m_outputPath);
             throw exc;
         }
     }
-    else if (m_config.m_option == co::options_chosen::retrieve)
+    else if (m_client_config.m_option == co::options_chosen::retrieve)
         retrieve();
-
 
 }
 
@@ -40,15 +39,15 @@ void Recompilation::integrate()
 
     {
         f_upload upload_class(m_client_pool, q_f_meta_data,
-                              q_f_mdata_w_hash, m_chunker, m_config.m_worker_count);
+                              q_f_mdata_w_hash, m_chunker_config , m_client_config.m_worker_count);
         upload_class.spawn_threads();
-        f_traverse traverse_class(m_config.m_inputPaths, m_config.m_operatePaths, q_f_meta_data);
+        f_traverse traverse_class(m_client_config.m_inputPaths, m_client_config.m_operatePaths, q_f_meta_data);
     }
 
     q_f_mdata_w_hash.sort();
 
-    f_serialization serializer(m_config.m_outputPath, q_f_mdata_w_hash, m_config.m_overwrite);
-    uint64_t size = serializer.serialize(m_config.m_inputPaths);
+    f_serialization serializer(m_client_config.m_outputPath, q_f_mdata_w_hash, m_client_config.m_overwrite);
+    uint64_t size = serializer.serialize(m_client_config.m_inputPaths);
 
     auto time_end = std::chrono::system_clock::now();
 
@@ -67,16 +66,16 @@ void Recompilation::retrieve()
     uint64_t size = 0;
     auto time_start = std::chrono::system_clock::now();
 
-    std::filesystem::create_directories(m_config.m_outputPath);
+    std::filesystem::create_directories(m_client_config.m_outputPath);
     common::job_queue<std::unique_ptr<common::f_meta_data>> q_f_meta_data;
 
     {
-        f_download download_class(m_client_pool, q_f_meta_data, m_config.m_outputPath,
-                                  m_config.m_worker_count);
+        f_download download_class(m_client_pool, q_f_meta_data, m_client_config.m_outputPath,
+                                  m_client_config.m_worker_count);
         download_class.spawn_threads();
 
-        f_serialization deserializer(m_config.m_inputPaths[0], q_f_meta_data);
-        size = deserializer.deserialize(m_config.m_outputPath);
+        f_serialization deserializer(m_client_config.m_inputPaths[0], q_f_meta_data);
+        size = deserializer.deserialize(m_client_config.m_outputPath);
     }
 
     auto time_end = std::chrono::system_clock::now();

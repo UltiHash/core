@@ -9,12 +9,12 @@ namespace uh::client::serialization
 f_upload::f_upload(std::unique_ptr<protocol::client_pool>& cl_pool,
                    common::job_queue<std::unique_ptr<common::f_meta_data>>& in_jq,
                    common::job_queue<std::unique_ptr<common::f_meta_data>>& out_jq,
-                   uh::client::chunking::file_chunker& chunker,
+                   const uh::client::chunking::chunking_config& chunker_config,
                    unsigned int num_threads):
                    m_client_pool(cl_pool),
                    m_input_jq(in_jq),
                    m_output_jq(out_jq),
-                   m_chunker(chunker),
+                   m_chunker(uh::client::chunking::mod(chunker_config).start()),
                    common::thread_manager(num_threads)
 {
 }
@@ -34,12 +34,15 @@ f_upload::~f_upload()
 
 // ---------------------------------------------------------------------
 
-void f_upload::chunk_and_upload(std::unique_ptr<common::f_meta_data>& f_meta_data, protocol::client_pool::handle& client_handle)
+void f_upload::chunk_and_upload(std::unique_ptr<common::f_meta_data>& f_meta_data,
+                                protocol::client_pool::handle& client_handle)
 {
     if ( f_meta_data->f_type() == common::uh_file_type::regular )
     {
         auto chunks = m_chunker.chunk_files(f_meta_data);
-        for (auto & chunk : chunks){
+
+        for (auto & chunk : chunks)
+        {
             auto alloc = client_handle->allocate(chunk.size());
             io::write_from_buffer(alloc->device(), chunk);
 
@@ -48,6 +51,7 @@ void f_upload::chunk_and_upload(std::unique_ptr<common::f_meta_data>& f_meta_dat
             f_meta_data->add_effective_size(meta_data.effective_size);
         }
     }
+
     m_output_jq.append_job(std::move(f_meta_data));
 }
 
@@ -63,10 +67,12 @@ void f_upload::spawn_threads()
 
                while (auto&& job = m_input_jq.get_job())
                {
-                    if (job == std::nullopt){
+                    if (job == std::nullopt)
+                    {
                        break;
                     }
-                    else{
+                    else
+                    {
                         chunk_and_upload(job.value(),
                             client_connection_handle);
                     }
