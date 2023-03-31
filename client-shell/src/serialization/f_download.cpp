@@ -78,7 +78,7 @@ void f_download::spawn_threads()
             {
                protocol::client_pool::handle&& client_connection_handle = m_client_pool->get();
 
-               while (auto&& item = m_input_jq.get_job())
+               while (auto item = m_input_jq.get_job())
                {
                    if (item == std::nullopt)
                        break;

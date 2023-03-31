@@ -79,11 +79,11 @@ mod::~mod() = default;
 
 // ---------------------------------------------------------------------
 
-chunking::file_chunker& mod::start()
+mod& mod::start()
 {
     INFO << "starting file chunking module";
     m_impl->m_chunker->start();
-    return *m_impl->m_chunker;
+    return *this;
 }
 
 // ---------------------------------------------------------------------

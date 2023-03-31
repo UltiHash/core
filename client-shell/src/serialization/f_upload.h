@@ -22,7 +22,7 @@ public:
     f_upload(std::unique_ptr<protocol::client_pool>&,
             common::job_queue<std::unique_ptr<common::f_meta_data>>&,
             common::job_queue<std::unique_ptr<common::f_meta_data>>&,
-            const uh::client::chunking::chunking_config&,
+            uh::client::chunking::file_chunker&,
             unsigned int=1);
     ~f_upload() override;
 

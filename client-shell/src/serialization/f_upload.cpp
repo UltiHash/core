@@ -9,12 +9,12 @@ namespace uh::client::serialization
 f_upload::f_upload(std::unique_ptr<protocol::client_pool>& cl_pool,
                    common::job_queue<std::unique_ptr<common::f_meta_data>>& in_jq,
                    common::job_queue<std::unique_ptr<common::f_meta_data>>& out_jq,
-                   const uh::client::chunking::chunking_config& chunker_config,
+                   uh::client::chunking::file_chunker& chunker,
                    unsigned int num_threads):
                    m_client_pool(cl_pool),
                    m_input_jq(in_jq),
                    m_output_jq(out_jq),
-                   m_chunker(uh::client::chunking::mod(chunker_config).start()),
+                   m_chunker(chunker),
                    common::thread_manager(num_threads)
 {
 }
@@ -65,7 +65,7 @@ void f_upload::spawn_threads()
         {
                protocol::client_pool::handle&& client_connection_handle = m_client_pool->get();
 
-               while (auto&& job = m_input_jq.get_job())
+               while (auto job = m_input_jq.get_job())
                {
                     if (job == std::nullopt)
                     {

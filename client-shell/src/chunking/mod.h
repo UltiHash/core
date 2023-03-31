@@ -42,7 +42,7 @@ public:
     explicit mod(const chunking_config& cfg);
     ~mod();
 
-    chunking::file_chunker& start();
+    mod& start();
 
     chunking::file_chunker& chunker();
 
