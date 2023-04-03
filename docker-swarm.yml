@@ -6,9 +6,13 @@ services:
     networks:
       - uh-integration
     ports:
-      - "3000:3000"
+      - target: 3000
+        published: 3000
+        protocol: tcp
+        mode: host
     deploy:
       mode: global
+      endpoint_mode: dnsrr
       placement:
         constraints:
           - node.labels.role == agency
@@ -22,9 +26,13 @@ services:
     networks:
       - uh-integration
     ports:
-      - "3001:3000"
+      - target: 3000
+        published: 3001
+        protocol: tcp
+        mode: host
     deploy:
       mode: global
+      endpoint_mode: dnsrr
       placement:
         constraints:
           - node.labels.role == agency
@@ -40,9 +48,13 @@ services:
     networks:
       - uh-integration
     ports: 
-      - "9090:9090"
+      - target: 9090
+        published: 9090
+        protocol: tcp
+        mode: host
     deploy:
       mode: global
+      endpoint_mode: dnsrr
       placement:
         constraints:
           - node.labels.role == agency
@@ -58,38 +70,52 @@ services:
     networks:
       - uh-integration
     ports:
-      - "9091:9091"
+      - target: 9091
+        published: 9091
+        protocol: tcp
+        mode: host
     deploy:
       mode: global
+      endpoint_mode: dnsrr
       placement:
         constraints:
           - node.labels.role == agency
   uh-server-db:
-    image: ghcr.io/ultihash/server-db:20230317
+    image: ghcr.io/ultihash/server-db:20230323
     networks:
       - uh-integration
     deploy:
       mode: global
+      endpoint_mode: dnsrr
       placement:
          constraints:
           - node.labels.role == database
+    volumes:
+      - type: bind
+        source: /mnt/disk1
+        target: /data
   uh-server-agency:
-    image: ghcr.io/ultihash/server-agency:20230317
+    image: ghcr.io/ultihash/server-agency:20230323
     networks:
       - uh-integration
     ports:
-      - "21832:21832"
+      - target: 21832
+        published: 21832
+        protocol: tcp
+        mode: host
     deploy: 
       mode: global
+      endpoint_mode: dnsrr
       placement:
         constraints:
           - node.labels.role == agency
   uh-client-shell:
-    image: ghcr.io/ultihash/client-shell:20230317
+    image: ghcr.io/ultihash/client-shell:20230323
     networks:
       - uh-integration
     deploy:
       mode: global
+      endpoint_mode: dnsrr
       placement:
         constraints:
           - node.labels.role == agency

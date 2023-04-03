@@ -21,7 +21,7 @@ class fixed_size_chunker : public file_chunker {
          * @return a vector of chunks
          * @throw may throw any derivative of exception on error
          */
-        virtual std::vector<uh::protocol::blob> chunk_files(std::unique_ptr<common::f_meta_data>&) override;
+        virtual std::vector<uh::protocol::blob> chunk_files(std::unique_ptr<uhv::f_meta_data>&) override;
 
         /**
          * Return the name of the chunking strategy as a std::string.
