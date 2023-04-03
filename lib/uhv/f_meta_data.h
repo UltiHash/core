@@ -1,14 +1,13 @@
-#ifndef SERIALIZATION_FILE_META_DATA_H
-#define SERIALIZATION_FILE_META_DATA_H
+#ifndef UHV_FILE_META_DATA_H
+#define UHV_FILE_META_DATA_H
 
-#include <iostream>
 #include <vector>
 #include <algorithm>
 #include <boost/filesystem.hpp>
 #include <logging/logging_boost.h>
 
 
-namespace uh::client::common
+namespace uh::uhv
 {
 
 // ---------------------------------------------------------------------
@@ -69,13 +68,19 @@ public:
     [[nodiscard]] const std::uint64_t& f_size() const;
     [[nodiscard]] const std::uint64_t& f_effective_size() const;
 
+    [[nodiscard]] std::vector<char>& get_hashes();
+
+
     void set_f_path(std::string);
     void set_f_type(const std::uint8_t&);
     void set_f_permissions(const std::uint32_t&);
     void set_f_size(const std::optional<std::uint64_t>&);
     void set_f_hashes(const std::vector <char>&);
     void add_hash(const std::vector<char>&);
+    void remove_hash (size_t start_index, size_t end_index);
     void add_effective_size(const std::uint64_t&);
+    void set_effective_size(const std::uint64_t&);
+
 
 private:
     std::filesystem::path m_f_path{};
@@ -88,6 +93,6 @@ private:
 
 // ---------------------------------------------------------------------
 
-} // namespace uh::client::common
+} // namespace uh::uhv
 
 #endif

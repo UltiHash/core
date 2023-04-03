@@ -6,11 +6,14 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/lib)
 option(BUILD_SERVER_DB      "Build the server-db component"     OFF)
 option(BUILD_SERVER_AGENCY  "Build the server-agency component" OFF)
 option(BUILD_CLIENT_SHELL   "Build the client-shell component"  OFF)
+option(BUILD_CLIENT_FUSE   "Build the client-fuse component"  OFF)
 
-if((NOT BUILD_SERVER_DB) AND (NOT BUILD_SERVER_AGENCY) AND (NOT BUILD_CLIENT_SHELL))
+
+if((NOT BUILD_SERVER_DB) AND (NOT BUILD_SERVER_AGENCY) AND (NOT BUILD_CLIENT_SHELL) AND (NOT BUILD_CLIENT_FUSE))
     SET(BUILD_SERVER_DB ON CACHE BOOL       "Building the server-db component" FORCE)
     SET(BUILD_SERVER_AGENCY ON CACHE BOOL   "Building the server-agency component" FORCE)
     SET(BUILD_CLIENT_SHELL ON CACHE BOOL    "Building the server-client component" FORCE)
+    SET(BUILD_CLIENT_FUSE ON CACHE BOOL    "Building the server-fuse component" FORCE)
 endif()
 
 find_package(Git REQUIRED)
@@ -47,6 +50,10 @@ endif()
 
 if(BUILD_CLIENT_SHELL)
 add_subdirectory(client-shell)
+endif()
+
+if(BUILD_CLIENT_FUSE)
+add_subdirectory(client-fuse)
 endif()
 
 enable_testing()

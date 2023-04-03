@@ -2,7 +2,7 @@
 #define CLIENT_FILE_CHUNKING_H
 
 //#include "utils.h"
-#include "../common/f_meta_data.h"
+#include <uhv/f_meta_data.h>
 #include <protocol/client_pool.h>
 #include <util/exception.h>
 
@@ -21,7 +21,7 @@ namespace uh::client::chunking {
          * @return a vector of chunks
          * @throw may throw any derivative of exception on error
          */
-        virtual std::vector<uh::protocol::blob> chunk_files(std::unique_ptr<common::f_meta_data>&) = 0;
+        virtual std::vector<uh::protocol::blob> chunk_files(std::unique_ptr<uhv::f_meta_data>&) = 0;
 
         /**
          * Return the name of the chunking strategy as a std::string.
