@@ -1,0 +1,63 @@
+#ifdef SINGLE_TEST_RUNNER
+#define BOOST_TEST_NO_MAIN
+#else
+#define BOOST_TEST_MODULE "uhClientShell Traverse Tests"
+#endif
+
+#include <filesystem>
+#include <fstream>
+#include <boost/test/unit_test.hpp>
+
+#include "serialization/f_traverse.h"
+#include "common/job_queue.h"
+#include "common/f_meta_data.h"
+
+// ------------- Tests Suites Follow --------------
+using namespace uh::client::serialization;
+namespace fs = std::filesystem;
+BOOST_AUTO_TEST_SUITE(TraverseSuite)
+
+struct fs_fixture
+{
+    fs_fixture()
+    {
+        // setup
+        fs::path dir_path = "./mock_dir/mock_subdir";
+        fs::create_directories(dir_path);
+        fs::path filepath = dir_path / "mock_file.txt";
+        std::ofstream outfile(filepath);
+        outfile << "Hello, world!" << std::endl;
+        outfile.close();
+    }
+
+    ~fs_fixture()
+    {
+        // teardown
+        fs::path path_to_delete = "./mock_dir";
+        fs::remove_all(path_to_delete);
+    }
+};
+
+BOOST_FIXTURE_TEST_CASE(traverseTest, fs_fixture)
+{
+    std::vector<std::filesystem::path> operate_paths = {"./mock_dir/mock_subdir"};
+    std::vector<std::filesystem::path> exclude_paths = {};
+    uh::client::common::job_queue<std::unique_ptr<
+        uh::client::common::f_meta_data>>
+        output_jq;
+    f_traverse traverse(operate_paths, exclude_paths, output_jq);
+    traverse.traverse();
+    output_jq.stop();
+    std::vector<std::filesystem::path> all_f_metadata;
+    while (auto item = output_jq.get_job())
+    {
+        if (item == std::nullopt)
+            break;
+        else
+            all_f_metadata.push_back(item.value()->f_path());
+    }
+    BOOST_TEST(all_f_metadata[0] == "./mock_dir/mock_subdir");
+    BOOST_TEST(all_f_metadata[1] == "./mock_dir/mock_subdir/mock_file.txt");
+}
+
+BOOST_AUTO_TEST_SUITE_END()
