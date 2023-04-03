@@ -5,7 +5,7 @@
 #ifdef SINGLE_TEST_RUNNER
 #define BOOST_TEST_NO_MAIN
 #else
-#define BOOST_TEST_MODULE "uhLibSerialization2 Serialization Tests"
+#define BOOST_TEST_MODULE "uhLibSerialization Serialization Tests"
 #endif
 
 #include <boost/test/unit_test.hpp>

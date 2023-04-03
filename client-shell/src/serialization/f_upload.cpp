@@ -7,8 +7,8 @@ namespace uh::client::serialization
 // ---------------------------------------------------------------------
 
 f_upload::f_upload(std::unique_ptr<protocol::client_pool>& cl_pool,
-                   common::job_queue<std::unique_ptr<common::f_meta_data>>& in_jq,
-                   common::job_queue<std::unique_ptr<common::f_meta_data>>& out_jq,
+                   uhv::job_queue<std::unique_ptr<uhv::f_meta_data>>& in_jq,
+                   uhv::job_queue<std::unique_ptr<uhv::f_meta_data>>& out_jq,
                    uh::client::chunking::file_chunker& chunker,
                    unsigned int num_threads):
                    m_client_pool(cl_pool),
@@ -34,10 +34,10 @@ f_upload::~f_upload()
 
 // ---------------------------------------------------------------------
 
-void f_upload::chunk_and_upload(std::unique_ptr<common::f_meta_data>& f_meta_data,
+void f_upload::chunk_and_upload(std::unique_ptr<uhv::f_meta_data>& f_meta_data,
                                 protocol::client_pool::handle& client_handle)
 {
-    if ( f_meta_data->f_type() == common::uh_file_type::regular )
+    if ( f_meta_data->f_type() == uhv::uh_file_type::regular )
     {
         auto chunks = m_chunker.chunk_files(f_meta_data);
 
