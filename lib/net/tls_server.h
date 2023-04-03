@@ -19,7 +19,7 @@ class tls_server : public server
 {
 public:
     tls_server(const server_config& config,
-               util::factory<uh::protocol::protocol>& protocol_factory);
+               uh::protocol::protocol_factory& protocol_factory);
 
     void run() override;
 
@@ -34,7 +34,7 @@ private:
     boost::asio::ip::tcp::acceptor m_acceptor;
     boost::asio::ssl::context m_ssl;
 
-    util::factory<uh::protocol::protocol>& m_protocol_factory;
+    uh::protocol::protocol_factory& m_protocol_factory;
     scheduler m_scheduler;
 };
 

@@ -75,6 +75,14 @@ public:
     }
 
     // -------------------------------------------------
+    unsigned long size()
+    {
+        std::lock_guard lk(m_mutex);
+
+        return m_jobs.size();
+    }
+
+    // -------------------------------------------------
     bool empty()
     {
         std::unique_lock lk(m_mutex);

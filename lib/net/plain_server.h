@@ -21,7 +21,8 @@ namespace uh::net
 struct server_config
 {
     constexpr static uint16_t DEFAULT_PORT = 0x5548;
-    constexpr static std::size_t DEFAULT_THREADS = 3;
+    constexpr static std::size_t DEFAULT_THREADS = 50;
+    constexpr static std::size_t CONNECTION_LIMIT = uh::net::server_config::DEFAULT_THREADS-1;
 
     uint16_t port = DEFAULT_PORT;
 
@@ -37,7 +38,7 @@ class plain_server : public server
 {
 public:
     plain_server(const server_config& config,
-                 util::factory<uh::protocol::protocol>& protocol_factory);
+                 uh::protocol::protocol_factory& protocol_factory);
 
     void run() override;
 
@@ -47,7 +48,7 @@ private:
     boost::asio::io_context m_context;
     boost::asio::ip::tcp::acceptor m_acceptor;
 
-    util::factory<uh::protocol::protocol>& m_protocol_factory;
+    uh::protocol::protocol_factory & m_protocol_factory;
     scheduler m_scheduler;
 
     std::atomic<bool> m_running;

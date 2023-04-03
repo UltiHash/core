@@ -52,29 +52,27 @@ void server::on_write_chunk(std::span<char>)
 
 // ---------------------------------------------------------------------
 
-void server::handle(std::shared_ptr<net::socket> client)
+void server::handle()
 {
-    boost::iostreams::stream<io::boost_device> io(client);
 
     m_state = server_state::setup;
 
-    while (io.is_open() && m_state != server_state::disconnected)
+    while (client_->valid() && m_state != server_state::disconnected)
     {
         try
         {
-            uint8_t request_id;
-            read(io, request_id);
+            const auto request_id = m_bs.read <uint8_t> ();
 
             switch (m_state)
             {
-                case server_state::setup: handle_setup_request(io, request_id); break;
-                case server_state::normal: handle_normal_request(io, request_id); break;
-                case server_state::reading: handle_reading_request(io, request_id); break;
-                case server_state::writing: handle_writing_request(io, request_id); break;
+                case server_state::setup: handle_setup_request(request_id); break;
+                case server_state::normal: handle_normal_request(request_id); break;
+                case server_state::reading: handle_reading_request(request_id); break;
+                case server_state::writing: handle_writing_request(request_id); break;
 
                 default:
-                    write(io, status{ .code = status::FAILED, .message = "unsupported state" });
-                    io.close();
+                    write(m_bs, status{ .code = status::FAILED, .message = "unsupported state" });
+                    m_bs.sync ();
                     ERROR << "unsupported state";
                     return;
             }
@@ -86,8 +84,8 @@ void server::handle(std::shared_ptr<net::socket> client)
         }
         catch (const std::exception& e)
         {
-            write(io, status{ .code = status::FAILED, .message = e.what() });
-            io.flush();
+            write(m_bs, status{ .code = status::FAILED, .message = e.what() });
+            m_bs.sync ();
             m_read_block.reset();
             m_write_alloc.reset();
             m_state = server_state::normal;
@@ -97,76 +95,76 @@ void server::handle(std::shared_ptr<net::socket> client)
 
 // ---------------------------------------------------------------------
 
-void server::handle_setup_request(iostream& io, uint8_t request_id)
+void server::handle_setup_request(uint8_t request_id)
 {
     switch (request_id)
     {
-        case hello::request_id: return handle_hello(io);
-        case quit::request_id: return handle_quit(io);
+        case hello::request_id: return handle_hello();
+        case quit::request_id: return handle_quit();
 
         default:
             throw std::runtime_error("setup, unsupported command: "
-                + std::to_string(request_id));
+                                     + std::to_string(request_id));
     }
 }
 
 // ---------------------------------------------------------------------
 
-void server::handle_normal_request(iostream& io, uint8_t request_id)
+void server::handle_normal_request(uint8_t request_id)
 {
     switch (request_id)
     {
-        case read_block::request_id: return handle_read_block(io);
-        case quit::request_id: return handle_quit(io);
-        case free_space::request_id: return handle_free_space(io);
-        case reset::request_id: return handle_reset(io);
-        case allocate_chunk::request_id: return handle_allocate_chunk(io);
+        case read_block::request_id: return handle_read_block();
+        case quit::request_id: return handle_quit();
+        case free_space::request_id: return handle_free_space();
+        case reset::request_id: return handle_reset();
+        case allocate_chunk::request_id: return handle_allocate_chunk();
 
         default:
             throw std::runtime_error("normal, unsupported command: "
-                + std::to_string(request_id));
+                                     + std::to_string(request_id));
     }
 }
 
 // ---------------------------------------------------------------------
 
-void server::handle_reading_request(iostream& io, uint8_t request_id)
+void server::handle_reading_request(uint8_t request_id)
 {
     switch (request_id)
     {
-        case quit::request_id: return handle_quit(io);
-        case reset::request_id: return handle_reset(io);
-        case next_chunk::request_id: return handle_next_chunk(io);
+        case quit::request_id: return handle_quit();
+        case reset::request_id: return handle_reset();
+        case next_chunk::request_id: return handle_next_chunk();
 
         default:
             throw std::runtime_error("reading, unsupported command: "
-                + std::to_string(request_id));
+                                     + std::to_string(request_id));
     }
 }
 
 // ---------------------------------------------------------------------
 
-void server::handle_writing_request(iostream& io, uint8_t request_id)
+void server::handle_writing_request(uint8_t request_id)
 {
     switch (request_id)
     {
-        case quit::request_id: return handle_quit(io);
-        case reset::request_id: return handle_reset(io);
-        case write_chunk::request_id: return handle_write_chunk(io);
-        case finalize_block::request_id: return handle_finalize_block(io);
+        case quit::request_id: return handle_quit();
+        case reset::request_id: return handle_reset();
+        case write_chunk::request_id: return handle_write_chunk();
+        case finalize_block::request_id: return handle_finalize_block();
 
         default:
             throw std::runtime_error("writing, unsupported command: "
-                + std::to_string(request_id));
+                                     + std::to_string(request_id));
     }
 }
 
 // ---------------------------------------------------------------------
 
-void server::handle_hello(iostream& io)
+void server::handle_hello()
 {
     hello::request req;
-    read(io, req);
+    read(m_bs, req);
 
     server_information info;
 
@@ -176,41 +174,42 @@ void server::handle_hello(iostream& io)
     }
     catch (const std::exception& e)
     {
-        write(io, status{ .code = status::FAILED, .message = e.what() });
+        write(m_bs, status{ .code = status::FAILED, .message = e.what() });
+        m_bs.sync ();
         m_state = server_state::disconnected;
         return;
     }
 
-    write(io, status{ status::OK });
-    write(io, hello::response{
-        .server_version = info.version,
-        .protocol_version = info.protocol });
-    io.flush();
+    write(m_bs, status{ status::OK });
+    write(m_bs, hello::response{
+            .server_version = info.version,
+            .protocol_version = info.protocol });
+    m_bs.sync ();
 
     m_state = server_state::normal;
 }
 
 // ---------------------------------------------------------------------
 
-void server::handle_read_block(iostream& io)
+void server::handle_read_block()
 {
     read_block::request req;
-    read(io, req);
+    read(m_bs, req);
 
     m_read_block = on_read_block(std::move(req.hash));
 
     m_state = server_state::reading;
 
-    write(io, status{ status::OK });
-    io.flush();
+    write(m_bs, status{ status::OK });
+    m_bs.sync ();
 }
 
 // ---------------------------------------------------------------------
 
-void server::handle_quit(iostream& io)
+void server::handle_quit()
 {
     quit::request req;
-    read(io, req);
+    read(m_bs, req);
 
     try
     {
@@ -223,33 +222,32 @@ void server::handle_quit(iostream& io)
 
     m_state = server_state::disconnected;
 
-    write(io, status{ status::OK });
-    io.flush();
-    io.close();
+    write(m_bs, status{ status::OK });
+    m_bs.sync ();
 }
 
 // ---------------------------------------------------------------------
 
-void server::handle_free_space(iostream& io)
+void server::handle_free_space()
 {
     free_space::request req;
-    read(io, req);
+    read(m_bs, req);
 
     auto space = on_free_space();
 
     m_state = server_state::normal;
 
-    write(io, status{ status::OK });
-    write(io, free_space::response{ .space_available = space });
-    io.flush();
+    write(m_bs, status{ status::OK });
+    write(m_bs, free_space::response{ .space_available = space });
+    m_bs.sync ();
 }
 
 // ---------------------------------------------------------------------
 
-void server::handle_reset(iostream& io)
+void server::handle_reset()
 {
     reset::request req;
-    read(io, req);
+    read(m_bs, req);
 
     on_reset();
 
@@ -257,16 +255,16 @@ void server::handle_reset(iostream& io)
     m_read_block.reset();
     m_write_alloc.reset();
 
-    write(io, status{ status::OK });
-    io.flush();
+    write(m_bs, status{ status::OK });
+    m_bs.sync ();
 }
 
 // ---------------------------------------------------------------------
 
-void server::handle_next_chunk(iostream& io)
+void server::handle_next_chunk()
 {
     next_chunk::request req;
-    read(io, req);
+    read(m_bs, req);
 
     if (req.max_size < MINIMUM_CHUNK_SIZE || req.max_size > MAXIMUM_CHUNK_SIZE)
     {
@@ -281,17 +279,17 @@ void server::handle_next_chunk(iostream& io)
         m_read_block.reset();
     }
 
-    write(io, status{ status::OK });
-    write(io, next_chunk::response{ .content = std::span<char>(buffer.begin(), count) });
-    io.flush();
+    write(m_bs, status{ status::OK });
+    write(m_bs, next_chunk::response{ .content = std::span<char>(buffer.begin(), count) });
+    m_bs.sync ();
 }
 
 // ---------------------------------------------------------------------
 
-void server::handle_allocate_chunk(iostream& io)
+void server::handle_allocate_chunk()
 {
     allocate_chunk::request req;
-    read(io, req);
+    read(m_bs, req);
 
     if (req.size > MAXIMUM_BLOCK_SIZE)
     {
@@ -301,17 +299,17 @@ void server::handle_allocate_chunk(iostream& io)
     m_write_alloc = on_allocate_chunk(req.size);
     m_state = server_state::writing;
 
-    write(io, status{ status::OK });
-    io.flush();
+    write(m_bs, status{ status::OK });
+    m_bs.sync ();
 }
 
 // ---------------------------------------------------------------------
 
-void server::handle_write_chunk(iostream& io)
+void server::handle_write_chunk()
 {
     std::vector<char> buffer(MAXIMUM_CHUNK_SIZE);
     write_chunk::request req{ .data = buffer };
-    read(io, req);
+    read(m_bs, req);
 
     if (!m_write_alloc)
     {
@@ -320,16 +318,16 @@ void server::handle_write_chunk(iostream& io)
 
     on_write_chunk(req.data);
     m_write_alloc->device().write(req.data);
-    write(io, status{ status::OK });
-    io.flush();
+    write(m_bs, status{ status::OK });
+    m_bs.sync ();
 }
 
 // ---------------------------------------------------------------------
 
-void server::handle_finalize_block(iostream& io)
+void server::handle_finalize_block()
 {
     finalize_block::request req;
-    read(io, req);
+    read(m_bs, req);
 
     if (!m_write_alloc)
     {
@@ -341,11 +339,11 @@ void server::handle_finalize_block(iostream& io)
     auto meta_data = m_write_alloc->persist();
     m_write_alloc.reset();
 
-    write(io, status{ status::OK });
-    write(io, finalize_block::response{
-        .hash = std::move(meta_data.hash),
-        .effective_size = meta_data.effective_size });
-    io.flush();
+    write(m_bs, status{ status::OK });
+    write(m_bs, finalize_block::response{
+            .hash = std::move(meta_data.hash),
+            .effective_size = meta_data.effective_size });
+    m_bs.sync ();
 
     m_state = server_state::normal;
 }

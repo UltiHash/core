@@ -4,6 +4,7 @@
 #include <net/socket.h>
 #include "allocation.h"
 #include "common.h"
+#include "serialization/serialization.h"
 
 #include <boost/iostreams/stream.hpp>
 #include <iostream>
@@ -97,7 +98,7 @@ private:
     std::streamsize write_chunk(std::span<const char> buffer);
 
     std::shared_ptr<net::socket> m_sock;
-    boost::iostreams::stream<io::boost_device> m_io;
+    serialization::buffered_serialization m_bs;
 };
 
 // ---------------------------------------------------------------------

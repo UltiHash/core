@@ -74,6 +74,8 @@ class application_config_base : public loader
 public:
     application_config_base();
 
+    void add_desc(const std::string& description);
+
     action evaluate(int argc, const char** argv);
 
     void print_help();
@@ -83,6 +85,7 @@ public:
 private:
     basic_options m_basic;
     config_file m_config;
+    std::string m_desc{};
 
     void handle_config();
 };

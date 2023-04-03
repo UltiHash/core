@@ -17,7 +17,7 @@ namespace uh::dbn::server
 class protocol : public uh::protocol::server
 {
 public:
-    protocol(storage::backend& storage);
+    protocol(storage::backend& storage, std::shared_ptr<net::socket> client);
 
     virtual uh::protocol::server_information on_hello(const std::string& client_version) override;
     virtual std::unique_ptr<io::device> on_read_block(uh::protocol::blob&& hash) override;
