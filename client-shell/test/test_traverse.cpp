@@ -9,8 +9,8 @@
 #include <boost/test/unit_test.hpp>
 
 #include "serialization/f_traverse.h"
-#include "common/job_queue.h"
-#include "common/f_meta_data.h"
+#include "uhv/job_queue.h"
+#include "uhv/f_meta_data.h"
 
 // ------------- Tests Suites Follow --------------
 using namespace uh::client::serialization;
