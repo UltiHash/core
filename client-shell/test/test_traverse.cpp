@@ -49,8 +49,8 @@ BOOST_AUTO_TEST_SUITE(TraverseSuite)
         std::vector<std::filesystem::path> operate_paths = {"./mock_dir/mock_subdir"};
         std::vector<std::filesystem::path> exclude_paths = {};
 
-        uh::client::common::job_queue<std::unique_ptr<
-                uh::client::common::f_meta_data>>
+        uh::uhv::job_queue<std::unique_ptr<
+                uh::uhv::f_meta_data>>
                 output_jq;
         f_traverse traverse(operate_paths, exclude_paths, output_jq);
         traverse.traverse();
