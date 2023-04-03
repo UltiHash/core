@@ -13,6 +13,7 @@ namespace uh::client::common
 
 // ---------------------------------------------------------------------
 
+
 template <typename T>
 class job_queue
 {
