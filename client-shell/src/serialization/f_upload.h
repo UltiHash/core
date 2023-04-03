@@ -28,7 +28,7 @@ public:
     ~f_upload() override;
 
     void spawn_threads() override;
-    void chunk_and_upload(std::unique_ptr<uhv::f_meta_data>&, protocol::client_pool::handle&));
+    void chunk_and_upload(std::unique_ptr<uhv::f_meta_data>&, protocol::client_pool::handle&);
 
 private:
     uhv::job_queue<std::unique_ptr<uhv::f_meta_data>>& m_input_jq;

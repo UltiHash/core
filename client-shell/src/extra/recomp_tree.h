@@ -5,7 +5,7 @@
 #ifndef CLIENT_SHELL_RECOMP_TREE_H
 #define CLIENT_SHELL_RECOMP_TREE_H
 
-#include "serialization/EnDecoder.h"
+#include <filesystem>
 
 namespace uh::client::serialization
 {
@@ -154,92 +154,6 @@ struct treeNode : public std::enable_shared_from_this<treeNode<T,U>>
 
 };
 
-
-// --------------------------------------------------------------------- SERIALIZER FOR ENCODING
-template <typename OutType, typename T, typename U>
-OutType BFSSerializer(treeNode<T,U>* rootNode)
-{
-    OutType serializedOutput;
-    EnDecoder encoder{};
-    std::deque<treeNode<T, U>*> treeLevel;
-    treeLevel.push_back(rootNode);
-    while (!treeLevel.empty())
-    {
-        treeNode<T,U>* t_Parent = treeLevel.front();
-        treeLevel.pop_front();
-
-        // serialization part of the nodes
-        SequentialContainer auto t_dataEnc = encoder.encode<OutType>(t_Parent->getData());
-        serializedOutput.insert(serializedOutput.cend(),t_dataEnc.begin(),t_dataEnc.end());
-        SequentialContainer auto t_seekEnc = encoder.encode<OutType>(t_Parent->getSeek());
-        serializedOutput.insert(serializedOutput.cend(),t_seekEnc.begin(),t_seekEnc.end());
-        SequentialContainer auto t_nChildEnc = encoder.encode<OutType>(t_Parent->getChildren().size());
-        serializedOutput.insert(serializedOutput.cend(),t_nChildEnc.begin(),t_nChildEnc.end());
-
-        for (const auto &t_Pair: t_Parent->getChildren())
-        {
-            treeLevel.push_back(t_Pair.second.get());
-        }
-    }
-    return serializedOutput;
-}
-// --------------------------------------------------------------------- END OF SERIALIZER
-
-
-// --------------------------------------------------------------------- DE-SERIALIZER FOR DECODING
-template <typename OutType, typename T, typename U, typename Iterator>
-bool BFSDeSerializer(std::shared_ptr<treeNode<T,U>>& rootNode, OutType& input, Iterator& step, unsigned char& offset)
-{
-    try
-    {
-        std::deque<treeNode<T, U>*> treeLevel;
-        treeNode<T, U> *t_Parent;
-        std::size_t c_child = 0;
-
-        // get the root node
-        auto internal_decoder_func = [&step,&offset]<typename OutType2>(OutType2& input)
-            {
-                EnDecoder encoder{};
-                auto t_dataDec = encoder.decoder<std::string>(input, step);
-                auto t_Data = std::get<0>(t_dataDec);
-                step = std::get<1>(t_dataDec);
-                auto t_seekEnc = encoder.decoder<std::uint64_t>(input, step);
-                auto t_Seek = std::get<0>(t_seekEnc) + offset;
-                step = std::get<1>(t_seekEnc);
-                auto t_nChildEnc = encoder.decoder<std::size_t>(input, step);
-                auto t_Children = std::get<0>(t_nChildEnc);
-                step = std::get<1>(t_nChildEnc);
-
-                return std::make_tuple(t_Data,t_Seek,t_Children);
-            };
-
-        auto decoded_tuple = internal_decoder_func(input);
-
-        rootNode = std::make_shared<treeNode<T, U>>(std::get<0>(decoded_tuple), std::get<1>(decoded_tuple), nullptr, std::get<2>(decoded_tuple));
-        treeLevel.push_back(rootNode.get());
-
-        while (!treeLevel.empty())
-        {
-            t_Parent = treeLevel.front();
-            treeLevel.pop_front();
-            // generate the tree Nodes in BFS style as it was encoded that way
-            for (c_child = 0; c_child < t_Parent->getNumChild(); ++c_child)
-            {
-                decoded_tuple = internal_decoder_func(input);
-                auto somePtr = t_Parent->addChild(std::get<0>(decoded_tuple), std::get<1>(decoded_tuple), std::get<2>(decoded_tuple));
-                treeLevel.push_back(somePtr);
-                c_child++;
-            }
-        }
-        return true;
-    }
-    catch (const std::exception& e)
-    {
-        ERROR << e.what();
-        return false;
-    }
-}
-// --------------------------------------------------------------------- END OF DE-SERIALIZER
 
 } // namespace uh::client::serialization
 

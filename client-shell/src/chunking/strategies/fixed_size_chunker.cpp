@@ -14,7 +14,7 @@ void fixed_size_chunker::start()
 
 // ---------------------------------------------------------------------
 
-std::vector<uh::protocol::blob> fixed_size_chunker::chunk_files(std::unique_ptr<common::f_meta_data>& f_meta_data)
+std::vector<uh::protocol::blob> fixed_size_chunker::chunk_files(std::unique_ptr<uhv::f_meta_data>& f_meta_data)
 {
         std::vector<uh::protocol::blob> chunks;
         std::ifstream input_file(f_meta_data->f_path(),

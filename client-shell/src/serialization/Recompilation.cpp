@@ -70,7 +70,7 @@ void Recompilation::retrieve()
     uint64_t size = 0;
     auto time_start = std::chrono::system_clock::now();
 
-    std::filesystem::create_directories(m_config.m_outputPath);
+    std::filesystem::create_directories(m_client_config.m_outputPath);
     uhv::job_queue<std::unique_ptr<uhv::f_meta_data>> q_f_meta_data;
 
     {
