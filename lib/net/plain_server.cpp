@@ -53,7 +53,7 @@ void plain_server::run()
 
 // ---------------------------------------------------------------------
 
-void plain_server::spawn_client(std::shared_ptr<net::socket> sock)
+void plain_server::spawn_client(const std::shared_ptr<net::socket>& sock)
 {
     m_scheduler.spawn([this, sock] ()
     {

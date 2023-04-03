@@ -22,7 +22,7 @@ std::unique_ptr<uh::protocol::protocol> protocol_factory::create(std::shared_ptr
     return std::make_unique<metrics::protocol_metrics_wrapper>(
             client,
             m_metrics,
-        std::make_unique<protocol>(m_cluster, client));
+            std::make_unique<protocol>(m_cluster, client));
 }
 
 // ---------------------------------------------------------------------

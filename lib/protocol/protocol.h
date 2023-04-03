@@ -26,7 +26,7 @@ class protocol_factory
 {
 public:
     virtual ~protocol_factory() = default;
-    virtual std::unique_ptr<uh::protocol::protocol> create(std::shared_ptr<net::socket> client)  = 0;
+    virtual std::unique_ptr<uh::protocol::protocol> create(std::shared_ptr<net::socket> client) = 0;
 };
 
 // ---------------------------------------------------------------------

@@ -5,6 +5,7 @@
 #include "common.h"
 #include "protocol.h"
 #include "serialization/serialization.h"
+#include "net/scheduler.h"
 
 #include <boost/iostreams/stream.hpp>
 
@@ -37,7 +38,7 @@ public:
 
     constexpr static std::size_t MAXIMUM_BLOCK_SIZE = 2u * 1024 * 1024 * 1024;
 
-    explicit server (std::shared_ptr<net::socket> client): protocol (client), m_bs (*client) {}
+    explicit server (const std::shared_ptr<net::socket>& client): protocol(client), m_bs (*client) {}
     virtual ~server() = default;
 
     virtual server_information on_hello(const std::string& client_version) = 0;

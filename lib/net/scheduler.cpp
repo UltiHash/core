@@ -1,6 +1,7 @@
 #include "scheduler.h"
 
 #include <logging/logging_boost.h>
+#include <net/plain_server.h>
 
 #include <exception>
 
@@ -40,6 +41,13 @@ void scheduler::spawn(const std::function<void()>& f)
 
 // ---------------------------------------------------------------------
 
+bool scheduler::is_busy() const
+{
+    return m_threads_used >= uh::net::server_config::CONNECTION_LIMIT;
+}
+
+// ---------------------------------------------------------------------
+
 void scheduler::worker()
 {
     m_running = true;
@@ -57,6 +65,8 @@ void scheduler::worker()
         }
         else
         {
+            m_threads_used++;
+
             auto job = m_jobs.front();
             m_jobs.pop_front();
             lk.unlock();
@@ -73,6 +83,8 @@ void scheduler::worker()
             {
                 ERROR << "job failed with unknown exception";
             }
+
+            m_threads_used--;
         }
     }
 }

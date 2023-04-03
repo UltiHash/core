@@ -163,30 +163,40 @@ void server::handle_writing_request(uint8_t request_id)
 
 void server::handle_hello()
 {
-    hello::request req;
-    read(m_bs, req);
-
-    server_information info;
-
-    try
+    if (m_scheduler.is_busy())
     {
-        info = on_hello(req.client_version);
-    }
-    catch (const std::exception& e)
-    {
-        write(m_bs, status{ .code = status::FAILED, .message = e.what() });
-        m_bs.sync ();
+        write(m_bs, status{ status::FAILED, "server is busy" });
+        m_bs.sync();
+
         m_state = server_state::disconnected;
-        return;
     }
+    else
+    {
+        hello::request req;
+        read(m_bs, req);
 
-    write(m_bs, status{ status::OK });
-    write(m_bs, hello::response{
-            .server_version = info.version,
-            .protocol_version = info.protocol });
-    m_bs.sync ();
+        server_information info;
 
-    m_state = server_state::normal;
+        try
+        {
+            info = on_hello(req.client_version);
+        }
+        catch (const std::exception& e)
+        {
+            write(m_bs, status{ .code = status::FAILED, .message = e.what() });
+            m_bs.sync ();
+            m_state = server_state::disconnected;
+            return;
+        }
+
+        write(m_bs, status{ status::OK });
+        write(m_bs, hello::response{
+                .server_version = info.version,
+                .protocol_version = info.protocol });
+        m_bs.sync();
+
+        m_state = server_state::normal;
+    }
 }
 
 // ---------------------------------------------------------------------

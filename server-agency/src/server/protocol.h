@@ -19,7 +19,7 @@ namespace uh::an::server
 class protocol : public uh::protocol::server
 {
 public:
-    protocol(cluster::mod& cluster, std::shared_ptr<net::socket> client);
+    protocol(cluster::mod& cluster, const std::shared_ptr<net::socket>& client);
 
     virtual uh::protocol::server_information on_hello(const std::string& client_version) override;
     virtual std::unique_ptr<io::device> on_read_block(uh::protocol::blob&& hash) override;
