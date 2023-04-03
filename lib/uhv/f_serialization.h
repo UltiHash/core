@@ -31,11 +31,17 @@ public:
 
     static std::vector<char> serialize_f_meta_data(const std::unique_ptr<uh::uhv::f_meta_data>& ptr_f_meta_data,
                                         const std::filesystem::path& relative_path);
+
     //static std::unique_ptr<uh::uhv::f_meta_data> deserialize_f_meta_data(std::vector<std::uint8_t>& uhv_container,
     //                                                                         std::vector<std::uint8_t>::iterator& it,
     //                                                                         const std::filesystem::path& dest_path);
 
 private:
+    static void __serialize_f_meta_data(const std::unique_ptr<uh::uhv::f_meta_data>& ptr_f_meta_data,
+                                        const std::filesystem::path& relative_path,
+                                        io::device& device);
+    static std::unique_ptr<uh::uhv::f_meta_data> __deserialize_f_meta_data(const std::filesystem::path& dest_path,
+                                                                           io::device& device);
     std::filesystem::path m_UHV_path;
     uhv::job_queue<std::unique_ptr<uhv::f_meta_data>>& m_job_queue;
     bool m_overwrite;
