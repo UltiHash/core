@@ -1,16 +1,18 @@
 #ifndef SERIALIZATION_RECOMPILATION_H
 #define SERIALIZATION_RECOMPILATION_H
 
+#include <uhv/f_meta_data.h>
+#include <uhv/f_serialization.h>
+#include <uhv/job_queue.h>
+#include <chunking/mod.h>
+
 #include "../client_options/client_config.h"
 #include "protocol/client_factory.h"
 #include "protocol/client_pool.h"
-#include "common/f_meta_data.h"
-#include "common/job_queue.h"
 #include "f_upload.h"
 #include "f_download.h"
 #include "f_traverse.h"
-#include "f_serialization.h"
-#include <chunking/mod.h>
+
 
 namespace co = uh::client::option;
 
