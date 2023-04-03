@@ -26,6 +26,8 @@ static const struct fuse_operations uh_operations =
     .create         = uh::uhv::uh_create,
     .ftruncate      = uh::uhv::uh_ftruncate,
     .utimens        = uh::uhv::uh_utimens,
+    //.write_buf      = uh::uhv::uh_write_buf,
+    //.read_buf       = uh::uhv::uh_read_buf,
     };
 
 
@@ -34,14 +36,14 @@ static const struct fuse_operations uh_operations =
 
 static const struct fuse_opt option_spec[] =
     {
-        OPTION("--path=%s", UHVpath),
-        OPTION("-p=%s", UHVpath),
-        OPTION("--agency-hostname=%s", agency_hostname),
-        OPTION("-H=%s", agency_hostname),
-        OPTION("--agency-port=%i", agency_port),
-        OPTION("-P=%i", agency_port),
-        OPTION("--agency-connections=%i", agency_connections),
-        OPTION("-C=%i", agency_connections),
+        OPTION("--path %s", UHVpath),
+        OPTION("-p %s", UHVpath),
+        OPTION("--agency-hostname %s", agency_hostname),
+        OPTION("-H %s", agency_hostname),
+        OPTION("--agency-port %i", agency_port),
+        OPTION("-P %i", agency_port),
+        OPTION("--agency-connections %i", agency_connections),
+        OPTION("-C %i", agency_connections),
         OPTION("--help", show_help),
         OPTION("-h", show_help),
         FUSE_OPT_END
