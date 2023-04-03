@@ -33,6 +33,9 @@ RUN chmod +x /usr/local/bin/start.sh
 
 RUN addgroup --system --gid 234 uh
 RUN adduser --system --uid 234 --gid 234 --shell /bin/bash uh
+RUN mkdir /data
+RUN chown -R uh:uh /data
+
 USER uh
 WORKDIR /home/uh
 
