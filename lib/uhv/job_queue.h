@@ -15,7 +15,6 @@ namespace uh::uhv
 
 // ---------------------------------------------------------------------
 
-
 template <typename T>
 class job_queue
 {
