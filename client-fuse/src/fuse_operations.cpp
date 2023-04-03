@@ -465,6 +465,14 @@ void __uh_destroy (void *context) {
     delete pcontext;
 }
 
+int __uh_write_buf (const char *path, struct fuse_bufvec *buf, off_t off, struct fuse_file_info *fi){
+        throw std::runtime_error("Not implemented");
+}
+
+int __uh_read_buf (const char *path, struct fuse_bufvec **bufp, size_t size, off_t off, struct fuse_file_info *fi){
+        throw std::runtime_error("Not implemented");
+}
+
 /*-----  fuse operations made safe -----*/
 
 void *uh_init (struct fuse_conn_info *conn){
@@ -603,6 +611,30 @@ void uh_destroy (void *context)
     catch(const std::exception& e)
     {
         std::cerr << e.what() << '\n';
+    }
+}
+
+int uh_write_buf (const char *path, struct fuse_bufvec *buf, off_t off, struct fuse_file_info *fi){
+    try
+    {
+        return __uh_write_buf(path, buf, off, fi);
+    }
+    catch(const std::exception& e)
+    {
+        std::cerr << e.what() << '\n';
+        return -ENOENT;
+    }
+}
+
+int uh_read_buf (const char *path, struct fuse_bufvec **bufp, size_t size, off_t off, struct fuse_file_info *fi){
+    try
+    {
+        return __uh_read_buf(path, bufp, size, off, fi);
+    }
+    catch(const std::exception& e)
+    {
+        std::cerr << e.what() << '\n';
+        return -ENOENT;
     }
 }
 

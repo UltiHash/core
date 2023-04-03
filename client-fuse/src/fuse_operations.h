@@ -70,6 +70,9 @@ int uh_utimens (const char *path, const struct timespec tv[2]);
 
 int uh_mkdir (const char *path, mode_t mode);
 
+int uh_write_buf (const char *, struct fuse_bufvec *buf, off_t off, struct fuse_file_info *);
+
+int uh_read_buf (const char *, struct fuse_bufvec **bufp, size_t size, off_t off, struct fuse_file_info *);
 
 } // end namespace uh::uhv
 
