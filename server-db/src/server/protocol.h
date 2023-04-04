@@ -2,7 +2,7 @@
 #define SERVER_DATABASE_SERVER_PROTOCOL_H
 
 #include <storage/mod.h>
-#include <protocol/server.h>
+#include <protocol/requests_interface.h>
 
 #include <memory>
 
@@ -14,7 +14,7 @@ namespace uh::dbn::server
 
 // ---------------------------------------------------------------------
 
-class protocol : public uh::protocol::handler_interface
+class protocol : public uh::protocol::request_interface
 {
 public:
     protocol(storage::backend& storage);

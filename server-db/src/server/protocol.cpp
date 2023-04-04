@@ -11,9 +11,9 @@ namespace uh::dbn::server
 
 // ---------------------------------------------------------------------
 
-std::size_t protocol::on_free_space()
+protocol::protocol(storage::backend& storage)
+        : m_storage(storage)
 {
-//    THROW(unsupported, "this call is not supported by this node type");
 }
 
 // ---------------------------------------------------------------------
@@ -32,7 +32,7 @@ void protocol::on_reset()
 
 std::size_t protocol::on_next_chunk(std::span<char>)
 {
-//    THROW(unsupported, "this call is not supported by this node type");
+    THROW(unsupported, "this call is not supported by this node type");
 }
 
 // ---------------------------------------------------------------------
@@ -44,13 +44,6 @@ void protocol::on_finalize()
 // ---------------------------------------------------------------------
 
 void protocol::on_write_chunk(std::span<char>)
-{
-}
-
-// ---------------------------------------------------------------------
-
-protocol::protocol(storage::backend& storage)
-    : m_storage(storage)
 {
 }
 

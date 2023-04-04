@@ -23,9 +23,10 @@ uh::protocol::server_information protocol::on_hello(const std::string& client_ve
 {
     INFO << "connection from client with version " << client_version;
 
-    return {
-            .version = PROJECT_VERSION,
-            .protocol = 1,
+    return
+    {
+        .version = PROJECT_VERSION,
+        .protocol = 1,
     };
 }
 
@@ -40,7 +41,7 @@ std::unique_ptr<io::device> protocol::on_read_block(uh::protocol::blob&& hash)
 
 std::size_t protocol::on_free_space()
 {
-//    THROW(unsupported, "this call is not supported by this node type");
+    THROW(unsupported, "this call is not supported by this node type");
 }
 
 // ---------------------------------------------------------------------
@@ -59,7 +60,7 @@ void protocol::on_reset()
 
 std::size_t protocol::on_next_chunk(std::span<char>)
 {
-//    THROW(unsupported, "this call is not supported by this node type");
+    THROW(unsupported, "this call is not supported by this node type");
 }
 
 // ---------------------------------------------------------------------

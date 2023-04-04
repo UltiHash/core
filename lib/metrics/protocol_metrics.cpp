@@ -90,7 +90,7 @@ prometheus::Counter& protocol_metrics::reqs_finalize() const
 // ---------------------------------------------------------------------
 
 protocol_metrics_wrapper::protocol_metrics_wrapper(const protocol_metrics& metrics,
-    std::unique_ptr<uh::protocol::handler_interface>&& base) :
+    std::unique_ptr<uh::protocol::request_interface>&& base) :
     m_metrics(metrics),
     m_base(std::move(base))
 {

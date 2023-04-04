@@ -1,7 +1,6 @@
 #ifndef SERVER_AGENCY_SERVER_PROTOCOL_FACTORY_H
 #define SERVER_AGENCY_SERVER_PROTOCOL_FACTORY_H
 
-#include <net/server.h>
 #include <protocol/protocol.h>
 #include <metrics/protocol_metrics.h>
 

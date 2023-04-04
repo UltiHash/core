@@ -1,8 +1,8 @@
 #ifndef UH_METRICS_PROTOCOL_METRICS_H
 #define UH_METRICS_PROTOCOL_METRICS_H
 
-#include <protocol/server.h>
 #include <metrics/service.h>
+#include <protocol/requests_interface.h>
 
 #include <memory>
 
@@ -41,12 +41,11 @@ private:
 
 // ---------------------------------------------------------------------
 
-class protocol_metrics_wrapper : public protocol::server
+class protocol_metrics_wrapper : public uh::protocol::request_interface
 {
 public:
-    protocol_metrics_wrapper(std::shared_ptr<net::socket> client,
-        const protocol_metrics& metrics,
-        std::unique_ptr<uh::protocol::server>&& base);
+    protocol_metrics_wrapper(const protocol_metrics& metrics,
+        std::unique_ptr<uh::protocol::request_interface>&& base);
 
     virtual uh::protocol::server_information on_hello(const std::string& client_version) override;
     virtual std::unique_ptr<io::device> on_read_block(uh::protocol::blob&& hash) override;
@@ -61,7 +60,7 @@ public:
 
 private:
     const protocol_metrics& m_metrics;
-    std::unique_ptr<uh::protocol::server> m_base;
+    std::unique_ptr<uh::protocol::request_interface> m_base;
 };
 
 // ---------------------------------------------------------------------

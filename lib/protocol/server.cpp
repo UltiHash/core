@@ -125,40 +125,30 @@ void server::handle_writing_request(uint8_t request_id)
 
 void server::handle_hello()
 {
-    if (m_scheduler.is_busy())
-    {
-        write(m_bs, status{ status::FAILED, "server is busy" });
-        m_bs.sync();
+    hello::request req;
+    read(m_bs, req);
 
+    server_information info;
+
+    try
+    {
+        info = m_req_intf->on_hello(req.client_version);
+    }
+    catch (const std::exception& e)
+    {
+        write(m_bs, status{ .code = status::FAILED, .message = e.what() });
+        m_bs.sync ();
         m_state = server_state::disconnected;
+        return;
     }
-    else
-    {
-        hello::request req;
-        read(m_bs, req);
 
-        server_information info;
+    write(m_bs, status{ status::OK });
+    write(m_bs, hello::response{
+            .server_version = info.version,
+            .protocol_version = info.protocol });
+    m_bs.sync();
 
-        try
-        {
-            info = m_hif->on_hello(req.client_version);
-        }
-        catch (const std::exception& e)
-        {
-            write(m_bs, status{ .code = status::FAILED, .message = e.what() });
-            m_bs.sync ();
-            m_state = server_state::disconnected;
-            return;
-        }
-
-        write(m_bs, status{ status::OK });
-        write(m_bs, hello::response{
-                .server_version = info.version,
-                .protocol_version = info.protocol });
-        m_bs.sync();
-
-        m_state = server_state::normal;
-    }
+    m_state = server_state::normal;
 }
 
 // ---------------------------------------------------------------------
@@ -168,7 +158,7 @@ void server::handle_read_block()
     read_block::request req;
     read(m_bs, req);
 
-    m_read_block = m_hif->on_read_block(std::move(req.hash));
+    m_read_block = m_req_intf->on_read_block(std::move(req.hash));
 
     m_state = server_state::reading;
 
@@ -185,7 +175,7 @@ void server::handle_quit()
 
     try
     {
-        m_hif->on_quit(req.reason);
+        m_req_intf->on_quit(req.reason);
     }
     catch (...)
     {
@@ -205,7 +195,7 @@ void server::handle_free_space()
     free_space::request req;
     read(m_bs, req);
 
-    auto space = m_hif->on_free_space();
+    auto space = m_req_intf->on_free_space();
 
     m_state = server_state::normal;
 
@@ -221,7 +211,7 @@ void server::handle_reset()
     reset::request req;
     read(m_bs, req);
 
-    m_hif->on_reset();
+    m_req_intf->on_reset();
 
     m_state = server_state::normal;
     m_read_block.reset();
@@ -268,7 +258,7 @@ void server::handle_allocate_chunk()
         THROW(illegal_args, "block size out of range");
     }
 
-    m_write_alloc = m_hif->on_allocate_chunk(req.size);
+    m_write_alloc = m_req_intf->on_allocate_chunk(req.size);
     m_state = server_state::writing;
 
     write(m_bs, status{ status::OK });
@@ -288,7 +278,7 @@ void server::handle_write_chunk()
         THROW(internal_error, "no space allocated");
     }
 
-    m_hif->on_write_chunk(req.data);
+    m_req_intf->on_write_chunk(req.data);
     m_write_alloc->device().write(req.data);
     write(m_bs, status{ status::OK });
     m_bs.sync ();
@@ -306,7 +296,7 @@ void server::handle_finalize_block()
         THROW(internal_error, "no space allocated");
     }
 
-    m_hif->on_finalize();
+    m_req_intf->on_finalize();
 
     auto meta_data = m_write_alloc->persist();
     m_write_alloc.reset();

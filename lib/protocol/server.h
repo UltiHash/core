@@ -5,7 +5,7 @@
 #include "common.h"
 #include "protocol.h"
 #include "serialization/serialization.h"
-
+#include "protocol/requests_interface.h"
 #include <boost/iostreams/stream.hpp>
 
 
@@ -38,8 +38,8 @@ public:
     constexpr static std::size_t MAXIMUM_BLOCK_SIZE = 2u * 1024 * 1024 * 1024;
 
     explicit server (const std::shared_ptr<net::socket>& client,
-                     std::unique_ptr<uh::protocol::handler_interface>&& hif
-                     ) : protocol (client), m_bs (*client), m_hif(std::move(hif)) {}
+                     std::unique_ptr<uh::protocol::request_interface>&& req_intf
+                     ) : protocol (client), m_bs (*client), m_req_intf(std::move(req_intf)) {}
     virtual ~server() = default;
 
     void handle() override;
@@ -67,7 +67,7 @@ private:
     std::unique_ptr<allocation> m_write_alloc;        // invariant: (!m_write_alloc) == (m_state != writing)
     serialization::buffered_serialization m_bs;
 
-    std::unique_ptr<handler_interface> m_hif;
+    std::unique_ptr<request_interface> m_req_intf;
 };
 
 // ---------------------------------------------------------------------

@@ -20,10 +20,9 @@ protocol_factory::protocol_factory(storage::mod& storage,
 std::unique_ptr<uh::protocol::protocol> protocol_factory::create(std::shared_ptr<net::socket> client)
 {
     return std::make_unique<uh::protocol::server>
-            (std::move(client),
-             std::make_unique<uh::metrics::protocol_metrics_wrapper>
-                     (m_metrics, std::make_unique<protocol>(m_storage.backend())));
-
+            (client,
+                std::make_unique<uh::metrics::protocol_metrics_wrapper>
+                    (m_metrics, std::make_unique<protocol>(m_storage.backend())));
 }
 
 // ---------------------------------------------------------------------
