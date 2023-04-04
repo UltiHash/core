@@ -89,11 +89,10 @@ prometheus::Counter& protocol_metrics::reqs_finalize() const
 
 // ---------------------------------------------------------------------
 
-protocol_metrics_wrapper::protocol_metrics_wrapper(std::shared_ptr<net::socket> client,
-    const protocol_metrics& metrics,
-    std::unique_ptr<server>&& base)
-    : server(std::move(client)), m_base(std::move(base)),
-      m_metrics(metrics)
+protocol_metrics_wrapper::protocol_metrics_wrapper(const protocol_metrics& metrics,
+    std::unique_ptr<uh::protocol::handler_interface>&& base) :
+    m_metrics(metrics),
+    m_base(std::move(base))
 {
 }
 

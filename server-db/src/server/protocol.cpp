@@ -11,8 +11,46 @@ namespace uh::dbn::server
 
 // ---------------------------------------------------------------------
 
-protocol::protocol(storage::backend& storage, std::shared_ptr<net::socket> client)
-    : uh::protocol::server (client), m_storage(storage)
+std::size_t protocol::on_free_space()
+{
+//    THROW(unsupported, "this call is not supported by this node type");
+}
+
+// ---------------------------------------------------------------------
+
+void protocol::on_quit(const std::string&)
+{
+}
+
+// ---------------------------------------------------------------------
+
+void protocol::on_reset()
+{
+}
+
+// ---------------------------------------------------------------------
+
+std::size_t protocol::on_next_chunk(std::span<char>)
+{
+//    THROW(unsupported, "this call is not supported by this node type");
+}
+
+// ---------------------------------------------------------------------
+
+void protocol::on_finalize()
+{
+}
+
+// ---------------------------------------------------------------------
+
+void protocol::on_write_chunk(std::span<char>)
+{
+}
+
+// ---------------------------------------------------------------------
+
+protocol::protocol(storage::backend& storage)
+    : m_storage(storage)
 {
 }
 

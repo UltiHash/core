@@ -16,14 +16,22 @@ namespace uh::an::server
 
 // ---------------------------------------------------------------------
 
-class protocol : public uh::protocol::server
+class protocol : public uh::protocol::handler_interface
 {
 public:
-    protocol(cluster::mod& cluster, const std::shared_ptr<net::socket>& client);
+    explicit protocol(cluster::mod& cluster);
 
-    virtual uh::protocol::server_information on_hello(const std::string& client_version) override;
-    virtual std::unique_ptr<io::device> on_read_block(uh::protocol::blob&& hash) override;
-    virtual std::unique_ptr<uh::protocol::allocation> on_allocate_chunk(std::size_t size) override;
+    uh::protocol::server_information on_hello(const std::string& client_version) override;
+    std::unique_ptr<io::device> on_read_block(uh::protocol::blob&& hash) override;
+    std::unique_ptr<uh::protocol::allocation> on_allocate_chunk(std::size_t size) override;
+
+    std::size_t on_free_space() override;
+    void on_quit(const std::string& reason) override;
+    void on_reset() override;
+
+    std::size_t on_next_chunk(std::span<char> buffer) override;
+    void on_finalize() override;
+    void on_write_chunk(std::span<char> buffer) override;
 
 private:
     cluster::mod& m_cluster;

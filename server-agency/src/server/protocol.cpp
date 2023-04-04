@@ -7,35 +7,71 @@
 #include <vector>
 
 
-using namespace uh::protocol;
-
 namespace uh::an::server
 {
 
 // ---------------------------------------------------------------------
 
-protocol::protocol(cluster::mod& cluster, const std::shared_ptr<net::socket>& client):
-        uh::protocol::server(client), m_cluster(cluster)
+protocol::protocol(cluster::mod& cluster):
+        m_cluster(cluster)
 {
 }
 
 // ---------------------------------------------------------------------
 
-server_information protocol::on_hello(const std::string& client_version)
+uh::protocol::server_information protocol::on_hello(const std::string& client_version)
 {
     INFO << "connection from client with version " << client_version;
 
     return {
-        .version = PROJECT_VERSION,
-        .protocol = 1,
+            .version = PROJECT_VERSION,
+            .protocol = 1,
     };
 }
 
 // ---------------------------------------------------------------------
 
-std::unique_ptr<io::device> protocol::on_read_block(blob&& hash)
+std::unique_ptr<io::device> protocol::on_read_block(uh::protocol::blob&& hash)
 {
     return m_cluster.bc_read_block(hash);
+}
+
+// ---------------------------------------------------------------------
+
+std::size_t protocol::on_free_space()
+{
+//    THROW(unsupported, "this call is not supported by this node type");
+}
+
+// ---------------------------------------------------------------------
+
+void protocol::on_quit(const std::string&)
+{
+}
+
+// ---------------------------------------------------------------------
+
+void protocol::on_reset()
+{
+}
+
+// ---------------------------------------------------------------------
+
+std::size_t protocol::on_next_chunk(std::span<char>)
+{
+//    THROW(unsupported, "this call is not supported by this node type");
+}
+
+// ---------------------------------------------------------------------
+
+void protocol::on_finalize()
+{
+}
+
+// ---------------------------------------------------------------------
+
+void protocol::on_write_chunk(std::span<char>)
+{
 }
 
 // ---------------------------------------------------------------------
