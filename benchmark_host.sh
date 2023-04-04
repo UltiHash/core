@@ -151,12 +151,16 @@ post_results_to_slack()
   local corpus="$1"; shift;
   local log_path_base="$1"; shift;
   local upload_fresh_throughput=$(get_agency_fresh_upload_throughput "${corpus}" "${log_path_base}")
+  upload_fresh_throughput=$(printf "%.2f" ${upload_fresh_throughput})
   local upload_fresh_throughput_exit=$?
   local upload_fresh_deduplication=$(get_agency_fresh_upload_deduplication "${corpus}" "${log_path_base}")
+  upload_fresh_deduplication=$(printf "%.2f" ${upload_fresh_deduplication})
   local upload_fresh_deduplication_exit=$?
   local upload_update_throughput=$(get_agency_update_upload_throughput "${corpus}" "${log_path_base}")
+  upload_update_throughput=$(printf "%.2f" ${upload_update_throughput})
   local upload_update_throughput_exit=$?
   local download_agency_throughput=$(get_agency_download_throughput "${corpus}" "${log_path_base}")
+  download_agency_throughput=$(printf "%.2f" ${download_agency_throughput})
   local download_agency_throughput_exit=$?
 
   if [ $upload_fresh_throughput_exit -eq 0 ] && [ $upload_update_throughput_exit -eq 0 ] && [ $download_agency_throughput_exit -eq 0 ]
