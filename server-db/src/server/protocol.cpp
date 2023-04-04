@@ -2,7 +2,7 @@
 
 #include <config.hpp>
 #include <logging/logging_boost.h>
-
+#include <protocol/exception.h>
 
 using namespace uh::protocol;
 

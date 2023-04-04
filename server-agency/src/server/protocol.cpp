@@ -2,10 +2,12 @@
 
 #include <config.hpp>
 #include <logging/logging_boost.h>
+#include <protocol/exception.h>
 #include <util/exception.h>
 
 #include <vector>
 
+using namespace uh::protocol;
 
 namespace uh::an::server
 {
