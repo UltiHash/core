@@ -18,6 +18,8 @@ struct request_interface
 
     virtual std::unique_ptr <uh::protocol::allocation> on_allocate_chunk(std::size_t size) = 0;
 
+    // default implementations
+
     virtual std::size_t on_free_space() { return 0; }
 
     virtual void on_quit(const std::string &reason) { };
