@@ -365,6 +365,14 @@ int __uh_read (const char *path, char *buffer, size_t size, off_t offset, struct
     return size;
 }
 
+uh::uhv::f_meta_data& get_fmetadata(struct fuse_file_info *fi){
+  if(fi->fh == 0){
+//    THROW(...)
+    throw std::runtime_error("error while getting metadata");
+  }
+    return *reinterpret_cast<uh::uhv::f_meta_data*>(fi->fh);
+}
+
 int __uh_write (const char *path, const char *buf, size_t size, off_t offset, struct fuse_file_info *fi) {
 
     std::cout << "uh_write(" << path << ", " << size << ", " << offset << ")\n";
@@ -373,7 +381,7 @@ int __uh_write (const char *path, const char *buf, size_t size, off_t offset, st
     {
         return -EACCES;
     }
-    auto &fmd = *reinterpret_cast<uh::uhv::f_meta_data*>(fi->fh);
+    auto &fmd = get_fmetadata(fi);
     if (fmd.f_type() != uh::uhv::uh_file_type::regular) {
         return -ENOMEM;
     }
@@ -425,6 +433,16 @@ int __uh_write (const char *path, const char *buf, size_t size, off_t offset, st
     return size;
 }
 
+int __uh_write_buf (const char *path, struct fuse_bufvec *buf_vec, off_t off, struct fuse_file_info *fi){
+    int success = - ENOENT;
+
+    size_t size = buf_vec->buf->size;
+    size_t offset = buf_vec->off;
+    char * buf = static_cast<char*>(buf_vec->buf->mem);
+    __uh_write(path, buf, size, offset, fi);
+    return size;
+}
+
 int __uh_create (const char *path, mode_t mode, struct fuse_file_info *fi) {
     std::cout << "uh_create(" << path << ")\n";
 
@@ -444,12 +462,8 @@ int __uh_create (const char *path, mode_t mode, struct fuse_file_info *fi) {
     auto container_handle = context->container.get();
     auto& files = container_handle();
 
-    files.emplace(std::string (path), md);
-
-    uh::protocol::client_pool::handle&& client_handle = context->client_pool->get();
-    std::span <char> empty_data {};
-    const auto effective_size = upload_data (client_handle, max_chunk_size, empty_data, md.get_hashes());
-    md.set_effective_size(effective_size);
+    auto res_pair = files.emplace(std::string (path), md);
+    set_metadata(fi, res_pair.first->second);
 
     // store the new metadata into the uh volume
     std::ofstream UHV_file(get_options().UHVpath, std::ios::app | std::ios::out | std::ios::binary);
@@ -465,9 +479,6 @@ void __uh_destroy (void *context) {
     delete pcontext;
 }
 
-int __uh_write_buf (const char *path, struct fuse_bufvec *buf, off_t off, struct fuse_file_info *fi){
-        throw std::runtime_error("Not implemented");
-}
 
 int __uh_read_buf (const char *path, struct fuse_bufvec **bufp, size_t size, off_t off, struct fuse_file_info *fi){
         throw std::runtime_error("Not implemented");
