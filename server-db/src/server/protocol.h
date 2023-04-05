@@ -2,7 +2,7 @@
 #define SERVER_DATABASE_SERVER_PROTOCOL_H
 
 #include <storage/mod.h>
-#include <protocol/requests_interface.h>
+#include <protocol/request_interface.h>
 
 #include <memory>
 

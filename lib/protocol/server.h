@@ -5,7 +5,7 @@
 #include "common.h"
 #include "protocol.h"
 #include "serialization/serialization.h"
-#include "protocol/requests_interface.h"
+#include "protocol/request_interface.h"
 #include <boost/iostreams/stream.hpp>
 
 

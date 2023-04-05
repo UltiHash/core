@@ -3,7 +3,7 @@
 
 #include <cluster/mod.h>
 #include <protocol/protocol.h>
-#include <protocol/requests_interface.h>
+#include <protocol/request_interface.h>
 #include <memory>
 
 using namespace boost::asio::ip;

@@ -2,7 +2,7 @@
 #define UH_METRICS_PROTOCOL_METRICS_H
 
 #include <metrics/service.h>
-#include <protocol/requests_interface.h>
+#include <protocol/request_interface.h>
 
 #include <memory>
 
