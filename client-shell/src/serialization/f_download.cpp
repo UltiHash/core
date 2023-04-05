@@ -8,12 +8,11 @@ namespace uh::client::serialization
 f_download::f_download(std::unique_ptr<protocol::client_pool>& cl_pool,
                        uhv::job_queue<std::unique_ptr<uhv::f_meta_data>>& jq,
                        std::filesystem::path dest_path,
-                       unsigned int num_threads) :
-                       m_client_pool(cl_pool),
-                       m_input_jq(jq),
-                       m_dest_path(std::move(dest_path)),
-                       common::thread_manager(num_threads)
-
+                       unsigned int num_threads)
+    : common::thread_manager(num_threads),
+      m_input_jq(jq),
+      m_client_pool(cl_pool),
+      m_dest_path(std::move(dest_path))
 {
 }
 
@@ -46,7 +45,7 @@ void f_download::download_files(std::unique_ptr<uhv::f_meta_data>& f_meta_data,
 
         std::vector<char> buffer(64);
 
-        for (auto i = 0; i < f_meta_data->f_hashes().size(); i += 64)
+        for (auto i = 0u; i < f_meta_data->f_hashes().size(); i += 64)
         {
             std::copy(f_meta_data->f_hashes().begin() + i,
                       f_meta_data->f_hashes().begin() + i + 64, buffer.begin());

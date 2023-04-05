@@ -148,7 +148,7 @@ void client_options::handle(const boost::program_options::variables_map& vars)
         try
         {
             std::set<std::filesystem::path> removeDuplicatePath;
-            for (int i = 1; i < m_posPaths.size(); ++i)
+            for (auto i = 1u; i < m_posPaths.size(); ++i)
             {
                 errorPath = m_posPaths.at(i);
                 auto sanitizedPath = std::filesystem::canonical(
@@ -189,7 +189,7 @@ void client_options::handle(const boost::program_options::variables_map& vars)
             is_UHV(m_config.m_inputPaths, "source path on --retrieve[-r] has wrong extensions. Please ensure that the source ends with '.uh'.");
             if (m_posPaths.size()>1)
             {
-                for (int i = 1; i < m_posPaths.size(); ++i)
+                for (auto i = 1u; i < m_posPaths.size(); ++i)
                 {
                     errorPath = m_posPaths.at(i);
                     m_config.m_operatePaths.emplace_back(weakly_canonical(std::filesystem::path(errorPath)));
@@ -211,7 +211,7 @@ void client_options::handle(const boost::program_options::variables_map& vars)
 
             if (m_posPaths.size()>1)
             {
-                for (int i = 1; i < m_posPaths.size(); ++i) {
+                for (auto i = 1u; i < m_posPaths.size(); ++i) {
                     errorPath = m_posPaths.at(i);
                     m_config.m_operatePaths.emplace_back(weakly_canonical(std::filesystem::path(errorPath)));
                 }

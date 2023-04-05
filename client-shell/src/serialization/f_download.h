@@ -29,7 +29,6 @@ private:
     uhv::job_queue<std::unique_ptr<uhv::f_meta_data>>& m_input_jq;
     std::unique_ptr<uh::protocol::client_pool>& m_client_pool;
     std::filesystem::path m_dest_path;
-
 };
 
 // ---------------------------------------------------------------------
