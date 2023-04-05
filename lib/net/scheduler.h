@@ -7,6 +7,7 @@
 #include <list>
 #include <mutex>
 #include <thread>
+#include <net/plain_server.h>
 
 
 namespace uh::net
@@ -35,6 +36,8 @@ private:
 
     std::atomic<bool> m_running;
     std::atomic<std::size_t> m_threads_used;
+
+    std::size_t m_threads_limit;
 };
 
 // ---------------------------------------------------------------------

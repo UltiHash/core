@@ -18,37 +18,6 @@ protocol::protocol(storage::backend& storage)
 
 // ---------------------------------------------------------------------
 
-void protocol::on_quit(const std::string&)
-{
-}
-
-// ---------------------------------------------------------------------
-
-void protocol::on_reset()
-{
-}
-
-// ---------------------------------------------------------------------
-
-std::size_t protocol::on_next_chunk(std::span<char>)
-{
-    THROW(unsupported, "this call is not supported by this node type");
-}
-
-// ---------------------------------------------------------------------
-
-void protocol::on_finalize()
-{
-}
-
-// ---------------------------------------------------------------------
-
-void protocol::on_write_chunk(std::span<char>)
-{
-}
-
-// ---------------------------------------------------------------------
-
 server_information protocol::on_hello(const std::string& client_version)
 {
     INFO << "connection from client with version " << client_version;
@@ -78,6 +47,13 @@ std::size_t protocol::on_free_space()
 std::unique_ptr<uh::protocol::allocation> protocol::on_allocate_chunk(std::size_t size)
 {
     return m_storage.allocate(size);
+}
+
+// ---------------------------------------------------------------------
+
+std::size_t protocol::on_next_chunk(std::span<char>)
+{
+    THROW(unsupported, "this call is not supported by this node type");
 }
 
 // ---------------------------------------------------------------------

@@ -21,7 +21,6 @@ struct server_config
 {
     constexpr static uint16_t DEFAULT_PORT = 0x5548;
     constexpr static std::size_t DEFAULT_THREADS = 100;
-    constexpr static std::size_t CONNECTION_LIMIT = uh::net::server_config::DEFAULT_THREADS-5;
 
     uint16_t port = DEFAULT_PORT;
 

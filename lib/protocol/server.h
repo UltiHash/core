@@ -38,8 +38,8 @@ public:
     constexpr static std::size_t MAXIMUM_BLOCK_SIZE = 2u * 1024 * 1024 * 1024;
 
     explicit server (const std::shared_ptr<net::socket>& client,
-                     std::unique_ptr<uh::protocol::request_interface>&& req_intf
-                     ) : protocol (client), m_bs (*client), m_req_intf(std::move(req_intf)) {}
+                     std::unique_ptr<uh::protocol::request_interface>&& handler_interface
+                     ) : protocol (client), m_bs (*client), m_handler_interface(std::move(handler_interface)) {}
     virtual ~server() = default;
 
     void handle() override;
@@ -67,7 +67,7 @@ private:
     std::unique_ptr<allocation> m_write_alloc;        // invariant: (!m_write_alloc) == (m_state != writing)
     serialization::buffered_serialization m_bs;
 
-    std::unique_ptr<request_interface> m_req_intf;
+    std::unique_ptr<request_interface> m_handler_interface;
 };
 
 // ---------------------------------------------------------------------

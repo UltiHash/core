@@ -41,6 +41,13 @@ std::unique_ptr<io::device> protocol::on_read_block(uh::protocol::blob&& hash)
 
 // ---------------------------------------------------------------------
 
+std::unique_ptr<uh::protocol::allocation> protocol::on_allocate_chunk(std::size_t size)
+{
+    return m_cluster.allocate(size);
+}
+
+// ---------------------------------------------------------------------
+
 std::size_t protocol::on_free_space()
 {
     THROW(unsupported, "this call is not supported by this node type");
@@ -48,40 +55,9 @@ std::size_t protocol::on_free_space()
 
 // ---------------------------------------------------------------------
 
-void protocol::on_quit(const std::string&)
-{
-}
-
-// ---------------------------------------------------------------------
-
-void protocol::on_reset()
-{
-}
-
-// ---------------------------------------------------------------------
-
 std::size_t protocol::on_next_chunk(std::span<char>)
 {
     THROW(unsupported, "this call is not supported by this node type");
-}
-
-// ---------------------------------------------------------------------
-
-void protocol::on_finalize()
-{
-}
-
-// ---------------------------------------------------------------------
-
-void protocol::on_write_chunk(std::span<char>)
-{
-}
-
-// ---------------------------------------------------------------------
-
-std::unique_ptr<uh::protocol::allocation> protocol::on_allocate_chunk(std::size_t size)
-{
-    return m_cluster.allocate(size);
 }
 
 // ---------------------------------------------------------------------
