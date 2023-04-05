@@ -5,7 +5,7 @@
 #include "common.h"
 #include "protocol.h"
 #include "serialization/serialization.h"
-
+#include "protocol/request_interface.h"
 #include <boost/iostreams/stream.hpp>
 
 
@@ -37,19 +37,10 @@ public:
 
     constexpr static std::size_t MAXIMUM_BLOCK_SIZE = 2u * 1024 * 1024 * 1024;
 
-    explicit server (std::shared_ptr<net::socket> client): protocol (client), m_bs (*client) {}
+    explicit server (const std::shared_ptr<net::socket>& client,
+                     std::unique_ptr<uh::protocol::request_interface>&& handler_interface
+                     ) : protocol (client), m_bs (*client), m_handler_interface(std::move(handler_interface)) {}
     virtual ~server() = default;
-
-    virtual server_information on_hello(const std::string& client_version) = 0;
-    virtual std::unique_ptr<io::device> on_read_block(blob&& hash) = 0;
-    virtual std::size_t on_free_space();
-
-    virtual void on_quit(const std::string& reason);
-    virtual void on_reset();
-    virtual std::size_t on_next_chunk(std::span<char> buffer);
-    virtual void on_finalize();
-    virtual void on_write_chunk(std::span<char> buffer);
-    virtual std::unique_ptr<allocation> on_allocate_chunk(std::size_t size) = 0;
 
     void handle() override;
 
@@ -75,6 +66,8 @@ private:
     std::unique_ptr<io::device> m_read_block;        // invariant: (!m_read_block) == (m_state != reading)
     std::unique_ptr<allocation> m_write_alloc;        // invariant: (!m_write_alloc) == (m_state != writing)
     serialization::buffered_serialization m_bs;
+
+    std::unique_ptr<request_interface> m_handler_interface;
 };
 
 // ---------------------------------------------------------------------

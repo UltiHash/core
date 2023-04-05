@@ -22,7 +22,6 @@ public:
 
     std::unique_ptr<uh::protocol::protocol> create(std::shared_ptr<net::socket> client) override;
 
-
 private:
     storage::mod& m_storage;
     const uh::metrics::protocol_metrics& m_metrics;
