@@ -30,7 +30,7 @@ std::unique_ptr<client> client_factory::create()
 
     c->hello(m_client_version);
 
-    return std::move(c);
+    return c;
 }
 
 // ---------------------------------------------------------------------
