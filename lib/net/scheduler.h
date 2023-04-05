@@ -24,8 +24,6 @@ public:
     void worker();
     void stop();
 
-    [[nodiscard]] bool is_busy() const;
-
 private:
     std::mutex m_mutex;
     std::condition_variable m_cv;
@@ -35,8 +33,6 @@ private:
 
     std::atomic<bool> m_running;
     std::atomic<std::size_t> m_threads_used;
-
-    std::size_t m_threads_limit;
 };
 
 // ---------------------------------------------------------------------

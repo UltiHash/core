@@ -11,7 +11,7 @@ namespace uh::net
 
 // ---------------------------------------------------------------------
 
-scheduler::scheduler(std::size_t threads) : m_threads_limit(threads-5)
+scheduler::scheduler(std::size_t threads)
 {
     while (threads--)
     {
@@ -37,13 +37,6 @@ void scheduler::spawn(const std::function<void()>& f)
     }
 
     m_cv.notify_one();
-}
-
-// ---------------------------------------------------------------------
-
-bool scheduler::is_busy() const
-{
-    return m_threads_used >= m_threads_limit;
 }
 
 // ---------------------------------------------------------------------
