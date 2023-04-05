@@ -17,9 +17,15 @@ client_allocation::client_allocation(client& c)
 
 client_allocation::~client_allocation()
 {
-    if (m_dangling)
+    try
     {
-        m_client.reset();
+        if (m_dangling)
+        {
+            m_client.reset();
+        }
+    }
+    catch (const std::exception&)
+    {
     }
 }
 

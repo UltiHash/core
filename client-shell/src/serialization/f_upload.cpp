@@ -71,10 +71,15 @@ void f_upload::spawn_threads()
                 {
                    break;
                 }
-                else
+
+                try
                 {
-                    chunk_and_upload(job.value(),
-                        client_connection_handle);
+                    chunk_and_upload(job.value(), client_connection_handle);
+                }
+                catch (const std::exception& e)
+                {
+                    ERROR << "failure while uploading " << (*job)->f_path() << ": " << e.what();
+                    return;
                 }
            }
         });

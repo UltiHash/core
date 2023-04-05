@@ -55,9 +55,15 @@ namespace uh::io {
 
 
         ~buffered_device() override {
-            sync();
-            delete[] buffer;
-            buffer = nullptr;
+            try
+            {
+                sync();
+                delete[] buffer;
+                buffer = nullptr;
+            }
+            catch (const std::exception&)
+            {
+            }
         }
     };
 
