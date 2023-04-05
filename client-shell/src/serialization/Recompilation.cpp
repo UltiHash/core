@@ -42,9 +42,11 @@ void Recompilation::integrate()
     {
         uh::client::chunking::mod chunking_module(m_chunker_config);
         chunking_module.start();
+
         f_upload upload_class(m_client_pool, q_f_meta_data,
                               q_f_mdata_w_hash, chunking_module.chunker(), m_client_config.m_worker_count);
         upload_class.spawn_threads();
+
         f_traverse traverse_class(m_client_config.m_inputPaths, m_client_config.m_operatePaths, q_f_meta_data);
     }
 

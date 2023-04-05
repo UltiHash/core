@@ -14,44 +14,6 @@ namespace uh::protocol
 
 // ---------------------------------------------------------------------
 
-std::size_t server::on_free_space()
-{
-    THROW(unsupported, "this call is not supported by this node type");
-}
-
-// ---------------------------------------------------------------------
-
-void server::on_quit(const std::string&)
-{
-}
-
-// ---------------------------------------------------------------------
-
-void server::on_reset()
-{
-}
-
-// ---------------------------------------------------------------------
-
-std::size_t server::on_next_chunk(std::span<char>)
-{
-    THROW(unsupported, "this call is not supported by this node type");
-}
-
-// ---------------------------------------------------------------------
-
-void server::on_finalize()
-{
-}
-
-// ---------------------------------------------------------------------
-
-void server::on_write_chunk(std::span<char>)
-{
-}
-
-// ---------------------------------------------------------------------
-
 void server::handle()
 {
 
@@ -170,7 +132,7 @@ void server::handle_hello()
 
     try
     {
-        info = on_hello(req.client_version);
+        info = m_handler_interface->on_hello(req.client_version);
     }
     catch (const std::exception& e)
     {
@@ -184,7 +146,7 @@ void server::handle_hello()
     write(m_bs, hello::response{
             .server_version = info.version,
             .protocol_version = info.protocol });
-    m_bs.sync ();
+    m_bs.sync();
 
     m_state = server_state::normal;
 }
@@ -196,7 +158,7 @@ void server::handle_read_block()
     read_block::request req;
     read(m_bs, req);
 
-    m_read_block = on_read_block(std::move(req.hash));
+    m_read_block = m_handler_interface->on_read_block(std::move(req.hash));
 
     m_state = server_state::reading;
 
@@ -213,7 +175,7 @@ void server::handle_quit()
 
     try
     {
-        on_quit(req.reason);
+        m_handler_interface->on_quit(req.reason);
     }
     catch (...)
     {
@@ -233,7 +195,7 @@ void server::handle_free_space()
     free_space::request req;
     read(m_bs, req);
 
-    auto space = on_free_space();
+    auto space = m_handler_interface->on_free_space();
 
     m_state = server_state::normal;
 
@@ -249,7 +211,7 @@ void server::handle_reset()
     reset::request req;
     read(m_bs, req);
 
-    on_reset();
+    m_handler_interface->on_reset();
 
     m_state = server_state::normal;
     m_read_block.reset();
@@ -296,7 +258,7 @@ void server::handle_allocate_chunk()
         THROW(illegal_args, "block size out of range");
     }
 
-    m_write_alloc = on_allocate_chunk(req.size);
+    m_write_alloc = m_handler_interface->on_allocate_chunk(req.size);
     m_state = server_state::writing;
 
     write(m_bs, status{ status::OK });
@@ -316,7 +278,7 @@ void server::handle_write_chunk()
         THROW(internal_error, "no space allocated");
     }
 
-    on_write_chunk(req.data);
+    m_handler_interface->on_write_chunk(req.data);
     m_write_alloc->device().write(req.data);
     write(m_bs, status{ status::OK });
     m_bs.sync ();
@@ -334,7 +296,7 @@ void server::handle_finalize_block()
         THROW(internal_error, "no space allocated");
     }
 
-    on_finalize();
+    m_handler_interface->on_finalize();
 
     auto meta_data = m_write_alloc->persist();
     m_write_alloc.reset();

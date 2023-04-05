@@ -12,7 +12,6 @@
 #include <cstdint>
 #include <filesystem>
 
-
 namespace uh::net
 {
 
@@ -21,8 +20,7 @@ namespace uh::net
 struct server_config
 {
     constexpr static uint16_t DEFAULT_PORT = 0x5548;
-    constexpr static std::size_t DEFAULT_THREADS = 50;
-    constexpr static std::size_t CONNECTION_LIMIT = uh::net::server_config::DEFAULT_THREADS-1;
+    constexpr static std::size_t DEFAULT_THREADS = 100;
 
     uint16_t port = DEFAULT_PORT;
 
@@ -42,13 +40,13 @@ public:
 
     void run() override;
 
-    void spawn_client(std::shared_ptr<socket> client);
+    void spawn_client(const std::shared_ptr<socket>& client);
 
 private:
     boost::asio::io_context m_context;
     boost::asio::ip::tcp::acceptor m_acceptor;
 
-    uh::protocol::protocol_factory & m_protocol_factory;
+    uh::protocol::protocol_factory& m_protocol_factory;
     scheduler m_scheduler;
 
     std::atomic<bool> m_running;

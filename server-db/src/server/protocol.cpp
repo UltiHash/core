@@ -2,7 +2,7 @@
 
 #include <config.hpp>
 #include <logging/logging_boost.h>
-
+#include <protocol/exception.h>
 
 using namespace uh::protocol;
 
@@ -11,8 +11,8 @@ namespace uh::dbn::server
 
 // ---------------------------------------------------------------------
 
-protocol::protocol(storage::backend& storage, std::shared_ptr<net::socket> client)
-    : uh::protocol::server (client), m_storage(storage)
+protocol::protocol(storage::backend& storage)
+        : m_storage(storage)
 {
 }
 
@@ -47,6 +47,13 @@ std::size_t protocol::on_free_space()
 std::unique_ptr<uh::protocol::allocation> protocol::on_allocate_chunk(std::size_t size)
 {
     return m_storage.allocate(size);
+}
+
+// ---------------------------------------------------------------------
+
+std::size_t protocol::on_next_chunk(std::span<char>)
+{
+    THROW(unsupported, "this call is not supported by this node type");
 }
 
 // ---------------------------------------------------------------------
