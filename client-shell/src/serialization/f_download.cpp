@@ -76,15 +76,22 @@ void f_download::spawn_threads()
     {
         m_thread_pool.emplace_back([&]()
         {
-           protocol::client_pool::handle&& client_connection_handle = m_client_pool->get();
+            protocol::client_pool::handle&& client_connection_handle = m_client_pool->get();
 
-           while (auto item = m_input_jq.get_job())
-           {
-               if (item == std::nullopt)
-                   break;
-               else
-                   download_files(item.value(),
-                                client_connection_handle);
+            while (auto item = m_input_jq.get_job())
+            {
+                if (item == std::nullopt)
+                    break;
+
+                try
+                {
+                    download_files(item.value(), client_connection_handle);
+                }
+                catch (const std::exception& e)
+                {
+                    ERROR << "failure while downloading " << (*item)->f_path() << ": " << e.what();
+                    return;
+                }
            }
         });
     }

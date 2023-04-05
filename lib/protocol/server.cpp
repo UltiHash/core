@@ -125,6 +125,7 @@ void server::handle_writing_request(uint8_t request_id)
 
 void server::handle_hello()
 {
+    DEBUG << "hello request on " << client_->peer();
     hello::request req;
     read(m_bs, req);
 
@@ -155,6 +156,8 @@ void server::handle_hello()
 
 void server::handle_read_block()
 {
+    DEBUG << "read_block request on " << client_->peer();
+
     read_block::request req;
     read(m_bs, req);
 
@@ -170,6 +173,8 @@ void server::handle_read_block()
 
 void server::handle_quit()
 {
+    DEBUG << "quit request on " << client_->peer();
+
     quit::request req;
     read(m_bs, req);
 
@@ -192,6 +197,8 @@ void server::handle_quit()
 
 void server::handle_free_space()
 {
+    DEBUG << "free_space request on " << client_->peer();
+
     free_space::request req;
     read(m_bs, req);
 
@@ -208,6 +215,8 @@ void server::handle_free_space()
 
 void server::handle_reset()
 {
+    DEBUG << "reset request on " << client_->peer();
+
     reset::request req;
     read(m_bs, req);
 
@@ -225,6 +234,8 @@ void server::handle_reset()
 
 void server::handle_next_chunk()
 {
+    DEBUG << "next_chunk request on " << client_->peer();
+
     next_chunk::request req;
     read(m_bs, req);
 
@@ -250,6 +261,8 @@ void server::handle_next_chunk()
 
 void server::handle_allocate_chunk()
 {
+    DEBUG << "allocate request on " << client_->peer();
+
     allocate_chunk::request req;
     read(m_bs, req);
 
@@ -269,6 +282,8 @@ void server::handle_allocate_chunk()
 
 void server::handle_write_chunk()
 {
+    DEBUG << "write_chunk request on " << client_->peer();
+
     std::vector<char> buffer(MAXIMUM_CHUNK_SIZE);
     write_chunk::request req{ .data = buffer };
     read(m_bs, req);
@@ -288,6 +303,8 @@ void server::handle_write_chunk()
 
 void server::handle_finalize_block()
 {
+    DEBUG << "finalize_block request on " << client_->peer();
+
     finalize_block::request req;
     read(m_bs, req);
 

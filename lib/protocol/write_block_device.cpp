@@ -1,5 +1,7 @@
 #include "write_block_device.h"
 
+#include <logging/logging_boost.h>
+
 #include "exception.h"
 
 
@@ -21,8 +23,13 @@ write_block_device::~write_block_device()
     {
         m_client.reset();
     }
+    catch (const std::exception& e)
+    {
+        WARNING << "error while write client reset: " << e.what();
+    }
     catch (...)
     {
+        WARNING << "unknown error while write client reset";
     }
 }
 

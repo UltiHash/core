@@ -1,7 +1,10 @@
 #include "read_block_device.h"
 
+#include <logging/logging_boost.h>
+
 #include "client.h"
 #include "exception.h"
+
 
 
 namespace uh::protocol
@@ -22,8 +25,13 @@ read_block_device::~read_block_device()
     {
         m_client.reset();
     }
+    catch (const std::exception& e)
+    {
+        WARNING << "error while read client reset: " << e.what();
+    }
     catch (...)
     {
+        WARNING << "unknown error while read client reset";
     }
 }
 
