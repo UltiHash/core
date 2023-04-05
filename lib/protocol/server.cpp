@@ -2,7 +2,6 @@
 
 #include "exception.h"
 #include "messages.h"
-#include "serializer.h"
 
 #include <logging/logging_boost.h>
 
