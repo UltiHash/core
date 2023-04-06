@@ -463,7 +463,8 @@ int __uh_create (const char *path, mode_t mode, struct fuse_file_info *fi) {
     auto& files = container_handle();
 
     auto res_pair = files.emplace(std::string (path), md);
-    set_metadata(fi, res_pair.first->second);
+    auto meta_handle = res_pair.first->second.get();
+    set_metadata(fi, meta_handle());
 
     // store the new metadata into the uh volume
     std::ofstream UHV_file(get_options().UHVpath, std::ios::app | std::ios::out | std::ios::binary);

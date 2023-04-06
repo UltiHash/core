@@ -12,7 +12,7 @@ private_context* get_context()
     return static_cast<private_context*>(fuse_get_context()->private_data);
 }
 
-void set_metadata(struct fuse_file_info* fi, ts_f_meta_data& fmd)
+void set_metadata(struct fuse_file_info* fi, f_meta_data& fmd)
 {
     fi->fh = reinterpret_cast<size_t>(&fmd);
 }
