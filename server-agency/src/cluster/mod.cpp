@@ -46,8 +46,8 @@ public:
     }
 
 private:
-    std::unique_ptr<io::device> m_dev;
     protocol::client_pool::handle m_handle;
+    std::unique_ptr<io::device> m_dev;
 };
 
 // ---------------------------------------------------------------------
