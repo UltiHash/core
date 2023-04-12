@@ -1,5 +1,7 @@
 #include "protocol_metrics.h"
 
+#include <utility>
+
 
 using namespace uh::protocol;
 
@@ -87,11 +89,10 @@ prometheus::Counter& protocol_metrics::reqs_finalize() const
 
 // ---------------------------------------------------------------------
 
-protocol_metrics_wrapper::protocol_metrics_wrapper(
-    const protocol_metrics& metrics,
-    std::unique_ptr<server>&& base)
-    : m_base(std::move(base)),
-      m_metrics(metrics)
+protocol_metrics_wrapper::protocol_metrics_wrapper(const protocol_metrics& metrics,
+    std::unique_ptr<uh::protocol::request_interface>&& base) :
+    m_metrics(metrics),
+    m_base(std::move(base))
 {
 }
 

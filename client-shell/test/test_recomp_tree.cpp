@@ -14,7 +14,14 @@
 // ------------- Tests Suites Follow --------------
 using namespace uh::client::serialization;
 
+namespace
+{
+
+// ---------------------------------------------------------------------
+
 BOOST_AUTO_TEST_SUITE( RecompilationTreeSuite )
+
+// ---------------------------------------------------------------------
 
 BOOST_AUTO_TEST_CASE( rootNodeTest )
 {
@@ -24,6 +31,8 @@ BOOST_AUTO_TEST_CASE( rootNodeTest )
     BOOST_TEST(rootNode.getData().size()==0);
     BOOST_TEST(rootNode.getSeek()==0);
 }
+
+// ---------------------------------------------------------------------
 
 BOOST_AUTO_TEST_CASE( rootwChildTest )
 {
@@ -40,6 +49,8 @@ BOOST_AUTO_TEST_CASE( rootwChildTest )
     rootNode.getChildByRPath("Videos/MyDog")->addChild("BeachDogPictures", 332);
 }
 
+// ---------------------------------------------------------------------
+
 BOOST_AUTO_TEST_CASE( relPathFuncCheck )
 {
     treeNode<std::string, std::uint32_t> rootNode("/home/ankit/Downloads/", 32);
@@ -52,6 +63,8 @@ BOOST_AUTO_TEST_CASE( relPathFuncCheck )
     BOOST_TEST(rootNode.getChildByRPath("Videos/MyDog/BeachDogPictures")->getSeek()==332);
 }
 
+// ---------------------------------------------------------------------
+
 BOOST_AUTO_TEST_CASE( BFSCheck )
 {
     std::shared_ptr<treeNode<std::string,std::uint64_t>> rootNodePtr = std::make_shared<treeNode<std::string,std::uint64_t>>("/home/Downloads",0);
@@ -62,4 +75,10 @@ BOOST_AUTO_TEST_CASE( BFSCheck )
     rootNodePtr->getChild("Videos")->addChild("MyTurtle", 222);
 }
 
+// ---------------------------------------------------------------------
+
 BOOST_AUTO_TEST_SUITE_END()
+
+// ---------------------------------------------------------------------
+
+} // namespace

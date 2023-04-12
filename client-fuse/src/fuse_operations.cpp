@@ -365,16 +365,18 @@ int __uh_read (const char *path, char *buffer, size_t size, off_t offset, struct
     return size;
 }
 
-uh::uhv::f_meta_data& get_fmetadata(struct fuse_file_info *fi){
-  if(fi->fh == 0){
-//    THROW(...)
-    throw std::runtime_error("error while getting metadata");
-  }
+uh::uhv::f_meta_data& get_fmetadata(struct fuse_file_info *fi)
+{
+    if(fi->fh == 0)
+    {
+        throw std::runtime_error("error while getting metadata");
+    }
+
     return *reinterpret_cast<uh::uhv::f_meta_data*>(fi->fh);
 }
 
-int __uh_write (const char *path, const char *buf, size_t size, off_t offset, struct fuse_file_info *fi) {
-
+int __uh_write (const char *path, const char *buf, size_t size, off_t offset, struct fuse_file_info *fi)
+{
     std::cout << "uh_write(" << path << ", " << size << ", " << offset << ")\n";
 
     if ((fi->flags & O_ACCMODE) != O_RDWR and (fi->flags & O_ACCMODE) != O_WRONLY)
@@ -479,7 +481,6 @@ void __uh_destroy (void *context) {
     auto pcontext = static_cast <private_context *> (context);
     delete pcontext;
 }
-
 
 int __uh_read_buf (const char *path, struct fuse_bufvec **bufp, size_t size, off_t off, struct fuse_file_info *fi){
         throw std::runtime_error("Not implemented");

@@ -18,14 +18,15 @@ enum class options_chosen : char
 
 // ---------------------------------------------------------------------
 
-typedef struct
+struct client_config
 {
     std::uint16_t m_worker_count;
     options_chosen m_option;
+    bool m_overwrite = false;
     std::vector<std::filesystem::path> m_inputPaths;
     std::filesystem::path m_outputPath;
     std::vector<std::filesystem::path> m_operatePaths;
-}  client_config;
+};
 
 
 // ---------------------------------------------------------------------

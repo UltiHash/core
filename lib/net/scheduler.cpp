@@ -1,6 +1,7 @@
 #include "scheduler.h"
 
 #include <logging/logging_boost.h>
+#include <net/plain_server.h>
 
 #include <exception>
 
@@ -57,6 +58,8 @@ void scheduler::worker()
         }
         else
         {
+            m_threads_used++;
+
             auto job = m_jobs.front();
             m_jobs.pop_front();
             lk.unlock();
@@ -73,6 +76,8 @@ void scheduler::worker()
             {
                 ERROR << "job failed with unknown exception";
             }
+
+            m_threads_used--;
         }
     }
 }

@@ -102,9 +102,9 @@ void f_meta_data::set_f_path(std::string path_str)
 
 // ---------------------------------------------------------------------
 
-void f_meta_data::set_f_hashes(const std::string& vec_hashes)
+void f_meta_data::set_f_hashes(const std::vector <char>& vec_hashes)
 {
-    m_f_hashes = std::vector<char>(vec_hashes.begin(), vec_hashes.end());
+    m_f_hashes = vec_hashes;
 }
 
 // ---------------------------------------------------------------------

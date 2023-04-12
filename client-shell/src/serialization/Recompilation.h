@@ -4,6 +4,8 @@
 #include <uhv/f_meta_data.h>
 #include <uhv/f_serialization.h>
 #include <uhv/job_queue.h>
+#include <chunking/mod.h>
+
 #include "../client_options/client_config.h"
 #include "protocol/client_factory.h"
 #include "protocol/client_pool.h"
@@ -21,14 +23,17 @@ namespace uh::client::serialization
 class Recompilation
 {
     public:
-        Recompilation(const co::client_config&, std::unique_ptr<uh::protocol::client_pool>&&);
+        Recompilation(const co::client_config&,
+        const uh::client::chunking::chunking_config& ,
+        std::unique_ptr<uh::protocol::client_pool>&&);
 
     private:
         void integrate();
         void retrieve();
 
     private:
-        const co::client_config& m_config;
+        const co::client_config& m_client_config;
+        const client::chunking::chunking_config& m_chunker_config;
         std::unique_ptr<uh::protocol::client_pool> m_client_pool;
 
 };

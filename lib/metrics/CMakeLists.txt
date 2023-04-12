@@ -8,8 +8,8 @@ set(CMAKE_CXX_STANDARD 20)
 set(${PROJECT_NAME}_INTERNAL_DEPS uhLibUtil uhLibNet uhLibProtocol)
 
 # configuring library dependencies for cmake and linker
-set(${PROJECT_NAME}_INCLUDE_DIRS ${${PROJECT_NAME}_INTERNAL_DEPS})
-set(${PROJECT_NAME}_LINK_LIBRARIES ${${PROJECT_NAME}_INTERNAL_DEPS})
+set(${PROJECT_NAME}_INCLUDE_DIRS ${${PROJECT_NAME}_INTERNAL_DEPS} uhLibSerialization)
+set(${PROJECT_NAME}_LINK_LIBRARIES ${${PROJECT_NAME}_INTERNAL_DEPS} uhLibSerialization)
 
 # adding all the .h files of the current project
 file(GLOB HEADER_FILE_LIST ${CMAKE_CURRENT_SOURCE_DIR}/*.h)

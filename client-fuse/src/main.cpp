@@ -26,8 +26,6 @@ static const struct fuse_operations uh_operations =
     .create         = uh::uhv::uh_create,
     .ftruncate      = uh::uhv::uh_ftruncate,
     .utimens        = uh::uhv::uh_utimens,
-    //.write_buf      = uh::uhv::uh_write_buf,
-    //.read_buf       = uh::uhv::uh_read_buf,
     };
 
 

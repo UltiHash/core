@@ -1,5 +1,6 @@
 #include "client_options.h"
 #include <logging/logging_boost.h>
+#include <unordered_set>
 
 using namespace boost::program_options;
 
@@ -12,9 +13,9 @@ client_options::client_options()
         : options("Client Options")
 {
     visible().add_options()
-            ("retrieve,r","read the recompilation file and put the contents to the target destination")
-            ("integrate,i","write the contents of the sources provided and generate the recompilation file at the target")
-            ("workers,w",  value<std::uint16_t>(&m_config.m_worker_count), "size of the worker threads when uploading and downloading")
+            ("retrieve,r","read the UltiHash Volume and put the contents to the target destination")
+            ("integrate,i","write the contents of the sources provided and generate a UltiHash Volume file at the target")
+            ("jobs,j",  value<std::uint16_t>(&m_config.m_worker_count), "size of the worker threads when uploading and downloading")
             ("exclude,E", value<std::vector<std::string>>(&m_operateStrPaths)->multitoken(), "exclude directories when integrating [optional]")
             ("target,T", value<std::string>(&m_targetDirectory), "destination of the target directory for --retrieve(-r) operation [optional]")
             ("verbose,V" , "shows details about the results of running the command [optional]");
@@ -90,15 +91,6 @@ void client_options::handle(const boost::program_options::variables_map& vars)
     std::string errorPath;
 
     //------------------------------------------------ LAMDA FUNCTIONS
-    // lamda function for checking if path exists
-    auto is_Existing = [](std::vector<std::filesystem::path>& input)
-    {
-        for (const auto& Path : input)
-        {
-            if (std::filesystem::exists(Path))
-                throw std::runtime_error("'"+Path.string() + "' already exists.");
-        }
-    };
 
     //lamda function for checking UltiHash Volume
     auto is_UHV = [](const std::vector<std::filesystem::path>& input, const std::string& chosenOpt)
@@ -120,7 +112,34 @@ void client_options::handle(const boost::program_options::variables_map& vars)
     {
         destPaths.push_back(weakly_canonical(std::filesystem::path(m_posPaths.front())));
         is_UHV(destPaths, "destination on --integrate[-i] has wrong extensions. Please ensure that the destination ends with '.uh'.");
-        is_Existing(destPaths);
+
+        if (exists(destPaths.front()))
+        {
+            std::string user_response;
+            std::unordered_set<std::string> validResponses = {"y", "n", "yes", "no"};
+
+            std::cout << "The file already exists. Do you want to overwite it? (y/n) ";
+            std::cin >> user_response;
+
+            std::ranges::transform(user_response, user_response.begin(), [](char c){ return std::tolower(c); });
+
+            if (validResponses.count(user_response) > 0)
+            {
+                if (user_response == "y" || user_response == "yes")
+                {
+                    m_config.m_overwrite = true;
+                }
+                else
+                {
+                    throw std::logic_error("Please provide a new UHV file.");
+                }
+            }
+            else
+            {
+                throw std::runtime_error("Invalid response. Please enter 'y' or 'n'.");
+            }
+        }
+
         if (m_posPaths.size()==1)
             throw std::runtime_error("--integrate[-i] requires a source and a target. Please refer to --help more for information.");
         if (m_exclude)
