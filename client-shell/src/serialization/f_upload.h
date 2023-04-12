@@ -18,15 +18,17 @@ class f_upload : public common::thread_manager
 {
 public:
 
-    f_upload(std::unique_ptr<protocol::client_pool>&,
-            uhv::job_queue<std::unique_ptr<uhv::f_meta_data>>&,
-            uhv::job_queue<std::unique_ptr<uhv::f_meta_data>>&,
-            uh::client::chunking::file_chunker&,
-            unsigned int=1);
+    f_upload(std::unique_ptr<protocol::client_pool>& client_pool,
+            uhv::job_queue<std::unique_ptr<uhv::f_meta_data>>& input_queue,
+            uhv::job_queue<std::unique_ptr<uhv::f_meta_data>>& output_files,
+            uh::client::chunking::file_chunker& chunker,
+            unsigned int num_threads = 1);
     ~f_upload() override;
 
     void spawn_threads() override;
-    void chunk_and_upload(std::unique_ptr<uhv::f_meta_data>&, protocol::client_pool::handle&);
+
+    void chunk_and_upload(std::unique_ptr<uhv::f_meta_data>& metadata,
+                          protocol::client_pool::handle& client);
 
 private:
     uhv::job_queue<std::unique_ptr<uhv::f_meta_data>>& m_input_jq;
