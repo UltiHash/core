@@ -17,24 +17,6 @@ write_block_device::write_block_device(client& c)
 
 // ---------------------------------------------------------------------
 
-write_block_device::~write_block_device()
-{
-    try
-    {
-        m_client.reset();
-    }
-    catch (const std::exception& e)
-    {
-        WARNING << "error while write client reset: " << e.what();
-    }
-    catch (...)
-    {
-        WARNING << "unknown error while write client reset";
-    }
-}
-
-// ---------------------------------------------------------------------
-
 std::streamsize write_block_device::write(std::span<const char> buffer)
 {
     return m_client.write_chunk(buffer);

@@ -19,24 +19,6 @@ read_block_device::read_block_device(client& c)
 
 // ---------------------------------------------------------------------
 
-read_block_device::~read_block_device()
-{
-    try
-    {
-        m_client.reset();
-    }
-    catch (const std::exception& e)
-    {
-        WARNING << "error while read client reset: " << e.what();
-    }
-    catch (...)
-    {
-        WARNING << "unknown error while read client reset";
-    }
-}
-
-// ---------------------------------------------------------------------
-
 std::streamsize read_block_device::write(std::span<const char> buffer)
 {
     THROW(unsupported, "write call not supported on read_block_device");
