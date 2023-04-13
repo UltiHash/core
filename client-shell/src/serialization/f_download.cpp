@@ -42,13 +42,11 @@ void f_download::download_file(std::unique_ptr<uhv::f_meta_data>& f_meta_data)
             throw std::runtime_error("Error: Could not open file "
                                      + f_meta_data->f_path().string() + "\n");
 
-        std::vector<char> buffer(64);
-
         auto client = m_client_pool.get();
         for (auto i = 0; i < f_meta_data->f_hashes().size(); i += 64)
         {
-            std::copy(f_meta_data->f_hashes().begin() + i,
-                      f_meta_data->f_hashes().begin() + i + 64, buffer.begin());
+            std::vector<char> buffer(f_meta_data->f_hashes().begin() + i,
+                                     f_meta_data->f_hashes().begin() + i + 64);
 
             new_file << *client->read_block(buffer);
         }
