@@ -9,9 +9,11 @@ namespace uh::dbn::server
 // ---------------------------------------------------------------------
 
 protocol_factory::protocol_factory(storage::mod& storage,
-                                   const uh::metrics::protocol_metrics& metrics)
+                                   const uh::metrics::protocol_metrics& metrics,
+                                   const uh::net::server_info &serv_info)
     : m_storage(storage),
-      m_metrics(metrics)
+      m_metrics(metrics),
+      m_serv_info (serv_info)
 {
 }
 
@@ -22,7 +24,7 @@ std::unique_ptr<uh::protocol::protocol> protocol_factory::create(std::shared_ptr
     return std::make_unique<uh::protocol::server>
             (client,
                 std::make_unique<uh::metrics::protocol_metrics_wrapper>
-                    (m_metrics, std::make_unique<protocol>(m_storage.backend())));
+                    (m_metrics, std::make_unique<protocol>(m_storage.backend(), m_serv_info)));
 }
 
 // ---------------------------------------------------------------------
