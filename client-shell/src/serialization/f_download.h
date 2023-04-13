@@ -25,6 +25,7 @@ public:
 
     void spawn_threads() override;
 
+    void join();
     const std::map<std::filesystem::path, std::optional<std::string>>& results() const;
 
 private:

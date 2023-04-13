@@ -20,13 +20,24 @@ f_download::f_download(protocol::client_pool& cl_pool,
 
 f_download::~f_download()
 {
+    join();
+}
+
+// ---------------------------------------------------------------------
+
+void f_download::join()
+{
     m_input_jq.stop();
+
     for (auto& thread : m_thread_pool)
     {
-        INFO << "Joining Thread ";
         if (thread.joinable())
+        {
             thread.join();
+        }
     }
+
+    m_thread_pool.clear();
 }
 
 // ---------------------------------------------------------------------

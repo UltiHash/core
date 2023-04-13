@@ -33,6 +33,35 @@ APPLICATION_CONFIG
 
 // ---------------------------------------------------------------------
 
+void handle_errors(const std::string& message,
+                   const std::map<std::filesystem::path, std::optional<std::string>>& results)
+{
+    bool errors = false;
+
+    for (const auto& result : results)
+    {
+        if (!result.second)
+        {
+            continue;
+        }
+
+        if (!errors)
+        {
+            std::cerr << message << "\n";
+            errors = true;
+        }
+
+        std::cerr << result.first << ": " << *result.second << "\n";
+    }
+
+    if (errors)
+    {
+        throw std::runtime_error(message);
+    }
+}
+
+// ---------------------------------------------------------------------
+
 void integrate(protocol::client_pool& pool,
                unsigned worker_count,
                const chunking::chunking_config& chunker_config,
@@ -88,6 +117,9 @@ void retrieve(protocol::client_pool& pool,
 
         f_serialization deserializer(input_path, q_f_meta_data);
         size = deserializer.deserialize(output_path);
+
+        download_class.join();
+        handle_errors("there were errors during download", download_class.results());
     }
 
     auto time_end = std::chrono::system_clock::now();
