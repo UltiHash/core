@@ -14,7 +14,6 @@ class write_block_device : public io::device
 {
 public:
     write_block_device(client& c);
-    virtual ~write_block_device();
 
     virtual std::streamsize write(std::span<const char> buffer) override;
     virtual std::streamsize read(std::span<char> buffer) override;

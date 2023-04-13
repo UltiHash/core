@@ -17,14 +17,22 @@ struct treeNode : public std::enable_shared_from_this<treeNode<T,U>>
 {
     public:
 
-        // ------------------------------------------------ CLASS FUNCTIONS
-        treeNode() : m_data() , m_parent(nullptr), m_seek(0), m_nChild(0) {};
-        explicit treeNode(const T &data, const U& seek = 0, treeNode<T,U>* pr= nullptr, std::size_t nChild = 0) : m_data(data), m_seek(seek), m_parent(pr), m_nChild(nChild) {}
-        ~treeNode() = default;
-        // ------------------------------------------------ END OF CLASS FUNCTIONS
+        treeNode()
+            : m_data(),
+              m_seek(0),
+              m_nChild(0),
+              m_parent(nullptr)
+        {
+        }
 
+        explicit treeNode(const T &data, const U& seek = 0, treeNode<T,U>* pr= nullptr, std::size_t nChild = 0)
+            : m_data(data),
+              m_seek(seek),
+              m_nChild(nChild),
+              m_parent(pr)
+        {
+        }
 
-        // ------------------------------------------------ BASIC SETTERS
         void setData(const T& t)
         {
             this->m_data = t;
@@ -44,10 +52,7 @@ struct treeNode : public std::enable_shared_from_this<treeNode<T,U>>
         {
             m_parent = shptr;
         }
-        // ------------------------------------------------ END OF BASIC SETTERS
 
-
-        // ------------------------------------------------ BASIC GETTERS
         const T& getData() const
         {
             return this->m_data;
@@ -72,10 +77,7 @@ struct treeNode : public std::enable_shared_from_this<treeNode<T,U>>
         {
             return m_parent;
         }
-        // ------------------------------------------------ END OF BASIC GETTERS
 
-
-        // ------------------------------------------------ LOGIC FUNCTIONS
         bool removeChild(const T& t)
         {
             return m_children.erase(t);
@@ -141,17 +143,13 @@ struct treeNode : public std::enable_shared_from_this<treeNode<T,U>>
             os << "\n";
             return os;
         }
-        // ------------------------------------------------ END OF LOGIC FUNCTIONS
 
-
-    protected:
+    private:
         T m_data;
         U m_seek;
         size_t m_nChild;
         treeNode<T,U>* m_parent;
         std::unordered_map<T, std::shared_ptr<treeNode<T,U>>> m_children;
-    private:
-
 };
 
 

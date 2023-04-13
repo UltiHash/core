@@ -46,8 +46,7 @@ uh::options::action options::evaluate(const boost::program_options::variables_ma
     storage_config c;
     c.db_root = vars[optionString(OptionsEnum::DbRoot)].as<std::string>();
     c.backend_type = vars[optionString(OptionsEnum::DbStorageAlgorithm)].as<std::string>();
-
-    size_t size_to_allocate = vars[optionString(OptionsEnum::AllocateStorage)].as<std::size_t>();
+    c.allocate_bytes = vars[optionString(OptionsEnum::AllocateStorage)].as<std::size_t>();
 
     if (vars.count(optionString(OptionsEnum::CreateNewRoot)) > 0)
     {

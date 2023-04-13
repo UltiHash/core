@@ -106,7 +106,7 @@ namespace uh::serialization {
             }
             else if constexpr (sizeof(InnerType) > 1) {  // different endian
                 char data[sizeof(InnerType)];
-                for (long i = 0; i < data_size; i++) {
+                for (auto i = 0u; i < data_size; i++) {
                     sync_read (dev_, data);
                     char *tmp_dat = endian_convert (data);
                     auto *val = reinterpret_cast <InnerType *> (tmp_dat);

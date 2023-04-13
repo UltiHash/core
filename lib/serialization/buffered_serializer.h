@@ -19,7 +19,10 @@ namespace uh::serialization {
     class buffered_serializer: public Serializer {
         uh::io::buffered_device <io::device> dev_;
     public:
-        explicit buffered_serializer (io::device &dev): dev_(dev, 1024), Serializer(dev_){}
+        explicit buffered_serializer(io::device &dev)
+            : Serializer(dev_),
+              dev_(dev, 1024)
+        {}
 
         void sync () {
             dev_.sync();

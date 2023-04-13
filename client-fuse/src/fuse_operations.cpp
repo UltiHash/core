@@ -205,7 +205,7 @@ int __uh_ftruncate (const char *path, off_t off, struct fuse_file_info *fi) {
         return -ENOMEM;
     }
 
-    if (off > fmd.f_size()) {
+    if (static_cast<size_t>(off) > fmd.f_size()) {
         return -EFBIG;
     }
 
@@ -351,7 +351,7 @@ int __uh_read (const char *path, char *buffer, size_t size, off_t offset, struct
     {
         std::vector<char> current_hash(64);
 
-        for (auto i = 0; i < fmd.f_hashes().size(); i += 64)
+        for (auto i = 0u; i < fmd.f_hashes().size(); i += 64)
         {
             std::copy(fmd.f_hashes().begin() + i,
                       fmd.f_hashes().begin() + i + 64, current_hash.begin());
@@ -391,7 +391,7 @@ int __uh_write (const char *path, const char *buf, size_t size, off_t offset, st
     auto context = get_context();
     uh::protocol::client_pool::handle&& client_handle = context->client_pool->get();
 
-    if (offset == fmd.f_size() and offset > 0) {       // if this is an append, for instance when performing "echo data >> file"
+    if (static_cast<size_t>(offset) == fmd.f_size() and offset > 0) {       // if this is an append, for instance when performing "echo data >> file"
 
         // read the last chunk of the file
         std::vector<char> current_hash(64);
