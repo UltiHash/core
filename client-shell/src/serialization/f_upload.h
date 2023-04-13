@@ -1,14 +1,12 @@
 #ifndef SERIALIZATION_F_UPLOAD_H
 #define SERIALIZATION_F_UPLOAD_H
 
-
 #include <chunking/mod.h>
 #include <fstream>
 #include <uhv/job_queue.h>
 #include <uhv/f_meta_data.h>
 #include <protocol/client_pool.h>
 #include "../common/thread_manager.h"
-
 
 
 namespace uh::client::serialization
