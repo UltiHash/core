@@ -10,12 +10,12 @@ f_upload::f_upload(std::unique_ptr<protocol::client_pool>& cl_pool,
                    uhv::job_queue<std::unique_ptr<uhv::f_meta_data>>& in_jq,
                    uhv::job_queue<std::unique_ptr<uhv::f_meta_data>>& out_jq,
                    uh::client::chunking::file_chunker& chunker,
-                   unsigned int num_threads):
-                   m_client_pool(cl_pool),
-                   m_input_jq(in_jq),
-                   m_output_jq(out_jq),
-                   m_chunker(chunker),
-                   common::thread_manager(num_threads)
+                   unsigned int num_threads)
+    : common::thread_manager(num_threads),
+      m_input_jq(in_jq),
+      m_output_jq(out_jq),
+      m_client_pool(cl_pool),
+      m_chunker(chunker)
 {
 }
 

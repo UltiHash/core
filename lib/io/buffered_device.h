@@ -19,9 +19,11 @@ namespace uh::io {
         unsigned long pointer = 0;
         DeviceType &dev_;
     public:
-        explicit buffered_device(DeviceType &dev, std::size_t buffer_size = 1024) :
-            dev_(dev), buffer_size_ {buffer_size}, buffer{new char[buffer_size]} {}
-
+        explicit buffered_device(DeviceType &dev, std::size_t buffer_size = 1024)
+            : buffer_size_ {buffer_size},
+              buffer{new char[buffer_size]},
+              dev_(dev)
+        {}
 
         std::streamsize write(std::span<const char> data) override {
             if (pointer + data.size() >= buffer_size_) {

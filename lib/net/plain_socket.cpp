@@ -38,7 +38,7 @@ std::unique_ptr<plain_socket> plain_socket::connect(io_context& ctx,
     std::unique_ptr<plain_socket> conn = std::make_unique<plain_socket>(std::move(sock));
     conn->peer() = endpoint;
 
-    return std::move(conn);
+    return conn;
 }
 
 // ---------------------------------------------------------------------
