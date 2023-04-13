@@ -23,6 +23,7 @@ struct private_context;
 
 private_context* get_context();
 f_meta_data& get_metadata(struct fuse_file_info* fi);
+void set_metadata(struct fuse_file_info* fi, f_meta_data& fmd);
 std::vector <std::filesystem::path> get_files (const std::string &directory, const std::unordered_map <std::string, uh::uhv::ts_f_meta_data> &metadata_list);
 std::size_t subfolders_count (const std::string &directory, std::unordered_map <std::string,
             uh::uhv::ts_f_meta_data> &metadata_list);
