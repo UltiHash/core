@@ -15,7 +15,7 @@ loader& loader::evaluate(int argc, const char** argv)
     m_options.add(m_hidden);
 
     po::positional_options_description pos;
-    for (const auto pm : m_positional_mappings)
+    for (const auto& pm : m_positional_mappings)
     {
         pos.add(pm.map_to.c_str(), pm.max_count);
     }

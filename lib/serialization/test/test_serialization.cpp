@@ -105,7 +105,7 @@ BOOST_AUTO_TEST_CASE(range_types) {
     std::vector <double> dvec1 {1.1, 3.2, 4.45, 3.76};
     std::vector <std::uint8_t> emptyvec {};
     std::vector <std::uint64_t> largevec (1024ul*1024ul*16ul);
-    for (int i = 0; i < largevec.size(); i+=1024) {
+    for (auto i = 0u; i < largevec.size(); i+=1024) {
         largevec[i] = i;
     }
 
@@ -127,12 +127,12 @@ BOOST_AUTO_TEST_CASE(buffered_serializer_test) {
     std::vector <double> dvec1 {1.1, 3.2, 4.45, 3.76};
     std::vector <std::uint8_t> emptyvec {};
     std::vector <std::uint64_t> largevec (1024ul*1024ul*16ul);
-    for (int i = 0; i < largevec.size(); i+=1024) {
+    for (auto i = 0u; i < largevec.size(); i+=1024) {
         largevec[i] = i;
     }
 
-    unsigned long ov1 = 2, dv1;
-    double ov2 = 4.12, dv2;
+    unsigned long ov1 = 2;
+    double ov2 = 4.12;
 
     test_range_serialization <std::string, buffered_serializer <sl_serializer>> (str1, "string test");
     test_range_serialization < std::vector <long>, buffered_serializer<sl_serializer>> (lvec1, "long vector test");
@@ -155,19 +155,19 @@ BOOST_AUTO_TEST_CASE(buffered_serialization_test) {
     std::vector<double> dvec1{1.1, 3.2, 4.45, 3.76};
     std::vector<std::uint8_t> emptyvec{};
     std::vector<std::uint64_t> largevec(1024ul * 1024ul * 256ul);
-    for (int i = 0; i < largevec.size(); i += 1024) {
+    for (auto i = 0u; i < largevec.size(); i += 1024) {
         largevec[i] = i;
     }
 
     constexpr std::size_t buffer_size = 1024;
     char buffer[buffer_size];
-    for (int i = 0; i < buffer_size; i += 64) {
+    for (auto i = 0u; i < buffer_size; i += 64) {
         buffer[i] = i;
     }
     std::span ds{buffer, buffer_size};
 
-    unsigned long ov1 = 2, dv1;
-    double ov2 = 4.12, dv2;
+    unsigned long ov1 = 2;
+    double ov2 = 4.12;
 
     uh::io::sstream_device dev;
 

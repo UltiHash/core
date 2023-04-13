@@ -1,5 +1,7 @@
 #include "client_pool.h"
 
+#include <logging/logging_boost.h>
+
 
 namespace uh::protocol
 {
@@ -75,7 +77,15 @@ void client_pool::put_back(std::unique_ptr<client> c)
 
     if (c->valid())
     {
-        m_clients.push_back(std::move(c));
+        try
+        {
+            c->reset();
+            m_clients.push_back(std::move(c));
+        }
+        catch (const std::exception& e)
+        {
+            DEBUG << "Error during reset: " << e.what();
+        }
     }
 
     m_available_connection++;
