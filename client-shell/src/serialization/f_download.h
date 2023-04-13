@@ -16,14 +16,15 @@ class f_download : public common::thread_manager
 {
 public:
 
-    f_download(std::unique_ptr<protocol::client_pool>&,
-                uhv::job_queue<std::unique_ptr<uhv::f_meta_data>>&,
-                std::filesystem::path,
-                unsigned int=1);
+    f_download(std::unique_ptr<protocol::client_pool>& cl_pool,
+               uhv::job_queue<std::unique_ptr<uhv::f_meta_data>>& jq,
+               std::filesystem::path dest_path,
+               unsigned int num_threads = 1);
     ~f_download() override;
 
     void spawn_threads() override;
-    static void download_files(std::unique_ptr<uhv::f_meta_data>&, protocol::client_pool::handle&);
+    static void download_files(std::unique_ptr<uhv::f_meta_data>& f_meta_data,
+                               protocol::client_pool::handle& client_handle);
 
 private:
     uhv::job_queue<std::unique_ptr<uhv::f_meta_data>>& m_input_jq;

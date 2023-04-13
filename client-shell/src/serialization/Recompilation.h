@@ -23,9 +23,9 @@ namespace uh::client::serialization
 class Recompilation
 {
     public:
-        Recompilation(const co::client_config&,
-        const uh::client::chunking::chunking_config& ,
-        std::unique_ptr<uh::protocol::client_pool>&&);
+        Recompilation(const co::client_config& config,
+        const uh::client::chunking::chunking_config& chunker_config,
+        std::unique_ptr<uh::protocol::client_pool>&& pool);
 
     private:
         void integrate();
