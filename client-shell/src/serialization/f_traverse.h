@@ -17,16 +17,14 @@ class f_traverse
 {
 public:
 
-    f_traverse(std::vector<std::filesystem::path>,
-               std::vector<std::filesystem::path>,
-               uhv::job_queue<std::unique_ptr<uhv::f_meta_data>>&);
+    f_traverse(std::vector<std::filesystem::path> traverse_Paths,
+               uhv::job_queue<std::unique_ptr<uhv::f_meta_data>>& jq);
     ~f_traverse() = default;
 
     void traverse();
 
 private:
     std::queue<std::filesystem::path> m_fs_queue;
-    std::vector<std::filesystem::path> m_operate_paths;
     uhv::job_queue<std::unique_ptr<uhv::f_meta_data>>& m_output_jq;
 };
 

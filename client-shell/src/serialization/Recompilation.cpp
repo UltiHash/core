@@ -47,7 +47,7 @@ void Recompilation::integrate()
                               q_f_mdata_w_hash, chunking_module.chunker(), m_client_config.m_worker_count);
         upload_class.spawn_threads();
 
-        f_traverse traverse_class(m_client_config.m_inputPaths, m_client_config.m_operatePaths, q_f_meta_data);
+        f_traverse traverse_class(m_client_config.m_inputPaths, q_f_meta_data);
     }
 
     q_f_mdata_w_hash.sort();
