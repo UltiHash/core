@@ -119,13 +119,12 @@ uint64_t f_serialization::serialize(const std::vector<std::filesystem::path>& ro
 uint64_t f_serialization::deserialize(const std::filesystem::path& dest_path, bool create_files)
 {
     std::uint64_t raw_size = 0;
-
     io::file file (m_UHV_path);
     uh::serialization::sl_deserializer deserialize (file);
-    const auto count = deserialize.read <unsigned long> ();
+    auto count = deserialize.read <unsigned long> ();
 
-    for (auto i = 0; i < count; ++i) {
-
+    while (count--)
+    {
         auto p_f_meta_data = __deserialize_f_meta_data(dest_path, file);
 
         if (create_files) {

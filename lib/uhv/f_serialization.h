@@ -45,7 +45,6 @@ private:
     std::filesystem::path m_UHV_path;
     uhv::job_queue<std::unique_ptr<uhv::f_meta_data>>& m_job_queue;
     bool m_overwrite;
-
 };
 
 // ---------------------------------------------------------------------

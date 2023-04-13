@@ -1,7 +1,10 @@
 #include "read_block_device.h"
 
+#include <logging/logging_boost.h>
+
 #include "client.h"
 #include "exception.h"
+
 
 
 namespace uh::protocol
@@ -12,19 +15,6 @@ namespace uh::protocol
 read_block_device::read_block_device(client& c)
     : m_client(c)
 {
-}
-
-// ---------------------------------------------------------------------
-
-read_block_device::~read_block_device()
-{
-    try
-    {
-        m_client.reset();
-    }
-    catch (...)
-    {
-    }
 }
 
 // ---------------------------------------------------------------------

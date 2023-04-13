@@ -26,9 +26,9 @@ tls_server::tls_server(const server_config& config,
                        uh::protocol::protocol_factory& protocol_factory)
     : m_context(),
       m_acceptor(m_context, ip::tcp::endpoint(ip::tcp::v4(), config.port)),
+      m_ssl(ssl::context::tlsv13),
       m_protocol_factory(protocol_factory),
-      m_scheduler(config.threads),
-      m_ssl(ssl::context::tlsv13)
+      m_scheduler(config.threads)
 {
     m_ssl.use_certificate_chain_file(config.tls_chain);
     m_ssl.use_private_key_file(config.tls_pkey, ssl::context::pem);

@@ -20,7 +20,6 @@ namespace uh::serialization {
         // ---------------------------------------------------------------------
 
         static constexpr inline void set_control_byte_size_length (char &control_byte_v, const auto size_length) {
-            const auto nl_data_size_len = endian_convert (size_length);
             const char size_len_bits = (static_cast <char> (size_length));
             control_byte_v |= size_len_bits;
         }

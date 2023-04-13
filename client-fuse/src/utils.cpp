@@ -12,9 +12,9 @@ private_context* get_context()
     return static_cast<private_context*>(fuse_get_context()->private_data);
 }
 
-f_meta_data &get_metadata(struct fuse_file_info* fi)
+void set_metadata(struct fuse_file_info* fi, f_meta_data& fmd)
 {
-    return reinterpret_cast<ts_f_meta_data*>(fi->fh)->get()();
+    fi->fh = reinterpret_cast<size_t>(&fmd);
 }
 
 std::vector <std::filesystem::path> get_files (const std::string &directory, const std::unordered_map <std::string,
