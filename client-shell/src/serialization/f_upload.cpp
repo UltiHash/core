@@ -6,7 +6,7 @@ namespace uh::client::serialization
 
 // ---------------------------------------------------------------------
 
-f_upload::f_upload(std::unique_ptr<protocol::client_pool>& cl_pool,
+f_upload::f_upload(protocol::client_pool& cl_pool,
                    uhv::job_queue<std::unique_ptr<uhv::f_meta_data>>& in_jq,
                    uhv::job_queue<std::unique_ptr<uhv::f_meta_data>>& out_jq,
                    uh::client::chunking::file_chunker& chunker,
@@ -63,7 +63,7 @@ void f_upload::spawn_threads()
     {
         m_thread_pool.emplace_back([&]()
         {
-           protocol::client_pool::handle&& client_connection_handle = m_client_pool->get();
+           protocol::client_pool::handle&& client_connection_handle = m_client_pool.get();
 
            while (auto job = m_input_jq.get_job())
            {

@@ -18,7 +18,7 @@ class f_upload : public common::thread_manager
 {
 public:
 
-    f_upload(std::unique_ptr<protocol::client_pool>& client_pool,
+    f_upload(protocol::client_pool& client_pool,
             uhv::job_queue<std::unique_ptr<uhv::f_meta_data>>& input_queue,
             uhv::job_queue<std::unique_ptr<uhv::f_meta_data>>& output_files,
             uh::client::chunking::file_chunker& chunker,
@@ -33,7 +33,7 @@ public:
 private:
     uhv::job_queue<std::unique_ptr<uhv::f_meta_data>>& m_input_jq;
     uhv::job_queue<std::unique_ptr<uhv::f_meta_data>>& m_output_jq;
-    std::unique_ptr<uh::protocol::client_pool>& m_client_pool;
+    uh::protocol::client_pool& m_client_pool;
     uh::client::chunking::file_chunker& m_chunker;
 };
 
