@@ -35,22 +35,7 @@ std::unique_ptr<net::server> make_server(
 } // namespace
 
 // ---------------------------------------------------------------------
-/*
-    struct callable
-    {
-        void set_server(server& p)
-        {
-            m_server = p;
-        }
 
-        bool is_busy()
-        {
-            return m_server && m_server->busy();
-        }
-
-        server* m_server = nullptr;
-    };
-*/
 struct mod::impl
 {
     impl(const net::server_config& config,
