@@ -31,8 +31,7 @@ f_download::~f_download()
 
 // ---------------------------------------------------------------------
 
-void f_download::download_files(std::unique_ptr<uhv::f_meta_data>& f_meta_data,
-                            protocol::client_pool::handle& client_handle)
+void f_download::download_file(std::unique_ptr<uhv::f_meta_data>& f_meta_data)
 {
     if (f_meta_data->f_type() == uhv::uh_file_type::regular)
     {
@@ -45,12 +44,13 @@ void f_download::download_files(std::unique_ptr<uhv::f_meta_data>& f_meta_data,
 
         std::vector<char> buffer(64);
 
-        for (auto i = 0u; i < f_meta_data->f_hashes().size(); i += 64)
+        auto client = m_client_pool->get();
+        for (auto i = 0; i < f_meta_data->f_hashes().size(); i += 64)
         {
             std::copy(f_meta_data->f_hashes().begin() + i,
                       f_meta_data->f_hashes().begin() + i + 64, buffer.begin());
 
-            new_file << *client_handle->read_block(buffer);
+            new_file << *client->read_block(buffer);
         }
 
         new_file.flush();
@@ -64,7 +64,6 @@ void f_download::download_files(std::unique_ptr<uhv::f_meta_data>& f_meta_data,
     std::filesystem::permissions(f_meta_data->f_path(),
                                  static_cast<std::filesystem::perms>(f_meta_data->f_permissions()),
                                  std::filesystem::perm_options::replace);
-
 }
 
 // ---------------------------------------------------------------------
@@ -75,25 +74,41 @@ void f_download::spawn_threads()
     {
         m_thread_pool.emplace_back([&]()
         {
-            protocol::client_pool::handle&& client_connection_handle = m_client_pool->get();
-
             while (auto item = m_input_jq.get_job())
             {
                 if (item == std::nullopt)
+                {
                     break;
+                }
 
                 try
                 {
-                    download_files(item.value(), client_connection_handle);
+                    download_file(*item);
+                    add_result((*item)->f_path());
                 }
                 catch (const std::exception& e)
                 {
-                    ERROR << "failure while downloading " << (*item)->f_path() << ": " << e.what();
-                    return;
+                    add_result((*item)->f_path(), e.what());
                 }
-           }
+            }
         });
     }
+}
+
+// ---------------------------------------------------------------------
+
+const std::map<std::filesystem::path, std::optional<std::string>>& f_download::results() const
+{
+    return m_results;
+}
+
+// ---------------------------------------------------------------------
+
+void f_download::add_result(const std::filesystem::path& p,
+                            const std::optional<std::string>& error)
+{
+    const std::lock_guard<std::mutex> lock(m_result_mutex);
+    m_results[p] = error;
 }
 
 // ---------------------------------------------------------------------

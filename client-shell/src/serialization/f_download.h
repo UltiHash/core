@@ -5,6 +5,7 @@
 #include <uhv/job_queue.h>
 #include "../common/thread_manager.h"
 #include <fstream>
+#include <map>
 
 
 namespace uh::client::serialization
@@ -23,13 +24,21 @@ public:
     ~f_download() override;
 
     void spawn_threads() override;
-    static void download_files(std::unique_ptr<uhv::f_meta_data>& f_meta_data,
-                               protocol::client_pool::handle& client_handle);
+
+    const std::map<std::filesystem::path, std::optional<std::string>>& results() const;
 
 private:
+    void add_result(const std::filesystem::path& p,
+                    const std::optional<std::string>& error = std::nullopt);
+
+    void download_file(std::unique_ptr<uhv::f_meta_data>& f_meta_data);
+
     uhv::job_queue<std::unique_ptr<uhv::f_meta_data>>& m_input_jq;
     std::unique_ptr<uh::protocol::client_pool>& m_client_pool;
     std::filesystem::path m_dest_path;
+
+    std::map<std::filesystem::path, std::optional<std::string>> m_results;
+    std::mutex m_result_mutex;
 };
 
 // ---------------------------------------------------------------------
