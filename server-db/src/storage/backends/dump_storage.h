@@ -74,14 +74,6 @@ class dump_storage : public backend {
          */
         uh::protocol::blob hashing_function(const uh::protocol::blob &data);
 
-        /**
-         * Given a hash string as a uh::protocol::blob, return the file path
-         * to the corresponding data block
-         * @param hash: the hash as a std::vector
-         * @return a file path as a boost::filesystem::path
-         */
-        virtual std::filesystem::path get_filepath_from_hash(const uh::protocol::blob &hash);
-
     protected:
 
         constexpr static std::string_view m_type = "DumpStorage";

@@ -32,10 +32,6 @@ public:
     static std::vector<char> serialize_f_meta_data(const std::unique_ptr<uh::uhv::f_meta_data>& ptr_f_meta_data,
                                         const std::filesystem::path& relative_path);
 
-    //static std::unique_ptr<uh::uhv::f_meta_data> deserialize_f_meta_data(std::vector<std::uint8_t>& uhv_container,
-    //                                                                         std::vector<std::uint8_t>::iterator& it,
-    //                                                                         const std::filesystem::path& dest_path);
-
 private:
     static void __serialize_f_meta_data(const std::unique_ptr<uh::uhv::f_meta_data>& ptr_f_meta_data,
                                         const std::filesystem::path& relative_path,

@@ -6,9 +6,9 @@ namespace uh::client::serialization
 // ---------------------------------------------------------------------
 
 f_traverse::f_traverse(std::vector<std::filesystem::path> traverse_Paths,
-                       std::vector<std::filesystem::path> operate_Paths,
-                       uhv::job_queue<std::unique_ptr<uhv::f_meta_data>>& jq) :
-                       m_fs_queue(), m_operate_paths(std::move(operate_Paths)) , m_output_jq(jq)
+                       uhv::job_queue<std::unique_ptr<uhv::f_meta_data>>& jq)
+    : m_fs_queue(),
+      m_output_jq(jq)
 {
     for (auto& item : traverse_Paths)
         m_fs_queue.push(std::move(item));
