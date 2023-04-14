@@ -1,12 +1,15 @@
 #ifndef SERIALIZATION_F_UPLOAD_H
 #define SERIALIZATION_F_UPLOAD_H
 
-#include <chunking/mod.h>
-#include <fstream>
 #include <uhv/job_queue.h>
 #include <uhv/f_meta_data.h>
 #include <protocol/client_pool.h>
+
+#include <chunking/mod.h>
 #include "../common/thread_manager.h"
+
+#include <fstream>
+#include <map>
 
 
 namespace uh::client::serialization
@@ -18,21 +21,32 @@ class f_upload : public common::thread_manager
 {
 public:
 
-    f_upload(std::unique_ptr<protocol::client_pool>&,
-            uhv::job_queue<std::unique_ptr<uhv::f_meta_data>>&,
-            uhv::job_queue<std::unique_ptr<uhv::f_meta_data>>&,
-            uh::client::chunking::file_chunker&,
-            unsigned int=1);
+    f_upload(protocol::client_pool& client_pool,
+            uhv::job_queue<std::unique_ptr<uhv::f_meta_data>>& input_queue,
+            uhv::job_queue<std::unique_ptr<uhv::f_meta_data>>& output_files,
+            uh::client::chunking::file_chunker& chunker,
+            unsigned int num_threads = 1);
     ~f_upload() override;
 
     void spawn_threads() override;
-    void chunk_and_upload(std::unique_ptr<uhv::f_meta_data>&, protocol::client_pool::handle&);
+
+    void join();
+    const std::map<std::filesystem::path, std::optional<std::string>>& results() const;
+
+    void chunk_and_upload(std::unique_ptr<uhv::f_meta_data>& metadata,
+                          protocol::client_pool::handle& client);
 
 private:
+    void add_result(const std::filesystem::path& p,
+                    const std::optional<std::string>& error = std::nullopt);
+
     uhv::job_queue<std::unique_ptr<uhv::f_meta_data>>& m_input_jq;
     uhv::job_queue<std::unique_ptr<uhv::f_meta_data>>& m_output_jq;
-    std::unique_ptr<uh::protocol::client_pool>& m_client_pool;
+    uh::protocol::client_pool& m_client_pool;
     uh::client::chunking::file_chunker& m_chunker;
+
+    std::map<std::filesystem::path, std::optional<std::string>> m_results;
+    std::mutex m_result_mutex;
 };
 
 // ---------------------------------------------------------------------
