@@ -71,18 +71,6 @@ private:
 
 // ---------------------------------------------------------------------
 
-std::filesystem::path dump_storage::get_filepath_from_hash(const uh::protocol::blob &hash){
-
-    std::string hash_string = to_hex_string(hash.begin(), hash.end());
-
-    DEBUG << "Here is the formated sha512 string " << hash_string;
-
-    std::filesystem::path filepath = this->m_root / hash_string;
-    return filepath;
-}
-
-// ---------------------------------------------------------------------
-
 uh::protocol::blob dump_storage::hashing_function(const uh::protocol::blob &data) {
     return uh::dbn::storage::sha512(data);
 }
@@ -105,8 +93,16 @@ std::unique_ptr<io::device> dump_storage::read_block(const uh::protocol::blob& h
 
     std::string hash_string(hash.begin(), hash.end());
 
-    std::filesystem::path filepath = this->get_filepath_from_hash(hash);
-    return std::make_unique<io::file>(filepath);
+    std::string hex = to_hex_string(hash.begin(), hash.end());
+    std::filesystem::path filepath = this->m_root / hex;
+
+    auto file = std::make_unique<io::file>(filepath);
+    if (!file->valid())
+    {
+        THROW(util::exception, "unknown hash: " + hex);
+    }
+
+    return file;
 }
 
 // ---------------------------------------------------------------------
