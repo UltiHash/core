@@ -59,7 +59,7 @@ void f_download::download_file(std::unique_ptr<uhv::f_meta_data>& f_meta_data)
             std::vector<char> buffer(f_meta_data->f_hashes().begin() + i,
                                      f_meta_data->f_hashes().begin() + i + 64);
 
-            new_file << *client->read_block(buffer);
+            copy(*client->read_block(buffer), new_file);
         }
 
         new_file.flush();
