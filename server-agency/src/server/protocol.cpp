@@ -14,8 +14,9 @@ namespace uh::an::server
 
 // ---------------------------------------------------------------------
 
-protocol::protocol(cluster::mod& cluster):
-        m_cluster(cluster)
+protocol::protocol(cluster::mod& cluster, const uh::net::server_info &serv_info):
+        m_cluster(cluster),
+        m_serv_info (serv_info)
 {
 }
 
@@ -23,6 +24,12 @@ protocol::protocol(cluster::mod& cluster):
 
 uh::protocol::server_information protocol::on_hello(const std::string& client_version)
 {
+
+    if (m_serv_info.server_busy())
+    {
+        THROW(server_busy, "server is busy, try again later");
+    }
+
     INFO << "connection from client with version " << client_version;
 
     return

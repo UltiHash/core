@@ -11,8 +11,9 @@ namespace uh::dbn::server
 
 // ---------------------------------------------------------------------
 
-protocol::protocol(storage::backend& storage)
-        : m_storage(storage)
+protocol::protocol(storage::backend& storage, const uh::net::server_info &serv_info)
+        : m_storage(storage),
+        m_serv_info (serv_info)
 {
 }
 
@@ -20,6 +21,12 @@ protocol::protocol(storage::backend& storage)
 
 server_information protocol::on_hello(const std::string& client_version)
 {
+
+    if (m_serv_info.server_busy())
+    {
+        THROW(server_busy, "server is busy, try again later");
+    }
+
     INFO << "connection from client with version " << client_version;
 
     return {

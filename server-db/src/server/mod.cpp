@@ -42,8 +42,10 @@ struct mod::impl
          dbn::metrics::mod& metrics);
 
     boost::asio::io_context io;
-    protocol_factory pf;
     std::unique_ptr<net::server> server;
+    net::server_info serv_info;
+    protocol_factory pf;
+
 };
 
 // ---------------------------------------------------------------------
@@ -52,8 +54,9 @@ mod::impl::impl(const net::server_config& config,
                 dbn::storage::mod& storage,
                 dbn::metrics::mod& metrics)
     : io(),
-      pf(storage, metrics.protocol()),
-      server(make_server(config, pf))
+      server(make_server(config, pf)),
+      serv_info (*server),
+      pf(storage, metrics.protocol(), serv_info)
 {
 }
 
