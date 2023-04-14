@@ -23,13 +23,24 @@ f_upload::f_upload(protocol::client_pool& cl_pool,
 
 f_upload::~f_upload()
 {
+    join();
+}
+
+// ---------------------------------------------------------------------
+
+void f_upload::join()
+{
     m_input_jq.stop();
+
     for (auto& thread : m_thread_pool)
     {
-        INFO << "Joining Thread ";
         if (thread.joinable())
+        {
             thread.join();
+        }
     }
+
+    m_thread_pool.clear();
 }
 
 // ---------------------------------------------------------------------
@@ -72,18 +83,36 @@ void f_upload::spawn_threads()
                    break;
                 }
 
+                auto filename = (*job)->f_path();
+
                 try
                 {
-                    chunk_and_upload(job.value(), client_connection_handle);
+                    chunk_and_upload(*job, client_connection_handle);
+                    add_result(filename);
                 }
                 catch (const std::exception& e)
                 {
-                    ERROR << "failure while uploading " << (*job)->f_path() << ": " << e.what();
-                    return;
+                    add_result(filename, e.what());
                 }
            }
         });
     }
+}
+
+// ---------------------------------------------------------------------
+
+const std::map<std::filesystem::path, std::optional<std::string>>& f_upload::results() const
+{
+    return m_results;
+}
+
+// ---------------------------------------------------------------------
+
+void f_upload::add_result(const std::filesystem::path& p,
+                          const std::optional<std::string>& error)
+{
+    const std::lock_guard<std::mutex> lock(m_result_mutex);
+    m_results[p] = error;
 }
 
 // ---------------------------------------------------------------------

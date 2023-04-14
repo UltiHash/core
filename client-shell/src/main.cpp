@@ -83,6 +83,9 @@ void integrate(protocol::client_pool& pool,
         upload_class.spawn_threads();
 
         f_traverse traverse_class(input, q_f_meta_data);
+
+        upload_class.join();
+        handle_errors("there were errors during upload", upload_class.results());
     }
 
     q_f_mdata_w_hash.sort();

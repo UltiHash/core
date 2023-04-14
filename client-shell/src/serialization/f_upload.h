@@ -1,12 +1,15 @@
 #ifndef SERIALIZATION_F_UPLOAD_H
 #define SERIALIZATION_F_UPLOAD_H
 
-#include <chunking/mod.h>
-#include <fstream>
 #include <uhv/job_queue.h>
 #include <uhv/f_meta_data.h>
 #include <protocol/client_pool.h>
+
+#include <chunking/mod.h>
 #include "../common/thread_manager.h"
+
+#include <fstream>
+#include <map>
 
 
 namespace uh::client::serialization
@@ -27,14 +30,23 @@ public:
 
     void spawn_threads() override;
 
+    void join();
+    const std::map<std::filesystem::path, std::optional<std::string>>& results() const;
+
     void chunk_and_upload(std::unique_ptr<uhv::f_meta_data>& metadata,
                           protocol::client_pool::handle& client);
 
 private:
+    void add_result(const std::filesystem::path& p,
+                    const std::optional<std::string>& error = std::nullopt);
+
     uhv::job_queue<std::unique_ptr<uhv::f_meta_data>>& m_input_jq;
     uhv::job_queue<std::unique_ptr<uhv::f_meta_data>>& m_output_jq;
     uh::protocol::client_pool& m_client_pool;
     uh::client::chunking::file_chunker& m_chunker;
+
+    std::map<std::filesystem::path, std::optional<std::string>> m_results;
+    std::mutex m_result_mutex;
 };
 
 // ---------------------------------------------------------------------
