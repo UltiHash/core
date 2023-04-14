@@ -85,7 +85,11 @@ std::size_t write_from_buffer(
 
 // ---------------------------------------------------------------------
 
-std::ostream& operator<<(std::ostream& out, device& d);
+/**
+ * Copy the complete device to the given std::ostream&. Return number of
+ * bytes written.
+ */
+std::size_t copy(device& d, std::ostream& out);
 
 // ---------------------------------------------------------------------
 
