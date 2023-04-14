@@ -68,13 +68,15 @@ std::size_t write_from_buffer(
 
 // ---------------------------------------------------------------------
 
-std::ostream& operator<<(std::ostream& out, device& d)
+std::size_t copy(device& d, std::ostream& out)
 {
     std::array<char, BUFFER_SIZE> buffer;
+    std::size_t rv = 0;
 
     while (d.valid())
     {
         auto read = d.read(buffer);
+        rv += read;
         if (!read)
         {
             break;
@@ -82,7 +84,7 @@ std::ostream& operator<<(std::ostream& out, device& d)
         out.write(buffer.data(), read);
     }
 
-    return out;
+    return rv;
 }
 
 // ---------------------------------------------------------------------
