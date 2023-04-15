@@ -381,7 +381,7 @@ int __uh_read (const char *path, char *buffer, size_t size, off_t offset, struct
 
     auto context = get_context();
 
-    // get f_metadata without locking its
+    // get f_metadata without keeping it locked
     auto &fmd = context->open_files.get()().at(fi->fh).get() ();
 
     uh::protocol::client_pool::handle client_handle = context->client_pool->get();
