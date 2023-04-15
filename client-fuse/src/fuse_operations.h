@@ -13,20 +13,22 @@
 #include <uhv/job_queue.h>
 #include <uhv/f_serialization.h>
 #include <uhv/f_meta_data.h>
-#include <fuse_f_meta_data.h>
 #include <protocol/client_factory.h>
 #include <protocol/client_pool.h>
 #include <net/plain_socket.h>
 #include <util/exception.h>
-#include "fuse_ts_container.h"
+#include "thread_safe_type.h"
 
 namespace uh::uhv {
 
 struct private_context
 {
+    unsigned long fd = 0;
     boost::asio::io_context io;
     std::unique_ptr<uh::protocol::client_pool> client_pool;
-    ts_container container {};
+    ts_container fmetadata_map;
+    thread_safe_type <std::unordered_map <std::string, unsigned long>> subdirectory_counts;
+    thread_safe_type <std::unordered_map <unsigned long, ts_f_meta_data&>> open_files;
 };
 
 
@@ -55,6 +57,8 @@ void *uh_init (struct fuse_conn_info *conn);
 int uh_readdir (const char *path, void *buf, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info *fi);
 
 int uh_open (const char *path, struct fuse_file_info *fi);
+
+int uh_release (const char *path, struct fuse_file_info *fi);
 
 int uh_read (const char *, char *, size_t, off_t, struct fuse_file_info *);
 

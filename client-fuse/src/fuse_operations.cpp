@@ -23,7 +23,7 @@ int __uh_getattr (const char *path, struct stat *stbuf)
     uh::uhv::uh_file_type f_type;
 
     auto *ctx = get_context();
-    auto container_handle = ctx->container.get();
+    auto container_handle = ctx->fmetadata_map.get();
     auto& unordered_map = container_handle();
 
     auto it = unordered_map.find(path);
@@ -58,7 +58,7 @@ int __uh_getattr (const char *path, struct stat *stbuf)
     if (f_type == uh::uhv::uh_file_type::directory)
     {
         stbuf->st_mode = S_IFDIR | 0766;
-        stbuf->st_nlink = 2 + subfolders_count (path, unordered_map);
+        stbuf->st_nlink = 2 + get_context()->subdirectory_counts.get() ().at(f_meta_data.f_path());
     }
     std::cout << "leaving uh_getattr(" << path << ", )\n";
 
@@ -72,7 +72,7 @@ int uh_unlink(const char *path)
     uh::uhv::uh_file_type f_type;
 
     auto *ctx = get_context();
-    auto container_handle = ctx->container.get();
+    auto container_handle = ctx->fmetadata_map.get();
     auto& unordered_map = container_handle();
     auto it = unordered_map.find(path);
     if (it == unordered_map.end())
@@ -114,7 +114,7 @@ int uh_rmdir (const char *path)
     }
 
     auto *ctx = get_context();
-    auto container_handle = ctx->container.get();
+    auto container_handle = ctx->fmetadata_map.get();
     auto& unordered_map = container_handle();
     auto it = unordered_map.find(pathString);
     if (it == unordered_map.end())
@@ -146,6 +146,8 @@ int uh_rmdir (const char *path)
     else if(f_type == uh::uhv::uh_file_type::directory)
     {
         unordered_map.erase(it);
+        ctx->subdirectory_counts.get()().erase(f_meta_data.f_path());
+        ctx->subdirectory_counts.get()().at(f_meta_data.f_path().parent_path())--;
     }
 
     // store the new metadata into the uh volume
@@ -179,20 +181,36 @@ void *__uh_init (struct fuse_conn_info *conn)
     serializer.deserialize("", false);
     metadata_list.stop();
 
-    auto container_handle = context->container.get();
-    auto& unordered_map = container_handle();
+    auto container_handle = context->fmetadata_map.get();
+    auto& metadata_map = container_handle();
+
+    auto subdirectories_handle = context->subdirectory_counts.get();
+    auto &subdirectory_counts = subdirectories_handle();
 
     while (const auto& metadata = metadata_list.get_job())
     {
         if (metadata == std::nullopt)
             break;
-        unordered_map.emplace(metadata.value()->f_path(), *(*metadata));
+
+        if (metadata->get()->f_type() == uh::uhv::uh_file_type::directory) {
+            auto parent = metadata->get()->f_path().parent_path();
+            if (const auto &it = subdirectory_counts.find(parent); it != subdirectory_counts.end()) {
+                subdirectory_counts [parent] ++;
+            }
+            else {
+                subdirectory_counts.emplace(parent, 1);
+            }
+            subdirectory_counts.emplace(metadata->get()->f_path(), 0);
+        }
+        metadata_map.emplace(metadata.value()->f_path(), *(*metadata));
     }
+
+
     f_meta_data metadata;
     metadata.set_f_path("/");
     metadata.set_f_type(uh::uhv::directory);
     metadata.set_f_size(0u);
-    unordered_map.emplace("/", std::move (metadata));
+    metadata_map.emplace("/", std::move (metadata));
 
     return context;
 }
@@ -200,7 +218,12 @@ void *__uh_init (struct fuse_conn_info *conn)
 int __uh_ftruncate (const char *path, off_t off, struct fuse_file_info *fi) {
     std::cout << "uh_ftruncate(" << path << ", " << off << ")\n";
 
-    auto &fmd = *reinterpret_cast<uh::uhv::f_meta_data*>(fi->fh);
+    auto context = get_context();
+
+    auto &ts_fmd = context->open_files.get()().at(fi->fh);
+    auto fmd_handler = ts_fmd.get();
+    auto &fmd = fmd_handler();
+
     if (fmd.f_type() != uh::uhv::uh_file_type::regular) {
         return -ENOMEM;
     }
@@ -217,7 +240,7 @@ int __uh_ftruncate (const char *path, off_t off, struct fuse_file_info *fi) {
         fmd.set_f_hashes({});
 
         // store the new metadata into the uh volume
-        auto container = get_context()->container.get();
+        auto container = context->fmetadata_map.get();
         auto &handler = container();
         rewrite_uhv_file(get_options().UHVpath, handler);
 
@@ -233,7 +256,7 @@ int __uh_mkdir(const char *path, mode_t mode)
 {
     std::cout << "uh_mkdir(" << path << ")\n";
 
-    auto container_handle = get_context()->container.get();
+    auto container_handle = get_context()->fmetadata_map.get();
     auto& unordered_map = container_handle();
 
     // TODO: sanitize the path
@@ -242,18 +265,20 @@ int __uh_mkdir(const char *path, mode_t mode)
 
 
     // create meta data
-    std::unique_ptr<uh::uhv::f_meta_data> ptr_f_meta_data = std::make_unique<uh::uhv::f_meta_data>();
-    ptr_f_meta_data->set_f_path(path);
-    ptr_f_meta_data->set_f_type(uh::uhv::directory);
-    ptr_f_meta_data->set_f_size(0u);
-    ptr_f_meta_data->set_f_permissions(static_cast<std::uint32_t>(mode));
+    f_meta_data f_meta_data;
+    f_meta_data.set_f_path(path);
+    f_meta_data.set_f_type(uh::uhv::directory);
+    f_meta_data.set_f_size(0u);
+    f_meta_data.set_f_permissions(static_cast<std::uint32_t>(mode));
 
     // store the new metadata into the uh volume
     std::ofstream UHV_file(get_options().UHVpath, std::ios::app | std::ios::out | std::ios::binary);
-    write_metadata(UHV_file, *ptr_f_meta_data);
+    write_metadata(UHV_file, f_meta_data);
 
 
-    unordered_map.emplace(std::string(path), std::move (*ptr_f_meta_data));
+    unordered_map.emplace(std::string(path), f_meta_data);
+    get_context()->subdirectory_counts.get()().emplace(f_meta_data.f_path(), 0);
+    get_context()->subdirectory_counts.get()().at(f_meta_data.f_path().parent_path())++;
 
     std::cout << "leaving uh_mkdir(" << path << ", )\n";
 
@@ -269,7 +294,7 @@ int __uh_readdir (const char *path, void *buf, fuse_fill_dir_t filler, off_t off
 
     std::vector <std::filesystem::path> files;
     {
-        auto container_handle = get_context()->container.get();
+        auto container_handle = get_context()->fmetadata_map.get();
         auto& unordered_map = container_handle();
         auto meta_handle = unordered_map.at(path).get();
         const auto& metadata = meta_handle();
@@ -307,21 +332,35 @@ int __uh_open (const char *path, struct fuse_file_info *fi)
         return -EACCES;
     }
 
-    auto container_handle = get_context()->container.get();
-    auto& unordered_map = container_handle();
-    auto it = unordered_map.find(path);
-    if (it == unordered_map.end())
+    auto container_handle = get_context()->fmetadata_map.get();
+    auto& metadata_map = container_handle();
+    auto it = metadata_map.find(path);
+    if (it == metadata_map.end())
     {
         return -EACCES;
     }
     else {
-        auto meta_handle = it->second.get();
-        auto& meta_data = meta_handle();
-        fi->fh = reinterpret_cast<uint64_t>(&meta_data);
+        get_context()->open_files.get() ().emplace(get_context()->fd, it->second);
+        fi->fh = get_context()->fd;
+        get_context()->fd ++;
     }
 
     std::cout << "leaving uh_open(" << path << ", )\n";;
 
+    return 0;
+}
+
+int __uh_release (const char *path, struct fuse_file_info *fi) {
+    auto open_files_handler = get_context()->open_files.get();
+    auto &open_files = open_files_handler ();
+    if (const auto &it = open_files.find(fi->fh); it != open_files.end()) {
+        // TODO: later we could reuse the release fd by adding it to a fd_queue. When opening a
+        // file, if the fd_queue is not empty we pop one fd from the queue, otherwise, we increment context->fd;
+        open_files.erase(it);
+    }
+    else {
+        return -EBADF;
+    }
     return 0;
 }
 
@@ -341,9 +380,12 @@ int __uh_read (const char *path, char *buffer, size_t size, off_t offset, struct
     }
 
     auto context = get_context();
+
+    // get f_metadata without locking its
+    auto &fmd = context->open_files.get()().at(fi->fh).get() ();
+
     uh::protocol::client_pool::handle client_handle = context->client_pool->get();
 
-    auto &fmd = *reinterpret_cast<uh::uhv::f_meta_data*>(fi->fh);
 
     size_t curr_offset = 0;
     std::stringstream recompiled_chunks;
@@ -365,16 +407,6 @@ int __uh_read (const char *path, char *buffer, size_t size, off_t offset, struct
     return size;
 }
 
-uh::uhv::f_meta_data& get_fmetadata(struct fuse_file_info *fi)
-{
-    if(fi->fh == 0)
-    {
-        throw std::runtime_error("error while getting metadata");
-    }
-
-    return *reinterpret_cast<uh::uhv::f_meta_data*>(fi->fh);
-}
-
 int __uh_write (const char *path, const char *buf, size_t size, off_t offset, struct fuse_file_info *fi)
 {
     std::cout << "uh_write(" << path << ", " << size << ", " << offset << ")\n";
@@ -383,12 +415,16 @@ int __uh_write (const char *path, const char *buf, size_t size, off_t offset, st
     {
         return -EACCES;
     }
-    auto &fmd = get_fmetadata(fi);
+
+    auto context = get_context();
+    auto &ts_fmd = context->open_files.get()().at(fi->fh);
+    auto fmd_handler = ts_fmd.get();
+    auto &fmd = fmd_handler();
+
     if (fmd.f_type() != uh::uhv::uh_file_type::regular) {
         return -ENOMEM;
     }
 
-    auto context = get_context();
     uh::protocol::client_pool::handle&& client_handle = context->client_pool->get();
 
     if (static_cast<size_t>(offset) == fmd.f_size() and offset > 0) {       // if this is an append, for instance when performing "echo data >> file"
@@ -426,7 +462,7 @@ int __uh_write (const char *path, const char *buf, size_t size, off_t offset, st
 
 
     // store the new metadata into the uh volume
-    auto container = get_context()->container.get();
+    auto container = get_context()->fmetadata_map.get();
     auto &handler = container();
     rewrite_uhv_file(get_options().UHVpath, handler);
 
@@ -461,7 +497,7 @@ int __uh_create (const char *path, mode_t mode, struct fuse_file_info *fi) {
     md.set_f_permissions(mode);
 
     auto *context = get_context();
-    auto container_handle = context->container.get();
+    auto container_handle = context->fmetadata_map.get();
     auto& files = container_handle();
 
     auto res_pair = files.emplace(std::string (path), md);
@@ -544,6 +580,19 @@ int uh_open (const char *path, struct fuse_file_info *fi)
     try
     {
         return __uh_open(path, fi);
+    }
+    catch(const std::exception& e)
+    {
+        std::cerr << e.what() << '\n';
+        return -ENOENT;
+    }
+}
+
+int uh_release (const char *path, struct fuse_file_info *fi)
+{
+    try
+    {
+        return __uh_release(path, fi);
     }
     catch(const std::exception& e)
     {

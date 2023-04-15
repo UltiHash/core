@@ -20,6 +20,7 @@ static const struct fuse_operations uh_operations =
     .open           = uh::uhv::uh_open,
     .read           = uh::uhv::uh_read,
     .write          = uh::uhv::uh_write,
+    .release        = uh::uhv::uh_release,
     .readdir        = uh::uhv::uh_readdir,
     .init           = uh::uhv::uh_init,
     .destroy        = uh::uhv::uh_destroy,
