@@ -37,7 +37,7 @@ uhClient -i test.uh test -a uh-server-agency:21832
 rm -Rf test
 
 # retrieve test workload and validate their checksums
-yes | uhClient -r -T ./ ./test.uh -a uh-server-agency:21832 -M
+yes | uhClient -r -T ./ ./test.uh -a uh-server-agency:21832
 cat checksum.txt | sha512sum -c
 
 # cleanup
