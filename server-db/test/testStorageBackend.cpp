@@ -12,25 +12,19 @@
 #include <storage/backends/dump_storage.h>
 #include <util/temp_dir.h>
 
-namespace
-{
+namespace {
 
-// ---------------------------------------------------------------------
-
-class storage_fixture
-{
+class storage_fixture {
 public:
     static constexpr std::size_t ALLOCATED_BYTES = 1e6;
 
     storage_fixture()
-        : m_metrics_service({}),
-          m_metrics(m_metrics_service),
-          m_dump(m_tmp.path(), ALLOCATED_BYTES, m_metrics)
-    {
+            : m_metrics_service({}),
+              m_metrics(m_metrics_service),
+              m_dump(m_tmp.path(), ALLOCATED_BYTES, m_metrics) {
     }
 
-    uh::dbn::storage::backend& backend()
-    {
+    uh::dbn::storage::backend &backend() {
         return m_dump;
     }
 
@@ -41,21 +35,24 @@ private:
     uh::dbn::storage::dump_storage m_dump;
 };
 
-// ---------------------------------------------------------------------
-
 static const std::string CONTENTS_STR = "These are the contents of test_input_file.txt and test_input_file_2.txt";
 static const std::string EXPECTED_SHA512_HASH = "2610fa1ed2dc40f92a3e44cb894b757e4e4469a053b5b2ccf69179b577cfac29403aed645ecab45e10c5db2d9c6bbb0916b0b7c9caa635d271f5274b3e868011";
-
-// ---------------------------------------------------------------------
 
 std::vector<char> to_vector(const std::string& s)
 {
     return std::vector<char>(s.begin(), s.end());
 }
 
+uh::protocol::block_meta_data integrate_data (const std::vector <char> &data, uh::dbn::storage::backend &storage_backend) {
+    auto d1 = to_vector(CONTENTS_STR);
+    auto allocation1 = storage_backend.allocate (d1.size());
+    allocation1->device().write(d1);
+    return allocation1->persist();
+}
+
 // ---------------------------------------------------------------------
 
-BOOST_AUTO_TEST_CASE( hashing_function_expected_hash )
+BOOST_AUTO_TEST_CASE(hashing_function_expected_hash)
 {
     uh::protocol::blob vec_hash = uh::dbn::storage::sha512(to_vector(CONTENTS_STR));
     std::string hash_string = uh::dbn::storage::to_hex_string(vec_hash.begin(), vec_hash.end());
@@ -65,40 +62,51 @@ BOOST_AUTO_TEST_CASE( hashing_function_expected_hash )
 
 // ---------------------------------------------------------------------
 
+
 BOOST_FIXTURE_TEST_CASE( dump_storage_io, storage_fixture )
 {
-    uh::protocol::blob x = to_vector(CONTENTS_STR);
+    sleep(1);
+    auto block_md = integrate_data (to_vector(CONTENTS_STR), backend());
 
-    // Write block.
-    uh::protocol::blob hash_key = backend().write_block(x);
+    auto read_device = backend().read_block(block_md.hash);
+    std::vector <char> fetched_data;
+    fetched_data.resize(CONTENTS_STR.size());
+    read_device->read(fetched_data);
+    auto fetched_hex =  uh::dbn::storage::to_hex_string (fetched_data.begin(), fetched_data.end ());
+    auto original_hex =  uh::dbn::storage::to_hex_string (CONTENTS_STR.begin(), CONTENTS_STR.end ());
 
-    // Read block.
-    uh::protocol::blob y = uh::io::read_to_buffer(*backend().read_block(hash_key));
-
-    BOOST_CHECK(x == y);
+    BOOST_CHECK(fetched_hex == original_hex);
 }
+
 
 // ---------------------------------------------------------------------
 
 BOOST_FIXTURE_TEST_CASE( dump_storage_no_duplicates, storage_fixture )
 {
-    uh::protocol::blob x = backend().write_block(to_vector(CONTENTS_STR));
-    uh::protocol::blob y = backend().write_block(to_vector(CONTENTS_STR));
+    sleep(1);
+    auto block_md1 = integrate_data (to_vector(CONTENTS_STR), backend());
 
-    BOOST_CHECK(x == y);
+    auto block_md2 = integrate_data (to_vector(CONTENTS_STR), backend());
+
+
+    auto hash1 =  uh::dbn::storage::to_hex_string (block_md1.hash.begin(), block_md1.hash.end ());
+    auto hash2 =  uh::dbn::storage::to_hex_string (block_md2.hash.begin(), block_md2.hash.end ());
+
+    BOOST_CHECK(hash1 == hash2);
 }
 
 // ---------------------------------------------------------------------
 
 BOOST_FIXTURE_TEST_CASE( dump_storage_expected_hash, storage_fixture )
 {
-    uh::protocol::blob x = backend().write_block(to_vector(CONTENTS_STR));
-    std::string x_str = uh::dbn::storage::to_hex_string(x.begin(), x.end());
+    sleep(1);
+
+    auto block_md1 = integrate_data (to_vector(CONTENTS_STR), backend());
+    std::string x_str = uh::dbn::storage::to_hex_string(block_md1.hash.begin(), block_md1.hash.end());
 
     BOOST_CHECK(x_str == EXPECTED_SHA512_HASH);
 }
 
-// ---------------------------------------------------------------------
 
 BOOST_FIXTURE_TEST_CASE( dump_storage_allocation, storage_fixture )
 {
@@ -122,6 +130,5 @@ BOOST_FIXTURE_TEST_CASE( dump_storage_allocation, storage_fixture )
     }
 }
 
-// ---------------------------------------------------------------------
 
 } // namespace
