@@ -195,7 +195,7 @@ void *__uh_init (struct fuse_conn_info *conn)
         if (metadata->get()->f_type() == uh::uhv::uh_file_type::directory) {
             auto parent = metadata->get()->f_path().parent_path();
             if (const auto &it = subdirectory_counts.find(parent); it != subdirectory_counts.end()) {
-                subdirectory_counts [parent] ++;
+                it->second ++;
             }
             else {
                 subdirectory_counts.emplace(parent, 1);
@@ -340,7 +340,8 @@ int __uh_open (const char *path, struct fuse_file_info *fi)
         return -EACCES;
     }
     else {
-        get_context()->open_files.get() ().emplace(get_context()->fd, it->second);
+        auto open_files_map_handler = get_context()->open_files.get();
+        open_files_map_handler().emplace(get_context()->fd, it->second);
         fi->fh = get_context()->fd;
         get_context()->fd ++;
     }
@@ -352,11 +353,11 @@ int __uh_open (const char *path, struct fuse_file_info *fi)
 
 int __uh_release (const char *path, struct fuse_file_info *fi) {
     auto open_files_handler = get_context()->open_files.get();
-    auto &open_files = open_files_handler ();
-    if (const auto &it = open_files.find(fi->fh); it != open_files.end()) {
-        // TODO: later we could reuse the release fd by adding it to a fd_queue. When opening a
+    auto &open_files_map = open_files_handler ();
+    if (const auto &it = open_files_map.find(fi->fh); it != open_files_map.end()) {
+        // TODO: later we could reuse the released fd by adding it to a fd_queue. When opening a
         // file, if the fd_queue is not empty we pop one fd from the queue, otherwise, we increment context->fd;
-        open_files.erase(it);
+        open_files_map.erase(it);
     }
     else {
         return -EBADF;
@@ -381,8 +382,8 @@ int __uh_read (const char *path, char *buffer, size_t size, off_t offset, struct
 
     auto context = get_context();
 
-    // get f_metadata without keeping it locked
-    auto &fmd = context->open_files.get()().at(fi->fh).get() ();
+    auto fmd_handler = context->open_files.get();
+    auto fmd = fmd_handler().at(fi->fh).get() ();
 
     uh::protocol::client_pool::handle client_handle = context->client_pool->get();
 
