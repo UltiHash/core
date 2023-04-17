@@ -30,18 +30,6 @@ std::vector <std::filesystem::path> get_files (const std::string &directory, con
     return files;
 }
 
-std::size_t subfolders_count (const std::string &directory, std::unordered_map <std::string,
-        uh::uhv::ts_f_meta_data> &metadata_list) {
-    size_t res = 0;
-    for (auto &md: metadata_list) {
-        const auto path = std::filesystem::path(md.first);
-        if (path.parent_path() == directory and !path.filename().empty() and (md.second.get()().f_type() == uh::uhv::uh_file_type::directory)) {
-            res ++;
-        }
-    }
-    return res;
-}
-
 uint64_t upload_data (uh::protocol::client_pool::handle& client_handle, size_t chunk_size, const std::span <char> &data, std::vector <char> &hashes) {
     std::size_t write_offset = 0ul;
     auto effective_size = 0;
