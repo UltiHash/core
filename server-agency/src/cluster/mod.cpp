@@ -151,7 +151,7 @@ std::map<node_ref, std::unique_ptr<client_pool>> make_nodes(
 
 struct mod::impl
 {
-    impl(const config& cfg);
+    explicit impl(const config& cfg);
 
     io_context io;
     std::map<node_ref, std::unique_ptr<client_pool>> nodes;
@@ -205,9 +205,7 @@ std::list< std::pair<node_ref, std::size_t> > mod::bc_free_space()
     {
         try
         {
-            rv.push_back(
-                std::make_pair(node.first, node.second->get()->free_space())
-            );
+            rv.emplace_back(node.first, node.second->get()->free_space());
         }
         catch (const std::exception& e)
         {
