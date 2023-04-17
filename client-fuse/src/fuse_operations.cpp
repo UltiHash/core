@@ -471,16 +471,6 @@ int __uh_write (const char *path, const char *buf, size_t size, off_t offset, st
     return size;
 }
 
-int __uh_write_buf (const char *path, struct fuse_bufvec *buf_vec, off_t off, struct fuse_file_info *fi){
-    int success = - ENOENT;
-
-    size_t size = buf_vec->buf->size;
-    size_t offset = buf_vec->off;
-    char * buf = static_cast<char*>(buf_vec->buf->mem);
-    __uh_write(path, buf, size, offset, fi);
-    return size;
-}
-
 int __uh_create (const char *path, mode_t mode, struct fuse_file_info *fi) {
     std::cout << "uh_create(" << path << ")\n";
 
@@ -516,10 +506,6 @@ void __uh_destroy (void *context) {
 
     auto pcontext = static_cast <private_context *> (context);
     delete pcontext;
-}
-
-int __uh_read_buf (const char *path, struct fuse_bufvec **bufp, size_t size, off_t off, struct fuse_file_info *fi){
-        throw std::runtime_error("Not implemented");
 }
 
 /*-----  fuse operations made safe -----*/
@@ -673,30 +659,6 @@ void uh_destroy (void *context)
     catch(const std::exception& e)
     {
         std::cerr << e.what() << '\n';
-    }
-}
-
-int uh_write_buf (const char *path, struct fuse_bufvec *buf, off_t off, struct fuse_file_info *fi){
-    try
-    {
-        return __uh_write_buf(path, buf, off, fi);
-    }
-    catch(const std::exception& e)
-    {
-        std::cerr << e.what() << '\n';
-        return -ENOENT;
-    }
-}
-
-int uh_read_buf (const char *path, struct fuse_bufvec **bufp, size_t size, off_t off, struct fuse_file_info *fi){
-    try
-    {
-        return __uh_read_buf(path, bufp, size, off, fi);
-    }
-    catch(const std::exception& e)
-    {
-        std::cerr << e.what() << '\n';
-        return -ENOENT;
     }
 }
 
