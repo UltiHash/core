@@ -183,14 +183,16 @@ int main(int argc, const char *argv[])
                 break;
         }
     }
-    catch (const std::exception &exc)
+    catch (const std::exception& e)
     {
-        FATAL << exc.what() << '\n';
+        FATAL << e.what() << '\n';
+        std::cerr << "Error: " << e.what() << "\n";
         return 1;
     }
     catch (...)
     {
         FATAL << "unknown exception occurred";
+        std::cerr << "Error: unknown error\n";
         return 1;
     }
     return EXIT_SUCCESS;
