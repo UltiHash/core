@@ -26,9 +26,9 @@ jobs:
       run: docker pull ghcr.io/ultihash/build-base:20230118
     - name: Build and bring up containers
       run: docker-compose -f docker-compose-integration.yml up -d --build
-    - name: Wait for test to complete
+    - name: Wait for integration test to complete
       run: ./wait_for_benchmark.py
-    - name: Validate test output
+    - name: Validate integration test output
       env:
         RUN_AS_ACTION: 1
       run: ./integration.sh
