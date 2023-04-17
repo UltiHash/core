@@ -8,7 +8,7 @@ fi
 
 docker-compose logs > logs.txt
 docker-compose stop
-yes | docker-compose rm
+docker-compose rm -f
 
 RESULT=$(cat logs.txt | grep uh-client-shell | tail -n 1 | grep OK)
 
