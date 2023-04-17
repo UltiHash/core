@@ -1,15 +1,39 @@
 #include "service.h"
 
+#include <util/exception.h>
+
 
 using namespace prometheus;
 
 namespace uh::metrics
 {
 
+namespace
+{
+
+// ---------------------------------------------------------------------
+
+prometheus::Exposer make_exposer(const config& c)
+{
+    try
+    {
+        return prometheus::Exposer(c.address, c.threads);
+    }
+    catch (const std::exception& e)
+    {
+        THROW(util::exception,
+              std::string("could not start metrics HTTP server: ") + e.what());
+    }
+}
+
+// ---------------------------------------------------------------------
+
+} // namespace
+
 // ---------------------------------------------------------------------
 
 service::service(const config& cfg)
-    : m_exposer(cfg.address, cfg.threads),
+    : m_exposer(make_exposer(cfg)),
       m_registry(std::make_shared<prometheus::Registry>())
 {
     m_exposer.RegisterCollectable(m_registry, cfg.path);
