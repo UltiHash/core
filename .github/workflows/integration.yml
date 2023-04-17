@@ -17,6 +17,13 @@ jobs:
       with:
         token: ${{ secrets.PAT }}
         submodules: recursive
+    - uses: docker/login-action@v2
+      with:
+        registry: ghcr.io
+        username: plauth
+        password: ${{ secrets.PAT }}
+    - name: Pull build base image
+      run: docker pull ghcr.io/ultihash/build-base:20230118
     - name: Build and bring up containers
       run: docker-compose -f docker-compose-integration.yml up -d --build
     - name: Wait for test to complete
