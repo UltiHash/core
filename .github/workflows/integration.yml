@@ -1,0 +1,27 @@
+name: Integration Test (C++ Apps)
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+  schedule:
+    - cron: '0 6 * * *'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        token: ${{ secrets.PAT }}
+        submodules: recursive
+    - name: Build and bring up containers
+      run: docker-compose -f docker-compose-integration.yml up -d --build
+    - name: Wait for test to complete
+      run: ./wait_for_benchmark.py
+    - name: Validate test output
+      env:
+        RUN_AS_ACTION: 1
+      run: ./integration.sh

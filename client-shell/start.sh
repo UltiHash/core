@@ -1,5 +1,7 @@
 #!/bin/bash
 
+ncat -e /bin/cat -k -u -l 1337 &
+
 echo "Waiting for uh-server-agency to become available..."
 RAND=$(( ( RANDOM % 5 )  + 1 ))
 sleep $RAND
@@ -42,4 +44,5 @@ cat checksum.txt | sha512sum -c
 rm -Rf test*
 rm -f checksum.txt
 
+pkill ncat
 sleep infinity

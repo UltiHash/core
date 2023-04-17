@@ -32,7 +32,7 @@ if __name__ == '__main__':
     message = "Still working..."
     s.settimeout(BACKOFF_TIME)
 
-    sys.stdout.write("Instantiated benchmark setup, now waiting for its completion... ")
+    sys.stdout.write("Instantiated test setup, now waiting for its completion... ")
     spinner = Spinner()
     spinner.start()
     while True:
