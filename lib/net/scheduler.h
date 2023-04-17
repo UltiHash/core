@@ -24,6 +24,10 @@ public:
     void worker();
     void stop();
 
+    [[nodiscard]] std::size_t number_of_threads () const;
+    [[nodiscard]] std::size_t number_of_busy_threads () const;
+
+
 private:
     std::mutex m_mutex;
     std::condition_variable m_cv;

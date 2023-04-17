@@ -43,8 +43,10 @@ struct mod::impl
          an::metrics::mod& metrics);
 
     boost::asio::io_context io;
-    protocol_factory pf;
     std::unique_ptr<net::server> server;
+    net::server_info serv_info;
+    protocol_factory pf;
+
 };
 
 // ---------------------------------------------------------------------
@@ -53,8 +55,9 @@ mod::impl::impl(const net::server_config& config,
                 an::cluster::mod& cluster,
                 an::metrics::mod& metrics)
     : io(),
-      pf(cluster, metrics.protocol()),
-      server(make_server(config, pf))
+      server(make_server(config, pf)),
+      serv_info (*server),
+      pf(cluster, metrics.protocol(), serv_info)
 {
 }
 

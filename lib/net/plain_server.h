@@ -5,8 +5,9 @@
 #include <net/scheduler.h>
 #include <protocol/protocol.h>
 #include <util/factory.h>
-
 #include <boost/asio.hpp>
+
+#include "server_info.h"
 
 #include <atomic>
 #include <cstdint>
@@ -41,7 +42,7 @@ public:
     void run() override;
 
     void spawn_client(const std::shared_ptr<socket>& client);
-
+    [[nodiscard]] bool is_busy () const override;
 private:
     boost::asio::io_context m_context;
     boost::asio::ip::tcp::acceptor m_acceptor;
