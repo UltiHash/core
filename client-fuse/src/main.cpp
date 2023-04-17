@@ -102,14 +102,16 @@ int main(int argc, char *argv[])
         fuse_opt_free_args(&args);
         return ret;
     }
-    catch (const std::exception& exc)
+    catch (const std::exception& e)
     {
-        FATAL << exc.what();
+        FATAL << e.what();
+        std::cerr << "Error while starting service: " << e.what() << "\n";
         return EXIT_FAILURE;
     }
     catch (...)
     {
         FATAL << "unknown exception occurred";
+        std::cerr << "Error while starting service: unknown error\n";
         return EXIT_FAILURE;
     }
 }

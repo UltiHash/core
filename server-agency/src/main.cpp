@@ -46,11 +46,13 @@ int main(int argc, const char** argv)
     catch (const std::exception& e)
     {
         FATAL << e.what();
+        std::cerr << "Error while starting service: " << e.what() << "\n";
         return 1;
     }
     catch (...)
     {
         FATAL << "unknown exception occurred";
+        std::cerr << "Error while starting service: unknown error\n";
         return 1;
     }
 
