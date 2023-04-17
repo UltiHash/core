@@ -12,8 +12,7 @@ agency_connection::agency_connection()
 {
     visible().add_options()
             ("agency-node,a", value<std::string>(), "<HOSTNAME[:PORT]> of agency node to connect to (port defaults to 8565)")
-            ("pool-size,P", value<std::uint16_t>(&m_config.pool_size), "pool size of connections to the agency node [optional]")
-            ("metrics,M", "display connection statistics [optional]");
+            ("pool-size,P", value<std::uint16_t>(&m_config.pool_size), "pool size of connections to the agency node [optional]");
 }
 
 // ---------------------------------------------------------------------

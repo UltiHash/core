@@ -57,8 +57,13 @@ void plain_server::spawn_client(const std::shared_ptr<net::socket>& sock)
 {
     m_scheduler.spawn([this, sock] ()
     {
+
         m_protocol_factory.create(sock)->handle();
     });
+}
+
+bool plain_server::is_busy() const {
+    return m_scheduler.number_of_threads() == m_scheduler.number_of_busy_threads();
 }
 
 // ---------------------------------------------------------------------
