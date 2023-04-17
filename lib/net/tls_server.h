@@ -22,6 +22,7 @@ public:
                uh::protocol::protocol_factory& protocol_factory);
 
     void run() override;
+    [[nodiscard]] bool is_busy () const override;
 
 private:
     struct connection_state;

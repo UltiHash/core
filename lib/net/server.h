@@ -12,6 +12,8 @@ public:
     virtual ~server() = default;
 
     virtual void run() = 0;
+
+    [[nodiscard]] virtual bool is_busy () const = 0;
 };
 
 // ---------------------------------------------------------------------

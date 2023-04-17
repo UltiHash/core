@@ -6,6 +6,8 @@
 #include <protocol/request_interface.h>
 #include <memory>
 
+#include <net/server_info.h>
+
 using namespace boost::asio::ip;
 
 namespace uh::an::server
@@ -16,7 +18,7 @@ namespace uh::an::server
 class protocol : public uh::protocol::request_interface
 {
 public:
-    explicit protocol(cluster::mod& cluster);
+    explicit protocol(cluster::mod& cluster, const uh::net::server_info &serv_info);
 
     uh::protocol::server_information on_hello(const std::string& client_version) override;
     std::unique_ptr<io::device> on_read_block(uh::protocol::blob&& hash) override;
@@ -26,6 +28,7 @@ public:
 
 private:
     cluster::mod& m_cluster;
+    const uh::net::server_info &m_serv_info;
 };
 
 // ---------------------------------------------------------------------
