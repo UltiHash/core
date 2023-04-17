@@ -11,7 +11,6 @@ docker-compose stop
 yes | docker-compose rm
 
 RESULT=$(cat logs.txt | grep uh-client-shell | tail -n 1 | grep OK)
-rm logs.txt
 
 if [ $? -eq 0 ]
 then
