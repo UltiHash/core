@@ -1,11 +1,3 @@
-/*
-  FUSE: Filesystem in Userspace
-  Copyright (C) 2001-2007  Miklos Szeredi <miklos@szeredi.hu>
-
-  This program can be distributed under the terms of the GNU GPLv2.
-  See the file COPYING.
-*/
-
 #define FUSE_USE_VERSION 31
 
 #include "fuse_operations.h"
@@ -78,14 +70,13 @@ int main(int argc, char *argv[])
         struct fuse_args args = FUSE_ARGS_INIT(argc, argv);
 
         auto& opt = uh::uhv::get_options();
-        /* Default Values */
+
         opt.UHVpath = strdup("volume.uh");
         opt.agency_hostname = strdup("localhost");
         opt.agency_port = 21832;
         opt.agency_connections = 3;
         opt.show_help = false;
 
-        /* Parse options */
         if (fuse_opt_parse(&args, &opt, option_spec, NULL) == -1)
             throw std::runtime_error("error: parsing failed");
 
@@ -103,14 +94,16 @@ int main(int argc, char *argv[])
         fuse_opt_free_args(&args);
         return ret;
     }
-    catch (const std::exception& exc)
+    catch (const std::exception& e)
     {
-        FATAL << exc.what();
+        FATAL << e.what();
+        std::cerr << "Error while starting service: " << e.what() << "\n";
         return EXIT_FAILURE;
     }
     catch (...)
     {
         FATAL << "unknown exception occurred";
+        std::cerr << "Error while starting service: unknown error\n";
         return EXIT_FAILURE;
     }
 }
