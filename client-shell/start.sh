@@ -33,11 +33,11 @@ cp /usr/local/bin/uhClient test
 
 # store checksums of test workload, integrate data into UltiHash volume and delete files afterwards
 sha512sum test/uhClient > checksum.txt
-uhClient -i test.uh test -a uh-server-agency:21832
+uhClient --integrate test.uh test --agency-node uh-server-agency:21832
 rm -Rf test
 
 # retrieve test workload and validate their checksums
-yes | uhClient -r -T ./ ./test.uh -a uh-server-agency:21832
+yes | uhClient --retrieve test.uh --target ./ --agency-node uh-server-agency:21832
 cat checksum.txt | sha512sum -c
 
 # cleanup
