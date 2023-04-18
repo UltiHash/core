@@ -13,8 +13,8 @@ client_options::client_options()
         : options("Client Options")
 {
     visible().add_options()
-            ("retrieve,r","read the UltiHash Volume and put the contents to the target destination")
-            ("integrate,i","write the contents of the sources provided and generate a UltiHash Volume file at the target")
+            ("retrieve,r", value<std::string>(&m_uhv_path), "read the UltiHash Volume and put the contents to the target destination")
+            ("integrate,i", value<std::string>(&m_uhv_path), "write the contents of the sources provided and generate a UltiHash Volume file at the target")
             ("jobs,j",  value<std::uint16_t>(&m_config.m_worker_count), "size of the worker threads when uploading and downloading")
             ("exclude,E", value<std::vector<std::string>>(&m_operateStrPaths)->multitoken(), "exclude directories when integrating [optional]")
             ("target,T", value<std::string>(&m_targetDirectory), "destination of the target directory for --retrieve(-r) operation [optional]")
@@ -86,8 +86,6 @@ void client_options::handle(const boost::program_options::variables_map& vars)
     if (optDisabled())
         throw std::invalid_argument("No client options given. See --help for more information.");
 
-    // evaluate the commands, check if files are relevant and put it in a data structure
-    std::vector<std::filesystem::path> destPaths;
     std::string errorPath;
 
     //------------------------------------------------ LAMDA FUNCTIONS
@@ -104,16 +102,14 @@ void client_options::handle(const boost::program_options::variables_map& vars)
     //------------------------------------------------ END OF LAMDA FUNCTIONS
 
     //------------------------------------------------ SANITY CHECKS ACCORDING TO OPTION
-    if (m_posPaths.empty())
-        throw std::runtime_error("Path missing for the given client option.");
 
     // generation of filesystem paths from CLI strings
     if (m_integrate)
     {
-        destPaths.push_back(weakly_canonical(std::filesystem::path(m_posPaths.front())));
-        is_UHV(destPaths, "destination on --integrate[-i] has wrong extensions. Please ensure that the destination ends with '.uh'.");
+        m_config.m_outputPath  = weakly_canonical(std::filesystem::path(m_uhv_path));
+        is_UHV({m_config.m_outputPath}, "destination on --integrate[-i] has wrong extensions. Please ensure that the destination ends with '.uh'.");
 
-        if (exists(destPaths.front()))
+        if (exists(m_config.m_outputPath))
         {
             std::string user_response;
             std::unordered_set<std::string> validResponses = {"y", "n", "yes", "no"};
@@ -140,17 +136,19 @@ void client_options::handle(const boost::program_options::variables_map& vars)
             }
         }
 
-        if (m_posPaths.size()==1)
-            throw std::runtime_error("--integrate[-i] requires a source and a target. Please refer to --help more for information.");
+        if (m_posPaths.empty())
+            throw std::runtime_error("No data specified to be integrated. Please refer to --help more for information.");
+        if (m_posPaths.size() > 1)
+            throw std::runtime_error( "Too many arguments for the integrate operation.");
         if (m_exclude)
             for (const auto& path : m_operateStrPaths)
                 m_config.m_operatePaths.emplace_back(canonical(std::filesystem::path(path)));
         try
         {
             std::set<std::filesystem::path> removeDuplicatePath;
-            for (auto i = 1u; i < m_posPaths.size(); ++i)
+            for (const auto & m_posPath : m_posPaths)
             {
-                errorPath = m_posPaths.at(i);
+                errorPath = m_posPath;
                 auto sanitizedPath = std::filesystem::canonical(
                         std::filesystem::path(errorPath));
                 removeDuplicatePath.insert(sanitizedPath);
@@ -175,30 +173,26 @@ void client_options::handle(const boost::program_options::variables_map& vars)
             if (!is_directory(targetDirectory))
                 throw std::runtime_error("--target(-T) requires a directory path.");
 
-            destPaths.push_back(targetDirectory);
+            m_config.m_outputPath = targetDirectory;
         }
         else
         {
-            destPaths.emplace_back(std::filesystem::current_path().string()+"/UHOutput");
-            std::filesystem::create_directory(destPaths[0]);
+            m_config.m_outputPath = std::filesystem::current_path().string()+"/UHOutput";
+            std::filesystem::create_directory(m_config.m_outputPath);
         }
         try
         {
-            errorPath = m_posPaths.at(0);
+            errorPath = m_uhv_path;
             m_config.m_inputPaths.push_back(canonical(std::filesystem::path(errorPath)));
             is_UHV(m_config.m_inputPaths, "source path on --retrieve[-r] has wrong extensions. Please ensure that the source ends with '.uh'.");
-            if (m_posPaths.size()>1)
-            {
-                for (auto i = 1u; i < m_posPaths.size(); ++i)
-                {
-                    errorPath = m_posPaths.at(i);
-                    m_config.m_operatePaths.emplace_back(weakly_canonical(std::filesystem::path(errorPath)));
-                }
-            }
         }
         catch(const std::exception& ex)
         {
             throw std::runtime_error( "'" + errorPath + "' doesn't exists.");
+        }
+        if (!m_posPaths.empty())
+        {
+            throw std::runtime_error( "Too many arguments for the retrieve operation.");
         }
         m_config.m_option = options_chosen::retrieve;
     }
@@ -227,9 +221,6 @@ void client_options::handle(const boost::program_options::variables_map& vars)
         m_config.m_option = options_chosen::list;
     }
     //------------------------------------------------ END OF BASIC SANITY CHECKS
-
-    if (!m_list)
-        m_config.m_outputPath = destPaths.at(0);
 
     // checking inputs and outputs for validation
     std::cout << "INPUT: ";
