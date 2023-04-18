@@ -2,39 +2,33 @@
 #define CLIENT_CHUNKING_FIXED_SIZE_H
 
 #include <chunking/file_chunker.h>
-#include <protocol/client_pool.h>
+#include <io/device.h>
 
 
-namespace uh::client::chunking {
+namespace uh::client::chunking
+{
 
-class fixed_size_chunker : public file_chunker {
-    public:
-        fixed_size_chunker(size_t chunk_size_in_bytes):
-        m_chunk_size(chunk_size_in_bytes)
-        {}
+// ---------------------------------------------------------------------
 
-        virtual void start() override;
+class fixed_size_chunker : public file_chunker
+{
+public:
+    fixed_size_chunker(io::device& dev, size_t chunk_size);
 
-        /**
-         * Split a datafile into chunks and return them.
-         *
-         * @return a vector of chunks
-         * @throw may throw any derivative of exception on error
-         */
-        virtual std::vector<uh::protocol::blob> chunk_files(std::unique_ptr<uhv::f_meta_data>&) override;
+    /**
+     * Return the next chunk to upload. If there are no more chunks, return
+     * an empty chunk instead.
+     *
+     * @throw may throw any derivative of exception on error
+     */
+    uh::protocol::blob next_chunk() override;
 
-        /**
-         * Return the name of the chunking strategy as a std::string.
-         */
-        virtual std::string chunking_type() override {return std::string(m_type);}
-        
-        size_t chunk_size() {return m_chunk_size;}
-    
-    protected:
+private:
+    io::device& m_dev;
+    size_t m_chunk_size = 0;
+};
 
-        constexpr static std::string_view m_type = "FixedSize";
-        size_t m_chunk_size = 0;
-    };
+// ---------------------------------------------------------------------
 
 } // namespace uh::dbn::storage
 
