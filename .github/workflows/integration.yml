@@ -23,7 +23,7 @@ jobs:
         username: plauth
         password: ${{ secrets.PAT }}
     - name: Pull build base image
-      run: docker pull ghcr.io/ultihash/build-base:20230118
+      run: docker pull ghcr.io/ultihash/build-base:20230418
     - name: Build and bring up containers
       run: docker-compose -f docker-compose-integration.yml up -d --build
     - name: Wait for integration test to complete
