@@ -251,6 +251,7 @@ void server::handle_next_chunk()
         m_read_block.reset();
     }
 
+    m_handler_interface->on_next_chunk(buffer);
     write(m_bs, status{ status::OK });
     write(m_bs, next_chunk::response{ .content = std::span<char>(buffer.begin(), count) });
     m_bs.sync ();

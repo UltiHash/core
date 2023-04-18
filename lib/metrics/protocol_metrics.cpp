@@ -138,10 +138,9 @@ void protocol_metrics_wrapper::on_reset()
 
 // ---------------------------------------------------------------------
 
-std::size_t protocol_metrics_wrapper::on_next_chunk(std::span<char> buffer)
+void protocol_metrics_wrapper::on_next_chunk(std::span<char> buffer)
 {
     m_metrics.reqs_next_chunk().Increment();
-    return m_base->on_next_chunk(buffer);
 }
 
 // ---------------------------------------------------------------------

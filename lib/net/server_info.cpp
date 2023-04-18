@@ -4,10 +4,22 @@
 
 #include "server_info.h"
 
-uh::net::server_info::server_info(const net::server &server) : m_server {server} {
+namespace uh::net {
+
+// ---------------------------------------------------------------------
+
+server_info::server_info(const net::server &server) : m_server {server}
+{
 
 }
 
-bool uh::net::server_info::server_busy() const {
+// ---------------------------------------------------------------------
+
+bool server_info::server_busy() const
+{
     return m_server.is_busy();
 }
+
+// ---------------------------------------------------------------------
+
+} // namespace uh::net
