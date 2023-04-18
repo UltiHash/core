@@ -8,20 +8,18 @@ namespace uh::client::chunking
 
 fixed_size_chunker::fixed_size_chunker(io::device& dev, size_t chunk_size)
     : m_dev(dev),
-      m_chunk_size(chunk_size)
+      m_chunk_size(chunk_size),
+      m_buffer(chunk_size)
 {
 }
 
 // ---------------------------------------------------------------------
 
-uh::protocol::blob fixed_size_chunker::next_chunk()
+std::span<char> fixed_size_chunker::next_chunk()
 {
-    uh::protocol::blob chunk(m_chunk_size);
+    std::size_t read = m_dev.read({ m_buffer.data(), m_buffer.size() });
 
-    auto read = m_dev.read({ chunk.data(), chunk.size() });
-    chunk.resize(read);
-
-    return chunk;
+    return { m_buffer.data(), read };
 }
 
 // ---------------------------------------------------------------------

@@ -44,7 +44,6 @@ uh::options::action options::evaluate(const boost::program_options::variables_ma
     size_t chunk_size = vars[optionString(OptionsEnum::ChunkSize)].as<std::size_t>();
     c.chunk_size_in_bytes = chunk_size;
 
-
     std::swap(m_config, c);
     return uh::options::action::proceed;
 }

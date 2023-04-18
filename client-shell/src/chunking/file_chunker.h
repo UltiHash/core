@@ -1,7 +1,7 @@
 #ifndef CLIENT_FILE_CHUNKING_H
 #define CLIENT_FILE_CHUNKING_H
 
-#include <protocol/common.h>
+#include <span>
 
 
 namespace uh::client::chunking {
@@ -18,7 +18,7 @@ public:
      *
      * @throw may throw any derivative of exception on error
      */
-    virtual uh::protocol::blob next_chunk() = 0;
+    virtual std::span<char> next_chunk() = 0;
 };
 
 // ---------------------------------------------------------------------

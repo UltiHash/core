@@ -1,7 +1,7 @@
 #ifndef CLIENT_CHUNKING_FIXED_SIZE_H
 #define CLIENT_CHUNKING_FIXED_SIZE_H
 
-#include <chunking/file_chunker.h>
+#include "../file_chunker.h"
 #include <io/device.h>
 
 
@@ -21,11 +21,12 @@ public:
      *
      * @throw may throw any derivative of exception on error
      */
-    uh::protocol::blob next_chunk() override;
+    std::span<char> next_chunk() override;
 
 private:
     io::device& m_dev;
     size_t m_chunk_size = 0;
+    std::vector<char> m_buffer;
 };
 
 // ---------------------------------------------------------------------
