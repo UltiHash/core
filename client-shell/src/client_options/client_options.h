@@ -39,6 +39,7 @@ class client_options : public uh::options::options
         client_config m_config{3};
         std::vector<std::string> m_posPaths;
         std::vector<std::string> m_operateStrPaths;
+        std::string m_uhv_path;
         std::string m_targetDirectory;
     };
 
