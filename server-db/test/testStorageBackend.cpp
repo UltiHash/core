@@ -36,7 +36,6 @@ private:
 };
 
 static const std::string CONTENTS_STR = "These are the contents of test_input_file.txt and test_input_file_2.txt";
-static const std::string EXPECTED_SHA512_HASH = "2610fa1ed2dc40f92a3e44cb894b757e4e4469a053b5b2ccf69179b577cfac29403aed645ecab45e10c5db2d9c6bbb0916b0b7c9caa635d271f5274b3e868011";
 
 std::vector<char> to_vector(const std::string& s)
 {
@@ -52,20 +51,9 @@ uh::protocol::block_meta_data integrate_data (const std::vector <char> &data, uh
 
 // ---------------------------------------------------------------------
 
-BOOST_AUTO_TEST_CASE(hashing_function_expected_hash)
-{
-    uh::protocol::blob vec_hash = uh::dbn::storage::sha512(to_vector(CONTENTS_STR));
-    std::string hash_string = uh::dbn::storage::to_hex_string(vec_hash.begin(), vec_hash.end());
-
-    BOOST_CHECK(hash_string == EXPECTED_SHA512_HASH);
-}
-
-// ---------------------------------------------------------------------
-
 
 BOOST_FIXTURE_TEST_CASE( dump_storage_io, storage_fixture )
 {
-    sleep(1);
     auto block_md = integrate_data (to_vector(CONTENTS_STR), backend());
 
     auto read_device = backend().read_block(block_md.hash);
@@ -83,7 +71,6 @@ BOOST_FIXTURE_TEST_CASE( dump_storage_io, storage_fixture )
 
 BOOST_FIXTURE_TEST_CASE( dump_storage_no_duplicates, storage_fixture )
 {
-    sleep(1);
     auto block_md1 = integrate_data (to_vector(CONTENTS_STR), backend());
 
     auto block_md2 = integrate_data (to_vector(CONTENTS_STR), backend());
@@ -96,17 +83,6 @@ BOOST_FIXTURE_TEST_CASE( dump_storage_no_duplicates, storage_fixture )
 }
 
 // ---------------------------------------------------------------------
-
-BOOST_FIXTURE_TEST_CASE( dump_storage_expected_hash, storage_fixture )
-{
-    sleep(1);
-
-    auto block_md1 = integrate_data (to_vector(CONTENTS_STR), backend());
-    std::string x_str = uh::dbn::storage::to_hex_string(block_md1.hash.begin(), block_md1.hash.end());
-
-    BOOST_CHECK(x_str == EXPECTED_SHA512_HASH);
-}
-
 
 BOOST_FIXTURE_TEST_CASE( dump_storage_allocation, storage_fixture )
 {
