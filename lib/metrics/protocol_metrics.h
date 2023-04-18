@@ -52,7 +52,7 @@ public:
     virtual std::size_t on_free_space() override;
     virtual void on_quit(const std::string& reason) override;
     virtual void on_reset() override;
-    virtual std::size_t on_next_chunk(std::span<char> buffer) override;
+    virtual void on_next_chunk(std::span<char> buffer) override;
     virtual void on_finalize() override;
     virtual void on_write_chunk(std::span<char> buffer) override;
     virtual std::unique_ptr<uh::protocol::allocation>

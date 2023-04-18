@@ -49,7 +49,7 @@ public:
      * Configuration: add job queue and worker threads to send to back-end
      * asynnc.
      */
-    mod(const config& cfg);
+    explicit mod(const config& cfg);
     ~mod();
 
     void start();
