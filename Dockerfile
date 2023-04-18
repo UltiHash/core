@@ -1,4 +1,4 @@
-FROM ghcr.io/ultihash/build-base:20230118 as build
+FROM ghcr.io/ultihash/build-base:20230418 as build
 
 ARG CMAKE_OPTION
 
