@@ -10,7 +10,7 @@ docker-compose logs > logs.txt
 docker-compose stop
 docker-compose rm -f
 
-RESULT=$(cat logs.txt | grep uh-client-shell | tail -n 1 | grep OK)
+RESULT=$(grep uh-client-shell logs.txt | tail -n 1 | grep OK)
 
 if [ $? -eq 0 ]
 then
