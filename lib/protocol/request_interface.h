@@ -26,7 +26,7 @@ struct request_interface
 
     virtual void on_reset() { };
 
-    virtual std::size_t on_next_chunk(std::span<char> buffer) { return 0; };
+    virtual void on_next_chunk(std::span<char> buffer) { };
 
     virtual void on_finalize() { };
 

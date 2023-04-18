@@ -10,7 +10,10 @@
 
 namespace uh::net {
 
-class server_info {
+// ---------------------------------------------------------------------
+
+class server_info
+{
     const net::server &m_server;
 public:
     explicit server_info (const net::server &server);
@@ -18,5 +21,8 @@ public:
     [[nodiscard]] bool server_busy() const;
 };
 
-}
+// ---------------------------------------------------------------------
+
+} // namespace uh::net
+
 #endif //CORE_SERVER_INFO_H

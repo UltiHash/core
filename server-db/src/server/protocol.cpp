@@ -58,7 +58,7 @@ std::unique_ptr<uh::protocol::allocation> protocol::on_allocate_chunk(std::size_
 
 // ---------------------------------------------------------------------
 
-std::size_t protocol::on_next_chunk(std::span<char>)
+void protocol::on_next_chunk(std::span<char>)
 {
     THROW(unsupported, "this call is not supported by this node type");
 }
