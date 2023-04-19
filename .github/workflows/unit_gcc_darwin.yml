@@ -1,4 +1,4 @@
-name: CI Pipeline (MacOS Monterey, GCC)
+name: Unit Tests (MacOS Monterey, GCC)
 
 on:
   push:
