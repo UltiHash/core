@@ -30,7 +30,7 @@ struct chunking_config
     constexpr static std::string_view default_chunking_strategy = "FixedSize";
     std::string chunking_strategy = std::string(default_chunking_strategy);
 
-    constexpr static size_t default_chunk_size_in_bytes = 4194304; // = 2^22
+    constexpr static size_t default_chunk_size_in_bytes = 4 * 1024 * 1024;
     size_t chunk_size_in_bytes = 0;
 };
 
@@ -40,15 +40,12 @@ class mod
 {
 public:
     explicit mod(const chunking_config& cfg);
-    ~mod();
 
-    mod& start();
-
-    chunking::file_chunker& chunker();
+    std::unique_ptr<chunking::file_chunker> create_chunker(io::device& d);
 
 private:
-    struct impl;
-    std::unique_ptr<impl> m_impl;
+    ChunkingStrategyEnum m_strategy;
+    size_t m_chunk_size;
 };
 
 // ---------------------------------------------------------------------
