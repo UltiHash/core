@@ -32,6 +32,15 @@ constexpr const char* strategyString(ChunkingStrategy n)
     THROW(util::exception, "Not implemented option");
 }
 
+constexpr const char* strategyString(ChunkingStrategyEnum n)
+{
+    switch (n)
+    {
+        case ChunkingStrategyEnum::FixedSize: return "FixedSize";
+        case ChunkingStrategyEnum::OtherChunkingStrategy: return "OtherChunkingStrategy";
+        default: THROW(util::exception, "Not implemented option");
+    }
+}
 /*
   Chunking can be done by following one of several strategies: For instance, Fixed size chunking
   splits a file in several equal-sized chunks. For such a strategy, different chunk sizes can be
@@ -45,6 +54,7 @@ static std::unordered_map<std::string, ChunkingStrategy> string2backendtype =
   {strategyString(ChunkingStrategy::Gear), ChunkingStrategy::Gear},
   {strategyString(ChunkingStrategy::FastCDC), ChunkingStrategy::FastCDC},
 };
+
 
 // ---------------------------------------------------------------------
 
