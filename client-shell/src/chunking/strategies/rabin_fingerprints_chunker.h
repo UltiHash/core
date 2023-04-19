@@ -1,8 +1,9 @@
 #ifndef CLIENT_CHUNKING_FIXED_SIZE_H
 #define CLIENT_CHUNKING_FIXED_SIZE_H
 
-#include <chunking/file_chunker.h>
+#include "../file_chunker.h"
 #include <io/device.h>
+#include <chunking/rabin_polynomial.h>
 
 
 namespace uh::client::chunking
