@@ -65,5 +65,4 @@ scrape_configs:
     follow_redirects: true
     enable_http2: true
     static_configs:
-      - targets:
-          - node-exporter:9100
+      - targets: ['host.docker.internal:9100']
