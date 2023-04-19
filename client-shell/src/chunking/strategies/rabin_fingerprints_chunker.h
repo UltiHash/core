@@ -3,8 +3,10 @@
 
 #include "../file_chunker.h"
 #include <io/device.h>
-#include <chunking/rabin_polynomial.h>
-#include <chunking/rabin_polynomial_constants.h>
+extern "C"{
+    #include <chunking/rabin_polynomial.h>
+    #include <chunking/rabin_polynomial_constants.h>
+}
 
 
 namespace uh::client::chunking
