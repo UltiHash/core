@@ -265,7 +265,6 @@ struct rabin_polynomial *get_file_rabin_polys(FILE *file_to_read) {
         //a block grows with chunk positions and hashes at each loop, but the data is thrown away
         block=read_rabin_block(file_data,bytes_read,block);
         bytes_read=fread(file_data,1,RAB_FILE_READ_BUF_SIZE,file_to_read);
-        file_data
     }
     
     free(file_data);

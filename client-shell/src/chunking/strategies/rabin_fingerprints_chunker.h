@@ -4,6 +4,7 @@
 #include "../file_chunker.h"
 #include <io/device.h>
 #include <chunking/rabin_polynomial.h>
+#include <chunking/rabin_polynomial_constants.h>
 
 
 namespace uh::client::chunking
@@ -28,6 +29,7 @@ private:
     io::device& m_dev;
     size_t m_chunk_size = 0;
     std::vector<char> m_buffer;
+    struct rab_block_info *m_block=nullptr;
 };
 
 // ---------------------------------------------------------------------
