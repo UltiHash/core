@@ -1,5 +1,7 @@
 #include "options.h"
 
+#include <util/exception.h>
+
 
 using namespace boost::program_options;
 
