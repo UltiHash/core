@@ -1,6 +1,7 @@
 #ifndef CLIENT_CHUNKING_MOD_H
 #define CLIENT_CHUNKING_MOD_H
 
+#include <chunking/defaults.h>
 #include <util/exception.h>
 
 #include <chunking/chunker.h>
@@ -16,6 +17,7 @@ namespace uh::client::chunking
 enum class ChunkingStrategy
 {
     FixedSize,
+    CDCrabin,
     Gear,
     FastCDC
 };
@@ -25,6 +27,7 @@ constexpr const char* strategyString(ChunkingStrategy n)
     switch (n)
     {
         case ChunkingStrategy::FixedSize: return "FixedSize";
+        case ChunkingStrategy::CDCrabin: return "CDCrabin";
         case ChunkingStrategy::Gear: return "Gear";
         case ChunkingStrategy::FastCDC: return "FastCDC";
     }
@@ -32,15 +35,7 @@ constexpr const char* strategyString(ChunkingStrategy n)
     THROW(util::exception, "Not implemented option");
 }
 
-constexpr const char* strategyString(ChunkingStrategyEnum n)
-{
-    switch (n)
-    {
-        case ChunkingStrategyEnum::FixedSize: return "FixedSize";
-        case ChunkingStrategyEnum::OtherChunkingStrategy: return "OtherChunkingStrategy";
-        default: THROW(util::exception, "Not implemented option");
-    }
-}
+
 /*
   Chunking can be done by following one of several strategies: For instance, Fixed size chunking
   splits a file in several equal-sized chunks. For such a strategy, different chunk sizes can be
@@ -51,6 +46,7 @@ constexpr const char* strategyString(ChunkingStrategyEnum n)
 static std::unordered_map<std::string, ChunkingStrategy> string2backendtype =
 {
   {strategyString(ChunkingStrategy::FixedSize), ChunkingStrategy::FixedSize},
+  {strategyString(ChunkingStrategy::CDCrabin), ChunkingStrategy::CDCrabin},
   {strategyString(ChunkingStrategy::Gear), ChunkingStrategy::Gear},
   {strategyString(ChunkingStrategy::FastCDC), ChunkingStrategy::FastCDC},
 };
@@ -65,7 +61,7 @@ struct chunking_config
 
     std::string chunking_strategy = std::string(default_chunking_strategy);
 
-    constexpr static size_t default_chunk_size_in_bytes = 4 * 1024 * 1024;
+    constexpr static size_t default_chunk_size_in_bytes = DEFAULT_CHUNK_SIZE;
     size_t chunk_size_in_bytes = 0;
 
     uh::chunking::fast_cdc_config fast_cdc;
