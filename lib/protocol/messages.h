@@ -251,6 +251,32 @@ void read(serialization::buffered_serialization& in, finalize_block::response& r
 
 // ---------------------------------------------------------------------
 
+struct write_small_block
+{
+    struct request
+    {
+        std::span<char> data;
+    };
+
+    struct response
+    {
+        blob hash;
+        uint64_t effective_size;
+    };
+
+    constexpr static uint8_t request_id = 0x0b;
+};
+
+// ---------------------------------------------------------------------
+
+void write(serialization::buffered_serialization& out, const write_small_block::request& request);
+void read(serialization::buffered_serialization& in, write_small_block::request& request);
+
+void write(serialization::buffered_serialization& out, const write_small_block::response& response);
+void read(serialization::buffered_serialization& in, write_small_block::response& response);
+
+// ---------------------------------------------------------------------
+
 } // namespace uh::protocol
 
 #endif

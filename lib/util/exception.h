@@ -39,7 +39,7 @@ private:
 // ---------------------------------------------------------------------
 
 DEFINE_EXCEPTION(system_error);
-DEFINE_EXCEPTION(dangling_allocation);
+DEFINE_EXCEPTION(no_space_error);
 DEFINE_SUB_EXCEPTION(file_exists, system_error);
 
 // ---------------------------------------------------------------------

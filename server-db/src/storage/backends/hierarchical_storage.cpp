@@ -68,10 +68,9 @@ hierarchical_storage::hierarchical_storage(std::filesystem::path db_root, size_t
     m_hash_directory_names_offset (hash_directory_names_offset)
     {
         if( !std::filesystem::is_directory(m_root) ) {
-            std::string msg("Path does not exist: " + m_root.string());
-            throw std::runtime_error(msg);
+            throw std::runtime_error("path does not exist: " + m_root.string());
         }
-        else{
+        else {
             m_used = get_dir_size(m_root);
             if (m_used >= m_alloc)
             {
@@ -132,7 +131,7 @@ std::unique_ptr<uh::protocol::allocation> hierarchical_storage::allocate(std::si
         std::size_t used = m_used;
         if (m_alloc - used <= size)
         {
-            THROW(util::exception, "out of space");
+            THROW(util::no_space_error, "out of space");
         }
 
         auto new_val = used + size;
