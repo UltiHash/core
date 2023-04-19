@@ -21,54 +21,82 @@ services:
       - prometheus
     volumes:
       - grafana-storage:/var/lib/grafana grafana/grafana-enterprise
+    user: '472'
   prometheus:
     image: prom/prometheus
     ports:
       - "9090:9090"
+    links:
+      - node-exporter
     volumes:
       - type: bind
         source: ./prometheus.yml
         target: /etc/prometheus/prometheus.yml
-  uh-server-db:
-    image: uh-server-db
-    build:
-      context: ./
-      dockerfile: Dockerfile
-      args:
-        - CMAKE_OPTION=BUILD_SERVER_DB
-        - SRC_PATH=server-db
-        - TARGET=uhServerDB
-    links:
-      - prometheus
-  uh-server-agency:
-    image: uh-server-agency
-    build:
-      context: ./
-      dockerfile: Dockerfile
-      args:
-        - CMAKE_OPTION=BUILD_SERVER_AGENCY
-        - SRC_PATH=server-agency
-        - TARGET=uhServerAgency
+  node-exporter:
+    privileged: true
+    image: quay.io/prometheus/node-exporter:latest
     ports:
-      - "21832:21832"
-    depends_on:
-      - uh-server-db
-    links:
-      - prometheus
-      - uh-server-db
-  uh-client-shell:
-    image: uh-client-shell
-    build:
-      context: ./
-      dockerfile: Dockerfile
-      args:
-        - CMAKE_OPTION=BUILD_CLIENT_SHELL
-        - SRC_PATH=client-shell
-        - TARGET=uhClient
-    depends_on:
-      - uh-server-db
-      - uh-server-agency
-    links:
-      - uh-server-agency
+      - "9100:9100"
+    command:
+      - '--path.rootfs=/host'
+      - "--path.sysfs=/host/sys"
+      - "--collector.rapl"
+      # - "--collector.filesystem.ignored-mount-points"
+      # - "^/(rootfs/)?(dev|etc|host|proc|run|sys|volume1)($$|/)"
+    # network_mode: host
+    # pid: host
+    restart: unless-stopped
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
 volumes:
-  grafana-storage:
+  grafana-storage: {}
+  # mongodb:
+  #   image: mongo
+  #   volumes:
+  #     - "./data:/data/db"
+  #   ports:
+  #     - "27017:27017"
+  # uh-server-db:
+  #   image: uh-server-db
+  #   build:
+  #     context: ./
+  #     dockerfile: Dockerfile
+  #     args:
+  #       - CMAKE_OPTION=BUILD_SERVER_DB
+  #       - SRC_PATH=server-db
+  #       - TARGET=uhServerDB
+  #   links:
+  #     - prometheus
+  # uh-server-agency:
+  #   image: uh-server-agency
+  #   build:
+  #     context: ./
+  #     dockerfile: Dockerfile
+  #     args:
+  #       - CMAKE_OPTION=BUILD_SERVER_AGENCY
+  #       - SRC_PATH=server-agency
+  #       - TARGET=uhServerAgency
+  #   ports:
+  #     - "21832:21832"
+  #   depends_on:
+  #     - uh-server-db
+  #   links:
+  #     - prometheus
+  #     - uh-server-db
+  # uh-client-shell:
+  #   image: uh-client-shell
+  #   build:
+  #     context: ./
+  #     dockerfile: Dockerfile
+  #     args:
+  #       - CMAKE_OPTION=BUILD_CLIENT_SHELL
+  #       - SRC_PATH=client-shell
+  #       - TARGET=uhClient
+  #   depends_on:
+  #     - uh-server-db
+  #     - uh-server-agency
+  #   links:
+  #     - uh-server-agency
+
