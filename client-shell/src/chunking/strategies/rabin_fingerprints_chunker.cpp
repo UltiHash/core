@@ -1,4 +1,5 @@
 #include "rabin_fingerprints_chunker.h"
+#include <logging/logging_boost.h>
 #include <vector>
 
 
@@ -14,6 +15,8 @@ rabin_fingerprints_chunker::rabin_fingerprints_chunker(io::device& dev, size_t c
       m_block(nullptr)
 {
     initialize_rabin_polynomial_defaults();
+    INFO << "--- Storage backend initialized --- ";
+    INFO << "        chunking strategy : " << chunker_type();
     //JM  - TODO - is this init state going to persist? Do we need to fix it?
 }
 

@@ -2,6 +2,7 @@
 
 #include <logging/logging_boost.h>
 #include <chunking/strategies/fixed_size_chunker.h>
+#include <chunking/strategies/rabin_fingerprints_chunker.h>
 
 
 namespace uh::client::chunking
@@ -50,6 +51,8 @@ std::unique_ptr<uh::chunking::chunker> mod::create_chunker(io::device& d)
             return std::make_unique<uh::chunking::gear>(m_gear, d);
         case ChunkingStrategy::FastCDC:
             return std::make_unique<uh::chunking::fast_cdc>(m_fast_cdc, d);
+        case ChunkingStrategy::CDCrabin:
+            return std::make_unique<rabin_fingerprints_chunker>(d, m_chunk_size);
     }
 
     THROW(util::exception, "chunk type not implemented");

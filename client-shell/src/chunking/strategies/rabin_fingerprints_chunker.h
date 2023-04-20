@@ -1,5 +1,5 @@
-#ifndef CLIENT_CHUNKING_FIXED_SIZE_H
-#define CLIENT_CHUNKING_FIXED_SIZE_H
+#ifndef CLIENT_CHUNKING_RABIN_FINGERPRINTS_H
+#define CLIENT_CHUNKING_RABIN_FINGERPRINTS_H
 
 #include "../file_chunker.h"
 #include <io/device.h>
@@ -27,11 +27,14 @@ public:
      */
     std::span<char> next_chunk() override;
 
+    std::string chunker_type() {return std::string(m_type);}
+
 private:
     io::device& m_dev;
     size_t m_chunk_size = 0;
     std::vector<char> m_buffer;
     struct rab_block_info *m_block=nullptr;
+    constexpr static std::string_view m_type = "CDCrabin";
 };
 
 // ---------------------------------------------------------------------
