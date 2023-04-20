@@ -1,5 +1,7 @@
-#include <fstream>
 #include "f_upload.h"
+
+#include <io/file.h>
+
 
 namespace uh::client::serialization
 {
@@ -9,13 +11,13 @@ namespace uh::client::serialization
 f_upload::f_upload(protocol::client_pool& cl_pool,
                    uhv::job_queue<std::unique_ptr<uhv::f_meta_data>>& in_jq,
                    uhv::job_queue<std::unique_ptr<uhv::f_meta_data>>& out_jq,
-                   uh::client::chunking::file_chunker& chunker,
+                   uh::client::chunking::mod& chunking,
                    unsigned int num_threads)
     : common::thread_manager(num_threads),
       m_input_jq(in_jq),
       m_output_jq(out_jq),
       m_client_pool(cl_pool),
-      m_chunker(chunker)
+      m_chunking(chunking)
 {
 }
 
@@ -50,9 +52,11 @@ void f_upload::chunk_and_upload(std::unique_ptr<uhv::f_meta_data>& f_meta_data,
 {
     if ( f_meta_data->f_type() == uhv::uh_file_type::regular )
     {
-        auto chunks = m_chunker.chunk_files(f_meta_data);
+        io::file file(f_meta_data->f_path());
 
-        for (auto & chunk : chunks)
+        auto chunker = m_chunking.create_chunker(file);
+
+        for (auto chunk = chunker->next_chunk(); !chunk.empty(); chunk = chunker->next_chunk())
         {
             protocol::block_meta_data meta_data;
             if (chunk.size() > uh::protocol::server::SMALL_CHUNK_LIMIT) {

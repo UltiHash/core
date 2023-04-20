@@ -1,9 +1,6 @@
 #include "mod.h"
 
-#include <config.hpp>
-
 #include <logging/logging_boost.h>
-#include <util/exception.h>
 #include <chunking/strategies/fixed_size_chunker.h>
 
 
@@ -15,7 +12,7 @@ namespace
 
 // ---------------------------------------------------------------------
 
-ChunkingStrategyEnum define_chunking_strategy(const std::string& chunking_strategy)
+ChunkingStrategy define_chunking_strategy(const std::string& chunking_strategy)
 {
     auto it = string2backendtype.find(chunking_strategy);
     if (it != string2backendtype.end()) {
@@ -29,68 +26,33 @@ ChunkingStrategyEnum define_chunking_strategy(const std::string& chunking_strate
 
 // ---------------------------------------------------------------------
 
-std::unique_ptr<file_chunker> make_chunker(const chunking_config& cfg){
-
-    //Check whether we have enough space:
-    auto chunking_strategy = define_chunking_strategy(cfg.chunking_strategy);
-
-    switch (chunking_strategy)
-    {
-        case ChunkingStrategyEnum::FixedSize:
-            return std::make_unique<chunking::fixed_size_chunker>(cfg.chunk_size_in_bytes);
-        case ChunkingStrategyEnum::OtherChunkingStrategy:
-            THROW(util::exception, "Not implemented yet");
-    }
-
-    std::string msg("Not a chunking strategy: " + cfg.chunking_strategy);
-    THROW(util::exception, msg);
-
-}
-
-// ---------------------------------------------------------------------
-
 } // namespace
 
 // ---------------------------------------------------------------------
 
-struct mod::impl
-{
-    explicit impl(const chunking_config& cfg);
-    std::unique_ptr<chunking::file_chunker> m_chunker;
-};
-
-// ---------------------------------------------------------------------
-
-mod::impl::impl(const chunking_config& cfg)
-    : m_chunker(make_chunker(cfg))
-{
-}
-
-// ---------------------------------------------------------------------
-
 mod::mod(const chunking_config& cfg)
-    : m_impl(std::make_unique<impl>(cfg))
+    : m_strategy(define_chunking_strategy(cfg.chunking_strategy)),
+      m_chunk_size(cfg.chunk_size_in_bytes),
+      m_fast_cdc(cfg.fast_cdc),
+      m_gear(cfg.gear)
 {
 }
 
 // ---------------------------------------------------------------------
 
-mod::~mod() = default;
-
-// ---------------------------------------------------------------------
-
-mod& mod::start()
+std::unique_ptr<uh::chunking::chunker> mod::create_chunker(io::device& d)
 {
-    INFO << "starting file chunking module";
-    m_impl->m_chunker->start();
-    return *this;
-}
+    switch (m_strategy)
+    {
+        case ChunkingStrategy::FixedSize:
+            return std::make_unique<fixed_size_chunker>(d, m_chunk_size);
+        case ChunkingStrategy::Gear:
+            return std::make_unique<uh::chunking::gear>(m_gear, d);
+        case ChunkingStrategy::FastCDC:
+            return std::make_unique<uh::chunking::fast_cdc>(m_fast_cdc, d);
+    }
 
-// ---------------------------------------------------------------------
-
-chunking::file_chunker& mod::chunker()
-{
-    return *m_impl->m_chunker;
+    THROW(util::exception, "chunk type not implemented");
 }
 
 // ---------------------------------------------------------------------

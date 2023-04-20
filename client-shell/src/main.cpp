@@ -64,7 +64,7 @@ void handle_errors(const std::string& message,
 
 void integrate(protocol::client_pool& pool,
                unsigned worker_count,
-               const chunking::chunking_config& chunker_config,
+               const client::chunking::chunking_config& chunker_config,
                const std::vector<std::filesystem::path>& input,
                const std::filesystem::path& output,
                bool overwrite)
@@ -76,10 +76,9 @@ void integrate(protocol::client_pool& pool,
 
     {
         uh::client::chunking::mod chunking_module(chunker_config);
-        chunking_module.start();
 
         f_upload upload_class(pool, q_f_meta_data,
-                              q_f_mdata_w_hash, chunking_module.chunker(), worker_count);
+                              q_f_mdata_w_hash, chunking_module, worker_count);
         upload_class.spawn_threads();
 
         f_traverse traverse_class(input, q_f_meta_data);

@@ -34,14 +34,14 @@ namespace uh::io {
                 pointer += data.size();
                 return data.size();
             } else {
-                return serialization::sync_write(dev_, data);
+                return io::write(dev_, data);
 
             }
         }
 
 
         std::streamsize read(std::span<char> data) override {
-            return serialization::sync_read(dev_, data);
+            return io::read(dev_, data);
         }
 
         [[nodiscard]] bool valid() const override {
@@ -50,7 +50,7 @@ namespace uh::io {
 
         inline void sync() {
             if (pointer > 0) {
-                serialization::sync_write(dev_, {buffer, pointer});
+                io::write(dev_, {buffer, pointer});
                 pointer = 0;
             }
         }
