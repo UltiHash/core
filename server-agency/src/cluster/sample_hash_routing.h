@@ -7,6 +7,7 @@
 
 #include <memory>
 #include <unordered_map>
+#include <functional>
 #include <protocol/client_pool.h>
 #include "routing_interface.h"
 
@@ -16,10 +17,18 @@ namespace uh::an::cluster
     public:
         explicit sample_hash_routing(const std::unordered_map<std::string, std::unique_ptr<protocol::client_pool>> &nodes);
 
-        const std::unique_ptr<protocol::client_pool> &route_data (const std::span <char> &data) override;
+        const std::unique_ptr<protocol::client_pool> &route_data (const std::span <char> &data) const override;
 
     private:
+
+        using node_index_t = std::unordered_map<std::size_t, const std::unique_ptr<protocol::client_pool>&>;
+
+        static node_index_t
+        fill_node_index (const std::unordered_map<std::string, std::unique_ptr<protocol::client_pool>> &);
+
         const std::unordered_map<std::string, std::unique_ptr<protocol::client_pool>> &m_nodes;
+        const node_index_t m_nodes_index;
+
     };
 
 }
