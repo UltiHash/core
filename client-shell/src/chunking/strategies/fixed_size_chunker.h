@@ -1,8 +1,8 @@
 #ifndef CLIENT_CHUNKING_FIXED_SIZE_H
 #define CLIENT_CHUNKING_FIXED_SIZE_H
 
-#include "../file_chunker.h"
 #include <io/device.h>
+#include <chunking/chunker.h>
 
 
 namespace uh::client::chunking
@@ -10,7 +10,7 @@ namespace uh::client::chunking
 
 // ---------------------------------------------------------------------
 
-class fixed_size_chunker : public file_chunker
+class fixed_size_chunker : public uh::chunking::chunker
 {
 public:
     fixed_size_chunker(io::device& dev, size_t chunk_size);
