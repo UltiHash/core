@@ -11,10 +11,30 @@ namespace uh::chunking
 
 // ---------------------------------------------------------------------
 
+struct fast_cdc_config
+{
+    /**
+     * Minimum size of chunks.
+     */
+    std::size_t min_size = 8192;
+
+    /**
+     * Maximum size of chunks.
+     */
+    std::size_t max_size = 1 * 1024 * 1024;
+
+    /**
+     * Normalized size of chunks. max_size > normal_size > min_size.
+     */
+    std::size_t normal_size = 128 * 1024;
+};
+
+// ---------------------------------------------------------------------
+
 class fast_cdc : public chunker
 {
 public:
-    fast_cdc(io::device& in, std::size_t min_size, std::size_t max_size);
+    fast_cdc(const fast_cdc_config& config, io::device& in);
 
     std::span<char> next_chunk() override;
 

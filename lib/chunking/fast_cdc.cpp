@@ -2,19 +2,25 @@
 
 #include "fast_cdc_random.inc"
 
+#include <util/exception.h>
+
 
 namespace uh::chunking
 {
 
 // ---------------------------------------------------------------------
 
-fast_cdc::fast_cdc(io::device& in, std::size_t min_size, std::size_t max_size)
-    : m_buffer(in, max_size),
+fast_cdc::fast_cdc(const fast_cdc_config& c, io::device& in)
+    : m_buffer(in, c.max_size),
       m_geartable(reinterpret_cast<const uint64_t*>(random_gen_table)),
-      m_min_size(min_size),
-      m_max_size(max_size),
-      m_normal_size(8 * 1024)
+      m_min_size(c.min_size),
+      m_max_size(c.max_size),
+      m_normal_size(c.normal_size)
 {
+    if (!(m_max_size > m_normal_size && m_normal_size > m_min_size))
+    {
+        THROW(uh::util::illegal_args, "illegal FastCDC limitations");
+    }
 }
 
 // ---------------------------------------------------------------------
