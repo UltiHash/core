@@ -89,4 +89,40 @@ std::size_t copy(device& d, std::ostream& out)
 
 // ---------------------------------------------------------------------
 
+std::streamsize write(io::device& dev, std::span<const char> buffer)
+{
+    std::size_t written = 0;
+
+    const auto total = buffer.size();
+    while (written < total)
+    {
+        written += dev.write({buffer.data() + written, total - written});
+    }
+
+    return written;
+}
+
+// ---------------------------------------------------------------------
+
+std::streamsize read(io::device& dev, std::span<char> buffer)
+{
+    std::size_t reads = 0;
+
+    const auto total = buffer.size();
+    while (reads < total)
+    {
+        auto read = dev.read({buffer.data() + reads, total - reads});
+        if (read == 0)
+        {
+            break;
+        }
+
+        reads += read;
+    }
+
+    return reads;
+}
+
+// ---------------------------------------------------------------------
+
 } // namespace uh::io

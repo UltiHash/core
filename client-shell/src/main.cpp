@@ -64,7 +64,7 @@ void handle_errors(const std::string& message,
 
 void integrate(protocol::client_pool& pool,
                unsigned worker_count,
-               const chunking::chunking_config& chunker_config,
+               const client::chunking::chunking_config& chunker_config,
                const std::vector<std::filesystem::path>& input,
                const std::filesystem::path& output,
                bool overwrite)

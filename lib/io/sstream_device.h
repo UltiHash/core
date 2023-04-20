@@ -2,30 +2,35 @@
 // Created by masi on 13.03.23.
 //
 
-#ifndef CORE_SSTREAM_DEVICE_H
-#define CORE_SSTREAM_DEVICE_H
+#ifndef IO_SSTREAM_DEVICE_H
+#define IO_SSTREAM_DEVICE_H
 
 #include "device.h"
 
-#include <filesystem>
 #include <sstream>
 
-namespace uh::io {
+
+namespace uh::io
+{
 
 // ---------------------------------------------------------------------
 
-    class sstream_device : public io::device {
-        public:
+class sstream_device : public io::device
+{
+public:
+    sstream_device(const std::string& init = "");
 
-        std::streamsize write(std::span<const char> buffer) override;
-        std::streamsize read(std::span<char> buffer) override;
-        bool valid() const override;
+    std::streamsize write(std::span<const char> buffer) override;
+    std::streamsize read(std::span<char> buffer) override;
 
-        private:
-        std::stringstream m_io;
-    };
+    bool valid() const override;
+
+private:
+    std::stringstream m_io;
+};
+
+// ---------------------------------------------------------------------
 
 } // namespace uh::io
 
-
-#endif //CORE_SSTREAM_DEVICE_H
+#endif

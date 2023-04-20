@@ -93,6 +93,30 @@ std::size_t copy(device& d, std::ostream& out);
 
 // ---------------------------------------------------------------------
 
+/**
+ * Write the buffer to the device. This function guarantees that the complete
+ * buffer is written by calling `dev.write()` repeatedly until everything is
+ * written.
+ *
+ * @throws when `dev.write()` throws
+ * @return number of bytes written
+ */
+std::streamsize write(io::device& dev, std::span<const char> buffer);
+
+// ---------------------------------------------------------------------
+
+/**
+ * Read from the device to the buffer. This function guarantees that all bytes
+ * available on the device up to `buffer.size()` are read by calling `dev.read()`
+ * repeatedly until `buffer` is filled or `dev.read()` signales end of data.
+ *
+ * @throws when `dev.read()` throws
+ * @return number of bytes read
+ */
+std::streamsize read(io::device& dev, std::span<char> buffer);
+
+// ---------------------------------------------------------------------
+
 } // namespace uh::io
 
 #endif
