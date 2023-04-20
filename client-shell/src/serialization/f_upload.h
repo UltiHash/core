@@ -4,6 +4,7 @@
 #include <uhv/job_queue.h>
 #include <uhv/f_meta_data.h>
 #include <protocol/client_pool.h>
+#include <protocol/server.h>
 
 #include <chunking/mod.h>
 #include "../common/thread_manager.h"
@@ -21,7 +22,6 @@ class f_upload : public common::thread_manager
 {
 public:
 
-    constexpr static std::size_t SMALL_CHUNK_LIMIT = 16 * 1024 * 1024;
 
     f_upload(protocol::client_pool& client_pool,
             uhv::job_queue<std::unique_ptr<uhv::f_meta_data>>& input_queue,

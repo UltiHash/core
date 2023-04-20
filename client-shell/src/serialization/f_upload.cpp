@@ -55,7 +55,7 @@ void f_upload::chunk_and_upload(std::unique_ptr<uhv::f_meta_data>& f_meta_data,
         for (auto & chunk : chunks)
         {
             protocol::block_meta_data meta_data;
-            if (chunk.size() > SMALL_CHUNK_LIMIT) {
+            if (chunk.size() > uh::protocol::server::SMALL_CHUNK_LIMIT) {
                 auto alloc = client_handle->allocate(chunk.size());
                 io::write_from_buffer(alloc->device(), chunk);
                 meta_data = alloc->persist();

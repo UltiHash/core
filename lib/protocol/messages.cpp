@@ -362,4 +362,33 @@ void read(serialization::buffered_serialization& in, write_small_block::response
 
 // ---------------------------------------------------------------------
 
+void write(serialization::buffered_serialization& out, const read_small_block::request& request)
+{
+    out.write(read_small_block::request_id);
+    out.write(request.hash);}
+
+// ---------------------------------------------------------------------
+
+void read(serialization::buffered_serialization& in, read_small_block::request& request)
+{
+    request.hash = in.read <std::vector<char>> ();
+}
+
+// ---------------------------------------------------------------------
+
+void write(serialization::buffered_serialization& out, const read_small_block::response& response)
+{
+    out.write(response.data);
+}
+
+// ---------------------------------------------------------------------
+
+void read(serialization::buffered_serialization& in, read_small_block::response& response)
+{
+    check_status(in);
+    in.read (response.data);
+}
+
+// ---------------------------------------------------------------------
+
 } // namespace uh::protocol
