@@ -10,10 +10,25 @@ namespace uh::chunking
 
 // ---------------------------------------------------------------------
 
+struct gear_config
+{
+    /**
+     * Maximum size of produced chunks.
+     */
+    std::size_t max_size = 1 * 1024 * 1024;
+
+    /**
+     * Average size of chunks.
+     */
+    std::size_t average_size = 128 * 1024;
+};
+
+// ---------------------------------------------------------------------
+
 class gear : public chunker
 {
 public:
-    gear(io::device& in, std::size_t max_size);
+    gear(const gear_config& c, io::device& in);
 
     std::span<char> next_chunk() override;
 
@@ -23,13 +38,7 @@ private:
     uint64_t m_fp = 0;
     const uint64_t* m_geartable;
     std::size_t m_max_size;
-
-    /*
-     * Defines average chunk size: number of most significant bits set is equal
-     * to log(average chunk size). Here: log(8192) = 13.
-     */
-    static constexpr uint64_t significant_bits = 18;
-    static constexpr uint64_t m_mask = (~0ul) << (64 - significant_bits);
+    uint64_t m_mask;
 };
 // ---------------------------------------------------------------------
 
