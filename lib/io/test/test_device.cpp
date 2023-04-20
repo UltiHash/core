@@ -7,10 +7,12 @@
 #include <boost/test/unit_test.hpp>
 #include <boost/mpl/vector.hpp>
 
+#include <io/buffered_device.h>
 #include <io/sstream_device.h>
 
 
 using namespace uh;
+using namespace uh::io;
 
 namespace
 {
@@ -30,7 +32,14 @@ const static std::string TEST_TEXT =
 
 // ---------------------------------------------------------------------
 
-typedef boost::mpl::vector<io::sstream_device> device_types;
+typedef boost::mpl::vector<
+    sstream_device,
+    buffered_device<sstream_device>
+> device_types;
+
+// ---------------------------------------------------------------------
+
+struct Fixture {};
 
 // ---------------------------------------------------------------------
 
@@ -39,19 +48,30 @@ typedef boost::mpl::vector<io::sstream_device> device_types;
  * that will read the text given in TEST_TEXT.
  */
 template <typename T>
-std::unique_ptr<io::device> make_test_device();
+std::unique_ptr<T> make_test_device();
 
 // ---------------------------------------------------------------------
 
 template <>
-std::unique_ptr<io::device> make_test_device<io::sstream_device>()
+std::unique_ptr<sstream_device> make_test_device<sstream_device>()
 {
-    return std::make_unique<io::sstream_device>(TEST_TEXT);
+    return std::make_unique<sstream_device>(TEST_TEXT);
 }
 
 // ---------------------------------------------------------------------
 
-BOOST_FIXTURE_TEST_CASE_TEMPLATE( valid_default, T, device_types, T )
+template <>
+std::unique_ptr<buffered_device<sstream_device>> make_test_device<buffered_device<sstream_device>>()
+{
+    static std::unique_ptr<sstream_device> base;
+    base = make_test_device<sstream_device>();
+
+    return std::make_unique<buffered_device<sstream_device>>(*base);
+}
+
+// ---------------------------------------------------------------------
+
+BOOST_FIXTURE_TEST_CASE_TEMPLATE( valid_default, T, device_types, Fixture )
 {
     auto dev = make_test_device<T>();
 
@@ -60,7 +80,7 @@ BOOST_FIXTURE_TEST_CASE_TEMPLATE( valid_default, T, device_types, T )
 
 // ---------------------------------------------------------------------
 
-BOOST_FIXTURE_TEST_CASE_TEMPLATE( read_full, T, device_types, T )
+BOOST_FIXTURE_TEST_CASE_TEMPLATE( read_full, T, device_types, Fixture )
 {
     auto dev = make_test_device<T>();
 
@@ -83,7 +103,7 @@ BOOST_FIXTURE_TEST_CASE_TEMPLATE( read_full, T, device_types, T )
 
 // ---------------------------------------------------------------------
 
-BOOST_FIXTURE_TEST_CASE_TEMPLATE( read_partial, T, device_types, T )
+BOOST_FIXTURE_TEST_CASE_TEMPLATE( read_partial, T, device_types, Fixture )
 {
     auto dev = make_test_device<T>();
 
