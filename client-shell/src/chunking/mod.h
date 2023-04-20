@@ -1,8 +1,9 @@
 #ifndef CLIENT_CHUNKING_MOD_H
 #define CLIENT_CHUNKING_MOD_H
+
 #include <protocol/client_pool.h>
 
-#include <chunking/file_chunker.h>
+#include <chunking/chunker.h>
 #include <util/exception.h>
 
 
@@ -52,7 +53,7 @@ class mod
 public:
     explicit mod(const chunking_config& cfg);
 
-    std::unique_ptr<chunking::file_chunker> create_chunker(io::device& d);
+    std::unique_ptr<uh::chunking::chunker> create_chunker(io::device& d);
 
 private:
     ChunkingStrategyEnum m_strategy;

@@ -39,7 +39,7 @@ mod::mod(const chunking_config& cfg)
 
 // ---------------------------------------------------------------------
 
-std::unique_ptr<chunking::file_chunker> mod::create_chunker(io::device& d)
+std::unique_ptr<uh::chunking::chunker> mod::create_chunker(io::device& d)
 {
     switch (m_strategy)
     {
