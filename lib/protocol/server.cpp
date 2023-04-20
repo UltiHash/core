@@ -240,7 +240,7 @@ void server::handle_next_chunk()
 
     if (req.max_size < MINIMUM_CHUNK_SIZE || req.max_size > MAXIMUM_CHUNK_SIZE)
     {
-        THROW(illegal_args, "buffer size out of range");
+        THROW(util::illegal_args, "buffer size out of range");
     }
 
     std::vector<char> buffer(req.max_size);
@@ -268,7 +268,7 @@ void server::handle_allocate_chunk()
 
     if (req.size > MAXIMUM_BLOCK_SIZE)
     {
-        THROW(illegal_args, "block size out of range");
+        THROW(util::illegal_args, "block size out of range");
     }
 
     m_write_alloc = m_handler_interface->on_allocate_chunk(req.size);

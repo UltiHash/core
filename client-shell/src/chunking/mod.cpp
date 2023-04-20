@@ -1,7 +1,6 @@
 #include "mod.h"
 
 #include <logging/logging_boost.h>
-#include <util/exception.h>
 #include <chunking/strategies/fixed_size_chunker.h>
 
 
@@ -13,7 +12,7 @@ namespace
 
 // ---------------------------------------------------------------------
 
-ChunkingStrategyEnum define_chunking_strategy(const std::string& chunking_strategy)
+ChunkingStrategy define_chunking_strategy(const std::string& chunking_strategy)
 {
     auto it = string2backendtype.find(chunking_strategy);
     if (it != string2backendtype.end()) {
@@ -33,18 +32,24 @@ ChunkingStrategyEnum define_chunking_strategy(const std::string& chunking_strate
 
 mod::mod(const chunking_config& cfg)
     : m_strategy(define_chunking_strategy(cfg.chunking_strategy)),
-      m_chunk_size(cfg.chunk_size_in_bytes)
+      m_chunk_size(cfg.chunk_size_in_bytes),
+      m_fast_cdc(cfg.fast_cdc),
+      m_gear(cfg.gear)
 {
 }
 
 // ---------------------------------------------------------------------
 
-std::unique_ptr<chunking::file_chunker> mod::create_chunker(io::device& d)
+std::unique_ptr<uh::chunking::chunker> mod::create_chunker(io::device& d)
 {
     switch (m_strategy)
     {
-        case ChunkingStrategyEnum::FixedSize:
+        case ChunkingStrategy::FixedSize:
             return std::make_unique<fixed_size_chunker>(d, m_chunk_size);
+        case ChunkingStrategy::Gear:
+            return std::make_unique<uh::chunking::gear>(m_gear, d);
+        case ChunkingStrategy::FastCDC:
+            return std::make_unique<uh::chunking::fast_cdc>(m_fast_cdc, d);
     }
 
     THROW(util::exception, "chunk type not implemented");

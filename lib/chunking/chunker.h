@@ -1,16 +1,18 @@
-#ifndef CLIENT_FILE_CHUNKING_H
-#define CLIENT_FILE_CHUNKING_H
+#ifndef CHUNKING_CHUNKER_H
+#define CHUNKING_CHUNKER_H
 
 #include <span>
 
 
-namespace uh::client::chunking {
+namespace uh::chunking
+{
 
 // ---------------------------------------------------------------------
 
-class file_chunker {
+class chunker
+{
 public:
-    virtual ~file_chunker() = default;
+    virtual ~chunker() = default;
 
     /**
      * Return the next chunk to upload. If there are no more chunks, return
@@ -23,6 +25,6 @@ public:
 
 // ---------------------------------------------------------------------
 
-} // namespace uh::client::chunking
+} // namespace uh::chunking
 
 #endif

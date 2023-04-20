@@ -69,7 +69,7 @@ namespace uh::serialization {
             std::copy (data_ptr,
                        data_ptr + sizeof (data),
                        std::back_inserter(buffer));
-            sync_write(dev_, buffer);
+            io::write(dev_, buffer);
         }
 
         // ---------------------------------------------------------------------
@@ -87,8 +87,8 @@ namespace uh::serialization {
         void write (const Range &data) {
             const auto data_size = std::ranges::size (data) * sizeof (InnerType);
             const auto header = get_header(data_size);
-            sync_write(dev_, header);
-            sync_write(dev_, {reinterpret_cast <const char *> (std::ranges::data(data)), data_size});
+            io::write(dev_, header);
+            io::write(dev_, {reinterpret_cast <const char *> (std::ranges::data(data)), data_size});
 
         }
 
