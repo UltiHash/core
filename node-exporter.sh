@@ -2,6 +2,17 @@
 
 username=$(whoami)
 
+# go
+if ! command -v go &> /dev/null
+then
+    echo "Go is not installed. Installing..."
+    sudo apt-get update
+    sudo apt-get install -y golang
+else
+    echo "Go is already installed."
+fi
+
+# node-exporter
 if [ ! -d "/home/$username/Downloads" ]; then
   mkdir "/home/$username/Downloads"
 fi
