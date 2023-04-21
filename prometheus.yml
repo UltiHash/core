@@ -65,4 +65,4 @@ scrape_configs:
     follow_redirects: true
     enable_http2: true
     static_configs:
-      - targets: ['host.docker.internal:9100']
+      - targets: ["192.168.42.20:9100"]
