@@ -62,6 +62,7 @@ struct rabin_polynomial{
     uint64_t start;
     uint16_t length;
     uint64_t polynomial;
+    char *chunk_data;
     struct rabin_polynomial *next_polynomial;   
 };
 

@@ -57,15 +57,15 @@
 #endif
 
 #ifndef RAB_POLYNOMIAL_WIN_SIZE
-#define RAB_POLYNOMIAL_WIN_SIZE 31
+#define RAB_POLYNOMIAL_WIN_SIZE 8
 #endif
 
 #ifndef RAB_POLYNOMIAL_MIN_WIN_SIZE
-#define RAB_POLYNOMIAL_MIN_WIN_SIZE 17
+#define RAB_POLYNOMIAL_MIN_WIN_SIZE 4
 #endif
 
 #ifndef RAB_POLYNOMIAL_MAX_WIN_SIZE
-#define RAB_POLYNOMIAL_MAX_WIN_SIZE 63
+#define RAB_POLYNOMIAL_MAX_WIN_SIZE 16
 #endif
 
 //# of bytes to read at a time when reading through files

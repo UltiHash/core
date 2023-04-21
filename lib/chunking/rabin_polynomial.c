@@ -176,6 +176,7 @@ struct rabin_polynomial *gen_new_polynomial(struct rabin_polynomial *tail, uint6
     next->start=total_len-length;
     next->length=length;
     next->polynomial=rab_sum;
+    next->chunk_data=NULL;
     
     return next;
     
@@ -338,12 +339,11 @@ struct rab_block_info *read_rabin_block(void *buf, size_t size, struct rab_block
     }
    
 
-    size_t i;
+    size_t i, j, J;
     for(i=0;i<size;i++) {
     	char cur_byte=*((char *)(buf+i));
         char pushed_out=block->current_window_data[block->window_pos];
         block->current_window_data[block->window_pos]=cur_byte;
-        //fprintf(stdout, "%c", cur_byte);
         block->cur_roll_checksum=(block->cur_roll_checksum*rabin_polynomial_prime)+cur_byte;
         block->tail->polynomial=(block->tail->polynomial*rabin_polynomial_prime)+cur_byte;
         block->cur_roll_checksum-=(pushed_out*polynomial_lookup_buf[rabin_sliding_window_size]);
@@ -358,6 +358,21 @@ struct rab_block_info *read_rabin_block(void *buf, size_t size, struct rab_block
         //If we hit our special value or reached the max win size create a new block
         if((block->tail->length >= rabin_polynomial_min_block_size && (block->cur_roll_checksum % rabin_polynomial_average_block_size) == rabin_polynomial_prime)|| block->tail->length == rabin_polynomial_max_block_size) {
             block->tail->start=block->total_bytes_read-block->tail->length;
+
+            //TODO - JM ask the team how to manage the memory of this malloc. Is this a memory leak?
+            block->tail->chunk_data=malloc(sizeof(char)*(1+block->tail->length));
+            J = block->tail->start;
+            for(j=0; j<block->tail->length;j++){
+                block->tail->chunk_data[j] = *(char *)(buf+J+j);
+            }
+            block->tail->chunk_data[j] = NULL;
+
+            // JM >>>>>
+            //fprintf(stdout, "%.*s", block->tail->length, block->tail->chunk_data);
+            fprintf(stdout, "%s", block->tail->chunk_data);
+            fprintf(stdout, "\n=======\n");
+            // <<<<< JM
+
             struct rabin_polynomial *new_poly=gen_new_polynomial(NULL,0,0,0);
             block->tail->next_polynomial=new_poly;
             block->tail=new_poly;
