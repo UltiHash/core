@@ -285,7 +285,7 @@ struct rab_block_info *init_empty_block() {
         fprintf(stderr,"Could not allocate rabin polynomial block, no memory left!\n");
         return NULL;
     }
-	
+
 	block->head=gen_new_polynomial(NULL,0,0,0);
     
 	if(block->head == NULL)
@@ -338,7 +338,7 @@ struct rab_block_info *read_rabin_block(void *buf, size_t size, struct rab_block
 
     }
    
-
+    size_t bytes_offset = block->total_bytes_read;
     size_t i, j, J;
     for(i=0;i<size;i++) {
     	char cur_byte=*((char *)(buf+i));
@@ -361,7 +361,7 @@ struct rab_block_info *read_rabin_block(void *buf, size_t size, struct rab_block
 
             //TODO - JM ask the team how to manage the memory of this malloc. Is this a memory leak?
             block->tail->chunk_data=malloc(sizeof(char)*(1+block->tail->length));
-            J = block->tail->start;
+            J = block->tail->start - bytes_offset;
             for(j=0; j<block->tail->length;j++){
                 block->tail->chunk_data[j] = *(char *)(buf+J+j);
             }
@@ -369,8 +369,10 @@ struct rab_block_info *read_rabin_block(void *buf, size_t size, struct rab_block
 
             // JM >>>>>
             //fprintf(stdout, "%.*s", block->tail->length, block->tail->chunk_data);
-            fprintf(stdout, "%s", block->tail->chunk_data);
-            fprintf(stdout, "\n=======\n");
+            //FILE* debuglog = fopen("./debugfile", "a");
+            //fprintf(debuglog, "%s", block->tail->chunk_data);
+            //fclose(debuglog);
+            //fprintf(stdout, "\n=======\n");
             // <<<<< JM
 
             struct rabin_polynomial *new_poly=gen_new_polynomial(NULL,0,0,0);
