@@ -26,7 +26,7 @@ public:
     f_upload(protocol::client_pool& client_pool,
             uhv::job_queue<std::unique_ptr<uhv::f_meta_data>>& input_queue,
             uhv::job_queue<std::unique_ptr<uhv::f_meta_data>>& output_files,
-            uh::client::chunking::file_chunker& chunker,
+            uh::client::chunking::mod& chunking,
             unsigned int num_threads = 1);
     ~f_upload() override;
 
@@ -45,7 +45,7 @@ private:
     uhv::job_queue<std::unique_ptr<uhv::f_meta_data>>& m_input_jq;
     uhv::job_queue<std::unique_ptr<uhv::f_meta_data>>& m_output_jq;
     uh::protocol::client_pool& m_client_pool;
-    uh::client::chunking::file_chunker& m_chunker;
+    uh::client::chunking::mod& m_chunking;
 
     std::map<std::filesystem::path, std::optional<std::string>> m_results;
     std::mutex m_result_mutex;
