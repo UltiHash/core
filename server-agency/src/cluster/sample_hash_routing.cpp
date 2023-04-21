@@ -35,7 +35,7 @@ const std::unique_ptr<protocol::client_pool> &sample_hash_routing::route_data(co
         }
     }
 
-    std::string_view sample_view (sample, SAMPLE_SIZE);
+    const std::string_view sample_view (sample, SAMPLE_SIZE);
     const auto hash = get_hash_func () (sample_view);
 
     return m_nodes_index.at(hash % m_nodes_index.size());
@@ -52,8 +52,8 @@ sample_hash_routing::node_index_t sample_hash_routing::fill_node_index(
     return nodes_index;
 }
 
-std::hash<std::string_view> sample_hash_routing::get_hash_func() {
-    static std::hash <std::string_view> hash_func {};
+const std::hash<std::string_view> &sample_hash_routing::get_hash_func() {
+    const static std::hash <std::string_view> hash_func {};
     return hash_func;
 }
 
