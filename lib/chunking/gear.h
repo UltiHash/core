@@ -40,6 +40,7 @@ private:
     std::size_t m_max_size;
     uint64_t m_mask;
 };
+
 // ---------------------------------------------------------------------
 
 } // namespace uh::chunking
