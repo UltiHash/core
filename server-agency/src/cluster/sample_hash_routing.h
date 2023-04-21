@@ -28,7 +28,10 @@ namespace uh::an::cluster
 
         const std::unordered_map<std::string, std::unique_ptr<protocol::client_pool>> &m_nodes;
         const node_index_t m_nodes_index;
+        static constexpr std::size_t SAMPLE_SIZE = 64;
+        static constexpr std::size_t SAMPLE_PIECES = 4;
 
+        static inline std::hash <std::string_view> get_hash_func ();
     };
 
 }

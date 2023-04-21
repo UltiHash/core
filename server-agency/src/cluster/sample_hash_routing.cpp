@@ -14,27 +14,29 @@ sample_hash_routing::sample_hash_routing(
 const std::unique_ptr<protocol::client_pool> &sample_hash_routing::route_data(const std::span <char> &data) const {
 
 
-    std::string sample;
+    char sample [SAMPLE_SIZE];
 
-    if (data.size() < 64) {
-        sample.append(data.data(), data.size());
+    if (data.size() < SAMPLE_SIZE) {
+        std::memcpy (sample, data.data(), data.size());
+        std::memset (sample, 0, SAMPLE_SIZE - data.size());
     }
     else {
-        sample.reserve(64);
 
-        const std::size_t step = data.size() / 4;
+        const std::size_t step = data.size() / SAMPLE_PIECES;
+        constexpr auto sample_piece_size = SAMPLE_SIZE / SAMPLE_PIECES;
+
         auto data_ptr = data.data();
+        auto sample_ptr = sample;
 
-        sample.append(data_ptr, 16);
-        data_ptr += step;
-        sample.append(data_ptr, 16);
-        data_ptr += step;
-        sample.append(data_ptr, 16);
-        data_ptr += step;
-        sample.append(data_ptr, 16);
+        for (auto i = 0; i < SAMPLE_PIECES; ++i) {
+            std::memcpy (sample_ptr, data_ptr, sample_piece_size);
+            data_ptr += step;
+            sample_ptr += sample_piece_size;
+        }
     }
-    
-    const auto hash = std::hash <std::string> {} (sample);
+
+    std::string_view sample_view (sample, SAMPLE_SIZE);
+    const auto hash = get_hash_func () (sample_view);
 
     return m_nodes_index.at(hash % m_nodes_index.size());
 }
@@ -48,6 +50,11 @@ sample_hash_routing::node_index_t sample_hash_routing::fill_node_index(
         nodes_index.emplace(index++, std::cref (node_pair.second));
     }
     return nodes_index;
+}
+
+std::hash<std::string_view> sample_hash_routing::get_hash_func() {
+    static std::hash <std::string_view> hash_func {};
+    return hash_func;
 }
 
 }
