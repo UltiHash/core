@@ -1,6 +1,7 @@
 #include "rabin_fingerprints_chunker.h"
 #include <logging/logging_boost.h>
 #include <vector>
+#include <iostream>
 
 
 namespace uh::client::chunking
@@ -17,22 +18,45 @@ rabin_fingerprints_chunker::rabin_fingerprints_chunker(io::device& dev, size_t c
     initialize_rabin_polynomial_defaults();
     INFO << "--- Storage backend initialized --- ";
     INFO << "        chunking strategy : " << chunker_type();
-    //JM  - TODO - is this init state going to persist? Do we need to fix it?
 }
 
 // ---------------------------------------------------------------------
 
+size_t rabin_fingerprints_chunker::refill_buffer()
+{
+    size_t bytes_read=m_dev.read({m_buffer.data(), m_buffer.size()});
+
+    if(!bytes_read)
+        return bytes_read;
+
+    m_block=read_rabin_block(m_buffer.data(), bytes_read, m_block);
+
+    if(!m_chunk){
+        m_chunk=m_block->head;
+    }
+    else{
+        m_chunk=m_chunk->next_polynomial;
+    }
+
+    return bytes_read;
+}
+
 std::span<char> rabin_fingerprints_chunker::next_chunk()
 {
-///
-    //file_data is the content of each chunk
-    //a block contains several chunks positions but not data itself
-    //a block grows with chunk positions and hashes at each loop, but the data is thrown away
-    size_t bytes_read=m_dev.read({m_buffer.data(), m_buffer.size()});
-    m_block=read_rabin_block(m_buffer.data(), bytes_read, m_block);
-///
+    if(!m_chunk){
+        if(!refill_buffer())
+            return {};
+    }
+    else
+    {
+        m_chunk = m_chunk->next_polynomial;
+    }
+    if(!m_chunk->next_polynomial){
+        if(!refill_buffer())
+            return {};
+    }
 
-    return { m_buffer.data(), bytes_read };
+    return {m_chunk->chunk_data, m_chunk->length};
 }
 
 // ---------------------------------------------------------------------

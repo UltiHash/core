@@ -29,11 +29,14 @@ public:
 
     std::string chunker_type() {return std::string(m_type);}
 
+    size_t refill_buffer();
+
 private:
     io::device& m_dev;
     size_t m_chunk_size = 0;
     std::vector<char> m_buffer;
     struct rab_block_info *m_block=nullptr;
+    struct rabin_polynomial *m_chunk=nullptr;
     constexpr static std::string_view m_type = "CDCrabin";
 };
 
