@@ -100,6 +100,7 @@ void integrate(protocol::client_pool& pool,
 
     std::cout << "encoding speed: " << (mbytes / seconds) << " Mb/s" << std::endl;
 }
+
 // ---------------------------------------------------------------------
 
 void retrieve(protocol::client_pool& pool,

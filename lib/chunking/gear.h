@@ -15,12 +15,12 @@ struct gear_config
     /**
      * Maximum size of produced chunks.
      */
-    std::size_t max_size = 1 * 1024 * 1024;
+    std::size_t max_size = 128 * 1024;
 
     /**
      * Average size of chunks.
      */
-    std::size_t average_size = 128 * 1024;
+    std::size_t average_size = 16 * 1024;
 };
 
 // ---------------------------------------------------------------------
