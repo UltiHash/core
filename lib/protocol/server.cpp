@@ -80,6 +80,9 @@ void server::handle_normal_request(uint8_t request_id)
         case free_space::request_id: return handle_free_space();
         case reset::request_id: return handle_reset();
         case allocate_chunk::request_id: return handle_allocate_chunk();
+        case write_small_block::request_id: return handle_write_small_block();
+        case read_small_block::request_id: return handle_read_small_block();
+
 
         default:
             throw std::runtime_error("normal, unsupported command: "
@@ -276,6 +279,31 @@ void server::handle_allocate_chunk()
 
     write(m_bs, status{ status::OK });
     m_bs.sync ();
+}
+
+// ---------------------------------------------------------------------
+
+void server::handle_write_small_block ()
+{
+    DEBUG << "write_short_block request on " << client_->peer();
+
+    std::vector<char> buffer(SMALL_CHUNK_LIMIT);
+    write_small_block::request req{ .data = buffer };
+    read(m_bs, req);
+    auto meta_data = m_handler_interface->on_write_small_block (req.data);
+    write(m_bs, status{ status::OK });
+    write(m_bs, write_small_block::response{
+            .hash = std::move(meta_data.hash),
+            .effective_size = meta_data.effective_size });
+    m_bs.sync ();
+}
+
+// ---------------------------------------------------------------------
+
+void server::handle_read_small_block ()
+{
+    DEBUG << "read_short_block request on " << client_->peer();
+    THROW(util::exception, "read_short_block not implemented");
 }
 
 // ---------------------------------------------------------------------
