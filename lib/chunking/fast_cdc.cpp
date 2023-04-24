@@ -64,7 +64,7 @@ void fast_cdc::to_split_border()
         }
     }
 
-    for (; pos < m_buffer.length(); ++pos)
+    for (; pos < std::min(m_max_size, m_buffer.length()); ++pos)
     {
         int ch = m_buffer.next_byte();
         m_fp = (m_fp << 1) + m_geartable[ch];
