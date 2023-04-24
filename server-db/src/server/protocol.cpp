@@ -65,4 +65,12 @@ void protocol::on_next_chunk(std::span<char>)
 
 // ---------------------------------------------------------------------
 
+uh::protocol::block_meta_data protocol::on_write_small_block(std::span<char> buffer) {
+    auto alloc = m_storage.allocate (buffer.size());
+    alloc->device().write(buffer);
+    return alloc->persist();
+}
+
+// ---------------------------------------------------------------------
+
 } // namespace uh::dbn::server
