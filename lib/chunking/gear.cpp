@@ -19,7 +19,7 @@ uint64_t compute_mask(std::size_t average_size)
 {
     uint64_t mask = 0;
 
-    constexpr uint64_t msb = (~0) >> (sizeof(uint64_t)-1) << (sizeof(uint64_t)-1);
+    constexpr uint64_t msb = ((~0ul) >> (8*sizeof(uint64_t)-1)) << (8*sizeof(uint64_t)-1);
 
     while (average_size)
     {
