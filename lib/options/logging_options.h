@@ -21,7 +21,6 @@ public:
 
 private:
     log::config m_config;
-    boost::program_options::options_description m_desc;
 };
 
 // ---------------------------------------------------------------------
