@@ -23,6 +23,7 @@ public:
     uh::protocol::server_information on_hello(const std::string& client_version) override;
     std::unique_ptr<io::device> on_read_block(uh::protocol::blob&& hash) override;
     std::unique_ptr<uh::protocol::allocation> on_allocate_chunk(std::size_t size) override;
+    uh::protocol::block_meta_data on_write_small_block (std::span <char> buffer) override;
     std::size_t on_free_space() override;
     void on_next_chunk(std::span<char> buffer) override;
 

@@ -1,4 +1,5 @@
 #include "mod.h"
+#include "sample_hash_routing.h"
 
 #include <config.hpp>
 
@@ -127,11 +128,11 @@ std::unique_ptr<client_pool> make_client_pool(
 
 // ---------------------------------------------------------------------
 
-std::map<node_ref, std::unique_ptr<client_pool>> make_nodes(
+std::unordered_map<node_ref, std::unique_ptr<client_pool>> make_nodes(
     io_context& io,
     const config& cfg)
 {
-    std::map<node_ref, std::unique_ptr<client_pool>> rv;
+    std::unordered_map<node_ref, std::unique_ptr<client_pool>> rv;
 
     auto cf_config = make_cf_config();
 
@@ -142,6 +143,8 @@ std::map<node_ref, std::unique_ptr<client_pool>> make_nodes(
 
     return rv;
 }
+
+
 
 // ---------------------------------------------------------------------
 
@@ -154,13 +157,16 @@ struct mod::impl
     explicit impl(const config& cfg);
 
     io_context io;
-    std::map<node_ref, std::unique_ptr<client_pool>> nodes;
+    std::unordered_map<node_ref, std::unique_ptr<client_pool>> nodes;
+    std::unique_ptr <routing_interface> m_routing;
+
 };
 
 // ---------------------------------------------------------------------
 
 mod::impl::impl(const config& cfg)
-    : nodes(make_nodes(io, cfg))
+    : nodes(make_nodes(io, cfg)),
+    m_routing(std::make_unique <sample_hash_routing> (sample_hash_routing (nodes)))
 {
 }
 
@@ -263,6 +269,13 @@ std::unique_ptr<uh::protocol::allocation> mod::allocate(std::size_t size)
     }
 
     THROW(util::exception, "insufficient space in back-end");
+}
+
+protocol::block_meta_data mod::write_small_block (std::span <char> buffer) {
+
+    const auto &client_connections = m_impl->m_routing->route_data(buffer);
+    return client_connections->get()->write_small_block(buffer);
+
 }
 
 // ---------------------------------------------------------------------
