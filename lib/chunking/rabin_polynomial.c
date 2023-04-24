@@ -58,21 +58,11 @@ uint64_t *polynomial_lookup_buf;
 /**
  * Prints the list of rabin polynomials to the given file
  */
-// JM >>>>> 
-//void print_rabin_poly_list_to_file(FILE *out_file, struct rabin_polynomial *poly){
-void print_rabin_poly_list_to_file(FILE *out_file, struct rabin_polynomial *poly, FILE *file_to_read){
-// <<<<< JM
+void print_rabin_poly_list_to_file(FILE *out_file, struct rabin_polynomial *poly){
     struct rabin_polynomial *cur_poly=poly;
     
     while(cur_poly != NULL) {
         print_rabin_poly_to_file(out_file,cur_poly,1);
-// JM >>>>>
-        char *file_data=malloc(cur_poly->length);
-        size_t bytes_read=fread(file_data,1,cur_poly->length,file_to_read);
-        fprintf(stdout, "\n------\n");
-        fprintf(stdout, "%s", file_data);
-        fprintf(stdout, "\n------\n");
-// <<<<< JM
         cur_poly=cur_poly->next_polynomial;
     }
     
@@ -374,15 +364,6 @@ struct rab_block_info *read_rabin_block(void *buf, size_t size, struct rab_block
                 block->tail->chunk_data[j] = *(char *)(buf+J+j);
             }
             block->tail->chunk_data[j] = NULL;
-
-            // JM >>>>>
-            //fprintf(stdout, "%.*s", block->tail->length, block->tail->chunk_data);
-            //FILE* debugfile = fopen("/home/juan/Repos/core/debugfile", "a");
-            //fprintf(debugfile, "===%ld===", J);
-            //fprintf(debugfile, "%s", block->tail->chunk_data);
-            //fclose(debugfile);
-            //fprintf(stdout, "\n=======\n");
-            // <<<<< JM
 
             struct rabin_polynomial *new_poly=gen_new_polynomial(NULL,0,0,0);
             block->tail->next_polynomial=new_poly;

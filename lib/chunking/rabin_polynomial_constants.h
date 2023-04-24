@@ -39,9 +39,7 @@
 //to the Rabin Fingerprinting algorithm
 
 #ifndef RAB_MAX_BLOCK_SIZE
-//JM
-//#define RAB_MAX_BLOCK_SIZE 4096
-#define RAB_MAX_BLOCK_SIZE 256
+#define RAB_MAX_BLOCK_SIZE 4096
 #endif
 
 #ifndef RAB_MIN_BLOCK_SIZE
@@ -70,7 +68,5 @@
 
 //# of bytes to read at a time when reading through files
 #ifndef RAB_FILE_READ_BUF_SIZE
-//JM
-//#define RAB_FILE_READ_BUF_SIZE 1048576
-#define RAB_FILE_READ_BUF_SIZE 1024
+#define RAB_FILE_READ_BUF_SIZE 1048576
 #endif

@@ -97,10 +97,7 @@ int initialize_rabin_polynomial_defaults();
 int initialize_rabin_polynomial(uint64_t prime, unsigned max_size, unsigned int min_size, unsigned int average_block_size);
 
 void print_rabin_poly_to_file(FILE *out_file, struct rabin_polynomial *poly,int new_line);
-// JM >>>>> 
-//void print_rabin_poly_list_to_file(FILE *out_file, struct rabin_polynomial *poly);
-void print_rabin_poly_list_to_file(FILE *out_file, struct rabin_polynomial *poly, FILE *file_to_read);
-// <<<<< JM
+void print_rabin_poly_list_to_file(FILE *out_file, struct rabin_polynomial *poly);
 
 /*
  * Reads the block given, continuing using the info given in rab_block
