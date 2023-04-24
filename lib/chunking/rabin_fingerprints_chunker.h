@@ -1,8 +1,9 @@
-#ifndef CLIENT_CHUNKING_RABIN_FINGERPRINTS_H
-#define CLIENT_CHUNKING_RABIN_FINGERPRINTS_H
+#ifndef CHUNKING_RABIN_FINGERPRINTS_H
+#define CHUNKING_RABIN_FINGERPRINTS_H
 
-#include <chunking/chunker.h>
 #include <io/device.h>
+#include <chunking/buffer.h>
+#include <chunking/chunker.h>
 extern "C"{
     #include <chunking/rabin_polynomial.h>
     #include <chunking/rabin_polynomial_constants.h>
@@ -14,17 +15,18 @@ namespace uh::chunking
 
 // ---------------------------------------------------------------------
 
+struct rabin_fingerprints_config
+{
+    std::size_t chunk_size = 128 * 1024;
+};
+
+// ---------------------------------------------------------------------
+
 class rabin_fingerprints_chunker : public chunker
 {
 public:
-    rabin_fingerprints_chunker(io::device& dev, size_t chunk_size);
+    rabin_fingerprints_chunker(const rabin_fingerprints_config& config, io::device& dev);
 
-    /**
-     * Return the next chunk to upload. If there are no more chunks, return
-     * an empty chunk instead.
-     *
-     * @throw may throw any derivative of exception on error
-     */
     std::span<char> next_chunk() override;
 
     std::string chunker_type() {return std::string(m_type);}

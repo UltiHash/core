@@ -9,10 +9,10 @@ namespace uh::chunking
 
 // ---------------------------------------------------------------------
 
-rabin_fingerprints_chunker::rabin_fingerprints_chunker(io::device& dev, size_t chunk_size)
+rabin_fingerprints_chunker::rabin_fingerprints_chunker(const rabin_fingerprints_config& config ,io::device& dev)
     : m_dev(dev),
-      m_chunk_size(chunk_size),
-      m_buffer(chunk_size),
+      m_chunk_size(config.chunk_size),
+      m_buffer(config.chunk_size),
       m_block(nullptr)
 {
     initialize_rabin_polynomial_defaults();

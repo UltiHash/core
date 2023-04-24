@@ -67,6 +67,7 @@ struct chunking_config
 
     uh::chunking::fast_cdc_config fast_cdc;
     uh::chunking::gear_config gear;
+    uh::chunking::rabin_fingerprints_config rabin;
 };
 
 // ---------------------------------------------------------------------
@@ -83,6 +84,7 @@ private:
     size_t m_chunk_size;
     uh::chunking::fast_cdc_config m_fast_cdc;
     uh::chunking::gear_config m_gear;
+    uh::chunking::rabin_fingerprints_config m_rabin;
 };
 
 // ---------------------------------------------------------------------
