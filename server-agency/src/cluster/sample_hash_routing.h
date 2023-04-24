@@ -31,7 +31,8 @@ namespace uh::an::cluster
         static constexpr std::size_t SAMPLE_SIZE = 64;
         static constexpr std::size_t SAMPLE_PIECES = 4;
 
-        static inline const std::hash <std::string_view> &get_hash_func ();
+        static const std::hash <std::string_view> &get_hash_func ();
+        const std::hash <std::string_view> &hash_func = get_hash_func();
     };
 
 }

@@ -35,7 +35,7 @@ const std::unique_ptr<protocol::client_pool> &sample_hash_routing::route_data(co
         }
     }
 
-    const auto hash = get_hash_func () ({sample, SAMPLE_SIZE});
+    const auto hash = hash_func ({sample, SAMPLE_SIZE});
 
     return m_nodes_index.at (hash % m_nodes_index.size());
 }
