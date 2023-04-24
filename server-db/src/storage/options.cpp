@@ -48,6 +48,10 @@ uh::options::action options::evaluate(const boost::program_options::variables_ma
     c.backend_type = vars[optionString(OptionsEnum::DbStorageAlgorithm)].as<std::string>();
     c.allocate_bytes = vars[optionString(OptionsEnum::AllocateStorage)].as<std::size_t>();
 
+    if (std::filesystem::path (c.db_root).is_relative()) {
+        THROW(util::illegal_args, "The database root must be an absolute path.");
+    }
+
     if (vars.count(optionString(OptionsEnum::CreateNewRoot)) > 0)
     {
         c.create_new_root = true;
