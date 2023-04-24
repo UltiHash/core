@@ -339,7 +339,7 @@ struct rab_block_info *read_rabin_block(void *buf, size_t size, struct rab_block
     }
    
     size_t bytes_offset = block->total_bytes_read;
-    size_t i, j, J;
+    size_t i, j, J, block_tail_start;
     for(i=0;i<size;i++) {
     	char cur_byte=*((char *)(buf+i));
         char pushed_out=block->current_window_data[block->window_pos];
@@ -352,16 +352,24 @@ struct rab_block_info *read_rabin_block(void *buf, size_t size, struct rab_block
         block->total_bytes_read++;
         block->tail->length++;
         
-        if(block->window_pos == rabin_sliding_window_size) //Loop back around
+        if(block->window_pos == rabin_sliding_window_size){ //Loop back around
             block->window_pos=0;
+        }
         
         //If we hit our special value or reached the max win size create a new block
         if((block->tail->length >= rabin_polynomial_min_block_size && (block->cur_roll_checksum % rabin_polynomial_average_block_size) == rabin_polynomial_prime)|| block->tail->length == rabin_polynomial_max_block_size) {
             block->tail->start=block->total_bytes_read-block->tail->length;
+            block_tail_start = block->tail->start;
 
-            //TODO - JM ask the team how to manage the memory of this malloc. Is this a memory leak?
+            //TODO - This may be a memory leak, since we're not freeing the memory anywhere!
             block->tail->chunk_data=malloc(sizeof(char)*(1+block->tail->length));
-            J = block->tail->start - bytes_offset;
+            if(bytes_offset > block_tail_start){
+                J = 0;
+            }
+            else
+            {
+                J = block_tail_start - bytes_offset;
+            }
             for(j=0; j<block->tail->length;j++){
                 block->tail->chunk_data[j] = *(char *)(buf+J+j);
             }
@@ -369,9 +377,10 @@ struct rab_block_info *read_rabin_block(void *buf, size_t size, struct rab_block
 
             // JM >>>>>
             //fprintf(stdout, "%.*s", block->tail->length, block->tail->chunk_data);
-            //FILE* debuglog = fopen("./debugfile", "a");
-            //fprintf(debuglog, "%s", block->tail->chunk_data);
-            //fclose(debuglog);
+            //FILE* debugfile = fopen("/home/juan/Repos/core/debugfile", "a");
+            //fprintf(debugfile, "===%ld===", J);
+            //fprintf(debugfile, "%s", block->tail->chunk_data);
+            //fclose(debugfile);
             //fprintf(stdout, "\n=======\n");
             // <<<<< JM
 
@@ -379,8 +388,9 @@ struct rab_block_info *read_rabin_block(void *buf, size_t size, struct rab_block
             block->tail->next_polynomial=new_poly;
             block->tail=new_poly;
             
-            if(i==size-1)
+            if(i==size-1){
                 block->current_poly_finished=1;
+            }
         }
     }
     
