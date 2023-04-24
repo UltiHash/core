@@ -15,12 +15,12 @@ struct gear_config
     /**
      * Maximum size of produced chunks.
      */
-    std::size_t max_size = 1 * 1024 * 1024;
+    std::size_t max_size = 128 * 1024;
 
     /**
      * Average size of chunks.
      */
-    std::size_t average_size = 128 * 1024;
+    std::size_t average_size = 16 * 1024;
 };
 
 // ---------------------------------------------------------------------
@@ -40,6 +40,7 @@ private:
     std::size_t m_max_size;
     uint64_t m_mask;
 };
+
 // ---------------------------------------------------------------------
 
 } // namespace uh::chunking

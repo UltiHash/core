@@ -31,14 +31,19 @@ options::options()
                 "Strategy to use for spliting files into chunks")
         (optionString(OptionsEnum::ChunkSize),
             value<size_t>()->default_value(uh::client::chunking::chunking_config::default_chunk_size_in_bytes),
-                "Size in bytes of the chunks, in case of a fixed size chunking strategy");
+                "Size in bytes of the chunks, in case of a fixed size chunking strategy")
+        ("gear-max-size", value< std::size_t >(&m_config.gear.max_size), "maximum chunk size for Gear CDC")
+        ("gear-avg-size", value< std::size_t >(&m_config.gear.average_size), "average chunk size for Gear CDC")
+        ("fastcdc-min-size", value< std::size_t >(&m_config.fast_cdc.min_size), "minimum chunk size for FastCDC")
+        ("fastcdc-max-size", value< std::size_t >(&m_config.fast_cdc.max_size), "maximum chunk size for FastCDC")
+        ("fastcdc-normal-size", value< std::size_t >(&m_config.fast_cdc.normal_size), "normal chunk size for FastCDC");
 }
 
 // ---------------------------------------------------------------------
 
 uh::options::action options::evaluate(const boost::program_options::variables_map& vars)
 {
-    chunking_config c;
+    chunking_config c = m_config;
     c.chunking_strategy = vars[optionString(OptionsEnum::ChunkingStrategy)].as<std::string>();
 
     size_t chunk_size = vars[optionString(OptionsEnum::ChunkSize)].as<std::size_t>();

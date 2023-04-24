@@ -114,7 +114,7 @@ void client_options::handle(const boost::program_options::variables_map& vars)
             std::string user_response;
             std::unordered_set<std::string> validResponses = {"y", "n", "yes", "no"};
 
-            std::cout << "The file already exists. Do you want to overwite it? (y/n) ";
+            std::cout << "The file already exists. Do you want to overwrite it? (y/n) ";
             std::cin >> user_response;
 
             std::ranges::transform(user_response, user_response.begin(), [](char c){ return std::tolower(c); });
