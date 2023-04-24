@@ -1,7 +1,5 @@
 #include "logging_options.h"
 
-#include <ranges>
-
 
 using namespace boost::program_options;
 

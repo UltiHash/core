@@ -34,7 +34,9 @@ std::span<char> fast_cdc::next_chunk()
 
     if (m_buffer.length() < m_min_size)
     {
-        return m_buffer.data();
+        auto start = m_buffer.mark();
+        m_buffer.skip(m_buffer.length());
+        return m_buffer.data(start);
     }
 
     auto start = m_buffer.mark();
@@ -46,11 +48,7 @@ std::span<char> fast_cdc::next_chunk()
 
 void fast_cdc::to_split_border()
 {
-    auto normal = m_normal_size;
-    if (m_buffer.length() < normal)
-    {
-        normal = m_buffer.length();
-    }
+    auto normal = std::min(m_normal_size, m_buffer.length());
 
     m_buffer.skip(m_min_size);
     unsigned pos = m_min_size;
@@ -66,7 +64,7 @@ void fast_cdc::to_split_border()
         }
     }
 
-    for (; pos < m_buffer.length(); ++pos)
+    for (; pos < std::min(m_max_size, m_buffer.length()); ++pos)
     {
         int ch = m_buffer.next_byte();
         m_fp = (m_fp << 1) + m_geartable[ch];
