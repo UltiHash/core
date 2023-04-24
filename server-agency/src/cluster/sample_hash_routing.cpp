@@ -7,11 +7,12 @@
 namespace uh::an::cluster {
 
 sample_hash_routing::sample_hash_routing(
-        const std::unordered_map<std::string, std::unique_ptr<protocol::client_pool>> &nodes) :
+        const std::unordered_map<std::string, std::unique_ptr<protocol::client_pool>>& nodes) :
         m_nodes (nodes),
-        m_nodes_index(fill_node_index (m_nodes)){}
+        m_nodes_index(fill_node_index (m_nodes)){
+}
 
-const std::unique_ptr<protocol::client_pool> &sample_hash_routing::route_data(const std::span <char> &data) const {
+const std::unique_ptr<protocol::client_pool>& sample_hash_routing::route_data(const std::span <char>& data) const {
 
 
     char sample [SAMPLE_SIZE];

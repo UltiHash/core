@@ -52,7 +52,10 @@ public:
         }
         catch (const util::file_exists&)
         {
-            m_used -= m_size;
+            std::size_t used;
+            do {
+                used = m_used;
+            } while (!m_used.compare_exchange_weak(used, used - m_size));
             effective_size = 0u;
         }
 

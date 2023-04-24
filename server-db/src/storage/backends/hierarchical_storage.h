@@ -14,7 +14,7 @@ class hierarchical_storage : public backend {
 
 public:
 
-    hierarchical_storage (std::filesystem::path db_root, size_t size_bytes, uh::dbn::metrics::storage_metrics& storage_metrics, std::size_t hash_directory_names_offset = 0);
+    hierarchical_storage (std::filesystem::path db_root, size_t size_bytes, uh::dbn::metrics::storage_metrics& storage_metrics);
 
     void start() override;
 
@@ -42,7 +42,6 @@ private:
     constexpr static unsigned int m_levels = 4;
 
     const std::filesystem::path m_root;
-    const std::size_t m_hash_directory_names_offset;
 
     const std::size_t m_alloc;
     std::atomic<std::size_t> m_used;

@@ -59,13 +59,11 @@ private:
 };
 
 hierarchical_storage::hierarchical_storage(std::filesystem::path db_root, size_t size_bytes,
-                                                    uh::dbn::metrics::storage_metrics &storage_metrics,
-                                                    std::size_t hash_directory_names_offset):
+                                                    uh::dbn::metrics::storage_metrics& storage_metrics):
     m_root(std::move (db_root)),
     m_alloc(size_bytes),
     m_used(0),
-    m_storage_metrics(storage_metrics),
-    m_hash_directory_names_offset (hash_directory_names_offset)
+    m_storage_metrics(storage_metrics)
     {
         if( !std::filesystem::is_directory(m_root) ) {
             throw std::runtime_error("path does not exist: " + m_root.string());
@@ -145,14 +143,12 @@ std::unique_ptr<uh::protocol::allocation> hierarchical_storage::allocate(std::si
 }
 
 std::filesystem::path hierarchical_storage::get_hash_path (const std::string &hash) const {
-    auto offset = m_hash_directory_names_offset;
     auto file_path = m_root;
     for (unsigned int i = 0; i < m_levels; i++) {
-        const auto directory_name = hash.substr(offset, 2);
+        const auto directory_name = hash.substr(2 * i, 2);
         file_path = file_path / directory_name;
-        offset += 2;
     }
-    const auto file_name = hash.substr(offset);
+    const auto file_name = hash.substr(2 * m_levels);
     file_path = file_path / file_name;
 
     return file_path;
