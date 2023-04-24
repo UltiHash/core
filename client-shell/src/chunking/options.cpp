@@ -43,7 +43,7 @@ options::options()
 
 uh::options::action options::evaluate(const boost::program_options::variables_map& vars)
 {
-    chunking_config c;
+    chunking_config c = m_config;
     c.chunking_strategy = vars[optionString(OptionsEnum::ChunkingStrategy)].as<std::string>();
 
     size_t chunk_size = vars[optionString(OptionsEnum::ChunkSize)].as<std::size_t>();
