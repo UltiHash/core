@@ -163,4 +163,12 @@ bool client::valid() const
 
 // ---------------------------------------------------------------------
 
+void client::send_integrated_size(const std::string& unique_id,
+                            std::streamsize integrated_size) const
+{
+
+}
+
+// ---------------------------------------------------------------------
+
 } // namespace uh::protocol
