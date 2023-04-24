@@ -2,6 +2,7 @@
 #define SERVER_DATABASE_STORAGE_OPTIONS_H
 
 #include <options/options.h>
+#include <util/exception.h>
 
 #include "mod.h"
 
