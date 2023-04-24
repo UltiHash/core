@@ -7,6 +7,7 @@
 #include <chunking/chunker.h>
 #include <chunking/gear.h>
 #include <chunking/fast_cdc.h>
+#include <chunking/rabin_fingerprints_chunker.h>
 
 #include <unordered_map>
 
