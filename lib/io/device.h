@@ -65,7 +65,7 @@ private:
 
 // ---------------------------------------------------------------------
 
-static constexpr std::streamsize DEFAULT_CHUNK_SIZE = 16 * 1024 * 1024;
+static constexpr std::streamsize IO_DEFAULT_CHUNK_SIZE = 16 * 1024 * 1024;
 
 // ---------------------------------------------------------------------
 
@@ -75,7 +75,7 @@ static constexpr std::streamsize DEFAULT_CHUNK_SIZE = 16 * 1024 * 1024;
  */
 std::vector<char> read_to_buffer(
     device& dev,
-    std::streamsize chunk_size = DEFAULT_CHUNK_SIZE);
+    std::streamsize chunk_size = IO_DEFAULT_CHUNK_SIZE);
 
 // ---------------------------------------------------------------------
 
