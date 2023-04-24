@@ -21,6 +21,7 @@ services:
       - prometheus
     volumes:
       - grafana-storage:/var/lib/grafana grafana/grafana-enterprise
+    user: '472'
   prometheus:
     image: prom/prometheus
     ports:
@@ -30,45 +31,45 @@ services:
         source: ./prometheus.yml
         target: /etc/prometheus/prometheus.yml
   uh-server-db:
-    image: uh-server-db
-    build:
-      context: ./
-      dockerfile: Dockerfile
-      args:
-        - CMAKE_OPTION=BUILD_SERVER_DB
-        - SRC_PATH=server-db
-        - TARGET=uhServerDB
-    links:
-      - prometheus
+   image: uh-server-db
+   build:
+     context: ./
+     dockerfile: Dockerfile
+     args:
+       - CMAKE_OPTION=BUILD_SERVER_DB
+       - SRC_PATH=server-db
+       - TARGET=uhServerDB
+   links:
+     - prometheus
   uh-server-agency:
-    image: uh-server-agency
-    build:
-      context: ./
-      dockerfile: Dockerfile
-      args:
-        - CMAKE_OPTION=BUILD_SERVER_AGENCY
-        - SRC_PATH=server-agency
-        - TARGET=uhServerAgency
-    ports:
-      - "21832:21832"
-    depends_on:
-      - uh-server-db
-    links:
-      - prometheus
-      - uh-server-db
+   image: uh-server-agency
+   build:
+     context: ./
+     dockerfile: Dockerfile
+     args:
+       - CMAKE_OPTION=BUILD_SERVER_AGENCY
+       - SRC_PATH=server-agency
+       - TARGET=uhServerAgency
+   ports:
+     - "21832:21832"
+   depends_on:
+     - uh-server-db
+   links:
+     - prometheus
+     - uh-server-db
   uh-client-shell:
-    image: uh-client-shell
-    build:
-      context: ./
-      dockerfile: Dockerfile
-      args:
-        - CMAKE_OPTION=BUILD_CLIENT_SHELL
-        - SRC_PATH=client-shell
-        - TARGET=uhClient
-    depends_on:
-      - uh-server-db
-      - uh-server-agency
-    links:
-      - uh-server-agency
+   image: uh-client-shell
+   build:
+     context: ./
+     dockerfile: Dockerfile
+     args:
+       - CMAKE_OPTION=BUILD_CLIENT_SHELL
+       - SRC_PATH=client-shell
+       - TARGET=uhClient
+   depends_on:
+     - uh-server-db
+     - uh-server-agency
+   links:
+     - uh-server-agency
 volumes:
-  grafana-storage:
+  grafana-storage: {}
