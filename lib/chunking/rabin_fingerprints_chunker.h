@@ -1,7 +1,7 @@
 #ifndef CLIENT_CHUNKING_RABIN_FINGERPRINTS_H
 #define CLIENT_CHUNKING_RABIN_FINGERPRINTS_H
 
-#include "../file_chunker.h"
+#include <chunking/chunker.h>
 #include <io/device.h>
 extern "C"{
     #include <chunking/rabin_polynomial.h>
@@ -9,12 +9,12 @@ extern "C"{
 }
 
 
-namespace uh::client::chunking
+namespace uh::chunking
 {
 
 // ---------------------------------------------------------------------
 
-class rabin_fingerprints_chunker : public file_chunker
+class rabin_fingerprints_chunker : public chunker
 {
 public:
     rabin_fingerprints_chunker(io::device& dev, size_t chunk_size);

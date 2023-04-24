@@ -4,7 +4,7 @@
 #include <iostream>
 
 
-namespace uh::client::chunking
+namespace uh::chunking
 {
 
 // ---------------------------------------------------------------------
