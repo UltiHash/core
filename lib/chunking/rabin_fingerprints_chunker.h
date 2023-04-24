@@ -17,7 +17,7 @@ namespace uh::chunking
 
 struct rabin_fingerprints_config
 {
-    std::size_t chunk_size = 128 * 1024;
+    std::size_t chunk_size = 1024;
 };
 
 // ---------------------------------------------------------------------
