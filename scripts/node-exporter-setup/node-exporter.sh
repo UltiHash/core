@@ -24,5 +24,18 @@ if [ ! -d "/home/$username/Downloads/node_exporter" ]; then
   make build
 fi
 
+sudo useradd --no-create-home --shell /bin/false node_exporter || exit
+
 cd "/home/$username/Downloads/node_exporter" || exit
-./node_exporter
+
+sudo cp node_exporter /usr/local/bin || exit
+
+sudo chown node_exporter:node_exporter /usr/local/bin/node_exporter || exit
+
+sudo cp ./node_exporter.service /etc/systemd/system/ || exit
+
+sudo systemctl daemon-reload || exit
+
+sudo systemctl start node_exporter || exit
+
+sudo systemctl enable node_exporter || exit
