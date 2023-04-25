@@ -387,10 +387,6 @@ struct rab_block_info *read_rabin_block(void *buf, size_t size, struct rab_block
             }
 
             memcpy(block->tail->chunk_data+partial_fill, (buf+J), block_tail_length);
-            // Equivalent to:
-            // for(j=0; j<block->tail->length;j++){
-            //     block->tail->chunk_data[j] = *(char *)(buf+J+j);
-            // }
 
             struct rabin_polynomial *new_poly=gen_new_polynomial(NULL,0,0,0);
             block->tail->next_polynomial=new_poly;
