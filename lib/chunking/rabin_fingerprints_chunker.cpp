@@ -13,9 +13,15 @@ rabin_fingerprints_chunker::rabin_fingerprints_chunker(const rabin_fingerprints_
     : m_dev(dev),
       m_chunk_size(config.chunk_size),
       m_buffer(config.chunk_size),
-      m_block(nullptr)
+      m_block(nullptr),
+      m_chunk(nullptr)
 {
-    initialize_rabin_polynomial_defaults();
+    static int __rabin_init_result = initialize_rabin_polynomial_defaults();
+
+    if(!__rabin_init_result){
+        throw(std::runtime_error("Error initializing Rabin fingerprints"));
+    }
+
     INFO << "--- Storage backend initialized --- ";
     INFO << "        chunking strategy : " << chunker_type();
 }
@@ -43,20 +49,24 @@ size_t rabin_fingerprints_chunker::refill_buffer()
 
 std::span<char> rabin_fingerprints_chunker::next_chunk()
 {
+    size_t bytes_read = 0;
+
     if(!m_chunk){
-        if(!refill_buffer())
+        bytes_read = refill_buffer();
+        if(!bytes_read)
             return {};
+        return {m_chunk->chunk_data, m_chunk->length};
     }
     else
     {
         m_chunk = m_chunk->next_polynomial;
+        if(!m_chunk->chunk_data){
+            bytes_read = refill_buffer();
+            if(!bytes_read)
+                return {};
+        }
+        return {m_chunk->chunk_data, m_chunk->length};
     }
-    if(!m_chunk->next_polynomial){
-        if(!refill_buffer())
-            return {};
-    }
-
-    return {m_chunk->chunk_data, m_chunk->length};
 }
 
 // ---------------------------------------------------------------------
