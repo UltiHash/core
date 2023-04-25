@@ -1,5 +1,6 @@
 #include "rabin_fingerprints_chunker.h"
 #include <logging/logging_boost.h>
+#include <util/exception.h>
 #include <vector>
 #include <iostream>
 
@@ -36,6 +37,9 @@ size_t rabin_fingerprints_chunker::refill_buffer()
         return bytes_read;
 
     m_block=read_rabin_block(m_buffer.data(), bytes_read, m_block);
+
+    if(!m_block)
+        THROW(util::exception, "Out of memory to read new rabin block");
 
     if(!m_chunk){
         m_chunk=m_block->head;
