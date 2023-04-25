@@ -17,7 +17,7 @@ struct mod_cdc_config
     /**
      * Minimum size of chunks.
      */
-    std::size_t min_size = 4*1024;
+    std::size_t min_size = 4 * 1024;
 
     /**
      * Maximum size of chunks.

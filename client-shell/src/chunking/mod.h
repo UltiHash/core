@@ -64,6 +64,8 @@ struct chunking_config
 
     uh::chunking::fast_cdc_config fast_cdc;
     uh::chunking::gear_config gear;
+    uh::chunking::mod_cdc_config mod_cdc;
+
 };
 
 // ---------------------------------------------------------------------
