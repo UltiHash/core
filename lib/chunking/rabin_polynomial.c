@@ -37,6 +37,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 
 #include "rabin_polynomial.h"
@@ -352,7 +353,7 @@ struct rab_block_info *read_rabin_block(void *buf, size_t size, struct rab_block
     }
    
     size_t bytes_offset = block->total_bytes_read;
-    size_t i, j, J, block_tail_start;
+    size_t i, j, J, block_tail_start, partial_fill, block_tail_length;
     for(i=0;i<size;i++) {
     	char cur_byte=*((char *)(buf+i));
         char pushed_out=block->current_window_data[block->window_pos];
@@ -373,9 +374,10 @@ struct rab_block_info *read_rabin_block(void *buf, size_t size, struct rab_block
         if((block->tail->length >= rabin_polynomial_min_block_size && (block->cur_roll_checksum % rabin_polynomial_average_block_size) == rabin_polynomial_prime)|| block->tail->length == rabin_polynomial_max_block_size) {
             block->tail->start=block->total_bytes_read-block->tail->length;
             block_tail_start = block->tail->start;
+            block_tail_length = block->tail->length;
+            partial_fill = 0; //This will change in a future PR
 
-            //TODO - This may be a memory leak, since we're not freeing the memory anywhere!
-            block->tail->chunk_data=malloc(sizeof(char)*(1+block->tail->length));
+            block->tail->chunk_data=malloc(sizeof(char)*(block->tail->length));
             if(bytes_offset > block_tail_start){
                 J = 0;
             }
@@ -383,10 +385,12 @@ struct rab_block_info *read_rabin_block(void *buf, size_t size, struct rab_block
             {
                 J = block_tail_start - bytes_offset;
             }
-            for(j=0; j<block->tail->length;j++){
-                block->tail->chunk_data[j] = *(char *)(buf+J+j);
-            }
-            block->tail->chunk_data[j] = NULL;
+
+            memcpy(block->tail->chunk_data+partial_fill, (buf+J), block_tail_length);
+            // Equivalent to:
+            // for(j=0; j<block->tail->length;j++){
+            //     block->tail->chunk_data[j] = *(char *)(buf+J+j);
+            // }
 
             struct rabin_polynomial *new_poly=gen_new_polynomial(NULL,0,0,0);
             block->tail->next_polynomial=new_poly;

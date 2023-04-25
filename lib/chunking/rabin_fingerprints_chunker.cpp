@@ -29,6 +29,14 @@ rabin_fingerprints_chunker::rabin_fingerprints_chunker(const rabin_fingerprints_
 
 // ---------------------------------------------------------------------
 
+rabin_fingerprints_chunker::~rabin_fingerprints_chunker(){
+    free_chunk_data(m_block);
+    free_rabin_fingerprint_list(m_block->head);
+    free(m_block);
+}
+
+// ---------------------------------------------------------------------
+
 size_t rabin_fingerprints_chunker::refill_buffer()
 {
     size_t bytes_read=m_dev.read({m_buffer.data(), m_buffer.size()});

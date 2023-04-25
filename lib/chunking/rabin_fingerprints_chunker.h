@@ -27,6 +27,8 @@ class rabin_fingerprints_chunker : public chunker
 public:
     rabin_fingerprints_chunker(const rabin_fingerprints_config& config, io::device& dev);
 
+    ~rabin_fingerprints_chunker() override;
+
     std::span<char> next_chunk() override;
 
     std::string chunker_type() {return std::string(m_type);}
