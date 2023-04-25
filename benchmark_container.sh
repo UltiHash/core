@@ -75,7 +75,7 @@ download_volume ()
     local dest="$1"; shift;
     local flags=$*
 
-    yes | ${PATH_CLIENT} --retrieve "${volume}" "${dest}" --agency-node "${remote}" ${flags}
+    yes | ${PATH_CLIENT} --retrieve "${volume}" --target "${dest}" --agency-node "${remote}" ${flags}
 }
 
 #
