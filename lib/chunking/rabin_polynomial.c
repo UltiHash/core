@@ -226,10 +226,33 @@ void free_rabin_fingerprint_list(struct rabin_polynomial *head) {
     
     while(cur_poly != NULL) {
         next_poly=cur_poly->next_polynomial;
+        if(cur_poly->chunk_data != NULL){
+            free(cur_poly->chunk_data);
+            cur_poly->chunk_data = NULL;
+        }
         free(cur_poly);
         cur_poly=next_poly;
     }
     
+}
+
+/*
+ * Deallocates only the chunk data from each polynomial
+ */
+void free_chunk_data(struct rab_block_info *block){
+
+    struct rabin_polynomial *cur_poly, *next_poly;
+
+    cur_poly=block->head;
+
+    while(cur_poly != NULL) {
+        next_poly=cur_poly->next_polynomial;
+        if(cur_poly->chunk_data != NULL){
+            free(cur_poly->chunk_data);
+            cur_poly->chunk_data = NULL;
+        }
+        cur_poly=next_poly;
+    }
 }
 
 /*
@@ -317,7 +340,8 @@ struct rab_block_info *read_rabin_block(void *buf, size_t size, struct rab_block
     }
     
     else {
-     	block=cur_block;
+        free_chunk_data(cur_block);
+        block=cur_block;
     }
     //We ended on a border, gen a new tail
     if(block->current_poly_finished) {

@@ -90,6 +90,7 @@ void change_average_rabin_block_size(int increment_mode);
 int write_rabin_fingerprints_to_binary_file(FILE *file,struct rabin_polynomial *head);
 struct rabin_polynomial *read_rabin_polys_from_file_binary(FILE *file);
 void free_rabin_fingerprint_list(struct rabin_polynomial *head);
+void free_chunk_data(struct rab_block_info *block);
 
 struct rabin_polynomial *gen_new_polynomial(struct rabin_polynomial *tail, uint64_t total_len, uint16_t length, uint64_t rab_sum);
 
