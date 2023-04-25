@@ -2,6 +2,7 @@
 
 #include <logging/logging_boost.h>
 #include <chunking/strategies/fixed_size_chunker.h>
+#include <chunking/mod_chunker.h>
 
 
 namespace uh::client::chunking
@@ -46,6 +47,8 @@ std::unique_ptr<uh::chunking::chunker> mod::create_chunker(io::device& d)
     {
         case ChunkingStrategy::FixedSize:
             return std::make_unique<fixed_size_chunker>(d, m_chunk_size);
+        case ChunkingStrategy::Mod:
+            return std::make_unique<uh::chunking::mod_chunker>(m_mod_cdc, d);
         case ChunkingStrategy::Gear:
             return std::make_unique<uh::chunking::gear>(m_gear, d);
         case ChunkingStrategy::FastCDC:
