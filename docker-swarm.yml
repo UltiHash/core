@@ -84,6 +84,11 @@ services:
     image: ghcr.io/ultihash/server-db:20230323
     networks:
       - uh-integration
+    ports:
+      - target: 12345
+        published: 12345
+        protocol: tcp
+        mode: host
     deploy:
       mode: global
       endpoint_mode: dnsrr
