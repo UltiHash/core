@@ -48,21 +48,23 @@ public:
         if (m_buf_size - m_pointer < m_max_size) {
             refresh_buffer();
             if (m_buf_size < m_max_size) {
+                m_pointer = m_buf_size;
                 return {m_buffer, m_buf_size};
             }
         }
 
         const auto start = m_pointer;
-        const auto loop_limit = std::min (start + m_max_size, m_buf_size) - sizeof (unsigned long);
+        const auto loop_limit = std::min (start + m_max_size, m_buf_size);
+        unsigned long window = 0;
         for (auto i = m_pointer + m_min_size; i < loop_limit; i++) {
-            const auto data = *reinterpret_cast <unsigned long *> (m_buffer + i);
-            if (data % m_normal_size == 0) {
-                m_pointer = i + 1;
+            window = (window << 1) + m_buffer [i];
+            if (window % m_normal_size == 0) {
+                m_pointer = i;
                 return {m_buffer + start, i - start};
             }
         }
 
-        m_pointer = loop_limit + 1;
+        m_pointer = loop_limit;
         return {m_buffer + start, loop_limit - start};
 
     }
@@ -75,7 +77,7 @@ private:
     inline void refresh_buffer () {
         const auto remaining_size = m_buf_size - m_pointer;
         std::memmove(m_buffer, m_buffer + m_pointer, remaining_size);
-        m_buf_size = m_dev.read({m_buffer + remaining_size, m_buf_size - remaining_size});
+        m_buf_size = m_dev.read({m_buffer + remaining_size, m_buf_size - remaining_size}) + remaining_size;
         m_pointer = 0;
     }
     const std::size_t m_min_size;
