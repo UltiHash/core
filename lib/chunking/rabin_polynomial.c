@@ -340,7 +340,6 @@ struct rab_block_info *read_rabin_block(void *buf, size_t size, struct rab_block
     }
     
     else {
-        free_chunk_data(cur_block);
         block=cur_block;
     }
     //We ended on a border, gen a new tail
