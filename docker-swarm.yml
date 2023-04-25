@@ -81,7 +81,7 @@ services:
         constraints:
           - node.labels.role == agency
   uh-server-db:
-    image: ghcr.io/ultihash/server-db:20230323
+    image: ghcr.io/ultihash/server-db:20230425
     networks:
       - uh-integration
     ports:
@@ -100,7 +100,7 @@ services:
         source: /mnt/disk1
         target: /data
   uh-server-agency:
-    image: ghcr.io/ultihash/server-agency:20230323
+    image: ghcr.io/ultihash/server-agency:20230425
     networks:
       - uh-integration
     ports:
@@ -115,7 +115,7 @@ services:
         constraints:
           - node.labels.role == agency
   uh-client-shell:
-    image: ghcr.io/ultihash/client-shell:20230323
+    image: ghcr.io/ultihash/client-shell:20230425
     networks:
       - uh-integration
     deploy:
