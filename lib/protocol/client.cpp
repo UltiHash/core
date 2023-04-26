@@ -176,7 +176,7 @@ bool client::valid() const
 
 // ---------------------------------------------------------------------
 
-void client::send_statistics(const uh::protocol::client_statistics::request& client_stat)
+void client::send_client_statistics(const uh::protocol::client_statistics::request& client_stat)
 {
     write(m_bs, client_stat);
     m_bs.sync();

@@ -63,7 +63,7 @@ void f_upload::send_statistics()
             uhv_id, m_uploaded_size };
 
     protocol::client_pool::handle client_handle = m_client_pool.get();
-    client_handle->send_statistics(client_stat);
+    client_handle->send_client_statistics(client_stat);
 }
 
 // ---------------------------------------------------------------------

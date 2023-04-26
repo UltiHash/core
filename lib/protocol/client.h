@@ -91,7 +91,7 @@ public:
      * Sends the uhv file's unique identifier and the size that was integrated
      * by the client.
      */
-     void send_statistics(const uh::protocol::client_statistics::request& client_stat);
+     void send_client_statistics(const uh::protocol::client_statistics::request& client_stat);
 
 
 private:
