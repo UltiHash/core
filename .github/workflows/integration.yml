@@ -12,7 +12,14 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      actions: read
     steps:
+    - name: Initialize Energy Estimation
+      uses: green-coding-berlin/eco-ci-energy-estimation@main
+      with:
+        task: start-measurement
+
     - uses: actions/checkout@v3
       with:
         token: ${{ secrets.PAT }}
@@ -24,11 +31,48 @@ jobs:
         password: ${{ secrets.PAT }}
     - name: Pull build base image
       run: docker pull ghcr.io/ultihash/build-base:20230418
+
+    - name: Energy measurement - setup
+      uses: green-coding-berlin/eco-ci-energy-estimation@main
+      with:
+        task: get-measurement
+        label: 'setup'
+        send-data: false
+
     - name: Build and bring up containers
       run: docker-compose -f docker-compose-integration.yml up -d --build
+
+    - name: Energy measurement - Build and bring up containers
+      uses: green-coding-berlin/eco-ci-energy-estimation@main
+      with:
+        task: get-measurement
+        label: 'build and bring up containers'
+        send-data: false
+
     - name: Wait for integration test to complete
       run: ./wait_for_benchmark.py
+
+    - name: Energy measurement - integration test
+      uses: green-coding-berlin/eco-ci-energy-estimation@main
+      with:
+        task: get-measurement
+        label: 'integration test'
+        send-data: false
+
     - name: Validate integration test output
       env:
         RUN_AS_ACTION: 1
       run: ./integration.sh
+
+    - name: Energy measurement - validation
+      uses: green-coding-berlin/eco-ci-energy-estimation@main
+      with:
+        task: get-measurement
+        label: 'validation'
+        send-data: false
+
+    - name: Show Energy Results
+      uses: green-coding-berlin/eco-ci-energy-estimation@main
+      with:
+        task: display-results
+        send-data: false
