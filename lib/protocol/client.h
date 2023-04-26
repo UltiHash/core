@@ -5,6 +5,7 @@
 #include "allocation.h"
 #include "common.h"
 #include "serialization/serialization.h"
+#include "protocol/messages.h"
 
 #include <boost/iostreams/stream.hpp>
 #include <iostream>
@@ -30,7 +31,7 @@ public:
     ~client();
 
     /**
-     * Send client version information to the server. This must be the first
+     * Sends client version information to the server. This must be the first
      * command in a client session. The server returns it's version and the
      * version of the supported protocol.
      *
@@ -39,7 +40,7 @@ public:
     server_information hello(const std::string& client_version);
 
     /**
-     * Send a `read_block` request to the server. The server will look up
+     * Sends a `read_block` request to the server. The server will look up
      * the hash and return the associated data, if available.
      *
      * @return a device that can be used to read the block. If the device is
@@ -51,7 +52,7 @@ public:
     std::unique_ptr<io::device> read_block(const blob& hash);
 
     /**
-     * Allocate space for a given chunk
+     * Allocates space for a given chunk
      */
     std::unique_ptr<allocation> allocate(std::size_t);
 
@@ -85,6 +86,13 @@ public:
      * that there was an I/O error before.
      */
     bool valid() const;
+
+    /**
+     * Sends the uhv file's unique identifier and the size that was integrated
+     * by the client.
+     */
+     void send_client_statistics(const uh::protocol::client_statistics::request& client_stat);
+
 
 private:
     friend class client_allocation;
