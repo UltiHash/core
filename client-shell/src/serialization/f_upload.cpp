@@ -1,4 +1,3 @@
-#include <openssl/sha.h>
 #include <utility>
 #include <io/file.h>
 
@@ -63,7 +62,7 @@ void f_upload::send_statistics()
     uh::protocol::client_statistics::request client_stat {
             uhv_id, m_uploaded_size };
 
-    protocol::client_pool::handle&& client_handle = m_client_pool.get();
+    protocol::client_pool::handle client_handle = m_client_pool.get();
     client_handle->send_statistics(client_stat);
 }
 
