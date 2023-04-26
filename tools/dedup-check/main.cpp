@@ -73,4 +73,6 @@ int main(int argc, const char *argv[]) {
     std::cout << "number of files " << count << std::endl;
     std::cout << "total size " << static_cast <double> (total_size) / static_cast <double> (1024 * 1024 * 1024) << " GB" << std::endl;
     std::cout << "effective size " << static_cast <double> (effective_size) / static_cast <double> (1024 * 1024 * 1024) << " GB" << std::endl;
-    std::cout << "deduplication ratio is " << ratio << std::endl;}
+    std::cout << "chunking algorithm " << config.chunking().chunking_strategy << std::endl;
+    std::cout << "deduplication ratio is " << ratio << std::endl;
+}
