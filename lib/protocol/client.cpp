@@ -163,10 +163,13 @@ bool client::valid() const
 
 // ---------------------------------------------------------------------
 
-void client::send_integrated_size(const std::string& unique_id,
-                            std::streamsize integrated_size) const
+void client::send_statistics(const uh::protocol::client_statistics::request& client_stat)
 {
+    write(m_bs, client_stat);
+    m_bs.sync();
 
+    client_statistics::response response;
+    read(m_bs, response);
 }
 
 // ---------------------------------------------------------------------

@@ -1,4 +1,5 @@
 #include "f_upload.h"
+#include "protocol/messages.h"
 
 #include <io/file.h>
 
@@ -26,6 +27,7 @@ f_upload::f_upload(protocol::client_pool& cl_pool,
 f_upload::~f_upload()
 {
     join();
+    send_statistics();
 }
 
 // ---------------------------------------------------------------------
@@ -43,6 +45,17 @@ void f_upload::join()
     }
 
     m_thread_pool.clear();
+}
+
+// ---------------------------------------------------------------------
+
+void f_upload::send_statistics()
+{
+    uh::protocol::client_statistics::request client_stat {
+            {'a', 'b', 'c', 'd'}, 40};
+
+    protocol::client_pool::handle&& client_handle = m_client_pool.get();
+    client_handle->send_statistics(client_stat);
 }
 
 // ---------------------------------------------------------------------

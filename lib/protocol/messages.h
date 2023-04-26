@@ -251,28 +251,28 @@ void read(serialization::buffered_serialization& in, finalize_block::response& r
 
 // ---------------------------------------------------------------------
 
-struct client_info
+struct client_statistics
 {
     struct request
     {
-        std::string uhv_id;
-        std::uintmax_t integrated_size;
+        blob uhv_id;
+        std::uint64_t integrated_size;
     };
 
     struct response
     {
     };
 
-    constexpr static uint8_t request_id = 0x0b;
+    constexpr static uint8_t request_id = 0x0c;
 };
 
 // ---------------------------------------------------------------------
 
-void write(serialization::buffered_serialization& out, const client_info::request& request);
-void read(serialization::buffered_serialization& in, client_info::request& request);
+void write(serialization::buffered_serialization& out, const client_statistics::request& request);
+void read(serialization::buffered_serialization& in, client_statistics::request& request);
 
-void write(serialization::buffered_serialization& out, const client_info::response& response);
-void read(serialization::buffered_serialization& in, client_info::response& response);
+void write(serialization::buffered_serialization& out, const client_statistics::response& response);
+void read(serialization::buffered_serialization& in, client_statistics::response& response);
 
 // ---------------------------------------------------------------------
 

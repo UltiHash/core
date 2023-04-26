@@ -80,6 +80,7 @@ void server::handle_normal_request(uint8_t request_id)
         case free_space::request_id: return handle_free_space();
         case reset::request_id: return handle_reset();
         case allocate_chunk::request_id: return handle_allocate_chunk();
+        case client_statistics::request_id: return handle_client_statistics();
 
         default:
             throw std::runtime_error("normal, unsupported command: "
@@ -325,6 +326,22 @@ void server::handle_finalize_block()
     m_bs.sync ();
 
     m_state = server_state::normal;
+}
+
+// ---------------------------------------------------------------------
+
+void server::handle_client_statistics()
+{
+    DEBUG << "client_statistics request on " << client_->peer();
+
+    client_statistics::request req;
+    read(m_bs, req);
+
+    DEBUG << "{ " << (req.uhv_id[0]) << ", " << req.integrated_size << " }";
+
+    write(m_bs, status{ status::OK });
+    m_bs.sync();
+
 }
 
 // ---------------------------------------------------------------------

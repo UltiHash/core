@@ -5,6 +5,7 @@
 #include "allocation.h"
 #include "common.h"
 #include "serialization/serialization.h"
+#include "protocol/messages.h"
 
 #include <boost/iostreams/stream.hpp>
 #include <iostream>
@@ -81,7 +82,7 @@ public:
      * Sends the uhv file's unique identifier and the size that was integrated
      * by the client.
      */
-     void send_integrated_size(const std::string& unique_id, std::streamsize integrated_size) const;
+     void send_statistics(const uh::protocol::client_statistics::request& client_stat);
 
 
 private:

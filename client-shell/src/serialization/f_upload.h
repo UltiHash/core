@@ -29,10 +29,10 @@ public:
     ~f_upload() override;
 
     void spawn_threads() override;
-
     void join();
-    const std::map<std::filesystem::path, std::optional<std::string>>& results() const;
 
+    [[nodiscard]] const std::map<std::filesystem::path, std::optional<std::string>>& results() const;
+    void send_statistics();
     void chunk_and_upload(std::unique_ptr<uhv::f_meta_data>& metadata,
                           protocol::client_pool::handle& client);
 
