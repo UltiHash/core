@@ -1,0 +1,65 @@
+name: Create Hardware Monitoring Dashboard
+on:
+  push:
+    branches:
+      - master
+jobs:
+  create_dashboard:
+    runs-on: ubuntu-latest
+    steps:
+      # Checkout the repository to the GitHub Actions runner
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      # Install the latest version of Terraform CLI
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+
+      # Initialize a new or existing Terraform working directory by creating initial files, loading any remote state, downloading modules, etc.
+      - name: Terraform Init
+        working-directory: ./monitoring
+        run: terraform init
+
+      # Checks that all Terraform configuration files adhere to a canonical format
+      - name: Terraform Format
+        working-directory: ./monitoring
+        run: terraform fmt -check
+        continue-on-error: true
+
+      # Previews the changes that Terraform will make
+      - name: Plan Terraform
+        id: plan
+        continue-on-error: true
+        working-directory: ./monitoring
+        run: terraform plan -input=false -no-color
+
+      # Post the preview (terraform plan) from the previous step as a GitHub pull request comment
+      - name: Post Plan to GitHub PR
+        if: github.ref != 'refs/heads/master'
+        uses: mshick/add-pr-comment@v1
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          repo-token-user-login: "github-actions[bot]"
+          message: |
+            Applying:
+
+            ```
+            ${{ steps.plan.outputs.stdout }}
+            ```
+
+      # Applies the terraform configuration files when the branch is `main`
+      - name: Apply Terraform
+        if: github.ref == 'refs/heads/master'
+        id: apply
+        continue-on-error: true
+        working-directory: ./monitoring
+        run: |
+          terraform apply -auto-approve -state=terraform.tfstate
+
+      # Commit the terraform state
+      - name: commit the terraform state
+        if: github.ref == 'refs/heads/master'
+        uses: stefanzweifel/git-auto-commit-action@v4
+        with:
+          commit_message: Updating Terraform state
+          file_pattern: "*.tfstate"
