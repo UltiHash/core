@@ -1,8 +1,10 @@
-#include "f_upload.h"
-#include "protocol/messages.h"
-
+#include <openssl/sha.h>
+#include <utility>
 #include <io/file.h>
 
+#include "f_upload.h"
+#include "protocol/messages.h"
+#include "util/sha512.h"
 
 namespace uh::client::serialization
 {
@@ -13,12 +15,14 @@ f_upload::f_upload(protocol::client_pool& cl_pool,
                    uhv::job_queue<std::unique_ptr<uhv::f_meta_data>>& in_jq,
                    uhv::job_queue<std::unique_ptr<uhv::f_meta_data>>& out_jq,
                    uh::client::chunking::mod& chunking,
+                   std::filesystem::path uhv_path,
                    unsigned int num_threads)
     : common::thread_manager(num_threads),
       m_input_jq(in_jq),
       m_output_jq(out_jq),
       m_client_pool(cl_pool),
-      m_chunking(chunking)
+      m_chunking(chunking),
+      m_uhv_path(std::move(uhv_path))
 {
 }
 
@@ -51,10 +55,13 @@ void f_upload::join()
 
 void f_upload::send_statistics()
 {
-    // calculate statistics
+    uh::protocol::blob uhv_path {};
+    std::ranges::copy(m_uhv_path.string(), std::back_inserter(uhv_path));
+
+    const uh::protocol::blob uhv_id {uh::util::sha512(uhv_path)};
 
     uh::protocol::client_statistics::request client_stat {
-            {'a', 'b', 'c', 'd'}, 40};
+            uhv_id, m_uploaded_size };
 
     protocol::client_pool::handle&& client_handle = m_client_pool.get();
     client_handle->send_statistics(client_stat);
@@ -74,17 +81,21 @@ void f_upload::chunk_and_upload(std::unique_ptr<uhv::f_meta_data>& f_meta_data,
         for (auto chunk = chunker->next_chunk(); !chunk.empty(); chunk = chunker->next_chunk())
         {
             protocol::block_meta_data meta_data;
-            if (chunk.size() > uh::protocol::server::SMALL_CHUNK_LIMIT) {
+            if (chunk.size() > uh::protocol::server::SMALL_CHUNK_LIMIT)
+            {
                 auto alloc = client_handle->allocate(chunk.size());
                 io::write_from_buffer(alloc->device(), chunk);
                 meta_data = alloc->persist();
             }
-            else {
+            else
+            {
                 meta_data = client_handle->write_small_block(chunk);
             }
             f_meta_data->add_hash(meta_data.hash);
             f_meta_data->add_effective_size(meta_data.effective_size);
         }
+
+        m_uploaded_size += f_meta_data->f_size();
     }
 
     m_output_jq.append_job(std::move(f_meta_data));

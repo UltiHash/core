@@ -368,8 +368,6 @@ void server::handle_client_statistics()
     client_statistics::request req;
     read(m_bs, req);
 
-    DEBUG << "{ " << (req.uhv_id[0]) << ", " << req.integrated_size << " }";
-
     write(m_bs, status{ status::OK });
     m_bs.sync();
 }
