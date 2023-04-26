@@ -51,6 +51,8 @@ void f_upload::join()
 
 void f_upload::send_statistics()
 {
+    // calculate statistics
+
     uh::protocol::client_statistics::request client_stat {
             {'a', 'b', 'c', 'd'}, 40};
 

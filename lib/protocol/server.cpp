@@ -288,14 +288,18 @@ void server::handle_write_small_block ()
     DEBUG << "write_short_block request on " << client_->peer();
 
     std::vector<char> buffer(SMALL_CHUNK_LIMIT);
+
     write_small_block::request req{ .data = buffer };
     read(m_bs, req);
     auto meta_data = m_handler_interface->on_write_small_block (req.data);
+
     write(m_bs, status{ status::OK });
     write(m_bs, write_small_block::response{
             .hash = std::move(meta_data.hash),
             .effective_size = meta_data.effective_size });
+
     m_bs.sync ();
+
 }
 
 // ---------------------------------------------------------------------
@@ -368,7 +372,6 @@ void server::handle_client_statistics()
 
     write(m_bs, status{ status::OK });
     m_bs.sync();
-
 }
 
 // ---------------------------------------------------------------------

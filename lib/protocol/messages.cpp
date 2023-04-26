@@ -393,6 +393,7 @@ void read(serialization::buffered_serialization& in, read_small_block::response&
 
 void write(serialization::buffered_serialization& out, const client_statistics::request& request)
 {
+    out.write(client_statistics::request_id);
     out.write(request.uhv_id);
     out.write(request.integrated_size);
 }
