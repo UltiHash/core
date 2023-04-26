@@ -50,7 +50,7 @@ int main(int argc, const char** argv)
     }
     catch (...)
     {
-        FATAL << "unknown exception occured";
+        FATAL << "unknown exception occurred";
         std::cerr << "Error while starting service: unknown error\n";
         return 1;
     }

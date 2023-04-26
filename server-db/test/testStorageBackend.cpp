@@ -4,13 +4,14 @@
 #ifdef SINGLE_TEST_RUNNER
 #define BOOST_TEST_NO_MAIN
 #else
-#define BOOST_TEST_MODULE "uhServerDb Dummy Tests"
+#define BOOST_TEST_MODULE "uhServerDb Backend Tests"
 #endif
 
 #include <boost/test/unit_test.hpp>
 #include <metrics/mod.h>
 #include <storage/backends/dump_storage.h>
 #include <util/temp_dir.h>
+#include <storage/backends/hierarchical_storage.h>
 
 namespace {
 
@@ -21,11 +22,12 @@ public:
     storage_fixture()
             : m_metrics_service({}),
               m_metrics(m_metrics_service),
-              m_dump(m_tmp.path(), ALLOCATED_BYTES, m_metrics) {
+              m_dump(m_tmp.path(), ALLOCATED_BYTES, m_metrics),
+              m_hierarchical(m_tmp.path(), ALLOCATED_BYTES, m_metrics) {
     }
 
     uh::dbn::storage::backend &backend() {
-        return m_dump;
+        return m_hierarchical;
     }
 
 private:
@@ -33,6 +35,8 @@ private:
     uh::metrics::service m_metrics_service;
     uh::dbn::metrics::storage_metrics m_metrics;
     uh::dbn::storage::dump_storage m_dump;
+    uh::dbn::storage::hierarchical_storage m_hierarchical;
+
 };
 
 static const std::string CONTENTS_STR = "These are the contents of test_input_file.txt and test_input_file_2.txt";

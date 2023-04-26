@@ -80,6 +80,19 @@ std::unique_ptr<allocation> client::allocate(std::size_t size)
 
 // ---------------------------------------------------------------------
 
+protocol::block_meta_data client::write_small_block(std::span <char> data) {
+
+    write(m_bs, write_small_block::request{.data = data});
+    m_bs.sync();
+
+    write_small_block::response response;
+    read(m_bs, response);
+
+    return {response.hash, response.effective_size};
+}
+
+// ---------------------------------------------------------------------
+
 void client::quit(const std::string& reason)
 {
     write(m_bs, quit::request{ .reason = reason });

@@ -34,6 +34,7 @@ class server : public protocol
 public:
     constexpr static std::size_t MINIMUM_CHUNK_SIZE = 64 * 1024;
     constexpr static std::size_t MAXIMUM_CHUNK_SIZE = 64 * 1024 * 1024;
+    constexpr static std::size_t SMALL_CHUNK_LIMIT = 64 * 1024 * 1024;
 
     constexpr static std::size_t MAXIMUM_BLOCK_SIZE = 2u * 1024 * 1024 * 1024;
 
@@ -58,6 +59,8 @@ private:
     void handle_reset();
     void handle_next_chunk();
     void handle_allocate_chunk();
+    void handle_write_small_block();
+    void handle_read_small_block();
     void handle_write_chunk();
     void handle_finalize_block();
     void handle_client_statistics();

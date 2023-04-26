@@ -52,7 +52,10 @@ public:
         }
         catch (const util::file_exists&)
         {
-            m_used -= m_size;
+            std::size_t used;
+            do {
+                used = m_used;
+            } while (!m_used.compare_exchange_weak(used, used - m_size));
             effective_size = 0u;
         }
 
@@ -81,7 +84,7 @@ void dump_storage::start(){
 
     INFO << "--- Storage backend initialized --- " << std::filesystem::absolute(this->m_root);
     INFO << "        backend type   : " << backend_type();
-    INFO << "        root diretcory : " << std::filesystem::absolute(this->m_root);
+    INFO << "        root directory : " << std::filesystem::absolute(this->m_root);
     INFO << "        space allocated: " << allocated_space();
     INFO << "        space available: " << free_space();
     INFO << "        space consumed : " << used_space();
