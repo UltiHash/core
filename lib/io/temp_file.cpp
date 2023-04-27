@@ -34,7 +34,8 @@ std::pair<int, std::filesystem::path> open_temp_file(const std::filesystem::path
 
 temp_file::temp_file(const std::filesystem::path& directory)
     : m_fd(-1),
-      m_path()
+      m_path(),
+      m_remove(true)
 {
     if (!std::filesystem::exists(directory))
     {
@@ -53,6 +54,10 @@ temp_file::~temp_file()
     if (m_fd != -1)
     {
         close(m_fd);
+    }
+
+    if (m_remove)
+    {
         unlink(m_path.c_str());
     }
 }
@@ -107,7 +112,23 @@ bool temp_file::valid() const
 
 void temp_file::release_to(const std::filesystem::path& path)
 {
-    if (link(m_path.c_str(), path.c_str()) == -1)
+    if (m_path == path)
+    {
+        m_remove = false;
+        return;
+    }
+
+    if (::link(m_path.c_str(), path.c_str()) == -1)
+    {
+        THROW_FROM_ERRNO();
+    }
+}
+
+// ---------------------------------------------------------------------
+
+void temp_file::rename(const std::filesystem::path& path)
+{
+    if (::rename(m_path.c_str(), path.c_str()) == -1)
     {
         THROW_FROM_ERRNO();
     }

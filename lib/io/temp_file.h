@@ -64,6 +64,11 @@ public:
     void release_to(const std::filesystem::path& path);
 
     /**
+     * Rename the file to `path` overwriting already existing files.
+     */
+    void rename(const std::filesystem::path& path);
+
+    /**
      * Return the path of the temporary file.
      */
     const std::filesystem::path& path() const;
@@ -73,6 +78,7 @@ public:
 private:
     int m_fd;
     std::filesystem::path m_path;
+    bool m_remove;
 };
 
 // ---------------------------------------------------------------------

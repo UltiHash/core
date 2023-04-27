@@ -100,7 +100,6 @@ BOOST_AUTO_TEST_CASE( release_to )
         tf_path = tf.path();
         tf.release_to(target_path);
 
-        BOOST_CHECK(std::filesystem::exists(tf_path));
         BOOST_CHECK(std::filesystem::exists(target_path));
     }
 
@@ -108,6 +107,16 @@ BOOST_AUTO_TEST_CASE( release_to )
     BOOST_CHECK(std::filesystem::exists(target_path));
 
     std::filesystem::remove(target_path);
+}
+
+// ---------------------------------------------------------------------
+
+BOOST_AUTO_TEST_CASE( release_to_throws )
+{
+    temp_file tf_1(TEMP_DIR);
+    temp_file tf_2(TEMP_DIR);
+
+    BOOST_CHECK_THROW(tf_1.release_to(tf_2.path()), file_exists);
 }
 
 // ---------------------------------------------------------------------
