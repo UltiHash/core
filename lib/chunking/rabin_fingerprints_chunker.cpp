@@ -61,6 +61,7 @@ size_t rabin_fingerprints_chunker::refill_buffer()
 std::span<char> rabin_fingerprints_chunker::next_chunk()
 {
     size_t bytes_read = 0;
+    FILE *myfile = fopen("/home/juan/Repos/core/chunkdatafile_c", "a"); // <--- JM DEBUG
 
     if(!m_chunk){
         bytes_read = refill_buffer();
@@ -74,6 +75,8 @@ std::span<char> rabin_fingerprints_chunker::next_chunk()
         if(!bytes_read){
             if(!m_finished){
                 m_finished = true;
+                fwrite(m_chunk->chunk_data, sizeof(char), m_chunk->length,myfile);// <--- JM DEBUG
+                fclose(myfile);// <--- JM DEBUG
                 return {m_chunk->chunk_data, m_chunk->length};
             }
             else{
@@ -85,6 +88,8 @@ std::span<char> rabin_fingerprints_chunker::next_chunk()
     else{
         if(!m_update_chunk){
             m_update_chunk = !m_update_chunk;
+            fwrite(m_chunk->chunk_data, sizeof(char), m_chunk->length,myfile);// <--- JM DEBUG
+            fclose(myfile);// <--- JM DEBUG
             return {m_chunk->chunk_data, m_chunk->length};
         }
         else{
