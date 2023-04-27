@@ -15,8 +15,8 @@ namespace uh::uhv
 enum uh_file_type : uint8_t
 {
     none = 0,
-    regular = 1,
-    directory = 2,
+    regular,
+    directory,
 };
 
 // ---------------------------------------------------------------------

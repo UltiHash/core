@@ -63,6 +63,7 @@ private:
     void handle_read_small_block();
     void handle_write_chunk();
     void handle_finalize_block();
+    void handle_client_statistics();
 
     server_state m_state = server_state::disconnected;
 

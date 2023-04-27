@@ -302,6 +302,31 @@ void read(serialization::buffered_serialization& in, read_small_block::response&
 
 // ---------------------------------------------------------------------
 
+struct client_statistics
+{
+    struct request
+    {
+        blob uhv_id;
+        std::uint64_t integrated_size;
+    };
+
+    struct response
+    {
+    };
+
+    constexpr static uint8_t request_id = 0x0d;
+};
+
+// ---------------------------------------------------------------------
+
+void write(serialization::buffered_serialization& out, const client_statistics::request& request);
+void read(serialization::buffered_serialization& in, client_statistics::request& request);
+
+void write(serialization::buffered_serialization& out, const client_statistics::response& response);
+void read(serialization::buffered_serialization& in, client_statistics::response& response);
+
+// ---------------------------------------------------------------------
+
 } // namespace uh::protocol
 
 #endif

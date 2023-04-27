@@ -37,6 +37,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 
 #include "rabin_polynomial.h"
@@ -58,21 +59,11 @@ uint64_t *polynomial_lookup_buf;
 /**
  * Prints the list of rabin polynomials to the given file
  */
-// JM >>>>> 
-//void print_rabin_poly_list_to_file(FILE *out_file, struct rabin_polynomial *poly){
-void print_rabin_poly_list_to_file(FILE *out_file, struct rabin_polynomial *poly, FILE *file_to_read){
-// <<<<< JM
+void print_rabin_poly_list_to_file(FILE *out_file, struct rabin_polynomial *poly){
     struct rabin_polynomial *cur_poly=poly;
     
     while(cur_poly != NULL) {
         print_rabin_poly_to_file(out_file,cur_poly,1);
-// JM >>>>>
-        char *file_data=malloc(cur_poly->length);
-        size_t bytes_read=fread(file_data,1,cur_poly->length,file_to_read);
-        fprintf(stdout, "\n------\n");
-        fprintf(stdout, "%s", file_data);
-        fprintf(stdout, "\n------\n");
-// <<<<< JM
         cur_poly=cur_poly->next_polynomial;
     }
     
@@ -176,6 +167,7 @@ struct rabin_polynomial *gen_new_polynomial(struct rabin_polynomial *tail, uint6
     next->start=total_len-length;
     next->length=length;
     next->polynomial=rab_sum;
+    next->chunk_data=NULL;
     
     return next;
     
@@ -235,10 +227,33 @@ void free_rabin_fingerprint_list(struct rabin_polynomial *head) {
     
     while(cur_poly != NULL) {
         next_poly=cur_poly->next_polynomial;
+        if(cur_poly->chunk_data != NULL){
+            free(cur_poly->chunk_data);
+            cur_poly->chunk_data = NULL;
+        }
         free(cur_poly);
         cur_poly=next_poly;
     }
     
+}
+
+/*
+ * Deallocates only the chunk data from each polynomial
+ */
+void free_chunk_data(struct rab_block_info *block){
+
+    struct rabin_polynomial *cur_poly, *next_poly;
+
+    cur_poly=block->head;
+
+    while(cur_poly != NULL) {
+        next_poly=cur_poly->next_polynomial;
+        if(cur_poly->chunk_data != NULL){
+            free(cur_poly->chunk_data);
+            cur_poly->chunk_data = NULL;
+        }
+        cur_poly=next_poly;
+    }
 }
 
 /*
@@ -284,7 +299,7 @@ struct rab_block_info *init_empty_block() {
         fprintf(stderr,"Could not allocate rabin polynomial block, no memory left!\n");
         return NULL;
     }
-	
+
 	block->head=gen_new_polynomial(NULL,0,0,0);
     
 	if(block->head == NULL)
@@ -326,7 +341,7 @@ struct rab_block_info *read_rabin_block(void *buf, size_t size, struct rab_block
     }
     
     else {
-     	block=cur_block;
+        block=cur_block;
     }
     //We ended on a border, gen a new tail
     if(block->current_poly_finished) {
@@ -337,13 +352,12 @@ struct rab_block_info *read_rabin_block(void *buf, size_t size, struct rab_block
 
     }
    
-
-    size_t i;
+    size_t bytes_offset = block->total_bytes_read;
+    size_t i, j, J, block_tail_start, partial_fill, block_tail_length;
     for(i=0;i<size;i++) {
     	char cur_byte=*((char *)(buf+i));
         char pushed_out=block->current_window_data[block->window_pos];
         block->current_window_data[block->window_pos]=cur_byte;
-        //fprintf(stdout, "%c", cur_byte);
         block->cur_roll_checksum=(block->cur_roll_checksum*rabin_polynomial_prime)+cur_byte;
         block->tail->polynomial=(block->tail->polynomial*rabin_polynomial_prime)+cur_byte;
         block->cur_roll_checksum-=(pushed_out*polynomial_lookup_buf[rabin_sliding_window_size]);
@@ -352,18 +366,35 @@ struct rab_block_info *read_rabin_block(void *buf, size_t size, struct rab_block
         block->total_bytes_read++;
         block->tail->length++;
         
-        if(block->window_pos == rabin_sliding_window_size) //Loop back around
+        if(block->window_pos == rabin_sliding_window_size){ //Loop back around
             block->window_pos=0;
+        }
         
         //If we hit our special value or reached the max win size create a new block
         if((block->tail->length >= rabin_polynomial_min_block_size && (block->cur_roll_checksum % rabin_polynomial_average_block_size) == rabin_polynomial_prime)|| block->tail->length == rabin_polynomial_max_block_size) {
             block->tail->start=block->total_bytes_read-block->tail->length;
+            block_tail_start = block->tail->start;
+            block_tail_length = block->tail->length;
+            partial_fill = 0; //This will change in a future PR
+
+            block->tail->chunk_data=malloc(sizeof(char)*(block->tail->length));
+            if(bytes_offset > block_tail_start){
+                J = 0;
+            }
+            else
+            {
+                J = block_tail_start - bytes_offset;
+            }
+
+            memcpy(block->tail->chunk_data+partial_fill, (buf+J), block_tail_length);
+
             struct rabin_polynomial *new_poly=gen_new_polynomial(NULL,0,0,0);
             block->tail->next_polynomial=new_poly;
             block->tail=new_poly;
             
-            if(i==size-1)
+            if(i==size-1){
                 block->current_poly_finished=1;
+            }
         }
     }
     

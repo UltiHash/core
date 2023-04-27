@@ -35,9 +35,9 @@ mod::mod(const chunking_config& cfg)
     : m_strategy(define_chunking_strategy(cfg.chunking_strategy)),
       m_chunk_size(cfg.chunk_size_in_bytes),
       m_fast_cdc(cfg.fast_cdc),
-      m_gear(cfg.gear),
+      m_rabin(cfg.rabin),
+      m_gear(cfg.gear)
       m_mod_cdc(cfg.mod_cdc)
-
 {
 }
 
@@ -55,6 +55,8 @@ std::unique_ptr<uh::chunking::chunker> mod::create_chunker(io::device& d)
             return std::make_unique<uh::chunking::gear>(m_gear, d);
         case ChunkingStrategy::FastCDC:
             return std::make_unique<uh::chunking::fast_cdc>(m_fast_cdc, d);
+        case ChunkingStrategy::CDCrabin:
+            return std::make_unique<uh::chunking::rabin_fingerprints_chunker>(m_rabin, d);
     }
 
     THROW(util::exception, "chunk type not implemented");

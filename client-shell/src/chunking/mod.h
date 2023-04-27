@@ -1,11 +1,13 @@
 #ifndef CLIENT_CHUNKING_MOD_H
 #define CLIENT_CHUNKING_MOD_H
 
+#include <chunking/defaults.h>
 #include <util/exception.h>
 
 #include <chunking/chunker.h>
 #include <chunking/gear.h>
 #include <chunking/fast_cdc.h>
+#include <chunking/rabin_fingerprints_chunker.h>
 
 #include <unordered_map>
 #include "chunking/mod_chunker.h"
@@ -18,6 +20,7 @@ enum class ChunkingStrategy
 {
     FixedSize,
     Mod,
+    CDCrabin,
     Gear,
     FastCDC
 };
@@ -28,12 +31,14 @@ constexpr const char* strategyString(ChunkingStrategy n)
     {
         case ChunkingStrategy::FixedSize: return "FixedSize";
         case ChunkingStrategy::Mod: return "Mod";
+        case ChunkingStrategy::CDCrabin: return "CDCrabin";
         case ChunkingStrategy::Gear: return "Gear";
         case ChunkingStrategy::FastCDC: return "FastCDC";
     }
 
     THROW(util::exception, "Not implemented option");
 }
+
 
 /*
   Chunking can be done by following one of several strategies: For instance, Fixed size chunking
@@ -46,9 +51,11 @@ static std::unordered_map<std::string, ChunkingStrategy> string2backendtype =
 {
   {strategyString(ChunkingStrategy::FixedSize), ChunkingStrategy::FixedSize},
   {strategyString(ChunkingStrategy::Mod), ChunkingStrategy::Mod},
+  {strategyString(ChunkingStrategy::CDCrabin), ChunkingStrategy::CDCrabin},
   {strategyString(ChunkingStrategy::Gear), ChunkingStrategy::Gear},
   {strategyString(ChunkingStrategy::FastCDC), ChunkingStrategy::FastCDC},
 };
+
 
 // ---------------------------------------------------------------------
 
@@ -59,13 +66,13 @@ struct chunking_config
 
     std::string chunking_strategy = std::string(default_chunking_strategy);
 
-    constexpr static size_t default_chunk_size_in_bytes = 4 * 1024 * 1024;
+    constexpr static size_t default_chunk_size_in_bytes = DEFAULT_CHUNK_SIZE;
     size_t chunk_size_in_bytes = 0;
 
     uh::chunking::fast_cdc_config fast_cdc;
     uh::chunking::gear_config gear;
     uh::chunking::mod_cdc_config mod_cdc;
-
+    uh::chunking::rabin_fingerprints_config rabin;
 };
 
 // ---------------------------------------------------------------------
@@ -83,7 +90,7 @@ private:
     uh::chunking::fast_cdc_config m_fast_cdc;
     uh::chunking::gear_config m_gear;
     uh::chunking::mod_cdc_config m_mod_cdc;
-
+    uh::chunking::rabin_fingerprints_config m_rabin;
 };
 
 // ---------------------------------------------------------------------
