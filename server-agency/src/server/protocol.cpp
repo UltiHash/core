@@ -55,10 +55,17 @@ std::unique_ptr<uh::protocol::allocation> protocol::on_allocate_chunk(std::size_
 
 // ---------------------------------------------------------------------
 
-block_meta_data protocol::on_write_small_block (std::span <char> buffer) {
+block_meta_data protocol::on_write_small_block (std::span <char> buffer)
+{
     return m_cluster.write_small_block (buffer);
 }
 
+// ---------------------------------------------------------------------
+
+void protocol::on_client_statistics()
+{
+
+}
 
 // ---------------------------------------------------------------------
 

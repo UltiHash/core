@@ -25,6 +25,7 @@ public:
     prometheus::Counter& reqs_next_chunk() const;
     prometheus::Counter& reqs_write_chunk() const;
     prometheus::Counter& reqs_write_small_block() const;
+    prometheus::Counter& reqs_client_statistics() const;
     prometheus::Counter& reqs_allocate_chunk() const;
     prometheus::Counter& reqs_finalize() const;
 private:
@@ -37,6 +38,7 @@ private:
     prometheus::Counter& m_reqs_next_chunk;
     prometheus::Counter& m_reqs_write_chunk;
     prometheus::Counter& m_reqs_write_small_block;
+    prometheus::Counter& m_reqs_client_statistics;
     prometheus::Counter& m_reqs_allocate_chunk;
     prometheus::Counter& m_reqs_finalize;
 };
@@ -60,6 +62,7 @@ public:
     virtual uh::protocol::block_meta_data on_write_small_block(std::span<char> buffer) override;
     virtual std::unique_ptr<uh::protocol::allocation>
         on_allocate_chunk(std::size_t size) override;
+    virtual void on_client_statistics() override;
 
 private:
     const protocol_metrics& m_metrics;
