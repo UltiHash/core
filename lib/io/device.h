@@ -50,6 +50,51 @@ static constexpr std::streamsize IO_DEFAULT_CHUNK_SIZE = 16 * 1024 * 1024;
 // ---------------------------------------------------------------------
 
 /**
+ * Use this class to construct an "owning wrapper" around a device. Usually
+ * device wrapper expect the wrapped device as reference. With `device_wrapper`
+ * you can make tie the lifetime of the wrapped device to its wrapper:
+ */
+template <typename wrapper, typename ... args>
+class device_wrapper : public io::device
+{
+public:
+    device_wrapper(std::unique_ptr<device>&& base, args... a)
+        : m_base(std::move(base)),
+          m_wrapper(*m_base, std::forward(a)...)
+    {
+    }
+
+    std::streamsize write(std::span<const char> buffer) override
+    {
+        return m_wrapper.write(buffer);
+    }
+
+    std::streamsize read(std::span<char> buffer) override
+    {
+        return m_wrapper.read(buffer);
+    }
+
+    bool valid() const override
+    {
+        return m_wrapper.valid();
+    }
+
+private:
+    std::unique_ptr<device> m_base;
+    wrapper m_wrapper;
+};
+
+// ---------------------------------------------------------------------
+
+template <typename wrapper, typename ... args>
+std::unique_ptr<io::device> owning_wrapper(std::unique_ptr<device>&& base, args... a)
+{
+    return std::make_unique<device_wrapper<wrapper, args...>>(std::move(base), a...);
+}
+
+// ---------------------------------------------------------------------
+
+/**
  * Read the complete device into memory and return it in a vector. `chunk_size`
  * defines how many bytes are read at a time.
  */
