@@ -36,7 +36,7 @@ mod::mod(const chunking_config& cfg)
       m_chunk_size(cfg.chunk_size_in_bytes),
       m_fast_cdc(cfg.fast_cdc),
       m_rabin(cfg.rabin),
-      m_gear(cfg.gear)
+      m_gear(cfg.gear),
       m_mod_cdc(cfg.mod_cdc)
 {
 }
