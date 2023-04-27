@@ -13,20 +13,6 @@ namespace
 
 // ---------------------------------------------------------------------
 
-int seekdir_to_int(std::ios_base::seekdir way)
-{
-    switch (way)
-    {
-        case std::ios_base::beg: return SEEK_SET;
-        case std::ios_base::cur: return SEEK_CUR;
-        case std::ios_base::end: return SEEK_END;
-    }
-
-    THROW(util::exception, "unsupported seekdir value");
-}
-
-// ---------------------------------------------------------------------
-
 std::pair<int, std::filesystem::path> open_temp_file(const std::filesystem::path& templ)
 {
     auto path = templ.string();
@@ -132,21 +118,6 @@ void temp_file::release_to(const std::filesystem::path& path)
 const std::filesystem::path& temp_file::path() const
 {
     return m_path;
-}
-
-// ---------------------------------------------------------------------
-
-std::streampos temp_file::seek(stream_offset off, std::ios_base::seekdir way)
-{
-    int whence = seekdir_to_int(way);
-
-    auto rv = lseek(m_fd, off, whence);
-    if (rv == -1)
-    {
-        THROW_FROM_ERRNO();
-    }
-
-    return rv;
 }
 
 // ---------------------------------------------------------------------

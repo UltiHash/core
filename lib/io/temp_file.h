@@ -68,8 +68,6 @@ public:
      */
     const std::filesystem::path& path() const;
 
-    std::streampos seek(stream_offset off, std::ios_base::seekdir way);
-
     const static std::string FILENAME_TEMPLATE;
 
 private:
