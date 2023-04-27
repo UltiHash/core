@@ -66,7 +66,6 @@ std::span<char> rabin_fingerprints_chunker::next_chunk()
     if(!m_chunk){
         bytes_read = refill_buffer();
         if(!bytes_read){
-            free_rabin_fingerprint_list(m_block->head);
             return {};
         }
         return {m_chunk->chunk_data, m_chunk->length};
@@ -74,11 +73,14 @@ std::span<char> rabin_fingerprints_chunker::next_chunk()
     else
     {
         m_chunk = m_chunk->next_polynomial;
+        if(!m_chunk){
+            return {};
+        }
+
         if(!m_chunk->chunk_data){
             free_chunk_data(m_block); // up to here, all chunk_data has been returned, so we can free it.
             bytes_read = refill_buffer();
             if(!bytes_read){
-                free_rabin_fingerprint_list(m_block->head);
                 return {};
             }
         }
