@@ -45,26 +45,6 @@ public:
 
 // ---------------------------------------------------------------------
 
-/**
- * Adapter enabling boost iostreams API for devices.
- */
-class boost_device
-{
-public:
-    typedef char char_type;
-    typedef boost::iostreams::bidirectional_device_tag category;
-
-    boost_device(std::shared_ptr<device> dev);
-
-    std::streamsize write(const char* s, std::streamsize n);
-    std::streamsize read(char*s, std::streamsize n);
-
-private:
-    std::shared_ptr<device> m_dev;
-};
-
-// ---------------------------------------------------------------------
-
 static constexpr std::streamsize IO_DEFAULT_CHUNK_SIZE = 16 * 1024 * 1024;
 
 // ---------------------------------------------------------------------
