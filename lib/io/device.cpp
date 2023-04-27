@@ -89,6 +89,27 @@ std::size_t copy(device& d, std::ostream& out)
 
 // ---------------------------------------------------------------------
 
+std::size_t copy(device& in, device& out)
+{
+    std::array<char, BUFFER_SIZE> buffer;
+    std::size_t rv = 0;
+
+    while (in.valid())
+    {
+        std::size_t read = in.read(buffer);
+        rv += read;
+        if (!read)
+        {
+            break;
+        }
+        out.write({ buffer.data(), read });
+    }
+
+    return rv;
+}
+
+// ---------------------------------------------------------------------
+
 std::streamsize write(io::device& dev, std::span<const char> buffer)
 {
     std::size_t written = 0;

@@ -94,6 +94,14 @@ std::size_t copy(device& d, std::ostream& out);
 // ---------------------------------------------------------------------
 
 /**
+ * Copy the complete device `in` to the device `out`. Return number of
+ * bytes written.
+ */
+std::size_t copy(device& in, device& out);
+
+// ---------------------------------------------------------------------
+
+/**
  * Write the buffer to the device. This function guarantees that the complete
  * buffer is written by calling `dev.write()` repeatedly until everything is
  * written.
