@@ -41,6 +41,8 @@ private:
     std::vector<char> m_buffer;
     struct rab_block_info *m_block=nullptr;
     struct rabin_polynomial *m_chunk=nullptr;
+    bool m_update_chunk=false;
+    bool m_finished=false;
     constexpr static std::string_view m_type = "CDCrabin";
 };
 

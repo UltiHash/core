@@ -15,7 +15,9 @@ rabin_fingerprints_chunker::rabin_fingerprints_chunker(const rabin_fingerprints_
       m_chunk_size(config.chunk_size),
       m_buffer(config.chunk_size),
       m_block(nullptr),
-      m_chunk(nullptr)
+      m_chunk(nullptr),
+      m_update_chunk(false),
+      m_finished(false)
 {
     static int __rabin_init_result = initialize_rabin_polynomial_defaults();
 
@@ -52,9 +54,6 @@ size_t rabin_fingerprints_chunker::refill_buffer()
     if(!m_chunk){
         m_chunk=m_block->head;
     }
-    else{
-        m_chunk=m_chunk->next_polynomial;
-    }
 
     return bytes_read;
 }
@@ -68,23 +67,31 @@ std::span<char> rabin_fingerprints_chunker::next_chunk()
         if(!bytes_read){
             return {};
         }
-        return {m_chunk->chunk_data, m_chunk->length};
+        return next_chunk();
     }
-    else
-    {
-        m_chunk = m_chunk->next_polynomial;
-        if(!m_chunk){
-            return {};
-        }
-
-        if(!m_chunk->chunk_data){
-            free_chunk_data(m_block); // up to here, all chunk_data has been returned, so we can free it.
-            bytes_read = refill_buffer();
-            if(!bytes_read){
+    else if(!m_chunk->next_polynomial){
+        bytes_read = refill_buffer();
+        if(!bytes_read){
+            if(!m_finished){
+                m_finished = true;
+                return {m_chunk->chunk_data, m_chunk->length};
+            }
+            else{
                 return {};
             }
         }
-        return {m_chunk->chunk_data, m_chunk->length};
+        return next_chunk();
+    }
+    else{
+        if(!m_update_chunk){
+            m_update_chunk = !m_update_chunk;
+            return {m_chunk->chunk_data, m_chunk->length};
+        }
+        else{
+            m_update_chunk = !m_update_chunk;
+            m_chunk = m_chunk->next_polynomial;
+            return next_chunk() ;
+        }
     }
 }
 
