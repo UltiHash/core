@@ -79,8 +79,6 @@ void f_upload::chunk_and_upload(std::unique_ptr<uhv::f_meta_data>& f_meta_data,
 
         auto chunker = m_chunking.create_chunker(file);
 
-        std::ofstream myfile;// <--- JM DEBUG
-        myfile.open ("/home/juan/Repos/core/chunkdatafile_cpp", std::ios_base::app);// <--- JM DEBUG
         for (auto chunk = chunker->next_chunk(); !chunk.empty(); chunk = chunker->next_chunk())
         {
             protocol::block_meta_data meta_data;
@@ -92,7 +90,6 @@ void f_upload::chunk_and_upload(std::unique_ptr<uhv::f_meta_data>& f_meta_data,
             }
             else
             {
-                myfile.write(chunk.data(), chunk.size());// <--- JM DEBUG
                 meta_data = client_handle->write_small_block(chunk);
             }
             f_meta_data->add_hash(meta_data.hash);
@@ -100,7 +97,6 @@ void f_upload::chunk_and_upload(std::unique_ptr<uhv::f_meta_data>& f_meta_data,
         }
 
         m_uploaded_size += f_meta_data->f_size();
-        myfile.close();// <--- JM DEBUG
     }
 
     m_output_jq.append_job(std::move(f_meta_data));
