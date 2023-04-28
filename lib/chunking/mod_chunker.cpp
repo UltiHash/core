@@ -26,10 +26,11 @@ std::span<char> uh::chunking::mod_chunker::next_chunk() {
 
     const auto start = m_pointer;
     const auto loop_limit = std::min (start + m_max_size, m_buf_size);
+    const auto normalised_size = m_normal_size - m_min_size;
     unsigned long window = 0;
     for (auto i = m_pointer + m_min_size; i < loop_limit; i++) {
         window = (window << 1) + m_buffer [i];
-        if (window % m_normal_size == 0) {
+        if (window % normalised_size == 0) {
             m_pointer = i;
             return {m_buffer.data() + start, i - start};
         }
