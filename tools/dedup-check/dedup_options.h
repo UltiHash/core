@@ -23,7 +23,6 @@ public:
 
 private:
     dedup_config m_config;
-    boost::program_options::options_description m_desc;
 };
 
 }
