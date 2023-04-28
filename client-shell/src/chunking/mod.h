@@ -19,6 +19,7 @@ namespace uh::client::chunking
 enum class ChunkingStrategy
 {
     FixedSize,
+    Mod,
     CDCrabin,
     Gear,
     FastCDC,
@@ -30,6 +31,7 @@ constexpr const char* strategyString(ChunkingStrategy n)
     switch (n)
     {
         case ChunkingStrategy::FixedSize: return "FixedSize";
+        case ChunkingStrategy::Mod: return "Mod";
         case ChunkingStrategy::CDCrabin: return "CDCrabin";
         case ChunkingStrategy::Gear: return "Gear";
         case ChunkingStrategy::FastCDC: return "FastCDC";
@@ -50,6 +52,7 @@ constexpr const char* strategyString(ChunkingStrategy n)
 static std::unordered_map<std::string, ChunkingStrategy> string2backendtype =
 {
   {strategyString(ChunkingStrategy::FixedSize), ChunkingStrategy::FixedSize},
+  {strategyString(ChunkingStrategy::Mod), ChunkingStrategy::Mod},
   {strategyString(ChunkingStrategy::CDCrabin), ChunkingStrategy::CDCrabin},
   {strategyString(ChunkingStrategy::Gear), ChunkingStrategy::Gear},
   {strategyString(ChunkingStrategy::FastCDC), ChunkingStrategy::FastCDC},
@@ -91,6 +94,7 @@ private:
     uh::chunking::fast_cdc_config m_fast_cdc;
     uh::chunking::mod_cdc_config m_mod_cdc;
     uh::chunking::gear_config m_gear;
+    uh::chunking::mod_cdc_config m_mod_cdc;
     uh::chunking::rabin_fingerprints_config m_rabin;
 };
 
