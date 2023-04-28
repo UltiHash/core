@@ -59,6 +59,8 @@ class dump_storage : public backend {
 
         virtual std::unique_ptr<uh::protocol::allocation> allocate(std::size_t size);
 
+        std::unique_ptr<uh::protocol::allocation> allocate_multi (std::size_t size) override;
+
         void update_space_consumption();
 
 

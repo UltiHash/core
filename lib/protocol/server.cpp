@@ -82,6 +82,8 @@ void server::handle_normal_request(uint8_t request_id)
         case allocate_chunk::request_id: return handle_allocate_chunk();
         case write_small_block::request_id: return handle_write_small_block();
         case read_small_block::request_id: return handle_read_small_block();
+        case write_xsmall_blocks::request_id: return handle_write_xsmall_blocks();
+
 
 
         default:
@@ -304,6 +306,20 @@ void server::handle_read_small_block ()
 {
     DEBUG << "read_short_block request on " << client_->peer();
     THROW(util::exception, "read_short_block not implemented");
+}
+
+// ---------------------------------------------------------------------
+
+void server::handle_write_xsmall_blocks ()
+{
+    DEBUG << "write_short_block request on " << client_->peer();
+
+    write_xsmall_blocks::request req;
+    read(m_bs, req);
+    auto meta_data = m_handler_interface->on_write_xsmall_blocks (req);
+    write(m_bs, status{ status::OK });
+    write(m_bs, meta_data);
+    m_bs.sync ();
 }
 
 // ---------------------------------------------------------------------

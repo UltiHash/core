@@ -3,10 +3,11 @@
 
 #include <protocol/client_pool.h>
 
-#include <unordered_map>
+#include <map>
 #include <memory>
 #include <string>
 #include "routing_interface.h"
+#include "protocol/messages.h"
 
 
 namespace uh::an::cluster
@@ -86,6 +87,14 @@ public:
      * @return the hash of the data
      */
     protocol::block_meta_data write_small_block (std::span <char> buffer);
+
+
+    /**
+     * Routes different blocks to their corresponding data nodes
+     * @param buffer array of blocks
+     * @return the hash array of the blocks
+     */
+    uh::protocol::write_xsmall_blocks::response write_xsmall_blocks (const uh::protocol::write_xsmall_blocks::request &req);
 
 private:
     struct impl;

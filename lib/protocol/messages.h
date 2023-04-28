@@ -302,6 +302,56 @@ void read(serialization::buffered_serialization& in, read_small_block::response&
 
 // ---------------------------------------------------------------------
 
+struct write_xsmall_blocks
+{
+    struct request
+    {
+        std::vector <std::uint16_t> chunk_sizes;
+        std::vector <char> data;
+    };
+
+    struct response
+    {
+        std::size_t effective_size;
+        blob hashes;
+    };
+
+    constexpr static uint8_t request_id = 0x0d;
+};
+
+// ---------------------------------------------------------------------
+
+void write(serialization::buffered_serialization& out, const write_xsmall_blocks::request& request);
+void read(serialization::buffered_serialization& in, write_xsmall_blocks::request& request);
+
+void write(serialization::buffered_serialization& out, const write_xsmall_blocks::response& response);
+void read(serialization::buffered_serialization& in, write_xsmall_blocks::response& response);
+
+// ---------------------------------------------------------------------
+
+struct read_xsmall_blocks
+{
+    struct request
+    {
+        blob hashes;
+    };
+
+    struct response
+    {
+        std::vector <char> data;
+    };
+
+    constexpr static uint8_t request_id = 0x0e;
+};
+
+// ---------------------------------------------------------------------
+
+void write(serialization::buffered_serialization& out, const read_xsmall_blocks::request& request);
+void read(serialization::buffered_serialization& in, read_xsmall_blocks::request& request);
+
+void write(serialization::buffered_serialization& out, const read_xsmall_blocks::response& response);
+void read(serialization::buffered_serialization& in, read_xsmall_blocks::response& response);
+
 } // namespace uh::protocol
 
 #endif
