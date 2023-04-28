@@ -83,8 +83,7 @@ void server::handle_normal_request(uint8_t request_id)
         case write_small_block::request_id: return handle_write_small_block();
         case read_small_block::request_id: return handle_read_small_block();
         case write_xsmall_blocks::request_id: return handle_write_xsmall_blocks();
-
-
+        case client_statistics::request_id: return handle_client_statistics();
 
         default:
             throw std::runtime_error("normal, unsupported command: "
@@ -290,14 +289,18 @@ void server::handle_write_small_block ()
     DEBUG << "write_short_block request on " << client_->peer();
 
     std::vector<char> buffer(SMALL_CHUNK_LIMIT);
+
     write_small_block::request req{ .data = buffer };
     read(m_bs, req);
     auto meta_data = m_handler_interface->on_write_small_block (req.data);
+
     write(m_bs, status{ status::OK });
     write(m_bs, write_small_block::response{
             .hash = std::move(meta_data.hash),
             .effective_size = meta_data.effective_size });
+
     m_bs.sync ();
+
 }
 
 // ---------------------------------------------------------------------
@@ -369,6 +372,19 @@ void server::handle_finalize_block()
     m_bs.sync ();
 
     m_state = server_state::normal;
+}
+
+// ---------------------------------------------------------------------
+
+void server::handle_client_statistics()
+{
+    DEBUG << "client_statistics request on " << client_->peer();
+
+    client_statistics::request req;
+    read(m_bs, req);
+
+    write(m_bs, status{ status::OK });
+    m_bs.sync();
 }
 
 // ---------------------------------------------------------------------

@@ -2,6 +2,7 @@
 
 #include <io/file.h>
 #include <io/sha512.h>
+#include "util/sha512.h"
 
 
 namespace uh::dbn::storage {
@@ -74,8 +75,9 @@ private:
 
 // ---------------------------------------------------------------------
 
-uh::protocol::blob dump_storage::hashing_function(const uh::protocol::blob &data) {
-    return uh::dbn::storage::sha512(data);
+uh::protocol::blob dump_storage::hashing_function(const uh::protocol::blob &data)
+{
+    return uh::util::sha512(data);
 }
 
 // ---------------------------------------------------------------------

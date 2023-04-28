@@ -1,7 +1,9 @@
-#include "f_upload.h"
-
+#include <utility>
 #include <io/file.h>
 
+#include "f_upload.h"
+#include "protocol/messages.h"
+#include "util/sha512.h"
 
 namespace uh::client::serialization
 {
@@ -12,12 +14,14 @@ f_upload::f_upload(protocol::client_pool& cl_pool,
                    uhv::job_queue<std::unique_ptr<uhv::f_meta_data>>& in_jq,
                    uhv::job_queue<std::unique_ptr<uhv::f_meta_data>>& out_jq,
                    uh::client::chunking::mod& chunking,
+                   std::filesystem::path uhv_path,
                    unsigned int num_threads)
     : common::thread_manager(num_threads),
       m_input_jq(in_jq),
       m_output_jq(out_jq),
       m_client_pool(cl_pool),
-      m_chunking(chunking)
+      m_chunking(chunking),
+      m_uhv_path(std::move(uhv_path))
 {
 }
 
@@ -26,6 +30,7 @@ f_upload::f_upload(protocol::client_pool& cl_pool,
 f_upload::~f_upload()
 {
     join();
+    send_statistics();
 }
 
 // ---------------------------------------------------------------------
@@ -48,7 +53,7 @@ void f_upload::join()
 // ---------------------------------------------------------------------
 
 
-protocol::block_meta_data send_xs_blocks (auto &client_handle, auto &xsmall_blocks_req) {
+protocol::block_meta_data f_upload::send_xs_blocks (auto &client_handle, auto &xsmall_blocks_req) {
     protocol::block_meta_data meta_data;
     auto res = client_handle->write_xsmall_blocks(xsmall_blocks_req);
     protocol::write_xsmall_blocks::request new_req;
@@ -57,6 +62,22 @@ protocol::block_meta_data send_xs_blocks (auto &client_handle, auto &xsmall_bloc
     meta_data.effective_size = res.effective_size;
     return meta_data;
 }
+
+void f_upload::send_statistics()
+{
+    uh::protocol::blob uhv_path {};
+    std::ranges::copy(m_uhv_path.string(), std::back_inserter(uhv_path));
+
+    const uh::protocol::blob uhv_id {uh::util::sha512(uhv_path)};
+
+    uh::protocol::client_statistics::request client_stat {
+            uhv_id, m_uploaded_size };
+
+    protocol::client_pool::handle client_handle = m_client_pool.get();
+    client_handle->send_client_statistics(client_stat);
+}
+
+// ---------------------------------------------------------------------
 
 void f_upload::chunk_and_upload(std::unique_ptr<uhv::f_meta_data>& f_meta_data,
                                 protocol::client_pool::handle& client_handle)
@@ -71,8 +92,10 @@ void f_upload::chunk_and_upload(std::unique_ptr<uhv::f_meta_data>& f_meta_data,
 
         for (auto chunk = chunker->next_chunk(); !chunk.empty(); chunk = chunker->next_chunk())
         {
-            protocol::block_meta_data meta_data {};
-            if (chunk.size() > uh::protocol::server::SMALL_CHUNK_LIMIT) {
+
+            protocol::block_meta_data meta_data;
+            if (chunk.size() > uh::protocol::server::SMALL_CHUNK_LIMIT)
+            {
                 auto alloc = client_handle->allocate(chunk.size());
                 io::write_from_buffer(alloc->device(), chunk);
                 meta_data = alloc->persist();
@@ -96,6 +119,8 @@ void f_upload::chunk_and_upload(std::unique_ptr<uhv::f_meta_data>& f_meta_data,
             f_meta_data->add_hash(meta_data.hash);
             f_meta_data->add_effective_size(meta_data.effective_size);
         }
+
+        m_uploaded_size += f_meta_data->f_size();
     }
 
     m_output_jq.append_job(std::move(f_meta_data));
