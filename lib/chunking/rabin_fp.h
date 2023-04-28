@@ -17,7 +17,8 @@ namespace uh::chunking
 
 struct rabin_fp_config
 {
-    std::size_t chunk_size = 512;
+    //# of bytes to read at a time when reading through files
+    std::size_t read_buf_size = 512;
 };
 
 // ---------------------------------------------------------------------

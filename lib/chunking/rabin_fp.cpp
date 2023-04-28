@@ -12,8 +12,8 @@ namespace uh::chunking
 
 rabin_fp::rabin_fp(const rabin_fp_config& config ,io::device& dev)
     : m_dev(dev),
-      m_chunk_size(config.chunk_size),
-      m_buffer(config.chunk_size),
+      m_chunk_size(config.read_buf_size),
+      m_buffer(config.read_buf_size),
       m_block(nullptr),
       m_chunk(nullptr),
       m_update_chunk(false),
