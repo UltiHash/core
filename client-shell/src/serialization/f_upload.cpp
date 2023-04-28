@@ -92,7 +92,7 @@ void f_upload::chunk_and_upload(std::unique_ptr<uhv::f_meta_data>& f_meta_data,
             }
             else
             {
-                myfile << chunk.data();// <--- JM DEBUG
+                myfile.write(chunk.data(), chunk.size());// <--- JM DEBUG
                 meta_data = client_handle->write_small_block(chunk);
             }
             f_meta_data->add_hash(meta_data.hash);
