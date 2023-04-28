@@ -14,8 +14,9 @@ namespace uh::an::server
 
 // ---------------------------------------------------------------------
 
-protocol::protocol(cluster::mod& cluster, const uh::net::server_info &serv_info):
+protocol::protocol(cluster::mod& cluster, metrics::client_metrics& client, const uh::net::server_info &serv_info):
         m_cluster(cluster),
+        m_client(client),
         m_serv_info (serv_info)
 {
 }
@@ -64,7 +65,8 @@ block_meta_data protocol::on_write_small_block (std::span <char> buffer)
 
 void protocol::on_client_statistics(uh::protocol::client_statistics::request& client_stat)
 {
-
+    m_client.uhv_id().Set(1);
+    m_client.integrated_size().Set(client_stat.integrated_size);
 }
 
 // ---------------------------------------------------------------------
