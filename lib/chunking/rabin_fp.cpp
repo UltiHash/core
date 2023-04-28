@@ -61,7 +61,6 @@ size_t rabin_fp::refill_buffer()
 std::span<char> rabin_fp::next_chunk()
 {
     size_t bytes_read = 0;
-    FILE *myfile = fopen("/home/juan/Repos/core/chunkdatafile_c", "a"); // <--- JM DEBUG
 
     // This clause should only run for the beginning of a file.
     if(!m_chunk){
@@ -83,8 +82,6 @@ std::span<char> rabin_fp::next_chunk()
         if(!bytes_read){
             if(!m_finished){
                 m_finished = true;
-                fwrite(m_chunk->chunk_data, sizeof(char), m_chunk->length,myfile);// <--- JM DEBUG
-                fclose(myfile);// <--- JM DEBUG
                 return {m_chunk->chunk_data, m_chunk->length};
             }
             else{
@@ -98,8 +95,10 @@ std::span<char> rabin_fp::next_chunk()
     if(!m_update_chunk)
     {
         m_update_chunk = !m_update_chunk;
-        fwrite(m_chunk->chunk_data, sizeof(char), m_chunk->length,myfile);// <--- JM DEBUG
-        fclose(myfile);// <--- JM DEBUG
+
+        if(m_chunk->length == 0) // this happens between blocks. Do not return an empty chunk, since that kills the reading loop outside!
+            return next_chunk();
+
         return {m_chunk->chunk_data, m_chunk->length};
     }
 
