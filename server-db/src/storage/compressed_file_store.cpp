@@ -1,0 +1,113 @@
+#include "compressed_file_store.h"
+
+#include <util/exception.h>
+#include <io/file.h>
+#include <compression/compression.h>
+
+#include <arpa/inet.h>
+
+
+namespace uh::dbn::storage
+{
+
+namespace
+{
+
+// ---------------------------------------------------------------------
+
+void write_comp_type(io::device& out, comp::type t)
+{
+    uint32_t nl_id = htonl(to_uint(t));
+
+    if (out.write({ reinterpret_cast<char*>(&nl_id), sizeof(nl_id) }) < sizeof(nl_id))
+    {
+        THROW(util::exception, "failure writing compression header");
+    }
+}
+
+// ---------------------------------------------------------------------
+
+comp::type read_comp_type(io::device& in)
+{
+    uint32_t nl_id;
+    if (in.read({ reinterpret_cast<char*>(&nl_id), sizeof(nl_id) }) < sizeof(nl_id))
+    {
+        THROW(util::exception, "failure reading compression header");
+    }
+
+    return comp::from_uint(ntohl(nl_id));
+}
+
+// ---------------------------------------------------------------------
+
+std::unique_ptr<io::device> open_reader(const std::filesystem::path& path)
+{
+    auto in = std::make_unique<io::file>(path);
+
+    comp::type type = read_comp_type(*in);
+    return comp::create(std::move(in), type);
+}
+
+// ---------------------------------------------------------------------
+
+void compress_worker(const std::filesystem::path& path, comp::type t)
+{
+    auto in = open_reader(path);
+
+    auto temp = std::make_unique<io::temp_file>(path.parent_path());
+    write_comp_type(*temp, t);
+
+    auto out = comp::create(*temp, t);
+
+    copy(*in, *out);
+
+    temp->release_to(path);
+}
+
+// ---------------------------------------------------------------------
+
+} // namespace
+
+// ---------------------------------------------------------------------
+
+compressed_file_store::compressed_file_store(const compressed_file_store_config& config)
+    : m_worker(config.threads, compress_worker),
+      m_type(config.compression)
+{
+}
+
+// ---------------------------------------------------------------------
+
+std::unique_ptr<io::temp_file> compressed_file_store::temp_file(const std::filesystem::path& path)
+{
+    auto rv = std::make_unique<io::temp_file>(path);
+
+    write_comp_type(*rv, comp::type::none);
+
+    return rv;
+}
+
+// ---------------------------------------------------------------------
+
+std::unique_ptr<io::device> compressed_file_store::open(const std::filesystem::path& path)
+{
+    return open_reader(path);
+}
+
+// ---------------------------------------------------------------------
+
+void compressed_file_store::compress(const std::filesystem::path& path)
+{
+    std::unique_lock<std::mutex> lock(m_comp_mutex);
+    auto [it, success] = m_compressing.emplace(path);
+    if (!success)
+    {
+        return;
+    }
+
+    m_worker.push(path, comp::type::none);
+}
+
+// ---------------------------------------------------------------------
+
+} // namespace uh::dbn::storage

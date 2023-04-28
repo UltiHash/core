@@ -5,24 +5,29 @@
 
 #include <memory>
 #include "io/file.h"
-#include "io/sha512.h"
 
 namespace uh::dbn::storage {
 
 
-hierarchical_storage::hierarchical_multi_block_allocation::hierarchical_multi_block_allocation (hierarchical_storage &storage_backend, std::size_t size):
-m_storage_backend (storage_backend),
-m_size (size)
-{}
+hierarchical_storage::hierarchical_multi_block_allocation::hierarchical_multi_block_allocation(
+    hierarchical_storage &storage_backend,
+    compressed_file_store& store,
+    std::size_t size)
+    : m_storage_backend(storage_backend),
+      m_store(store),
+      m_size(size)
+{
+}
 
-void hierarchical_storage::hierarchical_multi_block_allocation::open_new_block (std::size_t block_size) {
+void hierarchical_storage::hierarchical_multi_block_allocation::open_new_block(std::size_t block_size) {
     if (block_is_open ()) {
         THROW(util::exception, "a block is already open. close the block or persist it before opening a new block.");
     }
     if (m_persisted_size + block_size > m_size) {
         THROW(util::exception, "multi allocation overflow.");
     }
-    m_tmp = std::make_unique<io::temp_file>(m_storage_backend.m_root);
+
+    m_tmp = m_store.temp_file(m_storage_backend.m_root);
     m_sha = std::make_unique<io::sha512>(*m_tmp);
     m_block_size = block_size;
 }
@@ -58,6 +63,7 @@ uh::protocol::block_meta_data hierarchical_storage::hierarchical_multi_block_all
     try {
         m_tmp->release_to(file_path);
         m_effective_size += m_block_size;
+        m_store.compress(file_path);
     }
     catch (const util::file_exists&) {
         m_block_size = 0ul;
@@ -84,12 +90,15 @@ hierarchical_storage::hierarchical_multi_block_allocation::~hierarchical_multi_b
 class hierarchical_storage::hierarchical_allocation: public uh::protocol::allocation {
 
 public:
-    explicit hierarchical_allocation(hierarchical_storage &storage_backend, std::size_t size):
-        m_storage_backend (storage_backend),
-        m_tmp(io::temp_file (storage_backend.m_root)),
-        m_sha(m_tmp),
-        m_size (size)
-        {}
+    explicit hierarchical_allocation(hierarchical_storage &storage_backend,
+                                     compressed_file_store& store,
+                                     std::size_t size)
+        : m_storage_backend (storage_backend),
+          m_store(store),
+          m_tmp(m_store.temp_file(storage_backend.m_root)),
+          m_sha(*m_tmp),
+          m_size (size)
+    {}
 
     io::device& device() override {
         return m_sha;
@@ -104,8 +113,9 @@ public:
         std::filesystem::create_directories(file_path.parent_path());
 
         try {
-            m_tmp.release_to(file_path);
+            m_tmp->release_to(file_path);
             m_effective_size = m_size;
+            m_store.compress(file_path);
         }
         catch (const util::file_exists&) {
             m_effective_size = 0u;
@@ -128,7 +138,8 @@ public:
 
 private:
     hierarchical_storage &m_storage_backend;
-    io::temp_file m_tmp;
+    compressed_file_store& m_store;
+    std::unique_ptr<io::temp_file> m_tmp;
     io::sha512 m_sha;
     std::size_t m_size;
     std::size_t m_effective_size {};
@@ -137,24 +148,25 @@ private:
 
 
 hierarchical_storage::hierarchical_storage(std::filesystem::path db_root, size_t size_bytes,
-                                                    uh::dbn::metrics::storage_metrics& storage_metrics):
+                                           uh::dbn::metrics::storage_metrics& storage_metrics):
     m_root(std::move (db_root)),
     m_alloc(size_bytes),
     m_used(0),
-    m_storage_metrics(storage_metrics)
-    {
-        if( !std::filesystem::is_directory(m_root) ) {
-            throw std::runtime_error("path does not exist: " + m_root.string());
-        }
-        else {
-            m_used = get_dir_size(m_root);
-            if (m_used >= m_alloc)
-            {
-                THROW(util::exception, "database used over limit");
-            }
-            update_space_consumption();
-        }
+    m_storage_metrics(storage_metrics),
+    m_store({ db_root, 5u })
+{
+    if( !std::filesystem::is_directory(m_root) ) {
+        throw std::runtime_error("path does not exist: " + m_root.string());
     }
+    else {
+        m_used = get_dir_size(m_root);
+        if (m_used >= m_alloc)
+        {
+            THROW(util::exception, "database used over limit");
+        }
+        update_space_consumption();
+    }
+}
 
 
 void hierarchical_storage::start() {
@@ -193,7 +205,7 @@ std::unique_ptr<io::device> hierarchical_storage::read_block(const protocol::blo
 
     const auto file_path = get_hash_path(hex);
 
-    auto file = std::make_unique<io::file> (file_path);
+    auto file = m_store.open(file_path);
     if (!file->valid()) {
         THROW(util::exception, "unknown hash: " + hex);
     }
@@ -204,7 +216,7 @@ std::unique_ptr<io::device> hierarchical_storage::read_block(const protocol::blo
 std::unique_ptr<uh::protocol::allocation> hierarchical_storage::allocate(std::size_t size) {
     acquire_storage_size(size);
 
-    return std::make_unique<hierarchical_allocation>(*this, size);
+    return std::make_unique<hierarchical_allocation>(*this, m_store, size);
 }
 
 std::filesystem::path hierarchical_storage::get_hash_path (const std::string &hash) const {
@@ -222,7 +234,7 @@ std::filesystem::path hierarchical_storage::get_hash_path (const std::string &ha
 std::unique_ptr<uh::protocol::allocation> hierarchical_storage::allocate_multi(std::size_t size) {
 
     acquire_storage_size(size);
-    return std::make_unique<hierarchical_multi_block_allocation>(*this, size);
+    return std::make_unique<hierarchical_multi_block_allocation>(*this, m_store, size);
 }
 
 void hierarchical_storage::acquire_storage_size(std::size_t size) {
