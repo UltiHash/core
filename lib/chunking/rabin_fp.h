@@ -15,19 +15,19 @@ namespace uh::chunking
 
 // ---------------------------------------------------------------------
 
-struct rabin_fingerprints_config
+struct rabin_fp_config
 {
     std::size_t chunk_size = 512;
 };
 
 // ---------------------------------------------------------------------
 
-class rabin_fingerprints_chunker : public chunker
+class rabin_fp : public chunker
 {
 public:
-    rabin_fingerprints_chunker(const rabin_fingerprints_config& config, io::device& dev);
+    rabin_fp(const rabin_fp_config& config, io::device& dev);
 
-    ~rabin_fingerprints_chunker() override;
+    ~rabin_fp() override;
 
     std::span<char> next_chunk() override;
 

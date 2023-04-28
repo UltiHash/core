@@ -1,4 +1,4 @@
-#include "rabin_fingerprints_chunker.h"
+#include "rabin_fp.h"
 #include <logging/logging_boost.h>
 #include <util/exception.h>
 #include <vector>
@@ -10,7 +10,7 @@ namespace uh::chunking
 
 // ---------------------------------------------------------------------
 
-rabin_fingerprints_chunker::rabin_fingerprints_chunker(const rabin_fingerprints_config& config ,io::device& dev)
+rabin_fp::rabin_fp(const rabin_fp_config& config ,io::device& dev)
     : m_dev(dev),
       m_chunk_size(config.chunk_size),
       m_buffer(config.chunk_size),
@@ -31,7 +31,7 @@ rabin_fingerprints_chunker::rabin_fingerprints_chunker(const rabin_fingerprints_
 
 // ---------------------------------------------------------------------
 
-rabin_fingerprints_chunker::~rabin_fingerprints_chunker(){
+rabin_fp::~rabin_fp(){
     free_chunk_data(m_block);
     free_rabin_fingerprint_list(m_block->head);
     free(m_block);
@@ -39,7 +39,7 @@ rabin_fingerprints_chunker::~rabin_fingerprints_chunker(){
 
 // ---------------------------------------------------------------------
 
-size_t rabin_fingerprints_chunker::refill_buffer()
+size_t rabin_fp::refill_buffer()
 {
     size_t bytes_read=m_dev.read({m_buffer.data(), m_buffer.size()});
 
@@ -58,7 +58,7 @@ size_t rabin_fingerprints_chunker::refill_buffer()
     return bytes_read;
 }
 
-std::span<char> rabin_fingerprints_chunker::next_chunk()
+std::span<char> rabin_fp::next_chunk()
 {
     size_t bytes_read = 0;
     FILE *myfile = fopen("/home/juan/Repos/core/chunkdatafile_c", "a"); // <--- JM DEBUG

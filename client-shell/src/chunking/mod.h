@@ -7,7 +7,7 @@
 #include <chunking/chunker.h>
 #include <chunking/gear.h>
 #include <chunking/fast_cdc.h>
-#include <chunking/rabin_fingerprints_chunker.h>
+#include <chunking/rabin_fp.h>
 
 #include <unordered_map>
 #include "chunking/mod_chunker.h"
@@ -72,7 +72,7 @@ struct chunking_config
     uh::chunking::fast_cdc_config fast_cdc;
     uh::chunking::gear_config gear;
     uh::chunking::mod_cdc_config mod_cdc;
-    uh::chunking::rabin_fingerprints_config rabin;
+    uh::chunking::rabin_fp_config rabin;
 };
 
 // ---------------------------------------------------------------------
@@ -90,7 +90,7 @@ private:
     uh::chunking::fast_cdc_config m_fast_cdc;
     uh::chunking::gear_config m_gear;
     uh::chunking::mod_cdc_config m_mod_cdc;
-    uh::chunking::rabin_fingerprints_config m_rabin;
+    uh::chunking::rabin_fp_config m_rabin;
 };
 
 // ---------------------------------------------------------------------
