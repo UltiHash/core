@@ -10,6 +10,7 @@
 #include <chunking/rabin_fingerprints_chunker.h>
 
 #include <unordered_map>
+#include "chunking/mod_chunker.h"
 
 
 namespace uh::client::chunking
@@ -71,7 +72,7 @@ struct chunking_config
 
     uh::chunking::fast_cdc_config fast_cdc;
     uh::chunking::gear_config gear;
-    uh::chunking::gear_config mod_cdc;
+    uh::chunking::mod_cdc_config mod_cdc;
     uh::chunking::rabin_fingerprints_config rabin;
 };
 
@@ -88,7 +89,7 @@ private:
     ChunkingStrategy m_strategy;
     size_t m_chunk_size;
     uh::chunking::fast_cdc_config m_fast_cdc;
-    uh::chunking::fast_cdc_config m_mod_cdc;
+    uh::chunking::mod_cdc_config m_mod_cdc;
     uh::chunking::gear_config m_gear;
     uh::chunking::rabin_fingerprints_config m_rabin;
 };

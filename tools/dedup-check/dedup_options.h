@@ -19,7 +19,7 @@ public:
 
     uh::options::action evaluate(const boost::program_options::variables_map &vars) override;
 
-    const dedup_config &config() const;
+    [[nodiscard]] const dedup_config &config() const;
 
 private:
     dedup_config m_config;
