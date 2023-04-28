@@ -63,14 +63,22 @@ std::span<char> rabin_fingerprints_chunker::next_chunk()
     size_t bytes_read = 0;
     FILE *myfile = fopen("/home/juan/Repos/core/chunkdatafile_c", "a"); // <--- JM DEBUG
 
+    // This clause should only run for the beginning of a file.
     if(!m_chunk){
         bytes_read = refill_buffer();
         if(!bytes_read){
             return {};
         }
-        return next_chunk();
     }
-    else if(!m_chunk->next_polynomial){
+
+    // Many chunks are filled only partially by the end of a buffer and then fully filled by the beginning of the next buffer.
+    // When chunks are only filled partially, their "next_polynomial" attribute is not set, so the above clause is engaged
+    // and the chunk is completed.
+    // The situation is different at the end of a file, since the file can end without a rabin fingerprint being completed.
+    // In such a case, the above clause runs refilling the buffer (and m_block), but next_polynomial may still be null. Thus,
+    // upon calling the function once again, the clause runs again, returning the last chunk of the file (even if it is an
+    // incomplete polynomial).
+    if(!m_chunk->next_polynomial){
         bytes_read = refill_buffer();
         if(!bytes_read){
             if(!m_finished){
@@ -85,18 +93,23 @@ std::span<char> rabin_fingerprints_chunker::next_chunk()
         }
         return next_chunk();
     }
-    else{
-        if(!m_update_chunk){
-            m_update_chunk = !m_update_chunk;
-            fwrite(m_chunk->chunk_data, sizeof(char), m_chunk->length,myfile);// <--- JM DEBUG
-            fclose(myfile);// <--- JM DEBUG
-            return {m_chunk->chunk_data, m_chunk->length};
-        }
-        else{
-            m_update_chunk = !m_update_chunk;
-            m_chunk = m_chunk->next_polynomial;
-            return next_chunk() ;
-        }
+
+    // Base case: return the current chunk
+    if(!m_update_chunk)
+    {
+        m_update_chunk = !m_update_chunk;
+        fwrite(m_chunk->chunk_data, sizeof(char), m_chunk->length,myfile);// <--- JM DEBUG
+        fclose(myfile);// <--- JM DEBUG
+        return {m_chunk->chunk_data, m_chunk->length};
+    }
+
+    // Only update the chunk (It is guaranteed that m_chunk and m_chunk->next_polynomial are not null).
+    // If the new chunk is a special case, it will be dealt with in the above clauses by calling the function recursively.
+    else
+    {
+        m_update_chunk = !m_update_chunk;
+        m_chunk = m_chunk->next_polynomial;
+        return next_chunk() ;
     }
 }
 
