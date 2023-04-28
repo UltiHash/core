@@ -32,63 +32,20 @@ struct mod_cdc_config
 
 class mod_chunker : public chunker {
 public:
-    mod_chunker(const mod_cdc_config &config, io::device &in)
-            :
-            m_min_size(config.min_size),
-            m_max_size(config.max_size),
-            m_normal_size(config.normal_size),
-            m_dev (in),
-            m_buffer (new char [m_max_size * 10]),
-            m_buf_size (m_dev.read({m_buffer, m_max_size * 10}))
+    mod_chunker(const mod_cdc_config &config, io::device &in, size_t chunks_count_in_buffer = 10);
 
-    {
-    }
+    std::span<char> next_chunk() override;
 
-    std::span<char> next_chunk() override {
-        if (m_buf_size - m_pointer < m_max_size) {
-            refresh_buffer();
-            if (m_buf_size < m_max_size) {
-                m_pointer = m_buf_size;
-                return {m_buffer, m_buf_size};
-            }
-        }
-
-        const auto start = m_pointer;
-        const auto loop_limit = std::min (start + m_max_size, m_buf_size);
-        unsigned long window = 0;
-        for (auto i = m_pointer + m_min_size; i < loop_limit; i++) {
-            window = (window << 1) + m_buffer [i];
-            if (window % m_normal_size == 0) {
-                m_pointer = i;
-                return {m_buffer + start, i - start};
-            }
-        }
-
-        m_pointer = loop_limit;
-        return {m_buffer + start, loop_limit - start};
-
-    }
-
-    ~mod_chunker() override {
-        delete [] m_buffer;
-    }
 private:
 
-    inline void refresh_buffer () {
-        const auto remaining_size = m_buf_size - m_pointer;
-        std::memmove(m_buffer, m_buffer + m_pointer, remaining_size);
-        m_buf_size = m_dev.read({m_buffer + remaining_size, m_buf_size - remaining_size}) + remaining_size;
-        m_pointer = 0;
-    }
+    inline void refresh_buffer ();
     const std::size_t m_min_size;
     const std::size_t m_max_size;
     const std::size_t m_normal_size;
     io::device &m_dev;
-    char *m_buffer;
+    std::vector <char> m_buffer;
     std::size_t m_buf_size;
     std::size_t m_pointer {};
-
-
 };
 
 }
