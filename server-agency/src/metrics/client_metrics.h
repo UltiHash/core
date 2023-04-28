@@ -8,10 +8,10 @@ namespace uh::an::metrics
 
 // ---------------------------------------------------------------------
 
-    class agency_metrics
+    class client_metrics
     {
     public:
-        agency_metrics(uh::metrics::service& service);
+        client_metrics(uh::metrics::service& service);
 
         prometheus::Gauge& uhv_id() const;
         prometheus::Gauge& integrated_size() const;

@@ -6,6 +6,7 @@
 
 #include <memory>
 
+#include "protocol/messages.h"
 
 namespace uh::metrics
 {
@@ -62,7 +63,7 @@ public:
     virtual uh::protocol::block_meta_data on_write_small_block(std::span<char> buffer) override;
     virtual std::unique_ptr<uh::protocol::allocation>
         on_allocate_chunk(std::size_t size) override;
-    virtual void on_client_statistics() override;
+    virtual void on_client_statistics(uh::protocol::client_statistics::request& client_stat) override;
 
 private:
     const protocol_metrics& m_metrics;

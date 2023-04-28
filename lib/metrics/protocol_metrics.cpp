@@ -185,10 +185,10 @@ block_meta_data protocol_metrics_wrapper::on_write_small_block(std::span<char> b
 
 // ---------------------------------------------------------------------
 
-void protocol_metrics_wrapper::on_client_statistics()
+void protocol_metrics_wrapper::on_client_statistics(uh::protocol::client_statistics::request& client_stat)
 {
     m_metrics.reqs_client_statistics().Increment();
-    return m_base->on_client_statistics();
+    return m_base->on_client_statistics(client_stat);
 }
 
 // ---------------------------------------------------------------------

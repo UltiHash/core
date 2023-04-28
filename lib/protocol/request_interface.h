@@ -34,7 +34,7 @@ struct request_interface
 
     virtual void on_write_chunk(std::span<char> buffer) { };
 
-    virtual void on_client_statistics() { };
+    virtual void on_client_statistics(uh::protocol::client_statistics::request& client_stat) { };
 
     virtual ~request_interface() = default;
 

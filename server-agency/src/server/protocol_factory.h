@@ -25,6 +25,7 @@ public:
 
 private:
     cluster::mod& m_cluster;
+    uh::an::metrics::mod& m_client_metrics;
     const uh::metrics::protocol_metrics& m_metrics;
     const uh::net::server_info &m_serv_info;
 };

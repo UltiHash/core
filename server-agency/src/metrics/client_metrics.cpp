@@ -1,4 +1,4 @@
-#include "agency_metrics.h"
+#include "client_metrics.h"
 
 
 namespace uh::an::metrics
@@ -6,8 +6,8 @@ namespace uh::an::metrics
 
 // ---------------------------------------------------------------------
 
-agency_metrics::agency_metrics(uh::metrics::service& service)
-    : m_gauges(service.add_gauge_family("client_stat", "Client Statistics")),
+client_metrics::client_metrics(uh::metrics::service& service)
+    : m_gauges(service.add_gauge_family("client_statistics", "Gives statistics about client")),
       m_uhv_id(m_gauges.Add({{"type", "uhv_id"}})),
       m_integrated_size(m_gauges.Add({{"type", "integrated_size"}}))
 {
@@ -17,14 +17,14 @@ agency_metrics::agency_metrics(uh::metrics::service& service)
 
 // ---------------------------------------------------------------------
 
-prometheus::Gauge& agency_metrics::uhv_id() const
+prometheus::Gauge& client_metrics::uhv_id() const
 {
     return m_uhv_id;
 }
 
 // ---------------------------------------------------------------------
 
-prometheus::Gauge& agency_metrics::integrated_size() const
+prometheus::Gauge& client_metrics::integrated_size() const
 {
     return m_integrated_size;
 }

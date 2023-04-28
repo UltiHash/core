@@ -62,7 +62,7 @@ block_meta_data protocol::on_write_small_block (std::span <char> buffer)
 
 // ---------------------------------------------------------------------
 
-void protocol::on_client_statistics()
+void protocol::on_client_statistics(uh::protocol::client_statistics::request& client_stat)
 {
 
 }
