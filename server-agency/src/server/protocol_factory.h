@@ -18,7 +18,7 @@ class protocol_factory : public uh::protocol::protocol_factory
 public:
     protocol_factory(
         cluster::mod& cluster,
-        metrics::mod& client,
+        metrics::client_metrics& client,
         const uh::metrics::protocol_metrics& metrics,
         const uh::net::server_info &serv_info);
 
@@ -26,7 +26,7 @@ public:
 
 private:
     cluster::mod& m_cluster;
-    metrics::mod& m_client;
+    metrics::client_metrics& m_client;
     const uh::metrics::protocol_metrics& m_metrics;
     const uh::net::server_info &m_serv_info;
 };

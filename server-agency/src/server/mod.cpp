@@ -57,7 +57,7 @@ mod::impl::impl(const net::server_config& config,
     : io(),
       server(make_server(config, pf)),
       serv_info (*server),
-      pf(cluster, metrics.protocol(), serv_info)
+      pf(cluster, metrics.client(), metrics.protocol(), serv_info)
 {
 }
 
