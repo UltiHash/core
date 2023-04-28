@@ -19,16 +19,25 @@ storage_metrics::storage_metrics(uh::metrics::service& service)
 
 // ---------------------------------------------------------------------
 
-prometheus::Gauge& storage_metrics::free_space() const{
+prometheus::Gauge& storage_metrics::free_space() const
+{
     return m_free_space;
 }
 
-prometheus::Gauge& storage_metrics::used_space() const {
+// ---------------------------------------------------------------------
+
+prometheus::Gauge& storage_metrics::used_space() const
+{
     return m_used_space;
 }
 
-prometheus::Gauge& storage_metrics::alloc_space() const {
+// ---------------------------------------------------------------------
+
+prometheus::Gauge& storage_metrics::alloc_space() const
+{
     return m_alloc_space;
 }
 
-} // namespace uh::metrics
+// ---------------------------------------------------------------------
+
+} // namespace uh::dbn::metrics

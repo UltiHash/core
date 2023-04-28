@@ -22,7 +22,7 @@ protocol_metrics::protocol_metrics(uh::metrics::service& service)
       m_reqs_write_small_block (m_counters.Add({{ "type", "write_small_block" }})),
       m_reqs_allocate_chunk(m_counters.Add({{ "type", "allocate_chunk" }})),
       m_reqs_finalize(m_counters.Add({{ "type", "finalize" }})),
-      m_reqs_client_statistics(m_counters.Add({{ "type", "client_statistics" }})),
+      m_reqs_client_statistics(m_counters.Add({{ "type", "client_statistics" }}))
 
 {
 }
