@@ -13,7 +13,7 @@ namespace uh::an::metrics
     public:
         explicit client_metrics(uh::metrics::service& service);
 
-        prometheus::Gauge& set_uhv_metrics(const std::pair<std::string, std::uint64_t>& label) const;
+        void set_uhv_metrics(const std::pair<std::string, std::uint64_t>& label) const;
 
     private:
         prometheus::Family<prometheus::Gauge>& m_gauges;

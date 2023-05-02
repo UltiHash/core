@@ -86,15 +86,16 @@ prometheus::Counter& protocol_metrics::reqs_write_small_block() const
 
 // ---------------------------------------------------------------------
 
-<<<<<<< HEAD
 prometheus::Counter& protocol_metrics::reqs_client_statistics() const
 {
     return m_reqs_client_statistics;
-=======
+}
+
+// ---------------------------------------------------------------------
+
 prometheus::Counter& protocol_metrics::reqs_write_xsmall_blocks() const
 {
     return m_reqs_write_xsmall_blocks;
->>>>>>> master
 }
 
 // ---------------------------------------------------------------------
