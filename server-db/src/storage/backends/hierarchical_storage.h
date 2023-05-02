@@ -5,6 +5,7 @@
 #ifndef CORE_HIERARCHICAL_STORAGE_H
 #define CORE_HIERARCHICAL_STORAGE_H
 #include "storage/backend.h"
+#include "io/sha512.h"
 #include <metrics/storage_metrics.h>
 
 
@@ -30,11 +31,37 @@ public:
 
     std::unique_ptr<uh::protocol::allocation> allocate(std::size_t size) override;
 
-private:
+    std::unique_ptr<uh::protocol::allocation> allocate_multi (std::size_t size) override;
 
     class hierarchical_allocation;
+    class hierarchical_multi_block_allocation: public uh::protocol::allocation {
+    public:
+        explicit hierarchical_multi_block_allocation (hierarchical_storage &storage_backend, std::size_t size);
+
+        void open_new_block (std::size_t block_size);
+        bool block_is_open ();
+        void close_block ();
+        io::device& device() override;
+        uh::protocol::block_meta_data persist() override;
+        ~hierarchical_multi_block_allocation() override;
+        hierarchical_multi_block_allocation(const hierarchical_storage&) = delete;
+        hierarchical_multi_block_allocation &operator=(const hierarchical_storage &) = delete;
+    private:
+
+        hierarchical_storage &m_storage_backend;
+        std::unique_ptr <io::temp_file> m_tmp {nullptr};
+        std::unique_ptr <io::sha512> m_sha {nullptr};
+        std::size_t m_size;
+        std::size_t m_block_size {};
+        std::size_t m_persisted_size {};
+        std::size_t m_effective_size {};
+    };
+private:
+
 
     void update_space_consumption();
+
+    void acquire_storage_size (std::size_t size);
 
     [[nodiscard]] std::filesystem::path get_hash_path (const std::string &hash) const;
 

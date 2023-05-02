@@ -12,7 +12,7 @@ sample_hash_routing::sample_hash_routing(
         m_nodes_index(fill_node_index (m_nodes)){
 }
 
-const std::unique_ptr<protocol::client_pool>& sample_hash_routing::route_data(const std::span <char>& data) const {
+protocol::client_pool& sample_hash_routing::route_data(const std::span <const char>& data) const {
 
 
     char sample [SAMPLE_SIZE];
@@ -47,13 +47,13 @@ sample_hash_routing::node_index_t sample_hash_routing::fill_node_index(
 
     size_t index = 0;
     for (const auto& node_pair : nodes) {
-        nodes_index.emplace(index++, std::cref (node_pair.second));
+        nodes_index.emplace(index++, *node_pair.second);
     }
     return nodes_index;
 }
 
-const std::hash<std::string_view> &sample_hash_routing::get_hash_func() {
-    const static std::hash <std::string_view> hash_func {};
+const std::hash<std::string> &sample_hash_routing::get_hash_func() {
+    const static std::hash <std::string> hash_func {};
     return hash_func;
 }
 
