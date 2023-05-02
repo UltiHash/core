@@ -10,6 +10,7 @@
 #include <chunking/rabin_fingerprints_chunker.h>
 
 #include <unordered_map>
+#include "chunking/mod_chunker.h"
 
 
 namespace uh::client::chunking
@@ -20,7 +21,8 @@ enum class ChunkingStrategy
     FixedSize,
     CDCrabin,
     Gear,
-    FastCDC
+    FastCDC,
+    ModCDC
 };
 
 constexpr const char* strategyString(ChunkingStrategy n)
@@ -31,6 +33,7 @@ constexpr const char* strategyString(ChunkingStrategy n)
         case ChunkingStrategy::CDCrabin: return "CDCrabin";
         case ChunkingStrategy::Gear: return "Gear";
         case ChunkingStrategy::FastCDC: return "FastCDC";
+        case ChunkingStrategy::ModCDC: return "ModCDC";
     }
 
     THROW(util::exception, "Not implemented option");
@@ -50,6 +53,8 @@ static std::unordered_map<std::string, ChunkingStrategy> string2backendtype =
   {strategyString(ChunkingStrategy::CDCrabin), ChunkingStrategy::CDCrabin},
   {strategyString(ChunkingStrategy::Gear), ChunkingStrategy::Gear},
   {strategyString(ChunkingStrategy::FastCDC), ChunkingStrategy::FastCDC},
+  {strategyString(ChunkingStrategy::ModCDC), ChunkingStrategy::ModCDC},
+
 };
 
 
@@ -67,6 +72,7 @@ struct chunking_config
 
     uh::chunking::fast_cdc_config fast_cdc;
     uh::chunking::gear_config gear;
+    uh::chunking::mod_cdc_config mod_cdc;
     uh::chunking::rabin_fingerprints_config rabin;
 };
 
@@ -84,6 +90,7 @@ private:
     size_t m_chunk_size;
     uh::chunking::fast_cdc_config m_fast_cdc;
     uh::chunking::gear_config m_gear;
+    uh::chunking::mod_cdc_config m_mod_cdc;
     uh::chunking::rabin_fingerprints_config m_rabin;
 };
 

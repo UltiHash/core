@@ -36,7 +36,10 @@ options::options()
         ("gear-avg-size", value< std::size_t >(&m_config.gear.average_size), "average chunk size for Gear CDC")
         ("fastcdc-min-size", value< std::size_t >(&m_config.fast_cdc.min_size), "minimum chunk size for FastCDC")
         ("fastcdc-max-size", value< std::size_t >(&m_config.fast_cdc.max_size), "maximum chunk size for FastCDC")
-        ("fastcdc-normal-size", value< std::size_t >(&m_config.fast_cdc.normal_size), "normal chunk size for FastCDC");
+        ("fastcdc-normal-size", value< std::size_t >(&m_config.fast_cdc.normal_size), "normal chunk size for FastCDC")
+        ("modcdc-min-size", value< std::size_t >(&m_config.mod_cdc.min_size), "minimum chunk size for ModCDC")
+        ("modcdc-max-size", value< std::size_t >(&m_config.mod_cdc.max_size), "maximum chunk size for ModCDC")
+        ("modcdc-normal-size", value< std::size_t >(&m_config.mod_cdc.normal_size), "normal chunk size for ModCDC");
 }
 
 // ---------------------------------------------------------------------
