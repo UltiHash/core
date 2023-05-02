@@ -52,6 +52,17 @@ void f_upload::join()
 
 // ---------------------------------------------------------------------
 
+
+protocol::block_meta_data f_upload::send_xs_blocks (auto &client_handle, auto &xsmall_blocks_req) {
+    protocol::block_meta_data meta_data;
+    auto res = client_handle->write_xsmall_blocks(xsmall_blocks_req);
+    protocol::write_xsmall_blocks::request new_req;
+    std::swap (xsmall_blocks_req, new_req);
+    meta_data.hash.insert(meta_data.hash.end(), res.hashes.begin(), res.hashes.end());
+    meta_data.effective_size = res.effective_size;
+    return meta_data;
+}
+
 void f_upload::send_statistics()
 {
     uh::protocol::blob uhv_path {};
@@ -76,9 +87,12 @@ void f_upload::chunk_and_upload(std::unique_ptr<uhv::f_meta_data>& f_meta_data,
         io::file file(f_meta_data->f_path());
 
         auto chunker = m_chunking.create_chunker(file);
+        protocol::write_xsmall_blocks::request xsmall_blocks_req;
+
 
         for (auto chunk = chunker->next_chunk(); !chunk.empty(); chunk = chunker->next_chunk())
         {
+
             protocol::block_meta_data meta_data;
             if (chunk.size() > uh::protocol::server::SMALL_CHUNK_LIMIT)
             {
@@ -86,10 +100,22 @@ void f_upload::chunk_and_upload(std::unique_ptr<uhv::f_meta_data>& f_meta_data,
                 io::write_from_buffer(alloc->device(), chunk);
                 meta_data = alloc->persist();
             }
-            else
-            {
+            else if (chunk.size() > uh::protocol::server::XSMALL_CHUNK_SIZE_LIMIT){
                 meta_data = client_handle->write_small_block(chunk);
             }
+            else {
+                if (xsmall_blocks_req.chunk_sizes.size() == uh::protocol::server::XSMALL_CHUNK_COUNT_LIMIT) {
+                    meta_data = send_xs_blocks(client_handle, xsmall_blocks_req);
+                }
+                xsmall_blocks_req.data.insert(xsmall_blocks_req.data.end(), chunk.data(), chunk.data() + chunk.size());
+                xsmall_blocks_req.chunk_sizes.push_back(chunk.size());
+            }
+            f_meta_data->add_hash(meta_data.hash);
+            f_meta_data->add_effective_size(meta_data.effective_size);
+        }
+
+        if (!xsmall_blocks_req.chunk_sizes.empty()) {
+            const auto meta_data = send_xs_blocks(client_handle, xsmall_blocks_req);
             f_meta_data->add_hash(meta_data.hash);
             f_meta_data->add_effective_size(meta_data.effective_size);
         }

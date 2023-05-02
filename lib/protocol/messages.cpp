@@ -242,7 +242,7 @@ void write(serialization::buffered_serialization& out, const allocate_chunk::req
 
 void read(serialization::buffered_serialization& in, allocate_chunk::request& request)
 {
-    allocate_chunk::request tmp;
+    allocate_chunk::request tmp {};
     tmp.size = in.read <uint64_t>();
 
     std::swap(tmp, request);
@@ -391,11 +391,68 @@ void read(serialization::buffered_serialization& in, read_small_block::response&
 
 // ---------------------------------------------------------------------
 
-void write(serialization::buffered_serialization& out, const client_statistics::request& request)
+void write(serialization::buffered_serialization& out, const write_xsmall_blocks::request& request)
 {
-    out.write(client_statistics::request_id);
-    out.write(request.uhv_id);
-    out.write(request.integrated_size);
+    out.write(write_xsmall_blocks::request_id);
+    out.write(request.chunk_sizes);
+    out.write(request.data);
+}
+
+// ---------------------------------------------------------------------
+
+void read(serialization::buffered_serialization& in, write_xsmall_blocks::request& request)
+{
+    request.chunk_sizes = in.read<decltype(request.chunk_sizes)>();
+    request.data = in.read<decltype(request.data)>();
+}
+
+// ---------------------------------------------------------------------
+
+void write(serialization::buffered_serialization& out, const write_xsmall_blocks::response& response)
+{
+    out.write(response.hashes);
+    out.write(response.effective_size);
+
+}
+
+// ---------------------------------------------------------------------
+
+void read(serialization::buffered_serialization& in, write_xsmall_blocks::response& response)
+{
+    check_status(in);
+
+    response.hashes = in.read<std::vector<char>>();
+    response.effective_size = in.read<decltype (response.effective_size)>();
+
+}
+
+// ---------------------------------------------------------------------
+
+void write(serialization::buffered_serialization& out, const read_xsmall_blocks::request& request)
+{
+    out.write(read_small_block::request_id);
+    out.write(request.hashes);}
+
+// ---------------------------------------------------------------------
+
+void read(serialization::buffered_serialization& in, read_xsmall_blocks::request& request)
+{
+    request.hashes = in.read <std::vector<char>> ();
+}
+
+// ---------------------------------------------------------------------
+
+void write(serialization::buffered_serialization& out, const read_xsmall_blocks::response& response)
+{
+    out.write(response.data);
+}
+
+// ---------------------------------------------------------------------
+
+void read(serialization::buffered_serialization& in, read_xsmall_blocks::response& response)
+{
+    check_status(in);
+    response.data = in.read<decltype(response.data)>();
 }
 
 // ---------------------------------------------------------------------
@@ -412,8 +469,11 @@ void read(serialization::buffered_serialization& in, client_statistics::request&
 
 // ---------------------------------------------------------------------
 
-void write(serialization::buffered_serialization& out, const client_statistics::response& response)
+void write(serialization::buffered_serialization& out, const client_statistics::request& request)
 {
+    out.write(client_statistics::request_id);
+    out.write(request.uhv_id);
+    out.write(request.integrated_size);
 }
 
 // ---------------------------------------------------------------------
@@ -427,5 +487,9 @@ void read(serialization::buffered_serialization& in, client_statistics::response
 }
 
 // ---------------------------------------------------------------------
+
+void write(serialization::buffered_serialization& out, const client_statistics::response& response)
+{
+}
 
 } // namespace uh::protocol

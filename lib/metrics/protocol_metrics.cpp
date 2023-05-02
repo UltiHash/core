@@ -20,6 +20,7 @@ protocol_metrics::protocol_metrics(uh::metrics::service& service)
       m_reqs_next_chunk(m_counters.Add({{ "type", "next_chunk" }})),
       m_reqs_write_chunk(m_counters.Add({{ "type", "write_chunk" }})),
       m_reqs_write_small_block (m_counters.Add({{ "type", "write_small_block" }})),
+      m_reqs_write_xsmall_blocks (m_counters.Add({{ "type", "write_xsmall_blocks" }})),
       m_reqs_allocate_chunk(m_counters.Add({{ "type", "allocate_chunk" }})),
       m_reqs_finalize(m_counters.Add({{ "type", "finalize" }})),
       m_reqs_client_statistics(m_counters.Add({{ "type", "client_statistics" }}))
@@ -85,9 +86,15 @@ prometheus::Counter& protocol_metrics::reqs_write_small_block() const
 
 // ---------------------------------------------------------------------
 
+<<<<<<< HEAD
 prometheus::Counter& protocol_metrics::reqs_client_statistics() const
 {
     return m_reqs_client_statistics;
+=======
+prometheus::Counter& protocol_metrics::reqs_write_xsmall_blocks() const
+{
+    return m_reqs_write_xsmall_blocks;
+>>>>>>> master
 }
 
 // ---------------------------------------------------------------------
@@ -189,6 +196,14 @@ void protocol_metrics_wrapper::on_client_statistics(uh::protocol::client_statist
 {
     m_metrics.reqs_client_statistics().Increment();
     return m_base->on_client_statistics(client_stat);
+}
+
+// ---------------------------------------------------------------------
+
+uh::protocol::write_xsmall_blocks::response protocol_metrics_wrapper::on_write_xsmall_blocks (const uh::protocol::write_xsmall_blocks::request &req)
+{
+    m_metrics.reqs_write_xsmall_blocks().Increment();
+    return m_base->on_write_xsmall_blocks(req);
 }
 
 // ---------------------------------------------------------------------
