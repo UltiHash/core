@@ -7,7 +7,7 @@ namespace uh::an::metrics
 // ---------------------------------------------------------------------
 
 client_metrics::client_metrics(uh::metrics::service& service)
-    : m_gauges(service.add_gauge_family("client_statistics", "Gives statistics about client"))
+    : m_gauges(service.add_gauge_family("client_metrics", "Gives the integrated size of the associated UHV file"))
 {
 }
 
