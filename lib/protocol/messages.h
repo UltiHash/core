@@ -327,6 +327,31 @@ void read(serialization::buffered_serialization& in, client_statistics::response
 
 // ---------------------------------------------------------------------
 
+
+struct write_chunks
+{
+    struct request
+    {
+        std::span <char> data;
+    };
+
+    struct response
+    {
+        std::vector <char> hashes;
+        std::vector <uint32_t> effective_sizes;
+    };
+
+    constexpr static uint8_t request_id = 0x10;
+};
+
+// ---------------------------------------------------------------------
+
+void write(serialization::buffered_serialization& out, const write_chunks::request& request);
+void read(serialization::buffered_serialization& in, write_chunks::request& request);
+
+void write(serialization::buffered_serialization& out, const write_chunks::response& response);
+void read(serialization::buffered_serialization& in, write_chunks::response& response);
+
 } // namespace uh::protocol
 
 #endif
