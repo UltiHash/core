@@ -11,15 +11,12 @@ namespace uh::an::metrics
     class client_metrics
     {
     public:
-        client_metrics(uh::metrics::service& service);
+        explicit client_metrics(uh::metrics::service& service);
 
-        prometheus::Gauge& uhv_id() const;
-        prometheus::Gauge& integrated_size() const;
+        prometheus::Gauge& set_uhv_metrics(const std::pair<std::string, std::uint64_t>& label) const;
 
     private:
         prometheus::Family<prometheus::Gauge>& m_gauges;
-        prometheus::Gauge& m_uhv_id;
-        prometheus::Gauge& m_integrated_size;
     };
 
 // ---------------------------------------------------------------------

@@ -402,7 +402,7 @@ void write(serialization::buffered_serialization& out, const client_statistics::
 
 void read(serialization::buffered_serialization& in, client_statistics::request& request)
 {
-    client_statistics::request tmp;
+    client_statistics::request tmp {};
 
     tmp.uhv_id = in.read<blob>();
     tmp.integrated_size = in.read<std::uint64_t>();

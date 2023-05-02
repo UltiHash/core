@@ -65,8 +65,9 @@ block_meta_data protocol::on_write_small_block (std::span <char> buffer)
 
 void protocol::on_client_statistics(uh::protocol::client_statistics::request& client_stat)
 {
-    m_client.uhv_id().Set(1);
-    m_client.integrated_size().Set(client_stat.integrated_size);
+    m_client.set_uhv_metrics(std::pair<std::string, std::uint64_t>(
+            std::string(client_stat.uhv_id.begin(), client_stat.uhv_id.end()),
+               client_stat.integrated_size));
 }
 
 // ---------------------------------------------------------------------
