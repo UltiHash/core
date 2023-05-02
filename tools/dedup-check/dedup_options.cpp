@@ -3,6 +3,7 @@
 //
 #include "dedup_options.h"
 #include <filesystem>
+#include "util/exception.h"
 
 uh::tools::dedup_options::dedup_options(): uh::options::options("Chunking Options") {
     visible().add_options()
@@ -14,7 +15,7 @@ uh::options::action uh::tools::dedup_options::evaluate(const boost::program_opti
     c.path = vars["path"].as<std::string>();
 
     if (!std::filesystem::exists(c.path)) {
-        throw std::exception ();
+        THROW(util::exception, "The path does not exist!");
     }
     std::swap(m_config, c);
     return uh::options::action::proceed;
