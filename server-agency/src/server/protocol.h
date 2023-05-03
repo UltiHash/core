@@ -7,6 +7,7 @@
 #include <memory>
 
 #include <net/server_info.h>
+#include "metrics/client_metrics.h"
 
 using namespace boost::asio::ip;
 
@@ -18,12 +19,13 @@ namespace uh::an::server
 class protocol : public uh::protocol::request_interface
 {
 public:
-    explicit protocol(cluster::mod& cluster, const uh::net::server_info &serv_info);
+    explicit protocol(cluster::mod& cluster, metrics::client_metrics& client, const uh::net::server_info &serv_info);
 
     uh::protocol::server_information on_hello(const std::string& client_version) override;
     std::unique_ptr<io::device> on_read_block(uh::protocol::blob&& hash) override;
     std::unique_ptr<uh::protocol::allocation> on_allocate_chunk(std::size_t size) override;
     uh::protocol::block_meta_data on_write_small_block (std::span <char> buffer) override;
+    void on_client_statistics(uh::protocol::client_statistics::request& client_stat) override;
     uh::protocol::write_xsmall_blocks::response on_write_xsmall_blocks (const uh::protocol::write_xsmall_blocks::request &) override;
 
     std::size_t on_free_space() override;
@@ -31,6 +33,7 @@ public:
 
 private:
     cluster::mod& m_cluster;
+    metrics::client_metrics& m_client;
     const uh::net::server_info &m_serv_info;
 };
 
