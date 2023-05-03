@@ -394,12 +394,12 @@ void server::handle_client_statistics()
 void server::handle_write_chunks() {
     DEBUG << "write_chunks request on " << client_->peer();
 
-    const auto chunk_sizes = m_bs.read<std::vector <uint32_t>>();
-    const auto data = m_bs.read<std::vector <char>>();
-    //auto resp = m_handler_interface->on_write_chunks ({chunk_sizes, data});
+    auto chunk_sizes = m_bs.read<std::vector <uint32_t>>();
+    auto data = m_bs.read<std::vector <char>>();
+    auto resp = m_handler_interface->on_write_chunks ({chunk_sizes, data});
 
     write(m_bs, status{ status::OK });
-    //write(m_bs, resp);
+    write(m_bs, resp);
 
     m_bs.sync ();
 }

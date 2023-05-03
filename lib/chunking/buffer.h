@@ -73,9 +73,14 @@ public:
     std::span<char> data(const pos& p);
 
     /**
-     * Return the complete contents of the buffer.
+     * Return the unread contents of the buffer.
      */
     std::span<char> data();
+
+    /**
+     * Return the complete contents of the buffer.
+     */
+    std::span<char> raw_data();
 
 private:
     io::device& m_in;

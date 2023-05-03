@@ -28,9 +28,11 @@ struct gear_config
 class gear : public chunker
 {
 public:
-    gear(const gear_config& c, io::device& in);
+    gear(const gear_config& c, io::device& in, std::size_t buffer_size = 0);
 
     std::span<char> next_chunk() override;
+    [[nodiscard]] buffer& get_buffer () override;
+
 
 private:
     buffer m_buffer;

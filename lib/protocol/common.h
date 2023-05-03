@@ -30,6 +30,14 @@ struct block_meta_data
 
 // ---------------------------------------------------------------------
 
+struct chunks_meta_data
+{
+    std::vector <char> data;
+    std::vector <std::uint32_t> chunk_sizes;
+};
+
+// ---------------------------------------------------------------------
+
 } // namespace uh::protocol
 
 #endif

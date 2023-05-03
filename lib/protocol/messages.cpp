@@ -494,7 +494,7 @@ void write(serialization::buffered_serialization& out, const client_statistics::
 
 void write(serialization::buffered_serialization& out, const write_chunks::request& request)
 {
-    out.write(write_small_block::request_id);
+    out.write(write_chunks::request_id);
     out.write(request.chunk_sizes);
     out.sync();
     out.write(request.data);

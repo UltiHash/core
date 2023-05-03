@@ -36,8 +36,8 @@ uint64_t compute_mask(std::size_t average_size)
 
 // ---------------------------------------------------------------------
 
-gear::gear(const gear_config& c, io::device& in)
-    : m_buffer(in, c.max_size),
+gear::gear(const gear_config& c, io::device& in, std::size_t buffer_size)
+    : m_buffer(in, std::max (buffer_size, 2 * c.max_size)),
       m_geartable(reinterpret_cast<const uint64_t*>(random_gen_table)),
       m_max_size(c.max_size),
       m_mask(compute_mask(c.average_size))
@@ -70,6 +70,12 @@ std::span<char> gear::next_chunk()
     }
 
     return m_buffer.data(start);
+}
+
+// ---------------------------------------------------------------------
+
+buffer &gear::get_buffer() {
+    return m_buffer;
 }
 
 // ---------------------------------------------------------------------

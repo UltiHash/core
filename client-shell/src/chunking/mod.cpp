@@ -1,7 +1,7 @@
 #include "mod.h"
 
 #include <logging/logging_boost.h>
-#include <chunking/strategies/fixed_size_chunker.h>
+#include "chunking/fixed_size_chunker.h"
 #include <chunking/mod_chunker.h>
 
 
@@ -41,36 +41,22 @@ mod::mod(const chunking_config& cfg)
 {
 }
 
-
 // ---------------------------------------------------------------------
 
-std::unique_ptr<uh::chunking::chunker> mod::create_chunker(uh::chunking::buffer& b)
-{
-    switch (m_strategy)
-    {
-        case ChunkingStrategy::FastCDC:
-            return std::make_unique<uh::chunking::fast_cdc>(m_fast_cdc, std::move (b));
-    }
-
-    THROW(util::exception, "chunk type not implemented");
-}
-
-// ---------------------------------------------------------------------
-
-std::unique_ptr<uh::chunking::chunker> mod::create_chunker(io::device& d)
+std::unique_ptr<uh::chunking::chunker> mod::create_chunker(io::device& d, std::size_t buffer_size)
 {
     switch (m_strategy)
     {
         case ChunkingStrategy::FixedSize:
-            return std::make_unique<fixed_size_chunker>(d, m_chunk_size);
+            return std::make_unique<uh::chunking::fixed_size_chunker>(d, m_chunk_size, buffer_size);
         case ChunkingStrategy::Gear:
-            return std::make_unique<uh::chunking::gear>(m_gear, d);
+            return std::make_unique<uh::chunking::gear>(m_gear, d, buffer_size);
         case ChunkingStrategy::FastCDC:
-            return std::make_unique<uh::chunking::fast_cdc>(m_fast_cdc, d);
-        case ChunkingStrategy::ModCDC:
-            return std::make_unique<uh::chunking::mod_chunker>(m_mod_cdc, d);
-        case ChunkingStrategy::CDCrabin:
-            return std::make_unique<uh::chunking::rabin_fp>(m_rabin, d);
+            return std::make_unique<uh::chunking::fast_cdc>(m_fast_cdc, d, buffer_size);
+        //case ChunkingStrategy::ModCDC:
+            //return std::make_unique<uh::chunking::mod_chunker>(m_mod_cdc, d, buffer_size);
+        //case ChunkingStrategy::CDCrabin:
+            //return std::make_unique<uh::chunking::rabin_fp>(m_rabin, d, buffer_size);
     }
 
     THROW(util::exception, "chunk type not implemented");

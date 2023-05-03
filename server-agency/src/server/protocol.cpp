@@ -83,4 +83,10 @@ protocol::on_write_xsmall_blocks(const uh::protocol::write_xsmall_blocks::reques
 
 // ---------------------------------------------------------------------
 
+uh::protocol::write_chunks::response protocol::on_write_chunks(const write_chunks::request &req) {
+    return m_cluster.write_chunks (req);
+}
+
+// ---------------------------------------------------------------------
+
 } // namespace uh::an::server

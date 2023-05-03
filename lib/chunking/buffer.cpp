@@ -10,7 +10,7 @@ namespace uh::chunking
 
 buffer::buffer(io::device& in, std::size_t size)
     : m_in(in),
-      m_buffer(2 * size),
+      m_buffer(size),
       m_wptr(0),
       m_rptr(0),
       m_size(size)
@@ -95,6 +95,13 @@ std::span<char> buffer::data(const pos& p)
 std::span<char> buffer::data()
 {
     return { &m_buffer[m_rptr], length() };
+}
+
+// ---------------------------------------------------------------------
+
+std::span<char> buffer::raw_data()
+{
+    return { &m_buffer[0], m_wptr };
 }
 
 // ---------------------------------------------------------------------

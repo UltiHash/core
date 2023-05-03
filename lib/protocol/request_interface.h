@@ -24,6 +24,8 @@ struct request_interface
 
     virtual write_xsmall_blocks::response on_write_xsmall_blocks (const write_xsmall_blocks::request &) = 0;
 
+    virtual write_chunks::response on_write_chunks (const write_chunks::request &) = 0;
+
     // default implementations
 
     virtual std::size_t on_free_space() { return 0; }

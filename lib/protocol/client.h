@@ -71,7 +71,7 @@ public:
      * response.
      * @return response from agency server
      */
-    protocol::write_chunks::response write_chunks(const protocol::write_chunks::request &);
+    uh::protocol::write_chunks::response write_chunks(const uh::protocol::write_chunks::request &);
 
     /**
      * Sends several blocks at once to the data node and returns the hashes and the effective sizes of the blocks.
