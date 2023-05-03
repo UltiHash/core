@@ -35,6 +35,8 @@ class fast_cdc : public chunker
 {
 public:
     fast_cdc(const fast_cdc_config& config, io::device& in);
+    fast_cdc(const fast_cdc_config& config, buffer&& buf);
+
 
     std::span<char> next_chunk() override;
 

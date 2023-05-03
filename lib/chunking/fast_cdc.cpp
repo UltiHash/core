@@ -25,6 +25,21 @@ fast_cdc::fast_cdc(const fast_cdc_config& c, io::device& in)
 
 // ---------------------------------------------------------------------
 
+fast_cdc::fast_cdc(const fast_cdc_config& c, buffer&& buf)
+        : m_buffer(buf),
+          m_geartable(reinterpret_cast<const uint64_t*>(random_gen_table)),
+          m_min_size(c.min_size),
+          m_max_size(c.max_size),
+          m_normal_size(c.normal_size)
+{
+    if (!(m_max_size > m_normal_size && m_normal_size > m_min_size))
+    {
+        THROW(uh::util::illegal_args, "illegal FastCDC limitations");
+    }
+}
+
+// ---------------------------------------------------------------------
+
 std::span<char> fast_cdc::next_chunk()
 {
     if (m_buffer.fill_buffer() == 0)

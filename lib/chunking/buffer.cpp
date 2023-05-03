@@ -21,6 +21,9 @@ buffer::buffer(io::device& in, std::size_t size)
 
 std::size_t buffer::fill_buffer()
 {
+    if (m_rptr < m_wptr) {
+        return length ();
+    }
     if (m_rptr > m_size)
     {
         std::memmove(&m_buffer[0], &m_buffer[m_rptr], m_wptr - m_rptr);

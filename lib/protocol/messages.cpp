@@ -1,4 +1,5 @@
 #include "messages.h"
+#include "util/exception.h"
 
 namespace uh::protocol
 {
@@ -430,6 +431,8 @@ void read(serialization::buffered_serialization& in, client_statistics::response
 void write(serialization::buffered_serialization& out, const write_chunks::request& request)
 {
     out.write(write_small_block::request_id);
+    out.write(request.chunk_sizes);
+    out.sync();
     out.write(request.data);
 }
 
@@ -437,7 +440,7 @@ void write(serialization::buffered_serialization& out, const write_chunks::reque
 
 void read(serialization::buffered_serialization& in, write_chunks::request& request)
 {
-    in.read(request.data);
+    THROW (util::exception, "not implemented");
 }
 
 // ---------------------------------------------------------------------
@@ -445,7 +448,7 @@ void read(serialization::buffered_serialization& in, write_chunks::request& requ
 void write(serialization::buffered_serialization& out, const write_chunks::response& response)
 {
     out.write(response.hashes);
-    out.write(response.effective_sizes);
+    out.write(response.effective_size);
 }
 
 // ---------------------------------------------------------------------
@@ -455,7 +458,7 @@ void read(serialization::buffered_serialization& in, write_chunks::response& res
     check_status(in);
 
     response.hashes = in.read<std::vector<char>>();
-    response.effective_sizes = in.read<decltype (response.effective_sizes)>();
+    response.effective_size = in.read<decltype (response.effective_size)>();
 }
 // ---------------------------------------------------------------------
 

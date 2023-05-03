@@ -66,6 +66,14 @@ public:
     block_meta_data write_small_block(std::span <char> data);
 
     /**
+     * Sends the given chunks of data and their sizes to the agency server and returns its
+     * response.
+     * @return response from agency server
+     */
+    protocol::write_chunks::response write_chunks(const protocol::write_chunks::request &);
+
+
+    /**
      * End the connection by sending the `quit` command, optionally with a
      * reason.
      */

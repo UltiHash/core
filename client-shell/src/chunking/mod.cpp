@@ -41,6 +41,20 @@ mod::mod(const chunking_config& cfg)
 {
 }
 
+
+// ---------------------------------------------------------------------
+
+std::unique_ptr<uh::chunking::chunker> mod::create_chunker(uh::chunking::buffer& b)
+{
+    switch (m_strategy)
+    {
+        case ChunkingStrategy::FastCDC:
+            return std::make_unique<uh::chunking::fast_cdc>(m_fast_cdc, std::move (b));
+    }
+
+    THROW(util::exception, "chunk type not implemented");
+}
+
 // ---------------------------------------------------------------------
 
 std::unique_ptr<uh::chunking::chunker> mod::create_chunker(io::device& d)

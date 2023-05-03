@@ -38,6 +38,7 @@ public:
 
     constexpr static std::size_t MAXIMUM_BLOCK_SIZE = 2u * 1024 * 1024 * 1024;
 
+
     explicit server (const std::shared_ptr<net::socket>& client,
                      std::unique_ptr<uh::protocol::request_interface>&& handler_interface
                      ) : protocol (client), m_bs (*client), m_handler_interface(std::move(handler_interface)) {}
@@ -64,6 +65,8 @@ private:
     void handle_write_chunk();
     void handle_finalize_block();
     void handle_client_statistics();
+    void handle_write_chunks();
+
 
     server_state m_state = server_state::disconnected;
 
@@ -72,6 +75,7 @@ private:
     serialization::buffered_serialization m_bs;
 
     std::unique_ptr<request_interface> m_handler_interface;
+
 };
 
 // ---------------------------------------------------------------------

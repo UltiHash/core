@@ -84,6 +84,7 @@ public:
     explicit mod(const chunking_config& cfg);
 
     std::unique_ptr<uh::chunking::chunker> create_chunker(io::device& d);
+    std::unique_ptr<uh::chunking::chunker> create_chunker(uh::chunking::buffer& b);
 
 private:
     ChunkingStrategy m_strategy;

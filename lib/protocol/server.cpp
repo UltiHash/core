@@ -83,6 +83,8 @@ void server::handle_normal_request(uint8_t request_id)
         case write_small_block::request_id: return handle_write_small_block();
         case read_small_block::request_id: return handle_read_small_block();
         case client_statistics::request_id: return handle_client_statistics();
+        case write_chunks::request_id: return handle_write_chunks();
+
 
         default:
             throw std::runtime_error("normal, unsupported command: "
@@ -370,6 +372,21 @@ void server::handle_client_statistics()
 
     write(m_bs, status{ status::OK });
     m_bs.sync();
+}
+
+// ---------------------------------------------------------------------
+
+void server::handle_write_chunks() {
+    DEBUG << "write_chunks request on " << client_->peer();
+
+    const auto chunk_sizes = m_bs.read<std::vector <uint32_t>>();
+    const auto data = m_bs.read<std::vector <char>>();
+    //auto resp = m_handler_interface->on_write_chunks ({chunk_sizes, data});
+
+    write(m_bs, status{ status::OK });
+    //write(m_bs, resp);
+
+    m_bs.sync ();
 }
 
 // ---------------------------------------------------------------------

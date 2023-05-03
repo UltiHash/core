@@ -332,13 +332,14 @@ struct write_chunks
 {
     struct request
     {
+        std::span <uint32_t> chunk_sizes;
         std::span <char> data;
     };
 
     struct response
     {
         std::vector <char> hashes;
-        std::vector <uint32_t> effective_sizes;
+        std::size_t effective_size;
     };
 
     constexpr static uint8_t request_id = 0x10;
