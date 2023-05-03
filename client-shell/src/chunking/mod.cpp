@@ -56,7 +56,7 @@ std::unique_ptr<uh::chunking::chunker> mod::create_chunker(io::device& d)
         case ChunkingStrategy::ModCDC:
             return std::make_unique<uh::chunking::mod_chunker>(m_mod_cdc, d);
         case ChunkingStrategy::CDCrabin:
-            return std::make_unique<uh::chunking::rabin_fingerprints_chunker>(m_rabin, d);
+            return std::make_unique<uh::chunking::rabin_fp>(m_rabin, d);
     }
 
     THROW(util::exception, "chunk type not implemented");
