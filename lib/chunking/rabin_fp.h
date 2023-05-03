@@ -15,19 +15,20 @@ namespace uh::chunking
 
 // ---------------------------------------------------------------------
 
-struct rabin_fingerprints_config
+struct rabin_fp_config
 {
-    std::size_t chunk_size = 1024;
+    //# of bytes to read at a time when reading through files
+    std::size_t read_buf_size = 512;
 };
 
 // ---------------------------------------------------------------------
 
-class rabin_fingerprints_chunker : public chunker
+class rabin_fp : public chunker
 {
 public:
-    rabin_fingerprints_chunker(const rabin_fingerprints_config& config, io::device& dev);
+    rabin_fp(const rabin_fp_config& config, io::device& dev);
 
-    ~rabin_fingerprints_chunker() override;
+    ~rabin_fp() override;
 
     std::span<char> next_chunk() override;
 
@@ -41,6 +42,8 @@ private:
     std::vector<char> m_buffer;
     struct rab_block_info *m_block=nullptr;
     struct rabin_polynomial *m_chunk=nullptr;
+    bool m_update_chunk=false;
+    bool m_finished=false;
     constexpr static std::string_view m_type = "CDCrabin";
 };
 

@@ -333,7 +333,7 @@ struct rab_block_info *init_empty_block() {
  */
 struct rab_block_info *read_rabin_block(void *buf, size_t size, struct rab_block_info *cur_block) {
     struct rab_block_info *block;
-    
+
     if(cur_block == NULL) {
         block=init_empty_block();
         if(block == NULL)
@@ -352,9 +352,11 @@ struct rab_block_info *read_rabin_block(void *buf, size_t size, struct rab_block
 
     }
    
-    size_t bytes_offset = block->total_bytes_read;
-    size_t i, j, J, block_tail_start, partial_fill, block_tail_length;
+    size_t i;
+    size_t bytes_read_prev = block->total_bytes_read;
+    uint8_t partial_chunk_needed = 1; //bool true
     for(i=0;i<size;i++) {
+        partial_chunk_needed = 1; //bool true on loop start
     	char cur_byte=*((char *)(buf+i));
         char pushed_out=block->current_window_data[block->window_pos];
         block->current_window_data[block->window_pos]=cur_byte;
@@ -366,39 +368,61 @@ struct rab_block_info *read_rabin_block(void *buf, size_t size, struct rab_block
         block->total_bytes_read++;
         block->tail->length++;
         
-        if(block->window_pos == rabin_sliding_window_size){ //Loop back around
+        if(block->window_pos == rabin_sliding_window_size) //Loop back around
             block->window_pos=0;
-        }
-        
+
         //If we hit our special value or reached the max win size create a new block
         if((block->tail->length >= rabin_polynomial_min_block_size && (block->cur_roll_checksum % rabin_polynomial_average_block_size) == rabin_polynomial_prime)|| block->tail->length == rabin_polynomial_max_block_size) {
-            block->tail->start=block->total_bytes_read-block->tail->length;
-            block_tail_start = block->tail->start;
-            block_tail_length = block->tail->length;
-            partial_fill = 0; //This will change in a future PR
+            // JM >>>
+            partial_chunk_needed = 0; //bool to false, since we freeze the chunk here
 
-            block->tail->chunk_data=malloc(sizeof(char)*(block->tail->length));
-            if(bytes_offset > block_tail_start){
-                J = 0;
-            }
-            else
+            int bytes_read_in_current_call = block->total_bytes_read - bytes_read_prev;
+            int start_buf_at = bytes_read_in_current_call - block->tail->length;
+            int copy_n_bytes = block->tail->length;
+            int start_chunk = 0;
+            if(start_buf_at < 0)
             {
-                J = block_tail_start - bytes_offset;
+                copy_n_bytes += start_buf_at; //decrement, 'cause startbufat < 0
+                start_chunk  -= start_buf_at; //increment, 'cause startbufat < 0
+                start_buf_at -= start_buf_at; //should be zero
             }
 
-            memcpy(block->tail->chunk_data+partial_fill, (buf+J), block_tail_length);
+            block->tail->chunk_data = (char*) realloc(block->tail->chunk_data, sizeof(char)*(block->tail->length));
+            memcpy(block->tail->chunk_data+start_chunk, buf+start_buf_at, copy_n_bytes);
+            // <<< JM
 
+            block->tail->start=block->total_bytes_read-block->tail->length;
             struct rabin_polynomial *new_poly=gen_new_polynomial(NULL,0,0,0);
             block->tail->next_polynomial=new_poly;
             block->tail=new_poly;
             
-            if(i==size-1){
+            if(i==size-1)
                 block->current_poly_finished=1;
-            }
         }
     }
+    // JM >>>
+    if(partial_chunk_needed)
+    {
+        // TODO - This code is exactly the same as in the if close inside the for loop above!
+        // This whole function should be reorganized and split into several helper functions.
+        int bytes_read_in_current_call = block->total_bytes_read - bytes_read_prev;
+        int start_buf_at = bytes_read_in_current_call - block->tail->length;
+        int copy_n_bytes = block->tail->length;
+        int start_chunk = 0;
+        if(start_buf_at < 0)
+        {
+            copy_n_bytes += start_buf_at; //decrement, 'cause startbufat < 0
+            start_chunk  -= start_buf_at; //increment, 'cause startbufat < 0
+            start_buf_at -= start_buf_at; //should be zero
+            block->tail->chunk_data = (char*) realloc(block->tail->chunk_data, sizeof(char)*(block->tail->length));
+        }
+        else
+        {
+            block->tail->chunk_data=malloc(sizeof(char)*block->tail->length);
+        }
+        memcpy(block->tail->chunk_data+start_chunk, buf+(start_buf_at), copy_n_bytes);
+    }
+    // <<< JM
     
     return block;
-    
 }
-
