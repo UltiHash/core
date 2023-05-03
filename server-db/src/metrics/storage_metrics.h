@@ -25,6 +25,6 @@ private:
 
 // ---------------------------------------------------------------------
 
-} // namespace uh::metrics
+} // namespace uh::dbn::metrics
 
 #endif

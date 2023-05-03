@@ -383,6 +383,8 @@ void server::handle_client_statistics()
     client_statistics::request req;
     read(m_bs, req);
 
+    m_handler_interface->on_client_statistics(req);
+
     write(m_bs, status{ status::OK });
     m_bs.sync();
 }
