@@ -19,10 +19,10 @@ namespace uh::client::chunking
 enum class ChunkingStrategy
 {
     FixedSize,
-    Mod,
     CDCrabin,
     Gear,
-    FastCDC
+    FastCDC,
+    ModCDC
 };
 
 constexpr const char* strategyString(ChunkingStrategy n)
@@ -30,10 +30,10 @@ constexpr const char* strategyString(ChunkingStrategy n)
     switch (n)
     {
         case ChunkingStrategy::FixedSize: return "FixedSize";
-        case ChunkingStrategy::Mod: return "Mod";
         case ChunkingStrategy::CDCrabin: return "CDCrabin";
         case ChunkingStrategy::Gear: return "Gear";
         case ChunkingStrategy::FastCDC: return "FastCDC";
+        case ChunkingStrategy::ModCDC: return "ModCDC";
     }
 
     THROW(util::exception, "Not implemented option");
@@ -50,10 +50,11 @@ constexpr const char* strategyString(ChunkingStrategy n)
 static std::unordered_map<std::string, ChunkingStrategy> string2backendtype =
 {
   {strategyString(ChunkingStrategy::FixedSize), ChunkingStrategy::FixedSize},
-  {strategyString(ChunkingStrategy::Mod), ChunkingStrategy::Mod},
   {strategyString(ChunkingStrategy::CDCrabin), ChunkingStrategy::CDCrabin},
   {strategyString(ChunkingStrategy::Gear), ChunkingStrategy::Gear},
   {strategyString(ChunkingStrategy::FastCDC), ChunkingStrategy::FastCDC},
+  {strategyString(ChunkingStrategy::ModCDC), ChunkingStrategy::ModCDC},
+
 };
 
 
