@@ -26,6 +26,7 @@ public:
     std::unique_ptr<uh::protocol::allocation> on_allocate_chunk(std::size_t size) override;
     void on_next_chunk(std::span<char> buffer) override;
     uh::protocol::block_meta_data on_write_small_block (std::span <char> buffer) override;
+    uh::protocol::write_xsmall_blocks::response on_write_xsmall_blocks (const uh::protocol::write_xsmall_blocks::request &) override;
 
 
 private:

@@ -155,4 +155,10 @@ void dump_storage::update_space_consumption()
 
 // ---------------------------------------------------------------------
 
+std::unique_ptr<uh::protocol::allocation> dump_storage::allocate_multi(std::size_t size) {
+    THROW (util::exception, "multiple allocation for dump storage not implemented");
+}
+
+// ---------------------------------------------------------------------
+
 } //namespace uh::dbn::storage

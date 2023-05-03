@@ -5,6 +5,7 @@
 #include "allocation.h"
 #include "common.h"
 #include "serialization/serialization.h"
+
 #include "protocol/messages.h"
 
 #include <boost/iostreams/stream.hpp>
@@ -72,6 +73,14 @@ public:
      */
     protocol::write_chunks::response write_chunks(const protocol::write_chunks::request &);
 
+    /**
+     * Sends several blocks at once to the data node and returns the hashes and the effective sizes of the blocks.
+     * If the data node does not have free space it returns a failed status.
+     *
+     * @param data several blocks to be integrated
+     * @return hashes and effective sizes of the integrated data
+     */
+    uh::protocol::write_xsmall_blocks::response write_xsmall_blocks (const uh::protocol::write_xsmall_blocks::request &);
 
     /**
      * End the connection by sending the `quit` command, optionally with a

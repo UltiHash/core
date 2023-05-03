@@ -17,11 +17,11 @@ namespace uh::an::cluster
     public:
         explicit sample_hash_routing(const std::unordered_map<std::string, std::unique_ptr<protocol::client_pool>> &nodes);
 
-        const std::unique_ptr<protocol::client_pool> &route_data (const std::span <char>& data) const override;
+        protocol::client_pool &route_data (const std::span <const char>& data) const override;
 
     private:
 
-        using node_index_t = std::unordered_map<std::size_t, const std::unique_ptr<protocol::client_pool>&>;
+        using node_index_t = std::unordered_map<std::size_t, protocol::client_pool&>;
 
         static node_index_t
         fill_node_index (const std::unordered_map<std::string, std::unique_ptr<protocol::client_pool>> &);
@@ -32,8 +32,8 @@ namespace uh::an::cluster
         static constexpr std::size_t SAMPLE_PIECES = 4;
         static_assert (SAMPLE_SIZE % SAMPLE_PIECES == 0);
 
-        static const std::hash <std::string_view> &get_hash_func ();
-        const std::hash <std::string_view> &hash_func = get_hash_func();
+        static const std::hash <std::string> &get_hash_func ();
+        const std::hash <std::string> &hash_func = get_hash_func();
     };
 
 }

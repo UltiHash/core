@@ -10,7 +10,7 @@ namespace uh::an::cluster
 
 struct routing_interface {
 
-    [[nodiscard]] virtual const std::unique_ptr<protocol::client_pool> &route_data (const std::span <char> &data) const = 0;
+    [[nodiscard]] virtual protocol::client_pool &route_data (const std::span <const char> &data) const = 0;
 
     virtual ~routing_interface() = default;
 

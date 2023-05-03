@@ -5,7 +5,6 @@
 #include <uhv/f_meta_data.h>
 #include <protocol/client_pool.h>
 #include <protocol/server.h>
-
 #include <chunking/mod.h>
 #include "../common/thread_manager.h"
 
@@ -40,7 +39,9 @@ public:
                           protocol::client_pool::handle& client);
 
 private:
-    void add_result(const std::filesystem::path& p,
+        protocol::block_meta_data send_xs_blocks (auto &client_handle, auto &xsmall_blocks_req);
+
+        void add_result(const std::filesystem::path& p,
                     const std::optional<std::string>& error = std::nullopt);
 
     uhv::job_queue<std::unique_ptr<uhv::f_meta_data>>& m_input_jq;
