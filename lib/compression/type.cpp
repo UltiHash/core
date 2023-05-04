@@ -13,6 +13,7 @@ type from_uint(std::uint32_t v)
     switch (v)
     {
         case 0x00: return type::none;
+        case 0x01: return type::brotli;
     }
 
     THROW(util::exception, "unsupported compression id");
@@ -25,6 +26,7 @@ std::uint32_t to_uint(type t)
     switch (t)
     {
         case type::none: return 0x00;
+        case type::brotli: return 0x01;
     }
 
     THROW(util::exception, "unsupported compression type");
@@ -37,6 +39,7 @@ std::string to_string(type t)
     switch (t)
     {
         case type::none: return "none";
+        case type::brotli: return "brotli";
     }
 
     THROW(util::exception, "unsupported compression type");

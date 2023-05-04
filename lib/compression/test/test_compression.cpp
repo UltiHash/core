@@ -8,9 +8,10 @@
 #include <boost/test/data/test_case.hpp>
 #include <boost/mpl/vector.hpp>
 
-#include <io/sstream_device.h>
+#include <io/buffer.h>
 #include <compression/compression.h>
 #include <compression/none.h>
+#include <compression/brotli.h>
 
 
 using namespace uh;
@@ -35,13 +36,15 @@ const static std::string TEST_TEXT =
 // ---------------------------------------------------------------------
 
 typedef boost::mpl::vector<
-    comp::none
+    comp::none,
+    comp::brotli
 > comp_types;
 
 // ---------------------------------------------------------------------
 
 static const std::list<comp::type> comp_enum_types = {
-    comp::type::none
+    comp::type::none,
+    comp::type::brotli
 };
 
 // ---------------------------------------------------------------------
@@ -52,12 +55,15 @@ struct Fixture {};
 
 BOOST_FIXTURE_TEST_CASE_TEMPLATE( rw_invariant, T, comp_types, Fixture )
 {
-    io::sstream_device base;
+    io::buffer base;
 
-    auto comp_dev = T(base);
-    comp_dev.write(TEST_TEXT);
+    {
+        auto comp_dev = T(base);
+        comp_dev.write(TEST_TEXT);
+    }
 
     std::vector<char> buffer(TEST_TEXT.size());
+    auto comp_dev = T(base);
     comp_dev.read(buffer);
 
     BOOST_CHECK_EQUAL(std::string(&buffer[0], buffer.size()), TEST_TEXT);
@@ -67,12 +73,15 @@ BOOST_FIXTURE_TEST_CASE_TEMPLATE( rw_invariant, T, comp_types, Fixture )
 
 BOOST_DATA_TEST_CASE( rw_invariant_by_type, comp_enum_types )
 {
-    io::sstream_device base;
+    io::buffer base;
 
-    auto comp_dev = comp::create(base, sample);
-    comp_dev->write(TEST_TEXT);
+    {
+        auto comp_dev = comp::create(base, sample);
+        comp_dev->write(TEST_TEXT);
+    }
 
     std::vector<char> buffer(TEST_TEXT.size());
+    auto comp_dev = comp::create(base, sample);
     comp_dev->read(buffer);
 
     BOOST_CHECK_EQUAL(std::string(&buffer[0], buffer.size()), TEST_TEXT);

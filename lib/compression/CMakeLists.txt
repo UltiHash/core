@@ -10,7 +10,7 @@ find_package(Boost 1.80 COMPONENTS system unit_test_framework REQUIRED)
 message(STATUS "Brotli: ${brotli_SOURCE_DIR}/c/include")
 
 set(${PROJECT_NAME}_INCLUDE_DIRS ${Boost_INCLUDE_DIRS} brotlicommon-static)
-set(${PROJECT_NAME}_LINK_LIBRARIES ${Boost_LIBRARIES} uhLibUtil uhLibIo brotlicommon-static brotlienc-static)
+set(${PROJECT_NAME}_LINK_LIBRARIES ${Boost_LIBRARIES} uhLibUtil uhLibIo brotlicommon-static brotlidec-static brotlienc-static)
 
 # adding all the .h files of the current project
 file(GLOB HEADER_FILE_LIST ${CMAKE_CURRENT_SOURCE_DIR}/*.h)

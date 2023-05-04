@@ -1,6 +1,7 @@
 #include "compressed_file_store.h"
 
 #include <util/exception.h>
+#include <logging/logging_boost.h>
 #include <io/file.h>
 #include <compression/compression.h>
 
@@ -50,18 +51,24 @@ std::unique_ptr<io::device> open_reader(const std::filesystem::path& path)
 
 // ---------------------------------------------------------------------
 
-void compress_worker(const std::filesystem::path& path, comp::type t)
+void compress_worker(const std::filesystem::path& path,
+                     comp::type t,
+                     compressed_file_store* store)
 {
     auto in = open_reader(path);
 
     auto temp = std::make_unique<io::temp_file>(path.parent_path());
     write_comp_type(*temp, t);
 
-    auto out = comp::create(*temp, t);
+    {
+        auto out = comp::create(*temp, t);
+        copy(*in, *out);
+    }
 
-    copy(*in, *out);
+    temp->rename(path);
+    store->finish(path);
 
-    temp->release_to(path);
+    INFO << "finished compression of " << path;
 }
 
 // ---------------------------------------------------------------------
@@ -105,7 +112,16 @@ void compressed_file_store::compress(const std::filesystem::path& path)
         return;
     }
 
-    m_worker.push(path, comp::type::none);
+    INFO << "scheduled compression of " << path;
+    m_worker.push(path, m_type, this);
+}
+
+// ---------------------------------------------------------------------
+
+void compressed_file_store::finish(const std::filesystem::path& path)
+{
+    std::unique_lock<std::mutex> lock(m_comp_mutex);
+    m_compressing.erase(path);
 }
 
 // ---------------------------------------------------------------------

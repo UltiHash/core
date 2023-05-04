@@ -59,9 +59,15 @@ public:
      */
     void compress(const std::filesystem::path& path);
 
+    /**
+     * Finalize compression by removing the path from the internal compression
+     * queue, allowing for recompression in the future.
+     */
+    void finish(const std::filesystem::path& path);
+
 private:
     unsigned m_threads;
-    util::job_queue<void, std::filesystem::path, comp::type> m_worker;
+    util::job_queue<void, std::filesystem::path, comp::type, compressed_file_store*> m_worker;
 
     std::mutex m_comp_mutex;
     std::set<std::filesystem::path> m_compressing;

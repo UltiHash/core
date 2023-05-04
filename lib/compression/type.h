@@ -14,7 +14,8 @@ namespace uh::comp
 
 enum class type
 {
-    none
+    none,
+    brotli
 };
 
 // ---------------------------------------------------------------------
