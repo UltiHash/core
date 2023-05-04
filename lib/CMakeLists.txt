@@ -9,6 +9,7 @@ set(Boost_USE_STATIC_LIBS ON)
 enable_testing()
 
 add_subdirectory(chunking)
+add_subdirectory(compression)
 add_subdirectory(io)
 add_subdirectory(logging)
 add_subdirectory(metrics)

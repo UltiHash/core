@@ -4,8 +4,11 @@
 
 #ifndef CORE_HIERARCHICAL_STORAGE_H
 #define CORE_HIERARCHICAL_STORAGE_H
-#include "storage/backend.h"
+
+#include <storage/backend.h>
+#include <storage/compressed_file_store.h>
 #include "io/sha512.h"
+
 #include <metrics/storage_metrics.h>
 
 
@@ -14,8 +17,7 @@ namespace uh::dbn::storage {
 class hierarchical_storage : public backend {
 
 public:
-
-    hierarchical_storage (std::filesystem::path db_root, size_t size_bytes, uh::dbn::metrics::storage_metrics& storage_metrics);
+    hierarchical_storage(std::filesystem::path db_root, size_t size_bytes, uh::dbn::metrics::storage_metrics& storage_metrics);
 
     void start() override;
 
@@ -36,7 +38,9 @@ public:
     class hierarchical_allocation;
     class hierarchical_multi_block_allocation: public uh::protocol::allocation {
     public:
-        explicit hierarchical_multi_block_allocation (hierarchical_storage &storage_backend, std::size_t size);
+        explicit hierarchical_multi_block_allocation (hierarchical_storage &storage_backend,
+                                                      compressed_file_store& store,
+                                                      std::size_t size);
 
         void open_new_block (std::size_t block_size);
         bool block_is_open ();
@@ -55,6 +59,7 @@ public:
         std::size_t m_block_size {};
         std::size_t m_persisted_size {};
         std::size_t m_effective_size {};
+        compressed_file_store& m_store;
     };
 private:
 
@@ -73,6 +78,7 @@ private:
     const std::size_t m_alloc;
     std::atomic<std::size_t> m_used;
     uh::dbn::metrics::storage_metrics& m_storage_metrics;
+    compressed_file_store m_store;
 };
 
 }
