@@ -13,20 +13,6 @@ namespace
 
 // ---------------------------------------------------------------------
 
-int seekdir_to_int(std::ios_base::seekdir way)
-{
-    switch (way)
-    {
-        case std::ios_base::beg: return SEEK_SET;
-        case std::ios_base::cur: return SEEK_CUR;
-        case std::ios_base::end: return SEEK_END;
-    }
-
-    THROW(util::exception, "unsupported seekdir value");
-}
-
-// ---------------------------------------------------------------------
-
 std::pair<int, std::filesystem::path> open_temp_file(const std::filesystem::path& templ)
 {
     auto path = templ.string();
@@ -48,7 +34,8 @@ std::pair<int, std::filesystem::path> open_temp_file(const std::filesystem::path
 
 temp_file::temp_file(const std::filesystem::path& directory)
     : m_fd(-1),
-      m_path()
+      m_path(),
+      m_remove(true)
 {
     if (!std::filesystem::exists(directory))
     {
@@ -67,6 +54,10 @@ temp_file::~temp_file()
     if (m_fd != -1)
     {
         close(m_fd);
+    }
+
+    if (m_remove)
+    {
         unlink(m_path.c_str());
     }
 }
@@ -121,7 +112,23 @@ bool temp_file::valid() const
 
 void temp_file::release_to(const std::filesystem::path& path)
 {
-    if (link(m_path.c_str(), path.c_str()) == -1)
+    if (m_path == path)
+    {
+        m_remove = false;
+        return;
+    }
+
+    if (::link(m_path.c_str(), path.c_str()) == -1)
+    {
+        THROW_FROM_ERRNO();
+    }
+}
+
+// ---------------------------------------------------------------------
+
+void temp_file::rename(const std::filesystem::path& path)
+{
+    if (::rename(m_path.c_str(), path.c_str()) == -1)
     {
         THROW_FROM_ERRNO();
     }
@@ -132,21 +139,6 @@ void temp_file::release_to(const std::filesystem::path& path)
 const std::filesystem::path& temp_file::path() const
 {
     return m_path;
-}
-
-// ---------------------------------------------------------------------
-
-std::streampos temp_file::seek(stream_offset off, std::ios_base::seekdir way)
-{
-    int whence = seekdir_to_int(way);
-
-    auto rv = lseek(m_fd, off, whence);
-    if (rv == -1)
-    {
-        THROW_FROM_ERRNO();
-    }
-
-    return rv;
 }
 
 // ---------------------------------------------------------------------

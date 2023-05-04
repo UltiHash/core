@@ -1,3 +1,6 @@
 [submodule "lib/third-party/prometheus-cpp"]
 	path = lib/third-party/prometheus-cpp
 	url = https://github.com/jupp0r/prometheus-cpp
+[submodule "lib/third-party/brotli"]
+	path = lib/third-party/brotli
+	url = https://github.com/google/brotli

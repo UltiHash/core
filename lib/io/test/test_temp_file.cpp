@@ -6,6 +6,7 @@
 
 #include <boost/test/unit_test.hpp>
 #include <util/exception.h>
+#include <io/file.h>
 #include <io/temp_file.h>
 
 
@@ -58,11 +59,9 @@ BOOST_AUTO_TEST_CASE( read_write )
     auto written = tf.write({LOREM_IPSUM.c_str(), LOREM_IPSUM.size()});
     BOOST_CHECK_EQUAL(written, LOREM_IPSUM.size());
 
-    auto seekpos = tf.seek(0, std::ios_base::beg);
-    BOOST_CHECK_EQUAL(seekpos, 0);
-
+    file in(tf.path());
     std::string copy(LOREM_IPSUM.size(), 0);
-    auto read = tf.read({copy.data(), copy.size()});
+    auto read = in.read({copy.data(), copy.size()});
     BOOST_CHECK_EQUAL(read, LOREM_IPSUM.size());
 
     BOOST_CHECK_EQUAL(copy, LOREM_IPSUM);
@@ -101,7 +100,6 @@ BOOST_AUTO_TEST_CASE( release_to )
         tf_path = tf.path();
         tf.release_to(target_path);
 
-        BOOST_CHECK(std::filesystem::exists(tf_path));
         BOOST_CHECK(std::filesystem::exists(target_path));
     }
 
@@ -109,6 +107,16 @@ BOOST_AUTO_TEST_CASE( release_to )
     BOOST_CHECK(std::filesystem::exists(target_path));
 
     std::filesystem::remove(target_path);
+}
+
+// ---------------------------------------------------------------------
+
+BOOST_AUTO_TEST_CASE( release_to_throws )
+{
+    temp_file tf_1(TEMP_DIR);
+    temp_file tf_2(TEMP_DIR);
+
+    BOOST_CHECK_THROW(tf_1.release_to(tf_2.path()), file_exists);
 }
 
 // ---------------------------------------------------------------------
