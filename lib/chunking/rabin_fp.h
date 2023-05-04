@@ -39,7 +39,7 @@ public:
 private:
     io::device& m_dev;
     size_t m_chunk_size = 0;
-    std::vector<char> m_buffer;
+    buffer m_buffer;
     struct rab_block_info *m_block=nullptr;
     struct rabin_polynomial *m_chunk=nullptr;
     bool m_update_chunk=false;
