@@ -47,6 +47,20 @@ int buffer::next_byte()
 
 // ---------------------------------------------------------------------
 
+char* buffer::next_buffer()
+{
+    if (m_rptr == m_wptr)
+    {
+        return nullptr;
+    }
+
+    m_rptr += length();
+
+    return m_buffer.data();
+}
+
+// ---------------------------------------------------------------------
+
 void buffer::skip(std::size_t count)
 {
     m_rptr += count;

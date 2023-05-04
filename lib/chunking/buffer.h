@@ -39,6 +39,11 @@ public:
     int next_byte();
 
     /**
+     * Read the whole buffer.
+     */
+    char* next_buffer();
+
+    /**
      * Skip over the next `count` bytes.
      */
     void skip(std::size_t count);
