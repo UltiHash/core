@@ -153,7 +153,7 @@ hierarchical_storage::hierarchical_storage(std::filesystem::path db_root, size_t
     m_alloc(size_bytes),
     m_used(0),
     m_storage_metrics(storage_metrics),
-    m_store({ db_root, 5u, comp::type::brotli })
+    m_store({ db_root, 5u, comp::type::brotli }, storage_metrics)
 {
     if( !std::filesystem::is_directory(m_root) ) {
         throw std::runtime_error("path does not exist: " + m_root.string());

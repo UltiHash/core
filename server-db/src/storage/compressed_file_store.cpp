@@ -51,35 +51,53 @@ std::unique_ptr<io::device> open_reader(const std::filesystem::path& path)
 
 // ---------------------------------------------------------------------
 
-void compress_worker(const std::filesystem::path& path,
-                     comp::type t,
-                     compressed_file_store* store)
-{
-    auto in = open_reader(path);
-
-    auto temp = std::make_unique<io::temp_file>(path.parent_path());
-    write_comp_type(*temp, t);
-
-    {
-        auto out = comp::create(*temp, t);
-        copy(*in, *out);
-    }
-
-    temp->rename(path);
-    store->finish(path);
-
-    INFO << "finished compression of " << path;
-}
-
-// ---------------------------------------------------------------------
-
 } // namespace
 
 // ---------------------------------------------------------------------
 
-compressed_file_store::compressed_file_store(const compressed_file_store_config& config)
-    : m_worker(config.threads, compress_worker),
-      m_type(config.compression)
+compression_worker::compression_worker(compressed_file_store& store,
+                                       storage_metrics& metrics)
+    : m_store(store),
+      m_metrics(metrics)
+{
+}
+
+// ---------------------------------------------------------------------
+
+void compression_worker::operator()(const std::filesystem::path& path, comp::type type)
+{
+    try
+    {
+        m_store.start(path);
+        auto in = open_reader(path);
+
+        auto temp = std::make_unique<io::temp_file>(path.parent_path());
+        write_comp_type(*temp, type);
+
+        {
+            auto out = comp::create(*temp, type);
+            copy(*in, *out);
+        }
+
+        temp->rename(path);
+    }
+    catch (...)
+    {
+        m_store.finish(path);
+        throw;
+    }
+
+    m_store.finish(path);
+}
+
+// ---------------------------------------------------------------------
+
+compressed_file_store::compressed_file_store(const compressed_file_store_config& config,
+                                             storage_metrics& metrics)
+    : m_metrics(metrics),
+      m_worker(config.threads, compression_worker(*this, m_metrics)),
+      m_type(config.compression),
+      m_active(0)
 {
 }
 
@@ -112,8 +130,27 @@ void compressed_file_store::compress(const std::filesystem::path& path)
         return;
     }
 
+    try
+    {
+        m_worker.push(path, m_type);
+        m_metrics.comp_scheduled().Set(m_compressing.size());
+    }
+    catch (...)
+    {
+        m_compressing.erase(path);
+        throw;
+    }
+
     INFO << "scheduled compression of " << path;
-    m_worker.push(path, m_type, this);
+}
+
+// ---------------------------------------------------------------------
+
+void compressed_file_store::start(const std::filesystem::path& path)
+{
+    ++m_active;
+    m_metrics.comp_running().Set(m_active);
+    INFO << "starting compression of " << path;
 }
 
 // ---------------------------------------------------------------------
@@ -121,7 +158,14 @@ void compressed_file_store::compress(const std::filesystem::path& path)
 void compressed_file_store::finish(const std::filesystem::path& path)
 {
     std::unique_lock<std::mutex> lock(m_comp_mutex);
+
     m_compressing.erase(path);
+    m_metrics.comp_scheduled().Set(m_compressing.size());
+
+    --m_active;
+    m_metrics.comp_running().Set(m_active);
+
+    INFO << "finished compression of " << path;
 }
 
 // ---------------------------------------------------------------------

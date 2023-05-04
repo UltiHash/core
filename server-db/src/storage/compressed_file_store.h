@@ -6,6 +6,8 @@
 #include <io/temp_file.h>
 #include <compression/type.h>
 
+#include <metrics/storage_metrics.h>
+
 #include <filesystem>
 #include <memory>
 #include <set>
@@ -36,13 +38,37 @@ struct compressed_file_store_config
 
 // ---------------------------------------------------------------------
 
+class compressed_file_store;
+
+// ---------------------------------------------------------------------
+
+using uh::dbn::metrics::storage_metrics;
+
+// ---------------------------------------------------------------------
+
+class compression_worker
+{
+public:
+    compression_worker(compressed_file_store& store, storage_metrics& metrics);
+
+    void operator()(const std::filesystem::path& path, comp::type type);
+
+private:
+    compressed_file_store& m_store;
+    storage_metrics& m_metrics;
+};
+
+// ---------------------------------------------------------------------
+
 class compressed_file_store
 {
 public:
     /**
      * handle paths relative to base path
      */
-    compressed_file_store(const compressed_file_store_config& config);
+    compressed_file_store(
+        const compressed_file_store_config& config,
+        storage_metrics& metrics);
 
     /**
      * Open a temporary file for writing
@@ -59,19 +85,22 @@ public:
      */
     void compress(const std::filesystem::path& path);
 
-    /**
-     * Finalize compression by removing the path from the internal compression
-     * queue, allowing for recompression in the future.
-     */
-    void finish(const std::filesystem::path& path);
 
 private:
+    friend class compression_worker;
+
+    void start(const std::filesystem::path& path);
+    void finish(const std::filesystem::path& path);
+
+    storage_metrics& m_metrics;
     unsigned m_threads;
-    util::job_queue<void, std::filesystem::path, comp::type, compressed_file_store*> m_worker;
 
     std::mutex m_comp_mutex;
     std::set<std::filesystem::path> m_compressing;
     comp::type m_type;
+    std::atomic<unsigned> m_active;
+
+    util::job_queue<void, std::filesystem::path, comp::type> m_worker;
 };
 
 // ---------------------------------------------------------------------
