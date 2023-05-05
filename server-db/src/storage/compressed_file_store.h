@@ -20,15 +20,12 @@ namespace uh::dbn::storage
 
 struct compressed_file_store_config
 {
-    /**
-     * Base directory for compressed file storage.
-     */
-    std::filesystem::path base_direcory;
+    static constexpr unsigned DEFAULT_THREADS = 5u;
 
     /**
      * Number of threads for background compression.
      */
-    unsigned threads;
+    unsigned threads = DEFAULT_THREADS;
 
     /**
      * Default compression applied to files.

@@ -70,4 +70,35 @@ const storage_config& options::config() const
 
 // ---------------------------------------------------------------------
 
+compression_options::compression_options()
+    : uh::options::options("Compression Options")
+{
+    visible().add_options()
+
+        ("comp-algorithm",
+         value<std::string>()->default_value("none"),
+         "compress chunks on disk using this algorithm")
+
+        ("comp-threads",
+         value<unsigned>(&m_config.threads)->default_value(compressed_file_store_config::DEFAULT_THREADS),
+         "number of threads used for compression");
+}
+
+// ---------------------------------------------------------------------
+
+uh::options::action compression_options::evaluate(const boost::program_options::variables_map& vars)
+{
+    m_config.compression = comp::to_type(vars["comp-algorithm"].as<std::string>());
+    return uh::options::action::proceed;
+}
+
+// ---------------------------------------------------------------------
+
+const compressed_file_store_config& compression_options::config() const
+{
+    return m_config;
+}
+
+// ---------------------------------------------------------------------
+
 } // namespace uh::dbn::storage

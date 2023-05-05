@@ -47,6 +47,23 @@ std::string to_string(type t)
 
 // ---------------------------------------------------------------------
 
+type to_type(const std::string& s)
+{
+    if (s == "none")
+    {
+        return type::none;
+    }
+
+    if (s == "brotli")
+    {
+        return type::brotli;
+    }
+
+    THROW(util::exception, "unsupported compression type: " + s);
+}
+
+// ---------------------------------------------------------------------
+
 std::ostream& operator<<(std::ostream& out, comp::type t)
 {
     out << to_string(t);

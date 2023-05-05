@@ -143,15 +143,16 @@ private:
 };
 
 
-hierarchical_storage::hierarchical_storage(std::filesystem::path db_root, size_t size_bytes,
-                                           uh::dbn::metrics::storage_metrics& storage_metrics):
-    m_root(std::move (db_root)),
-    m_alloc(size_bytes),
-    m_used(0),
-    m_storage_metrics(storage_metrics),
-    m_store({ db_root, 5u, comp::type::brotli },
-            storage_metrics,
-            [this](std::streamsize s){ this->return_space(s); })
+hierarchical_storage::hierarchical_storage(
+    const hierarchical_storage_config& config,
+    uh::dbn::metrics::storage_metrics& storage_metrics)
+    : m_root(config.db_root),
+      m_alloc(config.size_bytes),
+      m_used(0),
+      m_storage_metrics(storage_metrics),
+      m_store(config.compressed,
+              storage_metrics,
+              [this](std::streamsize s){ this->return_space(s); })
 {
     if (!std::filesystem::is_directory(m_root))
     {

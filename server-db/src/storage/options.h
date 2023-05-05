@@ -3,6 +3,7 @@
 
 #include <options/options.h>
 #include <util/exception.h>
+#include <storage/compressed_file_store.h>
 
 #include "mod.h"
 
@@ -23,7 +24,21 @@ public:
 
 private:
     storage_config m_config;
-    boost::program_options::options_description m_desc;
+};
+
+// ---------------------------------------------------------------------
+
+class compression_options : public uh::options::options
+{
+public:
+    compression_options();
+
+    uh::options::action evaluate(const boost::program_options::variables_map& vars) override;
+
+    const compressed_file_store_config& config() const;
+
+private:
+    compressed_file_store_config m_config;
 };
 
 // ---------------------------------------------------------------------

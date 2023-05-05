@@ -14,10 +14,29 @@
 
 namespace uh::dbn::storage {
 
+struct hierarchical_storage_config
+{
+    /**
+     * Root directory of storage
+     */
+    std::filesystem::path db_root;
+
+    /**
+     * Amount of allocated space in bytes.
+     */
+    size_t size_bytes;
+
+    /**
+     * Configuration of compressed file storage.
+     */
+    compressed_file_store_config compressed;
+};
+
 class hierarchical_storage : public backend {
 
 public:
-    hierarchical_storage(std::filesystem::path db_root, size_t size_bytes, uh::dbn::metrics::storage_metrics& storage_metrics);
+    hierarchical_storage(const hierarchical_storage_config& config,
+                         uh::dbn::metrics::storage_metrics& storage_metrics);
 
     void start() override;
 
