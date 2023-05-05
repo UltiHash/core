@@ -68,7 +68,8 @@ public:
      */
     compressed_file_store(
         const compressed_file_store_config& config,
-        storage_metrics& metrics);
+        storage_metrics& metrics,
+        std::function<void(std::streamsize)> report_savings = [](std::streamsize){} );
 
     /**
      * Open a temporary file for writing
@@ -85,20 +86,20 @@ public:
      */
     void compress(const std::filesystem::path& path);
 
-
 private:
     friend class compression_worker;
 
     void start(const std::filesystem::path& path);
-    void finish(const std::filesystem::path& path);
+    void finish(const std::filesystem::path& path, std::streamsize savings);
 
     storage_metrics& m_metrics;
-    unsigned m_threads;
 
     std::mutex m_comp_mutex;
     std::set<std::filesystem::path> m_compressing;
+
     comp::type m_type;
     std::atomic<unsigned> m_active;
+    std::function<void(std::streamsize)> m_report_savings;
 
     util::job_queue<void, std::filesystem::path, comp::type> m_worker;
 };
