@@ -45,27 +45,52 @@ public:
 
 // ---------------------------------------------------------------------
 
+static constexpr std::streamsize IO_DEFAULT_CHUNK_SIZE = 16 * 1024 * 1024;
+
+// ---------------------------------------------------------------------
+
 /**
- * Adapter enabling boost iostreams API for devices.
+ * Use this class to construct an "owning wrapper" around a device. Usually
+ * device wrapper expect the wrapped device as reference. With `device_wrapper`
+ * you can make tie the lifetime of the wrapped device to its wrapper:
  */
-class boost_device
+template <typename wrapper, typename ... args>
+class device_wrapper : public io::device
 {
 public:
-    typedef char char_type;
-    typedef boost::iostreams::bidirectional_device_tag category;
+    device_wrapper(std::unique_ptr<device>&& base, args... a)
+        : m_base(std::move(base)),
+          m_wrapper(*m_base, std::forward(a)...)
+    {
+    }
 
-    boost_device(std::shared_ptr<device> dev);
+    std::streamsize write(std::span<const char> buffer) override
+    {
+        return m_wrapper.write(buffer);
+    }
 
-    std::streamsize write(const char* s, std::streamsize n);
-    std::streamsize read(char*s, std::streamsize n);
+    std::streamsize read(std::span<char> buffer) override
+    {
+        return m_wrapper.read(buffer);
+    }
+
+    bool valid() const override
+    {
+        return m_wrapper.valid();
+    }
 
 private:
-    std::shared_ptr<device> m_dev;
+    std::unique_ptr<device> m_base;
+    wrapper m_wrapper;
 };
 
 // ---------------------------------------------------------------------
 
-static constexpr std::streamsize IO_DEFAULT_CHUNK_SIZE = 16 * 1024 * 1024;
+template <typename wrapper, typename ... args>
+std::unique_ptr<io::device> owning_wrapper(std::unique_ptr<device>&& base, args... a)
+{
+    return std::make_unique<device_wrapper<wrapper, args...>>(std::move(base), a...);
+}
 
 // ---------------------------------------------------------------------
 
@@ -90,6 +115,14 @@ std::size_t write_from_buffer(
  * bytes written.
  */
 std::size_t copy(device& d, std::ostream& out);
+
+// ---------------------------------------------------------------------
+
+/**
+ * Copy the complete device `in` to the device `out`. Return number of
+ * bytes written.
+ */
+std::size_t copy(device& in, device& out);
 
 // ---------------------------------------------------------------------
 

@@ -16,15 +16,22 @@ public:
     prometheus::Gauge& free_space() const;
     prometheus::Gauge& used_space() const;
     prometheus::Gauge& alloc_space() const;
+
+    prometheus::Gauge& comp_scheduled() const;
+    prometheus::Gauge& comp_running() const;
 private:
     prometheus::Family<prometheus::Gauge>& m_gauges;
     prometheus::Gauge& m_free_space;
     prometheus::Gauge& m_used_space;
     prometheus::Gauge& m_alloc_space;
+
+    prometheus::Family<prometheus::Gauge>& m_gauge_comp;
+    prometheus::Gauge& m_comp_scheduled;
+    prometheus::Gauge& m_comp_running;
 };
 
 // ---------------------------------------------------------------------
 
-} // namespace uh::metrics
+} // namespace uh::dbn::metrics
 
 #endif

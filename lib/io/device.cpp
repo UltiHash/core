@@ -17,27 +17,6 @@ constexpr std::streamsize BUFFER_SIZE = 1024 * 1024;
 
 // ---------------------------------------------------------------------
 
-boost_device::boost_device(std::shared_ptr<device> dev)
-    : m_dev(dev)
-{
-}
-
-// ---------------------------------------------------------------------
-
-std::streamsize boost_device::write(const char* s, std::streamsize n)
-{
-    return m_dev->write(std::span<const char>(s, n));
-}
-
-// ---------------------------------------------------------------------
-
-std::streamsize boost_device::read(char*s, std::streamsize n)
-{
-    return m_dev->read(std::span<char>(s, n));
-}
-
-// ---------------------------------------------------------------------
-
 std::vector<char> read_to_buffer(device& dev, std::streamsize chunk_size)
 {
     std::streamsize read = 0;
@@ -82,6 +61,27 @@ std::size_t copy(device& d, std::ostream& out)
             break;
         }
         out.write(buffer.data(), read);
+    }
+
+    return rv;
+}
+
+// ---------------------------------------------------------------------
+
+std::size_t copy(device& in, device& out)
+{
+    std::array<char, BUFFER_SIZE> buffer;
+    std::size_t rv = 0;
+
+    while (in.valid())
+    {
+        std::size_t read = in.read(buffer);
+        rv += read;
+        if (!read)
+        {
+            break;
+        }
+        out.write({ buffer.data(), read });
     }
 
     return rv;

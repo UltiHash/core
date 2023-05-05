@@ -14,8 +14,9 @@ namespace uh::an::server
 
 // ---------------------------------------------------------------------
 
-protocol::protocol(cluster::mod& cluster, const uh::net::server_info &serv_info):
+protocol::protocol(cluster::mod& cluster, metrics::client_metrics& client, const uh::net::server_info &serv_info):
         m_cluster(cluster),
+        m_client(client),
         m_serv_info (serv_info)
 {
 }
@@ -55,10 +56,19 @@ std::unique_ptr<uh::protocol::allocation> protocol::on_allocate_chunk(std::size_
 
 // ---------------------------------------------------------------------
 
-block_meta_data protocol::on_write_small_block (std::span <char> buffer) {
+block_meta_data protocol::on_write_small_block (std::span <char> buffer)
+{
     return m_cluster.write_small_block (buffer);
 }
 
+// ---------------------------------------------------------------------
+
+void protocol::on_client_statistics(uh::protocol::client_statistics::request& client_stat)
+{
+    m_client.set_uhv_metrics(std::pair<std::string, std::uint64_t>(
+            std::string(client_stat.uhv_id.begin(), client_stat.uhv_id.end()),
+               client_stat.integrated_size));
+}
 
 // ---------------------------------------------------------------------
 
@@ -77,7 +87,8 @@ void protocol::on_next_chunk(std::span<char>)
 // ---------------------------------------------------------------------
 
 uh::protocol::write_xsmall_blocks::response
-protocol::on_write_xsmall_blocks(const uh::protocol::write_xsmall_blocks::request &req) {
+protocol::on_write_xsmall_blocks(const uh::protocol::write_xsmall_blocks::request &req)
+{
     return m_cluster.write_xsmall_blocks (req);
 }
 

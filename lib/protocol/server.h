@@ -25,10 +25,6 @@ enum class server_state
 
 // ---------------------------------------------------------------------
 
-using iostream = boost::iostreams::stream<io::boost_device>;
-
-// ---------------------------------------------------------------------
-
 class server : public protocol
 {
 public:

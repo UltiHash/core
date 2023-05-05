@@ -4,7 +4,7 @@
 #include <metrics/protocol_metrics.h>
 
 #include <memory>
-
+#include "client_metrics.h"
 
 namespace uh::an::metrics
 {
@@ -19,6 +19,7 @@ public:
     ~mod();
 
     uh::metrics::protocol_metrics& protocol();
+    client_metrics& client();
 
 private:
     struct impl;
