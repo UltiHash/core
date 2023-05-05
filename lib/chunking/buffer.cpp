@@ -24,12 +24,10 @@ std::size_t buffer::fill_buffer()
     if (m_rptr < m_wptr) {
         return length ();
     }
-    if (m_rptr > m_size)
-    {
-        std::memmove(&m_buffer[0], &m_buffer[m_rptr], m_wptr - m_rptr);
-        m_wptr = m_wptr - m_rptr;
-        m_rptr = 0;
-    }
+
+    std::memmove(&m_buffer[0], &m_buffer[m_rptr], m_wptr - m_rptr);
+    m_wptr = m_wptr - m_rptr;
+    m_rptr = 0;
 
     m_wptr += m_in.read({ &m_buffer[m_wptr], m_buffer.size() - m_wptr });
 
@@ -52,6 +50,11 @@ int buffer::next_byte()
 
 void buffer::skip(std::size_t count)
 {
+    if (m_rptr + count > m_wptr) {
+        count -= m_wptr - m_rptr;
+        m_rptr = m_wptr;
+        fill_buffer();
+    }
     m_rptr += count;
 }
 
