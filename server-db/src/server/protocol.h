@@ -28,11 +28,13 @@ public:
     uh::protocol::block_meta_data on_write_small_block (std::span <char> buffer) override;
     uh::protocol::write_xsmall_blocks::response on_write_xsmall_blocks (const uh::protocol::write_xsmall_blocks::request &) override;
     uh::protocol::write_chunks::response on_write_chunks (const uh::protocol::write_chunks::request &) override;
+    uh::protocol::read_chunks::response on_read_chunks (const uh::protocol::read_chunks::request &) override;
 
 
 private:
     storage::backend& m_storage;
     const uh::net::server_info &m_serv_info;
+    std::vector <char> m_read_buffer;
 };
 
 // ---------------------------------------------------------------------

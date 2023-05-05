@@ -20,6 +20,7 @@ void f_serialization::__serialize_f_meta_data(const std::unique_ptr<uh::uhv::f_m
     if (ptr_f_meta_data->f_type() == uhv::uh_file_type::regular) {
         serializer.write(ptr_f_meta_data->f_size());
         serializer.write(ptr_f_meta_data->f_hashes());
+        serializer.write(ptr_f_meta_data->f_chunk_sizes());
     }
 
     serializer.sync();
@@ -51,6 +52,7 @@ std::unique_ptr<uh::uhv::f_meta_data> f_serialization::__deserialize_f_meta_data
     if (p_f_meta_data->f_type() == uhv::uh_file_type::regular) {
         p_f_meta_data->set_f_size(deserializer.read <std::uint64_t> ());
         p_f_meta_data->set_f_hashes(deserializer.read <std::vector <char>> ());
+        p_f_meta_data->add_chunk_sizes(deserializer.read<std::vector <uint32_t>>());
     }
 
     return p_f_meta_data; // RVO optimization

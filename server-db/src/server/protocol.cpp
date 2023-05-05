@@ -15,7 +15,8 @@ namespace uh::dbn::server {
 
     protocol::protocol(storage::backend &storage, const uh::net::server_info &serv_info)
             : m_storage(storage),
-              m_serv_info(serv_info) {
+              m_serv_info(serv_info),
+              m_read_buffer(uh::protocol::server::MAXIMUM_DATA_SIZE) {
     }
 
 // ---------------------------------------------------------------------
@@ -110,6 +111,22 @@ uh::protocol::write_chunks::response protocol::on_write_chunks(const write_chunk
     }
 
     return res;
+}
+
+// ---------------------------------------------------------------------
+
+uh::protocol::read_chunks::response protocol::on_read_chunks(const read_chunks::request &req) {
+    uh::protocol::read_chunks::response resp;
+    ssize_t total_size = 0;
+    for (size_t i = 0; i < req.hashes.size(); i+=64) {
+        auto dev = m_storage.read_block({req.hashes.data() + i, 64});
+        const auto size = dev->read({m_read_buffer.begin() + total_size, m_read_buffer.end()});
+        resp.chunk_sizes.emplace_back(size);
+        total_size += size;
+    }
+    resp.data.reserve(total_size);
+    resp.data.insert(resp.data.cend(), m_read_buffer.begin(), m_read_buffer.begin() + total_size);
+    return resp;
 }
 
 // ---------------------------------------------------------------------

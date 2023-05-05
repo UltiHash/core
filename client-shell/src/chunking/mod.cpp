@@ -53,10 +53,10 @@ std::unique_ptr<uh::chunking::chunker> mod::create_chunker(io::device& d, std::s
             return std::make_unique<uh::chunking::gear>(m_gear, d, buffer_size);
         case ChunkingStrategy::FastCDC:
             return std::make_unique<uh::chunking::fast_cdc>(m_fast_cdc, d, buffer_size);
-        //case ChunkingStrategy::ModCDC:
-            //return std::make_unique<uh::chunking::mod_chunker>(m_mod_cdc, d, buffer_size);
-        //case ChunkingStrategy::CDCrabin:
-            //return std::make_unique<uh::chunking::rabin_fp>(m_rabin, d, buffer_size);
+        case ChunkingStrategy::ModCDC:
+            return std::make_unique<uh::chunking::mod_chunker>(m_mod_cdc, d);
+        case ChunkingStrategy::CDCrabin:
+            return std::make_unique<uh::chunking::rabin_fp>(m_rabin, d);
     }
 
     THROW(util::exception, "chunk type not implemented");

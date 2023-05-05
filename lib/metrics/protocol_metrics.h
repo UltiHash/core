@@ -27,6 +27,7 @@ public:
     prometheus::Counter& reqs_write_small_block() const;
     prometheus::Counter& reqs_write_xsmall_blocks() const;
     prometheus::Counter& reqs_write_chunks() const;
+    prometheus::Counter& reqs_read_chunks() const;
     prometheus::Counter& reqs_allocate_chunk() const;
     prometheus::Counter& reqs_finalize() const;
 private:
@@ -41,6 +42,7 @@ private:
     prometheus::Counter& m_reqs_write_small_block;
     prometheus::Counter& m_reqs_write_xsmall_blocks;
     prometheus::Counter& m_reqs_write_chunks;
+    prometheus::Counter& m_reqs_read_chunks;
     prometheus::Counter& m_reqs_allocate_chunk;
     prometheus::Counter& m_reqs_finalize;
 };
@@ -64,6 +66,7 @@ public:
     virtual uh::protocol::block_meta_data on_write_small_block(std::span<char> buffer) override;
     uh::protocol::write_xsmall_blocks::response on_write_xsmall_blocks (const uh::protocol::write_xsmall_blocks::request &) override;
     uh::protocol::write_chunks::response on_write_chunks (const uh::protocol::write_chunks::request &) override;
+    uh::protocol::read_chunks::response on_read_chunks (const uh::protocol::read_chunks::request &) override;
 
 
     virtual std::unique_ptr<uh::protocol::allocation>

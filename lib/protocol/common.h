@@ -3,6 +3,7 @@
 
 #include <string>
 #include <vector>
+#include <list>
 
 
 namespace uh::protocol
@@ -34,6 +35,7 @@ struct chunks_meta_data
 {
     std::vector <char> data;
     std::vector <std::uint32_t> chunk_sizes;
+    std::list <uint32_t> chunk_indices;
 };
 
 // ---------------------------------------------------------------------

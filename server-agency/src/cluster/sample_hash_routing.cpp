@@ -12,6 +12,8 @@ sample_hash_routing::sample_hash_routing(
         m_nodes_index(fill_node_index (m_nodes)){
 }
 
+// ---------------------------------------------------------------------
+
 protocol::client_pool& sample_hash_routing::route_data(const std::span <const char>& data) const {
 
 
@@ -41,6 +43,21 @@ protocol::client_pool& sample_hash_routing::route_data(const std::span <const ch
     return m_nodes_index.at (hash % m_nodes_index.size());
 }
 
+// ---------------------------------------------------------------------
+
+routing_interface::db_hash_offsets_map sample_hash_routing::route_hashes(const std::span<char> &hashes) const {
+    db_hash_offsets_map res;
+    std::list <size_t> offsets;
+    for (size_t i = 0; i < hashes.size(); i+=64) {
+        offsets.push_back(i);
+    }
+    res [&m_nodes_index.at (0)] = std::move (offsets);
+
+    return res;
+}
+
+// ---------------------------------------------------------------------
+
 sample_hash_routing::node_index_t sample_hash_routing::fill_node_index(
         const std::unordered_map<std::string, std::unique_ptr<protocol::client_pool>> &nodes) {
     node_index_t nodes_index;
@@ -52,9 +69,10 @@ sample_hash_routing::node_index_t sample_hash_routing::fill_node_index(
     return nodes_index;
 }
 
+// ---------------------------------------------------------------------
+
 const std::hash<std::string> &sample_hash_routing::get_hash_func() {
     const static std::hash <std::string> hash_func {};
     return hash_func;
 }
-
 }

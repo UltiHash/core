@@ -85,6 +85,8 @@ void server::handle_normal_request(uint8_t request_id)
         case write_xsmall_blocks::request_id: return handle_write_xsmall_blocks();
         case client_statistics::request_id: return handle_client_statistics();
         case write_chunks::request_id: return handle_write_chunks();
+        case read_chunks::request_id: return handle_read_chunks();
+
 
 
         default:
@@ -397,6 +399,20 @@ void server::handle_write_chunks() {
     auto chunk_sizes = m_bs.read<std::vector <uint32_t>>();
     auto data = m_bs.read<std::vector <char>>();
     auto resp = m_handler_interface->on_write_chunks ({chunk_sizes, data});
+
+    write(m_bs, status{ status::OK });
+    write(m_bs, resp);
+
+    m_bs.sync ();
+}
+
+// ---------------------------------------------------------------------
+
+void server::handle_read_chunks() {
+    DEBUG << "read_chunks request on " << client_->peer();
+
+    auto hashes = m_bs.read<std::vector <char>>();
+    auto resp = m_handler_interface->on_read_chunks ({{hashes.data(), hashes.size()}});
 
     write(m_bs, status{ status::OK });
     write(m_bs, resp);

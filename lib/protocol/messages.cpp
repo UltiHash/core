@@ -6,7 +6,7 @@ namespace uh::protocol
 
 // ---------------------------------------------------------------------
 
-void write(serialization::buffered_serialization& out, const protocol::status& status)
+void write(serialization::buffered_serialization& out, const uh::protocol::status& status)
 {
     out.write(status.code);
 
@@ -525,5 +525,40 @@ void read(serialization::buffered_serialization& in, write_chunks::response& res
     response.effective_size = in.read<decltype (response.effective_size)>();
 }
 
+// ---------------------------------------------------------------------
+
+void write(serialization::buffered_serialization& out, const read_chunks::request& request)
+{
+    out.write(read_chunks::request_id);
+    out.write(request.hashes);
+}
+
+// ---------------------------------------------------------------------
+
+void read(serialization::buffered_serialization& in, read_chunks::request& request)
+{
+    THROW (util::exception, "not implemented");
+}
+
+// ---------------------------------------------------------------------
+
+void write(serialization::buffered_serialization& out, const read_chunks::response& response)
+{
+    out.write(response.data);
+    out.write(response.chunk_sizes);
+
+
+}
+
+// ---------------------------------------------------------------------
+
+void read(serialization::buffered_serialization& in, read_chunks::response& response)
+{
+    check_status(in);
+
+    response.data = in.read<std::vector<char>>();
+    response.chunk_sizes = in.read<decltype (response.chunk_sizes)>();
+
+}
 
 } // namespace uh::protocol

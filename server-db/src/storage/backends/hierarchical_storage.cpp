@@ -188,7 +188,7 @@ void hierarchical_storage::update_space_consumption() {
     m_storage_metrics.used_space().Set(m_used);
 }
 
-std::unique_ptr<io::device> hierarchical_storage::read_block(const protocol::blob &hash) {
+std::unique_ptr<io::device> hierarchical_storage::read_block(const std::span <char>& hash) {
     std::string hex = to_hex_string(hash.begin(), hash.end());
 
     const auto file_path = get_hash_path(hex);

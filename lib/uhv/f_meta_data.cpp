@@ -60,6 +60,14 @@ const std::vector<char>& f_meta_data::f_hashes() const
 
 // ---------------------------------------------------------------------
 
+const std::vector<uint32_t>& f_meta_data::f_chunk_sizes () const
+{
+    return m_chunk_sizes;
+}
+
+
+// ---------------------------------------------------------------------
+
 std::vector<char>& f_meta_data::get_hashes()
 {
     return m_f_hashes;
@@ -128,6 +136,14 @@ void f_meta_data::set_f_size(const std::optional<std::uint64_t>& f_size)
     m_f_size = f_size;
 }
 
+void f_meta_data::add_chunk_sizes(std::vector<uint32_t> &&chunk_sizes) {
+    std::copy(chunk_sizes.begin(), chunk_sizes.end(), std::back_inserter(m_chunk_sizes));
+}
+
+
+void f_meta_data::add_chunk_sizes(const std::vector<uint32_t> &chunk_sizes) {
+    std::copy(chunk_sizes.begin(), chunk_sizes.end(), std::back_inserter(m_chunk_sizes));
+}
 // ---------------------------------------------------------------------
 
 } // namespace uh::uhv

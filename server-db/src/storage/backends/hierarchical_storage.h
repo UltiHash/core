@@ -19,7 +19,7 @@ public:
 
     void start() override;
 
-    std::unique_ptr<io::device> read_block(const uh::protocol::blob& hash) override;
+    std::unique_ptr<io::device> read_block(const std::span <char>& hash) override;
 
     size_t free_space() override;
 

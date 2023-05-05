@@ -5,7 +5,6 @@
 #include "allocation.h"
 #include "messages.h"
 
-class reponse;
 namespace uh::protocol
 {
 
@@ -25,6 +24,8 @@ struct request_interface
     virtual write_xsmall_blocks::response on_write_xsmall_blocks (const write_xsmall_blocks::request &) = 0;
 
     virtual write_chunks::response on_write_chunks (const write_chunks::request &) = 0;
+
+    virtual read_chunks::response on_read_chunks (const read_chunks::request &) = 0;
 
     // default implementations
 
