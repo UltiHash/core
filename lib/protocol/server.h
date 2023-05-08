@@ -34,7 +34,7 @@ public:
     constexpr static std::size_t XSMALL_CHUNK_SIZE_LIMIT = std::numeric_limits <std::uint16_t>::max();
     constexpr static std::size_t XSMALL_CHUNK_COUNT_LIMIT = std::numeric_limits <std::uint16_t>::max();
     constexpr static std::size_t MAXIMUM_BLOCK_SIZE = 2u * 512 * 1024 * 1024;
-    constexpr static std::size_t MAXIMUM_DATA_SIZE = 512 * 1024 * 1024;
+    constexpr static std::size_t MAXIMUM_DATA_SIZE = 512lu * 1024lu * 1024lu;
 
 
     explicit server (const std::shared_ptr<net::socket>& client,
