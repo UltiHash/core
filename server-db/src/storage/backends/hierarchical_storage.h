@@ -50,8 +50,8 @@ public:
         ~hierarchical_multi_block_allocation() override;
         hierarchical_multi_block_allocation(const hierarchical_storage&) = delete;
         hierarchical_multi_block_allocation &operator=(const hierarchical_storage &) = delete;
-    private:
 
+    private:
         hierarchical_storage &m_storage_backend;
         std::unique_ptr <io::temp_file> m_tmp {nullptr};
         std::unique_ptr <io::sha512> m_sha {nullptr};
@@ -61,10 +61,10 @@ public:
         std::size_t m_effective_size {};
         compressed_file_store& m_store;
     };
+
 private:
-
-
     void update_space_consumption();
+    void return_space(std::size_t size);
 
     void acquire_storage_size (std::size_t size);
 
