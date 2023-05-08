@@ -3,7 +3,6 @@
 
 #include "f_upload.h"
 #include "protocol/messages.h"
-#include "util/sha512.h"
 
 namespace uh::client::serialization
 {
@@ -68,10 +67,8 @@ void f_upload::send_statistics()
     uh::protocol::blob uhv_path {};
     std::ranges::copy(m_uhv_path.string(), std::back_inserter(uhv_path));
 
-    const uh::protocol::blob uhv_id {uh::util::sha512(uhv_path)};
-
     uh::protocol::client_statistics::request client_stat {
-            uhv_id, m_uploaded_size };
+            uhv_path, m_uploaded_size };
 
     protocol::client_pool::handle client_handle = m_client_pool.get();
     client_handle->send_client_statistics(client_stat);
