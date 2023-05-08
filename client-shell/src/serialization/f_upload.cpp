@@ -92,7 +92,7 @@ void f_upload::chunk_and_upload(std::unique_ptr<uhv::f_meta_data>& f_meta_data,
         for (auto chunk = chunker->next_chunk(); !chunk.empty(); chunk = chunker->next_chunk()) {
             chunk_sizes.push_back(chunk.size());
             if (chunker->get_buffer().length() == 0) {
-                protocol::write_chunks::response resp = client_handle->write_chunks({chunk_sizes, chunker->get_buffer().raw_data()});
+                protocol::write_chunks::response resp = client_handle->write_chunks(protocol::write_chunks::request {chunk_sizes, chunker->get_buffer().raw_data()});
                 f_meta_data->add_hash(resp.hashes);
                 f_meta_data->add_effective_size(resp.effective_size);
                 f_meta_data->add_chunk_sizes (std::move (chunk_sizes));
