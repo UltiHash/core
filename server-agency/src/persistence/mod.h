@@ -17,7 +17,7 @@ namespace uh::an::persistence
 
         ~mod();
 
-        storage& storage();
+        storage& client_storage();
 
     private:
         std::unique_ptr<storage> m_storage;
