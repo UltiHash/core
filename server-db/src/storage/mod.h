@@ -10,6 +10,7 @@
 #include <filesystem>
 #include "utils.h"
 #include <storage/backend.h>
+#include <storage/compressed_file_store.h>
 
 
 namespace uh::dbn::storage
@@ -34,6 +35,8 @@ struct storage_config
     std::filesystem::path db_root = std::string(default_db_root);
     std::string backend_type = std::string(default_backend_type);
     bool create_new_root = false;
+
+    compressed_file_store_config comp;
 };
 
 // ---------------------------------------------------------------------
