@@ -2,6 +2,7 @@
 #define CHUNKING_CHUNKER_H
 
 #include <span>
+#include "buffer.h"
 
 
 namespace uh::chunking
@@ -21,6 +22,7 @@ public:
      * @throw may throw any derivative of exception on error
      */
     virtual std::span<char> next_chunk() = 0;
+    [[nodiscard]] virtual buffer& get_buffer () = 0;
 };
 
 // ---------------------------------------------------------------------

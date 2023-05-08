@@ -35,6 +35,7 @@ public:
     mod_chunker(const mod_cdc_config &config, io::device &in, size_t chunks_count_in_buffer = 10);
 
     std::span<char> next_chunk() override;
+    [[nodiscard]] buffer& get_buffer () override;
 
 private:
 

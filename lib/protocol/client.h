@@ -67,6 +67,19 @@ public:
     block_meta_data write_small_block(std::span <char> data);
 
     /**
+     * Sends the given chunks of data and their sizes to the agency server and returns its
+     * response.
+     * @return response from agency server
+     */
+    uh::protocol::write_chunks::response write_chunks(const uh::protocol::write_chunks::request &);
+
+    /**
+     * Sends a bunch of hashes to the server and receives its data.
+     */
+    uh::protocol::read_chunks::response read_chunks (const read_chunks::request &req);
+
+
+    /**
      * Sends several blocks at once to the data node and returns the hashes and the effective sizes of the blocks.
      * If the data node does not have free space it returns a failed status.
      *

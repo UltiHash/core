@@ -63,6 +63,7 @@ public:
 
     [[nodiscard]] const std::filesystem::path& f_path() const;
     [[nodiscard]] const std::vector<char>& f_hashes() const;
+    [[nodiscard]] const std::vector<uint32_t>& f_chunk_sizes() const;
     [[nodiscard]] const std::uint8_t& f_type() const;
     [[nodiscard]] const std::uint32_t& f_permissions() const;
     [[nodiscard]] const std::uint64_t& f_size() const;
@@ -77,6 +78,8 @@ public:
     void set_f_size(const std::optional<std::uint64_t>&);
     void set_f_hashes(const std::vector <char>&);
     void add_hash(const std::vector<char>&);
+    void add_chunk_sizes(std::vector<uint32_t>&&);
+    void add_chunk_sizes(const std::vector<uint32_t>&);
     void remove_hash (size_t start_index, size_t end_index);
     void add_effective_size(const std::uint64_t&);
     void set_effective_size(const std::uint64_t&);
@@ -88,6 +91,7 @@ private:
     std::uint32_t m_f_permissions{};
     std::optional<std::uint64_t> m_f_size{};
     std::uint64_t m_f_effective_size{};
+    std::vector <uint32_t> m_chunk_sizes{};
     std::vector<char> m_f_hashes{};
 };
 

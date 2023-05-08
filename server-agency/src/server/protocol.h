@@ -27,6 +27,9 @@ public:
     uh::protocol::block_meta_data on_write_small_block (std::span <char> buffer) override;
     void on_client_statistics(uh::protocol::client_statistics::request& client_stat) override;
     uh::protocol::write_xsmall_blocks::response on_write_xsmall_blocks (const uh::protocol::write_xsmall_blocks::request &) override;
+    uh::protocol::write_chunks::response on_write_chunks (const uh::protocol::write_chunks::request &) override;
+    uh::protocol::read_chunks::response on_read_chunks (const uh::protocol::read_chunks::request &) override;
+
 
     std::size_t on_free_space() override;
     void on_next_chunk(std::span<char> buffer) override;

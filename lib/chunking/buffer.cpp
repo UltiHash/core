@@ -10,7 +10,7 @@ namespace uh::chunking
 
 buffer::buffer(io::device& in, std::size_t size)
     : m_in(in),
-      m_buffer(2 * size),
+      m_buffer(size),
       m_wptr(0),
       m_rptr(0),
       m_size(size)
@@ -21,12 +21,13 @@ buffer::buffer(io::device& in, std::size_t size)
 
 std::size_t buffer::fill_buffer()
 {
-    if (m_rptr > m_size)
-    {
-        std::memmove(&m_buffer[0], &m_buffer[m_rptr], m_wptr - m_rptr);
-        m_wptr = m_wptr - m_rptr;
-        m_rptr = 0;
+    if (m_rptr < m_wptr) {
+        return length ();
     }
+
+    std::memmove(&m_buffer[0], &m_buffer[m_rptr], m_wptr - m_rptr);
+    m_wptr = m_wptr - m_rptr;
+    m_rptr = 0;
 
     m_wptr += m_in.read({ &m_buffer[m_wptr], m_buffer.size() - m_wptr });
 
@@ -49,6 +50,11 @@ int buffer::next_byte()
 
 void buffer::skip(std::size_t count)
 {
+    if (m_rptr + count > m_wptr) {
+        count -= m_wptr - m_rptr;
+        m_rptr = m_wptr;
+        fill_buffer();
+    }
     m_rptr += count;
 }
 
@@ -92,6 +98,13 @@ std::span<char> buffer::data(const pos& p)
 std::span<char> buffer::data()
 {
     return { &m_buffer[m_rptr], length() };
+}
+
+// ---------------------------------------------------------------------
+
+std::span<char> buffer::raw_data()
+{
+    return { &m_buffer[0], m_wptr };
 }
 
 // ---------------------------------------------------------------------

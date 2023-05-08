@@ -94,7 +94,7 @@ void dump_storage::start(){
 
 // ---------------------------------------------------------------------
 
-std::unique_ptr<io::device> dump_storage::read_block(const uh::protocol::blob& hash) {
+std::unique_ptr<io::device> dump_storage::read_block(const std::span <char>& hash) {
 
     std::string hash_string(hash.begin(), hash.end());
 
