@@ -2,8 +2,8 @@
 #define SERVER_AGENCY_PERSISTENCE_MDD_H
 
 #include <memory>
-#include <persistence/storage.h>
 #include <persistence/options.h>
+#include <persistence/storage/client_metrics_storage.h>
 
 namespace uh::an::persistence
 {
@@ -19,10 +19,10 @@ namespace uh::an::persistence
 
         void start();
 
-        storage& client_storage();
+        client_metrics& storage();
 
     private:
-        std::unique_ptr<storage> m_storage;
+        std::unique_ptr<client_metrics> m_storage;
     };
 
 // ---------------------------------------------------------------------
