@@ -1,6 +1,5 @@
 #include "client_metrics.h"
 
-
 namespace uh::an::metrics
 {
 
@@ -13,9 +12,10 @@ client_metrics::client_metrics(uh::metrics::service& service)
 
 // ---------------------------------------------------------------------
 
-void client_metrics::set_uhv_metrics(const std::pair<std::string, std::uint64_t>& label) const
+void client_metrics::set_uhv_metrics(const uh::protocol::client_statistics::request& client_stat) const
 {
-    m_gauges.Add({{"uhv_id", label.first}}).Set(static_cast<double>(label.second));
+    m_gauges.Add({{"uhv_id", std::string(client_stat.uhv_id.begin(), client_stat.uhv_id.end())}})
+        .Set(static_cast<double>(client_stat.integrated_size));
 }
 
 // ---------------------------------------------------------------------

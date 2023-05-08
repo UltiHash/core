@@ -1,26 +1,27 @@
 #ifndef SERVER_AGENCY_PERSISTENCE_STORAGE_STORAGE_H
 #define SERVER_AGENCY_PERSISTENCE_STORAGE_STORAGE_H
 
-#include "persistence/storage.h"
 #include <logging/logging_boost.h>
 #include <persistence/options.h>
 #include <io/temp_file.h>
+#include <protocol/messages.h>
 
 namespace uh::an::persistence
 {
 
 // ---------------------------------------------------------------------
 
-    class statistics_storage : public storage
+    class client_metrics
     {
     public:
-        explicit statistics_storage(const persistence_config& config);
+        explicit client_metrics(const persistence_config& config);
 
-        void start() override;
+        void start();
+        void add(const uh::protocol::client_statistics::request& req);
 
     private:
         std::filesystem::path m_target_path;
-        std::unique_ptr<io::temp_file> m_tmp {};
+        std::map<std::string, std::uint64_t> m_id_to_size;
     };
 
 // ---------------------------------------------------------------------
