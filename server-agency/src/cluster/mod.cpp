@@ -185,7 +185,7 @@ mod::~mod() = default;
 
 void mod::start()
 {
-    INFO << "starting cluster module";
+    INFO << "          starting cluster module";
 }
 
 // ---------------------------------------------------------------------

@@ -10,7 +10,7 @@ namespace uh::dbn::storage {
 
 class dump_storage : public backend {
     public:
-        dump_storage(std::filesystem::path db_root, size_t size_bytes, uh::dbn::metrics::storage_metrics& storage_metrics):
+        dump_storage(const std::filesystem::path& db_root, size_t size_bytes, uh::dbn::metrics::storage_metrics& storage_metrics):
         m_root(db_root),
         m_alloc(size_bytes),
         m_used(0),

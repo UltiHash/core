@@ -20,13 +20,13 @@ options::options(): uh::options::options("Persistence Options")
 
 uh::options::action options::evaluate(const boost::program_options::variables_map& vars)
 {
-    auto persistence_path = vars["persistence-path"].as<std::string>();
+    m_config.persistence_path = std::filesystem::path(vars["persistence-path"].as<std::string>());
 
-    if (!std::filesystem::exists(persistence_path))
-        throw std::runtime_error("Path doesn't exists: " + persistence_path);
+    if (!std::filesystem::exists(m_config.persistence_path))
+        throw std::runtime_error("Path doesn't exists: " + m_config.persistence_path);
 
-    if (!std::filesystem::is_directory(persistence_path))
-        throw std::runtime_error("Path '" + persistence_path + "' is not a directory.");
+    if (!std::filesystem::is_directory(m_config.persistence_path))
+        throw std::runtime_error("Path '" + m_config.persistence_path + "' is not a directory.");
 
     return uh::options::action::proceed;
 

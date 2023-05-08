@@ -13,9 +13,11 @@ namespace uh::an::persistence
     class mod
     {
     public:
-        mod(const persistence_config& config);
+        explicit mod(const persistence_config& config);
 
-        ~mod();
+        ~mod() = default;
+
+        void start();
 
         storage& client_storage();
 
