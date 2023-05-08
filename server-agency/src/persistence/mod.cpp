@@ -12,6 +12,14 @@ mod::mod(const persistence_config& config) : m_storage(std::make_unique<statisti
 
 // ---------------------------------------------------------------------
 
+void mod::start()
+{
+    INFO << "       starting persistence module";
+    m_storage->start();
+}
+
+// ---------------------------------------------------------------------
+
 storage& mod::client_storage()
 {
     return *m_storage;

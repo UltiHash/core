@@ -5,6 +5,7 @@
 #include <cluster/options.h>
 #include <server/mod.h>
 #include <metrics/mod.h>
+#include <persistence/mod.h>
 #include "persistence/options.h"
 #include <logging/logging_boost.h>
 
@@ -36,11 +37,14 @@ int main(int argc, const char** argv)
 
         init_logging(config.logging());
 
-        INFO << "Setting up metrics";
+        INFO << "               --- Agency Node Modules ---";
         metrics::mod metrics_module(config.metrics());
 
         cluster::mod cluster_module(config.cluster());
         cluster_module.start();
+
+        uh::an::persistence::mod persistence_module(config.persistence());
+        persistence_module.start();
 
         server::mod server_module(config.server(), cluster_module, metrics_module);
         server_module.start();
