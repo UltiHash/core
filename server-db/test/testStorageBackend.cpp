@@ -43,7 +43,7 @@ static const std::string CONTENTS_STR = "These are the contents of test_input_fi
 
 std::vector<char> to_vector(const std::string& s)
 {
-    return std::vector<char>(s.begin(), s.end());
+    return {s.begin(), s.end()};
 }
 
 uh::protocol::block_meta_data integrate_data (const std::vector <char> &data, uh::dbn::storage::backend &storage_backend) {

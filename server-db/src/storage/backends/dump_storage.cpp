@@ -2,6 +2,8 @@
 
 #include <io/file.h>
 #include <io/sha512.h>
+
+#include <utility>
 #include "util/sha512.h"
 
 
@@ -13,11 +15,11 @@ class dump_storage_allocation : public protocol::allocation
 {
 public:
     dump_storage_allocation(std::unique_ptr<io::temp_file> device,
-                            const std::filesystem::path& target_dir,
+                            std::filesystem::path target_dir,
                             std::atomic<size_t>& used,
                             std::size_t size)
         : m_tmp(std::move(device)),
-          m_target_dir(target_dir),
+          m_target_dir(std::move(target_dir)),
           m_used(used),
           m_size(size),
           m_sha(*m_tmp),
