@@ -16,7 +16,8 @@ APPLICATION_CONFIG(
     (server, uh::options::server_options),
     (logging, uh::options::logging_options),
     (metrics, uh::options::metrics_options),
-    (storage, uh::dbn::storage::options));
+    (storage, uh::dbn::storage::options),
+    (comp, uh::dbn::storage::compression_options));
 
 using namespace uh::log;
 using namespace uh::dbn;
@@ -36,7 +37,9 @@ int main(int argc, const char** argv)
         INFO << "Setting up metrics";
         metrics::mod metrics_module(config.metrics()); //TODO add storage metrics
 
-        storage::mod storage_module(config.storage(), metrics_module.storage());
+        auto storage_config = config.storage();
+        storage_config.comp = config.comp();
+        storage::mod storage_module(storage_config, metrics_module.storage());
         storage_module.start();
 
         server::mod server_module(config.server(), storage_module, metrics_module);
