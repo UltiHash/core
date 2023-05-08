@@ -1,0 +1,44 @@
+#include <filesystem>
+#include "options.h"
+
+
+using namespace boost::program_options;
+
+namespace uh::an::persistence
+{
+
+// ---------------------------------------------------------------------
+
+options::options(): uh::options::options("Persistence Options")
+{
+    visible().add_options()
+            ("persistence-path,P", value< std::string>()->default_value("/var/lib/"), "Path where data can be stored permanently");
+
+}
+
+// ---------------------------------------------------------------------
+
+uh::options::action options::evaluate(const boost::program_options::variables_map& vars)
+{
+    auto persistence_path = vars["persistence-path"].as<std::string>();
+
+    if (!std::filesystem::exists(persistence_path))
+        throw std::runtime_error("Path doesn't exists: " + persistence_path);
+
+    if (!std::filesystem::is_directory(persistence_path))
+        throw std::runtime_error("Path '" + persistence_path + "' is not a directory.");
+
+    return uh::options::action::proceed;
+
+}
+
+// ---------------------------------------------------------------------
+
+const persistence_config& options::config() const
+{
+    return m_config;
+}
+
+// ---------------------------------------------------------------------
+
+} // namespace uh::an::persistence

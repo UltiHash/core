@@ -5,6 +5,7 @@
 #include <cluster/options.h>
 #include <server/mod.h>
 #include <metrics/mod.h>
+#include "persistence/options.h"
 #include <logging/logging_boost.h>
 
 #include <options/app_config.h>
@@ -17,7 +18,8 @@ APPLICATION_CONFIG(
     (server, uh::options::server_options),
     (logging, uh::options::logging_options),
     (metrics, uh::options::metrics_options),
-    (cluster, uh::an::cluster::options));
+    (cluster, uh::an::cluster::options),
+    (persistence, uh::an::persistence::options));
 
 using namespace uh::log;
 using namespace uh::an;
