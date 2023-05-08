@@ -23,7 +23,7 @@ public:
             : m_metrics_service({}),
               m_metrics(m_metrics_service),
               m_dump(m_tmp.path(), ALLOCATED_BYTES, m_metrics),
-              m_hierarchical(m_tmp.path(), ALLOCATED_BYTES, m_metrics) {
+              m_hierarchical({ m_tmp.path(), ALLOCATED_BYTES }, m_metrics) {
     }
 
     uh::dbn::storage::backend &backend() {

@@ -2,6 +2,7 @@
 
 #include <util/exception.h>
 #include <logging/logging_boost.h>
+#include <io/count.h>
 #include <io/file.h>
 #include <compression/compression.h>
 
@@ -66,38 +67,47 @@ compression_worker::compression_worker(compressed_file_store& store,
 
 void compression_worker::operator()(const std::filesystem::path& path, comp::type type)
 {
+    std::streamsize savings = 0;
     try
     {
         m_store.start(path);
         auto in = open_reader(path);
+        io::count count_in(*in);
 
-        auto temp = std::make_unique<io::temp_file>(path.parent_path());
-        write_comp_type(*temp, type);
+        auto temp = io::temp_file(path.parent_path());
+        io::count count_out(temp);
+
+        write_comp_type(count_out, type);
 
         {
-            auto out = comp::create(*temp, type);
-            copy(*in, *out);
+            auto out = comp::create(count_out, type);
+            copy(count_in, *out);
         }
 
-        temp->rename(path);
+        temp.rename(path);
+
+        savings = count_in.read() - count_out.written();
     }
     catch (...)
     {
-        m_store.finish(path);
+        m_store.finish(path, savings);
         throw;
     }
 
-    m_store.finish(path);
+    m_store.finish(path, savings);
 }
 
 // ---------------------------------------------------------------------
 
-compressed_file_store::compressed_file_store(const compressed_file_store_config& config,
-                                             storage_metrics& metrics)
+compressed_file_store::compressed_file_store(
+    const compressed_file_store_config& config,
+    storage_metrics& metrics,
+    std::function<void(std::streamsize)> report_savings)
     : m_metrics(metrics),
-      m_worker(config.threads, compression_worker(*this, m_metrics)),
       m_type(config.compression),
-      m_active(0)
+      m_active(0),
+      m_report_savings(report_savings),
+      m_worker(config.threads, compression_worker(*this, m_metrics))
 {
 }
 
@@ -155,7 +165,8 @@ void compressed_file_store::start(const std::filesystem::path& path)
 
 // ---------------------------------------------------------------------
 
-void compressed_file_store::finish(const std::filesystem::path& path)
+void compressed_file_store::finish(const std::filesystem::path& path,
+                                   std::streamsize savings)
 {
     std::unique_lock<std::mutex> lock(m_comp_mutex);
 
@@ -164,6 +175,7 @@ void compressed_file_store::finish(const std::filesystem::path& path)
 
     --m_active;
     m_metrics.comp_running().Set(m_active);
+    m_report_savings(savings);
 
     INFO << "finished compression of " << path;
 }
