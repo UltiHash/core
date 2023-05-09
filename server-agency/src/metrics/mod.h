@@ -15,7 +15,7 @@ namespace uh::an::metrics
 class mod
 {
 public:
-    explicit mod(const uh::metrics::config& config, uh::an::persistence::mod& persistence);
+    mod(const uh::metrics::config& config, uh::an::persistence::mod& persistence);
 
     ~mod();
 
