@@ -25,7 +25,7 @@ void client_metrics::start()
         std::filesystem::create_directory(m_target_path.parent_path());
     }
 
-    INFO << "client metrics persistence on: " << m_target_path;
+    INFO << "client metrics persistent on: " << m_target_path;
 }
 
 // ---------------------------------------------------------------------
