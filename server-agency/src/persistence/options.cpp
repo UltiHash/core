@@ -12,7 +12,7 @@ namespace uh::an::persistence
 options::options(): uh::options::options("Persistence Options")
 {
     visible().add_options()
-            ("persistence-path,P", value< std::string>()->default_value("/var/lib/"), "Path where data can be stored permanently");
+            ("persistence-path,P", value<std::string>()->default_value("/var/lib/"), "Path where data can be stored permanently");
 
 }
 

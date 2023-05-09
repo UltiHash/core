@@ -14,8 +14,12 @@ namespace uh::an::server
 
 // ---------------------------------------------------------------------
 
-protocol::protocol(cluster::mod& cluster, metrics::client_metrics& client, const uh::net::server_info &serv_info):
+protocol::protocol(cluster::mod& cluster,
+                   an::persistence::persist& persistence,
+                   metrics::client_metrics& client,
+                   const uh::net::server_info &serv_info):
         m_cluster(cluster),
+        m_persistence(persistence),
         m_client(client),
         m_serv_info (serv_info)
 {
@@ -66,8 +70,7 @@ block_meta_data protocol::on_write_small_block (std::span <char> buffer)
 void protocol::on_client_statistics(uh::protocol::client_statistics::request& client_stat)
 {
     m_client.set_uhv_metrics(client_stat);
-    // must call agency node's persistence module for persisting data
-    // persistence module has the map
+    m_persistence.add(client_stat);
 }
 
 // ---------------------------------------------------------------------

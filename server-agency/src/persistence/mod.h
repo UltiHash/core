@@ -23,6 +23,7 @@ namespace uh::an::persistence
 
     private:
         std::unique_ptr<client_metrics> m_storage;
+        const persistence_config& m_config;
     };
 
 // ---------------------------------------------------------------------
