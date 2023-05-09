@@ -23,104 +23,9 @@ APPLICATION_CONFIG
 (chunking, uh::client::chunking::options)
 );
 
-struct bytes {
 
-
-    bytes (std::span <char> data): m_size (data.size()), m_data (new unsigned char[m_size]) {
-        assert(m_size % sizeof(uint64_t) == 0);
-        std::memcpy(m_data, data.data(), m_size);
-    }
-
-    bytes (bytes &&b) noexcept {
-        m_data = b.m_data;
-        m_size = b.m_size;
-        b.m_data = nullptr;
-        b.m_size = 0;
-    }
-
-    std::size_t m_size;
-    unsigned char *m_data;
-    bool operator < (const bytes &b) {
-        for (std::size_t i = 0; i < m_size; i+=sizeof (uint64_t)) {
-            const auto v1 = *reinterpret_cast <uint64_t *> (m_data + i);
-            const auto v2 = *reinterpret_cast <uint64_t *> (b.m_data + i);
-            if (v1 == v2) {
-                continue;
-            }
-            return v1 < v2;
-        }
-        return false;
-    }
-
-    bool operator <= (const bytes &b) {
-        for (std::size_t i = 0; i < m_size; i+=sizeof (uint64_t)) {
-            const auto v1 = *reinterpret_cast <uint64_t *> (m_data + i);
-            const auto v2 = *reinterpret_cast <uint64_t *> (b.m_data + i);
-            if (v1 == v2) {
-                continue;
-            }
-            return v1 < v2;
-        }
-        return true;
-    }
-
-    bool operator == (const bytes &b) {
-        for (std::size_t i = 0; i < m_size; i+=sizeof (uint64_t)) {
-            const auto v1 = *reinterpret_cast <uint64_t *> (m_data + i);
-            const auto v2 = *reinterpret_cast <uint64_t *> (b.m_data + i);
-            if (v1 == v2) {
-                continue;
-            }
-            return false;
-        }
-        return true;
-    }
-
-    bool operator != (const bytes &b) {
-        for (std::size_t i = 0; i < m_size; i+=sizeof (uint64_t)) {
-            const auto v1 = *reinterpret_cast <uint64_t *> (m_data + i);
-            const auto v2 = *reinterpret_cast <uint64_t *> (b.m_data + i);
-            if (v1 == v2) {
-                continue;
-            }
-            return true;
-        }
-        return false;
-    }
-
-    bool operator > (const bytes &b) {
-        for (std::size_t i = 0; i < m_size; i+=sizeof (uint64_t)) {
-            const auto v1 = *reinterpret_cast <uint64_t *> (m_data + i);
-            const auto v2 = *reinterpret_cast <uint64_t *> (b.m_data + i);
-            if (v1 == v2) {
-                continue;
-            }
-            return v1 > v2;
-        }
-        return false;
-    }
-
-    bool operator >= (const bytes &b) {
-        for (std::size_t i = 0; i < m_size; i+=sizeof (uint64_t)) {
-            const auto v1 = *reinterpret_cast <uint64_t *> (m_data + i);
-            const auto v2 = *reinterpret_cast <uint64_t *> (b.m_data + i);
-            if (v1 == v2) {
-                continue;
-            }
-            return v1 > v2;
-        }
-        return true;
-    }
-
-
-    ~bytes() {
-        m_size = 0;
-        if (m_data != nullptr) {
-            delete[] m_data;
-            m_data = nullptr;
-        }
-    }
-};
+std::map <std::string, unsigned long> blocks;
+size_t total_size = 0;
 
 size_t largest_common_prefix (const std::string &str1, const std::string& str2) {
     size_t i = 0;
@@ -130,26 +35,6 @@ size_t largest_common_prefix (const std::string &str1, const std::string& str2) 
     }
     return i;
 }
-
-struct lexical_comp {
-    bool operator()(const std::string& a, const std::string& b) const {
-        const auto lcp = largest_common_prefix(a, b);
-        if (lcp == a.size()) {
-            return true;
-        }
-        else if (lcp == b.size()) {
-            return false;
-        }
-        else {
-            return a.at(lcp) < b.at(lcp);
-
-        }
-        //return std::lexicographical_compare (a.cbegin(), a.cend(), b.cbegin(), b.cend());
-    }
-};
-
-std::map <std::string, unsigned long> blocks;
-size_t total_size = 0;
 
 void insert_block (const std::string &chunk_str, size_t min_block) {
 
