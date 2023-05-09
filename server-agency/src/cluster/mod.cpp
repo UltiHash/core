@@ -7,6 +7,7 @@
 #include <protocol/client_factory.h>
 #include <net/plain_socket.h>
 #include <util/exception.h>
+#include <forward_list>
 
 
 using namespace boost::asio;
@@ -271,6 +272,8 @@ std::unique_ptr<uh::protocol::allocation> mod::allocate(std::size_t size)
     THROW(util::exception, "insufficient space in back-end");
 }
 
+// ---------------------------------------------------------------------
+
 protocol::block_meta_data mod::write_small_block (std::span <char> buffer) {
 
     auto &client_connections = m_impl->m_routing->route_data(buffer);
@@ -278,26 +281,109 @@ protocol::block_meta_data mod::write_small_block (std::span <char> buffer) {
 
 }
 
+// ---------------------------------------------------------------------
+
 uh::protocol::write_xsmall_blocks::response mod::write_xsmall_blocks (const uh::protocol::write_xsmall_blocks::request &req) {
     std::map <client_pool *, uh::protocol::write_xsmall_blocks::request> conn_blocks_map;
     size_t offset = 0;
-    for (std::size_t i = 0; i < req.chunk_sizes.size(); i++) {
-        std::span <const char> block {req.data.data() + offset, req.chunk_sizes [i]};
+    for (const auto chunk_size: req.chunk_sizes) {
+        std::span <const char> block {req.data.data() + offset, chunk_size};
         auto &client_connections = m_impl->m_routing->route_data(block);
         conn_blocks_map [&client_connections].data.insert(conn_blocks_map [&client_connections].data.end(), block.data(), block.data() + block.size());
-        conn_blocks_map [&client_connections].chunk_sizes.push_back(req.chunk_sizes[i]);
-        offset += req.chunk_sizes [i];
+        conn_blocks_map [&client_connections].chunk_sizes.push_back(chunk_size);
+        offset += chunk_size;
 
     }
 
     // TODO this could be done in different threads
     uh::protocol::write_xsmall_blocks::response total_res;
+    total_res.effective_size = 0;
+
     for (auto &conn_blocks: conn_blocks_map) {
         auto res = conn_blocks.first->get()->write_xsmall_blocks (conn_blocks.second);
         total_res.hashes.insert(total_res.hashes.end(), res.hashes.begin(), res.hashes.end());
         total_res.effective_size += res.effective_size;
     }
     return total_res;
+}
+
+// ---------------------------------------------------------------------
+
+uh::protocol::write_chunks::response mod::write_chunks(const write_chunks::request &req) {
+    std::map <client_pool *, chunks_meta_data> conn_blocks_map;
+
+    size_t offset = 0;
+
+    for (std::size_t i = 0; i < req.chunk_sizes.size(); ++i) {
+        const auto chunk_size = req.chunk_sizes[i];
+        std::span <const char> block {req.data.data() + offset, chunk_size};
+        auto &client_connections = m_impl->m_routing->route_data(block);
+        auto &chunks_md = conn_blocks_map [&client_connections];
+        chunks_md.data.insert(conn_blocks_map [&client_connections].data.end(), block.data(), block.data() + block.size());
+        chunks_md.chunk_sizes.emplace_back(chunk_size);
+        chunks_md.chunk_indices.emplace_back(i);
+        offset += chunk_size;
+    }
+
+    // TODO this should be done in different threads
+    uh::protocol::write_chunks::response total_res;
+    total_res.hashes.resize(req.chunk_sizes.size() * 64);
+    total_res.effective_size = 0;
+    for (auto &conn_blocks: conn_blocks_map) {
+        auto res = conn_blocks.first->get()->write_chunks ({conn_blocks.second.chunk_sizes, conn_blocks.second.data});
+        std::size_t dn_index = 0;
+        for (const auto total_index: conn_blocks.second.chunk_indices) {
+            std::memcpy (total_res.hashes.data() + total_index * 64, res.hashes.data() + dn_index, 64);
+            dn_index += 64;
+        }
+        total_res.effective_size += res.effective_size;
+    }
+    return total_res;
+}
+
+// ---------------------------------------------------------------------
+
+uh::protocol::read_chunks::response mod::read_chunks(const read_chunks::request &req) {
+
+    std::map <client_pool *, std::vector <char>> conn_hashes_map;
+
+    auto routed_hash_offsets = m_impl->m_routing->route_hashes(req.hashes);
+
+    for (const auto &connection_hash_off_pair: routed_hash_offsets) {
+
+        auto& conn_hashes = conn_hashes_map[connection_hash_off_pair.first];
+        conn_hashes.reserve(connection_hash_off_pair.second.size() * 64);
+
+        for (const auto req_hash_off: connection_hash_off_pair.second) {
+            conn_hashes.insert(conn_hashes.end(), req.hashes.data() + req_hash_off, req.hashes.data() + req_hash_off + 64);
+        }
+    }
+
+    std::forward_list <uh::protocol::read_chunks::response> responses;
+    std::map <std::size_t, std::span <char>> hash_offset_data_map;
+
+    // TODO this should be done in different threads
+    for (auto &conn_hashes: conn_hashes_map) {
+
+        const auto &conn_hash_offsets = routed_hash_offsets [conn_hashes.first];
+        responses.emplace_front(std::move (conn_hashes.first->get()->read_chunks ({conn_hashes.second})));
+        auto &resp = responses.front();
+
+        size_t offset = 0;
+        size_t chunk_size_id = 0;
+        for (const auto hash_offset: conn_hash_offsets) {
+            const auto chunk_size = resp.chunk_sizes[chunk_size_id ++];
+            hash_offset_data_map [hash_offset] = std::span <char> {resp.data.data() + offset, chunk_size};
+            offset += chunk_size;
+        }
+    }
+
+    uh::protocol::read_chunks::response total_resp;
+    for (const auto &hash_offset_data_pair: hash_offset_data_map) {
+        total_resp.data.insert(total_resp.data.end(), hash_offset_data_pair.second.begin(), hash_offset_data_pair.second.end());
+    }
+
+    return total_resp;
 }
 
 // ---------------------------------------------------------------------

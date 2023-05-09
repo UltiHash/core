@@ -21,6 +21,8 @@ protocol_metrics::protocol_metrics(uh::metrics::service& service)
       m_reqs_write_chunk(m_counters.Add({{ "type", "write_chunk" }})),
       m_reqs_write_small_block (m_counters.Add({{ "type", "write_small_block" }})),
       m_reqs_write_xsmall_blocks (m_counters.Add({{ "type", "write_xsmall_blocks" }})),
+      m_reqs_write_chunks(m_counters.Add({{ "type", "write_chunks" }})),
+      m_reqs_read_chunks(m_counters.Add({{ "type", "read_chunks" }})),
       m_reqs_allocate_chunk(m_counters.Add({{ "type", "allocate_chunk" }})),
       m_reqs_finalize(m_counters.Add({{ "type", "finalize" }})),
       m_reqs_client_statistics(m_counters.Add({{ "type", "client_statistics" }}))
@@ -96,6 +98,20 @@ prometheus::Counter& protocol_metrics::reqs_client_statistics() const
 prometheus::Counter& protocol_metrics::reqs_write_xsmall_blocks() const
 {
     return m_reqs_write_xsmall_blocks;
+}
+
+// ---------------------------------------------------------------------
+
+prometheus::Counter& protocol_metrics::reqs_write_chunks () const
+{
+    return m_reqs_write_chunks;
+}
+
+// ---------------------------------------------------------------------
+
+prometheus::Counter& protocol_metrics::reqs_read_chunks () const
+{
+    return m_reqs_read_chunks;
 }
 
 // ---------------------------------------------------------------------
@@ -209,10 +225,25 @@ uh::protocol::write_xsmall_blocks::response protocol_metrics_wrapper::on_write_x
 
 // ---------------------------------------------------------------------
 
+uh::protocol::write_chunks::response protocol_metrics_wrapper::on_write_chunks (const uh::protocol::write_chunks::request &req)
+{
+    m_metrics.reqs_write_chunks().Increment(req.chunk_sizes.size());
+    return m_base->on_write_chunks(req);
+}
+
+// ---------------------------------------------------------------------
+
 std::unique_ptr<allocation> protocol_metrics_wrapper::on_allocate_chunk(std::size_t size)
 {
     m_metrics.reqs_allocate_chunk().Increment();
     return m_base->on_allocate_chunk(size);
+}
+
+// ---------------------------------------------------------------------
+
+uh::protocol::read_chunks::response protocol_metrics_wrapper::on_read_chunks(const read_chunks::request &req) {
+    m_metrics.reqs_read_chunks().Increment(req.hashes.size() / 64);
+    return m_base->on_read_chunks (req);
 }
 
 // ---------------------------------------------------------------------

@@ -114,4 +114,10 @@ std::span<char> rabin_fp::next_chunk()
 
 // ---------------------------------------------------------------------
 
+buffer &rabin_fp::get_buffer() {
+    THROW(util::exception, "not supported");
+}
+
+// ---------------------------------------------------------------------
+
 } // namespace uh::client::chunking

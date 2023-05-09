@@ -2,6 +2,7 @@
 // Created by masi on 4/28/23.
 //
 #include "mod_chunker.h"
+#include "util/exception.h"
 
 uh::chunking::mod_chunker::mod_chunker(const uh::chunking::mod_cdc_config &config, uh::io::device &in, size_t chunks_count_in_buffer)
         :
@@ -46,6 +47,10 @@ void uh::chunking::mod_chunker::refresh_buffer() {
     std::memmove(m_buffer.data(), m_buffer.data() + m_pointer, remaining_size);
     m_buf_size = m_dev.read({m_buffer.data() + remaining_size, m_buf_size - remaining_size}) + remaining_size;
     m_pointer = 0;
+}
+
+uh::chunking::buffer &uh::chunking::mod_chunker::get_buffer() {
+    THROW (util::exception, "not supported");
 }
 
 

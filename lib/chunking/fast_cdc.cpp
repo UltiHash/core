@@ -10,12 +10,12 @@ namespace uh::chunking
 
 // ---------------------------------------------------------------------
 
-fast_cdc::fast_cdc(const fast_cdc_config& c, io::device& in)
-    : m_buffer(in, c.max_size),
-      m_geartable(reinterpret_cast<const uint64_t*>(random_gen_table)),
-      m_min_size(c.min_size),
-      m_max_size(c.max_size),
-      m_normal_size(c.normal_size)
+fast_cdc::fast_cdc(const fast_cdc_config& c, io::device& in, std::size_t buffer_size)
+        : m_buffer(in, std::max (buffer_size, 2*c.max_size)),
+          m_geartable(reinterpret_cast<const uint64_t*>(random_gen_table)),
+          m_min_size(c.min_size),
+          m_max_size(c.max_size),
+          m_normal_size(c.normal_size)
 {
     if (!(m_max_size > m_normal_size && m_normal_size > m_min_size))
     {
@@ -74,6 +74,12 @@ void fast_cdc::to_split_border()
             return;
         }
     }
+}
+
+// ---------------------------------------------------------------------
+
+buffer &fast_cdc::get_buffer() {
+    return m_buffer;
 }
 
 // ---------------------------------------------------------------------
