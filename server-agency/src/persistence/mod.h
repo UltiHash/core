@@ -19,7 +19,7 @@ namespace uh::an::persistence
 
         void start();
 
-        client_metrics& storage();
+        client_metrics& clientM_persistence();
 
     private:
         std::unique_ptr<client_metrics> m_storage;

@@ -15,7 +15,7 @@ namespace uh::an::server
 // ---------------------------------------------------------------------
 
 protocol::protocol(cluster::mod& cluster,
-                   an::persistence::persist& persistence,
+                   an::persistence::client_metrics& persistence,
                    metrics::client_metrics& client,
                    const uh::net::server_info &serv_info):
         m_cluster(cluster),

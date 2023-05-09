@@ -8,7 +8,7 @@
 
 #include <net/server_info.h>
 #include <metrics/client_metrics.h>
-#include "persistence/storage/persist.h"
+#include <persistence/storage/client_metrics_storage.h>
 
 using namespace boost::asio::ip;
 
@@ -21,7 +21,7 @@ class protocol : public uh::protocol::request_interface
 {
 public:
     explicit protocol(cluster::mod& cluster,
-                      an::persistence::persist& persistence,
+                      an::persistence::client_metrics& persistence,
                       metrics::client_metrics& client,
                       const uh::net::server_info &serv_info);
 
@@ -40,7 +40,7 @@ public:
 
 private:
     cluster::mod& m_cluster;
-    an::persistence::persist& m_persistence;
+    an::persistence::client_metrics& m_persistence;
     metrics::client_metrics& m_client;
     const uh::net::server_info &m_serv_info;
 };
