@@ -3,7 +3,6 @@
 
 #include <logging/logging_boost.h>
 #include <persistence/options.h>
-#include "persist.h"
 #include <protocol/messages.h>
 
 namespace uh::an::persistence
@@ -11,14 +10,16 @@ namespace uh::an::persistence
 
 // ---------------------------------------------------------------------
 
-    class client_metrics : public persist
+    class client_metrics
     {
     public:
         explicit client_metrics(const persistence_config& config);
 
-        void start() override;
-        void add(const uh::protocol::client_statistics::request& req) override;
-        void flush() override;
+        void start();
+        void add(const uh::protocol::client_statistics::request& req);
+        void flush();
+
+        [[nodiscard]] const std::map<std::string, std::uint64_t>& id_to_size_map() const;
 
     private:
         void retrieve();

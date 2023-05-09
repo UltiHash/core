@@ -21,7 +21,7 @@ void mod::start()
 
 // ---------------------------------------------------------------------
 
-client_metrics& mod::storage()
+client_metrics& mod::clientM_persistence()
 {
     return *m_storage;
 }

@@ -37,6 +37,13 @@ void client_metrics::add(const uh::protocol::client_statistics::request& req)
 
 // ---------------------------------------------------------------------
 
+const std::map<std::string, std::uint64_t>& client_metrics::id_to_size_map() const
+{
+    return m_id_to_size;
+}
+
+// ---------------------------------------------------------------------
+
 void client_metrics::flush()
 {
     io::file metrics_file(m_target_path, std::ios::out | std::ios::trunc | std::ios::binary);
