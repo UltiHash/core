@@ -18,10 +18,10 @@ namespace uh::an::persistence
 
         void start() override;
         void add(const uh::protocol::client_statistics::request& req) override;
-        void retrieve() override;
         void flush() override;
 
     private:
+        void retrieve();
         std::filesystem::path m_target_path;
         std::map<std::string, std::uint64_t> m_id_to_size;
     };
