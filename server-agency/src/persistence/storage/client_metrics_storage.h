@@ -4,7 +4,6 @@
 #include <logging/logging_boost.h>
 #include <persistence/options.h>
 #include "persist.h"
-#include <io/temp_file.h>
 #include <protocol/messages.h>
 
 namespace uh::an::persistence
