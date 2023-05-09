@@ -74,7 +74,8 @@ uint64_t f_serialization::serialize(const std::vector<std::filesystem::path>& ro
     std::uint64_t effective_size = 0;
 
     auto mode = std::ios::out | std::ios::app | std::ios::binary;
-    if (m_overwrite) {
+    if (m_overwrite)
+    {
         mode = std::ios::out | std::ios::trunc | std::ios::binary;
     }
 

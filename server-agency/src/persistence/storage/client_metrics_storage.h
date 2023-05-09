@@ -19,8 +19,8 @@ namespace uh::an::persistence
 
         void start() override;
         void add(const uh::protocol::client_statistics::request& req) override;
-        void serialize();
-        void deserialize();
+        void retrieve() override;
+        void flush() override;
 
     private:
         std::filesystem::path m_target_path;

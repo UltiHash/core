@@ -69,8 +69,10 @@ block_meta_data protocol::on_write_small_block (std::span <char> buffer)
 
 void protocol::on_client_statistics(uh::protocol::client_statistics::request& client_stat)
 {
+    // ! TODO: set_uhv_metrics should technically be in protocol_metrics_wrapper
     m_client.set_uhv_metrics(client_stat);
     m_persistence.add(client_stat);
+    m_persistence.flush();
 }
 
 // ---------------------------------------------------------------------
