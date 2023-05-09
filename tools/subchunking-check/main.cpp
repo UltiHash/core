@@ -151,8 +151,48 @@ struct lexical_comp {
 std::map <std::string, unsigned long> blocks;
 size_t total_size = 0;
 
+void insert_block (const std::string &chunk_str, size_t min_block) {
 
-std::string old;
+    auto eq_range = blocks.equal_range(chunk_str);
+    if (eq_range.first != blocks.begin()) {
+        eq_range.first --;
+    }
+    if (eq_range.second != blocks.end()) {
+        eq_range.second ++;
+    }
+
+    auto res = std::max_element (eq_range.first, eq_range.second, [&chunk_str] (const auto &block1, const auto &block2) {
+        return largest_common_prefix(chunk_str, block1.first) < largest_common_prefix(chunk_str, block2.first);
+    });
+
+    if (res == blocks.end()) {
+        blocks.emplace_hint (res, chunk_str, 1);
+        return;
+    }
+
+    const auto key = res->first;
+    const auto i = largest_common_prefix(chunk_str, key);
+
+    if (i < min_block or (chunk_str.size() - i < min_block and chunk_str.size() - i > 0) or (key.size() - i < min_block and key.size() - i  > 0)) {
+        blocks.emplace_hint(res, chunk_str, 1);
+        return;
+    }
+
+    if (i > 0 and i < key.size()) {
+        blocks.emplace_hint (res, key.substr(0, i), res->second + 1);
+    }
+    if (i > 0 and i < key.size()) {
+        blocks.erase(res);
+    }
+    if (i < chunk_str.size()) {
+        insert_block(chunk_str.substr(i), min_block);
+    }
+    if (i > 0 and i < key.size()) {
+        insert_block(key.substr(i), min_block);
+    }
+
+}
+
 void integrate (const std::filesystem::path &path, uh::client::chunking::mod &chunking_module, size_t min_block) {
     uh::io::file f (path, std::ios::in);
 
@@ -161,53 +201,10 @@ void integrate (const std::filesystem::path &path, uh::client::chunking::mod &ch
     for (auto chunk = chunker->next_chunk(); !chunk.empty(); chunk = chunker->next_chunk()) {
         std::string chunk_str {chunk.data (), chunk.size()};
 
-        auto eq_range = blocks.equal_range(chunk_str);
-        if (eq_range.first != blocks.begin()) {
-            eq_range.first --;
-        }
-        std::pair <size_t, decltype(eq_range.first)> max_fit {0, blocks.end()};
-
-
-        for (auto itr = eq_range.first; itr != eq_range.second ; itr++) {
-            if (const auto lcp = largest_common_prefix(chunk_str, itr->first); lcp > max_fit.first) {
-                max_fit = {lcp, itr};
-            }
-        }
 
         total_size += chunk.size();
+        insert_block(chunk_str, min_block);
 
-        if (max_fit.second == blocks.end()) {
-            blocks.emplace(chunk_str, 1);
-            continue;
-        }
-        const auto &key = max_fit.second->first;
-        size_t i = 0;
-        const auto min_size = std::min (key.size(), chunk.size());
-        while (i < min_size and key[i] == chunk[i]) {
-            i++;
-        }
-
-        if (i < min_block or chunk.size() - i < min_block or key.size() - i < min_block) {
-            blocks.emplace(chunk_str, 1);
-            continue;
-        }
-
-
-        if (i > 0) {
-            blocks.emplace(key.substr(0, i), max_fit.second->second + 1);
-        }
-        if (i < chunk.size()) {
-            auto news = chunk_str.substr(i);
-            blocks.emplace(news, 1);
-        }
-        if (i < key.size()) {
-            auto news = key.substr(i);
-
-            blocks.emplace(news, max_fit.second->second);
-        }
-        if (i > 0 or i < key.size()) {
-            blocks.erase(max_fit.second->first);
-        }
     }
 }
 
@@ -220,53 +217,38 @@ int main(int argc, const char *argv[]) {
     }
 
     auto chunking_cfg = config.chunking();
-    const auto min_block_size = 0;
-    chunking_cfg.fast_cdc.min_size = 8;
-    chunking_cfg.fast_cdc.normal_size = 16;
-    chunking_cfg.fast_cdc.max_size = 32;
+    const auto min_subchunk_size = 2*1024;
+    chunking_cfg.fast_cdc.min_size = 4*1024;
+    chunking_cfg.fast_cdc.normal_size = 8*1024;
+    chunking_cfg.fast_cdc.max_size = 1024*512;
     uh::client::chunking::mod chunking_module(chunking_cfg);
 
     const auto root = config.subchunking().path;
     unsigned long count = 0;
 
 
-/*
-    uh::io::file f (root, std::ios::in);
-
-    auto chunker = chunking_module.create_chunker(f);
-    for (auto chunk = chunker->next_chunk(); !chunk.empty(); chunk = chunker->next_chunk()) {
-        blocks.emplace(std::string {chunk.data (), chunk.size ()}, 1);
-    }
-
-    for (const auto b: blocks) {
-        std::cout << b.first << std::endl;
-    }
-
-    return 0;
-*/
-
-        if (std::filesystem::is_directory(root)) {
+    if (std::filesystem::is_directory(root)) {
         for (const auto &file: std::filesystem::recursive_directory_iterator(root)) {
             if (file.is_directory()) {
                 continue;
             }
-            integrate(file, chunking_module, min_block_size);
-            std::cout << "integrated " << file << std::endl;
+            integrate(file, chunking_module, min_subchunk_size);
+            //std::cout << "integrated " << file << std::endl;
             count++;
         }
     }
     else {
-        integrate(root, chunking_module, min_block_size);
-        std::cout << "integrated " << root << std::endl;
+        integrate(root, chunking_module, min_subchunk_size);
+        //std::cout << "integrated " << root << std::endl;
     }
 
     size_t effective_size = 0;
     for (const auto &item: blocks) {
-        std::cout << item.first.size() << std::endl;
+        //std::cout << item.first << std::endl;
         effective_size += item.first.size();
     }
 
-    double ratio = static_cast <double> (effective_size) / static_cast <double> (total_size);
+    double ratio = 1 - static_cast <double> (effective_size) / static_cast <double> (total_size);
     std::cout << std::endl;
     std::cout << "number of files " << count << std::endl;
     std::cout << "total size " << static_cast <double> (total_size) / static_cast <double> (1024 * 1024 * 1024) << " GB" << std::endl;
