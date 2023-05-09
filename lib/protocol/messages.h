@@ -376,6 +376,63 @@ void read(serialization::buffered_serialization& in, client_statistics::request&
 void write(serialization::buffered_serialization& out, const client_statistics::response& response);
 void read(serialization::buffered_serialization& in, client_statistics::response& response);
 
+// ---------------------------------------------------------------------
+
+
+struct write_chunks
+{
+    struct request
+    {
+        std::span <uint32_t> chunk_sizes;
+        std::span <char> data;
+    };
+
+    struct response
+    {
+        std::vector <char> hashes;
+        std::size_t effective_size;
+    };
+
+    constexpr static uint8_t request_id = 0x10;
+};
+
+// ---------------------------------------------------------------------
+
+void write(serialization::buffered_serialization& out, const write_chunks::request& request);
+void read(serialization::buffered_serialization& in, write_chunks::request& request);
+
+void write(serialization::buffered_serialization& out, const write_chunks::response& response);
+void read(serialization::buffered_serialization& in, write_chunks::response& response);
+
+// ---------------------------------------------------------------------
+
+
+struct read_chunks
+{
+    struct request
+    {
+        std::span <char> hashes;
+    };
+
+    struct response
+    {
+        std::vector <char> data;
+        std::vector <uint32_t> chunk_sizes;
+    };
+
+    constexpr static uint8_t request_id = 0x11;
+};
+
+// ---------------------------------------------------------------------
+
+void write(serialization::buffered_serialization& out, const read_chunks::request& request);
+void read(serialization::buffered_serialization& in, read_chunks::request& request);
+
+void write(serialization::buffered_serialization& out, const read_chunks::response& response);
+void read(serialization::buffered_serialization& in, read_chunks::response& response);
+
+// ---------------------------------------------------------------------
+
 } // namespace uh::protocol
 
 #endif

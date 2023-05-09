@@ -10,6 +10,7 @@
 #include <functional>
 #include <protocol/client_pool.h>
 #include "routing_interface.h"
+#include <util/exception.h>
 
 namespace uh::an::cluster
 {
@@ -18,6 +19,8 @@ namespace uh::an::cluster
         explicit sample_hash_routing(const std::unordered_map<std::string, std::unique_ptr<protocol::client_pool>> &nodes);
 
         protocol::client_pool &route_data (const std::span <const char>& data) const override;
+
+        [[nodiscard]] db_hash_offsets_map route_hashes (const std::span <char> &hashes) const override;
 
     private:
 

@@ -96,6 +96,20 @@ public:
      */
     uh::protocol::write_xsmall_blocks::response write_xsmall_blocks (const uh::protocol::write_xsmall_blocks::request &req);
 
+    /**
+     * Routes different blocks to their corresponding data nodes
+     * @param buffer array of blocks
+     * @return the hash array of the blocks
+     */
+    uh::protocol::write_chunks::response write_chunks (const uh::protocol::write_chunks::request &req);
+
+    /**
+     * Reads the chunks of the given hashes from the data nodes.
+     * @param req a request consisting of hashes
+     * @return the data
+     */
+    uh::protocol::read_chunks::response read_chunks (const uh::protocol::read_chunks::request &req);
+
 private:
     struct impl;
     std::unique_ptr<impl> m_impl;

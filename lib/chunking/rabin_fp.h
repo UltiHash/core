@@ -32,6 +32,8 @@ public:
 
     std::span<char> next_chunk() override;
 
+    [[nodiscard]] buffer& get_buffer () override;
+
     std::string chunker_type() {return std::string(m_type);}
 
     size_t refill_buffer();

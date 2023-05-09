@@ -6,6 +6,7 @@
 #include <protocol/client_pool.h>
 #include <protocol/server.h>
 #include <chunking/mod.h>
+#include <algorithm>
 #include "../common/thread_manager.h"
 
 #include <fstream>
