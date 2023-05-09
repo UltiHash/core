@@ -108,10 +108,6 @@ services:
         published: 21832
         protocol: tcp
         mode: host
-      - target: 8080
-        published: 8090
-        protocol: tcp
-        mode: host
     deploy: 
       mode: global
       endpoint_mode: dnsrr
