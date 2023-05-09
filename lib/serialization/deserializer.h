@@ -6,7 +6,6 @@
 #define CORE_DESERIALIZER_H
 
 #include "serialization_common.h"
-#include <cassert>
 
 namespace uh::serialization {
 
