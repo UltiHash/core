@@ -46,7 +46,7 @@ int main(int argc, const char** argv)
         uh::an::persistence::mod persistence_module(config.persistence());
         persistence_module.start();
 
-        server::mod server_module(config.server(), cluster_module, metrics_module);
+        server::mod server_module(config.server(), cluster_module, metrics_module, persistence_module);
         server_module.start();
     }
     catch (const std::exception& e)

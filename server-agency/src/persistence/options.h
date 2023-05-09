@@ -2,18 +2,17 @@
 #define SERVER_AGENCY_PERSISTENCE_OPTIONS_H
 
 #include <options/options.h>
-
+#include <filesystem>
 
 namespace uh::an::persistence
 {
 
 // ---------------------------------------------------------------------
 
-    typedef struct
+    struct persistence_config
     {
         std::string persistence_path;
-
-    } persistence_config;
+    };
 
 // ---------------------------------------------------------------------
 
