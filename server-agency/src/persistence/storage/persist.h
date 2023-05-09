@@ -18,6 +18,10 @@ namespace uh::an::persistence
 
         virtual void add(const uh::protocol::client_statistics::request& req) = 0;
 
+        virtual void retrieve() = 0;
+
+        virtual void flush() = 0;
+
     };
 
 // ---------------------------------------------------------------------
