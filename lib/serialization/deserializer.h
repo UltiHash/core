@@ -6,6 +6,7 @@
 #define CORE_DESERIALIZER_H
 
 #include "serialization_common.h"
+#include <cassert>
 
 namespace uh::serialization {
 
@@ -60,7 +61,7 @@ namespace uh::serialization {
             constexpr auto data_size_len = 1;
 
             char buffer[1 + data_size_len + data_size];
-            io::read(dev_, buffer);
+            assert (io::read(dev_, buffer) != 0);
 
             Arithmetic data = *reinterpret_cast <Arithmetic *> (buffer + data_size_len + 1);
             //std::memcpy(&data, buffer + data_size_len + 1, data_size);
