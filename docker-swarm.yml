@@ -121,7 +121,7 @@ services:
     volumes:
       - type: bind
         source: /var/lib/agency-node
-        target: /var/lib
+        target: /var/lib/agency-node
   uh-client-shell:
     image: ghcr.io/ultihash/client-shell:20230503
     networks:
