@@ -13,7 +13,8 @@ namespace uh::an::metrics
     class client_metrics
     {
     public:
-        explicit client_metrics(uh::metrics::service& service, const uh::an::persistence::client_metrics& persisted_client_metrics);
+        explicit client_metrics(uh::metrics::service& service,
+                                const uh::an::persistence::client_metrics& persisted_client_metrics);
 
         void set_uhv_metrics(const uh::protocol::client_statistics::request& client_stat) const;
 
