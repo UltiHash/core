@@ -30,6 +30,7 @@ std::unique_ptr<uh::protocol::protocol> protocol_factory::create(std::shared_ptr
                     std::make_unique<uh::metrics::protocol_metrics_wrapper>
                             (m_protocol_metrics, std::make_unique<uh::an::server::protocol>
                                     (m_cluster, m_persistence.clientM_persistence(), m_client_metrics, m_serv_info)));
+
 }
 
 // ---------------------------------------------------------------------
