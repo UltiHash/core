@@ -118,6 +118,10 @@ services:
       placement:
         constraints:
           - node.labels.role == agency
+    volumes:
+      - type: bind
+        source: /var/lib/agency-node
+        target: /var/lib
   uh-client-shell:
     image: ghcr.io/ultihash/client-shell:20230503
     networks:
