@@ -17,10 +17,10 @@ services:
         constraints:
           - node.labels.role == agency
     environment:
-    - WATCHPACK_POLLING=true
-    - REACT_APP_ANONYMOUS_ACCESS_ENABLED=true
-    - REACT_APP_DASHBOARD_URI=http://localhost:3001/d-solo/ERNvb7o4k/ultihash-monitoring
-    - REACT_APP_DASHBOARD_PANEL_IDS=[4, 2]
+      - WATCHPACK_POLLING=true
+      - REACT_APP_ANONYMOUS_ACCESS_ENABLED=true
+      - REACT_APP_DASHBOARD_URI=http://localhost:3001/d-solo/ERNvb7o4k/ultihash-monitoring
+      - REACT_APP_DASHBOARD_PANEL_IDS=[4, 2]
   grafana:
     image: grafana/grafana-enterprise
     networks:
@@ -47,7 +47,7 @@ services:
     image: prom/prometheus
     networks:
       - uh-integration
-    ports: 
+    ports:
       - target: 9090
         published: 9090
         protocol: tcp
@@ -58,7 +58,7 @@ services:
       placement:
         constraints:
           - node.labels.role == agency
-    volumes: 
+    volumes:
       - type: bind
         source: prometheus.yml
         target: /etc/prometheus/prometheus.yml
@@ -81,7 +81,7 @@ services:
         constraints:
           - node.labels.role == agency
   uh-server-db:
-    image: ghcr.io/ultihash/server-db:20230425
+    image: ghcr.io/ultihash/server-db:20230503
     networks:
       - uh-integration
     ports:
@@ -93,14 +93,14 @@ services:
       mode: global
       endpoint_mode: dnsrr
       placement:
-         constraints:
+        constraints:
           - node.labels.role == database
     volumes:
       - type: bind
         source: /mnt/disk1
         target: /data
   uh-server-agency:
-    image: ghcr.io/ultihash/server-agency:20230425
+    image: ghcr.io/ultihash/server-agency:20230503
     networks:
       - uh-integration
     ports:
@@ -108,14 +108,18 @@ services:
         published: 21832
         protocol: tcp
         mode: host
-    deploy: 
+      - target: 8080
+        published: 8090
+        protocol: tcp
+        mode: host
+    deploy:
       mode: global
       endpoint_mode: dnsrr
       placement:
         constraints:
           - node.labels.role == agency
   uh-client-shell:
-    image: ghcr.io/ultihash/client-shell:20230425
+    image: ghcr.io/ultihash/client-shell:20230503
     networks:
       - uh-integration
     deploy:
