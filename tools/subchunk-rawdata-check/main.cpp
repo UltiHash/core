@@ -38,6 +38,9 @@ struct substr_non_match {
     }
 };
 
+void chunks_common_substrings(std::list<size_t> list1, uh::chunking::buffer &buffer, char *device, const long size,
+                              size_t size1);
+
 /*
 struct window {
     size_t offset {};
@@ -54,49 +57,122 @@ long backend_size = 0;
 std::vector <int> size_table;
 
 
+std::pair <std::set <substr_match>, std::set <substr_non_match>> get_substrings_coverage (const std::set <substr_match>& longest_substrings, std::size_t chunk_size) {
+    std::set <substr_match> min_cover_substrings;
+    std::set <substr_non_match> non_covered_substrings;
 
-std::set <substr_match> chunks_longest_common_substrings (uh::client::chunking::mod &chunking_module, std::string path, char* data_device, const long window_size, size_t min_subchunk_size) {
-    uh::io::file f (path, std::ios::in);
+    long offset = 0;
+    auto itr = longest_substrings.cbegin();
+    while (offset < chunk_size and itr != longest_substrings.cend()) {
+        const auto &substr = *itr;
+        if (substr.m_chunk_offset + substr.m_size <= offset) {
+            continue;
+        }
+        const long overlap = static_cast <long> (offset) - substr.m_chunk_offset;
+        if (overlap <= 0) {
 
-    auto chunker = chunking_module.create_chunker(f);
-    //std::vector <char> window (window_size);
-    //data_device.read(window.data(), window_size);
-    //auto data_size = data_device.gcount();
-    //data_device.clear();
-    std::set <substr_match> substrings;
+            min_cover_substrings.emplace_hint(min_cover_substrings.end(), substr);
 
-    //data_device.seekg(0);
-
-    for (auto chunk = chunker->next_chunk(); !chunk.empty(); chunk = chunker->next_chunk()) {
-    }
-
-        long backend_index = 0;
-    while (backend_index < backend_size) {
-
-            for (long i = 0; i < chunk.size(); i++) {
-            const auto row = i * window_size;
-            const auto prev_row = row - window_size;
-            const auto max_backend_index = std::min (backend_size, backend_index + window_size);
-            for (long idx = backend_index; idx < max_backend_index; idx++) {
-                if (chunk[i] != data_device[idx]) [[likely]] {
-                    continue;
-                }
-                const auto j = idx - backend_index;
-                auto &size_item = size_table [row + j];
-                size_item = (i && j) ? 1 + size_table [prev_row + j - 1] : 1;
-                if (size_item >= min_subchunk_size) {
-                    uint16_t size = size_item + 1;
-                    substrings.insert({i - size_item + 1, size, j - size_item + 1});
-                }
+            if (overlap < 0) {
+                non_covered_substrings.emplace_hint (non_covered_substrings.end(), substr_non_match {offset, static_cast <int> (-overlap)});
             }
         }
-        backend_index += window_size;
+        else {
+            min_cover_substrings.emplace_hint(min_cover_substrings.end(), substr_match {offset, static_cast <int> (substr.m_size - overlap), substr.m_data_offset+overlap});
+        }
+        offset = substr.m_chunk_offset + substr.m_size;
+        itr ++;
+    }
+
+    if (offset < chunk_size) {
+        non_covered_substrings.emplace_hint (non_covered_substrings.end(), substr_non_match {offset, static_cast <int> (chunk_size - offset)});
 
     }
+    return {min_cover_substrings, non_covered_substrings};
+}
+/*
+
+void chunks_common_substrings(const std::list<size_t> &chunk_sizes, std::span <char> data, std::fstream &backend, const long window_size,
+                              size_t min_subchunk_size) {
+    std::vector <char> window (window_size);
+
+    backend.seekg(0);
+    size_t offset = 0;
+    size_t backend_index = 0;
+    std::set <substr_match> substrings;
+
+    while (backend_index < backend_size) {
+
+        backend.read(window.data(), window_size);
+        auto data_size = backend.gcount();
+        backend.clear();
+
+
+        for (const auto chunk_size: chunk_sizes) {
+            std::span<char> chunk{data.data() + offset, chunk_size};
+
+
+            for (long i = 0; i < chunk.size(); i++) {
+                const auto row = i * window_size;
+                const auto prev_row = row - window_size;
+                for (long j = 0; j < data_size; j++) {
+                    if (chunk[i] != window[j]) [[likely]] {
+                        continue;
+                    }
+                    auto &size_item = size_table[row + j];
+                    size_item = (i && j) ? 1 + size_table[prev_row + j - 1] : 1;
+                    if (size_item >= min_subchunk_size) {
+                        uint16_t size = size_item + 1;
+                        substrings.insert({i - size_item + 1, size, j - size_item + 1});
+                    }
+                }
+            }
+
+            offset += chunk_size;
+        }
+
+
+        backend_index += data_size;
+    }
+
+
+
+
+
+
+
+    auto [covered, uncovered] = get_substrings_coverage (substrings, chunk.size());
+    auto it = covered.begin();
+    for (const auto &substr: uncovered) {
+        substr_match synced_substr {substr.m_chunk_offset, substr.m_size,  backend_size};
+        backend.write(chunk.data() + substr.m_chunk_offset, substr.m_size);
+        backend_size += substr.m_size;
+        it = covered.emplace_hint(it, synced_substr);
+    }
+
+    blocks.emplace(std::string{chunk.data(), chunk.size()}, std::move (covered));
+    non_deduplicated_size += chunk.size();
+
+}
+
+
+std::set <substr_match> batch_chunks_commop_substrings (uh::client::chunking::mod &chunking_module, const std::string& path, std::fstream &backend, const long window_size, size_t min_subchunk_size) {
+    uh::io::file f (path, std::ios::in);
+
+    std::list <size_t> chunk_sizes;
+    auto chunker = chunking_module.create_chunker(f,1024*1024*16);
+    for (auto chunk = chunker->next_chunk(); !chunk.empty(); chunk = chunker->next_chunk()) {
+        chunk_sizes.push_back(chunk.size());
+        if (chunker->get_buffer().length() == 0) {
+            chunks_common_substrings (chunk_sizes, chunker->get_buffer().data(), backend, window_size, min_subchunk_size);
+        }
+    }
+
+    std::set <substr_match> substrings;
 
     return substrings;
 }
-
+*/
 std::set <substr_match> longest_common_substrings (std::span <char> &chunk, char* data_device, const long window_size, size_t min_subchunk_size) {
 
     //std::vector <char> window (window_size);
@@ -132,40 +208,6 @@ std::set <substr_match> longest_common_substrings (std::span <char> &chunk, char
     }
 
     return substrings;
-}
-
-std::pair <std::set <substr_match>, std::set <substr_non_match>> get_substrings_coverage (const std::set <substr_match>& longest_substrings, std::size_t chunk_size) {
-    std::set <substr_match> min_cover_substrings;
-    std::set <substr_non_match> non_covered_substrings;
-
-    long offset = 0;
-    auto itr = longest_substrings.cbegin();
-    while (offset < chunk_size and itr != longest_substrings.cend()) {
-        const auto &substr = *itr;
-        if (substr.m_chunk_offset + substr.m_size <= offset) {
-            continue;
-        }
-        const long overlap = static_cast <long> (offset) - substr.m_chunk_offset;
-        if (overlap <= 0) {
-
-            min_cover_substrings.emplace_hint(min_cover_substrings.end(), substr);
-
-            if (overlap < 0) {
-                non_covered_substrings.emplace_hint (non_covered_substrings.end(), substr_non_match {offset, static_cast <int> (-overlap)});
-            }
-        }
-        else {
-            min_cover_substrings.emplace_hint(min_cover_substrings.end(), substr_match {offset, static_cast <int> (substr.m_size - overlap), substr.m_data_offset+overlap});
-        }
-        offset = substr.m_chunk_offset + substr.m_size;
-        itr ++;
-    }
-
-    if (offset < chunk_size) {
-        non_covered_substrings.emplace_hint (non_covered_substrings.end(), substr_non_match {offset, static_cast <int> (chunk_size - offset)});
-
-    }
-    return {min_cover_substrings, non_covered_substrings};
 }
 
 
@@ -214,14 +256,14 @@ int main(int argc, const char *argv[]) {
     uh::client::chunking::chunking_config chunking_cfg;
     const auto max_backend_size = 100 * 1024 * 1024;
     const auto min_subchunk_size = 512;
-    const auto window_size = 16*1024;
+    const auto window_size = 1024*1024;
 
     //chunking_cfg.chunking_strategy = "FastCDC";
     //chunking_cfg.fast_cdc.min_size = 4*1024;
     //chunking_cfg.fast_cdc.normal_size = 8*1024;
     //chunking_cfg.fast_cdc.max_size = 16*1024;
     chunking_cfg.chunking_strategy = "FixedSize";
-    chunking_cfg.chunk_size_in_bytes = 8*1024;
+    chunking_cfg.chunk_size_in_bytes = 1024*1024;
     uh::client::chunking::mod chunking_module(chunking_cfg);
 
     const auto root = "/home/masi/Workspace/core/cmake-build-debug/client-shell/data.mp4";
