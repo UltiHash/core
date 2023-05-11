@@ -24,8 +24,12 @@ APPLICATION_CONFIG
 );
 
 
-std::map <std::string, unsigned long> blocks;
-size_t total_size = 0;
+std::map <std::string, unsigned long> fragments;
+std::unordered_map <std::string, unsigned long> blocks;
+
+
+size_t non_deduplicated_size = 0;
+long chunk_count = 0;
 
 size_t largest_common_prefix (const std::string &str1, const std::string& str2) {
     size_t i = 0;
@@ -36,13 +40,13 @@ size_t largest_common_prefix (const std::string &str1, const std::string& str2) 
     return i;
 }
 
-void insert_block (const std::string &chunk_str, size_t min_block) {
+int insert_block (const std::string &chunk_str, size_t min_block) {
 
-    auto eq_range = blocks.equal_range(chunk_str);
-    if (eq_range.first != blocks.begin()) {
+    auto eq_range = fragments.equal_range(chunk_str);
+    if (eq_range.first != fragments.begin()) {
         eq_range.first --;
     }
-    if (eq_range.second != blocks.end()) {
+    if (eq_range.second != fragments.end()) {
         eq_range.second ++;
     }
 
@@ -50,31 +54,36 @@ void insert_block (const std::string &chunk_str, size_t min_block) {
         return largest_common_prefix(chunk_str, block1.first) < largest_common_prefix(chunk_str, block2.first);
     });
 
-    if (res == blocks.end()) {
-        blocks.emplace_hint (res, chunk_str, 1);
-        return;
+    if (res == fragments.end()) {
+        fragments.emplace_hint (res, chunk_str, 1);
+        return 1;
     }
 
     const auto key = res->first;
     const auto i = largest_common_prefix(chunk_str, key);
 
     if (i < min_block or (chunk_str.size() - i < min_block and chunk_str.size() - i > 0) or (key.size() - i < min_block and key.size() - i  > 0)) {
-        blocks.emplace_hint(res, chunk_str, 1);
-        return;
+        fragments.emplace_hint(res, chunk_str, 1);
+        return 1;
     }
 
+    int count = 0;
     if (i > 0 and i < key.size()) {
-        blocks.emplace_hint (res, key.substr(0, i), res->second + 1);
+        fragments.emplace_hint (res, key.substr(0, i), res->second + 1);
+        count ++;
     }
     if (i > 0 and i < key.size()) {
-        blocks.erase(res);
+        fragments.erase(res);
+        count --;
     }
     if (i < chunk_str.size()) {
-        insert_block(chunk_str.substr(i), min_block);
+        count += insert_block(chunk_str.substr(i), min_block);
     }
     if (i > 0 and i < key.size()) {
-        insert_block(key.substr(i), min_block);
+        count += insert_block(key.substr(i), min_block);
     }
+
+    return count;
 
 }
 
@@ -83,13 +92,15 @@ void integrate (const std::filesystem::path &path, uh::client::chunking::mod &ch
 
     auto chunker = chunking_module.create_chunker(f);
 
+
     for (auto chunk = chunker->next_chunk(); !chunk.empty(); chunk = chunker->next_chunk()) {
         std::string chunk_str {chunk.data (), chunk.size()};
 
 
-        total_size += chunk.size();
-        insert_block(chunk_str, min_block);
 
+        non_deduplicated_size += chunk.size();
+        blocks.emplace(chunk_str, insert_block(chunk_str, min_block));
+        chunk_count ++;
     }
 }
 
@@ -128,16 +139,28 @@ int main(int argc, const char *argv[]) {
     }
 
     size_t effective_size = 0;
-    for (const auto &item: blocks) {
+    for (const auto &item: fragments) {
         //std::cout << item.first << std::endl;
         effective_size += item.first.size();
     }
 
-    double ratio = 1 - static_cast <double> (effective_size) / static_cast <double> (total_size);
+    long total = 0;
+    for (const auto &block: blocks) {
+        std::cout << block.second << std::endl;
+        if (block.second == 0) {
+            throw 1;
+        }
+        total += block.second;
+    }
+
+    double ratio = 1 - static_cast <double> (effective_size) / static_cast <double> (non_deduplicated_size);
     std::cout << std::endl;
     std::cout << "number of files " << count << std::endl;
-    std::cout << "total size " << static_cast <double> (total_size) / static_cast <double> (1024 * 1024 * 1024) << " GB" << std::endl;
+    std::cout << "total size " << static_cast <double> (non_deduplicated_size) / static_cast <double> (1024 * 1024 * 1024) << " GB" << std::endl;
     std::cout << "effective size " << static_cast <double> (effective_size) / static_cast <double> (1024 * 1024 * 1024) << " GB" << std::endl;
     std::cout << "chunking algorithm " << config.chunking().chunking_strategy << std::endl;
+    std::cout << "fragments " << fragments.size() << std::endl;
+    std::cout << "chunks " << chunk_count << std::endl;
+    std::cout << "average fragment/block count " << static_cast <double> (total) / static_cast <double> (chunk_count)  << ", total number of fragment references " << total << std::endl;
     std::cout << "deduplication ratio is " << ratio << std::endl;
 }

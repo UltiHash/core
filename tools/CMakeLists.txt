@@ -10,3 +10,5 @@ enable_testing()
 
 add_subdirectory(dedup-check)
 add_subdirectory(subchunking-check)
+add_subdirectory(subchunk-rawdata-check)
+

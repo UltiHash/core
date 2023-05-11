@@ -21,7 +21,7 @@ APPLICATION_CONFIG
 );
 
 std::unordered_map <std::string, std::list <std::filesystem::path>> blocks;
-size_t total_size = 0;
+size_t non_deduplicated_size = 0;
 
 void integrate (const std::filesystem::path &path, uh::client::chunking::mod &chunking_module) {
     uh::io::file f (path, std::ios::in);
