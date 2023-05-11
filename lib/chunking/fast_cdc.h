@@ -34,9 +34,11 @@ struct fast_cdc_config
 class fast_cdc : public chunker
 {
 public:
-    fast_cdc(const fast_cdc_config& config, io::device& in);
+    fast_cdc(const fast_cdc_config& config, io::device& in, std::size_t buffer_size = 0);
 
     std::span<char> next_chunk() override;
+    [[nodiscard]] buffer& get_buffer () override;
+
 
 private:
     void to_split_border();

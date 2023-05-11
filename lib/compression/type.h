@@ -4,7 +4,7 @@
 #include <io/device.h>
 
 #include <cstdint>
-#include <memory>
+#include <string>
 
 
 namespace uh::comp
@@ -29,6 +29,7 @@ std::uint32_t to_uint(type t);
 // ---------------------------------------------------------------------
 
 std::string to_string(type t);
+type to_type(const std::string& s);
 
 // ---------------------------------------------------------------------
 

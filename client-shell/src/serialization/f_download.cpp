@@ -1,4 +1,5 @@
 #include "f_download.h"
+#include <protocol/server.h>
 
 namespace uh::client::serialization
 {
@@ -44,6 +45,7 @@ void f_download::join()
 
 void f_download::download_file(std::unique_ptr<uhv::f_meta_data>& f_meta_data)
 {
+
     if (f_meta_data->f_type() == uhv::uh_file_type::regular)
     {
         std::ofstream new_file(f_meta_data->f_path(),
@@ -54,16 +56,27 @@ void f_download::download_file(std::unique_ptr<uhv::f_meta_data>& f_meta_data)
                                      + f_meta_data->f_path().string() + "\n");
 
         auto client = m_client_pool.get();
-        for (auto i = 0; i < f_meta_data->f_hashes().size(); i += 64)
-        {
-            std::vector<char> buffer(f_meta_data->f_hashes().begin() + i,
-                                     f_meta_data->f_hashes().begin() + i + 64);
 
-            copy(*client->read_block(buffer), new_file);
+        size_t aggregated_size = 0;
+        size_t offset = 0;
+
+        // here we assume that each chunksize is smaller than MAXIMUM_DATA_SIZE
+        for (size_t i = 0; i < f_meta_data->f_chunk_sizes().size(); ++i) {
+            aggregated_size += f_meta_data->f_chunk_sizes()[i];
+            if (aggregated_size > protocol::server::MAXIMUM_DATA_SIZE) {
+                auto resp = client->read_chunks (
+                        {{const_cast <char *> (f_meta_data->f_hashes().data() + offset), (i - 1) * 64}});
+                new_file.write (resp.data.data(), resp.data.size());
+                offset = (i - 1) * 64;
+                aggregated_size = f_meta_data->f_chunk_sizes()[i];
+            }
+        }
+        if (aggregated_size > 0) {
+            auto resp = client->read_chunks ({{const_cast <char *> (f_meta_data->f_hashes().data() + offset),
+                                               f_meta_data->f_hashes().size() - offset}});
+            new_file.write (resp.data.data(), resp.data.size());
         }
 
-        new_file.flush();
-        new_file.close();
     }
     else if (f_meta_data->f_type() == uhv::uh_file_type::none)
     {

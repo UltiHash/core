@@ -1,12 +1,13 @@
 #ifdef SINGLE_TEST_RUNNER
 #define BOOST_TEST_NO_MAIN
 #else
-#define BOOST_TEST_MODULE "uhLibChunking Buffer Tests"
+#define BOOST_TEST_MODULE "uhLibIo Device Tests"
 #endif
 
 #include <boost/test/unit_test.hpp>
 #include <boost/mpl/vector.hpp>
 
+#include <io/buffer.h>
 #include <io/buffered_device.h>
 #include <io/sstream_device.h>
 
@@ -34,7 +35,8 @@ const static std::string TEST_TEXT =
 
 typedef boost::mpl::vector<
     sstream_device,
-    buffered_device<sstream_device>
+    buffered_device<sstream_device>,
+    buffer
 > device_types;
 
 // ---------------------------------------------------------------------
@@ -67,6 +69,16 @@ std::unique_ptr<buffered_device<sstream_device>> make_test_device<buffered_devic
     base = make_test_device<sstream_device>();
 
     return std::make_unique<buffered_device<sstream_device>>(*base);
+}
+
+// ---------------------------------------------------------------------
+
+template <>
+std::unique_ptr<buffer> make_test_device()
+{
+    auto rv = std::make_unique<buffer>();
+    rv->write(TEST_TEXT);
+    return rv;
 }
 
 // ---------------------------------------------------------------------

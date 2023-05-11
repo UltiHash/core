@@ -33,10 +33,9 @@ public:
     constexpr static std::size_t SMALL_CHUNK_LIMIT = 64 * 1024 * 1024;
     constexpr static std::size_t XSMALL_CHUNK_SIZE_LIMIT = std::numeric_limits <std::uint16_t>::max();
     constexpr static std::size_t XSMALL_CHUNK_COUNT_LIMIT = std::numeric_limits <std::uint16_t>::max();
+    constexpr static std::size_t MAXIMUM_BLOCK_SIZE = 2u * 512 * 1024 * 1024;
+    constexpr static std::size_t MAXIMUM_DATA_SIZE = 512lu * 1024lu * 1024lu;
 
-
-
-    constexpr static std::size_t MAXIMUM_BLOCK_SIZE = 2u * 1024 * 1024 * 1024;
 
     explicit server (const std::shared_ptr<net::socket>& client,
                      std::unique_ptr<uh::protocol::request_interface>&& handler_interface
@@ -65,6 +64,9 @@ private:
     void handle_write_chunk();
     void handle_finalize_block();
     void handle_client_statistics();
+    void handle_write_chunks();
+    void handle_read_chunks();
+
 
     server_state m_state = server_state::disconnected;
 
@@ -73,6 +75,7 @@ private:
     serialization::buffered_serialization m_bs;
 
     std::unique_ptr<request_interface> m_handler_interface;
+
 };
 
 // ---------------------------------------------------------------------
