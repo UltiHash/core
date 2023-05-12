@@ -246,7 +246,7 @@ void hierarchical_storage::return_space(std::size_t size)
 void hierarchical_storage::acquire_storage_size(std::size_t size) {
     while (true)
     {
-        std::size_t used = m_used;
+        std::size_t used = m_used.load();
         if (m_alloc - used <= size)
         {
             THROW(util::no_space_error, "out of space");
