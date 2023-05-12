@@ -253,7 +253,7 @@ void hierarchical_storage::acquire_storage_size(std::size_t size) {
         }
 
         auto new_val = used + size;
-        if (m_used.compare_exchange_strong(used, new_val))
+        if (m_used.compare_exchange_weak(used, new_val))
         {
             break;
         }
