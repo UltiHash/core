@@ -57,10 +57,6 @@ services:
    links:
      - prometheus
      - uh-server-db
-   volumes:
-    - type: bind
-      source: /var/lib/agency-node
-      target: /var/lib/agency-node
   uh-client-shell:
    image: uh-client-shell
    build:
