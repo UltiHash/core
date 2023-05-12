@@ -72,6 +72,7 @@ void protocol::on_client_statistics(uh::protocol::client_statistics::request& cl
     // ! TODO: set_uhv_metrics should technically be in protocol_metrics_wrapper
     m_client.set_uhv_metrics(client_stat);
     m_persistence.add(client_stat);
+    // TODO: flush occasionally
     m_persistence.flush();
 }
 
