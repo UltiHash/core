@@ -42,6 +42,14 @@ bool file::valid() const
     return m_io.good();
 }
 
+void file::seek(off64_t pos) {
+    m_io.seekg(pos);
+}
+
+void file::seek(off64_t off,std::ios_base::seekdir way) {
+    m_io.seekg(off,way);
+}
+
 // ---------------------------------------------------------------------
 
 } // namespace uh::io
