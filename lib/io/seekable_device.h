@@ -13,7 +13,9 @@ namespace uh::io {
 
         virtual void seek (off64_t pos) = 0;
 
-        virtual void seek (off64_t off,std::ios_base::seekdir way) = 0;
+        virtual void seek (off64_t off, int whence) = 0;
+
+        virtual size_t seekable_size() = 0;
     };
 } // uh::io
 

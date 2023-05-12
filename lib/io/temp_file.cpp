@@ -1,4 +1,5 @@
 #include "temp_file.h"
+#include "file.h"
 
 #include <util/exception.h>
 
@@ -23,7 +24,7 @@ std::pair<int, std::filesystem::path> open_temp_file(const std::filesystem::path
         THROW_FROM_ERRNO();
     }
 
-    return std::make_pair(fd, std::filesystem::path(path));
+    return {fd, std::filesystem::path(path)};
 }
 
 // ---------------------------------------------------------------------
@@ -32,19 +33,30 @@ std::pair<int, std::filesystem::path> open_temp_file(const std::filesystem::path
 
 // ---------------------------------------------------------------------
 
-temp_file::temp_file(const std::filesystem::path& directory)
-    : m_fd(-1),
-      m_path(),
-      m_remove(true)
+temp_file::temp_file(const std::filesystem::path &directory) : file(directory,"w+"),m_remove(true)
+{
+    temp_file_constructor(directory);
+}
+
+// ---------------------------------------------------------------------
+
+temp_file::temp_file(const std::filesystem::path &directory, const std::string& mode):
+io::file(directory,mode) {
+    temp_file_constructor(directory);
+}
+
+// ---------------------------------------------------------------------
+
+void temp_file::temp_file_constructor(const std::filesystem::path &directory)
 {
     if (!std::filesystem::exists(directory))
     {
         THROW(util::exception, "parent of temporary file does not exist");
     }
 
-    auto [fd, path] = open_temp_file(directory / FILENAME_TEMPLATE);
-    m_fd = fd;
-    m_path = path;
+    auto tmp = open_temp_file(directory / FILENAME_TEMPLATE);
+    this->m_fp = tmp.first;
+    m_path = tmp.second;
 }
 
 // ---------------------------------------------------------------------

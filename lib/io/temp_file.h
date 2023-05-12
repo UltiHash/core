@@ -1,7 +1,7 @@
 #ifndef UH_IO_TEMPFILE_H
 #define UH_IO_TEMPFILE_H
 
-#include <io/device.h>
+#include <io/file.h>
 
 #include <filesystem>
 #include <boost/iostreams/categories.hpp>
@@ -21,7 +21,7 @@ using boost::iostreams::stream_offset;
  * Temporary file with self-cleanup. The file implements Boost's seekable device
  * interface.
  */
-class temp_file : public io::device
+class temp_file : public io::file
 {
 public:
     /**
@@ -29,19 +29,26 @@ public:
      *
      * @throw the directory does not exist
      */
-    temp_file(const std::filesystem::path& directory);
+    explicit temp_file(const std::filesystem::path &directory);
+
+    /**
+     *
+     * @param directory create temporary file here
+     * @param mode work at some temporary file in another mode
+     */
+    explicit temp_file(const std::filesystem::path &directory, const std::string& mode);
 
     /**
      * Remove the temporary file.
      */
-    ~temp_file();
+    ~temp_file() override;
 
     /**
      * Write the contents of the span and return the number of bytes written.
      *
      * @throw writing fails for any reason
      */
-    virtual std::streamsize write(std::span<const char> buffer) override;
+    std::streamsize write(std::span<const char> buffer) override;
 
     /**
      * Read from the device and store it in the buffer. Return the number of
@@ -49,12 +56,12 @@ public:
      *
      * @throw error while reading
      */
-    virtual std::streamsize read(std::span<char> buffer) override;
+    std::streamsize read(std::span<char> buffer) override;
 
     /**
      * Return whether this device still can be used.
      */
-    virtual bool valid() const override;
+    [[nodiscard]] bool valid() const override;
 
     /**
      * Rename the file to `path` and make it a permanent file.
@@ -71,14 +78,19 @@ public:
     /**
      * Return the path of the temporary file.
      */
-    const std::filesystem::path& path() const;
+    [[nodiscard]] const std::filesystem::path& path() const;
 
     const static std::string FILENAME_TEMPLATE;
 
 private:
-    int m_fd;
-    std::filesystem::path m_path;
-    bool m_remove;
+    bool m_remove{};
+
+    /**
+     * after creating a file object we need to set it up to match the needs of a temp file
+     *
+     * @param directory directory where the file should be created within
+     */
+    void temp_file_constructor(const std::filesystem::path &directory);
 };
 
 // ---------------------------------------------------------------------

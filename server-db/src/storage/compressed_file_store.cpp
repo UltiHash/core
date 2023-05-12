@@ -74,7 +74,7 @@ void compression_worker::operator()(const std::filesystem::path& path, comp::typ
         auto in = open_reader(path);
         io::count count_in(*in);
 
-        auto temp = io::temp_file(path.parent_path());
+        auto temp = io::temp_file(<#initializer#>, path.parent_path());
         io::count count_out(temp);
 
         write_comp_type(count_out, type);
