@@ -17,13 +17,7 @@ client_metrics::client_metrics(const persistence_config& config) :
 void client_metrics::start()
 {
     if (std::filesystem::exists(m_target_path))
-    {
         retrieve();
-    }
-    else
-    {
-        std::filesystem::create_directory(m_target_path.parent_path());
-    }
 
     INFO << "client metrics persistent on: " << m_target_path;
 }
