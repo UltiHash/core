@@ -111,20 +111,25 @@ public:
         std::filesystem::create_directories(file_path.parent_path());
 
         try {
-            io::temp_file serialize_uncompressed(file_path.parent_path(),"w");
-
-            io::buffer buf_base,buf_content;
+            io::buffer buf_base;
 
             uh::dbn::storage::write_comp_type(buf_base, uh::comp::type::none);
-            io::copy(*m_tmp,buf_content);
+
+            io::temp_file serialize_uncompressed(file_path.parent_path(),"w");
+            auto compression_type_size = io::copy(buf_base,serialize_uncompressed);
+
+            m_tmp->close();
+
+            auto tmp_reader = io::file(m_tmp->path(),"r");
+            io::copy(tmp_reader,serialize_uncompressed);
+            tmp_reader.close();
+
+            m_tmp->open();
             m_tmp->reset_file_state();
 
-            auto tmp = comp::create(buf_content,uh::comp::type::none);
-            io::copy(buf_base,serialize_uncompressed);
-            io::copy(buf_content,serialize_uncompressed);
-
             serialize_uncompressed.release_to(file_path);
-            m_effective_size = m_size;
+            serialize_uncompressed.close();
+            m_effective_size = compression_type_size + m_size;
             m_store.compress(file_path);
         }
         catch (const util::file_exists&) {

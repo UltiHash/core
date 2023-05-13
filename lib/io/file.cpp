@@ -5,14 +5,12 @@
 
 #include <utility>
 
-
-const std::filesystem::path& uh::io::file::path() const
-{
-    return m_path;
-}
-
 namespace uh::io
 {
+
+const std::filesystem::path &file::path() {
+    return m_path;
+}
 
 // ---------------------------------------------------------------------
 
@@ -77,7 +75,6 @@ std::streamsize file::write(std::span<const char> buffer)
 {
     auto written_size = fwrite(buffer.data(), 1, buffer.size(), m_fp);
     fflush(m_fp);
-    read_write_done = true;
     return written_size;
 }
 
@@ -86,7 +83,6 @@ std::streamsize file::write(std::span<const char> buffer)
 std::streamsize file::read(std::span<char> buffer)
 {
     auto read_size = fread(buffer.data(), 1, buffer.size(),  m_fp);
-    read_write_done = true;
     return read_size;
 }
 
@@ -94,7 +90,7 @@ std::streamsize file::read(std::span<char> buffer)
 
 bool file::valid() const
 {
-    return m_fp != nullptr && !read_write_done;
+    return m_fp != nullptr && ftell(m_fp) < seekable_size() ;
 }
 
 // ---------------------------------------------------------------------
@@ -111,8 +107,7 @@ void file::seek(off64_t off, int whence) {
 
 // ---------------------------------------------------------------------
 
-std::size_t file::seekable_size()
-{
+std::size_t file::seekable_size() const {
     auto last_pos = ftell(m_fp);
 
     fseek(m_fp, 0L, SEEK_END);
@@ -149,7 +144,6 @@ void file::delete_file() {
 // ---------------------------------------------------------------------
 
 void file::reset_file_state() {
-    read_write_done = false;
     seek(0);
 }
 

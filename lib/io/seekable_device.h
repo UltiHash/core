@@ -15,7 +15,7 @@ namespace uh::io {
 
         virtual void seek (off64_t off, int whence) = 0;
 
-        virtual size_t seekable_size() = 0;
+        [[nodiscard]] virtual size_t seekable_size() const = 0;
     };
 } // uh::io
 

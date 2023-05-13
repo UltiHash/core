@@ -45,7 +45,7 @@ public:
     [[nodiscard]] bool valid() const override;
     void seek(off64_t pos) override;
     void seek(off64_t off, int whence) override;
-    std::size_t seekable_size() override;
+    [[nodiscard]] std::size_t seekable_size() const override;
     void close();
     void open();
     void delete_file();
@@ -53,12 +53,12 @@ public:
     /**
      * resets still open file and seeks to beginning of file
      */
-    void reset_file_state();
+    virtual void reset_file_state();
 
     /**
      * Return the path of the file
      */
-    [[nodiscard]] const std::filesystem::path& path() const;
+    [[nodiscard]] const std::filesystem::path& path();
 
 protected:
     std::filesystem::path m_path;
@@ -67,7 +67,6 @@ protected:
 
 private:
     static void has_parent_path(const std::filesystem::path &path);
-    bool read_write_done = false;
 };
 
 // ---------------------------------------------------------------------

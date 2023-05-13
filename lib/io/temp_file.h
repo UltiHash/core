@@ -77,6 +77,11 @@ public:
      */
     static std::filesystem::path generate_valid_temp_path(const std::filesystem::path& at_directory);
 
+    /**
+     * reset temporary file to empty new file
+     */
+    void reset_temp_file();
+
 private:
     bool m_remove{};
 

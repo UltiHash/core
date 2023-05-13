@@ -40,7 +40,7 @@ public:
     /**
      * Return whether this device still can be used.
      */
-    virtual bool valid() const = 0;
+    [[nodiscard]] virtual bool valid() const = 0;
 };
 
 // ---------------------------------------------------------------------
