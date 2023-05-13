@@ -3,6 +3,10 @@
 
 #include <io/device.h>
 #include <compression/type.h>
+#include <compression/none.h>
+#include <compression/brotli.h>
+#include <util/exception.h>
+#include <filesystem>
 
 
 namespace uh::comp

@@ -7,7 +7,8 @@
 
 #include <storage/backend.h>
 #include <storage/compressed_file_store.h>
-#include "io/sha512.h"
+#include <io/sha512.h>
+#include <compression/none.h>
 
 #include <metrics/storage_metrics.h>
 

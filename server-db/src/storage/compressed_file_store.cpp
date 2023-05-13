@@ -1,18 +1,6 @@
 #include "compressed_file_store.h"
 
-#include <util/exception.h>
-#include <logging/logging_boost.h>
-#include <io/count.h>
-#include <io/file.h>
-#include <compression/compression.h>
-
-#include <arpa/inet.h>
-
-
 namespace uh::dbn::storage
-{
-
-namespace
 {
 
 // ---------------------------------------------------------------------
@@ -50,10 +38,6 @@ std::unique_ptr<io::device> open_reader(const std::filesystem::path& path)
     in->reset_file_state();
     return comp::create(std::move(in), type);
 }
-
-// ---------------------------------------------------------------------
-
-} // namespace
 
 // ---------------------------------------------------------------------
 

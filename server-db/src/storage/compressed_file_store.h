@@ -2,9 +2,16 @@
 #define SERVER_DB_STORAGE_COMPRESSED_FILE_WRITER_H
 
 #include <util/job_queue.h>
+#include <util/exception.h>
+#include <io/count.h>
+#include <io/file.h>
 #include <io/device.h>
 #include <io/temp_file.h>
-#include <compression/type.h>
+#include <io/buffer.h>
+#include <compression/compression.h>
+#include <logging/logging_boost.h>
+
+#include <arpa/inet.h>
 
 #include <metrics/storage_metrics.h>
 
@@ -15,6 +22,18 @@
 
 namespace uh::dbn::storage
 {
+
+// ---------------------------------------------------------------------
+
+void write_comp_type(io::device& out, comp::type t);
+
+// ---------------------------------------------------------------------
+
+comp::type read_comp_type(io::device& in);
+
+// ---------------------------------------------------------------------
+
+std::unique_ptr<io::device> open_reader(const std::filesystem::path& path);
 
 // ---------------------------------------------------------------------
 

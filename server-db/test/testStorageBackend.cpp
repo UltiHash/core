@@ -48,7 +48,7 @@ std::vector<char> to_vector(const std::string& s)
 
 uh::protocol::block_meta_data integrate_data (const std::vector <char> &data, uh::dbn::storage::backend &storage_backend) {
     auto d1 = to_vector(CONTENTS_STR);
-    auto allocation1 = storage_backend.allocate (d1.size());
+    auto allocation1 = storage_backend.allocate(d1.size());
     allocation1->device().write(d1);
     return allocation1->persist();
 }
