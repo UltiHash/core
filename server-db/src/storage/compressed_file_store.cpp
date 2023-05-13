@@ -34,10 +34,14 @@ std::unique_ptr<io::device> open_reader(const std::filesystem::path& path)
 {
     auto in = std::make_unique<io::file>(path,"r");
 
+    io::buffer tmp_buf;
+    in->seek(sizeof(comp::type));
+    io::copy(*in,tmp_buf);
+    in->reset_file_state();
+
     comp::type type = read_comp_type(*in);
     in->reset_file_state();
-    in->seek(sizeof(type));
-    return comp::create(std::move(in), type);
+    return comp::create(tmp_buf, type);
 }
 
 // ---------------------------------------------------------------------
