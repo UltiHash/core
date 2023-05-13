@@ -1,8 +1,4 @@
-#include <chrono>
-#include <random>
-#include <iostream>
-#include <ctime>
-#include <unistd.h>
+
 #include <util/exception.h>
 #include "temp_file.h"
 #include "file.h"
@@ -57,6 +53,7 @@ void file::has_parent_path(const std::filesystem::path &path) {
 std::streamsize file::write(std::span<const char> buffer)
 {
     auto written_size = fwrite(buffer.begin().base(), buffer.size(), 1, m_fp);
+    close();
     return written_size;
 }
 
@@ -65,6 +62,7 @@ std::streamsize file::write(std::span<const char> buffer)
 std::streamsize file::read(std::span<char> buffer)
 {
     auto read_size = fread(buffer.data(), buffer.size(), 1, m_fp);
+    close();
     return read_size;
 }
 
@@ -110,8 +108,10 @@ void file::open() {
 // ---------------------------------------------------------------------
 
 void file::close() {
-    fclose(m_fp);
-    delete m_fp;
+    if(valid()){
+        fclose(m_fp);
+        m_fp = nullptr;
+    }
 }
 
 // ---------------------------------------------------------------------

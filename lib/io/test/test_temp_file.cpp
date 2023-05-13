@@ -8,7 +8,6 @@
 #include <util/exception.h>
 #include <io/file.h>
 #include <io/temp_file.h>
-#include "file.h"
 
 
 using namespace uh::util;
@@ -66,6 +65,16 @@ BOOST_AUTO_TEST_CASE( read_write )
     BOOST_CHECK_EQUAL(read, LOREM_IPSUM.size());
 
     BOOST_CHECK_EQUAL(copy, LOREM_IPSUM);
+}
+
+// ---------------------------------------------------------------------
+
+BOOST_AUTO_TEST_CASE( throw_if_pointing_to_no_directory )
+{
+    temp_file tf(TEMP_DIR);
+    tf.write({LOREM_IPSUM.c_str(), LOREM_IPSUM.size()});
+
+    BOOST_CHECK_THROW(temp_file(tf.path()), exception);
 }
 
 // ---------------------------------------------------------------------

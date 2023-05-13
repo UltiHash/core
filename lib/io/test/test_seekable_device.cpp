@@ -14,8 +14,6 @@
 #include <util/exception.h>
 #include <io/file.h>
 #include <io/temp_file.h>
-#include "file.h"
-
 
 using namespace uh::util;
 using namespace uh::io;
@@ -25,11 +23,11 @@ namespace
 
 // ---------------------------------------------------------------------
 
-    const static std::filesystem::path TEMP_DIR = "/tmp";
+    const std::filesystem::path TEMP_DIR = "/tmp";
 
 // ---------------------------------------------------------------------
 
-    const static std::string LOREM_IPSUM =
+    const std::string LOREM_IPSUM =
             "Lorem ipsum dolor sit amet, consectetur adipiscing "
             "elit, sed do eiusmod tempor incididunt ut labore et "
             "dolore magna aliqua. Ut enim ad minim veniam, quis "
@@ -42,10 +40,35 @@ namespace
 
 // ---------------------------------------------------------------------
 
-typedef boost::mpl::vector<
-        file,
-        temp_file
-> device_types;
+    typedef boost::mpl::vector<
+            file,
+            temp_file
+    > device_types;
+
+// ---------------------------------------------------------------------
+
+    /**
+    * To be implemented for each type in `device_types`: constructs a device
+    * that will read the text given in TEST_TEXT.
+    */
+    template <typename T>
+    std::unique_ptr<T> make_test_seekable_device();
+
+// ---------------------------------------------------------------------
+
+    template <>
+    std::unique_ptr<file> make_test_seekable_device<file>()
+    {
+        return std::make_unique<file>("/path");
+    }
+
+// ---------------------------------------------------------------------
+
+    template <>
+    std::unique_ptr<temp_file> make_test_seekable_device<temp_file>()
+    {
+        return std::make_unique<temp_file>("/path");
+    }
 
 // ---------------------------------------------------------------------
 
@@ -53,26 +76,17 @@ struct Fixture {};
 
 // ---------------------------------------------------------------------
 
-    BOOST_AUTO_TEST_CASE( temporary )
+    BOOST_FIXTURE_TEST_CASE_TEMPLATE( seek_unspecified, T, device_types, Fixture )
     {
-        std::filesystem::path path;
+        auto dev = make_test_seekable_device<T>();
 
-        {
-            temp_file tf(TEMP_DIR);
-            path = tf.path();
+        auto test_path = std::filesystem::path(TEMP_DIR);
 
-            BOOST_CHECK(path.parent_path() == TEMP_DIR);
-            BOOST_CHECK(std::filesystem::exists(path));
+        if constexpr (std::is_same_v<T,file>){
+            test_path = temp_file::generate_valid_temp_path(TEMP_DIR);
         }
 
-        BOOST_CHECK(!std::filesystem::exists(path));
-    }
-
-// ---------------------------------------------------------------------
-
-    BOOST_AUTO_TEST_CASE( read_write )
-    {
-        temp_file tf(TEMP_DIR);
+        T tf(test_path);
 
         auto written = tf.write({LOREM_IPSUM.c_str(), LOREM_IPSUM.size()});
         BOOST_CHECK_EQUAL(written, LOREM_IPSUM.size());
@@ -83,59 +97,13 @@ struct Fixture {};
         BOOST_CHECK_EQUAL(read, LOREM_IPSUM.size());
 
         BOOST_CHECK_EQUAL(copy, LOREM_IPSUM);
+
+        BOOST_CHECK(dev->valid());
     }
 
 // ---------------------------------------------------------------------
 
-    BOOST_AUTO_TEST_CASE( throw_if_directory_missing )
-    {
-        unsigned counter = 0;
-        std::stringstream subdir;
-        std::filesystem::path dir = ".";
 
-        do
-        {
-            subdir.clear();
-            subdir << "tmp-" << counter;
-            ++counter;
-        }
-        while (std::filesystem::exists(dir / subdir.str()));
-
-        BOOST_CHECK_THROW(temp_file(dir / subdir.str()), exception);
-    }
-
-// ---------------------------------------------------------------------
-
-    BOOST_AUTO_TEST_CASE( release_to )
-    {
-        auto target_path = TEMP_DIR / "release-to-unit-test";
-
-        std::filesystem::remove(target_path);
-        std::filesystem::path tf_path;
-
-        {
-            temp_file tf(TEMP_DIR);
-            tf_path = tf.path();
-            tf.release_to(target_path);
-
-            BOOST_CHECK(std::filesystem::exists(target_path));
-        }
-
-        BOOST_CHECK(!std::filesystem::exists(tf_path));
-        BOOST_CHECK(std::filesystem::exists(target_path));
-
-        std::filesystem::remove(target_path);
-    }
-
-// ---------------------------------------------------------------------
-
-    BOOST_AUTO_TEST_CASE( release_to_throws )
-    {
-        temp_file tf_1(TEMP_DIR);
-        temp_file tf_2(TEMP_DIR);
-
-        BOOST_CHECK_THROW(tf_1.release_to(tf_2.path()), file_exists);
-    }
 
 // ---------------------------------------------------------------------
 

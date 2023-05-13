@@ -2,11 +2,17 @@
 #define UH_IO_TEMPFILE_H
 
 #include <io/file.h>
+#include <util/exception.h>
 
 #include <filesystem>
 #include <boost/iostreams/categories.hpp>
 #include <boost/iostreams/positioning.hpp>
 
+#include <chrono>
+#include <random>
+#include <iostream>
+#include <ctime>
+#include <unistd.h>
 
 namespace uh::io
 {

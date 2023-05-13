@@ -1,13 +1,5 @@
+
 #include "temp_file.h"
-#include "file.h"
-
-#include <util/exception.h>
-
-#include <unistd.h>
-#include <ctime>
-#include <iostream>
-#include <random>
-#include <chrono>
 
 namespace uh::io
 {
@@ -111,10 +103,16 @@ void temp_file::release_to(const std::filesystem::path& path)
 
 void temp_file::rename(const std::filesystem::path& path)
 {
+    close();
+
     if (::rename(m_path.c_str(), path.c_str()) == -1)
     {
         THROW_FROM_ERRNO();
     }
+
+    m_path = path;
+
+    open();
 }
 
 // ---------------------------------------------------------------------
@@ -127,7 +125,7 @@ void temp_file::rename(const std::filesystem::path& path)
     do{
         out_approach = at_directory / (FILENAME_TEMPLATE + gen_random());
     }
-    while(!std::filesystem::exists(out_approach));
+    while(std::filesystem::exists(out_approach));
 
     return out_approach;
 }

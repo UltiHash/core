@@ -26,13 +26,25 @@ public:
 
     ~file() override;
 
+    /**
+     * writes to file and closes it to invalidate
+     *
+     * @param buffer input
+     * @return size written
+     */
     std::streamsize write(std::span<const char> buffer) override;
+    /**
+     * read to file and closes it to invalidate
+     *
+     * @param buffer input
+     * @return size written
+     */
     std::streamsize read(std::span<char> buffer) override;
     [[nodiscard]] bool valid() const override;
     void seek(off64_t pos) override;
     void seek(off64_t off, int whence) override;
     std::size_t seekable_size() override;
-    static void close();
+    void close();
     void open();
 
     /**
@@ -43,7 +55,7 @@ public:
 protected:
     std::filesystem::path m_path;
     std::string m_mode{};
-    static FILE* m_fp;
+    FILE* m_fp;
 
 private:
     static void has_parent_path(const std::filesystem::path &path);
