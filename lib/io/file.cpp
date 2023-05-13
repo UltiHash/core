@@ -1,7 +1,19 @@
+#include <chrono>
+#include <random>
+#include <iostream>
+#include <ctime>
+#include <unistd.h>
+#include <util/exception.h>
+#include "temp_file.h"
 #include "file.h"
 
 #include <utility>
 
+
+const std::filesystem::path& uh::io::file::path() const
+{
+    return m_path;
+}
 
 namespace uh::io
 {
@@ -11,6 +23,7 @@ namespace uh::io
 file::file(const std::filesystem::path& path)
     : m_path(path)
 {
+    m_fp = nullptr;
     has_parent_path(path);
 
     if(!std::filesystem::exists(path) ^ !std::filesystem::is_directory(path)){
@@ -23,6 +36,7 @@ file::file(const std::filesystem::path& path)
 file::file(const std::filesystem::path &path, std::string openmode)
     : m_path(path),m_mode(std::move(openmode))
 {
+    m_fp = nullptr;
     has_parent_path(path);
 
     if(!std::filesystem::exists(path) ^ !std::filesystem::is_directory(path)){
@@ -58,16 +72,22 @@ std::streamsize file::read(std::span<char> buffer)
 
 bool file::valid() const
 {
-    return m_fp != nullptr && !feof(m_fp);
+    return m_fp != nullptr;
 }
+
+// ---------------------------------------------------------------------
 
 void file::seek(off64_t pos) {
     fseek(m_fp,pos,SEEK_SET);
 }
 
+// ---------------------------------------------------------------------
+
 void file::seek(off64_t off, int whence) {
     fseek(m_fp,off,whence);
 }
+
+// ---------------------------------------------------------------------
 
 std::size_t file::seekable_size()
 {
@@ -81,13 +101,20 @@ std::size_t file::seekable_size()
     return seek_size;
 }
 
+// ---------------------------------------------------------------------
+
 void file::open() {
     if(m_fp == nullptr)m_fp = fopen64(m_path.c_str(),m_mode.c_str());
 }
 
+// ---------------------------------------------------------------------
+
 void file::close() {
     fclose(m_fp);
+    delete m_fp;
 }
+
+// ---------------------------------------------------------------------
 
 file::~file() {
     close();

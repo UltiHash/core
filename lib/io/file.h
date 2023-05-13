@@ -32,13 +32,18 @@ public:
     void seek(off64_t pos) override;
     void seek(off64_t off, int whence) override;
     std::size_t seekable_size() override;
-    void close();
+    static void close();
     void open();
+
+    /**
+     * Return the path of the file
+     */
+    [[nodiscard]] const std::filesystem::path& path() const;
 
 protected:
     std::filesystem::path m_path;
     std::string m_mode{};
-    FILE* m_fp{};
+    static FILE* m_fp;
 
 private:
     static void has_parent_path(const std::filesystem::path &path);

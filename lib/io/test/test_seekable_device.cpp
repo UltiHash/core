@@ -14,6 +14,7 @@
 #include <util/exception.h>
 #include <io/file.h>
 #include <io/temp_file.h>
+#include "file.h"
 
 
 using namespace uh::util;

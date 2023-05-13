@@ -44,27 +44,7 @@ public:
     ~temp_file() override;
 
     /**
-     * Write the contents of the span and return the number of bytes written.
-     *
-     * @throw writing fails for any reason
-     */
-    std::streamsize write(std::span<const char> buffer) override;
-
-    /**
-     * Read from the device and store it in the buffer. Return the number of
-     * bytes read.
-     *
-     * @throw error while reading
-     */
-    std::streamsize read(std::span<char> buffer) override;
-
-    /**
-     * Return whether this device still can be used.
-     */
-    [[nodiscard]] bool valid() const override;
-
-    /**
-     * Rename the file to `path` and make it a permanent file.
+     * Rename/Move the file to `path`, make it a permanent file
      *
      * @throw a file with the given name already exists
      */
@@ -76,11 +56,11 @@ public:
     void rename(const std::filesystem::path& path);
 
     /**
-     * Return the path of the temporary file.
+     *
+     * @param at_directory is the directory where a temp file should be created
+     * @return the path that can be converted into a valid temp file
      */
-    [[nodiscard]] const std::filesystem::path& path() const;
-
-    const static std::string FILENAME_TEMPLATE;
+    static std::filesystem::path generate_valid_temp_path(const std::filesystem::path& at_directory);
 
 private:
     bool m_remove{};
