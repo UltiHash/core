@@ -44,7 +44,7 @@ comp::type read_comp_type(io::device& in)
 
 std::unique_ptr<io::device> open_reader(const std::filesystem::path& path)
 {
-    auto in = std::make_unique<io::file>(path,"rb");
+    auto in = std::make_unique<io::file>(path,"r");
 
     comp::type type = read_comp_type(*in);
     in->reset_file_state();
@@ -73,7 +73,7 @@ void compression_worker::operator()(const std::filesystem::path& path, comp::typ
     {
         std::streamsize read_size,write_size;
 
-        auto temp = io::temp_file(path.parent_path(),"wb");
+        auto temp = io::temp_file(path.parent_path(),"w");
         {
             m_store.start(path);
             auto in = open_reader(path);
