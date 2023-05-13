@@ -46,6 +46,7 @@ public:
     std::size_t seekable_size() override;
     void close();
     void open();
+    void delete_file();
 
     /**
      * Return the path of the file

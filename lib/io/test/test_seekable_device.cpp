@@ -92,11 +92,14 @@ struct Fixture {};
         BOOST_CHECK_EQUAL(written, LOREM_IPSUM.size());
 
         file in(tf.path());
-        std::string copy(LOREM_IPSUM.size(), 0);
-        auto read = in.read({copy.data(), copy.size()});
-        BOOST_CHECK_EQUAL(read, LOREM_IPSUM.size());
 
-        BOOST_CHECK_EQUAL(copy, LOREM_IPSUM);
+        in.seek(10);
+
+        std::string copy(LOREM_IPSUM.size()-10, 0);
+        auto read = in.read({copy.data(), copy.size()});
+        BOOST_CHECK_EQUAL(read, LOREM_IPSUM.size()-10);
+
+        BOOST_CHECK_EQUAL(copy, std::string{LOREM_IPSUM.data()+10,LOREM_IPSUM.size()});
 
         BOOST_CHECK(dev->valid());
     }

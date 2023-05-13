@@ -74,7 +74,7 @@ temp_file::~temp_file()
 
     if (m_remove)
     {
-        unlink(m_path.c_str());
+        delete_file();
     }
 }
 
