@@ -53,7 +53,7 @@ void file::has_parent_path(const std::filesystem::path &path) {
 std::streamsize file::write(std::span<const char> buffer)
 {
     auto written_size = fwrite(buffer.data(), 1, buffer.size(), m_fp);
-    close();
+    read_write_done = true;
     return written_size;
 }
 
@@ -62,7 +62,7 @@ std::streamsize file::write(std::span<const char> buffer)
 std::streamsize file::read(std::span<char> buffer)
 {
     auto read_size = fread(buffer.data(), 1, buffer.size(),  m_fp);
-    close();
+    read_write_done = true;
     return read_size;
 }
 
@@ -70,7 +70,7 @@ std::streamsize file::read(std::span<char> buffer)
 
 bool file::valid() const
 {
-    return m_fp != nullptr;
+    return m_fp != nullptr && !read_write_done;
 }
 
 // ---------------------------------------------------------------------
@@ -119,6 +119,13 @@ void file::close() {
 
 void file::delete_file() {
     unlink(m_path.c_str());
+}
+
+// ---------------------------------------------------------------------
+
+void file::reset_file() {
+    read_write_done = false;
+    seek(0);
 }
 
 // ---------------------------------------------------------------------

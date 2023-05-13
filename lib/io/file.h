@@ -27,14 +27,15 @@ public:
     ~file() override;
 
     /**
-     * writes to file and closes it to invalidate
+     * writes to file and sets file invalid
      *
      * @param buffer input
      * @return size written
      */
     std::streamsize write(std::span<const char> buffer) override;
+
     /**
-     * read to file and closes it to invalidate
+     * read to file and sets file invalid
      *
      * @param buffer input
      * @return size written
@@ -49,6 +50,11 @@ public:
     void delete_file();
 
     /**
+     * resets still open file and seeks to beginning of file
+     */
+    void reset_file();
+
+    /**
      * Return the path of the file
      */
     [[nodiscard]] const std::filesystem::path& path() const;
@@ -60,6 +66,7 @@ protected:
 
 private:
     static void has_parent_path(const std::filesystem::path &path);
+    bool read_write_done = false;
 };
 
 // ---------------------------------------------------------------------

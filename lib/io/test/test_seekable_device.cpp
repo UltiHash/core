@@ -47,39 +47,12 @@ namespace
 
 // ---------------------------------------------------------------------
 
-    /**
-    * To be implemented for each type in `device_types`: constructs a device
-    * that will read the text given in TEST_TEXT.
-    */
-    template <typename T>
-    std::unique_ptr<T> make_test_seekable_device();
-
-// ---------------------------------------------------------------------
-
-    template <>
-    std::unique_ptr<file> make_test_seekable_device<file>()
-    {
-        return std::make_unique<file>("/path");
-    }
-
-// ---------------------------------------------------------------------
-
-    template <>
-    std::unique_ptr<temp_file> make_test_seekable_device<temp_file>()
-    {
-        return std::make_unique<temp_file>("/path");
-    }
-
-// ---------------------------------------------------------------------
-
 struct Fixture {};
 
 // ---------------------------------------------------------------------
 
 BOOST_FIXTURE_TEST_CASE_TEMPLATE( seek_unspecified, T, device_types, Fixture )
 {
-    auto dev = make_test_seekable_device<T>();
-
     auto test_path = std::filesystem::path(TEMP_DIR);
 
     if constexpr (std::is_same_v<T,file>){
@@ -91,8 +64,15 @@ BOOST_FIXTURE_TEST_CASE_TEMPLATE( seek_unspecified, T, device_types, Fixture )
     auto written = tf.write({LOREM_IPSUM.c_str(), LOREM_IPSUM.size()});
     BOOST_CHECK_EQUAL(written, LOREM_IPSUM.size());
 
-    file in(tf.path());
+    BOOST_CHECK(!tf.valid());
 
+    tf.reset_file();
+    BOOST_CHECK(tf.valid());
+
+    tf.close();
+    BOOST_CHECK(!tf.valid());
+
+    file in(tf.path());
     in.seek(10);
 
     std::string copy(LOREM_IPSUM.size()-10, 0);
@@ -103,7 +83,13 @@ BOOST_FIXTURE_TEST_CASE_TEMPLATE( seek_unspecified, T, device_types, Fixture )
 
     BOOST_CHECK_EQUAL(copy, test_string);
 
-    BOOST_CHECK(dev->valid());
+    BOOST_CHECK(!in.valid());
+    in.reset_file();
+    BOOST_CHECK(in.valid());
+
+    if constexpr (std::is_same_v<T,file>){
+        tf.delete_file();
+    }
 }
 
 // ---------------------------------------------------------------------
