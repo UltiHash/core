@@ -107,9 +107,13 @@ void temp_file::rename(const std::filesystem::path& path)
 {
     close();
 
-    if (std::rename(m_path.c_str(), path.c_str()))
+    if (std::filesystem::exists(path))
     {
-        THROW(util::exception,"the file of release "+path.string()+" did already exist");
+        THROW(util::file_exists,"the file of release "+path.string()+" did already exist");
+    }
+    else
+    {
+        std::rename(m_path.c_str(), path.c_str());
     }
 
     m_path = path;
