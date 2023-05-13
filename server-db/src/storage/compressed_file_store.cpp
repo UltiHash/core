@@ -72,12 +72,12 @@ void compression_worker::operator()(const std::filesystem::path& path, comp::typ
     try
     {
         std::streamsize read_size,write_size;
+
+        auto temp = io::temp_file(path.parent_path(),"wb");
         {
             m_store.start(path);
             auto in = open_reader(path);
             io::count count_in(*in);
-
-            auto temp = io::temp_file(path.parent_path(),"wb");
             io::count count_out(temp);
 
             write_comp_type(count_out, type);
