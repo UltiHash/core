@@ -42,7 +42,16 @@ file(directory,"w+"),m_remove(true)
 // ---------------------------------------------------------------------
 
 temp_file::temp_file(const std::filesystem::path &directory, const std::string& mode):
-io::file(directory,mode) {
+io::file(directory,mode)
+{
+    temp_file_constructor(directory);
+}
+
+// ---------------------------------------------------------------------
+
+temp_file::temp_file(const std::filesystem::path &directory, std::ios_base::openmode mode):
+file(directory, mode)
+{
     temp_file_constructor(directory);
 }
 

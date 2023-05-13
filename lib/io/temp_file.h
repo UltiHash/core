@@ -38,11 +38,20 @@ public:
     explicit temp_file(const std::filesystem::path &directory);
 
     /**
+     * C style version of mode
      *
      * @param directory create temporary file here
      * @param mode work at some temporary file in another mode
      */
-    explicit temp_file(const std::filesystem::path &directory, const std::string& mode);
+    temp_file(const std::filesystem::path &directory, const std::string& mode);
+
+    /**
+     * C++ style version of mode
+     *
+     * @param directory create temporary file here
+     * @param mode work at some temporary file in another mode
+     */
+    temp_file(const std::filesystem::path &directory, std::ios_base::openmode mode);
 
     /**
      * Remove the temporary file.

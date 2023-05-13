@@ -42,6 +42,29 @@ file::file(const std::filesystem::path &path, std::string openmode)
 
 // ---------------------------------------------------------------------
 
+file::file(const std::filesystem::path &path, std::ios_base::openmode mode) {
+    std::string c_mode;
+
+    if(mode & std::ios_base::in)c_mode += "r";
+    else if(mode & std::ios_base::out)c_mode += "w+";
+    else if(mode & std::ios_base::app)c_mode += "a";
+    else if(mode & std::ios_base::trunc)c_mode += "w";
+
+    if(mode & std::ios_base::binary)c_mode += "b";
+
+    m_mode = c_mode;
+
+    m_fp = nullptr;
+    has_parent_path(path);
+
+    if(!std::filesystem::exists(path) ^ !std::filesystem::is_directory(path)){
+        open();
+    }
+    if(mode & std::ios_base::ate)fseek(m_fp,0,SEEK_END);
+}
+
+// ---------------------------------------------------------------------
+
 void file::has_parent_path(const std::filesystem::path &path) {
     if((path.has_parent_path() && !std::filesystem::exists(path.parent_path()))||
     (!path.has_parent_path() && !std::filesystem::exists(path)))
