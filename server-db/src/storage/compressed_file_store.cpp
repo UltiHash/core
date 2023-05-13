@@ -32,16 +32,13 @@ comp::type read_comp_type(io::device& in)
 
 std::unique_ptr<io::device> open_reader(const std::filesystem::path& path)
 {
-    auto in = std::make_unique<io::file>(path,"r");
+    auto in = io::file(path,"r");
 
-    io::buffer tmp_buf;
-    in->seek(sizeof(comp::type));
-    io::copy(*in,tmp_buf);
-    in->reset_file_state();
+    comp::type type = read_comp_type(in);
+    auto out = comp::create(std::make_unique<io::file>(in), type);
+    in.reset_file_state();
 
-    comp::type type = read_comp_type(*in);
-    in->reset_file_state();
-    return comp::create(tmp_buf, type);
+    return out;
 }
 
 // ---------------------------------------------------------------------
