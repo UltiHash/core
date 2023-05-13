@@ -208,7 +208,7 @@ struct rabin_polynomial *read_rabin_polys_from_file_binary(FILE *file) {
     
     while(polys_read != 0 && tail != NULL) {
         struct rabin_polynomial *cur_poly=gen_new_polynomial(tail,0,0,0);
-        fread(cur_poly, sizeof(struct rabin_polynomial), 1, file);
+        (void)fread(cur_poly, sizeof(struct rabin_polynomial), 1, file);
         tail=cur_poly;
     }
     
