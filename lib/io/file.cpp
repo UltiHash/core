@@ -17,12 +17,12 @@ namespace uh::io
 // ---------------------------------------------------------------------
 
 file::file(const std::filesystem::path& path)
-    : m_path(path)
+    : m_path(path),m_mode("a+")
 {
     m_fp = nullptr;
     has_parent_path(path);
 
-    if(!std::filesystem::exists(path) ^ !std::filesystem::is_directory(path)){
+    if(!std::filesystem::is_directory(path)){
         open();
     }
 }
@@ -52,7 +52,7 @@ void file::has_parent_path(const std::filesystem::path &path) {
 
 std::streamsize file::write(std::span<const char> buffer)
 {
-    auto written_size = fwrite(buffer.begin().base(), buffer.size(), 1, m_fp);
+    auto written_size = fwrite(buffer.data(), 1, buffer.size(), m_fp);
     close();
     return written_size;
 }
@@ -61,7 +61,7 @@ std::streamsize file::write(std::span<const char> buffer)
 
 std::streamsize file::read(std::span<char> buffer)
 {
-    auto read_size = fread(buffer.data(), buffer.size(), 1, m_fp);
+    auto read_size = fread(buffer.data(), 1, buffer.size(),  m_fp);
     close();
     return read_size;
 }
@@ -102,7 +102,8 @@ std::size_t file::seekable_size()
 // ---------------------------------------------------------------------
 
 void file::open() {
-    if(m_fp == nullptr)m_fp = fopen64(m_path.c_str(),m_mode.c_str());
+    if(m_fp == nullptr)
+        m_fp = fopen64(m_path.c_str(),m_mode.c_str());
 }
 
 // ---------------------------------------------------------------------

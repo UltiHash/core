@@ -76,37 +76,35 @@ struct Fixture {};
 
 // ---------------------------------------------------------------------
 
-    BOOST_FIXTURE_TEST_CASE_TEMPLATE( seek_unspecified, T, device_types, Fixture )
-    {
-        auto dev = make_test_seekable_device<T>();
+BOOST_FIXTURE_TEST_CASE_TEMPLATE( seek_unspecified, T, device_types, Fixture )
+{
+    auto dev = make_test_seekable_device<T>();
 
-        auto test_path = std::filesystem::path(TEMP_DIR);
+    auto test_path = std::filesystem::path(TEMP_DIR);
 
-        if constexpr (std::is_same_v<T,file>){
-            test_path = temp_file::generate_valid_temp_path(TEMP_DIR);
-        }
-
-        T tf(test_path);
-
-        auto written = tf.write({LOREM_IPSUM.c_str(), LOREM_IPSUM.size()});
-        BOOST_CHECK_EQUAL(written, LOREM_IPSUM.size());
-
-        file in(tf.path());
-
-        in.seek(10);
-
-        std::string copy(LOREM_IPSUM.size()-10, 0);
-        auto read = in.read({copy.data(), copy.size()});
-        BOOST_CHECK_EQUAL(read, LOREM_IPSUM.size()-10);
-
-        BOOST_CHECK_EQUAL(copy, std::string{LOREM_IPSUM.data()+10,LOREM_IPSUM.size()});
-
-        BOOST_CHECK(dev->valid());
+    if constexpr (std::is_same_v<T,file>){
+        test_path = temp_file::generate_valid_temp_path(TEMP_DIR);
     }
 
-// ---------------------------------------------------------------------
+    T tf(test_path);
 
+    auto written = tf.write({LOREM_IPSUM.c_str(), LOREM_IPSUM.size()});
+    BOOST_CHECK_EQUAL(written, LOREM_IPSUM.size());
 
+    file in(tf.path());
+
+    in.seek(10);
+
+    std::string copy(LOREM_IPSUM.size()-10, 0);
+    auto read = in.read({copy.data(), copy.size()});
+    BOOST_CHECK_EQUAL(read, LOREM_IPSUM.size()-10);
+
+    auto test_string = std::string{LOREM_IPSUM.begin()+10,LOREM_IPSUM.end()};
+
+    BOOST_CHECK_EQUAL(copy, test_string);
+
+    BOOST_CHECK(dev->valid());
+}
 
 // ---------------------------------------------------------------------
 
