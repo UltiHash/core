@@ -53,7 +53,7 @@ public:
     /**
      * resets still open file and seeks to beginning of file
      */
-    void reset_file();
+    void reset_file_state();
 
     /**
      * Return the path of the file

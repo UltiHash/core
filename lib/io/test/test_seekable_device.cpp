@@ -66,7 +66,7 @@ BOOST_FIXTURE_TEST_CASE_TEMPLATE( seek_unspecified, T, device_types, Fixture )
 
     BOOST_CHECK(!tf.valid());
 
-    tf.reset_file();
+    tf.reset_file_state();
     BOOST_CHECK(tf.valid());
 
     tf.close();
@@ -84,7 +84,7 @@ BOOST_FIXTURE_TEST_CASE_TEMPLATE( seek_unspecified, T, device_types, Fixture )
     BOOST_CHECK_EQUAL(copy, test_string);
 
     BOOST_CHECK(!in.valid());
-    in.reset_file();
+    in.reset_file_state();
     BOOST_CHECK(in.valid());
 
     if constexpr (std::is_same_v<T,file>){

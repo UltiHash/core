@@ -59,7 +59,7 @@ BOOST_AUTO_TEST_CASE( read_write )
     auto written = tf.write({LOREM_IPSUM.c_str(), LOREM_IPSUM.size()});
     BOOST_CHECK_EQUAL(written, LOREM_IPSUM.size());
 
-    tf.reset_file();
+    tf.reset_file_state();
 
     file in(tf.path());
     std::string copy(LOREM_IPSUM.size(), 0);

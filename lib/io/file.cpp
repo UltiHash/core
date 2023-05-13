@@ -76,6 +76,7 @@ void file::has_parent_path(const std::filesystem::path &path) {
 std::streamsize file::write(std::span<const char> buffer)
 {
     auto written_size = fwrite(buffer.data(), 1, buffer.size(), m_fp);
+    fflush(m_fp);
     read_write_done = true;
     return written_size;
 }
@@ -133,6 +134,7 @@ void file::open() {
 
 void file::close() {
     if(valid()){
+        fflush(m_fp);
         fclose(m_fp);
         m_fp = nullptr;
     }
@@ -146,7 +148,7 @@ void file::delete_file() {
 
 // ---------------------------------------------------------------------
 
-void file::reset_file() {
+void file::reset_file_state() {
     read_write_done = false;
     seek(0);
 }

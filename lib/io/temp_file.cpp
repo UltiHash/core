@@ -98,7 +98,15 @@ void temp_file::release_to(const std::filesystem::path& path)
         return;
     }
 
-    rename(path);
+    if (std::filesystem::exists(path))
+    {
+        THROW(util::file_exists,"the file of release "+path.string()+" did already exist");
+    }
+    else
+    {
+        rename(path);
+    }
+
 }
 
 // ---------------------------------------------------------------------
@@ -107,15 +115,7 @@ void temp_file::rename(const std::filesystem::path& path)
 {
     close();
 
-    if (std::filesystem::exists(path))
-    {
-        THROW(util::file_exists,"the file of release "+path.string()+" did already exist");
-    }
-    else
-    {
-        std::rename(m_path.c_str(), path.c_str());
-    }
-
+    std::rename(m_path.c_str(), path.c_str());
     m_path = path;
 
     open();
