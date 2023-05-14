@@ -95,7 +95,7 @@ public:
     /**
      * Open a file for reading.
      */
-    std::unique_ptr<io::device> open(const std::filesystem::path& path);
+    static std::unique_ptr<io::device> open(const std::filesystem::path& path);
 
     /**
      * Start compressing file transparently in the background. Does not throw.
