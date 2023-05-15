@@ -49,14 +49,6 @@ io::file(directory,mode)
 
 // ---------------------------------------------------------------------
 
-temp_file::temp_file(const std::filesystem::path &directory, std::ios_base::openmode mode):
-file(directory, mode)
-{
-    temp_file_constructor(directory);
-}
-
-// ---------------------------------------------------------------------
-
 void temp_file::temp_file_constructor(const std::filesystem::path &directory)
 {
     if (!std::filesystem::exists(directory))

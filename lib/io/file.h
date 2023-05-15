@@ -23,7 +23,6 @@ class file : public seekable_device
 public:
     explicit file(const std::filesystem::path& path);
     file(const std::filesystem::path& path, std::string mode);
-    file(const std::filesystem::path& path, std::ios_base::openmode mode);
 
     ~file() override;
 
