@@ -40,7 +40,7 @@ BOOST_AUTO_TEST_CASE( temporary )
     std::filesystem::path path;
 
     {
-        temp_file tf(<#initializer#>, TEMP_DIR);
+        temp_file tf(TEMP_DIR);
         path = tf.path();
 
         BOOST_CHECK(path.parent_path() == TEMP_DIR);
@@ -54,7 +54,7 @@ BOOST_AUTO_TEST_CASE( temporary )
 
 BOOST_AUTO_TEST_CASE( read_write )
 {
-    temp_file tf(<#initializer#>, TEMP_DIR);
+    temp_file tf(TEMP_DIR);
 
     auto written = tf.write({LOREM_IPSUM.c_str(), LOREM_IPSUM.size()});
     BOOST_CHECK_EQUAL(written, LOREM_IPSUM.size());
@@ -83,7 +83,7 @@ BOOST_AUTO_TEST_CASE( throw_if_directory_missing )
     }
     while (std::filesystem::exists(dir / subdir.str()));
 
-    BOOST_CHECK_THROW(temp_file(<#initializer#>, dir / subdir.str()), exception);
+    BOOST_CHECK_THROW(temp_file(dir / subdir.str()), exception);
 }
 
 // ---------------------------------------------------------------------
@@ -96,7 +96,7 @@ BOOST_AUTO_TEST_CASE( release_to )
     std::filesystem::path tf_path;
 
     {
-        temp_file tf(<#initializer#>, TEMP_DIR);
+        temp_file tf(TEMP_DIR);
         tf_path = tf.path();
         tf.release_to(target_path);
 
@@ -113,8 +113,8 @@ BOOST_AUTO_TEST_CASE( release_to )
 
 BOOST_AUTO_TEST_CASE( release_to_throws )
 {
-    temp_file tf_1(<#initializer#>, TEMP_DIR);
-    temp_file tf_2(<#initializer#>, TEMP_DIR);
+    temp_file tf_1(TEMP_DIR);
+    temp_file tf_2(TEMP_DIR);
 
     BOOST_CHECK_THROW(tf_1.release_to(tf_2.path()), file_exists);
 }
