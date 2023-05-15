@@ -30,8 +30,8 @@ public:
      *
      * @throw the directory does not exist
      */
-    explicit temp_file(const std::filesystem::path &directory);
-    explicit temp_file(const std::filesystem::path &directory,std::ios_base::openmode mode);
+    explicit temp_file(std::filesystem::path directory);
+    explicit temp_file(std::filesystem::path directory,std::ios_base::openmode mode);
 
     /**
      * Remove the temporary file.

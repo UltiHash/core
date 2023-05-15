@@ -1,5 +1,5 @@
 #include "file.h"
-#include <iostream>
+
 
 namespace uh::io
 {
@@ -7,7 +7,7 @@ namespace uh::io
 // ---------------------------------------------------------------------
 
 file::file(const std::filesystem::path& path)
-    : m_path(path)
+    : m_path(path),m_mode(std::ios_base::out)
 {
     if(!std::filesystem::is_directory(path))
         m_io = std::fstream(path);
@@ -16,7 +16,7 @@ file::file(const std::filesystem::path& path)
 // ---------------------------------------------------------------------
 
 file::file(const std::filesystem::path &path, std::ios_base::openmode mode)
-    : m_path(path)
+    : m_path(path),m_mode(mode)
 {
 
     if(!std::filesystem::is_directory(path))
@@ -53,7 +53,22 @@ bool file::valid() const
 // ---------------------------------------------------------------------
 
 void file::seek(std::streamoff off, std::ios_base::seekdir whence) {
-    m_io.seekg(off,whence);
+    auto cur_pos = m_io.tellg();
+    if(m_mode & std::ios_base::in){
+        switch (whence) {
+            case std::ios_base::beg:
+
+        }
+        m_io.seekg(off,whence);
+    }
+    else{
+        if(m_mode & std::ios_base::out){
+            m_io.seekp(off,whence);
+        }
+        else{
+            THROW(util::exception,"file mode was not supported for seeking");
+        }
+    }
 }
 
 // ---------------------------------------------------------------------

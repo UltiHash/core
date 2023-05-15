@@ -32,6 +32,7 @@ public:
 protected:
     std::fstream m_io;
     std::filesystem::path m_path;
+    std::ios_base::openmode m_mode;
 };
 
 // ---------------------------------------------------------------------

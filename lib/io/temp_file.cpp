@@ -13,7 +13,11 @@ namespace
 
 // ---------------------------------------------------------------------
 
-std::tuple<int , std::filesystem::path> open_temp_file(const std::filesystem::path& templ)
+const std::string FILENAME_TEMPLATE = "tempfile-XXXXXX";
+
+// ---------------------------------------------------------------------
+
+std::tuple<int , std::filesystem::path> open_temp_file(std::filesystem::path& templ)
 {
     auto path = templ.string();
 
@@ -23,7 +27,26 @@ std::tuple<int , std::filesystem::path> open_temp_file(const std::filesystem::pa
         THROW_FROM_ERRNO();
     }
 
-    return {fd, std::filesystem::path(path)};
+    templ = std::filesystem::path(path);
+
+    return {fd, templ};
+}
+
+std::filesystem::path convert_to_stream_path(std::filesystem::path &fd_path){
+    if (!std::filesystem::exists(fd_path))
+    {
+        THROW(util::exception, "parent of temporary file does not exist");
+    }
+
+    if(std::filesystem::is_directory(fd_path))
+    {
+        fd_path = fd_path / FILENAME_TEMPLATE;
+        auto [fd, path] = open_temp_file(fd_path);
+        close(fd);
+
+        fd_path = path;
+    }
+    return fd_path;
 }
 
 // ---------------------------------------------------------------------
@@ -32,39 +55,15 @@ std::tuple<int , std::filesystem::path> open_temp_file(const std::filesystem::pa
 
 // ---------------------------------------------------------------------
 
-temp_file::temp_file(const std::filesystem::path &directory)
-    : file(directory), m_remove(true)
-{
-    if (!std::filesystem::exists(directory))
-    {
-        THROW(util::exception, "parent of temporary file does not exist");
-    }
-
-    if(std::filesystem::is_directory(directory)){
-        auto [fd, path] = open_temp_file(directory / FILENAME_TEMPLATE);
-        close(fd);
-        this->m_io = std::fstream(path);
-        m_path = path;
-    }
-}
+temp_file::temp_file(std::filesystem::path directory)
+    : file(convert_to_stream_path(directory)), m_remove(true)
+{}
 
 // ---------------------------------------------------------------------
 
-temp_file::temp_file(const std::filesystem::path &directory,std::ios_base::openmode mode)
-        : file(directory,mode), m_remove(true)
-{
-    if (!std::filesystem::exists(directory))
-    {
-        THROW(util::exception, "parent of temporary file does not exist");
-    }
-
-    if(std::filesystem::is_directory(directory)){
-        auto [fd, path] = open_temp_file(directory / FILENAME_TEMPLATE);
-        close(fd);
-        this->m_io = std::fstream(path,mode);
-        m_path = path;
-    }
-}
+temp_file::temp_file(std::filesystem::path directory,std::ios_base::openmode mode)
+        : file(convert_to_stream_path(directory), mode), m_remove(true)
+{}
 
 // ---------------------------------------------------------------------
 
@@ -106,10 +105,6 @@ void temp_file::rename(const std::filesystem::path& path)
         THROW_FROM_ERRNO();
     }
 }
-
-// ---------------------------------------------------------------------
-
-const std::string temp_file::FILENAME_TEMPLATE = "tempfile-XXXXXX";
 
 // ---------------------------------------------------------------------
 
