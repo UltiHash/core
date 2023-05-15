@@ -34,7 +34,7 @@ std::string gen_random() {
 // ---------------------------------------------------------------------
 
 temp_file::temp_file(const std::filesystem::path &directory):
-file(directory,"w+"),m_remove(true)
+file(directory,"a"),m_remove(true)
 {
     temp_file_constructor(directory);
 }
@@ -114,11 +114,9 @@ void temp_file::release_to(const std::filesystem::path& path)
 void temp_file::rename(const std::filesystem::path& path)
 {
     close();
-
-    std::rename(m_path.c_str(), path.c_str());
+    ::rename(m_path.c_str(),path.c_str());
+    m_fp = freopen64(path.c_str(),m_mode.c_str(),m_fp);
     m_path = path;
-
-    open();
 }
 
 // ---------------------------------------------------------------------

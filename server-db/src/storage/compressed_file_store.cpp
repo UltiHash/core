@@ -4,33 +4,38 @@ namespace uh::dbn::storage {
 
 // ---------------------------------------------------------------------
 
-    void write_comp_type(io::device &out, comp::type t) {
-        uint32_t nl_id = htonl(to_uint(t));
+void write_comp_type(io::device &out, comp::type t)
+{
+    uint32_t nl_id = htonl(to_uint(t));
 
-        if (out.write({reinterpret_cast<char *>(&nl_id), sizeof(nl_id)}) < sizeof(nl_id)) {
-            THROW(util::exception, "failure writing compression header");
-        }
+    if (out.write({reinterpret_cast<char *>(&nl_id), sizeof(nl_id)}) < sizeof(nl_id))
+    {
+        THROW(util::exception, "failure writing compression header");
     }
+}
 
 // ---------------------------------------------------------------------
 
-    comp::type read_comp_type(io::device &in) {
-        uint32_t nl_id;
-        if (in.read({reinterpret_cast<char *>(&nl_id), sizeof(nl_id)}) < sizeof(nl_id)) {
-            THROW(util::exception, "failure reading compression header");
-        }
-
-        return comp::from_uint(ntohl(nl_id));
+comp::type read_comp_type(io::device &in)
+{
+    uint32_t nl_id;
+    if (in.read({reinterpret_cast<char*>(&nl_id), sizeof(nl_id)}) < sizeof(nl_id))
+    {
+        THROW(util::exception, "failure reading compression header");
     }
+
+    return comp::from_uint(ntohl(nl_id));
+}
 
 // ---------------------------------------------------------------------
 
-    std::unique_ptr<io::device> open_reader(const std::filesystem::path &path) {
-        auto in = std::make_unique<io::file>(path,"r");
+std::unique_ptr<io::device> open_reader(const std::filesystem::path &path)
+{
+    auto in = std::make_unique<io::file>(path, "r+");
 
-        comp::type type = read_comp_type(*in);
-        return comp::create(std::move(in), type);
-    }
+    comp::type type = read_comp_type(*in);
+    return comp::create(std::move(in), type);
+}
 
 // ---------------------------------------------------------------------
 
@@ -93,7 +98,7 @@ compressed_file_store::compressed_file_store(
     : m_metrics(metrics),
       m_type(config.compression),
       m_active(0),
-      m_report_savings(report_savings),
+      m_report_savings(std::move(report_savings)),
       m_worker(config.threads, compression_worker(*this, m_metrics))
 {
 }
@@ -102,7 +107,7 @@ compressed_file_store::compressed_file_store(
 
 std::unique_ptr<io::temp_file> compressed_file_store::temp_file(const std::filesystem::path& path)
 {
-    auto rv = std::make_unique<io::temp_file>(path,"w");
+    auto rv = std::make_unique<io::temp_file>(path);
 
     uh::dbn::storage::write_comp_type(*rv, comp::type::none);
 

@@ -1,7 +1,6 @@
 #ifndef IO_FILE_H
 #define IO_FILE_H
 
-#include <io/file.h>
 #include <io/seekable_device.h>
 #include <util/exception.h>
 
@@ -11,6 +10,7 @@
 #include <filesystem>
 #include <fstream>
 #include <cstdio>
+#include <utility>
 
 
 namespace uh::io
@@ -66,6 +66,7 @@ protected:
     FILE* m_fp;
 
 private:
+    bool is_open = false;
     static void has_parent_path(const std::filesystem::path &path);
 };
 

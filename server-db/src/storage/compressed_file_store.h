@@ -90,7 +90,7 @@ public:
     /**
      * Open a temporary file for writing
      */
-    std::unique_ptr<io::temp_file> temp_file(const std::filesystem::path& path);
+    static std::unique_ptr<io::temp_file> temp_file(const std::filesystem::path& path);
 
     /**
      * Open a file for reading.
