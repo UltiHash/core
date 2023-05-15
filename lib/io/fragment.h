@@ -4,6 +4,8 @@
 
 #include <io/device.h>
 
+#include "serialization/serialization.h"
+
 #ifndef CORE_FRAGMENT_H
 #define CORE_FRAGMENT_H
 

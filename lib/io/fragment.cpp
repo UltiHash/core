@@ -7,6 +7,8 @@
 namespace uh::io
 {
     fragment::fragment(device &impl) : impl(impl) {
+        auto ser = serialization::serialization(impl);
+        ser.read<std::vector<char>>();
 
     }
 

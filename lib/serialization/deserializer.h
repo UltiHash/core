@@ -76,6 +76,40 @@ namespace uh::serialization {
         // ---------------------------------------------------------------------
 
         /**
+         * putting the function to public makes it possible to speed up by seeking
+         * over seekable device
+         *
+         * @return pair of control byte and the number of bytes forming a buffer to describe the number
+         * of elements on the serialization
+         */
+        [[nodiscard]] inline auto get_control_byte_size_length(){
+            char control_byte[1];
+            io::read(dev_, control_byte);
+
+            return std::make_pair(control_byte[0],get_control_byte_size_length(control_byte[0]));
+        }
+
+        /**
+         * This function reads from device
+         *
+         * @return pair of 1. number of bytes describing the content and 2. number of elements stored of that type
+         */
+        auto get_data_size(){
+            auto data_size_len = get_control_byte_size_length();
+            std::vector<char> data_size_bytes(data_size_len.second);
+            io::read(dev_, data_size_bytes);
+
+            auto data_size = get_control_byte_size(data_size_bytes, data_size_len);
+            if (is_different_endian(data_size_len.first)) {
+                data_size = endian_convert (data_size);
+            }
+
+            return std::make_pair(sizeof(data_size_len.first)+data_size_bytes.size(),data_size);
+        }
+
+        // ---------------------------------------------------------------------
+
+        /**
          * reads the data from the device and deserializes it into the given contiguous range type.
          * @tparam Range the type of the data to be deserialized. It should be a contiguous range of arithmetic types
          * @tparam InnerType the arithmetic inner type of the given range type
