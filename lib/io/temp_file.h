@@ -29,19 +29,19 @@ public:
      *
      * @throw the directory does not exist
      */
-    temp_file(const std::filesystem::path& directory);
+    explicit temp_file(const std::filesystem::path& directory);
 
     /**
      * Remove the temporary file.
      */
-    ~temp_file();
+    ~temp_file() override;
 
     /**
      * Write the contents of the span and return the number of bytes written.
      *
      * @throw writing fails for any reason
      */
-    virtual std::streamsize write(std::span<const char> buffer) override;
+    std::streamsize write(std::span<const char> buffer) override;
 
     /**
      * Read from the device and store it in the buffer. Return the number of
@@ -49,12 +49,12 @@ public:
      *
      * @throw error while reading
      */
-    virtual std::streamsize read(std::span<char> buffer) override;
+    std::streamsize read(std::span<char> buffer) override;
 
     /**
      * Return whether this device still can be used.
      */
-    virtual bool valid() const override;
+    [[nodiscard]] bool valid() const override;
 
     /**
      * Rename the file to `path` and make it a permanent file.
@@ -73,7 +73,6 @@ public:
      */
     [[nodiscard]] std::filesystem::path path();
 
-    void seek (std::streamoff pos) override;
     void seek (std::streamoff off, std::ios_base::seekdir whence) override;
 
     const static std::string FILENAME_TEMPLATE;

@@ -22,7 +22,6 @@ public:
     std::streamsize read(std::span<char> buffer) override;
     bool valid() const override;
 
-    void seek (std::streamoff pos) override;
     void seek (std::streamoff off, std::ios_base::seekdir whence) override;
 
 private:

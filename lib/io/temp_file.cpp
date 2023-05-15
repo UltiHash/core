@@ -3,7 +3,7 @@
 #include <util/exception.h>
 
 #include <unistd.h>
-
+#include <fstream>
 
 namespace uh::io
 {
@@ -13,7 +13,7 @@ namespace
 
 // ---------------------------------------------------------------------
 
-std::pair<int, std::filesystem::path> open_temp_file(const std::filesystem::path& templ)
+std::tuple<int , std::filesystem::path> open_temp_file(const std::filesystem::path& templ)
 {
     auto path = templ.string();
 
@@ -23,7 +23,7 @@ std::pair<int, std::filesystem::path> open_temp_file(const std::filesystem::path
         THROW_FROM_ERRNO();
     }
 
-    return std::make_pair(fd, std::filesystem::path(path));
+    return {fd, std::filesystem::path(path)};
 }
 
 // ---------------------------------------------------------------------
@@ -143,19 +143,8 @@ std::filesystem::path temp_file::path()
 
 // ---------------------------------------------------------------------
 
-void temp_file::seek(std::streamoff pos) {
-    ::lseek(m_fd,pos,SEEK_CUR);
-}
-
-// ---------------------------------------------------------------------
-
 void temp_file::seek(std::streamoff off, std::ios_base::seekdir whence) {
-    switch (whence) {
-        case std::ios_base::beg: ::lseek(m_fd,off,SEEK_SET);
-        case std::ios_base::cur: ::lseek(m_fd,off,SEEK_CUR);
-        case std::ios_base::end: ::lseek(m_fd,off,SEEK_END);
-        default: ::lseek(m_fd,off,SEEK_CUR);
-    }
+
 }
 
 // ---------------------------------------------------------------------

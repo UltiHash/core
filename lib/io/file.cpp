@@ -44,12 +44,6 @@ bool file::valid() const
 
 // ---------------------------------------------------------------------
 
-void file::seek(std::streamoff pos) {
-    m_io.seekg(pos);
-}
-
-// ---------------------------------------------------------------------
-
 void file::seek(std::streamoff off, std::ios_base::seekdir whence) {
     m_io.seekg(off,whence);
 }
