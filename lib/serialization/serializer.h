@@ -30,6 +30,9 @@ namespace uh::serialization {
             const auto nl_data_size = endian_convert (data_size);
             std::memcpy (buffer, reinterpret_cast <const char *> (&nl_data_size) + sizeof (nl_data_size) - data_size_len, data_size_len);
         }
+        // ---------------------------------------------------------------------
+
+    public:
 
         // ---------------------------------------------------------------------
 
@@ -41,10 +44,6 @@ namespace uh::serialization {
             set_data_size(buffer.data() + 1, data_size, data_size_len);
             return buffer;
         }
-
-        // ---------------------------------------------------------------------
-
-    public:
 
         // ---------------------------------------------------------------------
 
