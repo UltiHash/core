@@ -57,6 +57,8 @@ services:
    links:
      - prometheus
      - uh-server-db
+   volumes:
+    - agency-node:/var/lib/agency-node
   uh-client-shell:
    image: uh-client-shell
    build:
@@ -73,3 +75,8 @@ services:
      - uh-server-agency
 volumes:
   grafana-storage: {}
+  agency-node:
+    driver_opts:
+      type: none
+      device: /var/lib/agency-node
+      o: bind

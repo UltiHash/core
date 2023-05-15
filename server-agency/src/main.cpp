@@ -5,6 +5,8 @@
 #include <cluster/options.h>
 #include <server/mod.h>
 #include <metrics/mod.h>
+#include <persistence/mod.h>
+#include "persistence/options.h"
 #include <logging/logging_boost.h>
 
 #include <options/app_config.h>
@@ -17,7 +19,8 @@ APPLICATION_CONFIG(
     (server, uh::options::server_options),
     (logging, uh::options::logging_options),
     (metrics, uh::options::metrics_options),
-    (cluster, uh::an::cluster::options));
+    (cluster, uh::an::cluster::options),
+    (persistence, uh::an::persistence::options));
 
 using namespace uh::log;
 using namespace uh::an;
@@ -34,13 +37,16 @@ int main(int argc, const char** argv)
 
         init_logging(config.logging());
 
-        INFO << "Setting up metrics";
-        metrics::mod metrics_module(config.metrics());
-
+        INFO << "               --- Agency Node Modules ---";
         cluster::mod cluster_module(config.cluster());
         cluster_module.start();
 
-        server::mod server_module(config.server(), cluster_module, metrics_module);
+        uh::an::persistence::mod persistence_module(config.persistence());
+        persistence_module.start();
+
+        metrics::mod metrics_module(config.metrics(), persistence_module);
+
+        server::mod server_module(config.server(), cluster_module, metrics_module, persistence_module);
         server_module.start();
     }
     catch (const std::exception& e)
