@@ -138,7 +138,7 @@ void temp_file::rename(const std::filesystem::path& path)
 
 void temp_file::reset_temp_file() {
     freopen64(m_path.c_str(),"w",m_fp);
-    open();
+    freopen64(m_path.c_str(),m_mode.c_str(),m_fp);
 }
 
 // ---------------------------------------------------------------------
