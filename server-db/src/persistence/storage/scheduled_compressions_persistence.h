@@ -14,7 +14,7 @@ namespace uh::dbn::persistence
     /*
      * Class to store the scheduling information of the compression in a device. It is not thread safe.
      * Other classes using it which are multithreaded should have thread safety built-in in order access
-     * use the scheduled_compressions_persistence class.
+     * and use the scheduled_compressions_persistence class.
      */
     class scheduled_compressions_persistence
     {
