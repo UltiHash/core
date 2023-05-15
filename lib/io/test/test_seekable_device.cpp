@@ -64,13 +64,10 @@ BOOST_FIXTURE_TEST_CASE_TEMPLATE( seek_unspecified, T, device_types, Fixture )
     auto written = tf.write({LOREM_IPSUM.c_str(), LOREM_IPSUM.size()});
     BOOST_CHECK_EQUAL(written, LOREM_IPSUM.size());
 
-    BOOST_CHECK(!tf.valid());
+    BOOST_CHECK(tf.valid());
 
     tf.reset_file_state();
     BOOST_CHECK(tf.valid());
-
-    tf.close();
-    BOOST_CHECK(!tf.valid());
 
     file in(tf.path());
     in.seek(10);

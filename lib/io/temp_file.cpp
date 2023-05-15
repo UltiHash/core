@@ -71,7 +71,7 @@ void temp_file::temp_file_constructor(const std::filesystem::path &directory)
 
 temp_file::~temp_file()
 {
-    close();
+    fflush(m_fp);
 
     if (m_remove)
     {
@@ -105,7 +105,7 @@ void temp_file::release_to(const std::filesystem::path& path)
 
 void temp_file::rename(const std::filesystem::path& path)
 {
-    close();
+    fflush(m_fp);
     ::rename(m_path.c_str(),path.c_str());
     m_fp = freopen64(path.c_str(),m_mode.c_str(),m_fp);
     m_path = path;

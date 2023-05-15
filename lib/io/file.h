@@ -24,8 +24,6 @@ public:
     explicit file(const std::filesystem::path& path);
     file(const std::filesystem::path& path, std::string mode);
 
-    ~file() override;
-
     /**
      * writes to file and sets file invalid
      *
@@ -49,7 +47,6 @@ public:
     void seek(off64_t pos) override;
     void seek(off64_t off, int whence) override;
     [[nodiscard]] std::size_t seekable_size() const override;
-    void close();
     void open();
     void delete_file();
 
