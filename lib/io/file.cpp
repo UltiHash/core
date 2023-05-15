@@ -95,7 +95,7 @@ std::size_t file::seekable_size() const {
 // ---------------------------------------------------------------------
 
 void file::open() {
-    m_fp = fopen64(m_path.c_str(),m_mode.c_str());
+    m_fp = fopen(m_path.c_str(),m_mode.c_str());
     is_open = true;
 }
 
