@@ -1,7 +1,7 @@
 #ifndef UH_IO_TEMPFILE_H
 #define UH_IO_TEMPFILE_H
 
-#include <io/device.h>
+#include <io/seekable_device.h>
 
 #include <filesystem>
 #include <boost/iostreams/categories.hpp>
@@ -21,7 +21,7 @@ using boost::iostreams::stream_offset;
  * Temporary file with self-cleanup. The file implements Boost's seekable device
  * interface.
  */
-class temp_file : public io::device
+class temp_file : public io::seekable_device
 {
 public:
     /**
@@ -71,14 +71,18 @@ public:
     /**
      * Return the path of the temporary file.
      */
-    const std::filesystem::path& path() const;
+    [[nodiscard]] std::filesystem::path path();
+
+    void seek (std::streamoff pos) override;
+    void seek (std::streamoff off, std::ios_base::seekdir whence) override;
 
     const static std::string FILENAME_TEMPLATE;
 
 private:
     int m_fd;
-    std::filesystem::path m_path;
     bool m_remove;
+
+    std::filesystem::path m_path;
 };
 
 // ---------------------------------------------------------------------

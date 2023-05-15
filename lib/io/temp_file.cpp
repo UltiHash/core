@@ -136,9 +136,26 @@ void temp_file::rename(const std::filesystem::path& path)
 
 // ---------------------------------------------------------------------
 
-const std::filesystem::path& temp_file::path() const
+std::filesystem::path temp_file::path()
 {
     return m_path;
+}
+
+// ---------------------------------------------------------------------
+
+void temp_file::seek(std::streamoff pos) {
+    ::lseek(m_fd,pos,SEEK_CUR);
+}
+
+// ---------------------------------------------------------------------
+
+void temp_file::seek(std::streamoff off, std::ios_base::seekdir whence) {
+    switch (whence) {
+        case std::ios_base::beg: ::lseek(m_fd,off,SEEK_SET);
+        case std::ios_base::cur: ::lseek(m_fd,off,SEEK_CUR);
+        case std::ios_base::end: ::lseek(m_fd,off,SEEK_END);
+        default: ::lseek(m_fd,off,SEEK_CUR);
+    }
 }
 
 // ---------------------------------------------------------------------
