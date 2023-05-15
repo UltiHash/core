@@ -79,7 +79,7 @@ BOOST_FIXTURE_TEST_CASE_TEMPLATE( seek_unspecified, T, device_types, Fixture )
     auto test_path = std::filesystem::path(TEMP_DIR);
 
     if constexpr (std::is_same_v<T,temp_file>){
-        temp_file tf(<#initializer#>, test_path);
+        temp_file tf(test_path);
 
         auto written = tf.write({LOREM_IPSUM.c_str(), LOREM_IPSUM.size()});
         BOOST_CHECK_EQUAL(written, LOREM_IPSUM.size());

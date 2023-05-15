@@ -31,7 +31,6 @@ public:
 
 protected:
     std::fstream m_io;
-private:
     std::filesystem::path m_path;
 };
 

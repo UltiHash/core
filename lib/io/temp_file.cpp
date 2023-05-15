@@ -44,6 +44,7 @@ temp_file::temp_file(const std::filesystem::path &directory)
         auto [fd, path] = open_temp_file(directory / FILENAME_TEMPLATE);
         close(fd);
         this->m_io = std::fstream(path);
+        m_path = path;
     }
 }
 
@@ -61,6 +62,7 @@ temp_file::temp_file(const std::filesystem::path &directory,std::ios_base::openm
         auto [fd, path] = open_temp_file(directory / FILENAME_TEMPLATE);
         close(fd);
         this->m_io = std::fstream(path,mode);
+        m_path = path;
     }
 }
 
