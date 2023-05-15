@@ -61,7 +61,10 @@ std::streamsize file::read(std::span<char> buffer)
 
 bool file::valid() const
 {
-    return is_open && !feof(m_fp);
+    return is_open && (
+    std::find(m_mode.begin(),m_mode.end(),'w') != m_mode.end() ||
+    std::find(m_mode.begin(),m_mode.end(),'a') != m_mode.end() ||
+            ftell(m_fp) < seekable_size());
 }
 
 // ---------------------------------------------------------------------

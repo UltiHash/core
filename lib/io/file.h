@@ -11,7 +11,7 @@
 #include <fstream>
 #include <cstdio>
 #include <utility>
-
+#include <algorithm>
 
 namespace uh::io
 {
@@ -41,6 +41,10 @@ public:
      * @return size written
      */
     std::streamsize read(std::span<char> buffer) override;
+    /**
+     *
+     * @return if the stream position is before eof on read or if writing is enabled
+     */
     [[nodiscard]] bool valid() const override;
     void seek(off64_t pos) override;
     void seek(off64_t off, int whence) override;
