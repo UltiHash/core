@@ -26,6 +26,7 @@ struct file_mmap_info {
 
 class mmap_storage {
 public:
+
     mmap_storage (const std::forward_list<file_mmap_info> &files);
 
     /** Allocate new memory in the mmap_storage and return a pointer to it.

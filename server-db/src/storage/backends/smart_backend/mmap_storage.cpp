@@ -37,7 +37,7 @@ uh::dbn::storage::smart::mmap_storage::mmap_storage(const std::forward_list<file
 }
 
 void uh::dbn::storage::smart::mmap_storage::mmap_file(const file_mmap_info &file) {
-    const auto fd = open(file.path.c_str(), O_CREAT | O_RDWR, S_IRWXU);
+    const auto fd = open(file.path.c_str(), O_CREAT | O_RDWR, S_IRUSR | S_IWUSR);
     ftruncate(fd, file.max_size);
     const auto flags = MAP_SHARED | MAP_FIXED | MAP_FIXED_NOREPLACE;
     const auto ptr = mmap(file.address, file.max_size, PROT_READ | PROT_WRITE, flags, fd, 0);
