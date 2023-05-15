@@ -69,7 +69,7 @@ BOOST_FIXTURE_TEST_CASE_TEMPLATE( seek_unspecified, T, device_types, Fixture )
     tf.reset_file_state();
     BOOST_CHECK(tf.valid());
 
-    file in(tf.path());
+    file in(tf.path(),"r");
     in.seek(10);
 
     std::string copy(LOREM_IPSUM.size()-10, 0);
