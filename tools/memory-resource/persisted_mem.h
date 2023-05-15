@@ -102,7 +102,7 @@ private:
             throw std::exception ();
         }
         ftruncate (m_data_fd, m_size + size);
-        const auto flags = MAP_SHARED | MAP_FIXED | MAP_FIXED_NOREPLACE;
+        const auto flags = MAP_SHARED | MAP_FIXED;
         const auto addr = reinterpret_cast <void *> (reinterpret_cast <size_t> (m_pin) + m_size);
         const auto mmapped = mmap(addr, size, PROT_READ | PROT_WRITE, flags, m_data_fd, m_size);
         if (mmapped != addr) {
