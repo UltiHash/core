@@ -1,7 +1,6 @@
 #ifndef SERVER_AGENCY_PERSISTENCE_STORAGE_STORAGE_H
 #define SERVER_AGENCY_PERSISTENCE_STORAGE_STORAGE_H
 
-#include <logging/logging_boost.h>
 #include <persistence/options.h>
 #include <protocol/messages.h>
 

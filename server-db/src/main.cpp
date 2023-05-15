@@ -38,13 +38,13 @@ int main(int argc, const char** argv)
         INFO << "               --- Database Node Modules ---";
         metrics::mod metrics_module(config.metrics()); //TODO add storage metrics
 
-        auto storage_config = config.storage();
-        storage_config.comp = config.comp();
-        storage::mod storage_module(storage_config, metrics_module.storage());
-        storage_module.start();
-
         persistence::mod persistence_module(config.persistence());
         persistence_module.start();
+
+        auto storage_config = config.storage();
+        storage_config.comp = config.comp();
+        storage::mod storage_module(storage_config, metrics_module.storage(), persistence_module.scheduled_persistence());
+        storage_module.start();
 
         server::mod server_module(config.server(), storage_module, metrics_module);
         server_module.start();

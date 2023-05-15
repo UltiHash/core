@@ -1,6 +1,6 @@
 #include "client_metrics_persistence.h"
 #include <io/file.h>
-#include <persistence/options.h>
+#include <logging/logging_boost.h>
 
 namespace uh::an::persistence
 {
@@ -8,7 +8,7 @@ namespace uh::an::persistence
 // ---------------------------------------------------------------------
 
 client_metrics::client_metrics(const persistence_config& config) :
-    m_target_path(config.persistence_path / std::filesystem::path("/uhv_metrics.ua"))
+    m_target_path(config.persistence_path / std::filesystem::path("uhv_metrics.ua"))
 {
 }
 
@@ -75,6 +75,8 @@ void client_metrics::retrieve()
         auto integrated_size = deserializer.read<std::uint64_t>();
         m_id_to_size.insert({uhv_id, integrated_size});
     }
+
+
 }
 
 // ---------------------------------------------------------------------

@@ -55,7 +55,9 @@ BackendTypeEnum define_backend_type(std::string backend_type){
 
 // ---------------------------------------------------------------------
 
-std::unique_ptr<backend> make_backend(const storage_config& cfg, metrics::storage_metrics& storage_metrics){
+std::unique_ptr<backend> make_backend(const storage_config& cfg, metrics::storage_metrics& storage_metrics,
+                                      persistence::scheduled_compressions_persistence& scheduled_compressions)
+{
 
     maybe_create_database_root_directory(cfg.db_root, cfg.create_new_root);
 
@@ -75,7 +77,7 @@ std::unique_ptr<backend> make_backend(const storage_config& cfg, metrics::storag
         case BackendTypeEnum::HierarchicalStorage:
             return std::make_unique<storage::hierarchical_storage>(
                     hierarchical_storage_config{ cfg.db_root, size_needed, cfg.comp },
-                    storage_metrics);
+                    storage_metrics, scheduled_compressions);
         case BackendTypeEnum::OtherStorage:
             THROW(util::exception, "Not implemented yet");
     }
@@ -93,21 +95,21 @@ std::unique_ptr<backend> make_backend(const storage_config& cfg, metrics::storag
 
 struct mod::impl
 {
-    impl(const storage_config& cfg, metrics::storage_metrics& storage_metrics);
+    impl(const storage_config& cfg, metrics::storage_metrics& storage_metrics, persistence::scheduled_compressions_persistence& scheduled_compressions);
     std::unique_ptr<storage::backend> m_backend;
 };
 
 // ---------------------------------------------------------------------
 
-mod::impl::impl(const storage_config& cfg, metrics::storage_metrics& storage_metrics)
-    : m_backend(make_backend(cfg, storage_metrics))
+mod::impl::impl(const storage_config& cfg, metrics::storage_metrics& storage_metrics, persistence::scheduled_compressions_persistence& scheduled_compressions)
+    : m_backend(make_backend(cfg, storage_metrics, scheduled_compressions))
 {
 }
 
 // ---------------------------------------------------------------------
 
-mod::mod(const storage_config& cfg, metrics::storage_metrics& storage_metrics)
-    : m_impl(std::make_unique<impl>(cfg, storage_metrics))
+mod::mod(const storage_config& cfg, metrics::storage_metrics& storage_metrics, persistence::scheduled_compressions_persistence& scheduled_compressions)
+    : m_impl(std::make_unique<impl>(cfg, storage_metrics, scheduled_compressions))
 {
 }
 

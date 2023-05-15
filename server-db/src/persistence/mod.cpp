@@ -6,7 +6,7 @@ namespace uh::dbn::persistence
 
 // ---------------------------------------------------------------------
 
-mod::mod(const persistence_config& config) : m_jq_persistence(std::make_unique<job_queue_persistence>(config))
+mod::mod(const persistence_config& config) : m_scheduling_persistence(std::make_unique<scheduled_compressions_persistence>(config))
 {
 }
 
@@ -15,14 +15,14 @@ mod::mod(const persistence_config& config) : m_jq_persistence(std::make_unique<j
 void mod::start()
 {
     INFO << "       starting persistence module";
-    m_jq_persistence->start();
+    m_scheduling_persistence->start();
 }
 
 // ---------------------------------------------------------------------
 
-job_queue_persistence& mod::jobQ_persistence()
+scheduled_compressions_persistence& mod::scheduled_persistence()
 {
-    return *m_jq_persistence;
+    return *m_scheduling_persistence;
 }
 
 // ---------------------------------------------------------------------

@@ -1,7 +1,7 @@
 #ifndef SERVER_DATABASE_PERSISTENCE_MOD_H
 #define SERVER_DATABASE_PERSISTENCE_MOD_H
 
-#include <persistence/storage/job_queue_persistence.h>
+#include <persistence/storage/scheduled_compressions_persistence.h>
 #include <persistence/options.h>
 
 namespace uh::dbn::persistence
@@ -18,10 +18,10 @@ namespace uh::dbn::persistence
 
         void start();
 
-        job_queue_persistence& jobQ_persistence();
+        scheduled_compressions_persistence& scheduled_persistence();
 
     private:
-        std::unique_ptr<job_queue_persistence> m_jq_persistence;
+        std::unique_ptr<scheduled_compressions_persistence> m_scheduling_persistence;
     };
 
 // ---------------------------------------------------------------------
