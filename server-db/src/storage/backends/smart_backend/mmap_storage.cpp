@@ -31,10 +31,26 @@ mmap_storage::mmap_storage(const std::forward_list<file_mmap_info> &files) :
         m_log(create_logger()) {
 
     for (const auto &file: files) {
-        mmap_file(file);
+        mmap_file (file);
     }
 
     replay_logger();
+}
+
+void* mmap_storage::allocate(std::size_t size) {
+    m_log << "al " << size << '\n';
+    return do_allocate(size);
+}
+
+void mmap_storage::deallocate(void *p, size_t size) {
+    m_log << "de " << p << ' ' << size << '\n';
+    do_deallocate(p, size);
+}
+
+void mmap_storage::sync(void *ptr, std::size_t size) {
+    for (const auto &resource: m_resources) {
+        msync(resource.first, resource.second.get_size(), MS_SYNC);
+    }
 }
 
 void mmap_storage::mmap_file(const file_mmap_info &file) {
@@ -64,14 +80,15 @@ std::fstream mmap_storage::create_logger() {
 void mmap_storage::replay_logger() {
     std::string token;
     while (m_log >> token) {
-        if (token == "alloc") {
+        if (token == "al") {
             size_t bytes;
             m_log >> bytes;
             do_allocate(bytes);
-        } else if (token == "dealloc") {
-            size_t addr, bytes;
+        } else if (token == "de") {
+            void* addr;
+            size_t bytes;
             m_log >> addr >> bytes;
-            do_deallocate(reinterpret_cast <void *> (addr), bytes);
+            do_deallocate(addr, bytes);
         } else {
             throw std::invalid_argument("error: unknown token in the allocation log");
         }
@@ -79,23 +96,7 @@ void mmap_storage::replay_logger() {
     m_log.clear();
 }
 
-void *mmap_storage::allocate(std::size_t size) {
-    m_log << "alloc " << size << '\n';
-    return do_allocate(size);
-}
-
-void mmap_storage::deallocate(void *p, size_t size) {
-    m_log << "dealloc " << p << ' ' << size << '\n';
-    do_deallocate(p, size);
-}
-
-void mmap_storage::sync(void *ptr, std::size_t size) {
-    for (const auto &resource: m_resources) {
-        msync(resource.first, resource.second.get_size(), MS_SYNC);
-    }
-}
-
-void *mmap_storage::do_allocate(size_t bytes) {
+void* mmap_storage::do_allocate(size_t bytes) {
     for (auto &resource: m_resources) {
         try {
             return resource.second.get_pool_resource().allocate (bytes);
