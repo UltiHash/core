@@ -92,19 +92,25 @@ namespace uh::serialization {
         /**
          * This function reads from device
          *
-         * @return pair of 1. number of bytes describing the content and 2. number of elements stored of that type
+         * @return tuple of
+         * 1. number of bytes describing the content with the help
+         * of one control bytes and data size buffer and
+         * 2. number of elements stored of that type
+         * 3. control byte
          */
         auto get_data_size(){
             auto data_size_len = get_control_byte_size_length();
             std::vector<char> data_size_bytes(data_size_len.second);
             io::read(dev_, data_size_bytes);
 
-            auto data_size = get_control_byte_size(data_size_bytes, data_size_len);
+            auto data_size = get_control_byte_size(data_size_bytes, data_size_len.second);
             if (is_different_endian(data_size_len.first)) {
                 data_size = endian_convert (data_size);
             }
 
-            return std::make_pair(sizeof(data_size_len.first)+data_size_bytes.size(),data_size);
+            return std::make_tuple(sizeof(data_size_len.first)+data_size_bytes.size(),
+                                   data_size,
+                                   data_size_len.first);
         }
 
         // ---------------------------------------------------------------------
@@ -121,27 +127,17 @@ namespace uh::serialization {
                  and requires(Range range, InnerType inner_type) { range.resize(1); range[0] = inner_type; }
         Range read() {
 
-            char control_byte[1];
-            io::read(dev_, control_byte);
-
-            const auto data_size_len = get_control_byte_size_length(control_byte[0]);
-            std::vector<char> data_size_bytes(data_size_len);
-            io::read(dev_, data_size_bytes);
-
-            auto data_size = get_control_byte_size(data_size_bytes, data_size_len);
-            if (is_different_endian(control_byte[0])) {
-                data_size = endian_convert (data_size);
-            }
+            auto data_size = get_data_size();
 
             Range range;
-            range.resize(data_size / sizeof (InnerType));
+            range.resize(std::get<1>(data_size) / sizeof (InnerType));
 
-            if (!is_different_endian(control_byte[0]) or sizeof(InnerType) == 1) [[likely]] {  // no need to convert
-                io::read(dev_, {reinterpret_cast <char *> (std::ranges::data(range)), data_size});
+            if (!is_different_endian(std::get<2>(data_size)) or sizeof(InnerType) == 1) [[likely]] {  // no need to convert
+                io::read(dev_, {reinterpret_cast <char *> (std::ranges::data(range)), std::get<1>(data_size)});
             }
             else if constexpr (sizeof(InnerType) > 1) {  // different endian
                 char data[sizeof(InnerType)];
-                for (auto i = 0u; i < data_size; i++) {
+                for (auto i = 0u; i < std::get<1>(data_size); i++) {
                     io::read(dev_, data);
                     char *tmp_dat = endian_convert (data);
                     auto *val = reinterpret_cast <InnerType *> (tmp_dat);
@@ -156,20 +152,10 @@ namespace uh::serialization {
 
         void read(std::span <char> &range) {
 
-            char control_byte[1];
-            io::read(dev_, control_byte);
+            auto data_size = get_data_size();
 
-            auto data_size_len = get_control_byte_size_length(control_byte[0]);
-            std::vector<char> data_size_bytes(data_size_len);
-            io::read(dev_, data_size_bytes);
-
-            auto data_size = get_control_byte_size(data_size_bytes, data_size_len);
-            if (is_different_endian(control_byte[0])) [[unlikely]] {
-                data_size = endian_convert (data_size);
-            }
-
-            io::read(dev_, {range.data (), data_size});
-            range = {range.data (), data_size};
+            io::read(dev_, {range.data (), std::get<1>(data_size)});
+            range = {range.data (), std::get<1>(data_size)};
 
         }
 
