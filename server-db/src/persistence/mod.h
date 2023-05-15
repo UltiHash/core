@@ -1,11 +1,10 @@
-#ifndef SERVER_AGENCY_PERSISTENCE_MDD_H
-#define SERVER_AGENCY_PERSISTENCE_MDD_H
+#ifndef SERVER_DATABASE_PERSISTENCE_MOD_H
+#define SERVER_DATABASE_PERSISTENCE_MOD_H
 
-#include <memory>
+#include <persistence/storage/job_queue_persistence.h>
 #include <persistence/options.h>
-#include <persistence/storage/client_metrics_persistence.h>
 
-namespace uh::an::persistence
+namespace uh::dbn::persistence
 {
 
 // ---------------------------------------------------------------------
@@ -19,14 +18,14 @@ namespace uh::an::persistence
 
         void start();
 
-        client_metrics& clientM_persistence();
+        job_queue_persistence& jobQ_persistence();
 
     private:
-        std::unique_ptr<client_metrics> m_storage;
+        std::unique_ptr<job_queue_persistence> m_jq_persistence;
     };
 
 // ---------------------------------------------------------------------
 
-} // namespace uh::an::persistence
+} // namespace uh::dbn:persistence
 
 #endif

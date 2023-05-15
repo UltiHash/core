@@ -1,4 +1,5 @@
 #include "mod.h"
+#include <logging/logging_boost.h>
 
 using namespace uh::metrics;
 

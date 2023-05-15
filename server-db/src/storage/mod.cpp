@@ -119,7 +119,7 @@ mod::~mod() = default;
 
 void mod::start()
 {
-    INFO << "starting storage module";
+    INFO << "          starting storage module";
     m_impl->m_backend->start();
 }
 
