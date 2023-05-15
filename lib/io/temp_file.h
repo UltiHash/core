@@ -50,8 +50,6 @@ public:
      */
     void rename(const std::filesystem::path& path);
 
-    const static std::string FILENAME_TEMPLATE;
-
 private:
     bool m_remove;
 };

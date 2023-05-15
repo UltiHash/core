@@ -1,5 +1,6 @@
 #include "file.h"
 
+#include "util/exception.h"
 
 namespace uh::io
 {
@@ -55,15 +56,15 @@ bool file::valid() const
 void file::seek(std::streamoff off, std::ios_base::seekdir whence) {
     auto cur_pos = m_io.tellg();
     if(m_mode & std::ios_base::in){
-        switch (whence) {
-            case std::ios_base::beg:
-
-        }
         m_io.seekg(off,whence);
+        if(off > std::abs(m_io.tellg()-cur_pos))
+            THROW(util::exception,"input seek was out of range; seek incomplete");
     }
     else{
         if(m_mode & std::ios_base::out){
             m_io.seekp(off,whence);
+            if(off > std::abs(m_io.tellp()-cur_pos))
+                THROW(util::exception,"output seek was out of range; seek incomplete");
         }
         else{
             THROW(util::exception,"file mode was not supported for seeking");
@@ -76,6 +77,18 @@ void file::seek(std::streamoff off, std::ios_base::seekdir whence) {
 std::filesystem::path file::path()
 {
     return m_path;
+}
+
+// ---------------------------------------------------------------------
+
+bool file::is_open() {
+    return m_io.is_open();
+}
+
+// ---------------------------------------------------------------------
+
+void file::close() {
+    m_io.close();
 }
 
 // ---------------------------------------------------------------------

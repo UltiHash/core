@@ -11,6 +11,12 @@ namespace uh::io {
 
     class seekable_device: public io::device  {
 
+        /**
+         * seeks stream pointer to position
+         *
+         * @param off how far we seek
+         * @param whence the position we start seeking from
+         */
         virtual void seek (std::streamoff off, std::ios_base::seekdir whence) = 0;
 
     };
