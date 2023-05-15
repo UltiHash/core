@@ -78,19 +78,32 @@ BOOST_FIXTURE_TEST_CASE_TEMPLATE( seek_unspecified, T, device_types, Fixture )
 {
     auto test_path = std::filesystem::path(TEMP_DIR);
 
-    if constexpr (std::is_same_v<T,file>){
-        test_path = "tempfile-"+gen_random();
+    if constexpr (std::is_same_v<T,temp_file>){
+        T tf(test_path);
+
+        auto written = tf.write({LOREM_IPSUM.c_str(), LOREM_IPSUM.size()});
+        BOOST_CHECK_EQUAL(written, LOREM_IPSUM.size());
+
+        BOOST_CHECK(tf.valid());
+
+        test_path = tf.path();
+        tf.release_to(test_path);
+    }
+    else{
+        test_path /= "tempfile-" + gen_random();
+
+        T tf(test_path,std::ios_base::out);
+
+        auto written = tf.write({LOREM_IPSUM.c_str(), LOREM_IPSUM.size()});
+        BOOST_CHECK_EQUAL(written, LOREM_IPSUM.size());
+
+        BOOST_CHECK(tf.valid());
     }
 
-    T tf(test_path);
-
-    auto written = tf.write({LOREM_IPSUM.c_str(), LOREM_IPSUM.size()});
-    BOOST_CHECK_EQUAL(written, LOREM_IPSUM.size());
-
-    BOOST_CHECK(tf.valid());
-
     file in(test_path,std::ios_base::in);
-    in.seek(10);
+    BOOST_CHECK(in.valid());
+    if(in.valid())
+        in.seek(10);
 
     std::string copy(LOREM_IPSUM.size()-10, 0);
     auto read = in.read({copy.data(), copy.size()});
@@ -100,11 +113,9 @@ BOOST_FIXTURE_TEST_CASE_TEMPLATE( seek_unspecified, T, device_types, Fixture )
 
     BOOST_CHECK_EQUAL(copy, test_string);
 
-    BOOST_CHECK(!in.valid());
+    BOOST_CHECK(in.valid());
 
-    if constexpr (std::is_same_v<T,file>){
-        std::filesystem::remove(test_path);
-    }
+    std::filesystem::remove(test_path);
 }
 
 // ---------------------------------------------------------------------
