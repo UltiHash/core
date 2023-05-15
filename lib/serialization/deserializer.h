@@ -149,14 +149,23 @@ namespace uh::serialization {
 
         }
 
-
-        void read(std::span <char> &range) {
+        /**
+         * read range, extract control byte, size bytes and content
+         *
+         * @param range
+         *
+         * @return total accumulated size read
+         */
+        std::streamsize read(std::span <char> &range) {
 
             auto data_size = get_data_size();
 
-            io::read(dev_, {range.data (), std::get<1>(data_size)});
+            std::streamsize accumulate_read = std::get<0>(data_size);
+
+            accumulate_read += io::read(dev_, {range.data (), std::get<1>(data_size)});
             range = {range.data (), std::get<1>(data_size)};
 
+            return accumulate_read;
         }
 
         // ---------------------------------------------------------------------

@@ -57,10 +57,12 @@ namespace uh::serialization {
          *
          * @tparam ValueType a numerical type
          * @param data to be serialized
+         *
+         * @return total written size
          */
         template <typename ValueType>
         requires (std::is_arithmetic_v <ValueType> or std::is_enum_v <ValueType>)
-        void write (ValueType data) {
+        std::streamsize write (ValueType data) {
 
             constexpr auto data_size = sizeof (ValueType);
             auto buffer = get_header(data_size);
@@ -68,7 +70,7 @@ namespace uh::serialization {
             std::copy (data_ptr,
                        data_ptr + sizeof (data),
                        std::back_inserter(buffer));
-            io::write(dev_, buffer);
+            return io::write(dev_, buffer);
         }
 
         // ---------------------------------------------------------------------
@@ -83,12 +85,15 @@ namespace uh::serialization {
         template <typename Range, typename InnerType = std::ranges::range_value_t<Range>>
         requires std::ranges::contiguous_range <Range>
                 and (std::is_arithmetic_v <InnerType> or std::is_enum_v <InnerType>)
-        void write (const Range &data) {
+        std::streamsize write (const Range &data) {
             const auto data_size = std::ranges::size (data) * sizeof (InnerType);
             const auto header = get_header(data_size);
-            io::write(dev_, header);
-            io::write(dev_, {reinterpret_cast <const char *> (std::ranges::data(data)), data_size});
 
+            std::streamsize accumulate_size{};
+            accumulate_size += io::write(dev_, header);
+            accumulate_size += io::write(dev_, {reinterpret_cast <const char *> (std::ranges::data(data)), data_size});
+
+            return accumulate_size;
         }
 
 

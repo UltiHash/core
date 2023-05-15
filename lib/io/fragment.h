@@ -12,13 +12,17 @@
 namespace uh::io{
     class fragment : public io::device{
 
-        explicit fragment(device &impl);
+        explicit fragment(device &impl,std::streamoff start_pos = 0);
         std::streamsize write(std::span<const char> buffer) override;
         std::streamsize read(std::span<char> buffer) override;
-        bool valid() const override;
+        [[nodiscard]] bool valid() const override;
 
     private:
         device &impl;
+        bool is_analyzed{};
+        std::size_t data_size{};
+        std::size_t header_size{};
+        std::streamoff frag_beg_pos{};
     };
 } // namespace uh::io
 
