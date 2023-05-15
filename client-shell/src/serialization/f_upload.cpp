@@ -92,40 +92,14 @@ void f_upload::chunk_and_upload(std::unique_ptr<uhv::f_meta_data>& f_meta_data,
         std::vector <uint32_t> chunk_sizes;
 
 
-        for (auto chunk = chunker->next_chunk(); !chunk.empty(); chunk = chunker->next_chunk())
-        {
-
-            protocol::block_meta_data meta_data;
-
-            if (chunk.size() > uh::protocol::server::SMALL_CHUNK_LIMIT)
-            {
-                auto alloc = client_handle->allocate(chunk.size());
-                io::write_from_buffer(alloc->device(), chunk);
-                meta_data = alloc->persist();
+        for (auto chunk = chunker->next_chunk(); !chunk.empty(); chunk = chunker->next_chunk()) {
+            chunk_sizes.push_back(chunk.size());
+            if (chunker->get_buffer().length() == 0) {
+                protocol::write_chunks::response resp = client_handle->write_chunks(protocol::write_chunks::request {chunk_sizes, chunker->get_buffer().raw_data()});
+                f_meta_data->add_hash(resp.hashes);
+                f_meta_data->add_effective_size(resp.effective_size);
+                f_meta_data->add_chunk_sizes (std::move (chunk_sizes));
             }
-            else if (chunk.size() > uh::protocol::server::XSMALL_CHUNK_SIZE_LIMIT)
-            {
-                meta_data = client_handle->write_small_block(chunk);
-            }
-            else
-            {
-                if (xsmall_blocks_req.chunk_sizes.size() == uh::protocol::server::XSMALL_CHUNK_COUNT_LIMIT)
-                {
-                    meta_data = send_xs_blocks(client_handle, xsmall_blocks_req);
-                }
-                xsmall_blocks_req.data.insert(xsmall_blocks_req.data.end(), chunk.data(), chunk.data() + chunk.size());
-                xsmall_blocks_req.chunk_sizes.push_back(chunk.size());
-            }
-
-            f_meta_data->add_hash(meta_data.hash);
-            f_meta_data->add_effective_size(meta_data.effective_size);
-        }
-
-        if (!xsmall_blocks_req.chunk_sizes.empty())
-        {
-            const auto meta_data = send_xs_blocks(client_handle, xsmall_blocks_req);
-            f_meta_data->add_hash(meta_data.hash);
-            f_meta_data->add_effective_size(meta_data.effective_size);
         }
 
         m_uploaded_size += f_meta_data->f_size();
