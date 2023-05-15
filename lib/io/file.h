@@ -15,6 +15,12 @@ namespace uh::io
 class file : public seekable_device
 {
 public:
+    /**
+     * files are in read mode on default, any other behaviour needs to be manually defined
+     * on its mode
+     *
+     * @param path input path to work on
+     */
     explicit file(const std::filesystem::path& path);
     file(const std::filesystem::path& path, std::ios_base::openmode mode);
 

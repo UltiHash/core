@@ -56,7 +56,7 @@ std::filesystem::path convert_to_stream_path(std::filesystem::path &fd_path){
 // ---------------------------------------------------------------------
 
 temp_file::temp_file(std::filesystem::path directory)
-    : file(convert_to_stream_path(directory)), m_remove(true)
+    : file(convert_to_stream_path(directory),std::ios_base::app), m_remove(true)
 {}
 
 // ---------------------------------------------------------------------

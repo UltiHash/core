@@ -26,7 +26,8 @@ class temp_file : public io::file
 public:
     /**
      * Create a temporary file in the given directory. The directory must exist. If the input is
-     * not a directory, but an existing file, it is treated as such file
+     * not a directory, but an existing file, it is treated as such file.
+     * The DEFAULT temp file mode is appending
      *
      * @throw the directory does not exist
      */

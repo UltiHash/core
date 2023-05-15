@@ -8,10 +8,10 @@ namespace uh::io
 // ---------------------------------------------------------------------
 
 file::file(const std::filesystem::path& path)
-    : m_path(path),m_mode(std::ios_base::out)
+    : m_path(path),m_mode(std::ios_base::in)
 {
     if(!std::filesystem::is_directory(path))
-        m_io = std::fstream(path);
+        m_io = std::fstream(path,m_mode);
 }
 
 // ---------------------------------------------------------------------
