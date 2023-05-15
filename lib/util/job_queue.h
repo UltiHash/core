@@ -133,14 +133,14 @@ void job_queue<result, args...>::worker()
 
         try
         {
-            auto applied = std::apply(m_handler, entry.job);
-            if (std::is_same<void, result>::value)
+            if constexpr (std::is_same<void, result>::value)
             {
+                std::apply(m_handler, entry.job);
                 entry.promise.set_value();
             }
             else
             {
-                entry.promise.set_value(std::move(applied));
+                entry.promise.set_value(std::apply(m_handler, entry.job));
             }
         }
         catch (...)
