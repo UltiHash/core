@@ -24,7 +24,7 @@ std::unordered_map <std::string, std::list <std::filesystem::path>> blocks;
 size_t total_size = 0;
 
 void integrate (const std::filesystem::path &path, uh::client::chunking::mod &chunking_module) {
-    uh::io::file f (path, std::ios::in);
+    uh::io::file f(path, "r");
 
     auto chunker = chunking_module.create_chunker(f);
 
