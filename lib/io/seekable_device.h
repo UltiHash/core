@@ -11,9 +11,9 @@ namespace uh::io {
 
     class seekable_device: public io::device  {
 
-        virtual void seek (off64_t pos) = 0;
+        virtual void seek (std::streamoff pos) = 0;
 
-        virtual void seek (off64_t off, int whence) = 0;
+        virtual void seek (std::streamoff off, int whence) = 0;
 
         [[nodiscard]] virtual size_t seekable_size() const = 0;
     };

@@ -44,8 +44,8 @@ public:
      * @return if the stream position is before eof on read or if writing is enabled
      */
     [[nodiscard]] bool valid() const override;
-    void seek(off64_t pos) override;
-    void seek(off64_t off, int whence) override;
+    void seek(std::streamoff pos) override;
+    void seek(std::streamoff off, int whence) override;
     [[nodiscard]] std::size_t seekable_size() const override;
     void open();
     void delete_file();

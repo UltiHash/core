@@ -69,13 +69,13 @@ bool file::valid() const
 
 // ---------------------------------------------------------------------
 
-void file::seek(off64_t pos) {
+void file::seek(std::streamoff pos) {
     fseek(m_fp,pos,SEEK_SET);
 }
 
 // ---------------------------------------------------------------------
 
-void file::seek(off64_t off, int whence) {
+void file::seek(std::streamoff off, int whence) {
     fseek(m_fp,off,whence);
 }
 
