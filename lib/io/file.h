@@ -24,8 +24,15 @@ public:
 
     void seek (std::streamoff off, std::ios_base::seekdir whence) override;
 
-private:
+    /**
+     * Return the path of the temporary file.
+     */
+    [[nodiscard]] std::filesystem::path path();
+
+protected:
     std::fstream m_io;
+private:
+    std::filesystem::path m_path;
 };
 
 // ---------------------------------------------------------------------

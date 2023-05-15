@@ -1,7 +1,7 @@
 #ifndef UH_IO_TEMPFILE_H
 #define UH_IO_TEMPFILE_H
 
-#include <io/seekable_device.h>
+#include <io/file.h>
 
 #include <filesystem>
 #include <boost/iostreams/categories.hpp>
@@ -21,40 +21,22 @@ using boost::iostreams::stream_offset;
  * Temporary file with self-cleanup. The file implements Boost's seekable device
  * interface.
  */
-class temp_file : public io::seekable_device
+class temp_file : public io::file
 {
 public:
     /**
-     * Create a temporary file in the given directory. The directory must exist.
+     * Create a temporary file in the given directory. The directory must exist. If the input is
+     * not a directory, but an existing file, it is treated as such file
      *
      * @throw the directory does not exist
      */
-    explicit temp_file(const std::filesystem::path& directory);
+    explicit temp_file(const std::filesystem::path &directory);
+    explicit temp_file(const std::filesystem::path &directory,std::ios_base::openmode mode);
 
     /**
      * Remove the temporary file.
      */
     ~temp_file() override;
-
-    /**
-     * Write the contents of the span and return the number of bytes written.
-     *
-     * @throw writing fails for any reason
-     */
-    std::streamsize write(std::span<const char> buffer) override;
-
-    /**
-     * Read from the device and store it in the buffer. Return the number of
-     * bytes read.
-     *
-     * @throw error while reading
-     */
-    std::streamsize read(std::span<char> buffer) override;
-
-    /**
-     * Return whether this device still can be used.
-     */
-    [[nodiscard]] bool valid() const override;
 
     /**
      * Rename the file to `path` and make it a permanent file.
@@ -68,20 +50,10 @@ public:
      */
     void rename(const std::filesystem::path& path);
 
-    /**
-     * Return the path of the temporary file.
-     */
-    [[nodiscard]] std::filesystem::path path();
-
-    void seek (std::streamoff off, std::ios_base::seekdir whence) override;
-
     const static std::string FILENAME_TEMPLATE;
 
 private:
-    int m_fd;
     bool m_remove;
-
-    std::filesystem::path m_path;
 };
 
 // ---------------------------------------------------------------------
