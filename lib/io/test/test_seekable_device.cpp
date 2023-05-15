@@ -78,7 +78,7 @@ BOOST_FIXTURE_TEST_CASE_TEMPLATE( seek_unspecified, T, device_types, Fixture )
 {
     auto test_path = std::filesystem::path(TEMP_DIR);
 
-    if constexpr (std::is_same_v<T,temp_file>){
+    if constexpr (std::is_same_v<T,file>){
         auto old_path = test_path;
 
         do{
