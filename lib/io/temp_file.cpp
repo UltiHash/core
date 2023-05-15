@@ -3,7 +3,7 @@
 #include <util/exception.h>
 
 #include <unistd.h>
-
+#include <fstream>
 
 namespace uh::io
 {
@@ -13,7 +13,11 @@ namespace
 
 // ---------------------------------------------------------------------
 
-std::pair<int, std::filesystem::path> open_temp_file(const std::filesystem::path& templ)
+const std::string FILENAME_TEMPLATE = "tempfile-XXXXXX";
+
+// ---------------------------------------------------------------------
+
+std::tuple<int , std::filesystem::path> open_temp_file(std::filesystem::path& templ)
 {
     auto path = templ.string();
 
@@ -23,7 +27,26 @@ std::pair<int, std::filesystem::path> open_temp_file(const std::filesystem::path
         THROW_FROM_ERRNO();
     }
 
-    return std::make_pair(fd, std::filesystem::path(path));
+    templ = std::filesystem::path(path);
+
+    return {fd, templ};
+}
+
+std::filesystem::path convert_to_stream_path(std::filesystem::path &fd_path){
+    if (!std::filesystem::exists(fd_path))
+    {
+        THROW(util::exception, "parent of temporary file does not exist");
+    }
+
+    if(std::filesystem::is_directory(fd_path))
+    {
+        fd_path = fd_path / FILENAME_TEMPLATE;
+        auto [fd, path] = open_temp_file(fd_path);
+        close(fd);
+
+        fd_path = path;
+    }
+    return fd_path;
 }
 
 // ---------------------------------------------------------------------
@@ -32,93 +55,42 @@ std::pair<int, std::filesystem::path> open_temp_file(const std::filesystem::path
 
 // ---------------------------------------------------------------------
 
-temp_file::temp_file(const std::filesystem::path& directory)
-    : m_fd(-1),
-      m_path(),
-      m_remove(true)
-{
-    if (!std::filesystem::exists(directory))
-    {
-        THROW(util::exception, "parent of temporary file does not exist");
-    }
+temp_file::temp_file(std::filesystem::path directory)
+    : file(convert_to_stream_path(directory),std::ios_base::app), m_remove(true)
+{}
 
-    auto [fd, path] = open_temp_file(directory / FILENAME_TEMPLATE);
-    m_fd = fd;
-    m_path = path;
-}
+// ---------------------------------------------------------------------
+
+temp_file::temp_file(std::filesystem::path directory,std::ios_base::openmode mode)
+        : file(convert_to_stream_path(directory), mode), m_remove(true)
+{}
 
 // ---------------------------------------------------------------------
 
 temp_file::~temp_file()
 {
-    if (m_fd != -1)
+    if (is_open())
     {
-        close(m_fd);
+        close();
     }
 
     if (m_remove)
     {
-        unlink(m_path.c_str());
+        std::filesystem::remove(path());
     }
-}
-
-// ---------------------------------------------------------------------
-
-std::streamsize temp_file::write(std::span<const char> buffer)
-{
-    std::streamsize rv = 0;
-
-    std::size_t n = buffer.size();
-    const char* s = buffer.data();
-    while (n > 0)
-    {
-        auto written = ::write(m_fd, s, n);
-
-        if (written == -1)
-        {
-            THROW_FROM_ERRNO();
-        }
-
-        n -= written;
-        rv += written;
-        s += written;
-    }
-
-    return rv;
-}
-
-// ---------------------------------------------------------------------
-
-std::streamsize temp_file::read(std::span<char> buffer)
-{
-    auto rv = ::read(m_fd, buffer.data(), buffer.size());
-
-    if (rv == -1)
-    {
-        THROW_FROM_ERRNO();
-    }
-
-    return rv;
-}
-
-// ---------------------------------------------------------------------
-
-bool temp_file::valid() const
-{
-    return m_fd != -1;
 }
 
 // ---------------------------------------------------------------------
 
 void temp_file::release_to(const std::filesystem::path& path)
 {
-    if (m_path == path)
+    if (this->path() == path)
     {
         m_remove = false;
         return;
     }
 
-    if (::link(m_path.c_str(), path.c_str()) == -1)
+    if (::link(this->path().c_str(), path.c_str()) == -1)
     {
         THROW_FROM_ERRNO();
     }
@@ -128,39 +100,11 @@ void temp_file::release_to(const std::filesystem::path& path)
 
 void temp_file::rename(const std::filesystem::path& path)
 {
-    if (::rename(m_path.c_str(), path.c_str()) == -1)
+    if (::rename(this->path().c_str(), path.c_str()) == -1)
     {
         THROW_FROM_ERRNO();
     }
 }
-
-// ---------------------------------------------------------------------
-
-std::filesystem::path temp_file::path()
-{
-    return m_path;
-}
-
-// ---------------------------------------------------------------------
-
-void temp_file::seek(std::streamoff pos) {
-    ::lseek(m_fd,pos,SEEK_CUR);
-}
-
-// ---------------------------------------------------------------------
-
-void temp_file::seek(std::streamoff off, std::ios_base::seekdir whence) {
-    switch (whence) {
-        case std::ios_base::beg: ::lseek(m_fd,off,SEEK_SET);
-        case std::ios_base::cur: ::lseek(m_fd,off,SEEK_CUR);
-        case std::ios_base::end: ::lseek(m_fd,off,SEEK_END);
-        default: ::lseek(m_fd,off,SEEK_CUR);
-    }
-}
-
-// ---------------------------------------------------------------------
-
-const std::string temp_file::FILENAME_TEMPLATE = "tempfile-XXXXXX";
 
 // ---------------------------------------------------------------------
 

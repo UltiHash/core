@@ -78,44 +78,49 @@ BOOST_FIXTURE_TEST_CASE_TEMPLATE( seek_unspecified, T, device_types, Fixture )
 {
     auto test_path = std::filesystem::path(TEMP_DIR);
 
-    if constexpr (std::is_same_v<T,temp_file>){
-        T tf(test_path);
+    if constexpr (std::is_same_v<T,file>){
+        auto old_path = test_path;
 
-        auto written = tf.write({LOREM_IPSUM.c_str(), LOREM_IPSUM.size()});
-        BOOST_CHECK_EQUAL(written, LOREM_IPSUM.size());
-
-        BOOST_CHECK(tf.valid());
-
-        test_path = tf.path();
-        tf.release_to(test_path);
+        do{
+            test_path = old_path / ("tempfile-" + gen_random());
+        } while (std::filesystem::exists(test_path));
     }
-    else{
-        test_path /= "tempfile-" + gen_random();
 
+    {
         T tf(test_path,std::ios_base::out);
+        test_path = tf.path();
 
         auto written = tf.write({LOREM_IPSUM.c_str(), LOREM_IPSUM.size()});
         BOOST_CHECK_EQUAL(written, LOREM_IPSUM.size());
 
         BOOST_CHECK(tf.valid());
+
+        if(tf.valid()){
+            if constexpr (std::is_same_v<T,temp_file>){
+                tf.release_to(test_path);
+            }
+        }
     }
 
-    file in(test_path,std::ios_base::in);
-    BOOST_CHECK(in.valid());
-    if(in.valid())
-        in.seek(10);
+    T tf2(test_path,std::ios_base::in);
+    tf2.seek(10,std::ios_base::beg);
 
     std::string copy(LOREM_IPSUM.size()-10, 0);
-    auto read = in.read({copy.data(), copy.size()});
+    auto read = tf2.read({copy.data(), copy.size()});
     BOOST_CHECK_EQUAL(read, LOREM_IPSUM.size()-10);
 
     auto test_string = std::string{LOREM_IPSUM.begin()+10,LOREM_IPSUM.end()};
 
     BOOST_CHECK_EQUAL(copy, test_string);
 
-    BOOST_CHECK(in.valid());
+    BOOST_CHECK(tf2.valid());
 
-    std::filesystem::remove(test_path);
+    BOOST_CHECK_THROW(tf2.seek(500,std::ios_base::beg), std::exception);
+    BOOST_CHECK_THROW(tf2.seek(500,std::ios_base::cur), std::exception);
+    BOOST_CHECK_THROW(tf2.seek(-500,std::ios_base::end), std::exception);
+
+    if(std::filesystem::exists(test_path))
+        std::filesystem::remove(test_path);
 }
 
 // ---------------------------------------------------------------------
