@@ -30,7 +30,7 @@ void integrate (const std::filesystem::path &path, uh::client::chunking::mod &ch
 
     for (auto chunk = chunker->next_chunk(); !chunk.empty(); chunk = chunker->next_chunk()) {
         blocks[{chunk.data(), chunk.size()}].push_back(path);
-        total_size += chunk.size();
+        non_deduplicated_size += chunk.size();
     }
 }
 
@@ -68,10 +68,10 @@ int main(int argc, const char *argv[]) {
         }
     }
 
-    double ratio = static_cast <double> (effective_size) / static_cast <double> (total_size);
+    double ratio = static_cast <double> (effective_size) / static_cast <double> (non_deduplicated_size);
     std::cout << std::endl;
     std::cout << "number of files " << count << std::endl;
-    std::cout << "total size " << static_cast <double> (total_size) / static_cast <double> (1024 * 1024 * 1024) << " GB" << std::endl;
+    std::cout << "total size " << static_cast <double> (non_deduplicated_size) / static_cast <double> (1024 * 1024 * 1024) << " GB" << std::endl;
     std::cout << "effective size " << static_cast <double> (effective_size) / static_cast <double> (1024 * 1024 * 1024) << " GB" << std::endl;
     std::cout << "chunking algorithm " << config.chunking().chunking_strategy << std::endl;
     std::cout << "deduplication ratio is " << ratio << std::endl;

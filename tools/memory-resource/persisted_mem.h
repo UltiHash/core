@@ -55,7 +55,7 @@ class mmaper: public std::pmr::memory_resource {
     int m_data_fd;
 
 public:
-    mmaper (int data_fd, void *pin, size_t size = m_min_size):
+    mmaper (int data_fd, void *pin, size_t size = 2 * m_min_size):
             m_pin (pin),
             m_data_fd (data_fd),
             m_log (create_logger ()) {
@@ -79,8 +79,8 @@ private:
             m_log << "alloc " << bytes << ' ' << alignment << '\n';
         }
         m_allocated_size += bytes;
-        if (m_allocated_size >= m_size) {
-            load_new_buffer (2 * m_size);
+        if (m_allocated_size >= m_size - m_min_size) {
+            load_new_buffer (m_size);
         }
         return m_resource->allocate(bytes, alignment);
     }
