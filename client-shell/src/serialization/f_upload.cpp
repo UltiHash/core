@@ -91,8 +91,7 @@ void f_upload::chunk_and_upload(std::unique_ptr<uhv::f_meta_data>& f_meta_data,
         auto chunker = m_chunking.create_chunker(file,  std::min (uh::protocol::server::MAXIMUM_DATA_SIZE, static_cast <const size_t> (f_meta_data->f_size())));
         std::vector <uint32_t> chunk_sizes;
 
-        for (auto chunk = chunker->next_chunk(); !chunk.empty(); chunk = chunker->next_chunk())
-        {
+        for (auto chunk = chunker->next_chunk(); !chunk.empty(); chunk = chunker->next_chunk()) {
             chunk_sizes.push_back(chunk.size());
             if (chunker->get_buffer().length() == 0) {
                 protocol::write_chunks::response resp = client_handle->write_chunks(protocol::write_chunks::request {chunk_sizes, chunker->get_buffer().raw_data()});
