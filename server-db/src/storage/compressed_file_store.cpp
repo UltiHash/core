@@ -106,7 +106,7 @@ compressed_file_store::compressed_file_store(
     : m_metrics(metrics),
       m_type(config.compression),
       m_active(0),
-      m_report_savings(report_savings),
+      m_report_savings(std::move(report_savings)),
       m_worker(config.threads, compression_worker(*this, m_metrics))
 {
 }
