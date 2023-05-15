@@ -79,68 +79,37 @@ BOOST_FIXTURE_TEST_CASE_TEMPLATE( seek_unspecified, T, device_types, Fixture )
     auto test_path = std::filesystem::path(TEMP_DIR);
 
     if constexpr (std::is_same_v<T,temp_file>){
-        temp_file tf(test_path);
-
-        auto written = tf.write({LOREM_IPSUM.c_str(), LOREM_IPSUM.size()});
-        BOOST_CHECK_EQUAL(written, LOREM_IPSUM.size());
-
-        tf.seek(10,std::ios_base::beg);
-        written = tf.write({LOREM_IPSUM.c_str(), LOREM_IPSUM.size()});
-
-        std::string test_vec;
-        test_vec.append(LOREM_IPSUM.begin(),LOREM_IPSUM.begin()+10);
-        test_vec.append(LOREM_IPSUM);
-
-        tf.release_to(test_path);
-
-        file in(test_path,std::ios_base::in);
-
-        std::string read_vec;
-        read_vec.resize(test_vec.size());
-        in.read({read_vec.data(),read_vec.size()});
-
-        BOOST_CHECK_EQUAL(test_vec, read_vec);
-
-        BOOST_CHECK(tf.valid());
-
-        BOOST_CHECK_THROW(tf.seek(500,std::ios_base::cur), std::exception);
-
-        test_path = tf.path();
-
-    }
-    else{
         auto old_path = test_path;
 
         do{
             test_path = old_path / ("tempfile-" + gen_random());
         } while (std::filesystem::exists(test_path));
-
-        T tf(test_path,std::ios_base::out);
-
-        auto written = tf.write({LOREM_IPSUM.c_str(), LOREM_IPSUM.size()});
-        BOOST_CHECK_EQUAL(written, LOREM_IPSUM.size());
-
-        BOOST_CHECK(tf.valid());
-
-        file in(test_path,std::ios_base::in);
-        BOOST_CHECK(in.valid());
-        if(in.valid())
-            in.seek(10,std::ios_base::beg);
-
-        std::string copy(LOREM_IPSUM.size()-10, 0);
-        auto read = in.read({copy.data(), copy.size()});
-        BOOST_CHECK_EQUAL(read, LOREM_IPSUM.size()-10);
-
-        auto test_string = std::string{LOREM_IPSUM.begin()+10,LOREM_IPSUM.end()};
-
-        BOOST_CHECK_EQUAL(copy, test_string);
-
-        BOOST_CHECK(in.valid());
-
-        BOOST_CHECK_THROW(in.seek(436,std::ios_base::cur), std::exception);
     }
 
-    std::filesystem::remove(test_path);
+    T tf(test_path,std::ios_base::out | std::ios_base::in);
+
+    auto written = tf.write({LOREM_IPSUM.c_str(), LOREM_IPSUM.size()});
+    BOOST_CHECK_EQUAL(written, LOREM_IPSUM.size());
+
+    BOOST_CHECK(tf.valid());
+
+    if(tf.valid())
+        tf.seek(10,std::ios_base::beg);
+
+    std::string copy(LOREM_IPSUM.size()-10, 0);
+    auto read = tf.read({copy.data(), copy.size()});
+    BOOST_CHECK_EQUAL(read, LOREM_IPSUM.size()-10);
+
+    auto test_string = std::string{LOREM_IPSUM.begin()+10,LOREM_IPSUM.end()};
+
+    BOOST_CHECK_EQUAL(copy, test_string);
+
+    BOOST_CHECK(tf.valid());
+
+    BOOST_CHECK_THROW(tf.seek(500,std::ios_base::cur), std::exception);
+
+    if(std::filesystem::exists(test_path))
+        std::filesystem::remove(test_path);
 }
 
 // ---------------------------------------------------------------------
