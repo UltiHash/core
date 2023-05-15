@@ -60,7 +60,8 @@ namespace uh::serialization {
             constexpr auto data_size_len = 1;
 
             char buffer[1 + data_size_len + data_size];
-            io::read(dev_, buffer);
+            if (io::read(dev_, buffer) == 0)
+                throw std::runtime_error("Device is empty.");
 
             Arithmetic data = *reinterpret_cast <Arithmetic *> (buffer + data_size_len + 1);
             //std::memcpy(&data, buffer + data_size_len + 1, data_size);

@@ -9,10 +9,12 @@ namespace uh::an::server
 // ---------------------------------------------------------------------
 
 protocol_factory::protocol_factory(cluster::mod& cluster,
+                                   an::persistence::mod& persistence,
                                    metrics::client_metrics& client,
                                    const uh::metrics::protocol_metrics& protocol,
                                    const uh::net::server_info &serv_info)
     : m_cluster(cluster),
+      m_persistence(persistence),
       m_client_metrics(client),
       m_protocol_metrics(protocol),
       m_serv_info (serv_info)
@@ -26,7 +28,9 @@ std::unique_ptr<uh::protocol::protocol> protocol_factory::create(std::shared_ptr
     return std::make_unique<uh::protocol::server>
             (client,
                     std::make_unique<uh::metrics::protocol_metrics_wrapper>
-                            (m_protocol_metrics, std::make_unique<uh::an::server::protocol>(m_cluster, m_client_metrics, m_serv_info)));
+                            (m_protocol_metrics, std::make_unique<uh::an::server::protocol>
+                                    (m_cluster, m_persistence.clientM_persistence(), m_client_metrics, m_serv_info)));
+
 }
 
 // ---------------------------------------------------------------------
