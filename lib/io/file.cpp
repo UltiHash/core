@@ -11,8 +11,7 @@ file::file(const std::filesystem::path &path, std::ios_base::openmode mode)
     : m_path(path),m_mode(mode)
 {
 
-    if(!std::filesystem::is_directory(path))
-        m_io = std::fstream(path,mode);
+    m_io = std::fstream(path,mode);
 
     if (!m_io.is_open())
         throw std::runtime_error("Could not open the file!");
