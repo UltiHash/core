@@ -4,6 +4,8 @@
 
 #include "device.h"
 
+#include <ios>
+
 #ifndef CORE_SEEKABLE_DEVICE_H
 #define CORE_SEEKABLE_DEVICE_H
 
@@ -17,7 +19,7 @@ namespace uh::io {
          * @param off how far we seek
          * @param whence the position we start seeking from
          */
-        virtual void seek (std::streamoff off, const std::ios_base::seekdir whence) = 0;
+        virtual void seek (std::streamoff off, std::ios_base::seekdir whence) = 0;
 
     };
 } // uh::io
