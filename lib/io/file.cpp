@@ -12,6 +12,7 @@ file::file(const std::filesystem::path &path, std::ios_base::openmode mode)
 {
 
     m_io = std::fstream(path,mode);
+    m_io.exceptions( std::ifstream::badbit | std::ifstream::failbit );
 
     if (!m_io.is_open())
         throw std::runtime_error("Could not open the file!");
