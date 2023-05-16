@@ -6,6 +6,8 @@
 
 #include "serialization/serialization.h"
 
+#include <openssl/evp.h>
+
 #ifndef CORE_FRAGMENT_H
 #define CORE_FRAGMENT_H
 
@@ -71,7 +73,7 @@ namespace uh::io{
         explicit fragment(device &impl,std::streamoff start_pos = 0);
 
     private:
-        device &impl;
+        device& impl;
         bool is_analyzed{};
         std::size_t data_size{};
         std::size_t header_size{};

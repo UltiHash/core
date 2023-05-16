@@ -38,7 +38,7 @@ std::streamsize fragment::read(std::span<char> buffer) {
         frag_read_pos += header_size;
     }
 
-    auto read_advance = io::read(impl,{buffer.data(),buffer.size()});
+    auto read_advance = impl.read({buffer.data(),buffer.size()});
     frag_read_pos += read_advance;
 
     return read_advance;
@@ -47,7 +47,7 @@ std::streamsize fragment::read(std::span<char> buffer) {
 // ---------------------------------------------------------------------
 
 bool fragment::valid() const {
-    return impl.valid() && frag_read_pos < frag_beg_pos+header_size+data_size;
+    return frag_read_pos < frag_beg_pos+header_size+data_size;
 }
 
 // ---------------------------------------------------------------------
