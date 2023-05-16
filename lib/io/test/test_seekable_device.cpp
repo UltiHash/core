@@ -93,7 +93,7 @@ BOOST_FIXTURE_TEST_CASE_TEMPLATE( seek_unspecified, T, device_types, Fixture )
         auto written = tf.write({LOREM_IPSUM.c_str(), LOREM_IPSUM.size()});
         BOOST_CHECK_EQUAL(written, LOREM_IPSUM.size());
 
-        BOOST_CHECK(tf.valid());
+        BOOST_REQUIRE(tf.valid());
 
         if(tf.valid()){
             if constexpr (std::is_same_v<T,temp_file>){
@@ -113,7 +113,7 @@ BOOST_FIXTURE_TEST_CASE_TEMPLATE( seek_unspecified, T, device_types, Fixture )
 
     BOOST_CHECK_EQUAL(copy, test_string);
 
-    BOOST_CHECK(tf2.valid());
+    BOOST_REQUIRE(tf2.valid());
 
     BOOST_CHECK_THROW(tf2.seek(500,std::ios_base::beg), std::exception);
     BOOST_CHECK_THROW(tf2.seek(500,std::ios_base::cur), std::exception);
