@@ -21,14 +21,13 @@ public:
      *
      * @param path input path to work on
      */
-    explicit file(const std::filesystem::path& path);
-    file(const std::filesystem::path& path, std::ios_base::openmode mode);
+    explicit file(const std::filesystem::path& path, std::ios_base::openmode mode = std::ios_base::in);
 
     std::streamsize write(std::span<const char> buffer) override;
     std::streamsize read(std::span<char> buffer) override;
     bool valid() const override;
 
-    void seek (std::streamoff off, const std::ios_base::seekdir whence) override;
+    void seek (std::streamoff off, std::ios_base::seekdir whence) override;
 
     /**
      * Return the path of the temporary file.
