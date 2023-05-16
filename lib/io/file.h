@@ -35,9 +35,6 @@ public:
      */
     [[nodiscard]] std::filesystem::path path();
 
-    bool is_open();
-    void close();
-
 private:
     std::fstream m_io;
     std::filesystem::path m_path;

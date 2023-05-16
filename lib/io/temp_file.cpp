@@ -69,11 +69,6 @@ temp_file::temp_file(std::filesystem::path directory,std::ios_base::openmode mod
 
 temp_file::~temp_file()
 {
-    if (is_open())
-    {
-        close();
-    }
-
     if (m_remove)
     {
         std::filesystem::remove(path());
