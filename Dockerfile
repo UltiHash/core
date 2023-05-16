@@ -37,8 +37,10 @@ RUN adduser --system --uid 234 --gid 234 --shell /bin/bash uh
 RUN mkdir /data
 RUN chown -R uh:uh /data
 
+# required for agency-node metrics persistence
 RUN mkdir -p /var/lib/agency-node
 RUN chown -R uh:uh /var/lib/agency-node
+
 USER uh
 WORKDIR /home/uh
 
