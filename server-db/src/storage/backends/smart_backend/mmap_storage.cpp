@@ -5,30 +5,23 @@
 
 namespace uh::dbn::storage::smart {
 
-class mmap_storage::resource_entry {
-public:
-    resource_entry(void *p, size_t size) :
-            m_size(size),
-            m_monotonic_buffer(p, size, std::pmr::null_memory_resource()),
-            m_pool_resource(&m_monotonic_buffer) {}
 
-    std::pmr::memory_resource &get_pool_resource() {
-        return m_pool_resource;
-    }
+mmap_storage::resource_entry::resource_entry(void *p, size_t size):
+        m_size(size),
+        m_monotonic_buffer(p, size, std::pmr::null_memory_resource()),
+        m_pool_resource(&m_monotonic_buffer) {
+}
 
-    std::size_t get_size() const {
-        return m_size;
-    }
+std::pmr::memory_resource& mmap_storage::resource_entry::get_pool_resource() {
+    return m_pool_resource;
+}
 
-private:
-    std::size_t m_size;
-    std::pmr::monotonic_buffer_resource m_monotonic_buffer;
-    std::pmr::synchronized_pool_resource m_pool_resource;
-
-};
+std::size_t mmap_storage::resource_entry::get_size() const {
+    return m_size;
+}
 
 mmap_storage::mmap_storage(const std::forward_list<file_mmap_info> &files) :
-        m_log(create_logger()) {
+    m_log(create_logger()) {
 
     for (const auto &file: files) {
         mmap_file (file);
@@ -56,7 +49,10 @@ void mmap_storage::sync(void *ptr, std::size_t size) {
 void mmap_storage::mmap_file(const file_mmap_info &file) {
     const auto fd = open(file.path.c_str(), O_CREAT | O_RDWR, S_IRUSR | S_IWUSR);
     ftruncate(fd, file.max_size);
-    const auto flags = MAP_SHARED | MAP_FIXED | MAP_FIXED_NOREPLACE;
+    auto flags = MAP_SHARED;
+    if (file.address != nullptr) {
+        flags |= MAP_FIXED;
+    }
     const auto ptr = mmap(file.address, file.max_size, PROT_READ | PROT_WRITE, flags, fd, 0);
     close(fd);
     if (file.address != nullptr and ptr != file.address) {
@@ -68,8 +64,8 @@ void mmap_storage::mmap_file(const file_mmap_info &file) {
                              std::forward_as_tuple(ptr, file.max_size));
 }
 
-std::fstream mmap_storage::create_logger() {
-    std::filesystem::path log_name = "_mmap_allocation_log_";
+std::fstream mmap_storage::create_logger() const {
+    const std::filesystem::path log_name = "_mmap_allocation_log_";
     auto flags = std::ios::in | std::ios::out;
     if (!std::filesystem::exists(log_name)) {
         flags |= std::ios::trunc;
@@ -101,7 +97,7 @@ void* mmap_storage::do_allocate(size_t bytes) {
         try {
             return resource.second.get_pool_resource().allocate (bytes);
         }
-        catch (std::bad_alloc) {
+        catch (std::bad_alloc &) {
 
         }
     }
