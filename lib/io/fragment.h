@@ -12,16 +12,7 @@
 namespace uh::io{
     class fragment : public io::device{
 
-        /**
-         * a fragment uses a device to either only read or only write in its lifetime
-         * after reading or writing the fragment can tell where to find its content
-         * relatively to the device stream
-         *
-         * @param impl input device
-         * @param start_pos relative start position on device to distinguish fragments
-         */
-        explicit fragment(device &impl,std::streamoff start_pos = 0);
-
+    public:
         /**
          * read un-serialized input and write serialized to device
          *
@@ -69,6 +60,15 @@ namespace uh::io{
          * pointer to one byte after the fragment
          */
         void skip();
+        /**
+         * a fragment uses a device to either only read or only write in its lifetime
+         * after reading or writing the fragment can tell where to find its content
+         * relatively to the device stream
+         *
+         * @param impl input device
+         * @param start_pos relative start position on device to distinguish fragments
+         */
+        explicit fragment(device &impl,std::streamoff start_pos = 0);
 
     private:
         device &impl;
