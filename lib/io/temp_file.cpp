@@ -17,9 +17,9 @@ const std::string FILENAME_TEMPLATE = "tempfile-XXXXXX";
 
 // ---------------------------------------------------------------------
 
-std::tuple<int , std::filesystem::path> open_temp_file(std::filesystem::path& templ)
+std::filesystem::path open_temp_file(std::filesystem::path& templ)
 {
-    auto path = templ.string();
+    auto path = (templ / FILENAME_TEMPLATE).string();
 
     int fd = mkstemp(path.data());
     if (fd == -1)
@@ -27,26 +27,9 @@ std::tuple<int , std::filesystem::path> open_temp_file(std::filesystem::path& te
         THROW_FROM_ERRNO();
     }
 
-    templ = std::filesystem::path(path);
+    close(fd);
 
-    return {fd, templ};
-}
-
-std::filesystem::path convert_to_stream_path(std::filesystem::path &fd_path){
-    if (!std::filesystem::exists(fd_path))
-    {
-        THROW(util::exception, "parent of temporary file does not exist");
-    }
-
-    if(std::filesystem::is_directory(fd_path))
-    {
-        fd_path = fd_path / FILENAME_TEMPLATE;
-        auto [fd, path] = open_temp_file(fd_path);
-        close(fd);
-
-        fd_path = path;
-    }
-    return fd_path;
+    return path;
 }
 
 // ---------------------------------------------------------------------
@@ -55,25 +38,16 @@ std::filesystem::path convert_to_stream_path(std::filesystem::path &fd_path){
 
 // ---------------------------------------------------------------------
 
-temp_file::temp_file(std::filesystem::path directory)
-    : file(convert_to_stream_path(directory),std::ios_base::app), m_remove(true)
-{}
-
-// ---------------------------------------------------------------------
-
-temp_file::temp_file(std::filesystem::path directory,std::ios_base::openmode mode)
-        : file(convert_to_stream_path(directory), mode), m_remove(true)
-{}
+temp_file::temp_file(std::filesystem::path directory, std::ios_base::openmode mode)
+    : file(open_temp_file(directory), mode),
+      m_remove(true)
+{
+}
 
 // ---------------------------------------------------------------------
 
 temp_file::~temp_file()
 {
-    if (is_open())
-    {
-        close();
-    }
-
     if (m_remove)
     {
         std::filesystem::remove(path());
