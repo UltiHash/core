@@ -47,6 +47,7 @@ void scheduled_compressions_persistence::erase(const std::filesystem::path& path
 {
     m_scheduled.erase(path);
     flush();
+
 }
 
 // ---------------------------------------------------------------------
