@@ -2,7 +2,7 @@
 // Created by benjamin-elias on 15.05.23.
 //
 
-#include "io/device.h"
+#include "io/fragmented_device.h"
 
 #include "serialization/serialization.h"
 
@@ -14,7 +14,7 @@
 namespace uh::io{
 
     template<typename DeviceType> requires std::is_base_of_v<io::device, DeviceType>
-    class fragment : public io::device{
+    class fragment : public io::fragmented_device{
 
     protected:
         DeviceType& dev_;
@@ -54,6 +54,10 @@ namespace uh::io{
             return ser.read(buffer);
         }
 
+        /**
+         *
+         * @return the state of the underlying device
+         */
         [[nodiscard]] bool valid() const override{
             return dev_.valid();
         }
@@ -61,11 +65,21 @@ namespace uh::io{
         /**
          * with this function the underlying device is read until
          * one position behind the fragment content
+         *
+         * @return counts the entire count a fragment fills,
+         * together with it's header structure
          */
         std::streamsize skip(){
             auto ser = serialization::serialization(dev_);
             std::span<char>tmp{};
-            return ser.read(tmp);
+
+            auto data_size = ser.get_data_size();
+
+            std::streamsize accumulate_read{};
+            accumulate_read += std::get<0>(data_size);
+            accumulate_read += io::read(dev_, {tmp.data (), std::get<1>(data_size)});
+
+            return accumulate_read;
         }
 
     };
