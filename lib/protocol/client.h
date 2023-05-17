@@ -78,16 +78,6 @@ public:
      */
     uh::protocol::read_chunks::response read_chunks (const read_chunks::request &req);
 
-
-    /**
-     * Sends several blocks at once to the data node and returns the hashes and the effective sizes of the blocks.
-     * If the data node does not have free space it returns a failed status.
-     *
-     * @param data several blocks to be integrated
-     * @return hashes and effective sizes of the integrated data
-     */
-    uh::protocol::write_xsmall_blocks::response write_xsmall_blocks (const uh::protocol::write_xsmall_blocks::request &);
-
     /**
      * End the connection by sending the `quit` command, optionally with a
      * reason.

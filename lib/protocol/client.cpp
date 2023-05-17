@@ -93,20 +93,6 @@ protocol::block_meta_data client::write_small_block(std::span <char> data) {
 
 // ---------------------------------------------------------------------
 
-uh::protocol::write_xsmall_blocks::response client::write_xsmall_blocks (const uh::protocol::write_xsmall_blocks::request &req) {
-
-    write(m_bs, req);
-    m_bs.sync();
-
-    write_xsmall_blocks::response response;
-    read(m_bs, response);
-
-    return response;
-}
-
-
-// ---------------------------------------------------------------------
-
 void client::quit(const std::string& reason)
 {
     write(m_bs, quit::request{ .reason = reason });

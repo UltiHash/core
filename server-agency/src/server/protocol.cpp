@@ -92,14 +92,6 @@ void protocol::on_next_chunk(std::span<char>)
 
 // ---------------------------------------------------------------------
 
-uh::protocol::write_xsmall_blocks::response
-protocol::on_write_xsmall_blocks(const uh::protocol::write_xsmall_blocks::request &req)
-{
-    return m_cluster.write_xsmall_blocks (req);
-}
-
-// ---------------------------------------------------------------------
-
 uh::protocol::write_chunks::response protocol::on_write_chunks(const write_chunks::request &req) {
     return m_cluster.write_chunks (req);
 }

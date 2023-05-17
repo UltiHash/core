@@ -21,8 +21,6 @@ struct request_interface
 
     virtual block_meta_data on_write_small_block (std::span<char> buffer) = 0;
 
-    virtual write_xsmall_blocks::response on_write_xsmall_blocks (const write_xsmall_blocks::request &) = 0;
-
     virtual write_chunks::response on_write_chunks (const write_chunks::request &) = 0;
 
     virtual read_chunks::response on_read_chunks (const read_chunks::request &) = 0;
