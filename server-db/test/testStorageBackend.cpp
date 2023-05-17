@@ -36,8 +36,8 @@ private:
     uh::metrics::service m_metrics_service;
     uh::dbn::metrics::storage_metrics m_metrics;
     uh::dbn::storage::dump_storage m_dump;
-    uh::dbn::storage::hierarchical_storage m_hierarchical;
     uh::dbn::persistence::scheduled_compressions_persistence m_scheduled_compressions;
+    uh::dbn::storage::hierarchical_storage m_hierarchical;
 
 };
 
