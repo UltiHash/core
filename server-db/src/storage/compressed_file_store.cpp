@@ -111,6 +111,11 @@ compressed_file_store::compressed_file_store(
       m_report_savings(std::move(report_savings)),
       m_worker(config.threads, compression_worker(*this, m_metrics))
 {
+    if (!m_scheduled_compressions.empty())
+    {
+        for (const auto& compression_path : m_scheduled_compressions.set())
+            compress(compression_path);
+    }
 }
 
 // ---------------------------------------------------------------------

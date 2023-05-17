@@ -59,6 +59,20 @@ std::size_t scheduled_compressions_persistence::size() const
 
 // ---------------------------------------------------------------------
 
+bool scheduled_compressions_persistence::empty() const
+{
+    return m_scheduled.empty();
+}
+
+// ---------------------------------------------------------------------
+
+const std::set<std::filesystem::path>& scheduled_compressions_persistence::set() const
+{
+    return m_scheduled;
+}
+
+// ---------------------------------------------------------------------
+
 void scheduled_compressions_persistence::flush()
 {
     io::file scheduled_compressions(m_target_path, std::ios::out | std::ios::trunc | std::ios::binary);

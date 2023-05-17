@@ -26,6 +26,9 @@ namespace uh::dbn::persistence
         std::pair<std::set<std::filesystem::path>::iterator, bool> emplace(const std::filesystem::path& path);
         void erase(const std::filesystem::path& path);
         void flush();
+
+        [[nodiscard]] const std::set<std::filesystem::path>& set() const;
+        [[nodiscard]] bool empty() const;
         [[nodiscard]] std::size_t size() const;
 
     private:
