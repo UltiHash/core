@@ -31,7 +31,6 @@ public:
      *
      * @throw the directory does not exist
      */
-    explicit temp_file(std::filesystem::path directory);
     explicit temp_file(std::filesystem::path directory,std::ios_base::openmode mode = std::ios_base::app);
 
     /**
