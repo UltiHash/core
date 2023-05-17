@@ -58,7 +58,7 @@ namespace uh::serialization {
          * @tparam ValueType a numerical type
          * @param data to be serialized
          *
-         * @return total written size
+         * @return total written size without control byte and data size bytes
          */
         template <typename ValueType>
         requires (std::is_arithmetic_v <ValueType> or std::is_enum_v <ValueType>)
@@ -66,11 +66,12 @@ namespace uh::serialization {
 
             constexpr auto data_size = sizeof (ValueType);
             auto buffer = get_header(data_size);
+            std::streamsize header_size = buffer.size();
             const auto* data_ptr = reinterpret_cast <const char *> (&data);
             std::copy (data_ptr,
                        data_ptr + sizeof (data),
                        std::back_inserter(buffer));
-            return io::write(dev_, buffer);
+            return io::write(dev_, buffer) - header_size;
         }
 
         // ---------------------------------------------------------------------
@@ -90,7 +91,7 @@ namespace uh::serialization {
             const auto header = get_header(data_size);
 
             std::streamsize accumulate_size{};
-            accumulate_size += io::write(dev_, header);
+            io::write(dev_, header);
             accumulate_size += io::write(dev_, {reinterpret_cast <const char *> (std::ranges::data(data)), data_size});
 
             return accumulate_size;

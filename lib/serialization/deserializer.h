@@ -160,7 +160,7 @@ namespace uh::serialization {
 
             auto data_size = get_data_size();
 
-            std::streamsize accumulate_read = std::get<0>(data_size);
+            std::streamsize accumulate_read{};
 
             accumulate_read += io::read(dev_, {range.data (), std::get<1>(data_size)});
             range = {range.data (), std::get<1>(data_size)};

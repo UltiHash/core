@@ -91,7 +91,10 @@ std::unique_ptr<fragment<buffer>> make_test_device()
     static std::unique_ptr<buffer> buf;
     buf = std::make_unique<buffer>();
 
-    return std::make_unique<fragment<buffer>>(*buf);
+    auto rv = std::make_unique<fragment<buffer>>(*buf);
+    rv->write(TEST_TEXT);
+
+    return rv;
 }
 
 // ---------------------------------------------------------------------
