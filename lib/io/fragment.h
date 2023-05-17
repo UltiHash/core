@@ -28,7 +28,7 @@ namespace uh::io{
          * @param impl input device
          * @param start_pos relative start position on device to distinguish fragments
          */
-        explicit fragment(io::device &dev): dev_ (dev){}
+        explicit fragment(io::device &dev);
 
         /**
          * read un-serialized input and write serialized to device
@@ -37,11 +37,7 @@ namespace uh::io{
          * @return number of bytes that were persisted to device
          */
 
-        std::streamsize write(std::span<const char> buffer) override
-        {
-            auto ser = serialization::serialization(dev_);
-            return ser.write(buffer);
-        }
+        std::streamsize write(std::span<const char> buffer) override;
 
         /**
          * read serialized device to un-serialized buffer
@@ -49,25 +45,15 @@ namespace uh::io{
          * @param buffer to be read to from device
          * @return number of bytes totally read from device
          */
-        std::streamsize read(std::span<char> buffer) override
-        {
-            auto ser = serialization::serialization(dev_);
-            return ser.read(buffer);
-        }
+        std::streamsize read(std::span<char> buffer) override;
 
-        [[nodiscard]] bool valid() const override{
-            return dev_.valid();
-        }
+        [[nodiscard]] bool valid() const override;
 
         /**
          * with this function the underlying device is read until
          * one position behind the fragment content
          */
-        std::streamsize skip(){
-            auto ser = serialization::serialization(dev_);
-            std::span<char>tmp{};
-            return ser.read(tmp);
-        }
+        std::streamsize skip();
 
     };
 } // namespace uh::io
