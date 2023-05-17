@@ -274,41 +274,6 @@ std::unique_ptr<uh::protocol::allocation> mod::allocate(std::size_t size)
 
 // ---------------------------------------------------------------------
 
-protocol::block_meta_data mod::write_small_block (std::span <char> buffer) {
-
-    auto &client_connections = m_impl->m_routing->route_data(buffer);
-    return client_connections.get()->write_small_block(buffer);
-
-}
-
-// ---------------------------------------------------------------------
-
-uh::protocol::write_xsmall_blocks::response mod::write_xsmall_blocks (const uh::protocol::write_xsmall_blocks::request &req) {
-    std::map <client_pool *, uh::protocol::write_xsmall_blocks::request> conn_blocks_map;
-    size_t offset = 0;
-    for (const auto chunk_size: req.chunk_sizes) {
-        std::span <const char> block {req.data.data() + offset, chunk_size};
-        auto &client_connections = m_impl->m_routing->route_data(block);
-        conn_blocks_map [&client_connections].data.insert(conn_blocks_map [&client_connections].data.end(), block.data(), block.data() + block.size());
-        conn_blocks_map [&client_connections].chunk_sizes.push_back(chunk_size);
-        offset += chunk_size;
-
-    }
-
-    // TODO this could be done in different threads
-    uh::protocol::write_xsmall_blocks::response total_res;
-    total_res.effective_size = 0;
-
-    for (auto &conn_blocks: conn_blocks_map) {
-        auto res = conn_blocks.first->get()->write_xsmall_blocks (conn_blocks.second);
-        total_res.hashes.insert(total_res.hashes.end(), res.hashes.begin(), res.hashes.end());
-        total_res.effective_size += res.effective_size;
-    }
-    return total_res;
-}
-
-// ---------------------------------------------------------------------
-
 uh::protocol::write_chunks::response mod::write_chunks(const write_chunks::request &req) {
     std::map <client_pool *, chunks_meta_data> conn_blocks_map;
 

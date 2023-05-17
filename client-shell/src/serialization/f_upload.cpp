@@ -51,22 +51,6 @@ void f_upload::join()
 
 // ---------------------------------------------------------------------
 
-protocol::block_meta_data f_upload::send_xs_blocks (auto& client_handle, auto& xsmall_blocks_req)
-{
-    auto res = client_handle->write_xsmall_blocks(xsmall_blocks_req);
-
-    protocol::write_xsmall_blocks::request new_req;
-    std::swap (xsmall_blocks_req, new_req);
-
-    protocol::block_meta_data meta_data;
-    meta_data.hash.insert(meta_data.hash.end(), res.hashes.begin(), res.hashes.end());
-    meta_data.effective_size = res.effective_size;
-
-    return meta_data;
-}
-
-// ---------------------------------------------------------------------
-
 void f_upload::send_statistics()
 {
     uh::protocol::blob uhv_path {};
