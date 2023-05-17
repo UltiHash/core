@@ -58,15 +58,6 @@ public:
     std::unique_ptr<allocation> allocate(std::size_t);
 
     /**
-     * Sends the data to the data node and returns the hash and the effective size of the data.
-     * If the data node does not have free space it returns a failed status.
-     *
-     * @param data actual data to be integrated
-     * @return hash and effective size of the integrated data
-     */
-    block_meta_data write_small_block(std::span <char> data);
-
-    /**
      * Sends the given chunks of data and their sizes to the agency server and returns its
      * response.
      * @return response from agency server
@@ -77,16 +68,6 @@ public:
      * Sends a bunch of hashes to the server and receives its data.
      */
     uh::protocol::read_chunks::response read_chunks (const read_chunks::request &req);
-
-
-    /**
-     * Sends several blocks at once to the data node and returns the hashes and the effective sizes of the blocks.
-     * If the data node does not have free space it returns a failed status.
-     *
-     * @param data several blocks to be integrated
-     * @return hashes and effective sizes of the integrated data
-     */
-    uh::protocol::write_xsmall_blocks::response write_xsmall_blocks (const uh::protocol::write_xsmall_blocks::request &);
 
     /**
      * End the connection by sending the `quit` command, optionally with a

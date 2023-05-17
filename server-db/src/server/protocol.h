@@ -25,11 +25,8 @@ public:
     std::size_t on_free_space() override;
     std::unique_ptr<uh::protocol::allocation> on_allocate_chunk(std::size_t size) override;
     void on_next_chunk(std::span<char> buffer) override;
-    uh::protocol::block_meta_data on_write_small_block (std::span <char> buffer) override;
-    uh::protocol::write_xsmall_blocks::response on_write_xsmall_blocks (const uh::protocol::write_xsmall_blocks::request &) override;
     uh::protocol::write_chunks::response on_write_chunks (const uh::protocol::write_chunks::request &) override;
     uh::protocol::read_chunks::response on_read_chunks (const uh::protocol::read_chunks::request &) override;
-
 
 private:
     storage::backend& m_storage;
