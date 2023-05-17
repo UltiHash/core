@@ -38,7 +38,7 @@ typedef boost::mpl::vector<
     sstream_device,
     buffered_device<sstream_device>,
     buffer,
-    fragment<buffer>
+    fragment
 > device_types;
 
 // ---------------------------------------------------------------------
@@ -86,12 +86,12 @@ std::unique_ptr<buffer> make_test_device()
 // ---------------------------------------------------------------------
 
 template <>
-std::unique_ptr<fragment<buffer>> make_test_device()
+std::unique_ptr<fragment> make_test_device()
 {
     static std::unique_ptr<buffer> buf;
     buf = std::make_unique<buffer>();
 
-    auto rv = std::make_unique<fragment<buffer>>(*buf);
+    auto rv = std::make_unique<fragment>(*buf);
     rv->write(TEST_TEXT);
 
     return rv;

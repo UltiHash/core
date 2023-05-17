@@ -13,11 +13,10 @@
 
 namespace uh::io{
 
-    template<typename DeviceType> requires std::is_base_of_v<io::device, DeviceType>
     class fragment : public io::fragmented_device{
 
     protected:
-        DeviceType& dev_;
+        io::device& dev_;
 
     public:
         /**
@@ -29,7 +28,7 @@ namespace uh::io{
          * @param impl input device
          * @param start_pos relative start position on device to distinguish fragments
          */
-        explicit fragment(DeviceType& dev) : dev_(dev){}
+        explicit fragment(io::device& dev) : dev_(dev){}
 
         /**
          * read un-serialized input and write serialized to device
@@ -69,7 +68,7 @@ namespace uh::io{
          * @return counts the entire count a fragment fills,
          * together with it's header structure
          */
-        std::streamsize skip(){
+        std::streamsize skip() override{
             auto ser = serialization::serialization(dev_);
             std::span<char>tmp{};
 
