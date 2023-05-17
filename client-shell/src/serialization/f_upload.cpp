@@ -86,7 +86,7 @@ void f_upload::chunk_and_upload(std::unique_ptr<uhv::f_meta_data>& f_meta_data,
 {
     if ( f_meta_data->f_type() == uhv::uh_file_type::regular )
     {
-        io::file file(f_meta_data->f_path(),std::ios_base::out);
+        io::file file(f_meta_data->f_path());
 
         auto chunker = m_chunking.create_chunker(file,  std::min (uh::protocol::server::MAXIMUM_DATA_SIZE, static_cast <const size_t> (f_meta_data->f_size())));
         std::vector <uint32_t> chunk_sizes;
