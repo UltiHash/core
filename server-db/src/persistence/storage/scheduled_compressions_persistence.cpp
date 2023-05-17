@@ -1,5 +1,6 @@
 #include "scheduled_compressions_persistence.h"
 #include <logging/logging_boost.h>
+#include <io/temp_file.h>
 #include <io/file.h>
 #include <serialization/serialization.h>
 
@@ -75,7 +76,7 @@ const std::set<std::filesystem::path>& scheduled_compressions_persistence::set()
 
 void scheduled_compressions_persistence::flush()
 {
-    io::file scheduled_compressions(m_target_path, std::ios::out | std::ios::trunc | std::ios::binary);
+    io::temp_file scheduled_compressions(m_target_path.parent_path());
 
     uh::serialization::buffered_serializer serializer(scheduled_compressions);
     serializer.write(m_scheduled.size());
@@ -86,6 +87,7 @@ void scheduled_compressions_persistence::flush()
     }
 
     serializer.sync();
+    scheduled_compressions.rename(m_target_path);
 }
 
 // ---------------------------------------------------------------------

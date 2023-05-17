@@ -1,5 +1,6 @@
 #include "client_metrics_persistence.h"
 #include <io/file.h>
+#include <io/temp_file.h>
 #include <logging/logging_boost.h>
 
 namespace uh::an::persistence
@@ -41,7 +42,7 @@ const std::map<std::string, std::uint64_t>& client_metrics::id_to_size_map() con
 
 void client_metrics::flush()
 {
-    io::file metrics_file(m_target_path, std::ios::out | std::ios::trunc | std::ios::binary);
+    io::temp_file metrics_file(m_target_path.parent_path());
 
     uh::serialization::buffered_serializer serializer(metrics_file);
     serializer.write(m_id_to_size.size());
@@ -53,6 +54,7 @@ void client_metrics::flush()
     }
 
     serializer.sync();
+    metrics_file.rename(m_target_path);
 }
 
 // ---------------------------------------------------------------------
