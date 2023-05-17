@@ -15,7 +15,7 @@ uh::options::action options::evaluate(const boost::program_options::variables_ma
         m_config.persistence_path = "/var/lib/database-node";
 
     if (!std::filesystem::exists(m_config.persistence_path))
-        throw std::runtime_error("Path doesn't exists: " + m_config.persistence_path);
+        throw std::runtime_error("Path doesn't exist: " + m_config.persistence_path);
 
     if (std::filesystem::is_directory(m_config.persistence_path))
     {
