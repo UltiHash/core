@@ -15,9 +15,6 @@ namespace uh::io{
 
     class fragment : public io::fragmented_device{
 
-    protected:
-        io::device& dev_;
-
     public:
         /**
          * a fragment uses a device to either only read or only write in its lifetime
@@ -81,6 +78,8 @@ namespace uh::io{
             return accumulate_read;
         }
 
+    private:
+        io::device& dev_;
     };
 } // namespace uh::io
 
