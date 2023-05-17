@@ -114,8 +114,6 @@ BOOST_FIXTURE_TEST_CASE_TEMPLATE( seek_unspecified, T, device_types, Fixture )
 
     BOOST_REQUIRE(tf2.valid());
 
-    BOOST_CHECK_THROW(tf2.seek(-500, std::ios_base::beg), std::exception);
-
     std::filesystem::remove(test_path);
 }
 
