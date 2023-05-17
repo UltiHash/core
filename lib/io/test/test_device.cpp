@@ -90,8 +90,10 @@ std::unique_ptr<fragment> make_test_device()
 {
     static std::unique_ptr<buffer> base;
     base = make_test_device<buffer>();
+    auto ser = serialization::serialization(*base);
+    ser.write(TEST_TEXT);
 
-    //return std::make_unique<fragment>(base);
+    return std::make_unique<fragment>(*base);
 }
 
 // ---------------------------------------------------------------------
