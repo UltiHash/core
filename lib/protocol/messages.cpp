@@ -392,35 +392,6 @@ void read(serialization::buffered_serialization& in, read_small_block::response&
 
 // ---------------------------------------------------------------------
 
-void write(serialization::buffered_serialization& out, const read_xsmall_blocks::request& request)
-{
-    out.write(read_small_block::request_id);
-    out.write(request.hashes);}
-
-// ---------------------------------------------------------------------
-
-void read(serialization::buffered_serialization& in, read_xsmall_blocks::request& request)
-{
-    request.hashes = in.read <std::vector<char>> ();
-}
-
-// ---------------------------------------------------------------------
-
-void write(serialization::buffered_serialization& out, const read_xsmall_blocks::response& response)
-{
-    out.write(response.data);
-}
-
-// ---------------------------------------------------------------------
-
-void read(serialization::buffered_serialization& in, read_xsmall_blocks::response& response)
-{
-    check_status(in);
-    response.data = in.read<decltype(response.data)>();
-}
-
-// ---------------------------------------------------------------------
-
 void read(serialization::buffered_serialization& in, client_statistics::request& request)
 {
     client_statistics::request tmp {};
