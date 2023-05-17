@@ -2,7 +2,6 @@
 #include <logging/logging_boost.h>
 #include <io/file.h>
 #include <serialization/serialization.h>
-#include <iostream>
 
 namespace uh::dbn::persistence
 {
@@ -11,6 +10,13 @@ namespace uh::dbn::persistence
 
 scheduled_compressions_persistence::scheduled_compressions_persistence(const persistence_config& config) :
     m_target_path(config.persistence_path / std::filesystem::path("scheduled_compressions.ua"))
+{
+}
+
+// ---------------------------------------------------------------------
+
+scheduled_compressions_persistence::scheduled_compressions_persistence() :
+        m_target_path("/tmp" / std::filesystem::path("scheduled_compressions.ua"))
 {
 }
 
@@ -26,7 +32,8 @@ void scheduled_compressions_persistence::start()
 
 // ---------------------------------------------------------------------
 
-std::pair<std::set<std::filesystem::path>::iterator, bool> scheduled_compressions_persistence::emplace(const std::filesystem::path& path)
+std::pair<std::set<std::filesystem::path>::iterator, bool> scheduled_compressions_persistence::
+                                                           emplace(const std::filesystem::path& path)
 {
     auto ret_value = m_scheduled.insert(path);
     flush();
@@ -58,7 +65,7 @@ void scheduled_compressions_persistence::flush()
     uh::serialization::buffered_serializer serializer(scheduled_compressions);
     serializer.write(m_scheduled.size());
 
-    for (const auto& path : m_scheduled)
+    for (const auto &path : m_scheduled)
     {
         serializer.write(path.string());
     }
@@ -79,11 +86,6 @@ void scheduled_compressions_persistence::retrieve()
     {
         auto path= deserializer.read<std::string>();
         m_scheduled.insert(path);
-    }
-
-    // iterate over the set and print each element
-    for (const auto& element : m_scheduled) {
-        std::cout << element << " ";
     }
 }
 

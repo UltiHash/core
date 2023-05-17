@@ -135,7 +135,7 @@ std::unique_ptr<io::device> compressed_file_store::open(const std::filesystem::p
 
 void compressed_file_store::compress(const std::filesystem::path& path)
 {
-    std::unique_lock<std::mutex> lock(m_comp_mutex);
+    std::lock_guard<std::mutex> lock(m_comp_mutex);
     auto [it, success] = m_scheduled_compressions.emplace(path);
     if (!success)
     {
@@ -171,7 +171,7 @@ void compressed_file_store::start(const std::filesystem::path& path)
 void compressed_file_store::finish(const std::filesystem::path& path,
                                    std::streamsize savings)
 {
-    std::unique_lock<std::mutex> lock(m_comp_mutex);
+    std::lock_guard<std::mutex> lock(m_comp_mutex);
 
     m_scheduled_compressions.erase(path);
     m_metrics.comp_scheduled().Set(static_cast<double>(m_scheduled_compressions.size()));

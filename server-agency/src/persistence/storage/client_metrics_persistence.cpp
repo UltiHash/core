@@ -76,7 +76,6 @@ void client_metrics::retrieve()
         m_id_to_size.insert({uhv_id, integrated_size});
     }
 
-
 }
 
 // ---------------------------------------------------------------------

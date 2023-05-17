@@ -1,4 +1,5 @@
 #include <persistence/mod.h>
+#include <logging/logging_boost.h>
 #include "persistence/storage/client_metrics_persistence.h"
 
 namespace uh::an::persistence

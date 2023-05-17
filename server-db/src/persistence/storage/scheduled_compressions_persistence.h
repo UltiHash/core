@@ -20,6 +20,7 @@ namespace uh::dbn::persistence
     {
     public:
         explicit scheduled_compressions_persistence(const persistence_config& config);
+        scheduled_compressions_persistence();
 
         void start();
         std::pair<std::set<std::filesystem::path>::iterator, bool> emplace(const std::filesystem::path& path);
@@ -30,7 +31,7 @@ namespace uh::dbn::persistence
     private:
         void retrieve();
         std::filesystem::path m_target_path;
-        std::set<std::filesystem::path> m_scheduled;
+        std::set<std::filesystem::path> m_scheduled{};
     };
 
 // ---------------------------------------------------------------------
