@@ -82,13 +82,6 @@ public:
     std::unique_ptr<uh::protocol::allocation> allocate(std::size_t size);
 
     /**
-     * Routes the data to its corresponding data node
-     * @param buffer data to be written on one of the data nodes
-     * @return the hash of the data
-     */
-    protocol::block_meta_data write_small_block (std::span <char> buffer);
-
-    /**
      * Routes different blocks to their corresponding data nodes
      * @param buffer array of blocks
      * @return the hash array of the blocks

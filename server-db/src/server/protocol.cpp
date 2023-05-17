@@ -68,15 +68,6 @@ void protocol::on_next_chunk(std::span<char>)
 
 // ---------------------------------------------------------------------
 
-uh::protocol::block_meta_data protocol::on_write_small_block(std::span<char> buffer)
-{
-    auto alloc = m_storage.allocate(buffer.size());
-    alloc->device().write(buffer);
-    return alloc->persist();
-}
-
-// ---------------------------------------------------------------------
-
 uh::protocol::write_chunks::response protocol::on_write_chunks(const write_chunks::request &req)
 {
     auto alloc = m_storage.allocate_multi (req.data.size());

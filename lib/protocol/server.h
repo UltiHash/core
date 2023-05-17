@@ -58,9 +58,6 @@ private:
     void handle_reset();
     void handle_next_chunk();
     void handle_allocate_chunk();
-    void handle_write_small_block();
-    void handle_read_small_block();
-    void handle_write_xsmall_blocks();
     void handle_write_chunk();
     void handle_finalize_block();
     void handle_client_statistics();

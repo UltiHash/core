@@ -331,67 +331,6 @@ void read(serialization::buffered_serialization& in, finalize_block::response& r
 
 // ---------------------------------------------------------------------
 
-void write(serialization::buffered_serialization& out, const write_small_block::request& request)
-{
-    out.write(write_small_block::request_id);
-    out.write(request.data);}
-
-// ---------------------------------------------------------------------
-
-void read(serialization::buffered_serialization& in, write_small_block::request& request)
-{
-    in.read(request.data);
-}
-
-// ---------------------------------------------------------------------
-
-void write(serialization::buffered_serialization& out, const write_small_block::response& response)
-{
-    out.write(response.hash);
-    out.write(response.effective_size);
-}
-
-// ---------------------------------------------------------------------
-
-void read(serialization::buffered_serialization& in, write_small_block::response& response)
-{
-    check_status(in);
-
-    response.hash = in.read<std::vector<char>>();
-    response.effective_size = in.read<decltype (response.effective_size)>();
-}
-
-// ---------------------------------------------------------------------
-
-void write(serialization::buffered_serialization& out, const read_small_block::request& request)
-{
-    out.write(read_small_block::request_id);
-    out.write(request.hash);}
-
-// ---------------------------------------------------------------------
-
-void read(serialization::buffered_serialization& in, read_small_block::request& request)
-{
-    request.hash = in.read <std::vector<char>> ();
-}
-
-// ---------------------------------------------------------------------
-
-void write(serialization::buffered_serialization& out, const read_small_block::response& response)
-{
-    out.write(response.data);
-}
-
-// ---------------------------------------------------------------------
-
-void read(serialization::buffered_serialization& in, read_small_block::response& response)
-{
-    check_status(in);
-    in.read (response.data);
-}
-
-// ---------------------------------------------------------------------
-
 void read(serialization::buffered_serialization& in, client_statistics::request& request)
 {
     client_statistics::request tmp {};

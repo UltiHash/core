@@ -274,15 +274,6 @@ std::unique_ptr<uh::protocol::allocation> mod::allocate(std::size_t size)
 
 // ---------------------------------------------------------------------
 
-protocol::block_meta_data mod::write_small_block (std::span <char> buffer) {
-
-    auto &client_connections = m_impl->m_routing->route_data(buffer);
-    return client_connections.get()->write_small_block(buffer);
-
-}
-
-// ---------------------------------------------------------------------
-
 uh::protocol::write_chunks::response mod::write_chunks(const write_chunks::request &req) {
     std::map <client_pool *, chunks_meta_data> conn_blocks_map;
 

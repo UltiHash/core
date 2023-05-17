@@ -60,13 +60,6 @@ std::unique_ptr<uh::protocol::allocation> protocol::on_allocate_chunk(std::size_
 
 // ---------------------------------------------------------------------
 
-block_meta_data protocol::on_write_small_block (std::span <char> buffer)
-{
-    return m_cluster.write_small_block (buffer);
-}
-
-// ---------------------------------------------------------------------
-
 void protocol::on_client_statistics(uh::protocol::client_statistics::request& client_stat)
 {
     // ! TODO: set_uhv_metrics should technically be in protocol_metrics_wrapper

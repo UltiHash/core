@@ -58,15 +58,6 @@ public:
     std::unique_ptr<allocation> allocate(std::size_t);
 
     /**
-     * Sends the data to the data node and returns the hash and the effective size of the data.
-     * If the data node does not have free space it returns a failed status.
-     *
-     * @param data actual data to be integrated
-     * @return hash and effective size of the integrated data
-     */
-    block_meta_data write_small_block(std::span <char> data);
-
-    /**
      * Sends the given chunks of data and their sizes to the agency server and returns its
      * response.
      * @return response from agency server
