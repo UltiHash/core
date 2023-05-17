@@ -16,6 +16,9 @@ file::file(const std::filesystem::path &path, std::ios_base::openmode mode)
 
     if (!m_io.is_open())
         throw std::runtime_error("Could not open the file!");
+    else{
+        eof_count = std::filesystem::file_size(path);
+    }
 
 }
 
@@ -23,7 +26,26 @@ file::file(const std::filesystem::path &path, std::ios_base::openmode mode)
 
 std::streamsize file::write(std::span<const char> buffer)
 {
+    std::streamoff start_tell,end_tell;
+
+    if(m_mode & std::ios_base::in){
+        start_tell = m_io.tellg();
+    }
+    else{
+        start_tell = m_io.tellp();
+    }
+
     m_io.write(buffer.data(), buffer.size());
+
+    if(m_mode & std::ios_base::in){
+        end_tell = m_io.tellg();
+    }
+    else{
+        end_tell = m_io.tellp();
+    }
+
+    eof_count = std::max(eof_count,end_tell-start_tell);
+
     return buffer.size();
 }
 
@@ -46,26 +68,16 @@ bool file::valid() const
 
 void file::seek(std::streamoff off, const std::ios_base::seekdir whence)
 {
-    std::streampos cur_pos = m_io.tellg();
-    std::streampos next_pos;
-
-    std::streampos max_pos;
+    std::streampos cur_pos;
 
     if(m_mode & std::ios_base::in){
-        m_io.seekg(0,std::ios_base::end);
-        max_pos = m_io.tellg();
-        m_io.seekg(cur_pos,std::ios_base::beg);
+        cur_pos = m_io.tellg();
     }
     else{
-        if(m_mode & std::ios_base::out){
-            m_io.seekp(0,std::ios_base::end);
-            max_pos = m_io.tellp();
-            m_io.seekp(cur_pos,std::ios_base::beg);
-        }
-        else{
-            THROW(util::exception,"file mode was not supported for seeking");
-        }
+        cur_pos = m_io.tellp();
     }
+
+    std::streampos next_pos;
 
     switch (whence) {
         case std::ios_base::beg:
@@ -75,7 +87,7 @@ void file::seek(std::streamoff off, const std::ios_base::seekdir whence)
             next_pos = off + cur_pos;
             break;
         case std::ios_base::end:
-            next_pos = off + max_pos;
+            next_pos = off + eof_count;
             break;
         default:
             next_pos = 0;
@@ -83,7 +95,7 @@ void file::seek(std::streamoff off, const std::ios_base::seekdir whence)
 
     if(next_pos < 0)
         THROW(util::exception,"input seek was out of lower range; seek incomplete");
-    if(next_pos > max_pos)
+    if(next_pos > eof_count)
         THROW(util::exception,"input seek was out of upper range; seek incomplete");
 
     if(m_mode & std::ios_base::in){
