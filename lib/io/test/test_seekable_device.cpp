@@ -87,25 +87,26 @@ BOOST_FIXTURE_TEST_CASE_TEMPLATE( seek_unspecified, T, device_types, Fixture )
     }
 
     {
-        T tf(test_path,std::ios_base::out);
+        T tf(test_path, std::ios_base::out);
         test_path = tf.path();
 
-        auto written = tf.write({LOREM_IPSUM.c_str(), LOREM_IPSUM.size()});
+        auto written = tf.write(LOREM_IPSUM);
         BOOST_CHECK_EQUAL(written, LOREM_IPSUM.size());
 
         BOOST_REQUIRE(tf.valid());
 
-        if constexpr (std::is_same_v<T,temp_file>){
+        if constexpr (std::is_same_v<T, temp_file>)
+        {
             tf.release_to(test_path);
         }
     }
 
-    file tf2(test_path,std::ios_base::in);
-    tf2.seek(10,std::ios_base::cur);
+    file tf2(test_path, std::ios_base::in);
+    tf2.seek(10, std::ios_base::cur);
 
     std::string copy(LOREM_IPSUM.size()-10, 0);
 
-    auto read = tf2.read({copy.data(), copy.size()});
+    auto read = tf2.read(copy);
     BOOST_CHECK_EQUAL(read, LOREM_IPSUM.size()-10);
 
     auto test_string = std::string{LOREM_IPSUM.begin()+10,LOREM_IPSUM.end()};
@@ -113,7 +114,7 @@ BOOST_FIXTURE_TEST_CASE_TEMPLATE( seek_unspecified, T, device_types, Fixture )
 
     BOOST_REQUIRE(tf2.valid());
 
-    BOOST_CHECK_THROW(tf2.seek(-500,std::ios_base::beg), std::exception);
+    BOOST_CHECK_THROW(tf2.seek(-500, std::ios_base::beg), std::exception);
 
     std::filesystem::remove(test_path);
 }

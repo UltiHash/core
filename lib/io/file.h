@@ -21,7 +21,8 @@ public:
      *
      * @param path input path to work on
      */
-    explicit file(const std::filesystem::path& path, std::ios_base::openmode mode = std::ios_base::in);
+    explicit file(const std::filesystem::path& path,
+                  std::ios_base::openmode mode = std::ios_base::in | std::ios_base::out);
 
     std::streamsize write(std::span<const char> buffer) override;
     std::streamsize read(std::span<char> buffer) override;
@@ -37,7 +38,6 @@ public:
 private:
     std::fstream m_io;
     std::filesystem::path m_path;
-    std::ios_base::openmode m_mode;
 };
 
 // ---------------------------------------------------------------------

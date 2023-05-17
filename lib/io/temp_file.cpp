@@ -19,9 +19,7 @@ const std::string FILENAME_TEMPLATE = "tempfile-XXXXXX";
 
 std::filesystem::path open_temp_file(std::filesystem::path& templ)
 {
-    templ = templ / FILENAME_TEMPLATE;
-
-    auto path = templ.string();
+    auto path = (templ / FILENAME_TEMPLATE).string();
 
     int fd = mkstemp(path.data());
     if (fd == -1)
@@ -40,9 +38,11 @@ std::filesystem::path open_temp_file(std::filesystem::path& templ)
 
 // ---------------------------------------------------------------------
 
-temp_file::temp_file(std::filesystem::path directory,std::ios_base::openmode mode)
-        : file(open_temp_file(directory), mode), m_remove(true)
-{}
+temp_file::temp_file(std::filesystem::path directory, std::ios_base::openmode mode)
+    : file(open_temp_file(directory), mode),
+      m_remove(true)
+{
+}
 
 // ---------------------------------------------------------------------
 

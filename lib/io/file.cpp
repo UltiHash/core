@@ -8,9 +8,10 @@ namespace uh::io
 // ---------------------------------------------------------------------
 
 file::file(const std::filesystem::path &path, std::ios_base::openmode mode)
-    : m_path(path),m_mode(mode),m_io(std::fstream(path,mode))
+    : m_path(path),
+      m_io(path, mode)
 {
-    m_io.exceptions( std::ifstream::badbit | std::ifstream::failbit );
+    m_io.exceptions(std::ifstream::badbit | std::ifstream::failbit);
 }
 
 // ---------------------------------------------------------------------
@@ -38,14 +39,22 @@ bool file::valid() const
 
 // ---------------------------------------------------------------------
 
-void file::seek(std::streamoff off, const std::ios_base::seekdir whence)
+void file::seek(std::streamoff off, std::ios_base::seekdir whence)
 {
-    if(m_mode & std::ios_base::in){
-        m_io.seekg(off,whence);
-    }
-    else{
-        m_io.seekp(off,whence);
-    }
+    /* For std::fstream (and relatives), `seekg` and `seekp` are changing
+     * the same pointer. From https://en.cppreference.com/w/cpp/io/basic_filebuf:
+     *
+     *   std::basic_filebuf is a std::basic_streambuf whose associated
+     *   character sequence is a file. Both the input sequence and the
+     *   output sequence are associated with the same file, and a joint
+     *   file position is maintained for both operations.
+     *
+     * If we seek with std::ios_base::cur this means we would move the
+     * pointer twice, if also calling seekp after seekg. To avoid wrong
+     * positioning, we only call `seekg`, relying on basic_filebuf to
+     * adjust the put-pointer as well.
+     */
+    m_io.seekg(off, whence);
 }
 
 // ---------------------------------------------------------------------
