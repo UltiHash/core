@@ -67,9 +67,10 @@ namespace uh::io{
          */
         std::streamsize skip() override{
             auto ser = serialization::serialization(dev_);
-            std::span<char>tmp{};
 
             auto data_size = ser.get_data_size();
+            std::vector<char>tmp{};
+            tmp.resize(std::get<1>(data_size),0);
 
             std::streamsize accumulate_read{};
             accumulate_read += std::get<0>(data_size);
