@@ -7,7 +7,7 @@ namespace uh::an::persistence
 
 // ---------------------------------------------------------------------
 
-mod::mod(const persistence_config& config) : m_storage(std::make_unique<client_metrics>(config))
+mod::mod(const uh::options::persistence_config& config) : m_storage(std::make_unique<client_metrics>(config))
 {
 }
 

@@ -7,7 +7,7 @@ namespace uh::an::persistence
 
 // ---------------------------------------------------------------------
 
-client_metrics::client_metrics(const persistence_config& config) :
+client_metrics::client_metrics(const uh::options::persistence_config& config) :
     m_target_path(config.persistence_path / std::filesystem::path("uhv_metrics.ua"))
 {
 }

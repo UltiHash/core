@@ -12,7 +12,7 @@ namespace uh::an::persistence
     class client_metrics
     {
     public:
-        explicit client_metrics(const persistence_config& config);
+        explicit client_metrics(const uh::options::persistence_config& config);
 
         void start();
         void add(const uh::protocol::client_statistics::request& req);

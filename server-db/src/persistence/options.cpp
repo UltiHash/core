@@ -5,20 +5,14 @@ using namespace boost::program_options;
 namespace uh::dbn::persistence
 {
 
-// ---------------------------------------------------------------------
-
-options::options(): uh::options::options("Persistence Options")
-{
-    visible().add_options()
-            ("persistence-path,P", value<std::string>()->default_value("/var/lib/database-node"), "Path where data can be stored permanently");
-
-}
-
-// ---------------------------------------------------------------------
+    // ---------------------------------------------------------------------
 
 uh::options::action options::evaluate(const boost::program_options::variables_map& vars)
 {
     m_config.persistence_path = std::filesystem::path(vars["persistence-path"].as<std::string>());
+
+    if (m_config.persistence_path == "/var/lib")
+        m_config.persistence_path = "/var/lib/database-node";
 
     if (!std::filesystem::exists(m_config.persistence_path))
         throw std::runtime_error("Path doesn't exists: " + m_config.persistence_path);
@@ -33,13 +27,6 @@ uh::options::action options::evaluate(const boost::program_options::variables_ma
 
     return uh::options::action::proceed;
 
-}
-
-// ---------------------------------------------------------------------
-
-const persistence_config& options::config() const
-{
-    return m_config;
 }
 
 // ---------------------------------------------------------------------

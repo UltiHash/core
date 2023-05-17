@@ -19,7 +19,7 @@ namespace uh::dbn::persistence
     class scheduled_compressions_persistence
     {
     public:
-        explicit scheduled_compressions_persistence(const persistence_config& config);
+        explicit scheduled_compressions_persistence(const uh::options::persistence_config& config);
         scheduled_compressions_persistence();
 
         void start();

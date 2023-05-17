@@ -13,7 +13,7 @@ namespace uh::an::persistence
     class mod
     {
     public:
-        explicit mod(const persistence_config& config);
+        explicit mod(const uh::options::persistence_config& config);
 
         ~mod() = default;
 

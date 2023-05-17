@@ -3,30 +3,19 @@
 
 #include <options/options.h>
 #include <filesystem>
+#include <options/persistence_options.h>
 
 namespace uh::dbn::persistence
 {
 
 // ---------------------------------------------------------------------
 
-    struct persistence_config
-    {
-        std::string persistence_path;
-    };
-
-// ---------------------------------------------------------------------
-
-    class options : public uh::options::options
+    class options : public uh::options::persistence_options
     {
     public:
-        options();
+        options() = default;
 
         uh::options::action evaluate(const boost::program_options::variables_map& vars) override;
-
-        [[nodiscard]] const persistence_config& config() const;
-
-    private:
-        persistence_config m_config;
 
     };
 

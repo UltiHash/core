@@ -6,7 +6,7 @@
 #include <server/mod.h>
 #include <metrics/mod.h>
 #include <persistence/mod.h>
-#include "persistence/options.h"
+#include <persistence/options.h>
 #include <logging/logging_boost.h>
 
 #include <options/app_config.h>
