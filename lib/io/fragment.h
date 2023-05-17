@@ -3,7 +3,6 @@
 //
 
 #include "io/device.h"
-#include "io/buffer.h"
 
 #include "serialization/serialization.h"
 
@@ -14,7 +13,6 @@
 
 namespace uh::io{
 
-    template<typename DeviceType> requires std::is_base_of_v<io::device, DeviceType>
     class fragment : public io::device{
 
     public:
@@ -27,8 +25,8 @@ namespace uh::io{
          * @param impl input device
          * @param start_pos relative start position on device to distinguish fragments
          */
-        explicit fragment(DeviceType &dev,std::streamoff start_pos = 0):
-        dev_(&dev), frag_beg_pos(start_pos), frag_read_pos(start_pos){}
+        explicit fragment(std::unique_ptr<device> dev,std::streamoff start_pos = 0):
+        dev_(dev), frag_beg_pos(start_pos), frag_read_pos(start_pos){}
 
         /**
          * read un-serialized input and write serialized to device
@@ -118,7 +116,7 @@ namespace uh::io{
         }
 
     private:
-        DeviceType dev_;
+        DeviceType dev_{};
         bool is_analyzed{};
         std::size_t data_size{};
         std::size_t header_size{};
