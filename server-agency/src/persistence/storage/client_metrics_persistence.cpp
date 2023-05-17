@@ -17,13 +17,7 @@ client_metrics::client_metrics(const persistence_config& config) :
 void client_metrics::start()
 {
     if (std::filesystem::exists(m_target_path))
-    {
         retrieve();
-    }
-    else
-    {
-        std::filesystem::create_directory(m_target_path.parent_path());
-    }
 
     INFO << "client metrics persistent on: " << m_target_path;
 }
@@ -33,6 +27,7 @@ void client_metrics::start()
 void client_metrics::add(const uh::protocol::client_statistics::request& req)
 {
     m_id_to_size.insert_or_assign(std::string(req.uhv_id.begin(), req.uhv_id.end()), req.integrated_size);
+    flush();
 }
 
 // ---------------------------------------------------------------------
