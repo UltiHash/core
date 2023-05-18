@@ -17,7 +17,6 @@
 #include <boost/mpl/vector.hpp>
 
 #include <filesystem>
-#include <random>
 
 #include <util/exception.h>
 
@@ -63,35 +62,48 @@ typedef boost::mpl::vector<
 
 // ---------------------------------------------------------------------
 
+/**
+ * To be implemented for each type in `device_types_no_seek` and `device_types_seek`: constructs a device
+ * that will read the text given in TEST_TEXT.
+ */
+template <typename T>
+std::unique_ptr<T> make_test_device();
+
+std::filesystem::path workpath;
+std::unique_ptr<temp_file> tempFile;
+
+// ---------------------------------------------------------------------
+
+template <>
+std::unique_ptr<fragment_on_seekable_device> make_test_device<fragment_on_seekable_device>()
+{
+    tempFile = std::make_unique<temp_file>(TEMP_DIR,std::ios_base::out | std::ios_base::in);
+
+    auto rv = std::make_unique<fragment_on_seekable_device>(*tempFile);
+
+    workpath = tempFile->path();
+
+    return rv;
+}
+
+// ---------------------------------------------------------------------
+
 BOOST_FIXTURE_TEST_CASE_TEMPLATE( multi_fragment_seek_on_device_test, T, device_types_seek , Fixture )
 {
-    std::filesystem::path workpath;
-    std::streamsize written;
+    std::unique_ptr<T> fragmented = make_test_device<T>();
+
+    std::streamsize written{};
 
     const std::string test_string1(LOREM_IPSUM),
             test_string2(LOREM_IPSUM+"another ipsum");
 
-    static std::unique_ptr<file> tempFile;
-    static std::unique_ptr<T> fragmented;
-
-    {
-        static std::unique_ptr<temp_file> tempFile1 =
-                std::make_unique<temp_file>(TEMP_DIR,std::ios_base::out);
-        fragmented = std::make_unique<T>(*tempFile1);
-
-        written = fragmented->write({test_string1.data(),test_string1.size()});
-        written += fragmented->write({test_string2.data(),test_string2.size()});
-
-        workpath = tempFile1->path();
-        tempFile1->release_to(workpath);
-    }
+    written = fragmented->write({test_string1.data(),test_string1.size()});
+    written += fragmented->write({test_string2.data(),test_string2.size()});
 
     BOOST_REQUIRE_EQUAL(written,test_string1.size()+test_string2.size());
     BOOST_REQUIRE(std::filesystem::exists(workpath) && std::filesystem::file_size(workpath) > 0);
 
-    tempFile = std::make_unique<file>(workpath,std::ios_base::in);
-
-    fragmented = std::make_unique<T>(*tempFile);
+    tempFile->seek(0,std::ios_base::beg);
 
     std::unique_ptr<buffer> tb = std::make_unique<buffer>();
     tb->write({test_string1.data(),test_string1.size()});
@@ -121,10 +133,7 @@ BOOST_FIXTURE_TEST_CASE_TEMPLATE( multi_fragment_seek_on_device_test, T, device_
 
 BOOST_FIXTURE_TEST_CASE_TEMPLATE( fragment_partial_read_seek_exceptions, T, device_types_seek , Fixture )
 {
-    static std::unique_ptr<temp_file> tempFile;
-    tempFile = std::make_unique<temp_file>(TEMP_DIR,std::ios_base::in | std::ios_base::out);
-
-    auto fragmented = std::make_unique<T>(*tempFile);
+    std::unique_ptr<T> fragmented = make_test_device<T>();
 
     const std::string test_string1(LOREM_IPSUM);
 
