@@ -4,12 +4,16 @@
 
 #include "io/fragmented_device.h"
 
-#include "serialization/serialization.h"
-
 #ifndef CORE_FRAGMENT_H
 #define CORE_FRAGMENT_H
 
 namespace uh::io{
+
+    enum fragmented_states {
+        UNDEFINED_STATE,
+        READING_BEGIN,
+        READING_COMPLETE
+    };
 
     class fragment_on_device : public io::fragmented_device{
 
@@ -57,13 +61,18 @@ namespace uh::io{
          */
         std::streamsize skip() override;
 
+    protected:
+        [[nodiscard]] std::streamoff getElementsLeftToRead() const;
+
+        void setElementsLeftToRead(std::streamoff elementsLeftToRead);
+
+        [[nodiscard]] fragmented_states getStateMachine() const;
+
+        void setStateMachine(fragmented_states stateMachine);
+
     private:
         io::device& dev_;
-        enum {
-            UNDEFINED_STATE,
-            READING_BEGIN,
-            READING_COMPLETE
-        } state_machine = UNDEFINED_STATE;
+        fragmented_states state_machine = UNDEFINED_STATE;
         std::streamoff elements_left_to_read{};
     };
 } // namespace uh::io

@@ -3,6 +3,7 @@
 //
 #include "fragment_on_device.h"
 
+#include <serialization/serialization.h>
 #include <util/exception.h>
 
 namespace uh::io{
@@ -99,6 +100,30 @@ namespace uh::io{
                                   " and the error code was: "+e.what());
         }
         return accumulate_read;
+    }
+
+    // ---------------------------------------------------------------------
+
+    std::streamoff fragment_on_device::getElementsLeftToRead() const {
+        return elements_left_to_read;
+    }
+
+    // ---------------------------------------------------------------------
+
+    void fragment_on_device::setElementsLeftToRead(std::streamoff elementsLeftToRead) {
+        elements_left_to_read = elementsLeftToRead;
+    }
+
+    // ---------------------------------------------------------------------
+
+    fragmented_states fragment_on_device::getStateMachine() const {
+        return state_machine;
+    }
+
+    // ---------------------------------------------------------------------
+
+    void fragment_on_device::setStateMachine(fragmented_states stateMachine) {
+        state_machine = stateMachine;
     }
 
     // ---------------------------------------------------------------------

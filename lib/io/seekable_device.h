@@ -13,6 +13,7 @@ namespace uh::io {
 
     class seekable_device: public io::device  {
 
+    public:
         /**
          * seeks stream pointer to position
          *
