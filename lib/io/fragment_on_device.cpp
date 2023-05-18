@@ -1,7 +1,7 @@
 //
 // Created by benjamin-elias on 18.05.23.
 //
-#include "fragment.h"
+#include "fragment_on_device.h"
 
 #include <util/exception.h>
 
@@ -9,14 +9,14 @@ namespace uh::io{
 
     // ---------------------------------------------------------------------
 
-    fragment::fragment(io::device &dev) : dev_(dev){}
+    fragment_on_device::fragment_on_device(io::device &dev) : dev_(dev){}
 
     // ---------------------------------------------------------------------
 
-    std::streamsize fragment::write(std::span<const char> buffer)
+    std::streamsize fragment_on_device::write(std::span<const char> buffer)
     {
         if(state_machine == READING_BEGIN)
-            THROW(util::exception,"Writing on fragment corrupted the fragments incomplete reading state!");
+            THROW(util::exception,"Writing on fragment_on_device corrupted the fragments incomplete reading state!");
 
         auto ser = serialization::serialization(dev_);
         return ser.write(buffer);
@@ -24,7 +24,7 @@ namespace uh::io{
 
     // ---------------------------------------------------------------------
 
-    std::streamsize fragment::read(std::span<char> buffer)
+    std::streamsize fragment_on_device::read(std::span<char> buffer)
     {
         std::streamsize accumulate_read{};
         std::streamoff buffer_size{};
@@ -48,9 +48,9 @@ namespace uh::io{
             if(!elements_left_to_read)state_machine = READING_COMPLETE;
         }
         catch(std::exception &e){
-            THROW(util::exception,"fragment serialization failed on skip! "
+            THROW(util::exception,"fragment_on_device serialization failed on skip! "
                                   "Buffer size was "+std::to_string(buffer_size)+
-                                  " The fragment state was "+std::to_string(state_machine)+
+                                  " The fragment_on_device state was "+std::to_string(state_machine)+
                                   " and the error code was: "+e.what());
         }
         return accumulate_read;
@@ -58,14 +58,14 @@ namespace uh::io{
 
     // ---------------------------------------------------------------------
 
-    bool fragment::valid() const
+    bool fragment_on_device::valid() const
     {
         return dev_.valid();
     }
 
     // ---------------------------------------------------------------------
 
-    std::streamsize fragment::skip()
+    std::streamsize fragment_on_device::skip()
     {
         std::streamsize accumulate_read{};
         std::streamoff buffer_size{};
@@ -93,9 +93,9 @@ namespace uh::io{
             elements_left_to_read = 0;
         }
         catch(std::exception &e){
-            THROW(util::exception,"fragment serialization failed on skip! "
+            THROW(util::exception,"fragment_on_device serialization failed on skip! "
                                   "Buffer size was "+std::to_string(buffer_size)+
-                                  " The fragment state was "+std::to_string(state_machine)+
+                                  " The fragment_on_device state was "+std::to_string(state_machine)+
                                   " and the error code was: "+e.what());
         }
         return accumulate_read;

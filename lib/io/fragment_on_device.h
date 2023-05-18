@@ -11,19 +11,19 @@
 
 namespace uh::io{
 
-    class fragment : public io::fragmented_device{
+    class fragment_on_device : public io::fragmented_device{
 
     public:
         /**
-         * a fragment uses a device to either only read or only write in its lifetime
-         * after reading or writing the fragment can tell where to find its content
+         * a fragment_on_device uses a device to either only read or only write in its lifetime
+         * after reading or writing the fragment_on_device can tell where to find its content
          * relatively to the device stream.
-         * A fragment is a serialized device.
+         * A fragment_on_device is a serialized device.
          *
          * @param impl input device
          * @param start_pos relative start position on device to distinguish fragments
          */
-        explicit fragment(io::device& dev);
+        explicit fragment_on_device(io::device& dev);
 
         /**
          * read un-serialized input and write serialized to device
@@ -50,9 +50,9 @@ namespace uh::io{
 
         /**
          * with this function the underlying device is read until
-         * one position behind the fragment content
+         * one position behind the fragment_on_device content
          *
-         * @return counts the entire count a fragment fills,
+         * @return counts the entire count a fragment_on_device fills,
          * together with it's header structure
          */
         std::streamsize skip() override;

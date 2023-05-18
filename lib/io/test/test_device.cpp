@@ -10,7 +10,7 @@
 #include <io/buffer.h>
 #include <io/buffered_device.h>
 #include <io/sstream_device.h>
-#include <io/fragment.h>
+#include <io/fragment_on_device.h>
 
 
 using namespace uh;
@@ -38,7 +38,7 @@ typedef boost::mpl::vector<
     sstream_device,
     buffered_device<sstream_device>,
     buffer,
-    fragment
+    fragment_on_device
 > device_types;
 
 // ---------------------------------------------------------------------
@@ -86,12 +86,12 @@ std::unique_ptr<buffer> make_test_device()
 // ---------------------------------------------------------------------
 
 template <>
-std::unique_ptr<fragment> make_test_device()
+std::unique_ptr<fragment_on_device> make_test_device()
 {
     static std::unique_ptr<buffer> buf;
     buf = std::make_unique<buffer>();
 
-    auto rv = std::make_unique<fragment>(*buf);
+    auto rv = std::make_unique<fragment_on_device>(*buf);
     rv->write(TEST_TEXT);
 
     return rv;

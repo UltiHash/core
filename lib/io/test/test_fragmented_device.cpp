@@ -13,7 +13,7 @@
 #include <boost/mpl/vector.hpp>
 
 #include <util/exception.h>
-#include <io/fragment.h>
+#include <io/fragment_on_device.h>
 #include <io/buffer.h>
 #include <serialization/serialization.h>
 
@@ -43,7 +43,7 @@ struct Fixture {};
 // ---------------------------------------------------------------------
 
 typedef boost::mpl::vector<
-        fragment
+        fragment_on_device
 > device_types;
 
 // ---------------------------------------------------------------------
@@ -58,12 +58,12 @@ std::unique_ptr<T> make_test_device();
 // ---------------------------------------------------------------------
 
 template <>
-std::unique_ptr<fragment> make_test_device<fragment>()
+std::unique_ptr<fragment_on_device> make_test_device<fragment_on_device>()
 {
     static std::unique_ptr<buffer> buf;
     buf = std::make_unique<buffer>();
 
-    auto rv = std::make_unique<fragment>(*buf);
+    auto rv = std::make_unique<fragment_on_device>(*buf);
 
     return rv;
 }
