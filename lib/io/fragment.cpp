@@ -17,7 +17,7 @@ namespace uh::io{
     {
         if(state_machine == READING_BEGIN)
             THROW(util::exception,"Writing on fragment corrupted its incomplete reading state!");
-        state_machine = WRITING_MODE;
+
         auto ser = serialization::serialization(dev_);
         return ser.write(buffer);
     }
@@ -26,21 +26,15 @@ namespace uh::io{
 
     std::streamsize fragment::read(std::span<char> buffer)
     {
-        if(state_machine == WRITING_MODE)
-            THROW(util::exception,"The fragment had already written contents to device, please use a new fragment!");
-
         std::streamsize accumulate_read{};
         std::streamoff buffer_size{};
 
         try{
-            std::streamoff header_elements{};
-
             if(state_machine == UNDEFINED_STATE || state_machine == READING_COMPLETE){
                 auto ser = serialization::serialization(dev_);
                 auto data_size = ser.get_data_size();
                 state_machine = READING_BEGIN;
 
-                header_elements = static_cast<std::streamoff>(std::get<0>(data_size));
                 elements_left_to_read = static_cast<std::streamoff>(std::get<1>(data_size));
             }
 
@@ -48,7 +42,6 @@ namespace uh::io{
             std::size_t stream_advance = std::min(static_cast<std::size_t>(buffer_size),
                                                   static_cast<std::size_t>(elements_left_to_read));
 
-            accumulate_read += header_elements;
             accumulate_read += io::read(dev_, {buffer.data(),stream_advance});
 
             elements_left_to_read -= static_cast<std::streamoff>(stream_advance);
@@ -74,9 +67,6 @@ namespace uh::io{
 
     std::streamsize fragment::skip()
     {
-        if(state_machine == WRITING_MODE)
-            THROW(util::exception,"The fragment had already written contents to device, please use a new fragment!");
-
         std::streamsize accumulate_read{};
         std::streamoff buffer_size{};
 
