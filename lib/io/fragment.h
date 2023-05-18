@@ -6,8 +6,6 @@
 
 #include "serialization/serialization.h"
 
-#include <openssl/evp.h>
-
 #ifndef CORE_FRAGMENT_H
 #define CORE_FRAGMENT_H
 
@@ -25,7 +23,7 @@ namespace uh::io{
          * @param impl input device
          * @param start_pos relative start position on device to distinguish fragments
          */
-        explicit fragment(io::device& dev) : dev_(dev){}
+        explicit fragment(io::device& dev);
 
         /**
          * read un-serialized input and write serialized to device
@@ -34,10 +32,7 @@ namespace uh::io{
          * @return number of bytes that were persisted to device
          */
 
-        std::streamsize write(std::span<const char> buffer) override{
-            auto ser = serialization::serialization(dev_);
-            return ser.write(buffer);
-        }
+        std::streamsize write(std::span<const char> buffer) override;
 
         /**
          * read serialized device to un-serialized buffer
@@ -45,18 +40,13 @@ namespace uh::io{
          * @param buffer to be read to from device
          * @return number of bytes totally read from device
          */
-        std::streamsize read(std::span<char> buffer) override{
-            auto ser = serialization::serialization(dev_);
-            return ser.read(buffer);
-        }
+        std::streamsize read(std::span<char> buffer) override;
 
         /**
          *
          * @return the state of the underlying device
          */
-        [[nodiscard]] bool valid() const override{
-            return dev_.valid();
-        }
+        [[nodiscard]] bool valid() const override;
 
         /**
          * with this function the underlying device is read until
@@ -65,22 +55,17 @@ namespace uh::io{
          * @return counts the entire count a fragment fills,
          * together with it's header structure
          */
-        std::streamsize skip() override{
-            auto ser = serialization::serialization(dev_);
-
-            auto data_size = ser.get_data_size();
-            std::vector<char>tmp{};
-            tmp.resize(std::get<1>(data_size),0);
-
-            std::streamsize accumulate_read{};
-            accumulate_read += std::get<0>(data_size);
-            accumulate_read += io::read(dev_, {tmp.data (), std::get<1>(data_size)});
-
-            return accumulate_read;
-        }
+        std::streamsize skip() override;
 
     private:
         io::device& dev_;
+        enum {
+            UNDEFINED_STATE,
+            READING_BEGIN,
+            READING_COMPLETE,
+            WRITING_MODE
+        } state_machine = UNDEFINED_STATE;
+        std::streamoff elements_left_to_read{};
     };
 } // namespace uh::io
 
