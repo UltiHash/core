@@ -1,4 +1,8 @@
 //
+// Created by benjamin-elias on 18.05.23.
+//
+
+//
 // Created by benjamin-elias on 17.05.23.
 //
 
@@ -18,7 +22,10 @@
 #include <util/exception.h>
 
 #include <io/fragment_on_device.h>
+#include <io/fragment_on_seekable_device.h>
 #include <io/buffer.h>
+#include <io/temp_file.h>
+#include <io/file.h>
 
 #include <serialization/serialization.h>
 
@@ -51,50 +58,46 @@ struct Fixture {};
 // ---------------------------------------------------------------------
 
 typedef boost::mpl::vector<
-        fragment_on_device
-> device_types_no_seek;
+        fragment_on_seekable_device
+> device_types_seek;
 
 // ---------------------------------------------------------------------
 
-/**
- * To be implemented for each type in `device_types_no_seek` and `device_types_seek`: constructs a device
- * that will read the text given in TEST_TEXT.
- */
-template <typename T>
-std::unique_ptr<T> make_test_device();
-
-// ---------------------------------------------------------------------
-
-template <>
-std::unique_ptr<fragment_on_device> make_test_device<fragment_on_device>()
+BOOST_FIXTURE_TEST_CASE_TEMPLATE( multi_fragment_seek_on_device_test, T, device_types_seek , Fixture )
 {
-    static std::unique_ptr<buffer> buf;
-    buf = std::make_unique<buffer>();
-
-    auto rv = std::make_unique<fragment_on_device>(*buf);
-
-    return rv;
-}
-
-// ---------------------------------------------------------------------
-
-BOOST_FIXTURE_TEST_CASE_TEMPLATE( multi_fragment_on_device_test, T, device_types_no_seek, Fixture )
-{
-    std::unique_ptr<T> fragmented = make_test_device<T>();
+    std::filesystem::path workpath;
+    std::streamsize written;
 
     const std::string test_string1(LOREM_IPSUM),
-    test_string2(LOREM_IPSUM+"another ipsum");
+            test_string2(LOREM_IPSUM+"another ipsum");
 
-    auto written = fragmented->write({test_string1.data(),test_string1.size()});
-    written += fragmented->write({test_string2.data(),test_string2.size()});
+    static std::unique_ptr<file> tempFile;
+    static std::unique_ptr<T> fragmented;
+
+    {
+        static std::unique_ptr<temp_file> tempFile1 =
+                std::make_unique<temp_file>(TEMP_DIR,std::ios_base::out);
+        fragmented = std::make_unique<T>(*tempFile1);
+
+        written = fragmented->write({test_string1.data(),test_string1.size()});
+        written += fragmented->write({test_string2.data(),test_string2.size()});
+
+        workpath = tempFile1->path();
+        tempFile1->release_to(workpath);
+    }
 
     BOOST_REQUIRE_EQUAL(written,test_string1.size()+test_string2.size());
+    BOOST_REQUIRE(std::filesystem::exists(workpath) && std::filesystem::file_size(workpath) > 0);
+
+    tempFile = std::make_unique<file>(workpath,std::ios_base::in);
+
+    fragmented = std::make_unique<T>(*tempFile);
 
     std::unique_ptr<buffer> tb = std::make_unique<buffer>();
     tb->write({test_string1.data(),test_string1.size()});
 
     auto header_size1 = uh::serialization::serialization<uh::serialization::sl_serializer,
-    uh::serialization::sl_deserializer>::sl_serializer::get_header(test_string1.size()).size();
+            uh::serialization::sl_deserializer>::sl_serializer::get_header(test_string1.size()).size();
     auto size1 = fragmented->skip();
 
     BOOST_REQUIRE(size1 == test_string1.size()+header_size1);
@@ -102,6 +105,7 @@ BOOST_FIXTURE_TEST_CASE_TEMPLATE( multi_fragment_on_device_test, T, device_types
     std::vector<char> read_back_second;
     read_back_second.resize(test_string2.size(),0);
 
+    tempFile->seek(0,std::ios_base::beg);
     auto size2 = fragmented->read({read_back_second.data(),read_back_second.size()});
 
     BOOST_REQUIRE(size2 == test_string2.size());
@@ -109,13 +113,18 @@ BOOST_FIXTURE_TEST_CASE_TEMPLATE( multi_fragment_on_device_test, T, device_types
                                   read_back_second.begin(),read_back_second.end());
 
     BOOST_CHECK(!fragmented->valid());
+
+    std::filesystem::remove(workpath);
 }
 
 // ---------------------------------------------------------------------
 
-BOOST_FIXTURE_TEST_CASE_TEMPLATE( fragment_partial_read_exceptions, T, device_types_no_seek, Fixture )
+BOOST_FIXTURE_TEST_CASE_TEMPLATE( fragment_partial_read_seek_exceptions, T, device_types_seek , Fixture )
 {
-    std::unique_ptr<T> fragmented = make_test_device<T>();
+    static std::unique_ptr<temp_file> tempFile;
+    tempFile = std::make_unique<temp_file>(TEMP_DIR,std::ios_base::in | std::ios_base::out);
+
+    auto fragmented = std::make_unique<T>(*tempFile);
 
     const std::string test_string1(LOREM_IPSUM);
 
@@ -126,6 +135,7 @@ BOOST_FIXTURE_TEST_CASE_TEMPLATE( fragment_partial_read_exceptions, T, device_ty
     std::string partial_buffer2;
     partial_buffer2.resize(test_string1.size()-8,0);
 
+    tempFile->seek(0,std::ios_base::beg);
     auto partial_size1 = fragmented->read({partial_buffer1.data(),partial_buffer1.size()});
     BOOST_REQUIRE_EQUAL(partial_size1,partial_buffer1.size());
 
@@ -136,7 +146,5 @@ BOOST_FIXTURE_TEST_CASE_TEMPLATE( fragment_partial_read_exceptions, T, device_ty
 
     BOOST_CHECK_EQUAL(partial_size1+partial_size2,test_string1.size());
 }
-
-// ---------------------------------------------------------------------
 
 } // namespace

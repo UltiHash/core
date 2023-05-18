@@ -53,24 +53,24 @@ struct Fixture {};
 
 // ---------------------------------------------------------------------
 
-    std::string gen_random() {
-        static const char alphanum[] =
-                "0123456789"
-                "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-                "abcdefghijklmnopqrstuvwxyz";
+std::string gen_random() {
+    static const char alphanum[] =
+            "0123456789"
+            "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+            "abcdefghijklmnopqrstuvwxyz";
 
-        std::string tmp_s;
-        tmp_s.reserve(6);
-        auto seed = std::chrono::high_resolution_clock::now().time_since_epoch().count();
-        std::mt19937 rand_gen(seed);
-        std::uniform_int_distribution<uint16_t> distribution(0,sizeof(alphanum));
+    std::string tmp_s;
+    tmp_s.reserve(6);
+    auto seed = std::chrono::high_resolution_clock::now().time_since_epoch().count();
+    std::mt19937 rand_gen(seed);
+    std::uniform_int_distribution<uint16_t> distribution(0,sizeof(alphanum));
 
-        for (int i = 0; i < 6; ++i) {
-            tmp_s += alphanum[distribution(rand_gen) % (sizeof(alphanum) - 1)];
-        }
-
-        return tmp_s;
+    for (int i = 0; i < 6; ++i) {
+        tmp_s += alphanum[distribution(rand_gen) % (sizeof(alphanum) - 1)];
     }
+
+    return tmp_s;
+}
 
 // ---------------------------------------------------------------------
 
