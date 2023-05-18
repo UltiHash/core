@@ -70,7 +70,7 @@ template <typename T>
 std::unique_ptr<T> make_test_device();
 
 std::filesystem::path workpath;
-std::unique_ptr<temp_file> tempFile;
+static std::unique_ptr<temp_file> tempFile;
 
 // ---------------------------------------------------------------------
 

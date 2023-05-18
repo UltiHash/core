@@ -1,7 +1,5 @@
 #include "file.h"
 
-#include "util/exception.h"
-
 namespace uh::io
 {
 
