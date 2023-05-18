@@ -16,7 +16,7 @@ namespace uh::io {
     public:
 
         /**
-         * Write the contents of the spans and return the number of bytes written for each
+         * Write the contents of the spans and return the number of bytes written for each.
          *
          * @throw writing fails for any reason
          */
