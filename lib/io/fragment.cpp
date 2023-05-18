@@ -16,7 +16,7 @@ namespace uh::io{
     std::streamsize fragment::write(std::span<const char> buffer)
     {
         if(state_machine == READING_BEGIN)
-            THROW(util::exception,"Writing on fragment corrupted its incomplete reading state!");
+            THROW(util::exception,"Writing on fragment corrupted the fragments incomplete reading state!");
 
         auto ser = serialization::serialization(dev_);
         return ser.write(buffer);

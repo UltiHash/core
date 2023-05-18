@@ -68,7 +68,6 @@ std::unique_ptr<fragment> make_test_device<fragment>()
     return rv;
 }
 
-
 BOOST_FIXTURE_TEST_CASE_TEMPLATE( multi_fragment_on_device_test, T, device_types, Fixture )
 {
     std::unique_ptr<T> fragmented = make_test_device<T>();
@@ -98,6 +97,32 @@ BOOST_FIXTURE_TEST_CASE_TEMPLATE( multi_fragment_on_device_test, T, device_types
                                   read_back_second.begin(),read_back_second.end());
 
     BOOST_CHECK(!fragmented->valid());
+}
+
+// ---------------------------------------------------------------------
+
+BOOST_FIXTURE_TEST_CASE_TEMPLATE( fragment_partial_read_exceptions, T, device_types, Fixture )
+{
+    std::unique_ptr<T> fragmented = make_test_device<T>();
+
+    const std::string test_string1(LOREM_IPSUM);
+
+    fragmented->write(test_string1);
+
+    std::string partial_buffer1;
+    partial_buffer1.resize(8,0);
+    std::string partial_buffer2;
+    partial_buffer2.resize(test_string1.size()-8,0);
+
+    auto partial_size1 = fragmented->read({partial_buffer1.data(),partial_buffer1.size()});
+    BOOST_REQUIRE_EQUAL(partial_size1,partial_buffer1.size());
+
+    BOOST_REQUIRE_THROW(fragmented->write({partial_buffer1.data(),partial_buffer1.size()}),std::exception);
+
+    auto partial_size2 = fragmented->read({partial_buffer2.data(),partial_buffer2.size()});
+    BOOST_REQUIRE_EQUAL(partial_size2,partial_buffer2.size());
+
+    BOOST_CHECK_EQUAL(partial_size1+partial_size2,test_string1.size());
 }
 
 // ---------------------------------------------------------------------
