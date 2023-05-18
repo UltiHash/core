@@ -29,16 +29,34 @@ namespace uh::io{
         if(state_machine == WRITING_MODE)
             THROW(util::exception,"The fragment had already written contents to device, please use a new fragment!");
 
-        auto ser = serialization::serialization(dev_);
         std::streamsize accumulate_read{};
+        std::streamoff buffer_size{};
 
         try{
-            auto data_size = ser.get_data_size();
-            accumulate_read += io::read(dev_, {buffer.data (), std::get<1>(data_size)});
+            std::streamoff header_elements{};
+
+            if(state_machine == UNDEFINED_STATE || state_machine == READING_COMPLETE){
+                auto ser = serialization::serialization(dev_);
+                auto data_size = ser.get_data_size();
+                state_machine = READING_BEGIN;
+
+                header_elements = static_cast<std::streamoff>(std::get<0>(data_size));
+                elements_left_to_read = static_cast<std::streamoff>(std::get<1>(data_size));
+            }
+
+            buffer_size = static_cast<std::streamoff>(buffer.size());
+            std::size_t stream_advance = std::min(static_cast<std::size_t>(buffer_size),
+                                                  static_cast<std::size_t>(elements_left_to_read));
+
+            accumulate_read += header_elements;
+            accumulate_read += io::read(dev_, {buffer.data(),stream_advance});
+
+            elements_left_to_read -= static_cast<std::streamoff>(stream_advance);
+            if(!elements_left_to_read)state_machine = READING_COMPLETE;
         }
         catch(std::exception &e){
-            THROW(util::exception,"fragment serialization failed on read! "
-                                  "Buffer size was "+std::to_string(buffer.size())+
+            THROW(util::exception,"fragment serialization failed on skip! "
+                                  "Buffer size was "+std::to_string(buffer_size)+
                                   " The fragment state was "+std::to_string(state_machine)+
                                   " and the error code was: "+e.what());
         }
@@ -71,15 +89,15 @@ namespace uh::io{
                 auto data_size = ser.get_data_size();
                 state_machine = READING_BEGIN;
 
-                header_elements = std::get<0>(data_size);
-                elements_left_to_read = std::get<1>(data_size);
+                header_elements = static_cast<std::streamoff>(std::get<0>(data_size));
+                elements_left_to_read = static_cast<std::streamoff>(std::get<1>(data_size));
             }
 
             tmp.resize(elements_left_to_read,0);
-            buffer_size = tmp.size();
+            buffer_size = static_cast<std::streamoff>(tmp.size());
 
             accumulate_read += header_elements;
-            accumulate_read += io::read(dev_, {tmp.data (), static_cast<std::size_t>(elements_left_to_read)});
+            accumulate_read += io::read(dev_, {tmp.data(), static_cast<std::size_t>(elements_left_to_read)});
 
             state_machine = READING_COMPLETE;
             elements_left_to_read = 0;
