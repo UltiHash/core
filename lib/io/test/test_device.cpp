@@ -10,8 +10,8 @@
 #include <io/buffer.h>
 #include <io/buffered_device.h>
 #include <io/sstream_device.h>
-#include <io/fragment_on_device.h>
-#include <io/fragment_on_seekable_device.h>
+#include <io/fragment_device.h>
+#include <io/fragment_seekable_device.h>
 #include <io/temp_file.h>
 
 
@@ -43,8 +43,8 @@ typedef boost::mpl::vector<
     sstream_device,
     buffered_device<sstream_device>,
     buffer,
-    fragment_on_device,
-    fragment_on_seekable_device
+    fragment_device,
+    fragment_seekable_device
 > device_types;
 
 // ---------------------------------------------------------------------
@@ -92,12 +92,12 @@ std::unique_ptr<buffer> make_test_device()
 // ---------------------------------------------------------------------
 
 template <>
-std::unique_ptr<fragment_on_device> make_test_device()
+std::unique_ptr<fragment_device> make_test_device()
 {
     static std::unique_ptr<buffer> buf;
     buf = std::make_unique<buffer>();
 
-    auto rv = std::make_unique<fragment_on_device>(*buf);
+    auto rv = std::make_unique<fragment_device>(*buf);
     rv->write(TEST_TEXT);
 
     return rv;
@@ -106,12 +106,12 @@ std::unique_ptr<fragment_on_device> make_test_device()
 // ---------------------------------------------------------------------
 
 template <>
-std::unique_ptr<fragment_on_seekable_device> make_test_device()
+std::unique_ptr<fragment_seekable_device> make_test_device()
 {
     static std::unique_ptr<temp_file> tempFile;
     tempFile = std::make_unique<temp_file>(TEMP_DIR,std::ios_base::in | std::ios_base::out);
 
-    auto rv = std::make_unique<fragment_on_seekable_device>(*tempFile);
+    auto rv = std::make_unique<fragment_seekable_device>(*tempFile);
     rv->write(TEST_TEXT);
     tempFile->seek(0,std::ios_base::beg);
 

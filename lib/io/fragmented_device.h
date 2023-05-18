@@ -13,9 +13,9 @@ namespace uh::io{
 
         /**
          * with this function the underlying device is read until
-         * one position behind the fragment_on_device content
+         * one position behind the fragment_device content
          *
-         * @return counts the entire count a fragment_on_device fills,
+         * @return counts the entire count a fragment_device fills,
          * together with it's header structure
          */
          virtual std::streamsize skip() = 0;

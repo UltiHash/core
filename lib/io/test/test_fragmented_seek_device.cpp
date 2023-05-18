@@ -20,8 +20,8 @@
 
 #include <util/exception.h>
 
-#include <io/fragment_on_device.h>
-#include <io/fragment_on_seekable_device.h>
+#include <io/fragment_device.h>
+#include <io/fragment_seekable_device.h>
 #include <io/buffer.h>
 #include <io/temp_file.h>
 #include <io/file.h>
@@ -57,7 +57,7 @@ struct Fixture {};
 // ---------------------------------------------------------------------
 
 typedef boost::mpl::vector<
-        fragment_on_seekable_device
+        fragment_seekable_device
 > device_types_seek;
 
 // ---------------------------------------------------------------------
@@ -75,11 +75,11 @@ std::unique_ptr<T> make_test_device();
 // ---------------------------------------------------------------------
 
 template <>
-std::unique_ptr<fragment_on_seekable_device> make_test_device<fragment_on_seekable_device>()
+std::unique_ptr<fragment_seekable_device> make_test_device<fragment_seekable_device>()
 {
     tempFile = std::make_unique<temp_file>(TEMP_DIR,std::ios_base::out | std::ios_base::in);
 
-    auto rv = std::make_unique<fragment_on_seekable_device>(*tempFile);
+    auto rv = std::make_unique<fragment_seekable_device>(*tempFile);
 
     workpath = tempFile->path();
 

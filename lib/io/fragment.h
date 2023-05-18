@@ -5,11 +5,11 @@
 #ifndef CORE_FRAGMENT_H
 #define CORE_FRAGMENT_H
 
-#include "fragment_on_seekable_device.h"
+#include "fragment_seekable_device.h"
 
 namespace uh::io{
 
-    template <typename Fragment = fragment_on_seekable_device>
+    template <typename Fragment = fragment_seekable_device>
     requires (std::is_base_of_v<fragmented_device,Fragment>)
     class fragment : public Fragment {
     public:

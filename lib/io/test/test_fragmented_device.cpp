@@ -17,7 +17,7 @@
 
 #include <util/exception.h>
 
-#include <io/fragment_on_device.h>
+#include <io/fragment_device.h>
 #include <io/buffer.h>
 
 #include <serialization/serialization.h>
@@ -51,7 +51,7 @@ struct Fixture {};
 // ---------------------------------------------------------------------
 
 typedef boost::mpl::vector<
-        fragment_on_device
+        fragment_device
 > device_types_no_seek;
 
 // ---------------------------------------------------------------------
@@ -66,12 +66,12 @@ std::unique_ptr<T> make_test_device();
 // ---------------------------------------------------------------------
 
 template <>
-std::unique_ptr<fragment_on_device> make_test_device<fragment_on_device>()
+std::unique_ptr<fragment_device> make_test_device<fragment_device>()
 {
     static std::unique_ptr<buffer> buf;
     buf = std::make_unique<buffer>();
 
-    auto rv = std::make_unique<fragment_on_device>(*buf);
+    auto rv = std::make_unique<fragment_device>(*buf);
 
     return rv;
 }

@@ -2,19 +2,19 @@
 // Created by benjamin-elias on 18.05.23.
 //
 
-#include "fragment_on_seekable_device.h"
+#include "fragment_seekable_device.h"
 
 #include <serialization/serialization.h>
 #include <util/exception.h>
 
 namespace uh::io {
 
-    fragment_on_seekable_device::fragment_on_seekable_device(seekable_device &device):
-    dev_(device), fragment_on_device(device) {}
+    fragment_seekable_device::fragment_seekable_device(seekable_device &device):
+            dev_(device), fragment_device(device) {}
 
     // ---------------------------------------------------------------------
 
-    std::streamsize fragment_on_seekable_device::skip() {
+    std::streamsize fragment_seekable_device::skip() {
         std::streamsize accumulate_read{};
         std::streamoff buffer_size{};
 
@@ -38,9 +38,9 @@ namespace uh::io {
             setElementsLeftToRead(0);
         }
         catch(std::exception &e){
-            THROW(util::exception,"fragment_on_seekable_device serialization failed on skip! "
+            THROW(util::exception,"fragment_seekable_device serialization failed on skip! "
                                   "Buffer size was "+std::to_string(buffer_size)+
-                                  " The fragment_on_seekable_device state was "+std::to_string(getStateMachine())+
+                                  " The fragment_seekable_device state was "+std::to_string(getStateMachine())+
                                   " and the error code was: "+e.what());
         }
         return accumulate_read;

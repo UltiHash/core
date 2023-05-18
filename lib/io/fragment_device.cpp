@@ -1,7 +1,7 @@
 //
 // Created by benjamin-elias on 18.05.23.
 //
-#include "fragment_on_device.h"
+#include "fragment_device.h"
 
 #include <serialization/serialization.h>
 #include <util/exception.h>
@@ -10,14 +10,14 @@ namespace uh::io{
 
     // ---------------------------------------------------------------------
 
-    fragment_on_device::fragment_on_device(io::device &dev) : dev_(dev){}
+    fragment_device::fragment_device(io::device &dev) : dev_(dev){}
 
     // ---------------------------------------------------------------------
 
-    std::streamsize fragment_on_device::write(std::span<const char> buffer)
+    std::streamsize fragment_device::write(std::span<const char> buffer)
     {
         if(state_machine == READING_BEGIN)
-            THROW(util::exception,"Writing on fragment_on_device corrupted the fragments incomplete reading state!");
+            THROW(util::exception,"Writing on fragment_device corrupted the fragments incomplete reading state!");
 
         auto ser = serialization::serialization(dev_);
         return ser.write(buffer);
@@ -25,7 +25,7 @@ namespace uh::io{
 
     // ---------------------------------------------------------------------
 
-    std::streamsize fragment_on_device::read(std::span<char> buffer)
+    std::streamsize fragment_device::read(std::span<char> buffer)
     {
         std::streamsize accumulate_read{};
         std::streamoff buffer_size{};
@@ -49,9 +49,9 @@ namespace uh::io{
             if(!elements_left_to_read)state_machine = READING_COMPLETE;
         }
         catch(std::exception &e){
-            THROW(util::exception,"fragment_on_device serialization failed on skip! "
+            THROW(util::exception,"fragment_device serialization failed on skip! "
                                   "Buffer size was "+std::to_string(buffer_size)+
-                                  " The fragment_on_device state was "+std::to_string(state_machine)+
+                                  " The fragment_device state was "+std::to_string(state_machine)+
                                   " and the error code was: "+e.what());
         }
         return accumulate_read;
@@ -59,14 +59,14 @@ namespace uh::io{
 
     // ---------------------------------------------------------------------
 
-    bool fragment_on_device::valid() const
+    bool fragment_device::valid() const
     {
         return dev_.valid();
     }
 
     // ---------------------------------------------------------------------
 
-    std::streamsize fragment_on_device::skip()
+    std::streamsize fragment_device::skip()
     {
         std::streamsize accumulate_read{};
         std::streamoff buffer_size{};
@@ -94,9 +94,9 @@ namespace uh::io{
             elements_left_to_read = 0;
         }
         catch(std::exception &e){
-            THROW(util::exception,"fragment_on_device serialization failed on skip! "
+            THROW(util::exception,"fragment_device serialization failed on skip! "
                                   "Buffer size was "+std::to_string(buffer_size)+
-                                  " The fragment_on_device state was "+std::to_string(state_machine)+
+                                  " The fragment_device state was "+std::to_string(state_machine)+
                                   " and the error code was: "+e.what());
         }
         return accumulate_read;
@@ -104,25 +104,25 @@ namespace uh::io{
 
     // ---------------------------------------------------------------------
 
-    fragmented_states fragment_on_device::getStateMachine() const {
+    fragmented_states fragment_device::getStateMachine() const {
         return state_machine;
     }
 
     // ---------------------------------------------------------------------
 
-    void fragment_on_device::setStateMachine(fragmented_states stateMachine) {
+    void fragment_device::setStateMachine(fragmented_states stateMachine) {
         state_machine = stateMachine;
     }
 
     // ---------------------------------------------------------------------
 
-    std::streamoff fragment_on_device::getElementsLeftToRead() const {
+    std::streamoff fragment_device::getElementsLeftToRead() const {
         return elements_left_to_read;
     }
 
     // ---------------------------------------------------------------------
 
-    void fragment_on_device::setElementsLeftToRead(std::streamoff elementsLeftToRead) {
+    void fragment_device::setElementsLeftToRead(std::streamoff elementsLeftToRead) {
         elements_left_to_read = elementsLeftToRead;
     }
 
