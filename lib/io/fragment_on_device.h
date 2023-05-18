@@ -62,8 +62,7 @@ namespace uh::io{
         enum {
             UNDEFINED_STATE,
             READING_BEGIN,
-            READING_COMPLETE,
-            WRITING_MODE
+            READING_COMPLETE
         } state_machine = UNDEFINED_STATE;
         std::streamoff elements_left_to_read{};
     };
