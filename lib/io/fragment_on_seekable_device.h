@@ -12,6 +12,7 @@ namespace uh::io {
 
     class fragment_on_seekable_device: public fragment_on_device {
 
+    public:
         /**
          * a fragment_on_seekable_device uses a device to either only read or only write,
          * or in case seek over the fragment content in its lifetime;

@@ -13,8 +13,12 @@
 #include <boost/mpl/vector.hpp>
 
 #include <util/exception.h>
+
 #include <io/fragment_on_device.h>
+#include <io/fragment_on_seekable_device.h>
 #include <io/buffer.h>
+#include <io/temp_file.h>
+
 #include <serialization/serialization.h>
 
 using namespace uh::util;
@@ -22,6 +26,9 @@ using namespace uh::io;
 
 namespace
 {
+// ---------------------------------------------------------------------
+
+const static std::filesystem::path TEMP_DIR = "/tmp";
 
 // ---------------------------------------------------------------------
 
@@ -43,7 +50,8 @@ struct Fixture {};
 // ---------------------------------------------------------------------
 
 typedef boost::mpl::vector<
-        fragment_on_device
+        fragment_on_device,
+        fragment_on_seekable_device
 > device_types;
 
 // ---------------------------------------------------------------------
@@ -67,6 +75,23 @@ std::unique_ptr<fragment_on_device> make_test_device<fragment_on_device>()
 
     return rv;
 }
+
+// ---------------------------------------------------------------------
+
+template <>
+std::unique_ptr<fragment_on_seekable_device> make_test_device()
+{
+    static std::unique_ptr<temp_file> tempFile;
+    tempFile = std::make_unique<temp_file>(TEMP_DIR,std::ios_base::in | std::ios_base::out);
+
+    auto rv = std::make_unique<fragment_on_seekable_device>(*tempFile);
+    rv->write(LOREM_IPSUM);
+    tempFile->seek(0,std::ios_base::beg);
+
+    return rv;
+}
+
+// ---------------------------------------------------------------------
 
 BOOST_FIXTURE_TEST_CASE_TEMPLATE( multi_fragment_on_device_test, T, device_types, Fixture )
 {

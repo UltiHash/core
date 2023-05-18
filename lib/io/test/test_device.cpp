@@ -11,6 +11,8 @@
 #include <io/buffered_device.h>
 #include <io/sstream_device.h>
 #include <io/fragment_on_device.h>
+#include <io/fragment_on_seekable_device.h>
+#include <io/temp_file.h>
 
 
 using namespace uh;
@@ -18,6 +20,9 @@ using namespace uh::io;
 
 namespace
 {
+// ---------------------------------------------------------------------
+
+const static std::filesystem::path TEMP_DIR = "/tmp";
 
 // ---------------------------------------------------------------------
 
@@ -38,7 +43,8 @@ typedef boost::mpl::vector<
     sstream_device,
     buffered_device<sstream_device>,
     buffer,
-    fragment_on_device
+    fragment_on_device,
+    fragment_on_seekable_device
 > device_types;
 
 // ---------------------------------------------------------------------
@@ -93,6 +99,21 @@ std::unique_ptr<fragment_on_device> make_test_device()
 
     auto rv = std::make_unique<fragment_on_device>(*buf);
     rv->write(TEST_TEXT);
+
+    return rv;
+}
+
+// ---------------------------------------------------------------------
+
+template <>
+std::unique_ptr<fragment_on_seekable_device> make_test_device()
+{
+    static std::unique_ptr<temp_file> tempFile;
+    tempFile = std::make_unique<temp_file>(TEMP_DIR,std::ios_base::in | std::ios_base::out);
+
+    auto rv = std::make_unique<fragment_on_seekable_device>(*tempFile);
+    rv->write(TEST_TEXT);
+    tempFile->seek(0,std::ios_base::beg);
 
     return rv;
 }
