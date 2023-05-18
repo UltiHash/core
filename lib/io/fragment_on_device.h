@@ -61,15 +61,6 @@ namespace uh::io{
          */
         std::streamsize skip() override;
 
-    protected:
-        [[nodiscard]] std::streamoff getElementsLeftToRead() const;
-
-        void setElementsLeftToRead(std::streamoff elementsLeftToRead);
-
-        [[nodiscard]] fragmented_states getStateMachine() const;
-
-        void setStateMachine(fragmented_states stateMachine);
-
     private:
         io::device& dev_;
         fragmented_states state_machine = UNDEFINED_STATE;
