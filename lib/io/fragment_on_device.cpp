@@ -104,4 +104,28 @@ namespace uh::io{
 
     // ---------------------------------------------------------------------
 
+    fragmented_states fragment_on_device::getStateMachine() const {
+        return state_machine;
+    }
+
+    // ---------------------------------------------------------------------
+
+    void fragment_on_device::setStateMachine(fragmented_states stateMachine) {
+        state_machine = stateMachine;
+    }
+
+    // ---------------------------------------------------------------------
+
+    std::streamoff fragment_on_device::getElementsLeftToRead() const {
+        return elements_left_to_read;
+    }
+
+    // ---------------------------------------------------------------------
+
+    void fragment_on_device::setElementsLeftToRead(std::streamoff elementsLeftToRead) {
+        elements_left_to_read = elementsLeftToRead;
+    }
+
+    // ---------------------------------------------------------------------
+
 } // namespace uh::io

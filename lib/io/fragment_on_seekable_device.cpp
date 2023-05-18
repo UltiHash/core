@@ -10,59 +10,7 @@
 namespace uh::io {
 
     fragment_on_seekable_device::fragment_on_seekable_device(seekable_device &device):
-    dev_(device) {}
-
-    // ---------------------------------------------------------------------
-
-    std::streamsize fragment_on_seekable_device::write(std::span<const char> buffer)
-    {
-        if(state_machine == READING_BEGIN)
-            THROW(util::exception,"Writing on fragment_on_seekable_device corrupted the fragments incomplete reading state!");
-
-        auto ser = serialization::serialization(dev_);
-        return ser.write(buffer);
-    }
-
-    // ---------------------------------------------------------------------
-
-    std::streamsize fragment_on_seekable_device::read(std::span<char> buffer)
-    {
-        std::streamsize accumulate_read{};
-        std::streamoff buffer_size{};
-
-        try{
-            if(state_machine == UNDEFINED_STATE || state_machine == READING_COMPLETE){
-                auto ser = serialization::serialization(dev_);
-                auto data_size = ser.get_data_size();
-                state_machine = READING_BEGIN;
-
-                elements_left_to_read = static_cast<std::streamoff>(std::get<1>(data_size));
-            }
-
-            buffer_size = static_cast<std::streamoff>(buffer.size());
-            std::size_t stream_advance = std::min(static_cast<std::size_t>(buffer_size),
-                                                  static_cast<std::size_t>(elements_left_to_read));
-
-            accumulate_read += io::read(dev_, {buffer.data(),stream_advance});
-
-            elements_left_to_read -= static_cast<std::streamoff>(stream_advance);
-            if(!elements_left_to_read)state_machine = READING_COMPLETE;
-        }
-        catch(std::exception &e){
-            THROW(util::exception,"fragment_on_seekable_device serialization failed on skip! "
-                                  "Buffer size was "+std::to_string(buffer_size)+
-                                  " The fragment_on_seekable_device state was "+std::to_string(state_machine)+
-                                  " and the error code was: "+e.what());
-        }
-        return accumulate_read;
-    }
-
-    // ---------------------------------------------------------------------
-
-    bool fragment_on_seekable_device::valid() const
-    {
-        return dev_.valid();
-    }
+    dev_(device), fragment_on_device(device) {}
 
     // ---------------------------------------------------------------------
 
@@ -73,26 +21,26 @@ namespace uh::io {
         try{
             std::streamoff header_elements{};
 
-            if(state_machine == UNDEFINED_STATE || state_machine == READING_COMPLETE){
+            if(getStateMachine() == UNDEFINED_STATE || getStateMachine() == READING_COMPLETE){
                 auto ser = serialization::serialization(dev_);
                 auto data_size = ser.get_data_size();
-                state_machine = READING_BEGIN;
+                setStateMachine(READING_BEGIN);
 
                 header_elements = static_cast<std::streamoff>(std::get<0>(data_size));
-                elements_left_to_read = static_cast<std::streamoff>(std::get<1>(data_size));
+                setElementsLeftToRead(static_cast<std::streamoff>(std::get<1>(data_size)));
             }
 
             accumulate_read += header_elements;
-            dev_.seek(elements_left_to_read,std::ios_base::cur);
-            accumulate_read += elements_left_to_read;
+            dev_.seek(getElementsLeftToRead(),std::ios_base::cur);
+            accumulate_read += getElementsLeftToRead();
 
-            state_machine = READING_COMPLETE;
-            elements_left_to_read = 0;
+            setStateMachine(READING_COMPLETE);
+            setElementsLeftToRead(0);
         }
         catch(std::exception &e){
             THROW(util::exception,"fragment_on_seekable_device serialization failed on skip! "
                                   "Buffer size was "+std::to_string(buffer_size)+
-                                  " The fragment_on_seekable_device state was "+std::to_string(state_machine)+
+                                  " The fragment_on_seekable_device state was "+std::to_string(getStateMachine())+
                                   " and the error code was: "+e.what());
         }
         return accumulate_read;
