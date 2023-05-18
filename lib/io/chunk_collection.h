@@ -37,7 +37,7 @@ namespace uh::io {
          *
          * @param fragment_file is the path to the managed fragmented file
          */
-        chunk_collection(std::filesystem::path collection_path);
+        explicit chunk_collection(std::filesystem::path  collection_path);
 
         /**
          * @param buffer is the data to be written or appended to the
@@ -105,6 +105,7 @@ namespace uh::io {
         std::filesystem::path path;
         std::vector<chunk_collection_entry> index;
         uint8_t at_collection_index_entry_count{};
+        uint32_t at_collection_offset_count{};
     };
 
 } // namespace uh::io
