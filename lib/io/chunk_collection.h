@@ -37,14 +37,14 @@ namespace uh::io {
          *
          * @param fragment_file is the path to the managed fragmented file
          */
-        explicit chunk_collection(std::filesystem::path  collection_path);
+        explicit chunk_collection(std::filesystem::path collection_path);
 
         /**
          * @param buffer is the data to be written or appended to the
          * chunk collection
          * @return is the size truly written to the underlying device
          */
-        std::streamsize write(std::span<const char> buffer);
+        std::streamsize write(std::span<const char> buffer) override;
 
         /**
          * @param buffer to be read from the current unspecified position by
@@ -52,31 +52,32 @@ namespace uh::io {
          * @return the size of the fragment that was read with the help
          * of fragment implementation
          */
-        virtual std::streamsize read(std::span<char> buffer);
+        std::streamsize read(std::span<char> buffer) override;
 
         /**
          *
          * @return if the current position has not reached the end of
          * the underlying seekable device
          */
-        [[nodiscard]] virtual bool valid() const;
+        [[nodiscard]] bool valid() const override;
 
         /**
          *
          * @param buffer a list of buffers to be written to the chunk collection
          * @return stream sizes to determine if writing was completed (0 for not completed)
          */
-        std::vector<std::streamsize> write(std::vector<std::span<const char>> buffer);
+        std::vector<std::streamsize> write(std::vector<std::span<const char>> buffer) override;
 
         /**
          *
          * @param buffer to read multiple contents at once from the current position
          * @return stream sizes to determine if reading was completed and correct
          */
-        std::vector<std::streamsize> read(std::vector<std::span<char>> buffer);
+        std::vector<std::streamsize> read(std::vector<std::span<char>> buffer) override;
 
         /**
          * write with returning the index that was assigned to the written buffer
+         * or instead give an index
          *
          * @param buffer to be written
          * @return tuple<stream size, assigned index position>
@@ -94,18 +95,46 @@ namespace uh::io {
         /**
          * write indexed multiple buffers
          */
-        std::vector<std::tuple<std::streamsize,uint8_t>> write_indexed(std::vector<std::span<const char>> buffer);
+        std::vector<std::tuple<std::streamsize,uint8_t>> write_indexed(const std::vector<std::span<const char>>& buffer);
 
         /**
          * read indexed multiple positions
          */
-        std::vector<std::vector<char>> read_indexed(std::vector<uint8_t> at);
+        std::vector<std::vector<char>> read_indexed(const std::vector<uint8_t>& at);
+
+        /**
+         *
+         * @return the count of addresses used
+         */
+        uint8_t count();
+
+        /**
+         *
+         * @return the accumulated size of the chunk collection together with index-, control- and size bytes
+         */
+        std::size_t size();
+
+        /**
+         *
+         * @param index_adress is the address of a registered fragment/chunk
+         * @return the size of the content payload of the fragment/chunk
+         */
+        std::size_t size(uint8_t index_adress);
+
+        /**
+         *
+         * @param index_adress is the address of a registered fragment/chunk
+         * @return the size of the content payload of the fragment/chunk
+         */
+        std::size_t size(std::size_t index_pos);
 
     private:
         std::filesystem::path path;
         std::vector<chunk_collection_entry> index;
         uint8_t at_collection_index_entry_count{};
         uint32_t at_collection_offset_count{};
+
+        uint8_t next_free_address();
     };
 
 } // namespace uh::io
