@@ -6,6 +6,8 @@
 
 namespace uh::dbn::storage::smart {
 
+
+
 mmap_storage::mmap_storage(const std::forward_list<file_mmap_info>& files):
     m_log_file_path (generate_log_file_path(files)),
     m_log(create_logger()) {
@@ -33,7 +35,7 @@ void mmap_storage::sync(void *ptr, std::size_t size) {
 }
 
 void *mmap_storage::get_raw_ptr(size_t offset) {
-    return m_resource_container.get_resource(offset).m_ptr.get_offset_ptr_at(offset).m_addr;
+    return get_resource(offset).m_ptr.get_offset_ptr_at(offset).m_addr;
 }
 
 void mmap_storage::mmap_file(const file_mmap_info& file) {
@@ -49,7 +51,10 @@ void mmap_storage::mmap_file(const file_mmap_info& file) {
     if (file.address != nullptr and ptr != file.address) {
         throw std::runtime_error("error: could not pin the file at the desired pointer!");
     }
-    m_resource_container.add_resource(file.path, ptr, file.max_size);
+    m_resources.emplace_hint(m_resources.cend(),std::piecewise_construct,
+                                    std::forward_as_tuple(m_aggregate_size),
+                                    std::forward_as_tuple(ptr, file.max_size, m_aggregate_size));
+    m_aggregate_size += file.max_size;
 }
 
 std::fstream mmap_storage::create_logger() const {
@@ -81,7 +86,7 @@ void mmap_storage::replay_logger() {
 
 offset_ptr mmap_storage::do_allocate (size_t bytes) {
 
-    for (auto &resource: m_resource_container.get_resources()) {
+    for (auto &resource: m_resources) {
         try {
             auto ptr = resource.second.get_pool_resource().allocate (bytes);
             return resource.second.m_ptr.get_offset_ptr_at (ptr);
@@ -92,7 +97,7 @@ offset_ptr mmap_storage::do_allocate (size_t bytes) {
 }
 
 void mmap_storage::do_deallocate (const offset_ptr& offset_ptr, size_t bytes) {
-    auto &resource = m_resource_container.get_resource (offset_ptr.m_offset, bytes);
+    auto &resource = get_resource (offset_ptr.m_offset, bytes);
     const auto deallocate_offset_ptr = resource.m_ptr.get_offset_ptr_at(offset_ptr.m_offset);
     resource.get_pool_resource().deallocate(deallocate_offset_ptr.m_addr, bytes);
 }
@@ -118,6 +123,44 @@ bool mmap_storage::files_consistent_existency (const std::forward_list<file_mmap
     return existed_files;
 }
 
+mmap_storage::resource_entry &mmap_storage::get_resource(size_t offset, size_t size) {
+    auto itr = m_resources.upper_bound (offset);
+    if (itr == m_resources.cbegin()) {
+        throw std::domain_error("error: deallocate request for non-existing resource");
+    }
+    itr--;
+    if (itr->first + itr->second.m_size < offset + size) {
+        throw std::domain_error("error: deallocate request for non-existing resource");
+    }
+    return itr->second;
+}
+
+offset_ptr::offset_ptr(size_t offset, void *addr) :
+        m_addr (static_cast <char*> (addr)), m_offset (offset) {}
+
+offset_ptr offset_ptr::get_offset_ptr_at(size_t offset) const {
+    if (m_addr == nullptr) {
+        throw std::logic_error ("error: nullptr in offset_ptr");
+    }
+    return {offset, (offset - m_offset) + static_cast <char*> (m_addr)};
+}
+
+offset_ptr offset_ptr::get_offset_ptr_at(void *raw_ptr) const {
+    if (m_addr == nullptr) {
+        throw std::logic_error ("error: nullptr in offset_ptr");
+    }
+    return {(static_cast <char*> (raw_ptr) - static_cast <char*> (m_addr)) + m_offset, raw_ptr};
+}
+
+mmap_storage::resource_entry::resource_entry(void *addr, size_t size, size_t offset) :
+        m_ptr (offset, addr),
+        m_size (size),
+        m_monotonic_buffer(addr, size, std::pmr::null_memory_resource()),
+        m_pool_resource(&m_monotonic_buffer) {}
+
+std::pmr::memory_resource &mmap_storage::resource_entry::get_pool_resource() {
+    return m_pool_resource;
+}
 
 
 } // end namespace uh::dbn::storage::smart
