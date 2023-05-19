@@ -3,6 +3,7 @@
 
 #include <protocol/client_pool.h>
 #include <metrics/storage_metrics.h>
+#include <persistence/storage/scheduled_compressions_persistence.h>
 
 #include <unordered_map>
 #include <memory>
@@ -44,7 +45,7 @@ struct storage_config
 class mod
 {
 public:
-    mod(const storage_config& cfg, metrics::storage_metrics& storage_metrics);
+    mod(const storage_config& cfg, metrics::storage_metrics& storage_metrics, persistence::scheduled_compressions_persistence& scheduled_compressions);
     ~mod();
 
     void start();

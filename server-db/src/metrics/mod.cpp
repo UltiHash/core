@@ -1,5 +1,5 @@
 #include "mod.h"
-
+#include <logging/logging_boost.h>
 
 using namespace uh::metrics;
 
@@ -31,6 +31,7 @@ mod::impl::impl(const uh::metrics::config& config)
 mod::mod(const uh::metrics::config& config)
     : m_impl(std::make_unique<impl>(config))
 {
+    INFO << "             starting metrics module";
 }
 
 // ---------------------------------------------------------------------

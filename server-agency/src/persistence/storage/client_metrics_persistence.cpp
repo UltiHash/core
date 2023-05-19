@@ -1,13 +1,14 @@
-#include "client_metrics_storage.h"
+#include "client_metrics_persistence.h"
 #include <io/file.h>
-#include <persistence/options.h>
+#include <io/temp_file.h>
+#include <logging/logging_boost.h>
 
 namespace uh::an::persistence
 {
 
 // ---------------------------------------------------------------------
 
-client_metrics::client_metrics(const persistence_config& config) :
+client_metrics::client_metrics(const uh::options::persistence_config& config) :
     m_target_path(config.persistence_path / std::filesystem::path("uhv_metrics.ua"))
 {
 }
@@ -27,6 +28,7 @@ void client_metrics::start()
 void client_metrics::add(const uh::protocol::client_statistics::request& req)
 {
     m_id_to_size.insert_or_assign(std::string(req.uhv_id.begin(), req.uhv_id.end()), req.integrated_size);
+    flush();
 }
 
 // ---------------------------------------------------------------------
@@ -40,7 +42,7 @@ const std::map<std::string, std::uint64_t>& client_metrics::id_to_size_map() con
 
 void client_metrics::flush()
 {
-    io::file metrics_file(m_target_path, std::ios::out | std::ios::trunc | std::ios::binary);
+    io::temp_file metrics_file(m_target_path.parent_path());
 
     uh::serialization::buffered_serializer serializer(metrics_file);
     serializer.write(m_id_to_size.size());
@@ -52,6 +54,7 @@ void client_metrics::flush()
     }
 
     serializer.sync();
+    metrics_file.rename(m_target_path);
 }
 
 // ---------------------------------------------------------------------
@@ -69,6 +72,7 @@ void client_metrics::retrieve()
         auto integrated_size = deserializer.read<std::uint64_t>();
         m_id_to_size.insert({uhv_id, integrated_size});
     }
+
 }
 
 // ---------------------------------------------------------------------

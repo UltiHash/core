@@ -8,7 +8,7 @@
 
 #include <net/server_info.h>
 #include <metrics/client_metrics.h>
-#include <persistence/storage/client_metrics_storage.h>
+#include <persistence/storage/client_metrics_persistence.h>
 
 using namespace boost::asio::ip;
 
