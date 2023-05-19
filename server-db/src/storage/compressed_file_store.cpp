@@ -102,13 +102,20 @@ void compression_worker::operator()(const std::filesystem::path& path, comp::typ
 compressed_file_store::compressed_file_store(
     const compressed_file_store_config& config,
     storage_metrics& metrics,
+    persistence::scheduled_compressions_persistence& scheduled_compressions,
     std::function<void(std::streamsize)> report_savings)
     : m_metrics(metrics),
+      m_scheduled_compressions(scheduled_compressions),
       m_type(config.compression),
       m_active(0),
       m_report_savings(std::move(report_savings)),
       m_worker(config.threads, compression_worker(*this, m_metrics))
 {
+    if (!m_scheduled_compressions.empty())
+    {
+        for (const auto& compression_path : m_scheduled_compressions.set())
+            compress(compression_path);
+    }
 }
 
 // ---------------------------------------------------------------------
@@ -133,8 +140,8 @@ std::unique_ptr<io::device> compressed_file_store::open(const std::filesystem::p
 
 void compressed_file_store::compress(const std::filesystem::path& path)
 {
-    std::unique_lock<std::mutex> lock(m_comp_mutex);
-    auto [it, success] = m_compressing.emplace(path);
+    std::lock_guard<std::mutex> lock(m_comp_mutex);
+    auto [it, success] = m_scheduled_compressions.insert(path);
     if (!success)
     {
         return;
@@ -143,11 +150,11 @@ void compressed_file_store::compress(const std::filesystem::path& path)
     try
     {
         m_worker.push(path, m_type);
-        m_metrics.comp_scheduled().Set(m_compressing.size());
+        m_metrics.comp_scheduled().Set(static_cast<double>(m_scheduled_compressions.size()));
     }
     catch (...)
     {
-        m_compressing.erase(path);
+        m_scheduled_compressions.erase(path);
         throw;
     }
 
@@ -158,6 +165,7 @@ void compressed_file_store::compress(const std::filesystem::path& path)
 
 void compressed_file_store::start(const std::filesystem::path& path)
 {
+    std::lock_guard<std::mutex> lock(m_comp_mutex);
     ++m_active;
     m_metrics.comp_running().Set(m_active);
     INFO << "starting compression of " << path;
@@ -168,10 +176,10 @@ void compressed_file_store::start(const std::filesystem::path& path)
 void compressed_file_store::finish(const std::filesystem::path& path,
                                    std::streamsize savings)
 {
-    std::unique_lock<std::mutex> lock(m_comp_mutex);
+    std::lock_guard<std::mutex> lock(m_comp_mutex);
 
-    m_compressing.erase(path);
-    m_metrics.comp_scheduled().Set(m_compressing.size());
+    m_scheduled_compressions.erase(path);
+    m_metrics.comp_scheduled().Set(static_cast<double>(m_scheduled_compressions.size()));
 
     --m_active;
     m_metrics.comp_running().Set(m_active);
