@@ -51,12 +51,16 @@ namespace uh::io {
         }
     }
 
+    // ---------------------------------------------------------------------
+
     template<class SeekableDevice>
     requires(std::is_base_of_v<seekable_device, SeekableDevice>)std::streamsize
     chunk_collection<SeekableDevice>::write(std::span<const char> buffer)
     {
         return std::get<0>(write_indexed(buffer));
     }
+
+    // ---------------------------------------------------------------------
 
     template<class SeekableDevice>
     requires(std::is_base_of_v<seekable_device, SeekableDevice>)std::streamsize
@@ -66,14 +70,23 @@ namespace uh::io {
 
         f1.read({old_index_address,1});
 
+        at_collection_offset_count += size(old_index_address[0]);
+
+        if(at_collection_index_entry_count != std::numeric_limits<unsigned char>::max())
+            at_collection_index_entry_count++;
+
         fragment_seekable_device frag(f1);
         return frag.read(buffer);
     }
+
+    // ---------------------------------------------------------------------
 
     template<class SeekableDevice>
     requires(std::is_base_of_v<seekable_device, SeekableDevice>)bool chunk_collection<SeekableDevice>::valid() const {
         return count() < std::numeric_limits<unsigned char>::max();
     }
+
+    // ---------------------------------------------------------------------
 
     template<class SeekableDevice>
     requires(std::is_base_of_v<seekable_device, SeekableDevice>)std::vector<std::streamsize>
@@ -88,6 +101,8 @@ namespace uh::io {
         return sizes_out;
     }
 
+    // ---------------------------------------------------------------------
+
     template<class SeekableDevice>
     requires(std::is_base_of_v<seekable_device, SeekableDevice>)std::vector<std::streamsize>
     chunk_collection<SeekableDevice>::read(std::vector<std::span<char>> buffer) {
@@ -100,6 +115,8 @@ namespace uh::io {
 
         return sizes_out;
     }
+
+    // ---------------------------------------------------------------------
 
     template<class SeekableDevice>
     requires(std::is_base_of_v<seekable_device, SeekableDevice>)std::tuple<std::streamsize, uint8_t>
@@ -124,12 +141,17 @@ namespace uh::io {
         auto start_pos = at_collection_offset_count;
         at_collection_offset_count += write_total;
 
+        if(at_collection_index_entry_count != std::numeric_limits<unsigned char>::max())
+            at_collection_index_entry_count++;
+
         index.emplace_back(start_pos,
                            at_collection_offset_count-start_pos,
                            new_index_address[0]);
 
         return {write_out,new_index_address[0]};
     }
+
+    // ---------------------------------------------------------------------
 
     template<class SeekableDevice>
     requires(std::is_base_of_v<seekable_device, SeekableDevice>)std::vector<char>
@@ -156,8 +178,15 @@ namespace uh::io {
         fragment_seekable_device frag(f1);
         frag.read({buffer.data(),buffer.size()});
 
+        at_collection_offset_count += size(old_index_address[0]);
+
+        if(at_collection_index_entry_count != std::numeric_limits<unsigned char>::max())
+            at_collection_index_entry_count++;
+
         return buffer;
     }
+
+    // ---------------------------------------------------------------------
 
     template<class SeekableDevice>
     requires(std::is_base_of_v<seekable_device, SeekableDevice>)std::vector<std::tuple<std::streamsize, uint8_t>>
@@ -172,6 +201,8 @@ namespace uh::io {
         return sizes_out;
     }
 
+    // ---------------------------------------------------------------------
+
     template<class SeekableDevice>
     requires(std::is_base_of_v<seekable_device, SeekableDevice>)std::vector<std::vector<char>>
     chunk_collection<SeekableDevice>::read_indexed(const std::vector<uint8_t>& at) {
@@ -185,10 +216,14 @@ namespace uh::io {
         return results_out;
     }
 
+    // ---------------------------------------------------------------------
+
     template<class SeekableDevice>
     requires(std::is_base_of_v<seekable_device, SeekableDevice>)uint8_t chunk_collection<SeekableDevice>::count() {
         return index.size();
     }
+
+    // ---------------------------------------------------------------------
 
     template<class SeekableDevice>
     requires(std::is_base_of_v<seekable_device, SeekableDevice>)std::size_t chunk_collection<SeekableDevice>::size() {
@@ -196,6 +231,8 @@ namespace uh::io {
             return acc + c.fragment_size;
         });
     }
+
+    // ---------------------------------------------------------------------
 
     template<class SeekableDevice>
     requires(std::is_base_of_v<seekable_device, SeekableDevice>)std::size_t
@@ -211,11 +248,39 @@ namespace uh::io {
         return el->fragment_size;
     }
 
+    // ---------------------------------------------------------------------
+
     template<class SeekableDevice>
     requires(std::is_base_of_v<seekable_device, SeekableDevice>)std::size_t
     chunk_collection<SeekableDevice>::size(std::size_t index_pos) {
         return index[index_pos].fragment_size;
     }
+
+    // ---------------------------------------------------------------------
+
+    template<class SeekableDevice>
+    requires(std::is_base_of_v<seekable_device, SeekableDevice>)const std::filesystem::path &
+    chunk_collection<SeekableDevice>::getPath() const {
+        return path;
+    }
+
+    // ---------------------------------------------------------------------
+
+    template<class SeekableDevice>
+    requires(std::is_base_of_v<seekable_device, SeekableDevice>)uint8_t
+    chunk_collection<SeekableDevice>::getAtCollectionIndexEntryCount() const {
+        return at_collection_index_entry_count;
+    }
+
+    // ---------------------------------------------------------------------
+
+    template<class SeekableDevice>
+    requires(std::is_base_of_v<seekable_device, SeekableDevice>)uint32_t
+    chunk_collection<SeekableDevice>::getAtCollectionOffsetCount() const {
+        return at_collection_offset_count;
+    }
+
+    // ---------------------------------------------------------------------
 
     template<class SeekableDevice>
     requires(std::is_base_of_v<seekable_device, SeekableDevice>)uint8_t
@@ -239,4 +304,6 @@ namespace uh::io {
         return 0;
     }
 
-} // io
+    // ---------------------------------------------------------------------
+
+} // namespace uh::io

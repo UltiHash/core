@@ -28,6 +28,8 @@ namespace uh::io {
     requires(std::is_base_of_v<seekable_device,SeekableDevice>)
     class chunk_collection: public multi_devices{
 
+    public:
+
         /**
          * a chunk collection keeps track of the position and the movement
          * of incoming and outgoing chunks/fragments.
@@ -127,6 +129,12 @@ namespace uh::io {
          * @return the size of the content payload of the fragment/chunk
          */
         std::size_t size(std::size_t index_pos);
+
+        [[nodiscard]] const std::filesystem::path &getPath() const;
+
+        [[nodiscard]] uint8_t getAtCollectionIndexEntryCount() const;
+
+        [[nodiscard]] uint32_t getAtCollectionOffsetCount() const;
 
     private:
         std::filesystem::path path;
