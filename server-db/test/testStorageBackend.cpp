@@ -108,6 +108,7 @@ BOOST_FIXTURE_TEST_CASE( dump_storage_allocation, storage_fixture )
 
         allocation->persist();
         allocation.reset();
+
         BOOST_CHECK_THROW(backend().allocate(2), std::exception);
     }
 }
