@@ -67,23 +67,23 @@ BOOST_FIXTURE_TEST_CASE(test_mmap_storage_basic_allocation, files_info_fixture)
     mmap_storage ms (files_info ());
 
     size_t size1 = 1024, size2 = 512;
-    void* ptr1 = ms.allocate(size1);
-    void* ptr2 = ms.allocate(size2);
-    BOOST_TEST(static_cast <char*> (ptr1) + size1 <= ptr2);
+    offset_ptr ptr1 = ms.allocate(size1);
+    offset_ptr ptr2 = ms.allocate(size2);
+    BOOST_TEST(ptr1.m_addr + size1 <= ptr2.m_addr);
 
     ms.deallocate(ptr1, size1);
-    void* ptr3 = ms.allocate(size1);
-    BOOST_TEST(ptr1 == ptr3);
+    offset_ptr ptr3 = ms.allocate(size1);
+    BOOST_TEST(ptr1.m_addr == ptr3.m_addr);
 
-    void *ptr4 = ms.allocate(size2);
-    BOOST_TEST(static_cast <char*> (ptr2) + size2 <= ptr4);
+    offset_ptr ptr4 = ms.allocate(size2);
+    BOOST_TEST(ptr1.m_addr + size2 <= ptr4.m_addr);
 }
 
 BOOST_FIXTURE_TEST_CASE(test_mmap_storage_data_test, files_info_fixture)
 {
 
     cleanup ();
-    void* ptr;
+    offset_ptr ptr;
     char data[] = "0123456789";
     size_t size = 10;
 
@@ -91,12 +91,13 @@ BOOST_FIXTURE_TEST_CASE(test_mmap_storage_data_test, files_info_fixture)
         mmap_storage ms(files_info());
 
         ptr = ms.allocate(size);
-        std::memcpy(ptr, data, size);
+        std::memcpy(ptr.m_addr, data, size);
     }
 
     {
         mmap_storage ms(files_info());
-        BOOST_TEST (std::strncmp(data, static_cast <char *> (ptr), size) == 0);
+        void* raw_ptr = ms.get_raw_ptr(ptr.m_offset);
+        BOOST_TEST (std::strncmp(data, static_cast <char *> (raw_ptr), size) == 0);
     }
 
 }
@@ -105,8 +106,8 @@ BOOST_FIXTURE_TEST_CASE(test_mmap_storage_persistet_alloc_test, files_info_fixtu
 {
 
     cleanup ();
-    void* ptr1;
-    void *ptr2;
+    offset_ptr ptr1;
+    offset_ptr ptr2;
     char data[] = "0123456789";
     size_t size = 10;
 
@@ -114,25 +115,22 @@ BOOST_FIXTURE_TEST_CASE(test_mmap_storage_persistet_alloc_test, files_info_fixtu
         mmap_storage ms(files_info());
 
         ptr1 = ms.allocate(size);
-        std::memcpy(ptr1, data, size);
+        std::memcpy(ptr1.m_addr, data, size);
     }
 
     {
         mmap_storage ms(files_info());
-
         ptr2 = ms.allocate(size);
-
+        BOOST_TEST (ptr1.m_offset + size <= ptr2.m_offset);
     }
     {
         mmap_storage ms(files_info());
-
         ms.deallocate(ptr1, size);
-
     }
     {
         mmap_storage ms(files_info());
-
         ptr2 = ms.allocate(size);
+        BOOST_TEST (ptr1.m_offset == ptr2.m_offset);
 
     }
 }
