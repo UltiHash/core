@@ -60,20 +60,11 @@ std::unique_ptr<uh::protocol::allocation> protocol::on_allocate_chunk(std::size_
 
 // ---------------------------------------------------------------------
 
-block_meta_data protocol::on_write_small_block (std::span <char> buffer)
-{
-    return m_cluster.write_small_block (buffer);
-}
-
-// ---------------------------------------------------------------------
-
 void protocol::on_client_statistics(uh::protocol::client_statistics::request& client_stat)
 {
     // ! TODO: set_uhv_metrics should technically be in protocol_metrics_wrapper
     m_client.set_uhv_metrics(client_stat);
     m_persistence.add(client_stat);
-    // TODO: flush occasionally
-    m_persistence.flush();
 }
 
 // ---------------------------------------------------------------------
@@ -88,14 +79,6 @@ std::size_t protocol::on_free_space()
 void protocol::on_next_chunk(std::span<char>)
 {
     THROW(unsupported, "this call is not supported by this node type");
-}
-
-// ---------------------------------------------------------------------
-
-uh::protocol::write_xsmall_blocks::response
-protocol::on_write_xsmall_blocks(const uh::protocol::write_xsmall_blocks::request &req)
-{
-    return m_cluster.write_xsmall_blocks (req);
 }
 
 // ---------------------------------------------------------------------

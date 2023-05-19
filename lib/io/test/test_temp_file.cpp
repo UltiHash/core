@@ -54,17 +54,26 @@ BOOST_AUTO_TEST_CASE( temporary )
 
 BOOST_AUTO_TEST_CASE( read_write )
 {
-    temp_file tf(TEMP_DIR);
+    std::filesystem::path test_path;
+    {
+        temp_file tf(TEMP_DIR);
+        test_path = tf.path();
 
-    auto written = tf.write({LOREM_IPSUM.c_str(), LOREM_IPSUM.size()});
-    BOOST_CHECK_EQUAL(written, LOREM_IPSUM.size());
+        auto written = tf.write({LOREM_IPSUM.c_str(), LOREM_IPSUM.size()});
+        BOOST_CHECK_EQUAL(written, LOREM_IPSUM.size());
 
-    file in(tf.path());
+        tf.release_to(test_path);
+    }
+
+    file in(test_path,std::ios_base::in);
     std::string copy(LOREM_IPSUM.size(), 0);
     auto read = in.read({copy.data(), copy.size()});
     BOOST_CHECK_EQUAL(read, LOREM_IPSUM.size());
 
     BOOST_CHECK_EQUAL(copy, LOREM_IPSUM);
+
+    if(std::filesystem::exists(test_path))
+        std::filesystem::remove(test_path);
 }
 
 // ---------------------------------------------------------------------

@@ -251,111 +251,6 @@ void read(serialization::buffered_serialization& in, finalize_block::response& r
 
 // ---------------------------------------------------------------------
 
-struct write_small_block
-{
-    struct request
-    {
-        std::span<char> data;
-    };
-
-    struct response
-    {
-        blob hash;
-        uint64_t effective_size;
-    };
-
-    constexpr static uint8_t request_id = 0x0b;
-};
-
-// ---------------------------------------------------------------------
-
-void write(serialization::buffered_serialization& out, const write_small_block::request& request);
-void read(serialization::buffered_serialization& in, write_small_block::request& request);
-
-void write(serialization::buffered_serialization& out, const write_small_block::response& response);
-void read(serialization::buffered_serialization& in, write_small_block::response& response);
-
-// ---------------------------------------------------------------------
-
-struct read_small_block
-{
-    struct request
-    {
-        blob hash;
-    };
-
-    struct response
-    {
-        std::span<char> data;
-    };
-
-    constexpr static uint8_t request_id = 0x0c;
-};
-
-// ---------------------------------------------------------------------
-
-void write(serialization::buffered_serialization& out, const read_small_block::request& request);
-void read(serialization::buffered_serialization& in, read_small_block::request& request);
-
-void write(serialization::buffered_serialization& out, const read_small_block::response& response);
-void read(serialization::buffered_serialization& in, read_small_block::response& response);
-
-// ---------------------------------------------------------------------
-
-struct write_xsmall_blocks
-{
-    struct request
-    {
-        std::vector <std::uint16_t> chunk_sizes;
-        std::vector <char> data;
-    };
-
-    struct response
-    {
-        std::size_t effective_size;
-        blob hashes;
-    };
-
-    constexpr static uint8_t request_id = 0x0d;
-};
-
-
-// ---------------------------------------------------------------------
-
-void write(serialization::buffered_serialization& out, const write_xsmall_blocks::request& request);
-void read(serialization::buffered_serialization& in, write_xsmall_blocks::request& request);
-
-void write(serialization::buffered_serialization& out, const write_xsmall_blocks::response& response);
-void read(serialization::buffered_serialization& in, write_xsmall_blocks::response& response);
-
-// ---------------------------------------------------------------------
-
-struct read_xsmall_blocks
-{
-    struct request
-    {
-        blob hashes;
-    };
-
-    struct response
-    {
-        std::vector <char> data;
-    };
-
-    constexpr static uint8_t request_id = 0x0e;
-};
-
-// ---------------------------------------------------------------------
-
-void write(serialization::buffered_serialization& out, const read_xsmall_blocks::request& request);
-void read(serialization::buffered_serialization& in, read_xsmall_blocks::request& request);
-
-void write(serialization::buffered_serialization& out, const read_xsmall_blocks::response& response);
-void read(serialization::buffered_serialization& in, read_xsmall_blocks::response& response);
-
-// ---------------------------------------------------------------------
-
-
 struct client_statistics
 {
     struct request
@@ -377,7 +272,6 @@ void write(serialization::buffered_serialization& out, const client_statistics::
 void read(serialization::buffered_serialization& in, client_statistics::response& response);
 
 // ---------------------------------------------------------------------
-
 
 struct write_chunks
 {
@@ -405,7 +299,6 @@ void write(serialization::buffered_serialization& out, const write_chunks::respo
 void read(serialization::buffered_serialization& in, write_chunks::response& response);
 
 // ---------------------------------------------------------------------
-
 
 struct read_chunks
 {
