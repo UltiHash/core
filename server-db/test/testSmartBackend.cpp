@@ -32,7 +32,7 @@ public:
                 std::filesystem::remove(fi.path);
             }
         }
-        const std::filesystem::path log_name = "_mmap_allocation_log_";
+        const std::filesystem::path log_name = "log_d46fb07781239d0a77dbb1ec41f315194142472970a296ac990840b68a8e8d9134a9dd34de2891521a01b78aed0df4793731fab110880fb9219641ad7219065187b093386fa4a8592bdf458c169d6ca";
         if (exists(log_name)) {
             std::filesystem::remove(log_name);
         }
@@ -69,14 +69,14 @@ BOOST_FIXTURE_TEST_CASE(test_mmap_storage_basic_allocation, files_info_fixture)
     size_t size1 = 1024, size2 = 512;
     void* ptr1 = ms.allocate(size1);
     void* ptr2 = ms.allocate(size2);
-    BOOST_CHECK(static_cast <char*> (ptr1) + size1 <= ptr2);
+    BOOST_TEST(static_cast <char*> (ptr1) + size1 <= ptr2);
 
     ms.deallocate(ptr1, size1);
     void* ptr3 = ms.allocate(size1);
-    BOOST_CHECK(ptr1 == ptr3);
+    BOOST_TEST(ptr1 == ptr3);
 
     void *ptr4 = ms.allocate(size2);
-    BOOST_CHECK(static_cast <char*> (ptr2) + size2 <= ptr4);
+    BOOST_TEST(static_cast <char*> (ptr2) + size2 <= ptr4);
 }
 
 BOOST_FIXTURE_TEST_CASE(test_mmap_storage_data_test, files_info_fixture)
@@ -96,7 +96,43 @@ BOOST_FIXTURE_TEST_CASE(test_mmap_storage_data_test, files_info_fixture)
 
     {
         mmap_storage ms(files_info());
-        BOOST_CHECK (std::strncmp(data, static_cast <char *> (ptr), size) == 0);
+        BOOST_TEST (std::strncmp(data, static_cast <char *> (ptr), size) == 0);
     }
 
+}
+
+BOOST_FIXTURE_TEST_CASE(test_mmap_storage_persistet_alloc_test, files_info_fixture)
+{
+
+    cleanup ();
+    void* ptr1;
+    void *ptr2;
+    char data[] = "0123456789";
+    size_t size = 10;
+
+    {
+        mmap_storage ms(files_info());
+
+        ptr1 = ms.allocate(size);
+        std::memcpy(ptr1, data, size);
+    }
+
+    {
+        mmap_storage ms(files_info());
+
+        ptr2 = ms.allocate(size);
+
+    }
+    {
+        mmap_storage ms(files_info());
+
+        ms.deallocate(ptr1, size);
+
+    }
+    {
+        mmap_storage ms(files_info());
+
+        ptr2 = ms.allocate(size);
+
+    }
 }

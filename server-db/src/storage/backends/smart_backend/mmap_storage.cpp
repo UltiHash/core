@@ -1,28 +1,17 @@
 //
 // Created by masi on 5/15/23.
 //
+#include <unordered_map>
 #include "mmap_storage.h"
 
 namespace uh::dbn::storage::smart {
 
-
-mmap_storage::resource_entry::resource_entry(void *p, size_t size):
-        m_size(size),
-        m_monotonic_buffer(p, size, std::pmr::null_memory_resource()),
-        m_pool_resource(&m_monotonic_buffer) {
-}
-
-std::pmr::memory_resource& mmap_storage::resource_entry::get_pool_resource() {
-    return m_pool_resource;
-}
-
-std::size_t mmap_storage::resource_entry::get_size() const {
-    return m_size;
-}
-
-mmap_storage::mmap_storage(const std::forward_list<file_mmap_info> &files) :
+mmap_storage::mmap_storage(const std::forward_list<file_mmap_info> &files):
+    m_init_run (!files_consistent_existency(files)),
+    m_log_file_path (generate_log_file_path(files)),
     m_log(create_logger()) {
 
+    files_consistent_existency(files);
     for (const auto &file: files) {
         mmap_file (file);
     }
@@ -36,17 +25,16 @@ void* mmap_storage::allocate(std::size_t size) {
 }
 
 void mmap_storage::deallocate(void *p, size_t size) {
-    m_log << "de " << p << ' ' << size << '\n';
+    m_log << "de " << m_resource_container.get_init_ptr (p) << ' ' << size << '\n';
     do_deallocate(p, size);
 }
 
 void mmap_storage::sync(void *ptr, std::size_t size) {
-    for (const auto &resource: m_resources) {
-        msync(resource.first, resource.second.get_size(), MS_SYNC);
-    }
+    msync(ptr, size, MS_SYNC);
 }
 
 void mmap_storage::mmap_file(const file_mmap_info &file) {
+
     const auto fd = open(file.path.c_str(), O_CREAT | O_RDWR, S_IRUSR | S_IWUSR);
     ftruncate(fd, file.max_size);
     auto flags = MAP_SHARED;
@@ -58,25 +46,30 @@ void mmap_storage::mmap_file(const file_mmap_info &file) {
     if (file.address != nullptr and ptr != file.address) {
         throw std::runtime_error("error: could not pin the file at the desired pointer!");
     }
-    m_resources.emplace_hint(m_resources.cend(),
-                             std::piecewise_construct,
-                             std::forward_as_tuple(ptr),
-                             std::forward_as_tuple(ptr, file.max_size));
+    if (m_init_run) {
+        m_log << "init " << file.path << ' ' << ptr << '\n';
+    }
+    m_resource_container.add_resource(file.path, ptr, file.max_size);
 }
 
 std::fstream mmap_storage::create_logger() const {
-    const std::filesystem::path log_name = "_mmap_allocation_log_";
     auto flags = std::ios::in | std::ios::out;
-    if (!std::filesystem::exists(log_name)) {
+    if (!std::filesystem::exists(m_log_file_path)) {
         flags |= std::ios::trunc;
     }
-    return {log_name, flags};
+    return {m_log_file_path, flags};
 }
 
 void mmap_storage::replay_logger() {
     std::string token;
     while (m_log >> token) {
-        if (token == "al") {
+        if (token == "init") {
+            std::filesystem::path p;
+            void* addr;
+            m_log >> p >> addr;
+            m_resource_container.set_init_address(p, addr);
+        }
+        else if (token == "al") {
             size_t bytes;
             m_log >> bytes;
             do_allocate(bytes);
@@ -84,7 +77,7 @@ void mmap_storage::replay_logger() {
             void* addr;
             size_t bytes;
             m_log >> addr >> bytes;
-            do_deallocate(addr, bytes);
+            do_deallocate(m_resource_container.get_current_ptr(addr), bytes);
         } else {
             throw std::invalid_argument("error: unknown token in the allocation log");
         }
@@ -93,27 +86,40 @@ void mmap_storage::replay_logger() {
 }
 
 void* mmap_storage::do_allocate(size_t bytes) {
-    for (auto &resource: m_resources) {
-        try {
-            return resource.second.get_pool_resource().allocate (bytes);
-        }
-        catch (std::bad_alloc &) {
 
+    for (auto &resource: m_resource_container) {
+        try {
+            return resource.allocate (bytes);
         }
+        catch (std::bad_alloc &) {}
     }
     throw std::bad_alloc();
 }
 
 void mmap_storage::do_deallocate(void *p, size_t bytes) {
-    auto itr = m_resources.upper_bound(p);
-    if (itr == m_resources.cbegin()) {
-        throw std::domain_error("error: deallocate request for non-existing resource");
+    auto &resource = m_resource_container.get_resource (p, bytes);
+    resource.deallocate(p, bytes);
+}
+
+std::filesystem::path mmap_storage::generate_log_file_path(const std::forward_list<file_mmap_info> &files) {
+
+    std::hash <std::filesystem::path> hasher;
+    std::stringstream hash_stream;
+    hash_stream << "log_";
+    for (const auto &fi: files) {
+        hash_stream << std::hex << hasher (fi.path);
     }
-    itr--;
-    if (static_cast<char *> (itr->first) + itr->second.get_size() < p) {
-        throw std::domain_error("error: deallocate request for non-existing resource");
+    return hash_stream.str();
+}
+
+bool mmap_storage::files_consistent_existency(const std::forward_list<file_mmap_info> &files) {
+    bool existed_files = std::filesystem::exists(files.begin()->path);
+    for (auto itr = std::next (files.cbegin()); itr != files.cend(); itr ++) {
+        if (std::filesystem::exists(itr->path) != existed_files) {
+            throw std::runtime_error ("error: the data files must be consistent in their existence!");
+        }
     }
-    itr->second.get_pool_resource().deallocate(p, bytes);
+    return existed_files;
 }
 
 } // end namespace uh::dbn::storage::smart
