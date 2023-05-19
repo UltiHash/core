@@ -23,7 +23,7 @@ namespace uh::dbn::persistence
         scheduled_compressions_persistence();
 
         void start();
-        std::pair<std::set<std::filesystem::path>::iterator, bool> emplace(const std::filesystem::path& path);
+        std::pair<std::set<std::filesystem::path>::iterator, bool> insert(const std::filesystem::path& path);
         void erase(const std::filesystem::path& path);
         void flush();
 

@@ -34,7 +34,7 @@ void scheduled_compressions_persistence::start()
 // ---------------------------------------------------------------------
 
 std::pair<std::set<std::filesystem::path>::iterator, bool> scheduled_compressions_persistence::
-                                                           emplace(const std::filesystem::path& path)
+                                                           insert(const std::filesystem::path& path)
 {
     auto ret_value = m_scheduled.insert(path);
     flush();

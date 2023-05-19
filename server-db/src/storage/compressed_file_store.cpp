@@ -141,7 +141,7 @@ std::unique_ptr<io::device> compressed_file_store::open(const std::filesystem::p
 void compressed_file_store::compress(const std::filesystem::path& path)
 {
     std::lock_guard<std::mutex> lock(m_comp_mutex);
-    auto [it, success] = m_scheduled_compressions.emplace(path);
+    auto [it, success] = m_scheduled_compressions.insert(path);
     if (!success)
     {
         return;
