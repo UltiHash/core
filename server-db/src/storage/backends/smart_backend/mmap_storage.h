@@ -18,6 +18,7 @@
 
 namespace uh::dbn::storage::smart {
 
+class mmap_storage;
 
 struct file_mmap_info {
     std::filesystem::path path;
@@ -28,12 +29,17 @@ struct file_mmap_info {
 class offset_ptr {
 public:
     offset_ptr (size_t offset = 0, void* addr = nullptr);
-    [[nodiscard]] offset_ptr get_offset_ptr_at (size_t offset) const;
-    [[nodiscard]] offset_ptr get_offset_ptr_at (void* raw_ptr) const;
     size_t m_offset;
     char* m_addr;
-};
 
+    bool operator == (const offset_ptr& ptr) const noexcept {
+        return m_addr == ptr.m_addr;
+    }
+private:
+    [[nodiscard]] offset_ptr get_offset_ptr_at (size_t offset) const;
+    [[nodiscard]] offset_ptr get_offset_ptr_at (void* raw_ptr) const;
+    friend mmap_storage;
+};
 
 class mmap_storage {
 
@@ -56,6 +62,11 @@ public:
      */
     void sync (void* ptr, std::size_t size);
 
+    /**
+     * Transforms the given offset to a pointer on the memory.
+     * @param offset
+     * @return pointer
+     */
     void* get_raw_ptr (size_t offset);
 
 private:

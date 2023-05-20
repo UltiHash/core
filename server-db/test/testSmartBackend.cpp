@@ -10,6 +10,7 @@
 #include <boost/test/unit_test.hpp>
 #include <storage/backends/smart_backend/mmap_storage.h>
 #include "storage/backend.h"
+#include "storage/backends/smart_backend/mmap_set.h"
 
 using namespace uh::dbn::storage::smart;
 
@@ -17,6 +18,8 @@ class files_info_fixture {
 public:
     static constexpr int FILES_COUNT = 10;
     static constexpr size_t FILE_SIZE = 24 * 1024;
+
+    const std::filesystem::path m_set_filename = "set_data";
 
     files_info_fixture(): m_files_info (generate_files_info ()) {
 
@@ -37,6 +40,9 @@ public:
             std::filesystem::remove(log_name);
         }
 
+        if (exists(m_set_filename)) {
+            std::filesystem::remove(m_set_filename);
+        }
     }
 
 private:
@@ -133,4 +139,51 @@ BOOST_FIXTURE_TEST_CASE(test_mmap_storage_persistet_alloc_test, files_info_fixtu
         BOOST_TEST (ptr1.m_offset == ptr2.m_offset);
 
     }
+}
+
+BOOST_FIXTURE_TEST_CASE(basic_test_mmap_set, files_info_fixture)
+{
+    cleanup();
+    mmap_storage ms(files_info());
+
+    file_mmap_info fi {m_set_filename, nullptr, 512*1024};
+    mmap_set set {fi, ms};
+
+    set.insert("hello from data 1");
+    set.insert("data 2 hello from data 2");
+    set.insert("third data hello from data 3");
+    set.insert("some other data");
+    set.insert("yet again, some other data");
+    set.insert("yet again, some other data");
+    set.insert("yet again, some other data");
+    set.insert("and even more data");
+    set.insert("third data hello from data 3");
+
+
+    auto res1 = set.find("and even more data");
+    BOOST_TEST(std::get <2> (res1) == "and even more data");
+
+    auto res2 = set.find("some other data");
+    BOOST_TEST(std::get <2> (res2) == "some other data");
+
+    auto res3 = set.find("hello from data 1");
+    BOOST_TEST(std::get <2> (res3) == "hello from data 1");
+
+    auto res4 = set.find("yet again, some other data");
+    BOOST_TEST(std::get <2> (res4) == "yet again, some other data");
+
+    auto res5 = set.find("third data hello from data 3");
+    BOOST_TEST(std::get <2> (res5) == "third data hello from data 3");
+
+    auto res6 = set.find("hello from data ");
+    std::cout << std::get <2> (res6) << std::endl;
+
+    auto res7 = set.find("some other");
+    std::cout << std::get <2> (res7) << std::endl;
+
+    auto res8 = set.find("some other data 2");
+    std::cout << std::get <2> (res8) << std::endl;
+
+    auto res9 = set.find("some other something");
+    std::cout << std::get <2> (res9) << std::endl;
 }
