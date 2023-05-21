@@ -146,8 +146,7 @@ BOOST_FIXTURE_TEST_CASE(basic_test_mmap_set, files_info_fixture)
     cleanup();
     mmap_storage ms(files_info());
 
-    file_mmap_info fi {m_set_filename, nullptr, 512*1024};
-    mmap_set set {fi, ms};
+    mmap_set set {m_set_filename, ms};
 
     set.insert("hello from data 1");
     set.insert("data 2 hello from data 2");
@@ -161,22 +160,22 @@ BOOST_FIXTURE_TEST_CASE(basic_test_mmap_set, files_info_fixture)
 
 
     auto res1 = set.find("and even more data");
-    BOOST_TEST(std::get <2> (res1) == "and even more data");
+    BOOST_TEST(res1.match.value() == "and even more data");
 
     auto res2 = set.find("some other data");
-    BOOST_TEST(std::get <2> (res2) == "some other data");
+    BOOST_TEST(res2.match.value() == "some other data");
 
     auto res3 = set.find("hello from data 1");
-    BOOST_TEST(std::get <2> (res3) == "hello from data 1");
+    BOOST_TEST(res3.match.value() == "hello from data 1");
 
     auto res4 = set.find("yet again, some other data");
-    BOOST_TEST(std::get <2> (res4) == "yet again, some other data");
+    BOOST_TEST(res4.match.value() == "yet again, some other data");
 
     auto res5 = set.find("third data hello from data 3");
-    BOOST_TEST(std::get <2> (res5) == "third data hello from data 3");
-
+    BOOST_TEST(res5.match.value() == "third data hello from data 3");
+/*
     auto res6 = set.find("hello from data ");
-    std::cout << std::get <2> (res6) << std::endl;
+    std::cout << res2.match << std::endl;
 
     auto res7 = set.find("some other");
     std::cout << std::get <2> (res7) << std::endl;
@@ -185,5 +184,6 @@ BOOST_FIXTURE_TEST_CASE(basic_test_mmap_set, files_info_fixture)
     std::cout << std::get <2> (res8) << std::endl;
 
     auto res9 = set.find("some other something");
-    std::cout << std::get <2> (res9) << std::endl;
+    std::cout << std::get <2> (res9) << std::endl
+    */;
 }
