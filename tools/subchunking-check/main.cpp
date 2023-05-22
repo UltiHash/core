@@ -186,3 +186,4 @@ int main(int argc, const char *argv[]) {
     std::cout << "average fragment/block count " << static_cast <double> (total) / static_cast <double> (chunk_count)  << ", total number of fragment references " << total << std::endl;
     std::cout << "deduplication ratio is " << ratio << std::endl;
 }
+

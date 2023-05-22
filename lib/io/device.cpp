@@ -17,6 +17,20 @@ constexpr std::streamsize BUFFER_SIZE = 1024 * 1024;
 
 // ---------------------------------------------------------------------
 
+std::streamsize device::write_range(data_generator& generator)
+{
+    std::streamsize rv = 0;
+
+    for (auto chunk = generator.next(); chunk; chunk = generator.next())
+    {
+        rv += uh::io::write(*this, chunk->data());
+    }
+
+    return rv;
+}
+
+// ---------------------------------------------------------------------
+
 std::vector<char> read_to_buffer(device& dev, std::streamsize chunk_size)
 {
     std::streamsize read = 0;

@@ -1,13 +1,12 @@
-#include <persistence/mod.h>
+#include "mod.h"
 #include <logging/logging_boost.h>
-#include "persistence/storage/client_metrics_persistence.h"
 
-namespace uh::an::persistence
+namespace uh::dbn::persistence
 {
 
 // ---------------------------------------------------------------------
 
-mod::mod(const uh::options::persistence_config& config) : m_storage(std::make_unique<client_metrics>(config))
+mod::mod(const uh::options::persistence_config& config) : m_scheduling_persistence(std::make_unique<scheduled_compressions_persistence>(config))
 {
 }
 
@@ -16,16 +15,16 @@ mod::mod(const uh::options::persistence_config& config) : m_storage(std::make_un
 void mod::start()
 {
     INFO << "       starting persistence module";
-    m_storage->start();
+    m_scheduling_persistence->start();
 }
 
 // ---------------------------------------------------------------------
 
-client_metrics& mod::clientM_persistence()
+scheduled_compressions_persistence& mod::scheduled_persistence()
 {
-    return *m_storage;
+    return *m_scheduling_persistence;
 }
 
 // ---------------------------------------------------------------------
 
-} // namespace uh::an::persistence
+} // namespace uh::dbn:persistence

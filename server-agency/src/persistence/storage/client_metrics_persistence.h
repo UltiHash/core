@@ -1,7 +1,6 @@
-#ifndef SERVER_AGENCY_PERSISTENCE_STORAGE_CLIENT_METRICS_STORAGE_H
-#define SERVER_AGENCY_PERSISTENCE_STORAGE_CLIENT_METRICS_STORAGE_H
+#ifndef SERVER_AGENCY_PERSISTENCE_STORAGE_CLIENT_METRICS_PERSISTENCE_H
+#define SERVER_AGENCY_PERSISTENCE_STORAGE_CLIENT_METRICS_PERSISTENCE_H
 
-#include <logging/logging_boost.h>
 #include <persistence/options.h>
 #include <protocol/messages.h>
 
@@ -13,7 +12,7 @@ namespace uh::an::persistence
     class client_metrics
     {
     public:
-        explicit client_metrics(const persistence_config& config);
+        explicit client_metrics(const uh::options::persistence_config& config);
 
         void start();
         void add(const uh::protocol::client_statistics::request& req);

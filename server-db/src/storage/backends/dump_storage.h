@@ -57,7 +57,7 @@ class dump_storage : public backend {
 
         virtual std::string backend_type() override {return std::string(m_type);}
 
-        virtual std::unique_ptr<uh::protocol::allocation> allocate(std::size_t size);
+        std::unique_ptr<uh::protocol::allocation> allocate(std::size_t size) override;
 
         std::unique_ptr<uh::protocol::allocation> allocate_multi (std::size_t size) override;
 

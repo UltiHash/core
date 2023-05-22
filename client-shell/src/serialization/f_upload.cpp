@@ -51,22 +51,6 @@ void f_upload::join()
 
 // ---------------------------------------------------------------------
 
-protocol::block_meta_data f_upload::send_xs_blocks (auto& client_handle, auto& xsmall_blocks_req)
-{
-    auto res = client_handle->write_xsmall_blocks(xsmall_blocks_req);
-
-    protocol::write_xsmall_blocks::request new_req;
-    std::swap (xsmall_blocks_req, new_req);
-
-    protocol::block_meta_data meta_data;
-    meta_data.hash.insert(meta_data.hash.end(), res.hashes.begin(), res.hashes.end());
-    meta_data.effective_size = res.effective_size;
-
-    return meta_data;
-}
-
-// ---------------------------------------------------------------------
-
 void f_upload::send_statistics()
 {
     uh::protocol::blob uhv_path {};
@@ -91,8 +75,8 @@ void f_upload::chunk_and_upload(std::unique_ptr<uhv::f_meta_data>& f_meta_data,
         auto chunker = m_chunking.create_chunker(file,  std::min (uh::protocol::server::MAXIMUM_DATA_SIZE, static_cast <const size_t> (f_meta_data->f_size())));
         std::vector <uint32_t> chunk_sizes;
 
-
-        for (auto chunk = chunker->next_chunk(); !chunk.empty(); chunk = chunker->next_chunk()) {
+        for (auto chunk = chunker->next_chunk(); !chunk.empty(); chunk = chunker->next_chunk())
+        {
             chunk_sizes.push_back(chunk.size());
             if (chunker->get_buffer().length() == 0) {
                 protocol::write_chunks::response resp = client_handle->write_chunks(protocol::write_chunks::request {chunk_sizes, chunker->get_buffer().raw_data()});
@@ -103,7 +87,6 @@ void f_upload::chunk_and_upload(std::unique_ptr<uhv::f_meta_data>& f_meta_data,
         }
 
         m_uploaded_size += f_meta_data->f_size();
-
 
     }
 

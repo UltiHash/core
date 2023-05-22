@@ -14,8 +14,8 @@ hierarchical_storage::hierarchical_multi_block_allocation::hierarchical_multi_bl
     compressed_file_store& store,
     std::size_t size)
     : m_storage_backend(storage_backend),
-      m_store(store),
-      m_size(size)
+      m_size(size),
+      m_store(store)
 {
 }
 
@@ -145,13 +145,15 @@ private:
 
 hierarchical_storage::hierarchical_storage(
     const hierarchical_storage_config& config,
-    uh::dbn::metrics::storage_metrics& storage_metrics)
+    uh::dbn::metrics::storage_metrics& storage_metrics,
+    persistence::scheduled_compressions_persistence& scheduled_compressions)
     : m_root(config.db_root),
       m_alloc(config.size_bytes),
       m_used(0),
       m_storage_metrics(storage_metrics),
       m_store(config.compressed,
               storage_metrics,
+              scheduled_compressions,
               [this](std::streamsize s){ this->return_space(s); })
 {
     if (!std::filesystem::is_directory(m_root))

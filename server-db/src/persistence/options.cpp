@@ -1,19 +1,18 @@
-#include <filesystem>
 #include "options.h"
 
 using namespace boost::program_options;
 
-namespace uh::an::persistence
+namespace uh::dbn::persistence
 {
 
-// ---------------------------------------------------------------------
+    // ---------------------------------------------------------------------
 
 uh::options::action options::evaluate(const boost::program_options::variables_map& vars)
 {
     m_config.persistence_path = std::filesystem::path(vars["persistence-path"].as<std::string>());
 
     if (m_config.persistence_path == "/var/lib")
-        m_config.persistence_path = "/var/lib/agency-node";
+        m_config.persistence_path = "/var/lib/database-node";
 
     if (!std::filesystem::exists(m_config.persistence_path))
         throw std::runtime_error("Path doesn't exist: " + m_config.persistence_path);
@@ -32,4 +31,4 @@ uh::options::action options::evaluate(const boost::program_options::variables_ma
 
 // ---------------------------------------------------------------------
 
-} // namespace uh::an::persistence
+} // namespace uh::dbn:persistence

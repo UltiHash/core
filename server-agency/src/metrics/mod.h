@@ -2,7 +2,6 @@
 #define SERVER_AGENCY_METRICS_MOD_H
 
 #include <metrics/protocol_metrics.h>
-#include <logging/logging_boost.h>
 #include <memory>
 #include <persistence/mod.h>
 #include "client_metrics.h"
