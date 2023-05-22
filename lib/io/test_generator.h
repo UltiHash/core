@@ -14,10 +14,10 @@ namespace uh::io::test
 class generator : public uh::io::data_generator
 {
 public:
-    generator(std::span<char> data, std::size_t chunk_size = 16);
+    generator(std::span<const char> data, std::size_t chunk_size = 16);
 
     std::optional<data_chunk> next() override;
-    std::optional<std::size_t> size() override;
+    std::size_t size() const override;
 
 private:
     std::list<io::data_chunk> m_chunks;
