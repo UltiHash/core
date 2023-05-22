@@ -17,9 +17,10 @@ class logger: public std::pmr::memory_resource {
     std::pmr::memory_resource *m_mem_resource;
     std::pmr::string m_name;
 public:
-    logger (std::pmr::memory_resource *mem_resource, std::pmr::string name):
-            m_name (std::move (name)),
-            m_mem_resource (mem_resource) {
+    logger (std::pmr::memory_resource *mem_resource, std::pmr::string name)
+        : m_mem_resource (mem_resource),
+          m_name (std::move (name))
+    {
     }
 private:
     void * do_allocate(size_t bytes, size_t alignment) override {
@@ -42,6 +43,7 @@ class mmaper: public std::pmr::memory_resource {
 
     constexpr static size_t m_min_size = 16*1024;
     void *m_pin;
+    int m_data_fd;
     size_t m_size {};
     size_t m_allocated_size {};
     bool m_replying {false};
@@ -52,7 +54,6 @@ class mmaper: public std::pmr::memory_resource {
     std::pmr::forward_list <std::pmr::synchronized_pool_resource> m_pool_resources;
 
     std::pmr::memory_resource *m_resource {nullptr};
-    int m_data_fd;
 
 public:
     mmaper (int data_fd, void *pin, size_t size = 2 * m_min_size):
@@ -68,7 +69,7 @@ public:
     }
 
     ~mmaper () override {
-        for (const auto buf: m_buffers) {
+        for (const auto& buf: m_buffers) {
             msync (buf.first, buf.second, MS_SYNC);
         }
     }

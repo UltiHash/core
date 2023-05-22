@@ -41,9 +41,9 @@ private:
     prometheus::Counter& m_reqs_write_chunk;
     prometheus::Counter& m_reqs_write_chunks;
     prometheus::Counter& m_reqs_read_chunks;
-    prometheus::Counter& m_reqs_client_statistics;
     prometheus::Counter& m_reqs_allocate_chunk;
     prometheus::Counter& m_reqs_finalize;
+    prometheus::Counter& m_reqs_client_statistics;
 };
 
 // ---------------------------------------------------------------------

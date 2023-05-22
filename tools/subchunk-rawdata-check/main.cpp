@@ -134,7 +134,6 @@ void integrate (char *backend, const std::filesystem::path &path, uh::client::ch
 
     auto chunker = chunking_module.create_chunker(f);
     timer_pack <5> timer;
-    long counter = 0;
     timer.start(3);
     timer.start(4);
     for (auto chunk = chunker->next_chunk(); !chunk.empty(); chunk = chunker->next_chunk()) {
