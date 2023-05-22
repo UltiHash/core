@@ -9,31 +9,25 @@ namespace uh::io
 // ---------------------------------------------------------------------
 
 data_chunk::data_chunk(std::vector<char>&& buffer)
-    : m_buffer(std::move(buffer)),
-      m_span()
+    : m_data(std::move(buffer))
 {
 }
 
 // ---------------------------------------------------------------------
 
-data_chunk::data_chunk(std::span<char> span)
-    : m_buffer(),
-      m_span(span)
+data_chunk::data_chunk(std::span<const char> span)
+    : m_data(span)
 {
 }
 
 // ---------------------------------------------------------------------
 
-std::span<char> data_chunk::data()
+std::span<const char> data_chunk::data()
 {
-    if (!m_buffer.empty())
+    switch (m_data.index())
     {
-        return m_buffer;
-    }
-
-    if (!m_span.empty())
-    {
-        return m_span;
+        case 0: return std::get<0>(m_data);
+        case 1: return std::get<1>(m_data);
     }
 
     THROW(util::illegal_state, "data_chunk all buffers empty");

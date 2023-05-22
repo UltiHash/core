@@ -6,7 +6,7 @@ namespace uh::io::test
 
 // ---------------------------------------------------------------------
 
-generator::generator(std::span<char> data, std::size_t chunk_size)
+generator::generator(std::span<const char> data, std::size_t chunk_size)
     : m_size(data.size())
 {
     bool vec = false;
@@ -45,7 +45,7 @@ std::optional<data_chunk> generator::next()
 
 // ---------------------------------------------------------------------
 
-std::optional<std::size_t> generator::size()
+std::size_t generator::size() const
 {
     return m_size;
 }
