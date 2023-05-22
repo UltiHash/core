@@ -1,7 +1,7 @@
 #ifndef IO_DEVICE_H
 #define IO_DEVICE_H
 
-#include <boost/iostreams/categories.hpp>
+#include <io/data_generator.h>
 
 #include <ios>
 #include <memory>
@@ -38,6 +38,13 @@ public:
     virtual std::streamsize read(std::span<char> buffer) = 0;
 
     /**
+     * Write data provided by a data_generator.
+     *
+     * @throw writing fails for any reason
+     */
+    virtual std::streamsize write_range(data_generator& generator);
+
+    /**
      * Return whether this device still can be used.
      */
     virtual bool valid() const = 0;
@@ -72,6 +79,11 @@ public:
     std::streamsize read(std::span<char> buffer) override
     {
         return m_wrapper.read(buffer);
+    }
+
+    std::streamsize write_range(data_generator& generator) override
+    {
+        return m_wrapper.write_range(generator);
     }
 
     bool valid() const override
