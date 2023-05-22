@@ -14,8 +14,8 @@ hierarchical_storage::hierarchical_multi_block_allocation::hierarchical_multi_bl
     compressed_file_store& store,
     std::size_t size)
     : m_storage_backend(storage_backend),
-      m_store(store),
-      m_size(size)
+      m_size(size),
+      m_store(store)
 {
 }
 

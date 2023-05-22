@@ -27,8 +27,8 @@ class connection_device : public io::device
 public:
     connection_device(protocol::client_pool::handle&& h,
                       std::unique_ptr<io::device>&& dev)
-        : m_dev(std::move(dev)),
-          m_handle(std::move(h))
+        : m_handle(std::move(h)),
+          m_dev(std::move(dev))
     {
     }
 
@@ -331,7 +331,7 @@ uh::protocol::read_chunks::response mod::read_chunks(const read_chunks::request 
     for (auto &conn_hashes: conn_hashes_map) {
 
         const auto &conn_hash_offsets = routed_hash_offsets [conn_hashes.first];
-        responses.emplace_front(std::move (conn_hashes.first->get()->read_chunks ({conn_hashes.second})));
+        responses.emplace_front(conn_hashes.first->get()->read_chunks ({conn_hashes.second}));
         auto &resp = responses.front();
 
         size_t offset = 0;

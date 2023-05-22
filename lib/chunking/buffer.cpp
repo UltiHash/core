@@ -12,8 +12,7 @@ buffer::buffer(io::device& in, std::size_t size)
     : m_in(in),
       m_buffer(size),
       m_wptr(0),
-      m_rptr(0),
-      m_size(size)
+      m_rptr(0)
 {
 }
 
