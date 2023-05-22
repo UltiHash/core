@@ -54,7 +54,7 @@ private:
         for (int i = 0; i < FILES_COUNT; ++i) {
             std::filesystem::path p {std::string ("file_") + std::to_string(i)};
 
-            files_info.emplace_front (p, nullptr, FILE_SIZE);
+            files_info.push_front ({p, nullptr, FILE_SIZE});
         }
 
         return files_info;

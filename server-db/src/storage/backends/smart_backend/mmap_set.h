@@ -16,8 +16,11 @@ namespace uh::dbn::storage::smart {
 
 
 struct fragment {
-    uint64_t data_offset;
-    size_t size;
+    fragment (uint64_t data_offset, size_t size):
+        m_data_offset (data_offset),
+        m_size (size) {}
+    uint64_t m_data_offset;
+    size_t m_size;
 };
 
 class mmap_set {
@@ -30,15 +33,15 @@ class mmap_set {
     };
 
     struct mmap_node {
-        fragment frag;
-        uint64_t parent;
-        uint64_t left;
-        uint64_t right;
-        color_t color;
+        fragment m_frag;
+        uint64_t m_parent;
+        uint64_t m_left;
+        uint64_t m_right;
+        color_t m_color;
     };
     struct node {
-        uint64_t offset;
-        mmap_node* m_node;
+        uint64_t m_offset;
+        mmap_node* m_mnode;
     };
 
 public:
@@ -60,9 +63,9 @@ public:
 
 
 
-    search_result find (const std::string_view &frag, uint64_t hint = NILL_OFFSET);
+    search_result find (const std::string_view& frag, uint64_t hint = NILL_OFFSET);
 
-    uint64_t remove (fragment frag, uint64_t hint);
+    uint64_t remove (fragment& frag, uint64_t hint);
 
 
 private:
@@ -81,7 +84,7 @@ private:
 
     inline node add_node () noexcept;
 
-    inline void set_root (node &x) noexcept;
+    inline void set_root (node& x) noexcept;
 
     inline int comp (const std::string_view& new_fragment, const fragment& f);
 

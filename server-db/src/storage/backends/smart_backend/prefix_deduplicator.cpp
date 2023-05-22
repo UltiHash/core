@@ -22,7 +22,7 @@ std::pair<std::vector<fragment>, size_t> prefix_deduplicator::deduplicate(std::s
     const auto lower_common_prefix = largest_common_prefix (data, res.lower->second);
 
     if (lower_common_prefix == data.size()) {
-        const auto sub_hint = m_fragment_set.insert_index (data, res.lower->first, res.hint);
+        m_fragment_set.insert_index (data, res.lower->first, res.hint);
         return {{{res.lower->first, data.size()}}, 0};
     }
 
@@ -40,11 +40,11 @@ std::pair<std::vector<fragment>, size_t> prefix_deduplicator::deduplicate(std::s
         return {{{offset, data.size()}}, data.size()};
     }
     else if (max_common_prefix == data.size()) {
-        const auto sub_hint = m_fragment_set.insert_index (data, max_data_offset, res.hint);
+        m_fragment_set.insert_index (data, max_data_offset, res.hint);
         return {{{max_data_offset, data.size()}}, 0};
     }
     else {
-        const auto sub_hint = m_fragment_set.insert_index (data.substr(0, max_common_prefix), max_data_offset, res.hint); // but not really add the data
+        m_fragment_set.insert_index (data.substr(0, max_common_prefix), max_data_offset, res.hint); // but not really add the data
         auto fragments = deduplicate (data.substr (max_common_prefix, data.size() -  max_common_prefix));
         fragments.first.emplace_back (max_data_offset, max_common_prefix);
         return fragments;

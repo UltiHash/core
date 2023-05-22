@@ -5,7 +5,7 @@
 
 namespace uh::dbn::storage::smart {
 
-mmap_set::mmap_set(mmap_storage &data_store, std::filesystem::path file) :
+mmap_set::mmap_set(mmap_storage& data_store, std::filesystem::path file) :
         m_data_store (data_store),
         m_file_path (std::move (file)) {
 
@@ -27,7 +27,7 @@ mmap_set::mmap_set(mmap_storage &data_store, std::filesystem::path file) :
     if (!existing_index) {
         *m_end = NILL_OFFSET;
         m_nil = add_node ();
-        m_nil.m_node->color = BLACK;
+        m_nil.m_mnode->m_color = BLACK;
         set_root (m_nil);
     }
     else {
@@ -41,7 +41,7 @@ uint64_t mmap_set::insert_data(const std::string_view& frag) {
     return alloc.m_offset;
 }
 
-uint64_t mmap_set::insert_index(const std::string_view &frag, uint64_t data_offset, uint64_t hint) {
+uint64_t mmap_set::insert_index(const std::string_view& frag, uint64_t data_offset, uint64_t hint) {
 
     const auto f = find (frag, hint);
     if (f.match) {
@@ -50,23 +50,23 @@ uint64_t mmap_set::insert_index(const std::string_view &frag, uint64_t data_offs
 
     const auto y = get_node(f.hint);
     node z = add_node ();
-    z.m_node->parent = f.hint;
+    z.m_mnode->m_parent = f.hint;
 
     if (f.comp == 0) {
         set_root (z);
     }
     else if (f.comp < 0) {
-        y.m_node->left = z.offset;
+        y.m_mnode->m_left = z.m_offset;
     }
     else {
-        y.m_node->right = z.offset;
+        y.m_mnode->m_right = z.m_offset;
     }
-    z.m_node->left = NILL_OFFSET;
-    z.m_node->right = NILL_OFFSET;
-    z.m_node->color = RED;
-    z.m_node->frag = {data_offset, frag.size()};
+    z.m_mnode->m_left = NILL_OFFSET;
+    z.m_mnode->m_right = NILL_OFFSET;
+    z.m_mnode->m_color = RED;
+    z.m_mnode->m_frag = {data_offset, frag.size()};
 
-    const auto offset = z.offset;
+    const auto offset = z.m_offset;
 
     balance (z);
 
@@ -76,7 +76,7 @@ uint64_t mmap_set::insert_index(const std::string_view &frag, uint64_t data_offs
     return offset;
 }
 
-mmap_set::search_result mmap_set::find(const std::string_view &frag, uint64_t hint) {
+mmap_set::search_result mmap_set::find(const std::string_view& frag, uint64_t hint) {
     auto y = m_nil;
     search_result res;
 
@@ -84,44 +84,44 @@ mmap_set::search_result mmap_set::find(const std::string_view &frag, uint64_t hi
     auto x = get_node (resolved.first);
 
     if (resolved.second) {
-        char* ptr = static_cast <char*> (m_data_store.get_raw_ptr(x.m_node->frag.data_offset));
-        res.match = {y.m_node->frag.data_offset, {ptr, y.m_node->frag.size}};
+        char* ptr = static_cast <char*> (m_data_store.get_raw_ptr(x.m_mnode->m_frag.m_data_offset));
+        res.match = {y.m_mnode->m_frag.m_data_offset, {ptr, y.m_mnode->m_frag.m_size}};
         return res;
     }
 
     int comp_int = 0;
     node largest_lower = m_nil;
     node smallest_upper = m_nil;
-    while (x.offset != NILL_OFFSET) {
+    while (x.m_offset != NILL_OFFSET) {
         y = x;
-        comp_int = comp (frag, x.m_node->frag);
+        comp_int = comp (frag, x.m_mnode->m_frag);
         if (comp_int < 0) {
             smallest_upper = x;
-            x = get_node (x.m_node->left);
+            x = get_node (x.m_mnode->m_left);
         }
         else if (comp_int > 0) {
             largest_lower = x;
-            x = get_node (x.m_node->right);
+            x = get_node (x.m_mnode->m_right);
         }
         else {
-            char* ptr = static_cast <char*> (m_data_store.get_raw_ptr(y.m_node->frag.data_offset));
-            res.match = {y.m_node->frag.data_offset, {ptr, y.m_node->frag.size}};
+            char* ptr = static_cast <char*> (m_data_store.get_raw_ptr(y.m_mnode->m_frag.m_data_offset));
+            res.match = {y.m_mnode->m_frag.m_data_offset, {ptr, y.m_mnode->m_frag.m_size}};
             break;
         }
     }
 
     if (!res.match) {
-        char *ptr_lower = static_cast <char *> (m_data_store.get_raw_ptr(largest_lower.m_node->frag.data_offset));
-        char *ptr_upper = static_cast <char *> (m_data_store.get_raw_ptr(smallest_upper.m_node->frag.data_offset));
-        res.lower = {largest_lower.m_node->frag.data_offset, {ptr_lower, largest_lower.m_node->frag.size}};
-        res.upper = {smallest_upper.m_node->frag.data_offset, {ptr_upper, smallest_upper.m_node->frag.size}};
+        char *ptr_lower = static_cast <char *> (m_data_store.get_raw_ptr(largest_lower.m_mnode->m_frag.m_data_offset));
+        char *ptr_upper = static_cast <char *> (m_data_store.get_raw_ptr(smallest_upper.m_mnode->m_frag.m_data_offset));
+        res.lower = {largest_lower.m_mnode->m_frag.m_data_offset, {ptr_lower, largest_lower.m_mnode->m_frag.m_size}};
+        res.upper = {smallest_upper.m_mnode->m_frag.m_data_offset, {ptr_upper, smallest_upper.m_mnode->m_frag.m_size}};
     }
-    res.hint = y.offset;
+    res.hint = y.m_offset;
     res.comp = comp_int;
     return res;
 }
 
-std::pair<uint64_t, bool> mmap_set::resolve_hint(uint64_t hint, const std::string_view &frag) {
+std::pair<uint64_t, bool> mmap_set::resolve_hint(uint64_t hint, const std::string_view& frag) {
 
     if (hint == NILL_OFFSET) {
         return {*m_root, false};
@@ -129,129 +129,129 @@ std::pair<uint64_t, bool> mmap_set::resolve_hint(uint64_t hint, const std::strin
 
     const auto n = get_node (hint);
 
-    const auto comp_n = comp (frag, n.m_node->frag);
+    const auto comp_n = comp (frag, n.m_mnode->m_frag);
     if (comp_n == 0) {
-        return {n.offset, true};
+        return {n.m_offset, true};
     }
 
-    if (n.m_node->parent == NILL_OFFSET) {
+    if (n.m_mnode->m_parent == NILL_OFFSET) {
         return {*m_root, false};
     }
-    const auto p = get_node (n.m_node->parent);
+    const auto p = get_node (n.m_mnode->m_parent);
 
 
-    if (hint == p.m_node->left and p.m_node->right != NILL_OFFSET) {
-        const auto lower_sister = get_node(p.m_node->right);
-        const auto comp_ls = comp (frag, lower_sister.m_node->frag);
+    if (hint == p.m_mnode->m_left and p.m_mnode->m_right != NILL_OFFSET) {
+        const auto lower_sister = get_node(p.m_mnode->m_right);
+        const auto comp_ls = comp (frag, lower_sister.m_mnode->m_frag);
 
         if (comp_ls == 0) {
-            return {lower_sister.offset, true};
+            return {lower_sister.m_offset, true};
         }
 
         if (comp_n < 0 and comp_ls > 0) {
-            const auto comp_p = comp (frag, p.m_node->frag);
+            const auto comp_p = comp (frag, p.m_mnode->m_frag);
 
             if (comp_p == 0) {
-                return {p.offset, true};
+                return {p.m_offset, true};
             }
 
-            else if (comp_p > 0 and n.m_node->left != NILL_OFFSET) {
-                return {n.m_node->left, false};
+            else if (comp_p > 0 and n.m_mnode->m_left != NILL_OFFSET) {
+                return {n.m_mnode->m_left, false};
             }
-            else if (comp_p < 0 and lower_sister.m_node->right != NILL_OFFSET){
-                return {lower_sister.m_node->right, false};
+            else if (comp_p < 0 and lower_sister.m_mnode->m_right != NILL_OFFSET){
+                return {lower_sister.m_mnode->m_right, false};
             }
             else {
-                return {p.offset, false};
+                return {p.m_offset, false};
             }
         }
 
     }
-    else if (hint == p.m_node->right and p.m_node->left != NILL_OFFSET) {
-        const auto upper_sister = get_node(p.m_node->left);
-        const auto comp_us = comp (frag, upper_sister.m_node->frag);
+    else if (hint == p.m_mnode->m_right and p.m_mnode->m_left != NILL_OFFSET) {
+        const auto upper_sister = get_node(p.m_mnode->m_left);
+        const auto comp_us = comp (frag, upper_sister.m_mnode->m_frag);
 
         if (comp_us == 0) {
-            return {upper_sister.offset, true};
+            return {upper_sister.m_offset, true};
         }
 
         if (comp_n > 0 and comp_us < 0) {
-            const auto comp_p = comp (frag, p.m_node->frag);
+            const auto comp_p = comp (frag, p.m_mnode->m_frag);
 
             if (comp_p == 0) {
-                return {p.offset, true};
+                return {p.m_offset, true};
             }
-            else if (comp_p > 0 and upper_sister.m_node->right != NILL_OFFSET) {
-                return {upper_sister.m_node->right, false};
+            else if (comp_p > 0 and upper_sister.m_mnode->m_right != NILL_OFFSET) {
+                return {upper_sister.m_mnode->m_right, false};
             }
-            else if (comp_p < 0 and n.m_node->left != NILL_OFFSET) {
-                return {n.m_node->left, false};
+            else if (comp_p < 0 and n.m_mnode->m_left != NILL_OFFSET) {
+                return {n.m_mnode->m_left, false};
             }
             else {
-                return {p.offset, false};
+                return {p.m_offset, false};
             }
         }
 
     }
 
-    if (p.m_node->parent == NILL_OFFSET) {
+    if (p.m_mnode->m_parent == NILL_OFFSET) {
         return {*m_root, false};
     }
 
-    const auto gp = get_node(p.m_node->parent);
+    const auto gp = get_node(p.m_mnode->m_parent);
 
-    const auto comp_p = comp (frag, p.m_node->frag);
+    const auto comp_p = comp (frag, p.m_mnode->m_frag);
     if (comp_p == 0) {
-        return {p.offset, true};
+        return {p.m_offset, true};
     }
 
-    if (p.offset == gp.m_node->left and gp.m_node->right != NILL_OFFSET) {
-        const auto lower_aunt = get_node(gp.m_node->right);
-        const auto comp_la = comp (frag, lower_aunt.m_node->frag);
+    if (p.m_offset == gp.m_mnode->m_left and gp.m_mnode->m_right != NILL_OFFSET) {
+        const auto lower_aunt = get_node(gp.m_mnode->m_right);
+        const auto comp_la = comp (frag, lower_aunt.m_mnode->m_frag);
 
         if (comp_la == 0) {
-            return {lower_aunt.offset, true};
+            return {lower_aunt.m_offset, true};
         }
 
         if (comp_p < 0 and comp_la > 0) {
-            const auto comp_gp = comp (frag, p.m_node->frag);
+            const auto comp_gp = comp (frag, p.m_mnode->m_frag);
 
             if (comp_gp == 0) {
-                return {gp.offset, true};
+                return {gp.m_offset, true};
             }
-            else if (comp_gp > 0 and p.m_node->left != NILL_OFFSET) {
-                return {p.m_node->left, false};
+            else if (comp_gp > 0 and p.m_mnode->m_left != NILL_OFFSET) {
+                return {p.m_mnode->m_left, false};
             }
-            else if (comp_gp < 0 and lower_aunt.m_node->right != NILL_OFFSET){
-                return {lower_aunt.m_node->right, false};
+            else if (comp_gp < 0 and lower_aunt.m_mnode->m_right != NILL_OFFSET){
+                return {lower_aunt.m_mnode->m_right, false};
             }
             else {
-                return {gp.offset, false};
+                return {gp.m_offset, false};
             }
         }
     }
-    else if (p.offset == gp.m_node->right and gp.m_node->left != NILL_OFFSET) {
-        const auto upper_aunt = get_node(gp.m_node->left);
-        const auto comp_ua = comp (frag, upper_aunt.m_node->frag);
+    else if (p.m_offset == gp.m_mnode->m_right and gp.m_mnode->m_left != NILL_OFFSET) {
+        const auto upper_aunt = get_node(gp.m_mnode->m_left);
+        const auto comp_ua = comp (frag, upper_aunt.m_mnode->m_frag);
 
         if (comp_ua == 0) {
-            return {upper_aunt.offset, true};
+            return {upper_aunt.m_offset, true};
         }
 
         if (comp_p > 0 and comp_ua < 0) {
-            const auto comp_gp = comp (frag, p.m_node->frag);
+            const auto comp_gp = comp (frag, p.m_mnode->m_frag);
 
             if (comp_gp == 0) {
-                return {p.offset, true};
+                return {p.m_offset, true};
             }
-            else if (comp_gp > 0 and upper_aunt.m_node->right != NILL_OFFSET) {
-                return {upper_aunt.m_node->right, false};
+            else if (comp_gp > 0 and upper_aunt.m_mnode->m_right != NILL_OFFSET) {
+                return {upper_aunt.m_mnode->m_right, false};
             }
-            else if (comp_gp < 0 and p.m_node->left != NILL_OFFSET) {
-                return {p.m_node->left, false};
+            else if (comp_gp < 0 and p.m_mnode->m_left != NILL_OFFSET) {
+                return {p.m_mnode->m_left, false};
             }
             else {
-                return {p.offset, false};
+                return {p.m_offset, false};
             }
         }
     }
@@ -277,96 +277,96 @@ void mmap_set::extend_mapping() {
 
 }
 
-void mmap_set::balance(mmap_set::node &z) {
-    auto parent = get_node (z.m_node->parent);
-    while (parent.m_node->color == RED) {
-        auto grand_parent = get_node(parent.m_node->parent);
-        if (parent.offset == grand_parent.m_node->left) {
-            auto y = get_node (grand_parent.m_node->right);
-            if (y.m_node->color == RED) {
-                parent.m_node->color = BLACK;
-                y.m_node->color = BLACK;
-                grand_parent.m_node->color = RED;
+void mmap_set::balance(mmap_set::node& z) {
+    auto parent = get_node (z.m_mnode->m_parent);
+    while (parent.m_mnode->m_color == RED) {
+        auto grand_parent = get_node(parent.m_mnode->m_parent);
+        if (parent.m_offset == grand_parent.m_mnode->m_left) {
+            auto y = get_node (grand_parent.m_mnode->m_right);
+            if (y.m_mnode->m_color == RED) {
+                parent.m_mnode->m_color = BLACK;
+                y.m_mnode->m_color = BLACK;
+                grand_parent.m_mnode->m_color = RED;
                 z = grand_parent;
-                parent = get_node (z.m_node->parent);
-                grand_parent = get_node(parent.m_node->parent);
+                parent = get_node (z.m_mnode->m_parent);
+                grand_parent = get_node(parent.m_mnode->m_parent);
             }
             else {
-                if (z.offset == parent.m_node->right) {
+                if (z.m_offset == parent.m_mnode->m_right) {
                     z = parent;
-                    parent = get_node (z.m_node->parent);
-                    grand_parent = get_node(parent.m_node->parent);
+                    parent = get_node (z.m_mnode->m_parent);
+                    grand_parent = get_node(parent.m_mnode->m_parent);
                     left_rotate (z);
                 }
-                parent.m_node->color = BLACK;
-                grand_parent.m_node->color = RED;
+                parent.m_mnode->m_color = BLACK;
+                grand_parent.m_mnode->m_color = RED;
                 right_rotate (grand_parent);
             }
         }
         else {
-            auto y = get_node (grand_parent.m_node->left);
-            if (y.m_node->color == RED) {
-                parent.m_node->color = BLACK;
-                y.m_node->color = BLACK;
-                grand_parent.m_node->color = RED;
+            auto y = get_node (grand_parent.m_mnode->m_left);
+            if (y.m_mnode->m_color == RED) {
+                parent.m_mnode->m_color = BLACK;
+                y.m_mnode->m_color = BLACK;
+                grand_parent.m_mnode->m_color = RED;
                 z = grand_parent;
-                parent = get_node (z.m_node->parent);
-                grand_parent = get_node(parent.m_node->parent);
+                parent = get_node (z.m_mnode->m_parent);
+                grand_parent = get_node(parent.m_mnode->m_parent);
             }
             else {
-                if (z.offset == parent.m_node->left) {
+                if (z.m_offset == parent.m_mnode->m_left) {
                     z = parent;
-                    parent = get_node (z.m_node->parent);
-                    grand_parent = get_node(parent.m_node->parent);
+                    parent = get_node (z.m_mnode->m_parent);
+                    grand_parent = get_node(parent.m_mnode->m_parent);
                     right_rotate (z);
                 }
-                parent.m_node->color = BLACK;
-                grand_parent.m_node->color = RED;
+                parent.m_mnode->m_color = BLACK;
+                grand_parent.m_mnode->m_color = RED;
                 left_rotate (grand_parent);
             }
         }
     }
-    get_node(*m_root).m_node->color = BLACK;
+    get_node(*m_root).m_mnode->m_color = BLACK;
 }
 
-void mmap_set::left_rotate(mmap_set::node &x) {
-    auto y = get_node(x.m_node->right);
-    x.m_node->right = y.m_node->left;
-    if (y.m_node->left != NILL_OFFSET) {
-        get_node (y.m_node->left).m_node->parent = x.offset;
+void mmap_set::left_rotate(mmap_set::node& x) {
+    auto y = get_node(x.m_mnode->m_right);
+    x.m_mnode->m_right = y.m_mnode->m_left;
+    if (y.m_mnode->m_left != NILL_OFFSET) {
+        get_node (y.m_mnode->m_left).m_mnode->m_parent = x.m_offset;
     }
-    y.m_node->parent = x.m_node->parent;
-    if (x.m_node->parent == NILL_OFFSET) {
+    y.m_mnode->m_parent = x.m_mnode->m_parent;
+    if (x.m_mnode->m_parent == NILL_OFFSET) {
         set_root (y);
     }
-    else if (x.offset == get_node (x.m_node->parent).m_node->left) {
-        get_node(x.m_node->parent).m_node->left = y.offset;
+    else if (x.m_offset == get_node (x.m_mnode->m_parent).m_mnode->m_left) {
+        get_node(x.m_mnode->m_parent).m_mnode->m_left = y.m_offset;
     }
     else {
-        get_node(x.m_node->parent).m_node->right = y.offset;
+        get_node(x.m_mnode->m_parent).m_mnode->m_right = y.m_offset;
     }
-    y.m_node->left = x.offset;
-    x.m_node->parent = y.offset;
+    y.m_mnode->m_left = x.m_offset;
+    x.m_mnode->m_parent = y.m_offset;
 }
 
-void mmap_set::right_rotate(mmap_set::node &x) {
-    auto y = get_node(x.m_node->left);
-    x.m_node->left = y.m_node->right;
-    if (y.m_node->right != NILL_OFFSET) {
-        get_node (y.m_node->right).m_node->parent = x.offset;
+void mmap_set::right_rotate(mmap_set::node& x) {
+    auto y = get_node(x.m_mnode->m_left);
+    x.m_mnode->m_left = y.m_mnode->m_right;
+    if (y.m_mnode->m_right != NILL_OFFSET) {
+        get_node (y.m_mnode->m_right).m_mnode->m_parent = x.m_offset;
     }
-    y.m_node->parent = x.m_node->parent;
-    if (x.m_node->parent == NILL_OFFSET) {
+    y.m_mnode->m_parent = x.m_mnode->m_parent;
+    if (x.m_mnode->m_parent == NILL_OFFSET) {
         set_root (y);
     }
-    else if (x.offset == get_node (x.m_node->parent).m_node->right) {
-        get_node(x.m_node->parent).m_node->right = y.offset;
+    else if (x.m_offset == get_node (x.m_mnode->m_parent).m_mnode->m_right) {
+        get_node(x.m_mnode->m_parent).m_mnode->m_right = y.m_offset;
     }
     else {
-        get_node(x.m_node->parent).m_node->left = y.offset;
+        get_node(x.m_mnode->m_parent).m_mnode->m_left = y.m_offset;
     }
-    y.m_node->right = x.offset;
-    x.m_node->parent = y.offset;
+    y.m_mnode->m_right = x.m_offset;
+    x.m_mnode->m_parent = y.m_offset;
 }
 
 mmap_set::node mmap_set::get_node(uint64_t offset) noexcept {
@@ -375,19 +375,19 @@ mmap_set::node mmap_set::get_node(uint64_t offset) noexcept {
 
 mmap_set::node mmap_set::add_node() noexcept {
     node n;
-    n.offset = *m_end;
+    n.m_offset = *m_end;
     *m_end += sizeof (mmap_node);
-    n.m_node = reinterpret_cast <mmap_node*> (m_index_store + n.offset);
+    n.m_mnode = reinterpret_cast <mmap_node*> (m_index_store + n.m_offset);
     return n;
 }
 
 void mmap_set::set_root(mmap_set::node &x) noexcept {
-    *m_root = x.offset;
+    *m_root = x.m_offset;
 }
 
 int mmap_set::comp(const std::string_view &new_fragment, const fragment &f) {
-    auto* p2 = m_data_store.get_raw_ptr(f.data_offset);
-    const std::string_view strw2 {static_cast <char*> (p2), f.size};
+    auto* p2 = m_data_store.get_raw_ptr(f.m_data_offset);
+    const std::string_view strw2 {static_cast <char*> (p2), f.m_size};
     return new_fragment.compare(strw2);
 }
 
