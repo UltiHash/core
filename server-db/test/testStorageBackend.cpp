@@ -12,6 +12,7 @@
 #include <storage/backends/dump_storage.h>
 #include <util/temp_dir.h>
 #include <storage/backends/hierarchical_storage.h>
+#include <persistence/storage/scheduled_compressions_persistence.h>
 
 namespace {
 
@@ -23,7 +24,7 @@ public:
             : m_metrics_service({}),
               m_metrics(m_metrics_service),
               m_dump(m_tmp.path(), ALLOCATED_BYTES, m_metrics),
-              m_hierarchical({ m_tmp.path(), ALLOCATED_BYTES }, m_metrics) {
+              m_hierarchical({ m_tmp.path(), ALLOCATED_BYTES }, m_metrics, m_scheduled_compressions) {
     }
 
     uh::dbn::storage::backend &backend() {
@@ -35,6 +36,7 @@ private:
     uh::metrics::service m_metrics_service;
     uh::dbn::metrics::storage_metrics m_metrics;
     uh::dbn::storage::dump_storage m_dump;
+    uh::dbn::persistence::scheduled_compressions_persistence m_scheduled_compressions;
     uh::dbn::storage::hierarchical_storage m_hierarchical;
 
 };
@@ -67,7 +69,7 @@ BOOST_FIXTURE_TEST_CASE( dump_storage_io, storage_fixture )
     auto fetched_hex =  uh::dbn::storage::to_hex_string (fetched_data.begin(), fetched_data.end ());
     auto original_hex =  uh::dbn::storage::to_hex_string (CONTENTS_STR.begin(), CONTENTS_STR.end ());
 
-    BOOST_CHECK(fetched_hex == original_hex);
+     BOOST_CHECK(fetched_hex == original_hex);
 }
 
 
@@ -106,6 +108,7 @@ BOOST_FIXTURE_TEST_CASE( dump_storage_allocation, storage_fixture )
 
         allocation->persist();
         allocation.reset();
+
         BOOST_CHECK_THROW(backend().allocate(2), std::exception);
     }
 }

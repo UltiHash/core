@@ -8,7 +8,7 @@
 
 #include <net/server_info.h>
 #include <metrics/client_metrics.h>
-#include <persistence/storage/client_metrics_storage.h>
+#include <persistence/storage/client_metrics_persistence.h>
 
 using namespace boost::asio::ip;
 
@@ -28,12 +28,9 @@ public:
     uh::protocol::server_information on_hello(const std::string& client_version) override;
     std::unique_ptr<io::device> on_read_block(uh::protocol::blob&& hash) override;
     std::unique_ptr<uh::protocol::allocation> on_allocate_chunk(std::size_t size) override;
-    uh::protocol::block_meta_data on_write_small_block (std::span <char> buffer) override;
     void on_client_statistics(uh::protocol::client_statistics::request& client_stat) override;
-    uh::protocol::write_xsmall_blocks::response on_write_xsmall_blocks (const uh::protocol::write_xsmall_blocks::request &) override;
     uh::protocol::write_chunks::response on_write_chunks (const uh::protocol::write_chunks::request &) override;
     uh::protocol::read_chunks::response on_read_chunks (const uh::protocol::read_chunks::request &) override;
-
 
     std::size_t on_free_space() override;
     void on_next_chunk(std::span<char> buffer) override;

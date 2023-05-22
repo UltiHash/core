@@ -42,6 +42,7 @@ class mmaper: public std::pmr::memory_resource {
 
     constexpr static size_t m_min_size = 16*1024;
     void *m_pin;
+
     size_t m_size {};
     size_t m_allocated_size {};
     bool m_replying {false};
@@ -53,6 +54,7 @@ class mmaper: public std::pmr::memory_resource {
 
     std::pmr::memory_resource *m_resource {nullptr};
     int m_data_fd;
+
 
 public:
     mmaper (int data_fd, void *pin, size_t size = 2 * m_min_size):
@@ -68,7 +70,8 @@ public:
     }
 
     ~mmaper () override {
-        for (const auto buf: m_buffers) {
+
+        for (const auto& buf: m_buffers) {
             msync (buf.first, buf.second, MS_SYNC);
         }
     }
@@ -102,7 +105,8 @@ private:
             throw std::exception ();
         }
         ftruncate (m_data_fd, m_size + size);
-        const auto flags = MAP_SHARED | MAP_FIXED | MAP_FIXED_NOREPLACE;
+
+        const auto flags = MAP_SHARED | MAP_FIXED;
         const auto addr = reinterpret_cast <void *> (reinterpret_cast <size_t> (m_pin) + m_size);
         const auto mmapped = mmap(addr, size, PROT_READ | PROT_WRITE, flags, m_data_fd, m_size);
         if (mmapped != addr) {
