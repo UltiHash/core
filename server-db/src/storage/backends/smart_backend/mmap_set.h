@@ -39,15 +39,7 @@ class mmap_set {
         uint64_t offset;
         mmap_node* m_node;
     };
-    struct search_result {
-        std::optional <std::string_view> lower;
-        std::optional <std::string_view> match;
-        std::optional <std::string_view> upper;
-        uint64_t hint {};
-    private:
-        int comp {};
-        friend mmap_set;
-    };
+
 
     constexpr static size_t SET_INIT_FILE_SIZE = 1024ul;
     constexpr static size_t SET_FILE_EXTEND_LIMIT = 256ul;
@@ -60,6 +52,17 @@ class mmap_set {
     std::atomic <uint64_t*> m_end;
 
 public:
+    
+    struct search_result {
+        std::optional <std::string_view> lower;
+        std::optional <std::string_view> match;
+        std::optional <std::string_view> upper;
+        uint64_t hint {};
+    private:
+        int comp {};
+        friend mmap_set;
+    };
+
     mmap_set(const std::filesystem::path& file, mmap_storage& data_store);
 
     /**
@@ -72,6 +75,7 @@ public:
     search_result find (const std::string_view &frag, uint64_t hint = NILL_OFFSET);
 
     uint64_t remove (fragment frag, uint64_t hint);
+
 
 private:
 
