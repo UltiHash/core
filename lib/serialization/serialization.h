@@ -9,6 +9,8 @@
 #include "serializer.h"
 #include "buffered_serializer_2.h"
 #include "buffered_serializer.h"
+#include "fragment_serializer.h"
+#include "fragment_deserializer.h"
 
 namespace uh::serialization {
 

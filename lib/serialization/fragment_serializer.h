@@ -1,17 +1,19 @@
 //
-// Created by masi on 02.03.23.
+// Created by benjamin-elias on 22.05.23.
 //
 
-
-#ifndef CORE_SERIALIZER_H
-#define CORE_SERIALIZER_H
+#ifndef CORE_FRAGMENT_SERIALIZER_H
+#define CORE_FRAGMENT_SERIALIZER_H
 
 #include "serialization_common.h"
+#include "fragment_size_struct.h"
 
 
 namespace uh::serialization {
 
-    class sl_serializer {
+    // ---------------------------------------------------------------------
+
+    class sl_fragment_serializer {
     protected:
 
         io::device &dev_;
@@ -33,12 +35,13 @@ namespace uh::serialization {
 
         // ---------------------------------------------------------------------
 
-        [[nodiscard]] static inline std::vector <char> get_header (size_t data_size) {
+        [[nodiscard]] static inline std::vector <char> get_header (size_t data_size,uint8_t index) {
             auto data_size_len = (std::bit_width (data_size) + 7) / 8;
-            std::vector <char> buffer (data_size_len + 1);
+            std::vector <char> buffer (data_size_len + 2);
             buffer [0] = control_byte;
             set_control_byte_size_length (buffer[0], data_size_len);
             set_data_size(buffer.data() + 1, data_size, data_size_len);
+            buffer.push_back(static_cast<char>(index));
             return buffer;
         }
 
@@ -48,7 +51,7 @@ namespace uh::serialization {
 
         // ---------------------------------------------------------------------
 
-        explicit sl_serializer (io::device &dev): dev_ (dev) {
+        explicit sl_fragment_serializer (io::device &dev): dev_ (dev) {
         }
 
         // ---------------------------------------------------------------------
@@ -58,18 +61,30 @@ namespace uh::serialization {
          *
          * @tparam ValueType a numerical type
          * @param data to be serialized
+         *
+         * @return total written size without control byte and data size bytes
          */
         template <typename ValueType>
         requires (std::is_arithmetic_v <ValueType> or std::is_enum_v <ValueType>)
-        void write (ValueType data) {
+        fragment_serialize_size_format write (ValueType data, uint8_t index) {
 
             constexpr auto data_size = sizeof (ValueType);
-            auto buffer = get_header(data_size);
+            auto buffer = get_header(data_size,index);
+            std::streamsize header_size = buffer.size();
             const auto* data_ptr = reinterpret_cast <const char *> (&data);
             std::copy (data_ptr,
                        data_ptr + sizeof (data),
                        std::back_inserter(buffer));
-            io::write(dev_, buffer);
+
+            std::streamsize written_size = io::write(dev_, buffer);
+
+            if(written_size > 0) written_size -= header_size;
+
+            fragment_serialize_size_format fssf(header_size,
+                                                written_size,
+                                                index);
+
+            return fssf;
         }
 
         // ---------------------------------------------------------------------
@@ -84,12 +99,16 @@ namespace uh::serialization {
         template <typename Range, typename InnerType = std::ranges::range_value_t<Range>>
         requires std::ranges::contiguous_range <Range>
                  and (std::is_arithmetic_v <InnerType> or std::is_enum_v <InnerType>)
-        void write (const Range &data) {
+        fragment_serialize_size_format write (const Range &data, uint8_t index) {
             const auto data_size = std::ranges::size (data) * sizeof (InnerType);
-            const auto header = get_header(data_size);
-            io::write(dev_, header);
-            io::write(dev_, {reinterpret_cast <const char *> (std::ranges::data(data)), data_size});
+            const auto header = get_header(data_size,index);
 
+            fragment_serialize_size_format fssf(io::write(dev_, header),
+                                                io::write(dev_, {reinterpret_cast <const char *>
+                                                (std::ranges::data(data)), data_size}),
+                                                index);
+
+            return fssf;
         }
 
 
@@ -97,4 +116,4 @@ namespace uh::serialization {
 
 } // namespace uh::serialization
 
-#endif //CORE_SERIALIZER_H
+#endif //CORE_FRAGMENT_SERIALIZER_H
