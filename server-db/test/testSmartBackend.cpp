@@ -148,15 +148,15 @@ BOOST_FIXTURE_TEST_CASE(basic_test_mmap_set, files_info_fixture)
 
     mmap_set set {m_set_filename, ms};
 
-    set.insert("hello from data 1");
-    set.insert("data 2 hello from data 2");
-    set.insert("third data hello from data 3");
+    auto h = set.insert("hello from data 1");
+    h = set.insert("data 2 hello from data 2", h);
+    set.insert("third data hello from data 3", h);
     set.insert("some other data");
     set.insert("yet again, some other data");
-    set.insert("yet again, some other data");
+    h = set.insert("yet again, some other data", h);
     set.insert("yet again, some other data");
     set.insert("and even more data");
-    set.insert("third data hello from data 3");
+    set.insert("third data hello from data 3", h);
 
 
     auto res1 = set.find("and even more data");
