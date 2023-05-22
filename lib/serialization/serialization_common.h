@@ -54,7 +54,25 @@ namespace uh::serialization {
     struct is_serialization_type: std::conjunction <is_serializer <T>, is_deserializer <T>>
     {};
 
+    template <typename T>
+    struct is_fragment_serializer: std::bool_constant <
+            requires (T t) {
+                t.write (std::declval <std::vector <char>> (), std::declval <uint8_t> ());
+                t.write (std::declval <std::vector <long>> (), std::declval <uint8_t> ());
+            }>
+    {};
 
+    template <typename T>
+    struct is_fragment_deserializer: std::bool_constant <
+            requires (T t) {
+                t.template read <std::vector <int>> ();
+                t.template read <std::vector <char>> ();
+            }>
+    {};
+
+    template <typename T>
+    struct is_fragment_serialization_type: std::conjunction <is_serializer <T>, is_deserializer <T>>
+    {};
 
 } // namespace uh::serialization
 

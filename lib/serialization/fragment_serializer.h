@@ -57,39 +57,6 @@ namespace uh::serialization {
         // ---------------------------------------------------------------------
 
         /**
-         * serializes the given data into the device.
-         *
-         * @tparam ValueType a numerical type
-         * @param data to be serialized
-         *
-         * @return total written size without control byte and data size bytes
-         */
-        template <typename ValueType>
-        requires (std::is_arithmetic_v <ValueType> or std::is_enum_v <ValueType>)
-        fragment_serialize_size_format write (ValueType data, uint8_t index) {
-
-            constexpr auto data_size = sizeof (ValueType);
-            auto buffer = get_header(data_size,index);
-            std::streamsize header_size = buffer.size();
-            const auto* data_ptr = reinterpret_cast <const char *> (&data);
-            std::copy (data_ptr,
-                       data_ptr + sizeof (data),
-                       std::back_inserter(buffer));
-
-            std::streamsize written_size = io::write(dev_, buffer);
-
-            if(written_size > 0) written_size -= header_size;
-
-            fragment_serialize_size_format fssf(header_size,
-                                                written_size,
-                                                index);
-
-            return fssf;
-        }
-
-        // ---------------------------------------------------------------------
-
-        /**
          * serializes the given range of data into the device.
          *
          * @tparam Range the type of the data to be serialized. It should be a contiguous range of arithmetic types

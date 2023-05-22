@@ -92,36 +92,6 @@ namespace uh::serialization {
         explicit sl_fragment_deserializer (io::device &dev) : dev_ (dev) {
         }
 
-        // ---------------------------------------------------------------------
-
-        /**
-         * reads the data from the device and deserializes it into the given Arithmetic type.
-         * @tparam Arithmetic a numerical type
-         * @return deserialized data
-         */
-        template<typename Arithmetic>
-        requires std::is_arithmetic_v<Arithmetic>
-        Arithmetic read() {
-
-            constexpr auto data_size = sizeof(Arithmetic);
-            constexpr auto data_size_len = 1;
-
-            char buffer[2 + data_size_len + data_size];
-            if (io::read(dev_, buffer) == 0)
-                throw std::runtime_error("Device is empty.");
-
-            Arithmetic data = *reinterpret_cast <Arithmetic *> (buffer + data_size_len + 2);
-            //std::memcpy(&data, buffer + data_size_len + 1, data_size);
-
-            if (is_different_endian(buffer[0])) [[unlikely]] {
-                data = endian_convert (data);
-            }
-
-            return data;
-        }
-
-        // ---------------------------------------------------------------------
-
         /**
          * reads the data from the device and deserializes it into the given contiguous range type.
          * @tparam Range the type of the data to be deserialized. It should be a contiguous range of arithmetic types
@@ -132,7 +102,7 @@ namespace uh::serialization {
         requires std::ranges::contiguous_range<Range>
                  and (std::is_arithmetic_v < InnerType > )
                  and requires(Range range, InnerType inner_type) { range.resize(1); range[0] = inner_type; }
-        Range read() {
+        auto read() {
 
             auto data_size_index = get_data_size_index();
 
@@ -153,31 +123,12 @@ namespace uh::serialization {
                 }
             }
 
-            return range;
-
-        }
-
-        /**
-         * read range, extract control byte, size bytes, index and content
-         *
-         * @param range
-         *
-         * @return total accumulated size read
-         */
-        fragment_serialize_size_format read(std::vector<char> &range) {
-
-            auto data_size_index = get_data_size_index();
-
-            range.clear();
-            range.resize(data_size_index.content_size);
-
-            fragment_serialize_size_format fssf(
+            return std::make_pair(range,fragment_serialize_size_format(
                     data_size_index.header_size,
-                    io::read(dev_, {range.data (), data_size_index.content_size}),
+                    data_size_index.content_size,
                     data_size_index.index
-                    );
+                    ));
 
-            return fssf;
         }
 
         // ---------------------------------------------------------------------
