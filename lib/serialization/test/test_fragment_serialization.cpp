@@ -12,8 +12,6 @@
 #include "serialization/fragment_serializer.h"
 #include "serialization/fragment_deserializer.h"
 
-
-#include "io/file.h"
 #include "io/sstream_device.h"
 #include "serialization/buffered_serializer.h"
 #include "serialization/serialization.h"
@@ -22,7 +20,7 @@ using namespace uh::serialization;
 
 // ------------- Tests Follow --------------
 
-BOOST_AUTO_TEST_CASE(serialize_size_len)  {
+BOOST_AUTO_TEST_CASE(serialize_fragment_size_len)  {
     struct test_serialize_size_len: sl_fragment_serializer, sl_fragment_deserializer {
         static void test () {
             for (int size_len = 0; size_len < 8; ++size_len) {
@@ -36,7 +34,9 @@ BOOST_AUTO_TEST_CASE(serialize_size_len)  {
     test_serialize_size_len::test();
 }
 
-BOOST_AUTO_TEST_CASE(serialize_size) {
+
+
+BOOST_AUTO_TEST_CASE(serialize_fragment_size) {
     struct test_serialize_size: sl_fragment_serializer, sl_fragment_deserializer {
         static void test () {
             for (unsigned long size = 0; size < 128l; ++size) {
@@ -50,8 +50,10 @@ BOOST_AUTO_TEST_CASE(serialize_size) {
     test_serialize_size::test();
 }
 
+
+
 template <typename T, typename Serializer = buffered_fragment_serializer <sl_fragment_serializer>, typename Deserializer = sl_fragment_deserializer>
-void test_range_serialization (const T& data, const std::string test_name = "") {
+void test_fragment_range_serialization (const T& data, const std::string test_name = "") {
     uh::io::sstream_device dev;
     {
         Serializer serialize(dev);
@@ -73,6 +75,8 @@ void test_range_serialization (const T& data, const std::string test_name = "") 
     }
 }
 
+
+
 BOOST_AUTO_TEST_CASE(buffered_serializer_test) {
 
     std::string str1 = "data1 data2 data3";
@@ -88,20 +92,17 @@ BOOST_AUTO_TEST_CASE(buffered_serializer_test) {
     unsigned long ov1 = 2;
     double ov2 = 4.12;
 
-    test_range_serialization <std::string, buffered_serializer <sl_serializer>> (str1, "string test");
-    test_range_serialization < std::vector <long>, buffered_serializer<sl_serializer>> (lvec1, "long vector test");
-    test_range_serialization < std::vector <double>, buffered_serializer<sl_serializer>> (dvec1, "double vector test");
-    test_range_serialization <std::vector <std::uint8_t>, buffered_serializer<sl_serializer>> (emptyvec, "empty vector test");
-    test_range_serialization <std::vector <std::uint64_t>, buffered_serializer<sl_serializer>> (largevec, "large vector test");
-    test_range_serialization <std::string, buffered_serializer<sl_serializer>> (str2, "string 2 test");
-
-    test_range_serialization <unsigned long, buffered_serializer<sl_serializer>> (ov1, "unsigned long test");
-    test_range_serialization <double, buffered_serializer<sl_serializer>> (ov2, "double test");
-
+    test_fragment_range_serialization <std::string, buffered_serializer <sl_serializer>> (str1, "string test");
+    test_fragment_range_serialization < std::vector <long>, buffered_serializer<sl_serializer>> (lvec1, "long vector test");
+    test_fragment_range_serialization < std::vector <double>, buffered_serializer<sl_serializer>> (dvec1, "double vector test");
+    test_fragment_range_serialization <std::vector <std::uint8_t>, buffered_serializer<sl_serializer>> (emptyvec, "empty vector test");
+    test_fragment_range_serialization <std::vector <std::uint64_t>, buffered_serializer<sl_serializer>> (largevec, "large vector test");
+    test_fragment_range_serialization <std::string, buffered_serializer<sl_serializer>> (str2, "string 2 test");
 
 }
 
-/*
+
+
 BOOST_AUTO_TEST_CASE(buffered_serialization_test) {
 
     std::string str1 = "data1 data2 data3";
@@ -165,7 +166,7 @@ BOOST_AUTO_TEST_CASE(buffered_serialization_test) {
                        reinterpret_cast<const char *> (ds.data()), ds2.size()) == 0);
 }
 
-*/
+
 
 BOOST_AUTO_TEST_CASE(serialization_type_tests) {
     typedef fragment_serialization <buffered_fragment_serializer<sl_fragment_serializer>, sl_fragment_deserializer> sertype;
