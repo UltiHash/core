@@ -15,11 +15,9 @@ namespace uh::an::server
 // ---------------------------------------------------------------------
 
 protocol::protocol(cluster::mod& cluster,
-                   an::persistence::client_metrics& persistence,
                    metrics::client_metrics& client,
                    const uh::net::server_info &serv_info):
         m_cluster(cluster),
-        m_persistence(persistence),
         m_client(client),
         m_serv_info (serv_info)
 {
@@ -64,7 +62,6 @@ void protocol::on_client_statistics(uh::protocol::client_statistics::request& cl
 {
     // ! TODO: set_uhv_metrics should technically be in protocol_metrics_wrapper
     m_client.set_uhv_metrics(client_stat);
-    m_persistence.add(client_stat);
 }
 
 // ---------------------------------------------------------------------

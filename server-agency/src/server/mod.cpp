@@ -40,8 +40,7 @@ struct mod::impl
 {
     impl(const net::server_config& config,
          an::cluster::mod& cluster,
-         an::metrics::mod& metrics,
-         an::persistence::mod& persistence);
+         an::metrics::mod& metrics);
 
     boost::asio::io_context io;
     std::unique_ptr<net::server> server;
@@ -54,12 +53,11 @@ struct mod::impl
 
 mod::impl::impl(const net::server_config& config,
                 an::cluster::mod& cluster,
-                an::metrics::mod& metrics,
-                an::persistence::mod& persistence)
+                an::metrics::mod& metrics)
     : io(),
       server(make_server(config, pf)),
       serv_info (*server),
-      pf(cluster, persistence, metrics.client(), metrics.protocol(), serv_info)
+      pf(cluster, metrics.client(), metrics.protocol(), serv_info)
 {
 }
 
@@ -67,9 +65,8 @@ mod::impl::impl(const net::server_config& config,
 
 mod::mod(const net::server_config& config,
          an::cluster::mod& cluster,
-         an::metrics::mod& metrics,
-         an::persistence::mod& persistence)
-    : m_impl(std::make_unique<mod::impl>(config, cluster, metrics, persistence))
+         an::metrics::mod& metrics)
+    : m_impl(std::make_unique<mod::impl>(config, cluster, metrics))
 {
 }
 

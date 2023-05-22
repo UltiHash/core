@@ -20,8 +20,7 @@ namespace uh::an::server
 class protocol : public uh::protocol::request_interface
 {
 public:
-    explicit protocol(cluster::mod& cluster,
-                      an::persistence::client_metrics& persistence,
+    protocol(cluster::mod& cluster,
                       metrics::client_metrics& client,
                       const uh::net::server_info &serv_info);
 
@@ -37,7 +36,6 @@ public:
 
 private:
     cluster::mod& m_cluster;
-    an::persistence::client_metrics& m_persistence;
     metrics::client_metrics& m_client;
     const uh::net::server_info &m_serv_info;
 };
