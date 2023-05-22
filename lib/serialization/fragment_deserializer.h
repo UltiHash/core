@@ -11,7 +11,7 @@
 
 namespace uh::serialization {
 
-    class sl_deserializer {
+    class sl_fragment_deserializer {
 
     protected:
         io::device &dev_;
@@ -43,8 +43,53 @@ namespace uh::serialization {
 
         // ---------------------------------------------------------------------
 
+        /**
+         * putting the function to public makes it possible to speed up by seeking
+         * over seekable device
+         *
+         * @return pair of control byte and the number of bytes forming a buffer to describe the number
+         * of elements on the serialization
+         */
+        [[nodiscard]] inline auto get_control_byte_size_length(){
+            char control_byte[1];
+            io::read(dev_, control_byte);
+
+            return fragment_serialize_control_byte_transit_format(
+                    get_control_byte_size_length(control_byte[0]),
+                    control_byte[0]
+            );
+        }
+
+        /**
+         * This function reads from device
+         *
+         * @return deliver header deconstruction to read functions
+         */
+        auto get_data_size_index(){
+            auto data_size_len = get_control_byte_size_length();
+            std::vector<char> data_size_bytes(data_size_len.header_size);
+            io::read(dev_, data_size_bytes);
+
+            auto data_size = get_control_byte_size(data_size_bytes, data_size_len.header_size);
+            if (is_different_endian(data_size_len.control_byte)) {
+                data_size = endian_convert (data_size);
+            }
+
+            char index[1];
+
+            io::read(dev_, {index,1});
+
+            return fragment_serialize_transit_format(
+                    sizeof(data_size_len.control_byte)+data_size_bytes.size(),
+                    data_size,
+                    static_cast<char>(data_size_len.control_byte),
+                    index[0]);
+        }
+
+        // ---------------------------------------------------------------------
+
     public:
-        explicit sl_deserializer (io::device &dev) : dev_ (dev) {
+        explicit sl_fragment_deserializer (io::device &dev) : dev_ (dev) {
         }
 
         // ---------------------------------------------------------------------
@@ -61,11 +106,11 @@ namespace uh::serialization {
             constexpr auto data_size = sizeof(Arithmetic);
             constexpr auto data_size_len = 1;
 
-            char buffer[1 + data_size_len + data_size];
+            char buffer[2 + data_size_len + data_size];
             if (io::read(dev_, buffer) == 0)
                 throw std::runtime_error("Device is empty.");
 
-            Arithmetic data = *reinterpret_cast <Arithmetic *> (buffer + data_size_len + 1);
+            Arithmetic data = *reinterpret_cast <Arithmetic *> (buffer + data_size_len + 2);
             //std::memcpy(&data, buffer + data_size_len + 1, data_size);
 
             if (is_different_endian(buffer[0])) [[unlikely]] {
@@ -73,46 +118,6 @@ namespace uh::serialization {
             }
 
             return data;
-        }
-
-        // ---------------------------------------------------------------------
-
-        /**
-         * putting the function to public makes it possible to speed up by seeking
-         * over seekable device
-         *
-         * @return pair of control byte and the number of bytes forming a buffer to describe the number
-         * of elements on the serialization
-         */
-        [[nodiscard]] inline auto get_control_byte_size_length(){
-            char control_byte[1];
-            io::read(dev_, control_byte);
-
-            return std::make_pair(control_byte[0],get_control_byte_size_length(control_byte[0]));
-        }
-
-        /**
-         * This function reads from device
-         *
-         * @return tuple of
-         * 1. number of bytes describing the content with the help
-         * of one control bytes and data size buffer and
-         * 2. number of elements stored of that type
-         * 3. control byte
-         */
-        auto get_data_size(){
-            auto data_size_len = get_control_byte_size_length();
-            std::vector<char> data_size_bytes(data_size_len.second);
-            io::read(dev_, data_size_bytes);
-
-            auto data_size = get_control_byte_size(data_size_bytes, data_size_len.second);
-            if (is_different_endian(data_size_len.first)) {
-                data_size = endian_convert (data_size);
-            }
-
-            return std::make_tuple(sizeof(data_size_len.first)+data_size_bytes.size(),
-                                   data_size,
-                                   data_size_len.first);
         }
 
         // ---------------------------------------------------------------------
@@ -129,17 +134,18 @@ namespace uh::serialization {
                  and requires(Range range, InnerType inner_type) { range.resize(1); range[0] = inner_type; }
         Range read() {
 
-            auto data_size = get_data_size();
+            auto data_size_index = get_data_size_index();
 
             Range range;
-            range.resize(std::get<1>(data_size) / sizeof (InnerType));
+            range.resize(data_size_index.content_size / sizeof (InnerType));
 
-            if (!is_different_endian(std::get<2>(data_size)) or sizeof(InnerType) == 1) [[likely]] {  // no need to convert
-                io::read(dev_, {reinterpret_cast <char *> (std::ranges::data(range)), std::get<1>(data_size)});
+            if (!is_different_endian(data_size_index.control_byte) or sizeof(InnerType) == 1) [[likely]] {  // no need to convert
+                io::read(dev_, {reinterpret_cast <char *> (std::ranges::data(range)),
+                                data_size_index.content_size});
             }
             else if constexpr (sizeof(InnerType) > 1) {  // different endian
                 char data[sizeof(InnerType)];
-                for (auto i = 0u; i < std::get<1>(data_size); i++) {
+                for (auto i = 0u; i < data_size_index.content_size; i++) {
                     io::read(dev_, data);
                     char *tmp_dat = endian_convert (data);
                     auto *val = reinterpret_cast <InnerType *> (tmp_dat);
@@ -152,22 +158,26 @@ namespace uh::serialization {
         }
 
         /**
-         * read range, extract control byte, size bytes and content
+         * read range, extract control byte, size bytes, index and content
          *
          * @param range
          *
          * @return total accumulated size read
          */
-        std::streamsize read(std::span <char> &range) {
+        fragment_serialize_size_format read(std::vector<char> &range) {
 
-            auto data_size = get_data_size();
+            auto data_size_index = get_data_size_index();
 
-            std::streamsize accumulate_read{};
+            range.clear();
+            range.resize(data_size_index.content_size);
 
-            accumulate_read += io::read(dev_, {range.data (), std::get<1>(data_size)});
-            range = {range.data (), std::get<1>(data_size)};
+            fragment_serialize_size_format fssf(
+                    data_size_index.header_size,
+                    io::read(dev_, {range.data (), data_size_index.content_size}),
+                    data_size_index.index
+                    );
 
-            return accumulate_read;
+            return fssf;
         }
 
         // ---------------------------------------------------------------------

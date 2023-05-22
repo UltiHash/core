@@ -23,6 +23,30 @@ namespace uh::serialization{
 
     // ---------------------------------------------------------------------
 
+    struct fragment_serialize_transit_format{
+        uint32_t header_size;
+        uint32_t content_size;
+        char control_byte;
+        uint8_t index;
+
+        fragment_serialize_transit_format(uint32_t header_len,uint32_t content_len,char control_byte,uint8_t index):
+                header_size(header_len), content_size(content_len), control_byte(control_byte), index(index){}
+
+    };
+
+    // ---------------------------------------------------------------------
+
+    struct fragment_serialize_control_byte_transit_format{
+        uint32_t header_size;
+        char control_byte;
+
+        fragment_serialize_control_byte_transit_format(uint32_t header_len,char control_byte):
+                header_size(header_len), control_byte(control_byte){}
+
+    };
+
+    // ---------------------------------------------------------------------
+
 }
 
 #endif //CORE_FRAGMENT_SIZE_STRUCT_H

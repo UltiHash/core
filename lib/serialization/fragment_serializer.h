@@ -41,7 +41,7 @@ namespace uh::serialization {
             buffer [0] = control_byte;
             set_control_byte_size_length (buffer[0], data_size_len);
             set_data_size(buffer.data() + 1, data_size, data_size_len);
-            buffer.push_back(static_cast<char>(index));
+            buffer.back() = static_cast<char>(index);
             return buffer;
         }
 
