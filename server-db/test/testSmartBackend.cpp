@@ -11,6 +11,7 @@
 #include <storage/backends/smart_backend/mmap_storage.h>
 #include "storage/backend.h"
 #include "storage/backends/smart_backend/mmap_set.h"
+#include "storage/backends/smart_backend/prefix_deduplicator.h"
 
 using namespace uh::dbn::storage::smart;
 
@@ -141,38 +142,47 @@ BOOST_FIXTURE_TEST_CASE(test_mmap_storage_persistet_alloc_test, files_info_fixtu
     }
 }
 
+
+uint64_t set_insert (mmap_set& set, std::string_view data, uint64_t hint = 2*sizeof (uint64_t)) {
+    const auto data_offset = set.insert_data(data);
+    const auto h = set.insert_index(data, data_offset);
+    return h;
+}
+
 BOOST_FIXTURE_TEST_CASE(basic_test_mmap_set, files_info_fixture)
 {
     cleanup();
     mmap_storage ms(files_info());
 
-    mmap_set set {m_set_filename, ms};
+    mmap_set set {ms, m_set_filename};
 
-    auto h = set.insert("hello from data 1");
-    h = set.insert("data 2 hello from data 2", h);
-    set.insert("third data hello from data 3", h);
-    set.insert("some other data");
-    set.insert("yet again, some other data");
-    h = set.insert("yet again, some other data", h);
-    set.insert("yet again, some other data");
-    set.insert("and even more data");
-    set.insert("third data hello from data 3", h);
+    auto h = set_insert (set, "hello from data 1");
+    h = set_insert (set, "data 2 hello from data 2", h);
+    set_insert(set, "third data hello from data 3", h);
+    set_insert(set, "some other data");
+    set_insert(set, "yet again, some other data");
+    h = set_insert(set, "yet again, some other data", h);
+    set_insert(set, "yet again, some other data");
+    set_insert(set, "and even more data");
+    set_insert(set, "third data hello from data 3", h);
+
 
 
     auto res1 = set.find("and even more data");
-    BOOST_TEST(res1.match.value() == "and even more data");
+    BOOST_TEST(res1.match->second == "and even more data");
 
     auto res2 = set.find("some other data");
-    BOOST_TEST(res2.match.value() == "some other data");
+    auto str = res2.match->second;
+    BOOST_TEST(str == "some other data");
 
     auto res3 = set.find("hello from data 1");
-    BOOST_TEST(res3.match.value() == "hello from data 1");
+    BOOST_TEST(res3.match->second == "hello from data 1");
 
     auto res4 = set.find("yet again, some other data");
-    BOOST_TEST(res4.match.value() == "yet again, some other data");
+    BOOST_TEST(res4.match->second == "yet again, some other data");
 
     auto res5 = set.find("third data hello from data 3");
-    BOOST_TEST(res5.match.value() == "third data hello from data 3");
+    BOOST_TEST(res5.match->second == "third data hello from data 3");
 /*
     auto res6 = set.find("hello from data ");
     std::cout << res2.match << std::endl;
@@ -185,5 +195,34 @@ BOOST_FIXTURE_TEST_CASE(basic_test_mmap_set, files_info_fixture)
 
     auto res9 = set.find("some other something");
     std::cout << std::get <2> (res9) << std::endl
-    */;
+*/
+
+}
+
+BOOST_FIXTURE_TEST_CASE(basic_dedup_test, files_info_fixture)
+{
+    cleanup();
+    mmap_storage ms(files_info());
+    prefix_deduplicator pd {ms , m_set_filename};
+
+    std::string str1 = "hello from data 1";
+    auto res1 = pd.deduplicate(str1);
+    BOOST_TEST (res1.second == str1.size());
+
+    std::string str2 = "hello from data 2234";
+    auto res2 = pd.deduplicate(str2);
+    BOOST_TEST (res2.second == 4);
+
+    std::string str3 = "data 2 hello from data 2";
+    auto res3 = pd.deduplicate(str3);
+    BOOST_TEST (res3.second == str3.size());
+
+    std::string str4 = "hello from data yet again";
+    auto res4 = pd.deduplicate(str4);
+    BOOST_TEST (res4.second == 9);
+
+    std::string str5 = "yet again, some other data";
+    auto res5 = pd.deduplicate(str5);
+    BOOST_TEST (res5.second == 17);
+
 }

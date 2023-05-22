@@ -5,12 +5,12 @@
 
 namespace uh::dbn::storage::smart {
 
-mmap_set::mmap_set(const std::filesystem::path &file, mmap_storage &data_store) :
-        m_file_path (file),
-        m_data_store (data_store) {
+mmap_set::mmap_set(mmap_storage &data_store, std::filesystem::path file) :
+        m_data_store (data_store),
+        m_file_path (std::move (file)) {
 
-    const auto existing_index = std::filesystem::exists(file);
-    const auto fd = open(file.c_str(), O_CREAT | O_RDWR, S_IRUSR | S_IWUSR);
+    const auto existing_index = std::filesystem::exists(m_file_path.c_str());
+    const auto fd = open(m_file_path.c_str(), O_CREAT | O_RDWR, S_IRUSR | S_IWUSR);
     if (!existing_index) {
         ftruncate(fd, m_file_size);
     }
@@ -35,8 +35,13 @@ mmap_set::mmap_set(const std::filesystem::path &file, mmap_storage &data_store) 
     }
 }
 
+uint64_t mmap_set::insert_data(const std::string_view& frag) {
+    auto alloc = m_data_store.allocate(frag.size());
+    std::memcpy(alloc.m_addr, frag.data(), frag.size());
+    return alloc.m_offset;
+}
 
-uint64_t mmap_set::insert(const std::string_view &frag, uint64_t hint) {
+uint64_t mmap_set::insert_index(const std::string_view &frag, uint64_t data_offset, uint64_t hint) {
 
     const auto f = find (frag, hint);
     if (f.match) {
@@ -59,9 +64,7 @@ uint64_t mmap_set::insert(const std::string_view &frag, uint64_t hint) {
     z.m_node->left = NILL_OFFSET;
     z.m_node->right = NILL_OFFSET;
     z.m_node->color = RED;
-    auto alloc = m_data_store.allocate(frag.size());
-    std::memcpy (alloc.m_addr, frag.data(), frag.size());
-    z.m_node->frag = {alloc.m_offset, frag.size()};
+    z.m_node->frag = {data_offset, frag.size()};
 
     const auto offset = z.offset;
 
@@ -73,7 +76,6 @@ uint64_t mmap_set::insert(const std::string_view &frag, uint64_t hint) {
     return offset;
 }
 
-
 mmap_set::search_result mmap_set::find(const std::string_view &frag, uint64_t hint) {
     auto y = m_nil;
     search_result res;
@@ -83,7 +85,7 @@ mmap_set::search_result mmap_set::find(const std::string_view &frag, uint64_t hi
 
     if (resolved.second) {
         char* ptr = static_cast <char*> (m_data_store.get_raw_ptr(x.m_node->frag.data_offset));
-        res.match = {ptr, y.m_node->frag.size};
+        res.match = {y.m_node->frag.data_offset, {ptr, y.m_node->frag.size}};
         return res;
     }
 
@@ -103,7 +105,7 @@ mmap_set::search_result mmap_set::find(const std::string_view &frag, uint64_t hi
         }
         else {
             char* ptr = static_cast <char*> (m_data_store.get_raw_ptr(y.m_node->frag.data_offset));
-            res.match = {ptr, y.m_node->frag.size};
+            res.match = {y.m_node->frag.data_offset, {ptr, y.m_node->frag.size}};
             break;
         }
     }
@@ -111,8 +113,8 @@ mmap_set::search_result mmap_set::find(const std::string_view &frag, uint64_t hi
     if (!res.match) {
         char *ptr_lower = static_cast <char *> (m_data_store.get_raw_ptr(largest_lower.m_node->frag.data_offset));
         char *ptr_upper = static_cast <char *> (m_data_store.get_raw_ptr(smallest_upper.m_node->frag.data_offset));
-        res.lower = {ptr_lower, largest_lower.m_node->frag.size};
-        res.upper = {ptr_upper, smallest_upper.m_node->frag.size};
+        res.lower = {largest_lower.m_node->frag.data_offset, {ptr_lower, largest_lower.m_node->frag.size}};
+        res.upper = {smallest_upper.m_node->frag.data_offset, {ptr_upper, smallest_upper.m_node->frag.size}};
     }
     res.hint = y.offset;
     res.comp = comp_int;
@@ -132,9 +134,13 @@ std::pair<uint64_t, bool> mmap_set::resolve_hint(uint64_t hint, const std::strin
         return {n.offset, true};
     }
 
+    if (n.m_node->parent == NILL_OFFSET) {
+        return {*m_root, false};
+    }
     const auto p = get_node (n.m_node->parent);
 
-    if (hint == p.m_node->left) {
+
+    if (hint == p.m_node->left and p.m_node->right != NILL_OFFSET) {
         const auto lower_sister = get_node(p.m_node->right);
         const auto comp_ls = comp (frag, lower_sister.m_node->frag);
 
@@ -148,16 +154,20 @@ std::pair<uint64_t, bool> mmap_set::resolve_hint(uint64_t hint, const std::strin
             if (comp_p == 0) {
                 return {p.offset, true};
             }
-            else if (comp_p > 0) {
+
+            else if (comp_p > 0 and n.m_node->left != NILL_OFFSET) {
                 return {n.m_node->left, false};
             }
-            else {
+            else if (comp_p < 0 and lower_sister.m_node->right != NILL_OFFSET){
                 return {lower_sister.m_node->right, false};
+            }
+            else {
+                return {p.offset, false};
             }
         }
 
     }
-    else {
+    else if (hint == p.m_node->right and p.m_node->left != NILL_OFFSET) {
         const auto upper_sister = get_node(p.m_node->left);
         const auto comp_us = comp (frag, upper_sister.m_node->frag);
 
@@ -171,23 +181,31 @@ std::pair<uint64_t, bool> mmap_set::resolve_hint(uint64_t hint, const std::strin
             if (comp_p == 0) {
                 return {p.offset, true};
             }
-            else if (comp_p > 0) {
+            else if (comp_p > 0 and upper_sister.m_node->right != NILL_OFFSET) {
                 return {upper_sister.m_node->right, false};
             }
-            else {
+            else if (comp_p < 0 and n.m_node->left != NILL_OFFSET) {
                 return {n.m_node->left, false};
+            }
+            else {
+                return {p.offset, false};
             }
         }
 
     }
 
+    if (p.m_node->parent == NILL_OFFSET) {
+        return {*m_root, false};
+    }
+
     const auto gp = get_node(p.m_node->parent);
+
     const auto comp_p = comp (frag, p.m_node->frag);
     if (comp_p == 0) {
         return {p.offset, true};
     }
 
-    if (p.offset == gp.m_node->left) {
+    if (p.offset == gp.m_node->left and gp.m_node->right != NILL_OFFSET) {
         const auto lower_aunt = get_node(gp.m_node->right);
         const auto comp_la = comp (frag, lower_aunt.m_node->frag);
 
@@ -201,15 +219,18 @@ std::pair<uint64_t, bool> mmap_set::resolve_hint(uint64_t hint, const std::strin
             if (comp_gp == 0) {
                 return {gp.offset, true};
             }
-            else if (comp_gp > 0) {
+            else if (comp_gp > 0 and p.m_node->left != NILL_OFFSET) {
                 return {p.m_node->left, false};
             }
-            else {
+            else if (comp_gp < 0 and lower_aunt.m_node->right != NILL_OFFSET){
                 return {lower_aunt.m_node->right, false};
+            }
+            else {
+                return {gp.offset, false};
             }
         }
     }
-    else {
+    else if (p.offset == gp.m_node->right and gp.m_node->left != NILL_OFFSET) {
         const auto upper_aunt = get_node(gp.m_node->left);
         const auto comp_ua = comp (frag, upper_aunt.m_node->frag);
 
@@ -223,11 +244,14 @@ std::pair<uint64_t, bool> mmap_set::resolve_hint(uint64_t hint, const std::strin
             if (comp_gp == 0) {
                 return {p.offset, true};
             }
-            else if (comp_gp > 0) {
+            else if (comp_gp > 0 and upper_aunt.m_node->right != NILL_OFFSET) {
                 return {upper_aunt.m_node->right, false};
             }
-            else {
+            else if (comp_gp < 0 and p.m_node->left != NILL_OFFSET) {
                 return {p.m_node->left, false};
+            }
+            else {
+                return {p.offset, false};
             }
         }
     }
@@ -366,4 +390,5 @@ int mmap_set::comp(const std::string_view &new_fragment, const fragment &f) {
     const std::string_view strw2 {static_cast <char*> (p2), f.size};
     return new_fragment.compare(strw2);
 }
-}
+
+} // end namespace uh::dbn::storage::smart
