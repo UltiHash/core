@@ -102,15 +102,16 @@ void mmap_storage::do_deallocate (const offset_ptr& offset_ptr, size_t bytes) {
     resource.get_pool_resource().deallocate(deallocate_offset_ptr.m_addr, bytes);
 }
 
-std::filesystem::path mmap_storage::generate_log_file_path (const std::forward_list<file_mmap_info> &files) {
+std::filesystem::path mmap_storage::generate_log_file_path (const std::forward_list<file_mmap_info>& files) {
 
-    std::hash <std::filesystem::path> hasher;
-    std::stringstream hash_stream;
-    hash_stream << "log_";
-    for (const auto &fi: files) {
+    std::hash <std::string> hasher;
+    std::string file_name = "log_";
+    for (const auto& fi: files) {
+        std::stringstream hash_stream;
         hash_stream << std::hex << hasher (fi.path);
+        file_name += hash_stream.str().substr(0, 2);
     }
-    return hash_stream.str();
+    return file_name;
 }
 
 bool mmap_storage::files_consistent_existency (const std::forward_list<file_mmap_info>& files) {

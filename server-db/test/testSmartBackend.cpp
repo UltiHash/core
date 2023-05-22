@@ -36,7 +36,7 @@ public:
                 std::filesystem::remove(fi.path);
             }
         }
-        const std::filesystem::path log_name = "log_d46fb07781239d0a77dbb1ec41f315194142472970a296ac990840b68a8e8d9134a9dd34de2891521a01b78aed0df4793731fab110880fb9219641ad7219065187b093386fa4a8592bdf458c169d6ca";
+        const std::filesystem::path log_name = "log_d4774199341a3721872b";
         if (exists(log_name)) {
             std::filesystem::remove(log_name);
         }
