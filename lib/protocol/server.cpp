@@ -47,7 +47,6 @@ void server::handle()
         {
             write(m_bs, status{ .code = status::FAILED, .message = e.what() });
             m_bs.sync ();
-            m_read_block.reset();
             m_write_alloc.reset();
             m_state = server_state::normal;
         }
@@ -75,7 +74,6 @@ void server::handle_normal_request(uint8_t request_id)
 {
     switch (request_id)
     {
-        case read_block::request_id: return handle_read_block();
         case quit::request_id: return handle_quit();
         case free_space::request_id: return handle_free_space();
         case reset::request_id: return handle_reset();
@@ -83,8 +81,6 @@ void server::handle_normal_request(uint8_t request_id)
         case client_statistics::request_id: return handle_client_statistics();
         case write_chunks::request_id: return handle_write_chunks();
         case read_chunks::request_id: return handle_read_chunks();
-
-
 
         default:
             throw std::runtime_error("normal, unsupported command: "
@@ -100,7 +96,6 @@ void server::handle_reading_request(uint8_t request_id)
     {
         case quit::request_id: return handle_quit();
         case reset::request_id: return handle_reset();
-        case next_chunk::request_id: return handle_next_chunk();
 
         default:
             throw std::runtime_error("reading, unsupported command: "
@@ -158,23 +153,6 @@ void server::handle_hello()
 
 // ---------------------------------------------------------------------
 
-void server::handle_read_block()
-{
-    DEBUG << "read_block request on " << client_->peer();
-
-    read_block::request req;
-    read(m_bs, req);
-
-    m_read_block = m_handler_interface->on_read_block(std::move(req.hash));
-
-    m_state = server_state::reading;
-
-    write(m_bs, status{ status::OK });
-    m_bs.sync ();
-}
-
-// ---------------------------------------------------------------------
-
 void server::handle_quit()
 {
     DEBUG << "quit request on " << client_->peer();
@@ -227,38 +205,9 @@ void server::handle_reset()
     m_handler_interface->on_reset();
 
     m_state = server_state::normal;
-    m_read_block.reset();
     m_write_alloc.reset();
 
     write(m_bs, status{ status::OK });
-    m_bs.sync ();
-}
-
-// ---------------------------------------------------------------------
-
-void server::handle_next_chunk()
-{
-    DEBUG << "next_chunk request on " << client_->peer();
-
-    next_chunk::request req;
-    read(m_bs, req);
-
-    if (req.max_size < MINIMUM_CHUNK_SIZE || req.max_size > MAXIMUM_CHUNK_SIZE)
-    {
-        THROW(util::illegal_args, "buffer size out of range");
-    }
-
-    std::vector<char> buffer(req.max_size);
-    auto count = m_read_block->read(std::span<char>(buffer.begin(), buffer.end()));
-    if (count == 0)
-    {
-        m_state = server_state::normal;
-        m_read_block.reset();
-    }
-
-    m_handler_interface->on_next_chunk(buffer);
-    write(m_bs, status{ status::OK });
-    write(m_bs, next_chunk::response{ .content = std::span<char>(buffer.begin(), count) });
     m_bs.sync ();
 }
 

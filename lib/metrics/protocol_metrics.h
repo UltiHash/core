@@ -19,11 +19,9 @@ public:
     protocol_metrics(uh::metrics::service& service);
 
     prometheus::Counter& reqs_hello() const;
-    prometheus::Counter& reqs_read_block() const;
     prometheus::Counter& reqs_free_space() const;
     prometheus::Counter& reqs_quit() const;
     prometheus::Counter& reqs_reset() const;
-    prometheus::Counter& reqs_next_chunk() const;
     prometheus::Counter& reqs_write_chunk() const;
     prometheus::Counter& reqs_client_statistics() const;
     prometheus::Counter& reqs_write_chunks() const;
@@ -33,11 +31,9 @@ public:
 private:
     prometheus::Family<prometheus::Counter>& m_counters;
     prometheus::Counter& m_reqs_hello;
-    prometheus::Counter& m_reqs_read_block;
     prometheus::Counter& m_reqs_free_space;
     prometheus::Counter& m_reqs_quit;
     prometheus::Counter& m_reqs_reset;
-    prometheus::Counter& m_reqs_next_chunk;
     prometheus::Counter& m_reqs_write_chunk;
     prometheus::Counter& m_reqs_write_chunks;
     prometheus::Counter& m_reqs_read_chunks;
@@ -55,11 +51,9 @@ public:
         std::unique_ptr<uh::protocol::request_interface>&& base);
 
     virtual uh::protocol::server_information on_hello(const std::string& client_version) override;
-    virtual std::unique_ptr<io::device> on_read_block(uh::protocol::blob&& hash) override;
     virtual std::size_t on_free_space() override;
     virtual void on_quit(const std::string& reason) override;
     virtual void on_reset() override;
-    virtual void on_next_chunk(std::span<char> buffer) override;
     virtual void on_finalize() override;
     virtual void on_write_chunk(std::span<char> buffer) override;
     uh::protocol::write_chunks::response on_write_chunks (const uh::protocol::write_chunks::request &) override;

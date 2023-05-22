@@ -22,38 +22,6 @@ namespace
 
 // ---------------------------------------------------------------------
 
-class connection_device : public io::device
-{
-public:
-    connection_device(protocol::client_pool::handle&& h,
-                      std::unique_ptr<io::device>&& dev)
-        : m_handle(std::move(h)),
-          m_dev(std::move(dev))
-    {
-    }
-
-    std::streamsize write(std::span<const char> buffer) override
-    {
-        return m_dev->write(buffer);
-    }
-
-    std::streamsize read(std::span<char> buffer) override
-    {
-        return m_dev->read(buffer);
-    }
-
-    bool valid() const override
-    {
-        return m_dev->valid();
-    }
-
-private:
-    protocol::client_pool::handle m_handle;
-    std::unique_ptr<io::device> m_dev;
-};
-
-// ---------------------------------------------------------------------
-
 class alloc : public uh::protocol::allocation
 {
 public:
@@ -222,27 +190,6 @@ std::list< std::pair<node_ref, std::size_t> > mod::bc_free_space()
     }
 
     return rv;
-}
-
-// ---------------------------------------------------------------------
-
-std::unique_ptr<io::device> mod::bc_read_block(const blob& hash)
-{
-    for (const auto& node : m_impl->nodes)
-    {
-        try
-        {
-            auto conn = node.second->get();
-            auto dev = conn->read_block(hash);
-            return std::make_unique<connection_device>(std::move(conn), std::move(dev));
-        }
-        catch (const std::exception& e)
-        {
-            INFO << "hash not known to " << node.first << ": " << e.what();
-        }
-    }
-
-    THROW(util::exception, "hash could not be found in cluster");
 }
 
 // ---------------------------------------------------------------------

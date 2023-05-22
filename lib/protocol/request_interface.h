@@ -15,8 +15,6 @@ struct request_interface
 
     virtual uh::protocol::server_information on_hello(const std::string& client_version) = 0;
 
-    virtual std::unique_ptr <io::device> on_read_block(uh::protocol::blob &&hash) = 0;
-
     virtual std::unique_ptr <uh::protocol::allocation> on_allocate_chunk(std::size_t size) = 0;
 
     virtual write_chunks::response on_write_chunks (const write_chunks::request &) = 0;
@@ -30,8 +28,6 @@ struct request_interface
     virtual void on_quit(const std::string &reason) { };
 
     virtual void on_reset() { };
-
-    virtual void on_next_chunk(std::span<char> buffer) { };
 
     virtual void on_finalize() { };
 

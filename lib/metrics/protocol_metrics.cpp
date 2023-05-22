@@ -13,11 +13,9 @@ namespace uh::metrics
 protocol_metrics::protocol_metrics(uh::metrics::service& service)
     : m_counters(service.add_counter_family("uh_requests", "number of UH requests")),
       m_reqs_hello(m_counters.Add({{ "type", "hello" }})),
-      m_reqs_read_block(m_counters.Add({{ "type", "read_block" }})),
       m_reqs_free_space(m_counters.Add({{ "type", "free_space" }})),
       m_reqs_quit(m_counters.Add({{ "type", "quit" }})),
       m_reqs_reset(m_counters.Add({{ "type", "reset" }})),
-      m_reqs_next_chunk(m_counters.Add({{ "type", "next_chunk" }})),
       m_reqs_write_chunk(m_counters.Add({{ "type", "write_chunk" }})),
       m_reqs_write_chunks(m_counters.Add({{ "type", "write_chunks" }})),
       m_reqs_read_chunks(m_counters.Add({{ "type", "read_chunks" }})),
@@ -33,13 +31,6 @@ protocol_metrics::protocol_metrics(uh::metrics::service& service)
 prometheus::Counter& protocol_metrics::reqs_hello() const
 {
     return m_reqs_hello;
-}
-
-// ---------------------------------------------------------------------
-
-prometheus::Counter& protocol_metrics::reqs_read_block() const
-{
-    return m_reqs_read_block;
 }
 
 // ---------------------------------------------------------------------
@@ -61,13 +52,6 @@ prometheus::Counter& protocol_metrics::reqs_quit() const
 prometheus::Counter& protocol_metrics::reqs_reset() const
 {
     return m_reqs_reset;
-}
-
-// ---------------------------------------------------------------------
-
-prometheus::Counter& protocol_metrics::reqs_next_chunk() const
-{
-    return m_reqs_next_chunk;
 }
 
 // ---------------------------------------------------------------------
@@ -131,14 +115,6 @@ server_information protocol_metrics_wrapper::on_hello(const std::string& client_
 
 // ---------------------------------------------------------------------
 
-std::unique_ptr<io::device> protocol_metrics_wrapper::on_read_block(blob&& hash)
-{
-    m_metrics.reqs_read_block().Increment();
-    return m_base->on_read_block(std::move(hash));
-}
-
-// ---------------------------------------------------------------------
-
 std::size_t protocol_metrics_wrapper::on_free_space()
 {
     m_metrics.reqs_free_space().Increment();
@@ -159,13 +135,6 @@ void protocol_metrics_wrapper::on_reset()
 {
     m_metrics.reqs_reset().Increment();
     return m_base->on_reset();
-}
-
-// ---------------------------------------------------------------------
-
-void protocol_metrics_wrapper::on_next_chunk(std::span<char> buffer)
-{
-    m_metrics.reqs_next_chunk().Increment();
 }
 
 // ---------------------------------------------------------------------
