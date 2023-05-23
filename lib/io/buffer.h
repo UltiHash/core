@@ -20,6 +20,8 @@ public:
     std::streamsize read(std::span<char> buffer) override;
 
     bool valid() const override;
+
+    const std::vector<char>& data() const;
 private:
     std::vector<char> m_buffer;
     std::size_t m_rptr;
