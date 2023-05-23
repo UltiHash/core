@@ -3,9 +3,12 @@
 
 #include "common.h"
 
+#include <serialization/serialization.h>
+
 #include <span>
 #include <string>
-#include "serialization/serialization.h"
+#include <variant>
+#include <vector>
 
 
 namespace uh::protocol
@@ -309,7 +312,7 @@ struct read_chunks
 
     struct response
     {
-        std::vector <char> data;
+        std::variant< std::vector<char>, std::unique_ptr<io::data_generator> > data;
         std::vector <uint32_t> chunk_sizes;
     };
 

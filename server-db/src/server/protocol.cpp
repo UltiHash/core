@@ -1,9 +1,12 @@
 #include "protocol.h"
 
-#include <config.hpp>
 #include <logging/logging_boost.h>
+#include <io/group_generator.h>
 #include <protocol/exception.h>
+
+#include <config.hpp>
 #include <storage/backends/hierarchical_storage.h>
+
 #include <numeric>
 
 
@@ -76,18 +79,25 @@ uh::protocol::write_chunks::response protocol::on_write_chunks(const write_chunk
 
 // ---------------------------------------------------------------------
 
-uh::protocol::read_chunks::response protocol::on_read_chunks(const read_chunks::request &req)
+uh::protocol::read_chunks::response protocol::on_read_chunks(const read_chunks::request& req)
 {
-    uh::protocol::read_chunks::response resp;
+    auto generator = std::make_unique<io::group_generator>();
     ssize_t total_size = 0;
-    for (size_t i = 0; i < req.hashes.size(); i+=64) {
-        auto dev = m_storage.read_block({req.hashes.data() + i, 64});
-        const auto size = dev->read({m_read_buffer.begin() + total_size, m_read_buffer.end()});
+
+    uh::protocol::read_chunks::response resp;
+    for (size_t i = 0; i < req.hashes.size(); i+=64)
+    {
+        auto dev = m_storage.read_block({ req.hashes.data() + i, 64 });
+
+        auto size = dev->size();
+        generator->append(std::move(dev));
+
         resp.chunk_sizes.emplace_back(size);
         total_size += size;
     }
-    resp.data.reserve(total_size);
-    resp.data.insert(resp.data.cend(), m_read_buffer.begin(), m_read_buffer.begin() + total_size);
+
+    resp.data = std::move(generator);
+
     return resp;
 }
 

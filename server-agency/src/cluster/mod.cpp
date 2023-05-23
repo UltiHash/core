@@ -279,20 +279,22 @@ uh::protocol::read_chunks::response mod::read_chunks(const read_chunks::request 
 
         const auto &conn_hash_offsets = routed_hash_offsets [conn_hashes.first];
         responses.emplace_front(conn_hashes.first->get()->read_chunks ({conn_hashes.second}));
-        auto &resp = responses.front();
+        auto& resp = responses.front();
+        auto& resp_data = std::get<0>(resp.data);
 
         size_t offset = 0;
         size_t chunk_size_id = 0;
         for (const auto hash_offset: conn_hash_offsets) {
             const auto chunk_size = resp.chunk_sizes[chunk_size_id ++];
-            hash_offset_data_map [hash_offset] = std::span <char> {resp.data.data() + offset, chunk_size};
+            hash_offset_data_map[hash_offset] = std::span<char>{ resp_data.data() + offset, chunk_size };
             offset += chunk_size;
         }
     }
 
     uh::protocol::read_chunks::response total_resp;
+    auto& data = std::get<0>(total_resp.data);
     for (const auto &hash_offset_data_pair: hash_offset_data_map) {
-        total_resp.data.insert(total_resp.data.end(), hash_offset_data_pair.second.begin(), hash_offset_data_pair.second.end());
+        data.insert(data.end(), hash_offset_data_pair.second.begin(), hash_offset_data_pair.second.end());
     }
 
     return total_resp;
