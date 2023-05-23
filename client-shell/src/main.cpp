@@ -9,7 +9,7 @@
 #include <config.hpp>
 #include <client_options/client_options.h>
 #include <client_options/agency_connection.h>
-#include <chunking/options.h>
+#include <options/chunking_options.h>
 
 #include <serialization/f_upload.h>
 #include <serialization/f_download.h>
@@ -28,7 +28,7 @@ APPLICATION_CONFIG
 (
     (client, uh::client::option::client_options),
     (agency, uh::client::option::agency_connection),
-    (chunking, uh::client::chunking::options)
+    (chunking, uh::options::chunking_options)
 );
 
 // ---------------------------------------------------------------------
@@ -64,7 +64,7 @@ void handle_errors(const std::string& message,
 
 void integrate(protocol::client_pool& pool,
                unsigned worker_count,
-               const client::chunking::chunking_config& chunker_config,
+               const chunking::config& chunker_config,
                const std::vector<std::filesystem::path>& input,
                const std::filesystem::path& output,
                bool overwrite)
@@ -75,7 +75,7 @@ void integrate(protocol::client_pool& pool,
     uhv::job_queue<std::unique_ptr<uhv::f_meta_data>> q_f_mdata_w_hash;
 
     {
-        uh::client::chunking::mod chunking_module(chunker_config);
+        uh::chunking::mod chunking_module(chunker_config);
 
         f_upload upload_class(pool, q_f_meta_data,
                               q_f_mdata_w_hash, chunking_module,
