@@ -14,6 +14,7 @@
 #include <options/logging_options.h>
 #include <options/server_options.h>
 
+#include "signals/signal.h"
 
 APPLICATION_CONFIG(
     (server, uh::options::server_options),
@@ -29,6 +30,8 @@ int main(int argc, const char** argv)
 {
     try
     {
+        uh::signal::signal signal_handler;
+
         application_config config;
         if (config.evaluate(argc, argv) == uh::options::action::exit)
         {
@@ -47,7 +50,12 @@ int main(int argc, const char** argv)
         metrics::mod metrics_module(config.metrics(), persistence_module);
 
         server::mod server_module(config.server(), cluster_module, metrics_module);
+
+        signal_handler.register_func([&](){ server_module.stop();
+                                                        persistence_module.stop(); });
+
         server_module.start();
+
     }
     catch (const std::exception& e)
     {

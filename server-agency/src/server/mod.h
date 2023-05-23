@@ -25,6 +25,7 @@ public:
     ~mod();
 
     void start();
+    void stop();
 
 private:
     struct impl;
