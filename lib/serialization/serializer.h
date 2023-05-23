@@ -92,7 +92,16 @@ namespace uh::serialization {
 
         }
 
-
+        /**
+         * Serializes a data::generator.
+         */
+        void write(io::data_generator& dg)
+        {
+            const auto data_size = dg.size();
+            const auto header = get_header(data_size);
+            io::write(dev_, header);
+            dev_.write_range(dg);
+        }
     };
 
 } // namespace uh::serialization

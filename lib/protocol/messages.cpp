@@ -423,8 +423,20 @@ void read(serialization::buffered_serialization& in, read_chunks::request& reque
 
 void write(serialization::buffered_serialization& out, const read_chunks::response& response)
 {
-    out.write(response.data);
-    out.write(response.chunk_sizes);
+    switch (response.data.index())
+    {
+        case 0:
+            out.write(std::get<0>(response.data));
+            out.write(response.chunk_sizes);
+            return;
+
+        case 1:
+            out.write(*std::get<1>(response.data));
+            out.write(response.chunk_sizes);
+            return;
+    }
+
+    THROW (util::exception, "unsupported response data format");
 }
 
 // ---------------------------------------------------------------------
