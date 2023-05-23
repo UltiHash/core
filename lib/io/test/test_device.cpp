@@ -10,6 +10,7 @@
 #include <io/buffer.h>
 #include <io/buffered_device.h>
 #include <io/sstream_device.h>
+#include <io/test_generator.h>
 
 
 using namespace uh;
@@ -38,56 +39,6 @@ typedef boost::mpl::vector<
     buffered_device<sstream_device>,
     buffer
 > device_types;
-
-// ---------------------------------------------------------------------
-
-class generator : public uh::io::data_generator
-{
-public:
-    generator(std::span<char> data, std::size_t chunk_size = 16)
-        : m_size(data.size())
-    {
-        bool vec = false;
-        while (!data.empty())
-        {
-            auto size = std::min(chunk_size, data.size());
-            auto chunk = data.subspan(0, size);
-
-            if (vec)
-            {
-                m_chunks.push_back(std::vector<char>(chunk.begin(), chunk.end()));
-            }
-            else
-            {
-                m_chunks.push_back(chunk);
-            }
-
-            vec = !vec;
-            data = data.subspan(size);
-        }
-    }
-
-    std::optional<data_chunk> next() override
-    {
-        if (m_chunks.empty())
-        {
-            return std::nullopt;
-        }
-
-        auto front = m_chunks.front();
-        m_chunks.pop_front();
-        return front;
-    }
-
-    std::optional<std::size_t> size() override
-    {
-        return m_size;
-    }
-
-private:
-    std::list<io::data_chunk> m_chunks;
-    std::size_t m_size;
-};
 
 // ---------------------------------------------------------------------
 
@@ -190,7 +141,7 @@ BOOST_FIXTURE_TEST_CASE_TEMPLATE( read_partial, T, device_types, Fixture )
 BOOST_FIXTURE_TEST_CASE_TEMPLATE( data_generator_api, T, device_types, Fixture )
 {
     std::vector v(TEST_TEXT.begin(), TEST_TEXT.end());
-    generator gen(v);
+    test::generator gen(v);
     auto dev = make_test_device<T>();
 
     auto count = dev->write_range(gen);
