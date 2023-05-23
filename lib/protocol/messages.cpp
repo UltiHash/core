@@ -1,6 +1,7 @@
 #include "messages.h"
 #include "util/exception.h"
 
+
 namespace uh::protocol
 {
 
@@ -233,6 +234,8 @@ void read(serialization::buffered_serialization& in, next_chunk::response& respo
     in.read(response.content);
 }
 
+// ---------------------------------------------------------------------
+
 void write(serialization::buffered_serialization& out, const allocate_chunk::request& request)
 {
     out.write(allocate_chunk::request_id);
@@ -422,8 +425,6 @@ void write(serialization::buffered_serialization& out, const read_chunks::respon
 {
     out.write(response.data);
     out.write(response.chunk_sizes);
-
-
 }
 
 // ---------------------------------------------------------------------
@@ -434,7 +435,8 @@ void read(serialization::buffered_serialization& in, read_chunks::response& resp
 
     response.data = in.read<std::vector<char>>();
     response.chunk_sizes = in.read<decltype (response.chunk_sizes)>();
-
 }
+
+// ---------------------------------------------------------------------
 
 } // namespace uh::protocol

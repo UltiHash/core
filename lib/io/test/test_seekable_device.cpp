@@ -74,9 +74,9 @@ BOOST_FIXTURE_TEST_CASE_TEMPLATE( seek_unspecified, T, device_types, Fixture )
     std::string copy(LOREM_IPSUM.size()-10, 0);
 
     auto read = tf2.read(copy);
-    BOOST_CHECK_EQUAL(read, LOREM_IPSUM.size()-10);
+    BOOST_CHECK_EQUAL(read, LOREM_IPSUM.size() - 10);
 
-    auto test_string = std::string{LOREM_IPSUM.begin()+10,LOREM_IPSUM.end()};
+    auto test_string = std::string{LOREM_IPSUM.begin() + 10, LOREM_IPSUM.end()};
     BOOST_CHECK_EQUAL(copy, test_string);
 
     BOOST_REQUIRE(tf2.valid());
