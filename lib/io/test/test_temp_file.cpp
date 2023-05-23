@@ -4,14 +4,17 @@
 #define BOOST_TEST_MODULE "uhLibUtil TempFile Tests"
 #endif
 
-#include <boost/test/unit_test.hpp>
+#include <test/ipsum.h>
 #include <util/exception.h>
 #include <io/file.h>
 #include <io/temp_file.h>
 
+#include <boost/test/unit_test.hpp>
+
 
 using namespace uh::util;
 using namespace uh::io;
+using namespace uh::test;
 
 namespace
 {
@@ -19,19 +22,6 @@ namespace
 // ---------------------------------------------------------------------
 
 const static std::filesystem::path TEMP_DIR = "/tmp";
-
-// ---------------------------------------------------------------------
-
-const static std::string LOREM_IPSUM =
-    "Lorem ipsum dolor sit amet, consectetur adipiscing "
-    "elit, sed do eiusmod tempor incididunt ut labore et "
-    "dolore magna aliqua. Ut enim ad minim veniam, quis "
-    "nostrud exercitation ullamco laboris nisi ut "
-    "aliquip ex ea commodo consequat. Duis aute irure "
-    "dolor in reprehenderit in voluptate velit esse "
-    "cillum dolore eu fugiat nulla pariatur. Excepteur "
-    "sint occaecat cupidatat non proident, sunt in culpa "
-    "qui officia deserunt mollit anim id est laborum.";
 
 // ---------------------------------------------------------------------
 

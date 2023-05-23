@@ -1,17 +1,13 @@
-#ifdef SINGLE_TEST_RUNNER
-#define BOOST_TEST_NO_MAIN
-#else
-#define BOOST_TEST_MODULE "uhLibChunking TempFile Tests"
-#endif
+#ifndef TEST_IPSUM_H
+#define TEST_IPSUM_H
 
-#include <boost/test/unit_test.hpp>
-#include <util/exception.h>
-#include <chunking/rabin_polynomial.h>
+#include <string>
 
 
-
-namespace
+namespace uh::test
 {
+
+// ---------------------------------------------------------------------
 
 const static std::string LOREM_IPSUM =
     "Lorem ipsum dolor sit amet, consectetur adipiscing "
@@ -26,9 +22,6 @@ const static std::string LOREM_IPSUM =
 
 // ---------------------------------------------------------------------
 
-BOOST_AUTO_TEST_CASE( dummy )
-{
-    BOOST_CHECK(true);
-}
+} // namespace uh::test
 
-}//namespace
+#endif
