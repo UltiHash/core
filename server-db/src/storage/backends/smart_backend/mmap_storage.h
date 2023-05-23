@@ -102,7 +102,7 @@ private:
     std::filesystem::path m_log_file_path;
     std::fstream m_log;
     std::map <size_t, resource_entry> m_resources;
-    std::size_t m_aggregate_size {};
+    std::size_t m_aggregated_size {};
 
 };
 

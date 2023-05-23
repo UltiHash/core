@@ -9,6 +9,7 @@
 #include <cstring>
 #include <atomic>
 #include <optional>
+#include <boost/thread.hpp>
 
 #include "mmap_storage.h"
 
@@ -72,13 +73,17 @@ private:
 
     std::pair <uint64_t, bool> resolve_hint (uint64_t hint, const std::string_view& frag);
 
+    char* init_mmap (const std::filesystem::path& file_path, size_t file_size);
+
+    search_result unlocked_find (const std::string_view& frag, uint64_t hint);
+
     void extend_mapping ();
 
-    void balance (node& z);
+    void balance (node& z, boost::upgrade_lock <boost::shared_mutex>& lock);
 
-    void left_rotate (node& x);
+    void left_rotate (node& x, boost::upgrade_lock <boost::shared_mutex>& lock);
 
-    void right_rotate (node& x);
+    void right_rotate (node& x, boost::upgrade_lock <boost::shared_mutex>& lock);
 
     inline node get_node (uint64_t offset) noexcept;
 
@@ -96,10 +101,11 @@ private:
     size_t m_file_size = SET_INIT_FILE_SIZE;
     std::filesystem::path m_file_path;
     node m_nil {};
-    std::atomic <uint64_t*> m_root;
-    std::atomic <uint64_t*> m_end;
     char* m_index_store = nullptr;
+    std::atomic <uint64_t*> m_root;
+    std::atomic_ref <uint64_t> m_end;
 
+    boost::shared_mutex m_mutex;
 };
 
 } // end namespace uh::dbn::storage::smart

@@ -52,9 +52,9 @@ void mmap_storage::mmap_file(const file_mmap_info& file) {
         throw std::runtime_error("error: could not pin the file at the desired pointer!");
     }
     m_resources.emplace_hint(m_resources.cend(),std::piecewise_construct,
-                                    std::forward_as_tuple(m_aggregate_size),
-                                    std::forward_as_tuple(ptr, file.max_size, m_aggregate_size));
-    m_aggregate_size += file.max_size;
+                                    std::forward_as_tuple(m_aggregated_size),
+                                    std::forward_as_tuple(ptr, file.max_size, m_aggregated_size));
+    m_aggregated_size += file.max_size;
 }
 
 std::fstream mmap_storage::create_logger() const {

@@ -63,7 +63,6 @@ private:
 
     std::forward_list <file_mmap_info> m_files_info;
 };
-
 // ------------- Tests Follow --------------
 
 BOOST_FIXTURE_TEST_CASE(test_mmap_storage_basic_allocation, files_info_fixture)
@@ -145,7 +144,7 @@ BOOST_FIXTURE_TEST_CASE(test_mmap_storage_persistet_alloc_test, files_info_fixtu
 
 uint64_t set_insert (mmap_set& set, std::string_view data, uint64_t hint = 2*sizeof (uint64_t)) {
     const auto data_offset = set.insert_data(data);
-    const auto h = set.insert_index(data, data_offset);
+    const auto h = set.insert_index(data, data_offset, hint);
     return h;
 }
 
@@ -183,46 +182,58 @@ BOOST_FIXTURE_TEST_CASE(basic_test_mmap_set, files_info_fixture)
 
     auto res5 = set.find("third data hello from data 3");
     BOOST_TEST(res5.match->second == "third data hello from data 3");
-/*
-    auto res6 = set.find("hello from data ");
-    std::cout << res2.match << std::endl;
 
-    auto res7 = set.find("some other");
-    std::cout << std::get <2> (res7) << std::endl;
+//    auto res6 = set.find("hello from data ");
+//    std::cout << res2.match << std::endl;
+//
+//    auto res7 = set.find("some other");
+//    std::cout << std::get <2> (res7) << std::endl;
+//
+//    auto res8 = set.find("some other data 2");
+//    std::cout << std::get <2> (res8) << std::endl;
+//
+//    auto res9 = set.find("some other something");
+//    std::cout << std::get <2> (res9) << std::endl
 
-    auto res8 = set.find("some other data 2");
-    std::cout << std::get <2> (res8) << std::endl;
-
-    auto res9 = set.find("some other something");
-    std::cout << std::get <2> (res9) << std::endl
-*/
 
 }
 
+
 BOOST_FIXTURE_TEST_CASE(basic_dedup_test, files_info_fixture)
 {
+
     cleanup();
-    mmap_storage ms(files_info());
-    prefix_deduplicator pd {ms , m_set_filename};
+    {
+        mmap_storage ms(files_info());
+        prefix_deduplicator pd{ms, m_set_filename};
 
-    std::string str1 = "hello from data 1";
-    auto res1 = pd.deduplicate(str1);
-    BOOST_TEST (res1.second == str1.size());
+        std::string str1 = "hello from data 1";
+        auto res1 = pd.deduplicate(str1);
+        BOOST_TEST (res1.second == str1.size());
 
-    std::string str2 = "hello from data 2234";
-    auto res2 = pd.deduplicate(str2);
-    BOOST_TEST (res2.second == 4);
+        std::string str2 = "hello from data 2234";
+        auto res2 = pd.deduplicate(str2);
+        BOOST_TEST (res2.second == 4);
 
-    std::string str3 = "data 2 hello from data 2";
-    auto res3 = pd.deduplicate(str3);
-    BOOST_TEST (res3.second == str3.size());
+        std::string str3 = "data 2 hello from data 2";
+        auto res3 = pd.deduplicate(str3);
+        BOOST_TEST (res3.second == str3.size());
 
-    std::string str4 = "hello from data yet again";
-    auto res4 = pd.deduplicate(str4);
-    BOOST_TEST (res4.second == 9);
+        std::string str4 = "hello from data yet again";
+        auto res4 = pd.deduplicate(str4);
+        BOOST_TEST (res4.second == 9);
 
-    std::string str5 = "yet again, some other data";
-    auto res5 = pd.deduplicate(str5);
-    BOOST_TEST (res5.second == 17);
+        std::string str5 = "yet again, some other data";
+        auto res5 = pd.deduplicate(str5);
+        BOOST_TEST (res5.second == 17);
+    }
 
+    {
+        mmap_storage ms (files_info());
+        prefix_deduplicator pd {ms, m_set_filename};
+
+        std::string str5 = "yet again, some other data";
+        auto res5 = pd.deduplicate(str5);
+        BOOST_TEST (res5.second == 0);
+    }
 }

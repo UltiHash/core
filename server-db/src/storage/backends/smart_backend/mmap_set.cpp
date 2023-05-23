@@ -7,25 +7,13 @@ namespace uh::dbn::storage::smart {
 
 mmap_set::mmap_set(mmap_storage& data_store, std::filesystem::path file) :
         m_data_store (data_store),
-        m_file_path (std::move (file)) {
+        m_file_path (std::move (file)),
+        m_index_store (init_mmap(m_file_path, m_file_size)),
+        m_root (reinterpret_cast <uint64_t*> (m_index_store)),
+        m_end (*reinterpret_cast <uint64_t*> (m_index_store + sizeof(m_root))) {
 
-    const auto existing_index = std::filesystem::exists(m_file_path.c_str());
-    const auto fd = open(m_file_path.c_str(), O_CREAT | O_RDWR, S_IRUSR | S_IWUSR);
-    if (!existing_index) {
-        ftruncate(fd, m_file_size);
-    }
-    else {
-        m_file_size = lseek (fd, SEEK_END, 0);
-    }
-
-    m_index_store = static_cast <char*> (mmap(nullptr, m_file_size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0));
-    close(fd);
-
-    m_root = reinterpret_cast <uint64_t*> (m_index_store);
-    m_end = reinterpret_cast <uint64_t*> (m_index_store + sizeof(m_root));
-
-    if (!existing_index) {
-        *m_end = NILL_OFFSET;
+    if (m_end == 0) {
+        m_end = NILL_OFFSET;
         m_nil = add_node ();
         m_nil.m_mnode->m_color = BLACK;
         set_root (m_nil);
@@ -33,6 +21,7 @@ mmap_set::mmap_set(mmap_storage& data_store, std::filesystem::path file) :
     else {
         m_nil = get_node(NILL_OFFSET);
     }
+
 }
 
 uint64_t mmap_set::insert_data(const std::string_view& frag) {
@@ -43,15 +32,17 @@ uint64_t mmap_set::insert_data(const std::string_view& frag) {
 
 uint64_t mmap_set::insert_index(const std::string_view& frag, uint64_t data_offset, uint64_t hint) {
 
-    const auto f = find (frag, hint);
+    boost::upgrade_lock lock (m_mutex);
+
+    const auto f = unlocked_find (frag, hint);
     if (f.match) {
         return f.hint;
     }
 
-    const auto y = get_node(f.hint);
     node z = add_node ();
     z.m_mnode->m_parent = f.hint;
 
+    const auto y = get_node(f.hint);
     if (f.comp == 0) {
         set_root (z);
     }
@@ -68,57 +59,18 @@ uint64_t mmap_set::insert_index(const std::string_view& frag, uint64_t data_offs
 
     const auto offset = z.m_offset;
 
-    balance (z);
+    balance (z, lock);
 
-    if (*m_end > m_file_size - SET_FILE_EXTEND_LIMIT) {
+    if (m_end > m_file_size - SET_FILE_EXTEND_LIMIT) {
         extend_mapping ();
     }
     return offset;
 }
 
 mmap_set::search_result mmap_set::find(const std::string_view& frag, uint64_t hint) {
-    auto y = m_nil;
-    search_result res;
 
-    const auto resolved = resolve_hint (hint, frag);
-    auto x = get_node (resolved.first);
-
-    if (resolved.second) {
-        char* ptr = static_cast <char*> (m_data_store.get_raw_ptr(x.m_mnode->m_frag.m_data_offset));
-        res.match = {y.m_mnode->m_frag.m_data_offset, {ptr, y.m_mnode->m_frag.m_size}};
-        return res;
-    }
-
-    int comp_int = 0;
-    node largest_lower = m_nil;
-    node smallest_upper = m_nil;
-    while (x.m_offset != NILL_OFFSET) {
-        y = x;
-        comp_int = comp (frag, x.m_mnode->m_frag);
-        if (comp_int < 0) {
-            smallest_upper = x;
-            x = get_node (x.m_mnode->m_left);
-        }
-        else if (comp_int > 0) {
-            largest_lower = x;
-            x = get_node (x.m_mnode->m_right);
-        }
-        else {
-            char* ptr = static_cast <char*> (m_data_store.get_raw_ptr(y.m_mnode->m_frag.m_data_offset));
-            res.match = {y.m_mnode->m_frag.m_data_offset, {ptr, y.m_mnode->m_frag.m_size}};
-            break;
-        }
-    }
-
-    if (!res.match) {
-        char *ptr_lower = static_cast <char *> (m_data_store.get_raw_ptr(largest_lower.m_mnode->m_frag.m_data_offset));
-        char *ptr_upper = static_cast <char *> (m_data_store.get_raw_ptr(smallest_upper.m_mnode->m_frag.m_data_offset));
-        res.lower = {largest_lower.m_mnode->m_frag.m_data_offset, {ptr_lower, largest_lower.m_mnode->m_frag.m_size}};
-        res.upper = {smallest_upper.m_mnode->m_frag.m_data_offset, {ptr_upper, smallest_upper.m_mnode->m_frag.m_size}};
-    }
-    res.hint = y.m_offset;
-    res.comp = comp_int;
-    return res;
+    boost::shared_lock lock (m_mutex);
+    return unlocked_find (frag, hint);
 }
 
 std::pair<uint64_t, bool> mmap_set::resolve_hint(uint64_t hint, const std::string_view& frag) {
@@ -259,8 +211,77 @@ std::pair<uint64_t, bool> mmap_set::resolve_hint(uint64_t hint, const std::strin
     return {*m_root, false};
 }
 
+
+mmap_set::search_result mmap_set::unlocked_find (const std::string_view &frag, uint64_t hint) {
+
+    auto y = m_nil;
+    search_result res;
+
+    const auto resolved = resolve_hint (hint, frag);
+    auto x = get_node (resolved.first);
+
+    if (resolved.second) {
+        char* ptr = static_cast <char*> (m_data_store.get_raw_ptr(x.m_mnode->m_frag.m_data_offset));
+        res.match = {y.m_mnode->m_frag.m_data_offset, {ptr, y.m_mnode->m_frag.m_size}};
+        return res;
+    }
+
+    int comp_int = 0;
+    node largest_lower = m_nil;
+    node smallest_upper = m_nil;
+    while (x.m_offset != NILL_OFFSET) {
+        y = x;
+        comp_int = comp (frag, x.m_mnode->m_frag);
+        if (comp_int < 0) {
+            smallest_upper = x;
+            x = get_node (x.m_mnode->m_left);
+        }
+        else if (comp_int > 0) {
+            largest_lower = x;
+            x = get_node (x.m_mnode->m_right);
+        }
+        else {
+            char* ptr = static_cast <char*> (m_data_store.get_raw_ptr(y.m_mnode->m_frag.m_data_offset));
+            res.match = {y.m_mnode->m_frag.m_data_offset, {ptr, y.m_mnode->m_frag.m_size}};
+            break;
+        }
+    }
+
+    if (!res.match) {
+        char *ptr_lower = static_cast <char *> (m_data_store.get_raw_ptr(largest_lower.m_mnode->m_frag.m_data_offset));
+        char *ptr_upper = static_cast <char *> (m_data_store.get_raw_ptr(smallest_upper.m_mnode->m_frag.m_data_offset));
+        res.lower = {largest_lower.m_mnode->m_frag.m_data_offset, {ptr_lower, largest_lower.m_mnode->m_frag.m_size}};
+        res.upper = {smallest_upper.m_mnode->m_frag.m_data_offset, {ptr_upper, smallest_upper.m_mnode->m_frag.m_size}};
+    }
+    res.hint = y.m_offset;
+    res.comp = comp_int;
+    return res;
+}
+
+char* mmap_set::init_mmap (const std::filesystem::path& file_path, size_t file_size) {
+    const auto existing_index = std::filesystem::exists(file_path.c_str());
+    const auto fd = open(file_path.c_str(), O_CREAT | O_RDWR, S_IRUSR | S_IWUSR);
+    if (!existing_index) {
+        ftruncate(fd, file_size);
+    }
+    else {
+        file_size = lseek (fd, SEEK_END, 0);
+    }
+
+    const auto mmap_addr = static_cast <char*> (mmap(nullptr, file_size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0));
+    close(fd);
+
+    if (!existing_index) {
+        std::memset(mmap_addr, 0, NILL_OFFSET);
+    }
+
+    return mmap_addr;
+}
+
+
+
 void mmap_set::extend_mapping() {
-    msync (m_index_store, *m_end, MS_SYNC);
+    msync (m_index_store, m_end, MS_SYNC);
     munmap (m_index_store, m_file_size);
 
     m_file_size *= 2;
@@ -273,11 +294,11 @@ void mmap_set::extend_mapping() {
 
     m_nil = get_node(2 * sizeof (uint64_t));
     m_root = reinterpret_cast <uint64_t*> (m_index_store);
-    m_end = reinterpret_cast <uint64_t*> (m_index_store + sizeof(m_root));
+    m_end = *reinterpret_cast <uint64_t*> (m_index_store + sizeof(m_root));
 
 }
 
-void mmap_set::balance(mmap_set::node& z) {
+void mmap_set::balance(mmap_set::node& z, boost::upgrade_lock <boost::shared_mutex>& lock) {
     auto parent = get_node (z.m_mnode->m_parent);
     while (parent.m_mnode->m_color == RED) {
         auto grand_parent = get_node(parent.m_mnode->m_parent);
@@ -296,11 +317,11 @@ void mmap_set::balance(mmap_set::node& z) {
                     z = parent;
                     parent = get_node (z.m_mnode->m_parent);
                     grand_parent = get_node(parent.m_mnode->m_parent);
-                    left_rotate (z);
+                    left_rotate (z, lock);
                 }
                 parent.m_mnode->m_color = BLACK;
                 grand_parent.m_mnode->m_color = RED;
-                right_rotate (grand_parent);
+                right_rotate (grand_parent, lock);
             }
         }
         else {
@@ -318,19 +339,23 @@ void mmap_set::balance(mmap_set::node& z) {
                     z = parent;
                     parent = get_node (z.m_mnode->m_parent);
                     grand_parent = get_node(parent.m_mnode->m_parent);
-                    right_rotate (z);
+                    right_rotate (z, lock);
                 }
                 parent.m_mnode->m_color = BLACK;
                 grand_parent.m_mnode->m_color = RED;
-                left_rotate (grand_parent);
+                left_rotate (grand_parent, lock);
             }
         }
     }
     get_node(*m_root).m_mnode->m_color = BLACK;
 }
 
-void mmap_set::left_rotate(mmap_set::node& x) {
+void mmap_set::left_rotate(mmap_set::node& x, boost::upgrade_lock <boost::shared_mutex>& lock) {
+
     auto y = get_node(x.m_mnode->m_right);
+
+    boost::upgrade_to_unique_lock <boost::shared_mutex> write_lock (lock);
+
     x.m_mnode->m_right = y.m_mnode->m_left;
     if (y.m_mnode->m_left != NILL_OFFSET) {
         get_node (y.m_mnode->m_left).m_mnode->m_parent = x.m_offset;
@@ -349,8 +374,11 @@ void mmap_set::left_rotate(mmap_set::node& x) {
     x.m_mnode->m_parent = y.m_offset;
 }
 
-void mmap_set::right_rotate(mmap_set::node& x) {
+void mmap_set::right_rotate(mmap_set::node& x, boost::upgrade_lock <boost::shared_mutex>& lock) {
     auto y = get_node(x.m_mnode->m_left);
+
+    boost::upgrade_to_unique_lock <boost::shared_mutex> write_lock (lock);
+
     x.m_mnode->m_left = y.m_mnode->m_right;
     if (y.m_mnode->m_right != NILL_OFFSET) {
         get_node (y.m_mnode->m_right).m_mnode->m_parent = x.m_offset;
@@ -375,8 +403,11 @@ mmap_set::node mmap_set::get_node(uint64_t offset) noexcept {
 
 mmap_set::node mmap_set::add_node() noexcept {
     node n;
-    n.m_offset = *m_end;
-    *m_end += sizeof (mmap_node);
+    do {
+        n.m_offset = m_end;
+    }
+    while (!m_end.compare_exchange_weak(n.m_offset, m_end + sizeof (mmap_node)));
+
     n.m_mnode = reinterpret_cast <mmap_node*> (m_index_store + n.m_offset);
     return n;
 }
