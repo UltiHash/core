@@ -16,13 +16,6 @@ namespace
 
 // ---------------------------------------------------------------------
 
-blob to_blob(const std::string& s)
-{
-    return blob(s.data(), s.data() + s.size());
-}
-
-// ---------------------------------------------------------------------
-
 BOOST_AUTO_TEST_CASE( status_message )
 {
     {
