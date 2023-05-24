@@ -72,7 +72,6 @@ void server::handle_normal_request(uint8_t request_id)
     {
         case quit::request_id: return handle_quit();
         case free_space::request_id: return handle_free_space();
-        case reset::request_id: return handle_reset();
         case client_statistics::request_id: return handle_client_statistics();
         case write_chunks::request_id: return handle_write_chunks();
         case read_chunks::request_id: return handle_read_chunks();
@@ -153,22 +152,6 @@ void server::handle_free_space()
 
     write(m_bs, status{ status::OK });
     write(m_bs, free_space::response{ .space_available = space });
-    m_bs.sync ();
-}
-
-// ---------------------------------------------------------------------
-
-void server::handle_reset()
-{
-    DEBUG << "reset request on " << client_->peer();
-
-    reset::request req;
-    read(m_bs, req);
-
-    m_handler_interface->on_reset();
-    m_state = server_state::normal;
-
-    write(m_bs, status{ status::OK });
     m_bs.sync ();
 }
 

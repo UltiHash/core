@@ -109,29 +109,6 @@ void read(serialization::buffered_serialization& in, free_space::response& respo
 
 // ---------------------------------------------------------------------
 
-struct reset
-{
-    struct request
-    {
-    };
-
-    struct response
-    {
-    };
-
-    constexpr static uint8_t request_id = 0x06;
-};
-
-// ---------------------------------------------------------------------
-
-void write(serialization::buffered_serialization& out, const reset::request& request);
-void read(serialization::buffered_serialization& in, reset::request& request);
-
-void write(serialization::buffered_serialization& out, const reset::response& response);
-void read(serialization::buffered_serialization& in, reset::response& response);
-
-// ---------------------------------------------------------------------
-
 struct next_chunk
 {
     struct request

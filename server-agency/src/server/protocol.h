@@ -28,7 +28,6 @@ public:
                       const uh::net::server_info &serv_info);
 
     uh::protocol::server_information on_hello(const std::string& client_version) override;
-    std::unique_ptr<uh::protocol::allocation> on_allocate_chunk(std::size_t size) override;
     void on_client_statistics(uh::protocol::client_statistics::request& client_stat) override;
     uh::protocol::write_chunks::response on_write_chunks (const uh::protocol::write_chunks::request &) override;
     uh::protocol::read_chunks::response on_read_chunks (const uh::protocol::read_chunks::request &) override;

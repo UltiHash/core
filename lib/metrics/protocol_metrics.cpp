@@ -15,12 +15,8 @@ protocol_metrics::protocol_metrics(uh::metrics::service& service)
       m_reqs_hello(m_counters.Add({{ "type", "hello" }})),
       m_reqs_free_space(m_counters.Add({{ "type", "free_space" }})),
       m_reqs_quit(m_counters.Add({{ "type", "quit" }})),
-      m_reqs_reset(m_counters.Add({{ "type", "reset" }})),
-      m_reqs_write_chunk(m_counters.Add({{ "type", "write_chunk" }})),
       m_reqs_write_chunks(m_counters.Add({{ "type", "write_chunks" }})),
       m_reqs_read_chunks(m_counters.Add({{ "type", "read_chunks" }})),
-      m_reqs_allocate_chunk(m_counters.Add({{ "type", "allocate_chunk" }})),
-      m_reqs_finalize(m_counters.Add({{ "type", "finalize" }})),
       m_reqs_client_statistics(m_counters.Add({{ "type", "client_statistics" }}))
 
 {
@@ -49,20 +45,6 @@ prometheus::Counter& protocol_metrics::reqs_quit() const
 
 // ---------------------------------------------------------------------
 
-prometheus::Counter& protocol_metrics::reqs_reset() const
-{
-    return m_reqs_reset;
-}
-
-// ---------------------------------------------------------------------
-
-prometheus::Counter& protocol_metrics::reqs_write_chunk() const
-{
-    return m_reqs_write_chunk;
-}
-
-// ---------------------------------------------------------------------
-
 prometheus::Counter& protocol_metrics::reqs_client_statistics() const
 {
     return m_reqs_client_statistics;
@@ -80,20 +62,6 @@ prometheus::Counter& protocol_metrics::reqs_write_chunks () const
 prometheus::Counter& protocol_metrics::reqs_read_chunks () const
 {
     return m_reqs_read_chunks;
-}
-
-// ---------------------------------------------------------------------
-
-prometheus::Counter& protocol_metrics::reqs_allocate_chunk() const
-{
-    return m_reqs_allocate_chunk;
-}
-
-// ---------------------------------------------------------------------
-
-prometheus::Counter& protocol_metrics::reqs_finalize() const
-{
-    return m_reqs_finalize;
 }
 
 // ---------------------------------------------------------------------
@@ -131,29 +99,6 @@ void protocol_metrics_wrapper::on_quit(const std::string& reason)
 
 // ---------------------------------------------------------------------
 
-void protocol_metrics_wrapper::on_reset()
-{
-    m_metrics.reqs_reset().Increment();
-    return m_base->on_reset();
-}
-
-// ---------------------------------------------------------------------
-
-void protocol_metrics_wrapper::on_finalize()
-{
-    m_metrics.reqs_finalize().Increment();
-    return m_base->on_finalize();
-}
-
-// ---------------------------------------------------------------------
-
-void protocol_metrics_wrapper::on_write_chunk(std::span<char>)
-{
-    m_metrics.reqs_write_chunk().Increment();
-}
-
-// ---------------------------------------------------------------------
-
 void protocol_metrics_wrapper::on_client_statistics(uh::protocol::client_statistics::request& client_stat)
 {
     m_metrics.reqs_client_statistics().Increment();
@@ -166,14 +111,6 @@ uh::protocol::write_chunks::response protocol_metrics_wrapper::on_write_chunks (
 {
     m_metrics.reqs_write_chunks().Increment(req.chunk_sizes.size());
     return m_base->on_write_chunks(req);
-}
-
-// ---------------------------------------------------------------------
-
-std::unique_ptr<allocation> protocol_metrics_wrapper::on_allocate_chunk(std::size_t size)
-{
-    m_metrics.reqs_allocate_chunk().Increment();
-    return m_base->on_allocate_chunk(size);
 }
 
 // ---------------------------------------------------------------------

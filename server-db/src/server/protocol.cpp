@@ -50,13 +50,6 @@ std::size_t protocol::on_free_space()
 
 // ---------------------------------------------------------------------
 
-std::unique_ptr<uh::protocol::allocation> protocol::on_allocate_chunk(std::size_t size)
-{
-    return m_storage.allocate(size);
-}
-
-// ---------------------------------------------------------------------
-
 uh::protocol::write_chunks::response protocol::on_write_chunks(const write_chunks::request &req)
 {
     auto alloc = m_storage.allocate_multi (req.data.size());

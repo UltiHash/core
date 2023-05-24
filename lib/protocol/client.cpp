@@ -92,17 +92,6 @@ std::size_t client::free_space()
 
 // ---------------------------------------------------------------------
 
-void client::reset()
-{
-    write(m_bs, reset::request{});
-    m_bs.sync();
-
-    reset::response response;
-    read(m_bs, response);
-}
-
-// ---------------------------------------------------------------------
-
 std::streamsize client::next_chunk(std::span<char> buffer)
 {
     write(m_bs, next_chunk::request{ .max_size = static_cast<uint32_t>(buffer.size()) });

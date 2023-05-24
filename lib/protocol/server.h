@@ -47,7 +47,6 @@ private:
     void handle_hello();
     void handle_quit();
     void handle_free_space();
-    void handle_reset();
     void handle_client_statistics();
     void handle_write_chunks();
     void handle_read_chunks();

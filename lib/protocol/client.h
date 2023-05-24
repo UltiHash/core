@@ -81,11 +81,6 @@ public:
     std::size_t free_space();
 
     /**
-     * Reset the connection to normal state.
-     */
-    void reset();
-
-    /**
      * Return true, if there is a working underlying connection. False indicates
      * that there was an I/O error before.
      */

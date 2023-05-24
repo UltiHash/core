@@ -138,37 +138,6 @@ void read(serialization::buffered_serialization& in, free_space::response& respo
 
 // ---------------------------------------------------------------------
 
-void write(serialization::buffered_serialization& out, const reset::request& request)
-{
-    out.write(reset::request_id);
-}
-
-// ---------------------------------------------------------------------
-
-void read(serialization::buffered_serialization& in, reset::request& request)
-{
-    reset::request tmp;
-    std::swap(tmp, request);
-}
-
-// ---------------------------------------------------------------------
-
-void write(serialization::buffered_serialization& out, const reset::response&)
-{
-}
-
-// ---------------------------------------------------------------------
-
-void read(serialization::buffered_serialization& in, reset::response& response)
-{
-    check_status(in);
-
-    reset::response tmp;
-    std::swap(tmp, response);
-}
-
-// ---------------------------------------------------------------------
-
 void write(serialization::buffered_serialization& out, const next_chunk::request& request)
 {
     out.write(next_chunk::request_id);
