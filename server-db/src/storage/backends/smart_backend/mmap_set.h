@@ -59,31 +59,29 @@ public:
 
     mmap_set(mmap_storage& data_store, std::filesystem::path file);
 
-    uint64_t insert_data (const std::string_view& frag);
     uint64_t insert_index (const std::string_view& frag, uint64_t data_offset, uint64_t hint = NILL_OFFSET);
-
-
 
     search_result find (const std::string_view& frag, uint64_t hint = NILL_OFFSET);
 
+    void sync (uint64_t offset);
+
     uint64_t remove (fragment& frag, uint64_t hint);
 
+    ~mmap_set ();
 
 private:
 
     std::pair <uint64_t, bool> resolve_hint (uint64_t hint, const std::string_view& frag);
 
-    char* init_mmap (const std::filesystem::path& file_path, size_t file_size);
-
     search_result unlocked_find (const std::string_view& frag, uint64_t hint);
 
     void extend_mapping ();
 
-    void balance (node& z, boost::upgrade_lock <boost::shared_mutex>& lock);
+    void balance (node& z);
 
-    void left_rotate (node& x, boost::upgrade_lock <boost::shared_mutex>& lock);
+    void left_rotate (node& x);
 
-    void right_rotate (node& x, boost::upgrade_lock <boost::shared_mutex>& lock);
+    void right_rotate (node& x);
 
     inline node get_node (uint64_t offset) noexcept;
 

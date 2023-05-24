@@ -2,13 +2,14 @@
 // Created by masi on 5/22/23.
 //
 #include "mmap_set.h"
+#include "smart_storage.h"
 
 namespace uh::dbn::storage::smart {
 
 mmap_set::mmap_set(mmap_storage& data_store, std::filesystem::path file) :
         m_data_store (data_store),
         m_file_path (std::move (file)),
-        m_index_store (init_mmap(m_file_path, m_file_size)),
+        m_index_store (init_mmap(m_file_path, NILL_OFFSET, m_file_size)),
         m_root (reinterpret_cast <uint64_t*> (m_index_store)),
         m_end (*reinterpret_cast <uint64_t*> (m_index_store + sizeof(m_root))) {
 
@@ -22,12 +23,6 @@ mmap_set::mmap_set(mmap_storage& data_store, std::filesystem::path file) :
         m_nil = get_node(NILL_OFFSET);
     }
 
-}
-
-uint64_t mmap_set::insert_data(const std::string_view& frag) {
-    auto alloc = m_data_store.allocate(frag.size());
-    std::memcpy(alloc.m_addr, frag.data(), frag.size());
-    return alloc.m_offset;
 }
 
 uint64_t mmap_set::insert_index(const std::string_view& frag, uint64_t data_offset, uint64_t hint) {
@@ -59,7 +54,8 @@ uint64_t mmap_set::insert_index(const std::string_view& frag, uint64_t data_offs
 
     const auto offset = z.m_offset;
 
-    balance (z, lock);
+    boost::upgrade_to_unique_lock <boost::shared_mutex> write_lock (lock);
+    balance (z);
 
     if (m_end > m_file_size - SET_FILE_EXTEND_LIMIT) {
         extend_mapping ();
@@ -71,6 +67,18 @@ mmap_set::search_result mmap_set::find(const std::string_view& frag, uint64_t hi
 
     boost::shared_lock lock (m_mutex);
     return unlocked_find (frag, hint);
+}
+
+void mmap_set::sync(uint64_t offset) {
+
+    if (msync(align_ptr (m_index_store + offset), sizeof (mmap_node), MS_SYNC) != 0) {
+        throw std::system_error (errno, std::system_category(), "mmap_set could not sync the mmap data");
+    }
+}
+
+mmap_set::~mmap_set() {
+    msync (m_index_store, m_file_size, MS_SYNC);
+    munmap(m_index_store, m_file_size);
 }
 
 std::pair<uint64_t, bool> mmap_set::resolve_hint(uint64_t hint, const std::string_view& frag) {
@@ -258,29 +266,8 @@ mmap_set::search_result mmap_set::unlocked_find (const std::string_view &frag, u
     return res;
 }
 
-char* mmap_set::init_mmap (const std::filesystem::path& file_path, size_t file_size) {
-    const auto existing_index = std::filesystem::exists(file_path.c_str());
-    const auto fd = open(file_path.c_str(), O_CREAT | O_RDWR, S_IRUSR | S_IWUSR);
-    if (!existing_index) {
-        ftruncate(fd, file_size);
-    }
-    else {
-        file_size = lseek (fd, SEEK_END, 0);
-    }
-
-    const auto mmap_addr = static_cast <char*> (mmap(nullptr, file_size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0));
-    close(fd);
-
-    if (!existing_index) {
-        std::memset(mmap_addr, 0, NILL_OFFSET);
-    }
-
-    return mmap_addr;
-}
-
-
-
 void mmap_set::extend_mapping() {
+
     msync (m_index_store, m_end, MS_SYNC);
     munmap (m_index_store, m_file_size);
 
@@ -298,7 +285,7 @@ void mmap_set::extend_mapping() {
 
 }
 
-void mmap_set::balance(mmap_set::node& z, boost::upgrade_lock <boost::shared_mutex>& lock) {
+void mmap_set::balance(mmap_set::node& z) {
     auto parent = get_node (z.m_mnode->m_parent);
     while (parent.m_mnode->m_color == RED) {
         auto grand_parent = get_node(parent.m_mnode->m_parent);
@@ -317,11 +304,11 @@ void mmap_set::balance(mmap_set::node& z, boost::upgrade_lock <boost::shared_mut
                     z = parent;
                     parent = get_node (z.m_mnode->m_parent);
                     grand_parent = get_node(parent.m_mnode->m_parent);
-                    left_rotate (z, lock);
+                    left_rotate (z);
                 }
                 parent.m_mnode->m_color = BLACK;
                 grand_parent.m_mnode->m_color = RED;
-                right_rotate (grand_parent, lock);
+                right_rotate (grand_parent);
             }
         }
         else {
@@ -339,23 +326,20 @@ void mmap_set::balance(mmap_set::node& z, boost::upgrade_lock <boost::shared_mut
                     z = parent;
                     parent = get_node (z.m_mnode->m_parent);
                     grand_parent = get_node(parent.m_mnode->m_parent);
-                    right_rotate (z, lock);
+                    right_rotate (z);
                 }
                 parent.m_mnode->m_color = BLACK;
                 grand_parent.m_mnode->m_color = RED;
-                left_rotate (grand_parent, lock);
+                left_rotate (grand_parent);
             }
         }
     }
     get_node(*m_root).m_mnode->m_color = BLACK;
 }
 
-void mmap_set::left_rotate(mmap_set::node& x, boost::upgrade_lock <boost::shared_mutex>& lock) {
+void mmap_set::left_rotate(mmap_set::node& x) {
 
     auto y = get_node(x.m_mnode->m_right);
-
-    boost::upgrade_to_unique_lock <boost::shared_mutex> write_lock (lock);
-
     x.m_mnode->m_right = y.m_mnode->m_left;
     if (y.m_mnode->m_left != NILL_OFFSET) {
         get_node (y.m_mnode->m_left).m_mnode->m_parent = x.m_offset;
@@ -374,11 +358,9 @@ void mmap_set::left_rotate(mmap_set::node& x, boost::upgrade_lock <boost::shared
     x.m_mnode->m_parent = y.m_offset;
 }
 
-void mmap_set::right_rotate(mmap_set::node& x, boost::upgrade_lock <boost::shared_mutex>& lock) {
+void mmap_set::right_rotate(mmap_set::node& x) {
+
     auto y = get_node(x.m_mnode->m_left);
-
-    boost::upgrade_to_unique_lock <boost::shared_mutex> write_lock (lock);
-
     x.m_mnode->m_left = y.m_mnode->m_right;
     if (y.m_mnode->m_right != NILL_OFFSET) {
         get_node (y.m_mnode->m_right).m_mnode->m_parent = x.m_offset;

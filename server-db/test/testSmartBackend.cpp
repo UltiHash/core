@@ -7,11 +7,14 @@
 #define BOOST_TEST_MODULE "uhServerDb SmartBackend Tests"
 #endif
 
+#include <span>
 #include <boost/test/unit_test.hpp>
 #include <storage/backends/smart_backend/mmap_storage.h>
-#include "storage/backend.h"
-#include "storage/backends/smart_backend/mmap_set.h"
-#include "storage/backends/smart_backend/prefix_deduplicator.h"
+#include <storage/backend.h>
+#include <storage/backends/smart_backend/mmap_set.h>
+#include <storage/backends/smart_backend/smart_storage.h>
+#include <storage/backends/smart_backend/robin_hood_hashmap.h>
+
 
 using namespace uh::dbn::storage::smart;
 
@@ -21,6 +24,9 @@ public:
     static constexpr size_t FILE_SIZE = 24 * 1024;
 
     const std::filesystem::path m_set_filename = "set_data";
+    const std::filesystem::path m_hashmap_key_filename = "hashmap_key_data";
+    const std::filesystem::path m_hashmap_value_filename = "hashmap_value_data";
+
 
     files_info_fixture(): m_files_info (generate_files_info ()) {
 
@@ -43,6 +49,14 @@ public:
 
         if (exists(m_set_filename)) {
             std::filesystem::remove(m_set_filename);
+        }
+
+        if (exists(m_hashmap_key_filename)) {
+            std::filesystem::remove(m_hashmap_key_filename);
+        }
+
+        if (exists(m_hashmap_value_filename)) {
+            std::filesystem::remove(m_hashmap_value_filename);
         }
     }
 
@@ -142,9 +156,10 @@ BOOST_FIXTURE_TEST_CASE(test_mmap_storage_persistet_alloc_test, files_info_fixtu
 }
 
 
-uint64_t set_insert (mmap_set& set, std::string_view data, uint64_t hint = 2*sizeof (uint64_t)) {
-    const auto data_offset = set.insert_data(data);
-    const auto h = set.insert_index(data, data_offset, hint);
+uint64_t set_insert (mmap_storage& ms, mmap_set& set, std::string_view data, uint64_t hint = 2*sizeof (uint64_t)) {
+    auto alloc = ms.allocate(data.size());
+    std::memcpy(alloc.m_addr, data.data(), data.size());
+    const auto h = set.insert_index(data, alloc.m_offset, hint);
     return h;
 }
 
@@ -155,15 +170,15 @@ BOOST_FIXTURE_TEST_CASE(basic_test_mmap_set, files_info_fixture)
 
     mmap_set set {ms, m_set_filename};
 
-    auto h = set_insert (set, "hello from data 1");
-    h = set_insert (set, "data 2 hello from data 2", h);
-    set_insert(set, "third data hello from data 3", h);
-    set_insert(set, "some other data");
-    set_insert(set, "yet again, some other data");
-    h = set_insert(set, "yet again, some other data", h);
-    set_insert(set, "yet again, some other data");
-    set_insert(set, "and even more data");
-    set_insert(set, "third data hello from data 3", h);
+    auto h = set_insert (ms, set, "hello from data 1");
+    h = set_insert (ms, set, "data 2 hello from data 2", h);
+    set_insert(ms, set, "third data hello from data 3", h);
+    set_insert(ms, set, "some other data");
+    set_insert(ms, set, "yet again, some other data");
+    h = set_insert(ms, set, "yet again, some other data", h);
+    set_insert(ms, set, "yet again, some other data");
+    set_insert(ms, set, "and even more data");
+    set_insert(ms, set, "third data hello from data 3", h);
 
 
 
@@ -203,37 +218,119 @@ BOOST_FIXTURE_TEST_CASE(basic_dedup_test, files_info_fixture)
 {
 
     cleanup();
+    std::hash <std::string> h;
+    auto hs = [] (unsigned long v) {
+        return std::span <char> {reinterpret_cast <char*> (&v), sizeof (v)};
+    };
+
     {
-        mmap_storage ms(files_info());
-        prefix_deduplicator pd{ms, m_set_filename};
+        smart_storage pd{files_info(), m_set_filename};
+
 
         std::string str1 = "hello from data 1";
-        auto res1 = pd.deduplicate(str1);
-        BOOST_TEST (res1.second == str1.size());
+        auto res1 = pd.integrate(hs (h (str1)), str1);
+        BOOST_TEST (res1 == str1.size());
 
         std::string str2 = "hello from data 2234";
-        auto res2 = pd.deduplicate(str2);
-        BOOST_TEST (res2.second == 4);
+        auto res2 = pd.integrate(hs (h (str2)), str2);
+        BOOST_TEST (res2 == 4);
 
         std::string str3 = "data 2 hello from data 2";
-        auto res3 = pd.deduplicate(str3);
-        BOOST_TEST (res3.second == str3.size());
+        auto res3 = pd.integrate(hs (h (str3)), str3);
+        BOOST_TEST (res3 == str3.size());
 
         std::string str4 = "hello from data yet again";
-        auto res4 = pd.deduplicate(str4);
-        BOOST_TEST (res4.second == 9);
+        auto res4 = pd.integrate(hs (h (str4)), str4);
+        BOOST_TEST (res4 == 9);
 
         std::string str5 = "yet again, some other data";
-        auto res5 = pd.deduplicate(str5);
-        BOOST_TEST (res5.second == 17);
+        auto res5 = pd.integrate(hs (h (str5)), str5);
+        BOOST_TEST (res5 == 17);
     }
 
     {
-        mmap_storage ms (files_info());
-        prefix_deduplicator pd {ms, m_set_filename};
+        smart_storage pd{files_info(), m_set_filename};
 
         std::string str5 = "yet again, some other data";
-        auto res5 = pd.deduplicate(str5);
-        BOOST_TEST (res5.second == 0);
+        auto res5 = pd.integrate(hs (h (str5)), str5);
+        BOOST_TEST (res5 == 0);
+    }
+}
+
+
+void insert_in_hm (robin_hood_hashmap& hm, std::string& k, std::string& v) {
+    std::span <char> sk {k};
+    std::span <char> sv {v};
+    hm.insert(sk, sv);
+}
+
+BOOST_FIXTURE_TEST_CASE(basic_hashmap_test, files_info_fixture)
+{
+    cleanup();
+
+
+    std::string k1 = "bba3f3c564f31d8664c5775fbe16580061693f1db21069b58fa448ecbbf397f2264ab1fb8f17f33edbdab52def96fd2b1124d04ba1764b554e0e7b49a24d5574";
+    std::string v1 = "value1";
+
+    std::string k2 = "ce8cd8c8035651ac62d1f74f6f16f98263998a9cba6183e3afd356bc93e81962432b50e28b2af172576d6d61a18e1b35241db63b3b55d3e023bea671402a3ac8";
+    std::string v2 = "value2";
+
+    std::string k3 = "521e6c7bf2a02d97f8f055f12afaadf93dbb4b1dd1a4fcd042302143d43e5eb3b7b325bff8af75eb6037cf0adec1eeba7eec19ca8e1e10424454bd5e3356f73a";
+    std::string v3 = "value3";
+
+    std::string k4 = "416c19b9f9c498f58685a33f76f73bebb0064525757f5d46682f35c903e8629e0fb16107ddd8f34f9a5a5f0057b13dc77c2daebbc17cf207320790222ad28212";
+    std::string v4 = "value4";
+
+    std::string k5 = "067cd2591e8a3087596f9c3339325929e1341979d0fe4cd4fdbd2d2376432c745db1beb647f6eace883659ae9418cacb36a7e58bf719f41b5beb962c84dd8873";
+    std::string v5 = "value5";
+
+    {
+        mmap_storage ms(files_info());
+
+        robin_hood_hashmap hm (m_hashmap_key_filename, ms);
+
+        insert_in_hm(hm, k1, v1);
+
+        insert_in_hm(hm, k2, v2);
+
+        insert_in_hm(hm, k3, v3);
+
+        insert_in_hm(hm, k4, v4);
+
+        insert_in_hm(hm, k5, v5);
+
+        auto res = hm.get(k1);
+        BOOST_TEST(v1 == std::string (res.value().data(), res.value().size()));
+
+        res = hm.get(k2);
+        BOOST_TEST(v2 == std::string (res.value().data(), res.value().size()));
+
+        res = hm.get(k5);
+        BOOST_TEST(v5 == std::string (res.value().data(), res.value().size()));
+
+        res = hm.get(k4);
+        BOOST_TEST(v4 == std::string (res.value().data(), res.value().size()));
+
+        res = hm.get(k3);
+        BOOST_TEST(v3 == std::string (res.value().data(), res.value().size()));
+    }
+    {
+        mmap_storage ms(files_info());
+
+        robin_hood_hashmap hm (m_hashmap_key_filename, ms);
+        auto res = hm.get(k1);
+        BOOST_TEST(v1 == std::string (res.value().data(), res.value().size()));
+
+        res = hm.get(k2);
+        BOOST_TEST(v2 == std::string (res.value().data(), res.value().size()));
+
+        res = hm.get(k5);
+        BOOST_TEST(v5 == std::string (res.value().data(), res.value().size()));
+
+        res = hm.get(k4);
+        BOOST_TEST(v4 == std::string (res.value().data(), res.value().size()));
+
+        res = hm.get(k3);
+        BOOST_TEST(v3 == std::string (res.value().data(), res.value().size()));
     }
 }

@@ -10,15 +10,20 @@
 #include <fstream>
 #include <memory_resource>
 #include <map>
+#include <set>
+#include <system_error>
 
 #include <sys/mman.h>
 #include <fcntl.h>
 #include <unistd.h>
-#include <set>
+#include <cerrno>
+#include <boost/interprocess/mapped_region.hpp>
 
 namespace uh::dbn::storage::smart {
 
 class mmap_storage;
+
+void* align_ptr (void* ptr);
 
 struct file_mmap_info {
     std::filesystem::path path;
@@ -63,11 +68,18 @@ public:
     void sync (void* ptr, std::size_t size);
 
     /**
+     * Flushes the whole mmap storage to disk. Only return when sync was finished.
+     */
+    void sync ();
+
+    /**
      * Transforms the given offset to a pointer on the memory.
      * @param offset
      * @return pointer
      */
     void* get_raw_ptr (size_t offset);
+
+    ~mmap_storage();
 
 private:
 

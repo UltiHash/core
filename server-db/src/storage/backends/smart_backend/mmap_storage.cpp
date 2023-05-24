@@ -2,6 +2,7 @@
 // Created by masi on 5/15/23.
 //
 #include <unordered_map>
+#include <boost/interprocess/mapped_region.hpp>
 #include "mmap_storage.h"
 
 namespace uh::dbn::storage::smart {
@@ -31,7 +32,17 @@ void mmap_storage::deallocate(const offset_ptr& off_ptr, size_t size) {
 }
 
 void mmap_storage::sync(void *ptr, std::size_t size) {
-    msync(ptr, size, MS_SYNC);
+    if (msync(align_ptr (ptr), size, MS_SYNC) != 0) {
+        throw std::system_error (errno, std::system_category(), "mmap_storage could not sync the mmap data");
+    }
+}
+
+void mmap_storage::sync () {
+    for (auto &resource: m_resources) {
+        if (msync (resource.second.m_ptr.m_addr, resource.second.m_size, MS_SYNC) != 0) {
+            throw std::system_error (errno, std::system_category(), "mmap_storage could not sync the mmap data");
+        }
+    }
 }
 
 void *mmap_storage::get_raw_ptr(size_t offset) {
@@ -136,8 +147,12 @@ mmap_storage::resource_entry &mmap_storage::get_resource(size_t offset, size_t s
     return itr->second;
 }
 
+mmap_storage::~mmap_storage() {
+    sync();
+}
+
 offset_ptr::offset_ptr(size_t offset, void *addr) :
-        m_addr (static_cast <char*> (addr)), m_offset (offset) {}
+    m_addr (static_cast <char*> (addr)), m_offset (offset) {}
 
 offset_ptr offset_ptr::get_offset_ptr_at(size_t offset) const {
     if (m_addr == nullptr) {
@@ -163,5 +178,10 @@ std::pmr::memory_resource &mmap_storage::resource_entry::get_pool_resource() {
     return m_pool_resource;
 }
 
+
+void *align_ptr(void *ptr) {
+    static const size_t PAGE_SIZE = boost::interprocess::mapped_region::get_page_size();
+    return static_cast <char*> (ptr) - reinterpret_cast <size_t> (ptr) % PAGE_SIZE;
+}
 
 } // end namespace uh::dbn::storage::smart
