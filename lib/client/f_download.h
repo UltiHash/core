@@ -3,7 +3,7 @@
 
 #include <protocol/client_pool.h>
 #include <uhv/job_queue.h>
-#include "../common/thread_manager.h"
+#include "thread_manager.h"
 #include <fstream>
 #include <map>
 

@@ -7,7 +7,7 @@
 #include <protocol/server.h>
 #include <chunking/mod.h>
 #include <algorithm>
-#include "../common/thread_manager.h"
+#include "thread_manager.h"
 
 #include <fstream>
 #include <map>
