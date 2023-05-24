@@ -52,9 +52,6 @@ private:
     void handle_quit();
     void handle_free_space();
     void handle_reset();
-    void handle_allocate_chunk();
-    void handle_write_chunk();
-    void handle_finalize_block();
     void handle_client_statistics();
     void handle_write_chunks();
     void handle_read_chunks();
@@ -66,7 +63,6 @@ private:
     serialization::buffered_serialization m_bs;
 
     std::unique_ptr<request_interface> m_handler_interface;
-
 };
 
 // ---------------------------------------------------------------------

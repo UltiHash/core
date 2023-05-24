@@ -1,6 +1,5 @@
 #include "client.h"
 
-#include "client_allocation.h"
 #include "messages.h"
 
 #include <util/exception.h>
@@ -64,13 +63,7 @@ std::unique_ptr<io::device> client::read_block(const blob& hash)
 
 std::unique_ptr<allocation> client::allocate(std::size_t size)
 {
-    write(m_bs, allocate_chunk::request{ .size = size });
-    m_bs.sync();
-
-    allocate_chunk::response response;
-    read(m_bs, response);
-
-    return std::make_unique<client_allocation>(*this);
+    THROW(util::exception, "client::allocate is disabled");
 }
 
 // ---------------------------------------------------------------------
@@ -125,28 +118,14 @@ std::streamsize client::next_chunk(std::span<char> buffer)
 
 block_meta_data client::finalize()
 {
-    write(m_bs, finalize_block::request{});
-    m_bs.sync();
-
-    finalize_block::response response;
-    read(m_bs, response);
-
-    return { std::move(response.hash), response.effective_size };
+    THROW(util::exception, "client::finalize is disabled");
 }
 
 // ---------------------------------------------------------------------
 
 std::streamsize client::write_chunk(std::span<const char> buffer)
 {
-    std::span<char> non_const(const_cast<char*>(buffer.data()), buffer.size());
-
-    write(m_bs, write_chunk::request{ .data = non_const });
-    m_bs.sync();
-
-    write_chunk::response response;
-    read(m_bs, response);
-
-    return buffer.size();
+    THROW(util::exception, "client::write_chunk is disabled");
 }
 
 // ---------------------------------------------------------------------

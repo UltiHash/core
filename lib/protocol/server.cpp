@@ -77,7 +77,6 @@ void server::handle_normal_request(uint8_t request_id)
         case quit::request_id: return handle_quit();
         case free_space::request_id: return handle_free_space();
         case reset::request_id: return handle_reset();
-        case allocate_chunk::request_id: return handle_allocate_chunk();
         case client_statistics::request_id: return handle_client_statistics();
         case write_chunks::request_id: return handle_write_chunks();
         case read_chunks::request_id: return handle_read_chunks();
@@ -111,8 +110,6 @@ void server::handle_writing_request(uint8_t request_id)
     {
         case quit::request_id: return handle_quit();
         case reset::request_id: return handle_reset();
-        case write_chunk::request_id: return handle_write_chunk();
-        case finalize_block::request_id: return handle_finalize_block();
 
         default:
             throw std::runtime_error("writing, unsupported command: "
@@ -209,76 +206,6 @@ void server::handle_reset()
 
     write(m_bs, status{ status::OK });
     m_bs.sync ();
-}
-
-// ---------------------------------------------------------------------
-
-void server::handle_allocate_chunk()
-{
-    DEBUG << "allocate request on " << client_->peer();
-
-    allocate_chunk::request req;
-    read(m_bs, req);
-
-    if (req.size > MAXIMUM_BLOCK_SIZE)
-    {
-        THROW(util::illegal_args, "block size out of range");
-    }
-
-    m_write_alloc = m_handler_interface->on_allocate_chunk(req.size);
-    m_state = server_state::writing;
-
-    write(m_bs, status{ status::OK });
-    m_bs.sync ();
-}
-
-// ---------------------------------------------------------------------
-
-void server::handle_write_chunk()
-{
-    DEBUG << "write_chunk request on " << client_->peer();
-
-    std::vector<char> buffer(MAXIMUM_CHUNK_SIZE);
-    write_chunk::request req{ .data = buffer };
-    read(m_bs, req);
-
-    if (!m_write_alloc)
-    {
-        THROW(internal_error, "no space allocated");
-    }
-
-    m_handler_interface->on_write_chunk(req.data);
-    m_write_alloc->device().write(req.data);
-    write(m_bs, status{ status::OK });
-    m_bs.sync ();
-}
-
-// ---------------------------------------------------------------------
-
-void server::handle_finalize_block()
-{
-    DEBUG << "finalize_block request on " << client_->peer();
-
-    finalize_block::request req;
-    read(m_bs, req);
-
-    if (!m_write_alloc)
-    {
-        THROW(internal_error, "no space allocated");
-    }
-
-    m_handler_interface->on_finalize();
-
-    auto meta_data = m_write_alloc->persist();
-    m_write_alloc.reset();
-
-    write(m_bs, status{ status::OK });
-    write(m_bs, finalize_block::response{
-            .hash = std::move(meta_data.hash),
-            .effective_size = meta_data.effective_size });
-    m_bs.sync ();
-
-    m_state = server_state::normal;
 }
 
 // ---------------------------------------------------------------------
