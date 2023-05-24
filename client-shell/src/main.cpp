@@ -2,9 +2,9 @@
 #include <net/plain_socket.h>
 #include <protocol/client_factory.h>
 #include <protocol/client_pool.h>
-#include <client/f_upload.h>
-#include <client/f_download.h>
-#include <client/f_traverse.h>
+#include <client/upload.h>
+#include <client/download.h>
+#include <client/traverse.h>
 #include <options/app_config.h>
 #include <options/chunking_options.h>
 #include <uhv/file.h>

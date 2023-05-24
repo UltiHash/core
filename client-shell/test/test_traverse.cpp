@@ -4,13 +4,15 @@
 #define BOOST_TEST_MODULE "uh-cli Traverse Tests"
 #endif
 
+#include <client/traverse.h>
+#include <uhv/job_queue.h>
+#include <uhv/meta_data.h>
+
 #include <filesystem>
 #include <fstream>
+
 #include <boost/test/unit_test.hpp>
 
-#include <client/f_traverse.h>
-#include "uhv/job_queue.h"
-#include "uhv/f_meta_data.h"
 
 // ------------- Tests Suites Follow --------------
 using namespace uh::client;

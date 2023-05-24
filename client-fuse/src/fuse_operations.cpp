@@ -4,6 +4,9 @@
 #include "fuse_operations.h"
 #include "utils.h"
 
+#include <net/plain_socket.h>
+
+
 namespace uh::uhv {
 
 options& get_options()

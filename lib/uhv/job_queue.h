@@ -1,7 +1,7 @@
-#ifndef COMMON_JOB_QUEUE_H
-#define COMMON_JOB_QUEUE_H
+#ifndef UHV_JOB_QUEUE_H
+#define UHV_JOB_QUEUE_H
 
-#include <uhv/f_meta_data.h>
+#include <uhv/meta_data.h>
 
 #include <condition_variable>
 #include <mutex>

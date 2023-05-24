@@ -1,8 +1,8 @@
-#ifndef CLIENT_F_UPLOAD_H
-#define CLIENT_F_UPLOAD_H
+#ifndef CLIENT_UPLOAD_H
+#define CLIENT_UPLOAD_H
 
 #include <uhv/job_queue.h>
-#include <uhv/f_meta_data.h>
+#include <uhv/meta_data.h>
 #include <protocol/client_pool.h>
 #include <protocol/server.h>
 #include <chunking/mod.h>

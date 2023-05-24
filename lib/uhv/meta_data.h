@@ -1,5 +1,5 @@
-#ifndef UHV_FILE_META_DATA_H
-#define UHV_FILE_META_DATA_H
+#ifndef UHV_META_DATA_H
+#define UHV_META_DATA_H
 
 #include <vector>
 #include <algorithm>
