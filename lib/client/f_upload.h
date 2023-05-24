@@ -1,5 +1,5 @@
-#ifndef SERIALIZATION_F_UPLOAD_H
-#define SERIALIZATION_F_UPLOAD_H
+#ifndef CLIENT_F_UPLOAD_H
+#define CLIENT_F_UPLOAD_H
 
 #include <uhv/job_queue.h>
 #include <uhv/f_meta_data.h>
@@ -7,18 +7,18 @@
 #include <protocol/server.h>
 #include <chunking/mod.h>
 #include <algorithm>
-#include "../common/thread_manager.h"
+#include "thread_manager.h"
 
 #include <fstream>
 #include <map>
 
 
-namespace uh::client::serialization
+namespace uh::client
 {
 
 // ---------------------------------------------------------------------
 
-class f_upload : public common::thread_manager
+class f_upload : public thread_manager
 {
 public:
 
@@ -57,6 +57,6 @@ private:
 
 // ---------------------------------------------------------------------
 
-} // namespace uh::client::serialization
+} // namespace uh::client
 
 #endif

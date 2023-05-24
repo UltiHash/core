@@ -1,6 +1,6 @@
 #include "thread_manager.h"
 
-namespace uh::client::common
+namespace uh::client
 {
 
 // ---------------------------------------------------------------------
@@ -15,4 +15,4 @@ thread_manager::~thread_manager () = default;
 
 // ---------------------------------------------------------------------
 
-} // namespace uh::client::common
+} // namespace uh::client

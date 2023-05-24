@@ -1,7 +1,7 @@
 #include "f_download.h"
 #include <protocol/server.h>
 
-namespace uh::client::serialization
+namespace uh::client
 {
 
 // ---------------------------------------------------------------------
@@ -10,7 +10,7 @@ f_download::f_download(protocol::client_pool& cl_pool,
                        uhv::job_queue<std::unique_ptr<uhv::f_meta_data>>& jq,
                        std::filesystem::path dest_path,
                        unsigned int num_threads)
-    : common::thread_manager(num_threads),
+    : thread_manager(num_threads),
       m_input_jq(jq),
       m_client_pool(cl_pool),
       m_dest_path(std::move(dest_path))
@@ -135,4 +135,4 @@ void f_download::add_result(const std::filesystem::path& p,
 
 // ---------------------------------------------------------------------
 
-} // namespace uh::client::serialization
+} // namespace uh::client

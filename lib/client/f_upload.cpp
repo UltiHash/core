@@ -4,7 +4,7 @@
 #include "f_upload.h"
 #include "protocol/messages.h"
 
-namespace uh::client::serialization
+namespace uh::client
 {
 
 // ---------------------------------------------------------------------
@@ -15,7 +15,7 @@ f_upload::f_upload(protocol::client_pool& cl_pool,
                    uh::chunking::mod& chunking,
                    std::filesystem::path uhv_path,
                    unsigned int num_threads)
-    : common::thread_manager(num_threads),
+    : thread_manager(num_threads),
       m_input_jq(in_jq),
       m_output_jq(out_jq),
       m_client_pool(cl_pool),
@@ -144,4 +144,4 @@ void f_upload::add_result(const std::filesystem::path& p,
 
 // ---------------------------------------------------------------------
 
-} // namespace uh::client::serialization
+} // namespace uh::client
