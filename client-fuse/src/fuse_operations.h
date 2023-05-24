@@ -11,8 +11,8 @@
 #include <logging/logging_boost.h>
 #include <unordered_map>
 #include <uhv/job_queue.h>
-#include <uhv/f_serialization.h>
-#include <uhv/f_meta_data.h>
+#include <uhv/serialization.h>
+#include <uhv/meta_data.h>
 #include <protocol/client_factory.h>
 #include <protocol/client_pool.h>
 #include <net/plain_socket.h>
