@@ -7,6 +7,7 @@
 
 #include "mmap_set.h"
 #include "mmap_storage.h"
+#include "robin_hood_hashmap.h"
 
 namespace uh::dbn::storage::smart {
 
@@ -15,7 +16,7 @@ char *init_mmap(const std::filesystem::path &file_path, size_t init_size, size_t
 class smart_storage {
 
 public:
-    smart_storage (const std::forward_list<file_mmap_info>& files, std::filesystem::path fragment_set_path);
+    smart_storage (const std::forward_list<file_mmap_info>& files, std::filesystem::path fragment_set_path, std::filesystem::path hashtable_path);
 
     size_t integrate (std::span <char> hash, std::string_view data);
 
@@ -40,6 +41,7 @@ private:
 
     mmap_storage m_data_store;
     mmap_set m_fragment_set;
+    robin_hood_hashmap m_hashtable;
 
 };
 

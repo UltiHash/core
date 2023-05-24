@@ -62,7 +62,7 @@ private:
     constexpr static size_t HASH_ELEMENT_SIZE = POOR_VALUE_SIZE + KEY_VALUE_SPAN_SIZE;
 
     size_t m_key_file_size = MAP_INIT_KEY_FILE_SIZE;
-    
+
     std::filesystem::path m_key_file;
     std::filesystem::path m_value_file;
 

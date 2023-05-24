@@ -25,8 +25,6 @@ public:
 
     const std::filesystem::path m_set_filename = "set_data";
     const std::filesystem::path m_hashmap_key_filename = "hashmap_key_data";
-    const std::filesystem::path m_hashmap_value_filename = "hashmap_value_data";
-
 
     files_info_fixture(): m_files_info (generate_files_info ()) {
 
@@ -55,9 +53,6 @@ public:
             std::filesystem::remove(m_hashmap_key_filename);
         }
 
-        if (exists(m_hashmap_value_filename)) {
-            std::filesystem::remove(m_hashmap_value_filename);
-        }
     }
 
 private:
@@ -224,7 +219,7 @@ BOOST_FIXTURE_TEST_CASE(basic_dedup_test, files_info_fixture)
     };
 
     {
-        smart_storage pd{files_info(), m_set_filename};
+        smart_storage pd{files_info(), m_set_filename, m_hashmap_key_filename};
 
 
         std::string str1 = "hello from data 1";
@@ -249,7 +244,7 @@ BOOST_FIXTURE_TEST_CASE(basic_dedup_test, files_info_fixture)
     }
 
     {
-        smart_storage pd{files_info(), m_set_filename};
+        smart_storage pd{files_info(), m_set_filename, m_hashmap_key_filename};
 
         std::string str5 = "yet again, some other data";
         auto res5 = pd.integrate(hs (h (str5)), str5);

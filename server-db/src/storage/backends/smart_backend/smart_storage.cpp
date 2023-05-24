@@ -32,9 +32,10 @@ char *init_mmap(const std::filesystem::path &file_path, size_t init_size, size_t
 namespace uh::dbn::storage::smart {
 
 
-smart_storage::smart_storage(const std::forward_list<file_mmap_info>& files, std::filesystem::path fragment_set_path) :
+smart_storage::smart_storage(const std::forward_list<file_mmap_info>& files, std::filesystem::path fragment_set_path, std::filesystem::path hashtable_path) :
         m_data_store (files),
-        m_fragment_set (m_data_store, std::move (fragment_set_path)){
+        m_fragment_set (m_data_store, std::move (fragment_set_path)),
+        m_hashtable (hashtable_path, m_data_store){
 
 }
 
