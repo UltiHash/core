@@ -12,7 +12,7 @@ namespace uh::client::serialization
 f_upload::f_upload(protocol::client_pool& cl_pool,
                    uhv::job_queue<std::unique_ptr<uhv::f_meta_data>>& in_jq,
                    uhv::job_queue<std::unique_ptr<uhv::f_meta_data>>& out_jq,
-                   uh::client::chunking::mod& chunking,
+                   uh::chunking::mod& chunking,
                    std::filesystem::path uhv_path,
                    unsigned int num_threads)
     : common::thread_manager(num_threads),

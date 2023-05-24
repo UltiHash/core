@@ -1,5 +1,5 @@
-#ifndef CLIENT_CHUNKING_MOD_H
-#define CLIENT_CHUNKING_MOD_H
+#ifndef CHUNKING_MOD_H
+#define CHUNKING_MOD_H
 
 #include <chunking/defaults.h>
 #include <util/exception.h>
@@ -13,7 +13,7 @@
 #include "chunking/mod_chunker.h"
 
 
-namespace uh::client::chunking
+namespace uh::chunking
 {
 
 enum class ChunkingStrategy
@@ -60,7 +60,7 @@ static std::unordered_map<std::string, ChunkingStrategy> string2backendtype =
 
 // ---------------------------------------------------------------------
 
-struct chunking_config
+struct config
 {
     constexpr static std::string_view default_chunking_strategy =
         strategyString(ChunkingStrategy::FixedSize);
@@ -81,7 +81,7 @@ struct chunking_config
 class mod
 {
 public:
-    explicit mod(const chunking_config& cfg);
+    explicit mod(const config& cfg);
 
     std::unique_ptr<uh::chunking::chunker> create_chunker(io::device& d, std::size_t buffer_size = 0);
 
@@ -96,6 +96,6 @@ private:
 
 // ---------------------------------------------------------------------
 
-} // namespace uh::client::chunking
+} // namespace uh::chunking
 
 #endif

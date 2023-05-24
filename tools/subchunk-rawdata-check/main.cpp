@@ -10,7 +10,7 @@
 #include <filesystem>
 #include <list>
 #include "io/file.h"
-#include "../../client-shell/src/chunking/options.h"
+#include "options/chunking_options.h"
 #include "timer_pack.hpp"
 #include <algorithm>
 #include <span>
@@ -129,7 +129,7 @@ std::set <substr_match> longest_common_substrings (std::span <char> &chunk, char
 }
 
 
-void integrate (char *backend, const std::filesystem::path &path, uh::client::chunking::mod &chunking_module, const long window_size, size_t min_subchunk_size) {
+void integrate (char *backend, const std::filesystem::path &path, uh::chunking::mod &chunking_module, const long window_size, size_t min_subchunk_size) {
     uh::io::file f (path, std::ios::in);
 
     auto chunker = chunking_module.create_chunker(f);
@@ -170,7 +170,7 @@ void integrate (char *backend, const std::filesystem::path &path, uh::client::ch
 
 int main(int argc, const char *argv[]) {
 
-    uh::client::chunking::chunking_config chunking_cfg;
+    uh::chunking::config chunking_cfg;
     const auto max_backend_size = 100 * 1024 * 1024;
     const auto min_subchunk_size = 512;
     const auto window_size = 1024*1024;
@@ -181,7 +181,7 @@ int main(int argc, const char *argv[]) {
     //chunking_cfg.fast_cdc.max_size = 16*1024;
     chunking_cfg.chunking_strategy = "FixedSize";
     chunking_cfg.chunk_size_in_bytes = 1024*1024;
-    uh::client::chunking::mod chunking_module(chunking_cfg);
+    uh::chunking::mod chunking_module(chunking_cfg);
 
     const auto root = "/home/masi/Workspace/core/cmake-build-debug/client-shell/data.mp4";
     unsigned long count = 0;
