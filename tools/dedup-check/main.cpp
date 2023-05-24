@@ -11,19 +11,19 @@
 #include <filesystem>
 #include <list>
 #include "io/file.h"
-#include "../../client-shell/src/chunking/options.h"
+#include "options/chunking_options.h"
 #include "dedup_options.h"
 
 APPLICATION_CONFIG
 (
 (dedup, uh::tools::dedup_options),
-(chunking, uh::client::chunking::options)
+(chunking, uh::options::chunking_options)
 );
 
 std::unordered_map <std::string, std::list <std::filesystem::path>> blocks;
 size_t non_deduplicated_size = 0;
 
-void integrate (const std::filesystem::path &path, uh::client::chunking::mod &chunking_module) {
+void integrate (const std::filesystem::path &path, uh::chunking::mod &chunking_module) {
     uh::io::file f (path, std::ios::in);
 
     auto chunker = chunking_module.create_chunker(f);
@@ -43,7 +43,7 @@ int main(int argc, const char *argv[]) {
     }
 
     auto chunking_cfg = config.chunking();
-    uh::client::chunking::mod chunking_module(chunking_cfg);
+    uh::chunking::mod chunking_module(chunking_cfg);
 
     const auto root = config.dedup().path;
     unsigned long count = 0;

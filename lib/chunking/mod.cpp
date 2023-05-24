@@ -5,7 +5,7 @@
 #include <chunking/mod_chunker.h>
 
 
-namespace uh::client::chunking
+namespace uh::chunking
 {
 
 namespace
@@ -31,7 +31,7 @@ ChunkingStrategy define_chunking_strategy(const std::string& chunking_strategy)
 
 // ---------------------------------------------------------------------
 
-mod::mod(const chunking_config& cfg)
+mod::mod(const config& cfg)
     : m_strategy(define_chunking_strategy(cfg.chunking_strategy)),
       m_chunk_size(cfg.chunk_size_in_bytes),
       m_fast_cdc(cfg.fast_cdc),
@@ -64,4 +64,4 @@ std::unique_ptr<uh::chunking::chunker> mod::create_chunker(io::device& d, std::s
 
 // ---------------------------------------------------------------------
 
-} //namespace uh::client::chunking
+} //namespace uh::chunking
