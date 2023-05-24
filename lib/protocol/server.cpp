@@ -15,7 +15,6 @@ namespace uh::protocol
 
 void server::handle()
 {
-
     m_state = server_state::setup;
 
     while (client_->valid() && m_state != server_state::disconnected)
@@ -28,8 +27,6 @@ void server::handle()
             {
                 case server_state::setup: handle_setup_request(request_id); break;
                 case server_state::normal: handle_normal_request(request_id); break;
-                case server_state::reading: handle_reading_request(request_id); break;
-                case server_state::writing: handle_writing_request(request_id); break;
 
                 default:
                     write(m_bs, status{ .code = status::FAILED, .message = "unsupported state" });
@@ -47,7 +44,6 @@ void server::handle()
         {
             write(m_bs, status{ .code = status::FAILED, .message = e.what() });
             m_bs.sync ();
-            m_write_alloc.reset();
             m_state = server_state::normal;
         }
     }
@@ -83,36 +79,6 @@ void server::handle_normal_request(uint8_t request_id)
 
         default:
             throw std::runtime_error("normal, unsupported command: "
-                                     + std::to_string(request_id));
-    }
-}
-
-// ---------------------------------------------------------------------
-
-void server::handle_reading_request(uint8_t request_id)
-{
-    switch (request_id)
-    {
-        case quit::request_id: return handle_quit();
-        case reset::request_id: return handle_reset();
-
-        default:
-            throw std::runtime_error("reading, unsupported command: "
-                                     + std::to_string(request_id));
-    }
-}
-
-// ---------------------------------------------------------------------
-
-void server::handle_writing_request(uint8_t request_id)
-{
-    switch (request_id)
-    {
-        case quit::request_id: return handle_quit();
-        case reset::request_id: return handle_reset();
-
-        default:
-            throw std::runtime_error("writing, unsupported command: "
                                      + std::to_string(request_id));
     }
 }
@@ -200,9 +166,7 @@ void server::handle_reset()
     read(m_bs, req);
 
     m_handler_interface->on_reset();
-
     m_state = server_state::normal;
-    m_write_alloc.reset();
 
     write(m_bs, status{ status::OK });
     m_bs.sync ();

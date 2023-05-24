@@ -19,8 +19,6 @@ enum class server_state
     disconnected,
     setup,
     normal,
-    reading,
-    writing,
 };
 
 // ---------------------------------------------------------------------
@@ -45,8 +43,6 @@ private:
 
     void handle_setup_request(uint8_t request_id);
     void handle_normal_request(uint8_t request_id);
-    void handle_reading_request(uint8_t request_id);
-    void handle_writing_request(uint8_t request_id);
 
     void handle_hello();
     void handle_quit();
@@ -56,10 +52,7 @@ private:
     void handle_write_chunks();
     void handle_read_chunks();
 
-
     server_state m_state = server_state::disconnected;
-
-    std::unique_ptr<allocation> m_write_alloc;        // invariant: (!m_write_alloc) == (m_state != writing)
     serialization::buffered_serialization m_bs;
 
     std::unique_ptr<request_interface> m_handler_interface;
