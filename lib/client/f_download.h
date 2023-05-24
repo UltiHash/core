@@ -1,5 +1,5 @@
-#ifndef SERIALIZATION_F_DOWNLOAD_H
-#define SERIALIZATION_F_DOWNLOAD_H
+#ifndef CLIENT_F_DOWNLOAD_H
+#define CLIENT_F_DOWNLOAD_H
 
 #include <protocol/client_pool.h>
 #include <uhv/job_queue.h>
@@ -8,12 +8,12 @@
 #include <map>
 
 
-namespace uh::client::serialization
+namespace uh::client
 {
 
 // ---------------------------------------------------------------------
 
-class f_download : public common::thread_manager
+class f_download : public thread_manager
 {
 public:
 
@@ -44,6 +44,6 @@ private:
 
 // ---------------------------------------------------------------------
 
-} // namespace uh::client::serialization
+} // namespace uh::client
 
 #endif

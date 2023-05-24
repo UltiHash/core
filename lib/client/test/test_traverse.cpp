@@ -13,7 +13,7 @@
 #include "uhv/f_meta_data.h"
 
 // ------------- Tests Suites Follow --------------
-using namespace uh::client::serialization;
+using namespace uh::client;
 namespace fs = std::filesystem;
 
 namespace

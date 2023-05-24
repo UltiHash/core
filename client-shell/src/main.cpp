@@ -20,7 +20,6 @@
 using namespace uh;
 using namespace uh::uhv;
 using namespace uh::client;
-using namespace uh::client::serialization;
 
 // ---------------------------------------------------------------------
 
