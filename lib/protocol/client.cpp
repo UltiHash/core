@@ -1,8 +1,9 @@
 #include "client.h"
 
 #include "client_allocation.h"
-#include "read_block_device.h"
 #include "messages.h"
+
+#include <util/exception.h>
 
 
 using namespace uh::io;
@@ -56,13 +57,7 @@ server_information client::hello(const std::string& client_version)
 
 std::unique_ptr<io::device> client::read_block(const blob& hash)
 {
-    write(m_bs, read_block::request{ .hash = std::move(hash) });
-    m_bs.sync();
-
-    read_block::response response;
-    read(m_bs, response);
-
-    return std::make_unique<read_block_device>(*this);
+    THROW(util::exception, "client::read_block is disabled");
 }
 
 // ---------------------------------------------------------------------

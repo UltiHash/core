@@ -61,30 +61,6 @@ void read(serialization::buffered_serialization& in, hello::response& request);
 
 // ---------------------------------------------------------------------
 
-struct read_block
-{
-    struct request
-    {
-        blob hash;
-    };
-
-    struct response
-    {
-    };
-
-    constexpr static uint8_t request_id = 0x03;
-};
-
-// ---------------------------------------------------------------------
-
-void write(serialization::buffered_serialization& out, const read_block::request& request);
-void read(serialization::buffered_serialization& in, read_block::request& request);
-
-void write(serialization::buffered_serialization& out, const read_block::response& response);
-void read(serialization::buffered_serialization& in, read_block::response& response);
-
-// ---------------------------------------------------------------------
-
 struct quit
 {
     struct request

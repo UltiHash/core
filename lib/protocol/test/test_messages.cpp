@@ -80,37 +80,6 @@ BOOST_AUTO_TEST_CASE( hello_response )
 
 // ---------------------------------------------------------------------
 
-BOOST_AUTO_TEST_CASE( read_block_request )
-{
-    uh::io::sstream_device dev;
-    uh::serialization::buffered_serialization ser (dev);
-    write(ser, read_block::request{ .hash = to_blob("hashed data") });
-    ser.sync();
-
-    char ch = ser.read<char>();
-    BOOST_TEST(ch == read_block::request_id);
-
-    read_block::request req;
-    read(ser, req);
-    BOOST_TEST(req.hash == to_blob("hashed data"));
-}
-
-// ---------------------------------------------------------------------
-
-BOOST_AUTO_TEST_CASE( read_block_response )
-{
-    uh::io::sstream_device dev;
-    uh::serialization::buffered_serialization ser (dev);
-    write(ser, status{ .code = status::OK });
-    write(ser, read_block::response{});
-    ser.sync();
-
-    read_block::response res;
-    read(ser, res);
-}
-
-// ---------------------------------------------------------------------
-
 BOOST_AUTO_TEST_CASE( quit_request )
 {
     uh::io::sstream_device dev;

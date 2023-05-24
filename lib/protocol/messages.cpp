@@ -71,39 +71,6 @@ void read(serialization::buffered_serialization& in, hello::response& request)
 
 // ---------------------------------------------------------------------
 
-void write(serialization::buffered_serialization& out, const read_block::request& request)
-{
-    out.write(read_block::request_id);
-    out.write(request.hash);
-}
-
-// ---------------------------------------------------------------------
-
-void read(serialization::buffered_serialization& in, read_block::request& request)
-{
-    read_block::request tmp;
-    tmp.hash = in.read<std::vector<char>> ();
-    std::swap(tmp, request);
-}
-
-// ---------------------------------------------------------------------
-
-void write(serialization::buffered_serialization& out, const read_block::response& response)
-{
-}
-
-// ---------------------------------------------------------------------
-
-void read(serialization::buffered_serialization& in, read_block::response& response)
-{
-    check_status(in);
-
-    read_block::response tmp;
-    std::swap(tmp, response);
-}
-
-// ---------------------------------------------------------------------
-
 void write(serialization::buffered_serialization& out, const quit::request& request)
 {
     out.write(quit::request_id);
