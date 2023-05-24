@@ -13,6 +13,7 @@ namespace uh::signal
     class signal
     {
     public:
+
         signal();
         ~signal() = default;
 
@@ -21,6 +22,7 @@ namespace uh::signal
 
     private:
         sigset_t m_sigset {};
+
         std::vector<std::function<void()>> m_handler_functions;
 
     };

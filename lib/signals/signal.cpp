@@ -23,7 +23,7 @@ std::future<int> signal::run()
         int signum = 0;
         sigwait(&m_sigset, &signum);
 
-        INFO << "signal handler called, cleaning up ... " << signum;
+        INFO << "signal handler called: " << strsignal(signum) <<  "(" << signum << "), cleaning up ... ";
 
         for (const auto& cleanup_function : m_handler_functions)
         {

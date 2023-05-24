@@ -91,7 +91,8 @@ void scheduler::stop()
 
     for (auto& th : m_threads)
     {
-        th.join();
+        if (th.joinable())
+            th.join();
     }
 }
 
