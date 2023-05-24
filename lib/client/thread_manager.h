@@ -1,11 +1,11 @@
-#ifndef COMMON_THREAD_POOL_H
-#define COMMON_THREAD_POOL_H
+#ifndef CLIENT_THREAD_MANAGER_H
+#define CLIENT_THREAD_MANAGER_H
 
 #include <thread>
 #include <vector>
 #include <logging/logging_boost.h>
 
-namespace uh::client::common
+namespace uh::client
 {
 
 // ---------------------------------------------------------------------
@@ -26,6 +26,6 @@ protected:
 
 // ---------------------------------------------------------------------
 
-} // namespace uh::client::common
+} // namespace uh::client
 
 #endif

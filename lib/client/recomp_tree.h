@@ -2,12 +2,12 @@
 // Created by ankit on 01.12.22.
 //
 
-#ifndef CLIENT_SHELL_RECOMP_TREE_H
-#define CLIENT_SHELL_RECOMP_TREE_H
+#ifndef CLIENT_RECOMP_TREE_H
+#define CLIENT_RECOMP_TREE_H
 
 #include <filesystem>
 
-namespace uh::client::serialization
+namespace uh::client
 {
 
 // ---------------------------------------------------------------------
@@ -153,6 +153,6 @@ struct treeNode : public std::enable_shared_from_this<treeNode<T,U>>
 };
 
 
-} // namespace uh::client::serialization
+} // namespace uh::client
 
 #endif //CLIENT_SHELL_RECOMP_TREE_H

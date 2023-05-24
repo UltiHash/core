@@ -11,16 +11,15 @@
 #include <client_options/agency_connection.h>
 #include <options/chunking_options.h>
 
-#include <serialization/f_upload.h>
-#include <serialization/f_download.h>
-#include <serialization/f_traverse.h>
+#include <client/f_upload.h>
+#include <client/f_download.h>
+#include <client/f_traverse.h>
 
 // ---------------------------------------------------------------------
 
 using namespace uh;
 using namespace uh::uhv;
 using namespace uh::client;
-using namespace uh::client::serialization;
 
 // ---------------------------------------------------------------------
 
