@@ -24,6 +24,7 @@ void mod::start()
 void mod::stop()
 {
     INFO << "        stopping persistence module";
+    m_storage->stop();
 }
 
 // ---------------------------------------------------------------------

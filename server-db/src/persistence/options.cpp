@@ -5,7 +5,7 @@ using namespace boost::program_options;
 namespace uh::dbn::persistence
 {
 
-    // ---------------------------------------------------------------------
+// ---------------------------------------------------------------------
 
 uh::options::action options::evaluate(const boost::program_options::variables_map& vars)
 {

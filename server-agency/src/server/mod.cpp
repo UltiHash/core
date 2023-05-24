@@ -78,7 +78,7 @@ mod::~mod() = default;
 
 void mod::start()
 {
-    INFO << "starting server";
+    INFO << "            starting server";
     m_impl->server->run();
 }
 
@@ -86,7 +86,8 @@ void mod::start()
 
 void mod::stop()
 {
-    INFO << "stopping server";
+    INFO << "             stopping server";
+    m_impl->server->stop();
 }
 
 // ---------------------------------------------------------------------

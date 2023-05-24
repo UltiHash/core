@@ -51,10 +51,13 @@ int main(int argc, const char** argv)
 
         server::mod server_module(config.server(), cluster_module, metrics_module);
 
-        signal_handler.register_func([&](){ server_module.stop();
-                                                        persistence_module.stop(); });
+        signal_handler.register_func([&](){ server_module.stop(); persistence_module.stop(); });
+        auto signal_thread = signal_handler.run();
 
         server_module.start();
+        signal_thread.get();
+
+        INFO << "agency node exiting ...";
 
     }
     catch (const std::exception& e)

@@ -1,5 +1,4 @@
 #include <signals/signal.h>
-#include <csignal>
 
 namespace uh::signal
 {
@@ -8,26 +7,35 @@ namespace uh::signal
 
 signal::signal()
 {
-    std::signal(SIGINT, signal::handler);
-    std::signal(SIGTERM, signal::handler);
+    sigemptyset(&m_sigset);
+    sigaddset(&m_sigset, SIGINT);
+    sigaddset(&m_sigset, SIGTERM);
+    pthread_sigmask(SIG_BLOCK, &m_sigset, nullptr);
 }
 
 // ---------------------------------------------------------------------
 
-std::vector<std::function<void()>> signal::m_handler_functions;
-
-// ---------------------------------------------------------------------
-
-void signal::handler(int signal_number)
+std::future<int> signal::run()
 {
-    INFO << "signal handler called: " << signal_number;
 
-    for (const auto& cleanup_function : m_handler_functions)
+    auto signal_handler = [&]()
     {
-        cleanup_function();
-    }
+        int signum = 0;
+        sigwait(&m_sigset, &signum);
 
-    std::exit(0);
+        INFO << "signal handler called, cleaning up ... " << signum;
+
+        for (const auto& cleanup_function : m_handler_functions)
+        {
+            cleanup_function();
+        }
+
+        INFO << "cleanup finished ... ";
+
+        return signum;
+    };
+
+    return std::async(std::launch::async, signal_handler);
 }
 
 // ---------------------------------------------------------------------
