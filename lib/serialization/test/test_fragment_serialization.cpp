@@ -13,7 +13,6 @@
 #include "serialization/fragment_serializer.h"
 #include "serialization/fragment_deserializer.h"
 #include "serialization/buffered_fragment_serializer.h"
-#include "serialization/serialization.h"
 #include "serialization/fragment_serialization.h"
 #include "io/sstream_device.h"
 
@@ -58,7 +57,7 @@ void test_fragment_range_serialization (const T& data, const std::string test_na
     uh::io::sstream_device dev;
     {
         Serializer serialize(dev);
-        serialize.write(data);
+        serialize.write(data,0);
     }
     {
         Deserializer deserialize (dev);
@@ -93,12 +92,18 @@ BOOST_AUTO_TEST_CASE(buffered_fragment_serializer_test) {
     unsigned long ov1 = 2;
     double ov2 = 4.12;
 
-    test_fragment_range_serialization <std::string, buffered_serializer <sl_serializer>> (str1, "string test");
-    test_fragment_range_serialization < std::vector <long>, buffered_serializer<sl_serializer>> (lvec1, "long vector test");
-    test_fragment_range_serialization < std::vector <double>, buffered_serializer<sl_serializer>> (dvec1, "double vector test");
-    test_fragment_range_serialization <std::vector <std::uint8_t>, buffered_serializer<sl_serializer>> (emptyvec, "empty vector test");
-    test_fragment_range_serialization <std::vector <std::uint64_t>, buffered_serializer<sl_serializer>> (largevec, "large vector test");
-    test_fragment_range_serialization <std::string, buffered_serializer<sl_serializer>> (str2, "string 2 test");
+    test_fragment_range_serialization <std::string, buffered_fragment_serializer <sl_fragment_serializer>>
+    (str1, "string test");
+    test_fragment_range_serialization < std::vector <long>, buffered_fragment_serializer <sl_fragment_serializer>>
+    (lvec1, "long vector test");
+    test_fragment_range_serialization < std::vector <double>, buffered_fragment_serializer <sl_fragment_serializer>>
+    (dvec1, "double vector test");
+    test_fragment_range_serialization <std::vector <std::uint8_t>,
+            buffered_fragment_serializer <sl_fragment_serializer>> (emptyvec, "empty vector test");
+    test_fragment_range_serialization <std::vector <std::uint64_t>,
+            buffered_fragment_serializer <sl_fragment_serializer>> (largevec, "large vector test");
+    test_fragment_range_serialization <std::string, buffered_fragment_serializer <sl_fragment_serializer>>
+    (str2, "string 2 test");
 
 }
 
@@ -123,48 +128,56 @@ BOOST_AUTO_TEST_CASE(buffered_fragment_serialization_test) {
     }
     std::span ds{buffer, buffer_size};
 
-    unsigned long ov1 = 2;
-    double ov2 = 4.12;
-
     uh::io::sstream_device dev;
 
-    buffered_serialization ser(dev);
-    ser.write(str1);
-    ser.write(str2);
-    ser.write(lvec1);
-    ser.write(dvec1);
-    ser.write(emptyvec);
-    ser.write(largevec);
-    ser.write(ov1);
-    ser.write(ov2);
-    ser.write(ds);
+    buffered_fragment_serialization ser(dev);
+    ser.write(str1,0);
+    ser.write(str2,1);
+    ser.write(lvec1,2);
+    ser.write(dvec1,3);
+    ser.write(emptyvec,4);
+    ser.write(largevec,5);
+    ser.write(ds,6);
 
     ser.sync();
 
-    sl_deserializer des (dev);
-    BOOST_TEST (des.read<std::string>() == str1);
-    BOOST_TEST (ser.read<std::string>() == str2);
-    auto lvec2 = ser.read<std::vector <long>>();
-    BOOST_TEST (lvec2.size() == lvec1.size());
-    BOOST_TEST(strncmp(reinterpret_cast<const char *> (lvec1.data()),
-                       reinterpret_cast<const char *> (lvec2.data()), lvec2.size()) == 0);
-    auto dvec2 = ser.read<std::vector <double>>();
-    BOOST_TEST (dvec2.size() == dvec1.size());
-    BOOST_TEST(strncmp(reinterpret_cast<const char *> (dvec1.data()),
-                       reinterpret_cast<const char *> (dvec2.data()), dvec2.size()) == 0);
-    auto empty2 = ser.read<std::vector <std::uint8_t>>();
-    BOOST_TEST (empty2.size() == emptyvec.size());
-    auto largevec2 = ser.read<std::vector <uint64_t>>();
-    BOOST_TEST (largevec.size() == largevec2.size());
-    BOOST_TEST(strncmp(reinterpret_cast<const char *> (largevec.data()),
-                       reinterpret_cast<const char *> (largevec2.data()), largevec2.size()) == 0);
-    BOOST_TEST (ser.read<unsigned long>() == ov1);
-    BOOST_TEST (ser.read<double>() == ov2);
+    sl_fragment_deserializer des (dev);
 
-    auto ds2 = ser.read<std::vector <char>>();
-    BOOST_TEST (ds2.size() == ds.size());
-    BOOST_TEST(strncmp(reinterpret_cast<const char *> (ds2.data()),
-                       reinterpret_cast<const char *> (ds.data()), ds2.size()) == 0);
+    auto str1_read = des.read<std::string>();
+    BOOST_TEST (str1_read.first == str1);
+    BOOST_TEST (str1_read.second.index_num == 0);
+
+    auto str2_read = ser.read<std::string>();
+    BOOST_TEST (str2_read.first == str2);
+    BOOST_TEST (str2_read.second.index_num == 1);
+
+    auto lvec2_read = ser.read<std::vector <long>>();
+    BOOST_TEST (lvec2_read.first.size() == lvec1.size());
+    BOOST_TEST(strncmp(reinterpret_cast<const char *> (lvec1.data()),
+                       reinterpret_cast<const char *> (lvec2_read.first.data()), lvec2_read.first.size()) == 0);
+    BOOST_TEST (lvec2_read.second.index_num == 2);
+
+    auto dvec2_read = ser.read<std::vector <double>>();
+    BOOST_TEST (dvec2_read.first.size() == dvec1.size());
+    BOOST_TEST(strncmp(reinterpret_cast<const char *> (dvec1.data()),
+                       reinterpret_cast<const char *> (dvec2_read.first.data()), dvec2_read.first.size()) == 0);
+    BOOST_TEST (dvec2_read.second.index_num == 3);
+
+    auto empty2_read = ser.read<std::vector <std::uint8_t>>();
+    BOOST_TEST (empty2_read.first.size() == emptyvec.size());
+    BOOST_TEST (empty2_read.second.index_num == 4);
+
+    auto largevec2_read = ser.read<std::vector <uint64_t>>();
+    BOOST_TEST (largevec.size() == largevec2_read.first.size());
+    BOOST_TEST(strncmp(reinterpret_cast<const char *> (largevec.data()),
+                       reinterpret_cast<const char *> (largevec2_read.first.data()), largevec2_read.first.size()) == 0);
+    BOOST_TEST (largevec2_read.second.index_num == 5);
+
+    auto ds2_read = ser.read<std::vector <char>>();
+    BOOST_TEST (ds2_read.first.size() == ds.size());
+    BOOST_TEST(strncmp(reinterpret_cast<const char *> (ds2_read.first.data()),
+                       reinterpret_cast<const char *> (ds.data()), ds2_read.first.size()) == 0);
+    BOOST_TEST (ds2_read.second.index_num == 6);
 }
 
 

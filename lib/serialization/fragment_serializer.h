@@ -68,12 +68,8 @@ namespace uh::serialization {
         template <typename Range, typename InnerType = std::ranges::range_value_t<Range>>
         requires std::ranges::contiguous_range <Range>
                  and (std::is_arithmetic_v <InnerType> or std::is_enum_v <InnerType>)
-        fragment_serialize_size_format write (const Range &data, uint8_t index) {
-
-            if(data.empty())
-                THROW(util::exception, "The content of the incoming range of fragment serializer"
-                                       " index " + std::to_string(index) + " was empty!");
-
+        fragment_serialize_size_format write (const Range &data, uint8_t index)
+        {
             const auto data_size = std::ranges::size (data) * sizeof (InnerType);
             const auto header = get_header(data_size,index);
 
@@ -97,12 +93,8 @@ namespace uh::serialization {
         requires std::ranges::contiguous_range <Range>
                  and (std::is_arithmetic_v <InnerType> or std::is_enum_v <InnerType>)
                  and std::is_unsigned_v<ALLOC_UTYPE> and (sizeof(ALLOC_UTYPE) < sizeof(uint64_t))
-        fragment_serialize_size_format write (const Range &data, uint8_t index, ALLOC_UTYPE alloc) {
-
-            if(data.empty())
-                THROW(util::exception, "The content of the incoming range of fragment serializer"
-                                       " index " + std::to_string(index) + " was empty!");
-
+        fragment_serialize_size_format write (const Range &data, uint8_t index, ALLOC_UTYPE alloc)
+        {
             const auto data_size = alloc * sizeof (InnerType);
             const auto header = get_header(data_size,index);
 
