@@ -1,8 +1,8 @@
 #include "client.h"
 
-#include "client_allocation.h"
-#include "read_block_device.h"
 #include "messages.h"
+
+#include <util/exception.h>
 
 
 using namespace uh::io;
@@ -56,26 +56,14 @@ server_information client::hello(const std::string& client_version)
 
 std::unique_ptr<io::device> client::read_block(const blob& hash)
 {
-    write(m_bs, read_block::request{ .hash = std::move(hash) });
-    m_bs.sync();
-
-    read_block::response response;
-    read(m_bs, response);
-
-    return std::make_unique<read_block_device>(*this);
+    THROW(util::exception, "client::read_block is disabled");
 }
 
 // ---------------------------------------------------------------------
 
 std::unique_ptr<allocation> client::allocate(std::size_t size)
 {
-    write(m_bs, allocate_chunk::request{ .size = size });
-    m_bs.sync();
-
-    allocate_chunk::response response;
-    read(m_bs, response);
-
-    return std::make_unique<client_allocation>(*this);
+    THROW(util::exception, "client::allocate is disabled");
 }
 
 // ---------------------------------------------------------------------
@@ -104,17 +92,6 @@ std::size_t client::free_space()
 
 // ---------------------------------------------------------------------
 
-void client::reset()
-{
-    write(m_bs, reset::request{});
-    m_bs.sync();
-
-    reset::response response;
-    read(m_bs, response);
-}
-
-// ---------------------------------------------------------------------
-
 std::streamsize client::next_chunk(std::span<char> buffer)
 {
     write(m_bs, next_chunk::request{ .max_size = static_cast<uint32_t>(buffer.size()) });
@@ -130,28 +107,14 @@ std::streamsize client::next_chunk(std::span<char> buffer)
 
 block_meta_data client::finalize()
 {
-    write(m_bs, finalize_block::request{});
-    m_bs.sync();
-
-    finalize_block::response response;
-    read(m_bs, response);
-
-    return { std::move(response.hash), response.effective_size };
+    THROW(util::exception, "client::finalize is disabled");
 }
 
 // ---------------------------------------------------------------------
 
 std::streamsize client::write_chunk(std::span<const char> buffer)
 {
-    std::span<char> non_const(const_cast<char*>(buffer.data()), buffer.size());
-
-    write(m_bs, write_chunk::request{ .data = non_const });
-    m_bs.sync();
-
-    write_chunk::response response;
-    read(m_bs, response);
-
-    return buffer.size();
+    THROW(util::exception, "client::write_chunk is disabled");
 }
 
 // ---------------------------------------------------------------------

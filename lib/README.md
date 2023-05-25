@@ -27,3 +27,7 @@ Collects submodules to third-party library repositories.
 ## util
 
 Utility classes
+
+## test
+
+Classes, functions and data used in test cases.

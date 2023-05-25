@@ -3,9 +3,12 @@
 
 #include "common.h"
 
+#include <serialization/serialization.h>
+
 #include <span>
 #include <string>
-#include "serialization/serialization.h"
+#include <variant>
+#include <vector>
 
 
 namespace uh::protocol
@@ -58,30 +61,6 @@ void read(serialization::buffered_serialization& in, hello::response& request);
 
 // ---------------------------------------------------------------------
 
-struct read_block
-{
-    struct request
-    {
-        blob hash;
-    };
-
-    struct response
-    {
-    };
-
-    constexpr static uint8_t request_id = 0x03;
-};
-
-// ---------------------------------------------------------------------
-
-void write(serialization::buffered_serialization& out, const read_block::request& request);
-void read(serialization::buffered_serialization& in, read_block::request& request);
-
-void write(serialization::buffered_serialization& out, const read_block::response& response);
-void read(serialization::buffered_serialization& in, read_block::response& response);
-
-// ---------------------------------------------------------------------
-
 struct quit
 {
     struct request
@@ -130,29 +109,6 @@ void read(serialization::buffered_serialization& in, free_space::response& respo
 
 // ---------------------------------------------------------------------
 
-struct reset
-{
-    struct request
-    {
-    };
-
-    struct response
-    {
-    };
-
-    constexpr static uint8_t request_id = 0x06;
-};
-
-// ---------------------------------------------------------------------
-
-void write(serialization::buffered_serialization& out, const reset::request& request);
-void read(serialization::buffered_serialization& in, reset::request& request);
-
-void write(serialization::buffered_serialization& out, const reset::response& response);
-void read(serialization::buffered_serialization& in, reset::response& response);
-
-// ---------------------------------------------------------------------
-
 struct next_chunk
 {
     struct request
@@ -175,79 +131,6 @@ void read(serialization::buffered_serialization& in, next_chunk::request& reques
 
 void write(serialization::buffered_serialization& out, const next_chunk::response& response);
 void read(serialization::buffered_serialization& in, next_chunk::response& response);
-
-// ---------------------------------------------------------------------
-
-struct allocate_chunk
-{
-    struct request
-    {
-        uint64_t size;
-    };
-
-    struct response
-    {
-    };
-
-    constexpr static uint8_t request_id = 0x08;
-};
-
-// ---------------------------------------------------------------------
-
-void write(serialization::buffered_serialization& out, const allocate_chunk::request& request);
-void read(serialization::buffered_serialization& in, allocate_chunk::request& request);
-
-void write(serialization::buffered_serialization& out, const allocate_chunk::response& response);
-void read(serialization::buffered_serialization& in, allocate_chunk::response& response);
-
-// ---------------------------------------------------------------------
-
-struct write_chunk
-{
-    struct request
-    {
-        std::span<char> data;
-    };
-
-    struct response
-    {
-    };
-
-    constexpr static uint8_t request_id = 0x09;
-};
-
-// ---------------------------------------------------------------------
-
-void write(serialization::buffered_serialization& out, const write_chunk::request& request);
-void read(serialization::buffered_serialization& in, write_chunk::request& request);
-
-void write(serialization::buffered_serialization& out, const write_chunk::response& response);
-void read(serialization::buffered_serialization& in, write_chunk::response& response);
-
-// ---------------------------------------------------------------------
-
-struct finalize_block
-{
-    struct request
-    {
-    };
-
-    struct response
-    {
-        blob hash;
-        uint64_t effective_size;
-    };
-
-    constexpr static uint8_t request_id = 0x0a;
-};
-
-// ---------------------------------------------------------------------
-
-void write(serialization::buffered_serialization& out, const finalize_block::request& request);
-void read(serialization::buffered_serialization& in, finalize_block::request& request);
-
-void write(serialization::buffered_serialization& out, const finalize_block::response& response);
-void read(serialization::buffered_serialization& in, finalize_block::response& response);
 
 // ---------------------------------------------------------------------
 
@@ -309,7 +192,7 @@ struct read_chunks
 
     struct response
     {
-        std::vector <char> data;
+        std::variant< std::vector<char>, std::unique_ptr<io::data_generator> > data;
         std::vector <uint32_t> chunk_sizes;
     };
 
