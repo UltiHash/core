@@ -81,7 +81,7 @@ void integrate(protocol::client_pool& pool,
                               output, worker_count);
         upload_class.spawn_threads();
 
-        f_traverse traverse_class(input, q_f_meta_data);
+        f_traverse traverse_class(input, q_f_meta_data); // <----- Is this needed?
 
         upload_class.join();
         handle_errors("there were errors during upload", upload_class.results());
