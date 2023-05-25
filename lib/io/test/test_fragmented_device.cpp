@@ -16,7 +16,6 @@
 #include <io/fragment_on_device.h>
 #include <io/buffer.h>
 #include <io/device.h>
-#include <serialization/serialization.h>
 
 using namespace uh::util;
 using namespace uh::io;
@@ -102,38 +101,53 @@ BOOST_FIXTURE_TEST_CASE_TEMPLATE( multi_fragment_on_device_skip_test, T, device_
 
 BOOST_FIXTURE_TEST_CASE_TEMPLATE( fragment_partial_read_write_exceptions, T, device_types, Fixture )
 {
-    std::unique_ptr<T> fragmented = make_test_device<T>();
+    static std::unique_ptr<buffer> buf;
+    buf = std::make_unique<buffer>();
 
-    const std::string test_string1(LOREM_IPSUM);
+    auto fragmented = std::make_unique<T>(*buf), fragmented_read = std::make_unique<T>(*buf);
 
-    std::streamsize written{};
+    std::streamsize written{},read{};
 
     do{
-        buffer small_buf(test_string1.size()/3);
-        uh::io::write(small_buf,{LOREM_IPSUM.data()+written,small_buf.data().size()});
+        buffer small_buf(LOREM_IPSUM.size()/3);
 
-        uh::io::write()
-        //require throw on reading
-        //fragmented->write({small_buf.data(),test_string1.size()/2},LOREM_IPSUM.size());
+        auto maximum_writeable = std::min(small_buf.data().size(),
+                                          static_cast<uint64_t>(std::distance(LOREM_IPSUM.cbegin()+written,
+                                                                              LOREM_IPSUM.cend())));
+
+        uh::io::write(small_buf,{LOREM_IPSUM.data()+written,maximum_writeable});
+
+        bool first_write = !written;
+        written += uh::io::write(*fragmented,
+                                 {small_buf.data().data(),maximum_writeable},
+                                 LOREM_IPSUM.size()).content_size;
+
+        if(first_write)BOOST_REQUIRE_THROW(copy(*fragmented,small_buf),std::exception);
     }
-    while(written != test_string1.size());
+    while(written != LOREM_IPSUM.size());
 
-    fragmented->write(test_string1);
+    BOOST_CHECK_EQUAL(written,LOREM_IPSUM.size());
 
-    std::string partial_buffer1;
-    partial_buffer1.resize(8,0);
-    std::string partial_buffer2;
-    partial_buffer2.resize(test_string1.size()-8,0);
+    std::stringstream test_read{};
 
-    auto partial_size1 = fragmented->read({partial_buffer1.data(),partial_buffer1.size()});
-    BOOST_REQUIRE_EQUAL(partial_size1,partial_buffer1.size());
+    do{
+        buffer small_buf(LOREM_IPSUM.size()/4);
 
-    BOOST_REQUIRE_THROW(fragmented->write({partial_buffer1.data(),partial_buffer1.size()}),std::exception);
+        auto maximum_readable = std::min(small_buf.data().size(),
+                                         static_cast<uint64_t>(std::distance(LOREM_IPSUM.cbegin()+written,
+                                                                              LOREM_IPSUM.cend())));
 
-    auto partial_size2 = fragmented->read({partial_buffer2.data(),partial_buffer2.size()});
-    BOOST_REQUIRE_EQUAL(partial_size2,partial_buffer2.size());
+        bool first_read = !written;
 
-    BOOST_CHECK_EQUAL(partial_size1+partial_size2,test_string1.size());
+        read += uh::io::copy(*fragmented_read,small_buf);
+        if(first_read)BOOST_REQUIRE_THROW(copy(small_buf,*fragmented_read),std::exception);
+
+        test_read.write(small_buf.data().data(),static_cast<std::streamsize>(small_buf.data().size()));
+    }
+    while(fragmented_read->valid());
+
+    BOOST_CHECK_EQUAL(read,LOREM_IPSUM.size());
+    BOOST_CHECK_EQUAL(std::string(test_read.str()),LOREM_IPSUM);
 }
 
 // ---------------------------------------------------------------------

@@ -83,10 +83,11 @@ namespace uh::io{
 
     private:
         enum{
+            UNDEFINED_STATE,
             READING_BEGIN,
-            COMPLETE,
-            WRITING_BEGIN
-        } state_machine = COMPLETE;
+            WRITING_BEGIN,
+            COMPLETE
+        } state_machine = UNDEFINED_STATE;
         int64_t elements_left_to_process{};
         uint8_t index;
         char control_byte{};

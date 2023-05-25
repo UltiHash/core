@@ -39,11 +39,18 @@ namespace uh::io{
         if(state_machine == READING_BEGIN)
             THROW(util::exception,"Writing on fragment_on_device corrupted the fragments incomplete reading state!");
 
-        if(state_machine == COMPLETE){
+        if(state_machine == UNDEFINED_STATE){
             state_machine = WRITING_BEGIN;
             auto return_size_format =
                     serialization::sl_fragment_serializer::write(buffer, index, alloc);
             elements_left_to_process = static_cast<int64_t>(alloc) - return_size_format.content_size;
+
+            if(elements_left_to_process < 0)
+                THROW(util::exception,"Too many elements were written to fragment on device! Allocation was exceeded!");
+
+            if(!elements_left_to_process)
+                state_machine = COMPLETE;
+
             return return_size_format;
         }
         else{
@@ -72,7 +79,7 @@ namespace uh::io{
         if(state_machine == WRITING_BEGIN)
             THROW(util::exception,"Reading on fragment_on_device corrupted the fragments incomplete writing state!");
 
-        if(state_machine == COMPLETE){
+        if(state_machine == UNDEFINED_STATE){
             state_machine = READING_BEGIN;
             serialization::fragment_serialize_transit_format header_read_format =
                     serialization::sl_fragment_deserializer::get_header_data_size_index();
@@ -137,7 +144,7 @@ namespace uh::io{
 
     bool fragment_on_device::valid() const
     {
-        return serialization::sl_fragment_serializer::dev_.valid();
+        return serialization::sl_fragment_serializer::dev_.valid() and state_machine != COMPLETE;
     }
 
     // ---------------------------------------------------------------------
