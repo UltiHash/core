@@ -1,11 +1,11 @@
-#include "options.h"
+#include "chunking_options.h"
 
 #include <util/exception.h>
 
 
 using namespace boost::program_options;
 
-namespace uh::client::chunking
+namespace uh::options
 {
 
 enum class OptionsEnum {ChunkingStrategy, ChunkSize};
@@ -22,15 +22,15 @@ constexpr const char* optionString(OptionsEnum n)
 
 // ---------------------------------------------------------------------
 
-options::options()
-    : uh::options::options("Chunking Options")
+chunking_options::chunking_options()
+    : options::options("Chunking Options")
 {
     visible().add_options()
         (optionString(OptionsEnum::ChunkingStrategy),
-            value<std::string>()->default_value(std::string(uh::client::chunking::chunking_config::default_chunking_strategy)),
+            value<std::string>()->default_value(std::string(uh::chunking::config::default_chunking_strategy)),
                 "Strategy to use for spliting files into chunks")
         (optionString(OptionsEnum::ChunkSize),
-            value<size_t>()->default_value(uh::client::chunking::chunking_config::default_chunk_size_in_bytes),
+            value<size_t>()->default_value(uh::chunking::config::default_chunk_size_in_bytes),
                 "Size in bytes of the chunks, in case of a fixed size chunking strategy")
         ("gear-max-size", value< std::size_t >(&m_config.gear.max_size), "maximum chunk size for Gear CDC")
         ("gear-avg-size", value< std::size_t >(&m_config.gear.average_size), "average chunk size for Gear CDC")
@@ -44,9 +44,9 @@ options::options()
 
 // ---------------------------------------------------------------------
 
-uh::options::action options::evaluate(const boost::program_options::variables_map& vars)
+action chunking_options::evaluate(const boost::program_options::variables_map& vars)
 {
-    chunking_config c = m_config;
+    chunking::config c = m_config;
     c.chunking_strategy = vars[optionString(OptionsEnum::ChunkingStrategy)].as<std::string>();
 
     size_t chunk_size = vars[optionString(OptionsEnum::ChunkSize)].as<std::size_t>();
@@ -58,11 +58,11 @@ uh::options::action options::evaluate(const boost::program_options::variables_ma
 
 // ---------------------------------------------------------------------
 
-const chunking_config& options::config() const
+const chunking::config& chunking_options::config() const
 {
     return m_config;
 }
 
 // ---------------------------------------------------------------------
 
-} // namespace boost::program_options;
+} // namespace uh::chunking;

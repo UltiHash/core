@@ -1,5 +1,5 @@
-#ifndef SERIALIZATION_FS_TRAVERSE_H
-#define SERIALIZATION_FS_TRAVERSE_H
+#ifndef CLIENT_FS_TRAVERSE_H
+#define CLIENT_FS_TRAVERSE_H
 
 #include <logging/logging_boost.h>
 #include <uhv/job_queue.h>
@@ -8,7 +8,7 @@
 #include <filesystem>
 
 
-namespace uh::client::serialization
+namespace uh::client
 {
 
 // ---------------------------------------------------------------------
@@ -30,6 +30,6 @@ private:
 
 // ---------------------------------------------------------------------
 
-} // namespace uh::client::serialization
+} // namespace uh::client
 
 #endif

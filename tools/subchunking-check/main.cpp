@@ -11,7 +11,7 @@
 #include <filesystem>
 #include <list>
 #include "io/file.h"
-#include "../../client-shell/src/chunking/options.h"
+#include "options/chunking_options.h"
 #include "subchunking_options.h"
 #include <algorithm>
 #include <span>
@@ -20,7 +20,7 @@
 APPLICATION_CONFIG
 (
 (subchunking, uh::tools::subchunking_options),
-(chunking, uh::client::chunking::options)
+(chunking, uh::options::chunking_options)
 );
 
 
@@ -112,6 +112,7 @@ void integrate (const std::filesystem::path &path, uh::client::chunking::mod &ch
     try {
         uh::io::file f(path, std::ios::in);
 
+
         auto chunker = chunking_module.create_chunker(f);
 
 
@@ -143,7 +144,7 @@ int main(int argc, const char *argv[]) {
     chunking_cfg.fast_cdc.min_size = 4*1024;
     chunking_cfg.fast_cdc.normal_size = 8*1024;
     chunking_cfg.fast_cdc.max_size = 1024*512;
-    uh::client::chunking::mod chunking_module(chunking_cfg);
+    uh::chunking::mod chunking_module(chunking_cfg);
 
     const auto root = config.subchunking().path;
     unsigned long count = 0;
