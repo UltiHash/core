@@ -108,7 +108,7 @@ int insert_block (const std::string &chunk_str, size_t min_block) {
 
 }
 
-void integrate (const std::filesystem::path &path, uh::client::chunking::mod &chunking_module, size_t min_block) {
+void integrate (const std::filesystem::path &path, uh::chunking::mod &chunking_module, size_t min_block) {
     try {
         uh::io::file f(path, std::ios::in);
 
