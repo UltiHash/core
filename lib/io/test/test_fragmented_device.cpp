@@ -15,6 +15,7 @@
 #include <util/exception.h>
 #include <io/fragment_on_device.h>
 #include <io/buffer.h>
+#include <io/device.h>
 #include <serialization/serialization.h>
 
 using namespace uh::util;
@@ -68,7 +69,7 @@ std::unique_ptr<fragment_on_device> make_test_device<fragment_on_device>()
     return rv;
 }
 
-BOOST_FIXTURE_TEST_CASE_TEMPLATE( multi_fragment_on_device_test, T, device_types, Fixture )
+BOOST_FIXTURE_TEST_CASE_TEMPLATE( multi_fragment_on_device_skip_test, T, device_types, Fixture )
 {
     std::unique_ptr<T> fragmented = make_test_device<T>();
 
@@ -81,18 +82,16 @@ BOOST_FIXTURE_TEST_CASE_TEMPLATE( multi_fragment_on_device_test, T, device_types
     std::unique_ptr<buffer> tb = std::make_unique<buffer>();
     tb->write({test_string1.data(),test_string1.size()});
 
-    auto header_size1 = uh::serialization::serialization<uh::serialization::sl_serializer,
-    uh::serialization::sl_deserializer>::sl_serializer::get_header(test_string1.size()).size();
     auto size1 = fragmented->skip();
 
-    BOOST_REQUIRE(size1 == test_string1.size()+header_size1);
+    BOOST_REQUIRE(size1.content_size == test_string1.size());
 
     std::vector<char> read_back_second;
     read_back_second.resize(test_string2.size(),0);
 
     auto size2 = fragmented->read({read_back_second.data(),read_back_second.size()});
 
-    BOOST_REQUIRE(size2 == test_string2.size());
+    BOOST_REQUIRE(size2.content_size == test_string2.size());
     BOOST_CHECK_EQUAL_COLLECTIONS(test_string2.begin(),test_string2.end(),
                                   read_back_second.begin(),read_back_second.end());
 
@@ -101,11 +100,23 @@ BOOST_FIXTURE_TEST_CASE_TEMPLATE( multi_fragment_on_device_test, T, device_types
 
 // ---------------------------------------------------------------------
 
-BOOST_FIXTURE_TEST_CASE_TEMPLATE( fragment_partial_read_exceptions, T, device_types, Fixture )
+BOOST_FIXTURE_TEST_CASE_TEMPLATE( fragment_partial_read_write_exceptions, T, device_types, Fixture )
 {
     std::unique_ptr<T> fragmented = make_test_device<T>();
 
     const std::string test_string1(LOREM_IPSUM);
+
+    std::streamsize written{};
+
+    do{
+        buffer small_buf(test_string1.size()/3);
+        uh::io::write(small_buf,{LOREM_IPSUM.data()+written,small_buf.data().size()});
+
+        uh::io::write()
+        //require throw on reading
+        //fragmented->write({small_buf.data(),test_string1.size()/2},LOREM_IPSUM.size());
+    }
+    while(written != test_string1.size());
 
     fragmented->write(test_string1);
 
