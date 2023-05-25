@@ -5,12 +5,12 @@
 #ifndef CORE_FRAGMENT_SERIALIZATION_COMMON_H
 #define CORE_FRAGMENT_SERIALIZATION_COMMON_H
 
+#include "serialization/serialization_common.h"
+
 #include <bit>
 #include <type_traits>
-#include <cstring>
 #include <utility>
 #include <vector>
-#include "io/device.h"
 #include "check_byteswap.h"
 
 namespace uh::serialization {
@@ -20,6 +20,18 @@ namespace uh::serialization {
             requires (T t) {
                 t.write (std::declval <std::vector <char>> (), std::declval <uint8_t> ());
                 t.write (std::declval <std::vector <long>> (), std::declval <uint8_t> ());
+                t.write (std::declval <std::vector <char>> (), std::declval <uint8_t> (),
+                        std::declval <uint8_t> ());
+                t.write (std::declval <std::vector <long>> (), std::declval <uint8_t> (),
+                        std::declval <uint8_t> ());
+                t.write (std::declval <std::vector <char>> (), std::declval <uint8_t> (),
+                         std::declval <uint16_t> ());
+                t.write (std::declval <std::vector <long>> (), std::declval <uint8_t> (),
+                         std::declval <uint16_t> ());
+                t.write (std::declval <std::vector <char>> (), std::declval <uint8_t> (),
+                         std::declval <uint32_t> ());
+                t.write (std::declval <std::vector <long>> (), std::declval <uint8_t> (),
+                         std::declval <uint32_t> ());
             }>
     {};
 

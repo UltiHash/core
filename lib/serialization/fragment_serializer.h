@@ -5,7 +5,7 @@
 #ifndef CORE_FRAGMENT_SERIALIZER_H
 #define CORE_FRAGMENT_SERIALIZER_H
 
-#include "serialization_common.h"
+#include "fragment_serialization_common.h"
 #include "fragment_size_struct.h"
 
 #include "util/exception.h"

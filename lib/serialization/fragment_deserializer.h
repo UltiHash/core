@@ -5,7 +5,7 @@
 #ifndef CORE_FRAGMENT_DESERIALIZER_H
 #define CORE_FRAGMENT_DESERIALIZER_H
 
-#include "serialization_common.h"
+#include "fragment_serialization_common.h"
 #include "fragment_size_struct.h"
 
 
@@ -62,7 +62,7 @@ namespace uh::serialization {
 
         // ---------------------------------------------------------------------
 
-    public:
+    protected:
 
         // ---------------------------------------------------------------------
 
@@ -72,7 +72,7 @@ namespace uh::serialization {
          *
          * @return deliver header deconstruction to read functions
          */
-        auto get_header_data_size_index(){
+        fragment_serialize_transit_format get_header_data_size_index(){
             auto data_size_len = get_control_byte_size_length();
             std::vector<char> data_size_bytes(data_size_len.header_size);
             io::read(dev_, data_size_bytes);
@@ -86,12 +86,57 @@ namespace uh::serialization {
 
             io::read(dev_, {index,1});
 
-            return fragment_serialize_transit_format(
-                    sizeof(data_size_len.control_byte)+data_size_bytes.size(),
-                    data_size,
+            return {
+                    static_cast<uint8_t>(sizeof(data_size_len.control_byte)+data_size_bytes.size()),
+                    static_cast<uint32_t>(data_size),
                     static_cast<char>(data_size_len.control_byte),
-                    index[0]);
+                    static_cast<uint8_t>(index[0])
+            };
         }
+
+        // ---------------------------------------------------------------------
+
+        /**
+         * reads the data content only from the device and deserializes it into the given contiguous range type.
+         * @param data_size_index the input fragment information in case the header was already read
+         * @tparam Range the type of the data to be deserialized. It should be a contiguous range of arithmetic types
+         * @tparam InnerType the arithmetic inner type of the given range type
+         * @return deserialized data
+         */
+        template<typename Range, typename InnerType = std::ranges::range_value_t <Range>>
+        requires std::ranges::contiguous_range<Range>
+                 and (std::is_arithmetic_v < InnerType > )
+                 and requires(Range range, InnerType inner_type) { range.resize(1); range[0] = inner_type; }
+        std::pair<Range,fragment_serialize_size_format> read(fragment_serialize_transit_format data_size_index) {
+
+            Range range;
+            range.resize(data_size_index.content_size / sizeof (InnerType));
+
+            if (!is_different_endian(data_size_index.control_byte) or sizeof(InnerType) == 1) [[likely]] {  // no need to convert
+                io::read(dev_, {reinterpret_cast <char *> (std::ranges::data(range)),
+                                data_size_index.content_size});
+            }
+            else if constexpr (sizeof(InnerType) > 1) {  // different endian
+                char data[sizeof(InnerType)];
+                for (auto i = 0u; i < data_size_index.content_size; i++) {
+                    io::read(dev_, data);
+                    char *tmp_dat = endian_convert (data);
+                    auto *val = reinterpret_cast <InnerType *> (tmp_dat);
+                    range[i] = *val;
+                }
+            }
+
+            return std::make_pair(range,fragment_serialize_size_format(
+                    data_size_index.header_size,
+                    data_size_index.content_size,
+                    data_size_index.index
+            ));
+
+        }
+
+        // ---------------------------------------------------------------------
+
+    public:
 
         // ---------------------------------------------------------------------
 
@@ -134,46 +179,6 @@ namespace uh::serialization {
                     data_size_index.content_size,
                     data_size_index.index
                     ));
-
-        }
-
-        // ---------------------------------------------------------------------
-
-        /**
-         * reads the data content only from the device and deserializes it into the given contiguous range type.
-         * @param data_size_index the input fragment information in case the header was already read
-         * @tparam Range the type of the data to be deserialized. It should be a contiguous range of arithmetic types
-         * @tparam InnerType the arithmetic inner type of the given range type
-         * @return deserialized data
-         */
-        template<typename Range, typename InnerType = std::ranges::range_value_t <Range>>
-        requires std::ranges::contiguous_range<Range>
-                 and (std::is_arithmetic_v < InnerType > )
-                 and requires(Range range, InnerType inner_type) { range.resize(1); range[0] = inner_type; }
-        std::pair<Range,fragment_serialize_size_format> read(fragment_serialize_transit_format data_size_index) {
-
-            Range range;
-            range.resize(data_size_index.content_size / sizeof (InnerType));
-
-            if (!is_different_endian(data_size_index.control_byte) or sizeof(InnerType) == 1) [[likely]] {  // no need to convert
-                io::read(dev_, {reinterpret_cast <char *> (std::ranges::data(range)),
-                                data_size_index.content_size});
-            }
-            else if constexpr (sizeof(InnerType) > 1) {  // different endian
-                char data[sizeof(InnerType)];
-                for (auto i = 0u; i < data_size_index.content_size; i++) {
-                    io::read(dev_, data);
-                    char *tmp_dat = endian_convert (data);
-                    auto *val = reinterpret_cast <InnerType *> (tmp_dat);
-                    range[i] = *val;
-                }
-            }
-
-            return std::make_pair(range,fragment_serialize_size_format(
-                    data_size_index.header_size,
-                    data_size_index.content_size,
-                    data_size_index.index
-            ));
 
         }
 

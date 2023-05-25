@@ -5,6 +5,7 @@
 #include "io/fragmented_device.h"
 #include "io/device.h"
 #include "serialization/fragment_size_struct.h"
+#include "serialization/fragment_serialization.h"
 #include "util/exception.h"
 
 #include <cstdint>
@@ -15,7 +16,7 @@
 
 namespace uh::io{
 
-    class fragment_on_device : public io::fragmented_device{
+    class fragment_on_device : public serialization::fragment_serialization<>, public fragmented_device{
 
     public:
         /**
@@ -74,16 +75,21 @@ namespace uh::io{
          */
         uh::serialization::fragment_serialize_size_format skip() override;
 
+        /**
+         *
+         * @return valid index after at least reading once or writing once
+         */
+        [[nodiscard]] uint8_t getIndex() const;
+
     private:
-        io::device& dev_;
         enum{
-            UNDEFINED_STATE,
             READING_BEGIN,
             COMPLETE,
             WRITING_BEGIN
-        } state_machine = UNDEFINED_STATE;
+        } state_machine = COMPLETE;
         int64_t elements_left_to_process{};
         uint8_t index;
+        char control_byte{};
     };
 } // namespace uh::io
 

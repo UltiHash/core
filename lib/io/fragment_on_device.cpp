@@ -7,13 +7,15 @@
 #include <serialization/fragment_serialization.h>
 #include <serialization/fragment_size_struct.h>
 #include <io/device.h>
+
 #include <span>
 
 namespace uh::io{
 
     // ---------------------------------------------------------------------
 
-    fragment_on_device::fragment_on_device(io::device &dev, uint8_t index) : dev_(dev),index(index){}
+    fragment_on_device::fragment_on_device(io::device &dev, uint8_t index):
+    serialization::fragment_serialization<>(dev),index(index){}
 
     // ---------------------------------------------------------------------
 
@@ -24,8 +26,8 @@ namespace uh::io{
             THROW(util::exception,"Writing on fragment_on_device corrupted the fragments incomplete reading state!");
 
         state_machine = WRITING_BEGIN;
-        auto ser = serialization::fragment_serialization(dev_);
-        auto return_size_format = ser.write(buffer, index);
+        auto return_size_format =
+                serialization::sl_fragment_serializer::write(buffer, index);
         state_machine = COMPLETE;
         return return_size_format;
     }
@@ -37,15 +39,15 @@ namespace uh::io{
         if(state_machine == READING_BEGIN)
             THROW(util::exception,"Writing on fragment_on_device corrupted the fragments incomplete reading state!");
 
-        if(state_machine == UNDEFINED_STATE or state_machine == COMPLETE){
+        if(state_machine == COMPLETE){
             state_machine = WRITING_BEGIN;
-            auto ser = serialization::fragment_serialization(dev_);
-            auto return_size_format = ser.write(buffer, index, alloc);
+            auto return_size_format =
+                    serialization::sl_fragment_serializer::write(buffer, index, alloc);
             elements_left_to_process = static_cast<int64_t>(alloc) - return_size_format.content_size;
             return return_size_format;
         }
         else{
-            std::streamsize written = io::write(dev_,buffer);
+            std::streamsize written = io::write(serialization::sl_fragment_serializer::dev_,buffer);
             elements_left_to_process -= written;
 
             if(elements_left_to_process < 0)
@@ -58,7 +60,7 @@ namespace uh::io{
                 0,
                 static_cast<uint32_t>(written),
                 index
-            }
+            };
         }
     }
 
@@ -67,41 +69,75 @@ namespace uh::io{
     uh::serialization::fragment_serialize_size_format
     fragment_on_device::read(std::span<char> buffer)
     {
-        std::streamsize accumulate_read{};
-        std::streamoff buffer_size{};
+        if(state_machine == WRITING_BEGIN)
+            THROW(util::exception,"Reading on fragment_on_device corrupted the fragments incomplete writing state!");
 
-        try{
-            if(state_machine == UNDEFINED_STATE || state_machine == COMPLETE){
-                auto ser = serialization::serialization(dev_);
-                auto data_size = ser.get_data_size();
-                state_machine = READING_BEGIN;
+        if(state_machine == COMPLETE){
+            state_machine = READING_BEGIN;
+            serialization::fragment_serialize_transit_format header_read_format =
+                    serialization::sl_fragment_deserializer::get_header_data_size_index();
 
-                elements_left_to_process = static_cast<std::streamoff>(std::get<1>(data_size));
-            }
+            elements_left_to_process = header_read_format.content_size;
+            control_byte = header_read_format.control_byte;
+            index = header_read_format.index;
 
-            buffer_size = static_cast<std::streamoff>(buffer.size());
-            std::size_t stream_advance = std::min(static_cast<std::size_t>(buffer_size),
-                                                  static_cast<std::size_t>(elements_left_to_process));
+            header_read_format.content_size = std::min(header_read_format.content_size,
+                                                       static_cast<uint32_t>(buffer.size()));
 
-            accumulate_read += io::read(dev_, {buffer.data(),stream_advance});
+            std::pair<std::vector<char>,serialization::fragment_serialize_size_format> first_read =
+                    serialization::sl_fragment_deserializer::read<std::vector<char>>(header_read_format);
 
-            elements_left_to_process -= static_cast<std::streamoff>(stream_advance);
-            if(!elements_left_to_process)state_machine = COMPLETE;
+            std::memcpy(buffer.data(),first_read.first.data(),buffer.size());
+
+            elements_left_to_process -= first_read.second.content_size;
+
+            if(elements_left_to_process < 0)
+                THROW(util::exception,"Too many elements were read from fragment on device! Allocation was exceeded!");
+
+            if(!elements_left_to_process)
+                state_machine = COMPLETE;
+
+            return {
+                static_cast<uint8_t>(first_read.second.header_size),
+                first_read.second.content_size,
+                static_cast<uint8_t>(first_read.second.index_num)
+            };
         }
-        catch(std::exception &e){
-            THROW(util::exception,"fragment_on_device serialization failed on skip! "
-                                  "Buffer size was "+std::to_string(buffer_size)+
-                                  " The fragment_on_device state was "+std::to_string(state_machine)+
-                                  " and the error code was: "+e.what());
+        else{
+            uint32_t to_read = std::min(
+                    static_cast<uint32_t>(elements_left_to_process),
+                    static_cast<uint32_t>(buffer.size())
+            );
+
+            serialization::fragment_serialize_transit_format header_read_format(
+                    0,
+                    to_read,
+                             control_byte,
+                             index);
+
+            std::pair<std::vector<char>,serialization::fragment_serialize_size_format> read_continue =
+                    serialization::sl_fragment_deserializer::read<std::vector<char>>(header_read_format);
+
+            std::memcpy(buffer.data(),read_continue.first.data(),buffer.size());
+
+            elements_left_to_process -= read_continue.second.content_size;
+
+            if(elements_left_to_process < 0)
+                THROW(util::exception,"Too many elements were read from fragment on device! Allocation was exceeded!");
+
+            if(!elements_left_to_process)
+                state_machine = COMPLETE;
+
+            return read_continue.second;
         }
-        return accumulate_read;
+
     }
 
     // ---------------------------------------------------------------------
 
     bool fragment_on_device::valid() const
     {
-        return dev_.valid();
+        return serialization::sl_fragment_serializer::dev_.valid();
     }
 
     // ---------------------------------------------------------------------
@@ -109,38 +145,13 @@ namespace uh::io{
     uh::serialization::fragment_serialize_size_format
     fragment_on_device::skip()
     {
-        std::streamsize accumulate_read{};
-        std::streamoff buffer_size{};
+        return serialization::sl_fragment_deserializer::read<std::vector<char>>().second;
+    }
 
-        try{
-            std::streamoff header_elements{};
-            std::vector<char>tmp{};
+    // ---------------------------------------------------------------------
 
-            if(state_machine == UNDEFINED_STATE || state_machine == COMPLETE){
-                auto ser = serialization::serialization(dev_);
-                auto data_size = ser.get_data_size();
-                state_machine = READING_BEGIN;
-
-                header_elements = static_cast<std::streamoff>(std::get<0>(data_size));
-                elements_left_to_process = static_cast<std::streamoff>(std::get<1>(data_size));
-            }
-
-            tmp.resize(elements_left_to_process, 0);
-            buffer_size = static_cast<std::streamoff>(tmp.size());
-
-            accumulate_read += header_elements;
-            accumulate_read += io::read(dev_, {tmp.data(), static_cast<std::size_t>(elements_left_to_process)});
-
-            state_machine = COMPLETE;
-            elements_left_to_process = 0;
-        }
-        catch(std::exception &e){
-            THROW(util::exception,"fragment_on_device serialization failed on skip! "
-                                  "Buffer size was "+std::to_string(buffer_size)+
-                                  " The fragment_on_device state was "+std::to_string(state_machine)+
-                                  " and the error code was: "+e.what());
-        }
-        return accumulate_read;
+    uint8_t fragment_on_device::getIndex() const {
+        return index;
     }
 
     // ---------------------------------------------------------------------

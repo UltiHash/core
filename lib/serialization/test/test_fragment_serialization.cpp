@@ -9,12 +9,13 @@
 #endif
 
 #include <boost/test/unit_test.hpp>
+
 #include "serialization/fragment_serializer.h"
 #include "serialization/fragment_deserializer.h"
-
-#include "io/sstream_device.h"
-#include "serialization/buffered_serializer.h"
+#include "serialization/buffered_fragment_serializer.h"
 #include "serialization/serialization.h"
+#include "serialization/fragment_serialization.h"
+#include "io/sstream_device.h"
 
 using namespace uh::serialization;
 
@@ -77,7 +78,7 @@ void test_fragment_range_serialization (const T& data, const std::string test_na
 
 
 
-BOOST_AUTO_TEST_CASE(buffered_serializer_test) {
+BOOST_AUTO_TEST_CASE(buffered_fragment_serializer_test) {
 
     std::string str1 = "data1 data2 data3";
     std::string str2 = "fsdfsdg data2 data3 data 5 da t asdasf gfdg ytg";
@@ -103,7 +104,7 @@ BOOST_AUTO_TEST_CASE(buffered_serializer_test) {
 
 
 
-BOOST_AUTO_TEST_CASE(buffered_serialization_test) {
+BOOST_AUTO_TEST_CASE(buffered_fragment_serialization_test) {
 
     std::string str1 = "data1 data2 data3";
     std::string str2 = "fsdfsdg data2 data3 data 5 da t asdasf gfdg ytg";
@@ -168,7 +169,7 @@ BOOST_AUTO_TEST_CASE(buffered_serialization_test) {
 
 
 
-BOOST_AUTO_TEST_CASE(serialization_type_tests) {
+BOOST_AUTO_TEST_CASE(fragment_serialization_type_tests) {
     typedef fragment_serialization <buffered_fragment_serializer<sl_fragment_serializer>, sl_fragment_deserializer> sertype;
 
     BOOST_ASSERT (is_fragment_serializer <sl_fragment_serializer>::value);
