@@ -66,7 +66,8 @@ void f_download::download_file(std::unique_ptr<uhv::f_meta_data>& f_meta_data)
             if (aggregated_size > protocol::server::MAXIMUM_DATA_SIZE) {
                 auto resp = client->read_chunks (
                         {{const_cast <char *> (f_meta_data->f_hashes().data() + offset), (i - 1) * 64}});
-                new_file.write (resp.data.data(), resp.data.size());
+                const auto& data = std::get<0>(resp.data);
+                new_file.write (data.data(), data.size());
                 offset = (i - 1) * 64;
                 aggregated_size = f_meta_data->f_chunk_sizes()[i];
             }
@@ -74,7 +75,9 @@ void f_download::download_file(std::unique_ptr<uhv::f_meta_data>& f_meta_data)
         if (aggregated_size > 0) {
             auto resp = client->read_chunks ({{const_cast <char *> (f_meta_data->f_hashes().data() + offset),
                                                f_meta_data->f_hashes().size() - offset}});
-            new_file.write (resp.data.data(), resp.data.size());
+
+            const auto& data = std::get<0>(resp.data);
+            new_file.write(data.data(), data.size());
         }
 
     }
