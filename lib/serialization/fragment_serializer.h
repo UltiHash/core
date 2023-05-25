@@ -8,6 +8,8 @@
 #include "serialization_common.h"
 #include "fragment_size_struct.h"
 
+#include "util/exception.h"
+
 
 namespace uh::serialization {
 
@@ -67,17 +69,51 @@ namespace uh::serialization {
         requires std::ranges::contiguous_range <Range>
                  and (std::is_arithmetic_v <InnerType> or std::is_enum_v <InnerType>)
         fragment_serialize_size_format write (const Range &data, uint8_t index) {
+
+            if(data.empty())
+                THROW(util::exception, "The content of the incoming range of fragment serializer"
+                                       " index " + std::to_string(index) + " was empty!");
+
             const auto data_size = std::ranges::size (data) * sizeof (InnerType);
             const auto header = get_header(data_size,index);
 
-            fragment_serialize_size_format fssf(io::write(dev_, header),
-                                                io::write(dev_, {reinterpret_cast <const char *>
-                                                (std::ranges::data(data)), data_size}),
-                                                index);
-
-            return fssf;
+            return {static_cast<uint8_t>(io::write(dev_, header)),
+                    static_cast<uint32_t>(io::write(dev_, {reinterpret_cast <const char *>
+                    (std::ranges::data(data)), data_size})),
+                    index};
         }
 
+        // ---------------------------------------------------------------------
+
+        /**
+         * serializes the given range of data into the device.
+         *
+         * @tparam Range the type of the data to be serialized. It should be a contiguous range of arithmetic types
+         * @tparam InnerType the arithmetic inner type of the given range type
+         * @tparam ALLOC_UTYPE the type of incoming allocation u_int to reserve more or limit the space to be written
+         * @param data to be serialized
+         */
+        template <typename Range, typename InnerType = std::ranges::range_value_t<Range>,typename ALLOC_UTYPE>
+        requires std::ranges::contiguous_range <Range>
+                 and (std::is_arithmetic_v <InnerType> or std::is_enum_v <InnerType>)
+                 and std::is_unsigned_v<ALLOC_UTYPE> and (sizeof(ALLOC_UTYPE) < sizeof(uint64_t))
+        fragment_serialize_size_format write (const Range &data, uint8_t index, ALLOC_UTYPE alloc) {
+
+            if(data.empty())
+                THROW(util::exception, "The content of the incoming range of fragment serializer"
+                                       " index " + std::to_string(index) + " was empty!");
+
+            const auto data_size = alloc * sizeof (InnerType);
+            const auto header = get_header(data_size,index);
+
+            return {static_cast<uint8_t>(io::write(dev_, header)),
+                    static_cast<uint32_t>(io::write(dev_, {reinterpret_cast <const char *>
+                                                           (std::ranges::data(data)),
+                                                           std::min(data_size,std::ranges::size(data))})),
+                    index};
+        }
+
+        // ---------------------------------------------------------------------
 
     };
 

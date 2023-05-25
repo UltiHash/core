@@ -3,6 +3,12 @@
 //
 
 #include "io/fragmented_device.h"
+#include "io/device.h"
+#include "serialization/fragment_size_struct.h"
+#include "util/exception.h"
+
+#include <cstdint>
+#include <span>
 
 #ifndef CORE_FRAGMENT_H
 #define CORE_FRAGMENT_H
@@ -18,19 +24,32 @@ namespace uh::io{
          * relatively to the device stream.
          * A fragment_on_device is a serialized device.
          *
-         * @param impl input device
-         * @param start_pos relative start position on device to distinguish fragments
+         * @param dev input device
+         * @param index index of fragment needs to be set in case fragment is supposed to be written
          */
-        explicit fragment_on_device(io::device& dev);
+        explicit fragment_on_device(io::device& dev,uint8_t index = 0);
 
         /**
          * read un-serialized input and write serialized to device
          *
          * @param buffer input
-         * @return number of bytes that were persisted to device
+         * @return struct with header size written, number of bytes that were persisted to device
+         * and the index of the fragment
          */
 
-        std::streamsize write(std::span<const char> buffer) override;
+        uh::serialization::fragment_serialize_size_format write(std::span<const char> buffer) override;
+
+        /**
+         * read un-serialized input and write serialized to device
+         *
+         * @param buffer input
+         * @param alloc allocate space on fragment, append multiple times to fragment or limit write
+         * @return struct with header size written, number of bytes that were persisted to device
+         * and the index of the fragment
+         */
+
+        uh::serialization::fragment_serialize_size_format write(std::span<const char> buffer,
+                                                                uint32_t alloc) override;
 
         /**
          * read serialized device to un-serialized buffer
@@ -38,7 +57,7 @@ namespace uh::io{
          * @param buffer to be read to from device
          * @return number of bytes totally read from device
          */
-        std::streamsize read(std::span<char> buffer) override;
+        uh::serialization::fragment_serialize_size_format read(std::span<char> buffer) override;
 
         /**
          *
@@ -53,16 +72,18 @@ namespace uh::io{
          * @return counts the entire count a fragment_on_device fills,
          * together with it's header structure
          */
-        std::streamsize skip() override;
+        uh::serialization::fragment_serialize_size_format skip() override;
 
     private:
         io::device& dev_;
-        enum {
+        enum{
             UNDEFINED_STATE,
             READING_BEGIN,
-            READING_COMPLETE
+            COMPLETE,
+            WRITING_BEGIN
         } state_machine = UNDEFINED_STATE;
-        std::streamoff elements_left_to_read{};
+        int64_t elements_left_to_process{};
+        uint8_t index;
     };
 } // namespace uh::io
 
