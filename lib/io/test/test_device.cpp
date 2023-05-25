@@ -7,30 +7,20 @@
 #include <boost/test/unit_test.hpp>
 #include <boost/mpl/vector.hpp>
 
+#include <test/ipsum.h>
 #include <io/buffer.h>
 #include <io/buffered_device.h>
 #include <io/sstream_device.h>
 #include <io/fragment_on_device.h>
+#include <io/test_generator.h>
 
 
 using namespace uh;
 using namespace uh::io;
+using namespace uh::test;
 
 namespace
 {
-
-// ---------------------------------------------------------------------
-
-const static std::string TEST_TEXT =
-    "Lorem ipsum dolor sit amet, consectetur adipiscing "
-    "elit, sed do eiusmod tempor incididunt ut labore et "
-    "dolore magna aliqua. Ut enim ad minim veniam, quis "
-    "nostrud exercitation ullamco laboris nisi ut "
-    "aliquip ex ea commodo consequat. Duis aute irure "
-    "dolor in reprehenderit in voluptate velit esse "
-    "cillum dolore eu fugiat nulla pariatur. Excepteur "
-    "sint occaecat cupidatat non proident, sunt in culpa "
-    "qui officia deserunt mollit anim id est laborum.";
 
 // ---------------------------------------------------------------------
 
@@ -49,7 +39,7 @@ struct Fixture {};
 
 /**
  * To be implemented for each type in `device_types`: constructs a device
- * that will read the text given in TEST_TEXT.
+ * that will read the text given in LOREM_IPSUM.
  */
 template <typename T>
 std::unique_ptr<T> make_test_device();
@@ -59,7 +49,7 @@ std::unique_ptr<T> make_test_device();
 template <>
 std::unique_ptr<sstream_device> make_test_device<sstream_device>()
 {
-    return std::make_unique<sstream_device>(TEST_TEXT);
+    return std::make_unique<sstream_device>(LOREM_IPSUM);
 }
 
 // ---------------------------------------------------------------------
@@ -79,7 +69,7 @@ template <>
 std::unique_ptr<buffer> make_test_device()
 {
     auto rv = std::make_unique<buffer>();
-    rv->write(TEST_TEXT);
+    rv->write(LOREM_IPSUM);
     return rv;
 }
 
@@ -112,12 +102,12 @@ BOOST_FIXTURE_TEST_CASE_TEMPLATE( read_full, T, device_types, Fixture )
 {
     auto dev = make_test_device<T>();
 
-    std::vector<char> buffer(TEST_TEXT.size());
+    std::vector<char> buffer(LOREM_IPSUM.size());
 
     {
         auto count = dev->read(buffer);
-        BOOST_CHECK_EQUAL(count, TEST_TEXT.size());
-        BOOST_CHECK_EQUAL(TEST_TEXT, std::string(&buffer[0], count));
+        BOOST_CHECK_EQUAL(count, LOREM_IPSUM.size());
+        BOOST_CHECK_EQUAL(LOREM_IPSUM, std::string(&buffer[0], count));
     }
 
     {
@@ -146,9 +136,22 @@ BOOST_FIXTURE_TEST_CASE_TEMPLATE( read_partial, T, device_types, Fixture )
         complete += std::string(&buffer[0], count);
     }
 
-    BOOST_CHECK_EQUAL(total, TEST_TEXT.size());
-    BOOST_CHECK_EQUAL(TEST_TEXT, complete);
+    BOOST_CHECK_EQUAL(total, LOREM_IPSUM.size());
+    BOOST_CHECK_EQUAL(LOREM_IPSUM, complete);
     BOOST_CHECK(!dev->valid());
+}
+
+// ---------------------------------------------------------------------
+
+BOOST_FIXTURE_TEST_CASE_TEMPLATE( data_generator_api, T, device_types, Fixture )
+{
+    std::vector v(LOREM_IPSUM.begin(), LOREM_IPSUM.end());
+    io::test::generator gen(v);
+
+    auto dev = make_test_device<T>();
+
+    auto count = dev->write_range(gen);
+    BOOST_CHECK_EQUAL(count, LOREM_IPSUM.size());
 }
 
 // ---------------------------------------------------------------------

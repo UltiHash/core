@@ -3,8 +3,11 @@
 //
 #include "hierarchical_storage.h"
 
+#include <io/buffer_generator.h>
+#include <io/file.h>
+
 #include <memory>
-#include "io/file.h"
+
 
 namespace uh::dbn::storage {
 
@@ -14,8 +17,8 @@ hierarchical_storage::hierarchical_multi_block_allocation::hierarchical_multi_bl
     compressed_file_store& store,
     std::size_t size)
     : m_storage_backend(storage_backend),
-      m_store(store),
-      m_size(size)
+      m_size(size),
+      m_store(store)
 {
 }
 
@@ -145,13 +148,15 @@ private:
 
 hierarchical_storage::hierarchical_storage(
     const hierarchical_storage_config& config,
-    uh::dbn::metrics::storage_metrics& storage_metrics)
+    uh::dbn::metrics::storage_metrics& storage_metrics,
+    persistence::scheduled_compressions_persistence& scheduled_compressions)
     : m_root(config.db_root),
       m_alloc(config.size_bytes),
       m_used(0),
       m_storage_metrics(storage_metrics),
       m_store(config.compressed,
               storage_metrics,
+              scheduled_compressions,
               [this](std::streamsize s){ this->return_space(s); })
 {
     if (!std::filesystem::is_directory(m_root))
@@ -200,7 +205,7 @@ void hierarchical_storage::update_space_consumption() {
     m_storage_metrics.used_space().Set(m_used);
 }
 
-std::unique_ptr<io::device> hierarchical_storage::read_block(const std::span <char>& hash) {
+std::unique_ptr<io::data_generator> hierarchical_storage::read_block(const std::span <char>& hash) {
     std::string hex = to_hex_string(hash.begin(), hash.end());
 
     const auto file_path = get_hash_path(hex);
@@ -210,7 +215,24 @@ std::unique_ptr<io::device> hierarchical_storage::read_block(const std::span <ch
         THROW(util::exception, "unknown hash: " + hex);
     }
 
-    return file;
+    std::vector<char> buffer(BUFFER_SIZE);
+    std::size_t ofs = 0;
+    std::size_t size = 0;
+
+    do
+    {
+        if (buffer.size() - ofs < BUFFER_SIZE)
+        {
+            buffer.resize(buffer.size() + BUFFER_SIZE);
+        }
+
+        size = file->read({ buffer.begin() + ofs, buffer.size() - ofs });
+        ofs += size;
+    }
+    while (size != 0);
+
+    buffer.resize(ofs);
+    return std::make_unique<io::buffer_generator>(std::move(buffer));
 }
 
 std::unique_ptr<uh::protocol::allocation> hierarchical_storage::allocate(std::size_t size) {

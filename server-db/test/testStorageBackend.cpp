@@ -7,11 +7,14 @@
 #define BOOST_TEST_MODULE "uhServerDb Backend Tests"
 #endif
 
-#include <boost/test/unit_test.hpp>
-#include <metrics/mod.h>
-#include <storage/backends/dump_storage.h>
 #include <util/temp_dir.h>
+#include <io/buffer.h>
+#include <metrics/mod.h>
+#include <persistence/storage/scheduled_compressions_persistence.h>
+#include <storage/backends/dump_storage.h>
 #include <storage/backends/hierarchical_storage.h>
+
+#include <boost/test/unit_test.hpp>
 
 namespace {
 
@@ -23,7 +26,7 @@ public:
             : m_metrics_service({}),
               m_metrics(m_metrics_service),
               m_dump(m_tmp.path(), ALLOCATED_BYTES, m_metrics),
-              m_hierarchical({ m_tmp.path(), ALLOCATED_BYTES }, m_metrics) {
+              m_hierarchical({ m_tmp.path(), ALLOCATED_BYTES }, m_metrics, m_scheduled_compressions) {
     }
 
     uh::dbn::storage::backend &backend() {
@@ -35,6 +38,7 @@ private:
     uh::metrics::service m_metrics_service;
     uh::dbn::metrics::storage_metrics m_metrics;
     uh::dbn::storage::dump_storage m_dump;
+    uh::dbn::persistence::scheduled_compressions_persistence m_scheduled_compressions;
     uh::dbn::storage::hierarchical_storage m_hierarchical;
 
 };
@@ -55,30 +59,27 @@ uh::protocol::block_meta_data integrate_data (const std::vector <char> &data, uh
 
 // ---------------------------------------------------------------------
 
-
 BOOST_FIXTURE_TEST_CASE( dump_storage_io, storage_fixture )
 {
-    auto block_md = integrate_data (to_vector(CONTENTS_STR), backend());
+    auto block_md = integrate_data(to_vector(CONTENTS_STR), backend());
 
-    auto read_device = backend().read_block(block_md.hash);
-    std::vector <char> fetched_data;
-    fetched_data.resize(CONTENTS_STR.size());
-    read_device->read(fetched_data);
-    auto fetched_hex =  uh::dbn::storage::to_hex_string (fetched_data.begin(), fetched_data.end ());
-    auto original_hex =  uh::dbn::storage::to_hex_string (CONTENTS_STR.begin(), CONTENTS_STR.end ());
+    auto data = backend().read_block(block_md.hash);
+    uh::io::buffer buffer(data->size());
+
+    buffer.write_range(*data);
+
+    auto fetched_hex = uh::dbn::storage::to_hex_string(buffer.data().begin(), buffer.data().end());
+    auto original_hex = uh::dbn::storage::to_hex_string(CONTENTS_STR.begin(), CONTENTS_STR.end());
 
     BOOST_CHECK(fetched_hex == original_hex);
 }
-
 
 // ---------------------------------------------------------------------
 
 BOOST_FIXTURE_TEST_CASE( dump_storage_no_duplicates, storage_fixture )
 {
     auto block_md1 = integrate_data (to_vector(CONTENTS_STR), backend());
-
     auto block_md2 = integrate_data (to_vector(CONTENTS_STR), backend());
-
 
     auto hash1 =  uh::dbn::storage::to_hex_string (block_md1.hash.begin(), block_md1.hash.end ());
     auto hash2 =  uh::dbn::storage::to_hex_string (block_md2.hash.begin(), block_md2.hash.end ());
@@ -106,6 +107,7 @@ BOOST_FIXTURE_TEST_CASE( dump_storage_allocation, storage_fixture )
 
         allocation->persist();
         allocation.reset();
+
         BOOST_CHECK_THROW(backend().allocate(2), std::exception);
     }
 }

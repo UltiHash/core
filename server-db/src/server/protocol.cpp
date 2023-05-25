@@ -1,9 +1,12 @@
 #include "protocol.h"
 
-#include <config.hpp>
 #include <logging/logging_boost.h>
+#include <io/group_generator.h>
 #include <protocol/exception.h>
+
+#include <config.hpp>
 #include <storage/backends/hierarchical_storage.h>
+
 #include <numeric>
 
 
@@ -14,16 +17,15 @@ namespace uh::dbn::server
 
 // ---------------------------------------------------------------------
 
-protocol::protocol(storage::backend &storage, const uh::net::server_info &serv_info)
+protocol::protocol(storage::backend& storage, const uh::net::server_info& serv_info)
     : m_storage(storage),
-      m_serv_info(serv_info),
-      m_read_buffer(uh::protocol::server::MAXIMUM_DATA_SIZE)
+      m_serv_info(serv_info)
 {
 }
 
 // ---------------------------------------------------------------------
 
-server_information protocol::on_hello(const std::string &client_version)
+server_information protocol::on_hello(const std::string& client_version)
 {
     if (m_serv_info.server_busy())
     {
@@ -40,13 +42,6 @@ server_information protocol::on_hello(const std::string &client_version)
 
 // ---------------------------------------------------------------------
 
-std::unique_ptr<io::device> protocol::on_read_block(uh::protocol::blob &&hash)
-{
-    return m_storage.read_block(hash);
-}
-
-// ---------------------------------------------------------------------
-
 std::size_t protocol::on_free_space()
 {
     return m_storage.free_space();
@@ -54,33 +49,20 @@ std::size_t protocol::on_free_space()
 
 // ---------------------------------------------------------------------
 
-std::unique_ptr<uh::protocol::allocation> protocol::on_allocate_chunk(std::size_t size)
-{
-    return m_storage.allocate(size);
-}
-
-// ---------------------------------------------------------------------
-
-void protocol::on_next_chunk(std::span<char>)
-{
-    THROW(unsupported, "this call is not supported by this node type");
-}
-
-// ---------------------------------------------------------------------
-
 uh::protocol::write_chunks::response protocol::on_write_chunks(const write_chunks::request &req)
 {
-    auto alloc = m_storage.allocate_multi (req.data.size());
-    auto &multi_alloc = dynamic_cast <uh::dbn::storage::hierarchical_storage::hierarchical_multi_block_allocation&> (*alloc);
+    auto alloc = m_storage.allocate_multi(req.data.size());
+    auto& multi_alloc = dynamic_cast <uh::dbn::storage::hierarchical_storage::hierarchical_multi_block_allocation&>(*alloc);
     size_t offset = 0;
     uh::protocol::write_chunks::response res;
     res.effective_size = 0;
 
-    for (const auto size: req.chunk_sizes) {
+    for (const auto size : req.chunk_sizes)
+    {
         multi_alloc.open_new_block(size);
         multi_alloc.device().write({req.data.data() + offset, size});
         auto block_md = multi_alloc.persist();
-        res.hashes.insert(res.hashes.end (), block_md.hash.cbegin(), block_md.hash.cend());
+        res.hashes.insert(res.hashes.end(), block_md.hash.cbegin(), block_md.hash.cend());
         res.effective_size += block_md.effective_size;
         offset += size;
     }
@@ -90,18 +72,23 @@ uh::protocol::write_chunks::response protocol::on_write_chunks(const write_chunk
 
 // ---------------------------------------------------------------------
 
-uh::protocol::read_chunks::response protocol::on_read_chunks(const read_chunks::request &req)
+uh::protocol::read_chunks::response protocol::on_read_chunks(const read_chunks::request& req)
 {
+    auto generator = std::make_unique<io::group_generator>();
+
     uh::protocol::read_chunks::response resp;
-    ssize_t total_size = 0;
-    for (size_t i = 0; i < req.hashes.size(); i+=64) {
-        auto dev = m_storage.read_block({req.hashes.data() + i, 64});
-        const auto size = dev->read({m_read_buffer.begin() + total_size, m_read_buffer.end()});
+    for (size_t i = 0; i < req.hashes.size(); i += 64)
+    {
+        auto dev = m_storage.read_block({ req.hashes.data() + i, 64 });
+
+        auto size = dev->size();
+        generator->append(std::move(dev));
+
         resp.chunk_sizes.emplace_back(size);
-        total_size += size;
     }
-    resp.data.reserve(total_size);
-    resp.data.insert(resp.data.cend(), m_read_buffer.begin(), m_read_buffer.begin() + total_size);
+
+    resp.data = std::move(generator);
+
     return resp;
 }
 

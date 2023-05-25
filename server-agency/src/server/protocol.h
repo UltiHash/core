@@ -1,14 +1,16 @@
 #ifndef SERVER_AGENCY_SERVER_PROTOCOL_H
 #define SERVER_AGENCY_SERVER_PROTOCOL_H
 
-#include <cluster/mod.h>
+#include <net/server_info.h>
 #include <protocol/protocol.h>
 #include <protocol/request_interface.h>
+
+#include <cluster/mod.h>
+#include <metrics/client_metrics.h>
+#include <persistence/storage/client_metrics_persistence.h>
+
 #include <memory>
 
-#include <net/server_info.h>
-#include <metrics/client_metrics.h>
-#include <persistence/storage/client_metrics_storage.h>
 
 using namespace boost::asio::ip;
 
@@ -26,14 +28,11 @@ public:
                       const uh::net::server_info &serv_info);
 
     uh::protocol::server_information on_hello(const std::string& client_version) override;
-    std::unique_ptr<io::device> on_read_block(uh::protocol::blob&& hash) override;
-    std::unique_ptr<uh::protocol::allocation> on_allocate_chunk(std::size_t size) override;
     void on_client_statistics(uh::protocol::client_statistics::request& client_stat) override;
     uh::protocol::write_chunks::response on_write_chunks (const uh::protocol::write_chunks::request &) override;
     uh::protocol::read_chunks::response on_read_chunks (const uh::protocol::read_chunks::request &) override;
 
     std::size_t on_free_space() override;
-    void on_next_chunk(std::span<char> buffer) override;
 
 private:
     cluster::mod& m_cluster;

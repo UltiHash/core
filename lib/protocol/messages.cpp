@@ -1,6 +1,7 @@
 #include "messages.h"
 #include "util/exception.h"
 
+
 namespace uh::protocol
 {
 
@@ -66,39 +67,6 @@ void read(serialization::buffered_serialization& in, hello::response& request)
     tmp.protocol_version = in.read<unsigned> ();
 
     std::swap(tmp, request);
-}
-
-// ---------------------------------------------------------------------
-
-void write(serialization::buffered_serialization& out, const read_block::request& request)
-{
-    out.write(read_block::request_id);
-    out.write(request.hash);
-}
-
-// ---------------------------------------------------------------------
-
-void read(serialization::buffered_serialization& in, read_block::request& request)
-{
-    read_block::request tmp;
-    tmp.hash = in.read<std::vector<char>> ();
-    std::swap(tmp, request);
-}
-
-// ---------------------------------------------------------------------
-
-void write(serialization::buffered_serialization& out, const read_block::response& response)
-{
-}
-
-// ---------------------------------------------------------------------
-
-void read(serialization::buffered_serialization& in, read_block::response& response)
-{
-    check_status(in);
-
-    read_block::response tmp;
-    std::swap(tmp, response);
 }
 
 // ---------------------------------------------------------------------
@@ -170,37 +138,6 @@ void read(serialization::buffered_serialization& in, free_space::response& respo
 
 // ---------------------------------------------------------------------
 
-void write(serialization::buffered_serialization& out, const reset::request& request)
-{
-    out.write(reset::request_id);
-}
-
-// ---------------------------------------------------------------------
-
-void read(serialization::buffered_serialization& in, reset::request& request)
-{
-    reset::request tmp;
-    std::swap(tmp, request);
-}
-
-// ---------------------------------------------------------------------
-
-void write(serialization::buffered_serialization& out, const reset::response&)
-{
-}
-
-// ---------------------------------------------------------------------
-
-void read(serialization::buffered_serialization& in, reset::response& response)
-{
-    check_status(in);
-
-    reset::response tmp;
-    std::swap(tmp, response);
-}
-
-// ---------------------------------------------------------------------
-
 void write(serialization::buffered_serialization& out, const next_chunk::request& request)
 {
     out.write(next_chunk::request_id);
@@ -231,102 +168,6 @@ void read(serialization::buffered_serialization& in, next_chunk::response& respo
 {
     check_status(in);
     in.read(response.content);
-}
-
-void write(serialization::buffered_serialization& out, const allocate_chunk::request& request)
-{
-    out.write(allocate_chunk::request_id);
-    out.write(request.size);
-}
-
-// ---------------------------------------------------------------------
-
-void read(serialization::buffered_serialization& in, allocate_chunk::request& request)
-{
-    allocate_chunk::request tmp {};
-    tmp.size = in.read <uint64_t>();
-
-    std::swap(tmp, request);
-}
-
-// ---------------------------------------------------------------------
-
-void write(serialization::buffered_serialization& out, const allocate_chunk::response&)
-{
-}
-
-// ---------------------------------------------------------------------
-
-void read(serialization::buffered_serialization& in, allocate_chunk::response& response)
-{
-    check_status(in);
-
-    allocate_chunk::response tmp;
-    std::swap(tmp, response);
-}
-
-// ---------------------------------------------------------------------
-
-void write(serialization::buffered_serialization& out, const write_chunk::request& request)
-{
-    out.write(write_chunk::request_id);
-    out.write(request.data);
-}
-
-// ---------------------------------------------------------------------
-
-void read(serialization::buffered_serialization& in, write_chunk::request& request)
-{
-    in.read(request.data);
-}
-
-// ---------------------------------------------------------------------
-
-void write(serialization::buffered_serialization& out, const write_chunk::response& response)
-{
-}
-
-// ---------------------------------------------------------------------
-
-void read(serialization::buffered_serialization& in, write_chunk::response& response)
-{
-    check_status(in);
-
-    write_chunk::response tmp;
-    std::swap(tmp, response);
-}
-
-// ---------------------------------------------------------------------
-
-void write(serialization::buffered_serialization& out, const finalize_block::request& request)
-{
-    out.write(finalize_block::request_id);
-}
-
-// ---------------------------------------------------------------------
-
-void read(serialization::buffered_serialization& in, finalize_block::request& request)
-{
-    finalize_block::request tmp;
-    std::swap(tmp, request);
-}
-
-// ---------------------------------------------------------------------
-
-void write(serialization::buffered_serialization& out, const finalize_block::response& response)
-{
-    out.write(response.hash);
-    out.write(response.effective_size);
-}
-
-// ---------------------------------------------------------------------
-
-void read(serialization::buffered_serialization& in, finalize_block::response& response)
-{
-    check_status(in);
-
-    response.hash = in.read<std::vector<char>>();
-    response.effective_size = in.read<uint64_t>();
 }
 
 // ---------------------------------------------------------------------
@@ -420,10 +261,20 @@ void read(serialization::buffered_serialization& in, read_chunks::request& reque
 
 void write(serialization::buffered_serialization& out, const read_chunks::response& response)
 {
-    out.write(response.data);
-    out.write(response.chunk_sizes);
+    switch (response.data.index())
+    {
+        case 0:
+            out.write(std::get<0>(response.data));
+            out.write(response.chunk_sizes);
+            return;
 
+        case 1:
+            out.write(*std::get<1>(response.data));
+            out.write(response.chunk_sizes);
+            return;
+    }
 
+    THROW (util::exception, "unsupported response data format");
 }
 
 // ---------------------------------------------------------------------
@@ -434,7 +285,8 @@ void read(serialization::buffered_serialization& in, read_chunks::response& resp
 
     response.data = in.read<std::vector<char>>();
     response.chunk_sizes = in.read<decltype (response.chunk_sizes)>();
-
 }
+
+// ---------------------------------------------------------------------
 
 } // namespace uh::protocol

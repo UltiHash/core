@@ -35,6 +35,8 @@ public:
      */
     [[nodiscard]] std::filesystem::path path();
 
+
+    std::size_t size();
 private:
     std::fstream m_io;
     std::filesystem::path m_path;

@@ -7,6 +7,7 @@
 
 #include <storage/backend.h>
 #include <storage/compressed_file_store.h>
+#include <persistence/storage/scheduled_compressions_persistence.h>
 #include "io/sha512.h"
 
 #include <metrics/storage_metrics.h>
@@ -36,11 +37,12 @@ class hierarchical_storage : public backend {
 
 public:
     hierarchical_storage(const hierarchical_storage_config& config,
-                         uh::dbn::metrics::storage_metrics& storage_metrics);
+                         uh::dbn::metrics::storage_metrics& storage_metrics,
+                         persistence::scheduled_compressions_persistence& scheduled_compressions);
 
     void start() override;
 
-    std::unique_ptr<io::device> read_block(const std::span <char>& hash) override;
+    std::unique_ptr<io::data_generator> read_block(const std::span <char>& hash) override;
 
     size_t free_space() override;
 
@@ -81,6 +83,7 @@ public:
         compressed_file_store& m_store;
     };
 
+    static constexpr std::size_t BUFFER_SIZE = 128 * 1024;
 private:
     void update_space_consumption();
     void return_space(std::size_t size);

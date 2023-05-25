@@ -1,12 +1,13 @@
 #include <persistence/mod.h>
-#include "persistence/storage/client_metrics_storage.h"
+#include <logging/logging_boost.h>
+#include "persistence/storage/client_metrics_persistence.h"
 
 namespace uh::an::persistence
 {
 
 // ---------------------------------------------------------------------
 
-mod::mod(const persistence_config& config) : m_storage(std::make_unique<client_metrics>(config))
+mod::mod(const uh::options::persistence_config& config) : m_storage(std::make_unique<client_metrics>(config))
 {
 }
 
