@@ -9,7 +9,6 @@
 #include <cstring>
 
 #include "serializer.h"
-#include "fragment_serializer.h"
 #include "io/buffered_device.h"
 
 namespace uh::serialization {
@@ -23,21 +22,6 @@ namespace uh::serialization {
         explicit buffered_serializer(io::device &dev)
             : Serializer(dev_),
               dev_(dev, 1024)
-        {}
-
-        void sync () {
-            dev_.sync();
-        }
-    };
-
-    template <typename Serializer = sl_fragment_serializer>
-    requires (is_fragment_serializer <Serializer>::value)
-    class buffered_fragment_serializer: public Serializer {
-        uh::io::buffered_device <io::device> dev_;
-    public:
-        explicit buffered_fragment_serializer(io::device &dev)
-                : Serializer(dev_),
-                  dev_(dev, 4096)
         {}
 
         void sync () {

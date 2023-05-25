@@ -4,7 +4,7 @@
 #include "fragment_on_device.h"
 
 #include <util/exception.h>
-#include <serialization/serialization.h>
+#include <serialization/fragment_serialization.h>
 
 namespace uh::io{
 
@@ -19,7 +19,7 @@ namespace uh::io{
         if(state_machine == READING_BEGIN)
             THROW(util::exception,"Writing on fragment_on_device corrupted the fragments incomplete reading state!");
 
-        auto ser = serialization::serialization<serialization::sl_fragment_serializer,serialization::sl_fragment_deserializer>(dev_);
+        auto ser = serialization::fragment_serialization(dev_);
 
 
         return ser.write(buffer);

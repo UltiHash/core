@@ -71,7 +71,7 @@ namespace uh::serialization {
     {};
 
     template <typename T>
-    struct is_fragment_serialization_type: std::conjunction <is_serializer <T>, is_deserializer <T>>
+    struct is_fragment_serialization_type: std::conjunction <is_fragment_serializer <T>, is_fragment_deserializer <T>>
     {};
 
 } // namespace uh::serialization
