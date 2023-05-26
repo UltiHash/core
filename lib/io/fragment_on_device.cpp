@@ -163,4 +163,11 @@ namespace uh::io{
 
     // ---------------------------------------------------------------------
 
+    bool fragment_on_device::reset() {
+        state_machine = UNDEFINED_STATE;
+        return valid();
+    }
+
+    // ---------------------------------------------------------------------
+
 } // namespace uh::io

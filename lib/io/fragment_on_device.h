@@ -81,6 +81,12 @@ namespace uh::io{
          */
         [[nodiscard]] uint8_t getIndex() const;
 
+        /**
+         * reset the state machine to a new fragment beginning
+         * @return if the underlying device is still valid to deliver the next fragment structure
+         */
+        bool reset();
+
     private:
         enum{
             UNDEFINED_STATE,
