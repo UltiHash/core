@@ -17,6 +17,8 @@ signal::signal()
 
 int signal::run() const
 {
+    pthread_sigmask(SIG_UNBLOCK, &m_sigset, nullptr);
+
     int signum = 0;
     sigwait(&m_sigset, &signum);
 
