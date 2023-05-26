@@ -42,7 +42,7 @@ public:
 
     void start() override;
 
-    std::unique_ptr<io::device> read_block(const std::span <char>& hash) override;
+    std::unique_ptr<io::data_generator> read_block(const std::span <char>& hash) override;
 
     size_t free_space() override;
 
@@ -83,6 +83,7 @@ public:
         compressed_file_store& m_store;
     };
 
+    static constexpr std::size_t BUFFER_SIZE = 128 * 1024;
 private:
     void update_space_consumption();
     void return_space(std::size_t size);

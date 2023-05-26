@@ -22,38 +22,6 @@ namespace
 
 // ---------------------------------------------------------------------
 
-class connection_device : public io::device
-{
-public:
-    connection_device(protocol::client_pool::handle&& h,
-                      std::unique_ptr<io::device>&& dev)
-        : m_handle(std::move(h)),
-          m_dev(std::move(dev))
-    {
-    }
-
-    std::streamsize write(std::span<const char> buffer) override
-    {
-        return m_dev->write(buffer);
-    }
-
-    std::streamsize read(std::span<char> buffer) override
-    {
-        return m_dev->read(buffer);
-    }
-
-    bool valid() const override
-    {
-        return m_dev->valid();
-    }
-
-private:
-    protocol::client_pool::handle m_handle;
-    std::unique_ptr<io::device> m_dev;
-};
-
-// ---------------------------------------------------------------------
-
 class alloc : public uh::protocol::allocation
 {
 public:
@@ -226,27 +194,6 @@ std::list< std::pair<node_ref, std::size_t> > mod::bc_free_space()
 
 // ---------------------------------------------------------------------
 
-std::unique_ptr<io::device> mod::bc_read_block(const blob& hash)
-{
-    for (const auto& node : m_impl->nodes)
-    {
-        try
-        {
-            auto conn = node.second->get();
-            auto dev = conn->read_block(hash);
-            return std::make_unique<connection_device>(std::move(conn), std::move(dev));
-        }
-        catch (const std::exception& e)
-        {
-            INFO << "hash not known to " << node.first << ": " << e.what();
-        }
-    }
-
-    THROW(util::exception, "hash could not be found in cluster");
-}
-
-// ---------------------------------------------------------------------
-
 std::unique_ptr<uh::protocol::allocation> mod::allocate(std::size_t size)
 {
     auto free_space = bc_free_space();
@@ -332,20 +279,22 @@ uh::protocol::read_chunks::response mod::read_chunks(const read_chunks::request 
 
         const auto &conn_hash_offsets = routed_hash_offsets [conn_hashes.first];
         responses.emplace_front(conn_hashes.first->get()->read_chunks ({conn_hashes.second}));
-        auto &resp = responses.front();
+        auto& resp = responses.front();
+        auto& resp_data = std::get<0>(resp.data);
 
         size_t offset = 0;
         size_t chunk_size_id = 0;
         for (const auto hash_offset: conn_hash_offsets) {
             const auto chunk_size = resp.chunk_sizes[chunk_size_id ++];
-            hash_offset_data_map [hash_offset] = std::span <char> {resp.data.data() + offset, chunk_size};
+            hash_offset_data_map[hash_offset] = std::span<char>{ resp_data.data() + offset, chunk_size };
             offset += chunk_size;
         }
     }
 
     uh::protocol::read_chunks::response total_resp;
+    auto& data = std::get<0>(total_resp.data);
     for (const auto &hash_offset_data_pair: hash_offset_data_map) {
-        total_resp.data.insert(total_resp.data.end(), hash_offset_data_pair.second.begin(), hash_offset_data_pair.second.end());
+        data.insert(data.end(), hash_offset_data_pair.second.begin(), hash_offset_data_pair.second.end());
     }
 
     return total_resp;
