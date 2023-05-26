@@ -469,7 +469,7 @@ BOOST_FIXTURE_TEST_CASE(smart_storage_basic_test, files_info_fixture) {
 
     {
         smart_storage sm(files_info(), m_set_filename, m_hashmap_key_filename, m_growing_directory);
-        
+
         const auto r1 = sm.retrieve(k1);
         const auto sr1 = sm.serialize_fragments(r1);
         BOOST_TEST (sr1.size() == v1.size());
