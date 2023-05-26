@@ -3,6 +3,7 @@
 //
 
 #include "fragmented_device.h"
+#include "serialization/fragment_size_struct.h"
 
 #include <ios>
 

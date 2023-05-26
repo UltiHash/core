@@ -6,7 +6,6 @@
 #include "io/device.h"
 #include "serialization/fragment_size_struct.h"
 #include "serialization/fragment_serialization.h"
-#include "util/exception.h"
 
 #include <cstdint>
 #include <span>

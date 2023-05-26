@@ -118,7 +118,7 @@ BOOST_FIXTURE_TEST_CASE_TEMPLATE( fragment_partial_read_write_exceptions, T, dev
         buffer small_buf(LOREM_IPSUM.size()/3);
 
         auto maximum_writeable = std::min(small_buf.data().size(),
-                                          static_cast<uint64_t>(std::distance(LOREM_IPSUM.cbegin()+written,
+                                          static_cast<std::size_t>(std::distance(LOREM_IPSUM.cbegin()+written,
                                                                               LOREM_IPSUM.cend())));
 
         uh::io::write(small_buf,{LOREM_IPSUM.data()+written,maximum_writeable});
@@ -140,7 +140,7 @@ BOOST_FIXTURE_TEST_CASE_TEMPLATE( fragment_partial_read_write_exceptions, T, dev
         std::vector<char> small_buf(LOREM_IPSUM.size()/4);
 
         auto maximum_readable = std::min(small_buf.size(),
-                                         static_cast<uint64_t>(std::distance(LOREM_IPSUM.cbegin()+read,
+                                         static_cast<std::size_t>(std::distance(LOREM_IPSUM.cbegin()+read,
                                                                               LOREM_IPSUM.cend())));
 
         bool first_read = !written;
