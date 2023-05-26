@@ -82,15 +82,11 @@ std::unique_ptr<fragment_on_device> make_test_device<fragment_on_device>()
 
 // ---------------------------------------------------------------------
 
-std::unique_ptr<temp_file> temp_buf = std::make_unique<temp_file>
-        (TEMP_DIR,std::ios_base::in | std::ios_base::out);
-std::filesystem::path temp_path = temp_buf->path();
-
-// ---------------------------------------------------------------------
-
 template <>
 std::unique_ptr<fragment_on_seekable_device> make_test_device<fragment_on_seekable_device>()
 {
+    static std::unique_ptr<temp_file> temp_buf = std::make_unique<temp_file>
+            (TEMP_DIR,std::ios_base::in | std::ios_base::out);
     auto rv = std::make_unique<fragment_on_seekable_device>(*temp_buf);
 
     return rv;
@@ -101,6 +97,12 @@ std::unique_ptr<fragment_on_seekable_device> make_test_device<fragment_on_seekab
 BOOST_FIXTURE_TEST_CASE_TEMPLATE( multi_fragment_on_device_skip_test, T, device_types, Fixture )
 {
     std::unique_ptr<T> fragmented = make_test_device<T>();
+    static std::unique_ptr<temp_file> temp_buf;
+    if constexpr (std::is_same_v<T,fragment_on_seekable_device>){
+        temp_buf = std::make_unique<temp_file>
+                (TEMP_DIR,std::ios_base::in | std::ios_base::out);
+        fragmented = std::make_unique<T>(*temp_buf);
+    }
 
     const std::string test_string1(LOREM_IPSUM),
     test_string2(LOREM_IPSUM+"another ipsum");
@@ -132,13 +134,9 @@ BOOST_FIXTURE_TEST_CASE_TEMPLATE( multi_fragment_on_device_skip_test, T, device_
     BOOST_CHECK_EQUAL_COLLECTIONS(test_string2.begin(),test_string2.end(),
                                   read_back_second.begin(),read_back_second.end());
 
-    BOOST_CHECK(!fragmented->valid());
+    BOOST_CHECK(!fragmented->valid());//implement eof detection to unvalidate
     fragmented->reset();
     BOOST_CHECK(!fragmented->valid());
-
-    temp_buf = std::make_unique<temp_file>
-            (TEMP_DIR,std::ios_base::in | std::ios_base::out);
-    temp_path = temp_buf->path();
 }
 
 // ---------------------------------------------------------------------
@@ -146,6 +144,16 @@ BOOST_FIXTURE_TEST_CASE_TEMPLATE( multi_fragment_on_device_skip_test, T, device_
 BOOST_FIXTURE_TEST_CASE_TEMPLATE( fragment_partial_read_write_exceptions, T, device_types, Fixture )
 {
     auto fragmented = make_test_device<T>(), fragmented_read = make_test_device<T>();
+
+    static std::unique_ptr<temp_file> temp_buf;
+
+    if constexpr (std::is_same_v<T,fragment_on_seekable_device>){
+        temp_buf = std::make_unique<temp_file>
+                (TEMP_DIR,std::ios_base::in | std::ios_base::out);
+        fragmented = std::make_unique<T>(*temp_buf);
+        fragmented_read = std::make_unique<T>(*temp_buf);
+    }
+
 
     std::streamsize written{},read{};
 
