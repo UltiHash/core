@@ -1,5 +1,5 @@
-#ifndef SERIALIZATION_F_UPLOAD_H
-#define SERIALIZATION_F_UPLOAD_H
+#ifndef CLIENT_F_UPLOAD_H
+#define CLIENT_F_UPLOAD_H
 
 #include <uhv/job_queue.h>
 #include <uhv/f_meta_data.h>
@@ -7,18 +7,18 @@
 #include <protocol/server.h>
 #include <chunking/mod.h>
 #include <algorithm>
-#include "../common/thread_manager.h"
+#include "thread_manager.h"
 
 #include <fstream>
 #include <map>
 
 
-namespace uh::client::serialization
+namespace uh::client
 {
 
 // ---------------------------------------------------------------------
 
-class f_upload : public common::thread_manager
+class f_upload : public thread_manager
 {
 public:
 
@@ -26,7 +26,7 @@ public:
     f_upload(protocol::client_pool& client_pool,
             uhv::job_queue<std::unique_ptr<uhv::f_meta_data>>& input_queue,
             uhv::job_queue<std::unique_ptr<uhv::f_meta_data>>& output_files,
-            uh::client::chunking::mod& chunking,
+            uh::chunking::mod& chunking,
             std::filesystem::path uhv_path,
             unsigned int num_threads = 1);
     ~f_upload() override;
@@ -46,7 +46,7 @@ private:
     uhv::job_queue<std::unique_ptr<uhv::f_meta_data>>& m_input_jq;
     uhv::job_queue<std::unique_ptr<uhv::f_meta_data>>& m_output_jq;
     uh::protocol::client_pool& m_client_pool;
-    uh::client::chunking::mod& m_chunking;
+    uh::chunking::mod& m_chunking;
     std::filesystem::path m_uhv_path;
 
     std::atomic<std::uint64_t> m_uploaded_size;
@@ -57,6 +57,6 @@ private:
 
 // ---------------------------------------------------------------------
 
-} // namespace uh::client::serialization
+} // namespace uh::client
 
 #endif

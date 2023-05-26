@@ -1,6 +1,6 @@
 #include "f_traverse.h"
 
-namespace uh::client::serialization
+namespace uh::client
 {
 
 // ---------------------------------------------------------------------
@@ -41,4 +41,4 @@ void f_traverse::traverse()
 
 // ---------------------------------------------------------------------
 
-} // namespace uh::client::serialization
+} // namespace uh::client
