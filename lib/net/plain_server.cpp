@@ -48,8 +48,6 @@ void plain_server::run()
         }
     }
 
-    // If server isn't running then the program will terminate,
-    // hence calling the destructor. Why stop it explicitly?
     m_scheduler.stop();
 }
 

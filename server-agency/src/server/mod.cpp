@@ -44,8 +44,17 @@ struct mod::impl
          an::metrics::mod& metrics);
 
     boost::asio::io_context io;
-    std::unique_ptr<net::server> server;
-    std::future<void> server_future;
+
+    struct server_wrapper
+    {
+        explicit server_wrapper(std::unique_ptr<net::server> server);
+        void stop();
+
+        std::unique_ptr<net::server> server;
+        std::future<void> server_future;
+    };
+
+    server_wrapper server_wrapper;
     net::server_info serv_info;
     protocol_factory pf;
 
@@ -53,12 +62,26 @@ struct mod::impl
 
 // ---------------------------------------------------------------------
 
+mod::impl::server_wrapper::server_wrapper(std::unique_ptr<net::server> serv) : server(std::move(serv))
+{
+}
+
+// ---------------------------------------------------------------------
+
+void mod::impl::server_wrapper::stop()
+{
+    server->stop();
+    server_future.get();
+}
+
+// ---------------------------------------------------------------------
+
 mod::impl::impl(const net::server_config& config,
                 an::cluster::mod& cluster,
                 an::metrics::mod& metrics)
     : io(),
-      server(make_server(config, pf)),
-      serv_info (*server),
+      server_wrapper(make_server(config, pf)),
+      serv_info (*server_wrapper.server),
       pf(cluster, metrics.client(), metrics.protocol(), serv_info)
 {
 }
@@ -81,7 +104,8 @@ mod::~mod() = default;
 void mod::start()
 {
     INFO << "            starting server";
-    m_impl->server_future = std::async(std::launch::async, [&]() { m_impl->server->run(); });
+    m_impl->server_wrapper.server_future = std::async(std::launch::async,
+                                                      [&]() { m_impl->server_wrapper.server->run(); });
 }
 
 // ---------------------------------------------------------------------
@@ -89,8 +113,7 @@ void mod::start()
 void mod::stop()
 {
     INFO << "             stopping server";
-    m_impl->server->stop();
-    m_impl->server_future.get();
+    m_impl->server_wrapper.stop();
 }
 
 // ---------------------------------------------------------------------

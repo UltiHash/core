@@ -20,14 +20,12 @@ int signal::run() const
     int signum = 0;
     sigwait(&m_sigset, &signum);
 
-    INFO << "signal handler called: " << strsignal(signum) <<  "(" << signum << "), cleaning up ... ";
+    DEBUG << " " << strsignal(signum) <<  "(" << signum << ") called, cleaning up ... ";
 
     for (const auto& cleanup_function : m_handler_functions)
     {
         cleanup_function();
     }
-
-    INFO << "cleanup finished ... ";
 
     return signum;
 }

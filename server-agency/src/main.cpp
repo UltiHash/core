@@ -53,10 +53,11 @@ int main(int argc, const char** argv)
         server::mod server_module(config.server(), cluster_module, metrics_module);
         server_module.start();
 
+
         signal_handler.register_func([&](){ server_module.stop(); persistence_module.stop(); });
         auto signal_received = signal_handler.run();
 
-        INFO << " agency node clean shutdown: signal " << strsignal(signal_received) << "(" << signal_received << ") ...";
+        INFO << " agency node clean shutdown: signal " << strsignal(signal_received) << "(" << signal_received << ")";
 
     }
     catch (const std::exception& e)
