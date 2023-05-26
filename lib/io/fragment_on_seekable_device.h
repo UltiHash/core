@@ -14,6 +14,7 @@ namespace uh::io{
 
 class fragment_on_seekable_device: public fragment_on_device{
 
+public:
     /**
      * fragment on seekable device will not read the device on skip, but seek over the content
      *
@@ -30,7 +31,7 @@ class fragment_on_seekable_device: public fragment_on_device{
      */
     uh::serialization::fragment_serialize_size_format skip() override;
 
-private:
+protected:
     io::seekable_device& dev2_;
 };
 

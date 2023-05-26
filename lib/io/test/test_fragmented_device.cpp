@@ -14,14 +14,21 @@
 
 #include <util/exception.h>
 #include <io/fragment_on_device.h>
+#include <io/fragment_on_seekable_device.h>
 #include <io/buffer.h>
 #include <io/device.h>
+#include <io/temp_file.h>
+#include <io/file.h>
 
 using namespace uh::util;
 using namespace uh::io;
 
 namespace
 {
+
+// ---------------------------------------------------------------------
+
+const static std::filesystem::path TEMP_DIR = "/tmp";
 
 // ---------------------------------------------------------------------
 
@@ -43,8 +50,13 @@ struct Fixture {};
 // ---------------------------------------------------------------------
 
 typedef boost::mpl::vector<
-        fragment_on_device
+        fragment_on_device,
+        fragment_on_seekable_device
 > device_types;
+
+// ---------------------------------------------------------------------
+
+
 
 // ---------------------------------------------------------------------
 
@@ -68,6 +80,24 @@ std::unique_ptr<fragment_on_device> make_test_device<fragment_on_device>()
     return rv;
 }
 
+// ---------------------------------------------------------------------
+
+std::unique_ptr<temp_file> temp_buf = std::make_unique<temp_file>
+        (TEMP_DIR,std::ios_base::in | std::ios_base::out);
+std::filesystem::path temp_path = temp_buf->path();
+
+// ---------------------------------------------------------------------
+
+template <>
+std::unique_ptr<fragment_on_seekable_device> make_test_device<fragment_on_seekable_device>()
+{
+    auto rv = std::make_unique<fragment_on_seekable_device>(*temp_buf);
+
+    return rv;
+}
+
+// ---------------------------------------------------------------------
+
 BOOST_FIXTURE_TEST_CASE_TEMPLATE( multi_fragment_on_device_skip_test, T, device_types, Fixture )
 {
     std::unique_ptr<T> fragmented = make_test_device<T>();
@@ -80,6 +110,10 @@ BOOST_FIXTURE_TEST_CASE_TEMPLATE( multi_fragment_on_device_skip_test, T, device_
 
     std::unique_ptr<buffer> tb = std::make_unique<buffer>();
     tb->write({test_string1.data(),test_string1.size()});
+
+    if constexpr (std::is_same_v<T,fragment_on_seekable_device>){
+        temp_buf->seek(0,std::ios_base::beg);
+    }
 
     auto size1 = fragmented->skip();
 
@@ -101,16 +135,17 @@ BOOST_FIXTURE_TEST_CASE_TEMPLATE( multi_fragment_on_device_skip_test, T, device_
     BOOST_CHECK(!fragmented->valid());
     fragmented->reset();
     BOOST_CHECK(!fragmented->valid());
+
+    temp_buf = std::make_unique<temp_file>
+            (TEMP_DIR,std::ios_base::in | std::ios_base::out);
+    temp_path = temp_buf->path();
 }
 
 // ---------------------------------------------------------------------
 
 BOOST_FIXTURE_TEST_CASE_TEMPLATE( fragment_partial_read_write_exceptions, T, device_types, Fixture )
 {
-    static std::unique_ptr<buffer> buf;
-    buf = std::make_unique<buffer>();
-
-    auto fragmented = std::make_unique<T>(*buf), fragmented_read = std::make_unique<T>(*buf);
+    auto fragmented = make_test_device<T>(), fragmented_read = make_test_device<T>();
 
     std::streamsize written{},read{};
 
@@ -136,6 +171,10 @@ BOOST_FIXTURE_TEST_CASE_TEMPLATE( fragment_partial_read_write_exceptions, T, dev
 
     std::string test_read{};
 
+    if constexpr (std::is_same_v<T,fragment_on_seekable_device>){
+        temp_buf->seek(0,std::ios_base::beg);
+    }
+
     do{
         std::vector<char> small_buf(LOREM_IPSUM.size()/4);
 
@@ -143,7 +182,7 @@ BOOST_FIXTURE_TEST_CASE_TEMPLATE( fragment_partial_read_write_exceptions, T, dev
                                          static_cast<std::size_t>(std::distance(LOREM_IPSUM.cbegin()+read,
                                                                               LOREM_IPSUM.cend())));
 
-        bool first_read = !written;
+        bool first_read = !read;
 
         read += uh::io::fragmented::read(*fragmented_read,{small_buf.data(),small_buf.size()}).content_size;
         if(first_read)
