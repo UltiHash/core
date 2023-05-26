@@ -69,8 +69,7 @@ namespace uh::io{
          * with this function the underlying device is read until
          * one position behind the fragment_on_device content
          *
-         * @return counts the entire count a fragment_on_device fills,
-         * together with it's header structure
+         * @return struct{header size, content size, index}
          */
         uh::serialization::fragment_serialize_size_format skip() override;
 

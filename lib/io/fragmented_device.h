@@ -59,7 +59,7 @@ namespace uh::io{
          * with this function the underlying fragmented device is read until
          * one position behind the fragment_on_device content
          *
-         * @return a struct with header size, content size and fragment index
+         * @return struct{header size, content size, index}
          */
          virtual uh::serialization::fragment_serialize_size_format skip() = 0;
 
