@@ -27,7 +27,7 @@ void client_metrics::start()
 
 void client_metrics::stop()
 {
-
+    flush();
 }
 
 // ---------------------------------------------------------------------

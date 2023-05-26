@@ -6,6 +6,7 @@
 #include <net/server.h>
 #include <net/tls_server.h>
 #include <logging/logging_boost.h>
+#include <future>
 
 
 namespace uh::an::server
@@ -44,6 +45,7 @@ struct mod::impl
 
     boost::asio::io_context io;
     std::unique_ptr<net::server> server;
+    std::future<void> server_future;
     net::server_info serv_info;
     protocol_factory pf;
 
@@ -79,7 +81,7 @@ mod::~mod() = default;
 void mod::start()
 {
     INFO << "            starting server";
-    m_impl->server->run();
+    m_impl->server_future = std::async(std::launch::async, [&]() { m_impl->server->run(); });
 }
 
 // ---------------------------------------------------------------------
@@ -88,6 +90,7 @@ void mod::stop()
 {
     INFO << "             stopping server";
     m_impl->server->stop();
+    m_impl->server_future.get();
 }
 
 // ---------------------------------------------------------------------

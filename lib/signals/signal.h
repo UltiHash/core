@@ -18,7 +18,7 @@ namespace uh::signal
         ~signal() = default;
 
         void register_func(std::function<void()>&& func);
-        std::future<int> run();
+        [[nodiscard]] int run() const;
 
     private:
         sigset_t m_sigset {};

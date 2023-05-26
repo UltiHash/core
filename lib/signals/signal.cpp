@@ -15,27 +15,21 @@ signal::signal()
 
 // ---------------------------------------------------------------------
 
-std::future<int> signal::run()
+int signal::run() const
 {
+    int signum = 0;
+    sigwait(&m_sigset, &signum);
 
-    auto signal_handler = [&]()
+    INFO << "signal handler called: " << strsignal(signum) <<  "(" << signum << "), cleaning up ... ";
+
+    for (const auto& cleanup_function : m_handler_functions)
     {
-        int signum = 0;
-        sigwait(&m_sigset, &signum);
+        cleanup_function();
+    }
 
-        INFO << "signal handler called: " << strsignal(signum) <<  "(" << signum << "), cleaning up ... ";
+    INFO << "cleanup finished ... ";
 
-        for (const auto& cleanup_function : m_handler_functions)
-        {
-            cleanup_function();
-        }
-
-        INFO << "cleanup finished ... ";
-
-        return signum;
-    };
-
-    return std::async(std::launch::async, signal_handler);
+    return signum;
 }
 
 // ---------------------------------------------------------------------

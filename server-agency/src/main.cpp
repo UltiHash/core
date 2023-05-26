@@ -49,21 +49,13 @@ int main(int argc, const char** argv)
         persistence_module.start();
 
         metrics::mod metrics_module(config.metrics(), persistence_module);
+
         server::mod server_module(config.server(), cluster_module, metrics_module);
-
-
-        // ! stop functions should always have thread safe operations as it is always executed in the signal
-        // handling thread
-        // persistence_module.stop(); is called immediately which is not good because some of the threads in the
-        // scheduler might be finishing their task up in short: joining
-        // SOLUTION : call server in a different thread. Whenever server_module.stop() is called, we wait for that thread
-        // to finsh, and we continue with persistence_module.stop()
-        signal_handler.register_func([&](){ server_module.stop(); persistence_module.stop(); });
-        auto signal_thread = signal_handler.run();
-
         server_module.start();
 
-        auto signal_received = signal_thread.get();
+        signal_handler.register_func([&](){ server_module.stop(); persistence_module.stop(); });
+        auto signal_received = signal_handler.run();
+
         INFO << " agency node clean shutdown: signal " << strsignal(signal_received) << "(" << signal_received << ") ...";
 
     }
