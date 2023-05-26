@@ -7,7 +7,7 @@
 
 #include <ios>
 
-namespace uh::io{
+namespace uh::io::fragmented{
 
     // ---------------------------------------------------------------------
 
@@ -140,4 +140,4 @@ namespace uh::io{
 
     // ---------------------------------------------------------------------
 
-} // namespace uh::io
+} // namespace uh::io::fragmented

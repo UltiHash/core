@@ -124,11 +124,11 @@ BOOST_FIXTURE_TEST_CASE_TEMPLATE( fragment_partial_read_write_exceptions, T, dev
         uh::io::write(small_buf,{LOREM_IPSUM.data()+written,maximum_writeable});
 
         bool first_write = !written;
-        written += uh::io::write(*fragmented,
+        written += uh::io::fragmented::write(*fragmented,
                                  {small_buf.data().data(),maximum_writeable},
                                  LOREM_IPSUM.size()).content_size;
 
-        if(first_write)BOOST_REQUIRE_THROW(copy(*fragmented,small_buf),std::exception);
+        if(first_write)BOOST_REQUIRE_THROW(uh::io::fragmented::copy(*fragmented,small_buf),std::exception);
     }
     while(written != LOREM_IPSUM.size());
 
@@ -145,8 +145,10 @@ BOOST_FIXTURE_TEST_CASE_TEMPLATE( fragment_partial_read_write_exceptions, T, dev
 
         bool first_read = !written;
 
-        read += uh::io::read(*fragmented_read,{small_buf.data(),small_buf.size()}).content_size;
-        if(first_read)BOOST_REQUIRE_THROW(write(*fragmented_read,{small_buf.data(),small_buf.size()}),std::exception);
+        read += uh::io::fragmented::read(*fragmented_read,{small_buf.data(),small_buf.size()}).content_size;
+        if(first_read)
+            BOOST_REQUIRE_THROW(uh::io::fragmented::write(*fragmented_read,
+                                                          {small_buf.data(),small_buf.size()}),std::exception);
 
         test_read.append(small_buf.data(),maximum_readable);
     }

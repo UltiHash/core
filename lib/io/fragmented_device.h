@@ -73,6 +73,10 @@ namespace uh::io{
 
 // ---------------------------------------------------------------------
 
+namespace fragmented{
+
+// ---------------------------------------------------------------------
+
 /**
  * Copy the complete fragmented device `in` to the fragmented device `out`. Return number of
  * bytes written.
@@ -137,6 +141,8 @@ namespace uh::io{
 
 // ---------------------------------------------------------------------
 
-}
+} // namespace uh::io::fragmented
+
+} // namespace uh::io
 
 #endif //CORE_FRAGMENTED_DEVICE_H
