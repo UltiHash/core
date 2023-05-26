@@ -18,6 +18,7 @@
 #include <net/plain_socket.h>
 #include <util/exception.h>
 #include "thread_safe_type.h"
+#include <client/upload.h>
 
 namespace uh::uhv {
 
@@ -29,6 +30,10 @@ struct private_context
     ts_container fmetadata_map;
     thread_safe_type <std::unordered_map <std::string, unsigned long>> subdirectory_counts;
     thread_safe_type <std::unordered_map <unsigned long, ts_f_meta_data&>> open_files;
+    job_queue<std::unique_ptr<uhv::f_meta_data>> q_f_meta_data;
+    job_queue<std::unique_ptr<uhv::f_meta_data>> q_f_mdata_w_hash;
+    uh::client::f_upload* upload_class;
+    uh::chunking::mod* chunking_module;
 };
 
 

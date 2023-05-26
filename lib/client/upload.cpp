@@ -66,13 +66,13 @@ void f_upload::send_statistics()
 // ---------------------------------------------------------------------
 
 void f_upload::chunk_and_upload(std::unique_ptr<uhv::f_meta_data>& f_meta_data,
-                                protocol::client_pool::handle& client_handle)
+                                protocol::client_pool::handle& client_handle,
+                                io::device& device)
 {
     if ( f_meta_data->f_type() == uhv::uh_file_type::regular )
     {
-        io::file file(f_meta_data->f_path());
 
-        auto chunker = m_chunking.create_chunker(file,  std::min (uh::protocol::server::MAXIMUM_DATA_SIZE, static_cast <const size_t> (f_meta_data->f_size())));
+        auto chunker = m_chunking.create_chunker(device,  std::min (uh::protocol::server::MAXIMUM_DATA_SIZE, static_cast <const size_t> (f_meta_data->f_size())));
         std::vector <uint32_t> chunk_sizes;
 
         for (auto chunk = chunker->next_chunk(); !chunk.empty(); chunk = chunker->next_chunk())
@@ -114,7 +114,8 @@ void f_upload::spawn_threads()
 
                 try
                 {
-                    chunk_and_upload(*job, client_connection_handle);
+                    auto file_device = io::file(filename, std::ios_base::in);
+                    chunk_and_upload(*job, client_connection_handle, file_device);
                     add_result(filename);
                 }
                 catch (const std::exception& e)

@@ -176,7 +176,8 @@ void *__uh_init (struct fuse_conn_info *conn)
                 cf_config), get_options().agency_connections);
 
     uh::uhv::job_queue<std::unique_ptr<uh::uhv::f_meta_data>> metadata_list;
-    uh::uhv::f_serialization serializer {std::filesystem::path (get_options().UHVpath), metadata_list};
+    auto uhv_path = std::filesystem::path(get_options().UHVpath);
+    uh::uhv::f_serialization serializer {uhv_path, metadata_list};
 
     serializer.deserialize("", false);
     metadata_list.stop();
@@ -211,6 +212,18 @@ void *__uh_init (struct fuse_conn_info *conn)
     metadata.set_f_type(uh::uhv::directory);
     metadata.set_f_size(0u);
     metadata_map.emplace("/", std::move (metadata));
+
+    const chunking::config* chunker_config = new chunking::config;
+
+    context->chunking_module = new chunking::mod(*chunker_config);
+    unsigned int num_workers = 1;
+    context->upload_class = new client::f_upload(*context->client_pool.release(),
+                              context->q_f_meta_data,
+                              context->q_f_mdata_w_hash,
+                              *context->chunking_module,
+                              uhv_path, num_workers);
+    context->upload_class->spawn_threads();
+
 
     return context;
 }
@@ -420,47 +433,17 @@ int __uh_write (const char *path, const char *buf, size_t size, off_t offset, st
     auto context = get_context();
     auto &ts_fmd = context->open_files.get()().at(fi->fh);
     auto fmd_handler = ts_fmd.get();
-    auto &fmd = fmd_handler();
+    auto fmd = std::make_unique<uh::uhv::f_meta_data>(fmd_handler());
 
-    if (fmd.f_type() != uh::uhv::uh_file_type::regular) {
+    if (fmd->f_type() != uh::uhv::uh_file_type::regular) {
         return -ENOMEM;
     }
 
     uh::protocol::client_pool::handle&& client_handle = context->client_pool->get();
 
-    if (static_cast<size_t>(offset) == fmd.f_size() and offset > 0) {       // if this is an append, for instance when performing "echo data >> file"
+    io::sstream_device sstream_dev(std::string(buf, size));
 
-        // read the last chunk of the file
-        std::vector<char> current_hash(64);
-        std::vector <char> last_chunk (std::max (fmd.f_size() % max_chunk_size, min_chuck_size) + size);
-        std::span<char> data = {last_chunk.data(), last_chunk.size() - size};
-        std::copy(fmd.f_hashes().end() - 64, fmd.f_hashes().end (), current_hash.begin());
-        fmd.remove_hash(fmd.f_hashes().size() - 64, fmd.f_hashes().size());
-        client_handle->read_block(current_hash)->read(data);
-
-        // append the new data to the last chunk
-        std::copy(buf, buf + size, last_chunk.begin() + fmd.f_size() % max_chunk_size);
-        data = {last_chunk.data(), fmd.f_size() % max_chunk_size + size};
-
-        //write the extended last chunk
-        const auto effective_size = upload_data (client_handle, max_chunk_size, data, fmd.get_hashes());
-        fmd.add_effective_size(effective_size);
-        fmd.set_f_size(fmd.f_size() + size);
-    }
-    else if (offset == 0) {         // for now, we assume replace data which is usually the case
-                                    // since text editors write the whole file after modifications
-
-        std::span<char> data = {const_cast <char*> (buf), size};
-        fmd.set_f_hashes({});
-        const auto effective_size = upload_data (client_handle, max_chunk_size, data, fmd.get_hashes());
-        fmd.set_effective_size(effective_size);
-        fmd.set_f_size(size);
-
-    }
-    else {
-        throw std::runtime_error("write operation not supported");
-    }
-
+    context->upload_class->chunk_and_upload(fmd, client_handle, sstream_dev);
 
     // store the new metadata into the uh volume
     auto container = get_context()->fmetadata_map.get();
@@ -506,6 +489,7 @@ void __uh_destroy (void *context) {
     std::cout << "uh_destroy(context)\n";
 
     auto pcontext = static_cast <private_context *> (context);
+    pcontext->upload_class->join();
     delete pcontext;
 }
 
