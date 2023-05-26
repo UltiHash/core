@@ -64,7 +64,7 @@ void mmap_storage::mmap_file(const file_mmap_info& file) {
     }
     m_resources.emplace_hint(m_resources.cend(),std::piecewise_construct,
                                     std::forward_as_tuple(m_aggregated_size),
-                                    std::forward_as_tuple(ptr, file.max_size, m_aggregated_size));
+                                    std::forward_as_tuple(ptr, file.path, file.max_size, m_aggregated_size));
     m_aggregated_size += file.max_size;
 }
 
@@ -135,7 +135,7 @@ bool mmap_storage::files_consistent_existency (const std::forward_list<file_mmap
     return existed_files;
 }
 
-mmap_storage::resource_entry &mmap_storage::get_resource(size_t offset, size_t size) {
+resource_entry &mmap_storage::get_resource(size_t offset, size_t size) {
     auto itr = m_resources.upper_bound (offset);
     if (itr == m_resources.cbegin()) {
         throw std::domain_error("error: deallocate request for non-existing resource");
@@ -168,13 +168,14 @@ offset_ptr offset_ptr::get_offset_ptr_at(void *raw_ptr) const {
     return {(static_cast <char*> (raw_ptr) - static_cast <char*> (m_addr)) + m_offset, raw_ptr};
 }
 
-mmap_storage::resource_entry::resource_entry(void *addr, size_t size, size_t offset) :
+resource_entry::resource_entry(void *addr, std::filesystem::path path, size_t size, size_t offset) :
+        m_path (std::move(path)),
         m_ptr (offset, addr),
         m_size (size),
         m_monotonic_buffer(addr, size, std::pmr::null_memory_resource()),
         m_pool_resource(&m_monotonic_buffer) {}
 
-std::pmr::memory_resource &mmap_storage::resource_entry::get_pool_resource() {
+std::pmr::memory_resource& resource_entry::get_pool_resource() {
     return m_pool_resource;
 }
 

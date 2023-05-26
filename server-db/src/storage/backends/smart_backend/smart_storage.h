@@ -11,17 +11,21 @@
 
 namespace uh::dbn::storage::smart {
 
-char *init_mmap(const std::filesystem::path &file_path, size_t init_size, size_t &file_size);
+char* init_mmap(const std::filesystem::path &file_path, size_t init_size, size_t &file_size);
 
 class smart_storage {
 
 public:
-    smart_storage (const std::forward_list<file_mmap_info>& files, std::filesystem::path fragment_set_path, std::filesystem::path hashtable_path);
+    smart_storage (const std::forward_list<file_mmap_info>& data_files,
+                   std::filesystem::path fragment_set_path,
+                   std::filesystem::path hashtable_path,
+                   std::filesystem::path hashtable_value_directory);
 
     size_t integrate (std::span <char> hash, std::string_view data);
 
-    std::span <fragment> retrieve (std::span <char> hash);
+    std::vector <fragment> retrieve (std::span <char> hash);
 
+    std::vector <char> serialize_fragments (const std::vector<fragment>&);
 
 private:
 
@@ -37,6 +41,7 @@ private:
 
     static inline size_t largest_common_prefix (const std::string_view &str1, const std::string_view& str2) noexcept;
 
+    constexpr static size_t HASH_SIZE = 128;
     constexpr static size_t MIN_FRAGMENT_SIZE = 4;
 
     mmap_storage m_data_store;

@@ -22,6 +22,7 @@
 namespace uh::dbn::storage::smart {
 
 class mmap_storage;
+class growing_mmap_storage;
 
 void* align_ptr (void* ptr);
 
@@ -44,6 +45,20 @@ private:
     [[nodiscard]] offset_ptr get_offset_ptr_at (size_t offset) const;
     [[nodiscard]] offset_ptr get_offset_ptr_at (void* raw_ptr) const;
     friend mmap_storage;
+    friend growing_mmap_storage;
+
+};
+
+class resource_entry {
+public:
+    resource_entry (void* addr, std::filesystem::path path, size_t size, size_t offset);
+    std::filesystem::path m_path;
+    std::pmr::memory_resource &get_pool_resource();
+    offset_ptr m_ptr;
+    const size_t m_size;
+private:
+    std::pmr::monotonic_buffer_resource m_monotonic_buffer;
+    std::pmr::synchronized_pool_resource m_pool_resource;
 };
 
 class mmap_storage {
@@ -83,17 +98,7 @@ public:
 
 private:
 
-    class resource_entry {
-    public:
-        resource_entry (void* addr, size_t size, size_t offset);
 
-        std::pmr::memory_resource &get_pool_resource();
-        offset_ptr m_ptr;
-        const size_t m_size;
-    private:
-        std::pmr::monotonic_buffer_resource m_monotonic_buffer;
-        std::pmr::synchronized_pool_resource m_pool_resource;
-    };
 
     offset_ptr do_allocate (size_t bytes);
 

@@ -4,10 +4,12 @@
 
 #include "smart_storage.h"
 
+#include <ranges>
+
 
 namespace uh::dbn::storage::smart {
 
-char *init_mmap(const std::filesystem::path &file_path, size_t init_size, size_t &file_size) {
+char* init_mmap(const std::filesystem::path &file_path, size_t init_size, size_t &file_size) {
     const auto existing_index = std::filesystem::exists(file_path.c_str());
     const auto fd = open(file_path.c_str(), O_CREAT | O_RDWR, S_IRUSR | S_IWUSR);
     if (!existing_index) {
@@ -32,18 +34,54 @@ char *init_mmap(const std::filesystem::path &file_path, size_t init_size, size_t
 namespace uh::dbn::storage::smart {
 
 
-smart_storage::smart_storage(const std::forward_list<file_mmap_info>& files, std::filesystem::path fragment_set_path, std::filesystem::path hashtable_path) :
-        m_data_store (files),
+smart_storage::smart_storage(const std::forward_list<file_mmap_info>& data_files,
+                             std::filesystem::path fragment_set_path,
+                             std::filesystem::path hashtable_index_path,
+                             std::filesystem::path hashtable_value_directory) :
+        m_data_store (data_files),
         m_fragment_set (m_data_store, std::move (fragment_set_path)),
-        m_hashtable (hashtable_path, m_data_store){
+        m_hashtable (HASH_SIZE, std::move (hashtable_index_path), std::move (hashtable_value_directory)){
 
 }
 
 size_t smart_storage::integrate(std::span <char> hash, std::string_view data) {
 
-    const auto fragments = deduplicate (data);
-    // here we insert into hash
+    if (const auto f = m_hashtable.get(hash); f) {
+        //TODO should we compare the data as well? It can be that the data
+        // is different and we do not notice it
+        return 0;
+    }
+
+    auto fragments = deduplicate (data);
+    m_hashtable.insert(hash, {reinterpret_cast <char*> (fragments.first.data()), fragments.first.size() * sizeof (fragment)});
     return fragments.second;
+}
+
+std::vector<fragment> smart_storage::retrieve(std::span<char> hash) {
+    auto f = m_hashtable.get(hash);
+    if (f) {
+        const auto ptr = reinterpret_cast <fragment*> (f.value().data());
+        const auto size = f.value().size() / sizeof (fragment);
+        return std::vector <fragment> {ptr, ptr + size};
+    }
+    throw std::out_of_range ("smart_storage could not find the data of the given hash value");
+}
+
+std::vector<char> smart_storage::serialize_fragments(const std::vector<fragment>& fragments) {
+
+    size_t offset = 0;
+    for (const auto f: fragments) {
+        offset += f.m_size;
+    }
+    std::vector <char> data (offset);
+
+    offset = 0;
+    for (auto f : std::ranges::reverse_view(fragments)) {
+        const auto frag_data = get_fragment_data_ptr(f);
+        std::memcpy(data.data() + offset, frag_data.data(), f.m_size);
+        offset += f.m_size;
+    }
+    return data;
 }
 
 std::span <char> smart_storage::get_fragment_data_ptr (const fragment& frag) {
@@ -106,5 +144,6 @@ smart_storage::largest_common_prefix(const std::string_view &str1, const std::st
     }
     return i;
 }
+
 
 } // end namespace uh::dbn::storage::smart
