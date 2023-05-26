@@ -76,16 +76,16 @@ namespace uh::io{
         uh::serialization::fragment_serialize_size_format skip() override;
 
         /**
+         * reset the state machine to a new fragment beginning
+         * @return if the underlying device is still valid to deliver the next fragment structure
+         */
+        bool reset() override;
+
+        /**
          *
          * @return valid index after at least reading once or writing once
          */
         [[nodiscard]] uint8_t getIndex() const;
-
-        /**
-         * reset the state machine to a new fragment beginning
-         * @return if the underlying device is still valid to deliver the next fragment structure
-         */
-        bool reset();
 
     private:
         enum{

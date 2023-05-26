@@ -85,6 +85,10 @@ BOOST_FIXTURE_TEST_CASE_TEMPLATE( multi_fragment_on_device_skip_test, T, device_
 
     BOOST_REQUIRE(size1.content_size == test_string1.size());
 
+    BOOST_CHECK(!fragmented->valid());
+    fragmented->reset();
+    BOOST_CHECK(fragmented->valid());
+
     std::vector<char> read_back_second;
     read_back_second.resize(test_string2.size(),0);
 
@@ -94,6 +98,8 @@ BOOST_FIXTURE_TEST_CASE_TEMPLATE( multi_fragment_on_device_skip_test, T, device_
     BOOST_CHECK_EQUAL_COLLECTIONS(test_string2.begin(),test_string2.end(),
                                   read_back_second.begin(),read_back_second.end());
 
+    BOOST_CHECK(!fragmented->valid());
+    fragmented->reset();
     BOOST_CHECK(!fragmented->valid());
 }
 
@@ -128,26 +134,26 @@ BOOST_FIXTURE_TEST_CASE_TEMPLATE( fragment_partial_read_write_exceptions, T, dev
 
     BOOST_CHECK_EQUAL(written,LOREM_IPSUM.size());
 
-    std::stringstream test_read{};
+    std::string test_read{};
 
     do{
-        buffer small_buf(LOREM_IPSUM.size()/4);
+        std::vector<char> small_buf(LOREM_IPSUM.size()/4);
 
-        auto maximum_readable = std::min(small_buf.data().size(),
-                                         static_cast<uint64_t>(std::distance(LOREM_IPSUM.cbegin()+written,
+        auto maximum_readable = std::min(small_buf.size(),
+                                         static_cast<uint64_t>(std::distance(LOREM_IPSUM.cbegin()+read,
                                                                               LOREM_IPSUM.cend())));
 
         bool first_read = !written;
 
-        read += uh::io::copy(*fragmented_read,small_buf);
-        if(first_read)BOOST_REQUIRE_THROW(copy(small_buf,*fragmented_read),std::exception);
+        read += uh::io::read(*fragmented_read,{small_buf.data(),small_buf.size()}).content_size;
+        if(first_read)BOOST_REQUIRE_THROW(write(*fragmented_read,{small_buf.data(),small_buf.size()}),std::exception);
 
-        test_read.write(small_buf.data().data(),static_cast<std::streamsize>(small_buf.data().size()));
+        test_read.append(small_buf.data(),maximum_readable);
     }
     while(fragmented_read->valid());
 
     BOOST_CHECK_EQUAL(read,LOREM_IPSUM.size());
-    BOOST_CHECK_EQUAL(std::string(test_read.str()),LOREM_IPSUM);
+    BOOST_CHECK_EQUAL(test_read, LOREM_IPSUM);
 }
 
 // ---------------------------------------------------------------------

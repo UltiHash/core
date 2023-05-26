@@ -79,7 +79,7 @@ namespace uh::io{
     {
         auto out_frag_size = serialization::fragment_serialize_size_format(0,0,0);
 
-        while (out_frag_size.content_size < alloc)
+        while (out_frag_size.content_size < buffer.size())
         {
             auto write_frag_size =
                     dev.write({buffer.data(), buffer.size()},alloc);

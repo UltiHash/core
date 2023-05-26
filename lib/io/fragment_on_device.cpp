@@ -9,6 +9,7 @@
 #include <io/device.h>
 
 #include <span>
+#include <ranges>
 
 namespace uh::io{
 
@@ -54,7 +55,10 @@ namespace uh::io{
             return return_size_format;
         }
         else{
-            std::streamsize written = io::write(serialization::sl_fragment_serializer::dev_,buffer);
+            std::size_t left_to_write = std::min(static_cast<std::size_t>(elements_left_to_process),
+                                                     static_cast<std::size_t>(buffer.size()));
+            std::streamsize written = io::write(serialization::sl_fragment_serializer::dev_,
+                                                {buffer.data(),left_to_write});
             elements_left_to_process -= written;
 
             if(elements_left_to_process < 0)
@@ -94,7 +98,7 @@ namespace uh::io{
             std::pair<std::vector<char>,serialization::fragment_serialize_size_format> first_read =
                     serialization::sl_fragment_deserializer::read<std::vector<char>>(header_read_format);
 
-            std::memcpy(buffer.data(),first_read.first.data(),buffer.size());
+            std::memcpy(buffer.data(),first_read.first.data(),first_read.first.size());
 
             elements_left_to_process -= first_read.second.content_size;
 
@@ -125,7 +129,7 @@ namespace uh::io{
             std::pair<std::vector<char>,serialization::fragment_serialize_size_format> read_continue =
                     serialization::sl_fragment_deserializer::read<std::vector<char>>(header_read_format);
 
-            std::memcpy(buffer.data(),read_continue.first.data(),buffer.size());
+            std::memcpy(buffer.data(),read_continue.first.data(),read_continue.first.size());
 
             elements_left_to_process -= read_continue.second.content_size;
 

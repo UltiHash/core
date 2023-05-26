@@ -63,6 +63,12 @@ namespace uh::io{
          */
          virtual uh::serialization::fragment_serialize_size_format skip() = 0;
 
+        /**
+        * reset fragment to a new fragment beginning
+        * @return if the underlying device is still valid to deliver the next fragment structure
+        */
+        virtual bool reset() = 0;
+
     };
 
 // ---------------------------------------------------------------------
@@ -76,7 +82,7 @@ namespace uh::io{
 // ---------------------------------------------------------------------
 
 /**
- * Copy the complete fragmented device `in` to the fragmented device `out`. Return number of
+ * Copy the complete fragmented device `in` to the device `out`. Return number of
  * bytes written.
  */
     std::size_t copy(fragmented_device& in, device& out);
