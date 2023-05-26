@@ -24,9 +24,9 @@ namespace
 // ---------------------------------------------------------------------
 
 typedef boost::mpl::vector<
-        sstream_device,
-        buffered_device<sstream_device>,
-        buffer
+    sstream_device,
+    buffered_device<sstream_device>,
+    buffer
 > device_types;
 
 // ---------------------------------------------------------------------
