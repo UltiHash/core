@@ -19,6 +19,7 @@ namespace uh::io {
     template<class SEEKABLE_TYPE = io::file>
     class chunk_collection {
 
+    public:
         /**
          * a chunk collection keeps track of the position and the movement
          * of incoming and outgoing chunks/fragments.

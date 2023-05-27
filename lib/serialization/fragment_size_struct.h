@@ -12,9 +12,11 @@ namespace uh::serialization{
     // ---------------------------------------------------------------------
 
     struct fragment_serialize_size_format{
-        uint32_t content_size;
-        uint16_t header_size;
-        uint16_t index_num;
+        uint32_t content_size{};
+        uint16_t header_size{};
+        uint16_t index_num{};
+
+        fragment_serialize_size_format() = default;
 
         fragment_serialize_size_format(uint8_t header_len,uint32_t content_len,uint8_t index_num):
                 header_size(header_len), content_size(content_len), index_num(index_num){}

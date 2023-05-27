@@ -13,6 +13,8 @@
 #include <algorithm>
 #include <array>
 #include <numeric>
+#include <vector>
+#include <list>
 
 namespace uh::io {
 
@@ -160,9 +162,21 @@ namespace uh::io {
             temporarily_open_file = std::make_unique<SEEKABLE_TYPE>(path, std::ios_base::in);
         }
 
-        std::vector<std::pair<std::vector<char>, serialization::fragment_serialize_size_format>> out_list;
+        std::vector<uint8_t> index_num_list = get_index_num_content_list();
+        std::vector<uint8_t> filtered_at_list_in_seek_order;
 
-        for(const auto& at_item:at){
+        std::copy_if(index_num_list.cbegin(),index_num_list.cend(),filtered_at_list_in_seek_order.begin(),
+                     [&at](const auto item)
+                     {
+                         return std::any_of(at.cbegin(),at.cend(),[&item](const auto item2){
+                             return item == item2;
+                         });
+                     });
+
+        std::vector<std::pair<std::vector<char>, serialization::fragment_serialize_size_format>>
+        out_list(filtered_at_list_in_seek_order.size());
+
+        for(const auto at_item:filtered_at_list_in_seek_order){
             auto fragment_pos_element = find_address(at_item);
 
             temporarily_cached_fragment_on_seekable_device =
@@ -172,7 +186,7 @@ namespace uh::io {
 
             temporarily_cached_fragment_on_seekable_device.reset();
 
-            serialization::fragment_serialize_size_format read(0,0,0);
+            serialization::fragment_serialize_size_format read;
             std::array<char,buf_size> buffer{};
             std::vector<char> output{};
 
@@ -191,7 +205,11 @@ namespace uh::io {
 
             } while (temporarily_cached_fragment_on_seekable_device->valid());
 
-            out_list.emplace_back(output,read);
+            out_list[
+                    std::distance(at.begin(),
+                                  std::find(at.begin(),at.end(),at_item)
+                                  )
+                    ] = std::make_pair(output,read);
         }
 
         return out_list;
