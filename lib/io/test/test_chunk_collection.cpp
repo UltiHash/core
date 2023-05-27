@@ -34,7 +34,8 @@ namespace
 
     BOOST_AUTO_TEST_CASE( chunk_collection_read_write )
     {
-        BOOST_CHECK(true);
+        chunk_collection<uh::io::temp_file> temporary_chunk_collection(TEMP_DIR);
+
     }
 
 // ---------------------------------------------------------------------

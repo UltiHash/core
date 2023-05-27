@@ -6,6 +6,7 @@
 
 #include "io/fragment_on_seekable_device.h"
 #include "io/fragment_on_seekable_reset_device.h"
+#include "io/temp_file.h"
 #include "serialization/fragment_size_struct.h"
 
 #include <utility>
@@ -25,13 +26,14 @@ namespace uh::io {
     path(std::move(collection_location)),
     temporarily_open_file(std::make_unique<SEEKABLE_TYPE>(path, std::ios_base::in)),
     temporarily_cached_fragment_on_seekable_device(
-            std::make_unique<io::fragment_on_seekable_device>(*temporarily_open_file))
+            std::make_unique<io::fragment_on_seekable_device>(*temporarily_open_file)),
+    to_be_deleted(std::is_same_v<SEEKABLE_TYPE,io::temp_file>)
     {
         if(std::filesystem::exists(path))
         {
             std::streamoff collection_offset{};
             uint16_t index_entry_count{};
-            serialization::fragment_serialize_size_format skip_format(0,0,0);
+            serialization::fragment_serialize_size_format skip_format;
 
             do{
                 skip_format = temporarily_cached_fragment_on_seekable_device->skip();
@@ -47,6 +49,12 @@ namespace uh::io {
 
             } while (skip_format.content_size > 0);
         }
+
+        if constexpr (std::is_same_v<SEEKABLE_TYPE,io::temp_file>){
+            temporarily_open_file->release_to(temporarily_open_file->path());
+            path = temporarily_open_file->path();
+        }
+
     }
 
     // ---------------------------------------------------------------------
@@ -63,7 +71,7 @@ namespace uh::io {
             THROW(util::exception,"Incoming writing buffer was too large!");
 
         if(!temporarily_cached_fragment_on_seekable_device->valid()){
-            temporarily_open_file = std::make_unique<SEEKABLE_TYPE>(path, std::ios_base::app);
+            temporarily_open_file = std::make_unique<io::file>(path, std::ios_base::app);
             temporarily_cached_fragment_on_seekable_device =
                     std::make_unique<io::fragment_on_seekable_device>(*temporarily_open_file,
                                                                       next_free_address());
@@ -83,7 +91,7 @@ namespace uh::io {
     chunk_collection<SEEKABLE_TYPE>::read_indexed(uint8_t at)
     {
         if(!temporarily_cached_fragment_on_seekable_device->valid()){
-            temporarily_open_file = std::make_unique<SEEKABLE_TYPE>(path, std::ios_base::in);
+            temporarily_open_file = std::make_unique<io::file>(path, std::ios_base::in);
 
             auto fragment_pos_element = find_address(at);
 
@@ -135,7 +143,7 @@ namespace uh::io {
         });
 
         if(!temporarily_cached_fragment_on_seekable_device->valid()){
-            temporarily_open_file = std::make_unique<SEEKABLE_TYPE>(path, std::ios_base::app);
+            temporarily_open_file = std::make_unique<io::file>(path, std::ios_base::app);
         }
 
         std::vector<serialization::fragment_serialize_size_format> out_list{};
@@ -159,7 +167,7 @@ namespace uh::io {
     chunk_collection<SEEKABLE_TYPE>::read_indexed(const std::vector<uint8_t>& at)
     {
         if(!temporarily_cached_fragment_on_seekable_device->valid()){
-            temporarily_open_file = std::make_unique<SEEKABLE_TYPE>(path, std::ios_base::in);
+            temporarily_open_file = std::make_unique<io::file>(path, std::ios_base::in);
         }
 
         std::vector<uint8_t> index_num_list = get_index_num_content_list();
@@ -342,6 +350,15 @@ namespace uh::io {
         }
 
         return out_list;
+    }
+
+    // ---------------------------------------------------------------------
+
+    template<class SEEKABLE_TYPE>
+    chunk_collection<SEEKABLE_TYPE>::~chunk_collection() {
+        if(to_be_deleted){
+            std::filesystem::remove(getPath());
+        }
     }
 
     // ---------------------------------------------------------------------

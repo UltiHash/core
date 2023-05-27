@@ -112,8 +112,17 @@ namespace uh::io {
          */
         template<std::enable_if_t<std::is_same_v<SEEKABLE_TYPE,io::temp_file>, bool> = true>
         void release_to(const std::filesystem::path& release_path){
-            temporarily_open_file->release_to(release_path);
-            path = temporarily_open_file->path();
+            to_be_deleted = false;
+
+            if(release_path == getPath())
+                return;
+
+            if (::link(getPath().c_str(), release_path.c_str()) == -1)
+            {
+                THROW_FROM_ERRNO();
+            }
+
+            path = release_path;
         }
 
         std::vector<uint8_t> get_index_num_content_list();
@@ -126,9 +135,12 @@ namespace uh::io {
         std::unique_ptr<io::fragmented_device> temporarily_cached_fragment_on_seekable_device;
 
         uint8_t next_free_address();
+        bool to_be_deleted;
 
         std::vector<std::pair<serialization::fragment_serialize_size_format,std::streamoff>>::const_iterator
         find_address(uint8_t at);
+
+        ~chunk_collection();
 
         constexpr static std::size_t buf_size = 1 << 26;
     };
