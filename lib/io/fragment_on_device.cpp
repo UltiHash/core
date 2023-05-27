@@ -5,7 +5,6 @@
 
 #include <util/exception.h>
 #include <serialization/fragment_size_struct.h>
-#include <serialization/fragment_serialization.h>
 #include <io/device.h>
 
 #include <span>
@@ -93,7 +92,7 @@ namespace uh::io{
             std::pair<std::vector<char>,serialization::fragment_serialize_size_format> first_read =
                     frag_serialize.read<std::vector<char>>(header_read_format);
 
-            std::memcpy(buffer.data(),first_read.first.data(),first_read.first.size());
+            std::copy(first_read.first.begin(),first_read.first.end(),buffer.begin());
 
             elements_left_to_process -= first_read.second.content_size;
 
@@ -124,7 +123,7 @@ namespace uh::io{
             std::pair<std::vector<char>,serialization::fragment_serialize_size_format> read_continue =
                     frag_serialize.read<std::vector<char>>(header_read_format);
 
-            std::memcpy(buffer.data(),read_continue.first.data(),read_continue.first.size());
+            std::copy(read_continue.first.begin(),read_continue.first.end(),buffer.begin());
 
             elements_left_to_process -= read_continue.second.content_size;
 

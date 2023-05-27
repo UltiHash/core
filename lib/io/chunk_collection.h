@@ -24,7 +24,6 @@
 
 namespace uh::io {
 
-    template<class SEEKABLE_TYPE = io::file>
     class chunk_collection {
 
     public:
@@ -44,26 +43,29 @@ namespace uh::io {
          *
          * @param collection_location where the file containing the chunk collection is located
          */
-        explicit chunk_collection(std::filesystem::path collection_location):
+        explicit chunk_collection(std::filesystem::path collection_location,bool create_tempfile = false):
                 path(std::move(collection_location)),
-                to_be_deleted(std::is_same_v<SEEKABLE_TYPE,io::temp_file>)
+                to_be_deleted(create_tempfile)
         {
-            auto file = std::make_unique<SEEKABLE_TYPE>(path, std::ios_base::in);
-
-            if constexpr (std::is_same_v<SEEKABLE_TYPE,io::temp_file>){
-                file->release_to(file->path());
-                path = file->path();
+            if (create_tempfile){
+                auto file = io::temp_file(path, std::ios_base::out);
+                file.release_to(file.path());
+                path = file.path();
             }
+
+            auto temporarily_open_file = std::make_unique<io::file>(path, std::ios_base::in);
+
+            auto temporarily_cached_fragment_on_seekable_device =
+                    std::make_unique<io::fragment_on_seekable_device>(*temporarily_open_file);
 
             if(std::filesystem::exists(path))
             {
                 std::streamoff collection_offset{};
                 uint16_t index_entry_count{};
                 serialization::fragment_serialize_size_format skip_format;
-                fragment_on_seekable_device frag_seek(*file);
 
                 do{
-                    skip_format = frag_seek.skip();
+                    skip_format = temporarily_cached_fragment_on_seekable_device->skip();
 
                     if(skip_format.content_size == 0)
                         break;
@@ -79,58 +81,22 @@ namespace uh::io {
         }
 
         /**
-         * write with returning the index that was assigned to the written buffer
-         * or instead give an index
-         *
-         * @param buffer to be written
-         * @param alloc allocate space and write fragment to chunk collection with the help of multiple buffers
-         * WARNING: allocated space must be written completely (accumulated buffer size is longer or equal alloc)
-         * @return tuple<stream size, assigned index position>
-         */
-        serialization::fragment_serialize_size_format write_indexed
-                (std::span<const char> buffer,uint32_t alloc = 0)
-        {
-            if(!free())
-                THROW(util::exception,"On chunk collection " + path.string() +
-                                      "was no space left to multi write indexed!");
-
-            if(buffer.size() > std::numeric_limits<uint32_t>::max())
-                THROW(util::exception,"Incoming writing buffer was too large!");
-
-            if(!temporarily_cached_fragment_on_seekable_device->valid()){
-                temporarily_open_file = std::make_unique<io::file>(path, std::ios_base::app);
-                temporarily_cached_fragment_on_seekable_device =
-                        std::make_unique<io::fragment_on_seekable_device>(*temporarily_open_file,
-                                                                          next_free_address());
-            }
-
-            uint32_t allocate_space = std::max(static_cast<uint32_t>(buffer.size()),alloc);
-            serialization::fragment_serialize_size_format written =
-                    temporarily_cached_fragment_on_seekable_device->write(buffer,allocate_space);
-
-            return written;
-        }
-
-        /**
          * read a certain index pointer and return a vector buffer of the content
          *
          * @param at index
          * @return buffer
          */
-        std::pair<std::vector<char>,serialization::fragment_serialize_size_format> read_indexed(uint8_t at)
+        std::pair<std::vector<char>,serialization::fragment_serialize_size_format>
+        read_indexed(uint8_t at)
         {
-            if(!temporarily_cached_fragment_on_seekable_device->valid()){
-                temporarily_open_file = std::make_unique<io::file>(path, std::ios_base::in);
+            auto temporarily_open_file = std::make_unique<io::file>(path, std::ios_base::in);
 
-                auto fragment_pos_element = find_address(at);
+            auto fragment_pos_element = find_address(at);
 
-                temporarily_cached_fragment_on_seekable_device =
-                        std::make_unique<io::fragment_on_seekable_reset_device>(*temporarily_open_file,
-                                                                                0,
-                                                                                fragment_pos_element->second);
+            auto temporarily_cached_fragment_on_seekable_device =
+                    std::make_unique<io::fragment_on_seekable_device>(*temporarily_open_file);
 
-                temporarily_cached_fragment_on_seekable_device.reset();
-            }
+            temporarily_open_file->seek(fragment_pos_element->second,std::ios_base::beg);
 
             serialization::fragment_serialize_size_format read(0,0,0);
             std::array<char,buf_size> buffer{};
@@ -155,40 +121,34 @@ namespace uh::io {
         }
 
         /**
-         * Write indexed multiple buffers and return a list of fragment size structs that contain written fragment
-         * information.
-         * Does not close filestream.
+         * write with returning the index that was assigned to the written buffer
+         * or instead give an index
+         *
+         * @param buffer to be written
+         * @param alloc allocate space and write fragment to chunk collection with the help of multiple buffers
+         * WARNING: allocated space must be written completely (accumulated buffer size is longer or equal alloc)
+         * @return tuple<stream size, assigned index position>
          */
-        std::vector<serialization::fragment_serialize_size_format>
-        write_indexed_multi(const std::vector<std::span<const char>> &buffer)
+        serialization::fragment_serialize_size_format write_indexed
+                (std::span<const char> buffer,uint32_t alloc = 0)
         {
-
-            if(static_cast<long>(free()) - buffer.size() <= 0)
+            if(!free())
                 THROW(util::exception,"On chunk collection " + path.string() +
                                       "was no space left to multi write indexed!");
 
-            std::for_each(buffer.cbegin(),buffer.cend(),[](const auto& item)
-            {
-                if(item.size() > std::numeric_limits<uint32_t>::max())
-                    THROW(util::exception,"Incoming writing buffer was too large!");
-            });
+            if(buffer.size() > std::numeric_limits<uint32_t>::max())
+                THROW(util::exception,"Incoming writing buffer was too large!");
 
-            if(!temporarily_cached_fragment_on_seekable_device->valid()){
-                temporarily_open_file = std::make_unique<io::file>(path, std::ios_base::app);
-            }
+            auto temporarily_open_file = std::make_unique<io::file>(path, std::ios_base::app);
+            auto temporarily_cached_fragment_on_seekable_device =
+                    std::make_unique<io::fragment_on_seekable_device>(*temporarily_open_file,
+                                                                      next_free_address());
 
-            std::vector<serialization::fragment_serialize_size_format> out_list{};
+            uint32_t allocate_space = std::max(static_cast<uint32_t>(buffer.size()),alloc);
+            serialization::fragment_serialize_size_format written =
+                    temporarily_cached_fragment_on_seekable_device->write(buffer,allocate_space);
 
-            for(const auto& item:buffer)
-            {
-                temporarily_cached_fragment_on_seekable_device =
-                        std::make_unique<io::fragment_on_seekable_device>(*temporarily_open_file,
-                                                                          next_free_address());
-
-                out_list.push_back(temporarily_cached_fragment_on_seekable_device->write(item));
-            }
-
-            return out_list;
+            return written;
         }
 
         /**
@@ -197,9 +157,7 @@ namespace uh::io {
         std::vector<std::pair<std::vector<char>, serialization::fragment_serialize_size_format>>
         read_indexed_multi(const std::vector<uint8_t>& at)
         {
-            if(!temporarily_cached_fragment_on_seekable_device->valid()){
-                temporarily_open_file = std::make_unique<io::file>(path, std::ios_base::in);
-            }
+            auto temporarily_open_file = std::make_unique<io::file>(path, std::ios_base::in);
 
             std::vector<uint8_t> index_num_list = get_index_num_content_list();
             std::vector<uint8_t> filtered_at_list_in_seek_order;
@@ -218,12 +176,10 @@ namespace uh::io {
             for(const auto at_item:filtered_at_list_in_seek_order){
                 auto fragment_pos_element = find_address(at_item);
 
-                temporarily_cached_fragment_on_seekable_device =
-                        std::make_unique<io::fragment_on_seekable_reset_device>(*temporarily_open_file,
-                                                                                0,
-                                                                                fragment_pos_element->second);
+                auto temporarily_cached_fragment_on_seekable_device =
+                        std::make_unique<io::fragment_on_seekable_device>(*temporarily_open_file);
 
-                temporarily_cached_fragment_on_seekable_device.reset();
+                temporarily_open_file->seek(fragment_pos_element->second,std::ios_base::beg);
 
                 serialization::fragment_serialize_size_format read;
                 std::array<char,buf_size> buffer{};
@@ -249,6 +205,41 @@ namespace uh::io {
                                       std::find(at.begin(),at.end(),at_item)
                         )
                 ] = std::make_pair(output,read);
+            }
+
+            return out_list;
+        }
+
+        /**
+         * Write indexed multiple buffers and return a list of fragment size structs that contain written fragment
+         * information.
+         * Does not close filestream.
+         */
+        std::vector<serialization::fragment_serialize_size_format>
+        write_indexed_multi(const std::vector<std::span<const char>> &buffer)
+        {
+
+            if(static_cast<long>(free()) - buffer.size() <= 0)
+                THROW(util::exception,"On chunk collection " + path.string() +
+                                      "was no space left to multi write indexed!");
+
+            std::for_each(buffer.cbegin(),buffer.cend(),[](const auto& item)
+            {
+                if(item.size() > std::numeric_limits<uint32_t>::max())
+                    THROW(util::exception,"Incoming writing buffer was too large!");
+            });
+
+            auto temporarily_open_file = std::make_unique<io::file>(path, std::ios_base::app);
+
+            std::vector<serialization::fragment_serialize_size_format> out_list{};
+
+            for(const auto& item:buffer)
+            {
+                auto temporarily_cached_fragment_on_seekable_device =
+                        std::make_unique<io::fragment_on_seekable_device>(*temporarily_open_file,
+                                                                          next_free_address());
+
+                out_list.push_back(temporarily_cached_fragment_on_seekable_device->write(item));
             }
 
             return out_list;
@@ -405,8 +396,8 @@ namespace uh::io {
         std::filesystem::path path;
         std::vector<std::pair<serialization::fragment_serialize_size_format,std::streamoff>> index;
 
-        std::unique_ptr<io::file> temporarily_open_file;
-        std::unique_ptr<io::fragmented_device> temporarily_cached_fragment_on_seekable_device;
+        //std::unique_ptr<io::file> temporarily_open_file;
+        //std::unique_ptr<io::fragment_on_seekable_device> temporarily_cached_fragment_on_seekable_device;
         constexpr static std::size_t buf_size = 1 << 26;
     };
 
