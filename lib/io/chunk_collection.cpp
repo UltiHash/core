@@ -4,7 +4,6 @@
 
 #include "chunk_collection.h"
 
-#include "io/file.h"
 #include "io/fragment_on_seekable_device.h"
 #include "io/fragment_on_seekable_reset_device.h"
 #include "serialization/fragment_size_struct.h"
@@ -19,9 +18,10 @@ namespace uh::io {
 
     // ---------------------------------------------------------------------
 
-    chunk_collection::chunk_collection(std::filesystem::path collection_location):
+    template<class SEEKABLE_TYPE>
+    chunk_collection<SEEKABLE_TYPE>::chunk_collection(std::filesystem::path collection_location):
     path(std::move(collection_location)),
-    temporarily_open_file(std::make_unique<io::file>(path, std::ios_base::in)),
+    temporarily_open_file(std::make_unique<SEEKABLE_TYPE>(path, std::ios_base::in)),
     temporarily_cached_fragment_on_seekable_device(
             std::make_unique<io::fragment_on_seekable_device>(*temporarily_open_file))
     {
@@ -49,7 +49,8 @@ namespace uh::io {
 
     // ---------------------------------------------------------------------
 
-    serialization::fragment_serialize_size_format chunk_collection::write_indexed
+    template<class SEEKABLE_TYPE>
+    serialization::fragment_serialize_size_format chunk_collection<SEEKABLE_TYPE>::write_indexed
     (std::span<const char> buffer,uint32_t alloc)
     {
         if(!free())
@@ -60,7 +61,7 @@ namespace uh::io {
             THROW(util::exception,"Incoming writing buffer was too large!");
 
         if(!temporarily_cached_fragment_on_seekable_device->valid()){
-            temporarily_open_file = std::make_unique<io::file>(path, std::ios_base::app);
+            temporarily_open_file = std::make_unique<SEEKABLE_TYPE>(path, std::ios_base::app);
             temporarily_cached_fragment_on_seekable_device =
                     std::make_unique<io::fragment_on_seekable_device>(*temporarily_open_file,
                                                                       next_free_address());
@@ -75,11 +76,12 @@ namespace uh::io {
 
     // ---------------------------------------------------------------------
 
+    template<class SEEKABLE_TYPE>
     std::pair<std::vector<char>, serialization::fragment_serialize_size_format>
-    chunk_collection::read_indexed(uint8_t at)
+    chunk_collection<SEEKABLE_TYPE>::read_indexed(uint8_t at)
     {
         if(!temporarily_cached_fragment_on_seekable_device->valid()){
-            temporarily_open_file = std::make_unique<io::file>(path, std::ios_base::in);
+            temporarily_open_file = std::make_unique<SEEKABLE_TYPE>(path, std::ios_base::in);
 
             auto fragment_pos_element = find_address(at);
 
@@ -115,8 +117,9 @@ namespace uh::io {
 
     // ---------------------------------------------------------------------
 
+    template<class SEEKABLE_TYPE>
     std::vector<serialization::fragment_serialize_size_format>
-    chunk_collection::write_indexed(const std::vector<std::span<const char>> &buffer)
+    chunk_collection<SEEKABLE_TYPE>::write_indexed(const std::vector<std::span<const char>> &buffer)
     {
 
         if(static_cast<long>(free()) - buffer.size() <= 0)
@@ -130,7 +133,7 @@ namespace uh::io {
         });
 
         if(!temporarily_cached_fragment_on_seekable_device->valid()){
-            temporarily_open_file = std::make_unique<io::file>(path, std::ios_base::app);
+            temporarily_open_file = std::make_unique<SEEKABLE_TYPE>(path, std::ios_base::app);
         }
 
         std::vector<serialization::fragment_serialize_size_format> out_list{};
@@ -149,11 +152,12 @@ namespace uh::io {
 
     // ---------------------------------------------------------------------
 
+    template<class SEEKABLE_TYPE>
     std::vector<std::pair<std::vector<char>, serialization::fragment_serialize_size_format>>
-    chunk_collection::read_indexed(const std::vector<uint8_t>& at)
+    chunk_collection<SEEKABLE_TYPE>::read_indexed(const std::vector<uint8_t>& at)
     {
         if(!temporarily_cached_fragment_on_seekable_device->valid()){
-            temporarily_open_file = std::make_unique<io::file>(path, std::ios_base::in);
+            temporarily_open_file = std::make_unique<SEEKABLE_TYPE>(path, std::ios_base::in);
         }
 
         std::vector<std::pair<std::vector<char>, serialization::fragment_serialize_size_format>> out_list;
@@ -195,14 +199,16 @@ namespace uh::io {
 
     // ---------------------------------------------------------------------
 
-    uint16_t chunk_collection::count()
+    template<class SEEKABLE_TYPE>
+    uint16_t chunk_collection<SEEKABLE_TYPE>::count()
     {
         return static_cast<uint16_t>(index.size());
     }
 
     // ---------------------------------------------------------------------
 
-    std::size_t chunk_collection::size()
+    template<class SEEKABLE_TYPE>
+    std::size_t chunk_collection<SEEKABLE_TYPE>::size()
     {
         std::size_t accumulated{};
 
@@ -216,7 +222,8 @@ namespace uh::io {
 
     // ---------------------------------------------------------------------
 
-    std::size_t chunk_collection::size(uint8_t index_adress)
+    template<class SEEKABLE_TYPE>
+    std::size_t chunk_collection<SEEKABLE_TYPE>::size(uint8_t index_adress)
     {
         auto found_address = find_address(index_adress);
 
@@ -225,7 +232,8 @@ namespace uh::io {
 
     // ---------------------------------------------------------------------
 
-    std::size_t chunk_collection::content_size(uint8_t index_adress) {
+    template<class SEEKABLE_TYPE>
+    std::size_t chunk_collection<SEEKABLE_TYPE>::content_size(uint8_t index_adress) {
         auto found_address = find_address(index_adress);
 
         return found_address->first.content_size;
@@ -233,27 +241,31 @@ namespace uh::io {
 
     // ---------------------------------------------------------------------
 
-    bool chunk_collection::full() const
+    template<class SEEKABLE_TYPE>
+    bool chunk_collection<SEEKABLE_TYPE>::full() const
     {
         return index.size() == std::numeric_limits<unsigned char>::max();
     }
 
     // ---------------------------------------------------------------------
 
-    uint8_t chunk_collection::free() {
+    template<class SEEKABLE_TYPE>
+    uint8_t chunk_collection<SEEKABLE_TYPE>::free() {
         return std::numeric_limits<uint8_t>::max() - count();
     }
 
     // ---------------------------------------------------------------------
 
-    std::filesystem::path chunk_collection::getPath()
+    template<class SEEKABLE_TYPE>
+    std::filesystem::path chunk_collection<SEEKABLE_TYPE>::getPath()
     {
         return path;
     }
 
     // ---------------------------------------------------------------------
 
-    uint8_t chunk_collection::next_free_address()
+    template<class SEEKABLE_TYPE>
+    uint8_t chunk_collection<SEEKABLE_TYPE>::next_free_address()
     {
         if(full())
             THROW(util::exception,"There are no more free addresses on chunk collection "+path.string()+" !");
@@ -279,8 +291,9 @@ namespace uh::io {
 
     // ---------------------------------------------------------------------
 
+    template<class SEEKABLE_TYPE>
     std::vector<std::pair<serialization::fragment_serialize_size_format, std::streamoff>>::const_iterator
-    chunk_collection::find_address(uint8_t at) {
+    chunk_collection<SEEKABLE_TYPE>::find_address(uint8_t at) {
         auto fragment_pos_element = std::find_if(index.cbegin(),index.cend(),
                                                  [&at](const std::pair<
                                                          serialization::fragment_serialize_size_format,
@@ -295,6 +308,22 @@ namespace uh::io {
                                   " was not found on chunk collection " + path.string());
 
         return fragment_pos_element;
+    }
+
+    // ---------------------------------------------------------------------
+
+    template<class SEEKABLE_TYPE>
+    std::vector<uint8_t> chunk_collection<SEEKABLE_TYPE>::get_index_num_content_list() {
+        std::vector<uint8_t> out_list(index.size());
+
+        std::size_t counter{};
+
+        for(const auto& item:index){
+            out_list[counter] = item.first.index_num;
+            counter++;
+        }
+
+        return out_list;
     }
 
     // ---------------------------------------------------------------------

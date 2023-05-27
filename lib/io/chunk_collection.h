@@ -16,6 +16,7 @@
 
 namespace uh::io {
 
+    template<class SEEKABLE_TYPE = io::file>
     class chunk_collection {
 
         /**
@@ -27,7 +28,7 @@ namespace uh::io {
          *
          * @param collection_location where the file containing the chunk collection is located
          */
-        explicit chunk_collection(std::filesystem::path  collection_location);
+        explicit chunk_collection(std::filesystem::path collection_location);
 
         /**
          * write with returning the index that was assigned to the written buffer
@@ -103,11 +104,24 @@ namespace uh::io {
          */
         std::filesystem::path getPath();
 
+        /**
+         * Rename the temp_file to `path` and make it a permanent file, in case we are based on temp_file
+         *
+         * @throw a file with the given name already exists
+         */
+        template<std::enable_if_t<std::is_same_v<SEEKABLE_TYPE,io::temp_file>, bool> = true>
+        void release_to(const std::filesystem::path& release_path){
+            temporarily_open_file->release_to(release_path);
+            path = temporarily_open_file->path();
+        }
+
+        std::vector<uint8_t> get_index_num_content_list();
+
     private:
         std::filesystem::path path;
         std::vector<std::pair<serialization::fragment_serialize_size_format,std::streamoff>> index;
 
-        std::unique_ptr<io::file> temporarily_open_file;
+        std::unique_ptr<SEEKABLE_TYPE> temporarily_open_file;
         std::unique_ptr<io::fragmented_device> temporarily_cached_fragment_on_seekable_device;
 
         uint8_t next_free_address();
