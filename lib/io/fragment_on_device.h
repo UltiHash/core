@@ -15,7 +15,7 @@
 
 namespace uh::io{
 
-    class fragment_on_device : public serialization::fragment_serialization<>, public fragmented_device{
+    class fragment_on_device : public fragmented_device{
 
     public:
         /**
@@ -61,7 +61,10 @@ namespace uh::io{
 
         /**
          *
-         * @return the state of the underlying device
+         * WARNING: seekable devices are valid if the stream pointer is not one step beyond the last character,
+         * instead of pointing exactly to the last element
+         *
+         * @return the state of the underlying device and if reading or writing was not completed or started once
          */
         [[nodiscard]] bool valid() const override;
 
@@ -93,8 +96,12 @@ namespace uh::io{
             COMPLETE
         } state_machine = UNDEFINED_STATE;
         int64_t elements_left_to_process{};
+        io::device& dev_fragment;
         uint8_t index;
         char control_byte{};
+
+    protected:
+        serialization::fragment_serialization<> frag_serialize;
     };
 } // namespace uh::io
 

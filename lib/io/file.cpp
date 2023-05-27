@@ -1,6 +1,6 @@
 #include "file.h"
 
-#include "util/exception.h"
+#include <filesystem>
 
 namespace uh::io
 {
@@ -68,13 +68,7 @@ std::filesystem::path file::path()
 
 std::size_t file::size()
 {
-    auto pos = m_io.tellg();
-    m_io.seekg(0, std::ios::end);
-
-    auto rv = m_io.tellg();
-    m_io.seekg(pos, std::ios::beg);
-
-    return rv;
+    return std::filesystem::file_size(m_path);
 }
 
 // ---------------------------------------------------------------------

@@ -15,7 +15,7 @@ namespace uh::io{
     // ---------------------------------------------------------------------
 
     fragment_on_device::fragment_on_device(io::device &dev, uint8_t index):
-    serialization::fragment_serialization<>(dev),index(index){}
+    dev_fragment(dev), frag_serialize(dev),index(index){}
 
     // ---------------------------------------------------------------------
 
@@ -25,9 +25,7 @@ namespace uh::io{
         if(state_machine == READING_BEGIN)
             THROW(util::exception,"Writing on fragment_on_device corrupted the fragments incomplete reading state!");
 
-        state_machine = WRITING_BEGIN;
-        auto return_size_format =
-                serialization::sl_fragment_serializer::write(buffer, index);
+        auto return_size_format = frag_serialize.write(buffer, index);
         state_machine = COMPLETE;
         return return_size_format;
     }
@@ -41,8 +39,7 @@ namespace uh::io{
 
         if(state_machine == UNDEFINED_STATE){
             state_machine = WRITING_BEGIN;
-            auto return_size_format =
-                    serialization::sl_fragment_serializer::write(buffer, index, alloc);
+            auto return_size_format = frag_serialize.write(buffer, index, alloc);
             elements_left_to_process = static_cast<int64_t>(alloc) - return_size_format.content_size;
 
             if(elements_left_to_process < 0)
@@ -56,8 +53,7 @@ namespace uh::io{
         else{
             std::size_t left_to_write = std::min(static_cast<std::size_t>(elements_left_to_process),
                                                      static_cast<std::size_t>(buffer.size()));
-            std::streamsize written = io::write(serialization::sl_fragment_serializer::dev_,
-                                                {buffer.data(),left_to_write});
+            std::streamsize written = dev_fragment.write({buffer.data(),left_to_write});
             elements_left_to_process -= written;
 
             if(elements_left_to_process < 0)
@@ -85,7 +81,7 @@ namespace uh::io{
         if(state_machine == UNDEFINED_STATE){
             state_machine = READING_BEGIN;
             serialization::fragment_serialize_transit_format header_read_format =
-                    serialization::sl_fragment_deserializer::get_header_data_size_index();
+                    frag_serialize.get_header_data_size_index();
 
             elements_left_to_process = header_read_format.content_size;
             control_byte = header_read_format.control_byte;
@@ -95,7 +91,7 @@ namespace uh::io{
                                                        static_cast<uint32_t>(buffer.size()));
 
             std::pair<std::vector<char>,serialization::fragment_serialize_size_format> first_read =
-                    serialization::sl_fragment_deserializer::read<std::vector<char>>(header_read_format);
+                    frag_serialize.read<std::vector<char>>(header_read_format);
 
             std::memcpy(buffer.data(),first_read.first.data(),first_read.first.size());
 
@@ -126,7 +122,7 @@ namespace uh::io{
                              index);
 
             std::pair<std::vector<char>,serialization::fragment_serialize_size_format> read_continue =
-                    serialization::sl_fragment_deserializer::read<std::vector<char>>(header_read_format);
+                    frag_serialize.read<std::vector<char>>(header_read_format);
 
             std::memcpy(buffer.data(),read_continue.first.data(),read_continue.first.size());
 
@@ -147,7 +143,7 @@ namespace uh::io{
 
     bool fragment_on_device::valid() const
     {
-        return serialization::sl_fragment_serializer::dev_.valid() and state_machine != COMPLETE;
+        return dev_fragment.valid() and state_machine != COMPLETE;
     }
 
     // ---------------------------------------------------------------------
@@ -155,7 +151,7 @@ namespace uh::io{
     uh::serialization::fragment_serialize_size_format
     fragment_on_device::skip()
     {
-        return serialization::sl_fragment_deserializer::read<std::vector<char>>().second;
+        return frag_serialize.read<std::vector<char>>().second;
     }
 
     // ---------------------------------------------------------------------
