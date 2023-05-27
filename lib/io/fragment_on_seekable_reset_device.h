@@ -20,7 +20,8 @@ namespace uh::io {
          * @param index position that is either given on write or read from underlying device
          * @param starts_at fragment starting position to be seeked to
          */
-        explicit fragment_on_seekable_reset_device(io::seekable_device& dev, uint8_t index = 0, std::streamoff starts_at = 0);
+        explicit fragment_on_seekable_reset_device(io::seekable_device& dev, uint8_t index = 0,
+                                                   std::streamoff starts_at = 0);
 
         /**
          * reset the state machine to the stored fragment beginning

@@ -6,6 +6,8 @@
 #define CORE_CHUNK_COLLECTION_H
 
 #include "serialization/fragment_size_struct.h"
+#include "io/file.h"
+#include "io/fragment_on_seekable_device.h"
 
 #include <filesystem>
 #include <vector>
@@ -33,9 +35,11 @@ namespace uh::io {
          * or instead give an index
          *
          * @param buffer to be written
+         * @param alloc allocate space and write fragment to chunk collection with the help of multiple buffers
+         * WARNING: allocated space must be written completely (accumulated buffer size is longer or equal alloc)
          * @return tuple<stream size, assigned index position>
          */
-        serialization::fragment_serialize_size_format write_indexed(std::span<const char> buffer);
+        serialization::fragment_serialize_size_format write_indexed(std::span<const char> buffer,uint32_t alloc = 0);
 
         /**
          * read a certain index pointer and return a vector buffer of the content
@@ -60,7 +64,7 @@ namespace uh::io {
          *
          * @return the count of addresses used
          */
-        uint8_t count();
+        uint16_t count();
 
         /**
          *
@@ -72,9 +76,16 @@ namespace uh::io {
         /**
          *
          * @param index_adress is the address of a registered fragment/chunk
-         * @return the size of the content payload of the fragment/chunk
+         * @return the size of the header and content payload of the fragment/chunk
          */
         std::size_t size(uint8_t index_adress);
+
+        /**
+         *
+         * @param index_adress is the address of a registered fragment/chunk
+         * @return the size of the content payload of the fragment/chunk
+         */
+        std::size_t content_size(uint8_t index_adress);
 
         /**
          *
@@ -91,8 +102,14 @@ namespace uh::io {
     private:
         std::filesystem::path path;
         std::vector<std::pair<serialization::fragment_serialize_size_format,std::streamoff>> index;
+        std::unique_ptr<io::file> temporarily_open_file;
+        std::unique_ptr<io::fragmented_device> temporarily_cached_fragment_on_seekable_device;
 
         uint8_t next_free_address();
+        std::vector<std::pair<serialization::fragment_serialize_size_format,std::streamoff>>::const_iterator
+        find_address(uint8_t at);
+
+        constexpr static std::size_t buf_size = 1 << 26;
     };
 
 } // namespace uh::io

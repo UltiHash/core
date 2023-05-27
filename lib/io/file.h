@@ -35,6 +35,11 @@ public:
      */
     [[nodiscard]] std::filesystem::path path();
 
+    /**
+     * manually close the filestream to unblock the file
+     */
+    void close();
+
 
     std::size_t size();
 private:
