@@ -91,6 +91,8 @@ namespace uh::io {
     private:
         std::filesystem::path path;
         std::vector<std::pair<serialization::fragment_serialize_size_format,std::streamoff>> index;
+
+        uint8_t next_free_address();
     };
 
 } // namespace uh::io

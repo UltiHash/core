@@ -79,4 +79,27 @@ namespace uh::io {
     std::filesystem::path chunk_collection::getPath() {
         return path;
     }
+
+    // ---------------------------------------------------------------------
+
+    uint8_t chunk_collection::next_free_address() {
+        if(full())
+            THROW(util::exception,"There are no more free addresses on chunk collection "+path.string()+" !");
+
+        auto copy_index = index;
+
+        std::sort(copy_index.begin(),copy_index.end(),[](const auto &a, const auto &b){
+            return a.first.index_num < b.first.index_num;
+        });
+
+        auto index_beg = std::begin(copy_index);
+        for(unsigned short i = 0; i < std::numeric_limits<unsigned char>::max();i++){
+            if(index_beg == std::end(copy_index) || index_beg->first.index_num != i){
+                return i;
+            }
+        }
+
+        return 0;
+    }
+
 } // namespace uh::io
