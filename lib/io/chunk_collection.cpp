@@ -72,8 +72,7 @@ namespace uh::io {
         serialization::fragment_serialize_size_format written =
                 temporarily_cached_fragment_on_seekable_device->write(buffer,allocate_space);
 
-        if(!temporarily_cached_fragment_on_seekable_device->valid())
-            temporarily_open_file->close();
+        temporarily_open_file->close();
 
         return written;
     }
@@ -151,8 +150,7 @@ namespace uh::io {
             out_list.push_back(temporarily_cached_fragment_on_seekable_device->write(item));
         }
 
-        if(!temporarily_cached_fragment_on_seekable_device->valid())
-            temporarily_open_file->close();
+        temporarily_open_file->close();
 
         return out_list;
     }
@@ -162,7 +160,7 @@ namespace uh::io {
     std::vector<std::pair<std::vector<char>, serialization::fragment_serialize_size_format>>
     chunk_collection::read_indexed(const std::vector<uint8_t>& at)
     {
-
+        //TODO: order read with the help of fragment position and seek into one direction
     }
 
     // ---------------------------------------------------------------------
