@@ -25,13 +25,7 @@ namespace uh::io {
          *
          * @param collection_location where the file containing the chunk collection is located
          */
-        explicit chunk_collection(const std::filesystem::path& collection_location);
-
-        /**
-         *
-         * @return if the chunk collection is full
-         */
-        [[nodiscard]] bool full() const;
+        explicit chunk_collection(std::filesystem::path  collection_location);
 
         /**
          * write with returning the index that was assigned to the written buffer
@@ -83,10 +77,9 @@ namespace uh::io {
 
         /**
          *
-         * @param index_adress is the address of a registered fragment/chunk
-         * @return the size of the content payload of the fragment/chunk
+         * @return if the chunk collection is full
          */
-        std::size_t size(std::size_t index_pos);
+        [[nodiscard]] bool full() const;
 
         /**
          *
