@@ -228,10 +228,6 @@ BOOST_FIXTURE_TEST_CASE(basic_dedup_test, files_info_fixture)
 
     cleanup();
     std::hash <std::string> h;
-    auto hs = [] (unsigned long v) {
-        return std::span <char> {reinterpret_cast <char*> (&v), sizeof (v)};
-    };
-
     {
         smart_storage pd{files_info(), m_set_filename, m_hashmap_key_filename, m_growing_directory};
 
@@ -348,7 +344,7 @@ BOOST_FIXTURE_TEST_CASE(basic_growing_mmap_storage_test, files_info_fixture)
     cleanup();
     offset_ptr ptr1;
     offset_ptr ptr2;
-    char data [256];
+    char data [] = "Calculate the length of your string of text or numbers to check the number of characters it contains! Using our online character counting tool is quick and easy! This tool is great for computer programmers, web developers, writers, and other programmers.  ";
     size_t size = 256;
 
     {
@@ -390,6 +386,9 @@ BOOST_FIXTURE_TEST_CASE(basic_growing_mmap_storage_test, files_info_fixture)
         BOOST_TEST (ptr1.m_offset + size < ptr2.m_offset);
 
         void* raw_ptr = ms.get_raw_ptr(ptr1.m_offset);
+        std::cout.write(data, size);
+        std::cout << std::endl;
+        std::cout.write(static_cast <char *> (raw_ptr),size);
         BOOST_TEST (std::memcmp(&data, static_cast <char *> (raw_ptr), size) == 0);
 
         void* raw_ptr2 = ms.get_raw_ptr(ptr2.m_offset);
