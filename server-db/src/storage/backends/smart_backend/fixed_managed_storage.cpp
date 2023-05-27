@@ -3,13 +3,13 @@
 //
 #include <unordered_map>
 #include <boost/interprocess/mapped_region.hpp>
-#include "mmap_storage.h"
+#include "fixed_managed_storage.h"
 
 namespace uh::dbn::storage::smart {
 
 
 
-mmap_storage::mmap_storage(const std::forward_list<file_mmap_info>& files):
+fixed_managed_storage::fixed_managed_storage(const std::forward_list<file_mmap_info>& files):
     m_log_file_path (generate_log_file_path(files)),
     m_log(create_logger()) {
 
@@ -21,35 +21,35 @@ mmap_storage::mmap_storage(const std::forward_list<file_mmap_info>& files):
     replay_logger();
 }
 
-offset_ptr mmap_storage::allocate(std::size_t size) {
+offset_ptr fixed_managed_storage::allocate(std::size_t size) {
     m_log << "al " << size << '\n';
     return do_allocate(size);
 }
 
-void mmap_storage::deallocate(const offset_ptr& off_ptr, size_t size) {
+void fixed_managed_storage::deallocate(const offset_ptr& off_ptr, size_t size) {
     m_log << "de " << off_ptr.m_offset << ' ' << size << '\n';
     do_deallocate(off_ptr, size);
 }
 
-void mmap_storage::sync(void *ptr, std::size_t size) {
+void fixed_managed_storage::sync(void *ptr, std::size_t size) {
     if (msync(align_ptr (ptr), size, MS_SYNC) != 0) {
-        throw std::system_error (errno, std::system_category(), "mmap_storage could not sync the mmap data");
+        throw std::system_error (errno, std::system_category(), "fixed_managed_storage could not sync the mmap data");
     }
 }
 
-void mmap_storage::sync () {
+void fixed_managed_storage::sync () {
     for (auto &resource: m_resources) {
         if (msync (resource.second.m_ptr.m_addr, resource.second.m_size, MS_SYNC) != 0) {
-            throw std::system_error (errno, std::system_category(), "mmap_storage could not sync the mmap data");
+            throw std::system_error (errno, std::system_category(), "fixed_managed_storage could not sync the mmap data");
         }
     }
 }
 
-void *mmap_storage::get_raw_ptr(size_t offset) {
+void *fixed_managed_storage::get_raw_ptr(size_t offset) {
     return get_resource(offset).m_ptr.get_offset_ptr_at(offset).m_addr;
 }
 
-void mmap_storage::mmap_file(const file_mmap_info& file) {
+void fixed_managed_storage::mmap_file(const file_mmap_info& file) {
 
     const auto fd = open(file.path.c_str(), O_CREAT | O_RDWR, S_IRUSR | S_IWUSR);
     ftruncate(fd, file.max_size);
@@ -68,7 +68,7 @@ void mmap_storage::mmap_file(const file_mmap_info& file) {
     m_aggregated_size += file.max_size;
 }
 
-std::fstream mmap_storage::create_logger() const {
+std::fstream fixed_managed_storage::create_logger() const {
     auto flags = std::ios::in | std::ios::out;
     if (!std::filesystem::exists(m_log_file_path)) {
         flags |= std::ios::trunc;
@@ -76,7 +76,7 @@ std::fstream mmap_storage::create_logger() const {
     return {m_log_file_path, flags};
 }
 
-void mmap_storage::replay_logger() {
+void fixed_managed_storage::replay_logger() {
     std::string token;
     while (m_log >> token) {
         if (token == "al") {
@@ -95,7 +95,7 @@ void mmap_storage::replay_logger() {
     m_log.clear();
 }
 
-offset_ptr mmap_storage::do_allocate (size_t bytes) {
+offset_ptr fixed_managed_storage::do_allocate (size_t bytes) {
 
     for (auto &resource: m_resources) {
         try {
@@ -107,13 +107,13 @@ offset_ptr mmap_storage::do_allocate (size_t bytes) {
     throw std::bad_alloc();
 }
 
-void mmap_storage::do_deallocate (const offset_ptr& offset_ptr, size_t bytes) {
+void fixed_managed_storage::do_deallocate (const offset_ptr& offset_ptr, size_t bytes) {
     auto &resource = get_resource (offset_ptr.m_offset, bytes);
     const auto deallocate_offset_ptr = resource.m_ptr.get_offset_ptr_at(offset_ptr.m_offset);
     resource.get_pool_resource().deallocate(deallocate_offset_ptr.m_addr, bytes);
 }
 
-std::filesystem::path mmap_storage::generate_log_file_path (const std::forward_list<file_mmap_info>& files) {
+std::filesystem::path fixed_managed_storage::generate_log_file_path (const std::forward_list<file_mmap_info>& files) {
 
     std::hash <std::string> hasher;
     std::string file_name = "log_";
@@ -125,7 +125,7 @@ std::filesystem::path mmap_storage::generate_log_file_path (const std::forward_l
     return file_name;
 }
 
-bool mmap_storage::files_consistent_existency (const std::forward_list<file_mmap_info>& files) {
+bool fixed_managed_storage::files_consistent_existency (const std::forward_list<file_mmap_info>& files) {
     bool existed_files = std::filesystem::exists(files.begin()->path);
     for (auto itr = std::next (files.cbegin()); itr != files.cend(); itr ++) {
         if (std::filesystem::exists(itr->path) != existed_files) {
@@ -135,7 +135,7 @@ bool mmap_storage::files_consistent_existency (const std::forward_list<file_mmap
     return existed_files;
 }
 
-resource_entry &mmap_storage::get_resource(size_t offset, size_t size) {
+resource_entry &fixed_managed_storage::get_resource(size_t offset, size_t size) {
     auto itr = m_resources.upper_bound (offset);
     if (itr == m_resources.cbegin()) {
         throw std::domain_error("error: deallocate request for non-existing resource");
@@ -147,7 +147,7 @@ resource_entry &mmap_storage::get_resource(size_t offset, size_t size) {
     return itr->second;
 }
 
-mmap_storage::~mmap_storage() {
+fixed_managed_storage::~fixed_managed_storage() {
     sync();
 }
 

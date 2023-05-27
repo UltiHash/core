@@ -1,17 +1,17 @@
 //
 // Created by masi on 5/22/23.
 //
-#include "mmap_set.h"
+#include "persisted_redblack_tree_set.h"
 #include "smart_storage.h"
 
 namespace uh::dbn::storage::smart {
 
-mmap_set::mmap_set(mmap_storage& data_store, std::filesystem::path file) :
+persisted_redblack_tree_set::persisted_redblack_tree_set(fixed_managed_storage& data_store, std::filesystem::path file) :
         m_data_store (data_store),
         m_file_path (std::move (file)),
-        m_index_store (init_mmap(m_file_path, NILL_OFFSET, m_file_size)),
-        m_root (reinterpret_cast <uint64_t*> (m_index_store)),
-        m_end (*reinterpret_cast <uint64_t*> (m_index_store + sizeof(m_root))) {
+        m_index_store (growing_plain_storage (std::move (m_file_path), SET_INIT_FILE_SIZE)),
+        m_root (reinterpret_cast <uint64_t*> (m_index_store.get_storage())),
+        m_end (*reinterpret_cast <uint64_t*> (m_index_store.get_storage() + sizeof(m_root))) {
 
     if (m_end == 0) {
         m_end = NILL_OFFSET;
@@ -25,7 +25,7 @@ mmap_set::mmap_set(mmap_storage& data_store, std::filesystem::path file) :
 
 }
 
-uint64_t mmap_set::insert_index(const std::string_view& frag, uint64_t data_offset, uint64_t hint) {
+uint64_t persisted_redblack_tree_set::insert_index(const std::string_view& frag, uint64_t data_offset, uint64_t hint) {
 
     boost::upgrade_lock lock (m_mutex);
 
@@ -57,31 +57,29 @@ uint64_t mmap_set::insert_index(const std::string_view& frag, uint64_t data_offs
     boost::upgrade_to_unique_lock <boost::shared_mutex> write_lock (lock);
     balance (z);
 
-    if (m_end > m_file_size - SET_FILE_EXTEND_LIMIT) {
-        extend_mapping ();
+    if (m_end > m_index_store.get_size() - SET_FILE_EXTEND_LIMIT) {
+        m_index_store.extend_mapping();
+        m_nil = get_node(2 * sizeof (uint64_t));
+        m_root = reinterpret_cast <uint64_t*> (m_index_store.get_storage());
+        m_end = *reinterpret_cast <uint64_t*> (m_index_store.get_storage() + sizeof(m_root));
     }
     return offset;
 }
 
-mmap_set::search_result mmap_set::find(const std::string_view& frag, uint64_t hint) {
+persisted_redblack_tree_set::search_result persisted_redblack_tree_set::find(const std::string_view& frag, uint64_t hint) {
 
     boost::shared_lock lock (m_mutex);
     return unlocked_find (frag, hint);
 }
 
-void mmap_set::sync(uint64_t offset) {
+void persisted_redblack_tree_set::sync(uint64_t offset) {
 
-    if (msync(align_ptr (m_index_store + offset), sizeof (mmap_node), MS_SYNC) != 0) {
-        throw std::system_error (errno, std::system_category(), "mmap_set could not sync the mmap data");
+    if (msync(align_ptr (m_index_store.get_storage() + offset), sizeof (mmap_node), MS_SYNC) != 0) {
+        throw std::system_error (errno, std::system_category(), "persisted_redblack_tree_set could not sync the mmap data");
     }
 }
 
-mmap_set::~mmap_set() {
-    msync (m_index_store, m_file_size, MS_SYNC);
-    munmap(m_index_store, m_file_size);
-}
-
-std::pair<uint64_t, bool> mmap_set::resolve_hint(uint64_t hint, const std::string_view& frag) {
+std::pair<uint64_t, bool> persisted_redblack_tree_set::resolve_hint(uint64_t hint, const std::string_view& frag) {
 
     if (hint == NILL_OFFSET) {
         return {*m_root, false};
@@ -220,7 +218,7 @@ std::pair<uint64_t, bool> mmap_set::resolve_hint(uint64_t hint, const std::strin
 }
 
 
-mmap_set::search_result mmap_set::unlocked_find (const std::string_view &frag, uint64_t hint) {
+persisted_redblack_tree_set::search_result persisted_redblack_tree_set::unlocked_find (const std::string_view &frag, uint64_t hint) {
 
     auto y = m_nil;
     search_result res;
@@ -266,26 +264,7 @@ mmap_set::search_result mmap_set::unlocked_find (const std::string_view &frag, u
     return res;
 }
 
-void mmap_set::extend_mapping() {
-
-    msync (m_index_store, m_end, MS_SYNC);
-    munmap (m_index_store, m_file_size);
-
-    m_file_size *= 2;
-
-    const auto fd = open(m_file_path.c_str(), O_RDWR);
-    ftruncate(fd, m_file_size);
-
-    m_index_store = static_cast <char*> (mmap(nullptr, m_file_size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0));
-    close(fd);
-
-    m_nil = get_node(2 * sizeof (uint64_t));
-    m_root = reinterpret_cast <uint64_t*> (m_index_store);
-    m_end = *reinterpret_cast <uint64_t*> (m_index_store + sizeof(m_root));
-
-}
-
-void mmap_set::balance(mmap_set::node& z) {
+void persisted_redblack_tree_set::balance(persisted_redblack_tree_set::node& z) {
     auto parent = get_node (z.m_mnode->m_parent);
     while (parent.m_mnode->m_color == RED) {
         auto grand_parent = get_node(parent.m_mnode->m_parent);
@@ -337,7 +316,7 @@ void mmap_set::balance(mmap_set::node& z) {
     get_node(*m_root).m_mnode->m_color = BLACK;
 }
 
-void mmap_set::left_rotate(mmap_set::node& x) {
+void persisted_redblack_tree_set::left_rotate(persisted_redblack_tree_set::node& x) {
 
     auto y = get_node(x.m_mnode->m_right);
     x.m_mnode->m_right = y.m_mnode->m_left;
@@ -358,7 +337,7 @@ void mmap_set::left_rotate(mmap_set::node& x) {
     x.m_mnode->m_parent = y.m_offset;
 }
 
-void mmap_set::right_rotate(mmap_set::node& x) {
+void persisted_redblack_tree_set::right_rotate(persisted_redblack_tree_set::node& x) {
 
     auto y = get_node(x.m_mnode->m_left);
     x.m_mnode->m_left = y.m_mnode->m_right;
@@ -379,26 +358,26 @@ void mmap_set::right_rotate(mmap_set::node& x) {
     x.m_mnode->m_parent = y.m_offset;
 }
 
-mmap_set::node mmap_set::get_node(uint64_t offset) noexcept {
-    return {offset, reinterpret_cast <mmap_node*> (m_index_store + offset)};
+persisted_redblack_tree_set::node persisted_redblack_tree_set::get_node(uint64_t offset) noexcept {
+    return {offset, reinterpret_cast <mmap_node*> (m_index_store.get_storage() + offset)};
 }
 
-mmap_set::node mmap_set::add_node() noexcept {
+persisted_redblack_tree_set::node persisted_redblack_tree_set::add_node() noexcept {
     node n;
     do {
         n.m_offset = m_end;
     }
     while (!m_end.compare_exchange_weak(n.m_offset, m_end + sizeof (mmap_node)));
 
-    n.m_mnode = reinterpret_cast <mmap_node*> (m_index_store + n.m_offset);
+    n.m_mnode = reinterpret_cast <mmap_node*> (m_index_store.get_storage() + n.m_offset);
     return n;
 }
 
-void mmap_set::set_root(mmap_set::node &x) noexcept {
+void persisted_redblack_tree_set::set_root(persisted_redblack_tree_set::node &x) noexcept {
     *m_root = x.m_offset;
 }
 
-int mmap_set::comp(const std::string_view &new_fragment, const fragment &f) {
+int persisted_redblack_tree_set::comp(const std::string_view &new_fragment, const fragment &f) {
     auto* p2 = m_data_store.get_raw_ptr(f.m_data_offset);
     const std::string_view strw2 {static_cast <char*> (p2), f.m_size};
     return new_fragment.compare(strw2);

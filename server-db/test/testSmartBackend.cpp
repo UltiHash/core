@@ -9,12 +9,12 @@
 
 #include <span>
 #include <boost/test/unit_test.hpp>
-#include <storage/backends/smart_backend/mmap_storage.h>
+#include <storage/backends/smart_backend/fixed_managed_storage.h>
 #include <storage/backend.h>
-#include <storage/backends/smart_backend/mmap_set.h>
+#include <storage/backends/smart_backend/persisted_redblack_tree_set.h>
 #include <storage/backends/smart_backend/smart_storage.h>
-#include <storage/backends/smart_backend/robin_hood_hashmap.h>
-#include <storage/backends/smart_backend/growing_mmap_storage.h>
+#include <storage/backends/smart_backend/persisted_robinhood_hashmap.h>
+#include <storage/backends/smart_backend/growing_managed_storage.h>
 
 
 using namespace uh::dbn::storage::smart;
@@ -87,7 +87,7 @@ BOOST_FIXTURE_TEST_CASE(test_mmap_storage_basic_allocation, files_info_fixture)
 
     cleanup ();
 
-    mmap_storage ms (files_info ());
+    fixed_managed_storage ms (files_info ());
 
     size_t size1 = 1024, size2 = 512;
     offset_ptr ptr1 = ms.allocate(size1);
@@ -111,14 +111,14 @@ BOOST_FIXTURE_TEST_CASE(test_mmap_storage_data_test, files_info_fixture)
     size_t size = 10;
 
     {
-        mmap_storage ms(files_info());
+        fixed_managed_storage ms(files_info());
 
         ptr = ms.allocate(size);
         std::memcpy(ptr.m_addr, data, size);
     }
 
     {
-        mmap_storage ms(files_info());
+        fixed_managed_storage ms(files_info());
         void* raw_ptr = ms.get_raw_ptr(ptr.m_offset);
         BOOST_TEST (std::memcmp(data, static_cast <char *> (raw_ptr), size) == 0);
     }
@@ -135,23 +135,23 @@ BOOST_FIXTURE_TEST_CASE(test_mmap_storage_persistet_alloc_test, files_info_fixtu
     size_t size = 10;
 
     {
-        mmap_storage ms(files_info());
+        fixed_managed_storage ms(files_info());
 
         ptr1 = ms.allocate(size);
         std::memcpy(ptr1.m_addr, data, size);
     }
 
     {
-        mmap_storage ms(files_info());
+        fixed_managed_storage ms(files_info());
         ptr2 = ms.allocate(size);
         BOOST_TEST (ptr1.m_offset + size <= ptr2.m_offset);
     }
     {
-        mmap_storage ms(files_info());
+        fixed_managed_storage ms(files_info());
         ms.deallocate(ptr1, size);
     }
     {
-        mmap_storage ms(files_info());
+        fixed_managed_storage ms(files_info());
         ptr2 = ms.allocate(size);
         BOOST_TEST (ptr1.m_offset == ptr2.m_offset);
 
@@ -159,7 +159,7 @@ BOOST_FIXTURE_TEST_CASE(test_mmap_storage_persistet_alloc_test, files_info_fixtu
 }
 
 
-uint64_t set_insert (mmap_storage& ms, mmap_set& set, std::string_view data, uint64_t hint = 2*sizeof (uint64_t)) {
+uint64_t set_insert (fixed_managed_storage& ms, persisted_redblack_tree_set& set, std::string_view data, uint64_t hint = 2 * sizeof (uint64_t)) {
     auto alloc = ms.allocate(data.size());
     std::memcpy(alloc.m_addr, data.data(), data.size());
     const auto h = set.insert_index(data, alloc.m_offset, hint);
@@ -169,9 +169,9 @@ uint64_t set_insert (mmap_storage& ms, mmap_set& set, std::string_view data, uin
 BOOST_FIXTURE_TEST_CASE(basic_test_mmap_set, files_info_fixture)
 {
     cleanup();
-    mmap_storage ms(files_info());
+    fixed_managed_storage ms(files_info());
 
-    mmap_set set {ms, m_set_filename};
+    persisted_redblack_tree_set set {ms, m_set_filename};
 
     auto h = set_insert (ms, set, "hello from data 1");
     h = set_insert (ms, set, "data 2 hello from data 2", h);
@@ -267,7 +267,7 @@ BOOST_FIXTURE_TEST_CASE(basic_dedup_test, files_info_fixture)
 }
 
 
-void insert_in_hm (robin_hood_hashmap& hm, std::string& k, std::string& v) {
+void insert_in_hm (persisted_robinhood_hashmap& hm, std::string& k, std::string& v) {
     std::span <char> sk {k};
     std::span <char> sv {v};
     hm.insert(sk, sv);
@@ -295,7 +295,7 @@ BOOST_FIXTURE_TEST_CASE(basic_hashmap_test, files_info_fixture)
 
     {
 
-        robin_hood_hashmap hm (64, m_hashmap_key_filename, m_growing_directory);
+        persisted_robinhood_hashmap hm (64, m_hashmap_key_filename, m_growing_directory);
 
         insert_in_hm(hm, k1, v1);
 
@@ -324,7 +324,7 @@ BOOST_FIXTURE_TEST_CASE(basic_hashmap_test, files_info_fixture)
     }
     {
 
-        robin_hood_hashmap hm (64, m_hashmap_key_filename, m_growing_directory);
+        persisted_robinhood_hashmap hm (64, m_hashmap_key_filename, m_growing_directory);
         auto res = hm.get(k1);
         BOOST_TEST(v1 == std::string (res.value().data(), res.value().size()));
 
@@ -352,7 +352,7 @@ BOOST_FIXTURE_TEST_CASE(basic_growing_mmap_storage_test, files_info_fixture)
     size_t size = 1024;
 
     {
-        growing_mmap_storage ms(m_growing_directory, 4*1024, 32*1024);
+        growing_managed_storage ms(m_growing_directory, 4 * 1024, 32 * 1024);
 
         ptr1 = ms.allocate(size);
         std::memcpy(ptr1.m_addr, data, size);
@@ -372,7 +372,7 @@ BOOST_FIXTURE_TEST_CASE(basic_growing_mmap_storage_test, files_info_fixture)
     }
 
     {
-        growing_mmap_storage ms(m_growing_directory, 4*1024, 32*1024);
+        growing_managed_storage ms(m_growing_directory, 4 * 1024, 32 * 1024);
         ms.allocate(size);
         ms.allocate(size);
         ms.allocate(size);
@@ -466,7 +466,7 @@ BOOST_FIXTURE_TEST_CASE(smart_storage_basic_test, files_info_fixture) {
         BOOST_TEST (sr6.size() == v6.size());
         BOOST_TEST (std::memcmp (sr6.data(), v6.data(), v6.size()) == 0);
     }
-
+    char* ptr = new char [10*1024*1024];
     {
         smart_storage sm(files_info(), m_set_filename, m_hashmap_key_filename, m_growing_directory);
 

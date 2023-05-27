@@ -2,8 +2,8 @@
 // Created by masi on 5/19/23.
 //
 
-#ifndef CORE_MMAP_SET_H
-#define CORE_MMAP_SET_H
+#ifndef CORE_PERSISTED_REDBLACK_TREE_SET_H
+#define CORE_PERSISTED_REDBLACK_TREE_SET_H
 
 #include <span>
 #include <cstring>
@@ -11,7 +11,8 @@
 #include <optional>
 #include <boost/thread.hpp>
 
-#include "mmap_storage.h"
+#include "fixed_managed_storage.h"
+#include "growing_plain_storage.h"
 
 namespace uh::dbn::storage::smart {
 
@@ -24,7 +25,7 @@ struct fragment {
     size_t m_size;
 };
 
-class mmap_set {
+class persisted_redblack_tree_set {
 
 
     enum color_t : uint8_t
@@ -54,10 +55,10 @@ public:
         uint64_t hint {};
     private:
         int comp {};
-        friend mmap_set;
+        friend persisted_redblack_tree_set;
     };
 
-    mmap_set(mmap_storage& data_store, std::filesystem::path file);
+    persisted_redblack_tree_set(fixed_managed_storage& data_store, std::filesystem::path file);
 
     uint64_t insert_index (const std::string_view& frag, uint64_t data_offset, uint64_t hint = NILL_OFFSET);
 
@@ -67,15 +68,11 @@ public:
 
     uint64_t remove (fragment& frag, uint64_t hint);
 
-    ~mmap_set ();
-
 private:
 
     std::pair <uint64_t, bool> resolve_hint (uint64_t hint, const std::string_view& frag);
 
     search_result unlocked_find (const std::string_view& frag, uint64_t hint);
-
-    void extend_mapping ();
 
     void balance (node& z);
 
@@ -95,16 +92,14 @@ private:
     constexpr static size_t SET_FILE_EXTEND_LIMIT = 256ul;
     constexpr static uint64_t NILL_OFFSET = 2 * sizeof (uint64_t);
 
-    mmap_storage& m_data_store;
-    size_t m_file_size = SET_INIT_FILE_SIZE;
+    fixed_managed_storage& m_data_store;
     std::filesystem::path m_file_path;
     node m_nil {};
-    char* m_index_store = nullptr;
+    growing_plain_storage m_index_store;
     std::atomic <uint64_t*> m_root;
     std::atomic_ref <uint64_t> m_end;
-
     boost::shared_mutex m_mutex;
 };
 
 } // end namespace uh::dbn::storage::smart
-#endif //CORE_MMAP_SET_H
+#endif //CORE_PERSISTED_REDBLACK_TREE_SET_H

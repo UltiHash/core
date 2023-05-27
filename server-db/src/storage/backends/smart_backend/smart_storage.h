@@ -5,13 +5,11 @@
 #ifndef CORE_SMART_STORAGE_H
 #define CORE_SMART_STORAGE_H
 
-#include "mmap_set.h"
-#include "mmap_storage.h"
-#include "robin_hood_hashmap.h"
+#include "persisted_redblack_tree_set.h"
+#include "fixed_managed_storage.h"
+#include "persisted_robinhood_hashmap.h"
 
 namespace uh::dbn::storage::smart {
-
-char* init_mmap(const std::filesystem::path &file_path, size_t init_size, size_t &file_size);
 
 class smart_storage {
 
@@ -44,9 +42,9 @@ private:
     constexpr static size_t HASH_SIZE = 128;
     constexpr static size_t MIN_FRAGMENT_SIZE = 4;
 
-    mmap_storage m_data_store;
-    mmap_set m_fragment_set;
-    robin_hood_hashmap m_hashtable;
+    fixed_managed_storage m_data_store;
+    persisted_redblack_tree_set m_fragment_set;
+    persisted_robinhood_hashmap m_hashtable;
 
 };
 

@@ -2,19 +2,19 @@
 // Created by masi on 5/25/23.
 //
 
-#ifndef CORE_GROWING_MMAP_STORAGE_H
-#define CORE_GROWING_MMAP_STORAGE_H
+#ifndef CORE_GROWING_MANAGED_STORAGE_H
+#define CORE_GROWING_MANAGED_STORAGE_H
 
 #include <optional>
 
-#include "mmap_storage.h"
+#include "fixed_managed_storage.h"
 
 namespace uh::dbn::storage::smart {
 
-class growing_mmap_storage {
+class growing_managed_storage {
 
 public:
-    growing_mmap_storage (std::filesystem::path directory, size_t min_file_size, size_t max_file_size);
+    growing_managed_storage (std::filesystem::path directory, size_t min_file_size, size_t max_file_size);
 
     offset_ptr allocate (std::size_t size);
 
@@ -40,7 +40,7 @@ public:
      */
     void* get_raw_ptr (size_t offset);
 
-    ~growing_mmap_storage();
+    ~growing_managed_storage();
 
 private:
 
@@ -80,4 +80,4 @@ private:
 };
 } // end namespace uh::dbn::storage::smart
 
-#endif //CORE_GROWING_MMAP_STORAGE_H
+#endif //CORE_GROWING_MANAGED_STORAGE_H

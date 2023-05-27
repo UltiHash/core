@@ -9,31 +9,6 @@
 
 namespace uh::dbn::storage::smart {
 
-char* init_mmap(const std::filesystem::path &file_path, size_t init_size, size_t &file_size) {
-    const auto existing_index = std::filesystem::exists(file_path.c_str());
-    const auto fd = open(file_path.c_str(), O_CREAT | O_RDWR, S_IRUSR | S_IWUSR);
-    if (!existing_index) {
-        ftruncate(fd, file_size);
-    }
-    else {
-        file_size = lseek (fd, 0, SEEK_END);
-    }
-
-    const auto mmap_addr = static_cast <char*> (mmap(nullptr, file_size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0));
-    close(fd);
-
-    if (!existing_index) {
-        std::memset (mmap_addr, 0, init_size);
-    }
-
-    return mmap_addr;
-}
-
-} // end namespace uh::dbn::storage::smart
-
-namespace uh::dbn::storage::smart {
-
-
 smart_storage::smart_storage(const std::forward_list<file_mmap_info>& data_files,
                              std::filesystem::path fragment_set_path,
                              std::filesystem::path hashtable_index_path,

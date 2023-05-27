@@ -3,13 +3,13 @@
 //
 #include <unordered_map>
 #include <boost/interprocess/mapped_region.hpp>
-#include "growing_mmap_storage.h"
+#include "growing_managed_storage.h"
 
 namespace uh::dbn::storage::smart {
 
 
 
-growing_mmap_storage::growing_mmap_storage (std::filesystem::path directory, size_t min_file_size, size_t max_file_size):
+growing_managed_storage::growing_managed_storage (std::filesystem::path directory, size_t min_file_size, size_t max_file_size):
         m_min_file_size (min_file_size),
         m_max_file_size (max_file_size),
         m_directory (std::move (directory)),
@@ -20,35 +20,35 @@ growing_mmap_storage::growing_mmap_storage (std::filesystem::path directory, siz
     replay_logger();
 }
 
-offset_ptr growing_mmap_storage::allocate(std::size_t size) {
+offset_ptr growing_managed_storage::allocate(std::size_t size) {
     m_log << "al " << size << '\n';
     return do_allocate(size);
 }
 
-void growing_mmap_storage::deallocate(const offset_ptr& off_ptr, size_t size) {
+void growing_managed_storage::deallocate(const offset_ptr& off_ptr, size_t size) {
     m_log << "de " << off_ptr.m_offset << ' ' << size << '\n';
     do_deallocate(off_ptr, size);
 }
 
-void growing_mmap_storage::sync(void *ptr, std::size_t size) {
+void growing_managed_storage::sync(void *ptr, std::size_t size) {
     if (msync(align_ptr (ptr), size, MS_SYNC) != 0) {
-        throw std::system_error (errno, std::system_category(), "growing_mmap_storage could not sync the mmap data");
+        throw std::system_error (errno, std::system_category(), "growing_managed_storage could not sync the mmap data");
     }
 }
 
-void growing_mmap_storage::sync () {
+void growing_managed_storage::sync () {
     for (auto &resource: m_resources) {
         if (msync (resource.second.m_ptr.m_addr, resource.second.m_size, MS_SYNC) != 0) {
-            throw std::system_error (errno, std::system_category(), "growing_mmap_storage could not sync the mmap data");
+            throw std::system_error (errno, std::system_category(), "growing_managed_storage could not sync the mmap data");
         }
     }
 }
 
-void* growing_mmap_storage::get_raw_ptr(size_t offset) {
+void* growing_managed_storage::get_raw_ptr(size_t offset) {
     return get_resource(offset).m_ptr.get_offset_ptr_at(offset).m_addr;
 }
 
-std::fstream growing_mmap_storage::create_logger() const {
+std::fstream growing_managed_storage::create_logger() const {
     auto flags = std::ios::in | std::ios::out;
     if (!std::filesystem::exists(m_log_file_path)) {
         flags |= std::ios::trunc;
@@ -56,7 +56,7 @@ std::fstream growing_mmap_storage::create_logger() const {
     return {m_log_file_path, flags};
 }
 
-void growing_mmap_storage::replay_logger() {
+void growing_managed_storage::replay_logger() {
     std::string token;
     while (m_log >> token) {
         if (token == "al") {
@@ -75,7 +75,7 @@ void growing_mmap_storage::replay_logger() {
     m_log.clear();
 }
 
-offset_ptr growing_mmap_storage::do_allocate (size_t bytes) {
+offset_ptr growing_managed_storage::do_allocate (size_t bytes) {
 
     std::lock_guard <std::mutex> lock (m_mutex);
 
@@ -100,18 +100,18 @@ offset_ptr growing_mmap_storage::do_allocate (size_t bytes) {
 
 }
 
-void growing_mmap_storage::do_deallocate (const offset_ptr& offset_ptr, size_t bytes) {
+void growing_managed_storage::do_deallocate (const offset_ptr& offset_ptr, size_t bytes) {
     auto &resource = get_resource (offset_ptr.m_offset, bytes);
     const auto deallocate_offset_ptr = resource.m_ptr.get_offset_ptr_at(offset_ptr.m_offset);
     resource.get_pool_resource().deallocate(deallocate_offset_ptr.m_addr, bytes);
 }
 
-std::filesystem::path growing_mmap_storage::generate_log_file_path () {
+std::filesystem::path growing_managed_storage::generate_log_file_path () {
     std::string file_name = "alloc_log_file";
     return m_directory / file_name;
 }
 
-void growing_mmap_storage::load_data_store () {
+void growing_managed_storage::load_data_store () {
     m_aggregated_size = 0;
     if (std::filesystem::is_empty(m_directory)) {
         mmap_file(get_file_name (m_aggregated_size, m_min_file_size), m_aggregated_size, m_min_file_size);
@@ -127,7 +127,7 @@ void growing_mmap_storage::load_data_store () {
         }
     }
 }
-void growing_mmap_storage::grow () {
+void growing_managed_storage::grow () {
     sync();
 
     const auto last_resource = m_resources.crbegin();
@@ -149,11 +149,11 @@ void growing_mmap_storage::grow () {
     replay_logger();
 }
 
-std::filesystem::path growing_mmap_storage::get_file_name (uint64_t offset, size_t file_size) {
+std::filesystem::path growing_managed_storage::get_file_name (uint64_t offset, size_t file_size) {
     return m_directory / std::string {"file_" + std::to_string (offset) + "_" + std::to_string(file_size)};
 }
 
-std::pair <uint64_t, size_t> growing_mmap_storage::parse_file_name (const std::filesystem::path& path) {
+std::pair <uint64_t, size_t> growing_managed_storage::parse_file_name (const std::filesystem::path& path) {
     const auto file = path.filename();
     const auto index1 = file.string().find('_') + 1;
     const auto index2 = file.string().substr(index1).find('_') + index1 + 1;
@@ -162,7 +162,7 @@ std::pair <uint64_t, size_t> growing_mmap_storage::parse_file_name (const std::f
     return {std::stoul (offset_str), std::stoul (size_str)};
 }
 
-void growing_mmap_storage::mmap_file(const std::filesystem::path& file, uint64_t offset, size_t file_size) {
+void growing_managed_storage::mmap_file(const std::filesystem::path& file, uint64_t offset, size_t file_size) {
 
     const auto fd = open(file.c_str(), O_CREAT | O_RDWR, S_IRUSR | S_IWUSR);
     ftruncate(fd, file_size);
@@ -173,7 +173,7 @@ void growing_mmap_storage::mmap_file(const std::filesystem::path& file, uint64_t
                              std::forward_as_tuple(ptr, file, file_size, offset));
 }
 
-resource_entry &growing_mmap_storage::get_resource(size_t offset, size_t size) {
+resource_entry &growing_managed_storage::get_resource(size_t offset, size_t size) {
     auto itr = m_resources.upper_bound (offset);
     if (itr == m_resources.cbegin()) {
         throw std::domain_error("error: deallocate request for non-existing resource");
@@ -185,7 +185,7 @@ resource_entry &growing_mmap_storage::get_resource(size_t offset, size_t size) {
     return itr->second;
 }
 
-growing_mmap_storage::~growing_mmap_storage() {
+growing_managed_storage::~growing_managed_storage() {
     sync();
 }
 

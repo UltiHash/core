@@ -2,8 +2,8 @@
 // Created by masi on 5/23/23.
 //
 
-#ifndef CORE_ROBIN_HOOD_HASHMAP_H
-#define CORE_ROBIN_HOOD_HASHMAP_H
+#ifndef CORE_PERSISTED_ROBINHOOD_HASHMAP_H
+#define CORE_PERSISTED_ROBINHOOD_HASHMAP_H
 
 #include <filesystem>
 #include <span>
@@ -13,15 +13,16 @@
 #include <sys/mman.h>
 #include <fcntl.h>
 #include <unistd.h>
-#include "mmap_storage.h"
-#include "growing_mmap_storage.h"
+#include "fixed_managed_storage.h"
+#include "growing_managed_storage.h"
+#include "growing_plain_storage.h"
 
 namespace uh::dbn::storage::smart {
 
-class robin_hood_hashmap {
+class persisted_robinhood_hashmap {
 
 public:
-    robin_hood_hashmap (const size_t key_size, std::filesystem::path key_file, std::filesystem::path value_file);
+    persisted_robinhood_hashmap (const size_t key_size, std::filesystem::path key_file, std::filesystem::path value_file);
 
     /**
      * Inserts the given key value in the hash map.
@@ -39,7 +40,7 @@ public:
 
     void remove (std::span <char> key);
 
-    ~robin_hood_hashmap ();
+    ~persisted_robinhood_hashmap ();
 
 private:
 
@@ -52,12 +53,12 @@ private:
 
     [[nodiscard]] inline size_t hash_index (const std::span <char>& key) const noexcept;
 
-    void extend_key_store ();
+    //void extend_key_store ();
 
-    void rehash(size_t old_file_size, size_t new_file_size);
+    void rehash(size_t old_file_size);
 
-    std::tuple <robin_hood_hashmap::hit_stat, uint8_t, char*> try_place_key (std::span <char> key);
-    std::tuple <robin_hood_hashmap::hit_stat, uint8_t, char*> insert_key (std::span <char> key);
+    std::tuple <persisted_robinhood_hashmap::hit_stat, uint8_t, char*> try_place_key (std::span <char> key);
+    std::tuple <persisted_robinhood_hashmap::hit_stat, uint8_t, char*> insert_key (std::span <char> key);
 
     constexpr static size_t MAP_INIT_KEY_FILE_SIZE = 1024ul;
     constexpr static size_t MIN_VALUE_FILE_SIZE = 1024ul*1024ul;
@@ -72,16 +73,14 @@ private:
     const size_t m_key_value_span_size;
     const size_t m_hash_element_size;
     std::vector <char> m_empty_key;
-    size_t m_key_file_size = MAP_INIT_KEY_FILE_SIZE;
-    std::filesystem::path m_key_file;
     std::filesystem::path m_value_file;
     std::shared_mutex m_mutex;
-    char* m_key_store;
-    growing_mmap_storage m_value_store;
+    growing_plain_storage m_key_store;
+    growing_managed_storage m_value_store;
     std::atomic_ref <size_t> m_inserted_keys_size;
 
 };
 
 } // end namespace uh::dbn::storage::smart
 
-#endif //CORE_ROBIN_HOOD_HASHMAP_H
+#endif //CORE_PERSISTED_ROBINHOOD_HASHMAP_H

@@ -2,8 +2,8 @@
 // Created by masi on 5/15/23.
 //
 
-#ifndef CORE_MMAP_STORAGE_H
-#define CORE_MMAP_STORAGE_H
+#ifndef CORE_FIXED_MANAGED_STORAGE_H
+#define CORE_FIXED_MANAGED_STORAGE_H
 
 #include <filesystem>
 #include <forward_list>
@@ -21,8 +21,8 @@
 
 namespace uh::dbn::storage::smart {
 
-class mmap_storage;
-class growing_mmap_storage;
+class fixed_managed_storage;
+class growing_managed_storage;
 
 void* align_ptr (void* ptr);
 
@@ -44,8 +44,8 @@ public:
 private:
     [[nodiscard]] offset_ptr get_offset_ptr_at (size_t offset) const;
     [[nodiscard]] offset_ptr get_offset_ptr_at (void* raw_ptr) const;
-    friend mmap_storage;
-    friend growing_mmap_storage;
+    friend fixed_managed_storage;
+    friend growing_managed_storage;
 
 };
 
@@ -61,11 +61,11 @@ private:
     std::pmr::synchronized_pool_resource m_pool_resource;
 };
 
-class mmap_storage {
+class fixed_managed_storage {
 
 public:
 
-    explicit mmap_storage (const std::forward_list<file_mmap_info>& files);
+    explicit fixed_managed_storage (const std::forward_list<file_mmap_info>& files);
 
     /** Allocate new memory in the mmap_storage and return a pointer to it.
      *  @throws bad_alloc
@@ -94,7 +94,7 @@ public:
      */
     void* get_raw_ptr (size_t offset);
 
-    ~mmap_storage();
+    ~fixed_managed_storage();
 
 private:
 
@@ -126,4 +126,4 @@ private:
 
 } // end namespace uh::dbn::storage::smart
 
-#endif //CORE_MMAP_STORAGE_H
+#endif //CORE_FIXED_MANAGED_STORAGE_H
