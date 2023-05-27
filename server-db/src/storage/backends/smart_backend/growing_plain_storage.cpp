@@ -10,6 +10,30 @@ growing_plain_storage::growing_plain_storage(std::filesystem::path file, size_t 
         m_file_size (init_size),
         m_storage (init_mmap(m_file_path, init_size, m_file_size)) {}
 
+growing_plain_storage::growing_plain_storage(growing_plain_storage &&storage) noexcept:
+        m_file_path (std::move (storage.m_file_path)),
+        m_file_size (storage.get_size()),
+        m_storage (storage.m_storage) {
+    storage.m_file_size = 0;
+    storage.m_storage = nullptr;
+}
+
+growing_plain_storage &growing_plain_storage::operator=(growing_plain_storage &&storage) noexcept {
+    m_file_size = storage.m_file_size;
+    m_file_path = std::move (storage.m_file_path);
+    m_storage = storage.m_storage;
+    storage.m_file_size = 0;
+    storage.m_storage = nullptr;
+    return *this;
+}
+
+void growing_plain_storage::destroy() {
+    munmap (m_storage, m_file_size);
+    std::filesystem::remove(m_file_path);
+    m_file_size = 0;
+    m_storage = nullptr;
+}
+
 char *growing_plain_storage::init_mmap(const std::filesystem::path &file_path, size_t init_size, size_t &file_size) {
     const auto existing_storage = std::filesystem::exists(file_path.c_str());
     const auto fd = open(file_path.c_str(), O_CREAT | O_RDWR, S_IRUSR | S_IWUSR);
@@ -47,8 +71,16 @@ void growing_plain_storage::extend_mapping() {
 }
 
 growing_plain_storage::~growing_plain_storage() {
-    msync (m_storage, m_file_size, MS_SYNC);
-    munmap (m_storage, m_file_size);
+    if (m_storage != nullptr) {
+        msync(m_storage, m_file_size, MS_SYNC);
+        munmap(m_storage, m_file_size);
+    }
 }
+
+void growing_plain_storage::rename_file(const std::filesystem::path &new_name) {
+    std::filesystem::rename(m_file_path, new_name);
+    m_file_path = new_name;
+}
+
 
 } // end namespace uh::dbn::storage::smart

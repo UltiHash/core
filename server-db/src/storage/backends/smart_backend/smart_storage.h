@@ -19,19 +19,34 @@ public:
                    std::filesystem::path hashtable_path,
                    std::filesystem::path hashtable_value_directory);
 
+    /**
+     * Integrates the data of the given hash
+     * @param hash
+     * @param data
+     * @return effective size
+     */
     size_t integrate (std::span <char> hash, std::string_view data);
 
+    /**
+     * Retrieves the fragments of the given hash in the reveresed order
+     * @param hash
+     * @return fragments in the reveresed order
+     */
     std::vector <fragment> retrieve (std::span <char> hash);
 
+    /**
+     * Recreates the data based on the reversed ordered fragments
+     * @return data
+     */
     std::vector <char> serialize_fragments (const std::vector<fragment>&);
 
-private:
-
     /**
-     * stefan's network ioring-based code will invoke this function for each fragment to send out the data
+     * stefan's network io_uring-based code will invoke this function for each fragment (in reverse order) to send out the data
      * @return
      */
     std::span <char> get_fragment_data_ptr (const fragment&);
+
+private:
 
     std::pair <std::vector <fragment>, size_t> deduplicate (std::string_view data);
 

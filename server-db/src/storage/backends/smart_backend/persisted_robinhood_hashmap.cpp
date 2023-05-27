@@ -21,26 +21,16 @@ void persisted_robinhood_hashmap::insert(std::span<char> key, std::span<char> va
     std::unique_lock <std::shared_mutex> lock (m_mutex);
 
     auto res = insert_key (key);
-    if (std::get <0> (res) == NON_HIT) {
-        m_key_store.extend_mapping ();
-        rehash (m_key_store.get_size() / 2);
-
-        res = insert_key (key);
-        if (std::get <0> (res) == NON_HIT) {
-            throw std::bad_alloc ();
-        }
-    }
 
     const std::uint32_t value_size = value.size_bytes();
     const auto offset_ptr = m_value_store.allocate(value.size_bytes());
 
-    const auto key_store_value_index = std::get <2> (res) + POOR_VALUE_SIZE + m_key_size;
+    const auto key_store_value_index = res.element_pos + POOR_VALUE_SIZE + m_key_size;
     std::memcpy (key_store_value_index, &offset_ptr.m_offset, VALUE_PTR_SIZE);
     std::memcpy (key_store_value_index + VALUE_PTR_SIZE, &value_size, VALUE_LENGTH_SIZE);
 
-    if (static_cast <double> (m_inserted_keys_size) > static_cast <double> (m_key_store.get_size()) * KEY_STORE_LOAD_FACTOR) {
-        m_key_store.extend_mapping ();
-        rehash (m_key_store.get_size() / 2);
+    if (need_rehash(res.element_pos)) {
+        extend_and_rehash();
     }
 
     lock.unlock();
@@ -82,31 +72,29 @@ size_t persisted_robinhood_hashmap::hash_index(const std::span<char> &key) const
     for (int i = 0; i < 2 * sizeof (size_t); i += sizeof (size_t)) {
         h += *reinterpret_cast <size_t*> (key.data() + i);
     }
-    auto pos = h % m_key_store.get_size();
+    auto pos = h % (m_key_store.get_size() - 2 * m_hash_element_size - KEY_STORE_META_DATA_SIZE);
     pos += m_hash_element_size - pos % m_hash_element_size;
 
     return pos + KEY_STORE_META_DATA_SIZE;
 }
 
-void persisted_robinhood_hashmap::rehash(size_t old_file_size) {
-    const auto end_old_key_store = reinterpret_cast <char*> (m_key_store.get_storage() + old_file_size);
-    std::vector <char> tmp (m_key_value_span_size);
-    for (char* i = m_key_store.get_storage() + KEY_STORE_META_DATA_SIZE + POOR_VALUE_SIZE; i < end_old_key_store; i += m_hash_element_size) {
-        if (std::memcmp (i, m_empty_key.data(), m_key_size) != 0) {
-            std::memcpy (tmp.data(), i, m_key_value_span_size);
-            std::memset (i - POOR_VALUE_SIZE, 0, m_key_size + POOR_VALUE_SIZE);
-            const auto res = insert_key({tmp.data(), m_key_size});
-            if (std::get <0> (res) == NON_HIT) {
-                m_key_store.extend_mapping();
-                rehash (m_key_store.get_size() / 2);
-                return;
+bool persisted_robinhood_hashmap::rehash(growing_plain_storage& old_key_store) {
+    const auto old_key_store_end = reinterpret_cast <char*> (old_key_store.get_storage() + old_key_store.get_size());
+    for (char* i = old_key_store.get_storage() + KEY_STORE_META_DATA_SIZE; i < old_key_store_end; i += m_hash_element_size) {
+        if (std::memcmp (i + POOR_VALUE_SIZE, m_empty_key.data(), m_key_size) != 0) {
+            const auto res = insert_key({i + POOR_VALUE_SIZE, m_key_size});
+            std::memcpy (res.element_pos + POOR_VALUE_SIZE + m_key_size,
+                         i + POOR_VALUE_SIZE + m_key_size,
+                         VALUE_PTR_SIZE + VALUE_LENGTH_SIZE);
+            if (need_rehash (res.element_pos)) {
+                return false;
             }
-            std::memcpy (std::get <2> (res) + POOR_VALUE_SIZE + m_key_size, tmp.data() + m_key_size, VALUE_PTR_SIZE + VALUE_LENGTH_SIZE);
         }
     }
+    return true;
 }
 
-std::tuple <persisted_robinhood_hashmap::hit_stat, uint8_t, char*> persisted_robinhood_hashmap::try_place_key(std::span<char> key) {
+persisted_robinhood_hashmap::insert_stat persisted_robinhood_hashmap::try_place_key(std::span<char> key) {
 
     auto key_store_index = m_key_store.get_storage() + hash_index (key);
     std::uint8_t dangling_poor_value = 0;
@@ -114,10 +102,6 @@ std::tuple <persisted_robinhood_hashmap::hit_stat, uint8_t, char*> persisted_rob
     while (std::memcmp (key_store_index + POOR_VALUE_SIZE, key.data(), m_key_size) != 0) {
 
         if (std::memcmp (key_store_index + POOR_VALUE_SIZE, m_empty_key.data(), m_key_size) == 0) {
-
-            if (key_store_index + m_hash_element_size > m_key_store.get_storage() + m_key_store.get_size()) {
-                return {NON_HIT, dangling_poor_value, nullptr};
-            }
 
             m_inserted_keys_size ++;
             *key_store_index = dangling_poor_value;
@@ -127,25 +111,25 @@ std::tuple <persisted_robinhood_hashmap::hit_stat, uint8_t, char*> persisted_rob
                 throw std::system_error (errno, std::system_category(), "persisted_robinhood_hashmap could not sync the mmap data");
             }
 
-            return {EMPTY_HIT, dangling_poor_value, key_store_index};
+            return {key_store_index, EMPTY_HIT, dangling_poor_value};
         }
 
         const auto poor_value = *key_store_index;
 
         if (dangling_poor_value > poor_value) {
-            return {SWAP_HIT, dangling_poor_value, key_store_index};
+            return {key_store_index, SWAP_HIT, dangling_poor_value};
         }
 
         key_store_index += m_hash_element_size;
         dangling_poor_value ++;
     }
 
-    return {MATCH_HIT, dangling_poor_value, key_store_index};
+    return {key_store_index, MATCH_HIT, dangling_poor_value};
 }
 
-std::tuple <persisted_robinhood_hashmap::hit_stat, uint8_t, char*> persisted_robinhood_hashmap::insert_key(std::span<char> key) {
-    const auto res = try_place_key(key);
-    if (std::get <0> (res) != SWAP_HIT) {
+persisted_robinhood_hashmap::insert_stat persisted_robinhood_hashmap::insert_key(std::span<char> key) {
+    auto res = try_place_key(key);
+    if (res.hit_stat != SWAP_HIT) {
         return res;
     }
 
@@ -154,16 +138,22 @@ std::tuple <persisted_robinhood_hashmap::hit_stat, uint8_t, char*> persisted_rob
 
     std::memcpy (dangling_space.data(), key.data(), m_key_size);
 
-    auto dangling_poor_value = std::get <1> (res);
-    auto key_store_index = std::get <2> (res);
+    auto dangling_poor_value = res.dangling_poor_value;
+    auto key_store_index = res.element_pos;
     const auto modification_start = key_store_index;
+
+    insert_stat istat;
 
     do {
         const auto poor_value = *key_store_index;
         if (dangling_poor_value > poor_value) {
+            if (istat.element_pos == nullptr) {
+                istat.element_pos = key_store_index;
+                istat.dangling_poor_value = dangling_poor_value;
+            }
             std::memcpy(swap_space.data(), key_store_index + POOR_VALUE_SIZE, m_key_value_span_size);
-            *key_store_index = static_cast <char> (dangling_poor_value);
             std::memcpy(key_store_index + POOR_VALUE_SIZE, dangling_space.data(), m_key_value_span_size);
+            *key_store_index = static_cast <char> (dangling_poor_value);
             dangling_poor_value = poor_value;
             std::swap (swap_space, dangling_space);
         }
@@ -175,20 +165,52 @@ std::tuple <persisted_robinhood_hashmap::hit_stat, uint8_t, char*> persisted_rob
         dangling_poor_value ++;
     } while (std::memcmp (key_store_index + POOR_VALUE_SIZE, m_empty_key.data(), m_key_size) != 0);
 
-    if (key_store_index + m_hash_element_size > m_key_store.get_storage() + m_key_store.get_size()) {
-        return {NON_HIT, dangling_poor_value, nullptr};
-    }
-
     m_inserted_keys_size ++;
-    *key_store_index = static_cast <char> (dangling_poor_value);
     std::memcpy (key_store_index + POOR_VALUE_SIZE, dangling_space.data(), m_key_value_span_size);
+    *key_store_index = static_cast <char> (dangling_poor_value);
 
     const auto aligned = static_cast <char*> (align_ptr (modification_start));
     if (msync (aligned, key_store_index + m_hash_element_size - aligned, MS_SYNC) != 0) {
         throw std::system_error (errno, std::system_category(), "persisted_robinhood_hashmap could not sync the mmap data");
     }
 
-    return {SWAP_HIT, dangling_poor_value, key_store_index};
+    istat.hit_stat = SWAP_HIT;
+    return istat;
+}
+
+bool persisted_robinhood_hashmap::need_rehash (const char* inserted_element) const {
+    return (static_cast <double> (m_inserted_keys_size) > static_cast <double> (m_key_store.get_size()) * KEY_STORE_LOAD_FACTOR)
+           or (inserted_element >= m_key_store.get_storage() + m_key_store.get_size() - m_hash_element_size);
+}
+
+void persisted_robinhood_hashmap::extend_and_rehash() {
+
+    const auto file_name = m_key_store.get_filename();
+    static auto swap_store = [this] (auto& tmp_key_store) {
+        std::swap (tmp_key_store, m_key_store);
+        auto tmp_atomic_ref = std::atomic_ref <size_t> (*reinterpret_cast <size_t*> (m_key_store.get_storage()));
+        std::memcpy(&m_inserted_keys_size, &tmp_atomic_ref, sizeof (tmp_atomic_ref));
+    };
+
+    int extension = 2;
+    auto tmp_key_store = growing_plain_storage ("tmp", extension * m_key_store.get_size());
+    swap_store (tmp_key_store);
+
+    while (!rehash(tmp_key_store)) {
+        swap_store (tmp_key_store);
+        tmp_key_store.destroy();
+
+        extension *= 2;
+        if (extension > MAX_EXTENSION_FACTOR) {
+            throw std::out_of_range ("persisted_robinhood_hashmap failed to create storage to rehash");
+        }
+
+        tmp_key_store = growing_plain_storage ("tmp", extension * m_key_store.get_size());
+        swap_store (tmp_key_store);
+    }
+
+    tmp_key_store.destroy();
+    m_key_store.rename_file(file_name);
 }
 
 

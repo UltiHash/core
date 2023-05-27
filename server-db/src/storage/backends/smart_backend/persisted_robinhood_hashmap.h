@@ -44,21 +44,26 @@ public:
 
 private:
 
-    enum hit_stat: uint8_t {
+    enum hit_enum: uint8_t {
         MATCH_HIT,
         EMPTY_HIT,
         SWAP_HIT,
-        NON_HIT,
+    };
+
+    struct insert_stat {
+        char* element_pos = nullptr;
+        hit_enum hit_stat;
+        uint8_t dangling_poor_value {};
     };
 
     [[nodiscard]] inline size_t hash_index (const std::span <char>& key) const noexcept;
 
-    //void extend_key_store ();
+    bool rehash(growing_plain_storage& old_key_store);
 
-    void rehash(size_t old_file_size);
-
-    std::tuple <persisted_robinhood_hashmap::hit_stat, uint8_t, char*> try_place_key (std::span <char> key);
-    std::tuple <persisted_robinhood_hashmap::hit_stat, uint8_t, char*> insert_key (std::span <char> key);
+    insert_stat try_place_key (std::span <char> key);
+    insert_stat insert_key (std::span <char> key);
+    inline bool need_rehash (const char* inserted_element) const;
+    void extend_and_rehash ();
 
     constexpr static size_t MAP_INIT_KEY_FILE_SIZE = 1024ul;
     constexpr static size_t MIN_VALUE_FILE_SIZE = 1024ul*1024ul;
@@ -68,6 +73,7 @@ private:
     constexpr static size_t POOR_VALUE_SIZE = sizeof (uint8_t);
     constexpr static size_t VALUE_LENGTH_SIZE = sizeof (uint32_t);
     constexpr static size_t VALUE_PTR_SIZE = sizeof (uint64_t);
+    constexpr static size_t MAX_EXTENSION_FACTOR = 32;
 
     const size_t m_key_size;
     const size_t m_key_value_span_size;
