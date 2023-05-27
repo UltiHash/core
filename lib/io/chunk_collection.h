@@ -46,9 +46,6 @@ namespace uh::io {
          */
         explicit chunk_collection(std::filesystem::path collection_location):
                 path(std::move(collection_location)),
-                temporarily_open_file(std::make_unique<SEEKABLE_TYPE>(path, std::ios_base::in)),
-                temporarily_cached_fragment_on_seekable_device(
-                        std::make_unique<io::fragment_on_seekable_device>(*temporarily_open_file)),
                 to_be_deleted(std::is_same_v<SEEKABLE_TYPE,io::temp_file>)
         {
             if(std::filesystem::exists(path))
@@ -72,11 +69,12 @@ namespace uh::io {
                 } while (skip_format.content_size > 0);
             }
 
+            auto file = std::make_unique<SEEKABLE_TYPE>(path, std::ios_base::in);
+
             if constexpr (std::is_same_v<SEEKABLE_TYPE,io::temp_file>){
-                temporarily_open_file->release_to(temporarily_open_file->path());
+                file->release_to(temporarily_open_file->path());
                 path = temporarily_open_file->path();
             }
-
         }
 
         /**
@@ -359,11 +357,6 @@ namespace uh::io {
         }
 
     private:
-        std::filesystem::path path;
-        std::vector<std::pair<serialization::fragment_serialize_size_format,std::streamoff>> index;
-
-        std::unique_ptr<io::seekable_device> temporarily_open_file;
-        std::unique_ptr<io::fragmented_device> temporarily_cached_fragment_on_seekable_device;
 
         uint8_t next_free_address()
         {
@@ -389,8 +382,6 @@ namespace uh::io {
             return 0;
         }
 
-        bool to_be_deleted;
-
         std::vector<std::pair<serialization::fragment_serialize_size_format,std::streamoff>>::const_iterator
         find_address(uint8_t at) {
             auto fragment_pos_element = std::find_if(index.cbegin(),index.cend(),
@@ -409,6 +400,12 @@ namespace uh::io {
             return fragment_pos_element;
         }
 
+        bool to_be_deleted;
+        std::filesystem::path path;
+        std::vector<std::pair<serialization::fragment_serialize_size_format,std::streamoff>> index;
+
+        std::unique_ptr<io::file> temporarily_open_file;
+        std::unique_ptr<io::fragmented_device> temporarily_cached_fragment_on_seekable_device;
         constexpr static std::size_t buf_size = 1 << 26;
     };
 
