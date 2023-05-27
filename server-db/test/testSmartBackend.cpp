@@ -390,10 +390,10 @@ BOOST_FIXTURE_TEST_CASE(basic_growing_mmap_storage_test, files_info_fixture)
         BOOST_TEST (ptr1.m_offset + size < ptr2.m_offset);
 
         void* raw_ptr = ms.get_raw_ptr(ptr1.m_offset);
-        BOOST_TEST (std::memcmp(data, static_cast <char *> (raw_ptr), size) == 0);
+        BOOST_TEST (std::memcmp(&data, static_cast <char *> (raw_ptr), size) == 0);
 
         void* raw_ptr2 = ms.get_raw_ptr(ptr2.m_offset);
-        BOOST_TEST (std::memcmp(data, static_cast <char *> (raw_ptr2), size) == 0);
+        BOOST_TEST (std::memcmp(&data, static_cast <char *> (raw_ptr2), size) == 0);
     }
     munmap(align_ptr(ptr1.m_addr), 1024);
 
