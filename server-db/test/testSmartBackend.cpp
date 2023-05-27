@@ -355,7 +355,7 @@ BOOST_FIXTURE_TEST_CASE(basic_growing_mmap_storage_test, files_info_fixture)
         growing_managed_storage ms(m_growing_directory, 4 * 1024, 8 * 1024);
 
         ptr1 = ms.allocate(size);
-        std::memcpy(ptr1.m_addr, data, size);
+        std::memcpy(ptr1.m_addr, &data, size);
 
         ms.allocate(size);
         ms.allocate(size);
@@ -364,7 +364,7 @@ BOOST_FIXTURE_TEST_CASE(basic_growing_mmap_storage_test, files_info_fixture)
         ms.allocate(size);
         ms.allocate(size);
         ptr2 = ms.allocate(size);
-        std::memcpy(ptr2.m_addr, data, size);
+        std::memcpy(ptr2.m_addr, &data, size);
         ms.allocate(size);
         ms.allocate(size);
         ms.allocate(size);
