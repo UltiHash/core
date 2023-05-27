@@ -14,7 +14,6 @@
 #include <span>
 
 
-
 namespace uh::io {
 
     class chunk_collection {
@@ -107,10 +106,12 @@ namespace uh::io {
     private:
         std::filesystem::path path;
         std::vector<std::pair<serialization::fragment_serialize_size_format,std::streamoff>> index;
+
         std::unique_ptr<io::file> temporarily_open_file;
         std::unique_ptr<io::fragmented_device> temporarily_cached_fragment_on_seekable_device;
 
         uint8_t next_free_address();
+
         std::vector<std::pair<serialization::fragment_serialize_size_format,std::streamoff>>::const_iterator
         find_address(uint8_t at);
 

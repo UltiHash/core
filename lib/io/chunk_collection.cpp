@@ -44,8 +44,6 @@ namespace uh::io {
                 index_entry_count++;
 
             } while (skip_format.content_size > 0);
-
-            temporarily_open_file->close();
         }
     }
 
@@ -71,8 +69,6 @@ namespace uh::io {
         uint32_t allocate_space = std::max(static_cast<uint32_t>(buffer.size()),alloc);
         serialization::fragment_serialize_size_format written =
                 temporarily_cached_fragment_on_seekable_device->write(buffer,allocate_space);
-
-        temporarily_open_file->close();
 
         return written;
     }
@@ -114,8 +110,6 @@ namespace uh::io {
 
         } while (temporarily_cached_fragment_on_seekable_device->valid());
 
-        temporarily_open_file->close();
-
         return {output,read};
     }
 
@@ -149,8 +143,6 @@ namespace uh::io {
 
             out_list.push_back(temporarily_cached_fragment_on_seekable_device->write(item));
         }
-
-        temporarily_open_file->close();
 
         return out_list;
     }
@@ -197,8 +189,6 @@ namespace uh::io {
 
             out_list.emplace_back(output,read);
         }
-
-        temporarily_open_file->close();
 
         return out_list;
     }
