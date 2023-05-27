@@ -348,11 +348,11 @@ BOOST_FIXTURE_TEST_CASE(basic_growing_mmap_storage_test, files_info_fixture)
     cleanup();
     offset_ptr ptr1;
     offset_ptr ptr2;
-    char data [1024];
-    size_t size = 1024;
+    char data [256];
+    size_t size = 256;
 
     {
-        growing_managed_storage ms(m_growing_directory, 4 * 1024, 32 * 1024);
+        growing_managed_storage ms(m_growing_directory, 4 * 1024, 8 * 1024);
 
         ptr1 = ms.allocate(size);
         std::memcpy(ptr1.m_addr, data, size);
@@ -374,7 +374,7 @@ BOOST_FIXTURE_TEST_CASE(basic_growing_mmap_storage_test, files_info_fixture)
     const auto addr = mmap (align_ptr(ptr1.m_addr), 1024, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE | MAP_FIXED, -1, 0);
     BOOST_TEST(addr == align_ptr(ptr1.m_addr));
     {
-        growing_managed_storage ms(m_growing_directory, 4 * 1024, 32 * 1024);
+        growing_managed_storage ms(m_growing_directory, 4 * 1024, 8 * 1024);
         ms.allocate(size);
         ms.allocate(size);
         ms.allocate(size);

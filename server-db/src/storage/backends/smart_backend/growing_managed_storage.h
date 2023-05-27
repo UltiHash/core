@@ -68,7 +68,7 @@ private:
 
     std::filesystem::path generate_log_file_path () ;
 
-    constexpr static unsigned int MAX_GROW_ATTEMPTS = 3;
+    constexpr static unsigned int MAX_GROW_ATTEMPTS = 5;
     const size_t m_min_file_size;
     const size_t m_max_file_size;
     const std::filesystem::path m_directory;
