@@ -16,8 +16,7 @@
 
 #include <boost/test/unit_test.hpp>
 
-#include <numeric>
-#include <limits>
+#include <filesystem>
 
 using namespace uh::util;
 using namespace uh::io;
@@ -42,6 +41,14 @@ namespace
             BOOST_REQUIRE(std::filesystem::exists(work_path));
         }
         BOOST_REQUIRE(!std::filesystem::exists(work_path));
+
+        {
+            chunk_collection<uh::io::temp_file> temporary_chunk_collection2(TEMP_DIR);
+            temporary_chunk_collection2.release_to(temporary_chunk_collection2.getPath());
+            work_path = temporary_chunk_collection2.getPath();
+        }
+        BOOST_REQUIRE(std::filesystem::exists(work_path));
+        std::filesystem::remove(work_path);
     }
 
 // ---------------------------------------------------------------------
