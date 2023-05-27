@@ -96,8 +96,7 @@ std::pair<uint64_t, bool> persisted_redblack_tree_set::resolve_hint(uint64_t hin
         return {*m_root, false};
     }
     const auto p = get_node (n.m_mnode->m_parent);
-
-
+    
     if (hint == p.m_mnode->m_left and p.m_mnode->m_right != NILL_OFFSET) {
         const auto lower_sister = get_node(p.m_mnode->m_right);
         const auto comp_ls = comp (frag, lower_sister.m_mnode->m_frag);

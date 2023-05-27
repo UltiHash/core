@@ -51,7 +51,8 @@ std::vector<char> smart_storage::serialize_fragments(const std::vector<fragment>
     std::vector <char> data (offset);
 
     offset = 0;
-    for (auto f : std::ranges::reverse_view(fragments)) {
+    for (auto itr = fragments.crbegin(); itr != fragments.crend(); itr ++) {
+        const auto& f = *itr;
         const auto frag_data = get_fragment_data_ptr(f);
         std::memcpy(data.data() + offset, frag_data.data(), f.m_size);
         offset += f.m_size;
