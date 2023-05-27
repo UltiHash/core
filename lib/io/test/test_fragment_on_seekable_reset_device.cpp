@@ -40,17 +40,19 @@ BOOST_AUTO_TEST_CASE( test_reset_device )
     const std::string test_string1(uh::test::LOREM_IPSUM),
             test_string2(uh::test::LOREM_IPSUM+"another ipsum");
 
-    fragmented->write(test_string1);
+    auto written_serialized_size1 =
+            fragmented->write(test_string1);
     fragmented->write(test_string2);
 
     std::unique_ptr<buffer> tb = std::make_unique<buffer>();
     tb->write({test_string1.data(),test_string1.size()});
 
+    fragmented->reset();
     auto size1 = fragmented->skip();
 
     BOOST_REQUIRE(size1.content_size == test_string1.size());
 
-    BOOST_CHECK(!fragmented->valid());
+    BOOST_CHECK(fragmented->valid());
     fragmented->reset();
     BOOST_CHECK(fragmented->valid());
 
@@ -65,11 +67,22 @@ BOOST_AUTO_TEST_CASE( test_reset_device )
 
     BOOST_CHECK(!fragmented->valid());//implement eof detection to unvalidate
     fragmented->reset();
-
     BOOST_CHECK(fragmented->valid());
 
-    auto size3 = fragmented->read({read_back_second.data(),read_back_second.size()});
-    BOOST_REQUIRE_EQUAL(size3.content_size,0);
+    std::unique_ptr<fragment_on_seekable_reset_device> fragmented_back =
+            std::make_unique<fragment_on_seekable_reset_device>
+                    (*temp_buf,0,
+                     written_serialized_size1.header_size+
+                     written_serialized_size1.content_size);
+
+    fragmented_back->reset();
+
+    read_back_second.resize(test_string2.size(),0);
+    auto size_back = fragmented->read({read_back_second.data(),read_back_second.size()});
+
+    BOOST_REQUIRE(size_back.content_size == test_string2.size());
+    BOOST_CHECK_EQUAL_COLLECTIONS(test_string2.begin(),test_string2.end(),
+                                  read_back_second.begin(),read_back_second.end());
 }
 
 // ---------------------------------------------------------------------
