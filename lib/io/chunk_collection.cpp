@@ -160,7 +160,47 @@ namespace uh::io {
     std::vector<std::pair<std::vector<char>, serialization::fragment_serialize_size_format>>
     chunk_collection::read_indexed(const std::vector<uint8_t>& at)
     {
-        //TODO: order read with the help of fragment position and seek into one direction
+        if(!temporarily_cached_fragment_on_seekable_device->valid()){
+            temporarily_open_file = std::make_unique<io::file>(path, std::ios_base::in);
+        }
+
+        std::vector<std::pair<std::vector<char>, serialization::fragment_serialize_size_format>> out_list;
+
+        for(const auto& at_item:at){
+            auto fragment_pos_element = find_address(at_item);
+
+            temporarily_cached_fragment_on_seekable_device =
+                    std::make_unique<io::fragment_on_seekable_reset_device>(*temporarily_open_file,
+                                                                            0,
+                                                                            fragment_pos_element->second);
+
+            temporarily_cached_fragment_on_seekable_device.reset();
+
+            serialization::fragment_serialize_size_format read(0,0,0);
+            std::array<char,buf_size> buffer{};
+            std::vector<char> output{};
+
+            do{
+                serialization::fragment_serialize_size_format temp_read =
+                        temporarily_cached_fragment_on_seekable_device->read(buffer);
+
+                std::size_t old_size = output.size();
+
+                output.resize(output.size()+temp_read.content_size);
+                std::memcpy(output.data()+old_size,buffer.data(),temp_read.content_size);
+
+                read.header_size = std::max(read.header_size,temp_read.header_size);
+                read.content_size += temp_read.content_size;
+                read.index_num = read.index_num;
+
+            } while (temporarily_cached_fragment_on_seekable_device->valid());
+
+            out_list.emplace_back(output,read);
+        }
+
+        temporarily_open_file->close();
+
+        return out_list;
     }
 
     // ---------------------------------------------------------------------
