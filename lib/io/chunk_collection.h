@@ -48,14 +48,22 @@ namespace uh::io {
                 path(std::move(collection_location)),
                 to_be_deleted(std::is_same_v<SEEKABLE_TYPE,io::temp_file>)
         {
+            auto file = std::make_unique<SEEKABLE_TYPE>(path, std::ios_base::in);
+
+            if constexpr (std::is_same_v<SEEKABLE_TYPE,io::temp_file>){
+                file->release_to(file->path());
+                path = file->path();
+            }
+
             if(std::filesystem::exists(path))
             {
                 std::streamoff collection_offset{};
                 uint16_t index_entry_count{};
                 serialization::fragment_serialize_size_format skip_format;
+                fragment_on_seekable_device frag_seek(*file);
 
                 do{
-                    skip_format = temporarily_cached_fragment_on_seekable_device->skip();
+                    skip_format = frag_seek.skip();
 
                     if(skip_format.content_size == 0)
                         break;
@@ -67,13 +75,6 @@ namespace uh::io {
                     index_entry_count++;
 
                 } while (skip_format.content_size > 0);
-            }
-
-            auto file = std::make_unique<SEEKABLE_TYPE>(path, std::ios_base::in);
-
-            if constexpr (std::is_same_v<SEEKABLE_TYPE,io::temp_file>){
-                file->release_to(temporarily_open_file->path());
-                path = temporarily_open_file->path();
             }
         }
 
