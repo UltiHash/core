@@ -34,6 +34,11 @@ class persisted_redblack_tree_set {
         BLACK = 1
     };
 
+    enum direction_t: uint8_t {
+        LEFT = 0,
+        RIGHT = 1,
+    };
+
     struct mmap_node {
         fragment m_frag;
         uint64_t m_parent;
@@ -76,15 +81,22 @@ private:
 
     void balance (node& z);
 
-    void left_rotate (node& x);
+    node directed_balance (node& z, direction_t d);
 
-    void right_rotate (node& x);
+    std::pair<uint64_t, bool> lower_sister_inspect_hint (const node& n, const std::string_view& frag, int n_frag_comp);
+    std::pair<uint64_t, bool> upper_sister_inspect_hint (const node& n, const std::string_view& frag, int n_frag_comp);
 
     inline node get_node (uint64_t offset) noexcept;
 
     inline node add_node () noexcept;
 
     inline void set_root (node& x) noexcept;
+
+    void rotate (node& x, direction_t d);
+
+    static inline uint64_t& get_child (const node& x, direction_t d) noexcept;
+
+    static inline uint64_t& get_other_child (const node& x, direction_t d) noexcept;
 
     inline int comp (const std::string_view& new_fragment, const fragment& f);
 
