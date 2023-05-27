@@ -50,7 +50,9 @@ namespace uh::io {
         std::pair<std::vector<char>,serialization::fragment_serialize_size_format> read_indexed(uint8_t at);
 
         /**
-         * write indexed multiple buffers
+         * Write indexed multiple buffers and return a list of fragment size structs that contain written fragment
+         * information.
+         * Does not close filestream.
          */
         std::vector<serialization::fragment_serialize_size_format>
         write_indexed(const std::vector<std::span<const char>>& buffer);
@@ -58,7 +60,8 @@ namespace uh::io {
         /**
          * read indexed multiple positions with smart seeking
          */
-        std::vector<std::vector<char>> read_indexed(const std::vector<uint8_t>& at);
+        std::vector<std::pair<std::vector<char>, serialization::fragment_serialize_size_format>>
+        read_indexed(const std::vector<uint8_t>& at);
 
         /**
          *
@@ -92,6 +95,8 @@ namespace uh::io {
          * @return if the chunk collection is full
          */
         [[nodiscard]] bool full() const;
+
+        uint8_t free();
 
         /**
          *
