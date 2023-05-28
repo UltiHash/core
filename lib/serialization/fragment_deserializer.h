@@ -87,7 +87,8 @@ namespace uh::serialization {
             io::read(dev_, {index,1});
 
             return {
-                    static_cast<uint8_t>(sizeof(data_size_len.control_byte)+data_size_bytes.size()),
+                    static_cast<uint8_t>(sizeof(data_size_len.control_byte)+
+                    data_size_bytes.size()+sizeof(index)),
                     static_cast<uint32_t>(data_size),
                     static_cast<char>(data_size_len.control_byte),
                     static_cast<uint8_t>(index[0])

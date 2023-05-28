@@ -12,8 +12,7 @@
 #include <util/exception.h>
 #include <io/temp_file.h>
 #include <io/chunk_collection.h>
-#include <io/buffer.h>
-#include <io/device.h>
+#include <serialization/fragment_size_struct.h>
 
 #include <boost/test/unit_test.hpp>
 
@@ -29,7 +28,7 @@ namespace
 
 // ---------------------------------------------------------------------
 
-    const static std::filesystem::path TEMP_DIR = "/tmp";
+    const std::filesystem::path TEMP_DIR = "/tmp";
 
 // ---------------------------------------------------------------------
 
@@ -62,19 +61,23 @@ namespace
     {
         chunk_collection cc(TEMP_DIR,true);
 
-        for(uint16_t i = 0; i < std::numeric_limits<uint8_t>::max()+1; i++){
+        for(uint16_t i = 0; i < std::numeric_limits<uint8_t>::max()+1; i++)
+        {
             std::string input = uh::test::LOREM_IPSUM + std::to_string(i);
 
             if(i == std::numeric_limits<uint8_t>::max()){
                 BOOST_REQUIRE_THROW(cc.write_indexed(input),uh::util::exception);
                 break;
             }
-            else
-                cc.write_indexed(input);
+            else{
+                auto check_header = cc.write_indexed(input);
+                BOOST_CHECK_EQUAL(check_header.header_size,4);
+            }
 
             auto read_back = cc.read_indexed(static_cast<uint8_t>(i));
             BOOST_REQUIRE_EQUAL_COLLECTIONS(input.begin(),input.end(),
                                             read_back.first.begin(),read_back.first.end());
+            BOOST_CHECK_EQUAL(read_back.second.header_size,4);
         }
 
         std::string input3 = uh::test::LOREM_IPSUM + std::to_string(3);

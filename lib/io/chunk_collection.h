@@ -53,10 +53,10 @@ namespace uh::io {
                 path = file.path();
             }
 
-            auto temporarily_open_file = std::make_unique<io::file>(path, std::ios_base::in);
+            auto temporarily_open_file = io::file(path, std::ios_base::in);
 
             auto temporarily_cached_fragment_on_seekable_device =
-                    std::make_unique<io::fragment_on_seekable_device>(*temporarily_open_file);
+                    io::fragment_on_seekable_device(temporarily_open_file);
 
             if(std::filesystem::exists(path))
             {
@@ -65,7 +65,7 @@ namespace uh::io {
                 serialization::fragment_serialize_size_format skip_format;
 
                 do{
-                    skip_format = temporarily_cached_fragment_on_seekable_device->skip();
+                    skip_format = temporarily_cached_fragment_on_seekable_device.skip();
 
                     if(skip_format.content_size == 0)
                         break;
@@ -74,6 +74,7 @@ namespace uh::io {
                         THROW(util::exception,"Indexing of chunk collection "+path.string()+" exceeded limits");
 
                     index.emplace_back(skip_format,collection_offset);
+                    collection_offset += skip_format.header_size + skip_format.content_size;
                     index_entry_count++;
 
                 } while (skip_format.content_size > 0);
@@ -89,22 +90,22 @@ namespace uh::io {
         std::pair<std::vector<char>,serialization::fragment_serialize_size_format>
         read_indexed(uint8_t at)
         {
-            auto temporarily_open_file = std::make_unique<io::file>(path, std::ios_base::in);
+            auto temporarily_open_file = io::file(path, std::ios_base::in);
 
             auto fragment_pos_element = find_address(at);
 
             auto temporarily_cached_fragment_on_seekable_device =
-                    std::make_unique<io::fragment_on_seekable_device>(*temporarily_open_file);
+                    io::fragment_on_seekable_device(temporarily_open_file);
 
-            temporarily_open_file->seek(fragment_pos_element->second,std::ios_base::beg);
+            temporarily_open_file.seek((*fragment_pos_element).second,std::ios_base::beg);
 
-            serialization::fragment_serialize_size_format read(0,0,0);
-            std::array<char,buf_size> buffer{};
+            serialization::fragment_serialize_size_format read;
+            std::vector<char> buffer(1 << 23);
             std::vector<char> output{};
 
             do{
                 serialization::fragment_serialize_size_format temp_read =
-                        temporarily_cached_fragment_on_seekable_device->read(buffer);
+                        temporarily_cached_fragment_on_seekable_device.read(buffer);
 
                 std::size_t old_size = output.size();
 
@@ -115,7 +116,7 @@ namespace uh::io {
                 read.content_size += temp_read.content_size;
                 read.index_num = read.index_num;
 
-            } while (temporarily_cached_fragment_on_seekable_device->valid());
+            } while (temporarily_cached_fragment_on_seekable_device.valid());
 
             return {output,read};
         }
@@ -139,14 +140,22 @@ namespace uh::io {
             if(buffer.size() > std::numeric_limits<uint32_t>::max())
                 THROW(util::exception,"Incoming writing buffer was too large!");
 
-            auto temporarily_open_file = std::make_unique<io::file>(path, std::ios_base::app);
+            auto temporarily_open_file = io::file(path, std::ios_base::app);
             auto temporarily_cached_fragment_on_seekable_device =
-                    std::make_unique<io::fragment_on_seekable_device>(*temporarily_open_file,
+                    io::fragment_on_seekable_device(temporarily_open_file,
                                                                       next_free_address());
 
             uint32_t allocate_space = std::max(static_cast<uint32_t>(buffer.size()),alloc);
             serialization::fragment_serialize_size_format written =
-                    temporarily_cached_fragment_on_seekable_device->write(buffer,allocate_space);
+                    temporarily_cached_fragment_on_seekable_device.write(buffer,allocate_space);
+
+            if(index.empty())
+                index.emplace_back(written,0);
+            else
+                index.emplace_back(written,
+                                   index.back().second+
+                                      index.back().first.header_size+
+                                      index.back().first.content_size);
 
             return written;
         }
@@ -157,7 +166,7 @@ namespace uh::io {
         std::vector<std::pair<std::vector<char>, serialization::fragment_serialize_size_format>>
         read_indexed_multi(const std::vector<uint8_t>& at)
         {
-            auto temporarily_open_file = std::make_unique<io::file>(path, std::ios_base::in);
+            auto temporarily_open_file = io::file(path, std::ios_base::in);
 
             std::vector<uint8_t> index_num_list = get_index_num_content_list();
             std::vector<uint8_t> filtered_at_list_in_seek_order;
@@ -177,17 +186,17 @@ namespace uh::io {
                 auto fragment_pos_element = find_address(at_item);
 
                 auto temporarily_cached_fragment_on_seekable_device =
-                        std::make_unique<io::fragment_on_seekable_device>(*temporarily_open_file);
+                        io::fragment_on_seekable_device(temporarily_open_file);
 
-                temporarily_open_file->seek(fragment_pos_element->second,std::ios_base::beg);
+                temporarily_open_file.seek(fragment_pos_element->second,std::ios_base::beg);
 
                 serialization::fragment_serialize_size_format read;
-                std::array<char,buf_size> buffer{};
+                std::vector<char> buffer(1 << 23);
                 std::vector<char> output{};
 
                 do{
                     serialization::fragment_serialize_size_format temp_read =
-                            temporarily_cached_fragment_on_seekable_device->read(buffer);
+                            temporarily_cached_fragment_on_seekable_device.read(buffer);
 
                     std::size_t old_size = output.size();
 
@@ -198,7 +207,7 @@ namespace uh::io {
                     read.content_size += temp_read.content_size;
                     read.index_num = read.index_num;
 
-                } while (temporarily_cached_fragment_on_seekable_device->valid());
+                } while (temporarily_cached_fragment_on_seekable_device.valid());
 
                 out_list[
                         std::distance(at.begin(),
@@ -229,17 +238,24 @@ namespace uh::io {
                     THROW(util::exception,"Incoming writing buffer was too large!");
             });
 
-            auto temporarily_open_file = std::make_unique<io::file>(path, std::ios_base::app);
+            auto temporarily_open_file = io::file(path, std::ios_base::app);
 
             std::vector<serialization::fragment_serialize_size_format> out_list{};
 
             for(const auto& item:buffer)
             {
                 auto temporarily_cached_fragment_on_seekable_device =
-                        std::make_unique<io::fragment_on_seekable_device>(*temporarily_open_file,
-                                                                          next_free_address());
+                        io::fragment_on_seekable_device(temporarily_open_file,next_free_address());
 
-                out_list.push_back(temporarily_cached_fragment_on_seekable_device->write(item));
+                out_list.push_back(temporarily_cached_fragment_on_seekable_device.write(item));
+
+                if(index.empty())
+                    index.emplace_back(out_list.back(),0);
+                else
+                    index.emplace_back(out_list.back(),
+                                       index.back().second+
+                                          index.back().first.header_size+
+                                          index.back().first.content_size);
             }
 
             return out_list;
@@ -365,10 +381,12 @@ namespace uh::io {
             auto index_beg = std::begin(copy_index);
             for(unsigned short i = 0; i < std::numeric_limits<unsigned char>::max();i++)
             {
-                if(index_beg == std::end(copy_index) || index_beg->first.index_num != i)
+                if(index_beg == std::end(copy_index) || index_beg->first.index_num < i)
                 {
                     return i;
                 }
+                else
+                    index_beg++;
             }
 
             return 0;
@@ -395,10 +413,6 @@ namespace uh::io {
         bool to_be_deleted;
         std::filesystem::path path;
         std::vector<std::pair<serialization::fragment_serialize_size_format,std::streamoff>> index;
-
-        //std::unique_ptr<io::file> temporarily_open_file;
-        //std::unique_ptr<io::fragment_on_seekable_device> temporarily_cached_fragment_on_seekable_device;
-        constexpr static std::size_t buf_size = 1 << 26;
     };
 
 } // namespace uh::io
