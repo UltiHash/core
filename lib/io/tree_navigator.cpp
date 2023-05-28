@@ -51,6 +51,28 @@ namespace uh::io {
     std::pair<std::stack<char>, serialization::fragment_serialize_size_format>
     tree_navigator::write_indexed(std::span<const char> buffer, uint32_t alloc) {
         std::vector<chunk_collection*> same_amount_addresses_free;
+
+        uint16_t addresses_free_max{};
+        for(const auto& col:chunk_collections){
+            uint16_t free_adr = col.first->free();
+            if(free_adr > addresses_free_max)
+                addresses_free_max = free_adr;
+        }
+
+        for(const auto& col:chunk_collections){
+            if(col.first->free() == addresses_free_max){
+                same_amount_addresses_free.push_back(col.first);
+            }
+        }
+
+        //write to same amount_addresses_free where the alloc is most distant from the average fragment size
+
+        auto min_size_of_most_free_addresses =
+                *std::min_element(same_amount_addresses_free.begin(),same_amount_addresses_free.end(),
+                                 [](const auto& a,const auto& b){
+            return a->size() < b->size();
+        });
+
     }
 
     // ---------------------------------------------------------------------
