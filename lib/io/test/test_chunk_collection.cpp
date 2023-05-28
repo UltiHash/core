@@ -78,6 +78,7 @@ namespace
             BOOST_REQUIRE_EQUAL_COLLECTIONS(input.begin(),input.end(),
                                             read_back.first.begin(),read_back.first.end());
             BOOST_CHECK_EQUAL(read_back.second.header_size,4);
+            BOOST_CHECK_EQUAL(cc.size(i),input.size()+read_back.second.header_size);
         }
 
         std::string input3 = uh::test::LOREM_IPSUM + std::to_string(3);
@@ -110,6 +111,17 @@ namespace
         }
 
         cc.write_indexed_multi(to_write_span);
+
+        auto valid_indexes = cc.get_index_num_content_list();
+        std::ranges::reverse(valid_indexes.begin(),valid_indexes.end());
+
+        auto read_all_back = cc.read_indexed_multi(valid_indexes);
+
+        auto to_write_reverse_beg = to_write.crbegin();
+        for(const auto& item:read_all_back){
+            BOOST_CHECK_EQUAL_COLLECTIONS(item.first.cbegin(),item.first.cend(),
+                                          to_write_reverse_beg->cbegin(),to_write_reverse_beg->cend());
+        }
     }
 
 // ---------------------------------------------------------------------

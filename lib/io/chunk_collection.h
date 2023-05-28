@@ -228,7 +228,7 @@ namespace uh::io {
         write_indexed_multi(const std::vector<std::span<const char>> &buffer)
         {
 
-            if(static_cast<long>(free()) - buffer.size() <= 0)
+            if(static_cast<long>(free()) - buffer.size() < 0)
                 THROW(util::exception,"On chunk collection " + path.string() +
                                       "was no space left to multi write indexed!");
 
@@ -319,6 +319,10 @@ namespace uh::io {
             return index.size() == std::numeric_limits<unsigned char>::max();
         }
 
+        /**
+         *
+         * @return tell how many addresses are still free
+         */
         uint8_t free() {
             return std::numeric_limits<uint8_t>::max() - count();
         }
