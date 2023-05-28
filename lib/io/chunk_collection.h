@@ -166,19 +166,23 @@ namespace uh::io {
         std::vector<std::pair<std::vector<char>, serialization::fragment_serialize_size_format>>
         read_indexed_multi(const std::vector<uint8_t>& at)
         {
+            for(const auto item:at){
+                if(std::count(at.cbegin(),at.cend(),item) > 1){
+                    THROW(util::exception,"Read indexed multi received dupliate read indexes. This is not allowed!");
+                }
+            }
+
             auto temporarily_open_file = io::file(path, std::ios_base::in);
 
             std::vector<uint8_t> index_num_list = get_index_num_content_list();
             std::vector<uint8_t> filtered_at_list_in_seek_order;
 
-
-            std::copy_if(index_num_list.cbegin(),index_num_list.cend(),filtered_at_list_in_seek_order.begin(),
-                         [&at](const auto item)
-                         {
-                             return std::any_of(at.cbegin(),at.cend(),[&item](const auto item2){
-                                 return item == item2;
-                             });
-                         });
+            for(const auto item: index_num_list){
+                if(std::any_of(at.cbegin(),at.cend(),[item](const auto item2){
+                    return item == item2;
+                }))
+                    filtered_at_list_in_seek_order.push_back(item);
+            }
 
             std::vector<std::pair<std::vector<char>, serialization::fragment_serialize_size_format>>
                     out_list(filtered_at_list_in_seek_order.size());
@@ -210,11 +214,10 @@ namespace uh::io {
 
                 } while (temporarily_cached_fragment_on_seekable_device.valid());
 
-                out_list[
-                        std::distance(at.begin(),
-                                      std::find(at.begin(),at.end(),at_item)
-                        )
-                ] = std::make_pair(output,read);
+                std::streamoff distance_filtered_projected_to_at =
+                        std::distance(at.begin(),std::find(at.begin(),at.end(),at_item));
+
+                out_list[distance_filtered_projected_to_at] = std::make_pair(output,read);
             }
 
             return out_list;
