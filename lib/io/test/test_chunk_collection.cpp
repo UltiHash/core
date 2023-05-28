@@ -87,6 +87,31 @@ namespace
                                         read_back3.first.begin(),read_back3.first.end());
     }
 
+    // ---------------------------------------------------------------------
+
+    BOOST_AUTO_TEST_CASE( write_read_multi_chunk_collection )
+    {
+        chunk_collection cc(TEMP_DIR,true);
+
+        std::vector<std::string> to_write;
+
+        for(uint16_t i = 0; i < std::numeric_limits<uint8_t>::max(); i++)
+        {
+            std::string input = uh::test::LOREM_IPSUM + std::to_string(i);
+            to_write.push_back(input);
+        }
+
+        std::vector<std::span<const char>> to_write_span;
+
+        to_write_span.reserve(to_write.size());
+
+        for(const auto& item: to_write){
+            to_write_span.emplace_back(item.data(),item.size());
+        }
+
+        cc.write_indexed_multi(to_write_span);
+    }
+
 // ---------------------------------------------------------------------
 
 } // namespace
