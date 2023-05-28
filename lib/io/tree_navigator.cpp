@@ -7,5 +7,8 @@
 namespace uh::io {
 
 
+    tree_navigator::tree_navigator(const std::filesystem::path& root) {
+
+    }
 
 } // namespace uh::io
