@@ -17,7 +17,6 @@
 
 #define CHUNK_COLLECTION_BUFFER_SIZE 1 << 23
 
-
 namespace uh::io {
 
     class chunk_collection {
