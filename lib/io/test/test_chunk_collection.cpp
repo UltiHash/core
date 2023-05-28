@@ -114,7 +114,7 @@ namespace
 
         auto valid_indexes = cc.get_index_num_content_list();
         std::vector<uint8_t> valid_indexes_simulation(valid_indexes.size());
-        for(uint16_t i2 = 0; i2 < valid_indexes.size(); i2++){
+        for(uint16_t i2 = 0; valid_indexes.size() > static_cast<std::size_t>(i2) ; i2++){
             valid_indexes_simulation[i2] = i2;
         }
 
@@ -131,6 +131,7 @@ namespace
         for(const auto& item:read_all_back){
             BOOST_CHECK_EQUAL_COLLECTIONS(item.first.cbegin(),item.first.cend(),
                                           to_write_reverse_beg->cbegin(),to_write_reverse_beg->cend());
+            to_write_reverse_beg++;
         }
     }
 

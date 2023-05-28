@@ -70,7 +70,7 @@ namespace uh::io {
                     if(skip_format.content_size == 0)
                         break;
 
-                    if(index_entry_count >= std::numeric_limits<unsigned char>::max())
+                    if(index_entry_count > std::numeric_limits<unsigned char>::max()+1)
                         THROW(util::exception,"Indexing of chunk collection "+path.string()+" exceeded limits");
 
                     index.emplace_back(skip_format,collection_offset);
@@ -187,6 +187,8 @@ namespace uh::io {
             std::vector<std::pair<std::vector<char>, serialization::fragment_serialize_size_format>>
                     out_list(filtered_at_list_in_seek_order.size());
 
+            std::vector<char> buffer(1 << 23);
+
             for(const auto at_item:filtered_at_list_in_seek_order){
                 auto fragment_pos_element = find_address(at_item);
 
@@ -196,7 +198,6 @@ namespace uh::io {
                 temporarily_open_file.seek(fragment_pos_element->second,std::ios_base::beg);
 
                 serialization::fragment_serialize_size_format read;
-                std::vector<char> buffer(1 << 23);
                 std::vector<char> output{};
 
                 do{
@@ -210,7 +211,7 @@ namespace uh::io {
 
                     read.header_size = std::max(read.header_size,temp_read.header_size);
                     read.content_size += temp_read.content_size;
-                    read.index_num = read.index_num;
+                    read.index_num = temp_read.index_num;
 
                 } while (temporarily_cached_fragment_on_seekable_device.valid());
 
@@ -328,7 +329,7 @@ namespace uh::io {
          * @return tell how many addresses are still free
          */
         uint8_t free() {
-            return std::numeric_limits<uint8_t>::max() - count();
+            return std::numeric_limits<uint8_t>::max()+1 - count();
         }
 
         /**
@@ -387,7 +388,7 @@ namespace uh::io {
             });
 
             auto index_beg = std::begin(copy_index);
-            for(unsigned short i = 0; i < std::numeric_limits<unsigned char>::max();i++)
+            for(unsigned short i = 0; i < std::numeric_limits<unsigned char>::max()+1;i++)
             {
                 if(index_beg == std::end(copy_index) || index_beg->first.index_num < i)
                 {
