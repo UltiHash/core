@@ -59,6 +59,7 @@ namespace
 
     BOOST_AUTO_TEST_CASE( write_read_chunk_collection )
     {
+        BOOST_CHECK_THROW(chunk_collection(std::filesystem::path(TEMP_DIR)),std::exception);
         chunk_collection cc(TEMP_DIR,true);
 
         for(uint16_t i = 0; i <= std::numeric_limits<uint8_t>::max()+1; i++)
