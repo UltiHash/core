@@ -32,8 +32,10 @@ namespace uh::io {
          * It only builds up a temporary connection to an underlying seekable_device.
          * On constructor the fragmented seekable device is scanned for the
          * position of its contents.
+         * Automatically heals incomplete remove operations on indexing
          *
          * @param collection_location where the file containing the chunk collection is located
+         * @throw if no file and no corrupted temporary file from the remove operation exist
          */
         explicit chunk_collection(std::filesystem::path collection_location,bool create_tempfile = false);
 

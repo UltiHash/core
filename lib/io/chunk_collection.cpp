@@ -39,12 +39,26 @@ namespace uh::io{
             path = file.path();
         }
 
+        std::filesystem::path corrupted_tempfile_path = path.string()+".tmp";
+
+        bool file_exists = std::filesystem::exists(path);
+        bool file_temp_file_exists = std::filesystem::exists(corrupted_tempfile_path);
+
+        if(file_exists and file_temp_file_exists){
+            std::filesystem::remove(corrupted_tempfile_path);
+        }
+
+        if(not file_exists and file_temp_file_exists){
+            std::filesystem::rename(corrupted_tempfile_path,path);
+            file_exists = true;
+        }
+
         auto temporarily_open_file = io::file(path, std::ios_base::in);
 
         auto temporarily_cached_fragment_on_seekable_device =
                 io::fragment_on_seekable_device(temporarily_open_file);
 
-        if(std::filesystem::exists(path))
+        if(file_exists)
         {
             std::streamoff collection_offset{};
             uint16_t index_entry_count{};
