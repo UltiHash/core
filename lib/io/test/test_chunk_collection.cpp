@@ -65,7 +65,7 @@ namespace
         {
             std::string input = uh::test::LOREM_IPSUM + std::to_string(i);
 
-            if(i == std::numeric_limits<uint8_t>::max()){
+            if(i == std::numeric_limits<uint8_t>::max()+1){
                 BOOST_REQUIRE_THROW(cc.write_indexed(input),std::exception);
                 break;
             }
