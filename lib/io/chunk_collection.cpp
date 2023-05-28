@@ -22,6 +22,8 @@ namespace uh::io{
 
     chunk_collection::~chunk_collection()
     {
+        std::lock_guard lock(readmux);
+
         if(to_be_deleted){
             std::filesystem::remove(getPath());
         }
@@ -33,6 +35,8 @@ namespace uh::io{
             path(std::move(collection_location)),
             to_be_deleted(create_tempfile)
     {
+        std::lock_guard lock(readmux);
+
         if (create_tempfile){
             auto file = io::temp_file(path, std::ios_base::out);
             file.release_to(file.path());
@@ -86,6 +90,8 @@ namespace uh::io{
     serialization::fragment_serialize_size_format
     chunk_collection::write_indexed(std::span<const char> buffer, uint32_t alloc)
     {
+        std::lock_guard lock(readmux);
+
         if(!free())
             THROW(util::exception,"On chunk collection " + path.string() +
                                   "was no space left to multi write indexed!");
@@ -118,6 +124,8 @@ namespace uh::io{
     std::pair<std::vector<char>, serialization::fragment_serialize_size_format>
     chunk_collection::read_indexed(uint8_t at)
     {
+        std::lock_guard lock(readmux);
+
         auto temporarily_open_file = io::file(path, std::ios_base::in);
 
         auto fragment_pos_element = find_address(at);
@@ -153,6 +161,8 @@ namespace uh::io{
 
     void chunk_collection::remove(uint8_t at)
     {
+        std::lock_guard lock(readmux);
+
         std::filesystem::path temp_path;
         {
             io::temp_file cc_tmp(getPath().parent_path());
@@ -193,6 +203,7 @@ namespace uh::io{
     std::vector<serialization::fragment_serialize_size_format>
     chunk_collection::write_indexed_multi(const std::vector<std::span<const char>> &buffer)
     {
+        std::lock_guard lock(readmux);
 
         if(static_cast<long>(free()) - buffer.size() < 0)
             THROW(util::exception,"On chunk collection " + path.string() +
@@ -232,6 +243,8 @@ namespace uh::io{
     std::vector<std::pair<std::vector<char>, serialization::fragment_serialize_size_format>>
     chunk_collection::read_indexed_multi(const std::vector<uint8_t> &at)
     {
+        std::lock_guard lock(readmux);
+
         for(const auto item:at){
             if(std::count(at.cbegin(),at.cend(),item) > 1){
                 THROW(util::exception,"Read indexed multi received dupliate read indexes. This is not allowed!");
@@ -294,6 +307,8 @@ namespace uh::io{
 
     uint16_t chunk_collection::count()
     {
+        std::lock_guard lock(readmux);
+
         return static_cast<uint16_t>(index.size());
     }
 
@@ -301,6 +316,8 @@ namespace uh::io{
 
     std::size_t chunk_collection::size()
     {
+        std::lock_guard lock(readmux);
+
         std::size_t accumulated{};
 
         for(const auto& item:index)
@@ -315,6 +332,8 @@ namespace uh::io{
 
     std::size_t chunk_collection::size(uint8_t index_adress)
     {
+        std::lock_guard lock(readmux);
+
         auto found_address = find_address(index_adress);
 
         return found_address->first.header_size + found_address->first.content_size;
@@ -324,6 +343,8 @@ namespace uh::io{
 
     std::size_t chunk_collection::content_size(uint8_t index_adress)
     {
+        std::lock_guard lock(readmux);
+
         auto found_address = find_address(index_adress);
 
         return found_address->first.content_size;
@@ -331,8 +352,10 @@ namespace uh::io{
 
     // ---------------------------------------------------------------------
 
-    bool chunk_collection::full() const
+    bool chunk_collection::full()
     {
+        std::lock_guard lock(readmux);
+
         return index.size() == std::numeric_limits<unsigned char>::max()+1;
     }
 
@@ -340,12 +363,16 @@ namespace uh::io{
 
     uint16_t chunk_collection::free()
     {
+        std::lock_guard lock(readmux);
+
         return static_cast<uint16_t>(std::numeric_limits<uint8_t>::max())+1 - count();
     }
 
     // ---------------------------------------------------------------------
 
-    std::filesystem::path chunk_collection::getPath() {
+    std::filesystem::path chunk_collection::getPath()
+    {
+        std::lock_guard lock(readmux);
         return path;
     }
 
@@ -353,6 +380,8 @@ namespace uh::io{
 
     void chunk_collection::release_to(const std::filesystem::path &release_path)
     {
+        std::lock_guard lock(readmux);
+
         to_be_deleted = false;
 
         if(release_path == getPath())
@@ -368,7 +397,10 @@ namespace uh::io{
 
     // ---------------------------------------------------------------------
 
-    std::vector<uint8_t> chunk_collection::get_index_num_content_list() {
+    std::vector<uint8_t> chunk_collection::get_index_num_content_list()
+    {
+        std::lock_guard lock(readmux);
+
         std::vector<uint8_t> out_list(index.size());
 
         std::size_t counter{};
@@ -385,6 +417,8 @@ namespace uh::io{
 
     uint8_t chunk_collection::next_free_address()
     {
+        std::lock_guard lock(readmux);
+
         if(full())
             THROW(util::exception,"There are no more free addresses on chunk collection "+path.string()+" !");
 
@@ -414,6 +448,8 @@ namespace uh::io{
     std::vector<std::pair<serialization::fragment_serialize_size_format, std::streamoff>>::iterator
     chunk_collection::find_address(uint8_t at)
     {
+        std::lock_guard lock(readmux);
+
         auto fragment_pos_element = std::find_if(index.begin(),index.end(),
                                                  [&at](const std::pair<
                                                          serialization::fragment_serialize_size_format,

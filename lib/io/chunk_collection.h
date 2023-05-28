@@ -14,6 +14,7 @@
 #include <algorithm>
 #include <vector>
 #include <span>
+#include <mutex>
 
 #define CHUNK_COLLECTION_BUFFER_SIZE 1 << 23
 
@@ -143,6 +144,8 @@ namespace uh::io {
         bool to_be_deleted;
         std::filesystem::path path;
         std::vector<std::pair<serialization::fragment_serialize_size_format,std::streamoff>> index;
+
+        std::recursive_mutex readmux;
     };
 
 } // namespace uh::io
