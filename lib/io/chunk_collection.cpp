@@ -352,10 +352,8 @@ namespace uh::io{
 
     // ---------------------------------------------------------------------
 
-    bool chunk_collection::full()
+    bool chunk_collection::full() const
     {
-        std::lock_guard lock(readmux);
-
         return index.size() == std::numeric_limits<unsigned char>::max()+1;
     }
 
