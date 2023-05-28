@@ -72,6 +72,10 @@ namespace uh::io {
         std::vector<std::pair<std::vector<char>, serialization::fragment_serialize_size_format>>
         read_indexed_multi(const std::vector<uint8_t>& at);
 
+        /**
+         *
+         * @param at remove fragment with this index
+         */
         void remove(uint8_t at);
 
         /**
@@ -126,24 +130,13 @@ namespace uh::io {
          */
         void release_to(const std::filesystem::path& release_path);
 
-        std::vector<uint8_t> get_index_num_content_list() {
-            std::vector<uint8_t> out_list(index.size());
-
-            std::size_t counter{};
-
-            for(const auto& item:index){
-                out_list[counter] = item.first.index_num;
-                counter++;
-            }
-
-            return out_list;
-        }
+        std::vector<uint8_t> get_index_num_content_list();
 
     private:
 
         uint8_t next_free_address();
 
-        std::vector<std::pair<serialization::fragment_serialize_size_format,std::streamoff>>::const_iterator
+        std::vector<std::pair<serialization::fragment_serialize_size_format,std::streamoff>>::iterator
         find_address(uint8_t at);
 
         bool to_be_deleted;

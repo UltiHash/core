@@ -135,6 +135,62 @@ namespace
         }
     }
 
+    // ---------------------------------------------------------------------
+
+    BOOST_AUTO_TEST_CASE( remove_fragment_multi_chunk_collection )
+    {
+        chunk_collection cc(TEMP_DIR,true);
+
+        std::vector<std::string> to_write;
+
+        for(uint16_t i = 0; i < std::numeric_limits<uint8_t>::max()+1; i++)
+        {
+            std::string input = uh::test::LOREM_IPSUM + std::to_string(i);
+            to_write.push_back(input);
+        }
+
+        std::vector<std::span<const char>> to_write_span;
+
+        to_write_span.reserve(to_write.size());
+
+        for(const auto& item: to_write){
+            to_write_span.emplace_back(item.data(),item.size());
+        }
+
+        cc.write_indexed_multi(to_write_span);
+
+        cc.remove(3);
+
+        auto valid_indexes = cc.get_index_num_content_list();
+        std::vector<uint8_t> valid_indexes_simulation;
+
+        for(uint16_t i2 = 0; valid_indexes.size()+1 > static_cast<std::size_t>(i2) ; i2++){
+            if(i2 == 3){
+                continue;
+            }
+            valid_indexes_simulation.push_back(i2);
+        }
+
+        BOOST_REQUIRE_EQUAL_COLLECTIONS(valid_indexes.cbegin(),valid_indexes.cend(),
+                                        valid_indexes_simulation.cbegin(),valid_indexes_simulation.cend());
+
+        auto read_all_back = cc.read_indexed_multi(valid_indexes);
+
+        auto to_write_beg = to_write.cbegin();
+        for(const auto& item:read_all_back){
+            auto copy_beg_it = to_write_beg;
+            to_write_beg++;
+
+            if(std::distance(to_write.cbegin(),to_write_beg) == 3){
+                to_write_beg++;
+            }
+
+            BOOST_CHECK_EQUAL_COLLECTIONS(item.first.cbegin(),item.first.cend(),
+                                          copy_beg_it->cbegin(),copy_beg_it->cend());
+
+        }
+    }
+
 // ---------------------------------------------------------------------
 
 } // namespace

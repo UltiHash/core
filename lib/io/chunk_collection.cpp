@@ -18,11 +18,16 @@
 
 namespace uh::io{
 
-    chunk_collection::~chunk_collection() {
+    // ---------------------------------------------------------------------
+
+    chunk_collection::~chunk_collection()
+    {
         if(to_be_deleted){
             std::filesystem::remove(getPath());
         }
     }
+
+    // ---------------------------------------------------------------------
 
     chunk_collection::chunk_collection(std::filesystem::path collection_location, bool create_tempfile) :
             path(std::move(collection_location)),
@@ -62,8 +67,11 @@ namespace uh::io{
         }
     }
 
+    // ---------------------------------------------------------------------
+
     serialization::fragment_serialize_size_format
-    chunk_collection::write_indexed(std::span<const char> buffer, uint32_t alloc) {
+    chunk_collection::write_indexed(std::span<const char> buffer, uint32_t alloc)
+    {
         if(!free())
             THROW(util::exception,"On chunk collection " + path.string() +
                                   "was no space left to multi write indexed!");
@@ -91,8 +99,11 @@ namespace uh::io{
         return written;
     }
 
+    // ---------------------------------------------------------------------
+
     std::pair<std::vector<char>, serialization::fragment_serialize_size_format>
-    chunk_collection::read_indexed(uint8_t at) {
+    chunk_collection::read_indexed(uint8_t at)
+    {
         auto temporarily_open_file = io::file(path, std::ios_base::in);
 
         auto fragment_pos_element = find_address(at);
@@ -124,8 +135,50 @@ namespace uh::io{
         return {output,read};
     }
 
+    // ---------------------------------------------------------------------
+
+    void chunk_collection::remove(uint8_t at)
+    {
+        std::filesystem::path temp_path;
+        {
+            io::temp_file cc_tmp(getPath().parent_path());
+            {
+                io::file input_file(getPath());
+
+                for(const auto item:get_index_num_content_list()){
+                    if(item != at){
+                        fragment_on_seekable_device reader(input_file);
+                        auto read_from_this = read_indexed(item);
+
+                        fragment_on_seekable_device writer(cc_tmp,reader.getIndex());
+                        writer.write(read_from_this.first);
+                    }
+                }
+            }
+
+            temp_path = getPath().string() + ".tmp";
+            cc_tmp.release_to(temp_path);
+        }
+
+        std::filesystem::remove(getPath());
+        std::rename(temp_path.c_str(),getPath().c_str());
+
+        auto to_remove_it = find_address(at);
+        auto remove_size_struct = to_remove_it->first;
+
+        std::for_each(to_remove_it,index.end(),[&remove_size_struct](
+                std::pair<serialization::fragment_serialize_size_format,std::streamoff>& index_pair){
+            index_pair.second -= (remove_size_struct.header_size + remove_size_struct.content_size);
+        });
+
+        index.erase(to_remove_it);
+    }
+
+    // ---------------------------------------------------------------------
+
     std::vector<serialization::fragment_serialize_size_format>
-    chunk_collection::write_indexed_multi(const std::vector<std::span<const char>> &buffer) {
+    chunk_collection::write_indexed_multi(const std::vector<std::span<const char>> &buffer)
+    {
 
         if(static_cast<long>(free()) - buffer.size() < 0)
             THROW(util::exception,"On chunk collection " + path.string() +
@@ -160,8 +213,11 @@ namespace uh::io{
         return out_list;
     }
 
+    // ---------------------------------------------------------------------
+
     std::vector<std::pair<std::vector<char>, serialization::fragment_serialize_size_format>>
-    chunk_collection::read_indexed_multi(const std::vector<uint8_t> &at) {
+    chunk_collection::read_indexed_multi(const std::vector<uint8_t> &at)
+    {
         for(const auto item:at){
             if(std::count(at.cbegin(),at.cend(),item) > 1){
                 THROW(util::exception,"Read indexed multi received dupliate read indexes. This is not allowed!");
@@ -220,11 +276,17 @@ namespace uh::io{
         return out_list;
     }
 
-    uint16_t chunk_collection::count() {
+    // ---------------------------------------------------------------------
+
+    uint16_t chunk_collection::count()
+    {
         return static_cast<uint16_t>(index.size());
     }
 
-    std::size_t chunk_collection::size() {
+    // ---------------------------------------------------------------------
+
+    std::size_t chunk_collection::size()
+    {
         std::size_t accumulated{};
 
         for(const auto& item:index)
@@ -235,31 +297,48 @@ namespace uh::io{
         return accumulated;
     }
 
-    std::size_t chunk_collection::size(uint8_t index_adress) {
+    // ---------------------------------------------------------------------
+
+    std::size_t chunk_collection::size(uint8_t index_adress)
+    {
         auto found_address = find_address(index_adress);
 
         return found_address->first.header_size + found_address->first.content_size;
     }
 
-    std::size_t chunk_collection::content_size(uint8_t index_adress) {
+    // ---------------------------------------------------------------------
+
+    std::size_t chunk_collection::content_size(uint8_t index_adress)
+    {
         auto found_address = find_address(index_adress);
 
         return found_address->first.content_size;
     }
 
-    bool chunk_collection::full() const {
+    // ---------------------------------------------------------------------
+
+    bool chunk_collection::full() const
+    {
         return index.size() == std::numeric_limits<unsigned char>::max()+1;
     }
 
-    uint16_t chunk_collection::free() {
+    // ---------------------------------------------------------------------
+
+    uint16_t chunk_collection::free()
+    {
         return static_cast<uint16_t>(std::numeric_limits<uint8_t>::max())+1 - count();
     }
+
+    // ---------------------------------------------------------------------
 
     std::filesystem::path chunk_collection::getPath() {
         return path;
     }
 
-    void chunk_collection::release_to(const std::filesystem::path &release_path) {
+    // ---------------------------------------------------------------------
+
+    void chunk_collection::release_to(const std::filesystem::path &release_path)
+    {
         to_be_deleted = false;
 
         if(release_path == getPath())
@@ -273,7 +352,25 @@ namespace uh::io{
         path = release_path;
     }
 
-    uint8_t chunk_collection::next_free_address() {
+    // ---------------------------------------------------------------------
+
+    std::vector<uint8_t> chunk_collection::get_index_num_content_list() {
+        std::vector<uint8_t> out_list(index.size());
+
+        std::size_t counter{};
+
+        for(const auto& item:index){
+            out_list[counter] = item.first.index_num;
+            counter++;
+        }
+
+        return out_list;
+    }
+
+    // ---------------------------------------------------------------------
+
+    uint8_t chunk_collection::next_free_address()
+    {
         if(full())
             THROW(util::exception,"There are no more free addresses on chunk collection "+path.string()+" !");
 
@@ -298,9 +395,12 @@ namespace uh::io{
         return 0;
     }
 
-    std::vector<std::pair<serialization::fragment_serialize_size_format, std::streamoff>>::const_iterator
-    chunk_collection::find_address(uint8_t at) {
-        auto fragment_pos_element = std::find_if(index.cbegin(),index.cend(),
+    // ---------------------------------------------------------------------
+
+    std::vector<std::pair<serialization::fragment_serialize_size_format, std::streamoff>>::iterator
+    chunk_collection::find_address(uint8_t at)
+    {
+        auto fragment_pos_element = std::find_if(index.begin(),index.end(),
                                                  [&at](const std::pair<
                                                          serialization::fragment_serialize_size_format,
                                                          std::streamoff
@@ -309,10 +409,13 @@ namespace uh::io{
                                                      return elem.first.index_num == at;
                                                  });
 
-        if(fragment_pos_element == index.cend())
+        if(fragment_pos_element == index.end())
             THROW(util::exception,"Fragment " + std::to_string(at)+
                                   " was not found on chunk collection " + path.string());
 
         return fragment_pos_element;
     }
+
+    // ---------------------------------------------------------------------
+
 }
