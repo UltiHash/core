@@ -21,6 +21,8 @@
 #include <list>
 #include <span>
 
+#define CHUNK_COLLECTION_BUFFER_SIZE 1 << 23
+
 
 namespace uh::io {
 
@@ -100,7 +102,7 @@ namespace uh::io {
             temporarily_open_file.seek((*fragment_pos_element).second,std::ios_base::beg);
 
             serialization::fragment_serialize_size_format read;
-            std::vector<char> buffer(1 << 23);
+            std::vector<char> buffer(CHUNK_COLLECTION_BUFFER_SIZE);
             std::vector<char> output{};
 
             do{
@@ -187,7 +189,7 @@ namespace uh::io {
             std::vector<std::pair<std::vector<char>, serialization::fragment_serialize_size_format>>
                     out_list(filtered_at_list_in_seek_order.size());
 
-            std::vector<char> buffer(1 << 23);
+            std::vector<char> buffer(CHUNK_COLLECTION_BUFFER_SIZE);
 
             for(const auto at_item:filtered_at_list_in_seek_order){
                 auto fragment_pos_element = find_address(at_item);
