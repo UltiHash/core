@@ -251,8 +251,8 @@ namespace uh::io{
         return index.size() == std::numeric_limits<unsigned char>::max()+1;
     }
 
-    uint8_t chunk_collection::free() {
-        return std::numeric_limits<uint8_t>::max()+1 - count();
+    uint16_t chunk_collection::free() {
+        return static_cast<uint16_t>(std::numeric_limits<uint8_t>::max())+1 - count();
     }
 
     std::filesystem::path chunk_collection::getPath() {

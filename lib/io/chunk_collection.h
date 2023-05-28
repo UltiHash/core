@@ -109,7 +109,7 @@ namespace uh::io {
          *
          * @return tell how many addresses are still free
          */
-        uint8_t free();
+        uint16_t free();
 
         /**
          *
