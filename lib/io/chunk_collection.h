@@ -72,6 +72,8 @@ namespace uh::io {
         std::vector<std::pair<std::vector<char>, serialization::fragment_serialize_size_format>>
         read_indexed_multi(const std::vector<uint8_t>& at);
 
+        void remove(uint8_t at);
+
         /**
          *
          * @return the count of addresses used
