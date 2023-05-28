@@ -15,7 +15,6 @@
 #include <numeric>
 #include <vector>
 #include <span>
-#include <mutex>
 
 namespace uh::io{
 
@@ -32,19 +31,21 @@ namespace uh::io{
 
     // ---------------------------------------------------------------------
 
-    chunk_collection::chunk_collection(const std::filesystem::path& collection_location, bool create_tempfile) :
-            path(std::make_unique<std::filesystem::path>(collection_location)),
-            to_be_deleted(std::make_unique<bool>(create_tempfile))
+    chunk_collection::chunk_collection(std::filesystem::path collection_location, bool create_tempfile) :
+            path(std::move(collection_location)),
+            to_be_deleted(create_tempfile)
     {
+        std::lock_guard lock(readmux);
+
         if (create_tempfile){
-            auto file = io::temp_file(*path, std::ios_base::out);
+            auto file = io::temp_file(path, std::ios_base::out);
             file.release_to(file.path());
-            *path = file.path();
+            path = file.path();
         }
 
-        std::filesystem::path corrupted_tempfile_path = path->string()+".tmp";
+        std::filesystem::path corrupted_tempfile_path = path.string()+".tmp";
 
-        bool file_exists = std::filesystem::exists(*path);
+        bool file_exists = std::filesystem::exists(path);
         bool file_temp_file_exists = std::filesystem::exists(corrupted_tempfile_path);
 
         if(file_exists and file_temp_file_exists){
@@ -52,11 +53,11 @@ namespace uh::io{
         }
 
         if(not file_exists and file_temp_file_exists){
-            std::filesystem::rename(corrupted_tempfile_path,*path);
+            std::filesystem::rename(corrupted_tempfile_path,path);
             file_exists = true;
         }
 
-        auto temporarily_open_file = io::file(*path, std::ios_base::in);
+        auto temporarily_open_file = io::file(path, std::ios_base::in);
 
         auto temporarily_cached_fragment_on_seekable_device =
                 io::fragment_on_seekable_device(temporarily_open_file);
@@ -74,9 +75,9 @@ namespace uh::io{
                     break;
 
                 if(index_entry_count > std::numeric_limits<unsigned char>::max()+1)
-                    THROW(util::exception,"Indexing of chunk collection "+path->string()+" exceeded limits");
+                    THROW(util::exception,"Indexing of chunk collection "+path.string()+" exceeded limits");
 
-                index->emplace_back(skip_format,collection_offset);
+                index.emplace_back(skip_format,collection_offset);
                 collection_offset += skip_format.header_size + skip_format.content_size;
                 index_entry_count++;
 
@@ -92,13 +93,13 @@ namespace uh::io{
         std::lock_guard lock(readmux);
 
         if(!free())
-            THROW(util::exception,"On chunk collection " + path->string() +
+            THROW(util::exception,"On chunk collection " + path.string() +
                                   "was no space left to multi write indexed!");
 
         if(buffer.size() > std::numeric_limits<uint32_t>::max())
             THROW(util::exception,"Incoming writing buffer was too large!");
 
-        auto temporarily_open_file = io::file(*path, std::ios_base::app);
+        auto temporarily_open_file = io::file(path, std::ios_base::app);
         auto temporarily_cached_fragment_on_seekable_device =
                 io::fragment_on_seekable_device(temporarily_open_file,
                                                 next_free_address());
@@ -107,13 +108,13 @@ namespace uh::io{
         serialization::fragment_serialize_size_format written =
                 temporarily_cached_fragment_on_seekable_device.write(buffer,allocate_space);
 
-        if(index->empty())
-            index->emplace_back(written,0);
+        if(index.empty())
+            index.emplace_back(written,0);
         else
-            index->emplace_back(written,
-                               index->back().second+
-                               index->back().first.header_size+
-                               index->back().first.content_size);
+            index.emplace_back(written,
+                               index.back().second+
+                               index.back().first.header_size+
+                               index.back().first.content_size);
 
         return written;
     }
@@ -125,7 +126,7 @@ namespace uh::io{
     {
         std::lock_guard lock(readmux);
 
-        auto temporarily_open_file = io::file(*path, std::ios_base::in);
+        auto temporarily_open_file = io::file(path, std::ios_base::in);
 
         auto fragment_pos_element = find_address(at);
 
@@ -189,12 +190,12 @@ namespace uh::io{
         auto to_remove_it = find_address(at);
         auto remove_size_struct = to_remove_it->first;
 
-        std::for_each(to_remove_it,index->end(),[&remove_size_struct](
+        std::for_each(to_remove_it,index.end(),[&remove_size_struct](
                 std::pair<serialization::fragment_serialize_size_format,std::streamoff>& index_pair){
             index_pair.second -= (remove_size_struct.header_size + remove_size_struct.content_size);
         });
 
-        index->erase(to_remove_it);
+        index.erase(to_remove_it);
     }
 
     // ---------------------------------------------------------------------
@@ -205,7 +206,7 @@ namespace uh::io{
         std::lock_guard lock(readmux);
 
         if(static_cast<long>(free()) - buffer.size() < 0)
-            THROW(util::exception,"On chunk collection " + path->string() +
+            THROW(util::exception,"On chunk collection " + path.string() +
                                   "was no space left to multi write indexed!");
 
         std::for_each(buffer.cbegin(),buffer.cend(),[](const auto& item)
@@ -214,7 +215,7 @@ namespace uh::io{
                 THROW(util::exception,"Incoming writing buffer was too large!");
         });
 
-        auto temporarily_open_file = io::file(*path, std::ios_base::app);
+        auto temporarily_open_file = io::file(path, std::ios_base::app);
 
         std::vector<serialization::fragment_serialize_size_format> out_list{};
 
@@ -225,13 +226,13 @@ namespace uh::io{
 
             out_list.push_back(temporarily_cached_fragment_on_seekable_device.write(item));
 
-            if(index->empty())
-                index->emplace_back(out_list.back(),0);
+            if(index.empty())
+                index.emplace_back(out_list.back(),0);
             else
-                index->emplace_back(out_list.back(),
-                                   index->back().second+
-                                   index->back().first.header_size+
-                                   index->back().first.content_size);
+                index.emplace_back(out_list.back(),
+                                   index.back().second+
+                                   index.back().first.header_size+
+                                   index.back().first.content_size);
         }
 
         return out_list;
@@ -250,7 +251,7 @@ namespace uh::io{
             }
         }
 
-        auto temporarily_open_file = io::file(*path, std::ios_base::in);
+        auto temporarily_open_file = io::file(path, std::ios_base::in);
 
         std::vector<uint8_t> index_num_list = get_index_num_content_list();
         std::vector<uint8_t> filtered_at_list_in_seek_order;
@@ -307,7 +308,8 @@ namespace uh::io{
     uint16_t chunk_collection::count()
     {
         std::lock_guard lock(readmux);
-        return static_cast<uint16_t>(index->size());
+
+        return static_cast<uint16_t>(index.size());
     }
 
     // ---------------------------------------------------------------------
@@ -318,7 +320,7 @@ namespace uh::io{
 
         std::size_t accumulated{};
 
-        for(const auto& item:*index)
+        for(const auto& item:index)
         {
             accumulated += item.first.header_size + item.first.content_size;
         }
@@ -354,7 +356,7 @@ namespace uh::io{
     {
         std::lock_guard lock(readmux);
 
-        return index->size() == std::numeric_limits<unsigned char>::max()+1;
+        return index.size() == std::numeric_limits<unsigned char>::max()+1;
     }
 
     // ---------------------------------------------------------------------
@@ -368,10 +370,10 @@ namespace uh::io{
 
     // ---------------------------------------------------------------------
 
-    std::filesystem::path chunk_collection::getPath() {
+    std::filesystem::path chunk_collection::getPath()
+    {
         std::lock_guard lock(readmux);
-
-        return *path;
+        return path;
     }
 
     // ---------------------------------------------------------------------
@@ -380,7 +382,7 @@ namespace uh::io{
     {
         std::lock_guard lock(readmux);
 
-        *to_be_deleted = false;
+        to_be_deleted = false;
 
         if(release_path == getPath())
             return;
@@ -390,7 +392,7 @@ namespace uh::io{
             THROW_FROM_ERRNO();
         }
 
-        *path = release_path;
+        path = release_path;
     }
 
     // ---------------------------------------------------------------------
@@ -399,11 +401,11 @@ namespace uh::io{
     {
         std::lock_guard lock(readmux);
 
-        std::vector<uint8_t> out_list(index->size());
+        std::vector<uint8_t> out_list(index.size());
 
         std::size_t counter{};
 
-        for(const auto& item:*index){
+        for(const auto& item:index){
             out_list[counter] = item.first.index_num;
             counter++;
         }
@@ -418,9 +420,9 @@ namespace uh::io{
         std::lock_guard lock(readmux);
 
         if(full())
-            THROW(util::exception,"There are no more free addresses on chunk collection "+path->string()+" !");
+            THROW(util::exception,"There are no more free addresses on chunk collection "+path.string()+" !");
 
-        auto copy_index = *index;
+        auto copy_index = index;
 
         std::sort(copy_index.begin(),copy_index.end(),[](const auto &a, const auto &b)
         {
@@ -448,7 +450,7 @@ namespace uh::io{
     {
         std::lock_guard lock(readmux);
 
-        auto fragment_pos_element = std::find_if(index->begin(),index->end(),
+        auto fragment_pos_element = std::find_if(index.begin(),index.end(),
                                                  [&at](const std::pair<
                                                          serialization::fragment_serialize_size_format,
                                                          std::streamoff
@@ -457,9 +459,9 @@ namespace uh::io{
                                                      return elem.first.index_num == at;
                                                  });
 
-        if(fragment_pos_element == index->end())
+        if(fragment_pos_element == index.end())
             THROW(util::exception,"Fragment " + std::to_string(at)+
-                                  " was not found on chunk collection " + path->string());
+                                  " was not found on chunk collection " + path.string());
 
         return fragment_pos_element;
     }
