@@ -112,7 +112,7 @@ namespace uh::io {
          *
          * @return if the chunk collection is full
          */
-        [[nodiscard]] bool full();
+        [[nodiscard]] bool full() const;
 
         /**
          *
