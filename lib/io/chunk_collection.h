@@ -14,6 +14,8 @@
 #include <algorithm>
 #include <vector>
 #include <span>
+#include <mutex>
+#include <atomic>
 
 #define CHUNK_COLLECTION_BUFFER_SIZE 1 << 23
 
@@ -37,7 +39,7 @@ namespace uh::io {
          * @param collection_location where the file containing the chunk collection is located
          * @throw if no file and no corrupted temporary file from the remove operation exist
          */
-        explicit chunk_collection(std::filesystem::path collection_location,bool create_tempfile = false);
+        explicit chunk_collection(const std::filesystem::path& collection_location,bool create_tempfile = false);
 
         /**
          * write with returning the index that was assigned to the written buffer
@@ -111,7 +113,7 @@ namespace uh::io {
          *
          * @return if the chunk collection is full
          */
-        [[nodiscard]] bool full() const;
+        [[nodiscard]] bool full();
 
         /**
          *
@@ -141,9 +143,14 @@ namespace uh::io {
         std::vector<std::pair<serialization::fragment_serialize_size_format,std::streamoff>>::iterator
         find_address(uint8_t at);
 
-        bool to_be_deleted;
-        std::filesystem::path path;
-        std::vector<std::pair<serialization::fragment_serialize_size_format,std::streamoff>> index;
+        std::unique_ptr<bool> to_be_deleted;
+        std::unique_ptr<std::filesystem::path> path;
+        std::unique_ptr<std::vector<std::pair<serialization::fragment_serialize_size_format,std::streamoff>>> index;
+
+        /*
+         * readmux is blocking read, writemux is blocking write
+         */
+        std::recursive_mutex readmux{};
     };
 
 } // namespace uh::io
