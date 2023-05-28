@@ -16,8 +16,10 @@ namespace uh::io {
         explicit tree_navigator(const std::filesystem::path& root);
 
     private:
-        std::vector<tree_navigator*> sub_trees;
-        std::vector<chunk_collection> chunk_collections;
+        std::vector<std::pair<tree_navigator*,uint8_t>> sub_trees;
+        std::vector<std::pair<chunk_collection*,uint8_t>> chunk_collections;
+
+        std::filesystem::path root;
     };
 
 } // namespace uh::io
