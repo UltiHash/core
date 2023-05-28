@@ -5,18 +5,13 @@
 #ifndef CORE_CHUNK_COLLECTION_H
 #define CORE_CHUNK_COLLECTION_H
 
-#include "serialization/fragment_size_struct.h"
 #include "io/file.h"
-#include "io/temp_file.h"
 #include "io/fragment_on_seekable_device.h"
-#include "io/fragment_on_seekable_reset_device.h"
 #include "serialization/fragment_size_struct.h"
 
 #include <utility>
 #include <filesystem>
 #include <algorithm>
-#include <array>
-#include <numeric>
 #include <vector>
 #include <span>
 

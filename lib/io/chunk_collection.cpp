@@ -4,6 +4,18 @@
 
 #include "chunk_collection.h"
 
+#include "io/file.h"
+#include "io/temp_file.h"
+#include "io/fragment_on_seekable_device.h"
+#include "serialization/fragment_size_struct.h"
+
+#include <utility>
+#include <filesystem>
+#include <algorithm>
+#include <numeric>
+#include <vector>
+#include <span>
+
 namespace uh::io{
 
     chunk_collection::~chunk_collection() {
