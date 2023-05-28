@@ -171,6 +171,7 @@ namespace uh::io {
             std::vector<uint8_t> index_num_list = get_index_num_content_list();
             std::vector<uint8_t> filtered_at_list_in_seek_order;
 
+
             std::copy_if(index_num_list.cbegin(),index_num_list.cend(),filtered_at_list_in_seek_order.begin(),
                          [&at](const auto item)
                          {
@@ -316,7 +317,7 @@ namespace uh::io {
          */
         [[nodiscard]] bool full() const
         {
-            return index.size() == std::numeric_limits<unsigned char>::max();
+            return index.size() == std::numeric_limits<unsigned char>::max()+1;
         }
 
         /**

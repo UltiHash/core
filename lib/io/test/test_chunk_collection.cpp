@@ -61,12 +61,12 @@ namespace
     {
         chunk_collection cc(TEMP_DIR,true);
 
-        for(uint16_t i = 0; i < std::numeric_limits<uint8_t>::max()+1; i++)
+        for(uint16_t i = 0; i <= std::numeric_limits<uint8_t>::max()+1; i++)
         {
             std::string input = uh::test::LOREM_IPSUM + std::to_string(i);
 
             if(i == std::numeric_limits<uint8_t>::max()){
-                BOOST_REQUIRE_THROW(cc.write_indexed(input),uh::util::exception);
+                BOOST_REQUIRE_THROW(cc.write_indexed(input),std::exception);
                 break;
             }
             else{
@@ -96,7 +96,7 @@ namespace
 
         std::vector<std::string> to_write;
 
-        for(uint16_t i = 0; i < std::numeric_limits<uint8_t>::max(); i++)
+        for(uint16_t i = 0; i < std::numeric_limits<uint8_t>::max()+1; i++)
         {
             std::string input = uh::test::LOREM_IPSUM + std::to_string(i);
             to_write.push_back(input);
