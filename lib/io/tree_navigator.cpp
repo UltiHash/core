@@ -7,8 +7,11 @@
 #include "boost/algorithm/hex.hpp"
 
 #include <filesystem>
+#include <stack>
 
 namespace uh::io {
+
+    // ---------------------------------------------------------------------
 
     tree_navigator::~tree_navigator() {
         std::for_each(sub_trees.begin(),sub_trees.end(),[](auto& sub_tree_entry){
@@ -19,6 +22,8 @@ namespace uh::io {
             delete chunk_collection_entry.first;
         });
     }
+
+    // ---------------------------------------------------------------------
 
     tree_navigator::tree_navigator(const std::filesystem::path& root): root(root){
 
@@ -41,61 +46,88 @@ namespace uh::io {
         }
     }
 
-    serialization::fragment_serialize_size_format
+    // ---------------------------------------------------------------------
+
+    std::pair<std::stack<char>, serialization::fragment_serialize_size_format>
     tree_navigator::write_indexed(std::span<const char> buffer, uint32_t alloc) {
-        return serialization::fragment_serialize_size_format();
+        std::vector<chunk_collection*> same_amount_addresses_free;
     }
+
+    // ---------------------------------------------------------------------
 
     std::pair<std::vector<char>, serialization::fragment_serialize_size_format>
-    tree_navigator::read_indexed(uint8_t at) {
-        return std::pair<std::vector<char>, serialization::fragment_serialize_size_format>();
+    tree_navigator::read_indexed(const std::stack<char>& at) {
+
     }
 
-    std::vector<serialization::fragment_serialize_size_format>
+    // ---------------------------------------------------------------------
+
+    std::pair<std::stack<char>, std::vector<serialization::fragment_serialize_size_format>>
     tree_navigator::write_indexed_multi(const std::vector<std::span<const char>> &buffer) {
-        return std::vector<serialization::fragment_serialize_size_format>();
+
     }
+
+    // ---------------------------------------------------------------------
 
     std::vector<std::pair<std::vector<char>, serialization::fragment_serialize_size_format>>
-    tree_navigator::read_indexed_multi(const std::vector<uint8_t> &at) {
-        return std::vector<std::pair<std::vector<char>, serialization::fragment_serialize_size_format>>();
+    tree_navigator::read_indexed_multi(const std::vector<std::stack<char>> &at) {
+
     }
+
+    // ---------------------------------------------------------------------
 
     void tree_navigator::remove(uint8_t at) {
 
     }
 
+    // ---------------------------------------------------------------------
+
     uint16_t tree_navigator::count() {
-        return 0;
+
     }
+
+    // ---------------------------------------------------------------------
 
     std::size_t tree_navigator::size() {
-        return 0;
+
     }
+
+    // ---------------------------------------------------------------------
 
     std::size_t tree_navigator::level_size() {
-        return 0;
+
     }
+
+    // ---------------------------------------------------------------------
 
     std::size_t tree_navigator::content_size() {
-        return 0;
+
     }
+
+    // ---------------------------------------------------------------------
 
     std::size_t tree_navigator::content_level_size() {
-        return 0;
+
     }
 
-    bool tree_navigator::full() const {
-        return false;
-    }
+    // ---------------------------------------------------------------------
 
     uint64_t tree_navigator::free() {
-        return 0;
+
     }
+
+    // ---------------------------------------------------------------------
+
+    uint64_t tree_navigator::free_space() {
+
+    }
+
+    // ---------------------------------------------------------------------
 
     std::filesystem::path tree_navigator::getRoot() {
-        return std::filesystem::path();
+
     }
 
+    // ---------------------------------------------------------------------
 
 } // namespace uh::io

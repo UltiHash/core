@@ -8,6 +8,7 @@
 #include "io/chunk_collection.h"
 
 #include <vector>
+#include <stack>
 
 namespace uh::io {
 
@@ -34,7 +35,7 @@ namespace uh::io {
          * WARNING: allocated space must be written completely (accumulated buffer size is longer or equal alloc)
          * @return tuple<stream size, assigned index position>
          */
-        serialization::fragment_serialize_size_format write_indexed
+        std::pair<std::stack<char>, serialization::fragment_serialize_size_format> write_indexed
                 (std::span<const char> buffer,uint32_t alloc = 0);
 
         /**
@@ -44,21 +45,21 @@ namespace uh::io {
          * @return buffer
          */
         std::pair<std::vector<char>,serialization::fragment_serialize_size_format>
-        read_indexed(uint8_t at);
+        read_indexed(const std::stack<char>& at);
 
         /**
          * Write indexed multiple buffers and return a list of fragment size structs that contain written fragment
          * information.
          * Does not close filestream.
          */
-        std::vector<serialization::fragment_serialize_size_format>
+        std::pair<std::stack<char>, std::vector<serialization::fragment_serialize_size_format>>
         write_indexed_multi(const std::vector<std::span<const char>> &buffer);
 
         /**
          * read indexed multiple positions with smart seeking
          */
         std::vector<std::pair<std::vector<char>, serialization::fragment_serialize_size_format>>
-        read_indexed_multi(const std::vector<uint8_t>& at);
+        read_indexed_multi(const std::vector<std::stack<char>> &at);
 
         /**
          *
@@ -98,15 +99,15 @@ namespace uh::io {
 
         /**
          *
-         * @return if the tree navigator is full
-         */
-        [[nodiscard]] bool full() const;
-
-        /**
-         *
          * @return tell how many addresses are still free
          */
         uint64_t free();
+
+        /**
+         *
+         * @return tell how many bytes more can be stored
+         */
+        uint64_t free_space();
 
         /**
          *
@@ -119,6 +120,12 @@ namespace uh::io {
         std::vector<std::pair<chunk_collection*,uint8_t>> chunk_collections;
 
         std::filesystem::path root;
+        std::size_t size_stored{};
+
+        /**
+         * watches continues state depending processes like writing to an allocated space
+         */
+        bool not_completed_watchdog = false;
     };
 
 } // namespace uh::io
