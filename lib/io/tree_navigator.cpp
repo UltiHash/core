@@ -23,6 +23,7 @@ namespace uh::io {
                 auto* tmp_cc = new chunk_collection(file_object.path());
                 chunk_collections.emplace_back(tmp_cc,index_char);
             }
+
             if(file_object.is_directory()){
                 auto* tmp_sub_tree = new tree_navigator(file_object.path());
                 sub_trees.emplace_back(tmp_sub_tree,index_char);
