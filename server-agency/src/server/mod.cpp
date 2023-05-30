@@ -47,7 +47,7 @@ struct mod::impl
 
     struct server_wrapper
     {
-        explicit server_wrapper(std::unique_ptr<net::server> server);
+        explicit server_wrapper(std::unique_ptr<net::server>&& server);
         void stop();
 
         std::unique_ptr<net::server> server;
@@ -62,7 +62,7 @@ struct mod::impl
 
 // ---------------------------------------------------------------------
 
-mod::impl::server_wrapper::server_wrapper(std::unique_ptr<net::server> serv) : server(std::move(serv))
+mod::impl::server_wrapper::server_wrapper(std::unique_ptr<net::server>&& serv) : server(std::move(serv))
 {
 }
 

@@ -10,17 +10,25 @@ signal::signal()
     sigemptyset(&m_sigset);
     sigaddset(&m_sigset, SIGINT);
     sigaddset(&m_sigset, SIGTERM);
-    pthread_sigmask(SIG_BLOCK, &m_sigset, nullptr);
+
+    if (pthread_sigmask(SIG_BLOCK, &m_sigset, nullptr) != 0)
+        throw std::runtime_error("pthread_sigmask: Failed to block the given signals.");
+
+    INFO << "Signal handler initialized.";
 }
 
 // ---------------------------------------------------------------------
 
 int signal::run() const
 {
-    pthread_sigmask(SIG_UNBLOCK, &m_sigset, nullptr);
+
+    if (pthread_sigmask(SIG_UNBLOCK, &m_sigset, nullptr) != 0)
+        throw std::runtime_error("pthread_sigmask: Failed to unblock the given signals.");
 
     int signum = 0;
-    sigwait(&m_sigset, &signum);
+
+    if (sigwait(&m_sigset, &signum) != 0)
+        throw std::runtime_error("sigwait: Error while waiting for signals.");
 
     DEBUG << " " << strsignal(signum) <<  "(" << signum << ") called, cleaning up ... ";
 
