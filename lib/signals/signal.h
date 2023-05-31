@@ -17,6 +17,13 @@ namespace uh::signal
         signal();
         ~signal() = default;
 
+        /**
+         * register_func is for registering cleanup functions after the signals such as SIGTERM or SIGINT is caught. This
+         * function must be used for signal related cleaning up.
+         *
+         * @param func , function to execute after signal is caught. The function in the mean time gets stored in a vector.
+         */
+
         void register_func(std::function<void()>&& func);
         [[nodiscard]] int run() const;
 

@@ -42,7 +42,7 @@ public:
         return m_dev->read(buffer);
     }
 
-    bool valid() const override
+    [[nodiscard]] bool valid() const override
     {
         return m_dev->valid();
     }
@@ -157,6 +157,8 @@ struct mod::impl
 {
     explicit impl(const config& cfg);
 
+    void stop(const std::string& reason);
+
     io_context io;
     std::unordered_map<node_ref, std::unique_ptr<client_pool>> nodes;
     std::unique_ptr <routing_interface> m_routing;
@@ -167,8 +169,18 @@ struct mod::impl
 
 mod::impl::impl(const config& cfg)
     : nodes(make_nodes(io, cfg)),
-    m_routing(std::make_unique <sample_hash_routing> (sample_hash_routing (nodes)))
+    m_routing(std::make_unique <sample_hash_routing> (nodes))
 {
+}
+
+// ---------------------------------------------------------------------
+
+void mod::impl::stop(const std::string& reason)
+{
+    for (const auto& pair : nodes)
+    {
+        pair.second->quit_all(reason);
+    }
 }
 
 // ---------------------------------------------------------------------
@@ -187,6 +199,15 @@ mod::~mod() = default;
 void mod::start()
 {
     INFO << "          starting cluster module";
+}
+
+// ---------------------------------------------------------------------
+
+void mod::stop()
+{
+    INFO << "          stopping cluster module";
+
+    m_impl->stop("server agency stopped");
 }
 
 // ---------------------------------------------------------------------
