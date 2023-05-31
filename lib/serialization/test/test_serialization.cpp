@@ -215,10 +215,8 @@ BOOST_AUTO_TEST_CASE(buffered_serialization_test) {
 BOOST_AUTO_TEST_CASE(serialization_type_tests) {
     typedef serialization <buffered_serializer<sl_serializer>, sl_deserializer> sertype;
 
-    BOOST_ASSERT (is_serializer <sl_serializer>::value);
-    BOOST_ASSERT (is_deserializer <sl_deserializer>::value);
-    BOOST_ASSERT (is_serialization_type <sertype>::value);
-
-
+    BOOST_CHECK (is_serializer <sl_serializer>::value);
+    BOOST_CHECK (is_deserializer <sl_deserializer>::value);
+    BOOST_CHECK (is_serialization_type <sertype>::value);
 }
 
