@@ -9,7 +9,7 @@ signal::signal()
 {
     if ( sigemptyset(&m_sigset) == -1 || sigaddset(&m_sigset, SIGINT) == -1 || sigaddset(&m_sigset, SIGTERM) == -1 )
     {
-        throw std::runtime_error("sig*set: Failed to initialize the signals given.");
+        throw std::runtime_error("sig_set: Failed to initialize the given signals.");
     }
 
     if (pthread_sigmask(SIG_BLOCK, &m_sigset, nullptr) != 0)
