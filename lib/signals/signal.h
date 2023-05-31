@@ -23,8 +23,8 @@ namespace uh::signal
          *
          * @param func , function to execute after signal is caught. The function in the mean time gets stored in a vector.
          */
-
         void register_func(std::function<void()>&& func);
+
         [[nodiscard]] int run() const;
 
     private:
