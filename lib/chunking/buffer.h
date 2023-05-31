@@ -88,7 +88,6 @@ private:
 
     std::size_t m_wptr;
     std::size_t m_rptr;
-    std::size_t m_size;
 };
 
 // ---------------------------------------------------------------------

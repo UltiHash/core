@@ -8,8 +8,8 @@ namespace uh::io
 // ---------------------------------------------------------------------
 
 file::file(const std::filesystem::path &path, std::ios_base::openmode mode)
-    : m_path(path),
-      m_io(path, mode)
+    : m_io(path, mode),
+      m_path(path)
 {
     m_io.exceptions(std::ifstream::badbit);
 }
@@ -62,6 +62,19 @@ void file::seek(std::streamoff off, std::ios_base::seekdir whence)
 std::filesystem::path file::path()
 {
     return m_path;
+}
+
+// ---------------------------------------------------------------------
+
+std::size_t file::size()
+{
+    auto pos = m_io.tellg();
+    m_io.seekg(0, std::ios::end);
+
+    auto rv = m_io.tellg();
+    m_io.seekg(pos, std::ios::beg);
+
+    return rv;
 }
 
 // ---------------------------------------------------------------------

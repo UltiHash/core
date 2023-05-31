@@ -70,13 +70,6 @@ public:
     std::list< std::pair<node_ref, std::size_t> > bc_free_space();
 
     /**
-     * Send a read request for a given hash to all nodes.
-     * @return the block for the given hash
-     * @throw the block was not found
-     */
-    std::unique_ptr<io::device> bc_read_block(const uh::protocol::blob& hash);
-
-    /**
      * Allocate a chunk of given side on a cluster node and return an allocation
      * to it.
      */

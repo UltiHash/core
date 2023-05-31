@@ -1,10 +1,11 @@
 #include "dump_storage.h"
 
+#include <util/sha512.h>
+#include <io/device_generator.h>
 #include <io/file.h>
 #include <io/sha512.h>
 
 #include <utility>
-#include "util/sha512.h"
 
 
 namespace uh::dbn::storage {
@@ -96,8 +97,8 @@ void dump_storage::start(){
 
 // ---------------------------------------------------------------------
 
-std::unique_ptr<io::device> dump_storage::read_block(const std::span <char>& hash) {
-
+std::unique_ptr<io::data_generator> dump_storage::read_block(const std::span <char>& hash)
+{
     std::string hash_string(hash.begin(), hash.end());
 
     std::string hex = to_hex_string(hash.begin(), hash.end());
@@ -109,7 +110,8 @@ std::unique_ptr<io::device> dump_storage::read_block(const std::span <char>& has
         THROW(util::exception, "unknown hash: " + hex);
     }
 
-    return file;
+    auto size = file->size();
+    return std::make_unique<io::device_generator>(std::move(file), size);
 }
 
 // ---------------------------------------------------------------------

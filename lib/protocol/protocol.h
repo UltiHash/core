@@ -13,11 +13,7 @@ namespace uh::protocol
 
 class protocol
 {
-protected:
-    std::shared_ptr<net::socket> client_;
 public:
-    explicit protocol(std::shared_ptr<net::socket> client): client_(std::move(client)) {}
-
     virtual ~protocol() = default;
     virtual void handle() = 0;
 };

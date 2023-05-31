@@ -39,6 +39,7 @@ private:
 // ---------------------------------------------------------------------
 
 DEFINE_EXCEPTION(illegal_args);
+DEFINE_EXCEPTION(illegal_state);
 DEFINE_EXCEPTION(system_error);
 DEFINE_EXCEPTION(no_space_error);
 DEFINE_SUB_EXCEPTION(file_exists, system_error);

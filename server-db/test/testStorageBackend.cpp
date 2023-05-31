@@ -7,12 +7,14 @@
 #define BOOST_TEST_MODULE "uhServerDb Backend Tests"
 #endif
 
-#include <boost/test/unit_test.hpp>
-#include <metrics/mod.h>
-#include <storage/backends/dump_storage.h>
 #include <util/temp_dir.h>
-#include <storage/backends/hierarchical_storage.h>
+#include <io/buffer.h>
+#include <metrics/mod.h>
 #include <persistence/storage/scheduled_compressions_persistence.h>
+#include <storage/backends/dump_storage.h>
+#include <storage/backends/hierarchical_storage.h>
+
+#include <boost/test/unit_test.hpp>
 
 namespace {
 
@@ -57,30 +59,27 @@ uh::protocol::block_meta_data integrate_data (const std::vector <char> &data, uh
 
 // ---------------------------------------------------------------------
 
-
 BOOST_FIXTURE_TEST_CASE( dump_storage_io, storage_fixture )
 {
-    auto block_md = integrate_data (to_vector(CONTENTS_STR), backend());
+    auto block_md = integrate_data(to_vector(CONTENTS_STR), backend());
 
-    auto read_device = backend().read_block(block_md.hash);
-    std::vector <char> fetched_data;
-    fetched_data.resize(CONTENTS_STR.size());
-    read_device->read(fetched_data);
-    auto fetched_hex =  uh::dbn::storage::to_hex_string (fetched_data.begin(), fetched_data.end ());
-    auto original_hex =  uh::dbn::storage::to_hex_string (CONTENTS_STR.begin(), CONTENTS_STR.end ());
+    auto data = backend().read_block(block_md.hash);
+    uh::io::buffer buffer(data->size());
 
-     BOOST_CHECK(fetched_hex == original_hex);
+    buffer.write_range(*data);
+
+    auto fetched_hex = uh::dbn::storage::to_hex_string(buffer.data().begin(), buffer.data().end());
+    auto original_hex = uh::dbn::storage::to_hex_string(CONTENTS_STR.begin(), CONTENTS_STR.end());
+
+    BOOST_CHECK(fetched_hex == original_hex);
 }
-
 
 // ---------------------------------------------------------------------
 
 BOOST_FIXTURE_TEST_CASE( dump_storage_no_duplicates, storage_fixture )
 {
     auto block_md1 = integrate_data (to_vector(CONTENTS_STR), backend());
-
     auto block_md2 = integrate_data (to_vector(CONTENTS_STR), backend());
-
 
     auto hash1 =  uh::dbn::storage::to_hex_string (block_md1.hash.begin(), block_md1.hash.end ());
     auto hash2 =  uh::dbn::storage::to_hex_string (block_md2.hash.begin(), block_md2.hash.end ());
