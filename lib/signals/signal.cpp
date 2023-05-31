@@ -9,12 +9,12 @@ signal::signal()
 {
     if ( sigemptyset(&m_sigset) == -1 || sigaddset(&m_sigset, SIGINT) == -1 || sigaddset(&m_sigset, SIGTERM) == -1 )
     {
-        throw std::runtime_error("sig_set: Failed to initialize the given signals.");
+        throw std::runtime_error("sigset: Failed to initialize the signal set.");
     }
 
     if (pthread_sigmask(SIG_BLOCK, &m_sigset, nullptr) != 0)
     {
-        throw std::runtime_error("pthread_sigmask: Failed to block the given signals.");
+        throw std::runtime_error("pthread_sigmask: Failed to block the signals in the set.");
     }
 
     INFO << "Signal handler initialized.";
