@@ -58,7 +58,7 @@ int main(int argc, const char** argv)
                                                         cluster_module.stop(); });
 
         auto signal_received = signal_handler.run();
-        INFO << " agency node clean shutdown: signal " << strsignal(signal_received) << "(" << signal_received << ") ...";
+        INFO << " agency node clean shutdown: signal " << strsignal(signal_received) << "(" << signal_received << ")";
 
     }
     catch (const std::exception& e)
