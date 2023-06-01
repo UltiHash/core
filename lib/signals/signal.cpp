@@ -1,4 +1,5 @@
 #include <signals/signal.h>
+#include <util/exception.h>
 
 namespace uh::signal
 {
@@ -9,12 +10,12 @@ signal::signal()
 {
     if ( sigemptyset(&m_sigset) == -1 || sigaddset(&m_sigset, SIGINT) == -1 || sigaddset(&m_sigset, SIGTERM) == -1 )
     {
-        throw std::runtime_error("sig*set: Failed to initialize the signals given.");
+        THROW_FROM_ERRNO();
     }
 
     if (pthread_sigmask(SIG_BLOCK, &m_sigset, nullptr) != 0)
     {
-        throw std::runtime_error("pthread_sigmask: Failed to block the given signals.");
+        THROW_FROM_ERRNO();
     }
 
     INFO << "Signal handler initialized.";
@@ -28,10 +29,10 @@ int signal::run() const
 
     if (sigwait(&m_sigset, &signum) != 0)
     {
-        throw std::runtime_error("sigwait: Error while waiting for signals.");
+        THROW_FROM_ERRNO();
     }
 
-    DEBUG << " " << strsignal(signum) <<  "(" << signum << ") called, cleaning up ... ";
+    DEBUG << " " << strsignal(signum) <<  "(" << signum << ") called, cleaning up ";
 
     for (const auto& cleanup_function : m_handler_functions)
     {

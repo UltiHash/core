@@ -19,7 +19,8 @@ namespace uh::signal
 
         /**
          * register_func is for registering cleanup functions after the signals such as SIGTERM or SIGINT is caught. This
-         * function must be used for signal related cleaning up.
+         * function must be used for signal related cleaning up. It is important to note that the functions are executed
+         * in the order that they were added.
          *
          * @param func , function to execute after signal is caught. The function in the mean time gets stored in a vector.
          */

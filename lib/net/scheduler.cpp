@@ -91,9 +91,10 @@ void scheduler::stop()
 
     for (auto& th : m_threads)
     {
-        if (th.joinable())
             th.join();
     }
+
+    m_threads.clear();
 }
 
 // ---------------------------------------------------------------------
