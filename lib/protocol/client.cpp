@@ -48,6 +48,7 @@ server_information client::hello(const std::string& client_version)
 
     return {
         .version = resp.server_version,
+        .uuid = resp.server_uuid,
         .protocol = resp.protocol_version,
     };
 }

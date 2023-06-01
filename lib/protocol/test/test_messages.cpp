@@ -62,12 +62,14 @@ BOOST_AUTO_TEST_CASE( hello_response )
     uh::serialization::buffered_serialization ser (dev);
     write(ser, status{ .code = status::OK });
     write(ser, hello::response{ .server_version = "1.0.0",
+            .server_uuid = "01234567-89AB-CDEF-0123-456789ABCDEF"
             .protocol_version = 0x55 });
     ser.sync();
 
     hello::response res;
     read(ser, res);
     BOOST_TEST(res.server_version == "1.0.0");
+    BOOST_TEST(res.server_uid == "01234567-89AB-CDEF-0123-456789ABCDEF");
     BOOST_TEST(res.protocol_version == 0x55);
 }
 

@@ -18,6 +18,7 @@ typedef std::vector<char> blob;
 struct server_information
 {
     std::string version;
+    std::string uuid;
     unsigned protocol;
 };
 

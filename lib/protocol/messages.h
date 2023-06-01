@@ -45,6 +45,7 @@ struct hello
     struct response
     {
         std::string server_version;
+        std::string server_uuid;
         unsigned protocol_version;
     };
 

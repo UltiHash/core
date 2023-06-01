@@ -21,7 +21,7 @@ protocol::client_pool& sample_hash_routing::route_data(const std::span <const ch
 
     if (data.size() < SAMPLE_SIZE) {
         std::memcpy (sample, data.data(), data.size());
-        std::memset (sample, 0, SAMPLE_SIZE - data.size());
+        std::memset (sample +  data.size(), 0, SAMPLE_SIZE - data.size());
     }
     else {
 

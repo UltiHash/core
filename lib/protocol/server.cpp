@@ -97,6 +97,7 @@ void server::handle_hello()
     write(m_bs, status{ status::OK });
     write(m_bs, hello::response{
             .server_version = info.version,
+            .server_uuid = info.uuid,
             .protocol_version = info.protocol });
 
     m_bs.sync();

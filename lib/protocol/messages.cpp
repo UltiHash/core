@@ -52,6 +52,7 @@ void read(serialization::buffered_serialization& in, hello::request& request)
 void write(serialization::buffered_serialization& out, const hello::response& response)
 {
     out.write(response.server_version);
+    out.write(response.server_uuid);
     out.write(response.protocol_version);
 }
 
@@ -64,6 +65,7 @@ void read(serialization::buffered_serialization& in, hello::response& request)
     hello::response tmp;
 
     tmp.server_version = in.read<std::string> ();
+    tmp.server_uuid = in.read<std::string> ();
     tmp.protocol_version = in.read<unsigned> ();
 
     std::swap(tmp, request);
