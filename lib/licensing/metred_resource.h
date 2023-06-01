@@ -17,6 +17,7 @@ namespace uh::licensing{
 
         /**
          *
+         * @param dealloc a resource
          */
         virtual void deallocate(std::size_t dealloc) = 0;
 

@@ -11,6 +11,8 @@ namespace uh::licensing {
 
     class check_airgap_license: public check_license {
 
+    public:
+
         bool valid() override;
 
     };
