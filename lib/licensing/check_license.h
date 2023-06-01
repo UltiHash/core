@@ -20,6 +20,6 @@ namespace uh::licensing{
 
     };
 
-}
+} // namespace uh::licensing
 
 #endif //CORE_CHECK_LICENSE_H

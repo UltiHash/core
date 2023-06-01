@@ -30,4 +30,4 @@ namespace uh::licensing {
         stored_val -= dealloc;
     }
 
-} // licensing
+} // namespace uh::licensing
