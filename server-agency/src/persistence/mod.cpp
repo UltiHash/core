@@ -21,6 +21,14 @@ void mod::start()
 
 // ---------------------------------------------------------------------
 
+void mod::stop()
+{
+    INFO << "         stopping persistence module";
+    m_storage->stop();
+}
+
+// ---------------------------------------------------------------------
+
 client_metrics& mod::clientM_persistence()
 {
     return *m_storage;

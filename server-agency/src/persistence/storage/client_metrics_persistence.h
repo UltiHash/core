@@ -15,6 +15,8 @@ namespace uh::an::persistence
         explicit client_metrics(const uh::options::persistence_config& config);
 
         void start();
+        void stop();
+
         void add(const uh::protocol::client_statistics::request& req);
         void flush();
 
