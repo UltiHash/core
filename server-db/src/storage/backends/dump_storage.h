@@ -30,7 +30,8 @@ class dump_storage : public backend {
             }
         }
 
-        virtual void start() override;
+        void start() override;
+        void stop() override;
 
         /**
          * Read a data block identified by it's hash from the storage.

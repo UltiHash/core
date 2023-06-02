@@ -97,6 +97,13 @@ void dump_storage::start(){
 
 // ---------------------------------------------------------------------
 
+void dump_storage::stop(){
+
+    INFO << "stopping dump storage";
+}
+
+// ---------------------------------------------------------------------
+
 std::unique_ptr<io::data_generator> dump_storage::read_block(const std::span <char>& hash)
 {
     std::string hash_string(hash.begin(), hash.end());
