@@ -16,6 +16,8 @@ namespace uh::licensing{
 
         explicit licensed_feature(std::string feature_name,bool is_active);
 
+        [[nodiscard]] const std::string &getFeatureName() const;
+
         [[nodiscard]] virtual bool is_active() const = 0;
 
     private:
