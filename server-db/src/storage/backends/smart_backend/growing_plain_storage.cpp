@@ -37,7 +37,7 @@ void growing_plain_storage::destroy() {
 
 char *growing_plain_storage::init_mmap(const std::filesystem::path &file_path, size_t init_size, size_t &file_size) {
     const auto existing_storage = std::filesystem::exists(file_path.c_str());
-    if (!existing_storage) {
+    if (!existing_storage and !file_path.parent_path().empty()) {
         std::filesystem::create_directories(file_path.parent_path());
     }
     const auto fd = open(file_path.c_str(), O_CREAT | O_RDWR, S_IRUSR | S_IWUSR);

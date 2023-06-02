@@ -98,12 +98,13 @@ private:
         set_config conf;
         conf.set_minimum_free_space = 256;
         conf.set_init_file_size = 1024;
-        conf.fragment_set_path = "set_data";
+        conf.fragment_set_path = "set/set_data";
         return conf;
     }
     static data_store_config define_test_data_store_conf () {
         data_store_config conf;
         conf.data_store_files = generate_files();
+        conf.data_store_file_size = 32 * 1024;
         return conf;
     }
     dedupe_config define_test_dedupe_conf () {
@@ -115,7 +116,7 @@ private:
         std::list <std::filesystem::path> files_info;
 
         for (int i = 0; i < 10; ++i) {
-            std::filesystem::path p {std::string ("file_") + std::to_string(i)};
+            std::filesystem::path p {std::string ("ds/file_") + std::to_string(i)};
 
             files_info.emplace_front (p);
         }
@@ -463,7 +464,7 @@ BOOST_FIXTURE_TEST_CASE(basic_growing_mmap_storage_test, files_info_fixture)
 
 }
 
-std::string serialize_spans (std::list <std::span <char>> spans) {
+std::string serialize_spans (std::forward_list <std::span <char>> spans) {
     std::string res;
     for (const auto sp: spans) {
         res += std::string (sp.data(), sp.size());
@@ -517,27 +518,27 @@ BOOST_FIXTURE_TEST_CASE(smart_core_basic_test, files_info_fixture) {
         BOOST_TEST (i6 == 0);
 
         const auto r1 = sm.retrieve(k1);
-        const auto sr1 = serialize_spans(r1);
+        const auto sr1 = serialize_spans(r1.second);
         BOOST_TEST (sr1.size() == v1.size());
         BOOST_TEST (std::memcmp(sr1.data(), v1.data(), v1.size()) == 0);
 
         const auto r2 = sm.retrieve(k2);
-        const auto sr2 = serialize_spans(r2);
+        const auto sr2 = serialize_spans(r2.second);
         BOOST_TEST (sr2.size() == v2.size());
         BOOST_TEST (std::memcmp(sr2.data(), v2.data(), v2.size()) == 0);
 
         const auto r4 = sm.retrieve(k4);
-        const auto sr4 = serialize_spans(r4);
+        const auto sr4 = serialize_spans(r4.second);
         BOOST_TEST (sr4.size() == v4.size());
         BOOST_TEST (std::memcmp(sr4.data(), v4.data(), v4.size()) == 0);
 
         const auto r5 = sm.retrieve(k5);
-        const auto sr5 = serialize_spans(r5);
+        const auto sr5 = serialize_spans(r5.second);
         BOOST_TEST (sr5.size() == v5.size());
         BOOST_TEST (std::memcmp(sr5.data(), v5.data(), v5.size()) == 0);
 
         const auto r6 = sm.retrieve(k6);
-        const auto sr6 = serialize_spans(r6);
+        const auto sr6 = serialize_spans(r6.second);
         BOOST_TEST (sr6.size() == v6.size());
         BOOST_TEST (std::memcmp (sr6.data(), v6.data(), v6.size()) == 0);
     }
@@ -546,34 +547,29 @@ BOOST_FIXTURE_TEST_CASE(smart_core_basic_test, files_info_fixture) {
         smart_core sm(get_smart_config());
 
         const auto r1 = sm.retrieve(k1);
-        const auto sr1 = serialize_spans(r1);
+        const auto sr1 = serialize_spans(r1.second);
         BOOST_TEST (sr1.size() == v1.size());
         BOOST_TEST (std::memcmp(sr1.data(), v1.data(), v1.size()) == 0);
 
         const auto r2 = sm.retrieve(k2);
-        const auto sr2 = serialize_spans(r2);
+        const auto sr2 = serialize_spans(r2.second);
         BOOST_TEST (sr2.size() == v2.size());
         BOOST_TEST (std::memcmp(sr2.data(), v2.data(), v2.size()) == 0);
 
         const auto r4 = sm.retrieve(k4);
-        const auto sr4 = serialize_spans(r4);
+        const auto sr4 = serialize_spans(r4.second);
         BOOST_TEST (sr4.size() == v4.size());
         BOOST_TEST (std::memcmp(sr4.data(), v4.data(), v4.size()) == 0);
 
         const auto r5 = sm.retrieve(k5);
-        const auto sr5 = serialize_spans(r5);
+        const auto sr5 = serialize_spans(r5.second);
         BOOST_TEST (sr5.size() == v5.size());
         BOOST_TEST (std::memcmp(sr5.data(), v5.data(), v5.size()) == 0);
 
         const auto r6 = sm.retrieve(k6);
-        const auto sr6 = serialize_spans(r6);
+        const auto sr6 = serialize_spans(r6.second);
         BOOST_TEST (sr6.size() == v6.size());
         BOOST_TEST (std::memcmp (sr6.data(), v6.data(), v6.size()) == 0);
     }
-
-}
-
-BOOST_FIXTURE_TEST_CASE(smart_storage_basic_test, files_info_fixture) {
-    smart_storage sm (get_smart_config());
 
 }
