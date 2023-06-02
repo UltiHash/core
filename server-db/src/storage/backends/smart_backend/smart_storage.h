@@ -1,68 +1,60 @@
 //
-// Created by masi on 5/22/23.
+// Created by masi on 5/30/23.
 //
 
 #ifndef CORE_SMART_STORAGE_H
 #define CORE_SMART_STORAGE_H
 
-#include "persisted_redblack_tree_set.h"
-#include "fixed_managed_storage.h"
-#include "persisted_robinhood_hashmap.h"
+#include <vector>
+
+#include "smart_config.h"
+#include "smart_core.h"
+#include <storage/backend.h>
+#include <io/span_generator.h>
+#include <openssl/evp.h>
+#include <openssl/sha.h>
 
 namespace uh::dbn::storage::smart {
 
-class smart_storage {
+smart_config make_smart_config (const std::filesystem::path& root, size_t size, size_t max_file_size);
+
+class smart_storage : public uh::dbn::storage::backend {
 
 public:
-    smart_storage (const std::forward_list<file_mmap_info>& data_files,
-                   std::filesystem::path fragment_set_path,
-                   std::filesystem::path hashtable_path,
-                   std::filesystem::path hashtable_value_directory);
 
-    /**
-     * Integrates the data of the given hash
-     * @param hash
-     * @param data
-     * @return effective size
-     */
-    size_t integrate (std::span <char> hash, std::string_view data);
+    explicit smart_storage (const smart_config& smart_conf, uh::dbn::metrics::storage_metrics& storage_metrics);
 
-    /**
-     * Retrieves the fragments of the given hash in the reveresed order
-     * @param hash
-     * @return fragments in the reveresed order
-     */
-    std::vector <fragment> retrieve (std::span <char> hash);
+    void start() override;
 
-    /**
-     * Recreates the data based on the reversed ordered fragments
-     * @return data
-     */
-    std::vector <char> serialize_fragments (const std::vector<fragment>&);
+    std::unique_ptr<io::data_generator> read_block(const std::span <char>& hash) override;
 
-    /**
-     * stefan's network io_uring-based code will invoke this function for each fragment (in reverse order) to send out the data
-     * @return
-     */
-    std::span <char> get_fragment_data_ptr (const fragment&);
+    std::pair <std::size_t, std::vector <char>> write_block (const std::span <char>& data) override;
+
+    size_t free_space() override;
+
+    size_t used_space() override;
+
+    size_t allocated_space() override;
+
+    std::string backend_type() override;
+
+    std::unique_ptr<uh::protocol::allocation> allocate (std::size_t size) override;
+
+    std::unique_ptr<uh::protocol::allocation> allocate_multi (std::size_t size) override;
 
 private:
 
-    std::pair <std::vector <fragment>, size_t> deduplicate (std::string_view data);
+    void update_space_consumption();
 
-    uint64_t store_data (const std::string_view& frag);
-
-    static inline size_t largest_common_prefix (const std::string_view &str1, const std::string_view& str2) noexcept;
-
-    constexpr static size_t HASH_SIZE = 128;
-    constexpr static size_t MIN_FRAGMENT_SIZE = 4;
-
-    fixed_managed_storage m_data_store;
-    persisted_redblack_tree_set m_fragment_set;
-    persisted_robinhood_hashmap m_hashtable;
+    const smart_config m_smart_conf;
+    smart_core m_smart_core;
+    const std::size_t m_size;
+    std::atomic <std::size_t> m_used;
+    constexpr static std::string_view m_type = "SmartStorage";
+    EVP_MD_CTX* m_sha_ctx;
+    std::shared_mutex m_mutex;
+    uh::dbn::metrics::storage_metrics& m_storage_metrics;
 
 };
-
 } // end namespace uh::dbn::storage::smart
-
 #endif //CORE_SMART_STORAGE_H

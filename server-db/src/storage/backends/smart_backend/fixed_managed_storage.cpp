@@ -9,12 +9,13 @@ namespace uh::dbn::storage::smart {
 
 
 
-fixed_managed_storage::fixed_managed_storage(const std::forward_list<file_mmap_info>& files):
-    m_log_file_path (generate_log_file_path(files)),
+fixed_managed_storage::fixed_managed_storage(data_store_config conf):
+    m_conf(std::move (conf)),
+    m_log_file_path (generate_log_file_path()),
     m_log(create_logger()) {
-
-    files_consistent_existency(files);
-    for (const auto &file: files) {
+    std::filesystem::create_directories(m_conf.data_store_files.front().parent_path());
+    files_existence_consistency ();
+    for (const auto &file: m_conf.data_store_files) {
         mmap_file (file);
     }
 
@@ -49,23 +50,17 @@ void *fixed_managed_storage::get_raw_ptr(size_t offset) {
     return get_resource(offset).m_ptr.get_offset_ptr_at(offset).m_addr;
 }
 
-void fixed_managed_storage::mmap_file(const file_mmap_info& file) {
+void fixed_managed_storage::mmap_file(const std::filesystem::path& file) {
 
-    const auto fd = open(file.path.c_str(), O_CREAT | O_RDWR, S_IRUSR | S_IWUSR);
-    ftruncate(fd, file.max_size);
+    const auto fd = open(file.c_str(), O_CREAT | O_RDWR, S_IRUSR | S_IWUSR);
+    ftruncate(fd, m_conf.data_store_file_size);
     auto flags = MAP_SHARED;
-    if (file.address != nullptr) {
-        flags |= MAP_FIXED;
-    }
-    const auto ptr = mmap(file.address, file.max_size, PROT_READ | PROT_WRITE, flags, fd, 0);
+    const auto ptr = mmap(nullptr, m_conf.data_store_file_size, PROT_READ | PROT_WRITE, flags, fd, 0);
     close(fd);
-    if (file.address != nullptr and ptr != file.address) {
-        throw std::runtime_error("error: could not pin the file at the desired pointer!");
-    }
     m_resources.emplace_hint(m_resources.cend(),std::piecewise_construct,
                                     std::forward_as_tuple(m_aggregated_size),
-                                    std::forward_as_tuple(ptr, file.path, file.max_size, m_aggregated_size));
-    m_aggregated_size += file.max_size;
+                                    std::forward_as_tuple(ptr, file, m_conf.data_store_file_size, m_aggregated_size));
+    m_aggregated_size += m_conf.data_store_file_size;
 }
 
 std::fstream fixed_managed_storage::create_logger() const {
@@ -113,22 +108,22 @@ void fixed_managed_storage::do_deallocate (const offset_ptr& offset_ptr, size_t 
     resource.get_pool_resource().deallocate(deallocate_offset_ptr.m_addr, bytes);
 }
 
-std::filesystem::path fixed_managed_storage::generate_log_file_path (const std::forward_list<file_mmap_info>& files) {
+std::filesystem::path fixed_managed_storage::generate_log_file_path () {
 
     std::hash <std::string> hasher;
     std::string file_name = "log_";
-    for (const auto& fi: files) {
+    for (const auto& fi: m_conf.data_store_files) {
         std::stringstream hash_stream;
-        hash_stream << std::hex << hasher (fi.path);
+        hash_stream << std::hex << hasher (fi);
         file_name += hash_stream.str().substr(0, 2);
     }
     return file_name;
 }
 
-bool fixed_managed_storage::files_consistent_existency (const std::forward_list<file_mmap_info>& files) {
-    bool existed_files = std::filesystem::exists(files.begin()->path);
-    for (auto itr = std::next (files.cbegin()); itr != files.cend(); itr ++) {
-        if (std::filesystem::exists(itr->path) != existed_files) {
+bool fixed_managed_storage::files_existence_consistency () {
+    bool existed_files = std::filesystem::exists(*m_conf.data_store_files.cbegin());
+    for (auto itr = m_conf.data_store_files.cbegin(); itr != m_conf.data_store_files.cend(); itr ++) {
+        if (std::filesystem::exists(*itr) != existed_files) {
             throw std::runtime_error ("error: the data files must be consistent in their existence!");
         }
     }

@@ -16,13 +16,15 @@
 #include "fixed_managed_storage.h"
 #include "growing_managed_storage.h"
 #include "growing_plain_storage.h"
+#include <mutex>
 
 namespace uh::dbn::storage::smart {
 
 class persisted_robinhood_hashmap {
 
 public:
-    persisted_robinhood_hashmap (const size_t key_size, std::filesystem::path key_file, std::filesystem::path value_file);
+
+    explicit persisted_robinhood_hashmap (map_config map_conf);
 
     /**
      * Inserts the given key value in the hash map.
@@ -65,21 +67,15 @@ private:
     inline bool need_rehash (const char* inserted_element) const;
     void extend_and_rehash ();
 
-    constexpr static size_t MAP_INIT_KEY_FILE_SIZE = 1024ul;
-    constexpr static size_t MIN_VALUE_FILE_SIZE = 1024ul*1024ul;
-    constexpr static size_t MAX_VALUE_FILE_SIZE = 16ul*1024ul*1024ul;
-    constexpr static double KEY_STORE_LOAD_FACTOR = 0.9;
     constexpr static size_t KEY_STORE_META_DATA_SIZE = sizeof (size_t);
     constexpr static size_t POOR_VALUE_SIZE = sizeof (uint8_t);
     constexpr static size_t VALUE_LENGTH_SIZE = sizeof (uint32_t);
     constexpr static size_t VALUE_PTR_SIZE = sizeof (uint64_t);
-    constexpr static size_t MAX_EXTENSION_FACTOR = 32;
 
-    const size_t m_key_size;
+    const map_config m_map_conf;
     const size_t m_key_value_span_size;
     const size_t m_hash_element_size;
     std::vector <char> m_empty_key;
-    std::filesystem::path m_value_file;
     std::shared_mutex m_mutex;
     growing_plain_storage m_key_store;
     growing_managed_storage m_value_store;

@@ -5,6 +5,8 @@
 #ifndef CORE_FIXED_MANAGED_STORAGE_H
 #define CORE_FIXED_MANAGED_STORAGE_H
 
+#include "smart_config.h"
+
 #include <filesystem>
 #include <forward_list>
 #include <fstream>
@@ -25,12 +27,6 @@ class fixed_managed_storage;
 class growing_managed_storage;
 
 void* align_ptr (void* ptr);
-
-struct file_mmap_info {
-    std::filesystem::path path;
-    void *address;
-    std::size_t max_size;
-};
 
 class offset_ptr {
 public:
@@ -65,7 +61,7 @@ class fixed_managed_storage {
 
 public:
 
-    explicit fixed_managed_storage (const std::forward_list<file_mmap_info>& files);
+    explicit fixed_managed_storage (data_store_config);
 
     /** Allocate new memory in the mmap_storage and return a pointer to it.
      *  @throws bad_alloc
@@ -104,7 +100,7 @@ private:
 
     void do_deallocate (const offset_ptr& , size_t bytes);
 
-    void mmap_file (const file_mmap_info& file);
+    void mmap_file (const std::filesystem::path& file);
 
     resource_entry& get_resource (size_t offset, size_t size = 0);
 
@@ -112,15 +108,15 @@ private:
 
     void replay_logger ();
 
-    static std::filesystem::path generate_log_file_path (const std::forward_list<file_mmap_info>& files) ;
+    std::filesystem::path generate_log_file_path () ;
 
-    static bool files_consistent_existency (const std::forward_list<file_mmap_info>& files);
+    bool files_existence_consistency ();
 
+    const data_store_config m_conf;
     std::filesystem::path m_log_file_path;
     std::fstream m_log;
     std::map <size_t, resource_entry> m_resources;
     std::size_t m_aggregated_size {};
-
 };
 
 

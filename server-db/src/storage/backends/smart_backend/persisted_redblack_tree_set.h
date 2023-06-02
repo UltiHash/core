@@ -13,6 +13,7 @@
 
 #include "fixed_managed_storage.h"
 #include "growing_plain_storage.h"
+#include "smart_config.h"
 
 namespace uh::dbn::storage::smart {
 
@@ -63,7 +64,7 @@ public:
         friend persisted_redblack_tree_set;
     };
 
-    persisted_redblack_tree_set(fixed_managed_storage& data_store, std::filesystem::path file);
+    persisted_redblack_tree_set (set_config set_conf, fixed_managed_storage& data_store);
 
     uint64_t insert_index (const std::string_view& frag, uint64_t data_offset, uint64_t hint = NILL_OFFSET);
 
@@ -80,6 +81,8 @@ private:
     search_result unlocked_find (const std::string_view& frag, uint64_t hint);
 
     void balance (node& z);
+
+    void print_set (std::ostream& out, uint64_t offset);
 
     node directed_balance (node& z, direction_t d);
 
@@ -100,14 +103,12 @@ private:
 
     inline int comp (const std::string_view& new_fragment, const fragment& f);
 
-    constexpr static size_t SET_INIT_FILE_SIZE = 1024ul;
-    constexpr static size_t SET_FILE_EXTEND_LIMIT = 256ul;
     constexpr static uint64_t NILL_OFFSET = 2 * sizeof (uint64_t);
 
+    const set_config m_set_conf;
     fixed_managed_storage& m_data_store;
-    std::filesystem::path m_file_path;
-    node m_nil {};
     growing_plain_storage m_index_store;
+    node m_nil {};
     std::atomic <uint64_t*> m_root;
     std::atomic_ref <uint64_t> m_end;
     boost::shared_mutex m_mutex;

@@ -1,124 +1,112 @@
 //
-// Created by masi on 5/22/23.
+// Created by masi on 5/30/23.
 //
-
 #include "smart_storage.h"
-
-#include <ranges>
-
 
 namespace uh::dbn::storage::smart {
 
-smart_storage::smart_storage(const std::forward_list<file_mmap_info>& data_files,
-                             std::filesystem::path fragment_set_path,
-                             std::filesystem::path hashtable_index_path,
-                             std::filesystem::path hashtable_value_directory) :
-        m_data_store (data_files),
-        m_fragment_set (m_data_store, std::move (fragment_set_path)),
-        m_hashtable (HASH_SIZE, std::move (hashtable_index_path), std::move (hashtable_value_directory)){
+smart_config make_smart_config (const std::filesystem::path& root, size_t size, size_t max_file_size) {
 
-}
+    const std::filesystem::path data_store_directory = root / "data_store";
+    const std::filesystem::path set_directory = root / "set";
+    const std::filesystem::path hash_table_directory = root / "hash_table";
 
-size_t smart_storage::integrate(std::span <char> hash, std::string_view data) {
-
-    if (const auto f = m_hashtable.get(hash); f) {
-        //TODO should we compare the data as well? It can be that the data
-        // is different and we do not notice it
-        return 0;
-    }
-
-    auto fragments = deduplicate (data);
-    m_hashtable.insert(hash, {reinterpret_cast <char*> (fragments.first.data()), fragments.first.size() * sizeof (fragment)});
-    return fragments.second;
-}
-
-std::vector<fragment> smart_storage::retrieve(std::span<char> hash) {
-    auto f = m_hashtable.get(hash);
-    if (f) {
-        const auto ptr = reinterpret_cast <fragment*> (f.value().data());
-        const auto size = f.value().size() / sizeof (fragment);
-        return std::vector <fragment> {ptr, ptr + size};
-    }
-    throw std::out_of_range ("smart_storage could not find the data of the given hash value");
-}
-
-std::vector<char> smart_storage::serialize_fragments(const std::vector<fragment>& fragments) {
-
+    // here we assume that size % max_file_size == 0, otherwise
+    // we are creating larger files than the given size
+    data_store_config ds_conf;
+    ds_conf.data_store_file_size = 4ul * 1024ul * 1024ul * 1024ul;
     size_t offset = 0;
-    for (const auto f: fragments) {
-        offset += f.m_size;
+    while (offset < 20ul * 1024ul * 1024ul * 1024ul) {
+        const std::filesystem::path data_store_file = "data_" + std::to_string(offset);
+        ds_conf.data_store_files.emplace_front (root / data_store_directory / data_store_file);
+        offset += 1ul * 1024ul * 1024ul * 1024ul;
     }
-    std::vector <char> data (offset);
 
-    offset = 0;
-    for (auto itr = fragments.crbegin(); itr != fragments.crend(); itr ++) {
-        const auto& f = *itr;
-        const auto frag_data = get_fragment_data_ptr(f);
-        std::memcpy(data.data() + offset, frag_data.data(), f.m_size);
-        offset += f.m_size;
-    }
-    return data;
+    dedupe_config dd_conf {};
+    dd_conf.min_fragment_size = 2*1024;
+
+    set_config set_conf;
+    set_conf.set_init_file_size = 2ul * 1024ul * 1024ul * 1024ul;
+    set_conf.set_minimum_free_space = 20ul * 1024ul * 1024ul;
+    set_conf.fragment_set_path = set_directory / "fragment_set";
+
+    map_config map_conf;
+    map_conf.key_size = 64;
+    map_conf.map_key_file_init_size = 4ul * 1024ul * 1024ul * 1024ul;
+    map_conf.map_values_minimum_file_size = 4ul * 1024ul * 1024ul * 1024ul;
+    map_conf.map_values_maximum_file_size = 8ul * 1024ul * 1024ul * 1024ul;
+    map_conf.map_load_factor = 0.9;
+    map_conf.map_maximum_extension_factor = 32;
+    map_conf.hashtable_key_path = hash_table_directory / "key_file";
+    map_conf.hashtable_value_directory = hash_table_directory / "values";
+
+    return {map_conf, set_conf, ds_conf, dd_conf};
 }
 
-std::span <char> smart_storage::get_fragment_data_ptr (const fragment& frag) {
-    char* ptr = static_cast <char*> (m_data_store.get_raw_ptr(frag.m_data_offset));
-    return {ptr, frag.m_size};
+smart_storage::smart_storage(const smart_config &smart_conf, uh::dbn::metrics::storage_metrics& storage_metrics) :
+        m_smart_conf (smart_conf),
+        m_smart_core (smart_conf),
+        m_size (smart_conf.data_store_conf.data_store_file_size * smart_conf.data_store_conf.data_store_files.size()),
+        m_sha_ctx (EVP_MD_CTX_create ()),
+        m_storage_metrics (storage_metrics) {
+    EVP_DigestInit_ex (m_sha_ctx, EVP_sha512 (), nullptr);
 }
 
-
-std::pair<std::vector<fragment>, size_t> smart_storage::deduplicate (std::string_view data) {
-
-    const auto res = m_fragment_set.find({data.data(), data.size()});
-    if (res.match) {
-        return {{{res.match->first, res.match->second.size()}}, 0};
-    }
-
-    const auto lower_common_prefix = largest_common_prefix (data, res.lower->second);
-
-    if (lower_common_prefix == data.size()) {
-        m_fragment_set.insert_index (data, res.lower->first, res.hint);
-        return {{{res.lower->first, data.size()}}, 0};
-    }
-
-    const auto upper_common_prefix = largest_common_prefix (data, res.upper->second);
-    auto max_common_prefix = upper_common_prefix;
-    auto max_data_offset = res.upper->first;
-    if (max_common_prefix < lower_common_prefix) {
-        max_common_prefix = lower_common_prefix;
-        max_data_offset = res.lower->first;
-    }
-
-    if (max_common_prefix < MIN_FRAGMENT_SIZE or data.size() - max_common_prefix < MIN_FRAGMENT_SIZE) {
-        const auto offset = store_data(data);
-        m_fragment_set.insert_index(data, offset, res.hint);
-        return {{{offset, data.size()}}, data.size()};
-    }
-    else if (max_common_prefix == data.size()) {
-        m_fragment_set.insert_index (data, max_data_offset, res.hint);
-        return {{{max_data_offset, data.size()}}, 0};
-    }
-    else {
-        m_fragment_set.insert_index (data.substr(0, max_common_prefix), max_data_offset, res.hint); // but not really add the data
-        auto fragments = deduplicate (data.substr(max_common_prefix, data.size() - max_common_prefix));
-        fragments.first.emplace_back (max_data_offset, max_common_prefix);
-        return fragments;
-    }
+std::unique_ptr<io::data_generator> smart_storage::read_block (const std::span<char> &hash) {
+    std::shared_lock <std::shared_mutex> lock (m_mutex);
+    auto fragments_size_pair = m_smart_core.retrieve(hash);
+    return std::make_unique <io::span_generator> (fragments_size_pair.first, std::move (fragments_size_pair.second));
 }
 
-uint64_t smart_storage::store_data(const std::string_view& frag) {
-    auto alloc = m_data_store.allocate(frag.size());
-    std::memcpy(alloc.m_addr, frag.data(), frag.size());
-    return alloc.m_offset;
+std::pair <std::size_t, std::vector <char>> smart_storage::write_block (const std::span <char>& data) {
+    std::vector <char> sha (m_smart_conf.map_conf.key_size);
+    unsigned int size;
+    std::lock_guard <std::shared_mutex> lock (m_mutex);
+    EVP_DigestUpdate (m_sha_ctx, data.data(), data.size());
+    EVP_DigestFinal_ex (m_sha_ctx, reinterpret_cast <unsigned char*> (sha.data()), &size);
+    std::size_t effective_size;
+    try {
+        m_used += data.size();
+        effective_size = m_smart_core.integrate({sha.data(), size}, std::string_view(data.data(), data.size()));
+        update_space_consumption();
+    } catch (std::exception& e) {
+        m_used -= data.size();
+        throw e;
+    }
+    EVP_DigestInit_ex (m_sha_ctx, EVP_sha512 (), nullptr);
+    return {effective_size, std::move (sha)};
 }
 
-size_t
-smart_storage::largest_common_prefix(const std::string_view &str1, const std::string_view &str2) noexcept {
-    size_t i = 0;
-    const auto min_size = std::min (str1.size(), str2.size());
-    while (i < min_size and str1[i] == str2[i]) {
-        i++;
-    }
-    return i;
+size_t smart_storage::free_space() {
+    return m_size - m_used;
+}
+
+size_t smart_storage::used_space() {
+    return m_used;
+}
+
+size_t smart_storage::allocated_space() {
+    return m_size;
+}
+
+std::string smart_storage::backend_type() {
+    return std::string (m_type);
+}
+
+void smart_storage::start() {}
+
+std::unique_ptr<uh::protocol::allocation> smart_storage::allocate(std::size_t size) {
+    throw std::logic_error ("smart_storage does not support pre allocation");
+}
+
+std::unique_ptr<uh::protocol::allocation> smart_storage::allocate_multi(std::size_t size) {
+    throw std::logic_error ("smart_storage does not support pre allocation");
+}
+
+void smart_storage::update_space_consumption() {
+    m_storage_metrics.alloc_space().Set(m_size);
+    m_storage_metrics.free_space().Set(m_size - m_used);
+    m_storage_metrics.used_space().Set(m_used);
 }
 
 

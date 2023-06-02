@@ -140,13 +140,19 @@ int main(int argc, const char *argv[]) {
     }
 
     auto chunking_cfg = config.chunking();
+    /*
     const auto min_subchunk_size = 2*1024;
     chunking_cfg.fast_cdc.min_size = 4*1024;
     chunking_cfg.fast_cdc.normal_size = 8*1024;
     chunking_cfg.fast_cdc.max_size = 1024*512;
+     */
+    const auto min_subchunk_size = 4;
+    chunking_cfg.fast_cdc.min_size = 4;
+    chunking_cfg.fast_cdc.normal_size = 6;
+    chunking_cfg.fast_cdc.max_size = 16;
     uh::chunking::mod chunking_module(chunking_cfg);
 
-    const auto root = config.subchunking().path;
+    const auto root = "/home/masi/Workspace/core/cmake-build-debug/client-shell/test_text.txt";//config.subchunking().path;
     unsigned long count = 0;
 
 

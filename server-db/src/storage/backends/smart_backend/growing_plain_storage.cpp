@@ -8,7 +8,8 @@ namespace uh::dbn::storage::smart {
 growing_plain_storage::growing_plain_storage(std::filesystem::path file, size_t init_size) :
         m_file_path (std::move (file)),
         m_file_size (init_size),
-        m_storage (init_mmap(m_file_path, init_size, m_file_size)) {}
+        m_storage (init_mmap(m_file_path, init_size, m_file_size)) {
+}
 
 growing_plain_storage::growing_plain_storage(growing_plain_storage &&storage) noexcept:
         m_file_path (std::move (storage.m_file_path)),
@@ -36,6 +37,9 @@ void growing_plain_storage::destroy() {
 
 char *growing_plain_storage::init_mmap(const std::filesystem::path &file_path, size_t init_size, size_t &file_size) {
     const auto existing_storage = std::filesystem::exists(file_path.c_str());
+    if (!existing_storage) {
+        std::filesystem::create_directories(file_path.parent_path());
+    }
     const auto fd = open(file_path.c_str(), O_CREAT | O_RDWR, S_IRUSR | S_IWUSR);
     if (!existing_storage) {
         file_size = init_size;

@@ -14,7 +14,7 @@ growing_managed_storage::growing_managed_storage (std::filesystem::path director
         m_max_file_size (max_file_size),
         m_directory (std::move (directory)),
         m_log(create_logger()) {
-
+    std::filesystem::create_directories(m_directory);
     load_data_store();
     m_log_file_path = generate_log_file_path();
     replay_logger();
