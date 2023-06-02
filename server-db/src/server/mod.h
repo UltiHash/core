@@ -23,7 +23,8 @@ public:
 
     ~mod();
 
-    void start();
+    void start() const;
+    void stop() const;
 
 private:
     struct impl;

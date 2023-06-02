@@ -48,7 +48,8 @@ public:
     mod(const storage_config& cfg, metrics::storage_metrics& storage_metrics, persistence::scheduled_compressions_persistence& scheduled_compressions);
     ~mod();
 
-    void start();
+    void start() const;
+    void stop() const;
 
     storage::backend& backend();
 

@@ -119,10 +119,18 @@ mod::~mod() = default;
 
 // ---------------------------------------------------------------------
 
-void mod::start()
+void mod::start() const
 {
     INFO << "          starting storage module";
     m_impl->m_backend->start();
+}
+
+// ---------------------------------------------------------------------
+
+void mod::stop() const
+{
+    INFO << "          stopping storage module";
+    m_impl->m_backend->stop();
 }
 
 // ---------------------------------------------------------------------

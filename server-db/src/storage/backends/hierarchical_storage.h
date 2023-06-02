@@ -41,6 +41,7 @@ public:
                          persistence::scheduled_compressions_persistence& scheduled_compressions);
 
     void start() override;
+    void stop();
 
     std::unique_ptr<io::data_generator> read_block(const std::span <char>& hash) override;
 

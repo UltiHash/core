@@ -22,6 +22,8 @@ hierarchical_storage::hierarchical_multi_block_allocation::hierarchical_multi_bl
 {
 }
 
+// ---------------------------------------------------------------------
+
 void hierarchical_storage::hierarchical_multi_block_allocation::open_new_block(std::size_t block_size) {
     if (block_is_open ()) {
         THROW(util::exception, "a block is already open. close the block or persist it before opening a new block.");
@@ -35,14 +37,20 @@ void hierarchical_storage::hierarchical_multi_block_allocation::open_new_block(s
     m_block_size = block_size;
 }
 
+// ---------------------------------------------------------------------
+
 bool hierarchical_storage::hierarchical_multi_block_allocation::block_is_open () {
     return m_sha != nullptr and m_tmp != nullptr;
 }
+
+// ---------------------------------------------------------------------
 
 void hierarchical_storage::hierarchical_multi_block_allocation::close_block () {
     m_sha.reset(nullptr);
     m_tmp.reset(nullptr);
 }
+
+// ---------------------------------------------------------------------
 
 io::device& hierarchical_storage::hierarchical_multi_block_allocation::device() {
     if (!block_is_open ()) {
@@ -50,6 +58,8 @@ io::device& hierarchical_storage::hierarchical_multi_block_allocation::device() 
     }
     return *m_sha;
 }
+
+// ---------------------------------------------------------------------
 
 uh::protocol::block_meta_data hierarchical_storage::hierarchical_multi_block_allocation::persist() {
     if (!block_is_open ()) {
@@ -77,6 +87,7 @@ uh::protocol::block_meta_data hierarchical_storage::hierarchical_multi_block_all
     return {hash, m_block_size};
 }
 
+// ---------------------------------------------------------------------
 
 hierarchical_storage::hierarchical_multi_block_allocation::~hierarchical_multi_block_allocation()
 {
@@ -145,6 +156,7 @@ private:
     std::size_t m_effective_size {};
 };
 
+// ---------------------------------------------------------------------
 
 hierarchical_storage::hierarchical_storage(
     const hierarchical_storage_config& config,
@@ -173,6 +185,7 @@ hierarchical_storage::hierarchical_storage(
     update_space_consumption();
 }
 
+// ---------------------------------------------------------------------
 
 void hierarchical_storage::start() {
     INFO << "--- Storage backend initialized --- " << std::filesystem::absolute(this->m_root);
@@ -183,27 +196,46 @@ void hierarchical_storage::start() {
     INFO << "        space consumed : " << used_space();
 }
 
+// ---------------------------------------------------------------------
+
+void hierarchical_storage::stop() {
+    INFO << "stopping hierarchical_storage";
+    m_store.stop();
+}
+
+// ---------------------------------------------------------------------
+
 size_t hierarchical_storage::free_space() {
     return m_alloc - m_used;
 }
+
+// ---------------------------------------------------------------------
 
 size_t hierarchical_storage::used_space() {
     return m_used;
 }
 
+// ---------------------------------------------------------------------
+
 size_t hierarchical_storage::allocated_space() {
     return m_alloc;
 }
 
+// ---------------------------------------------------------------------
+
 std::string hierarchical_storage::backend_type() {
     return std::string(m_type);
 }
+
+// ---------------------------------------------------------------------
 
 void hierarchical_storage::update_space_consumption() {
     m_storage_metrics.alloc_space().Set(m_alloc);
     m_storage_metrics.free_space().Set(m_alloc - m_used);
     m_storage_metrics.used_space().Set(m_used);
 }
+
+// ---------------------------------------------------------------------
 
 std::unique_ptr<io::data_generator> hierarchical_storage::read_block(const std::span <char>& hash) {
     std::string hex = to_hex_string(hash.begin(), hash.end());
@@ -235,11 +267,15 @@ std::unique_ptr<io::data_generator> hierarchical_storage::read_block(const std::
     return std::make_unique<io::buffer_generator>(std::move(buffer));
 }
 
+// ---------------------------------------------------------------------
+
 std::unique_ptr<uh::protocol::allocation> hierarchical_storage::allocate(std::size_t size) {
     acquire_storage_size(size);
 
     return std::make_unique<hierarchical_allocation>(*this, m_store, size);
 }
+
+// ---------------------------------------------------------------------
 
 std::filesystem::path hierarchical_storage::get_hash_path (const std::string &hash) const {
     auto file_path = m_root;
@@ -253,17 +289,23 @@ std::filesystem::path hierarchical_storage::get_hash_path (const std::string &ha
     return file_path;
 }
 
+// ---------------------------------------------------------------------
+
 std::unique_ptr<uh::protocol::allocation> hierarchical_storage::allocate_multi(std::size_t size) {
 
     acquire_storage_size(size);
     return std::make_unique<hierarchical_multi_block_allocation>(*this, m_store, size);
 }
 
+// ---------------------------------------------------------------------
+
 void hierarchical_storage::return_space(std::size_t size)
 {
     m_used -= size;
     update_space_consumption();
 }
+
+// ---------------------------------------------------------------------
 
 void hierarchical_storage::acquire_storage_size(std::size_t size) {
     while (true)
@@ -284,4 +326,6 @@ void hierarchical_storage::acquire_storage_size(std::size_t size) {
     update_space_consumption();
 }
 
-}
+// ---------------------------------------------------------------------
+
+} // namespace uh::dbn::storage
