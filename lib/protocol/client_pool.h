@@ -44,6 +44,7 @@ public:
                 std::size_t pool_size);
 
     handle get();
+    void quit_all(const std::string& reason);
 
 private:
     friend class handle;
