@@ -54,6 +54,8 @@ namespace uh::licensing {
         explicit license_package(const check_license::role license_role, const std::vector<feature> features_input = {},
                                  const std::filesystem::path& config = std::filesystem::current_path().parent_path())
         {
+            //TODO: move license parser to check license and only make valid abstract
+
             for(uint8_t feature_iterate = 0; feature_iterate < feature_count_global; feature_iterate++){
                 features.emplace((feature)feature_iterate,
                                  std::find(features_input.cbegin(),features_input.cend(),
