@@ -1,32 +1,16 @@
 //
-// Created by masi on 5/19/23.
+// Created by masi on 6/3/23.
 //
 
-#ifndef CORE_PERSISTED_REDBLACK_TREE_SET_H
-#define CORE_PERSISTED_REDBLACK_TREE_SET_H
+#ifndef CORE_UNLOCKED_REDBLACK_TREE_H
+#define CORE_UNLOCKED_REDBLACK_TREE_H
 
-#include <span>
-#include <cstring>
-#include <atomic>
-#include <optional>
-
-#include "fixed_managed_storage.h"
-#include "growing_plain_storage.h"
-#include "smart_config.h"
+#include "persisted_redblack_tree_set.h"
 
 namespace uh::dbn::storage::smart {
 
 
-struct fragment {
-    fragment (uint64_t data_offset, size_t size):
-        m_data_offset (data_offset),
-        m_size (size) {}
-    uint64_t m_data_offset;
-    size_t m_size;
-};
-
-class persisted_redblack_tree_set {
-
+class unlocked_redblack_tree {
 
     enum color_t : uint8_t
     {
@@ -52,22 +36,21 @@ class persisted_redblack_tree_set {
     };
 
 public:
-
     struct search_result {
         std::optional <std::pair <uint64_t, std::string_view>> lower;
         std::optional <std::pair <uint64_t, std::string_view>> match;
         std::optional <std::pair <uint64_t, std::string_view>> upper;
         uint64_t hint {};
-    private:
         int comp {};
-        friend persisted_redblack_tree_set;
     };
 
-    persisted_redblack_tree_set (set_config set_conf, fixed_managed_storage& data_store);
 
-    uint64_t insert_index (const std::string_view& frag, uint64_t data_offset, uint64_t hint = NILL_OFFSET);
 
-    search_result find (const std::string_view& frag, uint64_t hint = NILL_OFFSET);
+    unlocked_redblack_tree (set_config set_conf, fixed_managed_storage& data_store);
+
+    uint64_t insert_index (const std::string_view& frag, uint64_t data_offset, const search_result& pos);
+
+    search_result find (const std::string_view& frag);
 
     void sync (uint64_t offset);
 
@@ -75,18 +58,9 @@ public:
 
 private:
 
-    std::pair <uint64_t, bool> resolve_hint (uint64_t hint, const std::string_view& frag);
-
-    search_result unlocked_find (const std::string_view& frag, uint64_t hint);
-
     void balance (node& z);
 
-    void print_set (std::ostream& out, uint64_t offset);
-
     node directed_balance (node& z, direction_t d);
-
-    std::pair<uint64_t, bool> lower_sister_inspect_hint (const node& n, const std::string_view& frag, int n_frag_comp);
-    std::pair<uint64_t, bool> upper_sister_inspect_hint (const node& n, const std::string_view& frag, int n_frag_comp);
 
     inline node get_node (uint64_t offset) noexcept;
 
@@ -110,8 +84,8 @@ private:
     node m_nil {};
     std::atomic <uint64_t*> m_root;
     std::atomic_ref <uint64_t> m_end;
-    std::shared_mutex m_mutex;
 };
 
 } // end namespace uh::dbn::storage::smart
-#endif //CORE_PERSISTED_REDBLACK_TREE_SET_H
+
+#endif //CORE_UNLOCKED_REDBLACK_TREE_H

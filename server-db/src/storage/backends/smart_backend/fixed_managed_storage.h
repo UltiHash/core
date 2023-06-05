@@ -30,7 +30,7 @@ void* align_ptr (void* ptr);
 
 class offset_ptr {
 public:
-    offset_ptr (size_t offset = 0, void* addr = nullptr);
+    explicit offset_ptr (size_t offset = 0, void* addr = nullptr);
     size_t m_offset;
     char* m_addr;
 
@@ -54,7 +54,7 @@ public:
     const size_t m_size;
 private:
     std::pmr::monotonic_buffer_resource m_monotonic_buffer;
-    std::pmr::synchronized_pool_resource m_pool_resource;
+    std::pmr::unsynchronized_pool_resource m_pool_resource;
 };
 
 class fixed_managed_storage {

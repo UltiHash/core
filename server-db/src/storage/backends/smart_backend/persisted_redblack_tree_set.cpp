@@ -26,7 +26,7 @@ persisted_redblack_tree_set::persisted_redblack_tree_set(set_config set_conf, fi
 
 uint64_t persisted_redblack_tree_set::insert_index(const std::string_view& frag, uint64_t data_offset, uint64_t hint) {
 
-    boost::upgrade_lock lock (m_mutex);
+    std::lock_guard lock (m_mutex);
 
     const auto f = unlocked_find (frag, hint);
     if (f.match) {
@@ -53,7 +53,6 @@ uint64_t persisted_redblack_tree_set::insert_index(const std::string_view& frag,
 
     const auto offset = z.m_offset;
 
-    boost::upgrade_to_unique_lock <boost::shared_mutex> write_lock (lock);
     balance (z);
 
     if (m_end > m_index_store.get_size() - m_set_conf.set_minimum_free_space) {
@@ -67,7 +66,7 @@ uint64_t persisted_redblack_tree_set::insert_index(const std::string_view& frag,
 
 persisted_redblack_tree_set::search_result persisted_redblack_tree_set::find(const std::string_view& frag, uint64_t hint) {
 
-    boost::shared_lock lock (m_mutex);
+    std::shared_lock lock (m_mutex);
     return unlocked_find (frag, hint);
 }
 

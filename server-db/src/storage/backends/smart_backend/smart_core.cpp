@@ -55,7 +55,7 @@ std::pair<std::vector<fragment>, size_t> smart_core::deduplicate (std::string_vi
     const auto lower_common_prefix = largest_common_prefix (data, f.lower->second);
 
     if (lower_common_prefix == data.size()) {
-        m_fragment_set.insert_index (data, f.lower->first, f.hint);
+        m_fragment_set.insert_index (data, f.lower->first, f);
         return {{{f.lower->first, data.size()}}, 0};
     }
 
@@ -69,15 +69,15 @@ std::pair<std::vector<fragment>, size_t> smart_core::deduplicate (std::string_vi
 
     if (max_common_prefix < m_dedupe_conf.min_fragment_size or data.size() - max_common_prefix < m_dedupe_conf.min_fragment_size) {
         const auto offset = store_data(data);
-        m_fragment_set.insert_index(data, offset, f.hint);
+        m_fragment_set.insert_index(data, offset, f);
         return {{{offset, data.size()}}, data.size()};
     }
     else if (max_common_prefix == data.size()) {
-        m_fragment_set.insert_index (data, max_data_offset, f.hint);
+        m_fragment_set.insert_index (data, max_data_offset, f);
         return {{{max_data_offset, data.size()}}, 0};
     }
     else {
-        m_fragment_set.insert_index (data.substr(0, max_common_prefix), max_data_offset, f.hint); // but not really add the data
+        m_fragment_set.insert_index (data.substr(0, max_common_prefix), max_data_offset, f); // but not really add the data
         auto fragments = deduplicate (data.substr(max_common_prefix, data.size() - max_common_prefix));
         fragments.first.emplace_back (max_data_offset, max_common_prefix);
         return fragments;

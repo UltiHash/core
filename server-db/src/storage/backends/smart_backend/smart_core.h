@@ -10,6 +10,7 @@
 #include "persisted_robinhood_hashmap.h"
 #include "smart_config.h"
 #include "metrics/storage_metrics.h"
+#include "unlocked_redblack_tree.h"
 
 namespace uh::dbn::storage::smart {
 
@@ -42,7 +43,7 @@ private:
     static inline size_t largest_common_prefix (const std::string_view &str1, const std::string_view& str2) noexcept;
 
     fixed_managed_storage m_data_store;
-    persisted_redblack_tree_set m_fragment_set;
+    unlocked_redblack_tree m_fragment_set;
     persisted_robinhood_hashmap m_hashtable;
 
     const dedupe_config m_dedupe_conf;
