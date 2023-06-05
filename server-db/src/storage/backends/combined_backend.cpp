@@ -10,7 +10,10 @@ combined_backend::smart_worker::smart_worker(smart::smart_storage &smart, storag
         m_smart_storage (smart), m_metrics (metrics) {}
 
 void combined_backend::smart_worker::operator()(std::filesystem::path path, std::vector<char> sha) {
-
+    int fd = open (path.c_str(), O_RDONLY);
+    size_t file_size = lseek (fd, 0, SEEK_END);
+    char* mmapped_data = static_cast <char*> (mmap(nullptr, file_size, PROT_READ, MAP_PRIVATE, fd, 0));
+    m_smart_storage.write_block({mmapped_data, file_size});
 }
 
 combined_backend::combined_backend(const hierarchical_storage_config &hierarchical_config,
@@ -34,7 +37,12 @@ void combined_backend::start() {
 }
 
 std::unique_ptr<io::data_generator> combined_backend::read_block(const std::span<char> &hash) {
-    return std::unique_ptr<io::data_generator>();
+    try {
+        return m_smart_storage.read_block(hash);
+    }
+    catch (std::out_of_range&) {
+        return m_hierarchical_storage.read_block(hash);
+    }
 }
 
 std::pair<std::size_t, std::vector<char>> combined_backend::write_block(const std::span<char> &data) {
@@ -44,15 +52,15 @@ std::pair<std::size_t, std::vector<char>> combined_backend::write_block(const st
 }
 
 size_t combined_backend::free_space() {
-    return 0;
+    return m_smart_storage.free_space();
 }
 
 size_t combined_backend::used_space() {
-    return 0;
+    return m_smart_storage.used_space();
 }
 
 size_t combined_backend::allocated_space() {
-    return 0;
+    return m_smart_storage.allocated_space();
 }
 
 std::string combined_backend::backend_type() {

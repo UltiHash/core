@@ -142,7 +142,7 @@ std::pair <std::size_t, std::vector <char>> hierarchical_storage::write_block(co
     acquire_storage_size (data.size());
     auto m_tmp = m_store.temp_file(m_root);
     auto m_sha = std::make_unique<io::sha512>(*m_tmp);
-    m_tmp->write(data);
+    m_sha->write(data);
     auto hash = m_sha->finalize();
     const std::string string_hash = to_hex_string(hash.begin(), hash.end());
     const auto file_path = get_hash_path(string_hash);
