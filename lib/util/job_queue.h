@@ -30,7 +30,7 @@ public:
     /**
      * Add a job to the queue and receive a std::future<result>.
      */
-    std::future<result> push(args&&...);
+    std::future<result> push(args...);
 
     /**
      * Stop the queue and join all worker threads. The queue will not
@@ -93,7 +93,7 @@ job_queue<result, args...>::~job_queue()
 // ---------------------------------------------------------------------
 
 template <typename result, typename ... args>
-std::future<result> job_queue<result, args...>::push(args&&... a)
+std::future<result> job_queue<result, args...>::push(args... a)
 {
     std::unique_lock<std::mutex> lock(m_jobs_mutex);
 

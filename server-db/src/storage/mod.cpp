@@ -7,7 +7,6 @@
 #include <unistd.h> //rmdir
 #include <logging/logging_boost.h>
 #include <util/exception.h>
-#include <storage/backends/dump_storage.h>
 
 
 namespace uh::dbn::storage
@@ -73,8 +72,6 @@ std::unique_ptr<backend> make_backend(const storage_config& cfg, metrics::storag
 
     switch (backend_type)
     {
-        case BackendTypeEnum::DumpStorage:
-            return std::make_unique<storage::dump_storage>(cfg.db_root, size_needed, storage_metrics);
         case BackendTypeEnum::HierarchicalStorage:
             return std::make_unique<storage::hierarchical_storage>(
                     hierarchical_storage_config{ cfg.db_root, size_needed, cfg.comp },

@@ -12,140 +12,6 @@
 namespace uh::dbn::storage {
 
 
-hierarchical_storage::hierarchical_multi_block_allocation::hierarchical_multi_block_allocation(
-    hierarchical_storage &storage_backend,
-    compressed_file_store& store,
-    std::size_t size)
-    : m_storage_backend(storage_backend),
-      m_size(size),
-      m_store(store)
-{
-}
-
-void hierarchical_storage::hierarchical_multi_block_allocation::open_new_block(std::size_t block_size) {
-    if (block_is_open ()) {
-        THROW(util::exception, "a block is already open. close the block or persist it before opening a new block.");
-    }
-    if (m_persisted_size + block_size > m_size) {
-        THROW(util::exception, "multi allocation overflow.");
-    }
-
-    m_tmp = m_store.temp_file(m_storage_backend.m_root);
-    m_sha = std::make_unique<io::sha512>(*m_tmp);
-    m_block_size = block_size;
-}
-
-bool hierarchical_storage::hierarchical_multi_block_allocation::block_is_open () {
-    return m_sha != nullptr and m_tmp != nullptr;
-}
-
-void hierarchical_storage::hierarchical_multi_block_allocation::close_block () {
-    m_sha.reset(nullptr);
-    m_tmp.reset(nullptr);
-}
-
-io::device& hierarchical_storage::hierarchical_multi_block_allocation::device() {
-    if (!block_is_open ()) {
-        THROW(util::exception, "get device: no open block.");
-    }
-    return *m_sha;
-}
-
-uh::protocol::block_meta_data hierarchical_storage::hierarchical_multi_block_allocation::persist() {
-    if (!block_is_open ()) {
-        THROW(util::exception, "persist: no open block.");
-    }
-
-    const auto hash = m_sha->finalize();
-    const std::string string_hash = to_hex_string(hash.begin(), hash.end());
-    const auto file_path = m_storage_backend.get_hash_path(string_hash);
-
-    std::filesystem::create_directories(file_path.parent_path());
-
-    m_persisted_size += m_block_size;
-    try {
-        m_tmp->release_to(file_path);
-        m_effective_size += m_block_size;
-        m_store.compress(file_path);
-    }
-    catch (const util::file_exists&) {
-        m_block_size = 0ul;
-    }
-
-    close_block();
-
-    return {hash, m_block_size};
-}
-
-
-hierarchical_storage::hierarchical_multi_block_allocation::~hierarchical_multi_block_allocation()
-{
-    if (m_effective_size < m_size)
-    {
-        m_storage_backend.return_space(m_size - m_effective_size);
-    }
-}
-
-// -----------------------------------------------------
-
-class hierarchical_storage::hierarchical_allocation: public uh::protocol::allocation {
-
-public:
-    explicit hierarchical_allocation(hierarchical_storage &storage_backend,
-                                     compressed_file_store& store,
-                                     std::size_t size)
-        : m_storage_backend (storage_backend),
-          m_store(store),
-          m_tmp(m_store.temp_file(storage_backend.m_root)),
-          m_sha(*m_tmp),
-          m_size (size)
-    {}
-
-    io::device& device() override {
-        return m_sha;
-    }
-
-    uh::protocol::block_meta_data persist() override {
-
-        const auto hash = m_sha.finalize();
-        const std::string string_hash = to_hex_string(hash.begin(), hash.end());
-        const auto file_path = m_storage_backend.get_hash_path(string_hash);
-
-        std::filesystem::create_directories(file_path.parent_path());
-
-        try {
-            m_tmp->release_to(file_path);
-            m_effective_size = m_size;
-            m_store.compress(file_path);
-        }
-        catch (const util::file_exists&) {
-            m_effective_size = 0u;
-        }
-
-        return {hash, m_effective_size};
-    }
-
-    ~hierarchical_allocation() override
-    {
-        if (m_effective_size == 0)
-        {
-            m_storage_backend.return_space(m_size);
-        }
-    }
-
-    hierarchical_allocation(const hierarchical_storage&) = delete;
-    hierarchical_allocation& operator=(const hierarchical_storage&) = delete;
-
-private:
-    hierarchical_storage& m_storage_backend;
-    compressed_file_store& m_store;
-    std::unique_ptr<io::temp_file> m_tmp;
-    io::sha512 m_sha;
-    std::size_t m_size;
-    std::size_t m_effective_size {};
-};
-
-
 hierarchical_storage::hierarchical_storage(
     const hierarchical_storage_config& config,
     uh::dbn::metrics::storage_metrics& storage_metrics,
@@ -235,12 +101,6 @@ std::unique_ptr<io::data_generator> hierarchical_storage::read_block(const std::
     return std::make_unique<io::buffer_generator>(std::move(buffer));
 }
 
-std::unique_ptr<uh::protocol::allocation> hierarchical_storage::allocate(std::size_t size) {
-    acquire_storage_size(size);
-
-    return std::make_unique<hierarchical_allocation>(*this, m_store, size);
-}
-
 std::filesystem::path hierarchical_storage::get_hash_path (const std::string_view &hash) const {
     auto file_path = m_root;
     for (unsigned int i = 0; i < m_levels; i++) {
@@ -251,12 +111,6 @@ std::filesystem::path hierarchical_storage::get_hash_path (const std::string_vie
     file_path = file_path / file_name;
 
     return file_path;
-}
-
-std::unique_ptr<uh::protocol::allocation> hierarchical_storage::allocate_multi(std::size_t size) {
-
-    acquire_storage_size(size);
-    return std::make_unique<hierarchical_multi_block_allocation>(*this, m_store, size);
 }
 
 void hierarchical_storage::return_space(std::size_t size)
@@ -285,7 +139,26 @@ void hierarchical_storage::acquire_storage_size(std::size_t size) {
 }
 
 std::pair <std::size_t, std::vector <char>> hierarchical_storage::write_block(const std::span<char> &data) {
-    throw std::runtime_error ("hierarchical_storage does not implement write_block method");
+    acquire_storage_size (data.size());
+    auto m_tmp = m_store.temp_file(m_root);
+    auto m_sha = std::make_unique<io::sha512>(*m_tmp);
+    m_tmp->write(data);
+    auto hash = m_sha->finalize();
+    const std::string string_hash = to_hex_string(hash.begin(), hash.end());
+    const auto file_path = get_hash_path(string_hash);
+    std::filesystem::create_directories(file_path.parent_path());
+
+    try {
+        m_tmp->release_to(file_path);
+        m_store.compress(file_path);
+    }
+    catch (const util::file_exists&) {
+        return_space(data.size());
+        return {0, std::move (hash)};
+    }
+
+    return {data.size(), std::move (hash)};
+
 }
 
 }

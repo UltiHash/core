@@ -42,6 +42,8 @@ struct smart_config {
     set_config set_conf;
     data_store_config data_store_conf;
     dedupe_config dedupe_conf;
+    size_t number_of_threads = DEFAULT_THREADS;
+    static constexpr unsigned DEFAULT_THREADS = 5u;
 };
 
 }

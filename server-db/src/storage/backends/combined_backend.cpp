@@ -6,12 +6,31 @@
 
 namespace uh::dbn::storage {
 
+combined_backend::smart_worker::smart_worker(smart::smart_storage &smart, storage_metrics &metrics) :
+        m_smart_storage (smart), m_metrics (metrics) {}
+
 void combined_backend::smart_worker::operator()(std::filesystem::path path, std::vector<char> sha) {
 
 }
 
-void combined_backend::start() {
+combined_backend::combined_backend(const hierarchical_storage_config &hierarchical_config,
+                               persistence::scheduled_compressions_persistence& scheduled_compressions,
+                               storage_metrics &storage_metrics):
+    m_hierarchical_config(hierarchical_config),
+    m_storage_metrics (storage_metrics),
+    m_hierarchical_storage (hierarchical_config, m_storage_metrics, scheduled_compressions),
+    m_smart_storage(hierarchical_config.smart_post_processing, m_storage_metrics),
+    m_worker (hierarchical_config.smart_post_processing.number_of_threads, smart_worker (m_smart_storage, m_storage_metrics)) {
 
+}
+
+void combined_backend::start() {
+    INFO << "--- Combined backend initialized --- " << std::filesystem::absolute(m_hierarchical_config.db_root);
+    INFO << "        backend type   : " << backend_type();
+    INFO << "        root directory : " << std::filesystem::absolute(m_hierarchical_config.db_root);
+    INFO << "        space allocated: " << allocated_space();
+    INFO << "        space available: " << free_space();
+    INFO << "        space consumed : " << used_space();
 }
 
 std::unique_ptr<io::data_generator> combined_backend::read_block(const std::span<char> &hash) {
@@ -40,12 +59,6 @@ std::string combined_backend::backend_type() {
     return std::string (m_type);
 }
 
-std::unique_ptr<uh::protocol::allocation> combined_backend::allocate(std::size_t size) {
-    return std::unique_ptr<uh::protocol::allocation>();
-}
 
-std::unique_ptr<uh::protocol::allocation> combined_backend::allocate_multi(std::size_t size) {
-    return std::unique_ptr<uh::protocol::allocation>();
-}
 
 } // namespace uh::dbn::storage
