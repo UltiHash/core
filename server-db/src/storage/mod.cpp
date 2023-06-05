@@ -1,5 +1,6 @@
 #include "mod.h"
 #include "storage/backends/hierarchical_storage.h"
+#include "storage/backends/smart_backend/smart_storage.h"
 
 #include <config.hpp>
 
@@ -78,6 +79,10 @@ std::unique_ptr<backend> make_backend(const storage_config& cfg, metrics::storag
             return std::make_unique<storage::hierarchical_storage>(
                     hierarchical_storage_config{ cfg.db_root, size_needed, cfg.comp },
                     storage_metrics, scheduled_compressions);
+        case BackendTypeEnum::SmartStorage:
+            return std::make_unique<storage::smart::smart_storage> (
+                    smart::make_smart_config(cfg.db_root, size_needed, cfg.max_file_size),
+                    storage_metrics);
         case BackendTypeEnum::OtherStorage:
             THROW(util::exception, "Not implemented yet");
     }
