@@ -24,7 +24,6 @@ public:
     storage_fixture()
             : m_metrics_service({}),
               m_metrics(m_metrics_service),
-              m_dump(m_tmp.path(), ALLOCATED_BYTES, m_metrics),
               m_hierarchical({ m_tmp.path(), ALLOCATED_BYTES }, m_metrics, m_scheduled_compressions) {
     }
 
@@ -36,7 +35,6 @@ private:
     uh::util::temp_directory m_tmp;
     uh::metrics::service m_metrics_service;
     uh::dbn::metrics::storage_metrics m_metrics;
-    uh::dbn::storage::dump_storage m_dump;
     uh::dbn::persistence::scheduled_compressions_persistence m_scheduled_compressions;
     uh::dbn::storage::hierarchical_storage m_hierarchical;
 
@@ -51,9 +49,8 @@ std::vector<char> to_vector(const std::string& s)
 
 uh::protocol::block_meta_data integrate_data (const std::vector <char> &data, uh::dbn::storage::backend &storage_backend) {
     auto d1 = to_vector(CONTENTS_STR);
-    auto allocation1 = storage_backend.allocate (d1.size());
-    allocation1->device().write(d1);
-    return allocation1->persist();
+    auto res = storage_backend.write_block(d1);
+    return {res.second, res.first};
 }
 
 // ---------------------------------------------------------------------
@@ -84,31 +81,6 @@ BOOST_FIXTURE_TEST_CASE( dump_storage_no_duplicates, storage_fixture )
     auto hash2 =  uh::dbn::storage::to_hex_string (block_md2.hash.begin(), block_md2.hash.end ());
 
     BOOST_CHECK(hash1 == hash2);
-}
-
-// ---------------------------------------------------------------------
-
-BOOST_FIXTURE_TEST_CASE( dump_storage_allocation, storage_fixture )
-{
-    BOOST_CHECK_THROW(backend().allocate(ALLOCATED_BYTES + 1), uh::util::exception);
-
-    {
-        auto allocation = backend().allocate(ALLOCATED_BYTES - 1);
-        BOOST_CHECK_THROW(backend().allocate(2), std::exception);
-
-        allocation.reset();
-        backend().allocate(2);
-    }
-
-    {
-        auto allocation = backend().allocate(ALLOCATED_BYTES - 1);
-        BOOST_CHECK_THROW(backend().allocate(2), std::exception);
-
-        allocation->persist();
-        allocation.reset();
-
-        BOOST_CHECK_THROW(backend().allocate(2), std::exception);
-    }
 }
 
 
