@@ -29,9 +29,7 @@ namespace uh::licensing {
                 delete item.second;
             }
 
-            for(auto& item:check_lic){
-                delete item;
-            }
+            delete check_lic;
         }
 
     public:
@@ -41,29 +39,23 @@ namespace uh::licensing {
          * @param config license file input
          * @throws if license is invalid or cannot be loaded
          */
-        explicit license_package(const std::filesystem::path& config = std::filesystem::current_path().parent_path())
+        explicit license_package(const check_license::role license_role,
+                                 const std::filesystem::path& config = std::filesystem::current_path().parent_path())
         {
             for(auto& file_object: std::filesystem::directory_iterator(config))
             {
                 if(file_object.is_regular_file() && file_object.path().extension() == ".lic")
                 {
-                    check_lic.push_back(new check_online_license);
+                    //TODO: add licensing configuration how the license should be checked
+                    auto* tmp_license_check = new check_online_license(file_object.path());
+
+                    if(tmp_license_check->check_role() == license_role && tmp_license_check->valid()){
+                        check_lic = tmp_license_check;
+                    }
+                    else delete tmp_license_check;
                 }
             }
-
-            //TODO: make this an abstract class for the features and add features with the help of a virtual
-            // class on construction
         }
-
-        /**
-         *
-         * Check if `role` is enabled in the configured license.
-         * @throw if `role`does not match given license
-         */
-        enum class role: unsigned char{
-            AGENCY_NODE,
-            DATA_NODE
-        };
 
         /**
          *
@@ -101,7 +93,7 @@ namespace uh::licensing {
          * @param r role to be validated
          * @throw if license role does not match requested role
          */
-        void check_role_enabled(role r) const
+        void check_role_enabled(check_license::role r) const
         {
             if(license_role != r)
                 THROW(util::exception,"Requested role did not match license role!");
@@ -157,12 +149,16 @@ namespace uh::licensing {
             }
         }
 
+        bool valid(){
+            return check_lic->valid();
+        }
+
     private:
-        role license_role;
+        check_license::role license_role = check_license::role::THROW_ROLE;
         std::map<feature,bool> features;
         std::map<metered_feature, metred_resource*> hard_metred_features;
         std::map<soft_metered_feature, soft_metred_resource*> soft_metred_features;
-        std::vector<CHECK_METHOD*> check_lic;
+        CHECK_METHOD* check_lic{};
         std::filesystem::path license_path;
     };
 

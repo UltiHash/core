@@ -5,6 +5,8 @@
 #ifndef CORE_CHECK_ONLINE_LICENSE_H
 #define CORE_CHECK_ONLINE_LICENSE_H
 
+#include <utility>
+
 #include "licensing/check_license.h"
 
 namespace uh::licensing{
@@ -12,6 +14,10 @@ namespace uh::licensing{
     class check_online_license: public check_license {
 
     public:
+
+        explicit check_online_license(std::filesystem::path license_folder);
+
+        check_license::role check_role() override;
 
         bool valid() override;
 

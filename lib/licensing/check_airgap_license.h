@@ -13,6 +13,10 @@ namespace uh::licensing {
 
     public:
 
+        explicit check_airgap_license(std::filesystem::path license_folder);
+
+        check_license::role check_role() override;
+
         bool valid() override;
 
     };
