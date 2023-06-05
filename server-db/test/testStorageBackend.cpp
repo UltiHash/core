@@ -11,7 +11,6 @@
 #include <io/buffer.h>
 #include <metrics/mod.h>
 #include <persistence/storage/scheduled_compressions_persistence.h>
-#include <storage/backends/dump_storage.h>
 #include <storage/backends/hierarchical_storage.h>
 
 #include <boost/test/unit_test.hpp>
