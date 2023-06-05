@@ -95,6 +95,8 @@ std::string smart_storage::backend_type() {
 
 void smart_storage::start() {}
 
+void smart_storage::stop() {}
+
 std::unique_ptr<uh::protocol::allocation> smart_storage::allocate(std::size_t size) {
     throw std::logic_error ("smart_storage does not support pre allocation");
 }
