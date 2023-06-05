@@ -11,6 +11,8 @@
 #include "util/exception.h"
 
 #include <map>
+#include <vector>
+#include <filesystem>
 
 namespace uh::licensing {
 
@@ -26,6 +28,10 @@ namespace uh::licensing {
             for(auto& item:soft_metred_features){
                 delete item.second;
             }
+
+            for(auto& item:check_lic){
+                delete item;
+            }
         }
 
     public:
@@ -35,8 +41,18 @@ namespace uh::licensing {
          * @param config license file input
          * @throws if license is invalid or cannot be loaded
          */
-        license_package(const license_package_config& config){
+        explicit license_package(const std::filesystem::path& config = std::filesystem::current_path().parent_path())
+        {
+            for(auto& file_object: std::filesystem::directory_iterator(config))
+            {
+                if(file_object.is_regular_file() && file_object.path().extension() == ".lic")
+                {
+                    check_lic.push_back(new check_online_license);
+                }
+            }
 
+            //TODO: make this an abstract class for the features and add features with the help of a virtual
+            // class on construction
         }
 
         /**
@@ -67,7 +83,7 @@ namespace uh::licensing {
          * @throw if resource boundary will be exceeded by resource allocation
          */
         enum class metered_feature: unsigned char{
-            LIMIT_CPU_COUNT = 1
+            LIMIT_CPU_COUNT = 0
         };
 
         /**
@@ -76,7 +92,7 @@ namespace uh::licensing {
          * @throw if resource boundary will be exceeded by resource allocation
          */
         enum class soft_metered_feature: unsigned char{
-            LIMIT_STORAGE_CAPACITY = 0,
+            LIMIT_STORAGE_CAPACITY = 1,
             LIMIT_NETWORK_CONNECTIONS = 2
         };
 
@@ -103,6 +119,7 @@ namespace uh::licensing {
         }
 
         /**
+         * first try soft limit allocate, if successful, hard limit allocate will also be set
          *
          * @param hmf hard metred feature that should check for available allocation
          * @param alloc some resource
@@ -114,6 +131,7 @@ namespace uh::licensing {
         }
 
         /**
+         * first try soft limit allocate, if successful, hard limit allocate will also be set
          *
          * @param smf soft metred feature that should check for available allocation without warning
          * @param alloc some resource
@@ -144,7 +162,8 @@ namespace uh::licensing {
         std::map<feature,bool> features;
         std::map<metered_feature, metred_resource*> hard_metred_features;
         std::map<soft_metered_feature, soft_metred_resource*> soft_metred_features;
-        CHECK_METHOD check_lic;
+        std::vector<CHECK_METHOD*> check_lic;
+        std::filesystem::path license_path;
     };
 
 } // namespace uh::licensing
