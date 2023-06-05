@@ -241,7 +241,7 @@ std::unique_ptr<uh::protocol::allocation> hierarchical_storage::allocate(std::si
     return std::make_unique<hierarchical_allocation>(*this, m_store, size);
 }
 
-std::filesystem::path hierarchical_storage::get_hash_path (const std::string &hash) const {
+std::filesystem::path hierarchical_storage::get_hash_path (const std::string_view &hash) const {
     auto file_path = m_root;
     for (unsigned int i = 0; i < m_levels; i++) {
         const auto directory_name = hash.substr(2 * i, 2);

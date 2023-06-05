@@ -58,6 +58,8 @@ public:
 
     std::pair <std::size_t, std::vector <char>> write_block (const std::span <char>& data) override;
 
+    [[nodiscard]] std::filesystem::path get_hash_path (const std::string_view &hash) const;
+
     class hierarchical_allocation;
     class hierarchical_multi_block_allocation: public uh::protocol::allocation {
     public:
@@ -91,8 +93,6 @@ private:
     void return_space(std::size_t size);
 
     void acquire_storage_size (std::size_t size);
-
-    [[nodiscard]] std::filesystem::path get_hash_path (const std::string &hash) const;
 
     constexpr static std::string_view m_type = "HierarchicalStorage";
     constexpr static unsigned int m_levels = 4;
