@@ -16,6 +16,7 @@ namespace uh::licensing{
 
     bool check_online_license::valid() {
         //TODO: online implementation if license is valid and exists
+
     }
 
     // ---------------------------------------------------------------------
