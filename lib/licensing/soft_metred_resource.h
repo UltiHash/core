@@ -6,6 +6,7 @@
 #define CORE_SOFT_METRED_RESOURCE_H
 
 #include "licensing/metred_resource.h"
+#include <cstddef>
 
 namespace uh::licensing{
 

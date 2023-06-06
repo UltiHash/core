@@ -5,11 +5,15 @@
 #ifndef CORE_METRED_RESOURCE_H
 #define CORE_METRED_RESOURCE_H
 
+#include <cstddef>
+
 namespace uh::licensing{
 
     class metred_resource{
 
     public:
+
+        ~metred_resource() = default;
 
         /**
          *

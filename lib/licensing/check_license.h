@@ -67,6 +67,11 @@ namespace uh::licensing{
 
     protected:
         std::filesystem::path license_path;
+
+        void write_license_base(role licenseRole, license_type licenseType);
+
+        const std::string role_string = "server_role: ";
+        const std::string license_type_string = "license_type: ";
     };
 
 } // namespace uh::licensing
