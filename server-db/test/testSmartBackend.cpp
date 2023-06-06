@@ -16,7 +16,7 @@
 #include <storage/backends/smart_backend/smart_core.h>
 #include <storage/backends/smart_backend/persisted_robinhood_hashmap.h>
 #include <storage/backends/smart_backend/growing_managed_storage.h>
-#include <storage/backends/smart_backend/smart_storage.h>
+#include "storage/backends/smart_storage.h"
 
 
 

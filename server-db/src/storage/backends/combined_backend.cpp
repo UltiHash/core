@@ -6,7 +6,7 @@
 
 namespace uh::dbn::storage {
 
-combined_backend::smart_worker::smart_worker(smart::smart_storage &smart, storage_metrics &metrics) :
+combined_backend::smart_worker::smart_worker(smart_storage &smart, storage_metrics &metrics) :
         m_smart_storage (smart), m_metrics (metrics) {}
 
 void combined_backend::smart_worker::operator()(std::filesystem::path path, std::vector<char> sha) {
@@ -28,7 +28,7 @@ combined_backend::combined_backend(const hierarchical_storage_config &hierarchic
 }
 
 void combined_backend::start() {
-    INFO << "--- Combined backend initialized --- " << std::filesystem::absolute(m_hierarchical_config.db_root);
+    INFO << "--- Storage backend initialized --- " << std::filesystem::absolute(m_hierarchical_config.db_root);
     INFO << "        backend type   : " << backend_type();
     INFO << "        root directory : " << std::filesystem::absolute(m_hierarchical_config.db_root);
     INFO << "        space allocated: " << allocated_space();

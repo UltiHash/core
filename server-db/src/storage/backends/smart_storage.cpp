@@ -5,7 +5,7 @@
 
 namespace uh::dbn::storage::smart {
 
-smart_config make_smart_config (const std::filesystem::path& root, size_t size, size_t max_file_size) {
+smart_config make_smart_config(const std::filesystem::path &root, size_t size, size_t max_file_size) {
 
     const std::filesystem::path data_store_directory = root / "data_store";
     const std::filesystem::path set_directory = root / "set";
@@ -13,24 +13,24 @@ smart_config make_smart_config (const std::filesystem::path& root, size_t size, 
 
     // here we assume that size % max_file_size == 0, otherwise
     // we are creating larger files than the given size
-    data_store_config ds_conf;
+    smart::data_store_config ds_conf;
     ds_conf.data_store_file_size = 4ul * 1024ul * 1024ul * 1024ul;
     size_t offset = 0;
     while (offset < 20ul * 1024ul * 1024ul * 1024ul) {
         const std::filesystem::path data_store_file = "data_" + std::to_string(offset);
-        ds_conf.data_store_files.emplace_front (root / data_store_directory / data_store_file);
+        ds_conf.data_store_files.emplace_front(root / data_store_directory / data_store_file);
         offset += 1ul * 1024ul * 1024ul * 1024ul;
     }
 
-    dedupe_config dd_conf {};
-    dd_conf.min_fragment_size = 2*1024;
+    smart::dedupe_config dd_conf{};
+    dd_conf.min_fragment_size = 2 * 1024;
 
-    set_config set_conf;
+    smart::set_config set_conf;
     set_conf.set_init_file_size = 2ul * 1024ul * 1024ul * 1024ul;
     set_conf.set_minimum_free_space = 20ul * 1024ul * 1024ul;
     set_conf.fragment_set_path = set_directory / "fragment_set";
 
-    map_config map_conf;
+    smart::map_config map_conf;
     map_conf.key_size = 64;
     map_conf.map_key_file_init_size = 4ul * 1024ul * 1024ul * 1024ul;
     map_conf.map_values_minimum_file_size = 4ul * 1024ul * 1024ul * 1024ul;
@@ -42,8 +42,13 @@ smart_config make_smart_config (const std::filesystem::path& root, size_t size, 
 
     return {map_conf, set_conf, ds_conf, dd_conf};
 }
+} // end namespace uh::dbn::storage::smart
 
-smart_storage::smart_storage(const smart_config &smart_conf, uh::dbn::metrics::storage_metrics& storage_metrics) :
+
+
+namespace uh::dbn::storage {
+
+smart_storage::smart_storage(const smart::smart_config &smart_conf, uh::dbn::metrics::storage_metrics& storage_metrics) :
         m_smart_conf (smart_conf),
         m_smart_core (smart_conf),
         m_size (smart_conf.data_store_conf.data_store_file_size * smart_conf.data_store_conf.data_store_files.size()),
@@ -94,7 +99,7 @@ std::string smart_storage::backend_type() {
 }
 
 void smart_storage::start() {
-    INFO << "--- Smart backend initialized --- " << std::filesystem::absolute(m_smart_conf.data_store_conf.data_store_files.front().parent_path());
+    INFO << "--- Storage backend initialized --- " << std::filesystem::absolute(m_smart_conf.data_store_conf.data_store_files.front().parent_path());
     INFO << "        backend type   : " << backend_type();
     INFO << "        root directory : " << std::filesystem::absolute(m_smart_conf.data_store_conf.data_store_files.front().parent_path());
     INFO << "        space allocated: " << allocated_space();
@@ -109,4 +114,4 @@ void smart_storage::update_space_consumption() {
 }
 
 
-} // end namespace uh::dbn::storage::smart
+} // end namespace uh::dbn::storage

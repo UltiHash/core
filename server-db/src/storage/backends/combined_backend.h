@@ -7,17 +7,17 @@
 
 #include <storage/backend.h>
 #include "hierarchical_storage.h"
-#include <storage/backends/smart_backend/smart_storage.h>
+#include "smart_storage.h"
 
 namespace uh::dbn::storage {
 
 class combined_backend: public backend {
 
     struct smart_worker {
-        smart::smart_storage& m_smart_storage;
+        smart_storage& m_smart_storage;
         storage_metrics& m_metrics;
 
-        smart_worker(smart::smart_storage& smart, storage_metrics& metrics);
+        smart_worker(smart_storage& smart, storage_metrics& metrics);
         void operator () (std::filesystem::path path, std::vector<char> sha);
     };
 
@@ -46,7 +46,7 @@ private:
     hierarchical_storage_config m_hierarchical_config;
     uh::dbn::metrics::storage_metrics& m_storage_metrics;
     hierarchical_storage m_hierarchical_storage;
-    smart::smart_storage m_smart_storage;
+    smart_storage m_smart_storage;
     util::job_queue<void, const std::filesystem::path&, const std::vector<char>&> m_worker;
     constexpr static std::string_view m_type = "CombinedStorage";
 
