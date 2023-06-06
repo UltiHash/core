@@ -11,6 +11,8 @@ namespace uh::licensing{
 
     class soft_metred_resource: public metred_resource{
 
+    public:
+
         /**
          *
          * @return if a warning level limit of the implemented resource has been reached

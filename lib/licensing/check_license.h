@@ -63,7 +63,7 @@ namespace uh::licensing{
          * @param license_path is the path to the license file
          * @return if the license file is valid for the implemented service role and features
          */
-        bool valid();
+        virtual bool valid();
 
     protected:
         std::filesystem::path license_path;

@@ -18,16 +18,15 @@
 
 namespace uh::licensing {
 
-    template<class CHECK_METHOD = check_online_license>
     class license_package {
 
         ~license_package()
         {
-            for(auto& item:hard_metred_features){
+            for(auto& item:hard_metered_features){
                 delete item.second;
             }
 
-            for(auto& item:soft_metred_features){
+            for(auto& item:soft_metered_features){
                 delete item.second;
             }
 
@@ -52,7 +51,7 @@ namespace uh::licensing {
          * @param config license file input
          * @throws if license is invalid or cannot be loaded
          */
-        explicit license_package(const check_license::role license_role, const std::vector<feature> features_input = {},
+        explicit license_package(const check_license::role license_role, const std::vector<feature>& features_input = {},
                                  const std::filesystem::path& config = std::filesystem::current_path().parent_path())
         {
             for(uint8_t feature_iterate = 0; feature_iterate < feature_count_global; feature_iterate++){
@@ -129,9 +128,14 @@ namespace uh::licensing {
          */
         void check_role_enabled(check_license::role r) const
         {
+            if(!check_lic)
+                THROW(util::exception,"No license was loaded on check_role_enabled!");
+
             if(check_lic->check_role() != r)
                 THROW(util::exception,"Requested role did not match license role!");
         }
+
+        //TODO: check license type enabled
 
         /**
          *
@@ -139,7 +143,7 @@ namespace uh::licensing {
          * @throw feature state not specified by license and by that not listed
          * @return feature state
          */
-        bool check_feature_enabled(feature f) const
+        [[nodiscard]] bool check_feature_enabled(feature f) const
         {
             return features.at(f);
         }
@@ -154,10 +158,10 @@ namespace uh::licensing {
          */
         bool hard_limit_allocate(metered_feature hmf, std::size_t alloc)
         {
-            if(!hard_metred_features.contains(hmf))
+            if(!hard_metered_features.contains(hmf))
                 return true;
 
-            return hard_metred_features.at(hmf).hard_limit_allocate(alloc);
+            return hard_metered_features.at(hmf)->hard_limit_allocate(alloc);
         }
 
         /**
@@ -170,10 +174,10 @@ namespace uh::licensing {
          */
         bool soft_limit_allocate(soft_metered_feature smf, std::size_t alloc)
         {
-            if(!hard_metred_features.contains(smf))
+            if(!hard_metered_features.contains(static_cast<const metered_feature>(smf)))
                 return true;
 
-            return soft_metred_features.at(smf).soft_limit_allocate(alloc);
+            return soft_metered_features.at(smf)->soft_limit_allocate(alloc);
         }
 
         /**
@@ -183,14 +187,14 @@ namespace uh::licensing {
          */
         void deallocate(metered_feature hmf, std::size_t dealloc)
         {
-            if(soft_metred_features.contains(hmf)){
-                soft_metred_features.at(hmf).deallocate(dealloc);
+            if(soft_metered_features.contains(static_cast<const soft_metered_feature>(hmf))){
+                soft_metered_features.at(static_cast<const soft_metered_feature>(hmf))->deallocate(dealloc);
             }
             else{
-                if(!hard_metred_features.contains(hmf))
+                if(!hard_metered_features.contains(hmf))
                     return;
 
-                hard_metred_features.at(hmf).deallocate(dealloc);
+                hard_metered_features.at(hmf)->deallocate(dealloc);
             }
         }
 
@@ -200,6 +204,9 @@ namespace uh::licensing {
          */
         [[nodiscard]] bool valid()
         {
+            if(!check_lic)
+                THROW(util::exception,"No license was loaded on valid check!");
+
             return check_lic->valid();
         }
 
@@ -210,9 +217,9 @@ namespace uh::licensing {
          * @param mf metered feature to be registered
          * @param mr metered resource class to be checked repeatedly
          */
-        static void add_hard_metred_feature(metered_feature mf,metred_resource* mr)
+        void add_hard_metred_feature(metered_feature mf,metred_resource* mr)
         {
-            hard_metred_features.emplace(mf,mr);
+            hard_metered_features.emplace(mf, mr);
         }
 
         /**
@@ -220,18 +227,18 @@ namespace uh::licensing {
          * @param smf soft metered feature to be registered
          * @param smr soft metered resource class to be checked repeatedly
          */
-        static void add_soft_metred_feature(soft_metered_feature smf,soft_metred_resource* smr)
+        void add_soft_metred_feature(soft_metered_feature smf,soft_metred_resource* smr)
         {
-            soft_metred_features.emplace(smf,smr);
+            soft_metered_features.emplace(smf, smr);
         }
 
     private:
 
         std::map<feature,bool> features;
-        static std::map<metered_feature, metred_resource*> hard_metred_features;
-        static std::map<soft_metered_feature, soft_metred_resource*> soft_metred_features;
+        std::map<metered_feature, metred_resource*> hard_metered_features;
+        std::map<soft_metered_feature, soft_metred_resource*> soft_metered_features;
 
-        CHECK_METHOD* check_lic{};
+        check_license* check_lic{};
         std::filesystem::path license_path;
         const uint8_t feature_count_global = 2;
     };

@@ -9,6 +9,8 @@ namespace uh::licensing{
 
     class metred_resource{
 
+    public:
+
         /**
          *
          * @return return if hard limit was reached
