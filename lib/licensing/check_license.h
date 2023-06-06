@@ -17,7 +17,7 @@ namespace uh::licensing{
         /**
          *
          * Check if `role` is enabled in the configured license.
-         * @throw if `role`does not match given license
+         * @throw if `role` does not match given license
          */
         enum class role: unsigned char{
             THROW_ROLE,
@@ -26,7 +26,20 @@ namespace uh::licensing{
         };
 
         /**
-         * remembers the license path to be checked on request
+         *
+         * Check the type of a license file
+         * @throw if `license_type` is not described in the license file
+         */
+        enum class license_type: unsigned char{
+            THROW_LICENSE_TYPE,
+            AIRGAP_LICENSE_WITH_ONLINE_ACTIVATION,
+            FLOATING_USER_LICENSE
+        };
+
+        /**
+         * manages license file creation and parsing
+         * First line license: license role
+         * Second line license:
          *
          * @param license_folder is the folder where a license file is stored
          */
@@ -36,7 +49,13 @@ namespace uh::licensing{
          *
          * @return role that was initialized by license file
          */
-        virtual role check_role() = 0;
+        role check_role();
+
+        /**
+         *
+         * @return type of license handling
+         */
+        license_type check_license_type();
 
         /**
          * the default license is not timed
