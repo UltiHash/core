@@ -20,18 +20,7 @@ namespace uh::licensing {
 
     class license_package {
 
-        ~license_package()
-        {
-            for(auto& item:hard_metered_features){
-                delete item.second;
-            }
-
-            for(auto& item:soft_metered_features){
-                delete item.second;
-            }
-
-            delete check_lic;
-        }
+        ~license_package();
 
     public:
 
@@ -51,54 +40,8 @@ namespace uh::licensing {
          * @param config license file input
          * @throws if license is invalid or cannot be loaded
          */
-        explicit license_package(const check_license::role license_role, const std::vector<feature>& features_input = {},
-                                 const std::filesystem::path& config = std::filesystem::current_path().parent_path())
-        {
-            for(uint8_t feature_iterate = 0; feature_iterate < feature_count_global; feature_iterate++){
-                features.emplace((feature)feature_iterate,
-                                 std::find(features_input.cbegin(),features_input.cend(),
-                                           (feature)feature_iterate) != features_input.cend());
-            }
-
-            for(auto& file_object: std::filesystem::directory_iterator(config))
-            {
-                if(file_object.is_regular_file() && file_object.path().extension() == ".lic")
-                {
-                    auto tmp_license_type_read = check_license(file_object.path());
-
-                    auto license_type_checked = tmp_license_type_read.check_license_type();
-
-                    switch (license_type_checked) {
-
-                        case check_license::license_type::AIRGAP_LICENSE_WITH_ONLINE_ACTIVATION:
-                        {
-                            auto* tmp_license_valid_airgap = new check_airgap_license(config);
-
-                            if(tmp_license_valid_airgap->valid())check_lic = tmp_license_valid_airgap;
-                            else delete tmp_license_valid_airgap;
-
-                            break;
-                        }
-
-                        case check_license::license_type::FLOATING_ONLINE_USER_LICENSE:
-                        {
-                            auto* tmp_license_valid_online = new check_airgap_license(config);
-
-                            if(tmp_license_valid_online->valid())check_lic = tmp_license_valid_online;
-                            else delete tmp_license_valid_online;
-
-                            break;
-                        }
-
-                        default:
-                            break;
-                    }
-
-                    if(license_type_checked != check_license::license_type::THROW_LICENSE_TYPE)
-                        break;
-                }
-            }
-        }
+        explicit license_package(check_license::role license_role, const std::vector<feature>& features_input = {},
+                                 const std::filesystem::path& config = std::filesystem::current_path().parent_path());
 
         /**
          *
@@ -126,28 +69,14 @@ namespace uh::licensing {
          * @param r role to be validated
          * @throw if license role does not match requested role or license not loaded
          */
-        void check_role_enabled(check_license::role r)
-        {
-            if(check_lic == nullptr)
-                THROW(util::exception,"No license was loaded on check_role_enabled!");
-
-            if(check_lic->check_role() != r)
-                THROW(util::exception,"Requested role did not match license role!");
-        }
+        void check_role_enabled(check_license::role r);
 
         /**
          *
          * @param l license to be validated
          * @throw if license type does not match requested license type or license not loaded
          */
-        void check_license_enabled(check_license::license_type l)
-        {
-            if(check_lic == nullptr)
-                THROW(util::exception,"No license was loaded on check_license_enabled!");
-
-            if(check_lic->check_license_type() != l)
-                THROW(util::exception,"Requested role did not match license role!");
-        }
+        void check_license_enabled(check_license::license_type l);
 
         /**
          *
@@ -155,10 +84,7 @@ namespace uh::licensing {
          * @throw feature state not specified by license and by that not listed
          * @return feature state
          */
-        [[nodiscard]] bool check_feature_enabled(feature f) const
-        {
-            return features.at(f);
-        }
+        [[nodiscard]] bool check_feature_enabled(feature f) const;
 
         /**
          * first try soft limit allocate, if successful, hard limit allocate will also be set
@@ -168,13 +94,7 @@ namespace uh::licensing {
          * @param alloc some resource
          * @return if allocation was successful and metered counter updated --> valid operation
          */
-        bool hard_limit_allocate(metered_feature hmf, std::size_t alloc)
-        {
-            if(!hard_metered_features.contains(hmf))
-                return true;
-
-            return hard_metered_features.at(hmf)->hard_limit_allocate(alloc);
-        }
+        bool hard_limit_allocate(metered_feature hmf, std::size_t alloc);
 
         /**
          * first try soft limit allocate, if successful, hard limit allocate will also be set
@@ -184,43 +104,20 @@ namespace uh::licensing {
          * @param alloc some resource
          * @return if allocation was successful and metered counter updated without warning required
          */
-        bool soft_limit_allocate(soft_metered_feature smf, std::size_t alloc)
-        {
-            if(!hard_metered_features.contains(static_cast<const metered_feature>(smf)))
-                return true;
-
-            return soft_metered_features.at(smf)->soft_limit_allocate(alloc);
-        }
+        bool soft_limit_allocate(soft_metered_feature smf, std::size_t alloc);
 
         /**
          *
          * @param hmf hard metred feature to be deallocated
          * @param dealloc resources to be registered deallocated
          */
-        void deallocate(metered_feature hmf, std::size_t dealloc)
-        {
-            if(soft_metered_features.contains(static_cast<const soft_metered_feature>(hmf))){
-                soft_metered_features.at(static_cast<const soft_metered_feature>(hmf))->deallocate(dealloc);
-            }
-            else{
-                if(!hard_metered_features.contains(hmf))
-                    return;
-
-                hard_metered_features.at(hmf)->deallocate(dealloc);
-            }
-        }
+        void deallocate(metered_feature hmf, std::size_t dealloc);
 
         /**
          *
          * @return if registered license type is valid
          */
-        [[nodiscard]] bool valid()
-        {
-            if(!check_lic)
-                THROW(util::exception,"No license was loaded on valid check!");
-
-            return check_lic->valid();
-        }
+        [[nodiscard]] bool valid();
 
     protected:
 
@@ -229,20 +126,14 @@ namespace uh::licensing {
          * @param mf metered feature to be registered
          * @param mr metered resource class to be checked repeatedly
          */
-        void add_hard_metred_feature(metered_feature mf,metred_resource* mr)
-        {
-            hard_metered_features.emplace(mf, mr);
-        }
+        void add_hard_metred_feature(metered_feature mf,metred_resource* mr);
 
         /**
          *
          * @param smf soft metered feature to be registered
          * @param smr soft metered resource class to be checked repeatedly
          */
-        void add_soft_metred_feature(soft_metered_feature smf,soft_metred_resource* smr)
-        {
-            soft_metered_features.emplace(smf, smr);
-        }
+        void add_soft_metred_feature(soft_metered_feature smf,soft_metred_resource* smr);
 
     private:
 
