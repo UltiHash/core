@@ -124,18 +124,30 @@ namespace uh::licensing {
         /**
          *
          * @param r role to be validated
-         * @throw if license role does not match requested role
+         * @throw if license role does not match requested role or license not loaded
          */
-        void check_role_enabled(check_license::role r) const
+        void check_role_enabled(check_license::role r)
         {
-            if(!check_lic)
+            if(check_lic == nullptr)
                 THROW(util::exception,"No license was loaded on check_role_enabled!");
 
             if(check_lic->check_role() != r)
                 THROW(util::exception,"Requested role did not match license role!");
         }
 
-        //TODO: check license type enabled
+        /**
+         *
+         * @param l license to be validated
+         * @throw if license type does not match requested license type or license not loaded
+         */
+        void check_license_enabled(check_license::license_type l)
+        {
+            if(check_lic == nullptr)
+                THROW(util::exception,"No license was loaded on check_license_enabled!");
+
+            if(check_lic->check_license_type() != l)
+                THROW(util::exception,"Requested role did not match license role!");
+        }
 
         /**
          *
