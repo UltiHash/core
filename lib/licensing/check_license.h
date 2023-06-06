@@ -33,7 +33,7 @@ namespace uh::licensing{
         enum class license_type: unsigned char{
             THROW_LICENSE_TYPE,
             AIRGAP_LICENSE_WITH_ONLINE_ACTIVATION,
-            FLOATING_USER_LICENSE
+            FLOATING_ONLINE_USER_LICENSE
         };
 
         /**
@@ -63,7 +63,7 @@ namespace uh::licensing{
          * @param license_path is the path to the license file
          * @return if the license file is valid for the implemented service role and features
          */
-        virtual bool valid() = 0;
+        bool valid();
 
     protected:
         std::filesystem::path license_path;

@@ -52,11 +52,15 @@ namespace uh::licensing{
                     return check_license::license_type::AIRGAP_LICENSE_WITH_ONLINE_ACTIVATION;
 
                 if(line == "floating_user_license")
-                    return check_license::license_type::FLOATING_USER_LICENSE;
+                    return check_license::license_type::FLOATING_ONLINE_USER_LICENSE;
             }
         }
 
         return check_license::license_type::THROW_LICENSE_TYPE;
+    }
+
+    bool check_license::valid() {
+        return true;
     }
 
     // ---------------------------------------------------------------------

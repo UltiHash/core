@@ -8,6 +8,7 @@
 #include "licensing/metred_resource.h"
 #include "licensing/soft_metred_resource.h"
 #include "licensing/check_online_license.h"
+#include "licensing/check_airgap_license.h"
 #include "util/exception.h"
 
 #include <map>
@@ -64,14 +65,38 @@ namespace uh::licensing {
             {
                 if(file_object.is_regular_file() && file_object.path().extension() == ".lic")
                 {
-                    //TODO: add licensing configuration how the license should be checked, license parser
-                    auto* tmp_license_check = new check_online_license(file_object.path());
+                    auto tmp_license_type_read = check_license(file_object.path());
 
-                    if(tmp_license_check->check_role() == license_role && tmp_license_check->valid()){
-                        check_lic = tmp_license_check;
-                        break;
+                    auto license_type_checked = tmp_license_type_read.check_license_type();
+
+                    switch (license_type_checked) {
+
+                        case check_license::license_type::AIRGAP_LICENSE_WITH_ONLINE_ACTIVATION:
+                        {
+                            auto* tmp_license_valid_airgap = new check_airgap_license(config);
+
+                            if(tmp_license_valid_airgap->valid())check_lic = tmp_license_valid_airgap;
+                            else delete tmp_license_valid_airgap;
+
+                            break;
+                        }
+
+                        case check_license::license_type::FLOATING_ONLINE_USER_LICENSE:
+                        {
+                            auto* tmp_license_valid_online = new check_airgap_license(config);
+
+                            if(tmp_license_valid_online->valid())check_lic = tmp_license_valid_online;
+                            else delete tmp_license_valid_online;
+
+                            break;
+                        }
+
+                        default:
+                            break;
                     }
-                    else delete tmp_license_check;
+
+                    if(license_type_checked != check_license::license_type::THROW_LICENSE_TYPE)
+                        break;
                 }
             }
         }
