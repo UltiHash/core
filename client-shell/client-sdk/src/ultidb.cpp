@@ -28,47 +28,47 @@ public:
 
 // ---------------------------------------------------------------------
 
-ULTIDB_RESULT ultidb_get_last_error()
+UDB_RESULT udb_get_last_error()
 {
-    return static_cast<ULTIDB_RESULT>(error);
+    return static_cast<UDB_RESULT>(error);
 }
 
 // ---------------------------------------------------------------------
 
-struct ULTIDB_CONFIG_STRUCT
+struct UDB_CONFIG_STRUCT
 {
-    ULTIDB_CONFIG_STRUCT() :
+    UDB_CONFIG_STRUCT() :
             hostname(nullptr),
             port(0),
             connection_pool(3),
-            chunking_mode(ULTIDB_FAST_CDC)
+            chunking_mode(UDB_FAST_CDC)
     {};
 
     const char* hostname;
     uint16_t port;
     size_t connection_pool;
-    ULTIDB_CHUNKING_MODE chunking_mode;
+    UDB_CHUNKING_MODE chunking_mode;
 
 };
 
 // ---------------------------------------------------------------------
 
-ULTIDB_CONFIG* udb_create_config()
+UDB_CONFIG* udb_create_config()
 {
     try
     {
-        return new ULTIDB_CONFIG();
+        return new UDB_CONFIG();
     }
     catch (const std::exception& e)
     {
-        error = ULTIDB_RESULT_ERROR;
+        error = UDB_RESULT_ERROR;
         return nullptr;
     }
 };
 
 // ---------------------------------------------------------------------
 
-ULTIDB_BOOL udb_config_set_agencynode(ULTIDB_CONFIG* cfg, const char *hostname, uint16_t port,
+UDB_RESULT udb_config_set_agencynode(UDB_CONFIG* cfg, const char *hostname, uint16_t port,
                                          size_t connection_pool)
 {
     try
@@ -76,44 +76,44 @@ ULTIDB_BOOL udb_config_set_agencynode(ULTIDB_CONFIG* cfg, const char *hostname, 
         cfg->hostname = hostname;
         cfg->port = port;
         cfg->connection_pool = connection_pool;
-        return ULTIDB_TRUE;
+        return UDB_RESULT_SUCCESS;
     }
     catch (const std::exception& e)
     {
-        error = ULTIDB_RESULT_ERROR;
-        return ULTIDB_FALSE;
+        error = UDB_RESULT_ERROR;
+        return UDB_RESULT_ERROR;
     }
 }
 
 // ---------------------------------------------------------------------
 
-ULTIDB_BOOL udb_config_set_chunking_strategy(ULTIDB_CONFIG* cfg, ULTIDB_CHUNKING_MODE chunking_strategy)
+UDB_RESULT udb_config_set_chunking_strategy(UDB_CONFIG* cfg, UDB_CHUNKING_MODE chunking_strategy)
 {
     try
     {
         cfg->chunking_mode = chunking_strategy;
-        return ULTIDB_TRUE;
+        return UDB_RESULT_SUCCESS;
     }
     catch (const std::exception& e)
     {
-        error = ULTIDB_RESULT_ERROR;
-        return ULTIDB_FALSE;
+        error = UDB_RESULT_ERROR;
+        return UDB_RESULT_ERROR;
     }
 }
 
 // ---------------------------------------------------------------------
 
-ULTIDB_RESULT udb_destroy_config(ULTIDB_CONFIG *config)
+UDB_RESULT udb_destroy_config(UDB_CONFIG *config)
 {
     try
     {
         delete config;
-        return ULTIDB_RESULT_SUCCESS;
+        return UDB_RESULT_SUCCESS;
     }
     catch(const std::exception& e)
     {
-        error = ULTIDB_RESULT_ERROR;
-        return ULTIDB_RESULT_ERROR;
+        error = UDB_RESULT_ERROR;
+        return UDB_RESULT_ERROR;
     }
 }
 
@@ -123,9 +123,9 @@ const char* get_sdk_version() { return SDK_VERSION; }
 
 // ---------------------------------------------------------------------
 
-struct ULTIDB_STATE_STRUCT
+struct UDB_STATE_STRUCT
 {
-    explicit ULTIDB_STATE_STRUCT(ULTIDB_CONFIG* config)
+    explicit UDB_STATE_STRUCT(UDB_CONFIG* config)
     {
         boost::asio::io_context io;
         std::stringstream s;
@@ -146,38 +146,38 @@ struct ULTIDB_STATE_STRUCT
 
 // ---------------------------------------------------------------------
 
-ULTIDB* udb_create_instance(ULTIDB_CONFIG* config)
+UDB* udb_create_instance(UDB_CONFIG* config)
 {
     try
     {
-        return new ULTIDB(config);
+        return new UDB(config);
     }
     catch (const std::exception& e)
     {
-        error = ULTIDB_RESULT_ERROR;
+        error = UDB_RESULT_ERROR;
         return nullptr;
     }
 }
 
 // ---------------------------------------------------------------------
 
-ULTIDB_RESULT udb_destroy_instance(ULTIDB* ulti_db_instance)
+UDB_RESULT udb_destroy_instance(UDB* ulti_db_instance)
 {
     try
     {
         delete ulti_db_instance;
-        return ULTIDB_RESULT_SUCCESS;
+        return UDB_RESULT_SUCCESS;
     }
     catch(const std::exception& e)
     {
-        error = ULTIDB_RESULT_ERROR;
-        return ULTIDB_RESULT_ERROR;
+        error = UDB_RESULT_ERROR;
+        return UDB_RESULT_ERROR;
     }
 }
 
 // ---------------------------------------------------------------------
 
-ULTIDB_RESULT udb_integrate(ULTIDB *db, char* hash_buffer, const char* data, size_t length)
+UDB_RESULT udb_integrate(UDB *db, char* hash_buffer, const char* data, size_t length)
 {
     try
     {
@@ -189,24 +189,24 @@ ULTIDB_RESULT udb_integrate(ULTIDB *db, char* hash_buffer, const char* data, siz
     }
     catch (const std::exception &e)
     {
-        error = ULTIDB_RESULT_ERROR;
-        return ULTIDB_RESULT::ULTIDB_RESULT_ERROR;
+        error = UDB_RESULT_ERROR;
+        return UDB_RESULT::UDB_RESULT_ERROR;
     }
 
-    return ULTIDB_RESULT::ULTIDB_RESULT_SUCCESS;
+    return UDB_RESULT::UDB_RESULT_SUCCESS;
 }
 
 // ---------------------------------------------------------------------
 
-ULTIDB_RESULT udb_retrieve(ULTIDB *db, char* buffer_to_fill, size_t buffer_length , const char* udb_hash, size_t hash_length, uint32_t* filled_length)
+UDB_RESULT udb_retrieve(UDB *db, char* buffer_to_fill, size_t buffer_length , const char* udb_hash, uint32_t* received_length)
 {
     try
     {
-        uh::protocol::read_chunks::request req { .hashes = std::span<const char>(udb_hash, hash_length)};
+        uh::protocol::read_chunks::request req { .hashes = std::span<const char>(udb_hash, 64)};
         auto result = db->connection_pool->get()->read_chunks(req);
 
         auto retrieved_size = result.chunk_sizes.front();
-        *filled_length = retrieved_size;
+        *received_length = retrieved_size;
 
         if (retrieved_size > buffer_length)
             throw Buffer_Overflow();
@@ -215,16 +215,16 @@ ULTIDB_RESULT udb_retrieve(ULTIDB *db, char* buffer_to_fill, size_t buffer_lengt
     }
     catch(const Buffer_Overflow& e)
     {
-        error = ULTIDB_BUFFER_OVERFLOW;
-        return ULTIDB_BUFFER_OVERFLOW;
+        error = UDB_BUFFER_OVERFLOW;
+        return UDB_BUFFER_OVERFLOW;
     }
     catch (const std::exception& e)
     {
-        error = ULTIDB_RESULT_ERROR;
-        return ULTIDB_RESULT_ERROR;
+        error = UDB_RESULT_ERROR;
+        return UDB_RESULT_ERROR;
     }
 
-    return ULTIDB_RESULT_SUCCESS;
+    return UDB_RESULT_SUCCESS;
 }
 
 // ---------------------------------------------------------------------
