@@ -18,7 +18,7 @@ namespace uh::client
 
 // ---------------------------------------------------------------------
 
-class request;
+class double_buffer;
 
 // ---------------------------------------------------------------------
 
@@ -39,8 +39,7 @@ public:
     [[nodiscard]] const std::map<std::filesystem::path, std::optional<std::string>>& results() const;
     void send_statistics();
     void chunk_and_upload(std::unique_ptr<uhv::f_meta_data>&& metadata,
-                          protocol::client_pool::handle& client,
-                          request& r);
+                          double_buffer& r);
 
     static constexpr std::size_t MAXIMUM_DATA_SIZE = 16 * 1024 * 1024;
 private:

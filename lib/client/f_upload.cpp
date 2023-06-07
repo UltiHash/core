@@ -137,6 +137,53 @@ private:
 
 // ---------------------------------------------------------------------
 
+struct double_buffer
+{
+    request first;
+    request second;
+    std::future<void> future;
+    bool use_first = false;
+    protocol::client_pool::handle client_handle;
+
+    double_buffer(protocol::client_pool::handle&& client_handle)
+        : client_handle(std::move(client_handle))
+    {
+        std::promise<void> p;
+        future = p.get_future();
+        p.set_value();
+    }
+
+    request& active()
+    {
+        return use_first ? first : second;
+    }
+
+    void swap()
+    {
+        future.get();
+
+        auto pms = std::make_shared<std::promise<void>>();
+        future = pms->get_future();
+
+        auto& buf = active();
+        std::jthread s( [&, this] () {
+            buf.send(client_handle);
+            buf.reset();
+            pms->set_value();
+        });
+
+        use_first = !use_first;
+    }
+
+    void finish()
+    {
+        future.get();
+        active().send(client_handle);
+    }
+};
+
+// ---------------------------------------------------------------------
+
 f_upload::f_upload(protocol::client_pool& cl_pool,
                    uhv::job_queue<std::unique_ptr<uhv::f_meta_data>>& in_jq,
                    std::list<std::future<std::unique_ptr<uhv::f_meta_data>>>& out_jq,
@@ -193,15 +240,13 @@ void f_upload::send_statistics()
 
 // ---------------------------------------------------------------------
 
-void f_upload::chunk_and_upload(std::unique_ptr<uhv::f_meta_data>&& md_ptr,
-                                protocol::client_pool::handle& client_handle,
-                                request& r)
+void f_upload::chunk_and_upload(std::unique_ptr<uhv::f_meta_data>&& md_ptr, double_buffer& r)
 {
     if (md_ptr->f_type() == uhv::uh_file_type::regular && md_ptr->f_size() != 0)
     {
         auto& md = *md_ptr;
         auto fh = std::make_shared<file_handle>(std::move(md_ptr));
-        r.add_handle(fh);
+        r.active().add_handle(fh);
         m_output_jq.push_back(fh->get_future());
 
         io::file file(md.f_path());
@@ -210,14 +255,13 @@ void f_upload::chunk_and_upload(std::unique_ptr<uhv::f_meta_data>&& md_ptr,
 
         for (auto chunk = chunker->next_chunk(); !chunk.empty(); chunk = chunker->next_chunk())
         {
-            if (r.space_left() < chunk.size())
+            if (r.active().space_left() < chunk.size())
             {
-                r.send(client_handle);
-                r.reset();
-                r.add_handle(fh);
+                r.swap();
+                r.active().add_handle(fh);
             }
 
-            r.add_chunk(fh.get(), chunk);
+            r.active().add_chunk(fh.get(), chunk);
         }
 
         m_uploaded_size += md.f_size();
@@ -240,8 +284,7 @@ void f_upload::spawn_threads()
     {
         m_thread_pool.emplace_back([&]()
         {
-           protocol::client_pool::handle&& client_connection_handle = m_client_pool.get();
-           request req;
+           double_buffer db(m_client_pool.get());
 
            while (auto job = m_input_jq.get_job())
            {
@@ -254,7 +297,7 @@ void f_upload::spawn_threads()
 
                 try
                 {
-                    chunk_and_upload(std::move(*job), client_connection_handle, req);
+                    chunk_and_upload(std::move(*job), db);
                     add_result(filename);
                 }
                 catch (const std::exception& e)
@@ -263,7 +306,7 @@ void f_upload::spawn_threads()
                 }
            }
 
-           req.send(client_connection_handle);
+           db.finish();
         });
     }
 }
