@@ -9,15 +9,26 @@
 #
 # Note that on macOS, this module requires the "macLICENSESPRING" package to be installed.
 
-
+set(SPRING_SHARED True)
 
 #extract OS specific package
 
-MACRO(SUBDIRWORKPATHLICENSE result curdir checkmatch)
+MACRO(SUBPATHWORKPATHLICENSE result curdir checkmatch)
     FILE(GLOB children ${curdir}/*) # This was changed
     SET(dirlist "")
     FOREACH(child ${children})
         IF(${child} MATCHES ${checkmatch}) # This was changed
+            LIST(APPEND dirlist ${child})
+        ENDIF()
+    ENDFOREACH()
+    SET(${result} ${dirlist})
+ENDMACRO()
+
+MACRO(SUBDIRWORKPATHLICENSE result curdir checkmatch)
+    FILE(GLOB_RECURSE children ${curdir}/*) # This was changed
+    SET(dirlist "")
+    FOREACH(child ${children})
+        IF((IS_DIRECTORY ${child}) AND (${child} MATCHES ${checkmatch})) # This was changed
             LIST(APPEND dirlist ${child})
         ENDIF()
     ENDFOREACH()
@@ -30,7 +41,7 @@ if (APPLE)
         message("* unzip -- License Spring\n")
 
         message("Extracting License Spring for Mac from:")
-        SUBDIRWORKPATHLICENSE(MACZIP ${CMAKE_CURRENT_LIST_DIR} "/LicenseSpring/LicenseSpringCppSDK[A-Za-z0-9_.]*Mac")
+        SUBPATHWORKPATHLICENSE(MACZIP ${CMAKE_CURRENT_LIST_DIR} "/LicenseSpring/LicenseSpringCppSDK[A-Za-z0-9_.]*Mac")
         message("${MACZIP}")
         message("to build area:")
         message("${CMAKE_CURRENT_BINARY_DIR}\n")
@@ -53,7 +64,7 @@ elseif (UNIX)
         message("* unzip -- License Spring\n")
 
         message("Extracting License Spring for Linux from:")
-        SUBDIRWORKPATHLICENSE(LINUXZIP ${CMAKE_CURRENT_LIST_DIR} "/LicenseSpring/LicenseSpringCppSDK[A-Za-z0-9_.]*Linux")
+        SUBPATHWORKPATHLICENSE(LINUXZIP ${CMAKE_CURRENT_LIST_DIR} "/LicenseSpring/LicenseSpringCppSDK[A-Za-z0-9_.]*Linux")
         message("${LINUXZIP}")
         message("to build area:")
         message("${CMAKE_CURRENT_BINARY_DIR}\n")
@@ -72,10 +83,12 @@ elseif (UNIX)
 
 endif ()
 
+set(LICENSESPRING_FOUND True)
+
 message("\n -- unpacking License Spring complete -- \n")
 
 #read version of license spring
-SUBDIRWORKPATHLICENSE(LICENSE_SPRING_SOURCE_FOLDER ${CMAKE_CURRENT_BINARY_DIR} "/LicenseSpring/LicenseSpring*")
+SUBPATHWORKPATHLICENSE(LICENSE_SPRING_SOURCE_FOLDER ${CMAKE_CURRENT_BINARY_DIR} "/LicenseSpring/LicenseSpring*")
 
 message("${LICENSE_SPRING_SOURCE_FOLDER}\n")
 
@@ -90,6 +103,15 @@ string(REGEX REPLACE "[A-Za-z+]" "" LICENSESPRING_FOUND_VERSION ${FIRST_README_V
 
 message("License Spring version:")
 message("${LICENSESPRING_FOUND_VERSION}\n")
+
+#remove either shared or static libraries from working directory
+
+if(${SPRING_SHARED})
+    SUBDIRWORKPATHLICENSE(STATIC_DELETE ${LICENSE_SPRING_SOURCE_FOLDER} "/static*")
+    message("${STATIC_DELETE}")
+else ()
+
+endif ()
 
 #[===[
 
