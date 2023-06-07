@@ -1,5 +1,5 @@
 /**
- * @file Exposes APIs to use UltiDB.
+ * @file Exposes APIs in order to use UltiDB.
  */
 
 #ifndef ULTIDB_SDK_INCLUDE_ULTIDB_H
@@ -13,6 +13,9 @@ extern "C" {
 
 // ---------------------------------------------------------------------
 
+#define SDK_NAME "ULTIDB"
+#define SDK_VERSION "0.1.0"
+
 /**
 * Opaque structure that holds the UltiDB state.
 *
@@ -25,23 +28,24 @@ typedef struct ULTIDB_STATE_STRUCT ULTIDB;
 * Opaque structure that holds the config parameters in order to create an instance
  * of UltiDB.
 *
-* Allocated and initialized with ::UltiDBCreateInstance.
-* Cleaned up and deallocated with ::UltiDBDestroyInstance.
+* Allocated and initialized with ::udb_create_config.
+* Cleaned up and deallocated with ::udb_destroy_config.
 */
 typedef struct ULTIDB_CONFIG_STRUCT ULTIDB_CONFIG;
 
 /**
- * Result type for ULTIDB APIs.
+ * Result given by the ULTIDB APIs which tells if the operation was successful or not.
  */
 typedef enum : uint8_t
 {
-    /* UltiDB Operation successfully completed. */
+    /* UltiDB operation successfully completed. */
     ULTIDB_RESULT_SUCCESS = 0,
 
-    /* UltiDB operation error, e.g. storage full. */
+    /* UltiDB operation failed and the error is not known. */
     ULTIDB_RESULT_ERROR = 1,
 
-    /* give more error codes here */
+    /* Data couldn't be fit in the buffer given. */
+    ULTIDB_BUFFER_OVERFLOW = 3,
 
 } ULTIDB_RESULT;
 
@@ -72,6 +76,11 @@ typedef enum ULTIDB_CHUNKING_MODE {
     ULTIDB_MOD_CDC = 3,
 
 } ULTIDB_CHUNKING_MODE;
+
+/*
+ * Gives the error code for the last operation.
+*/
+ULTIDB_RESULT ultidb_get_last_error();
 
 // ---------------------------------------------------------------------
 
@@ -120,38 +129,27 @@ ULTIDB* udb_create_instance(ULTIDB_CONFIG *config);
 ULTIDB_RESULT udb_destroy_instance(ULTIDB* ulti_db_instance);
 
 
-/**
- * Return the error code for the last operation. The errors are saved per thread.
- */
-uint8_t udb_get_errno(ULTIDB *db);
-uint8_t udb_config_get_errno(ULTIDB_CONFIG *config);
-
-
 // ---------------------------------------------------------------------
 
 /**
  *
  * @param db ULTIDB object which can be used to perform operations such as integrate and retrieve.
  * @param data Data to integrate into the ULTIDB cluster
+ * @param length Size of the data to integrate
  * @return unsigned int of 8 bits The value 0 means the operation was successful, else a integer value is set according
  * to the error encountered. This error can be deduced from enum ::ULTIDB_RESULT.
  */
-ULTIDB_RESULT udb_integrate(ULTIDB *db, const char* data);
+ULTIDB_RESULT udb_integrate(ULTIDB *db, char* hash_buffer, const char* data, size_t length);
 
 /**
  * Data to retrieve from the ULTIDB cluster based on the hash provided.
  *
  * @param db ULTIDB object which can be used to perform operations such as integrate and retrieve.
  * @param udb_hash SHA512 hash of the data integrated
+ * @param length Size of the data retrieved
  * @return char* Returns nullptr if the operation is unsuccessful else a pointer to the underlying data is returned
  */
-char* udb_retrieve(ULTIDB *db, const char* udb_hash);
-
-/* !! 1. How to improve the interface such that integrate and retrieve have the same return value? That seems much more
- * consistent.
- * 2. Naming convention of the function so it's shorter.
-*/
-
+ULTIDB_RESULT udb_retrieve(ULTIDB *db, char* buffer_to_fill, size_t buffer_length ,const char* udb_hash, size_t hash_length, uint32_t* filled_length);
 
 // ---------------------------------------------------------------------
 
