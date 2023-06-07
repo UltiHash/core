@@ -84,6 +84,17 @@ public:
     void add_effective_size(const std::uint64_t&);
     void set_effective_size(const std::uint64_t&);
 
+    template <typename iterator>
+    void append_hashes(iterator begin, iterator end)
+    {
+        m_f_hashes.insert(m_f_hashes.end(), begin, end);
+    }
+
+    template <typename iterator>
+    void append_sizes(iterator begin, iterator end)
+    {
+        m_chunk_sizes.insert(m_chunk_sizes.end(), begin, end);
+    }
 
 private:
     std::filesystem::path m_f_path{};

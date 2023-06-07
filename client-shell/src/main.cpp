@@ -92,7 +92,6 @@ void integrate(protocol::client_pool& pool,
     for (auto& next : metadata)
     {
         auto md = next.get();
-
         if (md->f_type() == uhv::uh_file_type::regular)
         {
             size += md->f_size();
