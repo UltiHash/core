@@ -103,18 +103,37 @@ if(${SPRING_SHARED} STREQUAL "ON")
 
     if(${CMAKE_BUILD_TYPE} STREQUAL "Debug")
         file(REMOVE_RECURSE "${LICENSE_SPRING_SOURCE_FOLDER}/bin/shared/Release")
+        add_library(libLicenseSpring SHARED IMPORTED)
+        set_property(TARGET libLicenseSpring PROPERTY IMPORTED_LOCATION
+                "${LICENSE_SPRING_SOURCE_FOLDER}/bin/shared/Debug/libLicenseSpring.so")
     else ()
         file(REMOVE_RECURSE "${LICENSE_SPRING_SOURCE_FOLDER}/bin/shared/Debug")
+        add_library(libLicenseSpring SHARED IMPORTED)
+        set_property(TARGET libLicenseSpring PROPERTY IMPORTED_LOCATION
+                "${LICENSE_SPRING_SOURCE_FOLDER}/bin/shared/Release/libLicenseSpring.so")
     endif ()
 else ()
     file(REMOVE_RECURSE "${LICENSE_SPRING_SOURCE_FOLDER}/bin/shared")
 
     if(${CMAKE_BUILD_TYPE} STREQUAL "Debug")
         file(REMOVE_RECURSE "${LICENSE_SPRING_SOURCE_FOLDER}/bin/static/Release")
+        add_library(libLicenseSpring STATIC IMPORTED)
+        set_property(TARGET libLicenseSpring PROPERTY IMPORTED_LOCATION
+                "${LICENSE_SPRING_SOURCE_FOLDER}/bin/shared/Debug/libLicenseSpring.a")
     else ()
         file(REMOVE_RECURSE "${LICENSE_SPRING_SOURCE_FOLDER}/bin/static/Debug")
+        add_library(libLicenseSpring STATIC IMPORTED)
+        set_property(TARGET libLicenseSpring PROPERTY IMPORTED_LOCATION
+                "${LICENSE_SPRING_SOURCE_FOLDER}/bin/shared/Release/libLicenseSpring.a")
     endif ()
 endif ()
+
+set(LICENSESPRING_LIBRARY ${libLicenseSpring})
+message(${LICENSESPRING_LIBRARY})
+find_path(LICENSESPRING_INCLUDE_DIR libLicenseSpring.so)
+set(LICENSESPRING_INCLUDE_DIRS "${LICENSESPRING_INCLUDE_DIR};${LICENSE_SPRING_SOURCE_FOLDER}/include/LicenseSpring")
+
+message("Included License Spring at: ${LICENSESPRING_INCLUDE_DIRS}")
 
 #[===[
 
