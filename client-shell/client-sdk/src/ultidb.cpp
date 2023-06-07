@@ -119,7 +119,7 @@ ULTIDB_RESULT udb_destroy_config(ULTIDB_CONFIG *config)
 
 // ---------------------------------------------------------------------
 
-const char* get_sdk_version() { return PROJECT_VERSION; }
+const char* get_sdk_version() { return SDK_VERSION; }
 
 // ---------------------------------------------------------------------
 
@@ -198,11 +198,11 @@ ULTIDB_RESULT udb_integrate(ULTIDB *db, char* hash_buffer, const char* data, siz
 
 // ---------------------------------------------------------------------
 
-ULTIDB_RESULT udb_retrieve(ULTIDB *db, char* buffer_to_fill, size_t buffer_length ,const char* udb_hash, size_t hash_length, uint32_t* filled_length)
+ULTIDB_RESULT udb_retrieve(ULTIDB *db, char* buffer_to_fill, size_t buffer_length ,char* udb_hash, size_t hash_length, uint32_t* filled_length)
 {
     try
     {
-        uh::protocol::read_chunks::request req { .hashes = std::span<const char>(udb_hash, hash_length)};
+        uh::protocol::read_chunks::request req { .hashes = std::span<char>(udb_hash, hash_length)};
         auto result = db->connection_pool->get()->read_chunks(req);
 
         auto retrieved_size = result.chunk_sizes.front();

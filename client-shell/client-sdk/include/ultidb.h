@@ -149,7 +149,7 @@ ULTIDB_RESULT udb_integrate(ULTIDB *db, char* hash_buffer, const char* data, siz
  * @param length Size of the data retrieved
  * @return char* Returns nullptr if the operation is unsuccessful else a pointer to the underlying data is returned
  */
-ULTIDB_RESULT udb_retrieve(ULTIDB *db, char* buffer_to_fill, size_t buffer_length ,const char* udb_hash, size_t hash_length, uint32_t* filled_length);
+ULTIDB_RESULT udb_retrieve(ULTIDB *db, char* buffer_to_fill, size_t buffer_length, char* udb_hash, size_t hash_length, uint32_t* filled_length);
 
 // ---------------------------------------------------------------------
 
