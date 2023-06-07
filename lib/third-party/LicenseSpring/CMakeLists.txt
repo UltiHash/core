@@ -9,20 +9,39 @@
 #
 # Note that on macOS, this module requires the "macLICENSESPRING" package to be installed.
 
+
+
 #extract OS specific package
+
+MACRO(SUBDIRWORKPATHLICENSE result curdir checkmatch)
+    FILE(GLOB children ${curdir}/*) # This was changed
+    SET(dirlist "")
+    FOREACH(child ${children})
+        IF(${child} MATCHES ${checkmatch}) # This was changed
+            LIST(APPEND dirlist ${child})
+        ENDIF()
+    ENDFOREACH()
+    SET(${result} ${dirlist})
+ENDMACRO()
+
 if (APPLE)
 
     if (EXISTS /usr/bin/unzip)
         message("* unzip -- License Spring\n")
 
         message("Extracting License Spring for Mac from:")
-        message("${CMAKE_CURRENT_LIST_DIR}/LicenseSpringCppSDKv7.23.0_MacUniversal.zip")
+        SUBDIRWORKPATHLICENSE(MACZIP ${CMAKE_CURRENT_LIST_DIR} "/LicenseSpring/LicenseSpringCppSDK[A-Za-z0-9_.]*Mac")
+        message("${MACZIP}")
         message("to build area:")
         message("${CMAKE_CURRENT_BINARY_DIR}\n")
 
+        if("${MACZIP}" STREQUAL "")
+            message(FATAL_ERROR "* libLicenseSpring.zip -- not found")
+        endif ()
+
         execute_process(COMMAND
                 /usr/bin/unzip -o
-                "${CMAKE_CURRENT_LIST_DIR}/LicenseSpringCppSDKv7.23.0_MacUniversal.zip"
+                "${MACZIP}"
                 -d "${CMAKE_CURRENT_BINARY_DIR}")
     else ()
         message(FATAL_ERROR "* zip and unzip -- not found")
@@ -34,13 +53,18 @@ elseif (UNIX)
         message("* unzip -- License Spring\n")
 
         message("Extracting License Spring for Linux from:")
-        message("${CMAKE_CURRENT_LIST_DIR}/LicenseSpringCppSDKv7.23.0_Linux_GCC9.2_IYoup3U.zip")
+        SUBDIRWORKPATHLICENSE(LINUXZIP ${CMAKE_CURRENT_LIST_DIR} "/LicenseSpring/LicenseSpringCppSDK[A-Za-z0-9_.]*Linux")
+        message("${LINUXZIP}")
         message("to build area:")
         message("${CMAKE_CURRENT_BINARY_DIR}\n")
 
+        if("${LINUXZIP}" STREQUAL "")
+            message(FATAL_ERROR "* libLicenseSpring.zip -- not found")
+        endif ()
+
         execute_process(COMMAND
                 /usr/bin/unzip -o
-                "${CMAKE_CURRENT_LIST_DIR}/LicenseSpringCppSDKv7.23.0_Linux_GCC9.2_IYoup3U.zip"
+                "${LINUXZIP}"
                 -d "${CMAKE_CURRENT_BINARY_DIR}")
     else ()
         message(FATAL_ERROR "* zip and unzip -- not found")
@@ -50,12 +74,22 @@ endif ()
 
 message("\n -- unpacking License Spring complete -- \n")
 
-#check if version found
-if (LICENSESPRING_FIND_VERSION)
-    set(LICENSESPRING_ERROR_MESSAGE "Unable to find libLicenseSpring library v${LICENSESPRING_FIND_VERSION}.")
-else ()
-    set(LICENSESPRING_ERROR_MESSAGE "Unable to find libLicenseSpring library.")
-endif ()
+#read version of license spring
+SUBDIRWORKPATHLICENSE(LICENSE_SPRING_SOURCE_FOLDER ${CMAKE_CURRENT_BINARY_DIR} "/LicenseSpring/LicenseSpring*")
+
+message("${LICENSE_SPRING_SOURCE_FOLDER}\n")
+
+file(READ "${LICENSE_SPRING_SOURCE_FOLDER}/README" spring_reader)
+string(REPLACE "\n" ";" spring_reader "${spring_reader}")
+foreach(line IN LISTS spring_reader)
+    set(FIRST_README_VERSION_LINE ${line})
+    BREAK()
+endforeach()
+
+string(REGEX REPLACE "[A-Za-z+]" "" LICENSESPRING_FOUND_VERSION ${FIRST_README_VERSION_LINE})
+
+message("License Spring version:")
+message("${LICENSESPRING_FOUND_VERSION}\n")
 
 #[===[
 
