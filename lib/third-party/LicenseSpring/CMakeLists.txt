@@ -9,7 +9,7 @@
 #
 # Note that on macOS, this module requires the "macLICENSESPRING" package to be installed.
 
-set(SPRING_SHARED True)
+set(SPRING_SHARED ON)
 
 #extract OS specific package
 
@@ -18,17 +18,6 @@ MACRO(SUBPATHWORKPATHLICENSE result curdir checkmatch)
     SET(dirlist "")
     FOREACH(child ${children})
         IF(${child} MATCHES ${checkmatch}) # This was changed
-            LIST(APPEND dirlist ${child})
-        ENDIF()
-    ENDFOREACH()
-    SET(${result} ${dirlist})
-ENDMACRO()
-
-MACRO(SUBDIRWORKPATHLICENSE result curdir checkmatch)
-    FILE(GLOB_RECURSE children ${curdir}/*) # This was changed
-    SET(dirlist "")
-    FOREACH(child ${children})
-        IF((IS_DIRECTORY ${child}) AND (${child} MATCHES ${checkmatch})) # This was changed
             LIST(APPEND dirlist ${child})
         ENDIF()
     ENDFOREACH()
@@ -103,14 +92,28 @@ string(REGEX REPLACE "[A-Za-z+]" "" LICENSESPRING_FOUND_VERSION ${FIRST_README_V
 
 message("License Spring version:")
 message("${LICENSESPRING_FOUND_VERSION}\n")
+message("Loading License Spring in mode: ${CMAKE_BUILD_TYPE}\n")
 
-#remove either shared or static libraries from working directory
+#remove either shared or static libraries from working directory as well as not needed content
+file(REMOVE_RECURSE "${LICENSE_SPRING_SOURCE_FOLDER}/samples")
+file(REMOVE_RECURSE "${LICENSE_SPRING_SOURCE_FOLDER}/documentation")
 
-if(${SPRING_SHARED})
-    SUBDIRWORKPATHLICENSE(STATIC_DELETE ${LICENSE_SPRING_SOURCE_FOLDER} "/static*")
-    message("${STATIC_DELETE}")
+if(${SPRING_SHARED} STREQUAL "ON")
+    file(REMOVE_RECURSE "${LICENSE_SPRING_SOURCE_FOLDER}/bin/static")
+
+    if(${CMAKE_BUILD_TYPE} STREQUAL "Debug")
+        file(REMOVE_RECURSE "${LICENSE_SPRING_SOURCE_FOLDER}/bin/shared/Release")
+    else ()
+        file(REMOVE_RECURSE "${LICENSE_SPRING_SOURCE_FOLDER}/bin/shared/Debug")
+    endif ()
 else ()
+    file(REMOVE_RECURSE "${LICENSE_SPRING_SOURCE_FOLDER}/bin/shared")
 
+    if(${CMAKE_BUILD_TYPE} STREQUAL "Debug")
+        file(REMOVE_RECURSE "${LICENSE_SPRING_SOURCE_FOLDER}/bin/static/Release")
+    else ()
+        file(REMOVE_RECURSE "${LICENSE_SPRING_SOURCE_FOLDER}/bin/static/Debug")
+    endif ()
 endif ()
 
 #[===[
