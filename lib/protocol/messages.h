@@ -187,7 +187,7 @@ struct read_chunks
 {
     struct request
     {
-        std::span <char> hashes;
+        std::span <const char> hashes;
     };
 
     struct response

@@ -93,7 +93,7 @@ uh::protocol::read_chunks::response protocol::on_read_chunks(const read_chunks::
     uh::protocol::read_chunks::response resp;
     for (size_t i = 0; i < req.hashes.size(); i += 64)
     {
-        auto dev = m_storage.read_block({ req.hashes.data() + i, 64 });
+        auto dev = m_storage.read_block({const_cast <char*> (req.hashes.data()) + i, 64 });
 
         auto size = dev->size();
         generator->append(std::move(dev));
