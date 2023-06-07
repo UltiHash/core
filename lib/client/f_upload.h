@@ -21,11 +21,9 @@ namespace uh::client
 class f_upload : public thread_manager
 {
 public:
-
-
     f_upload(protocol::client_pool& client_pool,
             uhv::job_queue<std::unique_ptr<uhv::f_meta_data>>& input_queue,
-            uhv::job_queue<std::unique_ptr<uhv::f_meta_data>>& output_files,
+            std::list<std::future<std::unique_ptr<uhv::f_meta_data>>>& output_files,
             uh::chunking::mod& chunking,
             std::filesystem::path uhv_path,
             unsigned int num_threads = 1);
@@ -44,7 +42,7 @@ private:
                 const std::optional<std::string>& error = std::nullopt);
 
     uhv::job_queue<std::unique_ptr<uhv::f_meta_data>>& m_input_jq;
-    uhv::job_queue<std::unique_ptr<uhv::f_meta_data>>& m_output_jq;
+    std::list<std::future<std::unique_ptr<uhv::f_meta_data>>>& m_output_jq;
     uh::protocol::client_pool& m_client_pool;
     uh::chunking::mod& m_chunking;
     std::filesystem::path m_uhv_path;

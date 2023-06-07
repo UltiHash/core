@@ -53,19 +53,17 @@ uint64_t upload_data (uh::protocol::client_pool::handle& client_handle, size_t c
 }
 
 
-void write_metadata (std::ofstream &UHV_file, const uh::uhv::f_meta_data &md) {
-    auto relative_path = (md.f_path() == "/") ? "/" : std::filesystem::relative(md.f_path(), "/");
-    auto bytes = uh::uhv::f_serialization::serialize_f_meta_data(std::make_unique<uh::uhv::f_meta_data>(md),
-                                                                 relative_path);
-    UHV_file.write(reinterpret_cast<const char *>(bytes.data()), static_cast<std::streamsize>(bytes.size()));
-}
-
-void rewrite_uhv_file (const std::filesystem::path &uhv_file, std::unordered_map <std::string, ts_f_meta_data> &data) {
-    std::ofstream UHV_file(uhv_file, std::ios::trunc | std::ios::out | std::ios::binary);
-    for (auto &tsmd: data) {
-        auto &md = tsmd.second.get()();
-        write_metadata(UHV_file, md);
+void rewrite_uhv_file(const std::filesystem::path& path,
+                      std::unordered_map<std::string, ts_f_meta_data>& data)
+{
+    std::list<std::unique_ptr<f_meta_data>> md;
+    for (auto& tsmd: data)
+    {
+        md.push_back(std::make_unique<f_meta_data>(tsmd.second.get()()));
     }
+
+    uh::uhv::file f(path);
+    f.serialize(md);
 }
 
 }

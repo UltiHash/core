@@ -46,12 +46,12 @@ BOOST_AUTO_TEST_SUITE(TraverseSuite)
 
     BOOST_FIXTURE_TEST_CASE(traverseTest, fs_fixture)
     {
-        std::vector<std::filesystem::path> operate_paths = {"./mock_dir/mock_subdir"};
+        std::filesystem::path path = "./mock_dir/mock_subdir";
 
         uh::uhv::job_queue<std::unique_ptr<
                 uh::uhv::f_meta_data>>
                 output_jq;
-        f_traverse traverse(operate_paths, output_jq);
+        f_traverse traverse(path, output_jq);
         traverse.traverse();
 
         std::vector<std::filesystem::path> all_f_metadata;

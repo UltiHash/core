@@ -92,7 +92,6 @@ int uh_unlink(const char *path)
         unordered_map.erase(it);
     }
 
-    // store the new metadata into the uh volume
     rewrite_uhv_file(get_options().UHVpath, unordered_map);
 
     std::cout << "leaving uh_unlink(" << path << ")\n";
@@ -150,7 +149,6 @@ int uh_rmdir (const char *path)
         ctx->subdirectory_counts.get()().at(f_meta_data.f_path().parent_path())--;
     }
 
-    // store the new metadata into the uh volume
     rewrite_uhv_file(get_options().UHVpath, unordered_map);
 
     return 0;
@@ -175,11 +173,8 @@ void *__uh_init (struct fuse_conn_info *conn)
                         context->io, get_options().agency_hostname, get_options().agency_port),
                 cf_config), get_options().agency_connections);
 
-    uh::uhv::job_queue<std::unique_ptr<uh::uhv::f_meta_data>> metadata_list;
-    uh::uhv::f_serialization serializer {std::filesystem::path (get_options().UHVpath), metadata_list};
-
-    serializer.deserialize("", false);
-    metadata_list.stop();
+    uh::uhv::file file(get_options().UHVpath);
+    std::list<std::unique_ptr<uh::uhv::f_meta_data>> metadata_list = file.deserialize();
 
     auto container_handle = context->fmetadata_map.get();
     auto& metadata_map = container_handle();
@@ -187,22 +182,23 @@ void *__uh_init (struct fuse_conn_info *conn)
     auto subdirectories_handle = context->subdirectory_counts.get();
     auto &subdirectory_counts = subdirectories_handle();
 
-    while (const auto& metadata = metadata_list.get_job())
+    for (const auto& metadata : metadata_list)
     {
-        if (metadata == std::nullopt)
-            break;
-
-        if (metadata->get()->f_type() == uh::uhv::uh_file_type::directory) {
-            auto parent = metadata->get()->f_path().parent_path();
-            if (const auto &it = subdirectory_counts.find(parent); it != subdirectory_counts.end()) {
+        if (metadata->f_type() == uh::uhv::uh_file_type::directory)
+        {
+            auto parent = metadata->f_path().parent_path();
+            if (const auto &it = subdirectory_counts.find(parent); it != subdirectory_counts.end())
+            {
                 it->second ++;
             }
-            else {
+            else
+            {
                 subdirectory_counts.emplace(parent, 1);
             }
-            subdirectory_counts.emplace(metadata->get()->f_path(), 0);
+            subdirectory_counts.emplace(metadata->f_path(), 0);
         }
-        metadata_map.emplace(metadata.value()->f_path(), *(*metadata));
+
+        metadata_map.emplace(metadata->f_path(), *metadata);
     }
 
 
@@ -271,10 +267,8 @@ int __uh_mkdir(const char *path, mode_t mode)
     f_meta_data.set_f_size(0u);
     f_meta_data.set_f_permissions(static_cast<std::uint32_t>(mode));
 
-    // store the new metadata into the uh volume
-    std::ofstream UHV_file(get_options().UHVpath, std::ios::app | std::ios::out | std::ios::binary);
-    write_metadata(UHV_file, f_meta_data);
-
+    uh::uhv::file uhv(get_options().UHVpath);
+    uhv.append(std::make_unique<uhv::f_meta_data>(f_meta_data));
 
     unordered_map.emplace(std::string(path), f_meta_data);
     get_context()->subdirectory_counts.get()().emplace(f_meta_data.f_path(), 0);
@@ -495,9 +489,8 @@ int __uh_create (const char *path, mode_t mode, struct fuse_file_info *fi) {
     auto meta_handle = res_pair.first->second.get();
     set_metadata(fi, meta_handle());
 
-    // store the new metadata into the uh volume
-    std::ofstream UHV_file(get_options().UHVpath, std::ios::app | std::ios::out | std::ios::binary);
-    write_metadata(UHV_file, md);
+    uh::uhv::file uhv(get_options().UHVpath);
+    uhv.append(std::make_unique<uhv::f_meta_data>(md));
 
     return 0;
 }

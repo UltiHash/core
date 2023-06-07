@@ -23,51 +23,51 @@ BOOST_AUTO_TEST_SUITE(TraverseSuite)
 
 // ---------------------------------------------------------------------
 
-    struct fs_fixture
+struct fs_fixture
+{
+    fs_fixture()
     {
-        fs_fixture()
-        {
-            fs::path dir_path = "./mock_dir/mock_subdir";
-            fs::create_directories(dir_path);
-            fs::path filepath = dir_path / "mock_file.txt";
-            std::ofstream outfile(filepath);
-            outfile << "Hello, world!" << std::endl;
-            outfile.close();
-        }
+        fs::path dir_path = "./mock_dir/mock_subdir";
+        fs::create_directories(dir_path);
+        fs::path filepath = dir_path / "mock_file.txt";
+        std::ofstream outfile(filepath);
+        outfile << "Hello, world!" << std::endl;
+        outfile.close();
+    }
 
-        ~fs_fixture()
-        {
-            fs::path path_to_delete = "./mock_dir";
-            fs::remove_all(path_to_delete);
-        }
-    };
+    ~fs_fixture()
+    {
+        fs::path path_to_delete = "./mock_dir";
+        fs::remove_all(path_to_delete);
+    }
+};
 
 // ---------------------------------------------------------------------
 
-    BOOST_FIXTURE_TEST_CASE(traverseTest, fs_fixture)
+BOOST_FIXTURE_TEST_CASE(traverseTest, fs_fixture)
+{
+    std::filesystem::path path = "./mock_dir/mock_subdir";
+
+    uh::uhv::job_queue<std::unique_ptr<
+            uh::uhv::f_meta_data>>
+            output_jq;
+    f_traverse traverse(path, output_jq);
+    traverse.traverse();
+
+    std::vector<std::filesystem::path> all_f_metadata;
+    output_jq.stop();
+
+    while (auto item = output_jq.get_job())
     {
-        std::vector<std::filesystem::path> operate_paths = {"./mock_dir/mock_subdir"};
-
-        uh::uhv::job_queue<std::unique_ptr<
-                uh::uhv::f_meta_data>>
-                output_jq;
-        f_traverse traverse(operate_paths, output_jq);
-        traverse.traverse();
-
-        std::vector<std::filesystem::path> all_f_metadata;
-        output_jq.stop();
-
-        while (auto item = output_jq.get_job())
-        {
-            if (item == std::nullopt)
-                break;
-            else
-                all_f_metadata.push_back(item.value()->f_path());
-        }
-
-        BOOST_TEST(all_f_metadata[0] == "./mock_dir/mock_subdir");
-        BOOST_TEST(all_f_metadata[1] == "./mock_dir/mock_subdir/mock_file.txt");
+        if (item == std::nullopt)
+            break;
+        else
+            all_f_metadata.push_back(item.value()->f_path());
     }
+
+    BOOST_TEST(all_f_metadata[0] == "./mock_dir/mock_subdir");
+    BOOST_TEST(all_f_metadata[1] == "./mock_dir/mock_subdir/mock_file.txt");
+}
 
 // ---------------------------------------------------------------------
 

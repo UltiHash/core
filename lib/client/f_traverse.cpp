@@ -5,13 +5,12 @@ namespace uh::client
 
 // ---------------------------------------------------------------------
 
-f_traverse::f_traverse(std::vector<std::filesystem::path> traverse_Paths,
+f_traverse::f_traverse(const std::filesystem::path& path,
                        uhv::job_queue<std::unique_ptr<uhv::f_meta_data>>& jq)
     : m_fs_queue(),
       m_output_jq(jq)
 {
-    for (auto& item : traverse_Paths)
-        m_fs_queue.push(std::move(item));
+    m_fs_queue.push(path);
     traverse();
 }
 
@@ -19,7 +18,6 @@ f_traverse::f_traverse(std::vector<std::filesystem::path> traverse_Paths,
 
 void f_traverse::traverse()
 {
-
     while(!m_fs_queue.empty())
     {
         auto path = m_fs_queue.front();

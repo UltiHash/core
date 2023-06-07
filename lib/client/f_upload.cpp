@@ -11,7 +11,7 @@ namespace uh::client
 
 f_upload::f_upload(protocol::client_pool& cl_pool,
                    uhv::job_queue<std::unique_ptr<uhv::f_meta_data>>& in_jq,
-                   uhv::job_queue<std::unique_ptr<uhv::f_meta_data>>& out_jq,
+                   std::list<std::future<std::unique_ptr<uhv::f_meta_data>>>& out_jq,
                    uh::chunking::mod& chunking,
                    std::filesystem::path uhv_path,
                    unsigned int num_threads)
@@ -68,6 +68,9 @@ void f_upload::send_statistics()
 void f_upload::chunk_and_upload(std::unique_ptr<uhv::f_meta_data>& f_meta_data,
                                 protocol::client_pool::handle& client_handle)
 {
+    std::promise<std::unique_ptr<uhv::f_meta_data>> promise;
+    m_output_jq.push_back(promise.get_future());
+
     if ( f_meta_data->f_type() == uhv::uh_file_type::regular )
     {
         io::file file(f_meta_data->f_path());
@@ -87,10 +90,9 @@ void f_upload::chunk_and_upload(std::unique_ptr<uhv::f_meta_data>& f_meta_data,
         }
 
         m_uploaded_size += f_meta_data->f_size();
-
     }
 
-    m_output_jq.append_job(std::move(f_meta_data));
+    promise.set_value(std::move(f_meta_data));
 }
 
 // ---------------------------------------------------------------------

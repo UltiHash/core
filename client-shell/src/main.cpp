@@ -1,19 +1,17 @@
-#include <options/app_config.h>
-#include <uhv/job_queue.h>
-#include <uhv/f_serialization.h>
+#include <logging/logging_boost.h>
+#include <net/plain_socket.h>
 #include <protocol/client_factory.h>
 #include <protocol/client_pool.h>
-#include <net/plain_socket.h>
-#include <logging/logging_boost.h>
+#include <client/f_upload.h>
+#include <client/f_download.h>
+#include <client/f_traverse.h>
+#include <options/app_config.h>
+#include <options/chunking_options.h>
+#include <uhv/file.h>
 
 #include <config.hpp>
 #include <client_options/client_options.h>
 #include <client_options/agency_connection.h>
-#include <options/chunking_options.h>
-
-#include <client/f_upload.h>
-#include <client/f_download.h>
-#include <client/f_traverse.h>
 
 // ---------------------------------------------------------------------
 
@@ -64,20 +62,20 @@ void handle_errors(const std::string& message,
 void integrate(protocol::client_pool& pool,
                unsigned worker_count,
                const chunking::config& chunker_config,
-               const std::vector<std::filesystem::path>& input,
+               const std::filesystem::path& input,
                const std::filesystem::path& output,
                bool overwrite)
 {
     auto time_start = std::chrono::system_clock::now();
 
     uhv::job_queue<std::unique_ptr<uhv::f_meta_data>> q_f_meta_data;
-    uhv::job_queue<std::unique_ptr<uhv::f_meta_data>> q_f_mdata_w_hash;
+    std::list<std::future<std::unique_ptr<uhv::f_meta_data>>> metadata;
 
     {
         uh::chunking::mod chunking_module(chunker_config);
 
         f_upload upload_class(pool, q_f_meta_data,
-                              q_f_mdata_w_hash, chunking_module,
+                              metadata, chunking_module,
                               output, worker_count);
         upload_class.spawn_threads();
 
@@ -87,10 +85,36 @@ void integrate(protocol::client_pool& pool,
         handle_errors("there were errors during upload", upload_class.results());
     }
 
-    q_f_mdata_w_hash.sort();
+    std::size_t size = 0u;
+    std::size_t effective_size = 0u;
 
-    f_serialization serializer(output, q_f_mdata_w_hash, overwrite);
-    uint64_t size = serializer.serialize(input);
+    std::list<std::unique_ptr<uhv::f_meta_data>> files;
+    for (auto& next : metadata)
+    {
+        auto md = next.get();
+
+        if (md->f_type() == uhv::uh_file_type::regular)
+        {
+            size += md->f_size();
+            effective_size += md->f_effective_size();
+        }
+
+        if (input != md->f_path()) [[likely]]
+        {
+            md->set_f_path(std::filesystem::relative(md->f_path(), input));
+        }
+        else
+        {
+            md->set_f_path(std::filesystem::path());
+        }
+
+        files.push_back(std::move(md));
+    }
+
+    files.sort([](auto& ml, auto& mr){ return ml->f_path() < mr->f_path(); });
+
+    uhv::file file(output);
+    file.serialize(files);
 
     auto time_end = std::chrono::system_clock::now();
 
@@ -98,7 +122,8 @@ void integrate(protocol::client_pool& pool,
     double seconds = time_diff.count();
     double mbytes = static_cast<double>(size) / (1024*1024);
 
-    std::cout << "encoding speed: " << (mbytes / seconds) << " Mb/s" << std::endl;
+    std::cout << "de-duplication ratio: " << (double) effective_size / (double) size << "\n";
+    std::cout << "encoding speed: " << (mbytes / seconds) << " Mb/s" << "\n";
 }
 
 // ---------------------------------------------------------------------
@@ -118,10 +143,11 @@ void retrieve(protocol::client_pool& pool,
         f_download download_class(pool, q_f_meta_data, output_path, worker_count);
         download_class.spawn_threads();
 
-        f_serialization deserializer(input_path, q_f_meta_data);
-        size = deserializer.deserialize(output_path);
+        uhv::file file(input_path);
+        file.deserialize(q_f_meta_data);
 
         download_class.join();
+        size = download_class.size();
         handle_errors("there were errors during download", download_class.results());
     }
 
@@ -169,7 +195,7 @@ int main(int argc, const char *argv[])
                 integrate(client_pool,
                           client_config.m_worker_count,
                           config.chunking(),
-                          client_config.m_inputPaths,
+                          client_config.m_inputPaths[0],
                           client_config.m_outputPath,
                           client_config.m_overwrite);
                 break;

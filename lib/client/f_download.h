@@ -28,6 +28,7 @@ public:
     void join();
     [[nodiscard]] const std::map<std::filesystem::path, std::optional<std::string>>& results() const;
 
+    std::size_t size() const;
 private:
     void add_result(const std::filesystem::path& p,
                     const std::optional<std::string>& error = std::nullopt);
@@ -40,6 +41,7 @@ private:
 
     std::map<std::filesystem::path, std::optional<std::string>> m_results;
     std::mutex m_result_mutex;
+    std::atomic<std::size_t> m_size;
 };
 
 // ---------------------------------------------------------------------

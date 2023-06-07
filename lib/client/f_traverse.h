@@ -17,9 +17,8 @@ class f_traverse
 {
 public:
 
-    f_traverse(std::vector<std::filesystem::path> traverse_Paths,
+    f_traverse(const std::filesystem::path& traverse_Paths,
                uhv::job_queue<std::unique_ptr<uhv::f_meta_data>>& jq);
-    ~f_traverse() = default;
 
     void traverse();
 

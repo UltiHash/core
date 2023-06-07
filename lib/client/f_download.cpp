@@ -1,5 +1,8 @@
 #include "f_download.h"
+
+#include <util/exception.h>
 #include <protocol/server.h>
+
 
 namespace uh::client
 {
@@ -13,7 +16,8 @@ f_download::f_download(protocol::client_pool& cl_pool,
     : thread_manager(num_threads),
       m_input_jq(jq),
       m_client_pool(cl_pool),
-      m_dest_path(std::move(dest_path))
+      m_dest_path(std::move(dest_path)),
+      m_size(0)
 {
 }
 
@@ -45,25 +49,28 @@ void f_download::join()
 
 void f_download::download_file(std::unique_ptr<uhv::f_meta_data>& f_meta_data)
 {
+    auto path = m_dest_path / f_meta_data->f_path();
+    std::filesystem::create_directories(path.parent_path());
 
     if (f_meta_data->f_type() == uhv::uh_file_type::regular)
     {
-        std::ofstream new_file(f_meta_data->f_path(),
-                                 std::ios::app | std::ios::binary);
-
+        std::ofstream new_file(path, std::ios::binary | std::ios::trunc);
         if (!new_file.is_open())
-            throw std::runtime_error("Error: Could not open file "
-                                     + f_meta_data->f_path().string() + "\n");
+        {
+            THROW(util::exception, "Error: Could not open file " + path.string());
+        }
 
         auto client = m_client_pool.get();
 
         size_t aggregated_size = 0;
         size_t offset = 0;
 
-        // here we assume that each chunk-size is smaller than MAXIMUM_DATA_SIZE
-        for (size_t i = 0; i < f_meta_data->f_chunk_sizes().size(); ++i) {
+        // here we assume that each chunk size is smaller than MAXIMUM_DATA_SIZE
+        for (size_t i = 0; i < f_meta_data->f_chunk_sizes().size(); ++i)
+        {
             aggregated_size += f_meta_data->f_chunk_sizes()[i];
-            if (aggregated_size > protocol::server::MAXIMUM_DATA_SIZE) {
+            if (aggregated_size > protocol::server::MAXIMUM_DATA_SIZE)
+            {
                 auto resp = client->read_chunks (
                         {{const_cast <char *> (f_meta_data->f_hashes().data() + offset), (i - 1) * 64}});
                 const auto& data = std::get<0>(resp.data);
@@ -72,21 +79,35 @@ void f_download::download_file(std::unique_ptr<uhv::f_meta_data>& f_meta_data)
                 aggregated_size = f_meta_data->f_chunk_sizes()[i];
             }
         }
-        if (aggregated_size > 0) {
+
+        if (aggregated_size > 0)
+        {
             auto resp = client->read_chunks ({{const_cast <char *> (f_meta_data->f_hashes().data() + offset),
                                                f_meta_data->f_hashes().size() - offset}});
 
             const auto& data = std::get<0>(resp.data);
+            m_size += data.size();
             new_file.write(data.data(), data.size());
         }
 
+        std::filesystem::permissions(path,
+                                    static_cast<std::filesystem::perms>(f_meta_data->f_permissions()),
+                                    std::filesystem::perm_options::replace);
     }
+    else if (f_meta_data->f_type() == uhv::uh_file_type::directory)
+    {
+        std::filesystem::create_directories(path);
+        std::filesystem::permissions(path,
+                                    static_cast<std::filesystem::perms>(f_meta_data->f_permissions()),
+                                    std::filesystem::perm_options::replace);
+    }
+
     else if (f_meta_data->f_type() == uhv::uh_file_type::none)
     {
         throw std::runtime_error("Unknown file type encountered: " + f_meta_data->f_path().string());
     }
 
-    std::filesystem::permissions(f_meta_data->f_path(),
+    std::filesystem::permissions(path,
                                  static_cast<std::filesystem::perms>(f_meta_data->f_permissions()),
                                  std::filesystem::perm_options::replace);
 }
@@ -125,6 +146,13 @@ void f_download::spawn_threads()
 const std::map<std::filesystem::path, std::optional<std::string>>& f_download::results() const
 {
     return m_results;
+}
+
+// ---------------------------------------------------------------------
+
+std::size_t f_download::size() const
+{
+    return m_size;
 }
 
 // ---------------------------------------------------------------------
