@@ -30,7 +30,7 @@ public:
     exception(const std::string& file, std::size_t line,
               const std::string& message);
 
-    virtual const char* what() const noexcept override;
+    [[nodiscard]] const char* what() const noexcept override;
 
 private:
     std::string m_message;

@@ -17,17 +17,6 @@ thread_local uint8_t error = 0;
 
 // ---------------------------------------------------------------------
 
-class Buffer_Overflow : public std::exception
-{
-public:
-    [[nodiscard]] const char* what() const noexcept override
-    {
-        return "Buffer overflow exception";
-    }
-};
-
-// ---------------------------------------------------------------------
-
 UDB_RESULT udb_get_last_error()
 {
     return static_cast<UDB_RESULT>(error);
@@ -209,11 +198,11 @@ UDB_RESULT udb_retrieve(UDB *db, char* buffer_to_fill, size_t buffer_length , co
         *received_length = retrieved_size;
 
         if (retrieved_size > buffer_length)
-            throw Buffer_Overflow();
+            throw std::overflow_error("Buffer overflow exception.");
 
         std::memcpy(buffer_to_fill, std::get<std::vector<char>>(result.data).data(), result.chunk_sizes.front());
     }
-    catch(const Buffer_Overflow& e)
+    catch(const std::overflow_error& e)
     {
         error = UDB_BUFFER_OVERFLOW;
         return UDB_BUFFER_OVERFLOW;
