@@ -46,7 +46,6 @@ private:
     fixed_managed_storage m_data_store;
     std::unique_ptr <sets::fragment_set_interface> m_fragment_set;
     persisted_robinhood_hashmap m_hashtable;
-
     const dedupe_config m_dedupe_conf;
 };
 

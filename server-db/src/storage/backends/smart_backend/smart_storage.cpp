@@ -13,8 +13,6 @@ smart_config make_smart_config (const std::filesystem::path& root, size_t size, 
     const std::filesystem::path set_directory = root / "set";
     const std::filesystem::path hash_table_directory = root / "hash_table";
 
-    // here we assume that size % max_file_size == 0, otherwise
-    // we are creating larger files than the given size
     data_store_config ds_conf;
     ds_conf.data_store_file_size = 4ul * GB;
     size_t offset = 0;
@@ -31,6 +29,7 @@ smart_config make_smart_config (const std::filesystem::path& root, size_t size, 
     set_conf.set_init_file_size = 2ul * GB;
     set_conf.max_empty_hole_size = 1ul * GB;
     set_conf.set_minimum_free_space = GB;
+
     set_conf.fragment_set_path = set_directory / "fragment_set";
 
     map_config map_conf;
@@ -38,6 +37,7 @@ smart_config make_smart_config (const std::filesystem::path& root, size_t size, 
     map_conf.map_key_file_init_size = 4ul * GB;
     map_conf.map_values_minimum_file_size = 4ul * GB;
     map_conf.map_values_maximum_file_size = 8ul * GB;
+
     map_conf.map_load_factor = 0.9;
     map_conf.map_maximum_extension_factor = 32;
     map_conf.hashtable_key_path = hash_table_directory / "key_file";

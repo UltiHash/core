@@ -13,10 +13,11 @@
 #include <sys/mman.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <mutex>
+
 #include "storage/backends/smart_backend/storage_types/fixed_managed_storage.h"
 #include "storage/backends/smart_backend/storage_types/growing_managed_storage.h"
 #include "storage/backends/smart_backend/storage_types/growing_plain_storage.h"
-#include <mutex>
 
 namespace uh::dbn::storage::smart {
 
