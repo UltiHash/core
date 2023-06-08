@@ -27,7 +27,7 @@ int main()
         exit(0);
     }
 
-//    /* retrieve data */
+    /* retrieve data */
     std::cout << hash_received << '\n';
 
     char data_container[2000] = {0};
