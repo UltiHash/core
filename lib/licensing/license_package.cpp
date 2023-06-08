@@ -35,7 +35,8 @@ namespace uh::licensing{
         {
             if(file_object.is_regular_file() && file_object.path().extension() == ".lic")
             {
-                auto tmp_license_type_read = check_license(file_object.path());
+                auto tmp_license_type_read = check_license(file_object.path(),
+                                                           "INIT_APP","0.0.0");
 
                 auto license_type_checked = tmp_license_type_read.check_license_type();
 
@@ -43,7 +44,9 @@ namespace uh::licensing{
 
                     case check_license::license_type::AIRGAP_LICENSE_WITH_ONLINE_ACTIVATION:
                     {
-                        auto* tmp_license_valid_airgap = new check_airgap_license(config, std::string(), std::string());
+                        auto* tmp_license_valid_airgap = new check_airgap_license(config,
+                                                                                  std::string(),
+                                                                                  std::string());
 
                         if(tmp_license_valid_airgap->valid())check_lic = tmp_license_valid_airgap;
                         else delete tmp_license_valid_airgap;
@@ -53,7 +56,9 @@ namespace uh::licensing{
 
                     case check_license::license_type::FLOATING_ONLINE_USER_LICENSE:
                     {
-                        auto* tmp_license_valid_online = new check_airgap_license(config, std::string(), std::string());
+                        auto* tmp_license_valid_online = new check_airgap_license(config,
+                                                                                  std::string(),
+                                                                                  std::string());
 
                         if(tmp_license_valid_online->valid())check_lic = tmp_license_valid_online;
                         else delete tmp_license_valid_online;
