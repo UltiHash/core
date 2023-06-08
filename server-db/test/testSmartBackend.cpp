@@ -408,6 +408,8 @@ BOOST_FIXTURE_TEST_CASE(basic_hashmap_test, files_info_fixture)
 
 BOOST_FIXTURE_TEST_CASE(basic_growing_mmap_storage_test, files_info_fixture)
 {
+    std::cout << "start2" << std::endl;
+
     cleanup();
     offset_ptr ptr1;
     offset_ptr ptr2;
@@ -462,6 +464,7 @@ BOOST_FIXTURE_TEST_CASE(basic_growing_mmap_storage_test, files_info_fixture)
         BOOST_TEST (std::memcmp(&data, static_cast <char *> (raw_ptr2), size) == 0);
     }
     munmap(align_ptr(ptr1.m_addr), 1024);
+    std::cout << "end2" << std::endl;
 
 }
 
@@ -474,6 +477,8 @@ std::string serialize_spans (std::forward_list <std::span <char>> spans) {
 }
 
 BOOST_FIXTURE_TEST_CASE(smart_core_basic_test, files_info_fixture) {
+    std::cout << "start1" << std::endl;
+
     cleanup();
 
 
