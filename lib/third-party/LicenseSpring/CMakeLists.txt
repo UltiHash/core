@@ -110,17 +110,26 @@ set(LICENSESPRING_INCLUDE_DIRS "${LICENSE_SPRING_SOURCE_FOLDER}/include/LicenseS
 file(REMOVE_RECURSE "${LICENSE_SPRING_SOURCE_FOLDER}/samples")
 file(REMOVE_RECURSE "${LICENSE_SPRING_SOURCE_FOLDER}/documentation")
 
+#copy and overwrite files
+set(COPY_SOURCE_FOLDER "${CMAKE_CURRENT_BINARY_DIR}")
+
+file(MAKE_DIRECTORY "${COPY_SOURCE_FOLDER}/include")
+file(COPY "${LICENSE_SPRING_SOURCE_FOLDER}/include" DESTINATION "${COPY_SOURCE_FOLDER}")
+
 if(${SPRING_SHARED} STREQUAL "ON")
     file(REMOVE_RECURSE "${LICENSE_SPRING_SOURCE_FOLDER}/bin/static")
 
     if(${CMAKE_BUILD_TYPE} STREQUAL "Debug")
         file(REMOVE_RECURSE "${LICENSE_SPRING_SOURCE_FOLDER}/bin/shared/Release")
-        set(LICENSESPRING_LIBRARY "${LICENSE_SPRING_SOURCE_FOLDER}/bin/shared/Debug/libLicenseSpring.so")
+
+        file(COPY "${LICENSE_SPRING_SOURCE_FOLDER}/bin/shared/Debug/" DESTINATION "${COPY_SOURCE_FOLDER}/bin")
     else ()
         file(REMOVE_RECURSE "${LICENSE_SPRING_SOURCE_FOLDER}/bin/shared/Debug")
-        set(LICENSESPRING_LIBRARY "${LICENSE_SPRING_SOURCE_FOLDER}/bin/shared/Release/libLicenseSpring.so")
+
+        file(COPY "${LICENSE_SPRING_SOURCE_FOLDER}/bin/shared/Release/" DESTINATION "${COPY_SOURCE_FOLDER}/bin")
     endif ()
 
+    set(LICENSESPRING_LIBRARY "${COPY_SOURCE_FOLDER}/bin/libLicenseSpring.so")
     set(LICENSESPRING_LIBRARIES ${LICENSESPRING_LIBRARY})
     message("Using library: ${LICENSESPRING_LIBRARIES}")
 
@@ -132,12 +141,15 @@ else ()
 
     if(${CMAKE_BUILD_TYPE} STREQUAL "Debug")
         file(REMOVE_RECURSE "${LICENSE_SPRING_SOURCE_FOLDER}/bin/static/Release")
-        set(LICENSESPRING_LIBRARY "${LICENSE_SPRING_SOURCE_FOLDER}/bin/static/Debug/libLicenseSpring.a")
+
+        file(COPY "${LICENSE_SPRING_SOURCE_FOLDER}/bin/static/Debug/" DESTINATION "${COPY_SOURCE_FOLDER}/bin")
     else ()
         file(REMOVE_RECURSE "${LICENSE_SPRING_SOURCE_FOLDER}/bin/static/Debug")
-        set(LICENSESPRING_LIBRARY "${LICENSE_SPRING_SOURCE_FOLDER}/bin/static/Release/libLicenseSpring.a")
+
+        file(COPY "${LICENSE_SPRING_SOURCE_FOLDER}/bin/static/Release/" DESTINATION "${COPY_SOURCE_FOLDER}/bin")
     endif ()
 
+    set(LICENSESPRING_LIBRARY "${COPY_SOURCE_FOLDER}/bin/libLicenseSpring.a")
     set(LICENSESPRING_LIBRARIES ${LICENSESPRING_LIBRARY})
     message("Using library: ${LICENSESPRING_LIBRARIES}")
 
@@ -147,9 +159,7 @@ endif ()
 
 message("Included License Spring at: ${LICENSESPRING_INCLUDE_DIRS}")
 
-#copy and overwrite files
-#file(REMOVE_RECURSE "${CMAKE_CURRENT_LIST_DIR}/Debug")
-#file(REMOVE_RECURSE "${CMAKE_CURRENT_LIST_DIR}/Release")
+
 
 # adding all the .h files of the current project
 file(GLOB HEADER_FILE_LIST ${CMAKE_CURRENT_SOURCE_DIR}/*.h)
