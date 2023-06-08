@@ -18,7 +18,7 @@ namespace uh::client
 
 // ---------------------------------------------------------------------
 
-class double_buffer;
+class buffers;
 
 // ---------------------------------------------------------------------
 
@@ -39,7 +39,7 @@ public:
     [[nodiscard]] const std::map<std::filesystem::path, std::optional<std::string>>& results() const;
     void send_statistics();
     void chunk_and_upload(std::unique_ptr<uhv::f_meta_data>&& metadata,
-                          double_buffer& r);
+                          buffers& r);
 
     static constexpr std::size_t MAXIMUM_DATA_SIZE = 64 * 1024 * 1024;
 private:

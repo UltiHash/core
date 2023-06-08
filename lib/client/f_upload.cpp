@@ -141,49 +141,105 @@ private:
 
 // ---------------------------------------------------------------------
 
-struct double_buffer
+class buffers
 {
-    request first;
-    request second;
-    std::future<void> future;
-    bool use_first = false;
-    protocol::client_pool::handle client_handle;
+public:
 
-    double_buffer(protocol::client_pool::handle&& client_handle)
-        : client_handle(std::move(client_handle))
+    buffers(protocol::client_pool::handle&& client_handle, std::size_t queue_size = 4)
+        : client_handle(std::move(client_handle)),
+          m_requests(queue_size),
+          m_mtx(),
+          m_active(0),
+          m_active_cond(),
+          m_send(0),
+          m_send_cond(),
+          m_thread([this](){ worker(); })
     {
-        std::promise<void> p;
-        future = p.get_future();
-        p.set_value();
     }
 
     request& active()
     {
-        return use_first ? first : second;
+        return m_requests[m_active];
     }
 
-    void swap()
+    /**
+     * Queue the current buffer for writing, move to the next available buffer, possibly
+     * waiting for one becoming available.
+     */
+    void next()
     {
-        future.get();
+        std::unique_lock lk(m_mtx);
+        auto next = (m_active + 1) % m_requests.size();
 
-        auto pms = std::make_shared<std::promise<void>>();
-        future = pms->get_future();
+        if (next == m_send)
+        {
+            m_send_cond.wait(lk, [&, this](){ return next != m_send; });
+        }
 
-        auto& buf = active();
-        std::jthread s( [&, this] () {
-            buf.send(client_handle);
-            buf.reset();
-            pms->set_value();
-        });
-
-        use_first = !use_first;
+        m_requests[next].reset();
+        m_active = next;
+        m_active_cond.notify_all();
     }
 
-    void finish()
+    /**
+     * Wait for a buffer becoming ready to send. Send this buffer
+     */
+    void worker()
     {
-        future.get();
-        active().send(client_handle);
+        m_running = true;
+        while (m_running)
+        {
+            std::unique_lock lk(m_mtx);
+            if (m_send == m_active)
+            {
+                m_active_cond.wait(lk, [this](){ return m_send != m_active || !m_running; });
+            }
+
+            if (!m_running)
+            {
+                break;
+            }
+
+            lk.unlock();
+            m_requests[m_send].send(client_handle);
+            lk.lock();
+            m_send = (m_send + 1) % m_requests.size();
+            m_send_cond.notify_all();
+        }
     }
+
+    void stop()
+    {
+        {
+            std::unique_lock lk(m_mtx);
+            if (m_active != m_send)
+            {
+                m_send_cond.wait(lk, [&, this](){ return m_active == m_send; });
+            }
+
+            m_running = false;
+            m_active_cond.notify_all();
+        }
+
+        m_thread.join();
+
+        m_requests[m_active].send(client_handle);
+    }
+
+private:
+    protocol::client_pool::handle client_handle;
+    std::vector<request> m_requests;
+
+    std::mutex m_mtx;
+
+    std::atomic<std::size_t> m_active;
+    std::condition_variable m_active_cond;
+
+    std::atomic<std::size_t> m_send;
+    std::condition_variable m_send_cond;
+
+    std::thread m_thread;
+    bool m_running;
 };
 
 // ---------------------------------------------------------------------
@@ -244,7 +300,7 @@ void f_upload::send_statistics()
 
 // ---------------------------------------------------------------------
 
-void f_upload::chunk_and_upload(std::unique_ptr<uhv::f_meta_data>&& md_ptr, double_buffer& r)
+void f_upload::chunk_and_upload(std::unique_ptr<uhv::f_meta_data>&& md_ptr, buffers& r)
 {
     if (md_ptr->f_type() == uhv::uh_file_type::regular && md_ptr->f_size() != 0)
     {
@@ -255,13 +311,6 @@ void f_upload::chunk_and_upload(std::unique_ptr<uhv::f_meta_data>&& md_ptr, doub
 
         io::file file(md.f_path());
         auto chunker = m_chunking.create_chunker(file, md.f_size());
-
-        // create the chunker, passing a buffer range: chunker = create_chunker(file, std::span(r.write_pos(), r.space_left()))
-
-        // chunker returns one of:
-        //  1. wrote chunk to buffer with length `chunk_size`
-        //  2. there are no more chunks
-        //  3. the buffer is too small to hold the next chunk
 
         bool busy = true;
         while (busy)
@@ -274,7 +323,7 @@ void f_upload::chunk_and_upload(std::unique_ptr<uhv::f_meta_data>&& md_ptr, doub
                     break;
 
                 case chunking::chunk_result::too_small:
-                    r.swap();
+                    r.next();
                     r.active().add_handle(fh);
                     break;
 
@@ -303,29 +352,36 @@ void f_upload::spawn_threads()
     {
         m_thread_pool.emplace_back([&]()
         {
-           double_buffer db(m_client_pool.get());
+            try
+            {
+                buffers db(m_client_pool.get());
 
-           while (auto job = m_input_jq.get_job())
-           {
-                if (job == std::nullopt)
+                while (auto job = m_input_jq.get_job())
                 {
-                   break;
+                    if (job == std::nullopt)
+                    {
+                        break;
+                    }
+
+                    auto filename = (*job)->f_path();
+
+                    try
+                    {
+                        chunk_and_upload(std::move(*job), db);
+                        add_result(filename);
+                    }
+                    catch (const std::exception& e)
+                    {
+                        add_result(filename, e.what());
+                    }
                 }
 
-                auto filename = (*job)->f_path();
-
-                try
-                {
-                    chunk_and_upload(std::move(*job), db);
-                    add_result(filename);
-                }
-                catch (const std::exception& e)
-                {
-                    add_result(filename, e.what());
-                }
-           }
-
-           db.finish();
+                db.stop();
+            }
+            catch (const std::exception& e)
+            {
+                std::cerr << "Error: " << e.what() << "\n";
+            }
         });
     }
 }
