@@ -9,14 +9,17 @@
 #include <third-party/LicenseSpring/include/LicenseSpring/LicenseManager.h>
 #include <third-party/LicenseSpring/include/LicenseSpring/Exceptions.h>
 
+#include <utility>
+
 namespace uh::licensing{
 
     // ---------------------------------------------------------------------
 
     check_online_license::check_online_license(std::filesystem::path license_folder, std::string appName,
-                                               std::string appVersion) :
+                                               std::string appVersion,
+                                               std::string userName, std::string password) :
             check_license(std::move(license_folder),std::move(appName),
-                          std::move(appVersion)){}
+                          std::move(appVersion)),userName(std::move(userName)),password(std::move(password)){}
 
     // ---------------------------------------------------------------------
 
@@ -34,9 +37,7 @@ namespace uh::licensing{
                 appName, appVersion, options);
 
         //For user-based implementation comment out above line, and use bottom 3 lines
-        const std::string userId = "example@email.com"; //input user email
-        const std::string userPassword = "password"; //input user password
-        auto licenseId = LicenseSpring::LicenseID::fromUser( userId, userPassword );
+        auto licenseId = LicenseSpring::LicenseID::fromUser( userName, password );
 
         // User-based implementation
         auto licenseManager = LicenseSpring::LicenseManager::create( pConfiguration );

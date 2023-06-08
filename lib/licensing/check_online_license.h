@@ -15,10 +15,13 @@ namespace uh::licensing{
 
     public:
 
-        explicit check_online_license(std::filesystem::path license_folder, std::string appName,
-                                      std::string appVersion);
+        explicit check_online_license(std::filesystem::path license_folder, std::string appName, std::string appVersion,
+                                      std::string userName, std::string password);
 
         bool valid() override;
+
+    private:
+        std::string userName, password;
     };
 
 } // namespace uh::licensing
