@@ -43,6 +43,7 @@ public:
         return do_sync (pos);
     }
 
+    virtual ~fragment_set_interface() = default;
 protected:
 
     virtual position_info do_insert_index (const std::string_view& frag, uint64_t data_offset, const position_info& pos) = 0;
