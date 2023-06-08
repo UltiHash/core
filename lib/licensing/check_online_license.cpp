@@ -8,6 +8,7 @@
 #include <LicenseSpring/EncryptString.h>
 #include <LicenseSpring/LicenseManager.h>
 #include <LicenseSpring/Exceptions.h>
+#include <third-party/LicenseSpring/include/Exceptons.h>
 
 #include <iostream>
 #include <thread>
