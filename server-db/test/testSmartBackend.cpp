@@ -96,9 +96,10 @@ private:
     }
     static set_config define_test_set_conf () {
         set_config conf;
-        conf.set_minimum_free_space = 256;
-        conf.set_init_file_size = 1024;
+        conf.set_minimum_free_space = 512;
+        conf.set_init_file_size = 4*1024;
         conf.fragment_set_path = "set/set_data";
+        conf.max_empty_hole_size = 512;
         return conf;
     }
     static data_store_config define_test_data_store_conf () {
