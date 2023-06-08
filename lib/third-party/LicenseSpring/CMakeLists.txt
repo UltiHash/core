@@ -18,8 +18,8 @@ message(STATUS "Using ${PROJECT_NAME}...")
 set(SPRING_SHARED ON)
 
 find_package(ZLIB REQUIRED)
-find_package(CURL REQUIRED)
-find_package(OpenSSL REQUIRED)
+find_package(CURL 4.8.0 REQUIRED)
+find_package(OpenSSL 1.1 REQUIRED)
 
 #extract OS specific package
 
@@ -157,8 +157,6 @@ else ()
     #target_include_directories(libLicenseSpring INTERFACE "${LICENSESPRING_INCLUDE_DIRS}")
 endif ()
 
-message("Included License Spring at: ${LICENSESPRING_INCLUDE_DIRS}")
-
 # adding all the .h files of the current project
 
 file(COPY "${COPY_SOURCE_FOLDER}/include" DESTINATION "${CMAKE_CURRENT_LIST_DIR}")
@@ -166,10 +164,12 @@ file(COPY "${COPY_SOURCE_FOLDER}/bin/" DESTINATION "${CMAKE_CURRENT_LIST_DIR}/bi
 
 file(GLOB HEADER_FILE_LIST ${CMAKE_CURRENT_BINARY_DIR}/include/*.h)
 
+message("Included License Spring at: ${HEADER_FILE_LIST}")
+
 #include_directories(${CMAKE_CURRENT_LIST_DIR}/include/)
 
 set(${PROJECT_NAME}_INCLUDE_DIRS ${CMAKE_CURRENT_LIST_DIR}/include)
-set(${PROJECT_NAME}_LINK_LIBRARIES ${OPENSSL_LIBRARIES} ${CURL_LIBRARIES} ${ZLIB_LIBRARIES} ${PROJECT_NAME})
+set(${PROJECT_NAME}_LINK_LIBRARIES ${OPENSSL_LIBRARIES} ${CURL_LIBRARIES} ${ZLIB_LIBRARIES})
 
 if(${SPRING_SHARED} STREQUAL "ON")
     add_library(${PROJECT_NAME} ${HEADER_FILE_LIST}#[===[${SOURCE_FILE_LIST}]===] IMPORTED SHARED)

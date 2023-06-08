@@ -43,7 +43,7 @@ namespace uh::licensing{
 
                     case check_license::license_type::AIRGAP_LICENSE_WITH_ONLINE_ACTIVATION:
                     {
-                        auto* tmp_license_valid_airgap = new check_airgap_license(config);
+                        auto* tmp_license_valid_airgap = new check_airgap_license(config, std::string(), std::string());
 
                         if(tmp_license_valid_airgap->valid())check_lic = tmp_license_valid_airgap;
                         else delete tmp_license_valid_airgap;
@@ -53,7 +53,7 @@ namespace uh::licensing{
 
                     case check_license::license_type::FLOATING_ONLINE_USER_LICENSE:
                     {
-                        auto* tmp_license_valid_online = new check_airgap_license(config);
+                        auto* tmp_license_valid_online = new check_airgap_license(config, std::string(), std::string());
 
                         if(tmp_license_valid_online->valid())check_lic = tmp_license_valid_online;
                         else delete tmp_license_valid_online;

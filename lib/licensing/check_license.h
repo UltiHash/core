@@ -43,7 +43,8 @@ namespace uh::licensing{
          *
          * @param license_folder is the folder where a license file is stored
          */
-        explicit check_license(std::filesystem::path license_folder): license_path(std::move(license_folder)){};
+        explicit check_license(std::filesystem::path license_folder, std::string appName, std::string appVersion):
+        license_path(std::move(license_folder)), appName(std::move(appName)), appVersion(std::move(appVersion)){};
 
         /**
          *
@@ -72,6 +73,8 @@ namespace uh::licensing{
 
         const std::string role_string = "server_role: ";
         const std::string license_type_string = "license_type: ";
+
+        std::string appName, appVersion;
     };
 
 } // namespace uh::licensing

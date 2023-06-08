@@ -15,7 +15,8 @@ namespace uh::licensing{
 
     public:
 
-        explicit check_online_license(std::filesystem::path license_folder);
+        explicit check_online_license(std::filesystem::path license_folder, std::string appName,
+                                      std::string appVersion);
 
         bool valid() override;
 
