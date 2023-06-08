@@ -502,74 +502,97 @@ BOOST_FIXTURE_TEST_CASE(smart_core_basic_test, files_info_fixture) {
         const auto i1 = sm.integrate(k1, v1);
         BOOST_TEST (i1 == v1.size());
 
+        std::cout << "1" << std::endl;
         const auto i2 = sm.integrate(k2, v2);
         BOOST_TEST (i2 == 4);
+        std::cout << "2" << std::endl;
 
         const auto i3 = sm.integrate(k3, v3);
         BOOST_TEST (i3 == v3.size());
+        std::cout << "3" << std::endl;
 
         const auto i4 = sm.integrate(k4, v4);
         BOOST_TEST (i4 == 9);
+        std::cout << "4" << std::endl;
 
         const auto i5 = sm.integrate(k5, v5);
         BOOST_TEST (i5 == 17);
+        std::cout << "5" << std::endl;
 
         const auto i6 = sm.integrate(k6, v6);
         BOOST_TEST (i6 == 0);
+        std::cout << "6" << std::endl;
 
         const auto r1 = sm.retrieve(k1);
         const auto sr1 = serialize_spans(r1.second);
         BOOST_TEST (sr1.size() == v1.size());
         BOOST_TEST (std::memcmp(sr1.data(), v1.data(), v1.size()) == 0);
+        std::cout << "7" << std::endl;
 
         const auto r2 = sm.retrieve(k2);
         const auto sr2 = serialize_spans(r2.second);
         BOOST_TEST (sr2.size() == v2.size());
         BOOST_TEST (std::memcmp(sr2.data(), v2.data(), v2.size()) == 0);
+        std::cout << "8" << std::endl;
 
         const auto r4 = sm.retrieve(k4);
         const auto sr4 = serialize_spans(r4.second);
         BOOST_TEST (sr4.size() == v4.size());
         BOOST_TEST (std::memcmp(sr4.data(), v4.data(), v4.size()) == 0);
+        std::cout << "9" << std::endl;
 
         const auto r5 = sm.retrieve(k5);
         const auto sr5 = serialize_spans(r5.second);
         BOOST_TEST (sr5.size() == v5.size());
         BOOST_TEST (std::memcmp(sr5.data(), v5.data(), v5.size()) == 0);
+        std::cout << "10" << std::endl;
 
         const auto r6 = sm.retrieve(k6);
         const auto sr6 = serialize_spans(r6.second);
         BOOST_TEST (sr6.size() == v6.size());
         BOOST_TEST (std::memcmp (sr6.data(), v6.data(), v6.size()) == 0);
+        std::cout << "11" << std::endl;
+
     }
+    std::cout << "12" << std::endl;
+
     char* ptr = new char [10*1024*1024];
     {
         smart_core sm(get_smart_config());
+        std::cout << "13" << std::endl;
 
         const auto r1 = sm.retrieve(k1);
         const auto sr1 = serialize_spans(r1.second);
         BOOST_TEST (sr1.size() == v1.size());
         BOOST_TEST (std::memcmp(sr1.data(), v1.data(), v1.size()) == 0);
+        std::cout << "14" << std::endl;
 
         const auto r2 = sm.retrieve(k2);
         const auto sr2 = serialize_spans(r2.second);
         BOOST_TEST (sr2.size() == v2.size());
         BOOST_TEST (std::memcmp(sr2.data(), v2.data(), v2.size()) == 0);
+        std::cout << "15" << std::endl;
 
         const auto r4 = sm.retrieve(k4);
         const auto sr4 = serialize_spans(r4.second);
         BOOST_TEST (sr4.size() == v4.size());
         BOOST_TEST (std::memcmp(sr4.data(), v4.data(), v4.size()) == 0);
+        std::cout << "16" << std::endl;
 
         const auto r5 = sm.retrieve(k5);
         const auto sr5 = serialize_spans(r5.second);
         BOOST_TEST (sr5.size() == v5.size());
         BOOST_TEST (std::memcmp(sr5.data(), v5.data(), v5.size()) == 0);
+        std::cout << "17" << std::endl;
 
         const auto r6 = sm.retrieve(k6);
         const auto sr6 = serialize_spans(r6.second);
         BOOST_TEST (sr6.size() == v6.size());
         BOOST_TEST (std::memcmp (sr6.data(), v6.data(), v6.size()) == 0);
+        std::cout << "18" << std::endl;
+
     }
+    std::cout << "19" << std::endl;
+
     delete[] ptr;
 }
