@@ -7,6 +7,8 @@
 
 #include <filesystem>
 #include <utility>
+#include <third-party/LicenseSpring/include/LicenseSpring/LicenseManager.h>
+#include <third-party/LicenseSpring/include/LicenseSpring/LicenseID.h>
 
 namespace uh::licensing{
 
@@ -75,6 +77,9 @@ namespace uh::licensing{
         const std::string license_type_string = "license_type: ";
 
         std::string appName, appVersion;
+
+        int licenseRegister(const std::shared_ptr<LicenseSpring::LicenseManager> &licenseManager,
+                            const LicenseSpring::LicenseID& licenseId);
     };
 
 } // namespace uh::licensing

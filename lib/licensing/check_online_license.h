@@ -5,9 +5,9 @@
 #ifndef CORE_CHECK_ONLINE_LICENSE_H
 #define CORE_CHECK_ONLINE_LICENSE_H
 
-#include <utility>
-
 #include "licensing/check_license.h"
+
+#include <utility>
 
 namespace uh::licensing{
 
@@ -19,7 +19,6 @@ namespace uh::licensing{
                                       std::string appVersion);
 
         bool valid() override;
-
     };
 
 } // namespace uh::licensing
