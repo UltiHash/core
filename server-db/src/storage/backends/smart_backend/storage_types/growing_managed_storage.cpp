@@ -31,9 +31,7 @@ void growing_managed_storage::deallocate(const offset_ptr& off_ptr, size_t size)
 }
 
 void growing_managed_storage::sync(void *ptr, std::size_t size) {
-    if (msync(align_ptr (ptr), size, MS_SYNC) != 0) {
-        throw std::system_error (errno, std::system_category(), "growing_managed_storage could not sync the mmap data");
-    }
+    sync_ptr (ptr, size);
 }
 
 void growing_managed_storage::sync () {
@@ -160,29 +158,6 @@ std::pair <uint64_t, size_t> growing_managed_storage::parse_file_name (const std
     const auto offset_str = file.string().substr(index1, index2 - 1 - index1);
     const auto size_str = file.string().substr(index2);
     return {std::stoul (offset_str), std::stoul (size_str)};
-}
-
-void growing_managed_storage::mmap_file(const std::filesystem::path& file, uint64_t offset, size_t file_size) {
-
-    const auto fd = open(file.c_str(), O_CREAT | O_RDWR, S_IRUSR | S_IWUSR);
-    ftruncate(fd, file_size);
-    const auto ptr = mmap(nullptr, file_size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
-    close(fd);
-    m_resources.emplace_hint(m_resources.cend(),std::piecewise_construct,
-                             std::forward_as_tuple(offset),
-                             std::forward_as_tuple(ptr, file, file_size, offset));
-}
-
-resource_entry &growing_managed_storage::get_resource(size_t offset, size_t size) {
-    auto itr = m_resources.upper_bound (offset);
-    if (itr == m_resources.cbegin()) {
-        throw std::domain_error("error: deallocate request for non-existing resource");
-    }
-    itr--;
-    if (itr->first + itr->second.m_size < offset + size) {
-        throw std::domain_error("error: deallocate request for non-existing resource");
-    }
-    return itr->second;
 }
 
 growing_managed_storage::~growing_managed_storage() {

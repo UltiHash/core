@@ -5,12 +5,13 @@
 #ifndef CORE_SMART_CORE_H
 #define CORE_SMART_CORE_H
 
-#include "persisted_redblack_tree_set.h"
-#include "fixed_managed_storage.h"
+#include "storage/backends/smart_backend/fragment_sets/persisted_redblack_tree_set.h"
+#include "storage/backends/smart_backend/storage_types/fixed_managed_storage.h"
 #include "persisted_robinhood_hashmap.h"
 #include "smart_config.h"
 #include "metrics/storage_metrics.h"
-#include "unlocked_redblack_tree.h"
+#include "storage/backends/smart_backend/fragment_sets/unlocked_redblack_tree.h"
+#include "storage/backends/smart_backend/fragment_sets/paged_redblack_tree.h"
 
 namespace uh::dbn::storage::smart {
 
@@ -36,14 +37,14 @@ public:
 
 private:
 
-    std::pair <std::vector <fragment>, size_t> deduplicate (std::string_view data);
+    std::pair <std::vector <sets::fragment>, size_t> deduplicate (std::string_view data);
 
     uint64_t store_data (const std::string_view& frag);
 
     static inline size_t largest_common_prefix (const std::string_view &str1, const std::string_view& str2) noexcept;
 
     fixed_managed_storage m_data_store;
-    unlocked_redblack_tree m_fragment_set;
+    std::unique_ptr <sets::fragment_set_interface> m_fragment_set;
     persisted_robinhood_hashmap m_hashtable;
 
     const dedupe_config m_dedupe_conf;

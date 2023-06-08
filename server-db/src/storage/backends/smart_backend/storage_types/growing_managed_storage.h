@@ -7,11 +7,11 @@
 
 #include <optional>
 
-#include "fixed_managed_storage.h"
+#include "storage_common.h"
 
 namespace uh::dbn::storage::smart {
 
-class growing_managed_storage {
+class growing_managed_storage: managed_storage {
 
 public:
     growing_managed_storage (std::filesystem::path directory, size_t min_file_size, size_t max_file_size);
@@ -26,7 +26,7 @@ public:
     /** Flush changes to the memory to disk. Only return when sync was finished.
      *  @throws on error
      */
-    void sync (void* ptr, std::size_t size);
+    static void sync (void* ptr, std::size_t size);
 
     /**
      * Flushes the whole mmap storage to disk. Only return when sync was finished.
@@ -44,21 +44,15 @@ public:
 
 private:
 
-private:
-
     offset_ptr do_allocate (size_t bytes);
 
     void do_deallocate (const offset_ptr& , size_t bytes);
-
-    void mmap_file (const std::filesystem::path& file, uint64_t offset, size_t file_size);
 
     void load_data_store ();
 
     std::filesystem::path get_file_name (uint64_t offset, size_t file_size);
 
     static std::pair <uint64_t, size_t> parse_file_name (const std::filesystem::path& file);
-
-    resource_entry& get_resource (size_t offset, size_t size = 0);
 
     std::fstream create_logger () const;
 
@@ -74,7 +68,6 @@ private:
     const std::filesystem::path m_directory;
     std::filesystem::path m_log_file_path;
     std::fstream m_log;
-    std::map <size_t, resource_entry> m_resources;
     std::size_t m_aggregated_size{};
     std::mutex m_mutex;
 };

@@ -5,12 +5,30 @@
 #ifndef CORE_UNLOCKED_REDBLACK_TREE_H
 #define CORE_UNLOCKED_REDBLACK_TREE_H
 
-#include "persisted_redblack_tree_set.h"
+#include <atomic>
+#include "fragment_set_interface.h"
+#include "storage/backends/smart_backend/smart_config.h"
+#include "storage/backends/smart_backend/storage_types/fixed_managed_storage.h"
+#include "storage/backends/smart_backend/storage_types/growing_plain_storage.h"
 
-namespace uh::dbn::storage::smart {
+namespace uh::dbn::storage::smart::sets {
 
 
-class unlocked_redblack_tree {
+class unlocked_redblack_tree: public fragment_set_interface{
+
+public:
+
+    unlocked_redblack_tree (set_config set_conf, fixed_managed_storage& data_store);
+
+private:
+
+    position_info do_insert_index (const std::string_view& frag, uint64_t data_offset, const position_info& pos) override;
+
+    [[nodiscard]] position_info do_find (const std::string_view& frag, const position_info& pos) const override;
+
+    void do_sync (const position_info& pos) override;
+
+    void do_remove (fragment& frag, const position_info& pos) override;
 
     enum color_t : uint8_t
     {
@@ -35,34 +53,11 @@ class unlocked_redblack_tree {
         mmap_node* m_mnode;
     };
 
-public:
-    struct search_result {
-        std::optional <std::pair <uint64_t, std::string_view>> lower;
-        std::optional <std::pair <uint64_t, std::string_view>> match;
-        std::optional <std::pair <uint64_t, std::string_view>> upper;
-        uint64_t hint {};
-        int comp {};
-    };
-
-
-
-    unlocked_redblack_tree (set_config set_conf, fixed_managed_storage& data_store);
-
-    uint64_t insert_index (const std::string_view& frag, uint64_t data_offset, const search_result& pos);
-
-    search_result find (const std::string_view& frag);
-
-    void sync (uint64_t offset);
-
-    uint64_t remove (fragment& frag, uint64_t hint);
-
-private:
-
     void balance (node& z);
 
     node directed_balance (node& z, direction_t d);
 
-    inline node get_node (uint64_t offset) noexcept;
+    [[nodiscard]] inline node get_node (uint64_t offset) const noexcept;
 
     inline node add_node () noexcept;
 
@@ -74,7 +69,7 @@ private:
 
     static inline uint64_t& get_other_child (const node& x, direction_t d) noexcept;
 
-    inline int comp (const std::string_view& new_fragment, const fragment& f);
+    [[nodiscard]] inline int comp (const std::string_view& new_fragment, const fragment& f)const ;
 
     constexpr static uint64_t NILL_OFFSET = 2 * sizeof (uint64_t);
 
@@ -86,6 +81,6 @@ private:
     std::atomic_ref <uint64_t> m_end;
 };
 
-} // end namespace uh::dbn::storage::smart
+} // end namespace uh::dbn::storage::smart::sets
 
 #endif //CORE_UNLOCKED_REDBLACK_TREE_H

@@ -9,13 +9,13 @@
 
 #include <span>
 #include <boost/test/unit_test.hpp>
-#include <storage/backends/smart_backend/fixed_managed_storage.h>
+#include "storage/backends/smart_backend/storage_types/fixed_managed_storage.h"
 #include <storage/backend.h>
 #include <storage/backends/smart_backend/smart_config.h>
-#include <storage/backends/smart_backend/persisted_redblack_tree_set.h>
+#include "storage/backends/smart_backend/fragment_sets/persisted_redblack_tree_set.h"
 #include <storage/backends/smart_backend/smart_core.h>
 #include <storage/backends/smart_backend/persisted_robinhood_hashmap.h>
-#include <storage/backends/smart_backend/growing_managed_storage.h>
+#include "storage/backends/smart_backend/storage_types/growing_managed_storage.h"
 #include <storage/backends/smart_backend/smart_storage.h>
 
 

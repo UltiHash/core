@@ -24,6 +24,7 @@ struct map_config {
 struct set_config {
     unsigned long set_init_file_size;
     unsigned long set_minimum_free_space;
+    unsigned long max_empty_hole_size;
     std::filesystem::path fragment_set_path;
 
 };
