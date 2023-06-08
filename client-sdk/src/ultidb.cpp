@@ -3,9 +3,13 @@
 #include "../include/ultidb.h"
 #include <functional>
 #include <thread>
-#include <protocol/client_pool.h>
-#include <protocol/client_factory.h>
-#include <net/plain_socket.h>
+#include <utility>
+#include "protocol/client_pool.h"
+#include "protocol/client_factory.h"
+#include "net/plain_socket.h"
+#include "chunking/mod.h"
+#include "protocol/server.h"
+#include <iostream>
 
 #if defined(__cplusplus) || defined(c_plusplus)
 extern "C" {
@@ -21,6 +25,35 @@ UDB_RESULT udb_get_last_error()
 {
     return static_cast<UDB_RESULT>(error);
 }
+
+// ---------------------------------------------------------------------
+
+const char* get_error_message()
+{
+    switch(error)
+    {
+        case 0 : return "Successful Operation.";
+        case 2: return "Buffer Overflow";
+        case 3: return "Undefined Chunking Mode";
+        default: return "Unknown Error";
+    }
+}
+
+// ---------------------------------------------------------------------
+
+class udb_undefined : public std::exception
+{
+public:
+    explicit udb_undefined(std::string  message) : message_(std::move(message)) {}
+
+    [[nodiscard]] const char* what() const noexcept override
+    {
+        return message_.c_str();
+    }
+
+private:
+    std::string message_;
+};
 
 // ---------------------------------------------------------------------
 
@@ -112,6 +145,38 @@ const char* get_sdk_version() { return SDK_VERSION; }
 
 // ---------------------------------------------------------------------
 
+//extern struct uh::chunking::config CHUNKING_CONFIG;
+
+// ---------------------------------------------------------------------
+
+constexpr const char* Exception_Messsage(UDB_RESULT n)
+{
+    switch (n)
+    {
+        case UDB_RESULT::UDB_UNDEFINED_CHUNKING_MODE: return "Undefined chunking mode.";
+    }
+
+    throw std::logic_error("The given enum doesn't have any string associated with it.");
+}
+
+// ---------------------------------------------------------------------
+
+constexpr const char* strategyString(UDB_CHUNKING_MODE n)
+{
+    switch (n)
+    {
+        case UDB_CHUNKING_MODE::UDB_FIXED_SIZE_CHUNK: return "FixedSize";
+        case UDB_CHUNKING_MODE::UDB_RABIN_FINGERPRINT: return "CDCrabin";
+        case UDB_CHUNKING_MODE::UDB_GEAR_CDC: return "Gear";
+        case UDB_CHUNKING_MODE::UDB_FAST_CDC: return "FastCDC";
+        case UDB_CHUNKING_MODE::UDB_MOD_CDC: return "ModCDC";
+    }
+
+    throw udb_undefined(Exception_Messsage(UDB_UNDEFINED_CHUNKING_MODE));
+}
+
+// ---------------------------------------------------------------------
+
 struct UDB_STATE_STRUCT
 {
     explicit UDB_STATE_STRUCT(UDB_CONFIG* config)
@@ -120,17 +185,20 @@ struct UDB_STATE_STRUCT
         std::stringstream s;
         s << SDK_NAME << " " << SDK_VERSION;
         uh::protocol::client_factory_config cf_config
-                {
-                        .client_version = s.str()
-                };
+            {
+                .client_version = s.str()
+            };
 
-        connection_pool = std::make_unique<uh::protocol::client_pool>(std::make_unique<uh::protocol::client_factory>(
+        m_connection_pool = std::make_unique<uh::protocol::client_pool>(std::make_unique<uh::protocol::client_factory>(
                 std::make_unique<uh::net::plain_socket_factory>(io, config->hostname, config->port),
                 cf_config), config->connection_pool);
 
+//        CHUNKING_CONFIG.chunking_strategy = strategyString(config->chunking_mode);
+//        m_chunking_mod = std::make_unique<uh::chunking::mod>(CHUNKING_CONFIG);
     }
 
-    std::unique_ptr<uh::protocol::client_pool> connection_pool;
+    std::unique_ptr<uh::protocol::client_pool> m_connection_pool;
+    std::unique_ptr<uh::chunking::mod> m_chunking_mod;
 };
 
 // ---------------------------------------------------------------------
@@ -140,6 +208,12 @@ UDB* udb_create_instance(UDB_CONFIG* config)
     try
     {
         return new UDB(config);
+    }
+    catch (const udb_undefined& e)
+    {
+        if ( std::string(e.what()) == Exception_Messsage(UDB_UNDEFINED_CHUNKING_MODE))
+            error = UDB_UNDEFINED_CHUNKING_MODE;
+        return nullptr;
     }
     catch (const std::exception& e)
     {
@@ -166,15 +240,25 @@ UDB_RESULT udb_destroy_instance(UDB* ulti_db_instance)
 
 // ---------------------------------------------------------------------
 
-UDB_RESULT udb_integrate(UDB *db, char* hash_buffer, const char* data, size_t length)
+UDB_RESULT udb_integrate(UDB *db, char* hash_buffer, size_t buffer_length, const char* data, size_t data_length)
 {
     try
     {
-        // divide into chunks here using the strategy
-        uh::protocol::write_chunks::request req { .chunk_sizes = std::span<uint32_t>(), .data = std::span<char>() };
-        auto result = db->connection_pool->get()->write_chunks(req);
+        if (buffer_length < 65)
+            throw std::overflow_error("Buffer overflow exception.");
 
-        // write hash in a buffer given
+        auto client_handle = db->m_connection_pool->get();
+        std::vector<uint32_t> chunk_sizes;
+        chunk_sizes.push_back(static_cast<uint32_t>(data_length));
+        auto resp = client_handle->write_chunks(uh::protocol::write_chunks::request { chunk_sizes,
+                                                                                      std::span<const char>(data, data_length) });
+
+        std::memcpy(hash_buffer, resp.hashes.data(), 65);
+    }
+    catch(const std::overflow_error& e)
+    {
+        error = UDB_BUFFER_OVERFLOW;
+        return UDB_BUFFER_OVERFLOW;
     }
     catch (const std::exception &e)
     {
@@ -187,20 +271,21 @@ UDB_RESULT udb_integrate(UDB *db, char* hash_buffer, const char* data, size_t le
 
 // ---------------------------------------------------------------------
 
-UDB_RESULT udb_retrieve(UDB *db, char* buffer_to_fill, size_t buffer_length , const char* udb_hash, uint32_t* received_length)
+UDB_RESULT udb_retrieve(UDB *db, char* buffer_to_fill, size_t buffer_length , const char* udb_hash)
 {
     try
     {
         uh::protocol::read_chunks::request req { .hashes = std::span<const char>(udb_hash, 64)};
-        auto result = db->connection_pool->get()->read_chunks(req);
+        auto result = db->m_connection_pool->get()->read_chunks(req);
 
-        auto retrieved_size = result.chunk_sizes.front();
-        *received_length = retrieved_size;
+         /* BUG: Agency Node loses the chunk size information. */
+         /* failure reading comression header should not be the error, instead couldn't read the hash should be theerror */
+//        auto retrieved_size = result.chunk_sizes.front();
+//
+//        if (retrieved_size > buffer_length)
+//            throw std::overflow_error("Buffer overflow exception.");
 
-        if (retrieved_size > buffer_length)
-            throw std::overflow_error("Buffer overflow exception.");
-
-        std::memcpy(buffer_to_fill, std::get<std::vector<char>>(result.data).data(), result.chunk_sizes.front());
+        std::memcpy(buffer_to_fill, std::get<std::vector<char>>(result.data).data(), std::get<std::vector<char>>(result.data).size() );
     }
     catch(const std::overflow_error& e)
     {

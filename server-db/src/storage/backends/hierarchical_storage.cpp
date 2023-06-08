@@ -328,7 +328,7 @@ void hierarchical_storage::acquire_storage_size(std::size_t size) {
 
 // ---------------------------------------------------------------------
   
-std::pair <std::size_t, std::vector <char>> hierarchical_storage::write_block(const std::span<char> &data) {
+std::pair <std::size_t, std::vector <char>> hierarchical_storage::write_block(const std::span<const char> &data) {
     throw std::runtime_error ("hierarchical_storage does not implement write_block method");
 }
 

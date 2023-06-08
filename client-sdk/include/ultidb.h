@@ -17,6 +17,8 @@ extern "C" {
 #define SDK_NAME "UDB"
 #define SDK_VERSION "0.1.0"
 
+const char* get_sdk_version();
+
 /**
 * Opaque structure that holds the UltiDB state.
 *
@@ -39,16 +41,21 @@ typedef struct UDB_CONFIG_STRUCT UDB_CONFIG;
  */
 typedef enum : uint8_t
 {
-    /* UltiDB operation successfully completed. */
+    /* UDB operation successfully completed. */
     UDB_RESULT_SUCCESS = 0,
 
-    /* UltiDB operation failed and the error is not known. */
-    UDB_RESULT_ERROR = 1,
+    /* UDB operation failed and the error is not known. */
+    UDB_RESULT_ERROR,
 
     /* Data couldn't be fit in the buffer given. */
-    UDB_BUFFER_OVERFLOW = 3,
+    UDB_BUFFER_OVERFLOW,
+
+    /* Undefined chunking mode given. */
+    UDB_UNDEFINED_CHUNKING_MODE,
 
 } UDB_RESULT;
+
+const char* get_error_message();
 
 /** Chunking Strategy to choose from. When the data is large when integrating then it is automatically divided into
  * smaller pieces of data which we call chunks. This is done in order to increase the de-duplication ratio as smaller
@@ -61,10 +68,7 @@ typedef enum : uint8_t
 */
 typedef enum UDB_CHUNKING_MODE {
 
-    /**
-     * Default chunking mode.
-     *
-     */
+    /** */
     UDB_FIXED_SIZE_CHUNK = 0,
 
     /**  */
@@ -75,6 +79,9 @@ typedef enum UDB_CHUNKING_MODE {
 
     /** */
     UDB_MOD_CDC = 3,
+
+    /** */
+    UDB_RABIN_FINGERPRINT = 4,
 
 } UDB_CHUNKING_MODE;
 
@@ -99,7 +106,6 @@ UDB_CONFIG* udb_create_config();
  * @param connection_pool The number of connections to create with the agency node.
  * @return bool true if the operation is successful, false if the operation failed
  */
- // return error code instead of bool
 UDB_RESULT udb_config_set_agencynode(UDB_CONFIG* cfg, const char *hostname, uint16_t port, size_t connection_pool = 3);
 
 /**
@@ -108,7 +114,6 @@ UDB_RESULT udb_config_set_agencynode(UDB_CONFIG* cfg, const char *hostname, uint
  * @param chunking_strategy The chunking strategy to apply
  * @return UDB_BOOL true if the operation is successful, false if the operation failed
  */
- // return error code instead of code
 UDB_RESULT udb_config_set_chunking_strategy(UDB_CONFIG* cfg, UDB_CHUNKING_MODE chunking_strategy);
 
 /**
@@ -131,29 +136,28 @@ UDB* udb_create_instance(UDB_CONFIG *config);
  */
 UDB_RESULT udb_destroy_instance(UDB* udb_instance);
 
-
 // ---------------------------------------------------------------------
 
 /**
  *
  * @param db UDB object which can be used to perform operations such as integrate and retrieve.
  * @param data Data to integrate into the UDB cluster
+ * @param buffer_length
  * @param length Size of the data to integrate
  * @return unsigned int of 8 bits The value 0 means the operation was successful, else a integer value is set according
  * to the error encountered. This error can be deduced from enum ::UDB_RESULT.
  */
-UDB_RESULT udb_integrate(UDB *db, char* hash_buffer, const char* data, size_t length);
+UDB_RESULT udb_integrate(UDB *db, char* hash_buffer,  size_t buffer_length, const char* data, size_t data_length);
 
 /**
  * Data to retrieve from the UDB cluster based on the hash provided.
  *
  * @param db UDB object which can be used to perform operations such as integrate and retrieve.
- * @param udb_hash SHA512 hash of the data integrated
+ * @param data_buffer
  * @param length Size of the data retrieved
  * @return char* Returns nullptr if the operation is unsuccessful else a pointer to the underlying data is returned
  */
-UDB_RESULT udb_retrieve(UDB *db, char* buffer_to_fill, size_t buffer_length, const char* udb_hash,
-                           uint32_t* filled_length);
+UDB_RESULT udb_retrieve(UDB *db, char* data_buffer, size_t buffer_length, const char* udb_hash);
 
 // ---------------------------------------------------------------------
 
@@ -162,3 +166,9 @@ UDB_RESULT udb_retrieve(UDB *db, char* buffer_to_fill, size_t buffer_length, con
 #endif
 
 #endif /* UDB_SDK_INCLUDE_UDB */
+
+/* !!!!! Things to Improve
+ * 1. Assumption of hash in retrieve being always 64 bytes. This is not very good.
+ * 2. There is no chunking being done, and if we do, we do not get only one hash.
+ *
+ */

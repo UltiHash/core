@@ -161,7 +161,7 @@ struct write_chunks
     struct request
     {
         std::span <uint32_t> chunk_sizes;
-        std::span <char> data;
+        std::span <const char> data;
     };
 
     struct response

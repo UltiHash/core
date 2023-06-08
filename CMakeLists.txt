@@ -9,6 +9,9 @@ option(BUILD_CLIENT_SHELL   "Build the client-shell component"  OFF)
 option(BUILD_CLIENT_FUSE    "Build the client-fuse component"  OFF)
 option(BUILD_TOOLS          "Build the tools component"  OFF)
 
+set(Boost_USE_STATIC_LIBS ON)
+add_compile_options(-fPIC)
+
 
 if((NOT BUILD_SERVER_DB) AND (NOT BUILD_SERVER_AGENCY) AND (NOT BUILD_CLIENT_SHELL) AND (NOT BUILD_CLIENT_FUSE) AND (NOT BUILD_TOOLS))
     SET(BUILD_SERVER_DB ON CACHE BOOL       "Building the server-db component" FORCE)
@@ -62,5 +65,7 @@ endif()
 if(BUILD_CLIENT_FUSE)
 add_subdirectory(client-fuse)
 endif()
+
+add_subdirectory(client-sdk)
 
 enable_testing()
