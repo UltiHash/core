@@ -9,7 +9,17 @@
 #
 # Note that on macOS, this module requires the "macLICENSESPRING" package to be installed.
 
+cmake_minimum_required(VERSION 3.22.0 FATAL_ERROR)
+set(CMAKE_CXX_STANDARD 20)
+
+project(uhLibLicenseSpring)
+message(STATUS "Using ${PROJECT_NAME}...")
+
 set(SPRING_SHARED ON)
+
+find_package(ZLIB REQUIRED)
+find_package(CURL REQUIRED)
+find_package(OpenSSL REQUIRED)
 
 #extract OS specific package
 
@@ -111,10 +121,12 @@ if(${SPRING_SHARED} STREQUAL "ON")
         set(LICENSESPRING_LIBRARY "${LICENSE_SPRING_SOURCE_FOLDER}/bin/shared/Release/libLicenseSpring.so")
     endif ()
 
-    message("Using library: ${LICENSESPRING_LIBRARY}")
+    set(LICENSESPRING_LIBRARIES ${LICENSESPRING_LIBRARY})
+    message("Using library: ${LICENSESPRING_LIBRARIES}")
 
-    #add_library(LicenseSpring SHARED ${LICENSESPRING_INCLUDE_DIRS})
-    target_link_libraries(LicenseSpring PUBLIC ${LICENSESPRING_LIBRARY})
+    #add_library(libLicenseSpring INTERFACE "${LICENSESPRING_INCLUDE_DIRS}")
+    #target_include_directories(libLicenseSpring INTERFACE "${LICENSESPRING_INCLUDE_DIRS}")
+
 else ()
     file(REMOVE_RECURSE "${LICENSE_SPRING_SOURCE_FOLDER}/bin/shared")
 
@@ -126,14 +138,25 @@ else ()
         set(LICENSESPRING_LIBRARY "${LICENSE_SPRING_SOURCE_FOLDER}/bin/static/Release/libLicenseSpring.a")
     endif ()
 
-    message("Using library: ${LICENSESPRING_LIBRARY}")
+    set(LICENSESPRING_LIBRARIES ${LICENSESPRING_LIBRARY})
+    message("Using library: ${LICENSESPRING_LIBRARIES}")
 
-    #add_library(LicenseSpring STATIC ${LICENSESPRING_INCLUDE_DIRS})
-    target_link_libraries(LicenseSpring PUBLIC ${LICENSESPRING_LIBRARY})
+    #add_library(libLicenseSpring INTERFACE "${LICENSESPRING_INCLUDE_DIRS}")
+    #target_include_directories(libLicenseSpring INTERFACE "${LICENSESPRING_INCLUDE_DIRS}")
 endif ()
 
-target_include_directories(${LICENSESPRING_INCLUDE_DIRS})
 message("Included License Spring at: ${LICENSESPRING_INCLUDE_DIRS}")
+
+#copy and overwrite files
+#file(REMOVE_RECURSE "${CMAKE_CURRENT_LIST_DIR}/Debug")
+#file(REMOVE_RECURSE "${CMAKE_CURRENT_LIST_DIR}/Release")
+
+# adding all the .h files of the current project
+file(GLOB HEADER_FILE_LIST ${CMAKE_CURRENT_SOURCE_DIR}/*.h)
+
+add_library(${PROJECT_NAME} ${HEADER_FILE_LIST} ${SOURCE_FILE_LIST})
+target_include_directories(${PROJECT_NAME} INTERFACE ${${PROJECT_NAME}_INCLUDE_DIRS})
+target_link_libraries(${PROJECT_NAME} ${${PROJECT_NAME}_LINK_LIBRARIES})
 
 #[===[
 

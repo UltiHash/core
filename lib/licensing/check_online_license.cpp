@@ -4,6 +4,14 @@
 
 #include "check_online_license.h"
 
+#include <LicenseSpring/Configuration.h>
+#include <LicenseSpring/EncryptString.h>
+#include <LicenseSpring/LicenseManager.h>
+#include <LicenseSpring/Exceptions.h>
+
+#include <iostream>
+#include <thread>
+
 namespace uh::licensing{
 
     // ---------------------------------------------------------------------
