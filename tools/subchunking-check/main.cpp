@@ -50,10 +50,6 @@ int insert_block (const std::string &chunk_str, size_t min_block) {
         eq_range.second ++;
     }
 
-    //auto res = std::max_element (eq_range.first, eq_range.second, [&chunk_str] (const auto &block1, const auto &block2) {
-    //    return largest_common_prefix(chunk_str, block1.first) < largest_common_prefix(chunk_str, block2.first);
-    //});
-
     auto res = eq_range.first;
     auto max_len = 0;
     auto max_index = 0;
@@ -112,18 +108,31 @@ void integrate (const std::filesystem::path &path, uh::chunking::mod &chunking_m
     try {
         uh::io::file f(path, std::ios::in);
 
+        auto chunker = chunking_module.create_chunker(f, f.size());
 
-        auto chunker = chunking_module.create_chunker(f);
+        std::vector<char> buffer(8 * 1024 * 1024);
+        bool busy = true;
+        while (busy)
+        {
+            auto res = chunker->chunk(buffer);
+            switch (res.type)
+            {
+                case uh::chunking::chunk_result::done:
+                    busy = false;
+                    break;
 
+                case uh::chunking::chunk_result::too_small:
+                    throw std::runtime_error("buffer too small");
+                    break;
 
-        for (auto chunk = chunker->next_chunk(); !chunk.empty(); chunk = chunker->next_chunk()) {
-            std::string chunk_str {chunk.data (), chunk.size()};
+                case uh::chunking::chunk_result::created:
+                    std::string chunk_str{&buffer[0], res.size};
 
-
-
-            non_deduplicated_size += chunk.size();
-            blocks.emplace(chunk_str, insert_block(chunk_str, min_block));
-            chunk_count ++;
+                    non_deduplicated_size += res.size;
+                    blocks.emplace(chunk_str, insert_block(chunk_str, min_block));
+                    chunk_count ++;
+                    break;
+            }
         }
     }
     catch (std::exception& e) {
@@ -140,12 +149,6 @@ int main(int argc, const char *argv[]) {
     }
 
     auto chunking_cfg = config.chunking();
-    /*
-    const auto min_subchunk_size = 2*1024;
-    chunking_cfg.fast_cdc.min_size = 4*1024;
-    chunking_cfg.fast_cdc.normal_size = 8*1024;
-    chunking_cfg.fast_cdc.max_size = 1024*512;
-     */
     const auto min_subchunk_size = 4;
     chunking_cfg.fast_cdc.min_size = 4;
     chunking_cfg.fast_cdc.normal_size = 6;
@@ -162,18 +165,15 @@ int main(int argc, const char *argv[]) {
                 continue;
             }
             integrate(file, chunking_module, min_subchunk_size);
-            //std::cout << "integrated " << file << std::endl;
             count++;
         }
     }
     else {
         integrate(root, chunking_module, min_subchunk_size);
-        //std::cout << "integrated " << root << std::endl;
     }
 
     size_t effective_size = 0;
     for (const auto &item: fragments) {
-        //std::cout << item.first << std::endl;
         effective_size += item.first.size();
     }
 

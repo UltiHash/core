@@ -43,16 +43,16 @@ mod::mod(const config& cfg)
 
 // ---------------------------------------------------------------------
 
-std::unique_ptr<uh::chunking::chunker> mod::create_chunker(io::device& d, std::size_t buffer_size)
+std::unique_ptr<uh::chunking::chunker> mod::create_chunker(io::device& d, std::size_t file_size)
 {
     switch (m_strategy)
     {
         case ChunkingStrategy::FixedSize:
-            return std::make_unique<uh::chunking::fixed_size_chunker>(d, m_chunk_size, buffer_size);
+            return std::make_unique<uh::chunking::fixed_size_chunker>(d, m_chunk_size, file_size);
         case ChunkingStrategy::Gear:
-            return std::make_unique<uh::chunking::gear>(m_gear, d, buffer_size);
+            return std::make_unique<uh::chunking::gear>(m_gear, d);
         case ChunkingStrategy::FastCDC:
-            return std::make_unique<uh::chunking::fast_cdc>(m_fast_cdc, d, buffer_size);
+            return std::make_unique<uh::chunking::fast_cdc>(m_fast_cdc, d);
         case ChunkingStrategy::ModCDC:
             return std::make_unique<uh::chunking::mod_chunker>(m_mod_cdc, d);
         case ChunkingStrategy::CDCrabin:

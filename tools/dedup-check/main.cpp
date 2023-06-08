@@ -26,11 +26,30 @@ size_t non_deduplicated_size = 0;
 void integrate (const std::filesystem::path &path, uh::chunking::mod &chunking_module) {
     uh::io::file f (path, std::ios::in);
 
-    auto chunker = chunking_module.create_chunker(f);
+    auto chunker = chunking_module.create_chunker(f, f.size());
 
-    for (auto chunk = chunker->next_chunk(); !chunk.empty(); chunk = chunker->next_chunk()) {
-        blocks[{chunk.data(), chunk.size()}].push_back(path);
-        non_deduplicated_size += chunk.size();
+    std::vector<char> buffer(8 * 1024 * 1024);
+
+    bool busy = true;
+    while (busy)
+    {
+        auto res = chunker->chunk(buffer);
+        switch (res.type)
+        {
+            case uh::chunking::chunk_result::done:
+                busy = false;
+                break;
+
+            case uh::chunking::chunk_result::too_small:
+                std::cerr << "chunker returned `too_small`\n";
+                busy = false;
+                break;
+
+            case uh::chunking::chunk_result::created:
+                blocks[{&buffer[0], res.size}].push_back(path);
+                non_deduplicated_size += res.size;
+                break;
+        }
     }
 }
 

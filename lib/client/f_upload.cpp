@@ -113,12 +113,16 @@ public:
         }
     }
 
-    void add_chunk(file_handle* fh, std::span<char> chunk)
+    std::span<char> buffer()
+    {
+        return std::span<char>(m_buffer.begin() + m_offs, m_buffer.end());
+    }
+
+    void add_chunk(file_handle* fh, std::size_t size)
     {
         m_files.push_back(fh);
-        m_chunk_sizes.push_back(chunk.size());
-        std::memcpy(&m_buffer[m_offs], chunk.data(), chunk.size());
-        m_offs += chunk.size();
+        m_chunk_sizes.push_back(size);
+        m_offs += size;
         fh->add_chunk();
     }
 
@@ -250,22 +254,37 @@ void f_upload::chunk_and_upload(std::unique_ptr<uhv::f_meta_data>&& md_ptr, doub
         m_output_jq.push_back(fh->get_future());
 
         io::file file(md.f_path());
+        auto chunker = m_chunking.create_chunker(file, md.f_size());
 
-        auto chunker = m_chunking.create_chunker(file,  std::min (uh::protocol::server::MAXIMUM_DATA_SIZE, static_cast <const size_t> (md.f_size())));
+        // create the chunker, passing a buffer range: chunker = create_chunker(file, std::span(r.write_pos(), r.space_left()))
 
-        for (auto chunk = chunker->next_chunk(); !chunk.empty(); chunk = chunker->next_chunk())
+        // chunker returns one of:
+        //  1. wrote chunk to buffer with length `chunk_size`
+        //  2. there are no more chunks
+        //  3. the buffer is too small to hold the next chunk
+
+        bool busy = true;
+        while (busy)
         {
-            if (r.active().space_left() < chunk.size())
+            auto res = chunker->chunk(r.active().buffer());
+            switch (res.type)
             {
-                r.swap();
-                r.active().add_handle(fh);
-            }
+                case chunking::chunk_result::done:
+                    busy = false;
+                    break;
 
-            r.active().add_chunk(fh.get(), chunk);
+                case chunking::chunk_result::too_small:
+                    r.swap();
+                    r.active().add_handle(fh);
+                    break;
+
+                case chunking::chunk_result::created:
+                    r.active().add_chunk(fh.get(), res.size);
+                    break;
+            }
         }
 
         m_uploaded_size += md.f_size();
-
         fh->ready();
     }
     else

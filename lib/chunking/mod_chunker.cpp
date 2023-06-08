@@ -4,53 +4,75 @@
 #include "mod_chunker.h"
 #include "util/exception.h"
 
-uh::chunking::mod_chunker::mod_chunker(const uh::chunking::mod_cdc_config &config, uh::io::device &in, size_t chunks_count_in_buffer)
+
+namespace uh::chunking
+{
+
+// ---------------------------------------------------------------------
+
+mod_chunker::mod_chunker(const uh::chunking::mod_cdc_config& config, uh::io::device& in)
         :
         m_min_size(config.min_size),
         m_max_size(config.max_size),
         m_normal_size(config.normal_size),
         m_dev (in),
-        m_buffer (m_max_size * chunks_count_in_buffer),
-        m_buf_size (m_dev.read({m_buffer.data(), m_buffer.size()}))
-
+        m_buffer(config.max_size),
+        m_size(0),
+        m_hint(0)
 {
 }
 
-std::span<char> uh::chunking::mod_chunker::next_chunk() {
-    if (m_buf_size - m_pointer < m_max_size) {
-        refresh_buffer();
-        if (m_buf_size < m_max_size) {
-            m_pointer = m_buf_size;
-            return {m_buffer.data(), m_buf_size};
+// ---------------------------------------------------------------------
+
+chunk_result mod_chunker::chunk(std::span<char> b)
+{
+    if (b.size() < m_max_size)
+    {
+        memcpy(&m_buffer[0], b.data(), m_hint);
+        m_size = m_hint;
+        m_hint = 0;
+
+        return { chunk_result::too_small };
+    }
+
+    if (m_hint == 0)
+    {
+        memcpy(b.data(), &m_buffer[0], m_size);
+
+        m_hint = m_dev.read(b.subspan(m_size));
+        m_hint = m_hint + m_size;
+        m_size = 0;
+
+        if (m_hint == 0)
+        {
+            return { chunk_result::done };
         }
     }
 
-    const auto start = m_pointer;
-    const auto loop_limit = std::min (start + m_max_size, m_buf_size);
-    const auto normalised_size = m_normal_size - m_min_size;
+    const auto mask = m_normal_size - m_min_size;
     unsigned long window = 0;
-    for (auto i = m_pointer + m_min_size; i < loop_limit; i++) {
-        window = (window << 1) + m_buffer [i];
-        if (window % normalised_size == 0) {
-            m_pointer = i;
-            return {m_buffer.data() + start, i - start};
+
+    if (m_hint < m_min_size)
+    {
+        auto size = m_hint;
+        m_hint = 0;
+        return { chunk_result::created, size };
+    }
+
+    auto pos = m_min_size;
+    for (; pos < std::min(m_max_size, m_hint); ++pos)
+    {
+        window = (window << 1) + b[pos];
+        if (window % mask == 0)
+        {
+            break;
         }
     }
 
-    m_pointer = loop_limit;
-    return {m_buffer.data() + start, loop_limit - start};
-
+    m_hint -= pos;
+    return { chunk_result::created, pos };
 }
 
-void uh::chunking::mod_chunker::refresh_buffer() {
-    const auto remaining_size = m_buf_size - m_pointer;
-    std::memmove(m_buffer.data(), m_buffer.data() + m_pointer, remaining_size);
-    m_buf_size = m_dev.read({m_buffer.data() + remaining_size, m_buf_size - remaining_size}) + remaining_size;
-    m_pointer = 0;
-}
+// ---------------------------------------------------------------------
 
-uh::chunking::buffer &uh::chunking::mod_chunker::get_buffer() {
-    THROW (util::exception, "not supported");
-}
-
-
+} // namespace uh::chunking

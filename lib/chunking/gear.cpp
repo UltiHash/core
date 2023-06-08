@@ -2,6 +2,8 @@
 
 #include "gear_random.inc"
 
+#include <cstring>
+
 
 namespace uh::chunking
 {
@@ -36,46 +38,56 @@ uint64_t compute_mask(std::size_t average_size)
 
 // ---------------------------------------------------------------------
 
-gear::gear(const gear_config& c, io::device& in, std::size_t buffer_size)
-    : m_buffer(in, std::max (buffer_size, 2 * c.max_size)),
+gear::gear(const gear_config& c, io::device& in)
+    : m_in(in),
       m_geartable(reinterpret_cast<const uint64_t*>(random_gen_table)),
       m_max_size(c.max_size),
-      m_mask(compute_mask(c.average_size))
+      m_mask(compute_mask(c.average_size)),
+      m_buffer(c.max_size),
+      m_size(0u),
+      m_hint(0u)
 {
 }
 
 // ---------------------------------------------------------------------
 
-std::span<char> gear::next_chunk()
+chunk_result gear::chunk(std::span<char> b)
 {
-    if (m_buffer.fill_buffer() == 0)
+    if (b.size() < m_max_size)
     {
-        return m_buffer.data(m_buffer.mark());
+        memcpy(&m_buffer[0], b.data(), m_hint);
+        m_size = m_hint;
+        m_hint = 0;
+
+        return { chunk_result::too_small };
     }
 
-    auto start = m_buffer.mark();
-    int ch;
-    while ((ch = m_buffer.next_byte()) != -1)
+    if (m_hint == 0)
     {
-        m_fp = (m_fp << 1) + m_geartable[ch];
+        memcpy(b.data(), &m_buffer[0], m_size);
+
+        m_hint = m_in.read(b.subspan(m_size));
+        m_hint = m_hint + m_size;
+        m_size = 0;
+
+        if (m_hint == 0)
+        {
+            return { chunk_result::done };
+        }
+    }
+
+    auto pos = 0u;
+    for (; pos < m_hint; ++pos)
+    {
+        m_fp = (m_fp << 1) + m_geartable[b[pos]];
         if ((m_fp & m_mask) == 0)
         {
             break;
         }
-
-        if (m_buffer.length(start) >= m_max_size)
-        {
-            break;
-        }
     }
 
-    return m_buffer.data(start);
-}
-
-// ---------------------------------------------------------------------
-
-buffer &gear::get_buffer() {
-    return m_buffer;
+    m_hint -= pos;
+    return { chunk_result::created, pos };
 }
 
 // ---------------------------------------------------------------------

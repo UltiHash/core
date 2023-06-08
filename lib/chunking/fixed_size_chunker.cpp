@@ -6,37 +6,33 @@ namespace uh::chunking
 
 // ---------------------------------------------------------------------
 
-fixed_size_chunker::fixed_size_chunker(io::device& dev, size_t chunk_size, size_t buffer_size)
-    : m_chunk_size(chunk_size),
-      m_buffer(dev, std::max (buffer_size, 2 * chunk_size))
+fixed_size_chunker::fixed_size_chunker(io::device& dev,
+                                       size_t chunk_size,
+                                       std::size_t file_size)
+    : m_dev(dev),
+      m_chunk_size(chunk_size),
+      m_file_size(file_size)
 {
 }
 
 // ---------------------------------------------------------------------
 
-std::span<char> fixed_size_chunker::next_chunk()
+chunk_result fixed_size_chunker::chunk(std::span<char> b)
 {
-    if (m_buffer.fill_buffer() == 0)
+    std::size_t to_read = std::min(m_chunk_size, m_file_size);
+    if (b.size() < to_read)
     {
-        return m_buffer.data();
+        return { chunk_result::too_small };
     }
 
-    if (m_buffer.length() < m_chunk_size)
+    std::size_t size = m_dev.read(b.subspan(0, to_read));
+    if (size == 0)
     {
-        auto start = m_buffer.mark();
-        m_buffer.skip(m_buffer.length());
-        return m_buffer.data(start);
+        return { chunk_result::done };
     }
 
-    auto start = m_buffer.mark();
-    m_buffer.skip(m_chunk_size);
-    return m_buffer.data(start);
-}
-
-// ---------------------------------------------------------------------
-
-buffer &fixed_size_chunker::get_buffer() {
-    return m_buffer;
+    m_file_size -= size;
+    return { chunk_result::created, size };
 }
 
 // ---------------------------------------------------------------------

@@ -1,7 +1,7 @@
 #ifndef CHUNKING_GEAR_H
 #define CHUNKING_GEAR_H
 
-#include <chunking/buffer.h>
+#include <io/device.h>
 #include <chunking/chunker.h>
 
 
@@ -28,19 +28,20 @@ struct gear_config
 class gear : public chunker
 {
 public:
-    gear(const gear_config& c, io::device& in, std::size_t buffer_size = 0);
+    gear(const gear_config& c, io::device& in);
 
-    std::span<char> next_chunk() override;
-    [[nodiscard]] buffer& get_buffer () override;
-
+    chunk_result chunk(std::span<char> b) override;
 
 private:
-    buffer m_buffer;
-
+    io::device& m_in;
     uint64_t m_fp = 0;
     const uint64_t* m_geartable;
     std::size_t m_max_size;
     uint64_t m_mask;
+
+    std::vector<char> m_buffer;
+    std::size_t m_size;
+    std::size_t m_hint;
 };
 
 // ---------------------------------------------------------------------

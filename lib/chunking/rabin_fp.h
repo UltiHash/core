@@ -2,11 +2,14 @@
 #define CHUNKING_RABIN_FINGERPRINTS_H
 
 #include <io/device.h>
-#include <chunking/buffer.h>
 #include <chunking/chunker.h>
-extern "C"{
-    #include <chunking/rabin_polynomial.h>
-    #include <chunking/rabin_polynomial_constants.h>
+
+extern "C"
+{
+
+#include <chunking/rabin_polynomial.h>
+#include <chunking/rabin_polynomial_constants.h>
+
 }
 
 
@@ -30,23 +33,16 @@ public:
 
     ~rabin_fp() override;
 
-    std::span<char> next_chunk() override;
-
-    [[nodiscard]] buffer& get_buffer () override;
-
-    std::string chunker_type() {return std::string(m_type);}
-
-    size_t refill_buffer();
+    chunk_result chunk(std::span<char> b) override;
 
 private:
     io::device& m_dev;
-    size_t m_chunk_size = 0;
-    std::vector<char> m_buffer;
     struct rab_block_info *m_block=nullptr;
     struct rabin_polynomial *m_chunk=nullptr;
-    bool m_update_chunk=false;
-    bool m_finished=false;
-    constexpr static std::string_view m_type = "CDCrabin";
+    std::vector<char> m_buffer;
+    std::size_t m_max_size;
+    std::size_t m_size;
+    std::size_t m_hint;
 };
 
 // ---------------------------------------------------------------------

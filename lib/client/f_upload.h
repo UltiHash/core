@@ -41,7 +41,7 @@ public:
     void chunk_and_upload(std::unique_ptr<uhv::f_meta_data>&& metadata,
                           double_buffer& r);
 
-    static constexpr std::size_t MAXIMUM_DATA_SIZE = 16 * 1024 * 1024;
+    static constexpr std::size_t MAXIMUM_DATA_SIZE = 64 * 1024 * 1024;
 private:
     void add_result(const std::filesystem::path& p,
                 const std::optional<std::string>& error = std::nullopt);
