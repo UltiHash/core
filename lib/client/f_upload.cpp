@@ -67,8 +67,18 @@ class request
 {
 public:
     request()
-        : m_buffer(f_upload::MAXIMUM_DATA_SIZE)
+        : m_buffer(reinterpret_cast<char*>(malloc(f_upload::MAXIMUM_DATA_SIZE))),
+          m_size(f_upload::MAXIMUM_DATA_SIZE)
     {
+        if (m_buffer == 0)
+        {
+            throw std::bad_alloc();
+        }
+    }
+
+    ~request()
+    {
+        free(m_buffer);
     }
 
     void reset()
@@ -81,12 +91,12 @@ public:
 
     std::size_t space_left() const
     {
-        return m_buffer.size() - m_offs;
+        return m_size - m_offs;
     }
 
     void send(protocol::client_pool::handle& client)
     {
-        auto resp = client->write_chunks(write_chunks::request{m_chunk_sizes, std::span(m_buffer.data(), m_offs)});
+        auto resp = client->write_chunks(write_chunks::request{m_chunk_sizes, std::span(m_buffer, m_offs)});
 
         auto hash_size = resp.hashes.size() / m_files.size();
         ASSERT(resp.hashes.size() % m_files.size() == 0);
@@ -115,7 +125,7 @@ public:
 
     std::span<char> buffer()
     {
-        return std::span<char>(m_buffer.begin() + m_offs, m_buffer.end());
+        return std::span<char>(m_buffer + m_offs, m_buffer + m_size);
     }
 
     void add_chunk(file_handle* fh, std::size_t size)
@@ -135,7 +145,8 @@ private:
     std::set<std::shared_ptr<file_handle>> m_handles;
     std::vector<file_handle*> m_files;
     std::vector<uint32_t> m_chunk_sizes;
-    std::vector<char> m_buffer;
+    char* m_buffer;
+    std::size_t m_size;
     std::size_t m_offs = 0;
 };
 
