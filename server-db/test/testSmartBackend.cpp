@@ -203,11 +203,11 @@ BOOST_FIXTURE_TEST_CASE(test_mmap_storage_persistet_alloc_test, files_info_fixtu
 }
 
 
-uint64_t set_insert (fixed_managed_storage& ms, persisted_redblack_tree_set& set, std::string_view data, uint64_t hint = 2 * sizeof (uint64_t)) {
+uint64_t set_insert (fixed_managed_storage& ms, sets::persisted_redblack_tree_set& set, std::string_view data, uint64_t hint = 2 * sizeof (uint64_t)) {
     auto alloc = ms.allocate(data.size());
     std::memcpy(alloc.m_addr, data.data(), data.size());
-    const auto h = set.insert_index(data, alloc.m_offset, hint);
-    return h;
+    const auto h = set.insert_index(data, alloc.m_offset);
+    return h.hint;
 }
 
 BOOST_FIXTURE_TEST_CASE(basic_test_mmap_set, files_info_fixture)
@@ -215,7 +215,7 @@ BOOST_FIXTURE_TEST_CASE(basic_test_mmap_set, files_info_fixture)
     cleanup();
     fixed_managed_storage ms(get_data_store_config());
 
-    persisted_redblack_tree_set set {get_set_conf(), ms};
+    sets::persisted_redblack_tree_set set {get_set_conf(), ms};
 
     auto h = set_insert (ms, set, "hello from data 1");
     h = set_insert (ms, set, "data 2 hello from data 2", h);
