@@ -481,6 +481,7 @@ BOOST_FIXTURE_TEST_CASE(smart_core_basic_test, files_info_fixture) {
 
     cleanup();
 
+    std::cout << "cleanup1" << std::endl;
 
     std::string k1 = "bba3f3c564f31d8664c5775fbe16580061693f1db21069b58fa448ecbbf397f2264ab1fb8f17f33edbdab52def96fd2b1124d04ba1764b554e0e7b49a24d5574";
     std::string v1 = "hello from data 1645";
