@@ -94,6 +94,8 @@ message("License Spring version:")
 message("${LICENSESPRING_FOUND_VERSION}\n")
 message("Loading License Spring in mode: ${CMAKE_BUILD_TYPE}\n")
 
+set(LICENSESPRING_INCLUDE_DIRS "${LICENSE_SPRING_SOURCE_FOLDER}/include/LicenseSpring")
+
 #remove either shared or static libraries from working directory as well as not needed content
 file(REMOVE_RECURSE "${LICENSE_SPRING_SOURCE_FOLDER}/samples")
 file(REMOVE_RECURSE "${LICENSE_SPRING_SOURCE_FOLDER}/documentation")
@@ -103,36 +105,34 @@ if(${SPRING_SHARED} STREQUAL "ON")
 
     if(${CMAKE_BUILD_TYPE} STREQUAL "Debug")
         file(REMOVE_RECURSE "${LICENSE_SPRING_SOURCE_FOLDER}/bin/shared/Release")
-        add_library(libLicenseSpring SHARED IMPORTED)
-        set_property(TARGET libLicenseSpring PROPERTY IMPORTED_LOCATION
-                "${LICENSE_SPRING_SOURCE_FOLDER}/bin/shared/Debug/libLicenseSpring.so")
+        set(LICENSESPRING_LIBRARY "${LICENSE_SPRING_SOURCE_FOLDER}/bin/shared/Debug/libLicenseSpring.so")
     else ()
         file(REMOVE_RECURSE "${LICENSE_SPRING_SOURCE_FOLDER}/bin/shared/Debug")
-        add_library(libLicenseSpring SHARED IMPORTED)
-        set_property(TARGET libLicenseSpring PROPERTY IMPORTED_LOCATION
-                "${LICENSE_SPRING_SOURCE_FOLDER}/bin/shared/Release/libLicenseSpring.so")
+        set(LICENSESPRING_LIBRARY "${LICENSE_SPRING_SOURCE_FOLDER}/bin/shared/Release/libLicenseSpring.so")
     endif ()
+
+    message("Using library: ${LICENSESPRING_LIBRARY}")
+
+    #add_library(LicenseSpring SHARED ${LICENSESPRING_INCLUDE_DIRS})
+    target_link_libraries(LicenseSpring PUBLIC ${LICENSESPRING_LIBRARY})
 else ()
     file(REMOVE_RECURSE "${LICENSE_SPRING_SOURCE_FOLDER}/bin/shared")
 
     if(${CMAKE_BUILD_TYPE} STREQUAL "Debug")
         file(REMOVE_RECURSE "${LICENSE_SPRING_SOURCE_FOLDER}/bin/static/Release")
-        add_library(libLicenseSpring STATIC IMPORTED)
-        set_property(TARGET libLicenseSpring PROPERTY IMPORTED_LOCATION
-                "${LICENSE_SPRING_SOURCE_FOLDER}/bin/shared/Debug/libLicenseSpring.a")
+        set(LICENSESPRING_LIBRARY "${LICENSE_SPRING_SOURCE_FOLDER}/bin/static/Debug/libLicenseSpring.a")
     else ()
         file(REMOVE_RECURSE "${LICENSE_SPRING_SOURCE_FOLDER}/bin/static/Debug")
-        add_library(libLicenseSpring STATIC IMPORTED)
-        set_property(TARGET libLicenseSpring PROPERTY IMPORTED_LOCATION
-                "${LICENSE_SPRING_SOURCE_FOLDER}/bin/shared/Release/libLicenseSpring.a")
+        set(LICENSESPRING_LIBRARY "${LICENSE_SPRING_SOURCE_FOLDER}/bin/static/Release/libLicenseSpring.a")
     endif ()
+
+    message("Using library: ${LICENSESPRING_LIBRARY}")
+
+    #add_library(LicenseSpring STATIC ${LICENSESPRING_INCLUDE_DIRS})
+    target_link_libraries(LicenseSpring PUBLIC ${LICENSESPRING_LIBRARY})
 endif ()
 
-set(LICENSESPRING_LIBRARY ${libLicenseSpring})
-message(${LICENSESPRING_LIBRARY})
-find_path(LICENSESPRING_INCLUDE_DIR libLicenseSpring.so)
-set(LICENSESPRING_INCLUDE_DIRS "${LICENSESPRING_INCLUDE_DIR};${LICENSE_SPRING_SOURCE_FOLDER}/include/LicenseSpring")
-
+target_include_directories(${LICENSESPRING_INCLUDE_DIRS})
 message("Included License Spring at: ${LICENSESPRING_INCLUDE_DIRS}")
 
 #[===[
