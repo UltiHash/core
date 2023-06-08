@@ -8,7 +8,6 @@
 #include <third-party/LicenseSpring/include/LicenseSpring/EncryptString.h>
 #include <third-party/LicenseSpring/include/LicenseSpring/LicenseManager.h>
 #include <third-party/LicenseSpring/include/LicenseSpring/Exceptions.h>
-#include <iostream>
 
 namespace uh::licensing{
 
