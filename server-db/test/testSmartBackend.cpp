@@ -571,5 +571,5 @@ BOOST_FIXTURE_TEST_CASE(smart_core_basic_test, files_info_fixture) {
         BOOST_TEST (sr6.size() == v6.size());
         BOOST_TEST (std::memcmp (sr6.data(), v6.data(), v6.size()) == 0);
     }
-
+    delete[] ptr;
 }
