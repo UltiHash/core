@@ -48,7 +48,7 @@ struct alignas (4096) block {
         return empty_node_id == nodes_count;
     }
 
-    uint8_t empty_node_id {};
+    uint8_t empty_node_id {0};
     mmap_node nodes [nodes_count]{};
 };
 
