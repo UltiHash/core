@@ -42,8 +42,8 @@ RUN mkdir -p /var/lib/agency-node
 RUN chown -R uh:uh /var/lib/agency-node
 
 # required for database-node compression-queue persistence
-RUN mkdir -p /var/lib/database-node
-RUN chown -R uh:uh /var/lib/database-node
+RUN mkdir -p /var/lib/data-node
+RUN chown -R uh:uh /var/lib/data-node
 
 USER uh
 WORKDIR /home/uh

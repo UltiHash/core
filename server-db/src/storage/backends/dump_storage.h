@@ -61,6 +61,8 @@ class dump_storage : public backend {
 
         std::unique_ptr<uh::protocol::allocation> allocate_multi (std::size_t size) override;
 
+        std::pair <std::size_t, std::vector <char>> write_block (const std::span <char>& data) override;
+
         void update_space_consumption();
 
 
