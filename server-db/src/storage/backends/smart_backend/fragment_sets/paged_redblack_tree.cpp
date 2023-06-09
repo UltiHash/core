@@ -220,11 +220,11 @@ node paged_redblack_tree::add_node(uint64_t parent) noexcept {
             std::cout << "node offset " << n.m_offset << std::endl;
 
             std::cout << "before size " << sizeof (mmap_node) << std::endl;
+            std::cout << "before size " << this->m_first_block.root_offset << std::endl;
 
-            std::cout << "before size " << m_first_block.empty_hole_size << std::endl;
-            std::cout << "before size " << m_first_block.root_offset << std::endl;
+            std::cout << "before size " << this->m_first_block.empty_hole_size << std::endl;
 
-            m_first_block.empty_hole_size -= sizeof (mmap_node);
+            this->m_first_block.empty_hole_size -= sizeof (mmap_node);
             std::cout << "finish" << std::endl;
 
         }
