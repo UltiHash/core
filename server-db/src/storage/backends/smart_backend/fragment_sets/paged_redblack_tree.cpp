@@ -217,6 +217,8 @@ node paged_redblack_tree::add_node(uint64_t parent) noexcept {
 
             n.m_offset += b.first;
             m_first_block.empty_hole_size -= sizeof (mmap_node);
+            std::cout << "finish" << std::endl;
+
         }
         else if (m_first_block.empty_hole_size < m_set_conf.max_empty_hole_size) {
             auto new_b = get_block(m_first_block.empty_block);
@@ -238,6 +240,8 @@ node paged_redblack_tree::add_node(uint64_t parent) noexcept {
             m_first_block.empty_block += block::effective_node_space;
             m_first_block.mix_block_offset = new_mix_b.first;
         }
+        std::cout << "return" << std::endl;
+
         return n;
     };
 
