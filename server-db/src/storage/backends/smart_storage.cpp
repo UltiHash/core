@@ -5,7 +5,7 @@
 
 namespace uh::dbn::storage::smart {
 
-smart_config make_smart_config (const std::filesystem::path& root, size_t size, size_t max_file_size) {
+smart_config make_smart_config(const std::filesystem::path &root, size_t size, size_t max_file_size) {
 
     constexpr unsigned long GB = 1024ul * 1024ul * 1024ul;
 
@@ -33,7 +33,7 @@ smart_config make_smart_config (const std::filesystem::path& root, size_t size, 
 
     set_conf.fragment_set_path = set_directory / "fragment_set";
 
-    map_config map_conf;
+    smart::map_config map_conf;
     map_conf.key_size = 64;
     map_conf.map_key_file_init_size = 4ul * GB;
     map_conf.map_values_minimum_file_size = 4ul * GB;
@@ -46,8 +46,13 @@ smart_config make_smart_config (const std::filesystem::path& root, size_t size, 
 
     return {map_conf, set_conf, ds_conf, dd_conf};
 }
+} // end namespace uh::dbn::storage::smart
 
-smart_storage::smart_storage(const smart_config &smart_conf, uh::dbn::metrics::storage_metrics& storage_metrics) :
+
+
+namespace uh::dbn::storage {
+
+smart_storage::smart_storage(const smart::smart_config &smart_conf, uh::dbn::metrics::storage_metrics& storage_metrics) :
         m_smart_conf (smart_conf),
         m_smart_core (smart_conf),
         m_size (smart_conf.data_store_conf.data_store_file_size * smart_conf.data_store_conf.data_store_files.size()),
@@ -97,14 +102,13 @@ std::string smart_storage::backend_type() {
     return std::string (m_type);
 }
 
-void smart_storage::start() {}
-
-std::unique_ptr<uh::protocol::allocation> smart_storage::allocate(std::size_t size) {
-    throw std::logic_error ("smart_storage does not support pre allocation");
-}
-
-std::unique_ptr<uh::protocol::allocation> smart_storage::allocate_multi(std::size_t size) {
-    throw std::logic_error ("smart_storage does not support pre allocation");
+void smart_storage::start() {
+    INFO << "--- Storage backend initialized --- " << std::filesystem::absolute(m_smart_conf.data_store_conf.data_store_files.front().parent_path());
+    INFO << "        backend type   : " << backend_type();
+    INFO << "        root directory : " << std::filesystem::absolute(m_smart_conf.data_store_conf.data_store_files.front().parent_path());
+    INFO << "        space allocated: " << allocated_space();
+    INFO << "        space available: " << free_space();
+    INFO << "        space consumed : " << used_space();
 }
 
 void smart_storage::update_space_consumption() {
@@ -114,4 +118,4 @@ void smart_storage::update_space_consumption() {
 }
 
 
-} // end namespace uh::dbn::storage::smart
+} // end namespace uh::dbn::storage
