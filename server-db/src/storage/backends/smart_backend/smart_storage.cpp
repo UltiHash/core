@@ -7,38 +7,42 @@ namespace uh::dbn::storage::smart {
 
 smart_config make_smart_config (const std::filesystem::path& root, size_t size, size_t max_file_size) {
 
+    constexpr unsigned long GB = 1024ul * 1024ul * 1024ul;
+
     const std::filesystem::path data_store_directory = root / "data_store";
     const std::filesystem::path set_directory = root / "set";
     const std::filesystem::path hash_table_directory = root / "hash_table";
 
-    // here we assume that size % max_file_size == 0, otherwise
-    // we are creating larger files than the given size
     data_store_config ds_conf;
-    ds_conf.data_store_file_size = 4ul * 1024ul * 1024ul * 1024ul;
+    ds_conf.data_store_file_size = 4ul * GB;
+    ds_conf.log_file = data_store_directory / "log_file";
     size_t offset = 0;
-    while (offset < 20ul * 1024ul * 1024ul * 1024ul) {
+    while (offset < 20ul * GB) {
         const std::filesystem::path data_store_file = "data_" + std::to_string(offset);
-        ds_conf.data_store_files.emplace_front (root / data_store_directory / data_store_file);
-        offset += 1ul * 1024ul * 1024ul * 1024ul;
+        ds_conf.data_store_files.emplace_front (data_store_directory / data_store_file);
+        offset += ds_conf.data_store_file_size;
     }
 
     dedupe_config dd_conf {};
-    dd_conf.min_fragment_size = 2*1024;
+    dd_conf.min_fragment_size = 2 * 1024;
 
     set_config set_conf;
-    set_conf.set_init_file_size = 2ul * 1024ul * 1024ul * 1024ul;
-    set_conf.set_minimum_free_space = 20ul * 1024ul * 1024ul;
+    set_conf.set_init_file_size = 2ul * GB;
+    set_conf.max_empty_hole_size = 1ul * GB;
+    set_conf.set_minimum_free_space = GB;
+
     set_conf.fragment_set_path = set_directory / "fragment_set";
 
     map_config map_conf;
     map_conf.key_size = 64;
-    map_conf.map_key_file_init_size = 4ul * 1024ul * 1024ul * 1024ul;
-    map_conf.map_values_minimum_file_size = 4ul * 1024ul * 1024ul * 1024ul;
-    map_conf.map_values_maximum_file_size = 8ul * 1024ul * 1024ul * 1024ul;
+    map_conf.map_key_file_init_size = 4ul * GB;
+    map_conf.map_values_minimum_file_size = 4ul * GB;
+    map_conf.map_values_maximum_file_size = 8ul * GB;
     map_conf.map_load_factor = 0.9;
     map_conf.map_maximum_extension_factor = 32;
     map_conf.hashtable_key_path = hash_table_directory / "key_file";
     map_conf.hashtable_value_directory = hash_table_directory / "values";
+    map_conf.value_store_log_file = map_conf.hashtable_value_directory / "log";
 
     return {map_conf, set_conf, ds_conf, dd_conf};
 }

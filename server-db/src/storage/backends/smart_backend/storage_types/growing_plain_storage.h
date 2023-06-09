@@ -15,7 +15,6 @@ namespace uh::dbn::storage::smart {
 
 class growing_plain_storage {
 
-
     std::filesystem::path m_file_path;
     size_t m_file_size;
     char* m_storage;

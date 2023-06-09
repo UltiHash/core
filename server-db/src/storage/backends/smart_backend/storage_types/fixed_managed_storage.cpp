@@ -2,7 +2,6 @@
 // Created by masi on 5/15/23.
 //
 #include <unordered_map>
-#include <boost/interprocess/mapped_region.hpp>
 #include "fixed_managed_storage.h"
 
 namespace uh::dbn::storage::smart {
@@ -11,12 +10,12 @@ namespace uh::dbn::storage::smart {
 
 fixed_managed_storage::fixed_managed_storage(data_store_config conf):
     m_conf(std::move (conf)),
-    m_log_file_path (generate_log_file_path()),
     m_log(create_logger()) {
     std::filesystem::create_directories(m_conf.data_store_files.front().parent_path());
     files_existence_consistency ();
     for (const auto &file: m_conf.data_store_files) {
-        mmap_file (file);
+        mmap_file (file, m_aggregated_size, m_conf.data_store_file_size);
+        m_aggregated_size += m_conf.data_store_file_size;
     }
 
     replay_logger();
@@ -33,9 +32,7 @@ void fixed_managed_storage::deallocate(const offset_ptr& off_ptr, size_t size) {
 }
 
 void fixed_managed_storage::sync(void *ptr, std::size_t size) {
-    if (msync(align_ptr (ptr), size, MS_SYNC) != 0) {
-        throw std::system_error (errno, std::system_category(), "fixed_managed_storage could not sync the mmap data");
-    }
+    sync_ptr(ptr, size);
 }
 
 void fixed_managed_storage::sync () {
@@ -50,25 +47,12 @@ void *fixed_managed_storage::get_raw_ptr(size_t offset) {
     return get_resource(offset).m_ptr.get_offset_ptr_at(offset).m_addr;
 }
 
-void fixed_managed_storage::mmap_file(const std::filesystem::path& file) {
-
-    const auto fd = open(file.c_str(), O_CREAT | O_RDWR, S_IRUSR | S_IWUSR);
-    ftruncate(fd, m_conf.data_store_file_size);
-    auto flags = MAP_SHARED;
-    const auto ptr = mmap(nullptr, m_conf.data_store_file_size, PROT_READ | PROT_WRITE, flags, fd, 0);
-    close(fd);
-    m_resources.emplace_hint(m_resources.cend(),std::piecewise_construct,
-                                    std::forward_as_tuple(m_aggregated_size),
-                                    std::forward_as_tuple(ptr, file, m_conf.data_store_file_size, m_aggregated_size));
-    m_aggregated_size += m_conf.data_store_file_size;
-}
-
 std::fstream fixed_managed_storage::create_logger() const {
     auto flags = std::ios::in | std::ios::out;
-    if (!std::filesystem::exists(m_log_file_path)) {
+    if (!std::filesystem::exists(m_conf.log_file)) {
         flags |= std::ios::trunc;
     }
-    return {m_log_file_path, flags};
+    return {m_conf.log_file, flags};
 }
 
 void fixed_managed_storage::replay_logger() {
@@ -108,18 +92,6 @@ void fixed_managed_storage::do_deallocate (const offset_ptr& offset_ptr, size_t 
     resource.get_pool_resource().deallocate(deallocate_offset_ptr.m_addr, bytes);
 }
 
-std::filesystem::path fixed_managed_storage::generate_log_file_path () {
-
-    std::hash <std::string> hasher;
-    std::string file_name = "log_";
-    for (const auto& fi: m_conf.data_store_files) {
-        std::stringstream hash_stream;
-        hash_stream << std::hex << hasher (fi);
-        file_name += hash_stream.str().substr(0, 2);
-    }
-    return file_name;
-}
-
 bool fixed_managed_storage::files_existence_consistency () {
     bool existed_files = std::filesystem::exists(*m_conf.data_store_files.cbegin());
     for (auto itr = m_conf.data_store_files.cbegin(); itr != m_conf.data_store_files.cend(); itr ++) {
@@ -128,18 +100,6 @@ bool fixed_managed_storage::files_existence_consistency () {
         }
     }
     return existed_files;
-}
-
-resource_entry &fixed_managed_storage::get_resource(size_t offset, size_t size) {
-    auto itr = m_resources.upper_bound (offset);
-    if (itr == m_resources.cbegin()) {
-        throw std::domain_error("error: deallocate request for non-existing resource");
-    }
-    itr--;
-    if (itr->first + itr->second.m_size < offset + size) {
-        throw std::domain_error("error: deallocate request for non-existing resource");
-    }
-    return itr->second;
 }
 
 fixed_managed_storage::~fixed_managed_storage() {
@@ -172,12 +132,6 @@ resource_entry::resource_entry(void *addr, std::filesystem::path path, size_t si
 
 std::pmr::memory_resource& resource_entry::get_pool_resource() {
     return m_pool_resource;
-}
-
-
-void *align_ptr(void *ptr) {
-    static const size_t PAGE_SIZE = boost::interprocess::mapped_region::get_page_size();
-    return static_cast <char*> (ptr) - reinterpret_cast <size_t> (ptr) % PAGE_SIZE;
 }
 
 } // end namespace uh::dbn::storage::smart

@@ -2,22 +2,19 @@
 // Created by masi on 5/25/23.
 //
 #include <unordered_map>
-#include <boost/interprocess/mapped_region.hpp>
+#include <fstream>
 #include "growing_managed_storage.h"
 
 namespace uh::dbn::storage::smart {
 
-
-
-growing_managed_storage::growing_managed_storage (std::filesystem::path directory, size_t min_file_size, size_t max_file_size):
+growing_managed_storage::growing_managed_storage (std::filesystem::path directory, std::filesystem::path log_file, size_t min_file_size, size_t max_file_size):
         m_min_file_size (min_file_size),
         m_max_file_size (max_file_size),
         m_directory (std::move (directory)),
-        m_log(create_logger()) {
-    std::filesystem::create_directories(m_directory);
-    load_data_store();
-    m_log_file_path = generate_log_file_path();
-    replay_logger();
+        m_log_file_path (std::move (log_file)) {
+     load_data_store ();
+     m_log = create_logger();
+     replay_logger();
 }
 
 offset_ptr growing_managed_storage::allocate(std::size_t size) {
@@ -31,9 +28,7 @@ void growing_managed_storage::deallocate(const offset_ptr& off_ptr, size_t size)
 }
 
 void growing_managed_storage::sync(void *ptr, std::size_t size) {
-    if (msync(align_ptr (ptr), size, MS_SYNC) != 0) {
-        throw std::system_error (errno, std::system_category(), "growing_managed_storage could not sync the mmap data");
-    }
+    sync_ptr (ptr, size);
 }
 
 void growing_managed_storage::sync () {
@@ -106,24 +101,20 @@ void growing_managed_storage::do_deallocate (const offset_ptr& offset_ptr, size_
     resource.get_pool_resource().deallocate(deallocate_offset_ptr.m_addr, bytes);
 }
 
-std::filesystem::path growing_managed_storage::generate_log_file_path () {
-    std::string file_name = "alloc_log_file";
-    return m_directory / file_name;
-}
-
 void growing_managed_storage::load_data_store () {
-    m_aggregated_size = 0;
+    std::filesystem::create_directories(std::filesystem::absolute (m_directory));
     if (std::filesystem::is_empty(m_directory)) {
-        mmap_file(get_file_name (m_aggregated_size, m_min_file_size), m_aggregated_size, m_min_file_size);
-        m_aggregated_size += m_min_file_size;
+        mmap_file(get_file_name (0, m_min_file_size), 0, m_min_file_size);
     }
     else {
+        std::size_t aggregated_size = 0;
         for (const auto& file: std::filesystem::directory_iterator (m_directory)) {
             if (file == m_log_file_path) {
                 continue;
             }
             const auto offset_size = parse_file_name(file);
             mmap_file(file, offset_size.first, offset_size.second);
+            aggregated_size += offset_size.second;
         }
     }
 }
@@ -133,7 +124,6 @@ void growing_managed_storage::grow () {
     const auto last_resource = m_resources.crbegin();
     const auto file_name = last_resource->second.m_path;
     const auto last_offset_size = parse_file_name(file_name);
-    m_resources.erase (std::next (last_resource).base());
     if (last_offset_size.second >= m_max_file_size) { // then, create a new file
         const auto new_offset = last_offset_size.first + last_offset_size.second;
         mmap_file(get_file_name (new_offset, m_min_file_size), new_offset, m_min_file_size);
@@ -144,6 +134,7 @@ void growing_managed_storage::grow () {
         const auto new_size = last_offset_size.second * 2ul;
         const auto new_file_name = get_file_name (offset, new_size);
         std::filesystem::rename(file_name, new_file_name);
+        m_resources.erase (std::next (last_resource).base());
         mmap_file(new_file_name, offset, new_size);
     }
     replay_logger();
@@ -160,29 +151,6 @@ std::pair <uint64_t, size_t> growing_managed_storage::parse_file_name (const std
     const auto offset_str = file.string().substr(index1, index2 - 1 - index1);
     const auto size_str = file.string().substr(index2);
     return {std::stoul (offset_str), std::stoul (size_str)};
-}
-
-void growing_managed_storage::mmap_file(const std::filesystem::path& file, uint64_t offset, size_t file_size) {
-
-    const auto fd = open(file.c_str(), O_CREAT | O_RDWR, S_IRUSR | S_IWUSR);
-    ftruncate(fd, file_size);
-    const auto ptr = mmap(nullptr, file_size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
-    close(fd);
-    m_resources.emplace_hint(m_resources.cend(),std::piecewise_construct,
-                             std::forward_as_tuple(offset),
-                             std::forward_as_tuple(ptr, file, file_size, offset));
-}
-
-resource_entry &growing_managed_storage::get_resource(size_t offset, size_t size) {
-    auto itr = m_resources.upper_bound (offset);
-    if (itr == m_resources.cbegin()) {
-        throw std::domain_error("error: deallocate request for non-existing resource");
-    }
-    itr--;
-    if (itr->first + itr->second.m_size < offset + size) {
-        throw std::domain_error("error: deallocate request for non-existing resource");
-    }
-    return itr->second;
 }
 
 growing_managed_storage::~growing_managed_storage() {
