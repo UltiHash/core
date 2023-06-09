@@ -9,16 +9,13 @@
 #
 # Note that on macOS, this module requires the "macLICENSESPRING" package to be installed.
 
-#cmake_minimum_required(VERSION 3.22.0 FATAL_ERROR)
-#set(CMAKE_CXX_STANDARD 20)
+cmake_minimum_required(VERSION 3.22.0 FATAL_ERROR)
+set(CMAKE_CXX_STANDARD 20)
 
-#project(uhLibLicenseSpring)
-#message(STATUS "Using ${PROJECT_NAME}...")
+project(uhLibLicenseSpring)
+message(STATUS "Using ${PROJECT_NAME}...")
 
-
-
-
-#[===[
+set(SPRING_SHARED ON)
 
 find_package(ZLIB REQUIRED)
 find_package(CURL 4.8.0 REQUIRED)
@@ -173,12 +170,9 @@ message("Included License Spring at: ${HEADER_FILE_LIST}")
 
 set(${PROJECT_NAME}_INCLUDE_DIRS ${CMAKE_CURRENT_LIST_DIR}/include)
 set(${PROJECT_NAME}_LINK_LIBRARIES ${OPENSSL_LIBRARIES} ${CURL_LIBRARIES} ${ZLIB_LIBRARIES})
-]===]
 
-#[===[
 if(${SPRING_SHARED} STREQUAL "ON")
-    #${HEADER_FILE_LIST}${SOURCE_FILE_LIST}
-    add_library(${PROJECT_NAME} SHARED IMPORTED GLOBAL)
+    add_library(${PROJECT_NAME} #[===[${HEADER_FILE_LIST}${SOURCE_FILE_LIST}]===] SHARED IMPORTED GLOBAL)
 
     if(${CMAKE_BUILD_TYPE} STREQUAL "Debug")
         set_property(TARGET ${PROJECT_NAME} PROPERTY IMPORTED_LOCATION
@@ -189,8 +183,7 @@ if(${SPRING_SHARED} STREQUAL "ON")
     endif ()
 
 else ()
-    #${SOURCE_FILE_LIST}
-    add_library(${PROJECT_NAME} ${HEADER_FILE_LIST} STATIC IMPORTED)
+    add_library(${PROJECT_NAME} ${HEADER_FILE_LIST}#[===[${SOURCE_FILE_LIST}]===] STATIC IMPORTED)
 
     if(${CMAKE_BUILD_TYPE} STREQUAL "Debug")
         set_property(TARGET ${PROJECT_NAME} PROPERTY IMPORTED_LOCATION
@@ -208,4 +201,3 @@ message("Include directories to ")
 target_link_libraries(${PROJECT_NAME} INTERFACE ${${PROJECT_NAME}_LINK_LIBRARIES})
 target_include_directories(${PROJECT_NAME} INTERFACE ${${PROJECT_NAME}_INCLUDE_DIRS})
 
-]===]
