@@ -214,8 +214,13 @@ node paged_redblack_tree::add_node(uint64_t parent) noexcept {
 
             n = b.second.acquire_node();
             std::cout << "node acquired" << std::endl;
+            std::cout << "node offset " << n.m_offset << std::endl;
 
             n.m_offset += b.first;
+            std::cout << "node offset " << n.m_offset << std::endl;
+
+            std::cout << "before size " << sizeof (mmap_node) << std::endl;
+
             m_first_block.empty_hole_size -= sizeof (mmap_node);
             std::cout << "finish" << std::endl;
 
@@ -278,7 +283,7 @@ uint64_t& paged_redblack_tree::get_other_child(const node &x, paged_redblack_tre
 }
 
 std::pair <uint64_t, block&> paged_redblack_tree::get_block (uint64_t node_offset) noexcept {
-
+    std::cout << "this should not be called " <<std::endl;
     const auto offset = node_offset - node_offset % m_block_size;
     return {offset, *reinterpret_cast <block*> (m_index_store.get_storage() + offset)};
 }
