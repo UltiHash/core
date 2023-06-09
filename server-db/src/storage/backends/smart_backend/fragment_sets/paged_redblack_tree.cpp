@@ -4,7 +4,6 @@
 
 #include "paged_redblack_tree.h"
 #include <boost/interprocess/mapped_region.hpp>
-#include <iostream>
 
 namespace uh::dbn::storage::smart::sets {
 
@@ -16,43 +15,23 @@ paged_redblack_tree::paged_redblack_tree(set_config set_conf, fixed_managed_stor
         m_index_store (growing_plain_storage (m_set_conf.fragment_set_path, m_set_conf.set_init_file_size)),
         m_first_block (*(reinterpret_cast <first_block*> (m_index_store.get_storage()))),
         m_block_size (boost::interprocess::mapped_region::get_page_size()) {
-    std::cout << "set constructing" << std::endl;
-    std::cout << "set constructing " << m_set_conf.set_init_file_size << std::endl;
 
     if (m_set_conf.set_init_file_size < 2 * m_block_size) {
         throw std::logic_error ("set file size should be at list large enough for 2 pages");
     }
 
     if (m_first_block.root_offset == 0) {
-        std::cout << "set 1" << std::endl;
-
         m_first_block.mix_block_offset = m_block_size;
-        std::cout << "set 2" << std::endl;
-
         m_first_block.empty_block = 2;
-        std::cout << "set 3" << std::endl;
-
         m_first_block.empty_hole_size = first_block::effective_node_space + block::effective_node_space;
-        std::cout << "set 4 " << m_first_block.empty_hole_size << std::endl;
-
         m_nil = add_node (0);
-        std::cout << "set 5" << std::endl;
-
         m_nil.m_mnode->m_color = BLACK;
-        std::cout << "set 6" << std::endl;
-
         m_first_block.nill_offset = m_nil.m_offset;
         m_first_block.root_offset = m_nil.m_offset;
-        std::cout << "set 7" << std::endl;
-
     }
     else {
-        std::cout << "set 8" << std::endl;
-
         m_nil = get_node (m_first_block.nill_offset);
     }
-    std::cout << "set constructed" << std::endl;
-
 }
 
 
@@ -205,28 +184,12 @@ node paged_redblack_tree::get_node(uint64_t offset) const noexcept {
 
 node paged_redblack_tree::add_node(uint64_t parent) noexcept {
 
-    static auto insert = [this] (auto b) {
+    auto insert = [this] (auto b) {
         node n;
-        std::cout << "add " << b.first << std::endl;
-
         if (!b.second.full()) {
-            std::cout << "not full " << sizeof (block) << " " << sizeof (first_block) << std::endl;
-
             n = b.second.acquire_node();
-            std::cout << "node acquired" << std::endl;
-            std::cout << "node offset " << n.m_offset << std::endl;
-
             n.m_offset += b.first;
-            std::cout << "node offset " << n.m_offset << std::endl;
-
-            std::cout << "before size " << sizeof (mmap_node) << std::endl;
-            std::cout << "before size " << this->m_first_block.root_offset << std::endl;
-
-            std::cout << "before size " << this->m_first_block.empty_hole_size << std::endl;
-
             this->m_first_block.empty_hole_size -= sizeof (mmap_node);
-            std::cout << "finish" << std::endl;
-
         }
         else if (m_first_block.empty_hole_size < m_set_conf.max_empty_hole_size) {
             auto new_b = get_block(m_first_block.empty_block);
@@ -248,8 +211,6 @@ node paged_redblack_tree::add_node(uint64_t parent) noexcept {
             m_first_block.empty_block += block::effective_node_space;
             m_first_block.mix_block_offset = new_mix_b.first;
         }
-        std::cout << "return" << std::endl;
-
         return n;
     };
 
@@ -286,7 +247,6 @@ uint64_t& paged_redblack_tree::get_other_child(const node &x, paged_redblack_tre
 }
 
 std::pair <uint64_t, block&> paged_redblack_tree::get_block (uint64_t node_offset) noexcept {
-    std::cout << "this should not be called " <<std::endl;
     const auto offset = node_offset - node_offset % m_block_size;
     return {offset, *reinterpret_cast <block*> (m_index_store.get_storage() + offset)};
 }
