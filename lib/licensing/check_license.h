@@ -45,8 +45,8 @@ namespace uh::licensing{
          *
          * @param license_folder is the folder where a license file is stored
          */
-        explicit check_license(std::filesystem::path license_folder, std::string appName, std::string appVersion):
-        license_path(std::move(license_folder)), appName(std::move(appName)), appVersion(std::move(appVersion)){};
+        explicit check_license(std::filesystem::path license_folder, std::string appName, std::string appVersion,
+                               std::string apiKey, std::string sharedKey, std::string productId);;
 
         /**
          *
@@ -73,10 +73,17 @@ namespace uh::licensing{
 
         void write_license_base(role licenseRole, license_type licenseType);
 
-        const std::string role_string = "server_role: ";
-        const std::string license_type_string = "license_type: ";
+        const std::string_view role_string = "server_role: ";
+        const std::string_view license_type_string = "license_type: ";
 
-        std::string appName, appVersion;
+        const std::string_view appName_string = "app_name: ";
+        const std::string_view appVersion_string = "app_version: ";
+
+        const std::string appName,
+        appVersion,
+        apiKey,
+        sharedKey,
+        productId;
 
         int licenseRegister(const std::shared_ptr<LicenseSpring::LicenseManager> &licenseManager,
                             const LicenseSpring::LicenseID& licenseId);

@@ -15,8 +15,8 @@ namespace uh::licensing {
 
     check_airgap_license::check_airgap_license(std::filesystem::path license_folder, std::string appName,
                                                std::string appVersion) :
-            check_license(std::move(license_folder),std::move(appName),
-                          std::move(appVersion)){}
+            check_license(std::move(license_folder), std::move(appName),
+                          std::move(appVersion), std::string(), std::string(), std::string()) {}
 
     // ---------------------------------------------------------------------
 

@@ -36,7 +36,8 @@ namespace uh::licensing{
             if(file_object.is_regular_file() && file_object.path().extension() == ".lic")
             {
                 auto tmp_license_type_read = check_license(file_object.path(),
-                                                           "INIT_APP","0.0.0");
+                                                           "INIT_APP", "0.0.0", std::string(), std::string(),
+                                                           std::string());
 
                 auto license_type_checked = tmp_license_type_read.check_license_type();
 

@@ -18,8 +18,8 @@ namespace uh::licensing{
     check_online_license::check_online_license(std::filesystem::path license_folder, std::string appName,
                                                std::string appVersion,
                                                std::string userName, std::string password) :
-            check_license(std::move(license_folder),std::move(appName),
-                          std::move(appVersion)),userName(std::move(userName)),password(std::move(password)){}
+            check_license(std::move(license_folder), std::move(appName),
+                          std::move(appVersion), std::string(), std::string(), std::string()), userName(std::move(userName)), password(std::move(password)){}
 
     // ---------------------------------------------------------------------
 

@@ -14,6 +14,13 @@ namespace uh::licensing{
 
     // ---------------------------------------------------------------------
 
+    check_license::check_license(std::filesystem::path license_folder, std::string appName, std::string appVersion,
+                                 std::string apiKey, std::string sharedKey, std::string productId) :
+            license_path(std::move(license_folder)), appName(std::move(appName)), appVersion(std::move(appVersion)),
+            apiKey(std::move(apiKey)),sharedKey(std::move(sharedKey)),productId(std::move(productId)){}
+
+    // ---------------------------------------------------------------------
+
     check_license::role check_license::check_role()
     {
         std::fstream license_file_stream(license_path,std::ios_base::in);
