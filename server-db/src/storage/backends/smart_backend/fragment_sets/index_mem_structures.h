@@ -61,7 +61,7 @@ struct alignas (4096) first_block {
         if (full ()) {
             throw std::overflow_error ("no empty nodes to be acquired");
         }
-        std::cout << "first block acquire " << empty_node_id << std::endl;
+        std::cout << "first block acquire " << (int)empty_node_id << std::endl;
         const auto offset = offsetof (first_block, nodes) + empty_node_id * sizeof (mmap_node);
         return {offset, &nodes [empty_node_id++]};
     }
@@ -75,7 +75,7 @@ struct alignas (4096) first_block {
     uint64_t empty_block {};
     uint64_t nill_offset {};
 
-    uint8_t empty_node_id {};
+    uint8_t empty_node_id {0};
     mmap_node nodes [nodes_count]{};
 };
 } // end namespace uh::dbn::storage::smart::sets
