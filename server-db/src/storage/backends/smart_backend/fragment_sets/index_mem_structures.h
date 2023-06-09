@@ -6,6 +6,8 @@
 #define CORE_INDEX_MEM_STRUCTURES_H
 
 #include "fragment_set_interface.h"
+#include <stdexcept>
+#include <iostream>
 
 namespace uh::dbn::storage::smart::sets {
 
@@ -36,7 +38,7 @@ struct alignas (4096) block {
 
     inline node acquire_node () {
         if (full ()) {
-            throw std::exception ();
+            throw std::overflow_error ("no empty nodes to be acquired");
         }
         const auto offset = offsetof (block, nodes) + empty_node_id * sizeof (mmap_node);
         return {offset, &nodes [empty_node_id++]};
@@ -57,8 +59,9 @@ struct alignas (4096) first_block {
 
     inline node acquire_node () {
         if (full ()) {
-            throw std::exception ();
+            throw std::overflow_error ("no empty nodes to be acquired");
         }
+        std::cout << "first block acquire " << empty_node_id << std::endl;
         const auto offset = offsetof (first_block, nodes) + empty_node_id * sizeof (mmap_node);
         return {offset, &nodes [empty_node_id++]};
     }

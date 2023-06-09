@@ -207,9 +207,14 @@ node paged_redblack_tree::add_node(uint64_t parent) noexcept {
 
     static auto insert = [this] (auto b) {
         node n;
+        std::cout << "add " << b.first << std::endl;
 
         if (!b.second.full()) {
+            std::cout << "not full " << sizeof (block) << " " << sizeof (first_block) << std::endl;
+
             n = b.second.acquire_node();
+            std::cout << "node acquired" << std::endl;
+
             n.m_offset += b.first;
             m_first_block.empty_hole_size -= sizeof (mmap_node);
         }

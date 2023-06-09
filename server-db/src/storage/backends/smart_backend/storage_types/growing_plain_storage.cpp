@@ -1,7 +1,6 @@
 //
 // Created by masi on 5/27/23.
 //
-#include <iostream>
 #include "growing_plain_storage.h"
 
 namespace uh::dbn::storage::smart {
@@ -10,7 +9,6 @@ growing_plain_storage::growing_plain_storage(std::filesystem::path file, size_t 
         m_file_path (std::move (file)),
         m_file_size (init_size),
         m_storage (init_mmap(m_file_path, init_size, m_file_size)) {
-    std::cout << "growing plain storage constrected" << std::endl;
 
 }
 
@@ -39,7 +37,6 @@ void growing_plain_storage::destroy() {
 }
 
 char *growing_plain_storage::init_mmap(const std::filesystem::path &file_path, size_t init_size, size_t &file_size) {
-    std::cout << "growing plain storage init map" << std::endl;
 
     const auto existing_storage = std::filesystem::exists(file_path.c_str());
     if (!existing_storage and !file_path.parent_path().empty()) {
@@ -60,8 +57,6 @@ char *growing_plain_storage::init_mmap(const std::filesystem::path &file_path, s
     if (!existing_storage) {
         std::memset (mmap_addr, 0, init_size);
     }
-    std::cout << "growing plain storage init map finishjed " << reinterpret_cast <uint64_t> (mmap_addr) << " " << file_size <<std::endl;
-
     return mmap_addr;
 }
 
