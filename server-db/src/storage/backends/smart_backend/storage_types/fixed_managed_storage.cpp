@@ -2,6 +2,7 @@
 // Created by masi on 5/15/23.
 //
 #include <unordered_map>
+#include <iostream>
 #include "fixed_managed_storage.h"
 
 namespace uh::dbn::storage::smart {
@@ -19,6 +20,8 @@ fixed_managed_storage::fixed_managed_storage(data_store_config conf):
     }
 
     replay_logger();
+    std::cout << "datastore constructed" << std::endl;
+
 }
 
 offset_ptr fixed_managed_storage::allocate(std::size_t size) {

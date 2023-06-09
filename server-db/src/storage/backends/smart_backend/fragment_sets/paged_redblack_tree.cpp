@@ -4,6 +4,7 @@
 
 #include "paged_redblack_tree.h"
 #include <boost/interprocess/mapped_region.hpp>
+#include <iostream>
 
 namespace uh::dbn::storage::smart::sets {
 
@@ -30,6 +31,8 @@ paged_redblack_tree::paged_redblack_tree(set_config set_conf, fixed_managed_stor
     else {
         m_nil = get_node (m_first_block.nill_offset);
     }
+    std::cout << "set constructed" << std::endl;
+
 }
 
 

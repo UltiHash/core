@@ -1,6 +1,7 @@
 //
 // Created by masi on 5/24/23.
 //
+#include <iostream>
 #include "persisted_robinhood_hashmap.h"
 
 namespace uh::dbn::storage::smart {
@@ -14,6 +15,7 @@ persisted_robinhood_hashmap::persisted_robinhood_hashmap(map_config map_conf) :
         m_value_store (m_map_conf.hashtable_value_directory, m_map_conf.value_store_log_file, m_map_conf.map_values_minimum_file_size, m_map_conf.map_values_maximum_file_size),
         m_inserted_keys_size {*reinterpret_cast <size_t*> (m_key_store.get_storage())} {
     std::memset (m_empty_key.data(), 0, m_map_conf.key_size);
+    std::cout << "hash map constructed" << std::endl;
 }
 
 
