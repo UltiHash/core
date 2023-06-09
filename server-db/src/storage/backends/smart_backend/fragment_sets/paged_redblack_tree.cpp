@@ -23,13 +23,27 @@ paged_redblack_tree::paged_redblack_tree(set_config set_conf, fixed_managed_stor
     }
 
     if (m_first_block.root_offset == 0) {
+        std::cout << "set 1" << std::endl;
+
         m_first_block.mix_block_offset = m_block_size;
+        std::cout << "set 2" << std::endl;
+
         m_first_block.empty_block = 2;
+        std::cout << "set 3" << std::endl;
+
         m_first_block.empty_hole_size = first_block::effective_node_space + block::effective_node_space;
+        std::cout << "set 4" << std::endl;
+
         m_nil = add_node (0);
+        std::cout << "set 5" << std::endl;
+
         m_nil.m_mnode->m_color = BLACK;
+        std::cout << "set 6" << std::endl;
+
         m_first_block.nill_offset = m_nil.m_offset;
         m_first_block.root_offset = m_nil.m_offset;
+        std::cout << "set 7" << std::endl;
+
     }
     else {
 
