@@ -17,6 +17,7 @@ paged_redblack_tree::paged_redblack_tree(set_config set_conf, fixed_managed_stor
         //m_blocked_mem(m_index_store.get_storage(), m_set_conf.max_empty_hole_size),
         m_first_block (*(reinterpret_cast <first_block*> (m_index_store.get_storage()))),
         m_block_size (boost::interprocess::mapped_region::get_page_size()) {
+    std::cout << "set constructing" << std::endl;
 
     if (m_first_block.root_offset == 0) {
 
@@ -31,7 +32,6 @@ paged_redblack_tree::paged_redblack_tree(set_config set_conf, fixed_managed_stor
     else {
         m_nil = get_node (m_first_block.nill_offset);
     }
-    std::cout << "set constructed" << std::endl;
 
 }
 
