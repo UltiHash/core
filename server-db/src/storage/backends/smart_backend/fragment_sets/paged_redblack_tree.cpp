@@ -17,6 +17,7 @@ paged_redblack_tree::paged_redblack_tree(set_config set_conf, fixed_managed_stor
         m_first_block (*(reinterpret_cast <first_block*> (m_index_store.get_storage()))),
         m_block_size (boost::interprocess::mapped_region::get_page_size()) {
     std::cout << "set constructing" << std::endl;
+    std::cout << "set constructing " << m_first_block.root_offset << std::endl;
 
     if (m_set_conf.set_init_file_size < 2 * m_block_size) {
         throw std::logic_error ("set file size should be at list large enough for 2 pages");
