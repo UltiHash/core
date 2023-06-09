@@ -172,11 +172,27 @@ set(${PROJECT_NAME}_INCLUDE_DIRS ${CMAKE_CURRENT_LIST_DIR}/include)
 set(${PROJECT_NAME}_LINK_LIBRARIES ${OPENSSL_LIBRARIES} ${CURL_LIBRARIES} ${ZLIB_LIBRARIES})
 
 if(${SPRING_SHARED} STREQUAL "ON")
-    add_library(${PROJECT_NAME} ${HEADER_FILE_LIST}#[===[${SOURCE_FILE_LIST}]===] IMPORTED SHARED)
-    set_property(TARGET ${PROJECT_NAME} PROPERTY IMPORTED_LOCATION "${CMAKE_CURRENT_BINARY_DIR}/bin/libLicenseSpring.so")
+    add_library(${PROJECT_NAME} #[===[${HEADER_FILE_LIST}${SOURCE_FILE_LIST}]===] SHARED IMPORTED GLOBAL)
+
+    if(${CMAKE_BUILD_TYPE} STREQUAL "Debug")
+        set_property(TARGET ${PROJECT_NAME} PROPERTY IMPORTED_LOCATION
+                "${CMAKE_CURRENT_LIST_DIR}/bin_Debug/libLicenseSpring.so")
+    else ()
+        set_property(TARGET ${PROJECT_NAME} PROPERTY IMPORTED_LOCATION
+                "${CMAKE_CURRENT_LIST_DIR}/bin_Release/libLicenseSpring.so")
+    endif ()
+
 else ()
-    add_library(${PROJECT_NAME} ${HEADER_FILE_LIST}#[===[${SOURCE_FILE_LIST}]===] IMPORTED STATIC)
-    set_property(TARGET ${PROJECT_NAME} PROPERTY IMPORTED_LOCATION "${CMAKE_CURRENT_BINARY_DIR}/bin/libLicenseSpring.a")
+    add_library(${PROJECT_NAME} ${HEADER_FILE_LIST}#[===[${SOURCE_FILE_LIST}]===] STATIC IMPORTED)
+
+    if(${CMAKE_BUILD_TYPE} STREQUAL "Debug")
+        set_property(TARGET ${PROJECT_NAME} PROPERTY IMPORTED_LOCATION
+                "${CMAKE_CURRENT_LIST_DIR}/bin_Debug/libLicenseSpring.a")
+    else ()
+        set_property(TARGET ${PROJECT_NAME} PROPERTY IMPORTED_LOCATION
+                "${CMAKE_CURRENT_LIST_DIR}/bin_Release/libLicenseSpring.a")
+    endif ()
+
 endif ()
 
 message("Link to: ${${PROJECT_NAME}_LINK_LIBRARIES}")
