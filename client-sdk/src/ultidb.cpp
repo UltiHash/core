@@ -90,7 +90,7 @@ UDB_CONFIG* udb_create_config()
 
 // ---------------------------------------------------------------------
 
-UDB_RESULT udb_config_set_agencynode(UDB_CONFIG* cfg, const char *hostname, uint16_t port,
+UDB_RESULT udb_config_set_host_node(UDB_CONFIG* cfg, const char *hostname, uint16_t port,
                                          size_t connection_pool)
 {
     try
@@ -181,7 +181,6 @@ struct UDB_STATE_STRUCT
 {
     explicit UDB_STATE_STRUCT(UDB_CONFIG* config)
     {
-        boost::asio::io_context io;
         std::stringstream s;
         s << SDK_NAME << " " << SDK_VERSION;
         uh::protocol::client_factory_config cf_config
@@ -190,15 +189,14 @@ struct UDB_STATE_STRUCT
             };
 
         m_connection_pool = std::make_unique<uh::protocol::client_pool>(std::make_unique<uh::protocol::client_factory>(
-                std::make_unique<uh::net::plain_socket_factory>(io, config->hostname, config->port),
+                std::make_unique<uh::net::plain_socket_factory>(m_io, config->hostname, config->port),
                 cf_config), config->connection_pool);
 
-//        CHUNKING_CONFIG.chunking_strategy = strategyString(config->chunking_mode);
-//        m_chunking_mod = std::make_unique<uh::chunking::mod>(CHUNKING_CONFIG);
     }
 
     std::unique_ptr<uh::protocol::client_pool> m_connection_pool;
     std::unique_ptr<uh::chunking::mod> m_chunking_mod;
+    boost::asio::io_context m_io;
 };
 
 // ---------------------------------------------------------------------
@@ -281,9 +279,6 @@ UDB_RESULT udb_retrieve(UDB *db, char* buffer_to_fill, size_t buffer_length , co
          /* BUG: Agency Node loses the chunk size information. */
          /* failure reading comression header should not be the error, instead couldn't read the hash should be theerror */
 //        auto retrieved_size = result.chunk_sizes.front();
-//
-//        if (retrieved_size > buffer_length)
-//            throw std::overflow_error("Buffer overflow exception.");
 
         std::memcpy(buffer_to_fill, std::get<std::vector<char>>(result.data).data(), std::get<std::vector<char>>(result.data).size() );
     }

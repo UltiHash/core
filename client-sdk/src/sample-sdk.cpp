@@ -7,10 +7,20 @@ int main()
 
      /* Get a pointer to the UDB Config File */
     UDB_CONFIG* udb_config = udb_create_config();
+    if (udb_config == nullptr)
+    {
+        std::cout << "error_occured: " << get_error_message();
+        exit(0);
+    }
     udb_config_set_agencynode(udb_config, "localhost", 0x5548);
 
-    /* Create an instance of UDB */
+    /* Create an instance of UDB using the config file */
     UDB* udb = udb_create_instance(udb_config);
+    if (udb == nullptr)
+    {
+        std::cout << "error_occured: " << get_error_message();
+        exit(0);
+    }
 
     /* integrate data */
     char client_data[] ="Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut"

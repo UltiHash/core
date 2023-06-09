@@ -17,10 +17,14 @@ extern "C" {
 #define SDK_NAME "UDB"
 #define SDK_VERSION "0.1.0"
 
+/**
+ *
+ * @return array of characters that holds the version of the SDK being used
+ */
 const char* get_sdk_version();
 
 /**
-* Opaque structure that holds the UltiDB state.
+* Opaque structure that holds the UDB state.
 *
 * Allocated and initialized with ::udb_create_instance.
 * Cleaned up and deallocated with ::udb_destroy_instance.
@@ -28,8 +32,8 @@ const char* get_sdk_version();
 typedef struct UDB_STATE_STRUCT UDB;
 
 /**
-* Opaque structure that holds the config parameters in order to create an instance
- * of UltiDB.
+* Opaque structure that holds the configuration parameters to create an instance
+ * of UDB.
 *
 * Allocated and initialized with ::udb_create_config.
 * Cleaned up and deallocated with ::udb_destroy_config.
@@ -37,7 +41,7 @@ typedef struct UDB_STATE_STRUCT UDB;
 typedef struct UDB_CONFIG_STRUCT UDB_CONFIG;
 
 /**
- * Result given by the UDB APIs which tells if the operation was successful or not.
+ * ENUM given by UDB APIs which tells the result of the APIs called.
  */
 typedef enum : uint8_t
 {
@@ -55,12 +59,20 @@ typedef enum : uint8_t
 
 } UDB_RESULT;
 
+/**
+ * Gets the message of the last error occurred.
+ */
 const char* get_error_message();
 
-/** Chunking Strategy to choose from. When the data is large when integrating then it is automatically divided into
+/*
+ * Gives the error code for the last operation.  The code is uint8_t integer.
+*/
+// is uint8_t enough?
+UDB_RESULT udb_get_last_error();
+
+/** Chunking Strategy to choose from. When the data is large then it is automatically divided into
  * smaller pieces of data which we call chunks. This is done in order to increase the de-duplication ratio as smaller
- * data chunks lead to higher probability of de-duplication. If the type of data to be integrated is known beforehand
- * then a chunking strategy can be chosen accordingly. The chunking strategy to choose from are:
+ * data chunks lead to higher probability of de-duplication. The chunking strategy to choose from are:
  * 1. Fixed Size
  * 2. Gear CDC
  * 3. Fast CDC
@@ -85,44 +97,41 @@ typedef enum UDB_CHUNKING_MODE {
 
 } UDB_CHUNKING_MODE;
 
-/*
- * Gives the error code for the last operation.
-*/
-UDB_RESULT udb_get_last_error();
-
 // ---------------------------------------------------------------------
 
 /**
-* Here goes configuration options that are usually exposed via client command line.
+* Creates an instance of ::UDB_CONFIG (typedef UDB_CONFIG) which can be used to put configuration parameters.
+ * @return UDB_CONFIG* pointer to the config created
 */
 UDB_CONFIG* udb_create_config();
 
 /**
- * Sets the connection parameter of the agency node in the given config file.
- *
- * @param cfg config file in which the connection parameters are set
- * @param hostname
- * @param port Port on which agency node is running
- * @param connection_pool The number of connections to create with the agency node.
- * @return bool true if the operation is successful, false if the operation failed
- */
-UDB_RESULT udb_config_set_agencynode(UDB_CONFIG* cfg, const char *hostname, uint16_t port, size_t connection_pool = 3);
-
-/**
- *
- * @param cfg config file in which the strategy is set
- * @param chunking_strategy The chunking strategy to apply
- * @return UDB_BOOL true if the operation is successful, false if the operation failed
- */
-UDB_RESULT udb_config_set_chunking_strategy(UDB_CONFIG* cfg, UDB_CHUNKING_MODE chunking_strategy);
-
-/**
- * Deallocates the intance created from ::udb_create_config.
+ * Deallocates the instance created from ::udb_create_config.
  *
  * @param config config instance to be deallocated
  * @return UDB_RESULT result of the operation
  */
 UDB_RESULT udb_destroy_config(UDB_CONFIG *config);
+
+/**
+ * Sets the connection parameters of the host node in the given config file.
+ *
+ * @param cfg config file where the connection parameters can be set
+ * @param hostname Name of the host to connect to
+ * @param port Port on which the host is running
+ * @param connection_pool The number of connections to create with the host. By default it is 3.
+ * @return UDB_RESULT enum that tells the result of the operation
+ */
+UDB_RESULT udb_config_set_host_node(UDB_CONFIG* cfg, const char *hostname, uint16_t port, size_t connection_pool = 3);
+
+/**
+ * Sets the chunking strategy in the given config file.
+ *
+ * @param cfg config file in which the strategy is set
+ * @param chunking_strategy enum which describes the strategy to apply
+ * @return UDB_RESULT enum that tells the result of the operation
+ */
+UDB_RESULT udb_config_set_chunking_strategy(UDB_CONFIG* cfg, UDB_CHUNKING_MODE chunking_strategy);
 
 /**
  * Creates an instance of ::UDB_STATE_STRUCT (typedef UDB) and initializes it.
@@ -141,11 +150,11 @@ UDB_RESULT udb_destroy_instance(UDB* udb_instance);
 /**
  *
  * @param db UDB object which can be used to perform operations such as integrate and retrieve.
- * @param data Data to integrate into the UDB cluster
- * @param buffer_length
+ * @param hash_buffer buffer in which the retrieved hash can be stored
+ * @param buffer_length length of the hash_buffer provided
+ * @param data pointer to the data to be integrated
  * @param length Size of the data to integrate
- * @return unsigned int of 8 bits The value 0 means the operation was successful, else a integer value is set according
- * to the error encountered. This error can be deduced from enum ::UDB_RESULT.
+ * @return UDB_RESULT enum that describes the result of the operation
  */
 UDB_RESULT udb_integrate(UDB *db, char* hash_buffer,  size_t buffer_length, const char* data, size_t data_length);
 
@@ -153,9 +162,10 @@ UDB_RESULT udb_integrate(UDB *db, char* hash_buffer,  size_t buffer_length, cons
  * Data to retrieve from the UDB cluster based on the hash provided.
  *
  * @param db UDB object which can be used to perform operations such as integrate and retrieve.
- * @param data_buffer
- * @param length Size of the data retrieved
- * @return char* Returns nullptr if the operation is unsuccessful else a pointer to the underlying data is returned
+ * @param data_buffer buffer in which data retrieved is to be stored
+ * @param buffer_length length of the buffer provided
+ * @param udb_hash the hash of the data to be retrieved
+ * @return UDB_RESULT enum that describes the result of the operation
  */
 UDB_RESULT udb_retrieve(UDB *db, char* data_buffer, size_t buffer_length, const char* udb_hash);
 
