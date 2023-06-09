@@ -2,22 +2,19 @@
 // Created by masi on 5/25/23.
 //
 #include <unordered_map>
-#include <boost/interprocess/mapped_region.hpp>
+#include <fstream>
 #include "growing_managed_storage.h"
 
 namespace uh::dbn::storage::smart {
 
-
-
-growing_managed_storage::growing_managed_storage (std::filesystem::path directory, size_t min_file_size, size_t max_file_size):
+growing_managed_storage::growing_managed_storage (std::filesystem::path directory, std::filesystem::path log_file, size_t min_file_size, size_t max_file_size):
         m_min_file_size (min_file_size),
         m_max_file_size (max_file_size),
         m_directory (std::move (directory)),
-        m_log(create_logger()) {
-    std::filesystem::create_directories(m_directory);
-    load_data_store();
-    m_log_file_path = generate_log_file_path();
-    replay_logger();
+        m_log_file_path (std::move (log_file)) {
+     load_data_store ();
+     m_log = create_logger();
+     replay_logger();
 }
 
 offset_ptr growing_managed_storage::allocate(std::size_t size) {
@@ -104,24 +101,20 @@ void growing_managed_storage::do_deallocate (const offset_ptr& offset_ptr, size_
     resource.get_pool_resource().deallocate(deallocate_offset_ptr.m_addr, bytes);
 }
 
-std::filesystem::path growing_managed_storage::generate_log_file_path () {
-    std::string file_name = "alloc_log_file";
-    return m_directory / file_name;
-}
-
 void growing_managed_storage::load_data_store () {
-    m_aggregated_size = 0;
+    std::filesystem::create_directories(std::filesystem::absolute (m_directory));
     if (std::filesystem::is_empty(m_directory)) {
-        mmap_file(get_file_name (m_aggregated_size, m_min_file_size), m_aggregated_size, m_min_file_size);
-        m_aggregated_size += m_min_file_size;
+        mmap_file(get_file_name (0, m_min_file_size), 0, m_min_file_size);
     }
     else {
+        std::size_t aggregated_size = 0;
         for (const auto& file: std::filesystem::directory_iterator (m_directory)) {
             if (file == m_log_file_path) {
                 continue;
             }
             const auto offset_size = parse_file_name(file);
             mmap_file(file, offset_size.first, offset_size.second);
+            aggregated_size += offset_size.second;
         }
     }
 }
@@ -131,7 +124,6 @@ void growing_managed_storage::grow () {
     const auto last_resource = m_resources.crbegin();
     const auto file_name = last_resource->second.m_path;
     const auto last_offset_size = parse_file_name(file_name);
-    m_resources.erase (std::next (last_resource).base());
     if (last_offset_size.second >= m_max_file_size) { // then, create a new file
         const auto new_offset = last_offset_size.first + last_offset_size.second;
         mmap_file(get_file_name (new_offset, m_min_file_size), new_offset, m_min_file_size);
@@ -142,6 +134,7 @@ void growing_managed_storage::grow () {
         const auto new_size = last_offset_size.second * 2ul;
         const auto new_file_name = get_file_name (offset, new_size);
         std::filesystem::rename(file_name, new_file_name);
+        m_resources.erase (std::next (last_resource).base());
         mmap_file(new_file_name, offset, new_size);
     }
     replay_logger();

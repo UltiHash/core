@@ -70,12 +70,9 @@ private:
 
     void replay_logger ();
 
-    std::filesystem::path generate_log_file_path () ;
-
     bool files_existence_consistency ();
 
     const data_store_config m_conf;
-    std::filesystem::path m_log_file_path;
     std::fstream m_log;
     std::size_t m_aggregated_size {};
 };

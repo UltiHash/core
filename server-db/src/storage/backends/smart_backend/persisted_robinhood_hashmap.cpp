@@ -11,7 +11,7 @@ persisted_robinhood_hashmap::persisted_robinhood_hashmap(map_config map_conf) :
         m_hash_element_size (POOR_VALUE_SIZE + m_key_value_span_size),
         m_empty_key (m_map_conf.key_size),
         m_key_store (growing_plain_storage (m_map_conf.hashtable_key_path, m_map_conf.map_key_file_init_size)),
-        m_value_store (m_map_conf.hashtable_value_directory, m_map_conf.map_values_minimum_file_size, m_map_conf.map_values_maximum_file_size),
+        m_value_store (m_map_conf.hashtable_value_directory, m_map_conf.value_store_log_file, m_map_conf.map_values_minimum_file_size, m_map_conf.map_values_maximum_file_size),
         m_inserted_keys_size {*reinterpret_cast <size_t*> (m_key_store.get_storage())} {
     std::memset (m_empty_key.data(), 0, m_map_conf.key_size);
 }

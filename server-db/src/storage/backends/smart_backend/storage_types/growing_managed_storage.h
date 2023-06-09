@@ -14,7 +14,7 @@ namespace uh::dbn::storage::smart {
 class growing_managed_storage: managed_storage {
 
 public:
-    growing_managed_storage (std::filesystem::path directory, size_t min_file_size, size_t max_file_size);
+    growing_managed_storage (std::filesystem::path directory, std::filesystem::path log_file, size_t min_file_size, size_t max_file_size);
 
     offset_ptr allocate (std::size_t size);
 
@@ -60,15 +60,13 @@ private:
 
     void grow ();
 
-    std::filesystem::path generate_log_file_path () ;
-
     constexpr static unsigned int MAX_GROW_ATTEMPTS = 5;
     const size_t m_min_file_size;
     const size_t m_max_file_size;
     const std::filesystem::path m_directory;
     std::filesystem::path m_log_file_path;
+
     std::fstream m_log;
-    std::size_t m_aggregated_size{};
     std::mutex m_mutex;
 };
 } // end namespace uh::dbn::storage::smart

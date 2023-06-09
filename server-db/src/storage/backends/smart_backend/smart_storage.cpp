@@ -15,10 +15,11 @@ smart_config make_smart_config (const std::filesystem::path& root, size_t size, 
 
     data_store_config ds_conf;
     ds_conf.data_store_file_size = 4ul * GB;
+    ds_conf.log_file = data_store_directory / "log_file";
     size_t offset = 0;
     while (offset < 20ul * GB) {
         const std::filesystem::path data_store_file = "data_" + std::to_string(offset);
-        ds_conf.data_store_files.emplace_front (root / data_store_directory / data_store_file);
+        ds_conf.data_store_files.emplace_front (data_store_directory / data_store_file);
         offset += ds_conf.data_store_file_size;
     }
 
@@ -37,11 +38,11 @@ smart_config make_smart_config (const std::filesystem::path& root, size_t size, 
     map_conf.map_key_file_init_size = 4ul * GB;
     map_conf.map_values_minimum_file_size = 4ul * GB;
     map_conf.map_values_maximum_file_size = 8ul * GB;
-
     map_conf.map_load_factor = 0.9;
     map_conf.map_maximum_extension_factor = 32;
     map_conf.hashtable_key_path = hash_table_directory / "key_file";
     map_conf.hashtable_value_directory = hash_table_directory / "values";
+    map_conf.value_store_log_file = map_conf.hashtable_value_directory / "log";
 
     return {map_conf, set_conf, ds_conf, dd_conf};
 }

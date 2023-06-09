@@ -40,9 +40,8 @@ public:
                 std::filesystem::remove(fi);
             }
         }
-        const std::filesystem::path log_name = "log_d4774199341a3721872b";
-        if (exists(log_name)) {
-            std::filesystem::remove(log_name);
+        if (exists(m_smart_config.data_store_conf.log_file)) {
+            std::filesystem::remove(m_smart_config.data_store_conf.log_file);
         }
 
         if (exists(m_smart_config.set_conf.fragment_set_path)) {
@@ -52,9 +51,12 @@ public:
         if (exists(m_smart_config.map_conf.hashtable_key_path)) {
             std::filesystem::remove(m_smart_config.map_conf.hashtable_key_path);
         }
+        if (exists (m_smart_config.map_conf.value_store_log_file)) {
+            std::filesystem::remove(m_smart_config.map_conf.value_store_log_file);
+        }
 
         if (exists (m_smart_config.map_conf.hashtable_value_directory)) {
-            std::filesystem::remove_all(m_smart_config.map_conf.hashtable_value_directory);
+            std::filesystem::remove_all(std::filesystem::absolute(m_smart_config.map_conf.hashtable_value_directory));
         }
         std::filesystem::create_directory(m_smart_config.map_conf.hashtable_value_directory);
 
@@ -87,11 +89,12 @@ private:
         conf.map_maximum_extension_factor = 32;
         conf.map_load_factor = 0.9;
         conf.map_values_maximum_file_size = 16 * 1024;
-        conf.map_values_minimum_file_size = 1 * 1024;
+        conf.map_values_minimum_file_size = 4 * 1024;
         conf.map_key_file_init_size = 4 * 1024;
         conf.key_size = 128;
         conf.hashtable_value_directory = "growing_mmap_storage_directory";
         conf.hashtable_key_path = "hashmap_key_data";
+        conf.value_store_log_file = conf.hashtable_value_directory / "log";
         return conf;
     }
     static set_config define_test_set_conf () {
@@ -106,6 +109,7 @@ private:
         data_store_config conf;
         conf.data_store_files = generate_files();
         conf.data_store_file_size = 32 * 1024;
+        conf.log_file = "ds/log";
         return conf;
     }
     dedupe_config define_test_dedupe_conf () {
@@ -408,7 +412,6 @@ BOOST_FIXTURE_TEST_CASE(basic_hashmap_test, files_info_fixture)
 
 BOOST_FIXTURE_TEST_CASE(basic_growing_mmap_storage_test, files_info_fixture)
 {
-    std::cout << "start2" << std::endl;
 
     cleanup();
     offset_ptr ptr1;
@@ -417,7 +420,7 @@ BOOST_FIXTURE_TEST_CASE(basic_growing_mmap_storage_test, files_info_fixture)
     size_t size = 256;
 
     {
-        growing_managed_storage ms(get_map_conf().hashtable_value_directory, 4 * 1024, 8 * 1024);
+        growing_managed_storage ms(get_map_conf().hashtable_value_directory, get_map_conf().value_store_log_file, 4 * 1024, 8 * 1024);
 
         ptr1 = ms.allocate(size);
         std::memcpy(ptr1.m_addr, &data, size);
@@ -439,7 +442,7 @@ BOOST_FIXTURE_TEST_CASE(basic_growing_mmap_storage_test, files_info_fixture)
     const auto addr = mmap (align_ptr(ptr1.m_addr), 1024, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE | MAP_FIXED, -1, 0);
     BOOST_TEST(addr == align_ptr(ptr1.m_addr));
     {
-        growing_managed_storage ms(get_map_conf().hashtable_value_directory, 4 * 1024, 8 * 1024);
+        growing_managed_storage ms(get_map_conf().hashtable_value_directory, get_map_conf().value_store_log_file,  4 * 1024, 8 * 1024);
         ms.allocate(size);
         ms.allocate(size);
         ms.allocate(size);
@@ -455,16 +458,15 @@ BOOST_FIXTURE_TEST_CASE(basic_growing_mmap_storage_test, files_info_fixture)
         BOOST_TEST (ptr1.m_offset + size < ptr2.m_offset);
 
         void* raw_ptr = ms.get_raw_ptr(ptr1.m_offset);
-        std::cout.write(data, size);
-        std::cout << std::endl;
-        std::cout.write(static_cast <char *> (raw_ptr),size);
+        //std::cout.write(data, size);
+        //std::cout << std::endl;
+        //std::cout.write(static_cast <char *> (raw_ptr),size);
         BOOST_TEST (std::memcmp(&data, static_cast <char *> (raw_ptr), size) == 0);
 
         void* raw_ptr2 = ms.get_raw_ptr(ptr2.m_offset);
         BOOST_TEST (std::memcmp(&data, static_cast <char *> (raw_ptr2), size) == 0);
     }
     munmap(align_ptr(ptr1.m_addr), 1024);
-    std::cout << "end2" << std::endl;
 
 }
 
@@ -477,11 +479,8 @@ std::string serialize_spans (std::forward_list <std::span <char>> spans) {
 }
 
 BOOST_FIXTURE_TEST_CASE(smart_core_basic_test, files_info_fixture) {
-    std::cout << "start1" << std::endl;
 
     cleanup();
-
-    std::cout << "cleanup1" << std::endl;
 
     std::string k1 = "bba3f3c564f31d8664c5775fbe16580061693f1db21069b58fa448ecbbf397f2264ab1fb8f17f33edbdab52def96fd2b1124d04ba1764b554e0e7b49a24d5574";
     std::string v1 = "hello from data 1645";
@@ -509,97 +508,78 @@ BOOST_FIXTURE_TEST_CASE(smart_core_basic_test, files_info_fixture) {
         const auto i1 = sm.integrate(k1, v1);
         BOOST_TEST (i1 == v1.size());
 
-        std::cout << "1" << std::endl;
         const auto i2 = sm.integrate(k2, v2);
         BOOST_TEST (i2 == 4);
-        std::cout << "2" << std::endl;
 
         const auto i3 = sm.integrate(k3, v3);
         BOOST_TEST (i3 == v3.size());
-        std::cout << "3" << std::endl;
 
         const auto i4 = sm.integrate(k4, v4);
         BOOST_TEST (i4 == 9);
-        std::cout << "4" << std::endl;
 
         const auto i5 = sm.integrate(k5, v5);
         BOOST_TEST (i5 == 17);
-        std::cout << "5" << std::endl;
 
         const auto i6 = sm.integrate(k6, v6);
         BOOST_TEST (i6 == 0);
-        std::cout << "6" << std::endl;
 
         const auto r1 = sm.retrieve(k1);
         const auto sr1 = serialize_spans(r1.second);
         BOOST_TEST (sr1.size() == v1.size());
         BOOST_TEST (std::memcmp(sr1.data(), v1.data(), v1.size()) == 0);
-        std::cout << "7" << std::endl;
 
         const auto r2 = sm.retrieve(k2);
         const auto sr2 = serialize_spans(r2.second);
         BOOST_TEST (sr2.size() == v2.size());
         BOOST_TEST (std::memcmp(sr2.data(), v2.data(), v2.size()) == 0);
-        std::cout << "8" << std::endl;
 
         const auto r4 = sm.retrieve(k4);
         const auto sr4 = serialize_spans(r4.second);
         BOOST_TEST (sr4.size() == v4.size());
         BOOST_TEST (std::memcmp(sr4.data(), v4.data(), v4.size()) == 0);
-        std::cout << "9" << std::endl;
 
         const auto r5 = sm.retrieve(k5);
         const auto sr5 = serialize_spans(r5.second);
         BOOST_TEST (sr5.size() == v5.size());
         BOOST_TEST (std::memcmp(sr5.data(), v5.data(), v5.size()) == 0);
-        std::cout << "10" << std::endl;
 
         const auto r6 = sm.retrieve(k6);
         const auto sr6 = serialize_spans(r6.second);
         BOOST_TEST (sr6.size() == v6.size());
         BOOST_TEST (std::memcmp (sr6.data(), v6.data(), v6.size()) == 0);
-        std::cout << "11" << std::endl;
 
     }
-    std::cout << "12" << std::endl;
 
     char* ptr = new char [10*1024*1024];
     {
         smart_core sm(get_smart_config());
-        std::cout << "13" << std::endl;
 
         const auto r1 = sm.retrieve(k1);
         const auto sr1 = serialize_spans(r1.second);
         BOOST_TEST (sr1.size() == v1.size());
         BOOST_TEST (std::memcmp(sr1.data(), v1.data(), v1.size()) == 0);
-        std::cout << "14" << std::endl;
 
         const auto r2 = sm.retrieve(k2);
         const auto sr2 = serialize_spans(r2.second);
         BOOST_TEST (sr2.size() == v2.size());
         BOOST_TEST (std::memcmp(sr2.data(), v2.data(), v2.size()) == 0);
-        std::cout << "15" << std::endl;
 
         const auto r4 = sm.retrieve(k4);
         const auto sr4 = serialize_spans(r4.second);
         BOOST_TEST (sr4.size() == v4.size());
         BOOST_TEST (std::memcmp(sr4.data(), v4.data(), v4.size()) == 0);
-        std::cout << "16" << std::endl;
 
         const auto r5 = sm.retrieve(k5);
         const auto sr5 = serialize_spans(r5.second);
         BOOST_TEST (sr5.size() == v5.size());
         BOOST_TEST (std::memcmp(sr5.data(), v5.data(), v5.size()) == 0);
-        std::cout << "17" << std::endl;
 
         const auto r6 = sm.retrieve(k6);
         const auto sr6 = serialize_spans(r6.second);
         BOOST_TEST (sr6.size() == v6.size());
         BOOST_TEST (std::memcmp (sr6.data(), v6.data(), v6.size()) == 0);
-        std::cout << "18" << std::endl;
 
     }
-    std::cout << "19" << std::endl;
 
     delete[] ptr;
 }

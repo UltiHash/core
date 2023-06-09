@@ -10,7 +10,6 @@ namespace uh::dbn::storage::smart {
 
 fixed_managed_storage::fixed_managed_storage(data_store_config conf):
     m_conf(std::move (conf)),
-    m_log_file_path (generate_log_file_path()),
     m_log(create_logger()) {
     std::filesystem::create_directories(m_conf.data_store_files.front().parent_path());
     files_existence_consistency ();
@@ -50,10 +49,10 @@ void *fixed_managed_storage::get_raw_ptr(size_t offset) {
 
 std::fstream fixed_managed_storage::create_logger() const {
     auto flags = std::ios::in | std::ios::out;
-    if (!std::filesystem::exists(m_log_file_path)) {
+    if (!std::filesystem::exists(m_conf.log_file)) {
         flags |= std::ios::trunc;
     }
-    return {m_log_file_path, flags};
+    return {m_conf.log_file, flags};
 }
 
 void fixed_managed_storage::replay_logger() {
@@ -91,18 +90,6 @@ void fixed_managed_storage::do_deallocate (const offset_ptr& offset_ptr, size_t 
     auto &resource = get_resource (offset_ptr.m_offset, bytes);
     const auto deallocate_offset_ptr = resource.m_ptr.get_offset_ptr_at(offset_ptr.m_offset);
     resource.get_pool_resource().deallocate(deallocate_offset_ptr.m_addr, bytes);
-}
-
-std::filesystem::path fixed_managed_storage::generate_log_file_path () {
-
-    std::hash <std::string> hasher;
-    std::string file_name = "log_";
-    for (const auto& fi: m_conf.data_store_files) {
-        std::stringstream hash_stream;
-        hash_stream << std::hex << hasher (fi);
-        file_name += hash_stream.str().substr(0, 2);
-    }
-    return file_name;
 }
 
 bool fixed_managed_storage::files_existence_consistency () {

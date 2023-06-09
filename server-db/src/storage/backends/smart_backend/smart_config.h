@@ -19,6 +19,8 @@ struct map_config {
     unsigned long map_maximum_extension_factor;
     std::filesystem::path hashtable_key_path;
     std::filesystem::path hashtable_value_directory;
+    std::filesystem::path value_store_log_file;
+
 };
 
 struct set_config {
@@ -31,6 +33,7 @@ struct set_config {
 
 struct data_store_config {
     std::list <std::filesystem::path> data_store_files;
+    std::filesystem::path log_file;
     unsigned long data_store_file_size;
 };
 
