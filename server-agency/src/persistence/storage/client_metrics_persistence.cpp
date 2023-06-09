@@ -25,6 +25,13 @@ void client_metrics::start()
 
 // ---------------------------------------------------------------------
 
+void client_metrics::stop()
+{
+    flush();
+}
+
+// ---------------------------------------------------------------------
+
 void client_metrics::add(const uh::protocol::client_statistics::request& req)
 {
     m_id_to_size.insert_or_assign(std::string(req.uhv_id.begin(), req.uhv_id.end()), req.integrated_size);

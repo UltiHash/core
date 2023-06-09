@@ -50,9 +50,30 @@ int insert_block (const std::string &chunk_str, size_t min_block) {
         eq_range.second ++;
     }
 
-    auto res = std::max_element (eq_range.first, eq_range.second, [&chunk_str] (const auto &block1, const auto &block2) {
-        return largest_common_prefix(chunk_str, block1.first) < largest_common_prefix(chunk_str, block2.first);
-    });
+    //auto res = std::max_element (eq_range.first, eq_range.second, [&chunk_str] (const auto &block1, const auto &block2) {
+    //    return largest_common_prefix(chunk_str, block1.first) < largest_common_prefix(chunk_str, block2.first);
+    //});
+
+    auto res = eq_range.first;
+    auto max_len = 0;
+    auto max_index = 0;
+    auto index = 0;
+    for (auto itr = eq_range.first; itr != eq_range.second ; itr++) {
+        if (const auto len = largest_common_prefix(chunk_str, itr->first); len > max_len) {
+            res = itr;
+            max_len = len;
+            max_index = index;
+        }
+        index ++;
+    }
+
+    if (max_index > 1) {
+        std::cout << max_index << std::endl;
+        throw 1;
+    }
+    if (max_index == 1 and max_len > 0) {
+        std::cout << "uncommon string " << res->first.size() - max_len << " " << chunk_str.size() - max_len << std::endl;
+    }
 
     if (res == fragments.end()) {
         fragments.emplace_hint (res, chunk_str, 1);
@@ -88,19 +109,25 @@ int insert_block (const std::string &chunk_str, size_t min_block) {
 }
 
 void integrate (const std::filesystem::path &path, uh::chunking::mod &chunking_module, size_t min_block) {
-    uh::io::file f (path, std::ios::in);
-
-    auto chunker = chunking_module.create_chunker(f);
-
-
-    for (auto chunk = chunker->next_chunk(); !chunk.empty(); chunk = chunker->next_chunk()) {
-        std::string chunk_str {chunk.data (), chunk.size()};
+    try {
+        uh::io::file f(path, std::ios::in);
 
 
+        auto chunker = chunking_module.create_chunker(f);
 
-        non_deduplicated_size += chunk.size();
-        blocks.emplace(chunk_str, insert_block(chunk_str, min_block));
-        chunk_count ++;
+
+        for (auto chunk = chunker->next_chunk(); !chunk.empty(); chunk = chunker->next_chunk()) {
+            std::string chunk_str {chunk.data (), chunk.size()};
+
+
+
+            non_deduplicated_size += chunk.size();
+            blocks.emplace(chunk_str, insert_block(chunk_str, min_block));
+            chunk_count ++;
+        }
+    }
+    catch (std::exception& e) {
+        return;
     }
 }
 
@@ -113,13 +140,19 @@ int main(int argc, const char *argv[]) {
     }
 
     auto chunking_cfg = config.chunking();
+    /*
     const auto min_subchunk_size = 2*1024;
     chunking_cfg.fast_cdc.min_size = 4*1024;
     chunking_cfg.fast_cdc.normal_size = 8*1024;
     chunking_cfg.fast_cdc.max_size = 1024*512;
+     */
+    const auto min_subchunk_size = 4;
+    chunking_cfg.fast_cdc.min_size = 4;
+    chunking_cfg.fast_cdc.normal_size = 6;
+    chunking_cfg.fast_cdc.max_size = 16;
     uh::chunking::mod chunking_module(chunking_cfg);
 
-    const auto root = config.subchunking().path;
+    const auto root = "/home/masi/Workspace/core/cmake-build-debug/client-shell/test_text.txt";//config.subchunking().path;
     unsigned long count = 0;
 
 
@@ -146,10 +179,6 @@ int main(int argc, const char *argv[]) {
 
     long total = 0;
     for (const auto &block: blocks) {
-        std::cout << block.second << std::endl;
-        if (block.second == 0) {
-            throw 1;
-        }
         total += block.second;
     }
 
@@ -164,3 +193,4 @@ int main(int argc, const char *argv[]) {
     std::cout << "average fragment/block count " << static_cast <double> (total) / static_cast <double> (chunk_count)  << ", total number of fragment references " << total << std::endl;
     std::cout << "deduplication ratio is " << ratio << std::endl;
 }
+

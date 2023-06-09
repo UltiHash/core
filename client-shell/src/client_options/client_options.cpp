@@ -222,7 +222,6 @@ void client_options::handle(const boost::program_options::variables_map& vars)
     }
     //------------------------------------------------ END OF BASIC SANITY CHECKS
 
-    // checking inputs and outputs for validation
     std::cout << "INPUT: ";
     for (const auto& path: m_config.m_inputPaths)
     {
