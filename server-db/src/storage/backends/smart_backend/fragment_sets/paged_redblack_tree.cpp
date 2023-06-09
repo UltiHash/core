@@ -37,6 +37,10 @@ paged_redblack_tree::paged_redblack_tree(set_config set_conf, fixed_managed_stor
 
 position_info paged_redblack_tree::do_insert_index (const std::string_view& frag, uint64_t data_offset, const position_info& pos) {
 
+    if (pos.hint == 0) {
+        throw std::logic_error ("unlocked_redblack_tree relies on the given position. First call the find function.");
+    }
+
     node z = add_node (pos.hint);
     z.m_mnode->m_parent = pos.hint;
     const auto y = get_node(pos.hint);
@@ -184,7 +188,7 @@ node paged_redblack_tree::get_node(uint64_t offset) const noexcept {
 
 node paged_redblack_tree::add_node(uint64_t parent) noexcept {
 
-    auto insert = [this] (auto b) {
+    auto find_page_friendly_offset = [this] (auto b) {
         node n;
         if (!b.second.full()) {
             n = b.second.acquire_node();
@@ -215,10 +219,10 @@ node paged_redblack_tree::add_node(uint64_t parent) noexcept {
     };
 
     if (parent < m_block_size) {
-        return insert (std::pair <uint64_t, first_block&>{0, m_first_block});
+        return find_page_friendly_offset (std::pair <uint64_t, first_block&>{0, m_first_block});
     }
     else {
-        return insert (std::move (get_block(parent)));
+        return find_page_friendly_offset (std::move (get_block(parent)));
     }
 }
 

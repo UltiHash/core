@@ -25,6 +25,10 @@ unlocked_redblack_tree::unlocked_redblack_tree(set_config set_conf, fixed_manage
 
 position_info unlocked_redblack_tree::do_insert_index (const std::string_view& frag, uint64_t data_offset, const position_info& pos) {
 
+    if (pos.hint == 0) {
+        throw std::logic_error ("unlocked_redblack_tree relies on the given position. First call the find function.");
+    }
+
     node z = add_node ();
     z.m_mnode->m_parent = pos.hint;
 
@@ -110,8 +114,11 @@ void unlocked_redblack_tree::balance(unlocked_redblack_tree::node& z) {
         if (parent.m_offset == grand_parent.m_mnode->m_left) {
             z = directed_balance (z, RIGHT);
         }
-        else {
+        else if (parent.m_offset == grand_parent.m_mnode->m_right) {
             z = directed_balance (z, LEFT);
+        }
+        else {
+            break;
         }
         parent = get_node (z.m_mnode->m_parent);
     }

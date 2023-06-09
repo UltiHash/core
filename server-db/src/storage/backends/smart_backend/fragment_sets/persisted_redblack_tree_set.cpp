@@ -254,8 +254,11 @@ void persisted_redblack_tree_set::balance(persisted_redblack_tree_set::node& z) 
         if (parent.m_offset == grand_parent.m_mnode->m_left) {
             z = directed_balance (z, RIGHT);
         }
-        else {
+        else if (parent.m_offset == grand_parent.m_mnode->m_right) {
             z = directed_balance (z, LEFT);
+        }
+        else {
+            break;
         }
         parent = get_node (z.m_mnode->m_parent);
     }
