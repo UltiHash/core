@@ -93,11 +93,17 @@ void scheduler::stop()
     {
         th.join();
     }
+
+    m_threads.clear();
 }
+
+// ---------------------------------------------------------------------
 
 std::size_t scheduler::number_of_busy_threads() const {
     return m_threads_used;
 }
+
+// ---------------------------------------------------------------------
 
 std::size_t scheduler::number_of_threads() const {
     return m_threads.size();

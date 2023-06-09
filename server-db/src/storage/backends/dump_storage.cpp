@@ -163,6 +163,10 @@ std::unique_ptr<uh::protocol::allocation> dump_storage::allocate_multi(std::size
     THROW (util::exception, "multiple allocation for dump storage not implemented");
 }
 
+std::pair <std::size_t, std::vector <char>> dump_storage::write_block(const std::span<char> &data) {
+    THROW (util::exception, "write_block for dump storage not implemented");
+}
+
 // ---------------------------------------------------------------------
 
 } //namespace uh::dbn::storage

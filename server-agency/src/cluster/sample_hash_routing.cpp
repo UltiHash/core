@@ -75,4 +75,7 @@ const std::hash<std::string> &sample_hash_routing::get_hash_func() {
     const static std::hash <std::string> hash_func {};
     return hash_func;
 }
-}
+
+// ---------------------------------------------------------------------
+
+} // namespace uh::an::cluster

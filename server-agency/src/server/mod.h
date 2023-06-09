@@ -20,12 +20,12 @@ class mod
 public:
     mod(const net::server_config& config,
         an::cluster::mod& cluster,
-        an::metrics::mod& metrics,
-        an::persistence::mod& persistence);
+        an::metrics::mod& metrics);
 
     ~mod();
 
     void start();
+    void stop();
 
 private:
     struct impl;
