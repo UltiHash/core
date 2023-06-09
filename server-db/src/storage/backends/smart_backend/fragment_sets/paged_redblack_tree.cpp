@@ -30,8 +30,11 @@ paged_redblack_tree::paged_redblack_tree(set_config set_conf, fixed_managed_stor
         m_first_block.root_offset = m_nil.m_offset;
     }
     else {
+        std::cout << "load nil " << m_first_block.nill_offset << std::endl;
+
         m_nil = get_node (m_first_block.nill_offset);
     }
+    std::cout << "set constructed" << std::endl;
 
 }
 
@@ -198,7 +201,7 @@ node paged_redblack_tree::add_node(uint64_t parent) noexcept {
             n = new_b.second.acquire_node();
             n.m_offset += new_b.first;
             m_first_block.empty_hole_size -= sizeof (mmap_node);
-            m_first_block.empty_block += m_block_size;
+            m_first_block.empty_block += block::effective_node_space;
         }
         else if (auto mix_b = get_block(m_first_block.mix_block_offset); !mix_b.second.full()) {
             n = mix_b.second.acquire_node();
@@ -210,7 +213,7 @@ node paged_redblack_tree::add_node(uint64_t parent) noexcept {
             n = new_mix_b.second.acquire_node();
             n.m_offset += new_mix_b.first;
             m_first_block.empty_hole_size -= sizeof (mmap_node);
-            m_first_block.empty_block += m_block_size;
+            m_first_block.empty_block += block::effective_node_space;
             m_first_block.mix_block_offset = new_mix_b.first;
         }
         return n;

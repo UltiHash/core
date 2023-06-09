@@ -60,7 +60,7 @@ char *growing_plain_storage::init_mmap(const std::filesystem::path &file_path, s
     if (!existing_storage) {
         std::memset (mmap_addr, 0, init_size);
     }
-    std::cout << "growing plain storage init map finishjed " << mmap_addr << " " << file_size <<std::endl;
+    std::cout << "growing plain storage init map finishjed " << reinterpret_cast <uint64_t> (mmap_addr) << " " << file_size <<std::endl;
 
     return mmap_addr;
 }
