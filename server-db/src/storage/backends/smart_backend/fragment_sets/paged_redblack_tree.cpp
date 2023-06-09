@@ -33,7 +33,7 @@ paged_redblack_tree::paged_redblack_tree(set_config set_conf, fixed_managed_stor
         std::cout << "set 3" << std::endl;
 
         m_first_block.empty_hole_size = first_block::effective_node_space + block::effective_node_space;
-        std::cout << "set 4" << std::endl;
+        std::cout << "set 4 " << m_first_block.empty_hole_size << std::endl;
 
         m_nil = add_node (0);
         std::cout << "set 5" << std::endl;
@@ -220,6 +220,9 @@ node paged_redblack_tree::add_node(uint64_t parent) noexcept {
             std::cout << "node offset " << n.m_offset << std::endl;
 
             std::cout << "before size " << sizeof (mmap_node) << std::endl;
+
+            std::cout << "before size " << m_first_block.empty_hole_size << std::endl;
+            std::cout << "before size " << m_first_block.root_offset << std::endl;
 
             m_first_block.empty_hole_size -= sizeof (mmap_node);
             std::cout << "finish" << std::endl;
