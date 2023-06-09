@@ -55,6 +55,12 @@ namespace uh::dbn::storage {
          * Reserve data storage of given `size` for multiple blocks and return an allocation for it.
          */
         virtual std::unique_ptr<uh::protocol::allocation> allocate_multi (std::size_t size) = 0;
+
+        /**
+         * Writes the data to the storage backend and returns its hash and effective size
+         */
+        virtual std::pair <std::size_t, std::vector <char>> write_block (const std::span <char>& data) = 0;
+
     };
 
 // ---------------------------------------------------------------------

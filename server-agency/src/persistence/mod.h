@@ -18,6 +18,7 @@ namespace uh::an::persistence
         ~mod() = default;
 
         void start();
+        void stop();
 
         client_metrics& clientM_persistence();
 

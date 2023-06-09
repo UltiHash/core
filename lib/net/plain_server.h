@@ -40,6 +40,7 @@ public:
                  uh::protocol::protocol_factory& protocol_factory);
 
     void run() override;
+    void stop() override;
 
     void spawn_client(const std::shared_ptr<socket>& client);
     [[nodiscard]] bool is_busy () const override;
