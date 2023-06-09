@@ -14,13 +14,15 @@ paged_redblack_tree::paged_redblack_tree(set_config set_conf, fixed_managed_stor
         m_set_conf (std::move (set_conf)),
         m_data_store (data_store),
         m_index_store (growing_plain_storage (m_set_conf.fragment_set_path, m_set_conf.set_init_file_size)),
-        //m_blocked_mem(m_index_store.get_storage(), m_set_conf.max_empty_hole_size),
         m_first_block (*(reinterpret_cast <first_block*> (m_index_store.get_storage()))),
         m_block_size (boost::interprocess::mapped_region::get_page_size()) {
     std::cout << "set constructing" << std::endl;
 
-    if (m_first_block.root_offset == 0) {
+    if (m_set_conf.set_init_file_size < 2 * m_block_size) {
+        throw std::logic_error ("set file size should be at list large enough for 2 pages");
+    }
 
+    if (m_first_block.root_offset == 0) {
         m_first_block.mix_block_offset = m_block_size;
         m_first_block.empty_block = 2;
         m_first_block.empty_hole_size = first_block::effective_node_space + block::effective_node_space;
@@ -30,7 +32,6 @@ paged_redblack_tree::paged_redblack_tree(set_config set_conf, fixed_managed_stor
         m_first_block.root_offset = m_nil.m_offset;
     }
     else {
-        std::cout << "load nil " << m_first_block.nill_offset << std::endl;
 
         m_nil = get_node (m_first_block.nill_offset);
     }
