@@ -19,17 +19,21 @@ struct map_config {
     unsigned long map_maximum_extension_factor;
     std::filesystem::path hashtable_key_path;
     std::filesystem::path hashtable_value_directory;
+    std::filesystem::path value_store_log_file;
+
 };
 
 struct set_config {
     unsigned long set_init_file_size;
     unsigned long set_minimum_free_space;
+    unsigned long max_empty_hole_size;
     std::filesystem::path fragment_set_path;
 
 };
 
 struct data_store_config {
     std::list <std::filesystem::path> data_store_files;
+    std::filesystem::path log_file;
     unsigned long data_store_file_size;
 };
 
