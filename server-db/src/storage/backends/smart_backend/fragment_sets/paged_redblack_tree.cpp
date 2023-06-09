@@ -189,7 +189,7 @@ node paged_redblack_tree::add_node(uint64_t parent) noexcept {
         if (!b.second.full()) {
             n = b.second.acquire_node();
             n.m_offset += b.first;
-            this->m_first_block.empty_hole_size -= sizeof (mmap_node);
+            m_first_block.empty_hole_size -= sizeof (mmap_node);
         }
         else if (m_first_block.empty_hole_size < m_set_conf.max_empty_hole_size) {
             auto new_b = get_block(m_first_block.empty_block);
