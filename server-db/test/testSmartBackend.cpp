@@ -479,8 +479,9 @@ std::string serialize_spans (std::forward_list <std::span <char>> spans) {
 }
 
 BOOST_FIXTURE_TEST_CASE(smart_core_basic_test, files_info_fixture) {
-
+std::cout << "1" << std::endl;
     cleanup();
+    std::cout << "2" << std::endl;
 
     std::string k1 = "bba3f3c564f31d8664c5775fbe16580061693f1db21069b58fa448ecbbf397f2264ab1fb8f17f33edbdab52def96fd2b1124d04ba1764b554e0e7b49a24d5574";
     std::string v1 = "hello from data 1645";
@@ -503,10 +504,14 @@ BOOST_FIXTURE_TEST_CASE(smart_core_basic_test, files_info_fixture) {
     std::string k6 = "e7c22b994c59d9cf2b48e549b1e24666636045930d3da7c1acb299d1c3b7f931f94aae41edda2c2b207a36e10f8bcb8d45223e54878f5b316e7ce3b6bc019629";
     std::string v6 = "hello from data 2234";
     {
+        std::cout << "3" << std::endl;
+
         smart_core sm(get_smart_config());
+        std::cout << "4" << std::endl;
 
         const auto i1 = sm.integrate(k1, v1);
         BOOST_TEST (i1 == v1.size());
+        std::cout << "5" << std::endl;
 
         const auto i2 = sm.integrate(k2, v2);
         BOOST_TEST (i2 == 4);
@@ -547,17 +552,21 @@ BOOST_FIXTURE_TEST_CASE(smart_core_basic_test, files_info_fixture) {
         const auto sr6 = serialize_spans(r6.second);
         BOOST_TEST (sr6.size() == v6.size());
         BOOST_TEST (std::memcmp (sr6.data(), v6.data(), v6.size()) == 0);
+        std::cout << "6" << std::endl;
 
     }
+    std::cout << "7" << std::endl;
 
     char* ptr = new char [10*1024*1024];
     {
         smart_core sm(get_smart_config());
+        std::cout << "8" << std::endl;
 
         const auto r1 = sm.retrieve(k1);
         const auto sr1 = serialize_spans(r1.second);
         BOOST_TEST (sr1.size() == v1.size());
         BOOST_TEST (std::memcmp(sr1.data(), v1.data(), v1.size()) == 0);
+        std::cout << "9" << std::endl;
 
         const auto r2 = sm.retrieve(k2);
         const auto sr2 = serialize_spans(r2.second);
@@ -578,8 +587,10 @@ BOOST_FIXTURE_TEST_CASE(smart_core_basic_test, files_info_fixture) {
         const auto sr6 = serialize_spans(r6.second);
         BOOST_TEST (sr6.size() == v6.size());
         BOOST_TEST (std::memcmp (sr6.data(), v6.data(), v6.size()) == 0);
+        std::cout << "10" << std::endl;
 
     }
+    std::cout << "11" << std::endl;
 
     delete[] ptr;
 }
