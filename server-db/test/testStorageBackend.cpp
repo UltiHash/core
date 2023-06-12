@@ -24,7 +24,7 @@ public:
     storage_fixture()
             : m_metrics_service({}),
               m_metrics(m_metrics_service),
-              m_hierarchical({ m_tmp.path(), ALLOCATED_BYTES }, m_metrics, m_scheduled_compressions) {
+              m_hierarchical({ m_tmp.path(), ALLOCATED_BYTES }, m_metrics, m_scheduled_compressions, m_instance_identity) {
     }
 
     uh::dbn::storage::backend &backend() {

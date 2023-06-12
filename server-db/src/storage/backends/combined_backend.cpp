@@ -18,10 +18,11 @@ void combined_backend::smart_worker::operator()(std::filesystem::path path, std:
 
 combined_backend::combined_backend(const hierarchical_storage_config &hierarchical_config,
                                persistence::scheduled_compressions_persistence& scheduled_compressions,
+                               persistence::uuid_persistence& instance_identity,
                                storage_metrics &storage_metrics):
     m_hierarchical_config(hierarchical_config),
     m_storage_metrics (storage_metrics),
-    m_hierarchical_storage (hierarchical_config, m_storage_metrics, scheduled_compressions),
+    m_hierarchical_storage (hierarchical_config, m_storage_metrics, scheduled_compressions, instance_identity),
     m_smart_storage(hierarchical_config.smart_post_processing, m_storage_metrics),
     m_worker (hierarchical_config.smart_post_processing.number_of_threads, smart_worker (m_smart_storage, m_storage_metrics)) {
 

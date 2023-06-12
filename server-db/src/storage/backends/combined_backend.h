@@ -25,6 +25,7 @@ public:
 
     combined_backend (const hierarchical_storage_config &hierarchical_config,
                       persistence::scheduled_compressions_persistence& scheduled_compressions,
+                      persistence::uuid_persistence& instance_identity,
                       storage_metrics &storage_metrics);
 
     void start() override;
