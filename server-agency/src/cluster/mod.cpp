@@ -107,7 +107,8 @@ std::unordered_map<node_ref, std::unique_ptr<client_pool>> make_nodes(
 
     for (const auto& nc : cfg.nodes)
     {
-        rv[make_node_ref(nc)] = make_client_pool(io, nc, cf_config);
+        auto client_pool = make_client_pool(io, nc, cf_config);
+        rv[client_pool->get_server_uuid()] = std::move(client_pool);
     }
 
     return rv;
@@ -223,6 +224,7 @@ std::unique_ptr<uh::protocol::allocation> mod::allocate(std::size_t size)
 
 uh::protocol::write_chunks::response mod::write_chunks(const write_chunks::request &req) {
     std::map <client_pool *, chunks_meta_data> conn_blocks_map;
+    auto fdb = uh::fdb::fdb("/etc/foundationdb/fdb.cluster");
 
     size_t offset = 0;
 
@@ -243,11 +245,17 @@ uh::protocol::write_chunks::response mod::write_chunks(const write_chunks::reque
     total_res.effective_size = 0;
     for (auto &conn_blocks: conn_blocks_map) {
         auto res = conn_blocks.first->get()->write_chunks ({conn_blocks.second.chunk_sizes, conn_blocks.second.data});
+        auto server_info = conn_blocks.first->get()->get_server_information();
+
         std::size_t dn_index = 0;
+        auto trans = fdb.make_transaction();
         for (const auto total_index: conn_blocks.second.chunk_indices) {
             std::memcpy (total_res.hashes.data() + total_index * 64, res.hashes.data() + dn_index, 64);
             dn_index += 64;
+            std::span<char> hash = {res.hashes.data() + dn_index, 64};
+            trans->put(hash, server_info.uuid);
         }
+        trans->commit();
         total_res.effective_size += res.effective_size;
     }
     return total_res;

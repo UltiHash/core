@@ -5,6 +5,7 @@
 
 #include <metrics/mod.h>
 #include <storage/mod.h>
+#include <persistence/mod.h>
 
 #include <memory>
 
@@ -19,7 +20,8 @@ class mod
 public:
     mod(const net::server_config& options,
         dbn::storage::mod& storage,
-        dbn::metrics::mod& metrics);
+        dbn::metrics::mod& metrics,
+        dbn::persistence::mod& persistence);
 
     ~mod();
 

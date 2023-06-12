@@ -10,14 +10,14 @@ namespace uh::dbn::persistence
 // ---------------------------------------------------------------------
 
 scheduled_compressions_persistence::scheduled_compressions_persistence(const uh::options::persistence_config& config) :
-    m_target_path(config.persistence_path / std::filesystem::path("scheduled_compressions.ua"))
+    m_target_path(config.persistence_path / std::filesystem::path("scheduled_compressions.uhs"))
 {
 }
 
 // ---------------------------------------------------------------------
 
 scheduled_compressions_persistence::scheduled_compressions_persistence() :
-        m_target_path("/tmp" / std::filesystem::path("scheduled_compressions.ua"))
+        m_target_path("/tmp/uh/data-node" / std::filesystem::path("scheduled_compressions.uhs"))
 {
 }
 
@@ -28,7 +28,7 @@ void scheduled_compressions_persistence::start()
     if (std::filesystem::exists(m_target_path))
         retrieve();
 
-    INFO << "scheduling info for compression persistent on: " << m_target_path;
+    INFO << "scheduling state for compression persisted at: " << m_target_path;
 }
 
 // ---------------------------------------------------------------------

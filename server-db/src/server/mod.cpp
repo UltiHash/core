@@ -39,7 +39,8 @@ struct mod::impl
 {
     impl(const net::server_config& config,
          dbn::storage::mod& storage,
-         dbn::metrics::mod& metrics);
+         dbn::metrics::mod& metrics,
+         dbn::persistence::mod& persistence);
 
     boost::asio::io_context io;
     std::unique_ptr<net::server> server;
@@ -52,7 +53,8 @@ struct mod::impl
 
 mod::impl::impl(const net::server_config& config,
                 dbn::storage::mod& storage,
-                dbn::metrics::mod& metrics)
+                dbn::metrics::mod& metrics,
+                dbn::persistence::mod& persistence)
     : io(),
       server(make_server(config, pf)),
       serv_info (*server),
@@ -64,8 +66,9 @@ mod::impl::impl(const net::server_config& config,
 
 mod::mod(const net::server_config& config,
          dbn::storage::mod& storage,
-         dbn::metrics::mod& metrics)
-    : m_impl(std::make_unique<mod::impl>(config, storage, metrics))
+         dbn::metrics::mod& metrics,
+         dbn::persistence::mod& persistence)
+    : m_impl(std::make_unique<mod::impl>(config, storage, metrics, persistence))
 {
 }
 

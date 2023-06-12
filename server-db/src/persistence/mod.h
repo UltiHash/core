@@ -2,6 +2,7 @@
 #define SERVER_DATABASE_PERSISTENCE_MOD_H
 
 #include <persistence/storage/scheduled_compressions_persistence.h>
+#include <persistence/storage/uuid_persistence.h>
 #include <persistence/options.h>
 
 namespace uh::dbn::persistence
@@ -19,9 +20,11 @@ namespace uh::dbn::persistence
         void start();
 
         scheduled_compressions_persistence& scheduled_persistence();
+        uuid_persistence& identity_persistence();
 
     private:
         std::unique_ptr<scheduled_compressions_persistence> m_scheduling_persistence;
+        std::unique_ptr<uuid_persistence> m_identity_persistence;
     };
 
 // ---------------------------------------------------------------------

@@ -26,7 +26,7 @@ public:
             : m_metrics_service({}),
               m_metrics(m_metrics_service),
               m_dump(m_tmp.path(), ALLOCATED_BYTES, m_metrics),
-              m_hierarchical({ m_tmp.path(), ALLOCATED_BYTES }, m_metrics, m_scheduled_compressions) {
+              m_hierarchical({ m_tmp.path(), ALLOCATED_BYTES }, m_metrics, m_scheduled_compressions, m_instance_identity) {
     }
 
     uh::dbn::storage::backend &backend() {
@@ -40,6 +40,7 @@ private:
     uh::dbn::storage::dump_storage m_dump;
     uh::dbn::persistence::scheduled_compressions_persistence m_scheduled_compressions;
     uh::dbn::storage::hierarchical_storage m_hierarchical;
+    uh::dbn::persistence::uuid_persistence m_instance_identity;
 
 };
 

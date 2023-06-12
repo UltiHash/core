@@ -2,7 +2,9 @@
 #define PROTOCOL_CLIENT_POOL_H
 
 #include <util/factory.h>
+#include <util/exception.h>
 #include "client.h"
+
 
 #include <condition_variable>
 #include <list>
@@ -44,6 +46,7 @@ public:
                 std::size_t pool_size);
 
     handle get();
+    std::string& get_server_uuid();
 
 private:
     friend class handle;
@@ -56,6 +59,7 @@ private:
 
     std::mutex m_mutex;
     std::condition_variable m_cv;
+    std::string m_server_uuid;
 };
 
 // ---------------------------------------------------------------------

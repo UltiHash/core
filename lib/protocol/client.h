@@ -92,6 +92,13 @@ public:
      */
      void send_client_statistics(const uh::protocol::client_statistics::request& client_stat);
 
+    /**
+     * Provides information about the server handling this client connction by
+     * returning a reference to a server_information object.
+     */
+    server_information& get_server_information();
+
+
 
 private:
     friend class client_allocation;
@@ -115,6 +122,8 @@ private:
 
     std::shared_ptr<net::socket> m_sock;
     serialization::buffered_serialization m_bs;
+    server_information m_server_info;
+
 };
 
 // ---------------------------------------------------------------------

@@ -8,6 +8,7 @@
 #include <string>
 #include "routing_interface.h"
 #include "protocol/messages.h"
+#include "fdb/fdb.h"
 
 
 namespace uh::an::cluster

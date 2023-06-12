@@ -40,7 +40,18 @@ client_pool::client_pool(std::unique_ptr<util::factory<client>>&& factory, std::
 {
     while (m_clients.size() < m_pool_size)
     {
-        m_clients.push_back(m_factory->create());
+        auto client = m_factory->create();
+
+        if(m_server_uuid.empty()) {
+            m_server_uuid = client.get()->get_server_information().uuid;
+        } else {
+            if(m_server_uuid != client.get()->get_server_information().uuid) {
+                THROW(uh::util::illegal_state, "Mismatching server uuids detected in client pool. "
+                                               "All clients in a pool must connect to the same server.");
+            }
+        }
+
+        m_clients.push_back(std::move(client));
     }
 }
 
@@ -85,6 +96,12 @@ void client_pool::put_back(std::unique_ptr<client> c)
     lk.unlock();
     m_cv.notify_one();
 
+}
+
+// ---------------------------------------------------------------------
+
+std::string& client_pool::get_server_uuid() {
+    return m_server_uuid;
 }
 
 // ---------------------------------------------------------------------

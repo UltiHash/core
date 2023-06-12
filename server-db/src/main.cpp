@@ -44,10 +44,11 @@ int main(int argc, const char** argv)
         auto storage_config = config.storage();
         storage_config.comp = config.comp();
         storage::mod storage_module(storage_config, metrics_module.storage(),
-                                    persistence_module.scheduled_persistence());
+                                    persistence_module.scheduled_persistence(),
+                                    persistence_module.identity_persistence());
         storage_module.start();
 
-        server::mod server_module(config.server(), storage_module, metrics_module);
+        server::mod server_module(config.server(), storage_module, metrics_module, persistence_module);
         server_module.start();
     }
     catch (const std::exception& e)

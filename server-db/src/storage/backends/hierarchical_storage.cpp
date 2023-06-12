@@ -149,7 +149,8 @@ private:
 hierarchical_storage::hierarchical_storage(
     const hierarchical_storage_config& config,
     uh::dbn::metrics::storage_metrics& storage_metrics,
-    persistence::scheduled_compressions_persistence& scheduled_compressions)
+    persistence::scheduled_compressions_persistence& scheduled_compressions,
+    persistence::uuid_persistence& instance_identity)
     : m_root(config.db_root),
       m_alloc(config.size_bytes),
       m_used(0),

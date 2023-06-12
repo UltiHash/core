@@ -14,8 +14,9 @@ mod::mod(const uh::options::persistence_config& config) : m_scheduling_persisten
 
 void mod::start()
 {
-    INFO << "       starting persistence module";
+    INFO << "       starting state persistence modules";
     m_scheduling_persistence->start();
+    m_identity_persistence->start();
 }
 
 // ---------------------------------------------------------------------
@@ -23,6 +24,13 @@ void mod::start()
 scheduled_compressions_persistence& mod::scheduled_persistence()
 {
     return *m_scheduling_persistence;
+}
+
+// ---------------------------------------------------------------------
+
+uuid_persistence& mod::identity_persistence()
+{
+    return *m_identity_persistence;
 }
 
 // ---------------------------------------------------------------------
