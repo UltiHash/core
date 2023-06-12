@@ -90,8 +90,8 @@ namespace uh::licensing{
         std::fstream license_file_stream(license_path, std::ios_base::in);
 
         for (std::string line; std::getline(license_file_stream, line);) {
-            if (line.starts_with(appName_string)) {
-                line = line.substr(appName_string.size(), line.size());
+            if (line.starts_with(user_name_string)) {
+                line = line.substr(user_name_string.size(), line.size());
                 return line;
             }
         }
