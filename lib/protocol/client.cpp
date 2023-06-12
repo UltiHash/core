@@ -46,14 +46,14 @@ server_information client::hello(const std::string& client_version)
     hello::response resp;
     read(m_bs, resp);
 
-    m_server_info =
-    {
+    m_server_uuid = resp.server_uuid;
+
+    return {
         .version = resp.server_version,
         .uuid = resp.server_uuid,
         .protocol = resp.protocol_version,
     };
 
-    return m_server_info;
 }
 
 // ---------------------------------------------------------------------
@@ -162,8 +162,8 @@ uh::protocol::read_chunks::response client::read_chunks (const read_chunks::requ
 
 // ---------------------------------------------------------------------
 
-server_information& client::get_server_information() {
-    return m_server_info;
+std::string& client::get_server_uuid() {
+    return m_server_uuid;
 }
 
 } // namespace uh::protocol

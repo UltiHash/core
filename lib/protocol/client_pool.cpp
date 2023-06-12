@@ -43,9 +43,9 @@ client_pool::client_pool(std::unique_ptr<util::factory<client>>&& factory, std::
         auto client = m_factory->create();
 
         if(m_server_uuid.empty()) {
-            m_server_uuid = client.get()->get_server_information().uuid;
+            m_server_uuid = client.get()->get_server_uuid();
         } else {
-            if(m_server_uuid != client.get()->get_server_information().uuid) {
+            if(m_server_uuid != client.get()->get_server_uuid()) {
                 THROW(uh::util::illegal_state, "Mismatching server uuids detected in client pool. "
                                                "All clients in a pool must connect to the same server.");
             }

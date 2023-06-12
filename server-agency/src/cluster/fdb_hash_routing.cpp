@@ -69,6 +69,7 @@ namespace uh::an::cluster {
                 }
             }
         }
+        trans.reset();
 
         // TODO: the offset by client_pool map structure needs to be replaced with something cleaner,
         // e.g. offset by data node uuid

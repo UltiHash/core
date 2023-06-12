@@ -266,7 +266,7 @@ uh::protocol::write_chunks::response mod::write_chunks(const write_chunks::reque
     total_res.effective_size = 0;
     for (auto &conn_blocks: conn_blocks_map) {
         auto res = conn_blocks.first->get()->write_chunks ({conn_blocks.second.chunk_sizes, conn_blocks.second.data});
-        auto server_info = conn_blocks.first->get()->get_server_information();
+        auto server_uuid = conn_blocks.first->get()->get_server_uuid();
 
         std::size_t dn_index = 0;
         auto trans = fdb.make_transaction();
@@ -274,7 +274,7 @@ uh::protocol::write_chunks::response mod::write_chunks(const write_chunks::reque
             std::memcpy (total_res.hashes.data() + total_index * 64, res.hashes.data() + dn_index, 64);
             dn_index += 64;
             std::span<char> hash = {res.hashes.data() + dn_index, 64};
-            trans->put(hash, server_info.uuid);
+            trans->put(hash, server_uuid);
         }
         trans->commit();
         total_res.effective_size += res.effective_size;
