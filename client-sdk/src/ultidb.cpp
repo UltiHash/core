@@ -188,6 +188,7 @@ struct UDB_STATE_STRUCT
                 .client_version = s.str()
             };
 
+        /* Segmentation fault given if the agency node is not running. */
         m_connection_pool = std::make_unique<uh::protocol::client_pool>(std::make_unique<uh::protocol::client_factory>(
                 std::make_unique<uh::net::plain_socket_factory>(m_io, config->hostname, config->port),
                 cf_config), config->connection_pool);
@@ -277,7 +278,7 @@ UDB_RESULT udb_retrieve(UDB *db, char* buffer_to_fill, size_t buffer_length , co
         auto result = db->m_connection_pool->get()->read_chunks(req);
 
          /* BUG: Agency Node loses the chunk size information. */
-         /* failure reading comression header should not be the error, instead couldn't read the hash should be theerror */
+         /* failure reading compression header should not be the error, instead couldn't read the hash should be the error */
 //        auto retrieved_size = result.chunk_sizes.front();
 
         std::memcpy(buffer_to_fill, std::get<std::vector<char>>(result.data).data(), std::get<std::vector<char>>(result.data).size() );
