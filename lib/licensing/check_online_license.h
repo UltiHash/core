@@ -9,14 +9,16 @@
 
 #include <utility>
 
-namespace uh::licensing{
+namespace uh::licensing {
 
-    class check_online_license: public check_license {
+    class check_online_license : public check_license {
 
     public:
 
         explicit check_online_license(std::filesystem::path license_folder, std::string appName, std::string appVersion,
-                                      std::string userName, std::string password);
+                                      std::string userName, std::string password, std::string apiKey,
+                                      std::string sharedKey,
+                                      std::string productId);
 
         bool valid() override;
 

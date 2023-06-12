@@ -9,6 +9,7 @@
 #include <utility>
 #include <third-party/LicenseSpring/include/LicenseSpring/LicenseManager.h>
 #include <third-party/LicenseSpring/include/LicenseSpring/LicenseID.h>
+#include <LicenseSpring/EncryptString.h>
 
 namespace uh::licensing{
 
@@ -43,10 +44,10 @@ namespace uh::licensing{
          * First line license: license role
          * Second line license:
          *
-         * @param license_folder is the folder where a license file is stored
+         * @param license_path is the path where a license file is stored
          */
-        explicit check_license(std::filesystem::path license_folder, std::string appName, std::string appVersion,
-                               std::string apiKey, std::string sharedKey, std::string productId);;
+        explicit check_license(std::filesystem::path license_path, std::string appName, std::string appVersion,
+                               std::string apiKey, std::string sharedKey, std::string productId);
 
         /**
          *
@@ -61,6 +62,18 @@ namespace uh::licensing{
         license_type check_license_type();
 
         /**
+         *
+         * @return name of app
+         */
+        std::string check_app_name();
+
+        /**
+         *
+         * @return name of app
+         */
+        std::string check_app_version();
+
+        /**
          * the default license is not timed
          *
          * @param license_path is the path to the license file
@@ -71,7 +84,8 @@ namespace uh::licensing{
     protected:
         std::filesystem::path license_path;
 
-        void write_license_base(role licenseRole, license_type licenseType);
+        void write_license_base(check_license::role licenseRole, check_license::license_type licenseType,
+                                const std::string& app_name_input, const std::string& app_version_input);
 
         const std::string_view role_string = "server_role: ";
         const std::string_view license_type_string = "license_type: ";
@@ -79,13 +93,14 @@ namespace uh::licensing{
         const std::string_view appName_string = "app_name: ";
         const std::string_view appVersion_string = "app_version: ";
 
-        const std::string appName,
-        appVersion,
-        apiKey,
-        sharedKey,
-        productId;
+        /**
+         * apiKey is 36 characters long
+         * sharedKey is 43 characters long
+         * productId is 6 characters long
+         */
+        const std::string appName, appVersion, apiKey, sharedKey, productId;
 
-        int licenseRegister(const std::shared_ptr<LicenseSpring::LicenseManager> &licenseManager,
+        static int licenseRegister(const std::shared_ptr<LicenseSpring::LicenseManager> &licenseManager,
                             const LicenseSpring::LicenseID& licenseId);
     };
 

@@ -33,7 +33,7 @@ const std::filesystem::path TEMP_DIR = "/tmp";
 typedef boost::mpl::vector<
     file,
     temp_file
-> license_types;
+> device_types;
 
 // ---------------------------------------------------------------------
 
@@ -41,7 +41,7 @@ struct Fixture {};
 
 // ---------------------------------------------------------------------
 
-BOOST_FIXTURE_TEST_CASE_TEMPLATE(seek_unspecified, T, license_types, Fixture )
+BOOST_FIXTURE_TEST_CASE_TEMPLATE(seek_unspecified, T, device_types, Fixture )
 {
     auto test_path = std::filesystem::path(TEMP_DIR);
 

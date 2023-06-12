@@ -17,23 +17,30 @@ namespace uh::licensing{
 
     check_online_license::check_online_license(std::filesystem::path license_folder, std::string appName,
                                                std::string appVersion,
-                                               std::string userName, std::string password) :
+                                               std::string userName, std::string password, std::string apiKey,
+                                               std::string sharedKey,
+                                               std::string productId) :
             check_license(std::move(license_folder), std::move(appName),
-                          std::move(appVersion), std::string(), std::string(), std::string()), userName(std::move(userName)), password(std::move(password)){}
+                          std::move(appVersion), std::move(apiKey), std::move(sharedKey),
+                          std::move(productId)),
+                          userName(std::move(userName)), password(std::move(password)){}
 
     // ---------------------------------------------------------------------
 
-    bool check_online_license::valid() {
-        //TODO: online implementation if license is valid and exists
-
+    bool check_online_license::valid()
+    {
         //Collecting network info
         LicenseSpring::ExtendedOptions options;
         options.collectNetworkInfo( true );
 
+        const std::string apiKey_crypt = LicenseSpring::Xor_string<36,char>(this->apiKey.c_str())._string;
+        const std::string sharedKey_crypt = LicenseSpring::Xor_string<43,char>(this->sharedKey.c_str())._string;
+        const std::string productId_crypt = LicenseSpring::Xor_string<6,char>(this->productId.c_str())._string;
+
         std::shared_ptr<LicenseSpring::Configuration> pConfiguration = LicenseSpring::Configuration::Create(
-                EncryptStr("XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX"), // your LicenseSpring API key (UUID)
-                EncryptStr("XXXXXXXXX-XXXXX-XXXXXXXXXXXXX_XXXXXX_XXXXXX"), // your LicenseSpring Shared key
-                EncryptStr("XXXXXX"), // product code that you specified in LicenseSpring for your application
+                apiKey_crypt, // your LicenseSpring API key (UUID)
+                sharedKey_crypt, // your LicenseSpring Shared key
+                productId_crypt, // product code that you specified in LicenseSpring for your application
                 appName, appVersion, options);
 
         //For user-based implementation comment out above line, and use bottom 3 lines

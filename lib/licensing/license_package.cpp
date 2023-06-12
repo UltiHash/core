@@ -47,7 +47,8 @@ namespace uh::licensing{
                     {
                         auto* tmp_license_valid_airgap = new check_airgap_license(config,
                                                                                   std::string(),
-                                                                                  std::string());
+                                                                                  std::string(), std::string(),
+                                                                                  std::string(), std::string());
 
                         if(tmp_license_valid_airgap->valid())check_lic = tmp_license_valid_airgap;
                         else delete tmp_license_valid_airgap;
@@ -59,7 +60,8 @@ namespace uh::licensing{
                     {
                         auto* tmp_license_valid_online = new check_airgap_license(config,
                                                                                   std::string(),
-                                                                                  std::string());
+                                                                                  std::string(), std::string(),
+                                                                                  std::string(), std::string());
 
                         if(tmp_license_valid_online->valid())check_lic = tmp_license_valid_online;
                         else delete tmp_license_valid_online;

@@ -20,7 +20,7 @@ set(SPRING_SHARED ON)
 
 find_package(ZLIB REQUIRED)
 find_package(CURL 4.8.0 REQUIRED)
-find_package(OpenSSL 1.1 REQUIRED)
+find_package(OpenSSL 1.1.0 REQUIRED)
 
 #extract OS specific package
 
@@ -160,8 +160,10 @@ endif ()
 
 # adding all the .h files of the current project
 
-file(COPY "${COPY_SOURCE_FOLDER}/include" DESTINATION "${CMAKE_CURRENT_LIST_DIR}")
-file(COPY "${COPY_SOURCE_FOLDER}/bin/" DESTINATION "${CMAKE_CURRENT_LIST_DIR}/bin_${CMAKE_BUILD_TYPE}/")
+file(COPY "${COPY_SOURCE_FOLDER}/include" DESTINATION "${CMAKE_CURRENT_LIST_DIR}"
+        PATTERN "curl*" EXCLUDE)
+file(COPY "${COPY_SOURCE_FOLDER}/bin/" DESTINATION "${CMAKE_CURRENT_LIST_DIR}/bin_${CMAKE_BUILD_TYPE}/"
+        PATTERN "libcurl*" EXCLUDE)
 
 file(GLOB HEADER_FILE_LIST ${CMAKE_CURRENT_BINARY_DIR}/include/*.h)
 

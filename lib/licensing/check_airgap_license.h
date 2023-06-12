@@ -9,12 +9,12 @@
 
 namespace uh::licensing {
 
-    class check_airgap_license: public check_license {
+    class check_airgap_license : public check_license {
 
     public:
 
-        explicit check_airgap_license(std::filesystem::path license_folder, std::string appName,
-                                      std::string appVersion);
+        explicit check_airgap_license(std::filesystem::path license_folder, std::string appName, std::string appVersion,
+                                      std::string apiKey, std::string sharedKey, std::string productId);
 
         bool valid() override;
 
