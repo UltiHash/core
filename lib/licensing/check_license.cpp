@@ -97,7 +97,7 @@ namespace uh::licensing{
                 THROW(util::exception,"No license type detected!");
         }
 
-        std::filesystem::path out_license_path = license_path / (role_string + ".lic");
+        std::filesystem::path out_license_path = license_path / (std::string(role_string) + ".lic");
 
         if(std::filesystem::exists(out_license_path))
             THROW(util::exception,"A license already existed on path \""+license_path.string()+"\" !");

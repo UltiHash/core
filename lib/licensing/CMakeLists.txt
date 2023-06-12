@@ -60,6 +60,7 @@ ExternalProject_Add(
         BUILD_COMMAND ""
         UPDATE_COMMAND ""
         INSTALL_COMMAND ""
+        LOG_DIR "${CMAKE_CURRENT_SOURCE_DIR}/ext/ep-logs"
 )
 
 # external dependencies
