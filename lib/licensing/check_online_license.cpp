@@ -15,15 +15,21 @@ namespace uh::licensing{
 
     // ---------------------------------------------------------------------
 
-    check_online_license::check_online_license(std::filesystem::path license_folder, std::string appName,
-                                               std::string appVersion,
-                                               std::string userName, std::string password, std::string apiKey,
+    check_online_license::check_online_license(const std::filesystem::path &license_file, std::string apiKey,
                                                std::string sharedKey,
-                                               std::string productId) :
-            check_license(std::move(license_folder), std::move(appName),
-                          std::move(appVersion), std::move(apiKey), std::move(sharedKey),
-                          std::move(productId)),
-                          userName(std::move(userName)), password(std::move(password)){}
+                                               std::string productId, std::string appName, std::string appVersion,
+                                               std::string userName, std::string password) :
+            check_license(license_file, std::move(apiKey), std::move(sharedKey),
+                          std::move(productId), std::move(appName),
+                          std::move(appVersion)),
+                          userName(std::move(userName)), password(std::move(password))
+                          {
+        if(this->userName.empty())
+          this->userName = check_app_name();
+
+        if(this->password.empty())
+          this->password = check_app_name();
+    }
 
     // ---------------------------------------------------------------------
 
@@ -50,6 +56,47 @@ namespace uh::licensing{
         auto licenseManager = LicenseSpring::LicenseManager::create( pConfiguration );
 
         return licenseRegister(licenseManager, licenseId);
+    }
+
+    // ---------------------------------------------------------------------
+
+    void check_online_license::write_license(check_license::role licenseRole, check_license::license_type licenseType,
+                                             const std::string &app_name_input, const std::string &app_version_input,
+                                             const std::string &username_input, const std::string &password_input)
+                                             {
+        auto out_file = write_license_file(licenseRole,licenseType,app_name_input,app_version_input);
+        out_file.write(std::string(user_name_string) + username_input + "\n");
+        out_file.write(std::string(password_string) + password_input + "\n");
+    }
+
+    // ---------------------------------------------------------------------
+
+    std::string check_online_license::check_user_name() {
+        std::fstream license_file_stream(license_path, std::ios_base::in);
+
+        for (std::string line; std::getline(license_file_stream, line);) {
+            if (line.starts_with(appName_string)) {
+                line = line.substr(appName_string.size(), line.size());
+                return line;
+            }
+        }
+
+        return {};
+    }
+
+    // ---------------------------------------------------------------------
+
+    std::string check_online_license::check_password() {
+        std::fstream license_file_stream(license_path, std::ios_base::in);
+
+        for (std::string line; std::getline(license_file_stream, line);) {
+            if (line.starts_with(appName_string)) {
+                line = line.substr(appName_string.size(), line.size());
+                return line;
+            }
+        }
+
+        return {};
     }
 
     // ---------------------------------------------------------------------

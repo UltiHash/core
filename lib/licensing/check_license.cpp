@@ -5,6 +5,7 @@
 #include "licensing/check_license.h"
 #include "util/exception.h"
 #include "logging/logging_boost.h"
+#include "io/temp_file.h"
 
 #include <fstream>
 #include <string>
@@ -15,10 +16,21 @@ namespace uh::licensing {
 
     // ---------------------------------------------------------------------
 
-    check_license::check_license(std::filesystem::path license_path, std::string appName, std::string appVersion,
-                                 std::string apiKey, std::string sharedKey, std::string productId) :
-            license_path(std::move(license_path)), appName(std::move(appName)), appVersion(std::move(appVersion)),
-            apiKey(std::move(apiKey)), sharedKey(std::move(sharedKey)), productId(std::move(productId)) {}
+    check_license::check_license(const std::filesystem::path &license_path, std::string apiKey,
+                                 std::string sharedKey, std::string productId, std::string appName,
+                                 std::string appVersion) :
+            license_path(license_path), appName(std::move(appName)), appVersion(std::move(appVersion)),
+            apiKey(std::move(apiKey)), sharedKey(std::move(sharedKey)), productId(std::move(productId))
+            {
+        if(std::filesystem::exists(license_path) and !std::filesystem::is_regular_file(license_path))
+            THROW(util::exception,"License path \""+license_path.string()+"\" was not a regular text file!");
+
+        if(this->appName.empty())
+            this->appName = check_app_name();
+
+        if(this->appVersion.empty())
+            this->appVersion = check_app_version();
+    }
 
     // ---------------------------------------------------------------------
 
@@ -131,12 +143,24 @@ namespace uh::licensing {
         if (std::filesystem::exists(out_license_path))
             THROW(util::exception, "A license already existed on path \"" + license_path.string() + "\" !");
 
-        io::file out_file(license_path,std::ios_base::out);
+        {
+            io::temp_file write_temp(license_path.parent_path());
 
-        out_file.write(std::string(appName_string) + app_name_input + "\n");
-        out_file.write(std::string(appVersion_string) + app_version_input + "\n");
-        out_file.write(std::string(role_string) + role_set_string + "\n");
-        out_file.write(std::string(license_type_string) + license_type_set_string + "\n");
+            write_temp.write(std::string(appName_string) + app_name_input + "\n");
+            write_temp.write(std::string(appVersion_string) + app_version_input + "\n");
+            write_temp.write(std::string(role_string) + role_set_string + "\n");
+            write_temp.write(std::string(license_type_string) + license_type_set_string + "\n");
+
+            if(std::filesystem::is_directory(license_path))
+                write_temp.release_to(license_path / (role_set_string + ".lic"));
+            else {
+                if(license_path.extension() != ".lic")
+                    license_path += ".lic";
+                write_temp.release_to(license_path);
+            }
+        }
+
+        io::file out_file(license_path,std::ios_base::app);
 
         return out_file;
     }

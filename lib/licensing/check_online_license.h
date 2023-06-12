@@ -15,15 +15,25 @@ namespace uh::licensing {
 
     public:
 
-        explicit check_online_license(std::filesystem::path license_folder, std::string appName, std::string appVersion,
-                                      std::string userName, std::string password, std::string apiKey,
+        explicit check_online_license(const std::filesystem::path &license_file, std::string apiKey,
                                       std::string sharedKey,
-                                      std::string productId);
+                                      std::string productId, std::string appName = "", std::string appVersion = "",
+                                      std::string userName = "", std::string password = "");
 
         bool valid() override;
 
+        void write_license(check_license::role licenseRole, check_license::license_type licenseType,
+                           const std::string& app_name_input, const std::string& app_version_input,
+                           const std::string& username_input, const std::string& password_input);
+
+        std::string check_user_name();
+
+        std::string check_password();
+
     private:
-        std::string userName, password;
+        std::string userName{}, password{};
+        const std::string_view user_name_string = "user_name: ";
+        const std::string_view password_string = "password: ";
     };
 
 } // namespace uh::licensing

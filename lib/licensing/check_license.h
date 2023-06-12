@@ -49,8 +49,9 @@ namespace uh::licensing{
          *
          * @param license_path is the path where a license file is stored
          */
-        explicit check_license(std::filesystem::path license_path, std::string appName, std::string appVersion,
-                               std::string apiKey, std::string sharedKey, std::string productId);
+        explicit check_license(const std::filesystem::path &license_path, std::string apiKey,
+                               std::string sharedKey, std::string productId, std::string appName = "",
+                               std::string appVersion = "");
 
         /**
          *
@@ -102,7 +103,7 @@ namespace uh::licensing{
          * sharedKey is 43 characters long
          * productId is 6 characters long
          */
-        const std::string appName, appVersion, apiKey, sharedKey, productId;
+        std::string appName, appVersion, apiKey, sharedKey, productId;
 
         static int licenseRegister(const std::shared_ptr<LicenseSpring::LicenseManager> &licenseManager,
                             const LicenseSpring::LicenseID& licenseId);
