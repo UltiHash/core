@@ -9,16 +9,14 @@
 
 #include <span>
 #include <boost/test/unit_test.hpp>
-#include <storage/backends/smart_backend/fixed_managed_storage.h>
+#include "storage/backends/smart_backend/storage_types/fixed_managed_storage.h"
 #include <storage/backend.h>
 #include <storage/backends/smart_backend/smart_config.h>
-#include <storage/backends/smart_backend/persisted_redblack_tree_set.h>
+#include "storage/backends/smart_backend/fragment_sets/persisted_redblack_tree_set.h"
 #include <storage/backends/smart_backend/smart_core.h>
 #include <storage/backends/smart_backend/persisted_robinhood_hashmap.h>
-#include <storage/backends/smart_backend/growing_managed_storage.h>
-#include <storage/backends/smart_backend/smart_storage.h>
-
-
+#include "storage/backends/smart_storage.h"
+#include "storage/backends/smart_backend/storage_types/growing_managed_storage.h"
 
 using namespace uh::dbn::storage::smart;
 
@@ -40,9 +38,8 @@ public:
                 std::filesystem::remove(fi);
             }
         }
-        const std::filesystem::path log_name = "log_d4774199341a3721872b";
-        if (exists(log_name)) {
-            std::filesystem::remove(log_name);
+        if (exists(m_smart_config.data_store_conf.log_file)) {
+            std::filesystem::remove(m_smart_config.data_store_conf.log_file);
         }
 
         if (exists(m_smart_config.set_conf.fragment_set_path)) {
@@ -52,9 +49,12 @@ public:
         if (exists(m_smart_config.map_conf.hashtable_key_path)) {
             std::filesystem::remove(m_smart_config.map_conf.hashtable_key_path);
         }
+        if (exists (m_smart_config.map_conf.value_store_log_file)) {
+            std::filesystem::remove(m_smart_config.map_conf.value_store_log_file);
+        }
 
         if (exists (m_smart_config.map_conf.hashtable_value_directory)) {
-            std::filesystem::remove_all(m_smart_config.map_conf.hashtable_value_directory);
+            std::filesystem::remove_all(std::filesystem::absolute(m_smart_config.map_conf.hashtable_value_directory));
         }
         std::filesystem::create_directory(m_smart_config.map_conf.hashtable_value_directory);
 
@@ -87,24 +87,27 @@ private:
         conf.map_maximum_extension_factor = 32;
         conf.map_load_factor = 0.9;
         conf.map_values_maximum_file_size = 16 * 1024;
-        conf.map_values_minimum_file_size = 1 * 1024;
+        conf.map_values_minimum_file_size = 4 * 1024;
         conf.map_key_file_init_size = 4 * 1024;
         conf.key_size = 128;
         conf.hashtable_value_directory = "growing_mmap_storage_directory";
         conf.hashtable_key_path = "hashmap_key_data";
+        conf.value_store_log_file = conf.hashtable_value_directory / "log";
         return conf;
     }
     static set_config define_test_set_conf () {
         set_config conf;
-        conf.set_minimum_free_space = 256;
-        conf.set_init_file_size = 1024;
+        conf.set_minimum_free_space = 512;
+        conf.set_init_file_size = 8*1024;
         conf.fragment_set_path = "set/set_data";
+        conf.max_empty_hole_size = 512;
         return conf;
     }
     static data_store_config define_test_data_store_conf () {
         data_store_config conf;
         conf.data_store_files = generate_files();
         conf.data_store_file_size = 32 * 1024;
+        conf.log_file = "ds/log";
         return conf;
     }
     dedupe_config define_test_dedupe_conf () {
@@ -203,11 +206,11 @@ BOOST_FIXTURE_TEST_CASE(test_mmap_storage_persistet_alloc_test, files_info_fixtu
 }
 
 
-uint64_t set_insert (fixed_managed_storage& ms, persisted_redblack_tree_set& set, std::string_view data, uint64_t hint = 2 * sizeof (uint64_t)) {
+uint64_t set_insert (fixed_managed_storage& ms, sets::persisted_redblack_tree_set& set, std::string_view data, uint64_t hint = 2 * sizeof (uint64_t)) {
     auto alloc = ms.allocate(data.size());
     std::memcpy(alloc.m_addr, data.data(), data.size());
-    const auto h = set.insert_index(data, alloc.m_offset, hint);
-    return h;
+    const auto h = set.insert_index(data, alloc.m_offset);
+    return h.hint;
 }
 
 BOOST_FIXTURE_TEST_CASE(basic_test_mmap_set, files_info_fixture)
@@ -215,7 +218,7 @@ BOOST_FIXTURE_TEST_CASE(basic_test_mmap_set, files_info_fixture)
     cleanup();
     fixed_managed_storage ms(get_data_store_config());
 
-    persisted_redblack_tree_set set {get_set_conf(), ms};
+    sets::persisted_redblack_tree_set set {get_set_conf(), ms};
 
     auto h = set_insert (ms, set, "hello from data 1");
     h = set_insert (ms, set, "data 2 hello from data 2", h);
@@ -407,6 +410,7 @@ BOOST_FIXTURE_TEST_CASE(basic_hashmap_test, files_info_fixture)
 
 BOOST_FIXTURE_TEST_CASE(basic_growing_mmap_storage_test, files_info_fixture)
 {
+
     cleanup();
     offset_ptr ptr1;
     offset_ptr ptr2;
@@ -414,7 +418,7 @@ BOOST_FIXTURE_TEST_CASE(basic_growing_mmap_storage_test, files_info_fixture)
     size_t size = 256;
 
     {
-        growing_managed_storage ms(get_map_conf().hashtable_value_directory, 4 * 1024, 8 * 1024);
+        growing_managed_storage ms(get_map_conf().hashtable_value_directory, get_map_conf().value_store_log_file, 4 * 1024, 8 * 1024);
 
         ptr1 = ms.allocate(size);
         std::memcpy(ptr1.m_addr, &data, size);
@@ -436,7 +440,7 @@ BOOST_FIXTURE_TEST_CASE(basic_growing_mmap_storage_test, files_info_fixture)
     const auto addr = mmap (align_ptr(ptr1.m_addr), 1024, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE | MAP_FIXED, -1, 0);
     BOOST_TEST(addr == align_ptr(ptr1.m_addr));
     {
-        growing_managed_storage ms(get_map_conf().hashtable_value_directory, 4 * 1024, 8 * 1024);
+        growing_managed_storage ms(get_map_conf().hashtable_value_directory, get_map_conf().value_store_log_file,  4 * 1024, 8 * 1024);
         ms.allocate(size);
         ms.allocate(size);
         ms.allocate(size);
@@ -452,9 +456,6 @@ BOOST_FIXTURE_TEST_CASE(basic_growing_mmap_storage_test, files_info_fixture)
         BOOST_TEST (ptr1.m_offset + size < ptr2.m_offset);
 
         void* raw_ptr = ms.get_raw_ptr(ptr1.m_offset);
-        std::cout.write(data, size);
-        std::cout << std::endl;
-        std::cout.write(static_cast <char *> (raw_ptr),size);
         BOOST_TEST (std::memcmp(&data, static_cast <char *> (raw_ptr), size) == 0);
 
         void* raw_ptr2 = ms.get_raw_ptr(ptr2.m_offset);
@@ -474,7 +475,6 @@ std::string serialize_spans (std::forward_list <std::span <char>> spans) {
 
 BOOST_FIXTURE_TEST_CASE(smart_core_basic_test, files_info_fixture) {
     cleanup();
-
 
     std::string k1 = "bba3f3c564f31d8664c5775fbe16580061693f1db21069b58fa448ecbbf397f2264ab1fb8f17f33edbdab52def96fd2b1124d04ba1764b554e0e7b49a24d5574";
     std::string v1 = "hello from data 1645";
@@ -497,6 +497,7 @@ BOOST_FIXTURE_TEST_CASE(smart_core_basic_test, files_info_fixture) {
     std::string k6 = "e7c22b994c59d9cf2b48e549b1e24666636045930d3da7c1acb299d1c3b7f931f94aae41edda2c2b207a36e10f8bcb8d45223e54878f5b316e7ce3b6bc019629";
     std::string v6 = "hello from data 2234";
     {
+
         smart_core sm(get_smart_config());
 
         const auto i1 = sm.integrate(k1, v1);
@@ -541,7 +542,9 @@ BOOST_FIXTURE_TEST_CASE(smart_core_basic_test, files_info_fixture) {
         const auto sr6 = serialize_spans(r6.second);
         BOOST_TEST (sr6.size() == v6.size());
         BOOST_TEST (std::memcmp (sr6.data(), v6.data(), v6.size()) == 0);
+
     }
+
     char* ptr = new char [10*1024*1024];
     {
         smart_core sm(get_smart_config());
@@ -570,6 +573,8 @@ BOOST_FIXTURE_TEST_CASE(smart_core_basic_test, files_info_fixture) {
         const auto sr6 = serialize_spans(r6.second);
         BOOST_TEST (sr6.size() == v6.size());
         BOOST_TEST (std::memcmp (sr6.data(), v6.data(), v6.size()) == 0);
+
     }
 
+    delete[] ptr;
 }
