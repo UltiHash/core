@@ -13,7 +13,11 @@
 #include <optional>
 
 
-#define HAPPEND_WHERE "(" << __FILE__ << ", " << __LINE__ << ", " << __FUNCTION__ << ") "
+#ifdef DEBUG
+# define HAPPEND_WHERE "(" << __FILE__ << ", " << __LINE__ << ", " << __FUNCTION__ << ") "
+#else
+# define HAPPEND_WHERE ""
+#endif
 
 #define TRACE BOOST_LOG_SEV(uh::log::lg, boost::log::trivial::trace) << HAPPEND_WHERE
 #define DEBUG BOOST_LOG_SEV(uh::log::lg, boost::log::trivial::debug) << HAPPEND_WHERE
