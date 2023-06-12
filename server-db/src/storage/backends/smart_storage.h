@@ -29,6 +29,8 @@ public:
 
     void start() override;
 
+    void stop() override;
+
     std::unique_ptr<io::data_generator> read_block(const std::span <char>& hash) override;
 
     std::pair <std::size_t, std::vector <char>> write_block (const std::span <char>& data) override;

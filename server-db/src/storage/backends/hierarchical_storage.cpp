@@ -11,7 +11,6 @@
 
 namespace uh::dbn::storage {
 
-
 hierarchical_storage::hierarchical_storage(
     const hierarchical_storage_config& config,
     uh::dbn::metrics::storage_metrics& storage_metrics,
@@ -39,6 +38,7 @@ hierarchical_storage::hierarchical_storage(
     update_space_consumption();
 }
 
+// ---------------------------------------------------------------------
 
 void hierarchical_storage::start() {
     INFO << "--- Storage backend initialized --- " << std::filesystem::absolute(this->m_root);
@@ -49,27 +49,46 @@ void hierarchical_storage::start() {
     INFO << "        space consumed : " << used_space();
 }
 
+// ---------------------------------------------------------------------
+
+void hierarchical_storage::stop() {
+    INFO << "stopping hierarchical_storage";
+    m_store.stop();
+}
+
+// ---------------------------------------------------------------------
+
 size_t hierarchical_storage::free_space() {
     return m_alloc - m_used;
 }
+
+// ---------------------------------------------------------------------
 
 size_t hierarchical_storage::used_space() {
     return m_used;
 }
 
+// ---------------------------------------------------------------------
+
 size_t hierarchical_storage::allocated_space() {
     return m_alloc;
 }
 
+// ---------------------------------------------------------------------
+
 std::string hierarchical_storage::backend_type() {
     return std::string(m_type);
 }
+
+// ---------------------------------------------------------------------
 
 void hierarchical_storage::update_space_consumption() {
     m_storage_metrics.alloc_space().Set(m_alloc);
     m_storage_metrics.free_space().Set(m_alloc - m_used);
     m_storage_metrics.used_space().Set(m_used);
 }
+
+// ---------------------------------------------------------------------
 
 std::unique_ptr<io::data_generator> hierarchical_storage::read_block(const std::span <char>& hash) {
     std::string hex = to_hex_string(hash.begin(), hash.end());
@@ -101,6 +120,8 @@ std::unique_ptr<io::data_generator> hierarchical_storage::read_block(const std::
     return std::make_unique<io::buffer_generator>(std::move(buffer));
 }
 
+// ---------------------------------------------------------------------
+
 std::filesystem::path hierarchical_storage::get_hash_path (const std::string_view &hash) const {
     auto file_path = m_root;
     for (unsigned int i = 0; i < m_levels; i++) {
@@ -113,11 +134,15 @@ std::filesystem::path hierarchical_storage::get_hash_path (const std::string_vie
     return file_path;
 }
 
+// ---------------------------------------------------------------------
+
 void hierarchical_storage::return_space(std::size_t size)
 {
     m_used -= size;
     update_space_consumption();
 }
+
+// ---------------------------------------------------------------------
 
 void hierarchical_storage::acquire_storage_size(std::size_t size) {
     while (true)
@@ -138,6 +163,8 @@ void hierarchical_storage::acquire_storage_size(std::size_t size) {
     update_space_consumption();
 }
 
+// ---------------------------------------------------------------------
+  
 std::pair <std::size_t, std::vector <char>> hierarchical_storage::write_block(const std::span<char> &data) {
     acquire_storage_size (data.size());
     auto m_tmp = m_store.temp_file(m_root);
@@ -161,4 +188,6 @@ std::pair <std::size_t, std::vector <char>> hierarchical_storage::write_block(co
 
 }
 
+// ---------------------------------------------------------------------
+  
 }

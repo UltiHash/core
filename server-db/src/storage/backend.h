@@ -14,6 +14,8 @@ namespace uh::dbn::storage {
 
         virtual void start() = 0;
 
+        virtual void stop() = 0;
+
         /**
          * Read a data block identified by it's hash from the storage.
          *

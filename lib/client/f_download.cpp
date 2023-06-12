@@ -60,7 +60,7 @@ void f_download::download_file(std::unique_ptr<uhv::f_meta_data>& f_meta_data)
         size_t aggregated_size = 0;
         size_t offset = 0;
 
-        // here we assume that each chunksize is smaller than MAXIMUM_DATA_SIZE
+        // here we assume that each chunk-size is smaller than MAXIMUM_DATA_SIZE
         for (size_t i = 0; i < f_meta_data->f_chunk_sizes().size(); ++i) {
             aggregated_size += f_meta_data->f_chunk_sizes()[i];
             if (aggregated_size > protocol::server::MAXIMUM_DATA_SIZE) {
