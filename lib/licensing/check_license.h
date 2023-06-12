@@ -50,7 +50,8 @@ namespace uh::licensing{
          * @param license_path is the path where a license file is stored
          */
         explicit check_license(std::filesystem::path license_path, check_license::license_type license_type,
-                               std::string apiKey, std::string sharedKey, std::string productId,
+                               std::string apiKey_encrypted, std::string sharedKey_encrypted,
+                               std::string productId_enrypted,
                                std::string appName = "",
                                std::string appVersion = "");
 
@@ -112,11 +113,11 @@ namespace uh::licensing{
         const std::string_view appVersion_string = "app_version: ";
 
         /**
-         * apiKey is 36 characters long
-         * sharedKey is 43 characters long
-         * productId is 6 characters long
+         * apiKey_crypt is 36 characters long
+         * sharedKey_crypt is 43 characters long
+         * productId_crypt is 6 characters long
          */
-        std::string appName, appVersion, apiKey, sharedKey, productId;
+        std::string appName, appVersion, apiKey_crypt, sharedKey_crypt, productId_crypt;
 
         const license_type licenseTypeInternal;
 

@@ -15,9 +15,10 @@ namespace uh::licensing {
 
     public:
 
-        explicit check_online_license(const std::filesystem::path &license_file, std::string apiKey,
-                                      std::string sharedKey,
-                                      std::string productId, std::string appName = "", std::string appVersion = "",
+        explicit check_online_license(const std::filesystem::path &license_file, std::string apiKey_encrypted,
+                                      std::string sharedKey_encrypted,
+                                      std::string productId_encrypted, std::string appName = "",
+                                      std::string appVersion = "",
                                       std::string userName = "", std::string password = "");
 
         bool valid() override;

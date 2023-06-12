@@ -8,6 +8,7 @@
 #include <LicenseSpring/EncryptString.h>
 #include <LicenseSpring/LicenseManager.h>
 #include <LicenseSpring/Exceptions.h>
+#include <LicenseSpring/LicenseFileStorage.h>
 
 #include <utility>
 
@@ -15,13 +16,13 @@ namespace uh::licensing {
 
     // ---------------------------------------------------------------------
 
-    check_airgap_license::check_airgap_license(const std::filesystem::path &license_file, std::string apiKey,
-                                               std::string sharedKey,
-                                               std::string productId, std::string appName, std::string appVersion) :
+    check_airgap_license::check_airgap_license(const std::filesystem::path &license_file, std::string apiKey_encrypted,
+                                               std::string sharedKey_encrypted,
+                                               std::string productId_encrypted, std::string appName, std::string appVersion) :
             check_license(license_file, license_type::AIRGAP_LICENSE_WITH_ONLINE_ACTIVATION,
-                          std::move(apiKey),
-                          std::move(sharedKey),
-                          std::move(productId), std::move(appName),
+                          std::move(apiKey_encrypted),
+                          std::move(sharedKey_encrypted),
+                          std::move(productId_encrypted), std::move(appName),
                           std::move(appVersion))
                           {
         if(this->keygen.empty())
@@ -36,10 +37,7 @@ namespace uh::licensing {
         LicenseSpring::ExtendedOptions options;
         options.collectNetworkInfo(true);
         options.enableLogging(true);
-
-        const std::string apiKey_crypt = LicenseSpring::Xor_string<36,char>(this->apiKey.c_str())._string;
-        const std::string sharedKey_crypt = LicenseSpring::Xor_string<43,char>(this->sharedKey.c_str())._string;
-        const std::string productId_crypt = LicenseSpring::Xor_string<6,char>(this->productId.c_str())._string;
+        options.enableVMDetection(false);
 
         std::shared_ptr<LicenseSpring::Configuration> pConfiguration = LicenseSpring::Configuration::Create(
                 apiKey_crypt, // your LicenseSpring API key (UUID)
@@ -68,7 +66,16 @@ namespace uh::licensing {
 
         auto licenseId = LicenseSpring::LicenseID::fromKey(license_key); //input license key
 
-        auto licenseManager = LicenseSpring::LicenseManager::create(pConfiguration);
+        std::filesystem::path spring_lic_path;
+        spring_lic_path.extension() = ".lic_spring";
+
+        /*
+        auto licenseFileStorage =
+                std::make_shared<LicenseSpring::FileStorageWithLock>(LicenseSpring::
+                FileStorageWithLock(spring_lic_path.wstring()));*/
+
+        auto licenseManager =
+                LicenseSpring::LicenseManager::create(pConfiguration);
 
         return licenseRegister(licenseManager, licenseId);
     }
