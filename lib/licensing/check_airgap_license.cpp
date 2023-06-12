@@ -35,6 +35,7 @@ namespace uh::licensing {
         //Collecting network info
         LicenseSpring::ExtendedOptions options;
         options.collectNetworkInfo(true);
+        options.enableLogging(true);
 
         const std::string apiKey_crypt = LicenseSpring::Xor_string<36,char>(this->apiKey.c_str())._string;
         const std::string sharedKey_crypt = LicenseSpring::Xor_string<43,char>(this->sharedKey.c_str())._string;
