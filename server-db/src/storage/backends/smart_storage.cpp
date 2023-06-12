@@ -111,6 +111,11 @@ void smart_storage::start() {
     INFO << "        space consumed : " << used_space();
 }
 
+void smart_storage::stop()
+{
+    INFO << "smart storage stopped";
+}
+
 void smart_storage::update_space_consumption() {
     m_storage_metrics.alloc_space().Set(m_size);
     m_storage_metrics.free_space().Set(m_size - m_used);

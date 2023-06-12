@@ -163,6 +163,13 @@ void compressed_file_store::compress(const std::filesystem::path& path)
 
 // ---------------------------------------------------------------------
 
+void compressed_file_store::stop()
+{
+    m_worker.stop();
+}
+
+// ---------------------------------------------------------------------
+
 void compressed_file_store::start(const std::filesystem::path& path)
 {
     std::lock_guard<std::mutex> lock(m_comp_mutex);

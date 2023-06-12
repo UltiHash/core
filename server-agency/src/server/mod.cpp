@@ -101,7 +101,7 @@ mod::~mod() = default;
 
 // ---------------------------------------------------------------------
 
-void mod::start()
+void mod::start() const
 {
     INFO << "           starting server";
     m_impl->server_wrapper.server_future = std::async(std::launch::async,
@@ -110,7 +110,7 @@ void mod::start()
 
 // ---------------------------------------------------------------------
 
-void mod::stop()
+void mod::stop() const
 {
     INFO << "            stopping server";
     m_impl->server_wrapper.stop();
