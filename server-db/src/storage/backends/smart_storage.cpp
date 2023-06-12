@@ -67,7 +67,7 @@ std::unique_ptr<io::data_generator> smart_storage::read_block (const std::span<c
     return std::make_unique <io::span_generator> (fragments_size_pair.first, std::move (fragments_size_pair.second));
 }
 
-std::pair <std::size_t, std::vector <char>> smart_storage::write_block (const std::span <char>& data) {
+std::pair <std::size_t, std::vector <char>> smart_storage::write_block (const std::span <const char>& data) {
     std::vector <char> sha (m_smart_conf.map_conf.key_size);
     unsigned int size;
     std::lock_guard <std::shared_mutex> lock (m_mutex);
