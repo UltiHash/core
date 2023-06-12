@@ -22,8 +22,10 @@ namespace uh::licensing{
 
     // ---------------------------------------------------------------------
 
-    license_package::license_package(const check_license::role license_role, const std::vector<feature> &features_input,
-                                     const std::filesystem::path &config)
+    license_package::license_package(check_license::role license_role,
+                                     const std::set<feature>& features_input,
+                                     const std::filesystem::path &config, const std::string& apiKey,
+                                     const std::string& sharedKey, const std::string& productId)
         {
         for(uint8_t feature_iterate = 0; feature_iterate < feature_count_global; feature_iterate++){
             features.emplace((feature)feature_iterate,
@@ -36,7 +38,8 @@ namespace uh::licensing{
             if(file_object.is_regular_file() && file_object.path().extension() == ".lic")
             {
                 auto tmp_license_type_read = check_license(file_object.path(),
-                                                           license_type::AIRGAP_LICENSE_WITH_ONLINE_ACTIVATION,
+                                                           check_license::license_type::
+                                                           AIRGAP_LICENSE_WITH_ONLINE_ACTIVATION,
                                                            std::string(), std::string(),
                                                            std::string(),
                                                            "INIT_APP", "0.0.0");
@@ -47,10 +50,10 @@ namespace uh::licensing{
 
                     case check_license::license_type::AIRGAP_LICENSE_WITH_ONLINE_ACTIVATION:
                     {
-                        auto* tmp_license_valid_airgap = new check_airgap_license(config, std::string(),
-                                                                                  std::string(), std::string(),
-                                                                                  std::string(),
-                                                                                  std::string());
+                        auto* tmp_license_valid_airgap = new check_airgap_license(config,
+                                                                                  apiKey,
+                                                                                  sharedKey,
+                                                                                  productId);
 
                         if(tmp_license_valid_airgap->valid())check_lic = tmp_license_valid_airgap;
                         else delete tmp_license_valid_airgap;
@@ -60,10 +63,10 @@ namespace uh::licensing{
 
                     case check_license::license_type::FLOATING_ONLINE_USER_LICENSE:
                     {
-                        auto* tmp_license_valid_online = new check_airgap_license(config, std::string(),
-                                                                                  std::string(), std::string(),
-                                                                                  std::string(),
-                                                                                  std::string());
+                        auto* tmp_license_valid_online = new check_airgap_license(config,
+                                                                                  apiKey,
+                                                                                  sharedKey,
+                                                                                  productId);
 
                         if(tmp_license_valid_online->valid())check_lic = tmp_license_valid_online;
                         else delete tmp_license_valid_online;
@@ -111,7 +114,7 @@ namespace uh::licensing{
 
     // ---------------------------------------------------------------------
 
-    bool license_package::hard_limit_allocate(license_package::metered_feature hmf, std::size_t alloc) {
+    bool license_package::hard_limit_allocate(license_package::hard_metered_feature hmf, std::size_t alloc) {
         if(!hard_metered_features.contains(hmf))
             return true;
 
@@ -121,7 +124,7 @@ namespace uh::licensing{
     // ---------------------------------------------------------------------
 
     bool license_package::soft_limit_allocate(license_package::soft_metered_feature smf, std::size_t alloc) {
-        if(!hard_metered_features.contains(static_cast<const metered_feature>(smf)))
+        if(!hard_metered_features.contains(static_cast<const hard_metered_feature>(smf)))
             return true;
 
         return soft_metered_features.at(smf)->soft_limit_allocate(alloc);
@@ -129,7 +132,7 @@ namespace uh::licensing{
 
     // ---------------------------------------------------------------------
 
-    void license_package::deallocate(license_package::metered_feature hmf, std::size_t dealloc) {
+    void license_package::deallocate(license_package::hard_metered_feature hmf, std::size_t dealloc) {
         if(soft_metered_features.contains(static_cast<const soft_metered_feature>(hmf))){
             soft_metered_features.at(static_cast<const soft_metered_feature>(hmf))->deallocate(dealloc);
         }
@@ -152,7 +155,7 @@ namespace uh::licensing{
 
     // ---------------------------------------------------------------------
 
-    void license_package::add_hard_metred_feature(license_package::metered_feature mf, metred_resource *mr) {
+    void license_package::add_hard_metred_feature(license_package::hard_metered_feature mf, metred_resource *mr) {
         hard_metered_features.emplace(mf, mr);
     }
 

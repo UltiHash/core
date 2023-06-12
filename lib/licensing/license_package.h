@@ -12,15 +12,13 @@
 #include "util/exception.h"
 
 #include <map>
-#include <vector>
+#include <set>
 #include <filesystem>
 #include <algorithm>
 
 namespace uh::licensing {
 
     class license_package {
-
-        ~license_package();
 
     public:
 
@@ -40,18 +38,22 @@ namespace uh::licensing {
          * @param config license file input
          * @throws if license is invalid or cannot be loaded
          */
-        explicit license_package(check_license::role license_role, const std::vector<feature>& features_input = {},
-                                 const std::filesystem::path& config = std::filesystem::current_path().parent_path());
+        explicit license_package(check_license::role license_role,
+                                 const std::set<feature>& features_input,
+                                 const std::filesystem::path &config, const std::string& apiKey,
+                                 const std::string& sharedKey, const std::string& productId);
 
         /**
          *
-         * Check if `metered_feature is set in the configured license.
+         * Check if `hard_metered_feature is set in the configured license.
          * Limit the resource capacity to the value set by license.
          * Warn if resource boundary is close to be hit.
          * @throw if resource boundary will be exceeded by resource allocation
          */
-        enum class metered_feature: unsigned char{
-            LIMIT_CPU_COUNT = 0
+        enum class hard_metered_feature: unsigned char{
+            LIMIT_CPU_COUNT = 0,
+            LIMIT_STORAGE_CAPACITY = 1,
+            LIMIT_NETWORK_CONNECTIONS = 2
         };
 
         /**
@@ -94,7 +96,7 @@ namespace uh::licensing {
          * @param alloc some resource
          * @return if allocation was successful and metered counter updated --> valid operation
          */
-        bool hard_limit_allocate(metered_feature hmf, std::size_t alloc);
+        bool hard_limit_allocate(hard_metered_feature hmf, std::size_t alloc);
 
         /**
          * first try soft limit allocate, if successful, hard limit allocate will also be set
@@ -111,7 +113,7 @@ namespace uh::licensing {
          * @param hmf hard metred feature to be deallocated
          * @param dealloc resources to be registered deallocated
          */
-        void deallocate(metered_feature hmf, std::size_t dealloc);
+        void deallocate(hard_metered_feature hmf, std::size_t dealloc);
 
         /**
          *
@@ -119,14 +121,14 @@ namespace uh::licensing {
          */
         [[nodiscard]] bool valid();
 
-    protected:
+        ~license_package();
 
         /**
          *
          * @param mf metered feature to be registered
          * @param mr metered resource class to be checked repeatedly
          */
-        void add_hard_metred_feature(metered_feature mf,metred_resource* mr);
+        void add_hard_metred_feature(hard_metered_feature mf, metred_resource* mr);
 
         /**
          *
@@ -138,7 +140,7 @@ namespace uh::licensing {
     private:
 
         std::map<feature,bool> features;
-        std::map<metered_feature, metred_resource*> hard_metered_features;
+        std::map<hard_metered_feature, metred_resource*> hard_metered_features;
         std::map<soft_metered_feature, soft_metred_resource*> soft_metered_features;
 
         check_license* check_lic{};

@@ -9,6 +9,8 @@
 
 #include <licensing/check_airgap_license.h>
 #include <licensing/check_online_license.h>
+#include <licensing/license_package.h>
+#include <licensing/soft_metred_storage_resource.h>
 #include <io/temp_file.h>
 
 
@@ -93,11 +95,67 @@ namespace {
 
 // ---------------------------------------------------------------------
 
-    BOOST_FIXTURE_TEST_CASE_TEMPLATE(valid_default, T, license_types, Fixture)
+    BOOST_FIXTURE_TEST_CASE_TEMPLATE(valid_default_license, T, license_types, Fixture)
     {
         auto lic = make_test_license<T>();
 
         BOOST_CHECK(lic->valid());
+        std::filesystem::remove(license_path);
+    }
+
+// ---------------------------------------------------------------------
+
+    BOOST_AUTO_TEST_CASE(license_package_test)
+    {
+        {
+            check_online_license tmp_write_online(TEMP_DIR, apiKey_test,
+                                                  sharedKey_test, product_Id_test);
+            tmp_write_online.write_license(check_license::role::AGENCY_NODE, appName_test,
+                                           appVersion_test, user_name_test,
+                                           password_test);
+            license_path = tmp_write_online.getLicensePath();
+        }
+
+        license_package lp(check_license::role::AGENCY_NODE,
+                           std::set<license_package::feature>{license_package::feature::DEDUPLICATION,
+                                                              license_package::feature::METRICS},
+                           license_path,
+                           apiKey_test,
+                           sharedKey_test,
+                           product_Id_test);
+
+        BOOST_REQUIRE_THROW(lp.add_soft_metred_feature(license_package::soft_metered_feature::LIMIT_STORAGE_CAPACITY,
+                                   new soft_metred_storage_resource(50,100)),std::exception);
+
+        lp.add_soft_metred_feature(license_package::soft_metered_feature::LIMIT_STORAGE_CAPACITY,
+                                   new soft_metred_storage_resource(100,50));
+
+        BOOST_REQUIRE_THROW(lp.check_role_enabled(check_license::role::DATA_NODE),std::exception);
+        BOOST_REQUIRE_THROW(lp.check_role_enabled(check_license::role::THROW_ROLE),std::exception);
+
+        lp.check_role_enabled(check_license::role::AGENCY_NODE);
+
+        BOOST_REQUIRE_THROW(lp.check_license_enabled(check_license::license_type::
+        AIRGAP_LICENSE_WITH_ONLINE_ACTIVATION),std::exception);
+        BOOST_REQUIRE_THROW(lp.check_license_enabled(check_license::license_type::
+        THROW_LICENSE_TYPE),std::exception);
+
+        lp.check_license_enabled(check_license::license_type::FLOATING_ONLINE_USER_LICENSE);
+
+        BOOST_CHECK(lp.valid());
+
+        BOOST_CHECK(lp.soft_limit_allocate(license_package::soft_metered_feature::LIMIT_STORAGE_CAPACITY,25));
+        BOOST_CHECK(lp.soft_limit_allocate(license_package::soft_metered_feature::LIMIT_STORAGE_CAPACITY,75));
+
+        BOOST_REQUIRE_THROW(lp.soft_limit_allocate(license_package::soft_metered_feature::LIMIT_NETWORK_CONNECTIONS,1),
+                            std::exception);
+
+        BOOST_REQUIRE_THROW(lp.soft_limit_allocate(license_package::soft_metered_feature::LIMIT_STORAGE_CAPACITY,1),
+                            std::exception);
+
+        BOOST_CHECK_NO_THROW(lp.deallocate(static_cast<license_package::hard_metered_feature>
+        (license_package::hard_metered_feature::LIMIT_STORAGE_CAPACITY), 100));
+
         std::filesystem::remove(license_path);
     }
 

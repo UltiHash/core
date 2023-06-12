@@ -7,16 +7,22 @@
 
 #include <cstdio>
 #include "licensing/soft_metred_resource.h"
+#include "util/exception.h"
 
 namespace uh::licensing {
 
     class soft_metred_storage_resource: public soft_metred_resource{
 
+    public:
         /*
          * set up metred limits to check on the licensing model
          */
         soft_metred_storage_resource(std::size_t hard_limit, std::size_t soft_limit):
-        hard_limit_val(hard_limit), soft_limit_val(soft_limit){}
+        hard_limit_val(hard_limit), soft_limit_val(soft_limit){
+            if(hard_limit < soft_limit)
+                THROW(util::exception,"The hard limit of a soft limited storage resource was smaller than it's soft"
+                                      "limit!");
+        }
 
         /**
          * check if the resource should be blocked when trying to allocate an amount of space
