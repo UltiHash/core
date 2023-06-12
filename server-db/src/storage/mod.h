@@ -20,7 +20,6 @@ namespace uh::dbn::storage
 enum class BackendTypeEnum {DumpStorage, HierarchicalStorage, SmartStorage, OtherStorage};
 
 static std::unordered_map<std::string, BackendTypeEnum> string2backendtype = {
-  {"DumpStorage", BackendTypeEnum::DumpStorage},
   {"HierarchicalStorage", BackendTypeEnum::HierarchicalStorage},
   {"SmartStorage", BackendTypeEnum::SmartStorage},
   {"OtherStorage", BackendTypeEnum::OtherStorage}

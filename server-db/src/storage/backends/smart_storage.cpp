@@ -5,45 +5,54 @@
 
 namespace uh::dbn::storage::smart {
 
-smart_config make_smart_config (const std::filesystem::path& root, size_t size, size_t max_file_size) {
+smart_config make_smart_config(const std::filesystem::path &root, size_t size, size_t max_file_size) {
+
+    constexpr unsigned long GB = 1024ul * 1024ul * 1024ul;
 
     const std::filesystem::path data_store_directory = root / "data_store";
     const std::filesystem::path set_directory = root / "set";
     const std::filesystem::path hash_table_directory = root / "hash_table";
 
-    // here we assume that size % max_file_size == 0, otherwise
-    // we are creating larger files than the given size
     data_store_config ds_conf;
-    ds_conf.data_store_file_size = 4ul * 1024ul * 1024ul * 1024ul;
+    ds_conf.data_store_file_size = 4ul * GB;
+    ds_conf.log_file = data_store_directory / "log_file";
     size_t offset = 0;
-    while (offset < 20ul * 1024ul * 1024ul * 1024ul) {
+    while (offset < 20ul * GB) {
         const std::filesystem::path data_store_file = "data_" + std::to_string(offset);
-        ds_conf.data_store_files.emplace_front (root / data_store_directory / data_store_file);
-        offset += 1ul * 1024ul * 1024ul * 1024ul;
+        ds_conf.data_store_files.emplace_front (data_store_directory / data_store_file);
+        offset += ds_conf.data_store_file_size;
     }
 
     dedupe_config dd_conf {};
-    dd_conf.min_fragment_size = 2*1024;
+    dd_conf.min_fragment_size = 2 * 1024;
 
     set_config set_conf;
-    set_conf.set_init_file_size = 2ul * 1024ul * 1024ul * 1024ul;
-    set_conf.set_minimum_free_space = 20ul * 1024ul * 1024ul;
+    set_conf.set_init_file_size = 2ul * GB;
+    set_conf.max_empty_hole_size = 1ul * GB;
+    set_conf.set_minimum_free_space = GB;
+
     set_conf.fragment_set_path = set_directory / "fragment_set";
 
-    map_config map_conf;
+    smart::map_config map_conf;
     map_conf.key_size = 64;
-    map_conf.map_key_file_init_size = 4ul * 1024ul * 1024ul * 1024ul;
-    map_conf.map_values_minimum_file_size = 4ul * 1024ul * 1024ul * 1024ul;
-    map_conf.map_values_maximum_file_size = 8ul * 1024ul * 1024ul * 1024ul;
+    map_conf.map_key_file_init_size = 4ul * GB;
+    map_conf.map_values_minimum_file_size = 4ul * GB;
+    map_conf.map_values_maximum_file_size = 8ul * GB;
     map_conf.map_load_factor = 0.9;
     map_conf.map_maximum_extension_factor = 32;
     map_conf.hashtable_key_path = hash_table_directory / "key_file";
     map_conf.hashtable_value_directory = hash_table_directory / "values";
+    map_conf.value_store_log_file = map_conf.hashtable_value_directory / "log";
 
     return {map_conf, set_conf, ds_conf, dd_conf};
 }
+} // end namespace uh::dbn::storage::smart
 
-smart_storage::smart_storage(const smart_config &smart_conf, uh::dbn::metrics::storage_metrics& storage_metrics) :
+
+
+namespace uh::dbn::storage {
+
+smart_storage::smart_storage(const smart::smart_config &smart_conf, uh::dbn::metrics::storage_metrics& storage_metrics) :
         m_smart_conf (smart_conf),
         m_smart_core (smart_conf),
         m_size (smart_conf.data_store_conf.data_store_file_size * smart_conf.data_store_conf.data_store_files.size()),
@@ -58,7 +67,7 @@ std::unique_ptr<io::data_generator> smart_storage::read_block (const std::span<c
     return std::make_unique <io::span_generator> (fragments_size_pair.first, std::move (fragments_size_pair.second));
 }
 
-std::pair <std::size_t, std::vector <char>> smart_storage::write_block (const std::span <const char>& data) {
+std::pair <std::size_t, std::vector <char>> smart_storage::write_block (const std::span <char>& data) {
     std::vector <char> sha (m_smart_conf.map_conf.key_size);
     unsigned int size;
     std::lock_guard <std::shared_mutex> lock (m_mutex);
@@ -93,16 +102,18 @@ std::string smart_storage::backend_type() {
     return std::string (m_type);
 }
 
-void smart_storage::start() {}
-
-void smart_storage::stop() {}
-
-std::unique_ptr<uh::protocol::allocation> smart_storage::allocate(std::size_t size) {
-    throw std::logic_error ("smart_storage does not support pre allocation");
+void smart_storage::start() {
+    INFO << "--- Storage backend initialized --- " << std::filesystem::absolute(m_smart_conf.data_store_conf.data_store_files.front().parent_path());
+    INFO << "        backend type   : " << backend_type();
+    INFO << "        root directory : " << std::filesystem::absolute(m_smart_conf.data_store_conf.data_store_files.front().parent_path());
+    INFO << "        space allocated: " << allocated_space();
+    INFO << "        space available: " << free_space();
+    INFO << "        space consumed : " << used_space();
 }
 
-std::unique_ptr<uh::protocol::allocation> smart_storage::allocate_multi(std::size_t size) {
-    throw std::logic_error ("smart_storage does not support pre allocation");
+void smart_storage::stop()
+{
+    INFO << "smart storage stopped";
 }
 
 void smart_storage::update_space_consumption() {
@@ -112,4 +123,4 @@ void smart_storage::update_space_consumption() {
 }
 
 
-} // end namespace uh::dbn::storage::smart
+} // end namespace uh::dbn::storage

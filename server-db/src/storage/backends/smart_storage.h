@@ -7,22 +7,25 @@
 
 #include <vector>
 
-#include "smart_config.h"
-#include "smart_core.h"
-#include <storage/backend.h>
-#include <io/span_generator.h>
+#include "storage/backends/smart_backend/smart_config.h"
+#include "storage/backends/smart_backend/smart_core.h"
+#include "storage/backend.h"
+#include "io/span_generator.h"
 #include <openssl/evp.h>
 #include <openssl/sha.h>
 
-namespace uh::dbn::storage::smart {
 
-smart_config make_smart_config (const std::filesystem::path& root, size_t size, size_t max_file_size);
+namespace uh::dbn::storage::smart {
+    smart_config make_smart_config (const std::filesystem::path& root, size_t size, size_t max_file_size);
+} // end namespace uh::dbn::storage::smart
+
+namespace uh::dbn::storage {
 
 class smart_storage : public uh::dbn::storage::backend {
 
 public:
 
-    explicit smart_storage (const smart_config& smart_conf, uh::dbn::metrics::storage_metrics& storage_metrics);
+    explicit smart_storage (const smart::smart_config& smart_conf, uh::dbn::metrics::storage_metrics& storage_metrics);
 
     void start() override;
 
@@ -40,16 +43,12 @@ public:
 
     std::string backend_type() override;
 
-    std::unique_ptr<uh::protocol::allocation> allocate (std::size_t size) override;
-
-    std::unique_ptr<uh::protocol::allocation> allocate_multi (std::size_t size) override;
-
 private:
 
     void update_space_consumption();
 
-    const smart_config m_smart_conf;
-    smart_core m_smart_core;
+    const smart::smart_config m_smart_conf;
+    smart::smart_core m_smart_core;
     const std::size_t m_size;
     std::atomic <std::size_t> m_used;
     constexpr static std::string_view m_type = "SmartStorage";
@@ -58,5 +57,5 @@ private:
     uh::dbn::metrics::storage_metrics& m_storage_metrics;
 
 };
-} // end namespace uh::dbn::storage::smart
+} // end namespace uh::dbn::storage
 #endif //CORE_SMART_STORAGE_H
