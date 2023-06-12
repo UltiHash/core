@@ -34,7 +34,7 @@ namespace uh::licensing {
 
     check_license::role check_license::check_role()
     {
-        if(std::filesystem::exists(license_path) || std::filesystem::is_directory(license_path))
+        if(!std::filesystem::exists(license_path) || std::filesystem::is_directory(license_path))
             return {};
 
         std::fstream license_file_stream(license_path, std::ios_base::in);
@@ -58,7 +58,7 @@ namespace uh::licensing {
 
     check_license::license_type check_license::check_license_type()
     {
-        if(std::filesystem::exists(license_path) || std::filesystem::is_directory(license_path))
+        if(!std::filesystem::exists(license_path) || std::filesystem::is_directory(license_path))
             return {};
 
         std::fstream license_file_stream(license_path, std::ios_base::in);
@@ -82,7 +82,7 @@ namespace uh::licensing {
 
     std::string check_license::check_app_name()
     {
-        if(std::filesystem::exists(license_path) || std::filesystem::is_directory(license_path))
+        if(!std::filesystem::exists(license_path) || std::filesystem::is_directory(license_path))
             return {};
 
         std::fstream license_file_stream(license_path, std::ios_base::in);
@@ -101,7 +101,7 @@ namespace uh::licensing {
 
     std::string check_license::check_app_version()
     {
-        if(std::filesystem::exists(license_path) || std::filesystem::is_directory(license_path))
+        if(!std::filesystem::exists(license_path) || std::filesystem::is_directory(license_path))
             return {};
 
         std::fstream license_file_stream(license_path, std::ios_base::in);
@@ -157,15 +157,21 @@ namespace uh::licensing {
             THROW(util::exception, "A license already existed on path \"" + license_path.string() + "\" !");
 
         {
-            io::temp_file write_temp(license_path.parent_path());
+            std::filesystem::path write_tmp_path = license_path;
+            if(write_tmp_path.extension() == ".lic")
+                write_tmp_path = write_tmp_path.parent_path();
+            io::temp_file write_temp(write_tmp_path);
 
             write_temp.write(std::string(appName_string) + app_name_input + "\n");
             write_temp.write(std::string(appVersion_string) + app_version_input + "\n");
             write_temp.write(std::string(role_string) + role_set_string + "\n");
             write_temp.write(std::string(license_type_string) + license_type_set_string + "\n");
 
-            if(std::filesystem::is_directory(license_path))
-                write_temp.release_to(license_path / (role_set_string + ".lic"));
+            if(std::filesystem::is_directory(license_path)){
+                license_path = license_path / (role_set_string + ".lic");
+                write_temp.release_to(license_path);
+            }
+
             else {
                 if(license_path.extension() != ".lic")
                     license_path += ".lic";

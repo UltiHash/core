@@ -86,7 +86,7 @@ namespace uh::licensing {
 
     std::string check_airgap_license::check_keygen()
     {
-        if(std::filesystem::exists(license_path) || std::filesystem::is_directory(license_path))
+        if(!std::filesystem::exists(license_path) || std::filesystem::is_directory(license_path))
             return {};
 
         std::fstream license_file_stream(license_path, std::ios_base::in);

@@ -56,19 +56,19 @@ namespace {
 
 // ---------------------------------------------------------------------
 
-    std::filesystem::path license_path;
-
     template<>
-    std::unique_ptr<check_airgap_license> make_test_license<check_airgap_license>() {
+    std::unique_ptr<check_airgap_license> make_test_license<check_airgap_license>()
+            {
+        std::filesystem::path license_path1;
         {
             check_airgap_license tmp_write_airgap(TEMP_DIR, apiKey_test,
                                                   sharedKey_test, product_Id_test);
             tmp_write_airgap.write_license(check_license::role::AGENCY_NODE, appName_test,
                                            appVersion_test, licenseKey_100);
-            license_path = tmp_write_airgap.getLicensePath();
+            license_path1 = tmp_write_airgap.getLicensePath();
         }
 
-        return std::make_unique<check_airgap_license>(license_path,
+        return std::make_unique<check_airgap_license>(license_path1,
                                                       apiKey_test,
                                                       sharedKey_test,
                                                       product_Id_test);
@@ -77,17 +77,19 @@ namespace {
 // ---------------------------------------------------------------------
 
     template<>
-    std::unique_ptr<check_online_license> make_test_license<check_online_license>() {
+    std::unique_ptr<check_online_license> make_test_license<check_online_license>()
+            {
+        std::filesystem::path license_path1;
         {
             check_online_license tmp_write_online(TEMP_DIR, apiKey_test,
                                                   sharedKey_test, product_Id_test);
             tmp_write_online.write_license(check_license::role::AGENCY_NODE, appName_test,
                                            appVersion_test, user_name_test,
                                            password_test);
-            license_path = tmp_write_online.getLicensePath();
+            license_path1 = tmp_write_online.getLicensePath();
         }
 
-        return std::make_unique<check_online_license>(license_path,
+        return std::make_unique<check_online_license>(license_path1,
                                                       apiKey_test,
                                                       sharedKey_test,
                                                       product_Id_test);
@@ -100,26 +102,27 @@ namespace {
         auto lic = make_test_license<T>();
 
         BOOST_CHECK(lic->valid());
-        std::filesystem::remove(license_path);
+        std::filesystem::remove("/tmp/agency_node.lic");
     }
 
 // ---------------------------------------------------------------------
 
     BOOST_AUTO_TEST_CASE(license_package_test)
     {
+        std::filesystem::path license_path1;
         {
             check_online_license tmp_write_online(TEMP_DIR, apiKey_test,
                                                   sharedKey_test, product_Id_test);
             tmp_write_online.write_license(check_license::role::AGENCY_NODE, appName_test,
                                            appVersion_test, user_name_test,
                                            password_test);
-            license_path = tmp_write_online.getLicensePath();
+            license_path1 = tmp_write_online.getLicensePath();
         }
 
         license_package lp(check_license::role::AGENCY_NODE,
                            std::set<license_package::feature>{license_package::feature::DEDUPLICATION,
                                                               license_package::feature::METRICS},
-                           license_path,
+                           license_path1,
                            apiKey_test,
                            sharedKey_test,
                            product_Id_test);
@@ -156,7 +159,7 @@ namespace {
         BOOST_CHECK_NO_THROW(lp.deallocate(static_cast<license_package::hard_metered_feature>
         (license_package::hard_metered_feature::LIMIT_STORAGE_CAPACITY), 100));
 
-        std::filesystem::remove(license_path);
+        std::filesystem::remove("/tmp/agency_node.lic");
     }
 
 // ---------------------------------------------------------------------
