@@ -73,10 +73,10 @@ void my_formatter(logging::record_view const& rec, logging::formatting_ostream& 
 
     strm << "Process/Thread(" ;
     auto process_formatter = expr::stream << boost::phoenix::bind(&get_native_process_id, process_id_type::or_none());
-    process_formatter(rec,strm);
+    process_formatter(rec, strm);
     strm << "/";
     auto thread_formatter = expr::stream << boost::phoenix::bind(&get_native_thread_id, thread_id_type::or_none());
-    thread_formatter(rec,strm);
+    thread_formatter(rec, strm);
     strm << "): ";
 
     strm << rec[expr::smessage];
