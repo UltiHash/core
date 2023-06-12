@@ -16,10 +16,11 @@ namespace uh::licensing {
 
     // ---------------------------------------------------------------------
 
-    check_license::check_license(const std::filesystem::path &license_path, std::string apiKey,
-                                 std::string sharedKey, std::string productId, std::string appName,
+    check_license::check_license(const std::filesystem::path &license_path, check_license::license_type license_type,
+                                 std::string apiKey, std::string sharedKey, std::string productId, std::string appName,
                                  std::string appVersion) :
-            license_path(license_path), appName(std::move(appName)), appVersion(std::move(appVersion)),
+            license_path(license_path), licenseTypeInternal(license_type),
+            appName(std::move(appName)), appVersion(std::move(appVersion)),
             apiKey(std::move(apiKey)), sharedKey(std::move(sharedKey)), productId(std::move(productId))
             {
         if(std::filesystem::exists(license_path) and !std::filesystem::is_regular_file(license_path))
@@ -34,7 +35,11 @@ namespace uh::licensing {
 
     // ---------------------------------------------------------------------
 
-    check_license::role check_license::check_role() {
+    check_license::role check_license::check_role()
+    {
+        if(std::filesystem::exists(license_path) || std::filesystem::is_directory(license_path))
+            return {};
+
         std::fstream license_file_stream(license_path, std::ios_base::in);
 
         for (std::string line; std::getline(license_file_stream, line);) {
@@ -54,7 +59,11 @@ namespace uh::licensing {
 
     // ---------------------------------------------------------------------
 
-    check_license::license_type check_license::check_license_type() {
+    check_license::license_type check_license::check_license_type()
+    {
+        if(std::filesystem::exists(license_path) || std::filesystem::is_directory(license_path))
+            return {};
+
         std::fstream license_file_stream(license_path, std::ios_base::in);
 
         for (std::string line; std::getline(license_file_stream, line);) {
@@ -74,7 +83,11 @@ namespace uh::licensing {
 
     // ---------------------------------------------------------------------
 
-    std::string check_license::check_app_name() {
+    std::string check_license::check_app_name()
+    {
+        if(std::filesystem::exists(license_path) || std::filesystem::is_directory(license_path))
+            return {};
+
         std::fstream license_file_stream(license_path, std::ios_base::in);
 
         for (std::string line; std::getline(license_file_stream, line);) {
@@ -89,7 +102,11 @@ namespace uh::licensing {
 
     // ---------------------------------------------------------------------
 
-    std::string check_license::check_app_version() {
+    std::string check_license::check_app_version()
+    {
+        if(std::filesystem::exists(license_path) || std::filesystem::is_directory(license_path))
+            return {};
+
         std::fstream license_file_stream(license_path, std::ios_base::in);
 
         for (std::string line; std::getline(license_file_stream, line);) {
@@ -110,9 +127,8 @@ namespace uh::licensing {
 
     // ---------------------------------------------------------------------
 
-    io::file check_license::write_license_file(
-            check_license::role licenseRole, check_license::license_type licenseType,
-            const std::string& app_name_input, const std::string& app_version_input)
+    io::file check_license::write_license_file(check_license::role licenseRole, const std::string &app_name_input,
+                                               const std::string &app_version_input)
             {
         std::string role_set_string, license_type_set_string;
 
@@ -127,7 +143,7 @@ namespace uh::licensing {
                 THROW(util::exception, "No license role detected!");
         }
 
-        switch (licenseType) {
+        switch (licenseTypeInternal) {
             case license_type::AIRGAP_LICENSE_WITH_ONLINE_ACTIVATION:
                 license_type_set_string = "airgap_license_with_online_activation";
                 break;
@@ -349,6 +365,18 @@ namespace uh::licensing {
         }
 
         return license_valid;
+    }
+
+    // ---------------------------------------------------------------------
+
+    bool check_license::is_written() {
+        return std::filesystem::exists(license_path) and std::filesystem::is_regular_file(license_path);
+    }
+
+    // ---------------------------------------------------------------------
+
+    const std::filesystem::path &check_license::getLicensePath() const {
+        return license_path;
     }
 
     // ---------------------------------------------------------------------

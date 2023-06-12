@@ -35,7 +35,9 @@ namespace uh::licensing{
         {
             if(file_object.is_regular_file() && file_object.path().extension() == ".lic")
             {
-                auto tmp_license_type_read = check_license(file_object.path(), std::string(), std::string(),
+                auto tmp_license_type_read = check_license(file_object.path(),
+                                                           license_type::AIRGAP_LICENSE_WITH_ONLINE_ACTIVATION,
+                                                           std::string(), std::string(),
                                                            std::string(),
                                                            "INIT_APP", "0.0.0");
 

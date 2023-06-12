@@ -22,9 +22,9 @@ namespace uh::licensing {
 
         bool valid() override;
 
-        void write_license(check_license::role licenseRole, check_license::license_type licenseType,
-                           const std::string& app_name_input, const std::string& app_version_input,
-                           const std::string& username_input, const std::string& password_input);
+        void write_license(check_license::role licenseRole, const std::string &app_name_input,
+                           const std::string &app_version_input,
+                           const std::string &username_input, const std::string &password_input);
 
         std::string check_user_name();
 

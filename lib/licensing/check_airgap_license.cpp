@@ -18,7 +18,9 @@ namespace uh::licensing {
     check_airgap_license::check_airgap_license(const std::filesystem::path &license_file, std::string apiKey,
                                                std::string sharedKey,
                                                std::string productId, std::string appName, std::string appVersion) :
-            check_license(license_file, std::move(apiKey), std::move(sharedKey),
+            check_license(license_file, license_type::AIRGAP_LICENSE_WITH_ONLINE_ACTIVATION,
+                          std::move(apiKey),
+                          std::move(sharedKey),
                           std::move(productId), std::move(appName),
                           std::move(appVersion))
                           {
@@ -72,17 +74,21 @@ namespace uh::licensing {
 
     // ---------------------------------------------------------------------
 
-    void check_airgap_license::write_license(check_license::role licenseRole, check_license::license_type licenseType,
-                                             const std::string &app_name_input, const std::string &app_version_input,
+    void check_airgap_license::write_license(check_license::role licenseRole, const std::string &app_name_input,
+                                             const std::string &app_version_input,
                                              const std::string &license_key_input)
                                              {
-        auto out_file = write_license_file(licenseRole,licenseType,app_name_input,app_version_input);
+        auto out_file = write_license_file(licenseRole, app_name_input, app_version_input);
         out_file.write(std::string(keygen_string) + license_key_input + "\n");
     }
 
     // ---------------------------------------------------------------------
 
-    std::string check_airgap_license::check_keygen() {
+    std::string check_airgap_license::check_keygen()
+    {
+        if(std::filesystem::exists(license_path) || std::filesystem::is_directory(license_path))
+            return {};
+
         std::fstream license_file_stream(license_path, std::ios_base::in);
 
         for (std::string line; std::getline(license_file_stream, line);) {

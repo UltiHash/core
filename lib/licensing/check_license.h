@@ -49,8 +49,9 @@ namespace uh::licensing{
          *
          * @param license_path is the path where a license file is stored
          */
-        explicit check_license(const std::filesystem::path &license_path, std::string apiKey,
-                               std::string sharedKey, std::string productId, std::string appName = "",
+        explicit check_license(const std::filesystem::path &license_path, check_license::license_type license_type,
+                               std::string apiKey, std::string sharedKey, std::string productId,
+                               std::string appName = "",
                                std::string appVersion = "");
 
         /**
@@ -85,12 +86,24 @@ namespace uh::licensing{
          */
         virtual bool valid();
 
+        /**
+         *
+         * @return if license file representation is written to disk
+         */
+        bool is_written();
+
+        /**
+         *
+         * @return license path
+         */
+        [[nodiscard]] const std::filesystem::path &getLicensePath() const;
+
     protected:
         std::filesystem::path license_path;
 
         io::file
-        write_license_file(check_license::role licenseRole, check_license::license_type licenseType,
-                           const std::string& app_name_input, const std::string& app_version_input);
+        write_license_file(check_license::role licenseRole, const std::string &app_name_input,
+                           const std::string &app_version_input);
 
         const std::string_view role_string = "server_role: ";
         const std::string_view license_type_string = "license_type: ";
@@ -104,6 +117,8 @@ namespace uh::licensing{
          * productId is 6 characters long
          */
         std::string appName, appVersion, apiKey, sharedKey, productId;
+
+        const license_type licenseTypeInternal;
 
         static int licenseRegister(const std::shared_ptr<LicenseSpring::LicenseManager> &licenseManager,
                             const LicenseSpring::LicenseID& licenseId);
