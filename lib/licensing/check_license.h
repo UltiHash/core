@@ -49,7 +49,7 @@ namespace uh::licensing{
          *
          * @param license_path is the path where a license file is stored
          */
-        explicit check_license(const std::filesystem::path &license_path, check_license::license_type license_type,
+        explicit check_license(std::filesystem::path license_path, check_license::license_type license_type,
                                std::string apiKey, std::string sharedKey, std::string productId,
                                std::string appName = "",
                                std::string appVersion = "");

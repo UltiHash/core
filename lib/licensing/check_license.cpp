@@ -16,16 +16,13 @@ namespace uh::licensing {
 
     // ---------------------------------------------------------------------
 
-    check_license::check_license(const std::filesystem::path &license_path, check_license::license_type license_type,
+    check_license::check_license(std::filesystem::path license_path, check_license::license_type license_type,
                                  std::string apiKey, std::string sharedKey, std::string productId, std::string appName,
                                  std::string appVersion) :
-            license_path(license_path), licenseTypeInternal(license_type),
+            license_path(std::move(license_path)), licenseTypeInternal(license_type),
             appName(std::move(appName)), appVersion(std::move(appVersion)),
             apiKey(std::move(apiKey)), sharedKey(std::move(sharedKey)), productId(std::move(productId))
             {
-        if(std::filesystem::exists(license_path) and !std::filesystem::is_regular_file(license_path))
-            THROW(util::exception,"License path \""+license_path.string()+"\" was not a regular text file!");
-
         if(this->appName.empty())
             this->appName = check_app_name();
 
@@ -154,7 +151,7 @@ namespace uh::licensing {
                 THROW(util::exception, "No license type detected!");
         }
 
-        std::filesystem::path out_license_path = license_path / (std::string(role_string) + ".lic");
+        std::filesystem::path out_license_path = license_path / (std::string(role_set_string) + ".lic");
 
         if (std::filesystem::exists(out_license_path))
             THROW(util::exception, "A license already existed on path \"" + license_path.string() + "\" !");
