@@ -4,10 +4,10 @@
 
 #include "check_online_license.h"
 
-#include <third-party/LicenseSpring/include/LicenseSpring/Configuration.h>
-#include <third-party/LicenseSpring/include/LicenseSpring/EncryptString.h>
-#include <third-party/LicenseSpring/include/LicenseSpring/LicenseManager.h>
-#include <third-party/LicenseSpring/include/LicenseSpring/Exceptions.h>
+#include <LicenseSpring/Configuration.h>
+#include <LicenseSpring/EncryptString.h>
+#include <LicenseSpring/LicenseManager.h>
+#include <LicenseSpring/Exceptions.h>
 
 #include <utility>
 

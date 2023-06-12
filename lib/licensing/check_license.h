@@ -7,8 +7,11 @@
 
 #include <filesystem>
 #include <utility>
-#include <third-party/LicenseSpring/include/LicenseSpring/LicenseManager.h>
-#include <third-party/LicenseSpring/include/LicenseSpring/LicenseID.h>
+
+#include <io/temp_file.h>
+
+#include <LicenseSpring/LicenseManager.h>
+#include <LicenseSpring/LicenseID.h>
 #include <LicenseSpring/EncryptString.h>
 
 namespace uh::licensing{
@@ -84,8 +87,9 @@ namespace uh::licensing{
     protected:
         std::filesystem::path license_path;
 
-        void write_license_base(check_license::role licenseRole, check_license::license_type licenseType,
-                                const std::string& app_name_input, const std::string& app_version_input);
+        io::file
+        write_license_file(check_license::role licenseRole, check_license::license_type licenseType,
+                           const std::string& app_name_input, const std::string& app_version_input);
 
         const std::string_view role_string = "server_role: ";
         const std::string_view license_type_string = "license_type: ";

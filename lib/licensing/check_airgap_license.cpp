@@ -4,10 +4,10 @@
 
 #include "check_airgap_license.h"
 
-#include <third-party/LicenseSpring/include/LicenseSpring/Configuration.h>
-#include <third-party/LicenseSpring/include/LicenseSpring/EncryptString.h>
-#include <third-party/LicenseSpring/include/LicenseSpring/LicenseManager.h>
-#include <third-party/LicenseSpring/include/LicenseSpring/Exceptions.h>
+#include <LicenseSpring/Configuration.h>
+#include <LicenseSpring/EncryptString.h>
+#include <LicenseSpring/LicenseManager.h>
+#include <LicenseSpring/Exceptions.h>
 
 #include <utility>
 
@@ -41,7 +41,25 @@ namespace uh::licensing {
                 appName, appVersion, options);
 
         //Key-based implementation
-        auto licenseId = LicenseSpring::LicenseID::fromKey("XXXX-XXXX-XXXX-XXXX"); //input license key
+
+        std::string local_keygen_string(keygen_string);
+        std::filesystem::path local_license_file_path(license_path);
+
+        auto key_read_func = [&local_keygen_string,&local_license_file_path](){
+            std::fstream license_file_stream(local_license_file_path, std::ios_base::in);
+
+            for (std::string line; std::getline(license_file_stream, line);) {
+                if (line.starts_with(local_keygen_string)) {
+                    return line.substr(local_keygen_string.size(), line.size());
+                }
+            }
+
+            return std::string{};
+        };
+
+        const std::string license_key = key_read_func();
+
+        auto licenseId = LicenseSpring::LicenseID::fromKey(license_key); //input license key
 
         auto licenseManager = LicenseSpring::LicenseManager::create(pConfiguration);
 

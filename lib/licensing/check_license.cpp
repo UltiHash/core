@@ -98,8 +98,10 @@ namespace uh::licensing {
 
     // ---------------------------------------------------------------------
 
-    void check_license::write_license_base(check_license::role licenseRole, check_license::license_type licenseType,
-                                           const std::string& app_name_input, const std::string& app_version_input) {
+    io::file check_license::write_license_file(
+            check_license::role licenseRole, check_license::license_type licenseType,
+            const std::string& app_name_input, const std::string& app_version_input)
+            {
         std::string role_set_string, license_type_set_string;
 
         switch (licenseRole) {
@@ -129,12 +131,14 @@ namespace uh::licensing {
         if (std::filesystem::exists(out_license_path))
             THROW(util::exception, "A license already existed on path \"" + license_path.string() + "\" !");
 
-        std::fstream license_file_stream(license_path, std::ios_base::out);
+        io::file out_file(license_path,std::ios_base::out);
 
-        license_file_stream << appName_string << app_name_input << std::endl;
-        license_file_stream << appVersion_string << app_version_input << std::endl;
-        license_file_stream << role_string << role_set_string << std::endl;
-        license_file_stream << license_type_string << license_type_set_string << std::endl;
+        out_file.write(std::string(appName_string) + app_name_input + "\n");
+        out_file.write(std::string(appVersion_string) + app_version_input + "\n");
+        out_file.write(std::string(role_string) + role_set_string + "\n");
+        out_file.write(std::string(license_type_string) + license_type_set_string + "\n");
+
+        return out_file;
     }
 
     // ---------------------------------------------------------------------

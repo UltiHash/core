@@ -18,6 +18,8 @@ namespace uh::licensing {
 
         bool valid() override;
 
+    private:
+        const std::string_view keygen_string = "local_license_key: ";
     };
 
 } // uh::licensing
