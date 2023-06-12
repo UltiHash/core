@@ -25,7 +25,7 @@ namespace uh::licensing {
                           std::move(appVersion))
                           {
         if(this->keygen.empty())
-          this->keygen = check_app_name();
+          this->keygen = check_keygen();
     }
 
     // ---------------------------------------------------------------------

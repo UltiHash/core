@@ -28,10 +28,10 @@ namespace uh::licensing{
                           userName(std::move(userName)), password(std::move(password))
                           {
         if(this->userName.empty())
-          this->userName = check_app_name();
+          this->userName = check_user_name();
 
         if(this->password.empty())
-          this->password = check_app_name();
+          this->password = check_password();
     }
 
     // ---------------------------------------------------------------------
