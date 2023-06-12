@@ -12,7 +12,7 @@ find_package(Boost 1.80 COMPONENTS program_options unit_test_framework REQUIRED)
 find_package(OpenSSL REQUIRED)
 
 # internal dependencies
-set(${PROJECT_NAME}_INTERNAL_DEPS uhLibUtil uhLibNet uhLibProtocol)
+set(${PROJECT_NAME}_INTERNAL_DEPS uhLibNet uhLibProtocol)
 
 # configuring library dependencies for cmake and linker
 set(${PROJECT_NAME}_INCLUDE_DIRS ${CMAKE_CURRENT_BINARY_DIR} src ${${PROJECT_NAME}_INTERNAL_DEPS})
@@ -27,7 +27,7 @@ add_library(${PROJECT_NAME} STATIC ${HEADER_FILE_LIST} ${SOURCE_FILE_LIST})
 target_link_libraries(${PROJECT_NAME} PRIVATE ${${PROJECT_NAME}_LINK_LIBRARIES})
 target_include_directories(${PROJECT_NAME} PUBLIC ${${PROJECT_NAME}_INCLUDE_DIRS})
 
-add_executable(sdk-test src/sample-sdk.cpp)
+add_executable(sdk-test ${CMAKE_CURRENT_SOURCE_DIR}/sample-sdk.cpp)
 target_link_libraries(sdk-test ${PROJECT_NAME})
 target_include_directories(sdk-test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
