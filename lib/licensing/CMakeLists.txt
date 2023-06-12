@@ -24,7 +24,6 @@ target_link_libraries(${PROJECT_NAME} ${${PROJECT_NAME}_LINK_LIBRARIES})
 
 # create testing targets
 include(${CMAKE_CURRENT_SOURCE_DIR}/../../cmake/testing/CMakeLists.txt)
-
 #[===[
 cmake_minimum_required(VERSION 3.22.0 FATAL_ERROR)
 set(CMAKE_CXX_STANDARD 20)
