@@ -95,6 +95,8 @@ void tls_server::handshake(std::shared_ptr<connection_state> state,
         });
 }
 
+// ---------------------------------------------------------------------
+
 bool tls_server::is_busy() const {
     return m_scheduler.number_of_threads() == m_scheduler.number_of_busy_threads();
 }

@@ -82,6 +82,21 @@ client_pool::handle client_pool::get()
 
 // ---------------------------------------------------------------------
 
+void client_pool::quit_all(const std::string& reason)
+{
+    std::lock_guard lk(m_mutex);
+
+    while (!m_clients.empty())
+    {
+        auto client = std::move(m_clients.front());
+        m_clients.pop_front();
+
+        client->quit(reason);
+    }
+}
+
+// ---------------------------------------------------------------------
+
 void client_pool::put_back(std::unique_ptr<client> c)
 {
     std::unique_lock lk(m_mutex);

@@ -6,6 +6,7 @@
 #include <net/server.h>
 #include <net/tls_server.h>
 #include <logging/logging_boost.h>
+#include <future>
 
 
 namespace uh::an::server
@@ -40,11 +41,20 @@ struct mod::impl
 {
     impl(const net::server_config& config,
          an::cluster::mod& cluster,
-         an::metrics::mod& metrics,
-         an::persistence::mod& persistence);
+         an::metrics::mod& metrics);
 
     boost::asio::io_context io;
-    std::unique_ptr<net::server> server;
+
+    struct server_wrapper
+    {
+        explicit server_wrapper(std::unique_ptr<net::server>&& server);
+        void stop();
+
+        std::unique_ptr<net::server> server;
+        std::future<void> server_future;
+    };
+
+    server_wrapper server_wrapper;
     net::server_info serv_info;
     protocol_factory pf;
 
@@ -52,14 +62,27 @@ struct mod::impl
 
 // ---------------------------------------------------------------------
 
+mod::impl::server_wrapper::server_wrapper(std::unique_ptr<net::server>&& serv) : server(std::move(serv))
+{
+}
+
+// ---------------------------------------------------------------------
+
+void mod::impl::server_wrapper::stop()
+{
+    server->stop();
+    server_future.get();
+}
+
+// ---------------------------------------------------------------------
+
 mod::impl::impl(const net::server_config& config,
                 an::cluster::mod& cluster,
-                an::metrics::mod& metrics,
-                an::persistence::mod& persistence)
+                an::metrics::mod& metrics)
     : io(),
-      server(make_server(config, pf)),
-      serv_info (*server),
-      pf(cluster, persistence, metrics.client(), metrics.protocol(), serv_info)
+      server_wrapper(make_server(config, pf)),
+      serv_info (*server_wrapper.server),
+      pf(cluster, metrics.client(), metrics.protocol(), serv_info)
 {
 }
 
@@ -67,9 +90,8 @@ mod::impl::impl(const net::server_config& config,
 
 mod::mod(const net::server_config& config,
          an::cluster::mod& cluster,
-         an::metrics::mod& metrics,
-         an::persistence::mod& persistence)
-    : m_impl(std::make_unique<mod::impl>(config, cluster, metrics, persistence))
+         an::metrics::mod& metrics)
+    : m_impl(std::make_unique<mod::impl>(config, cluster, metrics))
 {
 }
 
@@ -79,10 +101,19 @@ mod::~mod() = default;
 
 // ---------------------------------------------------------------------
 
-void mod::start()
+void mod::start() const
 {
-    INFO << "starting server";
-    m_impl->server->run();
+    INFO << "           starting server";
+    m_impl->server_wrapper.server_future = std::async(std::launch::async,
+                                                      [&]() { m_impl->server_wrapper.server->run(); });
+}
+
+// ---------------------------------------------------------------------
+
+void mod::stop() const
+{
+    INFO << "            stopping server";
+    m_impl->server_wrapper.stop();
 }
 
 // ---------------------------------------------------------------------

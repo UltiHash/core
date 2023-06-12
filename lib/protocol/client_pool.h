@@ -5,7 +5,6 @@
 #include <util/exception.h>
 #include "client.h"
 
-
 #include <condition_variable>
 #include <list>
 #include <mutex>
@@ -46,6 +45,7 @@ public:
                 std::size_t pool_size);
 
     handle get();
+    void quit_all(const std::string& reason);
     std::string& get_server_uuid();
 
 private:

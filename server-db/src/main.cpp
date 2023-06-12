@@ -11,6 +11,7 @@
 #include <options/app_config.h>
 #include <options/metrics_options.h>
 #include <options/logging_options.h>
+#include <signals/signal.h>
 
 APPLICATION_CONFIG(
     (server, uh::options::server_options),
@@ -27,6 +28,8 @@ int main(int argc, const char** argv)
 {
     try
     {
+        uh::signal::signal signal_handler;
+
         application_config config;
         if (config.evaluate(argc, argv) == uh::options::action::exit)
         {
@@ -50,6 +53,12 @@ int main(int argc, const char** argv)
 
         server::mod server_module(config.server(), storage_module, metrics_module, persistence_module);
         server_module.start();
+
+        signal_handler.register_func([&](){ server_module.stop();
+                                                        storage_module.stop(); });
+
+        auto signal_received = signal_handler.run();
+        INFO << " data node clean shutdown: signal " << strsignal(signal_received) << "(" << signal_received << ")";
     }
     catch (const std::exception& e)
     {

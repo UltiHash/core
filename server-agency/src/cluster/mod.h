@@ -56,6 +56,7 @@ public:
     ~mod();
 
     void start();
+    void stop();
 
     /**
      * Get a node by giving its reference.

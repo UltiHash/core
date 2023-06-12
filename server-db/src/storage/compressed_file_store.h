@@ -84,6 +84,11 @@ public:
      */
     void compress(const std::filesystem::path& path);
 
+    /**
+     * Stops the underlying queue.
+     */
+    void stop();
+
 private:
     friend class compression_worker;
 

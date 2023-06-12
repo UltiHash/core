@@ -43,11 +43,35 @@ struct mod::impl
          dbn::persistence::mod& persistence);
 
     boost::asio::io_context io;
-    std::unique_ptr<net::server> server;
+
+    struct server_wrapper
+    {
+        explicit server_wrapper(std::unique_ptr<net::server>&& server);
+        void stop();
+
+        std::unique_ptr<net::server> server;
+        std::future<void> server_future;
+    };
+
+    server_wrapper server_wrapper;
     net::server_info serv_info;
     protocol_factory pf;
 
 };
+
+// ---------------------------------------------------------------------
+
+mod::impl::server_wrapper::server_wrapper(std::unique_ptr<net::server>&& serv) : server(std::move(serv))
+{
+}
+
+// ---------------------------------------------------------------------
+
+void mod::impl::server_wrapper::stop()
+{
+    server->stop();
+    server_future.get();
+}
 
 // ---------------------------------------------------------------------
 
@@ -56,8 +80,8 @@ mod::impl::impl(const net::server_config& config,
                 dbn::metrics::mod& metrics,
                 dbn::persistence::mod& persistence)
     : io(),
-      server(make_server(config, pf)),
-      serv_info (*server),
+      server_wrapper(make_server(config, pf)),
+      serv_info (*server_wrapper.server),
       pf(storage, metrics.protocol(), serv_info)
 {
 }
@@ -78,10 +102,19 @@ mod::~mod() = default;
 
 // ---------------------------------------------------------------------
 
-void mod::start()
+void mod::start() const
 {
     INFO << "starting server";
-    m_impl->server->run();
+    m_impl->server_wrapper.server_future = std::async(std::launch::async,
+                                                      [&]() { m_impl->server_wrapper.server->run(); });
+}
+
+// ---------------------------------------------------------------------
+
+void mod::stop() const
+{
+    INFO << "stopping server";
+    m_impl->server_wrapper.stop();
 }
 
 // ---------------------------------------------------------------------
