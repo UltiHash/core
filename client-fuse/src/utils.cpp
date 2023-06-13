@@ -19,7 +19,7 @@ context* get_context()
 
 // ---------------------------------------------------------------------
 
-void set_metadata(struct fuse_file_info* fi, f_meta_data& fmd)
+void set_metadata(struct fuse_file_info* fi, meta_data& fmd)
 {
     fi->fh = reinterpret_cast<size_t>(&fmd);
 }
@@ -28,7 +28,7 @@ void set_metadata(struct fuse_file_info* fi, f_meta_data& fmd)
 
 std::vector<std::filesystem::path> get_files(
     const std::string& directory,
-    const std::unordered_map <std::string, ts_f_meta_data>& metadata_list)
+    const std::unordered_map <std::string, ts_meta_data>& metadata_list)
 {
     std::vector<std::filesystem::path> files;
 

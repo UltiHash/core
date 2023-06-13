@@ -51,12 +51,12 @@ BOOST_FIXTURE_TEST_CASE(traverseTest, fs_fixture)
     std::filesystem::path path = "./mock_dir/mock_subdir";
 
     uh::uhv::job_queue<std::unique_ptr<
-            uh::uhv::f_meta_data>>
+            uh::uhv::meta_data>>
             output_jq;
-    f_traverse traverse(path, output_jq);
-    traverse.traverse();
+    traverse traverse(path, output_jq);
+    traverse.run();
 
-    std::vector<std::filesystem::path> all_f_metadata;
+    std::vector<std::filesystem::path> all_metadata;
     output_jq.stop();
 
     while (auto item = output_jq.get_job())
@@ -64,11 +64,11 @@ BOOST_FIXTURE_TEST_CASE(traverseTest, fs_fixture)
         if (item == std::nullopt)
             break;
         else
-            all_f_metadata.push_back(item.value()->f_path());
+            all_metadata.push_back(item.value()->path());
     }
 
-    BOOST_TEST(all_f_metadata[0] == "./mock_dir/mock_subdir");
-    BOOST_TEST(all_f_metadata[1] == "./mock_dir/mock_subdir/mock_file.txt");
+    BOOST_TEST(all_metadata[0] == "./mock_dir/mock_subdir");
+    BOOST_TEST(all_metadata[1] == "./mock_dir/mock_subdir/mock_file.txt");
 }
 
 // ---------------------------------------------------------------------

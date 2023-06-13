@@ -67,8 +67,8 @@ public:
 
         auto compare = [](const auto& a, const auto& b)
         {
-            return (std::is_same<T, std::unique_ptr<f_meta_data>>::value) ?
-                        a->f_path() < b->f_path() : a < b ;
+            return (std::is_same<T, std::unique_ptr<meta_data>>::value) ?
+                        a->path() < b->path() : a < b ;
         };
 
         m_jobs.sort(compare);

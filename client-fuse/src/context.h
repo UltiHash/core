@@ -55,7 +55,7 @@ private:
     protocol::client_pool m_pool;
     ts_container m_metadata_map;
     thread_safe_type<std::unordered_map<std::filesystem::path, unsigned long>> m_subdirectory_counts;
-    thread_safe_type<std::unordered_map<unsigned long, ts_f_meta_data&>> m_open_files;
+    thread_safe_type<std::unordered_map<unsigned long, ts_meta_data&>> m_open_files;
 };
 
 // ---------------------------------------------------------------------

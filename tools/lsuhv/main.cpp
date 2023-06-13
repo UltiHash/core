@@ -4,14 +4,14 @@
 
 // ---------------------------------------------------------------------
 
-void dump_metadata(std::ostream& out, const uh::uhv::f_meta_data& md)
+void dump_metadata(std::ostream& out, const uh::uhv::meta_data& md)
 {
-    out << md.f_path() << " \t"
-        << md.f_chunk_sizes().size() << " \t";
+    out << md.path() << " \t"
+        << md.chunk_sizes().size() << " \t";
 
     try
     {
-        out << md.f_size();
+        out << md.size();
     }
     catch (const std::bad_optional_access&)
     {

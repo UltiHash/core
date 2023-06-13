@@ -20,7 +20,7 @@ namespace uh::client
 class file_handle
 {
 public:
-    file_handle(std::unique_ptr<uhv::f_meta_data>&& md)
+    file_handle(std::unique_ptr<uhv::meta_data>&& md)
         : m_metadata(std::move(md))
     {
     }
@@ -34,7 +34,7 @@ public:
         }
     }
 
-    uhv::f_meta_data& metadata()
+    uhv::meta_data& metadata()
     {
         return *m_metadata;
     }
@@ -54,8 +54,8 @@ public:
         m_queued = true;
     }
 private:
-    std::promise<std::unique_ptr<uhv::f_meta_data>> m_promise;
-    std::unique_ptr<uhv::f_meta_data> m_metadata;
+    std::promise<std::unique_ptr<uhv::meta_data>> m_promise;
+    std::unique_ptr<uhv::meta_data> m_metadata;
 
     unsigned m_chunks_missing = 0;
     bool m_queued = false;
@@ -67,8 +67,8 @@ class request
 {
 public:
     request()
-        : m_buffer(reinterpret_cast<char*>(malloc(f_upload::MAXIMUM_DATA_SIZE))),
-          m_size(f_upload::MAXIMUM_DATA_SIZE)
+        : m_buffer(reinterpret_cast<char*>(malloc(upload::MAXIMUM_DATA_SIZE))),
+          m_size(upload::MAXIMUM_DATA_SIZE)
     {
         if (m_buffer == 0)
         {
@@ -114,14 +114,14 @@ public:
             auto count = std::distance(m_files.begin() + index, it);
 
             file_handle& fh = *m_files[index];
-            uhv::f_meta_data& md = fh.metadata();
+            uhv::meta_data& md = fh.metadata();
 
             md.append_hashes(resp.hashes.begin() + index * hash_size,
                              resp.hashes.begin() + (index + count) * hash_size);
             md.append_sizes(m_chunk_sizes.begin() + index,
                             m_chunk_sizes.begin() + index + count);
 
-            // TODO: send effective size per chunk f_meta_data->add_effective_size(resp.effective_size);
+            // TODO: send effective size per chunk meta_data->add_effective_size(resp.effective_size);
 
             fh.finished(count);
             index += count;
@@ -258,12 +258,12 @@ private:
 
 // ---------------------------------------------------------------------
 
-f_upload::f_upload(protocol::client_pool& cl_pool,
-                   uhv::job_queue<std::unique_ptr<uhv::f_meta_data>>& in_jq,
-                   std::list<std::future<std::unique_ptr<uhv::f_meta_data>>>& out_jq,
-                   uh::chunking::mod& chunking,
-                   std::filesystem::path uhv_path,
-                   unsigned int num_threads)
+upload::upload(protocol::client_pool& cl_pool,
+               uhv::job_queue<std::unique_ptr<uhv::meta_data>>& in_jq,
+               std::list<std::future<std::unique_ptr<uhv::meta_data>>>& out_jq,
+               uh::chunking::mod& chunking,
+               std::filesystem::path uhv_path,
+               unsigned int num_threads)
     : thread_manager(num_threads),
       m_input_jq(in_jq),
       m_output_jq(out_jq),
@@ -275,7 +275,7 @@ f_upload::f_upload(protocol::client_pool& cl_pool,
 
 // ---------------------------------------------------------------------
 
-f_upload::~f_upload()
+upload::~upload()
 {
     join();
     send_statistics();
@@ -283,7 +283,7 @@ f_upload::~f_upload()
 
 // ---------------------------------------------------------------------
 
-void f_upload::join()
+void upload::join()
 {
     m_input_jq.stop();
 
@@ -300,7 +300,7 @@ void f_upload::join()
 
 // ---------------------------------------------------------------------
 
-void f_upload::send_statistics()
+void upload::send_statistics()
 {
     uh::protocol::blob uhv_path {};
     std::ranges::copy(m_uhv_path.string(), std::back_inserter(uhv_path));
@@ -314,17 +314,17 @@ void f_upload::send_statistics()
 
 // ---------------------------------------------------------------------
 
-void f_upload::chunk_and_upload(std::unique_ptr<uhv::f_meta_data>&& md_ptr, buffers& r)
+void upload::chunk_and_upload(std::unique_ptr<uhv::meta_data>&& md_ptr, buffers& r)
 {
-    if (md_ptr->f_type() == uhv::uh_file_type::regular && md_ptr->f_size() != 0)
+    if (md_ptr->type() == uhv::uh_file_type::regular && md_ptr->size() != 0)
     {
         auto& md = *md_ptr;
         auto fh = std::make_shared<file_handle>(std::move(md_ptr));
         r.active().add_handle(fh);
         m_output_jq.push_back(fh->get_future());
 
-        io::file file(md.f_path());
-        auto chunker = m_chunking.create_chunker(file, md.f_size());
+        io::file file(md.path());
+        auto chunker = m_chunking.create_chunker(file, md.size());
 
         bool busy = true;
         while (busy)
@@ -347,12 +347,12 @@ void f_upload::chunk_and_upload(std::unique_ptr<uhv::f_meta_data>&& md_ptr, buff
             }
         }
 
-        m_uploaded_size += md.f_size();
+        m_uploaded_size += md.size();
         fh->ready();
     }
     else
     {
-        std::promise<std::unique_ptr<uhv::f_meta_data>> promise;
+        std::promise<std::unique_ptr<uhv::meta_data>> promise;
         m_output_jq.push_back(promise.get_future());
         promise.set_value(std::move(md_ptr));
     }
@@ -360,7 +360,7 @@ void f_upload::chunk_and_upload(std::unique_ptr<uhv::f_meta_data>&& md_ptr, buff
 
 // ---------------------------------------------------------------------
 
-void f_upload::spawn_threads()
+void upload::spawn_threads()
 {
     for (size_t i = 0; i < m_num_threads; i++)
     {
@@ -377,7 +377,7 @@ void f_upload::spawn_threads()
                         break;
                     }
 
-                    auto filename = (*job)->f_path();
+                    auto filename = (*job)->path();
 
                     try
                     {
@@ -402,14 +402,14 @@ void f_upload::spawn_threads()
 
 // ---------------------------------------------------------------------
 
-const std::map<std::filesystem::path, std::optional<std::string>>& f_upload::results() const
+const std::map<std::filesystem::path, std::optional<std::string>>& upload::results() const
 {
     return m_results;
 }
 
 // ---------------------------------------------------------------------
 
-void f_upload::add_result(const std::filesystem::path& p,
+void upload::add_result(const std::filesystem::path& p,
                           const std::optional<std::string>& error)
 {
     const std::lock_guard<std::mutex> lock(m_result_mutex);

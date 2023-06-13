@@ -68,18 +68,18 @@ void integrate(protocol::client_pool& pool,
 {
     auto time_start = std::chrono::system_clock::now();
 
-    uhv::job_queue<std::unique_ptr<uhv::f_meta_data>> q_f_meta_data;
-    std::list<std::future<std::unique_ptr<uhv::f_meta_data>>> metadata;
+    uhv::job_queue<std::unique_ptr<uhv::meta_data>> q_meta_data;
+    std::list<std::future<std::unique_ptr<uhv::meta_data>>> metadata;
 
     {
         uh::chunking::mod chunking_module(chunker_config);
 
-        f_upload upload_class(pool, q_f_meta_data,
-                              metadata, chunking_module,
-                              output, worker_count);
+        upload upload_class(pool, q_meta_data,
+                            metadata, chunking_module,
+                            output, worker_count);
         upload_class.spawn_threads();
 
-        f_traverse traverse_class(input, q_f_meta_data);
+        traverse traverse_class(input, q_meta_data);
 
         upload_class.join();
         handle_errors("there were errors during upload", upload_class.results());
@@ -88,29 +88,29 @@ void integrate(protocol::client_pool& pool,
     std::size_t size = 0u;
     std::size_t effective_size = 0u;
 
-    std::list<std::unique_ptr<uhv::f_meta_data>> files;
+    std::list<std::unique_ptr<uhv::meta_data>> files;
     for (auto& next : metadata)
     {
         auto md = next.get();
-        if (md->f_type() == uhv::uh_file_type::regular)
+        if (md->type() == uhv::uh_file_type::regular)
         {
-            size += md->f_size();
-            effective_size += md->f_effective_size();
+            size += md->size();
+            effective_size += md->effective_size();
         }
 
-        if (input != md->f_path()) [[likely]]
+        if (input != md->path()) [[likely]]
         {
-            md->set_f_path(std::filesystem::relative(md->f_path(), input));
+            md->set_path(std::filesystem::relative(md->path(), input));
         }
         else
         {
-            md->set_f_path(std::filesystem::path());
+            md->set_path(std::filesystem::path());
         }
 
         files.push_back(std::move(md));
     }
 
-    files.sort([](auto& ml, auto& mr){ return ml->f_path() < mr->f_path(); });
+    files.sort([](auto& ml, auto& mr){ return ml->path() < mr->path(); });
 
     uhv::file file(output);
     file.serialize(files);
@@ -139,14 +139,14 @@ void retrieve(protocol::client_pool& pool,
     auto time_start = std::chrono::system_clock::now();
 
     std::filesystem::create_directories(output_path);
-    uhv::job_queue<std::unique_ptr<uhv::f_meta_data>> q_f_meta_data;
+    uhv::job_queue<std::unique_ptr<uhv::meta_data>> q_meta_data;
 
     {
-        f_download download_class(pool, q_f_meta_data, output_path, worker_count);
+        download download_class(pool, q_meta_data, output_path, worker_count);
         download_class.spawn_threads();
 
         uhv::file file(input_path);
-        file.deserialize(q_f_meta_data);
+        file.deserialize(q_meta_data);
 
         download_class.join();
         size = download_class.size();

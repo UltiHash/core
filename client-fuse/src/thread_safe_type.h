@@ -58,8 +58,8 @@ private:
     T m_t;
 };
 
-using ts_f_meta_data = thread_safe_type<uhv::f_meta_data>;
-using ts_container = thread_safe_type< std::unordered_map<std::string, ts_f_meta_data> >;
+using ts_meta_data = thread_safe_type<uhv::meta_data>;
+using ts_container = thread_safe_type< std::unordered_map<std::string, ts_meta_data> >;
 
 }
 

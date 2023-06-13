@@ -15,18 +15,18 @@ namespace
 
 // ---------------------------------------------------------------------
 
-void serialize_f_meta_data(io::device& device, uh::uhv::f_meta_data& md)
+void serialize_meta_data(io::device& device, uh::uhv::meta_data& md)
 {
     uh::serialization::buffered_serializer serializer(device);
 
-    serializer.write(md.f_path().string());
-    serializer.write(md.f_type());
-    serializer.write(md.f_permissions());
+    serializer.write(md.path().string());
+    serializer.write(md.type());
+    serializer.write(md.permissions());
 
-    if (md.f_type() == uhv::uh_file_type::regular) {
-        serializer.write(md.f_size());
-        serializer.write(md.f_hashes());
-        serializer.write(md.f_chunk_sizes());
+    if (md.type() == uhv::uh_file_type::regular) {
+        serializer.write(md.size());
+        serializer.write(md.hashes());
+        serializer.write(md.chunk_sizes());
     }
 
     serializer.sync();
@@ -34,23 +34,23 @@ void serialize_f_meta_data(io::device& device, uh::uhv::f_meta_data& md)
 
 // ---------------------------------------------------------------------
 
-std::unique_ptr<uh::uhv::f_meta_data> deserialize_f_meta_data(io::device& device)
+std::unique_ptr<uh::uhv::meta_data> deserialize_meta_data(io::device& device)
 {
     uh::serialization::sl_deserializer deserializer(device);
-    std::unique_ptr<uh::uhv::f_meta_data> p_f_meta_data = std::make_unique<uh::uhv::f_meta_data>();
+    std::unique_ptr<uh::uhv::meta_data> p_meta_data = std::make_unique<uh::uhv::meta_data>();
 
-    p_f_meta_data->set_f_path(deserializer.read <std::string> ());
-    p_f_meta_data->set_f_type(deserializer.read <std::uint8_t> ());
-    p_f_meta_data->set_f_permissions(deserializer.read <std::uint32_t> ());
+    p_meta_data->set_path(deserializer.read <std::string> ());
+    p_meta_data->set_type(deserializer.read <std::uint8_t> ());
+    p_meta_data->set_permissions(deserializer.read <std::uint32_t> ());
 
-    if (p_f_meta_data->f_type() == uhv::uh_file_type::regular)
+    if (p_meta_data->type() == uhv::uh_file_type::regular)
     {
-        p_f_meta_data->set_f_size(deserializer.read <std::uint64_t> ());
-        p_f_meta_data->set_f_hashes(deserializer.read <std::vector <char>> ());
-        p_f_meta_data->add_chunk_sizes(deserializer.read<std::vector <uint32_t>>());
+        p_meta_data->set_size(deserializer.read <std::uint64_t> ());
+        p_meta_data->set_hashes(deserializer.read <std::vector <char>> ());
+        p_meta_data->add_chunk_sizes(deserializer.read<std::vector <uint32_t>>());
     }
 
-    return p_f_meta_data;
+    return p_meta_data;
 }
 
 // ---------------------------------------------------------------------
@@ -66,7 +66,7 @@ file::file(const std::filesystem::path& path)
 
 // ---------------------------------------------------------------------
 
-void file::serialize(const std::list<std::unique_ptr<uhv::f_meta_data>>& metadata)
+void file::serialize(const std::list<std::unique_ptr<uhv::meta_data>>& metadata)
 {
     io::file file (m_path, std::ios::out | std::ios::trunc | std::ios::binary);
     uh::serialization::buffered_serializer serialize(file);
@@ -76,13 +76,13 @@ void file::serialize(const std::list<std::unique_ptr<uhv::f_meta_data>>& metadat
 
     for (const auto& item : metadata)
     {
-        serialize_f_meta_data(file, *item);
+        serialize_meta_data(file, *item);
     }
 }
 
 // ---------------------------------------------------------------------
 
-void file::deserialize(uhv::job_queue<std::unique_ptr<uhv::f_meta_data>>& out_queue)
+void file::deserialize(uhv::job_queue<std::unique_ptr<uhv::meta_data>>& out_queue)
 {
     io::file file(m_path);
     uh::serialization::sl_deserializer deserialize(file);
@@ -90,22 +90,22 @@ void file::deserialize(uhv::job_queue<std::unique_ptr<uhv::f_meta_data>>& out_qu
 
     while (count--)
     {
-        out_queue.append_job(deserialize_f_meta_data(file));
+        out_queue.append_job(deserialize_meta_data(file));
     }
 }
 
 // ---------------------------------------------------------------------
 
-std::list<std::unique_ptr<uhv::f_meta_data>> file::deserialize()
+std::list<std::unique_ptr<uhv::meta_data>> file::deserialize()
 {
     io::file file(m_path);
     uh::serialization::sl_deserializer deserialize(file);
     auto count = deserialize.read<unsigned long>();
 
-    std::list<std::unique_ptr<uhv::f_meta_data>> rv;
+    std::list<std::unique_ptr<uhv::meta_data>> rv;
     while (count--)
     {
-        rv.push_back(deserialize_f_meta_data(file));
+        rv.push_back(deserialize_meta_data(file));
     }
 
     return rv;
@@ -113,7 +113,7 @@ std::list<std::unique_ptr<uhv::f_meta_data>> file::deserialize()
 
 // ---------------------------------------------------------------------
 
-void file::append(std::unique_ptr<uhv::f_meta_data> md)
+void file::append(std::unique_ptr<uhv::meta_data> md)
 {
     io::file file(m_path, std::ios::out | std::ios::in | std::ios::binary);
 
@@ -126,7 +126,7 @@ void file::append(std::unique_ptr<uhv::f_meta_data> md)
     serialize.sync();
 
     file.seek(0, std::ios_base::end);
-    serialize_f_meta_data(file, *md);
+    serialize_meta_data(file, *md);
 }
 
 // ---------------------------------------------------------------------

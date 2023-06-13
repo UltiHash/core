@@ -61,10 +61,10 @@ void context::update_uhv()
     auto container = metadata_map();
     auto& data = container();
 
-    std::list<std::unique_ptr<uhv::f_meta_data>> md;
+    std::list<std::unique_ptr<uhv::meta_data>> md;
     for (auto& tsmd : data)
     {
-        md.push_back(std::make_unique<uhv::f_meta_data>(tsmd.second.get()()));
+        md.push_back(std::make_unique<uhv::meta_data>(tsmd.second.get()()));
     }
 
     m_uhv.serialize(md);
@@ -91,9 +91,9 @@ void context::init_metadata_map()
 
     for (const auto& metadata : metadata_list)
     {
-        if (metadata->f_type() == uhv::uh_file_type::directory)
+        if (metadata->type() == uhv::uh_file_type::directory)
         {
-            auto parent = metadata->f_path().parent_path();
+            auto parent = metadata->path().parent_path();
             if (const auto& it = subdirectory_counts.find(parent); it != subdirectory_counts.end())
             {
                 it->second++;
@@ -103,16 +103,16 @@ void context::init_metadata_map()
                 subdirectory_counts.emplace(parent, 1);
             }
 
-            subdirectory_counts.emplace(metadata->f_path(), 0);
+            subdirectory_counts.emplace(metadata->path(), 0);
         }
 
-        metadata_map.emplace(metadata->f_path(), *metadata);
+        metadata_map.emplace(metadata->path(), *metadata);
     }
 
-    uhv::f_meta_data metadata;
-    metadata.set_f_path("/");
-    metadata.set_f_type(uhv::directory);
-    metadata.set_f_size(0u);
+    uhv::meta_data metadata;
+    metadata.set_path("/");
+    metadata.set_type(uhv::directory);
+    metadata.set_size(0u);
     metadata_map.emplace("/", std::move(metadata));
     subdirectory_counts.emplace("/", 0);
 }
