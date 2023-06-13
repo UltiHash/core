@@ -4,8 +4,13 @@
 
 #include "utils.h"
 
-namespace uh::uhv {
 
+using namespace uh::uhv;
+
+namespace uh::fuse
+{
+
+// ---------------------------------------------------------------------
 
 private_context* get_context()
 {
@@ -18,7 +23,7 @@ void set_metadata(struct fuse_file_info* fi, f_meta_data& fmd)
 }
 
 std::vector <std::filesystem::path> get_files (const std::string &directory, const std::unordered_map <std::string,
-                                               uh::uhv::ts_f_meta_data> &metadata_list) {
+                                               ts_f_meta_data> &metadata_list) {
     std::vector <std::filesystem::path> files;
     for (const auto& md: metadata_list) {
         const auto path = std::filesystem::path(md.first);

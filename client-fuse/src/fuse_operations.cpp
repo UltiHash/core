@@ -7,7 +7,10 @@
 #include <net/plain_socket.h>
 
 
-namespace uh::uhv {
+using namespace uh::uhv;
+
+namespace uh::fuse
+{
 
 options& get_options()
 {

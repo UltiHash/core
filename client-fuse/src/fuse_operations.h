@@ -15,27 +15,17 @@
 #include <uhv/file.h>
 
 #include "config.hpp"
-#include "thread_safe_type.h"
+#include "context.h"
 
 #include <filesystem>
-#include <unordered_map>
 
 #include <fuse.h>
 
 
-namespace uh::uhv
+namespace uh::fuse
 {
 
-struct private_context
-{
-    unsigned long fd = 0;
-    boost::asio::io_context io;
-    std::unique_ptr<uh::protocol::client_pool> client_pool;
-    ts_container fmetadata_map;
-    thread_safe_type <std::unordered_map <std::string, unsigned long>> subdirectory_counts;
-    thread_safe_type <std::unordered_map <unsigned long, ts_f_meta_data&>> open_files;
-};
-
+// ---------------------------------------------------------------------
 
 struct options
 {
@@ -45,6 +35,8 @@ struct options
     int agency_connections;
     bool show_help;
 };
+
+// ---------------------------------------------------------------------
 
 constexpr std::uint64_t max_chunk_size = 1 << 22;
 constexpr std::uint64_t min_chuck_size = 64 * 1024ul;

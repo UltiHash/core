@@ -5,25 +5,25 @@
 
 static const struct fuse_operations uh_operations =
     {
-    .getattr        = uh::uhv::uh_getattr,
-    .mkdir          = uh::uhv::uh_mkdir,
-    .unlink         = uh::uhv::uh_unlink,
-    .rmdir          = uh::uhv::uh_rmdir,
-    .open           = uh::uhv::uh_open,
-    .read           = uh::uhv::uh_read,
-    .write          = uh::uhv::uh_write,
-    .release        = uh::uhv::uh_release,
-    .readdir        = uh::uhv::uh_readdir,
-    .init           = uh::uhv::uh_init,
-    .destroy        = uh::uhv::uh_destroy,
-    .create         = uh::uhv::uh_create,
-    .ftruncate      = uh::uhv::uh_ftruncate,
-    .utimens        = uh::uhv::uh_utimens,
+    .getattr        = uh::fuse::uh_getattr,
+    .mkdir          = uh::fuse::uh_mkdir,
+    .unlink         = uh::fuse::uh_unlink,
+    .rmdir          = uh::fuse::uh_rmdir,
+    .open           = uh::fuse::uh_open,
+    .read           = uh::fuse::uh_read,
+    .write          = uh::fuse::uh_write,
+    .release        = uh::fuse::uh_release,
+    .readdir        = uh::fuse::uh_readdir,
+    .init           = uh::fuse::uh_init,
+    .destroy        = uh::fuse::uh_destroy,
+    .create         = uh::fuse::uh_create,
+    .ftruncate      = uh::fuse::uh_ftruncate,
+    .utimens        = uh::fuse::uh_utimens,
     };
 
 
 #define OPTION(t, p)                           \
-    { t, offsetof(struct uh::uhv::options, p), 1 }
+    { t, offsetof(struct uh::fuse::options, p), 1 }
 
 static const struct fuse_opt option_spec[] =
     {
@@ -54,7 +54,8 @@ static void show_help(const char *prog_name)
 
 void validate_options()
 {
-    auto& opt = uh::uhv::get_options();
+    auto& opt = uh::fuse::get_options();
+    printf("path: %s\n", opt.UHVpath);
     auto path = canonical(std::filesystem::path(opt.UHVpath));
     if(opt.agency_port < 0 or opt.agency_port > USHRT_MAX)
         THROW(uh::util::exception, "An invalid port number was specified.");
@@ -69,7 +70,7 @@ int main(int argc, char *argv[])
         int ret = 0;
         struct fuse_args args = FUSE_ARGS_INIT(argc, argv);
 
-        auto& opt = uh::uhv::get_options();
+        auto& opt = uh::fuse::get_options();
 
         opt.UHVpath = strdup("volume.uh");
         opt.agency_hostname = strdup("localhost");
