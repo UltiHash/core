@@ -115,6 +115,14 @@ namespace LicenseSpring
         /// \param reference Customer reference.
         void setReference( const std::string& reference );
 
+        /// \brief Getter method for customer metadata.
+        /// \return Customer metadata.
+        const std::string& metadata() const;
+
+        /// \brief Setter method for customer metadata.
+        /// \param metadata Customer metadata.
+        void setMetadata( const std::string& metadata );
+
     private:
         std::string m_email;
         std::string m_firstName;
@@ -127,6 +135,7 @@ namespace LicenseSpring
         std::string m_country;
         std::string m_postcode;
         std::string m_reference;
+        std::string m_metadata;
     };
 }
 

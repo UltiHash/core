@@ -181,9 +181,9 @@ namespace LicenseSpring
         /// \return String of alternate service URL.
         const std::string& getAlternateServiceUrl() const;
 
-        /// \brief Getter for alternate key.
+        /// \brief Getter for alternate public key.
         /// \return String of alternate key.
-        const std::vector<int32_t>& getAlternateKey() const;
+        const std::string& getAlternateKey() const;
 
         /// \brief Returns custom information to be passed along with all API requests.
         /// \details Representing user defined generic field to be passed to the backend.

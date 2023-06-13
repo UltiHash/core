@@ -90,7 +90,8 @@ enum LSErrorCode
     eReadOnlyApiKey, ///< Provided api key is read_only
     eRevokedApiKey, ///< Provided api key is revoked
     eApiKeyProductNotAllowed, ///< Provided api key does not allow access to configured product
-    eFloatingTimeoutExpired ///< Floating license borrowing period or floating timeout expired
+    eFloatingTimeoutExpired, ///< Floating license borrowing period or floating timeout expired
+    eWatchdogError ///< Failed to set license watchdog
 };
 
 /// \brief Type of Device ID algorithm used by the SDK

@@ -184,6 +184,10 @@ namespace LicenseSpring
         /// \return License start date in a format %Y-%m-%d, if start date is not set for the License the string is empty.
         virtual const std::string& startDate() const = 0;
 
+        /// \brief Getter for license metadata.
+        /// \return String of license metadata json.
+        virtual const std::string& metadata() const = 0;
+
         /// \brief Getter method for license feature
         /// \param featureCode Feature code of the feature to get.
         /// \return LicenseFeature structure with the provided feature code.
@@ -367,6 +371,7 @@ namespace LicenseSpring
         /// \throw NoInternetException If cannot reach the server
         /// \throw NetworkTimeoutException In case of network timeout
         /// \throw LicenseServerException In case of internal server error
+        /// \throw SignatureMismatchException In case signature returned by LicenseSpring server is not valid
         /// \throw UnknownLicenseSpringException In rare case if something went wrong, please contact support
         virtual void syncConsumption( int32_t requestOverage = -1 ) = 0;
 
@@ -379,6 +384,7 @@ namespace LicenseSpring
         /// \throw NoInternetException If cannot reach the server
         /// \throw NetworkTimeoutException In case of network timeout
         /// \throw LicenseServerException In case of internal server error
+        /// \throw SignatureMismatchException In case signature returned by LicenseSpring server is not valid
         /// \throw UnknownLicenseSpringException In rare case if something went wrong, please contact support
         virtual void syncFeatureConsumption( const std::string& featureCode = std::string() ) = 0;
 
@@ -435,10 +441,12 @@ namespace LicenseSpring
         /// \details This is especially useful for floating licenses, but can be used for any.\n
         /// Provided callback will be called in case of errors.\n
         /// Timeout in minutes, 0 means use default (for Floating license it's floatingTimeout, for others - 1 hour).
+        /// \throw WatchdogException If cannot start watchdog thread.
         virtual void setupLicenseWatchdog( LicenseWatchdogCallback callback, uint32_t timeout = 0 ) = 0;
 
         /// \brief Resume background thread, you can call this within your callback
         /// in order to resume periodic license checks (registrations).
+        /// \throw WatchdogException If cannot start watchdog thread.
         virtual void resumeLicenseWatchdog() = 0;
 
         /// \brief Stops license watchdog background thread.

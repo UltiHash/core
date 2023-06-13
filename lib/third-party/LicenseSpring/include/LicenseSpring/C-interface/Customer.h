@@ -53,6 +53,10 @@ extern "C" {
 
         void ( *setReference )( struct LSCustomer* self, const char* reference );
 
+        const char* ( *metadata )( struct LSCustomer* self );
+
+        void ( *setMetadata )( struct LSCustomer* self, const char* metadata );
+
         void* inner;
 
     } LSCustomer;

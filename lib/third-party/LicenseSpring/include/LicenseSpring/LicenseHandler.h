@@ -215,6 +215,8 @@ namespace LicenseSpring
         const std::string& getLicenseStatusStr() const;
         /// \see License::startDate
         const std::string& getLicenseStartDate() const;
+        /// \see License::metadata
+        const std::string& getLicenseMetadata() const;
 
         /// \see License::type
         LicenseType getLicenseType() const;

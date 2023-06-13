@@ -52,6 +52,10 @@ namespace LicenseSpring
         /// \return LSAuthMethod object stating the product authorization method, i.e. AuthMethodKeyBased or AuthMethodUserBased.
         LSAuthMethod authorizationMethod() const;
 
+        /// \brief Getter for product metadata.
+        /// \return String of product metadata.
+        const std::string& metadata() const;
+
         /// \brief Helper method, creates ProductDetails object from JSON string.
         /// \return ProductDetails object from JSON string.
         static ProductDetails fromJsonString( const std::string& jsonString );
@@ -64,6 +68,7 @@ namespace LicenseSpring
         std::string         m_productName;
         std::string         m_productCode;
         LSAuthMethod m_authorizationMethod;
+        std::string         m_metadata;
     };
 }
 

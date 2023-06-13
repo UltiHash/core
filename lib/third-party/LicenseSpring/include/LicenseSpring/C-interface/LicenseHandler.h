@@ -96,6 +96,7 @@ extern "C" {
         const char* ( *getLicenseUser )( struct LSLicenseHandler* self );
         const char* ( *getLicenseStatusStr )( struct LSLicenseHandler* self );
         const char* ( *getLicenseStartDate )( struct LSLicenseHandler* self );
+        const char* ( *getLicenseMetadata )( struct LSLicenseHandler* self );
         enum LSLicenseType( *getLicenseType )( struct LSLicenseHandler* self );
         struct tm( *getLicenseExpiryDate )( struct LSLicenseHandler* self );
         struct tm( *getLicenseExpiryDateUtc )( struct LSLicenseHandler* self );

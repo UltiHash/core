@@ -24,6 +24,8 @@ extern "C" {
 
         enum LSAuthMethod( *authorizationMethod )( struct LSProductDetails* self );
 
+        const char* ( *metadata )( struct LSProductDetails* self );
+
         void* inner;
 
     } LSProductDetails;

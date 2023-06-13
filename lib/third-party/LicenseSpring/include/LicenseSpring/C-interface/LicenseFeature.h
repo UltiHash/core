@@ -44,6 +44,8 @@ extern "C" {
 
         bool ( *isExpired )( struct LSLicenseFeature* self );
 
+        const char* ( *metadata )( struct LSLicenseFeature* self );
+
         void* inner;
 
     } LSLicenseFeature;

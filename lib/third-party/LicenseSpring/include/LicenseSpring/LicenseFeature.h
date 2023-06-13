@@ -42,10 +42,11 @@ namespace LicenseSpring
         /// \param resetConsumption Is consuption reset is enabled for this license feature
         /// \param allowUnlimitedConsumptions Is unlimited consumption is enabled for this license feature
         /// \param consumptionPeriod The period of consumption reset
+        /// \param metadata The product feature metadata
         LicenseFeature( const std::string& code, const std::string& name, LSFeatureType type,
                         int32_t maxConsumption, int32_t totalConsumption, int32_t localConsumption,
                         const tm& expiryDate, bool allowOverages, int32_t maxOverages,
-                        bool resetConsumption, bool allowUnlimitedConsumptions, ConsumptionPeriod consumptionPeriod );
+                        bool resetConsumption, bool allowUnlimitedConsumptions, ConsumptionPeriod consumptionPeriod, const std::string& metadata );
 
         /// \brief Getter method for license feature code.
         /// \return License feature code.
@@ -106,6 +107,10 @@ namespace LicenseSpring
         /// \return License feature expiry date in UTC.
         tm expiryDateUtc() const;
 
+        /// \brief Getter method for license feature metadata.
+        /// \return License feature metadata.
+        const std::string& metadata() const;
+
         /// \brief Checks if license feature expired.
         /// \return True if feature expired and false otherwise.
         bool isExpired() const;
@@ -143,6 +148,7 @@ namespace LicenseSpring
         bool              m_resetConsumption;
         ConsumptionPeriod m_consumptionPeriod;
         tm                m_expiryDate;
+        std::string       m_metadata;
     };
 }
 

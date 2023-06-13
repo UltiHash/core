@@ -1,4 +1,6 @@
 
+include(FetchContent)
+
 cmake_minimum_required(VERSION 3.22.0 FATAL_ERROR)
 set(CMAKE_CXX_STANDARD 20)
 
@@ -17,6 +19,16 @@ file(GLOB HEADER_FILE_LIST ${CMAKE_CURRENT_SOURCE_DIR}/*.h)
 
 # adding all the .cpp files of the current project
 file(GLOB SOURCE_FILE_LIST ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp)
+
+#[===[
+FetchContent_Declare(
+        LicenceSpring
+        URL "https://kwiki-user-media.s3.amazonaws.com/staging/content/file_widgets/LicenseSpringCppSDKv${LICENSESPRING_VERSION}_${LICENSESPRING_TARGET}.zip"
+        LOG_DOWNLOAD ON
+        DOWNLOAD_EXTRACT_TIMESTAMP true
+)
+FetchContent_MakeAvailable(LicenceSpring)
+]===]
 
 add_library(${PROJECT_NAME} ${HEADER_FILE_LIST} ${SOURCE_FILE_LIST})
 target_include_directories(${PROJECT_NAME} INTERFACE ${${PROJECT_NAME}_INCLUDE_DIRS})

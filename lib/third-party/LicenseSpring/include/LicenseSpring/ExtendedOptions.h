@@ -253,26 +253,31 @@ namespace LicenseSpring
         /// \return Alternate License API URL.
         const std::string& getAlternateServiceURL() const;
 
-        /// \brief This method can be used if you are planning to deploy self-hosted server.
-        /// \details Contact support for more details.
+        /// \brief Set alternate public key. This method can be used if you are planning to deploy self-hosted server.
+        /// \details Key should be in format "-----BEGIN PUBLIC KEY-----\n.....key body...\n-----END PUBLIC KEY-----"
         /// \param key Public key for verification
-        /// \note There are multiple methods with the same name and different parameters.
+        void setAlternateKey( const std::string& key );
+
+        /// \brief Set alternate public key.
+        /// \details Overloaded method, contact support for more details.
+        /// \param key Public key for verification
         void setAlternateKey( const std::vector<int32_t>& key );
 
-        /// \brief This method can be used if you are planning to deploy self-hosted server.
-        /// \details Contact support for more details.
+        /// \brief Set alternate public key.
+        /// \details Overloaded method, contact support for more details.
         /// \param key Public key for verification
         /// \param size Size of key to create vector from
-        /// \note There are multiple methods with the same name and different parameters.
         void setAlternateKey( const int32_t* key, std::size_t size );
 
         /// \brief Getter for alternate License API URL.
         /// \return Alternate License API URL.
-        const std::vector<int32_t>& getAlternateKey() const;
+        const std::string& getAlternateKey() const;
 
     private:
         std::wstring  m_licenseFilePath;
         std::string   m_hardwareID;
+        std::string   m_serviceURL;
+        std::string   m_key;
         bool          m_collectNetworkInfo; // false by default
         bool          m_enableVMDetection;  // false by default
         bool          m_enableGuardFile;    // true by default
@@ -282,8 +287,6 @@ namespace LicenseSpring
         NetworkInfo   m_networkInfo;
         DeviceIDAlgorithm m_deviceIDAlgorithm;
         CryptoProvider::ptr_t m_cryptoProvider;
-        std::string           m_serviceURL;
-        std::vector<int32_t>  m_key;
     };
 
 } // namespace LicenseSpring

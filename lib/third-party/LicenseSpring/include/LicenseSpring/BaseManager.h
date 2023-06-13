@@ -49,6 +49,7 @@ namespace LicenseSpring
         /// \throw NoInternetException If cannot reach the server
         /// \throw NetworkTimeoutException In case of network timeout
         /// \throw LicenseServerException In case of internal server error
+        /// \throw SignatureMismatchException In case signature returned by LicenseSpring server is not valid
         /// \throw UnknownLicenseSpringException In rare case if something went wrong, for example unexpected server response
         ProductDetails getProductDetails() const;
 

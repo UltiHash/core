@@ -352,6 +352,14 @@ namespace LicenseSpring
         ApiKeyException( const std::string& message, LSErrorCode errorCode )
             : LicenseSpringException( message, errorCode ) {}
     };
+
+    /// \brief This exception can arise if setting license watchdog failed.
+    class LS_API WatchdogException : public LicenseSpringException
+    {
+    public:
+        WatchdogException( const std::string& message )
+            : LicenseSpringException( message, LSErrorCode::eWatchdogError ) {}
+    };
 }
 
 #ifdef _MSC_VER
