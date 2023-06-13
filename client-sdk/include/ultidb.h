@@ -97,7 +97,73 @@ typedef enum UDB_CHUNKING_MODE {
 
 } UDB_CHUNKING_MODE;
 
+/**
+ * Structure that holds a unique key for a given document.
+ */
+typedef struct UDB_KEY_STRUCT
+{
+    char* buffer;
+    size_t length;
+} UDB_KEY;
+
+/**
+ * A UDB Document is a structure that holds a unique key and the associated data.
+ */
+typedef struct UDB_DOCUMENT_STRUCT
+{
+    UDB_KEY* key;
+
+    char* data;
+    size_t size;
+} UDB_DOCUMENT;
+
 // ---------------------------------------------------------------------
+
+/**
+ * Creates an instance of UDB_KEY structure and returns a pointer to it.
+ *
+ * @param key_buffer buffer which contains the unique key
+ * @param length length of the key_buffer
+ * @return UDB_KEY* pointer to the UDB_KEY struct created
+ */
+UDB_KEY* udb_create_key(char* key_buffer, size_t length);
+
+/**
+ * Deallocates the instance of UDB_KEY.
+ *
+ * @param udb_key
+ * @return UDB_RESULT enum which describes the result of the operation
+ */
+UDB_RESULT udb_destroy_key(UDB_KEY* udb_key);
+
+/**
+ * Creates an instance of UDB_DOCUMENT structure and returns a pointer to it.
+ *
+ * @return UDB_DOCUMENT* pointer to the document structure allocated
+ */
+UDB_DOCUMENT* udb_create_document();
+
+/**
+ * Creates an instance of UDB_DOCUMENT with a given key and returns a pointer to it.
+ *
+ * @return UDB_DOCUMENT* pointer to the document structure allocated
+ */
+UDB_DOCUMENT* udb_create_document_raw_buffer(char* key_buffer, size_t length);
+UDB_DOCUMENT* udb_create_document_with_key(char* key_buffer, size_t length);
+
+UDB_RESULT udb_document_set_data(UDB_DOCUMENT* doc, char* data, size_t size);
+UDB_RESULT udb_document_get_data(UDB_DOCUMENT* doc, char** data, size_t* size);
+UDB_RESULT udb_document_set_key(UDB_DOCUMENT* doc, UDB_KEY* key);
+UDB_RESULT udb_document_get_key (UDB_DOCUMENT* doc, UDB_KEY** key);
+
+/**
+ * Deallocates the instance of UDB_DOCUMENT which was allocated before. It also frees all the memory that is held
+ * by the pointers inside the struct object.
+ *
+ * @param doc document to deallocate
+ * @return UDB_RESULT enum that describes the result of the operation
+ */
+UDB_RESULT udb_destroy_document(UDB_DOCUMENT* doc);
 
 /**
 * Creates an instance of ::UDB_CONFIG (typedef UDB_CONFIG) which can be used to put configuration parameters.
@@ -120,7 +186,7 @@ UDB_RESULT udb_destroy_config(UDB_CONFIG *config);
  * @param hostname Name of the host to connect to
  * @param port Port on which the host is running
  * @param connection_pool The number of connections to create with the host. By default it is 3.
- * @return UDB_RESULT enum that tells the result of the operation
+ * @return UDB_RESULT enum which describes the result of the operation
  */
 UDB_RESULT udb_config_set_host_node(UDB_CONFIG* cfg, const char *hostname, uint16_t port, size_t connection_pool = 3);
 
@@ -129,7 +195,7 @@ UDB_RESULT udb_config_set_host_node(UDB_CONFIG* cfg, const char *hostname, uint1
  *
  * @param cfg config file in which the strategy is set
  * @param chunking_strategy enum which describes the strategy to apply
- * @return UDB_RESULT enum that tells the result of the operation
+ * @return UDB_RESULT enum which describes the result of the operation
  */
 UDB_RESULT udb_config_set_chunking_strategy(UDB_CONFIG* cfg, UDB_CHUNKING_MODE chunking_strategy);
 
@@ -148,6 +214,77 @@ UDB_RESULT udb_destroy_instance(UDB* udb_instance);
 // ---------------------------------------------------------------------
 
 /**
+ * Check if server (or connection) is still alive.
+ *
+ * @param handle UDB handle which can be used to perform various udb operations.
+ * @return UDB_RESULT enum which describes the result of the operation
+ */
+UDB_RESULT udb_ping(UDB* handle);
+
+/**
+ *
+ * @param handle UDB handle which can be used to perform various udb operations.
+ * @param udb_docs array of UDB_DOCUMENT which are to be integrated
+ * @param n_udb_docs number of items in the udb_docs array
+ * @return UDB_RESULT enum which describes the result of the operation
+ */
+UDB_RESULT udb_insert(UDB* handle,
+                      const UDB_DOCUMENT** udb_docs,
+                      size_t n_udb_docs);
+
+/**
+ * Insert and generate a key for the documents.
+ */
+UDB_RESULT udb_insert_and_genkey(UDB* handle,
+                                 UDB_DOCUMENT** udb_docs,
+                                 size_t n_udb_docs);
+
+/**
+ * Convenience function around `udb_insert`.
+ *
+ * @param handle UDB handle which can be used to perform various udb operations.
+ * @param udb_docs a UDB_DOCUMENT which is to be integrated
+ * @return UDB_RESULT enum which describes the result of the operation
+ */
+UDB_RESULT udb_insert_one(UDB* handle,
+                          const UDB_DOCUMENT* doc);
+
+/**
+ * Convenience function around `udb_insert` which automatically generates a key for the document
+ * given.
+ *
+ * @param handle UDB handle which can be used to perform various udb operations.
+ * @param udb_docs a UDB_DOCUMENT which is to be integrated
+ * @return UDB_RESULT enum which describes the result of the operation
+ */
+UDB_RESULT udb_insert_one_and_genkey(UDB* handle,
+                                     const UDB_DOCUMENT* doc);
+
+/**
+ * Support our fast uploading without copy overhead.
+ */
+UDB_RESULT udb_insert_continuous_genkey(UDB* handle,
+                                        const char* buffer,
+                                        size_t size,
+                                        size_t* offsets,
+                                        size_t count,
+                                        UDB_KEY** out_key);
+
+
+/**
+ * See below for two variants of parameter passing.
+ */
+UDB_RESULT udb_get(UDB* handle,
+                   const UDB_KEY** key,
+                   size_t n_key,
+                   UDB_DOCUMENT** doc);
+
+// Convenience
+UDB_RESULT udb_get_one(UDB* handle,
+                       const UDB_KEY* key,
+                       UDB_DOCUMENT* doc);
+
+/**
  *
  * @param db UDB object which can be used to perform operations such as integrate and retrieve.
  * @param hash_buffer buffer in which the retrieved hash can be stored
@@ -156,7 +293,7 @@ UDB_RESULT udb_destroy_instance(UDB* udb_instance);
  * @param length Size of the data to integrate
  * @return UDB_RESULT enum that describes the result of the operation
  */
-UDB_RESULT udb_integrate(UDB *db, char* hash_buffer,  size_t buffer_length, const char* data, size_t data_length);
+UDB_RESULT udb_integrate(UDB *handle, char* hash_buffer,  size_t buffer_length, const char* data, size_t data_length);
 
 /**
  * Data to retrieve from the UDB cluster based on the hash provided.
@@ -167,7 +304,7 @@ UDB_RESULT udb_integrate(UDB *db, char* hash_buffer,  size_t buffer_length, cons
  * @param udb_hash the hash of the data to be retrieved
  * @return UDB_RESULT enum that describes the result of the operation
  */
-UDB_RESULT udb_retrieve(UDB *db, char* data_buffer, size_t buffer_length, const char* udb_hash);
+UDB_RESULT udb_retrieve(UDB *handle, char* data_buffer, size_t buffer_length, const char* udb_hash);
 
 // ---------------------------------------------------------------------
 

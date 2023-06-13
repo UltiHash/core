@@ -239,14 +239,14 @@ UDB_RESULT udb_destroy_instance(UDB* ulti_db_instance)
 
 // ---------------------------------------------------------------------
 
-UDB_RESULT udb_integrate(UDB *db, char* hash_buffer, size_t buffer_length, const char* data, size_t data_length)
+UDB_RESULT udb_integrate(UDB *handle, char* hash_buffer, size_t buffer_length, const char* data, size_t data_length)
 {
     try
     {
         if (buffer_length < 65)
             throw std::overflow_error("Buffer overflow exception.");
 
-        auto client_handle = db->m_connection_pool->get();
+        auto client_handle = handle->m_connection_pool->get();
         std::vector<uint32_t> chunk_sizes;
         chunk_sizes.push_back(static_cast<uint32_t>(data_length));
         auto resp = client_handle->write_chunks(uh::protocol::write_chunks::request { chunk_sizes,
@@ -270,12 +270,12 @@ UDB_RESULT udb_integrate(UDB *db, char* hash_buffer, size_t buffer_length, const
 
 // ---------------------------------------------------------------------
 
-UDB_RESULT udb_retrieve(UDB *db, char* buffer_to_fill, size_t buffer_length , const char* udb_hash)
+UDB_RESULT udb_retrieve(UDB *handle, char* buffer_to_fill, size_t buffer_length , const char* udb_hash)
 {
     try
     {
         uh::protocol::read_chunks::request req { .hashes = std::span<const char>(udb_hash, 64)};
-        auto result = db->m_connection_pool->get()->read_chunks(req);
+        auto result = handle->m_connection_pool->get()->read_chunks(req);
 
          /* BUG: Agency Node loses the chunk size information. */
          /* failure reading compression header should not be the error, instead couldn't read the hash should be the error */
