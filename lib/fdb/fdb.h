@@ -13,7 +13,7 @@
 #include <span>
 #include <optional>
 
-#define FDB_API_VERSION 630
+#define FDB_API_VERSION 710
 #include <foundationdb/fdb_c.h>
 
 namespace uh::fdb {
