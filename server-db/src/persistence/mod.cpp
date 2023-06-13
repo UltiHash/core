@@ -6,7 +6,8 @@ namespace uh::dbn::persistence
 
 // ---------------------------------------------------------------------
 
-mod::mod(const uh::options::persistence_config& config) : m_scheduling_persistence(std::make_unique<scheduled_compressions_persistence>(config))
+mod::mod(const uh::options::persistence_config& config) : m_scheduling_persistence(std::make_unique<scheduled_compressions_persistence>(config)),
+        m_identity_persistence(std::make_unique<uuid_persistence>(config))
 {
 }
 

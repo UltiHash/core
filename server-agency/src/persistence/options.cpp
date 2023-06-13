@@ -14,7 +14,7 @@ uh::options::action options::evaluate(const boost::program_options::variables_ma
 
     if (m_config.persistence_path == "/var/lib")
     {
-        m_config.persistence_path = "/var/lib/agency-node";
+        m_config.persistence_path = "/var/lib/uh/agency-node";
         std::filesystem::create_directory(m_config.persistence_path);
     }
     else

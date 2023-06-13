@@ -5,14 +5,21 @@ ARG CMAKE_OPTION
 COPY . /core
 WORKDIR /core
 
+RUN wget -O /tmp/foundationdb-clients_7.1.31-1_amd64.deb https://github.com/apple/foundationdb/releases/download/7.1.31/foundationdb-clients_7.1.31-1_amd64.deb
+RUN dpkg -i /tmp/foundationdb-clients_7.1.31-1_amd64.deb
+
 # Configure and compile
 RUN mkdir build \
     && cmake -B build -D${CMAKE_OPTION}=ON -DCMAKE_BUILD_TYPE=Release \
     && cmake --build build -j $(nproc) --config Release
 
+RUN wget -O /tmp/foundationdb-server_7.1.31-1_amd64.deb https://github.com/apple/foundationdb/releases/download/7.1.31/foundationdb-server_7.1.31-1_amd64.deb
+
+
 # Execute tests
 WORKDIR /core/build
-RUN ctest -C Release --output-on-failure
+RUN dpkg -i /tmp/foundationdb-server_7.1.31-1_amd64.deb && \
+    ctest -C Release --output-on-failure
 
 FROM ubuntu:22.04 as deploy
 
@@ -27,6 +34,14 @@ RUN apt-get update \
     && apt-get upgrade --yes \
     && apt-get install --yes --no-install-recommends curl ncat
 
+# Install FoundationDB
+RUN if [ "$TARGET" = "uhServerAgency" ]; then \
+        wget -O /tmp/foundationdb-clients_7.1.31-1_amd64.deb https://github.com/apple/foundationdb/releases/download/7.1.31/foundationdb-clients_7.1.31-1_amd64.deb && \
+        dpkg -i /tmp/foundationdb-clients_7.1.31-1_amd64.deb; \
+        wget -O /tmp/foundationdb-server_7.1.31-1_amd64.deb https://github.com/apple/foundationdb/releases/download/7.1.31/foundationdb-server_7.1.31-1_amd64.deb && \
+        dpkg -i /tmp/foundationdb-server_7.1.31-1_amd64.deb; \
+    fi
+
 COPY --from=build /core/build/${SRC_PATH}/${TARGET} /usr/local/bin
 COPY --from=build /core/${SRC_PATH}/start.sh /usr/local/bin
 RUN chmod +x /usr/local/bin/start.sh
@@ -38,12 +53,16 @@ RUN mkdir /data
 RUN chown -R uh:uh /data
 
 # required for agency-node metrics persistence
-RUN mkdir -p /var/lib/agency-node
-RUN chown -R uh:uh /var/lib/agency-node
+RUN mkdir -p /var/lib/uh/agency-node
+RUN chown -R uh:uh /var/lib/uh/agency-node
 
 # required for database-node compression-queue persistence
-RUN mkdir -p /var/lib/data-node
-RUN chown -R uh:uh /var/lib/data-node
+RUN mkdir -p /var/lib/uh/data-node
+RUN chown -R uh:uh /var/lib/uh/data-node
+
+ADD foundationdb.conf /etc/foundationdb/foundationdb.conf
+RUN mkdir -p /home/uh/foundationdb/log
+RUN chown -R uh:uh /home/uh/foundationdbrunner
 
 USER uh
 WORKDIR /home/uh

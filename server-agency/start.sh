@@ -1,5 +1,9 @@
 #!/bin/bash
 
+/usr/lib/foundationdb/fdbmonitor  --lockfile /home/runner/foundationdb/fdbmonitor.pid &
+sleep 3
+fdbcli --no-status --exec "configure new single memory"
+
 echo "Waiting for uh-server-db to become available..."
 RAND=$(( ( RANDOM % 5 )  + 1 ))
 sleep $RAND
