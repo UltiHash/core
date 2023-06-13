@@ -5,9 +5,13 @@
 #ifndef CORE_THREAD_SAFE_TYPE_H
 #define CORE_THREAD_SAFE_TYPE_H
 
+#include <uhv/meta_data.h>
+
 #include <mutex>
 
-namespace uh::fuse {
+
+namespace uh::fuse
+{
 
 template <typename T>
 class thread_safe_type {

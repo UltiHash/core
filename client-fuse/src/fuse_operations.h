@@ -10,11 +10,8 @@
 #include <unordered_map>
 #include <uhv/job_queue.h>
 #include <uhv/meta_data.h>
-#include <protocol/client_factory.h>
-#include <protocol/client_pool.h>
 #include <uhv/file.h>
 
-#include "config.hpp"
 #include "context.h"
 
 #include <filesystem>

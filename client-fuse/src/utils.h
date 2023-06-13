@@ -24,7 +24,7 @@ namespace uh::fuse
 
 // ---------------------------------------------------------------------
 
-private_context* get_context();
+context* get_context();
 
 /**
  * Set the metadata for the fuse_file_info `fi`.

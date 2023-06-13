@@ -3,6 +3,8 @@
 #include "fuse_operations.h"
 
 
+using namespace uh::fuse;
+
 static const struct fuse_operations uh_operations =
     {
     .getattr        = uh::fuse::uh_getattr,
@@ -14,7 +16,6 @@ static const struct fuse_operations uh_operations =
     .write          = uh::fuse::uh_write,
     .release        = uh::fuse::uh_release,
     .readdir        = uh::fuse::uh_readdir,
-    .init           = uh::fuse::uh_init,
     .destroy        = uh::fuse::uh_destroy,
     .create         = uh::fuse::uh_create,
     .ftruncate      = uh::fuse::uh_ftruncate,
@@ -79,7 +80,9 @@ int main(int argc, char *argv[])
         opt.show_help = false;
 
         if (fuse_opt_parse(&args, &opt, option_spec, NULL) == -1)
+        {
             throw std::runtime_error("error: parsing failed");
+        }
 
         if (opt.show_help)
         {
@@ -89,7 +92,14 @@ int main(int argc, char *argv[])
         else
         {
             validate_options();
-            ret = fuse_main(args.argc, args.argv, &uh_operations, NULL);
+
+            auto context = std::make_unique<uh::fuse::context>(
+                opt.UHVpath,
+                opt.agency_hostname,
+                opt.agency_port,
+                opt.agency_connections);
+
+            ret = fuse_main(args.argc, args.argv, &uh_operations, context.get());
         }
 
         fuse_opt_free_args(&args);

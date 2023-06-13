@@ -12,9 +12,9 @@ namespace uh::fuse
 
 // ---------------------------------------------------------------------
 
-private_context* get_context()
+context* get_context()
 {
-    return static_cast<private_context*>(fuse_get_context()->private_data);
+    return static_cast<context*>(fuse_get_context()->private_data);
 }
 
 // ---------------------------------------------------------------------
