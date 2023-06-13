@@ -96,6 +96,11 @@ public:
 
     void send(protocol::client_pool::handle& client)
     {
+        if (m_files.empty())
+        {
+            return;
+        }
+
         auto resp = client->write_chunks(write_chunks::request{m_chunk_sizes, std::span(m_buffer, m_offs)});
 
         auto hash_size = resp.hashes.size() / m_files.size();
@@ -164,6 +169,7 @@ public:
           m_active_cond(),
           m_send(0),
           m_send_cond(),
+          m_running(true),
           m_thread([this](){ worker(); })
     {
     }
@@ -197,7 +203,6 @@ public:
      */
     void worker()
     {
-        m_running = true;
         while (m_running)
         {
             std::unique_lock lk(m_mtx);
@@ -206,16 +211,14 @@ public:
                 m_active_cond.wait(lk, [this](){ return m_send != m_active || !m_running; });
             }
 
-            if (!m_running)
+            while (m_send != m_active)
             {
-                break;
+                lk.unlock();
+                m_requests[m_send].send(client_handle);
+                lk.lock();
+                m_send = (m_send + 1) % m_requests.size();
+                m_send_cond.notify_all();
             }
-
-            lk.unlock();
-            m_requests[m_send].send(client_handle);
-            lk.lock();
-            m_send = (m_send + 1) % m_requests.size();
-            m_send_cond.notify_all();
         }
     }
 
@@ -249,8 +252,8 @@ private:
     std::atomic<std::size_t> m_send;
     std::condition_variable m_send_cond;
 
-    std::thread m_thread;
     bool m_running;
+    std::thread m_thread;
 };
 
 // ---------------------------------------------------------------------
