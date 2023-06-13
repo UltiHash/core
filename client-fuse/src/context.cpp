@@ -56,6 +56,22 @@ uhv::file& context::uhv()
 
 // ---------------------------------------------------------------------
 
+void context::update_uhv()
+{
+    auto container = metadata_map();
+    auto& data = container();
+
+    std::list<std::unique_ptr<uhv::f_meta_data>> md;
+    for (auto& tsmd : data)
+    {
+        md.push_back(std::make_unique<uhv::f_meta_data>(tsmd.second.get()()));
+    }
+
+    m_uhv.serialize(md);
+}
+
+// ---------------------------------------------------------------------
+
 protocol::client_pool::handle context::get_client()
 {
     return m_pool.get();

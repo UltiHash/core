@@ -73,18 +73,4 @@ uint64_t upload_data(uh::protocol::client_pool::handle& client_handle,
     return effective_size;
 }
 
-
-void rewrite_uhv_file(const std::filesystem::path& path,
-                      std::unordered_map<std::string, ts_f_meta_data>& data)
-{
-    std::list<std::unique_ptr<f_meta_data>> md;
-    for (auto& tsmd: data)
-    {
-        md.push_back(std::make_unique<f_meta_data>(tsmd.second.get()()));
-    }
-
-    uh::uhv::file f(path);
-    f.serialize(md);
-}
-
 }

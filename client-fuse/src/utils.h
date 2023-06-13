@@ -40,9 +40,6 @@ std::vector<std::filesystem::path> get_files(
 uint64_t upload_data (uh::protocol::client_pool::handle& client_handle, size_t chunk_size, const std::span <char> &data, std::vector <char> &hashes);
 void write_metadata (std::ofstream &UHV_file, const uhv::f_meta_data &md);
 
-void rewrite_uhv_file(const std::filesystem::path& path,
-                      std::unordered_map<std::string, ts_f_meta_data>& data);
-
 } // namespace uh::fuse
 
 #endif //CORE_UTILS_H

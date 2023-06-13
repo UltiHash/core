@@ -54,7 +54,7 @@ private:
         m_mutex.unlock();
     }
 
-    std::mutex m_mutex;
+    std::recursive_mutex m_mutex;
     T m_t;
 };
 

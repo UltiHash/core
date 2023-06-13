@@ -27,8 +27,10 @@ struct context
     unsigned long fd = 0;
 
     uhv::file& uhv();
+    void update_uhv();
 
     protocol::client_pool::handle get_client();
+
 
     auto metadata_map()
     {

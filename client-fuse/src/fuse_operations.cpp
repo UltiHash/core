@@ -98,7 +98,7 @@ int uh_unlink(const char *path)
         unordered_map.erase(it);
     }
 
-    rewrite_uhv_file(get_options().UHVpath, unordered_map);
+    ctx->update_uhv();
 
     std::cout << "leaving uh_unlink(" << path << ")\n";
 
@@ -155,7 +155,7 @@ int uh_rmdir (const char *path)
         ctx->subdirectory_counts()().at(f_meta_data.f_path().parent_path())--;
     }
 
-    rewrite_uhv_file(get_options().UHVpath, unordered_map);
+    ctx->update_uhv();
 
     return 0;
 }
@@ -184,10 +184,7 @@ int __uh_ftruncate (const char *path, off_t off, struct fuse_file_info *fi) {
         fmd.set_effective_size(0);
         fmd.set_f_hashes({});
 
-        // store the new metadata into the uh volume
-        auto container = context->metadata_map();
-        rewrite_uhv_file(get_options().UHVpath, container());
-
+        context->update_uhv();
     }
     else {  // for now we do nothing
         throw std::runtime_error("ftruncate operation not supported");
@@ -402,11 +399,7 @@ int __uh_write (const char *path, const char *buf, size_t size, off_t offset, st
         throw std::runtime_error("write operation not supported");
     }
 
-
-    // store the new metadata into the uh volume
-    auto container = get_context()->metadata_map();
-    auto &handler = container();
-    rewrite_uhv_file(get_options().UHVpath, handler);
+    context->update_uhv();
 
     std::cout << "leaving uh_write(" << path << ", )\n";
 
@@ -421,7 +414,7 @@ int __uh_create (const char *path, mode_t mode, struct fuse_file_info *fi) {
         return -EACCES;
     }
 
-    uh::uhv::f_meta_data md (path);
+    uh::uhv::f_meta_data md(path);
     md.set_f_type(uh::uhv::uh_file_type::regular);
     md.set_f_size(0);
     md.set_effective_size(0);

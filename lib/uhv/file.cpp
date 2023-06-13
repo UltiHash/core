@@ -115,7 +115,7 @@ std::list<std::unique_ptr<uhv::f_meta_data>> file::deserialize()
 
 void file::append(std::unique_ptr<uhv::f_meta_data> md)
 {
-    io::file file(m_path, std::ios::out | std::ios::ate | std::ios::binary);
+    io::file file(m_path, std::ios::out | std::ios::in | std::ios::binary);
 
     uh::serialization::sl_deserializer deserialize(file);
     auto count = deserialize.read<unsigned long>();
