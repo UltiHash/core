@@ -356,21 +356,23 @@ int __uh_write (const char *path, const char *buf, size_t size, off_t offset, st
     }
 
     auto context = get_context();
-    auto &ts_fmd = context->open_files()().at(fi->fh);
+    auto& ts_fmd = context->open_files()().at(fi->fh);
     auto fmd_handler = ts_fmd.get();
-    auto &fmd = fmd_handler();
+    auto& fmd = fmd_handler();
 
-    if (fmd.f_type() != uh::uhv::uh_file_type::regular) {
+    if (fmd.f_type() != uh::uhv::uh_file_type::regular)
+    {
         return -ENOMEM;
     }
 
     protocol::client_pool::handle client_handle = context->get_client();
 
-    if (static_cast<size_t>(offset) == fmd.f_size() and offset > 0) {       // if this is an append, for instance when performing "echo data >> file"
+    if (static_cast<size_t>(offset) == fmd.f_size() and offset > 0)
+    {       // if this is an append, for instance when performing "echo data >> file"
 
         // read the last chunk of the file
         std::vector<char> current_hash(64);
-        std::vector <char> last_chunk (std::max (fmd.f_size() % max_chunk_size, min_chuck_size) + size);
+        std::vector<char> last_chunk(std::max(fmd.f_size() % max_chunk_size, min_chuck_size) + size);
         std::span<char> data = {last_chunk.data(), last_chunk.size() - size};
         std::copy(fmd.f_hashes().end() - 64, fmd.f_hashes().end (), current_hash.begin());
         fmd.remove_hash(fmd.f_hashes().size() - 64, fmd.f_hashes().size());
@@ -381,7 +383,7 @@ int __uh_write (const char *path, const char *buf, size_t size, off_t offset, st
         data = {last_chunk.data(), fmd.f_size() % max_chunk_size + size};
 
         //write the extended last chunk
-        const auto effective_size = upload_data (client_handle, max_chunk_size, data, fmd.get_hashes());
+        const auto effective_size = upload_data(client_handle, max_chunk_size, data, fmd.get_hashes());
         fmd.add_effective_size(effective_size);
         fmd.set_f_size(fmd.f_size() + size);
     }
