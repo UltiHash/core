@@ -36,7 +36,6 @@ int __uh_getattr (const char *path, struct stat *stbuf)
         return 0;
     }
     else if (it == unordered_map.end()) {
-        //stat (path, stbuf);
         stbuf->st_size = 0;
         stbuf->st_nlink = 1;
         stbuf->st_blksize = 4096;
