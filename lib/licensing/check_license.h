@@ -108,6 +108,9 @@ namespace uh::licensing{
         const std::string_view appName_string = "app_name: ";
         const std::string_view appVersion_string = "app_version: ";
 
+        const std::string_view airgap_license_string = "airgap_license_with_online_activation";
+        const std::string_view floating_license_string = "floating_online_user_license";
+
         /**
          * apiKey_crypt is 36 characters long
          * sharedKey_crypt is 43 characters long

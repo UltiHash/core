@@ -67,10 +67,10 @@ namespace uh::licensing {
             if (line.starts_with(license_type_string)) {
                 line = line.substr(license_type_string.size(), line.size());
 
-                if (line == "airgap_license_with_online_activation")
+                if (line == airgap_license_string)
                     return check_license::license_type::AIRGAP_LICENSE_WITH_ONLINE_ACTIVATION;
 
-                if (line == "floating_user_license")
+                if (line == floating_license_string)
                     return check_license::license_type::FLOATING_ONLINE_USER_LICENSE;
             }
         }
@@ -142,10 +142,10 @@ namespace uh::licensing {
 
         switch (licenseTypeInternal) {
             case license_type::AIRGAP_LICENSE_WITH_ONLINE_ACTIVATION:
-                license_type_set_string = "airgap_license_with_online_activation";
+                license_type_set_string = airgap_license_string;
                 break;
             case license_type::FLOATING_ONLINE_USER_LICENSE:
-                license_type_set_string = "floating_online_user_license";
+                license_type_set_string = floating_license_string;
                 break;
             default:
                 THROW(util::exception, "No license type detected!");
