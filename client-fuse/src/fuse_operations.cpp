@@ -28,7 +28,7 @@ int __uh_getattr (const char *path, struct stat *stbuf)
     memset(stbuf, 0, sizeof(struct stat));
     uh::uhv::uh_file_type f_type;
 
-    auto *ctx = get_context();
+    auto* ctx = get_context();
     auto container_handle = ctx->fmetadata_map.get();
     auto& unordered_map = container_handle();
 
@@ -304,7 +304,7 @@ int __uh_readdir (const char *path, void *buf, fuse_fill_dir_t filler, off_t off
             return -ENOENT;
         }
 
-        files = get_files (metadata.f_path(), unordered_map);
+        files = get_files(metadata.f_path(), unordered_map);
     }
 
     filler(buf, ".", nullptr, 0);

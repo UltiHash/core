@@ -17,25 +17,41 @@ private_context* get_context()
     return static_cast<private_context*>(fuse_get_context()->private_data);
 }
 
+// ---------------------------------------------------------------------
+
 void set_metadata(struct fuse_file_info* fi, f_meta_data& fmd)
 {
     fi->fh = reinterpret_cast<size_t>(&fmd);
 }
 
-std::vector <std::filesystem::path> get_files (const std::string &directory, const std::unordered_map <std::string,
-                                               ts_f_meta_data> &metadata_list) {
-    std::vector <std::filesystem::path> files;
-    for (const auto& md: metadata_list) {
+// ---------------------------------------------------------------------
+
+std::vector<std::filesystem::path> get_files(
+    const std::string& directory,
+    const std::unordered_map <std::string, ts_f_meta_data>& metadata_list)
+{
+    std::vector<std::filesystem::path> files;
+
+    for (const auto& md : metadata_list)
+    {
         const auto path = std::filesystem::path(md.first);
 
-        if (path.parent_path() == directory && !path.filename().empty()) {
+        if (path.parent_path() == directory && !path.filename().empty())
+        {
             files.emplace_back(path);
         }
     }
+
     return files;
 }
 
-uint64_t upload_data (uh::protocol::client_pool::handle& client_handle, size_t chunk_size, const std::span <char> &data, std::vector <char> &hashes) {
+// ---------------------------------------------------------------------
+
+uint64_t upload_data(uh::protocol::client_pool::handle& client_handle,
+                     size_t chunk_size,
+                     const std::span<char>& data,
+                     std::vector<char>& hashes)
+{
     std::size_t write_offset = 0ul;
     auto effective_size = 0;
 
