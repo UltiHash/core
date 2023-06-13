@@ -4,12 +4,6 @@
 
 #include "check_online_license.h"
 
-#include <LicenseSpring/Configuration.h>
-#include <LicenseSpring/EncryptString.h>
-#include <LicenseSpring/LicenseManager.h>
-#include <LicenseSpring/Exceptions.h>
-#include <LicenseSpring/LicenseFileStorage.h>
-
 #include <utility>
 
 namespace uh::licensing{
@@ -39,34 +33,7 @@ namespace uh::licensing{
 
     bool check_online_license::valid()
     {
-        //Collecting network info
-        LicenseSpring::ExtendedOptions options;
-        options.collectNetworkInfo( true );
-        options.enableLogging(true);
-        options.enableVMDetection(false);
-
-        std::shared_ptr<LicenseSpring::Configuration> pConfiguration = LicenseSpring::Configuration::Create(
-                apiKey_crypt, // your LicenseSpring API key (UUID)
-                sharedKey_crypt, // your LicenseSpring Shared key
-                productId_crypt, // product code that you specified in LicenseSpring for your application
-                appName, appVersion, options);
-
-        //For user-based implementation comment out above line, and use bottom 3 lines
-        auto licenseId = LicenseSpring::LicenseID::fromUser( userName, password );
-
-        std::filesystem::path spring_lic_path;
-        spring_lic_path.extension() = ".lic_spring";
-
-        /*
-        auto licenseFileStorage =
-                std::make_shared<LicenseSpring::FileStorageWithLock>(LicenseSpring::
-                FileStorageWithLock(spring_lic_path.wstring()));*/
-
-        // User-based implementation
-        auto licenseManager =
-                LicenseSpring::LicenseManager::create( pConfiguration );
-
-        return licenseRegister(licenseManager, licenseId);
+        return userName == check_user_name() and password == check_password();
     }
 
     // ---------------------------------------------------------------------

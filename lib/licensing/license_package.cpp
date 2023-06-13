@@ -4,6 +4,8 @@
 
 #include "licensing/license_package.h"
 
+#include <utility>
+
 namespace uh::licensing{
 
     // ---------------------------------------------------------------------
@@ -33,54 +35,75 @@ namespace uh::licensing{
                                        (feature)feature_iterate) != features_input.cend());
         }
 
+        auto init_lambda = [&config,&apiKey,&sharedKey,&productId,this]
+                (std::filesystem::path license_path_input){
+            auto tmp_license_type_read = check_license(std::move(license_path_input),
+                                                       check_license::license_type::
+                                                       AIRGAP_LICENSE_WITH_ONLINE_ACTIVATION,
+                                                       std::string(), std::string(),
+                                                       std::string(),
+                                                       "INIT_APP", "0.0.0");
+
+            auto license_type_checked = tmp_license_type_read.check_license_type();
+
+            switch (license_type_checked) {
+
+                case check_license::license_type::AIRGAP_LICENSE_WITH_ONLINE_ACTIVATION:
+                {
+                    auto* tmp_license_valid_airgap = new check_airgap_license(config,
+                                                                              apiKey,
+                                                                              sharedKey,
+                                                                              productId);
+
+                    if(tmp_license_valid_airgap->valid())check_lic = tmp_license_valid_airgap;
+                    else delete tmp_license_valid_airgap;
+
+                    break;
+                }
+
+                case check_license::license_type::FLOATING_ONLINE_USER_LICENSE:
+                {
+                    auto* tmp_license_valid_online = new check_airgap_license(config,
+                                                                              apiKey,
+                                                                              sharedKey,
+                                                                              productId);
+
+                    if(tmp_license_valid_online->valid())check_lic = tmp_license_valid_online;
+                    else delete tmp_license_valid_online;
+
+                    break;
+                }
+
+                default:
+                    break;
+            }
+
+            return license_type_checked;
+        };
+
+        if(std::filesystem::exists(config) and std::filesystem::is_regular_file(config))
+        {
+            if(config.extension() != ".lic")
+                THROW(util::exception,"Named license file did not carry extension \".lic\" ! Did you really chose a"
+                                      "license file?");
+
+            check_license::license_type licenseTypeToCheck = init_lambda(config);
+            check_role_enabled(license_role);
+            if(licenseTypeToCheck == check_license::license_type::THROW_LICENSE_TYPE)
+                THROW(util::exception,"License type checker failed to wrong type of license check!");
+
+            return;
+        }
+
         for(auto& file_object: std::filesystem::directory_iterator(config))
         {
             if(file_object.is_regular_file() && file_object.path().extension() == ".lic")
             {
-                auto tmp_license_type_read = check_license(file_object.path(),
-                                                           check_license::license_type::
-                                                           AIRGAP_LICENSE_WITH_ONLINE_ACTIVATION,
-                                                           std::string(), std::string(),
-                                                           std::string(),
-                                                           "INIT_APP", "0.0.0");
-
-                auto license_type_checked = tmp_license_type_read.check_license_type();
-
-                switch (license_type_checked) {
-
-                    case check_license::license_type::AIRGAP_LICENSE_WITH_ONLINE_ACTIVATION:
-                    {
-                        auto* tmp_license_valid_airgap = new check_airgap_license(config,
-                                                                                  apiKey,
-                                                                                  sharedKey,
-                                                                                  productId);
-
-                        if(tmp_license_valid_airgap->valid())check_lic = tmp_license_valid_airgap;
-                        else delete tmp_license_valid_airgap;
-
-                        break;
-                    }
-
-                    case check_license::license_type::FLOATING_ONLINE_USER_LICENSE:
-                    {
-                        auto* tmp_license_valid_online = new check_airgap_license(config,
-                                                                                  apiKey,
-                                                                                  sharedKey,
-                                                                                  productId);
-
-                        if(tmp_license_valid_online->valid())check_lic = tmp_license_valid_online;
-                        else delete tmp_license_valid_online;
-
-                        break;
-                    }
-
-                    default:
-                        break;
-                }
+                check_license::license_type licenseTypeToCheck = init_lambda(file_object.path());
 
                 check_role_enabled(license_role);
 
-                if(license_type_checked != check_license::license_type::THROW_LICENSE_TYPE)
+                if(licenseTypeToCheck != check_license::license_type::THROW_LICENSE_TYPE)
                     break;
             }
         }

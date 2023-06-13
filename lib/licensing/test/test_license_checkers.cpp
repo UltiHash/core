@@ -7,8 +7,6 @@
 #include <boost/test/unit_test.hpp>
 #include <boost/mpl/vector.hpp>
 
-#include <LicenseSpring/EncryptString.h>
-
 #include <licensing/check_airgap_license.h>
 #include <licensing/check_online_license.h>
 #include <licensing/license_package.h>
@@ -24,16 +22,17 @@ namespace {
 // ---------------------------------------------------------------------
 
     const std::filesystem::path TEMP_DIR = "/tmp";
-    const std::string apiKey_test = EncryptStr("f43e779a-71bc-460f-af89-69a1c47cbe8b");
-    const std::string sharedKey_test = EncryptStr("UtVbATx32BYf9QAQtLmcEJ4U5-58SezMIkeyb2Cy8l0");
-    const std::string product_Id_test = EncryptStr("02");
+    const std::string apiKey_test = "f43e779a-71bc-460f-af89-69a1c47cbe8b";
+    const std::string sharedKey_test = "UtVbATx32BYf9QAQtLmcEJ4U5-58SezMIkeyb2Cy8l0";
+    const std::string product_Id_test = "02";
 
     const std::string appName_test = "UltiHash agency_node";
     const std::string appVersion_test = "0.1.0";
 
     const std::string licenseKey_100 = "GZD9-8SMR-WLNK-2N02";
-    const std::string user_name_test = "benjamin@ultihash.io";
-    const std::string password_test = "#u5huzU!ita*o&I4@ona2+OVlGlhehe0!dLDeslticO#r?!3@*$a@$x*hl1lxisW";
+    const std::string user_name_test = "test_user";
+    const std::string password_test = "test_password";
+    //license spring password: "#u5huzU!ita*o&I4@ona2+OVlGlhehe0!dLDeslticO#r?!3@*$a@$x*hl1lxisW"
 
 // ---------------------------------------------------------------------
 
@@ -125,6 +124,14 @@ namespace {
                            std::set<license_package::feature>{license_package::feature::DEDUPLICATION,
                                                               license_package::feature::METRICS},
                            license_path1,
+                           apiKey_test,
+                           sharedKey_test,
+                           product_Id_test);
+
+        license_package lp2(check_license::role::AGENCY_NODE,
+                           std::set<license_package::feature>{license_package::feature::DEDUPLICATION,
+                                                              license_package::feature::METRICS},
+                           license_path1.parent_path(),
                            apiKey_test,
                            sharedKey_test,
                            product_Id_test);

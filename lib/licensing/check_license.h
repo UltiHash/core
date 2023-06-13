@@ -10,10 +10,6 @@
 
 #include <io/temp_file.h>
 
-#include <LicenseSpring/LicenseManager.h>
-#include <LicenseSpring/LicenseID.h>
-#include <LicenseSpring/EncryptString.h>
-
 namespace uh::licensing{
 
     class check_license{
@@ -120,9 +116,6 @@ namespace uh::licensing{
         std::string appName, appVersion, apiKey_crypt, sharedKey_crypt, productId_crypt;
 
         const license_type licenseTypeInternal;
-
-        static int licenseRegister(const std::shared_ptr<LicenseSpring::LicenseManager> &licenseManager,
-                            const LicenseSpring::LicenseID& licenseId);
     };
 
 } // namespace uh::licensing

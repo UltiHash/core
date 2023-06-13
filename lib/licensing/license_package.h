@@ -34,11 +34,12 @@ namespace uh::licensing {
         };
 
         /**
+         * automatically searches matching license file to activate product
          *
          * @param config license file input
          * @throws if license is invalid or cannot be loaded
          */
-        explicit license_package(check_license::role license_role,
+        explicit license_package(check_license::role license_path_input,
                                  const std::set<feature>& features_input,
                                  const std::filesystem::path &config, const std::string& apiKey,
                                  const std::string& sharedKey, const std::string& productId);
