@@ -161,9 +161,9 @@ endif ()
 # adding all the .h files of the current project
 
 file(COPY "${COPY_SOURCE_FOLDER}/include" DESTINATION "${CMAKE_CURRENT_LIST_DIR}"
-        PATTERN "curl*" EXCLUDE)
+        #[===[PATTERN "curl*" EXCLUDE]===])
 file(COPY "${COPY_SOURCE_FOLDER}/bin/" DESTINATION "${CMAKE_CURRENT_LIST_DIR}/bin_${CMAKE_BUILD_TYPE}/"
-        PATTERN "libcurl*" EXCLUDE)
+        #[===[PATTERN "libcurl*" EXCLUDE]===])
 
 file(GLOB HEADER_FILE_LIST ${CMAKE_CURRENT_BINARY_DIR}/include/*.h)
 
