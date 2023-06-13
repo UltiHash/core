@@ -17,7 +17,7 @@ scheduled_compressions_persistence::scheduled_compressions_persistence(const uh:
 // ---------------------------------------------------------------------
 
 scheduled_compressions_persistence::scheduled_compressions_persistence() :
-        m_target_path("/tmp/uh/data-node" / std::filesystem::path("scheduled_compressions.uhs"))
+        m_target_path("/tmp" / std::filesystem::path("scheduled_compressions.uhs"))
 {
 }
 
