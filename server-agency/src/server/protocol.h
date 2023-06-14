@@ -7,7 +7,7 @@
 
 #include <cluster/mod.h>
 #include <metrics/client_metrics.h>
-#include <persistence/storage/client_metrics_persistence.h>
+#include <persistence/client_metrics_persistence.h>
 
 #include <memory>
 

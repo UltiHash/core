@@ -3,7 +3,7 @@
 
 #include <memory>
 #include <persistence/options.h>
-#include <persistence/storage/client_metrics_persistence.h>
+#include <persistence/client_metrics_persistence.h>
 
 namespace uh::an::persistence
 {
@@ -13,7 +13,7 @@ namespace uh::an::persistence
     class mod
     {
     public:
-        explicit mod(const uh::options::persistence_config& config);
+        explicit mod(const storage_config& config);
 
         ~mod() = default;
 

@@ -5,7 +5,7 @@
 #include <io/device.h>
 #include <io/temp_file.h>
 #include <compression/type.h>
-#include <persistence/storage/scheduled_compressions_persistence.h>
+#include <persistence/scheduled_compressions_persistence.h>
 #include <metrics/storage_metrics.h>
 
 #include <filesystem>
@@ -15,23 +15,6 @@
 
 namespace uh::dbn::storage
 {
-
-// ---------------------------------------------------------------------
-
-struct compressed_file_store_config
-{
-    static constexpr unsigned DEFAULT_THREADS = 5u;
-
-    /**
-     * Number of threads for background compression.
-     */
-    unsigned threads = DEFAULT_THREADS;
-
-    /**
-     * Default compression applied to files.
-     */
-    comp::type compression = comp::type::none;
-};
 
 // ---------------------------------------------------------------------
 

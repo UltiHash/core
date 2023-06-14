@@ -9,8 +9,8 @@ namespace uh::dbn::persistence
 
 // ---------------------------------------------------------------------
 
-scheduled_compressions_persistence::scheduled_compressions_persistence(const uh::options::persistence_config& config) :
-    m_target_path(config.persistence_path / std::filesystem::path("scheduled_compressions.ua"))
+scheduled_compressions_persistence::scheduled_compressions_persistence(const uh::dbn::storage::storage_config& config) :
+    m_target_path(config.db_metrics / std::filesystem::path("scheduled_compressions.uhs"))
 {
 }
 

@@ -3,8 +3,7 @@
 
 #include <filesystem>
 #include <set>
-#include <options/options.h>
-#include <persistence/options.h>
+#include <storage/storage_config.h>
 
 namespace uh::dbn::persistence
 {
@@ -13,13 +12,13 @@ namespace uh::dbn::persistence
 
     /*
      * Class to store the scheduling information of the compression in a device. It is not thread safe.
-     * Other classes using it which are multithreaded should have thread safety built-in in order to access
+     * Other classes using it which are multi-threaded should have thread safety built-in in order to access
      * and use the scheduled_compressions_persistence class.
      */
     class scheduled_compressions_persistence
     {
     public:
-        explicit scheduled_compressions_persistence(const uh::options::persistence_config& config);
+        explicit scheduled_compressions_persistence(const uh::dbn::storage::storage_config& config);
         scheduled_compressions_persistence();
 
         void start();

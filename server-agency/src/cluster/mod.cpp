@@ -166,14 +166,14 @@ mod::~mod() = default;
 
 void mod::start()
 {
-    INFO << "          starting cluster module";
+    INFO << "starting cluster module";
 }
 
 // ---------------------------------------------------------------------
 
 void mod::stop()
 {
-    INFO << "          stopping cluster module";
+    INFO << "stopping cluster module";
 
     m_impl->stop("server agency stopped");
 }

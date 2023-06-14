@@ -41,7 +41,7 @@ int main(int argc, const char** argv)
         init_logging(config.logging());
 
 
-        INFO << "               --- Agency Node Modules ---";
+        INFO << "--- Agency Node Modules ---";
         cluster::mod cluster_module(config.cluster());
         cluster_module.start();
 

@@ -3,7 +3,7 @@
 
 #include <protocol/messages.h>
 #include <metrics/service.h>
-#include <persistence/storage/client_metrics_persistence.h>
+#include <persistence/client_metrics_persistence.h>
 
 namespace uh::an::metrics
 {

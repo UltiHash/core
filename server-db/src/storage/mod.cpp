@@ -59,7 +59,7 @@ std::unique_ptr<backend> make_backend(const storage_config& cfg, metrics::storag
                                       persistence::scheduled_compressions_persistence& scheduled_compressions)
 {
 
-    maybe_create_database_root_directory(cfg.db_root, cfg.create_new_root);
+    maybe_create_database_root_directory(cfg.db_root, cfg.create_new_directory);
 
     //Check whether we have enough space:
     size_t max_size = max_configurable_capacity(cfg.db_root);
@@ -123,7 +123,7 @@ mod::~mod() = default;
 
 void mod::start() const
 {
-    INFO << "          starting storage module";
+    INFO << "starting storage module";
     m_impl->m_backend->start();
 }
 
@@ -131,7 +131,7 @@ void mod::start() const
 
 void mod::stop() const
 {
-    INFO << "          stopping storage module";
+    INFO << "stopping storage module";
     m_impl->m_backend->stop();
 }
 

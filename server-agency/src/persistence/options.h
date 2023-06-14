@@ -3,19 +3,32 @@
 
 #include <options/options.h>
 #include <filesystem>
-#include "options/persistence_options.h"
 
 namespace uh::an::persistence
 {
 
+    struct storage_config
+    {
+        constexpr static std::string_view default_data_directory = "/var/lib/uh-agency-node";
+
+        std::filesystem::path data_directory = default_data_directory;
+        std::filesystem::path an_metrics = std::string(default_data_directory) + std::string("metrics");
+        bool create_new_directory = false;
+    };
+
 // ---------------------------------------------------------------------
 
-    class options : public uh::options::persistence_options
+    class options : public uh::options::options
     {
     public:
-        options() = default;
+        options();
 
         uh::options::action evaluate(const boost::program_options::variables_map& vars) override;
+
+        [[nodiscard]] const storage_config& config() const;
+
+    private:
+        storage_config m_config;
     };
 
 // ---------------------------------------------------------------------

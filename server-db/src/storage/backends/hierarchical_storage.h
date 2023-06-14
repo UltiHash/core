@@ -7,7 +7,7 @@
 
 #include <storage/backend.h>
 #include <storage/compressed_file_store.h>
-#include <persistence/storage/scheduled_compressions_persistence.h>
+#include <persistence/scheduled_compressions_persistence.h>
 #include "io/sha512.h"
 #include "storage/backends/smart_backend/smart_config.h"
 

@@ -1,8 +1,8 @@
 #ifndef SERVER_DATABASE_PERSISTENCE_MOD_H
 #define SERVER_DATABASE_PERSISTENCE_MOD_H
 
-#include <persistence/storage/scheduled_compressions_persistence.h>
-#include <persistence/options.h>
+#include <persistence/scheduled_compressions_persistence.h>
+#include <storage/options.h>
 
 namespace uh::dbn::persistence
 {
@@ -12,7 +12,7 @@ namespace uh::dbn::persistence
     class mod
     {
     public:
-        explicit mod(const uh::options::persistence_config& config);
+        explicit mod(const uh::dbn::storage::storage_config& config);
 
         ~mod() = default;
 
