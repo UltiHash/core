@@ -6,4 +6,12 @@
 #define PROJECT_VCSID "@PROJECT_VCSID@"
 #define PROJECT_REPOSITORY "@PROJECT_REPOSITORY@"
 
+/*
+ * Licensing
+ */
+
+#define LICENSE_API_KEY "f43e779a-71bc-460f-af89-69a1c47cbe8b"
+#define LICENSE_SHARED_KEY "UtVbATx32BYf9QAQtLmcEJ4U5-58SezMIkeyb2Cy8l0"
+#define LICENSE_PRODUCT_ID "01"
+
 #endif
