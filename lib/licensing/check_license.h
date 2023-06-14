@@ -116,7 +116,11 @@ namespace uh::licensing{
          * sharedKey_crypt is 43 characters long
          * productId_crypt is 6 characters long
          */
-        std::string appName, appVersion, apiKey_crypt, sharedKey_crypt, productId_crypt;
+        std::string appName,
+        appVersion,
+        apiKey_crypt,
+        sharedKey_crypt,
+        productId_crypt;
 
         const license_type licenseTypeInternal;
     };

@@ -11,14 +11,6 @@ namespace uh::licensing{
     // ---------------------------------------------------------------------
 
     license_package::~license_package() {
-        for(auto& item:hard_metered_features){
-            delete item.second;
-        }
-
-        for(auto& item:soft_metered_features){
-            delete item.second;
-        }
-
         delete check_lic;
     }
 
