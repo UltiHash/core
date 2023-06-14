@@ -13,8 +13,8 @@
 #include "fdb/fdb.h"
 
 #define CHAR_TO_SPAN(variable, stringLiteral) \
-    constexpr char* variable = (char*) stringLiteral; \
-    constexpr const std::span<char> variable##Span = {variable, std::strlen(variable)};
+    char* variable = (char*) stringLiteral; \
+    const std::span<char> variable##Span = {variable, std::strlen(variable)};
 
 CHAR_TO_SPAN(key1, "key_1");
 CHAR_TO_SPAN(key2, "key_2");
