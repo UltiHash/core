@@ -8,12 +8,15 @@
 #include "io/temp_file.h"
 #include "io/sha512.h"
 
+#include "LicenseSpring/Exceptions.h"
+
 #include <fstream>
 #include <string>
 #include <iostream>
 #include <utility>
 
 #include "boost/process.hpp"
+#include "boost/asio.hpp"
 
 namespace uh::licensing {
 
@@ -204,99 +207,46 @@ namespace uh::licensing {
     int check_license::licenseRegister(const std::shared_ptr<LicenseSpring::LicenseManager> &licenseManager,
                                        const LicenseSpring::LicenseID &licenseId) {
 
-        LicenseSpring::License::ptr_t license = nullptr;
-
-        try {
-            license = licenseManager->reloadLicense();
-            if (license != nullptr) {
-                license->localCheck(); //always good to do a local check whenever you run your program
+        LicenseSpring::License::ptr_t license = licenseManager->reloadLicense();
+        if(!license_check(license)){
+            try {
+                license = licenseManager->activateLicense(licenseId);
             }
-        }
-        catch (LicenseSpring::LocalLicenseException) { //Exception if we cannot read the local license or the local license file is corrupt
-            ERROR << "Could not read previous local license. Local license may be corrupt. "
-                  << "Create a new local license by activating your license." << std::endl;
-
-            std::cout << "Could not read previous local license. Local license may be corrupt. "
-                      << "Create a new local license by activating your license." << std::endl;
-            return 0;
-        }
-        catch (LicenseSpring::LicenseStateException) {
-            ERROR << "Current license is not valid" << std::endl;
-            std::cout << "Current license is not valid" << std::endl;
-            if (!license->isActive()) {
-                ERROR << "License is inactive" << std::endl;
-                std::cout << "License is inactive" << std::endl;
+            catch (LicenseSpring::ProductNotFoundException) {
+                ERROR << "Product not found on server, please check your product configuration." << std::endl;
+                std::cout << "Product not found on server, please check your product configuration." << std::endl;
                 return 0;
             }
-            if (license->isExpired()) {
-                ERROR << "License is expired" << std::endl;
-                std::cout << "License is expired" << std::endl;
+            catch (LicenseSpring::LicenseNotFoundException) {
+                ERROR << "License could not be found on server." << std::endl;
+                std::cout << "License could not be found on server." << std::endl;
                 return 0;
             }
-            if (!license->isEnabled()) {
-                ERROR << "License is disabled" << std::endl;
-                std::cout << "License is disabled" << std::endl;
+            catch (LicenseSpring::LicenseStateException) {
+                ERROR << "License is currently expired or disabled." << std::endl;
+                std::cout << "License is currently expired or disabled." << std::endl;
                 return 0;
             }
-        }
-        catch (LicenseSpring::ProductMismatchException) {
-            ERROR << "License does not belong to configured product." << std::endl;
-            std::cout << "License does not belong to configured product." << std::endl;
-            return 0;
-        }
-        catch (LicenseSpring::DeviceNotLicensedException) {
-            ERROR << "License does not belong to current computer." << std::endl;
-            std::cout << "License does not belong to current computer." << std::endl;
-            return 0;
-        }
-        catch (LicenseSpring::VMIsNotAllowedException) {
-            ERROR << "Currently running on VM, when VM is not allowed." << std::endl;
-            std::cout << "Currently running on VM, when VM is not allowed." << std::endl;
-            return 0;
-        }
-        catch (LicenseSpring::ClockTamperedException) {
-            ERROR << "Detected cheating with system clock." << std::endl;
-            std::cout << "Detected cheating with system clock." << std::endl;
-            return 0;
-        }
-
-        try {
-            license = licenseManager->activateLicense(licenseId);
-        }
-        catch (LicenseSpring::ProductNotFoundException) {
-            ERROR << "Product not found on server, please check your product configuration." << std::endl;
-            std::cout << "Product not found on server, please check your product configuration." << std::endl;
-            return 0;
-        }
-        catch (LicenseSpring::LicenseNotFoundException) {
-            ERROR << "License could not be found on server." << std::endl;
-            std::cout << "License could not be found on server." << std::endl;
-            return 0;
-        }
-        catch (LicenseSpring::LicenseStateException) {
-            ERROR << "License is currently expired or disabled." << std::endl;
-            std::cout << "License is currently expired or disabled." << std::endl;
-            return 0;
-        }
-        catch (LicenseSpring::LicenseNoAvailableActivationsException) {
-            ERROR << "No available activations remaining on license." << std::endl;
-            std::cout << "No available activations remaining on license." << std::endl;
-            return 0;
-        }
-        catch (LicenseSpring::CannotBeActivatedNowException) {
-            ERROR << "Current date is not at start date of license." << std::endl;
-            std::cout << "Current date is not at start date of license." << std::endl;
-            return 0;
-        }
-        catch (LicenseSpring::SignatureMismatchException) {
-            ERROR << "Signature on LicenseSpring server is invalid." << std::endl;
-            std::cout << "Signature on LicenseSpring server is invalid." << std::endl;
-            return 0;
-        }
-        catch (...) {
-            ERROR << "Possible connection issue." << std::endl;
-            std::cout << "Possible connection issue." << std::endl;
-            return 0;
+            catch (LicenseSpring::LicenseNoAvailableActivationsException) {
+                ERROR << "No available activations remaining on license." << std::endl;
+                std::cout << "No available activations remaining on license." << std::endl;
+                return 0;
+            }
+            catch (LicenseSpring::CannotBeActivatedNowException) {
+                ERROR << "Current date is not at start date of license." << std::endl;
+                std::cout << "Current date is not at start date of license." << std::endl;
+                return 0;
+            }
+            catch (LicenseSpring::SignatureMismatchException) {
+                ERROR << "Signature on LicenseSpring server is invalid." << std::endl;
+                std::cout << "Signature on LicenseSpring server is invalid." << std::endl;
+                return 0;
+            }
+            catch (...) {
+                ERROR << "Possible connection issue." << std::endl;
+                std::cout << "Possible connection issue." << std::endl;
+                return 0;
+            }
         }
 
         if (license != nullptr) {
@@ -305,20 +255,33 @@ namespace uh::licensing {
         //We can then extract our custom fields as a vector of CustomField objects as so:
         std::vector<LicenseSpring::CustomField> custom_vec = license->customFields();
 
-        boost::process::ipstream motherboardIdentityString;
-        auto deviceIdentityHashValue = boost::process::system("lshw -class bus -sanitize",
-                                                              boost::process::std_out > motherboardIdentityString);
+        boost::asio::io_service ios;
+        std::string lshw_result;
+
+        boost::process::async_pipe ap(ios);
+
+        boost::process::child c( "usr/bin/bash", "lshw -class bus -sanitize", boost::process::std_out > ap);
+
+        boost::asio::async_read(ap, boost::asio::buffer(lshw_result),
+                                [](const boost::system::error_code &ec, std::size_t size){});
+
+        ios.run();
+        c.wait();
+        int result = c.exit_code();
+
+        if(result)
+            THROW(util::exception,"Could not read lshw motherboard identity!");
 
         if (custom_vec.empty()) {
 
-            license->addDeviceVariable("DeviceIdentityHash", "dummyident");
+            license->addDeviceVariable("DeviceIdentityHash", lshw_result);
 
             std::vector<LicenseSpring::DeviceVariable> device_vec;
 
             try {
                 license->sendDeviceVariables();
                 device_vec = license->getDeviceVariables(true);
-                return device_vec[0].name() == "DeviceIdentityHash" and device_vec[0].value() == "dummyident";
+                return device_vec[0].name() == "DeviceIdentityHash" and device_vec[0].value() == lshw_result;
             }
             catch (...) {
                 std::cout << "Most likely a network connection issue, please check your connection." << std::endl;
@@ -330,6 +293,101 @@ namespace uh::licensing {
             //check if DeviceIdentityHash matches
             return custom_vec[0].fieldName() == "DeviceIdentityHash" and custom_vec[0].fieldValue() == "dummyident";
         }
+    }
+
+    bool check_license::license_check(const LicenseSpring::License::ptr_t& license) {
+        //First we'll run a online check. This will check your license on the
+        //LicenseSpring servers, and sync up your local license to match your online
+        if ( license != nullptr )
+        {
+            try
+            {
+                std::cout << "Checking license online..." << std::endl;
+                license->check();
+                std::cout << "License successfully checked" << std::endl;
+            }
+            catch ( LicenseSpring::LicenseStateException )
+            {
+                WARNING << "Online license is not valid" << std::endl;
+                std::cout << "Online license is not valid" << std::endl;
+                if ( !license->isActive() ){
+                    std::cout << "License is inactive" << std::endl;
+                    return false;
+                }
+                if ( license->isExpired() ){
+                    std::cout << "License is expired" << std::endl;
+                    return false;
+                }
+                if ( !license->isEnabled() ){
+                    std::cout << "License is disabled" << std::endl;
+                    return false;
+                }
+            }
+
+            //We use localCheck() in LicenseSpring/License.h in the include folder.This is
+            //useful to check if the license hasn't been copied over from another device, and
+            //that the license is still valid. Note: valid and active are not the same thing. See
+            //tutorial [link here] to learn the difference.
+            try
+            {
+                std::cout << "License successfully loaded, performing local check of the license..." << std::endl;
+                license->localCheck();
+                std::cout << "Local validation successful" << std::endl;
+            }
+            catch (LicenseSpring::LocalLicenseException) { //Exception if we cannot read the local license or the local license file is corrupt
+                ERROR << "Could not read previous local license. Local license may be corrupt. "
+                      << "Create a new local license by activating your license." << std::endl;
+
+                std::cout << "Could not read previous local license. Local license may be corrupt. "
+                          << "Create a new local license by activating your license." << std::endl;
+                return false;
+            }
+            catch (LicenseSpring::LicenseStateException) {
+                ERROR << "Current license is not valid" << std::endl;
+                std::cout << "Current license is not valid" << std::endl;
+                if (!license->isActive()) {
+                    ERROR << "License is inactive" << std::endl;
+                    std::cout << "License is inactive" << std::endl;
+                    return false;
+                }
+                if (license->isExpired()) {
+                    ERROR << "License is expired" << std::endl;
+                    std::cout << "License is expired" << std::endl;
+                    return false;
+                }
+                if (!license->isEnabled()) {
+                    ERROR << "License is disabled" << std::endl;
+                    std::cout << "License is disabled" << std::endl;
+                    return false;
+                }
+            }
+            catch (LicenseSpring::ProductMismatchException) {
+                ERROR << "License does not belong to configured product." << std::endl;
+                std::cout << "License does not belong to configured product." << std::endl;
+                return false;
+            }
+            catch (LicenseSpring::DeviceNotLicensedException) {
+                ERROR << "License does not belong to current computer." << std::endl;
+                std::cout << "License does not belong to current computer." << std::endl;
+                return false;
+            }
+            catch (LicenseSpring::VMIsNotAllowedException) {
+                ERROR << "Currently running on VM, when VM is not allowed." << std::endl;
+                std::cout << "Currently running on VM, when VM is not allowed." << std::endl;
+                return false;
+            }
+            catch (LicenseSpring::ClockTamperedException) {
+                ERROR << "Detected cheating with system clock." << std::endl;
+                std::cout << "Detected cheating with system clock." << std::endl;
+                return false;
+            }
+        }
+        else
+        {
+            std::cout << "No local license found";
+            return false;
+        }
+        return true;
     }
 
 } // namespace uh::licensing

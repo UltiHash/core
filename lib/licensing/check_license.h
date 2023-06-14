@@ -129,6 +129,8 @@ namespace uh::licensing{
 
         static int licenseRegister(const std::shared_ptr<LicenseSpring::LicenseManager> &licenseManager,
                                    const LicenseSpring::LicenseID& licenseId);
+
+        static bool license_check(const LicenseSpring::License::ptr_t& license);
     };
 
 } // namespace uh::licensing
