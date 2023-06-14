@@ -62,7 +62,7 @@ RUN chown -R uh:uh /var/lib/uh/data-node
 
 ADD foundationdb.conf /etc/foundationdb/foundationdb.conf
 RUN mkdir -p /home/uh/foundationdb/log
-RUN chown -R uh:uh /home/uh/foundationdbrunner
+RUN chown -R uh:uh /home/uh/foundationdb
 
 USER uh
 WORKDIR /home/uh
