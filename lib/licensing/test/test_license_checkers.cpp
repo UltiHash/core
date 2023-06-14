@@ -151,11 +151,11 @@ namespace {
         lp.check_role_enabled(check_license::role::DATA_NODE);
 
         BOOST_REQUIRE_THROW(lp.check_license_enabled(check_license::license_type::
-        AIRGAP_LICENSE_WITH_ONLINE_ACTIVATION),util::exception);
+        FLOATING_ONLINE_USER_LICENSE),util::exception);
         BOOST_REQUIRE_THROW(lp.check_license_enabled(check_license::license_type::
         THROW_LICENSE_TYPE),util::exception);
 
-        lp.check_license_enabled(check_license::license_type::FLOATING_ONLINE_USER_LICENSE);
+        lp.check_license_enabled(check_license::license_type::AIRGAP_LICENSE_WITH_ONLINE_ACTIVATION);
 
         BOOST_CHECK(lp.valid());
 
