@@ -2,12 +2,10 @@
 #include "storage/backends/hierarchical_storage.h"
 #include "storage/backends/smart_storage.h"
 
-#include <config.hpp>
-
 #include <unistd.h> //rmdir
 #include <logging/logging_boost.h>
 #include <util/exception.h>
-
+#include <storage/options.h>
 
 namespace uh::dbn::storage
 {
@@ -26,7 +24,8 @@ void maybe_create_database_root_directory(std::filesystem::path db_root,
 
     //Check whether we want to create a new dir:
     if(no_db_root and not ok_create_new_root)
-        THROW(util::exception, "Path does not exist: " + db_root.string());
+        THROW(util::exception, "Path does not exist: " + db_root.string() + ". You can turn on the flag `--" +
+        optionString(OptionsEnum::CreateNewRoot) + "' to create the non-existing paths.");
 
     //We are OK creating a new root if needed, otherwise just inform about its existence
     if (no_db_root){

@@ -6,20 +6,6 @@ using namespace boost::program_options;
 namespace uh::dbn::storage
 {
 
-enum class OptionsEnum {DataDirectory, CreateNewRoot, DbStorageAlgorithm, AllocateStorage};
-
-constexpr const char* optionString(OptionsEnum n)
-{
-    switch (n)
-    {
-        case OptionsEnum::DataDirectory: return "data-directory";
-        case OptionsEnum::CreateNewRoot: return "create-new-directory";
-        case OptionsEnum::DbStorageAlgorithm: return "db-storage-algorithm";
-        case OptionsEnum::AllocateStorage: return "allocate-storage";
-        default: THROW(util::exception, "Not implemented option");
-    }
-}
-
 // ---------------------------------------------------------------------
 
 options::options()
