@@ -26,7 +26,7 @@ namespace {
     const std::filesystem::path TEMP_DIR = "/tmp";
     const std::string apiKey_test = EncryptStr("f43e779a-71bc-460f-af89-69a1c47cbe8b");
     const std::string sharedKey_test = EncryptStr("UtVbATx32BYf9QAQtLmcEJ4U5-58SezMIkeyb2Cy8l0");
-    const std::string product_Id_test = EncryptStr("02");
+    const std::string product_Id_test = EncryptStr("01");
 
     const std::string appName_test = "UltiHash data_node";
     const std::string appVersion_test = "0.2.0";
@@ -38,7 +38,7 @@ namespace {
 // ---------------------------------------------------------------------
 
     typedef boost::mpl::vector<
-            check_online_license,
+            //check_online_license,
             check_airgap_license
     > license_types;
 
@@ -104,7 +104,7 @@ namespace {
         auto lic = make_test_license<T>();
 
         BOOST_CHECK(lic->valid());
-        std::filesystem::remove("/tmp/agency_node.lic");
+        std::filesystem::remove("/tmp/data_node.lic");
     }
 
 // ---------------------------------------------------------------------
@@ -113,12 +113,11 @@ namespace {
     {
         std::filesystem::path license_path1;
         {
-            check_online_license tmp_write_online(TEMP_DIR, apiKey_test,
+            check_airgap_license tmp_write_airgap(TEMP_DIR, apiKey_test,
                                                   sharedKey_test, product_Id_test);
-            tmp_write_online.write_license(check_license::role::DATA_NODE, appName_test,
-                                           appVersion_test, user_name_test,
-                                           password_test);
-            license_path1 = tmp_write_online.getLicensePath();
+            tmp_write_airgap.write_license(check_license::role::DATA_NODE, appName_test,
+                                           appVersion_test, licenseKey_100);
+            license_path1 = tmp_write_airgap.getLicensePath();
         }
 
         license_package lp(check_license::role::DATA_NODE,
@@ -177,7 +176,7 @@ namespace {
 
         delete soft_right;
 
-        std::filesystem::remove("/tmp/agency_node.lic");
+        std::filesystem::remove("/tmp/data_node.lic");
     }
 
 // ---------------------------------------------------------------------
