@@ -308,55 +308,27 @@ namespace uh::licensing {
         //We can then extract our custom fields as a vector of CustomField objects as so:
         std::vector<LicenseSpring::CustomField> custom_vec = license->customFields();
 
-        //Note: it is possible for our custom fields to be empty if we haven't added anything so be aware.
-        for (LicenseSpring::CustomField custom_field: custom_vec) {
-            //Here we display our key:value pairs.
-            std::cout << "Key: " << custom_field.fieldName() << " |Value: " << custom_field.fieldValue() << std::endl;
-
-            //You can also update the custom field key:value pairs as well, however, this
-            //will only affect the custom fields locally on your device, and will not in any way change
-            //the custom field key:value pairs set up on the LicenseSpring platform. The only way to change
-            //the custom field values on the LicenseSpring platoform, is manually, and not with code.
-            custom_field.setFieldName("New " + custom_field.fieldName());
-            custom_field.setFieldValue("New " + custom_field.fieldValue());
-            std::cout << "New Key: " << custom_field.fieldName() << "|New Value: " << custom_field.fieldValue()
-                      << std::endl;
-        }
-
         if (custom_vec.empty()) {
 
             license->addDeviceVariable("DeviceIdentityHash", "dummyident");
-            //Note, you can also create a DeviceVariable object and pass that in as a parameter instead.
-            //Furthermore, there is an optional third parameter, that by default is set true. When true,
-            //it'll save the DeviceVariable on your local license. When false, it will not add the Device
-            //Variable to your local license.
+
+            std::vector<LicenseSpring::DeviceVariable> device_vec;
+
+            try {
+                license->sendDeviceVariables();
+                device_vec = license->getDeviceVariables(true);
+                return device_vec[0].name() == "DeviceIdentityHash" and device_vec[0].value() == "dummyident";
+            }
+            catch (...) {
+                std::cout << "Most likely a network connection issue, please check your connection." << std::endl;
+                return false;
+            }
+
         }
-
-        //sendDeviceVariables() sends the device variables that have been created and stored locally to the backend, which syncs up
-        //both ends to have matching device variables. Creating a vector of device variables and setting it to equal license->getDeviceVariables()
-        //retrieves all the device variables currently stored locally. The true that we pass into getDeviceVariables() makes the function check
-        //the backend, which contains all the device variables since we just sent local changes to the backend right before getting them.
-
-        std::vector<LicenseSpring::DeviceVariable> device_vec;
-        bool license_valid = true;
-        try {
-            license->sendDeviceVariables();
-            device_vec = license->getDeviceVariables(true);
+        else{
+            //check if DeviceIdentityHash matches
+            return custom_vec[0].fieldName() == "DeviceIdentityHash" and custom_vec[0].fieldValue() == "dummyident";
         }
-        catch (...) {
-            std::cout << "Most likely a network connection issue, please check your connection." << std::endl;
-            license_valid = false;
-        }
-
-        //Looping through each device variable, we are able to print the names and values of each device variable using name() and value()
-        //respectively.
-
-        for (const LicenseSpring::DeviceVariable &device_variable: device_vec) {
-            std::cout << "Device Variable Name: " << device_variable.name() << " |Value: " << device_variable.value()
-                      << std::endl;
-        }
-
-        return license_valid;
     }
 
 } // namespace uh::licensing
