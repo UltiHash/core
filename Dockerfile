@@ -32,7 +32,7 @@ LABEL org.opencontainers.image.description="This container image contains a nigh
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update \
     && apt-get upgrade --yes \
-    && apt-get install --yes --no-install-recommends curl ncat
+    && apt-get install --yes --no-install-recommends curl wget ncat
 
 # Install FoundationDB
 RUN if [ "$TARGET" = "uhServerAgency" ]; then \
