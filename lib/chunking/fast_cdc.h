@@ -33,21 +33,19 @@ struct fast_cdc_config
 class fast_cdc : public chunker
 {
 public:
-    fast_cdc(const fast_cdc_config& config, io::device& in);
+    fast_cdc(const fast_cdc_config& config);
 
-    chunk_result chunk(std::span<char> b) override;
+    std::vector<std::size_t> chunk(std::span<char> b) const override;
+
+    std::size_t min_size() const override { return m_min_size; }
 
 private:
-    io::device& m_in;
-    uint64_t m_fp = 0;
+    std::size_t next_ofs(std::span<char> b, uint64_t& fp) const;
+
     const uint64_t* m_geartable;
     std::size_t m_min_size;
     std::size_t m_max_size;
     std::size_t m_normal_size;
-
-    std::vector<char> m_buffer;
-    std::size_t m_size;
-    std::size_t m_hint;
 
     static constexpr uint64_t m_mask_s = 0x0003590703530000;
     static constexpr uint64_t m_mask_l = 0x0000d90303530000;

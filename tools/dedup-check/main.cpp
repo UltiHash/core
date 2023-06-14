@@ -24,32 +24,29 @@ std::unordered_map <std::string, std::list <std::filesystem::path>> blocks;
 size_t non_deduplicated_size = 0;
 
 void integrate (const std::filesystem::path &path, uh::chunking::mod &chunking_module) {
-    uh::io::file f (path, std::ios::in);
-
-    auto chunker = chunking_module.create_chunker(f, f.size());
 
     std::vector<char> buffer(8 * 1024 * 1024);
+    uh::io::file f(path, std::ios::in);
+    auto chunker = chunking_module.create_chunker(f, f.size());
 
-    bool busy = true;
-    while (busy)
+    auto size = f.size();
+    auto pos = 0u;
+    while (pos < size)
     {
-        auto res = chunker->chunk(buffer);
-        switch (res.type)
+        std::size_t read = f.read(buffer);
+        std::span<char> b{ &buffer[0], read };
+
+        std::size_t offs = 0u;
+        for (auto cs : chunker->chunk(b))
         {
-            case uh::chunking::chunk_result::done:
-                busy = false;
-                break;
+            std::string chunk_str{&buffer[offs], cs};
+            offs += cs;
 
-            case uh::chunking::chunk_result::too_small:
-                std::cerr << "chunker returned `too_small`\n";
-                busy = false;
-                break;
-
-            case uh::chunking::chunk_result::created:
-                blocks[{&buffer[0], res.size}].push_back(path);
-                non_deduplicated_size += res.size;
-                break;
+            blocks[chunk_str].push_back(path);
+            non_deduplicated_size += cs;
         }
+
+        size += read;
     }
 }
 

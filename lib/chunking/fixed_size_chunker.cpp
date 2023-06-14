@@ -6,33 +6,23 @@ namespace uh::chunking
 
 // ---------------------------------------------------------------------
 
-fixed_size_chunker::fixed_size_chunker(io::device& dev,
-                                       size_t chunk_size,
-                                       std::size_t file_size)
-    : m_dev(dev),
-      m_chunk_size(chunk_size),
-      m_file_size(file_size)
+fixed_size_chunker::fixed_size_chunker(size_t chunk_size)
+    : m_chunk_size(chunk_size)
 {
 }
 
 // ---------------------------------------------------------------------
 
-chunk_result fixed_size_chunker::chunk(std::span<char> b)
+std::vector<std::size_t> fixed_size_chunker::chunk(std::span<char> b) const
 {
-    std::size_t to_read = std::min(m_chunk_size, m_file_size);
-    if (b.size() < to_read)
+    std::vector<std::size_t> rv;
+
+    for (std::size_t pos = 0u; pos < b.size(); pos += m_chunk_size)
     {
-        return { chunk_result::too_small };
+        rv.push_back(std::min(m_chunk_size, b.size() - pos));
     }
 
-    std::size_t size = m_dev.read(b.subspan(0, to_read));
-    if (size == 0)
-    {
-        return { chunk_result::done };
-    }
-
-    m_file_size -= size;
-    return { chunk_result::created, size };
+    return rv;
 }
 
 // ---------------------------------------------------------------------

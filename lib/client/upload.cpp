@@ -326,24 +326,24 @@ void upload::chunk_and_upload(std::unique_ptr<uhv::meta_data>&& md_ptr, buffers&
         io::file file(md.path());
         auto chunker = m_chunking.create_chunker(file, md.size());
 
-        bool busy = true;
-        while (busy)
+        std::size_t size = 0u;
+        while (size < md.size())
         {
-            auto res = chunker->chunk(r.active().buffer());
-            switch (res.type)
+            auto b = r.active().buffer();
+            auto read = file.read(b);
+            size += read;
+
+            auto chunk_sizes = chunker->chunk(b.subspan(0, read));
+
+            for (auto cs : chunk_sizes)
             {
-                case chunking::chunk_result::done:
-                    busy = false;
-                    break;
+                r.active().add_chunk(fh.get(), cs);
+            }
 
-                case chunking::chunk_result::too_small:
-                    r.next();
-                    r.active().add_handle(fh);
-                    break;
-
-                case chunking::chunk_result::created:
-                    r.active().add_chunk(fh.get(), res.size);
-                    break;
+            if (r.active().space_left() < chunker->min_size())
+            {
+                r.next();
+                r.active().add_handle(fh);
             }
         }
 

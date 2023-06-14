@@ -38,56 +38,39 @@ uint64_t compute_mask(std::size_t average_size)
 
 // ---------------------------------------------------------------------
 
-gear::gear(const gear_config& c, io::device& in)
-    : m_in(in),
-      m_geartable(reinterpret_cast<const uint64_t*>(random_gen_table)),
+gear::gear(const gear_config& c)
+    : m_geartable(reinterpret_cast<const uint64_t*>(random_gen_table)),
       m_max_size(c.max_size),
-      m_mask(compute_mask(c.average_size)),
-      m_buffer(c.max_size),
-      m_size(0u),
-      m_hint(0u)
+      m_mask(compute_mask(c.average_size))
 {
 }
 
 // ---------------------------------------------------------------------
 
-chunk_result gear::chunk(std::span<char> b)
+std::vector<std::size_t> gear::chunk(std::span<char> b) const
 {
-    if (b.size() < m_max_size)
+    std::vector<std::size_t> rv;
+
+    uint64_t fp = 0;
+    std::size_t pos = 0u;
+    std::size_t last = 0u;
+
+    for (pos = 0u; pos < b.size(); ++pos)
     {
-        memcpy(&m_buffer[0], b.data(), m_hint);
-        m_size = m_hint;
-        m_hint = 0;
-
-        return { chunk_result::too_small };
-    }
-
-    if (m_hint == 0)
-    {
-        memcpy(b.data(), &m_buffer[0], m_size);
-
-        m_hint = m_in.read(b.subspan(m_size));
-        m_hint = m_hint + m_size;
-        m_size = 0;
-
-        if (m_hint == 0)
+        fp = (fp << 1) + m_geartable[b[pos]];
+        if ((fp & m_mask) == 0)
         {
-            return { chunk_result::done };
+            rv.push_back(pos - last);
+            last = pos;
         }
     }
 
-    auto pos = 0u;
-    for (; pos < m_hint; ++pos)
+    if (last != pos)
     {
-        m_fp = (m_fp << 1) + m_geartable[b[pos]];
-        if ((m_fp & m_mask) == 0)
-        {
-            break;
-        }
+        rv.push_back(pos - last);
     }
 
-    m_hint -= pos;
-    return { chunk_result::created, pos };
+    return rv;
 }
 
 // ---------------------------------------------------------------------

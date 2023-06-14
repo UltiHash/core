@@ -28,20 +28,16 @@ struct gear_config
 class gear : public chunker
 {
 public:
-    gear(const gear_config& c, io::device& in);
+    gear(const gear_config& c);
 
-    chunk_result chunk(std::span<char> b) override;
+    std::vector<std::size_t> chunk(std::span<char> b) const override;
+
+    std::size_t min_size() const override { return 0u; }
 
 private:
-    io::device& m_in;
-    uint64_t m_fp = 0;
     const uint64_t* m_geartable;
     std::size_t m_max_size;
     uint64_t m_mask;
-
-    std::vector<char> m_buffer;
-    std::size_t m_size;
-    std::size_t m_hint;
 };
 
 // ---------------------------------------------------------------------

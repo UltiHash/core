@@ -73,7 +73,6 @@ struct config
     uh::chunking::fast_cdc_config fast_cdc;
     uh::chunking::gear_config gear;
     uh::chunking::mod_cdc_config mod_cdc;
-    uh::chunking::rabin_fp_config rabin;
 };
 
 // ---------------------------------------------------------------------
@@ -91,7 +90,6 @@ private:
     uh::chunking::fast_cdc_config m_fast_cdc;
     uh::chunking::gear_config m_gear;
     uh::chunking::mod_cdc_config m_mod_cdc;
-    uh::chunking::rabin_fp_config m_rabin;
 };
 
 // ---------------------------------------------------------------------

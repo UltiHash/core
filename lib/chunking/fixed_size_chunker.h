@@ -13,16 +13,13 @@ namespace uh::chunking
 class fixed_size_chunker : public uh::chunking::chunker
 {
 public:
-    fixed_size_chunker(io::device& dev,
-                       std::size_t chunk_size,
-                       std::size_t file_size);
+    fixed_size_chunker(std::size_t chunk_size);
 
-    chunk_result chunk(std::span<char> b) override;
+    std::vector<std::size_t> chunk(std::span<char> b) const override;
 
+    std::size_t min_size() const override { return 0u; }
 private:
-    io::device& m_dev;
     std::size_t m_chunk_size;
-    std::size_t m_file_size;
 };
 
 // ---------------------------------------------------------------------

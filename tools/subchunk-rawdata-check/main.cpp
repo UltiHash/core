@@ -120,41 +120,35 @@ void integrate (char *backend, const std::filesystem::path &path, uh::chunking::
 
     std::vector<char> buffer(8 * 1024 * 1024);
 
-    bool busy = true;
-    while (busy)
+    auto size = f.size();
+    auto pos = 0u;
+    while (pos < size)
     {
-        auto res = chunker->chunk(buffer);
-        switch (res.type)
+        std::size_t read = f.read(buffer);
+        std::span<char> b{ &buffer[0], read };
+
+        std::size_t offs = 0u;
+        for (auto cs : chunker->chunk(b))
         {
-            case uh::chunking::chunk_result::done:
-                busy = false;
-                break;
+            std::span<char> chunk{ &buffer[offs], cs };
+            offs += cs;
 
-            case uh::chunking::chunk_result::too_small:
-                std::cerr << "chunker returned `too_small`\n";
-                busy = false;
-                break;
+            const auto longest_substrings = longest_common_substrings(chunk, backend, window_size, min_subchunk_size);
+            auto [covered, uncovered] = get_substrings_coverage (longest_substrings, chunk.size());
 
-            case uh::chunking::chunk_result::created:
-            {
-                std::span<char> chunk{ &buffer[0], res.size };
-                const auto longest_substrings = longest_common_substrings(chunk, backend, window_size, min_subchunk_size);
-                auto [covered, uncovered] = get_substrings_coverage (longest_substrings, chunk.size());
-
-                auto it = covered.begin();
-                for (const auto &substr: uncovered) {
-                    substr_match synced_substr {substr.m_chunk_offset, substr.m_size,  backend_size};
-                    std::memcpy(backend + backend_size, chunk.data() + substr.m_chunk_offset, substr.m_size);
-                    backend_size += substr.m_size;
-                    it = covered.emplace_hint(it, synced_substr);
-                }
-
-                blocks.emplace(std::string{chunk.data(), chunk.size()}, std::move (covered));
-                non_deduplicated_size += chunk.size();
-
-                break;
+            auto it = covered.begin();
+            for (const auto &substr: uncovered) {
+                substr_match synced_substr {substr.m_chunk_offset, substr.m_size,  backend_size};
+                std::memcpy(backend + backend_size, chunk.data() + substr.m_chunk_offset, substr.m_size);
+                backend_size += substr.m_size;
+                it = covered.emplace_hint(it, synced_substr);
             }
+
+            blocks.emplace(std::string{chunk.data(), chunk.size()}, std::move (covered));
+            non_deduplicated_size += chunk.size();
         }
+
+        size += read;
     }
 }
 

@@ -2,8 +2,13 @@
 
 #include <util/exception.h>
 
-#include <cstring>
-#include <vector>
+extern "C"
+{
+
+#include <chunking/rabin_polynomial.h>
+#include <chunking/rabin_polynomial_constants.h>
+
+}
 
 
 namespace uh::chunking
@@ -11,71 +16,37 @@ namespace uh::chunking
 
 // ---------------------------------------------------------------------
 
-rabin_fp::rabin_fp(const rabin_fp_config& config, io::device& dev)
-    : m_dev(dev),
-      m_block(nullptr),
-      m_chunk(nullptr),
-      m_buffer(config.read_buf_size),
-      m_max_size(config.read_buf_size),
-      m_size(0),
-      m_hint(0)
+rabin_fp::rabin_fp()
 {
     static int __rabin_init_result = initialize_rabin_polynomial_defaults();
 
     if(!__rabin_init_result)
     {
-        throw(std::runtime_error("Error initializing Rabin fingerprints"));
+        THROW(util::exception, "Error initializing rabin fingerprints");
     }
 }
 
 // ---------------------------------------------------------------------
 
-rabin_fp::~rabin_fp()
+std::vector<std::size_t> rabin_fp::chunk(std::span<char> b) const
 {
-    free_chunk_data(m_block);
-    free_rabin_fingerprint_list(m_block->head);
-    free(m_block);
-}
+    std::vector<std::size_t> rv;
 
-// ---------------------------------------------------------------------
+    rab_block_info* block = read_rabin_block(b.data(), b.size(), nullptr);
 
-chunk_result rabin_fp::chunk(std::span<char> b)
-{
-    if (b.size() < m_max_size)
+    for (auto* c = block->head; c != nullptr; c = c->next_polynomial)
     {
-        memcpy(&m_buffer[0], b.data(), m_hint);
-        m_size = m_hint;
-        m_hint = 0;
-
-        return { chunk_result::too_small };
-    }
-
-    if (m_hint == 0)
-    {
-        memcpy(b.data(), &m_buffer[0], m_size);
-
-        m_hint = m_dev.read(b.subspan(m_size));
-        m_hint = m_hint + m_size;
-        m_size = 0;
-
-        if (m_hint == 0)
+        if (c->length != 0)
         {
-            return { chunk_result::done };
-        }
-
-        m_block = read_rabin_block(b.data(), m_hint, m_block);
-        if (!m_chunk)
-        {
-            m_chunk = m_block->head;
+            rv.push_back(c->length);
         }
     }
 
-    ASSERT(m_chunk->chunk_data == b.data());
+    free_chunk_data(block);
+    free_rabin_fingerprint_list(block->head);
+    free(block);
 
-    auto size = m_chunk->length;
-    m_hint -= m_chunk->length;
-    m_chunk = m_chunk->next_polynomial;
-    return { chunk_result::created, size };
+    return rv;
 }
 
 // ---------------------------------------------------------------------
