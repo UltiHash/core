@@ -248,14 +248,18 @@ namespace uh::licensing {
                 return 0;
             }
         }
+        else return true;
 
         if (license != nullptr) {
-            license->check();
+            return license_check(license);
         }
+        else return false;
+
+        /*
         //We can then extract our custom fields as a vector of CustomField objects as so:
         std::vector<LicenseSpring::CustomField> custom_vec = license->customFields();
 
-        std::vector<std::string> args { "-class bus", "-sanitize" };
+        std::string args("-class bus -sanitize");
         boost::process::ipstream out;
         std::string lshw_result;
 
@@ -291,6 +295,7 @@ namespace uh::licensing {
             //check if DeviceIdentityHash matches
             return custom_vec[0].fieldName() == "DeviceIdentityHash" and custom_vec[0].fieldValue() == "dummyident";
         }
+         */
     }
 
     bool check_license::license_check(const LicenseSpring::License::ptr_t& license) {

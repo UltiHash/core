@@ -105,6 +105,7 @@ namespace {
 
         BOOST_CHECK(lic->valid());
         std::filesystem::remove("/tmp/data_node.lic");
+        std::filesystem::remove("/tmp/data_node.lic_spring");
     }
 
 // ---------------------------------------------------------------------
@@ -177,6 +178,7 @@ namespace {
         delete soft_right;
 
         std::filesystem::remove("/tmp/data_node.lic");
+        std::filesystem::remove("/tmp/data_node.lic_spring");
     }
 
 // ---------------------------------------------------------------------
