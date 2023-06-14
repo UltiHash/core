@@ -136,11 +136,10 @@ namespace {
                            sharedKey_test,
                            product_Id_test);
 
-        auto* soft_wrong = new soft_metred_storage_resource(50,100);
         auto* soft_right = new soft_metred_storage_resource(100,50);
 
         BOOST_REQUIRE_THROW(lp.add_soft_metred_feature(license_package::soft_metered_feature::LIMIT_STORAGE_CAPACITY,
-                                   soft_wrong),util::exception);
+                                                       new soft_metred_storage_resource(50,100)),util::exception);
 
         lp.add_soft_metred_feature(license_package::soft_metered_feature::LIMIT_STORAGE_CAPACITY,
                                    soft_right);
@@ -175,7 +174,6 @@ namespace {
         BOOST_CHECK_NO_THROW(lp.deallocate(static_cast<license_package::hard_metered_feature>
         (license_package::hard_metered_feature::LIMIT_STORAGE_CAPACITY), 100));
 
-        delete soft_wrong;
         delete soft_right;
 
         std::filesystem::remove("/tmp/agency_node.lic");
