@@ -200,9 +200,7 @@ namespace uh::licensing {
 
     int check_license::licenseRegister(const std::shared_ptr<LicenseSpring::LicenseManager> &licenseManager,
                                        const LicenseSpring::LicenseID &licenseId) {
-        //reloadLicense() will return a pointer to the local license stored
-        //on the end-user's device if they have one that matches the current
-        //configuration i.e. API key, Shared key, and product code.
+
         LicenseSpring::License::ptr_t license = nullptr;
 
         try {
@@ -259,8 +257,6 @@ namespace uh::licensing {
             return 0;
         }
 
-        //Here we'll make sure our license is activated before we start testing with
-        //custom fields and device variables.
         try {
             license = licenseManager->activateLicense(licenseId);
         }
@@ -327,28 +323,9 @@ namespace uh::licensing {
                       << std::endl;
         }
 
+        if (custom_vec.empty()) {
 
-
-        //Since device variables are the opposite of custom fields, we create them on the user end then sync with the backend
-        std::cout << "Enter 'y' to create a device variable, any other input to skip." << std::endl;
-        std::string response;
-        std::getline(std::cin, response);
-
-        //Through taking in the name and value of the device variable we are able to pass them into addDeviceVariable() to create the device
-        //variable locally. The platform still does not contain device variables after addDeviceVariable()
-
-        //To update device variables, use the same varName as the variable you want to update, and use your
-        //updated value for varValue.
-        if (response == "y") {
-
-            std::cout << "Name of Variable: ";
-            std::string varName;
-            std::getline(std::cin, varName);
-
-            std::cout << "Value of Variable: ";
-            std::string varValue;
-            std::getline(std::cin, varValue);
-            license->addDeviceVariable(varName, varValue);
+            license->addDeviceVariable("DeviceIdentityHash", "dummyident");
             //Note, you can also create a DeviceVariable object and pass that in as a parameter instead.
             //Furthermore, there is an optional third parameter, that by default is set true. When true,
             //it'll save the DeviceVariable on your local license. When false, it will not add the Device

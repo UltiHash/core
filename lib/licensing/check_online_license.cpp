@@ -54,12 +54,15 @@ namespace uh::licensing{
         //For user-based implementation comment out above line, and use bottom 3 lines
         auto licenseId = LicenseSpring::LicenseID::fromUser( userName, password );
 
-        std::filesystem::path spring_lic_path;
-        spring_lic_path.extension() = ".lic_spring";
+        std::filesystem::path spring_lic_path = license_path;
+        spring_lic_path += "_spring";
 
         auto licenseFileStorage =
                 std::make_shared<LicenseSpring::FileStorageWithLock>(LicenseSpring::
                 FileStorageWithLock(spring_lic_path.wstring()));
+
+        if(!std::filesystem::exists(spring_lic_path))
+            licenseFileStorage->create(spring_lic_path.wstring());
 
         // User-based implementation
         auto licenseManager =
