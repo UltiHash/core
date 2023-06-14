@@ -65,7 +65,7 @@ namespace {
         {
             check_airgap_license tmp_write_airgap(TEMP_DIR, apiKey_test,
                                                   sharedKey_test, product_Id_test);
-            tmp_write_airgap.write_license(check_license::role::AGENCY_NODE, appName_test,
+            tmp_write_airgap.write_license(check_license::role::DATA_NODE, appName_test,
                                            appVersion_test, licenseKey_100);
             license_path1 = tmp_write_airgap.getLicensePath();
         }
@@ -85,7 +85,7 @@ namespace {
         {
             check_online_license tmp_write_online(TEMP_DIR, apiKey_test,
                                                   sharedKey_test, product_Id_test);
-            tmp_write_online.write_license(check_license::role::AGENCY_NODE, appName_test,
+            tmp_write_online.write_license(check_license::role::DATA_NODE, appName_test,
                                            appVersion_test, user_name_test,
                                            password_test);
             license_path1 = tmp_write_online.getLicensePath();
@@ -115,13 +115,13 @@ namespace {
         {
             check_online_license tmp_write_online(TEMP_DIR, apiKey_test,
                                                   sharedKey_test, product_Id_test);
-            tmp_write_online.write_license(check_license::role::AGENCY_NODE, appName_test,
+            tmp_write_online.write_license(check_license::role::DATA_NODE, appName_test,
                                            appVersion_test, user_name_test,
                                            password_test);
             license_path1 = tmp_write_online.getLicensePath();
         }
 
-        license_package lp(check_license::role::AGENCY_NODE,
+        license_package lp(check_license::role::DATA_NODE,
                            std::set<license_package::feature>{license_package::feature::DEDUPLICATION,
                                                               license_package::feature::METRICS},
                            license_path1,
@@ -129,7 +129,7 @@ namespace {
                            sharedKey_test,
                            product_Id_test);
 
-        license_package lp2(check_license::role::AGENCY_NODE,
+        license_package lp2(check_license::role::DATA_NODE,
                            std::set<license_package::feature>{license_package::feature::DEDUPLICATION,
                                                               license_package::feature::METRICS},
                            license_path1.parent_path(),
@@ -145,10 +145,10 @@ namespace {
         lp.add_soft_metred_feature(license_package::soft_metered_feature::LIMIT_STORAGE_CAPACITY,
                                    soft_right);
 
-        BOOST_REQUIRE_THROW(lp.check_role_enabled(check_license::role::DATA_NODE),util::exception);
+        BOOST_REQUIRE_THROW(lp.check_role_enabled(check_license::role::AGENCY_NODE),util::exception);
         BOOST_REQUIRE_THROW(lp.check_role_enabled(check_license::role::THROW_ROLE),util::exception);
 
-        lp.check_role_enabled(check_license::role::AGENCY_NODE);
+        lp.check_role_enabled(check_license::role::DATA_NODE);
 
         BOOST_REQUIRE_THROW(lp.check_license_enabled(check_license::license_type::
         AIRGAP_LICENSE_WITH_ONLINE_ACTIVATION),util::exception);
