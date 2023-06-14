@@ -44,6 +44,10 @@ jobs:
           mv project-config.jam.custom project-config.jam
           ./b2 -j $(sysctl -n hw.logicalcpu) --target=shared,static --link=shared
 
+      - name: Download and install FoundationDB
+        run: |
+          wget -O /tmp/FoundationDB-7.1.31_x86_64.pkg https://github.com/apple/foundationdb/releases/download/7.1.31/FoundationDB-7.1.31_x86_64.pkg
+          sudo installer -pkg /tmp/FoundationDB-7.1.31_x86_64.pkg -target /
       #- name: Install Boost
       #  run: |
       #    cd /tmp/boost_1_81_0
