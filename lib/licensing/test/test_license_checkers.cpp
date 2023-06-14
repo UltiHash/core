@@ -28,13 +28,12 @@ namespace {
     const std::string sharedKey_test = EncryptStr("UtVbATx32BYf9QAQtLmcEJ4U5-58SezMIkeyb2Cy8l0");
     const std::string product_Id_test = EncryptStr("02");
 
-    const std::string appName_test = "UltiHash agency_node";
-    const std::string appVersion_test = "0.1.0";
+    const std::string appName_test = "UltiHash data_node";
+    const std::string appVersion_test = "0.2.0";
 
-    const std::string licenseKey_100 = "GZD9-8SMR-WLNK-2N02";
-    const std::string user_name_test = "test_user";
-    const std::string password_test = "test_password";
-    //license spring password: "#u5huzU!ita*o&I4@ona2+OVlGlhehe0!dLDeslticO#r?!3@*$a@$x*hl1lxisW"
+    const std::string licenseKey_100 = "GZEW-B38N-TTNK-2M01";
+    const std::string user_name_test = "benjamin@ultihash.io";
+    const std::string password_test = "#u5huzU!ita*o&I4@ona2+OVlGlhehe0!dLDeslticO#r?!3@*$a@$x*hl1lxisW";
 
 // ---------------------------------------------------------------------
 

@@ -46,7 +46,6 @@ namespace uh::licensing {
                 appName, appVersion, options);
 
         //Key-based implementation
-
         std::string local_keygen_string(keygen_string);
         std::filesystem::path local_license_file_path(license_path);
 

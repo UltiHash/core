@@ -6,11 +6,14 @@
 #include "util/exception.h"
 #include "logging/logging_boost.h"
 #include "io/temp_file.h"
+#include "io/sha512.h"
 
 #include <fstream>
 #include <string>
 #include <iostream>
 #include <utility>
+
+#include "boost/process.hpp"
 
 namespace uh::licensing {
 
@@ -296,17 +299,15 @@ namespace uh::licensing {
             return 0;
         }
 
-
-        //Once our local license is synced up/updated with the online license, we should have the most up-to-date
-        //custom fields. There are two ways to update our custom fields to be in sync with our online product/license
-        //1. Activating a license will update all our custom fields on our local license.
-        //2. Running an online check (as long as it doesn't throw an exception), will also sync up our custom fields.
-        //on our local license.
         if (license != nullptr) {
             license->check();
         }
         //We can then extract our custom fields as a vector of CustomField objects as so:
         std::vector<LicenseSpring::CustomField> custom_vec = license->customFields();
+
+        boost::process::ipstream motherboardIdentityString;
+        auto deviceIdentityHashValue = boost::process::system("lshw -class bus -sanitize",
+                                                              boost::process::std_out > motherboardIdentityString);
 
         if (custom_vec.empty()) {
 
