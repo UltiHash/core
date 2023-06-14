@@ -38,9 +38,9 @@ jobs:
           cd /tmp/
           tar -xzf boost_1_82_0.tar.gz
           cd /tmp/boost_1_82_0
-          ./bootstrap.sh --with-libraries=all --with-toolset=gcc-12
+          ./bootstrap.sh --with-libraries=all --with-toolset=gcc-13
           sed '10,15d' project-config.jam > project-config.jam.custom 
-          echo "using gcc : 12.2 : /usr/local/bin/g++-12 ;" >> project-config.jam.custom
+          echo "using gcc : 13.1 : /usr/local/bin/g++-13 ;" >> project-config.jam.custom
           mv project-config.jam.custom project-config.jam
           ./b2 -j $(sysctl -n hw.logicalcpu) --target=shared,static --link=shared
 
@@ -58,7 +58,7 @@ jobs:
         # See https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html?highlight=cmake_build_type
         run: |
           export CXXFLAGS="$CXXFLAGS -fvisibility=hidden -I/tmp/boost_1_82_0 -I/usr/local/opt/openssl@3/include"
-          cmake -B ${{github.workspace}}/build -DBOOST_ROOT=/tmp/boost_1_82_0 -DOPENSSL_ROOT_DIR=$(brew --prefix openssl@3) -DCMAKE_C_COMPILER=gcc-12 -DCMAKE_CXX_COMPILER=g++-12 -DCMAKE_BUILD_TYPE=Release -DBUILD_SERVER_DB=ON -DBUILD_SERVER_AGENCY=ON -DBUILD_CLIENT_SHELL=ON
+          cmake -B ${{github.workspace}}/build -DBOOST_ROOT=/tmp/boost_1_82_0 -DOPENSSL_ROOT_DIR=$(brew --prefix openssl@3) -DCMAKE_C_COMPILER=gcc-13 -DCMAKE_CXX_COMPILER=g++-13 -DCMAKE_BUILD_TYPE=Release -DBUILD_SERVER_DB=ON -DBUILD_SERVER_AGENCY=ON -DBUILD_CLIENT_SHELL=ON
 
       - name: Build
         # Build your program with the given configuration
