@@ -7,6 +7,8 @@
 #include <boost/test/unit_test.hpp>
 #include <boost/mpl/vector.hpp>
 
+#include <LicenseSpring/EncryptString.h>
+
 #include <licensing/check_airgap_license.h>
 #include <licensing/check_online_license.h>
 #include <licensing/license_package.h>
@@ -22,9 +24,9 @@ namespace {
 // ---------------------------------------------------------------------
 
     const std::filesystem::path TEMP_DIR = "/tmp";
-    const std::string apiKey_test = "f43e779a-71bc-460f-af89-69a1c47cbe8b";
-    const std::string sharedKey_test = "UtVbATx32BYf9QAQtLmcEJ4U5-58SezMIkeyb2Cy8l0";
-    const std::string product_Id_test = "02";
+    const std::string apiKey_test = EncryptStr("f43e779a-71bc-460f-af89-69a1c47cbe8b");
+    const std::string sharedKey_test = EncryptStr("UtVbATx32BYf9QAQtLmcEJ4U5-58SezMIkeyb2Cy8l0");
+    const std::string product_Id_test = EncryptStr("02");
 
     const std::string appName_test = "UltiHash agency_node";
     const std::string appVersion_test = "0.1.0";

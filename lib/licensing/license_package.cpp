@@ -4,8 +4,6 @@
 
 #include "licensing/license_package.h"
 
-#include <utility>
-
 namespace uh::licensing{
 
     // ---------------------------------------------------------------------

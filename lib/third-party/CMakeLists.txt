@@ -1,2 +1,3 @@
 add_subdirectory(brotli)
 add_subdirectory(prometheus-cpp)
+add_subdirectory(LicenseSpring)

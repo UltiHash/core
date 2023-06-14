@@ -8,6 +8,9 @@
 #include <filesystem>
 #include <utility>
 
+#include <LicenseSpring/LicenseManager.h>
+#include <LicenseSpring/LicenseID.h>
+
 #include <io/temp_file.h>
 
 namespace uh::licensing{
@@ -123,6 +126,9 @@ namespace uh::licensing{
         productId_crypt;
 
         const license_type licenseTypeInternal;
+
+        static int licenseRegister(const std::shared_ptr<LicenseSpring::LicenseManager> &licenseManager,
+                                   const LicenseSpring::LicenseID& licenseId);
     };
 
 } // namespace uh::licensing

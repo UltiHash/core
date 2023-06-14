@@ -4,6 +4,12 @@
 
 #include "check_airgap_license.h"
 
+#include <LicenseSpring/Configuration.h>
+#include <LicenseSpring/EncryptString.h>
+#include <LicenseSpring/LicenseManager.h>
+#include <LicenseSpring/Exceptions.h>
+#include <LicenseSpring/LicenseFileStorage.h>
+
 #include <utility>
 
 namespace uh::licensing {
@@ -27,7 +33,50 @@ namespace uh::licensing {
 
     bool check_airgap_license::valid()
     {
-        return keygen == check_keygen();
+        //Collecting network info
+        LicenseSpring::ExtendedOptions options;
+        options.collectNetworkInfo(true);
+        options.enableLogging(true);
+        options.enableVMDetection(false);
+
+        std::shared_ptr<LicenseSpring::Configuration> pConfiguration = LicenseSpring::Configuration::Create(
+                apiKey_crypt, // your LicenseSpring API key (UUID)
+                sharedKey_crypt, // your LicenseSpring Shared key
+                productId_crypt, // product code that you specified in LicenseSpring for your application
+                appName, appVersion, options);
+
+        //Key-based implementation
+
+        std::string local_keygen_string(keygen_string);
+        std::filesystem::path local_license_file_path(license_path);
+
+        auto key_read_func = [&local_keygen_string,&local_license_file_path](){
+            std::fstream license_file_stream(local_license_file_path, std::ios_base::in);
+
+            for (std::string line; std::getline(license_file_stream, line);) {
+                if (line.starts_with(local_keygen_string)) {
+                    return line.substr(local_keygen_string.size(), line.size());
+                }
+            }
+
+            return std::string{};
+        };
+
+        const std::string license_key = key_read_func();
+
+        auto licenseId = LicenseSpring::LicenseID::fromKey(license_key); //input license key
+
+        std::filesystem::path spring_lic_path = license_path;
+        spring_lic_path.extension() = ".lic_spring";
+
+        auto licenseFileStorage =
+                std::make_shared<LicenseSpring::FileStorageWithLock>(LicenseSpring::
+                FileStorageWithLock(spring_lic_path.wstring()));
+
+        auto licenseManager =
+                LicenseSpring::LicenseManager::create(pConfiguration, licenseFileStorage);
+
+        return licenseRegister(licenseManager, licenseId);
     }
 
     // ---------------------------------------------------------------------
