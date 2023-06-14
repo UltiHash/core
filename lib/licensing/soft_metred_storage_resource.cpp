@@ -29,7 +29,7 @@ namespace uh::licensing {
     // ---------------------------------------------------------------------
 
     void soft_metred_storage_resource::deallocate(std::size_t dealloc) {
-        if(static_cast<long>(stored_val) < 0)
+        if(static_cast<long>(stored_val) < dealloc)
             THROW(util::exception, "License resource deallocation was called with underflow!");
 
         stored_val -= dealloc;

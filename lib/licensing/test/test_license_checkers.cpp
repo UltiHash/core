@@ -163,8 +163,11 @@ namespace {
         BOOST_REQUIRE_THROW(lp.soft_limit_allocate(license_package::soft_metered_feature::LIMIT_NETWORK_CONNECTIONS,1),
                             util::exception);
 
-        BOOST_REQUIRE_THROW(lp.soft_limit_allocate(license_package::soft_metered_feature::LIMIT_STORAGE_CAPACITY,1),
-                            util::exception);
+        BOOST_REQUIRE_EQUAL(lp.soft_limit_allocate(license_package::soft_metered_feature::LIMIT_STORAGE_CAPACITY,1),
+                            false);
+
+        BOOST_REQUIRE_THROW(lp.deallocate(static_cast<license_package::hard_metered_feature>
+        (license_package::hard_metered_feature::LIMIT_STORAGE_CAPACITY),101), util::exception);
 
         BOOST_CHECK_NO_THROW(lp.deallocate(static_cast<license_package::hard_metered_feature>
         (license_package::hard_metered_feature::LIMIT_STORAGE_CAPACITY), 100));
