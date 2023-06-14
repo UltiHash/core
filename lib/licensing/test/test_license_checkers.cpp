@@ -137,33 +137,34 @@ namespace {
                            product_Id_test);
 
         BOOST_REQUIRE_THROW(lp.add_soft_metred_feature(license_package::soft_metered_feature::LIMIT_STORAGE_CAPACITY,
-                                   new soft_metred_storage_resource(50,100)),std::exception);
+                                   new soft_metred_storage_resource(50,100)),util::exception);
 
         lp.add_soft_metred_feature(license_package::soft_metered_feature::LIMIT_STORAGE_CAPACITY,
                                    new soft_metred_storage_resource(100,50));
 
-        BOOST_REQUIRE_THROW(lp.check_role_enabled(check_license::role::DATA_NODE),std::exception);
-        BOOST_REQUIRE_THROW(lp.check_role_enabled(check_license::role::THROW_ROLE),std::exception);
+        BOOST_REQUIRE_THROW(lp.check_role_enabled(check_license::role::DATA_NODE),util::exception);
+        BOOST_REQUIRE_THROW(lp.check_role_enabled(check_license::role::THROW_ROLE),util::exception);
 
         lp.check_role_enabled(check_license::role::AGENCY_NODE);
 
         BOOST_REQUIRE_THROW(lp.check_license_enabled(check_license::license_type::
-        AIRGAP_LICENSE_WITH_ONLINE_ACTIVATION),std::exception);
+        AIRGAP_LICENSE_WITH_ONLINE_ACTIVATION),util::exception);
         BOOST_REQUIRE_THROW(lp.check_license_enabled(check_license::license_type::
-        THROW_LICENSE_TYPE),std::exception);
+        THROW_LICENSE_TYPE),util::exception);
 
         lp.check_license_enabled(check_license::license_type::FLOATING_ONLINE_USER_LICENSE);
 
         BOOST_CHECK(lp.valid());
 
         BOOST_CHECK(lp.soft_limit_allocate(license_package::soft_metered_feature::LIMIT_STORAGE_CAPACITY,25));
-        BOOST_CHECK(lp.soft_limit_allocate(license_package::soft_metered_feature::LIMIT_STORAGE_CAPACITY,75));
+        BOOST_CHECK(lp.hard_limit_allocate(static_cast<license_package::hard_metered_feature>
+        (license_package::soft_metered_feature::LIMIT_STORAGE_CAPACITY),75));
 
         BOOST_REQUIRE_THROW(lp.soft_limit_allocate(license_package::soft_metered_feature::LIMIT_NETWORK_CONNECTIONS,1),
-                            std::exception);
+                            util::exception);
 
         BOOST_REQUIRE_THROW(lp.soft_limit_allocate(license_package::soft_metered_feature::LIMIT_STORAGE_CAPACITY,1),
-                            std::exception);
+                            util::exception);
 
         BOOST_CHECK_NO_THROW(lp.deallocate(static_cast<license_package::hard_metered_feature>
         (license_package::hard_metered_feature::LIMIT_STORAGE_CAPACITY), 100));

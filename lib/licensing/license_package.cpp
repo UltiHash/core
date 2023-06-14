@@ -35,9 +35,10 @@ namespace uh::licensing{
                                        (feature)feature_iterate) != features_input.cend());
         }
 
-        auto init_lambda = [&config,&apiKey,&sharedKey,&productId,this]
-                (std::filesystem::path license_path_input){
-            auto tmp_license_type_read = check_license(std::move(license_path_input),
+        auto init_lambda = [&apiKey,&sharedKey,&productId,this]
+                (const std::filesystem::path& license_path_input)
+                {
+            auto tmp_license_type_read = check_license(license_path_input,
                                                        check_license::license_type::
                                                        AIRGAP_LICENSE_WITH_ONLINE_ACTIVATION,
                                                        std::string(), std::string(),
@@ -50,7 +51,7 @@ namespace uh::licensing{
 
                 case check_license::license_type::AIRGAP_LICENSE_WITH_ONLINE_ACTIVATION:
                 {
-                    auto* tmp_license_valid_airgap = new check_airgap_license(config,
+                    auto* tmp_license_valid_airgap = new check_airgap_license(license_path_input,
                                                                               apiKey,
                                                                               sharedKey,
                                                                               productId);
@@ -63,7 +64,7 @@ namespace uh::licensing{
 
                 case check_license::license_type::FLOATING_ONLINE_USER_LICENSE:
                 {
-                    auto* tmp_license_valid_online = new check_airgap_license(config,
+                    auto* tmp_license_valid_online = new check_airgap_license(license_path_input,
                                                                               apiKey,
                                                                               sharedKey,
                                                                               productId);
@@ -101,10 +102,16 @@ namespace uh::licensing{
             {
                 check_license::license_type licenseTypeToCheck = init_lambda(file_object.path());
 
-                check_role_enabled(license_role);
+                try{
+                    this->license_path = file_object.path();
+                    check_role_enabled(license_role);
 
-                if(licenseTypeToCheck != check_license::license_type::THROW_LICENSE_TYPE)
-                    break;
+                    if(licenseTypeToCheck != check_license::license_type::THROW_LICENSE_TYPE)
+                        return;
+                }
+                catch(std::exception& e){}
+
+                delete check_lic;
             }
         }
     }
@@ -139,7 +146,7 @@ namespace uh::licensing{
 
     bool license_package::hard_limit_allocate(license_package::hard_metered_feature hmf, std::size_t alloc) {
         if(!hard_metered_features.contains(hmf))
-            return true;
+            THROW(util::exception,"Hard metred feature was not avialable!");
 
         return hard_metered_features.at(hmf)->hard_limit_allocate(alloc);
     }
@@ -147,8 +154,8 @@ namespace uh::licensing{
     // ---------------------------------------------------------------------
 
     bool license_package::soft_limit_allocate(license_package::soft_metered_feature smf, std::size_t alloc) {
-        if(!hard_metered_features.contains(static_cast<const hard_metered_feature>(smf)))
-            return true;
+        if(!soft_metered_features.contains(smf))
+            THROW(util::exception,"Soft metred feature was not avialable!");
 
         return soft_metered_features.at(smf)->soft_limit_allocate(alloc);
     }
@@ -185,6 +192,7 @@ namespace uh::licensing{
     // ---------------------------------------------------------------------
 
     void license_package::add_soft_metred_feature(license_package::soft_metered_feature smf, soft_metred_resource *smr) {
+        hard_metered_features.emplace(static_cast<hard_metered_feature>(smf),smr);
         soft_metered_features.emplace(smf, smr);
     }
 
