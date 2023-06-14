@@ -6,7 +6,13 @@ message(STATUS "Using ${PROJECT_NAME}...")
 
 # external dependencies
 find_package(Boost 1.80 COMPONENTS unit_test_framework REQUIRED)
-find_package(FoundationDB-Client REQUIRED)
+if(APPLE)
+    find_library(FDB_C_LIB NAMES fdb_c PATHS /usr/local/lib)
+    add_library(fdb_c UNKNOWN IMPORTED)
+    set_property(TARGET fdb_c PROPERTY IMPORTED_LOCATION ${FDB_C_LIB})
+else()
+    find_package(FoundationDB-Client REQUIRED)
+endif()
 
 set(${PROJECT_NAME}_INCLUDE_DIRS ${Boost_INCLUDE_DIRS})
 set(${PROJECT_NAME}_LINK_LIBRARIES ${Boost_LIBRARIES} uhLibUtil fdb_c)
