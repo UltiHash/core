@@ -255,17 +255,15 @@ namespace uh::licensing {
         //We can then extract our custom fields as a vector of CustomField objects as so:
         std::vector<LicenseSpring::CustomField> custom_vec = license->customFields();
 
-        boost::asio::io_service ios;
+        std::vector<std::string> args { "-class bus", "-sanitize" };
+        boost::process::ipstream out;
         std::string lshw_result;
 
-        boost::process::async_pipe ap(ios);
+        boost::process::child c( boost::process::search_path("lshw"), args, boost::process::std_out > out);
 
-        boost::process::child c( "usr/bin/bash", "lshw -class bus -sanitize", boost::process::std_out > ap);
-
-        boost::asio::async_read(ap, boost::asio::buffer(lshw_result),
-                                [](const boost::system::error_code &ec, std::size_t size){});
-
-        ios.run();
+        for (std::string line; c.running() && std::getline(out, line);) {
+            lshw_result += line + "\n";
+        }
         c.wait();
         int result = c.exit_code();
 
