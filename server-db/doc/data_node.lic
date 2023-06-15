@@ -1,0 +1,5 @@
+app_name: UltiHash data_node
+app_version: 0.2.0
+server_role: data_node
+license_type: airgap_license_with_online_activation
+local_license_key: GZFJ-YSFZ-8A2K-2L01
