@@ -28,9 +28,9 @@ rabin_fp::rabin_fp()
 
 // ---------------------------------------------------------------------
 
-std::vector<std::size_t> rabin_fp::chunk(std::span<char> b) const
+std::vector<uint32_t> rabin_fp::chunk(std::span<char> b) const
 {
-    std::vector<std::size_t> rv;
+    std::vector<uint32_t> rv;
 
     rab_block_info* block = read_rabin_block(b.data(), b.size(), nullptr);
 

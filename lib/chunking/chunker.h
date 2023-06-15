@@ -1,6 +1,7 @@
 #ifndef CHUNKING_CHUNKER_H
 #define CHUNKING_CHUNKER_H
 
+#include <cstdint>
 #include <span>
 #include <vector>
 
@@ -18,7 +19,7 @@ public:
     /**
      * Compute the chunk sizes for a given buffer.
      */
-    virtual std::vector<std::size_t> chunk(std::span<char> b) const = 0;
+    virtual std::vector<uint32_t> chunk(std::span<char> b) const = 0;
 
     /**
      * Return minimum chunk size.

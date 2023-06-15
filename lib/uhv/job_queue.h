@@ -61,22 +61,6 @@ public:
     }
 
     // -------------------------------------------------
-    void sort()
-    {
-        std::unique_lock lk(m_mutex);
-
-        auto compare = [](const auto& a, const auto& b)
-        {
-            return (std::is_same<T, std::unique_ptr<meta_data>>::value) ?
-                        a->path() < b->path() : a < b ;
-        };
-
-        m_jobs.sort(compare);
-
-        lk.unlock();
-    }
-
-    // -------------------------------------------------
     unsigned long size()
     {
         std::lock_guard lk(m_mutex);

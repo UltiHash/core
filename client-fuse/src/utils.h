@@ -37,7 +37,11 @@ std::vector<std::filesystem::path> get_files(
     const std::string& directory,
     const std::unordered_map<std::string, ts_meta_data>& metadata_list);
 
-uint64_t upload_data (uh::protocol::client_pool::handle& client_handle, size_t chunk_size, const std::span <char> &data, std::vector <char> &hashes);
+uint64_t upload_data(uh::protocol::client_pool::handle& client_handle,
+                     size_t chunk_size,
+                     std::span<char> data,
+                     std::vector <char> &hashes);
+
 void write_metadata (std::ofstream &UHV_file, const uhv::meta_data &md);
 
 } // namespace uh::fuse

@@ -35,7 +35,7 @@ class fast_cdc : public chunker
 public:
     fast_cdc(const fast_cdc_config& config);
 
-    std::vector<std::size_t> chunk(std::span<char> b) const override;
+    std::vector<uint32_t> chunk(std::span<char> b) const override;
 
     std::size_t min_size() const override { return m_min_size; }
 

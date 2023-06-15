@@ -15,7 +15,7 @@ class fixed_size_chunker : public uh::chunking::chunker
 public:
     fixed_size_chunker(std::size_t chunk_size);
 
-    std::vector<std::size_t> chunk(std::span<char> b) const override;
+    std::vector<uint32_t> chunk(std::span<char> b) const override;
 
     std::size_t min_size() const override { return 0u; }
 private:

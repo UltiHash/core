@@ -53,9 +53,9 @@ std::size_t fast_cdc::next_ofs(std::span<char> b, uint64_t& fp) const
 
 // ---------------------------------------------------------------------
 
-std::vector<std::size_t> fast_cdc::chunk(std::span<char> b) const
+std::vector<uint32_t> fast_cdc::chunk(std::span<char> b) const
 {
-    std::vector<std::size_t> rv;
+    std::vector<uint32_t> rv;
 
     uint64_t fp = 0;
     std::size_t pos = 0;

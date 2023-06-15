@@ -34,7 +34,7 @@ class mod_chunker : public chunker {
 public:
     mod_chunker(const mod_cdc_config &config);
 
-    std::vector<std::size_t> chunk(std::span<char> b) const override;
+    std::vector<uint32_t> chunk(std::span<char> b) const override;
 
     std::size_t min_size() const override { return m_min_size; }
 

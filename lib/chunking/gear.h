@@ -30,7 +30,7 @@ class gear : public chunker
 public:
     gear(const gear_config& c);
 
-    std::vector<std::size_t> chunk(std::span<char> b) const override;
+    std::vector<uint32_t> chunk(std::span<char> b) const override;
 
     std::size_t min_size() const override { return 0u; }
 

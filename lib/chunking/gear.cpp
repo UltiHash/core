@@ -47,9 +47,9 @@ gear::gear(const gear_config& c)
 
 // ---------------------------------------------------------------------
 
-std::vector<std::size_t> gear::chunk(std::span<char> b) const
+std::vector<uint32_t> gear::chunk(std::span<char> b) const
 {
-    std::vector<std::size_t> rv;
+    std::vector<uint32_t> rv;
 
     uint64_t fp = 0;
     std::size_t pos = 0u;

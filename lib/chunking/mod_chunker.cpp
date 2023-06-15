@@ -44,9 +44,9 @@ std::size_t mod_chunker::next_ofs(std::span<char> b) const
 
 // ---------------------------------------------------------------------
 
-std::vector<std::size_t> mod_chunker::chunk(std::span<char> b) const
+std::vector<uint32_t> mod_chunker::chunk(std::span<char> b) const
 {
-    std::vector<std::size_t> rv;
+    std::vector<uint32_t> rv;
 
     std::size_t pos = 0;
 

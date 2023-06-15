@@ -258,6 +258,61 @@ private:
 
 // ---------------------------------------------------------------------
 
+std::vector<chunk> upload_request(protocol::client& client,
+                                  std::span<char> buffer,
+                                  chunking::chunker& chunker,
+                                  std::size_t& eff_size)
+{
+    auto sizes = chunker.chunk(buffer);
+    auto resp = client.write_chunks(protocol::write_chunks::request{
+        .chunk_sizes = sizes,
+        .data = buffer });
+
+    if (64 * sizes.size() != resp.hashes.size())
+    {
+        THROW(util::exception, "wrong number of hashes returned");
+    }
+
+    std::vector<chunk> rv;
+
+    for (auto i = 0u; i < sizes.size(); ++i)
+    {
+        rv.push_back(chunk{
+            .hash = std::vector<char>(resp.hashes.begin() + i * 64, resp.hashes.begin() + (i + 1) * 64),
+            .size = sizes[i] });
+    }
+
+    eff_size += resp.effective_size;
+
+    return rv;
+}
+
+// ---------------------------------------------------------------------
+
+std::vector<chunk> chunked_upload(protocol::client& client,
+                                  std::span<char> buffer,
+                                  chunking::chunker& chunker,
+                                  std::size_t& eff_size)
+{
+    std::vector<chunk> rv;
+    eff_size = 0u;
+
+    while (!buffer.empty())
+    {
+        auto size = std::min(buffer.size(), upload::MAXIMUM_DATA_SIZE);
+
+        auto chunks = upload_request(client, buffer.subspan(0, size), chunker, eff_size);
+
+        rv.insert(rv.end(), chunks.begin(), chunks.end());
+
+        buffer = buffer.subspan(size);
+    }
+
+    return rv;
+}
+
+// ---------------------------------------------------------------------
+
 upload::upload(protocol::client_pool& cl_pool,
                uhv::job_queue<std::unique_ptr<uhv::meta_data>>& in_jq,
                std::list<std::future<std::unique_ptr<uhv::meta_data>>>& out_jq,

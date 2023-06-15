@@ -3,6 +3,7 @@
 
 #include <uhv/job_queue.h>
 #include <uhv/meta_data.h>
+#include <protocol/hash.h>
 #include <protocol/client_pool.h>
 #include <protocol/server.h>
 #include <chunking/mod.h>
@@ -22,6 +23,38 @@ class buffers;
 
 // ---------------------------------------------------------------------
 
+struct chunk
+{
+    std::vector<char> hash;
+    std::size_t size;
+};
+
+// ---------------------------------------------------------------------
+
+/**
+ * Upload a buffer, using a given chunking algorithm.
+ *
+ * Upload the data in `buffer` to the server reachable through `client`.
+ * The buffer is chopped in smaller pieces using the `chunker`. The
+ * function returns the returned hashes.
+ *
+ * @param client connection to backe
+ * @param buffer buffer to upload
+ * @param chunker chunker used to create chunks
+ * @param eff_size returns effective size
+ *
+ * @throws in case of protocol error
+ */
+std::vector<chunk> chunked_upload(protocol::client& client,
+                                  std::span<char> buffer,
+                                  chunking::chunker& chunker,
+                                  std::size_t& eff_size);
+
+// ---------------------------------------------------------------------
+
+/**
+ * Upload from a list of files, return a list of metadata.
+ */
 class upload : public thread_manager
 {
 public:
