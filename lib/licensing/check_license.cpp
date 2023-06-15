@@ -400,7 +400,6 @@ namespace uh::licensing {
 
         LicenseSpring::License::ptr_t license = licenseManager->reloadLicense();
         auto cf = license->customFields();
-        license->getDeviceVariables(true);
         auto features = license->features();
 
         std::map<std::string,std::string> out_map;
