@@ -2,10 +2,10 @@
 #define SERVER_AGENCY_PERSISTENCE_MDD_H
 
 #include <memory>
-#include <persistence/options.h>
-#include <persistence/client_metrics_persistence.h>
+#include <state/options.h>
+#include <state/client_metrics.h>
 
-namespace uh::an::persistence
+namespace uh::an::state
 {
 
 // ---------------------------------------------------------------------
@@ -20,7 +20,7 @@ namespace uh::an::persistence
         void start();
         void stop();
 
-        client_metrics& clientM_persistence();
+        client_metrics& clientM_storage();
 
     private:
         std::unique_ptr<client_metrics> m_storage;

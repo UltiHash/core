@@ -1,12 +1,12 @@
 #include "mod.h"
 #include <logging/logging_boost.h>
 
-namespace uh::dbn::persistence
+namespace uh::dbn::state
 {
 
 // ---------------------------------------------------------------------
 
-mod::mod(const uh::dbn::storage::storage_config& config) : m_scheduling_persistence(std::make_unique<scheduled_compressions_persistence>(config))
+mod::mod(const uh::dbn::storage::storage_config& config) : m_scheduling(std::make_unique<scheduled_compressions>(config))
 {
 }
 
@@ -15,14 +15,14 @@ mod::mod(const uh::dbn::storage::storage_config& config) : m_scheduling_persiste
 void mod::start()
 {
     INFO << "starting persistence module";
-    m_scheduling_persistence->start();
+    m_scheduling->start();
 }
 
 // ---------------------------------------------------------------------
 
-scheduled_compressions_persistence& mod::scheduled_persistence()
+scheduled_compressions& mod::scheduled_storage()
 {
-    return *m_scheduling_persistence;
+    return *m_scheduling;
 }
 
 // ---------------------------------------------------------------------

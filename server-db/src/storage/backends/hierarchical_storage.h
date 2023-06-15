@@ -7,7 +7,7 @@
 
 #include <storage/backend.h>
 #include <storage/compressed_file_store.h>
-#include <persistence/scheduled_compressions_persistence.h>
+#include <state/scheduled_compressions.h>
 #include "io/sha512.h"
 #include "storage/backends/smart_backend/smart_config.h"
 
@@ -44,7 +44,7 @@ class hierarchical_storage : public backend {
 public:
     hierarchical_storage(const hierarchical_storage_config& config,
                          uh::dbn::metrics::storage_metrics& storage_metrics,
-                         persistence::scheduled_compressions_persistence& scheduled_compressions);
+                         state::scheduled_compressions& scheduled_compressions);
 
     void start() override;
     void stop() override;

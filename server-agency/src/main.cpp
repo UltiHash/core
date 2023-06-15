@@ -5,8 +5,8 @@
 #include <cluster/options.h>
 #include <server/mod.h>
 #include <metrics/mod.h>
-#include <persistence/mod.h>
-#include <persistence/options.h>
+#include <state/mod.h>
+#include <state/options.h>
 #include <logging/logging_boost.h>
 
 #include <options/app_config.h>
@@ -21,7 +21,7 @@ APPLICATION_CONFIG(
     (logging, uh::options::logging_options),
     (metrics, uh::options::metrics_options),
     (cluster, uh::an::cluster::options),
-    (persistence, uh::an::persistence::options));
+    (state, uh::an::state::options));
 
 using namespace uh::log;
 using namespace uh::an;
@@ -45,10 +45,10 @@ int main(int argc, const char** argv)
         cluster::mod cluster_module(config.cluster());
         cluster_module.start();
 
-        uh::an::persistence::mod persistence_module(config.persistence());
-        persistence_module.start();
+        uh::an::state::mod state_module(config.state());
+        state_module.start();
 
-        metrics::mod metrics_module(config.metrics(), persistence_module);
+        metrics::mod metrics_module(config.metrics(), state_module);
 
         server::mod server_module(config.server(), cluster_module, metrics_module);
         server_module.start();

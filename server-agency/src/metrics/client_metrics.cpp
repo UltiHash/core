@@ -6,7 +6,7 @@ namespace uh::an::metrics
 // ---------------------------------------------------------------------
 
 client_metrics::client_metrics(uh::metrics::service& service,
-                               uh::an::persistence::client_metrics& persisted_client_metrics)
+                               uh::an::state::client_metrics& persisted_client_metrics)
     : m_gauges(service.add_gauge_family("client_metrics", "Gives the integrated size of the associated UHV file")),
       m_persisted_client_metrics(persisted_client_metrics)
 {

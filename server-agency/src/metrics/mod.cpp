@@ -10,7 +10,7 @@ namespace uh::an::metrics
 
 struct mod::impl
 {
-    impl(const uh::metrics::config& config, uh::an::persistence::mod& persistence);
+    impl(const uh::metrics::config& config, uh::an::state::mod& persistence);
 
     uh::metrics::service metrics_service;
     protocol_metrics protocol;
@@ -19,19 +19,19 @@ struct mod::impl
 
 // ---------------------------------------------------------------------
 
-mod::impl::impl(const uh::metrics::config& config, uh::an::persistence::mod& persistence)
+mod::impl::impl(const uh::metrics::config& config, uh::an::state::mod& state_storage)
     : metrics_service(config),
       protocol(metrics_service),
-      client(metrics_service, persistence.clientM_persistence())
+      client(metrics_service, state_storage.clientM_storage())
 {
 }
 
 // ---------------------------------------------------------------------
 
-mod::mod(const uh::metrics::config& config, uh::an::persistence::mod& persistence)
-    : m_impl(std::make_unique<impl>(config, persistence))
+mod::mod(const uh::metrics::config& config, uh::an::state::mod& state_storage)
+    : m_impl(std::make_unique<impl>(config, state_storage))
 {
-    INFO << "             starting metrics module";
+    INFO << "starting metrics module";
 }
 
 // ---------------------------------------------------------------------

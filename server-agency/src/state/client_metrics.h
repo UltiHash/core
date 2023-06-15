@@ -1,10 +1,10 @@
 #ifndef SERVER_AGENCY_PERSISTENCE_STORAGE_CLIENT_METRICS_PERSISTENCE_H
 #define SERVER_AGENCY_PERSISTENCE_STORAGE_CLIENT_METRICS_PERSISTENCE_H
 
-#include <persistence/options.h>
+#include <state/options.h>
 #include <protocol/messages.h>
 
-namespace uh::an::persistence
+namespace uh::an::state
 {
 
 // ---------------------------------------------------------------------

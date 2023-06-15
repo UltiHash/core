@@ -1,9 +1,9 @@
-#include "client_metrics_persistence.h"
+#include "client_metrics.h"
 #include <io/file.h>
 #include <io/temp_file.h>
 #include <logging/logging_boost.h>
 
-namespace uh::an::persistence
+namespace uh::an::state
 {
 
 // ---------------------------------------------------------------------

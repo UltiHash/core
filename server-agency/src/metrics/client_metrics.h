@@ -3,7 +3,7 @@
 
 #include <protocol/messages.h>
 #include <metrics/service.h>
-#include <persistence/client_metrics_persistence.h>
+#include <state/client_metrics.h>
 
 namespace uh::an::metrics
 {
@@ -14,13 +14,13 @@ namespace uh::an::metrics
     {
     public:
         client_metrics(uh::metrics::service& service,
-                                uh::an::persistence::client_metrics& persisted_client_metrics);
+                                uh::an::state::client_metrics& persisted_client_metrics);
 
         void set_uhv_metrics(const uh::protocol::client_statistics::request& client_stat) const;
 
     private:
         prometheus::Family<prometheus::Gauge>& m_gauges;
-        uh::an::persistence::client_metrics& m_persisted_client_metrics;
+        uh::an::state::client_metrics& m_persisted_client_metrics;
     };
 
 // ---------------------------------------------------------------------

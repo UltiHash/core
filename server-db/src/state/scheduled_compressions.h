@@ -5,7 +5,7 @@
 #include <set>
 #include <storage/storage_config.h>
 
-namespace uh::dbn::persistence
+namespace uh::dbn::state
 {
 
 // ---------------------------------------------------------------------
@@ -15,11 +15,11 @@ namespace uh::dbn::persistence
      * Other classes using it which are multi-threaded should have thread safety built-in in order to access
      * and use the scheduled_compressions_persistence class.
      */
-    class scheduled_compressions_persistence
+    class scheduled_compressions
     {
     public:
-        explicit scheduled_compressions_persistence(const uh::dbn::storage::storage_config& config);
-        scheduled_compressions_persistence();
+        explicit scheduled_compressions(const uh::dbn::storage::storage_config& config);
+        scheduled_compressions();
 
         void start();
         std::pair<std::set<std::filesystem::path>::iterator, bool> insert(const std::filesystem::path& path);

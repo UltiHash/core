@@ -3,7 +3,7 @@
 
 #include <metrics/protocol_metrics.h>
 #include <memory>
-#include <persistence/mod.h>
+#include <state/mod.h>
 #include "client_metrics.h"
 
 namespace uh::an::metrics
@@ -14,7 +14,7 @@ namespace uh::an::metrics
 class mod
 {
 public:
-    mod(const uh::metrics::config& config, uh::an::persistence::mod& persistence);
+    mod(const uh::metrics::config& config, uh::an::state::mod& persistence);
 
     ~mod();
 

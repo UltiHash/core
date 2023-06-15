@@ -38,7 +38,7 @@ RUN adduser --system --uid 234 --gid 234 --shell /bin/bash uh
 RUN mkdir -p /var/lib/uh-agency-node
 RUN chown -R uh:uh /var/lib/uh-agency-node
 
-# required for database-node compression-queue persistence
+# required for data-node storage
 RUN mkdir -p /var/lib/uh-data-node
 RUN chown -R uh:uh /var/lib/uh-data-node
 

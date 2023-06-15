@@ -54,7 +54,7 @@ uh::options::action options::evaluate(const boost::program_options::variables_ma
     }
 
     c.db_root = c.data_directory / std::filesystem::path("data");
-    c.db_metrics = c.data_directory / std::filesystem::path("metrics");
+    c.db_metrics = c.data_directory / std::filesystem::path("state");
 
     std::filesystem::create_directory(c.db_metrics);
 

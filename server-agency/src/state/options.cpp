@@ -4,7 +4,7 @@
 
 using namespace boost::program_options;
 
-namespace uh::an::persistence
+namespace uh::an::state
 {
 
 // ---------------------------------------------------------------------
@@ -27,7 +27,7 @@ options::options()
 {
     visible().add_options()
             (optionString(OptionsEnum::DataDirectory),
-             value<std::string>()->default_value(std::string(uh::an::persistence::storage_config::default_data_directory)),
+             value<std::string>()->default_value(std::string(uh::an::state::storage_config::default_data_directory)),
              "Directory where the agency node stores its data");
 }
 
@@ -60,7 +60,7 @@ uh::options::action options::evaluate(const boost::program_options::variables_ma
 
     }
 
-    c.an_metrics = c.data_directory / std::filesystem::path("metrics");
+    c.an_metrics = c.data_directory / std::filesystem::path("state");
     std::filesystem::create_directory(c.an_metrics);
 
     std::swap(m_config, c);

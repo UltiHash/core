@@ -4,7 +4,7 @@
 #include <storage/mod.h>
 #include <storage/options.h>
 #include <server/mod.h>
-#include <persistence/mod.h>
+#include <state/mod.h>
 #include <metrics/mod.h>
 #include <logging/logging_boost.h>
 
@@ -42,12 +42,12 @@ int main(int argc, const char** argv)
         metrics::mod metrics_module(config.metrics()); //TODO add storage metrics
 
         auto storage_config = config.storage();
-        persistence::mod persistence_module(storage_config);
-        persistence_module.start();
+        state::mod state_module(storage_config);
+        state_module.start();
 
         storage_config.comp = config.comp();
         storage::mod storage_module(storage_config, metrics_module.storage(),
-                                    persistence_module.scheduled_persistence());
+                                    state_module.scheduled_storage());
         storage_module.start();
 
         server::mod server_module(config.server(), storage_module, metrics_module);

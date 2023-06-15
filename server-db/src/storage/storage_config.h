@@ -35,7 +35,7 @@ struct storage_config
 
     std::filesystem::path data_directory = default_data_directory;
     std::filesystem::path db_root = std::string(default_data_directory) + std::string("/data");
-    std::filesystem::path db_metrics = std::string(default_data_directory) + std::string("/metrics");
+    std::filesystem::path db_metrics = std::string(default_data_directory) + std::string("/state");
     std::string backend_type = std::string(default_backend_type);
     bool create_new_directory = false;
 

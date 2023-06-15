@@ -1,7 +1,7 @@
-#include <persistence/mod.h>
+#include <state/mod.h>
 #include <logging/logging_boost.h>
 
-namespace uh::an::persistence
+namespace uh::an::state
 {
 
 // ---------------------------------------------------------------------
@@ -28,7 +28,7 @@ void mod::stop()
 
 // ---------------------------------------------------------------------
 
-client_metrics& mod::clientM_persistence()
+client_metrics& mod::clientM_storage()
 {
     return *m_storage;
 }
