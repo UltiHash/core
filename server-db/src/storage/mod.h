@@ -3,7 +3,7 @@
 
 #include <protocol/client_pool.h>
 #include <metrics/storage_metrics.h>
-#include <state/scheduled_compressions.h>
+#include <state/scheduled_compressions_state.h>
 
 #include <unordered_map>
 #include <memory>
@@ -32,7 +32,7 @@ class mod
 {
 public:
     mod(const storage_config& cfg, metrics::storage_metrics& storage_metrics,
-        state::scheduled_compressions& scheduled_compressions);
+        state::scheduled_compressions_state& scheduled_compressions);
     ~mod();
 
     void start() const;

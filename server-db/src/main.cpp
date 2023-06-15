@@ -47,7 +47,7 @@ int main(int argc, const char** argv)
 
         storage_config.comp = config.comp();
         storage::mod storage_module(storage_config, metrics_module.storage(),
-                                    state_module.scheduled_compressions_state());
+                                    state_module.scheduled_compressions());
         storage_module.start();
 
         server::mod server_module(config.server(), storage_module, metrics_module);

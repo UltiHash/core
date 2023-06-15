@@ -1,4 +1,4 @@
-#include "client_metrics.h"
+#include "client_metrics_state.h"
 #include <io/file.h>
 #include <io/temp_file.h>
 #include <logging/logging_boost.h>
@@ -8,14 +8,14 @@ namespace uh::an::state
 
 // ---------------------------------------------------------------------
 
-client_metrics::client_metrics(const storage_config& config) :
+client_metrics_state::client_metrics_state(const storage_config& config) :
     m_target_path(config.an_metrics / std::filesystem::path("uhv_metrics.uhs"))
 {
 }
 
 // ---------------------------------------------------------------------
 
-void client_metrics::start()
+void client_metrics_state::start()
 {
     if (std::filesystem::exists(m_target_path))
         retrieve();
@@ -25,14 +25,14 @@ void client_metrics::start()
 
 // ---------------------------------------------------------------------
 
-void client_metrics::stop()
+void client_metrics_state::stop()
 {
     flush();
 }
 
 // ---------------------------------------------------------------------
 
-void client_metrics::add(const uh::protocol::client_statistics::request& req)
+void client_metrics_state::add(const uh::protocol::client_statistics::request& req)
 {
     m_id_to_size.insert_or_assign(std::string(req.uhv_id.begin(), req.uhv_id.end()), req.integrated_size);
     flush();
@@ -40,14 +40,14 @@ void client_metrics::add(const uh::protocol::client_statistics::request& req)
 
 // ---------------------------------------------------------------------
 
-const std::map<std::string, std::uint64_t>& client_metrics::id_to_size_map() const
+const std::map<std::string, std::uint64_t>& client_metrics_state::id_to_size_map() const
 {
     return m_id_to_size;
 }
 
 // ---------------------------------------------------------------------
 
-void client_metrics::flush()
+void client_metrics_state::flush()
 {
     io::temp_file metrics_file(m_target_path.parent_path());
 
@@ -66,7 +66,7 @@ void client_metrics::flush()
 
 // ---------------------------------------------------------------------
 
-void client_metrics::retrieve()
+void client_metrics_state::retrieve()
 {
     io::file metrics_file(m_target_path);
     uh::serialization::sl_deserializer deserializer(metrics_file);

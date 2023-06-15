@@ -15,11 +15,11 @@ namespace uh::dbn::state
      * Other classes using it which are multi-threaded should have thread safety built-in in order to access
      * and use the scheduled_compressions_persistence class.
      */
-    class scheduled_compressions
+    class scheduled_compressions_state
     {
     public:
-        explicit scheduled_compressions(const uh::dbn::storage::storage_config& config);
-        scheduled_compressions();
+        explicit scheduled_compressions_state(const uh::dbn::storage::storage_config& config);
+        scheduled_compressions_state();
 
         void start();
         std::pair<std::set<std::filesystem::path>::iterator, bool> insert(const std::filesystem::path& path);

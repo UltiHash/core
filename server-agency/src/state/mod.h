@@ -3,7 +3,7 @@
 
 #include <memory>
 #include <state/options.h>
-#include <state/client_metrics.h>
+#include <state/client_metrics_state.h>
 
 namespace uh::an::state
 {
@@ -20,10 +20,10 @@ namespace uh::an::state
         void start();
         void stop();
 
-        client_metrics& client_metrics_state();
+        client_metrics_state& client_metrics();
 
     private:
-        std::unique_ptr<client_metrics> m_client_metrics;
+        std::unique_ptr<client_metrics_state> m_client_metrics_state;
     };
 
 // ---------------------------------------------------------------------

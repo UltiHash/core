@@ -10,7 +10,7 @@
 #include <util/temp_dir.h>
 #include <io/buffer.h>
 #include <metrics/mod.h>
-#include <state/scheduled_compressions.h>
+#include <state/scheduled_compressions_state.h>
 #include <storage/backends/hierarchical_storage.h>
 
 #include <boost/test/unit_test.hpp>
@@ -35,7 +35,7 @@ private:
     uh::util::temp_directory m_tmp;
     uh::metrics::service m_metrics_service;
     uh::dbn::metrics::storage_metrics m_metrics;
-    uh::dbn::state::scheduled_compressions m_scheduled_compressions;
+    uh::dbn::state::scheduled_compressions_state m_scheduled_compressions;
     uh::dbn::storage::hierarchical_storage m_hierarchical;
 
 };

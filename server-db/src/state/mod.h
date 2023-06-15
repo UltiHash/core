@@ -1,7 +1,7 @@
 #ifndef SERVER_DATABASE_PERSISTENCE_MOD_H
 #define SERVER_DATABASE_PERSISTENCE_MOD_H
 
-#include <state/scheduled_compressions.h>
+#include <state/scheduled_compressions_state.h>
 #include <storage/options.h>
 
 namespace uh::dbn::state
@@ -18,10 +18,10 @@ namespace uh::dbn::state
 
         void start();
 
-        scheduled_compressions& scheduled_compressions_state();
+        scheduled_compressions_state& scheduled_compressions();
 
     private:
-        std::unique_ptr<scheduled_compressions> m_scheduling;
+        std::unique_ptr<scheduled_compressions_state> m_scheduled_compressions_state;
     };
 
 // ---------------------------------------------------------------------

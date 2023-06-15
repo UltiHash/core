@@ -19,7 +19,7 @@ public:
     ~mod();
 
     uh::metrics::protocol_metrics& protocol();
-    client_metrics& client();
+    client_metrics_state& client();
 
 private:
     struct impl;

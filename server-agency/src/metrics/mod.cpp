@@ -14,7 +14,7 @@ struct mod::impl
 
     uh::metrics::service metrics_service;
     protocol_metrics protocol;
-    client_metrics client;
+    client_metrics_state client;
 };
 
 // ---------------------------------------------------------------------
@@ -22,7 +22,7 @@ struct mod::impl
 mod::impl::impl(const uh::metrics::config& config, uh::an::state::mod& state_storage)
     : metrics_service(config),
       protocol(metrics_service),
-      client(metrics_service, state_storage.client_metrics_state())
+      client(metrics_service, state_storage.client_metrics())
 {
 }
 
@@ -47,7 +47,7 @@ protocol_metrics& mod::protocol()
 
 // ---------------------------------------------------------------------
 
-client_metrics& mod::client()
+client_metrics_state& mod::client()
 {
     return m_impl->client;
 }

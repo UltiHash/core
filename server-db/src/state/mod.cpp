@@ -6,7 +6,7 @@ namespace uh::dbn::state
 
 // ---------------------------------------------------------------------
 
-mod::mod(const uh::dbn::storage::storage_config& config) : m_scheduling(std::make_unique<scheduled_compressions>(config))
+mod::mod(const uh::dbn::storage::storage_config& config) : m_scheduled_compressions_state(std::make_unique<scheduled_compressions_state>(config))
 {
 }
 
@@ -15,14 +15,14 @@ mod::mod(const uh::dbn::storage::storage_config& config) : m_scheduling(std::mak
 void mod::start()
 {
     INFO << "starting persistence module";
-    m_scheduling->start();
+    m_scheduled_compressions_state->start();
 }
 
 // ---------------------------------------------------------------------
 
-scheduled_compressions& mod::scheduled_compressions_state()
+scheduled_compressions_state& mod::scheduled_compressions()
 {
-    return *m_scheduling;
+    return *m_scheduled_compressions_state;
 }
 
 // ---------------------------------------------------------------------

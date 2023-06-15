@@ -9,10 +9,10 @@ namespace uh::an::state
 
 // ---------------------------------------------------------------------
 
-    class client_metrics
+    class client_metrics_state
     {
     public:
-        explicit client_metrics(const storage_config& config);
+        explicit client_metrics_state(const storage_config& config);
 
         void start();
         void stop();

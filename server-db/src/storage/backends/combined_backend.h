@@ -24,7 +24,7 @@ class combined_backend: public backend {
 public:
 
     combined_backend (const hierarchical_storage_config &hierarchical_config,
-                      state::scheduled_compressions& scheduled_compressions,
+                      state::scheduled_compressions_state& scheduled_compressions,
                       storage_metrics &storage_metrics);
 
     void start() override;

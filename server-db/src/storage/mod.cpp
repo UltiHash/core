@@ -50,7 +50,7 @@ BackendTypeEnum define_backend_type(std::string backend_type){
 // ---------------------------------------------------------------------
 
 std::unique_ptr<backend> make_backend(const storage_config& cfg, metrics::storage_metrics& storage_metrics,
-                                      state::scheduled_compressions& scheduled_compressions)
+                                      state::scheduled_compressions_state& scheduled_compressions)
 {
 
     maybe_create_database_root_directory(cfg.db_root, cfg.create_new_directory);
@@ -91,20 +91,20 @@ std::unique_ptr<backend> make_backend(const storage_config& cfg, metrics::storag
 
 struct mod::impl
 {
-    impl(const storage_config& cfg, metrics::storage_metrics& storage_metrics, state::scheduled_compressions& scheduled_compressions);
+    impl(const storage_config& cfg, metrics::storage_metrics& storage_metrics, state::scheduled_compressions_state& scheduled_compressions);
     std::unique_ptr<storage::backend> m_backend;
 };
 
 // ---------------------------------------------------------------------
 
-mod::impl::impl(const storage_config& cfg, metrics::storage_metrics& storage_metrics, state::scheduled_compressions& scheduled_compressions)
+mod::impl::impl(const storage_config& cfg, metrics::storage_metrics& storage_metrics, state::scheduled_compressions_state& scheduled_compressions)
     : m_backend(make_backend(cfg, storage_metrics, scheduled_compressions))
 {
 }
 
 // ---------------------------------------------------------------------
 
-mod::mod(const storage_config& cfg, metrics::storage_metrics& storage_metrics, state::scheduled_compressions& scheduled_compressions)
+mod::mod(const storage_config& cfg, metrics::storage_metrics& storage_metrics, state::scheduled_compressions_state& scheduled_compressions)
     : m_impl(std::make_unique<impl>(cfg, storage_metrics, scheduled_compressions))
 {
 }

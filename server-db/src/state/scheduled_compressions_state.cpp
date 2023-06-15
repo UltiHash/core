@@ -1,4 +1,4 @@
-#include "scheduled_compressions.h"
+#include "scheduled_compressions_state.h"
 #include <logging/logging_boost.h>
 #include <io/temp_file.h>
 #include <io/file.h>
@@ -9,21 +9,21 @@ namespace uh::dbn::state
 
 // ---------------------------------------------------------------------
 
-scheduled_compressions::scheduled_compressions(const uh::dbn::storage::storage_config& config) :
+scheduled_compressions_state::scheduled_compressions_state(const uh::dbn::storage::storage_config& config) :
     m_target_path(config.db_metrics / std::filesystem::path("scheduled_compressions.uhs"))
 {
 }
 
 // ---------------------------------------------------------------------
 
-scheduled_compressions::scheduled_compressions() :
+scheduled_compressions_state::scheduled_compressions_state() :
         m_target_path("/tmp" / std::filesystem::path("scheduled_compressions.ua"))
 {
 }
 
 // ---------------------------------------------------------------------
 
-void scheduled_compressions::start()
+void scheduled_compressions_state::start()
 {
     if (std::filesystem::exists(m_target_path))
         retrieve();
@@ -33,7 +33,7 @@ void scheduled_compressions::start()
 
 // ---------------------------------------------------------------------
 
-std::pair<std::set<std::filesystem::path>::iterator, bool> scheduled_compressions::
+std::pair<std::set<std::filesystem::path>::iterator, bool> scheduled_compressions_state::
                                                            insert(const std::filesystem::path& path)
 {
     auto ret_value = m_scheduled.insert(path);
@@ -44,7 +44,7 @@ std::pair<std::set<std::filesystem::path>::iterator, bool> scheduled_compression
 
 // ---------------------------------------------------------------------
 
-void scheduled_compressions::erase(const std::filesystem::path& path)
+void scheduled_compressions_state::erase(const std::filesystem::path& path)
 {
     m_scheduled.erase(path);
     flush();
@@ -53,28 +53,28 @@ void scheduled_compressions::erase(const std::filesystem::path& path)
 
 // ---------------------------------------------------------------------
 
-std::size_t scheduled_compressions::size() const
+std::size_t scheduled_compressions_state::size() const
 {
     return m_scheduled.size();
 }
 
 // ---------------------------------------------------------------------
 
-bool scheduled_compressions::empty() const
+bool scheduled_compressions_state::empty() const
 {
     return m_scheduled.empty();
 }
 
 // ---------------------------------------------------------------------
 
-const std::set<std::filesystem::path>& scheduled_compressions::set() const
+const std::set<std::filesystem::path>& scheduled_compressions_state::set() const
 {
     return m_scheduled;
 }
 
 // ---------------------------------------------------------------------
 
-void scheduled_compressions::flush()
+void scheduled_compressions_state::flush()
 {
     io::temp_file scheduled_compressions(m_target_path.parent_path());
 
@@ -92,7 +92,7 @@ void scheduled_compressions::flush()
 
 // ---------------------------------------------------------------------
 
-void scheduled_compressions::retrieve()
+void scheduled_compressions_state::retrieve()
 {
     io::file scheduled_compressions(m_target_path);
     uh::serialization::sl_deserializer deserializer(scheduled_compressions);
