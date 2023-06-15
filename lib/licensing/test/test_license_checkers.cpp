@@ -181,6 +181,7 @@ namespace {
         BOOST_CHECK(feature_fields.contains("limitStorage"));
         BOOST_CHECK(feature_fields.contains("Metrics"));
         BOOST_CHECK(feature_fields.contains("Deduplication"));
+        BOOST_CHECK(feature_fields.contains("Limit_Storage_100TB"));
 
         delete soft_right;
 
