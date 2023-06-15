@@ -26,7 +26,11 @@ CHAR_TO_SPAN(val3, "value_3");
 CHAR_TO_SPAN(val4, "value_4");
 CHAR_TO_SPAN(notFound, "key_42")
 
+#if defined(__APPLE__)
+static auto fdb = uh::fdb::fdb("/usr/local/etc/foundationdb/fdb");
+#else
 static auto fdb = uh::fdb::fdb("/etc/foundationdb/fdb.cluster");
+#endif
 
 bool areEqual(const std::vector<char>& vec, const char* cString) {
     std::size_t cStringLength = std::strlen(cString);
