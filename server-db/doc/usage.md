@@ -6,7 +6,7 @@
 # Data Node Server
 
 ## Name
-uhServerData - The UltiHash Data Node server application 
+uh-data-node - The UltiHash Data Node server application 
 
 ## Synopsis
 
