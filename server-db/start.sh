@@ -2,4 +2,4 @@
 
 set -e
 
-uhServerDB --threads 15 --port 12345
+uh-data-node --threads 15 --port 12345
