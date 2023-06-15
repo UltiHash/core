@@ -1,4 +1,6 @@
 #include <uhv/file.h>
+#include <util/string.h>
+
 #include <iostream>
 
 
@@ -6,18 +8,16 @@
 
 void dump_metadata(std::ostream& out, const uh::uhv::meta_data& md)
 {
-    out << md.path() << " \t"
-        << md.chunk_sizes().size() << " \t";
+    out << md.size() << " \t"
+        << md.chunk_sizes().size() << " \t"
+        << md.path() << " \t"
+        << "\n";
 
-    try
+    for (auto i = 0u; i < md.hashes().size(); i += 64)
     {
-        out << md.size();
+        out << "\t\t\t"
+            << uh::util::to_hex_string(md.hashes().begin() + i, md.hashes().begin() + i + 64) << "\n";
     }
-    catch (const std::bad_optional_access&)
-    {
-    }
-
-    out << "\n";
 }
 
 // ---------------------------------------------------------------------
@@ -25,6 +25,7 @@ void dump_metadata(std::ostream& out, const uh::uhv::meta_data& md)
 void dump_file(std::ostream& out, const std::filesystem::path& p)
 {
     out << "contents of " << p << ":\n";
+    out << "size \tchunks \tpath\n";
 
     uh::uhv::file f(p);
 

@@ -94,9 +94,9 @@ const std::uint32_t& meta_data::permissions() const
 
 // ---------------------------------------------------------------------
 
-const std::uint64_t& meta_data::size() const
+std::uint64_t meta_data::size() const
 {
-    return m_size.value();
+    return m_size.value_or(0u);
 }
 
 // ---------------------------------------------------------------------

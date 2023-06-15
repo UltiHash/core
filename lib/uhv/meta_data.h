@@ -66,7 +66,7 @@ public:
     [[nodiscard]] const std::vector<uint32_t>& chunk_sizes() const;
     [[nodiscard]] const std::uint8_t& type() const;
     [[nodiscard]] const std::uint32_t& permissions() const;
-    [[nodiscard]] const std::uint64_t& size() const;
+    [[nodiscard]] std::uint64_t size() const;
     [[nodiscard]] const std::uint64_t& effective_size() const;
 
     [[nodiscard]] std::vector<char>& get_hashes();
