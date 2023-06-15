@@ -22,7 +22,7 @@ struct mod::impl
 mod::impl::impl(const uh::metrics::config& config, uh::an::state::mod& state_storage)
     : metrics_service(config),
       protocol(metrics_service),
-      client(metrics_service, state_storage.clientM_storage())
+      client(metrics_service, state_storage.client_metrics_state())
 {
 }
 

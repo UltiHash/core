@@ -20,7 +20,7 @@ void mod::start()
 
 // ---------------------------------------------------------------------
 
-scheduled_compressions& mod::scheduled_storage()
+scheduled_compressions& mod::scheduled_compressions_state()
 {
     return *m_scheduling;
 }

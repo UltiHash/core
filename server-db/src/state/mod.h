@@ -18,7 +18,7 @@ namespace uh::dbn::state
 
         void start();
 
-        scheduled_compressions& scheduled_storage();
+        scheduled_compressions& scheduled_compressions_state();
 
     private:
         std::unique_ptr<scheduled_compressions> m_scheduling;

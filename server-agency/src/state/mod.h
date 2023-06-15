@@ -20,10 +20,10 @@ namespace uh::an::state
         void start();
         void stop();
 
-        client_metrics& clientM_storage();
+        client_metrics& client_metrics_state();
 
     private:
-        std::unique_ptr<client_metrics> m_storage;
+        std::unique_ptr<client_metrics> m_client_metrics;
     };
 
 // ---------------------------------------------------------------------
