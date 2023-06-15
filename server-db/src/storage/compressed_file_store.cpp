@@ -102,7 +102,7 @@ void compression_worker::operator()(const std::filesystem::path& path, comp::typ
 compressed_file_store::compressed_file_store(
     const compressed_file_store_config& config,
     storage_metrics& metrics,
-    persistence::scheduled_compressions_persistence& scheduled_compressions,
+    state::scheduled_compressions_state& scheduled_compressions,
     std::function<void(std::streamsize)> report_savings)
     : m_metrics(metrics),
       m_scheduled_compressions(scheduled_compressions),

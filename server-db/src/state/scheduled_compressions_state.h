@@ -1,26 +1,25 @@
-#ifndef SERVER_DATABASE_PERSISTENCE_SCHEDULED_COMPRESSIONS_PERSISTENCE_H
-#define SERVER_DATABASE_PERSISTENCE_SCHEDULED_COMPRESSIONS_PERSISTENCE_H
+#ifndef SERVER_DATABASE_STATE_SCHEDULED_COMPRESSION_STATE_H
+#define SERVER_DATABASE_STATE_SCHEDULED_COMPRESSION_STATE_H
 
 #include <filesystem>
 #include <set>
-#include <options/options.h>
-#include <persistence/options.h>
+#include <storage/storage_config.h>
 
-namespace uh::dbn::persistence
+namespace uh::dbn::state
 {
 
 // ---------------------------------------------------------------------
 
     /*
      * Class to store the scheduling information of the compression in a device. It is not thread safe.
-     * Other classes using it which are multithreaded should have thread safety built-in in order to access
-     * and use the scheduled_compressions_persistence class.
+     * Other classes using it which are multi-threaded should have thread safety built-in in order to access
+     * and use the scheduled_compressions_state class.
      */
-    class scheduled_compressions_persistence
+    class scheduled_compressions_state
     {
     public:
-        explicit scheduled_compressions_persistence(const uh::options::persistence_config& config);
-        scheduled_compressions_persistence();
+        explicit scheduled_compressions_state(const uh::dbn::storage::storage_config& config);
+        scheduled_compressions_state();
 
         void start();
         std::pair<std::set<std::filesystem::path>::iterator, bool> insert(const std::filesystem::path& path);
@@ -39,6 +38,6 @@ namespace uh::dbn::persistence
 
 // ---------------------------------------------------------------------
 
-} // namespace uh::dbn::persistence
+} // namespace uh::dbn::state
 
 #endif

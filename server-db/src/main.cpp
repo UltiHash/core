@@ -4,10 +4,11 @@
 #include <storage/mod.h>
 #include <storage/options.h>
 #include <server/mod.h>
-#include <persistence/mod.h>
+#include <state/mod.h>
 #include <metrics/mod.h>
 #include <logging/logging_boost.h>
 
+#include <storage/storage_config.h>
 #include <options/app_config.h>
 #include <options/metrics_options.h>
 #include <options/logging_options.h>
@@ -18,8 +19,7 @@ APPLICATION_CONFIG(
     (logging, uh::options::logging_options),
     (metrics, uh::options::metrics_options),
     (storage, uh::dbn::storage::options),
-    (comp, uh::dbn::storage::compression_options),
-    (persistence, uh::dbn::persistence::options));
+    (comp, uh::dbn::storage::compression_options));
 
 using namespace uh::log;
 using namespace uh::dbn;
@@ -38,16 +38,16 @@ int main(int argc, const char** argv)
 
         init_logging(config.logging());
 
-        INFO << "               --- Database Node Modules ---";
+        INFO << "--- Database Node Modules ---";
         metrics::mod metrics_module(config.metrics()); //TODO add storage metrics
 
-        persistence::mod persistence_module(config.persistence());
-        persistence_module.start();
-
         auto storage_config = config.storage();
+        state::mod state_module(storage_config);
+        state_module.start();
+
         storage_config.comp = config.comp();
         storage::mod storage_module(storage_config, metrics_module.storage(),
-                                    persistence_module.scheduled_persistence());
+                                    state_module.scheduled_compressions());
         storage_module.start();
 
         server::mod server_module(config.server(), storage_module, metrics_module);
@@ -57,7 +57,7 @@ int main(int argc, const char** argv)
                                                         storage_module.stop(); });
 
         auto signal_received = signal_handler.run();
-        INFO << " data node clean shutdown: signal " << strsignal(signal_received) << "(" << signal_received << ")";
+        INFO << "data node clean shutdown: signal " << strsignal(signal_received) << "(" << signal_received << ")";
     }
     catch (const std::exception& e)
     {
