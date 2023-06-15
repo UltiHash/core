@@ -14,7 +14,7 @@ mod::mod(const uh::dbn::storage::storage_config& config) : m_scheduled_compressi
 
 void mod::start()
 {
-    INFO << "starting persistence module";
+    INFO << "starting state module";
     m_scheduled_compressions_state->start();
 }
 
@@ -27,4 +27,4 @@ scheduled_compressions_state& mod::scheduled_compressions()
 
 // ---------------------------------------------------------------------
 
-} // namespace uh::dbn:persistence
+} // namespace uh::dbn:state

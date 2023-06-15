@@ -1,5 +1,5 @@
-#ifndef SERVER_AGENCY_PERSISTENCE_OPTIONS_H
-#define SERVER_AGENCY_PERSISTENCE_OPTIONS_H
+#ifndef SERVER_AGENCY_STATE_OPTIONS_H
+#define SERVER_AGENCY_STATE_OPTIONS_H
 
 #include <options/options.h>
 #include <filesystem>
@@ -32,6 +32,6 @@ namespace uh::an::state
 
 // ---------------------------------------------------------------------
 
-} // namespace uh::an::persistence
+} // namespace uh::an::state
 
 #endif

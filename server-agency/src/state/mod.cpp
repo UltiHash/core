@@ -14,7 +14,7 @@ mod::mod(const storage_config& config) : m_client_metrics_state(std::make_unique
 
 void mod::start()
 {
-    INFO << "starting persistence module";
+    INFO << "starting state module";
     m_client_metrics_state->start();
 }
 
@@ -22,7 +22,7 @@ void mod::start()
 
 void mod::stop()
 {
-    INFO << "stopping persistence module";
+    INFO << "stopping state module";
     m_client_metrics_state->stop();
 }
 
@@ -35,4 +35,4 @@ client_metrics_state& mod::client_metrics()
 
 // ---------------------------------------------------------------------
 
-} // namespace uh::an::persistence
+} // namespace uh::an::state

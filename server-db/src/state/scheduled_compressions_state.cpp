@@ -108,4 +108,4 @@ void scheduled_compressions_state::retrieve()
 
 // ---------------------------------------------------------------------
 
-} // namespace uh::dbn::persistence
+} // namespace uh::dbn::state

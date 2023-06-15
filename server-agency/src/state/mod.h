@@ -1,5 +1,5 @@
-#ifndef SERVER_AGENCY_PERSISTENCE_MDD_H
-#define SERVER_AGENCY_PERSISTENCE_MDD_H
+#ifndef SERVER_AGENCY_STATE_MDD_H
+#define SERVER_AGENCY_STATE_MDD_H
 
 #include <memory>
 #include <state/options.h>
@@ -28,6 +28,6 @@ namespace uh::an::state
 
 // ---------------------------------------------------------------------
 
-} // namespace uh::an::persistence
+} // namespace uh::an::state
 
 #endif

@@ -84,4 +84,4 @@ void client_metrics_state::retrieve()
 
 // ---------------------------------------------------------------------
 
-} // namespace uh::an::persistence
+} // namespace uh::an::state

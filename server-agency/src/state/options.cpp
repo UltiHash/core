@@ -76,4 +76,4 @@ const storage_config& options::config() const
 
 // ---------------------------------------------------------------------
 
-} // namespace uh::an::persistence
+} // namespace uh::an::state

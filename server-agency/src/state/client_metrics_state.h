@@ -1,5 +1,5 @@
-#ifndef SERVER_AGENCY_PERSISTENCE_STORAGE_CLIENT_METRICS_PERSISTENCE_H
-#define SERVER_AGENCY_PERSISTENCE_STORAGE_CLIENT_METRICS_PERSISTENCE_H
+#ifndef SERVER_AGENCY_STATE_CLIENT_METRICS_STATE_H
+#define SERVER_AGENCY_STATE_CLIENT_METRICS_STATE_H
 
 #include <state/options.h>
 #include <protocol/messages.h>
@@ -30,6 +30,6 @@ namespace uh::an::state
 
 // ---------------------------------------------------------------------
 
-} // namespace uh::an::persistence
+} // namespace uh::an::state
 
 #endif

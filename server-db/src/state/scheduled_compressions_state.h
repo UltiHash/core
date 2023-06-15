@@ -1,5 +1,5 @@
-#ifndef SERVER_DATABASE_PERSISTENCE_SCHEDULED_COMPRESSIONS_PERSISTENCE_H
-#define SERVER_DATABASE_PERSISTENCE_SCHEDULED_COMPRESSIONS_PERSISTENCE_H
+#ifndef SERVER_DATABASE_STATE_SCHEDULED_COMPRESSION_STATE_H
+#define SERVER_DATABASE_STATE_SCHEDULED_COMPRESSION_STATE_H
 
 #include <filesystem>
 #include <set>
@@ -13,7 +13,7 @@ namespace uh::dbn::state
     /*
      * Class to store the scheduling information of the compression in a device. It is not thread safe.
      * Other classes using it which are multi-threaded should have thread safety built-in in order to access
-     * and use the scheduled_compressions_persistence class.
+     * and use the scheduled_compressions_state class.
      */
     class scheduled_compressions_state
     {
@@ -38,6 +38,6 @@ namespace uh::dbn::state
 
 // ---------------------------------------------------------------------
 
-} // namespace uh::dbn::persistence
+} // namespace uh::dbn::state
 
 #endif

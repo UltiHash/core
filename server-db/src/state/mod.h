@@ -1,5 +1,5 @@
-#ifndef SERVER_DATABASE_PERSISTENCE_MOD_H
-#define SERVER_DATABASE_PERSISTENCE_MOD_H
+#ifndef SERVER_DATABASE_STATE_MOD_H
+#define SERVER_DATABASE_STATE_MOD_H
 
 #include <state/scheduled_compressions_state.h>
 #include <storage/options.h>
@@ -26,6 +26,6 @@ namespace uh::dbn::state
 
 // ---------------------------------------------------------------------
 
-} // namespace uh::dbn:persistence
+} // namespace uh::dbn:state
 
 #endif
