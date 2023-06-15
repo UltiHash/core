@@ -14,6 +14,7 @@
 #include <options/logging_options.h>
 #include <options/server_options.h>
 
+#include "signals/signal.h"
 
 APPLICATION_CONFIG(
     (server, uh::options::server_options),
@@ -29,6 +30,8 @@ int main(int argc, const char** argv)
 {
     try
     {
+        uh::signal::signal signal_handler;
+
         application_config config;
         if (config.evaluate(argc, argv) == uh::options::action::exit)
         {
@@ -36,6 +39,7 @@ int main(int argc, const char** argv)
         }
 
         init_logging(config.logging());
+
 
         INFO << "               --- Agency Node Modules ---";
         cluster::mod cluster_module(config.cluster());
@@ -46,8 +50,16 @@ int main(int argc, const char** argv)
 
         metrics::mod metrics_module(config.metrics(), persistence_module);
 
-        server::mod server_module(config.server(), cluster_module, metrics_module, persistence_module);
+        server::mod server_module(config.server(), cluster_module, metrics_module);
         server_module.start();
+
+
+        signal_handler.register_func([&](){ server_module.stop();
+                                                        cluster_module.stop(); });
+
+        auto signal_received = signal_handler.run();
+        INFO << " agency node clean shutdown: signal " << strsignal(signal_received) << "(" << signal_received << ")";
+
     }
     catch (const std::exception& e)
     {

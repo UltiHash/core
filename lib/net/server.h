@@ -13,6 +13,8 @@ public:
 
     virtual void run() = 0;
 
+    virtual void stop() {};
+
     [[nodiscard]] virtual bool is_busy () const = 0;
 };
 
