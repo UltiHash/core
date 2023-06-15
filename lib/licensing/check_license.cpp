@@ -15,6 +15,9 @@
 #include <iostream>
 #include <utility>
 
+#include "boost/process.hpp"
+#include "boost/asio.hpp"
+
 namespace uh::licensing {
 
     // ---------------------------------------------------------------------
@@ -404,7 +407,18 @@ namespace uh::licensing {
         }
 
         for(const auto&item: features){
-            out_map.emplace(item.name(),item.metadata());
+            std::string metadata = item.metadata();
+            if(!metadata.empty()) {
+                boost::property_tree::ptree pt;
+                boost::property_tree::read_json(metadata,pt);
+
+                for(const auto& item2:pt){
+                    out_map.emplace(item2.first,item2.second.get_value<std::string>());
+                }
+            }
+            else{
+                out_map.emplace(item.name(),item.metadata());
+            }
         }
 
         return out_map;

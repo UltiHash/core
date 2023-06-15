@@ -177,11 +177,11 @@ namespace {
 
         auto feature_fields = lp.getCustomAndFeatureFields();
 
-        BOOST_CHECK(feature_fields.contains("warnStorage"));
-        BOOST_CHECK(feature_fields.contains("limitStorage"));
-        BOOST_CHECK(feature_fields.contains("Metrics"));
-        BOOST_CHECK(feature_fields.contains("Deduplication"));
-        BOOST_CHECK(feature_fields.contains("Limit_Storage_100TB"));
+        BOOST_CHECK(feature_fields.find("warnStorage") != feature_fields.end());
+        BOOST_CHECK(feature_fields.find("limitStorage") != feature_fields.end());
+        BOOST_CHECK(feature_fields.find("Metrics") != feature_fields.end());
+        BOOST_CHECK(feature_fields.find("Deduplication") != feature_fields.end());
+        BOOST_CHECK(feature_fields.find("Limit_Storage_100TB") != feature_fields.end());
 
         delete soft_right;
 
