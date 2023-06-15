@@ -7,11 +7,14 @@
 
 #include <filesystem>
 #include <utility>
+#include <map>
 
 #include <LicenseSpring/LicenseManager.h>
 #include <LicenseSpring/LicenseID.h>
 
 #include <io/temp_file.h>
+
+#include "boost/property_tree/json_parser.hpp"
 
 namespace uh::licensing{
 
@@ -98,6 +101,15 @@ namespace uh::licensing{
          */
         [[nodiscard]] const std::filesystem::path &getLicensePath() const;
 
+        /**
+         *
+         * @return a map of key value pairs that will configure the application
+         */
+        virtual std::map<std::string, std::string>
+        getCustomAndFeatureFields(){
+            return {};
+        };
+
     protected:
         std::filesystem::path license_path;
 
@@ -127,10 +139,33 @@ namespace uh::licensing{
 
         const license_type licenseTypeInternal;
 
-        static int licenseRegister(const std::shared_ptr<LicenseSpring::LicenseManager> &licenseManager,
-                                   const LicenseSpring::LicenseID& licenseId);
+        const bool collectNetworkInfo = true;
+        const bool enableLogging = true;
+        const bool enableVMDetection = false;
 
+        /**
+         *
+         * @param licenseManager parsed license file and API authentication
+         * @param licenseId license sign method either user based or key based
+         * @return success or failure of license activation and check
+         */
+        static bool licenseRegister(const std::shared_ptr<LicenseSpring::LicenseManager> &licenseManager,
+                                    const LicenseSpring::LicenseID& licenseId);
+
+        /**
+         *
+         * @param license is the incoming parsed license file
+         * @return if the license was still valid
+         */
         static bool license_check(const LicenseSpring::License::ptr_t& license);
+
+        /**
+         *
+         * @param licenseManager contains a storage method to find the license file
+         * @return a map of key value pairs that will configure the application
+         */
+        static std::map<std::string, std::string>
+        getCustomAndFeatureFields(const std::shared_ptr<LicenseSpring::LicenseManager> &licenseManager);
     };
 
 } // namespace uh::licensing

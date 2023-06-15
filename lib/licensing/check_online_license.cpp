@@ -120,6 +120,36 @@ namespace uh::licensing{
         return {};
     }
 
+
+    // ---------------------------------------------------------------------
+
+    std::map<std::string, std::string> check_online_license::getCustomAndFeatureFields()
+    {
+        //Collecting network info
+        LicenseSpring::ExtendedOptions options;
+        options.collectNetworkInfo(collectNetworkInfo);
+        options.enableLogging(enableLogging);
+        options.enableVMDetection(enableVMDetection);
+
+        std::shared_ptr<LicenseSpring::Configuration> pConfiguration = LicenseSpring::Configuration::Create(
+                apiKey_crypt, // your LicenseSpring API key (UUID)
+                sharedKey_crypt, // your LicenseSpring Shared key
+                productId_crypt, // product code that you specified in LicenseSpring for your application
+                appName, appVersion, options);
+
+        std::filesystem::path spring_lic_path = license_path;
+        spring_lic_path += "_spring";
+
+        auto licenseFileStorage =
+                std::make_shared<LicenseSpring::FileStorageWithLock>(LicenseSpring::
+                                                                     FileStorageWithLock(spring_lic_path.wstring()));
+
+        auto licenseManager =
+                LicenseSpring::LicenseManager::create(pConfiguration, licenseFileStorage);
+
+        return check_license::getCustomAndFeatureFields(licenseManager);
+    }
+
     // ---------------------------------------------------------------------
 
 } // namespace uh::licensing

@@ -188,4 +188,10 @@ namespace uh::licensing{
 
     // ---------------------------------------------------------------------
 
+    std::map<std::string, std::string> license_package::getCustomAndFeatureFields() {
+        return check_lic->getCustomAndFeatureFields();
+    }
+
+    // ---------------------------------------------------------------------
+
 } // namespace uh::licensing

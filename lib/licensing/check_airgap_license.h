@@ -13,17 +13,43 @@ namespace uh::licensing {
 
     public:
 
+        /*
+         * license model of online activation and air-gap use without time limit
+         */
         explicit check_airgap_license(const std::filesystem::path &license_file, std::string apiKey_encrypted,
                                       std::string sharedKey_encrypted,
                                       std::string productId_encrypted, std::string appName = "", std::string appVersion = "");
 
+        /**
+         *
+         * @return if the license key and activation could be validated
+         */
         bool valid() override;
 
+        /**
+         * write a license file
+         *
+         * @param licenseRole what role does the application play in the setup
+         * @param app_name_input application name
+         * @param app_version_input application version
+         * @param license_key_input application license key
+         */
         void write_license(check_license::role licenseRole, const std::string &app_name_input,
                            const std::string &app_version_input,
                            const std::string &license_key_input);
 
+        /**
+         *
+         * @return UltiHash license string from UltiHash license file
+         */
         std::string check_keygen();
+
+        /**
+         *
+         * @return license specific key value pairs for features, product variables and limits
+         */
+        std::map<std::string, std::string>
+                getCustomAndFeatureFields() override;
 
     private:
         std::string keygen;

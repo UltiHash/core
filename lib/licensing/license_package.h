@@ -138,6 +138,13 @@ namespace uh::licensing {
          */
         void add_soft_metred_feature(soft_metered_feature smf,soft_metred_resource* smr);
 
+        /**
+         *
+         * @return license specific key value pairs for features, product variables and limits
+         */
+        std::map<std::string, std::string>
+        getCustomAndFeatureFields();
+
     private:
 
         std::map<feature,bool> features;

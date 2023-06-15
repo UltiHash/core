@@ -204,8 +204,8 @@ namespace uh::licensing {
 
     // ---------------------------------------------------------------------
 
-    int check_license::licenseRegister(const std::shared_ptr<LicenseSpring::LicenseManager> &licenseManager,
-                                       const LicenseSpring::LicenseID &licenseId) {
+    bool check_license::licenseRegister(const std::shared_ptr<LicenseSpring::LicenseManager> &licenseManager,
+                                        const LicenseSpring::LicenseID &licenseId) {
 
         LicenseSpring::License::ptr_t license = licenseManager->reloadLicense();
         if(!license_check(license)){
@@ -215,37 +215,37 @@ namespace uh::licensing {
             catch (LicenseSpring::ProductNotFoundException) {
                 ERROR << "Product not found on server, please check your product configuration." << std::endl;
                 std::cout << "Product not found on server, please check your product configuration." << std::endl;
-                return 0;
+                return false;
             }
             catch (LicenseSpring::LicenseNotFoundException) {
                 ERROR << "License could not be found on server." << std::endl;
                 std::cout << "License could not be found on server." << std::endl;
-                return 0;
+                return false;
             }
             catch (LicenseSpring::LicenseStateException) {
                 ERROR << "License is currently expired or disabled." << std::endl;
                 std::cout << "License is currently expired or disabled." << std::endl;
-                return 0;
+                return false;
             }
             catch (LicenseSpring::LicenseNoAvailableActivationsException) {
                 ERROR << "No available activations remaining on license." << std::endl;
                 std::cout << "No available activations remaining on license." << std::endl;
-                return 0;
+                return false;
             }
             catch (LicenseSpring::CannotBeActivatedNowException) {
                 ERROR << "Current date is not at start date of license." << std::endl;
                 std::cout << "Current date is not at start date of license." << std::endl;
-                return 0;
+                return false;
             }
             catch (LicenseSpring::SignatureMismatchException) {
                 ERROR << "Signature on LicenseSpring server is invalid." << std::endl;
                 std::cout << "Signature on LicenseSpring server is invalid." << std::endl;
-                return 0;
+                return false;
             }
             catch (...) {
                 ERROR << "Possible connection issue." << std::endl;
                 std::cout << "Possible connection issue." << std::endl;
-                return 0;
+                return false;
             }
         }
         else return true;
@@ -391,6 +391,32 @@ namespace uh::licensing {
             return false;
         }
         return true;
+    }
+
+    std::map<std::string, std::string>
+    check_license::getCustomAndFeatureFields(const std::shared_ptr<LicenseSpring::LicenseManager> &licenseManager) {
+        LicenseSpring::License::ptr_t license = licenseManager->reloadLicense();
+        auto cf = license->customFields();
+        license->getDeviceVariables(true);
+        auto features = license->features();
+
+        std::map<std::string,std::string> out_map;
+
+        for(const auto& item:cf){
+            out_map.emplace(item.fieldName(),item.fieldValue());
+        }
+
+        for(const auto&item: features){
+            std::string metadata = item.metadata();
+            boost::property_tree::ptree pt;
+            boost::property_tree::read_json(metadata,pt);
+
+            for(const auto& item2:pt){
+                out_map.emplace(item2.first,item2.second.get_value<std::string>());
+            }
+        }
+
+        return out_map;
     }
 
 } // namespace uh::licensing
