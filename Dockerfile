@@ -36,9 +36,9 @@ RUN apt-get update \
 
 # Install FoundationDB
 RUN if [ "$TARGET" = "uhServerAgency" ]; then \
-        wget -O /tmp/foundationdb-clients_7.1.31-1_amd64.deb https://github.com/apple/foundationdb/releases/download/7.1.31/foundationdb-clients_7.1.31-1_amd64.deb && \
+        wget -O /tmp/foundationdb-clients_7.1.31-1_amd64.deb --no-check-certificate https://github.com/apple/foundationdb/releases/download/7.1.31/foundationdb-clients_7.1.31-1_amd64.deb && \
         dpkg -i /tmp/foundationdb-clients_7.1.31-1_amd64.deb; \
-        wget -O /tmp/foundationdb-server_7.1.31-1_amd64.deb https://github.com/apple/foundationdb/releases/download/7.1.31/foundationdb-server_7.1.31-1_amd64.deb && \
+        wget -O /tmp/foundationdb-server_7.1.31-1_amd64.deb --no-check-certificate https://github.com/apple/foundationdb/releases/download/7.1.31/foundationdb-server_7.1.31-1_amd64.deb && \
         dpkg -i /tmp/foundationdb-server_7.1.31-1_amd64.deb; \
     fi
 
