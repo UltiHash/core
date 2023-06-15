@@ -58,7 +58,7 @@ services:
      - prometheus
      - uh-server-db
    volumes:
-    - agency-node:/var/lib/agency-node
+    - agency-node:/var/lib/uh-agency-node
   uh-client-shell:
    image: uh-client-shell
    build:
@@ -78,5 +78,5 @@ volumes:
   agency-node:
     driver_opts:
       type: none
-      device: /var/lib/agency-node
+      device: /var/lib/uh-agency-node
       o: bind
