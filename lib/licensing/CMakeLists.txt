@@ -6,7 +6,7 @@ project(uhLibLicensing)
 message(STATUS "Using ${PROJECT_NAME}...")
 
 # external dependencies
-find_package(Boost 1.80 COMPONENTS system unit_test_framework REQUIRED)
+find_package(Boost 1.80 COMPONENTS system unit_test_framework json REQUIRED)
 find_package(OpenSSL REQUIRED)
 
 set(${PROJECT_NAME}_INCLUDE_DIRS ${Boost_INCLUDE_DIRS})

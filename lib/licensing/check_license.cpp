@@ -15,8 +15,8 @@
 #include <iostream>
 #include <utility>
 
-#include "boost/process.hpp"
-#include "boost/asio.hpp"
+#include "boost/property_tree/ptree.hpp"
+#include "boost/algorithm/string.hpp"
 
 namespace uh::licensing {
 
@@ -394,7 +394,10 @@ namespace uh::licensing {
     }
 
     std::map<std::string, std::string>
-    check_license::getCustomAndFeatureFields(const std::shared_ptr<LicenseSpring::LicenseManager> &licenseManager) {
+    check_license::getCustomAndFeatureFields(const std::shared_ptr<LicenseSpring::LicenseManager> &licenseManager)
+    {
+        auto feature_item_registry = std::vector<std::string>({"limitStorage", "warnStorage"});
+
         LicenseSpring::License::ptr_t license = licenseManager->reloadLicense();
         auto cf = license->customFields();
         license->getDeviceVariables(true);
@@ -402,18 +405,30 @@ namespace uh::licensing {
 
         std::map<std::string,std::string> out_map;
 
-        for(const auto& item:cf){
+        for(const auto& item:cf)
+        {
             out_map.emplace(item.fieldName(),item.fieldValue());
         }
 
         for(const auto&item: features){
             std::string metadata = item.metadata();
-            if(!metadata.empty()) {
-                boost::property_tree::ptree pt;
-                boost::property_tree::read_json(metadata,pt);
+            boost::algorithm::replace_all(metadata,"\\","");
 
-                for(const auto& item2:pt){
-                    out_map.emplace(item2.first,item2.second.get_value<std::string>());
+            if(!metadata.empty())
+            {
+                metadata = metadata.substr(1,metadata.size()-2);
+                std::stringstream meta_ss(metadata);
+                boost::property_tree::ptree pt;
+                boost::property_tree::read_json(meta_ss,pt);
+
+                for(const auto& item2: feature_item_registry)
+                {
+                    auto optional_child = pt.get_child_optional(item2);
+
+                    if(optional_child){
+                        auto read_entry = optional_child->get_value<std::string>();
+                        out_map.emplace(item2, read_entry);
+                    }
                 }
             }
             else{
