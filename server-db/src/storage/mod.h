@@ -30,7 +30,7 @@ static std::unordered_map<std::string, BackendTypeEnum> string2backendtype = {
 struct storage_config
 {
     constexpr static std::string_view default_db_root = "./DEFAULT_DB_ROOT";
-    constexpr static std::string_view default_backend_type = "HierarchicalStorage";
+    constexpr static std::string_view default_backend_type = "SmartStorage";
     constexpr static size_t default_allocated_size = 0;
     size_t allocate_bytes = 0;
     size_t max_file_size = 1024ul * 1024ul * 1024ul * 512ul;
