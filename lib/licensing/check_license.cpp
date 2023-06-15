@@ -243,8 +243,10 @@ namespace uh::licensing {
                 return false;
             }
             catch (...) {
-                ERROR << "Possible connection issue." << std::endl;
-                std::cout << "Possible connection issue." << std::endl;
+                ERROR << "Possible connection issue. Open port 443 and your internet connection to the license "
+                         "spring api." << std::endl;
+                std::cout << "Possible connection issue.  Open port 443 and your internet connection to the license "
+                             "spring api." << std::endl;
                 return false;
             }
         }
