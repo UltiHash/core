@@ -1,4 +1,4 @@
-% uhServerData(1) Version 0.2 | Data Node Server Documentation
+% uh-data-node(1) Version 0.2 | Data Node Server Documentation
 ```{=latex}
 \pagebreak
 ```
