@@ -1,7 +1,7 @@
 #!/bin/bash
 
 echo "Waiting for uh-server-db to become available..."
-RAND=$(( ( RANDOM % 5 )  + 15 ))
+RAND=$(( ( RANDOM % 5 )  + 40 ))
 sleep $RAND
 
 while true
