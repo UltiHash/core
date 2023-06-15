@@ -9,14 +9,13 @@ namespace uh::an::persistence
 
 // ---------------------------------------------------------------------
 
-enum class OptionsEnum {DataDirectory, CreateNewRoot};
+enum class OptionsEnum {DataDirectory};
 
 constexpr const char* optionString(OptionsEnum n)
 {
     switch (n)
     {
         case OptionsEnum::DataDirectory: return "data-directory";
-        case OptionsEnum::CreateNewRoot: return "create-new-directory";
         default: THROW(util::exception, "Not implemented option");
     }
 }
@@ -29,8 +28,7 @@ options::options()
     visible().add_options()
             (optionString(OptionsEnum::DataDirectory),
              value<std::string>()->default_value(std::string(uh::an::persistence::storage_config::default_data_directory)),
-             "Directory where important data are persisted")
-            (optionString(OptionsEnum::CreateNewRoot) ,"Creates the data directory if it does not exists.");
+             "Directory where the agency node stores its data");
 }
 
 // ---------------------------------------------------------------------
@@ -39,11 +37,6 @@ uh::options::action options::evaluate(const boost::program_options::variables_ma
 {
     storage_config c;
     c.data_directory = vars[optionString(OptionsEnum::DataDirectory)].as<std::string>();
-
-    if (vars.count(optionString(OptionsEnum::CreateNewRoot)) > 0)
-    {
-        c.create_new_directory = true;
-    }
 
     if (std::filesystem::path(c.data_directory).is_relative())
     {
@@ -63,16 +56,8 @@ uh::options::action options::evaluate(const boost::program_options::variables_ma
     }
     else
     {
-        if (c.create_new_directory)
-        {
-            std::filesystem::create_directory(c.data_directory);
-        }
-        else
-        {
-            THROW(util::illegal_args, "The data directory '" + std::string(c.data_directory) + "' doesn't exist. You can turn on the flag with the option '--" +
-                                      std::string(optionString(OptionsEnum::CreateNewRoot)) + "' to create the "
-                                                                                              "given directory in case it doesn't exist." );
-        }
+        std::filesystem::create_directory(c.data_directory);
+
     }
 
     c.an_metrics = c.data_directory / std::filesystem::path("metrics");

@@ -13,7 +13,6 @@ namespace uh::an::persistence
 
         std::filesystem::path data_directory = default_data_directory;
         std::filesystem::path an_metrics = std::string(default_data_directory) + std::string("metrics");
-        bool create_new_directory = false;
     };
 
 // ---------------------------------------------------------------------

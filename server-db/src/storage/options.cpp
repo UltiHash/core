@@ -14,9 +14,7 @@ options::options()
     visible().add_options()
         (optionString(OptionsEnum::DataDirectory),
             value<std::string>()->default_value(std::string(uh::dbn::storage::storage_config::default_data_directory)),
-                "Directory where important data are persisted")
-        (optionString(OptionsEnum::CreateNewRoot),
-            "Creates the data directory if it does not exists.")
+                "Directory where the data node stores its data")
         (optionString(OptionsEnum::DbStorageAlgorithm),
             value<std::string>()->default_value(std::string(uh::dbn::storage::storage_config::default_backend_type)),
                 "Database chunk sorting algorithm. One of [DumpStorage | OtherStorage]")
@@ -33,11 +31,6 @@ uh::options::action options::evaluate(const boost::program_options::variables_ma
     c.data_directory = vars[optionString(OptionsEnum::DataDirectory)].as<std::string>();
     c.backend_type = vars[optionString(OptionsEnum::DbStorageAlgorithm)].as<std::string>();
     c.allocate_bytes = vars[optionString(OptionsEnum::AllocateStorage)].as<std::size_t>();
-
-    if (vars.count(optionString(OptionsEnum::CreateNewRoot)) > 0)
-    {
-        c.create_new_directory = true;
-    }
 
     if (std::filesystem::path(c.data_directory).is_relative())
     {
@@ -57,16 +50,7 @@ uh::options::action options::evaluate(const boost::program_options::variables_ma
     }
     else
     {
-        if (c.create_new_directory)
-        {
-            std::filesystem::create_directory(c.data_directory);
-        }
-        else
-        {
-            THROW(util::illegal_args, "The data directory '" + std::string(c.data_directory) + "' doesn't exist. You can turn on the flag with the option '--" +
-                                      std::string(optionString(OptionsEnum::CreateNewRoot)) + "' to create the "
-                                                                                              "given directory in case it doesn't exist." );
-        }
+        std::filesystem::create_directory(c.data_directory);
     }
 
     c.db_root = c.data_directory / std::filesystem::path("data");

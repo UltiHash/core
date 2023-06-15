@@ -22,11 +22,6 @@ void maybe_create_database_root_directory(std::filesystem::path db_root,
     //Check whether the directory already exists:
     bool no_db_root = !std::filesystem::is_directory(db_root);
 
-    //Check whether we want to create a new dir:
-    if(no_db_root and not ok_create_new_root)
-        THROW(util::exception, "Path does not exist: " + db_root.string() + ". You can turn on the flag `--" +
-        optionString(OptionsEnum::CreateNewRoot) + "' to create the non-existing paths.");
-
     //We are OK creating a new root if needed, otherwise just inform about its existence
     if (no_db_root){
         if(!std::filesystem::create_directories(db_root)){

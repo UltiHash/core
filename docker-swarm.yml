@@ -97,8 +97,8 @@ services:
           - node.labels.role == database
     volumes:
       - type: bind
-        source: /mnt/disk1
-        target: /data
+        source: /mnt/disk1/uh-data-node
+        target: /var/lib/uh-data-node
   uh-server-agency:
     image: ghcr.io/ultihash/server-agency:20230503
     networks:
@@ -120,8 +120,8 @@ services:
           - node.labels.role == agency
     volumes:
       - type: bind
-        source: /var/lib/agency-node
-        target: /var/lib/agency-node
+        source: /data/uh-agency-node
+        target: /var/lib/uh-agency-node
   uh-client-shell:
     image: ghcr.io/ultihash/client-shell:20230503
     networks:
