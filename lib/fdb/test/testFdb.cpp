@@ -27,7 +27,7 @@ CHAR_TO_SPAN(val4, "value_4");
 CHAR_TO_SPAN(notFound, "key_42")
 
 #if defined(__APPLE__)
-static auto fdb = uh::fdb::fdb("/usr/local/etc/foundationdb/fdb");
+static auto fdb = uh::fdb::fdb("/usr/local/etc/foundationdb/fdb.cluster");
 #else
 static auto fdb = uh::fdb::fdb("/etc/foundationdb/fdb.cluster");
 #endif
