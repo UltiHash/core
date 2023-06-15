@@ -5,7 +5,7 @@
 #ifdef SINGLE_TEST_RUNNER
 #define BOOST_TEST_NO_MAIN
 #else
-#define BOOST_TEST_MODULE "uhServerDb Dummy Tests"
+#define BOOST_TEST_MODULE "uh-data-node Dummy Tests"
 #endif
 
 #include <boost/test/unit_test.hpp>

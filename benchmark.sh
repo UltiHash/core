@@ -3,7 +3,7 @@
 ADDR_AGENCY_NODE=localhost:21832
 ADDR_DB_NODE=localhost:12345
 
-PATH_CLIENT="/home/sjank/projects/core/build/client-shell/uhClient"
+PATH_CLIENT="/home/sjank/projects/core/build/client-shell/uh-cli"
 CORPORA_BASE_DIR="/home/sjank/corpora"
 #corpora=(fake-video-corpus qfs)
 corpora=(fake-video-corpus)

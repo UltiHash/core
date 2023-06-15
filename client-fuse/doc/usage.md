@@ -21,4 +21,4 @@ uhClientFuse - The UltiHash FUSE client application
 ## Known Limitations
 
 ## See Also
-uhServerData, uhServerAgency, uhClient
+uh-data-node, uh-agency-node, uh-cli

@@ -1,4 +1,4 @@
-% uhClient(1) Version 0.2 | UltiHash Command Line Client Documentation
+% uh-cli(1) Version 0.2 | UltiHash Command Line Client Documentation
 ```{=latex}
 \pagebreak
 ```
@@ -6,7 +6,7 @@
 # Command Line Client
 
 ## Name
-uhClient - The UltiHash command line client application
+uh-cli - The UltiHash command line client application
 
 ## Synopsis
 
@@ -21,4 +21,4 @@ uhClient - The UltiHash command line client application
 ## Known Limitations
 
 ## See Also
-uhServerData, uhServerAgency, uhClientFuse
+uh-data-node, uh-agency-node, uhClientFuse

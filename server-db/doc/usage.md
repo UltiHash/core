@@ -21,4 +21,4 @@ uhServerData - The UltiHash Data Node server application
 ## Known Limitations
 
 ## See Also
-uhServerAgency, uhClient, uhClientFuse
+uh-agency-node, uh-cli, uhClientFuse
