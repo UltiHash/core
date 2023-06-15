@@ -1,6 +1,7 @@
 #ifndef PROTOCOL_COMMON_H
 #define PROTOCOL_COMMON_H
 
+#include <cstdint>
 #include <string>
 #include <vector>
 #include <list>

@@ -8,6 +8,7 @@
 #include <bit>
 #include <type_traits>
 #include <cstring>
+#include <cstdint>
 #include <utility>
 #include <vector>
 #include "io/device.h"

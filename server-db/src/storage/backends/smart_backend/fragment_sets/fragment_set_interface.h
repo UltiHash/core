@@ -7,6 +7,7 @@
 
 #include <string_view>
 #include <optional>
+#include <cstdint>
 
 namespace uh::dbn::storage::smart::sets {
 
