@@ -160,33 +160,34 @@ int uh_rmdir (const char *path)
     return 0;
 }
 
-int __uh_ftruncate (const char *path, off_t off, struct fuse_file_info *fi) {
+int __uh_ftruncate (const char *path, off_t off, struct fuse_file_info *fi)
+{
     std::cout << "uh_ftruncate(" << path << ", " << off << ")\n";
 
-    auto context = get_context();
+    auto md = get_metadata(fi);
 
-    auto &ts_fmd = context->open_files()().at(fi->fh);
-    auto fmd_handler = ts_fmd.get();
-    auto &fmd = fmd_handler();
-
-    if (fmd.type() != uh::uhv::uh_file_type::regular) {
+    if (md->type() != uh::uhv::uh_file_type::regular)
+    {
         return -ENOMEM;
     }
 
-    if (static_cast<size_t>(off) > fmd.size()) {
+    if (static_cast<size_t>(off) > md->size())
+    {
         return -EFBIG;
     }
 
-    fmd.set_size(off);
+    md->set_size(off);
 
-    if (off == 0) {
-        fmd.set_size(0);
-        fmd.set_effective_size(0);
-        fmd.set_hashes({});
+    if (off == 0)
+    {
+        md->set_size(0);
+        md->set_effective_size(0);
+        md->set_hashes({});
 
-        context->update_uhv();
+        get_context()->update_uhv();
     }
-    else {  // for now we do nothing
+    else
+    {
         throw std::runtime_error("ftruncate operation not supported");
     }
 
@@ -263,7 +264,6 @@ int __uh_readdir (const char *path, void *buf, fuse_fill_dir_t filler, off_t off
 
 int __uh_open (const char *path, struct fuse_file_info *fi)
 {
-
     std::cout << "open(" << path << ", fi)\n";
 
     if ((fi->flags & O_ACCMODE) != O_RDONLY and (fi->flags & O_ACCMODE) != O_RDWR and (fi->flags & O_ACCMODE) != O_WRONLY)
@@ -271,36 +271,27 @@ int __uh_open (const char *path, struct fuse_file_info *fi)
         return -EACCES;
     }
 
-    auto container_handle = get_context()->metadata_map();
-    auto& metadata_map = container_handle();
-    auto it = metadata_map.find(path);
-    if (it == metadata_map.end())
+    auto metadata_map = get_context()->metadata_map();
+    auto it = metadata_map->find(path);
+    if (it == metadata_map->end())
     {
         return -EACCES;
     }
-    else {
-        auto open_files_map_handler = get_context()->open_files();
-        open_files_map_handler().emplace(get_context()->fd, it->second);
-        fi->fh = get_context()->fd;
-        get_context()->fd ++;
-    }
+
+    set_metadata(fi, it->second);
 
     std::cout << "leaving uh_open(" << path << ", )\n";;
-
     return 0;
 }
 
-int __uh_release (const char *path, struct fuse_file_info *fi) {
-    auto open_files_handler = get_context()->open_files();
-    auto &open_files_map = open_files_handler();
-    if (const auto &it = open_files_map.find(fi->fh); it != open_files_map.end()) {
-        // TODO: later we could reuse the released fd by adding it to a fd_queue. When opening a
-        // file, if the fd_queue is not empty we pop one fd from the queue, otherwise, we increment context->fd;
-        open_files_map.erase(it);
-    }
-    else {
+int __uh_release (const char *path, struct fuse_file_info *fi)
+{
+    if (fi->fh == 0)
+    {
         return -EBADF;
     }
+
+    fi->fh = 0;
     return 0;
 }
 
@@ -311,7 +302,6 @@ int __uh_utimens (const char *path, const struct timespec tv[2]) {
 
 int __uh_read (const char *path, char *buffer, size_t size, off_t offset, struct fuse_file_info *fi)
 {
-
     std::cout << "uh_read(" << path << ", " << size << ", " << offset << ")\n";
 
     if ((fi->flags & O_ACCMODE) != O_RDONLY and (fi->flags & O_ACCMODE) != O_RDWR)
@@ -319,25 +309,21 @@ int __uh_read (const char *path, char *buffer, size_t size, off_t offset, struct
         return -EACCES;
     }
 
-    auto context = get_context();
-
-    auto fmd_handler = context->open_files();
-    auto fmd = fmd_handler().at(fi->fh).get() ();
-
-    protocol::client_pool::handle client_handle = context->get_client();
+    auto md = get_metadata(fi);
+    auto client = get_context()->get_client();
 
     size_t curr_offset = 0;
     std::stringstream recompiled_chunks;
-    if (fmd.type() == uh::uhv::uh_file_type::regular)
+    if (md->type() == uh::uhv::uh_file_type::regular)
     {
         std::vector<char> current_hash(64);
 
-        for (auto i = 0u; i < fmd.hashes().size(); i += 64)
+        for (auto i = 0u; i < md->hashes().size(); i += 64)
         {
-            std::copy(fmd.hashes().begin() + i,
-                      fmd.hashes().begin() + i + 64, current_hash.begin());
+            std::copy(md->hashes().begin() + i,
+                      md->hashes().begin() + i + 64, current_hash.begin());
 
-            client_handle->read_block(current_hash)->read({buffer + curr_offset, 1024*1024});
+            client->read_block(current_hash)->read({buffer + curr_offset, 1024*1024});
             curr_offset += 1024*1024;
         }
     }
@@ -355,46 +341,43 @@ int __uh_write (const char *path, const char *buf, size_t size, off_t offset, st
         return -EACCES;
     }
 
-    auto context = get_context();
-    auto& ts_fmd = context->open_files()().at(fi->fh);
-    auto fmd_handler = ts_fmd.get();
-    auto& fmd = fmd_handler();
-
-    if (fmd.type() != uh::uhv::uh_file_type::regular)
+    auto md = get_metadata(fi);
+    if (md->type() != uh::uhv::uh_file_type::regular)
     {
         return -ENOMEM;
     }
 
-    protocol::client_pool::handle client_handle = context->get_client();
+    auto context = get_context();
+    auto client = context->get_client();
 
-    if (static_cast<size_t>(offset) == fmd.size() and offset > 0)
+    if (static_cast<size_t>(offset) == md->size() and offset > 0)
     {       // if this is an append, for instance when performing "echo data >> file"
 
         // read the last chunk of the file
         std::vector<char> current_hash(64);
-        std::vector<char> last_chunk(std::max(fmd.size() % max_chunk_size, min_chuck_size) + size);
+        std::vector<char> last_chunk(std::max(md->size() % max_chunk_size, min_chuck_size) + size);
         std::span<char> data = {last_chunk.data(), last_chunk.size() - size};
-        std::copy(fmd.hashes().end() - 64, fmd.hashes().end (), current_hash.begin());
-        fmd.remove_hash(fmd.hashes().size() - 64, fmd.hashes().size());
-        client_handle->read_block(current_hash)->read(data);
+        std::copy(md->hashes().end() - 64, md->hashes().end (), current_hash.begin());
+        md->remove_hash(md->hashes().size() - 64, md->hashes().size());
+        client->read_block(current_hash)->read(data);
 
         // append the new data to the last chunk
-        std::copy(buf, buf + size, last_chunk.begin() + fmd.size() % max_chunk_size);
-        data = {last_chunk.data(), fmd.size() % max_chunk_size + size};
+        std::copy(buf, buf + size, last_chunk.begin() + md->size() % max_chunk_size);
+        data = {last_chunk.data(), md->size() % max_chunk_size + size};
 
         //write the extended last chunk
-        const auto effective_size = upload_data(client_handle, max_chunk_size, data, fmd.get_hashes());
-        fmd.add_effective_size(effective_size);
-        fmd.set_size(fmd.size() + size);
+        const auto effective_size = upload_data(client, max_chunk_size, data, md->get_hashes());
+        md->add_effective_size(effective_size);
+        md->set_size(md->size() + size);
     }
     else if (offset == 0) {         // for now, we assume replace data which is usually the case
                                     // since text editors write the whole file after modifications
 
         std::span<char> data = {const_cast <char*> (buf), size};
-        fmd.set_hashes({});
-        const auto effective_size = upload_data (client_handle, max_chunk_size, data, fmd.get_hashes());
-        fmd.set_effective_size(effective_size);
-        fmd.set_size(size);
+        md->set_hashes({});
+        const auto effective_size = upload_data(client, max_chunk_size, data, md->get_hashes());
+        md->set_effective_size(effective_size);
+        md->set_size(size);
 
     }
     else {
@@ -424,15 +407,13 @@ int __uh_create (const char *path, mode_t mode, struct fuse_file_info *fi) {
     md.set_permissions(mode);
 
     auto *context = get_context();
-    auto container_handle = context->metadata_map();
-    auto& files = container_handle();
+    auto files = context->metadata_map();
 
-    auto res_pair = files.emplace(std::string (path), md);
-    auto meta_handle = res_pair.first->second.get();
-    set_metadata(fi, meta_handle());
+    auto res_pair = files->emplace(std::string(path), md);
+    set_metadata(fi, res_pair.first->second);
 
-    uh::uhv::file uhv(get_options().UHVpath);
-    uhv.append(std::make_unique<uhv::meta_data>(md));
+    std::cout << "md appending: " << md.path() << "\n";
+    context->uhv().append(std::make_unique<uhv::meta_data>(md));
 
     return 0;
 }

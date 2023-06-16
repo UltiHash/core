@@ -31,7 +31,9 @@ struct context
 
     protocol::client_pool::handle get_client();
 
-
+    /**
+     * Exclusive access to metadata_map
+     */
     auto metadata_map()
     {
         return m_metadata_map.get();
@@ -40,6 +42,20 @@ struct context
     auto open_files()
     {
         return m_open_files.get();
+    }
+
+    ts_meta_data::type_handle get_file(unsigned long fh)
+    {
+        auto handle = m_open_files.get();
+
+        try
+        {
+            return handle().at(fh).get();
+        }
+        catch (const std::exception& e)
+        {
+            THROW(util::exception, e.what());
+        }
     }
 
     auto subdirectory_counts()

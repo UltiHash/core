@@ -26,10 +26,16 @@ namespace uh::fuse
 
 context* get_context();
 
+// ---------------------------------------------------------------------
+
+ts_meta_data::type_handle get_metadata(struct fuse_file_info* fi);
+
+// ---------------------------------------------------------------------
+
 /**
  * Set the metadata for the fuse_file_info `fi`.
  */
-void set_metadata(struct fuse_file_info* fi, uhv::meta_data& fmd);
+void set_metadata(struct fuse_file_info* fi, ts_meta_data& fmd);
 
 // ---------------------------------------------------------------------
 

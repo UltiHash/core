@@ -23,7 +23,19 @@ context* get_context()
 
 // ---------------------------------------------------------------------
 
-void set_metadata(struct fuse_file_info* fi, meta_data& fmd)
+ts_meta_data::type_handle get_metadata(struct fuse_file_info* fi)
+{
+    if (fi->fh == 0)
+    {
+        throw std::runtime_error("file not open");
+    }
+
+    return reinterpret_cast<ts_meta_data*>(fi->fh)->get();
+}
+
+// ---------------------------------------------------------------------
+
+void set_metadata(struct fuse_file_info* fi, ts_meta_data& fmd)
 {
     fi->fh = reinterpret_cast<size_t>(&fmd);
 }

@@ -29,6 +29,16 @@ public:
             return m_t;
         }
 
+        T* operator->()
+        {
+            return &m_t;
+        }
+
+        T& operator*()
+        {
+            return m_t;
+        }
+
     private:
         friend thread_safe_type;
 
