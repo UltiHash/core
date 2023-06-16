@@ -132,7 +132,27 @@ namespace uh::licensing {
 
     io::file check_license::write_license_file(check_license::role licenseRole, const std::string &app_name_input,
                                                const std::string &app_version_input)
-            {
+    {
+
+        if(replace_license)
+        {
+            try{
+                std::filesystem::remove(license_path);
+            }
+            catch (std::exception& e){
+                THROW(util::exception,"Could not remove UltiHash license file for this reason: " +
+                                      std::string(e.what()));
+            }
+
+            try{
+                std::filesystem::remove(license_path.string() + "_spring");
+            }
+            catch (std::exception& e){
+                THROW(util::exception,"Could not remove License Spring locking file for this reason: " +
+                                      std::string(e.what()));
+            }
+        }
+
         std::string role_set_string, license_type_set_string;
 
         switch (licenseRole) {

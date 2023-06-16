@@ -14,12 +14,15 @@ namespace uh::dbn::licensing {
     
 // ---------------------------------------------------------------------
 
-    uh::options::action options::evaluate(const boost::program_options::variables_map& vars) {
-        m_config.license_key = std::filesystem::path(vars["activate"].as<std::string>());
-        m_config.license_type = "AirgapOnline";
+    uh::options::action options::evaluate(const boost::program_options::variables_map& vars)
+    {
+        m_config.license_key = std::filesystem::path(vars["activate-replace"].as<std::string>());
 
-        boost::algorithm::replace_all(m_config.license_key,"{","");
-        boost::algorithm::replace_all(m_config.license_key,"}","");
+        if(m_config.license_key.empty())
+            m_config.license_key = std::filesystem::path(vars["activate"].as<std::string>());
+        else m_config.license_replace = true;
+
+        m_config.license_type = "AirgapOnline";
 
         if(std::any_of(m_config.licensing_path.cbegin(),m_config.licensing_path.cend(),
                        [](auto c){return c == ';';}))
@@ -56,10 +59,12 @@ namespace uh::dbn::licensing {
             }
         }
 
-        if (m_config.licensing_path == "/var/lib") {
+        if (m_config.licensing_path.empty())
+        {
             m_config.licensing_path = "/var/lib/data-node/licensing";
             std::filesystem::create_directory(m_config.licensing_path);
-        } else {
+        } else
+        {
             if (!std::filesystem::exists(m_config.licensing_path))
                 throw std::runtime_error("Path doesn't exist: " + m_config.licensing_path);
 

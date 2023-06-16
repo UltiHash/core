@@ -10,24 +10,34 @@
 #include <LicenseSpring/Exceptions.h>
 #include <LicenseSpring/LicenseFileStorage.h>
 
+#include <util/exception.h>
+
 #include <utility>
 
 namespace uh::licensing{
 
     // ---------------------------------------------------------------------
 
-    check_online_license::check_online_license(const std::filesystem::path &license_file, std::string apiKey_encrypted,
+    check_online_license::check_online_license(const std::filesystem::path &license_file,
+                                               std::string apiKey_encrypted,
                                                std::string sharedKey_encrypted,
-                                               std::string productId_encrypted, std::string appName, std::string appVersion,
-                                               std::string userName, std::string password) :
+                                               std::string productId_encrypted,
+                                               std::string appName,
+                                               std::string appVersion,
+                                               std::string userName,
+                                               std::string password,
+                                               bool replace_license) :
             check_license(license_file,
                           license_type::FLOATING_ONLINE_USER_LICENSE,
                           std::move(apiKey_encrypted),
                           std::move(sharedKey_encrypted),
                           std::move(productId_encrypted), std::move(appName),
                           std::move(appVersion)),
-                          userName(std::move(userName)), password(std::move(password))
+                          userName(std::move(userName)),
+                          password(std::move(password))
                           {
+        this->replace_license = replace_license;
+
         if(this->userName.empty())
           this->userName = check_user_name();
 

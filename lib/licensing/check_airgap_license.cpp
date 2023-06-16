@@ -16,15 +16,22 @@ namespace uh::licensing {
 
     // ---------------------------------------------------------------------
 
-    check_airgap_license::check_airgap_license(const std::filesystem::path &license_file, std::string apiKey_encrypted,
+    check_airgap_license::check_airgap_license(const std::filesystem::path &license_file,
+                                               std::string apiKey_encrypted,
                                                std::string sharedKey_encrypted,
-                                               std::string productId_encrypted, std::string appName, std::string appVersion) :
+                                               std::string productId_encrypted,
+                                               std::string appName,
+                                               std::string appVersion,
+                                               bool replace_license) :
             check_license(license_file, license_type::AIRGAP_LICENSE_WITH_ONLINE_ACTIVATION,
                           std::move(apiKey_encrypted),
                           std::move(sharedKey_encrypted),
-                          std::move(productId_encrypted), std::move(appName),
+                          std::move(productId_encrypted),
+                          std::move(appName),
                           std::move(appVersion))
                           {
+        this->replace_license = replace_license;
+
         if(this->keygen.empty())
           this->keygen = check_keygen();
     }
@@ -46,22 +53,7 @@ namespace uh::licensing {
                 appName, appVersion, options);
 
         //Key-based implementation
-        std::string local_keygen_string(keygen_string);
-        std::filesystem::path local_license_file_path(license_path);
-
-        auto key_read_func = [&local_keygen_string,&local_license_file_path](){
-            std::fstream license_file_stream(local_license_file_path, std::ios_base::in);
-
-            for (std::string line; std::getline(license_file_stream, line);) {
-                if (line.starts_with(local_keygen_string)) {
-                    return line.substr(local_keygen_string.size(), line.size());
-                }
-            }
-
-            return std::string{};
-        };
-
-        const std::string license_key = key_read_func();
+        const std::string license_key = check_keygen();
 
         auto licenseId = LicenseSpring::LicenseID::fromKey(license_key); //input license key
 

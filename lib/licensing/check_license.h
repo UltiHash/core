@@ -112,6 +112,7 @@ namespace uh::licensing{
 
     protected:
         std::filesystem::path license_path;
+        bool replace_license;
 
         io::file
         write_license_file(check_license::role licenseRole, const std::string &app_name_input,

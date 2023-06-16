@@ -22,9 +22,8 @@ namespace
 
 // ---------------------------------------------------------------------
 
-void maybe_create_license_root_directory(std::filesystem::path license_root){
-
-
+void maybe_create_license_root_directory(std::filesystem::path license_root)
+{
     //Check whether the directory already exists:
     bool no_license_root = !std::filesystem::is_directory(license_root);
 
@@ -43,7 +42,8 @@ void maybe_create_license_root_directory(std::filesystem::path license_root){
 
 // ---------------------------------------------------------------------
 
-LicenseTypeEnum define_licensing_type(const std::string& backend_type){
+LicenseTypeEnum define_licensing_type(const std::string& backend_type)
+{
     auto it = string2backendtype.find(backend_type);
     if (it != string2backendtype.end()) {
         return it->second;
@@ -69,7 +69,10 @@ std::unique_ptr<uh::licensing::license_package> make_licensing(const uh::options
                 uh::licensing::check_airgap_license write_airgap(cfg.licensing_path,
                                                                  EncryptStr(LICENSE_API_KEY),
                                                                  EncryptStr(LICENSE_SHARED_KEY),
-                                                                 EncryptStr(LICENSE_PRODUCT_ID)
+                                                                 EncryptStr(LICENSE_PRODUCT_ID),
+                                                                 PROJECT_NAME,
+                                                                 PROJECT_VERSION,
+                                                                 cfg.license_replace
                 );
 
                 write_airgap.write_license(uh::licensing::check_license::role::DATA_NODE,
