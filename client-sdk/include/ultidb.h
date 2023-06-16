@@ -144,19 +144,6 @@ UDB_RESULT udb_destroy_key(UDB_KEY* udb_key);
 UDB_DOCUMENT* udb_create_document();
 
 /**
- * Creates an instance of UDB_DOCUMENT with a given key and returns a pointer to it.
- *
- * @return UDB_DOCUMENT* pointer to the document structure allocated
- */
-UDB_DOCUMENT* udb_create_document_raw_buffer(char* key_buffer, size_t length);
-UDB_DOCUMENT* udb_create_document_with_key(char* key_buffer, size_t length);
-
-UDB_RESULT udb_document_set_data(UDB_DOCUMENT* doc, char* data, size_t size);
-UDB_RESULT udb_document_get_data(UDB_DOCUMENT* doc, char** data, size_t* size);
-UDB_RESULT udb_document_set_key(UDB_DOCUMENT* doc, UDB_KEY* key);
-UDB_RESULT udb_document_get_key (UDB_DOCUMENT* doc, UDB_KEY** key);
-
-/**
  * Deallocates the instance of UDB_DOCUMENT which was allocated before. It also frees all the memory that is held
  * by the pointers inside the struct object.
  *
@@ -164,6 +151,19 @@ UDB_RESULT udb_document_get_key (UDB_DOCUMENT* doc, UDB_KEY** key);
  * @return UDB_RESULT enum that describes the result of the operation
  */
 UDB_RESULT udb_destroy_document(UDB_DOCUMENT* doc);
+
+/**
+ * Creates an instance of UDB_DOCUMENT with a given key and returns a pointer to it.
+ *
+ * @return UDB_DOCUMENT* pointer to the document structure allocated
+ */
+UDB_DOCUMENT* udb_create_document_with_buffer(char* key_buffer, size_t length);
+UDB_DOCUMENT* udb_create_document_with_key(char* key_buffer, size_t length);
+
+UDB_RESULT udb_document_set_data(UDB_DOCUMENT* doc, char* data, size_t size);
+UDB_RESULT udb_document_get_data(UDB_DOCUMENT* doc, char** data, size_t* size);
+UDB_RESULT udb_document_set_key(UDB_DOCUMENT* doc, UDB_KEY* key);
+UDB_RESULT udb_document_get_key (UDB_DOCUMENT* doc, UDB_KEY** key);
 
 /**
 * Creates an instance of ::UDB_CONFIG (typedef UDB_CONFIG) which can be used to put configuration parameters.

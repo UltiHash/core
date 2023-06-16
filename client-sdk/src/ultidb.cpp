@@ -145,7 +145,65 @@ const char* get_sdk_version() { return SDK_VERSION; }
 
 // ---------------------------------------------------------------------
 
-//extern struct uh::chunking::config CHUNKING_CONFIG;
+UDB_KEY* udb_create_key(char* key_buffer, size_t length)
+{
+    try
+    {
+        return new UDB_KEY_STRUCT();
+    }
+    catch (const std::exception& e)
+    {
+        error = UDB_RESULT_ERROR;
+        return nullptr;
+    }
+}
+
+// ---------------------------------------------------------------------
+
+UDB_RESULT udb_destroy_key(UDB_KEY* udb_key)
+{
+    try
+    {
+        delete udb_key;
+        return UDB_RESULT_SUCCESS;
+    }
+    catch(const std::exception& e)
+    {
+        error = UDB_RESULT_ERROR;
+        return UDB_RESULT_ERROR;
+    }
+}
+
+// ---------------------------------------------------------------------
+
+UDB_DOCUMENT* udb_create_document()
+{
+    try
+    {
+        return new UDB_DOCUMENT_STRUCT();
+    }
+    catch (const std::exception& e)
+    {
+        error = UDB_RESULT_ERROR;
+        return nullptr;
+    }
+}
+
+// ---------------------------------------------------------------------
+
+UDB_RESULT udb_destroy_document(UDB_DOCUMENT* udb_doc)
+{
+    try
+    {
+        delete udb_doc;
+        return UDB_RESULT_SUCCESS;
+    }
+    catch(const std::exception& e)
+    {
+        error = UDB_RESULT_ERROR;
+        return UDB_RESULT_ERROR;
+    }
+}
 
 // ---------------------------------------------------------------------
 
@@ -183,21 +241,27 @@ struct UDB_STATE_STRUCT
     {
         std::stringstream s;
         s << SDK_NAME << " " << SDK_VERSION;
-        uh::protocol::client_factory_config cf_config
+        m_cf_config =
             {
                 .client_version = s.str()
             };
 
-        /* Segmentation fault given if the agency node is not running. */
-        m_connection_pool = std::make_unique<uh::protocol::client_pool>(std::make_unique<uh::protocol::client_factory>(
-                std::make_unique<uh::net::plain_socket_factory>(m_io, config->hostname, config->port),
-                cf_config), config->connection_pool);
+        m_hostname = config->hostname;
+        m_port = config->port;
+
+//        /* Segmentation fault given if the agency node is not running. */
+//        m_connection_pool = std::make_unique<uh::protocol::client_pool>(std::make_unique<uh::protocol::client_factory>(
+//                std::make_unique<uh::net::plain_socket_factory>(m_io, config->hostname, config->port),
+//                cf_config), config->connection_pool);
 
     }
 
     std::unique_ptr<uh::protocol::client_pool> m_connection_pool;
     std::unique_ptr<uh::chunking::mod> m_chunking_mod;
     boost::asio::io_context m_io;
+    const char* m_hostname;
+    uint16_t m_port;
+
 };
 
 // ---------------------------------------------------------------------
@@ -239,6 +303,22 @@ UDB_RESULT udb_destroy_instance(UDB* ulti_db_instance)
 
 // ---------------------------------------------------------------------
 
+UDB_RESULT udb_ping(UDB* handle)
+{
+    try
+    {
+        auto client_handle = handle->m_connection_pool->get();
+        client_handle->ping();
+    }
+    catch(const std::exception& e)
+    {
+        error = UDB_RESULT_ERROR;
+        return UDB_RESULT::UDB_RESULT_ERROR;
+    }
+}
+
+// ---------------------------------------------------------------------
+
 UDB_RESULT udb_integrate(UDB *handle, char* hash_buffer, size_t buffer_length, const char* data, size_t data_length)
 {
     try
@@ -253,6 +333,9 @@ UDB_RESULT udb_integrate(UDB *handle, char* hash_buffer, size_t buffer_length, c
                                                                                       std::span<const char>(data, data_length) });
 
         std::memcpy(hash_buffer, resp.hashes.data(), 65);
+
+        return UDB_RESULT::UDB_RESULT_SUCCESS;
+
     }
     catch(const std::overflow_error& e)
     {
@@ -264,8 +347,6 @@ UDB_RESULT udb_integrate(UDB *handle, char* hash_buffer, size_t buffer_length, c
         error = UDB_RESULT_ERROR;
         return UDB_RESULT::UDB_RESULT_ERROR;
     }
-
-    return UDB_RESULT::UDB_RESULT_SUCCESS;
 }
 
 // ---------------------------------------------------------------------
