@@ -141,8 +141,8 @@ int main(int argc, const char *argv[])
     try
     {
         application_config config;
-        config.add_desc("General Usage:\n(integrate) - ./uhClient --integrate <destination_uh_file_name>.uh <origin_directory> --agency-node <host>:<port>\n"
-                        "(retrieve)  - ./uhClient --retrieve <destination_uh_file_name>.uh --target <target_directory> --agency-node <host>:<port>");
+        config.add_desc("General Usage:\n(integrate) - ./uh-cli --integrate <destination_uh_file_name>.uh <origin_directory> --agency-node <host>:<port>\n"
+                        "(retrieve)  - ./uh-cli --retrieve <destination_uh_file_name>.uh --target <target_directory> --agency-node <host>:<port>");
         if (config.evaluate(argc, argv) == uh::options::action::exit)
         {
             return 0;
