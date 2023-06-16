@@ -40,7 +40,6 @@ namespace uh::licensing {
          * @throws if license is invalid or cannot be loaded
          */
         explicit license_package(check_license::role license_path_input,
-                                 const std::set<feature>& features_input,
                                  const std::filesystem::path &config, const std::string& apiKey,
                                  const std::string& sharedKey, const std::string& productId);
 
@@ -154,6 +153,11 @@ namespace uh::licensing {
         check_license* check_lic{};
         std::filesystem::path license_path;
         const uint8_t feature_count_global = 2;
+
+        /**
+         * activates online defined features and limits
+         */
+        void feature_activation();
     };
 
 } // namespace uh::licensing

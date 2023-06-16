@@ -12,6 +12,8 @@
 namespace uh::dbn::storage
 {
 
+// ---------------------------------------------------------------------
+
 namespace
 {
 
@@ -43,7 +45,7 @@ void maybe_create_database_root_directory(std::filesystem::path db_root,
 
 // ---------------------------------------------------------------------
 
-BackendTypeEnum define_backend_type(std::string backend_type){
+BackendTypeEnum define_backend_type(const std::string& backend_type){
     auto it = string2backendtype.find(backend_type);
     if (it != string2backendtype.end()) {
         return it->second;
@@ -79,7 +81,7 @@ std::unique_ptr<backend> make_backend(const storage_config& cfg, metrics::storag
                     hierarchical_storage_config{ cfg.db_root, size_needed, cfg.comp },
                     storage_metrics, scheduled_compressions);
         case BackendTypeEnum::OtherStorage:
-            THROW(util::exception, "Not implemented yet");
+            THROW(util::exception, "Not yet implemented backend type");
     }
 
     std::string msg("Not a storage backend type: " + cfg.backend_type);

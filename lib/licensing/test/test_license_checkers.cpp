@@ -137,6 +137,9 @@ namespace {
                            sharedKey_test,
                            product_Id_test);
 
+        BOOST_CHECK(lp.check_feature_enabled(license_package::feature::DEDUPLICATION));
+        BOOST_CHECK(lp.check_feature_enabled(license_package::feature::METRICS));
+
         auto* soft_right = new soft_metred_storage_resource(100,50);
 
         BOOST_REQUIRE_THROW(lp.add_soft_metred_feature(license_package::soft_metered_feature::LIMIT_STORAGE_CAPACITY,
