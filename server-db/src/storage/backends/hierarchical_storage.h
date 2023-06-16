@@ -7,8 +7,9 @@
 
 #include <storage/backend.h>
 #include <storage/compressed_file_store.h>
-#include <persistence/storage/scheduled_compressions_persistence.h>
+#include <state/scheduled_compressions_state.h>
 #include "io/sha512.h"
+#include "storage/backends/smart_backend/smart_config.h"
 
 #include <metrics/storage_metrics.h>
 
@@ -31,6 +32,11 @@ struct hierarchical_storage_config
      * Configuration of compressed file storage.
      */
     compressed_file_store_config compressed;
+
+    /**
+     * Configuration of smart storage.
+     */
+    smart::smart_config smart_post_processing;
 };
 
 class hierarchical_storage : public backend {
@@ -38,9 +44,10 @@ class hierarchical_storage : public backend {
 public:
     hierarchical_storage(const hierarchical_storage_config& config,
                          uh::dbn::metrics::storage_metrics& storage_metrics,
-                         persistence::scheduled_compressions_persistence& scheduled_compressions);
+                         state::scheduled_compressions_state& scheduled_compressions);
 
     void start() override;
+    void stop() override;
 
     std::unique_ptr<io::data_generator> read_block(const std::span <char>& hash) override;
 
@@ -52,36 +59,9 @@ public:
 
     std::string backend_type() override;
 
-    std::unique_ptr<uh::protocol::allocation> allocate(std::size_t size) override;
+    std::pair <std::size_t, std::vector <char>> write_block (const std::span <char>& data) override;
 
-    std::unique_ptr<uh::protocol::allocation> allocate_multi (std::size_t size) override;
-
-    class hierarchical_allocation;
-    class hierarchical_multi_block_allocation: public uh::protocol::allocation {
-    public:
-        explicit hierarchical_multi_block_allocation (hierarchical_storage &storage_backend,
-                                                      compressed_file_store& store,
-                                                      std::size_t size);
-
-        void open_new_block (std::size_t block_size);
-        bool block_is_open ();
-        void close_block ();
-        io::device& device() override;
-        uh::protocol::block_meta_data persist() override;
-        ~hierarchical_multi_block_allocation() override;
-        hierarchical_multi_block_allocation(const hierarchical_storage&) = delete;
-        hierarchical_multi_block_allocation &operator=(const hierarchical_storage &) = delete;
-
-    private:
-        hierarchical_storage &m_storage_backend;
-        std::unique_ptr <io::temp_file> m_tmp {nullptr};
-        std::unique_ptr <io::sha512> m_sha {nullptr};
-        std::size_t m_size;
-        std::size_t m_block_size {};
-        std::size_t m_persisted_size {};
-        std::size_t m_effective_size {};
-        compressed_file_store& m_store;
-    };
+    [[nodiscard]] std::filesystem::path get_hash_path (const std::string_view &hash) const;
 
     static constexpr std::size_t BUFFER_SIZE = 128 * 1024;
 private:
@@ -89,8 +69,6 @@ private:
     void return_space(std::size_t size);
 
     void acquire_storage_size (std::size_t size);
-
-    [[nodiscard]] std::filesystem::path get_hash_path (const std::string &hash) const;
 
     constexpr static std::string_view m_type = "HierarchicalStorage";
     constexpr static unsigned int m_levels = 4;

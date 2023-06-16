@@ -4,12 +4,25 @@
 #include <options/options.h>
 #include <util/exception.h>
 #include <storage/compressed_file_store.h>
-
-#include "mod.h"
-
+#include <storage/storage_config.h>
 
 namespace uh::dbn::storage
 {
+
+// ---------------------------------------------------------------------
+
+    enum class OptionsEnum {DataDirectory, DbStorageAlgorithm, AllocateStorage};
+
+    constexpr const char* optionString(OptionsEnum n)
+    {
+        switch (n)
+        {
+            case OptionsEnum::DataDirectory: return "data-directory";
+            case OptionsEnum::DbStorageAlgorithm: return "db-storage-algorithm";
+            case OptionsEnum::AllocateStorage: return "allocate-storage";
+            default: THROW(util::exception, "Not implemented option");
+        }
+    }
 
 // ---------------------------------------------------------------------
 
@@ -18,9 +31,9 @@ class options : public uh::options::options
 public:
     options();
 
-    virtual uh::options::action evaluate(const boost::program_options::variables_map& vars) override;
+    uh::options::action evaluate(const boost::program_options::variables_map& vars) override;
 
-    const storage_config& config() const;
+    [[nodiscard]] const storage_config& config() const;
 
 private:
     storage_config m_config;
@@ -35,7 +48,7 @@ public:
 
     uh::options::action evaluate(const boost::program_options::variables_map& vars) override;
 
-    const compressed_file_store_config& config() const;
+    [[nodiscard]] const compressed_file_store_config& config() const;
 
 private:
     compressed_file_store_config m_config;

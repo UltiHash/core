@@ -1,7 +1,7 @@
 #ifdef SINGLE_TEST_RUNNER
 #define BOOST_TEST_NO_MAIN
 #else
-#define BOOST_TEST_MODULE "uhClientShell Traverse Tests"
+#define BOOST_TEST_MODULE "uh-cli Traverse Tests"
 #endif
 
 #include <filesystem>

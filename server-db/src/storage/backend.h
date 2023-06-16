@@ -14,6 +14,8 @@ namespace uh::dbn::storage {
 
         virtual void start() = 0;
 
+        virtual void stop() = 0;
+
         /**
          * Read a data block identified by it's hash from the storage.
          *
@@ -47,14 +49,10 @@ namespace uh::dbn::storage {
         virtual std::string backend_type() = 0;
 
         /**
-         * Reserve data storage of given `size` and return an allocation for it.
+         * Writes the data to the storage backend and returns its hash and effective size
          */
-        virtual std::unique_ptr<uh::protocol::allocation> allocate(std::size_t size) = 0;
+        virtual std::pair <std::size_t, std::vector <char>> write_block (const std::span <char>& data) = 0;
 
-        /**
-         * Reserve data storage of given `size` for multiple blocks and return an allocation for it.
-         */
-        virtual std::unique_ptr<uh::protocol::allocation> allocate_multi (std::size_t size) = 0;
     };
 
 // ---------------------------------------------------------------------
