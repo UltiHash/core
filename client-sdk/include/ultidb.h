@@ -5,8 +5,8 @@
 #ifndef UDB_SDK_INCLUDE_UDB_H
 #define UDB_SDK_INCLUDE_UDB_H
 
-#include <cstddef>  /* for size_t */
-#include <cstdint>
+#include <stddef.h>
+#include <stdint.h>
 
 #if defined(__cplusplus) || defined(c_plusplus)
 extern "C" {
