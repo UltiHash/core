@@ -15,7 +15,7 @@ void dump_metadata(std::ostream& out, const uh::uhv::meta_data& md)
 
     for (auto i = 0u; i < md.hashes().size(); i += 64)
     {
-        out << "\t\t\t"
+        out << "\t"
             << uh::util::to_hex_string(md.hashes().begin() + i, md.hashes().begin() + i + 64) << "\n";
     }
 }

@@ -26,38 +26,13 @@ int __uh_getattr(const std::filesystem::path& path, struct stat* stbuf)
     std::cout << "uh_getattr(" << path << ", stbuf)\n";
     memset(stbuf, 0, sizeof(struct stat));
 
-    auto* ctx = get_context();
-    auto container_handle = ctx->metadata_map();
-    auto& unordered_map = container_handle();
+    auto md = get_context()->get_file(path);
 
-    auto it = unordered_map.find(path);
-    if (it == unordered_map.end() && path.filename().c_str()[0] == '.')
-    {
-        std::cout << "leaving uh_getattr(" << path << ", )\n";
-        return 0;
-    }
-
-    if (it == unordered_map.end())
-    {
-        stbuf->st_size = 0;
-        stbuf->st_nlink = 1;
-        stbuf->st_blksize = 4096;
-        stbuf->st_blocks = 0;
-        clock_gettime(CLOCK_MONOTONIC, &stbuf->st_ctim);
-        stbuf->st_mode = S_IFREG | 0666;
-
-        THROW(exception, "file not found", ENOENT);
-    }
-
-    // !!! container should be released here since mera_data is found
-    auto meta_handle = it->second.get();
-    auto& meta_data = meta_handle();
-
-    uhv::uh_file_type type = static_cast<uhv::uh_file_type>(meta_data.type());
+    uhv::uh_file_type type = static_cast<uhv::uh_file_type>(md->type());
 
     if (type == uh::uhv::uh_file_type::regular)
     {
-        stbuf->st_size = meta_data.size();
+        stbuf->st_size = md->size();
         stbuf->st_nlink = 1;
         stbuf->st_mode = S_IFREG | 0666;
     }
@@ -65,11 +40,10 @@ int __uh_getattr(const std::filesystem::path& path, struct stat* stbuf)
     if (type == uh::uhv::uh_file_type::directory)
     {
         stbuf->st_mode = S_IFDIR | 0766;
-        stbuf->st_nlink = 2 + get_context()->subdirectory_counts() ().at(meta_data.path());
+        stbuf->st_nlink = 2 + get_context()->subdirectory_counts() ().at(md->path());
     }
 
     std::cout << "leaving uh_getattr(" << path << ", )\n";
-
     return 0;
 }
 
@@ -77,33 +51,23 @@ int uh_unlink(const char *path)
 {
     std::cout << "uh_unlink(" << path << ")\n";
 
-    uh::uhv::uh_file_type type;
-
-    auto *ctx = get_context();
-    auto container_handle = ctx->metadata_map();
-    auto& unordered_map = container_handle();
-    auto it = unordered_map.find(path);
-    if (it == unordered_map.end())
+    auto* ctx = get_context();
+    auto unordered_map = ctx->metadata_map();
+    auto it = unordered_map->find(path);
+    if (it == unordered_map->end())
     {
-        std::cout << "leaving uh_unlink(" << path << ")\n";
         THROW(exception, "file not found", ENOENT);
     }
 
-    // !!! container should be released here since meta_data is found
-    auto meta_handle = it->second.get();
-    auto& meta_data = meta_handle();
-
-    type = static_cast <uh::uhv::uh_file_type> (meta_data.type());
-
-    if (type == uh::uhv::uh_file_type::regular)
+    auto md = it->second.get();
+    if (md->type() == uh::uhv::uh_file_type::regular)
     {
-        unordered_map.erase(it);
+        unordered_map->erase(it);
     }
 
     ctx->update_uhv();
 
     std::cout << "leaving uh_unlink(" << path << ")\n";
-
     return 0;
 }
 
@@ -230,17 +194,15 @@ int __uh_readdir (const char *path, void *buf, fuse_fill_dir_t filler, off_t off
 
     std::vector <std::filesystem::path> files;
     {
-        auto container_handle = get_context()->metadata_map();
-        auto& unordered_map = container_handle();
-        auto meta_handle = unordered_map.at(path).get();
-        const auto& metadata = meta_handle();
+        auto unordered_map = get_context()->metadata_map();
+        auto metadata = unordered_map->at(path).get();
 
-        if (metadata.type() != uh::uhv::uh_file_type::directory)
+        if (metadata->type() != uh::uhv::uh_file_type::directory)
         {
             THROW(exception, "file is not a directory", ENOENT);
         }
 
-        files = get_files(metadata.path(), unordered_map);
+        files = get_files(metadata->path(), *unordered_map);
     }
 
     filler(buf, ".", nullptr, 0);
@@ -261,19 +223,13 @@ int __uh_open (const char *path, struct fuse_file_info *fi)
 {
     std::cout << "open(" << path << ", fi)\n";
 
-    if ((fi->flags & O_ACCMODE) != O_RDONLY and (fi->flags & O_ACCMODE) != O_RDWR and (fi->flags & O_ACCMODE) != O_WRONLY)
+    auto mode = fi->flags & O_ACCMODE;
+    if (mode != O_RDONLY && mode != O_RDWR && mode != O_WRONLY)
     {
         THROW(exception, "access denied", EACCES);
     }
 
-    auto metadata_map = get_context()->metadata_map();
-    auto it = metadata_map->find(path);
-    if (it == metadata_map->end())
-    {
-        THROW(exception, "file not found", ENOENT);
-    }
-
-    set_metadata(fi, it->second);
+    set_metadata(fi, get_context()->get_file_locked(path));
 
     std::cout << "leaving uh_open(" << path << ", )\n";;
     return 0;

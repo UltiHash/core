@@ -64,7 +64,7 @@ void context::update_uhv()
     std::list<std::unique_ptr<uhv::meta_data>> md;
     for (auto& tsmd : data)
     {
-        md.push_back(std::make_unique<uhv::meta_data>(tsmd.second.get()()));
+        md.push_back(std::make_unique<uhv::meta_data>(*tsmd.second.get()));
     }
 
     m_uhv.serialize(md);

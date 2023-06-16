@@ -3,6 +3,7 @@
 
 #include <protocol/client_pool.h>
 #include <uhv/file.h>
+#include "exception.h"
 #include "thread_safe_type.h"
 
 #include <memory>
@@ -39,23 +40,22 @@ struct context
         return m_metadata_map.get();
     }
 
-    auto open_files()
+    ts_meta_data& get_file_locked(const std::string& path)
     {
-        return m_open_files.get();
+        auto map = m_metadata_map.get();
+
+        auto it = map->find(path);
+        if (it == map->end())
+        {
+            THROW(exception, "file not found", ENOENT);
+        }
+
+        return it->second;
     }
 
-    ts_meta_data::type_handle get_file(unsigned long fh)
+    ts_meta_data::type_handle get_file(const std::string& path)
     {
-        auto handle = m_open_files.get();
-
-        try
-        {
-            return handle().at(fh).get();
-        }
-        catch (const std::exception& e)
-        {
-            THROW(util::exception, e.what());
-        }
+        return get_file_locked(path).get();
     }
 
     auto subdirectory_counts()
@@ -71,7 +71,6 @@ private:
     protocol::client_pool m_pool;
     ts_container m_metadata_map;
     thread_safe_type<std::unordered_map<std::filesystem::path, unsigned long>> m_subdirectory_counts;
-    thread_safe_type<std::unordered_map<unsigned long, ts_meta_data&>> m_open_files;
 };
 
 // ---------------------------------------------------------------------
