@@ -22,6 +22,7 @@ namespace
 
 // ---------------------------------------------------------------------
 
+
 void maybe_create_license_root_directory(std::filesystem::path license_root)
 {
     //Check whether the directory already exists:
