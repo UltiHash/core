@@ -71,7 +71,14 @@ uint64_t upload_data(uh::protocol::client_pool::handle& client_handle,
     std::size_t effective_size = 0;
     chunking::fixed_size_chunker fsc(chunk_size);
 
-    client::chunked_upload(*client_handle, data, fsc, effective_size);
+    auto result = client::chunked_upload(*client_handle, data, fsc, effective_size);
+
+    hashes.clear();
+    for (const auto& chunk : result)
+    {
+        hashes.insert(hashes.end(), chunk.hash.begin(), chunk.hash.end());
+    }
+
     return effective_size;
 }
 

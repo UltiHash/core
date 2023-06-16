@@ -346,7 +346,8 @@ int __uh_write (const char *path, const char *buf, size_t size, off_t offset, st
     auto client = context->get_client();
 
     if (static_cast<size_t>(offset) == md->size() and offset > 0)
-    {       // if this is an append, for instance when performing "echo data >> file"
+    {
+        // if this is an append, for instance when performing "echo data >> file"
 
         // read the last chunk of the file
         std::vector<char> current_hash(64);
@@ -365,17 +366,18 @@ int __uh_write (const char *path, const char *buf, size_t size, off_t offset, st
         md->add_effective_size(effective_size);
         md->set_size(md->size() + size);
     }
-    else if (offset == 0) {         // for now, we assume replace data which is usually the case
-                                    // since text editors write the whole file after modifications
-
+    else if (offset == 0)
+    {
+        // for now, we assume replace data which is usually the case
+        // since text editors write the whole file after modifications
         std::span<char> data = {const_cast <char*> (buf), size};
         md->set_hashes({});
         const auto effective_size = upload_data(client, max_chunk_size, data, md->get_hashes());
         md->set_effective_size(effective_size);
         md->set_size(size);
-
     }
-    else {
+    else
+    {
         throw std::runtime_error("write operation not supported");
     }
 
