@@ -17,7 +17,7 @@ void combined_backend::smart_worker::operator()(std::filesystem::path path, std:
 }
 
 combined_backend::combined_backend(const hierarchical_storage_config &hierarchical_config,
-                               persistence::scheduled_compressions_persistence& scheduled_compressions,
+                               state::scheduled_compressions_state& scheduled_compressions,
                                storage_metrics &storage_metrics):
     m_hierarchical_config(hierarchical_config),
     m_storage_metrics (storage_metrics),
