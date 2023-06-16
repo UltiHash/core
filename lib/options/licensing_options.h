@@ -18,6 +18,7 @@ namespace uh::options {
         std::string license_key;
         std::string license_user;
         std::string license_password;
+        std::string license_type;
     };
 
 // ---------------------------------------------------------------------

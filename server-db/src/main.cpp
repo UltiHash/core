@@ -6,12 +6,13 @@
 #include <server/mod.h>
 #include <persistence/mod.h>
 #include <metrics/mod.h>
+#include <licensing/mod.h>
+#include <licensing/options.h>
 #include <logging/logging_boost.h>
 
 #include <options/app_config.h>
 #include <options/metrics_options.h>
 #include <options/logging_options.h>
-
 #include <options/licensing_options.h>
 
 APPLICATION_CONFIG(
@@ -20,7 +21,8 @@ APPLICATION_CONFIG(
     (metrics, uh::options::metrics_options),
     (storage, uh::dbn::storage::options),
     (comp, uh::dbn::storage::compression_options),
-    (persistence, uh::dbn::persistence::options));
+    (persistence, uh::dbn::persistence::options),
+    (licensing, uh::dbn::licensing::options));
 
 using namespace uh::log;
 using namespace uh::dbn;
@@ -39,6 +41,9 @@ int main(int argc, const char** argv)
 
         INFO << "               --- Database Node Modules ---";
         metrics::mod metrics_module(config.metrics()); //TODO add storage metrics
+
+        licensing::mod licensing_module(config.licensing());
+        licensing_module.start();
 
         persistence::mod persistence_module(config.persistence());
         persistence_module.start();

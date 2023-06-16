@@ -16,6 +16,7 @@ namespace uh::dbn::licensing {
 
     uh::options::action options::evaluate(const boost::program_options::variables_map& vars) {
         m_config.license_key = std::filesystem::path(vars["activate"].as<std::string>());
+        m_config.license_type = "AirgapOnline";
 
         boost::algorithm::replace_all(m_config.license_key,"{","");
         boost::algorithm::replace_all(m_config.license_key,"}","");
@@ -28,19 +29,28 @@ namespace uh::dbn::licensing {
 
             switch (tmp_vec_configs.size()) {
                 case 2:
-                    m_config.license_key = tmp_vec_configs[0];
-                    m_config.licensing_path = tmp_vec_configs[1];
-                    break;
+                    m_config.license_type = tmp_vec_configs[0];
+                    m_config.license_key = tmp_vec_configs[1];
                 case 3:
-                    m_config.license_user = tmp_vec_configs[0];
-                    m_config.license_password = tmp_vec_configs[1];
+                    m_config.license_type = tmp_vec_configs[0];
+                    m_config.license_key = tmp_vec_configs[1];
                     m_config.licensing_path = tmp_vec_configs[2];
+                    break;
+                case 4:
+                    m_config.license_type = tmp_vec_configs[0];
+                    m_config.license_user = tmp_vec_configs[1];
+                    m_config.license_password = tmp_vec_configs[2];
+                    m_config.licensing_path = tmp_vec_configs[3];
                     break;
                 default:
                     std::string err_string = "Received string was: "+m_config.license_key+
-                            "Activation command was not populated with either {license key}, "
-                            "{license_key;license-path} or {username;password;license-path}."
-                            " Default license path is /var/lib .";
+                            "Activation command was not populated with either "
+                            "{license key}, "
+                            "{license type;license key}, "
+                            "{license type;license_key;license-path} or "
+                            "{license type;username;password;license-path}."
+                            " Default license path is /var/lib ."
+                            " Default license type is AirgapOnline";
                     INFO << err_string;
                     THROW(util::exception,err_string);
             }

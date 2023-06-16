@@ -3,6 +3,7 @@
 //
 
 #include "licensing/license_package.h"
+#include "logging/logging_boost.h"
 
 #include "soft_metred_storage_resource.h"
 
@@ -80,6 +81,8 @@ namespace uh::licensing{
 
             feature_activation();
 
+            INFO << "Loading license from " + this->license_path.string();
+
             return;
         }
 
@@ -95,8 +98,10 @@ namespace uh::licensing{
 
                     feature_activation();
 
-                    if(licenseTypeToCheck != check_license::license_type::THROW_LICENSE_TYPE)
+                    if(licenseTypeToCheck != check_license::license_type::THROW_LICENSE_TYPE){
+                        INFO << "Loading license from " + this->license_path.string();
                         return;
+                    }
                 }
                 catch(std::exception& e){}
 

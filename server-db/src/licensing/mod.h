@@ -11,6 +11,7 @@
 #include <memory>
 #include <string>
 #include <filesystem>
+#include "options/licensing_options.h"
 
 namespace uh::dbn::licensing {
 
@@ -25,21 +26,10 @@ namespace uh::dbn::licensing {
 
 // ---------------------------------------------------------------------
 
-    struct licensing_config
-    {
-        constexpr static std::string_view default_license_root = "/var/lib";
-        constexpr static std::string_view default_license_type = "AirgapOnline";
-        std::filesystem::path license_root = std::string(default_license_root);
-        std::string license_type = std::string(default_license_type);
-        bool create_new_license = false;
-    };
-
-// ---------------------------------------------------------------------
-
     class mod
     {
     public:
-        explicit mod(const licensing_config& cfg);
+        explicit mod(const uh::options::licensing_config& cfg);
         ~mod();
 
         void start();
