@@ -31,7 +31,7 @@ namespace {
     const std::string appName_test = "UltiHash data_node";
     const std::string appVersion_test = "0.2.0";
 
-    const std::string licenseKey_100 = "GZFJ-YSFZ-8A2K-2L01";
+    const std::string licenseKey_100 = "GZFP-Y2EK-A8EK-2L01";
     const std::string user_name_test = "benjamin@ultihash.io";
     const std::string password_test = "#u5huzU!ita*o&I4@ona2+OVlGlhehe0!dLDeslticO#r?!3@*$a@$x*hl1lxisW";
 
@@ -122,16 +122,12 @@ namespace {
         }
 
         license_package lp(check_license::role::DATA_NODE,
-                           std::set<license_package::feature>{license_package::feature::DEDUPLICATION,
-                                                              license_package::feature::METRICS},
                            license_path1,
                            apiKey_test,
                            sharedKey_test,
                            product_Id_test);
 
         license_package lp2(check_license::role::DATA_NODE,
-                           std::set<license_package::feature>{license_package::feature::DEDUPLICATION,
-                                                              license_package::feature::METRICS},
                            license_path1.parent_path(),
                            apiKey_test,
                            sharedKey_test,
@@ -169,7 +165,7 @@ namespace {
         BOOST_REQUIRE_THROW(lp.soft_limit_allocate(license_package::soft_metered_feature::LIMIT_NETWORK_CONNECTIONS,1),
                             util::exception);
 
-        BOOST_REQUIRE_EQUAL(lp.soft_limit_allocate(license_package::soft_metered_feature::LIMIT_STORAGE_CAPACITY,1),
+        BOOST_REQUIRE_EQUAL(lp.soft_limit_allocate(license_package::soft_metered_feature::LIMIT_STORAGE_CAPACITY,1000000000000000),
                             false);
 
         BOOST_REQUIRE_THROW(lp.deallocate(static_cast<license_package::hard_metered_feature>
