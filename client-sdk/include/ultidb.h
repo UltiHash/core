@@ -117,6 +117,11 @@ typedef struct UDB_DOCUMENT_STRUCT
     size_t size;
 } UDB_DOCUMENT;
 
+/**
+ *
+ */
+typedef struct UDB_CONNECTION_STRUCT UDB_CONNECTION;
+
 // ---------------------------------------------------------------------
 
 /**
@@ -213,13 +218,15 @@ UDB_RESULT udb_destroy_instance(UDB* udb_instance);
 
 // ---------------------------------------------------------------------
 
+UDB_CONNECTION* udb_connect(UDB* handle);
+
 /**
  * Check if server (or connection) is still alive.
  *
  * @param handle UDB handle which can be used to perform various udb operations.
  * @return UDB_RESULT enum which describes the result of the operation
  */
-UDB_RESULT udb_ping(UDB* handle);
+UDB_RESULT udb_ping(UDB_CONNECTION* udb_connection);
 
 /**
  *
@@ -293,7 +300,7 @@ UDB_RESULT udb_get_one(UDB* handle,
  * @param length Size of the data to integrate
  * @return UDB_RESULT enum that describes the result of the operation
  */
-UDB_RESULT udb_integrate(UDB *handle, char* hash_buffer,  size_t buffer_length, const char* data, size_t data_length);
+UDB_RESULT udb_integrate(UDB_CONNECTION* udb_connection, char* hash_buffer,  size_t buffer_length, const char* data, size_t data_length);
 
 /**
  * Data to retrieve from the UDB cluster based on the hash provided.
@@ -304,7 +311,7 @@ UDB_RESULT udb_integrate(UDB *handle, char* hash_buffer,  size_t buffer_length, 
  * @param udb_hash the hash of the data to be retrieved
  * @return UDB_RESULT enum that describes the result of the operation
  */
-UDB_RESULT udb_retrieve(UDB *handle, char* data_buffer, size_t buffer_length, const char* udb_hash);
+UDB_RESULT udb_retrieve(UDB_CONNECTION* udb_connection, char* data_buffer, size_t buffer_length, const char* udb_hash);
 
 // ---------------------------------------------------------------------
 

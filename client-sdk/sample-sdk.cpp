@@ -22,6 +22,21 @@ int main()
         exit(0);
     }
 
+    /* Get a connection to the UDB */
+    UDB_CONNECTION* udb_conn = udb_connect(udb);
+    if (udb_conn == nullptr)
+    {
+        std::cout << "error_occured: " << get_error_message();
+        exit(0);
+    }
+
+    /* ping the connection */
+    if (udb_ping(udb_conn) != UDB_RESULT_SUCCESS)
+    {
+        std::cout << "error_occured: " << get_error_message();
+        exit(0);
+    }
+
     /* integrate data */
     char client_data[] ="Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut"
                         " labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco "
@@ -30,7 +45,7 @@ int main()
                         " non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.";
 
     char hash_received[65] = {0};
-    auto result_code = udb_integrate(udb, hash_received, sizeof(hash_received), client_data, sizeof(client_data));
+    auto result_code = udb_integrate(udb_conn, hash_received, sizeof(hash_received), client_data, sizeof(client_data));
     if ( result_code != UDB_RESULT_SUCCESS)
     {
         std::cout << "error_occured: " << get_error_message();
@@ -41,7 +56,7 @@ int main()
     std::cout << hash_received << '\n';
 
     char data_container[2000] = {0};
-    result_code = udb_retrieve(udb, data_container, sizeof(data_container), hash_received);
+    result_code = udb_retrieve(udb_conn, data_container, sizeof(data_container), hash_received);
     if (result_code != UDB_RESULT_SUCCESS)
     {
         std::cout << "error occured: " << get_error_message();

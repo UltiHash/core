@@ -241,28 +241,49 @@ struct UDB_STATE_STRUCT
     {
         std::stringstream s;
         s << SDK_NAME << " " << SDK_VERSION;
-        m_cf_config =
+        uh::protocol::client_factory_config cf_config
             {
                 .client_version = s.str()
             };
 
-        m_hostname = config->hostname;
-        m_port = config->port;
-
-//        /* Segmentation fault given if the agency node is not running. */
-//        m_connection_pool = std::make_unique<uh::protocol::client_pool>(std::make_unique<uh::protocol::client_factory>(
-//                std::make_unique<uh::net::plain_socket_factory>(m_io, config->hostname, config->port),
-//                cf_config), config->connection_pool);
+        m_client_factory = std::make_unique<uh::protocol::client_factory>(
+                std::make_unique<uh::net::plain_socket_factory>(m_io, config->hostname, config->port),
+                cf_config);
 
     }
 
-    std::unique_ptr<uh::protocol::client_pool> m_connection_pool;
     std::unique_ptr<uh::chunking::mod> m_chunking_mod;
     boost::asio::io_context m_io;
-    const char* m_hostname;
-    uint16_t m_port;
+    std::unique_ptr<uh::protocol::client_factory> m_client_factory;
 
 };
+
+// ---------------------------------------------------------------------
+
+struct UDB_CONNECTION_STRUCT
+{
+    std::unique_ptr<uh::protocol::client> m_udb_client;
+
+    explicit UDB_CONNECTION_STRUCT(UDB* handle)
+    {
+        m_udb_client = handle->m_client_factory->create();
+    }
+};
+
+// ---------------------------------------------------------------------
+
+UDB_CONNECTION* udb_connect(UDB* handle)
+{
+    try
+    {
+        return new UDB_CONNECTION_STRUCT(handle);
+    }
+    catch(std::exception& e)
+    {
+        error = UDB_RESULT_ERROR;
+        return nullptr;
+    }
+}
 
 // ---------------------------------------------------------------------
 
@@ -303,12 +324,11 @@ UDB_RESULT udb_destroy_instance(UDB* ulti_db_instance)
 
 // ---------------------------------------------------------------------
 
-UDB_RESULT udb_ping(UDB* handle)
+UDB_RESULT udb_ping(UDB_CONNECTION_STRUCT* conn)
 {
     try
     {
-        auto client_handle = handle->m_connection_pool->get();
-        client_handle->ping();
+        conn->m_udb_client->valid();
     }
     catch(const std::exception& e)
     {
@@ -319,17 +339,16 @@ UDB_RESULT udb_ping(UDB* handle)
 
 // ---------------------------------------------------------------------
 
-UDB_RESULT udb_integrate(UDB *handle, char* hash_buffer, size_t buffer_length, const char* data, size_t data_length)
+UDB_RESULT udb_integrate(UDB_CONNECTION_STRUCT* conn, char* hash_buffer, size_t buffer_length, const char* data, size_t data_length)
 {
     try
     {
         if (buffer_length < 65)
             throw std::overflow_error("Buffer overflow exception.");
 
-        auto client_handle = handle->m_connection_pool->get();
         std::vector<uint32_t> chunk_sizes;
         chunk_sizes.push_back(static_cast<uint32_t>(data_length));
-        auto resp = client_handle->write_chunks(uh::protocol::write_chunks::request { chunk_sizes,
+        auto resp = conn->m_udb_client->write_chunks(uh::protocol::write_chunks::request { chunk_sizes,
                                                                                       std::span<const char>(data, data_length) });
 
         std::memcpy(hash_buffer, resp.hashes.data(), 65);
@@ -351,12 +370,12 @@ UDB_RESULT udb_integrate(UDB *handle, char* hash_buffer, size_t buffer_length, c
 
 // ---------------------------------------------------------------------
 
-UDB_RESULT udb_retrieve(UDB *handle, char* buffer_to_fill, size_t buffer_length , const char* udb_hash)
+UDB_RESULT udb_retrieve(UDB_CONNECTION_STRUCT* conn, char* buffer_to_fill, size_t buffer_length , const char* udb_hash)
 {
     try
     {
         uh::protocol::read_chunks::request req { .hashes = std::span<const char>(udb_hash, 64)};
-        auto result = handle->m_connection_pool->get()->read_chunks(req);
+        auto result = conn->m_udb_client->read_chunks(req);
 
          /* BUG: Agency Node loses the chunk size information. */
          /* failure reading compression header should not be the error, instead couldn't read the hash should be the error */
