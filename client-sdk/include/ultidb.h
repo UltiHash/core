@@ -162,9 +162,6 @@ UDB_RESULT udb_destroy_document(UDB_DOCUMENT* doc);
  *
  * @return UDB_DOCUMENT* pointer to the document structure allocated
  */
-UDB_DOCUMENT* udb_create_document_with_buffer(char* key_buffer, size_t length);
-UDB_DOCUMENT* udb_create_document_with_key(char* key_buffer, size_t length);
-
 UDB_RESULT udb_document_set_data(UDB_DOCUMENT* doc, char* data, size_t size);
 UDB_RESULT udb_document_get_data(UDB_DOCUMENT* doc, char** data, size_t* size);
 UDB_RESULT udb_document_set_key(UDB_DOCUMENT* doc, UDB_KEY* key);
@@ -218,7 +215,10 @@ UDB_RESULT udb_destroy_instance(UDB* udb_instance);
 
 // ---------------------------------------------------------------------
 
-UDB_CONNECTION* udb_connect(UDB* handle);
+UDB_CONNECTION* udb_create_connection(UDB* instance);
+
+UDB_RESULT udb_destroy_connection(UDB_CONNECTION* conn);
+
 
 /**
  * Check if server (or connection) is still alive.

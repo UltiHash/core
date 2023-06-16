@@ -23,7 +23,7 @@ int main()
     }
 
     /* Get a connection to the UDB */
-    UDB_CONNECTION* udb_conn = udb_connect(udb);
+    UDB_CONNECTION* udb_conn = udb_create_connection(udb);
     if (udb_conn == nullptr)
     {
         std::cout << "error_occured: " << get_error_message();
@@ -64,6 +64,7 @@ int main()
     std::cout << data_container << '\n';
 
     /* cleanup */
+    udb_destroy_connection(udb_conn);
     udb_destroy_instance(udb);
     udb_destroy_config(udb_config);
 

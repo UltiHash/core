@@ -191,6 +191,29 @@ UDB_DOCUMENT* udb_create_document()
 
 // ---------------------------------------------------------------------
 
+UDB_RESULT udb_document_set_data(UDB_DOCUMENT* doc, char* data, size_t size)
+{
+    doc->data = data;
+    doc->size = size;
+}
+
+// ---------------------------------------------------------------------
+
+UDB_RESULT udb_document_get_data(UDB_DOCUMENT* doc, char** data, size_t* size)
+{
+    *data = doc->data;
+    *size = doc->size;
+}
+
+// ---------------------------------------------------------------------
+
+UDB_RESULT udb_document_set_key(UDB_DOCUMENT* doc, UDB_KEY* key)
+{
+    doc->key = key;
+}
+
+// ---------------------------------------------------------------------
+
 UDB_RESULT udb_destroy_document(UDB_DOCUMENT* udb_doc)
 {
     try
@@ -272,16 +295,32 @@ struct UDB_CONNECTION_STRUCT
 
 // ---------------------------------------------------------------------
 
-UDB_CONNECTION* udb_connect(UDB* handle)
+UDB_CONNECTION* udb_create_connection(UDB* instance)
 {
     try
     {
-        return new UDB_CONNECTION_STRUCT(handle);
+        return new UDB_CONNECTION_STRUCT(instance);
     }
     catch(std::exception& e)
     {
         error = UDB_RESULT_ERROR;
         return nullptr;
+    }
+}
+
+// ---------------------------------------------------------------------
+
+UDB_RESULT udb_destroy_connection(UDB_CONNECTION* conn)
+{
+    try
+    {
+        delete conn;
+        return UDB_RESULT_SUCCESS;
+    }
+    catch(std::exception& e)
+    {
+        error = UDB_RESULT_ERROR;
+        return UDB_RESULT_ERROR;
     }
 }
 
@@ -308,11 +347,11 @@ UDB* udb_create_instance(UDB_CONFIG* config)
 
 // ---------------------------------------------------------------------
 
-UDB_RESULT udb_destroy_instance(UDB* ulti_db_instance)
+UDB_RESULT udb_destroy_instance(UDB* instance)
 {
     try
     {
-        delete ulti_db_instance;
+        delete instance;
         return UDB_RESULT_SUCCESS;
     }
     catch(const std::exception& e)
