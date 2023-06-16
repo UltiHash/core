@@ -2,6 +2,7 @@
 // Created by masi on 23.03.23.
 //
 #include "fuse_operations.h"
+#include "exception.h"
 #include "utils.h"
 
 
@@ -44,7 +45,8 @@ int __uh_getattr(const std::filesystem::path& path, struct stat* stbuf)
         stbuf->st_blocks = 0;
         clock_gettime(CLOCK_MONOTONIC, &stbuf->st_ctim);
         stbuf->st_mode = S_IFREG | 0666;
-        return -ENOENT;
+
+        THROW(exception, "file not found", ENOENT);
     }
 
     // !!! container should be released here since mera_data is found
@@ -84,7 +86,7 @@ int uh_unlink(const char *path)
     if (it == unordered_map.end())
     {
         std::cout << "leaving uh_unlink(" << path << ")\n";
-        return ENOENT;
+        THROW(exception, "file not found", ENOENT);
     }
 
     // !!! container should be released here since meta_data is found
@@ -109,54 +111,48 @@ int uh_rmdir (const char *path)
 {
     std::cout << "uh_rmdir(" << path << ")\n";
 
-    uh::uhv::uh_file_type type;
     std::string pathString(path);
 
     if(pathString.ends_with("."))
     {
-        std::cout << "leaving uh_unlink(" << pathString << ")\n";
-        return -EINVAL;
+        THROW(exception, "invalid path name", EINVAL);
     }
 
     auto *ctx = get_context();
-    auto container_handle = ctx->metadata_map();
-    auto& unordered_map = container_handle();
-    auto it = unordered_map.find(pathString);
-    if (it == unordered_map.end())
+    auto unordered_map = ctx->metadata_map();
+    auto it = unordered_map->find(pathString);
+    if (it == unordered_map->end())
     {
-        std::cout << "leaving uh_unlink(" << pathString << ")\n";
-        return -ENOENT;
+        THROW(exception, "file not found", ENOENT);
     }
 
     // check if the d
-    for(auto& [key, value] : unordered_map) {
-        // When a key starts with path but does not equal it, there are still sub-folders or files within that path
-        if(key.starts_with(pathString) and key.compare(pathString)) {
-            std::cout << "leaving uh_unlink(" << pathString << ")\n";
-            return -ENOTEMPTY;
+    for(auto& [key, value] : *unordered_map)
+    {
+        if (key.starts_with(pathString) and key.compare(pathString))
+        {
+            THROW(exception, "directory not empty", ENOTEMPTY);
         }
     }
 
-    // !!! container should be released here since memeta_handleta_data is found
-    auto meta_handle = it->second.get();
-    auto& meta_data = meta_handle();
+    auto meta_data = it->second.get();
 
-    type = static_cast <uh::uhv::uh_file_type> (meta_data.type());
-
+    uh::uhv::uh_file_type type = static_cast<uh::uhv::uh_file_type>(meta_data->type());
     if(type == uh::uhv::uh_file_type::regular)
     {
-        std::cout << "leaving uh_unlink(" << pathString << ")\n";
-        return -ENOTDIR;
+        THROW(exception, "file is not a directory", ENOTDIR);
     }
-    else if(type == uh::uhv::uh_file_type::directory)
+
+    if(type == uh::uhv::uh_file_type::directory)
     {
-        unordered_map.erase(it);
-        ctx->subdirectory_counts()().erase(meta_data.path());
-        ctx->subdirectory_counts()().at(meta_data.path().parent_path())--;
+        unordered_map->erase(it);
+        ctx->subdirectory_counts()().erase(meta_data->path());
+        ctx->subdirectory_counts()().at(meta_data->path().parent_path())--;
     }
 
     ctx->update_uhv();
 
+    std::cout << "leaving uh_unlink(" << pathString << ")\n";
     return 0;
 }
 
@@ -168,12 +164,12 @@ int __uh_ftruncate (const char *path, off_t off, struct fuse_file_info *fi)
 
     if (md->type() != uh::uhv::uh_file_type::regular)
     {
-        return -ENOMEM;
+        THROW(exception, "file is not a regular file", ENOMEM);
     }
 
     if (static_cast<size_t>(off) > md->size())
     {
-        return -EFBIG;
+        THROW(exception, "length is larget than the file size", EFBIG);
     }
 
     md->set_size(off);
@@ -198,13 +194,13 @@ int __uh_mkdir(const char *path, mode_t mode)
 {
     std::cout << "uh_mkdir(" << path << ")\n";
 
-    auto container_handle = get_context()->metadata_map();
-    auto& unordered_map = container_handle();
+    auto unordered_map = get_context()->metadata_map();
 
     // TODO: sanitize the path
-    if (unordered_map.find(path) != unordered_map.end())
-        return -ENOENT;
-
+    if (unordered_map->find(path) != unordered_map->end())
+    {
+        THROW(exception, "file not found", ENOENT);
+    }
 
     // create meta data
     meta_data md;
@@ -216,7 +212,7 @@ int __uh_mkdir(const char *path, mode_t mode)
     uh::uhv::file uhv(get_options().UHVpath);
     uhv.append(std::make_unique<uhv::meta_data>(md));
 
-    unordered_map.emplace(std::string(path), md);
+    unordered_map->emplace(std::string(path), md);
     get_context()->subdirectory_counts()().emplace(md.path(), 0);
     get_context()->subdirectory_counts()().at(md.path().parent_path())++;
 
@@ -241,8 +237,7 @@ int __uh_readdir (const char *path, void *buf, fuse_fill_dir_t filler, off_t off
 
         if (metadata.type() != uh::uhv::uh_file_type::directory)
         {
-            std::cout << "leaving uh_readdir(" << path << ", )\n";
-            return -ENOENT;
+            THROW(exception, "file is not a directory", ENOENT);
         }
 
         files = get_files(metadata.path(), unordered_map);
@@ -257,8 +252,8 @@ int __uh_readdir (const char *path, void *buf, fuse_fill_dir_t filler, off_t off
         uh_getattr(file.c_str(), &uh_stat);
         filler(buf, file.filename().c_str(), &uh_stat, 0);
     }
-    std::cout << "leaving uh_readdir(" << path << ", )\n";
 
+    std::cout << "leaving uh_readdir(" << path << ", )\n";
     return 0;
 }
 
@@ -268,14 +263,14 @@ int __uh_open (const char *path, struct fuse_file_info *fi)
 
     if ((fi->flags & O_ACCMODE) != O_RDONLY and (fi->flags & O_ACCMODE) != O_RDWR and (fi->flags & O_ACCMODE) != O_WRONLY)
     {
-        return -EACCES;
+        THROW(exception, "access denied", EACCES);
     }
 
     auto metadata_map = get_context()->metadata_map();
     auto it = metadata_map->find(path);
     if (it == metadata_map->end())
     {
-        return -EACCES;
+        THROW(exception, "file not found", ENOENT);
     }
 
     set_metadata(fi, it->second);
@@ -288,7 +283,7 @@ int __uh_release (const char *path, struct fuse_file_info *fi)
 {
     if (fi->fh == 0)
     {
-        return -EBADF;
+        THROW(exception, "bad file descriptor", EBADF);
     }
 
     fi->fh = 0;
@@ -306,7 +301,7 @@ int __uh_read (const char *path, char *buffer, size_t size, off_t offset, struct
 
     if ((fi->flags & O_ACCMODE) != O_RDONLY and (fi->flags & O_ACCMODE) != O_RDWR)
     {
-        return -EACCES;
+        THROW(exception, "access denied", EACCES);
     }
 
     auto md = get_metadata(fi);
@@ -338,13 +333,13 @@ int __uh_write (const char *path, const char *buf, size_t size, off_t offset, st
 
     if ((fi->flags & O_ACCMODE) != O_RDWR and (fi->flags & O_ACCMODE) != O_WRONLY)
     {
-        return -EACCES;
+        THROW(exception, "access denied", EACCES);
     }
 
     auto md = get_metadata(fi);
     if (md->type() != uh::uhv::uh_file_type::regular)
     {
-        return -ENOMEM;
+        THROW(exception, "file is not a regular file", ENOMEM);
     }
 
     auto context = get_context();
@@ -396,7 +391,7 @@ int __uh_create (const char *path, mode_t mode, struct fuse_file_info *fi) {
 
     if ((fi->flags & O_ACCMODE) != O_RDWR and (fi->flags & O_ACCMODE) != O_WRONLY)
     {
-        return -EACCES;
+        THROW(exception, "access denied", EACCES);
     }
 
     uh::uhv::meta_data md(path);
@@ -426,132 +421,78 @@ void __uh_destroy (void *context) {
 
 /*-----  fuse operations made safe -----*/
 
+#define TRY_CATCH( EXPR )                                                       \
+    try                                                                         \
+    {                                                                           \
+        EXPR;                                                                   \
+    }                                                                           \
+    catch (const exception& e)                                                  \
+    {                                                                           \
+        std::cerr << "Error in " << __FILE__ << ":" << __LINE__ << ": "         \
+                  << e.what() << "\n";                                          \
+        return -e.error();                                                      \
+    }                                                                           \
+    catch (const std::exception &e)                                             \
+    {                                                                           \
+        std::cerr << "Error in " << __FILE__ << ":" << __LINE__ << ": "         \
+                  << e.what() << "\n";                                          \
+        return -ENOENT;                                                         \
+    }                                                                           \
+    catch (...)                                                                 \
+    {                                                                           \
+        std::cerr << "Unknown error in " << __FILE__ << ":" << __LINE__ << "\n";\
+        return -ENOENT;                                                         \
+    }                                                                           \
+    do {} while (false)
+
 int uh_readdir (const char *path, void *buf, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info *fi)
 {
-    try
-    {
-       return __uh_readdir(path, buf, filler, offset, fi);
-    }
-    catch(const std::exception& e)
-    {
-        std::cerr << e.what() << '\n';
-        return -ENOENT;
-    }
+    TRY_CATCH( return __uh_readdir(path, buf, filler, offset, fi) );
 }
 
 int uh_read (const char *path, char *buf, size_t size, off_t offset, struct fuse_file_info *fi)
 {
-    try
-    {
-        return __uh_read(path, buf, size, offset, fi);
-    }
-    catch(const std::exception& e)
-    {
-        std::cerr << e.what() << '\n';
-        return -ENOENT;
-    }
+    TRY_CATCH( return __uh_read(path, buf, size, offset, fi) );
 }
 
 int uh_write (const char *path, const char *buf, size_t size, off_t offset, struct fuse_file_info *fi)
 {
-    try
-    {
-        return __uh_write (path, buf, size, offset, fi);
-    }
-    catch(const std::exception& e)
-    {
-        std::cerr << e.what() << '\n';
-        return -ENOENT;
-    }
+    TRY_CATCH( return __uh_write(path, buf, size, offset, fi) );
 }
 
 int uh_open (const char *path, struct fuse_file_info *fi)
 {
-    try
-    {
-        return __uh_open(path, fi);
-    }
-    catch(const std::exception& e)
-    {
-        std::cerr << e.what() << '\n';
-        return -ENOENT;
-    }
+    TRY_CATCH( return __uh_open(path, fi) );
 }
 
 int uh_release (const char *path, struct fuse_file_info *fi)
 {
-    try
-    {
-        return __uh_release(path, fi);
-    }
-    catch(const std::exception& e)
-    {
-        std::cerr << e.what() << '\n';
-        return -ENOENT;
-    }
+    TRY_CATCH( return __uh_release(path, fi) );
 }
 
 int uh_utimens (const char *path, const struct timespec tv[2])
 {
-    try
-    {
-        return __uh_utimens (path, tv);
-    }
-    catch(const std::exception& e)
-    {
-        std::cerr << e.what() << '\n';
-        return -ENOENT;
-    }
+    TRY_CATCH( return __uh_utimens (path, tv) );
 }
 
 int uh_getattr (const char *path, struct stat *stbuf)
 {
-    try
-    {
-        return __uh_getattr(path, stbuf);
-    }
-    catch(const std::exception& e)
-    {
-        std::cerr << "uh_getattr error: " << e.what() << '\n';
-        return -ENOENT;
-    }
+    TRY_CATCH( return __uh_getattr(path, stbuf) );
 }
 
-int uh_ftruncate (const char *path, off_t off, struct fuse_file_info *fi) {
-    try
-    {
-        return __uh_ftruncate(path, off, fi);
-    }
-    catch(const std::exception& e)
-    {
-        std::cerr << e.what() << '\n';
-        return -ENOENT;
-    }
+int uh_ftruncate (const char *path, off_t off, struct fuse_file_info *fi)
+{
+    TRY_CATCH( return __uh_ftruncate(path, off, fi) );
 }
 
-int uh_create (const char *path, mode_t mode, struct fuse_file_info *fi) {
-    try
-    {
-        return __uh_create(path, mode, fi);
-    }
-    catch(const std::exception& e)
-    {
-        std::cerr << e.what() << '\n';
-        return -ENOENT;
-    }
+int uh_create (const char *path, mode_t mode, struct fuse_file_info *fi)
+{
+    TRY_CATCH( return __uh_create(path, mode, fi) );
 }
 
-
-int uh_mkdir (const char *path, mode_t mode) {
-    try
-    {
-        return __uh_mkdir (path, mode);
-    }
-    catch(const std::exception& e)
-    {
-        std::cerr << e.what() << '\n';
-        return -ENOENT;
-    }
+int uh_mkdir (const char *path, mode_t mode)
+{
+    TRY_CATCH( return __uh_mkdir (path, mode) );
 }
 
 void uh_destroy (void *context)
@@ -560,9 +501,14 @@ void uh_destroy (void *context)
     {
         return __uh_destroy(context);
     }
-    catch(const std::exception& e)
+    catch (const std::exception &e)
     {
-        std::cerr << e.what() << '\n';
+        std::cerr << "Error in " << __FILE__ << ":" << __LINE__
+                  << e.what() << "\n";
+    }
+    catch (...)
+    {
+        std::cerr << "Unknown error in " << __FILE__ << ":" << __LINE__ << "\n";
     }
 }
 
