@@ -11,6 +11,7 @@
 #include <options/app_config.h>
 #include <options/metrics_options.h>
 #include <options/logging_options.h>
+
 #include <options/licensing_options.h>
 
 APPLICATION_CONFIG(

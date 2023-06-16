@@ -71,12 +71,20 @@ std::unique_ptr<uh::licensing::license_package> make_licensing(const licensing_c
 
     switch (license_type)
     {
-        case LicenseTypeEnum::AirgapOnlineActivationLicense:
+        case LicenseTypeEnum::AirgapOnlineActivationLicense:{
+            uh::licensing::check_airgap_license write_airgap(cfg.license_root,EncryptStr(LICENSE_API_KEY),
+                                                EncryptStr(LICENSE_SHARED_KEY),
+                                                EncryptStr(LICENSE_PRODUCT_ID)
+                                                );
+
+            write_airgap.write_license(uh::licensing::check_license::role::DATA_NODE, PROJECT_NAME, PROJECT_VERSION,);
+
             return std::make_unique<uh::licensing::license_package>(uh::licensing::check_license::role::DATA_NODE,
                                                                     cfg.license_root,
                                                                     EncryptStr(LICENSE_API_KEY),
                                                                     EncryptStr(LICENSE_SHARED_KEY),
                                                                     EncryptStr(LICENSE_PRODUCT_ID));
+        }
         case LicenseTypeEnum::OtherLicense:
             THROW(util::exception, "Not yet implemented licensing model");
     }

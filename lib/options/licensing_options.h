@@ -15,6 +15,9 @@ namespace uh::options {
     struct licensing_config
     {
         std::string licensing_path;
+        std::string license_key;
+        std::string license_user;
+        std::string license_password;
     };
 
 // ---------------------------------------------------------------------
