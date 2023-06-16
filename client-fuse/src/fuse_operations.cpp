@@ -318,8 +318,10 @@ int __uh_read (const char *path, char *buffer, size_t size, off_t offset, struct
             std::copy(md->hashes().begin() + i,
                       md->hashes().begin() + i + 64, current_hash.begin());
 
-            client->read_block(current_hash)->read({buffer + curr_offset, 1024*1024});
-            curr_offset += 1024*1024;
+            auto resp = client->read_chunks({ .hashes = current_hash });
+            auto& vector = std::get<0>(resp.data);
+            memcpy(buffer + curr_offset, vector.data(), vector.size());
+            curr_offset += vector.size();
         }
     }
     std::cout << "leaving uh_read(" << path << ", )\n";
