@@ -17,4 +17,4 @@ do
   sleep $RAND
 done
 
-uhServerAgency --db-node uh-server-db:12345
+uh-agency-node --db-node uh-server-db:12345

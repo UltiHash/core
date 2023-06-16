@@ -6,31 +6,15 @@ using namespace boost::program_options;
 namespace uh::dbn::storage
 {
 
-enum class OptionsEnum {DbRoot, CreateNewRoot, DbStorageAlgorithm, AllocateStorage};
-
-constexpr const char* optionString(OptionsEnum n)
-{
-    switch (n)
-    {
-        case OptionsEnum::DbRoot: return "db-root";
-        case OptionsEnum::CreateNewRoot: return "create-new-root";
-        case OptionsEnum::DbStorageAlgorithm: return "db-storage-algorithm";
-        case OptionsEnum::AllocateStorage: return "allocate-storage";
-        default: THROW(util::exception, "Not implemented option");
-    }
-}
-
 // ---------------------------------------------------------------------
 
 options::options()
     : uh::options::options("Storage Options")
 {
     visible().add_options()
-        (optionString(OptionsEnum::DbRoot),
-            value<std::string>()->default_value(std::string(uh::dbn::storage::storage_config::default_db_root)),
-                "Directory where the database root is located")
-        (optionString(OptionsEnum::CreateNewRoot),
-            "Creates the directory defined by argument db-root if it does not exists.")
+        (optionString(OptionsEnum::DataDirectory),
+            value<std::string>()->default_value(std::string(uh::dbn::storage::storage_config::default_data_directory)),
+                "Directory where the data node stores its data")
         (optionString(OptionsEnum::DbStorageAlgorithm),
             value<std::string>()->default_value(std::string(uh::dbn::storage::storage_config::default_backend_type)),
                 "Database chunk sorting algorithm. One of [DumpStorage | OtherStorage]")
@@ -44,18 +28,35 @@ options::options()
 uh::options::action options::evaluate(const boost::program_options::variables_map& vars)
 {
     storage_config c;
-    c.db_root = vars[optionString(OptionsEnum::DbRoot)].as<std::string>();
+    c.data_directory = vars[optionString(OptionsEnum::DataDirectory)].as<std::string>();
     c.backend_type = vars[optionString(OptionsEnum::DbStorageAlgorithm)].as<std::string>();
     c.allocate_bytes = vars[optionString(OptionsEnum::AllocateStorage)].as<std::size_t>();
 
-    if (std::filesystem::path (c.db_root).is_relative()) {
-        THROW(util::illegal_args, "The database root must be an absolute path.");
+    if (std::filesystem::path(c.data_directory).is_relative())
+    {
+        THROW(util::illegal_args, "The data directory must be an absolute path.");
     }
 
-    if (vars.count(optionString(OptionsEnum::CreateNewRoot)) > 0)
+    if (std::filesystem::exists(c.data_directory))
     {
-        c.create_new_root = true;
+        if (!std::filesystem::is_directory(c.data_directory))
+        {
+            THROW(util::illegal_args, "The given path for data directory is not a directory: " + c.data_directory.string());
+        }
+        if (access(c.data_directory.c_str(), W_OK | R_OK ) != 0)
+        {
+            THROW(util::illegal_args, "The user doesn't have read and write permission on directory: " + c.data_directory.string());
+        }
     }
+    else
+    {
+        std::filesystem::create_directory(c.data_directory);
+    }
+
+    c.db_root = c.data_directory / std::filesystem::path("data");
+    c.db_metrics = c.data_directory / std::filesystem::path("state");
+
+    std::filesystem::create_directory(c.db_metrics);
 
     std::swap(m_config, c);
     return uh::options::action::proceed;

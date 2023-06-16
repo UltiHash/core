@@ -2,12 +2,10 @@
 #include "storage/backends/hierarchical_storage.h"
 #include "storage/backends/smart_storage.h"
 
-#include <config.hpp>
-
 #include <unistd.h> //rmdir
 #include <logging/logging_boost.h>
 #include <util/exception.h>
-
+#include <storage/options.h>
 
 namespace uh::dbn::storage
 {
@@ -23,10 +21,6 @@ void maybe_create_database_root_directory(std::filesystem::path db_root,
 
     //Check whether the directory already exists:
     bool no_db_root = !std::filesystem::is_directory(db_root);
-
-    //Check whether we want to create a new dir:
-    if(no_db_root and not ok_create_new_root)
-        THROW(util::exception, "Path does not exist: " + db_root.string());
 
     //We are OK creating a new root if needed, otherwise just inform about its existence
     if (no_db_root){
@@ -56,10 +50,10 @@ BackendTypeEnum define_backend_type(std::string backend_type){
 // ---------------------------------------------------------------------
 
 std::unique_ptr<backend> make_backend(const storage_config& cfg, metrics::storage_metrics& storage_metrics,
-                                      persistence::scheduled_compressions_persistence& scheduled_compressions)
+                                      state::scheduled_compressions_state& scheduled_compressions)
 {
 
-    maybe_create_database_root_directory(cfg.db_root, cfg.create_new_root);
+    maybe_create_database_root_directory(cfg.db_root, cfg.create_new_directory);
 
     //Check whether we have enough space:
     size_t max_size = max_configurable_capacity(cfg.db_root);
@@ -97,20 +91,20 @@ std::unique_ptr<backend> make_backend(const storage_config& cfg, metrics::storag
 
 struct mod::impl
 {
-    impl(const storage_config& cfg, metrics::storage_metrics& storage_metrics, persistence::scheduled_compressions_persistence& scheduled_compressions);
+    impl(const storage_config& cfg, metrics::storage_metrics& storage_metrics, state::scheduled_compressions_state& scheduled_compressions);
     std::unique_ptr<storage::backend> m_backend;
 };
 
 // ---------------------------------------------------------------------
 
-mod::impl::impl(const storage_config& cfg, metrics::storage_metrics& storage_metrics, persistence::scheduled_compressions_persistence& scheduled_compressions)
+mod::impl::impl(const storage_config& cfg, metrics::storage_metrics& storage_metrics, state::scheduled_compressions_state& scheduled_compressions)
     : m_backend(make_backend(cfg, storage_metrics, scheduled_compressions))
 {
 }
 
 // ---------------------------------------------------------------------
 
-mod::mod(const storage_config& cfg, metrics::storage_metrics& storage_metrics, persistence::scheduled_compressions_persistence& scheduled_compressions)
+mod::mod(const storage_config& cfg, metrics::storage_metrics& storage_metrics, state::scheduled_compressions_state& scheduled_compressions)
     : m_impl(std::make_unique<impl>(cfg, storage_metrics, scheduled_compressions))
 {
 }
@@ -123,7 +117,7 @@ mod::~mod() = default;
 
 void mod::start() const
 {
-    INFO << "          starting storage module";
+    INFO << "starting storage module";
     m_impl->m_backend->start();
 }
 
@@ -131,7 +125,7 @@ void mod::start() const
 
 void mod::stop() const
 {
-    INFO << "          stopping storage module";
+    INFO << "stopping storage module";
     m_impl->m_backend->stop();
 }
 

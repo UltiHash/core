@@ -38,6 +38,23 @@ struct chunks_meta_data
     std::list <uint32_t> chunk_indices;
 };
 
+struct key_value_t {
+    std::span <const char> key;
+    std::span <const char> value;
+};
+
+struct data_entry {
+    key_value_t key_value;
+    std::span <std::span <const char>> labels;
+};
+
+struct query {
+    std::span <char> single_key;
+    std::span <char> start_key;
+    std::span <char> end_key;
+    std::span <std::span <const char>> labels;
+};
+
 // ---------------------------------------------------------------------
 
 } // namespace uh::protocol

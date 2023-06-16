@@ -38,7 +38,7 @@ services:
      args:
        - CMAKE_OPTION=BUILD_SERVER_DB
        - SRC_PATH=server-db
-       - TARGET=uhServerDB
+       - TARGET=uh-data-node
    links:
      - prometheus
   uh-server-agency:
@@ -49,7 +49,7 @@ services:
      args:
        - CMAKE_OPTION=BUILD_SERVER_AGENCY
        - SRC_PATH=server-agency
-       - TARGET=uhServerAgency
+       - TARGET=uh-agency-node
    ports:
      - "21832:21832"
    depends_on:
@@ -58,7 +58,7 @@ services:
      - prometheus
      - uh-server-db
    volumes:
-    - agency-node:/var/lib/agency-node
+    - agency-node:/var/lib/uh-agency-node
   uh-client-shell:
    image: uh-client-shell
    build:
@@ -67,7 +67,7 @@ services:
      args:
        - CMAKE_OPTION=BUILD_CLIENT_SHELL
        - SRC_PATH=client-shell
-       - TARGET=uhClient
+       - TARGET=uh-cli
    depends_on:
      - uh-server-db
      - uh-server-agency
@@ -78,5 +78,5 @@ volumes:
   agency-node:
     driver_opts:
       type: none
-      device: /var/lib/agency-node
+      device: /var/lib/uh-agency-node
       o: bind

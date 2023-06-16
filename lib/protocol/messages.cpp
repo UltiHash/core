@@ -289,4 +289,63 @@ void read(serialization::buffered_serialization& in, read_chunks::response& resp
 
 // ---------------------------------------------------------------------
 
+void write(serialization::buffered_serialization &out, const write_key_value::request &request) {
+
+    out.write(request.has_next);
+    out.write(request.key);
+    out.write(request.value);
+}
+
+// ---------------------------------------------------------------------
+
+void read(serialization::buffered_serialization &in, write_key_value::request &request) {
+    THROW (util::exception, "not implemented");
+}
+
+// ---------------------------------------------------------------------
+
+void write(serialization::buffered_serialization &out, const write_key_value::response &response) {
+    out.write(response.effective_size);
+}
+
+// ---------------------------------------------------------------------
+
+void read(serialization::buffered_serialization &in, write_key_value::response &response) {
+    check_status(in);
+    response.effective_size = in.read<decltype (response.effective_size)>();
+}
+
+// ---------------------------------------------------------------------
+
+void write(serialization::buffered_serialization &out, const read_key_value::request &request) {
+    out.write(request.start_key);
+    out.write(request.end_key);
+}
+
+// ---------------------------------------------------------------------
+
+void read(serialization::buffered_serialization &in, read_key_value::request &request) {
+    THROW (util::exception, "not implemented");
+}
+
+// ---------------------------------------------------------------------
+
+void write(serialization::buffered_serialization &out, const read_key_value::response &response) {
+    out.write(response.has_next);
+    out.write(response.key);
+    out.write(response.value);
+}
+
+// ---------------------------------------------------------------------
+
+void read(serialization::buffered_serialization &in, read_key_value::response &response) {
+    check_status(in);
+
+    response.has_next = in.read<decltype(response.has_next)>();
+    in.read (response.key);
+    in.read (response.value);
+}
+
+// ---------------------------------------------------------------------
+
 } // namespace uh::protocol

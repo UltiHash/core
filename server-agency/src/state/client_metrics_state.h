@@ -1,18 +1,18 @@
-#ifndef SERVER_AGENCY_PERSISTENCE_STORAGE_CLIENT_METRICS_PERSISTENCE_H
-#define SERVER_AGENCY_PERSISTENCE_STORAGE_CLIENT_METRICS_PERSISTENCE_H
+#ifndef SERVER_AGENCY_STATE_CLIENT_METRICS_STATE_H
+#define SERVER_AGENCY_STATE_CLIENT_METRICS_STATE_H
 
-#include <persistence/options.h>
+#include <state/options.h>
 #include <protocol/messages.h>
 
-namespace uh::an::persistence
+namespace uh::an::state
 {
 
 // ---------------------------------------------------------------------
 
-    class client_metrics
+    class client_metrics_state
     {
     public:
-        explicit client_metrics(const uh::options::persistence_config& config);
+        explicit client_metrics_state(const storage_config& config);
 
         void start();
         void stop();
@@ -30,6 +30,6 @@ namespace uh::an::persistence
 
 // ---------------------------------------------------------------------
 
-} // namespace uh::an::persistence
+} // namespace uh::an::state
 
 #endif

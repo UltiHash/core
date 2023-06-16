@@ -2,4 +2,4 @@
 
 set -e
 
-uhServerDB --db-root /data --create-new-root --threads 15 --port 12345
+uh-data-node --threads 15 --port 12345

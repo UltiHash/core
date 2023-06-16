@@ -65,6 +65,20 @@ void f_upload::send_statistics()
 
 // ---------------------------------------------------------------------
 
+void upload_file (std::unique_ptr<uhv::f_meta_data>& f_meta_data, io::file& file) {
+    size_t total_size = 0;
+    const auto buffer_size = std::min (uh::protocol::server::MAXIMUM_DATA_SIZE, static_cast <const size_t> (f_meta_data->f_size()));
+    auto buffer = std::make_unique_for_overwrite <char[]> (buffer_size);
+
+    while (total_size < f_meta_data->f_size()) {
+        protocol::write_key_value::request req;
+        const auto& path_str = f_meta_data->f_path().string();
+        req.key = {const_cast <char*> (path_str.c_str()), path_str.size()};
+
+        file.read({buffer.get(), buffer_size});
+    }
+}
+
 void f_upload::chunk_and_upload(std::unique_ptr<uhv::f_meta_data>& f_meta_data,
                                 protocol::client_pool::handle& client_handle)
 {

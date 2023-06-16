@@ -209,6 +209,54 @@ void read(serialization::buffered_serialization& in, read_chunks::response& resp
 
 // ---------------------------------------------------------------------
 
+struct write_key_value
+{
+    struct request
+    {
+        std::span <data_entry> data_entries;
+    };
+
+    struct response
+    {
+        std::span <std::size_t> effective_sizes;
+    };
+
+    constexpr static uint8_t request_id = 0x02;
+};
+
+// ---------------------------------------------------------------------
+
+void write(serialization::buffered_serialization& out, const write_key_value::request& request);
+void read(serialization::buffered_serialization& in, write_key_value::request& request);
+void write(serialization::buffered_serialization& out, const write_key_value::response& response);
+void read(serialization::buffered_serialization& in, write_key_value::response& response);
+
+// ---------------------------------------------------------------------
+
+struct read_key_value
+{
+    struct request
+    {
+        std::span <query> queries;
+    };
+
+    struct response
+    {
+        std::span <key_value_t> key_values;
+    };
+
+    constexpr static uint8_t request_id = 0x03;
+};
+
+// ---------------------------------------------------------------------
+
+void write(serialization::buffered_serialization& out, const read_key_value::request& request);
+void read(serialization::buffered_serialization& in, read_key_value::request& request);
+
+void write(serialization::buffered_serialization& out, const read_key_value::response& response);
+void read(serialization::buffered_serialization& in, read_key_value::response& response);
+
+// ---------------------------------------------------------------------
 } // namespace uh::protocol
 
 #endif
