@@ -201,25 +201,25 @@ namespace uh::licensing{
     void license_package::feature_activation() {
         auto feature_online = getCustomAndFeatureFields();
 
-        if(feature_online.contains("warnStorage"))
+        if(feature_online.contains(WARN_STORAGE_STRING))
         {
-            if(!feature_online.contains("limitStorage"))
+            if(!feature_online.contains(LIMIT_STORAGE_STRING))
             {
                 THROW(util::exception,"There was a misconfiguration due to the storage limits of your license. "
                                       "Please contact customer support!");
             }
 
             try{
-                uint64_t warnLevel = std::stoull(feature_online.at("warnStorage"));
-                uint64_t limitLevel = std::stoull(feature_online.at("limitStorage"));
+                uint64_t warnLevel = std::stoull(feature_online.at(WARN_STORAGE_STRING));
+                uint64_t limitLevel = std::stoull(feature_online.at(LIMIT_STORAGE_STRING));
 
                 add_soft_metred_feature(
                         uh::licensing::license_package::soft_metered_feature::LIMIT_STORAGE_CAPACITY,
                         new soft_metred_storage_resource(limitLevel,warnLevel)
                 );
 
-                feature_online.erase("warnStorage");
-                feature_online.erase("limitStorage");
+                feature_online.erase(WARN_STORAGE_STRING);
+                feature_online.erase(LIMIT_STORAGE_STRING);
             }
             catch(std::exception& e){
                 THROW(util::exception,"Parsing license specific soft storage limit failed for this reason: "+
@@ -229,10 +229,10 @@ namespace uh::licensing{
 
         }
         else{
-            if(feature_online.contains("limitStorage")){
+            if(feature_online.contains(LIMIT_STORAGE_STRING)){
 
                 try{
-                    uint64_t limitLevel = std::stoull(feature_online.at("limitStorage"));
+                    uint64_t limitLevel = std::stoull(feature_online.at(LIMIT_STORAGE_STRING));
 
                     add_hard_metred_feature(
                             uh::licensing::license_package::hard_metered_feature::LIMIT_STORAGE_CAPACITY,
@@ -247,8 +247,8 @@ namespace uh::licensing{
             }
         }
 
-        features.emplace(feature::DEDUPLICATION,feature_online.contains("Deduplication"));
-        features.emplace(feature::METRICS,feature_online.contains("Metrics"));
+        features.emplace(feature::DEDUPLICATION,feature_online.contains(DEDUPLICATION_STRING));
+        features.emplace(feature::METRICS,feature_online.contains(METRICS_STRING));
 
     }
 

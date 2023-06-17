@@ -22,6 +22,15 @@ namespace uh::licensing {
 
     public:
 
+        /*
+         * Licensing server feature flags
+         */
+
+        const std::string METRICS_STRING = "Metrics";
+        const std::string DEDUPLICATION_STRING = "Deduplication";
+        const std::string WARN_STORAGE_STRING = "warnStorage";
+        const std::string LIMIT_STORAGE_STRING = "limitStorage";
+
         /**
          *
          * Check if `feature`is enabled in the configured license.
