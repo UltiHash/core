@@ -49,10 +49,12 @@ namespace uh::licensing{
          * First line license: license role
          * Second line license:
          *
-         * @param license_path is the path where a license file is stored
+         * @param license_directory is the path where a license file is stored
          */
-        explicit check_license(std::filesystem::path license_path, check_license::license_type license_type,
-                               std::string apiKey_encrypted, std::string sharedKey_encrypted,
+        explicit check_license(std::filesystem::path license_directory,
+                               check_license::license_type license_type,
+                               std::string apiKey_encrypted,
+                               std::string sharedKey_encrypted,
                                std::string productId_enrypted,
                                std::string appName = "",
                                std::string appVersion = "");
@@ -112,7 +114,7 @@ namespace uh::licensing{
 
     protected:
         std::filesystem::path license_path;
-        bool replace_license;
+        bool replace_license = false;
 
         io::file
         write_license_file(check_license::role licenseRole, const std::string &app_name_input,
@@ -127,7 +129,11 @@ namespace uh::licensing{
         const std::string_view airgap_license_string = "airgap_license_with_online_activation";
         const std::string_view floating_license_string = "floating_online_user_license";
 
+        // ---------------------------------------------------------------------
+
         /**
+         * License Spring info and functions
+         *
          * apiKey_crypt is 36 characters long
          * sharedKey_crypt is 43 characters long
          * productId_crypt is 6 characters long
@@ -167,6 +173,9 @@ namespace uh::licensing{
          */
         static std::map<std::string, std::string>
         getCustomAndFeatureFields(const std::shared_ptr<LicenseSpring::LicenseManager> &licenseManager);
+
+        // ---------------------------------------------------------------------
+
     };
 
 } // namespace uh::licensing

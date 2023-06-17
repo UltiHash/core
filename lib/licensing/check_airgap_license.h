@@ -16,7 +16,7 @@ namespace uh::licensing {
         /*
          * license model of online activation and air-gap use without time limit
          */
-        explicit check_airgap_license(const std::filesystem::path &license_file,
+        explicit check_airgap_license(const std::filesystem::path &license_directory,
                                       std::string apiKey_encrypted,
                                       std::string sharedKey_encrypted,
                                       std::string productId_encrypted,

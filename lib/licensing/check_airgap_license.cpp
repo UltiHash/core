@@ -16,14 +16,14 @@ namespace uh::licensing {
 
     // ---------------------------------------------------------------------
 
-    check_airgap_license::check_airgap_license(const std::filesystem::path &license_file,
+    check_airgap_license::check_airgap_license(const std::filesystem::path &license_directory,
                                                std::string apiKey_encrypted,
                                                std::string sharedKey_encrypted,
                                                std::string productId_encrypted,
                                                std::string appName,
                                                std::string appVersion,
                                                bool replace_license) :
-            check_license(license_file, license_type::AIRGAP_LICENSE_WITH_ONLINE_ACTIVATION,
+            check_license(license_directory, license_type::AIRGAP_LICENSE_WITH_ONLINE_ACTIVATION,
                           std::move(apiKey_encrypted),
                           std::move(sharedKey_encrypted),
                           std::move(productId_encrypted),

@@ -28,7 +28,7 @@ namespace {
     const std::string sharedKey_test = EncryptStr("UtVbATx32BYf9QAQtLmcEJ4U5-58SezMIkeyb2Cy8l0");
     const std::string product_Id_test = EncryptStr("01");
 
-    const std::string appName_test = "UltiHash data_node";
+    const std::string appName_test = "uh-data-node";
     const std::string appVersion_test = "0.2.0";
 
     const std::string licenseKey_100 = "GZFP-Y2EK-A8EK-2L01";
@@ -59,8 +59,7 @@ namespace {
 // ---------------------------------------------------------------------
 
     template<>
-    std::unique_ptr<check_airgap_license> make_test_license<check_airgap_license>()
-            {
+    std::unique_ptr<check_airgap_license> make_test_license<check_airgap_license>() {
         std::filesystem::path license_path1;
         {
             check_airgap_license tmp_write_airgap(TEMP_DIR, apiKey_test,
@@ -79,8 +78,7 @@ namespace {
 // ---------------------------------------------------------------------
 
     template<>
-    std::unique_ptr<check_online_license> make_test_license<check_online_license>()
-            {
+    std::unique_ptr<check_online_license> make_test_license<check_online_license>() {
         std::filesystem::path license_path1;
         {
             check_online_license tmp_write_online(TEMP_DIR, apiKey_test,
@@ -121,67 +119,89 @@ namespace {
             license_path1 = tmp_write_airgap.getLicensePath();
         }
 
-        license_package lp(check_license::role::DATA_NODE,
-                           license_path1,
-                           apiKey_test,
-                           sharedKey_test,
-                           product_Id_test);
+        {
+            license_package lp(check_license::role::DATA_NODE,
+                               license_path1,
+                               apiKey_test,
+                               sharedKey_test,
+                               product_Id_test);
 
-        license_package lp2(check_license::role::DATA_NODE,
-                           license_path1.parent_path(),
-                           apiKey_test,
-                           sharedKey_test,
-                           product_Id_test);
+            license_package lp2(check_license::role::DATA_NODE,
+                                license_path1.parent_path(),
+                                apiKey_test,
+                                sharedKey_test,
+                                product_Id_test);
 
-        BOOST_CHECK(lp.check_feature_enabled(license_package::feature::DEDUPLICATION));
-        BOOST_CHECK(lp.check_feature_enabled(license_package::feature::METRICS));
+            BOOST_CHECK(lp.check_feature_enabled(license_package::feature::DEDUPLICATION));
+            BOOST_CHECK(lp.check_feature_enabled(license_package::feature::METRICS));
 
-        auto* soft_right = new soft_metred_storage_resource(100,50);
+            auto *soft_right = new soft_metred_storage_resource(100, 50);
 
-        BOOST_REQUIRE_THROW(lp.add_soft_metred_feature(license_package::soft_metered_feature::LIMIT_STORAGE_CAPACITY,
-                                                       new soft_metred_storage_resource(50,100)),util::exception);
+            BOOST_REQUIRE_THROW(lp.add_soft_metred_feature(license_package::soft_metered_feature::LIMIT_STORAGE_CAPACITY,
+                                                           new soft_metred_storage_resource(50, 100)), util::exception);
 
-        lp.add_soft_metred_feature(license_package::soft_metered_feature::LIMIT_STORAGE_CAPACITY,
-                                   soft_right);
+            lp.add_soft_metred_feature(license_package::soft_metered_feature::LIMIT_STORAGE_CAPACITY,
+                                       soft_right);
 
-        BOOST_REQUIRE_THROW(lp.check_role_enabled(check_license::role::AGENCY_NODE),util::exception);
-        BOOST_REQUIRE_THROW(lp.check_role_enabled(check_license::role::THROW_ROLE),util::exception);
+            BOOST_REQUIRE_THROW(lp.check_role_enabled(check_license::role::AGENCY_NODE), util::exception);
+            BOOST_REQUIRE_THROW(lp.check_role_enabled(check_license::role::THROW_ROLE), util::exception);
 
-        lp.check_role_enabled(check_license::role::DATA_NODE);
+            lp.check_role_enabled(check_license::role::DATA_NODE);
 
-        BOOST_REQUIRE_THROW(lp.check_license_enabled(check_license::license_type::
-        FLOATING_ONLINE_USER_LICENSE),util::exception);
-        BOOST_REQUIRE_THROW(lp.check_license_enabled(check_license::license_type::
-        THROW_LICENSE_TYPE),util::exception);
+            BOOST_REQUIRE_THROW(lp.check_license_enabled(check_license::license_type::
+                                                         FLOATING_ONLINE_USER_LICENSE), util::exception);
+            BOOST_REQUIRE_THROW(lp.check_license_enabled(check_license::license_type::
+                                                         THROW_LICENSE_TYPE), util::exception);
 
-        lp.check_license_enabled(check_license::license_type::AIRGAP_LICENSE_WITH_ONLINE_ACTIVATION);
+            lp.check_license_enabled(check_license::license_type::AIRGAP_LICENSE_WITH_ONLINE_ACTIVATION);
 
-        BOOST_CHECK(lp.valid());
+            BOOST_CHECK(lp.valid());
 
-        BOOST_CHECK(lp.soft_limit_allocate(license_package::soft_metered_feature::LIMIT_STORAGE_CAPACITY,25));
-        BOOST_CHECK(lp.hard_limit_allocate(static_cast<license_package::hard_metered_feature>
-        (license_package::soft_metered_feature::LIMIT_STORAGE_CAPACITY),75));
+            BOOST_CHECK(lp.soft_limit_allocate(license_package::soft_metered_feature::LIMIT_STORAGE_CAPACITY, 25));
+            BOOST_CHECK(lp.hard_limit_allocate(static_cast<license_package::hard_metered_feature>
+                                               (license_package::soft_metered_feature::LIMIT_STORAGE_CAPACITY), 75));
 
-        BOOST_REQUIRE_THROW(lp.soft_limit_allocate(license_package::soft_metered_feature::LIMIT_NETWORK_CONNECTIONS,1),
-                            util::exception);
+            BOOST_REQUIRE_THROW(lp.soft_limit_allocate(license_package::soft_metered_feature::LIMIT_NETWORK_CONNECTIONS, 1),
+                                util::exception);
 
-        BOOST_REQUIRE_EQUAL(lp.soft_limit_allocate(license_package::soft_metered_feature::LIMIT_STORAGE_CAPACITY,1000000000000000),
-                            false);
+            BOOST_REQUIRE_EQUAL(
+                    lp.soft_limit_allocate(license_package::soft_metered_feature::LIMIT_STORAGE_CAPACITY, 1000000000000000),
+                    false);
 
-        BOOST_REQUIRE_THROW(lp.deallocate(static_cast<license_package::hard_metered_feature>
-        (license_package::hard_metered_feature::LIMIT_STORAGE_CAPACITY),101), util::exception);
+            BOOST_REQUIRE_THROW(lp.deallocate(static_cast<license_package::hard_metered_feature>
+                                              (license_package::hard_metered_feature::LIMIT_STORAGE_CAPACITY), 101),
+                                util::exception);
 
-        BOOST_CHECK_NO_THROW(lp.deallocate(static_cast<license_package::hard_metered_feature>
-        (license_package::hard_metered_feature::LIMIT_STORAGE_CAPACITY), 100));
+            BOOST_CHECK_NO_THROW(lp.deallocate(static_cast<license_package::hard_metered_feature>
+                                               (license_package::hard_metered_feature::LIMIT_STORAGE_CAPACITY), 100));
 
-        auto feature_fields = lp.getCustomAndFeatureFields();
+            auto feature_fields = lp.getCustomAndFeatureFields();
 
-        BOOST_CHECK(feature_fields.find("warnStorage") != feature_fields.end());
-        BOOST_CHECK(feature_fields.find("limitStorage") != feature_fields.end());
-        BOOST_CHECK(feature_fields.find("Metrics") != feature_fields.end());
-        BOOST_CHECK(feature_fields.find("Deduplication") != feature_fields.end());
+            BOOST_CHECK(feature_fields.find("warnStorage") != feature_fields.end());
+            BOOST_CHECK(feature_fields.find("limitStorage") != feature_fields.end());
+            BOOST_CHECK(feature_fields.find("Metrics") != feature_fields.end());
+            BOOST_CHECK(feature_fields.find("Deduplication") != feature_fields.end());
 
-        delete soft_right;
+            delete soft_right;
+        }
+
+        {
+            check_airgap_license tmp_write_airgap(license_path1, apiKey_test,
+                                                  sharedKey_test, product_Id_test);
+            BOOST_CHECK_THROW(tmp_write_airgap.write_license(check_license::role::DATA_NODE, appName_test,
+                                                             appVersion_test, licenseKey_100), util::exception);
+        }
+
+        {
+            check_airgap_license tmp_write_airgap2(license_path1, apiKey_test,
+                                                  sharedKey_test, product_Id_test,
+                                                  appVersion_test, appVersion_test,
+                                                  true);
+            BOOST_CHECK_NO_THROW(tmp_write_airgap2.write_license(check_license::role::DATA_NODE, appName_test,
+                                                             appVersion_test, licenseKey_100));
+        }
+
+
 
         std::filesystem::remove("/tmp/data_node.lic");
         std::filesystem::remove("/tmp/data_node.lic_spring");

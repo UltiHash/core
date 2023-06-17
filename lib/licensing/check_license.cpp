@@ -22,12 +22,20 @@ namespace uh::licensing {
 
     // ---------------------------------------------------------------------
 
-    check_license::check_license(std::filesystem::path license_path, check_license::license_type license_type,
-                                 std::string apiKey_encrypted, std::string sharedKey_encrypted, std::string productId_enrypted, std::string appName,
+    check_license::check_license(std::filesystem::path license_directory,
+                                 check_license::license_type license_type,
+                                 std::string apiKey_encrypted,
+                                 std::string sharedKey_encrypted,
+                                 std::string productId_enrypted,
+                                 std::string appName,
                                  std::string appVersion) :
-            license_path(std::move(license_path)), licenseTypeInternal(license_type),
-            appName(std::move(appName)), appVersion(std::move(appVersion)),
-            apiKey_crypt(std::move(apiKey_encrypted)), sharedKey_crypt(std::move(sharedKey_encrypted)), productId_crypt(std::move(productId_enrypted))
+            license_path(std::move(license_directory)),
+            licenseTypeInternal(license_type),
+            appName(std::move(appName)),
+            appVersion(std::move(appVersion)),
+            apiKey_crypt(std::move(apiKey_encrypted)),
+            sharedKey_crypt(std::move(sharedKey_encrypted)),
+            productId_crypt(std::move(productId_enrypted))
             {
         if(this->appName.empty())
             this->appName = check_app_name();

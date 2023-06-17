@@ -18,7 +18,7 @@ namespace uh::licensing{
 
     // ---------------------------------------------------------------------
 
-    check_online_license::check_online_license(const std::filesystem::path &license_file,
+    check_online_license::check_online_license(const std::filesystem::path &license_directory,
                                                std::string apiKey_encrypted,
                                                std::string sharedKey_encrypted,
                                                std::string productId_encrypted,
@@ -27,7 +27,7 @@ namespace uh::licensing{
                                                std::string userName,
                                                std::string password,
                                                bool replace_license) :
-            check_license(license_file,
+            check_license(license_directory,
                           license_type::FLOATING_ONLINE_USER_LICENSE,
                           std::move(apiKey_encrypted),
                           std::move(sharedKey_encrypted),

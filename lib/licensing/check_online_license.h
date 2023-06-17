@@ -18,7 +18,8 @@ namespace uh::licensing {
         /*
          * license model of online activation and floating use with a time limit set on license cloud
          */
-        explicit check_online_license(const std::filesystem::path &license_file, std::string apiKey_encrypted,
+        explicit check_online_license(const std::filesystem::path &license_directory,
+                                      std::string apiKey_encrypted,
                                       std::string sharedKey_encrypted,
                                       std::string productId_encrypted,
                                       std::string appName = "",
