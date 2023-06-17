@@ -19,6 +19,8 @@
 
 #include "signals/signal.h"
 
+#include "licensing/global_licensing.h"
+
 APPLICATION_CONFIG(
     (server, uh::options::server_options),
     (logging, uh::options::logging_options),
@@ -30,7 +32,7 @@ APPLICATION_CONFIG(
 using namespace uh::log;
 using namespace uh::an;
 
-int main(int argc, const char** argv)
+int main(int argc, const char **argv)
 {
     try
     {
@@ -54,22 +56,23 @@ int main(int argc, const char** argv)
 
         metrics::mod metrics_module(config.metrics(), state_module);
 
-        licensing_global_module = new uh::an::licensing::mod(config.licensing());
-        licensing_global_module->start();
+        uh::an::licensing::global_license_pointer = std::make_unique<uh::an::licensing::mod>(config.licensing());
+        uh::an::licensing::global_license_pointer->start();
 
         server::mod server_module(config.server(), cluster_module, metrics_module);
         server_module.start();
 
 
-        signal_handler.register_func([&](){ server_module.stop();
-                                                        cluster_module.stop(); });
+        signal_handler.register_func([&]()
+                                     {
+                                         server_module.stop();
+                                         cluster_module.stop();
+                                     });
 
         auto signal_received = signal_handler.run();
         INFO << " agency node clean shutdown: signal " << strsignal(signal_received) << "(" << signal_received << ")";
-
-        delete licensing_global_module;
     }
-    catch (const std::exception& e)
+    catch (const std::exception &e)
     {
         FATAL << e.what();
         std::cerr << "Error while starting service: " << e.what() << "\n";

@@ -17,6 +17,8 @@
 #include <options/licensing_options.h>
 #include <signals/signal.h>
 
+#include <licensing/global_licensing.h>
+
 APPLICATION_CONFIG(
     (server, uh::options::server_options),
     (logging, uh::options::logging_options),
@@ -45,8 +47,8 @@ int main(int argc, const char** argv)
         INFO << "--- Database Node Modules ---";
         metrics::mod metrics_module(config.metrics()); //TODO add storage metrics
 
-        licensing_global_module = new uh::dbn::licensing::mod(config.licensing());
-        licensing_global_module->start();
+        uh::dbn::licensing::global_license_pointer = std::make_unique<uh::dbn::licensing::mod>(config.licensing());
+        uh::dbn::licensing::global_license_pointer->start();
 
         auto storage_config = config.storage();
         state::mod state_module(storage_config);
@@ -65,8 +67,6 @@ int main(int argc, const char** argv)
 
         auto signal_received = signal_handler.run();
         INFO << "data node clean shutdown: signal " << strsignal(signal_received) << "(" << signal_received << ")";
-
-        delete licensing_global_module;
     }
     catch (const std::exception& e)
     {

@@ -13,7 +13,7 @@
 namespace uh::dbn::storage
 {
 
-class licensed_backend: public backend
+class metered_backend: public backend
 {
 public:
     /**
@@ -21,14 +21,14 @@ public:
      * Writes warning to log file in case the warning limit was surpassed
      * @throw if license limit would be exceeded by storing the data --> allocation fails
      */
-    void licensed_alloc(std::size_t alloc);
+    void metered_alloc(std::size_t alloc);
 
     /**
      *
      * @param dealloc how much space should be deallocated from the license counter
      * @throw in case someone tries to deallocate below zero
      */
-    static void licensed_dealloc(std::size_t dealloc);
+    static void metered_dealloc(std::size_t dealloc);
 
 };
 
