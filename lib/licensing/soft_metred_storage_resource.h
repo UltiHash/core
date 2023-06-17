@@ -46,6 +46,12 @@ namespace uh::licensing {
          */
         void deallocate(std::size_t dealloc) override;
 
+        /**
+         *
+         * @return usable space limited by metred licensing
+         */
+        std::size_t free_count() override;
+
     private:
         std::size_t stored_val{};
         const std::size_t hard_limit_val;

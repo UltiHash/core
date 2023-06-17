@@ -16,9 +16,11 @@
 #include <filesystem>
 #include <algorithm>
 
-namespace uh::licensing {
+namespace uh::licensing
+{
 
-    class license_package {
+    class license_package
+    {
 
     public:
 
@@ -37,7 +39,8 @@ namespace uh::licensing {
          * Block feature if no license support is detected
          */
 
-        enum class feature: unsigned char{
+        enum class feature : unsigned char
+        {
             METRICS,
             DEDUPLICATION
         };
@@ -49,8 +52,8 @@ namespace uh::licensing {
          * @throws if license is invalid or cannot be loaded
          */
         explicit license_package(check_license::role license_path_input,
-                                 const std::filesystem::path &config, const std::string& apiKey,
-                                 const std::string& sharedKey, const std::string& productId);
+                                 const std::filesystem::path &config, const std::string &apiKey,
+                                 const std::string &sharedKey, const std::string &productId);
 
         /**
          *
@@ -59,7 +62,8 @@ namespace uh::licensing {
          * Warn if resource boundary is close to be hit.
          * @throw if resource boundary will be exceeded by resource allocation
          */
-        enum class hard_metered_feature: unsigned char{
+        enum class hard_metered_feature : unsigned char
+        {
             LIMIT_CPU_COUNT = 0,
             LIMIT_STORAGE_CAPACITY = 1,
             LIMIT_NETWORK_CONNECTIONS = 2
@@ -70,7 +74,8 @@ namespace uh::licensing {
          * Warn if resource boundary is close to be hit.
          * @throw if resource boundary will be exceeded by resource allocation
          */
-        enum class soft_metered_feature: unsigned char{
+        enum class soft_metered_feature : unsigned char
+        {
             LIMIT_STORAGE_CAPACITY = 1,
             LIMIT_NETWORK_CONNECTIONS = 2
         };
@@ -126,6 +131,13 @@ namespace uh::licensing {
 
         /**
          *
+         * @param hmf metred feature to test free count on
+         * @return number of free resources of metred resource
+         */
+        std::size_t free_count(hard_metered_feature hmf);
+
+        /**
+         *
          * @return if registered license type is valid
          */
         [[nodiscard]] bool valid();
@@ -137,14 +149,28 @@ namespace uh::licensing {
          * @param mf metered feature to be registered
          * @param mr metered resource class to be checked repeatedly
          */
-        void add_hard_metred_feature(hard_metered_feature mf, metred_resource* mr);
+        void add_hard_metred_feature(hard_metered_feature mf, metred_resource *mr);
 
         /**
          *
          * @param smf soft metered feature to be registered
          * @param smr soft metered resource class to be checked repeatedly
          */
-        void add_soft_metred_feature(soft_metered_feature smf,soft_metred_resource* smr);
+        void add_soft_metred_feature(soft_metered_feature smf, soft_metred_resource *smr);
+
+        /**
+         *
+         * @param mf metered feature to check
+         * @return if hard metred feature is available
+         */
+        bool has_hard_metred_feature(hard_metered_feature mf);
+
+        /**
+         *
+         * @param smf metered feature to check
+         * @return if soft metred feature is available
+         */
+        bool has_soft_metred_feature(license_package::soft_metered_feature smf);
 
         /**
          *
@@ -155,11 +181,11 @@ namespace uh::licensing {
 
     private:
 
-        std::map<feature,bool> features;
-        std::map<hard_metered_feature, metred_resource*> hard_metered_features;
-        std::map<soft_metered_feature, soft_metred_resource*> soft_metered_features;
+        std::map<feature, bool> features;
+        std::map<hard_metered_feature, metred_resource *> hard_metered_features;
+        std::map<soft_metered_feature, soft_metred_resource *> soft_metered_features;
 
-        check_license* check_lic{};
+        check_license *check_lic{};
         std::filesystem::path license_path;
         const uint8_t feature_count_global = 2;
 

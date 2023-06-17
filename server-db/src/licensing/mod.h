@@ -17,39 +17,41 @@ namespace uh::dbn::licensing {
 
     // ---------------------------------------------------------------------
 
-    enum class LicenseTypeEnum {AirgapOnlineActivationLicense, OtherLicense};
+    enum class LicenseTypeEnum {
+        AirgapOnlineActivationLicense, OtherLicense
+    };
 
     static std::unordered_map<std::string, LicenseTypeEnum> string2licensetype = {
             {"AirgapOnline", LicenseTypeEnum::AirgapOnlineActivationLicense},
             {"OtherLicense", LicenseTypeEnum::OtherLicense}
     };
 
-// ---------------------------------------------------------------------
+    // ---------------------------------------------------------------------
 
-    class mod
-    {
+    class mod {
     public:
-        explicit mod(const uh::options::licensing_config& cfg);
+        explicit mod(const uh::options::licensing_config &cfg);
+
         ~mod();
 
         void start();
 
-        uh::licensing::license_package& license_package();
+        uh::licensing::license_package &license_package();
 
     private:
         struct impl;
         std::unique_ptr<impl> m_impl;
     };
 
-// ---------------------------------------------------------------------
+    // ---------------------------------------------------------------------
 
 } // namespace uh::dbn::licensing
 
-namespace uh::dbn{
+namespace uh::dbn {
 
     // ---------------------------------------------------------------------
 
-    uh::dbn::licensing::mod* licensing_global_module;
+    uh::dbn::licensing::mod *licensing_global_module;
 
     // ---------------------------------------------------------------------
 

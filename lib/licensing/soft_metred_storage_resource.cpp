@@ -21,7 +21,7 @@ namespace uh::licensing {
 
     bool soft_metred_storage_resource::soft_limit_allocate(std::size_t alloc) {
         bool out = stored_val + alloc <= soft_limit_val;
-        if(!hard_limit_allocate(alloc)) return false;
+        if(out) return hard_limit_allocate(alloc);
 
         return out;
     }
@@ -33,6 +33,12 @@ namespace uh::licensing {
             THROW(util::exception, "License resource deallocation was called with underflow!");
 
         stored_val -= dealloc;
+    }
+
+    // ---------------------------------------------------------------------
+
+    std::size_t soft_metred_storage_resource::free_count() {
+        return hard_limit_val - stored_val;
     }
 
     // ---------------------------------------------------------------------

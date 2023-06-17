@@ -27,6 +27,12 @@ namespace uh::licensing{
          */
         virtual void deallocate(std::size_t dealloc) = 0;
 
+        /**
+         *
+         * @return count of free metred elements
+         */
+        virtual std::size_t free_count() = 0;
+
     };
 
 }
