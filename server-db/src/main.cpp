@@ -45,8 +45,8 @@ int main(int argc, const char** argv)
         INFO << "--- Database Node Modules ---";
         metrics::mod metrics_module(config.metrics()); //TODO add storage metrics
 
-        licensing::mod licensing_module(config.licensing());
-        licensing_module.start();
+        licensing_global_module = new uh::dbn::licensing::mod(config.licensing());
+        licensing_global_module->start();
 
         auto storage_config = config.storage();
         state::mod state_module(storage_config);
@@ -65,6 +65,8 @@ int main(int argc, const char** argv)
 
         auto signal_received = signal_handler.run();
         INFO << "data node clean shutdown: signal " << strsignal(signal_received) << "(" << signal_received << ")";
+
+        delete licensing_global_module;
     }
     catch (const std::exception& e)
     {

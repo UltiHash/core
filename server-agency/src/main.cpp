@@ -54,8 +54,8 @@ int main(int argc, const char** argv)
 
         metrics::mod metrics_module(config.metrics(), state_module);
 
-        licensing::mod licensing_module(config.licensing());
-        licensing_module.start();
+        licensing_global_module = new uh::an::licensing::mod(config.licensing());
+        licensing_global_module->start();
 
         server::mod server_module(config.server(), cluster_module, metrics_module);
         server_module.start();
@@ -67,6 +67,7 @@ int main(int argc, const char** argv)
         auto signal_received = signal_handler.run();
         INFO << " agency node clean shutdown: signal " << strsignal(signal_received) << "(" << signal_received << ")";
 
+        delete licensing_global_module;
     }
     catch (const std::exception& e)
     {

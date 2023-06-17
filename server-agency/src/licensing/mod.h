@@ -45,4 +45,14 @@ namespace uh::an::licensing {
 
 } // namespace uh::an::licensing
 
+namespace uh::an{
+
+    // ---------------------------------------------------------------------
+
+    uh::an::licensing::mod* licensing_global_module;
+
+    // ---------------------------------------------------------------------
+
+} // namespace uh::dbn
+
 #endif //CORE_MOD_H
