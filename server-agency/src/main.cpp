@@ -7,12 +7,15 @@
 #include <metrics/mod.h>
 #include <state/mod.h>
 #include <state/options.h>
+#include <licensing/mod.h>
+#include <licensing/options.h>
 #include <logging/logging_boost.h>
 
 #include <options/app_config.h>
 #include <options/metrics_options.h>
 #include <options/logging_options.h>
 #include <options/server_options.h>
+#include <options/licensing_options.h>
 
 #include "signals/signal.h"
 
@@ -21,7 +24,8 @@ APPLICATION_CONFIG(
     (logging, uh::options::logging_options),
     (metrics, uh::options::metrics_options),
     (cluster, uh::an::cluster::options),
-    (state, uh::an::state::options));
+    (state, uh::an::state::options),
+    (licensing, uh::an::licensing::options));
 
 using namespace uh::log;
 using namespace uh::an;
@@ -49,6 +53,9 @@ int main(int argc, const char** argv)
         state_module.start();
 
         metrics::mod metrics_module(config.metrics(), state_module);
+
+        licensing::mod licensing_module(config.licensing());
+        licensing_module.start();
 
         server::mod server_module(config.server(), cluster_module, metrics_module);
         server_module.start();

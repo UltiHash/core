@@ -13,7 +13,7 @@
 
 #include <LicenseSpring/EncryptString.h>
 
-namespace uh::dbn::licensing {
+namespace uh::an::licensing {
 
 // ---------------------------------------------------------------------    
 
@@ -75,7 +75,7 @@ std::unique_ptr<uh::licensing::license_package> make_licensing(const uh::options
                                                                  cfg.license_replace
                 );
 
-                write_airgap.write_license(uh::licensing::check_license::role::DATA_NODE,
+                write_airgap.write_license(uh::licensing::check_license::role::AGENCY_NODE,
                                            PROJECT_NAME,
                                            PROJECT_VERSION,
                                            cfg.license_key);
@@ -84,7 +84,7 @@ std::unique_ptr<uh::licensing::license_package> make_licensing(const uh::options
             }
 
             auto read_license =
-                    std::make_unique<uh::licensing::license_package>(uh::licensing::check_license::role::DATA_NODE,
+                    std::make_unique<uh::licensing::license_package>(uh::licensing::check_license::role::AGENCY_NODE,
                                                                      cfg.licensing_path,
                                                                      EncryptStr(LICENSE_API_KEY),
                                                                      EncryptStr(LICENSE_SHARED_KEY),
@@ -151,4 +151,4 @@ return *m_impl->m_licensing;
 
 // ---------------------------------------------------------------------
 
-} // namespace uh::dbn::licensing
+} // namespace uh::an::licensing

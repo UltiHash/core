@@ -57,10 +57,10 @@ namespace uh::licensing {
             if (line.starts_with(role_string)) {
                 line = line.substr(role_string.size(), line.size());
 
-                if (line == "agency_node")
+                if (line == "uh-agency-node")
                     return check_license::role::AGENCY_NODE;
 
-                if (line == "data_node")
+                if (line == "uh-data-node")
                     return check_license::role::DATA_NODE;
             }
         }
@@ -165,10 +165,10 @@ namespace uh::licensing {
 
         switch (licenseRole) {
             case role::AGENCY_NODE:
-                role_set_string = "agency_node";
+                role_set_string = "uh-agency-node";
                 break;
             case role::DATA_NODE:
-                role_set_string = "data_node";
+                role_set_string = "uh-data-node";
                 break;
             default:
                 THROW(util::exception, "No license role detected!");
@@ -284,48 +284,6 @@ namespace uh::licensing {
             return license_check(license);
         }
         else return false;
-
-        /*
-        //We can then extract our custom fields as a vector of CustomField objects as so:
-        std::vector<LicenseSpring::CustomField> custom_vec = license->customFields();
-
-        std::string args("-class bus -sanitize");
-        boost::process::ipstream out;
-        std::string lshw_result;
-
-        boost::process::child c( boost::process::search_path("lshw"), args, boost::process::std_out > out);
-
-        for (std::string line; c.running() && std::getline(out, line);) {
-            lshw_result += line + "\n";
-        }
-        c.wait();
-        int result = c.exit_code();
-
-        if(result)
-            THROW(util::exception,"Could not read lshw motherboard identity!");
-
-        if (custom_vec.empty()) {
-
-            license->addDeviceVariable("DeviceIdentityHash", lshw_result);
-
-            std::vector<LicenseSpring::DeviceVariable> device_vec;
-
-            try {
-                license->sendDeviceVariables();
-                device_vec = license->getDeviceVariables(true);
-                return device_vec[0].name() == "DeviceIdentityHash" and device_vec[0].value() == lshw_result;
-            }
-            catch (...) {
-                std::cout << "Most likely a network connection issue, please check your connection." << std::endl;
-                return false;
-            }
-
-        }
-        else{
-            //check if DeviceIdentityHash matches
-            return custom_vec[0].fieldName() == "DeviceIdentityHash" and custom_vec[0].fieldValue() == "dummyident";
-        }
-         */
     }
 
     bool check_license::license_check(const LicenseSpring::License::ptr_t& license) {

@@ -12,7 +12,7 @@
 #include <algorithm>
 #include <boost/algorithm/string.hpp>
 
-namespace uh::dbn::licensing {
+namespace uh::an::licensing {
     
 // ---------------------------------------------------------------------
 
@@ -82,4 +82,4 @@ namespace uh::dbn::licensing {
 
 // ---------------------------------------------------------------------
 
-} // namespace uh::dbn::licensing
+} // namespace uh::an::licensing

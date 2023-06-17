@@ -9,7 +9,7 @@
 #include <filesystem>
 #include <options/licensing_options.h>
 
-namespace uh::dbn::licensing {
+namespace uh::an::licensing {
 
 
 // ---------------------------------------------------------------------
@@ -25,6 +25,6 @@ namespace uh::dbn::licensing {
 
 // ---------------------------------------------------------------------
 
-} // namespace uh::dbn::licensing
+} // namespace uh::an::licensing
 
 #endif //CORE_OPTIONS_H
