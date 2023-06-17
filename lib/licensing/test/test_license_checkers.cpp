@@ -31,7 +31,7 @@ namespace {
     const std::string appName_test = "uh-data-node";
     const std::string appVersion_test = "0.2.0";
 
-    const std::string licenseKey_100 = "GZFP-Y2EK-A8EK-2L01";
+    const std::string licenseKey_100 = "GZHG-LH7N-RSJK-2J01";
     const std::string user_name_test = "benjamin@ultihash.io";
     const std::string password_test = "#u5huzU!ita*o&I4@ona2+OVlGlhehe0!dLDeslticO#r?!3@*$a@$x*hl1lxisW";
 
