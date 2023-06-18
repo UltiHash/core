@@ -30,6 +30,12 @@ public:
      */
     static void metered_dealloc(std::size_t dealloc);
 
+    /**
+     *
+     * @return free space due to licensing
+     */
+    static std::size_t metered_free_count();
+
 };
 
 } // namespace uh::dbn::storage

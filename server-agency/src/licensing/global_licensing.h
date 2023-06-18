@@ -9,7 +9,8 @@
 
 //export module global_licensing_agency_node;
 
-namespace uh::an::licensing{
+namespace uh::an::licensing
+{
 
 inline static std::unique_ptr<uh::an::licensing::mod> global_license_pointer;
 

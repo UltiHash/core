@@ -9,54 +9,58 @@
 #include "licensing/soft_metred_resource.h"
 #include "util/exception.h"
 
-namespace uh::licensing {
+namespace uh::licensing
+{
 
-    class soft_metred_storage_resource: public soft_metred_resource{
+class soft_metred_storage_resource: public soft_metred_resource
+{
 
-    public:
-        /*
-         * set up metred limits to check on the licensing model
-         */
-        soft_metred_storage_resource(std::size_t hard_limit, std::size_t soft_limit):
-        hard_limit_val(hard_limit), soft_limit_val(soft_limit){
-            if(hard_limit < soft_limit)
-                THROW(util::exception,"The hard limit of a soft limited storage resource was smaller than it's soft"
-                                      "limit!");
-        }
+public:
+    /*
+     * set up metred limits to check on the licensing model
+     */
+    soft_metred_storage_resource(std::size_t hard_limit, std::size_t soft_limit)
+        :
+        hard_limit_val(hard_limit), soft_limit_val(soft_limit)
+    {
+        if (hard_limit < soft_limit)
+            THROW(util::exception, "The hard limit of a soft limited storage resource was smaller than it's soft"
+                                   "limit!");
+    }
 
-        /**
-         * check if the resource should be blocked when trying to allocate an amount of space
-         *
-         * @param alloc space
-         * @return decision
-         */
-        [[nodiscard]] bool hard_limit_allocate(std::size_t alloc) override;
+    /**
+     * only allocate below hard limit, else do not allocate
+     *
+     * @param alloc space
+     * @return decision false if no allocation could be acquired below hard limit
+     */
+    [[nodiscard]] bool hard_limit_allocate(std::size_t alloc) override;
 
-        /**
-         * check if the resource should be warned about when trying to allocate an amount of space
-         *
-         * @param alloc space
-         * @return decision
-         */
-        [[nodiscard]] bool soft_limit_allocate(std::size_t alloc) override;
+    /**
+     * only allocate below warning limit, else do not allocate
+     *
+     * @param alloc space
+     * @return decision false if no allocation could be acquired below warning level
+     */
+    [[nodiscard]] bool soft_limit_allocate(std::size_t alloc) override;
 
-        /**
-         *
-         * @param dealloc
-         */
-        void deallocate(std::size_t dealloc) override;
+    /**
+     *
+     * @param dealloc
+     */
+    void deallocate(std::size_t dealloc) override;
 
-        /**
-         *
-         * @return usable space limited by metred licensing
-         */
-        std::size_t free_count() override;
+    /**
+     *
+     * @return usable space limited by metred licensing
+     */
+    std::size_t free_count() override;
 
-    private:
-        std::size_t stored_val{};
-        const std::size_t hard_limit_val;
-        const std::size_t soft_limit_val;
-    };
+private:
+    std::size_t stored_val{};
+    const std::size_t hard_limit_val;
+    const std::size_t soft_limit_val;
+};
 
 } // namespace uh::licensing
 

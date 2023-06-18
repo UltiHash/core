@@ -9,7 +9,8 @@
 
 //export module global_licensing_data_node;
 
-namespace uh::dbn::licensing{
+namespace uh::dbn::licensing
+{
 
 inline static std::unique_ptr<uh::dbn::licensing::mod> global_license_pointer;
 

@@ -8,19 +8,21 @@
 #include "licensing/metred_resource.h"
 #include <cstddef>
 
-namespace uh::licensing{
+namespace uh::licensing
+{
 
-    class soft_metred_resource: public metred_resource{
+class soft_metred_resource: public metred_resource
+{
 
-    public:
+public:
 
-        /**
-         *
-         * @return if a warning level limit of the implemented resource has been reached
-         */
-        virtual bool soft_limit_allocate(std::size_t alloc) = 0;
+    /**
+     *
+     * @return if a warning level limit of the implemented resource has been reached
+     */
+    virtual bool soft_limit_allocate(std::size_t alloc) = 0;
 
-    };
+};
 
 }
 

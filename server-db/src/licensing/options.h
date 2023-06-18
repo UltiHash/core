@@ -9,19 +9,20 @@
 #include <filesystem>
 #include <options/licensing_options.h>
 
-namespace uh::dbn::licensing {
+namespace uh::dbn::licensing
+{
 
 
 // ---------------------------------------------------------------------
 
-    class options : public uh::options::licensing_options
-    {
-    public:
-        options() = default;
+class options: public uh::options::licensing_options
+{
+public:
+    options() = default;
 
-        uh::options::action evaluate(const boost::program_options::variables_map& vars) override;
+    uh::options::action evaluate(const boost::program_options::variables_map &vars) override;
 
-    };
+};
 
 // ---------------------------------------------------------------------
 

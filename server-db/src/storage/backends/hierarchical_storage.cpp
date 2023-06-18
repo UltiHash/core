@@ -9,12 +9,13 @@
 #include <memory>
 
 
-namespace uh::dbn::storage {
+namespace uh::dbn::storage
+{
 
 hierarchical_storage::hierarchical_storage(
-    const hierarchical_storage_config& config,
-    uh::dbn::metrics::storage_metrics& storage_metrics,
-    state::scheduled_compressions_state& scheduled_compressions)
+    const hierarchical_storage_config &config,
+    uh::dbn::metrics::storage_metrics &storage_metrics,
+    state::scheduled_compressions_state &scheduled_compressions)
     : m_root(config.db_root),
       m_alloc(config.size_bytes),
       m_used(0),
@@ -22,7 +23,8 @@ hierarchical_storage::hierarchical_storage(
       m_store(config.compressed,
               storage_metrics,
               scheduled_compressions,
-              [this](std::streamsize s){ this->return_space(s); })
+              [this](std::streamsize s)
+              { this->return_space(s); })
 {
     if (!std::filesystem::is_directory(m_root))
     {
@@ -35,12 +37,23 @@ hierarchical_storage::hierarchical_storage(
         THROW(util::exception, "database used over limit");
     }
 
+    try
+    {
+        metered_alloc(m_used);
+    }
+    catch (std::exception &e)
+    {
+        THROW(util::no_space_error,
+              "Hierarchical storage is over license limit for this reason: " + std::string(e.what()));
+    }
+
     update_space_consumption();
 }
 
 // ---------------------------------------------------------------------
 
-void hierarchical_storage::start() {
+void hierarchical_storage::start()
+{
     INFO << "--- Storage backend initialized --- " << std::filesystem::absolute(this->m_root);
     INFO << "        backend type   : " << backend_type();
     INFO << "        root directory : " << std::filesystem::absolute(this->m_root);
@@ -51,38 +64,44 @@ void hierarchical_storage::start() {
 
 // ---------------------------------------------------------------------
 
-void hierarchical_storage::stop() {
+void hierarchical_storage::stop()
+{
     INFO << "stopping hierarchical_storage";
     m_store.stop();
 }
 
 // ---------------------------------------------------------------------
 
-size_t hierarchical_storage::free_space() {
-    return m_alloc - m_used;
+size_t hierarchical_storage::free_space()
+{
+    return std::min(m_alloc - m_used, metered_free_count());
 }
 
 // ---------------------------------------------------------------------
 
-size_t hierarchical_storage::used_space() {
+size_t hierarchical_storage::used_space()
+{
     return m_used;
 }
 
 // ---------------------------------------------------------------------
 
-size_t hierarchical_storage::allocated_space() {
+size_t hierarchical_storage::allocated_space()
+{
     return m_alloc;
 }
 
 // ---------------------------------------------------------------------
 
-std::string hierarchical_storage::backend_type() {
+std::string hierarchical_storage::backend_type()
+{
     return std::string(m_type);
 }
 
 // ---------------------------------------------------------------------
 
-void hierarchical_storage::update_space_consumption() {
+void hierarchical_storage::update_space_consumption()
+{
     m_storage_metrics.alloc_space().Set(m_alloc);
     m_storage_metrics.free_space().Set(m_alloc - m_used);
     m_storage_metrics.used_space().Set(m_used);
@@ -90,13 +109,15 @@ void hierarchical_storage::update_space_consumption() {
 
 // ---------------------------------------------------------------------
 
-std::unique_ptr<io::data_generator> hierarchical_storage::read_block(const std::span <char>& hash) {
+std::unique_ptr<io::data_generator> hierarchical_storage::read_block(const std::span<char> &hash)
+{
     std::string hex = to_hex_string(hash.begin(), hash.end());
 
     const auto file_path = get_hash_path(hex);
 
     auto file = m_store.open(file_path);
-    if (!file->valid()) {
+    if (!file->valid())
+    {
         THROW(util::exception, "unknown hash: " + hex);
     }
 
@@ -111,7 +132,7 @@ std::unique_ptr<io::data_generator> hierarchical_storage::read_block(const std::
             buffer.resize(buffer.size() + BUFFER_SIZE);
         }
 
-        size = file->read({ buffer.begin() + ofs, buffer.size() - ofs });
+        size = file->read({buffer.begin() + ofs, buffer.size() - ofs});
         ofs += size;
     }
     while (size != 0);
@@ -122,9 +143,11 @@ std::unique_ptr<io::data_generator> hierarchical_storage::read_block(const std::
 
 // ---------------------------------------------------------------------
 
-std::filesystem::path hierarchical_storage::get_hash_path (const std::string_view &hash) const {
+std::filesystem::path hierarchical_storage::get_hash_path(const std::string_view &hash) const
+{
     auto file_path = m_root;
-    for (unsigned int i = 0; i < m_levels; i++) {
+    for (unsigned int i = 0; i < m_levels; i++)
+    {
         const auto directory_name = hash.substr(2 * i, 2);
         file_path = file_path / directory_name;
     }
@@ -139,12 +162,14 @@ std::filesystem::path hierarchical_storage::get_hash_path (const std::string_vie
 void hierarchical_storage::return_space(std::size_t size)
 {
     m_used -= size;
+    metered_dealloc(size);
     update_space_consumption();
 }
 
 // ---------------------------------------------------------------------
 
-void hierarchical_storage::acquire_storage_size(std::size_t size) {
+void hierarchical_storage::acquire_storage_size(std::size_t size)
+{
     while (true)
     {
         std::size_t used = m_used;
@@ -160,13 +185,23 @@ void hierarchical_storage::acquire_storage_size(std::size_t size) {
         }
     }
 
+    try
+    {
+        metered_alloc(size);
+    }
+    catch (std::exception &e)
+    {
+        THROW(util::no_space_error, "Out of space for this reason: " + std::string(e.what()));
+    }
+
     update_space_consumption();
 }
 
 // ---------------------------------------------------------------------
-  
-std::pair <std::size_t, std::vector <char>> hierarchical_storage::write_block(const std::span<char> &data) {
-    acquire_storage_size (data.size());
+
+std::pair<std::size_t, std::vector<char>> hierarchical_storage::write_block(const std::span<char> &data)
+{
+    acquire_storage_size(data.size());
     auto m_tmp = m_store.temp_file(m_root);
     auto m_sha = std::make_unique<io::sha512>(*m_tmp);
     m_sha->write(data);
@@ -175,19 +210,21 @@ std::pair <std::size_t, std::vector <char>> hierarchical_storage::write_block(co
     const auto file_path = get_hash_path(string_hash);
     std::filesystem::create_directories(file_path.parent_path());
 
-    try {
+    try
+    {
         m_tmp->release_to(file_path);
         m_store.compress(file_path);
     }
-    catch (const util::file_exists&) {
+    catch (const util::file_exists &)
+    {
         return_space(data.size());
-        return {0, std::move (hash)};
+        return {0, std::move(hash)};
     }
 
-    return {data.size(), std::move (hash)};
+    return {data.size(), std::move(hash)};
 
 }
 
 // ---------------------------------------------------------------------
-  
+
 }

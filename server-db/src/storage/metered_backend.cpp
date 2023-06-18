@@ -51,4 +51,12 @@ void metered_backend::metered_dealloc(std::size_t dealloc)
 
 // ---------------------------------------------------------------------
 
+std::size_t metered_backend::metered_free_count()
+{
+    return uh::dbn::licensing::global_license_pointer->license_package()
+        .free_count(uh::licensing::license_package::hard_metered_feature::LIMIT_STORAGE_CAPACITY);
+}
+
+// ---------------------------------------------------------------------
+
 } // storage

@@ -30,7 +30,7 @@ APPLICATION_CONFIG(
 using namespace uh::log;
 using namespace uh::dbn;
 
-int main(int argc, const char** argv)
+int main(int argc, const char **argv)
 {
     try
     {
@@ -62,13 +62,16 @@ int main(int argc, const char** argv)
         server::mod server_module(config.server(), storage_module, metrics_module);
         server_module.start();
 
-        signal_handler.register_func([&](){ server_module.stop();
-                                                        storage_module.stop(); });
+        signal_handler.register_func([&]()
+                                     {
+                                         server_module.stop();
+                                         storage_module.stop();
+                                     });
 
         auto signal_received = signal_handler.run();
         INFO << "data node clean shutdown: signal " << strsignal(signal_received) << "(" << signal_received << ")";
     }
-    catch (const std::exception& e)
+    catch (const std::exception &e)
     {
         FATAL << e.what();
         std::cerr << "Error while starting service: " << e.what() << "\n";
