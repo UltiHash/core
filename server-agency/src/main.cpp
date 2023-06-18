@@ -56,8 +56,8 @@ int main(int argc, const char **argv)
 
         metrics::mod metrics_module(config.metrics(), state_module);
 
-        uh::an::licensing::global_license_pointer = std::make_unique<uh::an::licensing::mod>(config.licensing());
-        uh::an::licensing::global_license_pointer->start();
+        uh::an::licensing::global_license_pointer_an = std::make_unique<uh::an::licensing::mod>(config.licensing());
+        uh::an::licensing::global_license_pointer_an->start();
 
         server::mod server_module(config.server(), cluster_module, metrics_module);
         server_module.start();

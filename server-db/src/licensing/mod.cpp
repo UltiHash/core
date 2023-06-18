@@ -109,7 +109,6 @@ std::unique_ptr<uh::licensing::license_package> make_licensing(const uh::options
 
     std::string msg("Not a storage backend type: " + cfg.license_type);
     THROW(util::exception, msg);
-
 }
 
 // ---------------------------------------------------------------------

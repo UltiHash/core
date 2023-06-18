@@ -5,13 +5,9 @@
 #include "licensing/mod.h"
 #include <memory>
 
-//module;
-
-//export module global_licensing_agency_node;
-
 namespace uh::an::licensing
 {
 
-static std::unique_ptr<uh::an::licensing::mod> global_license_pointer;
+extern std::unique_ptr<uh::an::licensing::mod> global_license_pointer_an;
 
 }

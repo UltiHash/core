@@ -5,13 +5,9 @@
 #include "licensing/mod.h"
 #include <memory>
 
-//module;
-
-//export module global_licensing_data_node;
-
 namespace uh::dbn::licensing
 {
 
-static std::unique_ptr<uh::dbn::licensing::mod> global_license_pointer;
+extern std::unique_ptr<uh::dbn::licensing::mod> global_license_pointer_dbn;
 
 }

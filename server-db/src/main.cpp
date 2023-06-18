@@ -47,8 +47,8 @@ int main(int argc, const char **argv)
         INFO << "--- Database Node Modules ---";
         metrics::mod metrics_module(config.metrics()); //TODO add storage metrics
 
-        uh::dbn::licensing::global_license_pointer = std::make_unique<uh::dbn::licensing::mod>(config.licensing());
-        uh::dbn::licensing::global_license_pointer->start();
+        uh::dbn::licensing::global_license_pointer_dbn = std::make_unique<uh::dbn::licensing::mod>(config.licensing());
+        uh::dbn::licensing::global_license_pointer_dbn->start();
 
         auto storage_config = config.storage();
         state::mod state_module(storage_config);
