@@ -46,16 +46,17 @@ void maybe_create_license_root_directory(std::filesystem::path license_root)
 
 // ---------------------------------------------------------------------
 
-LicenseTypeEnum define_licensing_type(const std::string &backend_type)
+LicenseTypeEnum define_licensing_type(const std::string &license_type)
 {
-    auto it = string2licensetype.find(backend_type);
+    auto it = string2licensetype.find(license_type);
     if (it != string2licensetype.end())
     {
         return it->second;
     }
     else
     {
-        std::string msg("Not a licensing type: " + backend_type);
+        std::string msg("Not a licensing type: " + license_type);
+        INFO << msg;
         THROW(util::exception, msg);
     }
 }
