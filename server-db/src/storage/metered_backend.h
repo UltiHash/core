@@ -6,9 +6,6 @@
 #define CORE_LICENSED_BACKEND_H
 
 #include "storage/backend.h"
-#include "licensing/mod.h"
-#include "logging/logging_boost.h"
-#include "util/exception.h"
 
 namespace uh::dbn::storage
 {
@@ -21,20 +18,20 @@ public:
      * Writes warning to log file in case the warning limit was surpassed
      * @throw if license limit would be exceeded by storing the data --> allocation fails
      */
-    void metered_alloc(std::size_t alloc);
+    virtual void metered_alloc(std::size_t alloc) = 0;
 
     /**
      *
      * @param dealloc how much space should be deallocated from the license counter
      * @throw in case someone tries to deallocate below zero
      */
-    static void metered_dealloc(std::size_t dealloc);
+    virtual void metered_dealloc(std::size_t dealloc) = 0;
 
     /**
      *
      * @return free space due to licensing
      */
-    static std::size_t metered_free_count();
+    virtual std::size_t metered_free_count() = 0;
 
 };
 
