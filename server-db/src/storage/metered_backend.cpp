@@ -75,6 +75,7 @@ std::size_t metered_backend::metered_free_count()
     catch (std::exception &e)
     {
         FATAL << "Could not access global licensing module for this reason: " + std::string(e.what());
+        return {};
     }
 }
 
