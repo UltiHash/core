@@ -26,10 +26,9 @@ namespace
 void maybe_create_license_root_directory(std::filesystem::path license_root)
 {
     //Check whether the directory already exists:
-    bool no_license_root = !std::filesystem::is_directory(license_root);
 
     //We are OK creating a new root if needed, otherwise just inform about its existence
-    if (no_license_root)
+    if (!std::filesystem::is_directory(license_root))
     {
         if (!std::filesystem::create_directories(license_root))
         {
@@ -73,9 +72,10 @@ std::unique_ptr<uh::licensing::license_package> make_licensing(const uh::options
     {
         case LicenseTypeEnum::AirgapOnlineActivationLicense:
         {
-
-            if (!std::filesystem::exists(cfg.licensing_path))
+            if (std::filesystem::is_empty(cfg.licensing_path))
             {
+                INFO << "No licenses were found. Creating " + cfg.license_type + " license.";
+
                 uh::licensing::check_airgap_license write_airgap(cfg.licensing_path,
                                                                  EncryptStr(LICENSE_API_KEY),
                                                                  EncryptStr(LICENSE_SHARED_KEY),
@@ -84,6 +84,8 @@ std::unique_ptr<uh::licensing::license_package> make_licensing(const uh::options
                                                                  PROJECT_VERSION,
                                                                  cfg.license_replace
                 );
+
+                INFO << "Initialized " + cfg.license_type;
 
                 write_airgap.write_license(uh::licensing::check_license::role::DATA_NODE,
                                            PROJECT_NAME,

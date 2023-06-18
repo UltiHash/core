@@ -157,7 +157,8 @@ io::file check_license::write_license_file(check_license::role licenseRole, cons
     {
         try
         {
-            std::filesystem::remove(license_path);
+            if(!std::filesystem::is_directory(license_path) and license_path.extension() == ".lic")
+                std::filesystem::remove(license_path);
         }
         catch (std::exception &e)
         {
@@ -167,7 +168,8 @@ io::file check_license::write_license_file(check_license::role licenseRole, cons
 
         try
         {
-            std::filesystem::remove(license_path.string() + "_spring");
+            if(!std::filesystem::is_directory(license_path) and license_path.extension() == ".lic")
+                std::filesystem::remove(license_path.string() + "_spring");
         }
         catch (std::exception &e)
         {
