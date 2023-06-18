@@ -12,32 +12,39 @@ namespace uh::dbn::storage
 
 void metered_backend::metered_alloc(std::size_t alloc)
 {
-    if (uh::dbn::licensing::global_license_pointer->license_package().has_soft_metred_feature(
-        uh::licensing::license_package::soft_metered_feature::LIMIT_STORAGE_CAPACITY))
+    try
     {
-        if (!uh::dbn::licensing::global_license_pointer->license_package()
-            .soft_limit_allocate(uh::licensing::license_package::soft_metered_feature::LIMIT_STORAGE_CAPACITY,
-                                 alloc))
+        if (uh::dbn::licensing::global_license_pointer->license_package().has_soft_metred_feature(
+            uh::licensing::license_package::soft_metered_feature::LIMIT_STORAGE_CAPACITY))
         {
-            WARNING << "Storage backend \"" + backend_type() + "\" has only " +
-                    std::to_string(uh::dbn::licensing::global_license_pointer->license_package()
-                                       .free_count(uh::licensing::license_package::hard_metered_feature::LIMIT_STORAGE_CAPACITY))
-                    + " bytes free on its license!";
-
             if (!uh::dbn::licensing::global_license_pointer->license_package()
-                .hard_limit_allocate(uh::licensing::license_package::hard_metered_feature::LIMIT_STORAGE_CAPACITY,
+                .soft_limit_allocate(uh::licensing::license_package::soft_metered_feature::LIMIT_STORAGE_CAPACITY,
                                      alloc))
             {
-                std::string full_string = "Storage backend \"" + backend_type() + "\" is full. It has only " +
-                    std::to_string(uh::dbn::licensing::global_license_pointer->license_package()
-                                       .free_count(uh::licensing::license_package::hard_metered_feature::LIMIT_STORAGE_CAPACITY))
-                    + " bytes free on its license and by that cannot store another chunk with "
-                    + std::to_string(alloc) + " bytes!";
+                WARNING << "Storage backend \"" + backend_type() + "\" has only " +
+                        std::to_string(uh::dbn::licensing::global_license_pointer->license_package()
+                                           .free_count(uh::licensing::license_package::hard_metered_feature::LIMIT_STORAGE_CAPACITY))
+                        + " bytes free on its license!";
 
-                ERROR << full_string;
-                THROW(util::exception, full_string);
+                if (!uh::dbn::licensing::global_license_pointer->license_package()
+                    .hard_limit_allocate(uh::licensing::license_package::hard_metered_feature::LIMIT_STORAGE_CAPACITY,
+                                         alloc))
+                {
+                    std::string full_string = "Storage backend \"" + backend_type() + "\" is full. It has only " +
+                        std::to_string(uh::dbn::licensing::global_license_pointer->license_package()
+                                           .free_count(uh::licensing::license_package::hard_metered_feature::LIMIT_STORAGE_CAPACITY))
+                        + " bytes free on its license and by that cannot store another chunk with "
+                        + std::to_string(alloc) + " bytes!";
+
+                    ERROR << full_string;
+                    THROW(util::exception, full_string);
+                }
             }
         }
+    }
+    catch (std::exception &e)
+    {
+        FATAL << "Could not access global licensing module for this reason: " + std::string(e.what());
     }
 }
 
@@ -45,16 +52,30 @@ void metered_backend::metered_alloc(std::size_t alloc)
 
 void metered_backend::metered_dealloc(std::size_t dealloc)
 {
-    uh::dbn::licensing::global_license_pointer->license_package()
-        .deallocate(uh::licensing::license_package::hard_metered_feature::LIMIT_STORAGE_CAPACITY, dealloc);
+    try
+    {
+        uh::dbn::licensing::global_license_pointer->license_package()
+            .deallocate(uh::licensing::license_package::hard_metered_feature::LIMIT_STORAGE_CAPACITY, dealloc);
+    }
+    catch (std::exception &e)
+    {
+        FATAL << "Could not access global licensing module for this reason: " + std::string(e.what());
+    }
 }
 
 // ---------------------------------------------------------------------
 
 std::size_t metered_backend::metered_free_count()
 {
-    return uh::dbn::licensing::global_license_pointer->license_package()
-        .free_count(uh::licensing::license_package::hard_metered_feature::LIMIT_STORAGE_CAPACITY);
+    try
+    {
+        return uh::dbn::licensing::global_license_pointer->license_package()
+            .free_count(uh::licensing::license_package::hard_metered_feature::LIMIT_STORAGE_CAPACITY);
+    }
+    catch (std::exception &e)
+    {
+        FATAL << "Could not access global licensing module for this reason: " + std::string(e.what());
+    }
 }
 
 // ---------------------------------------------------------------------
