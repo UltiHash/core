@@ -11,6 +11,6 @@
 
 namespace uh::an::licensing{
 
-std::unique_ptr<uh::an::licensing::mod> global_license_pointer;
+inline static std::unique_ptr<uh::an::licensing::mod> global_license_pointer;
 
 }

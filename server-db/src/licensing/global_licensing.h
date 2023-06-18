@@ -11,6 +11,6 @@
 
 namespace uh::dbn::licensing{
 
-std::unique_ptr<uh::dbn::licensing::mod> global_license_pointer;
+inline static std::unique_ptr<uh::dbn::licensing::mod> global_license_pointer;
 
 }
