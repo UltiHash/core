@@ -109,6 +109,9 @@ std::unique_ptr<check_online_license> make_test_license<check_online_license>()
 
 BOOST_FIXTURE_TEST_CASE_TEMPLATE(valid_default_license, T, license_types, Fixture)
 {
+    std::filesystem::remove("/tmp/" + appName_test + ".lic");
+    std::filesystem::remove("/tmp/" + appName_test + ".lic_spring");
+
     auto lic = make_test_license<T>();
 
     BOOST_CHECK(lic->valid());
@@ -120,6 +123,9 @@ BOOST_FIXTURE_TEST_CASE_TEMPLATE(valid_default_license, T, license_types, Fixtur
 
 BOOST_AUTO_TEST_CASE(license_package_test)
 {
+    std::filesystem::remove("/tmp/" + appName_test + ".lic");
+    std::filesystem::remove("/tmp/" + appName_test + ".lic_spring");
+
     std::filesystem::path license_path1;
     {
         check_airgap_license tmp_write_airgap(TEMP_DIR, apiKey_test,
