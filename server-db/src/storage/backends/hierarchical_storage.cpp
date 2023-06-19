@@ -5,7 +5,6 @@
 
 #include <io/buffer_generator.h>
 #include <io/file.h>
-#include "licensing/global_licensing.h"
 
 #include <memory>
 
@@ -13,10 +12,9 @@
 namespace uh::dbn::storage
 {
 
-hierarchical_storage::hierarchical_storage(
-    const hierarchical_storage_config &config,
-    uh::dbn::metrics::storage_metrics &storage_metrics,
-    state::scheduled_compressions_state &scheduled_compressions)
+hierarchical_storage::hierarchical_storage(const hierarchical_storage_config &config,
+                                           uh::dbn::metrics::storage_metrics &storage_metrics,
+                                           state::scheduled_compressions_state &scheduled_compressions)
     : m_root(config.db_root),
       m_alloc(config.size_bytes),
       m_used(0),

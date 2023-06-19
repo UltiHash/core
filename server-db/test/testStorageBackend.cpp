@@ -12,22 +12,59 @@
 #include <metrics/mod.h>
 #include <state/scheduled_compressions_state.h>
 #include <storage/backends/hierarchical_storage.h>
+#include <licensing/global_licensing.h>
+#include <licensing/mod.h>
+#include <options/licensing_options.h>
 
 #include <boost/test/unit_test.hpp>
 
-namespace {
 
-class storage_fixture {
+namespace
+{
+
+class set_licensing
+{
+
+protected:
+    set_licensing()
+    {
+        uh::options::licensing_config m_config{};
+        m_config.license_type = "AirgapOnline";
+        m_config.licensing_path = "/tmp/uh-data-node/licensing";
+        m_config.license_replace = true;
+        m_config.license_key = "GZHG-LH7N-RSJK-2J01";
+
+        if (!std::filesystem::exists(m_config.licensing_path))
+        {
+            std::filesystem::create_directories(m_config.licensing_path);
+        }
+
+        uh::dbn::licensing::global_license_pointer_dbn = std::make_unique<uh::dbn::licensing::mod>(m_config);
+        uh::dbn::licensing::global_license_pointer_dbn->start();
+    }
+
+    ~set_licensing(){
+        std::filesystem::remove_all("/tmp/uh-data-node");
+    }
+
+};
+
+class storage_fixture: set_licensing
+{
 public:
     static constexpr std::size_t ALLOCATED_BYTES = 1e6;
 
     storage_fixture()
-            : m_metrics_service({}),
-              m_metrics(m_metrics_service),
-              m_hierarchical({ m_tmp.path(), ALLOCATED_BYTES }, m_metrics, m_scheduled_compressions) {
-    }
+        : set_licensing(),
+          m_metrics_service({}),
+          m_metrics(m_metrics_service),
+          m_hierarchical({m_tmp.path(), ALLOCATED_BYTES},
+                         m_metrics,
+                         m_scheduled_compressions)
+    {}
 
-    uh::dbn::storage::backend &backend() {
+    uh::dbn::storage::backend &backend()
+    {
         return m_hierarchical;
     }
 
@@ -42,12 +79,13 @@ private:
 
 static const std::string CONTENTS_STR = "These are the contents of test_input_file.txt and test_input_file_2.txt";
 
-std::vector<char> to_vector(const std::string& s)
+std::vector<char> to_vector(const std::string &s)
 {
     return {s.begin(), s.end()};
 }
 
-uh::protocol::block_meta_data integrate_data (const std::vector <char> &data, uh::dbn::storage::backend &storage_backend) {
+uh::protocol::block_meta_data integrate_data(const std::vector<char> &data, uh::dbn::storage::backend &storage_backend)
+{
     auto d1 = to_vector(CONTENTS_STR);
     auto res = storage_backend.write_block(d1);
     return {res.second, res.first};
@@ -55,7 +93,7 @@ uh::protocol::block_meta_data integrate_data (const std::vector <char> &data, uh
 
 // ---------------------------------------------------------------------
 
-BOOST_FIXTURE_TEST_CASE( dump_storage_io, storage_fixture )
+BOOST_FIXTURE_TEST_CASE(dump_storage_io, storage_fixture)
 {
     auto block_md = integrate_data(to_vector(CONTENTS_STR), backend());
 
@@ -72,16 +110,15 @@ BOOST_FIXTURE_TEST_CASE( dump_storage_io, storage_fixture )
 
 // ---------------------------------------------------------------------
 
-BOOST_FIXTURE_TEST_CASE( dump_storage_no_duplicates, storage_fixture )
+BOOST_FIXTURE_TEST_CASE(dump_storage_no_duplicates, storage_fixture)
 {
-    auto block_md1 = integrate_data (to_vector(CONTENTS_STR), backend());
-    auto block_md2 = integrate_data (to_vector(CONTENTS_STR), backend());
+    auto block_md1 = integrate_data(to_vector(CONTENTS_STR), backend());
+    auto block_md2 = integrate_data(to_vector(CONTENTS_STR), backend());
 
-    auto hash1 =  uh::dbn::storage::to_hex_string (block_md1.hash.begin(), block_md1.hash.end ());
-    auto hash2 =  uh::dbn::storage::to_hex_string (block_md2.hash.begin(), block_md2.hash.end ());
+    auto hash1 = uh::dbn::storage::to_hex_string(block_md1.hash.begin(), block_md1.hash.end());
+    auto hash2 = uh::dbn::storage::to_hex_string(block_md2.hash.begin(), block_md2.hash.end());
 
     BOOST_CHECK(hash1 == hash2);
 }
-
 
 } // namespace

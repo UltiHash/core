@@ -11,7 +11,7 @@
 #include "io/sha512.h"
 #include "storage/backends/smart_backend/smart_config.h"
 #include <metrics/storage_metrics.h>
-#include "licensing/mod.h"
+#include "licensing/global_licensing.h"
 #include "logging/logging_boost.h"
 #include "util/exception.h"
 
