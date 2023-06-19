@@ -37,7 +37,8 @@ uh-cli --integrate test.uh test --agency-node uh-server-agency:21832
 rm -Rf test
 
 # retrieve test workload and validate their checksums
-yes | uh-cli --retrieve test.uh --target ./ --agency-node uh-server-agency:21832
+mkdir test
+yes | uh-cli --retrieve test.uh --target ./test --agency-node uh-server-agency:21832
 cat checksum.txt | sha512sum -c
 
 # cleanup
