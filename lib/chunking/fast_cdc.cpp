@@ -4,15 +4,16 @@
 
 #include <util/exception.h>
 
+#include <cstring>
+
 
 namespace uh::chunking
 {
 
 // ---------------------------------------------------------------------
 
-fast_cdc::fast_cdc(const fast_cdc_config& c, io::device& in, std::size_t buffer_size)
-        : m_buffer(in, std::max (buffer_size, 2*c.max_size)),
-          m_geartable(reinterpret_cast<const uint64_t*>(random_gen_table)),
+fast_cdc::fast_cdc(const fast_cdc_config& c)
+        : m_geartable(reinterpret_cast<const uint64_t*>(random_gen_table)),
           m_min_size(c.min_size),
           m_max_size(c.max_size),
           m_normal_size(c.normal_size)
@@ -25,61 +26,49 @@ fast_cdc::fast_cdc(const fast_cdc_config& c, io::device& in, std::size_t buffer_
 
 // ---------------------------------------------------------------------
 
-std::span<char> fast_cdc::next_chunk()
+std::size_t fast_cdc::next_ofs(std::span<char> b, uint64_t& fp) const
 {
-    if (m_buffer.fill_buffer() == 0)
+    if (b.size() <= m_min_size)
     {
-        return m_buffer.data();
+        return b.size();
     }
 
-    if (m_buffer.length() < m_min_size)
+    bool done = false;
+    std::size_t pos = m_min_size;
+
+    for (; pos < std::min(m_normal_size, b.size()) && !done; ++pos)
     {
-        auto start = m_buffer.mark();
-        m_buffer.skip(m_buffer.length());
-        return m_buffer.data(start);
+        fp = (fp << 1) + m_geartable[b[pos]];
+        done = !(fp & m_mask_s);
     }
 
-    auto start = m_buffer.mark();
-    to_split_border();
-    return m_buffer.data(start);
+    for (; pos < std::min(m_max_size, b.size()) && !done; ++pos)
+    {
+        fp = (fp << 1) + m_geartable[b[pos]];
+        done = !(fp & m_mask_l);
+    }
+
+    return pos;
 }
 
 // ---------------------------------------------------------------------
 
-void fast_cdc::to_split_border()
+std::vector<uint32_t> fast_cdc::chunk(std::span<char> b) const
 {
-    auto normal = std::min(m_normal_size, m_buffer.length());
+    std::vector<uint32_t> rv;
 
-    m_buffer.skip(m_min_size);
-    unsigned pos = m_min_size;
+    uint64_t fp = 0;
+    std::size_t pos = 0;
 
-    for (; pos < normal; ++pos)
+    while (pos < b.size())
     {
-        int ch = m_buffer.next_byte();
-        m_fp = (m_fp << 1) + m_geartable[ch];
+        auto next = next_ofs(b.subspan(pos), fp);
 
-        if (!(m_fp & m_mask_s))
-        {
-            return;
-        }
+        pos += next;
+        rv.push_back(next);
     }
 
-    for (; pos < std::min(m_max_size, m_buffer.length()); ++pos)
-    {
-        int ch = m_buffer.next_byte();
-        m_fp = (m_fp << 1) + m_geartable[ch];
-
-        if (!(m_fp & m_mask_l))
-        {
-            return;
-        }
-    }
-}
-
-// ---------------------------------------------------------------------
-
-buffer &fast_cdc::get_buffer() {
-    return m_buffer;
+    return rv;
 }
 
 // ---------------------------------------------------------------------
