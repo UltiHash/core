@@ -2,6 +2,8 @@
 
 #include "gear_random.inc"
 
+#include <cstring>
+
 
 namespace uh::chunking
 {
@@ -36,9 +38,8 @@ uint64_t compute_mask(std::size_t average_size)
 
 // ---------------------------------------------------------------------
 
-gear::gear(const gear_config& c, io::device& in, std::size_t buffer_size)
-    : m_buffer(in, std::max (buffer_size, 2 * c.max_size)),
-      m_geartable(reinterpret_cast<const uint64_t*>(random_gen_table)),
+gear::gear(const gear_config& c)
+    : m_geartable(reinterpret_cast<const uint64_t*>(random_gen_table)),
       m_max_size(c.max_size),
       m_mask(compute_mask(c.average_size))
 {
@@ -46,36 +47,30 @@ gear::gear(const gear_config& c, io::device& in, std::size_t buffer_size)
 
 // ---------------------------------------------------------------------
 
-std::span<char> gear::next_chunk()
+std::vector<uint32_t> gear::chunk(std::span<char> b) const
 {
-    if (m_buffer.fill_buffer() == 0)
-    {
-        return m_buffer.data(m_buffer.mark());
-    }
+    std::vector<uint32_t> rv;
 
-    auto start = m_buffer.mark();
-    int ch;
-    while ((ch = m_buffer.next_byte()) != -1)
-    {
-        m_fp = (m_fp << 1) + m_geartable[ch];
-        if ((m_fp & m_mask) == 0)
-        {
-            break;
-        }
+    uint64_t fp = 0;
+    std::size_t pos = 0u;
+    std::size_t last = 0u;
 
-        if (m_buffer.length(start) >= m_max_size)
+    for (pos = 0u; pos < b.size(); ++pos)
+    {
+        fp = (fp << 1) + m_geartable[b[pos]];
+        if ((fp & m_mask) == 0)
         {
-            break;
+            rv.push_back(pos - last);
+            last = pos;
         }
     }
 
-    return m_buffer.data(start);
-}
+    if (last != pos)
+    {
+        rv.push_back(pos - last);
+    }
 
-// ---------------------------------------------------------------------
-
-buffer &gear::get_buffer() {
-    return m_buffer;
+    return rv;
 }
 
 // ---------------------------------------------------------------------

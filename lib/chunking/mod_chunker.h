@@ -32,22 +32,20 @@ struct mod_cdc_config
 
 class mod_chunker : public chunker {
 public:
-    mod_chunker(const mod_cdc_config &config, io::device &in, size_t chunks_count_in_buffer = 10);
+    mod_chunker(const mod_cdc_config &config);
 
-    std::span<char> next_chunk() override;
-    [[nodiscard]] buffer& get_buffer () override;
+    std::vector<uint32_t> chunk(std::span<char> b) const override;
+
+    std::size_t min_size() const override { return m_min_size; }
 
 private:
+    std::size_t next_ofs(std::span<char> b) const;
 
-    inline void refresh_buffer ();
     const std::size_t m_min_size;
     const std::size_t m_max_size;
     const std::size_t m_normal_size;
-    io::device &m_dev;
-    std::vector <char> m_buffer;
-    std::size_t m_buf_size;
-    std::size_t m_pointer {};
 };
 
 }
+
 #endif //CORE_CHUNKTEST_H
