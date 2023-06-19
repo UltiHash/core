@@ -76,6 +76,7 @@ std::pair <std::size_t, std::vector <char>> smart_storage::write_block (const st
     std::size_t effective_size;
     try {
         m_used += data.size();
+        metered_alloc(data.size());
         effective_size = m_smart_core.integrate({sha.data(), size}, std::string_view(data.data(), data.size()));
         update_space_consumption();
     } catch (std::exception& e) {
@@ -87,7 +88,7 @@ std::pair <std::size_t, std::vector <char>> smart_storage::write_block (const st
 }
 
 size_t smart_storage::free_space() {
-    return m_size - m_used;
+    return std::min(m_size - m_used, metered_free_count());
 }
 
 size_t smart_storage::used_space() {

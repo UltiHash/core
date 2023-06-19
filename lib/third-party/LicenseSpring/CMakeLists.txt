@@ -133,10 +133,6 @@ if(${SPRING_SHARED} STREQUAL "ON")
     set(LICENSESPRING_LIBRARY "${COPY_SOURCE_FOLDER}/bin/libLicenseSpring.so")
     set(LICENSESPRING_LIBRARIES ${LICENSESPRING_LIBRARY})
     message("Using library: ${LICENSESPRING_LIBRARIES}")
-
-    #add_library(libLicenseSpring INTERFACE "${LICENSESPRING_INCLUDE_DIRS}")
-    #target_include_directories(libLicenseSpring INTERFACE "${LICENSESPRING_INCLUDE_DIRS}")
-
 else ()
     file(REMOVE_RECURSE "${LICENSE_SPRING_SOURCE_FOLDER}/bin/shared")
 
@@ -153,26 +149,9 @@ else ()
     set(LICENSESPRING_LIBRARY "${COPY_SOURCE_FOLDER}/bin/libLicenseSpring.a")
     set(LICENSESPRING_LIBRARIES ${LICENSESPRING_LIBRARY})
     message("Using library: ${LICENSESPRING_LIBRARIES}")
-
-    #add_library(libLicenseSpring INTERFACE "${LICENSESPRING_INCLUDE_DIRS}")
-    #target_include_directories(libLicenseSpring INTERFACE "${LICENSESPRING_INCLUDE_DIRS}")
 endif ()
 
 # adding all the .h files of the current project
-
-#file(REMOVE_RECURSE "${COPY_SOURCE_FOLDER}/include/curl")
-#file(REMOVE_RECURSE "${COPY_SOURCE_FOLDER}/include/openssl")
-
-#file(REMOVE "${COPY_SOURCE_FOLDER}/bin/libcrypto.a")
-#file(REMOVE "${COPY_SOURCE_FOLDER}/bin/libcrypto.so")
-#file(REMOVE "${COPY_SOURCE_FOLDER}/bin/libcrypto.so.3")
-#file(REMOVE "${COPY_SOURCE_FOLDER}/bin/libssl.a")
-#file(REMOVE "${COPY_SOURCE_FOLDER}/bin/libssl.so")
-#file(REMOVE "${COPY_SOURCE_FOLDER}/bin/libssl.so.3")
-#file(REMOVE "${COPY_SOURCE_FOLDER}/bin/libcurl.a")
-#file(REMOVE "${COPY_SOURCE_FOLDER}/bin/libcurl.so")
-#file(REMOVE "${COPY_SOURCE_FOLDER}/bin/libcurl.so.4")
-#file(REMOVE "${COPY_SOURCE_FOLDER}/bin/libcurl.so.4.8.0")
 
 file(COPY "${COPY_SOURCE_FOLDER}/include" DESTINATION "${CMAKE_CURRENT_LIST_DIR}")
 file(COPY "${COPY_SOURCE_FOLDER}/bin/" DESTINATION "${CMAKE_CURRENT_LIST_DIR}/bin_${CMAKE_BUILD_TYPE}/")

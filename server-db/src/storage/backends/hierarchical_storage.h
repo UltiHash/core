@@ -11,7 +11,6 @@
 #include "io/sha512.h"
 #include "storage/backends/smart_backend/smart_config.h"
 #include <metrics/storage_metrics.h>
-#include "licensing/global_licensing.h"
 #include "logging/logging_boost.h"
 #include "util/exception.h"
 
@@ -65,12 +64,6 @@ public:
     std::pair<std::size_t, std::vector<char>> write_block(const std::span<char> &data) override;
 
     [[nodiscard]] std::filesystem::path get_hash_path(const std::string_view &hash) const;
-
-    void metered_alloc(std::size_t alloc) override;
-
-    void metered_dealloc(std::size_t dealloc) override;
-
-    std::size_t metered_free_count() override;
 
     static constexpr std::size_t BUFFER_SIZE = 128 * 1024;
 private:

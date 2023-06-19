@@ -5,13 +5,13 @@
 #ifndef CORE_COMBINED_BACKEND_H
 #define CORE_COMBINED_BACKEND_H
 
-#include <storage/backend.h>
+#include <storage/metered_backend.h>
 #include "hierarchical_storage.h"
 #include "smart_storage.h"
 
 namespace uh::dbn::storage {
 
-class combined_backend: public backend {
+class combined_backend: public metered_backend {
 
     struct smart_worker {
         smart_storage& m_smart_storage;
