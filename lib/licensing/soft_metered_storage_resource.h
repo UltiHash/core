@@ -6,20 +6,20 @@
 #define CORE_SOFT_METRED_STORAGE_RESOURCE_H
 
 #include <cstdio>
-#include "licensing/soft_metred_resource.h"
+#include "licensing/soft_metered_resource.h"
 #include "util/exception.h"
 
 namespace uh::licensing
 {
 
-class soft_metred_storage_resource: public soft_metred_resource
+class soft_metered_storage_resource: public soft_metered_resource
 {
 
 public:
     /*
      * set up metred limits to check on the licensing model
      */
-    soft_metred_storage_resource(std::size_t hard_limit, std::size_t soft_limit)
+    soft_metered_storage_resource(std::size_t hard_limit, std::size_t soft_limit)
         :
         hard_limit_val(hard_limit), soft_limit_val(soft_limit)
     {

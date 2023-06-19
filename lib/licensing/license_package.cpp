@@ -5,7 +5,7 @@
 #include "licensing/license_package.h"
 #include "logging/logging_boost.h"
 
-#include "soft_metred_storage_resource.h"
+#include "soft_metered_storage_resource.h"
 
 namespace uh::licensing {
 
@@ -205,7 +205,7 @@ namespace uh::licensing {
     // ---------------------------------------------------------------------
 
     void
-    license_package::add_soft_metred_feature(license_package::soft_metered_feature smf, soft_metred_resource *smr)
+    license_package::add_soft_metred_feature(license_package::soft_metered_feature smf, soft_metered_resource *smr)
     {
         hard_metered_features.emplace(static_cast<hard_metered_feature>(smf), smr);
         soft_metered_features.emplace(smf, smr);
@@ -253,7 +253,7 @@ namespace uh::licensing {
 
                 add_soft_metred_feature(
                         uh::licensing::license_package::soft_metered_feature::LIMIT_STORAGE_CAPACITY,
-                        new soft_metred_storage_resource(limitLevel, warnLevel)
+                        new soft_metered_storage_resource(limitLevel, warnLevel)
                 );
 
                 feature_online.erase(WARN_STORAGE_STRING);
@@ -273,7 +273,7 @@ namespace uh::licensing {
 
                     add_hard_metred_feature(
                             uh::licensing::license_package::hard_metered_feature::LIMIT_STORAGE_CAPACITY,
-                            new uh::licensing::soft_metred_storage_resource(limitLevel, limitLevel)
+                            new uh::licensing::soft_metered_storage_resource(limitLevel, limitLevel)
                     );
                 }
                 catch (std::exception &e) {

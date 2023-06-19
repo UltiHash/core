@@ -11,7 +11,7 @@
 namespace uh::licensing
 {
 
-class soft_metred_resource: public metred_resource
+class soft_metered_resource: public metred_resource
 {
 
 public:

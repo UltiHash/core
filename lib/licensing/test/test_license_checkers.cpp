@@ -12,7 +12,7 @@
 #include <licensing/check_airgap_license.h>
 #include <licensing/check_online_license.h>
 #include <licensing/license_package.h>
-#include <licensing/soft_metred_storage_resource.h>
+#include <licensing/soft_metered_storage_resource.h>
 #include <io/temp_file.h>
 
 
@@ -145,11 +145,11 @@ BOOST_AUTO_TEST_CASE(license_package_test)
         BOOST_CHECK(lp.check_feature_enabled(license_package::feature::DEDUPLICATION));
         BOOST_CHECK(lp.check_feature_enabled(license_package::feature::METRICS));
 
-        auto *soft_right = new soft_metred_storage_resource(100, 50);
+        auto *soft_right = new soft_metered_storage_resource(100, 50);
 
         BOOST_REQUIRE_THROW(
             lp.add_soft_metred_feature(license_package::soft_metered_feature::LIMIT_STORAGE_CAPACITY,
-                                       new soft_metred_storage_resource(50, 100)), util::exception);
+                                       new soft_metered_storage_resource(50, 100)), util::exception);
 
         lp.add_soft_metred_feature(license_package::soft_metered_feature::LIMIT_STORAGE_CAPACITY,
                                    soft_right);

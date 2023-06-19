@@ -6,7 +6,7 @@
 #define CORE_LICENSE_PACKAGE_H
 
 #include "licensing/metred_resource.h"
-#include "licensing/soft_metred_resource.h"
+#include "licensing/soft_metered_resource.h"
 #include "licensing/check_online_license.h"
 #include "licensing/check_airgap_license.h"
 #include "util/exception.h"
@@ -156,7 +156,7 @@ public:
      * @param smf soft metered feature to be registered
      * @param smr soft metered resource class to be checked repeatedly
      */
-    void add_soft_metred_feature(soft_metered_feature smf, soft_metred_resource *smr);
+    void add_soft_metred_feature(soft_metered_feature smf, soft_metered_resource *smr);
 
     /**
      *
@@ -183,7 +183,7 @@ private:
 
     std::map<feature, bool> features;
     std::map<hard_metered_feature, metred_resource *> hard_metered_features;
-    std::map<soft_metered_feature, soft_metred_resource *> soft_metered_features;
+    std::map<soft_metered_feature, soft_metered_resource *> soft_metered_features;
 
     check_license *check_lic{};
     std::filesystem::path license_path;
