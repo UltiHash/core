@@ -13,7 +13,7 @@
 cmake_minimum_required(VERSION 3.22.0 FATAL_ERROR)
 set(CMAKE_CXX_STANDARD 20)
 
-project(uhLibLicenseSpring)
+project(libLicenseSpring)
 message(STATUS "Using ${PROJECT_NAME}...")
 
 set(SPRING_SHARED ON)
@@ -160,13 +160,10 @@ file(GLOB HEADER_FILE_LIST ${CMAKE_CURRENT_BINARY_DIR}/include/*.h)
 
 message("Included License Spring at: ${HEADER_FILE_LIST}")
 
-#include_directories(${CMAKE_CURRENT_LIST_DIR}/include/)
-
 set(${PROJECT_NAME}_INCLUDE_DIRS ${CMAKE_CURRENT_LIST_DIR}/include)
 set(${PROJECT_NAME}_LINK_LIBRARIES ${OPENSSL_LIBRARIES} ${CURL_LIBRARIES} ${ZLIB_LIBRARIES})
 
 if(${SPRING_SHARED} STREQUAL "ON")
-    # ${HEADER_FILE_LIST} ${SOURCE_FILE_LIST}
     add_library(${PROJECT_NAME} SHARED IMPORTED GLOBAL)
 
     if(${CMAKE_BUILD_TYPE} STREQUAL "Debug")
@@ -178,7 +175,6 @@ if(${SPRING_SHARED} STREQUAL "ON")
     endif ()
 
 else ()
-    # ${SOURCE_FILE_LIST} ${HEADER_FILE_LIST}
     add_library(${PROJECT_NAME} STATIC IMPORTED GLOBAL)
 
     if(${CMAKE_BUILD_TYPE} STREQUAL "Debug")

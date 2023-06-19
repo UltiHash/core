@@ -161,14 +161,14 @@ BOOST_AUTO_TEST_CASE(license_package_test)
                                    soft_right);
 
         BOOST_REQUIRE_THROW(lp.check_role_enabled(check_license::role::AGENCY_NODE), util::exception);
-        BOOST_REQUIRE_THROW(lp.check_role_enabled(check_license::role::THROW_ROLE), util::exception);
+        BOOST_REQUIRE_THROW(lp.check_role_enabled(check_license::role::INVALID_ROLE), util::exception);
 
         lp.check_role_enabled(check_license::role::DATA_NODE);
 
         BOOST_REQUIRE_THROW(lp.check_license_enabled(check_license::license_type::
                                                      FLOATING_ONLINE_USER_LICENSE), util::exception);
         BOOST_REQUIRE_THROW(lp.check_license_enabled(check_license::license_type::
-                                                     THROW_LICENSE_TYPE), util::exception);
+                                                     INVALID_LICENSE_TYPE), util::exception);
 
         lp.check_license_enabled(check_license::license_type::AIRGAP_LICENSE_WITH_ONLINE_ACTIVATION);
 

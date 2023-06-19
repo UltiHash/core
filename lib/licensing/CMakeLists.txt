@@ -9,7 +9,7 @@ find_package(Boost 1.80 COMPONENTS system unit_test_framework json REQUIRED)
 find_package(OpenSSL REQUIRED)
 
 set(${PROJECT_NAME}_INCLUDE_DIRS ${Boost_INCLUDE_DIRS})
-set(${PROJECT_NAME}_LINK_LIBRARIES ${Boost_LIBRARIES} ${OPENSSL_LIBRARIES} uhLibIo uhLibLicenseSpring uhLibLogging)
+set(${PROJECT_NAME}_LINK_LIBRARIES ${Boost_LIBRARIES} ${OPENSSL_LIBRARIES} uhLibIo libLicenseSpring uhLibLogging)
 
 # adding all the .h files of the current project
 file(GLOB HEADER_FILE_LIST ${CMAKE_CURRENT_SOURCE_DIR}/*.h)
