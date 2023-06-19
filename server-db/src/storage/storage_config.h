@@ -28,7 +28,7 @@ struct compressed_file_store_config
 struct storage_config
 {
     constexpr static std::string_view default_data_directory = "/var/lib/uh-data-node";
-    constexpr static std::string_view default_backend_type = "HierarchicalStorage";
+    constexpr static std::string_view default_backend_type = "SmartStorage";
     constexpr static size_t default_allocated_size = 0;
     size_t allocate_bytes = 0;
     size_t max_file_size = 1024ul * 1024ul * 1024ul * 512ul;
