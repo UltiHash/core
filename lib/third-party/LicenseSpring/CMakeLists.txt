@@ -16,11 +16,11 @@ set(CMAKE_CXX_STANDARD 20)
 project(uhLibLicenseSpring)
 message(STATUS "Using ${PROJECT_NAME}...")
 
-set(SPRING_SHARED OFF)
+set(SPRING_SHARED ON)
 
 find_package(ZLIB REQUIRED)
 find_package(CURL 4.8.0 REQUIRED)
-find_package(OpenSSL REQUIRED)
+find_package(OpenSSL 3.0.0 REQUIRED)
 
 #extract OS specific package
 
@@ -160,10 +160,22 @@ endif ()
 
 # adding all the .h files of the current project
 
-file(COPY "${COPY_SOURCE_FOLDER}/include" DESTINATION "${CMAKE_CURRENT_LIST_DIR}"
-        #[===[PATTERN "curl*" EXCLUDE]===])
-file(COPY "${COPY_SOURCE_FOLDER}/bin/" DESTINATION "${CMAKE_CURRENT_LIST_DIR}/bin_${CMAKE_BUILD_TYPE}/"
-        #[===[PATTERN "libcurl*" EXCLUDE]===])
+file(REMOVE_RECURSE "${COPY_SOURCE_FOLDER}/include/curl")
+file(REMOVE_RECURSE "${COPY_SOURCE_FOLDER}/include/openssl")
+
+file(REMOVE "${COPY_SOURCE_FOLDER}/bin/libcrypto.a")
+file(REMOVE "${COPY_SOURCE_FOLDER}/bin/libcrypto.so")
+file(REMOVE "${COPY_SOURCE_FOLDER}/bin/libcrypto.so.3")
+file(REMOVE "${COPY_SOURCE_FOLDER}/bin/libssl.a")
+file(REMOVE "${COPY_SOURCE_FOLDER}/bin/libssl.so")
+file(REMOVE "${COPY_SOURCE_FOLDER}/bin/libssl.so.3")
+file(REMOVE "${COPY_SOURCE_FOLDER}/bin/libcurl.a")
+file(REMOVE "${COPY_SOURCE_FOLDER}/bin/libcurl.so")
+file(REMOVE "${COPY_SOURCE_FOLDER}/bin/libcurl.so.4")
+file(REMOVE "${COPY_SOURCE_FOLDER}/bin/libcurl.so.4.8.0")
+
+file(COPY "${COPY_SOURCE_FOLDER}/include" DESTINATION "${CMAKE_CURRENT_LIST_DIR}")
+file(COPY "${COPY_SOURCE_FOLDER}/bin/" DESTINATION "${CMAKE_CURRENT_LIST_DIR}/bin_${CMAKE_BUILD_TYPE}/")
 
 file(GLOB HEADER_FILE_LIST ${CMAKE_CURRENT_BINARY_DIR}/include/*.h)
 
