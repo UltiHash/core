@@ -20,7 +20,7 @@ set(SPRING_SHARED ON)
 
 find_package(ZLIB REQUIRED)
 find_package(CURL 4.8.0 REQUIRED)
-find_package(OpenSSL 3.0.0 REQUIRED)
+find_package(OpenSSL REQUIRED)
 
 #extract OS specific package
 
