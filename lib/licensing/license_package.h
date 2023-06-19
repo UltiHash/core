@@ -92,7 +92,7 @@ public:
      * @param l license to be validated
      * @throw if license type does not match requested license type or license not loaded
      */
-    void check_license_enabled(check_license::license_type l);
+    void check_license_enabled(LicenseTypeEnum l);
 
     /**
      *

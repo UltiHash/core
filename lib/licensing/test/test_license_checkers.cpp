@@ -73,7 +73,7 @@ std::unique_ptr<check_airgap_license> make_test_license<check_airgap_license>()
     {
         check_airgap_license tmp_write_airgap(TEMP_DIR, apiKey_test,
                                               sharedKey_test, product_Id_test);
-        tmp_write_airgap.write_license(check_license::role::DATA_NODE, appName_test,
+        tmp_write_airgap.write_license(check_license::NodeRole::DataNode, appName_test,
                                        appVersion_test, licenseKey_100);
         license_path1 = tmp_write_airgap.getLicensePath();
     }
@@ -93,7 +93,7 @@ std::unique_ptr<check_online_license> make_test_license<check_online_license>()
     {
         check_online_license tmp_write_online(TEMP_DIR, apiKey_test,
                                               sharedKey_test, product_Id_test);
-        tmp_write_online.write_license(check_license::role::DATA_NODE, appName_test,
+        tmp_write_online.write_license(check_license::NodeRole::DataNode, appName_test,
                                        appVersion_test, user_name_test,
                                        password_test);
         license_path1 = tmp_write_online.getLicensePath();
@@ -130,7 +130,7 @@ BOOST_AUTO_TEST_CASE(license_package_test)
     {
         check_airgap_license tmp_write_airgap(TEMP_DIR, apiKey_test,
                                               sharedKey_test, product_Id_test);
-        tmp_write_airgap.write_license(check_license::role::DATA_NODE, appName_test,
+        tmp_write_airgap.write_license(check_license::NodeRole::DataNode, appName_test,
                                        appVersion_test, licenseKey_100);
         license_path1 = tmp_write_airgap.getLicensePath();
     }
@@ -160,17 +160,15 @@ BOOST_AUTO_TEST_CASE(license_package_test)
         lp.add_soft_metred_feature(license_package::soft_metered_feature::LIMIT_STORAGE_CAPACITY,
                                    soft_right);
 
-        BOOST_REQUIRE_THROW(lp.check_role_enabled(check_license::role::AGENCY_NODE), util::exception);
-        BOOST_REQUIRE_THROW(lp.check_role_enabled(check_license::role::INVALID_ROLE), util::exception);
+        BOOST_REQUIRE_THROW(lp.check_role_enabled(check_license::NodeRole::AgencyNode), util::exception);
+        BOOST_REQUIRE_THROW(lp.check_role_enabled(check_license::NodeRole::OtherRole), util::exception);
 
-        lp.check_role_enabled(check_license::role::DATA_NODE);
+        lp.check_role_enabled(check_license::NodeRole::DataNode);
 
-        BOOST_REQUIRE_THROW(lp.check_license_enabled(check_license::license_type::
-                                                     FLOATING_ONLINE_USER_LICENSE), util::exception);
-        BOOST_REQUIRE_THROW(lp.check_license_enabled(check_license::license_type::
-                                                     INVALID_LICENSE_TYPE), util::exception);
+        BOOST_REQUIRE_THROW(lp.check_license_enabled(LicenseTypeEnum::FloatingOnline), util::exception);
+        BOOST_REQUIRE_THROW(lp.check_license_enabled(LicenseTypeEnum::OtherLicense), util::exception);
 
-        lp.check_license_enabled(check_license::license_type::AIRGAP_LICENSE_WITH_ONLINE_ACTIVATION);
+        lp.check_license_enabled(LicenseTypeEnum::AirgapOnline);
 
         BOOST_CHECK(lp.valid());
 
@@ -216,7 +214,7 @@ BOOST_AUTO_TEST_CASE(license_package_test)
     {
         check_airgap_license tmp_write_airgap(license_path1, apiKey_test,
                                               sharedKey_test, product_Id_test);
-        BOOST_CHECK_THROW(tmp_write_airgap.write_license(check_license::role::DATA_NODE, appName_test,
+        BOOST_CHECK_THROW(tmp_write_airgap.write_license(check_license::NodeRole::DataNode, appName_test,
                                                          appVersion_test, licenseKey_100), util::exception);
     }
 
@@ -225,7 +223,7 @@ BOOST_AUTO_TEST_CASE(license_package_test)
                                                sharedKey_test, product_Id_test,
                                                appVersion_test, appVersion_test,
                                                true);
-        BOOST_CHECK_NO_THROW(tmp_write_airgap2.write_license(check_license::role::DATA_NODE, appName_test,
+        BOOST_CHECK_NO_THROW(tmp_write_airgap2.write_license(check_license::NodeRole::DataNode, appName_test,
                                                              appVersion_test, licenseKey_100));
     }
 

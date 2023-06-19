@@ -4,12 +4,6 @@
 
 #include "check_airgap_license.h"
 
-#include <LicenseSpring/Configuration.h>
-#include <LicenseSpring/EncryptString.h>
-#include <LicenseSpring/LicenseManager.h>
-#include <LicenseSpring/Exceptions.h>
-#include <LicenseSpring/LicenseFileStorage.h>
-
 #include <utility>
 
 namespace uh::licensing
@@ -25,11 +19,8 @@ check_airgap_license::check_airgap_license(const std::filesystem::path &license_
                                            std::string appVersion,
                                            bool replace_license)
     :
-    check_license(license_directory, license_type::AIRGAP_LICENSE_WITH_ONLINE_ACTIVATION,
+    check_license(LicenseTypeEnum::AIRGAP_LICENSE_WITH_ONLINE_ACTIVATION,
                   std::move(apiKey_encrypted),
-                  std::move(sharedKey_encrypted),
-                  std::move(productId_encrypted),
-                  std::move(appName),
                   std::move(appVersion))
 {
     this->replace_license = replace_license;
@@ -59,20 +50,7 @@ bool check_airgap_license::valid()
 
     auto licenseId = LicenseSpring::LicenseID::fromKey(license_key); //input license key
 
-    std::filesystem::path spring_lic_path = license_path;
-    spring_lic_path += "_spring";
-
-    auto licenseFileStorage =
-        std::make_shared<LicenseSpring::FileStorageWithLock>(LicenseSpring::
-                                                             FileStorageWithLock(spring_lic_path.wstring()));
-
-    if (!std::filesystem::exists(spring_lic_path))
-        licenseFileStorage->create(spring_lic_path.wstring());
-
-    auto licenseManager =
-        LicenseSpring::LicenseManager::create(pConfiguration, licenseFileStorage);
-
-    return licenseRegister(licenseManager, licenseId);
+    return licenseRegister(pConfiguration, licenseId);
 }
 
 // ---------------------------------------------------------------------
@@ -81,7 +59,7 @@ void check_airgap_license::write_license(check_license::role licenseRole, const 
                                          const std::string &app_version_input,
                                          const std::string &license_key_input)
 {
-    auto out_file = write_license_file(licenseRole, app_name_input, app_version_input);
+    auto out_file = write_license_file(0);
     out_file.write(std::string(keygen_string) + license_key_input + "\n");
 }
 
@@ -122,17 +100,7 @@ std::map<std::string, std::string> check_airgap_license::getCustomAndFeatureFiel
         productId_crypt, // product code that you specified in LicenseSpring for your application
         appName, appVersion, options);
 
-    std::filesystem::path spring_lic_path = license_path;
-    spring_lic_path += "_spring";
-
-    auto licenseFileStorage =
-        std::make_shared<LicenseSpring::FileStorageWithLock>(LicenseSpring::
-                                                             FileStorageWithLock(spring_lic_path.wstring()));
-
-    auto licenseManager =
-        LicenseSpring::LicenseManager::create(pConfiguration, licenseFileStorage);
-
-    return check_license::getCustomAndFeatureFields(licenseManager);
+    return check_license::getCustomAndFeatureFields(pConfiguration);
 }
 
 // ---------------------------------------------------------------------

@@ -45,10 +45,10 @@ void maybe_create_license_root_directory(std::filesystem::path license_root)
 
 // ---------------------------------------------------------------------
 
-LicenseTypeEnum define_licensing_type(const std::string &license_type)
+uh::licensing::LicenseTypeEnum define_licensing_type(const std::string &license_type)
 {
-    auto it = string2licensetype.find(license_type);
-    if (it != string2licensetype.end())
+    auto it = uh::licensing::string2licensetype.find(license_type);
+    if (it != uh::licensing::string2licensetype.end())
     {
         return it->second;
     }
@@ -70,7 +70,7 @@ std::unique_ptr<uh::licensing::license_package> make_licensing(const uh::options
 
     switch (license_type)
     {
-        case LicenseTypeEnum::AirgapOnlineActivationLicense:
+        case uh::licensing::LicenseTypeEnum::AirgapOnline:
         {
             if (std::filesystem::is_empty(cfg.licensing_path))
             {
@@ -87,7 +87,7 @@ std::unique_ptr<uh::licensing::license_package> make_licensing(const uh::options
 
                 INFO << "Initialized " + cfg.license_type;
 
-                write_airgap.write_license(uh::licensing::check_license::role::DATA_NODE,
+                write_airgap.write_license(uh::licensing::check_license::role::DataNode,
                                            PROJECT_NAME,
                                            PROJECT_VERSION,
                                            cfg.license_key);
@@ -96,7 +96,7 @@ std::unique_ptr<uh::licensing::license_package> make_licensing(const uh::options
             }
 
             auto read_license =
-                std::make_unique<uh::licensing::license_package>(uh::licensing::check_license::role::DATA_NODE,
+                std::make_unique<uh::licensing::license_package>(uh::licensing::check_license::role::DataNode,
                                                                  cfg.licensing_path,
                                                                  EncryptStr(LICENSE_API_KEY),
                                                                  EncryptStr(LICENSE_SHARED_KEY),
@@ -104,7 +104,9 @@ std::unique_ptr<uh::licensing::license_package> make_licensing(const uh::options
 
             return read_license;
         }
-        case LicenseTypeEnum::OtherLicense:THROW(util::exception, "Not yet implemented licensing model");
+        case uh::licensing::LicenseTypeEnum::FloatingOnline:THROW(util::exception,
+                                                                  "Not yet implemented licensing model");
+        case uh::licensing::LicenseTypeEnum::OtherLicense:THROW(util::exception, "Not yet implemented licensing model");
     }
 
     std::string msg("Not a storage backend type: " + cfg.license_type);
@@ -148,7 +150,7 @@ void mod::start()
     INFO << "          starting licensing module";
 
     if (!m_impl->m_licensing->valid())
-        THROW(util::exception, "UltiHash " + std::string(PROJECT_NAME) + " license was not valid!");
+    THROW(util::exception, "UltiHash " + std::string(PROJECT_NAME) + " license was not valid!");
 
 }
 

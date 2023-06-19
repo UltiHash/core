@@ -50,10 +50,10 @@ uh::options::action options::evaluate(const boost::program_options::variables_ma
             default:
                 std::string err_string = "Received string was: " + m_config.license_key +
                     "Activation command was not populated with either "
-                    "{license key}, "
-                    "{license type;license key}, "
-                    "{license type;license_key;license-path} or "
-                    "{license type;username;password;license-path}."
+                    "\"license key\", "
+                    "\"license type;license key\", "
+                    "\"license type;license_key;license-path\" or "
+                    "\"license type;username;password;license-path\"."
                     " Default license path is /var/lib ."
                     " Default license type is AirgapOnline";
                 INFO << err_string;

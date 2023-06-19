@@ -11,6 +11,10 @@
 
 #include <LicenseSpring/LicenseManager.h>
 #include <LicenseSpring/LicenseID.h>
+#include <LicenseSpring/LicenseFileStorage.h>
+#include <LicenseSpring/Configuration.h>
+#include <LicenseSpring/EncryptString.h>
+#include <LicenseSpring/Exceptions.h>
 
 #include <io/temp_file.h>
 
@@ -19,32 +23,137 @@
 namespace uh::licensing
 {
 
+struct api_config
+{
+public:
+
+    const std::string apiKey;
+    const std::string sharedKey;
+    const std::string productId;
+
+    /**
+     * License Spring info and functions
+     *
+     * apiKey_crypt is 36 characters long
+     * sharedKey_crypt is 43 characters long
+     * productId_crypt is 6 characters long
+     */
+
+    api_config(std::string apiKey_input, std::string shardKey_input, std::string productId_input)
+        :
+        apiKey(std::move(apiKey_input)),
+        sharedKey(std::move(shardKey_input)),
+        productId(std::move(productId_input))
+    {}
+};
+
+struct credential_config
+{
+public:
+
+    const std::string appName;
+    const std::string appVersion;
+
+    credential_config(std::string appName_input, std::string appVersion_input)
+        :
+        appName(std::move(appName_input)),
+        appVersion(std::move(appVersion_input))
+    {}
+
+    bool empty()
+    {
+        return appName.empty() and appVersion.empty();
+    }
+};
+
+// ---------------------------------------------------------------------
+
+enum class LicenseTypeEnum
+{
+    AirgapOnline,
+    FloatingOnline,
+    OtherLicense
+};
+
+static std::unordered_map<std::string, LicenseTypeEnum> string2licensetype = {
+    {"AirgapOnline", LicenseTypeEnum::AirgapOnline},
+    {"FloatingOnline", LicenseTypeEnum::FloatingOnline},
+    {"OtherLicense", LicenseTypeEnum::OtherLicense}
+};
+
+static std::unordered_map<LicenseTypeEnum, std::string> licensetype2string = {
+    {LicenseTypeEnum::AirgapOnline, "AirgapOnline"},
+    {LicenseTypeEnum::FloatingOnline, "FloatingOnline"},
+    {LicenseTypeEnum::OtherLicense, "OtherLicense"}
+};
+
+// ---------------------------------------------------------------------
+
+enum class NodeRole: unsigned char
+{
+    DataNode,
+    AgencyNode,
+    OtherRole
+};
+
+static std::unordered_map<std::string, NodeRole> string2noderole = {
+    {"uh-data-node", NodeRole::DataNode},
+    {"uh-agency-node", NodeRole::AgencyNode},
+    {"uh-other-node", NodeRole::OtherRole}
+};
+
+static std::unordered_map<NodeRole, std::string> noderole2string = {
+    {NodeRole::DataNode, "uh-data-node"},
+    {NodeRole::AgencyNode, "uh-agency-node"},
+    {NodeRole::OtherRole, "uh-other-node"}
+};
+
+struct license_config
+{
+public:
+
+    const LicenseTypeEnum licenseTypeInternal = LicenseTypeEnum::AirgapOnline;
+    const NodeRole licenseNodeRole = NodeRole::DataNode;
+
+    const bool collectNetworkInfo = true;
+    const bool enableLogging = true;
+    const bool enableVMDetection = false;
+    const bool enableSSLcheck = true;
+    const bool enableGuardFile = true;
+
+    std::filesystem::path license_path = "/var/lib";
+    bool replace_license = false;
+
+    license_config() = default;
+
+    license_config(const LicenseTypeEnum licenseType,
+                   const NodeRole nodeRole,
+                   const bool networkInfo_active,
+                   const bool logging_active,
+                   const bool vm_detect_active,
+                   const bool ssl_active,
+                   const bool guard_file_active,
+                   std::filesystem::path license_path_input,
+                   bool replace_license)
+        :
+        licenseTypeInternal(licenseType),
+        licenseNodeRole(nodeRole),
+        collectNetworkInfo(networkInfo_active),
+        enableLogging(logging_active),
+        enableVMDetection(vm_detect_active),
+        enableSSLcheck(ssl_active),
+        enableGuardFile(guard_file_active),
+        license_path(std::move(license_path_input)),
+        replace_license(replace_license)
+    {}
+};
+
+// ---------------------------------------------------------------------
+
 class check_license
 {
 
 public:
-
-    /**
-     *
-     * Check if `role` is enabled in the configured license.
-     */
-    enum class role: unsigned char
-    {
-        INVALID_ROLE,
-        AGENCY_NODE,
-        DATA_NODE
-    };
-
-    /**
-     *
-     * Check the type of a license file
-     */
-    enum class license_type: unsigned char
-    {
-        INVALID_LICENSE_TYPE,
-        AIRGAP_LICENSE_WITH_ONLINE_ACTIVATION,
-        FLOATING_ONLINE_USER_LICENSE
-    };
 
     /**
      * manages license file creation and parsing
@@ -53,39 +162,9 @@ public:
      *
      * @param license_directory is the path where a license file is stored
      */
-    explicit check_license(std::filesystem::path license_directory,
-                           check_license::license_type license_type,
-                           std::string apiKey_encrypted,
-                           std::string sharedKey_encrypted,
-                           std::string productId_enrypted,
-                           std::string appName = "",
-                           std::string appVersion = "");
-
-    /**
-     *
-     * @return role that was initialized by license file
-     * @throw if `role` does not match given license
-     */
-    role check_role();
-
-    /**
-     *
-     * @return type of license handling
-     * @throw if `license_type` is not described in the license file
-     */
-    license_type check_license_type();
-
-    /**
-     *
-     * @return name of app
-     */
-    std::string check_app_name();
-
-    /**
-     *
-     * @return name of app
-     */
-    std::string check_app_version();
+    explicit check_license(uh::licensing::license_config license_config,
+                           uh::licensing::api_config apiKey_input,
+                           uh::licensing::credential_config credentialConfig_input);
 
     /**
      * the default license is not timed
@@ -99,61 +178,12 @@ public:
      *
      * @return if license file representation is written to disk
      */
-    bool is_written();
-
-    /**
-     *
-     * @return license path
-     */
-    [[nodiscard]] const std::filesystem::path &getLicensePath() const;
-
-    /**
-     *
-     * @return a map of key value pairs that will configure the application
-     */
-    virtual std::map<std::string, std::string>
-    getCustomAndFeatureFields()
-    {
-        return {};
-    };
+    [[nodiscard]] bool exists() const;
 
 protected:
-    std::filesystem::path license_path;
-    bool replace_license = false;
-
-    io::file
-    write_license_file(check_license::role licenseRole, const std::string &app_name_input,
-                       const std::string &app_version_input);
-
-    const std::string_view role_string = "server_role: ";
-    const std::string_view license_type_string = "license_type: ";
-
-    const std::string_view appName_string = "app_name: ";
-    const std::string_view appVersion_string = "app_version: ";
-
-    const std::string_view airgap_license_string = "airgap_license_with_online_activation";
-    const std::string_view floating_license_string = "floating_online_user_license";
-
-    // ---------------------------------------------------------------------
-
-    /**
-     * License Spring info and functions
-     *
-     * apiKey_crypt is 36 characters long
-     * sharedKey_crypt is 43 characters long
-     * productId_crypt is 6 characters long
-     */
-    std::string appName,
-        appVersion,
-        apiKey_crypt,
-        sharedKey_crypt,
-        productId_crypt;
-
-    const license_type licenseTypeInternal;
-
-    const bool collectNetworkInfo = true;
-    const bool enableLogging = true;
-    const bool enableVMDetection = false;
+    api_config m_api;
+    credential_config m_credential;
+    license_config m_license;
 
     /**
      *
@@ -161,8 +191,8 @@ protected:
      * @param licenseId license sign method either user based or key based
      * @return success or failure of license activation and check
      */
-    static bool licenseRegister(const std::shared_ptr<LicenseSpring::LicenseManager> &licenseManager,
-                                const LicenseSpring::LicenseID &licenseId);
+    [[nodiscard]] bool licenseRegister(const std::shared_ptr<LicenseSpring::Configuration> &pConfiguration,
+                                       const LicenseSpring::LicenseID &licenseId) const;
 
     /**
      *
@@ -176,8 +206,8 @@ protected:
      * @param licenseManager contains a storage method to find the license file
      * @return a map of key value pairs that will configure the application
      */
-    static std::map<std::string, std::string>
-    getCustomAndFeatureFields(const std::shared_ptr<LicenseSpring::LicenseManager> &licenseManager);
+    [[nodiscard]] std::map<std::string, std::string>
+    getCustomAndFeatureFields(const std::shared_ptr<LicenseSpring::Configuration> &pConfiguration) const;
 
     // ---------------------------------------------------------------------
 

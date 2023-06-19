@@ -10,7 +10,6 @@
 
 #include "LicenseSpring/Exceptions.h"
 
-#include <fstream>
 #include <string>
 #include <iostream>
 #include <utility>
@@ -23,122 +22,15 @@ namespace uh::licensing
 
 // ---------------------------------------------------------------------
 
-check_license::check_license(std::filesystem::path license_directory,
-                             check_license::license_type license_type,
-                             std::string apiKey_encrypted,
-                             std::string sharedKey_encrypted,
-                             std::string productId_enrypted,
-                             std::string appName,
-                             std::string appVersion)
+check_license::check_license(uh::licensing::license_config license_config,
+                             uh::licensing::api_config apiKey_input,
+                             uh::licensing::credential_config credentialConfig_input)
     :
-    license_path(std::move(license_directory)),
-    licenseTypeInternal(license_type),
-    appName(std::move(appName)),
-    appVersion(std::move(appVersion)),
-    apiKey_crypt(std::move(apiKey_encrypted)),
-    sharedKey_crypt(std::move(sharedKey_encrypted)),
-    productId_crypt(std::move(productId_enrypted))
-{
-    if (this->appName.empty())
-        this->appName = check_app_name();
+    m_license(std::move(license_config)),
+    m_api(std::move(apiKey_input)),
+    m_credential(std::move(credentialConfig_input))
+{}
 
-    if (this->appVersion.empty())
-        this->appVersion = check_app_version();
-}
-
-// ---------------------------------------------------------------------
-
-check_license::role check_license::check_role()
-{
-    if (!std::filesystem::exists(license_path) || std::filesystem::is_directory(license_path))
-        return {};
-
-    std::fstream license_file_stream(license_path, std::ios_base::in);
-
-    for (std::string line; std::getline(license_file_stream, line);)
-    {
-        if (line.starts_with(role_string))
-        {
-            line = line.substr(role_string.size(), line.size());
-
-            if (line == "uh-agency-node")
-                return check_license::role::AGENCY_NODE;
-
-            if (line == "uh-data-node")
-                return check_license::role::DATA_NODE;
-        }
-    }
-
-    return check_license::role::INVALID_ROLE;
-}
-
-// ---------------------------------------------------------------------
-
-check_license::license_type check_license::check_license_type()
-{
-    if (!std::filesystem::exists(license_path) || std::filesystem::is_directory(license_path))
-        return {};
-
-    std::fstream license_file_stream(license_path, std::ios_base::in);
-
-    for (std::string line; std::getline(license_file_stream, line);)
-    {
-        if (line.starts_with(license_type_string))
-        {
-            line = line.substr(license_type_string.size(), line.size());
-
-            if (line == airgap_license_string)
-                return check_license::license_type::AIRGAP_LICENSE_WITH_ONLINE_ACTIVATION;
-
-            if (line == floating_license_string)
-                return check_license::license_type::FLOATING_ONLINE_USER_LICENSE;
-        }
-    }
-
-    return check_license::license_type::INVALID_LICENSE_TYPE;
-}
-
-// ---------------------------------------------------------------------
-
-std::string check_license::check_app_name()
-{
-    if (!std::filesystem::exists(license_path) || std::filesystem::is_directory(license_path))
-        return {};
-
-    std::fstream license_file_stream(license_path, std::ios_base::in);
-
-    for (std::string line; std::getline(license_file_stream, line);)
-    {
-        if (line.starts_with(appName_string))
-        {
-            line = line.substr(appName_string.size(), line.size());
-            return line;
-        }
-    }
-
-    return {};
-}
-
-// ---------------------------------------------------------------------
-
-std::string check_license::check_app_version()
-{
-    if (!std::filesystem::exists(license_path) || std::filesystem::is_directory(license_path))
-        return {};
-
-    std::fstream license_file_stream(license_path, std::ios_base::in);
-
-    for (std::string line; std::getline(license_file_stream, line);)
-    {
-        if (line.starts_with(appVersion_string))
-        {
-            line = line.substr(appVersion_string.size(), line.size());
-            return line;
-        }
-    }
-
-    return {};
-}
 
 // ---------------------------------------------------------------------
 
@@ -149,118 +41,77 @@ bool check_license::valid()
 
 // ---------------------------------------------------------------------
 
-io::file check_license::write_license_file(check_license::role licenseRole, const std::string &app_name_input,
-                                           const std::string &app_version_input)
+bool check_license::exists() const
 {
+    return std::filesystem::exists(m_license.license_path) and std::filesystem::is_regular_file(m_license.license_path);
+}
 
-    if (replace_license)
+// ---------------------------------------------------------------------
+
+bool check_license::licenseRegister(const std::shared_ptr<LicenseSpring::Configuration> &pConfiguration,
+                                    const LicenseSpring::LicenseID &licenseId) const
+{
+    if (m_license.replace_license)
     {
         try
         {
-            if(!std::filesystem::is_directory(license_path) and license_path.extension() == ".lic")
-                std::filesystem::remove(license_path);
+            if (std::filesystem::is_regular_file(m_license.license_path)
+                and m_license.license_path.extension() == ".lic")
+                std::filesystem::remove(m_license.license_path);
         }
         catch (std::exception &e)
         {
             THROW(util::exception, "Could not remove UltiHash license file for this reason: " +
                 std::string(e.what()));
         }
-
-        try
-        {
-            if(!std::filesystem::is_directory(license_path) and license_path.extension() == ".lic")
-                std::filesystem::remove(license_path.string() + "_spring");
-        }
-        catch (std::exception &e)
-        {
-            THROW(util::exception, "Could not remove License Spring locking file for this reason: " +
-                std::string(e.what()));
-        }
     }
 
-    std::string role_set_string, license_type_set_string;
+    auto licenseFileStorage =
+        std::make_shared<LicenseSpring::FileStorageWithLock>(LicenseSpring::
+                                                             FileStorageWithLock(m_license.license_path.wstring()));
 
-    switch (licenseRole)
-    {
-        case role::AGENCY_NODE:role_set_string = "uh-agency-node";
-            break;
-        case role::DATA_NODE:role_set_string = "uh-data-node";
-            break;
-        default:THROW(util::exception, "No license role detected!");
-    }
+    if (!std::filesystem::exists(m_license.license_path))
+        licenseFileStorage->create(m_license.license_path.wstring());
 
-    switch (licenseTypeInternal)
-    {
-        case license_type::AIRGAP_LICENSE_WITH_ONLINE_ACTIVATION:license_type_set_string = airgap_license_string;
-            break;
-        case license_type::FLOATING_ONLINE_USER_LICENSE:license_type_set_string = floating_license_string;
-            break;
-        default:THROW(util::exception, "No license type detected!");
-    }
-
-    std::filesystem::path out_license_path = license_path / (std::string(role_set_string) + ".lic");
-
-    if (std::filesystem::exists(out_license_path))
-        THROW(util::exception, "A license already existed on path \"" + license_path.string() + "\" !");
-
-    {
-        std::filesystem::path write_tmp_path = license_path;
-        if (write_tmp_path.extension() == ".lic")
-            write_tmp_path = write_tmp_path.parent_path();
-        io::temp_file write_temp(write_tmp_path);
-
-        write_temp.write(std::string(appName_string) + app_name_input + "\n");
-        write_temp.write(std::string(appVersion_string) + app_version_input + "\n");
-        write_temp.write(std::string(role_string) + role_set_string + "\n");
-        write_temp.write(std::string(license_type_string) + license_type_set_string + "\n");
-
-        if (std::filesystem::is_directory(license_path))
-        {
-            license_path = license_path / (role_set_string + ".lic");
-            write_temp.release_to(license_path);
-        }
-
-        else
-        {
-            if (license_path.extension() != ".lic")
-                license_path += ".lic";
-            write_temp.release_to(license_path);
-        }
-    }
-
-    io::file out_file(license_path, std::ios_base::app);
-
-    return out_file;
-}
-
-// ---------------------------------------------------------------------
-
-bool check_license::is_written()
-{
-    return std::filesystem::exists(license_path) and std::filesystem::is_regular_file(license_path);
-}
-
-// ---------------------------------------------------------------------
-
-const std::filesystem::path &check_license::getLicensePath() const
-{
-    return license_path;
-}
-
-// ---------------------------------------------------------------------
-
-bool check_license::licenseRegister(const std::shared_ptr<LicenseSpring::LicenseManager> &licenseManager,
-                                    const LicenseSpring::LicenseID &licenseId)
-{
+    auto licenseManager =
+        LicenseSpring::LicenseManager::create(pConfiguration, licenseFileStorage);
 
     LicenseSpring::License::ptr_t license = licenseManager->reloadLicense();
+
     if (!license_check(license))
     {
         try
         {
             license = licenseManager->activateLicense(licenseId);
+
+            std::string role_set_string, license_type_set_string;
+
+            switch (m_license.licenseNodeRole)
+            {
+                case NodeRole::AgencyNode:role_set_string = noderole2string[NodeRole::AgencyNode];
+                    break;
+                case NodeRole::DataNode:role_set_string = noderole2string[NodeRole::DataNode];
+                    break;
+                default:THROW(util::exception, "No license role detected!");
+            }
+
+            switch (m_license.licenseTypeInternal)
+            {
+                case LicenseTypeEnum::AirgapOnline:
+                    license_type_set_string = licensetype2string[LicenseTypeEnum::AirgapOnline];
+                    break;
+                case LicenseTypeEnum::FloatingOnline:
+                    license_type_set_string = licensetype2string[LicenseTypeEnum::FloatingOnline];
+                    break;
+                default:THROW(util::exception, "No license type detected!");
+            }
+
+            license->addDeviceVariable("LicenseRole", role_set_string);
+            license->addDeviceVariable("LicenseType", license_type_set_string);
+            INFO << "License status: " << license->status();
         }
-        catch (std::exception& e){
+        catch (std::exception &e)
+        {
             ERROR << e.what();
             return false;
         }
@@ -305,7 +156,8 @@ bool check_license::license_check(const LicenseSpring::License::ptr_t &license)
                 return false;
             }
         }
-        catch (std::exception& e){
+        catch (std::exception &e)
+        {
             ERROR << e.what();
             return false;
         }
@@ -345,7 +197,8 @@ bool check_license::license_check(const LicenseSpring::License::ptr_t &license)
                 return false;
             }
         }
-        catch (std::exception& e){
+        catch (std::exception &e)
+        {
             ERROR << e.what();
             return false;
         }
@@ -360,9 +213,16 @@ bool check_license::license_check(const LicenseSpring::License::ptr_t &license)
 }
 
 std::map<std::string, std::string>
-check_license::getCustomAndFeatureFields(const std::shared_ptr<LicenseSpring::LicenseManager> &licenseManager)
+check_license::getCustomAndFeatureFields(const std::shared_ptr<LicenseSpring::Configuration> &pConfiguration) const
 {
     auto feature_item_registry = std::vector<std::string>({"limitStorage", "warnStorage"});
+
+    auto licenseFileStorage =
+        std::make_shared<LicenseSpring::FileStorageWithLock>(
+            LicenseSpring::FileStorageWithLock(m_license.license_path.wstring()));
+
+    auto licenseManager =
+        LicenseSpring::LicenseManager::create(pConfiguration, licenseFileStorage);
 
     LicenseSpring::License::ptr_t license = licenseManager->reloadLicense();
     auto cf = license->customFields();

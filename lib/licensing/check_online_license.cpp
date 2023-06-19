@@ -29,12 +29,10 @@ check_online_license::check_online_license(const std::filesystem::path &license_
                                            std::string password,
                                            bool replace_license)
     :
-    check_license(license_directory,
-                  license_type::FLOATING_ONLINE_USER_LICENSE,
-                  std::move(apiKey_encrypted),
-                  std::move(sharedKey_encrypted),
-                  std::move(productId_encrypted), std::move(appName),
-                  std::move(appVersion)),
+    check_license(
+        LicenseTypeEnum::FLOATING_ONLINE_USER_LICENSE,
+        std::move(apiKey_encrypted),
+        std::move(appVersion)),
     userName(std::move(userName)),
     password(std::move(password))
 {
@@ -89,7 +87,7 @@ void check_online_license::write_license(check_license::role licenseRole, const 
                                          const std::string &app_version_input,
                                          const std::string &username_input, const std::string &password_input)
 {
-    auto out_file = write_license_file(licenseRole, app_name_input, app_version_input);
+    auto out_file = write_license_file(0);
     out_file.write(std::string(user_name_string) + username_input + "\n");
     out_file.write(std::string(password_string) + password_input + "\n");
 }

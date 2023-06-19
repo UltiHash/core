@@ -18,18 +18,6 @@ namespace uh::dbn::licensing
 
 // ---------------------------------------------------------------------
 
-enum class LicenseTypeEnum
-{
-    AirgapOnlineActivationLicense, OtherLicense
-};
-
-static std::unordered_map<std::string, LicenseTypeEnum> string2licensetype = {
-    {"AirgapOnline", LicenseTypeEnum::AirgapOnlineActivationLicense},
-    {"OtherLicense", LicenseTypeEnum::OtherLicense}
-};
-
-// ---------------------------------------------------------------------
-
 class mod
 {
 public:

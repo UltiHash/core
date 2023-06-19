@@ -26,19 +26,15 @@ license_package::license_package(check_license::role license_role,
     auto init_lambda = [&apiKey, &sharedKey, &productId, this]
         (const std::filesystem::path &license_path_input)
     {
-        auto tmp_license_type_read = check_license(license_path_input,
-                                                   check_license::license_type::
-                                                   AIRGAP_LICENSE_WITH_ONLINE_ACTIVATION,
-                                                   std::string(), std::string(),
-                                                   std::string(),
-                                                   "INIT_APP", "0.0.0");
+        auto tmp_license_type_read = check_license(
+            LicenseTypeEnum::AirgapOnline,
+            std::string(), "0.0.0");
 
         auto license_type_checked = tmp_license_type_read.check_license_type();
 
         switch (license_type_checked)
         {
-
-            case check_license::license_type::AIRGAP_LICENSE_WITH_ONLINE_ACTIVATION:
+            case LicenseTypeEnum::AirgapOnline:
             {
                 auto *tmp_license_valid_airgap = new check_airgap_license(license_path_input,
                                                                           apiKey,
@@ -51,7 +47,7 @@ license_package::license_package(check_license::role license_role,
                 break;
             }
 
-            case check_license::license_type::FLOATING_ONLINE_USER_LICENSE:
+            case LicenseTypeEnum::FloatingOnline:
             {
                 auto *tmp_license_valid_online = new check_airgap_license(license_path_input,
                                                                           apiKey,
@@ -73,13 +69,13 @@ license_package::license_package(check_license::role license_role,
     if (std::filesystem::exists(config) and std::filesystem::is_regular_file(config))
     {
         if (config.extension() != ".lic")
-            THROW(util::exception, "Named license file did not carry extension \".lic\" ! Did you really chose a"
-                                   "license file?");
+        THROW(util::exception, "Named license file did not carry extension \".lic\" ! Did you really chose a"
+                               "license file?");
 
-        check_license::license_type licenseTypeToCheck = init_lambda(config);
+        LicenseTypeEnum licenseTypeToCheck = init_lambda(config);
         check_role_enabled(license_role);
-        if (licenseTypeToCheck == check_license::license_type::INVALID_LICENSE_TYPE)
-            THROW(util::exception, "License type checker failed to wrong type of license check!");
+        if (licenseTypeToCheck == LicenseTypeEnum::OtherLicense)
+        THROW(util::exception, "License type checker failed to wrong type of license check!");
 
         feature_activation();
 
@@ -92,7 +88,7 @@ license_package::license_package(check_license::role license_role,
     {
         if (file_object.is_regular_file() && file_object.path().extension() == ".lic")
         {
-            check_license::license_type licenseTypeToCheck = init_lambda(file_object.path());
+            LicenseTypeEnum licenseTypeToCheck = init_lambda(file_object.path());
 
             try
             {
@@ -101,7 +97,7 @@ license_package::license_package(check_license::role license_role,
 
                 feature_activation();
 
-                if (licenseTypeToCheck != check_license::license_type::INVALID_LICENSE_TYPE)
+                if (licenseTypeToCheck != LicenseTypeEnum::OtherLicense)
                 {
                     INFO << "Loading license from " + this->license_path.string();
                     return;
@@ -120,21 +116,21 @@ license_package::license_package(check_license::role license_role,
 void license_package::check_role_enabled(check_license::role r)
 {
     if (check_lic == nullptr)
-        THROW(util::exception, "No license was loaded on check_role_enabled!");
+    THROW(util::exception, "No license was loaded on check_role_enabled!");
 
     if (check_lic->check_role() != r)
-        THROW(util::exception, "Requested role did not match license role!");
+    THROW(util::exception, "Requested role did not match license role!");
 }
 
 // ---------------------------------------------------------------------
 
-void license_package::check_license_enabled(check_license::license_type l)
+void license_package::check_license_enabled(LicenseTypeEnum l)
 {
     if (check_lic == nullptr)
-        THROW(util::exception, "No license was loaded on check_license_enabled!");
+    THROW(util::exception, "No license was loaded on check_license_enabled!");
 
     if (check_lic->check_license_type() != l)
-        THROW(util::exception, "Requested role did not match license role!");
+    THROW(util::exception, "Requested role did not match license role!");
 }
 
 // ---------------------------------------------------------------------
@@ -149,7 +145,7 @@ bool license_package::check_feature_enabled(license_package::feature f) const
 bool license_package::hard_limit_allocate(license_package::hard_metered_feature hmf, std::size_t alloc)
 {
     if (!hard_metered_features.contains(hmf))
-        THROW(util::exception, "Hard metred feature was not avialable!");
+    THROW(util::exception, "Hard metred feature was not avialable!");
 
     return hard_metered_features.at(hmf)->hard_limit_allocate(alloc);
 }
@@ -159,7 +155,7 @@ bool license_package::hard_limit_allocate(license_package::hard_metered_feature 
 bool license_package::soft_limit_allocate(license_package::soft_metered_feature smf, std::size_t alloc)
 {
     if (!soft_metered_features.contains(smf))
-        THROW(util::exception, "Soft metred feature was not avialable!");
+    THROW(util::exception, "Soft metred feature was not avialable!");
 
     return soft_metered_features.at(smf)->soft_limit_allocate(alloc);
 }
@@ -203,7 +199,7 @@ std::size_t license_package::free_count(license_package::hard_metered_feature hm
 bool license_package::valid()
 {
     if (!check_lic)
-        THROW(util::exception, "No license was loaded on valid check!");
+    THROW(util::exception, "No license was loaded on valid check!");
 
     return check_lic->valid();
 }
@@ -243,7 +239,7 @@ bool license_package::has_soft_metred_feature(license_package::soft_metered_feat
 std::map<std::string, std::string> license_package::getCustomAndFeatureFields()
 {
     if (check_lic == nullptr)
-        THROW(util::exception, "License package type was empty and not correctly set!");
+    THROW(util::exception, "License package type was empty and not correctly set!");
 
     return check_lic->getCustomAndFeatureFields();
 }
