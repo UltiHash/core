@@ -16,7 +16,7 @@ set(CMAKE_CXX_STANDARD 20)
 project(uhLibLicenseSpring)
 message(STATUS "Using ${PROJECT_NAME}...")
 
-set(SPRING_SHARED ON)
+set(SPRING_SHARED OFF)
 
 find_package(ZLIB REQUIRED)
 find_package(CURL 4.8.0 REQUIRED)
