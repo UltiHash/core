@@ -36,27 +36,26 @@ mod::mod(const config& cfg)
       m_chunk_size(cfg.chunk_size_in_bytes),
       m_fast_cdc(cfg.fast_cdc),
       m_gear(cfg.gear),
-      m_mod_cdc(cfg.mod_cdc),
-      m_rabin(cfg.rabin)
+      m_mod_cdc(cfg.mod_cdc)
 {
 }
 
 // ---------------------------------------------------------------------
 
-std::unique_ptr<uh::chunking::chunker> mod::create_chunker(io::device& d, std::size_t buffer_size)
+std::unique_ptr<uh::chunking::chunker> mod::create_chunker(io::device& d, std::size_t file_size)
 {
     switch (m_strategy)
     {
         case ChunkingStrategy::FixedSize:
-            return std::make_unique<uh::chunking::fixed_size_chunker>(d, m_chunk_size, buffer_size);
+            return std::make_unique<uh::chunking::fixed_size_chunker>(m_chunk_size);
         case ChunkingStrategy::Gear:
-            return std::make_unique<uh::chunking::gear>(m_gear, d, buffer_size);
+            return std::make_unique<uh::chunking::gear>(m_gear);
         case ChunkingStrategy::FastCDC:
-            return std::make_unique<uh::chunking::fast_cdc>(m_fast_cdc, d, buffer_size);
+            return std::make_unique<uh::chunking::fast_cdc>(m_fast_cdc);
         case ChunkingStrategy::ModCDC:
-            return std::make_unique<uh::chunking::mod_chunker>(m_mod_cdc, d);
+            return std::make_unique<uh::chunking::mod_chunker>(m_mod_cdc);
         case ChunkingStrategy::CDCrabin:
-            return std::make_unique<uh::chunking::rabin_fp>(m_rabin, d);
+            return std::make_unique<uh::chunking::rabin_fp>();
     }
 
     THROW(util::exception, "chunk type not implemented");
