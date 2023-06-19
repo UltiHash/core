@@ -7,8 +7,8 @@
 
 #include "licensing/metred_resource.h"
 #include "licensing/soft_metered_resource.h"
-#include "licensing/check_online_license.h"
-#include "licensing/check_airgap_license.h"
+#include "licensing/check_user_license.h"
+#include "licensing/check_key_license.h"
 #include "util/exception.h"
 
 #include <map>

@@ -36,10 +36,10 @@ license_package::license_package(check_license::role license_role,
         {
             case LicenseTypeEnum::AirgapOnline:
             {
-                auto *tmp_license_valid_airgap = new check_airgap_license(license_path_input,
-                                                                          apiKey,
-                                                                          sharedKey,
-                                                                          productId);
+                auto *tmp_license_valid_airgap = new check_key_license(license_path_input,
+                                                                       apiKey,
+                                                                       sharedKey,
+                                                                       productId);
 
                 if (tmp_license_valid_airgap->valid())check_lic = tmp_license_valid_airgap;
                 else delete tmp_license_valid_airgap;
@@ -49,10 +49,10 @@ license_package::license_package(check_license::role license_role,
 
             case LicenseTypeEnum::FloatingOnline:
             {
-                auto *tmp_license_valid_online = new check_airgap_license(license_path_input,
-                                                                          apiKey,
-                                                                          sharedKey,
-                                                                          productId);
+                auto *tmp_license_valid_online = new check_key_license(license_path_input,
+                                                                       apiKey,
+                                                                       sharedKey,
+                                                                       productId);
 
                 if (tmp_license_valid_online->valid())check_lic = tmp_license_valid_online;
                 else delete tmp_license_valid_online;

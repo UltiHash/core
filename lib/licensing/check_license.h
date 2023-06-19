@@ -108,6 +108,25 @@ static std::unordered_map<NodeRole, std::string> noderole2string = {
     {NodeRole::OtherRole, "uh-other-node"}
 };
 
+struct license_activate_config
+{
+public:
+    const std::string username;
+    const std::string password;
+    const std::string key;
+
+    license_activate_config(std::string username_input, std::string password_input)
+        :
+        username(std::move(username_input)),
+        password(std::move(password_input))
+    {}
+
+    explicit license_activate_config(std::string key_input)
+        :
+        key(std::move(key_input))
+    {}
+};
+
 struct license_config
 {
 public:
@@ -180,6 +199,13 @@ public:
      */
     [[nodiscard]] bool exists() const;
 
+    /**
+     *
+     * @return a map of key value pairs that will configure the application
+     */
+    [[nodiscard]] std::map<std::string, std::string>
+    getCustomAndFeatureFields();
+
 protected:
     api_config m_api;
     credential_config m_credential;
@@ -191,8 +217,7 @@ protected:
      * @param licenseId license sign method either user based or key based
      * @return success or failure of license activation and check
      */
-    [[nodiscard]] bool licenseRegister(const std::shared_ptr<LicenseSpring::Configuration> &pConfiguration,
-                                       const LicenseSpring::LicenseID &licenseId) const;
+    bool licenseRegister(const LicenseSpring::LicenseID &licenseId);
 
     /**
      *
@@ -201,15 +226,15 @@ protected:
      */
     static bool license_check(const LicenseSpring::License::ptr_t &license);
 
-    /**
-     *
-     * @param licenseManager contains a storage method to find the license file
-     * @return a map of key value pairs that will configure the application
-     */
-    [[nodiscard]] std::map<std::string, std::string>
-    getCustomAndFeatureFields(const std::shared_ptr<LicenseSpring::Configuration> &pConfiguration) const;
+    LicenseSpring::ExtendedOptions getOptions();
 
-    // ---------------------------------------------------------------------
+    [[nodiscard]] const license_config &getLicense() const;
+
+    [[nodiscard]] const api_config &getApi() const;
+
+    [[nodiscard]] const credential_config &getCredentials() const;
+
+    std::shared_ptr<LicenseSpring::Configuration> getLicenseSpringConfig();
 
 };
 

@@ -48,8 +48,64 @@ bool check_license::exists() const
 
 // ---------------------------------------------------------------------
 
-bool check_license::licenseRegister(const std::shared_ptr<LicenseSpring::Configuration> &pConfiguration,
-                                    const LicenseSpring::LicenseID &licenseId) const
+std::map<std::string, std::string>
+check_license::getCustomAndFeatureFields()
+{
+    auto feature_item_registry = std::vector<std::string>({"limitStorage", "warnStorage"});
+
+    auto licenseFileStorage =
+        std::make_shared<LicenseSpring::FileStorageWithLock>(
+            LicenseSpring::FileStorageWithLock(m_license.license_path.wstring()));
+
+    auto licenseManager =
+        LicenseSpring::LicenseManager::create(getLicenseSpringConfig(), licenseFileStorage);
+
+    LicenseSpring::License::ptr_t license = licenseManager->reloadLicense();
+    auto cf = license->customFields();
+    auto features = license->features();
+
+    std::map<std::string, std::string> out_map;
+
+    for (const auto &item : cf)
+    {
+        out_map.emplace(item.fieldName(), item.fieldValue());
+    }
+
+    for (const auto &item : features)
+    {
+        std::string metadata = item.metadata();
+        boost::algorithm::replace_all(metadata, "\\", "");
+
+        if (!metadata.empty())
+        {
+            metadata = metadata.substr(1, metadata.size() - 2);
+            std::stringstream meta_ss(metadata);
+            boost::property_tree::ptree pt;
+            boost::property_tree::read_json(meta_ss, pt);
+
+            for (const auto &item2 : feature_item_registry)
+            {
+                auto optional_child = pt.get_child_optional(item2);
+
+                if (optional_child)
+                {
+                    auto read_entry = optional_child->get_value<std::string>();
+                    out_map.emplace(item2, read_entry);
+                }
+            }
+        }
+        else
+        {
+            out_map.emplace(item.name(), item.metadata());
+        }
+    }
+
+    return out_map;
+}
+
+// ---------------------------------------------------------------------
+
+bool check_license::licenseRegister(const LicenseSpring::LicenseID &licenseId)
 {
     if (m_license.replace_license)
     {
@@ -74,7 +130,7 @@ bool check_license::licenseRegister(const std::shared_ptr<LicenseSpring::Configu
         licenseFileStorage->create(m_license.license_path.wstring());
 
     auto licenseManager =
-        LicenseSpring::LicenseManager::create(pConfiguration, licenseFileStorage);
+        LicenseSpring::LicenseManager::create(getLicenseSpringConfig(), licenseFileStorage);
 
     LicenseSpring::License::ptr_t license = licenseManager->reloadLicense();
 
@@ -124,6 +180,8 @@ bool check_license::licenseRegister(const std::shared_ptr<LicenseSpring::Configu
     }
     else return false;
 }
+
+// ---------------------------------------------------------------------
 
 bool check_license::license_check(const LicenseSpring::License::ptr_t &license)
 {
@@ -212,59 +270,62 @@ bool check_license::license_check(const LicenseSpring::License::ptr_t &license)
     return true;
 }
 
-std::map<std::string, std::string>
-check_license::getCustomAndFeatureFields(const std::shared_ptr<LicenseSpring::Configuration> &pConfiguration) const
+// ---------------------------------------------------------------------
+
+LicenseSpring::ExtendedOptions check_license::getOptions()
 {
-    auto feature_item_registry = std::vector<std::string>({"limitStorage", "warnStorage"});
+    //Collecting network info
+    LicenseSpring::ExtendedOptions options;
 
-    auto licenseFileStorage =
-        std::make_shared<LicenseSpring::FileStorageWithLock>(
-            LicenseSpring::FileStorageWithLock(m_license.license_path.wstring()));
+    auto lic = getLicense();
 
-    auto licenseManager =
-        LicenseSpring::LicenseManager::create(pConfiguration, licenseFileStorage);
+    options.collectNetworkInfo(lic.collectNetworkInfo);
+    options.enableLogging(lic.enableLogging);
+    options.enableVMDetection(lic.enableVMDetection);
+    options.enableSSLCheck(lic.enableSSLcheck);
+    options.enableGuardFile(lic.enableGuardFile);
 
-    LicenseSpring::License::ptr_t license = licenseManager->reloadLicense();
-    auto cf = license->customFields();
-    auto features = license->features();
+    return options;
+}
 
-    std::map<std::string, std::string> out_map;
+// ---------------------------------------------------------------------
 
-    for (const auto &item : cf)
-    {
-        out_map.emplace(item.fieldName(), item.fieldValue());
-    }
+const license_config &check_license::getLicense() const
+{
+    return m_license;
+}
 
-    for (const auto &item : features)
-    {
-        std::string metadata = item.metadata();
-        boost::algorithm::replace_all(metadata, "\\", "");
+// ---------------------------------------------------------------------
 
-        if (!metadata.empty())
-        {
-            metadata = metadata.substr(1, metadata.size() - 2);
-            std::stringstream meta_ss(metadata);
-            boost::property_tree::ptree pt;
-            boost::property_tree::read_json(meta_ss, pt);
+const api_config &check_license::getApi() const
+{
+    return m_api;
+}
 
-            for (const auto &item2 : feature_item_registry)
-            {
-                auto optional_child = pt.get_child_optional(item2);
+// ---------------------------------------------------------------------
 
-                if (optional_child)
-                {
-                    auto read_entry = optional_child->get_value<std::string>();
-                    out_map.emplace(item2, read_entry);
-                }
-            }
-        }
-        else
-        {
-            out_map.emplace(item.name(), item.metadata());
-        }
-    }
+const credential_config &check_license::getCredentials() const
+{
+    return m_credential;
+}
 
-    return out_map;
+// ---------------------------------------------------------------------
+
+std::shared_ptr<LicenseSpring::Configuration> check_license::getLicenseSpringConfig()
+{
+    LicenseSpring::ExtendedOptions options = getOptions();
+    uh::licensing::api_config api = getApi();
+    uh::licensing::credential_config credentials = getCredentials();
+
+    std::shared_ptr<LicenseSpring::Configuration> pConfiguration = LicenseSpring::Configuration::Create(
+        api.apiKey, // your LicenseSpring API key (UUID)
+        api.sharedKey, // your LicenseSpring Shared key
+        api.productId, // product code that you specified in LicenseSpring for your application
+        credentials.appName,
+        credentials.appVersion,
+        options);
+
+    return pConfiguration;
 }
 
 } // namespace uh::licensing

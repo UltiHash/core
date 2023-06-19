@@ -76,13 +76,13 @@ std::unique_ptr<uh::licensing::license_package> make_licensing(const uh::options
             {
                 INFO << "No licenses were found. Creating " + cfg.license_type + " license.";
 
-                uh::licensing::check_airgap_license write_airgap(cfg.licensing_path,
-                                                                 EncryptStr(LICENSE_API_KEY),
-                                                                 EncryptStr(LICENSE_SHARED_KEY),
-                                                                 EncryptStr(LICENSE_PRODUCT_ID),
-                                                                 PROJECT_NAME,
-                                                                 PROJECT_VERSION,
-                                                                 cfg.license_replace
+                uh::licensing::check_key_license write_airgap(cfg.licensing_path,
+                                                              EncryptStr(LICENSE_API_KEY),
+                                                              EncryptStr(LICENSE_SHARED_KEY),
+                                                              EncryptStr(LICENSE_PRODUCT_ID),
+                                                              PROJECT_NAME,
+                                                              PROJECT_VERSION,
+                                                              cfg.license_replace
                 );
 
                 INFO << "Initialized " + cfg.license_type;

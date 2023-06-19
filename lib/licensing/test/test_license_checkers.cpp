@@ -9,8 +9,8 @@
 
 #include <LicenseSpring/EncryptString.h>
 
-#include <licensing/check_airgap_license.h>
-#include <licensing/check_online_license.h>
+#include <licensing/check_key_license.h>
+#include <licensing/check_user_license.h>
 #include <licensing/license_package.h>
 #include <licensing/soft_metered_storage_resource.h>
 #include <io/temp_file.h>
@@ -45,8 +45,8 @@ const std::string password_test = "#u5huzU!ita*o&I4@ona2+OVlGlhehe0!dLDeslticO#r
 // ---------------------------------------------------------------------
 
 typedef boost::mpl::vector<
-    //check_online_license,
-    check_airgap_license
+    //check_user_license,
+    check_key_license
 > license_types;
 
 // ---------------------------------------------------------------------
@@ -67,42 +67,42 @@ std::unique_ptr<T> make_test_license();
 // ---------------------------------------------------------------------
 
 template<>
-std::unique_ptr<check_airgap_license> make_test_license<check_airgap_license>()
+std::unique_ptr<check_key_license> make_test_license<check_key_license>()
 {
     std::filesystem::path license_path1;
     {
-        check_airgap_license tmp_write_airgap(TEMP_DIR, apiKey_test,
-                                              sharedKey_test, product_Id_test);
+        check_key_license tmp_write_airgap(TEMP_DIR, apiKey_test,
+                                           sharedKey_test, product_Id_test);
         tmp_write_airgap.write_license(check_license::NodeRole::DataNode, appName_test,
                                        appVersion_test, licenseKey_100);
         license_path1 = tmp_write_airgap.getLicensePath();
     }
 
-    return std::make_unique<check_airgap_license>(license_path1,
-                                                  apiKey_test,
-                                                  sharedKey_test,
-                                                  product_Id_test);
+    return std::make_unique<check_key_license>(license_path1,
+                                               apiKey_test,
+                                               sharedKey_test,
+                                               product_Id_test);
 }
 
 // ---------------------------------------------------------------------
 
 template<>
-std::unique_ptr<check_online_license> make_test_license<check_online_license>()
+std::unique_ptr<check_user_license> make_test_license<check_user_license>()
 {
     std::filesystem::path license_path1;
     {
-        check_online_license tmp_write_online(TEMP_DIR, apiKey_test,
-                                              sharedKey_test, product_Id_test);
+        check_user_license tmp_write_online(TEMP_DIR, apiKey_test,
+                                            sharedKey_test, product_Id_test);
         tmp_write_online.write_license(check_license::NodeRole::DataNode, appName_test,
                                        appVersion_test, user_name_test,
                                        password_test);
         license_path1 = tmp_write_online.getLicensePath();
     }
 
-    return std::make_unique<check_online_license>(license_path1,
-                                                  apiKey_test,
-                                                  sharedKey_test,
-                                                  product_Id_test);
+    return std::make_unique<check_user_license>(license_path1,
+                                                apiKey_test,
+                                                sharedKey_test,
+                                                product_Id_test);
 }
 
 // ---------------------------------------------------------------------
@@ -128,8 +128,8 @@ BOOST_AUTO_TEST_CASE(license_package_test)
 
     std::filesystem::path license_path1;
     {
-        check_airgap_license tmp_write_airgap(TEMP_DIR, apiKey_test,
-                                              sharedKey_test, product_Id_test);
+        check_key_license tmp_write_airgap(TEMP_DIR, apiKey_test,
+                                           sharedKey_test, product_Id_test);
         tmp_write_airgap.write_license(check_license::NodeRole::DataNode, appName_test,
                                        appVersion_test, licenseKey_100);
         license_path1 = tmp_write_airgap.getLicensePath();
@@ -212,17 +212,17 @@ BOOST_AUTO_TEST_CASE(license_package_test)
     }
 
     {
-        check_airgap_license tmp_write_airgap(license_path1, apiKey_test,
-                                              sharedKey_test, product_Id_test);
+        check_key_license tmp_write_airgap(license_path1, apiKey_test,
+                                           sharedKey_test, product_Id_test);
         BOOST_CHECK_THROW(tmp_write_airgap.write_license(check_license::NodeRole::DataNode, appName_test,
                                                          appVersion_test, licenseKey_100), util::exception);
     }
 
     {
-        check_airgap_license tmp_write_airgap2(license_path1, apiKey_test,
-                                               sharedKey_test, product_Id_test,
-                                               appVersion_test, appVersion_test,
-                                               true);
+        check_key_license tmp_write_airgap2(license_path1, apiKey_test,
+                                            sharedKey_test, product_Id_test,
+                                            appVersion_test, appVersion_test,
+                                            true);
         BOOST_CHECK_NO_THROW(tmp_write_airgap2.write_license(check_license::NodeRole::DataNode, appName_test,
                                                              appVersion_test, licenseKey_100));
     }
