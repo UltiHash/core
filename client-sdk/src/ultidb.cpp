@@ -62,14 +62,12 @@ struct UDB_CONFIG_STRUCT
     UDB_CONFIG_STRUCT() :
             hostname(nullptr),
             port(0),
-            connection_pool(3),
-            chunking_mode(UDB_FAST_CDC)
+            connection_pool(3)
     {};
 
     const char* hostname;
     uint16_t port;
     size_t connection_pool;
-    UDB_CHUNKING_MODE chunking_mode;
 
 };
 
@@ -98,22 +96,6 @@ UDB_RESULT udb_config_set_host_node(UDB_CONFIG* cfg, const char *hostname, uint1
         cfg->hostname = hostname;
         cfg->port = port;
         cfg->connection_pool = connection_pool;
-        return UDB_RESULT_SUCCESS;
-    }
-    catch (const std::exception& e)
-    {
-        error = UDB_RESULT_ERROR;
-        return UDB_RESULT_ERROR;
-    }
-}
-
-// ---------------------------------------------------------------------
-
-UDB_RESULT udb_config_set_chunking_strategy(UDB_CONFIG* cfg, UDB_CHUNKING_MODE chunking_strategy)
-{
-    try
-    {
-        cfg->chunking_mode = chunking_strategy;
         return UDB_RESULT_SUCCESS;
     }
     catch (const std::exception& e)
@@ -207,13 +189,6 @@ UDB_RESULT udb_document_get_data(UDB_DOCUMENT* doc, char** data, size_t* size)
 
 // ---------------------------------------------------------------------
 
-UDB_RESULT udb_document_set_key(UDB_DOCUMENT* doc, UDB_KEY* key)
-{
-    doc->key = key;
-}
-
-// ---------------------------------------------------------------------
-
 UDB_RESULT udb_destroy_document(UDB_DOCUMENT* udb_doc)
 {
     try
@@ -234,26 +209,11 @@ constexpr const char* Exception_Messsage(UDB_RESULT n)
 {
     switch (n)
     {
-        case UDB_RESULT::UDB_UNDEFINED_CHUNKING_MODE: return "Undefined chunking mode.";
+//        case UDB_RESULT::UDB_UNDEFINED_CHUNKING_MODE: return "Undefined chunking mode.";
+        default: return "unrecognized error.";
     }
 
     throw std::logic_error("The given enum doesn't have any string associated with it.");
-}
-
-// ---------------------------------------------------------------------
-
-constexpr const char* strategyString(UDB_CHUNKING_MODE n)
-{
-    switch (n)
-    {
-        case UDB_CHUNKING_MODE::UDB_FIXED_SIZE_CHUNK: return "FixedSize";
-        case UDB_CHUNKING_MODE::UDB_RABIN_FINGERPRINT: return "CDCrabin";
-        case UDB_CHUNKING_MODE::UDB_GEAR_CDC: return "Gear";
-        case UDB_CHUNKING_MODE::UDB_FAST_CDC: return "FastCDC";
-        case UDB_CHUNKING_MODE::UDB_MOD_CDC: return "ModCDC";
-    }
-
-    throw udb_undefined(Exception_Messsage(UDB_UNDEFINED_CHUNKING_MODE));
 }
 
 // ---------------------------------------------------------------------
@@ -275,7 +235,6 @@ struct UDB_STATE_STRUCT
 
     }
 
-    std::unique_ptr<uh::chunking::mod> m_chunking_mod;
     boost::asio::io_context m_io;
     std::unique_ptr<uh::protocol::client_factory> m_client_factory;
 
@@ -287,9 +246,9 @@ struct UDB_CONNECTION_STRUCT
 {
     std::unique_ptr<uh::protocol::client> m_udb_client;
 
-    explicit UDB_CONNECTION_STRUCT(UDB* handle)
+    explicit UDB_CONNECTION_STRUCT(UDB* udb)
     {
-        m_udb_client = handle->m_client_factory->create();
+        m_udb_client = udb->m_client_factory->create();
     }
 };
 
@@ -332,12 +291,6 @@ UDB* udb_create_instance(UDB_CONFIG* config)
     {
         return new UDB(config);
     }
-    catch (const udb_undefined& e)
-    {
-        if ( std::string(e.what()) == Exception_Messsage(UDB_UNDEFINED_CHUNKING_MODE))
-            error = UDB_UNDEFINED_CHUNKING_MODE;
-        return nullptr;
-    }
     catch (const std::exception& e)
     {
         error = UDB_RESULT_ERROR;
@@ -363,11 +316,160 @@ UDB_RESULT udb_destroy_instance(UDB* instance)
 
 // ---------------------------------------------------------------------
 
+UDB_RESULT udb_add(UDB_CONNECTION* conn,
+                   const UDB_DOCUMENT** docs,
+                   UDB_KEY** key,
+                   size_t n)
+{
+    try
+    {
+        for (size_t index = 0; index < n; index++)
+        {
+            std::vector<uint32_t> chunk_sizes; // TODO: inefficient has to change
+            chunk_sizes.push_back(static_cast<uint32_t>(docs[index]->size));
+
+            auto resp = conn->m_udb_client->write_chunks(uh::protocol::write_chunks::request
+                    { chunk_sizes, std::span<const char>(docs[index]->data, docs[index]->size ) });
+
+            char* returned_key = new char[65];
+            std::memcpy(returned_key, resp.hashes.data(), 65);
+//            returned_key[64] = '\0';
+
+            key[index]->key = returned_key;
+            key[index]->length = 64;
+        }
+
+        return UDB_RESULT::UDB_RESULT_SUCCESS;
+    }
+    catch (const std::bad_alloc& e)
+    {
+        error = UDB_BAD_ALLOCATION;
+        return UDB_RESULT::UDB_BAD_ALLOCATION;
+    }
+    catch (const std::exception& e)
+    {
+        error = UDB_RESULT_ERROR;
+        return UDB_RESULT::UDB_RESULT_ERROR;
+    }
+}
+
+// ---------------------------------------------------------------------
+
+UDB_RESULT udb_add_one(UDB_CONNECTION* conn,
+                       const UDB_DOCUMENT* doc,
+                       UDB_KEY* key)
+{
+    try
+    {
+        std::vector<uint32_t> chunk_sizes; // TODO: inefficient has to change
+        chunk_sizes.push_back(static_cast<uint32_t>(doc->size));
+
+        auto resp = conn->m_udb_client->write_chunks(uh::protocol::write_chunks::request
+                                                             { chunk_sizes, std::span<const char>(doc->data,
+                                                               doc->size ) });
+
+        char* returned_key = new char[65];
+        std::memcpy(returned_key, resp.hashes.data(), 65);
+
+        key->key = returned_key;
+        key->length = 64;
+
+        return UDB_RESULT::UDB_RESULT_SUCCESS;
+    }
+    catch (const std::bad_alloc& e)
+    {
+        error = UDB_BAD_ALLOCATION;
+        return UDB_RESULT::UDB_BAD_ALLOCATION;
+    }
+    catch (const std::exception& e)
+    {
+        error = UDB_RESULT_ERROR;
+        return UDB_RESULT::UDB_RESULT_ERROR;
+    }
+}
+
+// ---------------------------------------------------------------------
+
+UDB_RESULT udb_get(UDB_CONNECTION* conn,
+                   const UDB_KEY** key,
+                   UDB_DOCUMENT** doc,
+                   size_t n)
+{
+    try
+    {
+        for (size_t index = 0; index < n; index++)
+        {
+            uh::protocol::read_chunks::request req { .hashes = std::span<const char>(key[index]->key, 64)};
+            auto result = conn->m_udb_client->read_chunks(req);
+
+            /* BUG: Agency Node loses the chunk size information. */
+            /* failure reading compression header should not be the error, instead couldn't read the hash should be the error */
+//          auto retrieved_size = result.chunk_sizes.front();
+
+            auto returned_data_size = std::get<std::vector<char>>(result.data).size();
+            char* returned_data = new char[returned_data_size];
+            std::memcpy(returned_data, std::get<std::vector<char>>(result.data).data(),
+                        returned_data_size );
+
+            doc[index]->data = returned_data;
+            doc[index]->size = returned_data_size;
+        }
+
+        return UDB_RESULT::UDB_RESULT_SUCCESS;
+    }
+    catch (const std::bad_alloc& e)
+    {
+        error = UDB_BAD_ALLOCATION;
+        return UDB_RESULT::UDB_BAD_ALLOCATION;
+    }
+    catch(const std::exception& e)
+    {
+        error = UDB_RESULT_SUCCESS;
+        return UDB_RESULT::UDB_RESULT_ERROR;
+    }
+}
+
+// ---------------------------------------------------------------------
+
+UDB_RESULT udb_get_one(UDB_CONNECTION* conn,
+                       const UDB_KEY* key,
+                       UDB_DOCUMENT* doc)
+{
+    try
+    {
+        uh::protocol::read_chunks::request req { .hashes = std::span<const char>(key->key, 64)};
+        auto result = conn->m_udb_client->read_chunks(req);
+
+        auto returned_data_size = std::get<std::vector<char>>(result.data).size();
+        char* returned_data = new char[returned_data_size];
+        std::memcpy(returned_data, std::get<std::vector<char>>(result.data).data(),
+                    returned_data_size );
+
+        doc->data = returned_data;
+        doc->size = returned_data_size;
+
+        return UDB_RESULT::UDB_RESULT_SUCCESS;
+    }
+    catch (const std::bad_alloc& e)
+    {
+        error = UDB_BAD_ALLOCATION;
+        return UDB_RESULT::UDB_BAD_ALLOCATION;
+    }
+    catch(const std::exception& e)
+    {
+        error = UDB_RESULT_SUCCESS;
+        return UDB_RESULT::UDB_RESULT_ERROR;
+    }
+}
+
+// ---------------------------------------------------------------------
+
 UDB_RESULT udb_ping(UDB_CONNECTION_STRUCT* conn)
 {
     try
     {
         conn->m_udb_client->valid();
+        return UDB_RESULT::UDB_RESULT_SUCCESS;
     }
     catch(const std::exception& e)
     {

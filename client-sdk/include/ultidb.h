@@ -54,8 +54,8 @@ typedef enum : uint8_t
     /* Data couldn't be fit in the buffer given. */
     UDB_BUFFER_OVERFLOW,
 
-    /* Undefined chunking mode given. */
-    UDB_UNDEFINED_CHUNKING_MODE,
+    /* Memory couldn't be allocated. */
+    UDB_BAD_ALLOCATION,
 
 } UDB_RESULT;
 
@@ -70,39 +70,12 @@ const char* get_error_message();
 // is uint8_t enough?
 UDB_RESULT udb_get_last_error();
 
-/** Chunking Strategy to choose from. When the data is large then it is automatically divided into
- * smaller pieces of data which we call chunks. This is done in order to increase the de-duplication ratio as smaller
- * data chunks lead to higher probability of de-duplication. The chunking strategy to choose from are:
- * 1. Fixed Size
- * 2. Gear CDC
- * 3. Fast CDC
- * 4. Mod CDC
-*/
-typedef enum UDB_CHUNKING_MODE {
-
-    /** */
-    UDB_FIXED_SIZE_CHUNK = 0,
-
-    /**  */
-    UDB_GEAR_CDC = 1,
-
-    /**  */
-    UDB_FAST_CDC = 2,
-
-    /** */
-    UDB_MOD_CDC = 3,
-
-    /** */
-    UDB_RABIN_FINGERPRINT = 4,
-
-} UDB_CHUNKING_MODE;
-
 /**
  * Structure that holds a unique key for a given document.
  */
 typedef struct UDB_KEY_STRUCT
 {
-    char* buffer;
+    char* key;
     size_t length;
 } UDB_KEY;
 
@@ -111,14 +84,12 @@ typedef struct UDB_KEY_STRUCT
  */
 typedef struct UDB_DOCUMENT_STRUCT
 {
-    UDB_KEY* key;
-
     char* data;
     size_t size;
 } UDB_DOCUMENT;
 
 /**
- *
+ * A struct that holds the underlying connection to the database.
  */
 typedef struct UDB_CONNECTION_STRUCT UDB_CONNECTION;
 
@@ -164,8 +135,6 @@ UDB_RESULT udb_destroy_document(UDB_DOCUMENT* doc);
  */
 UDB_RESULT udb_document_set_data(UDB_DOCUMENT* doc, char* data, size_t size);
 UDB_RESULT udb_document_get_data(UDB_DOCUMENT* doc, char** data, size_t* size);
-UDB_RESULT udb_document_set_key(UDB_DOCUMENT* doc, UDB_KEY* key);
-UDB_RESULT udb_document_get_key (UDB_DOCUMENT* doc, UDB_KEY** key);
 
 /**
 * Creates an instance of ::UDB_CONFIG (typedef UDB_CONFIG) which can be used to put configuration parameters.
@@ -193,15 +162,6 @@ UDB_RESULT udb_destroy_config(UDB_CONFIG *config);
 UDB_RESULT udb_config_set_host_node(UDB_CONFIG* cfg, const char *hostname, uint16_t port, size_t connection_pool = 3);
 
 /**
- * Sets the chunking strategy in the given config file.
- *
- * @param cfg config file in which the strategy is set
- * @param chunking_strategy enum which describes the strategy to apply
- * @return UDB_RESULT enum which describes the result of the operation
- */
-UDB_RESULT udb_config_set_chunking_strategy(UDB_CONFIG* cfg, UDB_CHUNKING_MODE chunking_strategy);
-
-/**
  * Creates an instance of ::UDB_STATE_STRUCT (typedef UDB) and initializes it.
  */
 UDB* udb_create_instance(UDB_CONFIG *config);
@@ -226,7 +186,7 @@ UDB_RESULT udb_destroy_connection(UDB_CONNECTION* conn);
  * @param handle UDB handle which can be used to perform various udb operations.
  * @return UDB_RESULT enum which describes the result of the operation
  */
-UDB_RESULT udb_ping(UDB_CONNECTION* udb_connection);
+UDB_RESULT udb_ping(UDB_CONNECTION* conn);
 
 /**
  *
@@ -235,16 +195,10 @@ UDB_RESULT udb_ping(UDB_CONNECTION* udb_connection);
  * @param n_udb_docs number of items in the udb_docs array
  * @return UDB_RESULT enum which describes the result of the operation
  */
-UDB_RESULT udb_insert(UDB* handle,
-                      const UDB_DOCUMENT** udb_docs,
-                      size_t n_udb_docs);
-
-/**
- * Insert and generate a key for the documents.
- */
-UDB_RESULT udb_insert_and_genkey(UDB* handle,
-                                 UDB_DOCUMENT** udb_docs,
-                                 size_t n_udb_docs);
+UDB_RESULT udb_add(UDB_CONNECTION* conn,
+                   const UDB_DOCUMENT** docs,
+                   UDB_KEY** key,
+                   size_t n);
 
 /**
  * Convenience function around `udb_insert`.
@@ -253,41 +207,35 @@ UDB_RESULT udb_insert_and_genkey(UDB* handle,
  * @param udb_docs a UDB_DOCUMENT which is to be integrated
  * @return UDB_RESULT enum which describes the result of the operation
  */
-UDB_RESULT udb_insert_one(UDB* handle,
-                          const UDB_DOCUMENT* doc);
-
-/**
- * Convenience function around `udb_insert` which automatically generates a key for the document
- * given.
- *
- * @param handle UDB handle which can be used to perform various udb operations.
- * @param udb_docs a UDB_DOCUMENT which is to be integrated
- * @return UDB_RESULT enum which describes the result of the operation
- */
-UDB_RESULT udb_insert_one_and_genkey(UDB* handle,
-                                     const UDB_DOCUMENT* doc);
+UDB_RESULT udb_add_one(UDB_CONNECTION* conn,
+                       const UDB_DOCUMENT* doc,
+                       UDB_KEY* key);
 
 /**
  * Support our fast uploading without copy overhead.
  */
-UDB_RESULT udb_insert_continuous_genkey(UDB* handle,
-                                        const char* buffer,
-                                        size_t size,
-                                        size_t* offsets,
-                                        size_t count,
-                                        UDB_KEY** out_key);
-
+UDB_RESULT udb_add_continuous(UDB_CONNECTION* conn,
+                              const char* buffer,
+                              size_t size,
+                              size_t* offsets,
+                              size_t count,
+                              UDB_KEY** out_key);
 
 /**
  * See below for two variants of parameter passing.
  */
-UDB_RESULT udb_get(UDB* handle,
+UDB_RESULT udb_get(UDB_CONNECTION* conn,
                    const UDB_KEY** key,
-                   size_t n_key,
-                   UDB_DOCUMENT** doc);
+                   UDB_DOCUMENT** doc,
+                   size_t n_key);
+
+//UDB_RESULT udb_get_by_label(UDB* handle,
+//                   const UDB_LABEL* label,
+//                   size_t n_label,
+//                   UDB_DOCUMENT** doc); //return documents containing all the labels
 
 // Convenience
-UDB_RESULT udb_get_one(UDB* handle,
+UDB_RESULT udb_get_one(UDB_CONNECTION* conn,
                        const UDB_KEY* key,
                        UDB_DOCUMENT* doc);
 
@@ -324,5 +272,5 @@ UDB_RESULT udb_retrieve(UDB_CONNECTION* udb_connection, char* data_buffer, size_
 /* !!!!! Things to Improve
  * 1. Assumption of hash in retrieve being always 64 bytes. This is not very good.
  * 2. There is no chunking being done, and if we do, we do not get only one hash.
- *
+ * 3. pinging as of now is just checking the socket validity which is not ideal.
  */
