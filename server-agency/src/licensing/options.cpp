@@ -25,7 +25,7 @@ uh::options::action options::evaluate(const boost::program_options::variables_ma
         m_config.license_key = std::filesystem::path(vars["activate"].as<std::string>());
     else m_config.license_replace = true;
 
-    m_config.license_type = "AirgapOnline";
+    m_config.license_type = "AirgapKeyOnline";
 
     if (std::any_of(m_config.licensing_path.cbegin(), m_config.licensing_path.cend(),
                     [](auto c)
@@ -55,7 +55,7 @@ uh::options::action options::evaluate(const boost::program_options::variables_ma
                     "{license type;license_key;license-path} or "
                     "{license type;username;password;license-path}."
                     " Default license path is /var/lib ."
-                    " Default license type is AirgapOnline";
+                    " Default license type is AirgapKeyOnline";
                 INFO << err_string;
                 THROW(util::exception, err_string);
         }

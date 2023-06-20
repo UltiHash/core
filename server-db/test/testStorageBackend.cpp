@@ -29,7 +29,7 @@ protected:
     set_licensing()
     {
         uh::options::licensing_config m_config{};
-        m_config.license_type = "AirgapOnline";
+        m_config.license_type = "AirgapKeyOnline";
         m_config.licensing_path = "/tmp/uh-data-node/licensing";
         m_config.license_replace = true;
         m_config.license_key = "GZHG-LH7N-RSJK-2J01";

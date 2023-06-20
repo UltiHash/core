@@ -165,10 +165,10 @@ BOOST_AUTO_TEST_CASE(license_package_test)
 
         lp.check_role_enabled(check_license::NodeRole::DataNode);
 
-        BOOST_REQUIRE_THROW(lp.check_license_enabled(LicenseTypeEnum::FloatingOnline), util::exception);
+        BOOST_REQUIRE_THROW(lp.check_license_enabled(LicenseTypeEnum::AirgapUserOnline), util::exception);
         BOOST_REQUIRE_THROW(lp.check_license_enabled(LicenseTypeEnum::OtherLicense), util::exception);
 
-        lp.check_license_enabled(LicenseTypeEnum::AirgapOnline);
+        lp.check_license_enabled(LicenseTypeEnum::AirgapKeyOnline);
 
         BOOST_CHECK(lp.valid());
 

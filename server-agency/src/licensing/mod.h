@@ -31,7 +31,7 @@ enum class LicenseTypeEnum
 };
 
 static std::unordered_map<std::string, LicenseTypeEnum> string2licensetype = {
-    {"AirgapOnline", LicenseTypeEnum::AirgapOnlineActivationLicense},
+    {"AirgapKeyOnline", LicenseTypeEnum::AirgapOnlineActivationLicense},
     {"OtherLicense", LicenseTypeEnum::OtherLicense}
 };
 

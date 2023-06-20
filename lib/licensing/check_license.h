@@ -70,20 +70,20 @@ public:
 
 enum class LicenseTypeEnum
 {
-    AirgapOnline,
-    FloatingOnline,
+    AirgapKeyOnline,
+    AirgapUserOnline,
     OtherLicense
 };
 
 static std::unordered_map<std::string, LicenseTypeEnum> string2licensetype = {
-    {"AirgapOnline", LicenseTypeEnum::AirgapOnline},
-    {"FloatingOnline", LicenseTypeEnum::FloatingOnline},
+    {"AirgapKeyOnline", LicenseTypeEnum::AirgapKeyOnline},
+    {"AirgapUserOnline", LicenseTypeEnum::AirgapUserOnline},
     {"OtherLicense", LicenseTypeEnum::OtherLicense}
 };
 
 static std::unordered_map<LicenseTypeEnum, std::string> licensetype2string = {
-    {LicenseTypeEnum::AirgapOnline, "AirgapOnline"},
-    {LicenseTypeEnum::FloatingOnline, "FloatingOnline"},
+    {LicenseTypeEnum::AirgapKeyOnline, "AirgapKeyOnline"},
+    {LicenseTypeEnum::AirgapUserOnline, "AirgapUserOnline"},
     {LicenseTypeEnum::OtherLicense, "OtherLicense"}
 };
 
@@ -131,7 +131,7 @@ struct license_config
 {
 public:
 
-    const LicenseTypeEnum licenseTypeInternal = LicenseTypeEnum::AirgapOnline;
+    const LicenseTypeEnum licenseTypeInternal = LicenseTypeEnum::AirgapKeyOnline;
     const NodeRole licenseNodeRole = NodeRole::DataNode;
 
     const bool collectNetworkInfo = true;
@@ -235,6 +235,10 @@ protected:
     [[nodiscard]] const credential_config &getCredentials() const;
 
     std::shared_ptr<LicenseSpring::Configuration> getLicenseSpringConfig();
+
+    license_activate_config getLicenseActivateConfig();
+
+    LicenseSpring::License::ptr_t getLicenseFromLicenseSpring();
 
 };
 

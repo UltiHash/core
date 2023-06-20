@@ -19,7 +19,7 @@ namespace uh::options {
                 "\"license type;license_key;license-path\" or "
                 "\"license type;username;password;license-path\" to activate license on first run."
                 " Default license path DIRECTORY is /var/lib/***-node/licensing ."
-                " Default license type is AirgapOnline");
+                " Default license type is AirgapKeyOnline");
         visible().add_options()
                 ("activate-replace", value<std::string>()->default_value(""),
                  "Enter: \"license key\" or "
@@ -28,7 +28,7 @@ namespace uh::options {
                  "\"license type;username;password;license-path\" to activate license "
                  "and replace/DELETE old license files."
                  " Default license path DIRECTORY is /var/lib/***-node/licensing ."
-                 " Default license type is AirgapOnline");
+                 " Default license type is AirgapKeyOnline");
     }
 
 // ---------------------------------------------------------------------

@@ -27,14 +27,14 @@ license_package::license_package(check_license::role license_role,
         (const std::filesystem::path &license_path_input)
     {
         auto tmp_license_type_read = check_license(
-            LicenseTypeEnum::AirgapOnline,
+            LicenseTypeEnum::AirgapKeyOnline,
             std::string(), "0.0.0");
 
         auto license_type_checked = tmp_license_type_read.check_license_type();
 
         switch (license_type_checked)
         {
-            case LicenseTypeEnum::AirgapOnline:
+            case LicenseTypeEnum::AirgapKeyOnline:
             {
                 auto *tmp_license_valid_airgap = new check_key_license(license_path_input,
                                                                        apiKey,
@@ -47,7 +47,7 @@ license_package::license_package(check_license::role license_role,
                 break;
             }
 
-            case LicenseTypeEnum::FloatingOnline:
+            case LicenseTypeEnum::AirgapUserOnline:
             {
                 auto *tmp_license_valid_online = new check_key_license(license_path_input,
                                                                        apiKey,

@@ -70,7 +70,7 @@ std::unique_ptr<uh::licensing::license_package> make_licensing(const uh::options
 
     switch (license_type)
     {
-        case uh::licensing::LicenseTypeEnum::AirgapOnline:
+        case uh::licensing::LicenseTypeEnum::AirgapKeyOnline:
         {
             if (std::filesystem::is_empty(cfg.licensing_path))
             {
@@ -104,8 +104,8 @@ std::unique_ptr<uh::licensing::license_package> make_licensing(const uh::options
 
             return read_license;
         }
-        case uh::licensing::LicenseTypeEnum::FloatingOnline:THROW(util::exception,
-                                                                  "Not yet implemented licensing model");
+        case uh::licensing::LicenseTypeEnum::AirgapUserOnline:THROW(util::exception,
+                                                                    "Not yet implemented licensing model");
         case uh::licensing::LicenseTypeEnum::OtherLicense:THROW(util::exception, "Not yet implemented licensing model");
     }
 

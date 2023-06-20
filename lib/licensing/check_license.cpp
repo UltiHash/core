@@ -153,11 +153,14 @@ bool check_license::licenseRegister(const LicenseSpring::LicenseID &licenseId)
 
             switch (m_license.licenseTypeInternal)
             {
-                case LicenseTypeEnum::AirgapOnline:
-                    license_type_set_string = licensetype2string[LicenseTypeEnum::AirgapOnline];
+                case LicenseTypeEnum::AirgapKeyOnline:
+                    license_type_set_string = licensetype2string[LicenseTypeEnum::AirgapKeyOnline];
+                    license->addDeviceVariable("Key",licenseId.key());
                     break;
-                case LicenseTypeEnum::FloatingOnline:
-                    license_type_set_string = licensetype2string[LicenseTypeEnum::FloatingOnline];
+                case LicenseTypeEnum::AirgapUserOnline:
+                    license_type_set_string = licensetype2string[LicenseTypeEnum::AirgapUserOnline];
+                    license->addDeviceVariable("User",licenseId.user());
+                    license->addDeviceVariable("Password",licenseId.password());
                     break;
                 default:THROW(util::exception, "No license type detected!");
             }
@@ -326,6 +329,27 @@ std::shared_ptr<LicenseSpring::Configuration> check_license::getLicenseSpringCon
         options);
 
     return pConfiguration;
+}
+
+// ---------------------------------------------------------------------
+
+license_activate_config check_license::getLicenseActivateConfig()
+{
+    auto licenseFileStorage =
+        std::make_shared<LicenseSpring::FileStorageWithLock>(LicenseSpring::
+                                                             FileStorageWithLock(m_license.license_path.wstring()));
+
+    if (!std::filesystem::exists(m_license.license_path))
+        licenseFileStorage->create(m_license.license_path.wstring());
+
+    auto licenseManager =
+        LicenseSpring::LicenseManager::create(getLicenseSpringConfig(), licenseFileStorage);
+
+    LicenseSpring::License::ptr_t license = licenseManager->reloadLicense();
+
+    auto deviceVars = license->getDeviceVariables();
+
+    //find License type and set an activate config to license setup type
 }
 
 } // namespace uh::licensing
