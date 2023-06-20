@@ -63,7 +63,8 @@ uh::options::action options::evaluate(const boost::program_options::variables_ma
 
     if (m_config.licensing_path.empty())
     {
-        m_config.licensing_path = "/var/lib/" + std::string(PROJECT_NAME) + "/licensing";
+        m_config.licensing_path = "/var/lib/" + std::string(PROJECT_NAME) + "/licensing/" + std::string(PROJECT_NAME)
+            + ".lic";
         std::filesystem::create_directory(m_config.licensing_path);
     }
     else

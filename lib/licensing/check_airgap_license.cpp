@@ -379,6 +379,9 @@ license_activate_config check_airgap_license::getLicenseActivateConfig()
 
     LicenseSpring::License::ptr_t license = licenseManager->reloadLicense();
 
+    if(license == nullptr)
+        return m_license_activate;
+
     auto deviceVars = license->getDeviceVariables();
 
     auto valueFinder = [&deviceVars](std::string_view input)

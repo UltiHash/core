@@ -68,39 +68,38 @@ std::unique_ptr<uh::licensing::license_package> make_licensing(const uh::options
 
     auto license_type = define_licensing_type(cfg.license_type);
 
+    auto lic_config = uh::licensing::license_config();
+    lic_config.license_path = cfg.licensing_path;
+    lic_config.replace_license = cfg.license_replace;
+
+    auto api = uh::licensing::api_config(EncryptStr(LICENSE_API_KEY),
+                                         EncryptStr(LICENSE_SHARED_KEY),
+                                         EncryptStr(LICENSE_PRODUCT_ID));
+    auto credential = uh::licensing::credential_config(PROJECT_NAME, PROJECT_VERSION);
+
     switch (license_type)
     {
         case uh::licensing::LicenseTypeEnum::AirgapKeyOnline:
         {
+            auto activate = uh::licensing::license_activate_config(cfg.license_key);
             if (std::filesystem::is_empty(cfg.licensing_path))
             {
                 INFO << "No licenses were found. Creating " + cfg.license_type + " license.";
 
-                uh::licensing::check_key_license write_airgap(cfg.licensing_path,
-                                                              EncryptStr(LICENSE_API_KEY),
-                                                              EncryptStr(LICENSE_SHARED_KEY),
-                                                              EncryptStr(LICENSE_PRODUCT_ID),
-                                                              PROJECT_NAME,
-                                                              PROJECT_VERSION,
-                                                              cfg.license_replace
-                );
+                uh::licensing::check_airgap_license write_airgap(lic_config,
+                                                                 api,
+                                                                 credential,
+                                                                 activate);
 
                 INFO << "Initialized " + cfg.license_type;
-
-                write_airgap.write_license(uh::licensing::check_airgap_license::role::DataNode,
-                                           PROJECT_NAME,
-                                           PROJECT_VERSION,
-                                           cfg.license_key);
-
-                INFO << "Wrote new license key to " + write_airgap.getLicensePath().string();
+                INFO << "Wrote new license key to " + lic_config.license_path.string();
             }
 
             auto read_license =
-                std::make_unique<uh::licensing::license_package>(uh::licensing::check_airgap_license::role::DataNode,
-                                                                 cfg.licensing_path,
-                                                                 EncryptStr(LICENSE_API_KEY),
-                                                                 EncryptStr(LICENSE_SHARED_KEY),
-                                                                 EncryptStr(LICENSE_PRODUCT_ID));
+                std::make_unique<uh::licensing::license_package>(lic_config,
+                                                                 api,
+                                                                 credential,
+                                                                 activate);
 
             return read_license;
         }
