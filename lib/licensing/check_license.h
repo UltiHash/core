@@ -75,7 +75,7 @@ enum class LicenseTypeEnum
     OtherLicense
 };
 
-static std::unordered_map<std::string, LicenseTypeEnum> string2licensetype = {
+static std::vector<std::pair<std::string, LicenseTypeEnum>> string2licensetype = {
     {"AirgapKeyOnline", LicenseTypeEnum::AirgapKeyOnline},
     {"AirgapUserOnline", LicenseTypeEnum::AirgapUserOnline},
     {"OtherLicense", LicenseTypeEnum::OtherLicense}
@@ -96,7 +96,7 @@ enum class NodeRole: unsigned char
     OtherRole
 };
 
-static std::unordered_map<std::string, NodeRole> string2noderole = {
+static std::vector<std::pair<std::string, NodeRole>> string2noderole = {
     {"uh-data-node", NodeRole::DataNode},
     {"uh-agency-node", NodeRole::AgencyNode},
     {"uh-other-node", NodeRole::OtherRole}
@@ -111,9 +111,9 @@ static std::unordered_map<NodeRole, std::string> noderole2string = {
 struct license_activate_config
 {
 public:
-    const std::string username;
-    const std::string password;
-    const std::string key;
+    std::string username;
+    std::string password;
+    std::string key;
 
     license_activate_config(std::string username_input, std::string password_input)
         :
@@ -183,7 +183,8 @@ public:
      */
     explicit check_license(uh::licensing::license_config license_config,
                            uh::licensing::api_config apiKey_input,
-                           uh::licensing::credential_config credentialConfig_input);
+                           uh::licensing::credential_config credentialConfig_input,
+                           uh::licensing::license_activate_config license_activate_input);
 
     /**
      * the default license is not timed
@@ -238,8 +239,8 @@ protected:
 
     license_activate_config getLicenseActivateConfig();
 
-    LicenseSpring::License::ptr_t getLicenseFromLicenseSpring();
-
+private:
+    uh::licensing::license_activate_config m_license_activate;
 };
 
 } // namespace uh::licensing

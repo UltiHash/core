@@ -24,11 +24,13 @@ namespace uh::licensing
 
 check_license::check_license(uh::licensing::license_config license_config,
                              uh::licensing::api_config apiKey_input,
-                             uh::licensing::credential_config credentialConfig_input)
+                             uh::licensing::credential_config credentialConfig_input,
+                             uh::licensing::license_activate_config license_activate_input)
     :
     m_license(std::move(license_config)),
     m_api(std::move(apiKey_input)),
-    m_credential(std::move(credentialConfig_input))
+    m_credential(std::move(credentialConfig_input)),
+    m_license_activate(std::move(license_activate_input))
 {}
 
 
@@ -36,7 +38,15 @@ check_license::check_license(uh::licensing::license_config license_config,
 
 bool check_license::valid()
 {
-    return true;
+    if (!getLicenseActivateConfig().key.empty())
+    {
+        return licenseRegister(LicenseSpring::LicenseID::fromKey(getLicenseActivateConfig().key));
+    }
+    else
+    {
+        return licenseRegister(LicenseSpring::LicenseID::fromUser(getLicenseActivateConfig().username,
+                                                                  getLicenseActivateConfig().password));
+    }
 }
 
 // ---------------------------------------------------------------------
@@ -155,12 +165,12 @@ bool check_license::licenseRegister(const LicenseSpring::LicenseID &licenseId)
             {
                 case LicenseTypeEnum::AirgapKeyOnline:
                     license_type_set_string = licensetype2string[LicenseTypeEnum::AirgapKeyOnline];
-                    license->addDeviceVariable("Key",licenseId.key());
+                    license->addDeviceVariable("Key", licenseId.key());
                     break;
                 case LicenseTypeEnum::AirgapUserOnline:
                     license_type_set_string = licensetype2string[LicenseTypeEnum::AirgapUserOnline];
-                    license->addDeviceVariable("User",licenseId.user());
-                    license->addDeviceVariable("Password",licenseId.password());
+                    license->addDeviceVariable("Username", licenseId.user());
+                    license->addDeviceVariable("Password", licenseId.password());
                     break;
                 default:THROW(util::exception, "No license type detected!");
             }
@@ -349,7 +359,37 @@ license_activate_config check_license::getLicenseActivateConfig()
 
     auto deviceVars = license->getDeviceVariables();
 
-    //find License type and set an activate config to license setup type
+    auto valueFinder = [&deviceVars](std::string_view input)
+    {
+        return std::string(
+            std::find_if(deviceVars.begin(), deviceVars.end(),
+                         [&input](LicenseSpring::DeviceVariable &item)
+                         {
+                             return item.name() == input;
+                         })->value());
+    };
+
+    const std::string_view licenseType_indicator = "LicenseType";
+
+    //detect license type
+    std::string licType_string = valueFinder(licenseType_indicator);
+    LicenseTypeEnum licType_enum = std::find_if(string2licensetype.begin(), string2licensetype.end(),
+                                                [&licType_string](auto &item)
+                                                {
+                                                    return item.first == licType_string;
+                                                })->second;
+
+    if (licType_enum == LicenseTypeEnum::AirgapKeyOnline)
+    {
+        m_license_activate = license_activate_config(valueFinder("Key"));
+        return m_license_activate;
+    }
+    else
+    {
+        m_license_activate = license_activate_config(valueFinder("Username"), valueFinder("Password"));
+        return m_license_activate;
+    }
+
 }
 
 } // namespace uh::licensing
