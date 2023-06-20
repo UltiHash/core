@@ -161,7 +161,7 @@ UDB_RESULT udb_destroy_key(UDB_KEY* udb_key)
 {
     try
     {
-        delete udb_key->key;
+        delete [] udb_key->key;
         delete udb_key;
         return UDB_RESULT_SUCCESS;
     }
@@ -181,7 +181,7 @@ UDB_RESULT udb_destroy_multiple_keys(const UDB_KEY** key_container, size_t size)
         while (size > 0)
         {
             --size;
-            delete key_container[size]->key;
+            delete [] key_container[size]->key;
             delete key_container[size];
         }
 
@@ -246,7 +246,7 @@ UDB_RESULT udb_destroy_document(UDB_DOCUMENT* udb_doc)
 {
     try
     {
-        delete udb_doc->data;
+        delete [] udb_doc->data;
         delete udb_doc;
         return UDB_RESULT_SUCCESS;
     }
@@ -266,7 +266,7 @@ UDB_RESULT udb_destroy_multiple_documents(const UDB_DOCUMENT** doc_container, si
         while (size > 0)
         {
             --size;
-            delete doc_container[size]->data;
+            delete [] doc_container[size]->data;
             delete doc_container[size];
         }
 
@@ -423,7 +423,7 @@ UDB_RESULT udb_add(UDB_CONNECTION* conn,
             auto resp = conn->m_udb_client->write_chunks(uh::protocol::write_chunks::request
                     { chunk_sizes, std::span<const char>(docs[index]->data, docs[index]->size ) });
 
-            char* returned_key = new char[64]{};
+            char* returned_key = new char[64];
             std::memcpy(returned_key, resp.hashes.data(), 64); // TODO: inefficient copy
 
             key[index] = new UDB_KEY(returned_key, 64);
@@ -458,7 +458,7 @@ UDB_RESULT udb_add_one(UDB_CONNECTION* conn,
                                                              { chunk_sizes, std::span<const char>(doc->data,
                                                                doc->size ) });
 
-        char* returned_key = new char[64]{};
+        char* returned_key = new char[64];
         std::memcpy(returned_key, resp.hashes.data(), 64);
 
         key->key = returned_key;
@@ -532,7 +532,7 @@ UDB_RESULT udb_get_one(UDB_CONNECTION* conn,
 
         auto returned_data_size = std::get<std::vector<char>>(result.data).size();
 
-        char* returned_data = new char[returned_data_size]{};
+        char* returned_data = new char[returned_data_size];
         std::memcpy(returned_data, std::get<std::vector<char>>(result.data).data(),
                     returned_data_size );
 
