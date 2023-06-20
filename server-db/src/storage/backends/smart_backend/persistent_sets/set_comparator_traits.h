@@ -26,17 +26,14 @@ struct set_full_comparator {
 struct set_partial_comparator {
     explicit set_partial_comparator (managed_storage& storage): m_storage(storage) {}
 
-    [[nodiscard]] inline int operator () (const std::string_view& new_data, const offset_span& set_data) const {
-
-        const uint16_t new_key_size = *reinterpret_cast <const uint16_t*> (new_data.data());
-        const std::string_view new_key {new_data.data () + sizeof (uint16_t), new_key_size};
+    [[nodiscard]] inline int operator () (const std::string_view& key, const offset_span& set_data) const {
 
         auto* set_data_p = static_cast <const char*> (m_storage.get().get_raw_ptr(set_data.m_data_offset));
 
         const uint16_t set_key_size = *reinterpret_cast <const uint16_t*> (set_data_p);
         const std::string_view set_key {set_data_p + sizeof (uint16_t), set_key_size};
 
-        return new_key.compare(set_key);
+        return key.compare(set_key);
     }
 
     const std::reference_wrapper <managed_storage> m_storage;

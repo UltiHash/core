@@ -9,7 +9,7 @@ namespace uh::dbn::storage::smart::sets {
 persisted_redblack_tree_set::persisted_redblack_tree_set(set_config set_conf, managed_storage& data_store):
     m_set_conf (std::move (set_conf)),
     m_data_store (data_store),
-    m_index_store (growing_plain_storage (m_set_conf.fragment_set_path, m_set_conf.set_init_file_size)),
+    m_index_store (growing_plain_storage (m_set_conf.key_store_config)),
     m_root (reinterpret_cast <uint64_t*> (m_index_store.get_storage())),
     m_end (*reinterpret_cast <uint64_t*> (m_index_store.get_storage() + sizeof(m_root))) {
 
@@ -23,22 +23,22 @@ persisted_redblack_tree_set::persisted_redblack_tree_set(set_config set_conf, ma
         m_nil = get_node(NILL_OFFSET);
     }
 }
-position_info persisted_redblack_tree_set::do_push_back_pointer (const std::string_view& data, uint64_t data_offset, const position_info& pos) {
+index_type persisted_redblack_tree_set::do_add_pointer (const std::string_view& data, uint64_t data_offset, const index_type& pos) {
     std::lock_guard lock (m_mutex);
 
-    auto p = unlocked_find (data, pos.hint);
+    auto p = unlocked_find (data, pos);
     if (p.match) {
-        return p;
+        return p.index;
     }
 
     node z = add_node ();
-    z.m_mnode->m_parent = p.hint;
+    z.m_mnode->m_parent = p.index.position;
 
-    const auto y = get_node(p.hint);
-    if (p.comp == 0) {
+    const auto y = get_node(p.index.position);
+    if (p.index.comp == 0) {
         set_root (z);
     }
-    else if (p.comp < 0) {
+    else if (p.index.comp < 0) {
         y.m_mnode->m_left = z.m_offset;
     }
     else {
@@ -49,7 +49,7 @@ position_info persisted_redblack_tree_set::do_push_back_pointer (const std::stri
     z.m_mnode->m_color = RED;
     z.m_mnode->m_data = {data_offset, data.size()};
 
-    p.hint = z.m_offset;
+    p.index.position = z.m_offset;
 
     balance (z);
 
@@ -59,22 +59,22 @@ position_info persisted_redblack_tree_set::do_push_back_pointer (const std::stri
         m_root = reinterpret_cast <uint64_t*> (m_index_store.get_storage());
         m_end = *reinterpret_cast <uint64_t*> (m_index_store.get_storage() + sizeof(m_root));
     }
-    return p;
+    return p.index;
 }
 
-position_info persisted_redblack_tree_set::do_find (const std::string_view& frag, const position_info& pos) const {
+    set_result persisted_redblack_tree_set::do_find (const std::string_view& frag, const index_type& pos) const {
     std::shared_lock lock (m_mutex);
-    return unlocked_find (frag, pos.hint);
+    return unlocked_find (frag, pos);
 }
 
-void persisted_redblack_tree_set::do_sync(const position_info& pos) {
+void persisted_redblack_tree_set::do_sync(const index_type& pos) {
 
-    if (msync(align_ptr (m_index_store.get_storage() + pos.hint), sizeof (mmap_node), MS_SYNC) != 0) {
+    if (msync(align_ptr (m_index_store.get_storage() + pos.position), sizeof (mmap_node), MS_SYNC) != 0) {
         throw std::system_error (errno, std::system_category(), "persisted_redblack_tree_set could not sync the mmap data");
     }
 }
 
-void persisted_redblack_tree_set::do_remove(std::string_view &frag, const position_info &pos) {
+void persisted_redblack_tree_set::do_remove(std::string_view &frag, const index_type &pos) {
     throw std::runtime_error ("not implemented");
 }
 
@@ -201,12 +201,12 @@ persisted_redblack_tree_set::upper_sister_inspect_hint(const node &n,
 
 }
 
-position_info persisted_redblack_tree_set::unlocked_find (const std::string_view &frag, uint64_t hint) const {
+set_result persisted_redblack_tree_set::unlocked_find (const std::string_view &frag, index_type hint) const {
 
     auto y = m_nil;
-    position_info res;
+    set_result res;
 
-    const auto resolved = resolve_hint (hint, frag);
+    const auto resolved = resolve_hint (hint.position, frag);
     auto x = get_node (resolved.first);
 
     if (resolved.second) {
@@ -242,8 +242,7 @@ position_info persisted_redblack_tree_set::unlocked_find (const std::string_view
         res.lower = {largest_lower.m_mnode->m_data.m_data_offset, {ptr_lower, largest_lower.m_mnode->m_data.m_size}};
         res.upper = {smallest_upper.m_mnode->m_data.m_data_offset, {ptr_upper, smallest_upper.m_mnode->m_data.m_size}};
     }
-    res.hint = y.m_offset;
-    res.comp = comp_int;
+    res.index = {y.m_offset, comp_int};
     return res;
 }
 

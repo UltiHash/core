@@ -10,8 +10,14 @@
 #include <list>
 #include <string_view>
 #include <stdexcept>
+#include <storage/backends/smart_backend/persistent_sets/set_interface.h>
 
 namespace uh::dbn::storage::smart::key_stores {
+
+struct map_result {
+    std::optional<std::span<const char>> data;
+    sets::index_type index;
+};
 
 class key_store_interface {
 public:
@@ -21,14 +27,14 @@ public:
      * @param key
      * @param value
      */
-    virtual void insert (std::span<char> key, std::span<char> value) = 0;
+    virtual void insert (std::span<char> key, std::span<char> value, const sets::index_type& index) = 0;
 
     /**
      * returns the fragments offset and sizes
      * @param key
      * @return
      */
-    virtual std::optional<std::span<char>> get (std::span<char> key) = 0;
+    virtual map_result get (std::span<char> key) = 0;
 
     /**
      * Gives back the list of keys in the range of start_key to end_key with the given labels

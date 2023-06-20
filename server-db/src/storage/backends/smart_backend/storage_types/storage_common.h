@@ -21,8 +21,8 @@ void sync_ptr (void *ptr, std::size_t size);
 
 class offset_ptr {
 public:
-    offset_ptr (size_t offset = 0, void* addr = nullptr);
-    size_t m_offset;
+    offset_ptr (uint64_t offset = 0, void* addr = nullptr);
+    uint64_t m_offset;
     char* m_addr;
 
     bool operator == (const offset_ptr& ptr) const noexcept {

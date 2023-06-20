@@ -7,11 +7,11 @@
 
 #include "storage/backends/smart_backend/persistent_sets/persisted_redblack_tree_set.h"
 #include "storage/backends/smart_backend/storage_types/fixed_managed_storage.h"
-#include "storage/backends/smart_backend/key_stores/persisted_robinhood_hashmap.h"
 #include "smart_config.h"
 #include "metrics/storage_metrics.h"
 #include "storage/backends/smart_backend/persistent_sets/unlocked_redblack_tree.h"
 #include "storage/backends/smart_backend/persistent_sets/paged_redblack_tree.h"
+#include "storage/backends/smart_backend/key_stores/key_store_interface.h"
 
 namespace uh::dbn::storage::smart {
 

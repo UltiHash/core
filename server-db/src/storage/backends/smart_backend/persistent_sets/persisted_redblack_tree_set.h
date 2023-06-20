@@ -26,17 +26,17 @@ public:
 
 private:
 
-    position_info do_push_back_pointer (const std::string_view& frag, uint64_t data_offset, const position_info& pos) override;
+    index_type do_add_pointer (const std::string_view& frag, uint64_t data_offset, const index_type& pos) override;
 
-    [[nodiscard]] position_info do_find (const std::string_view& frag, const position_info& pos) const override;
+    [[nodiscard]] set_result do_find (const std::string_view& frag, const index_type& pos) const override;
 
-    void do_sync (const position_info& pos) override;
+    void do_sync (const index_type& pos) override;
 
-    void do_remove (std::string_view &frag, const position_info& pos) override;
+    void do_remove (std::string_view &frag, const index_type& pos) override;
 
     std::pair <uint64_t, bool> resolve_hint (uint64_t hint, const std::string_view& frag) const;
 
-    position_info unlocked_find (const std::string_view& frag, uint64_t hint) const;
+    set_result unlocked_find (const std::string_view& frag, index_type hint) const;
 
     void balance (node& z);
 

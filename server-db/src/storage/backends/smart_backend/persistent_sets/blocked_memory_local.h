@@ -6,30 +6,11 @@
 #define CORE_BLOCKED_MEMORY_H
 
 #include "set_interface.h"
+#include "index_mem_structures.h"
 
 namespace uh::dbn::storage::smart::sets {
 
-
-enum color_t : uint8_t
-{
-    RED = 0,
-    BLACK = 1
-};
-
-struct mmap_node {
-    fragment m_frag;
-    uint64_t m_parent;
-    uint64_t m_left;
-    uint64_t m_right;
-    color_t m_color;
-};
-struct node {
-    uint64_t m_offset;
-    mmap_node* m_mnode;
-};
-
-
-struct alignas (4096) block {
+struct alignas (4096) block_alt {
 
     static constexpr auto nodes_space = 4096 - sizeof (uint8_t);
     static constexpr auto nodes_count = nodes_space / sizeof (mmap_node);
@@ -46,7 +27,7 @@ struct alignas (4096) block {
         if (full ()) {
             throw std::exception ();
         }
-        const auto offset = offsetof (block, nodes) + empty_node_id * sizeof (mmap_node);
+        const auto offset = offsetof (block_alt, nodes) + empty_node_id * sizeof (mmap_node);
         return {offset, &nodes [empty_node_id++]};
     }
 
@@ -62,7 +43,7 @@ struct alignas (4096) block {
     mmap_node nodes [nodes_count]{};
 };
 
-struct alignas (4096) first_block {
+struct alignas (4096) first_block_alt {
     static constexpr auto nodes_space = 4096 - 5 * sizeof (size_t) - sizeof (uint8_t);
     static constexpr auto nodes_count = nodes_space / sizeof (mmap_node);
     static constexpr auto effective_node_space = nodes_count * sizeof (mmap_node);
@@ -71,7 +52,7 @@ struct alignas (4096) first_block {
         if (full ()) {
             throw std::exception ();
         }
-        const auto offset = offsetof (first_block, nodes) + empty_node_id * sizeof (mmap_node);
+        const auto offset = offsetof (first_block_alt, nodes) + empty_node_id * sizeof (mmap_node);
         return {offset, &nodes [empty_node_id++]};
     }
     inline std::pair <uint8_t, mmap_node*> acquire_mnode () {
@@ -97,8 +78,8 @@ struct alignas (4096) first_block {
 };
 
 struct blocked_memory {
-    explicit blocked_memory(void* memory, size_t max_empty_hole_size): blocks (reinterpret_cast <block*> (memory)),
-                                                                       m_first_block (*(reinterpret_cast <first_block*> (memory))),
+    explicit blocked_memory(void* memory, size_t max_empty_hole_size): blocks (reinterpret_cast <block_alt*> (memory)),
+                                                                       m_first_block (*(reinterpret_cast <first_block_alt*> (memory))),
                                                                        m_max_empty_hole_size (max_empty_hole_size){}
 
     [[nodiscard]] inline node get_node (uint64_t address) const {
@@ -160,8 +141,8 @@ struct blocked_memory {
         }
     }
 
-    first_block& m_first_block;
-    block* blocks;
+    first_block_alt& m_first_block;
+    block_alt* blocks;
     const size_t m_max_empty_hole_size;
 };
 } // end namespace uh::dbn::storage::smart::sets

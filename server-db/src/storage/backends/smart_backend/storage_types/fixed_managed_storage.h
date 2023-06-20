@@ -29,7 +29,7 @@ class fixed_managed_storage: public managed_storage {
 
 public:
 
-    explicit fixed_managed_storage (data_store_config);
+    explicit fixed_managed_storage (fixed_managed_storage_config);
 
     /** Allocate new memory in the mmap_storage and return a pointer to it.
      *  @throws bad_alloc
@@ -72,7 +72,7 @@ private:
 
     bool files_existence_consistency ();
 
-    const data_store_config m_conf;
+    const fixed_managed_storage_config m_conf;
     std::fstream m_log;
     std::size_t m_aggregated_size {};
 };

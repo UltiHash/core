@@ -10,15 +10,19 @@
 
 namespace uh::dbn::storage::smart::sets {
 
-struct position_info {
+struct index_type {
+    uint64_t position;
+    int comp;
+};
+
+struct set_result {
     std::optional <std::pair <uint64_t, std::string_view>> lower;
     std::optional <std::pair <uint64_t, std::string_view>> match;
     std::optional <std::pair <uint64_t, std::string_view>> upper;
-    uint64_t hint {};
-    int comp {};
+    index_type index;
 };
 
-extern position_info null_position;
+extern index_type null_index;
 
 class set_interface {
 public:
@@ -30,8 +34,8 @@ public:
      * @param pos position hint, some implementations may require this and rely on hint
      * @return
      */
-    position_info push_back_pointer (const std::string_view& data, uint64_t data_offset, const position_info& pos = null_position) {
-        return do_push_back_pointer (data, data_offset, pos);
+    index_type add_pointer (const std::string_view& data, uint64_t data_offset, const index_type& pos = null_index) {
+        return do_add_pointer (data, data_offset, pos);
     }
 
     /**
@@ -40,7 +44,7 @@ public:
      * @param pos position hint for search
      * @return position info of the found index/similar indices
      */
-    [[nodiscard]] position_info find (const std::string_view& data, const position_info& pos = null_position) const {
+    [[nodiscard]] set_result find (const std::string_view& data, const index_type& pos = null_index) const {
         return do_find(data, pos);
     };
 
@@ -49,7 +53,7 @@ public:
      * @param data index to be removed
      * @param pos position hint
      */
-    void remove (std::string_view& data, const position_info& pos = null_position) {
+    void remove (std::string_view& data, const index_type& pos = null_index) {
         return do_remove (data, pos);
     }
 
@@ -57,20 +61,20 @@ public:
      * Synchronises the fragment at the given position to disk
      * @param pos position of the fragment
      */
-    void sync (const position_info& pos) {
+    void sync (const index_type& pos) {
         return do_sync (pos);
     }
 
     virtual ~set_interface() = default;
 protected:
 
-    virtual position_info do_push_back_pointer (const std::string_view& data, uint64_t data_offset, const position_info& pos) = 0;
+    virtual index_type do_add_pointer (const std::string_view& data, uint64_t data_offset, const index_type& pos) = 0;
 
-    [[nodiscard]] virtual position_info do_find (const std::string_view& data, const position_info& pos) const = 0;
+    [[nodiscard]] virtual set_result do_find (const std::string_view& data, const index_type& pos) const = 0;
 
-    virtual void do_remove (std::string_view& data, const position_info& pos) = 0;
+    virtual void do_remove (std::string_view& data, const index_type& pos) = 0;
 
-    virtual void do_sync (const position_info& pos) = 0;
+    virtual void do_sync (const index_type& pos) = 0;
 
 };
 

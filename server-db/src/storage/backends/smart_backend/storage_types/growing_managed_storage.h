@@ -7,6 +7,7 @@
 
 #include <optional>
 
+#include <storage/backends/smart_backend/smart_config.h>
 #include "storage_common.h"
 
 namespace uh::dbn::storage::smart {
@@ -14,7 +15,7 @@ namespace uh::dbn::storage::smart {
 class growing_managed_storage: public managed_storage {
 
 public:
-    growing_managed_storage (std::filesystem::path directory, std::filesystem::path log_file, size_t min_file_size, size_t max_file_size);
+    growing_managed_storage (growing_managed_storage_config);
 
     offset_ptr allocate (std::size_t size) override;
 

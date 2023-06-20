@@ -26,21 +26,21 @@ class persisted_robinhood_hashmap: public key_store_interface {
 
 public:
 
-    explicit persisted_robinhood_hashmap (map_config map_conf);
+    explicit persisted_robinhood_hashmap (hashmap_config map_conf);
 
     /**
      * Inserts the given key value in the hash map.
      * @param key
      * @param value
      */
-    void insert (std::span <char> key, std::span <char> value) override;
+    void insert (std::span <char> key, std::span <char> value, const sets::index_type& index = {}) override;
 
     /**
      * returns the fragments offset and sizes
      * @param key
      * @return
      */
-    std::optional <std::span <char>> get (std::span <char> key) override;
+    map_result get (std::span <char> key) override;
 
     void remove (std::span <char> key) override;
 
@@ -74,7 +74,7 @@ private:
     constexpr static size_t VALUE_LENGTH_SIZE = sizeof (uint32_t);
     constexpr static size_t VALUE_PTR_SIZE = sizeof (uint64_t);
 
-    const map_config m_map_conf;
+    const hashmap_config m_map_conf;
     const size_t m_key_value_span_size;
     const size_t m_hash_element_size;
     std::vector <char> m_empty_key;

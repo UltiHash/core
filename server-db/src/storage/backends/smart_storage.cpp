@@ -13,7 +13,8 @@ smart_config make_smart_config(const std::filesystem::path &root, size_t size, s
     const std::filesystem::path set_directory = root / "set";
     const std::filesystem::path hash_table_directory = root / "hash_table";
 
-    data_store_config ds_conf;
+    // data store
+    fixed_managed_storage_config ds_conf;
     ds_conf.data_store_file_size = 4ul * GB;
     ds_conf.log_file = data_store_directory / "log_file";
     size_t offset = 0;
@@ -26,25 +27,55 @@ smart_config make_smart_config(const std::filesystem::path &root, size_t size, s
     dedupe_config dd_conf {};
     dd_conf.min_fragment_size = 2 * 1024;
 
-    set_config set_conf;
-    set_conf.set_init_file_size = 2ul * GB;
-    set_conf.max_empty_hole_size = 1ul * GB;
-    set_conf.set_minimum_free_space = GB;
+    // fragment set
+    growing_plain_storage_config fragment_set_key_store;
+    fragment_set_key_store.init_size = 2ul * GB;
+    fragment_set_key_store.file = set_directory / "fragment_set";
 
-    set_conf.fragment_set_path = set_directory / "fragment_set";
+    set_config fragment_set_conf;
+    fragment_set_conf.max_empty_hole_size = 1ul * GB;
+    fragment_set_conf.set_minimum_free_space = GB;
+    fragment_set_conf.key_store_config = std::move (fragment_set_key_store);
 
-    smart::map_config map_conf;
-    map_conf.key_size = 64;
-    map_conf.map_key_file_init_size = 4ul * GB;
-    map_conf.map_values_minimum_file_size = 4ul * GB;
-    map_conf.map_values_maximum_file_size = 8ul * GB;
-    map_conf.map_load_factor = 0.9;
-    map_conf.map_maximum_extension_factor = 32;
-    map_conf.hashtable_key_path = hash_table_directory / "key_file";
-    map_conf.hashtable_value_directory = hash_table_directory / "values";
-    map_conf.value_store_log_file = map_conf.hashtable_value_directory / "log";
+    // key store sorted map
+    growing_plain_storage_config key_store_index_set;
+    key_store_index_set.init_size = 2ul * GB;
+    key_store_index_set.file = set_directory / "key_store_index";
 
-    return {map_conf, set_conf, ds_conf, dd_conf};
+    growing_managed_storage_config key_store_data_store;
+    key_store_data_store.max_file_size = 1ul * GB;
+    key_store_data_store.min_file_size = GB;
+    key_store_data_store.log_file = set_directory / "log";
+    key_store_data_store.directory = set_directory / "key_store_data";
+
+    set_config key_store_set_conf;
+    key_store_set_conf.key_store_config = std::move (key_store_index_set);
+    key_store_set_conf.max_empty_hole_size = 1ul * GB;
+    key_store_set_conf.set_minimum_free_space = GB;
+
+    sorted_map_config sorted_map_conf;
+    sorted_map_conf.index_store = std::move (key_store_set_conf);
+    sorted_map_conf.data_store = std::move (key_store_data_store);
+
+    // key store hashmap
+    growing_plain_storage_config key_store_hashmap_key_store;
+    key_store_hashmap_key_store.init_size = 4ul * GB;
+    key_store_hashmap_key_store.file = hash_table_directory / "key_file";
+
+    growing_managed_storage_config key_store_hashmap_value_store;
+    key_store_hashmap_value_store.directory = hash_table_directory / "values";
+    key_store_hashmap_value_store.log_file = key_store_hashmap_value_store.directory / "log";
+    key_store_hashmap_value_store.min_file_size = 4ul * GB;
+    key_store_hashmap_value_store.max_file_size = 8ul * GB;
+
+    hashmap_config hashmap_conf;
+    hashmap_conf.key_size = 64;
+    hashmap_conf.map_load_factor = 0.9;
+    hashmap_conf.map_maximum_extension_factor = 32;
+    hashmap_conf.key_store_config = std::move (key_store_hashmap_key_store);
+    hashmap_conf.value_store_config = std::move (key_store_hashmap_value_store);
+
+    return {hashmap_conf, fragment_set_conf, sorted_map_conf, ds_conf, dd_conf};
 }
 } // end namespace uh::dbn::storage::smart
 
@@ -68,7 +99,7 @@ std::unique_ptr<io::data_generator> smart_storage::read_block (const std::span<c
 }
 
 std::pair <std::size_t, std::vector <char>> smart_storage::write_block (const std::span <char>& data) {
-    std::vector <char> sha (m_smart_conf.map_conf.key_size);
+    std::vector <char> sha (m_smart_conf.hashmap_key_store_conf.key_size);
     unsigned int size;
     std::lock_guard <std::shared_mutex> lock (m_mutex);
     EVP_DigestUpdate (m_sha_ctx, data.data(), data.size());

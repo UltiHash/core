@@ -8,7 +8,7 @@ namespace uh::dbn::storage::smart {
 
 
 
-fixed_managed_storage::fixed_managed_storage(data_store_config conf):
+fixed_managed_storage::fixed_managed_storage(fixed_managed_storage_config conf):
     m_conf(std::move (conf)),
     m_log(create_logger()) {
     std::filesystem::create_directories(m_conf.data_store_files.front().parent_path());

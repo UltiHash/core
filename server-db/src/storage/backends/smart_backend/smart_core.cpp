@@ -3,6 +3,8 @@
 //
 
 #include "smart_core.h"
+#include "storage/backends/smart_backend/key_stores/sorted_key_map.h"
+#include "storage/backends/smart_backend/key_stores/persisted_robinhood_hashmap.h"
 
 #include <ranges>
 
@@ -11,28 +13,29 @@ namespace uh::dbn::storage::smart {
 
 smart_core::smart_core (const smart_config& smart_conf):
         m_data_store (smart_conf.data_store_conf),
-        m_fragment_set (std::make_unique<sets::paged_redblack_tree <sets::set_full_comparator>>(smart_conf.set_conf, m_data_store)),
-        m_key_store (std::make_unique<key_stores::persisted_robinhood_hashmap> (smart_conf.map_conf)),
+        m_fragment_set (std::make_unique<sets::paged_redblack_tree <sets::set_full_comparator>>(smart_conf.fragment_set_conf, m_data_store)),
+        m_key_store (std::make_unique<key_stores::sorted_key_map> (std::move (smart_conf.sorted_key_store_config))),
+//        m_key_store (std::make_unique<key_stores::persisted_robinhood_hashmap> (std::move (smart_conf.hashmap_key_store_conf))),
         m_dedupe_conf (smart_conf.dedupe_conf) {}
 
 size_t smart_core::integrate(std::span <char> hash, std::string_view data) {
-
-    if (const auto f = m_key_store->get(hash); f) {
+    const auto f = m_key_store->get(hash);
+    if (f.data.has_value()) {
         //TODO should we compare the data as well? It can be that the data
         // is different and we do not notice it
         return 0;
     }
 
     auto fragments = deduplicate (data);
-    m_key_store->insert(hash, {reinterpret_cast <char*> (fragments.first.data()), fragments.first.size() * sizeof (sets::offset_span)});
+    m_key_store->insert(hash, {reinterpret_cast <char*> (fragments.first.data()), fragments.first.size() * sizeof (sets::offset_span)}, f.index);
     return fragments.second;
 }
 
 std::pair <size_t, std::forward_list <std::span <char>>> smart_core::retrieve(std::span<char> hash) {
     auto f = m_key_store->get(hash);
-    if (f) {
-        const auto ptr = reinterpret_cast <sets::offset_span*> (f.value().data());
-        const auto size = f.value().size() / sizeof (sets::offset_span);
+    if (f.data.has_value()) {
+        const auto ptr = reinterpret_cast <const sets::offset_span*> (f.data.value().data());
+        const auto size = f.data.value().size() / sizeof (sets::offset_span);
         size_t total_size = 0;
         std::forward_list <std::span <char>> res;
         for (auto frag = ptr; frag < ptr + size; frag++) {
@@ -55,7 +58,7 @@ std::pair<std::vector<sets::offset_span>, size_t> smart_core::deduplicate (std::
     const auto lower_common_prefix = largest_common_prefix (data, f.lower->second);
 
     if (lower_common_prefix == data.size()) {
-        m_fragment_set->push_back_pointer (data, f.lower->first, f);
+        m_fragment_set->add_pointer (data, f.lower->first, f.index);
         return {{{f.lower->first, data.size()}}, 0};
     }
 
@@ -69,15 +72,15 @@ std::pair<std::vector<sets::offset_span>, size_t> smart_core::deduplicate (std::
 
     if (max_common_prefix < m_dedupe_conf.min_fragment_size or data.size() - max_common_prefix < m_dedupe_conf.min_fragment_size) {
         const auto offset = store_data(data);
-        m_fragment_set->push_back_pointer(data, offset, f);
+        m_fragment_set->add_pointer (data, offset, f.index);
         return {{{offset, data.size()}}, data.size()};
     }
     else if (max_common_prefix == data.size()) {
-        m_fragment_set->push_back_pointer (data, max_data_offset, f);
+        m_fragment_set->add_pointer (data, max_data_offset, f.index);
         return {{{max_data_offset, data.size()}}, 0};
     }
     else {
-        m_fragment_set->push_back_pointer (data.substr(0, max_common_prefix), max_data_offset, f);
+        m_fragment_set->add_pointer (data.substr(0, max_common_prefix), max_data_offset, f.index);
         auto fragments = deduplicate (data.substr(max_common_prefix, data.size() - max_common_prefix));
         fragments.first.emplace_back (sets::offset_span {max_data_offset, max_common_prefix});
         return fragments;
