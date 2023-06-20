@@ -27,17 +27,18 @@ trap 'last_command=$current_command; current_command=$BASH_COMMAND' DEBUG
 # echo an error message before exiting
 trap 'echo "\"${last_command}\" command filed with exit code $?."' EXIT
 
-# prepare crude test workload, using the uhClient binary itself
+# prepare crude test workload, using the uh-cli binary itself
 mkdir -p test
-cp /usr/local/bin/uhClient test
+cp /usr/local/bin/uh-cli test
 
 # store checksums of test workload, integrate data into UltiHash volume and delete files afterwards
-sha512sum test/uhClient > checksum.txt
-uhClient --integrate test.uh test --agency-node uh-server-agency:21832
+sha512sum test/uh-cli > checksum.txt
+uh-cli --integrate test.uh test --agency-node uh-server-agency:21832
 rm -Rf test
 
 # retrieve test workload and validate their checksums
-yes | uhClient --retrieve test.uh --target ./ --agency-node uh-server-agency:21832
+mkdir test
+yes | uh-cli --retrieve test.uh --target ./test --agency-node uh-server-agency:21832
 cat checksum.txt | sha512sum -c
 
 # cleanup

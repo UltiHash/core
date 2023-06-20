@@ -3,7 +3,7 @@
 ADDR_AGENCY_NODE=uh-server-agency:21832
 ADDR_DB_NODE=uh-server-db:12345
 
-PATH_CLIENT="/usr/local/bin/uhClient"
+PATH_CLIENT="/usr/local/bin/uh-cli"
 CORPORA_BASE_DIR="/data/corpora"
 
 if [ $# -gt 0 ]; then

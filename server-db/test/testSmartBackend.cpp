@@ -4,7 +4,7 @@
 #ifdef SINGLE_TEST_RUNNER
 #define BOOST_TEST_NO_MAIN
 #else
-#define BOOST_TEST_MODULE "uhServerDb SmartBackend Tests"
+#define BOOST_TEST_MODULE "uh-data-node SmartBackend Tests"
 #endif
 
 #include <span>

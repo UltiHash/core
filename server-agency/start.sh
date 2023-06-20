@@ -1,7 +1,7 @@
 #!/bin/bash
 
 echo "Waiting for uh-server-db to become available..."
-RAND=$(( ( RANDOM % 5 )  + 1 ))
+RAND=$(( ( RANDOM % 5 )  + 40 ))
 sleep $RAND
 
 while true
@@ -17,4 +17,4 @@ do
   sleep $RAND
 done
 
-uhServerAgency --db-node uh-server-db:12345
+uh-agency-node --db-node uh-server-db:12345
