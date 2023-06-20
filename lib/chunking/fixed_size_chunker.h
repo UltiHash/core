@@ -17,7 +17,7 @@ public:
 
     std::vector<uint32_t> chunk(std::span<char> b) const override;
 
-    std::size_t min_size() const override { return 0u; }
+    std::size_t min_size() const override { return 1u; }
 private:
     std::size_t m_chunk_size;
 };
