@@ -9,8 +9,7 @@
 
 #include <LicenseSpring/EncryptString.h>
 
-#include <licensing/check_key_license.h>
-#include <licensing/check_user_license.h>
+#include <licensing/check_license.h>
 #include <licensing/license_package.h>
 #include <licensing/soft_metered_storage_resource.h>
 #include <io/temp_file.h>
@@ -45,8 +44,7 @@ const std::string password_test = "#u5huzU!ita*o&I4@ona2+OVlGlhehe0!dLDeslticO#r
 // ---------------------------------------------------------------------
 
 typedef boost::mpl::vector<
-    //check_user_license,
-    check_key_license
+    check_license
 > license_types;
 
 // ---------------------------------------------------------------------
@@ -159,16 +157,6 @@ BOOST_AUTO_TEST_CASE(license_package_test)
 
         lp.add_soft_metred_feature(license_package::soft_metered_feature::LIMIT_STORAGE_CAPACITY,
                                    soft_right);
-
-        BOOST_REQUIRE_THROW(lp.check_role_enabled(check_license::NodeRole::AgencyNode), util::exception);
-        BOOST_REQUIRE_THROW(lp.check_role_enabled(check_license::NodeRole::OtherRole), util::exception);
-
-        lp.check_role_enabled(check_license::NodeRole::DataNode);
-
-        BOOST_REQUIRE_THROW(lp.check_license_enabled(LicenseTypeEnum::AirgapUserOnline), util::exception);
-        BOOST_REQUIRE_THROW(lp.check_license_enabled(LicenseTypeEnum::OtherLicense), util::exception);
-
-        lp.check_license_enabled(LicenseTypeEnum::AirgapKeyOnline);
 
         BOOST_CHECK(lp.valid());
 

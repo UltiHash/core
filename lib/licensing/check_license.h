@@ -225,7 +225,7 @@ protected:
      * @param license is the incoming parsed license file
      * @return if the license was still valid
      */
-    static bool license_check(const LicenseSpring::License::ptr_t &license);
+    bool license_check(const LicenseSpring::License::ptr_t &license);
 
     LicenseSpring::ExtendedOptions getOptions();
 

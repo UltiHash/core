@@ -33,7 +33,6 @@ check_license::check_license(uh::licensing::license_config license_config,
     m_license_activate(std::move(license_activate_input))
 {}
 
-
 // ---------------------------------------------------------------------
 
 bool check_license::valid()
@@ -277,6 +276,26 @@ bool check_license::license_check(const LicenseSpring::License::ptr_t &license)
     else
     {
         ERROR << "No local license found";
+        return false;
+    }
+
+    auto devVars = license->getDeviceVariables();
+    std::string licenseRole = std::find_if(devVars.begin(), devVars.end(),
+                                           [](LicenseSpring::DeviceVariable &item)
+                                           {
+                                               return item.name() == "LicenseRole";
+                                           })->value();
+
+    NodeRole nodeRoleEnum = std::find_if(string2noderole.begin(),
+                                         string2noderole.end(),
+                                         [&licenseRole](std::pair<std::string, NodeRole> &item)
+                                         {
+                                             return item.first == licenseRole;
+                                         })->second;
+
+    if (getLicense().licenseNodeRole != nodeRoleEnum)
+    {
+        ERROR << "License node role did not match product node role!";
         return false;
     }
 

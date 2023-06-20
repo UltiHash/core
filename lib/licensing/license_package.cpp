@@ -3,6 +3,8 @@
 //
 
 #include "licensing/license_package.h"
+
+#include <utility>
 #include "logging/logging_boost.h"
 
 #include "soft_metered_storage_resource.h"
@@ -10,127 +12,17 @@
 namespace uh::licensing
 {
 
-// ---------------------------------------------------------------------
-
-license_package::~license_package()
+license_package::license_package(uh::licensing::license_config license_config,
+                                 uh::licensing::api_config apiKey_input,
+                                 uh::licensing::credential_config credentialConfig_input,
+                                 uh::licensing::license_activate_config license_activate_input):
+    check_license(
+        std::move(license_config),
+        std::move(apiKey_input),
+        std::move(credentialConfig_input),
+        std::move(license_activate_input))
 {
-    delete check_lic;
-}
-
-// ---------------------------------------------------------------------
-
-license_package::license_package(check_license::role license_role,
-                                 const std::filesystem::path &config, const std::string &apiKey,
-                                 const std::string &sharedKey, const std::string &productId)
-{
-    auto init_lambda = [&apiKey, &sharedKey, &productId, this]
-        (const std::filesystem::path &license_path_input)
-    {
-        auto tmp_license_type_read = check_license(
-            LicenseTypeEnum::AirgapKeyOnline,
-            std::string(), "0.0.0");
-
-        auto license_type_checked = tmp_license_type_read.check_license_type();
-
-        switch (license_type_checked)
-        {
-            case LicenseTypeEnum::AirgapKeyOnline:
-            {
-                auto *tmp_license_valid_airgap = new check_key_license(license_path_input,
-                                                                       apiKey,
-                                                                       sharedKey,
-                                                                       productId);
-
-                if (tmp_license_valid_airgap->valid())check_lic = tmp_license_valid_airgap;
-                else delete tmp_license_valid_airgap;
-
-                break;
-            }
-
-            case LicenseTypeEnum::AirgapUserOnline:
-            {
-                auto *tmp_license_valid_online = new check_key_license(license_path_input,
-                                                                       apiKey,
-                                                                       sharedKey,
-                                                                       productId);
-
-                if (tmp_license_valid_online->valid())check_lic = tmp_license_valid_online;
-                else delete tmp_license_valid_online;
-
-                break;
-            }
-
-            default:break;
-        }
-
-        return license_type_checked;
-    };
-
-    if (std::filesystem::exists(config) and std::filesystem::is_regular_file(config))
-    {
-        if (config.extension() != ".lic")
-        THROW(util::exception, "Named license file did not carry extension \".lic\" ! Did you really chose a"
-                               "license file?");
-
-        LicenseTypeEnum licenseTypeToCheck = init_lambda(config);
-        check_role_enabled(license_role);
-        if (licenseTypeToCheck == LicenseTypeEnum::OtherLicense)
-        THROW(util::exception, "License type checker failed to wrong type of license check!");
-
-        feature_activation();
-
-        INFO << "Loading license from " + this->license_path.string();
-
-        return;
-    }
-
-    for (auto &file_object : std::filesystem::directory_iterator(config))
-    {
-        if (file_object.is_regular_file() && file_object.path().extension() == ".lic")
-        {
-            LicenseTypeEnum licenseTypeToCheck = init_lambda(file_object.path());
-
-            try
-            {
-                this->license_path = file_object.path();
-                check_role_enabled(license_role);
-
-                feature_activation();
-
-                if (licenseTypeToCheck != LicenseTypeEnum::OtherLicense)
-                {
-                    INFO << "Loading license from " + this->license_path.string();
-                    return;
-                }
-            }
-            catch (std::exception &e)
-            {}
-
-            delete check_lic;
-        }
-    }
-}
-
-// ---------------------------------------------------------------------
-
-void license_package::check_role_enabled(check_license::role r)
-{
-    if (check_lic == nullptr)
-    THROW(util::exception, "No license was loaded on check_role_enabled!");
-
-    if (check_lic->check_role() != r)
-    THROW(util::exception, "Requested role did not match license role!");
-}
-
-// ---------------------------------------------------------------------
-
-void license_package::check_license_enabled(LicenseTypeEnum l)
-{
-    if (check_lic == nullptr)
-    THROW(util::exception, "No license was loaded on check_license_enabled!");
-
-    if (check_lic->check_license_type() != l)
-    THROW(util::exception, "Requested role did not match license role!");
+    feature_activation();
 }
 
 // ---------------------------------------------------------------------
@@ -196,16 +88,6 @@ std::size_t license_package::free_count(license_package::hard_metered_feature hm
 
 // ---------------------------------------------------------------------
 
-bool license_package::valid()
-{
-    if (!check_lic)
-    THROW(util::exception, "No license was loaded on valid check!");
-
-    return check_lic->valid();
-}
-
-// ---------------------------------------------------------------------
-
 void license_package::add_hard_metred_feature(license_package::hard_metered_feature mf, metred_resource *mr)
 {
     hard_metered_features.emplace(mf, mr);
@@ -232,16 +114,6 @@ bool license_package::has_hard_metred_feature(license_package::hard_metered_feat
 bool license_package::has_soft_metred_feature(license_package::soft_metered_feature smf)
 {
     return soft_metered_features.contains(smf);
-}
-
-// ---------------------------------------------------------------------
-
-std::map<std::string, std::string> license_package::getCustomAndFeatureFields()
-{
-    if (check_lic == nullptr)
-    THROW(util::exception, "License package type was empty and not correctly set!");
-
-    return check_lic->getCustomAndFeatureFields();
 }
 
 // ---------------------------------------------------------------------

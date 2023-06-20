@@ -7,8 +7,7 @@
 
 #include "licensing/metred_resource.h"
 #include "licensing/soft_metered_resource.h"
-#include "licensing/check_user_license.h"
-#include "licensing/check_key_license.h"
+#include "licensing/check_license.h"
 #include "util/exception.h"
 
 #include <map>
@@ -19,7 +18,7 @@
 namespace uh::licensing
 {
 
-class license_package
+class license_package: check_license
 {
 
 public:
@@ -46,14 +45,15 @@ public:
     };
 
     /**
-     * automatically searches matching license file to activate product
+     * manages features and metered setup on top of the license checker
      *
      * @param config license file input
      * @throws if license is invalid or cannot be loaded
      */
-    explicit license_package(check_license::role license_path_input,
-                             const std::filesystem::path &config, const std::string &apiKey,
-                             const std::string &sharedKey, const std::string &productId);
+    explicit license_package(uh::licensing::license_config license_config,
+                             uh::licensing::api_config apiKey_input,
+                             uh::licensing::credential_config credentialConfig_input,
+                             uh::licensing::license_activate_config license_activate_input);
 
     /**
      *
@@ -79,20 +79,6 @@ public:
         LIMIT_STORAGE_CAPACITY = 1,
         LIMIT_NETWORK_CONNECTIONS = 2
     };
-
-    /**
-     *
-     * @param r role to be validated
-     * @throw if license role does not match requested role or license not loaded
-     */
-    void check_role_enabled(check_license::role r);
-
-    /**
-     *
-     * @param l license to be validated
-     * @throw if license type does not match requested license type or license not loaded
-     */
-    void check_license_enabled(LicenseTypeEnum l);
 
     /**
      *
@@ -138,14 +124,6 @@ public:
 
     /**
      *
-     * @return if registered license type is valid
-     */
-    [[nodiscard]] bool valid();
-
-    ~license_package();
-
-    /**
-     *
      * @param mf metered feature to be registered
      * @param mr metered resource class to be checked repeatedly
      */
@@ -172,22 +150,11 @@ public:
      */
     bool has_soft_metred_feature(license_package::soft_metered_feature smf);
 
-    /**
-     *
-     * @return license specific key value pairs for features, product variables and limits
-     */
-    std::map<std::string, std::string>
-    getCustomAndFeatureFields();
-
 private:
 
     std::map<feature, bool> features;
     std::map<hard_metered_feature, metred_resource *> hard_metered_features;
     std::map<soft_metered_feature, soft_metered_resource *> soft_metered_features;
-
-    check_license *check_lic{};
-    std::filesystem::path license_path;
-    const uint8_t feature_count_global = 2;
 
     /**
      * activates online defined features and limits
