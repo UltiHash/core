@@ -5,7 +5,7 @@
 #ifndef CORE_BLOCKED_MEMORY_H
 #define CORE_BLOCKED_MEMORY_H
 
-#include "fragment_set_interface.h"
+#include "set_interface.h"
 
 namespace uh::dbn::storage::smart::sets {
 

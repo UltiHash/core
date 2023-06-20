@@ -4,7 +4,8 @@
 #include <string>
 #include <vector>
 #include <list>
-
+#include <memory>
+#include <span>
 
 namespace uh::protocol
 {
@@ -38,22 +39,22 @@ struct chunks_meta_data
     std::list <uint32_t> chunk_indices;
 };
 
-struct key_value_t {
-    std::span <const char> key;
-    std::span <const char> value;
+template <typename T>
+struct owning_span {
+    std::size_t size {};
+    std::unique_ptr <T[]> data = nullptr;
+    owning_span() = default;
+    owning_span(size_t data_size):
+        size (data_size),
+        data {std::make_unique_for_overwrite <T[]> (size)} {}
+    owning_span(size_t data_size, std::unique_ptr <T[]>&& ptr):
+        size (data_size),
+        data {std::move (ptr)} {}
+
 };
 
-struct data_entry {
-    key_value_t key_value;
-    std::span <std::span <const char>> labels;
-};
-
-struct query {
-    std::span <char> single_key;
-    std::span <char> start_key;
-    std::span <char> end_key;
-    std::span <std::span <const char>> labels;
-};
+template <typename T>
+using ospan = owning_span <T>;
 
 // ---------------------------------------------------------------------
 

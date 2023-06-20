@@ -15,13 +15,14 @@
 #include <unistd.h>
 #include <mutex>
 
+#include "key_store_interface.h"
 #include "storage/backends/smart_backend/storage_types/fixed_managed_storage.h"
 #include "storage/backends/smart_backend/storage_types/growing_managed_storage.h"
 #include "storage/backends/smart_backend/storage_types/growing_plain_storage.h"
 
-namespace uh::dbn::storage::smart {
+namespace uh::dbn::storage::smart::key_stores {
 
-class persisted_robinhood_hashmap {
+class persisted_robinhood_hashmap: public key_store_interface {
 
 public:
 
@@ -32,18 +33,18 @@ public:
      * @param key
      * @param value
      */
-    void insert (std::span <char> key, std::span <char> value);
+    void insert (std::span <char> key, std::span <char> value) override;
 
     /**
      * returns the fragments offset and sizes
      * @param key
      * @return
      */
-    std::optional <std::span <char>> get (std::span <char> key);
+    std::optional <std::span <char>> get (std::span <char> key) override;
 
-    void remove (std::span <char> key);
+    void remove (std::span <char> key) override;
 
-    ~persisted_robinhood_hashmap ();
+    ~persisted_robinhood_hashmap () override;
 
 private:
 
@@ -84,6 +85,6 @@ private:
 
 };
 
-} // end namespace uh::dbn::storage::smart
+} // end namespace uh::dbn::storage::smart::key_stores
 
 #endif //CORE_PERSISTED_ROBINHOOD_HASHMAP_H

@@ -51,6 +51,34 @@ private:
 
 
 class managed_storage {
+public:
+
+    /** Allocate new memory in the mmap_storage and return a pointer to it.
+  *  @throws bad_alloc
+  */
+    virtual offset_ptr allocate (std::size_t size) = 0;
+
+    /** Deallocate the memory pointed by p for size number of bytes.
+     *  @throws bad_alloc
+     */
+    virtual void deallocate (const offset_ptr&, size_t size) = 0;
+
+    /** Flush changes to the memory to disk. Only return when sync was finished.
+     *  @throws on error
+     */
+    virtual void sync (void* ptr, std::size_t size) = 0;
+
+    /**
+     * Flushes the whole mmap storage to disk. Only return when sync was finished.
+     */
+    virtual void sync ();
+
+    /**
+     * Transforms the given offset to a pointer on the memory.
+     * @param offset
+     * @return pointer
+     */
+    virtual void* get_raw_ptr (size_t offset) = 0;
 
 protected:
     managed_storage () = default;

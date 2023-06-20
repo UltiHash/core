@@ -6,52 +6,30 @@
 #define CORE_UNLOCKED_REDBLACK_TREE_H
 
 #include <atomic>
-#include "fragment_set_interface.h"
+#include "set_interface.h"
 #include "storage/backends/smart_backend/smart_config.h"
-#include "storage/backends/smart_backend/storage_types/fixed_managed_storage.h"
+#include "storage/backends/smart_backend/storage_types/storage_common.h"
 #include "storage/backends/smart_backend/storage_types/growing_plain_storage.h"
+#include "index_mem_structures.h"
 
 namespace uh::dbn::storage::smart::sets {
 
 
-class unlocked_redblack_tree: public fragment_set_interface{
+class unlocked_redblack_tree: public set_interface{
 
 public:
 
-    unlocked_redblack_tree (set_config set_conf, fixed_managed_storage& data_store);
+    unlocked_redblack_tree (set_config set_conf, managed_storage& data_store);
 
 private:
 
-    position_info do_insert_index (const std::string_view& frag, uint64_t data_offset, const position_info& pos) override;
+    position_info do_push_back_pointer (const std::string_view& data, uint64_t data_offset, const position_info& pos) override;
 
-    [[nodiscard]] position_info do_find (const std::string_view& frag, const position_info& pos) const override;
+    [[nodiscard]] position_info do_find (const std::string_view& data, const position_info& pos) const override;
 
     void do_sync (const position_info& pos) override;
 
-    void do_remove (fragment& frag, const position_info& pos) override;
-
-    enum color_t : uint8_t
-    {
-        RED = 0,
-        BLACK = 1
-    };
-
-    enum direction_t: uint8_t {
-        LEFT = 0,
-        RIGHT = 1,
-    };
-
-    struct mmap_node {
-        fragment m_frag;
-        uint64_t m_parent;
-        uint64_t m_left;
-        uint64_t m_right;
-        color_t m_color;
-    };
-    struct node {
-        uint64_t m_offset;
-        mmap_node* m_mnode;
-    };
+    void do_remove (std::string_view& data, const position_info& pos) override;
 
     void balance (node& z);
 
@@ -69,12 +47,12 @@ private:
 
     static inline uint64_t& get_other_child (const node& x, direction_t d) noexcept;
 
-    [[nodiscard]] inline int comp (const std::string_view& new_fragment, const fragment& f)const ;
+    [[nodiscard]] inline int comp (const std::string_view& new_data, const offset_span& f)const ;
 
     constexpr static uint64_t NILL_OFFSET = 2 * sizeof (uint64_t);
 
     const set_config m_set_conf;
-    fixed_managed_storage& m_data_store;
+    std::reference_wrapper <managed_storage> m_data_store;
     growing_plain_storage m_index_store;
     node m_nil {};
     std::atomic <uint64_t*> m_root;

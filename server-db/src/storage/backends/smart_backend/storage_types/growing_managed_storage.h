@@ -11,34 +11,34 @@
 
 namespace uh::dbn::storage::smart {
 
-class growing_managed_storage: managed_storage {
+class growing_managed_storage: public managed_storage {
 
 public:
     growing_managed_storage (std::filesystem::path directory, std::filesystem::path log_file, size_t min_file_size, size_t max_file_size);
 
-    offset_ptr allocate (std::size_t size);
+    offset_ptr allocate (std::size_t size) override;
 
     /** Deallocate the memory pointed by p for size number of bytes.
      *  @throws bad_alloc
      */
-    void deallocate (const offset_ptr&, size_t size);
+    void deallocate (const offset_ptr&, size_t size) override;
 
     /** Flush changes to the memory to disk. Only return when sync was finished.
      *  @throws on error
      */
-    static void sync (void* ptr, std::size_t size);
+    void sync (void* ptr, std::size_t size) override;
 
     /**
      * Flushes the whole mmap storage to disk. Only return when sync was finished.
      */
-    void sync ();
+    void sync () override;
 
     /**
      * Transforms the given offset to a pointer on the memory.
      * @param offset
      * @return pointer
      */
-    void* get_raw_ptr (size_t offset);
+    void* get_raw_ptr (size_t offset) override;
 
     ~growing_managed_storage();
 

@@ -6,6 +6,7 @@
 #define CORE_DESERIALIZER_H
 
 #include "serialization_common.h"
+#include "protocol/common.h"
 
 namespace uh::serialization {
 
@@ -136,6 +137,29 @@ namespace uh::serialization {
 
             io::read(dev_, {range.data (), data_size});
             range = {range.data (), data_size};
+
+        }
+
+        template <typename T>
+        requires (std::is_arithmetic_v <T> or std::is_enum_v <T>)
+        protocol::ospan <T> read_ospan() {
+
+            char control_byte[1];
+            io::read(dev_, control_byte);
+
+            auto data_size_len = get_control_byte_size_length(control_byte[0]);
+            std::vector<char> data_size_bytes(data_size_len);
+            io::read(dev_, data_size_bytes);
+
+            auto data_size = get_control_byte_size(data_size_bytes, data_size_len);
+            if (is_different_endian(control_byte[0])) [[unlikely]] {
+                data_size = endian_convert (data_size);
+            }
+
+            auto ptr = std::make_unique_for_overwrite<T[]>(data_size);
+
+            io::read(dev_, {reinterpret_cast <char*> (ptr.get ()), data_size * sizeof (T)});
+            return {data_size, std::move (ptr)};
 
         }
 

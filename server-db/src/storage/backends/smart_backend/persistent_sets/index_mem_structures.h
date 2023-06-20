@@ -5,7 +5,7 @@
 #ifndef CORE_INDEX_MEM_STRUCTURES_H
 #define CORE_INDEX_MEM_STRUCTURES_H
 
-#include "fragment_set_interface.h"
+#include "set_interface.h"
 #include <stdexcept>
 
 namespace uh::dbn::storage::smart::sets {
@@ -17,8 +17,13 @@ enum color_t : uint8_t
     BLACK = 1
 };
 
+struct offset_span {
+    uint64_t m_data_offset;
+    size_t m_size;
+};
+
 struct mmap_node {
-    fragment m_frag;
+    offset_span m_data;
     uint64_t m_parent;
     uint64_t m_left;
     uint64_t m_right;
@@ -27,6 +32,11 @@ struct mmap_node {
 struct node {
     uint64_t m_offset;
     mmap_node* m_mnode;
+};
+
+enum direction_t: uint8_t {
+    LEFT = 0,
+    RIGHT = 1,
 };
 
 struct alignas (4096) block {

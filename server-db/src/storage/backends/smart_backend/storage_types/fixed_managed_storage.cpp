@@ -36,11 +36,7 @@ void fixed_managed_storage::sync(void *ptr, std::size_t size) {
 }
 
 void fixed_managed_storage::sync () {
-    for (auto &resource: m_resources) {
-        if (msync (resource.second.m_ptr.m_addr, resource.second.m_size, MS_SYNC) != 0) {
-            throw std::system_error (errno, std::system_category(), "fixed_managed_storage could not sync the mmap data");
-        }
-    }
+    managed_storage::sync();
 }
 
 void *fixed_managed_storage::get_raw_ptr(size_t offset) {

@@ -290,50 +290,118 @@ void read(serialization::buffered_serialization& in, read_chunks::response& resp
 // ---------------------------------------------------------------------
 
 void write(serialization::buffered_serialization &out, const write_key_value::request &request) {
+    out.write(write_key_value::request_id);
+    switch (request.data.index())
+    {
+        case 0:
+            out.write(std::get <0> (request.key_sizes));
+            out.write(std::get <0> (request.value_sizes));
+            out.write(std::get <0> (request.label_counts));
+            out.write(std::get <0> (request.label_sizes));
+            out.write(std::get <0> (request.data));
+            return;
 
-    out.write(request.has_next);
-    out.write(request.key);
-    out.write(request.value);
+        case 1:
+            out.write(std::get <1> (request.key_sizes));
+            out.write(std::get <1> (request.value_sizes));
+            out.write(std::get <1> (request.label_counts));
+            out.write(std::get <1> (request.label_sizes));
+            out.write(std::get <1> (request.data));
+            return;
+    }
+
 }
 
 // ---------------------------------------------------------------------
 
 void read(serialization::buffered_serialization &in, write_key_value::request &request) {
-    THROW (util::exception, "not implemented");
+
+    request.key_sizes = in.read_ospan <uint16_t> ();
+    request.value_sizes = in.read_ospan <uint32_t> ();
+    request.label_counts = in.read_ospan <uint8_t> ();
+    request.label_sizes = in.read_ospan <uint8_t> ();
+    request.data = in.read_ospan <char> ();
 }
 
 // ---------------------------------------------------------------------
 
 void write(serialization::buffered_serialization &out, const write_key_value::response &response) {
-    out.write(response.effective_size);
+    out.write(response.effective_sizes);
 }
 
 // ---------------------------------------------------------------------
 
 void read(serialization::buffered_serialization &in, write_key_value::response &response) {
     check_status(in);
-    response.effective_size = in.read<decltype (response.effective_size)>();
+
+    response.effective_sizes = in.read_ospan<uint32_t>();
 }
 
 // ---------------------------------------------------------------------
 
 void write(serialization::buffered_serialization &out, const read_key_value::request &request) {
-    out.write(request.start_key);
-    out.write(request.end_key);
+    out.write(read_key_value::request_id);
+    switch (request.data.index())
+    {
+        case 0:
+            out.write(std::get <0> (request.start_key_sizes));
+            out.write(std::get <0> (request.end_key_sizes));
+            out.write(std::get <0> (request.single_key_sizes));
+            out.write(std::get <0> (request.label_counts));
+            out.write(std::get <0> (request.label_sizes));
+            out.write(std::get <0> (request.data));
+            return;
+
+        case 1:
+            out.write(std::get <1> (request.start_key_sizes));
+            out.write(std::get <1> (request.end_key_sizes));
+            out.write(std::get <1> (request.single_key_sizes));
+            out.write(std::get <1> (request.label_counts));
+            out.write(std::get <1> (request.label_sizes));
+            out.write(std::get <1> (request.data));
+            return;
+    }
 }
 
 // ---------------------------------------------------------------------
 
 void read(serialization::buffered_serialization &in, read_key_value::request &request) {
-    THROW (util::exception, "not implemented");
+    request.start_key_sizes = in.read_ospan <uint16_t> ();
+    request.end_key_sizes = in.read_ospan <uint16_t> ();
+    request.single_key_sizes = in.read_ospan <uint16_t> ();
+    request.label_counts = in.read_ospan <uint8_t> ();
+    request.label_sizes = in.read_ospan <uint8_t> ();
+    request.data = in.read_ospan <char> ();
 }
 
 // ---------------------------------------------------------------------
 
 void write(serialization::buffered_serialization &out, const read_key_value::response &response) {
-    out.write(response.has_next);
-    out.write(response.key);
-    out.write(response.value);
+
+    switch (response.key_sizes.index()) {
+        case 0:
+            out.write(std::get<0>(response.key_sizes));
+            out.write(std::get<0>(response.value_sizes));
+            break;
+
+        case 1:
+            out.write(std::get<1>(response.key_sizes));
+            out.write(std::get<0>(response.value_sizes));
+            break;
+    }
+
+        switch (response.data.index())
+    {
+        case 0:
+            out.write(std::get<0>(response.data));
+            return;
+
+        case 1:
+            out.write(*std::get<1>(response.data));
+            return;
+    }
+
+    THROW (util::exception, "unsupported response data format");
 }
 
 // ---------------------------------------------------------------------
@@ -341,9 +409,9 @@ void write(serialization::buffered_serialization &out, const read_key_value::res
 void read(serialization::buffered_serialization &in, read_key_value::response &response) {
     check_status(in);
 
-    response.has_next = in.read<decltype(response.has_next)>();
-    in.read (response.key);
-    in.read (response.value);
+    response.key_sizes = in.read_ospan <uint16_t> ();
+    response.value_sizes = in.read_ospan <uint32_t> ();
+    response.data = in.read_ospan <char> ();
 }
 
 // ---------------------------------------------------------------------

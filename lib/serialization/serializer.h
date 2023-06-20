@@ -7,7 +7,7 @@
 #define CORE_SERIALIZER_H
 
 #include "serialization_common.h"
-
+#include <algorithm>
 
 namespace uh::serialization {
 
@@ -101,6 +101,19 @@ namespace uh::serialization {
             const auto header = get_header(data_size);
             io::write(dev_, header);
             dev_.write_range(dg);
+        }
+
+        /**
+         * Serializes an owning span
+         * @param data
+         */
+        template <typename T>
+        requires (std::is_arithmetic_v <T> or std::is_enum_v <T>)
+        void write(const protocol::ospan<T>& data) {
+            const auto data_size = data.size * sizeof(T);
+            const auto header = get_header(data_size);
+            io::write(dev_, header);
+            io::write(dev_, {reinterpret_cast <const char *> (data.data.get()), data_size});
         }
     };
 

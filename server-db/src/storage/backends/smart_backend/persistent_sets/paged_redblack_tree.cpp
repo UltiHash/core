@@ -9,11 +9,13 @@ namespace uh::dbn::storage::smart::sets {
 
 position_info null_position;
 
-paged_redblack_tree::paged_redblack_tree(set_config set_conf, fixed_managed_storage& data_store):
+template <typename Comparator>
+paged_redblack_tree <Comparator>::paged_redblack_tree(set_config set_conf, managed_storage& data_store):
         m_set_conf (std::move (set_conf)),
         m_data_store (data_store),
         m_index_store (growing_plain_storage (m_set_conf.fragment_set_path, m_set_conf.set_init_file_size)),
         m_first_block (*(reinterpret_cast <first_block*> (m_index_store.get_storage()))),
+        m_comp (data_store),
         m_block_size (boost::interprocess::mapped_region::get_page_size()) {
 
     if (m_set_conf.set_init_file_size < 2 * m_block_size) {
@@ -34,8 +36,8 @@ paged_redblack_tree::paged_redblack_tree(set_config set_conf, fixed_managed_stor
     }
 }
 
-
-position_info paged_redblack_tree::do_insert_index (const std::string_view& frag, uint64_t data_offset, const position_info& pos) {
+template <typename Comparator>
+position_info paged_redblack_tree <Comparator>::do_push_back_pointer (const std::string_view& data, uint64_t data_offset, const position_info& pos) {
 
     if (pos.hint == 0) {
         throw std::logic_error ("unlocked_redblack_tree relies on the given position. First call the find function.");
@@ -56,7 +58,7 @@ position_info paged_redblack_tree::do_insert_index (const std::string_view& frag
     z.m_mnode->m_left = m_first_block.nill_offset;
     z.m_mnode->m_right = m_first_block.nill_offset;
     z.m_mnode->m_color = RED;
-    z.m_mnode->m_frag = {data_offset, frag.size()};
+    z.m_mnode->m_data = {data_offset, data.size()};
 
     const auto offset = z.m_offset;
 
@@ -70,8 +72,8 @@ position_info paged_redblack_tree::do_insert_index (const std::string_view& frag
     return {.hint = offset, .comp = pos.comp};
 }
 
-
-position_info paged_redblack_tree::do_find (const std::string_view &frag, const position_info&) const {
+template <typename Comparator>
+position_info paged_redblack_tree <Comparator>::do_find (const std::string_view &data, const position_info&) const {
 
     auto y = m_nil;
     position_info res;
@@ -82,7 +84,7 @@ position_info paged_redblack_tree::do_find (const std::string_view &frag, const 
     node smallest_upper = m_nil;
     while (x.m_offset != m_first_block.nill_offset) {
         y = x;
-        comp_int = comp (frag, x.m_mnode->m_frag);
+        comp_int = (*m_comp) (data, x.m_mnode->m_data);
         if (comp_int < 0) {
             largest_lower = x;
             x = get_node (x.m_mnode->m_left);
@@ -92,35 +94,38 @@ position_info paged_redblack_tree::do_find (const std::string_view &frag, const 
             x = get_node (x.m_mnode->m_right);
         }
         else {
-            char* ptr = static_cast <char*> (m_data_store.get_raw_ptr(y.m_mnode->m_frag.m_data_offset));
-            res.match = {y.m_mnode->m_frag.m_data_offset, {ptr, y.m_mnode->m_frag.m_size}};
+            char* ptr = static_cast <char*> (m_data_store.get().get_raw_ptr(y.m_mnode->m_data.m_data_offset));
+            res.match = {y.m_mnode->m_data.m_data_offset, {ptr, y.m_mnode->m_data.m_size}};
             break;
         }
     }
 
     if (!res.match) {
-        char *ptr_lower = static_cast <char *> (m_data_store.get_raw_ptr(largest_lower.m_mnode->m_frag.m_data_offset));
-        char *ptr_upper = static_cast <char *> (m_data_store.get_raw_ptr(smallest_upper.m_mnode->m_frag.m_data_offset));
-        res.lower = {largest_lower.m_mnode->m_frag.m_data_offset, {ptr_lower, largest_lower.m_mnode->m_frag.m_size}};
-        res.upper = {smallest_upper.m_mnode->m_frag.m_data_offset, {ptr_upper, smallest_upper.m_mnode->m_frag.m_size}};
+        char *ptr_lower = static_cast <char *> (m_data_store.get().get_raw_ptr(largest_lower.m_mnode->m_data.m_data_offset));
+        char *ptr_upper = static_cast <char *> (m_data_store.get().get_raw_ptr(smallest_upper.m_mnode->m_data.m_data_offset));
+        res.lower = {largest_lower.m_mnode->m_data.m_data_offset, {ptr_lower, largest_lower.m_mnode->m_data.m_size}};
+        res.upper = {smallest_upper.m_mnode->m_data.m_data_offset, {ptr_upper, smallest_upper.m_mnode->m_data.m_size}};
     }
     res.hint = y.m_offset;
     res.comp = comp_int;
     return res;
 }
 
-void paged_redblack_tree::do_sync(const position_info& pos) {
+template <typename Comparator>
+void paged_redblack_tree <Comparator>::do_sync(const position_info& pos) {
 
     if (msync(align_ptr (m_index_store.get_storage() + pos.hint), sizeof (mmap_node), MS_SYNC) != 0) {
         throw std::system_error (errno, std::system_category(), "persisted_redblack_tree_set could not sync the mmap data");
     }
 }
 
-void paged_redblack_tree::do_remove(fragment &frag, const position_info &pos) {
+template <typename Comparator>
+void paged_redblack_tree <Comparator>::do_remove(std::string_view& data, const position_info &pos) {
     throw std::runtime_error ("not implemented");
 }
 
-void paged_redblack_tree::balance(node& z) {
+template <typename Comparator>
+void paged_redblack_tree <Comparator>::balance(node& z) {
     auto parent = get_node (z.m_mnode->m_parent);
     while (parent.m_mnode->m_color == RED) {
         auto grand_parent = get_node(parent.m_mnode->m_parent);
@@ -138,7 +143,8 @@ void paged_redblack_tree::balance(node& z) {
     get_node(m_first_block.root_offset).m_mnode->m_color = BLACK;
 }
 
-node paged_redblack_tree::directed_balance(node& z, paged_redblack_tree::direction_t d) {
+template <typename Comparator>
+node paged_redblack_tree <Comparator>::directed_balance(node& z, direction_t d) {
     auto parent = get_node (z.m_mnode->m_parent);
     auto grand_parent = get_node(parent.m_mnode->m_parent);
 
@@ -161,7 +167,8 @@ node paged_redblack_tree::directed_balance(node& z, paged_redblack_tree::directi
     return z;
 }
 
-void paged_redblack_tree::rotate (node& x, paged_redblack_tree::direction_t d) {
+template <typename Comparator>
+void paged_redblack_tree <Comparator>::rotate (node& x, direction_t d) {
     auto y = get_node(get_other_child(x, d));
     auto& yc = get_child(y, d);
     get_other_child(x, d) = yc;
@@ -182,11 +189,13 @@ void paged_redblack_tree::rotate (node& x, paged_redblack_tree::direction_t d) {
     x.m_mnode->m_parent = y.m_offset;
 }
 
-node paged_redblack_tree::get_node(uint64_t offset) const noexcept {
+template <typename Comparator>
+node paged_redblack_tree <Comparator>::get_node(uint64_t offset) const noexcept {
     return {offset, reinterpret_cast <mmap_node*> (m_index_store.get_storage() + offset)};
 }
 
-node paged_redblack_tree::add_node(uint64_t parent) noexcept {
+template <typename Comparator>
+node paged_redblack_tree <Comparator>::add_node(uint64_t parent) noexcept {
 
     auto find_page_friendly_offset = [this] (auto b) {
         node n;
@@ -226,13 +235,8 @@ node paged_redblack_tree::add_node(uint64_t parent) noexcept {
     }
 }
 
-int paged_redblack_tree::comp(const std::string_view &new_fragment, const fragment &f) const {
-    auto* p2 = m_data_store.get_raw_ptr(f.m_data_offset);
-    const std::string_view strw2 {static_cast <char*> (p2), f.m_size};
-    return new_fragment.compare(strw2);
-}
-
-uint64_t& paged_redblack_tree::get_child(const node &x, paged_redblack_tree::direction_t d) noexcept {
+template <typename Comparator>
+uint64_t& paged_redblack_tree <Comparator>::get_child(const node &x, direction_t d) noexcept {
     if (d == LEFT) {
         return x.m_mnode->m_left;
     }
@@ -241,7 +245,8 @@ uint64_t& paged_redblack_tree::get_child(const node &x, paged_redblack_tree::dir
     }
 }
 
-uint64_t& paged_redblack_tree::get_other_child(const node &x, paged_redblack_tree::direction_t d) noexcept {
+template <typename Comparator>
+uint64_t& paged_redblack_tree <Comparator>::get_other_child(const node &x, direction_t d) noexcept {
     if (d == RIGHT) {
         return x.m_mnode->m_left;
     }
@@ -250,10 +255,10 @@ uint64_t& paged_redblack_tree::get_other_child(const node &x, paged_redblack_tre
     }
 }
 
-std::pair <uint64_t, block&> paged_redblack_tree::get_block (uint64_t node_offset) noexcept {
+template <typename Comparator>
+std::pair <uint64_t, block&> paged_redblack_tree <Comparator>::get_block (uint64_t node_offset) noexcept {
     const auto offset = node_offset - node_offset % m_block_size;
     return {offset, *reinterpret_cast <block*> (m_index_store.get_storage() + offset)};
 }
-
 
 } // end namespace uh::dbn::storage::smart::sets

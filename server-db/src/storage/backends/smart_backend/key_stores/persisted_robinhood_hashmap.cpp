@@ -3,7 +3,7 @@
 //
 #include "persisted_robinhood_hashmap.h"
 
-namespace uh::dbn::storage::smart {
+namespace uh::dbn::storage::smart::key_stores {
 
 persisted_robinhood_hashmap::persisted_robinhood_hashmap(map_config map_conf) :
         m_map_conf(std::move (map_conf)),
@@ -211,5 +211,9 @@ void persisted_robinhood_hashmap::extend_and_rehash() {
     m_key_store.rename_file(file_name);
 }
 
+void persisted_robinhood_hashmap::remove(std::span<char> key) {
+    std::runtime_error ("not implemented");
+}
 
-} // end namespace uh::dbn::storage::smart
+
+} // end namespace uh::dbn::storage::smart::key_stores

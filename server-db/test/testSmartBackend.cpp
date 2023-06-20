@@ -14,7 +14,7 @@
 #include <storage/backends/smart_backend/smart_config.h>
 #include "storage/backends/smart_backend/fragment_sets/persisted_redblack_tree_set.h"
 #include <storage/backends/smart_backend/smart_core.h>
-#include <storage/backends/smart_backend/persisted_robinhood_hashmap.h>
+#include "storage/backends/smart_backend/key_stores/persisted_robinhood_hashmap.h"
 #include "storage/backends/smart_storage.h"
 #include "storage/backends/smart_backend/storage_types/growing_managed_storage.h"
 
