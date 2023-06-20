@@ -7,8 +7,9 @@
 
 #include "licensing/metred_resource.h"
 #include "licensing/soft_metered_resource.h"
-#include "licensing/check_license.h"
+#include "licensing/check_airgap_license.h"
 #include "util/exception.h"
+#include "logging/logging_boost.h"
 
 #include <map>
 #include <set>
@@ -18,7 +19,7 @@
 namespace uh::licensing
 {
 
-class license_package: check_license
+class license_package: check_airgap_license
 {
 
 public:

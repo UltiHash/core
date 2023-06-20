@@ -2,7 +2,7 @@
 // Created by benjamin-elias on 06.06.23.
 //
 
-#include "licensing/check_license.h"
+#include "licensing/check_airgap_license.h"
 #include "util/exception.h"
 #include "logging/logging_boost.h"
 #include "io/temp_file.h"
@@ -22,10 +22,10 @@ namespace uh::licensing
 
 // ---------------------------------------------------------------------
 
-check_license::check_license(uh::licensing::license_config license_config,
-                             uh::licensing::api_config apiKey_input,
-                             uh::licensing::credential_config credentialConfig_input,
-                             uh::licensing::license_activate_config license_activate_input)
+check_airgap_license::check_airgap_license(uh::licensing::license_config license_config,
+                                           uh::licensing::api_config apiKey_input,
+                                           uh::licensing::credential_config credentialConfig_input,
+                                           uh::licensing::license_activate_config license_activate_input)
     :
     m_license(std::move(license_config)),
     m_api(std::move(apiKey_input)),
@@ -35,7 +35,7 @@ check_license::check_license(uh::licensing::license_config license_config,
 
 // ---------------------------------------------------------------------
 
-bool check_license::valid()
+bool check_airgap_license::valid()
 {
     if (!getLicenseActivateConfig().key.empty())
     {
@@ -50,7 +50,7 @@ bool check_license::valid()
 
 // ---------------------------------------------------------------------
 
-bool check_license::exists() const
+bool check_airgap_license::exists() const
 {
     return std::filesystem::exists(m_license.license_path) and std::filesystem::is_regular_file(m_license.license_path);
 }
@@ -58,7 +58,7 @@ bool check_license::exists() const
 // ---------------------------------------------------------------------
 
 std::map<std::string, std::string>
-check_license::getCustomAndFeatureFields()
+check_airgap_license::getCustomAndFeatureFields()
 {
     auto feature_item_registry = std::vector<std::string>({"limitStorage", "warnStorage"});
 
@@ -114,7 +114,7 @@ check_license::getCustomAndFeatureFields()
 
 // ---------------------------------------------------------------------
 
-bool check_license::licenseRegister(const LicenseSpring::LicenseID &licenseId)
+bool check_airgap_license::licenseRegister(const LicenseSpring::LicenseID &licenseId)
 {
     if (m_license.replace_license)
     {
@@ -195,7 +195,7 @@ bool check_license::licenseRegister(const LicenseSpring::LicenseID &licenseId)
 
 // ---------------------------------------------------------------------
 
-bool check_license::license_check(const LicenseSpring::License::ptr_t &license)
+bool check_airgap_license::license_check(const LicenseSpring::License::ptr_t &license)
 {
     //First we'll run a online check. This will check your license on the
     //LicenseSpring servers, and sync up your local license to match your online
@@ -304,7 +304,7 @@ bool check_license::license_check(const LicenseSpring::License::ptr_t &license)
 
 // ---------------------------------------------------------------------
 
-LicenseSpring::ExtendedOptions check_license::getOptions()
+LicenseSpring::ExtendedOptions check_airgap_license::getOptions()
 {
     //Collecting network info
     LicenseSpring::ExtendedOptions options;
@@ -322,28 +322,28 @@ LicenseSpring::ExtendedOptions check_license::getOptions()
 
 // ---------------------------------------------------------------------
 
-const license_config &check_license::getLicense() const
+const license_config &check_airgap_license::getLicense() const
 {
     return m_license;
 }
 
 // ---------------------------------------------------------------------
 
-const api_config &check_license::getApi() const
+const api_config &check_airgap_license::getApi() const
 {
     return m_api;
 }
 
 // ---------------------------------------------------------------------
 
-const credential_config &check_license::getCredentials() const
+const credential_config &check_airgap_license::getCredentials() const
 {
     return m_credential;
 }
 
 // ---------------------------------------------------------------------
 
-std::shared_ptr<LicenseSpring::Configuration> check_license::getLicenseSpringConfig()
+std::shared_ptr<LicenseSpring::Configuration> check_airgap_license::getLicenseSpringConfig()
 {
     LicenseSpring::ExtendedOptions options = getOptions();
     uh::licensing::api_config api = getApi();
@@ -362,7 +362,7 @@ std::shared_ptr<LicenseSpring::Configuration> check_license::getLicenseSpringCon
 
 // ---------------------------------------------------------------------
 
-license_activate_config check_license::getLicenseActivateConfig()
+license_activate_config check_airgap_license::getLicenseActivateConfig()
 {
     auto licenseFileStorage =
         std::make_shared<LicenseSpring::FileStorageWithLock>(LicenseSpring::

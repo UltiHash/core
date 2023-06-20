@@ -169,7 +169,7 @@ public:
 
 // ---------------------------------------------------------------------
 
-class check_license
+class check_airgap_license
 {
 
 public:
@@ -181,10 +181,10 @@ public:
      *
      * @param license_directory is the path where a license file is stored
      */
-    explicit check_license(uh::licensing::license_config license_config,
-                           uh::licensing::api_config apiKey_input,
-                           uh::licensing::credential_config credentialConfig_input,
-                           uh::licensing::license_activate_config license_activate_input);
+    explicit check_airgap_license(uh::licensing::license_config license_config,
+                                  uh::licensing::api_config apiKey_input,
+                                  uh::licensing::credential_config credentialConfig_input,
+                                  uh::licensing::license_activate_config license_activate_input);
 
     /**
      * the default license is not timed

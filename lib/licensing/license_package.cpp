@@ -5,7 +5,6 @@
 #include "licensing/license_package.h"
 
 #include <utility>
-#include "logging/logging_boost.h"
 
 #include "soft_metered_storage_resource.h"
 
@@ -16,7 +15,7 @@ license_package::license_package(uh::licensing::license_config license_config,
                                  uh::licensing::api_config apiKey_input,
                                  uh::licensing::credential_config credentialConfig_input,
                                  uh::licensing::license_activate_config license_activate_input):
-    check_license(
+    check_airgap_license(
         std::move(license_config),
         std::move(apiKey_input),
         std::move(credentialConfig_input),

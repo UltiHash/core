@@ -87,7 +87,7 @@ std::unique_ptr<uh::licensing::license_package> make_licensing(const uh::options
 
                 INFO << "Initialized " + cfg.license_type;
 
-                write_airgap.write_license(uh::licensing::check_license::role::DataNode,
+                write_airgap.write_license(uh::licensing::check_airgap_license::role::DataNode,
                                            PROJECT_NAME,
                                            PROJECT_VERSION,
                                            cfg.license_key);
@@ -96,7 +96,7 @@ std::unique_ptr<uh::licensing::license_package> make_licensing(const uh::options
             }
 
             auto read_license =
-                std::make_unique<uh::licensing::license_package>(uh::licensing::check_license::role::DataNode,
+                std::make_unique<uh::licensing::license_package>(uh::licensing::check_airgap_license::role::DataNode,
                                                                  cfg.licensing_path,
                                                                  EncryptStr(LICENSE_API_KEY),
                                                                  EncryptStr(LICENSE_SHARED_KEY),
