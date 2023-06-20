@@ -68,11 +68,11 @@ template<>
 std::unique_ptr<check_airgap_license> make_test_license<check_airgap_license>()
 {
     auto lic_config = license_config();
-    lic_config.license_path = TEMP_DIR/(appName_test+".lic");
+    lic_config.license_path = TEMP_DIR / (appName_test + ".lic");
     lic_config.replace_license = true;
 
     auto api = api_config(apiKey_test, sharedKey_test, product_Id_test);
-    auto credential = credential_config(appName_test,appVersion_test);
+    auto credential = credential_config(appName_test, appVersion_test);
     auto activate = license_activate_config(licenseKey_100);
 
     check_airgap_license tmp_write_airgap(lic_config,
@@ -97,105 +97,87 @@ BOOST_FIXTURE_TEST_CASE_TEMPLATE(valid_default_license, T, license_types, Fixtur
 
 // ---------------------------------------------------------------------
 
-BOOST_AUTO_TEST_CASE(license_package_test)
+BOOST_FIXTURE_TEST_CASE_TEMPLATE(license_package_test, T, license_types, Fixture)
 {
     std::filesystem::remove("/tmp/" + appName_test + ".lic");
-    std::filesystem::remove("/tmp/" + appName_test + ".lic_spring");
 
-    std::filesystem::path license_path1;
-    {
-        check_key_license tmp_write_airgap(TEMP_DIR, apiKey_test,
-                                           sharedKey_test, product_Id_test);
-        tmp_write_airgap.write_license(check_airgap_license::NodeRole::DataNode, appName_test,
-                                       appVersion_test, licenseKey_100);
-        license_path1 = tmp_write_airgap.getLicensePath();
-    }
+    auto tmp_write_airgap = make_test_license<T>();
 
-    {
-        license_package lp(check_airgap_license::role::DATA_NODE,
-                           license_path1,
-                           apiKey_test,
-                           sharedKey_test,
-                           product_Id_test);
+    BOOST_REQUIRE(tmp_write_airgap->valid());
 
-        license_package lp2(check_airgap_license::role::DATA_NODE,
-                            license_path1.parent_path(),
-                            apiKey_test,
-                            sharedKey_test,
-                            product_Id_test);
+    auto lic_config = license_config();
+    lic_config.license_path = TEMP_DIR;
+    lic_config.replace_license = true;
 
-        BOOST_CHECK(lp.check_feature_enabled(license_package::feature::DEDUPLICATION));
-        BOOST_CHECK(lp.check_feature_enabled(license_package::feature::METRICS));
+    auto api = api_config(apiKey_test, sharedKey_test, product_Id_test);
+    auto credential = credential_config(appName_test, appVersion_test);
+    auto activate = license_activate_config(licenseKey_100);
 
-        auto *soft_right = new soft_metered_storage_resource(100, 50);
+    T tmp_write_airgap2(lic_config,
+                        api,
+                        credential,
+                        activate);
 
-        BOOST_REQUIRE_THROW(
-            lp.add_soft_metred_feature(license_package::soft_metered_feature::LIMIT_STORAGE_CAPACITY,
-                                       new soft_metered_storage_resource(50, 100)), util::exception);
+    BOOST_REQUIRE(tmp_write_airgap2.valid());
 
+    license_package lp(lic_config,
+                       api,
+                       credential,
+                       activate);
+
+    BOOST_CHECK(lp.check_feature_enabled(license_package::feature::DEDUPLICATION));
+    BOOST_CHECK(lp.check_feature_enabled(license_package::feature::METRICS));
+
+    auto *soft_right = new soft_metered_storage_resource(100, 50);
+
+    BOOST_REQUIRE_THROW(
         lp.add_soft_metred_feature(license_package::soft_metered_feature::LIMIT_STORAGE_CAPACITY,
-                                   soft_right);
+                                   new soft_metered_storage_resource(50, 100)), util::exception);
 
-        BOOST_CHECK(lp.valid());
+    lp.add_soft_metred_feature(license_package::soft_metered_feature::LIMIT_STORAGE_CAPACITY,
+                               soft_right);
 
-        auto initial_usable_storage = lp.free_count(static_cast<license_package::hard_metered_feature>
-                                                    (license_package::soft_metered_feature::LIMIT_STORAGE_CAPACITY));
+    BOOST_CHECK(lp.valid());
 
-        BOOST_CHECK(lp.soft_limit_allocate(license_package::soft_metered_feature::LIMIT_STORAGE_CAPACITY, 25));
-        BOOST_CHECK(lp.hard_limit_allocate(static_cast<license_package::hard_metered_feature>
-                                           (license_package::soft_metered_feature::LIMIT_STORAGE_CAPACITY), 75));
+    auto initial_usable_storage = lp.free_count(static_cast<license_package::hard_metered_feature>
+                                                (license_package::soft_metered_feature::LIMIT_STORAGE_CAPACITY));
 
-        BOOST_CHECK_EQUAL(initial_usable_storage, lp.free_count(static_cast<license_package::hard_metered_feature>
-                                                                (license_package::soft_metered_feature::LIMIT_STORAGE_CAPACITY))
-            + 100);
+    BOOST_CHECK(lp.soft_limit_allocate(license_package::soft_metered_feature::LIMIT_STORAGE_CAPACITY, 25));
+    BOOST_CHECK(lp.hard_limit_allocate(static_cast<license_package::hard_metered_feature>
+                                       (license_package::soft_metered_feature::LIMIT_STORAGE_CAPACITY), 75));
 
-        BOOST_REQUIRE_THROW(
-            lp.soft_limit_allocate(license_package::soft_metered_feature::LIMIT_NETWORK_CONNECTIONS, 1),
-            util::exception);
+    BOOST_CHECK_EQUAL(initial_usable_storage, lp.free_count(static_cast<license_package::hard_metered_feature>
+                                                            (license_package::soft_metered_feature::LIMIT_STORAGE_CAPACITY))
+        + 100);
 
-        BOOST_REQUIRE_EQUAL(
-            lp.soft_limit_allocate(license_package::soft_metered_feature::LIMIT_STORAGE_CAPACITY,
-                                   1000000000000000),
-            false);
+    BOOST_REQUIRE_THROW(
+        lp.soft_limit_allocate(license_package::soft_metered_feature::LIMIT_NETWORK_CONNECTIONS, 1),
+        util::exception);
 
-        BOOST_REQUIRE_THROW(lp.deallocate(static_cast<license_package::hard_metered_feature>
-                                          (license_package::hard_metered_feature::LIMIT_STORAGE_CAPACITY), 101),
-                            util::exception);
+    BOOST_REQUIRE_EQUAL(
+        lp.soft_limit_allocate(license_package::soft_metered_feature::LIMIT_STORAGE_CAPACITY,
+                               1000000000000000),
+        false);
 
-        BOOST_CHECK_NO_THROW(lp.deallocate(static_cast<license_package::hard_metered_feature>
-                                           (license_package::hard_metered_feature::LIMIT_STORAGE_CAPACITY), 100));
+    BOOST_REQUIRE_THROW(lp.deallocate(static_cast<license_package::hard_metered_feature>
+                                      (license_package::hard_metered_feature::LIMIT_STORAGE_CAPACITY), 101),
+                        util::exception);
 
-        auto feature_fields = lp.getCustomAndFeatureFields();
+    BOOST_CHECK_NO_THROW(lp.deallocate(static_cast<license_package::hard_metered_feature>
+                                       (license_package::hard_metered_feature::LIMIT_STORAGE_CAPACITY), 100));
 
-        BOOST_CHECK(feature_fields.find(lp.WARN_STORAGE_STRING) == feature_fields.end());
-        BOOST_CHECK(feature_fields.find(lp.LIMIT_STORAGE_STRING) == feature_fields.end());
-        BOOST_CHECK(lp.has_soft_metred_feature(uh::licensing::license_package::soft_metered_feature::LIMIT_STORAGE_CAPACITY));
+    auto feature_fields = lp.getCustomAndFeatureFields();
 
-        BOOST_CHECK(feature_fields.find(lp.METRICS_STRING) != feature_fields.end());
-        BOOST_CHECK(feature_fields.find(lp.DEDUPLICATION_STRING) != feature_fields.end());
+    BOOST_CHECK(feature_fields.find(lp.WARN_STORAGE_STRING) == feature_fields.end());
+    BOOST_CHECK(feature_fields.find(lp.LIMIT_STORAGE_STRING) == feature_fields.end());
+    BOOST_CHECK(lp.has_soft_metred_feature(uh::licensing::license_package::soft_metered_feature::LIMIT_STORAGE_CAPACITY));
 
-        delete soft_right;
-    }
+    BOOST_CHECK(feature_fields.find(lp.METRICS_STRING) != feature_fields.end());
+    BOOST_CHECK(feature_fields.find(lp.DEDUPLICATION_STRING) != feature_fields.end());
 
-    {
-        check_key_license tmp_write_airgap(license_path1, apiKey_test,
-                                           sharedKey_test, product_Id_test);
-        BOOST_CHECK_THROW(tmp_write_airgap.write_license(check_airgap_license::NodeRole::DataNode, appName_test,
-                                                         appVersion_test, licenseKey_100), util::exception);
-    }
-
-    {
-        check_key_license tmp_write_airgap2(license_path1, apiKey_test,
-                                            sharedKey_test, product_Id_test,
-                                            appVersion_test, appVersion_test,
-                                            true);
-        BOOST_CHECK_NO_THROW(tmp_write_airgap2.write_license(check_airgap_license::NodeRole::DataNode, appName_test,
-                                                             appVersion_test, licenseKey_100));
-    }
-
+    delete soft_right;
 
     std::filesystem::remove("/tmp/" + appName_test + ".lic");
-    std::filesystem::remove("/tmp/" + appName_test + ".lic_spring");
 }
 
 // ---------------------------------------------------------------------

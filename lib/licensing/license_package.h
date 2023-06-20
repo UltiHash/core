@@ -19,7 +19,7 @@
 namespace uh::licensing
 {
 
-class license_package: check_airgap_license
+class license_package: public check_airgap_license
 {
 
 public:

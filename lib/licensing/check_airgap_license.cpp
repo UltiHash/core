@@ -31,7 +31,10 @@ check_airgap_license::check_airgap_license(uh::licensing::license_config license
     m_api(std::move(apiKey_input)),
     m_credential(std::move(credentialConfig_input)),
     m_license_activate(std::move(license_activate_input))
-{}
+{
+    if(std::filesystem::is_directory(m_license.license_path))
+        m_license.license_path /= m_credential.appName + ".lic";
+}
 
 // ---------------------------------------------------------------------
 
