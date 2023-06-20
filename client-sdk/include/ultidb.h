@@ -24,7 +24,7 @@ extern "C" {
 const char* get_sdk_version();
 
 /**
-* Opaque structure that holds the UDB state.
+* Opaque structure that holds the UDB instance. This instance can be used to create a connection to the database.
 *
 * Allocated and initialized with ::udb_create_instance.
 * Cleaned up and deallocated with ::udb_destroy_instance.
@@ -76,7 +76,20 @@ UDB_RESULT udb_get_last_error();
 typedef struct UDB_KEY_STRUCT
 {
     char* key;
-    size_t length;
+    size_t size;
+
+    UDB_KEY_STRUCT(char* key_buffer, size_t key_size)
+    {
+        key = key_buffer;
+        size = key_size;
+    }
+
+    UDB_KEY_STRUCT()
+    {
+        key = nullptr;
+        size = 0;
+    }
+
 } UDB_KEY;
 
 /**
@@ -86,6 +99,19 @@ typedef struct UDB_DOCUMENT_STRUCT
 {
     char* data;
     size_t size;
+
+    UDB_DOCUMENT_STRUCT(char* doc_data, size_t data_size)
+    {
+        data = doc_data;
+        size = data_size;
+    }
+
+    UDB_DOCUMENT_STRUCT()
+    {
+        data = nullptr;
+        size = 0;
+    }
+
 } UDB_DOCUMENT;
 
 /**
@@ -99,10 +125,11 @@ typedef struct UDB_CONNECTION_STRUCT UDB_CONNECTION;
  * Creates an instance of UDB_KEY structure and returns a pointer to it.
  *
  * @param key_buffer buffer which contains the unique key
- * @param length length of the key_buffer
+ * @param size size of the key_buffer
  * @return UDB_KEY* pointer to the UDB_KEY struct created
  */
-UDB_KEY* udb_create_key(char* key_buffer, size_t length);
+UDB_KEY* udb_create_key(char* key_buffer, size_t size);
+UDB_KEY* udb_create_empty_key();
 
 /**
  * Deallocates the instance of UDB_KEY.
@@ -112,12 +139,15 @@ UDB_KEY* udb_create_key(char* key_buffer, size_t length);
  */
 UDB_RESULT udb_destroy_key(UDB_KEY* udb_key);
 
+UDB_RESULT udb_destroy_multiple_keys(const UDB_KEY** udb_key, size_t size);
+
 /**
  * Creates an instance of UDB_DOCUMENT structure and returns a pointer to it.
  *
  * @return UDB_DOCUMENT* pointer to the document structure allocated
  */
-UDB_DOCUMENT* udb_create_document();
+UDB_DOCUMENT* udb_create_document(char* data, size_t size);
+UDB_DOCUMENT* udb_create_empty_document();
 
 /**
  * Deallocates the instance of UDB_DOCUMENT which was allocated before. It also frees all the memory that is held
@@ -128,13 +158,15 @@ UDB_DOCUMENT* udb_create_document();
  */
 UDB_RESULT udb_destroy_document(UDB_DOCUMENT* doc);
 
+UDB_RESULT udb_destroy_multiple_documents(const UDB_DOCUMENT** doc_container, size_t size);
+
 /**
  * Creates an instance of UDB_DOCUMENT with a given key and returns a pointer to it.
  *
  * @return UDB_DOCUMENT* pointer to the document structure allocated
  */
-UDB_RESULT udb_document_set_data(UDB_DOCUMENT* doc, char* data, size_t size);
-UDB_RESULT udb_document_get_data(UDB_DOCUMENT* doc, char** data, size_t* size);
+void udb_document_set_data(UDB_DOCUMENT* doc, char* data, size_t size);
+void udb_document_get_data(UDB_DOCUMENT* doc, char** data, size_t* size);
 
 /**
 * Creates an instance of ::UDB_CONFIG (typedef UDB_CONFIG) which can be used to put configuration parameters.
@@ -198,7 +230,7 @@ UDB_RESULT udb_ping(UDB_CONNECTION* conn);
 UDB_RESULT udb_add(UDB_CONNECTION* conn,
                    const UDB_DOCUMENT** docs,
                    UDB_KEY** key,
-                   size_t n);
+                   size_t n_docs);
 
 /**
  * Convenience function around `udb_insert`.
@@ -238,28 +270,6 @@ UDB_RESULT udb_get(UDB_CONNECTION* conn,
 UDB_RESULT udb_get_one(UDB_CONNECTION* conn,
                        const UDB_KEY* key,
                        UDB_DOCUMENT* doc);
-
-/**
- *
- * @param db UDB object which can be used to perform operations such as integrate and retrieve.
- * @param hash_buffer buffer in which the retrieved hash can be stored
- * @param buffer_length length of the hash_buffer provided
- * @param data pointer to the data to be integrated
- * @param length Size of the data to integrate
- * @return UDB_RESULT enum that describes the result of the operation
- */
-UDB_RESULT udb_integrate(UDB_CONNECTION* udb_connection, char* hash_buffer,  size_t buffer_length, const char* data, size_t data_length);
-
-/**
- * Data to retrieve from the UDB cluster based on the hash provided.
- *
- * @param db UDB object which can be used to perform operations such as integrate and retrieve.
- * @param data_buffer buffer in which data retrieved is to be stored
- * @param buffer_length length of the buffer provided
- * @param udb_hash the hash of the data to be retrieved
- * @return UDB_RESULT enum that describes the result of the operation
- */
-UDB_RESULT udb_retrieve(UDB_CONNECTION* udb_connection, char* data_buffer, size_t buffer_length, const char* udb_hash);
 
 // ---------------------------------------------------------------------
 

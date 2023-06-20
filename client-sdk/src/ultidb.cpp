@@ -127,7 +127,22 @@ const char* get_sdk_version() { return SDK_VERSION; }
 
 // ---------------------------------------------------------------------
 
-UDB_KEY* udb_create_key(char* key_buffer, size_t length)
+UDB_KEY* udb_create_key(char* key_buffer, size_t size)
+{
+    try
+    {
+        return new UDB_KEY_STRUCT(key_buffer, size);
+    }
+    catch (const std::exception& e)
+    {
+        error = UDB_RESULT_ERROR;
+        return nullptr;
+    }
+}
+
+// ---------------------------------------------------------------------
+
+UDB_KEY* udb_create_empty_key()
 {
     try
     {
@@ -146,6 +161,7 @@ UDB_RESULT udb_destroy_key(UDB_KEY* udb_key)
 {
     try
     {
+        delete udb_key->key;
         delete udb_key;
         return UDB_RESULT_SUCCESS;
     }
@@ -158,7 +174,44 @@ UDB_RESULT udb_destroy_key(UDB_KEY* udb_key)
 
 // ---------------------------------------------------------------------
 
-UDB_DOCUMENT* udb_create_document()
+UDB_RESULT udb_destroy_multiple_keys(const UDB_KEY** key_container, size_t size)
+{
+    try
+    {
+        while (size > 0)
+        {
+            --size;
+            delete key_container[size]->key;
+            delete key_container[size];
+        }
+
+        return UDB_RESULT::UDB_RESULT_SUCCESS;
+    }
+    catch(const std::exception& e)
+    {
+        error = UDB_RESULT_ERROR;
+        return UDB_RESULT_ERROR;
+    }
+}
+
+// ---------------------------------------------------------------------
+
+UDB_DOCUMENT* udb_create_document(char* data, size_t size)
+{
+    try
+    {
+        return new UDB_DOCUMENT_STRUCT(data, size);
+    }
+    catch (const std::exception& e)
+    {
+        error = UDB_RESULT_ERROR;
+        return nullptr;
+    }
+}
+
+// ---------------------------------------------------------------------
+
+UDB_DOCUMENT* udb_create_empty_document()
 {
     try
     {
@@ -173,7 +226,7 @@ UDB_DOCUMENT* udb_create_document()
 
 // ---------------------------------------------------------------------
 
-UDB_RESULT udb_document_set_data(UDB_DOCUMENT* doc, char* data, size_t size)
+void udb_document_set_data(UDB_DOCUMENT* doc, char* data, size_t size)
 {
     doc->data = data;
     doc->size = size;
@@ -181,7 +234,7 @@ UDB_RESULT udb_document_set_data(UDB_DOCUMENT* doc, char* data, size_t size)
 
 // ---------------------------------------------------------------------
 
-UDB_RESULT udb_document_get_data(UDB_DOCUMENT* doc, char** data, size_t* size)
+void udb_document_get_data(UDB_DOCUMENT* doc, char** data, size_t* size)
 {
     *data = doc->data;
     *size = doc->size;
@@ -193,8 +246,31 @@ UDB_RESULT udb_destroy_document(UDB_DOCUMENT* udb_doc)
 {
     try
     {
+        delete udb_doc->data;
         delete udb_doc;
         return UDB_RESULT_SUCCESS;
+    }
+    catch(const std::exception& e)
+    {
+        error = UDB_RESULT_ERROR;
+        return UDB_RESULT_ERROR;
+    }
+}
+
+// ---------------------------------------------------------------------
+
+UDB_RESULT udb_destroy_multiple_documents(const UDB_DOCUMENT** doc_container, size_t size)
+{
+    try
+    {
+        while (size > 0)
+        {
+            --size;
+            delete doc_container[size]->data;
+            delete doc_container[size];
+        }
+
+        return UDB_RESULT::UDB_RESULT_SUCCESS;
     }
     catch(const std::exception& e)
     {
@@ -316,6 +392,22 @@ UDB_RESULT udb_destroy_instance(UDB* instance)
 
 // ---------------------------------------------------------------------
 
+UDB_RESULT udb_ping(UDB_CONNECTION_STRUCT* conn)
+{
+    try
+    {
+        conn->m_udb_client->valid();
+        return UDB_RESULT::UDB_RESULT_SUCCESS;
+    }
+    catch(const std::exception& e)
+    {
+        error = UDB_RESULT_ERROR;
+        return UDB_RESULT::UDB_RESULT_ERROR;
+    }
+}
+
+// ---------------------------------------------------------------------
+
 UDB_RESULT udb_add(UDB_CONNECTION* conn,
                    const UDB_DOCUMENT** docs,
                    UDB_KEY** key,
@@ -331,12 +423,10 @@ UDB_RESULT udb_add(UDB_CONNECTION* conn,
             auto resp = conn->m_udb_client->write_chunks(uh::protocol::write_chunks::request
                     { chunk_sizes, std::span<const char>(docs[index]->data, docs[index]->size ) });
 
-            char* returned_key = new char[65];
-            std::memcpy(returned_key, resp.hashes.data(), 65);
-//            returned_key[64] = '\0';
+            char* returned_key = new char[64]{};
+            std::memcpy(returned_key, resp.hashes.data(), 64); // TODO: inefficient copy
 
-            key[index]->key = returned_key;
-            key[index]->length = 64;
+            key[index] = new UDB_KEY(returned_key, 64);
         }
 
         return UDB_RESULT::UDB_RESULT_SUCCESS;
@@ -368,11 +458,11 @@ UDB_RESULT udb_add_one(UDB_CONNECTION* conn,
                                                              { chunk_sizes, std::span<const char>(doc->data,
                                                                doc->size ) });
 
-        char* returned_key = new char[65];
-        std::memcpy(returned_key, resp.hashes.data(), 65);
+        char* returned_key = new char[64]{};
+        std::memcpy(returned_key, resp.hashes.data(), 64);
 
         key->key = returned_key;
-        key->length = 64;
+        key->size = 64;
 
         return UDB_RESULT::UDB_RESULT_SUCCESS;
     }
@@ -407,12 +497,12 @@ UDB_RESULT udb_get(UDB_CONNECTION* conn,
 //          auto retrieved_size = result.chunk_sizes.front();
 
             auto returned_data_size = std::get<std::vector<char>>(result.data).size();
+
             char* returned_data = new char[returned_data_size];
             std::memcpy(returned_data, std::get<std::vector<char>>(result.data).data(),
                         returned_data_size );
 
-            doc[index]->data = returned_data;
-            doc[index]->size = returned_data_size;
+            doc[index] = new UDB_DOCUMENT(returned_data, returned_data_size);
         }
 
         return UDB_RESULT::UDB_RESULT_SUCCESS;
@@ -441,7 +531,8 @@ UDB_RESULT udb_get_one(UDB_CONNECTION* conn,
         auto result = conn->m_udb_client->read_chunks(req);
 
         auto returned_data_size = std::get<std::vector<char>>(result.data).size();
-        char* returned_data = new char[returned_data_size];
+
+        char* returned_data = new char[returned_data_size]{};
         std::memcpy(returned_data, std::get<std::vector<char>>(result.data).data(),
                     returned_data_size );
 
@@ -460,82 +551,6 @@ UDB_RESULT udb_get_one(UDB_CONNECTION* conn,
         error = UDB_RESULT_SUCCESS;
         return UDB_RESULT::UDB_RESULT_ERROR;
     }
-}
-
-// ---------------------------------------------------------------------
-
-UDB_RESULT udb_ping(UDB_CONNECTION_STRUCT* conn)
-{
-    try
-    {
-        conn->m_udb_client->valid();
-        return UDB_RESULT::UDB_RESULT_SUCCESS;
-    }
-    catch(const std::exception& e)
-    {
-        error = UDB_RESULT_ERROR;
-        return UDB_RESULT::UDB_RESULT_ERROR;
-    }
-}
-
-// ---------------------------------------------------------------------
-
-UDB_RESULT udb_integrate(UDB_CONNECTION_STRUCT* conn, char* hash_buffer, size_t buffer_length, const char* data, size_t data_length)
-{
-    try
-    {
-        if (buffer_length < 65)
-            throw std::overflow_error("Buffer overflow exception.");
-
-        std::vector<uint32_t> chunk_sizes;
-        chunk_sizes.push_back(static_cast<uint32_t>(data_length));
-        auto resp = conn->m_udb_client->write_chunks(uh::protocol::write_chunks::request { chunk_sizes,
-                                                                                      std::span<const char>(data, data_length) });
-
-        std::memcpy(hash_buffer, resp.hashes.data(), 65);
-
-        return UDB_RESULT::UDB_RESULT_SUCCESS;
-
-    }
-    catch(const std::overflow_error& e)
-    {
-        error = UDB_BUFFER_OVERFLOW;
-        return UDB_BUFFER_OVERFLOW;
-    }
-    catch (const std::exception &e)
-    {
-        error = UDB_RESULT_ERROR;
-        return UDB_RESULT::UDB_RESULT_ERROR;
-    }
-}
-
-// ---------------------------------------------------------------------
-
-UDB_RESULT udb_retrieve(UDB_CONNECTION_STRUCT* conn, char* buffer_to_fill, size_t buffer_length , const char* udb_hash)
-{
-    try
-    {
-        uh::protocol::read_chunks::request req { .hashes = std::span<const char>(udb_hash, 64)};
-        auto result = conn->m_udb_client->read_chunks(req);
-
-         /* BUG: Agency Node loses the chunk size information. */
-         /* failure reading compression header should not be the error, instead couldn't read the hash should be the error */
-//        auto retrieved_size = result.chunk_sizes.front();
-
-        std::memcpy(buffer_to_fill, std::get<std::vector<char>>(result.data).data(), std::get<std::vector<char>>(result.data).size() );
-    }
-    catch(const std::overflow_error& e)
-    {
-        error = UDB_BUFFER_OVERFLOW;
-        return UDB_BUFFER_OVERFLOW;
-    }
-    catch (const std::exception& e)
-    {
-        error = UDB_RESULT_ERROR;
-        return UDB_RESULT_ERROR;
-    }
-
-    return UDB_RESULT_SUCCESS;
 }
 
 // ---------------------------------------------------------------------
