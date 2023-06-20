@@ -104,8 +104,8 @@ perform_download_benchmark ()
     rm -rf "${temp_dir}"
 }
 
-
 ncat -e /bin/cat -k -u -l 1337 &
+
 #
 # Test Plan Definition
 #
