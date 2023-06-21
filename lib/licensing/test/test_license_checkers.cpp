@@ -141,8 +141,8 @@ BOOST_FIXTURE_TEST_CASE_TEMPLATE(license_package_test, T, license_types, Fixture
 
         auto feature_fields = tmp_write_airgap->getCustomAndFeatureFields();
 
-        BOOST_CHECK(feature_fields.find(WARN_STORAGE_STRING) == feature_fields.end());
-        BOOST_CHECK(feature_fields.find(LIMIT_STORAGE_STRING) == feature_fields.end());
+        BOOST_CHECK(feature_fields.find(WARN_STORAGE_STRING) != feature_fields.end());
+        BOOST_CHECK(feature_fields.find(LIMIT_STORAGE_STRING) != feature_fields.end());
         BOOST_CHECK(lp.has_metred_feature(uh::licensing::license_package::metered_feature::LIMIT_STORAGE_CAPACITY));
 
         BOOST_CHECK(feature_fields.find(lp.METRICS_STRING) != feature_fields.end());

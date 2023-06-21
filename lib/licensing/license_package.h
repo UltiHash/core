@@ -32,7 +32,10 @@ public:
         :
         hard_limit_val(hard_limit),
         soft_limit_val(soft_limit)
-    {}
+    {
+        if(soft_limit > hard_limit)
+            THROW(util::exception,"Soft limit was larger than hard limit on setup!");
+    }
 };
 
 class license_package
