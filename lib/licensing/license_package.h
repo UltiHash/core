@@ -5,7 +5,6 @@
 #ifndef CORE_LICENSE_PACKAGE_H
 #define CORE_LICENSE_PACKAGE_H
 
-#include "licensing/metered_resource.h"
 #include "licensing/soft_metered_resource.h"
 #include "licensing/check_airgap_license.h"
 #include "util/exception.h"
@@ -108,6 +107,12 @@ public:
      * @return if soft metred feature is available
      */
     bool has_metred_feature(license_package::soft_metered_feature smf);
+
+    /**
+     *
+     * @return if license checker returns valid
+     */
+    bool valid();
 
 private:
 

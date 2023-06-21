@@ -5,7 +5,6 @@
 #ifndef CORE_SOFT_METRED_RESOURCE_H
 #define CORE_SOFT_METRED_RESOURCE_H
 
-#include "licensing/metered_resource.h"
 #include <cstddef>
 
 namespace uh::licensing

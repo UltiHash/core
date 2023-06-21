@@ -145,9 +145,9 @@ BOOST_FIXTURE_TEST_CASE_TEMPLATE(license_package_test, T, license_types, Fixture
             lp.allocate(license_package::soft_metered_feature::LIMIT_NETWORK_CONNECTIONS, 1),
             util::exception);
 
-        BOOST_REQUIRE_EQUAL(
+        BOOST_REQUIRE_THROW(
             lp.allocate(license_package::soft_metered_feature::LIMIT_STORAGE_CAPACITY,1000000000000000),
-            false);
+            std::exception);
 
         BOOST_REQUIRE_THROW(lp.deallocate(license_package::soft_metered_feature::LIMIT_STORAGE_CAPACITY, 101),
                             util::exception);

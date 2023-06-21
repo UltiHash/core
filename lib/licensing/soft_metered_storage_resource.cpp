@@ -27,7 +27,8 @@ bool soft_metered_storage_resource::allocate(std::size_t alloc)
         if (warn_once)
         {
             WARNING
-                << "Soft metered storage resource reached warning limit with " + std::to_string(stored_val) + " from "
+                << "Soft metered storage resource reached warning limit with " + std::to_string(stored_val)
+                    + " of a maximum of "
                     + std::to_string(hard_limit_val) + " bytes.";
             warn_once = false;
         }

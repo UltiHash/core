@@ -99,10 +99,13 @@ std::unique_ptr<uh::licensing::license_package> make_licensing(const uh::options
                 INFO << "Wrote new license key to " + lic_config.license_path.string();
             }
 
-            return std::make_unique<uh::licensing::license_package>(lic_config,
-                                                                    api,
-                                                                    credential,
-                                                                    activate);
+            return std::make_unique<uh::licensing::license_package>(
+                std::make_shared<uh::licensing::check_airgap_license>(lic_config,
+                                                                      api,
+                                                                      credential,
+                                                                      activate
+                )
+            );
         }
         case uh::licensing::LicenseTypeEnum::AirgapUserOnline:
         {
@@ -121,10 +124,13 @@ std::unique_ptr<uh::licensing::license_package> make_licensing(const uh::options
                 INFO << "Wrote new license key to " + lic_config.license_path.string();
             }
 
-            return std::make_unique<uh::licensing::license_package>(lic_config,
-                                                                    api,
-                                                                    credential,
-                                                                    activate);
+            return std::make_unique<uh::licensing::license_package>(
+                std::make_shared<uh::licensing::check_airgap_license>(lic_config,
+                                                                      api,
+                                                                      credential,
+                                                                      activate
+                )
+            );
         }
         case uh::licensing::LicenseTypeEnum::OtherLicense:THROW(util::exception, "Not yet implemented licensing model");
     }

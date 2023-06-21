@@ -17,7 +17,7 @@ namespace
 void maybe_create_license_root_directory(std::filesystem::path license_root)
 {
     //if the path is a file path to license try to create parent
-    if(license_root.extension() ==".lic")
+    if (license_root.extension() == ".lic")
         license_root = license_root.parent_path();
 
     //We are OK creating a new root if needed, otherwise just inform about its existence
@@ -99,10 +99,13 @@ std::unique_ptr<uh::licensing::license_package> make_licensing(const uh::options
                 INFO << "Wrote new license key to " + lic_config.license_path.string();
             }
 
-            return std::make_unique<uh::licensing::license_package>(lic_config,
-                                                                    api,
-                                                                    credential,
-                                                                    activate);
+            return std::make_unique<uh::licensing::license_package>(
+                std::make_shared<uh::licensing::check_airgap_license>(lic_config,
+                                                                      api,
+                                                                      credential,
+                                                                      activate
+                )
+            );
         }
         case uh::licensing::LicenseTypeEnum::AirgapUserOnline:
         {
@@ -121,10 +124,13 @@ std::unique_ptr<uh::licensing::license_package> make_licensing(const uh::options
                 INFO << "Wrote new license key to " + lic_config.license_path.string();
             }
 
-            return std::make_unique<uh::licensing::license_package>(lic_config,
-                                                                    api,
-                                                                    credential,
-                                                                    activate);
+            return std::make_unique<uh::licensing::license_package>(
+                std::make_shared<uh::licensing::check_airgap_license>(lic_config,
+                                                                      api,
+                                                                      credential,
+                                                                      activate
+                )
+            );
         }
         case uh::licensing::LicenseTypeEnum::OtherLicense:THROW(util::exception, "Not yet implemented licensing model");
     }

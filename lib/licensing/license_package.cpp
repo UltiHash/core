@@ -135,4 +135,11 @@ void license_package::feature_activation()
 
 // ---------------------------------------------------------------------
 
+bool license_package::valid()
+{
+    return m_check_license->valid();
+}
+
+// ---------------------------------------------------------------------
+
 } // namespace uh::licensing
