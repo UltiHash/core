@@ -35,7 +35,7 @@ const std::string appName_test = "uh-data-node";
 
 const std::string appVersion_test = "0.2.0";
 
-const std::string licenseKey_100 = "GZHG-LH7N-RSJK-2J01";
+const std::string licenseKey_100 = "GZLF-TD88-AZAK-2F01";
 
 const std::string user_name_test = "benjamin@ultihash.io";
 

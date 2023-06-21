@@ -32,7 +32,7 @@ protected:
         m_config.license_type = "AirgapKeyOnline";
         m_config.licensing_path = "/tmp/uh-data-node/licensing";
         m_config.license_replace = true;
-        m_config.license_key = "GZHG-LH7N-RSJK-2J01";
+        m_config.license_key = "GZLF-TD88-AZAK-2F01";
 
         if (!std::filesystem::exists(m_config.licensing_path))
         {
@@ -77,7 +77,7 @@ private:
 
 };
 
-static const std::string CONTENTS_STR = "These are the contents of test_input_file.txt and test_input_file_2.txt";
+const std::string CONTENTS_STR = "These are the contents of test_input_file.txt and test_input_file_2.txt";
 
 std::vector<char> to_vector(const std::string &s)
 {
