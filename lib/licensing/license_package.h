@@ -101,6 +101,13 @@ public:
 
     /**
      *
+     * @return if license checker returns valid
+     */
+    bool valid();
+
+private:
+    /**
+     *
      * @param smf soft metered feature to be registered
      * @param smr soft metered resource class to be checked repeatedly
      */
@@ -113,14 +120,6 @@ public:
      * @return if soft metred feature is available
      */
     bool has_metred_feature(license_package::metered_feature smf);
-
-    /**
-     *
-     * @return if license checker returns valid
-     */
-    bool valid();
-
-private:
 
     std::map<feature, bool> m_features;
     std::map<metered_feature, std::shared_ptr<metered_resource>> m_soft_metered_features;
