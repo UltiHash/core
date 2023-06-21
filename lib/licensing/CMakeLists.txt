@@ -54,7 +54,7 @@ file(GLOB HEADER_FILE_LIST ${CMAKE_CURRENT_SOURCE_DIR}/*.h)
 file(GLOB SOURCE_FILE_LIST ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp)
 
 add_library(${PROJECT_NAME} ${HEADER_FILE_LIST} ${SOURCE_FILE_LIST})
-target_include_directories(${PROJECT_NAME} INTERFACE ${${PROJECT_NAME}_INCLUDE_DIRS})
+target_include_directories(${PROJECT_NAME} INTERFACE ${${PROJECT_NAME}_INCLUDE_DIRS} "${CMAKE_BINARY_DIR}/ext/src/libLicenseSpring/include/LicenseSpring/*")
 
 set(LIBRARY_PATH "ext/src/LicenceSpring/bin/${COMPILE_LIBRARY_NAME_TYPE}/${CMAKE_BUILD_TYPE}")
 
@@ -64,7 +64,7 @@ set_target_properties(${PROJECT_NAME}
 
 add_custom_target(download_ls)
 add_dependencies(${PROJECT_NAME} libLicenseSpring)
-target_link_libraries(${PROJECT_NAME} ${${PROJECT_NAME}_LINK_LIBRARIES})
+target_link_libraries(${PROJECT_NAME} ${${PROJECT_NAME}_LINK_LIBRARIES} "${CMAKE_BINARY_DIR}/ext/src/libLicenseSpring/${SPRING_SHARED}/${CMAKE_BUILD_TYPE}/libLicenseSpring.so")
 
 # create testing targets
 include(${CMAKE_CURRENT_SOURCE_DIR}/../../cmake/testing/CMakeLists.txt)
