@@ -49,7 +49,7 @@ public:
      * @param config license file input
      * @throws if license is invalid or cannot be loaded
      */
-    explicit license_package(uh::licensing::check_airgap_license check_license);
+    explicit license_package(std::shared_ptr<uh::licensing::check_airgap_license> check_license);
 
     /**
      *
@@ -113,7 +113,7 @@ private:
 
     std::map<feature, bool> m_features;
     std::map<soft_metered_feature, std::shared_ptr<soft_metered_resource>> m_soft_metered_features;
-    check_airgap_license m_check_license;
+    std::shared_ptr<check_airgap_license> m_check_license;
 
     /**
      * activates online defined features and limits

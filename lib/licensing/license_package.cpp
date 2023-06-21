@@ -11,11 +11,11 @@
 namespace uh::licensing
 {
 
-license_package::license_package(uh::licensing::check_airgap_license check_license)
+license_package::license_package(std::shared_ptr<uh::licensing::check_airgap_license> check_license)
     :
     m_check_license(std::move(check_license))
 {
-    if (m_check_license.valid())feature_activation();
+    if (m_check_license->valid())feature_activation();
 }
 
 // ---------------------------------------------------------------------
@@ -74,7 +74,7 @@ bool license_package::has_metred_feature(license_package::soft_metered_feature s
 
 void license_package::feature_activation()
 {
-    auto feature_online = m_check_license.getCustomAndFeatureFields();
+    auto feature_online = m_check_license->getCustomAndFeatureFields();
 
     if (feature_online.contains(WARN_STORAGE_STRING))
     {
@@ -91,7 +91,7 @@ void license_package::feature_activation()
 
             add_metred_feature(
                 uh::licensing::license_package::soft_metered_feature::LIMIT_STORAGE_CAPACITY,
-                std::make_unique<soft_metered_storage_resource>(limitLevel, warnLevel)
+                std::make_shared<soft_metered_storage_resource>(limitLevel, warnLevel)
             );
 
             feature_online.erase(WARN_STORAGE_STRING);
@@ -115,7 +115,7 @@ void license_package::feature_activation()
 
                 add_metred_feature(
                     uh::licensing::license_package::soft_metered_feature::LIMIT_STORAGE_CAPACITY,
-                    std::make_unique<uh::licensing::soft_metered_storage_resource>(limitLevel,
+                    std::make_shared<uh::licensing::soft_metered_storage_resource>(limitLevel,
                                                                                    limitLevel)
                 );
             }
