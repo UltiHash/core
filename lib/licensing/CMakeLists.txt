@@ -64,7 +64,7 @@ set_target_properties(${PROJECT_NAME}
 
 add_custom_target(download_ls)
 add_dependencies(${PROJECT_NAME} libLicenseSpring)
-target_link_libraries(${PROJECT_NAME} ${${PROJECT_NAME}_LINK_LIBRARIES} "${CMAKE_BINARY_DIR}/ext/src/libLicenseSpring/${SPRING_SHARED}/${CMAKE_BUILD_TYPE}/libLicenseSpring.so")
+target_link_libraries(${PROJECT_NAME} ${${PROJECT_NAME}_LINK_LIBRARIES} "${CMAKE_BINARY_DIR}/ext/src/libLicenseSpring/${COMPILE_LIBRARY_NAME_TYPE}/${CMAKE_BUILD_TYPE}/libLicenseSpring.so")
 
 # create testing targets
 include(${CMAKE_CURRENT_SOURCE_DIR}/../../cmake/testing/CMakeLists.txt)
