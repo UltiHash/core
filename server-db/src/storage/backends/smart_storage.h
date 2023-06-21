@@ -9,7 +9,7 @@
 
 #include "storage/backends/smart_backend/smart_config.h"
 #include "storage/backends/smart_backend/smart_core.h"
-#include "storage/metered_backend.h"
+#include "storage/backend.h"
 #include "io/span_generator.h"
 #include <openssl/evp.h>
 #include <openssl/sha.h>
@@ -21,7 +21,7 @@ namespace uh::dbn::storage::smart {
 
 namespace uh::dbn::storage {
 
-class smart_storage : public uh::dbn::storage::metered_backend {
+class smart_storage : public uh::dbn::storage::backend {
 
 public:
 

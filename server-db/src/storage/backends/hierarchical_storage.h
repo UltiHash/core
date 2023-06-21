@@ -5,7 +5,7 @@
 #ifndef CORE_HIERARCHICAL_STORAGE_H
 #define CORE_HIERARCHICAL_STORAGE_H
 
-#include <storage/metered_backend.h>
+#include <storage/backend.h>
 #include <storage/compressed_file_store.h>
 #include <state/scheduled_compressions_state.h>
 #include "io/sha512.h"
@@ -40,7 +40,7 @@ struct hierarchical_storage_config
     smart::smart_config smart_post_processing;
 };
 
-class hierarchical_storage: public metered_backend
+class hierarchical_storage: public backend
 {
 
 public:
