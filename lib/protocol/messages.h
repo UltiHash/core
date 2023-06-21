@@ -2,6 +2,7 @@
 #define PROTOCOL_MESSAGES_H
 
 #include "common.h"
+#include <util/ospan.h>
 
 #include <serialization/serialization.h>
 
@@ -213,16 +214,16 @@ struct write_key_value
 {
     struct request
     {
-        std::variant <ospan <uint16_t>, std::span <uint16_t>> key_sizes;
-        std::variant <ospan <uint32_t>, std::span <uint32_t>> value_sizes;
-        std::variant <ospan <uint8_t>, std::span <uint8_t>> label_counts;
-        std::variant <ospan <uint8_t>, std::span <uint8_t>> label_sizes;
-        std::variant <ospan <char>, std::span <char>> data; // (key, value, label_count, labels) ...
+        std::variant <util::ospan <uint16_t>, std::span <uint16_t>> key_sizes;
+        std::variant <util::ospan <uint32_t>, std::span <uint32_t>> value_sizes;
+        std::variant <util::ospan <uint8_t>, std::span <uint8_t>> label_counts;
+        std::variant <util::ospan <uint8_t>, std::span <uint8_t>> label_sizes;
+        std::variant <util::ospan <char>, std::span <char>> data; // (key, value, label_count, labels) ...
     };
 
     struct response
     {
-        ospan <uint32_t> effective_sizes;
+        util::ospan <uint32_t> effective_sizes;
     };
 
     constexpr static uint8_t request_id = 0x02;
@@ -241,19 +242,19 @@ struct read_key_value
 {
     struct request
     {
-        std::variant <ospan <uint16_t>, std::span <uint16_t>> start_key_sizes;
-        std::variant <ospan <uint16_t>, std::span <uint16_t>> end_key_sizes;
-        std::variant <ospan <uint16_t>, std::span <uint16_t>> single_key_sizes;
-        std::variant <ospan <uint8_t>, std::span <uint8_t>> label_counts;
-        std::variant <ospan <uint8_t>, std::span <uint8_t>> label_sizes;
-        std::variant <ospan <char>, std::span <char>> data; // (start_key, end_key, single_key, label_count, labels) ...
+        std::variant <util::ospan <uint16_t>, std::span <uint16_t>> start_key_sizes;
+        std::variant <util::ospan <uint16_t>, std::span <uint16_t>> end_key_sizes;
+        std::variant <util::ospan <uint16_t>, std::span <uint16_t>> single_key_sizes;
+        std::variant <util::ospan <uint8_t>, std::span <uint8_t>> label_counts;
+        std::variant <util::ospan <uint8_t>, std::span <uint8_t>> label_sizes;
+        std::variant <util::ospan <char>, std::span <char>> data; // (start_key, end_key, single_key, label_count, labels) ...
     };
 
     struct response
     {
-        std::variant <ospan <uint16_t>, std::vector <uint16_t>> key_sizes;
-        std::variant <ospan <uint32_t>, std::vector <uint32_t>> value_sizes;
-        std::variant<ospan <char>, std::unique_ptr<io::data_generator> > data; // (key, value) ...
+        std::variant <util::ospan <uint16_t>, std::vector <uint16_t>> key_sizes;
+        std::variant <util::ospan <uint32_t>, std::vector <uint32_t>> value_sizes;
+        std::variant <util::ospan <char>, std::unique_ptr<io::data_generator> > data; // (key, value) ...
 
     };
 
@@ -332,7 +333,7 @@ struct structured_read_queries {
         std::span <char> start_key;
         std::span <char> end_key;
         std::span <char> single_key;
-        ospan <std::string_view> labels;
+        util::ospan <std::string_view> labels;
 
         explicit read_query (structured_read_queries& wq) {
             const auto start_key_size = std::get <0> (wq.m_req.get().start_key_sizes).data [wq.index];

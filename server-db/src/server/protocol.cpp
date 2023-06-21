@@ -92,7 +92,7 @@ uh::protocol::write_key_value::response protocol::on_write_kv(const write_key_va
 
     structured_write_queries wqs (request);
 
-    write_key_value::response resp {.effective_sizes = ospan<uint32_t> (std::get <0> (request.key_sizes).size)};
+    write_key_value::response resp {.effective_sizes = util::ospan<uint32_t> (std::get <0> (request.key_sizes).size)};
 
     int i = 0;
     for (auto wq = wqs.next(); wq != nullptr; wq = wqs.next()) {
@@ -106,27 +106,29 @@ uh::protocol::write_key_value::response protocol::on_write_kv(const write_key_va
 
 uh::protocol::read_key_value::response protocol::on_read_kv(const read_key_value::request &request) {
 
+    // TODO maybe a lock here?
+
     structured_read_queries queries (request);
     auto generator = std::make_unique<io::group_generator>();
     uh::protocol::read_key_value::response resp {.key_sizes = std::vector <uint16_t>{}, .value_sizes = std::vector <uint32_t> {}};
 
     for (auto query = queries.next(); query != nullptr; query = queries.next()) {
 
-        std::list <std::span <char>> query_keys;
         std::span <std::string_view> labels {query->labels.data.get(), query->labels.size};
 
         if (!query->single_key.empty()) {
-            query_keys = m_storage.list_keys(query->single_key, query->single_key, labels);
+            generator->append(m_storage.read_value(query->single_key, labels));
         }
         else if (!query->start_key.empty() or !query->end_key.empty()) {
-            query_keys = m_storage.list_keys(query->start_key, query->end_key, labels);
-        }
 
-        for (const auto& key: query_keys) {
-            auto res = m_storage.read_key_value (key);
-            std::get <1> (resp.key_sizes).emplace_back(key.size());
-            std::get <1> (resp.value_sizes).emplace_back(res->size());
-            generator->append(std::move(res));
+            auto key_values = m_storage.fetch_query(query->start_key, query->end_key, labels);
+
+            for (auto& key_value: key_values) {
+                std::get <1> (resp.key_sizes).emplace_back(key_value.key->size());
+                std::get <1> (resp.value_sizes).emplace_back(key_value.value->size());
+                generator->append(std::move(key_value.key));
+                generator->append(std::move(key_value.value));
+            }
         }
     }
 

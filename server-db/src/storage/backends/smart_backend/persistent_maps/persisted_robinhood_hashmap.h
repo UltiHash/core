@@ -15,14 +15,18 @@
 #include <unistd.h>
 #include <mutex>
 
-#include "key_store_interface.h"
-#include "storage/backends/smart_backend/storage_types/fixed_managed_storage.h"
-#include "storage/backends/smart_backend/storage_types/growing_managed_storage.h"
-#include "storage/backends/smart_backend/storage_types/growing_plain_storage.h"
+#include "storage/backends/common.h"
+#include "map_interface.h"
 
-namespace uh::dbn::storage::smart::key_stores {
+#include <storage/backends/smart_backend/storage_types/fixed_managed_storage.h>
+#include <storage/backends/smart_backend/storage_types/growing_managed_storage.h>
+#include <storage/backends/smart_backend/storage_types/growing_plain_storage.h>
+#include <util/ospan.h>
 
-class persisted_robinhood_hashmap: public key_store_interface {
+
+namespace uh::dbn::storage::smart::maps {
+
+class persisted_robinhood_hashmap: public map_interface {
 
 public:
 
@@ -33,7 +37,7 @@ public:
      * @param key
      * @param value
      */
-    void insert (std::span <char> key, std::span <char> value, const sets::index_type& index = {}) override;
+    void insert (std::span <char> key, std::span <char> value, const index_type& index = {}) override;
 
     /**
      * returns the fragments offset and sizes

@@ -55,7 +55,7 @@ private:
     index_type do_add_pointer (const std::string_view& data, uint64_t data_offset, const index_type& pos) override {
 
         if (pos.position == 0) {
-            throw std::logic_error ("unlocked_redblack_tree relies on the given position. First call the find function.");
+            throw std::logic_error ("paged_redblack_tree relies on the given position. First call the find function.");
         }
 
         node z = add_node (pos.position);
@@ -88,7 +88,7 @@ private:
     }
 
 
-    [[nodiscard]] set_result do_find (const std::string_view& data, const index_type& pos) const override {
+    [[nodiscard]] set_result do_find (const std::string_view& data, const index_type&) const override {
 
         auto y = m_nil;
         set_result res;
@@ -123,6 +123,27 @@ private:
         }
         res.index = {y.m_offset, comp_int};
         return res;
+    }
+
+    [[nodiscard]] std::list<std::pair<uint64_t, std::string_view>> do_get_range (const std::span<char> &start_data, const std::span<char> &end_data) const override {
+        auto f = find (start_data);
+
+        uint64_t start_offset;
+        if (f.match.has_value()) {
+            start_offset = f.match->first;
+        }
+        else if (f.upper.has_value()) {
+            start_offset = f.upper->first;
+        }
+        else {
+            return {};
+        }
+
+        std::list<std::pair<uint64_t, std::string_view>> result;
+
+        
+
+        return result;
     }
 
     void do_sync (const index_type& pos) override {

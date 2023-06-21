@@ -2,6 +2,7 @@
 // Created by masi on 5/30/23.
 //
 #include "smart_storage.h"
+#include "common.h"
 
 namespace uh::dbn::storage::smart {
 
@@ -169,16 +170,31 @@ void smart_storage::update_space_consumption() {
     m_storage_metrics.used_space().Set(m_used);
 }
 
-std::list<std::span <char>>
-smart_storage::list_keys(const std::span<char> &start_key, const std::span<char> &end_key, const std::span <std::string_view>& labels) {
-    return {};
+std::list<key_value_generator>
+smart_storage::fetch_query(const std::span<char> &start_key, const std::span<char> &end_key,
+                           const std::span<std::string_view> &labels) {
+
+    std::shared_lock <std::shared_mutex> lock (m_mutex);
+
+    auto key_fragmented_values = m_smart_core.retrieve_range(start_key, end_key, labels);
+
+    std::list <key_value_generator> result;
+
+    for (auto& key_fragmented_val: key_fragmented_values) {
+        auto key_span_generator = std::make_unique<io::span_generator>(key_fragmented_val.first.size(), std::forward_list<std::span<char>> {key_fragmented_val.first});
+        auto value_span_generator = std::make_unique<io::span_generator>(key_fragmented_val.second.first, std::move (key_fragmented_val.second.second));
+
+        result.push_front({std::move (key_span_generator), std::move (value_span_generator)});
+    }
+    return result;
 }
 
-std::unique_ptr<io::data_generator> smart_storage::read_key_value(const std::span<char> &key) {
+std::unique_ptr<io::data_generator> smart_storage::read_value (const std::span <char>& key, const std::span <std::string_view>& labels) {
     std::shared_lock <std::shared_mutex> lock (m_mutex);
     auto fragments_size_pair = m_smart_core.retrieve(key);
-    fragments_size_pair.second.emplace_front(key);
+    // fragments_size_pair.second.emplace_front(key);
     return std::make_unique <io::span_generator> (fragments_size_pair.first, std::move (fragments_size_pair.second));
 }
+
 
 } // end namespace uh::dbn::storage

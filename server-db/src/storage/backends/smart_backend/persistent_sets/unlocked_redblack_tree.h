@@ -27,6 +27,8 @@ private:
 
     [[nodiscard]] set_result do_find (const std::string_view& data, const index_type& pos) const override;
 
+    [[nodiscard]] std::list<std::pair<uint64_t, std::string_view>> do_get_range (const std::span<char> &start_data, const std::span<char> &end_data) const override;
+    
     void do_sync (const index_type& pos) override;
 
     void do_remove (std::string_view& data, const index_type& pos) override;

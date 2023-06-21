@@ -7,6 +7,7 @@
 #define CORE_SERIALIZER_H
 
 #include "serialization_common.h"
+#include <util/ospan.h>
 #include <algorithm>
 
 namespace uh::serialization {
@@ -109,7 +110,7 @@ namespace uh::serialization {
          */
         template <typename T>
         requires (std::is_arithmetic_v <T> or std::is_enum_v <T>)
-        void write(const protocol::ospan<T>& data) {
+        void write(const util::ospan<T>& data) {
             const auto data_size = data.size * sizeof(T);
             const auto header = get_header(data_size);
             io::write(dev_, header);

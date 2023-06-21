@@ -6,7 +6,8 @@
 #define CORE_DESERIALIZER_H
 
 #include "serialization_common.h"
-#include "protocol/common.h"
+#include <protocol/common.h>
+#include <util/ospan.h>
 
 namespace uh::serialization {
 
@@ -142,7 +143,7 @@ namespace uh::serialization {
 
         template <typename T>
         requires (std::is_arithmetic_v <T> or std::is_enum_v <T>)
-        protocol::ospan <T> read_ospan() {
+        util::ospan <T> read_ospan() {
 
             char control_byte[1];
             io::read(dev_, control_byte);

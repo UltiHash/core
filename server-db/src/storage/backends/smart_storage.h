@@ -37,9 +37,9 @@ public:
 
     std::size_t write_key_value (const std::span <char>& key, const std::span <char>& data) override;
 
-    std::unique_ptr<io::data_generator> read_key_value (const std::span <char>& key) override;
+    std::unique_ptr<io::data_generator> read_value (const std::span <char>& key, const std::span <std::string_view>& labels) override;
 
-    std::list <std::span <char>> list_keys (const std::span <char>& start_key, const std::span <char>& end_key, const std::span <std::string_view>& labels) override;
+    std::list <key_value_generator> fetch_query (const std::span <char>& start_key, const std::span <char>& end_key, const std::span <std::string_view>& labels) override;
 
     size_t free_space() override;
 

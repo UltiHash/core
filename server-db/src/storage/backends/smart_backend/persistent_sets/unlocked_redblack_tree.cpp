@@ -97,6 +97,12 @@ set_result unlocked_redblack_tree::do_find (const std::string_view& frag, const 
 
     return res;
 }
+
+std::list<std::pair<uint64_t, std::string_view>>
+unlocked_redblack_tree::do_get_range(const std::span<char> &start_data, const std::span<char> &end_data) const {
+    throw std::runtime_error ("not implemented");
+}
+
 void unlocked_redblack_tree::do_sync (const index_type& pos) {
     if (msync(align_ptr (m_index_store.get_storage() + pos.position), sizeof (mmap_node), MS_SYNC) != 0) {
         throw std::system_error (errno, std::system_category(), "persisted_redblack_tree_set could not sync the mmap data");

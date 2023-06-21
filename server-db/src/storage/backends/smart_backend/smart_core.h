@@ -5,35 +5,42 @@
 #ifndef CORE_SMART_CORE_H
 #define CORE_SMART_CORE_H
 
-#include "storage/backends/smart_backend/persistent_sets/persisted_redblack_tree_set.h"
 #include "storage/backends/smart_backend/storage_types/fixed_managed_storage.h"
 #include "smart_config.h"
 #include "metrics/storage_metrics.h"
-#include "storage/backends/smart_backend/persistent_sets/unlocked_redblack_tree.h"
 #include "storage/backends/smart_backend/persistent_sets/paged_redblack_tree.h"
-#include "storage/backends/smart_backend/key_stores/key_store_interface.h"
+#include "storage/backends/smart_backend/persistent_maps//map_interface.h"
 
 namespace uh::dbn::storage::smart {
 
 class smart_core {
 
+
+    typedef std::pair <size_t, std::forward_list <std::span <char>>> fragmented_data;
+    typedef std::pair <std::span <char>, fragmented_data> key_fragmented_value;
+
 public:
     explicit smart_core (const smart_config&);
 
     /**
-     * Integrates the data of the given hash
-     * @param hash
+     * Integrates the data of the given key
+     * @param key
      * @param data
      * @return effective size
      */
-    size_t integrate (std::span <char> hash, std::string_view data);
+    size_t integrate (std::span <char> key, std::string_view data);
 
     /**
-     * Retrieves the fragments of the given hash
-     * @param hash
+     * Retrieves the fragments of the given key
+     * @param key
      * @return fragments and the total size of data
      */
-    std::pair <size_t, std::forward_list <std::span <char>>> retrieve (std::span <char> hash);
+    fragmented_data retrieve (std::span <char> key);
+
+    /**
+     * Retrieves the key values with keys within the given range / having the given labels
+     */
+    std::list <key_fragmented_value> retrieve_range (std::span <char> start_key, std::span <char> end_key, const std::span <std::string_view>& labels);
 
 private:
 
@@ -45,7 +52,7 @@ private:
 
     fixed_managed_storage m_data_store;
     std::unique_ptr <sets::set_interface> m_fragment_set;
-    std::unique_ptr <key_stores::key_store_interface> m_key_store;
+    std::unique_ptr <maps::map_interface> m_key_store;
     const dedupe_config m_dedupe_conf;
 };
 

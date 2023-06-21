@@ -3,8 +3,8 @@
 //
 
 #include "smart_core.h"
-#include "storage/backends/smart_backend/key_stores/sorted_key_map.h"
-#include "storage/backends/smart_backend/key_stores/persisted_robinhood_hashmap.h"
+#include "storage/backends/smart_backend/persistent_maps/sorted_key_map.h"
+#include "storage/backends/smart_backend/persistent_maps/persisted_robinhood_hashmap.h"
 
 #include <ranges>
 
@@ -14,28 +14,28 @@ namespace uh::dbn::storage::smart {
 smart_core::smart_core (const smart_config& smart_conf):
         m_data_store (smart_conf.data_store_conf),
         m_fragment_set (std::make_unique<sets::paged_redblack_tree <sets::set_full_comparator>>(smart_conf.fragment_set_conf, m_data_store)),
-        m_key_store (std::make_unique<key_stores::sorted_key_map> (std::move (smart_conf.sorted_key_store_config))),
+        m_key_store (std::make_unique<maps::sorted_key_map> (std::move (smart_conf.sorted_key_store_config))),
 //        m_key_store (std::make_unique<key_stores::persisted_robinhood_hashmap> (std::move (smart_conf.hashmap_key_store_conf))),
         m_dedupe_conf (smart_conf.dedupe_conf) {}
 
-size_t smart_core::integrate(std::span <char> hash, std::string_view data) {
-    const auto f = m_key_store->get(hash);
-    if (f.data.has_value()) {
+size_t smart_core::integrate(std::span <char> key, std::string_view data) {
+    const auto f = m_key_store->get(key);
+    if (f.match.has_value()) {
         //TODO should we compare the data as well? It can be that the data
         // is different and we do not notice it
         return 0;
     }
 
     auto fragments = deduplicate (data);
-    m_key_store->insert(hash, {reinterpret_cast <char*> (fragments.first.data()), fragments.first.size() * sizeof (sets::offset_span)}, f.index);
+    m_key_store->insert(key, {reinterpret_cast <char*> (fragments.first.data()), fragments.first.size() * sizeof (sets::offset_span)}, f.index);
     return fragments.second;
 }
 
-std::pair <size_t, std::forward_list <std::span <char>>> smart_core::retrieve(std::span<char> hash) {
-    auto f = m_key_store->get(hash);
-    if (f.data.has_value()) {
-        const auto ptr = reinterpret_cast <const sets::offset_span*> (f.data.value().data());
-        const auto size = f.data.value().size() / sizeof (sets::offset_span);
+smart_core::fragmented_data smart_core::retrieve(std::span<char> key) {
+    auto f = m_key_store->get(key);
+    if (f.match.has_value()) {
+        const auto ptr = reinterpret_cast <const sets::offset_span*> (f.match.value().value.data());
+        const auto size = f.match.value().value.size() / sizeof (sets::offset_span);
         size_t total_size = 0;
         std::forward_list <std::span <char>> res;
         for (auto frag = ptr; frag < ptr + size; frag++) {
@@ -46,6 +46,14 @@ std::pair <size_t, std::forward_list <std::span <char>>> smart_core::retrieve(st
         return {total_size, res};
     }
     throw std::out_of_range ("smart_storage could not find the data of the given hash value");
+}
+
+std::list <smart_core::key_fragmented_value> smart_core::retrieve_range(std::span<char> start_key, std::span<char> end_key,
+                           const std::span<std::string_view> &labels) {
+    // TODO if start key or end key are empty
+    auto results = m_key_store->get_range(start_key, end_key);
+
+    return {};
 }
 
 std::pair<std::vector<sets::offset_span>, size_t> smart_core::deduplicate (std::string_view data) {
@@ -103,5 +111,6 @@ smart_core::largest_common_prefix(const std::string_view &str1, const std::strin
     }
     return i;
 }
+
 
 } // end namespace uh::dbn::storage::smart

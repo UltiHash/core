@@ -2,6 +2,7 @@
 #define SERVER_DB_STORAGE_BACKEND_H
 
 #include <protocol/server.h>
+#include <storage/backends/common.h>
 #include "utils.h"
 
 
@@ -63,14 +64,14 @@ namespace uh::dbn::storage {
         /**
         * Writes the key value to the storage backend and returns the effective size
         */
-        virtual std::unique_ptr<io::data_generator> read_key_value (const std::span <char>& key) {
+        virtual std::unique_ptr<io::data_generator> read_value (const std::span <char>& key, const std::span <std::string_view>& labels) {
             THROW(util::exception, "not implemented");
         }
 
         /**
          * Gives back the list of keys in the range of start_key to end_key with the given labels
          */
-        virtual std::list <std::span <char>> list_keys (const std::span <char>& start_key, const std::span <char>& end_key, const std::span <std::string_view>& labels) {
+        virtual std::list <key_value_generator> fetch_query (const std::span <char>& start_key, const std::span <char>& end_key, const std::span <std::string_view>& labels) {
             THROW(util::exception, "not implemented");
         }
 

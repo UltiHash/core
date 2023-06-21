@@ -12,11 +12,10 @@
 #include "storage/backends/smart_backend/storage_types/fixed_managed_storage.h"
 #include <storage/backend.h>
 #include <storage/backends/smart_backend/smart_config.h>
-#include "storage/backends/smart_backend/persistent_sets/persisted_redblack_tree_set.h"
 #include <storage/backends/smart_backend/smart_core.h>
-#include "storage/backends/smart_backend/key_stores/persisted_robinhood_hashmap.h"
-#include "storage/backends/smart_storage.h"
+#include "storage/backends/smart_backend/persistent_maps/persisted_robinhood_hashmap.h"
 #include "storage/backends/smart_backend/storage_types/growing_managed_storage.h"
+#include "storage/backends/smart_backend/persistent_sets/persisted_redblack_tree_set.h"
 
 using namespace uh::dbn::storage::smart;
 
@@ -387,7 +386,7 @@ BOOST_FIXTURE_TEST_CASE(basic_dedup_test, files_info_fixture)
 }
 
 
-void insert_in_hm (key_stores::persisted_robinhood_hashmap& hm, std::string& k, std::string& v) {
+void insert_in_hm (maps::persisted_robinhood_hashmap& hm, std::string& k, std::string& v) {
     std::span <char> sk {k};
     std::span <char> sv {v};
     hm.insert(sk, sv);
@@ -415,7 +414,7 @@ BOOST_FIXTURE_TEST_CASE(basic_hashmap_test, files_info_fixture)
 
     {
 
-        key_stores::persisted_robinhood_hashmap hm (get_hashmap_conf());
+        maps::persisted_robinhood_hashmap hm (get_hashmap_conf());
 
         insert_in_hm(hm, k1, v1);
 
@@ -428,37 +427,37 @@ BOOST_FIXTURE_TEST_CASE(basic_hashmap_test, files_info_fixture)
         insert_in_hm(hm, k5, v5);
 
         auto res = hm.get(k1);
-        BOOST_TEST(v1 == std::string (res.data.value().data(), res.data.value().size()));
+        BOOST_TEST(v1 == std::string (res.match.value().value.data(), res.match.value().value.size()));
 
         res = hm.get(k2);
-        BOOST_TEST(v2 == std::string (res.data.value().data(), res.data.value().size()));
+        BOOST_TEST(v2 == std::string (res.match.value().value.data(), res.match.value().value.size()));
 
         res = hm.get(k5);
-        BOOST_TEST(v5 == std::string (res.data.value().data(), res.data.value().size()));
+        BOOST_TEST(v5 == std::string (res.match.value().value.data(), res.match.value().value.size()));
 
         res = hm.get(k4);
-        BOOST_TEST(v4 == std::string (res.data.value().data(), res.data.value().size()));
+        BOOST_TEST(v4 == std::string (res.match.value().value.data(), res.match.value().value.size()));
 
         res = hm.get(k3);
-        BOOST_TEST(v3 == std::string (res.data.value().data(), res.data.value().size()));
+        BOOST_TEST(v3 == std::string (res.match.value().value.data(), res.match.value().value.size()));
     }
     {
 
-        key_stores::persisted_robinhood_hashmap hm (get_hashmap_conf());
+        maps::persisted_robinhood_hashmap hm (get_hashmap_conf());
         auto res = hm.get(k1);
-        BOOST_TEST(v1 == std::string (res.data.value().data(), res.data.value().size()));
+        BOOST_TEST(v1 == std::string (res.match.value().value.data(), res.match.value().value.size()));
 
         res = hm.get(k2);
-        BOOST_TEST(v2 == std::string (res.data.value().data(), res.data.value().size()));
+        BOOST_TEST(v2 == std::string (res.match.value().value.data(), res.match.value().value.size()));
 
         res = hm.get(k5);
-        BOOST_TEST(v5 == std::string (res.data.value().data(), res.data.value().size()));
+        BOOST_TEST(v5 == std::string (res.match.value().value.data(), res.match.value().value.size()));
 
         res = hm.get(k4);
-        BOOST_TEST(v4 == std::string (res.data.value().data(), res.data.value().size()));
+        BOOST_TEST(v4 == std::string (res.match.value().value.data(), res.match.value().value.size()));
 
         res = hm.get(k3);
-        BOOST_TEST(v3 == std::string (res.data.value().data(), res.data.value().size()));
+        BOOST_TEST(v3 == std::string (res.match.value().value.data(), res.match.value().value.size()));
     }
 }
 

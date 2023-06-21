@@ -3,7 +3,7 @@
 //
 #include "persisted_robinhood_hashmap.h"
 
-namespace uh::dbn::storage::smart::key_stores {
+namespace uh::dbn::storage::smart::maps {
 
 persisted_robinhood_hashmap::persisted_robinhood_hashmap(hashmap_config map_conf) :
         m_map_conf(std::move (map_conf)),
@@ -17,7 +17,7 @@ persisted_robinhood_hashmap::persisted_robinhood_hashmap(hashmap_config map_conf
 }
 
 
-void persisted_robinhood_hashmap::insert(std::span<char> key, std::span<char> value, const sets::index_type&) {
+void persisted_robinhood_hashmap::insert(std::span<char> key, std::span<char> value, const index_type&) {
 
     std::unique_lock <std::shared_mutex> lock (m_mutex);
 
@@ -52,7 +52,7 @@ map_result persisted_robinhood_hashmap::get(std::span<char> key) {
     while (std::memcmp (m_key_store.get_storage() + index + POOR_VALUE_SIZE, key.data(), m_map_conf.key_size) != 0) {
 
         if (expected_poor_value > m_key_store.get_storage() [index]) {
-            return {std::nullopt, 0};
+            return {};
         }
 
         expected_poor_value ++;
@@ -63,7 +63,7 @@ map_result persisted_robinhood_hashmap::get(std::span<char> key) {
     const auto value_size = *reinterpret_cast <uint32_t*> (m_key_store.get_storage() + index + POOR_VALUE_SIZE + m_map_conf.key_size + VALUE_PTR_SIZE);
 
     const auto value_ptr = m_value_store.get_raw_ptr(value_offset);
-    return {{std::span<const char>(static_cast <char *> (value_ptr), value_size)}, 0};
+    return {key, std::span<char> {static_cast <char *> (value_ptr), value_size}};
 }
 
 persisted_robinhood_hashmap::~persisted_robinhood_hashmap() {

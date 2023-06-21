@@ -5,21 +5,21 @@
 #ifndef CORE_SORTED_KEY_MAP_H
 #define CORE_SORTED_KEY_MAP_H
 
-#include "key_store_interface.h"
-#include "storage/backends/smart_backend/storage_types/growing_managed_storage.h"
+#include "map_interface.h"
+#include <storage/backends/smart_backend/storage_types/growing_managed_storage.h>
 #include <storage/backends/smart_backend/persistent_sets/paged_redblack_tree.h>
 
-namespace uh::dbn::storage::smart::key_stores {
+namespace uh::dbn::storage::smart::maps {
 
-class sorted_key_map: public key_store_interface {
+class sorted_key_map: public map_interface {
 public:
     explicit sorted_key_map (sorted_map_config conf);
 
-    void insert (std::span <char> key, std::span <char> value, const sets::index_type& index) override;
+    void insert (std::span <char> key, std::span <char> value, const index_type& index) override;
 
     map_result get (std::span <char> key) override;
 
-    std::list<std::span<char>> list_keys (const std::span<char> &start_key, const std::span<char> &end_key, const std::span<std::string_view> &labels) override;
+    std::list<map_key_value> get_range (const std::span<char> &start_key, const std::span<char> &end_key) override;
 
     void remove (std::span <char> key) override;
 

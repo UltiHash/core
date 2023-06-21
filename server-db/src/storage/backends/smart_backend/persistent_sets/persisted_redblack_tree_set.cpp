@@ -78,6 +78,12 @@ void persisted_redblack_tree_set::do_remove(std::string_view &frag, const index_
     throw std::runtime_error ("not implemented");
 }
 
+std::list<std::pair<uint64_t, std::string_view>>
+persisted_redblack_tree_set::do_get_range(const std::span<char> &start_data,
+                                          const std::span<char> &end_data) const {
+    throw std::runtime_error ("not implemented");
+}
+
 std::pair<uint64_t, bool> persisted_redblack_tree_set::resolve_hint(uint64_t hint, const std::string_view& frag) const {
 
     if (hint == 0) {

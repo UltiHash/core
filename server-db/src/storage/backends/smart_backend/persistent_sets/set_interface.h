@@ -7,22 +7,11 @@
 
 #include <string_view>
 #include <optional>
+#include <list>
+
+#include "storage/backends/common.h"
 
 namespace uh::dbn::storage::smart::sets {
-
-struct index_type {
-    uint64_t position;
-    int comp;
-};
-
-struct set_result {
-    std::optional <std::pair <uint64_t, std::string_view>> lower;
-    std::optional <std::pair <uint64_t, std::string_view>> match;
-    std::optional <std::pair <uint64_t, std::string_view>> upper;
-    index_type index;
-};
-
-extern index_type null_index;
 
 class set_interface {
 public:
@@ -34,7 +23,7 @@ public:
      * @param pos position hint, some implementations may require this and rely on hint
      * @return
      */
-    index_type add_pointer (const std::string_view& data, uint64_t data_offset, const index_type& pos = null_index) {
+    index_type add_pointer (const std::string_view& data, uint64_t data_offset, const index_type& pos = {}) {
         return do_add_pointer (data, data_offset, pos);
     }
 
@@ -44,16 +33,23 @@ public:
      * @param pos position hint for search
      * @return position info of the found index/similar indices
      */
-    [[nodiscard]] set_result find (const std::string_view& data, const index_type& pos = null_index) const {
+    [[nodiscard]] set_result find (const std::string_view& data, const index_type& pos = {}) const {
         return do_find(data, pos);
     };
+
+    /**
+     * Gives back the list of keys in the range of start_key to end_key with the given labels
+     */
+    [[nodiscard]] std::list<std::pair<uint64_t, std::string_view>> get_range (const std::span<char> &start_data, const std::span<char> &end_data) const {
+        return do_get_range (start_data, end_data);
+    }
 
     /**
      * Removes the fragment from the set with position hint to find the fragment.
      * @param data index to be removed
      * @param pos position hint
      */
-    void remove (std::string_view& data, const index_type& pos = null_index) {
+    void remove (std::string_view& data, const index_type& pos = {}) {
         return do_remove (data, pos);
     }
 
@@ -71,6 +67,8 @@ protected:
     virtual index_type do_add_pointer (const std::string_view& data, uint64_t data_offset, const index_type& pos) = 0;
 
     [[nodiscard]] virtual set_result do_find (const std::string_view& data, const index_type& pos) const = 0;
+
+    [[nodiscard]] virtual std::list<std::pair<uint64_t, std::string_view>> do_get_range (const std::span<char> &start_data, const std::span<char> &end_data) const = 0;
 
     virtual void do_remove (std::string_view& data, const index_type& pos) = 0;
 
