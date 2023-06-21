@@ -79,17 +79,12 @@ void license_package::feature_activation()
     bool warn = feature_online.contains(WARN_STORAGE_STRING);
     bool limit = feature_online.contains(LIMIT_STORAGE_STRING);
 
-    if (warn and limit)
+    if ((warn and limit) or warn)
         add_metred_feature(
             uh::licensing::license_package::metered_feature::LIMIT_STORAGE_CAPACITY,
             std::make_shared<metered_resource>(std::stoull(feature_online.at(LIMIT_STORAGE_STRING)),
-                                               std::stoull(feature_online.at(WARN_STORAGE_STRING)))
-        );
-    else if (!warn and limit)
-        add_metred_feature(
-            uh::licensing::license_package::metered_feature::LIMIT_STORAGE_CAPACITY,
-            std::make_shared<metered_resource>(std::stoull(feature_online.at(LIMIT_STORAGE_STRING)),
-                                               std::stoull(feature_online.at(LIMIT_STORAGE_STRING)))
+                                               std::stoull(feature_online
+                                                               .at(limit ? WARN_STORAGE_STRING : LIMIT_STORAGE_STRING)))
         );
 
     m_features.emplace(feature::DEDUPLICATION, feature_online.contains(DEDUPLICATION_STRING));
