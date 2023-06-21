@@ -34,7 +34,7 @@ ExternalProject_Add(
         PREFIX "${CMAKE_BINARY_DIR}/ext"
         URL "https://kwiki-user-media.s3.amazonaws.com/staging/content/file_widgets/LicenseSpringCppSDKv${LICENSESPRING_VERSION}_${LICENSESPRING_TARGET}.zip"
         DOWNLOAD_DIR "${CMAKE_BINARY_DIR}/ext/download"
-        DOWNLOAD_EXTRACT_TIMESTAMP false
+        DOWNLOAD_EXTRACT_TIMESTAMP true
         LOG_DOWNLOAD ON
         CONFIGURE_COMMAND ""
         BUILD_COMMAND ""
@@ -42,6 +42,7 @@ ExternalProject_Add(
         INSTALL_COMMAND ""
         LOG_DIR "${CMAKE_BINARY_DIR}/ext/ep-logs"
 )
+
 
 set(${PROJECT_NAME}_INCLUDE_DIRS ${Boost_INCLUDE_DIRS})
 set(${PROJECT_NAME}_LINK_LIBRARIES ${Boost_LIBRARIES} ${OPENSSL_LIBRARIES} uhLibIo uhLibLogging)
@@ -57,6 +58,11 @@ target_include_directories(${PROJECT_NAME} INTERFACE ${${PROJECT_NAME}_INCLUDE_D
 
 set(LIBRARY_PATH "ext/src/LicenceSpring/bin/${COMPILE_LIBRARY_NAME_TYPE}/${CMAKE_BUILD_TYPE}")
 
+set_target_properties(${PROJECT_NAME}
+        PROPERTIES LINK_FLAGS
+        "-L${LIBRARY_PATH} -Wl,--no-as-needed,--enable-new-dtags,-rpath,$ORIGIN/ext/src/LicenceSpring/bin/${COMPILE_LIBRARY_NAME_TYPE}/${CMAKE_BUILD_TYPE}")
+
+add_custom_target(download_ls)
 add_dependencies(${PROJECT_NAME} libLicenseSpring)
 target_link_libraries(${PROJECT_NAME} ${${PROJECT_NAME}_LINK_LIBRARIES})
 
