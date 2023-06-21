@@ -54,13 +54,11 @@ file(GLOB HEADER_FILE_LIST ${CMAKE_CURRENT_SOURCE_DIR}/*.h)
 file(GLOB SOURCE_FILE_LIST ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp)
 
 add_library(${PROJECT_NAME} ${HEADER_FILE_LIST} ${SOURCE_FILE_LIST})
-target_include_directories(${PROJECT_NAME} INTERFACE ${${PROJECT_NAME}_INCLUDE_DIRS} "${CMAKE_BINARY_DIR}/ext/src/libLicenseSpring/include/LicenseSpring/*")
+target_include_directories(${PROJECT_NAME} INTERFACE ${${PROJECT_NAME}_INCLUDE_DIRS} "${CMAKE_BINARY_DIR}/ext/src/libLicenseSpring/include/LicenseSpring")
 
 set(LIBRARY_PATH "ext/src/LicenceSpring/bin/${COMPILE_LIBRARY_NAME_TYPE}/${CMAKE_BUILD_TYPE}")
 
-set_target_properties(${PROJECT_NAME}
-        PROPERTIES LINK_FLAGS
-        "-L${LIBRARY_PATH} -Wl,--no-as-needed,--enable-new-dtags,-rpath,$ORIGIN/ext/src/LicenceSpring/bin/${COMPILE_LIBRARY_NAME_TYPE}/${CMAKE_BUILD_TYPE}")
+set_target_properties(${PROJECT_NAME} PROPERTIES LINK_FLAGS "-L${LIBRARY_PATH} -Wl,--no-as-needed,--enable-new-dtags,-rpath,$ORIGIN/ext/src/LicenceSpring/bin/${COMPILE_LIBRARY_NAME_TYPE}/${CMAKE_BUILD_TYPE}")
 
 add_custom_target(download_ls)
 add_dependencies(${PROJECT_NAME} libLicenseSpring)
