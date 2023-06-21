@@ -7,6 +7,7 @@
 
 #include <variant>
 #include <memory>
+#include <stack>
 #include "set_interface.h"
 #include "set_comparator_traits.h"
 #include "index_mem_structures.h"
@@ -109,31 +110,44 @@ private:
                 x = get_node (x.m_mnode->m_right);
             }
             else {
-                char* ptr = static_cast <char*> (m_data_store.get().get_raw_ptr(y.m_mnode->m_data.m_data_offset));
-                res.match = {y.m_mnode->m_data.m_data_offset, {ptr, y.m_mnode->m_data.m_size}};
+                res.match = {y.m_mnode->m_data.m_data_offset, fetch_node_data(y)};
                 break;
             }
         }
 
         if (!res.match) {
-            char *ptr_lower = static_cast <char *> (m_data_store.get().get_raw_ptr(largest_lower.m_mnode->m_data.m_data_offset));
-            char *ptr_upper = static_cast <char *> (m_data_store.get().get_raw_ptr(smallest_upper.m_mnode->m_data.m_data_offset));
-            res.lower = {largest_lower.m_mnode->m_data.m_data_offset, {ptr_lower, largest_lower.m_mnode->m_data.m_size}};
-            res.upper = {smallest_upper.m_mnode->m_data.m_data_offset, {ptr_upper, smallest_upper.m_mnode->m_data.m_size}};
+            res.lower = {largest_lower.m_mnode->m_data.m_data_offset, fetch_node_data (largest_lower)};
+            res.upper = {smallest_upper.m_mnode->m_data.m_data_offset, fetch_node_data (smallest_upper)};
         }
         res.index = {y.m_offset, comp_int};
         return res;
     }
 
     [[nodiscard]] std::list<std::pair<uint64_t, std::string_view>> do_get_range (const std::span<char> &start_data, const std::span<char> &end_data) const override {
-        auto f = find (start_data);
+
+        // TODO if start data or end data are empty
+
+        auto fstart = find ({start_data.data(), start_data.size()});
 
         uint64_t start_offset;
-        if (f.match.has_value()) {
-            start_offset = f.match->first;
+        if (fstart.match.has_value()) {
+            start_offset = fstart.match->first;
         }
-        else if (f.upper.has_value()) {
-            start_offset = f.upper->first;
+        else if (fstart.upper.has_value()) {
+            start_offset = fstart.upper->first;
+        }
+        else {
+            return {};
+        }
+
+        auto fend = find ({end_data.data(), end_data.size()});
+
+        uint64_t end_offset;
+        if (fend.match.has_value()) {
+            end_offset = fend.match->first;
+        }
+        else if (fend.lower.has_value()) {
+            end_offset = fend.lower->first;
         }
         else {
             return {};
@@ -141,7 +155,10 @@ private:
 
         std::list<std::pair<uint64_t, std::string_view>> result;
 
-        
+        auto n = get_node (start_offset);
+        in_order_traverse (n.m_mnode->m_left, end_offset, result);
+
+        // TODO traverse the parent until no right/left? child anymore
 
         return result;
     }
@@ -156,6 +173,38 @@ private:
 
     void do_remove (std::string_view& data, const index_type& pos) override {
         throw std::runtime_error ("not implemented");
+    }
+
+    void in_order_traverse (uint64_t start_offset, uint64_t end_offset, std::list<std::pair<uint64_t, std::string_view>> &result) const {
+
+        const auto nil =  m_first_block.nill_offset;
+
+        auto offset = start_offset;
+        std::stack <uint64_t> nodes;
+
+        do {
+            if (offset != end_offset and offset != nil) {
+                auto n = get_node(offset);
+                offset = n.m_mnode->m_right;
+                nodes.push(offset);
+            }
+            else {
+                offset = nodes.top();
+                nodes.pop();
+
+                auto n = get_node(offset);
+                result.emplace_back(offset, fetch_node_data(n));
+
+                offset = n.m_mnode->m_left;
+            }
+
+        } while (!nodes.empty());
+
+    }
+
+    [[nodiscard]] inline std::string_view fetch_node_data (const node& n) const {
+        char *ptr = static_cast <char *> (m_data_store.get().get_raw_ptr(n.m_mnode->m_data.m_data_offset));
+        return {ptr, n.m_mnode->m_data.m_size};
     }
 
     void balance (node& z) {
