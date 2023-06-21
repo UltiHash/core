@@ -68,11 +68,6 @@ std::unique_ptr<uh::licensing::license_package> make_licensing(const uh::options
 
     auto lic_config = uh::licensing::license_config(license_type,
                                                     uh::licensing::NodeRole::AgencyNode,
-                                                    true,
-                                                    true,
-                                                    false,
-                                                    true,
-                                                    true,
                                                     cfg.licensing_path,
                                                     cfg.license_replace);
 

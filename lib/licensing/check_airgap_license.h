@@ -144,21 +144,11 @@ public:
 
     license_config(const LicenseTypeEnum licenseType,
                    const NodeRole nodeRole,
-                   const bool networkInfo_active,
-                   const bool logging_active,
-                   const bool vm_detect_active,
-                   const bool ssl_active,
-                   const bool guard_file_active,
                    std::filesystem::path license_path_input,
                    bool replace_license)
         :
         licenseTypeInternal(licenseType),
         licenseNodeRole(nodeRole),
-        collectNetworkInfo(networkInfo_active),
-        enableLogging(logging_active),
-        enableVMDetection(vm_detect_active),
-        enableSSLcheck(ssl_active),
-        enableGuardFile(guard_file_active),
         license_path(std::move(license_path_input)),
         replace_license(replace_license)
     {}
