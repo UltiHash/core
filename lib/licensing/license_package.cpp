@@ -21,7 +21,7 @@ license_package::license_package(uh::licensing::license_config license_config,
         std::move(credentialConfig_input),
         std::move(license_activate_input))
 {
-    feature_activation();
+    if(valid())feature_activation();
 }
 
 // ---------------------------------------------------------------------

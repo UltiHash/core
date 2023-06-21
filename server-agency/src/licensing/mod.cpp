@@ -16,7 +16,9 @@ namespace
 
 void maybe_create_license_root_directory(std::filesystem::path license_root)
 {
-    //Check whether the directory already exists:
+    //if the path is a file path to license try to create parent
+    if(license_root.extension() ==".lic")
+        license_root = license_root.parent_path();
 
     //We are OK creating a new root if needed, otherwise just inform about its existence
     if (!std::filesystem::is_directory(license_root))
