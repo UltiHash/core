@@ -5,22 +5,35 @@
 #ifndef CORE_SOFT_METRED_RESOURCE_H
 #define CORE_SOFT_METRED_RESOURCE_H
 
-#include "licensing/metred_resource.h"
+#include "licensing/metered_resource.h"
 #include <cstddef>
 
 namespace uh::licensing
 {
 
-class soft_metered_resource: public metred_resource
+class soft_metered_resource
 {
-
 public:
+
+    ~soft_metered_resource() = default;
+
+    /**
+     *
+     * @param dealloc a resource
+     */
+    virtual void deallocate(std::size_t dealloc) = 0;
+
+    /**
+     *
+     * @return count of free metred elements
+     */
+    virtual std::size_t free_count() = 0;
 
     /**
      *
      * @return if a warning level limit of the implemented resource has been reached
      */
-    virtual bool soft_limit_allocate(std::size_t alloc) = 0;
+    virtual bool allocate(std::size_t alloc) = 0;
 
 };
 

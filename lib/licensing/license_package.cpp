@@ -11,115 +11,70 @@
 namespace uh::licensing
 {
 
-license_package::license_package(uh::licensing::license_config license_config,
-                                 uh::licensing::api_config apiKey_input,
-                                 uh::licensing::credential_config credentialConfig_input,
-                                 uh::licensing::license_activate_config license_activate_input):
-    check_airgap_license(
-        std::move(license_config),
-        std::move(apiKey_input),
-        std::move(credentialConfig_input),
-        std::move(license_activate_input))
+license_package::license_package(uh::licensing::check_airgap_license check_license)
+    :
+    m_check_license(std::move(check_license))
 {
-    if(valid())feature_activation();
+    if (m_check_license.valid())feature_activation();
 }
 
 // ---------------------------------------------------------------------
 
-bool license_package::check_feature_enabled(license_package::feature f) const
+bool license_package::feature_enabled(feature f) const
 {
-    return features.at(f);
+    return m_features.at(f);
 }
 
 // ---------------------------------------------------------------------
 
-bool license_package::hard_limit_allocate(license_package::hard_metered_feature hmf, std::size_t alloc)
+bool license_package::allocate(license_package::soft_metered_feature smf, std::size_t alloc)
 {
-    if (!hard_metered_features.contains(hmf))
-    THROW(util::exception, "Hard metred feature was not avialable!");
+    if(!has_metred_feature(smf))
+        THROW(util::exception,"Soft metered feature not found!");
 
-    return hard_metered_features.at(hmf)->hard_limit_allocate(alloc);
+    return m_soft_metered_features.at(smf)->allocate(alloc);
 }
 
 // ---------------------------------------------------------------------
 
-bool license_package::soft_limit_allocate(license_package::soft_metered_feature smf, std::size_t alloc)
+void license_package::deallocate(soft_metered_feature smf, std::size_t dealloc)
 {
-    if (!soft_metered_features.contains(smf))
-    THROW(util::exception, "Soft metred feature was not avialable!");
+    if(!has_metred_feature(smf))
+    THROW(util::exception,"Soft metered feature not found!");
 
-    return soft_metered_features.at(smf)->soft_limit_allocate(alloc);
+    return m_soft_metered_features.at(smf)->deallocate(dealloc);
 }
 
 // ---------------------------------------------------------------------
 
-void license_package::deallocate(license_package::hard_metered_feature hmf, std::size_t dealloc)
+std::size_t license_package::free_count(soft_metered_feature smf)
 {
-    if (soft_metered_features.contains(static_cast<const soft_metered_feature>(hmf)))
-    {
-        soft_metered_features.at(static_cast<const soft_metered_feature>(hmf))->deallocate(dealloc);
-    }
-    else
-    {
-        if (!hard_metered_features.contains(hmf))
-            return;
+    if(!has_metred_feature(smf))
+    THROW(util::exception,"Soft metered feature not found!");
 
-        hard_metered_features.at(hmf)->deallocate(dealloc);
-    }
-}
-
-// ---------------------------------------------------------------------
-
-std::size_t license_package::free_count(license_package::hard_metered_feature hmf)
-{
-    if (soft_metered_features.contains(static_cast<const soft_metered_feature>(hmf)))
-    {
-        return soft_metered_features.at(static_cast<const soft_metered_feature>(hmf))->free_count();
-    }
-    else
-    {
-        if (!hard_metered_features.contains(hmf))
-            return {};
-
-        return hard_metered_features.at(hmf)->free_count();
-    }
-}
-
-// ---------------------------------------------------------------------
-
-void license_package::add_hard_metred_feature(license_package::hard_metered_feature mf, metred_resource *mr)
-{
-    hard_metered_features.emplace(mf, mr);
+    return m_soft_metered_features.at(smf)->free_count();
 }
 
 // ---------------------------------------------------------------------
 
 void
-license_package::add_soft_metred_feature(license_package::soft_metered_feature smf, soft_metered_resource *smr)
+license_package::add_metred_feature(license_package::soft_metered_feature smf, const std::shared_ptr<soft_metered_resource>& smr)
 {
-    hard_metered_features.emplace(static_cast<hard_metered_feature>(smf), smr);
-    soft_metered_features.emplace(smf, smr);
+    m_soft_metered_features.emplace(smf,smr);
 }
 
 // ---------------------------------------------------------------------
 
-bool license_package::has_hard_metred_feature(license_package::hard_metered_feature mf)
+bool license_package::has_metred_feature(license_package::soft_metered_feature smf)
 {
-    return hard_metered_features.contains(mf);
-}
-
-// ---------------------------------------------------------------------
-
-bool license_package::has_soft_metred_feature(license_package::soft_metered_feature smf)
-{
-    return soft_metered_features.contains(smf);
+    return m_soft_metered_features.contains(smf);
 }
 
 // ---------------------------------------------------------------------
 
 void license_package::feature_activation()
 {
-    auto feature_online = getCustomAndFeatureFields();
+    auto feature_online = m_check_license.getCustomAndFeatureFields();
 
     if (feature_online.contains(WARN_STORAGE_STRING))
     {
@@ -134,9 +89,9 @@ void license_package::feature_activation()
             uint64_t warnLevel = std::stoull(feature_online.at(WARN_STORAGE_STRING));
             uint64_t limitLevel = std::stoull(feature_online.at(LIMIT_STORAGE_STRING));
 
-            add_soft_metred_feature(
+            add_metred_feature(
                 uh::licensing::license_package::soft_metered_feature::LIMIT_STORAGE_CAPACITY,
-                new soft_metered_storage_resource(limitLevel, warnLevel)
+                std::make_unique<soft_metered_storage_resource>(limitLevel, warnLevel)
             );
 
             feature_online.erase(WARN_STORAGE_STRING);
@@ -148,7 +103,6 @@ void license_package::feature_activation()
                 std::string(e.what()) + "\n Please contact customer support to correct "
                                         "your license!");
         }
-
     }
     else
     {
@@ -159,9 +113,10 @@ void license_package::feature_activation()
             {
                 uint64_t limitLevel = std::stoull(feature_online.at(LIMIT_STORAGE_STRING));
 
-                add_hard_metred_feature(
-                    uh::licensing::license_package::hard_metered_feature::LIMIT_STORAGE_CAPACITY,
-                    new uh::licensing::soft_metered_storage_resource(limitLevel, limitLevel)
+                add_metred_feature(
+                    uh::licensing::license_package::soft_metered_feature::LIMIT_STORAGE_CAPACITY,
+                    std::make_unique<uh::licensing::soft_metered_storage_resource>(limitLevel,
+                                                                                   limitLevel)
                 );
             }
             catch (std::exception &e)
@@ -173,8 +128,8 @@ void license_package::feature_activation()
         }
     }
 
-    features.emplace(feature::DEDUPLICATION, feature_online.contains(DEDUPLICATION_STRING));
-    features.emplace(feature::METRICS, feature_online.contains(METRICS_STRING));
+    m_features.emplace(feature::DEDUPLICATION, feature_online.contains(DEDUPLICATION_STRING));
+    m_features.emplace(feature::METRICS, feature_online.contains(METRICS_STRING));
 
 }
 

@@ -120,34 +120,26 @@ BOOST_FIXTURE_TEST_CASE_TEMPLATE(license_package_test, T, license_types, Fixture
 
     BOOST_REQUIRE(tmp_write_airgap2.valid());
 
-    license_package lp(lic_config,
-                       api,
-                       credential,
-                       activate);
+    license_package lp(tmp_write_airgap);
 
-    BOOST_CHECK(lp.check_feature_enabled(license_package::feature::DEDUPLICATION));
-    BOOST_CHECK(lp.check_feature_enabled(license_package::feature::METRICS));
-
-    auto *soft_right = new soft_metered_storage_resource(100, 50);
+    BOOST_CHECK(lp.feature_enabled(license_package::feature::DEDUPLICATION));
+    BOOST_CHECK(lp.feature_enabled(license_package::feature::METRICS));
 
     BOOST_REQUIRE_THROW(
         lp.add_soft_metred_feature(license_package::soft_metered_feature::LIMIT_STORAGE_CAPACITY,
-                                   new soft_metered_storage_resource(50, 100)), util::exception);
+                                   std::make_unique<soft_metered_storage_resource>(50, 100)), util::exception);
 
     lp.add_soft_metred_feature(license_package::soft_metered_feature::LIMIT_STORAGE_CAPACITY,
-                               soft_right);
+                               std::make_unique<soft_metered_storage_resource>(100, 50));
 
     BOOST_CHECK(lp.valid());
 
-    auto initial_usable_storage = lp.free_count(static_cast<license_package::hard_metered_feature>
-                                                (license_package::soft_metered_feature::LIMIT_STORAGE_CAPACITY));
+    auto initial_usable_storage = lp.free_count(license_package::soft_metered_feature::LIMIT_STORAGE_CAPACITY);
 
     BOOST_CHECK(lp.soft_limit_allocate(license_package::soft_metered_feature::LIMIT_STORAGE_CAPACITY, 25));
-    BOOST_CHECK(lp.hard_limit_allocate(static_cast<license_package::hard_metered_feature>
-                                       (license_package::soft_metered_feature::LIMIT_STORAGE_CAPACITY), 75));
+    BOOST_CHECK(lp.soft_limit_allocate(license_package::soft_metered_feature::LIMIT_STORAGE_CAPACITY, 75));
 
-    BOOST_CHECK_EQUAL(initial_usable_storage, lp.free_count(static_cast<license_package::hard_metered_feature>
-                                                            (license_package::soft_metered_feature::LIMIT_STORAGE_CAPACITY))
+    BOOST_CHECK_EQUAL(initial_usable_storage, lp.free_count(license_package::soft_metered_feature::LIMIT_STORAGE_CAPACITY)
         + 100);
 
     BOOST_REQUIRE_THROW(
@@ -159,23 +151,19 @@ BOOST_FIXTURE_TEST_CASE_TEMPLATE(license_package_test, T, license_types, Fixture
                                1000000000000000),
         false);
 
-    BOOST_REQUIRE_THROW(lp.deallocate(static_cast<license_package::hard_metered_feature>
-                                      (license_package::hard_metered_feature::LIMIT_STORAGE_CAPACITY), 101),
+    BOOST_REQUIRE_THROW(lp.deallocate(license_package::soft_metered_feature::LIMIT_STORAGE_CAPACITY, 101),
                         util::exception);
 
-    BOOST_CHECK_NO_THROW(lp.deallocate(static_cast<license_package::hard_metered_feature>
-                                       (license_package::hard_metered_feature::LIMIT_STORAGE_CAPACITY), 100));
+    BOOST_CHECK_NO_THROW(lp.deallocate(license_package::soft_metered_feature::LIMIT_STORAGE_CAPACITY, 100));
 
     auto feature_fields = lp.getCustomAndFeatureFields();
 
-    BOOST_CHECK(feature_fields.find(lp.WARN_STORAGE_STRING) == feature_fields.end());
-    BOOST_CHECK(feature_fields.find(lp.LIMIT_STORAGE_STRING) == feature_fields.end());
+    BOOST_CHECK(feature_fields.find(WARN_STORAGE_STRING) == feature_fields.end());
+    BOOST_CHECK(feature_fields.find(LIMIT_STORAGE_STRING) == feature_fields.end());
     BOOST_CHECK(lp.has_soft_metred_feature(uh::licensing::license_package::soft_metered_feature::LIMIT_STORAGE_CAPACITY));
 
     BOOST_CHECK(feature_fields.find(lp.METRICS_STRING) != feature_fields.end());
     BOOST_CHECK(feature_fields.find(lp.DEDUPLICATION_STRING) != feature_fields.end());
-
-    delete soft_right;
 
     std::filesystem::remove("/tmp/" + appName_test + ".lic");
 }

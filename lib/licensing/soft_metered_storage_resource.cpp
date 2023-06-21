@@ -5,28 +5,37 @@
 #include "soft_metered_storage_resource.h"
 
 #include "util/exception.h"
+#include "logging/logging_boost.h"
 
 namespace uh::licensing
 {
 
 // ---------------------------------------------------------------------
 
-bool soft_metered_storage_resource::hard_limit_allocate(std::size_t alloc)
+bool soft_metered_storage_resource::allocate(std::size_t alloc)
 {
-    bool out = stored_val + alloc <= hard_limit_val;
-    if (out)stored_val += alloc;
+    if (stored_val + alloc <= soft_limit_val)
+    {
+        stored_val += alloc;
+        warn_once = true;
+        return true;
+    }
 
-    return out;
-}
+    if (stored_val + alloc <= hard_limit_val)
+    {
+        stored_val += alloc;
+        if (warn_once)
+        {
+            WARNING
+                << "Soft metered storage resource reached warning limit with " + std::to_string(stored_val) + " from "
+                    + std::to_string(hard_limit_val) + " bytes.";
+            warn_once = false;
+        }
 
-// ---------------------------------------------------------------------
+        return true;
+    }
 
-bool soft_metered_storage_resource::soft_limit_allocate(std::size_t alloc)
-{
-    bool out = stored_val + alloc <= soft_limit_val;
-    if (out) return hard_limit_allocate(alloc);
-
-    return out;
+    THROW(util::exception, "Out of licensed storage!");
 }
 
 // ---------------------------------------------------------------------
@@ -34,7 +43,7 @@ bool soft_metered_storage_resource::soft_limit_allocate(std::size_t alloc)
 void soft_metered_storage_resource::deallocate(std::size_t dealloc)
 {
     if (static_cast<long>(stored_val) < dealloc)
-        THROW(util::exception, "License resource deallocation was called with underflow!");
+    THROW(util::exception, "License resource deallocation was called with underflow!");
 
     stored_val -= dealloc;
 }

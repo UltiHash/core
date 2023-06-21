@@ -12,6 +12,9 @@
 namespace uh::licensing
 {
 
+const std::string WARN_STORAGE_STRING = "warnStorage";
+const std::string LIMIT_STORAGE_STRING = "limitStorage";
+
 class soft_metered_storage_resource: public soft_metered_resource
 {
 
@@ -24,17 +27,9 @@ public:
         hard_limit_val(hard_limit), soft_limit_val(soft_limit)
     {
         if (hard_limit < soft_limit)
-            THROW(util::exception, "The hard limit of a soft limited storage resource was smaller than it's soft"
-                                   "limit!");
+        THROW(util::exception, "The hard limit of a soft limited storage resource was smaller than it's soft"
+                               "limit!");
     }
-
-    /**
-     * only allocate below hard limit, else do not allocate
-     *
-     * @param alloc space
-     * @return decision false if no allocation could be acquired below hard limit
-     */
-    [[nodiscard]] bool hard_limit_allocate(std::size_t alloc) override;
 
     /**
      * only allocate below warning limit, else do not allocate
@@ -42,7 +37,7 @@ public:
      * @param alloc space
      * @return decision false if no allocation could be acquired below warning level
      */
-    [[nodiscard]] bool soft_limit_allocate(std::size_t alloc) override;
+    [[nodiscard]] bool allocate(std::size_t alloc) override;
 
     /**
      *
@@ -60,6 +55,7 @@ private:
     std::size_t stored_val{};
     const std::size_t hard_limit_val;
     const std::size_t soft_limit_val;
+    bool warn_once = true;
 };
 
 } // namespace uh::licensing
