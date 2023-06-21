@@ -3,15 +3,6 @@
 //
 
 #include "mod.h"
-#include "licensing/license_package.h"
-#include "options/licensing_options.h"
-
-#include <config.hpp>
-
-#include <logging/logging_boost.h>
-#include <util/exception.h>
-
-#include <LicenseSpring/EncryptString.h>
 
 namespace uh::dbn::licensing
 {
@@ -49,9 +40,10 @@ uh::licensing::LicenseTypeEnum define_licensing_type(const std::string &license_
 {
     auto it = std::find_if(uh::licensing::string2licensetype.begin(),
                            uh::licensing::string2licensetype.end(),
-                           [&license_type](std::pair<std::string, uh::licensing::LicenseTypeEnum>& item){
-        return license_type == item.first;
-    });
+                           [&license_type](std::pair<std::string, uh::licensing::LicenseTypeEnum> &item)
+                           {
+                               return license_type == item.first;
+                           });
     if (it != uh::licensing::string2licensetype.end())
     {
         return it->second;
@@ -177,7 +169,6 @@ void mod::start()
 
     if (!m_impl->m_licensing->valid())
     THROW(util::exception, "UltiHash " + std::string(PROJECT_NAME) + " license was not valid!");
-
 }
 
 // ---------------------------------------------------------------------

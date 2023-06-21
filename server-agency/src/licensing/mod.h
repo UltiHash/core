@@ -19,7 +19,6 @@
 
 #include <LicenseSpring/EncryptString.h>
 
-
 namespace uh::an::licensing
 {
 

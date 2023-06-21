@@ -36,10 +36,15 @@ void maybe_create_license_root_directory(std::filesystem::path license_root)
 
 // ---------------------------------------------------------------------
 
-LicenseTypeEnum define_licensing_type(const std::string &license_type)
+uh::licensing::LicenseTypeEnum define_licensing_type(const std::string &license_type)
 {
-    auto it = string2licensetype.find(license_type);
-    if (it != string2licensetype.end())
+    auto it = std::find_if(uh::licensing::string2licensetype.begin(),
+                           uh::licensing::string2licensetype.end(),
+                           [&license_type](std::pair<std::string, uh::licensing::LicenseTypeEnum> &item)
+                           {
+                               return license_type == item.first;
+                           });
+    if (it != uh::licensing::string2licensetype.end())
     {
         return it->second;
     }
@@ -57,50 +62,73 @@ std::unique_ptr<uh::licensing::license_package> make_licensing(const uh::options
 {
     maybe_create_license_root_directory(cfg.licensing_path);
 
-    auto license_type = define_licensing_type(cfg.license_type);
+    uh::licensing::LicenseTypeEnum license_type = define_licensing_type(cfg.license_type);
+
+    auto lic_config = uh::licensing::license_config(license_type,
+                                                    uh::licensing::NodeRole::AgencyNode,
+                                                    true,
+                                                    true,
+                                                    false,
+                                                    true,
+                                                    true,
+                                                    cfg.licensing_path,
+                                                    cfg.license_replace);
+
+    auto api = uh::licensing::api_config(EncryptStr(LICENSE_API_KEY),
+                                         EncryptStr(LICENSE_SHARED_KEY),
+                                         EncryptStr(LICENSE_PRODUCT_ID));
+    auto credential = uh::licensing::credential_config(PROJECT_NAME, PROJECT_VERSION);
 
     switch (license_type)
     {
-        case LicenseTypeEnum::AirgapOnlineActivationLicense:
+        case uh::licensing::LicenseTypeEnum::AirgapKeyOnline:
         {
+            auto activate = uh::licensing::license_activate_config(cfg.license_key);
             if (std::filesystem::is_empty(cfg.licensing_path))
             {
                 INFO << "No licenses were found. Creating " + cfg.license_type + " license.";
 
-                uh::licensing::check_key_license write_airgap(cfg.licensing_path,
-                                                              EncryptStr(LICENSE_API_KEY),
-                                                              EncryptStr(LICENSE_SHARED_KEY),
-                                                              EncryptStr(LICENSE_PRODUCT_ID),
-                                                              PROJECT_NAME,
-                                                              PROJECT_VERSION,
-                                                              cfg.license_replace
-                );
+                uh::licensing::check_airgap_license write_airgap(lic_config,
+                                                                 api,
+                                                                 credential,
+                                                                 activate);
 
                 INFO << "Initialized " + cfg.license_type;
-
-                write_airgap.write_license(uh::licensing::check_airgap_license::role::AGENCY_NODE,
-                                           PROJECT_NAME,
-                                           PROJECT_VERSION,
-                                           cfg.license_key);
-
-                INFO << "Wrote new license key to " + write_airgap.getLicensePath().string();
+                INFO << "Wrote new license key to " + lic_config.license_path.string();
             }
 
-            auto read_license =
-                std::make_unique<uh::licensing::license_package>(uh::licensing::check_airgap_license::role::AGENCY_NODE,
-                                                                 cfg.licensing_path,
-                                                                 EncryptStr(LICENSE_API_KEY),
-                                                                 EncryptStr(LICENSE_SHARED_KEY),
-                                                                 EncryptStr(LICENSE_PRODUCT_ID));
-
-            return read_license;
+            return std::make_unique<uh::licensing::license_package>(lic_config,
+                                                                    api,
+                                                                    credential,
+                                                                    activate);
         }
-        case LicenseTypeEnum::OtherLicense:THROW(util::exception, "Not yet implemented licensing model");
+        case uh::licensing::LicenseTypeEnum::AirgapUserOnline:
+        {
+            auto activate = uh::licensing::license_activate_config(cfg.license_user,
+                                                                   cfg.license_password);
+            if (std::filesystem::is_empty(cfg.licensing_path))
+            {
+                INFO << "No licenses were found. Creating " + cfg.license_type + " license.";
+
+                uh::licensing::check_airgap_license write_airgap(lic_config,
+                                                                 api,
+                                                                 credential,
+                                                                 activate);
+
+                INFO << "Initialized " + cfg.license_type;
+                INFO << "Wrote new license key to " + lic_config.license_path.string();
+            }
+
+            return std::make_unique<uh::licensing::license_package>(lic_config,
+                                                                    api,
+                                                                    credential,
+                                                                    activate);
+        }
+        case uh::licensing::LicenseTypeEnum::OtherLicense:THROW(util::exception, "Not yet implemented licensing model");
     }
 
     std::string msg("Not a storage backend type: " + cfg.license_type);
     THROW(util::exception, msg);
-
 }
 
 // ---------------------------------------------------------------------
@@ -140,8 +168,7 @@ void mod::start()
     INFO << "          starting licensing module";
 
     if (!m_impl->m_licensing->valid())
-        THROW(util::exception, "UltiHash " + std::string(PROJECT_NAME) + " license was not valid!");
-
+    THROW(util::exception, "UltiHash " + std::string(PROJECT_NAME) + " license was not valid!");
 }
 
 // ---------------------------------------------------------------------
