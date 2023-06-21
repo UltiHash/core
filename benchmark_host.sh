@@ -15,7 +15,7 @@ teardown()
 {
   local services=$(docker service ls | grep nightlyBench_ | awk '{print $2}')
   if [[ -n ${services} ]]; then
-    docker service rm ${services} >/dev/null 2>&1 
+    docker service rm ${services} >/dev/null 2>&1
     if [[ -n "$1" ]]; then
       echo "Found left-over benchmark services that may interfere, cleaning up..."
       sleep 15
@@ -117,6 +117,30 @@ get_agency_update_upload_throughput()
 }
 
 #
+# Returns the average throughput of the dnode_update_upload metric from the log files
+#
+# Usage:
+#   get_agency_update_upload <corpus> <log_path_base>
+#
+get_dnode_update_upload_throughput()
+{
+  local corpus="$1"; shift;
+  local log_path_base="$1"; shift;
+  local log_paths=${log_path_base}*
+  RESULT=$(jq -s "map(.dnode_update_upload.${corpus}.throughput) | add / length" ${log_paths})
+  EXIT_STATUS=$?
+
+  if [ $EXIT_STATUS -eq 0 ]; then
+    printf "${RESULT}"
+    return 0
+  else
+    printf ""
+    return 1
+  fi
+
+}
+
+#
 # Returns the average throughput of the agency_fresh_upload metric from the log files
 #
 # Usage:
@@ -128,6 +152,30 @@ get_agency_download_throughput()
   local log_path_base="$1"; shift;
   local log_paths=${log_path_base}*
   RESULT=$(jq -s "map(.agency_download.${corpus}.throughput) | add / length" ${log_paths})
+  EXIT_STATUS=$?
+
+  if [ $EXIT_STATUS -eq 0 ]; then
+    printf "${RESULT}"
+    return 0
+  else
+    printf ""
+    return 1
+  fi
+
+}
+
+#
+# Returns the average throughput of the dnode_download metric from the log files
+#
+# Usage:
+#   get_dnode_download <corpus> <log_path_base>
+#
+get_dnode_download_throughput()
+{
+  local corpus="$1"; shift;
+  local log_path_base="$1"; shift;
+  local log_paths=${log_path_base}*
+  RESULT=$(jq -s "map(.dnode_download.${corpus}.throughput) | add / length" ${log_paths})
   EXIT_STATUS=$?
 
   if [ $EXIT_STATUS -eq 0 ]; then
@@ -163,15 +211,27 @@ post_results_to_slack()
   download_agency_throughput=$(printf "%.2f" ${download_agency_throughput})
   local download_agency_throughput_exit=$?
 
-  if [ $upload_fresh_throughput_exit -eq 0 ] && [ $upload_update_throughput_exit -eq 0 ] && [ $download_agency_throughput_exit -eq 0 ]
+  local download_dnode_throughput=$(get_dnode_download_throughput "${corpus}" "${log_path_base}")
+  download_dnode_throughput=$(printf "%.2f" ${download_dnode_throughput})
+  local download_dnode_throughput_exit=$?
+
+  local upload_dnode_throughput=$(get_dnode_update_upload_throughput "${corpus}" "${log_path_base}")
+  upload_dnode_throughput=$(printf "%.2f" ${upload_dnode_throughput})
+  local upload_dnode_throughput_exit=$?
+
+
+  if [ $upload_fresh_throughput_exit -eq 0 ] && [ $upload_update_throughput_exit -eq 0 ] && [ $download_agency_throughput_exit -eq 0 ] && \
+      [ $download_dnode_throughput_exit -eq 0 ] && [ $upload_dnode_throughput_exit -eq 0 ]
   then
         printf %b "text=Tonight's benchmark results for the \"${corpus}\" corpus:\n\t- upload throughput (fresh upload via agency-node): ${upload_fresh_throughput} MByte/s.\n\t- de-duplication ratio (fresh upload via agency-node): ${upload_fresh_deduplication}.\n\t- upload throughput (updating upload via agency-node): ${upload_update_throughput} MByte/s.\n\t- download throughput (via agency-node): ${download_agency_throughput} MByte\s.\n" > message.txt
+        printf %b "\n\t- upload throughput (via data-node): ${upload_dnode_throughput} MByte\s.\n" >> message.txt
+        printf %b "\n\t- download throughput (via data-node): ${download_dnode_throughput} MByte\s.\n" >> message.txt
         curl --data-binary @message.txt -d "channel=${SLACK_CHANNEL}" -H "Authorization: Bearer xoxb-2702783761651-4959893662113-aASbDCYEfMpCRgrnwvC4ZUUn" -X POST https://slack.com/api/chat.postMessage >/dev/null 2>&1
         rm message.txt
 	echo "Successfully posted benchmark results for the current corpus to Slack."
   else
         curl -d "text=Tonight's benchmarks did not run properly or there was an error parsing their output." -d "channel=${SLACK_CHANNEL}" -H "Authorization: Bearer xoxb-2702783761651-4959893662113-aASbDCYEfMpCRgrnwvC4ZUUn" -X POST https://slack.com/api/chat.postMessage >/dev/null 2>&1
-	echo "Notified Slack channel that the benchmark run using the current corpus didn't appear to deliver valid results." 
+	echo "Notified Slack channel that the benchmark run using the current corpus didn't appear to deliver valid results."
   fi
 
 }
@@ -195,7 +255,7 @@ post_results_to_prometheus()
   local download_agency_throughput=$(get_agency_download_throughput "${corpus}" "${log_path_base}")
   local download_agency_throughput_exit=$?
   local temp_dir=$(mktemp -d)
-  
+
   if [ $upload_fresh_throughput_exit -eq 0 ]; then
     printf %b "# TYPE uh_nightly_throughput gauge\n# HELP uh_nightly_throughput  Average throughput obtained during nightly benchmarks.\nuh_nightly_throughput ${upload_fresh_throughput}\n" > ${temp_dir}/agency_fresh_upload.txt
     curl --data-binary @${temp_dir}/agency_fresh_upload.txt http://localhost:9091/metrics/job/agency_fresh_upload/instance/${corpus}
@@ -216,7 +276,7 @@ post_results_to_prometheus()
     printf %b "# TYPE uh_nightly_throughput gauge\n# HELP uh_nightly_throughput  Average throughput obtained during nightly benchmarks.\nuh_nightly_throughput ${download_agency_throughput}\n" > ${temp_dir}/agency_download.txt
     curl --data-binary @${temp_dir}/agency_download.txt http://localhost:9091/metrics/job/agency_download/instance/${corpus}
   fi
- 
+
   rm -Rf ${temp_dir}
 
   echo "Successfully posted benchmark results for the current corpus to Prometheus."

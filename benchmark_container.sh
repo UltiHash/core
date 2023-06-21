@@ -1,7 +1,7 @@
 #!/bin/bash
 
 ADDR_AGENCY_NODE=uh-server-agency:21832
-ADDR_DB_NODE=uh-server-db:12345
+ADDR_DATA_NODE=uh-server-db:12345
 
 PATH_CLIENT="/usr/local/bin/uh-cli"
 CORPORA_BASE_DIR="/data/corpora"
@@ -128,6 +128,21 @@ temp_dir=$(mktemp -d)
 upload_corpus "${temp_dir}/volume.uh" "${CORPORA_BASE_DIR}/${corpus}" "${ADDR_AGENCY_NODE}" > /dev/null
 echo "    \"${corpus}\": {"
 perform_download_benchmark "${temp_dir}/volume.uh" "${ADDR_AGENCY_NODE}"
+rm -rf "${temp_dir}"
+echo "    }"
+echo "  }"
+
+echo "  \"dnode_update_upload\": {"
+echo "    \"${corpus}\": {"
+perform_upload_benchmark "${CORPORA_BASE_DIR}/${corpus}" "${ADDR_DATA_NODE}"
+echo "    }"
+echo "  },"
+
+echo "  \"dnode_download\": {"
+temp_dir=$(mktemp -d)
+upload_corpus "${temp_dir}/volume.uh" "${CORPORA_BASE_DIR}/${corpus}" "${ADDR_DATA_NODE}" > /dev/null
+echo "    \"${corpus}\": {"
+perform_download_benchmark "${temp_dir}/volume.uh" "${ADDR_DATA_NODE}"
 rm -rf "${temp_dir}"
 echo "    }"
 echo "  }"
