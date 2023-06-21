@@ -23,7 +23,6 @@ const std::string LIMIT_STORAGE_STRING = "limitStorage";
 struct metered_resource
 {
 public:
-    std::size_t stored_val{};
     const std::size_t hard_limit_val{};
     const std::size_t soft_limit_val{};
     bool warn_once = true;
@@ -95,10 +94,10 @@ public:
      * HINT: a not contained limit is no limit
      *
      * @param smf soft metred feature that should check for available allocation without warning
-     * @param alloc some resource
+     * @param size_input some resource
      * @return if allocation was successful and metered counter updated without warning required
      */
-    void check(license_package::metered_feature smf, std::size_t alloc);
+    void check(license_package::metered_feature smf, std::size_t size_input);
 
     /**
      *
