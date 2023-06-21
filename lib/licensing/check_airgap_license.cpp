@@ -169,11 +169,6 @@ bool check_airgap_license::licenseRegister(const LicenseSpring::LicenseID &licen
                     license_type_set_string = licensetype2string[LicenseTypeEnum::AirgapKeyOnline];
                     license->addDeviceVariable("Key", licenseId.key());
                     break;
-                case LicenseTypeEnum::AirgapUserOnline:
-                    license_type_set_string = licensetype2string[LicenseTypeEnum::AirgapUserOnline];
-                    license->addDeviceVariable("Username", licenseId.user());
-                    license->addDeviceVariable("Password", licenseId.password());
-                    break;
                 default:THROW(util::exception, "No license type detected!");
             }
 

@@ -71,19 +71,16 @@ public:
 enum class LicenseTypeEnum
 {
     AirgapKeyOnline,
-    AirgapUserOnline,
     OtherLicense
 };
 
 static std::vector<std::pair<std::string, LicenseTypeEnum>> string2licensetype = {
     {"AirgapKeyOnline", LicenseTypeEnum::AirgapKeyOnline},
-    {"AirgapUserOnline", LicenseTypeEnum::AirgapUserOnline},
     {"OtherLicense", LicenseTypeEnum::OtherLicense}
 };
 
 static std::unordered_map<LicenseTypeEnum, std::string> licensetype2string = {
     {LicenseTypeEnum::AirgapKeyOnline, "AirgapKeyOnline"},
-    {LicenseTypeEnum::AirgapUserOnline, "AirgapUserOnline"},
     {LicenseTypeEnum::OtherLicense, "OtherLicense"}
 };
 

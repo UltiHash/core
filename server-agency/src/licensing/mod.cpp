@@ -7,7 +7,7 @@
 namespace uh::an::licensing
 {
 
-// ---------------------------------------------------------------------    
+// ---------------------------------------------------------------------
 
 namespace
 {
@@ -86,31 +86,6 @@ std::unique_ptr<uh::licensing::license_package> make_licensing(const uh::options
         case uh::licensing::LicenseTypeEnum::AirgapKeyOnline:
         {
             auto activate = uh::licensing::license_activate_config(cfg.license_key);
-            if (std::filesystem::is_empty(cfg.licensing_path))
-            {
-                INFO << "No licenses were found. Creating " + cfg.license_type + " license.";
-
-                uh::licensing::check_airgap_license write_airgap(lic_config,
-                                                                 api,
-                                                                 credential,
-                                                                 activate);
-
-                INFO << "Initialized " + cfg.license_type;
-                INFO << "Wrote new license key to " + lic_config.license_path.string();
-            }
-
-            return std::make_unique<uh::licensing::license_package>(
-                std::make_shared<uh::licensing::check_airgap_license>(lic_config,
-                                                                      api,
-                                                                      credential,
-                                                                      activate
-                )
-            );
-        }
-        case uh::licensing::LicenseTypeEnum::AirgapUserOnline:
-        {
-            auto activate = uh::licensing::license_activate_config(cfg.license_user,
-                                                                   cfg.license_password);
             if (std::filesystem::is_empty(cfg.licensing_path))
             {
                 INFO << "No licenses were found. Creating " + cfg.license_type + " license.";
