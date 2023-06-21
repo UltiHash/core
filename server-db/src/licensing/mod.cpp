@@ -47,7 +47,11 @@ void maybe_create_license_root_directory(std::filesystem::path license_root)
 
 uh::licensing::LicenseTypeEnum define_licensing_type(const std::string &license_type)
 {
-    auto it = uh::licensing::string2licensetype.find(license_type);
+    auto it = std::find_if(uh::licensing::string2licensetype.begin(),
+                           uh::licensing::string2licensetype.end(),
+                           [&license_type](std::pair<std::string, uh::licensing::LicenseTypeEnum>& item){
+        return license_type == item.first;
+    });
     if (it != uh::licensing::string2licensetype.end())
     {
         return it->second;
@@ -66,11 +70,17 @@ std::unique_ptr<uh::licensing::license_package> make_licensing(const uh::options
 {
     maybe_create_license_root_directory(cfg.licensing_path);
 
-    auto license_type = define_licensing_type(cfg.license_type);
+    uh::licensing::LicenseTypeEnum license_type = define_licensing_type(cfg.license_type);
 
-    auto lic_config = uh::licensing::license_config();
-    lic_config.license_path = cfg.licensing_path;
-    lic_config.replace_license = cfg.license_replace;
+    auto lic_config = uh::licensing::license_config(license_type,
+                                                    uh::licensing::NodeRole::DataNode,
+                                                    true,
+                                                    true,
+                                                    false,
+                                                    true,
+                                                    true,
+                                                    cfg.licensing_path,
+                                                    cfg.license_replace);
 
     auto api = uh::licensing::api_config(EncryptStr(LICENSE_API_KEY),
                                          EncryptStr(LICENSE_SHARED_KEY),
@@ -95,16 +105,33 @@ std::unique_ptr<uh::licensing::license_package> make_licensing(const uh::options
                 INFO << "Wrote new license key to " + lic_config.license_path.string();
             }
 
-            auto read_license =
-                std::make_unique<uh::licensing::license_package>(lic_config,
+            return std::make_unique<uh::licensing::license_package>(lic_config,
+                                                                    api,
+                                                                    credential,
+                                                                    activate);
+        }
+        case uh::licensing::LicenseTypeEnum::AirgapUserOnline:
+        {
+            auto activate = uh::licensing::license_activate_config(cfg.license_user,
+                                                                   cfg.license_password);
+            if (std::filesystem::is_empty(cfg.licensing_path))
+            {
+                INFO << "No licenses were found. Creating " + cfg.license_type + " license.";
+
+                uh::licensing::check_airgap_license write_airgap(lic_config,
                                                                  api,
                                                                  credential,
                                                                  activate);
 
-            return read_license;
+                INFO << "Initialized " + cfg.license_type;
+                INFO << "Wrote new license key to " + lic_config.license_path.string();
+            }
+
+            return std::make_unique<uh::licensing::license_package>(lic_config,
+                                                                    api,
+                                                                    credential,
+                                                                    activate);
         }
-        case uh::licensing::LicenseTypeEnum::AirgapUserOnline:THROW(util::exception,
-                                                                    "Not yet implemented licensing model");
         case uh::licensing::LicenseTypeEnum::OtherLicense:THROW(util::exception, "Not yet implemented licensing model");
     }
 
