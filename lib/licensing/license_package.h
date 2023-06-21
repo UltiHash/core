@@ -5,7 +5,6 @@
 #ifndef CORE_LICENSE_PACKAGE_H
 #define CORE_LICENSE_PACKAGE_H
 
-#include "licensing/soft_metered_resource.h"
 #include "licensing/check_airgap_license.h"
 #include "util/exception.h"
 #include "logging/logging_boost.h"
@@ -17,6 +16,24 @@
 
 namespace uh::licensing
 {
+
+const std::string WARN_STORAGE_STRING = "warnStorage";
+const std::string LIMIT_STORAGE_STRING = "limitStorage";
+
+struct metered_resource
+{
+public:
+    std::size_t stored_val{};
+    const std::size_t hard_limit_val{};
+    const std::size_t soft_limit_val{};
+    bool warn_once = true;
+
+    metered_resource(std::size_t hard_limit, std::size_t soft_limit)
+        :
+        hard_limit_val(hard_limit),
+        soft_limit_val(soft_limit)
+    {}
+};
 
 class license_package
 {
@@ -55,7 +72,7 @@ public:
      * Warn if resource boundary is close to be hit.
      * @throw if resource boundary will be exceeded by resource allocation
      */
-    enum class soft_metered_feature: unsigned char
+    enum class metered_feature: unsigned char
     {
         LIMIT_CPU_COUNT = 0,
         LIMIT_STORAGE_CAPACITY = 1,
@@ -78,35 +95,22 @@ public:
      * @param alloc some resource
      * @return if allocation was successful and metered counter updated without warning required
      */
-    bool allocate(license_package::soft_metered_feature smf, std::size_t alloc);
-
-    /**
-     *
-     * @param hmf hard metred feature to be deallocated
-     * @param dealloc resources to be registered deallocated
-     */
-    void deallocate(soft_metered_feature hmf, std::size_t dealloc);
-
-    /**
-     *
-     * @param hmf metred feature to test free count on
-     * @return number of free resources of metred resource
-     */
-    std::size_t free_count(soft_metered_feature hmf);
+    void check(license_package::metered_feature smf, std::size_t alloc);
 
     /**
      *
      * @param smf soft metered feature to be registered
      * @param smr soft metered resource class to be checked repeatedly
      */
-    void add_metred_feature(license_package::soft_metered_feature smf, const std::shared_ptr<soft_metered_resource>& smr);
+    void add_metred_feature(license_package::metered_feature smf,
+                            const std::shared_ptr<metered_resource> &smr);
 
     /**
      *
      * @param smf metered feature to check
      * @return if soft metred feature is available
      */
-    bool has_metred_feature(license_package::soft_metered_feature smf);
+    bool has_metred_feature(license_package::metered_feature smf);
 
     /**
      *
@@ -117,7 +121,7 @@ public:
 private:
 
     std::map<feature, bool> m_features;
-    std::map<soft_metered_feature, std::shared_ptr<soft_metered_resource>> m_soft_metered_features;
+    std::map<metered_feature, std::shared_ptr<metered_resource>> m_soft_metered_features;
     std::shared_ptr<check_airgap_license> m_check_license;
 
     /**

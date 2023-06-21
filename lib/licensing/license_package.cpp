@@ -6,8 +6,6 @@
 
 #include <utility>
 
-#include "soft_metered_storage_resource.h"
-
 namespace uh::licensing
 {
 
@@ -27,45 +25,49 @@ bool license_package::feature_enabled(feature f) const
 
 // ---------------------------------------------------------------------
 
-bool license_package::allocate(license_package::soft_metered_feature smf, std::size_t alloc)
+void license_package::check(license_package::metered_feature smf, std::size_t alloc)
 {
-    if(!has_metred_feature(smf))
-        THROW(util::exception,"Soft metered feature not found!");
+    if (!has_metred_feature(smf))
+    THROW(util::exception, "Soft metered feature not found!");
 
-    return m_soft_metered_features.at(smf)->allocate(alloc);
-}
+    if (m_soft_metered_features.at(smf)->stored_val + alloc <= m_soft_metered_features.at(smf)->soft_limit_val)
+    {
+        m_soft_metered_features.at(smf)->stored_val += alloc;
+        m_soft_metered_features.at(smf)->warn_once = true;
+        return;
+    }
 
-// ---------------------------------------------------------------------
+    if (m_soft_metered_features.at(smf)->stored_val + alloc <= m_soft_metered_features.at(smf)->hard_limit_val)
+    {
+        m_soft_metered_features.at(smf)->stored_val += alloc;
+        if (m_soft_metered_features.at(smf)->warn_once)
+        {
+            WARNING
+                << "Soft metered storage resource reached warning limit with "
+                    + std::to_string(m_soft_metered_features.at(smf)->stored_val)
+                    + " of a maximum of "
+                    + std::to_string(m_soft_metered_features.at(smf)->hard_limit_val) + " bytes.";
+            m_soft_metered_features.at(smf)->warn_once = false;
+        }
 
-void license_package::deallocate(soft_metered_feature smf, std::size_t dealloc)
-{
-    if(!has_metred_feature(smf))
-    THROW(util::exception,"Soft metered feature not found!");
+        return;
+    }
 
-    return m_soft_metered_features.at(smf)->deallocate(dealloc);
-}
-
-// ---------------------------------------------------------------------
-
-std::size_t license_package::free_count(soft_metered_feature smf)
-{
-    if(!has_metred_feature(smf))
-    THROW(util::exception,"Soft metered feature not found!");
-
-    return m_soft_metered_features.at(smf)->free_count();
+    THROW(util::exception, "Out of licensed storage!");
 }
 
 // ---------------------------------------------------------------------
 
 void
-license_package::add_metred_feature(license_package::soft_metered_feature smf, const std::shared_ptr<soft_metered_resource>& smr)
+license_package::add_metred_feature(license_package::metered_feature smf,
+                                    const std::shared_ptr<metered_resource> &smr)
 {
-    m_soft_metered_features.emplace(smf,smr);
+    m_soft_metered_features.emplace(smf, smr);
 }
 
 // ---------------------------------------------------------------------
 
-bool license_package::has_metred_feature(license_package::soft_metered_feature smf)
+bool license_package::has_metred_feature(license_package::metered_feature smf)
 {
     return m_soft_metered_features.contains(smf);
 }
@@ -90,8 +92,8 @@ void license_package::feature_activation()
             uint64_t limitLevel = std::stoull(feature_online.at(LIMIT_STORAGE_STRING));
 
             add_metred_feature(
-                uh::licensing::license_package::soft_metered_feature::LIMIT_STORAGE_CAPACITY,
-                std::make_shared<soft_metered_storage_resource>(limitLevel, warnLevel)
+                uh::licensing::license_package::metered_feature::LIMIT_STORAGE_CAPACITY,
+                std::make_shared<metered_resource>(limitLevel, warnLevel)
             );
 
             feature_online.erase(WARN_STORAGE_STRING);
@@ -108,14 +110,13 @@ void license_package::feature_activation()
     {
         if (feature_online.contains(LIMIT_STORAGE_STRING))
         {
-
             try
             {
                 uint64_t limitLevel = std::stoull(feature_online.at(LIMIT_STORAGE_STRING));
 
                 add_metred_feature(
-                    uh::licensing::license_package::soft_metered_feature::LIMIT_STORAGE_CAPACITY,
-                    std::make_shared<uh::licensing::soft_metered_storage_resource>(limitLevel,
+                    uh::licensing::license_package::metered_feature::LIMIT_STORAGE_CAPACITY,
+                    std::make_shared<uh::licensing::metered_resource>(limitLevel,
                                                                                    limitLevel)
                 );
             }

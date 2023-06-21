@@ -11,8 +11,6 @@
 
 #include <licensing/check_airgap_license.h>
 #include <licensing/license_package.h>
-#include <licensing/soft_metered_storage_resource.h>
-#include <io/temp_file.h>
 
 
 using namespace uh;
@@ -127,38 +125,25 @@ BOOST_FIXTURE_TEST_CASE_TEMPLATE(license_package_test, T, license_types, Fixture
         BOOST_CHECK(lp.feature_enabled(license_package::feature::METRICS));
 
         BOOST_REQUIRE_THROW(
-            lp.add_metred_feature(license_package::soft_metered_feature::LIMIT_STORAGE_CAPACITY,
-                                       std::make_shared<soft_metered_storage_resource>(50, 100)), util::exception);
+            lp.add_metred_feature(license_package::metered_feature::LIMIT_STORAGE_CAPACITY,
+                                       std::make_shared<metered_resource>(50, 100)), util::exception);
 
-        lp.add_metred_feature(license_package::soft_metered_feature::LIMIT_STORAGE_CAPACITY,
-                                   std::make_unique<soft_metered_storage_resource>(100, 50));
-
-        auto initial_usable_storage = lp.free_count(license_package::soft_metered_feature::LIMIT_STORAGE_CAPACITY);
-
-        BOOST_CHECK(lp.allocate(license_package::soft_metered_feature::LIMIT_STORAGE_CAPACITY, 25));
-        BOOST_CHECK(lp.allocate(license_package::soft_metered_feature::LIMIT_STORAGE_CAPACITY, 75));
-
-        BOOST_CHECK_EQUAL(initial_usable_storage, lp.free_count(license_package::soft_metered_feature::LIMIT_STORAGE_CAPACITY)
-            + 100);
+        lp.add_metred_feature(license_package::metered_feature::LIMIT_STORAGE_CAPACITY,
+                                   std::make_unique<metered_resource>(100, 50));
 
         BOOST_REQUIRE_THROW(
-            lp.allocate(license_package::soft_metered_feature::LIMIT_NETWORK_CONNECTIONS, 1),
+            lp.check(license_package::metered_feature::LIMIT_NETWORK_CONNECTIONS, 1),
             util::exception);
 
         BOOST_REQUIRE_THROW(
-            lp.allocate(license_package::soft_metered_feature::LIMIT_STORAGE_CAPACITY,1000000000000000),
+            lp.check(license_package::metered_feature::LIMIT_STORAGE_CAPACITY, 1000000000000000),
             std::exception);
-
-        BOOST_REQUIRE_THROW(lp.deallocate(license_package::soft_metered_feature::LIMIT_STORAGE_CAPACITY, 101),
-                            util::exception);
-
-        BOOST_CHECK_NO_THROW(lp.deallocate(license_package::soft_metered_feature::LIMIT_STORAGE_CAPACITY, 100));
 
         auto feature_fields = tmp_write_airgap->getCustomAndFeatureFields();
 
         BOOST_CHECK(feature_fields.find(WARN_STORAGE_STRING) == feature_fields.end());
         BOOST_CHECK(feature_fields.find(LIMIT_STORAGE_STRING) == feature_fields.end());
-        BOOST_CHECK(lp.has_metred_feature(uh::licensing::license_package::soft_metered_feature::LIMIT_STORAGE_CAPACITY));
+        BOOST_CHECK(lp.has_metred_feature(uh::licensing::license_package::metered_feature::LIMIT_STORAGE_CAPACITY));
 
         BOOST_CHECK(feature_fields.find(lp.METRICS_STRING) != feature_fields.end());
         BOOST_CHECK(feature_fields.find(lp.DEDUPLICATION_STRING) != feature_fields.end());

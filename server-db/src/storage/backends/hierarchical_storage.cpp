@@ -40,7 +40,7 @@ hierarchical_storage::hierarchical_storage(const hierarchical_storage_config &co
     try
     {
         uh::dbn::licensing::global_license_pointer_dbn->license_package()
-            .allocate(uh::licensing::license_package::soft_metered_feature::LIMIT_STORAGE_CAPACITY, m_used);
+            .check(uh::licensing::license_package::metered_feature::LIMIT_STORAGE_CAPACITY, m_used);
     }
     catch (std::exception &e)
     {
@@ -75,8 +75,7 @@ void hierarchical_storage::stop()
 
 size_t hierarchical_storage::free_space()
 {
-    return std::min(m_alloc - m_used, uh::dbn::licensing::global_license_pointer_dbn->license_package()
-        .free_count(uh::licensing::license_package::soft_metered_feature::LIMIT_STORAGE_CAPACITY));
+    return m_alloc - m_used;
 }
 
 // ---------------------------------------------------------------------
@@ -164,7 +163,6 @@ std::filesystem::path hierarchical_storage::get_hash_path(const std::string_view
 void hierarchical_storage::return_space(std::size_t size)
 {
     m_used -= size;
-    metered_dealloc(size);
     update_space_consumption();
 }
 
@@ -190,7 +188,7 @@ void hierarchical_storage::acquire_storage_size(std::size_t size)
     try
     {
         uh::dbn::licensing::global_license_pointer_dbn->license_package()
-            .allocate(uh::licensing::license_package::soft_metered_feature::LIMIT_STORAGE_CAPACITY, size);
+            .check(uh::licensing::license_package::metered_feature::LIMIT_STORAGE_CAPACITY, size);
     }
     catch (std::exception &e)
     {
