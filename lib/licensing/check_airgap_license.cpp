@@ -270,7 +270,7 @@ bool check_airgap_license::license_check(const LicenseSpring::License::ptr_t &li
                                              return item.first == licenseRole;
                                          })->second;
 
-    if (getLicense().licenseNodeRole != nodeRoleEnum)
+    if (m_license.licenseNodeRole != nodeRoleEnum)
     {
         ERROR << "License node role did not match product node role!";
         return false;
@@ -281,52 +281,22 @@ bool check_airgap_license::license_check(const LicenseSpring::License::ptr_t &li
 
 // ---------------------------------------------------------------------
 
-LicenseSpring::ExtendedOptions check_airgap_license::getOptions()
-{
-    //Collecting network info
-    LicenseSpring::ExtendedOptions options;
-
-    auto lic = getLicense();
-
-    options.collectNetworkInfo(lic.collectNetworkInfo);
-    options.enableLogging(lic.enableLogging);
-    options.enableVMDetection(lic.enableVMDetection);
-    options.enableSSLCheck(lic.enableSSLcheck);
-    options.enableGuardFile(lic.enableGuardFile);
-
-    return options;
-}
-
-// ---------------------------------------------------------------------
-
-const license_config &check_airgap_license::getLicense() const
-{
-    return m_license;
-}
-
-// ---------------------------------------------------------------------
-
-const credential_config &check_airgap_license::getCredentials() const
-{
-    return m_credential;
-}
-
-// ---------------------------------------------------------------------
-
 std::shared_ptr<LicenseSpring::Configuration> check_airgap_license::getLicenseSpringConfig()
 {
-    LicenseSpring::ExtendedOptions options = getOptions();
-    uh::licensing::credential_config credentials = getCredentials();
+    LicenseSpring::ExtendedOptions options;
 
-    std::shared_ptr<LicenseSpring::Configuration> pConfiguration = LicenseSpring::Configuration::Create(
+#ifdef DEBUG
+    options.enableLogging(true);
+#endif
+    options.enableSSLCheck(true);
+
+    return LicenseSpring::Configuration::Create(
         EncryptStr(LICENSE_SPRING_API_KEY),
         EncryptStr(LICENSE_SPRING_SHARED_KEY),
-        m_api.productId, // product code that you specified in LicenseSpring for your application
-        credentials.appName,
-        credentials.appVersion,
+        m_api.productId,
+        m_credential.appName,
+        m_credential.appVersion,
         options);
-
-    return pConfiguration;
 }
 
 // ---------------------------------------------------------------------

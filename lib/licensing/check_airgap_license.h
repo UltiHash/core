@@ -137,7 +137,7 @@ public:
     [[nodiscard]] std::map<std::string, std::string>
     getCustomAndFeatureFields();
 
-protected:
+private:
     api_config m_api;
     credential_config m_credential;
     license_config m_license;
@@ -157,17 +157,10 @@ protected:
      */
     bool license_check(const LicenseSpring::License::ptr_t &license);
 
-    LicenseSpring::ExtendedOptions getOptions();
-
-    [[nodiscard]] const license_config &getLicense() const;
-
-    [[nodiscard]] const credential_config &getCredentials() const;
-
     std::shared_ptr<LicenseSpring::Configuration> getLicenseSpringConfig();
 
     license_activate_config getLicenseActivateConfig();
 
-private:
     uh::licensing::license_activate_config m_license_activate;
 };
 
