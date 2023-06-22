@@ -86,13 +86,6 @@ struct license_activate_config
 struct license_config
 {
     const NodeRole licenseNodeRole = NodeRole::DataNode;
-
-    const bool collectNetworkInfo = true;
-    const bool enableLogging = true;
-    const bool enableVMDetection = false;
-    const bool enableSSLcheck = true;
-    const bool enableGuardFile = true;
-
     std::filesystem::path license_path = "/var/lib";
 };
 
