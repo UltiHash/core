@@ -35,6 +35,12 @@ public:
 
     std::pair <std::size_t, std::vector <char>> write_block (const std::span <const char>& data) override;
 
+    std::size_t write_key_value (const std::span <char>& key, const std::span <char>& data) override;
+
+    std::unique_ptr<io::data_generator> read_value (const std::span <char>& key, const std::span <std::string_view>& labels) override;
+
+    std::list <key_value_generator> fetch_query (const std::span <char>& start_key, const std::span <char>& end_key, const std::span <std::string_view>& labels) override;
+
     size_t free_space() override;
 
     size_t used_space() override;

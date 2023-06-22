@@ -67,6 +67,4 @@ std::string combined_backend::backend_type() {
     return std::string (m_type);
 }
 
-
-
 } // namespace uh::dbn::storage

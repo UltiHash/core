@@ -8,7 +8,7 @@ namespace uh::dbn::storage::smart {
 
 
 
-fixed_managed_storage::fixed_managed_storage(data_store_config conf):
+fixed_managed_storage::fixed_managed_storage(fixed_managed_storage_config conf):
     m_conf(std::move (conf)),
     m_log(create_logger()) {
     std::filesystem::create_directories(m_conf.data_store_files.front().parent_path());
@@ -36,11 +36,7 @@ void fixed_managed_storage::sync(void *ptr, std::size_t size) {
 }
 
 void fixed_managed_storage::sync () {
-    for (auto &resource: m_resources) {
-        if (msync (resource.second.m_ptr.m_addr, resource.second.m_size, MS_SYNC) != 0) {
-            throw std::system_error (errno, std::system_category(), "fixed_managed_storage could not sync the mmap data");
-        }
-    }
+    managed_storage::sync();
 }
 
 void *fixed_managed_storage::get_raw_ptr(size_t offset) {

@@ -6,10 +6,10 @@
 
 namespace uh::dbn::storage::smart::sets {
 
-persisted_redblack_tree_set::persisted_redblack_tree_set(set_config set_conf, fixed_managed_storage& data_store):
+persisted_redblack_tree_set::persisted_redblack_tree_set(set_config set_conf, managed_storage& data_store):
     m_set_conf (std::move (set_conf)),
     m_data_store (data_store),
-    m_index_store (growing_plain_storage (m_set_conf.fragment_set_path, m_set_conf.set_init_file_size)),
+    m_index_store (growing_plain_storage (m_set_conf.key_store_config)),
     m_root (reinterpret_cast <uint64_t*> (m_index_store.get_storage())),
     m_end (*reinterpret_cast <uint64_t*> (m_index_store.get_storage() + sizeof(m_root))) {
 
@@ -23,22 +23,22 @@ persisted_redblack_tree_set::persisted_redblack_tree_set(set_config set_conf, fi
         m_nil = get_node(NILL_OFFSET);
     }
 }
-position_info persisted_redblack_tree_set::do_insert_index (const std::string_view& frag, uint64_t data_offset, const position_info& pos) {
+index_type persisted_redblack_tree_set::do_add_pointer (const std::string_view& data, uint64_t data_offset, const index_type& pos) {
     std::lock_guard lock (m_mutex);
 
-    auto p = unlocked_find (frag, pos.hint);
+    auto p = unlocked_find (data, pos);
     if (p.match) {
-        return p;
+        return p.index;
     }
 
     node z = add_node ();
-    z.m_mnode->m_parent = p.hint;
+    z.m_mnode->m_parent = p.index.position;
 
-    const auto y = get_node(p.hint);
-    if (p.comp == 0) {
+    const auto y = get_node(p.index.position);
+    if (p.index.comp == 0) {
         set_root (z);
     }
-    else if (p.comp < 0) {
+    else if (p.index.comp < 0) {
         y.m_mnode->m_left = z.m_offset;
     }
     else {
@@ -47,9 +47,9 @@ position_info persisted_redblack_tree_set::do_insert_index (const std::string_vi
     z.m_mnode->m_left = NILL_OFFSET;
     z.m_mnode->m_right = NILL_OFFSET;
     z.m_mnode->m_color = RED;
-    z.m_mnode->m_frag = {data_offset, frag.size()};
+    z.m_mnode->m_data = {data_offset, data.size()};
 
-    p.hint = z.m_offset;
+    p.index.position = z.m_offset;
 
     balance (z);
 
@@ -59,22 +59,28 @@ position_info persisted_redblack_tree_set::do_insert_index (const std::string_vi
         m_root = reinterpret_cast <uint64_t*> (m_index_store.get_storage());
         m_end = *reinterpret_cast <uint64_t*> (m_index_store.get_storage() + sizeof(m_root));
     }
-    return p;
+    return p.index;
 }
 
-position_info persisted_redblack_tree_set::do_find (const std::string_view& frag, const position_info& pos) const {
+    set_result persisted_redblack_tree_set::do_find (const std::string_view& frag, const index_type& pos) const {
     std::shared_lock lock (m_mutex);
-    return unlocked_find (frag, pos.hint);
+    return unlocked_find (frag, pos);
 }
 
-void persisted_redblack_tree_set::do_sync(const position_info& pos) {
+void persisted_redblack_tree_set::do_sync(const index_type& pos) {
 
-    if (msync(align_ptr (m_index_store.get_storage() + pos.hint), sizeof (mmap_node), MS_SYNC) != 0) {
+    if (msync(align_ptr (m_index_store.get_storage() + pos.position), sizeof (mmap_node), MS_SYNC) != 0) {
         throw std::system_error (errno, std::system_category(), "persisted_redblack_tree_set could not sync the mmap data");
     }
 }
 
-void persisted_redblack_tree_set::do_remove(fragment &frag, const position_info &pos) {
+void persisted_redblack_tree_set::do_remove(std::string_view &frag, const index_type &pos) {
+    throw std::runtime_error ("not implemented");
+}
+
+std::list<std::pair<uint64_t, std::string_view>>
+persisted_redblack_tree_set::do_get_range(const std::span<char> &start_data,
+                                          const std::span<char> &end_data) const {
     throw std::runtime_error ("not implemented");
 }
 
@@ -86,7 +92,7 @@ std::pair<uint64_t, bool> persisted_redblack_tree_set::resolve_hint(uint64_t hin
 
     const auto n = get_node (hint);
 
-    const auto comp_n = comp (frag, n.m_mnode->m_frag);
+    const auto comp_n = comp (frag, n.m_mnode->m_data);
     if (comp_n == 0) {
         return {n.m_offset, true};
     }
@@ -115,7 +121,7 @@ std::pair<uint64_t, bool> persisted_redblack_tree_set::resolve_hint(uint64_t hin
 
     const auto gp = get_node(p.m_mnode->m_parent);
 
-    const auto comp_p = comp (frag, p.m_mnode->m_frag);
+    const auto comp_p = comp (frag, p.m_mnode->m_data);
     if (comp_p == 0) {
         return {p.m_offset, true};
     }
@@ -136,20 +142,20 @@ std::pair<uint64_t, bool> persisted_redblack_tree_set::resolve_hint(uint64_t hin
     return {*m_root, false};
 }
 
-std::pair<uint64_t, bool> persisted_redblack_tree_set::lower_sister_inspect_hint(const persisted_redblack_tree_set::node &n,
+std::pair<uint64_t, bool> persisted_redblack_tree_set::lower_sister_inspect_hint(const node &n,
                                                                            const std::string_view& frag,
                                                                            int n_frag_comp) const {
     const auto p = get_node (n.m_mnode->m_parent);
 
     const auto lower_sister = get_node(p.m_mnode->m_right);
-    const auto comp_ls = comp (frag, lower_sister.m_mnode->m_frag);
+    const auto comp_ls = comp (frag, lower_sister.m_mnode->m_data);
 
     if (comp_ls == 0) {
         return {lower_sister.m_offset, true};
     }
 
     if (n_frag_comp > 0 and comp_ls < 0) {
-        const auto comp_p = comp (frag, p.m_mnode->m_frag);
+        const auto comp_p = comp (frag, p.m_mnode->m_data);
 
         if (comp_p == 0) {
             return {p.m_offset, true};
@@ -170,19 +176,19 @@ std::pair<uint64_t, bool> persisted_redblack_tree_set::lower_sister_inspect_hint
 
 
 std::pair<uint64_t, bool>
-persisted_redblack_tree_set::upper_sister_inspect_hint(const persisted_redblack_tree_set::node &n,
+persisted_redblack_tree_set::upper_sister_inspect_hint(const node &n,
                                                        const std::string_view &frag, int n_frag_comp) const {
     const auto p = get_node (n.m_mnode->m_parent);
 
     const auto upper_sister = get_node(p.m_mnode->m_left);
-    const auto comp_us = comp (frag, upper_sister.m_mnode->m_frag);
+    const auto comp_us = comp (frag, upper_sister.m_mnode->m_data);
 
     if (comp_us == 0) {
         return {upper_sister.m_offset, true};
     }
 
     if (n_frag_comp < 0 and comp_us > 0) {
-        const auto comp_p = comp (frag, p.m_mnode->m_frag);
+        const auto comp_p = comp (frag, p.m_mnode->m_data);
 
         if (comp_p == 0) {
             return {p.m_offset, true};
@@ -201,17 +207,17 @@ persisted_redblack_tree_set::upper_sister_inspect_hint(const persisted_redblack_
 
 }
 
-position_info persisted_redblack_tree_set::unlocked_find (const std::string_view &frag, uint64_t hint) const {
+set_result persisted_redblack_tree_set::unlocked_find (const std::string_view &frag, index_type hint) const {
 
     auto y = m_nil;
-    position_info res;
+    set_result res;
 
-    const auto resolved = resolve_hint (hint, frag);
+    const auto resolved = resolve_hint (hint.position, frag);
     auto x = get_node (resolved.first);
 
     if (resolved.second) {
-        char* ptr = static_cast <char*> (m_data_store.get_raw_ptr(x.m_mnode->m_frag.m_data_offset));
-        res.match = {y.m_mnode->m_frag.m_data_offset, {ptr, y.m_mnode->m_frag.m_size}};
+        char* ptr = static_cast <char*> (m_data_store.get().get_raw_ptr(x.m_mnode->m_data.m_data_offset));
+        res.match = {y.m_mnode->m_data.m_data_offset, {ptr, y.m_mnode->m_data.m_size}};
         return res;
     }
 
@@ -220,7 +226,7 @@ position_info persisted_redblack_tree_set::unlocked_find (const std::string_view
     node smallest_upper = m_nil;
     while (x.m_offset != NILL_OFFSET) {
         y = x;
-        comp_int = comp (frag, x.m_mnode->m_frag);
+        comp_int = comp (frag, x.m_mnode->m_data);
         if (comp_int < 0) {
             largest_lower = x;
             x = get_node (x.m_mnode->m_left);
@@ -230,24 +236,23 @@ position_info persisted_redblack_tree_set::unlocked_find (const std::string_view
             x = get_node (x.m_mnode->m_right);
         }
         else {
-            char* ptr = static_cast <char*> (m_data_store.get_raw_ptr(y.m_mnode->m_frag.m_data_offset));
-            res.match = {y.m_mnode->m_frag.m_data_offset, {ptr, y.m_mnode->m_frag.m_size}};
+            char* ptr = static_cast <char*> (m_data_store.get().get_raw_ptr(y.m_mnode->m_data.m_data_offset));
+            res.match = {y.m_mnode->m_data.m_data_offset, {ptr, y.m_mnode->m_data.m_size}};
             break;
         }
     }
 
     if (!res.match) {
-        char *ptr_lower = static_cast <char *> (m_data_store.get_raw_ptr(largest_lower.m_mnode->m_frag.m_data_offset));
-        char *ptr_upper = static_cast <char *> (m_data_store.get_raw_ptr(smallest_upper.m_mnode->m_frag.m_data_offset));
-        res.lower = {largest_lower.m_mnode->m_frag.m_data_offset, {ptr_lower, largest_lower.m_mnode->m_frag.m_size}};
-        res.upper = {smallest_upper.m_mnode->m_frag.m_data_offset, {ptr_upper, smallest_upper.m_mnode->m_frag.m_size}};
+        char *ptr_lower = static_cast <char *> (m_data_store.get().get_raw_ptr(largest_lower.m_mnode->m_data.m_data_offset));
+        char *ptr_upper = static_cast <char *> (m_data_store.get().get_raw_ptr(smallest_upper.m_mnode->m_data.m_data_offset));
+        res.lower = {largest_lower.m_mnode->m_data.m_data_offset, {ptr_lower, largest_lower.m_mnode->m_data.m_size}};
+        res.upper = {smallest_upper.m_mnode->m_data.m_data_offset, {ptr_upper, smallest_upper.m_mnode->m_data.m_size}};
     }
-    res.hint = y.m_offset;
-    res.comp = comp_int;
+    res.index = {y.m_offset, comp_int};
     return res;
 }
 
-void persisted_redblack_tree_set::balance(persisted_redblack_tree_set::node& z) {
+void persisted_redblack_tree_set::balance(node& z) {
     auto parent = get_node (z.m_mnode->m_parent);
     while (parent.m_mnode->m_color == RED) {
         auto grand_parent = get_node(parent.m_mnode->m_parent);
@@ -265,8 +270,7 @@ void persisted_redblack_tree_set::balance(persisted_redblack_tree_set::node& z) 
     get_node(*m_root).m_mnode->m_color = BLACK;
 }
 
-persisted_redblack_tree_set::node persisted_redblack_tree_set::directed_balance(persisted_redblack_tree_set::node& z,
-                                                   persisted_redblack_tree_set::direction_t d) {
+node persisted_redblack_tree_set::directed_balance(node& z, direction_t d) {
     auto parent = get_node (z.m_mnode->m_parent);
     auto grand_parent = get_node(parent.m_mnode->m_parent);
 
@@ -289,7 +293,7 @@ persisted_redblack_tree_set::node persisted_redblack_tree_set::directed_balance(
     return z;
 }
 
-void persisted_redblack_tree_set::rotate (persisted_redblack_tree_set::node& x, persisted_redblack_tree_set::direction_t d) {
+void persisted_redblack_tree_set::rotate (node& x, direction_t d) {
     auto y = get_node(get_other_child(x, d));
     auto& yc = get_child(y, d);
     get_other_child(x, d) = yc;
@@ -310,11 +314,11 @@ void persisted_redblack_tree_set::rotate (persisted_redblack_tree_set::node& x, 
     x.m_mnode->m_parent = y.m_offset;
 }
 
-persisted_redblack_tree_set::node persisted_redblack_tree_set::get_node(uint64_t offset) const noexcept {
+node persisted_redblack_tree_set::get_node(uint64_t offset) const noexcept {
     return {offset, reinterpret_cast <mmap_node*> (m_index_store.get_storage() + offset)};
 }
 
-persisted_redblack_tree_set::node persisted_redblack_tree_set::add_node() noexcept {
+node persisted_redblack_tree_set::add_node() noexcept {
     node n;
     do {
         n.m_offset = m_end;
@@ -325,18 +329,17 @@ persisted_redblack_tree_set::node persisted_redblack_tree_set::add_node() noexce
     return n;
 }
 
-void persisted_redblack_tree_set::set_root(persisted_redblack_tree_set::node &x) noexcept {
+void persisted_redblack_tree_set::set_root(node &x) noexcept {
     *m_root = x.m_offset;
 }
 
-int persisted_redblack_tree_set::comp(const std::string_view &new_fragment, const fragment &f) const {
-    auto* p2 = m_data_store.get_raw_ptr(f.m_data_offset);
+int persisted_redblack_tree_set::comp(const std::string_view &new_data, const offset_span &f) const {
+    auto* p2 = m_data_store.get().get_raw_ptr(f.m_data_offset);
     const std::string_view strw2 {static_cast <char*> (p2), f.m_size};
-    return new_fragment.compare(strw2);
+    return new_data.compare(strw2);
 }
 
-uint64_t& persisted_redblack_tree_set::get_child(const persisted_redblack_tree_set::node &x,
-                                               persisted_redblack_tree_set::direction_t d) noexcept {
+uint64_t& persisted_redblack_tree_set::get_child(const node &x, direction_t d) noexcept {
     if (d == LEFT) {
         return x.m_mnode->m_left;
     }
@@ -345,8 +348,7 @@ uint64_t& persisted_redblack_tree_set::get_child(const persisted_redblack_tree_s
     }
 }
 
-uint64_t& persisted_redblack_tree_set::get_other_child(const persisted_redblack_tree_set::node &x,
-                                                   persisted_redblack_tree_set::direction_t d) noexcept {
+uint64_t& persisted_redblack_tree_set::get_other_child(const node &x, direction_t d) noexcept {
     if (d == RIGHT) {
         return x.m_mnode->m_left;
     }
@@ -357,19 +359,19 @@ uint64_t& persisted_redblack_tree_set::get_other_child(const persisted_redblack_
 
 void persisted_redblack_tree_set::print_set(std::ostream& out, uint64_t offset) const {
     node n = get_node(offset);
-    auto* p = m_data_store.get_raw_ptr(n.m_mnode->m_frag.m_data_offset);
-    const std::string_view str {static_cast <char*> (p), n.m_mnode->m_frag.m_size};
+    auto* p = m_data_store.get().get_raw_ptr(n.m_mnode->m_data.m_data_offset);
+    const std::string_view str {static_cast <char*> (p), n.m_mnode->m_data.m_size};
     std::string_view strl;
     if (n.m_mnode->m_left != NILL_OFFSET) {
         node l = get_node(n.m_mnode->m_left);
-        auto *pl = m_data_store.get_raw_ptr(l.m_mnode->m_frag.m_data_offset);
-        strl = std::string_view {static_cast <char *> (pl), l.m_mnode->m_frag.m_size};
+        auto *pl = m_data_store.get().get_raw_ptr(l.m_mnode->m_data.m_data_offset);
+        strl = std::string_view {static_cast <char *> (pl), l.m_mnode->m_data.m_size};
     }
     std::string_view strr;
     if (n.m_mnode->m_right != NILL_OFFSET) {
         node r = get_node(n.m_mnode->m_right);
-        auto *pr = m_data_store.get_raw_ptr(r.m_mnode->m_frag.m_data_offset);
-        strr = std::string_view {static_cast <char *> (pr), r.m_mnode->m_frag.m_size};
+        auto *pr = m_data_store.get().get_raw_ptr(r.m_mnode->m_data.m_data_offset);
+        strr = std::string_view {static_cast <char *> (pr), r.m_mnode->m_data.m_size};
     }
     out << str << "\n\t" << "left: " << strl << "\n\t" << "right: " << strr << "\n";
 

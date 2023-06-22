@@ -5,10 +5,10 @@
 #include "unlocked_redblack_tree.h"
 namespace uh::dbn::storage::smart::sets {
 
-unlocked_redblack_tree::unlocked_redblack_tree(set_config set_conf, fixed_managed_storage& data_store):
+unlocked_redblack_tree::unlocked_redblack_tree(set_config set_conf, managed_storage& data_store):
         m_set_conf (std::move (set_conf)),
         m_data_store (data_store),
-        m_index_store (growing_plain_storage (m_set_conf.fragment_set_path, m_set_conf.set_init_file_size)),
+        m_index_store (growing_plain_storage (m_set_conf.key_store_config)),
         m_root (reinterpret_cast <uint64_t*> (m_index_store.get_storage())),
         m_end (*reinterpret_cast <uint64_t*> (m_index_store.get_storage() + sizeof(m_root))) {
 
@@ -23,16 +23,16 @@ unlocked_redblack_tree::unlocked_redblack_tree(set_config set_conf, fixed_manage
     }
 }
 
-position_info unlocked_redblack_tree::do_insert_index (const std::string_view& frag, uint64_t data_offset, const position_info& pos) {
+index_type unlocked_redblack_tree::do_add_pointer (const std::string_view& data, uint64_t data_offset, const index_type& pos) {
 
-    if (pos.hint == 0) {
+    if (pos.position == 0) {
         throw std::logic_error ("unlocked_redblack_tree relies on the given position. First call the find function.");
     }
 
     node z = add_node ();
-    z.m_mnode->m_parent = pos.hint;
+    z.m_mnode->m_parent = pos.position;
 
-    const auto y = get_node(pos.hint);
+    const auto y = get_node(pos.position);
     if (pos.comp == 0) {
         set_root (z);
     }
@@ -45,7 +45,7 @@ position_info unlocked_redblack_tree::do_insert_index (const std::string_view& f
     z.m_mnode->m_left = NILL_OFFSET;
     z.m_mnode->m_right = NILL_OFFSET;
     z.m_mnode->m_color = RED;
-    z.m_mnode->m_frag = {data_offset, frag.size()};
+    z.m_mnode->m_data = {data_offset, data.size()};
 
     const auto offset = z.m_offset;
 
@@ -57,13 +57,13 @@ position_info unlocked_redblack_tree::do_insert_index (const std::string_view& f
         m_root = reinterpret_cast <uint64_t*> (m_index_store.get_storage());
         m_end = *reinterpret_cast <uint64_t*> (m_index_store.get_storage() + sizeof(m_root));
     }
-    return {.hint = offset, .comp = pos.comp};
+    return {.position = offset, .comp = pos.comp};
 }
 
-position_info unlocked_redblack_tree::do_find (const std::string_view& frag, const position_info& pos) const {
+set_result unlocked_redblack_tree::do_find (const std::string_view& frag, const index_type& pos) const {
 
     auto y = m_nil;
-    position_info res;
+    set_result res;
     auto x = get_node (*m_root);
 
     int comp_int = 0;
@@ -71,7 +71,7 @@ position_info unlocked_redblack_tree::do_find (const std::string_view& frag, con
     node smallest_upper = m_nil;
     while (x.m_offset != NILL_OFFSET) {
         y = x;
-        comp_int = comp (frag, x.m_mnode->m_frag);
+        comp_int = comp (frag, x.m_mnode->m_data);
         if (comp_int < 0) {
             largest_lower = x;
             x = get_node (x.m_mnode->m_left);
@@ -81,33 +81,39 @@ position_info unlocked_redblack_tree::do_find (const std::string_view& frag, con
             x = get_node (x.m_mnode->m_right);
         }
         else {
-            char* ptr = static_cast <char*> (m_data_store.get_raw_ptr(y.m_mnode->m_frag.m_data_offset));
-            res.match = {y.m_mnode->m_frag.m_data_offset, {ptr, y.m_mnode->m_frag.m_size}};
+            char* ptr = static_cast <char*> (m_data_store.get().get_raw_ptr(y.m_mnode->m_data.m_data_offset));
+            res.match = {y.m_mnode->m_data.m_data_offset, {ptr, y.m_mnode->m_data.m_size}};
             break;
         }
     }
 
     if (!res.match) {
-        char *ptr_lower = static_cast <char *> (m_data_store.get_raw_ptr(largest_lower.m_mnode->m_frag.m_data_offset));
-        char *ptr_upper = static_cast <char *> (m_data_store.get_raw_ptr(smallest_upper.m_mnode->m_frag.m_data_offset));
-        res.lower = {largest_lower.m_mnode->m_frag.m_data_offset, {ptr_lower, largest_lower.m_mnode->m_frag.m_size}};
-        res.upper = {smallest_upper.m_mnode->m_frag.m_data_offset, {ptr_upper, smallest_upper.m_mnode->m_frag.m_size}};
+        char *ptr_lower = static_cast <char *> (m_data_store.get().get_raw_ptr(largest_lower.m_mnode->m_data.m_data_offset));
+        char *ptr_upper = static_cast <char *> (m_data_store.get().get_raw_ptr(smallest_upper.m_mnode->m_data.m_data_offset));
+        res.lower = {largest_lower.m_mnode->m_data.m_data_offset, {ptr_lower, largest_lower.m_mnode->m_data.m_size}};
+        res.upper = {smallest_upper.m_mnode->m_data.m_data_offset, {ptr_upper, smallest_upper.m_mnode->m_data.m_size}};
     }
-    res.hint = y.m_offset;
-    res.comp = comp_int;
+    res.index = {y.m_offset, comp_int};
+
     return res;
 }
-void unlocked_redblack_tree::do_sync (const position_info& pos) {
-    if (msync(align_ptr (m_index_store.get_storage() + pos.hint), sizeof (mmap_node), MS_SYNC) != 0) {
+
+std::list<std::pair<uint64_t, std::string_view>>
+unlocked_redblack_tree::do_get_range(const std::span<char> &start_data, const std::span<char> &end_data) const {
+    throw std::runtime_error ("not implemented");
+}
+
+void unlocked_redblack_tree::do_sync (const index_type& pos) {
+    if (msync(align_ptr (m_index_store.get_storage() + pos.position), sizeof (mmap_node), MS_SYNC) != 0) {
         throw std::system_error (errno, std::system_category(), "persisted_redblack_tree_set could not sync the mmap data");
     }
 }
 
-void unlocked_redblack_tree::do_remove(fragment &frag, const position_info &pos) {
+void unlocked_redblack_tree::do_remove(std::string_view& frag, const index_type &pos) {
     throw std::runtime_error ("not implemented");
 }
 
-void unlocked_redblack_tree::balance(unlocked_redblack_tree::node& z) {
+void unlocked_redblack_tree::balance(node& z) {
     auto parent = get_node (z.m_mnode->m_parent);
     while (parent.m_mnode->m_color == RED) {
         auto grand_parent = get_node(parent.m_mnode->m_parent);
@@ -125,8 +131,7 @@ void unlocked_redblack_tree::balance(unlocked_redblack_tree::node& z) {
     get_node(*m_root).m_mnode->m_color = BLACK;
 }
 
-unlocked_redblack_tree::node unlocked_redblack_tree::directed_balance(unlocked_redblack_tree::node& z,
-                                                                      unlocked_redblack_tree::direction_t d) {
+node unlocked_redblack_tree::directed_balance(node& z, direction_t d) {
     auto parent = get_node (z.m_mnode->m_parent);
     auto grand_parent = get_node(parent.m_mnode->m_parent);
 
@@ -149,7 +154,7 @@ unlocked_redblack_tree::node unlocked_redblack_tree::directed_balance(unlocked_r
     return z;
 }
 
-void unlocked_redblack_tree::rotate (unlocked_redblack_tree::node& x, unlocked_redblack_tree::direction_t d) {
+void unlocked_redblack_tree::rotate (node& x, direction_t d) {
     auto y = get_node(get_other_child(x, d));
     auto& yc = get_child(y, d);
     get_other_child(x, d) = yc;
@@ -170,11 +175,11 @@ void unlocked_redblack_tree::rotate (unlocked_redblack_tree::node& x, unlocked_r
     x.m_mnode->m_parent = y.m_offset;
 }
 
-unlocked_redblack_tree::node unlocked_redblack_tree::get_node(uint64_t offset) const noexcept {
+node unlocked_redblack_tree::get_node(uint64_t offset) const noexcept {
     return {offset, reinterpret_cast <mmap_node*> (m_index_store.get_storage() + offset)};
 }
 
-unlocked_redblack_tree::node unlocked_redblack_tree::add_node() noexcept {
+node unlocked_redblack_tree::add_node() noexcept {
     node n;
     do {
         n.m_offset = m_end;
@@ -185,18 +190,17 @@ unlocked_redblack_tree::node unlocked_redblack_tree::add_node() noexcept {
     return n;
 }
 
-void unlocked_redblack_tree::set_root(unlocked_redblack_tree::node &x) noexcept {
+void unlocked_redblack_tree::set_root(node &x) noexcept {
     *m_root = x.m_offset;
 }
 
-int unlocked_redblack_tree::comp(const std::string_view &new_fragment, const fragment &f) const {
-    auto* p2 = m_data_store.get_raw_ptr(f.m_data_offset);
+int unlocked_redblack_tree::comp(const std::string_view &new_data, const offset_span &f) const {
+    auto* p2 = m_data_store.get().get_raw_ptr(f.m_data_offset);
     const std::string_view strw2 {static_cast <char*> (p2), f.m_size};
-    return new_fragment.compare(strw2);
+    return new_data.compare(strw2);
 }
 
-uint64_t& unlocked_redblack_tree::get_child(const unlocked_redblack_tree::node &x,
-                                            unlocked_redblack_tree::direction_t d) noexcept {
+uint64_t& unlocked_redblack_tree::get_child(const node &x, direction_t d) noexcept {
     if (d == LEFT) {
         return x.m_mnode->m_left;
     }
@@ -205,8 +209,7 @@ uint64_t& unlocked_redblack_tree::get_child(const unlocked_redblack_tree::node &
     }
 }
 
-uint64_t& unlocked_redblack_tree::get_other_child(const unlocked_redblack_tree::node &x,
-                                                  unlocked_redblack_tree::direction_t d) noexcept {
+uint64_t& unlocked_redblack_tree::get_other_child(const node &x, direction_t d) noexcept {
     if (d == RIGHT) {
         return x.m_mnode->m_left;
     }
@@ -214,4 +217,7 @@ uint64_t& unlocked_redblack_tree::get_other_child(const unlocked_redblack_tree::
         return x.m_mnode->m_right;
     }
 }
+
+index_type null_index;
+
 } // end namespace uh::dbn::storage::smart::sets

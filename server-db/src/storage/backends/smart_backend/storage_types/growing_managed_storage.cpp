@@ -7,11 +7,11 @@
 
 namespace uh::dbn::storage::smart {
 
-growing_managed_storage::growing_managed_storage (std::filesystem::path directory, std::filesystem::path log_file, size_t min_file_size, size_t max_file_size):
-        m_min_file_size (min_file_size),
-        m_max_file_size (max_file_size),
-        m_directory (std::move (directory)),
-        m_log_file_path (std::move (log_file)) {
+growing_managed_storage::growing_managed_storage (growing_managed_storage_config conf):
+        m_min_file_size (std::move (conf.min_file_size)),
+        m_max_file_size (std::move (conf.max_file_size)),
+        m_directory (std::move (conf.directory)),
+        m_log_file_path (std::move (conf.log_file)) {
      load_data_store ();
      m_log = create_logger();
      replay_logger();
@@ -32,11 +32,7 @@ void growing_managed_storage::sync(void *ptr, std::size_t size) {
 }
 
 void growing_managed_storage::sync () {
-    for (auto &resource: m_resources) {
-        if (msync (resource.second.m_ptr.m_addr, resource.second.m_size, MS_SYNC) != 0) {
-            throw std::system_error (errno, std::system_category(), "growing_managed_storage could not sync the mmap data");
-        }
-    }
+    managed_storage::sync();
 }
 
 void* growing_managed_storage::get_raw_ptr(size_t offset) {

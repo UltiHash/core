@@ -10,55 +10,35 @@
 #include <atomic>
 #include <optional>
 
-#include "storage/backends/smart_backend/storage_types/fixed_managed_storage.h"
+#include "storage/backends/smart_backend/storage_types/storage_common.h"
 #include "storage/backends/smart_backend/storage_types/growing_plain_storage.h"
 #include "storage/backends/smart_backend/smart_config.h"
-#include "fragment_set_interface.h"
+#include "set_interface.h"
+#include "index_mem_structures.h"
 
 namespace uh::dbn::storage::smart::sets {
 
-class persisted_redblack_tree_set: public fragment_set_interface {
+class persisted_redblack_tree_set: public set_interface {
 
 public:
 
-    persisted_redblack_tree_set (set_config set_conf, fixed_managed_storage& data_store);
+    persisted_redblack_tree_set (set_config set_conf, managed_storage& data_store);
 
 private:
 
-    position_info do_insert_index (const std::string_view& frag, uint64_t data_offset, const position_info& pos) override;
+    index_type do_add_pointer (const std::string_view& frag, uint64_t data_offset, const index_type& pos) override;
 
-    [[nodiscard]] position_info do_find (const std::string_view& frag, const position_info& pos) const override;
+    [[nodiscard]] set_result do_find (const std::string_view& frag, const index_type& pos) const override;
 
-    void do_sync (const position_info& pos) override;
+    [[nodiscard]] std::list<std::pair<uint64_t, std::string_view>> do_get_range (const std::span<char> &start_data, const std::span<char> &end_data) const override;
 
-    void do_remove (fragment& frag, const position_info& pos) override;
+    void do_sync (const index_type& pos) override;
 
-    enum color_t : uint8_t
-    {
-        RED = 0,
-        BLACK = 1
-    };
-
-    enum direction_t: uint8_t {
-        LEFT = 0,
-        RIGHT = 1,
-    };
-
-    struct mmap_node {
-        fragment m_frag;
-        uint64_t m_parent;
-        uint64_t m_left;
-        uint64_t m_right;
-        color_t m_color;
-    };
-    struct node {
-        uint64_t m_offset;
-        mmap_node* m_mnode;
-    };
+    void do_remove (std::string_view &frag, const index_type& pos) override;
 
     std::pair <uint64_t, bool> resolve_hint (uint64_t hint, const std::string_view& frag) const;
 
-    position_info unlocked_find (const std::string_view& frag, uint64_t hint) const;
+    set_result unlocked_find (const std::string_view& frag, index_type hint) const;
 
     void balance (node& z);
 
@@ -81,12 +61,12 @@ private:
 
     static inline uint64_t& get_other_child (const node& x, direction_t d) noexcept;
 
-    [[nodiscard]] inline int comp (const std::string_view& new_fragment, const fragment& f) const;
+    [[nodiscard]] inline int comp (const std::string_view& new_data, const offset_span& f) const;
 
     constexpr static uint64_t NILL_OFFSET = 2 * sizeof (uint64_t);
 
     const set_config m_set_conf;
-    fixed_managed_storage& m_data_store;
+    std::reference_wrapper <managed_storage> m_data_store;
     growing_plain_storage m_index_store;
     node m_nil {};
     std::atomic <uint64_t*> m_root;

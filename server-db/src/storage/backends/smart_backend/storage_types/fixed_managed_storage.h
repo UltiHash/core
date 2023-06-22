@@ -25,38 +25,38 @@ namespace uh::dbn::storage::smart {
 class fixed_managed_storage;
 class growing_managed_storage;
 
-class fixed_managed_storage: managed_storage {
+class fixed_managed_storage: public managed_storage {
 
 public:
 
-    explicit fixed_managed_storage (data_store_config);
+    explicit fixed_managed_storage (fixed_managed_storage_config);
 
     /** Allocate new memory in the mmap_storage and return a pointer to it.
      *  @throws bad_alloc
      */
-    offset_ptr allocate (std::size_t size);
+    offset_ptr allocate (std::size_t size) override;
 
     /** Deallocate the memory pointed by p for size number of bytes.
      *  @throws bad_alloc
      */
-    void deallocate (const offset_ptr&, size_t size);
+    void deallocate (const offset_ptr&, size_t size) override;
 
     /** Flush changes to the memory to disk. Only return when sync was finished.
      *  @throws on error
      */
-    static void sync (void* ptr, std::size_t size);
+    void sync (void* ptr, std::size_t size) override;
 
     /**
      * Flushes the whole mmap storage to disk. Only return when sync was finished.
      */
-    void sync ();
+    void sync () override;
 
     /**
      * Transforms the given offset to a pointer on the memory.
      * @param offset
      * @return pointer
      */
-    void* get_raw_ptr (size_t offset);
+    void* get_raw_ptr (size_t offset) override;
 
     ~fixed_managed_storage();
 
@@ -72,7 +72,7 @@ private:
 
     bool files_existence_consistency ();
 
-    const data_store_config m_conf;
+    const fixed_managed_storage_config m_conf;
     std::fstream m_log;
     std::size_t m_aggregated_size {};
 };

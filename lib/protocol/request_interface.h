@@ -19,6 +19,10 @@ struct request_interface
 
     virtual read_chunks::response on_read_chunks (const read_chunks::request &) = 0;
 
+    virtual write_key_value::response on_write_kv (const write_key_value::request &) = 0;
+
+    virtual read_key_value::response on_read_kv (const read_key_value::request &) = 0;
+
     // default implementations
 
     virtual std::size_t on_free_space() { return 0; }

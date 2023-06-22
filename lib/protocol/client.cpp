@@ -160,4 +160,25 @@ uh::protocol::read_chunks::response client::read_chunks (const read_chunks::requ
 
 // ---------------------------------------------------------------------
 
+uh::protocol::write_key_value::response client::write_kv(const write_key_value::request &query) {
+    write (m_bs, query);
+    m_bs.sync();
+
+    uh::protocol::write_key_value::response resp;
+    read (m_bs, resp);
+    return resp;
+}
+
+// ---------------------------------------------------------------------
+
+uh::protocol::read_key_value::response client::read_kv(const read_key_value::request &query) {
+    write (m_bs, query);
+    m_bs.sync();
+    uh::protocol::read_key_value::response resp;
+    read (m_bs, resp);
+    return resp;
+}
+
+// ---------------------------------------------------------------------
+
 } // namespace uh::protocol
