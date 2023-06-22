@@ -133,13 +133,13 @@ private:
         uint64_t start_offset;
         if (fstart.match.has_value()) {
             start_offset = fstart.index.position;
-            result.emplace_back(fstart.match.value());
+            result.push_back({fstart.match.value().data, fstart.match.value().data_offset, start_offset});
 
         }
         else if (fstart.upper.has_value()) {
            start_offset = fstart.upper->index_offset;
            if (fstart.upper.value().data.compare({end_data.data(), end_data.size()}) < 0)
-                result.emplace_back(fstart.upper.value().data);
+                result.push_back({fstart.upper.value().data, fstart.upper.value().data_offset, start_offset});
         }
         else {
             return {};
@@ -167,7 +167,7 @@ private:
 
             while (n.m_offset == p.m_mnode->m_left) {
                 n = p;
-                result.emplace_back(fetch_node_data(n), n.m_mnode->m_data.m_data_offset, n.m_offset);
+                result.push_back({fetch_node_data(n), n.m_mnode->m_data.m_data_offset, n.m_offset});
 
                 if (in_order_traverse (n.m_mnode->m_right, end_offset, result)) {
                     break;
@@ -220,7 +220,7 @@ private:
                     if (offset == end_offset) {
                         return true;
                     }
-                    result.emplace_back(fetch_node_data(n), n.m_mnode->m_data.m_data_offset, offset);
+                    result.push_back({fetch_node_data(n), n.m_mnode->m_data.m_data_offset, offset});
 
                     offset = n.m_mnode->m_right;
                 } else {

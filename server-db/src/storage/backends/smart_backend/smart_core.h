@@ -50,6 +50,8 @@ private:
 
     static inline size_t largest_common_prefix (const std::string_view &str1, const std::string_view& str2) noexcept;
 
+    fragmented_data create_fragmented_data (std::span <const char> fragment_data);
+
     fixed_managed_storage m_data_store;
     std::unique_ptr <sets::set_interface> m_fragment_set;
     std::unique_ptr <maps::map_interface> m_key_store;
