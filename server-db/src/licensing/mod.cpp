@@ -66,20 +66,20 @@ std::unique_ptr<uh::licensing::license_package> make_licensing(const uh::options
 
     uh::licensing::LicenseTypeEnum license_type = define_licensing_type(cfg.license_type);
 
-    auto lic_config = uh::licensing::license_config(license_type,
-                                                    uh::licensing::NodeRole::DataNode,
-                                                    cfg.licensing_path);
+    auto lic_config = uh::licensing::license_config{ .licenseTypeInternal = license_type,
+                                                     .licenseNodeRole = uh::licensing::NodeRole::DataNode,
+                                                     .license_path = cfg.licensing_path };
 
-    auto api = uh::licensing::api_config(EncryptStr(LICENSE_API_KEY),
-                                         EncryptStr(LICENSE_SHARED_KEY),
-                                         EncryptStr(LICENSE_PRODUCT_ID));
-    auto credential = uh::licensing::credential_config(PROJECT_NAME, PROJECT_VERSION);
+    auto api = uh::licensing::api_config{ EncryptStr(LICENSE_API_KEY),
+                                          EncryptStr(LICENSE_SHARED_KEY),
+                                          EncryptStr(LICENSE_PRODUCT_ID) };
+    auto credential = uh::licensing::credential_config{ PROJECT_NAME, PROJECT_VERSION };
 
     switch (license_type)
     {
         case uh::licensing::LicenseTypeEnum::AirgapKeyOnline:
         {
-            auto activate = uh::licensing::license_activate_config(cfg.license_key);
+            auto activate = uh::licensing::license_activate_config{ .key = cfg.license_key };
             if (std::filesystem::is_empty(cfg.licensing_path))
             {
                 INFO << "No licenses were found. Creating " + cfg.license_type + " license.";

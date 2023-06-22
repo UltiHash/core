@@ -25,40 +25,15 @@ namespace uh::licensing
 
 struct api_config
 {
-public:
-
     const std::string apiKey;
     const std::string sharedKey;
     const std::string productId;
-
-    /**
-     * License Spring info and functions
-     *
-     * apiKey_crypt is 36 characters long
-     * sharedKey_crypt is 43 characters long
-     * productId_crypt is 6 characters long
-     */
-
-    api_config(std::string apiKey_input, std::string shardKey_input, std::string productId_input)
-        :
-        apiKey(std::move(apiKey_input)),
-        sharedKey(std::move(shardKey_input)),
-        productId(std::move(productId_input))
-    {}
 };
 
 struct credential_config
 {
-public:
-
     const std::string appName;
     const std::string appVersion;
-
-    credential_config(std::string appName_input, std::string appVersion_input)
-        :
-        appName(std::move(appName_input)),
-        appVersion(std::move(appVersion_input))
-    {}
 
     bool empty()
     {
@@ -107,27 +82,13 @@ static std::unordered_map<NodeRole, std::string> noderole2string = {
 
 struct license_activate_config
 {
-public:
     std::string username;
     std::string password;
     std::string key;
-
-    license_activate_config(std::string username_input, std::string password_input)
-        :
-        username(std::move(username_input)),
-        password(std::move(password_input))
-    {}
-
-    explicit license_activate_config(std::string key_input)
-        :
-        key(std::move(key_input))
-    {}
 };
 
 struct license_config
 {
-public:
-
     const LicenseTypeEnum licenseTypeInternal = LicenseTypeEnum::AirgapKeyOnline;
     const NodeRole licenseNodeRole = NodeRole::DataNode;
 
@@ -138,17 +99,6 @@ public:
     const bool enableGuardFile = true;
 
     std::filesystem::path license_path = "/var/lib";
-
-    license_config() = default;
-
-    license_config(const LicenseTypeEnum licenseType,
-                   const NodeRole nodeRole,
-                   std::filesystem::path license_path_input)
-        :
-        licenseTypeInternal(licenseType),
-        licenseNodeRole(nodeRole),
-        license_path(std::move(license_path_input))
-    {}
 };
 
 // ---------------------------------------------------------------------

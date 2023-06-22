@@ -68,16 +68,14 @@ std::unique_ptr<check_airgap_license> make_test_license<check_airgap_license>()
     auto lic_config = license_config();
     lic_config.license_path = TEMP_DIR / (appName_test + ".lic");
 
-    auto api = api_config(apiKey_test, sharedKey_test, product_Id_test);
-    auto credential = credential_config(appName_test, appVersion_test);
-    auto activate = license_activate_config(licenseKey_100);
+    auto api = api_config{ apiKey_test, sharedKey_test, product_Id_test };
+    auto credential = credential_config{ appName_test, appVersion_test };
+    auto activate = license_activate_config{ .key = licenseKey_100 };
 
-    check_airgap_license tmp_write_airgap(lic_config,
-                                          api,
-                                          credential,
-                                          activate);
-
-    return std::make_unique<check_airgap_license>(tmp_write_airgap);
+    return std::make_unique<check_airgap_license>(lic_config,
+                                                  api,
+                                                  credential,
+                                                  activate);
 }
 
 // ---------------------------------------------------------------------
@@ -105,9 +103,9 @@ BOOST_FIXTURE_TEST_CASE_TEMPLATE(license_package_test, T, license_types, Fixture
     auto lic_config = license_config();
     lic_config.license_path = TEMP_DIR;
 
-    auto api = api_config(apiKey_test, sharedKey_test, product_Id_test);
-    auto credential = credential_config(appName_test, appVersion_test);
-    auto activate = license_activate_config(licenseKey_100);
+    auto api = api_config{ apiKey_test, sharedKey_test, product_Id_test };
+    auto credential = credential_config{ appName_test, appVersion_test };
+    auto activate = license_activate_config{ .key = licenseKey_100 };
 
     T tmp_write_airgap2(lic_config,
                         api,

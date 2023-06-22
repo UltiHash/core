@@ -385,12 +385,13 @@ license_activate_config check_airgap_license::getLicenseActivateConfig()
 
     if (licType_enum == LicenseTypeEnum::AirgapKeyOnline)
     {
-        m_license_activate = license_activate_config(valueFinder("Key"));
+        m_license_activate = license_activate_config{ .key = valueFinder("Key") };
         return m_license_activate;
     }
     else
     {
-        m_license_activate = license_activate_config(valueFinder("Username"), valueFinder("Password"));
+        m_license_activate = license_activate_config{ .username = valueFinder("Username"),
+                                                      .password = valueFinder("Password") };
         return m_license_activate;
     }
 
