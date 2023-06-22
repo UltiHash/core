@@ -1,5 +1,5 @@
-#ifndef UHV_FILE_META_DATA_H
-#define UHV_FILE_META_DATA_H
+#ifndef UHV_META_DATA_H
+#define UHV_META_DATA_H
 
 #include <vector>
 #include <algorithm>
@@ -54,29 +54,29 @@ T convert_file_type(const Z& z)
 
 // ---------------------------------------------------------------------
 
-class f_meta_data
+class meta_data
 {
 public:
 
-    f_meta_data() = default;
-    explicit f_meta_data(std::filesystem::path);
+    meta_data() = default;
+    explicit meta_data(const std::filesystem::path& path);
 
-    [[nodiscard]] const std::filesystem::path& f_path() const;
-    [[nodiscard]] const std::vector<char>& f_hashes() const;
-    [[nodiscard]] const std::vector<uint32_t>& f_chunk_sizes() const;
-    [[nodiscard]] const std::uint8_t& f_type() const;
-    [[nodiscard]] const std::uint32_t& f_permissions() const;
-    [[nodiscard]] const std::uint64_t& f_size() const;
-    [[nodiscard]] const std::uint64_t& f_effective_size() const;
+    [[nodiscard]] const std::filesystem::path& path() const;
+    [[nodiscard]] const std::vector<char>& hashes() const;
+    [[nodiscard]] const std::vector<uint32_t>& chunk_sizes() const;
+    [[nodiscard]] const std::uint8_t& type() const;
+    [[nodiscard]] const std::uint32_t& permissions() const;
+    [[nodiscard]] std::uint64_t size() const;
+    [[nodiscard]] const std::uint64_t& effective_size() const;
 
     [[nodiscard]] std::vector<char>& get_hashes();
 
 
-    void set_f_path(std::string);
-    void set_f_type(const std::uint8_t&);
-    void set_f_permissions(const std::uint32_t&);
-    void set_f_size(const std::optional<std::uint64_t>&);
-    void set_f_hashes(const std::vector <char>&);
+    void set_path(std::string);
+    void set_type(const std::uint8_t&);
+    void set_permissions(const std::uint32_t&);
+    void set_size(const std::optional<std::uint64_t>&);
+    void set_hashes(const std::vector <char>&);
     void add_hash(const std::vector<char>&);
     void add_chunk_sizes(std::vector<uint32_t>&&);
     void add_chunk_sizes(const std::vector<uint32_t>&);
@@ -84,15 +84,26 @@ public:
     void add_effective_size(const std::uint64_t&);
     void set_effective_size(const std::uint64_t&);
 
+    template <typename iterator>
+    void append_hashes(iterator begin, iterator end)
+    {
+        m_hashes.insert(m_hashes.end(), begin, end);
+    }
+
+    template <typename iterator>
+    void append_sizes(iterator begin, iterator end)
+    {
+        m_chunk_sizes.insert(m_chunk_sizes.end(), begin, end);
+    }
 
 private:
-    std::filesystem::path m_f_path{};
-    std::uint8_t m_f_type{};
-    std::uint32_t m_f_permissions{};
-    std::optional<std::uint64_t> m_f_size{};
-    std::uint64_t m_f_effective_size{};
+    std::filesystem::path m_path{};
+    std::uint8_t m_type{};
+    std::uint32_t m_permissions{};
+    std::optional<std::uint64_t> m_size{};
+    std::uint64_t m_effective_size{};
     std::vector <uint32_t> m_chunk_sizes{};
-    std::vector<char> m_f_hashes{};
+    std::vector<char> m_hashes{};
 };
 
 // ---------------------------------------------------------------------

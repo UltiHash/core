@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22.0 FATAL_ERROR)
-project(uhClient VERSION 0.1.0)
+project(uh-cli VERSION 0.1.0)
 message(STATUS "Building ${PROJECT_NAME}...")
 
 set(CMAKE_CXX_STANDARD 20)

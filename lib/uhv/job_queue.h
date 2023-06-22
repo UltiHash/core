@@ -1,7 +1,7 @@
-#ifndef COMMON_JOB_QUEUE_H
-#define COMMON_JOB_QUEUE_H
+#ifndef UHV_JOB_QUEUE_H
+#define UHV_JOB_QUEUE_H
 
-#include <uhv/f_meta_data.h>
+#include <uhv/meta_data.h>
 
 #include <condition_variable>
 #include <mutex>
@@ -58,22 +58,6 @@ public:
 
         lk.unlock();
         m_cv.notify_one();
-    }
-
-    // -------------------------------------------------
-    void sort()
-    {
-        std::unique_lock lk(m_mutex);
-
-        auto compare = [](const auto& a, const auto& b)
-        {
-            return (std::is_same<T, std::unique_ptr<f_meta_data>>::value) ?
-                        a->f_path() < b->f_path() : a < b ;
-        };
-
-        m_jobs.sort(compare);
-
-        lk.unlock();
     }
 
     // -------------------------------------------------
