@@ -15,7 +15,6 @@
 #include <unistd.h>
 #include <mutex>
 
-#include "storage/backends/common.h"
 #include "map_interface.h"
 
 #include <storage/backends/smart_backend/storage_types/fixed_managed_storage.h>
@@ -37,7 +36,7 @@ public:
      * @param key
      * @param value
      */
-    void insert (std::span <char> key, std::span <char> value, const index_type& index = {}) override;
+    void insert (std::span <char> key, std::span <char> value, const sets::index_type& index = {}) override;
 
     /**
      * returns the fragments offset and sizes

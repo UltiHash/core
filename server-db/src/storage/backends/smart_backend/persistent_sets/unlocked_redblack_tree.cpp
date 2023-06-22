@@ -73,16 +73,16 @@ set_result unlocked_redblack_tree::do_find (const std::string_view& frag, const 
         y = x;
         comp_int = comp (frag, x.m_mnode->m_data);
         if (comp_int < 0) {
-            largest_lower = x;
+            smallest_upper = x;
             x = get_node (x.m_mnode->m_left);
         }
         else if (comp_int > 0) {
-            smallest_upper = x;
+            largest_lower = x;
             x = get_node (x.m_mnode->m_right);
         }
         else {
             char* ptr = static_cast <char*> (m_data_store.get().get_raw_ptr(y.m_mnode->m_data.m_data_offset));
-            res.match = {y.m_mnode->m_data.m_data_offset, {ptr, y.m_mnode->m_data.m_size}};
+            res.match = {{ptr, y.m_mnode->m_data.m_size}, y.m_mnode->m_data.m_data_offset,y.m_offset};
             break;
         }
     }
@@ -90,15 +90,15 @@ set_result unlocked_redblack_tree::do_find (const std::string_view& frag, const 
     if (!res.match) {
         char *ptr_lower = static_cast <char *> (m_data_store.get().get_raw_ptr(largest_lower.m_mnode->m_data.m_data_offset));
         char *ptr_upper = static_cast <char *> (m_data_store.get().get_raw_ptr(smallest_upper.m_mnode->m_data.m_data_offset));
-        res.lower = {largest_lower.m_mnode->m_data.m_data_offset, {ptr_lower, largest_lower.m_mnode->m_data.m_size}};
-        res.upper = {smallest_upper.m_mnode->m_data.m_data_offset, {ptr_upper, smallest_upper.m_mnode->m_data.m_size}};
+        res.lower = {{ptr_lower, largest_lower.m_mnode->m_data.m_size}, largest_lower.m_mnode->m_data.m_data_offset, largest_lower.m_offset};
+        res.upper = {{ptr_upper, smallest_upper.m_mnode->m_data.m_size}, smallest_upper.m_mnode->m_data.m_data_offset, smallest_upper.m_offset};
     }
     res.index = {y.m_offset, comp_int};
 
     return res;
 }
 
-std::list<std::pair<uint64_t, std::string_view>>
+std::list<set_data>
 unlocked_redblack_tree::do_get_range(const std::span<char> &start_data, const std::span<char> &end_data) const {
     throw std::runtime_error ("not implemented");
 }
@@ -123,7 +123,7 @@ void unlocked_redblack_tree::balance(node& z) {
         else if (parent.m_offset == grand_parent.m_mnode->m_right) {
             z = directed_balance (z, LEFT);
         }
-        else {
+        if (z.m_offset == *m_root) {
             break;
         }
         parent = get_node (z.m_mnode->m_parent);

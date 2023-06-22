@@ -62,7 +62,7 @@ index_type persisted_redblack_tree_set::do_add_pointer (const std::string_view& 
     return p.index;
 }
 
-    set_result persisted_redblack_tree_set::do_find (const std::string_view& frag, const index_type& pos) const {
+set_result persisted_redblack_tree_set::do_find (const std::string_view& frag, const index_type& pos) const {
     std::shared_lock lock (m_mutex);
     return unlocked_find (frag, pos);
 }
@@ -78,7 +78,7 @@ void persisted_redblack_tree_set::do_remove(std::string_view &frag, const index_
     throw std::runtime_error ("not implemented");
 }
 
-std::list<std::pair<uint64_t, std::string_view>>
+std::list<set_data>
 persisted_redblack_tree_set::do_get_range(const std::span<char> &start_data,
                                           const std::span<char> &end_data) const {
     throw std::runtime_error ("not implemented");
@@ -217,7 +217,7 @@ set_result persisted_redblack_tree_set::unlocked_find (const std::string_view &f
 
     if (resolved.second) {
         char* ptr = static_cast <char*> (m_data_store.get().get_raw_ptr(x.m_mnode->m_data.m_data_offset));
-        res.match = {y.m_mnode->m_data.m_data_offset, {ptr, y.m_mnode->m_data.m_size}};
+        res.match = {{ptr, x.m_mnode->m_data.m_size}, x.m_mnode->m_data.m_data_offset, x.m_offset};
         return res;
     }
 
@@ -228,16 +228,16 @@ set_result persisted_redblack_tree_set::unlocked_find (const std::string_view &f
         y = x;
         comp_int = comp (frag, x.m_mnode->m_data);
         if (comp_int < 0) {
-            largest_lower = x;
+            smallest_upper = x;
             x = get_node (x.m_mnode->m_left);
         }
         else if (comp_int > 0) {
-            smallest_upper = x;
+            largest_lower = x;
             x = get_node (x.m_mnode->m_right);
         }
         else {
             char* ptr = static_cast <char*> (m_data_store.get().get_raw_ptr(y.m_mnode->m_data.m_data_offset));
-            res.match = {y.m_mnode->m_data.m_data_offset, {ptr, y.m_mnode->m_data.m_size}};
+            res.match = {{ptr, y.m_mnode->m_data.m_size}, y.m_mnode->m_data.m_data_offset, y.m_offset};
             break;
         }
     }
@@ -245,8 +245,8 @@ set_result persisted_redblack_tree_set::unlocked_find (const std::string_view &f
     if (!res.match) {
         char *ptr_lower = static_cast <char *> (m_data_store.get().get_raw_ptr(largest_lower.m_mnode->m_data.m_data_offset));
         char *ptr_upper = static_cast <char *> (m_data_store.get().get_raw_ptr(smallest_upper.m_mnode->m_data.m_data_offset));
-        res.lower = {largest_lower.m_mnode->m_data.m_data_offset, {ptr_lower, largest_lower.m_mnode->m_data.m_size}};
-        res.upper = {smallest_upper.m_mnode->m_data.m_data_offset, {ptr_upper, smallest_upper.m_mnode->m_data.m_size}};
+        res.lower = {{ptr_lower, largest_lower.m_mnode->m_data.m_size}, largest_lower.m_mnode->m_data.m_data_offset, largest_lower.m_offset};
+        res.upper = {{ptr_upper, smallest_upper.m_mnode->m_data.m_size}, smallest_upper.m_mnode->m_data.m_data_offset, smallest_upper.m_offset};
     }
     res.index = {y.m_offset, comp_int};
     return res;
@@ -259,10 +259,10 @@ void persisted_redblack_tree_set::balance(node& z) {
         if (parent.m_offset == grand_parent.m_mnode->m_left) {
             z = directed_balance (z, RIGHT);
         }
-        else if (parent.m_offset == grand_parent.m_mnode->m_right) {
+        else {
             z = directed_balance (z, LEFT);
         }
-        else {
+        if (z.m_offset == *m_root) {
             break;
         }
         parent = get_node (z.m_mnode->m_parent);

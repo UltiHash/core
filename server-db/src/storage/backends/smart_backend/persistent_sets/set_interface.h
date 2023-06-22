@@ -8,10 +8,27 @@
 #include <string_view>
 #include <optional>
 #include <list>
-
-#include "storage/backends/common.h"
+#include <span>
 
 namespace uh::dbn::storage::smart::sets {
+
+struct index_type {
+    std::uint64_t position {};
+    int comp {};
+};
+
+struct set_data {
+    std::string_view data;
+    uint64_t data_offset;
+    uint64_t index_offset;
+};
+
+struct set_result {
+    std::optional <set_data> lower;
+    std::optional <set_data> match;
+    std::optional <set_data> upper;
+    index_type index;
+};
 
 class set_interface {
 public:
@@ -40,7 +57,7 @@ public:
     /**
      * Gives back the list of keys in the range of start_key to end_key with the given labels
      */
-    [[nodiscard]] std::list<std::pair<uint64_t, std::string_view>> get_range (const std::span<char> &start_data, const std::span<char> &end_data) const {
+    [[nodiscard]] std::list<set_data> get_range (const std::span<char> &start_data, const std::span<char> &end_data) const {
         return do_get_range (start_data, end_data);
     }
 
@@ -68,7 +85,7 @@ protected:
 
     [[nodiscard]] virtual set_result do_find (const std::string_view& data, const index_type& pos) const = 0;
 
-    [[nodiscard]] virtual std::list<std::pair<uint64_t, std::string_view>> do_get_range (const std::span<char> &start_data, const std::span<char> &end_data) const = 0;
+    [[nodiscard]] virtual std::list<set_data> do_get_range (const std::span<char> &start_data, const std::span<char> &end_data) const = 0;
 
     virtual void do_remove (std::string_view& data, const index_type& pos) = 0;
 

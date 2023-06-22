@@ -60,22 +60,22 @@ std::pair<std::vector<sets::offset_span>, size_t> smart_core::deduplicate (std::
 
     const auto f = m_fragment_set->find({data.data(), data.size()});
     if (f.match) {
-        return {{{f.match->first, f.match->second.size()}}, 0};
+        return {{{f.match->data_offset, f.match->data.size()}}, 0};
     }
 
-    const auto lower_common_prefix = largest_common_prefix (data, f.lower->second);
+    const auto lower_common_prefix = largest_common_prefix (data, f.lower->data);
 
     if (lower_common_prefix == data.size()) {
-        m_fragment_set->add_pointer (data, f.lower->first, f.index);
-        return {{{f.lower->first, data.size()}}, 0};
+        m_fragment_set->add_pointer (data, f.lower->data_offset, f.index);
+        return {{{f.lower->data_offset, data.size()}}, 0};
     }
 
-    const auto upper_common_prefix = largest_common_prefix (data, f.upper->second);
+    const auto upper_common_prefix = largest_common_prefix (data, f.upper->data);
     auto max_common_prefix = upper_common_prefix;
-    auto max_data_offset = f.upper->first;
+    auto max_data_offset = f.upper->data_offset;
     if (max_common_prefix < lower_common_prefix) {
         max_common_prefix = lower_common_prefix;
-        max_data_offset = f.lower->first;
+        max_data_offset = f.lower->data_offset;
     }
 
     if (max_common_prefix < m_dedupe_conf.min_fragment_size or data.size() - max_common_prefix < m_dedupe_conf.min_fragment_size) {

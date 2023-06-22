@@ -2,7 +2,6 @@
 #define SERVER_DB_STORAGE_BACKEND_H
 
 #include <protocol/server.h>
-#include <storage/backends/common.h>
 #include "utils.h"
 
 

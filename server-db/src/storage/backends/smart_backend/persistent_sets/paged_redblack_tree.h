@@ -14,7 +14,7 @@
 #include "storage/backends/smart_backend/smart_config.h"
 #include "storage/backends/smart_backend/storage_types/storage_common.h"
 #include "storage/backends/smart_backend/storage_types/growing_plain_storage.h"
-
+#include <iostream>
 #include <boost/interprocess/mapped_region.hpp>
 
 
@@ -102,63 +102,79 @@ private:
             y = x;
             comp_int = m_comp (data, x.m_mnode->m_data);
             if (comp_int < 0) {
-                largest_lower = x;
+                smallest_upper = x;
                 x = get_node (x.m_mnode->m_left);
             }
             else if (comp_int > 0) {
-                smallest_upper = x;
+                largest_lower = x;
                 x = get_node (x.m_mnode->m_right);
             }
             else {
-                res.match = {y.m_mnode->m_data.m_data_offset, fetch_node_data(y)};
+                res.match = {fetch_node_data(y), y.m_mnode->m_data.m_data_offset, y.m_offset};
                 break;
             }
         }
 
         if (!res.match) {
-            res.lower = {largest_lower.m_mnode->m_data.m_data_offset, fetch_node_data (largest_lower)};
-            res.upper = {smallest_upper.m_mnode->m_data.m_data_offset, fetch_node_data (smallest_upper)};
+            res.lower = {fetch_node_data (largest_lower), largest_lower.m_mnode->m_data.m_data_offset, largest_lower.m_offset};
+            res.upper = {fetch_node_data (smallest_upper), smallest_upper.m_mnode->m_data.m_data_offset, smallest_upper.m_offset};
         }
         res.index = {y.m_offset, comp_int};
         return res;
     }
 
-    [[nodiscard]] std::list<std::pair<uint64_t, std::string_view>> do_get_range (const std::span<char> &start_data, const std::span<char> &end_data) const override {
+    [[nodiscard]] std::list<set_data> do_get_range (const std::span<char> &start_data, const std::span<char> &end_data) const override {
 
         // TODO if start data or end data are empty
 
         auto fstart = find ({start_data.data(), start_data.size()});
+        std::list<set_data> result;
 
         uint64_t start_offset;
         if (fstart.match.has_value()) {
-            start_offset = fstart.match->first;
+            start_offset = fstart.index.position;
+            result.emplace_back(fstart.match.value());
+
         }
         else if (fstart.upper.has_value()) {
-            start_offset = fstart.upper->first;
+           start_offset = fstart.upper->index_offset;
+           if (fstart.upper.value().data.compare({end_data.data(), end_data.size()}) < 0)
+                result.emplace_back(fstart.upper.value().data);
         }
         else {
             return {};
         }
+
+
 
         auto fend = find ({end_data.data(), end_data.size()});
 
         uint64_t end_offset;
         if (fend.match.has_value()) {
-            end_offset = fend.match->first;
+            end_offset = fend.index.position;
         }
         else if (fend.lower.has_value()) {
-            end_offset = fend.lower->first;
+            end_offset = fend.lower->index_offset;
         }
         else {
             return {};
         }
 
-        std::list<std::pair<uint64_t, std::string_view>> result;
 
         auto n = get_node (start_offset);
-        in_order_traverse (n.m_mnode->m_left, end_offset, result);
+        if (!in_order_traverse (n.m_mnode->m_right, end_offset, result)) {
+            auto p = get_node (n.m_mnode->m_parent);
 
-        // TODO traverse the parent until no right/left? child anymore
+            while (n.m_offset == p.m_mnode->m_left) {
+                n = p;
+                result.emplace_back(fetch_node_data(n), n.m_mnode->m_data.m_data_offset, n.m_offset);
+
+                if (in_order_traverse (n.m_mnode->m_right, end_offset, result)) {
+                    break;
+                }
+                p = get_node (n.m_mnode->m_parent);
+            }
+        }
 
         return result;
     }
@@ -175,31 +191,45 @@ private:
         throw std::runtime_error ("not implemented");
     }
 
-    void in_order_traverse (uint64_t start_offset, uint64_t end_offset, std::list<std::pair<uint64_t, std::string_view>> &result) const {
+    bool in_order_traverse (uint64_t start_offset, uint64_t end_offset, std::list<set_data> &result) const {
 
         const auto nil =  m_first_block.nill_offset;
 
+        if (start_offset == nil) {
+            return false;
+        }
+
         auto offset = start_offset;
+
         std::stack <uint64_t> nodes;
 
-        do {
-            if (offset != end_offset and offset != nil) {
-                auto n = get_node(offset);
-                offset = n.m_mnode->m_right;
+        bool done = false;
+        while (!done) {
+            if (offset != nil) {
                 nodes.push(offset);
-            }
-            else {
-                offset = nodes.top();
-                nodes.pop();
-
                 auto n = get_node(offset);
-                result.emplace_back(offset, fetch_node_data(n));
-
                 offset = n.m_mnode->m_left;
             }
+            else {
+                if (!nodes.empty()) {
+                    offset = nodes.top();
+                    nodes.pop();
 
-        } while (!nodes.empty());
+                    auto n = get_node(offset);
 
+                    if (offset == end_offset) {
+                        return true;
+                    }
+                    result.emplace_back(fetch_node_data(n), n.m_mnode->m_data.m_data_offset, offset);
+
+                    offset = n.m_mnode->m_right;
+                } else {
+                    done = true;
+                }
+            }
+
+        }
+        return false;
     }
 
     [[nodiscard]] inline std::string_view fetch_node_data (const node& n) const {
@@ -211,13 +241,13 @@ private:
         auto parent = get_node (z.m_mnode->m_parent);
         while (parent.m_mnode->m_color == RED) {
             auto grand_parent = get_node(parent.m_mnode->m_parent);
-            if (parent.m_offset == grand_parent.m_mnode->m_left) {
-                z = directed_balance (z, RIGHT);
-            }
-            else if (parent.m_offset == grand_parent.m_mnode->m_right) {
-                z = directed_balance (z, LEFT);
+            if (parent.m_offset == grand_parent.m_mnode->m_right) {
+                directed_balance (z, LEFT);
             }
             else {
+                directed_balance (z, RIGHT);
+            }
+            if (z.m_offset == m_first_block.root_offset) {
                 break;
             }
             parent = get_node (z.m_mnode->m_parent);
@@ -225,14 +255,14 @@ private:
         get_node(m_first_block.root_offset).m_mnode->m_color = BLACK;
     }
 
-    node directed_balance (node& z, direction_t d) {
+    void directed_balance (node& z, direction_t d) {
         auto parent = get_node (z.m_mnode->m_parent);
         auto grand_parent = get_node(parent.m_mnode->m_parent);
 
         auto y = get_node (get_child(grand_parent, d));
         if (y.m_mnode->m_color == RED) {
-            parent.m_mnode->m_color = BLACK;
             y.m_mnode->m_color = BLACK;
+            parent.m_mnode->m_color = BLACK;
             grand_parent.m_mnode->m_color = RED;
             z = grand_parent;
         }
@@ -240,12 +270,13 @@ private:
             if (z.m_offset == get_child(parent, d)) {
                 z = parent;
                 rotate (z, static_cast <direction_t> (1 - d));
+                parent = get_node (z.m_mnode->m_parent);
+                grand_parent = get_node(parent.m_mnode->m_parent);
             }
             parent.m_mnode->m_color = BLACK;
             grand_parent.m_mnode->m_color = RED;
             rotate (grand_parent, d);
         }
-        return z;
     }
 
     [[nodiscard]] inline node get_node (uint64_t offset) const noexcept {
@@ -336,7 +367,6 @@ private:
         const auto offset = node_offset - node_offset % m_block_size;
         return {offset, *reinterpret_cast <block*> (m_index_store.get_storage() + offset)};
     }
-
 
     const set_config m_set_conf;
     std::reference_wrapper <managed_storage> m_data_store;
