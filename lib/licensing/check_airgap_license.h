@@ -82,8 +82,6 @@ static std::unordered_map<NodeRole, std::string> noderole2string = {
 
 struct license_activate_config
 {
-    std::string username;
-    std::string password;
     std::string key;
 };
 
