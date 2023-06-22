@@ -38,34 +38,18 @@ void maybe_create_license_root_directory(std::filesystem::path license_root)
 
 // ---------------------------------------------------------------------
 
-std::unique_ptr<uh::licensing::license_package> make_licensing(const uh::options::licensing_config &cfg)
+std::unique_ptr<uh::licensing::license_package> make_licensing(const uh::options::licensing_config& cfg)
 {
     maybe_create_license_root_directory(cfg.path);
 
-    auto lic_config = uh::licensing::license_config{ .licenseNodeRole = uh::licensing::NodeRole::DataNode,
-                                                     .license_path = cfg.path };
-
-    auto api = uh::licensing::api_config{ EncryptStr(LICENSE_PRODUCT_ID) };
-    auto credential = uh::licensing::credential_config{ PROJECT_NAME, PROJECT_VERSION };
-
-    auto activate = uh::licensing::license_activate_config{ .key = cfg.key };
-    if (std::filesystem::is_empty(cfg.path))
-    {
-        INFO << "No licenses were found. Creating one.";
-
-        uh::licensing::check_airgap_license write_airgap(lic_config,
-                                                            api,
-                                                            credential,
-                                                            activate);
-
-        INFO << "Wrote new license key to " + lic_config.license_path.string();
-    }
+    auto config = uh::licensing::ls_airgap_config{
+        .productId = LICENSE_PRODUCT_ID,
+        .appName = PROJECT_NAME,
+        .appVersion = PROJECT_VERSION,
+        .path = cfg.path };
 
     return std::make_unique<uh::licensing::license_package>(
-        std::make_shared<uh::licensing::check_airgap_license>(lic_config,
-                                                              api,
-                                                              credential,
-                                                              activate)
+        std::make_shared<uh::licensing::check_airgap_license>(config, cfg.key)
     );
 }
 

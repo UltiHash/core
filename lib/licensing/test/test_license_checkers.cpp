@@ -62,16 +62,14 @@ std::unique_ptr<check_airgap_license> make_test_license<check_airgap_license>(
     const std::filesystem::path& path)
 {
     // TODO why do we need to give the filename twice
-    auto lic_config = license_config { .license_path = path / "test.lic" / "test.lic" };
+    auto config = ls_airgap_config {
+        .productId = product_Id_test,
+        .appName = appName_test,
+        .appVersion = appVersion_test,
+        .path = path / "test.lic" / "test.lic"
+    };
 
-    auto api = api_config{ product_Id_test };
-    auto credential = credential_config{ appName_test, appVersion_test };
-    auto activate = license_activate_config{ .key = licenseKey_100 };
-
-    return std::make_unique<check_airgap_license>(lic_config,
-                                                  api,
-                                                  credential,
-                                                  activate);
+    return std::make_unique<check_airgap_license>(config, licenseKey_100);
 }
 
 // ---------------------------------------------------------------------
@@ -94,13 +92,14 @@ BOOST_FIXTURE_TEST_CASE_TEMPLATE(license_package_test, T, license_types, Fixture
 
     BOOST_REQUIRE(tmp_write_airgap->valid());
 
-    auto lic_config = license_config{ .license_path = temp.path() };
+    auto config = ls_airgap_config {
+        .productId = product_Id_test,
+        .appName = appName_test,
+        .appVersion = appVersion_test,
+        .path = temp.path() / "test.lic" / "test.lic"
+    };
 
-    auto api = api_config{ product_Id_test };
-    auto credential = credential_config{ appName_test, appVersion_test };
-    auto activate = license_activate_config{ .key = licenseKey_100 };
-
-    T tmp_write_airgap2(lic_config, api, credential, activate);
+    T tmp_write_airgap2(config, licenseKey_100);
 
     BOOST_REQUIRE(tmp_write_airgap2.valid());
 }

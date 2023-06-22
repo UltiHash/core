@@ -5,10 +5,7 @@
 #include "licensing/check_airgap_license.h"
 #include "util/exception.h"
 #include "logging/logging_boost.h"
-#include "io/temp_file.h"
-#include "io/sha512.h"
 
-#include <LicenseSpring/EncryptString.h>
 #include <LicenseSpring/Exceptions.h>
 
 #include <license_spring_credentials.h>
@@ -30,10 +27,7 @@ namespace
 
 // ---------------------------------------------------------------------
 
-std::shared_ptr<LicenseSpring::Configuration> mk_config(
-    const std::string& product,
-    const std::string& appName,
-    const std::string& appVersion)
+std::shared_ptr<LicenseSpring::Configuration> mk_config(const ls_airgap_config& config)
 {
     LicenseSpring::ExtendedOptions options;
 
@@ -45,9 +39,9 @@ std::shared_ptr<LicenseSpring::Configuration> mk_config(
     return LicenseSpring::Configuration::Create(
         EncryptStr(LICENSE_SPRING_API_KEY),
         EncryptStr(LICENSE_SPRING_SHARED_KEY),
-        product,
-        appName,
-        appVersion,
+        config.productId,
+        config.appName,
+        config.appVersion,
         options);
 }
 
@@ -57,17 +51,12 @@ std::shared_ptr<LicenseSpring::Configuration> mk_config(
 
 // ---------------------------------------------------------------------
 
-check_airgap_license::check_airgap_license(uh::licensing::license_config license_config,
-                                           uh::licensing::api_config apiKey_input,
-                                           uh::licensing::credential_config credentialConfig_input,
-                                           uh::licensing::license_activate_config license_activate_input)
-    : m_id(LicenseSpring::LicenseID::fromKey(license_activate_input.key)),
-      m_config(mk_config(apiKey_input.productId,
-                         credentialConfig_input.appName,
-                         credentialConfig_input.appVersion)),
-      m_storage(LicenseSpring::LicenseFileStorage::create(license_config.license_path.wstring())),
+check_airgap_license::check_airgap_license(const ls_airgap_config& config,
+                                  const std::string& key)
+    : m_config(mk_config(config)),
+      m_storage(LicenseSpring::LicenseFileStorage::create(config.path.wstring())),
       m_manager(LicenseSpring::LicenseManager::create(m_config, m_storage)),
-      m_license(m_manager->activateLicense(m_id))
+      m_license(m_manager->activateLicense(LicenseSpring::LicenseID::fromKey(key)))
 {
     reload(*m_license);
 }

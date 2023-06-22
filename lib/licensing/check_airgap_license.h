@@ -6,7 +6,6 @@
 #define CORE_CHECK_LICENSE_H
 
 #include <licensing/backend.h>
-#include <io/temp_file.h>
 
 #include <filesystem>
 #include <utility>
@@ -26,65 +25,14 @@
 namespace uh::licensing
 {
 
-struct api_config
+// ---------------------------------------------------------------------
+
+struct ls_airgap_config
 {
     const std::string productId;
-};
-
-struct credential_config
-{
     const std::string appName;
     const std::string appVersion;
-};
-
-// ---------------------------------------------------------------------
-
-enum class LicenseTypeEnum
-{
-    AirgapKeyOnline,
-    OtherLicense
-};
-
-static std::vector<std::pair<std::string, LicenseTypeEnum>> string2licensetype = {
-    {"AirgapKeyOnline", LicenseTypeEnum::AirgapKeyOnline},
-    {"OtherLicense", LicenseTypeEnum::OtherLicense}
-};
-
-static std::unordered_map<LicenseTypeEnum, std::string> licensetype2string = {
-    {LicenseTypeEnum::AirgapKeyOnline, "AirgapKeyOnline"},
-    {LicenseTypeEnum::OtherLicense, "OtherLicense"}
-};
-
-// ---------------------------------------------------------------------
-
-enum class NodeRole: unsigned char
-{
-    DataNode,
-    AgencyNode,
-    OtherRole
-};
-
-static std::vector<std::pair<std::string, NodeRole>> string2noderole = {
-    {"uh-data-node", NodeRole::DataNode},
-    {"uh-agency-node", NodeRole::AgencyNode},
-    {"uh-other-node", NodeRole::OtherRole}
-};
-
-static std::unordered_map<NodeRole, std::string> noderole2string = {
-    {NodeRole::DataNode, "uh-data-node"},
-    {NodeRole::AgencyNode, "uh-agency-node"},
-    {NodeRole::OtherRole, "uh-other-node"}
-};
-
-struct license_activate_config
-{
-    std::string key;
-};
-
-struct license_config
-{
-    const NodeRole licenseNodeRole = NodeRole::DataNode;
-    std::filesystem::path license_path = "/var/lib";
+    std::filesystem::path path;
 };
 
 // ---------------------------------------------------------------------
@@ -94,21 +42,13 @@ class check_airgap_license : public backend
 public:
 
     /**
-     * manages license file creation and parsing
-     * First line license: license role
-     * Second line license:
-     *
-     * @param license_directory is the path where a license file is stored
+     * Construct and activate license.
      */
-    explicit check_airgap_license(uh::licensing::license_config license_config,
-                                  uh::licensing::api_config apiKey_input,
-                                  uh::licensing::credential_config credentialConfig_input,
-                                  uh::licensing::license_activate_config license_activate_input);
+    explicit check_airgap_license(const ls_airgap_config& config,
+                                  const std::string& key);
 
     // without activation
-    explicit check_airgap_license(uh::licensing::license_config license_config,
-                                  uh::licensing::api_config apiKey_input,
-                                  uh::licensing::credential_config credentialConfig_input);
+    explicit check_airgap_license(const ls_airgap_config& config);
 
     /**
      * the default license is not timed
@@ -136,7 +76,6 @@ public:
 private:
     void reload(LicenseSpring::License& license);
 
-    LicenseSpring::LicenseID m_id;
     std::shared_ptr<LicenseSpring::Configuration> m_config;
     std::shared_ptr<LicenseSpring::LicenseFileStorageBase> m_storage;
     std::shared_ptr<LicenseSpring::LicenseManager> m_manager;
