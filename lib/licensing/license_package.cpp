@@ -20,12 +20,12 @@ license_package::license_package(std::shared_ptr<uh::licensing::check_airgap_lic
 
 bool license_package::feature_enabled(feature f) const
 {
-    return m_features.at(f);
+    return m_check_license->has_feature(f);
 }
 
 // ---------------------------------------------------------------------
 
-void license_package::check(license_package::metered_feature smf, std::size_t size_input)
+void license_package::check(metered_feature smf, std::size_t size_input)
 {
     if (!has_metred_feature(smf))
     THROW(util::exception, "Soft metered feature not found!");
@@ -57,7 +57,7 @@ void license_package::check(license_package::metered_feature smf, std::size_t si
 // ---------------------------------------------------------------------
 
 void
-license_package::add_metred_feature(license_package::metered_feature smf,
+license_package::add_metred_feature(metered_feature smf,
                                     const std::shared_ptr<metered_resource> &smr)
 {
     m_soft_metered_features.emplace(smf, smr);
@@ -65,7 +65,7 @@ license_package::add_metred_feature(license_package::metered_feature smf,
 
 // ---------------------------------------------------------------------
 
-bool license_package::has_metred_feature(license_package::metered_feature smf)
+bool license_package::has_metred_feature(metered_feature smf)
 {
     return m_soft_metered_features.contains(smf);
 }
@@ -81,7 +81,7 @@ void license_package::feature_activation()
 
     if ((warn and limit) or warn)
         add_metred_feature(
-            uh::licensing::license_package::metered_feature::LIMIT_STORAGE_CAPACITY,
+            metered_feature::LIMIT_STORAGE_CAPACITY,
             std::make_shared<metered_resource>(std::stoull(feature_online.at(LIMIT_STORAGE_STRING)),
                                                std::stoull(feature_online
                                                                .at(limit ? WARN_STORAGE_STRING : LIMIT_STORAGE_STRING)))

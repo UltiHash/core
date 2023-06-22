@@ -78,7 +78,7 @@ std::pair <std::size_t, std::vector <char>> smart_storage::write_block (const st
     try {
         m_used += data.size();
         uh::dbn::licensing::global_license_pointer_dbn->license_package()
-            .check(uh::licensing::license_package::metered_feature::LIMIT_STORAGE_CAPACITY, m_used);
+            .check(uh::licensing::metered_feature::LIMIT_STORAGE_CAPACITY, m_used);
         effective_size = m_smart_core.integrate({sha.data(), size}, std::string_view(data.data(), data.size()));
         update_space_consumption();
     } catch (std::exception& e) {

@@ -5,6 +5,7 @@
 #ifndef CORE_LICENSE_PACKAGE_H
 #define CORE_LICENSE_PACKAGE_H
 
+#include <licensing/features.h>
 #include "licensing/check_airgap_license.h"
 #include "util/exception.h"
 #include "logging/logging_boost.h"
@@ -45,21 +46,8 @@ public:
     /*
      * Licensing server feature flags
      */
-
     const std::string METRICS_STRING = "Metrics";
     const std::string DEDUPLICATION_STRING = "Deduplication";
-
-    /**
-     *
-     * Check if `feature`is enabled in the configured license.
-     * Block feature if no license support is detected
-     */
-
-    enum class feature: unsigned char
-    {
-        METRICS,
-        DEDUPLICATION
-    };
 
     /**
      * manages features and metered setup on top of the license checker
@@ -68,18 +56,6 @@ public:
      * @throws if license is invalid or cannot be loaded
      */
     explicit license_package(std::shared_ptr<uh::licensing::check_airgap_license> check_license);
-
-    /**
-     *
-     * Warn if resource boundary is close to be hit.
-     * @throw if resource boundary will be exceeded by resource allocation
-     */
-    enum class metered_feature: unsigned char
-    {
-        LIMIT_CPU_COUNT = 0,
-        LIMIT_STORAGE_CAPACITY = 1,
-        LIMIT_NETWORK_CONNECTIONS = 2
-    };
 
     /**
      *
@@ -97,14 +73,14 @@ public:
      * @param size_input some resource
      * @return if allocation was successful and metered counter updated without warning required
      */
-    void check(license_package::metered_feature smf, std::size_t size_input);
+    void check(metered_feature smf, std::size_t size_input);
 
     /**
      *
      * @param smf soft metered feature to be registered
      * @param smr soft metered resource class to be checked repeatedly
      */
-    void add_metred_feature(license_package::metered_feature smf,
+    void add_metred_feature(metered_feature smf,
                             const std::shared_ptr<metered_resource> &smr);
 
     /**
@@ -112,7 +88,7 @@ public:
      * @param smf metered feature to check
      * @return if soft metred feature is available
      */
-    bool has_metred_feature(license_package::metered_feature smf);
+    bool has_metred_feature(metered_feature smf);
 
     /**
      *

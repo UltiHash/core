@@ -80,6 +80,14 @@ check_airgap_license::getCustomAndFeatureFields()
 
     for (const auto &item : features)
     {
+        try
+        {
+            m_features.insert(feature_from_string(item.name()));
+        }
+        catch (const util::illegal_args&)
+        {
+        }
+
         std::string metadata = item.metadata();
         boost::algorithm::replace_all(metadata, "\\", "");
 
@@ -108,6 +116,13 @@ check_airgap_license::getCustomAndFeatureFields()
     }
 
     return out_map;
+}
+
+// ---------------------------------------------------------------------
+
+bool check_airgap_license::has_feature(feature f)
+{
+    return m_features.contains(f);
 }
 
 // ---------------------------------------------------------------------

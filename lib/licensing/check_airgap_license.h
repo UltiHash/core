@@ -5,6 +5,9 @@
 #ifndef CORE_CHECK_LICENSE_H
 #define CORE_CHECK_LICENSE_H
 
+#include <licensing/features.h>
+#include <io/temp_file.h>
+
 #include <filesystem>
 #include <utility>
 #include <map>
@@ -15,8 +18,6 @@
 #include <LicenseSpring/Configuration.h>
 #include <LicenseSpring/EncryptString.h>
 #include <LicenseSpring/Exceptions.h>
-
-#include <io/temp_file.h>
 
 #include "boost/property_tree/json_parser.hpp"
 
@@ -124,6 +125,8 @@ public:
     [[nodiscard]] std::map<std::string, std::string>
     getCustomAndFeatureFields();
 
+    bool has_feature(feature f);
+
 private:
     api_config m_api;
     credential_config m_credential;
@@ -149,6 +152,8 @@ private:
     license_activate_config getLicenseActivateConfig();
 
     uh::licensing::license_activate_config m_license_activate;
+
+    std::set<feature> m_features;
 };
 
 } // namespace uh::licensing

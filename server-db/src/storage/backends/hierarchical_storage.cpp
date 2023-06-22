@@ -40,7 +40,7 @@ hierarchical_storage::hierarchical_storage(const hierarchical_storage_config &co
     try
     {
         uh::dbn::licensing::global_license_pointer_dbn->license_package()
-            .check(uh::licensing::license_package::metered_feature::LIMIT_STORAGE_CAPACITY, m_used);
+            .check(uh::licensing::metered_feature::LIMIT_STORAGE_CAPACITY, m_used);
     }
     catch (std::exception &e)
     {
@@ -188,7 +188,7 @@ void hierarchical_storage::acquire_storage_size(std::size_t size)
     try
     {
         uh::dbn::licensing::global_license_pointer_dbn->license_package()
-            .check(uh::licensing::license_package::metered_feature::LIMIT_STORAGE_CAPACITY, m_used);
+            .check(uh::licensing::metered_feature::LIMIT_STORAGE_CAPACITY, m_used);
     }
     catch (std::exception &e)
     {
