@@ -427,7 +427,28 @@ UDB_RESULT udb_add(UDB_CONNECTION* conn, UDB_WRITE_QUERY* write_query)
 
 // ---------------------------------------------------------------------
 
+UDB_READ_QUERY* udb_create_read_query()
+{}
 
+// ---------------------------------------------------------------------
+
+UDB_RESULT udb_read_query_add_key()
+{}
+
+// ---------------------------------------------------------------------
+
+UDB_RESULT udb_read_query_set_key_range()
+{}
+
+// ---------------------------------------------------------------------
+
+UDB_RESULT udb_read_query_add_label()
+{}
+
+// ---------------------------------------------------------------------
+
+UDB_RESULT udb_destroy_read_query(UDB_READ_QUERY** read_query_ptr_container)
+{}
 
 // ---------------------------------------------------------------------
 
