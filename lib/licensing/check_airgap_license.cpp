@@ -52,7 +52,7 @@ std::shared_ptr<LicenseSpring::Configuration> mk_config(const ls_airgap_config& 
 // ---------------------------------------------------------------------
 
 check_airgap_license::check_airgap_license(const ls_airgap_config& config,
-                                  const std::string& key)
+                                           const std::string& key)
     : m_config(mk_config(config)),
       m_storage(LicenseSpring::LicenseFileStorage::create(config.path.wstring())),
       m_manager(LicenseSpring::LicenseManager::create(m_config, m_storage)),
@@ -65,6 +65,15 @@ check_airgap_license::check_airgap_license(const ls_airgap_config& config,
 
 bool check_airgap_license::valid()
 {
+    try
+    {
+        m_license->localCheck();
+    }
+    catch (...)
+    {
+        return false;
+    }
+
     return true;
 }
 
@@ -105,6 +114,23 @@ std::size_t check_airgap_license::feature_arg_size_t(feature f, const std::strin
 
 void check_airgap_license::reload(LicenseSpring::License& license)
 {
+    license.check();
+
+    if (!license.isActive())
+    {
+        THROW(util::exception, "license is not activated");
+    }
+
+    if (license.isExpired())
+    {
+        THROW(util::exception, "license is expired");
+    }
+
+    if (!license.isEnabled())
+    {
+        THROW(util::exception, "license is not enabled");
+    }
+
     std::map<feature, boost::property_tree::ptree> features;
 
     for (const auto& feature : license.features())
@@ -129,119 +155,6 @@ void check_airgap_license::reload(LicenseSpring::License& license)
 
     std::swap(features, m_features);
 }
-
-// ---------------------------------------------------------------------
-
-#if 0
-bool check_airgap_license::license_check(const LicenseSpring::License::ptr_t &license)
-{
-    //First we'll run a online check. This will check your license on the
-    //LicenseSpring servers, and sync up your local license to match your online
-    if (license != nullptr)
-    {
-        try
-        {
-            INFO << "Checking license online..." << std::endl;
-            license->check();
-            INFO << "License successfully checked" << std::endl;
-        }
-        catch (LicenseSpring::LicenseStateException)
-        {
-            WARNING << "Online license is not valid" << std::endl;
-            if (!license->isActive())
-            {
-                ERROR << "License is inactive" << std::endl;
-                return false;
-            }
-            if (license->isExpired())
-            {
-                ERROR << "License is expired" << std::endl;
-                return false;
-            }
-            if (!license->isEnabled())
-            {
-                ERROR << "License is disabled" << std::endl;
-                return false;
-            }
-        }
-        catch (std::exception &e)
-        {
-            ERROR << e.what();
-            return false;
-        }
-
-        //We use localCheck() in LicenseSpring/License.h in the include folder.This is
-        //useful to check if the license hasn't been copied over from another device, and
-        //that the license is still valid. Note: valid and active are not the same thing. See
-        //tutorial [link here] to learn the difference.
-        try
-        {
-            INFO << "License successfully loaded, performing local check of the license..." << std::endl;
-            license->localCheck();
-            INFO << "Local validation successful" << std::endl;
-        }
-        catch (LicenseSpring::LocalLicenseException)
-        { //Exception if we cannot read the local license or the local license file is corrupt
-            ERROR << "Could not read previous local license. Local license may be corrupt. "
-                  << "Create a new local license by activating your license." << std::endl;
-            return false;
-        }
-        catch (LicenseSpring::LicenseStateException)
-        {
-            ERROR << "Current license is not valid" << std::endl;
-            if (!license->isActive())
-            {
-                ERROR << "License is inactive" << std::endl;
-                return false;
-            }
-            if (license->isExpired())
-            {
-                ERROR << "License is expired" << std::endl;
-                return false;
-            }
-            if (!license->isEnabled())
-            {
-                ERROR << "License is disabled" << std::endl;
-                return false;
-            }
-        }
-        catch (std::exception &e)
-        {
-            ERROR << e.what();
-            return false;
-        }
-    }
-    else
-    {
-        ERROR << "No local license found";
-        return false;
-    }
-
-    auto devVars = license->getDeviceVariables();
-    std::string licenseRole = std::find_if(devVars.begin(), devVars.end(),
-                                           [](LicenseSpring::DeviceVariable &item)
-                                           {
-                                               return item.name() == "LicenseRole";
-                                           })->value();
-
-    NodeRole nodeRoleEnum = std::find_if(string2noderole.begin(),
-                                         string2noderole.end(),
-                                         [&licenseRole](std::pair<std::string, NodeRole> &item)
-                                         {
-                                             return item.first == licenseRole;
-                                         })->second;
-
-    /*
-    if (m_license.licenseNodeRole != nodeRoleEnum)
-    {
-        ERROR << "License node role did not match product node role!";
-        return false;
-    }
-    */
-
-    return true;
-}
-#endif
 
 // ---------------------------------------------------------------------
 

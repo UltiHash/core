@@ -20,19 +20,10 @@ namespace
 
 // ---------------------------------------------------------------------
 
-const std::filesystem::path TEMP_DIR = "/tmp";
-
-const std::string product_Id_test = EncryptStr("01");
-
-const std::string appName_test = "uh-data-node";
-
+const std::string product_Id_test = "uhtest";
+const std::string appName_test = "uh-test";
 const std::string appVersion_test = "0.2.0";
-
-const std::string licenseKey_100 = "GZLF-TD88-AZAK-2F01";
-
-const std::string user_name_test = "benjamin@ultihash.io";
-
-const std::string password_test = "#u5huzU!ita*o&I4@ona2+OVlGlhehe0!dLDeslticO#r?!3@*$a@$x*hl1lxisW";
+const std::string licenseKey_100 = "GZM9-S88G-RNEK-2EUH";
 
 // ---------------------------------------------------------------------
 
