@@ -142,17 +142,11 @@ bool check_airgap_license::licenseRegister(const LicenseSpring::LicenseID &licen
                 default:THROW(util::exception, "No license role detected!");
             }
 
-            switch (m_license.licenseTypeInternal)
-            {
-                case LicenseTypeEnum::AirgapKeyOnline:
-                    license_type_set_string = licensetype2string[LicenseTypeEnum::AirgapKeyOnline];
-                    license->addDeviceVariable("Key", licenseId.key());
-                    break;
-                default:THROW(util::exception, "No license type detected!");
-            }
-
+            license_type_set_string = licensetype2string[LicenseTypeEnum::AirgapKeyOnline];
+            license->addDeviceVariable("Key", licenseId.key());
             license->addDeviceVariable("LicenseRole", role_set_string);
             license->addDeviceVariable("LicenseType", license_type_set_string);
+
             INFO << "License status: " << license->status();
         }
         catch (std::exception &e)

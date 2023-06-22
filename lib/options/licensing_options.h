@@ -20,24 +20,16 @@ public:
     std::string license_key;
     std::string license_user;
     std::string license_password;
-    std::string license_type;
 
     licensing_config() = default;
 
-    licensing_config(std::string path,
-                        std::string type,
-                        std::string key){
+    licensing_config(std::string path, std::string key){
         licensing_path = std::move(path);
-        license_type = std::move(type);
         license_key = std::move(key);
     }
 
-    licensing_config(std::string path,
-                        std::string type,
-                        std::string user,
-                        std::string pass){
+    licensing_config(std::string path, std::string user, std::string pass){
         licensing_path = std::move(path);
-        license_type = std::move(type);
         license_user = std::move(user);
         license_password = std::move(pass);
     }
@@ -46,8 +38,7 @@ public:
         return licensing_path.empty() and
         license_key.empty()
         and license_user.empty()
-        and license_password.empty()
-        and license_type.empty();
+        and license_password.empty();
     }
 };
 

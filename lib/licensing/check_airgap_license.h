@@ -85,7 +85,6 @@ struct license_activate_config
 
 struct license_config
 {
-    const LicenseTypeEnum licenseTypeInternal = LicenseTypeEnum::AirgapKeyOnline;
     const NodeRole licenseNodeRole = NodeRole::DataNode;
 
     const bool collectNetworkInfo = true;

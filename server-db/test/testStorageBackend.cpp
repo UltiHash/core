@@ -29,7 +29,6 @@ protected:
     set_licensing()
     {
         uh::options::licensing_config m_config{};
-        m_config.license_type = "AirgapKeyOnline";
         m_config.licensing_path = "/tmp/uh-data-node/licensing";
         m_config.license_key = "GZLF-TD88-AZAK-2F01";
 

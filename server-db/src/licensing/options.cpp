@@ -20,7 +20,6 @@ namespace uh::dbn::licensing
 uh::options::action options::evaluate(const boost::program_options::variables_map &vars)
 {
     m_config.license_key = std::filesystem::path(vars["activate"].as<std::string>());
-    m_config.license_type = "AirgapKeyOnline";
 
     if (std::any_of(m_config.licensing_path.cbegin(), m_config.licensing_path.cend(),
                     [](auto c)
@@ -31,13 +30,11 @@ uh::options::action options::evaluate(const boost::program_options::variables_ma
 
         switch (tmp_vec_configs.size())
         {
-            case 2:m_config.license_type = tmp_vec_configs[0];
-                m_config.license_key = tmp_vec_configs[1];
-            case 3:m_config.license_type = tmp_vec_configs[0];
-                m_config.license_key = tmp_vec_configs[1];
+            case 2: m_config.license_key = tmp_vec_configs[1];
+            case 3: m_config.license_key = tmp_vec_configs[1];
                 m_config.licensing_path = tmp_vec_configs[2];
                 break;
-            case 4:m_config.license_type = tmp_vec_configs[0];
+            case 4:
                 m_config.license_user = tmp_vec_configs[1];
                 m_config.license_password = tmp_vec_configs[2];
                 m_config.licensing_path = tmp_vec_configs[3];
@@ -46,9 +43,8 @@ uh::options::action options::evaluate(const boost::program_options::variables_ma
                 std::string err_string = "Received string was: " + m_config.license_key +
                     "Activation command was not populated with either "
                     "\"license key\", "
-                    "\"license type;license key\", "
-                    "\"license type;license_key;license-path\" or "
-                    "\"license type;username;password;license-path\"."
+                    "\"license_key;license-path\" or "
+                    "\"username;password;license-path\"."
                     " Default license path is /var/lib ."
                     " Default license type is AirgapKeyOnline";
                 INFO << err_string;

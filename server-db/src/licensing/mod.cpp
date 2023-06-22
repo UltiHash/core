@@ -38,72 +38,35 @@ void maybe_create_license_root_directory(std::filesystem::path license_root)
 
 // ---------------------------------------------------------------------
 
-uh::licensing::LicenseTypeEnum define_licensing_type(const std::string &license_type)
-{
-    auto it = std::find_if(uh::licensing::string2licensetype.begin(),
-                           uh::licensing::string2licensetype.end(),
-                           [&license_type](std::pair<std::string, uh::licensing::LicenseTypeEnum> &item)
-                           {
-                               return license_type == item.first;
-                           });
-    if (it != uh::licensing::string2licensetype.end())
-    {
-        return it->second;
-    }
-    else
-    {
-        std::string msg("Not a licensing type: " + license_type);
-        INFO << msg;
-        THROW(util::exception, msg);
-    }
-}
-
-// ---------------------------------------------------------------------
-
 std::unique_ptr<uh::licensing::license_package> make_licensing(const uh::options::licensing_config &cfg)
 {
     maybe_create_license_root_directory(cfg.licensing_path);
 
-    uh::licensing::LicenseTypeEnum license_type = define_licensing_type(cfg.license_type);
-
-    auto lic_config = uh::licensing::license_config{ .licenseTypeInternal = license_type,
-                                                     .licenseNodeRole = uh::licensing::NodeRole::DataNode,
+    auto lic_config = uh::licensing::license_config{ .licenseNodeRole = uh::licensing::NodeRole::DataNode,
                                                      .license_path = cfg.licensing_path };
 
     auto api = uh::licensing::api_config{ EncryptStr(LICENSE_PRODUCT_ID) };
     auto credential = uh::licensing::credential_config{ PROJECT_NAME, PROJECT_VERSION };
 
-    switch (license_type)
+    auto activate = uh::licensing::license_activate_config{ .key = cfg.license_key };
+    if (std::filesystem::is_empty(cfg.licensing_path))
     {
-        case uh::licensing::LicenseTypeEnum::AirgapKeyOnline:
-        {
-            auto activate = uh::licensing::license_activate_config{ .key = cfg.license_key };
-            if (std::filesystem::is_empty(cfg.licensing_path))
-            {
-                INFO << "No licenses were found. Creating " + cfg.license_type + " license.";
+        INFO << "No licenses were found. Creating one.";
 
-                uh::licensing::check_airgap_license write_airgap(lic_config,
-                                                                 api,
-                                                                 credential,
-                                                                 activate);
+        uh::licensing::check_airgap_license write_airgap(lic_config,
+                                                            api,
+                                                            credential,
+                                                            activate);
 
-                INFO << "Initialized " + cfg.license_type;
-                INFO << "Wrote new license key to " + lic_config.license_path.string();
-            }
-
-            return std::make_unique<uh::licensing::license_package>(
-                std::make_shared<uh::licensing::check_airgap_license>(lic_config,
-                                                                      api,
-                                                                      credential,
-                                                                      activate
-                )
-            );
-        }
-        case uh::licensing::LicenseTypeEnum::OtherLicense:THROW(util::exception, "Not yet implemented licensing model");
+        INFO << "Wrote new license key to " + lic_config.license_path.string();
     }
 
-    std::string msg("Not a storage backend type: " + cfg.license_type);
-    THROW(util::exception, msg);
+    return std::make_unique<uh::licensing::license_package>(
+        std::make_shared<uh::licensing::check_airgap_license>(lic_config,
+                                                              api,
+                                                              credential,
+                                                              activate)
+    );
 }
 
 // ---------------------------------------------------------------------
