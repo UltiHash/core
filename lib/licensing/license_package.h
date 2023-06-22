@@ -5,49 +5,22 @@
 #ifndef CORE_LICENSE_PACKAGE_H
 #define CORE_LICENSE_PACKAGE_H
 
-#include <licensing/features.h>
-#include "licensing/check_airgap_license.h"
-#include "util/exception.h"
-#include "logging/logging_boost.h"
+#include <licensing/backend.h>
+#include <licensing/check_airgap_license.h>
 
 #include <map>
-#include <set>
-#include <filesystem>
-#include <algorithm>
+#include <memory>
+
 
 namespace uh::licensing
 {
 
-const std::string WARN_STORAGE_STRING = "warnStorage";
-const std::string LIMIT_STORAGE_STRING = "limitStorage";
-
-struct metered_resource
-{
-public:
-    const std::size_t hard_limit_val{};
-    const std::size_t soft_limit_val{};
-    bool warn_once = true;
-
-    metered_resource(std::size_t hard_limit, std::size_t soft_limit)
-        :
-        hard_limit_val(hard_limit),
-        soft_limit_val(soft_limit)
-    {
-        if(soft_limit > hard_limit)
-            THROW(util::exception,"Soft limit was larger than hard limit on setup!");
-    }
-};
+// ---------------------------------------------------------------------
 
 class license_package
 {
 
 public:
-
-    /*
-     * Licensing server feature flags
-     */
-    const std::string METRICS_STRING = "Metrics";
-    const std::string DEDUPLICATION_STRING = "Deduplication";
 
     /**
      * manages features and metered setup on top of the license checker
@@ -55,7 +28,7 @@ public:
      * @param config license file input
      * @throws if license is invalid or cannot be loaded
      */
-    explicit license_package(std::shared_ptr<uh::licensing::check_airgap_license> check_license);
+    explicit license_package(std::shared_ptr<backend> check_license);
 
     /**
      *
@@ -63,32 +36,12 @@ public:
      * @throw feature state not specified by license and by that not listed
      * @return feature state
      */
-    [[nodiscard]] bool feature_enabled(feature f) const;
+    [[nodiscard]] bool check(feature f) const;
 
     /**
-     * first try soft limit allocate, if successful, hard limit allocate will also be set
-     * HINT: a not contained limit is no limit
-     *
-     * @param smf soft metred feature that should check for available allocation without warning
-     * @param size_input some resource
-     * @return if allocation was successful and metered counter updated without warning required
+     * Check if feature value is within bounds.
      */
-    void check(metered_feature smf, std::size_t size_input);
-
-    /**
-     *
-     * @param smf soft metered feature to be registered
-     * @param smr soft metered resource class to be checked repeatedly
-     */
-    void add_metred_feature(metered_feature smf,
-                            const std::shared_ptr<metered_resource> &smr);
-
-    /**
-     *
-     * @param smf metered feature to check
-     * @return if soft metred feature is available
-     */
-    bool has_metred_feature(metered_feature smf);
+    void require(feature f, std::size_t value) const;
 
     /**
      *
@@ -99,13 +52,7 @@ public:
 private:
 
     std::map<feature, bool> m_features;
-    std::map<metered_feature, std::shared_ptr<metered_resource>> m_soft_metered_features;
-    std::shared_ptr<check_airgap_license> m_check_license;
-
-    /**
-     * activates online defined features and limits
-     */
-    void feature_activation();
+    std::shared_ptr<backend> m_backend;
 };
 
 } // namespace uh::licensing

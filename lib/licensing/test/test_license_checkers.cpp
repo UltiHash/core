@@ -7,6 +7,7 @@
 #include <boost/test/unit_test.hpp>
 #include <boost/mpl/vector.hpp>
 
+#include <util/temp_dir.h>
 #include <licensing/check_airgap_license.h>
 #include <licensing/license_package.h>
 
@@ -52,15 +53,16 @@ struct Fixture
  * that will read the text given in LOREM_IPSUM.
  */
 template<typename T>
-std::unique_ptr<T> make_test_license();
+std::unique_ptr<T> make_test_license(const std::filesystem::path& path);
 
 // ---------------------------------------------------------------------
 
 template<>
-std::unique_ptr<check_airgap_license> make_test_license<check_airgap_license>()
+std::unique_ptr<check_airgap_license> make_test_license<check_airgap_license>(
+    const std::filesystem::path& path)
 {
-    auto lic_config = license_config();
-    lic_config.license_path = TEMP_DIR / (appName_test + ".lic");
+    // TODO why do we need to give the filename twice
+    auto lic_config = license_config { .license_path = path / "test.lic" / "test.lic" };
 
     auto api = api_config{ product_Id_test };
     auto credential = credential_config{ appName_test, appVersion_test };
@@ -76,70 +78,31 @@ std::unique_ptr<check_airgap_license> make_test_license<check_airgap_license>()
 
 BOOST_FIXTURE_TEST_CASE_TEMPLATE(valid_default_license, T, license_types, Fixture)
 {
-    std::filesystem::remove("/tmp/" + appName_test + ".lic");
-
-    auto lic = make_test_license<T>();
+    util::temp_directory temp;
+    auto lic = make_test_license<T>(temp.path());
 
     BOOST_CHECK(lic->valid());
-    std::filesystem::remove("/tmp/" + appName_test + ".lic");
 }
 
 // ---------------------------------------------------------------------
 
 BOOST_FIXTURE_TEST_CASE_TEMPLATE(license_package_test, T, license_types, Fixture)
 {
-    std::filesystem::remove("/tmp/" + appName_test + ".lic");
+    util::temp_directory temp;
 
-    std::shared_ptr<T> tmp_write_airgap = make_test_license<T>();
+    std::shared_ptr<T> tmp_write_airgap = make_test_license<T>(temp.path());
 
     BOOST_REQUIRE(tmp_write_airgap->valid());
 
-    auto lic_config = license_config();
-    lic_config.license_path = TEMP_DIR;
+    auto lic_config = license_config{ .license_path = temp.path() };
 
     auto api = api_config{ product_Id_test };
     auto credential = credential_config{ appName_test, appVersion_test };
     auto activate = license_activate_config{ .key = licenseKey_100 };
 
-    T tmp_write_airgap2(lic_config,
-                        api,
-                        credential,
-                        activate);
+    T tmp_write_airgap2(lic_config, api, credential, activate);
 
     BOOST_REQUIRE(tmp_write_airgap2.valid());
-
-    if constexpr (std::is_same_v<T,check_airgap_license>){
-        license_package lp(tmp_write_airgap);
-
-        BOOST_CHECK(lp.feature_enabled(feature::DEDUPLICATION));
-        BOOST_CHECK(lp.feature_enabled(feature::METRICS));
-
-        BOOST_REQUIRE_THROW(
-            lp.add_metred_feature(metered_feature::LIMIT_STORAGE_CAPACITY,
-                                       std::make_shared<metered_resource>(50, 100)), util::exception);
-
-        lp.add_metred_feature(metered_feature::LIMIT_STORAGE_CAPACITY,
-                                   std::make_unique<metered_resource>(100, 50));
-
-        BOOST_REQUIRE_THROW(
-            lp.check(metered_feature::LIMIT_NETWORK_CONNECTIONS, 1),
-            util::exception);
-
-        BOOST_REQUIRE_THROW(
-            lp.check(metered_feature::LIMIT_STORAGE_CAPACITY, 1000000000000000),
-            std::exception);
-
-        auto feature_fields = tmp_write_airgap->getCustomAndFeatureFields();
-
-        BOOST_CHECK(feature_fields.find(WARN_STORAGE_STRING) != feature_fields.end());
-        BOOST_CHECK(feature_fields.find(LIMIT_STORAGE_STRING) != feature_fields.end());
-        BOOST_CHECK(lp.has_metred_feature(uh::licensing::metered_feature::LIMIT_STORAGE_CAPACITY));
-
-        BOOST_CHECK(feature_fields.find(lp.METRICS_STRING) != feature_fields.end());
-        BOOST_CHECK(feature_fields.find(lp.DEDUPLICATION_STRING) != feature_fields.end());
-    }
-
-    std::filesystem::remove("/tmp/" + appName_test + ".lic");
 }
 
 // ---------------------------------------------------------------------

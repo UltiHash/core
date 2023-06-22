@@ -20,8 +20,40 @@
 #include "boost/property_tree/ptree.hpp"
 #include "boost/algorithm/string.hpp"
 
+using namespace LicenseSpring;
+
 namespace uh::licensing
 {
+
+namespace
+{
+
+// ---------------------------------------------------------------------
+
+std::shared_ptr<LicenseSpring::Configuration> mk_config(
+    const std::string& product,
+    const std::string& appName,
+    const std::string& appVersion)
+{
+    LicenseSpring::ExtendedOptions options;
+
+#ifdef DEBUG
+    options.enableLogging(true);
+#endif
+    options.enableSSLCheck(true);
+
+    return LicenseSpring::Configuration::Create(
+        EncryptStr(LICENSE_SPRING_API_KEY),
+        EncryptStr(LICENSE_SPRING_SHARED_KEY),
+        product,
+        appName,
+        appVersion,
+        options);
+}
+
+// ---------------------------------------------------------------------
+
+}
 
 // ---------------------------------------------------------------------
 
@@ -29,158 +61,89 @@ check_airgap_license::check_airgap_license(uh::licensing::license_config license
                                            uh::licensing::api_config apiKey_input,
                                            uh::licensing::credential_config credentialConfig_input,
                                            uh::licensing::license_activate_config license_activate_input)
-    :
-    m_license(std::move(license_config)),
-    m_api(std::move(apiKey_input)),
-    m_credential(std::move(credentialConfig_input)),
-    m_license_activate(std::move(license_activate_input))
+    : m_id(LicenseSpring::LicenseID::fromKey(license_activate_input.key)),
+      m_config(mk_config(apiKey_input.productId,
+                         credentialConfig_input.appName,
+                         credentialConfig_input.appVersion)),
+      m_storage(LicenseSpring::LicenseFileStorage::create(license_config.license_path.wstring())),
+      m_manager(LicenseSpring::LicenseManager::create(m_config, m_storage)),
+      m_license(m_manager->activateLicense(m_id))
 {
-    if(std::filesystem::is_directory(m_license.license_path))
-        m_license.license_path /= m_credential.appName + ".lic";
+    reload(*m_license);
 }
 
 // ---------------------------------------------------------------------
 
 bool check_airgap_license::valid()
 {
-    return licenseRegister(LicenseSpring::LicenseID::fromKey(getLicenseActivateConfig().key));
+    return true;
 }
 
 // ---------------------------------------------------------------------
 
-bool check_airgap_license::exists() const
-{
-    return std::filesystem::exists(m_license.license_path) and std::filesystem::is_regular_file(m_license.license_path);
-}
-
-// ---------------------------------------------------------------------
-
-std::map<std::string, std::string>
-check_airgap_license::getCustomAndFeatureFields()
-{
-    auto feature_item_registry = std::vector<std::string>({"limitStorage", "warnStorage"});
-
-    auto licenseFileStorage =
-        std::make_shared<LicenseSpring::FileStorageWithLock>(
-            LicenseSpring::FileStorageWithLock(m_license.license_path.wstring()));
-
-    auto licenseManager =
-        LicenseSpring::LicenseManager::create(getLicenseSpringConfig(), licenseFileStorage);
-
-    LicenseSpring::License::ptr_t license = licenseManager->reloadLicense();
-    auto cf = license->customFields();
-    auto features = license->features();
-
-    std::map<std::string, std::string> out_map;
-
-    for (const auto &item : cf)
-    {
-        out_map.emplace(item.fieldName(), item.fieldValue());
-    }
-
-    for (const auto &item : features)
-    {
-        try
-        {
-            m_features.insert(feature_from_string(item.name()));
-        }
-        catch (const util::illegal_args&)
-        {
-        }
-
-        std::string metadata = item.metadata();
-        boost::algorithm::replace_all(metadata, "\\", "");
-
-        if (!metadata.empty())
-        {
-            metadata = metadata.substr(1, metadata.size() - 2);
-            std::stringstream meta_ss(metadata);
-            boost::property_tree::ptree pt;
-            boost::property_tree::read_json(meta_ss, pt);
-
-            for (const auto &item2 : feature_item_registry)
-            {
-                auto optional_child = pt.get_child_optional(item2);
-
-                if (optional_child)
-                {
-                    auto read_entry = optional_child->get_value<std::string>();
-                    out_map.emplace(item2, read_entry);
-                }
-            }
-        }
-        else
-        {
-            out_map.emplace(item.name(), item.metadata());
-        }
-    }
-
-    return out_map;
-}
-
-// ---------------------------------------------------------------------
-
-bool check_airgap_license::has_feature(feature f)
+bool check_airgap_license::has_feature(feature f) const
 {
     return m_features.contains(f);
 }
 
 // ---------------------------------------------------------------------
 
-bool check_airgap_license::licenseRegister(const LicenseSpring::LicenseID &licenseId)
+std::string check_airgap_license::feature_arg_string(feature f, const std::string& name) const
 {
-    auto licenseFileStorage = std::make_shared<LicenseSpring::FileStorageWithLock>
-        (m_license.license_path.wstring());
-
-    if (!std::filesystem::exists(m_license.license_path))
-        licenseFileStorage->create(m_license.license_path.wstring());
-
-    auto licenseManager =
-        LicenseSpring::LicenseManager::create(getLicenseSpringConfig(), licenseFileStorage);
-
-    LicenseSpring::License::ptr_t license = licenseManager->reloadLicense();
-
-    if (!license_check(license))
+    auto it = m_features.find(f);
+    if (it == m_features.end())
     {
-        try
-        {
-            license = licenseManager->activateLicense(licenseId);
-
-            std::string role_set_string, license_type_set_string;
-
-            switch (m_license.licenseNodeRole)
-            {
-                case NodeRole::AgencyNode:role_set_string = noderole2string[NodeRole::AgencyNode];
-                    break;
-                case NodeRole::DataNode:role_set_string = noderole2string[NodeRole::DataNode];
-                    break;
-                default:THROW(util::exception, "No license role detected!");
-            }
-
-            license_type_set_string = licensetype2string[LicenseTypeEnum::AirgapKeyOnline];
-            license->addDeviceVariable("Key", licenseId.key());
-            license->addDeviceVariable("LicenseRole", role_set_string);
-            license->addDeviceVariable("LicenseType", license_type_set_string);
-
-            INFO << "License status: " << license->status();
-        }
-        catch (std::exception &e)
-        {
-            ERROR << e.what();
-            return false;
-        }
+        THROW(util::exception, "feature argument not defined: " + name);
     }
-    else return true;
 
-    if (license != nullptr)
-    {
-        return license_check(license);
-    }
-    else return false;
+    return it->second.get<std::string>(name);
 }
 
 // ---------------------------------------------------------------------
 
+std::size_t check_airgap_license::feature_arg_size_t(feature f, const std::string& name) const
+{
+    auto it = m_features.find(f);
+    if (it == m_features.end())
+    {
+        THROW(util::exception, "feature argument not defined: " + name);
+    }
+
+    return it->second.get<std::size_t>(name);
+}
+
+// ---------------------------------------------------------------------
+
+void check_airgap_license::reload(LicenseSpring::License& license)
+{
+    std::map<feature, boost::property_tree::ptree> features;
+
+    for (const auto& feature : license.features())
+    {
+        try
+        {
+            auto feat = feature_from_string(feature.name());
+            auto& ptree = features[feat];
+
+            auto md = feature.metadata();
+            if (!md.empty())
+            {
+                std::stringstream metadata(md);
+                boost::property_tree::read_json(metadata, features[feat]);
+            }
+        }
+        catch (const util::exception& e)
+        {
+            continue;
+        }
+    }
+
+    std::swap(features, m_features);
+}
+
+// ---------------------------------------------------------------------
+
+#if 0
 bool check_airgap_license::license_check(const LicenseSpring::License::ptr_t &license)
 {
     //First we'll run a online check. This will check your license on the
@@ -279,78 +242,18 @@ bool check_airgap_license::license_check(const LicenseSpring::License::ptr_t &li
                                              return item.first == licenseRole;
                                          })->second;
 
+    /*
     if (m_license.licenseNodeRole != nodeRoleEnum)
     {
         ERROR << "License node role did not match product node role!";
         return false;
     }
+    */
 
     return true;
 }
-
-// ---------------------------------------------------------------------
-
-std::shared_ptr<LicenseSpring::Configuration> check_airgap_license::getLicenseSpringConfig()
-{
-    LicenseSpring::ExtendedOptions options;
-
-#ifdef DEBUG
-    options.enableLogging(true);
 #endif
-    options.enableSSLCheck(true);
-
-    return LicenseSpring::Configuration::Create(
-        EncryptStr(LICENSE_SPRING_API_KEY),
-        EncryptStr(LICENSE_SPRING_SHARED_KEY),
-        m_api.productId,
-        m_credential.appName,
-        m_credential.appVersion,
-        options);
-}
 
 // ---------------------------------------------------------------------
-
-license_activate_config check_airgap_license::getLicenseActivateConfig()
-{
-    auto licenseFileStorage =
-        std::make_shared<LicenseSpring::FileStorageWithLock>(LicenseSpring::
-                                                             FileStorageWithLock(m_license.license_path.wstring()));
-
-    if (!std::filesystem::exists(m_license.license_path))
-        licenseFileStorage->create(m_license.license_path.wstring());
-
-    auto licenseManager =
-        LicenseSpring::LicenseManager::create(getLicenseSpringConfig(), licenseFileStorage);
-
-    LicenseSpring::License::ptr_t license = licenseManager->reloadLicense();
-
-    if(license == nullptr)
-        return m_license_activate;
-
-    auto deviceVars = license->getDeviceVariables();
-
-    auto valueFinder = [&deviceVars](std::string_view input)
-    {
-        return std::string(
-            std::find_if(deviceVars.begin(), deviceVars.end(),
-                         [&input](LicenseSpring::DeviceVariable &item)
-                         {
-                             return item.name() == input;
-                         })->value());
-    };
-
-    const std::string_view licenseType_indicator = "LicenseType";
-
-    //detect license type
-    std::string licType_string = valueFinder(licenseType_indicator);
-    LicenseTypeEnum licType_enum = std::find_if(string2licensetype.begin(), string2licensetype.end(),
-                                                [&licType_string](auto &item)
-                                                {
-                                                    return item.first == licType_string;
-                                                })->second;
-
-    m_license_activate = license_activate_config{ .key = valueFinder("Key") };
-    return m_license_activate;
-}
 
 } // namespace uh::licensing

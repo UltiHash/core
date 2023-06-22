@@ -5,7 +5,7 @@
 #ifndef CORE_CHECK_LICENSE_H
 #define CORE_CHECK_LICENSE_H
 
-#include <licensing/features.h>
+#include <licensing/backend.h>
 #include <io/temp_file.h>
 
 #include <filesystem>
@@ -19,7 +19,9 @@
 #include <LicenseSpring/EncryptString.h>
 #include <LicenseSpring/Exceptions.h>
 
-#include "boost/property_tree/json_parser.hpp"
+#include <boost/property_tree/ptree.hpp>
+#include <boost/property_tree/json_parser.hpp>
+
 
 namespace uh::licensing
 {
@@ -87,9 +89,8 @@ struct license_config
 
 // ---------------------------------------------------------------------
 
-class check_airgap_license
+class check_airgap_license : public backend
 {
-
 public:
 
     /**
@@ -104,57 +105,47 @@ public:
                                   uh::licensing::credential_config credentialConfig_input,
                                   uh::licensing::license_activate_config license_activate_input);
 
+    // without activation
+    explicit check_airgap_license(uh::licensing::license_config license_config,
+                                  uh::licensing::api_config apiKey_input,
+                                  uh::licensing::credential_config credentialConfig_input);
+
     /**
      * the default license is not timed
      *
      * @param license_path is the path to the license file
      * @return if the license file is valid for the implemented service role and features
      */
-    bool valid();
+    bool valid() override;
 
     /**
-     *
-     * @return if license file representation is written to disk
+     * Return true if the given feature is enabled.
      */
-    [[nodiscard]] bool exists() const;
+    bool has_feature(feature f) const override;
 
     /**
-     *
-     * @return a map of key value pairs that will configure the application
+     * Return a feature parameter as an string.
      */
-    [[nodiscard]] std::map<std::string, std::string>
-    getCustomAndFeatureFields();
+    std::string feature_arg_string(feature f, const std::string& name) const override;
 
-    bool has_feature(feature f);
+    /**
+     * Return a feature parameter as an string.
+     */
+    std::size_t feature_arg_size_t(feature f, const std::string& name) const override;
 
 private:
-    api_config m_api;
-    credential_config m_credential;
-    license_config m_license;
+    void reload(LicenseSpring::License& license);
 
-    /**
-     *
-     * @param licenseManager parsed license file and API authentication
-     * @param licenseId license sign method either user based or key based
-     * @return success or failure of license activation and check
-     */
-    bool licenseRegister(const LicenseSpring::LicenseID &licenseId);
+    LicenseSpring::LicenseID m_id;
+    std::shared_ptr<LicenseSpring::Configuration> m_config;
+    std::shared_ptr<LicenseSpring::LicenseFileStorageBase> m_storage;
+    std::shared_ptr<LicenseSpring::LicenseManager> m_manager;
+    std::shared_ptr<LicenseSpring::License> m_license;
 
-    /**
-     *
-     * @param license is the incoming parsed license file
-     * @return if the license was still valid
-     */
-    bool license_check(const LicenseSpring::License::ptr_t &license);
-
-    std::shared_ptr<LicenseSpring::Configuration> getLicenseSpringConfig();
-
-    license_activate_config getLicenseActivateConfig();
-
-    uh::licensing::license_activate_config m_license_activate;
-
-    std::set<feature> m_features;
+    std::map<feature, boost::property_tree::ptree> m_features;
 };
+
+// ---------------------------------------------------------------------
 
 } // namespace uh::licensing
 

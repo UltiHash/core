@@ -4,99 +4,57 @@
 
 #include "licensing/license_package.h"
 
-#include <utility>
+#include "util/exception.h"
+#include "logging/logging_boost.h"
+
 
 namespace uh::licensing
 {
 
-license_package::license_package(std::shared_ptr<uh::licensing::check_airgap_license> check_license)
-    :
-    m_check_license(std::move(check_license))
+// ---------------------------------------------------------------------
+
+license_package::license_package(std::shared_ptr<backend> backend)
+    : m_backend(backend)
 {
-    if (m_check_license->valid())feature_activation();
 }
 
 // ---------------------------------------------------------------------
 
-bool license_package::feature_enabled(feature f) const
+bool license_package::check(feature f) const
 {
-    return m_check_license->has_feature(f);
+    return m_backend->has_feature(f);
 }
 
 // ---------------------------------------------------------------------
 
-void license_package::check(metered_feature smf, std::size_t size_input)
+void license_package::require(feature f, std::size_t value) const
 {
-    if (!has_metred_feature(smf))
-    THROW(util::exception, "Soft metered feature not found!");
+    auto min = m_backend->feature_arg_size_t(f, "min");
+    auto max = m_backend->feature_arg_size_t(f, "max");
 
-    if (size_input <= m_soft_metered_features.at(smf)->soft_limit_val)
+    if (min > value || max < value)
     {
-        m_soft_metered_features.at(smf)->warn_once = true;
-        return;
+        THROW(util::exception, "feature " + to_string(f) + " out of bounds");
     }
 
-    if (size_input <= m_soft_metered_features.at(smf)->hard_limit_val)
+    try
     {
-        if (m_soft_metered_features.at(smf)->warn_once)
+        auto max_soft = m_backend->feature_arg_size_t(f, "max_soft");
+        if (value > max_soft)
         {
-            WARNING
-                << "Soft metered storage resource reached warning limit with "
-                    + std::to_string(size_input)
-                    + " of a maximum of "
-                    + std::to_string(m_soft_metered_features.at(smf)->hard_limit_val) + " bytes.";
-            m_soft_metered_features.at(smf)->warn_once = false;
+            WARNING << "feature " << to_string(f) << " is about to expire";
         }
-
-        return;
     }
-
-    THROW(util::exception, "Out of licensed storage!");
-}
-
-// ---------------------------------------------------------------------
-
-void
-license_package::add_metred_feature(metered_feature smf,
-                                    const std::shared_ptr<metered_resource> &smr)
-{
-    m_soft_metered_features.emplace(smf, smr);
-}
-
-// ---------------------------------------------------------------------
-
-bool license_package::has_metred_feature(metered_feature smf)
-{
-    return m_soft_metered_features.contains(smf);
-}
-
-// ---------------------------------------------------------------------
-
-void license_package::feature_activation()
-{
-    auto feature_online = m_check_license->getCustomAndFeatureFields();
-
-    bool warn = feature_online.contains(WARN_STORAGE_STRING);
-    bool limit = feature_online.contains(LIMIT_STORAGE_STRING);
-
-    if ((warn and limit) or warn)
-        add_metred_feature(
-            metered_feature::LIMIT_STORAGE_CAPACITY,
-            std::make_shared<metered_resource>(std::stoull(feature_online.at(LIMIT_STORAGE_STRING)),
-                                               std::stoull(feature_online
-                                                               .at(limit ? WARN_STORAGE_STRING : LIMIT_STORAGE_STRING)))
-        );
-
-    m_features.emplace(feature::DEDUPLICATION, feature_online.contains(DEDUPLICATION_STRING));
-    m_features.emplace(feature::METRICS, feature_online.contains(METRICS_STRING));
-
+    catch (const std::exception&)
+    {
+    }
 }
 
 // ---------------------------------------------------------------------
 
 bool license_package::valid()
 {
-    return m_check_license->valid();
+    return true;
 }
 
 // ---------------------------------------------------------------------
