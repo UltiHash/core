@@ -8,7 +8,10 @@
 #include "io/temp_file.h"
 #include "io/sha512.h"
 
-#include "LicenseSpring/Exceptions.h"
+#include <LicenseSpring/EncryptString.h>
+#include <LicenseSpring/Exceptions.h>
+
+#include <license_spring_credentials.h>
 
 #include <string>
 #include <iostream>
@@ -303,13 +306,6 @@ const license_config &check_airgap_license::getLicense() const
 
 // ---------------------------------------------------------------------
 
-const api_config &check_airgap_license::getApi() const
-{
-    return m_api;
-}
-
-// ---------------------------------------------------------------------
-
 const credential_config &check_airgap_license::getCredentials() const
 {
     return m_credential;
@@ -320,13 +316,12 @@ const credential_config &check_airgap_license::getCredentials() const
 std::shared_ptr<LicenseSpring::Configuration> check_airgap_license::getLicenseSpringConfig()
 {
     LicenseSpring::ExtendedOptions options = getOptions();
-    uh::licensing::api_config api = getApi();
     uh::licensing::credential_config credentials = getCredentials();
 
     std::shared_ptr<LicenseSpring::Configuration> pConfiguration = LicenseSpring::Configuration::Create(
-        api.apiKey, // your LicenseSpring API key (UUID)
-        api.sharedKey, // your LicenseSpring Shared key
-        api.productId, // product code that you specified in LicenseSpring for your application
+        EncryptStr(LICENSE_SPRING_API_KEY),
+        EncryptStr(LICENSE_SPRING_SHARED_KEY),
+        m_api.productId, // product code that you specified in LicenseSpring for your application
         credentials.appName,
         credentials.appVersion,
         options);

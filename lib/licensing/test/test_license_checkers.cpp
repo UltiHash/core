@@ -7,8 +7,6 @@
 #include <boost/test/unit_test.hpp>
 #include <boost/mpl/vector.hpp>
 
-#include <LicenseSpring/EncryptString.h>
-
 #include <licensing/check_airgap_license.h>
 #include <licensing/license_package.h>
 
@@ -22,10 +20,6 @@ namespace
 // ---------------------------------------------------------------------
 
 const std::filesystem::path TEMP_DIR = "/tmp";
-
-const std::string apiKey_test = EncryptStr("f43e779a-71bc-460f-af89-69a1c47cbe8b");
-
-const std::string sharedKey_test = EncryptStr("UtVbATx32BYf9QAQtLmcEJ4U5-58SezMIkeyb2Cy8l0");
 
 const std::string product_Id_test = EncryptStr("01");
 
@@ -68,7 +62,7 @@ std::unique_ptr<check_airgap_license> make_test_license<check_airgap_license>()
     auto lic_config = license_config();
     lic_config.license_path = TEMP_DIR / (appName_test + ".lic");
 
-    auto api = api_config{ apiKey_test, sharedKey_test, product_Id_test };
+    auto api = api_config{ product_Id_test };
     auto credential = credential_config{ appName_test, appVersion_test };
     auto activate = license_activate_config{ .key = licenseKey_100 };
 
@@ -103,7 +97,7 @@ BOOST_FIXTURE_TEST_CASE_TEMPLATE(license_package_test, T, license_types, Fixture
     auto lic_config = license_config();
     lic_config.license_path = TEMP_DIR;
 
-    auto api = api_config{ apiKey_test, sharedKey_test, product_Id_test };
+    auto api = api_config{ product_Id_test };
     auto credential = credential_config{ appName_test, appVersion_test };
     auto activate = license_activate_config{ .key = licenseKey_100 };
 

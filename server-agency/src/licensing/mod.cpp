@@ -70,9 +70,7 @@ std::unique_ptr<uh::licensing::license_package> make_licensing(const uh::options
                                                      .licenseNodeRole = uh::licensing::NodeRole::DataNode,
                                                      .license_path = cfg.licensing_path };
 
-    auto api = uh::licensing::api_config{ EncryptStr(LICENSE_API_KEY),
-                                          EncryptStr(LICENSE_SHARED_KEY),
-                                          EncryptStr(LICENSE_PRODUCT_ID) };
+    auto api = uh::licensing::api_config{ EncryptStr(LICENSE_PRODUCT_ID) };
     auto credential = uh::licensing::credential_config{ PROJECT_NAME, PROJECT_VERSION };
 
     switch (license_type)

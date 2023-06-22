@@ -25,8 +25,6 @@ namespace uh::licensing
 
 struct api_config
 {
-    const std::string apiKey;
-    const std::string sharedKey;
     const std::string productId;
 };
 
@@ -162,8 +160,6 @@ protected:
     LicenseSpring::ExtendedOptions getOptions();
 
     [[nodiscard]] const license_config &getLicense() const;
-
-    [[nodiscard]] const api_config &getApi() const;
 
     [[nodiscard]] const credential_config &getCredentials() const;
 

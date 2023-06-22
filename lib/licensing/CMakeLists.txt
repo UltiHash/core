@@ -4,6 +4,13 @@ set(CMAKE_CXX_STANDARD 20)
 project(uhLibLicensing)
 message(STATUS "Using ${PROJECT_NAME}...")
 
+set(LICENSE_SPRING_API_KEY "f43e779a-71bc-460f-af89-69a1c47cbe8b")
+set(LICENSE_SPRING_SHARED_KEY "UtVbATx32BYf9QAQtLmcEJ4U5-58SezMIkeyb2Cy8l0")
+
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/license_spring_credentials.h.in
+               ${CMAKE_CURRENT_BINARY_DIR}/license_spring_credentials.h)
+include_directories(${CMAKE_CURRENT_BINARY_DIR})
+
 # external dependencies
 find_package(Boost 1.80 COMPONENTS system unit_test_framework json REQUIRED)
 find_package(OpenSSL REQUIRED)
