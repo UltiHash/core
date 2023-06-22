@@ -12,14 +12,7 @@ namespace uh::options {
 
 licensing_options::licensing_options(): uh::options::options("Licensing Options")
 {
-    visible().add_options()
-            ("activate", value<std::string>()->default_value(""),
-            "Enter: \"license key\" or "
-            "\"license type;license key\" or "
-            "\"license type;license_key;license-path\" or "
-            "\"license type;username;password;license-path\" to activate license on first run."
-            " Default license path DIRECTORY is /var/lib/***-node/licensing ."
-            " Default license type is AirgapKeyOnline");
+    visible().add_options()("activate", value<std::string>(&m_config.key)->default_value(""));
 }
 
 // ---------------------------------------------------------------------

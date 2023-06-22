@@ -8,7 +8,6 @@
 #include <state/mod.h>
 #include <state/options.h>
 #include <licensing/mod.h>
-#include <licensing/options.h>
 #include <logging/logging_boost.h>
 
 #include <options/app_config.h>
@@ -27,7 +26,7 @@ APPLICATION_CONFIG(
     (metrics, uh::options::metrics_options),
     (cluster, uh::an::cluster::options),
     (state, uh::an::state::options),
-    (licensing, uh::an::licensing::options));
+    (licensing, uh::options::licensing_options));
 
 using namespace uh::log;
 using namespace uh::an;

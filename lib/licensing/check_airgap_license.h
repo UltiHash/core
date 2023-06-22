@@ -32,11 +32,6 @@ struct credential_config
 {
     const std::string appName;
     const std::string appVersion;
-
-    bool empty()
-    {
-        return appName.empty() and appVersion.empty();
-    }
 };
 
 // ---------------------------------------------------------------------

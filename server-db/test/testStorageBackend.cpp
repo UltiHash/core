@@ -29,12 +29,12 @@ protected:
     set_licensing()
     {
         uh::options::licensing_config m_config{};
-        m_config.licensing_path = "/tmp/uh-data-node/licensing";
-        m_config.license_key = "GZLF-TD88-AZAK-2F01";
+        m_config.path = "/tmp/uh-data-node/licensing";
+        m_config.key = "GZLF-TD88-AZAK-2F01";
 
-        if (!std::filesystem::exists(m_config.licensing_path))
+        if (!std::filesystem::exists(m_config.path))
         {
-            std::filesystem::create_directories(m_config.licensing_path);
+            std::filesystem::create_directories(m_config.path);
         }
 
         uh::dbn::licensing::global_license_pointer_dbn = std::make_unique<uh::dbn::licensing::mod>(m_config);

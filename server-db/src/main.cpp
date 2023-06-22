@@ -7,7 +7,6 @@
 #include <state/mod.h>
 #include <metrics/mod.h>
 #include <licensing/mod.h>
-#include <licensing/options.h>
 #include <logging/logging_boost.h>
 
 #include <storage/storage_config.h>
@@ -25,7 +24,7 @@ APPLICATION_CONFIG(
     (metrics, uh::options::metrics_options),
     (storage, uh::dbn::storage::options),
     (comp, uh::dbn::storage::compression_options),
-    (licensing, uh::dbn::licensing::options));
+    (licensing, uh::options::licensing_options));
 
 using namespace uh::log;
 using namespace uh::dbn;
