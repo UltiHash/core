@@ -74,7 +74,7 @@ public:
     std::size_t feature_arg_size_t(feature f, const std::string& name) const override;
 
 private:
-    void reload(LicenseSpring::License& license);
+    void reload();
 
     std::shared_ptr<LicenseSpring::Configuration> m_config;
     std::shared_ptr<LicenseSpring::LicenseFileStorageBase> m_storage;

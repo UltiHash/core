@@ -58,7 +58,19 @@ check_airgap_license::check_airgap_license(const ls_airgap_config& config,
       m_manager(LicenseSpring::LicenseManager::create(m_config, m_storage)),
       m_license(m_manager->activateLicense(LicenseSpring::LicenseID::fromKey(key)))
 {
-    reload(*m_license);
+    m_license->check();
+    reload();
+}
+
+// ---------------------------------------------------------------------
+
+check_airgap_license::check_airgap_license(const ls_airgap_config& config)
+    : m_config(mk_config(config)),
+      m_storage(LicenseSpring::LicenseFileStorage::create(config.path.wstring())),
+      m_manager(LicenseSpring::LicenseManager::create(m_config, m_storage)),
+      m_license(m_manager->reloadLicense())
+{
+    reload();
 }
 
 // ---------------------------------------------------------------------
@@ -112,28 +124,28 @@ std::size_t check_airgap_license::feature_arg_size_t(feature f, const std::strin
 
 // ---------------------------------------------------------------------
 
-void check_airgap_license::reload(LicenseSpring::License& license)
+void check_airgap_license::reload()
 {
-    license.check();
+    m_license->localCheck();
 
-    if (!license.isActive())
+    if (!m_license->isActive())
     {
         THROW(util::exception, "license is not activated");
     }
 
-    if (license.isExpired())
+    if (m_license->isExpired())
     {
         THROW(util::exception, "license is expired");
     }
 
-    if (!license.isEnabled())
+    if (!m_license->isEnabled())
     {
         THROW(util::exception, "license is not enabled");
     }
 
     std::map<feature, boost::property_tree::ptree> features;
 
-    for (const auto& feature : license.features())
+    for (const auto& feature : m_license->features())
     {
         try
         {

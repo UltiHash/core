@@ -7,6 +7,7 @@
 #include <boost/test/unit_test.hpp>
 #include <boost/mpl/vector.hpp>
 
+#include <util/exception.h>
 #include <util/temp_dir.h>
 #include <licensing/check_airgap_license.h>
 #include <licensing/license_package.h>
@@ -23,7 +24,7 @@ namespace
 const std::string product_Id_test = "uhtest";
 const std::string appName_test = "uh-test";
 const std::string appVersion_test = "0.2.0";
-const std::string licenseKey_100 = "GZM9-S88G-RNEK-2EUH";
+const std::string licenseKey_test = "GZM9-S88G-RNEK-2EUH";
 
 // ---------------------------------------------------------------------
 
@@ -48,19 +49,24 @@ std::unique_ptr<T> make_test_license(const std::filesystem::path& path);
 
 // ---------------------------------------------------------------------
 
-template<>
-std::unique_ptr<check_airgap_license> make_test_license<check_airgap_license>(
-    const std::filesystem::path& path)
+auto mk_ls_config(const std::filesystem::path& path)
 {
     // TODO why do we need to give the filename twice
-    auto config = ls_airgap_config {
+    return ls_airgap_config {
         .productId = product_Id_test,
         .appName = appName_test,
         .appVersion = appVersion_test,
         .path = path / "test.lic" / "test.lic"
     };
+}
 
-    return std::make_unique<check_airgap_license>(config, licenseKey_100);
+// ---------------------------------------------------------------------
+
+template<>
+std::unique_ptr<check_airgap_license> make_test_license<check_airgap_license>(
+    const std::filesystem::path& path)
+{
+    return std::make_unique<check_airgap_license>(mk_ls_config(path), licenseKey_test);
 }
 
 // ---------------------------------------------------------------------
@@ -71,28 +77,43 @@ BOOST_FIXTURE_TEST_CASE_TEMPLATE(valid_default_license, T, license_types, Fixtur
     auto lic = make_test_license<T>(temp.path());
 
     BOOST_CHECK(lic->valid());
+
+    BOOST_CHECK(lic->has_feature(feature::STORAGE));
 }
 
 // ---------------------------------------------------------------------
 
-BOOST_FIXTURE_TEST_CASE_TEMPLATE(license_package_test, T, license_types, Fixture)
+BOOST_AUTO_TEST_CASE( ls_activate)
 {
     util::temp_directory temp;
 
-    std::shared_ptr<T> tmp_write_airgap = make_test_license<T>(temp.path());
+    {
+        check_airgap_license lic(mk_ls_config(temp.path()), licenseKey_test);
 
-    BOOST_REQUIRE(tmp_write_airgap->valid());
+        BOOST_REQUIRE(lic.valid());
+    }
 
-    auto config = ls_airgap_config {
-        .productId = product_Id_test,
-        .appName = appName_test,
-        .appVersion = appVersion_test,
-        .path = temp.path() / "test.lic" / "test.lic"
-    };
+    {
+        check_airgap_license lic(mk_ls_config(temp.path()));
 
-    T tmp_write_airgap2(config, licenseKey_100);
+        BOOST_REQUIRE(lic.valid());
+    }
+}
 
-    BOOST_REQUIRE(tmp_write_airgap2.valid());
+// ---------------------------------------------------------------------
+
+BOOST_FIXTURE_TEST_CASE_TEMPLATE(check_license_package, T, license_types, Fixture)
+{
+    util::temp_directory temp;
+    auto lic = make_test_license<T>(temp.path());
+
+    BOOST_REQUIRE(lic->valid());
+
+    license_package pkg(std::move(lic));
+
+    BOOST_CHECK(pkg.check(feature::STORAGE));
+    BOOST_CHECK_NO_THROW(pkg.require(feature::STORAGE, 200000));
+    BOOST_CHECK_THROW(pkg.require(feature::STORAGE, 1000000), util::exception);
 }
 
 // ---------------------------------------------------------------------
