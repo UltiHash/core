@@ -68,8 +68,7 @@ std::unique_ptr<uh::licensing::license_package> make_licensing(const uh::options
 
     auto lic_config = uh::licensing::license_config(license_type,
                                                     uh::licensing::NodeRole::AgencyNode,
-                                                    cfg.licensing_path,
-                                                    cfg.license_replace);
+                                                    cfg.licensing_path);
 
     auto api = uh::licensing::api_config(EncryptStr(LICENSE_API_KEY),
                                          EncryptStr(LICENSE_SHARED_KEY),

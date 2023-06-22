@@ -67,7 +67,6 @@ std::unique_ptr<check_airgap_license> make_test_license<check_airgap_license>()
 {
     auto lic_config = license_config();
     lic_config.license_path = TEMP_DIR / (appName_test + ".lic");
-    lic_config.replace_license = true;
 
     auto api = api_config(apiKey_test, sharedKey_test, product_Id_test);
     auto credential = credential_config(appName_test, appVersion_test);
@@ -105,7 +104,6 @@ BOOST_FIXTURE_TEST_CASE_TEMPLATE(license_package_test, T, license_types, Fixture
 
     auto lic_config = license_config();
     lic_config.license_path = TEMP_DIR;
-    lic_config.replace_license = true;
 
     auto api = api_config(apiKey_test, sharedKey_test, product_Id_test);
     auto credential = credential_config(appName_test, appVersion_test);

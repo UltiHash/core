@@ -119,24 +119,8 @@ check_airgap_license::getCustomAndFeatureFields()
 
 bool check_airgap_license::licenseRegister(const LicenseSpring::LicenseID &licenseId)
 {
-    if (m_license.replace_license)
-    {
-        try
-        {
-            if (std::filesystem::is_regular_file(m_license.license_path)
-                and m_license.license_path.extension() == ".lic")
-                std::filesystem::remove(m_license.license_path);
-        }
-        catch (std::exception &e)
-        {
-            THROW(util::exception, "Could not remove UltiHash license file for this reason: " +
-                std::string(e.what()));
-        }
-    }
-
-    auto licenseFileStorage =
-        std::make_shared<LicenseSpring::FileStorageWithLock>(LicenseSpring::
-                                                             FileStorageWithLock(m_license.license_path.wstring()));
+    auto licenseFileStorage = std::make_shared<LicenseSpring::FileStorageWithLock>
+        (m_license.license_path.wstring());
 
     if (!std::filesystem::exists(m_license.license_path))
         licenseFileStorage->create(m_license.license_path.wstring());

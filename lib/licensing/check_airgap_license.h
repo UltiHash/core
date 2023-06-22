@@ -138,19 +138,16 @@ public:
     const bool enableGuardFile = true;
 
     std::filesystem::path license_path = "/var/lib";
-    bool replace_license = false;
 
     license_config() = default;
 
     license_config(const LicenseTypeEnum licenseType,
                    const NodeRole nodeRole,
-                   std::filesystem::path license_path_input,
-                   bool replace_license)
+                   std::filesystem::path license_path_input)
         :
         licenseTypeInternal(licenseType),
         licenseNodeRole(nodeRole),
-        license_path(std::move(license_path_input)),
-        replace_license(replace_license)
+        license_path(std::move(license_path_input))
     {}
 };
 

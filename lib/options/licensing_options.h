@@ -11,66 +11,59 @@
 
 namespace uh::options {
 
-    // ---------------------------------------------------------------------
+// ---------------------------------------------------------------------
 
-    struct licensing_config
-    {
-    public:
-        std::string licensing_path;
-        std::string license_key;
-        std::string license_user;
-        std::string license_password;
-        std::string license_type;
+struct licensing_config
+{
+public:
+    std::string licensing_path;
+    std::string license_key;
+    std::string license_user;
+    std::string license_password;
+    std::string license_type;
 
-        bool license_replace = false;
+    licensing_config() = default;
 
-        licensing_config() = default;
+    licensing_config(std::string path,
+                        std::string type,
+                        std::string key){
+        licensing_path = std::move(path);
+        license_type = std::move(type);
+        license_key = std::move(key);
+    }
 
-        licensing_config(std::string path,
-                         bool replace,
-                         std::string type,
-                         std::string key){
-            licensing_path = std::move(path);
-            license_replace = replace;
-            license_type = std::move(type);
-            license_key = std::move(key);
-        }
+    licensing_config(std::string path,
+                        std::string type,
+                        std::string user,
+                        std::string pass){
+        licensing_path = std::move(path);
+        license_type = std::move(type);
+        license_user = std::move(user);
+        license_password = std::move(pass);
+    }
 
-        licensing_config(std::string path,
-                         bool replace,
-                         std::string type,
-                         std::string user,
-                         std::string pass){
-            licensing_path = std::move(path);
-            license_replace = replace;
-            license_type = std::move(type);
-            license_user = std::move(user);
-            license_password = std::move(pass);
-        }
-
-        [[nodiscard]] bool unchanged() const{
-            return licensing_path.empty() and
-            license_key.empty()
-            and license_user.empty()
-            and license_password.empty()
-            and license_type.empty()
-            and !license_replace;
-        }
-    };
+    [[nodiscard]] bool unchanged() const{
+        return licensing_path.empty() and
+        license_key.empty()
+        and license_user.empty()
+        and license_password.empty()
+        and license_type.empty();
+    }
+};
 
 // ---------------------------------------------------------------------
 
-    class licensing_options : public uh::options::options
-    {
-    public:
-        licensing_options();
+class licensing_options : public uh::options::options
+{
+public:
+    licensing_options();
 
-        [[nodiscard]] const licensing_config& config() const;
+    [[nodiscard]] const licensing_config& config() const;
 
-    protected:
-        licensing_config m_config;
+protected:
+    licensing_config m_config;
 
-    };
+};
 
 // ---------------------------------------------------------------------
 

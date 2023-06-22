@@ -19,12 +19,7 @@ namespace uh::an::licensing
 
 uh::options::action options::evaluate(const boost::program_options::variables_map &vars)
 {
-    m_config.license_key = std::filesystem::path(vars["activate-replace"].as<std::string>());
-
-    if (m_config.license_key.empty())
-        m_config.license_key = std::filesystem::path(vars["activate"].as<std::string>());
-    else m_config.license_replace = true;
-
+    m_config.license_key = std::filesystem::path(vars["activate"].as<std::string>());
     m_config.license_type = "AirgapKeyOnline";
 
     if (std::any_of(m_config.licensing_path.cbegin(), m_config.licensing_path.cend(),
