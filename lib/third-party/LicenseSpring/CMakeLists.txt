@@ -9,7 +9,7 @@
 #
 # Note that on macOS, this module requires the "macLICENSESPRING" package to be installed.
 
-
+#[===[
 cmake_minimum_required(VERSION 3.22.0 FATAL_ERROR)
 set(CMAKE_CXX_STANDARD 20)
 
@@ -192,4 +192,4 @@ message("Include directories to ")
 
 target_link_libraries(${PROJECT_NAME} INTERFACE ${${PROJECT_NAME}_LINK_LIBRARIES})
 target_include_directories(${PROJECT_NAME} INTERFACE ${${PROJECT_NAME}_INCLUDE_DIRS})
-
+]===]
