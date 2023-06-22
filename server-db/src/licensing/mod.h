@@ -2,22 +2,15 @@
 // Created by benjamin-elias on 15.06.23.
 //
 
-#ifndef CORE_MOD_H
-#define CORE_MOD_H
+#ifndef CORE_LICENSING_MOD_H
+#define CORE_LICENSING_MOD_H
 
-#include "licensing/license_package.h"
-#include "options/licensing_options.h"
-#include <logging/logging_boost.h>
-#include <util/exception.h>
+#include <licensing/license_package.h>
+#include <options/licensing_options.h>
 
-#include <unordered_map>
 #include <memory>
-#include <string>
-#include <filesystem>
 
-#include <config.hpp>
 
-#include <LicenseSpring/EncryptString.h>
 
 namespace uh::dbn::licensing
 {
@@ -44,4 +37,4 @@ private:
 
 } // namespace uh::dbn::licensing
 
-#endif //CORE_MOD_H
+#endif

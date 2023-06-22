@@ -2,20 +2,18 @@
 // Created by benjamin-elias on 06.06.23.
 //
 
-#include "licensing/check_airgap_license.h"
-#include "util/exception.h"
-#include "logging/logging_boost.h"
-
-#include <LicenseSpring/Exceptions.h>
-
+#include <licensing/check_airgap_license.h>
 #include <license_spring_credentials.h>
 
-#include <string>
-#include <iostream>
-#include <utility>
+#include <util/exception.h>
 
-#include "boost/property_tree/ptree.hpp"
-#include "boost/algorithm/string.hpp"
+#include <boost/property_tree/json_parser.hpp>
+
+#include <LicenseSpring/Configuration.h>
+#include <LicenseSpring/EncryptString.h>
+#include <LicenseSpring/LicenseFileStorage.h>
+#include <LicenseSpring/LicenseID.h>
+
 
 using namespace LicenseSpring;
 
@@ -27,16 +25,16 @@ namespace
 
 // ---------------------------------------------------------------------
 
-std::shared_ptr<LicenseSpring::Configuration> mk_config(const ls_airgap_config& config)
+std::shared_ptr<Configuration> mk_config(const ls_airgap_config& config)
 {
-    LicenseSpring::ExtendedOptions options;
+    ExtendedOptions options;
 
 #ifdef DEBUG
     options.enableLogging(true);
 #endif
     options.enableSSLCheck(true);
 
-    return LicenseSpring::Configuration::Create(
+    return Configuration::Create(
         EncryptStr(LICENSE_SPRING_API_KEY),
         EncryptStr(LICENSE_SPRING_SHARED_KEY),
         config.productId,
@@ -53,10 +51,10 @@ std::shared_ptr<LicenseSpring::Configuration> mk_config(const ls_airgap_config& 
 
 check_airgap_license::check_airgap_license(const ls_airgap_config& config,
                                            const std::string& key)
-    : m_config(mk_config(config)),
-      m_storage(LicenseSpring::LicenseFileStorage::create(config.path.wstring())),
-      m_manager(LicenseSpring::LicenseManager::create(m_config, m_storage)),
-      m_license(m_manager->activateLicense(LicenseSpring::LicenseID::fromKey(key)))
+    : m_manager(LicenseManager::create(
+            mk_config(config),
+            LicenseFileStorage::create(config.path.wstring()))),
+      m_license(m_manager->activateLicense(LicenseID::fromKey(key)))
 {
     m_license->check();
     reload();
@@ -65,9 +63,9 @@ check_airgap_license::check_airgap_license(const ls_airgap_config& config,
 // ---------------------------------------------------------------------
 
 check_airgap_license::check_airgap_license(const ls_airgap_config& config)
-    : m_config(mk_config(config)),
-      m_storage(LicenseSpring::LicenseFileStorage::create(config.path.wstring())),
-      m_manager(LicenseSpring::LicenseManager::create(m_config, m_storage)),
+    : m_manager(LicenseManager::create(
+            mk_config(config),
+            LicenseFileStorage::create(config.path.wstring()))),
       m_license(m_manager->reloadLicense())
 {
     reload();

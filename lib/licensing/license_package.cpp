@@ -2,10 +2,10 @@
 // Created by benjamin-elias on 06.06.23.
 //
 
-#include "licensing/license_package.h"
+#include "license_package.h"
 
-#include "util/exception.h"
-#include "logging/logging_boost.h"
+#include <util/exception.h>
+#include <logging/logging_boost.h>
 
 
 namespace uh::licensing

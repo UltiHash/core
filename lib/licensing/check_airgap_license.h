@@ -8,18 +8,11 @@
 #include <licensing/backend.h>
 
 #include <filesystem>
-#include <utility>
 #include <map>
 
-#include <LicenseSpring/LicenseManager.h>
-#include <LicenseSpring/LicenseID.h>
-#include <LicenseSpring/LicenseFileStorage.h>
-#include <LicenseSpring/Configuration.h>
-#include <LicenseSpring/EncryptString.h>
-#include <LicenseSpring/Exceptions.h>
-
 #include <boost/property_tree/ptree.hpp>
-#include <boost/property_tree/json_parser.hpp>
+
+#include <LicenseSpring/LicenseManager.h>
 
 
 namespace uh::licensing
@@ -76,8 +69,6 @@ public:
 private:
     void reload();
 
-    std::shared_ptr<LicenseSpring::Configuration> m_config;
-    std::shared_ptr<LicenseSpring::LicenseFileStorageBase> m_storage;
     std::shared_ptr<LicenseSpring::LicenseManager> m_manager;
     std::shared_ptr<LicenseSpring::License> m_license;
 

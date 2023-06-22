@@ -7,32 +7,12 @@
 
 #include "licensing/license_package.h"
 #include "options/licensing_options.h"
-#include <logging/logging_boost.h>
-#include <util/exception.h>
 
-#include <unordered_map>
 #include <memory>
-#include <string>
-#include <filesystem>
 
-#include <config.hpp>
-
-#include <LicenseSpring/EncryptString.h>
 
 namespace uh::an::licensing
 {
-
-// ---------------------------------------------------------------------
-
-enum class LicenseTypeEnum
-{
-    AirgapOnlineActivationLicense, OtherLicense
-};
-
-static std::unordered_map<std::string, LicenseTypeEnum> string2licensetype = {
-    {"AirgapKeyOnline", LicenseTypeEnum::AirgapOnlineActivationLicense},
-    {"OtherLicense", LicenseTypeEnum::OtherLicense}
-};
 
 // ---------------------------------------------------------------------
 

@@ -4,6 +4,12 @@
 
 #include "mod.h"
 
+#include <config.hpp>
+
+#include <logging/logging_boost.h>
+#include <util/exception.h>
+
+
 namespace uh::an::licensing
 {
 

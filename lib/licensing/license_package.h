@@ -50,7 +50,6 @@ public:
     bool valid();
 
 private:
-
     std::map<feature, bool> m_features;
     std::shared_ptr<backend> m_backend;
 };
