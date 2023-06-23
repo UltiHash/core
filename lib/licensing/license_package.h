@@ -6,7 +6,7 @@
 #define CORE_LICENSE_PACKAGE_H
 
 #include <licensing/backend.h>
-#include <licensing/check_airgap_license.h>
+#include <licensing/config.h>
 
 #include <map>
 #include <memory>
@@ -19,16 +19,14 @@ namespace uh::licensing
 
 class license_package
 {
-
 public:
-
     /**
      * manages features and metered setup on top of the license checker
      *
      * @param config license file input
      * @throws if license is invalid or cannot be loaded
      */
-    explicit license_package(std::shared_ptr<backend> check_license);
+    explicit license_package(const config& c);
 
     /**
      *
@@ -51,7 +49,7 @@ public:
 
 private:
     std::map<feature, bool> m_features;
-    std::shared_ptr<backend> m_backend;
+    std::unique_ptr<backend> m_backend;
 };
 
 } // namespace uh::licensing

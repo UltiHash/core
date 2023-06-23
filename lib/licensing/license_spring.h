@@ -20,28 +20,28 @@ namespace uh::licensing
 
 // ---------------------------------------------------------------------
 
-struct ls_airgap_config
+struct license_spring_config
 {
-    const std::string productId;
-    const std::string appName;
-    const std::string appVersion;
+    std::string productId;
+    std::string appName;
+    std::string appVersion;
     std::filesystem::path path;
 };
 
 // ---------------------------------------------------------------------
 
-class check_airgap_license : public backend
+class license_spring : public backend
 {
 public:
 
     /**
      * Construct and activate license.
      */
-    explicit check_airgap_license(const ls_airgap_config& config,
-                                  const std::string& key);
+    explicit license_spring(const license_spring_config& config,
+                            const std::string& key);
 
     // without activation
-    explicit check_airgap_license(const ls_airgap_config& config);
+    explicit license_spring(const license_spring_config& config);
 
     /**
      * the default license is not timed

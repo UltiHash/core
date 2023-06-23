@@ -6,18 +6,11 @@
 #define CORE_LICENSING_OPTIONS_H
 
 #include <options/options.h>
+#include <licensing/config.h>
 
 
 namespace uh::options
 {
-
-// ---------------------------------------------------------------------
-
-struct licensing_config
-{
-    std::string path;
-    std::string key;
-};
 
 // ---------------------------------------------------------------------
 
@@ -26,10 +19,10 @@ class licensing_options : public uh::options::options
 public:
     licensing_options();
 
-    [[nodiscard]] const licensing_config& config() const;
+    [[nodiscard]] const licensing::config& config() const;
 
 protected:
-    licensing_config m_config;
+    licensing::config m_config;
 };
 
 // ---------------------------------------------------------------------

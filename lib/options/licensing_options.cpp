@@ -6,18 +6,22 @@
 
 using namespace boost::program_options;
 
-namespace uh::options {
+
+namespace uh::options
+{
 
 // ---------------------------------------------------------------------
 
-licensing_options::licensing_options(): uh::options::options("Licensing Options")
+licensing_options::licensing_options()
+    : uh::options::options("Licensing Options")
 {
-    visible().add_options()("activate", value<std::string>(&m_config.key)->default_value(""));
+    visible().add_options()("activate",
+        value<std::string>(&m_config.activation_key)->default_value(""));
 }
 
 // ---------------------------------------------------------------------
 
-const licensing_config& licensing_options::config() const
+const licensing::config& licensing_options::config() const
 {
     return m_config;
 }
