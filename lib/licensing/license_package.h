@@ -6,7 +6,6 @@
 #define CORE_LICENSE_PACKAGE_H
 
 #include <licensing/backend.h>
-#include <licensing/check_airgap_license.h>
 
 #include <map>
 #include <memory>

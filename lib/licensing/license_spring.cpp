@@ -2,7 +2,7 @@
 // Created by benjamin-elias on 06.06.23.
 //
 
-#include <licensing/check_airgap_license.h>
+#include <licensing/license_spring.h>
 #include <license_spring_credentials.h>
 
 #include <util/exception.h>
@@ -25,7 +25,7 @@ namespace
 
 // ---------------------------------------------------------------------
 
-std::shared_ptr<Configuration> mk_config(const ls_airgap_config& config)
+std::shared_ptr<Configuration> mk_config(const license_spring_config& config)
 {
     ExtendedOptions options;
 
@@ -49,11 +49,11 @@ std::shared_ptr<Configuration> mk_config(const ls_airgap_config& config)
 
 // ---------------------------------------------------------------------
 
-check_airgap_license::check_airgap_license(const ls_airgap_config& config,
-                                           const std::string& key)
+license_spring::license_spring(const license_spring_config& config,
+                               const std::string& key)
     : m_manager(LicenseManager::create(
-            mk_config(config),
-            LicenseFileStorage::create(config.path.wstring()))),
+                mk_config(config),
+                LicenseFileStorage::create(config.path.wstring()))),
       m_license(m_manager->activateLicense(LicenseID::fromKey(key)))
 {
     m_license->check();
@@ -62,10 +62,10 @@ check_airgap_license::check_airgap_license(const ls_airgap_config& config,
 
 // ---------------------------------------------------------------------
 
-check_airgap_license::check_airgap_license(const ls_airgap_config& config)
+license_spring::license_spring(const license_spring_config& config)
     : m_manager(LicenseManager::create(
-            mk_config(config),
-            LicenseFileStorage::create(config.path.wstring()))),
+                mk_config(config),
+                LicenseFileStorage::create(config.path.wstring()))),
       m_license(m_manager->reloadLicense())
 {
     reload();
@@ -73,7 +73,7 @@ check_airgap_license::check_airgap_license(const ls_airgap_config& config)
 
 // ---------------------------------------------------------------------
 
-bool check_airgap_license::valid()
+bool license_spring::valid()
 {
     try
     {
@@ -89,14 +89,14 @@ bool check_airgap_license::valid()
 
 // ---------------------------------------------------------------------
 
-bool check_airgap_license::has_feature(feature f) const
+bool license_spring::has_feature(feature f) const
 {
     return m_features.contains(f);
 }
 
 // ---------------------------------------------------------------------
 
-std::string check_airgap_license::feature_arg_string(feature f, const std::string& name) const
+std::string license_spring::feature_arg_string(feature f, const std::string& name) const
 {
     auto it = m_features.find(f);
     if (it == m_features.end())
@@ -109,7 +109,7 @@ std::string check_airgap_license::feature_arg_string(feature f, const std::strin
 
 // ---------------------------------------------------------------------
 
-std::size_t check_airgap_license::feature_arg_size_t(feature f, const std::string& name) const
+std::size_t license_spring::feature_arg_size_t(feature f, const std::string& name) const
 {
     auto it = m_features.find(f);
     if (it == m_features.end())
@@ -122,7 +122,7 @@ std::size_t check_airgap_license::feature_arg_size_t(feature f, const std::strin
 
 // ---------------------------------------------------------------------
 
-void check_airgap_license::reload()
+void license_spring::reload()
 {
     m_license->localCheck();
 

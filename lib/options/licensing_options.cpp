@@ -6,7 +6,9 @@
 
 using namespace boost::program_options;
 
-namespace uh::options {
+
+namespace uh::options
+{
 
 // ---------------------------------------------------------------------
 
