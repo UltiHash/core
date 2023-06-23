@@ -21,13 +21,12 @@ void sync_ptr (void *ptr, std::size_t size);
 
 class offset_ptr {
 public:
-    offset_ptr (uint64_t offset = 0, void* addr = nullptr);
-    uint64_t m_offset;
-    char* m_addr;
+    offset_ptr () = default;
+    offset_ptr (uint64_t offset, void* addr = nullptr);
+    uint64_t m_offset {};
+    char* m_addr = nullptr;
 
-    bool operator == (const offset_ptr& ptr) const noexcept {
-        return m_addr == ptr.m_addr;
-    }
+    bool operator == (const offset_ptr& ptr) const noexcept;
 private:
     [[nodiscard]] offset_ptr get_offset_ptr_at (size_t offset) const;
     [[nodiscard]] offset_ptr get_offset_ptr_at (void* raw_ptr) const;

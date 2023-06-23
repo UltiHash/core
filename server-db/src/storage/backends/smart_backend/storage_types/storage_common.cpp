@@ -21,7 +21,7 @@ void sync_ptr (void *ptr, std::size_t size) {
 
 
 offset_ptr::offset_ptr(size_t offset, void *addr) :
-        m_addr (static_cast <char*> (addr)), m_offset (offset) {}
+        m_offset (offset), m_addr (static_cast <char*> (addr)) {}
 
 offset_ptr offset_ptr::get_offset_ptr_at(size_t offset) const {
     if (m_addr == nullptr) {
@@ -37,12 +37,16 @@ offset_ptr offset_ptr::get_offset_ptr_at(void *raw_ptr) const {
     return {(static_cast <char*> (raw_ptr) - static_cast <char*> (m_addr)) + m_offset, raw_ptr};
 }
 
+bool offset_ptr::operator==(const offset_ptr &ptr) const noexcept {
+    return m_addr == ptr.m_addr;
+}
+
 resource_entry::resource_entry(void *addr, std::filesystem::path path, size_t size, size_t offset) :
-        m_path (std::move(path)),
-        m_ptr (offset, addr),
-        m_size (size),
-        m_monotonic_buffer(addr, size, std::pmr::null_memory_resource()),
-        m_pool_resource(&m_monotonic_buffer) {}
+    m_path (std::move(path)),
+    m_ptr (offset, addr),
+    m_size (size),
+    m_monotonic_buffer(addr, size, std::pmr::null_memory_resource()),
+    m_pool_resource(&m_monotonic_buffer) {}
 
 std::pmr::memory_resource& resource_entry::get_pool_resource() {
     return m_pool_resource;

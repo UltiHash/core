@@ -58,6 +58,9 @@ private:
         if (pos.position == 0) {
             throw std::logic_error ("paged_redblack_tree relies on the given position. First call the find function.");
         }
+        if (pos.comp == 0 and pos.position != m_first_block.nill_offset) {
+            return pos;
+        }
 
         node z = add_node (pos.position);
         z.m_mnode->m_parent = pos.position;
@@ -145,8 +148,6 @@ private:
             return {};
         }
 
-
-
         auto fend = find ({end_data.data(), end_data.size()});
 
         uint64_t end_offset;
@@ -155,6 +156,8 @@ private:
         }
         else if (fend.lower.has_value()) {
             end_offset = fend.lower->index_offset;
+            if (fend.lower.value().data.compare({start_data.data(), start_data.size()}) > 0)
+                result.push_back({fend.lower.value().data, fend.lower.value().data_offset, end_offset});
         }
         else {
             return {};

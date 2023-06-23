@@ -15,7 +15,6 @@
 #include <storage/backends/smart_backend/smart_core.h>
 #include "storage/backends/smart_backend/persistent_maps/persisted_robinhood_hashmap.h"
 #include "storage/backends/smart_backend/storage_types/growing_managed_storage.h"
-#include "storage/backends/smart_backend/persistent_sets/persisted_redblack_tree_set.h"
 #include "storage/backends/smart_backend/persistent_maps/sorted_key_map.h"
 
 
@@ -262,10 +261,11 @@ BOOST_FIXTURE_TEST_CASE(test_mmap_storage_persistet_alloc_test, files_info_fixtu
 }
 
 
-uint64_t set_insert (fixed_managed_storage& ms, sets::persisted_redblack_tree_set& set, std::string_view data, uint64_t hint = 2 * sizeof (uint64_t)) {
+uint64_t set_insert (fixed_managed_storage& ms, sets::paged_redblack_tree<>& set, std::string_view data, uint64_t hint = 2 * sizeof (uint64_t)) {
     auto alloc = ms.allocate(data.size());
     std::memcpy(alloc.m_addr, data.data(), data.size());
-    const auto h = set.add_pointer (data, alloc.m_offset);
+    const auto f = set.find(data);
+    const auto h = set.add_pointer (data, alloc.m_offset, f.index);
     return h.position;
 }
 
@@ -274,17 +274,18 @@ BOOST_FIXTURE_TEST_CASE(basic_test_mmap_set, files_info_fixture)
     cleanup();
     fixed_managed_storage ms(get_data_store_config());
 
-    sets::persisted_redblack_tree_set set {get_set_conf(), ms};
+    sets::paged_redblack_tree set {get_set_conf(), ms};
 
     auto h = set_insert (ms, set, "hello from data 1");
     h = set_insert (ms, set, "data 2 hello from data 2", h);
     set_insert(ms, set, "third data hello from data 3", h);
     set_insert(ms, set, "some other data");
-    set_insert(ms, set, "yet again, some other data");
-    h = set_insert(ms, set, "yet again, some other data", h);
+    h = set_insert(ms, set, "yet again, some other data");
+    h = set_insert(ms, set, "yet again, some other data");
     set_insert(ms, set, "yet again, some other data");
     set_insert(ms, set, "and even more data");
     set_insert(ms, set, "third data hello from data 3", h);
+
     set_insert(ms, set, "some other data 2 ");
     set_insert(ms, set, "yet again, some other data 2");
     h = set_insert(ms, set, "yet again, some other data 2", h);
