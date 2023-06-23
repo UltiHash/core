@@ -4,6 +4,10 @@ set(CMAKE_CXX_STANDARD 20)
 project(uhLibLicensing)
 message(STATUS "Using ${PROJECT_NAME}...")
 
+if (CMAKE_VERSION VERSION_GREATER_EQUAL "3.24.0")
+    cmake_policy(SET CMP0135 NEW)
+endif()
+
 set(LICENSE_SPRING_API_KEY "f43e779a-71bc-460f-af89-69a1c47cbe8b")
 set(LICENSE_SPRING_SHARED_KEY "UtVbATx32BYf9QAQtLmcEJ4U5-58SezMIkeyb2Cy8l0")
 
@@ -12,14 +16,6 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/license_spring_credentials.h.in
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
 include(ExternalProject)
-set(SPRING_SHARED ON)
-
-if (SPRING_SHARED STREQUAL "ON")
-    set(COMPILE_LIBRARY_NAME_TYPE "shared")
-else ()
-    set(COMPILE_LIBRARY_NAME_TYPE "static")
-endif ()
-
 set(CMAKE_VERBOSE_MAKEFILE ON)
 set(LICENSESPRING_VERSION "7.24.0")
 
@@ -31,13 +27,13 @@ endif ()
 
 # external dependencies
 find_package(Boost 1.80 COMPONENTS system unit_test_framework json REQUIRED)
-find_package(OpenSSL 1.1.1 REQUIRED)
+find_package(OpenSSL 1.1.1 EXACT)
 find_package(CURL 4.8.0 REQUIRED)
 
 message("Downloading License Spring to ${CMAKE_BINARY_DIR}/ext")
 
 ExternalProject_Add(
-        libLicenseSpring
+        libLicenseSpringExtern
         PREFIX "${CMAKE_BINARY_DIR}/ext"
         URL "https://kwiki-user-media.s3.amazonaws.com/staging/content/file_widgets/LicenseSpringCppSDKv${LICENSESPRING_VERSION}_${LICENSESPRING_TARGET}.zip"
         DOWNLOAD_DIR "${CMAKE_BINARY_DIR}/ext/download"
@@ -47,11 +43,23 @@ ExternalProject_Add(
         UPDATE_COMMAND ""
         INSTALL_COMMAND ""
         LOG_DIR "${CMAKE_BINARY_DIR}/ext/ep-logs"
+        BUILD_BYPRODUCTS ${CMAKE_BINARY_DIR}/ext/src/libLicenseSpringExtern/bin/shared/${CMAKE_BUILD_TYPE}/libLicenseSpring.so
 )
 
+file(REMOVE ${CMAKE_BINARY_DIR}/ext/src/libLicenseSpringExtern/bin/shared/${CMAKE_BUILD_TYPE}/libcurl.so.4.8.0)
+file(REMOVE ${CMAKE_BINARY_DIR}/ext/src/libLicenseSpringExtern/bin/shared/${CMAKE_BUILD_TYPE}/libcurl.so.4)
+file(REMOVE ${CMAKE_BINARY_DIR}/ext/src/libLicenseSpringExtern/bin/shared/${CMAKE_BUILD_TYPE}/libcurl.so)
 
-set(${PROJECT_NAME}_INCLUDE_DIRS ${Boost_INCLUDE_DIRS})
-set(${PROJECT_NAME}_LINK_LIBRARIES ${Boost_LIBRARIES} ${OPENSSL_LIBRARIES} uhLibIo uhLibLogging)
+set(LIB_LICENSE_SPRING_INCLUDE "${CMAKE_BINARY_DIR}/ext/src/libLicenseSpringExtern/include")
+file(MAKE_DIRECTORY ${LIB_LICENSE_SPRING_INCLUDE})
+
+add_library(libLicenseSpring SHARED IMPORTED)
+set_property(TARGET libLicenseSpring PROPERTY IMPORTED_LOCATION ${CMAKE_BINARY_DIR}/ext/src/libLicenseSpringExtern/bin/shared/${CMAKE_BUILD_TYPE}/libLicenseSpring.so)
+target_include_directories(libLicenseSpring INTERFACE ${LIB_LICENSE_SPRING_INCLUDE})
+add_dependencies(libLicenseSpring libLicenseSpringExtern)
+
+set(${PROJECT_NAME}_INCLUDE_DIRS ${Boost_INCLUDE_DIRS} ${CURL_INCLUDE_DIR})
+set(${PROJECT_NAME}_LINK_LIBRARIES ${Boost_LIBRARIES} ${CURL_LIBRARIES} ${OPENSSL_LIBRARIES} uhLibIo uhLibLogging libLicenseSpring)
 
 # adding all the .h files of the current project
 file(GLOB HEADER_FILE_LIST ${CMAKE_CURRENT_SOURCE_DIR}/*.h)
@@ -59,16 +67,9 @@ file(GLOB HEADER_FILE_LIST ${CMAKE_CURRENT_SOURCE_DIR}/*.h)
 # adding all the .cpp files of the current project
 file(GLOB SOURCE_FILE_LIST ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp)
 
-add_library(${PROJECT_NAME} ${HEADER_FILE_LIST} ${SOURCE_FILE_LIST})
-target_include_directories(${PROJECT_NAME} PUBLIC ${${PROJECT_NAME}_INCLUDE_DIRS} ${CMAKE_BINARY_DIR}/ext/src/libLicenseSpring/include)
-
-set(LIBRARY_PATH "ext/src/LicenceSpring/bin/${COMPILE_LIBRARY_NAME_TYPE}/${CMAKE_BUILD_TYPE}")
-
-set_target_properties(${PROJECT_NAME} PROPERTIES LINK_FLAGS "-L${LIBRARY_PATH} -Wl,--no-as-needed,--enable-new-dtags,-rpath,$ORIGIN/ext/src/LicenceSpring/bin/${COMPILE_LIBRARY_NAME_TYPE}/${CMAKE_BUILD_TYPE}")
-
-add_custom_target(download_ls)
-add_dependencies(${PROJECT_NAME} libLicenseSpring)
-target_link_libraries(${PROJECT_NAME} ${${PROJECT_NAME}_LINK_LIBRARIES} "${CMAKE_BINARY_DIR}/ext/src/libLicenseSpring/bin/${COMPILE_LIBRARY_NAME_TYPE}/${CMAKE_BUILD_TYPE}/libLicenseSpring.so")
+add_library(${PROJECT_NAME} OBJECT ${HEADER_FILE_LIST} ${SOURCE_FILE_LIST})
+target_include_directories(${PROJECT_NAME} PUBLIC ${${PROJECT_NAME}_INCLUDE_DIRS})
+target_link_libraries(${PROJECT_NAME} PUBLIC ${${PROJECT_NAME}_LINK_LIBRARIES})
 
 # create testing targets
 include(${CMAKE_CURRENT_SOURCE_DIR}/../../cmake/testing/CMakeLists.txt)
