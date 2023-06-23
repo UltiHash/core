@@ -19,8 +19,9 @@ include(ExternalProject)
 set(CMAKE_VERBOSE_MAKEFILE ON)
 set(LICENSESPRING_VERSION "7.24.0")
 
-if (CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-    set(LICENSESPRING_TARGET "Linux_clang11")
+
+if (${CMAKE_SYSTEM_PROCESSOR} MATCHES "aarch64")
+    set(LICENSESPRING_TARGET "Linux_AArch64")
 else ()
     set(LICENSESPRING_TARGET "Linux_GCC9.2")
 endif ()
