@@ -45,7 +45,6 @@ int main(int argc, const char **argv)
 
         init_logging(config.logging());
 
-
         INFO << "--- Agency Node Modules ---";
         cluster::mod cluster_module(config.cluster());
         cluster_module.start();
@@ -53,14 +52,16 @@ int main(int argc, const char **argv)
         uh::an::state::mod state_module(config.state());
         state_module.start();
 
-        metrics::mod metrics_module(config.metrics(), state_module);
-
-        uh::an::licensing::global_license_pointer_an = std::make_unique<uh::an::licensing::mod>(config.licensing());
+        auto licensing = config.licensing();
+        licensing.ls_config.path = config.state().data_directory / "license";
+        uh::an::licensing::global_license_pointer_an =
+            std::make_unique<uh::an::licensing::mod>(licensing);
         uh::an::licensing::global_license_pointer_an->start();
+
+        metrics::mod metrics_module(config.metrics(), state_module);
 
         server::mod server_module(config.server(), cluster_module, metrics_module);
         server_module.start();
-
 
         signal_handler.register_func([&]()
                                      {

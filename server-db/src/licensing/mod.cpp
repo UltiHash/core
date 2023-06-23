@@ -48,7 +48,7 @@ mod::mod(const uh::licensing::config& cfg)
 
 void mod::start()
 {
-    INFO << "          starting licensing module";
+    INFO << "starting licensing module";
 
     if (!g_license_package->valid())
     {

@@ -33,7 +33,6 @@ struct license_spring_config
 class license_spring : public backend
 {
 public:
-
     /**
      * Construct and activate license.
      */
