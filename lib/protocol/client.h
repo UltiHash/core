@@ -62,12 +62,12 @@ public:
      * response.
      * @return response from server
      */
-    uh::protocol::write_chunks::response write_chunks(const uh::protocol::write_chunks::request &);
+    uh::protocol::write_chunks::response write_chunks(const uh::protocol::write_chunks::request&);
 
     /**
      * Sends a bunch of hashes to the server and receives its data.
      */
-    uh::protocol::read_chunks::response read_chunks (const read_chunks::request &req);
+    uh::protocol::read_chunks::response read_chunks(const read_chunks::request& req);
 
     /**
      * writes the given key value query to server

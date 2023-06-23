@@ -5,9 +5,11 @@
 #ifndef CORE_DESERIALIZER_H
 #define CORE_DESERIALIZER_H
 
+#include <util/exception.h>
 #include "serialization_common.h"
 #include <protocol/common.h>
 #include <util/ospan.h>
+
 
 namespace uh::serialization {
 
@@ -63,10 +65,11 @@ namespace uh::serialization {
 
             char buffer[1 + data_size_len + data_size];
             if (io::read(dev_, buffer) == 0)
-                throw std::runtime_error("Device is empty.");
+            {
+                THROW(uh::util::exception, "device is empty");
+            }
 
             Arithmetic data = *reinterpret_cast <Arithmetic *> (buffer + data_size_len + 1);
-            //std::memcpy(&data, buffer + data_size_len + 1, data_size);
 
             if (is_different_endian(buffer[0])) [[unlikely]] {
                 data = endian_convert (data);

@@ -8,9 +8,9 @@
 #include <fstream>
 #include <boost/test/unit_test.hpp>
 
-#include <client/f_traverse.h>
+#include <client/traverse.h>
 #include "uhv/job_queue.h"
-#include "uhv/f_meta_data.h"
+#include "uhv/meta_data.h"
 
 // ------------- Tests Suites Follow --------------
 using namespace uh::client;
@@ -46,15 +46,15 @@ BOOST_AUTO_TEST_SUITE(TraverseSuite)
 
     BOOST_FIXTURE_TEST_CASE(traverseTest, fs_fixture)
     {
-        std::vector<std::filesystem::path> operate_paths = {"./mock_dir/mock_subdir"};
+        std::filesystem::path path = "./mock_dir/mock_subdir";
 
         uh::uhv::job_queue<std::unique_ptr<
-                uh::uhv::f_meta_data>>
+                uh::uhv::meta_data>>
                 output_jq;
-        f_traverse traverse(operate_paths, output_jq);
-        traverse.traverse();
+        traverse traverse(path, output_jq);
+        traverse.run();
 
-        std::vector<std::filesystem::path> all_f_metadata;
+        std::vector<std::filesystem::path> all_metadata;
         output_jq.stop();
 
         while (auto item = output_jq.get_job())
@@ -62,11 +62,11 @@ BOOST_AUTO_TEST_SUITE(TraverseSuite)
             if (item == std::nullopt)
                 break;
             else
-                all_f_metadata.push_back(item.value()->f_path());
+                all_metadata.push_back(item.value()->path());
         }
 
-        BOOST_TEST(all_f_metadata[0] == "./mock_dir/mock_subdir");
-        BOOST_TEST(all_f_metadata[1] == "./mock_dir/mock_subdir/mock_file.txt");
+        BOOST_TEST(all_metadata[0] == "./mock_dir/mock_subdir");
+        BOOST_TEST(all_metadata[1] == "./mock_dir/mock_subdir/mock_file.txt");
     }
 
 // ---------------------------------------------------------------------

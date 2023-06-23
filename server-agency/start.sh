@@ -1,20 +1,23 @@
 #!/bin/bash
 
-echo "Waiting for uh-server-db to become available..."
-RAND=$(( ( RANDOM % 5 )  + 40 ))
-sleep $RAND
+SERVER_NAME="uh-server-db"
+SERVER_PORT=12345
+TIMEOUT="60"  # empty for infinite
 
-while true
-do
-  STDOUT=$(curl -s -f -i http://uh-server-db:8080/metrics)
-  ERRNO="$?"
-  if [ "$ERRNO" -eq 0 ] ; then
-        echo "uh-server-db has become available, moving on..."
-        break   # end loop
-  fi
-  RAND=$(( ( RANDOM % 5 )  + 5 ))
-  echo "uh-server-db is not available, retrying in $RAND seconds..."
-  sleep $RAND
+echo "Waiting for ${SERVER_NAME}:${SERVER_PORT} to become available..."
+
+timeout=$TIMEOUT
+while ! ncat -z ${SERVER_NAME} ${SERVER_PORT}; do
+    if [ "$timeout" = "0" ]; then
+        echo "Waiting for server ${SERVER_NAME}:${SERVER_PORT} failed"
+        exit 1
+    fi
+
+    if [ -n "$timeout" ]; then
+        timeout=$((timeout - 1))
+    fi
+    sleep 1;
 done
 
-uh-agency-node --db-node uh-server-db:12345
+echo "uh-server-db has become available, moving on..."
+uh-agency-node --db-node ${SERVER_NAME}:${SERVER_PORT}

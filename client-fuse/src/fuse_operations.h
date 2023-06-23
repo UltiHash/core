@@ -5,32 +5,24 @@
 #ifndef CORE_FUSE_OPERATIONS_H
 #define CORE_FUSE_OPERATIONS_H
 
-#include "config.hpp"
-#include <fuse.h>
-#include <filesystem>
+#include <util/exception.h>
 #include <logging/logging_boost.h>
 #include <unordered_map>
 #include <uhv/job_queue.h>
-#include <uhv/f_serialization.h>
-#include <uhv/f_meta_data.h>
-#include <protocol/client_factory.h>
-#include <protocol/client_pool.h>
-#include <net/plain_socket.h>
-#include <util/exception.h>
-#include "thread_safe_type.h"
+#include <uhv/meta_data.h>
+#include <uhv/file.h>
 
-namespace uh::uhv {
+#include "context.h"
 
-struct private_context
+#include <filesystem>
+
+#include <fuse.h>
+
+
+namespace uh::fuse
 {
-    unsigned long fd = 0;
-    boost::asio::io_context io;
-    std::unique_ptr<uh::protocol::client_pool> client_pool;
-    ts_container fmetadata_map;
-    thread_safe_type <std::unordered_map <std::string, unsigned long>> subdirectory_counts;
-    thread_safe_type <std::unordered_map <unsigned long, ts_f_meta_data&>> open_files;
-};
 
+// ---------------------------------------------------------------------
 
 struct options
 {
@@ -40,6 +32,8 @@ struct options
     int agency_connections;
     bool show_help;
 };
+
+// ---------------------------------------------------------------------
 
 constexpr std::uint64_t max_chunk_size = 1 << 22;
 constexpr std::uint64_t min_chuck_size = 64 * 1024ul;

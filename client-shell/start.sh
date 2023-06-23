@@ -2,21 +2,23 @@
 
 ncat -e /bin/cat -k -u -l 1337 &
 
-echo "Waiting for uh-server-agency to become available..."
-RAND=$(( ( RANDOM % 5 )  + 1 ))
-sleep $RAND
+SERVER_NAME="uh-server-agency"
+SERVER_PORT=21832
+TIMEOUT="60"  # empty for infinite
 
-while true
-do
-  STDOUT=$(curl -s -f -i http://uh-server-agency:8080/metrics)
-  ERRNO="$?"
-  if [ "$ERRNO" -eq 0 ] ; then
-        echo "uh-server-agency has become available, moving on..."
-        break   # end loop
-  fi
-  RAND=$(( ( RANDOM % 5 )  + 5 ))
-  echo "uh-server-agency is not available, retrying in $RAND seconds..."
-  sleep $RAND
+echo "Waiting for ${SERVER_NAME}:${SERVER_PORT} to become available..."
+
+timeout=$TIMEOUT
+while ! ncat -z ${SERVER_NAME} ${SERVER_PORT}; do
+    if [ "$timeout" = "0" ]; then
+        echo "Waiting for server ${SERVER_NAME}:${SERVER_PORT} failed"
+        exit 1
+    fi
+
+    if [ -n "$timeout" ]; then
+        timeout=$((timeout - 1))
+    fi
+    sleep 1;
 done
 
 # exit when any command fails
@@ -33,11 +35,12 @@ cp /usr/local/bin/uh-cli test
 
 # store checksums of test workload, integrate data into UltiHash volume and delete files afterwards
 sha512sum test/uh-cli > checksum.txt
-uh-cli --integrate test.uh test --agency-node uh-server-agency:21832
+uh-cli --integrate test.uh test --agency-node ${SERVER_NAME}:${SERVER_PORT}
 rm -Rf test
 
 # retrieve test workload and validate their checksums
-yes | uh-cli --retrieve test.uh --target ./ --agency-node uh-server-agency:21832
+mkdir test
+yes | uh-cli --retrieve test.uh --target ./test --agency-node ${SERVER_NAME}:${SERVER_PORT}
 cat checksum.txt | sha512sum -c
 
 # cleanup

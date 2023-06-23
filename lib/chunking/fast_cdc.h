@@ -2,7 +2,6 @@
 #define CHUNKING_FAST_CDC_H
 
 #include <io/device.h>
-#include <chunking/buffer.h>
 #include <chunking/chunker.h>
 
 
@@ -34,18 +33,15 @@ struct fast_cdc_config
 class fast_cdc : public chunker
 {
 public:
-    fast_cdc(const fast_cdc_config& config, io::device& in, std::size_t buffer_size = 0);
+    fast_cdc(const fast_cdc_config& config);
 
-    std::span<char> next_chunk() override;
-    [[nodiscard]] buffer& get_buffer () override;
+    std::vector<uint32_t> chunk(std::span<char> b) const override;
 
+    std::size_t min_size() const override { return m_min_size; }
 
 private:
-    void to_split_border();
+    std::size_t next_ofs(std::span<char> b, uint64_t& fp) const;
 
-    buffer m_buffer;
-
-    uint64_t m_fp = 0;
     const uint64_t* m_geartable;
     std::size_t m_min_size;
     std::size_t m_max_size;
@@ -58,5 +54,6 @@ private:
 // ---------------------------------------------------------------------
 
 } // namespace uh::chunking
+
 
 #endif
