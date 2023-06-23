@@ -11,10 +11,29 @@
 namespace uh::licensing
 {
 
+namespace
+{
+
 // ---------------------------------------------------------------------
 
-license_package::license_package(std::shared_ptr<backend> backend)
-    : m_backend(backend)
+std::unique_ptr<backend> mk_backend(const config& c)
+{
+    if (!c.activation_key.empty())
+    {
+        return std::make_unique<license_spring>(c.ls_config, c.activation_key);
+    }
+
+    return std::make_unique<license_spring>(c.ls_config);
+}
+
+// ---------------------------------------------------------------------
+
+}
+
+// ---------------------------------------------------------------------
+
+license_package::license_package(const config& c)
+    : m_backend(mk_backend(c))
 {
 }
 
@@ -54,7 +73,7 @@ void license_package::require(feature f, std::size_t value) const
 
 bool license_package::valid()
 {
-    return true;
+    return m_backend->valid();
 }
 
 // ---------------------------------------------------------------------

@@ -22,9 +22,9 @@ namespace uh::licensing
 
 struct license_spring_config
 {
-    const std::string productId;
-    const std::string appName;
-    const std::string appVersion;
+    std::string productId;
+    std::string appName;
+    std::string appVersion;
     std::filesystem::path path;
 };
 

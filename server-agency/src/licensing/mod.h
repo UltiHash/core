@@ -5,8 +5,8 @@
 #ifndef CORE_MOD_H
 #define CORE_MOD_H
 
-#include "licensing/license_package.h"
-#include "options/licensing_options.h"
+#include <licensing/license_package.h>
+#include <options/licensing_options.h>
 
 #include <memory>
 
@@ -19,12 +19,12 @@ namespace uh::an::licensing
 class mod
 {
 public:
-    explicit mod(const uh::options::licensing_config &cfg);
+    explicit mod(const uh::licensing::config& cfg);
     ~mod();
 
     void start();
 
-    uh::licensing::license_package &license_package();
+    uh::licensing::license_package& license_package();
 
 private:
     struct impl;

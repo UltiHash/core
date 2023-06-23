@@ -16,7 +16,10 @@ struct config
         license_spring,
     };
 
-    license_spring_config ls_airgap;
+    backend_type type = license_spring;
+    license_spring_config ls_config;
+
+    std::string activation_key;
 };
 
 // ---------------------------------------------------------------------

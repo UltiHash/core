@@ -11,7 +11,6 @@
 #include <memory>
 
 
-
 namespace uh::dbn::licensing
 {
 
@@ -20,17 +19,14 @@ namespace uh::dbn::licensing
 class mod
 {
 public:
-    explicit mod(const uh::options::licensing_config &cfg);
-
-    ~mod();
+    explicit mod(const uh::licensing::config& cfg);
 
     void start();
 
-    uh::licensing::license_package &license_package();
+    static uh::licensing::license_package& license_package();
 
 private:
-    struct impl;
-    std::unique_ptr<impl> m_impl;
+    static std::unique_ptr<uh::licensing::license_package> g_license_package;
 };
 
 // ---------------------------------------------------------------------

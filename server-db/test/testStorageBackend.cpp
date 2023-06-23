@@ -9,6 +9,7 @@
 
 #include <util/temp_dir.h>
 #include <io/buffer.h>
+#include <licensing/mod.h>
 #include <metrics/mod.h>
 #include <state/scheduled_compressions_state.h>
 #include <storage/backends/hierarchical_storage.h>
@@ -22,44 +23,25 @@
 namespace
 {
 
-class set_licensing
-{
-
-protected:
-    set_licensing()
-    {
-        uh::options::licensing_config m_config{};
-        m_config.path = "/tmp/uh-data-node/licensing";
-        m_config.key = "GZLF-TD88-AZAK-2F01";
-
-        if (!std::filesystem::exists(m_config.path))
-        {
-            std::filesystem::create_directories(m_config.path);
-        }
-
-        uh::dbn::licensing::global_license_pointer_dbn = std::make_unique<uh::dbn::licensing::mod>(m_config);
-        uh::dbn::licensing::global_license_pointer_dbn->start();
-    }
-
-    ~set_licensing(){
-        std::filesystem::remove_all("/tmp/uh-data-node");
-    }
-
-};
-
-class storage_fixture: set_licensing
+class storage_fixture
 {
 public:
     static constexpr std::size_t ALLOCATED_BYTES = 1e6;
 
     storage_fixture()
-        : set_licensing(),
+        : m_licensing(uh::licensing::config {
+            .ls_config = {
+                .path = m_tmp.path() / "test.lic" / "test.lic",
+            },
+            .activation_key = "GZLF-TD88-AZAK-2F01"
+          }),
           m_metrics_service({}),
           m_metrics(m_metrics_service),
           m_hierarchical({m_tmp.path(), ALLOCATED_BYTES},
                          m_metrics,
                          m_scheduled_compressions)
-    {}
+    {
+    }
 
     uh::dbn::storage::backend &backend()
     {
@@ -68,11 +50,11 @@ public:
 
 private:
     uh::util::temp_directory m_tmp;
+    uh::dbn::licensing::mod m_licensing;
     uh::metrics::service m_metrics_service;
     uh::dbn::metrics::storage_metrics m_metrics;
     uh::dbn::state::scheduled_compressions_state m_scheduled_compressions;
     uh::dbn::storage::hierarchical_storage m_hierarchical;
-
 };
 
 const std::string CONTENTS_STR = "These are the contents of test_input_file.txt and test_input_file_2.txt";

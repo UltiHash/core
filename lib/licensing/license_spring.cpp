@@ -25,7 +25,7 @@ namespace
 
 // ---------------------------------------------------------------------
 
-std::shared_ptr<Configuration> mk_config(const license_spring_config& config)
+std::shared_ptr<LicenseSpring::LicenseManager> mk_manager(const license_spring_config& config)
 {
     ExtendedOptions options;
 
@@ -34,13 +34,16 @@ std::shared_ptr<Configuration> mk_config(const license_spring_config& config)
 #endif
     options.enableSSLCheck(true);
 
-    return Configuration::Create(
+    auto cfg = Configuration::Create(
         EncryptStr(LICENSE_SPRING_API_KEY),
         EncryptStr(LICENSE_SPRING_SHARED_KEY),
         config.productId,
         config.appName,
         config.appVersion,
         options);
+
+    auto storage = LicenseFileStorage::create(config.path.wstring());
+    return LicenseManager::create(cfg, storage);
 }
 
 // ---------------------------------------------------------------------
@@ -51,9 +54,7 @@ std::shared_ptr<Configuration> mk_config(const license_spring_config& config)
 
 license_spring::license_spring(const license_spring_config& config,
                                const std::string& key)
-    : m_manager(LicenseManager::create(
-                mk_config(config),
-                LicenseFileStorage::create(config.path.wstring()))),
+    : m_manager(mk_manager(config)),
       m_license(m_manager->activateLicense(LicenseID::fromKey(key)))
 {
     m_license->check();
@@ -63,9 +64,7 @@ license_spring::license_spring(const license_spring_config& config,
 // ---------------------------------------------------------------------
 
 license_spring::license_spring(const license_spring_config& config)
-    : m_manager(LicenseManager::create(
-                mk_config(config),
-                LicenseFileStorage::create(config.path.wstring()))),
+    : m_manager(mk_manager(config)),
       m_license(m_manager->reloadLicense())
 {
     reload();
@@ -124,6 +123,11 @@ std::size_t license_spring::feature_arg_size_t(feature f, const std::string& nam
 
 void license_spring::reload()
 {
+    if (!m_license)
+    {
+        THROW(util::exception, "could not load license");
+    }
+
     m_license->localCheck();
 
     if (!m_license->isActive())
@@ -154,7 +158,7 @@ void license_spring::reload()
             if (!md.empty())
             {
                 std::stringstream metadata(md);
-                boost::property_tree::read_json(metadata, features[feat]);
+                boost::property_tree::read_json(metadata, ptree);
             }
         }
         catch (const util::exception& e)

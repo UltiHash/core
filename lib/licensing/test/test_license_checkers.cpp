@@ -5,11 +5,10 @@
 #endif
 
 #include <boost/test/unit_test.hpp>
-#include <boost/mpl/vector.hpp>
 
 #include <util/exception.h>
 #include <util/temp_dir.h>
-#include <licensing/check_airgap_license.h>
+#include <licensing/license_spring.h>
 #include <licensing/license_package.h>
 
 
@@ -28,31 +27,10 @@ const std::string licenseKey_test = "GZM9-S88G-RNEK-2EUH";
 
 // ---------------------------------------------------------------------
 
-typedef boost::mpl::vector<
-    check_airgap_license
-> license_types;
-
-// ---------------------------------------------------------------------
-
-struct Fixture
-{
-};
-
-// ---------------------------------------------------------------------
-
-/**
- * To be implemented for each type in `license_types`: constructs a license
- * that will read the text given in LOREM_IPSUM.
- */
-template<typename T>
-std::unique_ptr<T> make_test_license(const std::filesystem::path& path);
-
-// ---------------------------------------------------------------------
-
 auto mk_ls_config(const std::filesystem::path& path)
 {
     // TODO why do we need to give the filename twice
-    return ls_airgap_config {
+    return license_spring_config {
         .productId = product_Id_test,
         .appName = appName_test,
         .appVersion = appVersion_test,
@@ -62,58 +40,37 @@ auto mk_ls_config(const std::filesystem::path& path)
 
 // ---------------------------------------------------------------------
 
-template<>
-std::unique_ptr<check_airgap_license> make_test_license<check_airgap_license>(
-    const std::filesystem::path& path)
-{
-    return std::make_unique<check_airgap_license>(mk_ls_config(path), licenseKey_test);
-}
-
-// ---------------------------------------------------------------------
-
-BOOST_FIXTURE_TEST_CASE_TEMPLATE(valid_default_license, T, license_types, Fixture)
+BOOST_AUTO_TEST_CASE(valid_default_license)
 {
     util::temp_directory temp;
-    auto lic = make_test_license<T>(temp.path());
+    license_package pkg(licensing::config{
+        .ls_config = mk_ls_config(temp.path()),
+        .activation_key = licenseKey_test });
 
-    BOOST_CHECK(lic->valid());
-
-    BOOST_CHECK(lic->has_feature(feature::STORAGE));
-}
-
-// ---------------------------------------------------------------------
-
-BOOST_AUTO_TEST_CASE( ls_activate)
-{
-    util::temp_directory temp;
-
-    {
-        check_airgap_license lic(mk_ls_config(temp.path()), licenseKey_test);
-
-        BOOST_REQUIRE(lic.valid());
-    }
-
-    {
-        check_airgap_license lic(mk_ls_config(temp.path()));
-
-        BOOST_REQUIRE(lic.valid());
-    }
-}
-
-// ---------------------------------------------------------------------
-
-BOOST_FIXTURE_TEST_CASE_TEMPLATE(check_license_package, T, license_types, Fixture)
-{
-    util::temp_directory temp;
-    auto lic = make_test_license<T>(temp.path());
-
-    BOOST_REQUIRE(lic->valid());
-
-    license_package pkg(std::move(lic));
+    BOOST_CHECK(pkg.valid());
 
     BOOST_CHECK(pkg.check(feature::STORAGE));
     BOOST_CHECK_NO_THROW(pkg.require(feature::STORAGE, 200000));
     BOOST_CHECK_THROW(pkg.require(feature::STORAGE, 1000000), util::exception);
+}
+
+// ---------------------------------------------------------------------
+
+BOOST_AUTO_TEST_CASE(ls_activate)
+{
+    util::temp_directory temp;
+
+    {
+        license_spring lic(mk_ls_config(temp.path()), licenseKey_test);
+
+        BOOST_REQUIRE(lic.valid());
+    }
+
+    {
+        license_spring lic(mk_ls_config(temp.path()));
+
+        BOOST_REQUIRE(lic.valid());
+    }
 }
 
 // ---------------------------------------------------------------------
