@@ -45,6 +45,12 @@ typedef enum : uint8_t
     /* Memory couldn't be allocated. */
     UDB_BAD_ALLOCATION,
 
+    /* Cannot set key(s) as a key type has already been previously set. */
+    UDB_KEY_ALREADY_SET,
+
+    /* Not intialized. */
+    UDB_UNINITIALIZED,
+
 } UDB_RESULT;
 
 /*
@@ -52,17 +58,6 @@ typedef enum : uint8_t
 */
 // is uint8_t enough?
 UDB_RESULT udb_get_last_error();
-
-typedef enum : uint8_t
-{
-    MULTIPLE_KEYS = 0,
-
-    RANGE_KEYS,
-
-    NOT_DEFINED
-
-} UDB_READ_QUERY_TYPE;
-
 
 typedef struct UDB_DATA_WRAPPER
 {
@@ -187,9 +182,9 @@ UDB_RESULT udb_add(UDB_CONNECTION* conn, UDB_WRITE_QUERY* write_query); // shoul
 // case user hasn't specified it
 
 UDB_READ_QUERY* udb_create_read_query();
-UDB_RESULT udb_read_query_add_key();
-UDB_RESULT udb_read_query_set_key_range();
-UDB_RESULT udb_read_query_add_label();
+UDB_RESULT udb_read_query_add_key(UDB_READ_QUERY* read_query, UDB_DATA* key);
+UDB_RESULT udb_read_query_set_key_range(UDB_READ_QUERY* read_query, UDB_DATA* start_key, UDB_DATA* end_key);
+UDB_RESULT udb_read_query_set_labels(UDB_READ_QUERY* read_query, char** labels, size_t label_count);
 UDB_RESULT udb_destroy_read_query(UDB_READ_QUERY** read_query_ptr_container);
 
 UDB_RESULT udb_get(UDB_CONNECTION* conn, UDB_READ_QUERY* read_query, UDB_DOCUMENT** udb_document);
