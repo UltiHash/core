@@ -20,7 +20,7 @@ void sync_ptr (void *ptr, std::size_t size) {
 }
 
 
-offset_ptr::offset_ptr(size_t offset, void *addr) :
+offset_ptr::offset_ptr(uint64_t offset, void *addr) :
         m_offset (offset), m_addr (static_cast <char*> (addr)) {}
 
 offset_ptr offset_ptr::get_offset_ptr_at(size_t offset) const {
