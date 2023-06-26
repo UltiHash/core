@@ -163,7 +163,7 @@ namespace uh::serialization {
             auto ptr = std::make_unique_for_overwrite<T[]>(data_size);
 
             io::read(dev_, {reinterpret_cast <char*> (ptr.get ()), data_size});
-            return {data_size, std::move (ptr)};
+            return {data_size / sizeof(T), std::move (ptr)};
 
         }
 
