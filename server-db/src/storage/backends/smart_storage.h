@@ -33,7 +33,7 @@ public:
 
     std::unique_ptr<io::data_generator> read_block(const std::span <char>& hash) override;
 
-    std::pair <std::size_t, std::vector <char>> write_block (const std::span <char>& data) override;
+    std::pair <std::size_t, std::vector <char>> write_block (const std::span <const char>& data) override;
 
     std::size_t write_key_value (const std::span <char>& key, const std::span <char>& data) override;
 

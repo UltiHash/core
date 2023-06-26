@@ -51,7 +51,7 @@ namespace uh::dbn::storage {
         /**
          * Writes the data to the storage backend and returns its hash and effective size
          */
-        virtual std::pair <std::size_t, std::vector <char>> write_block (const std::span <char>& data) = 0;
+        virtual std::pair <std::size_t, std::vector <char>> write_block (const std::span <const char>& data) = 0;
 
         /**
          * Writes the key value to the storage backend and returns the effective size
