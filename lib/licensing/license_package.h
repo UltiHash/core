@@ -1,7 +1,3 @@
-//
-// Created by benjamin-elias on 01.06.23.
-//
-
 #ifndef CORE_LICENSE_PACKAGE_H
 #define CORE_LICENSE_PACKAGE_H
 

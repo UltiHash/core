@@ -1,7 +1,3 @@
-//
-// Created by benjamin-elias on 01.06.23.
-//
-
 #ifndef CORE_CHECK_LICENSE_H
 #define CORE_CHECK_LICENSE_H
 

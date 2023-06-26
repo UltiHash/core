@@ -1,7 +1,3 @@
-//
-// Created by benjamin-elias on 26.06.23.
-//
-
 #include <licensing/demo_license.h>
 
 #include <util/exception.h>
@@ -72,7 +68,7 @@ void demo_license::reload()
     const auto feat = feature::STORAGE;
     auto& ptree = features[feat];
 
-    auto md = R"("max" : 10737418240 "min" : 0 "max_soft" : 10200547328)";
+    auto md = "{\"max\":10737418240,\"max_soft\":10200547328,\"min\":0}";
     std::stringstream metadata(md);
     boost::property_tree::read_json(metadata, ptree);
 

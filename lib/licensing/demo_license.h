@@ -1,7 +1,3 @@
-//
-// Created by benjamin-elias on 26.06.23.
-//
-
 #ifndef DEMO_LICENSE_H
 #define DEMO_LICENSE_H
 

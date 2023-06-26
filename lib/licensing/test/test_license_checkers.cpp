@@ -35,7 +35,7 @@ auto mk_ls_config(const std::filesystem::path& path)
         .productId = product_Id_test,
         .appName = appName_test,
         .appVersion = appVersion_test,
-        .path = path / "test.lic" / "test.lic"
+        .path = path / (appName_test+".lic") / (appName_test+".lic")
     };
 }
 

@@ -1,7 +1,3 @@
-//
-// Created by benjamin-elias on 06.06.23.
-//
-
 #include "license_package.h"
 #include "demo_license.h"
 
