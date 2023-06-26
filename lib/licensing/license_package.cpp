@@ -15,24 +15,31 @@ namespace
 
 std::unique_ptr<backend> mk_backend(const config& c)
 {
-    if (!c.activation_key.empty())
-    {
+    try{
+        if (!c.activation_key.empty())
+        {
+            switch (c.type)
+            {
+                case uh::licensing::config::backend_type::license_spring:
+                    return std::make_unique<license_spring>(c.ls_config, c.activation_key);
+                default:
+                THROW(util::exception, "The demo license does not require a key!");
+            }
+
+        }
+
         switch (c.type)
         {
             case uh::licensing::config::backend_type::license_spring:
-                return std::make_unique<license_spring>(c.ls_config, c.activation_key);
+                return std::make_unique<license_spring>(c.ls_config);
             default:
-                THROW(util::exception, "The demo license does not require a key!");
+                return std::make_unique<demo_license>();
         }
-
     }
-
-    switch (c.type)
-    {
-        case uh::licensing::config::backend_type::license_spring:
-            return std::make_unique<license_spring>(c.ls_config);
-        default:
-            return std::make_unique<demo_license>(c.ls_config);
+    catch (std::exception& e){
+        ERROR << "Licensing check failed for this reason: " << e.what();
+        INFO << "Loading demo license.";
+        return std::make_unique<demo_license>();
     }
 }
 

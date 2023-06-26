@@ -97,10 +97,26 @@ BOOST_AUTO_TEST_CASE(ls_activate_demo)
     util::temp_directory temp;
 
     {
-        demo_license lic(mk_ls_config(temp.path()));
+        demo_license lic;
 
         BOOST_REQUIRE(!lic.valid());
     }
+}
+
+// ---------------------------------------------------------------------
+
+BOOST_AUTO_TEST_CASE(fallback_demo_license)
+{
+    util::temp_directory temp;
+    license_package pkg(licensing::config{
+        .ls_config = mk_ls_config(temp.path()),
+        .activation_key = "XXXX-XXXX-XXXX-XXXX"});
+
+    BOOST_CHECK(!pkg.valid());
+
+    BOOST_CHECK(pkg.check(feature::STORAGE));
+    BOOST_CHECK_NO_THROW(pkg.require(feature::STORAGE, 200000));
+    BOOST_CHECK_THROW(pkg.require(feature::STORAGE, 1000000000000), util::exception);
 }
 
 // ---------------------------------------------------------------------

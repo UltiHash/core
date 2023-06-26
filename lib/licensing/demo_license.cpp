@@ -7,14 +7,7 @@
 namespace uh::licensing
 {
 
-demo_license::demo_license(const license_spring_config &config, const std::string &key)
-{
-    reload();
-}
-
-// ---------------------------------------------------------------------
-
-demo_license::demo_license(const license_spring_config &config)
+demo_license::demo_license()
 {
     reload();
 }

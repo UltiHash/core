@@ -13,11 +13,7 @@ public:
     /**
      * Construct and activate license.
      */
-    explicit demo_license(const license_spring_config& config,
-                            const std::string& key);
-
-    // without activation
-    explicit demo_license(const license_spring_config& config);
+    explicit demo_license();
 
     /**
      * the default license is not timed
