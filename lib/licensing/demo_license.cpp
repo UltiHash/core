@@ -3,7 +3,6 @@
 //
 
 #include <licensing/demo_license.h>
-#include <license_spring_credentials.h>
 
 #include <util/exception.h>
 
