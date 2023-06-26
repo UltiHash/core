@@ -10,6 +10,7 @@
 
 namespace uh::dbn::storage::smart {
 
+// storage types
 struct growing_managed_storage_config {
     std::filesystem::path directory;
     std::filesystem::path log_file;
@@ -27,6 +28,8 @@ struct growing_plain_storage_config {
     std::filesystem::path file;
     size_t init_size;
 };
+
+// data structures
 
 struct set_config {
     unsigned long set_minimum_free_space;
@@ -47,6 +50,7 @@ struct sorted_map_config {
     growing_managed_storage_config data_store;
 };
 
+// deduplication
 struct dedupe_config {
     unsigned long min_fragment_size;
 };

@@ -15,7 +15,7 @@ class sorted_key_map: public map_interface {
 public:
     explicit sorted_key_map (sorted_map_config conf);
 
-    void insert (std::span <char> key, std::span <char> value, const index_type& index) override;
+    void insert (std::span <char> key, std::span <char> value, const sets::index_type& index) override;
 
     map_result get (std::span <char> key) override;
 

@@ -34,48 +34,44 @@ size_t smart_core::integrate(std::span <char> key, std::string_view data) {
 smart_core::fragmented_data smart_core::retrieve(std::span<char> key) {
     auto f = m_key_store->get(key);
     if (f.match.has_value()) {
-        const auto ptr = reinterpret_cast <const sets::offset_span*> (f.match.value().value.data());
-        const auto size = f.match.value().value.size() / sizeof (sets::offset_span);
-        size_t total_size = 0;
-        std::forward_list <std::span <char>> res;
-        for (auto frag = ptr; frag < ptr + size; frag++) {
-            char* raw_ptr = static_cast <char*> (m_data_store.get_raw_ptr(frag->m_data_offset));
-            res.emplace_front(raw_ptr, frag->m_size);
-            total_size += frag->m_size;
-        }
-        return {total_size, res};
+        return create_fragmented_data(f.match.value().value);
     }
     throw std::out_of_range ("smart_storage could not find the data of the given hash value");
 }
 
 std::list <smart_core::key_fragmented_value> smart_core::retrieve_range(std::span<char> start_key, std::span<char> end_key,
                            const std::span<std::string_view> &labels) {
-    // TODO if start key or end key are empty
     auto results = m_key_store->get_range(start_key, end_key);
 
-    return {};
+    std::list <smart_core::key_fragmented_value> out;
+    for (const auto& result: results) {
+        out.push_back({{const_cast <char*> (result.key.data ()), result.key.size ()},
+                       create_fragmented_data(result.value)});
+    }
+
+    return out;
 }
 
 std::pair<std::vector<sets::offset_span>, size_t> smart_core::deduplicate (std::string_view data) {
 
     const auto f = m_fragment_set->find({data.data(), data.size()});
     if (f.match) {
-        return {{{f.match->first, f.match->second.size()}}, 0};
+        return {{{f.match->data_offset, f.match->data.size()}}, 0};
     }
 
-    const auto lower_common_prefix = largest_common_prefix (data, f.lower->second);
+    const auto lower_common_prefix = largest_common_prefix (data, f.lower->data);
 
     if (lower_common_prefix == data.size()) {
-        m_fragment_set->add_pointer (data, f.lower->first, f.index);
-        return {{{f.lower->first, data.size()}}, 0};
+        m_fragment_set->add_pointer (data, f.lower->data_offset, f.index);
+        return {{{f.lower->data_offset, data.size()}}, 0};
     }
 
-    const auto upper_common_prefix = largest_common_prefix (data, f.upper->second);
+    const auto upper_common_prefix = largest_common_prefix (data, f.upper->data);
     auto max_common_prefix = upper_common_prefix;
-    auto max_data_offset = f.upper->first;
+    auto max_data_offset = f.upper->data_offset;
     if (max_common_prefix < lower_common_prefix) {
         max_common_prefix = lower_common_prefix;
-        max_data_offset = f.lower->first;
+        max_data_offset = f.lower->data_offset;
     }
 
     if (max_common_prefix < m_dedupe_conf.min_fragment_size or data.size() - max_common_prefix < m_dedupe_conf.min_fragment_size) {
@@ -112,5 +108,17 @@ smart_core::largest_common_prefix(const std::string_view &str1, const std::strin
     return i;
 }
 
+smart_core::fragmented_data smart_core::create_fragmented_data (std::span <const char> fragment_data) {
+    const auto ptr = reinterpret_cast <const sets::offset_span*> (fragment_data.data());
+    const auto size = fragment_data.size() / sizeof (sets::offset_span);
+    size_t total_size = 0;
+    std::forward_list <std::span <char>> res;
+    for (auto frag = ptr; frag < ptr + size; frag++) {
+        char* raw_ptr = static_cast <char*> (m_data_store.get_raw_ptr(frag->m_data_offset));
+        res.emplace_front(raw_ptr, frag->m_size);
+        total_size += frag->m_size;
+    }
+    return {total_size, std::move (res)};
+}
 
 } // end namespace uh::dbn::storage::smart

@@ -17,7 +17,7 @@ persisted_robinhood_hashmap::persisted_robinhood_hashmap(hashmap_config map_conf
 }
 
 
-void persisted_robinhood_hashmap::insert(std::span<char> key, std::span<char> value, const index_type&) {
+void persisted_robinhood_hashmap::insert(std::span<char> key, std::span<char> value, const sets::index_type&) {
 
     std::unique_lock <std::shared_mutex> lock (m_mutex);
 

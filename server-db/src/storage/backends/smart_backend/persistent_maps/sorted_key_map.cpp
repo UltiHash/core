@@ -8,7 +8,7 @@ sorted_key_map::sorted_key_map(sorted_map_config conf):
         m_storage (std::move (conf.data_store)),
         m_set(sets::paged_redblack_tree <sets::set_partial_comparator> (std::move (conf.index_store), m_storage)) {}
 
-void sorted_key_map::insert(std::span<char> key, std::span<char> value, const index_type& index) {
+void sorted_key_map::insert(std::span<char> key, std::span<char> value, const sets::index_type& index) {
     const auto size = key.size() + value.size() + sizeof (uint16_t);
     auto alloc = m_storage.allocate(size);
     uint16_t& key_size = *reinterpret_cast <uint16_t*> (alloc.m_addr);

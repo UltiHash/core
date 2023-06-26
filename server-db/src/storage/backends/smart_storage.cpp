@@ -2,7 +2,6 @@
 // Created by masi on 5/30/23.
 //
 #include "smart_storage.h"
-#include "common.h"
 
 namespace uh::dbn::storage::smart {
 

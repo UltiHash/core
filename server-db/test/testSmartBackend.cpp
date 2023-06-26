@@ -15,7 +15,8 @@
 #include <storage/backends/smart_backend/smart_core.h>
 #include "storage/backends/smart_backend/persistent_maps/persisted_robinhood_hashmap.h"
 #include "storage/backends/smart_backend/storage_types/growing_managed_storage.h"
-#include "storage/backends/smart_backend/persistent_sets/persisted_redblack_tree_set.h"
+#include "storage/backends/smart_backend/persistent_maps/sorted_key_map.h"
+
 
 using namespace uh::dbn::storage::smart;
 
@@ -260,10 +261,11 @@ BOOST_FIXTURE_TEST_CASE(test_mmap_storage_persistet_alloc_test, files_info_fixtu
 }
 
 
-uint64_t set_insert (fixed_managed_storage& ms, sets::persisted_redblack_tree_set& set, std::string_view data, uint64_t hint = 2 * sizeof (uint64_t)) {
+uint64_t set_insert (fixed_managed_storage& ms, sets::paged_redblack_tree<>& set, std::string_view data, uint64_t hint = 2 * sizeof (uint64_t)) {
     auto alloc = ms.allocate(data.size());
     std::memcpy(alloc.m_addr, data.data(), data.size());
-    const auto h = set.add_pointer (data, alloc.m_offset);
+    const auto f = set.find(data);
+    const auto h = set.add_pointer (data, alloc.m_offset, f.index);
     return h.position;
 }
 
@@ -272,17 +274,18 @@ BOOST_FIXTURE_TEST_CASE(basic_test_mmap_set, files_info_fixture)
     cleanup();
     fixed_managed_storage ms(get_data_store_config());
 
-    sets::persisted_redblack_tree_set set {get_set_conf(), ms};
+    sets::paged_redblack_tree set {get_set_conf(), ms};
 
     auto h = set_insert (ms, set, "hello from data 1");
     h = set_insert (ms, set, "data 2 hello from data 2", h);
     set_insert(ms, set, "third data hello from data 3", h);
     set_insert(ms, set, "some other data");
-    set_insert(ms, set, "yet again, some other data");
-    h = set_insert(ms, set, "yet again, some other data", h);
+    h = set_insert(ms, set, "yet again, some other data");
+    h = set_insert(ms, set, "yet again, some other data");
     set_insert(ms, set, "yet again, some other data");
     set_insert(ms, set, "and even more data");
     set_insert(ms, set, "third data hello from data 3", h);
+
     set_insert(ms, set, "some other data 2 ");
     set_insert(ms, set, "yet again, some other data 2");
     h = set_insert(ms, set, "yet again, some other data 2", h);
@@ -303,26 +306,26 @@ BOOST_FIXTURE_TEST_CASE(basic_test_mmap_set, files_info_fixture)
     set_insert(ms, set, "432third  234 data hello from data 3 4", h);
 
     auto res1 = set.find("and even more data");
-    BOOST_TEST(res1.match->second == "and even more data");
+    BOOST_TEST(res1.match->data == "and even more data");
 
     auto res2 = set.find("some other data");
-    auto str = res2.match->second;
+    auto str = res2.match->data;
     BOOST_TEST(str == "some other data");
 
     auto res3 = set.find("hello from data 1");
-    BOOST_TEST(res3.match->second == "hello from data 1");
+    BOOST_TEST(res3.match->data == "hello from data 1");
 
     auto res4 = set.find("yet again, some other data");
-    BOOST_TEST(res4.match->second == "yet again, some other data");
+    BOOST_TEST(res4.match->data == "yet again, some other data");
 
     auto res5 = set.find("third data hello from data 3");
-    BOOST_TEST(res5.match->second == "third data hello from data 3");
+    BOOST_TEST(res5.match->data == "third data hello from data 3");
 
     auto res6 = set.find("third  234 data hello from data 3 4");
-    BOOST_TEST(res6.match->second == "third  234 data hello from data 3 4");
+    BOOST_TEST(res6.match->data == "third  234 data hello from data 3 4");
 
     auto res7 = set.find("432third  234 data hello from data 3 4");
-    BOOST_TEST(res7.match->second == "432third  234 data hello from data 3 4");
+    BOOST_TEST(res7.match->data == "432third  234 data hello from data 3 4");
 
 //    auto res6 = set.find("hello from data ");
 //    std::cout << res2.match << std::endl;
@@ -631,4 +634,128 @@ BOOST_FIXTURE_TEST_CASE(smart_core_basic_test, files_info_fixture) {
     }
 
     delete[] ptr;
+}
+
+
+
+void insert_in_skm (maps::sorted_key_map& skm, std::string& k, std::string& v) {
+    std::span <char> sk {k};
+    std::span <char> sv {v};
+    auto res = skm.get(sk);
+    skm.insert(sk, sv, res.index);
+}
+
+BOOST_FIXTURE_TEST_CASE(sorted_map_basic_test, files_info_fixture) {
+
+    cleanup();
+
+    std::string k1 = "key1";
+    std::string v1 = "hello from data 1645";
+
+    std::string k2 = "key2sd";
+    std::string v2 = "hello from data 2234";
+
+    std::string k3 = "key3";
+    std::string v3 = "third data hello from data 3";
+
+    std::string k4 = "some_key4";
+    std::string v4 = "hello from data yet again";
+
+    std::string k5 = "key5";
+    std::string v5 = "yet again, some other data";
+
+    std::string k6 = "keysix";
+    std::string v6 = "hello from data 2234";
+
+    {
+
+        maps::sorted_key_map skm (get_sorted_key_map_conf());
+
+        insert_in_skm(skm, k1, v1);
+
+        insert_in_skm(skm, k2, v2);
+
+        insert_in_skm(skm, k3, v3);
+
+        insert_in_skm(skm, k4, v4);
+
+        insert_in_skm(skm, k5, v5);
+
+        insert_in_skm(skm, k6, v6);
+
+        auto res = skm.get(k1);
+        BOOST_TEST(v1 == std::string (res.match.value().value.data(), res.match.value().value.size()));
+
+        res = skm.get(k2);
+        BOOST_TEST(v2 == std::string (res.match.value().value.data(), res.match.value().value.size()));
+
+        res = skm.get(k5);
+        BOOST_TEST(v5 == std::string (res.match.value().value.data(), res.match.value().value.size()));
+
+        res = skm.get(k4);
+        BOOST_TEST(v4 == std::string (res.match.value().value.data(), res.match.value().value.size()));
+
+        res = skm.get(k3);
+        BOOST_TEST(v3 == std::string (res.match.value().value.data(), res.match.value().value.size()));
+    }
+    {
+
+        maps::sorted_key_map skm (get_sorted_key_map_conf());
+        auto res = skm.get(k1);
+        BOOST_TEST(v1 == std::string (res.match.value().value.data(), res.match.value().value.size()));
+
+        res = skm.get(k2);
+        BOOST_TEST(v2 == std::string (res.match.value().value.data(), res.match.value().value.size()));
+
+        res = skm.get(k5);
+        BOOST_TEST(v5 == std::string (res.match.value().value.data(), res.match.value().value.size()));
+
+        res = skm.get(k4);
+        BOOST_TEST(v4 == std::string (res.match.value().value.data(), res.match.value().value.size()));
+
+        res = skm.get(k3);
+        BOOST_TEST(v3 == std::string (res.match.value().value.data(), res.match.value().value.size()));
+
+        auto range = skm.get_range(k1, k5);
+        auto item = range.begin();
+
+        std::string_view string_key{item->key.data(), item->key.size()};
+        std::string_view string_value{item->value.data(), item->value.size()};
+        BOOST_TEST (string_key == k1);
+        BOOST_TEST (string_value == v1);
+
+        item++;
+        string_key = {item->key.data(), item->key.size()};
+        string_value = {item->value.data(), item->value.size()};
+        BOOST_TEST (string_key == k2);
+        BOOST_TEST (string_value == v2);
+
+        item++;
+        string_key = {item->key.data(), item->key.size()};
+        string_value = {item->value.data(), item->value.size()};
+        BOOST_TEST (string_key == k3);
+        BOOST_TEST (string_value == v3);
+
+        std::string non_existing_key ("key2");
+        range = skm.get_range(non_existing_key, k6);
+        item = range.begin();
+
+        string_key = {item->key.data(), item->key.size()};
+        string_value = {item->value.data(), item->value.size()};
+        BOOST_TEST (string_key == k2);
+        BOOST_TEST (string_value == v2);
+
+        item++;
+        string_key = {item->key.data(), item->key.size()};
+        string_value = {item->value.data(), item->value.size()};
+        BOOST_TEST (string_key == k3);
+        BOOST_TEST (string_value == v3);
+
+        item++;
+        string_key = {item->key.data(), item->key.size()};
+        string_value = {item->value.data(), item->value.size()};
+        BOOST_TEST (string_key == k5);
+        BOOST_TEST (string_value == v5);
+
+    }
 }
