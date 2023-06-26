@@ -25,8 +25,8 @@ elseif (UNIX)
     if (${CMAKE_SYSTEM_PROCESSOR} MATCHES "aarch64")
         set(LICENSESPRING_TARGET "Linux_AArch64")
     else ()
-        #set(LICENSESPRING_TARGET "Linux_GCC9.2")
-        set(LICENSESPRING_TARGET "Linux_openssl3_GCC7.5")
+        set(LICENSESPRING_TARGET "Linux_GCC9.2")
+	#set(LICENSESPRING_TARGET "Linux_openssl3_GCC7.5")
     endif ()
 else ()
     message("System not supported by License Spring.")
@@ -53,7 +53,7 @@ ExternalProject_Add(
         BUILD_BYPRODUCTS ${CMAKE_BINARY_DIR}/ext/src/libLicenseSpringExtern/bin/shared/${CMAKE_BUILD_TYPE}/libLicenseSpring.so
 )
 
-set(CMAKE_SKIP_RPATH TRUE)
+#set(CMAKE_SKIP_RPATH TRUE)
 
 file(REMOVE ${CMAKE_BINARY_DIR}/ext/src/libLicenseSpringExtern/bin/shared/${CMAKE_BUILD_TYPE}/libcurl.so.4.8.0)
 file(REMOVE ${CMAKE_BINARY_DIR}/ext/src/libLicenseSpringExtern/bin/shared/${CMAKE_BUILD_TYPE}/libcurl.so.4)
