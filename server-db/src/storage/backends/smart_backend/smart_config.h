@@ -53,6 +53,7 @@ struct sorted_map_config {
 // deduplication
 struct dedupe_config {
     unsigned long min_fragment_size;
+    unsigned long max_fragment_size;
 };
 
 struct smart_config {

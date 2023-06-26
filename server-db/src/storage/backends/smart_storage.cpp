@@ -25,7 +25,9 @@ smart_config make_smart_config(const std::filesystem::path &root, size_t size, s
     }
 
     dedupe_config dd_conf {};
+    dd_conf.min_fragment_size = 1 * 1024;
     dd_conf.min_fragment_size = 2 * 1024;
+
 
     // fragment set
     growing_plain_storage_config fragment_set_key_store;
