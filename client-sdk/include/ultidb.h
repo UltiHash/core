@@ -59,10 +59,31 @@ typedef enum : uint8_t
 // is uint8_t enough?
 UDB_RESULT udb_get_last_error();
 
+typedef enum : uint8_t
+{
+    owning = 0,
+    non_owning
+} OWNING_TYPE;
+
 typedef struct UDB_DATA_WRAPPER
 {
     char* data;
     size_t size;
+    OWNING_TYPE object_owning = non_owning;
+
+    UDB_DATA_WRAPPER(char* rec_ptr, size_t rec_size) :
+    data(rec_ptr), size(rec_size)
+    {}
+
+    UDB_DATA_WRAPPER(char* rec_ptr, size_t rec_size, OWNING_TYPE own_type) :
+            data(rec_ptr), size(rec_size), object_owning(own_type)
+    {}
+
+    ~UDB_DATA_WRAPPER()
+    {
+        if (object_owning == owning)
+            delete [] data;
+    }
 } UDB_DATA;
 
 /**
@@ -174,7 +195,7 @@ UDB_RESULT udb_document_add_label(UDB_DOCUMENT* doc, char* label);
 UDB_RESULT udb_destroy_document(UDB_DOCUMENT** ptr_to_document_ptr);
 
 UDB_WRITE_QUERY* udb_create_write_query();
-UDB_RESULT udb_write_query_add_document(UDB_WRITE_QUERY* write_query, UDB_DOCUMENT* document);
+void udb_write_query_add_document(UDB_WRITE_QUERY* write_query, UDB_DOCUMENT* document);
 //UDB_RESULT udb_write_query_add_whole_dicument();
 UDB_RESULT udb_destroy_write_query(UDB_WRITE_QUERY** write_query_ptr_container);
 

@@ -32,6 +32,7 @@ struct UDB_DOCUMENT_STRUCT
     UDB_DATA* value;
     char** labels;
     size_t label_count;
+    OWNING_TYPE underlying_pointers = non_owning;
 
     UDB_DOCUMENT_STRUCT() : key(nullptr), value(nullptr), labels(nullptr), label_count(0)
     {}
@@ -43,8 +44,16 @@ struct UDB_DOCUMENT_STRUCT
         label_count(rec_label_count)
     {}
 
-    //TODO: when destroying the document, the underlying pointers can be destroyed for convienence purposes
-
+    ~UDB_DOCUMENT_STRUCT()
+    {
+        if (underlying_pointers == owning)
+        {
+            delete key;
+            delete value;
+            for (size_t index = 0; index < label_count; index++)
+                delete [] labels[index];
+        }
+    }
 };
 
 // ---------------------------------------------------------------------
@@ -386,7 +395,7 @@ UDB_WRITE_QUERY* udb_create_write_query()
 
 // ---------------------------------------------------------------------
 
-UDB_RESULT udb_write_query_add_document(UDB_WRITE_QUERY* write_query, UDB_DOCUMENT* document)
+void udb_write_query_add_document(UDB_WRITE_QUERY* write_query, UDB_DOCUMENT* document)
 {
     write_query->documents.push_back(document);
 }
@@ -421,7 +430,7 @@ UDB_RESULT udb_add(UDB_CONNECTION* conn, UDB_WRITE_QUERY* write_query)
         std::vector<uint8_t> label_sizes;
 
         // TODO: reserve the memory and then memcpy into this reserved memory since we know the size of write_query
-        std::vector<char> data(write_query->documents.size() * 100);
+        std::vector<char> data;
 
         for (const auto& document : write_query->documents)
         {
@@ -459,7 +468,7 @@ UDB_RESULT udb_add(UDB_CONNECTION* conn, UDB_WRITE_QUERY* write_query)
     catch(const std::exception& e)
     {
         error = UDB_RESULT_ERROR;
-        return UDB_RESULT::UDB_RESULT_ERROR;;
+        return UDB_RESULT::UDB_RESULT_ERROR;
     }
 }
 
@@ -593,7 +602,7 @@ UDB_RESULT udb_destroy_read_query(UDB_READ_QUERY** read_query_ptr_container)
 
 // ---------------------------------------------------------------------
 
-UDB_RESULT udb_get(UDB_CONNECTION* conn, UDB_READ_QUERY* read_query, UDB_DOCUMENT** udb_document)
+UDB_RESULT udb_get(UDB_CONNECTION* conn, UDB_READ_QUERY* read_query, UDB_DOCUMENT** udb_documents)
 {
     try
     {
@@ -661,8 +670,8 @@ UDB_RESULT udb_get(UDB_CONNECTION* conn, UDB_READ_QUERY* read_query, UDB_DOCUMEN
                     label_sizes.push_back(label_size);
                     data.insert(data.end(), read_query->labels[index], read_query->labels[index] + label_size);
                 }
-
                 break;
+                
             case NOT_DEFINED:
                 throw std::logic_error(Exception_Messsage(UDB_UNINITIALIZED));
             default:
@@ -679,7 +688,8 @@ UDB_RESULT udb_get(UDB_CONNECTION* conn, UDB_READ_QUERY* read_query, UDB_DOCUMEN
                 std::span<char>(data.data(), data.size())
             });
 
-        //TODO: put resp in documents
+        //TODO: put resp in documents, use structured read query
+
 
         return UDB_RESULT::UDB_RESULT_SUCCESS;
     }
