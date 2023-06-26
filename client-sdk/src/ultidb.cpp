@@ -700,8 +700,8 @@ UDB_RESULT udb_get(UDB_CONNECTION* conn, UDB_READ_QUERY* read_query, UDB_DOCUMEN
 
             auto new_key_data = new UDB_DATA();
             auto key_size = std::get<0>(resp.key_sizes).data[index];
-            new_key_data->data = ;
-            new_key_data->size = ;
+//            new_key_data->data = ;
+//            new_key_data->size = ;
 
             auto value_size = std::get<0>(resp.value_sizes).data[index];
             auto label_count = std::get<0>(resp.label_counts).data[index];
