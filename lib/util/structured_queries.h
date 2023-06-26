@@ -37,7 +37,7 @@ struct structured_queries {
     int label_index {};
 };
 
-void handle_labels (auto q, size_t shift_offset_size, util::ospan <std::string_view>& labels, char* const data_ptr);
+void handle_labels (auto& q, size_t shift_offset_size, util::ospan <std::string_view>& labels, char* const data_ptr);
 
 struct read_query {
     std::span <char> start_key;

@@ -78,6 +78,20 @@ std::pair<std::vector<sets::offset_span>, size_t> smart_core::deduplicate (std::
         const auto offset = store_data(data);
         m_fragment_set->add_pointer (data, offset, f.index);
         return {{{offset, data.size()}}, data.size()};
+        /*
+        const auto size = std::min (data.size(), m_dedupe_conf.max_fragment_size);
+        const auto offset = store_data(data.substr(0, size));
+        m_fragment_set->add_pointer (data.substr(0, size), offset, f.index);
+        if (data.size() > size) {
+            auto fragments = deduplicate(data.substr(size));
+            fragments.first.emplace_back(sets::offset_span {offset, size});
+            fragments.second += size;
+            return fragments;
+        }
+        else {
+            return {{{offset, data.size()}}, data.size()};
+        }
+        */
     }
     else if (max_common_prefix == data.size()) {
         m_fragment_set->add_pointer (data, max_data_offset, f.index);
