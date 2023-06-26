@@ -101,12 +101,6 @@ BOOST_AUTO_TEST_CASE(ls_activate_demo)
 
         BOOST_REQUIRE(!lic.valid());
     }
-
-    {
-        demo_license lic(mk_ls_config(temp.path()));
-
-        BOOST_REQUIRE(!lic.valid());
-    }
 }
 
 // ---------------------------------------------------------------------

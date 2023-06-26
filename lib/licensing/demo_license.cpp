@@ -7,6 +7,8 @@
 
 #include <util/exception.h>
 
+#include <boost/property_tree/json_parser.hpp>
+
 namespace uh::licensing
 {
 
@@ -66,7 +68,16 @@ std::size_t demo_license::feature_arg_size_t(feature f, const std::string &name)
 
 void demo_license::reload()
 {
+    std::map<feature, boost::property_tree::ptree> features;
 
+    const auto feat = feature::STORAGE;
+    auto& ptree = features[feat];
+
+    auto md = R"("max" : 10737418240 "min" : 0 "max_soft" : 10200547328)";
+    std::stringstream metadata(md);
+    boost::property_tree::read_json(metadata, ptree);
+
+    std::swap(features, m_features);
 }
 
 } // licensing
