@@ -1,46 +1,27 @@
 //
-// Created by benjamin-elias on 01.06.23.
+// Created by benjamin-elias on 26.06.23.
 //
 
-#ifndef CORE_CHECK_LICENSE_H
-#define CORE_CHECK_LICENSE_H
+#ifndef DEMO_LICENSE_H
+#define DEMO_LICENSE_H
 
 #include <licensing/backend.h>
-
-#include <filesystem>
-#include <map>
-
-#include <boost/property_tree/ptree.hpp>
-
-#include <LicenseSpring/LicenseManager.h>
-
+#include <licensing/license_spring.h>
 
 namespace uh::licensing
 {
 
-// ---------------------------------------------------------------------
-
-struct license_spring_config
-{
-    std::string productId;
-    std::string appName;
-    std::string appVersion;
-    std::filesystem::path path;
-};
-
-// ---------------------------------------------------------------------
-
-class license_spring : public backend
+class demo_license: public backend
 {
 public:
     /**
      * Construct and activate license.
      */
-    explicit license_spring(const license_spring_config& config,
+    explicit demo_license(const license_spring_config& config,
                             const std::string& key);
 
     // without activation
-    explicit license_spring(const license_spring_config& config);
+    explicit demo_license(const license_spring_config& config);
 
     /**
      * the default license is not timed
@@ -68,14 +49,9 @@ public:
 private:
     void reload();
 
-    std::shared_ptr<LicenseSpring::LicenseManager> m_manager;
-    std::shared_ptr<LicenseSpring::License> m_license;
-
     std::map<feature, boost::property_tree::ptree> m_features;
 };
 
-// ---------------------------------------------------------------------
+} // licensing
 
-} // namespace uh::licensing
-
-#endif //CORE_CHECK_LICENSE_H
+#endif //DEMO_LICENSE_H

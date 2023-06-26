@@ -14,6 +14,7 @@ struct config
     enum backend_type
     {
         license_spring,
+        license_spring_demo
     };
 
     backend_type type = license_spring;

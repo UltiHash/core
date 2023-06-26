@@ -3,6 +3,7 @@
 //
 
 #include "license_package.h"
+#include "demo_license.h"
 
 #include <util/exception.h>
 #include <logging/logging_boost.h>
@@ -20,10 +21,23 @@ std::unique_ptr<backend> mk_backend(const config& c)
 {
     if (!c.activation_key.empty())
     {
-        return std::make_unique<license_spring>(c.ls_config, c.activation_key);
+        switch (c.type)
+        {
+            case uh::licensing::config::backend_type::license_spring:
+                return std::make_unique<license_spring>(c.ls_config, c.activation_key);
+            default:
+                THROW(util::exception, "The demo license does not require a key!");
+        }
+
     }
 
-    return std::make_unique<license_spring>(c.ls_config);
+    switch (c.type)
+    {
+        case uh::licensing::config::backend_type::license_spring:
+            return std::make_unique<license_spring>(c.ls_config);
+        default:
+            return std::make_unique<demo_license>(c.ls_config);
+    }
 }
 
 // ---------------------------------------------------------------------

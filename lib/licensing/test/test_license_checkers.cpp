@@ -9,6 +9,7 @@
 #include <util/exception.h>
 #include <util/temp_dir.h>
 #include <licensing/license_spring.h>
+#include <licensing/demo_license.h>
 #include <licensing/license_package.h>
 
 
@@ -70,6 +71,41 @@ BOOST_AUTO_TEST_CASE(ls_activate)
         license_spring lic(mk_ls_config(temp.path()));
 
         BOOST_REQUIRE(lic.valid());
+    }
+}
+
+// ---------------------------------------------------------------------
+
+BOOST_AUTO_TEST_CASE(valid_demo_license)
+{
+    util::temp_directory temp;
+    license_package pkg(licensing::config{
+        .type = uh::licensing::config::license_spring_demo,
+        .ls_config = mk_ls_config(temp.path())});
+
+    BOOST_CHECK(!pkg.valid());
+
+    BOOST_CHECK(pkg.check(feature::STORAGE));
+    BOOST_CHECK_NO_THROW(pkg.require(feature::STORAGE, 200000));
+    BOOST_CHECK_THROW(pkg.require(feature::STORAGE, 1000000000000), util::exception);
+}
+
+// ---------------------------------------------------------------------
+
+BOOST_AUTO_TEST_CASE(ls_activate_demo)
+{
+    util::temp_directory temp;
+
+    {
+        demo_license lic(mk_ls_config(temp.path()));
+
+        BOOST_REQUIRE(!lic.valid());
+    }
+
+    {
+        demo_license lic(mk_ls_config(temp.path()));
+
+        BOOST_REQUIRE(!lic.valid());
     }
 }
 
