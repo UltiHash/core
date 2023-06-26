@@ -23,12 +23,13 @@ set(LICENSESPRING_VERSION "7.24.0")
 if (${CMAKE_SYSTEM_PROCESSOR} MATCHES "aarch64")
     set(LICENSESPRING_TARGET "Linux_AArch64")
 else ()
-    set(LICENSESPRING_TARGET "Linux_GCC9.2")
+    #set(LICENSESPRING_TARGET "Linux_GCC9.2")
+    set(LICENSESPRING_TARGET "Linux_openssl3_GCC7.5")
 endif ()
 
 # external dependencies
 find_package(Boost 1.80 COMPONENTS system unit_test_framework json REQUIRED)
-find_package(OpenSSL 1.1.1 EXACT)
+find_package(OpenSSL 3 REQUIRED)
 find_package(CURL 4.8.0 REQUIRED)
 
 message("Downloading License Spring to ${CMAKE_BINARY_DIR}/ext")
@@ -47,9 +48,17 @@ ExternalProject_Add(
         BUILD_BYPRODUCTS ${CMAKE_BINARY_DIR}/ext/src/libLicenseSpringExtern/bin/shared/${CMAKE_BUILD_TYPE}/libLicenseSpring.so
 )
 
+set(CMAKE_SKIP_RPATH TRUE)
+
 file(REMOVE ${CMAKE_BINARY_DIR}/ext/src/libLicenseSpringExtern/bin/shared/${CMAKE_BUILD_TYPE}/libcurl.so.4.8.0)
 file(REMOVE ${CMAKE_BINARY_DIR}/ext/src/libLicenseSpringExtern/bin/shared/${CMAKE_BUILD_TYPE}/libcurl.so.4)
 file(REMOVE ${CMAKE_BINARY_DIR}/ext/src/libLicenseSpringExtern/bin/shared/${CMAKE_BUILD_TYPE}/libcurl.so)
+
+#file(REMOVE ${CMAKE_BINARY_DIR}/ext/src/libLicenseSpringExtern/bin/shared/${CMAKE_BUILD_TYPE}/libcrypto.so.3)
+#file(REMOVE ${CMAKE_BINARY_DIR}/ext/src/libLicenseSpringExtern/bin/shared/${CMAKE_BUILD_TYPE}/libcrypto.so)
+
+#file(REMOVE ${CMAKE_BINARY_DIR}/ext/src/libLicenseSpringExtern/bin/shared/${CMAKE_BUILD_TYPE}/libssl.so.3)
+#file(REMOVE ${CMAKE_BINARY_DIR}/ext/src/libLicenseSpringExtern/bin/shared/${CMAKE_BUILD_TYPE}/libssl.so)
 
 set(LIB_LICENSE_SPRING_INCLUDE "${CMAKE_BINARY_DIR}/ext/src/libLicenseSpringExtern/include")
 file(MAKE_DIRECTORY ${LIB_LICENSE_SPRING_INCLUDE})
