@@ -7,6 +7,7 @@
 #include <protocol/client_pool.h>
 #include <protocol/client_factory.h>
 #include <net/plain_socket.h>
+#include <util/ospan.h>
 #include <iostream>
 
 #if defined(__cplusplus) || defined(c_plusplus)
@@ -32,24 +33,29 @@ struct UDB_DOCUMENT_STRUCT
     UDB_DATA* value;
     char** labels;
     size_t label_count;
-    OWNING_TYPE underlying_pointers = non_owning;
+    OWNING_TYPE underlying_pointers;
 
-    UDB_DOCUMENT_STRUCT() : key(nullptr), value(nullptr), labels(nullptr), label_count(0)
+    UDB_DOCUMENT_STRUCT() : key(nullptr), value(nullptr), labels(nullptr), label_count(0),
+    underlying_pointers(non_owning) {};
+
+    explicit UDB_DOCUMENT_STRUCT(OWNING_TYPE owning_t) :  key(nullptr), value(nullptr), labels(nullptr), label_count(0),
+    underlying_pointers(owning_t)
     {}
 
     UDB_DOCUMENT_STRUCT(UDB_DATA* rec_key, UDB_DATA* rec_value, char** rec_labels, size_t rec_label_count) :
         key(rec_key),
         value(rec_value),
         labels(rec_labels),
-        label_count(rec_label_count)
+        label_count(rec_label_count),
+        underlying_pointers(non_owning)
     {}
 
     ~UDB_DOCUMENT_STRUCT()
     {
         if (underlying_pointers == owning)
         {
-            delete key;
-            delete value;
+            delete key->data;
+            delete value->data;
             for (size_t index = 0; index < label_count; index++)
                 delete [] labels[index];
         }
@@ -688,8 +694,25 @@ UDB_RESULT udb_get(UDB_CONNECTION* conn, UDB_READ_QUERY* read_query, UDB_DOCUMEN
                 std::span<char>(data.data(), data.size())
             });
 
-        //TODO: put resp in documents, use structured read query
+        for (size_t index = 0; index < std::get<0>(resp.key_sizes).size; index++)
+        {
+            auto* new_document = new UDB_DOCUMENT(owning);
 
+            auto new_key_data = new UDB_DATA();
+            auto key_size = std::get<0>(resp.key_sizes).data[index];
+            new_key_data->data = ;
+            new_key_data->size = ;
+
+            auto value_size = std::get<0>(resp.value_sizes).data[index];
+            auto label_count = std::get<0>(resp.label_counts).data[index];
+
+            for (size_t count = 0; count < label_count; count++)
+            {
+
+            }
+        }
+
+        resp.
 
         return UDB_RESULT::UDB_RESULT_SUCCESS;
     }

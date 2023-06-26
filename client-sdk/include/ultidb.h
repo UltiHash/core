@@ -61,29 +61,21 @@ UDB_RESULT udb_get_last_error();
 
 typedef enum : uint8_t
 {
-    owning = 0,
-    non_owning
+    non_owning = 0,
+    owning
 } OWNING_TYPE;
 
 typedef struct UDB_DATA_WRAPPER
 {
     char* data;
     size_t size;
-    OWNING_TYPE object_owning = non_owning;
 
     UDB_DATA_WRAPPER(char* rec_ptr, size_t rec_size) :
     data(rec_ptr), size(rec_size)
     {}
 
-    UDB_DATA_WRAPPER(char* rec_ptr, size_t rec_size, OWNING_TYPE own_type) :
-            data(rec_ptr), size(rec_size), object_owning(own_type)
-    {}
+    UDB_DATA_WRAPPER() : data(nullptr), size(0) {}
 
-    ~UDB_DATA_WRAPPER()
-    {
-        if (object_owning == owning)
-            delete [] data;
-    }
 } UDB_DATA;
 
 /**

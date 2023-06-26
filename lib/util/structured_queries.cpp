@@ -5,7 +5,7 @@
 
 namespace uh::util {
 
-void handle_labels(auto q, size_t shift_offset_size, ospan<std::string_view> &labels, char *const data_ptr) {
+void handle_labels(auto& q, size_t shift_offset_size, ospan<std::string_view> &labels, char *const data_ptr) {
 
     const auto label_count = std::get <0> (q.m_req.get().label_counts).data [q.index];
     const auto wq_label_index = q.label_index;
