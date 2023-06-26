@@ -19,12 +19,17 @@ include(ExternalProject)
 set(CMAKE_VERBOSE_MAKEFILE ON)
 set(LICENSESPRING_VERSION "7.24.0")
 
-
-if (${CMAKE_SYSTEM_PROCESSOR} MATCHES "aarch64")
-    set(LICENSESPRING_TARGET "Linux_AArch64")
+if(APPLE)
+    set(LICENSESPRING_TARGET "MacUniversal")
+elseif (UNIX)
+    if (${CMAKE_SYSTEM_PROCESSOR} MATCHES "aarch64")
+        set(LICENSESPRING_TARGET "Linux_AArch64")
+    else ()
+        #set(LICENSESPRING_TARGET "Linux_GCC9.2")
+        set(LICENSESPRING_TARGET "Linux_openssl3_GCC7.5")
+    endif ()
 else ()
-    #set(LICENSESPRING_TARGET "Linux_GCC9.2")
-    set(LICENSESPRING_TARGET "Linux_openssl3_GCC7.5")
+    message("System not supported by License Spring.")
 endif ()
 
 # external dependencies
