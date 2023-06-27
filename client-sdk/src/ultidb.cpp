@@ -8,6 +8,7 @@
 #include <protocol/client_factory.h>
 #include <net/plain_socket.h>
 #include <util/ospan.h>
+#include <util/structured_queries.h>
 #include <iostream>
 
 #if defined(__cplusplus) || defined(c_plusplus)
@@ -45,7 +46,7 @@ struct UDB_DOCUMENT_STRUCT
     UDB_DOCUMENT_STRUCT(UDB_DATA* rec_key, UDB_DATA* rec_value, char** rec_labels, size_t rec_label_count) :
         key(rec_key),
         value(rec_value),
-        labels(rec_labels),
+	labels(rec_labels),
         label_count(rec_label_count),
         underlying_pointers(non_owning)
     {}
@@ -55,9 +56,19 @@ struct UDB_DOCUMENT_STRUCT
         if (underlying_pointers == owning)
         {
             delete key->data;
+            key->data = nullptr;
+            delete key;
+            key = nullptr;
             delete value->data;
+            value->data = nullptr;
+            delete value;
             for (size_t index = 0; index < label_count; index++)
+            {
                 delete [] labels[index];
+                labels[index] = nullptr;
+            }
+            delete [] labels;
+            labels = nullptr;
         }
     }
 };
@@ -355,6 +366,7 @@ UDB_RESULT udb_destroy_document(UDB_DOCUMENT_STRUCT** ptr_to_document_ptr)
     {
         delete *ptr_to_document_ptr;
         *ptr_to_document_ptr = nullptr;
+        return UDB_RESULT_SUCCESS;
     }
     catch(const std::exception& e)
     {
@@ -694,25 +706,39 @@ UDB_RESULT udb_get(UDB_CONNECTION* conn, UDB_READ_QUERY* read_query, UDB_DOCUMEN
                 std::span<char>(data.data(), data.size())
             });
 
-        for (size_t index = 0; index < std::get<0>(resp.key_sizes).size; index++)
+        uh::util::structured_queries <uh::protocol::read_key_value::response> read_response(resp);
+
+        // TODO; do not copy data if possible
+        int i = 0;
+        for (auto rr = read_response.next(); rr != nullptr; rr = read_response.next())
         {
             auto* new_document = new UDB_DOCUMENT(owning);
-
-            auto new_key_data = new UDB_DATA();
-            auto key_size = std::get<0>(resp.key_sizes).data[index];
-//            new_key_data->data = ;
-//            new_key_data->size = ;
-
-            auto value_size = std::get<0>(resp.value_sizes).data[index];
-            auto label_count = std::get<0>(resp.label_counts).data[index];
-
-            for (size_t count = 0; count < label_count; count++)
+            auto* key_data = new UDB_DATA(rr->key.data(), rr->key.size());
+            auto* new_data = new UDB_DATA(rr->value.data(), rr->value.size());
+            new_document->key = key_data;
+            new_document->value = new_data;
+            auto** labels_pointer = new char*[rr->labels.size];
+            for (size_t index = 0; index < rr->labels.size; index++)
             {
-
+                const auto str = rr->labels.data [index];
+                if (!str.ends_with('\0'))
+                {
+                    auto* label = new char[rr->labels.data[index].size() + 1];
+                    std::memcpy(label, str.data(), rr->labels.data[index].size());
+                    label[rr->labels.data[index].size()] = '\0';
+                    labels_pointer[index] = label;
+                }
+                else
+                {
+                    auto* label = new char[rr->labels.data[index].size()];
+                    std::memcpy(label, str.data(), rr->labels.data[index].size());
+                    labels_pointer[index] = label;
+                }
             }
+            new_document->labels = labels_pointer;
+            new_document->label_count = rr->labels.size;
+            udb_documents[i++] = new_document;
         }
-
-        resp.
 
         return UDB_RESULT::UDB_RESULT_SUCCESS;
     }
@@ -763,7 +789,7 @@ UDB_DATA* udb_get_value(UDB_DOCUMENT* doc)
 
 size_t udb_get_labels_count(UDB_DOCUMENT* doc)
 {
-    doc->label_count;
+    return doc->label_count;
 }
 
 // ---------------------------------------------------------------------

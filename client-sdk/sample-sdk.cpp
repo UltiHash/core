@@ -13,7 +13,7 @@ int main()
         if (udb_config == nullptr)
         {
             std::cout << "error_occured: " << get_error_message();
-            exit(0);
+            exit(-1);
         }
         udb_config_set_host_node(udb_config, "localhost", 0x5548);
 
@@ -22,7 +22,7 @@ int main()
         if (udb == nullptr)
         {
             std::cout << "error_occured: " << get_error_message();
-            exit(0);
+            exit(-1);
         }
 
         /* Get a connection to the UDB */
@@ -30,14 +30,14 @@ int main()
         if (udb_conn == nullptr)
         {
             std::cout << "error_occured: " << get_error_message();
-            exit(0);
+            exit(-1);
         }
 
         /* ping the connection */
         if (udb_ping(udb_conn) != UDB_RESULT_SUCCESS)
         {
             std::cout << "error_occured: " << get_error_message();
-            exit(0);
+            exit(-1);
         }
 
     /* some random data */
@@ -68,7 +68,7 @@ int main()
         UDB_DATA key(test_key, strlen(test_key));
         UDB_DATA value(test_data_1, strlen(test_data_1));
 
-        UDB_DOCUMENT* test_doc_1 = udb_init_document(&key, &value, test_labels, 2);
+        UDB_DOCUMENT* test_doc_1 = udb_init_document(&key, &value, test_labels, sizeof(test_labels) / sizeof(char*));
 
         /* create write query */
         UDB_WRITE_QUERY* test_write_query = udb_create_write_query();
@@ -77,11 +77,25 @@ int main()
         if (udb_add(udb_conn, test_write_query) != UDB_RESULT_SUCCESS)
         {
             std::cout << "error: " << get_error_message();
-            exit(0);
+            exit(-1);
         }
+
+    /* getting a list of documents */
+        UDB_DOCUMENT* document_container[1];
+
+        UDB_READ_QUERY* test_read_query = udb_create_read_query();
+        udb_read_query_add_key(test_read_query, &key);
+
+        if (udb_get(udb_conn, test_read_query, document_container) != UDB_RESULT_SUCCESS)
+        {
+            std::cout << "error: " << get_error_message();
+            exit(-1);
+        }
+
 
     /* cleanup */
         udb_destroy_write_query(&test_write_query);
+        udb_destroy_read_query(&test_read_query);
         udb_destroy_connection(udb_conn);
         udb_destroy_instance(udb);
         udb_destroy_config(udb_config);
