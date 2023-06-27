@@ -382,11 +382,15 @@ void write(serialization::buffered_serialization &out, const read_key_value::res
         case 0:
             out.write(std::get<0>(response.key_sizes));
             out.write(std::get<0>(response.value_sizes));
+            out.write(std::get<0>(response.label_counts));
+            out.write(std::get<0>(response.label_sizes));
             break;
 
         case 1:
             out.write(std::get<1>(response.key_sizes));
             out.write(std::get<1>(response.value_sizes));
+            out.write(std::get<1>(response.label_counts));
+            out.write(std::get<1>(response.label_sizes));
             break;
     }
 
