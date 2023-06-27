@@ -88,7 +88,6 @@ int main()
             exit(-1);
         }
 
-
     /* cleanup */
         udb_destroy_read_query(&test_read_query);
         udb_destroy_write_query(&test_write_query);
