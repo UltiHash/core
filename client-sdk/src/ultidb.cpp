@@ -700,7 +700,7 @@ UDB_RESULT udb_get(UDB_CONNECTION* conn, UDB_READ_QUERY* read_query, UDB_DOCUMEN
                 break;
 
             case NOT_DEFINED:
-                throw std::logic_error(Exception_Messsage(UDB_UNINITIALIZED));
+                throw std::logic_error(Exception_Messsage(UDB_UNINITIALIZED_KEY));
             default:
                 throw std::runtime_error("Unrecognized error.");
         }
@@ -753,9 +753,9 @@ UDB_RESULT udb_get(UDB_CONNECTION* conn, UDB_READ_QUERY* read_query, UDB_DOCUMEN
     }
     catch (const std::exception& e)
     {
-        if (e.what() == Exception_Messsage(UDB_UNINITIALIZED))
+        if (e.what() == Exception_Messsage(UDB_UNINITIALIZED_KEY))
         {
-            error = UDB_UNINITIALIZED;
+            error = UDB_UNINITIALIZED_KEY;
         }
         else
         {

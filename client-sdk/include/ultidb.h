@@ -1,5 +1,5 @@
 /**
- * @file Exposes APIs in order to use UltiDB.
+ * @file Exposes APIs for UDB.
  */
 
 #ifndef UDB_SDK_INCLUDE_UDB_H
@@ -19,7 +19,7 @@ extern "C" {
 
 /**
  *
- * @return array of characters that holds the version of the SDK being used
+ * @return array of characters that gives the version of the SDK
  */
 const char* get_sdk_version();
 
@@ -29,7 +29,7 @@ const char* get_sdk_version();
 const char* get_error_message();
 
 /**
- * ENUM given by UDB APIs which tells the result of the APIs called.
+ * ENUM values that describes the result of API calls.
  */
 typedef enum : uint8_t
 {
@@ -48,23 +48,38 @@ typedef enum : uint8_t
     /* Cannot set key(s) as a key type has already been previously set. */
     UDB_KEY_ALREADY_SET,
 
-    /* Not intialized. */
-    UDB_UNINITIALIZED,
+    /* Key was not set when using ::UDB_READ_QUERY. */
+    UDB_UNINITIALIZED_KEY,
 
 } UDB_RESULT;
 
-/*
- * Gives the error code for the last operation.  The code is uint8_t integer.
-*/
-// is uint8_t enough?
+/**
+ *
+ * @return enum of type ::UDB_RESULT which describes the last error occurred.
+ */
 UDB_RESULT udb_get_last_error();
 
+/**
+ * Instructs the ::UDB_DOCUMENT whether to deallocate the underlying memory it holds
+ * or not.
+ *
+ * A document holds pointer to 3 major things: 1. UDB_DATA* key, 2. UDB_DATA* value,
+ * 3. char** labels. ::OWNING_TYPE can be set to owning in the ::UDB_DOCUMENT instance
+ * to instruct that the document has full ownership of the objects being referenced by
+ * these pointers. As a result when ::UDB_DOCUMENT instance is being destroyed, it will
+ * also destroy the underlying objects.
+ */
 typedef enum : uint8_t
 {
     non_owning = 0,
     owning
 } OWNING_TYPE;
 
+/**
+ * A wrapper struct that wraps a char* and the size of the data the char* points to.
+ *
+ * It is used to wrap the keys and values that the user has.
+ */
 typedef struct UDB_DATA_WRAPPER
 {
     char* data;
@@ -79,7 +94,7 @@ typedef struct UDB_DATA_WRAPPER
 } UDB_DATA;
 
 /**
-* Opaque structure that holds the UDB instance. This instance can be used to create a connection to the database.
+* Opaque structure that holds the underlying UDB instance.
 *
 * Allocated and initialized with ::udb_create_instance.
 * Cleaned up and deallocated with ::udb_destroy_instance.
@@ -87,8 +102,8 @@ typedef struct UDB_DATA_WRAPPER
 typedef struct UDB_STATE_STRUCT UDB;
 
 /**
-* Opaque structure that holds the configuration parameters to create an instance
- * of UDB.
+* Opaque structure that holds the configuration parameters to create an instance of
+ * ::UDB.
 *
 * Allocated and initialized with ::udb_create_config.
 * Cleaned up and deallocated with ::udb_destroy_config.
@@ -96,20 +111,37 @@ typedef struct UDB_STATE_STRUCT UDB;
 typedef struct UDB_CONFIG_STRUCT UDB_CONFIG;
 
 /**
- * A struct that holds the underlying connection to the database.
+ * Opaque structure that holds the underlying connection to the database.
  */
 typedef struct UDB_CONNECTION_STRUCT UDB_CONNECTION;
 
+/**
+ * Opaque structure that represents the concept of a "document". A document is a
+ * structure that holds a key, value, and labels.
+ */
 typedef struct UDB_DOCUMENT_STRUCT UDB_DOCUMENT;
 
+/**
+ * Opaque structure that describes a write query for writing documents into the database.
+ *
+ * Provided functions can be used to fill up this query structure and subsequently write
+ * documents to the database.
+ */
 typedef struct UDB_DOCUMENTS UDB_WRITE_QUERY;
 
+/**
+ * Opaque structure that describes a read query for reading documents from the database.
+ *
+ * Provided functions can be used to fill up this query structure and subsequently read
+ * documents from the database.
+ */
 typedef struct UDB_READ_QUERY_STRUCT UDB_READ_QUERY;
 
 // ---------------------------------------------------------------------
 
 /**
-* Creates an instance of ::UDB_CONFIG (typedef UDB_CONFIG) which can be used to put configuration parameters.
+* Creates an instance of ::UDB_CONFIG (typedef UDB_CONFIG) which can be used to
+ * put configuration parameters.
 * @return UDB_CONFIG* pointer to the config created
 */
 UDB_CONFIG* udb_create_config();
@@ -217,9 +249,3 @@ char* udb_get_label(UDB_DOCUMENT* doc, size_t label_index);
 #endif
 
 #endif /* UDB_SDK_INCLUDE_UDB */
-
-/* !!!!! Things to Improve
- * 1. Assumption of hash in retrieve being always 64 bytes. This is not very good.
- * 2. There is no chunking being done, and if we do, we do not get only one hash.
- * 3. pinging as of now is just checking the socket validity which is not ideal.
- */
