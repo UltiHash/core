@@ -78,6 +78,7 @@ private:
         z.m_mnode->m_right = m_first_block.nill_offset;
         z.m_mnode->m_color = RED;
         z.m_mnode->m_data = {data_offset, data.size()};
+        std::memcpy (reinterpret_cast <char*> (&z.m_mnode->data_prefix), data.data(), std::min (sizeof (z.m_mnode->data_prefix), data.size()));
 
         const auto offset = z.m_offset;
 
@@ -103,7 +104,7 @@ private:
         node smallest_upper = m_nil;
         while (x.m_offset != m_first_block.nill_offset) {
             y = x;
-            comp_int = m_comp (data, x.m_mnode->m_data);
+            comp_int = m_comp (data, *x.m_mnode);
             if (comp_int < 0) {
                 smallest_upper = x;
                 x = get_node (x.m_mnode->m_left);
