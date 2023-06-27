@@ -48,8 +48,6 @@ BOOST_AUTO_TEST_CASE(valid_default_license)
         .ls_config = mk_ls_config(temp.path()),
         .activation_key = licenseKey_test });
 
-    BOOST_CHECK(pkg.valid());
-
     BOOST_CHECK(pkg.check(feature::STORAGE));
     BOOST_CHECK_NO_THROW(pkg.require(feature::STORAGE, 200000));
     BOOST_CHECK_THROW(pkg.require(feature::STORAGE, 1000000), util::exception);
@@ -63,14 +61,10 @@ BOOST_AUTO_TEST_CASE(ls_activate)
 
     {
         license_spring lic(mk_ls_config(temp.path()), licenseKey_test);
-
-        BOOST_REQUIRE(lic.valid());
     }
 
     {
         license_spring lic(mk_ls_config(temp.path()));
-
-        BOOST_REQUIRE(lic.valid());
     }
 }
 
@@ -82,8 +76,6 @@ BOOST_AUTO_TEST_CASE(valid_demo_license)
     license_package pkg(licensing::config{
         .type = uh::licensing::config::license_spring_demo,
         .ls_config = mk_ls_config(temp.path())});
-
-    BOOST_CHECK(!pkg.valid());
 
     BOOST_CHECK(pkg.check(feature::STORAGE));
     BOOST_CHECK_NO_THROW(pkg.require(feature::STORAGE, 200000));
@@ -98,8 +90,6 @@ BOOST_AUTO_TEST_CASE(ls_activate_demo)
 
     {
         demo_license lic;
-
-        BOOST_REQUIRE(!lic.valid());
     }
 }
 
@@ -111,8 +101,6 @@ BOOST_AUTO_TEST_CASE(fallback_demo_license)
     license_package pkg(licensing::config{
         .ls_config = mk_ls_config(temp.path()),
         .activation_key = "XXXX-XXXX-XXXX-XXXX"});
-
-    BOOST_CHECK(!pkg.valid());
 
     BOOST_CHECK(pkg.check(feature::STORAGE));
     BOOST_CHECK_NO_THROW(pkg.require(feature::STORAGE, 200000));

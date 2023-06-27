@@ -74,22 +74,6 @@ license_spring::license_spring(const license_spring_config& config)
 
 // ---------------------------------------------------------------------
 
-bool license_spring::valid()
-{
-    try
-    {
-        m_license->localCheck();
-    }
-    catch (...)
-    {
-        return false;
-    }
-
-    return true;
-}
-
-// ---------------------------------------------------------------------
-
 bool license_spring::has_feature(feature f) const
 {
     return m_features.contains(f);

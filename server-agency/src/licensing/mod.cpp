@@ -64,11 +64,6 @@ mod::~mod() = default;
 void mod::start()
 {
     INFO << "          starting licensing module";
-
-    if (!m_impl->m_licensing->valid())
-    {
-        THROW(util::exception, std::string(PROJECT_NAME) + ": invalid license");
-    }
 }
 
 // ---------------------------------------------------------------------

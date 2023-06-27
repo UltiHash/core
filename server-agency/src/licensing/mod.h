@@ -22,7 +22,7 @@ public:
     explicit mod(const uh::licensing::config& cfg);
     ~mod();
 
-    void start();
+    static void start();
 
     uh::licensing::license_package& license_package();
 

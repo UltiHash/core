@@ -49,11 +49,6 @@ mod::mod(const uh::licensing::config& cfg)
 void mod::start()
 {
     INFO << "starting licensing module";
-
-    if (!g_license_package->valid())
-    {
-        THROW(util::exception, std::string(PROJECT_NAME) + ": invalid license");
-    }
 }
 
 // ---------------------------------------------------------------------

@@ -90,11 +90,4 @@ void license_package::require(feature f, std::size_t value) const
 
 // ---------------------------------------------------------------------
 
-bool license_package::valid()
-{
-    return m_backend->valid();
-}
-
-// ---------------------------------------------------------------------
-
 } // namespace uh::licensing

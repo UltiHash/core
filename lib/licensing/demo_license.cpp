@@ -12,13 +12,6 @@ demo_license::demo_license()
 
 // ---------------------------------------------------------------------
 
-bool demo_license::valid()
-{
-    return false;
-}
-
-// ---------------------------------------------------------------------
-
 bool demo_license::has_feature(feature f) const
 {
     return m_features.contains(f);

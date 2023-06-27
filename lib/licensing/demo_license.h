@@ -19,14 +19,6 @@ public:
     demo_license();
 
     /**
-     * the default license is not timed
-     *
-     * @param license_path is the path to the license file
-     * @return if the license file is valid for the implemented service role and features
-     */
-    bool valid() override;
-
-    /**
      * Return true if the given feature is enabled.
      */
     [[nodiscard]] bool has_feature(feature f) const override;

@@ -37,12 +37,6 @@ public:
      */
     void require(feature f, std::size_t value) const;
 
-    /**
-     *
-     * @return if license checker returns valid
-     */
-    bool valid();
-
 private:
     std::map<feature, bool> m_features;
     std::unique_ptr<backend> m_backend;
