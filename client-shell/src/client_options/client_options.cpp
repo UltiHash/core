@@ -106,8 +106,14 @@ void client_options::handle(const boost::program_options::variables_map& vars)
     // generation of filesystem paths from CLI strings
     if (m_integrate)
     {
+        if(!m_uhv_path.starts_with('/'))
+            throw std::logic_error("destination on --integrate[-i] did not start with absolute path indicator \'/\'");
+
         m_config.m_outputPath  = weakly_canonical(std::filesystem::path(m_uhv_path));
         is_UHV({m_config.m_outputPath}, "destination on --integrate[-i] has wrong extensions. Please ensure that the destination ends with '.uh'.");
+
+        if(!m_config.m_outputPath.parent_path().is_absolute())
+            throw std::logic_error("destination on --integrate[-i] was not an absolute path.");
 
         if (exists(m_config.m_outputPath))
         {
