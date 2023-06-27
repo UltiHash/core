@@ -254,8 +254,8 @@ struct read_key_value
     {
         std::variant <util::ospan <uint16_t>, std::vector <uint16_t>> key_sizes {};
         std::variant <util::ospan <uint32_t>, std::vector <uint32_t>> value_sizes {};
-        std::variant <util::ospan <uint8_t>, std::span <uint8_t>> label_counts {};
-        std::variant <util::ospan <uint8_t>, std::span <uint8_t>> label_sizes {};
+        std::variant <util::ospan <uint8_t>, std::vector <uint8_t>> label_counts {};
+        std::variant <util::ospan <uint8_t>, std::vector <uint8_t>> label_sizes {};
         std::variant <util::ospan <char>, std::unique_ptr<io::data_generator> > data; // (key, value, labels) ...
 
     };
