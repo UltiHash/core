@@ -116,7 +116,11 @@ uh::protocol::read_key_value::response protocol::on_read_kv(const read_key_value
         std::span <std::string_view> labels {query->labels.data.get(), query->labels.size};
 
         if (!query->single_key.empty()) {
-            generator->append(m_storage.read_value(query->single_key, labels));
+            auto res = m_storage.read_value(query->single_key, labels);
+            std::get <1> (resp.key_sizes).emplace_back(0);
+            std::get <1> (resp.value_sizes).emplace_back(res->size());
+            std::get <1> (resp.label_counts).emplace_back(0);
+            generator->append(std::move (res));
         }
         else if (!query->start_key.empty() or !query->end_key.empty()) {
 
@@ -125,6 +129,7 @@ uh::protocol::read_key_value::response protocol::on_read_kv(const read_key_value
             for (auto& key_value: key_values) {
                 std::get <1> (resp.key_sizes).emplace_back(key_value.key->size());
                 std::get <1> (resp.value_sizes).emplace_back(key_value.value->size());
+                std::get <1> (resp.label_counts).emplace_back (key_value.labels.size());
                 generator->append(std::move(key_value.key));
                 generator->append(std::move(key_value.value));
             }

@@ -24,6 +24,7 @@ namespace uh::dbn::storage {
     struct key_value_generator {
         std::unique_ptr <io::span_generator> key;
         std::unique_ptr <io::span_generator> value;
+        std::list <std::string_view> labels;
     };
 
     template <typename Iterator>
