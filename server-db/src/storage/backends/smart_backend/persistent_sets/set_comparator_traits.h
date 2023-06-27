@@ -16,10 +16,10 @@ struct set_full_comparator {
 
     [[nodiscard]] inline int operator () (const std::string_view& new_data, const mmap_node& set_data) const {
 
-        const std::string_view data_prefix {reinterpret_cast <const char*> (set_data.data_prefix), sizeof (set_data.data_prefix)};
-        if (const auto comp = new_data.compare (data_prefix); comp != 0) {
-            return comp;
-        }
+        //const std::string_view data_prefix {reinterpret_cast <const char*> (set_data.data_prefix), sizeof (set_data.data_prefix)};
+        //if (const auto comp = new_data.compare (data_prefix); comp != 0) {
+        //    return comp;
+        //}
 
         auto* p2 = m_storage.get().get_raw_ptr(set_data.m_data.m_data_offset);
         const std::string_view strw2 {static_cast <char*> (p2), set_data.m_data.m_size};
