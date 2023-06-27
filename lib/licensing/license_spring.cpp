@@ -46,7 +46,15 @@ std::shared_ptr<LicenseSpring::LicenseManager> mk_manager(const license_spring_c
 
 // ---------------------------------------------------------------------
 
-std::shared_ptr<LicenseSpring::License> mk_license(const std::shared_ptr<LicenseSpring::LicenseManager>& manager, const LicenseSpring::LicenseID& id){
+std::shared_ptr<LicenseSpring::License> mk_license(const std::shared_ptr<LicenseSpring::LicenseManager>& manager,
+                                                   const LicenseSpring::LicenseID& id,
+                                                   const license_spring_config& config){
+
+    if(std::filesystem::exists(config.path.parent_path())){
+        WARNING << "A license was already configured. Aborting new activation!";
+        return manager->reloadLicense();
+    }
+
     return manager->activateLicense(id);
 }
 
@@ -57,7 +65,7 @@ std::shared_ptr<LicenseSpring::License> mk_license(const std::shared_ptr<License
 license_spring::license_spring(const license_spring_config& config,
                                const std::string& key)
     : m_manager(mk_manager(config)),
-      m_license(mk_license(m_manager, LicenseID::fromKey(key)))
+      m_license(mk_license(m_manager, LicenseID::fromKey(key),config))
 {
     m_license->check();
     reload();
