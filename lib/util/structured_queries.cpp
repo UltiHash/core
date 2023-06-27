@@ -38,6 +38,18 @@ read_query::read_query(structured_queries<protocol::read_key_value::request> &rq
 
 }
 
+read_response::read_response(structured_queries<protocol::read_key_value::response> &rr)
+{
+    const auto key_size = std::get <0> (rr.m_req.get().key_sizes).data [rr.index];
+    const auto val_size = std::get <0> (rr.m_req.get().value_sizes).data [rr.index];
+    const auto data_ptr = std::get <0> (rr.m_req.get().data).data.get () + rr.offset;
+
+    key = {data_ptr, key_size};
+    value = {data_ptr + key_size, val_size};
+
+    handle_labels(rr, key_size + val_size, labels, data_ptr);
+}
+
 write_query::write_query(structured_queries<protocol::write_key_value::request> &wq) {
     const auto key_size = std::get <0> (wq.m_req.get().key_sizes).data [wq.index];
     const auto val_size = std::get <0> (wq.m_req.get().value_sizes).data [wq.index];

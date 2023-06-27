@@ -10,6 +10,7 @@
 #include <util/ospan.h>
 #include <util/structured_queries.h>
 #include <iostream>
+#include <vector>
 
 #if defined(__cplusplus) || defined(c_plusplus)
 extern "C" {
@@ -632,8 +633,11 @@ UDB_RESULT udb_get(UDB_CONNECTION* conn, UDB_READ_QUERY* read_query, UDB_DOCUMEN
         std::vector<uint8_t> label_sizes {};
         std::vector<char> data {};
 
-        switch (read_query->query_type) {
+        switch (static_cast<uint8_t>(read_query->query_type)) {
             case SINGLE_KEY:
+
+                start_key_sizes.push_back(0u);
+                end_key_sizes.push_back(0u);
 
                 single_key_sizes.push_back(read_query->start_key.front()->size);
                 data.insert(data.end(), read_query->start_key.front()->data,
@@ -650,6 +654,9 @@ UDB_RESULT udb_get(UDB_CONNECTION* conn, UDB_READ_QUERY* read_query, UDB_DOCUMEN
 
                 break;
             case MULTIPLE_KEYS:
+
+            start_key_sizes.push_back(0);
+                end_key_sizes.push_back(0);
 
                 for (size_t index = 0; index < read_query->start_key.size(); index++)
                 {
@@ -689,6 +696,8 @@ UDB_RESULT udb_get(UDB_CONNECTION* conn, UDB_READ_QUERY* read_query, UDB_DOCUMEN
                     data.insert(data.end(), read_query->labels[index], read_query->labels[index] + label_size);
                 }
                 break;
+
+                single_key_sizes.push_back(0);
                 
             case NOT_DEFINED:
                 throw std::logic_error(Exception_Messsage(UDB_UNINITIALIZED));

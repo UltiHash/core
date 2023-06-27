@@ -14,10 +14,12 @@ namespace uh::util {
 
 struct read_query;
 struct write_query;
+struct read_response;
 
 template <typename RequestType>
 requires (std::is_same_v <RequestType, protocol::read_key_value::request> or
-        (std::is_same_v <RequestType, protocol::write_key_value::request>) )
+        (std::is_same_v <RequestType, protocol::read_key_value::response>) or
+        (std::is_same_v <RequestType, protocol::write_key_value::request>))
 struct structured_queries {
 
     explicit structured_queries (const RequestType& req):
@@ -27,8 +29,10 @@ struct structured_queries {
     auto next () {
         if constexpr (std::is_same_v <RequestType, protocol::read_key_value::request>)
             return (offset == std::get <0> (m_req.get().data).size) ? nullptr: std::make_unique<read_query>(*this);
-        else
+        else if constexpr (std::is_same_v <RequestType, protocol::write_key_value::request>)
             return (offset == std::get <0> (m_req.get().data).size) ? nullptr: std::make_unique<write_query>(*this);
+        else
+            return (offset == std::get <0> (m_req.get().data).size) ? nullptr: std::make_unique<read_response>(*this);
     }
 
     const std::reference_wrapper <const RequestType> m_req;
@@ -47,6 +51,13 @@ struct read_query {
     explicit read_query (structured_queries <protocol::read_key_value::request>& rq);
 };
 
+struct read_response {
+    std::span <char> key;
+    std::span <char> value;
+    util::ospan <std::string_view> labels;
+
+    explicit read_response (structured_queries <protocol::read_key_value::response>& rr);
+};
 
 struct write_query {
     std::span <char> key;

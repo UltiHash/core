@@ -71,7 +71,7 @@ typedef struct UDB_DATA_WRAPPER
     size_t size;
 
     UDB_DATA_WRAPPER(char* rec_ptr, size_t rec_size) :
-    data(rec_ptr), size(rec_size)
+            data(rec_ptr), size(rec_size)
     {}
 
     UDB_DATA_WRAPPER() : data(nullptr), size(0) {}
