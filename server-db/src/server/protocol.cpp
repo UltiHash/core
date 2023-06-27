@@ -109,7 +109,10 @@ uh::protocol::read_key_value::response protocol::on_read_kv(const read_key_value
 
     uh::util::structured_queries <read_key_value::request> queries (request);
     auto generator = std::make_unique<io::group_generator>();
-    uh::protocol::read_key_value::response resp {.key_sizes = std::vector <uint16_t>{}, .value_sizes = std::vector <uint32_t> {}};
+    uh::protocol::read_key_value::response resp {.key_sizes = std::vector <uint16_t>{},
+                                                 .value_sizes = std::vector <uint32_t> {},
+                                                 .label_counts = std::vector <uint8_t> {},
+                                                 .label_sizes = std::vector <uint8_t> {}};
 
     for (auto query = queries.next(); query != nullptr; query = queries.next()) {
 

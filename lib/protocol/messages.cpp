@@ -415,6 +415,9 @@ void read(serialization::buffered_serialization &in, read_key_value::response &r
 
     response.key_sizes = in.read_ospan <uint16_t> ();
     response.value_sizes = in.read_ospan <uint32_t> ();
+    response.label_counts = in.read_ospan <uint8_t> ();
+    response.label_sizes = in.read_ospan <uint8_t> ();
+
     response.data = in.read_ospan <char> ();
 }
 
