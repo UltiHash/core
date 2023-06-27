@@ -4,7 +4,7 @@
 
 int main()
 {
-     std::cout << get_sdk_name() << " "  << get_sdk_version() << "\n";
+     std::cout << get_sdk_name() << " "  << get_sdk_version() << "\n\n";
 
      /* Initialization */
 
@@ -59,29 +59,35 @@ int main()
         char test_label_2[] = "Dog";
         char* test_labels[] = {test_label_1, test_label_2};
 
-    /* for adding a document into the database */
-        UDB_DATA key(test_key, strlen(test_key));
-        UDB_DATA value(test_data_1, strlen(test_data_1));
+    /* adding documents to database */
 
-        /* make it so that we do not have to create UDB_DATA for key and value separately in a single function */
-        UDB_DOCUMENT* test_doc_1 = udb_init_document(&key, &value, test_labels, sizeof(test_labels) / sizeof(char*));
+        /* initialize document with key, value, and label */
+        UDB_DATA key_wrapper(test_key, strlen(test_key));
+        UDB_DATA data_wrapper(test_data_1, strlen(test_data_1));
+        UDB_DOCUMENT* test_doc_1 = udb_init_document( &key_wrapper, &data_wrapper,
+                                                     test_labels, sizeof(test_labels) / sizeof(char*));
 
         /* create write query */
         UDB_WRITE_QUERY* test_write_query = udb_create_write_query();
         udb_write_query_add_document(test_write_query, test_doc_1);
 
+        /* add document to the database */
         if (udb_add(udb_conn, test_write_query) != UDB_RESULT_SUCCESS)
         {
             std::cout << "error: " << get_error_message();
             exit(-1);
         }
 
-    /* getting a list of documents */
+    /* getting a documents from the database */
+
+        /* create a container to hold the documents retrieved */
         UDB_DOCUMENTS* documents_container = udb_create_documents_container();
 
+        /* create read query with keys */
         UDB_READ_QUERY* test_read_query = udb_create_read_query();
-        udb_read_query_add_key(test_read_query, &key);
+        udb_read_query_add_key(test_read_query, &key_wrapper);
 
+        /* get documents from the database */
         if (udb_get(udb_conn, test_read_query, documents_container) != UDB_RESULT_SUCCESS)
         {
             std::cout << "error: " << get_error_message();
@@ -91,12 +97,21 @@ int main()
         /* print the returned data */
         UDB_DOCUMENT* retrieved_document = udb_get_document(documents_container, 0);
         UDB_DATA* returned_value = udb_get_value(retrieved_document);
-        std::string test_str;
+        UDB_DATA* returned_key = udb_get_key(retrieved_document);
+        std::string key_string;
+        std::string data_string;
+
+        for (size_t i=0; i< returned_key->size; i++)
+        {
+            key_string.push_back(returned_key->data[i]);
+        }
         for (size_t i=0; i< returned_value->size; i++)
         {
-            test_str.push_back(returned_value->data[i]);
+            data_string.push_back(returned_value->data[i]);
         }
-        std::cout << std::endl;
+
+        std::cout << "received key:\n" << key_string << "\n\n";
+        std::cout << "data:\n" << data_string << "\n";
 
     /* cleanup */
         udb_destroy_documents_container(&documents_container);

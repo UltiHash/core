@@ -33,26 +33,26 @@ struct UDB_DOCUMENT_STRUCT
     UDB_DATA* value;
     char** labels;
     size_t label_count;
-    OWNING_TYPE underlying_pointers;
+    OWNING_TYPE ownership;
 
     UDB_DOCUMENT_STRUCT() : key(nullptr), value(nullptr), labels(nullptr), label_count(0),
-    underlying_pointers(non_owning) {};
+    ownership(non_owning) {};
 
     explicit UDB_DOCUMENT_STRUCT(OWNING_TYPE owning_t) :  key(nullptr), value(nullptr), labels(nullptr), label_count(0),
-    underlying_pointers(owning_t)
+    ownership(owning_t)
     {}
 
     UDB_DOCUMENT_STRUCT(UDB_DATA* rec_key, UDB_DATA* rec_value, char** rec_labels, size_t rec_label_count) :
         key(rec_key),
         value(rec_value),
-	labels(rec_labels),
+	    labels(rec_labels),
         label_count(rec_label_count),
-        underlying_pointers(non_owning)
+        ownership(non_owning)
     {}
 
     ~UDB_DOCUMENT_STRUCT()
     {
-        if (underlying_pointers == owning)
+        if (ownership == owning)
         {
             delete [] key->data;
             key->data = nullptr;
@@ -99,6 +99,8 @@ UDB_DOCUMENTS* udb_create_documents_container()
     return new UDB_DOCUMENTS();
 }
 
+// ---------------------------------------------------------------------
+
 UDB_RESULT udb_add_document(UDB_DOCUMENTS* documents_container, UDB_DOCUMENT* document)
 {
     try
@@ -117,6 +119,8 @@ UDB_RESULT udb_add_document(UDB_DOCUMENTS* documents_container, UDB_DOCUMENT* do
         return UDB_RESULT::UDB_RESULT_ERROR;
     }
 }
+
+// ---------------------------------------------------------------------
 
 UDB_RESULT udb_destroy_documents_container(UDB_DOCUMENTS** documents_container)
 {
@@ -184,13 +188,11 @@ struct UDB_CONFIG_STRUCT
 {
     UDB_CONFIG_STRUCT() :
             hostname(nullptr),
-            port(0),
-            connection_pool(3)
+            port(0)
     {};
 
     const char* hostname;
     uint16_t port;
-    size_t connection_pool;
 
 };
 
@@ -211,12 +213,10 @@ UDB_CONFIG* udb_create_config()
 
 // ---------------------------------------------------------------------
 
-UDB_RESULT udb_config_set_host_node(UDB_CONFIG* cfg, const char *hostname, uint16_t port,
-                                         size_t connection_pool)
+UDB_RESULT udb_config_set_host_node(UDB_CONFIG* cfg, const char *hostname, uint16_t port)
 {
     cfg->hostname = hostname;
     cfg->port = port;
-    cfg->connection_pool = connection_pool;
     return UDB_RESULT_SUCCESS;
 }
 
@@ -492,7 +492,8 @@ UDB_RESULT udb_add(UDB_CONNECTION* conn, UDB_WRITE_QUERY* write_query)
 {
     try
     {
-        // TODO: fill it in a buffer and then send it after the buffer is filled instead of sending all docuents at once
+        // TODO: fill it in a buffer and then send it after the buffer is filled instead of sending
+        //  all documents at once
         std::vector<uint16_t> key_sizes;
         std::vector<uint32_t> value_sizes;
         std::vector<uint8_t> label_count;
@@ -777,7 +778,7 @@ UDB_RESULT udb_get(UDB_CONNECTION* conn, UDB_READ_QUERY* read_query, UDB_DOCUMEN
                 auto* key_value = new char[read_query->start_key[0]->size + 1];
                 std::memcpy(key_value, read_query->start_key[0]->data, read_query->start_key[0]->size);
                 key_value[read_query->start_key[0]->size] = '\0';
-                key_data = new UDB_DATA(key_value, read_query->start_key[0]->size);;
+                key_data = new UDB_DATA(key_value, read_query->start_key[0]->size);
             }
             else
             {
@@ -792,6 +793,7 @@ UDB_RESULT udb_get(UDB_CONNECTION* conn, UDB_READ_QUERY* read_query, UDB_DOCUMEN
             char** labels_pointer = nullptr;
             if (rr->labels.size > 0)
                 labels_pointer = new char*[rr->labels.size];
+
             for (size_t index = 0; index < rr->labels.size; index++)
             {
                 const auto str = rr->labels.data [index];
@@ -815,7 +817,7 @@ UDB_RESULT udb_get(UDB_CONNECTION* conn, UDB_READ_QUERY* read_query, UDB_DOCUMEN
             udb_documents->count++;
         }
 
-        // Free the ospan so that we don't delete twice, also do not copy the key and labels
+        // Free the ospan since document will free the data for us
         std::get<0>(resp.data).data.release();
 
         return UDB_RESULT::UDB_RESULT_SUCCESS;
