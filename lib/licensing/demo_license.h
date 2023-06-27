@@ -2,7 +2,10 @@
 #define DEMO_LICENSE_H
 
 #include <licensing/backend.h>
-#include <licensing/license_spring.h>
+
+#include <map>
+
+#include <boost/property_tree/json_parser.hpp>
 
 namespace uh::licensing
 {
@@ -13,7 +16,7 @@ public:
     /**
      * Construct and activate license.
      */
-    explicit demo_license();
+    demo_license();
 
     /**
      * the default license is not timed

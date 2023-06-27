@@ -2,8 +2,6 @@
 
 #include <util/exception.h>
 
-#include <boost/property_tree/json_parser.hpp>
-
 namespace uh::licensing
 {
 
@@ -28,11 +26,10 @@ bool demo_license::has_feature(feature f) const
 
 // ---------------------------------------------------------------------
 
-std::string demo_license::feature_arg_string(feature f, const std::string &name) const
+std::string demo_license::feature_arg_string(feature f, const std::string& name) const
 {
     auto it = m_features.find(f);
-    if (it == m_features.end())
-    {
+    if (it == m_features.end()) {
         THROW(util::exception, "feature argument not defined: " + name);
     }
 
@@ -41,11 +38,10 @@ std::string demo_license::feature_arg_string(feature f, const std::string &name)
 
 // ---------------------------------------------------------------------
 
-std::size_t demo_license::feature_arg_size_t(feature f, const std::string &name) const
+std::size_t demo_license::feature_arg_size_t(feature f, const std::string& name) const
 {
     auto it = m_features.find(f);
-    if (it == m_features.end())
-    {
+    if (it == m_features.end()) {
         THROW(util::exception, "feature argument not defined: " + name);
     }
 
@@ -59,9 +55,12 @@ void demo_license::reload()
     std::map<feature, boost::property_tree::ptree> features;
 
     const auto feat = feature::STORAGE;
-    auto& ptree = features[feat];
+    auto &ptree = features[feat];
 
-    auto md = "{\"max\":10737418240,\"max_soft\":10200547328,\"min\":0}";
+    const uint64_t one_GB_demo = 1024 * 1024 * 1024;
+
+    auto md = "{\"max\":" + std::to_string(one_GB_demo * 10) + ",\"max_soft\":"
+        + std::to_string(one_GB_demo * 9) + ",\"min\":0}";
     std::stringstream metadata(md);
     boost::property_tree::read_json(metadata, ptree);
 

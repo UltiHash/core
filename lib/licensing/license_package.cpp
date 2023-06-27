@@ -23,7 +23,8 @@ std::unique_ptr<backend> mk_backend(const config& c)
                 case uh::licensing::config::backend_type::license_spring:
                     return std::make_unique<license_spring>(c.ls_config, c.activation_key);
                 default:
-                THROW(util::exception, "The demo license does not require a key!");
+                    THROW(util::exception, "The demo license does not require a key!");
+
             }
 
         }
@@ -34,6 +35,7 @@ std::unique_ptr<backend> mk_backend(const config& c)
                 return std::make_unique<license_spring>(c.ls_config);
             default:
                 return std::make_unique<demo_license>();
+
         }
     }
     catch (std::exception& e){
