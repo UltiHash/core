@@ -4,7 +4,7 @@
 
 int main()
 {
-     std::cout << "UDB version " << get_sdk_version() << "\n";
+     std::cout << get_sdk_name() << " "  << get_sdk_version() << "\n";
 
      /* Initialization */
 
@@ -77,18 +77,29 @@ int main()
         }
 
     /* getting a list of documents */
-        UDB_DOCUMENT* document_container[1];
+        UDB_DOCUMENTS* documents_container = udb_create_documents_container();
 
         UDB_READ_QUERY* test_read_query = udb_create_read_query();
         udb_read_query_add_key(test_read_query, &key);
 
-        if (udb_get(udb_conn, test_read_query, document_container) != UDB_RESULT_SUCCESS)
+        if (udb_get(udb_conn, test_read_query, documents_container) != UDB_RESULT_SUCCESS)
         {
             std::cout << "error: " << get_error_message();
             exit(-1);
         }
 
+        /* print the returned data */
+        UDB_DOCUMENT* retrieved_document = udb_get_document(documents_container, 0);
+        UDB_DATA* returned_value = udb_get_value(retrieved_document);
+        std::string test_str;
+        for (size_t i=0; i< returned_value->size; i++)
+        {
+            test_str.push_back(returned_value->data[i]);
+        }
+        std::cout << std::endl;
+
     /* cleanup */
+        udb_destroy_documents_container(&documents_container);
         udb_destroy_read_query(&test_read_query);
         udb_destroy_write_query(&test_write_query);
         udb_destroy_connection(udb_conn);

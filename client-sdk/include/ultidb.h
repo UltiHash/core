@@ -18,7 +18,11 @@ extern "C" {
 #define SDK_VERSION "0.1.0"
 
 /**
- *
+ * @return array of characters that gives the name of the SDK
+ */
+const char* get_sdk_name();
+
+/**
  * @return array of characters that gives the version of the SDK
  */
 const char* get_sdk_version();
@@ -140,9 +144,9 @@ typedef struct UDB_READ_QUERY_STRUCT UDB_READ_QUERY;
 // ---------------------------------------------------------------------
 
 /**
-* Creates an instance of ::UDB_CONFIG (typedef UDB_CONFIG) which can be used to
- * put configuration parameters.
-* @return UDB_CONFIG* pointer to the config created
+* Creates an instance of ::UDB_CONFIG which can be used to put configuration parameters.
+ *
+* @return pointer to the ::UDB_CONFIG structure created
 */
 UDB_CONFIG* udb_create_config();
 
@@ -199,6 +203,11 @@ UDB_RESULT udb_ping(UDB_CONNECTION* conn);
 UDB_DOCUMENT* udb_init_document(UDB_DATA* key, UDB_DATA* value, char** labels, size_t label_count);
 UDB_DOCUMENT* udb_create_document();
 
+UDB_DOCUMENTS* udb_create_documents_container();
+UDB_RESULT udb_add_document(UDB_DOCUMENTS* documents_container, UDB_DOCUMENT* document);
+UDB_RESULT udb_destroy_documents_container(UDB_DOCUMENTS** documents_container);
+
+
 /**
  * Creates an instance of UDB_DOCUMENT with a given key and returns a pointer to it.
  *
@@ -232,7 +241,7 @@ UDB_RESULT udb_read_query_set_key_range(UDB_READ_QUERY* read_query, UDB_DATA* st
 UDB_RESULT udb_read_query_set_labels(UDB_READ_QUERY* read_query, char** labels, size_t label_count);
 UDB_RESULT udb_destroy_read_query(UDB_READ_QUERY** read_query_ptr_container);
 
-UDB_RESULT udb_get(UDB_CONNECTION* conn, UDB_READ_QUERY* read_query, UDB_DOCUMENT** udb_document);
+UDB_RESULT udb_get(UDB_CONNECTION* conn, UDB_READ_QUERY* read_query, UDB_DOCUMENTS* udb_document);
 
 /* Getters */
 size_t udb_get_documents_count(UDB_DOCUMENTS* docs);

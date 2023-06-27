@@ -1,9 +1,7 @@
 /* Implementation of UltiDB APIs. */
 
 #include "../include/ultidb.h"
-#include <functional>
 #include <thread>
-#include <utility>
 #include <protocol/client_pool.h>
 #include <protocol/client_factory.h>
 #include <net/plain_socket.h>
@@ -56,11 +54,11 @@ struct UDB_DOCUMENT_STRUCT
     {
         if (underlying_pointers == owning)
         {
-            delete key->data;
+            delete [] key->data;
             key->data = nullptr;
             delete key;
             key = nullptr;
-            delete value->data;
+            delete [] value->data;
             value->data = nullptr;
             delete value;
             for (size_t index = 0; index < label_count; index++)
@@ -93,6 +91,48 @@ struct UDB_DOCUMENTS
         documents.clear();
     }
 };
+
+// ---------------------------------------------------------------------
+
+UDB_DOCUMENTS* udb_create_documents_container()
+{
+    return new UDB_DOCUMENTS();
+}
+
+UDB_RESULT udb_add_document(UDB_DOCUMENTS* documents_container, UDB_DOCUMENT* document)
+{
+    try
+    {
+        documents_container->documents.push_back(document);
+        return UDB_RESULT_SUCCESS;
+    }
+    catch (const std::bad_alloc& e)
+    {
+        error = UDB_BAD_ALLOCATION;
+        return UDB_RESULT::UDB_BAD_ALLOCATION;
+    }
+    catch(const std::exception& e)
+    {
+        error = UDB_RESULT_ERROR;
+        return UDB_RESULT::UDB_RESULT_ERROR;
+    }
+}
+
+UDB_RESULT udb_destroy_documents_container(UDB_DOCUMENTS** documents_container)
+{
+    try
+    {
+        delete *documents_container;
+        *documents_container = nullptr;
+
+        return UDB_RESULT_SUCCESS;
+    }
+    catch(const std::exception& e)
+    {
+        error = UDB_RESULT_ERROR;
+        return UDB_RESULT::UDB_RESULT_ERROR;
+    }
+}
 
 // ---------------------------------------------------------------------
 
@@ -198,7 +238,17 @@ UDB_RESULT udb_destroy_config(UDB_CONFIG *config)
 
 // ---------------------------------------------------------------------
 
-const char* get_sdk_version() { return SDK_VERSION; }
+const char* get_sdk_version()
+{
+    return SDK_VERSION;
+}
+
+// ---------------------------------------------------------------------
+
+const char* get_sdk_name()
+{
+    return SDK_NAME;
+}
 
 // ---------------------------------------------------------------------
 
@@ -621,7 +671,7 @@ UDB_RESULT udb_destroy_read_query(UDB_READ_QUERY** read_query_ptr_container)
 
 // ---------------------------------------------------------------------
 
-UDB_RESULT udb_get(UDB_CONNECTION* conn, UDB_READ_QUERY* read_query, UDB_DOCUMENT** udb_documents)
+UDB_RESULT udb_get(UDB_CONNECTION* conn, UDB_READ_QUERY* read_query, UDB_DOCUMENTS* udb_documents)
 {
     try
     {
@@ -718,15 +768,30 @@ UDB_RESULT udb_get(UDB_CONNECTION* conn, UDB_READ_QUERY* read_query, UDB_DOCUMEN
         uh::util::structured_queries <uh::protocol::read_key_value::response> read_response(resp);
 
         // TODO; do not copy data if possible
-        int i = 0;
         for (auto rr = read_response.next(); rr != nullptr; rr = read_response.next())
         {
             auto* new_document = new UDB_DOCUMENT(owning);
-            auto* key_data = new UDB_DATA(rr->key.data(), rr->key.size());
-            auto* new_data = new UDB_DATA(rr->value.data(), rr->value.size());
+            UDB_DATA* key_data;
+            if (read_query->query_type == SINGLE_KEY)
+            {
+                auto* key_value = new char[read_query->start_key[0]->size + 1];
+                std::memcpy(key_value, read_query->start_key[0]->data, read_query->start_key[0]->size);
+                key_value[read_query->start_key[0]->size] = '\0';
+                key_data = new UDB_DATA(key_value, read_query->start_key[0]->size);;
+            }
+            else
+            {
+                key_data = new UDB_DATA(rr->key.data(), rr->key.size());
+            }
+
+            auto new_data = new UDB_DATA(rr->value.data(), rr->value.size());
+
             new_document->key = key_data;
             new_document->value = new_data;
-            auto** labels_pointer = new char*[rr->labels.size];
+
+            char** labels_pointer = nullptr;
+            if (rr->labels.size > 0)
+                labels_pointer = new char*[rr->labels.size];
             for (size_t index = 0; index < rr->labels.size; index++)
             {
                 const auto str = rr->labels.data [index];
@@ -746,10 +811,19 @@ UDB_RESULT udb_get(UDB_CONNECTION* conn, UDB_READ_QUERY* read_query, UDB_DOCUMEN
             }
             new_document->labels = labels_pointer;
             new_document->label_count = rr->labels.size;
-            udb_documents[i++] = new_document;
+            udb_documents->documents.push_back(new_document);
+            udb_documents->count++;
         }
 
+        // Free the ospan so that we don't delete twice, also do not copy the key and labels
+        std::get<0>(resp.data).data.release();
+
         return UDB_RESULT::UDB_RESULT_SUCCESS;
+    }
+    catch (const std::bad_alloc& e)
+    {
+        error = UDB_BAD_ALLOCATION;
+        return UDB_RESULT::UDB_BAD_ALLOCATION;
     }
     catch (const std::exception& e)
     {
@@ -791,6 +865,11 @@ UDB_DATA* udb_get_key(UDB_DOCUMENT* doc)
 
 UDB_DATA* udb_get_value(UDB_DOCUMENT* doc)
 {
+    std::string test_str;
+    for (size_t i=0; i< doc->value->size; i++)
+    {
+        test_str.push_back(doc->value->data[i]);
+    }
     return doc->value;
 }
 

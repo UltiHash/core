@@ -27,7 +27,7 @@ add_library(${PROJECT_NAME} STATIC ${HEADER_FILE_LIST} ${SOURCE_FILE_LIST})
 target_link_libraries(${PROJECT_NAME} PRIVATE ${${PROJECT_NAME}_LINK_LIBRARIES})
 target_include_directories(${PROJECT_NAME} PUBLIC ${${PROJECT_NAME}_INCLUDE_DIRS})
 
-add_executable(sdk-test ${CMAKE_CURRENT_SOURCE_DIR}/sample-sdk.cpp)
+add_executable(sdk-test ${CMAKE_CURRENT_SOURCE_DIR}/examples/sample-sdk.cpp)
 target_link_libraries(sdk-test ${PROJECT_NAME})
 target_include_directories(sdk-test PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
