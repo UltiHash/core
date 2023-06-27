@@ -655,7 +655,7 @@ UDB_RESULT udb_get(UDB_CONNECTION* conn, UDB_READ_QUERY* read_query, UDB_DOCUMEN
                 break;
             case MULTIPLE_KEYS:
 
-            start_key_sizes.push_back(0);
+                start_key_sizes.push_back(0);
                 end_key_sizes.push_back(0);
 
                 for (size_t index = 0; index < read_query->start_key.size(); index++)
@@ -695,10 +695,10 @@ UDB_RESULT udb_get(UDB_CONNECTION* conn, UDB_READ_QUERY* read_query, UDB_DOCUMEN
                     label_sizes.push_back(label_size);
                     data.insert(data.end(), read_query->labels[index], read_query->labels[index] + label_size);
                 }
+                single_key_sizes.push_back(0);
+
                 break;
 
-                single_key_sizes.push_back(0);
-                
             case NOT_DEFINED:
                 throw std::logic_error(Exception_Messsage(UDB_UNINITIALIZED));
             default:
