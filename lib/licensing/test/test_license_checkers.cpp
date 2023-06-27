@@ -64,6 +64,10 @@ BOOST_AUTO_TEST_CASE(ls_activate)
     }
 
     {
+        license_spring lic(mk_ls_config(temp.path()), licenseKey_test);
+    }
+
+    {
         license_spring lic(mk_ls_config(temp.path()));
     }
 }

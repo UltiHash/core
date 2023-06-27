@@ -21,6 +21,7 @@ std::unique_ptr<backend> mk_backend(const config& c)
             switch (c.type)
             {
                 case uh::licensing::config::backend_type::license_spring:
+                    INFO << "Loading standard license with key.";
                     return std::make_unique<license_spring>(c.ls_config, c.activation_key);
                 default:
                     THROW(util::exception, "The demo license does not require a key!");
@@ -32,8 +33,10 @@ std::unique_ptr<backend> mk_backend(const config& c)
         switch (c.type)
         {
             case uh::licensing::config::backend_type::license_spring:
+                INFO << "Loading standard license.";
                 return std::make_unique<license_spring>(c.ls_config);
             default:
+                INFO << "Loading demo license.";
                 return std::make_unique<demo_license>();
 
         }
