@@ -40,7 +40,8 @@ rm -Rf test
 
 # retrieve test workload and validate their checksums
 mkdir test
-yes | uh-cli --retrieve test.uh --target ./test --agency-node ${SERVER_NAME}:${SERVER_PORT}
+curdir=$(pwd)
+yes | uh-cli --retrieve test.uh --target ${curdir}/test --agency-node ${SERVER_NAME}:${SERVER_PORT}
 cat checksum.txt | sha512sum -c
 
 # cleanup
