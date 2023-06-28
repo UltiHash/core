@@ -31,7 +31,7 @@ const std::string licenseKey_test = "GZM9-S88G-RNEK-2EUH";
 auto mk_ls_config(const std::filesystem::path& path)
 {
     // TODO why do we need to give the filename twice
-    return license_spring_config {
+    return license_config {
         .productId = product_Id_test,
         .appName = appName_test,
         .appVersion = appVersion_test,
@@ -41,20 +41,23 @@ auto mk_ls_config(const std::filesystem::path& path)
 
 // ---------------------------------------------------------------------
 
-BOOST_AUTO_TEST_CASE(valid_default_license)
+#ifdef USE_LICENSE_SPRING
+BOOST_AUTO_TEST_CASE(valid_license_spring_license)
 {
     util::temp_directory temp;
     license_package pkg(licensing::config{
-        .ls_config = mk_ls_config(temp.path()),
+        .config = mk_ls_config(temp.path()),
         .activation_key = licenseKey_test });
 
     BOOST_CHECK(pkg.check(feature::STORAGE));
-    BOOST_CHECK_NO_THROW(pkg.require(feature::STORAGE, 200000));
-    BOOST_CHECK_THROW(pkg.require(feature::STORAGE, 1000000), util::exception);
+    BOOST_CHECK_NO_THROW(pkg.require(feature::STORAGE, (1ULL << 32) - 1));
+    BOOST_CHECK_THROW(pkg.require(feature::STORAGE, (1ULL << 42)), util::exception);
 }
+#endif
 
 // ---------------------------------------------------------------------
 
+#ifdef USE_LICENSE_SPRING
 BOOST_AUTO_TEST_CASE(ls_activate)
 {
     util::temp_directory temp;
@@ -71,6 +74,7 @@ BOOST_AUTO_TEST_CASE(ls_activate)
         license_spring lic(mk_ls_config(temp.path()));
     }
 }
+#endif
 
 // ---------------------------------------------------------------------
 
@@ -79,11 +83,11 @@ BOOST_AUTO_TEST_CASE(valid_demo_license)
     util::temp_directory temp;
     license_package pkg(licensing::config{
         .type = uh::licensing::config::license_spring_demo,
-        .ls_config = mk_ls_config(temp.path())});
+        .config = mk_ls_config(temp.path())});
 
     BOOST_CHECK(pkg.check(feature::STORAGE));
-    BOOST_CHECK_NO_THROW(pkg.require(feature::STORAGE, 200000));
-    BOOST_CHECK_THROW(pkg.require(feature::STORAGE, 1000000000000), util::exception);
+    BOOST_CHECK_NO_THROW(pkg.require(feature::STORAGE, (1ULL << 32) - 1));
+    BOOST_CHECK_THROW(pkg.require(feature::STORAGE, (1ULL << 42)), util::exception);
 }
 
 // ---------------------------------------------------------------------
@@ -103,12 +107,12 @@ BOOST_AUTO_TEST_CASE(fallback_demo_license)
 {
     util::temp_directory temp;
     license_package pkg(licensing::config{
-        .ls_config = mk_ls_config(temp.path()),
+        .config = mk_ls_config(temp.path()),
         .activation_key = "XXXX-XXXX-XXXX-XXXX"});
 
     BOOST_CHECK(pkg.check(feature::STORAGE));
-    BOOST_CHECK_NO_THROW(pkg.require(feature::STORAGE, 200000));
-    BOOST_CHECK_THROW(pkg.require(feature::STORAGE, 1000000000000), util::exception);
+    BOOST_CHECK_NO_THROW(pkg.require(feature::STORAGE, (1ULL << 32) - 1));
+    BOOST_CHECK_THROW(pkg.require(feature::STORAGE, (1ULL << 42)), util::exception);
 }
 
 // ---------------------------------------------------------------------

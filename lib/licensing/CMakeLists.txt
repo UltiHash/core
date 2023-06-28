@@ -4,77 +4,74 @@ set(CMAKE_CXX_STANDARD 20)
 project(uhLibLicensing)
 message(STATUS "Using ${PROJECT_NAME}...")
 
-if (CMAKE_VERSION VERSION_GREATER_EQUAL "3.24.0")
-    cmake_policy(SET CMP0135 NEW)
-endif()
-
-set(LICENSE_SPRING_API_KEY "f43e779a-71bc-460f-af89-69a1c47cbe8b")
-set(LICENSE_SPRING_SHARED_KEY "UtVbATx32BYf9QAQtLmcEJ4U5-58SezMIkeyb2Cy8l0")
-
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/license_spring_credentials.h.in
-               ${CMAKE_CURRENT_BINARY_DIR}/license_spring_credentials.h)
-include_directories(${CMAKE_CURRENT_BINARY_DIR})
-
-include(ExternalProject)
-set(CMAKE_VERBOSE_MAKEFILE ON)
-set(LICENSESPRING_VERSION "7.24.0")
-
-if(APPLE)
-    set(LICENSESPRING_TARGET "MacUniversal")
-elseif (UNIX)
-    if (${CMAKE_SYSTEM_PROCESSOR} MATCHES "aarch64")
-        set(LICENSESPRING_TARGET "Linux_AArch64")
-    else ()
-        set(LICENSESPRING_TARGET "Linux_GCC9.2")
-	#set(LICENSESPRING_TARGET "Linux_openssl3_GCC7.5")
-    endif ()
-else ()
-    message("System not supported by License Spring.")
-endif ()
-
 # external dependencies
 find_package(Boost 1.80 COMPONENTS system unit_test_framework json REQUIRED)
-find_package(OpenSSL 3 REQUIRED)
-find_package(CURL 4.8.0 REQUIRED)
 
-message("Downloading License Spring to ${CMAKE_BINARY_DIR}/ext")
+if(USE_LICENSE_SPRING)
+    set(LICENSE_SPRING_API_KEY "f43e779a-71bc-460f-af89-69a1c47cbe8b")
+    set(LICENSE_SPRING_SHARED_KEY "UtVbATx32BYf9QAQtLmcEJ4U5-58SezMIkeyb2Cy8l0")
 
-ExternalProject_Add(
-        libLicenseSpringExtern
-        PREFIX "${CMAKE_BINARY_DIR}/ext"
-        URL "https://kwiki-user-media.s3.amazonaws.com/staging/content/file_widgets/LicenseSpringCppSDKv${LICENSESPRING_VERSION}_${LICENSESPRING_TARGET}.zip"
-        DOWNLOAD_DIR "${CMAKE_BINARY_DIR}/ext/download"
-        LOG_DOWNLOAD ON
-        CONFIGURE_COMMAND ""
-        BUILD_COMMAND ""
-        UPDATE_COMMAND ""
-        INSTALL_COMMAND ""
-        LOG_DIR "${CMAKE_BINARY_DIR}/ext/ep-logs"
-        BUILD_BYPRODUCTS ${CMAKE_BINARY_DIR}/ext/src/libLicenseSpringExtern/bin/shared/${CMAKE_BUILD_TYPE}/libLicenseSpring.so
-)
+    if (CMAKE_VERSION VERSION_GREATER_EQUAL "3.24.0")
+        cmake_policy(SET CMP0135 NEW)
+    endif()
 
-#set(CMAKE_SKIP_RPATH TRUE)
+    include(ExternalProject)
+    set(CMAKE_VERBOSE_MAKEFILE ON)
+    set(LICENSESPRING_VERSION "7.24.0")
 
-file(REMOVE ${CMAKE_BINARY_DIR}/ext/src/libLicenseSpringExtern/bin/shared/${CMAKE_BUILD_TYPE}/libcurl.so.4.8.0)
-file(REMOVE ${CMAKE_BINARY_DIR}/ext/src/libLicenseSpringExtern/bin/shared/${CMAKE_BUILD_TYPE}/libcurl.so.4)
-file(REMOVE ${CMAKE_BINARY_DIR}/ext/src/libLicenseSpringExtern/bin/shared/${CMAKE_BUILD_TYPE}/libcurl.so)
+    if(APPLE)
+        set(LICENSESPRING_TARGET "MacUniversal")
+    elseif (UNIX)
+        if (${CMAKE_SYSTEM_PROCESSOR} MATCHES "aarch64")
+            set(LICENSESPRING_TARGET "Linux_AArch64")
+        else ()
+            set(LICENSESPRING_TARGET "Linux_GCC9.2")
+        #set(LICENSESPRING_TARGET "Linux_openssl3_GCC7.5")
+        endif ()
+    else ()
+        message("System not supported by License Spring.")
+    endif ()
 
-#file(REMOVE ${CMAKE_BINARY_DIR}/ext/src/libLicenseSpringExtern/bin/shared/${CMAKE_BUILD_TYPE}/libcrypto.so.3)
-#file(REMOVE ${CMAKE_BINARY_DIR}/ext/src/libLicenseSpringExtern/bin/shared/${CMAKE_BUILD_TYPE}/libcrypto.so)
 
-#file(REMOVE ${CMAKE_BINARY_DIR}/ext/src/libLicenseSpringExtern/bin/shared/${CMAKE_BUILD_TYPE}/libssl.so.3)
-#file(REMOVE ${CMAKE_BINARY_DIR}/ext/src/libLicenseSpringExtern/bin/shared/${CMAKE_BUILD_TYPE}/libssl.so)
+    find_package(OpenSSL 3 REQUIRED)
+    find_package(CURL 4.8.0 REQUIRED)
 
-set(LIB_LICENSE_SPRING_INCLUDE "${CMAKE_BINARY_DIR}/ext/src/libLicenseSpringExtern/include")
-file(MAKE_DIRECTORY ${LIB_LICENSE_SPRING_INCLUDE})
+    message("Downloading License Spring to ${CMAKE_BINARY_DIR}/ext")
 
-add_library(libLicenseSpring SHARED IMPORTED)
-set_property(TARGET libLicenseSpring PROPERTY IMPORTED_LOCATION ${CMAKE_BINARY_DIR}/ext/src/libLicenseSpringExtern/bin/shared/${CMAKE_BUILD_TYPE}/libLicenseSpring.so)
-target_include_directories(libLicenseSpring INTERFACE ${LIB_LICENSE_SPRING_INCLUDE})
-add_dependencies(libLicenseSpring libLicenseSpringExtern)
+    ExternalProject_Add(
+            libLicenseSpringExtern
+            PREFIX "${CMAKE_BINARY_DIR}/ext"
+            URL "https://kwiki-user-media.s3.amazonaws.com/staging/content/file_widgets/LicenseSpringCppSDKv${LICENSESPRING_VERSION}_${LICENSESPRING_TARGET}.zip"
+            DOWNLOAD_DIR "${CMAKE_BINARY_DIR}/ext/download"
+            LOG_DOWNLOAD ON
+            CONFIGURE_COMMAND ""
+            BUILD_COMMAND ""
+            UPDATE_COMMAND ""
+            INSTALL_COMMAND ""
+            LOG_DIR "${CMAKE_BINARY_DIR}/ext/ep-logs"
+            BUILD_BYPRODUCTS ${CMAKE_BINARY_DIR}/ext/src/libLicenseSpringExtern/bin/shared/${CMAKE_BUILD_TYPE}/libLicenseSpring.so
+    )
 
-set(${PROJECT_NAME}_INCLUDE_DIRS ${Boost_INCLUDE_DIRS} ${CURL_INCLUDE_DIR})
-set(${PROJECT_NAME}_LINK_LIBRARIES ${Boost_LIBRARIES} ${CURL_LIBRARIES} ${OPENSSL_LIBRARIES} uhLibIo uhLibLogging libLicenseSpring)
+    set(LIB_LICENSE_SPRING_INCLUDE "${CMAKE_BINARY_DIR}/ext/src/libLicenseSpringExtern/include")
+    file(MAKE_DIRECTORY ${LIB_LICENSE_SPRING_INCLUDE})
+
+    add_library(libLicenseSpring SHARED IMPORTED)
+    set_property(TARGET libLicenseSpring PROPERTY IMPORTED_LOCATION ${CMAKE_BINARY_DIR}/ext/src/libLicenseSpringExtern/bin/shared/${CMAKE_BUILD_TYPE}/libLicenseSpring.so)
+    target_include_directories(libLicenseSpring INTERFACE ${LIB_LICENSE_SPRING_INCLUDE})
+    add_dependencies(libLicenseSpring libLicenseSpringExtern)
+
+    set(${PROJECT_NAME}_INCLUDE_DIRS ${Boost_INCLUDE_DIRS} ${CURL_INCLUDE_DIR} ${CMAKE_CURRENT_BINARY_DIR})
+    set(${PROJECT_NAME}_LINK_LIBRARIES ${Boost_LIBRARIES} ${CURL_LIBRARIES} ${OPENSSL_LIBRARIES} uhLibIo uhLibLogging libLicenseSpring)
+
+else()
+    set(${PROJECT_NAME}_INCLUDE_DIRS ${Boost_INCLUDE_DIRS} ${CMAKE_CURRENT_BINARY_DIR})
+    set(${PROJECT_NAME}_LINK_LIBRARIES ${Boost_LIBRARIES} uhLibIo uhLibLogging)
+
+endif()
+
+# generate config header files
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/licensing_config.h.in
+               ${CMAKE_CURRENT_BINARY_DIR}/licensing_config.h)
 
 # adding all the .h files of the current project
 file(GLOB HEADER_FILE_LIST ${CMAKE_CURRENT_SOURCE_DIR}/*.h)

@@ -15,6 +15,7 @@ namespace
 
 std::unique_ptr<backend> mk_backend(const config& c)
 {
+#ifdef USE_LICENSE_SPRING
     try{
         if (!c.activation_key.empty())
         {
@@ -22,7 +23,7 @@ std::unique_ptr<backend> mk_backend(const config& c)
             {
                 case uh::licensing::config::backend_type::license_spring:
                     INFO << "Loading standard license with key.";
-                    return std::make_unique<license_spring>(c.ls_config, c.activation_key);
+                    return std::make_unique<license_spring>(c.config, c.activation_key);
                 default:
                     THROW(util::exception, "The demo license does not require a key!");
 
@@ -34,7 +35,7 @@ std::unique_ptr<backend> mk_backend(const config& c)
         {
             case uh::licensing::config::backend_type::license_spring:
                 INFO << "Loading standard license.";
-                return std::make_unique<license_spring>(c.ls_config);
+                return std::make_unique<license_spring>(c.config);
             default:
                 INFO << "Loading demo license.";
                 return std::make_unique<demo_license>();
@@ -46,6 +47,9 @@ std::unique_ptr<backend> mk_backend(const config& c)
         INFO << "Loading demo license.";
         return std::make_unique<demo_license>();
     }
+#else
+    return std::make_unique<demo_license>();
+#endif
 }
 
 // ---------------------------------------------------------------------

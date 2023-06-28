@@ -53,7 +53,7 @@ int main(int argc, const char **argv)
         state_module.start();
 
         auto licensing = config.licensing();
-        licensing.ls_config.path = config.state().data_directory / "license";
+        licensing.config.path = config.state().data_directory / "license";
         uh::an::licensing::global_license_pointer_an =
             std::make_unique<uh::an::licensing::mod>(licensing);
         uh::an::licensing::global_license_pointer_an->start();

@@ -1,5 +1,7 @@
+#include <licensing_config.h>
+#ifdef USE_LICENSE_SPRING
 #include <licensing/license_spring.h>
-#include <license_spring_credentials.h>
+
 
 #include <util/exception.h>
 
@@ -23,7 +25,7 @@ namespace
 
 // ---------------------------------------------------------------------
 
-std::shared_ptr<LicenseSpring::LicenseManager> mk_manager(const license_spring_config& config)
+std::shared_ptr<LicenseSpring::LicenseManager> mk_manager(const license_config& config)
 {
     ExtendedOptions options;
 
@@ -48,7 +50,7 @@ std::shared_ptr<LicenseSpring::LicenseManager> mk_manager(const license_spring_c
 
 std::shared_ptr<LicenseSpring::License> mk_license(const std::shared_ptr<LicenseSpring::LicenseManager>& manager,
                                                    const LicenseSpring::LicenseID& id,
-                                                   const license_spring_config& config){
+                                                   const license_config& config){
 
     if(std::filesystem::exists(config.path.parent_path())){
         WARNING << "A license was already configured. Aborting new activation!";
@@ -62,7 +64,7 @@ std::shared_ptr<LicenseSpring::License> mk_license(const std::shared_ptr<License
 
 // ---------------------------------------------------------------------
 
-license_spring::license_spring(const license_spring_config& config,
+license_spring::license_spring(const license_config& config,
                                const std::string& key)
     : m_manager(mk_manager(config)),
       m_license(mk_license(m_manager, LicenseID::fromKey(key),config))
@@ -73,7 +75,7 @@ license_spring::license_spring(const license_spring_config& config,
 
 // ---------------------------------------------------------------------
 
-license_spring::license_spring(const license_spring_config& config)
+license_spring::license_spring(const license_config& config)
     : m_manager(mk_manager(config)),
       m_license(m_manager->reloadLicense())
 {
@@ -167,3 +169,4 @@ void license_spring::reload()
 // ---------------------------------------------------------------------
 
 } // namespace uh::licensing
+#endif

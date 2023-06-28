@@ -18,6 +18,8 @@ if((NOT BUILD_SERVER_DB) AND (NOT BUILD_SERVER_AGENCY) AND (NOT BUILD_CLIENT_SHE
     SET(BUILD_TOOLS ON CACHE BOOL           "Building the tools component" FORCE)
 endif()
 
+option(USE_LICENSE_SPRING "Use the LicenseSpring licensing backend" OFF)
+
 find_package(Git REQUIRED)
 if(GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/.git")
     # auto-ignore build directory

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-SERVER_NAME="uh-server-db"
+SERVER_NAME="uh-data-node"
 SERVER_PORT=12345
 TIMEOUT="60"  # empty for infinite
 
@@ -19,5 +19,5 @@ while ! ncat -z ${SERVER_NAME} ${SERVER_PORT}; do
     sleep 1;
 done
 
-echo "uh-server-db has become available, moving on..."
-uh-agency-node --db-node ${SERVER_NAME}:${SERVER_PORT} --activate-replace "GZHG-MWDK-DHNK-2J02"
+echo "uh-data-node has become available, moving on..."
+uh-agency-node --db-node ${SERVER_NAME}:${SERVER_PORT} #--activate "GZHG-MWDK-DHNK-2J02"

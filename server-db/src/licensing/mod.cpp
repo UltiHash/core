@@ -22,9 +22,9 @@ namespace
 
 std::unique_ptr<uh::licensing::license_package> make_licensing(uh::licensing::config cfg)
 {
-    cfg.ls_config.productId = LICENSE_PRODUCT_ID;
-    cfg.ls_config.appName = PROJECT_NAME;
-    cfg.ls_config.appVersion = PROJECT_VERSION;
+    cfg.config.productId = LICENSE_PRODUCT_ID;
+    cfg.config.appName = PROJECT_NAME;
+    cfg.config.appVersion = PROJECT_VERSION;
 
     return std::make_unique<uh::licensing::license_package>(cfg);
 }

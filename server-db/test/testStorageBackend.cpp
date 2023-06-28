@@ -30,7 +30,7 @@ public:
 
     storage_fixture()
         : m_licensing(uh::licensing::config {
-            .ls_config = {
+            .config = {
                 .path = m_tmp.path() / "test.lic" / "test.lic",
             },
             .activation_key = "GZLF-TD88-AZAK-2F01"

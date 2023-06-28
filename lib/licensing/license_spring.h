@@ -1,7 +1,11 @@
+
 #ifndef CORE_CHECK_LICENSE_H
 #define CORE_CHECK_LICENSE_H
 
+#include <licensing/common.h>
 #include <licensing/backend.h>
+
+#ifdef USE_LICENSE_SPRING
 
 #include <filesystem>
 #include <map>
@@ -16,27 +20,17 @@ namespace uh::licensing
 
 // ---------------------------------------------------------------------
 
-struct license_spring_config
-{
-    std::string productId;
-    std::string appName;
-    std::string appVersion;
-    std::filesystem::path path;
-};
-
-// ---------------------------------------------------------------------
-
 class license_spring : public backend
 {
 public:
     /**
      * Construct and activate license.
      */
-    explicit license_spring(const license_spring_config& config,
+    explicit license_spring(const license_config& config,
                             const std::string& key);
 
     // without activation
-    explicit license_spring(const license_spring_config& config);
+    explicit license_spring(const license_config& config);
 
     /**
      * Return true if the given feature is enabled.
@@ -65,5 +59,5 @@ private:
 // ---------------------------------------------------------------------
 
 } // namespace uh::licensing
-
+#endif
 #endif //CORE_CHECK_LICENSE_H

@@ -1,7 +1,12 @@
 #ifndef LICENSING_CONFIG_H
 #define LICENSING_CONFIG_H
 
+#include <licensing/common.h>
+
+
+#ifdef USE_LICENSE_SPRING
 #include <licensing/license_spring.h>
+#endif
 
 
 namespace uh::licensing
@@ -18,7 +23,7 @@ struct config
     };
 
     backend_type type = license_spring;
-    license_spring_config ls_config;
+    license_config config;
 
     std::string activation_key;
 };
