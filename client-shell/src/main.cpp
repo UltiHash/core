@@ -110,7 +110,8 @@ void integrate(protocol::client_pool& pool,
         files.push_back(std::move(md));
     }
 
-    files.sort([](auto& ml, auto& mr){ return ml->path() < mr->path(); });
+    files.sort([](auto& ml, auto& mr)
+               { return ml->path() < mr->path(); });
 
     uhv::file file(output);
     file.serialize(files);
@@ -119,13 +120,13 @@ void integrate(protocol::client_pool& pool,
 
     auto time_diff = std::chrono::duration<double>(time_end - time_start);
     double seconds = time_diff.count();
-    double mbytes = static_cast<double>(size) / (1024*1024);
+    double mbytes = static_cast<double>(size) / (1024 * 1024);
 
-    if (size != 0)
-    {
-        std::cout << "de-duplication ratio: " << (double) effective_size / (double) size << "\n";
-        std::cout << "encoding speed: " << (mbytes / seconds) << " Mb/s" << "\n";
-    }
+    double dedup_ratio{1};
+    if (size)dedup_ratio = (double) effective_size / (double) size;
+
+    std::cout << "space saving: " << (double) 1 - dedup_ratio << "\n";
+    std::cout << "encoding speed: " << (mbytes / seconds) << " Mb/s" << "\n";
 }
 
 // ---------------------------------------------------------------------
@@ -157,20 +158,21 @@ void retrieve(protocol::client_pool& pool,
 
     auto time_diff = std::chrono::duration<double>(time_end - time_start);
     double seconds = time_diff.count();
-    double mbytes = static_cast<double>(size) / (1024*1024);
+    double mbytes = static_cast<double>(size) / (1024 * 1024);
 
     std::cout << "decoding speed: " << (mbytes / seconds) << " Mb/s" << std::endl;
 }
 
 // ---------------------------------------------------------------------
 
-int main(int argc, const char *argv[])
+int main(int argc, const char* argv[])
 {
     try
     {
         application_config config;
-        config.add_desc("General Usage:\n(integrate) - ./uh-cli --integrate <destination_uh_file_name>.uh <origin_directory> --agency-node <host>:<port>\n"
-                        "(retrieve)  - ./uh-cli --retrieve <destination_uh_file_name>.uh --target <target_directory> --agency-node <host>:<port>");
+        config.add_desc(
+            "General Usage:\n(integrate) - ./uh-cli --integrate <destination_uh_file_name>.uh <origin_directory> --agency-node <host>:<port>\n"
+            "(retrieve)  - ./uh-cli --retrieve <destination_uh_file_name>.uh --target <target_directory> --agency-node <host>:<port>");
         if (config.evaluate(argc, argv) == uh::options::action::exit)
         {
             return 0;
