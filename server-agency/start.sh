@@ -6,6 +6,8 @@ TIMEOUT="60"  # empty for infinite
 
 echo "Waiting for ${SERVER_NAME}:${SERVER_PORT} to become available..."
 
+sleep 15
+
 timeout=$TIMEOUT
 while ! ncat -z ${SERVER_NAME} ${SERVER_PORT}; do
     if [ "$timeout" = "0" ]; then
@@ -20,4 +22,4 @@ while ! ncat -z ${SERVER_NAME} ${SERVER_PORT}; do
 done
 
 echo "uh-data-node has become available, moving on..."
-uh-agency-node --db-node ${SERVER_NAME}:${SERVER_PORT} #--activate "GZHG-MWDK-DHNK-2J02"
+uh-agency-node --db-node ${SERVER_NAME}:${SERVER_PORT}
