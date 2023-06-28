@@ -50,10 +50,11 @@ void demo_license::reload()
     const auto feat = feature::STORAGE;
     auto &ptree = features[feat];
 
-    const uint64_t one_GB_demo = 1024 * 1024 * 1024;
+    const uint64_t sofLimit = 1 << 40;                 // 1TiB
+    const uint64_t hardLimit = sofLimit + (1 << 34);   // 1TiB + 16 GiB
 
-    auto md = "{\"max\":" + std::to_string(one_GB_demo * 10) + ",\"max_soft\":"
-        + std::to_string(one_GB_demo * 9) + ",\"min\":0}";
+    auto md = "{\"max\":" + std::to_string(hardLimit) + ",\"max_soft\":"
+              + std::to_string(sofLimit) + ",\"min\":0}";
     std::stringstream metadata(md);
     boost::property_tree::read_json(metadata, ptree);
 
