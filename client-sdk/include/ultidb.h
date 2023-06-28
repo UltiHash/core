@@ -12,10 +12,10 @@
 extern "C" {
 #endif
 
-// ---------------------------------------------------------------------
-
 #define SDK_NAME "UDB"
 #define SDK_VERSION "0.1.0"
+
+// ---------------------------------------------------------------------
 
 /**
  * @return array of characters that gives the name of the SDK
@@ -84,18 +84,7 @@ typedef enum : uint8_t
  *
  * It is used to wrap the keys and values that the user has.
  */
-typedef struct UDB_DATA_WRAPPER
-{
-    char* data;
-    size_t size;
-
-    UDB_DATA_WRAPPER(char* rec_ptr, size_t rec_size) :
-            data(rec_ptr), size(rec_size)
-    {}
-
-    UDB_DATA_WRAPPER() : data(nullptr), size(0) {}
-
-} UDB_DATA;
+typedef struct UDB_DATA_STRUCT UDB_DATA;
 
 /**
 * Opaque structure that holds the underlying UDB instance.
@@ -190,7 +179,7 @@ UDB* udb_create_instance(UDB_CONFIG *config);
 UDB_RESULT udb_destroy_instance(UDB* udb_instance);
 
 /**
- * Creates a instance of ::UDB_CONNECTION which can be used to perform various
+ * Creates an instance of ::UDB_CONNECTION which can be used to perform various
  * UDB operations such as adding and getting documents to/from the UDB database.
  *
  * The instance created has to be destroyed using ::udb_destroy_connection.
@@ -217,30 +206,54 @@ UDB_RESULT udb_ping(UDB_CONNECTION* conn);
 
 // ---------------------------------------------------------------------
 
-/**
- * Creates an instance of ::UDB_DOCUMENT structure. It returns a pointer to the
- * allocated instance which should be the
- *
- * @return pointer to the ::UDB_DOCUMENT structure allocated
- */
-UDB_DOCUMENT* udb_init_document(UDB_DATA* key, UDB_DATA* value, char** labels, size_t label_count);
-UDB_DOCUMENT* udb_create_document();
-void udb_document_set_key(UDB_DOCUMENT* doc, UDB_DATA* key);
-void udb_document_set_value(UDB_DOCUMENT* doc, UDB_DATA* value);
-void udb_document_set_labels(UDB_DOCUMENT* doc, char** labels);
-UDB_RESULT udb_document_add_label(UDB_DOCUMENT* doc, char* label);
+UDB_DATA* udb_create_data(char* data, size_t size);
+UDB_RESULT udb_destroy_data(UDB_DATA** data_wrapper);
 
 /**
- * Deallocates the instance of UDB_DOCUMENT which was allocated before. It also frees all the memory that is held
- * by the pointers inside the struct object.
+ * Creates an instance of ::UDB_DOCUMENT structure and returns a pointer it
+ * if the allocation was successful. On failure, a nullptr is returned.
+ *
+ * @param key UDB_DATA* which holds the key information
+ * @param value UDB_DATA* which holds the value information
+ * @param labels char** which holds pointers to the labels. The labels themselves are null terminated.
+ * @param label_count Number of labels the user wants to assign for the value
+ * @return pointer to the ::UDB_DOCUMENT allocated. On failure a nullptr is returned.
+*/
+UDB_DOCUMENT* udb_init_document(char* key, size_t key_size, char* value, size_t value_size,
+                                char** labels, size_t label_count);
+
+/**
+ * Deallocates the instance of ::UDB_DOCUMENT structure. If the document instance was set to have an
+ * owning enum through ::udb, it recursively deallocates references to all the object it holds, else it only
+ * deallocates itself.
  *
  * @param doc document to deallocate
  * @return UDB_RESULT enum that describes the result of the operation
  */
 UDB_RESULT udb_destroy_document(UDB_DOCUMENT** ptr_to_document_ptr);
 
+/**
+ * Creates an instance of ::UDB_DOCUMENTS container for holding array of ::UDB_DOCUMENT pointers.
+ *
+ * @return pointer to the ::UDB_DOCUMENTS allocated. On failure a nullptr is returned.
+ */
 UDB_DOCUMENTS* udb_create_documents_container();
+
+/**
+ * Adds UDB_DOCUMENT*
+ *
+ * @param documents_container pointer to the ::UDB_DOCUMENTS structure which holds the ::UDB_DOCUMENT
+ * pointers
+ * @param document pointer to a ::UDB_DOCUMENT which is to be added to the container
+ * @return enum which describes the result of the operation
+ */
 UDB_RESULT udb_add_document(UDB_DOCUMENTS* documents_container, UDB_DOCUMENT* document);
+
+/**
+ *
+ * @param documents_container
+ * @return
+ */
 UDB_RESULT udb_destroy_documents_container(UDB_DOCUMENTS** documents_container);
 
 
@@ -259,7 +272,7 @@ UDB_RESULT udb_destroy_write_query(UDB_WRITE_QUERY** write_query_ptr_container);
 
 
 
-UDB_RESULT udb_add(UDB_CONNECTION* conn, UDB_WRITE_QUERY* write_query); // should also account for keys being empty in
+UDB_RESULT udb_put(UDB_CONNECTION* conn, UDB_WRITE_QUERY* write_query); // should also account for keys being empty in
 // case user hasn't specified it
 
 

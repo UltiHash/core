@@ -29,47 +29,26 @@ UDB_RESULT udb_get_last_error()
 
 struct UDB_DOCUMENT_STRUCT
 {
-    UDB_DATA* key;
-    UDB_DATA* value;
+    char* key;
+    size_t key_size;
+    char* value;
+    size_t value_size;
     char** labels;
     size_t label_count;
-    OWNING_TYPE ownership;
 
-    UDB_DOCUMENT_STRUCT() : key(nullptr), value(nullptr), labels(nullptr), label_count(0),
-    ownership(non_owning) {};
+    UDB_DOCUMENT_STRUCT() : key(nullptr), key_size(0), value(nullptr), value_size(0),
+                            labels(nullptr), label_count(0)
+    {};
 
-    explicit UDB_DOCUMENT_STRUCT(OWNING_TYPE owning_t) :  key(nullptr), value(nullptr), labels(nullptr), label_count(0),
-    ownership(owning_t)
-    {}
-
-    UDB_DOCUMENT_STRUCT(UDB_DATA* rec_key, UDB_DATA* rec_value, char** rec_labels, size_t rec_label_count) :
+    UDB_DOCUMENT_STRUCT(char* rec_key, size_t rec_key_size, char* rec_value, size_t rec_value_size,
+                        char** rec_labels, size_t rec_label_count) :
         key(rec_key),
+        key_size(rec_key_size),
         value(rec_value),
+        value_size(rec_value_size),
 	    labels(rec_labels),
-        label_count(rec_label_count),
-        ownership(non_owning)
+        label_count(rec_label_count)
     {}
-
-    ~UDB_DOCUMENT_STRUCT()
-    {
-        if (ownership == owning)
-        {
-            delete [] key->data;
-            key->data = nullptr;
-            delete key;
-            key = nullptr;
-            delete [] value->data;
-            value->data = nullptr;
-            delete value;
-            for (size_t index = 0; index < label_count; index++)
-            {
-                delete [] labels[index];
-                labels[index] = nullptr;
-            }
-            delete [] labels;
-            labels = nullptr;
-        }
-    }
 };
 
 // ---------------------------------------------------------------------
@@ -82,14 +61,7 @@ struct UDB_DOCUMENTS
     UDB_DOCUMENTS() : count(0)
     {}
 
-    ~UDB_DOCUMENTS()
-    {
-        for (auto& item : documents)
-        {
-            delete item;
-        }
-        documents.clear();
-    }
+    ~UDB_DOCUMENTS() = default;
 };
 
 // ---------------------------------------------------------------------
@@ -178,6 +150,8 @@ const char* get_error_message()
         case 0 : return "Successful Operation.";
         case 2: return "Buffer Overflow";
         case 3: return "Bad memory allocation";
+        case 4: return "A key was already set previously.";
+        case 5: return "A key wasn't set on read query structure";
         default: return "Unknown Error";
     }
 }
@@ -381,26 +355,12 @@ UDB_RESULT udb_ping(UDB_CONNECTION_STRUCT* conn)
 
 // ---------------------------------------------------------------------
 
-UDB_DOCUMENT* udb_init_document(UDB_DATA* key, UDB_DATA* value, char** labels, size_t label_count)
+UDB_DOCUMENT* udb_init_document(char* key, size_t key_size, char* value, size_t value_size,
+                                char** labels, size_t label_count)
 {
     try
     {
-        return new UDB_DOCUMENT_STRUCT(key, value, labels, label_count);
-    }
-    catch (const std::exception& e)
-    {
-        error = UDB_RESULT_ERROR;
-        return nullptr;
-    }
-}
-
-// ---------------------------------------------------------------------
-
-UDB_DOCUMENT* udb_create_document()
-{
-    try
-    {
-        return new UDB_DOCUMENT_STRUCT();
+        return new UDB_DOCUMENT_STRUCT(key, key_size, value, value_size, labels, label_count);
     }
     catch (const std::exception& e)
     {
@@ -424,27 +384,6 @@ UDB_RESULT udb_destroy_document(UDB_DOCUMENT_STRUCT** ptr_to_document_ptr)
         error = UDB_RESULT_ERROR;
         return UDB_RESULT_ERROR;
     }
-}
-
-// ---------------------------------------------------------------------
-
-void udb_document_set_key(UDB_DOCUMENT* doc, UDB_DATA* key)
-{
-    doc->key = key;
-}
-
-// ---------------------------------------------------------------------
-
-void udb_document_set_value(UDB_DOCUMENT* doc, UDB_DATA* value)
-{
-    doc->value = value;
-}
-
-// ---------------------------------------------------------------------
-
-void udb_document_set_labels(UDB_DOCUMENT* doc, char** labels)
-{
-    doc->labels = labels;
 }
 
 // ---------------------------------------------------------------------
@@ -488,7 +427,7 @@ UDB_RESULT udb_destroy_write_query(UDB_WRITE_QUERY** ptr_to_write_query_ptr)
 
 // ---------------------------------------------------------------------
 
-UDB_RESULT udb_add(UDB_CONNECTION* conn, UDB_WRITE_QUERY* write_query)
+UDB_RESULT udb_put(UDB_CONNECTION* conn, UDB_WRITE_QUERY* write_query)
 {
     try
     {
@@ -504,11 +443,11 @@ UDB_RESULT udb_add(UDB_CONNECTION* conn, UDB_WRITE_QUERY* write_query)
 
         for (const auto& document : write_query->documents)
         {
-            key_sizes.push_back(document->key->size);
-            data.insert(data.end(), document->key->data, document->key->data + document->key->size);
+            key_sizes.push_back(document->key_size);
+            data.insert(data.end(), document->key, document->key + document->key_size);
 
-            value_sizes.push_back(document->value->size);
-            data.insert(data.end(), document->value->data, document->value->data + document->value->size);
+            value_sizes.push_back(document->value_size);
+            data.insert(data.end(), document->value, document->value + document->value_size);
 
             label_count.push_back(document->label_count);
             for (size_t index = 0; index < document->label_count; index++ )
