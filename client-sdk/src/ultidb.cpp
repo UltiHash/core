@@ -519,13 +519,13 @@ UDB_RESULT udb_add(UDB_CONNECTION* conn, UDB_WRITE_QUERY* write_query)
         }
 
         auto resp = conn->m_udb_client->write_kv(uh::protocol::write_key_value::request
-                                         {
-                                            std::span<uint16_t>(key_sizes.data(), key_sizes.size()),
-                                            std::span<uint32_t>(value_sizes.data(), value_sizes.size()),
-                                            std::span<uint8_t>(label_count.data(), label_count.size()),
-                                            std::span<uint8_t>(label_sizes.data(), label_sizes.size()),
-                                            std::span<char>(data.data(), data.size())
-                                         });
+                                                         {
+                                                                 std::span<uint16_t>(key_sizes.data(), key_sizes.size()),
+                                                                 std::span<uint32_t>(value_sizes.data(), value_sizes.size()),
+                                                                 std::span<uint8_t>(label_count.data(), label_count.size()),
+                                                                 std::span<uint8_t>(label_sizes.data(), label_sizes.size()),
+                                                                 std::span<char>(data.data(), data.size())
+                                                         });
 
         return UDB_RESULT::UDB_RESULT_SUCCESS;
     }
@@ -705,8 +705,6 @@ UDB_RESULT udb_get(UDB_CONNECTION* conn, UDB_READ_QUERY* read_query, UDB_DOCUMEN
                 break;
             case MULTIPLE_KEYS:
 
-                start_key_sizes.push_back(0);
-                end_key_sizes.push_back(0);
 
                 for (size_t index = 0; index < read_query->start_key.size(); index++)
                 {
@@ -716,12 +714,15 @@ UDB_RESULT udb_get(UDB_CONNECTION* conn, UDB_READ_QUERY* read_query, UDB_DOCUMEN
 
                     label_counts.push_back(read_query->label_count);
 
-                    for (index = 0; index < read_query->label_count; index++)
+                    for (int count = 0; count < read_query->label_count; count++)
                     {
-                        auto label_size = sizeof(read_query->labels[index]);
+                        auto label_size = sizeof(read_query->labels[count]);
                         label_sizes.push_back(label_size);
-                        data.insert(data.end(), read_query->labels[index], read_query->labels[index] + label_size);
+                        data.insert(data.end(), read_query->labels[count], read_query->labels[count] + label_size);
                     }
+                    start_key_sizes.push_back(0);
+                    end_key_sizes.push_back(0);
+
                 }
 
                 break;
@@ -770,6 +771,7 @@ UDB_RESULT udb_get(UDB_CONNECTION* conn, UDB_READ_QUERY* read_query, UDB_DOCUMEN
         // TODO; do not copy data if possible
         for (auto rr = read_response.next(); rr != nullptr; rr = read_response.next())
         {
+
             auto* new_document = new UDB_DOCUMENT(owning);
             UDB_DATA* key_data;
             if (read_query->query_type == SINGLE_KEY)

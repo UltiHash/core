@@ -28,11 +28,11 @@ read_query::read_query(structured_queries<protocol::read_key_value::request> &rq
     const auto start_key_size = std::get <0> (rq.m_req.get().start_key_sizes).data [rq.index];
     const auto end_key_size = std::get <0> (rq.m_req.get().end_key_sizes).data [rq.index];
     const auto single_key_size = std::get <0> (rq.m_req.get().single_key_sizes).data [rq.index];
-    const auto data_ptr = std::get <0> (rq.m_req.get().data).data.get () + rq.offset;
+    const auto data_ptr = std::get <0> (rq.m_req.get().data).data.get ();
 
-    start_key = {data_ptr, start_key_size};
-    end_key = {data_ptr + start_key_size, end_key_size};
-    single_key = {data_ptr + start_key_size + end_key_size, single_key_size};
+    start_key = {data_ptr + rq.offset, start_key_size};
+    end_key = {data_ptr + start_key_size + rq.offset, end_key_size};
+    single_key = {data_ptr + start_key_size + end_key_size + rq.offset, single_key_size};
 
     handle_labels(rq, start_key_size + end_key_size + single_key_size, labels, data_ptr);
 
@@ -42,10 +42,10 @@ read_response::read_response(structured_queries<protocol::read_key_value::respon
 {
     const auto key_size = std::get <0> (rr.m_req.get().key_sizes).data [rr.index];
     const auto val_size = std::get <0> (rr.m_req.get().value_sizes).data [rr.index];
-    const auto data_ptr = std::get <0> (rr.m_req.get().data).data.get () + rr.offset;
+    const auto data_ptr = std::get <0> (rr.m_req.get().data).data.get ();
 
-    key = {data_ptr, key_size};
-    value = {data_ptr + key_size, val_size};
+    key = {data_ptr + rr.offset, key_size};
+    value = {data_ptr + key_size + rr.offset, val_size};
 
     handle_labels(rr, key_size + val_size, labels, data_ptr);
 }
@@ -53,10 +53,10 @@ read_response::read_response(structured_queries<protocol::read_key_value::respon
 write_query::write_query(structured_queries<protocol::write_key_value::request> &wq) {
     const auto key_size = std::get <0> (wq.m_req.get().key_sizes).data [wq.index];
     const auto val_size = std::get <0> (wq.m_req.get().value_sizes).data [wq.index];
-    const auto data_ptr = std::get <0> (wq.m_req.get().data).data.get () + wq.offset;
+    const auto data_ptr = std::get <0> (wq.m_req.get().data).data.get ();
 
-    key = {data_ptr, key_size};
-    value = {data_ptr + key_size, val_size};
+    key = {data_ptr + wq.offset, key_size};
+    value = {data_ptr + key_size + wq.offset, val_size};
 
     handle_labels(wq, key_size + val_size, labels, data_ptr);
 

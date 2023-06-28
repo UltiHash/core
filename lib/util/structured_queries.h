@@ -15,7 +15,6 @@ namespace uh::util {
 struct read_query;
 struct write_query;
 struct read_response;
-
 template <typename RequestType>
 requires (std::is_same_v <RequestType, protocol::read_key_value::request> or
         (std::is_same_v <RequestType, protocol::read_key_value::response>) or
@@ -31,7 +30,7 @@ struct structured_queries {
             return (offset == std::get <0> (m_req.get().data).size) ? nullptr: std::make_unique<read_query>(*this);
         else if constexpr (std::is_same_v <RequestType, protocol::write_key_value::request>)
             return (offset == std::get <0> (m_req.get().data).size) ? nullptr: std::make_unique<write_query>(*this);
-        else
+        else if constexpr (std::is_same_v <RequestType, protocol::read_key_value::response>)
             return (offset == std::get <0> (m_req.get().data).size) ? nullptr: std::make_unique<read_response>(*this);
     }
 
