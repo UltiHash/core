@@ -152,6 +152,12 @@ struct UDB_READ_QUERY_RESULT
     size_t value_size;
     char** labels;
     size_t label_count;
+
+    UDB_READ_QUERY_RESULT(char* rec_key, size_t rec_key_size, char* rec_value, size_t rec_value_size,
+                          char** rec_labels, size_t rec_label_count) :
+                          key(rec_key), key_size(rec_value_size), value(rec_value), value_size(rec_value_size),
+                          labels(rec_labels), label_count(rec_label_count)
+    {}
 };
 
 /**
@@ -278,8 +284,8 @@ struct UDB_WRITE_QUERY_RESULTS;
 
 UDB_RESULT udb_destroy_write_query_results(UDB_WRITE_QUERY_RESULTS** results);
 
-UDB_RESULT udb_get_effective_sizes_count(UDB_WRITE_QUERY_RESULTS* results, size_t* count);
-UDB_RESULT udb_get_effective_size(UDB_WRITE_QUERY_RESULTS* results, uint32_t* value,size_t index);
+size_t udb_get_effective_sizes_count(UDB_WRITE_QUERY_RESULTS* results);
+uint32_t udb_get_effective_size(UDB_WRITE_QUERY_RESULTS* results, size_t index);
 
 /**
  * Putting the document in the database.
@@ -335,7 +341,7 @@ UDB_READ_QUERY_RESULTS* udb_get(UDB_CONNECTION* conn, UDB_READ_QUERY* read_query
  * @param result_ptr
  * @return
  */
-size_t udb_results_next(UDB_READ_QUERY_RESULTS* results_container, UDB_READ_QUERY_RESULT** result_ptr);
+bool udb_results_next(UDB_READ_QUERY_RESULTS* results_container, UDB_READ_QUERY_RESULT** result_ptr);
 
 UDB_RESULT udb_destroy_read_query_results(UDB_READ_QUERY_RESULTS** results);
 

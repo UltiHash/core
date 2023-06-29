@@ -78,11 +78,9 @@ int main()
             exit(-1);
         }
 
-        /* can create a loop and get all the effective sizes */
-        size_t count;
-        uint32_t eff_size;
-        udb_get_effective_sizes_count(write_results, &count);
-        udb_get_effective_size(write_results, &eff_size, 0);
+//        /* can create a loop and get all the effective sizes */
+//        auto count = udb_get_effective_sizes_count(write_results);
+//        auto eff_size = udb_get_effective_size(write_results, 0);
 
     /* getting a documents from the database */
 
@@ -101,7 +99,7 @@ int main()
         UDB_READ_QUERY_RESULT* result;
         while (udb_results_next(results, &result))
         {
-            // use the ptr to print the result as result points to UDB_READ_QUERY_RESULT struct
+            std::cout << result->value;
         }
 
     /* cleanup */
