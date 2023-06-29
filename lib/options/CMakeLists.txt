@@ -8,7 +8,7 @@ set(CMAKE_CXX_STANDARD 20)
 find_package(Boost 1.80 COMPONENTS program_options unit_test_framework REQUIRED)
 
 # internal dependencies
-set(${PROJECT_NAME}_INTERNAL_DEPS uhLibLogging uhLibUtil uhLibNet uhLibProtocol uhLibMetrics)
+set(${PROJECT_NAME}_INTERNAL_DEPS uhLibLogging uhLibUtil uhLibNet uhLibProtocol uhLibMetrics uhLibLicensing)
 
 # configuring library dependencies for cmake and linker
 set(${PROJECT_NAME}_INCLUDE_DIRS ${${PROJECT_NAME}_INTERNAL_DEPS} ${Boost_INCLUDE_DIRS} uhLibSerialization)
