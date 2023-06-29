@@ -272,12 +272,22 @@ void udb_write_query_add_document(UDB_WRITE_QUERY* write_query, UDB_DOCUMENT* do
 UDB_RESULT udb_destroy_write_query(UDB_WRITE_QUERY** write_query_ptr_container);
 
 /**
+ * pointer to the results given by udb_add.
+ */
+struct UDB_WRITE_QUERY_RESULTS;
+
+UDB_RESULT udb_destroy_write_query_results(UDB_WRITE_QUERY_RESULTS** results);
+
+UDB_RESULT udb_get_effective_sizes_count(UDB_WRITE_QUERY_RESULTS* results, size_t* count);
+UDB_RESULT udb_get_effective_size(UDB_WRITE_QUERY_RESULTS* results, uint32_t* value,size_t index);
+
+/**
  * Putting the document in the database.
  * @param conn
  * @param write_query
  * @return
  */
-UDB_RESULT udb_put(UDB_CONNECTION* conn, UDB_WRITE_QUERY* write_query);
+UDB_WRITE_QUERY_RESULTS* udb_put(UDB_CONNECTION* conn, UDB_WRITE_QUERY* write_query);
 
 /**
  * Creating a read query for reading documents.
@@ -327,7 +337,7 @@ UDB_READ_QUERY_RESULTS* udb_get(UDB_CONNECTION* conn, UDB_READ_QUERY* read_query
  */
 size_t udb_results_next(UDB_READ_QUERY_RESULTS* results_container, UDB_READ_QUERY_RESULT** result_ptr);
 
-UDB_RESULT udb_destroy_results(UDB_READ_QUERY_RESULTS** results);
+UDB_RESULT udb_destroy_read_query_results(UDB_READ_QUERY_RESULTS** results);
 
 /* Getters */
 size_t udb_get_results_count(UDB_READ_QUERY_RESULTS* results);

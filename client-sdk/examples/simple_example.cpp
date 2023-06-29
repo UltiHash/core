@@ -67,17 +67,20 @@ int main()
                                                      test_labels, sizeof(test_labels) / sizeof(char*));
 
         /* create a write query */
-        /* TODO: have a function for inserting just one document */
         UDB_WRITE_QUERY* test_write_query = udb_create_write_query();
         udb_write_query_add_document(test_write_query, test_doc_1);
 
         /* add document to the database */
-        // TODO: have a command that returns effective size
-        if (udb_put(udb_conn, test_write_query) != UDB_RESULT_SUCCESS)
+        UDB_WRITE_QUERY_RESULTS* write_results = udb_put(udb_conn, test_write_query);
+        if ( write_results == nullptr)
         {
             std::cout << "error: " << get_error_message();
             exit(-1);
         }
+        size_t count;
+        uint32_t eff_size;
+        udb_get_effective_sizes_count(write_results, &count);
+        udb_get_effective_size(write_results, &eff_size, 0);
 
     /* getting a documents from the database */
 
@@ -102,10 +105,11 @@ int main()
     /* cleanup */
 
         /* getting document */
-        udb_destroy_results(&results);
+        udb_destroy_read_query_results(&results);
         udb_destroy_read_query(&test_read_query);
 
         /* putting document */
+        udb_destroy_write_query_results(&write_results);
         udb_destroy_write_query(&test_write_query);
         udb_destroy_document(&test_doc_1);
 

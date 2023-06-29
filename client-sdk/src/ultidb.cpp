@@ -381,7 +381,31 @@ UDB_RESULT udb_destroy_write_query(UDB_WRITE_QUERY** ptr_to_write_query_ptr)
 
 // ---------------------------------------------------------------------
 
-UDB_RESULT udb_put(UDB_CONNECTION* conn, UDB_WRITE_QUERY* write_query)
+struct UDB_WRITE_QUERY_RESULTS
+{
+    std::vector<uint32_t> effective_sizes {};
+};
+
+// ---------------------------------------------------------------------
+
+UDB_RESULT udb_destroy_write_query_results(UDB_WRITE_QUERY_RESULTS** results)
+{
+    try
+    {
+        delete *results;
+        *results = nullptr;
+        return UDB_RESULT::UDB_RESULT_SUCCESS;
+    }
+    catch(const std::exception& e)
+    {
+        error = UDB_RESULT::UDB_RESULT_ERROR;
+        return UDB_RESULT::UDB_RESULT_ERROR;
+    }
+}
+
+// ---------------------------------------------------------------------
+
+UDB_WRITE_QUERY_RESULTS* udb_put(UDB_CONNECTION* conn, UDB_WRITE_QUERY* write_query)
 {
     try
     {
@@ -421,17 +445,26 @@ UDB_RESULT udb_put(UDB_CONNECTION* conn, UDB_WRITE_QUERY* write_query)
                                             std::span<char>(data.data(), data.size())
                                          });
 
-        return UDB_RESULT::UDB_RESULT_SUCCESS;
+        // TODO: optimize it since reserve is not used
+
+        auto* results = new UDB_WRITE_QUERY_RESULTS();
+        results->effective_sizes.insert(results->effective_sizes.end(),
+                                        std::span<uint32_t>(results->effective_sizes).begin(),
+                                        std::span<uint32_t>(results->effective_sizes).end());
+
+        resp.effective_sizes.data.release();
+
+        return results;
     }
     catch (const std::bad_alloc& e)
     {
         error = UDB_BAD_ALLOCATION;
-        return UDB_RESULT::UDB_BAD_ALLOCATION;
+        return nullptr;
     }
     catch(const std::exception& e)
     {
         error = UDB_RESULT_ERROR;
-        return UDB_RESULT::UDB_RESULT_ERROR;
+        return nullptr;
     }
 }
 
@@ -577,7 +610,7 @@ struct UDB_READ_QUERY_RESULTS
 
 // ---------------------------------------------------------------------
 
-UDB_RESULT udb_destroy_results(UDB_READ_QUERY_RESULTS** results)
+UDB_RESULT udb_destroy_read_query_results(UDB_READ_QUERY_RESULTS** results)
 {
     try
     {
