@@ -7,8 +7,12 @@ then
 fi
 
 docker compose -p integration logs > logs.txt
-docker compose -p integration stop
-docker compose -p integration rm -f
+
+if [ -z "$RUN_AS_ACTION" ]
+then
+  docker compose -p integration stop
+  docker compose -p integration rm -f
+fi
 
 RESULT=$(grep integration-uh-cli logs.txt | tail -n 1 | grep OK)
 
