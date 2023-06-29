@@ -2,15 +2,15 @@
 
 if [ -z "$RUN_AS_ACTION" ]
 then
-  docker-compose -f docker-compose-integration.yml up -d --build
+  docker compose -p integration -f docker-compose-integration.yml up -d --build
   ./wait_for_benchmark.py
 fi
 
-docker-compose logs > logs.txt
-docker-compose stop
-docker-compose rm -f
+docker compose -p integration logs > logs.txt
+docker compose -p integration stop
+docker compose -p integration rm -f
 
-RESULT=$(grep uh-cli logs.txt | tail -n 1 | grep OK)
+RESULT=$(grep integration-uh-cli logs.txt | tail -n 1 | grep OK)
 
 if [ $? -eq 0 ]
 then
