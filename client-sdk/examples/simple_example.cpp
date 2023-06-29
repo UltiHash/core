@@ -77,6 +77,8 @@ int main()
             std::cout << "error: " << get_error_message();
             exit(-1);
         }
+
+        /* can create a loop and get all the effective sizes */
         size_t count;
         uint32_t eff_size;
         udb_get_effective_sizes_count(write_results, &count);
