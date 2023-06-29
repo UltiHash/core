@@ -451,13 +451,13 @@ UDB_WRITE_QUERY_RESULTS* udb_put(UDB_CONNECTION* conn, UDB_WRITE_QUERY* write_qu
         }
 
         auto resp = conn->m_udb_client->write_kv(uh::protocol::write_key_value::request
-                                         {
-                                            std::span<uint16_t>(key_sizes.data(), key_sizes.size()),
-                                            std::span<uint32_t>(value_sizes.data(), value_sizes.size()),
-                                            std::span<uint8_t>(label_count.data(), label_count.size()),
-                                            std::span<uint8_t>(label_sizes.data(), label_sizes.size()),
-                                            std::span<char>(data.data(), data.size())
-                                         });
+                                                         {
+                                                                 std::span<uint16_t>(key_sizes.data(), key_sizes.size()),
+                                                                 std::span<uint32_t>(value_sizes.data(), value_sizes.size()),
+                                                                 std::span<uint8_t>(label_count.data(), label_count.size()),
+                                                                 std::span<uint8_t>(label_sizes.data(), label_sizes.size()),
+                                                                 std::span<char>(data.data(), data.size())
+                                                         });
 
         // TODO: optimize it since reserve is not used
 
@@ -677,7 +677,6 @@ UDB_READ_QUERY_RESULTS* udb_get(UDB_CONNECTION* conn, UDB_READ_QUERY* read_query
                 break;
 
             case MULTIPLE_KEYS:
-
 //                start_key_sizes.push_back(0);
 //                end_key_sizes.push_back(0);
 //

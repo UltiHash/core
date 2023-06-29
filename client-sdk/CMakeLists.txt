@@ -31,5 +31,12 @@ add_executable(simple_example ${CMAKE_CURRENT_SOURCE_DIR}/examples/simple_exampl
 target_link_libraries(simple_example ${PROJECT_NAME})
 target_include_directories(simple_example PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
+add_executable(directory-backup ${CMAKE_CURRENT_SOURCE_DIR}/examples/directory_backup.cpp)
+target_link_libraries(directory-backup ${PROJECT_NAME})
+target_include_directories(directory-backup PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
+
+add_executable(directory-restore ${CMAKE_CURRENT_SOURCE_DIR}/examples/directory_restore.cpp)
+target_link_libraries(directory-restore ${PROJECT_NAME})
+target_include_directories(directory-restore PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
 ## create testing targets
 #include(${CMAKE_CURRENT_SOURCE_DIR}/../cmake/testing/CMakeLists.txt)

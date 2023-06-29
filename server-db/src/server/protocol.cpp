@@ -120,9 +120,10 @@ uh::protocol::read_key_value::response protocol::on_read_kv(const read_key_value
 
         if (!query->single_key.empty()) {
             auto res = m_storage.read_value(query->single_key, labels);
-            std::get <1> (resp.key_sizes).emplace_back(0);
+            std::get <1> (resp.key_sizes).emplace_back(query->single_key.size());
             std::get <1> (resp.value_sizes).emplace_back(res->size());
             std::get <1> (resp.label_counts).emplace_back(0);
+            generator->append(std::make_unique <uh::io::span_generator> (query->single_key.size(), std::forward_list <std::span <char>> {query->single_key}));
             generator->append(std::move (res));
         }
         else if (!query->start_key.empty() or !query->end_key.empty()) {
