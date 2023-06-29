@@ -6,6 +6,8 @@ TIMEOUT="60"  # empty for infinite
 
 echo "Waiting for ${SERVER_NAME}:${SERVER_PORT} to become available..."
 
+sleep 15
+
 timeout=$TIMEOUT
 while ! ncat -z ${SERVER_NAME} ${SERVER_PORT}; do
     if [ "$timeout" = "0" ]; then

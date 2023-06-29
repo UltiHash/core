@@ -4,6 +4,10 @@ This repository is home to all functionality that is used by multiple components
 
 # libraries
 
+## licensing
+
+Everything related to a service, feature or product being usable by customer.
+
 ## logging
 
 Everything related to logging messages.
