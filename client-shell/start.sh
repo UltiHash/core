@@ -2,7 +2,7 @@
 
 ncat -e /bin/cat -k -u -l 1337 &
 
-SERVER_NAME="uh-agency-node"
+SERVER_NAME="uh-server-agency"
 SERVER_PORT=21832
 TIMEOUT="60"  # empty for infinite
 
