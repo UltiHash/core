@@ -66,12 +66,13 @@ int main()
         UDB_DOCUMENT* test_doc_1 = udb_init_document(test_key, strlen(test_key), test_data_1, strlen(test_data_1),
                                                      test_labels, sizeof(test_labels) / sizeof(char*));
 
-        /* create write query */
+        /* create a write query */
         /* TODO: have a function for inserting just one document */
         UDB_WRITE_QUERY* test_write_query = udb_create_write_query();
         udb_write_query_add_document(test_write_query, test_doc_1);
 
         /* add document to the database */
+        // TODO: have a command that returns effective size
         if (udb_put(udb_conn, test_write_query) != UDB_RESULT_SUCCESS)
         {
             std::cout << "error: " << get_error_message();
@@ -80,13 +81,35 @@ int main()
 
     /* getting a documents from the database */
 
+        /* create a read query*/
+        UDB_READ_QUERY* test_read_query = udb_create_read_query();
+        udb_read_query_add_key(test_read_query, test_key, sizeof(test_key));
+
+        /* getting a document from database */
+        UDB_READ_QUERY_RESULTS* results = udb_get(udb_conn, test_read_query);
+        if (results == nullptr)
+        {
+            std::cout << "error: " << get_error_message();
+            exit(-1);
+        }
+
+        UDB_READ_QUERY_RESULT* result;
+        while (udb_results_next(results, &result))
+        {
+            // use the ptr to print the result as result points to UDB_READ_QUERY_RESULT struct
+        }
 
     /* cleanup */
 
         /* getting document */
+        udb_destroy_results(&results);
+        udb_destroy_read_query(&test_read_query);
 
         /* putting document */
         udb_destroy_write_query(&test_write_query);
+        udb_destroy_document(&test_doc_1);
+
+        /* initialization stuffs */
         udb_destroy_connection(udb_conn);
         udb_destroy_instance(udb);
         udb_destroy_config(udb_config);

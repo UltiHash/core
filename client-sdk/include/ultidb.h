@@ -80,13 +80,6 @@ typedef enum : uint8_t
 } OWNING_TYPE;
 
 /**
- * A wrapper struct that wraps a char* and the size of the data the char* points to.
- *
- * It is used to wrap the keys and values that the user has.
- */
-typedef struct UDB_DATA_STRUCT UDB_DATA;
-
-/**
 * Opaque structure that holds the underlying UDB instance.
 *
 * Allocated and initialized with ::udb_create_instance.
@@ -130,7 +123,41 @@ typedef struct UDB_DOCUMENTS UDB_WRITE_QUERY;
  */
 typedef struct UDB_READ_QUERY_STRUCT UDB_READ_QUERY;
 
-// ---------------------------------------------------------------------
+/**
+ * A wrapper struct that wraps a char* and the size of the pointed data.
+ *
+ * It is used to wrap the keys and values for convenience purposes.
+ */
+struct UDB_DATA
+{
+    char* data;
+    size_t size;
+
+    UDB_DATA(char* rec_ptr, size_t rec_size) :
+            data(rec_ptr), size(rec_size)
+    {}
+
+    UDB_DATA() : data(nullptr), size(0) {}
+
+};
+
+/**
+ * A structure that holds key, value and labels.
+ */
+struct UDB_READ_QUERY_RESULT
+{
+    char* key;
+    size_t key_size;
+    char* value;
+    size_t value_size;
+    char** labels;
+    size_t label_count;
+};
+
+/**
+ * A opaque structure that holds
+ */
+struct UDB_READ_QUERY_RESULTS;
 
 /**
  * Creates an instance of ::UDB_CONFIG which can be used to put configuration parameters.
@@ -204,11 +231,6 @@ UDB_RESULT udb_destroy_connection(UDB_CONNECTION* conn);
  */
 UDB_RESULT udb_ping(UDB_CONNECTION* conn);
 
-// ---------------------------------------------------------------------
-
-UDB_DATA* udb_create_data(char* data, size_t size);
-UDB_RESULT udb_destroy_data(UDB_DATA** data_wrapper);
-
 /**
  * Creates an instance of ::UDB_DOCUMENT structure and returns a pointer it
  * if the allocation was successful. On failure, a nullptr is returned.
@@ -233,58 +255,87 @@ UDB_DOCUMENT* udb_init_document(char* key, size_t key_size, char* value, size_t 
 UDB_RESULT udb_destroy_document(UDB_DOCUMENT** ptr_to_document_ptr);
 
 /**
- * Creates an instance of ::UDB_DOCUMENTS container for holding array of ::UDB_DOCUMENT pointers.
- *
- * @return pointer to the ::UDB_DOCUMENTS allocated. On failure a nullptr is returned.
+ * Creating a write query to use when putting a document.
  */
-UDB_DOCUMENTS* udb_create_documents_container();
+UDB_WRITE_QUERY* udb_create_write_query();
 
 /**
- * Adds UDB_DOCUMENT*
- *
- * @param documents_container pointer to the ::UDB_DOCUMENTS structure which holds the ::UDB_DOCUMENT
- * pointers
- * @param document pointer to a ::UDB_DOCUMENT which is to be added to the container
- * @return enum which describes the result of the operation
+ * Adding a document in the write query.
+ * @param write_query
+ * @param document
  */
-UDB_RESULT udb_add_document(UDB_DOCUMENTS* documents_container, UDB_DOCUMENT* document);
+void udb_write_query_add_document(UDB_WRITE_QUERY* write_query, UDB_DOCUMENT* document);
 
 /**
- *
- * @param documents_container
+ * Destorying the instance of write query.
+ */
+UDB_RESULT udb_destroy_write_query(UDB_WRITE_QUERY** write_query_ptr_container);
+
+/**
+ * Putting the document in the database.
+ * @param conn
+ * @param write_query
  * @return
  */
-UDB_RESULT udb_destroy_documents_container(UDB_DOCUMENTS** documents_container);
+UDB_RESULT udb_put(UDB_CONNECTION* conn, UDB_WRITE_QUERY* write_query);
 
+/**
+ * Creating a read query for reading documents.
+ * @return
+ */
+UDB_READ_QUERY* udb_create_read_query();
+
+/**
+ * Adding keys to the read_query.
+ * @param read_query
+ * @param key
+ * @param key_size
+ * @return
+ */
+UDB_RESULT udb_read_query_add_key(UDB_READ_QUERY* read_query, char* key, size_t key_size);
+
+/**
+ * Setting the labels in read_query.
+ * @param read_query
+ * @param labels
+ * @param label_count
+ * @return
+ */
+UDB_RESULT udb_read_query_set_labels(UDB_READ_QUERY* read_query, char** labels, size_t label_count);
+
+/**
+ * Destroying a read_query.
+ * @param read_query_ptr_container
+ * @return
+ */
+UDB_RESULT udb_destroy_read_query(UDB_READ_QUERY** read_query_ptr_container);
+
+/**
+ * Getting the document using the read query. Returns a
+ * @param conn
+ * @param read_query
+ * @param udb_document
+ * @return
+ */
+UDB_READ_QUERY_RESULTS* udb_get(UDB_CONNECTION* conn, UDB_READ_QUERY* read_query);
+
+/**
+ * Get the ptr to the next result.
+ * @param results_container
+ * @param result_ptr
+ * @return
+ */
+size_t udb_results_next(UDB_READ_QUERY_RESULTS* results_container, UDB_READ_QUERY_RESULT** result_ptr);
+
+UDB_RESULT udb_destroy_results(UDB_READ_QUERY_RESULTS** results);
 
 /* Getters */
-size_t udb_get_documents_count(UDB_DOCUMENTS* docs);
-UDB_DOCUMENT* udb_get_document(UDB_DOCUMENTS* docs, size_t index);
+size_t udb_get_results_count(UDB_READ_QUERY_RESULTS* results);
+UDB_READ_QUERY_RESULT* udb_get_result(UDB_READ_QUERY_RESULTS* results, size_t index);
 UDB_DATA* udb_get_key(UDB_DOCUMENT* doc);
 UDB_DATA* udb_get_value(UDB_DOCUMENT* doc);
 size_t udb_get_labels_count(UDB_DOCUMENT* doc);
 char* udb_get_label(UDB_DOCUMENT* doc, size_t label_index);
-
-UDB_WRITE_QUERY* udb_create_write_query();
-void udb_write_query_add_document(UDB_WRITE_QUERY* write_query, UDB_DOCUMENT* document);
-//UDB_RESULT udb_write_query_add_whole_dicument();
-UDB_RESULT udb_destroy_write_query(UDB_WRITE_QUERY** write_query_ptr_container);
-
-
-
-UDB_RESULT udb_put(UDB_CONNECTION* conn, UDB_WRITE_QUERY* write_query); // should also account for keys being empty in
-// case user hasn't specified it
-
-
-
-UDB_READ_QUERY* udb_create_read_query();
-UDB_RESULT udb_read_query_add_key(UDB_READ_QUERY* read_query, UDB_DATA* key);
-UDB_RESULT udb_read_query_set_key_range(UDB_READ_QUERY* read_query, UDB_DATA* start_key, UDB_DATA* end_key);
-UDB_RESULT udb_read_query_set_labels(UDB_READ_QUERY* read_query, char** labels, size_t label_count);
-UDB_RESULT udb_destroy_read_query(UDB_READ_QUERY** read_query_ptr_container);
-
-
-UDB_RESULT udb_get(UDB_CONNECTION* conn, UDB_READ_QUERY* read_query, UDB_DOCUMENTS* udb_document);
 
 // ---------------------------------------------------------------------
 
