@@ -261,15 +261,16 @@ uh::protocol::write_chunks::response mod::write_chunks(const write_chunks::reque
     // TODO this should be done in different threads
     uh::protocol::write_chunks::response total_res;
     total_res.hashes.resize(req.chunk_sizes.size() * 64);
-    total_res.effective_size = 0;
+    total_res.effective_size.resize(req.chunk_sizes.size());
     for (auto &conn_blocks: conn_blocks_map) {
         auto res = conn_blocks.first->get()->write_chunks ({conn_blocks.second.chunk_sizes, conn_blocks.second.data});
         std::size_t dn_index = 0;
+        std::size_t index = 0;
         for (const auto total_index: conn_blocks.second.chunk_indices) {
-            std::memcpy (total_res.hashes.data() + total_index * 64, res.hashes.data() + dn_index, 64);
-            dn_index += 64;
+            total_res.effective_size[total_index] = res.effective_size[index];
+            std::memcpy (total_res.hashes.data() + total_index * 64, res.hashes.data() + (index * 64), 64);
+            ++index;
         }
-        total_res.effective_size += res.effective_size;
     }
     return total_res;
 }

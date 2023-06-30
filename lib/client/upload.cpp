@@ -4,10 +4,9 @@
 #include <protocol/messages.h>
 
 #include <algorithm>
+#include <numeric>
 #include <set>
 #include <utility>
-
-#include <iostream>
 
 
 using namespace uh::protocol;
@@ -120,8 +119,7 @@ public:
                              resp.hashes.begin() + (index + count) * hash_size);
             md.append_sizes(m_chunk_sizes.begin() + index,
                             m_chunk_sizes.begin() + index + count);
-
-            // TODO: send effective size per chunk meta_data->add_effective_size(resp.effective_size);
+            md.add_effective_size(resp.effective_size[index]);
 
             fh.finished(count);
             index += count;
@@ -282,7 +280,7 @@ std::vector<chunk> upload_request(protocol::client& client,
             .size = sizes[i] });
     }
 
-    eff_size += resp.effective_size;
+    eff_size += std::accumulate(resp.effective_size.begin(), resp.effective_size.end(), 0u);
 
     return rv;
 }
