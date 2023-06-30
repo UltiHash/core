@@ -75,9 +75,6 @@ int main(int argc, char* args[]) {
             continue;
         }
 
-        key_file << path << std::endl;
-
-
         const auto file_size = std::filesystem::file_size(dir_entry.path());
         if (file_size > max_val_size or file_size == 0) {
             std::cout << "ignoring file " << dir_entry.path()
@@ -110,6 +107,7 @@ int main(int argc, char* args[]) {
     }
 
     std::chrono::time_point <std::chrono::steady_clock> timer;
+    std::cout << "total size is " << total_size << std::endl;
 
     const auto before = std::chrono::steady_clock::now ();
     // TODO udb_add maybe a better name?

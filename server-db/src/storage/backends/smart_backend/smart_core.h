@@ -41,10 +41,12 @@ public:
      * Retrieves the key values with keys within the given range / having the given labels
      */
     std::list <key_fragmented_value> retrieve_range (std::span <char> start_key, std::span <char> end_key, const std::span <std::string_view>& labels);
+    size_t max_common = 0;
 
 private:
 
     std::pair <std::vector <sets::offset_span>, size_t> deduplicate (std::string_view data);
+    std::pair <std::vector <sets::offset_span>, size_t> non_rec_deduplicate (std::string_view data);
 
     uint64_t store_data (const std::string_view& frag);
 

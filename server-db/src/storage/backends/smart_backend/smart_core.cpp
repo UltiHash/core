@@ -26,7 +26,7 @@ size_t smart_core::integrate(std::span <char> key, std::string_view data) {
         return 0;
     }
 
-    auto fragments = deduplicate (data);
+    auto fragments = non_rec_deduplicate (data);
     m_key_store->insert(key, {reinterpret_cast <char*> (fragments.first.data()), fragments.first.size() * sizeof (sets::offset_span)}, f.index);
     return fragments.second;
 }
@@ -75,10 +75,10 @@ std::pair<std::vector<sets::offset_span>, size_t> smart_core::deduplicate (std::
     }
 
     if (max_common_prefix < m_dedupe_conf.min_fragment_size or data.size() - max_common_prefix < m_dedupe_conf.min_fragment_size) {
-        const auto offset = store_data(data);
-        m_fragment_set->add_pointer (data, offset, f.index);
-        return {{{offset, data.size()}}, data.size()};
-        /*
+        //const auto offset = store_data(data);
+        //m_fragment_set->add_pointer (data, offset, f.index);
+        //return {{{offset, data.size()}}, data.size()};
+
         const auto size = std::min (data.size(), m_dedupe_conf.max_fragment_size);
         const auto offset = store_data(data.substr(0, size));
         m_fragment_set->add_pointer (data.substr(0, size), offset, f.index);
@@ -91,7 +91,7 @@ std::pair<std::vector<sets::offset_span>, size_t> smart_core::deduplicate (std::
         else {
             return {{{offset, data.size()}}, data.size()};
         }
-        */
+
     }
     else if (max_common_prefix == data.size()) {
         m_fragment_set->add_pointer (data, max_data_offset, f.index);
@@ -104,6 +104,66 @@ std::pair<std::vector<sets::offset_span>, size_t> smart_core::deduplicate (std::
         return fragments;
     }
 }
+
+    std::pair<std::vector<sets::offset_span>, size_t> smart_core::non_rec_deduplicate (std::string_view data) {
+
+
+        auto integration_data = data;
+        std::pair<std::vector<sets::offset_span>, size_t> result;
+
+        while (!integration_data.empty()) {
+            const auto f = m_fragment_set->find({integration_data.data(), integration_data.size()});
+            if (f.match) {
+                result.first.emplace_back(sets::offset_span{f.match->data_offset, integration_data.size()});
+                integration_data = integration_data.substr(integration_data.size());
+                continue;
+            }
+
+            const auto lower_common_prefix = largest_common_prefix (integration_data, f.lower->data);
+
+            if (lower_common_prefix == integration_data.size()) {
+                m_fragment_set->add_pointer (integration_data, f.lower->data_offset, f.index);
+                result.first.emplace_back(sets::offset_span{f.lower->data_offset, integration_data.size()});
+                integration_data = integration_data.substr(integration_data.size());
+                continue;
+            }
+
+            const auto upper_common_prefix = largest_common_prefix (integration_data, f.upper->data);
+            auto max_common_prefix = upper_common_prefix;
+            auto max_data_offset = f.upper->data_offset;
+            if (max_common_prefix < lower_common_prefix) {
+                max_common_prefix = lower_common_prefix;
+                max_data_offset = f.lower->data_offset;
+            }
+            if (max_common < max_common_prefix) {
+                max_common = max_common_prefix;
+            }
+            if (max_common_prefix < m_dedupe_conf.min_fragment_size or integration_data.size() - max_common_prefix < m_dedupe_conf.min_fragment_size) {
+                const auto size = std::min (integration_data.size(), m_dedupe_conf.max_fragment_size);
+                const auto offset = store_data(integration_data.substr(0, size));
+                m_fragment_set->add_pointer (integration_data.substr(0, size), offset, f.index);
+                result.first.emplace_back(sets::offset_span{offset, size});
+                result.second += size;
+                integration_data = integration_data.substr(size);
+                continue;
+            }
+            else if (max_common_prefix == integration_data.size()) {
+                m_fragment_set->add_pointer (integration_data, max_data_offset, f.index);
+                result.first.emplace_back(sets::offset_span{max_data_offset, integration_data.size()});
+                integration_data = integration_data.substr(integration_data.size());
+                continue;
+            }
+            else {
+                m_fragment_set->add_pointer (integration_data.substr(0, max_common_prefix), max_data_offset, f.index);
+                result.first.emplace_back (sets::offset_span {max_data_offset, max_common_prefix});
+                integration_data = integration_data.substr(max_common_prefix, integration_data.size() - max_common_prefix);
+                continue;
+            }
+        }
+
+        return result;
+    }
+
 
 uint64_t smart_core::store_data(const std::string_view& frag) {
     auto alloc = m_data_store.allocate(frag.size());
@@ -127,7 +187,7 @@ smart_core::fragmented_data smart_core::create_fragmented_data (std::span <const
     const auto size = fragment_data.size() / sizeof (sets::offset_span);
     size_t total_size = 0;
     std::forward_list <std::span <char>> res;
-    for (auto frag = ptr; frag < ptr + size; frag++) {
+    for (auto frag = ptr + size - 1; frag >= ptr; frag--) {
         char* raw_ptr = static_cast <char*> (m_data_store.get_raw_ptr(frag->m_data_offset));
         res.emplace_front(raw_ptr, frag->m_size);
         total_size += frag->m_size;

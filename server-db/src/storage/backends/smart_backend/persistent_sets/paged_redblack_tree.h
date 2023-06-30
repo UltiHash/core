@@ -39,7 +39,7 @@ public:
 
         if (m_first_block.root_offset == 0) {
             m_first_block.mix_block_offset = m_block_size;
-            m_first_block.empty_block = 2;
+            m_first_block.empty_block = 2 * sizeof (block);
             m_first_block.empty_hole_size = first_block::effective_node_space + block::effective_node_space;
             m_nil = add_node (0);
             m_nil.m_mnode->m_color = BLACK;
@@ -78,7 +78,9 @@ private:
         z.m_mnode->m_right = m_first_block.nill_offset;
         z.m_mnode->m_color = RED;
         z.m_mnode->m_data = {data_offset, data.size()};
-        std::memcpy (reinterpret_cast <char*> (&z.m_mnode->data_prefix), data.data(), std::min (sizeof (z.m_mnode->data_prefix), data.size()));
+        z.m_mnode->data_prefix = *reinterpret_cast <const uint64_t*> (data.data());
+        //std::memcpy (reinterpret_cast <char*> (&z.m_mnode->data_prefix), data.data(), std::min (sizeof (z.m_mnode->data_prefix), data.size()));
+
 
         const auto offset = z.m_offset;
 
@@ -89,6 +91,7 @@ private:
             m_first_block = *(reinterpret_cast <first_block*> (m_index_store.get_storage()));
             m_nil = get_node (m_first_block.nill_offset);
         }
+
         return {.position = offset, .comp = pos.comp};
     }
 
@@ -302,7 +305,7 @@ private:
                 n = new_b.second.acquire_node();
                 n.m_offset += new_b.first;
                 m_first_block.empty_hole_size -= sizeof (mmap_node);
-                m_first_block.empty_block += block::effective_node_space;
+                m_first_block.empty_block += sizeof (block);
             }
             else if (auto mix_b = get_block(m_first_block.mix_block_offset); !mix_b.second.full()) {
                 n = mix_b.second.acquire_node();
@@ -314,7 +317,7 @@ private:
                 n = new_mix_b.second.acquire_node();
                 n.m_offset += new_mix_b.first;
                 m_first_block.empty_hole_size -= sizeof (mmap_node);
-                m_first_block.empty_block += block::effective_node_space;
+                m_first_block.empty_block += sizeof (block);
                 m_first_block.mix_block_offset = new_mix_b.first;
             }
             return n;

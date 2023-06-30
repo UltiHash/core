@@ -10,6 +10,9 @@
 #include <iostream>
 #include <vector>
 
+
+#include <iostream>
+
 #if defined(__cplusplus) || defined(c_plusplus)
 extern "C" {
 #endif
@@ -527,6 +530,11 @@ UDB_RESULT udb_add(UDB_CONNECTION* conn, UDB_WRITE_QUERY* write_query)
                                                                  std::span<char>(data.data(), data.size())
                                                          });
 
+        size_t total_size = 0;
+        for (int i = 0; i < resp.effective_sizes.size; ++i) {
+            total_size += resp.effective_sizes.data [i];
+        }
+        std::cout << "total effective size is " << total_size << std::endl;
         return UDB_RESULT::UDB_RESULT_SUCCESS;
     }
     catch (const std::bad_alloc& e)
