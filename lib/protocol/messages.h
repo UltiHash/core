@@ -167,7 +167,7 @@ struct write_chunks
     struct response
     {
         std::vector <char> hashes;
-        std::size_t effective_size;
+        std::vector <std::size_t> effective_size;
     };
 
     constexpr static uint8_t request_id = 0x10;
