@@ -242,7 +242,7 @@ namespace uh::an::cluster
 
 // ---------------------------------------------------------------------
 
-    uh::protocol::write_chunks::response mod::write_chunks(const write_chunks::request &req) {
+uh::protocol::write_chunks::response mod::write_chunks(const write_chunks::request &req) {
         std::map <client_pool *, chunks_meta_data> conn_blocks_map;
 
         size_t offset = 0;
@@ -272,6 +272,9 @@ namespace uh::an::cluster
             ++index;
         }
     }
+    return total_res;
+
+}
 
 // ---------------------------------------------------------------------
 
