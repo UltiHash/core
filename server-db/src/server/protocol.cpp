@@ -54,11 +54,10 @@ uh::protocol::write_chunks::response protocol::on_write_chunks(const write_chunk
 
         size_t offset = 0;
         uh::protocol::write_chunks::response res;
-        res.effective_size = 0;
 
         for (const auto size: req.chunk_sizes) {
             const auto result = m_storage.write_block({req.data.data() + offset, size});
-            res.effective_size += result.first;
+            res.effective_size.push_back(result.first);
             res.hashes.insert(res.hashes.end(), result.second.cbegin(), result.second.cend());
             offset += size;
         }
