@@ -5,7 +5,7 @@
 
 #include <metrics/mod.h>
 #include <cluster/mod.h>
-#include <persistence/mod.h>
+#include <state/mod.h>
 
 #include <memory>
 
@@ -24,8 +24,8 @@ public:
 
     ~mod();
 
-    void start();
-    void stop();
+    void start() const;
+    void stop() const;
 
 private:
     struct impl;

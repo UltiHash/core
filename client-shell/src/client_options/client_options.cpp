@@ -111,10 +111,11 @@ void client_options::handle(const boost::program_options::variables_map& vars)
 
         if (exists(m_config.m_outputPath))
         {
+            /*
             std::string user_response;
             std::unordered_set<std::string> validResponses = {"y", "n", "yes", "no"};
 
-            std::cout << "The file already exists. Do you want to overwrite it? (y/n) ";
+            std::cout << m_config.m_outputPath << " already exists. Do you want to overwrite it? (y/n) ";
             std::cin >> user_response;
 
             std::ranges::transform(user_response, user_response.begin(), [](char c){ return std::tolower(c); });
@@ -134,6 +135,8 @@ void client_options::handle(const boost::program_options::variables_map& vars)
             {
                 throw std::runtime_error("Invalid response. Please enter 'y' or 'n'.");
             }
+            */
+            m_config.m_overwrite = true;
         }
 
         if (m_posPaths.empty())
@@ -177,7 +180,7 @@ void client_options::handle(const boost::program_options::variables_map& vars)
         }
         else
         {
-            m_config.m_outputPath = std::filesystem::current_path().string()+"/UHOutput";
+            m_config.m_outputPath = std::filesystem::current_path().string()+"/uh-output";
             std::filesystem::create_directory(m_config.m_outputPath);
         }
         try
