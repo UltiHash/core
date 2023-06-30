@@ -7,7 +7,7 @@
 namespace uh::dbn::storage {
 
 combined_backend::smart_worker::smart_worker(smart_storage &smart, storage_metrics &metrics) :
-        m_smart_storage (smart), m_metrics (metrics) {}
+    m_smart_storage (smart), m_metrics (metrics) {}
 
 void combined_backend::smart_worker::operator()(std::filesystem::path path, std::vector<char> sha) {
     int fd = open (path.c_str(), O_RDONLY);
@@ -17,8 +17,8 @@ void combined_backend::smart_worker::operator()(std::filesystem::path path, std:
 }
 
 combined_backend::combined_backend(const hierarchical_storage_config &hierarchical_config,
-                               state::scheduled_compressions_state& scheduled_compressions,
-                               storage_metrics &storage_metrics):
+                                   state::scheduled_compressions_state& scheduled_compressions,
+                                   storage_metrics &storage_metrics):
     m_hierarchical_config(hierarchical_config),
     m_storage_metrics (storage_metrics),
     m_hierarchical_storage (hierarchical_config, m_storage_metrics, scheduled_compressions),
