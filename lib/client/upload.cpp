@@ -378,7 +378,7 @@ void upload::chunk_and_upload(std::unique_ptr<uhv::meta_data>&& md_ptr, buffers&
         r.active().add_handle(fh);
         m_output_jq.push_back(fh->get_future());
 
-        io::file file(md.path());
+        io::file file(md.path(), std::ios_base::in);
         auto chunker = m_chunking.create_chunker(file, md.size());
 
         std::size_t size = 0u;

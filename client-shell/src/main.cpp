@@ -122,13 +122,11 @@ void integrate(protocol::client_pool& pool,
     double seconds = time_diff.count();
     double mbytes = static_cast<double>(size) / (1024 * 1024);
 
-    if (size != 0)
-    {
-        double dedup_ratio = (double) effective_size / (double) size;
+    double dedup_ratio {1};
+    if(size)dedup_ratio = (double) effective_size / (double) size;
 
-        std::cout << "space saving: " << (double) 1 - dedup_ratio << std::endl;
-        std::cout << "encoding speed: " << (mbytes / seconds) << " Mb/s" << std::endl;
-    }
+    std::cout << "space saving: " << (double) 1 - dedup_ratio << std::endl;
+    std::cout << "encoding speed: " << (mbytes / seconds) << " Mb/s" << std::endl;
 }
 
 // ---------------------------------------------------------------------

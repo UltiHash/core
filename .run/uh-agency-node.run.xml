@@ -1,7 +1,0 @@
-<component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="uh-agency-node" type="CMakeRunConfiguration" factoryName="Application" PROGRAM_PARAMS="--db-node 0.0.0.0:12345 --metrics-address 0.0.0.0:8082" REDIRECT_INPUT="false" ELEVATE="false" USE_EXTERNAL_CONSOLE="false" PASS_PARENT_ENVS_2="true" PROJECT_NAME="Core" TARGET_NAME="uh-agency-node" CONFIG_NAME="Debug" RUN_TARGET_PROJECT_NAME="Core" RUN_TARGET_NAME="uh-agency-node">
-    <method v="2">
-      <option name="com.jetbrains.cidr.execution.CidrBuildBeforeRunTaskProvider$BuildBeforeRunTask" enabled="true" />
-    </method>
-  </configuration>
-</component>
