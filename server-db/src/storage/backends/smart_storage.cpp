@@ -2,6 +2,7 @@
 // Created by masi on 5/30/23.
 //
 #include "smart_storage.h"
+#include <licensing/global_licensing.h>
 
 namespace uh::dbn::storage::smart {
 
@@ -109,6 +110,8 @@ std::pair <std::size_t, std::vector <char>> smart_storage::write_block (const st
     std::size_t effective_size;
     try {
         m_used += data.size();
+        uh::dbn::licensing::global_license_pointer_dbn->license_package()
+            .require(uh::licensing::feature::STORAGE, m_used);
         effective_size = m_smart_core.integrate({sha.data(), size}, std::string_view(data.data(), data.size()));
         update_space_consumption();
     } catch (std::exception& e) {
