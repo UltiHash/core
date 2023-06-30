@@ -19,29 +19,19 @@ struct set_full_comparator {
     [[nodiscard]] inline int operator () (const std::string_view& new_data, const mmap_node& set_data) const {
 
         //if (const auto comp = memcmp (new_data.data(), &set_data.data_prefix, std::min (sizeof(uint64_t), new_data.size())); comp != 0) {
-        //    return comp;
+       //     return comp;
         //}
-
-
 
         //const uint64_t &data_prefix = *reinterpret_cast <const uint64_t *> (new_data.data());
         //int comp = data_prefix - set_data.data_prefix;
         //if (const int comp = set_data.data_prefix - data_prefix; comp != 0) {
         //    return comp;
         //}
+
         const auto* p2 = m_storage.get().get_raw_ptr(set_data.m_data.m_data_offset);
 
-
-
-        //const auto comp = memcmp (new_data.data(), &set_data.data_prefix, std::min (sizeof(uint64_t), new_data.size()));
-
-        //const auto comp2 = std::memcmp(new_data.data(), p2, std::min (set_data.m_data.m_size, new_data.size()));
-        //if (comp * comp2 < 0) {
-        //    throw std::exception ();
-        //}
-
-
-        return std::memcmp(new_data.data(), p2, std::min (set_data.m_data.m_size, new_data.size()));
+        const std::string_view set_content {static_cast <const char*> (p2), set_data.m_data.m_size};
+        return new_data.compare(set_content);
     }
 
     const std::reference_wrapper <managed_storage> m_storage;
