@@ -43,6 +43,11 @@ RUN chown -R uh:uh /var/lib/uh-agency-node
 RUN mkdir -p /var/lib/uh-data-node
 RUN chown -R uh:uh /var/lib/uh-data-node
 
+# required for testing
+RUN if [ -d "/tmp/uh-testing" ]; then rm -Rf /tmp/uh-testing; fi
+RUN mkdir -p /tmp/uh-testing
+RUN chown -R uh:uh /tmp/uh-testing
+
 USER uh
 WORKDIR /home/uh
 

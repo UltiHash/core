@@ -1,7 +1,4 @@
 #include "client_options.h"
-#include <logging/logging_boost.h>
-#include <util/exception.h>
-#include <io/file.h>
 #include <unordered_set>
 #include "unistd.h"
 
@@ -104,16 +101,17 @@ void client_options::handle(const boost::program_options::variables_map& vars)
         }
     };
 
-    auto is_accessible = [](const std::vector<std::filesystem::path>& input, const std::string& chosenOpt)
+    auto is_accessible = [](const std::vector<std::filesystem::path>& input, const std::string& chosenOpt, const uint8_t type)
     {
         for (const auto& m_path : input)
         {
             try{
-                if (access(m_path.c_str(), W_OK | R_OK) != 0  or !uh::io::file(m_path).valid())
-                THROW(util::illegal_args, chosenOpt + m_path.string());
+                if (access(m_path.c_str(), type) != 0  or !uh::io::file(m_path).valid())
+                    THROW(util::illegal_args, chosenOpt + std::filesystem::absolute(m_path).string());
             }
             catch (std::exception& e){
-                throw std::logic_error(std::string(e.what())+". "+chosenOpt);
+                throw std::logic_error("System error throw: " + std::string(e.what())+
+                    ". UltiHash error throw" + chosenOpt + std::filesystem::absolute(m_path).string());
             }
         }
     };
@@ -129,7 +127,8 @@ void client_options::handle(const boost::program_options::variables_map& vars)
                "Destination on --integrate[-i] has wrong extensions. Please ensure that the destination ends with '.uh'.");
 
         is_accessible({m_config.m_outputPath},
-                      "The user doesn't have read and write permission on directory: ");
+                      "The user doesn't have read and write permission on path: ",
+                      W_OK | R_OK);
 
         if (exists(m_config.m_outputPath))
         {
@@ -213,7 +212,8 @@ void client_options::handle(const boost::program_options::variables_map& vars)
                    "source path on --retrieve[-r] has wrong extensions. Please ensure that the source ends with '.uh'.");
 
             is_accessible(m_config.m_inputPaths,
-                          "The user doesn't have read and write permission on directory: ");
+                          "The user doesn't have read permission on path: ",
+                          R_OK);
         }
         catch (const std::exception& ex)
         {
@@ -235,7 +235,8 @@ void client_options::handle(const boost::program_options::variables_map& vars)
                    "source path on --list[-l] has wrong extensions. Please ensure that the source ends with '.uh'.");
 
             is_accessible(m_config.m_inputPaths,
-                          "The user doesn't have read and write permission on directory: ");
+                          "The user doesn't have read permission on path: ",
+                          R_OK);
 
             if (m_posPaths.size() > 1)
             {

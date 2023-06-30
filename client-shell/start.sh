@@ -32,21 +32,21 @@ trap 'last_command=$current_command; current_command=$BASH_COMMAND' DEBUG
 trap 'echo "\"${last_command}\" command filed with exit code $?."' EXIT
 
 # prepare crude test workload, using the uh-cli binary itself
-mkdir -p test
-cp /usr/local/bin/uh-cli test
+mkdir -p /tmp/uh-testing/test
+cp /usr/local/bin/uh-cli /tmp/uh-testing/test
 
 # store checksums of test workload, integrate data into UltiHash volume and delete files afterwards
-sha512sum test/uh-cli > checksum.txt
-uh-cli --integrate test.uh test --agency-node ${SERVER_NAME}:${SERVER_PORT}
-rm -Rf test
+sha512sum /tmp/uh-testing/test/uh-cli > checksum.txt
+uh-cli --integrate /tmp/uh-testing/test.uh /tmp/uh-testing/test --agency-node ${SERVER_NAME}:${SERVER_PORT}
+rm -Rf /tmp/uh-testing/test
 
 # retrieve test workload and validate their checksums
-mkdir test
-yes | uh-cli --retrieve test.uh --target ./test --agency-node ${SERVER_NAME}:${SERVER_PORT}
+mkdir /tmp/uh-testing/test
+yes | uh-cli --retrieve /tmp/uh-testing/test.uh --target /tmp/uh-testing/test --agency-node ${SERVER_NAME}:${SERVER_PORT}
 cat checksum.txt | sha512sum -c
 
 # cleanup
-rm -Rf test*
+rm -Rf /tmp/uh-testing/test*
 rm -f checksum.txt
 
 pkill ncat

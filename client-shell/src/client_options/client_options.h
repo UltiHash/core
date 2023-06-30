@@ -4,6 +4,9 @@
 #include <iostream>
 #include <filesystem>
 #include <options/options.h>
+#include <logging/logging_boost.h>
+#include <util/exception.h>
+#include <io/file.h>
 #include "client_config.h"
 
 namespace uh::client::option
