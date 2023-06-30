@@ -106,12 +106,12 @@ void client_options::handle(const boost::program_options::variables_map& vars)
         for (const auto& m_path : input)
         {
             try{
-                if (access(m_path.c_str(), type) != 0  or !uh::io::file(m_path).valid())
+                if (access(m_path.c_str(), type) != 0 and !uh::io::file(m_path).path().empty())
                     THROW(util::illegal_args, chosenOpt + std::filesystem::absolute(m_path).string());
             }
             catch (std::exception& e){
                 throw std::logic_error("System error throw: " + std::string(e.what())+
-                    ". UltiHash error throw" + chosenOpt + std::filesystem::absolute(m_path).string());
+                    ". UltiHash error throw: " + chosenOpt + std::filesystem::absolute(m_path).string());
             }
         }
     };
