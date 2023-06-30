@@ -2,10 +2,12 @@
 
 #include <io/file.h>
 #include <protocol/messages.h>
+#include <util/exception.h>
 
 #include <algorithm>
 #include <set>
 #include <utility>
+#include <unistd.h>
 
 #include <iostream>
 
@@ -377,6 +379,11 @@ void upload::chunk_and_upload(std::unique_ptr<uhv::meta_data>&& md_ptr, buffers&
         auto fh = std::make_shared<file_handle>(std::move(md_ptr));
         r.active().add_handle(fh);
         m_output_jq.push_back(fh->get_future());
+
+        if (access(md.path().c_str(), R_OK ) != 0)
+        {
+            THROW(util::illegal_args, "The user doesn't have read permission on path: " + md.path().string());
+        }
 
         io::file file(md.path(), std::ios_base::in);
         auto chunker = m_chunking.create_chunker(file, md.size());
