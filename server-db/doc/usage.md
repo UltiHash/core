@@ -1,4 +1,4 @@
-% uhServerData(1) Version 0.2 | Data Node Server Documentation
+% uh-data-node(1) Version 0.2 | Data Node Server Documentation
 ```{=latex}
 \pagebreak
 ```
@@ -6,7 +6,7 @@
 # Data Node Server
 
 ## Name
-uhServerData - The UltiHash Data Node server application 
+uh-data-node - The UltiHash Data Node server application 
 
 ## Synopsis
 
@@ -21,4 +21,4 @@ uhServerData - The UltiHash Data Node server application
 ## Known Limitations
 
 ## See Also
-uhServerAgency, uhClient, uhClientFuse
+uh-agency-node, uh-cli, uhClientFuse

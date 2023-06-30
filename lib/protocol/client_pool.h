@@ -30,6 +30,7 @@ public:
 
         ~handle();
         client* operator->();
+        client& operator*();
 
     private:
         friend client_pool;

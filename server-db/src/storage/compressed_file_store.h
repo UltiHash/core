@@ -5,7 +5,7 @@
 #include <io/device.h>
 #include <io/temp_file.h>
 #include <compression/type.h>
-#include <persistence/storage/scheduled_compressions_persistence.h>
+#include <state/scheduled_compressions_state.h>
 #include <metrics/storage_metrics.h>
 
 #include <filesystem>
@@ -15,23 +15,6 @@
 
 namespace uh::dbn::storage
 {
-
-// ---------------------------------------------------------------------
-
-struct compressed_file_store_config
-{
-    static constexpr unsigned DEFAULT_THREADS = 5u;
-
-    /**
-     * Number of threads for background compression.
-     */
-    unsigned threads = DEFAULT_THREADS;
-
-    /**
-     * Default compression applied to files.
-     */
-    comp::type compression = comp::type::none;
-};
 
 // ---------------------------------------------------------------------
 
@@ -66,7 +49,7 @@ public:
     compressed_file_store(
         const compressed_file_store_config& config,
         storage_metrics& metrics,
-        persistence::scheduled_compressions_persistence& scheduled_compressions,
+        state::scheduled_compressions_state& scheduled_compressions,
         std::function<void(std::streamsize)> report_savings = [](std::streamsize){});
 
     /**
@@ -84,6 +67,11 @@ public:
      */
     void compress(const std::filesystem::path& path);
 
+    /**
+     * Stops the underlying queue.
+     */
+    void stop();
+
 private:
     friend class compression_worker;
 
@@ -93,7 +81,7 @@ private:
     storage_metrics& m_metrics;
 
     std::mutex m_comp_mutex;
-    persistence::scheduled_compressions_persistence& m_scheduled_compressions;
+    state::scheduled_compressions_state& m_scheduled_compressions;
 
     comp::type m_type;
     std::atomic<unsigned> m_active;
