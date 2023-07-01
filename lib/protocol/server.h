@@ -33,10 +33,13 @@ private:
     void handle_client_statistics();
     void handle_write_chunks();
     void handle_read_chunks();
+    void handle_write_kv();
+    void handle_read_kv();
 
     std::shared_ptr<net::socket> m_client;
     serialization::buffered_serialization m_bs;
     std::unique_ptr<request_interface> m_handler_interface;
+
 };
 
 // ---------------------------------------------------------------------

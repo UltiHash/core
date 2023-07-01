@@ -8,7 +8,8 @@ namespace uh::signal
 
 signal::signal()
 {
-    if ( sigemptyset(&m_sigset) == -1 || sigaddset(&m_sigset, SIGINT) == -1 || sigaddset(&m_sigset, SIGTERM) == -1 )
+//    || sigaddset(&m_sigset, SIGINT) == -1 || sigaddset(&m_sigset, SIGTERM) == -1
+    if ( sigemptyset(&m_sigset) == -1)
     {
         THROW_FROM_ERRNO();
     }

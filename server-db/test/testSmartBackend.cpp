@@ -12,11 +12,11 @@
 #include "storage/backends/smart_backend/storage_types/fixed_managed_storage.h"
 #include <storage/backend.h>
 #include <storage/backends/smart_backend/smart_config.h>
-#include "storage/backends/smart_backend/fragment_sets/persisted_redblack_tree_set.h"
 #include <storage/backends/smart_backend/smart_core.h>
-#include <storage/backends/smart_backend/persisted_robinhood_hashmap.h>
-#include "storage/backends/smart_storage.h"
+#include "storage/backends/smart_backend/persistent_maps/persisted_robinhood_hashmap.h"
 #include "storage/backends/smart_backend/storage_types/growing_managed_storage.h"
+#include "storage/backends/smart_backend/persistent_maps/sorted_key_map.h"
+
 
 using namespace uh::dbn::storage::smart;
 
@@ -28,8 +28,10 @@ public:
     files_info_fixture():
             m_smart_config {define_test_map_conf (),
                             define_test_set_conf (),
+                            define_test_sorted_map_conf (),
                             define_test_data_store_conf (),
                             define_test_dedupe_conf()} {}
+
 
 
     void cleanup () {
@@ -42,33 +44,48 @@ public:
             std::filesystem::remove(m_smart_config.data_store_conf.log_file);
         }
 
-        if (exists(m_smart_config.set_conf.fragment_set_path)) {
-            std::filesystem::remove(m_smart_config.set_conf.fragment_set_path);
+        if (exists(m_smart_config.sorted_key_store_config.data_store.log_file)) {
+            std::filesystem::remove(m_smart_config.sorted_key_store_config.data_store.log_file);
+        }
+        if (exists(m_smart_config.sorted_key_store_config.data_store.directory)) {
+            std::filesystem::remove_all(std::filesystem::absolute(m_smart_config.sorted_key_store_config.data_store.directory));
+        }
+        if (exists(m_smart_config.sorted_key_store_config.index_store.key_store_config.file)) {
+            std::filesystem::remove(m_smart_config.sorted_key_store_config.index_store.key_store_config.file);
         }
 
-        if (exists(m_smart_config.map_conf.hashtable_key_path)) {
-            std::filesystem::remove(m_smart_config.map_conf.hashtable_key_path);
-        }
-        if (exists (m_smart_config.map_conf.value_store_log_file)) {
-            std::filesystem::remove(m_smart_config.map_conf.value_store_log_file);
+        if (exists(m_smart_config.fragment_set_conf.key_store_config.file)) {
+            std::filesystem::remove(m_smart_config.fragment_set_conf.key_store_config.file);
         }
 
-        if (exists (m_smart_config.map_conf.hashtable_value_directory)) {
-            std::filesystem::remove_all(std::filesystem::absolute(m_smart_config.map_conf.hashtable_value_directory));
+        if (exists(m_smart_config.hashmap_key_store_conf.value_store_config.log_file)) {
+            std::filesystem::remove(m_smart_config.hashmap_key_store_conf.value_store_config.log_file);
         }
-        std::filesystem::create_directory(m_smart_config.map_conf.hashtable_value_directory);
+        if (exists (m_smart_config.hashmap_key_store_conf.key_store_config.file)) {
+            std::filesystem::remove(m_smart_config.hashmap_key_store_conf.key_store_config.file);
+        }
+
+        if (exists (m_smart_config.hashmap_key_store_conf.value_store_config.directory)) {
+            std::filesystem::remove_all(std::filesystem::absolute(m_smart_config.hashmap_key_store_conf.value_store_config.directory));
+        }
+        std::filesystem::create_directory(m_smart_config.hashmap_key_store_conf.value_store_config.directory);
 
     }
 
-    const map_config& get_map_conf () {
-        return m_smart_config.map_conf;
+
+    const hashmap_config& get_hashmap_conf () {
+        return m_smart_config.hashmap_key_store_conf;
     }
 
     const set_config& get_set_conf () {
-        return m_smart_config.set_conf;
+        return m_smart_config.fragment_set_conf;
     }
 
-    const data_store_config& get_data_store_config () {
+    const sorted_map_config& get_sorted_key_map_conf () {
+        return m_smart_config.sorted_key_store_config;
+    }
+
+    const fixed_managed_storage_config& get_data_store_config () {
         return m_smart_config.data_store_conf;
     }
 
@@ -82,29 +99,67 @@ public:
 
 private:
 
-    static map_config define_test_map_conf () {
-        map_config conf;
-        conf.map_maximum_extension_factor = 32;
-        conf.map_load_factor = 0.9;
-        conf.map_values_maximum_file_size = 16 * 1024;
-        conf.map_values_minimum_file_size = 4 * 1024;
-        conf.map_key_file_init_size = 4 * 1024;
-        conf.key_size = 128;
-        conf.hashtable_value_directory = "growing_mmap_storage_directory";
-        conf.hashtable_key_path = "hashmap_key_data";
-        conf.value_store_log_file = conf.hashtable_value_directory / "log";
-        return conf;
+    static hashmap_config define_test_map_conf () {
+
+        growing_plain_storage_config key_store_hashmap_key_store;
+        key_store_hashmap_key_store.init_size = 8 * 1024;
+        key_store_hashmap_key_store.file = "hashmap_key_data";
+
+        growing_managed_storage_config key_store_hashmap_value_store;
+        key_store_hashmap_value_store.directory = "growing_mmap_storage_directory";
+        key_store_hashmap_value_store.log_file = key_store_hashmap_value_store.directory / "log";
+        key_store_hashmap_value_store.min_file_size = 8 * 1024;
+        key_store_hashmap_value_store.max_file_size = 16 * 1024;
+
+        hashmap_config hashmap_conf;
+        hashmap_conf.key_size = 128;
+        hashmap_conf.map_load_factor = 0.9;
+        hashmap_conf.map_maximum_extension_factor = 32;
+        hashmap_conf.key_store_config = std::move (key_store_hashmap_key_store);
+        hashmap_conf.value_store_config = std::move (key_store_hashmap_value_store);
+
+        return hashmap_conf;
     }
     static set_config define_test_set_conf () {
-        set_config conf;
-        conf.set_minimum_free_space = 512;
-        conf.set_init_file_size = 8*1024;
-        conf.fragment_set_path = "set/set_data";
-        conf.max_empty_hole_size = 512;
-        return conf;
+
+        growing_plain_storage_config fragment_set_key_store;
+        fragment_set_key_store.init_size = 8*1024;
+        fragment_set_key_store.file = "set/set_data";
+
+        set_config fragment_set_conf;
+        fragment_set_conf.max_empty_hole_size = 8*1024;
+        fragment_set_conf.set_minimum_free_space = 512;
+        fragment_set_conf.key_store_config = std::move (fragment_set_key_store);
+
+        return fragment_set_conf;
     }
-    static data_store_config define_test_data_store_conf () {
-        data_store_config conf;
+
+    static sorted_map_config define_test_sorted_map_conf () {
+
+        growing_plain_storage_config key_store_index_set;
+        key_store_index_set.init_size = 8 * 1024;
+        key_store_index_set.file = "key_store/key_store_index";
+
+        growing_managed_storage_config key_store_data_store;
+        key_store_data_store.max_file_size = 32 * 1024;
+        key_store_data_store.min_file_size = 8 * 1024;
+        key_store_data_store.log_file = "key_store/data/log";
+        key_store_data_store.directory = "key_store/data/";
+
+        set_config key_store_set_conf;
+        key_store_set_conf.key_store_config = std::move (key_store_index_set);
+        key_store_set_conf.max_empty_hole_size = 512;
+        key_store_set_conf.set_minimum_free_space = 512;
+
+        sorted_map_config sorted_map_conf;
+        sorted_map_conf.index_store = std::move (key_store_set_conf);
+        sorted_map_conf.data_store = std::move (key_store_data_store);
+
+        return sorted_map_conf;
+    }
+
+    static fixed_managed_storage_config define_test_data_store_conf () {
+        fixed_managed_storage_config conf;
         conf.data_store_files = generate_files();
         conf.data_store_file_size = 32 * 1024;
         conf.log_file = "ds/log";
@@ -113,6 +168,7 @@ private:
     dedupe_config define_test_dedupe_conf () {
         dedupe_config conf;
         conf.min_fragment_size = 4;
+        conf.max_fragment_size = 512;
         return conf;
     }
     static std::list <std::filesystem::path> generate_files () {
@@ -206,11 +262,12 @@ BOOST_FIXTURE_TEST_CASE(test_mmap_storage_persistet_alloc_test, files_info_fixtu
 }
 
 
-uint64_t set_insert (fixed_managed_storage& ms, sets::persisted_redblack_tree_set& set, std::string_view data, uint64_t hint = 2 * sizeof (uint64_t)) {
+uint64_t set_insert (fixed_managed_storage& ms, sets::paged_redblack_tree<>& set, std::string_view data, uint64_t hint = 2 * sizeof (uint64_t)) {
     auto alloc = ms.allocate(data.size());
     std::memcpy(alloc.m_addr, data.data(), data.size());
-    const auto h = set.insert_index(data, alloc.m_offset);
-    return h.hint;
+    const auto f = set.find(data);
+    const auto h = set.add_pointer (data, alloc.m_offset, f.index);
+    return h.position;
 }
 
 BOOST_FIXTURE_TEST_CASE(basic_test_mmap_set, files_info_fixture)
@@ -218,17 +275,18 @@ BOOST_FIXTURE_TEST_CASE(basic_test_mmap_set, files_info_fixture)
     cleanup();
     fixed_managed_storage ms(get_data_store_config());
 
-    sets::persisted_redblack_tree_set set {get_set_conf(), ms};
+    sets::paged_redblack_tree set {get_set_conf(), ms};
 
     auto h = set_insert (ms, set, "hello from data 1");
     h = set_insert (ms, set, "data 2 hello from data 2", h);
     set_insert(ms, set, "third data hello from data 3", h);
     set_insert(ms, set, "some other data");
-    set_insert(ms, set, "yet again, some other data");
-    h = set_insert(ms, set, "yet again, some other data", h);
+    h = set_insert(ms, set, "yet again, some other data");
+    h = set_insert(ms, set, "yet again, some other data");
     set_insert(ms, set, "yet again, some other data");
     set_insert(ms, set, "and even more data");
     set_insert(ms, set, "third data hello from data 3", h);
+
     set_insert(ms, set, "some other data 2 ");
     set_insert(ms, set, "yet again, some other data 2");
     h = set_insert(ms, set, "yet again, some other data 2", h);
@@ -249,26 +307,26 @@ BOOST_FIXTURE_TEST_CASE(basic_test_mmap_set, files_info_fixture)
     set_insert(ms, set, "432third  234 data hello from data 3 4", h);
 
     auto res1 = set.find("and even more data");
-    BOOST_TEST(res1.match->second == "and even more data");
+    BOOST_TEST(res1.match->data == "and even more data");
 
     auto res2 = set.find("some other data");
-    auto str = res2.match->second;
+    auto str = res2.match->data;
     BOOST_TEST(str == "some other data");
 
     auto res3 = set.find("hello from data 1");
-    BOOST_TEST(res3.match->second == "hello from data 1");
+    BOOST_TEST(res3.match->data == "hello from data 1");
 
     auto res4 = set.find("yet again, some other data");
-    BOOST_TEST(res4.match->second == "yet again, some other data");
+    BOOST_TEST(res4.match->data == "yet again, some other data");
 
     auto res5 = set.find("third data hello from data 3");
-    BOOST_TEST(res5.match->second == "third data hello from data 3");
+    BOOST_TEST(res5.match->data == "third data hello from data 3");
 
     auto res6 = set.find("third  234 data hello from data 3 4");
-    BOOST_TEST(res6.match->second == "third  234 data hello from data 3 4");
+    BOOST_TEST(res6.match->data == "third  234 data hello from data 3 4");
 
     auto res7 = set.find("432third  234 data hello from data 3 4");
-    BOOST_TEST(res7.match->second == "432third  234 data hello from data 3 4");
+    BOOST_TEST(res7.match->data == "432third  234 data hello from data 3 4");
 
 //    auto res6 = set.find("hello from data ");
 //    std::cout << res2.match << std::endl;
@@ -332,7 +390,7 @@ BOOST_FIXTURE_TEST_CASE(basic_dedup_test, files_info_fixture)
 }
 
 
-void insert_in_hm (persisted_robinhood_hashmap& hm, std::string& k, std::string& v) {
+void insert_in_hm (maps::persisted_robinhood_hashmap& hm, std::string& k, std::string& v) {
     std::span <char> sk {k};
     std::span <char> sv {v};
     hm.insert(sk, sv);
@@ -360,7 +418,7 @@ BOOST_FIXTURE_TEST_CASE(basic_hashmap_test, files_info_fixture)
 
     {
 
-        persisted_robinhood_hashmap hm (get_map_conf());
+        maps::persisted_robinhood_hashmap hm (get_hashmap_conf());
 
         insert_in_hm(hm, k1, v1);
 
@@ -373,37 +431,37 @@ BOOST_FIXTURE_TEST_CASE(basic_hashmap_test, files_info_fixture)
         insert_in_hm(hm, k5, v5);
 
         auto res = hm.get(k1);
-        BOOST_TEST(v1 == std::string (res.value().data(), res.value().size()));
+        BOOST_TEST(v1 == std::string (res.match.value().value.data(), res.match.value().value.size()));
 
         res = hm.get(k2);
-        BOOST_TEST(v2 == std::string (res.value().data(), res.value().size()));
+        BOOST_TEST(v2 == std::string (res.match.value().value.data(), res.match.value().value.size()));
 
         res = hm.get(k5);
-        BOOST_TEST(v5 == std::string (res.value().data(), res.value().size()));
+        BOOST_TEST(v5 == std::string (res.match.value().value.data(), res.match.value().value.size()));
 
         res = hm.get(k4);
-        BOOST_TEST(v4 == std::string (res.value().data(), res.value().size()));
+        BOOST_TEST(v4 == std::string (res.match.value().value.data(), res.match.value().value.size()));
 
         res = hm.get(k3);
-        BOOST_TEST(v3 == std::string (res.value().data(), res.value().size()));
+        BOOST_TEST(v3 == std::string (res.match.value().value.data(), res.match.value().value.size()));
     }
     {
 
-        persisted_robinhood_hashmap hm (get_map_conf());
+        maps::persisted_robinhood_hashmap hm (get_hashmap_conf());
         auto res = hm.get(k1);
-        BOOST_TEST(v1 == std::string (res.value().data(), res.value().size()));
+        BOOST_TEST(v1 == std::string (res.match.value().value.data(), res.match.value().value.size()));
 
         res = hm.get(k2);
-        BOOST_TEST(v2 == std::string (res.value().data(), res.value().size()));
+        BOOST_TEST(v2 == std::string (res.match.value().value.data(), res.match.value().value.size()));
 
         res = hm.get(k5);
-        BOOST_TEST(v5 == std::string (res.value().data(), res.value().size()));
+        BOOST_TEST(v5 == std::string (res.match.value().value.data(), res.match.value().value.size()));
 
         res = hm.get(k4);
-        BOOST_TEST(v4 == std::string (res.value().data(), res.value().size()));
+        BOOST_TEST(v4 == std::string (res.match.value().value.data(), res.match.value().value.size()));
 
         res = hm.get(k3);
-        BOOST_TEST(v3 == std::string (res.value().data(), res.value().size()));
+        BOOST_TEST(v3 == std::string (res.match.value().value.data(), res.match.value().value.size()));
     }
 }
 
@@ -418,7 +476,7 @@ BOOST_FIXTURE_TEST_CASE(basic_growing_mmap_storage_test, files_info_fixture)
     size_t size = 256;
 
     {
-        growing_managed_storage ms(get_map_conf().hashtable_value_directory, get_map_conf().value_store_log_file, 4 * 1024, 8 * 1024);
+        growing_managed_storage ms(get_hashmap_conf().value_store_config);
 
         ptr1 = ms.allocate(size);
         std::memcpy(ptr1.m_addr, &data, size);
@@ -440,7 +498,7 @@ BOOST_FIXTURE_TEST_CASE(basic_growing_mmap_storage_test, files_info_fixture)
     const auto addr = mmap (align_ptr(ptr1.m_addr), 1024, PROT_READ | PROT_WRITE, MAP_ANONYMOUS | MAP_PRIVATE | MAP_FIXED, -1, 0);
     BOOST_TEST(addr == align_ptr(ptr1.m_addr));
     {
-        growing_managed_storage ms(get_map_conf().hashtable_value_directory, get_map_conf().value_store_log_file,  4 * 1024, 8 * 1024);
+        growing_managed_storage ms(get_hashmap_conf().value_store_config);
         ms.allocate(size);
         ms.allocate(size);
         ms.allocate(size);
@@ -577,4 +635,128 @@ BOOST_FIXTURE_TEST_CASE(smart_core_basic_test, files_info_fixture) {
     }
 
     delete[] ptr;
+}
+
+
+
+void insert_in_skm (maps::sorted_key_map& skm, std::string& k, std::string& v) {
+    std::span <char> sk {k};
+    std::span <char> sv {v};
+    auto res = skm.get(sk);
+    skm.insert(sk, sv, res.index);
+}
+
+BOOST_FIXTURE_TEST_CASE(sorted_map_basic_test, files_info_fixture) {
+
+    cleanup();
+
+    std::string k1 = "key1";
+    std::string v1 = "hello from data 1645";
+
+    std::string k2 = "key2sd";
+    std::string v2 = "hello from data 2234";
+
+    std::string k3 = "key3";
+    std::string v3 = "third data hello from data 3";
+
+    std::string k4 = "some_key4";
+    std::string v4 = "hello from data yet again";
+
+    std::string k5 = "key5";
+    std::string v5 = "yet again, some other data";
+
+    std::string k6 = "keysix";
+    std::string v6 = "hello from data 2234";
+
+    {
+
+        maps::sorted_key_map skm (get_sorted_key_map_conf());
+
+        insert_in_skm(skm, k1, v1);
+
+        insert_in_skm(skm, k2, v2);
+
+        insert_in_skm(skm, k3, v3);
+
+        insert_in_skm(skm, k4, v4);
+
+        insert_in_skm(skm, k5, v5);
+
+        insert_in_skm(skm, k6, v6);
+
+        auto res = skm.get(k1);
+        BOOST_TEST(v1 == std::string (res.match.value().value.data(), res.match.value().value.size()));
+
+        res = skm.get(k2);
+        BOOST_TEST(v2 == std::string (res.match.value().value.data(), res.match.value().value.size()));
+
+        res = skm.get(k5);
+        BOOST_TEST(v5 == std::string (res.match.value().value.data(), res.match.value().value.size()));
+
+        res = skm.get(k4);
+        BOOST_TEST(v4 == std::string (res.match.value().value.data(), res.match.value().value.size()));
+
+        res = skm.get(k3);
+        BOOST_TEST(v3 == std::string (res.match.value().value.data(), res.match.value().value.size()));
+    }
+    {
+
+        maps::sorted_key_map skm (get_sorted_key_map_conf());
+        auto res = skm.get(k1);
+        BOOST_TEST(v1 == std::string (res.match.value().value.data(), res.match.value().value.size()));
+
+        res = skm.get(k2);
+        BOOST_TEST(v2 == std::string (res.match.value().value.data(), res.match.value().value.size()));
+
+        res = skm.get(k5);
+        BOOST_TEST(v5 == std::string (res.match.value().value.data(), res.match.value().value.size()));
+
+        res = skm.get(k4);
+        BOOST_TEST(v4 == std::string (res.match.value().value.data(), res.match.value().value.size()));
+
+        res = skm.get(k3);
+        BOOST_TEST(v3 == std::string (res.match.value().value.data(), res.match.value().value.size()));
+
+        auto range = skm.get_range(k1, k5);
+        auto item = range.begin();
+
+        std::string_view string_key{item->key.data(), item->key.size()};
+        std::string_view string_value{item->value.data(), item->value.size()};
+        BOOST_TEST (string_key == k1);
+        BOOST_TEST (string_value == v1);
+
+        item++;
+        string_key = {item->key.data(), item->key.size()};
+        string_value = {item->value.data(), item->value.size()};
+        BOOST_TEST (string_key == k2);
+        BOOST_TEST (string_value == v2);
+
+        item++;
+        string_key = {item->key.data(), item->key.size()};
+        string_value = {item->value.data(), item->value.size()};
+        BOOST_TEST (string_key == k3);
+        BOOST_TEST (string_value == v3);
+
+        std::string non_existing_key ("key2");
+        range = skm.get_range(non_existing_key, k6);
+        item = range.begin();
+
+        string_key = {item->key.data(), item->key.size()};
+        string_value = {item->value.data(), item->value.size()};
+        BOOST_TEST (string_key == k2);
+        BOOST_TEST (string_value == v2);
+
+        item++;
+        string_key = {item->key.data(), item->key.size()};
+        string_value = {item->value.data(), item->value.size()};
+        BOOST_TEST (string_key == k3);
+        BOOST_TEST (string_value == v3);
+
+        item++;
+        string_key = {item->key.data(), item->key.size()};
+        string_value = {item->value.data(), item->value.size()};
+        BOOST_TEST (string_key == k5);
+        BOOST_TEST (string_value == v5);
+
+    }
 }

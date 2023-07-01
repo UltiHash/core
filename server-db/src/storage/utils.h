@@ -16,9 +16,16 @@
 //This include is only needed because of the blob definition; otherwise is irrelevant.
 //Can we define blob at a larget scope?
 #include <protocol/client_pool.h>
+#include "io/span_generator.h"
 
 namespace uh::dbn::storage {
 // ---------------------------------------------------------------------
+
+    struct key_value_generator {
+        std::unique_ptr <io::span_generator> key;
+        std::unique_ptr <io::span_generator> value;
+        std::list <std::string_view> labels;
+    };
 
     template <typename Iterator>
     std::string to_hex_string(Iterator begin, Iterator end)

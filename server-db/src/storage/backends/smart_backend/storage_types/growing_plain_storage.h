@@ -11,6 +11,8 @@
 #include <unistd.h>
 #include <cstring>
 
+#include <storage/backends/smart_backend/smart_config.h>
+
 namespace uh::dbn::storage::smart {
 
 class growing_plain_storage {
@@ -21,7 +23,7 @@ class growing_plain_storage {
 
 public:
 
-    growing_plain_storage (std::filesystem::path file, size_t init_size);
+    growing_plain_storage (growing_plain_storage_config);
 
     growing_plain_storage (growing_plain_storage&&) noexcept;
 

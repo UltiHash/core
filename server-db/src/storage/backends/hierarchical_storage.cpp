@@ -200,9 +200,9 @@ void hierarchical_storage::acquire_storage_size(std::size_t size)
 
 // ---------------------------------------------------------------------
 
-std::pair<std::size_t, std::vector<char>> hierarchical_storage::write_block(const std::span<char> &data)
-{
-    acquire_storage_size(data.size());
+std::pair <std::size_t, std::vector <char>> hierarchical_storage::write_block(const std::span<const char> &data) {
+    acquire_storage_size (data.size());
+
     auto m_tmp = m_store.temp_file(m_root);
     auto m_sha = std::make_unique<io::sha512>(*m_tmp);
     m_sha->write(data);

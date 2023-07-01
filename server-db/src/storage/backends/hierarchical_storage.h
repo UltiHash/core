@@ -61,7 +61,7 @@ public:
 
     std::string backend_type() override;
 
-    std::pair<std::size_t, std::vector<char>> write_block(const std::span<char> &data) override;
+    std::pair <std::size_t, std::vector <char>> write_block (const std::span <const char>& data) override;
 
     [[nodiscard]] std::filesystem::path get_hash_path(const std::string_view &hash) const;
 

@@ -77,6 +77,8 @@ void server::handle_normal_request(uint8_t request_id)
         case client_statistics::request_id: return handle_client_statistics();
         case write_chunks::request_id: return handle_write_chunks();
         case read_chunks::request_id: return handle_read_chunks();
+        case write_key_value::request_id: return handle_write_kv();
+        case read_key_value::request_id: return handle_read_kv();
 
         default:
             throw std::runtime_error("normal, unsupported command: "
@@ -175,6 +177,37 @@ void server::handle_read_chunks()
 
     auto hashes = m_bs.read<std::vector <char>>();
     auto resp = m_handler_interface->on_read_chunks ({{hashes.data(), hashes.size()}});
+
+    write(m_bs, status{ status::OK });
+    write(m_bs, resp);
+
+    m_bs.sync ();
+}
+
+// ---------------------------------------------------------------------
+
+void server::handle_write_kv () {
+    DEBUG << "write_key_value request on " << m_client->peer();
+
+    write_key_value::request req;
+    read (m_bs, req);
+
+    auto resp = m_handler_interface->on_write_kv (req);
+
+    write(m_bs, status{ status::OK });
+    write(m_bs, resp);
+
+    m_bs.sync ();
+}
+
+// ---------------------------------------------------------------------
+
+void server::handle_read_kv () {
+    DEBUG << "read_key_value request on " << m_client->peer();
+
+    read_key_value::request req;
+    read (m_bs, req);
+    auto resp = m_handler_interface->on_read_kv (req);
 
     write(m_bs, status{ status::OK });
     write(m_bs, resp);

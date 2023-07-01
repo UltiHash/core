@@ -18,7 +18,7 @@ namespace uh::chunking
 
 enum class ChunkingStrategy
 {
-    FixedSize,
+    FixedSize = 0,
     CDCrabin,
     Gear,
     FastCDC,

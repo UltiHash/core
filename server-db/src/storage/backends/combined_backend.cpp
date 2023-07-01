@@ -45,7 +45,7 @@ std::unique_ptr<io::data_generator> combined_backend::read_block(const std::span
     }
 }
 
-std::pair<std::size_t, std::vector<char>> combined_backend::write_block(const std::span<char> &data) {
+std::pair<std::size_t, std::vector<char>> combined_backend::write_block(const std::span<const char> &data) {
     auto res = m_hierarchical_storage.write_block(data);
     m_worker.push(m_hierarchical_storage.get_hash_path({res.second.data(), res.second.size()}), res.second);
     return std::move (res);
@@ -66,7 +66,5 @@ size_t combined_backend::allocated_space() {
 std::string combined_backend::backend_type() {
     return std::string (m_type);
 }
-
-
 
 } // namespace uh::dbn::storage

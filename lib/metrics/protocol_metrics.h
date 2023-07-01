@@ -24,6 +24,8 @@ public:
     prometheus::Counter& reqs_client_statistics() const;
     prometheus::Counter& reqs_write_chunks() const;
     prometheus::Counter& reqs_read_chunks() const;
+    prometheus::Counter& reqs_write_kv() const;
+    prometheus::Counter& reqs_read_kv() const;
 private:
     prometheus::Family<prometheus::Counter>& m_counters;
     prometheus::Counter& m_reqs_hello;
@@ -31,6 +33,8 @@ private:
     prometheus::Counter& m_reqs_quit;
     prometheus::Counter& m_reqs_write_chunks;
     prometheus::Counter& m_reqs_read_chunks;
+    prometheus::Counter& m_reqs_write_kv;
+    prometheus::Counter& m_reqs_read_kv;
     prometheus::Counter& m_reqs_client_statistics;
 };
 
@@ -47,6 +51,9 @@ public:
     virtual void on_quit(const std::string& reason) override;
     uh::protocol::write_chunks::response on_write_chunks (const uh::protocol::write_chunks::request &) override;
     uh::protocol::read_chunks::response on_read_chunks (const uh::protocol::read_chunks::request &) override;
+
+    uh::protocol::write_key_value::response on_write_kv (const uh::protocol::write_key_value::request &) override;
+    uh::protocol::read_key_value::response on_read_kv (const uh::protocol::read_key_value::request &) override;
 
     virtual void on_client_statistics(uh::protocol::client_statistics::request& client_stat) override;
 

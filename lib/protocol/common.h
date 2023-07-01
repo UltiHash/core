@@ -4,7 +4,8 @@
 #include <string>
 #include <vector>
 #include <list>
-
+#include <memory>
+#include <span>
 
 namespace uh::protocol
 {
@@ -37,6 +38,8 @@ struct chunks_meta_data
     std::vector <std::uint32_t> chunk_sizes;
     std::list <uint32_t> chunk_indices;
 };
+
+
 
 // ---------------------------------------------------------------------
 

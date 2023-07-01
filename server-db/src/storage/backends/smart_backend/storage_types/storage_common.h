@@ -21,13 +21,12 @@ void sync_ptr (void *ptr, std::size_t size);
 
 class offset_ptr {
 public:
-    offset_ptr (size_t offset = 0, void* addr = nullptr);
-    size_t m_offset;
-    char* m_addr;
+    offset_ptr () = default;
+    offset_ptr (uint64_t offset, void* addr = nullptr);
+    uint64_t m_offset {};
+    char* m_addr = nullptr;
 
-    bool operator == (const offset_ptr& ptr) const noexcept {
-        return m_addr == ptr.m_addr;
-    }
+    bool operator == (const offset_ptr& ptr) const noexcept;
 private:
     [[nodiscard]] offset_ptr get_offset_ptr_at (size_t offset) const;
     [[nodiscard]] offset_ptr get_offset_ptr_at (void* raw_ptr) const;
@@ -51,6 +50,34 @@ private:
 
 
 class managed_storage {
+public:
+
+    /** Allocate new memory in the mmap_storage and return a pointer to it.
+  *  @throws bad_alloc
+  */
+    virtual offset_ptr allocate (std::size_t size) = 0;
+
+    /** Deallocate the memory pointed by p for size number of bytes.
+     *  @throws bad_alloc
+     */
+    virtual void deallocate (const offset_ptr&, size_t size) = 0;
+
+    /** Flush changes to the memory to disk. Only return when sync was finished.
+     *  @throws on error
+     */
+    virtual void sync (void* ptr, std::size_t size) = 0;
+
+    /**
+     * Flushes the whole mmap storage to disk. Only return when sync was finished.
+     */
+    virtual void sync ();
+
+    /**
+     * Transforms the given offset to a pointer on the memory.
+     * @param offset
+     * @return pointer
+     */
+    virtual void* get_raw_ptr (size_t offset) = 0;
 
 protected:
     managed_storage () = default;
