@@ -20,7 +20,7 @@ namespace uh::an::cluster
 
         protocol::client_pool &route_data (const std::span <const char>& data) const override;
 
-        [[nodiscard]] db_hash_offsets_map route_hashes (const std::span <char> &hashes) const override;
+        [[nodiscard]] db_hash_offsets_map route_hashes (const std::span <const char> &hashes) const override;
 
     private:
 

@@ -58,9 +58,9 @@ public:
     std::unique_ptr<allocation> allocate(std::size_t);
 
     /**
-     * Sends the given chunks of data and their sizes to the agency server and returns its
+     * Sends the given chunks of data and their sizes to the server and returns its
      * response.
-     * @return response from agency server
+     * @return response from server
      */
     uh::protocol::write_chunks::response write_chunks(const uh::protocol::write_chunks::request&);
 
@@ -68,6 +68,16 @@ public:
      * Sends a bunch of hashes to the server and receives its data.
      */
     uh::protocol::read_chunks::response read_chunks(const read_chunks::request& req);
+
+    /**
+     * writes the given key value query to server
+     */
+    uh::protocol::write_key_value::response write_kv(const write_key_value::request& query);
+
+    /**
+     * sends a read query to server and gets its response
+     */
+    uh::protocol::read_key_value::response read_kv(const read_key_value::request& query);
 
     /**
      * End the connection by sending the `quit` command, optionally with a

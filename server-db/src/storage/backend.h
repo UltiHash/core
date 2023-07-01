@@ -51,7 +51,30 @@ namespace uh::dbn::storage {
         /**
          * Writes the data to the storage backend and returns its hash and effective size
          */
-        virtual std::pair <std::size_t, std::vector <char>> write_block (const std::span <char>& data) = 0;
+        virtual std::pair <std::size_t, std::vector <char>> write_block (const std::span <const char>& data) = 0;
+
+        /**
+         * Writes the key value to the storage backend and returns the effective size
+         */
+        virtual std::size_t write_key_value (const std::span <char>& key, const std::span <char>& data) {
+            THROW(util::exception, "not implemented");
+        }
+
+        /**
+        * Writes the key value to the storage backend and returns the effective size
+        */
+        virtual std::unique_ptr<io::data_generator> read_value (const std::span <char>& key, const std::span <std::string_view>& labels) {
+            THROW(util::exception, "not implemented");
+        }
+
+        /**
+         * Gives back the list of keys in the range of start_key to end_key with the given labels
+         */
+        virtual std::list <key_value_generator> fetch_query (const std::span <char>& start_key, const std::span <char>& end_key, const std::span <std::string_view>& labels) {
+            THROW(util::exception, "not implemented");
+        }
+
+
 
     };
 
