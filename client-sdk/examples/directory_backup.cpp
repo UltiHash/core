@@ -65,7 +65,7 @@ int main(int argc, char* args[]) {
 
     UDB_WRITE_QUERY* write_query = udb_create_write_query();
     size_t total_size = 0;
-    std::map <std::filesystem::path, uh::util::ospan <char>> file_data;
+    std::map <std::string, uh::util::ospan <char>> file_data;
     std::unordered_map <UDB_DATA*, UDB_DATA*> key_value;
     key_file << path << std::endl;
 
@@ -95,7 +95,7 @@ int main(int argc, char* args[]) {
 
         auto res = file_data.emplace(std::move(dir_entry.path()), std::move(data));
         UDB_DATA *key = new UDB_DATA(const_cast <char *> (res.first->first.c_str()),
-                                     res.first->first.string().size());
+                                     res.first->first.size());
         UDB_DATA *value = new UDB_DATA(res.first->second.data.get(), res.first->second.size);
 
         auto kv = key_value.emplace(key, value);

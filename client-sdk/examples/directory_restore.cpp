@@ -58,7 +58,7 @@ int main(int argc, char* args[]) {
     size_t max_val_size = 10ul * 1024ul * 1024ul;
 
     UDB_READ_QUERY* read_query = udb_create_read_query();
-    std::unordered_set <std::filesystem::path> file_path_set;
+    std::unordered_set <std::string> file_path_set;
     std::unordered_set <UDB_DATA*> key_set;
 
     std::fstream key_file (path, std::ios::in);
@@ -71,7 +71,7 @@ int main(int argc, char* args[]) {
 
         auto res = file_path_set.emplace(std::move (file_path));
 
-        UDB_DATA* key = new UDB_DATA (const_cast <char*> (res.first->c_str()), res.first->string().size());
+        UDB_DATA* key = new UDB_DATA (const_cast <char*> (res.first->c_str()), res.first->size());
         key_set.emplace(key);
         udb_read_query_add_key(read_query, key);
     }

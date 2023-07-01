@@ -29,7 +29,7 @@ public:
             m_set_conf (std::move (set_conf)),
             m_data_store (data_store),
             m_index_store (growing_plain_storage (m_set_conf.key_store_config)),
-            m_first_block (*(reinterpret_cast <first_block*> (m_index_store.get_storage()))),
+            m_first_block (reinterpret_cast <first_block*> (m_index_store.get_storage())),
             m_comp (data_store),
             m_block_size (boost::interprocess::mapped_region::get_page_size()) {
 
@@ -37,17 +37,17 @@ public:
             throw std::logic_error ("set file size should be at list large enough for 2 pages");
         }
 
-        if (m_first_block.get().root_offset == 0) {
-            m_first_block.get().mix_block_offset = m_block_size;
-            m_first_block.get().empty_block = 2 * sizeof (block);
-            m_first_block.get().empty_hole_size = first_block::effective_node_space + block::effective_node_space;
+        if (m_first_block->root_offset == 0) {
+            m_first_block->mix_block_offset = m_block_size;
+            m_first_block->empty_block = 2 * sizeof (block);
+            m_first_block->empty_hole_size = first_block::effective_node_space + block::effective_node_space;
             m_nil = add_node (0);
             m_nil.m_mnode->m_color = BLACK;
-            m_first_block.get().nill_offset = m_nil.m_offset;
-            m_first_block.get().root_offset = m_nil.m_offset;
+            m_first_block->nill_offset = m_nil.m_offset;
+            m_first_block->root_offset = m_nil.m_offset;
         }
         else {
-            m_nil = get_node (m_first_block.get().nill_offset);
+            m_nil = get_node (m_first_block->nill_offset);
         }
     }
 
@@ -58,7 +58,7 @@ private:
         if (pos.position == 0) {
             throw std::logic_error ("paged_redblack_tree relies on the given position. First call the find function.");
         }
-        if (pos.comp == 0 and pos.position != m_first_block.get().nill_offset) {
+        if (pos.comp == 0 and pos.position != m_first_block->nill_offset) {
             return pos;
         }
 
@@ -66,7 +66,7 @@ private:
         z.m_mnode->m_parent = pos.position;
         const auto y = get_node(pos.position);
         if (pos.comp == 0) {
-            m_first_block.get().root_offset = z.m_offset;
+            m_first_block->root_offset = z.m_offset;
         }
         else if (pos.comp < 0) {
             y.m_mnode->m_left = z.m_offset;
@@ -74,8 +74,8 @@ private:
         else {
             y.m_mnode->m_right = z.m_offset;
         }
-        z.m_mnode->m_left = m_first_block.get().nill_offset;
-        z.m_mnode->m_right = m_first_block.get().nill_offset;
+        z.m_mnode->m_left = m_first_block->nill_offset;
+        z.m_mnode->m_right = m_first_block->nill_offset;
         z.m_mnode->m_color = RED;
         z.m_mnode->m_data = {data_offset, data.size()};
         z.m_mnode->data_prefix = *reinterpret_cast <const uint64_t*> (data.data());
@@ -86,10 +86,10 @@ private:
 
         balance (z);
 
-        if (m_first_block.get().empty_block > m_index_store.get_size() - m_set_conf.set_minimum_free_space) {
+        if (m_first_block->empty_block > m_index_store.get_size() - m_set_conf.set_minimum_free_space) {
             m_index_store.extend_mapping();
-            m_first_block = *(reinterpret_cast <first_block*> (m_index_store.get_storage()));
-            m_nil = get_node (m_first_block.get().nill_offset);
+            m_first_block = reinterpret_cast <first_block*> (m_index_store.get_storage());
+            m_nil = get_node (m_first_block->nill_offset);
         }
 
         return {.position = offset, .comp = pos.comp};
@@ -100,12 +100,12 @@ private:
 
         auto y = m_nil;
         set_result res;
-        auto x = get_node (m_first_block.get().root_offset);
+        auto x = get_node (m_first_block->root_offset);
 
         int comp_int = 0;
         node largest_lower = m_nil;
         node smallest_upper = m_nil;
-        while (x.m_offset != m_first_block.get().nill_offset) {
+        while (x.m_offset != m_first_block->nill_offset) {
             y = x;
             comp_int = m_comp (data, *x.m_mnode);
             if (comp_int < 0) {
@@ -200,7 +200,7 @@ private:
 
     bool in_order_traverse (uint64_t start_offset, uint64_t end_offset, std::list<set_data> &result) const {
 
-        const auto nil =  m_first_block.get().nill_offset;
+        const auto nil =  m_first_block->nill_offset;
 
         if (start_offset == nil) {
             return false;
@@ -254,12 +254,12 @@ private:
             else {
                 directed_balance (z, RIGHT);
             }
-            if (z.m_offset == m_first_block.get().root_offset) {
+            if (z.m_offset == m_first_block->root_offset) {
                 break;
             }
             parent = get_node (z.m_mnode->m_parent);
         }
-        get_node(m_first_block.get().root_offset).m_mnode->m_color = BLACK;
+        get_node(m_first_block->root_offset).m_mnode->m_color = BLACK;
     }
 
     void directed_balance (node& z, direction_t d) {
@@ -298,33 +298,33 @@ private:
             if (!b.second.full()) {
                 n = b.second.acquire_node();
                 n.m_offset += b.first;
-                m_first_block.get().empty_hole_size -= sizeof (mmap_node);
+                m_first_block->empty_hole_size -= sizeof (mmap_node);
             }
-            else if (m_first_block.get().empty_hole_size < m_set_conf.max_empty_hole_size) {
-                auto new_b = get_block(m_first_block.get().empty_block);
+            else if (m_first_block->empty_hole_size < m_set_conf.max_empty_hole_size) {
+                auto new_b = get_block(m_first_block->empty_block);
                 n = new_b.second.acquire_node();
                 n.m_offset += new_b.first;
-                m_first_block.get().empty_hole_size -= sizeof (mmap_node);
-                m_first_block.get().empty_block += sizeof (block);
+                m_first_block->empty_hole_size -= sizeof (mmap_node);
+                m_first_block->empty_block += sizeof (block);
             }
-            else if (auto mix_b = get_block(m_first_block.get().mix_block_offset); !mix_b.second.full()) {
+            else if (auto mix_b = get_block(m_first_block->mix_block_offset); !mix_b.second.full()) {
                 n = mix_b.second.acquire_node();
                 n.m_offset += mix_b.first;
-                m_first_block.get().empty_hole_size -= sizeof (mmap_node);
+                m_first_block->empty_hole_size -= sizeof (mmap_node);
             }
             else {
-                auto new_mix_b = get_block(m_first_block.get().empty_block);
+                auto new_mix_b = get_block(m_first_block->empty_block);
                 n = new_mix_b.second.acquire_node();
                 n.m_offset += new_mix_b.first;
-                m_first_block.get().empty_hole_size -= sizeof (mmap_node);
-                m_first_block.get().empty_block += sizeof (block);
-                m_first_block.get().mix_block_offset = new_mix_b.first;
+                m_first_block->empty_hole_size -= sizeof (mmap_node);
+                m_first_block->empty_block += sizeof (block);
+                m_first_block->mix_block_offset = new_mix_b.first;
             }
             return n;
         };
 
         if (parent < m_block_size) {
-            return find_page_friendly_offset (std::pair <uint64_t, first_block&>{0, m_first_block});
+            return find_page_friendly_offset (std::pair <uint64_t, first_block&>{0, *m_first_block});
         }
         else {
             return find_page_friendly_offset (std::move (get_block(parent)));
@@ -335,12 +335,12 @@ private:
         auto y = get_node(get_other_child(x, d));
         auto& yc = get_child(y, d);
         get_other_child(x, d) = yc;
-        if (yc != m_first_block.get().nill_offset) {
+        if (yc != m_first_block->nill_offset) {
             get_node (yc).m_mnode->m_parent = x.m_offset;
         }
         y.m_mnode->m_parent = x.m_mnode->m_parent;
-        if (x.m_mnode->m_parent == m_first_block.get().nill_offset) {
-            m_first_block.get().root_offset = y.m_offset;
+        if (x.m_mnode->m_parent == m_first_block->nill_offset) {
+            m_first_block->root_offset = y.m_offset;
         }
         else if (auto& aunt = get_child(get_node (x.m_mnode->m_parent), d); x.m_offset == aunt) {
             aunt = y.m_offset;
@@ -379,7 +379,7 @@ private:
     std::reference_wrapper <managed_storage> m_data_store;
     growing_plain_storage m_index_store;
     node m_nil {};
-    std::reference_wrapper <first_block> m_first_block;
+    first_block* m_first_block;
     Comparator m_comp;
 
     const size_t m_block_size;
