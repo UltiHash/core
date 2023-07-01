@@ -168,6 +168,7 @@ private:
     dedupe_config define_test_dedupe_conf () {
         dedupe_config conf;
         conf.min_fragment_size = 4;
+        conf.max_fragment_size = 512;
         return conf;
     }
     static std::list <std::filesystem::path> generate_files () {

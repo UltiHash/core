@@ -46,7 +46,6 @@ public:
 private:
 
     std::pair <std::vector <sets::offset_span>, size_t> deduplicate (std::string_view data);
-    std::pair <std::vector <sets::offset_span>, size_t> non_rec_deduplicate (std::string_view data);
 
     uint64_t store_data (const std::string_view& frag);
 

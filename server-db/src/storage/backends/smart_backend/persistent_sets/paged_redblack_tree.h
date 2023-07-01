@@ -78,9 +78,7 @@ private:
         z.m_mnode->m_right = m_first_block->nill_offset;
         z.m_mnode->m_color = RED;
         z.m_mnode->m_data = {data_offset, data.size()};
-        z.m_mnode->data_prefix = *reinterpret_cast <const uint64_t*> (data.data());
-        //std::memcpy (reinterpret_cast <char*> (&z.m_mnode->data_prefix), data.data(), std::min (sizeof (z.m_mnode->data_prefix), data.size()));
-
+        //z.m_mnode->data_prefix = *reinterpret_cast <const uint64_t*> (data.data());
 
         const auto offset = z.m_offset;
 
