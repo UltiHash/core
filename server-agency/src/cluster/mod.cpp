@@ -77,7 +77,7 @@ namespace uh::an::cluster
                 case config::connection_method::plain:
                     return std::make_unique<plain_socket_factory>(io, nc.hostname, nc.port);
                 case config::connection_method::tls:
-                THROW(util::exception, "TLS not implemented yet");  // TODO
+                    THROW(util::exception, "TLS not implemented yet");  // TODO
             }
 
             THROW(util::exception, "unknown connection method");

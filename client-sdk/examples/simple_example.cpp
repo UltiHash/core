@@ -52,7 +52,7 @@ int main()
                            "who asks for job pen. A wizard’s job is to vex chumps quickly in fog. The quick brown fox "
                            "jumps over the lazy dog.";
         /* key */
-        char test_key[] = "This_is_a_user_defined_key_2";
+        char test_key[] = "This_is_a_user_defined_key";
 
         /* labels */
         char test_label_1[] = "Fox";

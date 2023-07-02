@@ -271,7 +271,7 @@ UDB* udb_create_instance(UDB_CONFIG* config)
     }
     catch (const std::exception& e)
     {
-        error = UDB_RESULT_ERROR;
+        error = UDB_SERVER_NOT_FOUND;
         return nullptr;
     }
 }
