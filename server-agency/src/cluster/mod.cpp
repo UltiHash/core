@@ -77,7 +77,7 @@ namespace uh::an::cluster
                 case config::connection_method::plain:
                     return std::make_unique<plain_socket_factory>(io, nc.hostname, nc.port);
                 case config::connection_method::tls:
-                    THROW(util::exception, "TLS not implemented yet");  // TODO
+                THROW(util::exception, "TLS not implemented yet");  // TODO
             }
 
             THROW(util::exception, "unknown connection method");
@@ -261,17 +261,19 @@ namespace uh::an::cluster
         // TODO this should be done in different threads
         uh::protocol::write_chunks::response total_res;
         total_res.hashes.resize(req.chunk_sizes.size() * 64);
-        total_res.effective_size = 0;
+        total_res.effective_size.resize(req.chunk_sizes.size());
         for (auto &conn_blocks: conn_blocks_map) {
             auto res = conn_blocks.first->get()->write_chunks ({conn_blocks.second.chunk_sizes, conn_blocks.second.data});
             std::size_t dn_index = 0;
+            std::size_t index = 0;
             for (const auto total_index: conn_blocks.second.chunk_indices) {
-                std::memcpy (total_res.hashes.data() + total_index * 64, res.hashes.data() + dn_index, 64);
-                dn_index += 64;
+                total_res.effective_size[total_index] = res.effective_size[index];
+                std::memcpy (total_res.hashes.data() + total_index * 64, res.hashes.data() + (index * 64), 64);
+                ++index;
             }
-            total_res.effective_size += res.effective_size;
         }
         return total_res;
+
     }
 
 // ---------------------------------------------------------------------
@@ -336,41 +338,6 @@ namespace uh::an::cluster
     read_key_value::response mod::read_kv(const read_key_value::request &request) {
         auto &client_connections = m_impl->m_routing->route_data("dummy data");
         return client_connections.get()->read_kv (request);
-        // TODO this uses dummy routing
-        /*
-        std::list <read_key_value::response> responses;
-        unsigned int key_count = 0;
-        std::size_t size = 0;
-        for (auto rq = rqs.next(); rq != nullptr; rq = rqs.next()) {
-            auto routing_key = (rq->single_key.empty()) ? rq->start_key:rq->single_key;
-            auto &client_connections = m_impl->m_routing->route_data(routing_key);
-            responses.emplace_back(std::move (client_connections.get()->read_kv (*rq)));
-            key_count += responses.front().key_sizes.size;
-            size += responses.front().data.size;
-        }
-        read_key_value::response resp;
-        resp.key_sizes = {std::make_unique_for_overwrite <uint16_t[]> (key_count), key_count};
-        resp.value_sizes = {std::make_unique_for_overwrite <uint32_t[]> (key_count), key_count};
-        resp.data = {std::make_unique_for_overwrite <char[]> (size), size};
-
-        std::size_t key_offset = 0;
-        std::size_t value_offset = 0;
-        std::size_t data_offset = 0;
-
-        for (const auto& r: responses) {
-            const auto key_size_size = r.key_sizes.size * sizeof (uint16_t);
-            std::memcpy(resp.key_sizes.data.get() + key_offset, r.key_sizes.data.get(), key_size_size);
-            key_offset += key_size_size;
-            const auto value_size_size = r.value_sizes.size * sizeof (uint32_t);
-            std::memcpy(resp.value_sizes.data.get() + value_offset, r.value_sizes.data.get(), value_size_size);
-            value_offset += value_size_size;
-            const auto data_size = r.data.size;
-            std::memcpy(resp.data.data.get() + data_offset, r.data.data.get(), data_size);
-            data_offset += data_size;
-        }
-        return resp;
-
-    */
     }
 
 // ---------------------------------------------------------------------

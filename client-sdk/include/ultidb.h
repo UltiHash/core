@@ -64,22 +64,6 @@ typedef enum : uint8_t
 UDB_RESULT udb_get_last_error();
 
 /**
- * Instructs the ::UDB_DOCUMENT whether to deallocate the underlying memory it holds
- * or not.
- *
- * A document holds pointer to 3 major things: 1. UDB_DATA* key, 2. UDB_DATA* value,
- * 3. char** labels. ::OWNING_TYPE can be set to owning in the ::UDB_DOCUMENT instance
- * to instruct that the document has full ownership of the objects being referenced by
- * these pointers. As a result when ::UDB_DOCUMENT instance is being destroyed, it will
- * also destroy the underlying objects.
- */
-typedef enum : uint8_t
-{
-    non_owning = 0,
-    owning
-} OWNING_TYPE;
-
-/**
 * Opaque structure that holds the underlying UDB instance.
 *
 * Allocated and initialized with ::udb_create_instance.

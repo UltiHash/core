@@ -41,6 +41,7 @@ public:
      * Retrieves the key values with keys within the given range / having the given labels
      */
     std::list <key_fragmented_value> retrieve_range (std::span <char> start_key, std::span <char> end_key, const std::span <std::string_view>& labels);
+    size_t max_common = 0;
 
 private:
 

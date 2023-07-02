@@ -2,12 +2,13 @@
 
 #include <io/file.h>
 #include <protocol/messages.h>
+#include <util/exception.h>
 
 #include <algorithm>
+#include <numeric>
 #include <set>
 #include <utility>
-
-#include <iostream>
+#include <unistd.h>
 
 
 using namespace uh::protocol;
@@ -120,8 +121,7 @@ public:
                              resp.hashes.begin() + (index + count) * hash_size);
             md.append_sizes(m_chunk_sizes.begin() + index,
                             m_chunk_sizes.begin() + index + count);
-
-            // TODO: send effective size per chunk meta_data->add_effective_size(resp.effective_size);
+            md.add_effective_size(resp.effective_size[index]);
 
             fh.finished(count);
             index += count;
@@ -282,7 +282,7 @@ std::vector<chunk> upload_request(protocol::client& client,
             .size = sizes[i] });
     }
 
-    eff_size += resp.effective_size;
+    eff_size += std::accumulate(resp.effective_size.begin(), resp.effective_size.end(), 0u);
 
     return rv;
 }
@@ -378,7 +378,12 @@ void upload::chunk_and_upload(std::unique_ptr<uhv::meta_data>&& md_ptr, buffers&
         r.active().add_handle(fh);
         m_output_jq.push_back(fh->get_future());
 
-        io::file file(md.path());
+        if (access(md.path().c_str(), R_OK ) != 0)
+        {
+            THROW(util::illegal_args, "The user doesn't have read permission on path: " + md.path().string());
+        }
+
+        io::file file(md.path(), std::ios_base::in);
         auto chunker = m_chunking.create_chunker(file, md.size());
 
         std::size_t size = 0u;

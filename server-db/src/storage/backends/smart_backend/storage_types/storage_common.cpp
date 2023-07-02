@@ -76,11 +76,13 @@ resource_entry &managed_storage::get_resource(size_t offset, size_t size) {
 }
 
 void managed_storage::sync() {
+    /*
     for (auto &resource: m_resources) {
         if (msync (resource.second.m_ptr.m_addr, resource.second.m_size, MS_SYNC) != 0) {
             throw std::system_error (errno, std::system_category(), "managed_storage could not sync the mmap data");
         }
     }
+     */
 }
 
 } // end namespace uh::dbn::storage::smart

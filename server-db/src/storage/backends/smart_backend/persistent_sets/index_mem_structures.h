@@ -28,7 +28,7 @@ struct mmap_node {
     uint64_t m_left;
     uint64_t m_right;
     color_t m_color;
-    uint64_t data_prefix = 0;
+    //uint64_t data_prefix;
 };
 struct node {
     uint64_t m_offset;

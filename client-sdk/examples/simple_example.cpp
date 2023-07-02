@@ -52,7 +52,7 @@ int main()
                            "who asks for job pen. A wizard’s job is to vex chumps quickly in fog. The quick brown fox "
                            "jumps over the lazy dog.";
         /* key */
-        char test_key[] = "This_is_a_user_defined_key";
+        char test_key[] = "This_is_a_user_defined_key_2";
 
         /* labels */
         char test_label_1[] = "Fox";
@@ -86,7 +86,7 @@ int main()
 
         /* create a read query*/
         UDB_READ_QUERY* test_read_query = udb_create_read_query();
-        udb_read_query_add_key(test_read_query, test_key, sizeof(test_key));
+        udb_read_query_add_key(test_read_query, test_key, strlen(test_key));
 
         /* getting a document from database */
         UDB_READ_QUERY_RESULTS* results = udb_get(udb_conn, test_read_query);
@@ -99,7 +99,8 @@ int main()
         UDB_READ_QUERY_RESULT* result;
         while (udb_results_next(results, &result))
         {
-            std::cout << result->value;
+            std::cout << "Received Key:\n" << result->key << "\n\n";
+            std::cout << "Received Value:\n" << result->value << '\n';
         }
 
     /* cleanup */

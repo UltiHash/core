@@ -73,7 +73,7 @@ std::unique_ptr<buffer> make_test_device()
 
 // ---------------------------------------------------------------------
 
-BOOST_FIXTURE_TEST_CASE_TEMPLATE( valid_default, T, device_types, Fixture )
+BOOST_FIXTURE_TEST_CASE_TEMPLATE(valid_default, T, device_types, Fixture )
 {
     auto dev = make_test_device<T>();
 
@@ -82,7 +82,7 @@ BOOST_FIXTURE_TEST_CASE_TEMPLATE( valid_default, T, device_types, Fixture )
 
 // ---------------------------------------------------------------------
 
-BOOST_FIXTURE_TEST_CASE_TEMPLATE( read_full, T, device_types, Fixture )
+BOOST_FIXTURE_TEST_CASE_TEMPLATE(read_full, T, device_types, Fixture )
 {
     auto dev = make_test_device<T>();
 
@@ -105,7 +105,7 @@ BOOST_FIXTURE_TEST_CASE_TEMPLATE( read_full, T, device_types, Fixture )
 
 // ---------------------------------------------------------------------
 
-BOOST_FIXTURE_TEST_CASE_TEMPLATE( read_partial, T, device_types, Fixture )
+BOOST_FIXTURE_TEST_CASE_TEMPLATE(read_partial, T, device_types, Fixture )
 {
     auto dev = make_test_device<T>();
 
@@ -127,7 +127,7 @@ BOOST_FIXTURE_TEST_CASE_TEMPLATE( read_partial, T, device_types, Fixture )
 
 // ---------------------------------------------------------------------
 
-BOOST_FIXTURE_TEST_CASE_TEMPLATE( data_generator_api, T, device_types, Fixture )
+BOOST_FIXTURE_TEST_CASE_TEMPLATE(data_generator_api, T, device_types, Fixture )
 {
     std::vector v(LOREM_IPSUM.begin(), LOREM_IPSUM.end());
     io::test::generator gen(v);

@@ -2,6 +2,7 @@
 // Created by masi on 5/30/23.
 //
 #include "smart_storage.h"
+#include <licensing/global_licensing.h>
 
 namespace uh::dbn::storage::smart {
 
@@ -27,6 +28,7 @@ smart_config make_smart_config(const std::filesystem::path &root, size_t size, s
     dedupe_config dd_conf {};
     dd_conf.min_fragment_size = 1 * 1024;
     dd_conf.min_fragment_size = 2 * 1024;
+    dd_conf.max_fragment_size = 128 * 1024;
 
 
     // fragment set
@@ -109,6 +111,8 @@ std::pair <std::size_t, std::vector <char>> smart_storage::write_block (const st
     std::size_t effective_size;
     try {
         m_used += data.size();
+        uh::dbn::licensing::global_license_pointer_dbn->license_package()
+            .require(uh::licensing::feature::STORAGE, m_used);
         effective_size = m_smart_core.integrate({sha.data(), size}, std::string_view(data.data(), data.size()));
         update_space_consumption();
     } catch (std::exception& e) {
@@ -127,6 +131,7 @@ std::size_t smart_storage::write_key_value(const std::span<char> &key, const std
         std::lock_guard <std::shared_mutex> lock (m_mutex);
         m_used += data.size();
         effective_size = m_smart_core.integrate(key, std::string_view(data.data(), data.size()));
+        std::cout << "===============================" << m_smart_core.max_common << std::endl;
         update_space_consumption();
     } catch (std::exception& e) {
         m_used -= data.size();

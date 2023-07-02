@@ -89,6 +89,7 @@ struct UDB_READ_QUERY_STRUCT
     size_t key_count;
     UDB_READ_QUERY_TYPE query_type;
 
+
     UDB_READ_QUERY_STRUCT() : start_key(),
     end_key(), labels(nullptr), label_count(0), key_count(0),
     query_type(UDB_READ_QUERY_TYPE::NOT_DEFINED)
@@ -745,7 +746,6 @@ UDB_READ_QUERY_RESULTS* udb_get(UDB_CONNECTION* conn, UDB_READ_QUERY* read_query
         // TODO; do not copy data if possible
         for (auto rr = read_response.next(); rr != nullptr; rr = read_response.next())
         {
-
             char* key;
             size_t key_size;
 
@@ -768,6 +768,7 @@ UDB_READ_QUERY_RESULTS* udb_get(UDB_CONNECTION* conn, UDB_READ_QUERY* read_query
             char** labels = nullptr;
             if (rr->labels.size > 0)
                 labels = new char*[rr->labels.size];
+
             for (size_t index = 0; index < rr->labels.size; index++)
             {
                 const auto str = rr->labels.data [index];
@@ -776,6 +777,7 @@ UDB_READ_QUERY_RESULTS* udb_get(UDB_CONNECTION* conn, UDB_READ_QUERY* read_query
                     auto* label = new char[rr->labels.data[index].size() + 1];
                     std::memcpy(label, str.data(), rr->labels.data[index].size());
                     label[rr->labels.data[index].size()] = '\0';
+
                     labels[index] = label;
                 }
                 else
