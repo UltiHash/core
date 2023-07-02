@@ -107,6 +107,7 @@ const char* get_error_message()
         case 3: return "Bad memory allocation";
         case 4: return "A key was already set previously.";
         case 5: return "A key wasn't set on read query structure";
+        case 6: return "Error connecting to the server.";
         default: return "Unknown Error";
     }
 }
@@ -189,6 +190,8 @@ constexpr const char* Exception_Messsage(uint8_t n)
             return "Cannot get uninitialized read query.";
         case UDB_RESULT::UDB_KEY_ALREADY_SET:
             return "Key type was already previously set..";
+        case UDB_RESULT::UDB_SERVER_CONNECTION_ERROR:
+            return "error connecting to the server";
         default:
             return "The given enum doesn't have any string associated with it";
     }
@@ -226,7 +229,14 @@ struct UDB_CONNECTION_STRUCT
 
     explicit UDB_CONNECTION_STRUCT(UDB* udb)
     {
-        m_udb_client = udb->m_client_factory->create();
+        try
+        {
+            m_udb_client = udb->m_client_factory->create();
+        }
+        catch(const std::exception& e)
+        {
+            THROW(uh::util::exception, Exception_Messsage(UDB_SERVER_CONNECTION_ERROR));
+        }
     }
 };
 
@@ -240,7 +250,10 @@ UDB_CONNECTION* udb_create_connection(UDB* instance)
     }
     catch(std::exception& e)
     {
-        error = UDB_RESULT_ERROR;
+        if (e.what() == std::string(Exception_Messsage(UDB_SERVER_CONNECTION_ERROR)))
+            error = UDB_SERVER_CONNECTION_ERROR;
+        else
+            error = UDB_RESULT_ERROR;
         return nullptr;
     }
 }
@@ -271,7 +284,7 @@ UDB* udb_create_instance(UDB_CONFIG* config)
     }
     catch (const std::exception& e)
     {
-        error = UDB_SERVER_NOT_FOUND;
+        error = UDB_RESULT_ERROR;
         return nullptr;
     }
 }
@@ -298,13 +311,14 @@ UDB_RESULT udb_ping(UDB_CONNECTION_STRUCT* conn)
 {
     try
     {
-        conn->m_udb_client->valid();
+        if (!conn->m_udb_client->valid())
+            THROW(uh::util::exception, "cannot reach server");
         return UDB_RESULT::UDB_RESULT_SUCCESS;
     }
     catch(const std::exception& e)
     {
-        error = UDB_RESULT_ERROR;
-        return UDB_RESULT::UDB_RESULT_ERROR;
+        error = UDB_SERVER_CONNECTION_ERROR;
+        return UDB_RESULT::UDB_SERVER_CONNECTION_ERROR;
     }
 }
 
@@ -529,7 +543,7 @@ UDB_RESULT udb_read_query_add_key(UDB_READ_QUERY* read_query, char* key, size_t 
     }
     catch(const std::exception& e)
     {
-        if (e.what() == Exception_Messsage(UDB_KEY_ALREADY_SET))
+        if (e.what() == std::string(Exception_Messsage(UDB_KEY_ALREADY_SET)))
         {
             error = UDB_KEY_ALREADY_SET;
         }
@@ -564,7 +578,7 @@ UDB_RESULT udb_read_query_set_key_range(UDB_READ_QUERY* read_query, char* start_
     }
     catch(const std::exception& e)
     {
-        if (e.what() == Exception_Messsage(UDB_KEY_ALREADY_SET))
+        if (e.what() == std::string(Exception_Messsage(UDB_KEY_ALREADY_SET)))
         {
             error = UDB_KEY_ALREADY_SET;
         }
@@ -804,7 +818,7 @@ UDB_READ_QUERY_RESULTS* udb_get(UDB_CONNECTION* conn, UDB_READ_QUERY* read_query
     }
     catch (const std::exception& e)
     {
-        if (e.what() == Exception_Messsage(UDB_UNINITIALIZED_KEY))
+        if (e.what() == std::string(Exception_Messsage(UDB_UNINITIALIZED_KEY)))
         {
             error = UDB_UNINITIALIZED_KEY;
         }

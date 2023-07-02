@@ -142,8 +142,8 @@ private:
 
         }
         else if (fstart.upper.has_value()) {
-            start_offset = fstart.upper->index_offset;
-            if (fstart.upper.value().data.compare({end_data.data(), end_data.size()}) < 0)
+           start_offset = fstart.upper->index_offset;
+           if (fstart.upper.value().data.compare({end_data.data(), end_data.size()}) < 0)
                 result.push_back({fstart.upper.value().data, fstart.upper.value().data_offset, start_offset});
         }
         else {

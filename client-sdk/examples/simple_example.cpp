@@ -13,7 +13,7 @@ int main()
         if (udb_config == nullptr)
         {
             std::cout << "error_occured: " << get_error_message();
-            exit(-1);
+            exit(1);
         }
         udb_config_set_host_node(udb_config, "localhost", 0x5548);
 
@@ -21,23 +21,23 @@ int main()
         UDB* udb = udb_create_instance(udb_config);
         if (udb == nullptr)
         {
-            std::cout << "error_occured: " << get_error_message();
-            exit(-1);
+            std::cout << "error_occured: " << get_error_message() << '\n';
+            exit(1);
         }
 
         /* Get a connection to the UDB */
         UDB_CONNECTION* udb_conn = udb_create_connection(udb);
         if (udb_conn == nullptr)
         {
-            std::cout << "error_occured: " << get_error_message();
-            exit(-1);
+            std::cout << "error_occured: " << get_error_message() << '\n';
+            exit(1);
         }
 
         /* ping the connection */
         if (udb_ping(udb_conn) != UDB_RESULT_SUCCESS)
         {
-            std::cout << "error_occured: " << get_error_message();
-            exit(-1);
+            std::cout << "error_occured: " << get_error_message() << '\n';
+            exit(1);
         }
 
     /* some random data */
@@ -74,8 +74,8 @@ int main()
         UDB_WRITE_QUERY_RESULTS* write_results = udb_put(udb_conn, test_write_query);
         if ( write_results == nullptr)
         {
-            std::cout << "error: " << get_error_message();
-            exit(-1);
+            std::cout << "error: " << get_error_message() << '\n';
+            exit(1);
         }
 
 //        /* can create a loop and get all the effective sizes */
@@ -92,8 +92,8 @@ int main()
         UDB_READ_QUERY_RESULTS* results = udb_get(udb_conn, test_read_query);
         if (results == nullptr)
         {
-            std::cout << "error: " << get_error_message();
-            exit(-1);
+            std::cout << "error: " << get_error_message() << '\n';
+            exit(1);
         }
 
         UDB_READ_QUERY_RESULT* result;
