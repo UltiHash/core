@@ -43,7 +43,7 @@ int main()
     /* some random data */
 
         /* data */
-        char test_data_1[] = "Hello The quick brown fox jumps over the lazy dog. Pack my box with five dozen liquor jugs. "
+        char test_data_1[] = "Key 1 Test! The quick brown fox jumps over the lazy dog. Pack my box with five dozen liquor jugs. "
                            "How quickly daft jumping zebras vex. Crazy Fredrick bought many very exquisite opal jewels. "
                            "The five boxing wizards jump quickly. Mr. Jock, TV quiz PhD, bags few lynx. Sphinx of black "
                            "quartz, judge my vow. Jackdaws love my big sphinx of quartz. Bright vixens jump; dozy fowl "
@@ -100,7 +100,7 @@ int main()
         while (udb_results_next(results, &result))
         {
             std::cout << "Received Key:\n" << result->key << "\n\n";
-            std::cout << "Received Value:\n" << result->value << '\n';
+            std::cout << "Received Value:\n" << std::string_view (result->value, result->value_size) << '\n';
         }
 
     /* cleanup */
