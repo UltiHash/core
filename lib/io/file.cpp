@@ -11,7 +11,7 @@ file::file(const std::filesystem::path &path, std::ios_base::openmode mode)
     : m_io(path, mode),
       m_path(path)
 {
-    m_io.exceptions(std::ifstream::badbit);
+    m_io.exceptions(std::ifstream::badbit | std::ifstream::failbit);
 }
 
 // ---------------------------------------------------------------------
