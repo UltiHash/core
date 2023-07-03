@@ -57,6 +57,7 @@ private:
     std::unique_ptr <sets::set_interface> m_fragment_set;
     std::unique_ptr <maps::map_interface> m_key_store;
     const dedupe_config m_dedupe_conf;
+    std::size_t m_total_effective_size {};
 };
 
 } // end namespace uh::dbn::storage::smart
