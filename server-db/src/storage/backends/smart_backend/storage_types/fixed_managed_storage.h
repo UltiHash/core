@@ -51,6 +51,8 @@ public:
      */
     void sync () override;
 
+    std::size_t get_total_used_size () const noexcept;
+
     /**
      * Transforms the given offset to a pointer on the memory.
      * @param offset
@@ -75,6 +77,7 @@ private:
     const fixed_managed_storage_config m_conf;
     std::fstream m_log;
     std::size_t m_aggregated_size {};
+    std::size_t m_total_used_size {};
 };
 
 

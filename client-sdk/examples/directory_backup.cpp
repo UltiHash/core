@@ -106,7 +106,6 @@ int main(int argc, char* args[]) {
         total_size += file_size;
     }
 
-    std::chrono::time_point <std::chrono::steady_clock> timer;
     std::cout << "total size is " << total_size << std::endl;
 
     const auto before = std::chrono::steady_clock::now ();
@@ -126,6 +125,27 @@ int main(int argc, char* args[]) {
 
     // TODO how to get the dedupe ratio?
     std::cout << "Stored data of size " << total_size_gb << " with the dedupe ratio of <not available> and the bandwidth of " << bw << " GB/s" << std::endl;
+
+    double total_duration = 0;
+    for (const std::filesystem::directory_entry &dir_entry: std::filesystem::recursive_directory_iterator(path)) {
+        const auto file_size = std::filesystem::file_size(dir_entry.path());
+
+        std::fstream file(dir_entry.path());
+        uh::util::ospan<char> data(file_size);
+        file.read(data.data.get(), file_size);
+
+        const auto beforew = std::chrono::steady_clock::now ();
+
+        std::fstream wfile ("tmp", std::ios::out | std::ios::trunc);
+        wfile.write(data.data.get(), file_size);
+        const auto afterw = std::chrono::steady_clock::now ();
+        const std::chrono::duration <double> durationw = afterw - beforew;
+        total_duration += durationw.count();
+    }
+
+    const auto rawbw = total_size_gb / total_duration;
+
+    std::cout << "raw write bw " << rawbw << "GB/s" << std::endl;
 
     /* cleanup */
     udb_destroy_write_query(&write_query);

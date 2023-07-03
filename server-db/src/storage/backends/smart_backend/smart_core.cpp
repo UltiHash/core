@@ -5,6 +5,7 @@
 #include "smart_core.h"
 #include "storage/backends/smart_backend/persistent_maps/sorted_key_map.h"
 #include "storage/backends/smart_backend/persistent_maps/persisted_robinhood_hashmap.h"
+#include "logging/logging_boost.h"
 
 #include <ranges>
 
@@ -23,11 +24,13 @@ size_t smart_core::integrate(std::span <char> key, std::string_view data) {
     if (f.match.has_value()) {
         //TODO should we compare the data as well? It can be that the data
         // is different and we do not notice it
+        INFO << "Data store total used size " << m_data_store.get_total_used_size();
         return 0;
     }
 
     auto fragments = deduplicate (data);
     m_key_store->insert(key, {reinterpret_cast <char*> (fragments.first.data()), fragments.first.size() * sizeof (sets::offset_span)}, f.index);
+    INFO << "Data store total used size " << m_data_store.get_total_used_size();
     return fragments.second;
 }
 

@@ -130,7 +130,7 @@ std::size_t smart_storage::write_key_value(const std::span<char> &key, const std
         std::lock_guard <std::shared_mutex> lock (m_mutex);
         m_used += data.size();
         effective_size = m_smart_core.integrate(key, std::string_view(data.data(), data.size()));
-        std::cout << "===============================" << m_smart_core.max_common << std::endl;
+        INFO << "Maximum unmatched common prefix size less than minimum fragment size: " << m_smart_core.max_common << std::endl;
         update_space_consumption();
     } catch (std::exception& e) {
         m_used -= data.size();
