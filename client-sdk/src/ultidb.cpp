@@ -752,7 +752,7 @@ UDB_READ_QUERY_RESULTS* udb_get(UDB_CONNECTION* conn, UDB_READ_QUERY* read_query
                 std::span<uint8_t>(label_sizes.data(), label_sizes.size()),
                 std::span<char>(data.data(), data.size())
             });
-
+        auto value = std::get <0>(resp.data).data.get();
         uh::util::structured_queries <uh::protocol::read_key_value::response> read_response(resp);
 
         auto* read_query_results = new UDB_READ_QUERY_RESULTS();
