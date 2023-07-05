@@ -3,6 +3,7 @@
 
 #include <protocol/server.h>
 #include "utils.h"
+#include "util/structured_queries.h"
 
 
 namespace uh::dbn::storage {
@@ -56,7 +57,7 @@ namespace uh::dbn::storage {
         /**
          * Writes the key value to the storage backend and returns the effective size
          */
-        virtual std::size_t write_key_value (const std::span <char>& key, const std::span <char>& data) {
+        virtual std::size_t write_key_value (const std::span <char>& key, const std::span <char>& data, util::insertion_type) {
             THROW(util::exception, "not implemented");
         }
 

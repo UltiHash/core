@@ -19,7 +19,7 @@ smart_core::smart_core (const smart_config& smart_conf):
 //        m_key_store (std::make_unique<key_stores::persisted_robinhood_hashmap> (std::move (smart_conf.hashmap_key_store_conf))),
         m_dedupe_conf (smart_conf.dedupe_conf) {}
 
-size_t smart_core::integrate(std::span <char> key, std::string_view data) {
+size_t smart_core::integrate(std::span <char> key, std::string_view data, util::insertion_type insert_type) {
     const auto f = m_key_store->get(key);
     if (f.match.has_value()) {
         //TODO should we compare the data as well? It can be that the data

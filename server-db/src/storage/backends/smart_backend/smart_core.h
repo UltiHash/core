@@ -10,6 +10,7 @@
 #include "metrics/storage_metrics.h"
 #include "storage/backends/smart_backend/persistent_sets/paged_redblack_tree.h"
 #include "storage/backends/smart_backend/persistent_maps//map_interface.h"
+#include "util/structured_queries.h"
 
 namespace uh::dbn::storage::smart {
 
@@ -28,7 +29,7 @@ public:
      * @param data
      * @return effective size
      */
-    size_t integrate (std::span <char> key, std::string_view data);
+    size_t integrate (std::span <char> key, std::string_view data, util::insertion_type insert_type);
 
     /**
      * Retrieves the fragments of the given key
