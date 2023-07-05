@@ -18,6 +18,10 @@
 #include <boost/interprocess/mapped_region.hpp>
 
 
+namespace uh::dbn::storage::smart::maps {
+    class sorted_key_map;
+}
+
 namespace uh::dbn::storage::smart::sets {
 
 template <typename Comparator = set_full_comparator>
@@ -94,10 +98,17 @@ private:
     }
 
 
-    [[nodiscard]] set_result do_find (const std::string_view& data, const index_type&) const override {
+    [[nodiscard]] set_result do_find (const std::string_view& data, const index_type& pos) const override {
+        set_result res;
+
+        if (pos.position != 0) {
+            if (const auto n = get_node (pos.position); m_comp (data, *n.m_mnode) == 0) {
+                res.match = {fetch_node_data(n), n.m_mnode->m_data.m_data_offset, n.m_offset};
+                return res;
+            }
+        }
 
         auto y = m_nil;
-        set_result res;
         auto x = get_node (m_first_block->root_offset);
 
         int comp_int = 0;
@@ -373,13 +384,14 @@ private:
         return {offset, *reinterpret_cast <block*> (m_index_store.get_storage() + offset)};
     }
 
+    friend maps::sorted_key_map;
+
     const set_config m_set_conf;
     std::reference_wrapper <managed_storage> m_data_store;
     growing_plain_storage m_index_store;
     node m_nil {};
     first_block* m_first_block;
     Comparator m_comp;
-
     const size_t m_block_size;
 };
 

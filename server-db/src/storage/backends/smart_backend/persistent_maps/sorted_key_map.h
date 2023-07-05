@@ -17,6 +17,8 @@ public:
 
     void insert (std::span <char> key, std::span <char> value, const sets::index_type& index) override;
 
+    void update (std::span <char> key, std::span <char> value, const sets::index_type& pos) override;
+
     map_result get (std::span <char> key) override;
 
     std::list<map_key_value> get_range (const std::span<char> &start_key, const std::span<char> &end_key) override;
@@ -25,11 +27,16 @@ public:
 
     ~sorted_key_map () override;
 
+
+private:
+
+    std::pair <offset_ptr, size_t> store_data (std::span <char> key, std::span <char> value);
+
     growing_managed_storage m_storage;
     sets::paged_redblack_tree <sets::set_partial_comparator> m_set;
 
 };
 
-} // end namespace uh::dbn::storage::smart::key_stores
+} // end namespace uh::dbn::storage::smart::maps
 
 #endif //CORE_SORTED_KEY_MAP_H
