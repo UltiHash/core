@@ -224,6 +224,7 @@ struct write_key_value
     struct response
     {
         util::ospan <uint32_t> effective_sizes;
+        util::ospan <uint8_t> return_codes;
     };
 
     constexpr static uint8_t request_id = 0x02;

@@ -107,29 +107,29 @@ std::pair <std::size_t, std::vector <char>> smart_storage::write_block (const st
     std::lock_guard <std::shared_mutex> lock (m_mutex);
     EVP_DigestUpdate (m_sha_ctx, data.data(), data.size());
     EVP_DigestFinal_ex (m_sha_ctx, reinterpret_cast <unsigned char*> (sha.data()), &size);
-    std::size_t effective_size;
+    std::pair <std::uint8_t, std::size_t> res;
     try {
         m_used += data.size();
         uh::dbn::licensing::global_license_pointer_dbn->license_package()
             .require(uh::licensing::feature::STORAGE, m_used);
-        effective_size = m_smart_core.integrate({sha.data(), size}, std::string_view(data.data(), data.size()), util::insertion_type::INSERT_IGNORE);
+        res = m_smart_core.integrate({sha.data(), size}, std::string_view(data.data(), data.size()), util::insertion_type::INSERT_IGNORE);
         update_space_consumption();
     } catch (std::exception& e) {
         m_used -= data.size();
         throw e;
     }
     EVP_DigestInit_ex (m_sha_ctx, EVP_sha512 (), nullptr);
-    return {effective_size, std::move (sha)};
+    return {res.second, std::move (sha)};
 }
 
 
-std::size_t smart_storage::write_key_value(const std::span<char> &key, const std::span<char> &data, util::insertion_type insert_type) {
-    std::size_t effective_size;
+std::pair <std::uint8_t, std::size_t> smart_storage::write_key_value(const std::span<char> &key, const std::span<char> &data, util::insertion_type insert_type) {
+    std::pair <std::uint8_t, std::size_t> res;
 
     try {
         std::lock_guard <std::shared_mutex> lock (m_mutex);
         m_used += data.size();
-        effective_size = m_smart_core.integrate(key, std::string_view(data.data(), data.size()), insert_type);
+        res = m_smart_core.integrate(key, std::string_view(data.data(), data.size()), insert_type);
         INFO << "Maximum unmatched common prefix size less than minimum fragment size: " << m_smart_core.max_common << std::endl;
         m_smart_core.max_common = 0;
         update_space_consumption();
@@ -137,7 +137,7 @@ std::size_t smart_storage::write_key_value(const std::span<char> &key, const std
         m_used -= data.size();
         throw e;
     }
-    return effective_size;
+    return res;
 }
 
 size_t smart_storage::free_space() {

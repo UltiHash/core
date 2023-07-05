@@ -29,7 +29,7 @@ public:
      * @param data
      * @return effective size
      */
-    size_t integrate (std::span <char> key, std::string_view data, util::insertion_type insert_type);
+    std::pair <std::uint8_t, std::size_t> integrate (std::span <char> key, std::string_view data, util::insertion_type insert_type);
 
     /**
      * Retrieves the fragments of the given key

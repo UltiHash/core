@@ -57,7 +57,7 @@ namespace uh::dbn::storage {
         /**
          * Writes the key value to the storage backend and returns the effective size
          */
-        virtual std::size_t write_key_value (const std::span <char>& key, const std::span <char>& data, util::insertion_type) {
+        virtual std::pair <std::uint8_t, std::size_t> write_key_value (const std::span <char>& key, const std::span <char>& data, util::insertion_type) {
             THROW(util::exception, "not implemented");
         }
 

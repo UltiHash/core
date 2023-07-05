@@ -90,11 +90,14 @@ uh::protocol::write_key_value::response protocol::on_write_kv(const write_key_va
 
     uh::util::structured_queries <write_key_value::request> wqs (request);
 
-    write_key_value::response resp {.effective_sizes = util::ospan<uint32_t> (std::get <0> (request.key_sizes).size)};
+    write_key_value::response resp {.effective_sizes = util::ospan<uint32_t> (std::get <0> (request.key_sizes).size),
+                                    .return_codes = util::ospan<uint8_t> (std::get <0> (request.key_sizes).size)};
 
     int i = 0;
     for (auto wq = wqs.next(); wq != nullptr; wq = wqs.next()) {
-        resp.effective_sizes.data [i++] = m_storage.write_key_value(wq->key, wq->value, wq->insert_type);
+        const auto res = m_storage.write_key_value(wq->key, wq->value, wq->insert_type);
+        resp.return_codes.data [i] = res.first;
+        resp.effective_sizes.data [i++] = res.second;
     }
 
     return resp;
