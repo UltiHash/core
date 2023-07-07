@@ -4,19 +4,23 @@
 
 #include "fragment_on_seekable_reset_device.h"
 
-namespace uh::io {
+namespace uh::io
+{
 
 // ---------------------------------------------------------------------
 
-    fragment_on_seekable_reset_device::fragment_on_seekable_reset_device(seekable_device &dev, uint8_t index,
-                                                                         std::streamoff starts_at):
-            start_pos(starts_at), fragment_on_seekable_device(dev,index){}
+fragment_on_seekable_reset_device::fragment_on_seekable_reset_device(seekable_device& dev, uint8_t index,
+                                                                     std::streamoff starts_at)
+    :
+    start_pos(starts_at), fragment_on_seekable_device(dev, index)
+{}
 
 // ---------------------------------------------------------------------
 
-    bool fragment_on_seekable_reset_device::reset() {
-        dev_seek.seek(start_pos,std::ios_base::beg);
-        return fragment_on_device::reset();
-    }
+bool fragment_on_seekable_reset_device::reset()
+{
+    dev_seek.seek(start_pos, std::ios_base::beg);
+    return fragment_on_device::reset();
+}
 
 } // namespace uh::io

@@ -10,9 +10,11 @@
 #include "io/fragmented_device.h"
 #include "io/seekable_device.h"
 
-namespace uh::io{
+namespace uh::io
+{
 
-class fragment_on_seekable_device: public fragment_on_device{
+class fragment_on_seekable_device: public fragment_on_device
+{
 
 public:
     /**
@@ -21,7 +23,7 @@ public:
      * @param dev seekable input device
      * @param index of fragment to be written, if that is intended
      */
-    explicit fragment_on_seekable_device(io::seekable_device& dev,uint8_t index = 0);
+    explicit fragment_on_seekable_device(io::seekable_device& dev, uint8_t index = 0);
 
     /**
      * with this function the underlying device is read on its header and then seeked over the content until
