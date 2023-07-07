@@ -2,6 +2,7 @@
 #define PROTOCOL_MESSAGES_H
 
 #include "common.h"
+#include <util/ospan.h>
 
 #include <serialization/serialization.h>
 
@@ -161,7 +162,7 @@ struct write_chunks
     struct request
     {
         std::span <uint32_t> chunk_sizes;
-        std::span <char> data;
+        std::span <const char> data;
     };
 
     struct response
@@ -187,7 +188,7 @@ struct read_chunks
 {
     struct request
     {
-        std::span <char> hashes;
+        std::span <const char> hashes;
     };
 
     struct response
@@ -206,6 +207,69 @@ void read(serialization::buffered_serialization& in, read_chunks::request& reque
 
 void write(serialization::buffered_serialization& out, const read_chunks::response& response);
 void read(serialization::buffered_serialization& in, read_chunks::response& response);
+
+// ---------------------------------------------------------------------
+
+struct write_key_value
+{
+    struct request
+    {
+        std::variant <util::ospan <uint16_t>, std::span <uint16_t>> key_sizes {};
+        std::variant <util::ospan <uint32_t>, std::span <uint32_t>> value_sizes {};
+        std::variant <util::ospan <uint8_t>, std::span <uint8_t>> label_counts {};
+        std::variant <util::ospan <uint8_t>, std::span <uint8_t>> label_sizes {};
+        std::variant <util::ospan <char>, std::span <char>> data; // (key, value, labels) ...
+    };
+
+    struct response
+    {
+        util::ospan <uint32_t> effective_sizes;
+    };
+
+    constexpr static uint8_t request_id = 0x02;
+};
+
+// ---------------------------------------------------------------------
+
+void write(serialization::buffered_serialization& out, const write_key_value::request& request);
+void read(serialization::buffered_serialization& in, write_key_value::request& request);
+void write(serialization::buffered_serialization& out, const write_key_value::response& response);
+void read(serialization::buffered_serialization& in, write_key_value::response& response);
+
+// ---------------------------------------------------------------------
+
+struct read_key_value
+{
+    struct request
+    {
+        std::variant <util::ospan <uint16_t>, std::span <uint16_t>> start_key_sizes {};
+        std::variant <util::ospan <uint16_t>, std::span <uint16_t>> end_key_sizes {};
+        std::variant <util::ospan <uint16_t>, std::span <uint16_t>> single_key_sizes {};
+        std::variant <util::ospan <uint8_t>, std::span <uint8_t>> label_counts {};
+        std::variant <util::ospan <uint8_t>, std::span <uint8_t>> label_sizes {};
+        std::variant <util::ospan <char>, std::span <char>> data; // (start_key, end_key, single_key, labels) ...
+    };
+
+    struct response
+    {
+        std::variant <util::ospan <uint16_t>, std::vector <uint16_t>> key_sizes {};
+        std::variant <util::ospan <uint32_t>, std::vector <uint32_t>> value_sizes {};
+        std::variant <util::ospan <uint8_t>, std::vector <uint8_t>> label_counts {};
+        std::variant <util::ospan <uint8_t>, std::vector <uint8_t>> label_sizes {};
+        std::variant <util::ospan <char>, std::unique_ptr<io::data_generator> > data; // (key, value, labels) ...
+
+    };
+
+    constexpr static uint8_t request_id = 0x03;
+};
+
+// ---------------------------------------------------------------------
+
+void write(serialization::buffered_serialization& out, const read_key_value::request& request);
+void read(serialization::buffered_serialization& in, read_key_value::request& request);
+
+void write(serialization::buffered_serialization& out, const read_key_value::response& response);
+void read(serialization::buffered_serialization& in, read_key_value::response& response);
 
 // ---------------------------------------------------------------------
 

@@ -71,4 +71,16 @@ uh::protocol::read_chunks::response protocol::on_read_chunks(const read_chunks::
 
 // ---------------------------------------------------------------------
 
+uh::protocol::write_key_value::response protocol::on_write_kv(const write_key_value::request &req) {
+    return m_cluster.write_kv (req);
+}
+
+// ---------------------------------------------------------------------
+
+uh::protocol::read_key_value::response protocol::on_read_kv(const read_key_value::request &req) {
+    return m_cluster.read_kv (req);
+}
+
+// ---------------------------------------------------------------------
+
 } // namespace uh::an::server
