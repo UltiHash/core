@@ -16,8 +16,14 @@
 
 #define DEFINE_EXCEPTION(name) DEFINE_SUB_EXCEPTION(name, uh::util::exception)
 
-#define THROW(exception, message) throw exception(FILELINE, message)
+#define THROW(exception, message, ...) throw exception(FILELINE, message __VA_OPT__(,) __VA_ARGS__)
 #define THROW_FROM_ERRNO() uh::util::throw_from_syserror(FILELINE)
+
+#ifdef DEBUG
+# define ASSERT(X) if (!(X)) THROW(util::exception, "Assertion failed: " #X)
+#else
+# define ASSERT(X)
+#endif
 
 namespace uh::util
 {
@@ -30,7 +36,7 @@ public:
     exception(const std::string& file, std::size_t line,
               const std::string& message);
 
-    virtual const char* what() const noexcept override;
+    [[nodiscard]] const char* what() const noexcept override;
 
 private:
     std::string m_message;

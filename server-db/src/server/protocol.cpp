@@ -6,7 +6,7 @@
 
 #include <config.hpp>
 #include <storage/backends/hierarchical_storage.h>
-
+#include <util/structured_queries.h>
 #include <numeric>
 
 
@@ -51,23 +51,17 @@ std::size_t protocol::on_free_space()
 
 uh::protocol::write_chunks::response protocol::on_write_chunks(const write_chunks::request &req)
 {
-    auto alloc = m_storage.allocate_multi(req.data.size());
-    auto& multi_alloc = dynamic_cast <uh::dbn::storage::hierarchical_storage::hierarchical_multi_block_allocation&>(*alloc);
-    size_t offset = 0;
-    uh::protocol::write_chunks::response res;
-    res.effective_size = 0;
 
-    for (const auto size : req.chunk_sizes)
-    {
-        multi_alloc.open_new_block(size);
-        multi_alloc.device().write({req.data.data() + offset, size});
-        auto block_md = multi_alloc.persist();
-        res.hashes.insert(res.hashes.end(), block_md.hash.cbegin(), block_md.hash.cend());
-        res.effective_size += block_md.effective_size;
-        offset += size;
-    }
+        size_t offset = 0;
+        uh::protocol::write_chunks::response res;
 
-    return res;
+        for (const auto size: req.chunk_sizes) {
+            const auto result = m_storage.write_block({req.data.data() + offset, size});
+            res.effective_size.push_back(result.first);
+            res.hashes.insert(res.hashes.end(), result.second.cbegin(), result.second.cend());
+            offset += size;
+        }
+        return res;
 }
 
 // ---------------------------------------------------------------------
@@ -79,7 +73,7 @@ uh::protocol::read_chunks::response protocol::on_read_chunks(const read_chunks::
     uh::protocol::read_chunks::response resp;
     for (size_t i = 0; i < req.hashes.size(); i += 64)
     {
-        auto dev = m_storage.read_block({ req.hashes.data() + i, 64 });
+        auto dev = m_storage.read_block({const_cast <char*> (req.hashes.data()) + i, 64 });
 
         auto size = dev->size();
         generator->append(std::move(dev));
@@ -90,6 +84,64 @@ uh::protocol::read_chunks::response protocol::on_read_chunks(const read_chunks::
     resp.data = std::move(generator);
 
     return resp;
+}
+
+uh::protocol::write_key_value::response protocol::on_write_kv(const write_key_value::request &request) {
+
+    uh::util::structured_queries <write_key_value::request> wqs (request);
+
+    write_key_value::response resp {.effective_sizes = util::ospan<uint32_t> (std::get <0> (request.key_sizes).size)};
+
+    int i = 0;
+    for (auto wq = wqs.next(); wq != nullptr; wq = wqs.next()) {
+        resp.effective_sizes.data [i++] = m_storage.write_key_value(wq->key, wq->value);
+    }
+
+    return resp;
+}
+
+// ---------------------------------------------------------------------
+
+uh::protocol::read_key_value::response protocol::on_read_kv(const read_key_value::request &request) {
+
+    // TODO maybe a lock here?
+
+    uh::util::structured_queries <read_key_value::request> queries (request);
+    auto generator = std::make_unique<io::group_generator>();
+    uh::protocol::read_key_value::response resp {.key_sizes = std::vector <uint16_t>{},
+                                                 .value_sizes = std::vector <uint32_t> {},
+                                                 .label_counts = std::vector <uint8_t> {},
+                                                 .label_sizes = std::vector <uint8_t> {}};
+
+    for (auto query = queries.next(); query != nullptr; query = queries.next()) {
+
+        std::span <std::string_view> labels {query->labels.data.get(), query->labels.size};
+
+        if (!query->single_key.empty()) {
+            auto res = m_storage.read_value(query->single_key, labels);
+            std::get <1> (resp.key_sizes).emplace_back(query->single_key.size());
+            std::get <1> (resp.value_sizes).emplace_back(res->size());
+            std::get <1> (resp.label_counts).emplace_back(0);
+            generator->append(std::make_unique <uh::io::span_generator> (query->single_key.size(), std::forward_list <std::span <char>> {query->single_key}));
+            generator->append(std::move (res));
+        }
+        else if (!query->start_key.empty() or !query->end_key.empty()) {
+
+            auto key_values = m_storage.fetch_query(query->start_key, query->end_key, labels);
+
+            for (auto& key_value: key_values) {
+                std::get <1> (resp.key_sizes).emplace_back(key_value.key->size());
+                std::get <1> (resp.value_sizes).emplace_back(key_value.value->size());
+                std::get <1> (resp.label_counts).emplace_back (key_value.labels.size());
+                generator->append(std::move(key_value.key));
+                generator->append(std::move(key_value.value));
+            }
+        }
+    }
+
+    resp.data = std::move(generator);
+    return resp;
+
 }
 
 // ---------------------------------------------------------------------

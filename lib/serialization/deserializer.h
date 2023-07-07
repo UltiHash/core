@@ -5,7 +5,11 @@
 #ifndef CORE_DESERIALIZER_H
 #define CORE_DESERIALIZER_H
 
+#include <util/exception.h>
 #include "serialization_common.h"
+#include <protocol/common.h>
+#include <util/ospan.h>
+
 
 namespace uh::serialization {
 
@@ -61,10 +65,11 @@ namespace uh::serialization {
 
             char buffer[1 + data_size_len + data_size];
             if (io::read(dev_, buffer) == 0)
-                throw std::runtime_error("Device is empty.");
+            {
+                THROW(uh::util::exception, "device is empty");
+            }
 
             Arithmetic data = *reinterpret_cast <Arithmetic *> (buffer + data_size_len + 1);
-            //std::memcpy(&data, buffer + data_size_len + 1, data_size);
 
             if (is_different_endian(buffer[0])) [[unlikely]] {
                 data = endian_convert (data);
@@ -136,6 +141,29 @@ namespace uh::serialization {
 
             io::read(dev_, {range.data (), data_size});
             range = {range.data (), data_size};
+
+        }
+
+        template <typename T>
+        requires (std::is_arithmetic_v <T> or std::is_enum_v <T>)
+        util::ospan <T> read_ospan() {
+
+            char control_byte[1];
+            io::read(dev_, control_byte);
+
+            auto data_size_len = get_control_byte_size_length(control_byte[0]);
+            std::vector<char> data_size_bytes(data_size_len);
+            io::read(dev_, data_size_bytes);
+
+            auto data_size = get_control_byte_size(data_size_bytes, data_size_len);
+            if (is_different_endian(control_byte[0])) [[unlikely]] {
+                data_size = endian_convert (data_size);
+            }
+
+            auto ptr = std::make_unique_for_overwrite<T[]>(data_size);
+
+            io::read(dev_, {reinterpret_cast <char*> (ptr.get ()), data_size});
+            return {data_size / sizeof(T), std::move (ptr)};
 
         }
 

@@ -137,7 +137,8 @@ void client::send_client_statistics(const uh::protocol::client_statistics::reque
 
 // ---------------------------------------------------------------------
 
-uh::protocol::write_chunks::response client::write_chunks(const uh::protocol::write_chunks::request &req) {
+uh::protocol::write_chunks::response client::write_chunks(const uh::protocol::write_chunks::request &req)
+{
     write (m_bs, req);
     m_bs.sync();
 
@@ -148,10 +149,32 @@ uh::protocol::write_chunks::response client::write_chunks(const uh::protocol::wr
 
 // ---------------------------------------------------------------------
 
-uh::protocol::read_chunks::response client::read_chunks (const read_chunks::request &req) {
+uh::protocol::read_chunks::response client::read_chunks (const read_chunks::request &req)
+{
     write (m_bs, req);
     m_bs.sync();
     uh::protocol::read_chunks::response resp;
+    read (m_bs, resp);
+    return resp;
+}
+
+// ---------------------------------------------------------------------
+
+uh::protocol::write_key_value::response client::write_kv(const write_key_value::request &query) {
+    write (m_bs, query);
+    m_bs.sync();
+
+    uh::protocol::write_key_value::response resp;
+    read (m_bs, resp);
+    return resp;
+}
+
+// ---------------------------------------------------------------------
+
+uh::protocol::read_key_value::response client::read_kv(const read_key_value::request &query) {
+    write (m_bs, query);
+    m_bs.sync();
+    uh::protocol::read_key_value::response resp;
     read (m_bs, resp);
     return resp;
 }

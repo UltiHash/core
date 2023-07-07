@@ -30,6 +30,7 @@ public:
 
         ~handle();
         client* operator->();
+        client& operator*();
 
     private:
         friend client_pool;
@@ -44,6 +45,7 @@ public:
                 std::size_t pool_size);
 
     handle get();
+    void quit_all(const std::string& reason);
 
 private:
     friend class handle;

@@ -1,0 +1,120 @@
+#ifdef SINGLE_TEST_RUNNER
+#define BOOST_TEST_NO_MAIN
+#else
+#define BOOST_TEST_MODULE "uhLibLicensing License Check Tests"
+#endif
+
+#include <boost/test/unit_test.hpp>
+
+#include <util/exception.h>
+#include <util/temp_dir.h>
+#include <licensing/license_spring.h>
+#include <licensing/demo_license.h>
+#include <licensing/license_package.h>
+
+
+using namespace uh;
+using namespace uh::licensing;
+
+namespace
+{
+
+// ---------------------------------------------------------------------
+
+const std::string product_Id_test = "uhtest";
+const std::string appName_test = "uh-test";
+const std::string appVersion_test = "0.2.0";
+const std::string licenseKey_test = "GZM9-S88G-RNEK-2EUH";
+
+// ---------------------------------------------------------------------
+
+auto mk_ls_config(const std::filesystem::path& path)
+{
+    // TODO why do we need to give the filename twice
+    return license_config {
+        .productId = product_Id_test,
+        .appName = appName_test,
+        .appVersion = appVersion_test,
+        .path = path / (appName_test+".lic") / (appName_test+".lic")
+    };
+}
+
+// ---------------------------------------------------------------------
+
+#ifdef USE_LICENSE_SPRING
+BOOST_AUTO_TEST_CASE(valid_license_spring_license)
+{
+    util::temp_directory temp;
+    license_package pkg(licensing::config{
+        .config = mk_ls_config(temp.path()),
+        .activation_key = licenseKey_test });
+
+    BOOST_CHECK(pkg.check(feature::STORAGE));
+    BOOST_CHECK_NO_THROW(pkg.require(feature::STORAGE, (1ULL << 32) - 1));
+    BOOST_CHECK_THROW(pkg.require(feature::STORAGE, (1ULL << 42)), util::exception);
+}
+#endif
+
+// ---------------------------------------------------------------------
+
+#ifdef USE_LICENSE_SPRING
+BOOST_AUTO_TEST_CASE(ls_activate)
+{
+    util::temp_directory temp;
+
+    {
+        license_spring lic(mk_ls_config(temp.path()), licenseKey_test);
+    }
+
+    {
+        BOOST_CHECK_NO_THROW(license_spring lic(mk_ls_config(temp.path()), licenseKey_test));
+    }
+
+    {
+        license_spring lic(mk_ls_config(temp.path()));
+    }
+}
+#endif
+
+// ---------------------------------------------------------------------
+
+BOOST_AUTO_TEST_CASE(valid_demo_license)
+{
+    util::temp_directory temp;
+    license_package pkg(licensing::config{
+        .type = uh::licensing::config::license_spring_demo,
+        .config = mk_ls_config(temp.path())});
+
+    BOOST_CHECK(pkg.check(feature::STORAGE));
+    BOOST_CHECK_NO_THROW(pkg.require(feature::STORAGE, (1ULL << 32) - 1));
+    BOOST_CHECK_THROW(pkg.require(feature::STORAGE, (1ULL << 42)), util::exception);
+}
+
+// ---------------------------------------------------------------------
+
+BOOST_AUTO_TEST_CASE(ls_activate_demo)
+{
+    util::temp_directory temp;
+
+    {
+        demo_license lic;
+    }
+}
+
+// ---------------------------------------------------------------------
+
+BOOST_AUTO_TEST_CASE(fallback_demo_license)
+{
+    util::temp_directory temp;
+    license_package pkg(licensing::config{
+        .config = mk_ls_config(temp.path()),
+        .activation_key = "XXXX-XXXX-XXXX-XXXX"});
+
+    BOOST_CHECK(pkg.check(feature::STORAGE));
+    BOOST_CHECK_NO_THROW(pkg.require(feature::STORAGE, (1ULL << 32) - 1));
+    BOOST_CHECK_THROW(pkg.require(feature::STORAGE, (1ULL << 42)), util::exception);
+}
+
+// ---------------------------------------------------------------------
+
+} // namespace

@@ -17,6 +17,8 @@ protocol_metrics::protocol_metrics(uh::metrics::service& service)
       m_reqs_quit(m_counters.Add({{ "type", "quit" }})),
       m_reqs_write_chunks(m_counters.Add({{ "type", "write_chunks" }})),
       m_reqs_read_chunks(m_counters.Add({{ "type", "read_chunks" }})),
+      m_reqs_write_kv (m_counters.Add({{ "type", "write_kv" }})),
+      m_reqs_read_kv (m_counters.Add({{ "type", "read_kv" }})),
       m_reqs_client_statistics(m_counters.Add({{ "type", "client_statistics" }}))
 
 {
@@ -62,6 +64,18 @@ prometheus::Counter& protocol_metrics::reqs_write_chunks () const
 prometheus::Counter& protocol_metrics::reqs_read_chunks () const
 {
     return m_reqs_read_chunks;
+}
+
+// ---------------------------------------------------------------------
+
+prometheus::Counter &protocol_metrics::reqs_write_kv() const {
+    return m_reqs_write_kv;
+}
+
+// ---------------------------------------------------------------------
+
+prometheus::Counter &protocol_metrics::reqs_read_kv() const {
+    return m_reqs_read_kv;
 }
 
 // ---------------------------------------------------------------------
@@ -119,6 +133,19 @@ uh::protocol::read_chunks::response protocol_metrics_wrapper::on_read_chunks(con
     m_metrics.reqs_read_chunks().Increment(req.hashes.size() / 64);
     return m_base->on_read_chunks (req);
 }
+
+// ---------------------------------------------------------------------
+
+uh::protocol::write_key_value::response protocol_metrics_wrapper::on_write_kv(const write_key_value::request &req) {
+    m_metrics.reqs_write_kv().Increment();
+    return m_base->on_write_kv (req);
+}
+
+// ---------------------------------------------------------------------
+
+uh::protocol::read_key_value::response protocol_metrics_wrapper::on_read_kv(const read_key_value::request &req) {
+    m_metrics.reqs_read_kv().Increment();
+    return m_base->on_read_kv (req);}
 
 // ---------------------------------------------------------------------
 

@@ -6,4 +6,10 @@
 #define PROJECT_VCSID "@PROJECT_VCSID@"
 #define PROJECT_REPOSITORY "@PROJECT_REPOSITORY@"
 
+/*
+ * Licensing
+ */
+
+#define LICENSE_PRODUCT_ID "02"
+
 #endif

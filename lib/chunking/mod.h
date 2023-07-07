@@ -18,7 +18,7 @@ namespace uh::chunking
 
 enum class ChunkingStrategy
 {
-    FixedSize,
+    FixedSize = 0,
     CDCrabin,
     Gear,
     FastCDC,
@@ -73,7 +73,6 @@ struct config
     uh::chunking::fast_cdc_config fast_cdc;
     uh::chunking::gear_config gear;
     uh::chunking::mod_cdc_config mod_cdc;
-    uh::chunking::rabin_fp_config rabin;
 };
 
 // ---------------------------------------------------------------------
@@ -83,7 +82,7 @@ class mod
 public:
     explicit mod(const config& cfg);
 
-    std::unique_ptr<uh::chunking::chunker> create_chunker(io::device& d, std::size_t buffer_size = 0);
+    std::unique_ptr<uh::chunking::chunker> create_chunker(io::device& d, std::size_t file_size);
 
 private:
     ChunkingStrategy m_strategy;
@@ -91,7 +90,6 @@ private:
     uh::chunking::fast_cdc_config m_fast_cdc;
     uh::chunking::gear_config m_gear;
     uh::chunking::mod_cdc_config m_mod_cdc;
-    uh::chunking::rabin_fp_config m_rabin;
 };
 
 // ---------------------------------------------------------------------

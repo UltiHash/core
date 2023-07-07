@@ -25,6 +25,13 @@ client* client_pool::handle::operator->()
 
 // ---------------------------------------------------------------------
 
+client& client_pool::handle::operator*()
+{
+    return *m_client;
+}
+
+// ---------------------------------------------------------------------
+
 client_pool::handle::handle(client_pool& pool, std::unique_ptr<client>&& c)
     : m_pool(pool),
       m_client(std::move(c))
@@ -67,6 +74,21 @@ client_pool::handle client_pool::get()
         return {*this, m_factory->create()};
     }
 
+}
+
+// ---------------------------------------------------------------------
+
+void client_pool::quit_all(const std::string& reason)
+{
+    std::lock_guard lk(m_mutex);
+
+    while (!m_clients.empty())
+    {
+        auto client = std::move(m_clients.front());
+        m_clients.pop_front();
+
+        client->quit(reason);
+    }
 }
 
 // ---------------------------------------------------------------------

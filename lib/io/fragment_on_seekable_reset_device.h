@@ -7,31 +7,33 @@
 
 #include "io/fragment_on_seekable_device.h"
 
-namespace uh::io {
+namespace uh::io
+{
 
-    class fragment_on_seekable_reset_device: public fragment_on_seekable_device{
+class fragment_on_seekable_reset_device: public fragment_on_seekable_device
+{
 
-    public:
+public:
 
-        /**
-         * fragment on seekable reset device is a virtual device running on a seekable host device
-         *
-         * @param dev incoming seekable device to build this virtual device upon
-         * @param index position that is either given on write or read from underlying device
-         * @param starts_at fragment starting position to be seeked to
-         */
-        explicit fragment_on_seekable_reset_device(io::seekable_device& dev, uint8_t index = 0,
-                                                   std::streamoff starts_at = 0);
+    /**
+     * fragment on seekable reset device is a virtual device running on a seekable host device
+     *
+     * @param dev incoming seekable device to build this virtual device upon
+     * @param index position that is either given on write or read from underlying device
+     * @param starts_at fragment starting position to be seeked to
+     */
+    explicit fragment_on_seekable_reset_device(io::seekable_device& dev, uint8_t index = 0,
+                                               std::streamoff starts_at = 0);
 
-        /**
-         * reset the state machine to the stored fragment beginning
-         * @return if the underlying device is still valid to deliver the fragment structure of the stored position
-         */
-        bool reset() override;
+    /**
+     * reset the state machine to the stored fragment beginning
+     * @return if the underlying device is still valid to deliver the fragment structure of the stored position
+     */
+    bool reset() override;
 
-    private:
-        std::streamoff start_pos;
-    };
+private:
+    std::streamoff start_pos;
+};
 
 } // namespace uh::io
 

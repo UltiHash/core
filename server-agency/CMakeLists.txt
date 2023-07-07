@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22.0)
-project(uhServerAgency VERSION 0.2.0)
+project(uh-agency-node VERSION 0.2.0)
 message(STATUS "Building ${PROJECT_NAME}...")
 
 set(CMAKE_CXX_STANDARD 20)
@@ -12,7 +12,7 @@ set(Boost_USE_STATIC_LIBS ON)
 find_package(Boost 1.80 COMPONENTS unit_test_framework REQUIRED)
 
 # internal dependencies
-set(${PROJECT_NAME}_INTERNAL_DEPS uhLibLogging uhLibUtil uhLibNet uhLibOptions uhLibProtocol uhLibMetrics uhLibSerialization)
+set(${PROJECT_NAME}_INTERNAL_DEPS uhLibLogging uhLibUtil uhLibNet uhLibOptions uhLibProtocol uhLibSignals uhLibMetrics uhLibSerialization uhLibLicensing)
 
 # configuring library dependencies for cmake and linker
 set(${PROJECT_NAME}_INCLUDE_DIRS ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/src ${Boost_INCLUDE_DIRS} ${${PROJECT_NAME}_INTERNAL_DEPS})
@@ -23,9 +23,13 @@ file(GLOB_RECURSE HEADER_FILE_LIST ${CMAKE_CURRENT_SOURCE_DIR}/src/*.h)
 
 # adding all the .cpp files of the current project
 file(GLOB_RECURSE SOURCE_FILE_LIST ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp)
+
+# adding all the .ixx files of the current project
+file(GLOB_RECURSE MODULES_FILE_LIST ${CMAKE_CURRENT_SOURCE_DIR}/src/*.ixx)
+
 list(REMOVE_ITEM SOURCE_FILE_LIST ${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp)
 
-add_library(${PROJECT_NAME}_OBJECTS OBJECT ${HEADER_FILE_LIST} ${SOURCE_FILE_LIST})
+add_library(${PROJECT_NAME}_OBJECTS OBJECT ${HEADER_FILE_LIST} ${SOURCE_FILE_LIST} ${MODULES_FILE_LIST})
 target_include_directories(${PROJECT_NAME}_OBJECTS PUBLIC ${${PROJECT_NAME}_INCLUDE_DIRS})
 target_link_libraries(${PROJECT_NAME}_OBJECTS PUBLIC ${${PROJECT_NAME}_LINK_LIBRARIES})
 

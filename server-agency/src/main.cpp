@@ -5,30 +5,38 @@
 #include <cluster/options.h>
 #include <server/mod.h>
 #include <metrics/mod.h>
-#include <persistence/mod.h>
-#include <persistence/options.h>
+#include <state/mod.h>
+#include <state/options.h>
+#include <licensing/mod.h>
 #include <logging/logging_boost.h>
 
 #include <options/app_config.h>
 #include <options/metrics_options.h>
 #include <options/logging_options.h>
 #include <options/server_options.h>
+#include <options/licensing_options.h>
 
+#include "signals/signal.h"
+
+#include "licensing/global_licensing.h"
 
 APPLICATION_CONFIG(
     (server, uh::options::server_options),
     (logging, uh::options::logging_options),
     (metrics, uh::options::metrics_options),
     (cluster, uh::an::cluster::options),
-    (persistence, uh::an::persistence::options));
+    (state, uh::an::state::options),
+    (licensing, uh::options::licensing_options));
 
 using namespace uh::log;
 using namespace uh::an;
 
-int main(int argc, const char** argv)
+int main(int argc, const char **argv)
 {
     try
     {
+        uh::signal::signal signal_handler;
+
         application_config config;
         if (config.evaluate(argc, argv) == uh::options::action::exit)
         {
@@ -37,19 +45,34 @@ int main(int argc, const char** argv)
 
         init_logging(config.logging());
 
-        INFO << "               --- Agency Node Modules ---";
+        INFO << "--- Agency Node Modules ---";
         cluster::mod cluster_module(config.cluster());
         cluster_module.start();
 
-        uh::an::persistence::mod persistence_module(config.persistence());
-        persistence_module.start();
+        uh::an::state::mod state_module(config.state());
+        state_module.start();
 
-        metrics::mod metrics_module(config.metrics(), persistence_module);
+        auto licensing = config.licensing();
+        licensing.config.path = config.state().data_directory / "license";
+        uh::an::licensing::global_license_pointer_an =
+            std::make_unique<uh::an::licensing::mod>(licensing);
+        uh::an::licensing::global_license_pointer_an->start();
 
-        server::mod server_module(config.server(), cluster_module, metrics_module, persistence_module);
+        metrics::mod metrics_module(config.metrics(), state_module);
+
+        server::mod server_module(config.server(), cluster_module, metrics_module);
         server_module.start();
+
+        signal_handler.register_func([&]()
+                                     {
+                                         server_module.stop();
+                                         cluster_module.stop();
+                                     });
+
+        auto signal_received = signal_handler.run();
+        INFO << " agency node clean shutdown: signal " << strsignal(signal_received) << "(" << signal_received << ")";
     }
-    catch (const std::exception& e)
+    catch (const std::exception &e)
     {
         FATAL << e.what();
         std::cerr << "Error while starting service: " << e.what() << "\n";

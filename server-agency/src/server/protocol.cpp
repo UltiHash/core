@@ -15,11 +15,9 @@ namespace uh::an::server
 // ---------------------------------------------------------------------
 
 protocol::protocol(cluster::mod& cluster,
-                   an::persistence::client_metrics& persistence,
-                   metrics::client_metrics& client,
+                   metrics::client_metrics_state& client,
                    const uh::net::server_info &serv_info):
         m_cluster(cluster),
-        m_persistence(persistence),
         m_client(client),
         m_serv_info (serv_info)
 {
@@ -50,7 +48,6 @@ void protocol::on_client_statistics(uh::protocol::client_statistics::request& cl
 {
     // ! TODO: set_uhv_metrics should technically be in protocol_metrics_wrapper
     m_client.set_uhv_metrics(client_stat);
-    m_persistence.add(client_stat);
 }
 
 // ---------------------------------------------------------------------
@@ -70,6 +67,18 @@ uh::protocol::write_chunks::response protocol::on_write_chunks(const write_chunk
 
 uh::protocol::read_chunks::response protocol::on_read_chunks(const read_chunks::request &req) {
     return m_cluster.read_chunks (req);
+}
+
+// ---------------------------------------------------------------------
+
+uh::protocol::write_key_value::response protocol::on_write_kv(const write_key_value::request &req) {
+    return m_cluster.write_kv (req);
+}
+
+// ---------------------------------------------------------------------
+
+uh::protocol::read_key_value::response protocol::on_read_kv(const read_key_value::request &req) {
+    return m_cluster.read_kv (req);
 }
 
 // ---------------------------------------------------------------------

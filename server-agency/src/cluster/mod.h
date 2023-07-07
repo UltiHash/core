@@ -55,6 +55,7 @@ public:
     ~mod();
 
     void start();
+    void stop();
 
     /**
      * Get a node by giving its reference.
@@ -87,6 +88,16 @@ public:
      * @return the data
      */
     uh::protocol::read_chunks::response read_chunks (const uh::protocol::read_chunks::request &req);
+
+    /**
+     * Sends a batch request of several key value integrations to data node with routing
+     */
+    uh::protocol::write_key_value::response write_kv(const protocol::write_key_value::request &request);
+
+    /**
+     * Sends a batch request of several retrieval queries to data node with routing
+     */
+    uh::protocol::read_key_value::response read_kv(const protocol::read_key_value::request &request);
 
 private:
     struct impl;

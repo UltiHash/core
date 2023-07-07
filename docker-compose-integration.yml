@@ -8,7 +8,7 @@ services:
       args:
         - CMAKE_OPTION=BUILD_SERVER_DB
         - SRC_PATH=server-db
-        - TARGET=uhServerDB
+        - TARGET=uh-data-node
   uh-server-agency:
     image: uh-server-agency
     build:
@@ -17,7 +17,7 @@ services:
       args:
         - CMAKE_OPTION=BUILD_SERVER_AGENCY
         - SRC_PATH=server-agency
-        - TARGET=uhServerAgency
+        - TARGET=uh-agency-node
     ports:
       - "21832:21832"
     depends_on:
@@ -32,7 +32,7 @@ services:
       args:
         - CMAKE_OPTION=BUILD_CLIENT_SHELL
         - SRC_PATH=client-shell
-        - TARGET=uhClient
+        - TARGET=uh-cli
     ports:
       - "1337:1337/udp"
     depends_on:

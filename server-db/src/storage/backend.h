@@ -14,6 +14,8 @@ namespace uh::dbn::storage {
 
         virtual void start() = 0;
 
+        virtual void stop() = 0;
+
         /**
          * Read a data block identified by it's hash from the storage.
          *
@@ -47,14 +49,33 @@ namespace uh::dbn::storage {
         virtual std::string backend_type() = 0;
 
         /**
-         * Reserve data storage of given `size` and return an allocation for it.
+         * Writes the data to the storage backend and returns its hash and effective size
          */
-        virtual std::unique_ptr<uh::protocol::allocation> allocate(std::size_t size) = 0;
+        virtual std::pair <std::size_t, std::vector <char>> write_block (const std::span <const char>& data) = 0;
 
         /**
-         * Reserve data storage of given `size` for multiple blocks and return an allocation for it.
+         * Writes the key value to the storage backend and returns the effective size
          */
-        virtual std::unique_ptr<uh::protocol::allocation> allocate_multi (std::size_t size) = 0;
+        virtual std::size_t write_key_value (const std::span <char>& key, const std::span <char>& data) {
+            THROW(util::exception, "not implemented");
+        }
+
+        /**
+        * Writes the key value to the storage backend and returns the effective size
+        */
+        virtual std::unique_ptr<io::data_generator> read_value (const std::span <char>& key, const std::span <std::string_view>& labels) {
+            THROW(util::exception, "not implemented");
+        }
+
+        /**
+         * Gives back the list of keys in the range of start_key to end_key with the given labels
+         */
+        virtual std::list <key_value_generator> fetch_query (const std::span <char>& start_key, const std::span <char>& end_key, const std::span <std::string_view>& labels) {
+            THROW(util::exception, "not implemented");
+        }
+
+
+
     };
 
 // ---------------------------------------------------------------------

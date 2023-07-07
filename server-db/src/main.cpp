@@ -4,13 +4,19 @@
 #include <storage/mod.h>
 #include <storage/options.h>
 #include <server/mod.h>
-#include <persistence/mod.h>
+#include <state/mod.h>
 #include <metrics/mod.h>
+#include <licensing/mod.h>
 #include <logging/logging_boost.h>
 
+#include <storage/storage_config.h>
 #include <options/app_config.h>
 #include <options/metrics_options.h>
 #include <options/logging_options.h>
+#include <options/licensing_options.h>
+#include <signals/signal.h>
+
+#include <licensing/global_licensing.h>
 
 APPLICATION_CONFIG(
     (server, uh::options::server_options),
@@ -18,15 +24,17 @@ APPLICATION_CONFIG(
     (metrics, uh::options::metrics_options),
     (storage, uh::dbn::storage::options),
     (comp, uh::dbn::storage::compression_options),
-    (persistence, uh::dbn::persistence::options));
+    (licensing, uh::options::licensing_options));
 
 using namespace uh::log;
 using namespace uh::dbn;
 
-int main(int argc, const char** argv)
+int main(int argc, const char **argv)
 {
     try
     {
+        uh::signal::signal signal_handler;
+
         application_config config;
         if (config.evaluate(argc, argv) == uh::options::action::exit)
         {
@@ -35,22 +43,37 @@ int main(int argc, const char** argv)
 
         init_logging(config.logging());
 
-        INFO << "               --- Database Node Modules ---";
+        INFO << "--- Database Node Modules ---";
         metrics::mod metrics_module(config.metrics()); //TODO add storage metrics
 
-        persistence::mod persistence_module(config.persistence());
-        persistence_module.start();
+        auto licensing = config.licensing();
+        licensing.config.path = config.storage().data_directory / "license";
+        uh::dbn::licensing::global_license_pointer_dbn =
+            std::make_unique<uh::dbn::licensing::mod>(licensing);
+        uh::dbn::licensing::global_license_pointer_dbn->start();
 
         auto storage_config = config.storage();
+        state::mod state_module(storage_config);
+        state_module.start();
+
         storage_config.comp = config.comp();
         storage::mod storage_module(storage_config, metrics_module.storage(),
-                                    persistence_module.scheduled_persistence());
+                                    state_module.scheduled_compressions());
         storage_module.start();
 
         server::mod server_module(config.server(), storage_module, metrics_module);
         server_module.start();
+
+        signal_handler.register_func([&]()
+                                     {
+                                         server_module.stop();
+                                         storage_module.stop();
+                                     });
+
+        auto signal_received = signal_handler.run();
+        INFO << "data node clean shutdown: signal " << strsignal(signal_received) << "(" << signal_received << ")";
     }
-    catch (const std::exception& e)
+    catch (const std::exception &e)
     {
         FATAL << e.what();
         std::cerr << "Error while starting service: " << e.what() << "\n";

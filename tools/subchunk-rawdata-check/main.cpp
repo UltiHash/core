@@ -38,19 +38,6 @@ struct substr_non_match {
     }
 };
 
-void chunks_common_substrings(std::list<size_t> list1, uh::chunking::buffer &buffer, char *device, const long size,
-                              size_t size1);
-
-/*
-struct window {
-    size_t offset {};
-    size_t data_size {};
-    long window_size {};
-    std::vector <char> data;
-};
-
-window file_window;
-*/
 std::unordered_map <std::string, std::set <substr_match>> blocks;
 size_t non_deduplicated_size = 0;
 long backend_size = 0;
@@ -93,14 +80,7 @@ std::pair <std::set <substr_match>, std::set <substr_non_match>> get_substrings_
 
 std::set <substr_match> longest_common_substrings (std::span <char> &chunk, char* data_device, const long window_size, size_t min_subchunk_size) {
 
-    //std::vector <char> window (window_size);
-    //data_device.read(window.data(), window_size);
-    //auto data_size = data_device.gcount();
-    //data_device.clear();
     std::set <substr_match> substrings;
-
-    //data_device.seekg(0);
-
 
     long backend_index = 0;
     while (backend_index < backend_size) {
@@ -132,38 +112,43 @@ std::set <substr_match> longest_common_substrings (std::span <char> &chunk, char
 void integrate (char *backend, const std::filesystem::path &path, uh::chunking::mod &chunking_module, const long window_size, size_t min_subchunk_size) {
     uh::io::file f (path, std::ios::in);
 
-    auto chunker = chunking_module.create_chunker(f);
+    auto chunker = chunking_module.create_chunker(f, f.size());
     timer_pack <5> timer;
+    long counter = 0;
     timer.start(3);
     timer.start(4);
-    for (auto chunk = chunker->next_chunk(); !chunk.empty(); chunk = chunker->next_chunk()) {
 
-        const auto longest_substrings = longest_common_substrings(chunk, backend, window_size, min_subchunk_size);
-    /*
-        std::cout << "searching chunk: " << std::string {chunk.data(), chunk.size()} << std::endl;
-        std::cout << "window of " << window_size << " in data: ";
-        std::cout.write(backend, backend_size);
-        std::cout << std::endl;
-        for (const auto &s: longest_substrings) {
-            std::cout << s.m_chunk_offset << ":" << s.m_chunk_offset + s.m_size << " in " << s.m_data_offset << " i.e. " << std::string {chunk.data() + s.m_chunk_offset, static_cast<size_t>(s.m_size)} << std::endl;
+    std::vector<char> buffer(8 * 1024 * 1024);
+
+    auto size = f.size();
+    auto pos = 0u;
+    while (pos < size)
+    {
+        std::size_t read = f.read(buffer);
+        std::span<char> b{ &buffer[0], read };
+
+        std::size_t offs = 0u;
+        for (auto cs : chunker->chunk(b))
+        {
+            std::span<char> chunk{ &buffer[offs], cs };
+            offs += cs;
+
+            const auto longest_substrings = longest_common_substrings(chunk, backend, window_size, min_subchunk_size);
+            auto [covered, uncovered] = get_substrings_coverage (longest_substrings, chunk.size());
+
+            auto it = covered.begin();
+            for (const auto &substr: uncovered) {
+                substr_match synced_substr {substr.m_chunk_offset, substr.m_size,  backend_size};
+                std::memcpy(backend + backend_size, chunk.data() + substr.m_chunk_offset, substr.m_size);
+                backend_size += substr.m_size;
+                it = covered.emplace_hint(it, synced_substr);
+            }
+
+            blocks.emplace(std::string{chunk.data(), chunk.size()}, std::move (covered));
+            non_deduplicated_size += chunk.size();
         }
-        std::cout << "--------------" << std::endl;
-*/
 
-        auto [covered, uncovered] = get_substrings_coverage (longest_substrings, chunk.size());
-
-
-        auto it = covered.begin();
-        for (const auto &substr: uncovered) {
-            substr_match synced_substr {substr.m_chunk_offset, substr.m_size,  backend_size};
-            std::memcpy(backend + backend_size, chunk.data() + substr.m_chunk_offset, substr.m_size);
-            backend_size += substr.m_size;
-            it = covered.emplace_hint(it, synced_substr);
-        }
-
-        blocks.emplace(std::string{chunk.data(), chunk.size()}, std::move (covered));
-        non_deduplicated_size += chunk.size();
-
+        size += read;
     }
 }
 
@@ -175,10 +160,6 @@ int main(int argc, const char *argv[]) {
     const auto min_subchunk_size = 512;
     const auto window_size = 1024*1024;
 
-    //chunking_cfg.chunking_strategy = "FastCDC";
-    //chunking_cfg.fast_cdc.min_size = 4*1024;
-    //chunking_cfg.fast_cdc.normal_size = 8*1024;
-    //chunking_cfg.fast_cdc.max_size = 16*1024;
     chunking_cfg.chunking_strategy = "FixedSize";
     chunking_cfg.chunk_size_in_bytes = 1024*1024;
     uh::chunking::mod chunking_module(chunking_cfg);
@@ -186,7 +167,7 @@ int main(int argc, const char *argv[]) {
     const auto root = "/home/masi/Workspace/core/cmake-build-debug/client-shell/data.mp4";
     unsigned long count = 0;
     size_table.resize(window_size * chunking_cfg.chunk_size_in_bytes);
-    int fd = open ("backend", O_CREAT | O_RDWR | O_TRUNC, S_IRWXU); //backend {"backend", std::ios::out | std::ios::trunc | std::ios::binary | std::ios::in};
+    int fd = open ("backend", O_CREAT | O_RDWR | O_TRUNC, S_IRWXU);
     ftruncate(fd, max_backend_size);
     char *ptr = static_cast<char *>(mmap(nullptr, max_backend_size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0));
 
@@ -207,10 +188,6 @@ int main(int argc, const char *argv[]) {
 
     for (const auto &item: blocks) {
         std::cout << item.first << std::endl;
-
-        //for (const auto &subchunk: item.second) {
-        //    std::cout << subchunk <<std::endl;
-       // }
     }
 
     double ratio = 1 - static_cast <double> (backend_size) / static_cast <double> (non_deduplicated_size);

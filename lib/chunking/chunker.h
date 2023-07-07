@@ -1,8 +1,9 @@
 #ifndef CHUNKING_CHUNKER_H
 #define CHUNKING_CHUNKER_H
 
+#include <cstdint>
 #include <span>
-#include "buffer.h"
+#include <vector>
 
 
 namespace uh::chunking
@@ -16,13 +17,14 @@ public:
     virtual ~chunker() = default;
 
     /**
-     * Return the next chunk to upload. If there are no more chunks, return
-     * an empty chunk instead.
-     *
-     * @throw may throw any derivative of exception on error
+     * Compute the chunk sizes for a given buffer.
      */
-    virtual std::span<char> next_chunk() = 0;
-    [[nodiscard]] virtual buffer& get_buffer () = 0;
+    virtual std::vector<uint32_t> chunk(std::span<char> b) const = 0;
+
+    /**
+     * Return minimum chunk size.
+     */
+    virtual std::size_t min_size() const = 0;
 };
 
 // ---------------------------------------------------------------------

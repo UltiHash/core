@@ -24,6 +24,8 @@ public:
     uh::protocol::write_chunks::response on_write_chunks (const uh::protocol::write_chunks::request&) override;
     uh::protocol::read_chunks::response on_read_chunks (const uh::protocol::read_chunks::request&) override;
 
+    uh::protocol::write_key_value::response on_write_kv (const uh::protocol::write_key_value::request &) override;
+    uh::protocol::read_key_value::response on_read_kv (const uh::protocol::read_key_value::request &) override;
 private:
     storage::backend& m_storage;
     const uh::net::server_info &m_serv_info;

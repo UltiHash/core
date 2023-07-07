@@ -5,9 +5,13 @@
 #ifndef CORE_THREAD_SAFE_TYPE_H
 #define CORE_THREAD_SAFE_TYPE_H
 
+#include <uhv/meta_data.h>
+
 #include <mutex>
 
-namespace uh::uhv {
+
+namespace uh::fuse
+{
 
 template <typename T>
 class thread_safe_type {
@@ -22,6 +26,16 @@ public:
         }
 
         T& operator()() {
+            return m_t;
+        }
+
+        T* operator->()
+        {
+            return &m_t;
+        }
+
+        T& operator*()
+        {
             return m_t;
         }
 
@@ -50,12 +64,12 @@ private:
         m_mutex.unlock();
     }
 
-    std::mutex m_mutex;
+    std::recursive_mutex m_mutex;
     T m_t;
 };
 
-using ts_f_meta_data = thread_safe_type <f_meta_data>;
-using ts_container = thread_safe_type <std::unordered_map <std::string, ts_f_meta_data>>;
+using ts_meta_data = thread_safe_type<uhv::meta_data>;
+using ts_container = thread_safe_type< std::unordered_map<std::string, ts_meta_data> >;
 
 }
 

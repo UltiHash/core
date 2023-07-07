@@ -5,7 +5,7 @@
 #include <metrics/protocol_metrics.h>
 #include <metrics/mod.h>
 #include <cluster/mod.h>
-#include <persistence/mod.h>
+#include <state/mod.h>
 #include <net/server_info.h>
 
 
@@ -19,8 +19,7 @@ class protocol_factory : public uh::protocol::protocol_factory
 public:
     protocol_factory(
         cluster::mod& cluster,
-        an::persistence::mod& persistence,
-        metrics::client_metrics& client,
+        metrics::client_metrics_state& client,
         const uh::metrics::protocol_metrics& protocol,
         const uh::net::server_info &serv_info);
 
@@ -28,8 +27,7 @@ public:
 
 private:
     cluster::mod& m_cluster;
-    an::persistence::mod& m_persistence;
-    metrics::client_metrics& m_client_metrics;
+    metrics::client_metrics_state& m_client_metrics;
     const uh::metrics::protocol_metrics& m_protocol_metrics;
     const uh::net::server_info &m_serv_info;
 };

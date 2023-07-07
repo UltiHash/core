@@ -1,4 +1,4 @@
-% uhServerAgency(1) Version 0.2 | UltiHash Agency Node Server Documentation
+% uh-agency-node(1) Version 0.2 | UltiHash Agency Node Server Documentation
 ```{=latex}
 \pagebreak
 ```
@@ -6,7 +6,7 @@
 # Agency Node Server 
 
 ## Name
-uhServerAgency - The UltiHash Agency Node server application
+uh-agency-node - The UltiHash Agency Node server application
 
 ## Synopsis
 
@@ -21,4 +21,4 @@ uhServerAgency - The UltiHash Agency Node server application
 ## Known Limitations
 
 ## See Also
-uhServerData, uhClient, uhClientFuse
+uh-data-node, uh-cli, uhClientFuse
