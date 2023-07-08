@@ -17,54 +17,70 @@ namespace uh::io
 
 // ---------------------------------------------------------------------
 
-chunk_collection::~chunk_collection()
+namespace
 {
-    std::lock_guard lock(readmux);
 
-    if (behave_like_tempfile)
+// ---------------------------------------------------------------------
+
+std::unique_ptr<io::file> create_chunk_collection_file(std::filesystem::path& collection_location, bool create_tempfile)
+{
+    if (create_tempfile)
     {
-        std::filesystem::remove(getPath());
+        std::unique_ptr<io::temp_file>
+            file = std::make_unique<io::temp_file>(collection_location, std::ios_base::binary | std::ios_base::out);
+        file->release_to(file->path());
+
+        return file;
     }
+    else
+        return std::make_unique<io::file>(io::file(collection_location, std::ios_base::binary | std::ios_base::out));
 }
 
 // ---------------------------------------------------------------------
 
-chunk_collection::chunk_collection(std::filesystem::path collection_location, bool create_tempfile)
-    :
-    path(std::move(collection_location)),
-    behave_like_tempfile(create_tempfile)
+std::unique_ptr<io::file> maybe_repair_chunk_collection(std::unique_ptr<io::file> collection_file)
 {
-    std::lock_guard lock(readmux);
+    std::filesystem::path corrupted_tempfile_path = collection_file->path().string() + ".tmp";
 
-    if (create_tempfile)
+    bool temp_file_exists = std::filesystem::exists(corrupted_tempfile_path);
+
+    if(temp_file_exists)
     {
-        auto file = io::temp_file(path, std::ios_base::out);
-        file.release_to(file.path());
-        path = file.path();
+        bool file_exists = std::filesystem::exists(collection_file->path());
+        bool file_has_content = file_exists and not std::filesystem::is_empty(collection_file->path());
+
+        if (file_exists and not file_has_content)
+        {
+            collection_file->close();
+            std::filesystem::remove(collection_file->path());
+            file_exists = false;
+        }
+
+        if (file_exists)
+        {
+            std::filesystem::remove(corrupted_tempfile_path);
+            return collection_file;
+        }
+
+        std::filesystem::rename(corrupted_tempfile_path, collection_file->path());
+        collection_file = std::make_unique<io::file>(io::file(collection_file->path(),
+                                                              std::ios_base::binary | std::ios_base::out));
     }
 
-    std::filesystem::path corrupted_tempfile_path = path.string() + ".tmp";
+    return collection_file;
+}
 
-    bool file_exists = std::filesystem::exists(path);
-    bool file_temp_file_exists = std::filesystem::exists(corrupted_tempfile_path);
+// ---------------------------------------------------------------------
 
-    if (file_exists and file_temp_file_exists)
-    {
-        std::filesystem::remove(corrupted_tempfile_path);
-    }
-
-    if (not file_exists and file_temp_file_exists)
-    {
-        std::filesystem::rename(corrupted_tempfile_path, path);
-        file_exists = true;
-    }
-
-    auto temporarily_open_file = io::file(path, std::ios_base::in);
+std::vector<std::pair<serialization::fragment_serialize_size_format, std::streamoff>>
+maybe_index_chunk_collection(std::unique_ptr<io::file>& collection_file)
+{
+    std::vector<std::pair<serialization::fragment_serialize_size_format, std::streamoff>> output_index;
 
     auto temporarily_cached_fragment_on_seekable_device =
-        io::fragment_on_seekable_device(temporarily_open_file);
+        io::fragment_on_seekable_device(*collection_file);
 
-    if (file_exists)
+    if (collection_file->size())
     {
         std::streamoff collection_offset{};
         uint16_t index_entry_count{};
@@ -78,9 +94,9 @@ chunk_collection::chunk_collection(std::filesystem::path collection_location, bo
                 break;
 
             if (index_entry_count > std::numeric_limits<unsigned char>::max() + 1)
-            THROW(util::exception, "Indexing of chunk collection " + path.string() + " exceeded limits");
+            THROW(util::exception, "Indexing of chunk collection " + collection_file->path().string() + " exceeded limits");
 
-            index.emplace_back(skip_format, collection_offset);
+            output_index.emplace_back(skip_format, collection_offset);
             collection_offset += skip_format.header_size + skip_format.content_size;
             index_entry_count++;
 
@@ -91,17 +107,44 @@ chunk_collection::chunk_collection(std::filesystem::path collection_location, bo
 
 // ---------------------------------------------------------------------
 
+} // namespace
+
+// ---------------------------------------------------------------------
+
+chunk_collection::~chunk_collection()
+{
+    std::lock_guard lock(m_readmux);
+
+    m_workfile->close();
+
+    if (m_behave_like_tempfile or std::filesystem::is_empty(getPath()))
+        std::filesystem::remove(getPath());
+}
+
+// ---------------------------------------------------------------------
+
+chunk_collection::chunk_collection(std::filesystem::path collection_temp_directory_else_file_path, bool create_tempfile)
+    :
+    m_behave_like_tempfile(create_tempfile),
+    m_workfile(maybe_repair_chunk_collection(
+        create_chunk_collection_file(collection_temp_directory_else_file_path, m_behave_like_tempfile))
+    ),
+    m_index(maybe_index_chunk_collection(m_workfile))
+{}
+
+// ---------------------------------------------------------------------
+
 serialization::fragment_serialize_size_format
 chunk_collection::write_indexed(std::span<const char> buffer, uint32_t alloc)
 {
-    std::lock_guard lock(readmux);
+    std::lock_guard lock(m_readmux);
 
     if (!free())
-    THROW(util::exception, "On chunk collection " + path.string() +
+        THROW(util::exception, "On chunk collection " + m_workfile->path().string() +
         "was no space left to multi write indexed!");
 
     if (buffer.size() > std::numeric_limits<uint32_t>::max())
-    THROW(util::exception, "Incoming writing buffer was too large!");
+        THROW(util::exception, "Incoming writing buffer was too large!");
 
     auto temporarily_open_file = io::file(path, std::ios_base::app);
     auto temporarily_cached_fragment_on_seekable_device =
@@ -112,13 +155,13 @@ chunk_collection::write_indexed(std::span<const char> buffer, uint32_t alloc)
     serialization::fragment_serialize_size_format written =
         temporarily_cached_fragment_on_seekable_device.write(buffer, allocate_space);
 
-    if (index.empty())
-        index.emplace_back(written, 0);
+    if (m_index.empty())
+        m_index.emplace_back(written, 0);
     else
-        index.emplace_back(written,
-                           index.back().second +
-                               index.back().first.header_size +
-                               index.back().first.content_size);
+        m_index.emplace_back(written,
+                             m_index.back().second +
+                                 m_index.back().first.header_size +
+                                 m_index.back().first.content_size);
 
     return written;
 }
@@ -128,7 +171,7 @@ chunk_collection::write_indexed(std::span<const char> buffer, uint32_t alloc)
 std::pair<std::vector<char>, serialization::fragment_serialize_size_format>
 chunk_collection::read_indexed(uint8_t at)
 {
-    std::lock_guard lock(readmux);
+    std::lock_guard lock(m_readmux);
 
     auto temporarily_open_file = io::file(path, std::ios_base::in);
 
@@ -167,7 +210,7 @@ chunk_collection::read_indexed(uint8_t at)
 
 void chunk_collection::remove(uint8_t at)
 {
-    std::lock_guard lock(readmux);
+    std::lock_guard lock(m_readmux);
 
     std::filesystem::path temp_path;
     {
@@ -198,13 +241,13 @@ void chunk_collection::remove(uint8_t at)
     auto to_remove_it = find_address(at);
     auto remove_size_struct = to_remove_it->first;
 
-    std::for_each(to_remove_it, index.end(), [&remove_size_struct](
+    std::for_each(to_remove_it, m_index.end(), [&remove_size_struct](
         std::pair<serialization::fragment_serialize_size_format, std::streamoff>& index_pair)
     {
         index_pair.second -= (remove_size_struct.header_size + remove_size_struct.content_size);
     });
 
-    index.erase(to_remove_it);
+    m_index.erase(to_remove_it);
 }
 
 // ---------------------------------------------------------------------
@@ -212,7 +255,7 @@ void chunk_collection::remove(uint8_t at)
 std::vector<serialization::fragment_serialize_size_format>
 chunk_collection::write_indexed_multi(const std::vector<std::span<const char>>& buffer)
 {
-    std::lock_guard lock(readmux);
+    std::lock_guard lock(m_readmux);
 
     if (static_cast<long>(free()) - buffer.size() < 0)
     THROW(util::exception, "On chunk collection " + path.string() +
@@ -235,13 +278,13 @@ chunk_collection::write_indexed_multi(const std::vector<std::span<const char>>& 
 
         out_list.push_back(temporarily_cached_fragment_on_seekable_device.write(item));
 
-        if (index.empty())
-            index.emplace_back(out_list.back(), 0);
+        if (m_index.empty())
+            m_index.emplace_back(out_list.back(), 0);
         else
-            index.emplace_back(out_list.back(),
-                               index.back().second +
-                                   index.back().first.header_size +
-                                   index.back().first.content_size);
+            m_index.emplace_back(out_list.back(),
+                                 m_index.back().second +
+                                     m_index.back().first.header_size +
+                                     m_index.back().first.content_size);
     }
 
     return out_list;
@@ -252,7 +295,7 @@ chunk_collection::write_indexed_multi(const std::vector<std::span<const char>>& 
 std::vector<std::pair<std::vector<char>, serialization::fragment_serialize_size_format>>
 chunk_collection::read_indexed_multi(const std::vector<uint8_t>& at)
 {
-    std::lock_guard lock(readmux);
+    std::lock_guard lock(m_readmux);
 
     for (const auto item : at)
     {
@@ -323,20 +366,20 @@ chunk_collection::read_indexed_multi(const std::vector<uint8_t>& at)
 
 uint16_t chunk_collection::count()
 {
-    std::lock_guard lock(readmux);
+    std::lock_guard lock(m_readmux);
 
-    return static_cast<uint16_t>(index.size());
+    return static_cast<uint16_t>(m_index.size());
 }
 
 // ---------------------------------------------------------------------
 
 std::size_t chunk_collection::size()
 {
-    std::lock_guard lock(readmux);
+    std::lock_guard lock(m_readmux);
 
     std::size_t accumulated{};
 
-    for (const auto& item : index)
+    for (const auto& item : m_index)
     {
         accumulated += item.first.header_size + item.first.content_size;
     }
@@ -348,7 +391,7 @@ std::size_t chunk_collection::size()
 
 std::size_t chunk_collection::size(uint8_t index_adress)
 {
-    std::lock_guard lock(readmux);
+    std::lock_guard lock(m_readmux);
 
     auto found_address = find_address(index_adress);
 
@@ -359,7 +402,7 @@ std::size_t chunk_collection::size(uint8_t index_adress)
 
 std::size_t chunk_collection::content_size(uint8_t index_adress)
 {
-    std::lock_guard lock(readmux);
+    std::lock_guard lock(m_readmux);
 
     auto found_address = find_address(index_adress);
 
@@ -370,14 +413,14 @@ std::size_t chunk_collection::content_size(uint8_t index_adress)
 
 bool chunk_collection::full() const
 {
-    return index.size() == std::numeric_limits<unsigned char>::max() + 1;
+    return m_index.size() == std::numeric_limits<unsigned char>::max() + 1;
 }
 
 // ---------------------------------------------------------------------
 
 uint16_t chunk_collection::free()
 {
-    std::lock_guard lock(readmux);
+    std::lock_guard lock(m_readmux);
 
     return static_cast<uint16_t>(std::numeric_limits<uint8_t>::max()) + 1 - count();
 }
@@ -386,7 +429,7 @@ uint16_t chunk_collection::free()
 
 std::filesystem::path chunk_collection::getPath()
 {
-    std::lock_guard lock(readmux);
+    std::lock_guard lock(m_readmux);
     return path;
 }
 
@@ -394,9 +437,9 @@ std::filesystem::path chunk_collection::getPath()
 
 void chunk_collection::release_to(const std::filesystem::path& release_path)
 {
-    std::lock_guard lock(readmux);
+    std::lock_guard lock(m_readmux);
 
-    behave_like_tempfile = false;
+    m_behave_like_tempfile = false;
 
     if (release_path == getPath())
         return;
@@ -413,13 +456,13 @@ void chunk_collection::release_to(const std::filesystem::path& release_path)
 
 std::vector<uint8_t> chunk_collection::get_index_num_content_list()
 {
-    std::lock_guard lock(readmux);
+    std::lock_guard lock(m_readmux);
 
-    std::vector<uint8_t> out_list(index.size());
+    std::vector<uint8_t> out_list(m_index.size());
 
     std::size_t counter{};
 
-    for (const auto& item : index)
+    for (const auto& item : m_index)
     {
         out_list[counter] = item.first.index_num;
         counter++;
@@ -432,12 +475,12 @@ std::vector<uint8_t> chunk_collection::get_index_num_content_list()
 
 uint8_t chunk_collection::next_free_address()
 {
-    std::lock_guard lock(readmux);
+    std::lock_guard lock(m_readmux);
 
     if (full())
     THROW(util::exception, "There are no more free addresses on chunk collection " + path.string() + " !");
 
-    auto copy_index = index;
+    auto copy_index = m_index;
 
     std::sort(copy_index.begin(), copy_index.end(), [](const auto& a, const auto& b)
     {
@@ -463,9 +506,9 @@ uint8_t chunk_collection::next_free_address()
 std::vector<std::pair<serialization::fragment_serialize_size_format, std::streamoff>>::iterator
 chunk_collection::find_address(uint8_t at)
 {
-    std::lock_guard lock(readmux);
+    std::lock_guard lock(m_readmux);
 
-    auto fragment_pos_element = std::find_if(index.begin(), index.end(),
+    auto fragment_pos_element = std::find_if(m_index.begin(), m_index.end(),
                                              [&at](const std::pair<
                                                  serialization::fragment_serialize_size_format,
                                                  std::streamoff
@@ -474,7 +517,7 @@ chunk_collection::find_address(uint8_t at)
                                                  return elem.first.index_num == at;
                                              });
 
-    if (fragment_pos_element == index.end())
+    if (fragment_pos_element == m_index.end())
     THROW(util::exception, "Fragment " + std::to_string(at) +
         " was not found on chunk collection " + path.string());
 

@@ -30,8 +30,12 @@ public:
 
     void seek(std::streamoff off, std::ios_base::seekdir whence) override;
 
+    void reopen();
+
+    void close();
+
     /**
-     * Return the path of the temporary file.
+     * @return the path of the file.
      */
     [[nodiscard]] std::filesystem::path path();
 
@@ -39,6 +43,7 @@ public:
 
 private:
     std::fstream m_io;
+    std::ios_base::openmode m_mode;
     std::filesystem::path m_path;
 };
 

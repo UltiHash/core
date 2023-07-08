@@ -29,10 +29,10 @@ public:
      * of incoming and outgoing chunks/fragments.
      * Scan existing chunk collection on construction.
      *
-     * @param collection_location where the file containing the chunk collection is located
+     * @param collection_temp_directory_else_file_path where the file containing the chunk collection is located
      * @throw if no file and no corrupted temporary file from the remove operation exist
      */
-    explicit chunk_collection(std::filesystem::path collection_location, bool create_tempfile = false);
+    explicit chunk_collection(std::filesystem::path collection_temp_directory_else_file_path, bool create_tempfile = false);
 
     /**
      * Write with returning the index that was assigned to the written buffer
@@ -127,6 +127,10 @@ public:
      */
     void release_to(const std::filesystem::path& release_path);
 
+    /**
+     *
+     * @return a list of used index sort orders
+     */
     std::vector<uint8_t> get_index_num_content_list();
 
 private:
@@ -136,11 +140,11 @@ private:
     std::vector<std::pair<serialization::fragment_serialize_size_format, std::streamoff>>::iterator
     find_address(uint8_t at);
 
-    bool behave_like_tempfile;
-    std::filesystem::path path;
-    std::vector<std::pair<serialization::fragment_serialize_size_format, std::streamoff>> index;
+    bool m_behave_like_tempfile;
+    std::unique_ptr<io::file> m_workfile;
+    std::vector<std::pair<serialization::fragment_serialize_size_format, std::streamoff>> m_index;
 
-    std::recursive_mutex readmux;
+    std::recursive_mutex m_readmux;
 };
 
 } // namespace uh::io

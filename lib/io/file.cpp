@@ -9,6 +9,7 @@ namespace uh::io
 
 file::file(const std::filesystem::path &path, std::ios_base::openmode mode)
     : m_io(path, mode),
+      m_mode(mode),
       m_path(path)
 {
     m_io.exceptions(std::ifstream::badbit);
@@ -55,6 +56,20 @@ void file::seek(std::streamoff off, std::ios_base::seekdir whence)
      * adjust the put-pointer as well.
      */
     m_io.seekg(off, whence);
+}
+
+// ---------------------------------------------------------------------
+
+void file::reopen()
+{
+    m_io = std::fstream (m_path,m_mode);
+}
+
+// ---------------------------------------------------------------------
+
+void file::close()
+{
+    m_io.close();
 }
 
 // ---------------------------------------------------------------------
