@@ -166,7 +166,7 @@ BOOST_AUTO_TEST_CASE(remove_fragment_multi_chunk_collection)
 
     cc.write_indexed_multi(to_write_span);
 
-    cc.remove(3);
+    cc.remove({3});
 
     auto valid_indexes = cc.get_index_num_content_list();
     std::vector<uint8_t> valid_indexes_simulation;

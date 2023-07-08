@@ -32,7 +32,8 @@ public:
      * @param collection_temp_directory_else_file_path where the file containing the chunk collection is located
      * @throw if no file and no corrupted temporary file from the remove operation exist
      */
-    explicit chunk_collection(std::filesystem::path collection_temp_directory_else_file_path, bool create_tempfile = false);
+    explicit chunk_collection(std::filesystem::path collection_temp_directory_else_file_path,
+                              bool create_tempfile = false);
 
     /**
      * Write with returning the index that was assigned to the written buffer
@@ -73,7 +74,7 @@ public:
      *
      * @param at remove fragment with this index
      */
-    void remove(uint8_t at);
+    void remove(const std::vector<uint8_t>& at);
 
     /**
      *
@@ -139,7 +140,8 @@ private:
     std::vector<uint8_t> filtered_at_list_in_seek_order(const std::vector<uint8_t>& at);
 
     std::vector<std::pair<serialization::fragment_serialize_size_format, std::streamoff>>::iterator
-    find_address(uint8_t at);
+    find_address(uint8_t at,
+                 std::vector<std::pair<serialization::fragment_serialize_size_format, std::streamoff>>::iterator start_pos);
 
     bool m_behave_like_tempfile;
     std::unique_ptr<io::file> m_workfile;

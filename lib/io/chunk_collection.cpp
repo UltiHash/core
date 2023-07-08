@@ -186,7 +186,7 @@ chunk_collection::read_indexed(uint8_t at)
     if(m_workfile->mode() != read_mode)
         m_workfile = std::make_unique<io::file>(m_workfile->path(), read_mode);
 
-    auto fragment_pos_element = find_address(at);
+    auto fragment_pos_element = find_address(at, m_index.begin());
 
     auto temporarily_cached_fragment_on_seekable_device =
         io::fragment_on_seekable_device(*m_workfile);
@@ -219,7 +219,7 @@ chunk_collection::read_indexed(uint8_t at)
 
 // ---------------------------------------------------------------------
 
-void chunk_collection::remove(uint8_t at)
+void chunk_collection::remove(const std::vector<uint8_t>& at)
 {
     std::lock_guard lock(m_readmux);
 
@@ -231,7 +231,9 @@ void chunk_collection::remove(uint8_t at)
         {
             for (const auto item : get_index_num_content_list())
             {
-                if (item != at)
+                if (std::none_of(at.cbegin(),at.cend(),[&item](const auto&item2){
+                    return item == item2;
+                }))
                 {
                     fragment_on_seekable_device reader(*m_workfile);
                     auto read_from_this = read_indexed(item);
@@ -249,16 +251,22 @@ void chunk_collection::remove(uint8_t at)
 
     m_workfile = std::make_unique<io::file>(m_workfile->path(),read_mode);
 
-    auto to_remove_it = find_address(at);
-    auto remove_size_struct = to_remove_it->first;
+    auto seek_order_at_list = filtered_at_list_in_seek_order(at);
+    auto to_remove_it = m_index.begin();
 
-    std::for_each(to_remove_it, m_index.end(), [&remove_size_struct](
-        std::pair<serialization::fragment_serialize_size_format, std::streamoff>& index_pair)
-    {
-        index_pair.second -= (remove_size_struct.header_size + remove_size_struct.content_size);
-    });
+    for(const auto at_item:seek_order_at_list){
+        to_remove_it = find_address(at_item, to_remove_it);
+        auto remove_size_struct = to_remove_it->first;
 
-    m_index.erase(to_remove_it);
+        std::for_each(to_remove_it, m_index.end(), [&remove_size_struct](
+            std::pair<serialization::fragment_serialize_size_format, std::streamoff>& index_pair)
+        {
+            index_pair.second -= (remove_size_struct.header_size + remove_size_struct.content_size);
+        });
+
+        m_index.erase(to_remove_it);
+    }
+
 }
 
 // ---------------------------------------------------------------------
@@ -352,7 +360,7 @@ std::size_t chunk_collection::size(uint8_t index_adress)
 {
     std::lock_guard lock(m_readmux);
 
-    auto found_address = find_address(index_adress);
+    auto found_address = find_address(index_adress, m_index.begin());
 
     return found_address->first.header_size + found_address->first.content_size;
 }
@@ -363,7 +371,7 @@ std::size_t chunk_collection::content_size(uint8_t index_adress)
 {
     std::lock_guard lock(m_readmux);
 
-    auto found_address = find_address(index_adress);
+    auto found_address = find_address(index_adress, m_index.begin());
 
     return found_address->first.content_size;
 }
@@ -484,11 +492,11 @@ std::vector<uint8_t> chunk_collection::filtered_at_list_in_seek_order(const std:
 // ---------------------------------------------------------------------
 
 std::vector<std::pair<serialization::fragment_serialize_size_format, std::streamoff>>::iterator
-chunk_collection::find_address(uint8_t at)
+chunk_collection::find_address(uint8_t at, std::vector<std::pair<serialization::fragment_serialize_size_format, std::streamoff>>::iterator start_pos)
 {
     std::lock_guard lock(m_readmux);
 
-    auto fragment_pos_element = std::find_if(m_index.begin(), m_index.end(),
+    auto fragment_pos_element = std::find_if(start_pos, m_index.end(),
                                              [&at](const std::pair<
                                                  serialization::fragment_serialize_size_format,
                                                  std::streamoff
