@@ -121,7 +121,7 @@ chunk_collection::~chunk_collection()
 {
     m_workfile->close();
 
-    if (m_behave_like_tempfile or std::filesystem::is_empty(getPath()))
+    if (m_behave_like_tempfile or (std::filesystem::exists(getPath()) and std::filesystem::is_empty(getPath())))
         std::filesystem::remove(getPath());
 }
 
@@ -181,10 +181,10 @@ chunk_collection::read_indexed(uint8_t at)
 {
     std::lock_guard lock(m_readmux);
 
-    const auto write_mode = std::ios_base::binary | std::ios_base::in;
+    const auto read_mode = std::ios_base::binary | std::ios_base::in;
 
-    if(m_workfile->mode() != write_mode)
-        m_workfile = std::make_unique<io::file>(m_workfile->path(), write_mode);
+    if(m_workfile->mode() != read_mode)
+        m_workfile = std::make_unique<io::file>(m_workfile->path(), read_mode);
 
     auto fragment_pos_element = find_address(at);
 
@@ -223,17 +223,17 @@ void chunk_collection::remove(uint8_t at)
 {
     std::lock_guard lock(m_readmux);
 
-    std::filesystem::path temp_path;
+    const auto read_mode = std::ios_base::binary | std::ios_base::in;
+    m_workfile = std::make_unique<io::file>(m_workfile->path(), read_mode);
+
     {
         io::temp_file cc_tmp(getPath().parent_path());
         {
-            io::file input_file(getPath());
-
             for (const auto item : get_index_num_content_list())
             {
                 if (item != at)
                 {
-                    fragment_on_seekable_device reader(input_file);
+                    fragment_on_seekable_device reader(*m_workfile);
                     auto read_from_this = read_indexed(item);
 
                     fragment_on_seekable_device writer(cc_tmp, reader.getIndex());
@@ -242,12 +242,12 @@ void chunk_collection::remove(uint8_t at)
             }
         }
 
-        temp_path = getPath().string() + ".tmp";
-        cc_tmp.release_to(temp_path);
+        m_workfile->close();
+        cc_tmp.close();
+        cc_tmp.rename(m_workfile->path());
     }
 
-    std::filesystem::remove(getPath());
-    std::rename(temp_path.c_str(), getPath().c_str());
+    m_workfile = std::make_unique<io::file>(m_workfile->path(),read_mode);
 
     auto to_remove_it = find_address(at);
     auto remove_size_struct = to_remove_it->first;
@@ -410,7 +410,7 @@ void chunk_collection::release_to(const std::filesystem::path& release_path)
         THROW_FROM_ERRNO();
     }
 
-    m_workfile = std::make_unique<io::file>(release_path,m_workfile->mode());
+    m_workfile = std::make_unique<io::file>(release_path,std::ios_base::binary | std::ios_base::in);
 }
 
 // ---------------------------------------------------------------------
