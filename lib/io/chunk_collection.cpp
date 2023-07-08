@@ -33,11 +33,9 @@ std::unique_ptr<io::file> create_chunk_collection_file(std::filesystem::path& co
         std::unique_ptr<io::temp_file>
             file = std::make_unique<io::temp_file>(collection_location, std::ios_base::binary | std::ios_base::out);
         file->release_to(file->path());
-
-        return file;
     }
-    else
-        return std::make_unique<io::file>(io::file(collection_location, std::ios_base::binary | std::ios_base::out));
+
+    return std::make_unique<io::file>(io::file(collection_location, std::ios_base::binary | std::ios_base::out));
 }
 
 // ---------------------------------------------------------------------
