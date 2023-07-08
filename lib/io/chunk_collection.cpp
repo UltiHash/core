@@ -75,44 +75,6 @@ std::unique_ptr<io::file> maybe_repair_chunk_collection(std::unique_ptr<io::file
 
 // ---------------------------------------------------------------------
 
-std::vector<std::pair<serialization::fragment_serialize_size_format, std::streamoff>>
-maybe_index_chunk_collection(std::unique_ptr<io::file>& collection_file)
-{
-    std::vector<std::pair<serialization::fragment_serialize_size_format, std::streamoff>> output_index;
-
-    auto temporarily_cached_fragment_on_seekable_device =
-        io::fragment_on_seekable_device(*collection_file);
-
-    if (collection_file->size())
-    {
-        std::streamoff collection_offset{};
-        uint16_t index_entry_count{};
-        serialization::fragment_serialize_size_format skip_format;
-
-        do
-        {
-            skip_format = temporarily_cached_fragment_on_seekable_device.skip();
-
-            if (skip_format.content_size == 0)
-                break;
-
-            if (index_entry_count > std::numeric_limits<unsigned char>::max() + 1)
-            THROW(util::exception,
-                  "Indexing of chunk collection " + collection_file->path().string() + " exceeded limits");
-
-            output_index.emplace_back(skip_format, collection_offset);
-            collection_offset += skip_format.header_size + skip_format.content_size;
-            index_entry_count++;
-
-        }
-        while (skip_format.content_size > 0);
-    }
-
-    return output_index;
-}
-
-// ---------------------------------------------------------------------
-
 } // namespace
 
 // ---------------------------------------------------------------------
@@ -133,7 +95,7 @@ chunk_collection::chunk_collection(std::filesystem::path collection_temp_directo
     m_workfile(maybe_repair_chunk_collection(
         create_chunk_collection_file(collection_temp_directory_else_file_path, create_tempfile))
     ),
-    m_index(maybe_index_chunk_collection(m_workfile))
+    m_index(m_workfile)
 {}
 
 // ---------------------------------------------------------------------
@@ -144,15 +106,15 @@ chunk_collection::write_indexed(std::span<const char> buffer, uint32_t alloc)
     std::lock_guard lock(m_readmux);
 
     if (!free())
-        THROW(util::exception, "On chunk collection " + m_workfile->path().string() +
-            "was no space left to multi write indexed!");
+    THROW(util::exception, "On chunk collection " + m_workfile->path().string() +
+        "was no space left to multi write indexed!");
 
     if (buffer.size() > TREE_STORAGE_CHUNK_LIMIT)
-        THROW(util::exception, "Incoming writing buffer was too large!");
+    THROW(util::exception, "Incoming writing buffer was too large!");
 
     const auto write_mode = std::ios_base::binary | std::ios_base::app;
 
-    if(m_workfile->mode() != m_workfile->size()?write_mode:std::ios_base::binary | std::ios_base::out)
+    if (m_workfile->mode() != m_workfile->size() ? write_mode : std::ios_base::binary | std::ios_base::out)
         m_workfile = std::make_unique<io::file>(m_workfile->path(), write_mode);
 
     auto temporarily_cached_fragment_on_seekable_device =
@@ -183,7 +145,7 @@ chunk_collection::read_indexed(uint8_t at)
 
     const auto read_mode = std::ios_base::binary | std::ios_base::in;
 
-    if(m_workfile->mode() != read_mode)
+    if (m_workfile->mode() != read_mode)
         m_workfile = std::make_unique<io::file>(m_workfile->path(), read_mode);
 
     auto fragment_pos_element = find_address(at, m_index.begin());
@@ -231,7 +193,8 @@ void chunk_collection::remove(const std::vector<uint8_t>& at)
         {
             for (const auto item : get_index_num_content_list())
             {
-                if (std::none_of(at.cbegin(),at.cend(),[&item](const auto&item2){
+                if (std::none_of(at.cbegin(), at.cend(), [&item](const auto& item2)
+                {
                     return item == item2;
                 }))
                 {
@@ -249,12 +212,13 @@ void chunk_collection::remove(const std::vector<uint8_t>& at)
         cc_tmp.rename(m_workfile->path());
     }
 
-    m_workfile = std::make_unique<io::file>(m_workfile->path(),read_mode);
+    m_workfile = std::make_unique<io::file>(m_workfile->path(), read_mode);
 
     auto seek_order_at_list = filtered_at_list_in_seek_order(at);
     auto to_remove_it = m_index.begin();
 
-    for(const auto at_item:seek_order_at_list){
+    for (const auto at_item : seek_order_at_list)
+    {
         to_remove_it = find_address(at_item, to_remove_it);
         auto remove_size_struct = to_remove_it->first;
 
@@ -277,13 +241,13 @@ chunk_collection::write_indexed_multi(const std::vector<std::span<const char>>& 
     std::lock_guard lock(m_readmux);
 
     if (static_cast<long>(free()) - buffer.size() < 0)
-        THROW(util::exception, "On chunk collection " + m_workfile->path().string() +
-            "was no space left to multi write indexed!");
+    THROW(util::exception, "On chunk collection " + m_workfile->path().string() +
+        "was no space left to multi write indexed!");
 
     std::for_each(buffer.cbegin(), buffer.cend(), [](const auto& item)
     {
         if (item.size() > TREE_STORAGE_CHUNK_LIMIT)
-            THROW(util::exception, "Incoming writing buffer was too large!");
+        THROW(util::exception, "Incoming writing buffer was too large!");
     });
 
     std::vector<serialization::fragment_serialize_size_format> out_list{};
@@ -318,12 +282,12 @@ chunk_collection::read_indexed_multi(const std::vector<uint8_t>& at)
 
     for (const auto at_item : filtered_at_list)
     {
-        auto [output,read] = read_indexed(at_item);
+        auto [output, read] = read_indexed(at_item);
 
         std::streamoff distance_filtered_projected_to_at =
             std::distance(at.begin(), std::find(at.begin(), at.end(), at_item));
 
-        out_list[distance_filtered_projected_to_at] = std::make_pair(output, read);
+        out_list[distance_filtered_projected_to_at] = std::move(std::make_pair(std::move(output), read));
     }
 
     return out_list;
@@ -418,7 +382,7 @@ void chunk_collection::release_to(const std::filesystem::path& release_path)
         THROW_FROM_ERRNO();
     }
 
-    m_workfile = std::make_unique<io::file>(release_path,std::ios_base::binary | std::ios_base::in);
+    m_workfile = std::make_unique<io::file>(release_path, std::ios_base::binary | std::ios_base::in);
 }
 
 // ---------------------------------------------------------------------
@@ -447,7 +411,8 @@ uint8_t chunk_collection::next_free_address()
     std::lock_guard lock(m_readmux);
 
     if (full())
-        THROW(util::exception, "There are no more free addresses on chunk collection " + m_workfile->path().string() + " !");
+    THROW(util::exception,
+          "There are no more free addresses on chunk collection " + m_workfile->path().string() + " !");
 
     auto copy_index = m_index;
 
@@ -492,7 +457,9 @@ std::vector<uint8_t> chunk_collection::filtered_at_list_in_seek_order(const std:
 // ---------------------------------------------------------------------
 
 std::vector<std::pair<serialization::fragment_serialize_size_format, std::streamoff>>::iterator
-chunk_collection::find_address(uint8_t at, std::vector<std::pair<serialization::fragment_serialize_size_format, std::streamoff>>::iterator start_pos)
+chunk_collection::find_address(uint8_t at,
+                               std::vector<std::pair<serialization::fragment_serialize_size_format,
+                                                     std::streamoff>>::iterator start_pos)
 {
     std::lock_guard lock(m_readmux);
 
@@ -506,8 +473,8 @@ chunk_collection::find_address(uint8_t at, std::vector<std::pair<serialization::
                                              });
 
     if (fragment_pos_element == m_index.end())
-        THROW(util::exception, "Fragment " + std::to_string(at) +
-            " was not found on chunk collection " + m_workfile->path().string());
+    THROW(util::exception, "Fragment " + std::to_string(at) +
+        " was not found on chunk collection " + m_workfile->path().string());
 
     return fragment_pos_element;
 }

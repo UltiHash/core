@@ -1,9 +1,10 @@
 #ifndef CORE_CHUNK_COLLECTION_H
 #define CORE_CHUNK_COLLECTION_H
 
-#include "io/file.h"
-#include "io/fragment_on_seekable_device.h"
-#include "serialization/fragment_size_struct.h"
+#include <io/file.h>
+#include <io/fragment_on_seekable_device.h>
+#include <io/chunk_collection_index_persistence.h>
+#include <serialization/fragment_size_struct.h>
 
 #include <utility>
 #include <filesystem>
@@ -160,7 +161,7 @@ private:
                  std::vector<std::pair<serialization::fragment_serialize_size_format, std::streamoff>>::iterator start_pos);
 
     std::unique_ptr<io::file> m_workfile;
-    std::vector<std::pair<serialization::fragment_serialize_size_format, std::streamoff>> m_index;
+    chunk_collection_index_persistence m_index;
 
     std::recursive_mutex m_readmux;
 

@@ -3,6 +3,7 @@
 //
 
 #include <cstdint>
+#include <ios>
 
 #ifndef CORE_FRAGMENT_SIZE_STRUCT_H
 #define CORE_FRAGMENT_SIZE_STRUCT_H
@@ -24,6 +25,21 @@ struct fragment_serialize_size_format
         :
         header_size(header_len), content_size(content_len), index_num(index_num)
     {}
+
+    [[nodiscard]] std::ostringstream serialize() const
+    {
+        std::ostringstream ss;
+        ss << content_size;
+        ss << index_num;
+        ss << header_size;
+        return ss;
+    }
+
+    void deserialize(std::istringstream& input){
+        input.read(reinterpret_cast<char*>(content_size),sizeof(content_size));
+        input.read(reinterpret_cast<char*>(header_size),sizeof(header_size));
+        input.read(reinterpret_cast<char*>(index_num),sizeof(index_num));
+    }
 
 };
 
