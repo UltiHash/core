@@ -30,7 +30,7 @@ public:
      * Scan existing chunk collection on construction.
      *
      * @param collection_temp_directory_else_file_path where the file containing the chunk collection is located
-     * @throw if no file and no corrupted temporary file from the remove operation exist
+     * @throw if chunk collection is corrupted after repair attempt
      */
     explicit chunk_collection(std::filesystem::path collection_temp_directory_else_file_path,
                               bool create_tempfile = false);
@@ -42,7 +42,7 @@ public:
      * @param buffer to be written
      * @param alloc allocate space and write fragment to chunk collection with the help of multiple buffers
      * WARNING: allocated space must be written completely (accumulated buffer size is longer or equal alloc)
-     * @return tuple<stream size, assigned index position>
+     * @return fragment_serialize_size_format
      */
     serialization::fragment_serialize_size_format write_indexed
         (std::span<const char> buffer, uint32_t alloc = 0);
@@ -136,18 +136,35 @@ public:
 
 private:
 
+    /**
+     * @return next free address on chunk collection
+     */
     uint8_t next_free_address();
+
+    /**
+     *
+     * @param at is a list of chunk collection addresses to be removed
+     * @return at in order of chunks existining on chunk collextion
+     * @throw if an element in at is non existent on the chunk collection
+     */
     std::vector<uint8_t> filtered_at_list_in_seek_order(const std::vector<uint8_t>& at);
 
+    /**
+     *
+     * @param at is an element of a chunk collection address to be removed from index
+     * @param start_pos start searching from index position
+     * @return iterator of found position "at"
+     */
     std::vector<std::pair<serialization::fragment_serialize_size_format, std::streamoff>>::iterator
     find_address(uint8_t at,
                  std::vector<std::pair<serialization::fragment_serialize_size_format, std::streamoff>>::iterator start_pos);
 
-    bool m_behave_like_tempfile;
     std::unique_ptr<io::file> m_workfile;
     std::vector<std::pair<serialization::fragment_serialize_size_format, std::streamoff>> m_index;
 
     std::recursive_mutex m_readmux;
+
+    bool m_behave_like_tempfile;
 };
 
 } // namespace uh::io
