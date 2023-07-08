@@ -81,6 +81,13 @@ std::filesystem::path file::path()
 
 // ---------------------------------------------------------------------
 
+std::ios_base::openmode file::mode()
+{
+    return m_mode;
+}
+
+// ---------------------------------------------------------------------
+
 std::size_t file::size()
 {
     return std::filesystem::file_size(m_path);

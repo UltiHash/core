@@ -39,6 +39,8 @@ public:
      */
     [[nodiscard]] std::filesystem::path path();
 
+    std::ios_base::openmode mode();
+
     std::size_t size();
 
 private:

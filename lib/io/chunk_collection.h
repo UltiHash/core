@@ -136,6 +136,7 @@ public:
 private:
 
     uint8_t next_free_address();
+    std::vector<uint8_t> filtered_at_list_in_seek_order(const std::vector<uint8_t>& at);
 
     std::vector<std::pair<serialization::fragment_serialize_size_format, std::streamoff>>::iterator
     find_address(uint8_t at);
