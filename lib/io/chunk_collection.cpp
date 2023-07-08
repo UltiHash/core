@@ -107,6 +107,8 @@ maybe_index_chunk_collection(std::unique_ptr<io::file>& collection_file)
         }
         while (skip_format.content_size > 0);
     }
+
+    return output_index;
 }
 
 // ---------------------------------------------------------------------
@@ -117,8 +119,6 @@ maybe_index_chunk_collection(std::unique_ptr<io::file>& collection_file)
 
 chunk_collection::~chunk_collection()
 {
-    std::lock_guard lock(m_readmux);
-
     m_workfile->close();
 
     if (m_behave_like_tempfile or std::filesystem::is_empty(getPath()))
@@ -315,7 +315,7 @@ chunk_collection::read_indexed_multi(const std::vector<uint8_t>& at)
         std::streamoff distance_filtered_projected_to_at =
             std::distance(at.begin(), std::find(at.begin(), at.end(), at_item));
 
-        out_list[distance_filtered_projected_to_at] = std::move(std::make_pair(std::move(output), read));
+        out_list[distance_filtered_projected_to_at] = std::make_pair(output, read);
     }
 
     return out_list;
