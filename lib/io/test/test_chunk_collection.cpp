@@ -48,7 +48,7 @@ BOOST_AUTO_TEST_CASE(temporary_chunk_collecion)
         temporary_chunk_collection2.release_to(temporary_chunk_collection2.getPath());
         work_path = temporary_chunk_collection2.getPath();
     }
-    BOOST_REQUIRE(std::filesystem::exists(work_path));
+    BOOST_REQUIRE(!std::filesystem::exists(work_path));
 
     chunk_collection file_chunk_collection(work_path);
 
