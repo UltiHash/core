@@ -33,6 +33,7 @@ std::unique_ptr<io::file> create_chunk_collection_file(std::filesystem::path& co
         std::unique_ptr<io::temp_file>
             file = std::make_unique<io::temp_file>(collection_location, std::ios_base::binary | std::ios_base::out);
         file->release_to(file->path());
+        collection_location = file->path();
     }
 
     return std::make_unique<io::file>(io::file(collection_location, std::ios_base::binary | std::ios_base::out));
@@ -149,9 +150,9 @@ chunk_collection::write_indexed(std::span<const char> buffer, uint32_t alloc)
     if (buffer.size() > TREE_STORAGE_CHUNK_LIMIT)
         THROW(util::exception, "Incoming writing buffer was too large!");
 
-    const auto write_mode = std::ios_base::app;
+    const auto write_mode = std::ios_base::binary | std::ios_base::app;
 
-    if(m_workfile->mode() != m_workfile->size()?write_mode:std::ios_base::out)
+    if(m_workfile->mode() != m_workfile->size()?write_mode:std::ios_base::binary | std::ios_base::out)
         m_workfile = std::make_unique<io::file>(m_workfile->path(), write_mode);
 
     auto temporarily_cached_fragment_on_seekable_device =
@@ -180,7 +181,7 @@ chunk_collection::read_indexed(uint8_t at)
 {
     std::lock_guard lock(m_readmux);
 
-    const auto write_mode = std::ios_base::in;
+    const auto write_mode = std::ios_base::binary | std::ios_base::in;
 
     if(m_workfile->mode() != write_mode)
         m_workfile = std::make_unique<io::file>(m_workfile->path(), write_mode);
