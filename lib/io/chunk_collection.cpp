@@ -131,7 +131,7 @@ chunk_collection::chunk_collection(std::filesystem::path collection_temp_directo
     :
     m_behave_like_tempfile(create_tempfile),
     m_workfile(maybe_repair_chunk_collection(
-        create_chunk_collection_file(collection_temp_directory_else_file_path, m_behave_like_tempfile))
+        create_chunk_collection_file(collection_temp_directory_else_file_path, create_tempfile))
     ),
     m_index(maybe_index_chunk_collection(m_workfile))
 {}
