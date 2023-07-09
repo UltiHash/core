@@ -129,6 +129,12 @@ public:
      */
     void release_to(const std::filesystem::path& release_path);
 
+    /**
+     *
+     * @return a list of used index sort orders
+     */
+    std::vector<uint8_t> get_index_num_content_list();
+
 private:
     std::unique_ptr<io::file> m_workfile;
     chunk_collection_index_persistence m_index;

@@ -4,6 +4,7 @@
 
 #include <cstdint>
 #include <ios>
+#include <sstream>
 
 #ifndef CORE_FRAGMENT_SIZE_STRUCT_H
 #define CORE_FRAGMENT_SIZE_STRUCT_H

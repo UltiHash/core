@@ -361,4 +361,13 @@ void chunk_collection::release_to(const std::filesystem::path& release_path)
 
 // ---------------------------------------------------------------------
 
+std::vector<uint8_t> chunk_collection::get_index_num_content_list()
+{
+    std::lock_guard lock(m_readmux);
+
+    return m_index.get_index_num_content_list();
+}
+
+// ---------------------------------------------------------------------
+
 }

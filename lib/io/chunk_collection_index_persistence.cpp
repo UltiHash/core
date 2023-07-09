@@ -160,7 +160,7 @@ void chunk_collection_index_persistence::erase_index_items(const std::vector<uin
 
 std::vector<uint8_t> chunk_collection_index_persistence::get_index_num_content_list()
 {
-    std::vector<uint8_t> out_list(this->size());
+    std::vector<uint8_t> out_list(count());
 
     std::size_t counter{};
 

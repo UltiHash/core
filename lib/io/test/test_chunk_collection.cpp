@@ -18,6 +18,7 @@
 
 #include <filesystem>
 #include <limits>
+#include <algorithm>
 
 using namespace uh::util;
 using namespace uh::io;
@@ -118,7 +119,7 @@ BOOST_AUTO_TEST_CASE(write_read_multi_chunk_collection)
 
     auto valid_indexes = cc.get_index_num_content_list();
     std::vector<uint8_t> valid_indexes_simulation(valid_indexes.size());
-    for (uint16_t i2 = 0; valid_indexes.size() > static_cast<std::size_t>(i2); i2++)
+    for (uint16_t i2 = 0; cc.count() > static_cast<std::size_t>(i2); i2++)
     {
         valid_indexes_simulation[i2] = i2;
     }
@@ -126,7 +127,7 @@ BOOST_AUTO_TEST_CASE(write_read_multi_chunk_collection)
     BOOST_REQUIRE_EQUAL_COLLECTIONS(valid_indexes.cbegin(), valid_indexes.cend(),
                                     valid_indexes_simulation.cbegin(), valid_indexes_simulation.cend());
 
-    std::ranges::reverse(valid_indexes.begin(), valid_indexes.end());
+    std::reverse(valid_indexes.begin(),valid_indexes.end());
 
     BOOST_REQUIRE_THROW(cc.read_indexed_multi(std::vector<uint8_t>{0, 0}), std::exception);
 
