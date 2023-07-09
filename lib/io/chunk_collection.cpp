@@ -119,19 +119,19 @@ chunk_collection::write_indexed(std::span<const char> buffer, uint32_t alloc)
 
     auto temporarily_cached_fragment_on_seekable_device =
         io::fragment_on_seekable_device(*m_workfile,
-                                        next_free_address());
+                                        m_index.next_free_address());
 
     uint32_t allocate_space = std::max(static_cast<uint32_t>(buffer.size()), alloc);
     serialization::fragment_serialize_size_format written =
         temporarily_cached_fragment_on_seekable_device.write(buffer, allocate_space);
 
     if (m_index.empty())
-        m_index.emplace_back(written, 0);
+        m_index.emplace_back_index(written, 0);
     else
-        m_index.emplace_back(written,
-                             m_index.back().second +
-                                 m_index.back().first.header_size +
-                                 m_index.back().first.content_size);
+        m_index.emplace_back_index(written,
+                                   m_index.back().second +
+                                       m_index.back().first.header_size +
+                                       m_index.back().first.content_size);
 
     return written;
 }
@@ -148,7 +148,7 @@ chunk_collection::read_indexed(uint8_t at)
     if (m_workfile->mode() != read_mode)
         m_workfile = std::make_unique<io::file>(m_workfile->path(), read_mode);
 
-    auto fragment_pos_element = find_address(at, m_index.begin());
+    auto fragment_pos_element = m_index.find_address(at, m_index.begin());
 
     auto temporarily_cached_fragment_on_seekable_device =
         io::fragment_on_seekable_device(*m_workfile);
@@ -191,7 +191,7 @@ void chunk_collection::remove(const std::vector<uint8_t>& at)
     {
         io::temp_file cc_tmp(getPath().parent_path());
         {
-            for (const auto item : get_index_num_content_list())
+            for (const auto item : m_index.get_index_num_content_list())
             {
                 if (std::none_of(at.cbegin(), at.cend(), [&item](const auto& item2)
                 {
@@ -214,23 +214,7 @@ void chunk_collection::remove(const std::vector<uint8_t>& at)
 
     m_workfile = std::make_unique<io::file>(m_workfile->path(), read_mode);
 
-    auto seek_order_at_list = filtered_at_list_in_seek_order(at);
-    auto to_remove_it = m_index.begin();
-
-    for (const auto at_item : seek_order_at_list)
-    {
-        to_remove_it = find_address(at_item, to_remove_it);
-        auto remove_size_struct = to_remove_it->first;
-
-        std::for_each(to_remove_it, m_index.end(), [&remove_size_struct](
-            std::pair<serialization::fragment_serialize_size_format, std::streamoff>& index_pair)
-        {
-            index_pair.second -= (remove_size_struct.header_size + remove_size_struct.content_size);
-        });
-
-        m_index.erase(to_remove_it);
-    }
-
+    m_index.erase_index_items(at);
 }
 
 // ---------------------------------------------------------------------
@@ -273,7 +257,7 @@ chunk_collection::read_indexed_multi(const std::vector<uint8_t>& at)
         }
     }
 
-    std::vector<uint8_t> filtered_at_list = filtered_at_list_in_seek_order(at);
+    std::vector<uint8_t> filtered_at_list = m_index.filtered_at_list_in_seek_order(at);
 
     std::vector<std::pair<std::vector<char>, serialization::fragment_serialize_size_format>>
         out_list(filtered_at_list.size());
@@ -299,7 +283,7 @@ uint16_t chunk_collection::count()
 {
     std::lock_guard lock(m_readmux);
 
-    return static_cast<uint16_t>(m_index.size());
+    return m_index.count();
 }
 
 // ---------------------------------------------------------------------
@@ -308,14 +292,7 @@ std::size_t chunk_collection::size()
 {
     std::lock_guard lock(m_readmux);
 
-    std::size_t accumulated{};
-
-    for (const auto& item : m_index)
-    {
-        accumulated += item.first.header_size + item.first.content_size;
-    }
-
-    return accumulated;
+    return m_index.size();
 }
 
 // ---------------------------------------------------------------------
@@ -324,27 +301,23 @@ std::size_t chunk_collection::size(uint8_t index_adress)
 {
     std::lock_guard lock(m_readmux);
 
-    auto found_address = find_address(index_adress, m_index.begin());
-
-    return found_address->first.header_size + found_address->first.content_size;
+    return m_index.size(index_adress);
 }
 
 // ---------------------------------------------------------------------
 
-std::size_t chunk_collection::content_size(uint8_t index_adress)
+std::size_t chunk_collection::content_size(uint8_t index_address)
 {
     std::lock_guard lock(m_readmux);
 
-    auto found_address = find_address(index_adress, m_index.begin());
-
-    return found_address->first.content_size;
+    return m_index.content_size(index_address);
 }
 
 // ---------------------------------------------------------------------
 
 bool chunk_collection::full() const
 {
-    return m_index.size() == std::numeric_limits<unsigned char>::max() + 1;
+    return m_index.full();
 }
 
 // ---------------------------------------------------------------------
@@ -353,7 +326,7 @@ uint16_t chunk_collection::free()
 {
     std::lock_guard lock(m_readmux);
 
-    return static_cast<uint16_t>(std::numeric_limits<uint8_t>::max()) + 1 - count();
+    return m_index.free();
 }
 
 // ---------------------------------------------------------------------
@@ -361,6 +334,7 @@ uint16_t chunk_collection::free()
 std::filesystem::path chunk_collection::getPath()
 {
     std::lock_guard lock(m_readmux);
+
     return m_workfile->path();
 }
 
@@ -383,100 +357,6 @@ void chunk_collection::release_to(const std::filesystem::path& release_path)
     }
 
     m_workfile = std::make_unique<io::file>(release_path, std::ios_base::binary | std::ios_base::in);
-}
-
-// ---------------------------------------------------------------------
-
-std::vector<uint8_t> chunk_collection::get_index_num_content_list()
-{
-    std::lock_guard lock(m_readmux);
-
-    std::vector<uint8_t> out_list(m_index.size());
-
-    std::size_t counter{};
-
-    for (const auto& item : m_index)
-    {
-        out_list[counter] = item.first.index_num;
-        counter++;
-    }
-
-    return out_list;
-}
-
-// ---------------------------------------------------------------------
-
-uint8_t chunk_collection::next_free_address()
-{
-    std::lock_guard lock(m_readmux);
-
-    if (full())
-    THROW(util::exception,
-          "There are no more free addresses on chunk collection " + m_workfile->path().string() + " !");
-
-    auto copy_index = m_index;
-
-    std::sort(copy_index.begin(), copy_index.end(), [](const auto& a, const auto& b)
-    {
-        return a.first.index_num < b.first.index_num;
-    });
-
-    auto index_beg = std::begin(copy_index);
-    for (unsigned short i = 0; i < std::numeric_limits<unsigned char>::max() + 1; i++)
-    {
-        if (index_beg == std::end(copy_index) || index_beg->first.index_num < i)
-        {
-            return i;
-        }
-        else
-            index_beg++;
-    }
-
-    return 0;
-}
-
-// ---------------------------------------------------------------------
-
-std::vector<uint8_t> chunk_collection::filtered_at_list_in_seek_order(const std::vector<uint8_t>& at)
-{
-    std::vector<uint8_t> index_num_list = get_index_num_content_list();
-    std::vector<uint8_t> filtered_at_list_in_seek_order;
-
-    for (const auto item : index_num_list)
-    {
-        if (std::any_of(at.cbegin(), at.cend(), [item](const auto item2)
-        {
-            return item == item2;
-        }))
-            filtered_at_list_in_seek_order.push_back(item);
-    }
-
-    return filtered_at_list_in_seek_order;
-}
-
-// ---------------------------------------------------------------------
-
-std::vector<std::pair<serialization::fragment_serialize_size_format, std::streamoff>>::iterator
-chunk_collection::find_address(uint8_t at,
-                               std::vector<std::pair<serialization::fragment_serialize_size_format,
-                                                     std::streamoff>>::iterator start_pos)
-{
-    std::lock_guard lock(m_readmux);
-
-    auto fragment_pos_element = std::find_if(start_pos, m_index.end(),
-                                             [&at](const std::pair<
-                                                 serialization::fragment_serialize_size_format,
-                                                 std::streamoff
-                                             >& elem)
-                                             {
-                                                 return elem.first.index_num == at;
-                                             });
-
-    if (fragment_pos_element == m_index.end())
-    THROW(util::exception, "Fragment " + std::to_string(at) +
-        " was not found on chunk collection " + m_workfile->path().string());
-
-    return fragment_pos_element;
 }
 
 // ---------------------------------------------------------------------

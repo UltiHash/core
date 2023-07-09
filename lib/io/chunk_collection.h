@@ -99,10 +99,10 @@ public:
 
     /**
      *
-     * @param index_adress is the address of a registered fragment/chunk
+     * @param index_address is the address of a registered fragment/chunk
      * @return the size of the content payload of the fragment/chunk
      */
-    std::size_t content_size(uint8_t index_adress);
+    std::size_t content_size(uint8_t index_address);
 
     /**
      *
@@ -129,37 +129,7 @@ public:
      */
     void release_to(const std::filesystem::path& release_path);
 
-    /**
-     *
-     * @return a list of used index sort orders
-     */
-    std::vector<uint8_t> get_index_num_content_list();
-
 private:
-
-    /**
-     * @return next free address on chunk collection
-     */
-    uint8_t next_free_address();
-
-    /**
-     *
-     * @param at is a list of chunk collection addresses to be removed
-     * @return at in order of chunks existining on chunk collextion
-     * @throw if an element in at is non existent on the chunk collection
-     */
-    std::vector<uint8_t> filtered_at_list_in_seek_order(const std::vector<uint8_t>& at);
-
-    /**
-     *
-     * @param at is an element of a chunk collection address to be removed from index
-     * @param start_pos start searching from index position
-     * @return iterator of found position "at"
-     */
-    std::vector<std::pair<serialization::fragment_serialize_size_format, std::streamoff>>::iterator
-    find_address(uint8_t at,
-                 std::vector<std::pair<serialization::fragment_serialize_size_format, std::streamoff>>::iterator start_pos);
-
     std::unique_ptr<io::file> m_workfile;
     chunk_collection_index_persistence m_index;
 
