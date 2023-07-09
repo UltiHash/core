@@ -79,7 +79,7 @@ namespace uh::io {
 
     std::pair<std::vector<char>, serialization::fragment_serialize_size_format>
     tree_navigator::read_indexed(const std::stack<char>& at) {
-
+        //TODO
     }
 
     // ---------------------------------------------------------------------
