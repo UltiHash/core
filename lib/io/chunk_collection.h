@@ -3,7 +3,7 @@
 
 #include <io/file.h>
 #include <io/fragment_on_seekable_device.h>
-#include <io/chunk_collection_index_persistence.h>
+#include <io/chunk_collection_index_persistent.h>
 #include <serialization/fragment_size_struct.h>
 
 #include <utility>
@@ -137,7 +137,7 @@ public:
 
 private:
     std::unique_ptr<io::file> m_workfile;
-    chunk_collection_index_persistence m_index;
+    chunk_collection_index_persistent m_index;
 
     std::recursive_mutex m_readmux;
 

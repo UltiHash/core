@@ -1,4 +1,4 @@
-#include "chunk_collection_index_persistence.h"
+#include "chunk_collection_index_persistent.h"
 #include <io/fragment_on_seekable_device.h>
 
 #include <string>
@@ -8,7 +8,7 @@ namespace uh::io
 
 // ---------------------------------------------------------------------
 
-chunk_collection_index_persistence::chunk_collection_index_persistence(std::unique_ptr<io::file>& chunk_collection_file)
+chunk_collection_index_persistent::chunk_collection_index_persistent(std::unique_ptr<io::file>& chunk_collection_file)
     :
     std::vector<std::pair<serialization::fragment_serialize_size_format, std::streamoff>>(
         maybe_index_persist_chunk_collection(chunk_collection_file)),
@@ -18,7 +18,7 @@ chunk_collection_index_persistence::chunk_collection_index_persistence(std::uniq
 
 // ---------------------------------------------------------------------
 
-void chunk_collection_index_persistence::erase_index_items(const std::vector<uint8_t>& at)
+void chunk_collection_index_persistent::erase_index_items(const std::vector<uint8_t>& at)
 {
     if(forgotten){
         maybe_index_persist_chunk_collection(m_workfile);
@@ -78,7 +78,7 @@ void chunk_collection_index_persistence::erase_index_items(const std::vector<uin
 
 // ---------------------------------------------------------------------
 
-std::vector<uint8_t> chunk_collection_index_persistence::get_index_num_content_list()
+std::vector<uint8_t> chunk_collection_index_persistent::get_index_num_content_list()
 {
     std::vector<uint8_t> out_list(count());
 
@@ -95,14 +95,14 @@ std::vector<uint8_t> chunk_collection_index_persistence::get_index_num_content_l
 
 // ---------------------------------------------------------------------
 
-uint16_t chunk_collection_index_persistence::count() const
+uint16_t chunk_collection_index_persistent::count() const
 {
     return static_cast<uint16_t>(std::distance(this->cbegin(), this->cend()));
 }
 
 // ---------------------------------------------------------------------
 
-std::size_t chunk_collection_index_persistence::size()
+std::size_t chunk_collection_index_persistent::size()
 {
     std::size_t accumulated{};
 
@@ -116,7 +116,7 @@ std::size_t chunk_collection_index_persistence::size()
 
 // ---------------------------------------------------------------------
 
-std::size_t chunk_collection_index_persistence::size(uint8_t index_address)
+std::size_t chunk_collection_index_persistent::size(uint8_t index_address)
 {
     auto found_address = find_address(index_address, this->begin());
 
@@ -125,14 +125,14 @@ std::size_t chunk_collection_index_persistence::size(uint8_t index_address)
 
 // ---------------------------------------------------------------------
 
-std::size_t chunk_collection_index_persistence::index_file_size()
+std::size_t chunk_collection_index_persistent::index_file_size()
 {
     return m_index_file.size();
 }
 
 // ---------------------------------------------------------------------
 
-std::size_t chunk_collection_index_persistence::content_size(uint8_t index_adress)
+std::size_t chunk_collection_index_persistent::content_size(uint8_t index_adress)
 {
     auto found_address = find_address(index_adress, this->begin());
 
@@ -141,28 +141,28 @@ std::size_t chunk_collection_index_persistence::content_size(uint8_t index_adres
 
 // ---------------------------------------------------------------------
 
-bool chunk_collection_index_persistence::full() const
+bool chunk_collection_index_persistent::full() const
 {
     return count() == std::numeric_limits<unsigned char>::max() + 1;
 }
 
 // ---------------------------------------------------------------------
 
-uint16_t chunk_collection_index_persistence::free() const
+uint16_t chunk_collection_index_persistent::free() const
 {
     return static_cast<uint16_t>(std::numeric_limits<uint8_t>::max()) + 1 - count();
 }
 
 // ---------------------------------------------------------------------
 
-std::filesystem::path chunk_collection_index_persistence::getPath()
+std::filesystem::path chunk_collection_index_persistent::getPath()
 {
     return m_index_file.path();
 }
 
 // ---------------------------------------------------------------------
 
-uint8_t chunk_collection_index_persistence::next_free_address()
+uint8_t chunk_collection_index_persistent::next_free_address()
 {
     if (full())
     THROW(util::exception,
@@ -189,7 +189,7 @@ uint8_t chunk_collection_index_persistence::next_free_address()
 
 // ---------------------------------------------------------------------
 
-std::vector<uint8_t> chunk_collection_index_persistence::filtered_at_list_in_seek_order(const std::vector<uint8_t>& at)
+std::vector<uint8_t> chunk_collection_index_persistent::filtered_at_list_in_seek_order(const std::vector<uint8_t>& at)
 {
     std::vector<uint8_t> index_num_list = get_index_num_content_list();
     std::vector<uint8_t> filtered_at_list_in_seek_order;
@@ -209,8 +209,8 @@ std::vector<uint8_t> chunk_collection_index_persistence::filtered_at_list_in_see
 // ---------------------------------------------------------------------
 
 std::vector<std::pair<serialization::fragment_serialize_size_format, std::streamoff>>::iterator
-chunk_collection_index_persistence::find_address(uint8_t at,
-                                                 std::vector<std::pair<serialization::fragment_serialize_size_format,
+chunk_collection_index_persistent::find_address(uint8_t at,
+                                                std::vector<std::pair<serialization::fragment_serialize_size_format,
                                                                        std::streamoff>>::iterator start_pos)
 {
     auto fragment_pos_element = std::find_if(start_pos, this->end(),
@@ -231,7 +231,7 @@ chunk_collection_index_persistence::find_address(uint8_t at,
 
 // ---------------------------------------------------------------------
 
-void chunk_collection_index_persistence::forget()
+void chunk_collection_index_persistent::forget()
 {
     m_index_file.close();
     std::filesystem::remove(m_index_file.path());

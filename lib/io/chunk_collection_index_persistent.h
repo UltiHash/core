@@ -1,5 +1,5 @@
-#ifndef CHUNK_COLLECTION_INDEX_PERSISTENCE_H
-#define CHUNK_COLLECTION_INDEX_PERSISTENCE_H
+#ifndef CHUNK_COLLECTION_INDEX_PERSISTENT_H
+#define CHUNK_COLLECTION_INDEX_PERSISTENT_H
 
 #include <serialization/fragment_size_struct.h>
 #include <io/fragment_on_seekable_device.h>
@@ -105,7 +105,7 @@ maybe_index_persist_chunk_collection(std::unique_ptr<io::file>& collection_file)
 
 // ---------------------------------------------------------------------
 
-class chunk_collection_index_persistence:
+class chunk_collection_index_persistent:
     public std::vector<std::pair<serialization::fragment_serialize_size_format, std::streamoff>>
 {
 public:
@@ -115,7 +115,7 @@ public:
      *
      * @param chunk_collection_file is the incoming open chunk collection file
      */
-    explicit chunk_collection_index_persistence(std::unique_ptr<io::file>& chunk_collection_file);
+    explicit chunk_collection_index_persistent(std::unique_ptr<io::file>& chunk_collection_file);
 
     /**
      * Emplace object to memory and also append it to index
@@ -240,4 +240,4 @@ private:
 
 } // namespace uh::io
 
-#endif //CHUNK_COLLECTION_INDEX_PERSISTENCE_H
+#endif //CHUNK_COLLECTION_INDEX_PERSISTENT_H
