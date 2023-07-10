@@ -436,6 +436,20 @@ uint32_t udb_get_effective_size(UDB_WRITE_QUERY_RESULTS* results, size_t index)
 
 // ---------------------------------------------------------------------
 
+size_t udb_get_return_code_count(UDB_WRITE_QUERY_RESULTS* results)
+{
+    return results->return_code.size();
+}
+
+// ---------------------------------------------------------------------
+
+uint8_t udb_get_return_code(UDB_WRITE_QUERY_RESULTS* results, size_t index)
+{
+    return results->return_code[index];
+}
+
+// ---------------------------------------------------------------------
+
 UDB_WRITE_QUERY_RESULTS* udb_put(UDB_CONNECTION* conn, UDB_WRITE_QUERY* write_query)
 {
     try
@@ -691,11 +705,11 @@ UDB_READ_QUERY_RESULTS* udb_get(UDB_CONNECTION* conn, UDB_READ_QUERY* read_query
                 break;
 
             case MULTIPLE_KEYS:
-                start_key_sizes.push_back(0u);
-                end_key_sizes.push_back(0u);
 
                 for (size_t index = 0; index < read_query->start_key.size(); index++)
                 {
+                    start_key_sizes.push_back(0u);
+                    end_key_sizes.push_back(0u);
                     single_key_sizes.push_back(read_query->start_key[index].size);
                     data.insert(data.end(), read_query->start_key[index].data,
                                 read_query->start_key[index].data + read_query->start_key[index].size);

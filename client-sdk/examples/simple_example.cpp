@@ -111,7 +111,7 @@ int main()
         while (udb_results_next(results, &result))
         {
             std::cout << "Received Key:\n" << std::string_view (result->key, result->key_size) << "\n\n";
-            std::cout << "Received Value:\n" << std::string_view (result->value, result->value_size) << '\n';
+            std::cout << "Received Value:\n" << std::string_view (result->value, result->value_size) << "\n\n";
         }
 
     /* cleanup */

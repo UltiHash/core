@@ -94,6 +94,9 @@ typedef struct UDB_CONNECTION_STRUCT UDB_CONNECTION;
 /**
  * Opaque structure that represents the concept of a "document". A document is a
  * structure that holds a key, value, and labels.
+ *
+ * Allocated and initialized with ::udb_init_document.
+ * Cleaned up and deallocated with ::udb_destroy_document.
  */
 typedef struct UDB_DOCUMENT_STRUCT UDB_DOCUMENT;
 
@@ -310,7 +313,8 @@ size_t udb_get_effective_sizes_count(UDB_WRITE_QUERY_RESULTS* results);
  */
 uint32_t udb_get_effective_size(UDB_WRITE_QUERY_RESULTS* results, size_t index);
 
-// FUNCTION TO GET RETURN CODE
+size_t udb_get_return_code_count(UDB_WRITE_QUERY_RESULTS* results);
+uint8_t udb_get_return_code(UDB_WRITE_QUERY_RESULTS* results, size_t index);
 
 /**
  * Putting the document in the database.
