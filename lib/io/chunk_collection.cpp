@@ -84,7 +84,7 @@ chunk_collection::~chunk_collection()
     m_workfile->close();
 
     if (m_behave_like_tempfile or (std::filesystem::exists(getPath()) and std::filesystem::is_empty(getPath()))){
-        m_index.forget();
+        m_index.maybe_forget_index_file();
         std::filesystem::remove(getPath());
     }
 }
