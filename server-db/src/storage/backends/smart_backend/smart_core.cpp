@@ -49,6 +49,7 @@ std::pair <std::uint8_t, std::size_t>  smart_core::integrate(std::span <char> ke
     m_key_store->insert(key, {reinterpret_cast <char*> (fragments.first.data()), fragments.first.size() * sizeof (sets::offset_span)}, f.index);
     m_total_effective_size += fragments.second;
     return {0, fragments.second};
+
 }
 
 smart_core::fragmented_data smart_core::retrieve(std::span<char> key) {
@@ -77,6 +78,7 @@ std::pair<std::vector<sets::offset_span>, size_t> smart_core::deduplicate (std::
 
     auto integration_data = data;
     std::pair<std::vector<sets::offset_span>, size_t> result;
+
 
     while (!integration_data.empty()) {
         const auto f = m_fragment_set->find({integration_data.data(), integration_data.size()});

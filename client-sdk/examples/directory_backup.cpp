@@ -106,6 +106,7 @@ int main(int argc, char* args[]) {
         total_size += file_size;
     }
 
+    std::chrono::time_point <std::chrono::steady_clock> timer;
     std::cout << "total size is " << total_size << std::endl;
 
     const auto before = std::chrono::steady_clock::now ();

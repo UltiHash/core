@@ -109,6 +109,7 @@ private:
         }
 
         auto y = m_nil;
+
         auto x = get_node (m_first_block->root_offset);
 
         int comp_int = 0;
@@ -392,6 +393,7 @@ private:
     node m_nil {};
     first_block* m_first_block;
     Comparator m_comp;
+
     const size_t m_block_size;
 };
 

@@ -337,7 +337,6 @@ void read(serialization::buffered_serialization &in, write_key_value::response &
 
     response.effective_sizes = in.read_ospan<uint32_t>();
     response.return_codes = in.read_ospan<uint8_t>();
-
 }
 
 // ---------------------------------------------------------------------
