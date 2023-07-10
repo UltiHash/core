@@ -45,7 +45,7 @@ protocol::client_pool& sample_hash_routing::route_data(const std::span <const ch
 
 // ---------------------------------------------------------------------
 
-routing_interface::db_hash_offsets_map sample_hash_routing::route_hashes(const std::span<char> &hashes) const {
+routing_interface::db_hash_offsets_map sample_hash_routing::route_hashes(const std::span<const char> &hashes) const {
     db_hash_offsets_map res;
     std::list <size_t> offsets;
     for (size_t i = 0; i < hashes.size(); i+=64) {

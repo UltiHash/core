@@ -26,7 +26,7 @@ struct routing_interface {
      * @param hashes several hashes
      * @return a map that pairs each of the hashes (by their offset in the input) to their corresponding data nodes
      */
-    [[nodiscard]] virtual db_hash_offsets_map route_hashes (const std::span <char> &hashes) const = 0;
+    [[nodiscard]] virtual db_hash_offsets_map route_hashes (const std::span <const char> &hashes) const = 0;
 
 
     virtual ~routing_interface() = default;

@@ -5,10 +5,10 @@
 
 namespace uh::dbn::storage::smart {
 
-growing_plain_storage::growing_plain_storage(std::filesystem::path file, size_t init_size) :
-        m_file_path (std::move (file)),
-        m_file_size (init_size),
-        m_storage (init_mmap(m_file_path, init_size, m_file_size)) {
+growing_plain_storage::growing_plain_storage(growing_plain_storage_config conf) :
+        m_file_path (std::move (conf.file)),
+        m_file_size (conf.init_size),
+        m_storage (init_mmap(m_file_path, conf.init_size, m_file_size)) {
 
 }
 
