@@ -317,7 +317,7 @@ std::size_t chunk_collection::content_size(uint8_t index_address)
 
 // ---------------------------------------------------------------------
 
-bool chunk_collection::full() const
+bool chunk_collection::full()
 {
     return m_index.full();
 }

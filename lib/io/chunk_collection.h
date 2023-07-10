@@ -108,7 +108,7 @@ public:
      *
      * @return if the chunk collection is full
      */
-    [[nodiscard]] bool full() const;
+    [[nodiscard]] bool full();
 
     /**
      *
