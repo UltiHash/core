@@ -98,6 +98,7 @@ uh::protocol::write_key_value::response protocol::on_write_kv(const write_key_va
         const auto res = m_storage.write_key_value(wq->key, wq->value, wq->insert_type);
         resp.return_codes.data [i] = res.first;
         resp.effective_sizes.data [i++] = res.second;
+
     }
 
     return resp;

@@ -53,6 +53,7 @@ public:
 
     std::size_t get_total_used_size () const noexcept;
 
+
     /**
      * Transforms the given offset to a pointer on the memory.
      * @param offset
