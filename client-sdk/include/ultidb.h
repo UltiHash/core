@@ -142,16 +142,9 @@ struct UDB_READ_QUERY_RESULT
 
     UDB_READ_QUERY_RESULT(char* rec_key, size_t rec_key_size, char* rec_value, size_t rec_value_size,
                           char** rec_labels, size_t rec_label_count) :
-                          key(rec_key), key_size(rec_value_size), value(rec_value), value_size(rec_value_size),
+                          key(rec_key), key_size(rec_key_size), value(rec_value), value_size(rec_value_size),
                           labels(rec_labels), label_count(rec_label_count)
     {}
-
-    ~UDB_READ_QUERY_RESULT()
-    {
-        delete [] key;
-        delete [] value;
-        delete [] labels;
-    }
 };
 
 /**
@@ -414,6 +407,12 @@ size_t udb_get_results_count(UDB_READ_QUERY_RESULTS* results);
  */
 UDB_READ_QUERY_RESULT* udb_get_result(UDB_READ_QUERY_RESULTS* results, size_t index);
 
+/**
+ * Deallocates the ::UDB_DATA struct which was allocated before.
+ *
+ * @param data pointer to the ::UDB_DATA struct
+ * @return enum that describes the result of the operation
+ */
 UDB_RESULT udb_destroy_udb_data(UDB_DATA* data);
 
 /**

@@ -51,8 +51,19 @@ int main()
                            "quick daft zebras jump! Quick zephyrs blow, vexing daft Jim. Cozy lummox gives smart squid "
                            "who asks for job pen. A wizard’s job is to vex chumps quickly in fog. The quick brown fox "
                            "jumps over the lazy dog.";
+
+        char test_data_2[] = "Lorem Ipsum comes from a latin text written in 45BC by Roman statesman, lawyer, scholar, "
+                             "and philosopher, Marcus Tullius Cicero. The text is titled `de Finibus Bonorum et Malorum`"
+                             " which means `The Extremes of Good and Evil`. The most common form of Lorem ipsum is the "
+                             "following: Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor."
+                             "quack. Sphinx of black quartz, judge my vow. Waltz, nymph, for quick jigs vex Bud. How vexingly "
+                             "quick daft zebras jump! Quick zephyrs blow, vexing daft Jim. Cozy lummox gives smart squid "
+                             "who asks for job pen. A wizard’s job is to vex chumps quickly in fog. The quick brown fox "
+                             "jumps over the lazy dog.";
+
         /* key */
-        char test_key[] = "This_is_a_user_defined_key";
+        char test_key_1[] = "This_is_a_user_defined_key_1";
+        char test_key_2[] = "This_is_a_user_defined_key_2";
 
         /* labels */
         char test_label_1[] = "Fox";
@@ -63,12 +74,15 @@ int main()
 
         /* initialize document with key, value, and label */
 
-        UDB_DOCUMENT* test_doc_1 = udb_init_document(test_key, strlen(test_key), test_data_1, strlen(test_data_1),
+        UDB_DOCUMENT* test_doc_1 = udb_init_document(test_key_1, strlen(test_key_1), test_data_1, strlen(test_data_1),
                                                      test_labels, sizeof(test_labels) / sizeof(char*));
+        UDB_DOCUMENT* test_doc_2 = udb_init_document(test_key_2, strlen(test_key_2), test_data_2, strlen(test_data_2),
+                                                 test_labels, sizeof(test_labels) / sizeof(char*));
 
-        /* create a write query */
+    /* create a write query */
         UDB_WRITE_QUERY* test_write_query = udb_create_write_query();
         udb_write_query_add_document(test_write_query, test_doc_1);
+        udb_write_query_add_document(test_write_query, test_doc_2);
 
         /* add document to the database */
         UDB_WRITE_QUERY_RESULTS* write_results = udb_put(udb_conn, test_write_query);
@@ -82,7 +96,8 @@ int main()
 
         /* create a read query*/
         UDB_READ_QUERY* test_read_query = udb_create_read_query();
-        udb_read_query_add_key(test_read_query, test_key, strlen(test_key));
+        udb_read_query_add_key(test_read_query, test_key_1, strlen(test_key_1));
+        udb_read_query_add_key(test_read_query, test_key_2, strlen(test_key_2));
 
         /* getting a document from database */
         UDB_READ_QUERY_RESULTS* results = udb_get(udb_conn, test_read_query);
@@ -95,7 +110,7 @@ int main()
         UDB_READ_QUERY_RESULT* result;
         while (udb_results_next(results, &result))
         {
-            std::cout << "Received Key:\n" << result->key << "\n\n";
+            std::cout << "Received Key:\n" << std::string_view (result->key, result->key_size) << "\n\n";
             std::cout << "Received Value:\n" << std::string_view (result->value, result->value_size) << '\n';
         }
 

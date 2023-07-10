@@ -56,10 +56,8 @@ struct UDB_DOCUMENT_STRUCT
 struct UDB_DOCUMENTS
 {
     std::vector<UDB_DOCUMENT_STRUCT*> documents {};
-    size_t count;
 
-    UDB_DOCUMENTS() : count(0)
-    {}
+    UDB_DOCUMENTS() = default;
 
     ~UDB_DOCUMENTS() = default;
 };
@@ -641,6 +639,7 @@ UDB_RESULT udb_destroy_read_query_results(UDB_READ_QUERY_RESULTS* results)
 {
     try
     {
+        delete [] results->results_container[0].key;
         delete results;
 
         return UDB_RESULT_SUCCESS;
@@ -747,32 +746,14 @@ UDB_READ_QUERY_RESULTS* udb_get(UDB_CONNECTION* conn, UDB_READ_QUERY* read_query
                 std::span<uint8_t>(label_sizes.data(), label_sizes.size()),
                 std::span<char>(data.data(), data.size())
             });
-        auto value = std::get <0>(resp.data).data.get();
-        uh::util::structured_queries <uh::protocol::read_key_value::response> read_response(resp);
 
+        uh::util::structured_queries <uh::protocol::read_key_value::response> read_response(resp);
         auto* read_query_results = new UDB_READ_QUERY_RESULTS();
 
-        // TODO; do not copy data if possible
         for (auto rr = read_response.next(); rr != nullptr; rr = read_response.next())
         {
-            char* key;
-            size_t key_size;
-
-            if (read_query->query_type == SINGLE_KEY)
-            {
-                key = new char[read_query->start_key[0].size + 1];
-                std::memcpy(key, read_query->start_key[0].data, read_query->start_key[0].size);
-                key[read_query->start_key[0].size] = '\0';
-                key_size = read_query->start_key[0].size;
-            }
-            else if (read_query->query_type == MULTIPLE_KEYS)
-            {
-                for (size_t index = 0; index < read_query->start_key.size(); index++)
-                {
-
-                }
-            }
-
+            char* key = rr->key.data();
+            size_t key_size = rr->key.size();
 
             char* value = rr->value.data();
             size_t value_size = rr->value.size();
@@ -921,6 +902,7 @@ char* udb_get_label(UDB_DOCUMENT* doc, size_t label_index)
 UDB_RESULT udb_destory_udb_data(UDB_DATA* data)
 {
     delete data;
+    return UDB_RESULT_SUCCESS;
 }
 
 // ---------------------------------------------------------------------
