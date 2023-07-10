@@ -101,9 +101,9 @@ chunk_collection_index_persistent::chunk_collection_index_persistent(std::unique
     :
     std::vector<std::pair<serialization::fragment_serialize_size_format, std::streamoff>>(
         maybe_index_persist_chunk_collection(chunk_collection_file)),
-    m_index_file(index_path(chunk_collection_file), std::ios_base::app),
+    m_index_file(std::make_unique<io::file>(index_path(chunk_collection_file), std::ios_base::app)),
     m_workfile(chunk_collection_file),
-    m_index_file_size(m_index_file.size())
+    m_index_file_size(m_index_file->size())
 {}
 
 // ---------------------------------------------------------------------
@@ -133,13 +133,13 @@ void chunk_collection_index_persistent::erase_index_items(const std::vector<uint
         delete_pos_list.push_back(to_remove_it->first.index_num);
     }
 
-    io::temp_file erase_tmp(m_index_file.path().parent_path(), std::ios_base::out);
+    io::temp_file erase_tmp(m_index_file->path().parent_path(), std::ios_base::out);
     auto beg = begin();
 
     std::string read_buffer;
     read_buffer.resize(sizeof(serialization::fragment_serialize_size_format));
 
-    while (io::read(m_index_file, read_buffer))
+    while (io::read(*m_index_file, read_buffer))
     {
         if (std::none_of(delete_pos_list.cbegin(), delete_pos_list.cend(), [&beg](auto item)
         {
@@ -150,9 +150,9 @@ void chunk_collection_index_persistent::erase_index_items(const std::vector<uint
     }
 
     erase_tmp.close();
-    m_index_file.close();
+    m_index_file->close();
     erase_tmp.release_to(erase_tmp.path());
-    erase_tmp.rename(m_index_file.path());
+    erase_tmp.rename(m_index_file->path());
 
     std::size_t deleted_index_file_size{};
 
@@ -177,7 +177,7 @@ void chunk_collection_index_persistent::erase_index_items(const std::vector<uint
 
     m_index_file_size -= deleted_index_file_size;
 
-    m_index_file = io::file(m_index_file.path(), std::ios_base::app);
+    m_index_file = std::make_unique<io::file>(m_index_file->path(), std::ios_base::app);
 }
 
 // ---------------------------------------------------------------------
@@ -192,7 +192,7 @@ std::pair<serialization::fragment_serialize_size_format,
 
     maybe_recreate_index_file();
 
-    m_index_file_size += io::write(m_index_file, back().first.serialize().str());
+    m_index_file_size += io::write(*m_index_file, back().first.serialize().str());
 
     return tmp;
 }
@@ -300,7 +300,7 @@ uint8_t chunk_collection_index_persistent::next_free_address()
 
     if (full())
     THROW(util::exception,
-          "There are no more free addresses on chunk collection index " + m_index_file.path().string() + " !");
+          "There are no more free addresses on chunk collection index " + m_index_file->path().string() + " !");
 
     std::sort(this->begin(), this->end(), [](const auto& a, const auto& b)
     {
@@ -362,7 +362,7 @@ chunk_collection_index_persistent::find_address(uint8_t at,
 
     if (fragment_pos_element == this->end())
     THROW(util::exception, "Fragment " + std::to_string(at) +
-        " was not found on chunk collection " + m_index_file.path().string());
+        " was not found on chunk collection " + m_index_file->path().string());
 
     return fragment_pos_element;
 }
@@ -375,8 +375,8 @@ void chunk_collection_index_persistent::maybe_forget_index_file()
 
     if (not m_index_file_forgotten)
     {
-        m_index_file.close();
-        std::filesystem::remove(m_index_file.path());
+        m_index_file->close();
+        std::filesystem::remove(m_index_file->path());
         m_index_file_forgotten = true;
     }
 }
@@ -390,7 +390,7 @@ void chunk_collection_index_persistent::maybe_recreate_index_file()
     if (m_index_file_forgotten)
     {
         maybe_index_persist_chunk_collection(m_workfile);
-        m_index_file = io::file(index_path(m_workfile), std::ios_base::app);
+        m_index_file = std::make_unique<io::file>(index_path(m_workfile), std::ios_base::app);
         m_index_file_forgotten = false;
     }
 }

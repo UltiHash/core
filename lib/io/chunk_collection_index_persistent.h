@@ -130,7 +130,7 @@ public:
     void maybe_recreate_index_file();
 
 private:
-    io::file m_index_file;
+    std::unique_ptr<io::file> m_index_file;
     std::unique_ptr<io::file>& m_workfile;
     std::size_t m_index_file_size;
     bool m_index_file_forgotten = false;
