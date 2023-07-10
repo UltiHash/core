@@ -14,7 +14,7 @@ void handle_labels(auto& q, size_t shift_offset_size, ospan<std::string_view> &l
     q.index ++;
 
     labels = util::ospan <std::string_view> (label_count);
-    for (q.label_index = wq_label_index; q.label_index < label_count; ++q.label_index) {
+    for (q.label_index = wq_label_index; q.label_index < wq_label_index + label_count; ++q.label_index) {
         const auto label_size = std::get <0> (q.m_req.get().label_sizes).data [q.label_index];
         labels.data [q.label_index] = {data_ptr + q.offset, label_size};
         q.offset += label_size;
