@@ -135,7 +135,7 @@ private:
     std::size_t m_index_file_size;
     bool m_index_file_forgotten = false;
 
-    std::recursive_mutex m_work_mux{};
+    std::recursive_mutex m_index_work_mux{};
 };
 
 // ---------------------------------------------------------------------

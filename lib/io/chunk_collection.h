@@ -135,11 +135,16 @@ public:
      */
     std::vector<uint8_t> get_index_num_content_list();
 
+    /**
+     * For space savings on disk the index file of chunk collection may be deleted
+     */
+    void maybe_forget_chunk_collection_index_file();
+
 private:
     std::unique_ptr<io::file> m_workfile;
     chunk_collection_index_persistent m_index;
 
-    std::recursive_mutex m_readmux;
+    std::recursive_mutex m_chunk_collection_workmux;
 
     bool m_behave_like_tempfile;
 };
