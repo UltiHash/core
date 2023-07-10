@@ -394,7 +394,7 @@ UDB_RESULT udb_destroy_write_query(UDB_WRITE_QUERY* ptr_to_write_query_ptr)
 
 struct UDB_WRITE_QUERY_RESULTS
 {
-    std::vector<uint32_t> effective_sizes {};
+    std::span<uint32_t> effective_sizes;
 };
 
 // ---------------------------------------------------------------------
@@ -448,6 +448,8 @@ UDB_WRITE_QUERY_RESULTS* udb_put(UDB_CONNECTION* conn, UDB_WRITE_QUERY* write_qu
             key_sizes.push_back(document->key_size);
             data.insert(data.end(), document->key, document->key + document->key_size);
 
+            data.push_back(uh::util::INSERT_UPDATE);
+
             value_sizes.push_back(document->value_size);
             data.insert(data.end(), document->value, document->value + document->value_size);
 
@@ -472,12 +474,8 @@ UDB_WRITE_QUERY_RESULTS* udb_put(UDB_CONNECTION* conn, UDB_WRITE_QUERY* write_qu
         // TODO: optimize it since reserve is not used
 
         auto* results = new UDB_WRITE_QUERY_RESULTS();
-//        auto effective_size_span = std::span<uint32_t>(results->effective_sizes);
-//        results->effective_sizes.insert(results->effective_sizes.end(),
-//                                        effective_size_span.begin(),
-//                                        effective_size_span.end());
-//
-//        resp.effective_sizes.data.release();
+        results->effective_sizes = std::span<uint32_t>(resp.effective_sizes);
+        resp.effective_sizes.data.release();
 
         return results;
     }
@@ -709,25 +707,8 @@ UDB_READ_QUERY_RESULTS* udb_get(UDB_CONNECTION* conn, UDB_READ_QUERY* read_query
 
             case RANGE_KEYS:
 
-//                start_key_sizes.push_back(read_query->start_key.front()->size);
-//                data.insert(data.end(), read_query->start_key.front()->data,
-//                            read_query->start_key.front()->data + read_query->start_key.front()->size);
-//
-//
-//                end_key_sizes.push_back(read_query->end_key->size);
-//                data.insert(data.end(), read_query->end_key->data,
-//                            read_query->end_key->data + read_query->end_key->size);
-//
-//
-//                label_counts.push_back(read_query->label_count);
-//
-//                for (auto index = 0; index < read_query->label_count; index++)
-//                {
-//                    auto label_size = sizeof(read_query->labels[index]);
-//                    label_sizes.push_back(label_size);
-//                    data.insert(data.end(), read_query->labels[index], read_query->labels[index] + label_size);
-//                }
-//                single_key_sizes.push_back(0);
+                // not implemented yet
+                throw std::runtime_error("not implemented");
 
                 break;
 
