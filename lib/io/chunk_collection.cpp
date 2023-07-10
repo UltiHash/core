@@ -43,7 +43,7 @@ std::unique_ptr<io::file> create_chunk_collection_file(std::filesystem::path& co
 
 std::unique_ptr<io::file> maybe_repair_chunk_collection(std::unique_ptr<io::file> collection_file)
 {
-    std::filesystem::path corrupted_tempfile_path = collection_file->path().string() + ".tmp";
+    std::filesystem::path corrupted_tempfile_path = collection_file->path().replace_extension(".tmp").string();
 
     bool temp_file_exists = std::filesystem::exists(corrupted_tempfile_path);
 
@@ -83,7 +83,8 @@ chunk_collection::~chunk_collection()
 {
     m_workfile->close();
 
-    if (m_behave_like_tempfile or (std::filesystem::exists(getPath()) and std::filesystem::is_empty(getPath()))){
+    if (m_behave_like_tempfile or (std::filesystem::exists(getPath()) and std::filesystem::is_empty(getPath())))
+    {
         m_index.maybe_forget_index_file();
         std::filesystem::remove(getPath());
     }
@@ -152,10 +153,10 @@ chunk_collection::read_indexed(uint8_t at)
 
     auto fragment_pos_element = m_index.find_address(at, m_index.begin());
 
+    m_workfile->seek(fragment_pos_element->second, std::ios_base::beg);
+
     auto temporarily_cached_fragment_on_seekable_device =
         io::fragment_on_seekable_device(*m_workfile);
-
-    m_workfile->seek((*fragment_pos_element).second, std::ios_base::beg);
 
     serialization::fragment_serialize_size_format read;
     std::vector<char> buffer(CHUNK_COLLECTION_BUFFER_SIZE);
@@ -201,17 +202,22 @@ void chunk_collection::remove(const std::vector<uint8_t>& at)
                 }))
                 {
                     fragment_on_seekable_device reader(*m_workfile);
-                    auto read_from_this = read_indexed(item);
+                    auto read_from_source_chunk_collection = read_indexed(item);
 
-                    fragment_on_seekable_device writer(cc_tmp, reader.getIndex());
-                    writer.write(read_from_this.first);
+                    fragment_on_seekable_device writer(cc_tmp, read_from_source_chunk_collection.second.index_num);
+                    writer.write(read_from_source_chunk_collection.first);
                 }
             }
         }
 
         m_workfile->close();
         cc_tmp.close();
-        cc_tmp.rename(m_workfile->path());
+
+        std::filesystem::path replace_preparation_chunk_collection = m_workfile->path().replace_extension(".tmp");
+        cc_tmp.release_to(replace_preparation_chunk_collection);
+
+        std::filesystem::remove(m_workfile->path());
+        std::filesystem::rename(replace_preparation_chunk_collection, m_workfile->path());
     }
 
     m_workfile = std::make_unique<io::file>(m_workfile->path(), read_mode);
@@ -273,7 +279,7 @@ chunk_collection::read_indexed_multi(const std::vector<uint8_t>& at)
         std::streamoff distance_filtered_projected_to_at =
             std::distance(at.begin(), std::find(at.begin(), at.end(), at_item));
 
-        out_list[distance_filtered_projected_to_at] = std::move(std::make_pair(std::move(output), read));
+        out_list[distance_filtered_projected_to_at] = std::make_pair(output, read);
     }
 
     return out_list;
