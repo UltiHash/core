@@ -395,6 +395,13 @@ UDB_RESULT udb_destroy_write_query(UDB_WRITE_QUERY* ptr_to_write_query_ptr)
 struct UDB_WRITE_QUERY_RESULTS
 {
     std::span<uint32_t> effective_sizes;
+    std::span<uint8_t> return_code;
+
+    ~UDB_WRITE_QUERY_RESULTS()
+    {
+        delete [] effective_sizes.data();
+        delete [] return_code.data();
+    }
 };
 
 // ---------------------------------------------------------------------
@@ -471,11 +478,11 @@ UDB_WRITE_QUERY_RESULTS* udb_put(UDB_CONNECTION* conn, UDB_WRITE_QUERY* write_qu
                                                                  std::span<char>(data.data(), data.size())
                                                          });
 
-        // TODO: optimize it since reserve is not used
-
         auto* results = new UDB_WRITE_QUERY_RESULTS();
+        results->return_code = std::span<uint8_t>(resp.return_codes);
         results->effective_sizes = std::span<uint32_t>(resp.effective_sizes);
         resp.effective_sizes.data.release();
+        resp.return_codes.data.release();
 
         return results;
     }
@@ -689,7 +696,7 @@ UDB_READ_QUERY_RESULTS* udb_get(UDB_CONNECTION* conn, UDB_READ_QUERY* read_query
 
                 for (size_t index = 0; index < read_query->start_key.size(); index++)
                 {
-                    single_key_sizes.push_back(read_query->start_key.size());
+                    single_key_sizes.push_back(read_query->start_key[index].size);
                     data.insert(data.end(), read_query->start_key[index].data,
                                 read_query->start_key[index].data + read_query->start_key[index].size);
 

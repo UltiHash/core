@@ -310,6 +310,8 @@ size_t udb_get_effective_sizes_count(UDB_WRITE_QUERY_RESULTS* results);
  */
 uint32_t udb_get_effective_size(UDB_WRITE_QUERY_RESULTS* results, size_t index);
 
+// FUNCTION TO GET RETURN CODE
+
 /**
  * Putting the document in the database.
  * @param conn pointer to ::UDB_CONNECTION struct
