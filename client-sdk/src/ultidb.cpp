@@ -237,17 +237,7 @@ struct UDB_CONNECTION_STRUCT
         }
     }
 
-    ~UDB_CONNECTION_STRUCT()
-    {
-        try
-        {
-            m_udb_client->quit("quit request after successful operation,");
-        }
-        catch(const std::exception& e)
-        {
-            THROW(uh::util::exception, "error on quit request");
-        }
-    }
+    ~UDB_CONNECTION_STRUCT() = default;
 };
 
 // ---------------------------------------------------------------------

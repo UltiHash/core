@@ -92,7 +92,19 @@ int main()
             exit(1);
         }
 
-//        size_t effective_size_1 =
+        /* print all effective sizes */
+        size_t eff_count = udb_get_effective_sizes_count(write_results);
+
+        std::cout << "Effective Sizes: ";
+        for (auto count = 0; count < eff_count; count++)
+        {
+            std::cout << udb_get_effective_size(write_results, count) << " ";
+        }
+        std::cout << "\n\n";
+
+        int return_code_1 = udb_get_return_code(write_results, 0);
+        int return_code_2 = udb_get_return_code(write_results, 1);
+        std::cout << "Return code: " << return_code_1 << " " << return_code_2 << "\n\n";
 
     /* getting a documents from the database */
 
