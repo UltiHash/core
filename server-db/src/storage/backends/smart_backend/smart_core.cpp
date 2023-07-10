@@ -7,6 +7,7 @@
 #include "storage/backends/smart_backend/persistent_maps/persisted_robinhood_hashmap.h"
 #include "logging/logging_boost.h"
 
+
 #include <ranges>
 
 
@@ -35,6 +36,7 @@ std::pair <std::uint8_t, std::size_t>  smart_core::integrate(std::span <char> ke
         else if (insert_type == util::insertion_type::INSERT_IGNORE) {
             return {0, 0};
         }
+
         //TODO should we compare the data as well? It can be that the data
         // is different and we do not notice it
     }
