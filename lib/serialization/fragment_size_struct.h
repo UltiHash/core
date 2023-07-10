@@ -1,13 +1,16 @@
-//
-// Created by benjamin-elias on 22.05.23.
-//
+#ifndef CORE_FRAGMENT_SIZE_STRUCT_H
+#define CORE_FRAGMENT_SIZE_STRUCT_H
+
+#include <serialization/simple_arithmetic_serializer.h>
+#include <serialization/simple_arithmetic_deserializer.h>
+#include <io/device.h>
+#include <io/buffer.h>
 
 #include <cstdint>
 #include <ios>
 #include <sstream>
-
-#ifndef CORE_FRAGMENT_SIZE_STRUCT_H
-#define CORE_FRAGMENT_SIZE_STRUCT_H
+#include <cstring>
+#include <algorithm>
 
 namespace uh::serialization
 {
@@ -27,19 +30,27 @@ struct fragment_serialize_size_format
         header_size(header_len), content_size(content_len), index_num(index_num)
     {}
 
-    [[nodiscard]] std::ostringstream serialize() const
+    [[nodiscard]] std::vector<char> serialize() const
     {
-        std::ostringstream ss;
-        ss << content_size;
-        ss << index_num;
-        ss << header_size;
-        return ss;
+        io::buffer buf;
+        simple_arithmetic_serializer ser(buf);
+        ser.write(content_size);
+        ser.write(header_size);
+        ser.write(index_num);
+
+        std::vector<char> out_buf(sizeof(content_size) + sizeof(header_size) + sizeof(index_num));
+        io::read(buf, out_buf);
+
+        return out_buf;
     }
 
-    void deserialize(std::istringstream& input){
-        input.read(reinterpret_cast<char*>(content_size),sizeof(content_size));
-        input.read(reinterpret_cast<char*>(header_size),sizeof(header_size));
-        input.read(reinterpret_cast<char*>(index_num),sizeof(index_num));
+    void deserialize(io::device& input_dev)
+    {
+        simple_arithmetic_deserializer ser(input_dev);
+
+        content_size = ser.read<decltype(content_size)>();
+        header_size = ser.read<decltype(header_size)>();
+        index_num = ser.read<decltype(index_num)>();
     }
 
 };

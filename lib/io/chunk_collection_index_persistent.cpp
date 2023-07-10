@@ -1,5 +1,6 @@
 #include "chunk_collection_index_persistent.h"
 #include <io/fragment_on_seekable_device.h>
+#include <io/buffer.h>
 
 #include <string>
 
@@ -40,8 +41,10 @@ maybe_index_persist_chunk_collection(std::unique_ptr<io::file>& collection_file)
         while (io::read(read_index_file, read_buffer))
         {
             serialization::fragment_serialize_size_format skip_format;
-            std::istringstream ss(read_buffer);
-            skip_format.deserialize(ss);
+
+            io::buffer read_buffer_device;
+            io::write_from_buffer(read_buffer_device, read_buffer);
+            skip_format.deserialize(read_buffer_device);
 
             output_index.emplace_back(skip_format, collection_offset);
             collection_offset += skip_format.header_size + skip_format.content_size;
@@ -80,7 +83,8 @@ maybe_index_persist_chunk_collection(std::unique_ptr<io::file>& collection_file)
 
             output_index.emplace_back(skip_format, collection_offset);
 
-            io::write(write_index_file, skip_format.serialize().str());
+            auto frag_ser_size_format = skip_format.serialize();
+            io::write(write_index_file, std::span{frag_ser_size_format.begin(), frag_ser_size_format.end()});
 
             collection_offset += skip_format.header_size + skip_format.content_size;
             index_entry_count++;
@@ -145,7 +149,7 @@ void chunk_collection_index_persistent::erase_index_items(const std::vector<uint
         {
             return beg->first.index_num == item;
         }))
-            io::write(erase_tmp, read_buffer);
+            io::write(erase_tmp, std::span{read_buffer.begin(), read_buffer.end()});
         beg++;
     }
 
@@ -192,7 +196,8 @@ std::pair<serialization::fragment_serialize_size_format,
 
     maybe_recreate_index_file();
 
-    m_index_file_size += io::write(*m_index_file, back().first.serialize().str());
+    auto frag_ser_size_format = back().first.serialize();
+    m_index_file_size += io::write(*m_index_file, std::span{frag_ser_size_format.begin(), frag_ser_size_format.end()});
 
     return tmp;
 }
