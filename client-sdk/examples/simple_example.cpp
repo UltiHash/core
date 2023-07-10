@@ -43,7 +43,7 @@ int main()
     /* some random data */
 
         /* data */
-        char test_data_1[] = "Key 1 Test! The quick brown fox jumps over the lazy dog. Pack my box with five dozen liquor jugs. "
+        char test_data_1[] = "The quick brown fox jumps over the lazy dog. Pack my box with five dozen liquor jugs. "
                            "How quickly daft jumping zebras vex. Crazy Fredrick bought many very exquisite opal jewels. "
                            "The five boxing wizards jump quickly. Mr. Jock, TV quiz PhD, bags few lynx. Sphinx of black "
                            "quartz, judge my vow. Jackdaws love my big sphinx of quartz. Bright vixens jump; dozy fowl "
@@ -78,10 +78,6 @@ int main()
             exit(1);
         }
 
-//        /* can create a loop and get all the effective sizes */
-//        auto count = udb_get_effective_sizes_count(write_results);
-//        auto eff_size = udb_get_effective_size(write_results, 0);
-
     /* getting a documents from the database */
 
         /* create a read query*/
@@ -106,13 +102,13 @@ int main()
     /* cleanup */
 
         /* getting document */
-        udb_destroy_read_query_results(&results);
-        udb_destroy_read_query(&test_read_query);
+        udb_destroy_read_query_results(results);
+        udb_destroy_read_query(test_read_query);
 
         /* putting document */
-        udb_destroy_write_query_results(&write_results);
-        udb_destroy_write_query(&test_write_query);
-        udb_destroy_document(&test_doc_1);
+        udb_destroy_write_query_results(write_results);
+        udb_destroy_write_query(test_write_query);
+        udb_destroy_document(test_doc_1);
 
         /* initialization stuffs */
         udb_destroy_connection(udb_conn);

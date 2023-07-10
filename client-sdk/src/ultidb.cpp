@@ -340,12 +340,11 @@ UDB_DOCUMENT* udb_init_document(char* key, size_t key_size, char* value, size_t 
 
 // ---------------------------------------------------------------------
 
-UDB_RESULT udb_destroy_document(UDB_DOCUMENT_STRUCT** ptr_to_document_ptr)
+UDB_RESULT udb_destroy_document(UDB_DOCUMENT_STRUCT* ptr_to_document_ptr)
 {
     try
     {
-        delete *ptr_to_document_ptr;
-        *ptr_to_document_ptr = nullptr;
+        delete ptr_to_document_ptr;
         return UDB_RESULT_SUCCESS;
     }
     catch(const std::exception& e)
@@ -379,12 +378,11 @@ void udb_write_query_add_document(UDB_WRITE_QUERY* write_query, UDB_DOCUMENT* do
 
 // ---------------------------------------------------------------------
 
-UDB_RESULT udb_destroy_write_query(UDB_WRITE_QUERY** ptr_to_write_query_ptr)
+UDB_RESULT udb_destroy_write_query(UDB_WRITE_QUERY* ptr_to_write_query_ptr)
 {
     try
     {
-        delete *ptr_to_write_query_ptr;
-        *ptr_to_write_query_ptr = nullptr;
+        delete ptr_to_write_query_ptr;
         return UDB_RESULT::UDB_RESULT_SUCCESS;
     }
     catch(const std::exception& e)
@@ -403,12 +401,11 @@ struct UDB_WRITE_QUERY_RESULTS
 
 // ---------------------------------------------------------------------
 
-UDB_RESULT udb_destroy_write_query_results(UDB_WRITE_QUERY_RESULTS** results)
+UDB_RESULT udb_destroy_write_query_results(UDB_WRITE_QUERY_RESULTS* results)
 {
     try
     {
-        delete *results;
-        *results = nullptr;
+        delete results;
         return UDB_RESULT::UDB_RESULT_SUCCESS;
     }
     catch(const std::exception& e)
@@ -611,12 +608,11 @@ UDB_RESULT udb_read_query_add_label(UDB_READ_QUERY* read_query, char** labels, s
 
 // ---------------------------------------------------------------------
 
-UDB_RESULT udb_destroy_read_query(UDB_READ_QUERY** read_query_ptr_container)
+UDB_RESULT udb_destroy_read_query(UDB_READ_QUERY* read_query_ptr_container)
 {
     try
     {
-        delete *read_query_ptr_container;
-        *read_query_ptr_container = nullptr;
+        delete read_query_ptr_container;
 
         return UDB_RESULT_SUCCESS;
     }
@@ -641,12 +637,11 @@ struct UDB_READ_QUERY_RESULTS
 
 // ---------------------------------------------------------------------
 
-UDB_RESULT udb_destroy_read_query_results(UDB_READ_QUERY_RESULTS** results)
+UDB_RESULT udb_destroy_read_query_results(UDB_READ_QUERY_RESULTS* results)
 {
     try
     {
-        delete *results;
-        *results = nullptr;
+        delete results;
 
         return UDB_RESULT_SUCCESS;
     }
@@ -692,24 +687,24 @@ UDB_READ_QUERY_RESULTS* udb_get(UDB_CONNECTION* conn, UDB_READ_QUERY* read_query
                 break;
 
             case MULTIPLE_KEYS:
-//                start_key_sizes.push_back(0);
-//                end_key_sizes.push_back(0);
-//
-//                for (size_t index = 0; index < read_query->start_key.size(); index++)
-//                {
-//                    single_key_sizes.push_back(read_query->start_key[index]->size);
-//                    data.insert(data.end(), read_query->start_key[index]->data,
-//                                read_query->start_key[index]->data + read_query->start_key[index]->size);
-//
-//                    label_counts.push_back(read_query->label_count);
-//
-//                    for (index = 0; index < read_query->label_count; index++)
-//                    {
-//                        auto label_size = sizeof(read_query->labels[index]);
-//                        label_sizes.push_back(label_size);
-//                        data.insert(data.end(), read_query->labels[index], read_query->labels[index] + label_size);
-//                    }
-//                }
+                start_key_sizes.push_back(0u);
+                end_key_sizes.push_back(0u);
+
+                for (size_t index = 0; index < read_query->start_key.size(); index++)
+                {
+                    single_key_sizes.push_back(read_query->start_key.size());
+                    data.insert(data.end(), read_query->start_key[index].data,
+                                read_query->start_key[index].data + read_query->start_key[index].size);
+
+                    label_counts.push_back(read_query->label_count);
+
+                    for (index = 0; index < read_query->label_count; index++)
+                    {
+                        auto label_size = sizeof(read_query->labels[index]);
+                        label_sizes.push_back(label_size);
+                        data.insert(data.end(), read_query->labels[index], read_query->labels[index] + label_size);
+                    }
+                }
 
                 break;
 
@@ -770,9 +765,12 @@ UDB_READ_QUERY_RESULTS* udb_get(UDB_CONNECTION* conn, UDB_READ_QUERY* read_query
                 key[read_query->start_key[0].size] = '\0';
                 key_size = read_query->start_key[0].size;
             }
-            else
+            else if (read_query->query_type == MULTIPLE_KEYS)
             {
-                //TODO for multiple keys and range keys
+                for (size_t index = 0; index < read_query->start_key.size(); index++)
+                {
+
+                }
             }
 
 
@@ -851,50 +849,79 @@ bool udb_results_next(UDB_READ_QUERY_RESULTS* results_container, UDB_READ_QUERY_
 
 // ---------------------------------------------------------------------
 
-//size_t udb_get_documents_count(UDB_DOCUMENTS* docs)
-//{
-//    return docs->count;
-//}
-//
-//// ---------------------------------------------------------------------
-//
-//UDB_DOCUMENT* udb_get_document(UDB_DOCUMENTS* docs, size_t index)
-//{
-//    return docs->documents[index];
-//}
-//
-//// ---------------------------------------------------------------------
-//
-//UDB_DATA* udb_get_key(UDB_DOCUMENT* doc)
-//{
-//    return doc->key;
-//}
-//
-//// ---------------------------------------------------------------------
-//
-//UDB_DATA* udb_get_value(UDB_DOCUMENT* doc)
-//{
-//    std::string test_str;
-//    for (size_t i=0; i< doc->value->size; i++)
-//    {
-//        test_str.push_back(doc->value->data[i]);
-//    }
-//    return doc->value;
-//}
-//
-//// ---------------------------------------------------------------------
-//
-//size_t udb_get_labels_count(UDB_DOCUMENT* doc)
-//{
-//    return doc->label_count;
-//}
-//
-//// ---------------------------------------------------------------------
-//
-//char* udb_get_label(UDB_DOCUMENT* doc, size_t label_index)
-//{
-//    return doc->labels[label_index];
-//}
+size_t udb_get_results_count(UDB_READ_QUERY_RESULTS* results)
+{
+    return results->results_container.size();
+}
+
+
+// ---------------------------------------------------------------------
+
+UDB_READ_QUERY_RESULT* udb_get_result(UDB_READ_QUERY_RESULTS* results, size_t index)
+{
+    return &results->results_container[index];
+}
+
+// ---------------------------------------------------------------------
+
+UDB_DATA* udb_get_key(UDB_DOCUMENT* doc)
+{
+    try
+    {
+        return new UDB_DATA(doc->key, doc->key_size);
+    }
+    catch (const std::bad_alloc& e)
+    {
+        error = UDB_BAD_ALLOCATION;
+        return nullptr;
+    }
+    catch (const std::exception& e)
+    {
+        error = UDB_RESULT_ERROR;
+        return nullptr;
+    }
+}
+
+// ---------------------------------------------------------------------
+
+UDB_DATA* udb_get_value(UDB_DOCUMENT* doc)
+{
+    try
+    {
+        return new UDB_DATA(doc->value, doc->value_size);
+    }
+    catch (const std::bad_alloc& e)
+    {
+        error = UDB_BAD_ALLOCATION;
+        return nullptr;
+    }
+    catch (const std::exception& e)
+    {
+        error = UDB_RESULT_ERROR;
+        return nullptr;
+    }
+}
+
+// ---------------------------------------------------------------------
+
+size_t udb_get_labels_count(UDB_DOCUMENT* doc)
+{
+    return doc->label_count;
+}
+
+// ---------------------------------------------------------------------
+
+char* udb_get_label(UDB_DOCUMENT* doc, size_t label_index)
+{
+    return doc->labels[label_index];
+}
+
+// ---------------------------------------------------------------------
+
+UDB_RESULT udb_destory_udb_data(UDB_DATA* data)
+{
+    delete data;
+}
 
 // ---------------------------------------------------------------------
 

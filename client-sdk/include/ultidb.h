@@ -145,6 +145,13 @@ struct UDB_READ_QUERY_RESULT
                           key(rec_key), key_size(rec_value_size), value(rec_value), value_size(rec_value_size),
                           labels(rec_labels), label_count(rec_label_count)
     {}
+
+    ~UDB_READ_QUERY_RESULT()
+    {
+        delete [] key;
+        delete [] value;
+        delete [] labels;
+    }
 };
 
 /**
@@ -168,7 +175,7 @@ UDB_CONFIG* udb_create_config();
  * @param config config instance to be deallocated
  * @return enum that describes the result of the operation
  */
-UDB_RESULT udb_destroy_config(UDB_CONFIG *config);
+UDB_RESULT udb_destroy_config(UDB_CONFIG* config);
 
 /**
  * Sets the connection parameters of the host node in the given config file.
@@ -248,7 +255,7 @@ UDB_DOCUMENT* udb_init_document(char* key, size_t key_size, char* value, size_t 
  * @param doc document to deallocate
  * @return UDB_RESULT enum that describes the result of the operation
  */
-UDB_RESULT udb_destroy_document(UDB_DOCUMENT** ptr_to_document_ptr);
+UDB_RESULT udb_destroy_document(UDB_DOCUMENT* ptr_to_document_ptr);
 
 /**
  * Creating a write query to use when putting a document.
@@ -271,7 +278,7 @@ void udb_write_query_add_document(UDB_WRITE_QUERY* write_query, UDB_DOCUMENT* do
  *
  * @return UDB_RESULT enum that describes the result of the operation
  */
-UDB_RESULT udb_destroy_write_query(UDB_WRITE_QUERY** write_query);
+UDB_RESULT udb_destroy_write_query(UDB_WRITE_QUERY* write_query);
 
 /**
  * pointer to the results given by udb_add.
@@ -287,7 +294,7 @@ struct UDB_WRITE_QUERY_RESULTS;
 
  * @return UDB_RESULT enum that describes the result of the operation
  */
-UDB_RESULT udb_destroy_write_query_results(UDB_WRITE_QUERY_RESULTS** results);
+UDB_RESULT udb_destroy_write_query_results(UDB_WRITE_QUERY_RESULTS* results);
 
 /**
  * Gets the count of the effective sizes returned after putting each document from the write
@@ -354,7 +361,7 @@ UDB_RESULT udb_read_query_set_labels(UDB_READ_QUERY* read_query, char** labels, 
  *
  * @return UDB_RESULT enum that describes the result of the operation
  */
-UDB_RESULT udb_destroy_read_query(UDB_READ_QUERY** read_query_ptr_container);
+UDB_RESULT udb_destroy_read_query(UDB_READ_QUERY* read_query_ptr_container);
 
 /**
  * Getting the document using the ::UDB_READ_QUERY struct. Returns a pointer to the ::UDB_READ_QUERY_RESULTS
@@ -389,14 +396,59 @@ bool udb_results_next(UDB_READ_QUERY_RESULTS* results_container, UDB_READ_QUERY_
  * the ::UDB_READ_QUERY_RESULTS struct is no longer valid.
  * @return UDB_RESULT enum that describes the result of the operation
  */
-UDB_RESULT udb_destroy_read_query_results(UDB_READ_QUERY_RESULTS** results);
+UDB_RESULT udb_destroy_read_query_results(UDB_READ_QUERY_RESULTS* results);
 
-/* Getters */
+/**
+ * Gets the count of ::UDB_READ_QUERY_RESULT inside the ::UDB_READ_QUERY_RESULTS struct
+ *
+ * @param results pointer to the ::UDB_READ_QUERY_RESULTS struct
+ * @return size_t number of ::UDB_READ_QUERY_RESULT in the retrieved read query
+ */
 size_t udb_get_results_count(UDB_READ_QUERY_RESULTS* results);
+
+/**
+ * Gets the pointer to the ::UDB_READ_QUERY_RESULT at a given index inside the ::UDB_READ_QUERY_RESULTS struct
+ * @param results pointer to the ::UDB_READ_QUERY_RESULTS struct
+ * @param index position of ::UDB_READ_QUERY_RESULT inside ::UDB_READ_QUERY_RESULTS to get
+ * @return pointer to the ::UDB_READ_QUERY_RESULT struct
+ */
 UDB_READ_QUERY_RESULT* udb_get_result(UDB_READ_QUERY_RESULTS* results, size_t index);
+
+UDB_RESULT udb_destroy_udb_data(UDB_DATA* data);
+
+/**
+ * Gets a pointer to the ::UDB_DATA struct which holds the key information. The struct is allocated and has to
+ * be deallocated with ::udb_destroy_udb_data function.
+ *
+ * @param doc pointer to the ::UDB_DOCUMENT struct
+ * @return pointer to the UDB_DATA struct which holds the key information i.e. char* and size_t
+ */
 UDB_DATA* udb_get_key(UDB_DOCUMENT* doc);
+
+/**
+ * Gets the value of the document. Returns a pointer to ::UDB_DATA which holds the value
+ * information i.e. char* and size_t
+ *
+ * @param doc pointer to the ::UDB_DOCUMENT struct
+ * @return pointer to the UDB_DATA struct which holds the key information i.e. char* and size_t
+ */
 UDB_DATA* udb_get_value(UDB_DOCUMENT* doc);
+
+/**
+ * Gets the count of the labels inside the document.
+ *
+ * @param doc pointer to the ::UDB_DOCUMENT struct
+ * @return number of labels that is in the document
+ */
 size_t udb_get_labels_count(UDB_DOCUMENT* doc);
+
+/**
+ * Gets the pointer to the null-terminated label string from the given index.
+ *
+ * @param doc pointer to the document
+ * @param label_index index of the label string which is to be retrieved
+ * @return pointer to the null-terminated label string at the given index
+ */
 char* udb_get_label(UDB_DOCUMENT* doc, size_t label_index);
 
 // ---------------------------------------------------------------------
