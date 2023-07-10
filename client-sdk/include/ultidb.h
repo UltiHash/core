@@ -85,6 +85,9 @@ typedef struct UDB_CONFIG_STRUCT UDB_CONFIG;
 
 /**
  * Opaque structure that holds the underlying connection to the database.
+ *
+ * Allocated and initialized with ::udb_create_connection.
+ * Cleaned up and deallocated with ::udb_destroy_connection.
  */
 typedef struct UDB_CONNECTION_STRUCT UDB_CONNECTION;
 

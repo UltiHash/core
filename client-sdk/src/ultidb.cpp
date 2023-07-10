@@ -695,11 +695,11 @@ UDB_READ_QUERY_RESULTS* udb_get(UDB_CONNECTION* conn, UDB_READ_QUERY* read_query
 
                     label_counts.push_back(read_query->label_count);
 
-                    for (index = 0; index < read_query->label_count; index++)
+                    for (auto count = 0; count < read_query->label_count; count++)
                     {
-                        auto label_size = sizeof(read_query->labels[index]);
+                        auto label_size = sizeof(read_query->labels[count]);
                         label_sizes.push_back(label_size);
-                        data.insert(data.end(), read_query->labels[index], read_query->labels[index] + label_size);
+                        data.insert(data.end(), read_query->labels[count], read_query->labels[count] + label_size);
                     }
                 }
 
