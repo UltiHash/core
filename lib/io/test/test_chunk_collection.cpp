@@ -169,7 +169,6 @@ BOOST_AUTO_TEST_CASE(remove_fragment_multi_chunk_collection)
         chunk_collection cc(TEMP_DIR, true);
 
         cc.write_indexed_multi(to_write_span);
-        cc.maybe_forget_chunk_collection_index_file();
 
         collection_file_path = cc.getPath();
         cc.release_to(collection_file_path);

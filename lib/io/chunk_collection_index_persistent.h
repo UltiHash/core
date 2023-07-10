@@ -136,6 +136,12 @@ private:
     bool m_index_file_forgotten = false;
 
     std::recursive_mutex m_index_work_mux{};
+
+    std::vector<uint16_t> update_offset_calculate_delete_pos_list(const std::vector<uint8_t>& at);
+
+    void remove_persistent_index_file_items(const std::vector<uint16_t>& delete_pos_list);
+
+    std::size_t update_erase_size(const std::vector<uint16_t>& delete_pos_list);
 };
 
 // ---------------------------------------------------------------------
