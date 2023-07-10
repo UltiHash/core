@@ -2,6 +2,7 @@
 // Created by masi on 5/27/23.
 //
 #include "growing_plain_storage.h"
+#include <cstring>
 
 namespace uh::dbn::storage::smart {
 
@@ -45,7 +46,9 @@ char *growing_plain_storage::init_mmap(const std::filesystem::path &file_path, s
     const auto fd = open(file_path.c_str(), O_CREAT | O_RDWR, S_IRUSR | S_IWUSR);
     if (!existing_storage) {
         file_size = init_size;
-        ftruncate(fd, file_size);
+        if (ftruncate(fd, file_size) != 0) {
+            std::filesystem::filesystem_error (errno);
+        }
     }
     else {
         file_size = lseek (fd, 0, SEEK_END);
@@ -68,8 +71,9 @@ void growing_plain_storage::extend_mapping() {
     m_file_size *= 2;
 
     const auto fd = open(m_file_path.c_str(), O_RDWR);
-    ftruncate(fd, m_file_size);
-
+    if (ftruncate(fd, m_file_size) != 0) {
+        std::filesystem::filesystem_error (errno);
+    }
     m_storage = static_cast <char*> (mmap(nullptr, m_file_size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0));
     close(fd);
 

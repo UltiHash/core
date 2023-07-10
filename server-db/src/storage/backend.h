@@ -3,6 +3,7 @@
 
 #include <protocol/server.h>
 #include "utils.h"
+#include "util/structured_queries.h"
 
 
 namespace uh::dbn::storage {
@@ -54,9 +55,9 @@ namespace uh::dbn::storage {
         virtual std::pair <std::size_t, std::vector <char>> write_block (const std::span <const char>& data) = 0;
 
         /**
-         * Writes the key value to the storage backend and returns the effective size
+         * Writes the key value to the storage backend and returns the effective size and the return code (success or failed)
          */
-        virtual std::size_t write_key_value (const std::span <char>& key, const std::span <char>& data) {
+        virtual std::pair <std::uint8_t, std::size_t> write_key_value (const std::span <char>& key, const std::span <char>& data, util::insertion_type) {
             THROW(util::exception, "not implemented");
         }
 

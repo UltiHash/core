@@ -215,4 +215,8 @@ void persisted_robinhood_hashmap::remove(std::span<char> key) {
     std::runtime_error ("not implemented");
 }
 
+void persisted_robinhood_hashmap::update(std::span<char> key, std::span<char> value, const sets::index_type &pos) {
+    std::runtime_error ("not implemented");
+}
+
 } // end namespace uh::dbn::storage::smart::key_stores
