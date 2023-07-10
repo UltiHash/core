@@ -30,9 +30,9 @@ public:
 
     void seek(std::streamoff off, std::ios_base::seekdir whence) override;
 
-    void reopen();
-
     void close();
+
+    bool is_open();
 
     /**
      * @return the path of the file.

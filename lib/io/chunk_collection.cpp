@@ -81,6 +81,8 @@ std::unique_ptr<io::file> maybe_repair_chunk_collection(std::unique_ptr<io::file
 
 chunk_collection::~chunk_collection()
 {
+    std::lock_guard lock(m_chunk_collection_workmux);
+
     m_workfile->close();
 
     if (m_behave_like_tempfile or (std::filesystem::exists(getPath()) and std::filesystem::is_empty(getPath())))
@@ -104,7 +106,9 @@ chunk_collection::chunk_collection(std::filesystem::path collection_temp_directo
 // ---------------------------------------------------------------------
 
 serialization::fragment_serialize_size_format
-chunk_collection::write_indexed(std::span<const char> buffer, uint32_t alloc)
+chunk_collection::write_indexed(std::span<const char> buffer,
+                                uint32_t alloc,
+                                bool flush_after_operation)
 {
     std::lock_guard lock(m_chunk_collection_workmux);
 
@@ -117,7 +121,9 @@ chunk_collection::write_indexed(std::span<const char> buffer, uint32_t alloc)
 
     const auto write_mode = std::ios_base::binary | std::ios_base::app;
 
-    if (m_workfile->mode() != m_workfile->size() ? write_mode : std::ios_base::binary | std::ios_base::out)
+    if (not m_workfile->is_open() or
+        m_workfile->mode() != m_workfile->size() ? write_mode : std::ios_base::binary
+            | std::ios_base::out)
         m_workfile = std::make_unique<io::file>(m_workfile->path(), write_mode);
 
     auto temporarily_cached_fragment_on_seekable_device =
@@ -129,12 +135,15 @@ chunk_collection::write_indexed(std::span<const char> buffer, uint32_t alloc)
         temporarily_cached_fragment_on_seekable_device.write(buffer, allocate_space);
 
     if (m_index.empty())
-        m_index.emplace_back_index(written, 0);
+        m_index.emplace_back_index(written, 0, flush_after_operation);
     else
         m_index.emplace_back_index(written,
                                    m_index.back().second +
                                        m_index.back().first.header_size +
-                                       m_index.back().first.content_size);
+                                       m_index.back().first.content_size, flush_after_operation);
+
+    if (flush_after_operation)
+        m_workfile->close();
 
     return written;
 }
@@ -148,7 +157,8 @@ chunk_collection::read_indexed(uint8_t at)
 
     const auto read_mode = std::ios_base::binary | std::ios_base::in;
 
-    if (m_workfile->mode() != read_mode)
+    if (not m_workfile->is_open()
+        or m_workfile->mode() != read_mode)
         m_workfile = std::make_unique<io::file>(m_workfile->path(), read_mode);
 
     auto fragment_pos_element = m_index.find_address(at, m_index.begin());
@@ -228,7 +238,8 @@ void chunk_collection::remove(const std::vector<uint8_t>& at)
 // ---------------------------------------------------------------------
 
 std::vector<serialization::fragment_serialize_size_format>
-chunk_collection::write_indexed_multi(const std::vector<std::span<const char>>& buffer)
+chunk_collection::write_indexed_multi(const std::vector<std::span<const char>>& buffer,
+                                      bool flush_after_operation)
 {
     std::lock_guard lock(m_chunk_collection_workmux);
 
@@ -244,8 +255,13 @@ chunk_collection::write_indexed_multi(const std::vector<std::span<const char>>& 
 
     std::vector<serialization::fragment_serialize_size_format> out_list{};
 
+    std::size_t count_till_end_to_flush{};
     for (const auto& item : buffer)
-        out_list.push_back(write_indexed(item));
+    {
+        count_till_end_to_flush++;
+        out_list.push_back(write_indexed(item, 0,
+                                         count_till_end_to_flush == buffer.size() and flush_after_operation));
+    }
 
     return out_list;
 }

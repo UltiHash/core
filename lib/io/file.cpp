@@ -60,19 +60,17 @@ void file::seek(std::streamoff off, std::ios_base::seekdir whence)
 
 // ---------------------------------------------------------------------
 
-void file::reopen()
-{
-    m_io = std::fstream (m_path,m_mode);
-}
-
-// ---------------------------------------------------------------------
-
 void file::close()
 {
     m_io.close();
 }
 
 // ---------------------------------------------------------------------
+
+bool file::is_open()
+{
+    return m_io.is_open();
+}
 
 std::filesystem::path file::path()
 {

@@ -35,7 +35,8 @@ public:
      */
     std::pair<serialization::fragment_serialize_size_format,
               std::streamoff> emplace_back_index(serialization::fragment_serialize_size_format write_format,
-                                                 std::size_t emplace_size);
+                                                 std::size_t emplace_size,
+                                                 bool flush_after_operation = true);
 
     /**
      * delete multiple index positions from index and index file

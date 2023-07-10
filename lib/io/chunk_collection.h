@@ -46,7 +46,9 @@ public:
      * @return fragment_serialize_size_format
      */
     serialization::fragment_serialize_size_format write_indexed
-        (std::span<const char> buffer, uint32_t alloc = 0);
+        (std::span<const char> buffer,
+         uint32_t alloc = 0,
+         bool flush_after_operation = true);
 
     /**
      * read a certain index pointer and return a vector buffer of the content
@@ -63,7 +65,8 @@ public:
      * Does not close filestream.
      */
     std::vector<serialization::fragment_serialize_size_format>
-    write_indexed_multi(const std::vector<std::span<const char>>& buffer);
+    write_indexed_multi(const std::vector<std::span<const char>>& buffer,
+                        bool flush_after_operation = true);
 
     /**
      * read indexed multiple positions with smart seeking

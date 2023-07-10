@@ -69,8 +69,6 @@ BOOST_FIXTURE_TEST_CASE_TEMPLATE(seek_unspecified, T, device_types, Fixture )
     }
 
     file tf2(test_path, std::ios_base::in);
-    tf2.close();
-    tf2.reopen();
     tf2.seek(10, std::ios_base::cur);
 
     std::string copy(LOREM_IPSUM.size()-10, 0);

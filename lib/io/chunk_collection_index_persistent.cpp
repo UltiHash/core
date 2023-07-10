@@ -127,7 +127,8 @@ void chunk_collection_index_persistent::erase_index_items(const std::vector<uint
 
 std::pair<serialization::fragment_serialize_size_format,
           std::streamoff> chunk_collection_index_persistent::emplace_back_index(serialization::fragment_serialize_size_format write_format,
-                                                                                std::size_t emplace_size)
+                                                                                std::size_t emplace_size,
+                                                                                bool flush_after_operation)
 {
     std::lock_guard lock(m_index_work_mux);
 
@@ -135,8 +136,16 @@ std::pair<serialization::fragment_serialize_size_format,
 
     maybe_recreate_index_file();
 
+    std::ios_base::openmode write_mode = std::ios_base::binary | std::ios_base::app;
+
+    if (not m_index_file->is_open() or m_index_file->mode() != write_mode)
+        m_index_file = std::make_unique<io::file>(index_path(m_workfile), write_mode);
+
     auto frag_ser_size_format = back().first.serialize();
     m_index_file_size += io::write(*m_index_file, frag_ser_size_format);
+
+    if(flush_after_operation)
+        m_index_file->close();
 
     return tmp;
 }
@@ -341,7 +350,8 @@ void chunk_collection_index_persistent::maybe_recreate_index_file()
 
 // ---------------------------------------------------------------------
 
-std::vector<uint16_t> chunk_collection_index_persistent::update_offset_calculate_delete_pos_list(const std::vector<uint8_t>& at)
+std::vector<uint16_t> chunk_collection_index_persistent::update_offset_calculate_delete_pos_list(const std::vector<
+    uint8_t>& at)
 {
     std::lock_guard lock(m_index_work_mux);
 
@@ -379,7 +389,7 @@ void chunk_collection_index_persistent::remove_persistent_index_file_items(const
     std::string read_buffer;
     read_buffer.resize(sizeof(serialization::fragment_serialize_size_format));
 
-    m_index_file = std::make_unique<io::file>(m_index_file->path(), std::ios_base::in);
+    m_index_file = std::make_unique<io::file>(index_path(m_workfile), std::ios_base::binary | std::ios_base::in);
 
     while (io::read(*m_index_file, read_buffer))
     {
@@ -395,10 +405,7 @@ void chunk_collection_index_persistent::remove_persistent_index_file_items(const
     m_index_file->close();
     erase_tmp.release_to(erase_tmp.path());
     erase_tmp.rename(m_index_file->path());
-
-    m_index_file = std::make_unique<io::file>(m_index_file->path(), std::ios_base::app);
 }
-
 
 std::size_t chunk_collection_index_persistent::update_erase_size(const std::vector<uint16_t>& delete_pos_list)
 {
