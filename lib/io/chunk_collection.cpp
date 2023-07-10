@@ -31,12 +31,12 @@ std::unique_ptr<io::file> create_chunk_collection_file(std::filesystem::path& co
     if (create_tempfile)
     {
         std::unique_ptr<io::temp_file>
-            file = std::make_unique<io::temp_file>(collection_location, std::ios_base::app);
+            file = std::make_unique<io::temp_file>(collection_location, std::ios_base::binary | std::ios_base::app);
         file->release_to(file->path());
         collection_location = file->path();
     }
 
-    return std::make_unique<io::file>(io::file(collection_location, std::ios_base::app));
+    return std::make_unique<io::file>(io::file(collection_location, std::ios_base::binary | std::ios_base::app));
 }
 
 // ---------------------------------------------------------------------
@@ -67,7 +67,7 @@ std::unique_ptr<io::file> maybe_repair_chunk_collection(std::unique_ptr<io::file
 
         std::filesystem::rename(corrupted_tempfile_path, collection_file->path());
         collection_file = std::make_unique<io::file>(io::file(collection_file->path(),
-                                                              std::ios_base::app));
+                                                              std::ios_base::binary | std::ios_base::app));
     }
 
     return collection_file;
@@ -119,7 +119,7 @@ chunk_collection::write_indexed(std::span<const char> buffer,
     if (buffer.size() > TREE_STORAGE_CHUNK_LIMIT)
     THROW(util::exception, "Incoming writing buffer was too large!");
 
-    const auto write_mode = std::ios_base::app;
+    const auto write_mode = std::ios_base::binary | std::ios_base::app;
 
     if (not m_workfile->is_open() or
         m_workfile->mode() != write_mode)
@@ -154,7 +154,7 @@ chunk_collection::read_indexed(uint8_t at)
 {
     std::lock_guard lock(m_chunk_collection_workmux);
 
-    const auto read_mode = std::ios_base::in;
+    const auto read_mode = std::ios_base::binary | std::ios_base::in;
 
     if (not m_workfile->is_open()
         or m_workfile->mode() != read_mode)
@@ -197,7 +197,7 @@ void chunk_collection::remove(const std::vector<uint8_t>& at)
 {
     std::lock_guard lock(m_chunk_collection_workmux);
 
-    const auto read_mode = std::ios_base::in;
+    const auto read_mode = std::ios_base::binary | std::ios_base::in;
     m_workfile = std::make_unique<io::file>(m_workfile->path(), read_mode);
 
     {
@@ -379,7 +379,7 @@ void chunk_collection::release_to(const std::filesystem::path& release_path)
         THROW_FROM_ERRNO();
     }
 
-    m_workfile = std::make_unique<io::file>(release_path, std::ios_base::in);
+    m_workfile = std::make_unique<io::file>(release_path, std::ios_base::binary | std::ios_base::in);
 }
 
 // ---------------------------------------------------------------------

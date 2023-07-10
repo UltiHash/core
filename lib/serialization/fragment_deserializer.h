@@ -119,7 +119,6 @@ public:
             requires(Range range, InnerType inner_type) { range.resize(1); range[0] = inner_type; }
     std::pair<Range, fragment_serialize_size_format> read(fragment_serialize_transit_format data_size_index)
     {
-
         Range range;
         range.resize(data_size_index.content_size / sizeof(InnerType));
 

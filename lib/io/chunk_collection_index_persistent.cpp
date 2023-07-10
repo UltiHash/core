@@ -62,10 +62,13 @@ maybe_index_persist_chunk_collection(std::unique_ptr<io::file>& collection_file)
 
     if (collection_file->size())
     {
+        collection_file = std::make_unique<io::file>(filename_index, std::ios_base::binary | std::ios_base::in);
+        collection_file->seek(0, std::ios_base::beg);
+
         auto temporarily_cached_fragment_on_seekable_device =
             io::fragment_on_seekable_device(*collection_file);
 
-        io::file write_index_file(filename_index, std::ios_base::out);
+        io::file write_index_file(filename_index, std::ios_base::binary | std::ios_base::out);
 
         uint16_t index_entry_count{};
         serialization::fragment_serialize_size_format skip_format;
@@ -105,7 +108,8 @@ chunk_collection_index_persistent::chunk_collection_index_persistent(std::unique
     :
     std::vector<std::pair<serialization::fragment_serialize_size_format, std::streamoff>>(
         maybe_index_persist_chunk_collection(chunk_collection_file)),
-    m_index_file(std::make_unique<io::file>(index_path(chunk_collection_file), std::ios_base::in)),
+    m_index_file(std::make_unique<io::file>(index_path(chunk_collection_file),
+                                            std::ios_base::binary | std::ios_base::app)),
     m_workfile(chunk_collection_file),
     m_index_file_size(m_index_file->size())
 {}
@@ -136,7 +140,7 @@ std::pair<serialization::fragment_serialize_size_format,
 
     maybe_recreate_index_file();
 
-    std::ios_base::openmode write_mode = std::ios_base::app;
+    std::ios_base::openmode write_mode = std::ios_base::binary | std::ios_base::app;
 
     if (not m_index_file->is_open() or m_index_file->mode() != write_mode)
         m_index_file = std::make_unique<io::file>(index_path(m_workfile), write_mode);
@@ -144,7 +148,7 @@ std::pair<serialization::fragment_serialize_size_format,
     auto frag_ser_size_format = back().first.serialize();
     m_index_file_size += io::write(*m_index_file, frag_ser_size_format);
 
-    if(flush_after_operation)
+    if (flush_after_operation)
         m_index_file->close();
 
     return tmp;
@@ -343,7 +347,7 @@ void chunk_collection_index_persistent::maybe_recreate_index_file()
     if (m_index_file_forgotten)
     {
         maybe_index_persist_chunk_collection(m_workfile);
-        m_index_file = std::make_unique<io::file>(index_path(m_workfile), std::ios_base::app);
+        m_index_file = std::make_unique<io::file>(index_path(m_workfile), std::ios_base::binary | std::ios_base::app);
         m_index_file_forgotten = false;
     }
 }
@@ -383,13 +387,13 @@ void chunk_collection_index_persistent::remove_persistent_index_file_items(const
 {
     std::lock_guard lock(m_index_work_mux);
 
-    io::temp_file erase_tmp(m_index_file->path().parent_path(), std::ios_base::out);
+    io::temp_file erase_tmp(m_index_file->path().parent_path(), std::ios_base::binary | std::ios_base::out);
     auto beg = begin();
 
     std::string read_buffer;
     read_buffer.resize(sizeof(serialization::fragment_serialize_size_format));
 
-    m_index_file = std::make_unique<io::file>(index_path(m_workfile), std::ios_base::in);
+    m_index_file = std::make_unique<io::file>(index_path(m_workfile), std::ios_base::binary | std::ios_base::in);
 
     while (io::read(*m_index_file, read_buffer))
     {
