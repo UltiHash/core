@@ -54,7 +54,7 @@ public:
      *
      * @return the count of addresses used
      */
-    uint16_t count() const;
+    uint16_t count();
 
     /**
      *
@@ -87,13 +87,13 @@ public:
      *
      * @return if the chunk collection is full
      */
-    [[nodiscard]] bool full() const;
+    [[nodiscard]] bool full();
 
     /**
      *
      * @return tell how many addresses are still free
      */
-    uint16_t free() const;
+    uint16_t free();
 
     /**
      * @return next free address on chunk collection
@@ -128,12 +128,6 @@ public:
      * Recreate index file from chunk collection file
      */
     void maybe_recreate_index_file();
-
-    /**
-     *
-     * @return size of index file
-     */
-    std::size_t get_index_file_size() const;
 
 private:
     io::file m_index_file;

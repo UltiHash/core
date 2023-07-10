@@ -110,6 +110,8 @@ chunk_collection_index_persistent::chunk_collection_index_persistent(std::unique
 
 void chunk_collection_index_persistent::erase_index_items(const std::vector<uint8_t>& at)
 {
+    std::lock_guard lock(m_work_mux);
+
     maybe_recreate_index_file();
 
     auto seek_order_at_list = filtered_at_list_in_seek_order(at);
@@ -184,11 +186,13 @@ std::pair<serialization::fragment_serialize_size_format,
           std::streamoff> chunk_collection_index_persistent::emplace_back_index(serialization::fragment_serialize_size_format write_format,
                                                                                 std::size_t emplace_size)
 {
+    std::lock_guard lock(m_work_mux);
+
     auto tmp = emplace_back(write_format, emplace_size);
 
     maybe_recreate_index_file();
 
-    io::write(m_index_file, back().first.serialize().str());
+    m_index_file_size += io::write(m_index_file, back().first.serialize().str());
 
     return tmp;
 }
@@ -197,6 +201,8 @@ std::pair<serialization::fragment_serialize_size_format,
 
 std::vector<uint8_t> chunk_collection_index_persistent::get_index_num_content_list()
 {
+    std::lock_guard lock(m_work_mux);
+
     std::vector<uint8_t> out_list(count());
 
     std::size_t counter{};
@@ -212,8 +218,10 @@ std::vector<uint8_t> chunk_collection_index_persistent::get_index_num_content_li
 
 // ---------------------------------------------------------------------
 
-uint16_t chunk_collection_index_persistent::count() const
+uint16_t chunk_collection_index_persistent::count()
 {
+    std::lock_guard lock(m_work_mux);
+
     return static_cast<uint16_t>(std::distance(this->cbegin(), this->cend()));
 }
 
@@ -221,6 +229,8 @@ uint16_t chunk_collection_index_persistent::count() const
 
 std::size_t chunk_collection_index_persistent::size()
 {
+    std::lock_guard lock(m_work_mux);
+
     std::size_t accumulated{};
 
     for (const auto& item : *this)
@@ -235,6 +245,8 @@ std::size_t chunk_collection_index_persistent::size()
 
 std::size_t chunk_collection_index_persistent::size(uint8_t index_address)
 {
+    std::lock_guard lock(m_work_mux);
+
     auto found_address = find_address(index_address, this->begin());
 
     return found_address->first.header_size + found_address->first.content_size;
@@ -244,13 +256,17 @@ std::size_t chunk_collection_index_persistent::size(uint8_t index_address)
 
 std::size_t chunk_collection_index_persistent::index_file_size()
 {
-    return m_index_file.size();
+    std::lock_guard lock(m_work_mux);
+
+    return m_index_file_size;
 }
 
 // ---------------------------------------------------------------------
 
 std::size_t chunk_collection_index_persistent::content_size(uint8_t index_adress)
 {
+    std::lock_guard lock(m_work_mux);
+
     auto found_address = find_address(index_adress, this->begin());
 
     return found_address->first.content_size;
@@ -258,15 +274,19 @@ std::size_t chunk_collection_index_persistent::content_size(uint8_t index_adress
 
 // ---------------------------------------------------------------------
 
-bool chunk_collection_index_persistent::full() const
+bool chunk_collection_index_persistent::full()
 {
+    std::lock_guard lock(m_work_mux);
+
     return count() == std::numeric_limits<unsigned char>::max() + 1;
 }
 
 // ---------------------------------------------------------------------
 
-uint16_t chunk_collection_index_persistent::free() const
+uint16_t chunk_collection_index_persistent::free()
 {
+    std::lock_guard lock(m_work_mux);
+
     return static_cast<uint16_t>(std::numeric_limits<uint8_t>::max()) + 1 - count();
 }
 
@@ -276,6 +296,8 @@ uint16_t chunk_collection_index_persistent::free() const
 
 uint8_t chunk_collection_index_persistent::next_free_address()
 {
+    std::lock_guard lock(m_work_mux);
+
     if (full())
     THROW(util::exception,
           "There are no more free addresses on chunk collection index " + m_index_file.path().string() + " !");
@@ -303,6 +325,8 @@ uint8_t chunk_collection_index_persistent::next_free_address()
 
 std::vector<uint8_t> chunk_collection_index_persistent::filtered_at_list_in_seek_order(const std::vector<uint8_t>& at)
 {
+    std::lock_guard lock(m_work_mux);
+
     std::vector<uint8_t> index_num_list = get_index_num_content_list();
     std::vector<uint8_t> filtered_at_list_in_seek_order;
 
@@ -325,6 +349,8 @@ chunk_collection_index_persistent::find_address(uint8_t at,
                                                 std::vector<std::pair<serialization::fragment_serialize_size_format,
                                                                       std::streamoff>>::iterator start_pos)
 {
+    std::lock_guard lock(m_work_mux);
+
     auto fragment_pos_element = std::find_if(start_pos, this->end(),
                                              [&at](const std::pair<
                                                  serialization::fragment_serialize_size_format,
@@ -345,6 +371,8 @@ chunk_collection_index_persistent::find_address(uint8_t at,
 
 void chunk_collection_index_persistent::maybe_forget_index_file()
 {
+    std::lock_guard lock(m_work_mux);
+
     if (not m_index_file_forgotten)
     {
         m_index_file.close();
@@ -357,19 +385,14 @@ void chunk_collection_index_persistent::maybe_forget_index_file()
 
 void chunk_collection_index_persistent::maybe_recreate_index_file()
 {
+    std::lock_guard lock(m_work_mux);
+
     if (m_index_file_forgotten)
     {
         maybe_index_persist_chunk_collection(m_workfile);
         m_index_file = io::file(index_path(m_workfile), std::ios_base::app);
         m_index_file_forgotten = false;
     }
-}
-
-// ---------------------------------------------------------------------
-
-std::size_t chunk_collection_index_persistent::get_index_file_size() const
-{
-    return m_index_file_size;
 }
 
 // ---------------------------------------------------------------------
