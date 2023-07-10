@@ -59,7 +59,7 @@ write_query::write_query(structured_queries<protocol::write_key_value::request> 
     insert_type = static_cast<insertion_type> (data_ptr[wq.offset + key_size]);
     value = {data_ptr + key_size + sizeof(insert_type) + wq.offset, val_size};
 
-    handle_labels(wq, key_size + val_size, labels, data_ptr);
+    handle_labels(wq, key_size + val_size + sizeof(insert_type), labels, data_ptr);
 
 }
 
