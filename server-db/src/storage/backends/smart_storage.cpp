@@ -140,23 +140,6 @@ std::pair <std::uint8_t, std::size_t> smart_storage::write_key_value(const std::
     return res;
 }
 
-
-std::size_t smart_storage::write_key_value(const std::span<char> &key, const std::span<char> &data) {
-    std::size_t effective_size;
-
-    try {
-        std::lock_guard <std::shared_mutex> lock (m_mutex);
-        m_used += data.size();
-        effective_size = m_smart_core.integrate(key, std::string_view(data.data(), data.size()));
-        std::cout << "===============================" << m_smart_core.max_common << std::endl;
-        update_space_consumption();
-    } catch (std::exception& e) {
-        m_used -= data.size();
-        throw e;
-    }
-    return effective_size;
-}
-
 size_t smart_storage::free_space() {
     return m_size - m_used;
 }
