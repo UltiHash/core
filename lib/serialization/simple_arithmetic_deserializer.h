@@ -29,14 +29,16 @@ public:
     requires (std::is_arithmetic_v<T> or std::is_enum_v<T>)
     T read()
     {
-        std::vector<char> tmp(sizeof(T));
+        char tmp[sizeof(T)];
         io::read(dev_, tmp);
-        if constexpr (std::endian::native != std::endian::big)
-            std::reverse(tmp.begin(), tmp.end());
+        T sum_result{};
 
-        T* output_var = reinterpret_cast<T*>(tmp.data());
+        for(std::size_t i = 0; i < sizeof(T); i++){
+            T shift_tmp = (unsigned char) tmp[i];
+            sum_result += shift_tmp << (8 * (sizeof(T) - 1 - i));
+        }
 
-        return *output_var;
+        return sum_result;
     }
 };
 

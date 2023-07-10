@@ -9,6 +9,7 @@
 
 #include <cstring>
 #include <algorithm>
+#include <array>
 
 namespace uh::serialization
 {
@@ -27,10 +28,9 @@ public:
     requires (std::is_arithmetic_v<T> or std::is_enum_v<T>)
     void write(T data)
     {
-        std::vector<char> tmp(sizeof(data));
-        tmp.assign(&data, &data + sizeof(T));
-        if constexpr (std::endian::native != std::endian::big)
-            std::reverse(tmp.begin(), tmp.end());
+        std::array<char, sizeof(T)> tmp;
+        for (int i = 0; i < sizeof(T); i++)
+            tmp[sizeof(T) - 1 - i] = (data >> (i * 8));
 
         io::write(dev_, tmp);
     }
