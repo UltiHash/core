@@ -146,7 +146,7 @@ BOOST_AUTO_TEST_CASE(write_read_multi_chunk_collection)
 
 BOOST_AUTO_TEST_CASE(remove_fragment_multi_chunk_collection)
 {
-    chunk_collection cc(TEMP_DIR, true);
+    std::filesystem::path collection_file_path;
 
     std::vector<std::string> to_write;
 
@@ -165,14 +165,41 @@ BOOST_AUTO_TEST_CASE(remove_fragment_multi_chunk_collection)
         to_write_span.emplace_back(item.data(), item.size());
     }
 
-    cc.write_indexed_multi(to_write_span);
-    cc.maybe_forget_chunk_collection_index_file();
+    {
+        chunk_collection cc(TEMP_DIR, true);
 
-    cc.remove({3});
-    cc.maybe_forget_chunk_collection_index_file();
+        cc.write_indexed_multi(to_write_span);
+        cc.maybe_forget_chunk_collection_index_file();
+
+        collection_file_path = cc.getPath();
+        cc.release_to(collection_file_path);
+    }
+
+    chunk_collection cc(collection_file_path, false);
 
     auto valid_indexes = cc.get_index_num_content_list();
     std::vector<uint8_t> valid_indexes_simulation;
+
+    for (uint16_t i2 = 0; valid_indexes.size() + 1 > static_cast<std::size_t>(i2); i2++)
+    {
+        if (i2 == 3)
+        {
+            continue;
+        }
+        valid_indexes_simulation.push_back(i2);
+    }
+
+    BOOST_REQUIRE_EQUAL_COLLECTIONS(valid_indexes.cbegin(), valid_indexes.cend(),
+                                    valid_indexes_simulation.cbegin(), valid_indexes_simulation.cend());
+
+    auto cc_count_old = cc.count();
+    cc.remove({3});
+    BOOST_CHECK(cc_count_old-1 == cc.count());
+
+    cc.maybe_forget_chunk_collection_index_file();
+
+    valid_indexes = cc.get_index_num_content_list();
+    valid_indexes_simulation.clear();
 
     for (uint16_t i2 = 0; valid_indexes.size() + 1 > static_cast<std::size_t>(i2); i2++)
     {

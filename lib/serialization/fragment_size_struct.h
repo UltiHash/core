@@ -38,10 +38,9 @@ struct fragment_serialize_size_format
         ser.write(header_size);
         ser.write(index_num);
 
-        std::vector<char> out_buf(sizeof(content_size) + sizeof(header_size) + sizeof(index_num));
-        io::read(buf, out_buf);
+        uint16_t struct_size = sizeof(content_size) + sizeof(header_size) + sizeof(index_num);
 
-        return out_buf;
+        return {buf.data().begin(), buf.data().begin() + struct_size};
     }
 
     void deserialize(io::device& input_dev)

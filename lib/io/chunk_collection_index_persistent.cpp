@@ -84,7 +84,7 @@ maybe_index_persist_chunk_collection(std::unique_ptr<io::file>& collection_file)
             output_index.emplace_back(skip_format, collection_offset);
 
             auto frag_ser_size_format = skip_format.serialize();
-            io::write(write_index_file, std::span{frag_ser_size_format.begin(), frag_ser_size_format.end()});
+            io::write(write_index_file, frag_ser_size_format);
 
             collection_offset += skip_format.header_size + skip_format.content_size;
             index_entry_count++;
@@ -197,7 +197,7 @@ std::pair<serialization::fragment_serialize_size_format,
     maybe_recreate_index_file();
 
     auto frag_ser_size_format = back().first.serialize();
-    m_index_file_size += io::write(*m_index_file, std::span{frag_ser_size_format.begin(), frag_ser_size_format.end()});
+    m_index_file_size += io::write(*m_index_file, frag_ser_size_format);
 
     return tmp;
 }
