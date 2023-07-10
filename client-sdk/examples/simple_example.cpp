@@ -92,6 +92,8 @@ int main()
             exit(1);
         }
 
+//        size_t effective_size_1 =
+
     /* getting a documents from the database */
 
         /* create a read query*/

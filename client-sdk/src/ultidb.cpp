@@ -236,6 +236,18 @@ struct UDB_CONNECTION_STRUCT
             THROW(uh::util::exception, Exception_Messsage(UDB_SERVER_CONNECTION_ERROR));
         }
     }
+
+    ~UDB_CONNECTION_STRUCT()
+    {
+        try
+        {
+            m_udb_client->quit("quit request after successful operation,");
+        }
+        catch(const std::exception& e)
+        {
+            THROW(uh::util::exception, "error on quit request");
+        }
+    }
 };
 
 // ---------------------------------------------------------------------
