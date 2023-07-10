@@ -45,6 +45,8 @@ public:
      */
     map_result get (std::span <char> key) override;
 
+    void update (std::span<char> key, std::span<char> value, const sets::index_type& pos) override;
+
     void remove (std::span <char> key) override;
 
     ~persisted_robinhood_hashmap () override;

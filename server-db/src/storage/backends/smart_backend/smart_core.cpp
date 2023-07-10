@@ -5,6 +5,8 @@
 #include "smart_core.h"
 #include "storage/backends/smart_backend/persistent_maps/sorted_key_map.h"
 #include "storage/backends/smart_backend/persistent_maps/persisted_robinhood_hashmap.h"
+#include "logging/logging_boost.h"
+
 
 #include <ranges>
 
@@ -18,17 +20,36 @@ smart_core::smart_core (const smart_config& smart_conf):
 //        m_key_store (std::make_unique<key_stores::persisted_robinhood_hashmap> (std::move (smart_conf.hashmap_key_store_conf))),
         m_dedupe_conf (smart_conf.dedupe_conf) {}
 
-size_t smart_core::integrate(std::span <char> key, std::string_view data) {
+std::pair <std::uint8_t, std::size_t>  smart_core::integrate(std::span <char> key, std::string_view data, util::insertion_type insert_type) {
     const auto f = m_key_store->get(key);
     if (f.match.has_value()) {
+
+        if (insert_type == util::insertion_type::UPDATE or insert_type == util::insertion_type::INSERT_UPDATE) {
+            auto fragments = deduplicate (data);
+            m_key_store->update (key, {reinterpret_cast <char*> (fragments.first.data()), fragments.first.size() * sizeof (sets::offset_span)}, f.index);
+            m_total_effective_size += fragments.second;
+            return {0, fragments.second};
+        }
+        else if (insert_type == util::insertion_type::INSERT) {
+            return {1, 0};
+        }
+        else if (insert_type == util::insertion_type::INSERT_IGNORE) {
+            return {0, 0};
+        }
+
         //TODO should we compare the data as well? It can be that the data
         // is different and we do not notice it
-        return 0;
+    }
+
+    if (insert_type == util::insertion_type::UPDATE) {
+        return {1, 0};
     }
 
     auto fragments = deduplicate (data);
     m_key_store->insert(key, {reinterpret_cast <char*> (fragments.first.data()), fragments.first.size() * sizeof (sets::offset_span)}, f.index);
-    return fragments.second;
+    m_total_effective_size += fragments.second;
+    return {0, fragments.second};
+
 }
 
 smart_core::fragmented_data smart_core::retrieve(std::span<char> key) {
@@ -57,6 +78,7 @@ std::pair<std::vector<sets::offset_span>, size_t> smart_core::deduplicate (std::
 
     auto integration_data = data;
     std::pair<std::vector<sets::offset_span>, size_t> result;
+
 
     while (!integration_data.empty()) {
         const auto f = m_fragment_set->find({integration_data.data(), integration_data.size()});
