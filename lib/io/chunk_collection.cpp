@@ -31,12 +31,12 @@ std::unique_ptr<io::file> create_chunk_collection_file(std::filesystem::path& co
     if (create_tempfile)
     {
         std::unique_ptr<io::temp_file>
-            file = std::make_unique<io::temp_file>(collection_location, std::ios_base::binary | std::ios_base::out);
+            file = std::make_unique<io::temp_file>(collection_location, std::ios_base::binary | std::ios_base::app);
         file->release_to(file->path());
         collection_location = file->path();
     }
 
-    return std::make_unique<io::file>(io::file(collection_location, std::ios_base::binary | std::ios_base::out));
+    return std::make_unique<io::file>(io::file(collection_location, std::ios_base::binary | std::ios_base::app));
 }
 
 // ---------------------------------------------------------------------
@@ -67,7 +67,7 @@ std::unique_ptr<io::file> maybe_repair_chunk_collection(std::unique_ptr<io::file
 
         std::filesystem::rename(corrupted_tempfile_path, collection_file->path());
         collection_file = std::make_unique<io::file>(io::file(collection_file->path(),
-                                                              std::ios_base::binary | std::ios_base::out));
+                                                              std::ios_base::binary | std::ios_base::app));
     }
 
     return collection_file;
@@ -123,7 +123,7 @@ chunk_collection::write_indexed(std::span<const char> buffer,
 
     if (not m_workfile->is_open() or
         m_workfile->mode() != m_workfile->size() ? write_mode : std::ios_base::binary
-            | std::ios_base::out)
+            | std::ios_base::app)
         m_workfile = std::make_unique<io::file>(m_workfile->path(), write_mode);
 
     auto temporarily_cached_fragment_on_seekable_device =
