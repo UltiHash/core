@@ -192,7 +192,7 @@ std::size_t chunk_collection_index_persistent::size()
 
     for (const auto& item : *this)
     {
-        accumulated += item.first.content_buf_size + item.first.content_size;
+        accumulated += item.first.serialized_size() + item.first.content_size;
     }
 
     return accumulated;
@@ -206,7 +206,7 @@ std::size_t chunk_collection_index_persistent::size(uint8_t index_address)
 
     auto found_address = find_address(index_address, this->begin());
 
-    return found_address->first.content_buf_size + found_address->first.content_size;
+    return found_address->first.serialized_size() + found_address->first.content_size;
 }
 
 // ---------------------------------------------------------------------

@@ -43,7 +43,7 @@ struct fragment_serialize_size_format
 
         ser.write(content_size, content_buf_size_serialize[0]);
 
-        return {buf.data().begin(), buf.data().begin() + struct_size()};
+        return {buf.data().begin(), buf.data().begin() + serialized_size()};
     }
 
     void deserialize(io::device& input_dev)
@@ -55,7 +55,7 @@ struct fragment_serialize_size_format
         content_size = ser.read<decltype(content_size)>(content_buf_size);
     }
 
-    [[nodiscard]] inline long struct_size() const{
+    [[nodiscard]] inline long serialized_size() const{
         return 1 + 1 + content_buf_size;
     }
 };
