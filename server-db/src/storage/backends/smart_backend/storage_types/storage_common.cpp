@@ -13,10 +13,12 @@ void *align_ptr(void *ptr) noexcept {
 }
 
 void sync_ptr (void *ptr, std::size_t size) {
+    /*
     const auto aligned = align_ptr (ptr);
     if (msync(aligned, static_cast <char*> (ptr) - static_cast <char*> (aligned) + size, MS_SYNC) != 0) {
         throw std::system_error (errno, std::system_category(), "could not sync the mmap data");
     }
+     */
 }
 
 

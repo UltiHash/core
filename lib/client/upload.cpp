@@ -122,6 +122,7 @@ public:
             md.append_sizes(m_chunk_sizes.begin() + index,
                             m_chunk_sizes.begin() + index + count);
             md.add_effective_size(resp.effective_size[index]);
+            md.set_path(md.path());
 
             fh.finished(count);
             index += count;
@@ -130,7 +131,7 @@ public:
 
     std::span<char> buffer()
     {
-        return std::span<char>(m_buffer + m_offs, m_buffer + m_size);
+        return {m_buffer + m_offs, m_buffer + m_size};
     }
 
     void add_chunk(file_handle* fh, std::size_t size)
