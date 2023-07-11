@@ -1,7 +1,7 @@
 #ifdef SINGLE_TEST_RUNNER
 #define BOOST_TEST_NO_MAIN
 #else
-#define BOOST_TEST_MODULE "uhLibUtil TempFile Tests"
+#define BOOST_TEST_MODULE "uhLibIo File Tests"
 #endif
 
 #include <io/file.h>
