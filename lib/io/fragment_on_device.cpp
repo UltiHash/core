@@ -24,9 +24,9 @@ fragment_on_device::write(std::span<const char> buffer)
     if (state_machine == READING_BEGIN)
     THROW(util::exception, "Writing on fragment_on_device corrupted the fragments incomplete reading state!");
 
-    auto return_size_format = uh::serialization::fragment_serialize_size_format(index,buffer.size());
-    io::write(dev_fragment,return_size_format.serialize());
-    io::write(dev_fragment,buffer);
+    auto return_size_format = uh::serialization::fragment_serialize_size_format(index, buffer.size());
+    io::write(dev_fragment, return_size_format.serialize());
+    io::write(dev_fragment, buffer);
 
     state_machine = COMPLETE;
     return return_size_format;
@@ -45,17 +45,25 @@ fragment_on_device::write(std::span<const char> buffer, uint32_t alloc)
     if (state_machine == UNDEFINED_STATE)
     {
         state_machine = WRITING_BEGIN;
-        auto return_size_format = uh::serialization::fragment_serialize_size_format(index,
-                                                                                    std::max((uint64_t) alloc,
-                                                                                             buffer.size()));
-        elements_left_to_process = static_cast<int64_t>(alloc) - return_size_format.content_size;
+        return_size_format = uh::serialization::fragment_serialize_size_format(index,
+                                                                               std::max((uint64_t) alloc,
+                                                                                        buffer.size()));
+        io::write(dev_fragment, return_size_format.serialize());
+        auto writeable = std::min((long) alloc, (long) buffer.size());
+        io::write(dev_fragment,
+                  std::span{buffer.begin(), buffer.begin() + writeable});
+
+        elements_left_to_process = static_cast<int64_t>(alloc) - writeable;
     }
     else
     {
-        auto return_size_format = uh::serialization::fragment_serialize_size_format(index,
-                                                                                    std::min((uint64_t) elements_left_to_process,
-                                                                                             buffer.size()));
+        return_size_format = uh::serialization::fragment_serialize_size_format(index,
+                                                                               std::min((uint64_t) elements_left_to_process,
+                                                                                        buffer.size()));
 
+        io::write(dev_fragment, std::span{buffer.begin(), buffer.begin() + return_size_format.content_size});
+
+        return_size_format.content_buf_size = 0;
         elements_left_to_process -= return_size_format.content_size;
     }
     if (elements_left_to_process < 0)
@@ -73,7 +81,7 @@ uh::serialization::fragment_serialize_size_format
 fragment_on_device::read(std::span<char> buffer)
 {
     if (state_machine == WRITING_BEGIN)
-    THROW(util::exception, "Reading on fragment_on_device corrupted the fragments incomplete writing state!");
+        THROW(util::exception, "Reading on fragment_on_device corrupted the fragments incomplete writing state!");
 
     uh::serialization::fragment_serialize_size_format header_read_format;
     header_read_format.deserialize(dev_fragment);
@@ -90,13 +98,13 @@ fragment_on_device::read(std::span<char> buffer)
     }
     else
     {
-        header_read_format.content_size = std::min((uint32_t)elements_left_to_process,
+        header_read_format.content_size = std::min((uint32_t) elements_left_to_process,
                                                    static_cast<uint32_t>(buffer.size()));
 
         header_read_format.content_buf_size = 0;
     }
 
-    io::read(dev_fragment,std::span{buffer.begin(),buffer.begin()+header_read_format.content_size});
+    io::read(dev_fragment, std::span{buffer.begin(), buffer.begin() + header_read_format.content_size});
 
     elements_left_to_process -= header_read_format.content_size;
 
@@ -125,7 +133,7 @@ fragment_on_device::skip()
     read_over.deserialize(dev_fragment);
 
     std::vector<char> unused_buffer(read_over.content_size);
-    io::read(dev_fragment,unused_buffer);
+    io::read(dev_fragment, unused_buffer);
 
     return read_over;
 }
