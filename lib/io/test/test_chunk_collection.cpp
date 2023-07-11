@@ -215,6 +215,8 @@ BOOST_AUTO_TEST_CASE(remove_fragment_multi_chunk_collection)
 
     auto read_all_back = cc2.read_indexed_multi(valid_indexes);
 
+    //TODO: check indexes of simulation with persisted indexes
+
     auto to_write_beg = to_write.cbegin();
     for (const auto& item : read_all_back)
     {
