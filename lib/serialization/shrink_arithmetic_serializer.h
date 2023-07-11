@@ -33,7 +33,7 @@ public:
         uint16_t bytes_non_zero = sizeof(T);
         for (uint64_t i = 0; i < sizeof(T); i++)
         {
-            if ((data << (sizeof(T) - 1 - i)) == 0)
+            if ((data >> 8 * (sizeof(T) - 1 - i)) == 0)
                 bytes_non_zero--;
             else
                 break;
@@ -43,9 +43,9 @@ public:
 
     template<typename T>
     requires (std::is_arithmetic_v<T> or std::is_enum_v<T>)
-    uint16_t write(T data, uint16_t bytes_non_zero = sizeof(T))
+    void write(T data, uint16_t bytes_non_zero = sizeof(T))
     {
-        std::vector<char> tmp;
+        std::vector<char> tmp(bytes_non_zero);
         const auto converted = endian_convert(data);
 
         std::memcpy(tmp.data(),

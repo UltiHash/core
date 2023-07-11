@@ -32,10 +32,10 @@ public:
 
         for(std::size_t i = 0; i < bytes_non_zero; i++){
             T shift_tmp = (unsigned char) tmp[i];
-            sum_result += shift_tmp << (8 * (sizeof(T) - 1 - i));
+            sum_result += shift_tmp << (8 * (bytes_non_zero - 1 - i));
         }
 
-        return endian_convert(sum_result);
+        return sum_result;
     }
 };
 

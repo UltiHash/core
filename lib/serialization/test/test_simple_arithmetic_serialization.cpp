@@ -28,7 +28,7 @@ BOOST_AUTO_TEST_CASE(arithmetic_types) {
     BOOST_CHECK(max_uint64 == read_back);
 }
 
-BOOST_AUTO_TEST_CASE(serialization_type_tests) {
+BOOST_AUTO_TEST_CASE(simple_arithmetic_serialization_type_tests) {
     typedef shrink_arithmetic_serialization <shrink_arithmetic_serializer, shrink_arithmetic_deserializer> sertype;
 
     BOOST_CHECK (is_shrink_arithmetic_serializer <shrink_arithmetic_serializer>::value);

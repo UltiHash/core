@@ -34,14 +34,14 @@ struct fragment_serialize_size_format
     {
         io::buffer buf;
         shrink_arithmetic_serializer ser(buf);
-        ser.write((unsigned char)index_num);
+        ser.write((unsigned char) index_num);
 
         content_buf_size = ser.bytes_non_zero(content_size);
         char content_buf_size_serialize[1];
-        content_buf_size_serialize[0]=static_cast<unsigned char>(content_buf_size);
+        content_buf_size_serialize[0] = static_cast<unsigned char>(content_buf_size);
         io::write(buf, content_buf_size_serialize);
 
-        ser.write(content_size,content_buf_size_serialize[0]);
+        ser.write(content_size, content_buf_size_serialize[0]);
 
         uint16_t struct_size = sizeof(content_size) + sizeof(content_buf_size) + sizeof(index_num);
 
@@ -56,7 +56,6 @@ struct fragment_serialize_size_format
         content_buf_size = ser.read<unsigned char>();
         content_size = ser.read<decltype(content_size)>(content_buf_size);
     }
-
 };
 
 // ---------------------------------------------------------------------
