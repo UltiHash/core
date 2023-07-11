@@ -25,6 +25,9 @@ fragment_on_device::write(std::span<const char> buffer)
     THROW(util::exception, "Writing on fragment_on_device corrupted the fragments incomplete reading state!");
 
     auto return_size_format = uh::serialization::fragment_serialize_size_format(index,buffer.size());
+    io::write(dev_fragment,return_size_format.serialize());
+    io::write(dev_fragment,buffer);
+
     state_machine = COMPLETE;
     return return_size_format;
 }
@@ -37,6 +40,8 @@ fragment_on_device::write(std::span<const char> buffer, uint32_t alloc)
     if (state_machine == READING_BEGIN)
     THROW(util::exception, "Writing on fragment_on_device corrupted the fragments incomplete reading state!");
 
+    uh::serialization::fragment_serialize_size_format return_size_format;
+
     if (state_machine == UNDEFINED_STATE)
     {
         state_machine = WRITING_BEGIN;
@@ -44,30 +49,22 @@ fragment_on_device::write(std::span<const char> buffer, uint32_t alloc)
                                                                                     std::max((uint64_t) alloc,
                                                                                              buffer.size()));
         elements_left_to_process = static_cast<int64_t>(alloc) - return_size_format.content_size;
-
-        if (elements_left_to_process < 0)
-        THROW(util::exception, "Too many elements were written to fragment on device! Allocation was exceeded!");
-
-        if (!elements_left_to_process)
-            state_machine = COMPLETE;
-
-        return return_size_format;
     }
     else
     {
-        std::size_t left_to_write = std::min(static_cast<std::size_t>(elements_left_to_process),
-                                             static_cast<std::size_t>(buffer.size()));
-        std::streamsize written = dev_fragment.write({buffer.data(), left_to_write});
-        elements_left_to_process -= written;
+        auto return_size_format = uh::serialization::fragment_serialize_size_format(index,
+                                                                                    std::min((uint64_t) elements_left_to_process,
+                                                                                             buffer.size()));
 
-        if (elements_left_to_process < 0)
-        THROW(util::exception, "Too many elements were written to fragment on device! Allocation was exceeded!");
-
-        if (!elements_left_to_process)
-            state_machine = COMPLETE;
-
-        return {index, static_cast<uint32_t>(written)};
+        elements_left_to_process -= return_size_format.content_size;
     }
+    if (elements_left_to_process < 0)
+    THROW(util::exception, "Too many elements were written to fragment on device! Allocation was exceeded!");
+
+    if (!elements_left_to_process)
+        state_machine = COMPLETE;
+
+    return return_size_format;
 }
 
 // ---------------------------------------------------------------------
@@ -90,8 +87,6 @@ fragment_on_device::read(std::span<char> buffer)
 
         header_read_format.content_size = std::min(header_read_format.content_size,
                                                    static_cast<uint32_t>(buffer.size()));
-
-
     }
     else
     {
@@ -112,7 +107,6 @@ fragment_on_device::read(std::span<char> buffer)
         state_machine = COMPLETE;
 
     return header_read_format;
-
 }
 
 // ---------------------------------------------------------------------

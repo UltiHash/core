@@ -43,7 +43,7 @@ struct fragment_serialize_size_format
 
         ser.write(content_size, content_buf_size_serialize[0]);
 
-        uint16_t struct_size = sizeof(content_size) + sizeof(content_buf_size) + sizeof(index_num);
+        uint16_t struct_size = 1 + 1 + content_buf_size;
 
         return {buf.data().begin(), buf.data().begin() + struct_size};
     }
