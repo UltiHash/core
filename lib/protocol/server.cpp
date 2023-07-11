@@ -51,7 +51,9 @@ void server::handle()
     {
         try
         {
-            handle_normal_request(m_bs.read<uint8_t>());
+            if (handle_normal_request(m_bs.read<uint8_t>()) == 0) {
+                break;
+            }
         }
         catch (const read_error& e)
         {
@@ -68,17 +70,17 @@ void server::handle()
 
 // ---------------------------------------------------------------------
 
-void server::handle_normal_request(uint8_t request_id)
+int server::handle_normal_request(uint8_t request_id)
 {
     switch (request_id)
     {
-        case quit::request_id: return handle_quit();
-        case free_space::request_id: return handle_free_space();
-        case client_statistics::request_id: return handle_client_statistics();
-        case write_chunks::request_id: return handle_write_chunks();
-        case read_chunks::request_id: return handle_read_chunks();
-        case write_key_value::request_id: return handle_write_kv();
-        case read_key_value::request_id: return handle_read_kv();
+        case quit::request_id: handle_quit(); return 0;
+        case free_space::request_id: handle_free_space(); return 1;
+        case client_statistics::request_id: handle_client_statistics(); return 1;
+        case write_chunks::request_id: handle_write_chunks(); return 1;
+        case read_chunks::request_id: handle_read_chunks(); return 1;
+        case write_key_value::request_id: handle_write_kv(); return 1;
+        case read_key_value::request_id: handle_read_kv(); return 1;
 
         default:
             throw std::runtime_error("normal, unsupported command: "

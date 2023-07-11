@@ -7,6 +7,7 @@
 #include <storage/mod.h>
 
 #include <memory>
+#include <shared_mutex>
 
 
 namespace uh::dbn::server
@@ -29,6 +30,7 @@ public:
 private:
     storage::backend& m_storage;
     const uh::net::server_info &m_serv_info;
+    std::shared_mutex m;
 };
 
 // ---------------------------------------------------------------------
