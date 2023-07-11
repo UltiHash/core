@@ -77,7 +77,7 @@ template<>
 std::unique_ptr<fragment_on_seekable_device> make_test_device<fragment_on_seekable_device>()
 {
     static std::unique_ptr<temp_file> temp_buf = std::make_unique<temp_file>
-        (TEMP_DIR, std::ios_base::in | std::ios_base::out);
+        (TEMP_DIR, std::ios_base::binary | std::ios_base::in | std::ios_base::out);
     auto rv = std::make_unique<fragment_on_seekable_device>(*temp_buf);
 
     return rv;
@@ -92,7 +92,7 @@ BOOST_FIXTURE_TEST_CASE_TEMPLATE(multi_fragment_on_device_skip_test, T, device_t
     if constexpr (std::is_same_v<T, fragment_on_seekable_device>)
     {
         temp_buf = std::make_unique<temp_file>
-            (TEMP_DIR, std::ios_base::in | std::ios_base::out);
+            (TEMP_DIR, std::ios_base::binary | std::ios_base::in | std::ios_base::out);
         fragmented = std::make_unique<T>(*temp_buf);
     }
 
@@ -151,8 +151,11 @@ BOOST_FIXTURE_TEST_CASE_TEMPLATE(fragment_partial_read_write_exceptions, T, devi
     {
         std::unique_ptr<T> fragmented, fragmented_read;
 
-        static std::unique_ptr<temp_file> temp_buf = std::make_unique<temp_file>
-            (TEMP_DIR, std::ios_base::in | std::ios_base::out);
+        std::unique_ptr<temp_file> temp_buf = std::make_unique<temp_file>
+            (TEMP_DIR, std::ios_base::binary | std::ios_base::in | std::ios_base::out);
+
+        temp_buf->seek(0,std::ios_base::beg);
+
         fragmented = std::make_unique<T>(*temp_buf);
         fragmented_read = std::make_unique<T>(*temp_buf);
 

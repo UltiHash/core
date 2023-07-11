@@ -50,11 +50,11 @@ fragment_on_device::write(std::span<const char> buffer, uint32_t alloc)
                                                                                std::max((uint64_t) alloc,
                                                                                         buffer.size()));
         io::write(dev_fragment, return_size_format.serialize());
-        auto writeable = std::min((long) alloc, (long) buffer.size());
+        return_size_format.content_size = std::min((long) alloc, (long) buffer.size());
         io::write(dev_fragment,
-                  std::span{buffer.begin(), buffer.begin() + writeable});
+                  std::span{buffer.begin(), buffer.begin() + return_size_format.content_size});
 
-        elements_left_to_process = static_cast<int64_t>(alloc) - writeable;
+        elements_left_to_process = static_cast<int64_t>(alloc) - return_size_format.content_size;
     }
     else
     {
@@ -64,7 +64,6 @@ fragment_on_device::write(std::span<const char> buffer, uint32_t alloc)
 
         io::write(dev_fragment, std::span{buffer.begin(), buffer.begin() + return_size_format.content_size});
 
-        return_size_format.content_buf_size = 0;
         elements_left_to_process -= return_size_format.content_size;
     }
     if (elements_left_to_process < 0)
@@ -86,12 +85,12 @@ fragment_on_device::read(std::span<char> buffer)
     }
 
     uh::serialization::fragment_serialize_size_format header_read_format;
-    header_read_format.deserialize(dev_fragment);
 
     if (state_machine == UNDEFINED_STATE)
     {
         state_machine = READING_BEGIN;
 
+        header_read_format.deserialize(dev_fragment);
         elements_left_to_process = header_read_format.content_size;
         index = header_read_format.index_num;
 
