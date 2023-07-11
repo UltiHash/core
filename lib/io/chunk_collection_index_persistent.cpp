@@ -62,7 +62,10 @@ maybe_index_persist_chunk_collection(std::unique_ptr<io::file>& collection_file)
 
     if (collection_file->size())
     {
-        collection_file = std::make_unique<io::file>(collection_file->path(), std::ios_base::binary | std::ios_base::in);
+        collection_offset = 0;
+
+        collection_file = std::make_unique<io::file>(collection_file->path(),
+                                                     std::ios_base::binary | std::ios_base::in);
 
         auto temporarily_cached_fragment_on_seekable_device =
             io::fragment_on_seekable_device(*collection_file);
@@ -88,7 +91,7 @@ maybe_index_persist_chunk_collection(std::unique_ptr<io::file>& collection_file)
             auto frag_ser_size_format = skip_format.serialize();
             io::write(write_index_file, frag_ser_size_format);
 
-            collection_offset += skip_format.content_buf_size + skip_format.content_size;
+            collection_offset += skip_format.serialized_size() + skip_format.content_size;
             index_entry_count++;
         }
         while (skip_format.content_size > 0);
@@ -389,18 +392,22 @@ void chunk_collection_index_persistent::remove_persistent_index_file_items(const
     io::temp_file erase_tmp(m_index_file->path().parent_path(), std::ios_base::binary | std::ios_base::out);
     auto beg = begin();
 
-    std::string read_buffer;
-    read_buffer.resize(sizeof(serialization::fragment_serialize_size_format));
+    serialization::fragment_serialize_size_format tmp_format;
 
     m_index_file = std::make_unique<io::file>(index_path(m_workfile), std::ios_base::binary | std::ios_base::in);
 
-    while (io::read(*m_index_file, read_buffer))
+    while (m_index_file->valid())
     {
+        tmp_format.deserialize(*m_index_file);
+
         if (std::none_of(delete_pos_list.cbegin(), delete_pos_list.cend(), [&beg](auto item)
         {
             return beg->first.index_num == item;
         }))
-            io::write(erase_tmp, read_buffer);
+        {
+            io::write(erase_tmp,tmp_format.serialize());
+        }
+
         beg++;
     }
 
