@@ -1,6 +1,6 @@
 #include <iostream>
 #include "../include/ultidb.h"
-#include <string.h>
+#include <cstring>
 
 int main()
 {
@@ -72,19 +72,19 @@ int main()
 
     /* adding documents to database */
 
-        /* initialize document with key, value, and label */
+        /* initialize object with key, value, and label */
 
-        UDB_DOCUMENT* test_doc_1 = udb_init_document(test_key_1, strlen(test_key_1), test_data_1, strlen(test_data_1),
+        UDB_OBJECT* test_doc_1 = udb_init_document(test_key_1, strlen(test_key_1), test_data_1, strlen(test_data_1),
                                                      test_labels, sizeof(test_labels) / sizeof(char*));
-        UDB_DOCUMENT* test_doc_2 = udb_init_document(test_key_2, strlen(test_key_2), test_data_2, strlen(test_data_2),
+        UDB_OBJECT* test_doc_2 = udb_init_document(test_key_2, strlen(test_key_2), test_data_2, strlen(test_data_2),
                                                  test_labels, sizeof(test_labels) / sizeof(char*));
 
     /* create a write query */
         UDB_WRITE_QUERY* test_write_query = udb_create_write_query();
-        udb_write_query_add_document(test_write_query, test_doc_1);
-        udb_write_query_add_document(test_write_query, test_doc_2);
+        udb_write_query_add_object(test_write_query, test_doc_1);
+        udb_write_query_add_object(test_write_query, test_doc_2);
 
-        /* add document to the database */
+        /* add object to the database */
         UDB_WRITE_QUERY_RESULTS* write_results = udb_put(udb_conn, test_write_query);
         if ( write_results == nullptr)
         {
@@ -113,7 +113,7 @@ int main()
         udb_read_query_add_key(test_read_query, test_key_1, strlen(test_key_1));
         udb_read_query_add_key(test_read_query, test_key_2, strlen(test_key_2));
 
-        /* getting a document from database */
+        /* getting an object from database */
         UDB_READ_QUERY_RESULTS* results = udb_get(udb_conn, test_read_query);
         if (results == nullptr)
         {
@@ -130,11 +130,11 @@ int main()
 
     /* cleanup */
 
-        /* getting document */
+        /* getting object */
         udb_destroy_read_query_results(results);
         udb_destroy_read_query(test_read_query);
 
-        /* putting document */
+        /* putting object */
         udb_destroy_write_query_results(write_results);
         udb_destroy_write_query(test_write_query);
         udb_destroy_document(test_doc_1);
