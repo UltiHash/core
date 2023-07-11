@@ -13,13 +13,8 @@ file::file(const std::filesystem::path &path, std::ios_base::openmode mode)
 {
     m_io.exceptions(std::ios_base::badbit);
 
-    if(!m_io){
-        if(!std::filesystem::exists(path.parent_path()))
-            THROW(util::exception,"Parent path \""+path.parent_path().string()+
-                "\" does not exist for file \""+path.filename().string());
-
-        THROW(util::exception,"File \""+path.string()+"\" could not be opened!");
-    }
+    if(!m_io)
+        THROW(util::exception,"Parent path \""+path.string()+"\" does not exist");
 }
 
 // ---------------------------------------------------------------------
