@@ -9,15 +9,27 @@ sorted_key_map::sorted_key_map(sorted_map_config conf):
         m_set(sets::paged_redblack_tree <sets::set_partial_comparator> (std::move (conf.index_store), m_storage)) {}
 
 void sorted_key_map::insert(std::span<char> key, std::span<char> value, const sets::index_type& index) {
-    const auto size = key.size() + value.size() + sizeof (uint16_t);
-    auto alloc = m_storage.allocate(size);
-    uint16_t& key_size = *reinterpret_cast <uint16_t*> (alloc.m_addr);
-    key_size = key.size();
-    std::memcpy(alloc.m_addr + sizeof (uint16_t), key.data(), key.size());
-    std::memcpy(alloc.m_addr + sizeof (uint16_t) + key.size(), value.data(), value.size());
-    m_storage.sync(alloc.m_addr, size);
-    std::string_view data = {alloc.m_addr, size};
-    m_set.add_pointer(data, alloc.m_offset, index);
+
+    auto off_span = store_data (key, value);
+
+    std::string_view data = {off_span.first.m_addr, off_span.second};
+    m_set.add_pointer(data, off_span.first.m_offset, index);
+}
+
+void sorted_key_map::update(std::span<char> key, std::span<char> value, const sets::index_type &pos) {
+    auto result = m_set.find({key.data(), key.size()}, pos);
+    if (!result.match.has_value()) {
+        throw std::logic_error ("The given position for update is not valid!");
+    }
+    const auto& match = result.match.value();
+    m_storage.deallocate(match.data_offset, match.data.size());
+
+    auto off_span = store_data (key, value);
+
+    auto n = m_set.get_node (match.index_offset);
+    n.m_mnode->m_data.m_data_offset = off_span.first.m_offset;
+    n.m_mnode->m_data.m_size = off_span.second;
+
 }
 
 map_result sorted_key_map::get(std::span<char> key) {
@@ -48,5 +60,17 @@ sorted_key_map::~sorted_key_map() {
     m_set.sync({.position = 0});
 }
 
+std::pair<offset_ptr, size_t> sorted_key_map::store_data(std::span<char> key, std::span<char> value) {
 
-} // end namespace uh::dbn::storage::smart::key_stores
+    const auto size = key.size() + value.size() + sizeof (uint16_t);
+    auto alloc = m_storage.allocate(size);
+    uint16_t& key_size = *reinterpret_cast <uint16_t*> (alloc.m_addr);
+    key_size = key.size();
+    std::memcpy(alloc.m_addr + sizeof (uint16_t), key.data(), key.size());
+    std::memcpy(alloc.m_addr + sizeof (uint16_t) + key.size(), value.data(), value.size());
+    m_storage.sync(alloc.m_addr, size);
+    return {alloc, size};
+}
+
+
+} // end namespace uh::dbn::storage::smart::maps

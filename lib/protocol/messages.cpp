@@ -327,6 +327,7 @@ void read(serialization::buffered_serialization &in, write_key_value::request &r
 
 void write(serialization::buffered_serialization &out, const write_key_value::response &response) {
     out.write(response.effective_sizes);
+    out.write(response.return_codes);
 }
 
 // ---------------------------------------------------------------------
@@ -335,6 +336,7 @@ void read(serialization::buffered_serialization &in, write_key_value::response &
     check_status(in);
 
     response.effective_sizes = in.read_ospan<uint32_t>();
+    response.return_codes = in.read_ospan<uint8_t>();
 }
 
 // ---------------------------------------------------------------------

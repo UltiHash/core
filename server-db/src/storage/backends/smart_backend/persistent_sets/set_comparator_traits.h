@@ -17,10 +17,11 @@ struct set_full_comparator {
     explicit set_full_comparator (managed_storage& storage): m_storage(storage) {}
 
     [[nodiscard]] inline int operator () (const std::string_view& new_data, const mmap_node& set_data) const {
+        //if (const auto comp = new_data.substr(0,8).compare({reinterpret_cast <const char*>(&set_data.data_prefix), sizeof(set_data.data_prefix)}); comp != 0) {
+        //    return comp;
+        //}
         const auto* p2 = m_storage.get().get_raw_ptr(set_data.m_data.m_data_offset);
-
-        const std::string_view set_content {static_cast <const char*> (p2), set_data.m_data.m_size};
-        return new_data.compare(set_content);;
+        return new_data.compare({static_cast <const char*> (p2), set_data.m_data.m_size});;
     }
 
     const std::reference_wrapper <managed_storage> m_storage;

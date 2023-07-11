@@ -75,6 +75,7 @@ offset_ptr fixed_managed_storage::do_allocate (size_t bytes) {
     for (auto &resource: m_resources) {
         try {
             auto ptr = resource.second.get_pool_resource().allocate (bytes);
+            m_total_used_size += bytes;
             return resource.second.m_ptr.get_offset_ptr_at (ptr);
         }
         catch (std::bad_alloc &) {}
@@ -85,6 +86,7 @@ offset_ptr fixed_managed_storage::do_allocate (size_t bytes) {
 void fixed_managed_storage::do_deallocate (const offset_ptr& offset_ptr, size_t bytes) {
     auto &resource = get_resource (offset_ptr.m_offset, bytes);
     const auto deallocate_offset_ptr = resource.m_ptr.get_offset_ptr_at(offset_ptr.m_offset);
+    m_total_used_size -= bytes;
     resource.get_pool_resource().deallocate(deallocate_offset_ptr.m_addr, bytes);
 }
 
@@ -100,6 +102,10 @@ bool fixed_managed_storage::files_existence_consistency () {
 
 fixed_managed_storage::~fixed_managed_storage() {
     sync();
+}
+
+std::size_t fixed_managed_storage::get_total_used_size () const noexcept {
+    return m_total_used_size;
 }
 
 

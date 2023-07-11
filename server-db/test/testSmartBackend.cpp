@@ -360,32 +360,32 @@ BOOST_FIXTURE_TEST_CASE(basic_dedup_test, files_info_fixture)
 
 
         std::string str1 = "hello from data 1";
-        auto res1 = pd.integrate(k1, str1);
-        BOOST_TEST (res1 == str1.size());
+        auto res1 = pd.integrate(k1, str1, uh::util::insertion_type::INSERT_UPDATE);
+        BOOST_TEST (res1.second == str1.size());
 
         std::string str2 = "hello from data 2234";
-        auto res2 = pd.integrate(k2, str2);
-        BOOST_TEST (res2 == 4);
+        auto res2 = pd.integrate(k2, str2, uh::util::insertion_type::INSERT_UPDATE);
+        BOOST_TEST (res2.second == 4);
 
         std::string str3 = "data 2 hello from data 2";
-        auto res3 = pd.integrate(k3, str3);
-        BOOST_TEST (res3 == str3.size());
+        auto res3 = pd.integrate(k3, str3, uh::util::insertion_type::INSERT_UPDATE);
+        BOOST_TEST (res3.second == str3.size());
 
         std::string str4 = "hello from data yet again";
-        auto res4 = pd.integrate(k4, str4);
-        BOOST_TEST (res4 == 9);
+        auto res4 = pd.integrate(k4, str4, uh::util::insertion_type::INSERT_UPDATE);
+        BOOST_TEST (res4.second == 9);
 
         std::string str5 = "yet again, some other data";
-        auto res5 = pd.integrate(k5, str5);
-        BOOST_TEST (res5 == 17);
+        auto res5 = pd.integrate(k5, str5, uh::util::insertion_type::INSERT_UPDATE);
+        BOOST_TEST (res5.second == 17);
     }
 
     {
         smart_core pd{get_smart_config()};
 
         std::string str5 = "yet again, some other data";
-        auto res5 = pd.integrate(k5, str5);
-        BOOST_TEST (res5 == 0);
+        auto res5 = pd.integrate(k5, str5, uh::util::insertion_type::INSERT_UPDATE);
+        BOOST_TEST (res5.second == 0);
     }
 }
 
@@ -558,23 +558,23 @@ BOOST_FIXTURE_TEST_CASE(smart_core_basic_test, files_info_fixture) {
 
         smart_core sm(get_smart_config());
 
-        const auto i1 = sm.integrate(k1, v1);
-        BOOST_TEST (i1 == v1.size());
+        const auto i1 = sm.integrate(k1, v1, uh::util::insertion_type::INSERT_UPDATE);
+        BOOST_TEST (i1.second == v1.size());
 
-        const auto i2 = sm.integrate(k2, v2);
-        BOOST_TEST (i2 == 4);
+        const auto i2 = sm.integrate(k2, v2, uh::util::insertion_type::INSERT_UPDATE);
+        BOOST_TEST (i2.second == 4);
 
-        const auto i3 = sm.integrate(k3, v3);
-        BOOST_TEST (i3 == v3.size());
+        const auto i3 = sm.integrate(k3, v3, uh::util::insertion_type::INSERT_UPDATE);
+        BOOST_TEST (i3.second == v3.size());
 
-        const auto i4 = sm.integrate(k4, v4);
-        BOOST_TEST (i4 == 9);
+        const auto i4 = sm.integrate(k4, v4, uh::util::insertion_type::INSERT_UPDATE);
+        BOOST_TEST (i4.second == 9);
 
-        const auto i5 = sm.integrate(k5, v5);
-        BOOST_TEST (i5 == 17);
+        const auto i5 = sm.integrate(k5, v5, uh::util::insertion_type::INSERT_UPDATE);
+        BOOST_TEST (i5.second == 17);
 
-        const auto i6 = sm.integrate(k6, v6);
-        BOOST_TEST (i6 == 0);
+        const auto i6 = sm.integrate(k6, v6, uh::util::insertion_type::INSERT_UPDATE);
+        BOOST_TEST (i6.second == 0);
 
         const auto r1 = sm.retrieve(k1);
         const auto sr1 = serialize_spans(r1.second);
