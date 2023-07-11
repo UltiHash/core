@@ -67,7 +67,7 @@ typedef enum : uint8_t
 } UDB_RESULT;
 
 /**
- * Gets the enum of the type ::UDB_RESULT from the last error occurred.
+ * Gets the enum of type ::UDB_RESULT from the last error occurred.
  *
  * @return enum of type ::UDB_RESULT which describes the last error occurred.
  */
@@ -99,7 +99,7 @@ typedef struct UDB_CONFIG_STRUCT UDB_CONFIG;
 typedef struct UDB_CONNECTION_STRUCT UDB_CONNECTION;
 
 /**
- * Opaque structure that represents the concept of a "object". A object is a
+ * Opaque structure that represents the concept of an "object". An object is a
  * structure that holds a key, value, and labels.
  *
  * Allocated and initialized with ::udb_init_document.
@@ -108,25 +108,25 @@ typedef struct UDB_CONNECTION_STRUCT UDB_CONNECTION;
 typedef struct UDB_OBJECT_STRUCT UDB_OBJECT;
 
 /**
- * Opaque structure that describes a write query for writing documents into the database.
+ * Opaque structure that describes a write query for writing objects into the database.
  *
  * Provided functions can be used to fill up this query structure and subsequently write
- * documents to the database.
+ * objects to the database.
  */
 typedef struct UDB_OBJECTS UDB_WRITE_QUERY;
 
 /**
- * Opaque structure that describes a read query for reading documents from the database.
+ * Opaque structure that describes a read query for reading objects from the database.
  *
  * Provided functions can be used to fill up this query structure and subsequently read
- * documents from the database.
+ * objects from the database.
  */
 typedef struct UDB_READ_QUERY_STRUCT UDB_READ_QUERY;
 
 /**
  * A wrapper struct that wraps a char* and the size of the pointed data.
  *
- * It is used to wrap the keys and values of the documents when `getting` for convenience purposes.
+ * It is used to wrap the keys and values of the objects when `getting` for convenience purposes.
  */
 struct UDB_DATA
 {
@@ -218,7 +218,7 @@ UDB_RESULT udb_destroy_instance(UDB* udb_instance);
 
 /**
  * Creates an instance of ::UDB_CONNECTION which can be used to perform various
- * UDB operations such as adding and getting documents to/from the UDB database.
+ * UDB operations such as adding and getting objects to/from the UDB database.
  *
  * The instance created has to be destroyed using ::udb_destroy_connection.
  *
@@ -318,7 +318,7 @@ size_t udb_get_effective_sizes_count(UDB_WRITE_QUERY_RESULTS* results);
 
 /**
  * Gets the effective size from the index given inside the ::UDB_WRITE_QUERY_RESULTS struct.
- * The effective sizes are in same order as the documents inserted in the ::UDB_WRITE_QUERY.
+ * The effective sizes are in same order as the objects inserted in the ::UDB_WRITE_QUERY.
  *
  * @param results pointer to the ::UDB_WRITE_QUERY_RESULTS struct
  * @param index gives the index from which to get the effective size from
@@ -333,7 +333,7 @@ uint8_t udb_get_return_code(UDB_WRITE_QUERY_RESULTS* results, size_t index);
  * Puts the object in the database.
  *
  * @param conn pointer to ::UDB_CONNECTION struct
- * @param write_query pointer to the ::UDB_WRITE_QUERY struct which contains the documents to be put
+ * @param write_query pointer to the ::UDB_WRITE_QUERY struct which contains the objects to be put
  * in the database
  * @return pointer to the ::UDB_WRITE_QUERY_RESULTS which contains the results such as
  * the effective sizes and the return code of each object. On error nullptr is returned.
@@ -341,7 +341,7 @@ uint8_t udb_get_return_code(UDB_WRITE_QUERY_RESULTS* results, size_t index);
 UDB_WRITE_QUERY_RESULTS* udb_put(UDB_CONNECTION* conn, UDB_WRITE_QUERY* write_query);
 
 /**
- * Allocates the ::UDB_READ_QUERY struct for constructing read query in order to get documents from
+ * Allocates the ::UDB_READ_QUERY struct for constructing read query in order to get objects from
  * the database.
  *
  * The allocated instance has to be deallocated with ::udb_destroy_read_query.
@@ -386,7 +386,7 @@ UDB_RESULT udb_destroy_read_query(UDB_READ_QUERY* read_query_ptr_container);
  * @param conn pointer to ::UDB_CONNECTION struct
  * @param read_query pointer to the read query used to get the object from the database
  * @return UDB_READ_QUERY_RESULTS* pointer to the struct that contains the results of the ::udb_get operation.
- * The struct contains all the retrieved documents. On error nullptr is returned.
+ * The struct contains all the retrieved objects. On error nullptr is returned.
  */
 UDB_READ_QUERY_RESULTS* udb_get(UDB_CONNECTION* conn, UDB_READ_QUERY* read_query);
 
