@@ -65,6 +65,8 @@ fragment_on_device::write(std::span<const char> buffer, uint32_t alloc)
         io::write(dev_fragment, std::span{buffer.begin(), buffer.begin() + return_size_format.content_size});
 
         elements_left_to_process -= return_size_format.content_size;
+
+        return_size_format.index_num = index;
     }
     if (elements_left_to_process < 0)
     THROW(util::exception, "Too many elements were written to fragment on device! Allocation was exceeded!");
@@ -102,7 +104,7 @@ fragment_on_device::read(std::span<char> buffer)
         header_read_format.content_size = std::min((uint32_t) elements_left_to_process,
                                                    static_cast<uint32_t>(buffer.size()));
 
-        header_read_format.content_buf_size = 0;
+        header_read_format.index_num = index;
     }
 
     io::read(dev_fragment, std::span{buffer.begin(), buffer.begin() + header_read_format.content_size});
