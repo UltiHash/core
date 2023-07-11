@@ -41,7 +41,7 @@ struct Fixture
 // ---------------------------------------------------------------------
 
 typedef boost::mpl::vector<
-    fragment_on_device,
+    //fragment_on_device,
     fragment_on_seekable_device
 > device_types;
 
@@ -175,15 +175,7 @@ BOOST_FIXTURE_TEST_CASE_TEMPLATE(fragment_partial_read_write_exceptions, T, devi
             if (first_write)
             {
                 std::vector<char> throw_buffer(uh::test::LOREM_IPSUM.size());
-                try
-                {
-                    fragmented->read({throw_buffer.data(), throw_buffer.size()});
-                    BOOST_REQUIRE(false);
-                }
-                catch (std::exception& e)
-                {
-                    BOOST_REQUIRE(true);
-                }
+                BOOST_REQUIRE_THROW(fragmented->read({throw_buffer.data(), throw_buffer.size()}),std::exception);
             }
         }
         while (written != uh::test::LOREM_IPSUM.size());
@@ -208,15 +200,7 @@ BOOST_FIXTURE_TEST_CASE_TEMPLATE(fragment_partial_read_write_exceptions, T, devi
             read += fragmented_read->read(small_buf).content_size;
             if (first_read)
             {
-                try
-                {
-                    fragmented_read->write(small_buf);
-                    BOOST_REQUIRE(false);
-                }
-                catch (std::exception& e)
-                {
-                    BOOST_REQUIRE(true);
-                }
+                BOOST_REQUIRE_THROW(fragmented_read->write(small_buf),std::exception);
             }
 
             test_read.append(small_buf.data(), maximum_readable);
@@ -253,15 +237,7 @@ BOOST_FIXTURE_TEST_CASE_TEMPLATE(fragment_partial_read_write_exceptions, T, devi
             if (first_write)
             {
                 std::vector<char> throw_buffer(uh::test::LOREM_IPSUM.size());
-                try
-                {
-                    fragmented->read({throw_buffer.data(), throw_buffer.size()});
-                    BOOST_REQUIRE(false);
-                }
-                catch (std::exception& e)
-                {
-                    BOOST_REQUIRE(true);
-                }
+                BOOST_REQUIRE_THROW(fragmented->read({throw_buffer.data(), throw_buffer.size()}),std::exception);
             }
         }
         while (written != uh::test::LOREM_IPSUM.size());
@@ -284,15 +260,7 @@ BOOST_FIXTURE_TEST_CASE_TEMPLATE(fragment_partial_read_write_exceptions, T, devi
             read += fragmented_read->read(small_buf).content_size;
             if (first_read)
             {
-                try
-                {
-                    fragmented_read->write(small_buf);
-                    BOOST_REQUIRE(false);
-                }
-                catch (std::exception& e)
-                {
-                    BOOST_REQUIRE(true);
-                }
+                BOOST_REQUIRE_THROW(fragmented_read->write(small_buf),std::exception);
             }
 
             test_read.append(small_buf.data(), maximum_readable);

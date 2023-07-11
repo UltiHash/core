@@ -37,8 +37,9 @@ fragment_on_device::write(std::span<const char> buffer)
 uh::serialization::fragment_serialize_size_format
 fragment_on_device::write(std::span<const char> buffer, uint32_t alloc)
 {
-    if (state_machine == READING_BEGIN)
-    THROW(util::exception, "Writing on fragment_on_device corrupted the fragments incomplete reading state!");
+    if (state_machine == READING_BEGIN){
+        THROW(util::exception,"Writing on fragment_on_device corrupted the fragments incomplete reading state!");
+    }
 
     uh::serialization::fragment_serialize_size_format return_size_format;
 
@@ -80,8 +81,9 @@ fragment_on_device::write(std::span<const char> buffer, uint32_t alloc)
 uh::serialization::fragment_serialize_size_format
 fragment_on_device::read(std::span<char> buffer)
 {
-    if (state_machine == WRITING_BEGIN)
-        THROW(util::exception, "Reading on fragment_on_device corrupted the fragments incomplete writing state!");
+    if (state_machine == WRITING_BEGIN){
+        THROW(util::exception,"Reading on fragment_on_device corrupted the fragments incomplete writing state!");
+    }
 
     uh::serialization::fragment_serialize_size_format header_read_format;
     header_read_format.deserialize(dev_fragment);
