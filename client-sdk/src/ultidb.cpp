@@ -27,7 +27,7 @@ UDB_RESULT udb_get_last_error()
 
 // ---------------------------------------------------------------------
 
-struct UDB_DOCUMENT_STRUCT
+struct UDB_OBJECT_STRUCT
 {
     char* key;
     size_t key_size;
@@ -36,11 +36,11 @@ struct UDB_DOCUMENT_STRUCT
     char** labels;
     size_t label_count;
 
-    UDB_DOCUMENT_STRUCT() : key(nullptr), key_size(0), value(nullptr), value_size(0),
+    UDB_OBJECT_STRUCT() : key(nullptr), key_size(0), value(nullptr), value_size(0),
                             labels(nullptr), label_count(0)
     {};
 
-    UDB_DOCUMENT_STRUCT(char* rec_key, size_t rec_key_size, char* rec_value, size_t rec_value_size,
+    UDB_OBJECT_STRUCT(char* rec_key, size_t rec_key_size, char* rec_value, size_t rec_value_size,
                         char** rec_labels, size_t rec_label_count) :
         key(rec_key),
         key_size(rec_key_size),
@@ -53,13 +53,13 @@ struct UDB_DOCUMENT_STRUCT
 
 // ---------------------------------------------------------------------
 
-struct UDB_DOCUMENTS
+struct UDB_OBJECTS
 {
-    std::vector<UDB_DOCUMENT_STRUCT*> documents {};
+    std::vector<UDB_OBJECT_STRUCT*> objects {};
 
-    UDB_DOCUMENTS() = default;
+    UDB_OBJECTS() = default;
 
-    ~UDB_DOCUMENTS() = default;
+    ~UDB_OBJECTS() = default;
 };
 
 // ---------------------------------------------------------------------
@@ -324,12 +324,12 @@ UDB_RESULT udb_ping(UDB_CONNECTION_STRUCT* conn)
 
 // ---------------------------------------------------------------------
 
-UDB_DOCUMENT* udb_init_document(char* key, size_t key_size, char* value, size_t value_size,
+UDB_OBJECT* udb_init_document(char* key, size_t key_size, char* value, size_t value_size,
                                 char** labels, size_t label_count)
 {
     try
     {
-        return new UDB_DOCUMENT_STRUCT(key, key_size, value, value_size, labels, label_count);
+        return new UDB_OBJECT_STRUCT(key, key_size, value, value_size, labels, label_count);
     }
     catch (const std::exception& e)
     {
@@ -340,7 +340,7 @@ UDB_DOCUMENT* udb_init_document(char* key, size_t key_size, char* value, size_t 
 
 // ---------------------------------------------------------------------
 
-UDB_RESULT udb_destroy_document(UDB_DOCUMENT_STRUCT* ptr_to_document_ptr)
+UDB_RESULT udb_destroy_document(UDB_OBJECT_STRUCT* ptr_to_document_ptr)
 {
     try
     {
@@ -371,9 +371,9 @@ UDB_WRITE_QUERY* udb_create_write_query()
 
 // ---------------------------------------------------------------------
 
-void udb_write_query_add_document(UDB_WRITE_QUERY* write_query, UDB_DOCUMENT* document)
+void udb_write_query_add_object(UDB_WRITE_QUERY* write_query, UDB_OBJECT* object)
 {
-    write_query->documents.push_back(document);
+    write_query->objects.push_back(object);
 }
 
 // ---------------------------------------------------------------------
@@ -457,7 +457,7 @@ UDB_WRITE_QUERY_RESULTS* udb_put(UDB_CONNECTION* conn, UDB_WRITE_QUERY* write_qu
     try
     {
         // TODO: fill it in a buffer and then send it after the buffer is filled instead of sending
-        //  all documents at once
+        //  all objects at once
         std::vector<uint16_t> key_sizes;
         std::vector<uint32_t> value_sizes;
         std::vector<uint8_t> label_count;
@@ -466,22 +466,22 @@ UDB_WRITE_QUERY_RESULTS* udb_put(UDB_CONNECTION* conn, UDB_WRITE_QUERY* write_qu
         // TODO: reserve the memory and then memcpy into this reserved memory since we know the size of write_query
         std::vector<char> data;
 
-        for (const auto& document : write_query->documents)
+        for (const auto& object : write_query->objects)
         {
-            key_sizes.push_back(document->key_size);
-            data.insert(data.end(), document->key, document->key + document->key_size);
+            key_sizes.push_back(object->key_size);
+            data.insert(data.end(), object->key, object->key + object->key_size);
 
             data.push_back(uh::util::INSERT_UPDATE);
 
-            value_sizes.push_back(document->value_size);
-            data.insert(data.end(), document->value, document->value + document->value_size);
+            value_sizes.push_back(object->value_size);
+            data.insert(data.end(), object->value, object->value + object->value_size);
 
-            label_count.push_back(document->label_count);
-            for (size_t index = 0; index < document->label_count; index++ )
+            label_count.push_back(object->label_count);
+            for (size_t index = 0; index < object->label_count; index++ )
             {
-                auto label_size = strlen(document->labels[index]);
+                auto label_size = strlen(object->labels[index]);
                 label_sizes.push_back(label_size);
-                data.insert(data.end(), document->labels[index], document->labels[index] + label_size);
+                data.insert(data.end(), object->labels[index], object->labels[index] + label_size);
             }
         }
 
@@ -789,7 +789,7 @@ UDB_READ_QUERY_RESULTS* udb_get(UDB_CONNECTION* conn, UDB_READ_QUERY* read_query
             read_query_results->results_container.emplace_back(key, key_size, value, value_size, labels, labels_count);
         }
 
-        // Free the ospan since document will free the data for us
+        // Free the ospan since object will free the data for us
         std::get<0>(resp.data).data.release();
 
         return read_query_results;
@@ -849,11 +849,11 @@ UDB_READ_QUERY_RESULT* udb_get_result(UDB_READ_QUERY_RESULTS* results, size_t in
 
 // ---------------------------------------------------------------------
 
-UDB_DATA* udb_get_key(UDB_DOCUMENT* doc)
+UDB_DATA* udb_get_key(UDB_OBJECT* obj)
 {
     try
     {
-        return new UDB_DATA(doc->key, doc->key_size);
+        return new UDB_DATA(obj->key, obj->key_size);
     }
     catch (const std::bad_alloc& e)
     {
@@ -869,11 +869,11 @@ UDB_DATA* udb_get_key(UDB_DOCUMENT* doc)
 
 // ---------------------------------------------------------------------
 
-UDB_DATA* udb_get_value(UDB_DOCUMENT* doc)
+UDB_DATA* udb_get_value(UDB_OBJECT* obj)
 {
     try
     {
-        return new UDB_DATA(doc->value, doc->value_size);
+        return new UDB_DATA(obj->value, obj->value_size);
     }
     catch (const std::bad_alloc& e)
     {
@@ -889,21 +889,21 @@ UDB_DATA* udb_get_value(UDB_DOCUMENT* doc)
 
 // ---------------------------------------------------------------------
 
-size_t udb_get_labels_count(UDB_DOCUMENT* doc)
+size_t udb_get_labels_count(UDB_OBJECT* obj)
 {
-    return doc->label_count;
+    return obj->label_count;
 }
 
 // ---------------------------------------------------------------------
 
-char* udb_get_label(UDB_DOCUMENT* doc, size_t label_index)
+char* udb_get_label(UDB_OBJECT* obj, size_t label_index)
 {
-    return doc->labels[label_index];
+    return obj->labels[label_index];
 }
 
 // ---------------------------------------------------------------------
 
-UDB_RESULT udb_destory_udb_data(UDB_DATA* data)
+UDB_RESULT udb_destroy_udb_data(UDB_DATA* data)
 {
     delete data;
     return UDB_RESULT_SUCCESS;
