@@ -138,7 +138,7 @@ chunk_collection::write_indexed(std::span<const char> buffer,
     else
         m_index.emplace_back_index(written,
                                    m_index.back().second +
-                                       m_index.back().first.header_size +
+                                       m_index.back().first.content_buf_size +
                                        m_index.back().first.content_size, flush_after_operation);
 
     if (flush_after_operation)
@@ -181,7 +181,7 @@ chunk_collection::read_indexed(uint8_t at)
         output.resize(output.size() + temp_read.content_size);
         std::memcpy(output.data() + old_size, buffer.data(), temp_read.content_size);
 
-        read.header_size = std::max(read.header_size, temp_read.header_size);
+        read.content_buf_size = std::max(read.content_buf_size, temp_read.content_buf_size);
         read.content_size += temp_read.content_size;
         read.index_num = read.index_num;
 

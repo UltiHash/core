@@ -18,16 +18,12 @@ fragment_on_seekable_device::fragment_on_seekable_device(io::seekable_device& de
 
 uh::serialization::fragment_serialize_size_format fragment_on_seekable_device::skip()
 {
-    serialization::fragment_serialize_transit_format header_read_format =
-        frag_serialize.get_header_data_size_index();
+    uh::serialization::fragment_serialize_size_format read_over;
+    read_over.deserialize(dev_seek);
 
-    dev_seek.seek(header_read_format.content_size, std::ios_base::cur);
+    dev_seek.seek(read_over.content_size, std::ios_base::cur);
 
-    return {
-        static_cast<uint8_t>(header_read_format.header_size),
-        header_read_format.content_size,
-        header_read_format.index
-    };
+    return read_over;
 }
 
 // ---------------------------------------------------------------------

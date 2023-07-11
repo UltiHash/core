@@ -72,7 +72,7 @@ BOOST_AUTO_TEST_CASE(test_reset_device)
     std::unique_ptr<fragment_on_seekable_reset_device> fragmented_back =
         std::make_unique<fragment_on_seekable_reset_device>
             (*temp_buf, 0,
-             written_serialized_size1.header_size +
+             written_serialized_size1.content_buf_size +
                  written_serialized_size1.content_size);
 
     fragmented_back->reset();

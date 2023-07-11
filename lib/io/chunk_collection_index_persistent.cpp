@@ -47,7 +47,7 @@ maybe_index_persist_chunk_collection(std::unique_ptr<io::file>& collection_file)
             skip_format.deserialize(read_buffer_device);
 
             output_index.emplace_back(skip_format, collection_offset);
-            collection_offset += skip_format.header_size + skip_format.content_size;
+            collection_offset += skip_format.content_buf_size + skip_format.content_size;
         }
 
         if (collection_offset < collection_file->size())
@@ -89,7 +89,7 @@ maybe_index_persist_chunk_collection(std::unique_ptr<io::file>& collection_file)
             auto frag_ser_size_format = skip_format.serialize();
             io::write(write_index_file, frag_ser_size_format);
 
-            collection_offset += skip_format.header_size + skip_format.content_size;
+            collection_offset += skip_format.content_buf_size + skip_format.content_size;
             index_entry_count++;
         }
         while (skip_format.content_size > 0);
@@ -192,7 +192,7 @@ std::size_t chunk_collection_index_persistent::size()
 
     for (const auto& item : *this)
     {
-        accumulated += item.first.header_size + item.first.content_size;
+        accumulated += item.first.content_buf_size + item.first.content_size;
     }
 
     return accumulated;
@@ -206,7 +206,7 @@ std::size_t chunk_collection_index_persistent::size(uint8_t index_address)
 
     auto found_address = find_address(index_address, this->begin());
 
-    return found_address->first.header_size + found_address->first.content_size;
+    return found_address->first.content_buf_size + found_address->first.content_size;
 }
 
 // ---------------------------------------------------------------------
@@ -372,7 +372,7 @@ std::vector<uint16_t> chunk_collection_index_persistent::update_offset_calculate
         std::for_each(to_remove_it, end(), [&remove_size_struct](
             std::pair<serialization::fragment_serialize_size_format, std::streamoff>& index_pair)
         {
-            index_pair.second -= (remove_size_struct.header_size + remove_size_struct.content_size);
+            index_pair.second -= (remove_size_struct.content_buf_size + remove_size_struct.content_size);
         });
 
         delete_pos_list.push_back(to_remove_it->first.index_num);
@@ -430,7 +430,7 @@ std::size_t chunk_collection_index_persistent::update_erase_size(const std::vect
 
                       if (to_be_deleted)
                       {
-                          deleted_index_file_size += item.first.header_size + item.first.content_size;
+                          deleted_index_file_size += item.first.content_buf_size + item.first.content_size;
                       }
 
                       return to_be_deleted;

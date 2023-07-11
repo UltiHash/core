@@ -1,11 +1,7 @@
-//
-// Created by benjamin-elias on 18.05.23.
-//
 #include "fragment_on_device.h"
 
 #include <util/exception.h>
 #include <serialization/fragment_size_struct.h>
-#include <serialization/fragment_serialization.h>
 #include <io/device.h>
 
 #include <span>
@@ -28,7 +24,7 @@ fragment_on_device::write(std::span<const char> buffer)
     if (state_machine == READING_BEGIN)
     THROW(util::exception, "Writing on fragment_on_device corrupted the fragments incomplete reading state!");
 
-    auto return_size_format = frag_serialize.write(buffer, index);
+    auto return_size_format = uh::serialization::fragment_serialize_size_format(index,buffer.size());
     state_machine = COMPLETE;
     return return_size_format;
 }
@@ -44,7 +40,9 @@ fragment_on_device::write(std::span<const char> buffer, uint32_t alloc)
     if (state_machine == UNDEFINED_STATE)
     {
         state_machine = WRITING_BEGIN;
-        auto return_size_format = frag_serialize.write(buffer, index, alloc);
+        auto return_size_format = uh::serialization::fragment_serialize_size_format(index,
+                                                                                    std::max((uint64_t) alloc,
+                                                                                             buffer.size()));
         elements_left_to_process = static_cast<int64_t>(alloc) - return_size_format.content_size;
 
         if (elements_left_to_process < 0)
@@ -68,11 +66,7 @@ fragment_on_device::write(std::span<const char> buffer, uint32_t alloc)
         if (!elements_left_to_process)
             state_machine = COMPLETE;
 
-        return {
-            0,
-            static_cast<uint32_t>(written),
-            index
-        };
+        return {index, static_cast<uint32_t>(written)};
     }
 }
 
@@ -84,66 +78,40 @@ fragment_on_device::read(std::span<char> buffer)
     if (state_machine == WRITING_BEGIN)
     THROW(util::exception, "Reading on fragment_on_device corrupted the fragments incomplete writing state!");
 
+    uh::serialization::fragment_serialize_size_format header_read_format;
+    header_read_format.deserialize(dev_fragment);
+
     if (state_machine == UNDEFINED_STATE)
     {
         state_machine = READING_BEGIN;
-        serialization::fragment_serialize_transit_format header_read_format =
-            frag_serialize.get_header_data_size_index();
 
         elements_left_to_process = header_read_format.content_size;
-        control_byte = header_read_format.control_byte;
-        index = header_read_format.index;
+        index = header_read_format.index_num;
 
         header_read_format.content_size = std::min(header_read_format.content_size,
                                                    static_cast<uint32_t>(buffer.size()));
 
-        std::pair<std::vector<char>, serialization::fragment_serialize_size_format> first_read =
-            frag_serialize.read<std::vector<char>>(header_read_format);
 
-        std::memcpy(buffer.data(), first_read.first.data(), first_read.first.size());
-
-        elements_left_to_process -= first_read.second.content_size;
-
-        if (elements_left_to_process < 0)
-        THROW(util::exception, "Too many elements were read from fragment on device! Allocation was exceeded!");
-
-        if (!elements_left_to_process)
-            state_machine = COMPLETE;
-
-        return {
-            static_cast<uint8_t>(first_read.second.header_size),
-            first_read.second.content_size,
-            static_cast<uint8_t>(first_read.second.index_num)
-        };
     }
     else
     {
-        uint32_t to_read = std::min(
-            static_cast<uint32_t>(elements_left_to_process),
-            static_cast<uint32_t>(buffer.size())
-        );
+        header_read_format.content_size = std::min((uint32_t)elements_left_to_process,
+                                                   static_cast<uint32_t>(buffer.size()));
 
-        serialization::fragment_serialize_transit_format header_read_format(
-            0,
-            to_read,
-            control_byte,
-            index);
-
-        std::pair<std::vector<char>, serialization::fragment_serialize_size_format> read_continue =
-            frag_serialize.read<std::vector<char>>(header_read_format);
-
-        std::memcpy(buffer.data(), read_continue.first.data(), read_continue.first.size());
-
-        elements_left_to_process -= read_continue.second.content_size;
-
-        if (elements_left_to_process < 0)
-        THROW(util::exception, "Too many elements were read from fragment on device! Allocation was exceeded!");
-
-        if (!elements_left_to_process)
-            state_machine = COMPLETE;
-
-        return read_continue.second;
+        header_read_format.content_buf_size = 0;
     }
+
+    io::read(dev_fragment,std::span{buffer.begin(),buffer.begin()+header_read_format.content_size});
+
+    elements_left_to_process -= header_read_format.content_size;
+
+    if (elements_left_to_process < 0)
+    THROW(util::exception, "Too many elements were read from fragment on device! Allocation was exceeded!");
+
+    if (!elements_left_to_process)
+        state_machine = COMPLETE;
+
+    return header_read_format;
 
 }
 
@@ -159,7 +127,13 @@ bool fragment_on_device::valid() const
 uh::serialization::fragment_serialize_size_format
 fragment_on_device::skip()
 {
-    return frag_serialize.read<std::vector<char>>().second;
+    uh::serialization::fragment_serialize_size_format read_over;
+    read_over.deserialize(dev_fragment);
+
+    std::vector<char> unused_buffer(read_over.content_size);
+    io::read(dev_fragment,unused_buffer);
+
+    return read_over;
 }
 
 // ---------------------------------------------------------------------

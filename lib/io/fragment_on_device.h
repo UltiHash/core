@@ -5,7 +5,7 @@
 #include "io/fragmented_device.h"
 #include "io/device.h"
 #include "serialization/fragment_size_struct.h"
-#include "serialization/fragment_serialization.h"
+#include "serialization/shrink_arithmetic_serialization.h"
 
 #include <cstdint>
 #include <span>
@@ -99,10 +99,9 @@ private:
     int64_t elements_left_to_process{};
     io::device& dev_fragment;
     uint8_t index;
-    char control_byte{};
 
 protected:
-    serialization::fragment_serialization<> frag_serialize;
+    serialization::shrink_arithmetic_serialization<> frag_serialize;
 };
 } // namespace uh::io
 

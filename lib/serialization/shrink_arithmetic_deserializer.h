@@ -1,11 +1,8 @@
-//
-// Created by benjamin-elias on 10.07.23.
-//
-
-#ifndef SIMPLE_ARITHMETIC_DESERIALIZER_H
-#define SIMPLE_ARITHMETIC_DESERIALIZER_H
+#ifndef SHRINK_ARITHMETIC_DESERIALIZER_H
+#define SHRINK_ARITHMETIC_DESERIALIZER_H
 
 #include <io/device.h>
+#include <serialization/shrink_arithmetic_serialization_common.h>
 
 #include <cstring>
 #include <algorithm>
@@ -15,33 +12,33 @@
 namespace uh::serialization
 {
 
-class simple_arithmetic_deserializer
+class shrink_arithmetic_deserializer
 {
 protected:
     io::device& dev_;
 
 public:
-    explicit simple_arithmetic_deserializer(io::device& input_device)
+    explicit shrink_arithmetic_deserializer(io::device& input_device)
     : dev_(input_device)
         {}
 
     template<typename T>
     requires (std::is_arithmetic_v<T> or std::is_enum_v<T>)
-    T read()
+    T read(uint16_t bytes_non_zero = sizeof(T))
     {
-        char tmp[sizeof(T)];
+        std::vector<char> tmp(bytes_non_zero);
         io::read(dev_, tmp);
         T sum_result{};
 
-        for(std::size_t i = 0; i < sizeof(T); i++){
+        for(std::size_t i = 0; i < bytes_non_zero; i++){
             T shift_tmp = (unsigned char) tmp[i];
             sum_result += shift_tmp << (8 * (sizeof(T) - 1 - i));
         }
 
-        return sum_result;
+        return endian_convert(sum_result);
     }
 };
 
 } // uh::serialization
 
-#endif //SIMPLE_ARITHMETIC_DESERIALIZER_H
+#endif //SHRINK_ARITHMETIC_DESERIALIZER_H

@@ -75,14 +75,14 @@ BOOST_AUTO_TEST_CASE(write_read_chunk_collection)
         else
         {
             auto check_header = cc.write_indexed(input, true);
-            BOOST_CHECK_EQUAL(check_header.header_size, 4);
+            BOOST_CHECK_EQUAL(check_header.content_buf_size, 4);
         }
 
         auto read_back = cc.read_indexed(static_cast<uint8_t>(i));
         BOOST_REQUIRE_EQUAL_COLLECTIONS(input.begin(), input.end(),
                                         read_back.first.begin(), read_back.first.end());
-        BOOST_CHECK_EQUAL(read_back.second.header_size, 4);
-        BOOST_CHECK_EQUAL(cc.size(i), input.size() + read_back.second.header_size);
+        BOOST_CHECK_EQUAL(read_back.second.content_buf_size, 4);
+        BOOST_CHECK_EQUAL(cc.size(i), input.size() + read_back.second.content_buf_size);
     }
 
     std::string input3 = uh::test::LOREM_IPSUM + std::to_string(3);
