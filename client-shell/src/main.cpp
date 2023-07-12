@@ -102,7 +102,7 @@ void integrate(protocol::client_pool& pool,
         if (md->type() == uhv::uh_file_type::regular)
         {
             size += md->size();
-            effective_size += md->effective_size();
+            //effective_size += md->effective_size();
         }
 
         if (input != md->path()) [[likely]]
