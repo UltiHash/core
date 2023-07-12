@@ -66,10 +66,17 @@ void integrate(protocol::client_pool& pool,
                const std::filesystem::path& output,
                bool overwrite)
 {
+
+    if (!std::filesystem::is_directory(input)) {
+        throw std::runtime_error ("The input path must be a directory!");
+    }
+
     auto time_start = std::chrono::system_clock::now();
 
     uhv::job_queue<std::unique_ptr<uhv::meta_data>> q_meta_data;
     std::list<std::future<std::unique_ptr<uhv::meta_data>>> metadata;
+
+    std::size_t effective_size = 0u;
 
     {
         uh::chunking::mod chunking_module(chunker_config);
@@ -82,11 +89,11 @@ void integrate(protocol::client_pool& pool,
         traverse traverse_class(input, q_meta_data);
 
         upload_class.join();
+        effective_size = upload_class.m_total_effective_size;
         handle_errors("there were errors during upload", upload_class.results());
     }
 
     std::size_t size = 0u;
-    std::size_t effective_size = 0u;
 
     std::list<std::unique_ptr<uhv::meta_data>> files;
     for (auto& next : metadata)
@@ -95,7 +102,7 @@ void integrate(protocol::client_pool& pool,
         if (md->type() == uhv::uh_file_type::regular)
         {
             size += md->size();
-            effective_size += md->effective_size();
+            //effective_size += md->effective_size();
         }
 
         if (input != md->path()) [[likely]]

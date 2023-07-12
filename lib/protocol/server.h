@@ -25,7 +25,7 @@ public:
     void handle() override;
 
 private:
-    void handle_normal_request(uint8_t request_id);
+    int handle_normal_request(uint8_t request_id);
 
     void handle_hello();
     void handle_quit();
