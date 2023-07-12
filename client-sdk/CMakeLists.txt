@@ -4,7 +4,7 @@ message(STATUS "Building ${PROJECT_NAME}...")
 
 set(CMAKE_CXX_STANDARD 20)
 
-add_compile_options(-fPIC)
+add_compile_options(-fPIE)
 
 # external dependencies
 set(Boost_USE_STATIC_LIBS ON)
