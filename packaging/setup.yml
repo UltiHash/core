@@ -19,7 +19,7 @@
         - curl
         - gnupg
         - software-properties-common
-        - docker.ioPrints two lines of messages, but only if there is an environment value set
+        - docker.io
         - docker-compose
       when: ansible_os_family == 'Debian'
       become: yes
