@@ -127,7 +127,7 @@ BOOST_AUTO_TEST_CASE(write_read_multi_chunk_collection)
     BOOST_REQUIRE_EQUAL_COLLECTIONS(valid_indexes.cbegin(), valid_indexes.cend(),
                                     valid_indexes_simulation.cbegin(), valid_indexes_simulation.cend());
 
-    std::reverse(valid_indexes.begin(),valid_indexes.end());
+    std::reverse(valid_indexes.begin(), valid_indexes.end());
 
     BOOST_REQUIRE_THROW(cc.read_indexed_multi(std::vector<uint8_t>{0, 0}), std::exception);
 
@@ -194,7 +194,7 @@ BOOST_AUTO_TEST_CASE(remove_fragment_multi_chunk_collection)
 
     auto cc_count_old = cc2.count();
     cc2.remove({3});
-    BOOST_CHECK(cc_count_old-1 == cc2.count());
+    BOOST_CHECK(cc_count_old - 1 == cc2.count());
 
     cc2.maybe_forget_chunk_collection_index_file();
 
@@ -213,9 +213,14 @@ BOOST_AUTO_TEST_CASE(remove_fragment_multi_chunk_collection)
     BOOST_REQUIRE_EQUAL_COLLECTIONS(valid_indexes.cbegin(), valid_indexes.cend(),
                                     valid_indexes_simulation.cbegin(), valid_indexes_simulation.cend());
 
+    //TODO: fragment size struct read does not work because dev redirection was not successful
     auto read_all_back = cc2.read_indexed_multi(valid_indexes);
 
-    //TODO: check indexes of simulation with persisted indexes
+    auto test_beg = read_all_back.begin();
+    for (const auto test_index : valid_indexes_simulation)
+    {
+        BOOST_CHECK_EQUAL(test_index,test_beg->second.index_num);
+    }
 
     auto to_write_beg = to_write.cbegin();
     for (const auto& item : read_all_back)

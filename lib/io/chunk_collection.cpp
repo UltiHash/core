@@ -119,11 +119,7 @@ chunk_collection::write_indexed(std::span<const char> buffer,
     if (buffer.size() > TREE_STORAGE_CHUNK_LIMIT)
     THROW(util::exception, "Incoming writing buffer was too large!");
 
-    const auto write_mode = std::ios_base::binary | std::ios_base::app;
-
-    if (not m_workfile->is_open() or
-        m_workfile->mode() != write_mode)
-        m_workfile = std::make_unique<io::file>(m_workfile->path(), write_mode);
+    maybe_force_mode_flush_reopen(std::ios_base::binary | std::ios_base::app);
 
     auto temporarily_cached_fragment_on_seekable_device =
         io::fragment_on_seekable_device(*m_workfile,
@@ -154,14 +150,8 @@ chunk_collection::read_indexed(uint8_t at)
 {
     std::lock_guard lock(m_chunk_collection_workmux);
 
-    const auto read_mode = std::ios_base::binary | std::ios_base::in;
-
-    if (not m_workfile->is_open()
-        or m_workfile->mode() != read_mode)
-        m_workfile = std::make_unique<io::file>(m_workfile->path(), read_mode);
-
+    maybe_force_mode_flush_reopen(std::ios_base::binary | std::ios_base::in);
     auto fragment_pos_element = m_index.find_address(at, m_index.begin());
-
     m_workfile->seek(fragment_pos_element->second, std::ios_base::beg);
 
     auto temporarily_cached_fragment_on_seekable_device =
@@ -197,8 +187,8 @@ void chunk_collection::remove(const std::vector<uint8_t>& at)
 {
     std::lock_guard lock(m_chunk_collection_workmux);
 
-    const auto read_mode = std::ios_base::binary | std::ios_base::in;
-    m_workfile = std::make_unique<io::file>(m_workfile->path(), read_mode);
+    maybe_force_mode_flush_reopen(std::ios_base::binary | std::ios_base::in);
+    m_workfile->seek(0,std::ios_base::beg);
 
     {
         io::temp_file cc_tmp(getPath().parent_path());
@@ -229,7 +219,7 @@ void chunk_collection::remove(const std::vector<uint8_t>& at)
         std::filesystem::rename(replace_preparation_chunk_collection, m_workfile->path());
     }
 
-    m_workfile = std::make_unique<io::file>(m_workfile->path(), read_mode);
+    m_workfile = std::make_unique<io::file>(m_workfile->path(), std::ios_base::binary | std::ios_base::in);
 
     m_index.erase_index_items(at);
 }
@@ -398,6 +388,14 @@ void chunk_collection::maybe_forget_chunk_collection_index_file()
     std::lock_guard lock(m_chunk_collection_workmux);
 
     m_index.maybe_forget_index_file();
+}
+
+// ---------------------------------------------------------------------
+
+void chunk_collection::maybe_force_mode_flush_reopen(std::ios_base::openmode mode)
+{
+    if (not m_workfile->is_open() or m_workfile->mode() != mode)
+        m_workfile = std::make_unique<io::file>(m_workfile->path(), mode);
 }
 
 // ---------------------------------------------------------------------

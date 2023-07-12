@@ -150,6 +150,8 @@ private:
     std::recursive_mutex m_chunk_collection_workmux;
 
     bool m_behave_like_tempfile;
+
+    void maybe_force_mode_flush_reopen(std::ios_base::openmode mode);
 };
 
 } // namespace uh::io
