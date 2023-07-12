@@ -74,9 +74,9 @@ int main()
 
         /* initialize object with key, value, and label */
 
-        UDB_OBJECT* test_doc_1 = udb_init_document(test_key_1, strlen(test_key_1), test_data_1, strlen(test_data_1),
+        UDB_OBJECT* test_doc_1 = udb_init_object(test_key_1, strlen(test_key_1), test_data_1, strlen(test_data_1),
                                                      test_labels, sizeof(test_labels) / sizeof(char*));
-        UDB_OBJECT* test_doc_2 = udb_init_document(test_key_2, strlen(test_key_2), test_data_2, strlen(test_data_2),
+        UDB_OBJECT* test_doc_2 = udb_init_object(test_key_2, strlen(test_key_2), test_data_2, strlen(test_data_2),
                                                  test_labels, sizeof(test_labels) / sizeof(char*));
 
     /* create a write query */
@@ -137,7 +137,7 @@ int main()
         /* putting object */
         udb_destroy_write_query_results(write_results);
         udb_destroy_write_query(test_write_query);
-        udb_destroy_document(test_doc_1);
+        udb_destroy_object(test_doc_1);
 
         /* initialization stuffs */
         udb_destroy_connection(udb_conn);

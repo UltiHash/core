@@ -102,8 +102,8 @@ typedef struct UDB_CONNECTION_STRUCT UDB_CONNECTION;
  * Opaque structure that represents the concept of an "object". An object is a
  * structure that holds a key, value, and labels.
  *
- * Allocated and initialized with ::udb_init_document.
- * Cleaned up and deallocated with ::udb_destroy_document.
+ * Allocated and initialized with ::udb_init_object.
+ * Cleaned up and deallocated with ::udb_destroy_object.
  */
 typedef struct UDB_OBJECT_STRUCT UDB_OBJECT;
 
@@ -112,6 +112,9 @@ typedef struct UDB_OBJECT_STRUCT UDB_OBJECT;
  *
  * Provided functions can be used to fill up this query structure and subsequently write
  * objects to the database.
+ *
+ * Allocated and initialized with ::udb_create_write_query.
+ * Cleaned up and deallocated with ::udb_destroy_write_query.
  */
 typedef struct UDB_OBJECTS UDB_WRITE_QUERY;
 
@@ -120,13 +123,16 @@ typedef struct UDB_OBJECTS UDB_WRITE_QUERY;
  *
  * Provided functions can be used to fill up this query structure and subsequently read
  * objects from the database.
+ *
+ * Allocated and initialized with ::udb_create_read_query.
+ * Cleaned up and deallocated with ::udb_destroy_read_query.
  */
 typedef struct UDB_READ_QUERY_STRUCT UDB_READ_QUERY;
 
 /**
  * A wrapper struct that wraps a char* and the size of the pointed data.
  *
- * It is used to wrap the keys and values of the objects when `getting` for convenience purposes.
+ * It is used to wrap the keys and values of the objects when `getting` from objects for convenience purposes.
  */
 struct UDB_DATA
 {
@@ -167,6 +173,8 @@ struct UDB_READ_QUERY_RESULT
 
 /**
  * An opaque structure that holds all the results retrieved from the ::udb_get function.
+ *
+ * Cleaned up and deallocated with ::udb_destroy_read_query_results.
  */
 struct UDB_READ_QUERY_RESULTS;
 
@@ -244,10 +252,9 @@ UDB_RESULT udb_destroy_connection(UDB_CONNECTION* conn);
 UDB_RESULT udb_ping(UDB_CONNECTION* conn);
 
 /**
- * Creates an instance of ::UDB_OBJECT structure and returns a pointer it
- * if the allocation was successful. On failure, a nullptr is returned.
+ * Creates an instance of ::UDB_OBJECT structure.
  *
- * The allocated instance of ::UDB_OBJECT has to be deallocated with ::udb_destroy_document.
+ * The allocated instance of ::UDB_OBJECT has to be deallocated with ::udb_destroy_object.
  *
  * @param key pointer to the array of key characters
  * @param key_size size of the key
@@ -258,19 +265,19 @@ UDB_RESULT udb_ping(UDB_CONNECTION* conn);
  * @param label_count Number of labels the user wants to assign for the value
  * @return pointer to the ::UDB_OBJECT allocated. On error nullptr is returned.
 */
-UDB_OBJECT* udb_init_document(char* key, size_t key_size, char* value, size_t value_size,
+UDB_OBJECT* udb_init_object(char* key, size_t key_size, char* value, size_t value_size,
                                 char** labels, size_t label_count);
 
 /**
- * Deallocates the instance of ::UDB_OBJECT structure created via ::udb_init_document.
+ * Deallocates the instance of ::UDB_OBJECT structure created via ::udb_init_object.
  *
- * @param doc object to deallocate
+ * @param obj object to deallocate
  * @return UDB_RESULT enum that describes the result of the operation
  */
-UDB_RESULT udb_destroy_document(UDB_OBJECT* doc);
+UDB_RESULT udb_destroy_object(UDB_OBJECT* obj);
 
 /**
- * Creates a write query for putting a object into the database.
+ * Creates a write query for putting an object into the database.
  *
  * The allocated ::UDB_WRITE_QUERY has to be deallocated using ::udb_destroy_write_query.
  *
@@ -279,9 +286,9 @@ UDB_RESULT udb_destroy_document(UDB_OBJECT* doc);
 UDB_WRITE_QUERY* udb_create_write_query();
 
 /**
- * Adds a object in the write query.
+ * Adds an object in the write query.
  *
- * @param write_query The ::UDB_WRITE_QUERY struct in which a object is to be added
+ * @param write_query The ::UDB_WRITE_QUERY struct in which an object is to be added
  * @param object ::UDB_OBJECT struct to add
  */
 void udb_write_query_add_object(UDB_WRITE_QUERY* write_query, UDB_OBJECT* object);
@@ -296,6 +303,8 @@ UDB_RESULT udb_destroy_write_query(UDB_WRITE_QUERY* write_query);
 
 /**
  * An opaque struct which holds the results received from ::udb_put function call.
+ *
+ * Cleaned up and deallocated with ::udb_destroy_write_query_results.
  */
 struct UDB_WRITE_QUERY_RESULTS;
 
@@ -326,7 +335,24 @@ size_t udb_get_effective_sizes_count(UDB_WRITE_QUERY_RESULTS* results);
  */
 uint32_t udb_get_effective_size(UDB_WRITE_QUERY_RESULTS* results, size_t index);
 
+/**
+ * Gets the count of the return code returned in the ::UDB_WRITE_QUERY_RESULTS struct. ::UDB_WRITE_QUERY_RESULTS
+ * struct stores an array of return codes for each objects in the write query.
+ *
+ * @param results pointer to the ::UDB_WRITE_QUERY_RESULTS struct
+ * @return count of the return codes returned in ::UDB_WRITE_QUERY_RESULTS struct
+ */
 size_t udb_get_return_code_count(UDB_WRITE_QUERY_RESULTS* results);
+
+/**
+ * Gets the return code at the given index. The order of return codes returned is the same as the order of the
+ * objects added in the write query. ::UDB_WRITE_QUERY_RESULTS struct stores an array of return codes for each
+ * objects in the write query.
+ *
+ * @param results pointer to the ::UDB_WRITE_QUERY_RESULTS struct
+ * @param index index from which return code is to be received
+ * @return return code of each objects `put` into the database
+ */
 uint8_t udb_get_return_code(UDB_WRITE_QUERY_RESULTS* results, size_t index);
 
 /**
@@ -373,10 +399,10 @@ UDB_RESULT udb_read_query_set_labels(UDB_READ_QUERY* read_query, char** labels, 
 /**
  * Destroys the allocated ::UDB_READ_QUERY struct.
  *
- * @param read_query_ptr_container pointer to the allocated ::UDB_READ_QUERY struct
+ * @param read_query pointer to the allocated ::UDB_READ_QUERY struct
  * @return UDB_RESULT enum that describes the result of the operation
  */
-UDB_RESULT udb_destroy_read_query(UDB_READ_QUERY* read_query_ptr_container);
+UDB_RESULT udb_destroy_read_query(UDB_READ_QUERY* read_query);
 
 /**
  * Getting the object using the ::UDB_READ_QUERY struct. Returns a pointer to the ::UDB_READ_QUERY_RESULTS
@@ -439,39 +465,39 @@ UDB_RESULT udb_destroy_udb_data(UDB_DATA* data);
  * Gets a pointer to the ::UDB_DATA struct which holds the key information. The struct is allocated and has to
  * be deallocated with ::udb_destroy_udb_data function.
  *
- * @param doc pointer to the ::UDB_OBJECT struct
+ * @param obj pointer to the ::UDB_OBJECT struct
  * @return pointer to the UDB_DATA struct which holds the key information i.e. char* and size_t.
  * On error nullptr is returned.
  */
-UDB_DATA* udb_get_key(UDB_OBJECT* doc);
+UDB_DATA* udb_get_key(UDB_OBJECT* obj);
 
 /**
  * Gets the value of the object. Returns a pointer to ::UDB_DATA which holds the value
  * information i.e. char* and size_t
  *
- * @param doc pointer to the ::UDB_OBJECT struct
+ * @param obj pointer to the ::UDB_OBJECT struct
  * @return pointer to the UDB_DATA struct which holds the key information i.e. char* and size_t.
  * On error nullptr is returned.
  */
-UDB_DATA* udb_get_value(UDB_OBJECT* doc);
+UDB_DATA* udb_get_value(UDB_OBJECT* obj);
 
 /**
  * Gets the count of the labels inside the object.
  *
- * @param doc pointer to the ::UDB_OBJECT struct
+ * @param obj pointer to the ::UDB_OBJECT struct
  * @return number of labels that is in the object
  */
-size_t udb_get_labels_count(UDB_OBJECT* doc);
+size_t udb_get_labels_count(UDB_OBJECT* obj);
 
 /**
  * Gets the pointer to the null-terminated label string from the given index.
  *
- * @param doc pointer to the object
+ * @param obj pointer to the object
  * @param label_index index of the label string which is to be retrieved
  * @return pointer to the null-terminated label string at the given index.
  * On error nullptr is returned.
  */
-char* udb_get_label(UDB_OBJECT* doc, size_t label_index);
+char* udb_get_label(UDB_OBJECT* obj, size_t label_index);
 
 // ---------------------------------------------------------------------
 

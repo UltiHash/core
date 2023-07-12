@@ -4,7 +4,7 @@ message(STATUS "Building ${PROJECT_NAME}...")
 
 set(CMAKE_CXX_STANDARD 20)
 
-add_compile_options(-fPIE)
+add_compile_options(-fPIC)
 
 # external dependencies
 set(Boost_USE_STATIC_LIBS ON)
@@ -23,12 +23,13 @@ file(GLOB_RECURSE HEADER_FILE_LIST ${CMAKE_CURRENT_SOURCE_DIR}/include/*.h)
 # adding all the .cpp files of the current project
 file(GLOB_RECURSE SOURCE_FILE_LIST ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp)
 
-add_library(${PROJECT_NAME} STATIC ${HEADER_FILE_LIST} ${SOURCE_FILE_LIST})
-target_link_libraries(${PROJECT_NAME} PRIVATE ${${PROJECT_NAME}_LINK_LIBRARIES})
-target_include_directories(${PROJECT_NAME} PUBLIC ${${PROJECT_NAME}_INCLUDE_DIRS})
+# static library
+add_library(${PROJECT_NAME}_static STATIC ${HEADER_FILE_LIST} ${SOURCE_FILE_LIST})
+target_link_libraries(${PROJECT_NAME}_static PRIVATE ${${PROJECT_NAME}_LINK_LIBRARIES})
+target_include_directories(${PROJECT_NAME}_static PUBLIC ${${PROJECT_NAME}_INCLUDE_DIRS})
 
 add_executable(simple_example ${CMAKE_CURRENT_SOURCE_DIR}/examples/simple_example.cpp)
-target_link_libraries(simple_example ${PROJECT_NAME})
+target_link_libraries(simple_example ${PROJECT_NAME}_static)
 target_include_directories(simple_example PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 ## create testing targets

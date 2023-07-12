@@ -324,7 +324,7 @@ UDB_RESULT udb_ping(UDB_CONNECTION_STRUCT* conn)
 
 // ---------------------------------------------------------------------
 
-UDB_OBJECT* udb_init_document(char* key, size_t key_size, char* value, size_t value_size,
+UDB_OBJECT* udb_init_object(char* key, size_t key_size, char* value, size_t value_size,
                                 char** labels, size_t label_count)
 {
     try
@@ -340,7 +340,7 @@ UDB_OBJECT* udb_init_document(char* key, size_t key_size, char* value, size_t va
 
 // ---------------------------------------------------------------------
 
-UDB_RESULT udb_destroy_document(UDB_OBJECT_STRUCT* ptr_to_document_ptr)
+UDB_RESULT udb_destroy_object(UDB_OBJECT_STRUCT* ptr_to_document_ptr)
 {
     try
     {
