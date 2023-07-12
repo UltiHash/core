@@ -88,6 +88,7 @@ uh::protocol::read_chunks::response protocol::on_read_chunks(const read_chunks::
 
 uh::protocol::write_key_value::response protocol::on_write_kv(const write_key_value::request &request) {
 
+    std::lock_guard <std::shared_mutex> lock (m);
     uh::util::structured_queries <write_key_value::request> wqs (request);
 
     write_key_value::response resp {.effective_sizes = util::ospan<uint32_t> (std::get <0> (request.key_sizes).size),
@@ -110,6 +111,7 @@ uh::protocol::read_key_value::response protocol::on_read_kv(const read_key_value
 
     // TODO maybe a lock here?
 
+    std::shared_lock <std::shared_mutex> lock (m);
     uh::util::structured_queries <read_key_value::request> queries (request);
     auto generator = std::make_unique<io::group_generator>();
     uh::protocol::read_key_value::response resp {.key_sizes = std::vector <uint16_t>{},
