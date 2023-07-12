@@ -2,19 +2,24 @@
 
 UltiHash needs at least 40GB of free storage space. Please make sure that your system can provide them prior to installation.
 
-Visit the [UltiHash](https://www.ultihash.io) webpage and download the zipped installation package by clicking the button [Install](www.example.com).
+Visit the [UltiHash](https://www.ultihash.io) webpage and download the tarball installation package by clicking the button [SIMON PUT CORRECT LINK HERE TO THE TARBALL](www.example.com).
 
-Fire up a terminal and navigate to the `packaging` directory inside the folder you just unzipped:
+Fire up a terminal and navigate to the directory where the tarball was saved (Usually `$HOME/Downloads`)
 
 ```bash
-$ cd setup-hardware/packaging
+$ cd $HOME/Downloads
 ```
 
-Being inside that folder, follow the instructions that apply to your operating system.
+Unpack the tarball and navigate to the folder `UH-closed-beta-<yyyymmdd>/`. Once inside that directory, follow the instructions below that apply to your operating system.
 
-## Ubuntu 22.04 {#ubuntu}
+## Ubuntu 22.04
 
- - Ansible: `sudo apt install ansible`
+ - Install ansible: 
+
+```
+$ sudo apt update
+$ sudo apt install ansible
+```
 
 The following commands are used to setup, start and stop UltiHash:
 
@@ -59,6 +64,7 @@ From here on, please refer to the steps specified for [Ubuntu](#ubuntu).
 Install all pre-requisites using the dnf packet manager:
 
 ```
+$ sudo dnf check-update
 $ sudo dnf install ansible-core tar bzip2
 ```
 
