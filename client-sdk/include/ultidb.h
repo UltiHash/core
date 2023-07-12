@@ -187,34 +187,6 @@ UDB_RESULT udb_destroy_connection(UDB_CONNECTION* conn);
 UDB_RESULT udb_ping(UDB_CONNECTION* conn);
 
 /**
- * Creates an instance of ::UDB_CONNECTION which can be used to perform various
- * UDB operations such as adding and getting objects to/from the UDB database.
- *
- * The instance created has to be destroyed using ::udb_destroy_connection.
- *
- * @param instance ::UDB instance to use in order to create a connection to the database
- * @return pointer to the ::UDB_CONNECTION instance. On error nullptr is returned.
- */
-UDB_CONNECTION* udb_create_connection(UDB* instance);
-
-/**
- * Destroys an instance of ::UDB_CONNECTION created via ::udb_create_connection.
- *
- * @param conn ::UDB_CONNECTION instance to deallocate
- * @return enum that describes the result of the operation
- */
-UDB_RESULT udb_destroy_connection(UDB_CONNECTION* conn);
-
-/**
- * Check if database connection is still alive.
- *
- * @param conn UDB connection which can be used to perform various UDB operations.
- * @return enum which describes the result of the operation
- */
-UDB_RESULT udb_ping(UDB_CONNECTION* conn);
-
-
-/**
  *  QUERY
 */
 
