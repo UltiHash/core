@@ -28,15 +28,11 @@ The following commands are used to setup, start and stop UltiHash:
 ```
 $ ansible-playbook --ask-become-pass setup.yml
 ```
-### 2. Start:
 
-```
-$ ansible-playbook --ask-become-pass start.yml
-```
 ### 3. Stop:
 
 ```
-$ ansible-playbook --ask-become-pass stop.yml
+$ sudo docker-compose stop
 ```
 
 
