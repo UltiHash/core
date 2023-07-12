@@ -1,5 +1,4 @@
-
-# C API - Overview
+# C SDK - Overview
 
 The following is a simple `main` program that uses the UltiHash C API to create some documents, write them and retrieve them. The rest of the documentation explain each of the API functions, but this document is a quick reference to kick-start the user. The basic steps to follow when working with UltiHash are:
 
