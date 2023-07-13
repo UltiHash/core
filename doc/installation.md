@@ -29,6 +29,10 @@ The following commands are used to setup, start and stop UltiHash:
 $ ansible-playbook --ask-become-pass setup.yml
 ```
 
+You will be asked for the `BECOME` password. Enter your `sudo` password.
+After you enter your sudo password, you will be asked to `Please enter a path where UltiHash may store its data`.
+If you are fine with the default, just hit enter; otherwise, enter your preferred path.
+
 ### 3. Stop:
 
 ```
