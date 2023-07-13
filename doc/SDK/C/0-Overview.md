@@ -1,11 +1,30 @@
 # C SDK - Overview
 
+## Version
+
+To get the version and the name of the SDK being used, the following two functions can be used.
+
+ - returns a `const char*` that points to the array containing the name of the SDK
+```c++
+const char* get_sdk_name();
+```
+
+
+ - returns a `const char*` that points to the array containing the version of the sdk
+
+```c++
+const char* get_sdk_version();
+```
+
+## Simple example
+
 The following is a simple `main` program that uses the UltiHash C API to create some documents, write them and retrieve them. The rest of the documentation explain each of the API functions, but this document is a quick reference to kick-start the user. The basic steps to follow when working with UltiHash are:
 
 1. UltiHash Initialization,
 2. Adding `documents` to UltiHash,
 3. Querying `documents` from UltiHash,
 4. Session cleanup.
+
 
 
 ```c++
