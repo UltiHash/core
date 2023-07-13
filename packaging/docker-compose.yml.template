@@ -1,0 +1,49 @@
+version: "3.7"
+services:
+  grafana:
+    image: grafana/grafana-enterprise
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_SECURITY_ALLOW_EMBEDDING=true
+    links:
+      - prometheus
+    volumes:
+      - type: bind
+        source: {DATA_DIR}/grafana
+        target: /var/lib/grafana
+#    user: '472'
+  prometheus:
+    image: prom/prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - type: bind
+        source: ./prometheus.yml
+        target: /etc/prometheus/prometheus.yml
+  node_exporter:
+    image: prom/node-exporter
+    links:
+      - prometheus
+    ports:
+      - 9100:9100
+    volumes:
+      # Remember to use read-only bind mounts.
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - "--web.listen-address=:9100"
+      - "--path.procfs=/host/proc"
+      - "--path.sysfs=/host/sys"
+      - "--path.rootfs=/rootfs" # Necessary for collecting host filesystem metrics.
+      - "--collector.filesystem.ignored-mount-points='^/(sys|proc|dev|host|etc|rootfs/var/lib/docker/containers|rootfs/var/lib/docker/overlay2|rootfs/run/docker/netns|rootfs/var/lib/docker/aufs)($$|/)'"
+  uh-data-node:
+   image: ultihash/uh-data-node
+   links:
+     - prometheus
+   volumes:
+     - type: bind
+       source: {DATA_DIR}/uh-data-node
+       target: /var/lib/uh-data-node
