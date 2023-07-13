@@ -18,11 +18,11 @@ const char* get_sdk_version();
 
 ## Simple example
 
-The following is a simple `main` program that uses the UltiHash C API to create some documents, write them and retrieve them. The rest of the documentation explain each of the API functions, but this document is a quick reference to kick-start the user. The basic steps to follow when working with UltiHash are:
+The following is a simple `main` program that uses the UltiHash C API to create some objects, write them and retrieve them. The rest of the documentation explain each of the API functions, but this document is a quick reference to kick-start the user. The basic steps to follow when working with UltiHash are:
 
 1. UltiHash Initialization,
-2. Adding `documents` to UltiHash,
-3. Querying `documents` from UltiHash,
+2. Adding `objects` to UltiHash,
+3. Querying `objects` from UltiHash,
 4. Session cleanup.
 
 
@@ -100,7 +100,7 @@ int main()
         char test_label_2[] = "Dog";
         char* test_labels[] = {test_label_1, test_label_2};
 
-    /* adding documents to database */
+    /* adding objects to database */
 
         /* initialize object with key, value, and label */
 
@@ -136,7 +136,7 @@ int main()
         int return_code_2 = udb_get_return_code(write_results, 1);
         std::cout << "Return code: " << return_code_1 << " " << return_code_2 << "\n\n";
 
-    /* getting a documents from the database */
+    /* getting a objects from the database */
 
         /* create a read query*/
         UDB_READ_QUERY* test_read_query = udb_create_read_query();

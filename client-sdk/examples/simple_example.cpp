@@ -70,7 +70,7 @@ int main()
         char test_label_2[] = "Dog";
         char* test_labels[] = {test_label_1, test_label_2};
 
-    /* adding documents to database */
+    /* adding objects to database */
 
         /* initialize object with key, value, and label */
 
@@ -106,7 +106,7 @@ int main()
         int return_code_2 = udb_get_return_code(write_results, 1);
         std::cout << "Return code: " << return_code_1 << " " << return_code_2 << "\n\n";
 
-    /* getting a documents from the database */
+    /* getting objects from the database */
 
         /* create a read query*/
         UDB_READ_QUERY* test_read_query = udb_create_read_query();
