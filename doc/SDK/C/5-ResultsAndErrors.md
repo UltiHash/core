@@ -1,5 +1,5 @@
 
-# C API - Results and Errors
+# C SDK - Results and Errors
 
 ## `UDB_RESULT`
 

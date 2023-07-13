@@ -1,4 +1,4 @@
-# C API - Objects
+# C SDK - Objects
 
 Opaque structure that represents the concept of an "object". An object is a
 structure that holds a key, value, and labels.
