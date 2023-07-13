@@ -47,3 +47,14 @@ jobs:
           name: uh-cli-${{ matrix.os }}-${{ matrix.build }}
           path: ${{github.workspace}}/build/client-shell/uh-cli
 
+      - name: Upload uh-data-node
+        uses: actions/upload-artifact@v3
+        with:
+          name: uh-data-node-${{ matrix.os }}-${{ matrix.build }}
+          path: ${{github.workspace}}/build/server-db/uh-data-node
+
+      - name: Upload uh-agency-node
+        uses: actions/upload-artifact@v3
+        with:
+          name: uh-agency-node-${{ matrix.os }}-${{ matrix.build }}
+          path: ${{github.workspace}}/build/server-agency/uh-agency-node
