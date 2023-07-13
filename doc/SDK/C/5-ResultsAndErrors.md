@@ -10,6 +10,7 @@ The UDB_RESULT struct describes the result of API calls:
  - `UDB_BAD_ALLOCATION` - Memory couldn't be allocated
  - `UDB_KEY_ALREADY_SET` - Cannot set key(s) as a key type has already been previously set
  - `UDB_UNINITIALIZED_KEY` - Key was not set when using ::UDB_READ_QUERY
+ - `UDB_SERVER_CONNECTION_ERROR` - Server was not found.
 
 
 ## `ERRORS`
