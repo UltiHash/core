@@ -12,6 +12,8 @@ $ cd $HOME/Downloads
 
 Unpack the tarball and navigate to the folder `UH-closed-beta-<yyyymmdd>/`. Once inside that directory, follow the instructions below that apply to your operating system.
 
+After installing, you are ready to start using UltiHash via the CLI or the SDK. Please refer to those sections in the current documentation.
+
 ## Ubuntu 22.04
 
  - Install ansible: 

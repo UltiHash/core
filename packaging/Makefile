@@ -11,13 +11,11 @@ release: docker-compose.yml.template prometheus.yml setup.yml ../cmake-build-rel
 	cp ../cmake-build-release/client-shell/uh-cli bin/
 	cp -r ../client-sdk/include ./
 	cp -r ../client-sdk/examples ./
-	cp -r ./UhSandbox ./
-	tar -cjf $(TARGET_NAME) docker-compose.yml.template prometheus.yml setup.yml lib include examples bin
+	tar -cjf $(TARGET_NAME) docker-compose.yml.template prometheus.yml setup.yml lib include examples bin UhSandbox
 	rm -Rf ./include
 	rm -Rf ./examples
 	rm -Rf ./lib
 	rm -Rf ./bin
-	rm -Rf ./UhSandbox
 
 clean:
 	rm -f pandoDB-preview-*
