@@ -43,7 +43,20 @@ services:
    image: ultihash/uh-data-node
    links:
      - prometheus
+   ports:
+     - 21832:21832
    volumes:
      - type: bind
        source: {DATA_DIR}/uh-data-node
        target: /var/lib/uh-data-node
+  uh-agency-node:
+   image: ultihash/uh-agency-node
+   links:
+     - prometheus
+     - uh-data-node
+   ports:
+     - 12345:12345
+   volumes:
+     - type: bind
+       source: {DATA_DIR}/uh-agency-node
+       target: /var/lib/uh-agency-node
