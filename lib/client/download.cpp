@@ -71,8 +71,10 @@ void download::download_file(std::unique_ptr<uhv::meta_data>& meta_data)
             aggregated_size += meta_data->chunk_sizes()[i];
             if (aggregated_size > protocol::server::MAXIMUM_DATA_SIZE)
             {
+                auto hash_size = std::min (meta_data->hashes().size() - offset, (i - 1) * 64);
+
                 auto resp = client->read_chunks (
-                        {{const_cast <char *> (meta_data->hashes().data() + offset), (i - 1) * 64}});
+                        {{const_cast <char *> (meta_data->hashes().data() + offset), hash_size}});
                 const auto& data = std::get<0>(resp.data);
                 new_file.write (data.data(), data.size());
                 offset = (i - 1) * 64;
