@@ -319,7 +319,7 @@ chunk_collection_index_persistent::find_address(uint8_t at,
 
 void chunk_collection_index_persistent::release_to(const std::filesystem::path& release_path)
 {
-    if (m_index_file->path() == release_path)
+    if (m_index_file_forgotten or m_index_file->path() == release_path)
     {
         return;
     }
