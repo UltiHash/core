@@ -357,7 +357,8 @@ void chunk_collection::release_to(const std::filesystem::path& release_path)
     if (release_path == getPath())
         return;
 
-    m_workfile->close();
+    if(m_workfile->is_open())
+        m_workfile->close();
 
     auto new_index_path = release_path;
     new_index_path.replace_extension(".index");
