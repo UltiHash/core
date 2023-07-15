@@ -84,13 +84,11 @@ chunk_collection::~chunk_collection()
 {
     std::lock_guard lock(m_chunk_collection_workmux);
 
-    m_workfile->close();
+    if(m_workfile->is_open())
+        m_workfile->close();
 
     if (m_behave_like_tempfile or (std::filesystem::exists(getPath()) and std::filesystem::is_empty(getPath())))
-    {
-        m_index.maybe_forget_index_file();
         std::filesystem::remove(getPath());
-    }
 }
 
 // ---------------------------------------------------------------------
@@ -186,7 +184,7 @@ chunk_collection::read_indexed(uint8_t at,
     }
     while (temporarily_cached_fragment_on_seekable_device.valid());
 
-    if(close_after_operation)
+    if (close_after_operation)
         m_workfile->close();
 
     return {output, read};
@@ -209,7 +207,9 @@ void chunk_collection::remove(const std::vector<uint8_t>& at)
     {
         bool is_last = index_list_beg + 1 == index_list.end();
         auto read_from_source_chunk_collection = read_indexed(*index_list_beg, is_last);
-        cleaned_chunk_collection.write_indexed(read_from_source_chunk_collection.first, read_from_source_chunk_collection.first.size(), is_last);
+        cleaned_chunk_collection.write_indexed(read_from_source_chunk_collection.first,
+                                               read_from_source_chunk_collection.first.size(),
+                                               is_last);
         index_list_beg++;
     }
 
@@ -362,7 +362,7 @@ void chunk_collection::release_to(const std::filesystem::path& release_path)
     auto new_index_path = release_path;
     new_index_path.replace_extension(".index");
 
-    if(std::filesystem::exists(new_index_path))
+    if (std::filesystem::exists(new_index_path))
         std::filesystem::remove(new_index_path);
 
     if (::link(getPath().c_str(), release_path.c_str()) == -1)

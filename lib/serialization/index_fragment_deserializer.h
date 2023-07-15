@@ -30,6 +30,7 @@ public:
         std::vector<char> tmp(bytes_non_zero);
         if (io::read(dev_, tmp) == 0)
         THROW(util::exception, "Nothing readable for fragment deserializer!");
+
         T sum_result{};
 
         for (std::size_t i = 0; i < bytes_non_zero; i++)

@@ -6,12 +6,12 @@
 #define INDEX_FRAGMENT_SERIALIZER_H
 
 #include <io/device.h>
+#include <serialization/index_fragment_serialization_common.h>
+#include <util/exception.h>
 
 #include <cstring>
 #include <algorithm>
 #include <array>
-
-#include <serialization/index_fragment_serialization_common.h>
 
 namespace uh::serialization
 {
@@ -52,7 +52,8 @@ public:
                     reinterpret_cast <const char*> (&converted) + sizeof(converted) - bytes_non_zero,
                     bytes_non_zero);
 
-        io::write(dev_, tmp);
+        if (io::write(dev_, tmp) == 0)
+        THROW(util::exception, "Nothing writeable for fragment serializer!");
     }
 };
 
