@@ -199,10 +199,8 @@ void chunk_collection::remove(const std::vector<uint8_t>& at)
     std::lock_guard lock(m_chunk_collection_workmux);
 
     maybe_force_mode_flush_reopen(std::ios_base::binary | std::ios_base::in);
-    m_workfile->seek(0, std::ios_base::beg);
 
     chunk_collection cleaned_chunk_collection(getPath().parent_path(), true);
-
     std::vector<uint8_t> index_list = m_index.get_index_num_content_list(at);
 
     auto index_list_beg = index_list.begin();
