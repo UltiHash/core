@@ -209,8 +209,9 @@ void chunk_collection::remove(const std::vector<uint8_t>& at)
 
     while (index_list_beg != index_list.end())
     {
-        auto read_from_source_chunk_collection = read_indexed(*index_list_beg, index_list_beg + 1 == index_list.end());
-        out_remove.write_indexed(read_from_source_chunk_collection.first, read_from_source_chunk_collection.first.size(), index_list_beg + 1 == index_list.end());
+        bool is_last = index_list_beg + 1 == index_list.end();
+        auto read_from_source_chunk_collection = read_indexed(*index_list_beg, is_last);
+        out_remove.write_indexed(read_from_source_chunk_collection.first, read_from_source_chunk_collection.first.size(), is_last);
         index_list_beg++;
     }
 
