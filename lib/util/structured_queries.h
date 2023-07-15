@@ -11,6 +11,12 @@
 
 namespace uh::util {
 
+enum insertion_type: uint8_t {
+    INSERT,
+    UPDATE,
+    INSERT_UPDATE,
+    INSERT_IGNORE,
+};
 
 struct read_query;
 struct write_query;
@@ -61,6 +67,7 @@ struct read_response {
 struct write_query {
     std::span <char> key;
     std::span <char> value;
+    insertion_type insert_type;
     util::ospan <std::string_view> labels;
 
     explicit write_query (structured_queries <protocol::write_key_value::request>& wq);

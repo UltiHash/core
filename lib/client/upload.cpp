@@ -95,14 +95,15 @@ public:
         return m_size - m_offs;
     }
 
-    void send(protocol::client_pool::handle& client)
+    std::size_t send(protocol::client_pool::handle& client)
     {
         if (m_files.empty())
         {
-            return;
+            return 0;
         }
 
         auto resp = client->write_chunks(write_chunks::request{m_chunk_sizes, std::span(m_buffer, m_offs)});
+        auto eff_size = std::accumulate(resp.effective_size.begin(), resp.effective_size.end(), 0u);
 
         auto hash_size = resp.hashes.size() / m_files.size();
         ASSERT(resp.hashes.size() % m_files.size() == 0);
@@ -122,15 +123,17 @@ public:
             md.append_sizes(m_chunk_sizes.begin() + index,
                             m_chunk_sizes.begin() + index + count);
             md.add_effective_size(resp.effective_size[index]);
+            md.set_path(md.path());
 
             fh.finished(count);
             index += count;
         }
+        return eff_size;
     }
 
     std::span<char> buffer()
     {
-        return std::span<char>(m_buffer + m_offs, m_buffer + m_size);
+        return {m_buffer + m_offs, m_buffer + m_size};
     }
 
     void add_chunk(file_handle* fh, std::size_t size)
@@ -214,7 +217,7 @@ public:
             while (m_send != m_active)
             {
                 lk.unlock();
-                m_requests[m_send].send(client_handle);
+                m_total_effective_size += m_requests[m_send].send(client_handle);
                 lk.lock();
                 m_send = (m_send + 1) % m_requests.size();
                 m_send_cond.notify_all();
@@ -237,8 +240,10 @@ public:
 
         m_thread.join();
 
-        m_requests[m_active].send(client_handle);
+        m_total_effective_size += m_requests[m_active].send(client_handle);
     }
+
+    std::atomic <std::size_t> m_total_effective_size;
 
 private:
     protocol::client_pool::handle client_handle;
@@ -451,6 +456,7 @@ void upload::spawn_threads()
                 }
 
                 db.stop();
+                m_total_effective_size += db.m_total_effective_size;
             }
             catch (const std::exception& e)
             {

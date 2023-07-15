@@ -40,7 +40,9 @@ setup()
     sleep 10
   fi
   docker service create --network nightlyBench_net --mode global --name nightlyBench_database --hostname uh-server-db --constraint node.labels.role==database ghcr.io/ultihash/server-db:$(printf '%(%Y%m%d)T' -1) >/dev/null 2>&1
+  sleep 10
   docker service create --network nightlyBench_net --mode global --name nightlyBench_agency --hostname uh-server-agency --constraint node.labels.role==agency ghcr.io/ultihash/server-agency:$(printf '%(%Y%m%d)T' -1) >/dev/null 2>&1
+  sleep 10
   docker service create --network nightlyBench_net --mode global --name nightlyBench_client --hostname uh-client-shell --mount type=bind,source=/data,destination=/data --entrypoint "/data/benchmark_container.sh ${corpus}" --publish 1337:1337/udp --constraint node.labels.role==agency ghcr.io/ultihash/client-shell:$(printf '%(%Y%m%d)T' -1) >/dev/null 2>&1
 }
 

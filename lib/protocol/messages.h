@@ -218,12 +218,13 @@ struct write_key_value
         std::variant <util::ospan <uint32_t>, std::span <uint32_t>> value_sizes {};
         std::variant <util::ospan <uint8_t>, std::span <uint8_t>> label_counts {};
         std::variant <util::ospan <uint8_t>, std::span <uint8_t>> label_sizes {};
-        std::variant <util::ospan <char>, std::span <char>> data; // (key, value, labels) ...
+        std::variant <util::ospan <char>, std::span <char>> data; // (key, insert_type, value, labels) ...
     };
 
     struct response
     {
         util::ospan <uint32_t> effective_sizes;
+        util::ospan <uint8_t> return_codes;
     };
 
     constexpr static uint8_t request_id = 0x02;

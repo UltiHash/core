@@ -14,9 +14,9 @@ void handle_labels(auto& q, size_t shift_offset_size, ospan<std::string_view> &l
     q.index ++;
 
     labels = util::ospan <std::string_view> (label_count);
-    for (q.label_index = wq_label_index; q.label_index < label_count; ++q.label_index) {
+    for (q.label_index = wq_label_index; q.label_index < wq_label_index + label_count; ++q.label_index) {
         const auto label_size = std::get <0> (q.m_req.get().label_sizes).data [q.label_index];
-        labels.data [q.label_index] = {data_ptr + q.offset, label_size};
+        labels.data [q.label_index - wq_label_index] = {data_ptr + q.offset, label_size};
         q.offset += label_size;
     }
     if (q.offset > std::get <0> (q.m_req.get().data).size) {
@@ -56,9 +56,10 @@ write_query::write_query(structured_queries<protocol::write_key_value::request> 
     const auto data_ptr = std::get <0> (wq.m_req.get().data).data.get ();
 
     key = {data_ptr + wq.offset, key_size};
-    value = {data_ptr + key_size + wq.offset, val_size};
+    insert_type = static_cast<insertion_type> (data_ptr[wq.offset + key_size]);
+    value = {data_ptr + key_size + sizeof(insert_type) + wq.offset, val_size};
 
-    handle_labels(wq, key_size + val_size, labels, data_ptr);
+    handle_labels(wq, key_size + val_size + sizeof(insert_type), labels, data_ptr);
 
 }
 

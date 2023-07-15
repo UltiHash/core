@@ -10,9 +10,6 @@
 #include <iostream>
 #include <vector>
 
-
-#include <iostream>
-
 #if defined(__cplusplus) || defined(c_plusplus)
 extern "C" {
 #endif
@@ -30,112 +27,40 @@ UDB_RESULT udb_get_last_error()
 
 // ---------------------------------------------------------------------
 
-struct UDB_DOCUMENT_STRUCT
+struct UDB_OBJECT_STRUCT
 {
-    UDB_DATA* key;
-    UDB_DATA* value;
+    char* key;
+    size_t key_size;
+    char* value;
+    size_t value_size;
     char** labels;
     size_t label_count;
-    OWNING_TYPE underlying_pointers;
 
-    UDB_DOCUMENT_STRUCT() : key(nullptr), value(nullptr), labels(nullptr), label_count(0),
-    underlying_pointers(non_owning) {};
+    UDB_OBJECT_STRUCT() : key(nullptr), key_size(0), value(nullptr), value_size(0),
+                            labels(nullptr), label_count(0)
+    {};
 
-    explicit UDB_DOCUMENT_STRUCT(OWNING_TYPE owning_t) :  key(nullptr), value(nullptr), labels(nullptr), label_count(0),
-    underlying_pointers(owning_t)
-    {}
-
-    UDB_DOCUMENT_STRUCT(UDB_DATA* rec_key, UDB_DATA* rec_value, char** rec_labels, size_t rec_label_count) :
+    UDB_OBJECT_STRUCT(char* rec_key, size_t rec_key_size, char* rec_value, size_t rec_value_size,
+                        char** rec_labels, size_t rec_label_count) :
         key(rec_key),
+        key_size(rec_key_size),
         value(rec_value),
-	labels(rec_labels),
-        label_count(rec_label_count),
-        underlying_pointers(non_owning)
+        value_size(rec_value_size),
+	    labels(rec_labels),
+        label_count(rec_label_count)
     {}
-
-    ~UDB_DOCUMENT_STRUCT()
-    {
-        if (underlying_pointers == owning)
-        {
-            delete [] key->data;
-            key->data = nullptr;
-            delete key;
-            key = nullptr;
-            delete [] value->data;
-            value->data = nullptr;
-            delete value;
-            for (size_t index = 0; index < label_count; index++)
-            {
-                delete [] labels[index];
-                labels[index] = nullptr;
-            }
-            delete [] labels;
-            labels = nullptr;
-        }
-    }
 };
 
 // ---------------------------------------------------------------------
 
-struct UDB_DOCUMENTS
+struct UDB_OBJECTS
 {
-    std::vector<UDB_DOCUMENT_STRUCT*> documents {};
-    size_t count;
+    std::vector<UDB_OBJECT_STRUCT*> objects {};
 
-    UDB_DOCUMENTS() : count(0)
-    {}
+    UDB_OBJECTS() = default;
 
-    ~UDB_DOCUMENTS()
-    {
-        for (auto& item : documents)
-        {
-            delete item;
-        }
-        documents.clear();
-    }
+    ~UDB_OBJECTS() = default;
 };
-
-// ---------------------------------------------------------------------
-
-UDB_DOCUMENTS* udb_create_documents_container()
-{
-    return new UDB_DOCUMENTS();
-}
-
-UDB_RESULT udb_add_document(UDB_DOCUMENTS* documents_container, UDB_DOCUMENT* document)
-{
-    try
-    {
-        documents_container->documents.push_back(document);
-        return UDB_RESULT_SUCCESS;
-    }
-    catch (const std::bad_alloc& e)
-    {
-        error = UDB_BAD_ALLOCATION;
-        return UDB_RESULT::UDB_BAD_ALLOCATION;
-    }
-    catch(const std::exception& e)
-    {
-        error = UDB_RESULT_ERROR;
-        return UDB_RESULT::UDB_RESULT_ERROR;
-    }
-}
-
-UDB_RESULT udb_destroy_documents_container(UDB_DOCUMENTS** documents_container)
-{
-    try
-    {
-        delete *documents_container;
-        *documents_container = nullptr;
-
-        return UDB_RESULT_SUCCESS;
-    }
-    catch(const std::exception& e)
-    {
-        error = UDB_RESULT_ERROR;
-        return UDB_RESULT::UDB_RESULT_ERROR;
-    }
-}
 
 // ---------------------------------------------------------------------
 
@@ -155,15 +80,16 @@ typedef enum : uint8_t
 
 struct UDB_READ_QUERY_STRUCT
 {
-    std::vector<UDB_DATA*> start_key {};
-    UDB_DATA* end_key;
+    std::vector<UDB_DATA> start_key;
+    UDB_DATA end_key;
     char** labels;
     size_t label_count;
     size_t key_count;
     UDB_READ_QUERY_TYPE query_type;
 
-    UDB_READ_QUERY_STRUCT() :
-    end_key(nullptr), labels(nullptr), label_count(0), key_count(0),
+
+    UDB_READ_QUERY_STRUCT() : start_key(),
+    end_key(), labels(nullptr), label_count(0), key_count(0),
     query_type(UDB_READ_QUERY_TYPE::NOT_DEFINED)
     {}
 };
@@ -177,6 +103,9 @@ const char* get_error_message()
         case 0 : return "Successful Operation.";
         case 2: return "Buffer Overflow";
         case 3: return "Bad memory allocation";
+        case 4: return "A key was already set previously.";
+        case 5: return "A key wasn't set on read query structure";
+        case 6: return "Error connecting to the server.";
         default: return "Unknown Error";
     }
 }
@@ -187,13 +116,11 @@ struct UDB_CONFIG_STRUCT
 {
     UDB_CONFIG_STRUCT() :
             hostname(nullptr),
-            port(0),
-            connection_pool(3)
+            port(0)
     {};
 
     const char* hostname;
     uint16_t port;
-    size_t connection_pool;
 
 };
 
@@ -214,12 +141,10 @@ UDB_CONFIG* udb_create_config()
 
 // ---------------------------------------------------------------------
 
-UDB_RESULT udb_config_set_host_node(UDB_CONFIG* cfg, const char *hostname, uint16_t port,
-                                         size_t connection_pool)
+UDB_RESULT udb_config_set_host_node(UDB_CONFIG* cfg, const char *hostname, uint16_t port)
 {
     cfg->hostname = hostname;
     cfg->port = port;
-    cfg->connection_pool = connection_pool;
     return UDB_RESULT_SUCCESS;
 }
 
@@ -263,6 +188,8 @@ constexpr const char* Exception_Messsage(uint8_t n)
             return "Cannot get uninitialized read query.";
         case UDB_RESULT::UDB_KEY_ALREADY_SET:
             return "Key type was already previously set..";
+        case UDB_RESULT::UDB_SERVER_CONNECTION_ERROR:
+            return "error connecting to the server";
         default:
             return "The given enum doesn't have any string associated with it";
     }
@@ -300,8 +227,17 @@ struct UDB_CONNECTION_STRUCT
 
     explicit UDB_CONNECTION_STRUCT(UDB* udb)
     {
-        m_udb_client = udb->m_client_factory->create();
+        try
+        {
+            m_udb_client = udb->m_client_factory->create();
+        }
+        catch(const std::exception& e)
+        {
+            THROW(uh::util::exception, Exception_Messsage(UDB_SERVER_CONNECTION_ERROR));
+        }
     }
+
+    ~UDB_CONNECTION_STRUCT() = default;
 };
 
 // ---------------------------------------------------------------------
@@ -314,7 +250,10 @@ UDB_CONNECTION* udb_create_connection(UDB* instance)
     }
     catch(std::exception& e)
     {
-        error = UDB_RESULT_ERROR;
+        if (e.what() == std::string(Exception_Messsage(UDB_SERVER_CONNECTION_ERROR)))
+            error = UDB_SERVER_CONNECTION_ERROR;
+        else
+            error = UDB_RESULT_ERROR;
         return nullptr;
     }
 }
@@ -372,23 +311,25 @@ UDB_RESULT udb_ping(UDB_CONNECTION_STRUCT* conn)
 {
     try
     {
-        conn->m_udb_client->valid();
+        if (!conn->m_udb_client->valid())
+            THROW(uh::util::exception, "cannot reach server");
         return UDB_RESULT::UDB_RESULT_SUCCESS;
     }
     catch(const std::exception& e)
     {
-        error = UDB_RESULT_ERROR;
-        return UDB_RESULT::UDB_RESULT_ERROR;
+        error = UDB_SERVER_CONNECTION_ERROR;
+        return UDB_RESULT::UDB_SERVER_CONNECTION_ERROR;
     }
 }
 
 // ---------------------------------------------------------------------
 
-UDB_DOCUMENT* udb_init_document(UDB_DATA* key, UDB_DATA* value, char** labels, size_t label_count)
+UDB_OBJECT* udb_init_object(char* key, size_t key_size, char* value, size_t value_size,
+                                char** labels, size_t label_count)
 {
     try
     {
-        return new UDB_DOCUMENT_STRUCT(key, value, labels, label_count);
+        return new UDB_OBJECT_STRUCT(key, key_size, value, value_size, labels, label_count);
     }
     catch (const std::exception& e)
     {
@@ -399,27 +340,11 @@ UDB_DOCUMENT* udb_init_document(UDB_DATA* key, UDB_DATA* value, char** labels, s
 
 // ---------------------------------------------------------------------
 
-UDB_DOCUMENT* udb_create_document()
+UDB_RESULT udb_destroy_object(UDB_OBJECT_STRUCT* ptr_to_document_ptr)
 {
     try
     {
-        return new UDB_DOCUMENT_STRUCT();
-    }
-    catch (const std::exception& e)
-    {
-        error = UDB_RESULT_ERROR;
-        return nullptr;
-    }
-}
-
-// ---------------------------------------------------------------------
-
-UDB_RESULT udb_destroy_document(UDB_DOCUMENT_STRUCT** ptr_to_document_ptr)
-{
-    try
-    {
-        delete *ptr_to_document_ptr;
-        *ptr_to_document_ptr = nullptr;
+        delete ptr_to_document_ptr;
         return UDB_RESULT_SUCCESS;
     }
     catch(const std::exception& e)
@@ -427,27 +352,6 @@ UDB_RESULT udb_destroy_document(UDB_DOCUMENT_STRUCT** ptr_to_document_ptr)
         error = UDB_RESULT_ERROR;
         return UDB_RESULT_ERROR;
     }
-}
-
-// ---------------------------------------------------------------------
-
-void udb_document_set_key(UDB_DOCUMENT* doc, UDB_DATA* key)
-{
-    doc->key = key;
-}
-
-// ---------------------------------------------------------------------
-
-void udb_document_set_value(UDB_DOCUMENT* doc, UDB_DATA* value)
-{
-    doc->value = value;
-}
-
-// ---------------------------------------------------------------------
-
-void udb_document_set_labels(UDB_DOCUMENT* doc, char** labels)
-{
-    doc->labels = labels;
 }
 
 // ---------------------------------------------------------------------
@@ -467,19 +371,18 @@ UDB_WRITE_QUERY* udb_create_write_query()
 
 // ---------------------------------------------------------------------
 
-void udb_write_query_add_document(UDB_WRITE_QUERY* write_query, UDB_DOCUMENT* document)
+void udb_write_query_add_object(UDB_WRITE_QUERY* write_query, UDB_OBJECT* object)
 {
-    write_query->documents.push_back(document);
+    write_query->objects.push_back(object);
 }
 
 // ---------------------------------------------------------------------
 
-UDB_RESULT udb_destroy_write_query(UDB_WRITE_QUERY** ptr_to_write_query_ptr)
+UDB_RESULT udb_destroy_write_query(UDB_WRITE_QUERY* ptr_to_write_query_ptr)
 {
     try
     {
-        delete *ptr_to_write_query_ptr;
-        *ptr_to_write_query_ptr = nullptr;
+        delete ptr_to_write_query_ptr;
         return UDB_RESULT::UDB_RESULT_SUCCESS;
     }
     catch(const std::exception& e)
@@ -491,11 +394,70 @@ UDB_RESULT udb_destroy_write_query(UDB_WRITE_QUERY** ptr_to_write_query_ptr)
 
 // ---------------------------------------------------------------------
 
-UDB_RESULT udb_add(UDB_CONNECTION* conn, UDB_WRITE_QUERY* write_query)
+struct UDB_WRITE_QUERY_RESULTS
+{
+    std::span<uint32_t> effective_sizes;
+    std::span<uint8_t> return_code;
+
+    ~UDB_WRITE_QUERY_RESULTS()
+    {
+        delete [] effective_sizes.data();
+        delete [] return_code.data();
+    }
+};
+
+// ---------------------------------------------------------------------
+
+UDB_RESULT udb_destroy_write_query_results(UDB_WRITE_QUERY_RESULTS* results)
 {
     try
     {
-        // TODO: fill it in a buffer and then send it after the buffer is filled instead of sending all docuents at once
+        delete results;
+        return UDB_RESULT::UDB_RESULT_SUCCESS;
+    }
+    catch(const std::exception& e)
+    {
+        error = UDB_RESULT::UDB_RESULT_ERROR;
+        return UDB_RESULT::UDB_RESULT_ERROR;
+    }
+}
+
+// ---------------------------------------------------------------------
+
+size_t udb_get_effective_sizes_count(UDB_WRITE_QUERY_RESULTS* results)
+{
+    return results->effective_sizes.size();
+}
+
+// ---------------------------------------------------------------------
+
+uint32_t udb_get_effective_size(UDB_WRITE_QUERY_RESULTS* results, size_t index)
+{
+    return results->effective_sizes[index];
+}
+
+// ---------------------------------------------------------------------
+
+size_t udb_get_return_code_count(UDB_WRITE_QUERY_RESULTS* results)
+{
+    return results->return_code.size();
+}
+
+// ---------------------------------------------------------------------
+
+uint8_t udb_get_return_code(UDB_WRITE_QUERY_RESULTS* results, size_t index)
+{
+    return results->return_code[index];
+}
+
+// ---------------------------------------------------------------------
+
+UDB_WRITE_QUERY_RESULTS* udb_put(UDB_CONNECTION* conn, UDB_WRITE_QUERY* write_query)
+{
+    try
+    {
+        // TODO: fill it in a buffer and then send it after the buffer is filled instead of sending
+        //  all objects at once
         std::vector<uint16_t> key_sizes;
         std::vector<uint32_t> value_sizes;
         std::vector<uint8_t> label_count;
@@ -504,20 +466,22 @@ UDB_RESULT udb_add(UDB_CONNECTION* conn, UDB_WRITE_QUERY* write_query)
         // TODO: reserve the memory and then memcpy into this reserved memory since we know the size of write_query
         std::vector<char> data;
 
-        for (const auto& document : write_query->documents)
+        for (const auto& object : write_query->objects)
         {
-            key_sizes.push_back(document->key->size);
-            data.insert(data.end(), document->key->data, document->key->data + document->key->size);
+            key_sizes.push_back(object->key_size);
+            data.insert(data.end(), object->key, object->key + object->key_size);
 
-            value_sizes.push_back(document->value->size);
-            data.insert(data.end(), document->value->data, document->value->data + document->value->size);
+            data.push_back(uh::util::INSERT_UPDATE);
 
-            label_count.push_back(document->label_count);
-            for (size_t index = 0; index < document->label_count; index++ )
+            value_sizes.push_back(object->value_size);
+            data.insert(data.end(), object->value, object->value + object->value_size);
+
+            label_count.push_back(object->label_count);
+            for (size_t index = 0; index < object->label_count; index++ )
             {
-                auto label_size = strlen(document->labels[index]);
+                auto label_size = strlen(object->labels[index]);
                 label_sizes.push_back(label_size);
-                data.insert(data.end(), document->labels[index], document->labels[index] + label_size);
+                data.insert(data.end(), object->labels[index], object->labels[index] + label_size);
             }
         }
 
@@ -530,22 +494,23 @@ UDB_RESULT udb_add(UDB_CONNECTION* conn, UDB_WRITE_QUERY* write_query)
                                                                  std::span<char>(data.data(), data.size())
                                                          });
 
-        size_t total_size = 0;
-        for (int i = 0; i < resp.effective_sizes.size; ++i) {
-            total_size += resp.effective_sizes.data [i];
-        }
-        std::cout << "total effective size is " << total_size << std::endl;
-        return UDB_RESULT::UDB_RESULT_SUCCESS;
+        auto* results = new UDB_WRITE_QUERY_RESULTS();
+        results->return_code = std::span<uint8_t>(resp.return_codes);
+        results->effective_sizes = std::span<uint32_t>(resp.effective_sizes);
+        resp.effective_sizes.data.release();
+        resp.return_codes.data.release();
+
+        return results;
     }
     catch (const std::bad_alloc& e)
     {
         error = UDB_BAD_ALLOCATION;
-        return UDB_RESULT::UDB_BAD_ALLOCATION;
+        return nullptr;
     }
     catch(const std::exception& e)
     {
         error = UDB_RESULT_ERROR;
-        return UDB_RESULT::UDB_RESULT_ERROR;
+        return nullptr;
     }
 }
 
@@ -566,13 +531,13 @@ UDB_READ_QUERY* udb_create_read_query()
 
 // ---------------------------------------------------------------------
 
-UDB_RESULT udb_read_query_add_key(UDB_READ_QUERY* read_query, UDB_DATA* key)
+UDB_RESULT udb_read_query_add_key(UDB_READ_QUERY* read_query, char* key, size_t key_size)
 {
     try
     {
         if (read_query->query_type != RANGE_KEYS)
         {
-            read_query->start_key.push_back(key);
+            read_query->start_key.emplace_back(key, key_size);
             read_query->key_count++;
 
             switch (read_query->query_type)
@@ -594,7 +559,7 @@ UDB_RESULT udb_read_query_add_key(UDB_READ_QUERY* read_query, UDB_DATA* key)
     }
     catch(const std::exception& e)
     {
-        if (e.what() == Exception_Messsage(UDB_KEY_ALREADY_SET))
+        if (e.what() == std::string(Exception_Messsage(UDB_KEY_ALREADY_SET)))
         {
             error = UDB_KEY_ALREADY_SET;
         }
@@ -609,14 +574,15 @@ UDB_RESULT udb_read_query_add_key(UDB_READ_QUERY* read_query, UDB_DATA* key)
 
 // ---------------------------------------------------------------------
 
-UDB_RESULT udb_read_query_set_key_range(UDB_READ_QUERY* read_query, UDB_DATA* start_key, UDB_DATA* end_key)
+UDB_RESULT udb_read_query_set_key_range(UDB_READ_QUERY* read_query, char* start_key, size_t start_size,
+                                        char* end_key, size_t end_key_count)
 {
     try
     {
         if (read_query->query_type == RANGE_KEYS || read_query->query_type == NOT_DEFINED)
         {
-            read_query->start_key.push_back(start_key);
-            read_query->end_key = end_key;
+            read_query->start_key.emplace_back(start_key, start_size);
+            read_query->end_key = UDB_DATA(end_key, end_key_count);
             read_query->query_type = RANGE_KEYS;
         }
         else
@@ -628,7 +594,7 @@ UDB_RESULT udb_read_query_set_key_range(UDB_READ_QUERY* read_query, UDB_DATA* st
     }
     catch(const std::exception& e)
     {
-        if (e.what() == Exception_Messsage(UDB_KEY_ALREADY_SET))
+        if (e.what() == std::string(Exception_Messsage(UDB_KEY_ALREADY_SET)))
         {
             error = UDB_KEY_ALREADY_SET;
         }
@@ -661,12 +627,11 @@ UDB_RESULT udb_read_query_add_label(UDB_READ_QUERY* read_query, char** labels, s
 
 // ---------------------------------------------------------------------
 
-UDB_RESULT udb_destroy_read_query(UDB_READ_QUERY** read_query_ptr_container)
+UDB_RESULT udb_destroy_read_query(UDB_READ_QUERY* read_query_ptr_container)
 {
     try
     {
-        delete *read_query_ptr_container;
-        *read_query_ptr_container = nullptr;
+        delete read_query_ptr_container;
 
         return UDB_RESULT_SUCCESS;
     }
@@ -679,11 +644,40 @@ UDB_RESULT udb_destroy_read_query(UDB_READ_QUERY** read_query_ptr_container)
 
 // ---------------------------------------------------------------------
 
-UDB_RESULT udb_get(UDB_CONNECTION* conn, UDB_READ_QUERY* read_query, UDB_DOCUMENTS* udb_documents)
+struct UDB_READ_QUERY_RESULTS
+{
+    std::vector<UDB_READ_QUERY_RESULT> results_container;
+    size_t counter;
+
+    UDB_READ_QUERY_RESULTS() : results_container(), counter(0) {}
+
+    ~UDB_READ_QUERY_RESULTS() = default;
+};
+
+// ---------------------------------------------------------------------
+
+UDB_RESULT udb_destroy_read_query_results(UDB_READ_QUERY_RESULTS* results)
 {
     try
     {
+        delete [] results->results_container[0].key;
+        delete results;
 
+        return UDB_RESULT_SUCCESS;
+    }
+    catch (const std::exception& e)
+    {
+        error = UDB_RESULT_ERROR;
+        return UDB_RESULT::UDB_RESULT_ERROR;
+    }
+}
+
+// ---------------------------------------------------------------------
+
+UDB_READ_QUERY_RESULTS* udb_get(UDB_CONNECTION* conn, UDB_READ_QUERY* read_query)
+{
+    try
+    {
         std::vector<uint16_t> start_key_sizes {};
         std::vector<uint16_t> end_key_sizes {};
         std::vector<uint16_t> single_key_sizes {};
@@ -691,15 +685,15 @@ UDB_RESULT udb_get(UDB_CONNECTION* conn, UDB_READ_QUERY* read_query, UDB_DOCUMEN
         std::vector<uint8_t> label_sizes {};
         std::vector<char> data {};
 
-        switch (static_cast<uint8_t>(read_query->query_type)) {
+        switch (read_query->query_type) {
             case SINGLE_KEY:
 
                 start_key_sizes.push_back(0u);
                 end_key_sizes.push_back(0u);
 
-                single_key_sizes.push_back(read_query->start_key.front()->size);
-                data.insert(data.end(), read_query->start_key.front()->data,
-                            read_query->start_key.front()->data + read_query->start_key.front()->size);
+                single_key_sizes.push_back(read_query->start_key.front().size);
+                data.insert(data.end(), read_query->start_key.front().data,
+                            read_query->start_key.front().data + read_query->start_key.front().size);
 
                 label_counts.push_back(read_query->label_count);
 
@@ -711,50 +705,33 @@ UDB_RESULT udb_get(UDB_CONNECTION* conn, UDB_READ_QUERY* read_query, UDB_DOCUMEN
                 }
 
                 break;
-            case MULTIPLE_KEYS:
 
+            case MULTIPLE_KEYS:
 
                 for (size_t index = 0; index < read_query->start_key.size(); index++)
                 {
-                    single_key_sizes.push_back(read_query->start_key[index]->size);
-                    data.insert(data.end(), read_query->start_key[index]->data,
-                                read_query->start_key[index]->data + read_query->start_key[index]->size);
+                    start_key_sizes.push_back(0u);
+                    end_key_sizes.push_back(0u);
+                    single_key_sizes.push_back(read_query->start_key[index].size);
+                    data.insert(data.end(), read_query->start_key[index].data,
+                                read_query->start_key[index].data + read_query->start_key[index].size);
 
                     label_counts.push_back(read_query->label_count);
 
-                    for (int count = 0; count < read_query->label_count; count++)
+                    for (auto count = 0; count < read_query->label_count; count++)
                     {
                         auto label_size = sizeof(read_query->labels[count]);
                         label_sizes.push_back(label_size);
                         data.insert(data.end(), read_query->labels[count], read_query->labels[count] + label_size);
                     }
-                    start_key_sizes.push_back(0);
-                    end_key_sizes.push_back(0);
-
                 }
 
                 break;
+
             case RANGE_KEYS:
 
-                start_key_sizes.push_back(read_query->start_key.front()->size);
-                data.insert(data.end(), read_query->start_key.front()->data,
-                            read_query->start_key.front()->data + read_query->start_key.front()->size);
-
-
-                end_key_sizes.push_back(read_query->end_key->size);
-                data.insert(data.end(), read_query->end_key->data,
-                            read_query->end_key->data + read_query->end_key->size);
-
-
-                label_counts.push_back(read_query->label_count);
-
-                for (auto index = 0; index < read_query->label_count; index++)
-                {
-                    auto label_size = sizeof(read_query->labels[index]);
-                    label_sizes.push_back(label_size);
-                    data.insert(data.end(), read_query->labels[index], read_query->labels[index] + label_size);
-                }
-                single_key_sizes.push_back(0);
+                // not implemented yet
+                throw std::runtime_error("not implemented");
 
                 break;
 
@@ -775,33 +752,20 @@ UDB_RESULT udb_get(UDB_CONNECTION* conn, UDB_READ_QUERY* read_query, UDB_DOCUMEN
             });
 
         uh::util::structured_queries <uh::protocol::read_key_value::response> read_response(resp);
+        auto* read_query_results = new UDB_READ_QUERY_RESULTS();
 
-        // TODO; do not copy data if possible
         for (auto rr = read_response.next(); rr != nullptr; rr = read_response.next())
         {
+            char* key = rr->key.data();
+            size_t key_size = rr->key.size();
 
-            auto* new_document = new UDB_DOCUMENT(owning);
-            UDB_DATA* key_data;
-            if (read_query->query_type == SINGLE_KEY)
-            {
-                auto* key_value = new char[read_query->start_key[0]->size + 1];
-                std::memcpy(key_value, read_query->start_key[0]->data, read_query->start_key[0]->size);
-                key_value[read_query->start_key[0]->size] = '\0';
-                key_data = new UDB_DATA(key_value, read_query->start_key[0]->size);;
-            }
-            else
-            {
-                key_data = new UDB_DATA(rr->key.data(), rr->key.size());
-            }
+            char* value = rr->value.data();
+            size_t value_size = rr->value.size();
 
-            auto new_data = new UDB_DATA(rr->value.data(), rr->value.size());
-
-            new_document->key = key_data;
-            new_document->value = new_data;
-
-            char** labels_pointer = nullptr;
+            char** labels = nullptr;
             if (rr->labels.size > 0)
-                labels_pointer = new char*[rr->labels.size];
+                labels = new char*[rr->labels.size];
+
             for (size_t index = 0; index < rr->labels.size; index++)
             {
                 const auto str = rr->labels.data [index];
@@ -810,34 +774,34 @@ UDB_RESULT udb_get(UDB_CONNECTION* conn, UDB_READ_QUERY* read_query, UDB_DOCUMEN
                     auto* label = new char[rr->labels.data[index].size() + 1];
                     std::memcpy(label, str.data(), rr->labels.data[index].size());
                     label[rr->labels.data[index].size()] = '\0';
-                    labels_pointer[index] = label;
+
+                    labels[index] = label;
                 }
                 else
                 {
                     auto* label = new char[rr->labels.data[index].size()];
                     std::memcpy(label, str.data(), rr->labels.data[index].size());
-                    labels_pointer[index] = label;
+                    labels[index] = label;
                 }
             }
-            new_document->labels = labels_pointer;
-            new_document->label_count = rr->labels.size;
-            udb_documents->documents.push_back(new_document);
-            udb_documents->count++;
+            auto labels_count = rr->labels.size;
+
+            read_query_results->results_container.emplace_back(key, key_size, value, value_size, labels, labels_count);
         }
 
-        // Free the ospan so that we don't delete twice, also do not copy the key and labels
+        // Free the ospan since object will free the data for us
         std::get<0>(resp.data).data.release();
 
-        return UDB_RESULT::UDB_RESULT_SUCCESS;
+        return read_query_results;
     }
     catch (const std::bad_alloc& e)
     {
         error = UDB_BAD_ALLOCATION;
-        return UDB_RESULT::UDB_BAD_ALLOCATION;
+        return nullptr;
     }
     catch (const std::exception& e)
     {
-        if (e.what() == Exception_Messsage(UDB_UNINITIALIZED_KEY))
+        if (e.what() == std::string(Exception_Messsage(UDB_UNINITIALIZED_KEY)))
         {
             error = UDB_UNINITIALIZED_KEY;
         }
@@ -846,55 +810,103 @@ UDB_RESULT udb_get(UDB_CONNECTION* conn, UDB_READ_QUERY* read_query, UDB_DOCUMEN
             error = UDB_RESULT_ERROR;
         }
 
-        return UDB_RESULT::UDB_RESULT_ERROR;
+        return nullptr;
     }
 }
 
 // ---------------------------------------------------------------------
 
-size_t udb_get_documents_count(UDB_DOCUMENTS* docs)
+bool udb_results_next(UDB_READ_QUERY_RESULTS* results_container, UDB_READ_QUERY_RESULT** result_ptr)
 {
-    return docs->count;
-}
 
-// ---------------------------------------------------------------------
-
-UDB_DOCUMENT* udb_get_document(UDB_DOCUMENTS* docs, size_t index)
-{
-    return docs->documents[index];
-}
-
-// ---------------------------------------------------------------------
-
-UDB_DATA* udb_get_key(UDB_DOCUMENT* doc)
-{
-    return doc->key;
-}
-
-// ---------------------------------------------------------------------
-
-UDB_DATA* udb_get_value(UDB_DOCUMENT* doc)
-{
-    std::string test_str;
-    for (size_t i=0; i< doc->value->size; i++)
+    if (results_container->counter > results_container->results_container.size()-1)
     {
-        test_str.push_back(doc->value->data[i]);
+        results_container->counter = 0;
+        return false;
     }
-    return doc->value;
+
+    *result_ptr = &results_container->results_container[results_container->counter];
+
+    results_container->counter++;
+
+    return true;
 }
 
 // ---------------------------------------------------------------------
 
-size_t udb_get_labels_count(UDB_DOCUMENT* doc)
+size_t udb_get_results_count(UDB_READ_QUERY_RESULTS* results)
 {
-    return doc->label_count;
+    return results->results_container.size();
+}
+
+
+// ---------------------------------------------------------------------
+
+UDB_READ_QUERY_RESULT* udb_get_result(UDB_READ_QUERY_RESULTS* results, size_t index)
+{
+    return &results->results_container[index];
 }
 
 // ---------------------------------------------------------------------
 
-char* udb_get_label(UDB_DOCUMENT* doc, size_t label_index)
+UDB_DATA* udb_get_key(UDB_OBJECT* obj)
 {
-    return doc->labels[label_index];
+    try
+    {
+        return new UDB_DATA(obj->key, obj->key_size);
+    }
+    catch (const std::bad_alloc& e)
+    {
+        error = UDB_BAD_ALLOCATION;
+        return nullptr;
+    }
+    catch (const std::exception& e)
+    {
+        error = UDB_RESULT_ERROR;
+        return nullptr;
+    }
+}
+
+// ---------------------------------------------------------------------
+
+UDB_DATA* udb_get_value(UDB_OBJECT* obj)
+{
+    try
+    {
+        return new UDB_DATA(obj->value, obj->value_size);
+    }
+    catch (const std::bad_alloc& e)
+    {
+        error = UDB_BAD_ALLOCATION;
+        return nullptr;
+    }
+    catch (const std::exception& e)
+    {
+        error = UDB_RESULT_ERROR;
+        return nullptr;
+    }
+}
+
+// ---------------------------------------------------------------------
+
+size_t udb_get_labels_count(UDB_OBJECT* obj)
+{
+    return obj->label_count;
+}
+
+// ---------------------------------------------------------------------
+
+char* udb_get_label(UDB_OBJECT* obj, size_t label_index)
+{
+    return obj->labels[label_index];
+}
+
+// ---------------------------------------------------------------------
+
+UDB_RESULT udb_destroy_udb_data(UDB_DATA* data)
+{
+    delete data;
+    return UDB_RESULT_SUCCESS;
 }
 
 // ---------------------------------------------------------------------

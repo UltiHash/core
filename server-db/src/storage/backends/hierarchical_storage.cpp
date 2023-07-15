@@ -226,4 +226,6 @@ std::pair <std::size_t, std::vector <char>> hierarchical_storage::write_block(co
 
 }
 
+// ---------------------------------------------------------------------
+
 }
