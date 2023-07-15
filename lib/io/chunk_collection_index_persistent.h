@@ -22,6 +22,7 @@ class chunk_collection_index_persistent:
     public std::vector<std::pair<serialization::fragment_serialize_size_format, std::streamoff>>
 {
 public:
+    ~chunk_collection_index_persistent();
 
     /**
      * Guarantee that the index from the chunk collection is persisted and copied to memory

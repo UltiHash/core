@@ -35,29 +35,16 @@ maybe_index_persist_chunk_collection(std::unique_ptr<io::file>& collection_file)
     {
         io::file read_index_file(filename_index, std::ios_base::in);
 
-        std::string read_buffer;
-        read_buffer.resize(sizeof(serialization::fragment_serialize_size_format));
-
-        while (io::read(read_index_file, read_buffer))
+        while (read_index_file.valid())
         {
             serialization::fragment_serialize_size_format skip_format;
-
-            io::buffer read_buffer_device;
-            io::write_from_buffer(read_buffer_device, read_buffer);
-            skip_format.deserialize(read_buffer_device);
+            skip_format.deserialize(read_index_file);
 
             output_index.emplace_back(skip_format, collection_offset);
-            collection_offset += skip_format.content_buf_size + skip_format.content_size;
+            collection_offset += skip_format.serialized_size() + skip_format.content_size;
         }
 
-        if (collection_offset < collection_file->size())
-        {
-            read_index_file.close();
-            std::filesystem::remove(read_index_file.path());
-            output_index.clear();
-        }
-        else
-            return output_index;
+        return output_index;
     }
 
     if (collection_file->size())
@@ -94,7 +81,7 @@ maybe_index_persist_chunk_collection(std::unique_ptr<io::file>& collection_file)
             collection_offset += skip_format.serialized_size() + skip_format.content_size;
             index_entry_count++;
         }
-        while (skip_format.content_size > 0);
+        while (true);
     }
 
     return output_index;
@@ -103,6 +90,16 @@ maybe_index_persist_chunk_collection(std::unique_ptr<io::file>& collection_file)
 // ---------------------------------------------------------------------
 
 } // namespace
+
+// ---------------------------------------------------------------------
+
+chunk_collection_index_persistent::~chunk_collection_index_persistent()
+{
+    std::lock_guard lock(m_index_work_mux);
+
+    if(std::filesystem::exists(m_index_file->path()) and std::filesystem::is_empty(m_index_file->path()))
+        maybe_forget_index_file();
+}
 
 // ---------------------------------------------------------------------
 
@@ -362,5 +359,7 @@ void chunk_collection_index_persistent::maybe_recreate_index_file()
         m_index_file_forgotten = false;
     }
 }
+
+// ---------------------------------------------------------------------
 
 } // namespace uh::io
