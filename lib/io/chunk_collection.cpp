@@ -215,6 +215,7 @@ void chunk_collection::remove(const std::vector<uint8_t>& at)
     }
 
     //TODO: fallback if space of chunk collection could not be allocated --> copy elements one by one and truncate
+    //TODO: optimize remove last elements by truncating
 
     out_remove.release_to(m_workfile->path());
 }
