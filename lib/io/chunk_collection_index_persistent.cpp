@@ -61,9 +61,9 @@ maybe_index_persist_chunk_collection(std::unique_ptr<io::file>& collection_file,
 
         collection_file = std::make_unique<io::file>(collection_file->path(),
                                                      std::ios_base::binary | std::ios_base::in);
+        auto collection_file_size = (std::streamoff) collection_file->size();
 
         index_file = std::make_unique<io::file>(filename_index, std::ios_base::binary | std::ios_base::out);
-        auto index_file_size = (std::streamoff) index_file->size();
 
         auto temporarily_cached_fragment_on_seekable_device =
             io::fragment_on_seekable_device(*collection_file);
@@ -73,7 +73,7 @@ maybe_index_persist_chunk_collection(std::unique_ptr<io::file>& collection_file,
 
         do
         {
-            if (index_file_size == collection_offset)
+            if (collection_file_size == collection_offset)
                 break;
 
             skip_format = temporarily_cached_fragment_on_seekable_device.skip();
