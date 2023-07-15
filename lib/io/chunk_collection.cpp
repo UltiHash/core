@@ -371,7 +371,6 @@ void chunk_collection::release_to(const std::filesystem::path& release_path)
     m_index->release_to(new_index_path);
 
     m_workfile = std::make_unique<io::file>(release_path, std::ios_base::binary | std::ios_base::in);
-    m_index = std::make_unique<chunk_collection_index_persistent>(m_workfile);
 }
 
 // ---------------------------------------------------------------------
