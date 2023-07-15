@@ -84,7 +84,7 @@ chunk_collection::~chunk_collection()
 {
     std::lock_guard lock(m_chunk_collection_workmux);
 
-    if(m_workfile->is_open())
+    if (m_workfile->is_open())
         m_workfile->close();
 
     if (m_behave_like_tempfile or (std::filesystem::exists(getPath()) and std::filesystem::is_empty(getPath())))
@@ -99,7 +99,7 @@ chunk_collection::chunk_collection(std::filesystem::path collection_temp_directo
     m_workfile(maybe_repair_chunk_collection(
         create_chunk_collection_file(collection_temp_directory_else_file_path, create_tempfile))
     ),
-    m_index(m_workfile)
+    m_index(std::make_unique<chunk_collection_index_persistent>(m_workfile))
 {}
 
 // ---------------------------------------------------------------------
@@ -122,19 +122,19 @@ chunk_collection::write_indexed(std::span<const char> buffer,
 
     auto temporarily_cached_fragment_on_seekable_device =
         io::fragment_on_seekable_device(*m_workfile,
-                                        m_index.next_free_address());
+                                        m_index->next_free_address());
 
     uint32_t allocate_space = std::max(static_cast<uint32_t>(buffer.size()), alloc);
     serialization::fragment_serialize_size_format written =
         temporarily_cached_fragment_on_seekable_device.write(buffer, allocate_space);
 
-    if (m_index.empty())
-        m_index.emplace_back_index(written, 0, flush_after_operation);
+    if (m_index->empty())
+        m_index->emplace_back_index(written, 0, flush_after_operation);
     else
-        m_index.emplace_back_index(written,
-                                   m_index.back().second +
-                                       m_index.back().first.serialized_size() +
-                                       m_index.back().first.content_size, flush_after_operation);
+        m_index->emplace_back_index(written,
+                                   m_index->back().second +
+                                       m_index->back().first.serialized_size() +
+                                       m_index->back().first.content_size, flush_after_operation);
 
     if (flush_after_operation)
         m_workfile->close();
@@ -151,7 +151,7 @@ chunk_collection::read_indexed(uint8_t at,
     std::lock_guard lock(m_chunk_collection_workmux);
 
     maybe_force_mode_flush_reopen(std::ios_base::binary | std::ios_base::in);
-    auto fragment_pos_element = m_index.find_address(at, m_index.begin());
+    auto fragment_pos_element = m_index->find_address(at, m_index->begin());
 
     auto temporarily_cached_fragment_on_seekable_device =
         io::fragment_on_seekable_reset_front_device(*m_workfile,
@@ -199,7 +199,7 @@ void chunk_collection::remove(const std::vector<uint8_t>& at)
     maybe_force_mode_flush_reopen(std::ios_base::binary | std::ios_base::in);
 
     chunk_collection cleaned_chunk_collection(getPath().parent_path(), true);
-    std::vector<uint8_t> index_list = m_index.get_index_num_content_list(at);
+    std::vector<uint8_t> index_list = m_index->get_index_num_content_list(at);
 
     auto index_list_beg = index_list.begin();
 
@@ -265,7 +265,7 @@ chunk_collection::read_indexed_multi(const std::vector<uint8_t>& at)
         }
     }
 
-    std::vector<uint8_t> filtered_at_list = m_index.filtered_at_list_in_seek_order(at);
+    std::vector<uint8_t> filtered_at_list = m_index->filtered_at_list_in_seek_order(at);
 
     std::vector<std::pair<std::vector<char>, serialization::fragment_serialize_size_format>>
         out_list(filtered_at_list.size());
@@ -291,7 +291,7 @@ uint16_t chunk_collection::count()
 {
     std::lock_guard lock(m_chunk_collection_workmux);
 
-    return m_index.count();
+    return m_index->count();
 }
 
 // ---------------------------------------------------------------------
@@ -300,7 +300,7 @@ std::size_t chunk_collection::size()
 {
     std::lock_guard lock(m_chunk_collection_workmux);
 
-    return m_index.size();
+    return m_index->size();
 }
 
 // ---------------------------------------------------------------------
@@ -309,7 +309,7 @@ std::size_t chunk_collection::size(uint8_t index_adress)
 {
     std::lock_guard lock(m_chunk_collection_workmux);
 
-    return m_index.size(index_adress);
+    return m_index->size(index_adress);
 }
 
 // ---------------------------------------------------------------------
@@ -318,14 +318,14 @@ std::size_t chunk_collection::content_size(uint8_t index_address)
 {
     std::lock_guard lock(m_chunk_collection_workmux);
 
-    return m_index.content_size(index_address);
+    return m_index->content_size(index_address);
 }
 
 // ---------------------------------------------------------------------
 
 bool chunk_collection::full()
 {
-    return m_index.full();
+    return m_index->full();
 }
 
 // ---------------------------------------------------------------------
@@ -334,7 +334,7 @@ uint16_t chunk_collection::free()
 {
     std::lock_guard lock(m_chunk_collection_workmux);
 
-    return m_index.free();
+    return m_index->free();
 }
 
 // ---------------------------------------------------------------------
@@ -357,23 +357,21 @@ void chunk_collection::release_to(const std::filesystem::path& release_path)
     if (release_path == getPath())
         return;
 
-    if(m_workfile->is_open())
-        m_workfile->close();
-
     auto new_index_path = release_path;
     new_index_path.replace_extension(".index");
 
     if (std::filesystem::exists(new_index_path))
         std::filesystem::remove(new_index_path);
 
-    if (::link(getPath().c_str(), release_path.c_str()) == -1)
+    if (::rename(getPath().c_str(), release_path.c_str()) == -1)
     {
         THROW_FROM_ERRNO();
     }
 
-    m_index.release_to(new_index_path);
+    m_index->release_to(new_index_path);
 
     m_workfile = std::make_unique<io::file>(release_path, std::ios_base::binary | std::ios_base::in);
+    m_index = std::make_unique<chunk_collection_index_persistent>(m_workfile);
 }
 
 // ---------------------------------------------------------------------
@@ -382,7 +380,7 @@ std::vector<uint8_t> chunk_collection::get_index_num_content_list()
 {
     std::lock_guard lock(m_chunk_collection_workmux);
 
-    return m_index.get_index_num_content_list();
+    return m_index->get_index_num_content_list();
 }
 
 // ---------------------------------------------------------------------
@@ -391,7 +389,7 @@ void chunk_collection::maybe_forget_chunk_collection_index_file()
 {
     std::lock_guard lock(m_chunk_collection_workmux);
 
-    m_index.maybe_forget_index_file();
+    m_index->maybe_forget_index_file();
 }
 
 // ---------------------------------------------------------------------

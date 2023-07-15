@@ -146,7 +146,7 @@ public:
 
 private:
     std::unique_ptr<io::file> m_workfile;
-    chunk_collection_index_persistent m_index;
+    std::unique_ptr<chunk_collection_index_persistent> m_index;
 
     std::recursive_mutex m_chunk_collection_workmux;
 

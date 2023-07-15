@@ -333,9 +333,7 @@ void chunk_collection_index_persistent::release_to(const std::filesystem::path& 
         return;
     }
 
-    m_index_file->close();
-
-    if (::link(this->m_index_file->path().c_str(), release_path.c_str()) == -1)
+    if (::rename(this->m_index_file->path().c_str(), release_path.c_str()) == -1)
     {
         THROW_FROM_ERRNO();
     }
