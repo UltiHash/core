@@ -118,19 +118,6 @@ chunk_collection_index_persistent::chunk_collection_index_persistent(std::unique
 
 // ---------------------------------------------------------------------
 
-void chunk_collection_index_persistent::erase_index_items(const std::vector<uint8_t>& at)
-{
-    maybe_recreate_index_file();
-
-    std::vector<uint16_t> delete_pos_list = update_offset_calculate_delete_pos_list(at);
-
-    remove_persistent_index_file_items(delete_pos_list);
-
-    m_index_file_size -= update_erase_size(delete_pos_list);
-}
-
-// ---------------------------------------------------------------------
-
 std::pair<serialization::fragment_serialize_size_format,
           std::streamoff> chunk_collection_index_persistent::emplace_back_index(serialization::fragment_serialize_size_format write_format,
                                                                                 std::size_t emplace_size,
@@ -158,18 +145,22 @@ std::pair<serialization::fragment_serialize_size_format,
 
 // ---------------------------------------------------------------------
 
-std::vector<uint8_t> chunk_collection_index_persistent::get_index_num_content_list()
+std::vector<uint8_t> chunk_collection_index_persistent::get_index_num_content_list(const std::vector<uint8_t>& without)
 {
     std::lock_guard lock(m_index_work_mux);
 
-    std::vector<uint8_t> out_list(count());
+    std::vector<uint8_t> out_list(count() - without.size());
 
     std::size_t counter{};
 
-    for (const auto& item : *this)
+    for (const auto& index_item : *this)
     {
-        out_list[counter] = item.first.index_num;
-        counter++;
+        if(std::none_of(without.cbegin(),without.cend(),[&index_item](const uint8_t & without_item){
+            return index_item.first.index_num == without_item;
+        })){
+            out_list[counter] = index_item.first.index_num;
+            counter++;
+        }
     }
 
     return out_list;
@@ -251,8 +242,6 @@ uint16_t chunk_collection_index_persistent::free()
 
 // ---------------------------------------------------------------------
 
-// ---------------------------------------------------------------------
-
 uint8_t chunk_collection_index_persistent::next_free_address()
 {
     std::lock_guard lock(m_index_work_mux);
@@ -328,6 +317,25 @@ chunk_collection_index_persistent::find_address(uint8_t at,
 
 // ---------------------------------------------------------------------
 
+void chunk_collection_index_persistent::release_to(const std::filesystem::path& release_path)
+{
+    if (m_index_file->path() == release_path)
+    {
+        return;
+    }
+
+    m_index_file->close();
+
+    if (::link(this->m_index_file->path().c_str(), release_path.c_str()) == -1)
+    {
+        THROW_FROM_ERRNO();
+    }
+    m_index_file = std::make_unique<io::file>(release_path, std::ios_base::binary | std::ios_base::app);
+    m_index_file->close();
+}
+
+// ---------------------------------------------------------------------
+
 void chunk_collection_index_persistent::maybe_forget_index_file()
 {
     std::lock_guard lock(m_index_work_mux);
@@ -348,103 +356,11 @@ void chunk_collection_index_persistent::maybe_recreate_index_file()
 
     if (m_index_file_forgotten)
     {
-        maybe_index_persist_chunk_collection(m_workfile);
+        auto reindex = maybe_index_persist_chunk_collection(m_workfile);
+        assign(reindex.cbegin(),reindex.cend());
         m_index_file = std::make_unique<io::file>(index_path(m_workfile), std::ios_base::binary | std::ios_base::app);
         m_index_file_forgotten = false;
     }
 }
-
-// ---------------------------------------------------------------------
-
-std::vector<uint16_t> chunk_collection_index_persistent::update_offset_calculate_delete_pos_list(const std::vector<
-    uint8_t>& at)
-{
-    std::lock_guard lock(m_index_work_mux);
-
-    auto seek_order_at_list = filtered_at_list_in_seek_order(at);
-    auto to_remove_it = begin();
-
-    std::vector<uint16_t> delete_pos_list;
-
-    for (const auto at_item : seek_order_at_list)
-    {
-        to_remove_it = find_address(at_item, to_remove_it);
-        auto remove_size_struct = to_remove_it->first;
-
-        std::for_each(to_remove_it, end(), [&remove_size_struct](
-            std::pair<serialization::fragment_serialize_size_format, std::streamoff>& index_pair)
-        {
-            index_pair.second -= (remove_size_struct.content_buf_size + remove_size_struct.content_size);
-        });
-
-        delete_pos_list.push_back(to_remove_it->first.index_num);
-    }
-
-    return delete_pos_list;
-}
-
-// ---------------------------------------------------------------------
-
-void chunk_collection_index_persistent::remove_persistent_index_file_items(const std::vector<uint16_t>& delete_pos_list)
-{
-    std::lock_guard lock(m_index_work_mux);
-
-    io::temp_file erase_tmp(m_index_file->path().parent_path(), std::ios_base::binary | std::ios_base::out);
-    auto beg = begin();
-
-    serialization::fragment_serialize_size_format tmp_format;
-
-    m_index_file = std::make_unique<io::file>(index_path(m_workfile), std::ios_base::binary | std::ios_base::in);
-
-    while (m_index_file->valid())
-    {
-        tmp_format.deserialize(*m_index_file);
-
-        if (std::none_of(delete_pos_list.cbegin(), delete_pos_list.cend(), [&beg](auto item)
-        {
-            return beg->first.index_num == item;
-        }))
-        {
-            io::write(erase_tmp,tmp_format.serialize());
-        }
-
-        beg++;
-    }
-
-    erase_tmp.close();
-    m_index_file->close();
-    erase_tmp.release_to(erase_tmp.path());
-    erase_tmp.rename(m_index_file->path());
-}
-
-std::size_t chunk_collection_index_persistent::update_erase_size(const std::vector<uint16_t>& delete_pos_list)
-{
-    std::lock_guard lock(m_index_work_mux);
-
-    std::size_t deleted_index_file_size{};
-
-    std::erase_if(*this,
-                  [&delete_pos_list, &deleted_index_file_size](std::pair<serialization::fragment_serialize_size_format,
-                                                                         std::streamoff>& item)
-                  {
-                      bool to_be_deleted = std::any_of(delete_pos_list.begin(),
-                                                       delete_pos_list.end(),
-                                                       [&item](const auto item2)
-                                                       {
-                                                           return item.first.index_num == item2;
-                                                       });
-
-                      if (to_be_deleted)
-                      {
-                          deleted_index_file_size += item.first.content_buf_size + item.first.content_size;
-                      }
-
-                      return to_be_deleted;
-                  });
-
-    return deleted_index_file_size;
-}
-
-// ---------------------------------------------------------------------
 
 } // namespace uh::io

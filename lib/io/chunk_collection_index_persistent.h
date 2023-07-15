@@ -39,17 +39,10 @@ public:
                                                  bool flush_after_operation = true);
 
     /**
-     * delete multiple index positions from index and index file
-     *
-     * @param at
-     */
-    void erase_index_items(const std::vector<uint8_t>& at);
-
-    /**
      *
      * @return a list of used index sort orders
      */
-    std::vector<uint8_t> get_index_num_content_list();
+    std::vector<uint8_t> get_index_num_content_list(const std::vector<uint8_t>& without = std::vector<uint8_t>{});
 
     /**
      *
@@ -72,8 +65,7 @@ public:
     std::size_t size(uint8_t index_address);
 
     /**
-     *
-     * @return size of index helper file on disk
+     * @return index file size
      */
     std::size_t index_file_size();
 
@@ -121,6 +113,14 @@ public:
                                        std::streamoff>>::iterator start_pos);
 
     /**
+     * Rename the temp_file to `path` and make it a permanent file, in case we are based on temp_file,
+     * reset index file to new path and close the stream afterwards
+     *
+     * @throw a file with the given name already exists
+     */
+    void release_to(const std::filesystem::path& release_path);
+
+    /**
      * Delete index file that was created from chunk collection
      */
     void maybe_forget_index_file();
@@ -137,12 +137,6 @@ private:
     bool m_index_file_forgotten = false;
 
     std::recursive_mutex m_index_work_mux{};
-
-    std::vector<uint16_t> update_offset_calculate_delete_pos_list(const std::vector<uint8_t>& at);
-
-    void remove_persistent_index_file_items(const std::vector<uint16_t>& delete_pos_list);
-
-    std::size_t update_erase_size(const std::vector<uint16_t>& delete_pos_list);
 };
 
 // ---------------------------------------------------------------------

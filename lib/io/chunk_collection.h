@@ -58,7 +58,7 @@ public:
      * @return buffer
      */
     std::pair<std::vector<char>, serialization::fragment_serialize_size_format>
-    read_indexed(uint8_t at);
+    read_indexed(uint8_t at, bool close_after_operation = false);
 
     /**
      * Write indexed multiple buffers and return a list of fragment size structs that contain written fragment

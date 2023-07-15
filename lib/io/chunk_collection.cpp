@@ -147,7 +147,8 @@ chunk_collection::write_indexed(std::span<const char> buffer,
 // ---------------------------------------------------------------------
 
 std::pair<std::vector<char>, serialization::fragment_serialize_size_format>
-chunk_collection::read_indexed(uint8_t at)
+chunk_collection::read_indexed(uint8_t at,
+                               bool close_after_operation)
 {
     std::lock_guard lock(m_chunk_collection_workmux);
 
@@ -185,6 +186,9 @@ chunk_collection::read_indexed(uint8_t at)
     }
     while (temporarily_cached_fragment_on_seekable_device.valid());
 
+    if(close_after_operation)
+        m_workfile->close();
+
     return {output, read};
 }
 
@@ -197,40 +201,22 @@ void chunk_collection::remove(const std::vector<uint8_t>& at)
     maybe_force_mode_flush_reopen(std::ios_base::binary | std::ios_base::in);
     m_workfile->seek(0, std::ios_base::beg);
 
+    chunk_collection out_remove(getPath().parent_path(), true);
+
+    std::vector<uint8_t> index_list = m_index.get_index_num_content_list(at);
+
+    auto index_list_beg = index_list.begin();
+
+    while (index_list_beg != index_list.end())
     {
-        chunk_collection out_remove(getPath().parent_path(), true);
-
-        std::vector<uint8_t> index_list = m_index.get_index_num_content_list();
-        index_list.erase(std::remove_if(index_list.begin(), index_list.end(), [&at](const auto& index_list_item)
-        {
-            return std::any_of(at.cbegin(), at.cend(), [&index_list_item](const auto& at_item)
-            {
-                return index_list_item == at_item;
-            });
-        }), index_list.end());
-
-        auto index_list_beg = index_list.begin();
-
-        while (index_list_beg != index_list.end())
-        {
-            auto read_from_source_chunk_collection = read_indexed(*index_list_beg);
-            index_list_beg++;
-            out_remove.write_indexed(read_from_source_chunk_collection.first, re, index_list_beg == index_list.end());
-        }
-
-        m_workfile->close();
-        cc_tmp.close();
-
-        std::filesystem::path replace_preparation_chunk_collection = m_workfile->path().replace_extension(".tmp");
-        cc_tmp.release_to(replace_preparation_chunk_collection);
-
-        std::filesystem::remove(m_workfile->path());
-        std::filesystem::rename(replace_preparation_chunk_collection, m_workfile->path());
+        auto read_from_source_chunk_collection = read_indexed(*index_list_beg, index_list_beg + 1 == index_list.end());
+        out_remove.write_indexed(read_from_source_chunk_collection.first, read_from_source_chunk_collection.first.size(), index_list_beg + 1 == index_list.end());
+        index_list_beg++;
     }
 
-    m_workfile = std::make_unique<io::file>(m_workfile->path(), std::ios_base::binary | std::ios_base::in);
+    //TODO: fallback if space of chunk collection could not be allocated --> copy elements one by one and truncate
 
-    m_index.erase_index_items(at);
+    out_remove.release_to(m_workfile->path());
 }
 
 // ---------------------------------------------------------------------
@@ -373,10 +359,18 @@ void chunk_collection::release_to(const std::filesystem::path& release_path)
 
     m_workfile->close();
 
+    auto new_index_path = release_path;
+    new_index_path.replace_extension(".index");
+
+    if(std::filesystem::exists(new_index_path))
+        std::filesystem::remove(new_index_path);
+
     if (::link(getPath().c_str(), release_path.c_str()) == -1)
     {
         THROW_FROM_ERRNO();
     }
+
+    m_index.release_to(new_index_path);
 
     m_workfile = std::make_unique<io::file>(release_path, std::ios_base::binary | std::ios_base::in);
 }
