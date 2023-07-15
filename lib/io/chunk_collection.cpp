@@ -132,9 +132,9 @@ chunk_collection::write_indexed(std::span<const char> buffer,
         m_index->emplace_back_index(written, 0, flush_after_operation);
     else
         m_index->emplace_back_index(written,
-                                   m_index->back().second +
-                                       m_index->back().first.serialized_size() +
-                                       m_index->back().first.content_size, flush_after_operation);
+                                    m_index->back().second +
+                                        m_index->back().first.serialized_size() +
+                                        m_index->back().first.content_size, flush_after_operation);
 
     if (flush_after_operation)
         m_workfile->close();
@@ -207,9 +207,16 @@ void chunk_collection::remove(const std::vector<uint8_t>& at)
     {
         bool is_last = index_list_beg + 1 == index_list.end();
         auto read_from_source_chunk_collection = read_indexed(*index_list_beg, is_last);
-        cleaned_chunk_collection.write_indexed(read_from_source_chunk_collection.first,
-                                               read_from_source_chunk_collection.first.size(),
-                                               is_last);
+
+        auto current_index_pos = *index_list_beg;
+
+        if (std::none_of(at.cbegin(), at.cend(), [current_index_pos](const uint8_t at_item)
+        {
+            return current_index_pos == at_item;
+        }))
+            cleaned_chunk_collection.write_indexed(read_from_source_chunk_collection.first,
+                                                   read_from_source_chunk_collection.first.size(),
+                                                   is_last);
         index_list_beg++;
     }
 
