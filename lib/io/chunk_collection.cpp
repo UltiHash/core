@@ -155,7 +155,9 @@ chunk_collection::read_indexed(uint8_t at)
     auto fragment_pos_element = m_index.find_address(at, m_index.begin());
 
     auto temporarily_cached_fragment_on_seekable_device =
-        io::fragment_on_seekable_reset_front_device(*m_workfile,fragment_pos_element->first.index_num,fragment_pos_element->second);
+        io::fragment_on_seekable_reset_front_device(*m_workfile,
+                                                    fragment_pos_element->first.index_num,
+                                                    fragment_pos_element->second);
     temporarily_cached_fragment_on_seekable_device.reset();
 
     serialization::fragment_serialize_size_format read;
@@ -196,22 +198,24 @@ void chunk_collection::remove(const std::vector<uint8_t>& at)
     m_workfile->seek(0, std::ios_base::beg);
 
     {
-        io::temp_file cc_tmp(getPath().parent_path());
-        {
-            for (const auto item : m_index.get_index_num_content_list())
-            {
-                if (std::none_of(at.cbegin(), at.cend(), [&item](const auto& item2)
-                {
-                    return item == item2;
-                }))
-                {
-                    fragment_on_seekable_device reader(*m_workfile);
-                    auto read_from_source_chunk_collection = read_indexed(item);
+        chunk_collection out_remove(getPath().parent_path(), true);
 
-                    fragment_on_seekable_device writer(cc_tmp, read_from_source_chunk_collection.second.index_num);
-                    writer.write(read_from_source_chunk_collection.first);
-                }
-            }
+        std::vector<uint8_t> index_list = m_index.get_index_num_content_list();
+        index_list.erase(std::remove_if(index_list.begin(), index_list.end(), [&at](const auto& index_list_item)
+        {
+            return std::any_of(at.cbegin(), at.cend(), [&index_list_item](const auto& at_item)
+            {
+                return index_list_item == at_item;
+            });
+        }), index_list.end());
+
+        auto index_list_beg = index_list.begin();
+
+        while (index_list_beg != index_list.end())
+        {
+            auto read_from_source_chunk_collection = read_indexed(*index_list_beg);
+            index_list_beg++;
+            out_remove.write_indexed(read_from_source_chunk_collection.first, re, index_list_beg == index_list.end());
         }
 
         m_workfile->close();
