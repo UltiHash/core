@@ -201,7 +201,7 @@ void chunk_collection::remove(const std::vector<uint8_t>& at)
     maybe_force_mode_flush_reopen(std::ios_base::binary | std::ios_base::in);
     m_workfile->seek(0, std::ios_base::beg);
 
-    chunk_collection out_remove(getPath().parent_path(), true);
+    chunk_collection cleaned_chunk_collection(getPath().parent_path(), true);
 
     std::vector<uint8_t> index_list = m_index.get_index_num_content_list(at);
 
@@ -211,14 +211,14 @@ void chunk_collection::remove(const std::vector<uint8_t>& at)
     {
         bool is_last = index_list_beg + 1 == index_list.end();
         auto read_from_source_chunk_collection = read_indexed(*index_list_beg, is_last);
-        out_remove.write_indexed(read_from_source_chunk_collection.first, read_from_source_chunk_collection.first.size(), is_last);
+        cleaned_chunk_collection.write_indexed(read_from_source_chunk_collection.first, read_from_source_chunk_collection.first.size(), is_last);
         index_list_beg++;
     }
 
     //TODO: fallback if space of chunk collection could not be allocated --> copy elements one by one and truncate
     //TODO: optimize remove last elements by truncating
 
-    out_remove.release_to(m_workfile->path());
+    cleaned_chunk_collection.release_to(m_workfile->path());
 }
 
 // ---------------------------------------------------------------------
