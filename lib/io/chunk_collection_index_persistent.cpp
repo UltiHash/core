@@ -34,11 +34,18 @@ maybe_index_persist_chunk_collection(std::unique_ptr<io::file>& collection_file,
     if (is_index_persisted)
     {
         index_file = std::make_unique<io::file>(filename_index, std::ios_base::in);
+        std::size_t index_file_size = index_file->size();
+        std::size_t parse_count{};
 
         while (index_file->valid())
         {
+            if(index_file_size == parse_count)
+                break;
+
             serialization::fragment_serialize_size_format index_parse;
             index_parse.deserialize(*index_file);
+
+            parse_count += index_parse.serialized_size();
 
             output_index.emplace_back(index_parse, collection_offset);
             collection_offset += index_parse.serialized_size() + index_parse.content_size;
