@@ -2,8 +2,8 @@
 // Created by benjamin-elias on 10.07.23.
 //
 
-#ifndef SHRINK_ARITHMETIC_SERIALIZER_H
-#define SHRINK_ARITHMETIC_SERIALIZER_H
+#ifndef INDEX_FRAGMENT_SERIALIZER_H
+#define INDEX_FRAGMENT_SERIALIZER_H
 
 #include <io/device.h>
 
@@ -11,18 +11,18 @@
 #include <algorithm>
 #include <array>
 
-#include <serialization/shrink_arithmetic_serialization_common.h>
+#include <serialization/index_fragment_serialization_common.h>
 
 namespace uh::serialization
 {
 
-class shrink_arithmetic_serializer
+class index_fragment_serializer
 {
 protected:
     io::device& dev_;
 
 public:
-    explicit shrink_arithmetic_serializer(io::device& output_device)
+    explicit index_fragment_serializer(io::device& output_device)
         : dev_(output_device)
     {}
 
@@ -58,4 +58,4 @@ public:
 
 } // uh::serialization
 
-#endif //SHRINK_ARITHMETIC_SERIALIZER_H
+#endif //INDEX_FRAGMENT_SERIALIZER_H

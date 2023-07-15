@@ -12,7 +12,7 @@ namespace uh::serialization
 {
 
 template<typename T>
-struct is_shrink_arithmetic_serializer: std::bool_constant<
+struct is_index_fragment_serializer: std::bool_constant<
     requires(T t) {
         t.write(std::declval<char>());
         t.write(std::declval<short>());
@@ -41,7 +41,7 @@ struct is_shrink_arithmetic_serializer: std::bool_constant<
 };
 
 template<typename T>
-struct is_shrink_arithmetic_deserializer: std::bool_constant<
+struct is_index_fragment_deserializer: std::bool_constant<
     requires(T t) {
         t.template read<char>();
         t.template read<short>();
@@ -65,8 +65,8 @@ struct is_shrink_arithmetic_deserializer: std::bool_constant<
 };
 
 template<typename T>
-struct is_shrink_arithmetic_serialization_type:
-    std::conjunction<is_shrink_arithmetic_serializer<T>, is_shrink_arithmetic_deserializer<T>>
+struct is_index_fragment_serialization_type:
+    std::conjunction<is_index_fragment_serializer<T>, is_index_fragment_deserializer<T>>
 {
 };
 

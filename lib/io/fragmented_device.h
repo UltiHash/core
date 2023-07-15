@@ -69,7 +69,7 @@ public:
     * reset fragment to a new fragment beginning
     * @return if the underlying device is still valid to deliver the next fragment structure
     */
-    virtual bool reset() = 0;
+    virtual void reset() = 0;
 
 };
 

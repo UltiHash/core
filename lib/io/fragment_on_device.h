@@ -5,7 +5,7 @@
 #include "io/fragmented_device.h"
 #include "io/device.h"
 #include "serialization/fragment_size_struct.h"
-#include "serialization/shrink_arithmetic_serialization.h"
+#include "serialization/index_fragment_serialization.h"
 
 #include <cstdint>
 #include <span>
@@ -80,7 +80,7 @@ public:
      * reset the state machine to a new fragment beginning
      * @return if the underlying device is still valid to deliver the next fragment structure
      */
-    bool reset() override;
+    void reset() override;
 
     /**
      *
@@ -101,7 +101,7 @@ private:
     uint8_t index;
 
 protected:
-    serialization::shrink_arithmetic_serialization<> frag_serialize;
+    serialization::index_fragment_serialization<> frag_serialize;
 };
 } // namespace uh::io
 

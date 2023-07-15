@@ -147,10 +147,9 @@ uint8_t fragment_on_device::getIndex() const
 
 // ---------------------------------------------------------------------
 
-bool fragment_on_device::reset()
+void fragment_on_device::reset()
 {
     state_machine = UNDEFINED_STATE;
-    return valid();
 }
 
 // ---------------------------------------------------------------------

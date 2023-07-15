@@ -27,7 +27,8 @@ public:
 
     /**
      * A chunk collection keeps track of the position and the movement
-     * of incoming and outgoing chunks/fragments.
+     * of incoming and outgoing chunks/fragments. It keeps filestreams open as long as possible, either until
+     * the mode is switched from read to write or vice versa or on deconstruction of the chunk_collection
      * Scan existing chunk collection on construction.
      *
      * @param collection_temp_directory_else_file_path where the file containing the chunk collection is located

@@ -1,8 +1,8 @@
 #ifndef CORE_FRAGMENT_SIZE_STRUCT_H
 #define CORE_FRAGMENT_SIZE_STRUCT_H
 
-#include <serialization/shrink_arithmetic_serializer.h>
-#include <serialization/shrink_arithmetic_deserializer.h>
+#include <serialization/index_fragment_serializer.h>
+#include <serialization/index_fragment_deserializer.h>
 #include <io/device.h>
 #include <io/buffer.h>
 
@@ -33,7 +33,7 @@ struct fragment_serialize_size_format
     [[nodiscard]] std::vector<char> serialize()
     {
         io::buffer buf;
-        shrink_arithmetic_serializer ser(buf);
+        index_fragment_serializer ser(buf);
         ser.write((unsigned char) index_num);
 
         content_buf_size = ser.bytes_non_zero(content_size);
@@ -48,7 +48,7 @@ struct fragment_serialize_size_format
 
     void deserialize(io::device& input_dev)
     {
-        shrink_arithmetic_deserializer ser(input_dev);
+        index_fragment_deserializer ser(input_dev);
 
         index_num = ser.read<unsigned char>();
         content_buf_size = ser.read<unsigned char>();

@@ -1,8 +1,8 @@
-#ifndef SHRINK_ARITHMETIC_DESERIALIZER_H
-#define SHRINK_ARITHMETIC_DESERIALIZER_H
+#ifndef INDEX_FRAGMENT_DESERIALIZER_H
+#define INDEX_FRAGMENT_DESERIALIZER_H
 
 #include <io/device.h>
-#include <serialization/shrink_arithmetic_serialization_common.h>
+#include <serialization/index_fragment_serialization_common.h>
 
 #include <cstring>
 #include <algorithm>
@@ -12,13 +12,13 @@
 namespace uh::serialization
 {
 
-class shrink_arithmetic_deserializer
+class index_fragment_deserializer
 {
 protected:
     io::device& dev_;
 
 public:
-    explicit shrink_arithmetic_deserializer(io::device& input_device)
+    explicit index_fragment_deserializer(io::device& input_device)
     : dev_(input_device)
         {}
 
@@ -41,4 +41,4 @@ public:
 
 } // uh::serialization
 
-#endif //SHRINK_ARITHMETIC_DESERIALIZER_H
+#endif //INDEX_FRAGMENT_DESERIALIZER_H

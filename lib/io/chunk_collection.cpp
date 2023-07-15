@@ -3,6 +3,7 @@
 #include "io/file.h"
 #include "io/temp_file.h"
 #include "io/fragment_on_seekable_device.h"
+#include "io/fragment_on_seekable_reset_front_device.h"
 #include "serialization/fragment_size_struct.h"
 
 #include <utility>
@@ -134,7 +135,7 @@ chunk_collection::write_indexed(std::span<const char> buffer,
     else
         m_index.emplace_back_index(written,
                                    m_index.back().second +
-                                       m_index.back().first.serialized_size()+
+                                       m_index.back().first.serialized_size() +
                                        m_index.back().first.content_size, flush_after_operation);
 
     if (flush_after_operation)
@@ -152,10 +153,10 @@ chunk_collection::read_indexed(uint8_t at)
 
     maybe_force_mode_flush_reopen(std::ios_base::binary | std::ios_base::in);
     auto fragment_pos_element = m_index.find_address(at, m_index.begin());
-    m_workfile->seek(fragment_pos_element->second, std::ios_base::beg);
 
     auto temporarily_cached_fragment_on_seekable_device =
-        io::fragment_on_seekable_device(*m_workfile);
+        io::fragment_on_seekable_reset_front_device(*m_workfile,fragment_pos_element->first.index_num,fragment_pos_element->second);
+    temporarily_cached_fragment_on_seekable_device.reset();
 
     serialization::fragment_serialize_size_format read;
     std::vector<char> buffer(CHUNK_COLLECTION_BUFFER_SIZE);
@@ -166,6 +167,11 @@ chunk_collection::read_indexed(uint8_t at)
         serialization::fragment_serialize_size_format temp_read =
             temporarily_cached_fragment_on_seekable_device.read(buffer);
 
+        if (at != temp_read.index_num)
+        THROW(util::exception,
+              "Reading chunk collection was out of bounds on \"" + m_workfile->path().string() + "\" at index position "
+                  + std::to_string(read.index_num));
+
         std::size_t old_size = output.size();
 
         output.resize(output.size() + temp_read.content_size);
@@ -173,8 +179,7 @@ chunk_collection::read_indexed(uint8_t at)
 
         read.content_buf_size = std::max(read.content_buf_size, temp_read.content_buf_size);
         read.content_size += temp_read.content_size;
-        read.index_num = read.index_num;
-
+        read.index_num = temp_read.index_num;
     }
     while (temporarily_cached_fragment_on_seekable_device.valid());
 
@@ -188,7 +193,7 @@ void chunk_collection::remove(const std::vector<uint8_t>& at)
     std::lock_guard lock(m_chunk_collection_workmux);
 
     maybe_force_mode_flush_reopen(std::ios_base::binary | std::ios_base::in);
-    m_workfile->seek(0,std::ios_base::beg);
+    m_workfile->seek(0, std::ios_base::beg);
 
     {
         io::temp_file cc_tmp(getPath().parent_path());

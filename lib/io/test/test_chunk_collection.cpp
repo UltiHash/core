@@ -213,7 +213,6 @@ BOOST_AUTO_TEST_CASE(remove_fragment_multi_chunk_collection)
     BOOST_REQUIRE_EQUAL_COLLECTIONS(valid_indexes.cbegin(), valid_indexes.cend(),
                                     valid_indexes_simulation.cbegin(), valid_indexes_simulation.cend());
 
-    //TODO: fragment size struct read does not work because dev redirection was not successful
     auto read_all_back = cc2.read_indexed_multi(valid_indexes);
 
     auto test_beg = read_all_back.begin();
