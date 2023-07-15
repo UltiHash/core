@@ -34,12 +34,13 @@ maybe_index_persist_chunk_collection(std::unique_ptr<io::file>& collection_file,
     if (is_index_persisted)
     {
         index_file = std::make_unique<io::file>(filename_index, std::ios_base::in);
-        std::size_t index_file_size = index_file->size();
+        auto index_file_size = (std::streamoff) index_file->size();
+
         std::size_t parse_count{};
 
         while (index_file->valid())
         {
-            if(index_file_size == parse_count)
+            if (index_file_size == parse_count)
                 break;
 
             serialization::fragment_serialize_size_format index_parse;
@@ -61,20 +62,21 @@ maybe_index_persist_chunk_collection(std::unique_ptr<io::file>& collection_file,
         collection_file = std::make_unique<io::file>(collection_file->path(),
                                                      std::ios_base::binary | std::ios_base::in);
 
+        index_file = std::make_unique<io::file>(filename_index, std::ios_base::binary | std::ios_base::out);
+        auto index_file_size = (std::streamoff) index_file->size();
+
         auto temporarily_cached_fragment_on_seekable_device =
             io::fragment_on_seekable_device(*collection_file);
-
-        index_file = std::make_unique<io::file>(filename_index, std::ios_base::binary | std::ios_base::out);
 
         uint16_t index_entry_count{};
         serialization::fragment_serialize_size_format skip_format;
 
         do
         {
-            skip_format = temporarily_cached_fragment_on_seekable_device.skip();
-
-            if (skip_format.content_size == 0)
+            if (index_file_size == collection_offset)
                 break;
+
+            skip_format = temporarily_cached_fragment_on_seekable_device.skip();
 
             if (index_entry_count > std::numeric_limits<unsigned char>::max() + 1)
             THROW(util::exception,
@@ -104,7 +106,8 @@ chunk_collection_index_persistent::~chunk_collection_index_persistent()
 {
     std::lock_guard lock(m_index_work_mux);
 
-    if(!std::filesystem::exists(m_workfile->path()) or (std::filesystem::exists(m_index_file->path()) and std::filesystem::is_empty(m_index_file->path())))
+    if (!std::filesystem::exists(m_workfile->path())
+        or (std::filesystem::exists(m_index_file->path()) and std::filesystem::is_empty(m_index_file->path())))
         maybe_forget_index_file();
 }
 
@@ -159,9 +162,11 @@ std::vector<uint8_t> chunk_collection_index_persistent::get_index_num_content_li
 
     for (const auto& index_item : *this)
     {
-        if(std::none_of(without.cbegin(),without.cend(),[&index_item](const uint8_t & without_item){
+        if (std::none_of(without.cbegin(), without.cend(), [&index_item](const uint8_t& without_item)
+        {
             return index_item.first.index_num == without_item;
-        })){
+        }))
+        {
             out_list[counter] = index_item.first.index_num;
             counter++;
         }
@@ -346,7 +351,7 @@ void chunk_collection_index_persistent::maybe_forget_index_file()
 
     if (not m_index_file_forgotten)
     {
-        if(m_index_file->is_open())
+        if (m_index_file->is_open())
             m_index_file->close();
         std::filesystem::remove(m_index_file->path());
         m_index_file_forgotten = true;
@@ -362,7 +367,7 @@ void chunk_collection_index_persistent::maybe_recreate_index_file()
     if (m_index_file_forgotten)
     {
         auto reindex = maybe_index_persist_chunk_collection(m_workfile, m_index_file);
-        assign(reindex.cbegin(),reindex.cend());
+        assign(reindex.cbegin(), reindex.cend());
         m_index_file = std::make_unique<io::file>(index_path(m_workfile), std::ios_base::binary | std::ios_base::app);
         m_index_file_forgotten = false;
     }
