@@ -113,7 +113,7 @@ chunk_collection_index_persistent::~chunk_collection_index_persistent()
 
 // ---------------------------------------------------------------------
 
-chunk_collection_index_persistent::chunk_collection_index_persistent(std::shared_ptr<io::file>& chunk_collection_file)
+chunk_collection_index_persistent::chunk_collection_index_persistent(std::shared_ptr<io::file> chunk_collection_file)
     :
     m_index_file(std::make_unique<io::file>(index_path(chunk_collection_file),
                                             std::ios_base::binary | std::ios_base::app)),

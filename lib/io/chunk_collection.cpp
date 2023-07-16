@@ -27,7 +27,7 @@ namespace
 
 // ---------------------------------------------------------------------
 
-std::shared_ptr<io::file> create_chunk_collection_file(std::filesystem::path& collection_location, bool create_tempfile)
+std::shared_ptr<io::file> create_chunk_collection_file(std::filesystem::path collection_location, bool create_tempfile)
 {
     if (create_tempfile)
     {
@@ -96,7 +96,7 @@ chunk_collection::chunk_collection(std::filesystem::path collection_temp_directo
     :
     m_behave_like_tempfile(create_tempfile),
     m_workfile(maybe_repair_chunk_collection(
-        create_chunk_collection_file(collection_temp_directory_else_file_path, create_tempfile))
+        create_chunk_collection_file(std::move(collection_temp_directory_else_file_path), create_tempfile))
     ),
     m_index(std::make_unique<chunk_collection_index_persistent>(m_workfile))
 {}

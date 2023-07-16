@@ -29,7 +29,7 @@ public:
      *
      * @param chunk_collection_file is the incoming open chunk collection file
      */
-    explicit chunk_collection_index_persistent(std::shared_ptr<io::file>& chunk_collection_file);
+    explicit chunk_collection_index_persistent(std::shared_ptr<io::file> chunk_collection_file);
 
     /**
      * Emplace object to memory and also append it to index
