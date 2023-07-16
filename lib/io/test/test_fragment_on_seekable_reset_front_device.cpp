@@ -5,7 +5,7 @@
 #ifdef SINGLE_TEST_RUNNER
 #define BOOST_TEST_NO_MAIN
 #else
-#define BOOST_TEST_MODULE "uhLibUtil TempFile Tests"
+#define BOOST_TEST_MODULE "uhLibIo fragment on seekable front device Tests"
 #endif
 
 #include <test/ipsum.h>
@@ -72,12 +72,13 @@ BOOST_AUTO_TEST_CASE(test_reset_device)
     std::unique_ptr<fragment_on_seekable_reset_front_device> fragmented_back =
         std::make_unique<fragment_on_seekable_reset_front_device>
             (*temp_buf, 0,
-             written_serialized_size1.content_buf_size +
-                 written_serialized_size1.content_size);
+             written_serialized_size1.serialized_size() +
+                 test_string1.size());
 
     fragmented_back->reset();
 
-    read_back_second.resize(test_string2.size(), 0);
+    read_back_second.clear();
+    read_back_second.resize(test_string2.size());
     auto size_back = fragmented->read({read_back_second.data(), read_back_second.size()});
 
     BOOST_REQUIRE(size_back.content_size == test_string2.size());
