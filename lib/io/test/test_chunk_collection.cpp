@@ -219,6 +219,7 @@ BOOST_AUTO_TEST_CASE(remove_fragment_multi_chunk_collection)
     for (const auto test_index : valid_indexes_simulation)
     {
         BOOST_CHECK_EQUAL(test_index,test_beg->second.index_num);
+        test_beg++;
     }
 
     auto to_write_beg = to_write.cbegin();

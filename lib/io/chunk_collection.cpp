@@ -304,7 +304,7 @@ chunk_collection::read_indexed_multi(const std::vector<uint8_t>& at)
         std::streamoff distance_filtered_projected_to_at =
             std::distance(at.begin(), std::find(at.begin(), at.end(), at_item));
 
-        out_list[distance_filtered_projected_to_at] = std::make_pair(output, read);
+        out_list[distance_filtered_projected_to_at] = std::make_pair(std::move(output), read);
         count_operations++;
     }
 
