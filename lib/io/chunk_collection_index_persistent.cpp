@@ -106,7 +106,7 @@ chunk_collection_index_persistent::~chunk_collection_index_persistent()
 {
     std::lock_guard lock(m_index_work_mux);
 
-    if (!std::filesystem::exists(m_workfile->path())
+    if (!std::filesystem::exists(m_workfile.path())
         or (std::filesystem::exists(m_index_file->path()) and std::filesystem::is_empty(m_index_file->path())))
         maybe_forget_index_file();
 }
