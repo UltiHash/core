@@ -240,9 +240,8 @@ void chunk_collection::remove(const std::vector<uint8_t>& at)
     //TODO: optimize remove last elements by truncating
     auto work_path = m_workfile->path();
     cleaned_chunk_collection.release_to(m_workfile->path());
-    m_index->assign(cleaned_chunk_collection.m_index->begin(),cleaned_chunk_collection.m_index->end());
-    m_index->setM_index_file_forgotten(cleaned_chunk_collection.m_index->isM_index_file_forgotten());
-    m_index->setM_index_file_size(cleaned_chunk_collection.m_index->getM_index_file_size());
+
+    m_index->copy(cleaned_chunk_collection.m_index);
 }
 
 // ---------------------------------------------------------------------
@@ -296,16 +295,17 @@ chunk_collection::read_indexed_multi(const std::vector<uint8_t>& at)
     std::vector<std::pair<std::vector<char>, serialization::fragment_serialize_size_format>>
         out_list(filtered_at_list.size());
 
-    std::vector<char> buffer(CHUNK_COLLECTION_BUFFER_SIZE);
+    std::size_t count_operations{};
 
     for (const auto at_item : filtered_at_list)
     {
-        auto [output, read] = read_indexed(at_item);
+        auto [output, read] = read_indexed(at_item,count_operations == filtered_at_list.size());
 
         std::streamoff distance_filtered_projected_to_at =
             std::distance(at.begin(), std::find(at.begin(), at.end(), at_item));
 
         out_list[distance_filtered_projected_to_at] = std::make_pair(output, read);
+        count_operations++;
     }
 
     return out_list;

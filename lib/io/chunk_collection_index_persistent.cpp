@@ -407,4 +407,20 @@ void chunk_collection_index_persistent::setM_index_file_forgotten(bool mIndexFil
 
 // ---------------------------------------------------------------------
 
+void chunk_collection_index_persistent::setM_workfile(std::unique_ptr<io::file>& mWorkfile)
+{
+    m_workfile = std::move(mWorkfile);
+}
+
+// ---------------------------------------------------------------------
+
+void chunk_collection_index_persistent::copy(const std::unique_ptr<chunk_collection_index_persistent>& input_collection)
+{
+    this->assign(input_collection->begin(),input_collection->end());
+    this->setM_index_file_forgotten(input_collection->isM_index_file_forgotten());
+    this->setM_index_file_size(input_collection->getM_index_file_size());
+}
+
+// ---------------------------------------------------------------------
+
 } // namespace uh::io
