@@ -41,9 +41,9 @@ struct Fixture
 // ---------------------------------------------------------------------
 
 typedef boost::mpl::vector<
-    //fragment_on_device,
-    fragment_on_seekable_device//,
-    //fragment_on_seekable_reset_front_device
+    fragment_on_device,
+    fragment_on_seekable_device,
+    fragment_on_seekable_reset_front_device
 > device_types;
 
 // ---------------------------------------------------------------------
@@ -120,13 +120,23 @@ BOOST_FIXTURE_TEST_CASE_TEMPLATE(multi_fragment_on_device_skip_test, T, device_t
     {
         temp_buf->seek(0, std::ios_base::beg);
     }
+    else
+        if constexpr (std::is_same_v<T, fragment_on_seekable_reset_front_device>){
+            fragmented->reset();
+        }
 
     auto size1 = fragmented->skip();
 
     BOOST_REQUIRE(size1.content_size == test_string1.size());
 
-    BOOST_CHECK(!fragmented->valid());
-    fragmented->reset();
+    if constexpr (std::is_same_v<T, fragment_on_seekable_reset_front_device>){
+        BOOST_CHECK(fragmented->valid());
+    }
+    else{
+        BOOST_CHECK(!fragmented->valid());
+        fragmented->reset();
+    }
+
     BOOST_CHECK(fragmented->valid());
 
     std::vector<char> read_back_second;
@@ -139,27 +149,24 @@ BOOST_FIXTURE_TEST_CASE_TEMPLATE(multi_fragment_on_device_skip_test, T, device_t
                                   read_back_second.begin(), read_back_second.end());
 
     BOOST_CHECK(!fragmented->valid());//implement eof detection to unvalidate
-    fragmented->reset();
 
     if constexpr (std::is_same_v<T, fragment_on_seekable_device>)
     {
+        fragmented->reset();
         temp_buf->seek(0, std::ios_base::beg);
-    }
-
-    if constexpr (std::is_same_v<T, fragment_on_seekable_device>)
-    {
         BOOST_CHECK(fragmented->valid());
         auto size3 = fragmented->read({read_back_second.data(), read_back_second.size()});
         BOOST_REQUIRE_EQUAL(size3.content_size, test_string1.size());
     }
     else
     {
-        BOOST_CHECK(!fragmented->valid());
-        auto size3 = fragmented->read({read_back_second.data(), read_back_second.size()});
-        BOOST_REQUIRE_EQUAL(size3.content_size, 0);
+        if constexpr (std::is_same_v<T, fragment_on_seekable_reset_front_device>){
+            fragmented->reset();
+            fragmented->skip();
+            fragmented->skip();
+            BOOST_REQUIRE_THROW(fragmented->read({read_back_second.data(), read_back_second.size()}),std::exception);
+        }
     }
-
-
 }
 
 // ---------------------------------------------------------------------
@@ -308,13 +315,19 @@ BOOST_FIXTURE_TEST_CASE_TEMPLATE(fragment_partial_read_write_exceptions, T, devi
 
             std::vector<char> lorem1_read(lorem1.size());
             std::vector<char> lorem2_read(lorem2.size());
+            std::vector<char> zero_array(lorem2.size());
 
+            fragmented->reset();
             fragmented->read(lorem1_read);
-            fragmented.reset();
             fragmented->read(lorem2_read);
 
-            BOOST_CHECK_EQUAL_COLLECTIONS(lorem1.begin(),lorem1.begin()+lorem1.size(),lorem1_read.begin(),lorem1_read.end());
-            BOOST_CHECK_EQUAL_COLLECTIONS(lorem1.begin(),lorem1.begin()+lorem1.size(),lorem2_read.begin(),lorem2_read.begin()+lorem1.size());
+            BOOST_CHECK_EQUAL_COLLECTIONS(lorem1.begin(),lorem1.end(), lorem1_read.begin(),lorem1_read.end());
+            BOOST_CHECK_EQUAL_COLLECTIONS(zero_array.begin(),zero_array.end(), lorem2_read.begin(),lorem2_read.end());
+
+            fragmented->reset();
+            fragmented->read(lorem1_read);
+
+            BOOST_CHECK_EQUAL_COLLECTIONS(lorem1.begin(),lorem1.end(), lorem1_read.begin(),lorem1_read.end());
         }
 
 }
