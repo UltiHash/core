@@ -49,7 +49,8 @@ public:
     serialization::fragment_serialize_size_format write_indexed
         (std::span<const char> buffer,
          uint32_t alloc = 0,
-         bool flush_after_operation = true);
+         bool flush_after_operation = true,
+         int16_t maybe_force_index = -1);
 
     /**
      * read a certain index pointer and return a vector buffer of the content

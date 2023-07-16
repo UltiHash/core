@@ -107,7 +107,8 @@ chunk_collection::chunk_collection(std::filesystem::path collection_temp_directo
 serialization::fragment_serialize_size_format
 chunk_collection::write_indexed(std::span<const char> buffer,
                                 uint32_t alloc,
-                                bool flush_after_operation)
+                                bool flush_after_operation,
+                                int16_t maybe_force_index)
 {
     std::lock_guard lock(m_chunk_collection_workmux);
 
@@ -118,11 +119,17 @@ chunk_collection::write_indexed(std::span<const char> buffer,
     if (buffer.size() > TREE_STORAGE_CHUNK_LIMIT)
     THROW(util::exception, "Incoming writing buffer was too large!");
 
+    if(maybe_force_index < 0)
+        maybe_force_index = m_index->next_free_address();
+    else{
+        m_index->find_address(maybe_force_index,m_index->begin());
+    }
+
     maybe_force_mode_flush_reopen(std::ios_base::binary | std::ios_base::app);
 
     auto temporarily_cached_fragment_on_seekable_device =
         io::fragment_on_seekable_device(*m_workfile,
-                                        m_index->next_free_address());
+                                        maybe_force_index);
 
     uint32_t allocate_space = std::max(static_cast<uint32_t>(buffer.size()), alloc);
     serialization::fragment_serialize_size_format written =
@@ -216,7 +223,7 @@ void chunk_collection::remove(const std::vector<uint8_t>& at)
         }))
             cleaned_chunk_collection.write_indexed(read_from_source_chunk_collection.first,
                                                    read_from_source_chunk_collection.first.size(),
-                                                   is_last);
+                                                   is_last, current_index_pos);
         index_list_beg++;
     }
 
