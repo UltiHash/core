@@ -29,7 +29,7 @@ public:
      *
      * @param chunk_collection_file is the incoming open chunk collection file
      */
-    explicit chunk_collection_index_persistent(std::shared_ptr<io::file> chunk_collection_file);
+    explicit chunk_collection_index_persistent(io::file& chunk_collection_file);
 
     /**
      * Emplace object to memory and also append it to index
@@ -143,7 +143,7 @@ public:
 
 private:
     std::unique_ptr<io::file> m_index_file;
-    std::shared_ptr<io::file> m_workfile;
+    io::file& m_workfile;
     std::size_t m_index_file_size;
     bool m_index_file_forgotten = false;
 

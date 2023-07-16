@@ -15,15 +15,15 @@ namespace
 
 // ---------------------------------------------------------------------
 
-std::filesystem::path index_path(const std::shared_ptr<io::file>& collection_file)
+std::filesystem::path index_path(io::file& collection_file)
 {
-    return collection_file->path().replace_extension(".index");
+    return collection_file.path().replace_extension(".index");
 }
 
 // ---------------------------------------------------------------------
 
 std::vector<std::pair<serialization::fragment_serialize_size_format, std::streamoff>>
-maybe_index_persist_chunk_collection(std::shared_ptr<io::file>& collection_file, std::unique_ptr<io::file>& index_file)
+maybe_index_persist_chunk_collection(io::file& collection_file, std::unique_ptr<io::file>& index_file)
 {
     auto filename_index = index_path(collection_file);
     bool is_index_persisted = std::filesystem::exists(filename_index);
@@ -55,18 +55,18 @@ maybe_index_persist_chunk_collection(std::shared_ptr<io::file>& collection_file,
         return output_index;
     }
 
-    if (collection_file->size())
+    if (collection_file.size())
     {
         collection_offset = 0;
 
-        collection_file = std::make_shared<io::file>(collection_file->path(),
+        collection_file = io::file(collection_file.path(),
                                                      std::ios_base::binary | std::ios_base::in);
-        auto collection_file_size = (std::streamoff) collection_file->size();
+        auto collection_file_size = (std::streamoff) collection_file.size();
 
         index_file = std::make_unique<io::file>(filename_index, std::ios_base::binary | std::ios_base::out);
 
         auto temporarily_cached_fragment_on_seekable_device =
-            io::fragment_on_seekable_device(*collection_file);
+            io::fragment_on_seekable_device(collection_file);
 
         uint16_t index_entry_count{};
         serialization::fragment_serialize_size_format skip_format;
@@ -80,7 +80,7 @@ maybe_index_persist_chunk_collection(std::shared_ptr<io::file>& collection_file,
 
             if (index_entry_count > std::numeric_limits<unsigned char>::max() + 1)
             THROW(util::exception,
-                  "Indexing of chunk collection " + collection_file->path().string() + " exceeded limits");
+                  "Indexing of chunk collection " + collection_file.path().string() + " exceeded limits");
 
             output_index.emplace_back(skip_format, collection_offset);
 
@@ -113,7 +113,7 @@ chunk_collection_index_persistent::~chunk_collection_index_persistent()
 
 // ---------------------------------------------------------------------
 
-chunk_collection_index_persistent::chunk_collection_index_persistent(std::shared_ptr<io::file> chunk_collection_file)
+chunk_collection_index_persistent::chunk_collection_index_persistent(io::file& chunk_collection_file)
     :
     m_index_file(std::make_unique<io::file>(index_path(chunk_collection_file),
                                             std::ios_base::binary | std::ios_base::app)),
