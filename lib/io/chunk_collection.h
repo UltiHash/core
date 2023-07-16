@@ -32,6 +32,7 @@ public:
      * Scan existing chunk collection on construction.
      *
      * @param collection_temp_directory_else_file_path where the file containing the chunk collection is located
+     * @param create_tempfile chunk collection behaves like a temp file; release to keep
      * @throw if chunk collection is corrupted after repair attempt
      */
     explicit chunk_collection(std::filesystem::path collection_temp_directory_else_file_path,
@@ -146,7 +147,7 @@ public:
     void maybe_forget_chunk_collection_index_file();
 
 private:
-    std::unique_ptr<io::file> m_workfile;
+    std::shared_ptr<io::file> m_workfile;
     std::unique_ptr<chunk_collection_index_persistent> m_index;
 
     std::recursive_mutex m_chunk_collection_workmux;

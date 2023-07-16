@@ -29,7 +29,7 @@ public:
      *
      * @param chunk_collection_file is the incoming open chunk collection file
      */
-    explicit chunk_collection_index_persistent(std::unique_ptr<io::file>& chunk_collection_file);
+    explicit chunk_collection_index_persistent(std::shared_ptr<io::file>& chunk_collection_file);
 
     /**
      * Emplace object to memory and also append it to index
@@ -134,17 +134,16 @@ public:
     /*
      * getters and setters
      */
-    size_t getM_index_file_size() const;
+    [[nodiscard]] size_t getM_index_file_size() const;
     void setM_index_file_size(size_t mIndexFileSize);
-    bool isM_index_file_forgotten() const;
+    [[nodiscard]] bool isM_index_file_forgotten() const;
     void setM_index_file_forgotten(bool mIndexFileForgotten);
-    void setM_workfile(std::unique_ptr<io::file>& mWorkfile);
 
     void copy(const std::unique_ptr<chunk_collection_index_persistent>& input_collection);
 
 private:
     std::unique_ptr<io::file> m_index_file;
-    std::unique_ptr<io::file>& m_workfile;
+    std::shared_ptr<io::file> m_workfile;
     std::size_t m_index_file_size;
     bool m_index_file_forgotten = false;
 

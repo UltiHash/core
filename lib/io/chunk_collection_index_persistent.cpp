@@ -15,7 +15,7 @@ namespace
 
 // ---------------------------------------------------------------------
 
-std::filesystem::path index_path(std::unique_ptr<io::file>& collection_file)
+std::filesystem::path index_path(const std::shared_ptr<io::file>& collection_file)
 {
     return collection_file->path().replace_extension(".index");
 }
@@ -23,7 +23,7 @@ std::filesystem::path index_path(std::unique_ptr<io::file>& collection_file)
 // ---------------------------------------------------------------------
 
 std::vector<std::pair<serialization::fragment_serialize_size_format, std::streamoff>>
-maybe_index_persist_chunk_collection(std::unique_ptr<io::file>& collection_file, std::unique_ptr<io::file>& index_file)
+maybe_index_persist_chunk_collection(std::shared_ptr<io::file>& collection_file, std::unique_ptr<io::file>& index_file)
 {
     auto filename_index = index_path(collection_file);
     bool is_index_persisted = std::filesystem::exists(filename_index);
@@ -59,7 +59,7 @@ maybe_index_persist_chunk_collection(std::unique_ptr<io::file>& collection_file,
     {
         collection_offset = 0;
 
-        collection_file = std::make_unique<io::file>(collection_file->path(),
+        collection_file = std::make_shared<io::file>(collection_file->path(),
                                                      std::ios_base::binary | std::ios_base::in);
         auto collection_file_size = (std::streamoff) collection_file->size();
 
@@ -113,14 +113,14 @@ chunk_collection_index_persistent::~chunk_collection_index_persistent()
 
 // ---------------------------------------------------------------------
 
-chunk_collection_index_persistent::chunk_collection_index_persistent(std::unique_ptr<io::file>& chunk_collection_file)
+chunk_collection_index_persistent::chunk_collection_index_persistent(std::shared_ptr<io::file>& chunk_collection_file)
     :
     m_index_file(std::make_unique<io::file>(index_path(chunk_collection_file),
                                             std::ios_base::binary | std::ios_base::app)),
+    m_index_file_size(m_index_file->size()),
     std::vector<std::pair<serialization::fragment_serialize_size_format, std::streamoff>>{
         maybe_index_persist_chunk_collection(chunk_collection_file, m_index_file)},
-    m_workfile(chunk_collection_file),
-    m_index_file_size(m_index_file->size())
+    m_workfile(chunk_collection_file)
 {}
 
 // ---------------------------------------------------------------------
@@ -403,13 +403,6 @@ bool chunk_collection_index_persistent::isM_index_file_forgotten() const
 void chunk_collection_index_persistent::setM_index_file_forgotten(bool mIndexFileForgotten)
 {
     m_index_file_forgotten = mIndexFileForgotten;
-}
-
-// ---------------------------------------------------------------------
-
-void chunk_collection_index_persistent::setM_workfile(std::unique_ptr<io::file>& mWorkfile)
-{
-    m_workfile = std::move(mWorkfile);
 }
 
 // ---------------------------------------------------------------------
