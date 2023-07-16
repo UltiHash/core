@@ -12,7 +12,6 @@
 #include <boost/test/unit_test.hpp>
 #include <boost/mpl/vector.hpp>
 
-#include <util/exception.h>
 #include <io/fragment_on_device.h>
 #include <io/fragment_on_seekable_device.h>
 #include <io/fragment_on_seekable_reset_front_device.h>
@@ -108,8 +107,8 @@ BOOST_FIXTURE_TEST_CASE_TEMPLATE(multi_fragment_on_device_skip_test, T, device_t
         fragmented = std::make_unique<T>(*temp_buf);
     }
 
-    const std::string test_string1(uh::test::LOREM_IPSUM),
-        test_string2(uh::test::LOREM_IPSUM + "another ipsum");
+    std::string test_string1(uh::test::LOREM_IPSUM);
+    std::string test_string2(uh::test::LOREM_IPSUM + "another ipsum");
 
     fragmented->write(test_string1);
     fragmented->write(test_string2);
@@ -144,15 +143,23 @@ BOOST_FIXTURE_TEST_CASE_TEMPLATE(multi_fragment_on_device_skip_test, T, device_t
 
     if constexpr (std::is_same_v<T, fragment_on_seekable_device>)
     {
+        temp_buf->seek(0, std::ios_base::beg);
+    }
+
+    if constexpr (std::is_same_v<T, fragment_on_seekable_device>)
+    {
         BOOST_CHECK(fragmented->valid());
+        auto size3 = fragmented->read({read_back_second.data(), read_back_second.size()});
+        BOOST_REQUIRE_EQUAL(size3.content_size, test_string1.size());
     }
     else
     {
         BOOST_CHECK(!fragmented->valid());
+        auto size3 = fragmented->read({read_back_second.data(), read_back_second.size()});
+        BOOST_REQUIRE_EQUAL(size3.content_size, 0);
     }
 
-    auto size3 = fragmented->read({read_back_second.data(), read_back_second.size()});
-    BOOST_REQUIRE_EQUAL(size3.content_size, 0);
+
 }
 
 // ---------------------------------------------------------------------
