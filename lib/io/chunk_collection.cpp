@@ -119,10 +119,20 @@ chunk_collection::write_indexed(std::span<const char> buffer,
     if (buffer.size() > TREE_STORAGE_CHUNK_LIMIT)
     THROW(util::exception, "Incoming writing buffer was too large!");
 
-    if(maybe_force_index < 0)
+    if (maybe_force_index < 0)
         maybe_force_index = m_index->next_free_address();
-    else{
-        m_index->find_address(maybe_force_index,m_index->begin());
+    else
+    {
+        if (std::any_of(m_index->cbegin(), m_index->cend(), [&maybe_force_index](const auto& index_item)
+        {
+            return maybe_force_index == index_item.first.index_num;
+        }))
+        THROW(util::exception, "On chunk collection " + m_workfile->path().string() +
+            " forced index position " + std::to_string(maybe_force_index) + " was not available anymore!");
+
+        if (maybe_force_index > std::numeric_limits<uint8_t>::max())
+        THROW(util::exception, "On chunk collection " + m_workfile->path().string() +
+            " forced index position " + std::to_string(maybe_force_index) + " was out of bounds!");
     }
 
     maybe_force_mode_flush_reopen(std::ios_base::binary | std::ios_base::app);
@@ -204,7 +214,6 @@ void chunk_collection::remove(const std::vector<uint8_t>& at)
     std::lock_guard lock(m_chunk_collection_workmux);
 
     maybe_force_mode_flush_reopen(std::ios_base::binary | std::ios_base::in);
-
     chunk_collection cleaned_chunk_collection(getPath().parent_path(), true);
     std::vector<uint8_t> index_list = m_index->get_index_num_content_list(at);
 
@@ -229,8 +238,11 @@ void chunk_collection::remove(const std::vector<uint8_t>& at)
 
     //TODO: fallback if space of chunk collection could not be allocated --> copy elements one by one and truncate
     //TODO: optimize remove last elements by truncating
-
+    auto work_path = m_workfile->path();
     cleaned_chunk_collection.release_to(m_workfile->path());
+    m_index->assign(cleaned_chunk_collection.m_index->begin(),cleaned_chunk_collection.m_index->end());
+    m_index->setM_index_file_forgotten(cleaned_chunk_collection.m_index->isM_index_file_forgotten());
+    m_index->setM_index_file_size(cleaned_chunk_collection.m_index->getM_index_file_size());
 }
 
 // ---------------------------------------------------------------------
@@ -382,9 +394,8 @@ void chunk_collection::release_to(const std::filesystem::path& release_path)
         THROW_FROM_ERRNO();
     }
 
-    m_index->release_to(new_index_path);
-
     m_workfile = std::make_unique<io::file>(release_path, std::ios_base::binary | std::ios_base::in);
+    m_index->release_to(new_index_path);
 }
 
 // ---------------------------------------------------------------------

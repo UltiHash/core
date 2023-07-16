@@ -131,6 +131,11 @@ public:
      */
     void maybe_recreate_index_file();
 
+    size_t getM_index_file_size() const;
+    void setM_index_file_size(size_t mIndexFileSize);
+    bool isM_index_file_forgotten() const;
+    void setM_index_file_forgotten(bool mIndexFileForgotten);
+
 private:
     std::unique_ptr<io::file> m_index_file;
     std::unique_ptr<io::file>& m_workfile;
@@ -138,6 +143,7 @@ private:
     bool m_index_file_forgotten = false;
 
     std::recursive_mutex m_index_work_mux{};
+
 };
 
 // ---------------------------------------------------------------------

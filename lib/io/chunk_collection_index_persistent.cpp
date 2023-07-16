@@ -333,10 +333,16 @@ void chunk_collection_index_persistent::release_to(const std::filesystem::path& 
         return;
     }
 
+    if(m_index_file->is_open())
+        m_index_file->close();
+
     if (::rename(this->m_index_file->path().c_str(), release_path.c_str()) == -1)
     {
         THROW_FROM_ERRNO();
     }
+
+    m_index_file_forgotten = false;
+
     m_index_file = std::make_unique<io::file>(release_path, std::ios_base::binary | std::ios_base::app);
     m_index_file->close();
 }
@@ -369,6 +375,34 @@ void chunk_collection_index_persistent::maybe_recreate_index_file()
         m_index_file = std::make_unique<io::file>(index_path(m_workfile), std::ios_base::binary | std::ios_base::app);
         m_index_file_forgotten = false;
     }
+}
+
+// ---------------------------------------------------------------------
+
+size_t chunk_collection_index_persistent::getM_index_file_size() const
+{
+    return m_index_file_size;
+}
+
+// ---------------------------------------------------------------------
+
+void chunk_collection_index_persistent::setM_index_file_size(size_t mIndexFileSize)
+{
+    m_index_file_size = mIndexFileSize;
+}
+
+// ---------------------------------------------------------------------
+
+bool chunk_collection_index_persistent::isM_index_file_forgotten() const
+{
+    return m_index_file_forgotten;
+}
+
+// ---------------------------------------------------------------------
+
+void chunk_collection_index_persistent::setM_index_file_forgotten(bool mIndexFileForgotten)
+{
+    m_index_file_forgotten = mIndexFileForgotten;
 }
 
 // ---------------------------------------------------------------------
