@@ -18,14 +18,14 @@ namespace uh::dbn::storage::smart::maps {
 struct map_key_value {
     std::span <const char> key;
     std::span <const char> value;
-    uint64_t offset {};
+    uint64_t data_offset {};
     uint64_t index_offset {};
 
     map_key_value (std::span <char> key_, std::span <char> value_):
             key (key_), value (value_) {}
 
     explicit map_key_value (const sets::set_data& set_data_):
-            offset (set_data_.data_offset),
+            data_offset (set_data_.data_offset),
             index_offset (set_data_.index_offset) {
         const auto key_size = *reinterpret_cast <const uint16_t*> (set_data_.data.data ());
         key = {set_data_.data.data() + sizeof (key_size), key_size};
@@ -73,6 +73,13 @@ public:
     virtual void insert (std::span<char> key, std::span<char> value, const sets::index_type& index) = 0;
 
     /**
+     * Updates the given key with the given new value in the hash map.
+     * @param key
+     * @param value
+     */
+    virtual void update (std::span<char> key, std::span<char> value, const sets::index_type& pos) = 0;
+
+    /**
      * returns the fragments offset and sizes
      * @param key
      * @return
@@ -95,6 +102,6 @@ public:
     virtual ~map_interface () = default;
 };
 
-} // end namespace uh::dbn::storage::smart::key_stores
+} // end namespace uh::dbn::storage::smart::maps
 
 #endif //CORE_MAP_INTERFACE_H

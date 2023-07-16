@@ -13,10 +13,12 @@ void *align_ptr(void *ptr) noexcept {
 }
 
 void sync_ptr (void *ptr, std::size_t size) {
+    /*
     const auto aligned = align_ptr (ptr);
     if (msync(aligned, static_cast <char*> (ptr) - static_cast <char*> (aligned) + size, MS_SYNC) != 0) {
         throw std::system_error (errno, std::system_category(), "could not sync the mmap data");
     }
+     */
 }
 
 
@@ -55,7 +57,9 @@ std::pmr::memory_resource& resource_entry::get_pool_resource() {
 void managed_storage::mmap_file(const std::filesystem::path &file, uint64_t offset, size_t file_size) {
 
     const auto fd = open(file.c_str(), O_CREAT | O_RDWR, S_IRUSR | S_IWUSR);
-    ftruncate(fd, file_size);
+    if (ftruncate(fd, file_size) != 0) {
+        std::filesystem::filesystem_error (errno);
+    }
     const auto ptr = mmap(nullptr, file_size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
     close(fd);
     m_resources.emplace_hint(m_resources.cend(),std::piecewise_construct,

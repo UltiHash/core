@@ -19,7 +19,7 @@ enum color_t : uint8_t
 
 struct offset_span {
     uint64_t m_data_offset;
-    size_t m_size;
+    std::size_t m_size;
 };
 
 struct mmap_node {

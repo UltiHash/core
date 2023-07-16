@@ -11,7 +11,7 @@
 #include <test/ipsum.h>
 #include <util/exception.h>
 #include <io/temp_file.h>
-#include <io/fragment_on_seekable_reset_device.h>
+#include <io/fragment_on_seekable_reset_front_device.h>
 #include <io/buffer.h>
 
 #include <boost/test/unit_test.hpp>
@@ -34,8 +34,8 @@ BOOST_AUTO_TEST_CASE(test_reset_device)
 {
     static std::unique_ptr<temp_file> temp_buf = std::make_unique<temp_file>
         (TEMP_DIR, std::ios_base::in | std::ios_base::out);
-    std::unique_ptr<fragment_on_seekable_reset_device> fragmented =
-        std::make_unique<fragment_on_seekable_reset_device>(*temp_buf);
+    std::unique_ptr<fragment_on_seekable_reset_front_device> fragmented =
+        std::make_unique<fragment_on_seekable_reset_front_device>(*temp_buf);
 
     const std::string test_string1(uh::test::LOREM_IPSUM),
         test_string2(uh::test::LOREM_IPSUM + "another ipsum");
@@ -69,10 +69,10 @@ BOOST_AUTO_TEST_CASE(test_reset_device)
     fragmented->reset();
     BOOST_CHECK(fragmented->valid());
 
-    std::unique_ptr<fragment_on_seekable_reset_device> fragmented_back =
-        std::make_unique<fragment_on_seekable_reset_device>
+    std::unique_ptr<fragment_on_seekable_reset_front_device> fragmented_back =
+        std::make_unique<fragment_on_seekable_reset_front_device>
             (*temp_buf, 0,
-             written_serialized_size1.header_size +
+             written_serialized_size1.content_buf_size +
                  written_serialized_size1.content_size);
 
     fragmented_back->reset();

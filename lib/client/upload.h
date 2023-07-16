@@ -75,6 +75,8 @@ public:
                           buffers& r);
 
     static constexpr std::size_t MAXIMUM_DATA_SIZE = 32 * 1024 * 1024;
+    std::atomic<std::uint64_t> m_total_effective_size {};
+
 private:
     void add_result(const std::filesystem::path& p,
                 const std::optional<std::string>& error = std::nullopt);

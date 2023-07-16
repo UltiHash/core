@@ -101,7 +101,7 @@ std::uint64_t meta_data::size() const
 
 // ---------------------------------------------------------------------
 
-const std::uint64_t& meta_data::effective_size() const
+const std::uint64_t meta_data::effective_size() const
 {
     return m_effective_size;
 }
