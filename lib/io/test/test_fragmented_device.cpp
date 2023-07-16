@@ -15,6 +15,7 @@
 #include <util/exception.h>
 #include <io/fragment_on_device.h>
 #include <io/fragment_on_seekable_device.h>
+#include <io/fragment_on_seekable_reset_front_device.h>
 #include <io/buffer.h>
 #include <io/device.h>
 #include <io/temp_file.h>
@@ -42,7 +43,8 @@ struct Fixture
 
 typedef boost::mpl::vector<
     //fragment_on_device,
-    fragment_on_seekable_device
+    fragment_on_seekable_device//,
+    //fragment_on_seekable_reset_front_device
 > device_types;
 
 // ---------------------------------------------------------------------
@@ -79,6 +81,16 @@ std::unique_ptr<fragment_on_seekable_device> make_test_device<fragment_on_seekab
     static std::unique_ptr<temp_file> temp_buf = std::make_unique<temp_file>
         (TEMP_DIR, std::ios_base::binary | std::ios_base::in | std::ios_base::out);
     auto rv = std::make_unique<fragment_on_seekable_device>(*temp_buf);
+
+    return rv;
+}
+
+template<>
+std::unique_ptr<fragment_on_seekable_reset_front_device> make_test_device<fragment_on_seekable_reset_front_device>()
+{
+    static std::unique_ptr<temp_file> temp_buf = std::make_unique<temp_file>
+        (TEMP_DIR, std::ios_base::binary | std::ios_base::in | std::ios_base::out);
+    auto rv = std::make_unique<fragment_on_seekable_reset_front_device>(*temp_buf, 0, 0);
 
     return rv;
 }
@@ -154,7 +166,7 @@ BOOST_FIXTURE_TEST_CASE_TEMPLATE(fragment_partial_read_write_exceptions, T, devi
         std::unique_ptr<temp_file> temp_buf = std::make_unique<temp_file>
             (TEMP_DIR, std::ios_base::binary | std::ios_base::in | std::ios_base::out);
 
-        temp_buf->seek(0,std::ios_base::beg);
+        temp_buf->seek(0, std::ios_base::beg);
 
         fragmented = std::make_unique<T>(*temp_buf);
         fragmented_read = std::make_unique<T>(*temp_buf);
@@ -178,7 +190,7 @@ BOOST_FIXTURE_TEST_CASE_TEMPLATE(fragment_partial_read_write_exceptions, T, devi
             if (first_write)
             {
                 std::vector<char> throw_buffer(uh::test::LOREM_IPSUM.size());
-                BOOST_REQUIRE_THROW(fragmented->read({throw_buffer.data(), throw_buffer.size()}),std::exception);
+                BOOST_REQUIRE_THROW(fragmented->read({throw_buffer.data(), throw_buffer.size()}), std::exception);
             }
         }
         while (written != uh::test::LOREM_IPSUM.size());
@@ -203,7 +215,7 @@ BOOST_FIXTURE_TEST_CASE_TEMPLATE(fragment_partial_read_write_exceptions, T, devi
             read += fragmented_read->read(small_buf).content_size;
             if (first_read)
             {
-                BOOST_REQUIRE_THROW(fragmented_read->write(small_buf),std::exception);
+                BOOST_REQUIRE_THROW(fragmented_read->write(small_buf), std::exception);
             }
 
             test_read.append(small_buf.data(), maximum_readable);
@@ -214,65 +226,89 @@ BOOST_FIXTURE_TEST_CASE_TEMPLATE(fragment_partial_read_write_exceptions, T, devi
         BOOST_CHECK_EQUAL(test_read, uh::test::LOREM_IPSUM);
     }
     else
-    {
-        std::unique_ptr<T> fragmented, fragmented_read;
-
-        static std::unique_ptr<buffer> temp_buf = std::make_unique<buffer>();
-        fragmented = std::make_unique<T>(*temp_buf);
-        fragmented_read = std::make_unique<T>(*temp_buf);
-
-        std::streamsize written{}, read{};
-
-        do
+        if constexpr (std::is_same_v<T, fragment_on_device>)
         {
-            buffer small_buf(uh::test::LOREM_IPSUM.size() / 3);
+            std::unique_ptr<T> fragmented, fragmented_read;
 
-            auto maximum_writeable = std::min(small_buf.data().size(),
-                                              static_cast<std::size_t>(
-                                                  std::distance(uh::test::LOREM_IPSUM.cbegin() + written,
-                                                                uh::test::LOREM_IPSUM.cend())));
+            static std::unique_ptr<buffer> temp_buf = std::make_unique<buffer>();
+            fragmented = std::make_unique<T>(*temp_buf);
+            fragmented_read = std::make_unique<T>(*temp_buf);
 
-            uh::io::write(small_buf, {uh::test::LOREM_IPSUM.data() + written, maximum_writeable});
+            std::streamsize written{}, read{};
 
-            bool first_write = !written;
-            written += fragmented->write(small_buf.data(), uh::test::LOREM_IPSUM.size()).content_size;
-
-            if (first_write)
+            do
             {
-                std::vector<char> throw_buffer(uh::test::LOREM_IPSUM.size());
-                BOOST_REQUIRE_THROW(fragmented->read({throw_buffer.data(), throw_buffer.size()}),std::exception);
+                buffer small_buf(uh::test::LOREM_IPSUM.size() / 3);
+
+                auto maximum_writeable = std::min(small_buf.data().size(),
+                                                  static_cast<std::size_t>(
+                                                      std::distance(uh::test::LOREM_IPSUM.cbegin() + written,
+                                                                    uh::test::LOREM_IPSUM.cend())));
+
+                uh::io::write(small_buf, {uh::test::LOREM_IPSUM.data() + written, maximum_writeable});
+
+                bool first_write = !written;
+                written += fragmented->write(small_buf.data(), uh::test::LOREM_IPSUM.size()).content_size;
+
+                if (first_write)
+                {
+                    std::vector<char> throw_buffer(uh::test::LOREM_IPSUM.size());
+                    BOOST_REQUIRE_THROW(fragmented->read({throw_buffer.data(), throw_buffer.size()}), std::exception);
+                }
             }
+            while (written != uh::test::LOREM_IPSUM.size());
+
+            BOOST_CHECK_EQUAL(written, uh::test::LOREM_IPSUM.size());
+
+            std::string test_read{};
+
+            do
+            {
+                std::vector<char> small_buf(uh::test::LOREM_IPSUM.size() / 4);
+
+                auto maximum_readable = std::min(small_buf.size(),
+                                                 static_cast<std::size_t>(
+                                                     std::distance(uh::test::LOREM_IPSUM.cbegin() + read,
+                                                                   uh::test::LOREM_IPSUM.cend())));
+
+                bool first_read = !read;
+
+                read += fragmented_read->read(small_buf).content_size;
+                if (first_read)
+                {
+                    BOOST_REQUIRE_THROW(fragmented_read->write(small_buf), std::exception);
+                }
+
+                test_read.append(small_buf.data(), maximum_readable);
+            }
+            while (fragmented_read->valid());
+
+            BOOST_CHECK_EQUAL(read, uh::test::LOREM_IPSUM.size());
+            BOOST_CHECK_EQUAL(test_read, uh::test::LOREM_IPSUM);
         }
-        while (written != uh::test::LOREM_IPSUM.size());
-
-        BOOST_CHECK_EQUAL(written, uh::test::LOREM_IPSUM.size());
-
-        std::string test_read{};
-
-        do
+        else
         {
-            std::vector<char> small_buf(uh::test::LOREM_IPSUM.size() / 4);
+            //seekable reset device
+            static std::unique_ptr<temp_file> temp_buf = std::make_unique<temp_file>
+                (TEMP_DIR, std::ios_base::binary | std::ios_base::in | std::ios_base::out);
+            auto fragmented = std::make_unique<fragment_on_seekable_reset_front_device>(*temp_buf, 0, 0);
 
-            auto maximum_readable = std::min(small_buf.size(),
-                                             static_cast<std::size_t>(
-                                                 std::distance(uh::test::LOREM_IPSUM.cbegin() + read,
-                                                               uh::test::LOREM_IPSUM.cend())));
+            std::string lorem1 = "1" + uh::test::LOREM_IPSUM;
+            std::string lorem2 = "2" + uh::test::LOREM_IPSUM + "another ipsum";
 
-            bool first_read = !read;
+            fragmented->write(lorem1);
+            fragmented->write(lorem2);
 
-            read += fragmented_read->read(small_buf).content_size;
-            if (first_read)
-            {
-                BOOST_REQUIRE_THROW(fragmented_read->write(small_buf),std::exception);
-            }
+            std::vector<char> lorem1_read(lorem1.size());
+            std::vector<char> lorem2_read(lorem2.size());
 
-            test_read.append(small_buf.data(), maximum_readable);
+            fragmented->read(lorem1_read);
+            fragmented.reset();
+            fragmented->read(lorem2_read);
+
+            BOOST_CHECK_EQUAL_COLLECTIONS(lorem1.begin(),lorem1.begin()+lorem1.size(),lorem1_read.begin(),lorem1_read.end());
+            BOOST_CHECK_EQUAL_COLLECTIONS(lorem1.begin(),lorem1.begin()+lorem1.size(),lorem2_read.begin(),lorem2_read.begin()+lorem1.size());
         }
-        while (fragmented_read->valid());
-
-        BOOST_CHECK_EQUAL(read, uh::test::LOREM_IPSUM.size());
-        BOOST_CHECK_EQUAL(test_read, uh::test::LOREM_IPSUM);
-    }
 
 }
 
