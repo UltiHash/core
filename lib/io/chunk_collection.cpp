@@ -27,7 +27,7 @@ namespace
 
 // ---------------------------------------------------------------------
 
-std::shared_ptr<io::file> create_chunk_collection_file(std::filesystem::path collection_location, bool create_tempfile)
+std::unique_ptr<io::file> create_chunk_collection_file(std::filesystem::path collection_location, bool create_tempfile)
 {
     if (create_tempfile)
     {
@@ -36,12 +36,12 @@ std::shared_ptr<io::file> create_chunk_collection_file(std::filesystem::path col
         collection_location = file.path();
     }
 
-    return std::make_shared<io::file>(collection_location, std::ios_base::binary | std::ios_base::app);
+    return std::make_unique<io::file>(collection_location, std::ios_base::binary | std::ios_base::app);
 }
 
 // ---------------------------------------------------------------------
 
-std::shared_ptr<io::file> maybe_repair_chunk_collection(std::shared_ptr<io::file> collection_file)
+std::unique_ptr<io::file> maybe_repair_chunk_collection(std::unique_ptr<io::file> collection_file)
 {
     std::filesystem::path corrupted_tempfile_path = collection_file->path().replace_extension(".tmp").string();
 
@@ -66,7 +66,7 @@ std::shared_ptr<io::file> maybe_repair_chunk_collection(std::shared_ptr<io::file
         }
 
         std::filesystem::rename(corrupted_tempfile_path, collection_file->path());
-        collection_file = std::make_shared<io::file>(collection_file->path(),std::ios_base::binary | std::ios_base::app);
+        collection_file = std::make_unique<io::file>(collection_file->path(),std::ios_base::binary | std::ios_base::app);
     }
 
     return collection_file;
@@ -95,8 +95,7 @@ chunk_collection::chunk_collection(std::filesystem::path collection_temp_directo
     :
     m_behave_like_tempfile(create_tempfile),
     m_workfile(maybe_repair_chunk_collection(
-        create_chunk_collection_file(std::move(collection_temp_directory_else_file_path), create_tempfile))
-    ),
+        create_chunk_collection_file(std::move(collection_temp_directory_else_file_path), create_tempfile))),
     m_index(std::make_unique<chunk_collection_index_persistent>(m_workfile))
 {}
 
@@ -392,7 +391,7 @@ void chunk_collection::release_to(const std::filesystem::path& release_path)
         THROW_FROM_ERRNO();
     }
 
-    m_workfile = std::make_shared<io::file>(release_path, std::ios_base::binary | std::ios_base::in);
+    m_workfile = std::make_unique<io::file>(release_path, std::ios_base::binary | std::ios_base::in);
     m_index->release_to(new_index_path);
 }
 
@@ -419,7 +418,7 @@ void chunk_collection::maybe_forget_chunk_collection_index_file()
 void chunk_collection::maybe_force_mode_flush_reopen(std::ios_base::openmode mode)
 {
     if (not m_workfile->is_open() or m_workfile->mode() != mode)
-        m_workfile = std::make_shared<io::file>(m_workfile->path(), mode);
+        m_workfile = std::make_unique<io::file>(m_workfile->path(), mode);
 }
 
 // ---------------------------------------------------------------------
