@@ -138,6 +138,7 @@ int main()
         udb_destroy_write_query_results(write_results);
         udb_destroy_write_query(test_write_query);
         udb_destroy_object(test_doc_1);
+        udb_destroy_object(test_doc_2);
 
         /* initialization stuffs */
         udb_destroy_connection(udb_conn);
