@@ -9,18 +9,18 @@
 #include <iostream>
 #include "cluster_config.h"
 #include "data_store.h"
+#include "storage/growing_managed_storage.h"
 
 namespace uh::cluster {
 class data_node {
 public:
 
-    data_node (int id,
-               std::shared_ptr <const cluster_ranks> cluster_plan, data_node_config conf):
+    data_node (int id, std::shared_ptr <const cluster_ranks> cluster_plan, data_node_config conf):
             m_cluster_plan (std::move (cluster_plan)),
             m_id (id),
             m_job_name ("data_node_" + std::to_string (id)),
             m_conf (std::move(conf)),
-            m_data_store (conf.data_store_conf){
+            m_data_store (conf.data_store_conf) {
 
     }
 
@@ -32,8 +32,7 @@ public:
     const int m_id;
     const std::string m_job_name;
     data_node_config m_conf;
-    data_store m_data_store;
-
+    uh::cluster::storage::growing_managed_storage m_data_store;
 
 };
 } // end namespace uh::cluster

@@ -7,15 +7,15 @@
 
 #include <optional>
 
-#include <storage/backends/smart_backend/smart_config.h>
+#include "../cluster_config.h"
 #include "storage_common.h"
 
-namespace uh::dbn::storage::smart {
+namespace uh::cluster::storage {
 
 class growing_managed_storage: public managed_storage {
 
 public:
-    growing_managed_storage (growing_managed_storage_config);
+    growing_managed_storage (data_store_config);
 
     offset_ptr allocate (std::size_t size) override;
 
@@ -72,6 +72,6 @@ private:
     std::size_t m_storage_size {};
     const std::size_t m_max_storage_size;
 };
-} // end namespace uh::dbn::storage::smart
+} // end namespace uh::cluster::storage
 
 #endif //CORE_GROWING_MANAGED_STORAGE_H

@@ -5,9 +5,9 @@
 #include <fstream>
 #include "growing_managed_storage.h"
 
-namespace uh::dbn::storage::smart {
+namespace uh::cluster::storage {
 
-growing_managed_storage::growing_managed_storage (growing_managed_storage_config conf):
+growing_managed_storage::growing_managed_storage (data_store_config conf):
         m_min_file_size (conf.min_file_size),
         m_max_file_size (conf.max_file_size),
         m_directory (std::move (conf.directory)),

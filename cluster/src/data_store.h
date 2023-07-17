@@ -7,6 +7,8 @@
 
 #include "cluster_config.h"
 #include <span>
+#include <memory_resource>
+
 namespace uh::cluster {
 
 struct big_span {
@@ -17,6 +19,7 @@ struct big_span {
 class data_store {
 
 public:
+    /*
     data_store (data_store_config conf):
         m_conf (std::move (conf)) {
 
@@ -26,6 +29,7 @@ public:
     big_span read (uint128_t pointer, size_t size) const;
 
     const data_store_config m_conf;
+     */
 };
 } // end namespace uh::cluster
 

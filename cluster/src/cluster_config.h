@@ -9,6 +9,7 @@
 #include <numeric>
 #include <boost/multiprecision/cpp_int.hpp>
 #include <filesystem>
+#include "../../server-db/src/storage/backends/smart_backend/smart_config.h"
 
 namespace uh::cluster {
 
@@ -52,8 +53,12 @@ struct cluster_ranks {
 
 
 struct data_store_config {
-    uint128_t max_size;
+    uint128_t offset;
     std::filesystem::path directory;
+    std::filesystem::path log_file;
+    size_t min_file_size;
+    size_t max_file_size;
+    size_t max_storage_size;
 };
 
 struct data_node_config {
