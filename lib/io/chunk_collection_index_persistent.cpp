@@ -118,10 +118,12 @@ chunk_collection_index_persistent::chunk_collection_index_persistent(std::shared
     m_index_file(std::make_unique<io::file>(index_path(chunk_collection_file),
                           std::ios_base::binary | std::ios_base::app)),
     m_index_file_size(m_index_file->size()),
-    std::vector<std::pair<serialization::fragment_serialize_size_format, std::streamoff>>{
-        maybe_index_persist_chunk_collection(chunk_collection_file, m_index_file)},
     index_depend_file(chunk_collection_file)
-{}
+{
+    auto index_update = maybe_index_persist_chunk_collection(chunk_collection_file, m_index_file);
+    this->reserve(std::distance(index_update.cbegin(),index_update.cend()));
+    this->assign(index_update.cbegin(),index_update.cend());
+}
 
 // ---------------------------------------------------------------------
 
@@ -156,7 +158,16 @@ std::vector<uint8_t> chunk_collection_index_persistent::get_index_num_content_li
 {
     std::lock_guard lock(m_index_work_mux);
 
-    std::vector<uint8_t> out_list(count() - without.size());
+    uint16_t count_out_items{count()};
+
+    std::for_each(cbegin(),cend(),[&count_out_items,&without](const auto& index_item){
+        if(std::any_of(without.cbegin(),without.cend(),[&index_item](const auto& without_item){
+            return index_item.first.index_num == without_item;
+        }))
+            count_out_items--;
+    });
+
+    std::vector<uint8_t> out_list(count_out_items);
 
     std::size_t counter{};
 
