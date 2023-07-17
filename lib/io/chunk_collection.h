@@ -35,7 +35,7 @@ public:
      * @param create_tempfile chunk collection behaves like a temp file; release to keep
      * @throw if chunk collection is corrupted after repair attempt
      */
-    explicit chunk_collection(std::filesystem::path collection_temp_directory_else_file_path,
+    explicit chunk_collection(const std::filesystem::path& collection_temp_directory_else_file_path,
                               bool create_tempfile = false);
 
     /**
@@ -147,8 +147,8 @@ public:
     void maybe_forget_chunk_collection_index_file();
 
 private:
-    chunk_collection_index_persistent m_index;
-    io::file m_workfile;
+    std::unique_ptr<chunk_collection_index_persistent> m_index;
+    std::unique_ptr<io::file> m_workfile;
 
     std::recursive_mutex m_chunk_collection_workmux;
 

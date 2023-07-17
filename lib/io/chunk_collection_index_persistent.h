@@ -140,11 +140,11 @@ public:
     [[nodiscard]] bool isM_index_file_forgotten() const;
     void setM_index_file_forgotten(bool mIndexFileForgotten);
 
-    void copy(const std::unique_ptr<chunk_collection_index_persistent>& input_collection);
+    void copy(std::unique_ptr<chunk_collection_index_persistent>& input_collection);
 
 private:
     io::file m_index_file;
-    seekable_device& index_depend_dev;
+    std::unique_ptr<io::file>& index_depend_file;
     std::size_t m_index_file_size;
     bool m_index_file_forgotten = false;
 

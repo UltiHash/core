@@ -66,7 +66,7 @@ std::unique_ptr<io::file> maybe_repair_chunk_collection(std::unique_ptr<io::file
         }
 
         std::filesystem::rename(corrupted_tempfile_path, collection_file->path());
-        collection_file = std::make_unique<io::file>(collection_file->path(),std::ios_base::binary | std::ios_base::app);
+        collection_file = std::make_unique<io::file>(collection_file->path(), std::ios_base::binary | std::ios_base::app);
     }
 
     return collection_file;
@@ -91,13 +91,14 @@ chunk_collection::~chunk_collection()
 
 // ---------------------------------------------------------------------
 
-chunk_collection::chunk_collection(std::filesystem::path collection_temp_directory_else_file_path, bool create_tempfile)
+chunk_collection::chunk_collection(const std::filesystem::path& collection_temp_directory_else_file_path, bool create_tempfile)
     :
     m_behave_like_tempfile(create_tempfile),
     m_workfile(maybe_repair_chunk_collection(
-        create_chunk_collection_file(std::move(collection_temp_directory_else_file_path), create_tempfile))),
-    m_index(std::make_unique<chunk_collection_index_persistent>(m_workfile))
-{}
+        create_chunk_collection_file(collection_temp_directory_else_file_path, create_tempfile)))
+{
+    m_index = std::make_unique<chunk_collection_index_persistent>(m_workfile);
+}
 
 // ---------------------------------------------------------------------
 
@@ -135,8 +136,7 @@ chunk_collection::write_indexed(std::span<const char> buffer,
     maybe_force_mode_flush_reopen(std::ios_base::binary | std::ios_base::app);
 
     auto temporarily_cached_fragment_on_seekable_device =
-        io::fragment_on_seekable_device(*m_workfile,
-                                        maybe_force_index);
+        io::fragment_on_seekable_device(*m_workfile, maybe_force_index);
 
     uint32_t allocate_space = std::max(static_cast<uint32_t>(buffer.size()), alloc);
     serialization::fragment_serialize_size_format written =
@@ -146,9 +146,9 @@ chunk_collection::write_indexed(std::span<const char> buffer,
         m_index->emplace_back_index(written, 0, flush_after_operation);
     else
         m_index->emplace_back_index(written,
-                                    m_index->back().second +
-                                        m_index->back().first.serialized_size() +
-                                        m_index->back().first.content_size, flush_after_operation);
+                                   m_index->back().second +
+                                       m_index->back().first.serialized_size() +
+                                       m_index->back().first.content_size, flush_after_operation);
 
     if (flush_after_operation)
         m_workfile->close();
@@ -296,7 +296,7 @@ chunk_collection::read_indexed_multi(const std::vector<uint8_t>& at)
 
     for (const auto at_item : filtered_at_list)
     {
-        auto [output, read] = read_indexed(at_item,count_operations == filtered_at_list.size());
+        auto [output, read] = read_indexed(at_item, count_operations == filtered_at_list.size());
 
         std::streamoff distance_filtered_projected_to_at =
             std::distance(at.begin(), std::find(at.begin(), at.end(), at_item));
