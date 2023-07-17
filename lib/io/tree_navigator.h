@@ -22,6 +22,8 @@ public:
 
     ~tree_navigator() = default;
 
+    tree_navigator() = default;
+
     /**
      * a tree navigator takes care of 256 chunk collections and 256 tree navigators. The main job
      * is to balance storage location and size
@@ -29,7 +31,7 @@ public:
      * @param root is the root path of the tree
      */
     explicit tree_navigator(uint8_t set_name = 0,
-                            const std::weak_ptr<tree_navigator>& parent_navigator = std::make_shared<tree_navigator>(),
+                            tree_navigator* parent_navigator = nullptr,
                             const std::weak_ptr<std::filesystem::path>& root = std::make_shared<std::filesystem::path>());
 
     /**
@@ -137,7 +139,7 @@ private:
 
     std::size_t size_stored{};
     std::weak_ptr<std::filesystem::path> tree_root;
-    std::weak_ptr<tree_navigator> parent_navigator;
+    std::shared_ptr<tree_navigator> parent_navigator;
     std::array<unsigned char, 2> tree_navigator_name;
 
     std::recursive_mutex tree_work_mux{};
