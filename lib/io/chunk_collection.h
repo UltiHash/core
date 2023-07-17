@@ -147,8 +147,8 @@ public:
     void maybe_forget_chunk_collection_index_file();
 
 private:
-    chunk_collection_index_persistent m_index;
-    io::file m_workfile;
+    std::unique_ptr<chunk_collection_index_persistent> m_index;
+    std::shared_ptr<io::file> m_workfile;
 
     std::recursive_mutex m_chunk_collection_workmux;
 
