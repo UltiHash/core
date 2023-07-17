@@ -36,7 +36,8 @@ std::weak_ptr<io::file> maybe_repair_chunk_collection(std::filesystem::path coll
         collection_location = file.path();
     }
 
-    std::weak_ptr<io::file> collection_file = std::make_shared<io::file>(collection_location, std::ios_base::binary | std::ios_base::app);
+    auto shared_tmp = std::make_shared<io::file>(collection_location, std::ios_base::binary | std::ios_base::app);
+    std::weak_ptr<io::file> collection_file(shared_tmp);
 
     std::filesystem::path corrupted_tempfile_path = collection_file.lock()->path().replace_extension(".tmp").string();
 
