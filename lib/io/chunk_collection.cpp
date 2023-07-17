@@ -23,7 +23,7 @@ namespace
 
 // ---------------------------------------------------------------------
 
-#define TREE_STORAGE_CHUNK_LIMIT std::numeric_limits<uint32_t>::max()
+#define CHUNK_COLLECTION_CHUNK_SIZE_LIMIT std::numeric_limits<uint32_t>::max()
 
 // ---------------------------------------------------------------------
 
@@ -109,7 +109,7 @@ chunk_collection::write_indexed(std::span<const char> buffer,
     THROW(util::exception, "On chunk collection " + m_workfile->path().string() +
         "was no space left to multi write indexed!");
 
-    if (buffer.size() > TREE_STORAGE_CHUNK_LIMIT)
+    if (buffer.size() > CHUNK_COLLECTION_CHUNK_SIZE_LIMIT)
     THROW(util::exception, "Incoming writing buffer was too large!");
 
     if (maybe_force_index < 0)
@@ -251,7 +251,7 @@ chunk_collection::write_indexed_multi(const std::vector<std::span<const char>>& 
 
     std::for_each(buffer.cbegin(), buffer.cend(), [](const auto& item)
     {
-        if (item.size() > TREE_STORAGE_CHUNK_LIMIT)
+        if (item.size() > CHUNK_COLLECTION_CHUNK_SIZE_LIMIT)
         THROW(util::exception, "Incoming writing buffer was too large!");
     });
 
