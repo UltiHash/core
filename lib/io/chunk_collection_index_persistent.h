@@ -30,7 +30,7 @@ public:
      *
      * @param chunk_collection_file is the incoming open chunk collection file
      */
-    explicit chunk_collection_index_persistent(const std::weak_ptr<io::file>& chunk_collection_file);
+    explicit chunk_collection_index_persistent(std::shared_ptr<io::file>& chunk_collection_file);
 
     /**
      * Emplace object to memory and also append it to index
@@ -143,13 +143,12 @@ public:
     void copy(std::unique_ptr<chunk_collection_index_persistent>& input_collection);
 
 private:
-    io::file m_index_file;
-    std::weak_ptr<io::file> index_depend_file;
+    std::unique_ptr<io::file> m_index_file;
+    std::shared_ptr<io::file> index_depend_file;
     std::size_t m_index_file_size;
     bool m_index_file_forgotten = false;
 
     std::recursive_mutex m_index_work_mux{};
-
 };
 
 // ---------------------------------------------------------------------

@@ -27,7 +27,7 @@ namespace
 
 // ---------------------------------------------------------------------
 
-std::weak_ptr<io::file> maybe_repair_chunk_collection(std::filesystem::path collection_location, bool create_tempfile)
+std::shared_ptr<io::file> maybe_repair_chunk_collection(std::filesystem::path collection_location, bool create_tempfile)
 {
     if (create_tempfile)
     {
@@ -36,16 +36,15 @@ std::weak_ptr<io::file> maybe_repair_chunk_collection(std::filesystem::path coll
         collection_location = file.path();
     }
 
-    auto shared_tmp = std::make_shared<io::file>(collection_location, std::ios_base::binary | std::ios_base::app);
-    std::weak_ptr<io::file> collection_file(shared_tmp);
+    auto collection_file = std::make_shared<io::file>(collection_location, std::ios_base::binary | std::ios_base::app);
 
-    std::filesystem::path corrupted_tempfile_path = collection_file.lock()->path().replace_extension(".tmp").string();
+    std::filesystem::path corrupted_tempfile_path = collection_file->path().replace_extension(".tmp").string();
 
     bool temp_file_exists = std::filesystem::exists(corrupted_tempfile_path);
 
     if (temp_file_exists)
     {
-        auto locked_collection_file = collection_file.lock();
+        auto locked_collection_file = collection_file;
         bool file_exists = std::filesystem::exists(locked_collection_file->path());
         bool file_has_content = file_exists and not std::filesystem::is_empty(locked_collection_file->path());
 
@@ -62,7 +61,7 @@ std::weak_ptr<io::file> maybe_repair_chunk_collection(std::filesystem::path coll
             return collection_file;
         }
 
-        std::filesystem::rename(corrupted_tempfile_path, collection_file.lock()->path());
+        std::filesystem::rename(corrupted_tempfile_path, collection_file->path());
         collection_file = std::make_shared<io::file>(locked_collection_file->path(), std::ios_base::binary | std::ios_base::app);
     }
 
@@ -77,14 +76,11 @@ std::weak_ptr<io::file> maybe_repair_chunk_collection(std::filesystem::path coll
 
 chunk_collection::~chunk_collection()
 {
-    if(!m_workfile.expired()){
-        auto locked_workfile = m_workfile.lock();
-        if (locked_workfile->is_open())
-            locked_workfile->close();
+    if (m_workfile->is_open())
+        m_workfile->close();
 
-        if (m_behave_like_tempfile or (std::filesystem::exists(getPath()) and std::filesystem::is_empty(getPath())))
-            std::filesystem::remove(getPath());
-    }
+    if (m_behave_like_tempfile or (std::filesystem::exists(getPath()) and std::filesystem::is_empty(getPath())))
+        std::filesystem::remove(getPath());
 }
 
 // ---------------------------------------------------------------------
@@ -107,10 +103,8 @@ chunk_collection::write_indexed(std::span<const char> buffer,
 {
     std::lock_guard lock(m_chunk_collection_workmux);
 
-    auto locked_workfile = m_workfile.lock();
-
     if (!free())
-    THROW(util::exception, "On chunk collection " + locked_workfile->path().string() +
+    THROW(util::exception, "On chunk collection " + m_workfile->path().string() +
         "was no space left to multi write indexed!");
 
     if (buffer.size() > TREE_STORAGE_CHUNK_LIMIT)
@@ -124,18 +118,18 @@ chunk_collection::write_indexed(std::span<const char> buffer,
         {
             return maybe_force_index == index_item.first.index_num;
         }))
-        THROW(util::exception, "On chunk collection " + locked_workfile->path().string() +
+        THROW(util::exception, "On chunk collection " + m_workfile->path().string() +
             " forced index position " + std::to_string(maybe_force_index) + " was not available anymore!");
 
         if (maybe_force_index > std::numeric_limits<uint8_t>::max())
-        THROW(util::exception, "On chunk collection " + locked_workfile->path().string() +
+        THROW(util::exception, "On chunk collection " + m_workfile->path().string() +
             " forced index position " + std::to_string(maybe_force_index) + " was out of bounds!");
     }
 
     maybe_force_mode_flush_reopen(std::ios_base::binary | std::ios_base::app);
 
     auto temporarily_cached_fragment_on_seekable_device =
-        io::fragment_on_seekable_device(*locked_workfile, maybe_force_index);
+        io::fragment_on_seekable_device(*m_workfile, maybe_force_index);
 
 
     uint32_t allocate_space = std::max(static_cast<uint32_t>(buffer.size()), alloc);
@@ -151,7 +145,7 @@ chunk_collection::write_indexed(std::span<const char> buffer,
                                        m_index->back().first.content_size, flush_after_operation);
 
     if (flush_after_operation)
-        locked_workfile->close();
+        m_workfile->close();
 
     return written;
 }
@@ -164,13 +158,11 @@ chunk_collection::read_indexed(uint8_t at,
 {
     std::lock_guard lock(m_chunk_collection_workmux);
 
-    auto locked_workfile = m_workfile.lock();
-
     maybe_force_mode_flush_reopen(std::ios_base::binary | std::ios_base::in);
     auto fragment_pos_element = m_index->find_address(at, m_index->begin());
 
     auto temporarily_cached_fragment_on_seekable_device =
-        io::fragment_on_seekable_reset_front_device(*locked_workfile,
+        io::fragment_on_seekable_reset_front_device(*m_workfile,
                                                     fragment_pos_element->first.index_num,
                                                     fragment_pos_element->second);
     temporarily_cached_fragment_on_seekable_device.reset();
@@ -186,7 +178,7 @@ chunk_collection::read_indexed(uint8_t at,
 
         if (at != temp_read.index_num)
         THROW(util::exception,
-              "Reading chunk collection was out of bounds on \"" + locked_workfile->path().string() + "\" at index position "
+              "Reading chunk collection was out of bounds on \"" + m_workfile->path().string() + "\" at index position "
                   + std::to_string(read.index_num));
 
         std::size_t old_size = output.size();
@@ -201,7 +193,7 @@ chunk_collection::read_indexed(uint8_t at,
     while (temporarily_cached_fragment_on_seekable_device.valid());
 
     if (close_after_operation)
-        locked_workfile->close();
+        m_workfile->close();
 
     return {output, read};
 }
@@ -238,9 +230,8 @@ void chunk_collection::remove(const std::vector<uint8_t>& at)
     //TODO: fallback if space of chunk collection could not be allocated -. copy elements one by one and truncate
     //TODO: optimize remove last elements by truncating
 
-    auto locked_workfile = m_workfile.lock();
-    auto work_path = locked_workfile->path();
-    cleaned_chunk_collection.release_to(locked_workfile->path());
+    auto work_path = m_workfile->path();
+    cleaned_chunk_collection.release_to(m_workfile->path());
 
     m_index->copy(cleaned_chunk_collection.m_index);
 }
@@ -253,10 +244,8 @@ chunk_collection::write_indexed_multi(const std::vector<std::span<const char>>& 
 {
     std::lock_guard lock(m_chunk_collection_workmux);
 
-    auto locked_workfile = m_workfile.lock();
-
     if (static_cast<long>(free()) - buffer.size() < 0)
-    THROW(util::exception, "On chunk collection " + locked_workfile->path().string() +
+    THROW(util::exception, "On chunk collection " + m_workfile->path().string() +
         "was no space left to multi write indexed!");
 
     std::for_each(buffer.cbegin(), buffer.cend(), [](const auto& item)
@@ -372,7 +361,9 @@ uint16_t chunk_collection::free()
 
 std::filesystem::path chunk_collection::getPath()
 {
-    return m_workfile.lock()->path();
+    std::lock_guard lock(m_chunk_collection_workmux);
+
+    return m_workfile->path();
 }
 
 // ---------------------------------------------------------------------
@@ -423,10 +414,8 @@ void chunk_collection::maybe_forget_chunk_collection_index_file()
 
 void chunk_collection::maybe_force_mode_flush_reopen(std::ios_base::openmode mode)
 {
-    auto locked_workfile = m_workfile.lock();
-
-    if (not locked_workfile->is_open() or locked_workfile->mode() != mode)
-        locked_workfile = std::make_shared<io::file>(locked_workfile->path(), mode);
+    if (not m_workfile->is_open() or m_workfile->mode() != mode)
+        m_workfile = std::make_shared<io::file>(m_workfile->path(), mode);
 }
 
 // ---------------------------------------------------------------------
