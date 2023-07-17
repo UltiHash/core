@@ -3,6 +3,8 @@
 //
 
 #include <mpi.h>
+#include <system_error>
+#include <cerrno>
 #include "src/cluster_config.h"
 
 uh::cluster::cluster_config make_cluster_config () {
@@ -36,13 +38,13 @@ void execute_role (const int rank, const uh::cluster::cluster_config& cluster_co
 int main (int argc, char* argv[]) {
     auto rc = MPI_Init (&argc, &argv);
     if (rc != MPI_SUCCESS) {
-
+        throw std::runtime_error ("MPI operation failed");
     }
 
     int total_jobs;
     rc = MPI_Comm_size(MPI_COMM_WORLD, &total_jobs);
     if (rc != MPI_SUCCESS) {
-
+        throw std::runtime_error ("MPI operation failed");
     }
 
     const auto cluster_conf = make_cluster_config();
@@ -51,19 +53,19 @@ int main (int argc, char* argv[]) {
                     cluster_conf.redupe_jobs +
                     cluster_conf.dedupe_jobs +
                     cluster_conf.data_node_jobs) {
-
+        throw std::logic_error ("The number of processes must match the cluster configuration");
     }
 
     int rank;
     rc = MPI_Comm_rank(MPI_COMM_WORLD, &rank);
     if (rc != MPI_SUCCESS) {
-
+        throw std::runtime_error ("MPI operation failed");
     }
 
     execute_role (rank, cluster_conf);
 
     rc = MPI_Finalize();
     if (rc != MPI_SUCCESS) {
-
+        throw std::runtime_error ("MPI operation failed");
     }
 }
