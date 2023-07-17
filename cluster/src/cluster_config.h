@@ -8,6 +8,7 @@
 #include <vector>
 #include <numeric>
 #include <boost/multiprecision/cpp_int.hpp>
+#include <filesystem>
 
 namespace uh::cluster {
 
@@ -49,8 +50,14 @@ struct cluster_ranks {
     }
 };
 
+
 struct data_store_config {
     uint128_t max_size;
+    std::filesystem::path directory;
+};
+
+struct data_node_config {
+    data_store_config data_store_conf;
 };
 
 } // end namespace uh::cluster

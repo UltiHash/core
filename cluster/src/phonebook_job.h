@@ -14,8 +14,8 @@ namespace uh::cluster {
 class phonebook_job {
 public:
 
-    phonebook_job (int id, const uh::cluster::cluster_ranks& cluster_plan):
-            m_cluster_plan (cluster_plan),
+    phonebook_job (int id, std::shared_ptr <const uh::cluster::cluster_ranks> cluster_plan):
+            m_cluster_plan (std::move (cluster_plan)),
             m_id (id),
             m_job_name ("phonebook_" + std::to_string (id)) {
 
@@ -25,7 +25,7 @@ public:
         std::cout << "hello from " << m_job_name << std::endl;
     }
 
-    const std::reference_wrapper <const cluster_ranks> m_cluster_plan;
+    const std::shared_ptr <const cluster_ranks> m_cluster_plan;
     const int m_id;
     const std::string m_job_name;
 

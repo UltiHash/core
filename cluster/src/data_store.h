@@ -6,20 +6,26 @@
 #define CORE_DATA_STORE_H
 
 #include "cluster_config.h"
-
+#include <span>
 namespace uh::cluster {
+
+struct big_span {
+    uint128_t pointer;
+    size_t size;
+};
 
 class data_store {
 
 public:
-    data_store (uint128_t max_size, const data_store_config& conf):
-        m_max_size (std::move (max_size)),
-        m_conf (conf) {
+    data_store (data_store_config conf):
+        m_conf (std::move (conf)) {
 
     }
 
-    const uint128_t m_max_size;
-    const std::reference_wrapper <const data_store_config> m_conf;
+    uint128_t write (std::span <char> data);
+    big_span read (uint128_t pointer, size_t size) const;
+
+    const data_store_config m_conf;
 };
 } // end namespace uh::cluster
 

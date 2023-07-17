@@ -6,6 +6,7 @@
 #include <system_error>
 #include <cerrno>
 #include "src/cluster_config.h"
+#include <memory>
 #include "src/data_node.h"
 #include "src/dedupe_job.h"
 #include "src/redupe_job.h"
@@ -24,25 +25,25 @@ uh::cluster::cluster_skeleton make_cluster_config () {
 
 void execute_role (const int rank, const uh::cluster::cluster_skeleton& cluster_conf) {
 
-    uh::cluster::cluster_ranks cluster_plan (cluster_conf);
+    const auto cluster_plan = std::make_shared <const uh::cluster::cluster_ranks> (cluster_conf);
 
-    if (rank <= cluster_plan.data_node_ranks.back()) {
-        uh::cluster::data_node dn (rank, cluster_plan);
+    if (rank <= cluster_plan->data_node_ranks.back()) {
+        uh::cluster::data_node dn (rank, cluster_plan, uh::cluster::data_node_config {});
         dn.run();
     }
-    else if (rank <= cluster_plan.dedupe_ranks.back()) {
+    else if (rank <= cluster_plan->dedupe_ranks.back()) {
         uh::cluster::dedupe_job dd (rank, cluster_plan);
         dd.run();
     }
-    else if (rank <= cluster_plan.redupe_ranks.back()) {
+    else if (rank <= cluster_plan->redupe_ranks.back()) {
         uh::cluster::redupe_job rd (rank, cluster_plan);
         rd.run();
     }
-    else if (rank <= cluster_plan.phonebook_ranks.back()) {
+    else if (rank <= cluster_plan->phonebook_ranks.back()) {
         uh::cluster::phonebook_job pb (rank, cluster_plan);
         pb.run();
     }
-    else if (rank <= cluster_plan.entry_ranks.back()) {
+    else if (rank <= cluster_plan->entry_ranks.back()) {
         uh::cluster::entry_job en (rank, cluster_plan);
         en.run();
     }
