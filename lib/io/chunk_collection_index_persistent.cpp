@@ -159,10 +159,13 @@ std::vector<uint8_t> chunk_collection_index_persistent::get_index_num_content_li
     std::vector<uint8_t> out_list;
     out_list.reserve(count());
 
-    std::for_each(cbegin(), cend(),[&without,&out_list](const auto index_item){
-        if(std::none_of(without.cbegin(),without.cend(),[index_item](const auto without_item){
+    std::for_each(cbegin(), cend(), [&without, &out_list](const auto index_item)
+    {
+        if (std::none_of(without.cbegin(), without.cend(), [index_item](const auto without_item)
+        {
             return index_item.first.index_num == without_item;
-        })){
+        }))
+        {
             out_list.push_back(index_item.first.index_num);
         }
     });

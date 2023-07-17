@@ -62,7 +62,8 @@ std::shared_ptr<io::file> maybe_repair_chunk_collection(std::filesystem::path co
         }
 
         std::filesystem::rename(corrupted_tempfile_path, collection_file->path());
-        collection_file = std::make_shared<io::file>(locked_collection_file->path(), std::ios_base::binary | std::ios_base::app);
+        collection_file = std::make_shared<io::file>(locked_collection_file->path(),
+                                                     std::ios_base::binary | std::ios_base::app);
     }
 
     return collection_file;
@@ -85,7 +86,8 @@ chunk_collection::~chunk_collection()
 
 // ---------------------------------------------------------------------
 
-chunk_collection::chunk_collection(const std::filesystem::path& collection_temp_directory_else_file_path, bool create_tempfile)
+chunk_collection::chunk_collection(const std::filesystem::path& collection_temp_directory_else_file_path,
+                                   bool create_tempfile)
     :
     m_behave_like_tempfile(create_tempfile),
     m_workfile(maybe_repair_chunk_collection(collection_temp_directory_else_file_path, create_tempfile))
@@ -131,7 +133,6 @@ chunk_collection::write_indexed(std::span<const char> buffer,
     auto temporarily_cached_fragment_on_seekable_device =
         io::fragment_on_seekable_device(*m_workfile, maybe_force_index);
 
-
     uint32_t allocate_space = std::max(static_cast<uint32_t>(buffer.size()), alloc);
     serialization::fragment_serialize_size_format written =
         temporarily_cached_fragment_on_seekable_device.write(buffer, allocate_space);
@@ -140,9 +141,9 @@ chunk_collection::write_indexed(std::span<const char> buffer,
         m_index->emplace_back_index(written, 0, flush_after_operation);
     else
         m_index->emplace_back_index(written,
-                                   m_index->back().second +
-                                       m_index->back().first.serialized_size() +
-                                       m_index->back().first.content_size, flush_after_operation);
+                                    m_index->back().second +
+                                        m_index->back().first.serialized_size() +
+                                        m_index->back().first.content_size, flush_after_operation);
 
     if (flush_after_operation)
         m_workfile->close();
