@@ -413,11 +413,21 @@ void chunk_collection::maybe_forget_chunk_collection_index_file()
 
 // ---------------------------------------------------------------------
 
+long double chunk_collection::average_chunk_size()
+{
+    std::lock_guard lock(m_chunk_collection_workmux);
+
+    return m_index->average_chunk_size();
+}
+
+// ---------------------------------------------------------------------
+
 void chunk_collection::maybe_force_mode_flush_reopen(std::ios_base::openmode mode)
 {
     if (not m_workfile->is_open() or m_workfile->mode() != mode)
         m_workfile = std::make_shared<io::file>(m_workfile->path(), mode);
 }
+
 
 // ---------------------------------------------------------------------
 

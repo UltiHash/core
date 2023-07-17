@@ -9,6 +9,8 @@
 
 #include <vector>
 #include <stack>
+#include <mutex>
+#include <array>
 
 namespace uh::io {
 
@@ -16,7 +18,7 @@ namespace uh::io {
 
     public:
 
-        ~tree_navigator();
+        ~tree_navigator() = default;
 
         /**
          * a tree navigator takes care of 256 chunk collections and 256 tree navigators. The main job
@@ -36,7 +38,10 @@ namespace uh::io {
          * @return tuple<stream size, assigned index position>
          */
         std::pair<std::stack<char>, serialization::fragment_serialize_size_format> write_indexed
-                (std::span<const char> buffer,uint32_t alloc = 0);
+                (std::span<const char> buffer,
+                 uint32_t alloc = 0,
+                 bool flush_after_operation = true,
+                 const std::stack<unsigned char>& maybe_force_stack_start = std::stack<unsigned char>{});
 
         /**
          * read a certain index pointer and return a vector buffer of the content
@@ -45,7 +50,7 @@ namespace uh::io {
          * @return buffer
          */
         std::pair<std::vector<char>,serialization::fragment_serialize_size_format>
-        read_indexed(const std::stack<char>& at);
+        read_indexed(const std::stack<char>& at, bool close_after_operation = false);
 
         /**
          * Write indexed multiple buffers and return a list of fragment size structs that contain written fragment
@@ -53,13 +58,14 @@ namespace uh::io {
          * Does not close filestream.
          */
         std::pair<std::stack<char>, std::vector<serialization::fragment_serialize_size_format>>
-        write_indexed_multi(const std::vector<std::span<const char>> &buffer);
+        write_indexed_multi(const std::vector<std::span<const char>> &buffer,
+                            bool flush_after_operation = true);
 
         /**
          * read indexed multiple positions with smart seeking
          */
         std::vector<std::pair<std::vector<char>, serialization::fragment_serialize_size_format>>
-        read_indexed_multi(const std::vector<std::stack<char>> &at);
+        read_indexed_multi(const std::vector<std::stack<char>> &at, bool close_after_operation = false);
 
         /**
          *
@@ -116,16 +122,15 @@ namespace uh::io {
         std::filesystem::path getRoot();
 
     private:
-        std::vector<std::pair<tree_navigator*,uint8_t>> sub_trees;
-        std::vector<std::pair<chunk_collection*,uint8_t>> chunk_collections;
+        std::weak_ptr<std::vector<std::pair<std::unique_ptr<tree_navigator>,uint8_t>>> sub_trees;
+        std::weak_ptr<std::vector<std::pair<std::unique_ptr<chunk_collection>,uint8_t>>> chunk_collections;
 
-        std::filesystem::path root;
+        std::weak_ptr<tree_navigator> parent_tree_navigator;
+        std::array<unsigned char,4> tree_navigator_name;
         std::size_t size_stored{};
+        bool is_super_root{};
 
-        /**
-         * watches continues state depending processes like writing to an allocated space
-         */
-        bool not_completed_watchdog = false;
+        std::recursive_mutex tree_work_mux{};
     };
 
 } // namespace uh::io

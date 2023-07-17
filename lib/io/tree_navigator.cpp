@@ -13,18 +13,6 @@ namespace uh::io {
 
     // ---------------------------------------------------------------------
 
-    tree_navigator::~tree_navigator() {
-        std::for_each(sub_trees.begin(),sub_trees.end(),[](auto& sub_tree_entry){
-            delete sub_tree_entry.first;
-        });
-
-        std::for_each(chunk_collections.begin(),chunk_collections.end(),[](auto& chunk_collection_entry){
-            delete chunk_collection_entry.first;
-        });
-    }
-
-    // ---------------------------------------------------------------------
-
     tree_navigator::tree_navigator(const std::filesystem::path& root): root(root){
 
         for(const auto&file_object:std::filesystem::directory_iterator(root))
@@ -49,7 +37,10 @@ namespace uh::io {
     // ---------------------------------------------------------------------
 
     std::pair<std::stack<char>, serialization::fragment_serialize_size_format>
-    tree_navigator::write_indexed(std::span<const char> buffer, uint32_t alloc) {
+    tree_navigator::write_indexed(std::span<const char> buffer,
+                                  uint32_t alloc,
+                                  bool flush_after_operation,
+                                  const std::stack<unsigned char>& maybe_force_stack_start) {
         std::vector<chunk_collection*> same_amount_addresses_free;
 
         uint16_t addresses_free_max{};
@@ -78,21 +69,22 @@ namespace uh::io {
     // ---------------------------------------------------------------------
 
     std::pair<std::vector<char>, serialization::fragment_serialize_size_format>
-    tree_navigator::read_indexed(const std::stack<char>& at) {
+    tree_navigator::read_indexed(const std::stack<char>& at, bool close_after_operation) {
         //TODO
     }
 
     // ---------------------------------------------------------------------
 
     std::pair<std::stack<char>, std::vector<serialization::fragment_serialize_size_format>>
-    tree_navigator::write_indexed_multi(const std::vector<std::span<const char>> &buffer) {
+    tree_navigator::write_indexed_multi(const std::vector<std::span<const char>> &buffer,
+                                        bool flush_after_operation) {
 
     }
 
     // ---------------------------------------------------------------------
 
     std::vector<std::pair<std::vector<char>, serialization::fragment_serialize_size_format>>
-    tree_navigator::read_indexed_multi(const std::vector<std::stack<char>> &at) {
+    tree_navigator::read_indexed_multi(const std::vector<std::stack<char>> &at, bool close_after_operation) {
 
     }
 

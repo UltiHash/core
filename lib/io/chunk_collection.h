@@ -38,13 +38,6 @@ public:
     explicit chunk_collection(const std::filesystem::path& collection_temp_directory_else_file_path,
                               bool create_tempfile = false);
 
-    /**
-     * Write with returning the index that was assigned to the written buffer
-     * or instead give an index
-     *
-     *
-     * @return fragment_serialize_size_format
-     */
      /**
       *
       * @param buffer to be written
@@ -60,11 +53,6 @@ public:
          bool flush_after_operation = true,
          int16_t maybe_force_index = -1);
 
-    /**
-     *
-     * @param at index
-     * @return buffer
-     */
      /**
       * read a certain index pointer and return a vector buffer of the content
       *
@@ -167,6 +155,12 @@ public:
      * For space savings on disk the index file of chunk collection may be deleted
      */
     void maybe_forget_chunk_collection_index_file();
+
+    /**
+     *
+     * @return average chunk size of chunk collection
+     */
+    long double average_chunk_size();
 
 private:
     std::unique_ptr<chunk_collection_index_persistent> m_index;

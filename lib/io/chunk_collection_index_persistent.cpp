@@ -3,6 +3,7 @@
 #include <io/buffer.h>
 
 #include <string>
+#include <numeric>
 
 namespace uh::io
 {
@@ -374,6 +375,22 @@ void chunk_collection_index_persistent::maybe_recreate_index_file()
                                                   std::ios_base::binary | std::ios_base::app);
         m_index_file_forgotten = false;
     }
+}
+
+// ---------------------------------------------------------------------
+
+long double chunk_collection_index_persistent::average_chunk_size()
+{
+    std::lock_guard lock(m_index_work_mux);
+
+    return empty() ? 0 : (long double) std::accumulate(std::next(cbegin()),
+                                                       cend(),
+                                                       (uint64_t) cbegin()->first.content_size,
+                                                       [](uint64_t acc,
+                                                          std::pair<serialization::fragment_serialize_size_format,
+                                                                    std::streamoff> index_pair)
+                                                       {return acc + index_pair.first.content_size;})
+        / std::distance(cbegin(), cend());
 }
 
 // ---------------------------------------------------------------------

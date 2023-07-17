@@ -143,6 +143,12 @@ public:
      */
     void maybe_recreate_index_file();
 
+    /**
+     *
+     * @return average size of all chunks on index
+     */
+    long double average_chunk_size();
+
     /*
      * getters and setters
      */
