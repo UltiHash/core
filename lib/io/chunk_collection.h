@@ -42,11 +42,18 @@ public:
      * Write with returning the index that was assigned to the written buffer
      * or instead give an index
      *
-     * @param buffer to be written
-     * @param alloc allocate space and write fragment to chunk collection with the help of multiple buffers
-     * WARNING: allocated space must be written completely (accumulated buffer size is longer or equal alloc)
+     *
      * @return fragment_serialize_size_format
      */
+     /**
+      *
+      * @param buffer to be written
+      * @param alloc allocate space and write fragment to chunk collection with the help of multiple buffers
+      * WARNING: allocated space must be written completely (accumulated buffer size is longer or equal alloc)
+      * @param flush_after_operation may keep filestream open to write multiple objects in the same spot
+      * @param maybe_force_index force index position if it is unused
+      * @return fragment_serialize_size_format for index, content_buf_size and content_size
+      */
     serialization::fragment_serialize_size_format write_indexed
         (std::span<const char> buffer,
          uint32_t alloc = 0,
@@ -54,32 +61,44 @@ public:
          int16_t maybe_force_index = -1);
 
     /**
-     * read a certain index pointer and return a vector buffer of the content
      *
      * @param at index
      * @return buffer
      */
+     /**
+      * read a certain index pointer and return a vector buffer of the content
+      *
+      * @param at index position
+      * @param close_after_operation enables the user to keep the stream open to continuous read
+      * @return a pair of a read back buffer and fragment_serialize_size_format for information about it
+      */
     std::pair<std::vector<char>, serialization::fragment_serialize_size_format>
     read_indexed(uint8_t at, bool close_after_operation = false);
 
-    /**
-     * Write indexed multiple buffers and return a list of fragment size structs that contain written fragment
-     * information.
-     * Does not close filestream.
-     */
+     /**
+      * Write indexed multiple buffers and return a list of fragment size structs that contain written fragment
+      * information.
+      *
+      * @param buffer a vector of buffer spans that should be written to chunk collection
+      * @param flush_after_operation enables the user to keep the stream open to continuous write
+      * @return a vector of fragment_serialize_size_format for information about written information
+      */
     std::vector<serialization::fragment_serialize_size_format>
     write_indexed_multi(const std::vector<std::span<const char>>& buffer,
                         bool flush_after_operation = true);
 
-    /**
-     * read indexed multiple positions with smart seeking
-     */
+     /**
+      * read indexed multiple positions with smart seeking
+      *
+      * @param at read multiple buffers back to memory, indicated by the elements of at
+      * @return a vector of pairs of a read back buffer and fragment_serialize_size_format for information about it
+      */
     std::vector<std::pair<std::vector<char>, serialization::fragment_serialize_size_format>>
     read_indexed_multi(const std::vector<uint8_t>& at);
 
     /**
      *
-     * @param at remove fragment with this index
+     * @param at remove a vector of fragments by index
      */
     void remove(const std::vector<uint8_t>& at);
 
@@ -128,16 +147,19 @@ public:
      */
     std::filesystem::path getPath();
 
-    /**
-     * Rename the temp_file to `path` and make it a permanent file, in case we are based on temp_file
-     *
-     * @throw a file with the given name already exists
-     */
+     /**
+      * Overwrites the file of release path with this chunk collection; tries to also move and overwrite it's
+      * index file
+      *
+      * @throw if kernel rename throws
+      *
+      * @param release_path path to overwrite to
+      */
     void release_to(const std::filesystem::path& release_path);
 
     /**
      *
-     * @return a list of used index sort orders
+     * @return a list of used index numbers in the order they occur on the chunk collection
      */
     std::vector<uint8_t> get_index_num_content_list();
 

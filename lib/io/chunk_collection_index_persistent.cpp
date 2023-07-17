@@ -127,12 +127,12 @@ chunk_collection_index_persistent::chunk_collection_index_persistent(std::shared
 
 std::pair<serialization::fragment_serialize_size_format,
           std::streamoff> chunk_collection_index_persistent::emplace_back_index(serialization::fragment_serialize_size_format write_format,
-                                                                                std::size_t emplace_size,
+                                                                                std::size_t file_offset,
                                                                                 bool flush_after_operation)
 {
     std::lock_guard lock(m_index_work_mux);
 
-    auto tmp = emplace_back(write_format, emplace_size);
+    auto tmp = emplace_back(write_format, file_offset);
 
     maybe_recreate_index_file();
 
