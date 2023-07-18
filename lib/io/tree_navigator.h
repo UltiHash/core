@@ -30,9 +30,7 @@ public:
      *
      * @param root is the root path of the tree
      */
-    explicit tree_navigator(uint8_t set_name = 0,
-                            tree_navigator* parent_navigator = nullptr,
-                            const std::weak_ptr<std::filesystem::path>& root = std::make_shared<std::filesystem::path>());
+    explicit tree_navigator(uint8_t set_name, const std::filesystem::path& root);
 
     /**
      * write with returning the index that was assigned to the written buffer
@@ -139,7 +137,6 @@ private:
 
     std::size_t size_stored{};
     std::weak_ptr<std::filesystem::path> tree_root;
-    std::unique_ptr<tree_navigator> parent_navigator;
     std::array<unsigned char, 2> tree_navigator_name{};
 
     std::recursive_mutex tree_work_mux{};

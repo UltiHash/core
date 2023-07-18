@@ -22,11 +22,11 @@ namespace
 
 // ---------------------------------------------------------------------
 
-std::array<unsigned char, 2> get_navigator_name(uint8_t set_name, tree_navigator* parent_navigator)
+std::array<unsigned char, 2> get_navigator_name(const std::filesystem::path& tree_root, uint8_t set_name)
 {
     std::array<unsigned char, 2> out_name{};
 
-    out_name[0] = parent_navigator == nullptr ? 0 : parent_navigator->getTree_navigator_name()[1];
+    out_name[0] = boost::algorithm::unhex(tree_root.filename().string())[1];
     out_name[1] = set_name;
 
     return out_name;
@@ -34,17 +34,13 @@ std::array<unsigned char, 2> get_navigator_name(uint8_t set_name, tree_navigator
 
 // ---------------------------------------------------------------------
 
-std::shared_ptr<std::filesystem::path> maybe_set_tree_root(tree_navigator* parent_navigator,
-                                                           const std::weak_ptr<std::filesystem::path>& tree_root)
+std::shared_ptr<std::filesystem::path> maybe_set_tree_root(const std::filesystem::path& tree_root, uint8_t set_name)
 {
-    if (tree_root.lock()->empty())
-    THROW(util::exception, "If parent navigator is expired, it is expected to bee super root, so requiring a "
-                           "path for tree super root to be set!");
+    std::filesystem::path out_path = tree_root;
+    auto to_hex = boost::algorithm::hex(std::to_string(set_name));
+    out_path /= to_hex;
 
-    if (tree_root.lock()->empty())
-        return std::make_shared<std::filesystem::path>(parent_navigator->getRoot());
-
-    return tree_root.lock();
+    return std::make_shared<std::filesystem::path>(out_path);
 }
 
 // ---------------------------------------------------------------------
@@ -81,9 +77,7 @@ std::shared_ptr<std::vector<std::pair<std::shared_ptr<chunk_collection>,
 
 // ---------------------------------------------------------------------
 
-std::shared_ptr<std::vector<std::pair<std::shared_ptr<tree_navigator>,
-                                      uint8_t>>> index_sub_trees(const std::filesystem::path& input_path,
-                                                                 tree_navigator* parent_navigator)
+std::shared_ptr<std::vector<std::pair<std::shared_ptr<tree_navigator>,uint8_t>>> index_sub_trees(const std::filesystem::path& input_path)
 {
     std::shared_ptr<std::vector<std::pair<std::shared_ptr<tree_navigator>, uint8_t>>> out_sub_trees{};
 
@@ -97,7 +91,7 @@ std::shared_ptr<std::vector<std::pair<std::shared_ptr<tree_navigator>,
         if (file_object.is_directory())
         {
             out_sub_trees
-                ->emplace_back(std::make_shared<tree_navigator>(index_char[1], parent_navigator), index_char[1]);
+                ->emplace_back(std::make_shared<tree_navigator>(index_char[1],input_path), index_char[1]);
         }
         else
         THROW(util::exception,
@@ -149,14 +143,12 @@ std::size_t accumulate_all_sizes(const std::weak_ptr<std::vector<std::pair<std::
 // ---------------------------------------------------------------------
 
 tree_navigator::tree_navigator(uint8_t set_name,
-                               tree_navigator* parent_navigator,
-                               const std::weak_ptr<std::filesystem::path>& root)
+                               const std::filesystem::path& root)
     :
-    parent_navigator(parent_navigator),
-    tree_navigator_name(get_navigator_name(set_name, parent_navigator)),
-    tree_root(maybe_set_tree_root(parent_navigator, root)),
+    tree_navigator_name(get_navigator_name(root,set_name)),
+    tree_root(maybe_set_tree_root(root,set_name)),
     chunk_collections(index_chunk_collections(getRoot())),
-    sub_trees(index_sub_trees(getRoot(), this)),
+    sub_trees(index_sub_trees(getRoot())),
     size_stored(accumulate_all_sizes(sub_trees, chunk_collections))
 {}
 
