@@ -30,7 +30,7 @@ public:
      *
      * @param root is the root path of the tree
      */
-    explicit tree_navigator(uint8_t set_name, const std::filesystem::path& root, std::size_t index_sub_trees_size = 0);
+    explicit tree_navigator(uint8_t set_name, const std::filesystem::path& root);
 
     /**
      * write with returning the index that was assigned to the written buffer

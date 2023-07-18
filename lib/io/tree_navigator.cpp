@@ -7,6 +7,7 @@
 #include "boost/algorithm/hex.hpp"
 
 #include <util/exception.h>
+#include <serialization/fragment_serialize_size_format.h>
 
 #include <filesystem>
 #include <stack>
@@ -78,10 +79,27 @@ std::shared_ptr<std::vector<std::pair<std::shared_ptr<chunk_collection>,
 // ---------------------------------------------------------------------
 
 std::shared_ptr<std::vector<std::pair<std::shared_ptr<tree_navigator>,
-                                      uint8_t>>> index_sub_trees(const std::filesystem::path& input_path,
-                                                                 std::array<unsigned char, 2> tree_name)
+                                      uint8_t>>> index_sub_tree_persistent(const std::weak_ptr<std::vector<std::pair<std::shared_ptr<
+    chunk_collection>, uint8_t>>>& chunk_collections,
+                                                                           const std::filesystem::path& input_path,
+                                                                           std::array<unsigned char, 2> tree_name,
+                                                                           std::size_t& tree_navigator_size)
 {
     std::shared_ptr<std::vector<std::pair<std::shared_ptr<tree_navigator>, uint8_t>>> out_sub_trees{};
+    std::size_t chunk_collection_size{};
+    std::size_t sub_trees_size{};
+
+    auto locked_chunk_collections = chunk_collections.lock();
+
+    chunk_collection_size = std::accumulate(locked_chunk_collections->begin(),
+                                            locked_chunk_collections->end(),
+                                            (std::size_t) 0,
+                                            [](std::size_t acc,
+                                               const std::pair<std::shared_ptr<chunk_collection>,
+                                                               uint8_t>& pair_chunk_collection)
+                                            {
+                                                return acc + pair_chunk_collection.first->size();
+                                            });
 
     auto to_hex_string = [](unsigned char x)
     {
@@ -91,16 +109,28 @@ std::shared_ptr<std::vector<std::pair<std::shared_ptr<tree_navigator>,
     std::filesystem::path sub_tree_index_perisstence_path = input_path
         / (to_hex_string(tree_name[0]) + to_hex_string(tree_name[1]) + ".index");
 
-    if(std::filesystem::exists(sub_tree_index_perisstence_path)){
+    if (std::filesystem::exists(sub_tree_index_perisstence_path))
+    {
         //parse sizes and create empty sub_trees
         std::size_t index_file_size_count{};
         std::size_t index_file_size = std::filesystem::file_size(sub_tree_index_perisstence_path);
 
-        while (index_file_size_count < index_file_size){
-            out_sub_trees->emplace_back();
+        io::file sub_tree_index_file(sub_tree_index_perisstence_path, std::ios_base::in);
+
+        while (index_file_size_count < index_file_size)
+        {
+            serialization::fragment_serialize_size_format<uint64_t> tree_size_indexer{};
+            tree_size_indexer.deserialize(sub_tree_index_file);
+            sub_trees_size += tree_size_indexer.content_size;
+
+            out_sub_trees->emplace_back(nullptr, tree_size_indexer.index_num);
+
+            index_file_size_count += tree_size_indexer.serialized_size();
         }
     }
-    else{
+    else
+    {
+        io::file sub_tree_index_file(sub_tree_index_perisstence_path, std::ios_base::out);
         //index recursively and forget immediately on memory after persisting subtree index
         for (const auto& file_object : std::filesystem::directory_iterator(input_path))
         {
@@ -113,6 +143,13 @@ std::shared_ptr<std::vector<std::pair<std::shared_ptr<tree_navigator>,
             {
                 out_sub_trees
                     ->emplace_back(std::make_shared<tree_navigator>(index_char[1], input_path), index_char[1]);
+
+                auto analyzed_size = out_sub_trees->back().first->size();
+                sub_trees_size += analyzed_size;
+                out_sub_trees->back().first.reset();
+
+                serialization::fragment_serialize_size_format<uint64_t> write_to_sub_tree_index(index_char[1],analyzed_size);
+                io::write(sub_tree_index_file, write_to_sub_tree_index.serialize());
             }
             else
             THROW(util::exception,
@@ -121,41 +158,9 @@ std::shared_ptr<std::vector<std::pair<std::shared_ptr<tree_navigator>,
         }
     }
 
+    tree_navigator_size = chunk_collection_size + sub_trees_size;
+
     return out_sub_trees;
-}
-
-// ---------------------------------------------------------------------
-
-std::size_t accumulate_all_sizes(const std::weak_ptr<std::vector<std::pair<std::shared_ptr<tree_navigator>,
-                                                                           uint8_t>>>& sub_trees,
-                                 const std::weak_ptr<std::vector<std::pair<std::shared_ptr<chunk_collection>,
-                                                                           uint8_t>>>& chunk_collections)
-{
-    auto locked_chunk_collections = chunk_collections.lock();
-
-    std::size_t chunk_collection_size = std::accumulate(locked_chunk_collections->begin(),
-                                                        locked_chunk_collections->end(),
-                                                        (std::size_t) 0,
-                                                        [](std::size_t acc,
-                                                           const std::pair<std::shared_ptr<chunk_collection>,
-                                                                           uint8_t>& pair_chunk_collection)
-                                                        {
-                                                            return acc + pair_chunk_collection.first->size();
-                                                        });
-
-    auto locked_sub_tree = sub_trees.lock();
-
-    std::size_t sub_trees_size = std::accumulate(locked_sub_tree->begin(),
-                                                 locked_sub_tree->end(),
-                                                 (std::size_t) 0,
-                                                 [](std::size_t acc,
-                                                    const std::pair<std::shared_ptr<tree_navigator>,
-                                                                    uint8_t>& pair_chunk_collection)
-                                                 {
-                                                     return acc + pair_chunk_collection.first->size();
-                                                 });
-
-    return chunk_collection_size + sub_trees_size;
 }
 
 // ---------------------------------------------------------------------
@@ -165,14 +170,12 @@ std::size_t accumulate_all_sizes(const std::weak_ptr<std::vector<std::pair<std::
 // ---------------------------------------------------------------------
 
 tree_navigator::tree_navigator(uint8_t set_name,
-                               const std::filesystem::path& root,
-                               std::size_t index_sub_trees_size)
+                               const std::filesystem::path& root)
     :
     tree_navigator_name(get_navigator_name(root, set_name)),
     tree_root(maybe_set_tree_root(root, set_name)),
     chunk_collections(index_chunk_collections(getRoot())),
-    sub_trees(index_sub_trees(getRoot(), get_navigator_name(root, set_name))),
-    size_stored(index_sub_trees_size + accumulate_all_sizes(sub_trees, chunk_collections))
+    sub_trees(index_sub_tree_persistent(chunk_collections, getRoot(), get_navigator_name(root, set_name), size_stored))
 {}
 
 // ---------------------------------------------------------------------

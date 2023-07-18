@@ -27,7 +27,7 @@ struct fragment_serialize_size_format
 
     fragment_serialize_size_format() = default;
 
-    fragment_serialize_size_format(uint8_t index_num, uint32_t content_len)
+    fragment_serialize_size_format(uint8_t index_num, CONTENT_SIZE_TYPE content_len)
         :
         content_size(content_len), index_num(index_num)
     {}
