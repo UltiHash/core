@@ -20,7 +20,7 @@ using namespace uh::io;
 
 BOOST_AUTO_TEST_CASE(test_fragment_format_serialization)
 {
-    uh::serialization::fragment_serialize_size_format some_metadata(3,400), read_meta;
+    uh::serialization::fragment_serialize_size_format<> some_metadata(3,400), read_meta;
     uh::io::buffer buf;
 
     uh::io::write(buf, some_metadata.serialize());
