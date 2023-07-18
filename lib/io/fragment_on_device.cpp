@@ -24,7 +24,7 @@ fragment_on_device::write(std::span<const char> buffer)
     if (state_machine == READING_BEGIN)
     THROW(util::exception, "Writing on fragment_on_device corrupted the fragments incomplete reading state!");
 
-    auto return_size_format = uh::serialization::fragment_serialize_size_format(index, buffer.size());
+    auto return_size_format = uh::serialization::fragment_serialize_size_format<>(index, buffer.size());
     io::write(dev_fragment, return_size_format.serialize());
     io::write(dev_fragment, buffer);
 
@@ -42,13 +42,13 @@ fragment_on_device::write(std::span<const char> buffer, uint32_t alloc)
         THROW(util::exception, "Writing on fragment_on_device corrupted the fragments incomplete reading state!");
     }
 
-    uh::serialization::fragment_serialize_size_format return_size_format;
+    uh::serialization::fragment_serialize_size_format<> return_size_format;
     return_size_format.index_num = index;
 
     if (state_machine == UNDEFINED_STATE)
     {
         state_machine = WRITING_BEGIN;
-        return_size_format = uh::serialization::fragment_serialize_size_format(index,
+        return_size_format = uh::serialization::fragment_serialize_size_format<>(index,
                                                                                std::max((uint64_t) alloc,
                                                                                         buffer.size()));
         io::write(dev_fragment, return_size_format.serialize());
@@ -60,7 +60,7 @@ fragment_on_device::write(std::span<const char> buffer, uint32_t alloc)
     }
     else
     {
-        return_size_format = uh::serialization::fragment_serialize_size_format(index,
+        return_size_format = uh::serialization::fragment_serialize_size_format<>(index,
                                                                                std::min((uint64_t) elements_left_to_process,
                                                                                         buffer.size()));
 
@@ -86,7 +86,7 @@ fragment_on_device::read(std::span<char> buffer)
         THROW(util::exception, "Reading on fragment_on_device corrupted the fragments incomplete writing state!");
     }
 
-    uh::serialization::fragment_serialize_size_format header_read_format;
+    uh::serialization::fragment_serialize_size_format<> header_read_format;
 
     if (state_machine == UNDEFINED_STATE)
     {
@@ -129,7 +129,7 @@ bool fragment_on_device::valid() const
 uh::serialization::fragment_serialize_size_format<>
 fragment_on_device::skip()
 {
-    uh::serialization::fragment_serialize_size_format read_over;
+    uh::serialization::fragment_serialize_size_format<> read_over;
     read_over.deserialize(dev_fragment);
 
     std::vector<char> unused_buffer(read_over.content_size);
