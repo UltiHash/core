@@ -4,7 +4,7 @@
 
 #include "io/fragmented_device.h"
 #include "io/device.h"
-#include "serialization/fragment_size_struct.h"
+#include "serialization/fragment_serialize_size_format.h"
 #include "serialization/index_fragment_serialization.h"
 
 #include <cstdint>
@@ -37,7 +37,7 @@ public:
      * and the index of the fragment
      */
 
-    uh::serialization::fragment_serialize_size_format write(std::span<const char> buffer) override;
+    uh::serialization::fragment_serialize_size_format<> write(std::span<const char> buffer) override;
 
     /**
      * read un-serialized input and write serialized to device
@@ -48,7 +48,7 @@ public:
      * and the index of the fragment
      */
 
-    uh::serialization::fragment_serialize_size_format write(std::span<const char> buffer,
+    uh::serialization::fragment_serialize_size_format<> write(std::span<const char> buffer,
                                                             uint32_t alloc) override;
 
     /**
@@ -57,7 +57,7 @@ public:
      * @param buffer to be read to from device
      * @return number of bytes totally read from device
      */
-    uh::serialization::fragment_serialize_size_format read(std::span<char> buffer) override;
+    uh::serialization::fragment_serialize_size_format<> read(std::span<char> buffer) override;
 
     /**
      *
@@ -74,7 +74,7 @@ public:
      *
      * @return struct{header size, content size, index}
      */
-    uh::serialization::fragment_serialize_size_format skip() override;
+    uh::serialization::fragment_serialize_size_format<> skip() override;
 
     /**
      * reset the state machine to a new fragment beginning

@@ -16,7 +16,7 @@ fragment_on_seekable_device::fragment_on_seekable_device(io::seekable_device& de
 
 // ---------------------------------------------------------------------
 
-uh::serialization::fragment_serialize_size_format fragment_on_seekable_device::skip()
+uh::serialization::fragment_serialize_size_format<> fragment_on_seekable_device::skip()
 {
     uh::serialization::fragment_serialize_size_format read_over;
     read_over.deserialize(dev_seek);

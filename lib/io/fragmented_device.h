@@ -2,7 +2,7 @@
 // Created by benjamin-elias on 17.05.23.
 //
 
-#include "serialization/fragment_size_struct.h"
+#include "serialization/fragment_serialize_size_format.h"
 #include "io/device.h"
 
 #include <span>
@@ -29,7 +29,7 @@ public:
      * @throw writing fails for any reason
      * @return a struct with header size, content size and fragment index
      */
-    virtual uh::serialization::fragment_serialize_size_format write(std::span<const char> buffer) = 0;
+    virtual uh::serialization::fragment_serialize_size_format<> write(std::span<const char> buffer) = 0;
 
     /**
      * Write the contents of the span into an appendable fragment with pre-allocated space
@@ -40,7 +40,7 @@ public:
      * @throw writing fails for any reason
      * @return a struct with header size, content size and fragment index
      */
-    virtual uh::serialization::fragment_serialize_size_format write(std::span<const char> buffer,
+    virtual uh::serialization::fragment_serialize_size_format<> write(std::span<const char> buffer,
                                                                     uint32_t alloc) = 0;
 
     /**
@@ -50,7 +50,7 @@ public:
      * @throw error while reading
      * @return a struct with header size, content size and fragment index
      */
-    virtual uh::serialization::fragment_serialize_size_format read(std::span<char> buffer) = 0;
+    virtual uh::serialization::fragment_serialize_size_format<> read(std::span<char> buffer) = 0;
 
     /**
      * Return whether this fragmented device still can be used.
@@ -63,7 +63,7 @@ public:
      *
      * @return struct{header size, content size, index}
      */
-    virtual uh::serialization::fragment_serialize_size_format skip() = 0;
+    virtual uh::serialization::fragment_serialize_size_format<> skip() = 0;
 
     /**
     * reset fragment to a new fragment beginning

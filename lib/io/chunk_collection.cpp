@@ -4,7 +4,7 @@
 #include "io/temp_file.h"
 #include "io/fragment_on_seekable_device.h"
 #include "io/fragment_on_seekable_reset_front_device.h"
-#include "serialization/fragment_size_struct.h"
+#include "serialization/fragment_serialize_size_format.h"
 
 #include <utility>
 #include <filesystem>
@@ -97,7 +97,7 @@ chunk_collection::chunk_collection(const std::filesystem::path& collection_temp_
 
 // ---------------------------------------------------------------------
 
-serialization::fragment_serialize_size_format
+serialization::fragment_serialize_size_format<>
 chunk_collection::write_indexed(std::span<const char> buffer,
                                 uint32_t alloc,
                                 bool flush_after_operation,
@@ -153,7 +153,7 @@ chunk_collection::write_indexed(std::span<const char> buffer,
 
 // ---------------------------------------------------------------------
 
-std::pair<std::vector<char>, serialization::fragment_serialize_size_format>
+std::pair<std::vector<char>, serialization::fragment_serialize_size_format<>>
 chunk_collection::read_indexed(uint8_t at,
                                bool close_after_operation)
 {
@@ -165,7 +165,7 @@ chunk_collection::read_indexed(uint8_t at,
     auto temporarily_cached_fragment_on_seekable_device =
         io::fragment_on_seekable_reset_front_device(*m_workfile,
                                                     fragment_pos_element->first.index_num,
-                                                    fragment_pos_element->second);
+                                                    (std::streamoff) fragment_pos_element->second);
     temporarily_cached_fragment_on_seekable_device.reset();
 
     serialization::fragment_serialize_size_format read;
@@ -239,13 +239,13 @@ void chunk_collection::remove(const std::vector<uint8_t>& at)
 
 // ---------------------------------------------------------------------
 
-std::vector<serialization::fragment_serialize_size_format>
+std::vector<serialization::fragment_serialize_size_format<>>
 chunk_collection::write_indexed_multi(const std::vector<std::span<const char>>& buffer,
                                       bool flush_after_operation)
 {
     std::lock_guard lock(m_chunk_collection_workmux);
 
-    if (static_cast<long>(free()) - buffer.size() < 0)
+    if (static_cast<long>(free()) < buffer.size())
     THROW(util::exception, "On chunk collection " + m_workfile->path().string() +
         "was no space left to multi write indexed!");
 
@@ -255,7 +255,7 @@ chunk_collection::write_indexed_multi(const std::vector<std::span<const char>>& 
         THROW(util::exception, "Incoming writing buffer was too large!");
     });
 
-    std::vector<serialization::fragment_serialize_size_format> out_list{};
+    std::vector<serialization::fragment_serialize_size_format<>> out_list{};
 
     std::size_t count_till_end_to_flush{};
     for (const auto& item : buffer)
@@ -270,7 +270,7 @@ chunk_collection::write_indexed_multi(const std::vector<std::span<const char>>& 
 
 // ---------------------------------------------------------------------
 
-std::vector<std::pair<std::vector<char>, serialization::fragment_serialize_size_format>>
+std::vector<std::pair<std::vector<char>, serialization::fragment_serialize_size_format<>>>
 chunk_collection::read_indexed_multi(const std::vector<uint8_t>& at)
 {
     std::lock_guard lock(m_chunk_collection_workmux);
@@ -285,7 +285,7 @@ chunk_collection::read_indexed_multi(const std::vector<uint8_t>& at)
 
     std::vector<uint8_t> filtered_at_list = m_index->filtered_at_list_in_seek_order(at);
 
-    std::vector<std::pair<std::vector<char>, serialization::fragment_serialize_size_format>>
+    std::vector<std::pair<std::vector<char>, serialization::fragment_serialize_size_format<>>>
         out_list(filtered_at_list.size());
 
     std::size_t count_operations{};
@@ -294,7 +294,7 @@ chunk_collection::read_indexed_multi(const std::vector<uint8_t>& at)
     {
         auto [output, read] = read_indexed(at_item, count_operations == filtered_at_list.size());
 
-        std::streamoff distance_filtered_projected_to_at =
+        std::size_t distance_filtered_projected_to_at =
             std::distance(at.begin(), std::find(at.begin(), at.end(), at_item));
 
         out_list[distance_filtered_projected_to_at] = std::make_pair(std::move(output), read);

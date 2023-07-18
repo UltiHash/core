@@ -19,7 +19,7 @@ smart_config make_smart_config(const std::filesystem::path &root, size_t size, s
     ds_conf.data_store_file_size = 4ul * GB;
     ds_conf.log_file = data_store_directory / "log_file";
     size_t offset = 0;
-    while (offset < 20ul * GB) {
+    while (offset < 128ul * GB) {
         const std::filesystem::path data_store_file = "data_" + std::to_string(offset);
         ds_conf.data_store_files.emplace_front (data_store_directory / data_store_file);
         offset += ds_conf.data_store_file_size;

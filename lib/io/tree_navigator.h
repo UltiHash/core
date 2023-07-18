@@ -30,7 +30,7 @@ public:
      *
      * @param root is the root path of the tree
      */
-    explicit tree_navigator(uint8_t set_name, const std::filesystem::path& root);
+    explicit tree_navigator(uint8_t set_name, const std::filesystem::path& root, std::size_t index_sub_trees_size = 0);
 
     /**
      * write with returning the index that was assigned to the written buffer
@@ -41,7 +41,7 @@ public:
      * WARNING: allocated space must be written completely (accumulated buffer size is longer or equal alloc)
      * @return tuple<stream size, assigned index position>
      */
-    std::pair<std::stack<char>, serialization::fragment_serialize_size_format> write_indexed
+    std::pair<std::stack<char>, serialization::fragment_serialize_size_format<>> write_indexed
         (std::span<const char> buffer,
          uint32_t alloc = 0,
          bool flush_after_operation = true,
@@ -53,7 +53,7 @@ public:
      * @param at index
      * @return buffer
      */
-    std::pair<std::vector<char>, serialization::fragment_serialize_size_format>
+    std::pair<std::vector<char>, serialization::fragment_serialize_size_format<>>
     read_indexed(const std::stack<char>& at, bool close_after_operation = false);
 
     /**
@@ -61,14 +61,14 @@ public:
      * information.
      * Does not close filestream.
      */
-    std::pair<std::stack<char>, std::vector<serialization::fragment_serialize_size_format>>
+    std::pair<std::stack<char>, std::vector<serialization::fragment_serialize_size_format<>>>
     write_indexed_multi(const std::vector<std::span<const char>>& buffer,
                         bool flush_after_operation = true);
 
     /**
      * read indexed multiple positions with smart seeking
      */
-    std::vector<std::pair<std::vector<char>, serialization::fragment_serialize_size_format>>
+    std::vector<std::pair<std::vector<char>, serialization::fragment_serialize_size_format<>>>
     read_indexed_multi(const std::vector<std::stack<char>>& at, bool close_after_operation = false);
 
     /**

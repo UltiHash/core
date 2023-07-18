@@ -1,7 +1,7 @@
 #include "fragment_on_device.h"
 
 #include <util/exception.h>
-#include <serialization/fragment_size_struct.h>
+#include <serialization/fragment_serialize_size_format.h>
 #include <io/device.h>
 
 #include <span>
@@ -18,7 +18,7 @@ fragment_on_device::fragment_on_device(io::device& dev, uint8_t index)
 
 // ---------------------------------------------------------------------
 
-uh::serialization::fragment_serialize_size_format
+uh::serialization::fragment_serialize_size_format<>
 fragment_on_device::write(std::span<const char> buffer)
 {
     if (state_machine == READING_BEGIN)
@@ -34,7 +34,7 @@ fragment_on_device::write(std::span<const char> buffer)
 
 // ---------------------------------------------------------------------
 
-uh::serialization::fragment_serialize_size_format
+uh::serialization::fragment_serialize_size_format<>
 fragment_on_device::write(std::span<const char> buffer, uint32_t alloc)
 {
     if (state_machine == READING_BEGIN)
@@ -78,7 +78,7 @@ fragment_on_device::write(std::span<const char> buffer, uint32_t alloc)
 
 // ---------------------------------------------------------------------
 
-uh::serialization::fragment_serialize_size_format
+uh::serialization::fragment_serialize_size_format<>
 fragment_on_device::read(std::span<char> buffer)
 {
     if (state_machine == WRITING_BEGIN)
@@ -126,7 +126,7 @@ bool fragment_on_device::valid() const
 
 // ---------------------------------------------------------------------
 
-uh::serialization::fragment_serialize_size_format
+uh::serialization::fragment_serialize_size_format<>
 fragment_on_device::skip()
 {
     uh::serialization::fragment_serialize_size_format read_over;

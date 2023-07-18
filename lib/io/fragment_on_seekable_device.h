@@ -31,7 +31,7 @@ public:
      *
      * @return struct{header size, content size, index}
      */
-    uh::serialization::fragment_serialize_size_format skip() override;
+    uh::serialization::fragment_serialize_size_format<> skip() override;
 
 protected:
     io::seekable_device& dev_seek;

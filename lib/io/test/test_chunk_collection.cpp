@@ -12,7 +12,7 @@
 #include <util/exception.h>
 #include <io/temp_file.h>
 #include <io/chunk_collection.h>
-#include <serialization/fragment_size_struct.h>
+#include <serialization/fragment_serialize_size_format.h>
 
 #include <boost/test/unit_test.hpp>
 

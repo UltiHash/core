@@ -4,7 +4,7 @@
 #include <io/file.h>
 #include <io/fragment_on_seekable_device.h>
 #include <io/chunk_collection_index_persistent.h>
-#include <serialization/fragment_size_struct.h>
+#include <serialization/fragment_serialize_size_format.h>
 
 #include <utility>
 #include <filesystem>
@@ -47,7 +47,7 @@ public:
       * @param maybe_force_index force index position if it is unused
       * @return fragment_serialize_size_format for index, content_buf_size and content_size
       */
-    serialization::fragment_serialize_size_format write_indexed
+     serialization::fragment_serialize_size_format<> write_indexed
         (std::span<const char> buffer,
          uint32_t alloc = 0,
          bool flush_after_operation = true,
@@ -60,7 +60,7 @@ public:
       * @param close_after_operation enables the user to keep the stream open to continuous read
       * @return a pair of a read back buffer and fragment_serialize_size_format for information about it
       */
-    std::pair<std::vector<char>, serialization::fragment_serialize_size_format>
+     std::pair<std::vector<char>, serialization::fragment_serialize_size_format<>>
     read_indexed(uint8_t at, bool close_after_operation = false);
 
      /**
@@ -71,7 +71,7 @@ public:
       * @param flush_after_operation enables the user to keep the stream open to continuous write
       * @return a vector of fragment_serialize_size_format for information about written information
       */
-    std::vector<serialization::fragment_serialize_size_format>
+     std::vector<serialization::fragment_serialize_size_format<>>
     write_indexed_multi(const std::vector<std::span<const char>>& buffer,
                         bool flush_after_operation = true);
 
@@ -81,7 +81,7 @@ public:
       * @param at read multiple buffers back to memory, indicated by the elements of at
       * @return a vector of pairs of a read back buffer and fragment_serialize_size_format for information about it
       */
-    std::vector<std::pair<std::vector<char>, serialization::fragment_serialize_size_format>>
+     std::vector<std::pair<std::vector<char>, serialization::fragment_serialize_size_format<>>>
     read_indexed_multi(const std::vector<uint8_t>& at);
 
     /**

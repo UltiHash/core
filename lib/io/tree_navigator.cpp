@@ -77,26 +77,48 @@ std::shared_ptr<std::vector<std::pair<std::shared_ptr<chunk_collection>,
 
 // ---------------------------------------------------------------------
 
-std::shared_ptr<std::vector<std::pair<std::shared_ptr<tree_navigator>,uint8_t>>> index_sub_trees(const std::filesystem::path& input_path)
+std::shared_ptr<std::vector<std::pair<std::shared_ptr<tree_navigator>,
+                                      uint8_t>>> index_sub_trees(const std::filesystem::path& input_path,
+                                                                 std::array<unsigned char, 2> tree_name)
 {
     std::shared_ptr<std::vector<std::pair<std::shared_ptr<tree_navigator>, uint8_t>>> out_sub_trees{};
 
-    for (const auto& file_object : std::filesystem::directory_iterator(input_path))
+    auto to_hex_string = [](unsigned char x)
     {
-        if (file_object.path().filename().string().size() != 4)
-            continue;
+        return boost::algorithm::hex(std::to_string(x));
+    };
 
-        std::string index_char = boost::algorithm::unhex(file_object.path().filename().string());
+    std::filesystem::path sub_tree_index_perisstence_path = input_path
+        / (to_hex_string(tree_name[0]) + to_hex_string(tree_name[1]) + ".index");
 
-        if (file_object.is_directory())
-        {
-            out_sub_trees
-                ->emplace_back(std::make_shared<tree_navigator>(index_char[1],input_path), index_char[1]);
+    if(std::filesystem::exists(sub_tree_index_perisstence_path)){
+        //parse sizes and create empty sub_trees
+        std::size_t index_file_size_count{};
+        std::size_t index_file_size = std::filesystem::file_size(sub_tree_index_perisstence_path);
+
+        while (index_file_size_count < index_file_size){
+            out_sub_trees->emplace_back();
         }
-        else
-        THROW(util::exception,
-              "Invalid data directory was a different object instead in sub tree indexing, found in tree storage at location "
-                  + (input_path / file_object.path().filename()).string() + " !");
+    }
+    else{
+        //index recursively and forget immediately on memory after persisting subtree index
+        for (const auto& file_object : std::filesystem::directory_iterator(input_path))
+        {
+            if (file_object.path().filename().string().size() != 4 or file_object.path().extension() == ".index")
+                continue;
+
+            std::string index_char = boost::algorithm::unhex(file_object.path().filename().string());
+
+            if (file_object.is_directory())
+            {
+                out_sub_trees
+                    ->emplace_back(std::make_shared<tree_navigator>(index_char[1], input_path), index_char[1]);
+            }
+            else
+            THROW(util::exception,
+                  "Invalid data directory was a different object instead in sub tree indexing, found in tree storage at location "
+                      + (input_path / file_object.path().filename()).string() + " !");
+        }
     }
 
     return out_sub_trees;
@@ -143,18 +165,19 @@ std::size_t accumulate_all_sizes(const std::weak_ptr<std::vector<std::pair<std::
 // ---------------------------------------------------------------------
 
 tree_navigator::tree_navigator(uint8_t set_name,
-                               const std::filesystem::path& root)
+                               const std::filesystem::path& root,
+                               std::size_t index_sub_trees_size)
     :
-    tree_navigator_name(get_navigator_name(root,set_name)),
-    tree_root(maybe_set_tree_root(root,set_name)),
+    tree_navigator_name(get_navigator_name(root, set_name)),
+    tree_root(maybe_set_tree_root(root, set_name)),
     chunk_collections(index_chunk_collections(getRoot())),
-    sub_trees(index_sub_trees(getRoot())),
-    size_stored(accumulate_all_sizes(sub_trees, chunk_collections))
+    sub_trees(index_sub_trees(getRoot(), get_navigator_name(root, set_name))),
+    size_stored(index_sub_trees_size + accumulate_all_sizes(sub_trees, chunk_collections))
 {}
 
 // ---------------------------------------------------------------------
 
-std::pair<std::stack<char>, serialization::fragment_serialize_size_format>
+std::pair<std::stack<char>, serialization::fragment_serialize_size_format<>>
 tree_navigator::write_indexed(std::span<const char> buffer,
                               uint32_t alloc,
                               bool flush_after_operation,
@@ -165,7 +188,7 @@ tree_navigator::write_indexed(std::span<const char> buffer,
 
 // ---------------------------------------------------------------------
 
-std::pair<std::vector<char>, serialization::fragment_serialize_size_format>
+std::pair<std::vector<char>, serialization::fragment_serialize_size_format<>>
 tree_navigator::read_indexed(const std::stack<char>& at, bool close_after_operation)
 {
     //TODO
@@ -173,7 +196,7 @@ tree_navigator::read_indexed(const std::stack<char>& at, bool close_after_operat
 
 // ---------------------------------------------------------------------
 
-std::pair<std::stack<char>, std::vector<serialization::fragment_serialize_size_format>>
+std::pair<std::stack<char>, std::vector<serialization::fragment_serialize_size_format<>>>
 tree_navigator::write_indexed_multi(const std::vector<std::span<const char>>& buffer,
                                     bool flush_after_operation)
 {
@@ -182,7 +205,7 @@ tree_navigator::write_indexed_multi(const std::vector<std::span<const char>>& bu
 
 // ---------------------------------------------------------------------
 
-std::vector<std::pair<std::vector<char>, serialization::fragment_serialize_size_format>>
+std::vector<std::pair<std::vector<char>, serialization::fragment_serialize_size_format<>>>
 tree_navigator::read_indexed_multi(const std::vector<std::stack<char>>& at, bool close_after_operation)
 {
 

@@ -17,11 +17,13 @@ namespace uh::serialization
 
 // ---------------------------------------------------------------------
 
+template<typename CONTENT_SIZE_TYPE = uint32_t>
+requires std::is_unsigned_v <CONTENT_SIZE_TYPE>
 struct fragment_serialize_size_format
 {
+    CONTENT_SIZE_TYPE content_size{};
     uint16_t index_num{};
     uint16_t content_buf_size{};
-    uint32_t content_size{};
 
     fragment_serialize_size_format() = default;
 

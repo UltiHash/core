@@ -23,19 +23,19 @@ std::filesystem::path index_path(const std::shared_ptr<io::file>& collection_fil
 
 // ---------------------------------------------------------------------
 
-std::vector<std::pair<serialization::fragment_serialize_size_format, std::streamoff>>
+std::vector<std::pair<serialization::fragment_serialize_size_format<>, std::size_t>>
 maybe_index_persist_chunk_collection(std::shared_ptr<io::file>& collection_file)
 {
     auto filename_index = index_path(collection_file);
     bool is_index_persisted = std::filesystem::exists(filename_index);
 
-    std::vector<std::pair<serialization::fragment_serialize_size_format, std::streamoff>> output_index;
-    std::streamoff collection_offset{};
+    std::vector<std::pair<serialization::fragment_serialize_size_format<>, std::size_t>> output_index;
+    std::size_t collection_offset{};
 
     if (is_index_persisted)
     {
         io::file index_file = io::file(filename_index, std::ios_base::in);
-        auto index_file_size = (std::streamoff) index_file.size();
+        auto index_file_size = index_file.size();
 
         std::size_t parse_count{};
 
@@ -44,7 +44,7 @@ maybe_index_persist_chunk_collection(std::shared_ptr<io::file>& collection_file)
             if (index_file_size == parse_count)
                 break;
 
-            serialization::fragment_serialize_size_format index_parse;
+            serialization::fragment_serialize_size_format<> index_parse;
             index_parse.deserialize(index_file);
 
             parse_count += index_parse.serialized_size();
@@ -62,7 +62,7 @@ maybe_index_persist_chunk_collection(std::shared_ptr<io::file>& collection_file)
 
         collection_file = std::make_shared<io::file>(collection_file->path(),
                                                      std::ios_base::binary | std::ios_base::in);
-        auto collection_file_size = (std::streamoff) collection_file->size();
+        auto collection_file_size = collection_file->size();
 
         io::file index_file = io::file(filename_index, std::ios_base::binary | std::ios_base::out);
 
@@ -70,7 +70,7 @@ maybe_index_persist_chunk_collection(std::shared_ptr<io::file>& collection_file)
             io::fragment_on_seekable_device(*collection_file);
 
         uint16_t index_entry_count{};
-        serialization::fragment_serialize_size_format skip_format;
+        serialization::fragment_serialize_size_format<> skip_format;
 
         do
         {
@@ -116,7 +116,7 @@ chunk_collection_index_persistent::~chunk_collection_index_persistent()
 
 chunk_collection_index_persistent::chunk_collection_index_persistent(std::shared_ptr<io::file>& chunk_collection_file)
     :
-    std::vector<std::pair<serialization::fragment_serialize_size_format, std::streamoff>>{
+    std::vector<std::pair<serialization::fragment_serialize_size_format<>, std::size_t>>{
         maybe_index_persist_chunk_collection(chunk_collection_file)},
     m_index_file(std::make_unique<io::file>(index_path(chunk_collection_file),
                                             std::ios_base::binary | std::ios_base::app)),
@@ -126,10 +126,10 @@ chunk_collection_index_persistent::chunk_collection_index_persistent(std::shared
 
 // ---------------------------------------------------------------------
 
-std::pair<serialization::fragment_serialize_size_format,
-          std::streamoff> chunk_collection_index_persistent::emplace_back_index(serialization::fragment_serialize_size_format write_format,
-                                                                                std::size_t file_offset,
-                                                                                bool flush_after_operation)
+std::pair<serialization::fragment_serialize_size_format<>,
+          std::size_t> chunk_collection_index_persistent::emplace_back_index(serialization::fragment_serialize_size_format<> write_format,
+                                                                             std::size_t file_offset,
+                                                                             bool flush_after_operation)
 {
     std::lock_guard lock(m_index_work_mux);
 
@@ -300,17 +300,17 @@ std::vector<uint8_t> chunk_collection_index_persistent::filtered_at_list_in_seek
 
 // ---------------------------------------------------------------------
 
-std::vector<std::pair<serialization::fragment_serialize_size_format, std::streamoff>>::iterator
+std::vector<std::pair<serialization::fragment_serialize_size_format<>, std::size_t>>::iterator
 chunk_collection_index_persistent::find_address(uint8_t at,
-                                                std::vector<std::pair<serialization::fragment_serialize_size_format,
-                                                                      std::streamoff>>::iterator start_pos)
+                                                std::vector<std::pair<serialization::fragment_serialize_size_format<>,
+                                                                      std::size_t>>::iterator start_pos)
 {
     std::lock_guard lock(m_index_work_mux);
 
     auto fragment_pos_element = std::find_if(start_pos, this->end(),
                                              [&at](const std::pair<
-                                                 serialization::fragment_serialize_size_format,
-                                                 std::streamoff
+                                                 serialization::fragment_serialize_size_format<>,
+                                                 std::size_t
                                              >& elem)
                                              {
                                                  return elem.first.index_num == at;
@@ -384,12 +384,12 @@ long double chunk_collection_index_persistent::average_chunk_size()
     std::lock_guard lock(m_index_work_mux);
 
     return empty() ? 0 : ((long double) std::accumulate(std::next(cbegin()),
-                                                       cend(),
-                                                       (uint64_t) cbegin()->first.content_size,
-                                                       [](uint64_t acc,
-                                                          std::pair<serialization::fragment_serialize_size_format,
-                                                                    std::streamoff> index_pair)
-                                                       {return acc + index_pair.first.content_size;})
+                                                        cend(),
+                                                        (uint64_t) cbegin()->first.content_size,
+                                                        [](uint64_t acc,
+                                                           std::pair<serialization::fragment_serialize_size_format<>,
+                                                                     std::size_t> index_pair)
+                                                        {return acc + index_pair.first.content_size;})
         / std::distance(cbegin(), cend()));
 }
 

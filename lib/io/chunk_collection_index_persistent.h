@@ -1,7 +1,7 @@
 #ifndef CHUNK_COLLECTION_INDEX_PERSISTENT_H
 #define CHUNK_COLLECTION_INDEX_PERSISTENT_H
 
-#include <serialization/fragment_size_struct.h>
+#include <serialization/fragment_serialize_size_format.h>
 #include <io/fragment_on_seekable_device.h>
 #include <io/file.h>
 #include <io/temp_file.h>
@@ -20,7 +20,7 @@ namespace uh::io
 // ---------------------------------------------------------------------
 
 class chunk_collection_index_persistent:
-    public std::vector<std::pair<serialization::fragment_serialize_size_format, std::streamoff>>
+    public std::vector<std::pair<serialization::fragment_serialize_size_format<>, std::size_t>>
 {
 public:
     ~chunk_collection_index_persistent();
@@ -41,8 +41,8 @@ public:
      * @param flush_after_operation write continuous or close filestream after write
      * @return a pair of the fragment_serialize_size_format of a chunk and the offset where it was stored on any file
      */
-    std::pair<serialization::fragment_serialize_size_format,
-              std::streamoff> emplace_back_index(serialization::fragment_serialize_size_format write_format,
+    std::pair<serialization::fragment_serialize_size_format<>,
+              std::size_t> emplace_back_index(serialization::fragment_serialize_size_format<> write_format,
                                                  std::size_t file_offset,
                                                  bool flush_after_operation = true);
 
@@ -119,10 +119,10 @@ public:
      * @param start_pos start iterator from index vector. Starts searching from a certain index position
      * @return iterator of found position "at"
      */
-    std::vector<std::pair<serialization::fragment_serialize_size_format, std::streamoff>>::iterator
+    std::vector<std::pair<serialization::fragment_serialize_size_format<>, std::size_t>>::iterator
     find_address(uint8_t at,
-                 std::vector<std::pair<serialization::fragment_serialize_size_format,
-                                       std::streamoff>>::iterator start_pos);
+                 std::vector<std::pair<serialization::fragment_serialize_size_format<>,
+                                       std::size_t>>::iterator start_pos);
 
     /**
      * Rename the temp_file to `path` and make it a permanent file, in case we are based on temp_file,

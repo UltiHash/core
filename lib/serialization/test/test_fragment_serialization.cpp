@@ -9,7 +9,7 @@
 #endif
 
 #include <boost/test/unit_test.hpp>
-#include <serialization/fragment_size_struct.h>
+#include <serialization/fragment_serialize_size_format.h>
 #include <io/device.h>
 #include <io/buffer.h>
 
