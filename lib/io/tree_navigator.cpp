@@ -49,10 +49,10 @@ std::shared_ptr<std::filesystem::path> maybe_set_tree_root(tree_navigator* paren
 
 // ---------------------------------------------------------------------
 
-std::shared_ptr<std::vector<std::pair<std::unique_ptr<chunk_collection>,
+std::shared_ptr<std::vector<std::pair<std::shared_ptr<chunk_collection>,
                                       uint8_t>>> index_chunk_collections(const std::filesystem::path& input_path)
 {
-    std::shared_ptr<std::vector<std::pair<std::unique_ptr<chunk_collection>, uint8_t>>> out_chunk_collections{};
+    std::shared_ptr<std::vector<std::pair<std::shared_ptr<chunk_collection>, uint8_t>>> out_chunk_collections{};
 
     for (const auto& file_object : std::filesystem::directory_iterator(input_path))
     {
@@ -68,7 +68,7 @@ std::shared_ptr<std::vector<std::pair<std::unique_ptr<chunk_collection>,
 
         if (file_object.is_regular_file())
         {
-            out_chunk_collections->emplace_back(std::make_unique<chunk_collection>(file_object.path()), index_char);
+            out_chunk_collections->emplace_back(std::make_shared<chunk_collection>(file_object.path()), index_char);
         }
         else
         THROW(util::exception,
@@ -81,10 +81,11 @@ std::shared_ptr<std::vector<std::pair<std::unique_ptr<chunk_collection>,
 
 // ---------------------------------------------------------------------
 
-std::shared_ptr<std::vector<std::pair<std::unique_ptr<tree_navigator>,
-                                      uint8_t>>> index_sub_trees(const std::filesystem::path& input_path, tree_navigator* parent_navigator)
+std::shared_ptr<std::vector<std::pair<std::shared_ptr<tree_navigator>,
+                                      uint8_t>>> index_sub_trees(const std::filesystem::path& input_path,
+                                                                 tree_navigator* parent_navigator)
 {
-    std::shared_ptr<std::vector<std::pair<std::unique_ptr<tree_navigator>, uint8_t>>> out_sub_trees{};
+    std::shared_ptr<std::vector<std::pair<std::shared_ptr<tree_navigator>, uint8_t>>> out_sub_trees{};
 
     for (const auto& file_object : std::filesystem::directory_iterator(input_path))
     {
@@ -95,7 +96,8 @@ std::shared_ptr<std::vector<std::pair<std::unique_ptr<tree_navigator>,
 
         if (file_object.is_directory())
         {
-            out_sub_trees->emplace_back(std::make_unique<tree_navigator>(index_char[1], parent_navigator), index_char[1]);
+            out_sub_trees
+                ->emplace_back(std::make_shared<tree_navigator>(index_char[1], parent_navigator), index_char[1]);
         }
         else
         THROW(util::exception,
@@ -108,12 +110,36 @@ std::shared_ptr<std::vector<std::pair<std::unique_ptr<tree_navigator>,
 
 // ---------------------------------------------------------------------
 
-std::size_t accumulate_all_sizes(const std::weak_ptr<std::vector<std::pair<std::unique_ptr<tree_navigator>,
+std::size_t accumulate_all_sizes(const std::weak_ptr<std::vector<std::pair<std::shared_ptr<tree_navigator>,
                                                                            uint8_t>>>& sub_trees,
-                                 const std::weak_ptr<std::vector<std::pair<std::unique_ptr<chunk_collection>,
+                                 const std::weak_ptr<std::vector<std::pair<std::shared_ptr<chunk_collection>,
                                                                            uint8_t>>>& chunk_collections)
 {
-    std::size_t chunk_collection_size = std::accumulate();
+    auto locked_chunk_collections = chunk_collections.lock();
+
+    std::size_t chunk_collection_size = std::accumulate(locked_chunk_collections->begin(),
+                                                        locked_chunk_collections->end(),
+                                                        (std::size_t) 0,
+                                                        [](std::size_t acc,
+                                                           const std::pair<std::shared_ptr<chunk_collection>,
+                                                                           uint8_t>& pair_chunk_collection)
+                                                        {
+                                                            return acc + pair_chunk_collection.first->size();
+                                                        });
+
+    auto locked_sub_tree = sub_trees.lock();
+
+    std::size_t sub_trees_size = std::accumulate(locked_sub_tree->begin(),
+                                                 locked_sub_tree->end(),
+                                                 (std::size_t) 0,
+                                                 [](std::size_t acc,
+                                                    const std::pair<std::shared_ptr<tree_navigator>,
+                                                                    uint8_t>& pair_chunk_collection)
+                                                 {
+                                                     return acc + pair_chunk_collection.first->size();
+                                                 });
+
+    return chunk_collection_size + sub_trees_size;
 }
 
 // ---------------------------------------------------------------------

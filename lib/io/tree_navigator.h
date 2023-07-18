@@ -134,13 +134,13 @@ public:
     [[nodiscard]] const std::array<unsigned char, 2>& getTree_navigator_name() const;
 
 private:
-    std::weak_ptr<std::vector<std::pair<std::unique_ptr<tree_navigator>, uint8_t>>> sub_trees;
-    std::weak_ptr<std::vector<std::pair<std::unique_ptr<chunk_collection>, uint8_t>>> chunk_collections;
+    std::weak_ptr<std::vector<std::pair<std::shared_ptr<tree_navigator>, uint8_t>>> sub_trees;
+    std::weak_ptr<std::vector<std::pair<std::shared_ptr<chunk_collection>, uint8_t>>> chunk_collections;
 
     std::size_t size_stored{};
     std::weak_ptr<std::filesystem::path> tree_root;
-    std::shared_ptr<tree_navigator> parent_navigator;
-    std::array<unsigned char, 2> tree_navigator_name;
+    std::unique_ptr<tree_navigator> parent_navigator;
+    std::array<unsigned char, 2> tree_navigator_name{};
 
     std::recursive_mutex tree_work_mux{};
 };
