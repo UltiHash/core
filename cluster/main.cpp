@@ -13,22 +13,39 @@
 #include "src/phonebook_job.h"
 #include "src/entry_job.h"
 
-uh::cluster::cluster_skeleton make_cluster_config () {
+uh::cluster::cluster_skeleton make_cluster_skeleton () {
+//    return {
+//        .data_node_jobs_count = 4,
+//        .dedupe_jobs_count = 2,
+//        .redupe_jobs_count = 2,
+//        .phonebook_jobs_count = 1,
+//        .entry_jobs_count= 1,
+//    };
     return {
-        .data_node_jobs_count = 4,
-        .dedupe_jobs_count = 2,
-        .redupe_jobs_count = 2,
-        .phonebook_jobs_count = 1,
-        .entry_jobs_count= 1,
+            .data_node_jobs_count = 1,
+            .dedupe_jobs_count = 0,
+            .redupe_jobs_count = 0,
+            .phonebook_jobs_count = 0,
+            .entry_jobs_count= 0,
+    };};
+
+uh::cluster::data_store_config make_data_store_config () {
+    return {
+        .directory = "root/dn",
+        .log_file = "root/dn/log",
+        .min_file_size = 2ul * 1024ul * 1024ul * 1024ul,
+        .max_file_size = 16ul * 1024ul * 1024ul * 1024ul,
+        .max_storage_size = 64ul * 1024ul * 1024ul * 1024ul
     };
-};
+}
 
 void execute_role (const int rank, const uh::cluster::cluster_skeleton& cluster_conf) {
 
-    const auto cluster_plan = std::make_shared <const uh::cluster::cluster_ranks> (cluster_conf);
+    auto cluster_plan = std::make_shared <const uh::cluster::cluster_ranks> (cluster_conf);
 
     if (rank <= cluster_plan->data_node_ranks.back()) {
-        uh::cluster::data_node dn (rank, cluster_plan, uh::cluster::data_node_config {});
+        const auto id = rank - cluster_plan->data_node_ranks.front();
+        uh::cluster::data_node dn (id, std::move (cluster_plan), make_data_store_config());
         dn.run();
     }
     else if (rank <= cluster_plan->dedupe_ranks.back()) {
@@ -61,7 +78,7 @@ int main (int argc, char* argv[]) {
         throw std::runtime_error ("MPI operation failed");
     }
 
-    const auto cluster_conf = make_cluster_config();
+    const auto cluster_conf = make_cluster_skeleton();
     if (total_jobs != cluster_conf.entry_jobs_count  +
                     cluster_conf.phonebook_jobs_count  +
                     cluster_conf.redupe_jobs_count  +

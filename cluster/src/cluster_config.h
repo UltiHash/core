@@ -9,11 +9,12 @@
 #include <numeric>
 #include <boost/multiprecision/cpp_int.hpp>
 #include <filesystem>
-#include "../../server-db/src/storage/backends/smart_backend/smart_config.h"
+#include "big_int.h"
 
 namespace uh::cluster {
 
-typedef boost::multiprecision::uint128_t uint128_t;
+//typedef boost::multiprecision::uint128_t uint128_t;
+typedef big_int uint128_t;
 
 struct cluster_skeleton {
     int data_node_jobs_count;
@@ -53,16 +54,11 @@ struct cluster_ranks {
 
 
 struct data_store_config {
-    uint128_t offset;
     std::filesystem::path directory;
     std::filesystem::path log_file;
     size_t min_file_size;
     size_t max_file_size;
     size_t max_storage_size;
-};
-
-struct data_node_config {
-    data_store_config data_store_conf;
 };
 
 } // end namespace uh::cluster

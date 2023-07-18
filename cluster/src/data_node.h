@@ -15,12 +15,13 @@ namespace uh::cluster {
 class data_node {
 public:
 
-    data_node (int id, std::shared_ptr <const cluster_ranks> cluster_plan, data_node_config conf):
+    data_node (int id, std::shared_ptr <const cluster_ranks> cluster_plan, data_store_config conf):
             m_cluster_plan (std::move (cluster_plan)),
             m_id (id),
+            m_data_offset (conf.max_storage_size * m_id),
             m_job_name ("data_node_" + std::to_string (id)),
-            m_conf (std::move(conf)),
-            m_data_store (conf.data_store_conf) {
+            m_data_store (m_id, std::move (conf))
+    {
 
     }
 
@@ -30,9 +31,9 @@ public:
 
     const std::shared_ptr <const cluster_ranks> m_cluster_plan;
     const int m_id;
+    uint128_t m_data_offset;
     const std::string m_job_name;
-    data_node_config m_conf;
-    uh::cluster::storage::growing_managed_storage m_data_store;
+    uh::cluster::data_store m_data_store;
 
 };
 } // end namespace uh::cluster
