@@ -93,7 +93,15 @@ void integrate(protocol::client_pool& pool,
         handle_errors("there were errors during upload", upload_class.results());
     }
 
-    std::size_t size = 0u;
+
+    size_t size=0;
+    for(std::filesystem::recursive_directory_iterator it(input);
+        it!=std::filesystem::recursive_directory_iterator();
+        ++it)
+    {
+        if(!std::filesystem::is_directory(*it))
+            size+=std::filesystem::file_size(*it);
+    }
 
     std::list<std::unique_ptr<uhv::meta_data>> files;
     for (auto& next : metadata)
@@ -101,7 +109,7 @@ void integrate(protocol::client_pool& pool,
         auto md = next.get();
         if (md->type() == uhv::uh_file_type::regular)
         {
-            size += md->size();
+            //size += std::filesystem::file_size(md->path());
             //effective_size += md->effective_size();
         }
 
@@ -132,6 +140,7 @@ void integrate(protocol::client_pool& pool,
     double dedup_ratio {1};
     if(size)dedup_ratio = (double) effective_size / (double) size;
 
+    std::cout << "integration time: " << seconds << std::endl;
     std::cout << "space saving: " << (double) 1 - dedup_ratio << std::endl;
     std::cout << "encoding speed: " << (mbytes / seconds) << " Mb/s" << std::endl;
 }
@@ -167,6 +176,7 @@ void retrieve(protocol::client_pool& pool,
     double seconds = time_diff.count();
     double mbytes = static_cast<double>(size) / (1024 * 1024);
 
+    std::cout << "retrieval time: " << seconds << std::endl;
     std::cout << "decoding speed: " << (mbytes / seconds) << " Mb/s" << std::endl;
 }
 
