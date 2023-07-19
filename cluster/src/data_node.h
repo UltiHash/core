@@ -9,7 +9,6 @@
 #include <iostream>
 #include "cluster_config.h"
 #include "data_store.h"
-#include "storage/growing_managed_storage.h"
 
 namespace uh::cluster {
 class data_node {

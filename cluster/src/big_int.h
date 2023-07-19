@@ -13,13 +13,13 @@ namespace uh::cluster {
 class big_int {
     const uint64_t num[2];
 public:
-    big_int (): num {0,0} {
+    constexpr big_int () noexcept: num {0,0} {
     }
 
-    big_int (unsigned long number): num {0, number} {
+    constexpr big_int (unsigned long number) noexcept: num {0, number} {
     }
 
-    explicit big_int (std::string_view num_str): big_int () {
+    constexpr explicit big_int (std::string_view num_str): big_int () {
 
     }
 

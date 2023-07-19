@@ -7,14 +7,10 @@
 
 #include <vector>
 #include <numeric>
-#include <boost/multiprecision/cpp_int.hpp>
 #include <filesystem>
-#include "big_int.h"
 
 namespace uh::cluster {
 
-//typedef boost::multiprecision::uint128_t uint128_t;
-typedef big_int uint128_t;
 
 struct cluster_skeleton {
     int data_node_jobs_count;

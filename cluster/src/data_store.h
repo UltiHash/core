@@ -6,6 +6,7 @@
 #define CORE_DATA_STORE_H
 
 #include "cluster_config.h"
+#include "common.h"
 #include <span>
 #include <memory_resource>
 #include <map>
@@ -14,10 +15,6 @@
 
 namespace uh::cluster {
 
-struct big_span {
-    uint128_t pointer;
-    size_t size;
-};
 
 class data_store {
 
@@ -42,7 +39,7 @@ public:
                 continue;
             }
 
-            const int fd = open (entry.path().c_str(), O_RDWR | O_DIRECT | O_DSYNC);
+            const int fd = open (entry.path().c_str(), O_RDWR | O_DSYNC);
             if (fd <= 0) {
                 throw std::filesystem::filesystem_error ("Could not open the files in the data store root",
                                                          std::error_code(errno, std::system_category()));
@@ -60,7 +57,7 @@ public:
 
         if (m_open_files.empty()) {
             const auto file_path = m_conf.directory / get_name(0);
-            const int fd = open (file_path.c_str(), O_RDWR | O_CREAT | O_DIRECT | O_DSYNC, S_IWUSR | S_IRUSR);
+            const int fd = open (file_path.c_str(), O_RDWR | O_CREAT | O_DSYNC, S_IWUSR | S_IRUSR);
             if (fd <= 0) {
                 throw std::filesystem::filesystem_error ("Could not create new files in the data store root",
                                                          std::error_code(errno, std::system_category()));
@@ -72,10 +69,9 @@ public:
                                                          std::error_code(errno, std::system_category()));
             }
 
-            alignas (FS_ALIGNMENT) char buf [FS_ALIGNMENT];
-            std::memset (buf, 0, sizeof (std::size_t));
-            const auto ret = ::write(fd, buf, FS_ALIGNMENT);
-            if (ret != FS_ALIGNMENT) {
+            std::size_t data_size = 0;
+            const auto ret = ::write(fd, &data_size, sizeof(data_size));
+            if (ret != sizeof(data_size)) {
                 throw std::system_error (std::error_code(errno, std::system_category()), "Could not write the data size");
             }
             m_open_files.emplace(0, fd);
@@ -83,11 +79,12 @@ public:
         }
     }
 
-    uint128_t write (std::span <char> data);
-    big_span read (uint128_t pointer, size_t size) const;
+    address write (std::span <char> data);
+    std::span <char> read (uint128_t pointer, size_t size) const;
 
     ~data_store() {
         for (const auto& open_file: m_open_files) {
+            fsync (open_file.second);
             close (open_file.second);
         }
     }
@@ -109,7 +106,6 @@ private:
 
     const int m_id;
     const data_store_config m_conf;
-    constexpr static std::size_t FS_ALIGNMENT = 4096;
     std::map <uint128_t, int> m_open_files;
     std::unordered_map <int, std::size_t> m_file_sizes;
 
