@@ -12,7 +12,7 @@ find_package(Boost 1.80 COMPONENTS program_options unit_test_framework REQUIRED)
 find_package(OpenSSL REQUIRED)
 
 # internal dependencies
-set(${PROJECT_NAME}_INTERNAL_DEPS uhLibNet uhLibProtocol uhLibIo)
+set(${PROJECT_NAME}_INTERNAL_DEPS uhLibNet uhLibProtocol uhLibUtil uhLibIo)
 
 # configuring library dependencies for cmake and linker
 set(${PROJECT_NAME}_INCLUDE_DIRS ${CMAKE_CURRENT_BINARY_DIR} src ${${PROJECT_NAME}_INTERNAL_DEPS})
