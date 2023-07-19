@@ -9,7 +9,7 @@ find_package(Boost 1.80 COMPONENTS unit_test_framework REQUIRED)
 set(CMAKE_CXX_STANDARD 20)
 
 # configuring library dependencies for cmake and linker
-set(${PROJECT_NAME}_INTERNAL_DEPS uhLibLogging uhLibUtil uhLibNet uhLibOptions uhLibProtocol uhLibSerialization uhLibUhv uhLibChunking)
+set(${PROJECT_NAME}_INTERNAL_DEPS uhLibLogging uhLibUtil uhLibIo uhLibNet uhLibOptions uhLibProtocol uhLibSerialization uhLibUhv uhLibChunking)
 set(${PROJECT_NAME}_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/../  ${Boost_INCLUDE_DIRS} ${OPENSSL_INCLUDE_DIRS} ${${PROJECT_NAME}_INTERNAL_DEPS})
 set(${PROJECT_NAME}_LINK_LIBRARIES ${Boost_LIBRARIES} ${OPENSSL_LIBRARIES} ${${PROJECT_NAME}_INTERNAL_DEPS})
 
