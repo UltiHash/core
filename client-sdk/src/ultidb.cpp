@@ -1,6 +1,6 @@
 /* Implementation of UltiDB APIs. */
 
-#include "../include/ultidb.h"
+#include "../include/udb.h"
 #include <thread>
 #include <protocol/client_pool.h>
 #include <protocol/client_factory.h>
