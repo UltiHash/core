@@ -535,7 +535,7 @@ UDB_RESULT udb_read_query_add_key(UDB_READ_QUERY* read_query, char* key, size_t 
 {
     try
     {
-        if (read_query->query_type < RANGE_KEYS)
+        if (read_query->query_type < MULTIPLE_KEYS)
         {
             read_query->start_key.emplace_back(key, key_size);
             read_query->key_count++;
