@@ -96,7 +96,7 @@ int main()
         size_t eff_count = udb_get_effective_sizes_count(write_results);
 
         std::cout << "Effective Sizes: ";
-        for (auto count = 0; count < eff_count; count++)
+        for (size_t count = 0; count < eff_count; count++)
         {
             std::cout << udb_get_effective_size(write_results, count) << " ";
         }
