@@ -66,13 +66,13 @@ struct UDB_OBJECTS
 
 typedef enum : uint8_t
 {
-    SINGLE_KEY = 0,
+    NOT_DEFINED,
+
+    SINGLE_KEY,
 
     MULTIPLE_KEYS,
 
-    RANGE_KEYS,
-
-    NOT_DEFINED
+    RANGE_KEYS
 
 } UDB_READ_QUERY_TYPE;
 
@@ -180,7 +180,7 @@ const char* get_sdk_name()
 
 // ---------------------------------------------------------------------
 
-constexpr const char* Exception_Messsage(uint8_t n)
+constexpr const char* Exception_Message(uint8_t n)
 {
     switch (n)
     {
@@ -233,7 +233,7 @@ struct UDB_CONNECTION_STRUCT
         }
         catch(const std::exception& e)
         {
-            THROW(uh::util::exception, Exception_Messsage(UDB_SERVER_CONNECTION_ERROR));
+            THROW(uh::util::exception, Exception_Message(UDB_SERVER_CONNECTION_ERROR));
         }
     }
 
@@ -250,7 +250,7 @@ UDB_CONNECTION* udb_create_connection(UDB* instance)
     }
     catch(std::exception& e)
     {
-        if (e.what() == std::string(Exception_Messsage(UDB_SERVER_CONNECTION_ERROR)))
+        if (e.what() == std::string(Exception_Message(UDB_SERVER_CONNECTION_ERROR)))
             error = UDB_SERVER_CONNECTION_ERROR;
         else
             error = UDB_RESULT_ERROR;
@@ -535,31 +535,22 @@ UDB_RESULT udb_read_query_add_key(UDB_READ_QUERY* read_query, char* key, size_t 
 {
     try
     {
-        if (read_query->query_type != RANGE_KEYS)
+        if (read_query->query_type < RANGE_KEYS)
         {
             read_query->start_key.emplace_back(key, key_size);
             read_query->key_count++;
-
-            switch (read_query->query_type)
-            {
-                case NOT_DEFINED:
-                    read_query->query_type = SINGLE_KEY;
-                    break;
-                case SINGLE_KEY:
-                    read_query->query_type = MULTIPLE_KEYS;
-                    break;
-            }
+            read_query->query_type = static_cast<UDB_READ_QUERY_TYPE>(static_cast<uint8_t>(read_query->query_type) + 1);
         }
         else
         {
-            throw std::runtime_error(Exception_Messsage(UDB_KEY_ALREADY_SET));
+            throw std::runtime_error(Exception_Message(UDB_KEY_ALREADY_SET));
         }
 
         return UDB_RESULT::UDB_RESULT_SUCCESS;
     }
     catch(const std::exception& e)
     {
-        if (e.what() == std::string(Exception_Messsage(UDB_KEY_ALREADY_SET)))
+        if (e.what() == std::string(Exception_Message(UDB_KEY_ALREADY_SET)))
         {
             error = UDB_KEY_ALREADY_SET;
         }
@@ -587,14 +578,14 @@ UDB_RESULT udb_read_query_set_key_range(UDB_READ_QUERY* read_query, char* start_
         }
         else
         {
-            throw std::runtime_error(Exception_Messsage(UDB_KEY_ALREADY_SET));
+            throw std::runtime_error(Exception_Message(UDB_KEY_ALREADY_SET));
         }
 
         return UDB_RESULT::UDB_RESULT_SUCCESS;
     }
     catch(const std::exception& e)
     {
-        if (e.what() == std::string(Exception_Messsage(UDB_KEY_ALREADY_SET)))
+        if (e.what() == std::string(Exception_Message(UDB_KEY_ALREADY_SET)))
         {
             error = UDB_KEY_ALREADY_SET;
         }
@@ -736,7 +727,7 @@ UDB_READ_QUERY_RESULTS* udb_get(UDB_CONNECTION* conn, UDB_READ_QUERY* read_query
                 break;
 
             case NOT_DEFINED:
-                throw std::logic_error(Exception_Messsage(UDB_UNINITIALIZED_KEY));
+                throw std::logic_error(Exception_Message(UDB_UNINITIALIZED_KEY));
             default:
                 throw std::runtime_error("Unrecognized error.");
         }
@@ -801,7 +792,7 @@ UDB_READ_QUERY_RESULTS* udb_get(UDB_CONNECTION* conn, UDB_READ_QUERY* read_query
     }
     catch (const std::exception& e)
     {
-        if (e.what() == std::string(Exception_Messsage(UDB_UNINITIALIZED_KEY)))
+        if (e.what() == std::string(Exception_Message(UDB_UNINITIALIZED_KEY)))
         {
             error = UDB_UNINITIALIZED_KEY;
         }

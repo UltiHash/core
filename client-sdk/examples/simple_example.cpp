@@ -15,7 +15,7 @@ int main()
             std::cout << "error_occured: " << get_error_message();
             exit(1);
         }
-        udb_config_set_host_node(udb_config, "localhost", 0x5548);
+        udb_config_set_host_node(udb_config, "localhost", 0x5548); //port 21832
 
         /* Create an instance of UDB using the config file */
         UDB* udb = udb_create_instance(udb_config);
