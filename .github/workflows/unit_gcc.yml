@@ -58,3 +58,9 @@ jobs:
         with:
           name: uh-agency-node-${{ matrix.os }}-${{ matrix.build }}
           path: ${{github.workspace}}/build/server-agency/uh-agency-node
+
+      - name: Upload libUDB.a
+        uses: actions/upload-artifact@v3
+        with:
+          name: libUDB.a-${{ matrix.os }}-${{ matrix.build }}
+          path: ${{github.workspace}}/build/client-sdk/libUDB.a
