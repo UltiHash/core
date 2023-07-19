@@ -22,7 +22,7 @@ thread_local uint8_t error = 0;
 
 UDB_RESULT udb_get_last_error()
 {
-    return static_cast<UDB_RESULT>(error);
+    return (UDB_RESULT) error;
 }
 
 // ---------------------------------------------------------------------
@@ -539,7 +539,7 @@ UDB_RESULT udb_read_query_add_key(UDB_READ_QUERY* read_query, char* key, size_t 
         {
             read_query->start_key.emplace_back(key, key_size);
             read_query->key_count++;
-            read_query->query_type = static_cast<UDB_READ_QUERY_TYPE>(static_cast<uint8_t>(read_query->query_type) + 1);
+            read_query->query_type = (UDB_READ_QUERY_TYPE) ((uint8_t) read_query->query_type + 1);
         }
         else
         {
