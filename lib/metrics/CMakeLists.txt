@@ -5,7 +5,7 @@ message(STATUS "Building ${PROJECT_NAME}...")
 set(CMAKE_CXX_STANDARD 20)
 
 # internal dependencies
-set(${PROJECT_NAME}_INTERNAL_DEPS uhLibUtil uhLibNet uhLibProtocol)
+set(${PROJECT_NAME}_INTERNAL_DEPS uhLibUtil uhLibNet uhLibProtocol uhLibIo)
 
 # configuring library dependencies for cmake and linker
 set(${PROJECT_NAME}_INCLUDE_DIRS ${${PROJECT_NAME}_INTERNAL_DEPS} uhLibSerialization)
