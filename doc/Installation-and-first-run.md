@@ -77,4 +77,4 @@ $ uh-cli --retrieve <some_existing_uh_file>.uh --target <target_directory> --age
 
 ## Terminate the data-node running in the background
 
-$ kill $(ps -a | grep uh-data-node)
+$ pkill uh-data-node
