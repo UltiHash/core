@@ -1,5 +1,9 @@
 # Installation and first run
 
+UltiHash needs at least 40GB of free storage space. Please make sure that your system can provide them prior to installation.
+
+## Get UltiHash
+
 Download the package from [ultihash.io/beta](https://www.ultihash.io/beta)
 
 Extract the package:
