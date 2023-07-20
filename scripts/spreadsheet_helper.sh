@@ -11,7 +11,8 @@ start_db(){
 echo "Processing UltiHash project path = ${first_arg}, integration folder path = ${second_arg}"
 
 echo "Removing contents of ${third_arg}"
-rm "${third_arg}/*"
+rm "${third_arg}" -vr
+mkdir -p "${third_arg}"
 
 ${first_arg}/cmake-build-release/server-db/uh-data-node --threads 15 --port 12345 --data-directory ${third_arg}
 }
