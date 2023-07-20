@@ -1,5 +1,5 @@
 #include <iostream>
-#include "../include/ultidb.h"
+#include "../include/udb.h"
 #include <cstring>
 
 int main()
@@ -96,7 +96,7 @@ int main()
         size_t eff_count = udb_get_effective_sizes_count(write_results);
 
         std::cout << "Effective Sizes: ";
-        for (auto count = 0; count < eff_count; count++)
+        for (size_t count = 0; count < eff_count; count++)
         {
             std::cout << udb_get_effective_size(write_results, count) << " ";
         }
@@ -138,6 +138,7 @@ int main()
         udb_destroy_write_query_results(write_results);
         udb_destroy_write_query(test_write_query);
         udb_destroy_object(test_doc_1);
+        udb_destroy_object(test_doc_2);
 
         /* initialization stuffs */
         udb_destroy_connection(udb_conn);
