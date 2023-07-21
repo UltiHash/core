@@ -11,7 +11,7 @@
 namespace uh::cluster {
 
 class big_int {
-    const uint64_t num[2];
+    uint64_t num[2];
 public:
     constexpr big_int () noexcept: num {0,0} {
     }
@@ -21,6 +21,12 @@ public:
 
     constexpr explicit big_int (std::string_view num_str): big_int () {
 
+    }
+
+    inline big_int& operator += (const big_int& other) noexcept {
+        num[0] += other.num[0];
+        num[1] += other.num[1];
+        return *this;
     }
 
     constexpr inline bool operator < (const big_int& other) const noexcept {
@@ -41,6 +47,11 @@ public:
 
     constexpr inline big_int operator* (const big_int& other) const noexcept {
         return {};
+    }
+
+    inline big_int& operator += (const unsigned long other) noexcept {
+        num[1] += other;
+        return *this;
     }
 
     constexpr inline bool operator < (const unsigned long other) const noexcept {
