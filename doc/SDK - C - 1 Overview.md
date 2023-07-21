@@ -1,5 +1,35 @@
+# C SDK - Overview
+
+## Version
+
+To get the version and the name of the SDK being used, the following two functions can be used.
+
+ - returns a `const char*` that points to the array containing the name of the SDK
+```c++
+const char* get_sdk_name();
+```
+
+
+ - returns a `const char*` that points to the array containing the version of the sdk
+
+```c++
+const char* get_sdk_version();
+```
+
+## Simple example
+
+The following is a simple `main` program that uses the UltiHash C API to create some objects, write them and retrieve them. The rest of the documentation explain each of the API functions, but this document is a quick reference to kick-start the user. The basic steps to follow when working with UltiHash are:
+
+1. UltiHash Initialization,
+2. Adding `objects` to UltiHash,
+3. Querying `objects` from UltiHash,
+4. Session cleanup.
+
+
+
+```c++
 #include <iostream>
-#include "../include/udb.h"
+#include "../include/ultidb.h"
 #include <cstring>
 
 int main()
@@ -15,7 +45,7 @@ int main()
             std::cout << "error_occured: " << get_error_message();
             exit(1);
         }
-        udb_config_set_host_node(udb_config, "localhost", 0x5548); //port 21832
+        udb_config_set_host_node(udb_config, "localhost", 0x5548);
 
         /* Create an instance of UDB using the config file */
         UDB* udb = udb_create_instance(udb_config);
@@ -96,7 +126,7 @@ int main()
         size_t eff_count = udb_get_effective_sizes_count(write_results);
 
         std::cout << "Effective Sizes: ";
-        for (size_t count = 0; count < eff_count; count++)
+        for (auto count = 0; count < eff_count; count++)
         {
             std::cout << udb_get_effective_size(write_results, count) << " ";
         }
@@ -106,7 +136,7 @@ int main()
         int return_code_2 = udb_get_return_code(write_results, 1);
         std::cout << "Return code: " << return_code_1 << " " << return_code_2 << "\n\n";
 
-    /* getting objects from the database */
+    /* getting a objects from the database */
 
         /* create a read query*/
         UDB_READ_QUERY* test_read_query = udb_create_read_query();
@@ -147,3 +177,4 @@ int main()
 
     return 0;
 }
+```
