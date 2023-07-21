@@ -51,7 +51,7 @@ struct cluster_ranks {
 
 struct data_store_config {
     std::filesystem::path directory;
-    std::filesystem::path log_file;
+    std::filesystem::path hole_log;
     size_t min_file_size;
     size_t max_file_size;
     size_t max_storage_size;

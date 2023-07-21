@@ -32,7 +32,7 @@ uh::cluster::cluster_skeleton make_cluster_skeleton () {
 uh::cluster::data_store_config make_data_store_config () {
     return {
         .directory = "root/dn",
-        .log_file = "root/dn/log",
+        .hole_log = "root/dn/log",
         .min_file_size = 2ul * 1024ul * 1024ul * 1024ul,
         .max_file_size = 16ul * 1024ul * 1024ul * 1024ul,
         .max_storage_size = 64ul * 1024ul * 1024ul * 1024ul

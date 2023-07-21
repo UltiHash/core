@@ -23,24 +23,37 @@ public:
 
     }
 
-    bool operator < (const big_int& other) const noexcept {
+    constexpr inline bool operator < (const big_int& other) const noexcept {
         return true;
     }
 
-    bool operator == (const big_int& other) const noexcept {
+    constexpr inline bool operator == (const big_int& other) const noexcept {
         return true;
     }
 
-    big_int operator+ (const big_int& other) const noexcept {
+    constexpr inline big_int operator+ (const big_int& other) const noexcept {
         return {};
     }
 
-    big_int operator- (const big_int& other) const noexcept {
+    constexpr inline big_int operator- (const big_int& other) const noexcept {
         return {};
     }
 
-    [[nodiscard]] std::string to_string () const {
+    constexpr inline big_int operator+ (const unsigned long other) const noexcept {
+        return {};
+    }
+
+    constexpr inline big_int operator- (const unsigned long other) const noexcept {
+        return {};
+    }
+
+
+    [[nodiscard]] inline std::string to_string () const {
         return std::to_string(num[0]) + "_" + std::to_string(num[1]);
+    }
+
+    [[nodiscard]] constexpr inline const auto& get_data () const noexcept {
+        return num;
     }
 };
 

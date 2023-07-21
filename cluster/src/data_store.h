@@ -7,11 +7,13 @@
 
 #include "cluster_config.h"
 #include "common.h"
+#include "free_spot_manager.h"
 #include <span>
 #include <memory_resource>
 #include <map>
 #include <fcntl.h>
 #include <unistd.h>
+#include <cstring>
 
 namespace uh::cluster {
 
@@ -22,15 +24,15 @@ public:
 
     explicit data_store (int id, data_store_config conf):
         m_id (id),
-        m_conf (std::move (conf)) {
-
+        m_conf (std::move (conf)),
+        m_free_spot_manager (m_conf.hole_log){
 
         if (!std::filesystem::exists(m_conf.directory)) {
             std::filesystem::create_directories(m_conf.directory);
         }
 
         for (const auto& entry: std::filesystem::directory_iterator (m_conf.directory)) {
-            if (entry.path() == m_conf.log_file) {
+            if (entry.path() == m_conf.hole_log) {
                 continue;
             }
 
@@ -39,7 +41,7 @@ public:
                 continue;
             }
 
-            const int fd = open (entry.path().c_str(), O_RDWR | O_DSYNC);
+            const int fd = open (entry.path().c_str(), O_RDWR);
             if (fd <= 0) {
                 throw std::filesystem::filesystem_error ("Could not open the files in the data store root",
                                                          std::error_code(errno, std::system_category()));
@@ -54,7 +56,6 @@ public:
             m_open_files.emplace(id_offset.second, fd);
             m_file_data_sizes.emplace(fd, data_size);
             m_file_sizes.emplace(fd,std::filesystem::file_size(entry.path()));
-            m_file_paths.emplace(fd, std::filesystem::absolute(entry.path()));
         }
 
         if (m_open_files.empty()) {
@@ -67,18 +68,51 @@ public:
         // TODO io_uring
 
         unsigned long offset = 0;
+        address data_address;
+        auto pos = data_address.cbegin();
         for (const auto& partial_alloc: alloc) {
-            lseek(partial_alloc.fd, partial_alloc.offset, SEEK_CUR);
-            ::write(partial_alloc.fd, data.data() + offset, partial_alloc.size);
+            if (lseek(partial_alloc.fd, partial_alloc.offset, SEEK_CUR) != partial_alloc.offset) [[unlikely]] {
+                throw std::runtime_error ("Could not seek to the allocated offset");
+            }
+            for (size_t written = 0;
+                written < partial_alloc.size;
+                written += ::write(partial_alloc.fd, data.data() + offset + written, partial_alloc.size - written));
             offset += partial_alloc.size;
+            pos = data_address.emplace_after(pos, partial_alloc.global_offset, partial_alloc.size);
         }
 
-        return {};
+        return data_address;
     }
 
     std::span <char> read (uint128_t pointer, size_t size) const;
 
-    void remove (uint128_t pointer, size_t size);
+    void remove (uint128_t pointer, size_t size) {
+        const auto pfd = m_open_files.upper_bound (pointer);
+        if (pfd == m_open_files.cbegin()) {
+            throw std::out_of_range ("The given data offset could not be found in this data store");
+        }
+        const auto file = std::prev (pfd);
+        const auto file_offset = file->first;
+        const auto fd = file->second;
+
+        const auto seek = static_cast <long> ((file_offset - pointer).get_data()[1]);
+        if (seek + size > m_file_sizes.at(fd)) [[unlikely]] {
+            throw std::out_of_range ("The removal offset + size goes out of the file scope.");
+        }
+        if (lseek(fd, seek, SEEK_SET) != seek) [[unlikely]] {
+            throw std::runtime_error ("Could not seek to the removal position.");
+        }
+        char buf [1024];
+        std::memset (buf, 0, sizeof(buf));
+        for (size_t written = 0; written < size; written += ::write(fd, buf, std::min (size - written, sizeof(buf))));
+
+        m_free_spot_manager.push_free_spot(pointer, size);
+
+    }
+
+    void sync ();
+
+    uint128_t used_space ();
 
     ~data_store() {
         for (const auto& open_file: m_open_files) {
@@ -94,6 +128,7 @@ private:
         int fd;
         std::int64_t offset;
         std::size_t size;
+        uint128_t global_offset;
     };
     typedef std::forward_list <partial_alloc_t> alloc_t;
 
@@ -102,20 +137,34 @@ private:
         // TODO later we will have a list of free spots. First go through them
 
         alloc_t alloc;
-        // TODO check if we have space for size
-        
+
+        auto free_spot = m_free_spot_manager.pop_free_spot();
+        while (free_spot.has_value() and size > 0) {
+            // TODO add to temp allocation
+            if (size < free_spot->size) {
+                m_free_spot_manager.push_free_spot(free_spot->pointer + size,
+                                                   free_spot->size - size);
+                size = 0;
+                break;
+            }
+            size -= free_spot->size;
+        }
+
+
+
         while (size > 0) {
             auto partial_size = std::min(size, m_conf.max_file_size);
             size -= partial_size;
 
             const auto last_fd = m_open_files.crbegin()->second;
+            const auto last_file_offset = m_open_files.crbegin()->first;
             auto &data_size = m_file_data_sizes.at(last_fd);
             auto &file_size = m_file_sizes.at(last_fd);
 
             if (data_size + partial_size <= file_size) {                    // write in last file
 
-                alloc.emplace_front(last_fd, data_size, partial_size);
-            } else if (file_size < m_conf.max_file_size) {            // double the file size
+                alloc.emplace_front(last_fd, data_size, partial_size, last_file_offset + data_size);
+            } else if (file_size < m_conf.max_file_size) {                  // double the file size
 
                 const auto new_file_size = file_size << 1;
                 const int rc = ftruncate(last_fd, static_cast <long> (new_file_size));
@@ -124,10 +173,10 @@ private:
                                                             std::error_code(errno, std::system_category()));
                 }
                 file_size = new_file_size;
-                alloc.emplace_front(last_fd, data_size, partial_size);
+                alloc.emplace_front(last_fd, data_size, partial_size, last_file_offset + data_size);
 
-            } else if (const auto total_size = m_open_files.size() * m_conf.max_file_size; total_size + partial_size <
-                                                                                           m_conf.max_storage_size) {            // create a new file
+            } else if (const auto total_size = m_open_files.size() * m_conf.max_file_size;
+                    total_size + partial_size < m_conf.max_storage_size) {   // create a new file
 
                 auto init_file_size = m_conf.min_file_size;
                 while (init_file_size < partial_size and init_file_size < m_conf.max_file_size) {
@@ -135,9 +184,9 @@ private:
                 }
 
                 const auto fd = add_new_file(total_size, init_file_size);
-                alloc.emplace_front(fd, 0, partial_size);
+                alloc.emplace_front (fd, 0, partial_size, total_size);
 
-            } else {                                                  // no space left
+            } else {                                                        // no space left
                 throw std::bad_alloc();
             }
 
@@ -154,7 +203,7 @@ private:
 
     int add_new_file (const uint128_t& offset, std::size_t file_size) {
         const auto file_path = m_conf.directory / get_name(offset);
-        const int fd = open (file_path.c_str(), O_RDWR | O_CREAT | O_DSYNC, S_IWUSR | S_IRUSR);
+        const int fd = open (file_path.c_str(), O_RDWR | O_CREAT, S_IWUSR | S_IRUSR);
         if (fd <= 0) {
             throw std::filesystem::filesystem_error ("Could not create new files in the data store root",
                                                      std::error_code(errno, std::system_category()));
@@ -174,7 +223,6 @@ private:
         m_open_files.emplace(0, fd);
         m_file_data_sizes.emplace(fd, 0);
         m_file_sizes.emplace(fd, file_size);
-        m_file_paths.emplace(fd, std::filesystem::absolute(file_path));
         return fd;
     }
 
@@ -192,10 +240,10 @@ private:
 
     const int m_id;
     const data_store_config m_conf;
+    free_spot_manager m_free_spot_manager;
     std::map <uint128_t, int> m_open_files;
     std::unordered_map <int, std::size_t> m_file_data_sizes;
     std::unordered_map <int, std::size_t> m_file_sizes;
-    std::unordered_map <int, std::filesystem::path> m_file_paths;
 
 
 };
