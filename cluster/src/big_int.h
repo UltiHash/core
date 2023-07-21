@@ -19,6 +19,9 @@ public:
     constexpr big_int (unsigned long number) noexcept: num {0, number} {
     }
 
+    constexpr big_int (unsigned long nh, unsigned long nl) noexcept: num {nh, nl} {
+    }
+
     constexpr explicit big_int (std::string_view num_str): big_int () {
 
     }
