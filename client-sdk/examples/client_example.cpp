@@ -8,7 +8,7 @@ char* file_read(FILE* fp, long& object_size, char** output)
     object_size = ftell(fp);
     fseek(fp, 0L, SEEK_SET);
 
-    *output = (char*) malloc(object_size * sizeof(char));
+    *output = (char*) malloc((object_size+1) * sizeof(char));
     fread(output, object_size, sizeof(char), fp);
 
     fclose(fp);
@@ -72,7 +72,7 @@ int main(int argc, const char* argv[])
     }
     else
     {
-        key = (char*) malloc(key_size * sizeof(char));
+        key = (char*) malloc((key_size+1) * sizeof(char));
         strcpy(key, argv[2]);
     }
 
@@ -192,19 +192,16 @@ int main(int argc, const char* argv[])
         UDB_READ_QUERY_RESULT* result;
         if (udb_results_next(results, &result))
         {
-            source_size = result->value_size;
-            source = (char*) malloc(source_size);
-
-            memcpy(source, result->value, source_size);
+            std::cout << "result retrieved" << '\n';
         }
 
-        if(!source){
+        if(!result){
             std::cout << "error: nothing finally read from db" << '\n';
             exit(1);
         }
 
         FILE* write_fp = fopen(argv[3], "w");
-        fwrite(source, source_size, sizeof(char), write_fp);
+        fwrite(result->value, result->value_size, sizeof(char), write_fp);
         fclose(write_fp);
 
         /* getting object */
