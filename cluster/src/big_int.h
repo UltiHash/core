@@ -39,11 +39,26 @@ public:
         return {};
     }
 
+    constexpr inline big_int operator* (const big_int& other) const noexcept {
+        return {};
+    }
+
+    constexpr inline bool operator < (const unsigned long other) const noexcept {
+        return true;
+    }
+
+    constexpr inline bool operator == (const unsigned long other) const noexcept {
+        return true;
+    }
     constexpr inline big_int operator+ (const unsigned long other) const noexcept {
         return {};
     }
 
     constexpr inline big_int operator- (const unsigned long other) const noexcept {
+        return {};
+    }
+
+    constexpr inline big_int operator* (const unsigned long other) const noexcept {
         return {};
     }
 

@@ -8,6 +8,7 @@
 #include "cluster_config.h"
 #include "common.h"
 #include "free_spot_manager.h"
+#include "ospan.h"
 #include <span>
 #include <memory_resource>
 #include <map>
@@ -59,11 +60,14 @@ public:
         }
 
         if (m_open_files.empty()) {
-            add_new_file(0, m_conf.min_file_size);
+            add_new_file(0, static_cast <long> (m_conf.min_file_size));
         }
     }
 
     address write (std::span <char> data) {
+
+        std::lock_guard <std::shared_mutex> lock (m);
+
         const auto alloc = allocate (data.size());
         // TODO io_uring
 
@@ -79,23 +83,30 @@ public:
                 written += ::write(partial_alloc.fd, data.data() + offset + written, partial_alloc.size - written));
             offset += partial_alloc.size;
             pos = data_address.emplace_after(pos, partial_alloc.global_offset, partial_alloc.size);
+            m_modified_files.emplace_front(partial_alloc.fd);
         }
+
+        m_free_spot_manager.apply_popped_items();
 
         return data_address;
     }
 
-    std::span <char> read (uint128_t pointer, size_t size) const;
+    ospan <char> read (uint128_t pointer, size_t size) const {
+        const auto [fd, seek] = get_file_offset_pair(pointer);
+        ospan <char> data (size);
+        if (::lseek (fd, seek, SEEK_SET) != seek) {
+            throw std::runtime_error ("Could not seek to the read position.");
+        }
+        for (size_t r = 0;
+             r < size;
+             r += ::read (fd, data.data.get() + r, size - r));
+        return data;
+    }
 
     void remove (uint128_t pointer, size_t size) {
-        const auto pfd = m_open_files.upper_bound (pointer);
-        if (pfd == m_open_files.cbegin()) {
-            throw std::out_of_range ("The given data offset could not be found in this data store");
-        }
-        const auto file = std::prev (pfd);
-        const auto file_offset = file->first;
-        const auto fd = file->second;
 
-        const auto seek = static_cast <long> ((file_offset - pointer).get_data()[1]);
+        const auto [fd, seek] = get_file_offset_pair(pointer);
+
         if (seek + size > m_file_sizes.at(fd)) [[unlikely]] {
             throw std::out_of_range ("The removal offset + size goes out of the file scope.");
         }
@@ -107,12 +118,23 @@ public:
         for (size_t written = 0; written < size; written += ::write(fd, buf, std::min (size - written, sizeof(buf))));
 
         m_free_spot_manager.push_free_spot(pointer, size);
+        m_modified_files.emplace_front(fd);
 
     }
 
-    void sync ();
+    void sync () {
+        for (const auto fd: m_modified_files) {
+            fsync(fd);
+        }
+        m_free_spot_manager.sync();
+    }
 
-    uint128_t used_space ();
+    uint128_t used_space () {
+        const auto prev_files_data_size =  big_int (m_conf.max_file_size) * (m_open_files.size() - 1);
+        const auto last_fd = m_open_files.crbegin()->second;
+        const auto last_file_data_size =  m_file_data_sizes.at(last_fd);
+        return prev_files_data_size + last_file_data_size + m_free_spot_manager.total_free_spots();
+    }
 
     ~data_store() {
         for (const auto& open_file: m_open_files) {
@@ -132,28 +154,37 @@ private:
     };
     typedef std::forward_list <partial_alloc_t> alloc_t;
 
-    alloc_t allocate (std::size_t size) {
+    [[nodiscard]] std::pair <int, long> get_file_offset_pair (uint128_t pointer) const {
+        const auto pfd = m_open_files.upper_bound (pointer);
+        if (pfd == m_open_files.cbegin()) {
+            throw std::out_of_range ("The given data offset could not be found in this data store");
+        }
+        const auto [file_offset, fd] = *std::prev (pfd);
+        const auto seek = static_cast <long> ((file_offset - pointer).get_data()[1]);
 
-        // TODO later we will have a list of free spots. First go through them
+        return {fd, seek};
+    }
+
+    alloc_t allocate (std::size_t size) {
 
         alloc_t alloc;
 
         auto free_spot = m_free_spot_manager.pop_free_spot();
+        std::size_t partial_size;
         while (free_spot.has_value() and size > 0) {
-            // TODO add to temp allocation
-            if (size < free_spot->size) {
-                m_free_spot_manager.push_free_spot(free_spot->pointer + size,
-                                                   free_spot->size - size);
-                size = 0;
-                break;
-            }
-            size -= free_spot->size;
+            const auto [fd, seek] = get_file_offset_pair(free_spot->pointer);
+            partial_size = std::min (size, free_spot->size);
+            alloc.emplace_front(fd, seek, partial_size, free_spot->pointer);
+            size -= partial_size;
         }
 
-
+        if (partial_size < free_spot->size) {
+            m_free_spot_manager.push_free_spot(free_spot->pointer + partial_size,
+                                               free_spot->size - partial_size);
+        }
 
         while (size > 0) {
-            auto partial_size = std::min(size, m_conf.max_file_size);
+            partial_size = std::min(size, m_conf.max_file_size);
             size -= partial_size;
 
             const auto last_fd = m_open_files.crbegin()->second;
@@ -175,15 +206,18 @@ private:
                 file_size = new_file_size;
                 alloc.emplace_front(last_fd, data_size, partial_size, last_file_offset + data_size);
 
-            } else if (const auto total_size = m_open_files.size() * m_conf.max_file_size;
+            } else if (const auto total_size = big_int (m_conf.max_file_size) * m_open_files.size();
                     total_size + partial_size < m_conf.max_storage_size) {   // create a new file
 
+                if (data_size < file_size) {    // add the remaining unused file to the free spots
+                    m_free_spot_manager.push_free_spot(last_file_offset + data_size, file_size - data_size);
+                }
                 auto init_file_size = m_conf.min_file_size;
                 while (init_file_size < partial_size and init_file_size < m_conf.max_file_size) {
                     init_file_size <<= 1;
                 }
 
-                const auto fd = add_new_file(total_size, init_file_size);
+                const auto fd = add_new_file(total_size, static_cast <long> (init_file_size));
                 alloc.emplace_front (fd, 0, partial_size, total_size);
 
             } else {                                                        // no space left
@@ -201,7 +235,7 @@ private:
         return alloc;
     }
 
-    int add_new_file (const uint128_t& offset, std::size_t file_size) {
+    int add_new_file (const uint128_t& offset, long file_size) {
         const auto file_path = m_conf.directory / get_name(offset);
         const int fd = open (file_path.c_str(), O_RDWR | O_CREAT, S_IWUSR | S_IRUSR);
         if (fd <= 0) {
@@ -242,9 +276,10 @@ private:
     const data_store_config m_conf;
     free_spot_manager m_free_spot_manager;
     std::map <uint128_t, int> m_open_files;
+    std::forward_list <int> m_modified_files;
     std::unordered_map <int, std::size_t> m_file_data_sizes;
     std::unordered_map <int, std::size_t> m_file_sizes;
-
+    std::shared_mutex m;
 
 };
 

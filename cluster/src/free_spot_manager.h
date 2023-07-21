@@ -63,6 +63,14 @@ public:
         return {};
     }
 
+    void apply_popped_items () {
+
+    }
+
+    uint128_t total_free_spots () {
+        return {};
+    }
+
     void sync () {
         m_file.sync();
     }
