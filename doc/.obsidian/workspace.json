@@ -1,0 +1,126 @@
+{
+  "main": {
+    "id": "faff514ce103f76d",
+    "type": "split",
+    "children": [
+      {
+        "id": "1ade51138f25c5cf",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "78246a0a57c8444d",
+            "type": "leaf",
+            "state": {
+              "type": "empty",
+              "state": {}
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "vertical"
+  },
+  "left": {
+    "id": "41bf99145f105486",
+    "type": "split",
+    "children": [
+      {
+        "id": "af5e7223a3d098e1",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "aa347f96d25f5b9a",
+            "type": "leaf",
+            "state": {
+              "type": "search",
+              "state": {
+                "query": "",
+                "matchingCase": false,
+                "explainSearch": false,
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical"
+              }
+            }
+          },
+          {
+            "id": "01372a8cfe604db8",
+            "type": "leaf",
+            "state": {
+              "type": "file-explorer",
+              "state": {
+                "sortOrder": "alphabetical"
+              }
+            }
+          }
+        ],
+        "currentTab": 1
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300
+  },
+  "right": {
+    "id": "b2d6defe91cd804d",
+    "type": "split",
+    "children": [],
+    "direction": "horizontal",
+    "width": 300,
+    "collapsed": true
+  },
+  "left-ribbon": {
+    "hiddenItems": {
+      "publish:Publish changes...": false,
+      "switcher:Open quick switcher": false,
+      "command-palette:Open command palette": false
+    }
+  },
+  "active": "01372a8cfe604db8",
+  "lastOpenFiles": [
+    "Installation.md",
+    "Benchmarks.md",
+    "SDK - C - 5 Objects.md",
+    "SDK - C - 4 Query.md",
+    "SDK - C - 3 Startup.md",
+    "SDK - C - 2 Configure.md",
+    "SDK - C - 1 Overview.md",
+    "SDK - C - 6 Results and Errors.md",
+    "SDK/C/SDK - C - 6 Results and Errors.md",
+    "SDK/C/SDK - C - 5 Objects.md",
+    "SDK/C/SDK - C - 4 Query.md",
+    "SDK/C/SDK - C - 3 Startup.md",
+    "SDK/C/SDK - C - 2 Configure.md",
+    "SDK/C/SDK - C - 1 Overview.md",
+    "SDK/C/SDK - C - Query.md",
+    "SDK/C/SDK - C - Startup.md",
+    "SDK/C/SDK - C - Configure.md",
+    "SDK/C/SDK - C - Overview.md",
+    "CLI - Upload.md",
+    "CLI - Options.md",
+    "CLI - Download.md",
+    "CLI/CLI - Upload.md",
+    "CLI/CLI - Options.md",
+    "CLI/CLI - Download.md",
+    "CLI/download.md",
+    "benchmarks.md",
+    "SDK/C",
+    "SDK",
+    "CLI",
+    "mdfiles/SDK/C",
+    "mdfiles/SDK",
+    "mdfiles/CLI",
+    "mdfiles",
+    "New folder",
+    "logo.png",
+    "Asset 35@2x.png",
+    "favicon-192x192.png",
+    "android-chrome-192x192.png",
+    "AvenirNextLTPro-Bold.otf",
+    "AvenirNextLTPro-Regular.otf",
+    "favicon-32x32.png",
+    "favicon-16x16.png",
+    "android-chrome-512x512.png",
+    "apple-touch-icon.png",
+    "Icon + wordmark, gradient, horizontal.png.png"
+  ]
+}
