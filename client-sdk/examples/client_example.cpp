@@ -2,13 +2,13 @@
 #include "../include/udb.h"
 #include "string.h"
 
-void file_read(FILE* fp, long& object_size, char* output)
+char* file_read(FILE* fp, long& object_size, char** output)
 {
     fseek(fp, 0L, SEEK_END);
     object_size = ftell(fp);
     fseek(fp, 0L, SEEK_SET);
 
-    output = (char*) malloc(object_size * sizeof(char));
+    *output = (char*) malloc(object_size * sizeof(char));
     fread(output, object_size, sizeof(char), fp);
 
     fclose(fp);
@@ -35,13 +35,13 @@ int main(int argc, const char* argv[])
         CLIENT_GET
     } operation_type;
 
-    if (strcmp(argv[1], "put") != 0)
+    if (strcmp(argv[1], "put") == 0)
     {
         operation_type = CLIENT_PUT;
     }
     else
     {
-        if (strcmp(argv[1], "get") != 0)
+        if (strcmp(argv[1], "get") == 0)
         {
             operation_type = CLIENT_GET;
         }
@@ -56,11 +56,11 @@ int main(int argc, const char* argv[])
     /* key source argument 2 */
 
     char* key;
-    long key_size = strlen(argv[3]);
+    long key_size = strlen(argv[2]);
 
-    if (strrchr(argv[3], '/'))
+    if (strrchr(argv[2], '/'))
     {
-        FILE* fp = fopen(argv[3], "r");
+        FILE* fp = fopen(argv[2], "r");
 
         if (!fp)
         {
@@ -68,12 +68,12 @@ int main(int argc, const char* argv[])
             exit(1);
         }
 
-        file_read(fp, key_size, key);
+        file_read(fp, key_size, &key);
     }
     else
     {
         key = (char*) malloc(key_size * sizeof(char));
-        strcpy(key, argv[3]);
+        strcpy(key, argv[2]);
     }
 
     if (!key)
@@ -88,7 +88,7 @@ int main(int argc, const char* argv[])
 
     if (operation_type == CLIENT_PUT)
     {
-        FILE* fp_put = fopen(argv[4], "r");
+        FILE* fp_put = fopen(argv[3], "r");
 
         if (!fp_put)
         {
@@ -96,7 +96,7 @@ int main(int argc, const char* argv[])
             exit(1);
         }
 
-        file_read(fp_put, source_size, source);
+        file_read(fp_put, source_size, &source);
     }
 
     /* Initialization */
@@ -203,7 +203,7 @@ int main(int argc, const char* argv[])
             exit(1);
         }
 
-        FILE* write_fp = fopen(argv[4], "w");
+        FILE* write_fp = fopen(argv[3], "w");
         fwrite(source, source_size, sizeof(char), write_fp);
         fclose(write_fp);
 
