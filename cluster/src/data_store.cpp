@@ -181,8 +181,9 @@ data_store::alloc_t data_store::allocate(std::size_t size) {
         } else if (const auto total_size = big_int (m_conf.max_file_size) * m_open_files.size();
                 total_size + partial_size < m_conf.max_storage_size) {   // create a new file
 
-            if (data_size < file_size) {    // add the remaining unused file to the free spots
-                m_free_spot_manager.push_free_spot(last_file_offset + data_size, file_size - data_size);
+            if (data_size < file_size) {
+                alloc.emplace_front (last_fd, data_size, file_size - data_size, last_file_offset + data_size);
+                partial_size -= file_size - data_size;
             }
             auto init_file_size = m_conf.min_file_size;
             while (init_file_size < partial_size and init_file_size < m_conf.max_file_size) {

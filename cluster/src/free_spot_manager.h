@@ -27,38 +27,38 @@ public:
 
         shift_forward ();
 
-        m_file.seekp(m_pos);
+        m_file.seekp(m_end_pos);
         unsigned long free_spot_data[3];
         free_spot_data[0] = pointer.get_data()[0];
         free_spot_data[1] = pointer.get_data()[1];
         free_spot_data[2] = size;
-        m_file.write(reinterpret_cast<const char *>(free_spot_data), sizeof(free_spot_data));
-
-        m_file.seekp(0);
-        m_pos += sizeof(free_spot_data);
-        m_file.write(reinterpret_cast <const char *>(&m_pos), END_POINTER_SIZE);
+        write_size(m_file, ELEMENT_SIZE, reinterpret_cast<const char *>(free_spot_data));
+        m_end_pos += sizeof(free_spot_data);
         m_total_free_size += size;
     }
 
     std::optional <wide_span> pop_free_spot () {
-        if (m_pos + m_pop_count == END_POINTER_SIZE) {
+        if (m_start_pos + m_pop_count * ELEMENT_SIZE == m_end_pos) {
             return std::nullopt;
         }
 
-        m_file.seekg (END_POINTER_SIZE + m_pop_count * ELEMENT_SIZE);
+        m_file.seekg (m_start_pos + m_pop_count * ELEMENT_SIZE);
         unsigned long buffer [3];
-        m_file.read(reinterpret_cast<char *> (&buffer), sizeof (buffer));
+        read_size (m_file, ELEMENT_SIZE, reinterpret_cast <char *> (&buffer));
         wide_span wspan {{buffer[0], buffer[1]}, buffer[2]};
         m_pop_count ++;
 
         return wspan;
-
     }
 
     void apply_popped_items () {
-        // TODO what to do about increasing zeros offset
-        //m_total_free_size = m_total_free_size - size;
+        m_file.seekg (m_start_pos);
+        const auto free_size = m_pop_count * ELEMENT_SIZE;
+        const auto zeros = std::unique_ptr <char> (new char [free_size]);
+        write_size (m_file, free_size, zeros.get());
+        m_start_pos += free_size;
         m_pop_count = 0;
+        m_total_free_size = m_total_free_size - free_size;
     }
 
     uint128_t total_free_spots () {
@@ -82,7 +82,7 @@ private:
                 throw std::filesystem::filesystem_error ("Could not open/create the log file in the data store root",
                                                          std::error_code(errno, std::system_category()));
             }
-            file.read(reinterpret_cast <char *>(&m_pos), END_POINTER_SIZE);
+            m_end_pos = static_cast <long> (std::filesystem::file_size(m_hole_log));
             shift_forward ();
             return file;
         }
@@ -93,17 +93,17 @@ private:
                 throw std::filesystem::filesystem_error ("Could not open/create the log file in the data store root",
                                                          std::error_code(errno, std::system_category()));
             }
-            m_pos = sizeof(long);
-            file.write(reinterpret_cast <const char *>(&m_pos), END_POINTER_SIZE);
+            m_end_pos = 0;
             return file;
         }
     }
 
     uint128_t get_total_free_size() {
-        ospan <char> buffer (m_pos - END_POINTER_SIZE);
-        m_file.seekg(END_POINTER_SIZE);
-        m_file.read(buffer.data.get(), static_cast <long> (buffer.size));
+        ospan <char> buffer (m_end_pos);
+        m_file.seekg(0);
+        read_size (m_file, static_cast <long> (buffer.size), buffer.data.get());
         uint128_t total_size = 0;
+
         for (std::size_t i = 0; i < buffer.size; i += ELEMENT_SIZE) {
             total_size += *reinterpret_cast <unsigned long*> (buffer.data.get() + i + 2 * sizeof(unsigned long));
         }
@@ -111,51 +111,57 @@ private:
     }
 
     void shift_forward () {
-        if (m_pos == END_POINTER_SIZE) {
+        if (m_end_pos == 0) {
             return;
         }
-        long offset = END_POINTER_SIZE;
+        long offset = 0;
         m_file.seekg(offset);
         unsigned long free_spot_data[3];
-        const auto data_size = static_cast <long> (sizeof(free_spot_data));
         do {
+            read_size(m_file, ELEMENT_SIZE, reinterpret_cast<char *>(free_spot_data));
+            offset += ELEMENT_SIZE;
+        } while (free_spot_data[2] == 0 and offset < m_end_pos);
+        offset -= ELEMENT_SIZE;
 
-            long w = 0;
-            while (w < data_size) {
-                m_file.read(reinterpret_cast<char *>(free_spot_data) + w, data_size - w);
-                w += m_file.gcount();
-            }
+        if (offset > 0 and free_spot_data[2] != 0) {
 
-            offset += data_size;
-        } while (free_spot_data[2] == 0 and offset < m_pos);
-
-        if (offset - data_size > END_POINTER_SIZE
-            and free_spot_data[2] != 0) {
-
-            ospan <char> buffer (m_pos - offset + data_size);
-            std::memcpy (buffer.data.get(), &free_spot_data, data_size);
-            m_file.read(buffer.data.get() + data_size, static_cast <long> (buffer.size - data_size));
+            ospan <char> buffer (m_end_pos - offset);
+            std::memcpy (buffer.data.get(), &free_spot_data, ELEMENT_SIZE);
+            read_size(m_file, static_cast <long> (buffer.size - ELEMENT_SIZE), buffer.data.get() + ELEMENT_SIZE);
             m_file.seekp(0);
-            m_pos = static_cast <long> (END_POINTER_SIZE + buffer.size);
-            m_file.write(reinterpret_cast<const char *>(&m_pos), END_POINTER_SIZE);
-            m_file.write(buffer.data.get(), static_cast <long> (buffer.size));
-            std::filesystem::resize_file(m_hole_log, m_pos);
+            m_end_pos = static_cast <long> (buffer.size);
+            write_size(m_file, m_end_pos, buffer.data.get());
         }
-        else if (offset - data_size > END_POINTER_SIZE
-            and free_spot_data[2] == 0) {
-            m_file.seekp(0);
-            m_pos = END_POINTER_SIZE;
-            m_file.write(reinterpret_cast<const char *>(&m_pos), END_POINTER_SIZE);
-            std::filesystem::resize_file(m_hole_log, m_pos);
+        else if (offset > 0 and free_spot_data[2] == 0) {
+            m_end_pos = 0;
+        }
+        std::filesystem::resize_file(m_hole_log, m_end_pos);
+
+    }
+
+
+    static void read_size (std::fstream& file, long size, char* buffer) {
+        long r = 0;
+        while (r < size) {
+            file.read (buffer + r, size - r);
+            r += file.gcount ();
+        }
+    }
+
+    static void write_size (std::fstream& file, long size, const char* buffer) {
+        long w = 0;
+        while (w < size) {
+            file.write (buffer + w, size - w);
+            w += file.gcount ();
         }
     }
 
     const std::filesystem::path m_hole_log;
     std::fstream m_file;
     uint128_t m_total_free_size;
-    long m_pop_count;
-    long m_pos;
-    constexpr static long END_POINTER_SIZE = sizeof (m_pos);
+    long m_pop_count {};
+    long m_start_pos {};
+    long m_end_pos {};
     constexpr static long ELEMENT_SIZE = 3 * sizeof (unsigned long);
 };
 
