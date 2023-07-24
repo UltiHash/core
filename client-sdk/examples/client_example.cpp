@@ -2,18 +2,6 @@
 #include "../include/udb.h"
 #include "string.h"
 
-char* file_read(FILE* fp, long& object_size, char** output)
-{
-    fseek(fp, 0L, SEEK_END);
-    object_size = ftell(fp);
-    fseek(fp, 0L, SEEK_SET);
-
-    *output = (char*) malloc((object_size+1) * sizeof(char));
-    fread(output, object_size, sizeof(char), fp);
-
-    fclose(fp);
-}
-
 int main(int argc, const char* argv[])
 {
 
@@ -68,7 +56,14 @@ int main(int argc, const char* argv[])
             exit(1);
         }
 
-        file_read(fp, key_size, &key);
+        fseek(fp, 0L, SEEK_END);
+        key_size = ftell(fp);
+        fseek(fp, 0L, SEEK_SET);
+
+        key = (char*) malloc((key_size+1) * sizeof(char));
+        fread(key, key_size, sizeof(char), fp);
+
+        fclose(fp);
     }
     else
     {
@@ -96,7 +91,14 @@ int main(int argc, const char* argv[])
             exit(1);
         }
 
-        file_read(fp_put, source_size, &source);
+        fseek(fp_put, 0L, SEEK_END);
+        source_size = ftell(fp_put);
+        fseek(fp_put, 0L, SEEK_SET);
+
+        source = (char*) malloc((source_size+1) * sizeof(char));
+        fread(source, source_size, sizeof(char), fp_put);
+
+        fclose(fp_put);
     }
 
     /* Initialization */
