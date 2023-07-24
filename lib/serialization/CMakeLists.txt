@@ -9,7 +9,7 @@ find_package(Boost 1.80 COMPONENTS unit_test_framework REQUIRED)
 set(CMAKE_CXX_STANDARD 20)
 
 set(${PROJECT_NAME}_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR}/../ ${Boost_INCLUDE_DIRS})
-set(${PROJECT_NAME}_LINK_LIBRARIES ${Boost_LIBRARIES} uhLibIo)
+set(${PROJECT_NAME}_LINK_LIBRARIES ${Boost_LIBRARIES} uhLibIo uhLibUtil)
 
 
 # adding all the .h files of the current project

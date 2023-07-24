@@ -65,7 +65,7 @@ if(USE_LICENSE_SPRING)
 
 else()
     set(${PROJECT_NAME}_INCLUDE_DIRS ${Boost_INCLUDE_DIRS} ${CMAKE_CURRENT_BINARY_DIR})
-    set(${PROJECT_NAME}_LINK_LIBRARIES ${Boost_LIBRARIES} uhLibIo uhLibLogging)
+    set(${PROJECT_NAME}_LINK_LIBRARIES ${Boost_LIBRARIES} uhLibIo uhLibLogging uhLibUtil)
 
 endif()
 
