@@ -48,7 +48,6 @@ struct cluster_ranks {
     }
 };
 
-
 struct data_store_config {
     std::filesystem::path directory;
     std::filesystem::path hole_log;
