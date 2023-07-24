@@ -94,18 +94,37 @@ public:
 
     constexpr inline big_int operator* (const unsigned long other) const noexcept {
         constexpr auto bits_32 = sizeof (uint32_t) * 8;
-        const unsigned long sub_num00 = num[0] & UNSIGNED_MAX_4;
-        const unsigned long sub_num01 = num[0] >> bits_32;
-        const unsigned long sub_other0 = other & UNSIGNED_MAX_4;
-        const unsigned long sub_other1 = other >> bits_32;
-        const auto mul00 = sub_num00 * sub_other0;
-        const auto mul01 = sub_num00 * sub_other1; // <<32
-        const auto mul10 = sub_num01 * sub_other0; // <<32
-        const auto mul11 = sub_num01 * sub_other1; // <<64
+        const unsigned long sub_num11 = num[1] & UNSIGNED_MAX_4;
+        const unsigned long sub_num10 = num[1] >> bits_32;
+        const unsigned long sub_num01 = num[0] & UNSIGNED_MAX_4;
+        const unsigned long sub_num00 = num[0] >> bits_32;
+        const unsigned long sub_other1 = other & UNSIGNED_MAX_4;
+        const unsigned long sub_other0 = other >> bits_32;
 
-        const auto overflow = (mul01 >> bits_32) + (mul10 >> bits_32);
-        const auto num0 = num[0] + mul11 + overflow;
-        const auto num1 = mul00 + (mul01 << bits_32) + (mul10 << bits_32);
+        const auto mul111 = sub_other1 * sub_num11; // << 0
+        const auto mul110 = sub_other1 * sub_num10; // << 32
+        const auto mul101 = sub_other1 * sub_num01; // << 64
+        const auto mul100 = sub_other1 * sub_num00; // << 96
+
+        const auto mul011 = sub_other0 * sub_num11; // << 32
+        const auto mul010 = sub_other0 * sub_num10; // << 64
+        const auto mul001 = sub_other0 * sub_num01; // << 96
+        const auto mul000 = sub_other0 * sub_num00; // << 128 -- overflow
+
+        const auto res0 = mul111;
+        const auto res32 = mul110 + mul011;
+        const auto res64 = mul101 + mul010;
+        const auto res96 = mul100 + mul001;
+
+
+
+        const auto num1 = res0 + (res32 << 32);
+        auto num0 = res64 + (res32 >> 32) + (res96 << 32);
+
+        if (UNSIGNED_MAX_8 - mul110 < mul011) {
+            num0 ++;
+        }
+
         return {num0, num1};
     }
 
