@@ -30,7 +30,7 @@ public:
      *
      * @param root is the root path of the tree
      */
-    explicit tree_node(uint8_t set_name, const std::filesystem::path& root);
+    explicit tree_node(const std::filesystem::path& root, uint8_t set_name = 0);
 
     /**
      * write with returning the index that was assigned to the written buffer

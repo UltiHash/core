@@ -51,27 +51,30 @@ std::shared_ptr<std::vector<std::pair<std::shared_ptr<chunk_collection>,
 {
     std::shared_ptr<std::vector<std::pair<std::shared_ptr<chunk_collection>, uint8_t>>> out_chunk_collections{};
 
-    for (const auto& file_object : std::filesystem::directory_iterator(input_path))
-    {
-        if (file_object.path().filename().string().size() == 1)
-        THROW(util::exception,
-              "Invalid object found in tree storage at location "
-                  + (input_path / file_object.path().filename()).string() + " !");
+    std::string root_index_name = input_path.filename().replace_extension(".index").string();
 
-        if (file_object.path().filename().string().size() > 2)
-            continue;
-
-        uint8_t index_char = boost::algorithm::unhex(file_object.path().filename().string())[0];
-
-        if (file_object.is_regular_file())
+    if(not std::filesystem::exists(input_path / root_index_name))
+        for (const auto& file_object : std::filesystem::directory_iterator(input_path))
         {
-            out_chunk_collections->emplace_back(std::make_shared<chunk_collection>(file_object.path()), index_char);
+            if (file_object.path().filename().string().size() == 1)
+            THROW(util::exception,
+                  "Invalid object found in tree storage at location "
+                      + (input_path / file_object.path().filename()).string() + " !");
+
+            if (file_object.path().filename().string().size() > 2)
+                continue;
+
+            uint8_t index_char = boost::algorithm::unhex(file_object.path().filename().string())[0];
+
+            if (file_object.is_regular_file())
+            {
+                out_chunk_collections->emplace_back(std::make_shared<chunk_collection>(file_object.path()), index_char);
+            }
+            else
+            THROW(util::exception,
+                  "Invalid data file was a different object instead on chunk collection indexing, found in tree storage at location "
+                      + (input_path / file_object.path().filename()).string() + " !");
         }
-        else
-        THROW(util::exception,
-              "Invalid data file was a different object instead on chunk collection indexing, found in tree storage at location "
-                  + (input_path / file_object.path().filename()).string() + " !");
-    }
 
     return out_chunk_collections;
 }
@@ -111,6 +114,9 @@ std::shared_ptr<std::vector<std::pair<std::shared_ptr<tree_node>,
 
     if (std::filesystem::exists(sub_tree_index_perisstence_path))
     {
+        //TODO: read back mixed index file with chunk collectoin size and index
+        // read back tree node with their sizes and index
+        // also read back chunk count
         //parse sizes and create empty sub_trees
         std::size_t index_file_size_count{};
         std::size_t index_file_size = std::filesystem::file_size(sub_tree_index_perisstence_path);
@@ -142,7 +148,7 @@ std::shared_ptr<std::vector<std::pair<std::shared_ptr<tree_node>,
             if (file_object.is_directory())
             {
                 out_sub_trees
-                    ->emplace_back(std::make_shared<tree_node>(index_char[1], input_path), index_char[1]);
+                    ->emplace_back(std::make_shared<tree_node>(input_path, index_char[1]), index_char[1]);
 
                 auto analyzed_size = out_sub_trees->back().first->size();
                 sub_trees_size += analyzed_size;
@@ -169,8 +175,7 @@ std::shared_ptr<std::vector<std::pair<std::shared_ptr<tree_node>,
 
 // ---------------------------------------------------------------------
 
-tree_node::tree_node(uint8_t set_name,
-                     const std::filesystem::path& root)
+tree_node::tree_node(const std::filesystem::path& root, uint8_t set_name)
     :
     tree_navigator_name(get_navigator_name(root, set_name)),
     tree_root(maybe_set_tree_root(root, set_name)),
@@ -274,7 +279,7 @@ uint64_t tree_node::free_space()
 
 std::filesystem::path tree_node::getRoot()
 {
-    //recursively ask parent for root. use tree name to accumulate
+    return *tree_root.lock();
 }
 
 // ---------------------------------------------------------------------
