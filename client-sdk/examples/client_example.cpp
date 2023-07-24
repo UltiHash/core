@@ -1,6 +1,9 @@
 #include <iostream>
 #include "../include/udb.h"
 #include <cstring>
+#include <filesystem>
+#include <fstream>
+#include <vector>
 
 int main(int argc, const char* argv[])
 {
@@ -16,89 +19,38 @@ int main(int argc, const char* argv[])
     }
 
     /* operation type argument 1 */
+    std::string operation_type_string{argv[1], strlen(argv[1])};
+    std::string key_string{argv[2], strlen(argv[2])};
+    std::filesystem::path source_path{std::string{argv[3], strlen(argv[3])}};
 
-    enum operation_arguments
+    if (operation_type_string != "put" and operation_type_string != "get")
     {
-        CLIENT_PUT,
-        CLIENT_GET
-    } operation_type;
-
-    if (strcmp(argv[1], "put") == 0)
-    {
-        operation_type = CLIENT_PUT;
-    }
-    else
-    {
-        if (strcmp(argv[1], "get") == 0)
-        {
-            operation_type = CLIENT_GET;
-        }
-        else
-        {
-            std::cout << "error_occured: you need to specify either put or get in the first argument!"
-                      << '\n';
-            exit(1);
-        }
+        std::cout << "error_occured: you need to specify either put or get in the first argument!"
+                  << '\n';
+        exit(1);
     }
 
     /* key source argument 2 */
 
-    char* key;
-    long key_size = strlen(argv[2]);
-
-    if (strrchr(argv[2], '/'))
+    if (exists(std::filesystem::path(key_string)))
     {
-        FILE* fp = fopen(argv[2], "r");
-
-        if (!fp)
-        {
-            std::cout << "error_occured: key file could not be opened!" << '\n';
-            exit(1);
-        }
-
-        fseek(fp, 0L, SEEK_END);
-        key_size = ftell(fp);
-        fseek(fp, 0L, SEEK_SET);
-
-        key = (char*) malloc((key_size+1) * sizeof(char));
-        fread(key, key_size, sizeof(char), fp);
-
-        fclose(fp);
-    }
-    else
-    {
-        key = (char*) malloc((key_size+1) * sizeof(char));
-        strcpy(key, argv[2]);
-    }
-
-    if (!key)
-    {
-        std::cout << "error_occured: key entered was not valid!" << '\n';
-        exit(1);
+        std::ifstream key_read(key_string,std::ios_base::in);
+        unsigned long key_file_size = std::filesystem::file_size(key_string);
+        key_string.resize(key_file_size);
+        key_read.read(key_string.data(),key_file_size);
+        key_read.close();
     }
 
     /* case put argument 3, get data */
-    char* source = nullptr;
-    long source_size = 0;
+    std::vector<char> source;
 
-    if (operation_type == CLIENT_PUT)
+    if (operation_type_string == "put")
     {
-        FILE* fp_put = fopen(argv[3], "r");
-
-        if (!fp_put)
-        {
-            std::cout << "error_occured: value source file could not be opened!" << '\n';
-            exit(1);
-        }
-
-        fseek(fp_put, 0L, SEEK_END);
-        source_size = ftell(fp_put);
-        fseek(fp_put, 0L, SEEK_SET);
-
-        source = (char*) malloc((source_size+1) * sizeof(char));
-        fread(source, source_size, sizeof(char), fp_put);
-
-        fclose(fp_put);
+        std::ifstream source_read(source_path,std::ios_base::in);
+        unsigned long source_file_size = std::filesystem::file_size(source_path);
+        source.resize(source_file_size);
+        source_read.read(source.data(),source_file_size);
+        source_read.close();
     }
 
     /* Initialization */
@@ -141,10 +93,10 @@ int main(int argc, const char* argv[])
     char test_label_1[] = "Col1";
     char* test_labels[] = {test_label_1};
 
-    if (operation_type == CLIENT_PUT)
+    if (operation_type_string == "put")
     {
         /* initialize object with key, value, and label */
-        UDB_OBJECT* obj1 = udb_init_object(key, key_size, source, source_size,
+        UDB_OBJECT* obj1 = udb_init_object(key_string.data(), key_string.size(), source.data(), source.size(),
                                            test_labels, sizeof(test_labels) / sizeof(char*));
 
         /* create a write query */
@@ -181,7 +133,7 @@ int main(int argc, const char* argv[])
     {
         /* create a read query*/
         UDB_READ_QUERY* test_read_query = udb_create_read_query();
-        udb_read_query_add_key(test_read_query, key, key_size);
+        udb_read_query_add_key(test_read_query, key_string.data(), key_string.size());
 
         /* getting an object from database */
         UDB_READ_QUERY_RESULTS* results = udb_get(udb_conn, test_read_query);
@@ -202,9 +154,9 @@ int main(int argc, const char* argv[])
             exit(1);
         }
 
-        FILE* write_fp = fopen(argv[3], "w");
-        fwrite(result->value, result->value_size, sizeof(char), write_fp);
-        fclose(write_fp);
+        std::ofstream write_back(source_path, std::ios_base::out);
+        write_back.write(result->value,result->value_size);
+        write_back.close();
 
         /* getting object */
         udb_destroy_read_query_results(results);
@@ -215,9 +167,6 @@ int main(int argc, const char* argv[])
     udb_destroy_connection(udb_conn);
     udb_destroy_instance(udb);
     udb_destroy_config(udb_config);
-
-    free(key);
-    free(source);
 
     return 0;
 }

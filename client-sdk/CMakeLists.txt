@@ -28,9 +28,9 @@ add_library(${PROJECT_NAME} STATIC ${HEADER_FILE_LIST} ${SOURCE_FILE_LIST})
 target_link_libraries(${PROJECT_NAME} PRIVATE ${${PROJECT_NAME}_LINK_LIBRARIES})
 target_include_directories(${PROJECT_NAME} PUBLIC ${${PROJECT_NAME}_INCLUDE_DIRS})
 
-add_executable(simple_example ${CMAKE_CURRENT_SOURCE_DIR}/examples/simple_example.cpp)
-target_link_libraries(simple_example ${PROJECT_NAME})
-target_include_directories(simple_example PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
+add_executable(client_example ${CMAKE_CURRENT_SOURCE_DIR}/examples/client_example.cpp)
+target_link_libraries(client_example ${PROJECT_NAME})
+target_include_directories(client_example PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 ## create testing targets
 #include(${CMAKE_CURRENT_SOURCE_DIR}/../cmake/testing/CMakeLists.txt)
