@@ -53,7 +53,8 @@ std::shared_ptr<std::vector<std::pair<std::shared_ptr<chunk_collection>,
 
     std::string root_index_name = input_path.filename().replace_extension(".index").string();
 
-    if(not std::filesystem::exists(input_path / root_index_name))
+    //only fully load chunk collections if their size and chunk count is unclear
+    if (not std::filesystem::exists(input_path / root_index_name))
         for (const auto& file_object : std::filesystem::directory_iterator(input_path))
         {
             if (file_object.path().filename().string().size() == 1)
@@ -154,7 +155,8 @@ std::shared_ptr<std::vector<std::pair<std::shared_ptr<tree_node>,
                 sub_trees_size += analyzed_size;
                 out_sub_trees->back().first.reset();
 
-                serialization::fragment_serialize_size_format<uint64_t> write_to_sub_tree_index(index_char[1],analyzed_size);
+                serialization::fragment_serialize_size_format<uint64_t>
+                    write_to_sub_tree_index(index_char[1], analyzed_size);
                 io::write(sub_tree_index_file, write_to_sub_tree_index.serialize());
             }
             else
