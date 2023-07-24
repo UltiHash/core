@@ -30,5 +30,17 @@ BOOST_AUTO_TEST_CASE(test_fragment_format_serialization)
     BOOST_CHECK(some_metadata.index_num == read_meta.index_num);
     BOOST_CHECK(some_metadata.content_buf_size == read_meta.content_buf_size);
     BOOST_CHECK(some_metadata.content_size == read_meta.content_size);
+
+    uh::serialization::fragment_serialize_size_format<uint32_t,true> some_metadata2(3,400, tree_node_object_type::CHUNK_COLLECTION), read_meta2;
+    uh::io::buffer buf2;
+
+    uh::io::write(buf2, some_metadata2.serialize());
+
+    read_meta2.deserialize(buf2);
+
+    BOOST_CHECK(some_metadata2.index_num == read_meta2.index_num);
+    BOOST_CHECK(some_metadata2.tree_type == read_meta2.tree_type);
+    BOOST_CHECK(some_metadata2.content_buf_size == read_meta2.content_buf_size);
+    BOOST_CHECK(some_metadata2.content_size == read_meta2.content_size);
 }
 

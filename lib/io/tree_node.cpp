@@ -2,7 +2,7 @@
 // Created by benjamin-elias on 28.05.23.
 //
 
-#include "tree_navigator.h"
+#include "tree_node.h"
 
 #include "boost/algorithm/hex.hpp"
 
@@ -78,14 +78,14 @@ std::shared_ptr<std::vector<std::pair<std::shared_ptr<chunk_collection>,
 
 // ---------------------------------------------------------------------
 
-std::shared_ptr<std::vector<std::pair<std::shared_ptr<tree_navigator>,
+std::shared_ptr<std::vector<std::pair<std::shared_ptr<tree_node>,
                                       uint8_t>>> index_sub_tree_persistent(const std::weak_ptr<std::vector<std::pair<std::shared_ptr<
     chunk_collection>, uint8_t>>>& chunk_collections,
                                                                            const std::filesystem::path& input_path,
                                                                            std::array<unsigned char, 2> tree_name,
                                                                            std::size_t& tree_navigator_size)
 {
-    std::shared_ptr<std::vector<std::pair<std::shared_ptr<tree_navigator>, uint8_t>>> out_sub_trees{};
+    std::shared_ptr<std::vector<std::pair<std::shared_ptr<tree_node>, uint8_t>>> out_sub_trees{};
     std::size_t chunk_collection_size{};
     std::size_t sub_trees_size{};
 
@@ -142,7 +142,7 @@ std::shared_ptr<std::vector<std::pair<std::shared_ptr<tree_navigator>,
             if (file_object.is_directory())
             {
                 out_sub_trees
-                    ->emplace_back(std::make_shared<tree_navigator>(index_char[1], input_path), index_char[1]);
+                    ->emplace_back(std::make_shared<tree_node>(index_char[1], input_path), index_char[1]);
 
                 auto analyzed_size = out_sub_trees->back().first->size();
                 sub_trees_size += analyzed_size;
@@ -169,8 +169,8 @@ std::shared_ptr<std::vector<std::pair<std::shared_ptr<tree_navigator>,
 
 // ---------------------------------------------------------------------
 
-tree_navigator::tree_navigator(uint8_t set_name,
-                               const std::filesystem::path& root)
+tree_node::tree_node(uint8_t set_name,
+                     const std::filesystem::path& root)
     :
     tree_navigator_name(get_navigator_name(root, set_name)),
     tree_root(maybe_set_tree_root(root, set_name)),
@@ -181,10 +181,10 @@ tree_navigator::tree_navigator(uint8_t set_name,
 // ---------------------------------------------------------------------
 
 std::pair<std::stack<char>, serialization::fragment_serialize_size_format<>>
-tree_navigator::write_indexed(std::span<const char> buffer,
-                              uint32_t alloc,
-                              bool flush_after_operation,
-                              const std::stack<unsigned char>& maybe_force_stack_start)
+tree_node::write_indexed(std::span<const char> buffer,
+                         uint32_t alloc,
+                         bool flush_after_operation,
+                         const std::stack<unsigned char>& maybe_force_stack_start)
 {
     // use index file
 }
@@ -192,7 +192,7 @@ tree_navigator::write_indexed(std::span<const char> buffer,
 // ---------------------------------------------------------------------
 
 std::pair<std::vector<char>, serialization::fragment_serialize_size_format<>>
-tree_navigator::read_indexed(const std::stack<char>& at, bool close_after_operation)
+tree_node::read_indexed(const std::stack<char>& at, bool close_after_operation)
 {
     //TODO
 }
@@ -200,8 +200,8 @@ tree_navigator::read_indexed(const std::stack<char>& at, bool close_after_operat
 // ---------------------------------------------------------------------
 
 std::pair<std::stack<char>, std::vector<serialization::fragment_serialize_size_format<>>>
-tree_navigator::write_indexed_multi(const std::vector<std::span<const char>>& buffer,
-                                    bool flush_after_operation)
+tree_node::write_indexed_multi(const std::vector<std::span<const char>>& buffer,
+                               bool flush_after_operation)
 {
 
 }
@@ -209,77 +209,77 @@ tree_navigator::write_indexed_multi(const std::vector<std::span<const char>>& bu
 // ---------------------------------------------------------------------
 
 std::vector<std::pair<std::vector<char>, serialization::fragment_serialize_size_format<>>>
-tree_navigator::read_indexed_multi(const std::vector<std::stack<char>>& at, bool close_after_operation)
+tree_node::read_indexed_multi(const std::vector<std::stack<char>>& at, bool close_after_operation)
 {
 
 }
 
 // ---------------------------------------------------------------------
 
-void tree_navigator::remove(uint8_t at)
+void tree_node::remove(uint8_t at)
 {
 
 }
 
 // ---------------------------------------------------------------------
 
-uint16_t tree_navigator::count()
+uint16_t tree_node::count()
 {
 
 }
 
 // ---------------------------------------------------------------------
 
-std::size_t tree_navigator::size()
+std::size_t tree_node::size()
 {
 
 }
 
 // ---------------------------------------------------------------------
 
-std::size_t tree_navigator::level_size()
+std::size_t tree_node::level_size()
 {
 
 }
 
 // ---------------------------------------------------------------------
 
-std::size_t tree_navigator::content_size()
+std::size_t tree_node::content_size()
 {
 
 }
 
 // ---------------------------------------------------------------------
 
-std::size_t tree_navigator::content_level_size()
+std::size_t tree_node::content_level_size()
 {
 
 }
 
 // ---------------------------------------------------------------------
 
-uint64_t tree_navigator::free()
+uint64_t tree_node::free()
 {
 
 }
 
 // ---------------------------------------------------------------------
 
-uint64_t tree_navigator::free_space()
+uint64_t tree_node::free_space()
 {
 
 }
 
 // ---------------------------------------------------------------------
 
-std::filesystem::path tree_navigator::getRoot()
+std::filesystem::path tree_node::getRoot()
 {
     //recursively ask parent for root. use tree name to accumulate
 }
 
 // ---------------------------------------------------------------------
 
-const std::array<unsigned char, 2>& tree_navigator::getTree_navigator_name() const
+const std::array<unsigned char, 2>& tree_node::getTree_navigator_name() const
 {
     return tree_navigator_name;
 }

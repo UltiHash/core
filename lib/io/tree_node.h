@@ -15,14 +15,14 @@
 namespace uh::io
 {
 
-class tree_navigator
+class tree_node
 {
 
 public:
 
-    ~tree_navigator() = default;
+    ~tree_node() = default;
 
-    tree_navigator() = default;
+    tree_node() = default;
 
     /**
      * a tree navigator takes care of 256 chunk collections and 256 tree navigators. The main job
@@ -30,7 +30,7 @@ public:
      *
      * @param root is the root path of the tree
      */
-    explicit tree_navigator(uint8_t set_name, const std::filesystem::path& root);
+    explicit tree_node(uint8_t set_name, const std::filesystem::path& root);
 
     /**
      * write with returning the index that was assigned to the written buffer
@@ -127,12 +127,12 @@ public:
 
     /**
      *
-     * @return name of tree_navigator
+     * @return name of tree_node
      */
     [[nodiscard]] const std::array<unsigned char, 2>& getTree_navigator_name() const;
 
 private:
-    std::weak_ptr<std::vector<std::pair<std::shared_ptr<tree_navigator>, uint8_t>>> sub_trees;
+    std::weak_ptr<std::vector<std::pair<std::shared_ptr<tree_node>, uint8_t>>> sub_trees;
     std::weak_ptr<std::vector<std::pair<std::shared_ptr<chunk_collection>, uint8_t>>> chunk_collections;
 
     std::size_t size_stored{};
