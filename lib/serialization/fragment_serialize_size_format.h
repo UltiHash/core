@@ -66,7 +66,7 @@ public:
         return {buf.data().begin(), buf.data().begin() + serialized_size()};
     }
 
-    virtual void deserialize(io::device& input_dev)
+    virtual void deserialize(io::device &input_dev)
     {
         index_fragment_deserializer ser(input_dev);
 
@@ -88,6 +88,6 @@ public:
 
 // ---------------------------------------------------------------------
 
-}
+} // namespace uh::serialization
 
 #endif //CORE_FRAGMENT_SIZE_STRUCT_H

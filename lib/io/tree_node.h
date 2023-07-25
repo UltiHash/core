@@ -5,7 +5,8 @@
 #ifndef CORE_TREE_NAVIGATOR_H
 #define CORE_TREE_NAVIGATOR_H
 
-#include "io/chunk_collection.h"
+#include <io/chunk_collection.h>
+#include <serialization/tree_node_serialize_size_format.h>
 
 #include <vector>
 #include <stack>
@@ -79,9 +80,9 @@ public:
 
     /**
      *
-     * @return the count of addresses used
+     * @return the count of chunks within this tree_node
      */
-    uint16_t count();
+    uint64_t count();
 
     /**
      *
@@ -132,10 +133,11 @@ public:
     [[nodiscard]] const std::array<unsigned char, 2>& getTree_navigator_name() const;
 
 private:
-    std::weak_ptr<std::vector<std::pair<std::shared_ptr<tree_node>, uint8_t>>> sub_trees;
-    std::weak_ptr<std::vector<std::pair<std::shared_ptr<chunk_collection>, uint8_t>>> chunk_collections;
+    std::weak_ptr<std::vector<std::pair<std::shared_ptr<tree_node>, uh::serialization::tree_node_serialize_size_format>>> sub_trees;
+    std::weak_ptr<std::vector<std::pair<std::shared_ptr<chunk_collection>, uh::serialization::tree_node_serialize_size_format>>> chunk_collections;
 
     std::size_t size_stored{};
+    std::size_t chunk_count{};
     std::weak_ptr<std::filesystem::path> tree_root;
     std::array<unsigned char, 2> tree_navigator_name{};
 
