@@ -55,7 +55,7 @@ public:
      * @param at index
      * @return buffer
      */
-    std::pair<std::vector<char>, serialization::fragment_serialize_size_format<>>
+    std::pair<std::vector<char>, uh::serialization::tree_node_serialize_size_format>
     read_indexed(std::stack<unsigned char> at, bool close_after_operation = false);
 
     /**

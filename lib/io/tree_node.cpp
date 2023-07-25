@@ -283,6 +283,8 @@ tree_node::write_indexed
 
         sub_tree_ptr->first.reset();
         //TODO: sub_tree_manager
+        sub_tree_ptr->second.chunk_num++;
+        sub_tree_ptr->second.content_size += result_write.second.content_size;
 
         return result_write;
     }
@@ -314,7 +316,7 @@ tree_node::write_indexed
             sub_cc_ptr->first = std::make_shared<chunk_collection>(getRoot() / hex_str);
         }
 
-        auto result_write = sub_cc_ptr->first->write_indexed(buffer);
+        auto result_write = sub_cc_ptr->first->write_indexed(buffer,0,flush_after_operation);
         uh::serialization::tree_node_serialize_size_format out_format(result_write.index_num,
                                                                       result_write.content_size,
                                                                       result_write.tree_type,
@@ -322,6 +324,20 @@ tree_node::write_indexed
 
         sub_cc_ptr->first.reset();
         //TODO: chunk_collection manager
+        //TODO: persist index file
+
+        sub_cc_ptr->second.chunk_num++;
+        sub_cc_ptr->second.content_size += result_write.content_size;
+
+        chunk_count = 0;
+        size_stored = 0;
+
+        auto root_dir = getRoot();
+        std::string root_index_name = root_dir.filename().replace_extension(".index").string();
+        std::filesystem::path sub_tree_index_perisstence_path = std::filesystem::path(root_dir) / root_index_name;
+        std::filesystem::remove(sub_tree_index_perisstence_path);
+
+        index_sub_tree_persistent(chunk_collections, getRoot(), size_stored, chunk_count);
 
         return {navigator, out_format};
     }
@@ -330,10 +346,51 @@ tree_node::write_indexed
 
 // ---------------------------------------------------------------------
 
-std::pair<std::vector<char>, serialization::fragment_serialize_size_format<>>
+std::pair<std::vector<char>, uh::serialization::tree_node_serialize_size_format>
 tree_node::read_indexed(std::stack<unsigned char> at, bool close_after_operation)
 {
-    std::lock_guard lock(tree_work_mux);
+    if(at.empty())
+        THROW(util::exception, "The navigation stack in tree node was empty!");
+
+    if(at.size() > 1){
+        std::unique_lock lock(tree_work_mux);
+        auto sub_tree_ptr = get_tree_node_indexed(at.top());
+        at.pop();
+
+        if(sub_tree_ptr.first == nullptr)
+            sub_tree_ptr.first = std::make_shared<tree_node>(getRoot(), sub_tree_ptr.second.index_num);
+
+        lock.unlock();
+
+        auto result_read = sub_tree_ptr.first->read_indexed(at, close_after_operation);
+
+        lock.lock();
+
+        sub_tree_ptr.first.reset();
+
+        return result_read;
+    }
+    else{
+        std::unique_lock lock(tree_work_mux);
+        auto sub_cc_ptr = get_chunk_collection_indexed(at.top());
+
+        if (sub_cc_ptr.first == nullptr)
+        {
+            std::string hex_str = boost::algorithm::hex(std::to_string(sub_cc_ptr.second.index_num));
+            sub_cc_ptr.first = std::make_shared<chunk_collection>(getRoot() / hex_str);
+        }
+
+        lock.unlock();
+
+        auto result_read = sub_cc_ptr.first->read_indexed(at.top(), close_after_operation);
+        uh::serialization::tree_node_serialize_size_format out_format(result_read.second.index_num,result_read.second.content_size,result_read.second.tree_type,sub_cc_ptr.first->count());
+
+        lock.lock();
+
+        sub_cc_ptr.first.reset();
+
+        return {result_read.first, out_format};
+    }
 }
 
 // ---------------------------------------------------------------------
