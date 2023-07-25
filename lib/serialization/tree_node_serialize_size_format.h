@@ -20,6 +20,8 @@
 namespace uh::serialization
 {
 
+// ---------------------------------------------------------------------
+
 struct tree_node_serialize_size_format
     : public uh::serialization::fragment_serialize_size_format<uint64_t, true>
 {
@@ -72,6 +74,8 @@ struct tree_node_serialize_size_format
             1 + chunk_num_buf_size;
     }
 };
+
+// ---------------------------------------------------------------------
 
 } // namespace uh::serialization
 
