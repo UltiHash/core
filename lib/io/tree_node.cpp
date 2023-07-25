@@ -194,6 +194,7 @@ tree_node::write_indexed(std::span<const char> buffer,
                          const std::stack<unsigned char>& maybe_force_stack_start)
 {
     // use index file
+    std::lock_guard lock(tree_work_mux);
 }
 
 // ---------------------------------------------------------------------
@@ -202,6 +203,7 @@ std::pair<std::vector<char>, serialization::fragment_serialize_size_format<>>
 tree_node::read_indexed(const std::stack<char>& at, bool close_after_operation)
 {
     //TODO
+    std::lock_guard lock(tree_work_mux);
 }
 
 // ---------------------------------------------------------------------
@@ -210,7 +212,7 @@ std::pair<std::stack<char>, std::vector<serialization::fragment_serialize_size_f
 tree_node::write_indexed_multi(const std::vector<std::span<const char>>& buffer,
                                bool flush_after_operation)
 {
-
+    std::lock_guard lock(tree_work_mux);
 }
 
 // ---------------------------------------------------------------------
@@ -218,69 +220,70 @@ tree_node::write_indexed_multi(const std::vector<std::span<const char>>& buffer,
 std::vector<std::pair<std::vector<char>, serialization::fragment_serialize_size_format<>>>
 tree_node::read_indexed_multi(const std::vector<std::stack<char>>& at, bool close_after_operation)
 {
-
+    std::lock_guard lock(tree_work_mux);
 }
 
 // ---------------------------------------------------------------------
 
 void tree_node::remove(uint8_t at)
 {
-
+    std::lock_guard lock(tree_work_mux);
 }
 
 // ---------------------------------------------------------------------
 
 uint16_t tree_node::count()
 {
-
+    std::lock_guard lock(tree_work_mux);
 }
 
 // ---------------------------------------------------------------------
 
 std::size_t tree_node::size()
 {
-
+    std::lock_guard lock(tree_work_mux);
 }
 
 // ---------------------------------------------------------------------
 
 std::size_t tree_node::level_size()
 {
-
+    std::lock_guard lock(tree_work_mux);
 }
 
 // ---------------------------------------------------------------------
 
 std::size_t tree_node::content_size()
 {
-
+    std::lock_guard lock(tree_work_mux);
 }
 
 // ---------------------------------------------------------------------
 
 std::size_t tree_node::content_level_size()
 {
-
+    std::lock_guard lock(tree_work_mux);
 }
 
 // ---------------------------------------------------------------------
 
 uint64_t tree_node::free()
 {
-
+    std::lock_guard lock(tree_work_mux);
 }
 
 // ---------------------------------------------------------------------
 
 uint64_t tree_node::free_space()
 {
-
+    std::lock_guard lock(tree_work_mux);
 }
 
 // ---------------------------------------------------------------------
 
 std::filesystem::path tree_node::getRoot()
 {
+    std::lock_guard lock(tree_work_mux);
     return *tree_root.lock();
 }
 

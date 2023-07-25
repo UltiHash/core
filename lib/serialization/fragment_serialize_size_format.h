@@ -27,6 +27,8 @@ template<typename CONTENT_SIZE_TYPE = uint32_t, bool is_tree_node_serialize = fa
 requires std::is_unsigned_v<CONTENT_SIZE_TYPE>
 struct fragment_serialize_size_format
 {
+public:
+
     CONTENT_SIZE_TYPE content_size{};
     uint8_t index_num{};
 
@@ -43,7 +45,7 @@ struct fragment_serialize_size_format
         content_size(content_len), index_num(index_num), tree_type(type)
     {}
 
-    [[nodiscard]] std::vector<char> serialize()
+    virtual std::vector<char> serialize()
     {
         io::buffer buf;
         index_fragment_serializer ser(buf);
@@ -51,7 +53,7 @@ struct fragment_serialize_size_format
 
         content_buf_size = ser.bytes_non_zero(content_size);
         char content_buf_size_serialize[1];
-        content_buf_size_serialize[0] = static_cast<unsigned char>(content_buf_size);
+        content_buf_size_serialize[0] = static_cast<char>(content_buf_size);
         io::write(buf, content_buf_size_serialize);
 
         ser.write(content_size, content_buf_size_serialize[0]);
@@ -64,7 +66,7 @@ struct fragment_serialize_size_format
         return {buf.data().begin(), buf.data().begin() + serialized_size()};
     }
 
-    void deserialize(io::device& input_dev)
+    virtual void deserialize(io::device& input_dev)
     {
         index_fragment_deserializer ser(input_dev);
 
@@ -78,7 +80,7 @@ struct fragment_serialize_size_format
         }
     }
 
-    [[nodiscard]] inline long serialized_size() const
+    [[nodiscard]] virtual inline uint64_t serialized_size() const
     {
         return 1 + 1 + is_tree_node_serialize + content_buf_size;
     }
