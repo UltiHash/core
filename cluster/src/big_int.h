@@ -40,6 +40,10 @@ public:
         return num[0] < other.num[0] or ((num[0] == other.num[0]) and (num[1] < other.num[1]));
     }
 
+    constexpr inline bool operator > (const big_int& other) const noexcept {
+        return num[0] > other.num[0] or ((num[0] == other.num[0]) and (num[1] > other.num[1]));
+    }
+
     constexpr inline bool operator == (const big_int& other) const noexcept {
         return num[1] == other.num[1] and num[0] == other.num[0];
     }
@@ -56,17 +60,20 @@ public:
 
     constexpr inline big_int operator- (const big_int& other) const noexcept {
         big_int res {num[0] - other.num[0], num[1] - other.num[1]};
-        const auto max_no_underflow = UNSIGNED_MAX_8 - num[1];
-        if (other.num[1] > max_no_underflow) [[unlikely]] {
-            res.num[1] = UNSIGNED_MAX_8 - other.num[1] + max_no_underflow;
+
+        if (other.num[1] > num[1]) [[unlikely]] {
+            res.num[1] = UNSIGNED_MAX_8 - other.num[1] + num[1];
             res.num[0] --;
         }
         return res;
     }
 
-
     constexpr inline bool operator < (const unsigned long other) const noexcept {
         return num[0] == 0 and num[1] < other;
+    }
+
+    constexpr inline bool operator > (const unsigned long other) const noexcept {
+        return num[0] == 0 and num[1] > other;
     }
 
     constexpr inline bool operator == (const unsigned long other) const noexcept {
@@ -93,13 +100,12 @@ public:
     }
 
     constexpr inline big_int operator* (const unsigned long other) const noexcept {
-        constexpr auto bits_32 = sizeof (uint32_t) * 8;
         const unsigned long sub_num11 = num[1] & UNSIGNED_MAX_4;
-        const unsigned long sub_num10 = num[1] >> bits_32;
+        const unsigned long sub_num10 = num[1] >> 32;
         const unsigned long sub_num01 = num[0] & UNSIGNED_MAX_4;
-        const unsigned long sub_num00 = num[0] >> bits_32;
+        const unsigned long sub_num00 = num[0] >> 32;
         const unsigned long sub_other1 = other & UNSIGNED_MAX_4;
-        const unsigned long sub_other0 = other >> bits_32;
+        const unsigned long sub_other0 = other >> 32;
 
         const auto mul111 = sub_other1 * sub_num11; // << 0
         const auto mul110 = sub_other1 * sub_num10; // << 32
@@ -109,20 +115,25 @@ public:
         const auto mul011 = sub_other0 * sub_num11; // << 32
         const auto mul010 = sub_other0 * sub_num10; // << 64
         const auto mul001 = sub_other0 * sub_num01; // << 96
-        const auto mul000 = sub_other0 * sub_num00; // << 128 -- overflow
+        // const auto mul000 = sub_other0 * sub_num00; // << 128 -- overflow
 
         const auto res0 = mul111;
         const auto res32 = mul110 + mul011;
         const auto res64 = mul101 + mul010;
         const auto res96 = mul100 + mul001;
 
+        auto num0 = res64 + (res96 << 32) + (res32 >> 32);
+        const auto lshifted_res32 = (res32 << 32);
+        const auto num1 = res0 + lshifted_res32;
 
-
-        const auto num1 = res0 + (res32 << 32);
-        auto num0 = res64 + (res32 >> 32) + (res96 << 32);
-
-        if (UNSIGNED_MAX_8 - mul110 < mul011) {
+        if (const auto max_no_overflow = UNSIGNED_MAX_8 - res0;
+            max_no_overflow < lshifted_res32) [[unlikely]] {
             num0 ++;
+        }
+
+        if (const auto max_no_overflow = UNSIGNED_MAX_8 - mul110;
+                max_no_overflow < mul011) [[unlikely]] {
+            num0 += (1ul << 32);
         }
 
         return {num0, num1};
