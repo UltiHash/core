@@ -12,6 +12,7 @@
 #include <filesystem>
 #include <stack>
 #include <numeric>
+#include <utility>
 
 namespace uh::io
 {
@@ -86,6 +87,7 @@ index_chunk_collections(const std::filesystem::path &input_path,
                 tree_node_size += cc->size();
                 tree_node_chunk_count += cc->count();
                 out_chunk_collections->back().first.reset();
+                //TODO: chunk collection manager
             }
             else
             THROW(util::exception,
@@ -167,6 +169,7 @@ index_sub_tree_persistent(const std::weak_ptr<std::vector<std::pair<std::shared_
                 tree_node_size += tn->size();
                 tree_node_chunk_count += tn->count();
                 out_sub_trees->back().first.reset();
+                //TODO: sub_tree managaer
 
                 serialization::tree_node_serialize_size_format
                     write_to_sub_tree_index(index_char,
@@ -215,12 +218,13 @@ tree_node::tree_node(const std::filesystem::path &root, uint8_t set_name)
 
 // ---------------------------------------------------------------------
 
-std::pair<std::vector<unsigned char>, serialization::fragment_serialize_size_format<>>
+std::pair<std::stack<unsigned char>, uh::serialization::tree_node_serialize_size_format>
 tree_node::write_indexed
-    (std::vector<unsigned char> navigator,
+    (std::vector<char> buffer,
      uint32_t alloc,
      bool flush_after_operation,
-     const std::vector<unsigned char> &maybe_force_stack_start)
+     std::stack<unsigned char> maybe_force_stack_start,
+     std::stack<unsigned char> navigator)
 {
     std::lock_guard lock(tree_work_mux);
 
@@ -228,42 +232,98 @@ tree_node::write_indexed
     THROW(util::exception, "Navigation stack navigator was empty!");
 
     if (chunk_collections_address_full()
-        and std::all_of(chunk_collections.lock()->begin(), chunk_collections.lock()->end(), [this](std::pair<std::shared_ptr<chunk_collection>, uh::serialization::tree_node_serialize_size_format> &cc)
-        {
-            if(cc.first.get())
-                return cc.first->full();
-            else{
-                std::string hex_str = boost::algorithm::hex(std::to_string(cc.second.index_num));
-                cc.first = std::make_shared<chunk_collection>(getRoot() / hex_str);
-            }
-        }))
+        and std::all_of(chunk_collections.lock()->begin(),
+                        chunk_collections.lock()->end(),
+                        [this](std::pair<std::shared_ptr<chunk_collection>,
+                                         uh::serialization::tree_node_serialize_size_format> &cc)
+                        {
+                            if (cc.first.get())
+                                return cc.first->full();
+                            else
+                            {
+                                //TODO: chunk collection manager
+                                std::string hex_str = boost::algorithm::hex(std::to_string(cc.second.index_num));
+                                cc.first = std::make_shared<chunk_collection>(getRoot() / hex_str);
+
+                                bool out_val = cc.first->full();
+                                cc.first.reset();
+
+                                return out_val;
+                            }
+                        }))
     {
+        auto locked_sub_trees = sub_trees.lock();
+
         if (not sub_trees_address_full())
         {
             uint8_t next_free_sub_tree_addr = next_free_tree_node_address();
-            uh::serialization::tree_node_serialize_size_format tree_size_indexer(next_free_sub_tree_addr, 0);
-            sub_trees.lock()
+            uh::serialization::tree_node_serialize_size_format
+                tree_size_indexer(next_free_sub_tree_addr, 0, uh::serialization::TREE_NODE);
+            locked_sub_trees
                 ->emplace_back(std::make_shared<tree_node>(getRoot(), next_free_sub_tree_addr), tree_size_indexer);
         }
 
         std::vector<std::pair<std::shared_ptr<tree_node>, uh::serialization::tree_node_serialize_size_format>>
-            sub_trees_min_address_min_size = min_address_min_size_filter(*sub_trees.lock());
+            sub_trees_min_address_min_size = min_address_min_size_filter(*locked_sub_trees);
 
-        std::sort(sub_trees_min_address_min_size.begin(),
-                  sub_trees_min_address_min_size.end(),
-                  [](const auto &item1, const auto &item2)
-                  {
-                      return item1.second.index_num < item2.second.index_num;
-                  });
+        navigator.push(sub_trees_min_address_min_size.begin()->second.index_num);
 
-        navigator.push_back(sub_trees_min_address_min_size.begin()->second.index_num);
+        auto sub_tree_ptr = sub_trees_min_address_min_size.begin();
 
-        return sub_trees_min_address_min_size.begin()->first
-            ->write_indexed(navigator, alloc, flush_after_operation, maybe_force_stack_start);
+        if (sub_tree_ptr->first == nullptr)
+        {
+            sub_tree_ptr->first = std::make_shared<tree_node>(getRoot(), sub_tree_ptr->second.index_num);
+        }
+
+        auto result_write = sub_tree_ptr->first->write_indexed(buffer,
+                                                               alloc,
+                                                               flush_after_operation,
+                                                               std::move(maybe_force_stack_start),
+                                                               navigator);
+
+        sub_tree_ptr->first.reset();
+        //TODO: sub_tree_manager
+
+        return result_write;
     }
     else
     {
+        auto locked_chunk_collections = chunk_collections.lock();
 
+        if (not chunk_collections_address_full())
+        {
+            uint8_t next_free_sub_tree_addr = next_free_chunk_collection_address();
+            uh::serialization::tree_node_serialize_size_format
+                tree_size_indexer(next_free_sub_tree_addr, 0, uh::serialization::CHUNK_COLLECTION);
+            std::string hex_str = boost::algorithm::hex(std::to_string(next_free_sub_tree_addr));
+            locked_chunk_collections
+                ->emplace_back(std::make_shared<chunk_collection>(getRoot() / hex_str), tree_size_indexer);
+            locked_chunk_collections->back().first.reset();
+        }
+
+        std::vector<std::pair<std::shared_ptr<chunk_collection>, uh::serialization::tree_node_serialize_size_format>>
+            chunk_collections_min_address_min_size = min_address_min_size_filter(*locked_chunk_collections);
+
+        navigator.push(chunk_collections_min_address_min_size.begin()->second.index_num);
+
+        auto sub_cc_ptr = chunk_collections_min_address_min_size.begin();
+
+        if (sub_cc_ptr->first == nullptr)
+        {
+            std::string hex_str = boost::algorithm::hex(std::to_string(sub_cc_ptr->second.index_num));
+            sub_cc_ptr->first = std::make_shared<chunk_collection>(getRoot() / hex_str);
+        }
+
+        auto result_write = sub_cc_ptr->first->write_indexed(buffer);
+        uh::serialization::tree_node_serialize_size_format out_format(result_write.index_num,
+                                                                      result_write.content_size,
+                                                                      result_write.tree_type,
+                                                                      sub_cc_ptr->first->count());
+
+        sub_cc_ptr->first.reset();
+        //TODO: chunk_collection manager
+
+        return {navigator, out_format};
     }
 
 }

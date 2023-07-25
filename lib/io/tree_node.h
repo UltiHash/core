@@ -37,16 +37,17 @@ public:
      * write with returning the index that was assigned to the written navigator
      * or instead give an index
      *
-     * @param navigator to be written
+     * @param buffer to be written
      * @param alloc allocate space and write fragment to chunk collection with the help of multiple buffers
      * WARNING: allocated space must be written completely (accumulated navigator size is longer or equal alloc)
      * @return tuple<stream size, assigned index position>
      */
-    std::pair<std::vector<unsigned char>, serialization::fragment_serialize_size_format<>> write_indexed
-        (std::vector<unsigned char> navigator,
-         uint32_t alloc = 0,
-         bool flush_after_operation = true,
-         const std::vector<unsigned char>& maybe_force_stack_start = std::stack<unsigned char>{});
+    std::pair<std::stack<unsigned char>, uh::serialization::tree_node_serialize_size_format> write_indexed
+        (std::vector<char> buffer,
+         uint32_t alloc,
+         bool flush_after_operation,
+         std::stack<unsigned char> maybe_force_stack_start = std::stack<unsigned char>{},
+         std::stack<unsigned char> navigator = std::stack<unsigned char>{});
 
     /**
      * read a certain index pointer and return a vector buffer of the content
@@ -155,7 +156,7 @@ private:
 
         uint64_t min_addr = std::numeric_limits<uint64_t>::max();
 
-        for(const auto& el: *sub_trees.lock()){
+        for(const auto& el: search_pair_vector){
             if(el.second.chunk_num < min_addr){
                 sub_trees_min_address.clear();
                 min_addr = el.second.chunk_num;
@@ -177,6 +178,13 @@ private:
             if(el.second.content_size == min_size)
                 sub_trees_min_address_min_size.emplace_back(el);
         }
+
+        std::sort(sub_trees_min_address_min_size.begin(),
+                  sub_trees_min_address_min_size.end(),
+                  [](const auto &item1, const auto &item2)
+                  {
+                      return item1.second.index_num < item2.second.index_num;
+                  });
 
         return sub_trees_min_address_min_size;
     }
