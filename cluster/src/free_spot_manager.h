@@ -21,18 +21,24 @@ public:
         m_hole_log(std::move (hole_log)),
         m_file (open_file()),
         m_total_free_size (get_total_free_size ()){
+
+        shift_forward ();
+
+        m_file.exceptions(std::ios::badbit | std::ios::failbit);
     }
 
     void push_free_spot (uint128_t pointer, std::size_t size) {
 
         shift_forward ();
 
-        m_file.seekp(m_end_pos);
+        m_file.seekp(m_end_pos, std::ios::beg);
         unsigned long free_spot_data[3];
         free_spot_data[0] = pointer.get_data()[0];
         free_spot_data[1] = pointer.get_data()[1];
         free_spot_data[2] = size;
-        write_size(m_file, ELEMENT_SIZE, reinterpret_cast<const char *>(free_spot_data));
+
+        m_file.write (reinterpret_cast<const char *>(&free_spot_data), ELEMENT_SIZE);
+
         m_end_pos += sizeof(free_spot_data);
         m_total_free_size += size;
     }
@@ -42,23 +48,28 @@ public:
             return std::nullopt;
         }
 
-        m_file.seekg (m_start_pos + m_pop_count * ELEMENT_SIZE);
+        m_file.seekg (m_start_pos + m_pop_count * ELEMENT_SIZE, std::ios::beg);
         unsigned long buffer [3];
         read_size (m_file, ELEMENT_SIZE, reinterpret_cast <char *> (&buffer));
         wide_span wspan {{buffer[0], buffer[1]}, buffer[2]};
         m_pop_count ++;
-
+        m_popped_size += buffer[2];
         return wspan;
     }
 
     void apply_popped_items () {
-        m_file.seekg (m_start_pos);
+        if (m_pop_count == 0) {
+            return;
+        }
+        m_file.seekg (m_start_pos, std::ios::beg);
         const auto free_size = m_pop_count * ELEMENT_SIZE;
-        const auto zeros = std::unique_ptr <char> (new char [free_size]);
-        write_size (m_file, free_size, zeros.get());
+        const auto zeros = std::unique_ptr <char []> (new char [free_size]);
+        std::memset(zeros.get(), 0, free_size);
+        m_file.write (zeros.get(), free_size);
         m_start_pos += free_size;
         m_pop_count = 0;
-        m_total_free_size = m_total_free_size - free_size;
+        m_total_free_size = m_total_free_size - m_popped_size;
+        m_popped_size = 0;
     }
 
     uint128_t total_free_spots () {
@@ -83,11 +94,13 @@ private:
                                                          std::error_code(errno, std::system_category()));
             }
             m_end_pos = static_cast <long> (std::filesystem::file_size(m_hole_log));
-            shift_forward ();
             return file;
         }
         else {
-            std::filesystem::create_directories(m_hole_log);
+            if (!m_hole_log.parent_path().empty()) {
+                std::filesystem::create_directories(m_hole_log.parent_path());
+            }
+
             std::fstream file {m_hole_log, std::ios::binary | std::ios::in | std::ios::out | std::ios::trunc};
             if (!file) {
                 throw std::filesystem::filesystem_error ("Could not open/create the log file in the data store root",
@@ -100,12 +113,13 @@ private:
 
     uint128_t get_total_free_size() {
         ospan <char> buffer (m_end_pos);
-        m_file.seekg(0);
+        m_file.seekg (0, std::ios::beg);
         read_size (m_file, static_cast <long> (buffer.size), buffer.data.get());
         uint128_t total_size = 0;
+        const auto* long_buffer = reinterpret_cast <unsigned long*> (buffer.data.get());
 
-        for (std::size_t i = 0; i < buffer.size; i += ELEMENT_SIZE) {
-            total_size += *reinterpret_cast <unsigned long*> (buffer.data.get() + i + 2 * sizeof(unsigned long));
+        for (std::size_t i = 2; i < buffer.size / sizeof (unsigned long); i += 3) {
+            total_size += long_buffer[i];
         }
         return total_size;
     }
@@ -115,7 +129,7 @@ private:
             return;
         }
         long offset = 0;
-        m_file.seekg(offset);
+        m_file.seekg (offset, std::ios::beg);
         unsigned long free_spot_data[3];
         do {
             read_size(m_file, ELEMENT_SIZE, reinterpret_cast<char *>(free_spot_data));
@@ -128,14 +142,15 @@ private:
             ospan <char> buffer (m_end_pos - offset);
             std::memcpy (buffer.data.get(), &free_spot_data, ELEMENT_SIZE);
             read_size(m_file, static_cast <long> (buffer.size - ELEMENT_SIZE), buffer.data.get() + ELEMENT_SIZE);
-            m_file.seekp(0);
+            m_file.seekp(0, std::ios::beg);
             m_end_pos = static_cast <long> (buffer.size);
-            write_size(m_file, m_end_pos, buffer.data.get());
+            m_file.write(buffer.data.get(), m_end_pos);
         }
         else if (offset > 0 and free_spot_data[2] == 0) {
             m_end_pos = 0;
         }
         std::filesystem::resize_file(m_hole_log, m_end_pos);
+        m_start_pos = 0;
 
     }
 
@@ -148,20 +163,13 @@ private:
         }
     }
 
-    static void write_size (std::fstream& file, long size, const char* buffer) {
-        long w = 0;
-        while (w < size) {
-            file.write (buffer + w, size - w);
-            w += file.gcount ();
-        }
-    }
-
     const std::filesystem::path m_hole_log;
+    long m_end_pos {};
     std::fstream m_file;
     uint128_t m_total_free_size;
     long m_pop_count {};
+    uint128_t m_popped_size {};
     long m_start_pos {};
-    long m_end_pos {};
     constexpr static long ELEMENT_SIZE = 3 * sizeof (unsigned long);
 };
 

@@ -15,7 +15,7 @@ struct owning_span {
     std::size_t size {};
     std::unique_ptr <T[]> data = nullptr;
     owning_span() = default;
-    owning_span(size_t data_size):
+    explicit owning_span(size_t data_size):
             size (data_size),
             data {std::make_unique_for_overwrite <T[]> (size)} {}
     owning_span(size_t data_size, std::unique_ptr <T[]>&& ptr):
