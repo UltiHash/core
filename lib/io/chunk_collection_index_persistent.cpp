@@ -221,6 +221,22 @@ std::size_t chunk_collection_index_persistent::index_file_size()
 
 // ---------------------------------------------------------------------
 
+std::size_t chunk_collection_index_persistent::content_size()
+{
+    std::lock_guard lock(m_index_work_mux);
+
+    std::size_t accumulated{};
+
+    for (const auto& item : *this)
+    {
+        accumulated += item.first.content_size;
+    }
+
+    return accumulated;
+}
+
+// ---------------------------------------------------------------------
+
 std::size_t chunk_collection_index_persistent::content_size(uint8_t index_adress)
 {
     std::lock_guard lock(m_index_work_mux);

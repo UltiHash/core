@@ -333,6 +333,15 @@ std::size_t chunk_collection::size(uint8_t index_adress)
 
 // ---------------------------------------------------------------------
 
+std::size_t chunk_collection::content_size()
+{
+    std::lock_guard lock(m_chunk_collection_workmux);
+
+    return m_index->content_size();
+}
+
+// ---------------------------------------------------------------------
+
 std::size_t chunk_collection::content_size(uint8_t index_address)
 {
     std::lock_guard lock(m_chunk_collection_workmux);

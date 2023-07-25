@@ -80,6 +80,11 @@ public:
     std::size_t index_file_size();
 
     /**
+     * @return the size of the content payload of all fragments/chunks
+     */
+    std::size_t content_size();
+
+    /**
      *
      * @param index_adress is the address of a registered fragment/chunk
      * @return the size of the content payload of the fragment/chunk

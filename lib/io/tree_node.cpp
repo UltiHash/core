@@ -422,6 +422,18 @@ void tree_node::remove(std::stack<unsigned char> at)
 uint64_t tree_node::count()
 {
     std::lock_guard lock(tree_work_mux);
+
+    std::size_t count_out{};
+
+    for(const auto& item: *sub_trees.lock()){
+        count_out += item.second.chunk_num;
+    }
+
+    for(const auto& item: *chunk_collections.lock()){
+        count_out += item.second.chunk_num;
+    }
+
+    return count_out;
 }
 
 // ---------------------------------------------------------------------
@@ -429,6 +441,18 @@ uint64_t tree_node::count()
 std::size_t tree_node::size()
 {
     std::lock_guard lock(tree_work_mux);
+
+    std::size_t size_out{};
+
+    for(const auto& item: *sub_trees.lock()){
+        size_out += item.second.content_size;
+    }
+
+    for(const auto& item: *chunk_collections.lock()){
+        size_out += item.second.content_size;
+    }
+
+    return size_out;
 }
 
 // ---------------------------------------------------------------------
@@ -436,6 +460,14 @@ std::size_t tree_node::size()
 std::size_t tree_node::level_size()
 {
     std::lock_guard lock(tree_work_mux);
+
+    std::size_t size_out{};
+
+    for(const auto& item: *chunk_collections.lock()){
+        size_out += item.second.content_size;
+    }
+
+    return size_out;
 }
 
 // ---------------------------------------------------------------------
@@ -443,6 +475,29 @@ std::size_t tree_node::level_size()
 std::size_t tree_node::content_size()
 {
     std::lock_guard lock(tree_work_mux);
+
+    std::size_t size_out{};
+
+    for(auto& item: *sub_trees.lock()){
+        if(item.first == nullptr){
+            item.first = std::make_shared<tree_node>(getRoot(), item.second.index_num);
+        }
+        size_out += item.first->content_size();
+
+        item.first.reset();
+    }
+
+    for(auto& item: *chunk_collections.lock()){
+        if(item.first == nullptr){
+            std::string hex_str = boost::algorithm::hex(std::to_string(item.second.index_num));
+            item.first = std::make_shared<chunk_collection>(getRoot() / hex_str);
+        }
+        size_out += item.first->content_size();
+
+        item.first.reset();
+    }
+
+    return size_out;
 }
 
 // ---------------------------------------------------------------------
@@ -450,6 +505,20 @@ std::size_t tree_node::content_size()
 std::size_t tree_node::content_level_size()
 {
     std::lock_guard lock(tree_work_mux);
+
+    std::size_t size_out{};
+
+    for(auto& item: *chunk_collections.lock()){
+        if(item.first == nullptr){
+            std::string hex_str = boost::algorithm::hex(std::to_string(item.second.index_num));
+            item.first = std::make_shared<chunk_collection>(getRoot() / hex_str);
+        }
+        size_out += item.first->content_size();
+
+        item.first.reset();
+    }
+
+    return size_out;
 }
 
 // ---------------------------------------------------------------------
@@ -457,6 +526,29 @@ std::size_t tree_node::content_level_size()
 uint64_t tree_node::free_count()
 {
     std::lock_guard lock(tree_work_mux);
+
+    std::size_t free_count{};
+
+    for(auto& item: *sub_trees.lock()){
+        if(item.first == nullptr){
+            item.first = std::make_shared<tree_node>(getRoot(), item.second.index_num);
+        }
+        free_count += item.first->free_count();
+
+        item.first.reset();
+    }
+
+    for(auto& item: *chunk_collections.lock()){
+        if(item.first == nullptr){
+            std::string hex_str = boost::algorithm::hex(std::to_string(item.second.index_num));
+            item.first = std::make_shared<chunk_collection>(getRoot() / hex_str);
+        }
+        free_count += item.first->free();
+
+        item.first.reset();
+    }
+
+    return free_count;
 }
 
 // ---------------------------------------------------------------------
@@ -520,7 +612,7 @@ tree_node::get_tree_node_indexed(uint8_t at)
 }
 
 // ---------------------------------------------------------------------
-
+//TODO: deduplicate
 uint8_t tree_node::next_free_tree_node_address()
 {
     std::lock_guard lock(tree_work_mux);
