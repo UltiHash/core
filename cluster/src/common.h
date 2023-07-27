@@ -6,6 +6,7 @@
 #define CORE_COMMON_H
 
 #include <forward_list>
+#include <span>
 #include "big_int.h"
 
 namespace uh::cluster {

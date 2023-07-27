@@ -10,7 +10,6 @@
 #include <optional>
 #include <cstring>
 #include "common.h"
-#include "ospan.h"
 
 namespace uh::cluster {
 

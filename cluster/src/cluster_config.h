@@ -11,7 +11,6 @@
 
 namespace uh::cluster {
 
-
 struct cluster_skeleton {
     int data_node_jobs_count;
     int dedupe_jobs_count;

@@ -9,12 +9,13 @@ namespace uh::cluster {
 data_store::data_store(int id, data_store_config conf) :
         m_id (id),
         m_conf (std::move (conf)),
-        m_free_spot_manager (m_conf.hole_log){
+        m_free_spot_manager (m_conf.hole_log) {
 
     if (!std::filesystem::exists(m_conf.directory)) {
         std::filesystem::create_directories(m_conf.directory);
     }
 
+    std::unordered_map <int, std::size_t> file_sizes;
     for (const auto& entry: std::filesystem::directory_iterator (m_conf.directory)) {
         if (entry.path() == m_conf.hole_log) {
             continue;
@@ -31,34 +32,42 @@ data_store::data_store(int id, data_store_config conf) :
                                                      std::error_code(errno, std::system_category()));
         }
 
-        std::size_t data_size;
-        const auto ret = ::read (fd, &data_size, sizeof (data_size));
-        if (ret != sizeof (data_size)) {
-            throw std::system_error (std::error_code(errno, std::system_category()), "Could not read the data size");
-        }
-
         m_open_files.emplace(id_offset.second, fd);
-        m_file_data_sizes.emplace(fd, data_size);
-        m_file_sizes.emplace(fd,std::filesystem::file_size(entry.path()));
+        file_sizes.emplace(fd, std::filesystem::file_size(entry.path()));
     }
 
     if (m_open_files.empty()) {
-        add_new_file(0, static_cast <long> (m_conf.min_file_size));
+        int fd = add_new_file(0, static_cast <long> (m_conf.min_file_size));
+        file_sizes.emplace(fd, m_conf.min_file_size);
     }
+    else {
+        std::tie (m_last_file_offset, m_last_fd) = *m_open_files.crbegin();
+        m_last_file_size = file_sizes.at(m_last_fd);
+        const auto ret = ::read (m_last_fd, &m_last_file_data_end, sizeof (m_last_file_data_end));
+        if (ret != sizeof (m_last_file_data_end)) {
+            throw std::system_error (std::error_code(errno, std::system_category()), "Could not read the data size");
+        }
+    }
+
+    m_used = fetch_used_space();
 }
 
 address data_store::write(std::span<char> data) {
 
     std::lock_guard <std::shared_mutex> lock (m);
 
+    if (m_used + data.size() > m_conf.max_storage_size) [[unlikely]] {
+        throw std::bad_alloc();
+    }
+
     const auto alloc = allocate (data.size());
     // TODO io_uring
 
     unsigned long offset = 0;
-    address data_address;
-    auto pos = data_address.cbegin();
+    address data_address {};
+    auto pos = data_address.before_begin();
     for (const auto& partial_alloc: alloc) {
-        if (lseek(partial_alloc.fd, partial_alloc.offset, SEEK_CUR) != partial_alloc.offset) [[unlikely]] {
+        if (lseek(partial_alloc.fd, partial_alloc.offset, SEEK_SET) != partial_alloc.offset) [[unlikely]] {
             throw std::runtime_error ("Could not seek to the allocated offset");
         }
         for (size_t written = 0;
@@ -66,31 +75,38 @@ address data_store::write(std::span<char> data) {
              written += ::write(partial_alloc.fd, data.data() + offset + written, partial_alloc.size - written));
         offset += partial_alloc.size;
         pos = data_address.emplace_after(pos, partial_alloc.global_offset, partial_alloc.size);
-        m_modified_files.emplace_front(partial_alloc.fd);
     }
 
     m_free_spot_manager.apply_popped_items();
+    m_used += data.size();
 
     return data_address;
 }
 
-ospan<char> data_store::read(uint128_t pointer, size_t size) const {
+std::size_t data_store::read(char *buffer, uint128_t pointer, size_t size) const {
     const auto [fd, seek] = get_file_offset_pair(pointer);
-    ospan <char> data (size);
-    if (::lseek (fd, seek, SEEK_SET) != seek) {
+    if (::lseek (fd, seek, SEEK_SET) != seek) [[unlikely]] {
         throw std::runtime_error ("Could not seek to the read position.");
     }
-    for (size_t r = 0;
-         r < size;
-         r += ::read (fd, data.data.get() + r, size - r));
-    return data;
+
+    size_t tr = 0;
+    do {
+        const auto r = ::read (fd, buffer + tr, size - tr);
+        if (r == 0) [[unlikely]] {
+            break;
+        }
+        tr += r;
+    } while (tr < size);
+
+    return tr;
 }
 
 void data_store::remove(uint128_t pointer, size_t size) {
 
     const auto [fd, seek] = get_file_offset_pair(pointer);
 
-    if (seek + size > m_file_sizes.at(fd)) [[unlikely]] {
+    if ((fd == m_last_fd and m_last_file_data_end < seek + size)
+        or (fd != m_last_fd and m_conf.max_file_size < seek + size)) [[unlikely]] {
         throw std::out_of_range ("The removal offset + size goes out of the file scope.");
     }
     if (lseek(fd, seek, SEEK_SET) != seek) [[unlikely]] {
@@ -101,25 +117,42 @@ void data_store::remove(uint128_t pointer, size_t size) {
     for (size_t written = 0; written < size; written += ::write(fd, buf, std::min (size - written, sizeof(buf))));
 
     m_free_spot_manager.push_free_spot(pointer, size);
-    m_modified_files.emplace_front(fd);
-
+    m_used = m_used - size;
+    fsync (fd);
 }
 
 void data_store::sync() {
-    for (const auto fd: m_modified_files) {
-        fsync(fd);
+
+    for (const auto modification: m_modified_files) {
+
+        const auto fd = modification.first;
+        const auto data_end = modification.second;
+        if (::lseek(fd, 0, SEEK_SET) != 0) [[unlikely]] {
+            throw std::runtime_error ("Could not seek to the first position.");
+        }
+        const auto ret = ::write(fd, &data_end, sizeof(data_end));
+        if (ret != sizeof(data_end)) [[unlikely]] {
+            throw std::system_error (std::error_code(errno, std::system_category()), "Could not write the data size");
+        }
+
+
+        if (::lseek(fd, 8, SEEK_SET) != 8) [[unlikely]] {
+            throw std::runtime_error ("Could not seek to the first position.");
+        }
+
+        fsync (fd);
     }
+    m_modified_files.clear();
     m_free_spot_manager.sync();
 }
 
-uint128_t data_store::used_space() {
-    const auto prev_files_data_size =  big_int (m_conf.max_file_size) * (m_open_files.size() - 1);
-    const auto last_fd = m_open_files.crbegin()->second;
-    const auto last_file_data_size =  m_file_data_sizes.at(last_fd);
-    return prev_files_data_size + last_file_data_size + m_free_spot_manager.total_free_spots();
+uint128_t data_store::fetch_used_space() const noexcept {
+    const auto prev_files_data_size = big_int (m_conf.max_file_size) * (m_open_files.size() - 1);
+    return prev_files_data_size + m_last_file_data_end - m_free_spot_manager.total_free_spots();
 }
 
 data_store::~data_store() {
+    sync ();
     for (const auto& open_file: m_open_files) {
         fsync (open_file.second);
         close (open_file.second);
@@ -128,82 +161,74 @@ data_store::~data_store() {
 
 std::pair<int, long> data_store::get_file_offset_pair(uint128_t pointer) const {
     const auto pfd = m_open_files.upper_bound (pointer);
-    if (pfd == m_open_files.cbegin()) {
+    if (pfd == m_open_files.cbegin()) [[unlikely]] {
         throw std::out_of_range ("The given data offset could not be found in this data store");
     }
     const auto [file_offset, fd] = *std::prev (pfd);
-    const auto seek = static_cast <long> ((file_offset - pointer).get_data()[1]);
+    const auto seek = static_cast <long> ((pointer - file_offset).get_data()[1]);
 
     return {fd, seek};
 }
 
-data_store::alloc_t data_store::allocate(std::size_t size) {
+data_store::alloc_t data_store::allocate (std::size_t size) {
 
     alloc_t alloc;
 
     auto free_spot = m_free_spot_manager.pop_free_spot();
-    std::size_t partial_size;
+    std::size_t partial_size = 0;
     while (free_spot.has_value() and size > 0) {
         const auto [fd, seek] = get_file_offset_pair(free_spot->pointer);
         partial_size = std::min (size, free_spot->size);
         alloc.emplace_front(fd, seek, partial_size, free_spot->pointer);
         size -= partial_size;
+        free_spot = m_free_spot_manager.pop_free_spot();
     }
 
-    if (partial_size < free_spot->size) {
+    if (free_spot.has_value() and partial_size < free_spot->size) [[unlikely]] {
         m_free_spot_manager.push_free_spot(free_spot->pointer + partial_size,
                                            free_spot->size - partial_size);
     }
 
+    auto last_file_data_end = m_last_file_data_end;
     while (size > 0) {
-        partial_size = std::min(size, m_conf.max_file_size);
+
+        partial_size = std::min (size, m_conf.max_file_size - last_file_data_end);
+
+        if (partial_size == 0) [[unlikely]] {
+            m_modified_files.insert_or_assign (m_last_fd, last_file_data_end);
+
+            add_new_file (big_int (m_conf.max_file_size) * m_open_files.size(),
+                         static_cast <long> (m_conf.min_file_size));
+            m_used += sizeof (last_file_data_end);
+            partial_size = std::min (size, m_conf.max_file_size);
+            last_file_data_end = m_last_file_data_end;
+        }
+
         size -= partial_size;
 
-        const auto last_fd = m_open_files.crbegin()->second;
-        const auto last_file_offset = m_open_files.crbegin()->first;
-        auto &data_size = m_file_data_sizes.at(last_fd);
-        auto &file_size = m_file_sizes.at(last_fd);
-
-        if (data_size + partial_size <= file_size) {                    // write in last file
-
-            alloc.emplace_front(last_fd, data_size, partial_size, last_file_offset + data_size);
-        } else if (file_size < m_conf.max_file_size) {                  // double the file size
-
-            const auto new_file_size = file_size << 1;
-            const int rc = ftruncate(last_fd, static_cast <long> (new_file_size));
-            if (rc != 0) {
+        if (last_file_data_end + partial_size <= m_last_file_size) [[likely]] {   // write in last file
+            alloc.emplace_front(m_last_fd, last_file_data_end, partial_size, m_last_file_offset + last_file_data_end);
+        } else if (m_last_file_size < m_conf.max_file_size) {                       // double the file size
+            auto new_file_size = m_last_file_size << 1;
+            while (new_file_size - last_file_data_end < partial_size and new_file_size < m_conf.max_file_size) {
+                new_file_size <<= 1;
+            }
+            const int rc = ftruncate(m_last_fd, static_cast <long> (new_file_size));
+            if (rc != 0) [[unlikely]] {
                 throw std::filesystem::filesystem_error("Could not extend file in the data store",
                                                         std::error_code(errno, std::system_category()));
             }
-            file_size = new_file_size;
-            alloc.emplace_front(last_fd, data_size, partial_size, last_file_offset + data_size);
+            m_last_file_size = new_file_size;
+            alloc.emplace_front(m_last_fd, last_file_data_end, partial_size, m_last_file_offset + last_file_data_end);
 
-        } else if (const auto total_size = big_int (m_conf.max_file_size) * m_open_files.size();
-                total_size + partial_size < m_conf.max_storage_size) {   // create a new file
-
-            if (data_size < file_size) {
-                alloc.emplace_front (last_fd, data_size, file_size - data_size, last_file_offset + data_size);
-                partial_size -= file_size - data_size;
-            }
-            auto init_file_size = m_conf.min_file_size;
-            while (init_file_size < partial_size and init_file_size < m_conf.max_file_size) {
-                init_file_size <<= 1;
-            }
-
-            const auto fd = add_new_file(total_size, static_cast <long> (init_file_size));
-            alloc.emplace_front (fd, 0, partial_size, total_size);
-
-        } else {                                                        // no space left
-            throw std::bad_alloc();
+        } else [[unlikely]] {
+            throw std::logic_error("No place found to write the data");
         }
-
-        data_size += partial_size;
-        const auto ret = ::write(last_fd, &data_size, sizeof(data_size));
-        if (ret != sizeof(data_size)) {
-            throw std::system_error(std::error_code(errno, std::system_category()),
-                                    "Could not write the data size");
-        }
+        last_file_data_end += partial_size;
     }
+
+    m_last_file_data_end = last_file_data_end;
+    m_modified_files.insert_or_assign (m_last_fd, last_file_data_end);
 
     return alloc;
 }
@@ -211,25 +236,28 @@ data_store::alloc_t data_store::allocate(std::size_t size) {
 int data_store::add_new_file(const uint128_t &offset, long file_size) {
     const auto file_path = m_conf.directory / get_name(offset);
     const int fd = open (file_path.c_str(), O_RDWR | O_CREAT, S_IWUSR | S_IRUSR);
-    if (fd <= 0) {
+    if (fd <= 0) [[unlikely]] {
         throw std::filesystem::filesystem_error ("Could not create new files in the data store root",
                                                  std::error_code(errno, std::system_category()));
     }
 
     const int rc = ftruncate(fd, file_size);
-    if (rc != 0) {
+    if (rc != 0) [[unlikely]] {
         throw std::filesystem::filesystem_error ("Could not truncate new files in the data store root",
                                                  std::error_code(errno, std::system_category()));
     }
 
-    std::size_t data_size = 0;
-    const auto ret = ::write(fd, &data_size, sizeof(data_size));
-    if (ret != sizeof(data_size)) {
+    std::size_t data_end = sizeof (data_end);
+    const auto ret = ::write(fd, &data_end, sizeof(data_end));
+    if (ret != sizeof(data_end)) [[unlikely]] {
         throw std::system_error (std::error_code(errno, std::system_category()), "Could not write the data size");
     }
-    m_open_files.emplace(0, fd);
-    m_file_data_sizes.emplace(fd, 0);
-    m_file_sizes.emplace(fd, file_size);
+    m_open_files.emplace(offset, fd);
+    m_last_file_data_end = data_end;
+    m_last_file_size = file_size;
+    m_last_fd = fd;
+    m_last_file_offset = offset;
+
     return fd;
 }
 
@@ -244,5 +272,10 @@ std::pair<int, uint128_t> data_store::parse_file_name(const std::string &filenam
 std::string data_store::get_name(const uint128_t &offset) const {
     return "data_" + std::to_string(m_id) + "_" + offset.to_string();
 }
+
+uint128_t data_store::get_used_space() const noexcept {
+    return m_used;
+}
+
 
 } // end namespace uh::cluster

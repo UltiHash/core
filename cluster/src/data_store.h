@@ -8,7 +8,6 @@
 #include "cluster_config.h"
 #include "common.h"
 #include "free_spot_manager.h"
-#include "ospan.h"
 #include <span>
 #include <memory_resource>
 #include <map>
@@ -16,6 +15,7 @@
 #include <unistd.h>
 #include <cstring>
 #include <unordered_map>
+#include <unordered_set>
 
 namespace uh::cluster {
 
@@ -28,18 +28,19 @@ public:
 
     address write (std::span <char> data);
 
-    ospan <char> read (uint128_t pointer, size_t size) const;
+    std::size_t read (char* buffer, uint128_t pointer, size_t size) const;
 
     void remove (uint128_t pointer, size_t size);
 
     void sync ();
 
-    uint128_t used_space ();
+    [[nodiscard]] uint128_t get_used_space () const noexcept;
 
     ~data_store();
 
 
 private:
+
 
     struct partial_alloc_t {
         int fd {};
@@ -50,6 +51,8 @@ private:
     typedef std::forward_list <partial_alloc_t> alloc_t;
 
     [[nodiscard]] std::pair <int, long> get_file_offset_pair (uint128_t pointer) const;
+
+    [[nodiscard]] uint128_t fetch_used_space () const noexcept;
 
     alloc_t allocate (std::size_t size);
 
@@ -63,9 +66,12 @@ private:
     const data_store_config m_conf;
     free_spot_manager m_free_spot_manager;
     std::map <uint128_t, int> m_open_files;
-    std::forward_list <int> m_modified_files;
-    std::unordered_map <int, std::size_t> m_file_data_sizes;
-    std::unordered_map <int, std::size_t> m_file_sizes;
+    std::unordered_map <int, std::size_t> m_modified_files;
+    std::size_t m_last_file_data_end;
+    int m_last_fd;
+    uint128_t m_last_file_offset;
+    std::size_t m_last_file_size;
+    uint128_t m_used;
     std::shared_mutex m;
 
 };

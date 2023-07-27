@@ -4,7 +4,7 @@
 #include "free_spot_manager.h"
 
 namespace uh::cluster {
-    
+
 free_spot_manager::free_spot_manager(std::filesystem::path hole_log) :
         m_hole_log(std::move (hole_log)),
         m_file (open_file()),
@@ -98,13 +98,13 @@ std::fstream free_spot_manager::open_file() {
 }
 
 uint128_t free_spot_manager::get_total_free_size() {
-    ospan <char> buffer (m_end_pos);
+    const auto buffer = std::make_unique_for_overwrite <char []>(m_end_pos);
     m_file.seekg (0, std::ios::beg);
-    read_size (m_file, static_cast <long> (buffer.size), buffer.data.get());
+    read_size (m_file, m_end_pos, buffer.get());
     uint128_t total_size = 0;
-    const auto* long_buffer = reinterpret_cast <unsigned long*> (buffer.data.get());
+    const auto* long_buffer = reinterpret_cast <unsigned long*> (buffer.get());
 
-    for (std::size_t i = 2; i < buffer.size / sizeof (unsigned long); i += 3) {
+    for (std::size_t i = 2; i < m_end_pos / sizeof (unsigned long); i += 3) {
         total_size += long_buffer[i];
     }
     return total_size;
@@ -124,13 +124,13 @@ void free_spot_manager::shift_forward() {
     offset -= ELEMENT_SIZE;
 
     if (offset > 0 and free_spot_data[2] != 0) {
-
-        ospan <char> buffer (m_end_pos - offset);
-        std::memcpy (buffer.data.get(), &free_spot_data, ELEMENT_SIZE);
-        read_size(m_file, static_cast <long> (buffer.size - ELEMENT_SIZE), buffer.data.get() + ELEMENT_SIZE);
+        const auto buffer_size = m_end_pos - offset;
+        const auto buffer = std::make_unique_for_overwrite <char []>(buffer_size);
+        std::memcpy (buffer.get(), &free_spot_data, ELEMENT_SIZE);
+        read_size(m_file, buffer_size - ELEMENT_SIZE, buffer.get() + ELEMENT_SIZE);
         m_file.seekp(0, std::ios::beg);
-        m_end_pos = static_cast <long> (buffer.size);
-        m_file.write(buffer.data.get(), m_end_pos);
+        m_end_pos = buffer_size;
+        m_file.write(buffer.get(), m_end_pos);
     }
     else if (offset > 0 and free_spot_data[2] == 0) {
         m_end_pos = 0;

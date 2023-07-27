@@ -27,7 +27,8 @@ uh::cluster::cluster_skeleton make_cluster_skeleton () {
             .redupe_jobs_count = 0,
             .phonebook_jobs_count = 0,
             .entry_jobs_count= 0,
-    };};
+    };
+}
 
 uh::cluster::data_store_config make_data_store_config () {
     return {
