@@ -49,9 +49,10 @@ enum message_types {
     WRITE_MANY_REQ,
     WRITE_MANY_RESP,
     SYNC_REQ,
-    SYNC_RESP,
+    SYNC_OK,
     REMOVE_REQ,
-    REMOVE_RESP
+    REMOVE_OK,
+    FAILURE
 };
 
 } // end namespace uh::cluster

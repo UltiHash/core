@@ -30,25 +30,38 @@ public:
 
             MPI_Probe(MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
 
-            switch (status.MPI_TAG) {
-                case message_types::INIT_REQ:
-                    handle_init(status.MPI_SOURCE);
-                    break;
-                case message_types::WRITE_REQ:
-                    MPI_Get_count(&status, MPI_CHAR, &message_size);
-                    handle_write(status.MPI_SOURCE, message_size);
-                    break;
-                case message_types::READ_REQ:
-                    MPI_Get_count(&status, MPI_CHAR, &message_size);
-                    handle_read(status.MPI_SOURCE, message_size);
-                    break;
+            try {
+                switch (status.MPI_TAG) {
+                    case message_types::INIT_REQ:
+                        handle_init(status.MPI_SOURCE);
+                        break;
+                    case message_types::WRITE_REQ:
+                        MPI_Get_count(&status, MPI_CHAR, &message_size);
+                        handle_write(status.MPI_SOURCE, message_size);
+                        break;
+                    case message_types::READ_REQ:
+                        MPI_Get_count(&status, MPI_CHAR, &message_size);
+                        handle_read(status.MPI_SOURCE, message_size);
+                        break;
+                    case message_types::SYNC_REQ:
+                        handle_sync(status.MPI_SOURCE);
+                        break;
+                    case message_types::REMOVE_REQ:
+                        MPI_Get_count(&status, MPI_CHAR, &message_size);
+                        handle_remove (status.MPI_SOURCE, message_size);
+                        break;
+                    default:
+                        throw std::invalid_argument ("Unknown tag");
+                }
             }
-
+            catch (std::exception& e) {
+                handle_failure (status.MPI_SOURCE, e);
+            }
 
         }
     }
 
-    void handle_init (int target) const {
+    void handle_init (const int target) const {
         MPI_Status status;
         int dummy;
         MPI_Recv (&dummy, 1, MPI_INT, target, message_types::INIT_REQ, MPI_COMM_WORLD, &status);
@@ -60,7 +73,7 @@ public:
         }
     }
 
-    void handle_write (int source, int size) {
+    void handle_write (const int source, const int size) {
         MPI_Status status;
         const auto buf = std::make_unique_for_overwrite<char []>(size);
         auto rc = MPI_Recv (buf.get(), size, MPI_CHAR, source, message_types::WRITE_REQ, MPI_COMM_WORLD, &status);
@@ -75,11 +88,10 @@ public:
         }
     }
 
-    void handle_read (int source, int req_size) const {
+    void handle_read (const int source, const int req_size) const {
         MPI_Status status;
         address addr(req_size / sizeof(wide_span));
-        auto rc = MPI_Recv(addr.data.get(), req_size, MPI_CHAR, source, message_types::READ_REQ, MPI_COMM_WORLD,
-                           &status);
+        auto rc = MPI_Recv(addr.data.get(), req_size, MPI_CHAR, source, message_types::READ_REQ, MPI_COMM_WORLD, &status);
         if (rc != MPI_SUCCESS) [[unlikely]] {
             throw std::runtime_error("Could not receive the data address for read operation");
         }
@@ -111,6 +123,48 @@ public:
             w += send_size;
         }
 
+    }
+
+    void handle_sync (const int target) {
+        MPI_Status status;
+        int dummy;
+        MPI_Recv (&dummy, 1, MPI_INT, target, message_types::SYNC_REQ, MPI_COMM_WORLD, &status);
+
+        m_data_store.sync();
+
+        const auto rc = MPI_Send(&dummy, 1, MPI_INT, target, message_types::SYNC_OK, MPI_COMM_WORLD);
+        if (rc != MPI_SUCCESS) [[unlikely]] {
+            throw std::runtime_error("Could not send the sync confirmation");
+        }
+    }
+
+    void handle_remove (const int target, const int message_size) {
+        MPI_Status status;
+        address remove_span_list (message_size / sizeof(wide_span));
+        auto rc = MPI_Recv (remove_span_list.data.get(), message_size, MPI_CHAR, target, message_types::REMOVE_REQ, MPI_COMM_WORLD, &status);
+        if (rc != MPI_SUCCESS) [[unlikely]] {
+            throw std::runtime_error("Could not receive the data address for read operation");
+        }
+
+        for (int i = 0; i < remove_span_list.size; ++i) {
+            const auto pointer = remove_span_list.data[i].pointer;
+            const auto size = remove_span_list.data [i].size;
+            m_data_store.remove(pointer, size);
+        }
+
+        int dummy;
+        rc = MPI_Send(&dummy, 1, MPI_INT, target, message_types::REMOVE_OK, MPI_COMM_WORLD);
+        if (rc != MPI_SUCCESS) [[unlikely]] {
+            throw std::runtime_error("Could not send the remove confirmation");
+        }
+    }
+
+    static void handle_failure (const int target, const std::exception &e) {
+        const auto size = static_cast <int> (strlen (e.what()));
+        const auto rc = MPI_Send(e.what(), size, MPI_CHAR, target, message_types::FAILURE, MPI_COMM_WORLD);
+        if (rc != MPI_SUCCESS) [[unlikely]] {
+            throw std::runtime_error("Could not inform the failure");
+        }
     }
 
     const std::string m_job_name;
