@@ -135,9 +135,9 @@ do_listen(
     // Start listening for connections
     acceptor.listen(net::socket_base::max_listen_connections);
 
+    INFO << "starting server";
     for(;;)
     {
-        INFO << "starting server";
         // make a strand for each connection
         auto n_strand = make_strand(acceptor.get_executor());
         boost::asio::co_spawn(
