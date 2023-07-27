@@ -30,7 +30,7 @@ public:
         num[1] = std::stoul(num1_str);
     }
 
-    inline big_int& operator += (const big_int& other) noexcept {
+    constexpr inline big_int& operator += (const big_int& other) noexcept {
         num[0] += other.num[0];
         num[1] += other.num[1];
         return *this;
@@ -139,7 +139,7 @@ public:
         return {num0, num1};
     }
 
-    inline big_int& operator+= (const unsigned long other) noexcept {
+    constexpr inline big_int& operator+= (const unsigned long other) noexcept {
         const auto max_no_overflow = UNSIGNED_MAX_8 - num[1];
         if (other > max_no_overflow) [[unlikely]] {
             num[1] = other - max_no_overflow;

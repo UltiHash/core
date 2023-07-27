@@ -6,8 +6,8 @@
 
 namespace uh::cluster {
 
-data_store::data_store(int id, data_store_config conf) :
-        m_id (id),
+data_store::data_store(data_store_config conf, int id, bool adaptive) :
+        m_data_id (id),
         m_conf (std::move (conf)),
         m_free_spot_manager (m_conf.hole_log) {
 
@@ -22,12 +22,16 @@ data_store::data_store(int id, data_store_config conf) :
         }
 
         const auto id_offset = parse_file_name (entry.path().filename());
-        if (id_offset.first != m_id) {
-            continue;
+        if (!adaptive and id_offset.first != m_data_id) [[unlikely]] { // non-adaptive data store with fixed id
+            throw std::range_error ("The data store is spawned on the wrong data node");
+        }
+        else if (adaptive) { // data store with adaptive id (assuming one data store per node)
+            adaptive = false;
+            m_data_id = id_offset.first;
         }
 
         const int fd = open (entry.path().c_str(), O_RDWR);
-        if (fd <= 0) {
+        if (fd <= 0) [[unlikely]] {
             throw std::filesystem::filesystem_error ("Could not open the files in the data store root",
                                                      std::error_code(errno, std::system_category()));
         }
@@ -56,16 +60,15 @@ address data_store::write(std::span<char> data) {
 
     std::lock_guard <std::shared_mutex> lock (m);
 
-    if (m_used + data.size() > m_conf.max_storage_size) [[unlikely]] {
+    if (m_used + data.size() > m_conf.max_data_store_size) [[unlikely]] {
         throw std::bad_alloc();
     }
 
     const auto alloc = allocate (data.size());
     // TODO io_uring
 
-    unsigned long offset = 0;
-    address data_address {};
-    auto pos = data_address.before_begin();
+    unsigned long offset = 0, index = 0;
+    address data_address (alloc.size());
     for (const auto& partial_alloc: alloc) {
         if (lseek(partial_alloc.fd, partial_alloc.offset, SEEK_SET) != partial_alloc.offset) [[unlikely]] {
             throw std::runtime_error ("Could not seek to the allocated offset");
@@ -74,7 +77,7 @@ address data_store::write(std::span<char> data) {
              written < partial_alloc.size;
              written += ::write(partial_alloc.fd, data.data() + offset + written, partial_alloc.size - written));
         offset += partial_alloc.size;
-        pos = data_address.emplace_after(pos, partial_alloc.global_offset, partial_alloc.size);
+        data_address.data [index ++] = wide_span (partial_alloc.global_offset, partial_alloc.size);
     }
 
     m_free_spot_manager.apply_popped_items();
@@ -195,6 +198,7 @@ data_store::alloc_t data_store::allocate (std::size_t size) {
         partial_size = std::min (size, m_conf.max_file_size - last_file_data_end);
 
         if (partial_size == 0) [[unlikely]] {
+            //TODO revert the new file if IO not successful
             m_modified_files.insert_or_assign (m_last_fd, last_file_data_end);
 
             add_new_file (big_int (m_conf.max_file_size) * m_open_files.size(),
@@ -270,11 +274,15 @@ std::pair<int, uint128_t> data_store::parse_file_name(const std::string &filenam
 }
 
 std::string data_store::get_name(const uint128_t &offset) const {
-    return "data_" + std::to_string(m_id) + "_" + offset.to_string();
+    return "data_" + std::to_string(m_data_id) + "_" + offset.to_string();
 }
 
 uint128_t data_store::get_used_space() const noexcept {
     return m_used;
+}
+
+int data_store::get_data_id() const noexcept {
+    return m_data_id;
 }
 
 

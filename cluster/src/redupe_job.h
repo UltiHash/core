@@ -13,7 +13,7 @@ namespace uh::cluster {
 class redupe_job {
 public:
 
-    redupe_job (int id, std::shared_ptr <const uh::cluster::cluster_ranks> cluster_plan):
+    redupe_job (int id, uh::cluster::cluster_ranks cluster_plan):
             m_cluster_plan (std::move (cluster_plan)),
             m_id (id),
             m_job_name ("redupe_node_" + std::to_string (id)) {
@@ -24,7 +24,7 @@ public:
         std::cout << "hello from " << m_job_name << std::endl;
     }
 
-    const std::shared_ptr <const cluster_ranks> m_cluster_plan;
+    const cluster_ranks m_cluster_plan;
     const int m_id;
     const std::string m_job_name;
 

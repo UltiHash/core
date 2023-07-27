@@ -8,6 +8,7 @@
 #include <vector>
 #include <numeric>
 #include <filesystem>
+#include "common.h"
 
 namespace uh::cluster {
 
@@ -52,7 +53,7 @@ struct data_store_config {
     std::filesystem::path hole_log;
     size_t min_file_size;
     size_t max_file_size;
-    size_t max_storage_size;
+    uint128_t max_data_store_size;
 };
 
 } // end namespace uh::cluster

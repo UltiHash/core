@@ -28,7 +28,7 @@ struct config_fixture
                 .hole_log = "root/dn/log",
                 .min_file_size = 1024ul,
                 .max_file_size = 8ul * 1024ul,
-                .max_storage_size = 16 * 1024ul
+                .max_data_store_size = 16 * 1024ul
         };
     }
 
@@ -265,7 +265,7 @@ BOOST_FIXTURE_TEST_CASE (test_data_store, config_fixture)
     size_t expected_size = sizeof (size_t);
     {
 
-        data_store ds (0, make_data_store_config());
+        data_store ds (make_data_store_config(), 0);
         addr1 = ds.write(data1);
         expected_size += sizeof (data1);
         BOOST_CHECK(ds.get_used_space() == expected_size);
@@ -294,28 +294,31 @@ BOOST_FIXTURE_TEST_CASE (test_data_store, config_fixture)
         BOOST_CHECK(ds.get_used_space() == expected_size);
 
         size_t rsize;
-        rsize = ds.read(buf, addr1.front().pointer, addr1.front().size);
+        rsize = ds.read(buf, addr1.data[0].pointer, addr1.data[0].size);
         BOOST_TEST(rsize == sizeof(data1));
         BOOST_CHECK(std::memcmp(buf, data1, rsize) == 0);
 
-        rsize = ds.read(buf, addr2.front().pointer, addr2.front().size);
+        rsize = ds.read(buf, addr2.data[0].pointer, addr2.data[0].size);
         BOOST_TEST(rsize == sizeof(data2));
         BOOST_CHECK(std::memcmp(buf, data2, rsize) == 0);
 
-        rsize = ds.read(buf, addr3.front().pointer, addr3.front().size);
+        rsize = ds.read(buf, addr3.data[0].pointer, addr3.data[0].size);
         BOOST_TEST(rsize == sizeof(data3));
         BOOST_CHECK(std::memcmp(buf, data3, rsize) == 0);
 
-        rsize = ds.read(buf, addr4.front().pointer, addr4.front().size);
+        rsize = ds.read(buf, addr4.data[0].pointer, addr4.data[0].size);
         BOOST_TEST(rsize == sizeof(data4));
         BOOST_CHECK(std::memcmp(buf, data4, rsize) == 0);
 
-        rsize = ds.read(buf, addr5.front().pointer, addr5.front().size);
+        rsize = ds.read(buf, addr5.data[0].pointer, addr5.data[0].size);
         BOOST_TEST(rsize == sizeof(data5));
         BOOST_CHECK(std::memcmp(buf, data5, rsize) == 0);
 
         size_t ts = 0;
-        for (const auto& p: addr6) {
+
+
+        for (int i = 0; i < addr6.size; ++i) {
+            const auto p = addr6.data[i];
             rsize = ds.read(buf + ts, p.pointer, p.size);
             ts += rsize;
         }
@@ -323,7 +326,8 @@ BOOST_FIXTURE_TEST_CASE (test_data_store, config_fixture)
         BOOST_CHECK(std::memcmp(buf, data6, ts) == 0);
 
         ts = 0;
-        for (const auto& p: addr7) {
+        for (int i = 0; i < addr7.size; ++i) {
+            const auto p = addr7.data[i];
             rsize = ds.read(buf + ts, p.pointer, p.size);
             ts += rsize;
         }
@@ -331,7 +335,8 @@ BOOST_FIXTURE_TEST_CASE (test_data_store, config_fixture)
         BOOST_CHECK(std::memcmp(buf, data7, ts) == 0);
 
         ts = 0;
-        for (const auto& p: addr8) {
+        for (int i = 0; i < addr8.size; ++i) {
+            const auto p = addr8.data[i];
             rsize = ds.read(buf + ts, p.pointer, p.size);
             ts += rsize;
         }
@@ -339,7 +344,8 @@ BOOST_FIXTURE_TEST_CASE (test_data_store, config_fixture)
         BOOST_CHECK(std::memcmp(buf, data8, ts) == 0);
 
         ts = 0;
-        for (const auto& p: addr9) {
+        for (int i = 0; i < addr9.size; ++i) {
+            const auto p = addr9.data[i];
             rsize = ds.read(buf + ts, p.pointer, p.size);
             ts += rsize;
         }
@@ -348,9 +354,10 @@ BOOST_FIXTURE_TEST_CASE (test_data_store, config_fixture)
 
         BOOST_CHECK(ds.get_used_space() == expected_size);
 
-        ds.remove(addr9.front().pointer, addr9.front().size);
+        ds.remove(addr9.data[0].pointer, addr9.data[0].size);
         ts = 0;
-        for (const auto& p: addr9) {
+        for (int i = 0; i < addr9.size; ++i) {
+            const auto p = addr9.data[i];
             rsize = ds.read(buf + ts, p.pointer, p.size);
             ts += rsize;
         }
@@ -362,9 +369,10 @@ BOOST_FIXTURE_TEST_CASE (test_data_store, config_fixture)
         BOOST_CHECK_THROW (ds.write(data10), std::bad_alloc);
         BOOST_CHECK(ds.get_used_space() == expected_size);
 
-        ds.remove(addr2.front().pointer, addr2.front().size);
+        ds.remove(addr2.data[0].pointer, addr2.data[0].size);
         ts = 0;
-        for (const auto& p: addr2) {
+        for (int i = 0; i < addr2.size; ++i) {
+            const auto p = addr2.data[i];
             rsize = ds.read(buf + ts, p.pointer, p.size);
             ts += rsize;
         }
@@ -380,7 +388,8 @@ BOOST_FIXTURE_TEST_CASE (test_data_store, config_fixture)
         BOOST_CHECK_THROW (ds.write(data11), std::bad_alloc);
 
         ts = 0;
-        for (const auto& p: addr6) {
+        for (int i = 0; i < addr6.size; ++i) {
+            const auto p = addr6.data[i];
             rsize = ds.read(buf + ts, p.pointer, p.size);
             ts += rsize;
         }
@@ -389,7 +398,8 @@ BOOST_FIXTURE_TEST_CASE (test_data_store, config_fixture)
         BOOST_CHECK(std::memcmp(buf, data6, ts) == 0);
 
         ts = 0;
-        for (const auto& p: addr7) {
+        for (int i = 0; i < addr7.size; ++i) {
+            const auto p = addr7.data[i];
             rsize = ds.read(buf + ts, p.pointer, p.size);
             ts += rsize;
         }
@@ -397,7 +407,8 @@ BOOST_FIXTURE_TEST_CASE (test_data_store, config_fixture)
         BOOST_CHECK(std::memcmp(buf, data7, ts) == 0);
 
         ts = 0;
-        for (const auto& p: addr8) {
+        for (int i = 0; i < addr8.size; ++i) {
+            const auto p = addr8.data[i];
             rsize = ds.read(buf + ts, p.pointer, p.size);
             ts += rsize;
         }
@@ -411,7 +422,7 @@ BOOST_FIXTURE_TEST_CASE (test_data_store, config_fixture)
     }
 
     {
-        data_store ds (0, make_data_store_config());
+        data_store ds (make_data_store_config(), 0);
         BOOST_TEST(ds.get_used_space().get_data()[1] == expected_size);
 
         size_t ts, rsize;
@@ -420,7 +431,8 @@ BOOST_FIXTURE_TEST_CASE (test_data_store, config_fixture)
 
         ts = 0;
 
-        for (const auto& p: addr6) {
+        for (int i = 0; i < addr6.size; ++i) {
+            const auto p = addr6.data[i];
             rsize = ds.read(buf + ts, p.pointer, p.size);
             ts += rsize;
         }
@@ -428,7 +440,8 @@ BOOST_FIXTURE_TEST_CASE (test_data_store, config_fixture)
         BOOST_CHECK(std::memcmp(buf, data6, ts) == 0);
 
         ts = 0;
-        for (const auto& p: addr7) {
+        for (int i = 0; i < addr7.size; ++i) {
+            const auto p = addr7.data[i];
             rsize = ds.read(buf + ts, p.pointer, p.size);
             ts += rsize;
         }
@@ -436,7 +449,8 @@ BOOST_FIXTURE_TEST_CASE (test_data_store, config_fixture)
         BOOST_CHECK(std::memcmp(buf, data7, ts) == 0);
 
         ts = 0;
-        for (const auto& p: addr8) {
+        for (int i = 0; i < addr8.size; ++i) {
+            const auto p = addr8.data[i];
             rsize = ds.read(buf + ts, p.pointer, p.size);
             ts += rsize;
         }
@@ -444,7 +458,8 @@ BOOST_FIXTURE_TEST_CASE (test_data_store, config_fixture)
         BOOST_CHECK(std::memcmp(buf, data8, ts) == 0);
 
         ts = 0;
-        for (const auto& p: addr6) {
+        for (int i = 0; i < addr6.size; ++i) {
+            const auto p = addr6.data[i];
             ds.remove(p.pointer, p.size);
             ts += p.size;
         }
@@ -457,7 +472,8 @@ BOOST_FIXTURE_TEST_CASE (test_data_store, config_fixture)
 
         ts = 0;
 
-        for (const auto& p: addr11) {
+        for (int i = 0; i < addr11.size; ++i) {
+            const auto p = addr11.data[i];
             rsize = ds.read(buf + ts, p.pointer, p.size);
             ts += rsize;
         }

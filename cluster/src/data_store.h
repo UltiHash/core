@@ -9,6 +9,7 @@
 #include "common.h"
 #include "free_spot_manager.h"
 #include <span>
+#include <list>
 #include <memory_resource>
 #include <map>
 #include <fcntl.h>
@@ -24,7 +25,7 @@ class data_store {
 
 public:
 
-    explicit data_store (int id, data_store_config conf);
+    explicit data_store (data_store_config conf, int id, bool adaptive = true);
 
     address write (std::span <char> data);
 
@@ -35,6 +36,8 @@ public:
     void sync ();
 
     [[nodiscard]] uint128_t get_used_space () const noexcept;
+
+    int get_data_id () const noexcept;
 
     ~data_store();
 
@@ -48,7 +51,7 @@ private:
         std::size_t size {};
         uint128_t global_offset;
     };
-    typedef std::forward_list <partial_alloc_t> alloc_t;
+    typedef std::list <partial_alloc_t> alloc_t;
 
     [[nodiscard]] std::pair <int, long> get_file_offset_pair (uint128_t pointer) const;
 
@@ -62,13 +65,13 @@ private:
 
     [[nodiscard]] std::string get_name (const uint128_t& offset) const;
 
-    const int m_id;
+    int m_last_fd {};
+    std::size_t m_last_file_data_end {};
+    int m_data_id;
     const data_store_config m_conf;
     free_spot_manager m_free_spot_manager;
     std::map <uint128_t, int> m_open_files;
     std::unordered_map <int, std::size_t> m_modified_files;
-    std::size_t m_last_file_data_end;
-    int m_last_fd;
     uint128_t m_last_file_offset;
     std::size_t m_last_file_size;
     uint128_t m_used;

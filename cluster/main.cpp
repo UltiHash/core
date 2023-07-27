@@ -36,32 +36,32 @@ uh::cluster::data_store_config make_data_store_config () {
         .hole_log = "root/dn/log",
         .min_file_size = 2ul * 1024ul * 1024ul * 1024ul,
         .max_file_size = 16ul * 1024ul * 1024ul * 1024ul,
-        .max_storage_size = 64ul * 1024ul * 1024ul * 1024ul
+        .max_data_store_size = 64ul * 1024ul * 1024ul * 1024ul
     };
 }
 
 void execute_role (const int rank, const uh::cluster::cluster_skeleton& cluster_conf) {
 
-    auto cluster_plan = std::make_shared <const uh::cluster::cluster_ranks> (cluster_conf);
+    uh::cluster::cluster_ranks cluster_plan (cluster_conf);
 
-    if (rank <= cluster_plan->data_node_ranks.back()) {
-        const auto id = rank - cluster_plan->data_node_ranks.front();
-        uh::cluster::data_node dn (id, std::move (cluster_plan), make_data_store_config());
+    if (rank <= cluster_plan.data_node_ranks.back()) {
+        const auto id = rank - cluster_plan.data_node_ranks.front();
+        uh::cluster::data_node dn (make_data_store_config(), id);
         dn.run();
     }
-    else if (rank <= cluster_plan->dedupe_ranks.back()) {
+    else if (rank <= cluster_plan.dedupe_ranks.back()) {
         uh::cluster::dedupe_job dd (rank, cluster_plan);
         dd.run();
     }
-    else if (rank <= cluster_plan->redupe_ranks.back()) {
+    else if (rank <= cluster_plan.redupe_ranks.back()) {
         uh::cluster::redupe_job rd (rank, cluster_plan);
         rd.run();
     }
-    else if (rank <= cluster_plan->phonebook_ranks.back()) {
+    else if (rank <= cluster_plan.phonebook_ranks.back()) {
         uh::cluster::phonebook_job pb (rank, cluster_plan);
         pb.run();
     }
-    else if (rank <= cluster_plan->entry_ranks.back()) {
+    else if (rank <= cluster_plan.entry_ranks.back()) {
         uh::cluster::entry_job en (rank, cluster_plan);
         en.run();
     }
