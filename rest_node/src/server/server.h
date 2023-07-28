@@ -16,146 +16,63 @@
 #include <vector>
 #include <boost/beast/http/message_generator.hpp>
 #include <logging/logging_boost.h>
-
-namespace beast = boost::beast;         // from <boost/beast.hpp>
-namespace http = beast::http;           // from <boost/beast/http.hpp>
-namespace net = boost::asio;            // from <boost/asio.hpp>
-using tcp = boost::asio::ip::tcp;       // from <boost/asio/ip/tcp.hpp>
-
-using tcp_stream = typename beast::tcp_stream::rebind_executor<
-        net::use_awaitable_t<>::executor_with_default<net::any_io_executor>>::other;
+#include "net/server.h"
 
 //------------------------------------------------------------------------------
 
-// Handles the request received
-template <class Body, class Allocator>
-http::response<http::string_body>
-handle_request(http::request<Body, http::basic_fields<Allocator>>&& req)
+namespace uh::rest
 {
 
-    // Returns a bad request response
-    auto const bad_request =
-            [&req](beast::string_view why)
-            {
-                http::response<http::string_body> res{http::status::bad_request, req.version()};
-                res.set(http::field::server, BOOST_BEAST_VERSION_STRING);
-                res.set(http::field::content_type, "text/html");
-                res.keep_alive(req.keep_alive());
-                res.body() = std::string(why);
-                res.prepare_payload();
-                return res;
-            };
+    namespace beast = boost::beast;         // from <boost/beast.hpp>
+    namespace http = beast::http;           // from <boost/beast/http.hpp>
+    namespace net = boost::asio;            // from <boost/asio.hpp>
+    using tcp = boost::asio::ip::tcp;       // from <boost/asio/ip/tcp.hpp>
 
-    // Respond to HEAD request
-    if(req.method() == http::verb::get)
-    {
-        http::response<http::string_body> res{http::status::ok, req.version()};
-        res.set(http::field::server, BOOST_BEAST_VERSION_STRING);
-        res.set(http::field::content_type, "text/html");
-        res.keep_alive(req.keep_alive());
-        res.body() = std::string("This is the response for the GET request.");
-        res.prepare_payload();
-        return res;
-    }
-
-    return bad_request("Unknown HTTP-method");
-}
+    using tcp_stream = typename beast::tcp_stream::rebind_executor<
+            net::use_awaitable_t<>::executor_with_default<net::any_io_executor>>::other;
 
 //------------------------------------------------------------------------------
 
-// Handles an HTTP server connection
-net::awaitable<void>
-do_session(tcp_stream stream)
-{
-    INFO << "connection from: " << stream.socket().remote_endpoint();
-
-    // This buffer is required to persist across reads
-    beast::flat_buffer buffer;
-
-    // This lambda is used to send messages
-    try
+    struct rest_server_config
     {
-        for(;;)
-        {
-            // Set the timeout.
-            stream.expires_after(std::chrono::seconds(10));
+        constexpr static uint16_t DEFAULT_PORT = 8080;
+        constexpr static std::size_t DEFAULT_THREADS = 5;
 
-            // Read a request
-            http::request<http::string_body> req;
-            co_await http::async_read(stream, buffer, req);
-
-            // Handle the request
-            http::response<http::string_body> msg =
-                    handle_request(std::move(req));
-
-            // Determine if we should close the connection
-            bool keep_alive = msg.keep_alive();
-
-            // Send the response
-            co_await http::async_write(stream, std::move(msg), net::use_awaitable);
-
-            if(! keep_alive)
-            {
-                // This means we should close the connection, usually because
-                // the response indicated the "Connection: close" semantic.
-                break;
-            }
-        }
-    }
-    catch (boost::system::system_error & se)
-    {
-        if (se.code() != http::error::end_of_stream )
-            throw ;
-    }
-
-    // Send a TCP shutdown
-    beast::error_code ec;
-    stream.socket().shutdown(tcp::socket::shutdown_send, ec);
-
-    // At this point the connection is closed gracefully
-    // we ignore the error because the client might have
-    // dropped the connection already.
-}
+        std::size_t threads = DEFAULT_THREADS;
+        boost::asio::ip::address address;
+        uint16_t port = DEFAULT_PORT;
+    };
 
 //------------------------------------------------------------------------------
 
-// Accepts incoming connections and launches the sessions
-net::awaitable<void>
-do_listen(
-        tcp::endpoint endpoint)
-{
-    // Open the acceptor
-    auto acceptor = boost::asio::use_awaitable_t<boost::asio::any_io_executor>::as_default_on(tcp::acceptor(co_await net::this_coro::executor));
-    acceptor.open(endpoint.protocol());
-
-    // Allow address reuse
-    acceptor.set_option(net::socket_base::reuse_address(true));
-
-    // Bind to the server address
-    acceptor.bind(endpoint);
-
-    // Start listening for connections
-    acceptor.listen(net::socket_base::max_listen_connections);
-
-    INFO << "starting server";
-    for(;;)
+    class rest_server : public uh::net::server
     {
-        boost::asio::co_spawn(
-                acceptor.get_executor(),
-                do_session(tcp_stream(co_await acceptor.async_accept())),
-                [](const std::exception_ptr& e)
-                {
-                    if (e)
-                        try
-                        {
-                            std::rethrow_exception(e);
-                        }
-                        catch (std::exception &e) {
-                            std::cerr << "Error in session: " << e.what() << "\n";
-                        }
-                });
-    }
+    private:
+        const rest_server_config& m_config;
+        net::io_context m_ioc;
+        std::vector<std::thread> m_thread_container;
 
-}
+    public:
+        explicit rest_server(const rest_server_config& config);
+
+        ~rest_server() = default;
+
+        [[nodiscard]] bool is_busy() const override;
+
+        void run() override;
+
+        // Handles the request received
+        template <class Body, class Allocator>
+        http::response<http::string_body>
+        handle_request(http::request<Body, http::basic_fields<Allocator>>&& req);
+
+        // Handles an HTTP server connection
+        net::awaitable<void> do_session(tcp_stream stream);
+
+        // Accepts incoming connections and launches the sessions
+        net::awaitable<void> do_listen(tcp::endpoint endpoint);
+    };
 
 //------------------------------------------------------------------------------
+
+} // namespace uh::net

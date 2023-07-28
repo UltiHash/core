@@ -1,49 +1,44 @@
 #include "server/server.h"
 
+using namespace uh::rest;
+
 int main(int argc, char* argv[])
 {
-    // Check command line arguments.
-    if (argc != 4)
+    try
     {
-        std::cerr <<
-                  "Usage: http-server-awaitable <address> <port> <threads>\n" <<
-                  "Example:\n" <<
-                  "    http-server-awaitable 0.0.0.0 8080 1\n";
+        // command line parser
+        if (argc != 4)
+        {
+            std::cerr <<
+                      "Usage: http-server-awaitable <address> <port> <threads>\n" <<
+                      "Example:\n" <<
+                      "    http-server-awaitable 0.0.0.0 8080 1\n";
+            return EXIT_FAILURE;
+        }
+
+        rest_server_config server_config;
+
+        server_config.address = boost::asio::ip::make_address(argv[1]);
+        server_config.port = static_cast<uint16_t>(std::atoi(argv[2]));
+        server_config.threads = std::max<std::size_t>(1, std::atoi(argv[3]));
+
+        // run the server; will block
+        rest_server server(server_config);
+        server.run();
+
+    }
+    catch (const std::exception &e)
+    {
+        FATAL << e.what();
+        std::cerr << "Error while starting service: " << e.what() << "\n";
         return EXIT_FAILURE;
     }
-    auto const address = net::ip::make_address(argv[1]);
-    auto const port = static_cast<unsigned short>(std::atoi(argv[2]));
-    auto const threads = std::max<int>(1, std::atoi(argv[3]));
-
-    // The io_context is required for all I/O
-    net::io_context ioc{threads};
-
-    // Spawn a listening port
-    boost::asio::co_spawn(ioc,
-                          do_listen(tcp::endpoint{address, port}),
-                          [](const std::exception_ptr& e)
-                          {
-                              if (e)
-                                  try
-                                  {
-                                      std::rethrow_exception(e);
-                                  }
-                                  catch(std::exception & e)
-                                  {
-                                      std::cerr << "Error in acceptor: " << e.what() << "\n";
-                                  }
-                          });
-
-    // Run the I/O service on the requested number of threads
-    std::vector<std::thread> v;
-    v.reserve(threads - 1);
-    for(auto i = threads - 1; i > 0; --i)
-        v.emplace_back(
-                [&ioc]
-                {
-                    ioc.run();
-                });
-    ioc.run();
+    catch (...)
+    {
+        FATAL << "unknown exception occurred";
+        std::cerr << "Error while starting service: unknown error\n";
+        return EXIT_FAILURE;
+    }
 
     return EXIT_SUCCESS;
 }
