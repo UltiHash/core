@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.22.0 FATAL_ERROR)
-project(udb VERSION 0.1.0)
+project(udb-persistence VERSION 0.1.0)
 message(STATUS "Building ${PROJECT_NAME}...")
 
 set(CMAKE_CXX_STANDARD 20)
@@ -12,7 +12,7 @@ find_package(Boost 1.80 COMPONENTS program_options unit_test_framework REQUIRED)
 find_package(OpenSSL 3.0 REQUIRED)
 
 # internal dependencies
-set(${PROJECT_NAME}_INTERNAL_DEPS uhLibNet uhLibProtocol uhLibUtil uhLibIo)
+set(${PROJECT_NAME}_INTERNAL_DEPS uhLibUtil uhLibIo udb)
 
 # configuring library dependencies for cmake and linker
 set(${PROJECT_NAME}_INCLUDE_DIRS ${CMAKE_CURRENT_BINARY_DIR} src ${${PROJECT_NAME}_INTERNAL_DEPS})
@@ -28,9 +28,9 @@ add_library(${PROJECT_NAME} STATIC ${HEADER_FILE_LIST} ${SOURCE_FILE_LIST})
 target_link_libraries(${PROJECT_NAME} PRIVATE ${${PROJECT_NAME}_LINK_LIBRARIES})
 target_include_directories(${PROJECT_NAME} PUBLIC ${${PROJECT_NAME}_INCLUDE_DIRS})
 
-add_executable(simple_example ../client-sdk/examples/simple_example.cpp)
-target_link_libraries(simple_example ${PROJECT_NAME})
-target_include_directories(simple_example PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
+add_executable(client_example ../client-sdk-persistence/examples/client_example.cpp)
+target_link_libraries(client_example ${PROJECT_NAME})
+target_include_directories(client_example PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 ## create testing targets
 #include(${CMAKE_CURRENT_SOURCE_DIR}/../cmake/testing/CMakeLists.txt)
