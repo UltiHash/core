@@ -29,7 +29,7 @@ upload_corpus ()
     local remote="$1"; shift;
     local flags=$*
 
-    ${PATH_CLIENT} --integrate "${volume}" "${corpus}" --agency-node "${remote}" ${flags}
+    ${PATH_CLIENT} --integrate --overwrite-all "${volume}" "${corpus}" --agency-node "${remote}" ${flags}
 }
 
 #
