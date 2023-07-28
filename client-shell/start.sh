@@ -37,7 +37,7 @@ cp /usr/local/bin/uh-cli test
 
 # store checksums of test workload, integrate data into UltiHash volume and delete files afterwards
 sha512sum test/uh-cli > checksum.txt
-uh-cli --integrate test.uh test --agency-node ${SERVER_NAME}:${SERVER_PORT}
+uh-cli --integrate --overwrite-all test.uh test --agency-node ${SERVER_NAME}:${SERVER_PORT}
 rm -Rf test
 
 # retrieve test workload and validate their checksums

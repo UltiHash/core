@@ -34,6 +34,7 @@ class client_options : public uh::options::options
         bool m_integrate = false;
         bool m_list = false;
         bool m_exclude = false;
+        bool m_overwrite_all = false;
 
     private:
         client_config m_config{3};
