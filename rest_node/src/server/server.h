@@ -47,13 +47,13 @@ handle_request(http::request<Body, http::basic_fields<Allocator>>&& req)
             };
 
     // Respond to HEAD request
-    if(req.method() == http::verb::head)
+    if(req.method() == http::verb::get)
     {
         http::response<http::string_body> res{http::status::ok, req.version()};
         res.set(http::field::server, BOOST_BEAST_VERSION_STRING);
         res.set(http::field::content_type, "text/html");
         res.keep_alive(req.keep_alive());
-        res.body() = std::string("This is the response for the HEAD request.");
+        res.body() = std::string("This is the response for the GET request.");
         res.prepare_payload();
         return res;
     }
@@ -67,6 +67,8 @@ handle_request(http::request<Body, http::basic_fields<Allocator>>&& req)
 net::awaitable<void>
 do_session(tcp_stream stream)
 {
+    INFO << "connection from: " << stream.socket().remote_endpoint();
+
     // This buffer is required to persist across reads
     beast::flat_buffer buffer;
 
@@ -76,7 +78,7 @@ do_session(tcp_stream stream)
         for(;;)
         {
             // Set the timeout.
-            stream.expires_after(std::chrono::seconds(30));
+            stream.expires_after(std::chrono::seconds(10));
 
             // Read a request
             http::request<http::string_body> req;
@@ -138,11 +140,9 @@ do_listen(
     INFO << "starting server";
     for(;;)
     {
-        // make a strand for each connection
-        auto n_strand = make_strand(acceptor.get_executor());
         boost::asio::co_spawn(
-                n_strand,
-                do_session(tcp_stream(co_await acceptor.async_accept(n_strand))),
+                acceptor.get_executor(),
+                do_session(tcp_stream(co_await acceptor.async_accept())),
                 [](const std::exception_ptr& e)
                 {
                     if (e)

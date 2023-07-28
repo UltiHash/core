@@ -1,117 +1,129 @@
 #include <boost/asio.hpp>
-#include <boost/asio/experimental/awaitable_operators.hpp>
+#include <boost/beast/core.hpp>
+#include <boost/beast/http.hpp>
+#include <boost/beast/version.hpp>
+#include <boost/asio/awaitable.hpp>
+#include <boost/asio/co_spawn.hpp>
+#include <boost/asio/use_awaitable.hpp>
+#include <cstdlib>
+#include <functional>
 #include <iostream>
-#include <set>
+#include <string>
+#include <thread>
 
-namespace asio = boost::asio;
-using asio::use_awaitable;
-using asio::ip::tcp;
+namespace beast = boost::beast;         // from <boost/beast.hpp>
+namespace http = beast::http;           // from <boost/beast/http.hpp>
+namespace net = boost::asio;            // from <boost/asio.hpp>
+using tcp = boost::asio::ip::tcp;       // from <boost/asio/ip/tcp.hpp>
 
-namespace this_coro          = asio::this_coro;
-constexpr auto nothrow_await = asio::as_tuple(use_awaitable);
-using namespace asio::experimental::awaitable_operators;
-using namespace std::literals::chrono_literals;
+//------------------------------------------------------------------------------
 
-void once_in(size_t n, auto&& action) { // helper for reduced frequency logging
-    static std::atomic_size_t counter_ = 0;
-    if ((++counter_ % n) == 0) {
-        if constexpr (std::is_invocable_v<decltype(action), size_t>)
-            std::move(action)(counter_);
-        else
-            std::move(action)();
+using tcp_stream = typename beast::tcp_stream::rebind_executor<
+        net::use_awaitable_t<>::executor_with_default<net::any_io_executor>>::other;
+
+// Report a failure
+void
+fail(beast::error_code ec, char const* what)
+{
+    std::cerr << what << ": " << ec.message() << "\n";
+}
+
+// Performs an HTTP GET and prints the response
+net::awaitable<void>
+do_session(
+        std::string host,
+        std::string port,
+        std::string target,
+        int version)
+{
+    // These objects perform our I/O
+    auto resolver = net::use_awaitable.as_default_on(tcp::resolver(co_await net::this_coro::executor));
+    auto stream = tcp_stream(co_await net::this_coro::executor);
+
+    // Look up the domain name
+    auto const results = co_await resolver.async_resolve(host, port);
+
+    // Set the timeout.
+    stream.expires_after(std::chrono::seconds(10));
+
+    // Make the connection on the IP address we get from a lookup
+    co_await stream.async_connect(results);
+
+    for(;;)
+    {
+        // Set up an HTTP GET request message
+        http::request<http::string_body> req{http::verb::get, target, version};
+        req.set(http::field::host, host);
+        req.set(http::field::user_agent, BOOST_BEAST_VERSION_STRING);
+
+        // Send the HTTP request to the remote host
+        co_await http::async_write(stream, req);
+
+        // This buffer is used for reading and must be persisted
+        beast::flat_buffer b;
+
+        // Declare a container to hold the response
+        http::response<http::dynamic_body> res;
+
+        // Receive the HTTP response
+        co_await http::async_read(stream, b, res);
+
+        // Write the message to standard out
+        std::cout << "Thread ID:" << std::this_thread::get_id() << "\n" << res << '\n' << std::endl;
     }
 }
 
-asio::awaitable<void> timeout(auto duration) {
-    asio::steady_timer timer(co_await this_coro::executor);
-    timer.expires_after(duration);
-    co_await timer.async_wait(nothrow_await);
-}
-
-asio::awaitable<void> server_session(tcp::socket socket) {
-    try {
-        for (std::array<char, 2000> data;;) {
-            if (auto r = co_await (async_read(socket, asio::buffer(data), nothrow_await) || timeout(2ms));
-                    r.index() == 1) {
-                once_in(1000, [&] { std::cout << "server_session time out." << std::endl; });
-            } else {
-                auto [e, n] = std::get<0>(r);
-                if (!e) {
-                    once_in(1000, [&, n = n] {
-                        std::cout << "server_session writing " << n << " bytes to "
-                                  << socket.remote_endpoint() << std::endl;
-                    });
-                    if (n)
-                        co_await async_write(socket, asio::buffer(data, n), use_awaitable);
-                } else {
-                    std::cout << e.message() << std::endl;
-                }
-            }
-        }
-    } catch (boost::system::system_error const& se) {
-        std::cout << "server_session Exception: " << se.code().message() << std::endl;
-    } catch (std::exception const& e) {
-        std::cout << "server_session Exception: " << e.what() << std::endl;
+int main(int argc, char** argv)
+{
+    // Check command line arguments.
+    if(argc != 4)
+    {
+        std::cerr <<
+                  "Usage: http-client-awaitable <host> <port> <target>\n" <<
+                  "Example:\n" <<
+                  "    http-client-awaitable www.example.com 80 5 /\n";
+        return EXIT_FAILURE;
     }
 
-    std::cout << "server_session closed" << std::endl;
-}
+    auto const host = argv[1];
+    auto const port = argv[2];
+    auto const target = argv[3];
+    auto const threads = 5;
+    int version = 11;
 
-asio::awaitable<void> listener(uint16_t port) {
-    for (tcp::acceptor acc(co_await this_coro::executor, {{}, port});;) {
-        auto s = make_strand(acc.get_executor());
-        co_spawn(                                                        //
-                s,                                                           //
-                server_session(co_await acc.async_accept(s, use_awaitable)), //
-                asio::detached);
-    }
-}
+    // The io_context is required for all I/O
+    net::io_context ioc;
 
-asio::awaitable<void> client_session(uint16_t port) {
-    try {
-        tcp::socket socket(co_await this_coro::executor);
-        co_await socket.async_connect({{}, port}, use_awaitable);
-
-        for (std::array<char, 4024> data{0};;) {
-            co_await (async_read(socket, asio::buffer(data), use_awaitable) || timeout(2ms));
-            auto w = co_await async_write(socket, asio::buffer(data, 2000 /*SEHE?!*/), use_awaitable);
-
-            once_in(1000, [&](size_t counter) {
-                std::cout << "#" << counter << " wrote " << w << " bytes from " << socket.local_endpoint()
-                          << std::endl;
-            });
-        }
-    } catch (boost::system::system_error const& se) {
-        std::cout << "client_session Exception: " << se.code().message() << std::endl;
-    } catch (std::exception const& e) {
-        std::cout << "client_session Exception: " << e.what() << std::endl;
+    // Launch the asynchronous operation
+    for (int i=0; i < 5 ; i++)
+    {
+        net::co_spawn(ioc,
+                      do_session(host, port, target, version),
+                      [](const std::exception_ptr& e)
+                      {
+                          if (e)
+                              try
+                              {
+                                  std::rethrow_exception(e);
+                              }
+                              catch(std::exception & e)
+                              {
+                                  std::cerr << "Error: " << e.what() << "\n";
+                              }
+                      });
     }
 
-    std::cout << "client_session closed" << std::endl;
-}
+    // Run the I/O service on the requested number of threads
+    std::vector<std::thread> v;
+    v.reserve(threads - 1);
+    for(auto i = threads - 1; i > 0; --i)
+        v.emplace_back(
+                [&ioc]
+                {
+                    ioc.run();
+                });
 
-int main(int argc, char** argv) {
-    auto flags = std::set<std::string_view>(argv + 1, argv + argc);
-    bool server = flags.contains("server");
-    bool client = flags.contains("client");
+    ioc.run();
 
-    asio::thread_pool pool(server ? 8 : 3);
-    try {
-        asio::signal_set signals(pool, SIGINT, SIGTERM);
-        signals.async_wait([&](auto, auto) { pool.stop(); });
-
-        if (server) {
-            co_spawn(pool, listener(5555), asio::detached);
-        }
-
-        if (client) {
-            co_spawn(make_strand(pool), client_session(5555), asio::detached);
-            co_spawn(make_strand(pool), client_session(5555), asio::detached);
-            co_spawn(make_strand(pool), client_session(5555), asio::detached);
-        }
-
-        std::this_thread::sleep_for(30s); // time limited for COLIRU
-    } catch (std::exception const& e) {
-        std::cout << "main Exception: " << e.what() << std::endl;
-    }
+    return EXIT_SUCCESS;
 }
