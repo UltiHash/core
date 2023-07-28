@@ -9,7 +9,7 @@ add_compile_options(-fPIE)
 # external dependencies
 set(Boost_USE_STATIC_LIBS ON)
 find_package(Boost 1.80 COMPONENTS program_options unit_test_framework REQUIRED)
-find_package(OpenSSL 3.0 REQUIRED)
+find_package(OpenSSL REQUIRED)
 
 # internal dependencies
 set(${PROJECT_NAME}_INTERNAL_DEPS uhLibNet uhLibProtocol uhLibUtil uhLibIo)
