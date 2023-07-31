@@ -77,7 +77,7 @@ address data_store::write(std::span<char> data) {
              written < partial_alloc.size;
              written += ::write(partial_alloc.fd, data.data() + offset + written, partial_alloc.size - written));
         offset += partial_alloc.size;
-        data_address.data [index ++] = wide_span (partial_alloc.global_offset, partial_alloc.size);
+        data_address [index ++] = wide_span (partial_alloc.global_offset, partial_alloc.size);
     }
 
     m_free_spot_manager.apply_popped_items();

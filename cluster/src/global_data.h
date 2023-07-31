@@ -13,7 +13,10 @@ namespace uh::cluster {
 class global_data {
 
 public:
-    explicit global_data (const uint128_t max_data_store_size, const std::vector <int>& data_node_ranks) {
+    explicit global_data (global_data_config conf,
+                          const std::vector <int>& data_node_ranks):
+                          m_buffer_size (conf.buffer_size),
+                          m_buffer ((m_buffer_size == 0) ? nullptr:std::make_unique_for_overwrite <char []>(m_buffer_size)) {
 
         MPI_Status status;
         int rc;
@@ -28,19 +31,35 @@ public:
             if (rc != MPI_SUCCESS) [[unlikely]] {
                 throw std::runtime_error ("Could not receive init response");
             }
-            m_data_node_ranks.emplace (max_data_store_size * id, rank);
+            m_data_node_ranks.emplace (conf.max_data_store_size * id, rank);
         }
     }
 
-    address write (const std::span <const char> data) {}
+    address write (const std::span <const char> data) {
+        return {};
+    }
 
-    std::size_t read (char* buffer, const uint128_t pointer, const size_t size) const {};
+    void cache_write (const std::span <const char> data) {
+        if (data.size() + m_buf_index > m_buffer_size) {
 
-    void remove (const uint128_t pointer, const size_t size) {};
 
-    void sync (const address&) {};
+            m_buf_index = 0;
+        }
+        std::memcpy (m_buffer.get() + m_buf_index, data.data(), data.size());
+        m_buf_index += data.size();
+    }
 
-    [[nodiscard]] uint128_t get_used_space () const noexcept {};
+    std::size_t read (char* buffer, const uint128_t pointer, const size_t size) const {
+        return {};
+    }
+
+    void remove (const uint128_t pointer, const size_t size) {}
+
+    void sync (const address&) {}
+
+    [[nodiscard]] uint128_t get_used_space () const noexcept {
+        return {};
+    }
 
 
 private:
@@ -51,6 +70,9 @@ private:
     }
 
     std::map <const uint128_t, const int> m_data_node_ranks;
+    const std::size_t m_buffer_size;
+    int m_buf_index = 0;
+    const std::unique_ptr <char []> m_buffer;
 };
 
 } // end namespace uh::cluster

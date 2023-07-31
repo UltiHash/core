@@ -20,24 +20,7 @@ struct wide_span {
     size_t size {};
 };
 
-template <typename T>
-struct owning_span {
-    std::size_t size {};
-    std::unique_ptr <T[]> data = nullptr;
-    owning_span() = default;
-    explicit owning_span(size_t data_size):
-            size (data_size),
-            data {std::make_unique_for_overwrite <T[]> (size)} {}
-    owning_span (size_t data_size, std::unique_ptr <T[]>&& ptr):
-            size (data_size),
-            data {std::move (ptr)} {}
-
-};
-
-template <typename T>
-using ospan = owning_span <T>;
-
-typedef ospan <wide_span> address;
+typedef std::vector <wide_span> address;
 
 enum message_types {
     INIT_REQ,
@@ -52,8 +35,13 @@ enum message_types {
     SYNC_OK,
     REMOVE_REQ,
     REMOVE_OK,
+    USED_REQ,
+    USED_RESP,
+    DEDUPE,
     FAILURE
 };
+
+void handle_failure (const std::string& job_name, int target, const std::exception &e);
 
 } // end namespace uh::cluster
 

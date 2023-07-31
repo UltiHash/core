@@ -40,6 +40,17 @@ uh::cluster::data_store_config make_data_store_config () {
     };
 }
 
+uh::cluster::dedupe_config make_dedupe_node_config () {
+    return {
+        .min_fragment_size = 1024,
+        .max_fragment_size = 4 * 1024,
+        .storage_conf = {
+                .max_data_store_size =  64ul * 1024ul * 1024ul * 1024ul,
+                .buffer_size = 1024,
+        }
+    };
+}
+
 void execute_role (const int rank, const uh::cluster::cluster_skeleton& cluster_conf) {
 
     uh::cluster::cluster_ranks cluster_plan (cluster_conf);
@@ -50,19 +61,19 @@ void execute_role (const int rank, const uh::cluster::cluster_skeleton& cluster_
         dn.run();
     }
     else if (rank <= cluster_plan.dedupe_ranks.back()) {
-        uh::cluster::dedupe_job dd (rank, cluster_plan);
+        uh::cluster::dedupe_job dd (rank, make_dedupe_node_config (), std::move (cluster_plan));
         dd.run();
     }
     else if (rank <= cluster_plan.redupe_ranks.back()) {
-        uh::cluster::redupe_job rd (rank, cluster_plan);
+        uh::cluster::redupe_job rd (rank, std::move (cluster_plan));
         rd.run();
     }
     else if (rank <= cluster_plan.phonebook_ranks.back()) {
-        uh::cluster::phonebook_job pb (rank, cluster_plan);
+        uh::cluster::phonebook_job pb (rank, std::move (cluster_plan));
         pb.run();
     }
     else if (rank <= cluster_plan.entry_ranks.back()) {
-        uh::cluster::entry_job en (rank, cluster_plan);
+        uh::cluster::entry_job en (rank, std::move (cluster_plan));
         en.run();
     }
 }

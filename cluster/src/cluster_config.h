@@ -56,6 +56,17 @@ struct data_store_config {
     uint128_t max_data_store_size;
 };
 
+struct global_data_config {
+    uint128_t max_data_store_size;
+    std::size_t buffer_size {};
+};
+
+struct dedupe_config {
+    std::size_t min_fragment_size;
+    std::size_t max_fragment_size;
+    global_data_config storage_conf;
+};
+
 } // end namespace uh::cluster
 
 #endif //CORE_CLUSTER_CONFIG_H

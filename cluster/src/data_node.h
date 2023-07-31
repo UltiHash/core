@@ -10,6 +10,7 @@
 #include "cluster_config.h"
 #include "data_store.h"
 #include <mpi.h>
+#include <atomic>
 
 namespace uh::cluster {
 class data_node {
@@ -31,12 +32,13 @@ private:
 
     void handle_remove (int target, int message_size);
 
-    static void handle_failure (int target, const std::exception &e);
+    void handle_get_used (int target);
 
     const std::string m_job_name;
     uh::cluster::data_store m_data_store;
-    bool m_stop = false;
+    std::atomic <bool> m_stop = false;
 
+    void handle_write_many(int source, int size);
 };
 } // end namespace uh::cluster
 #endif //CORE_DATA_NODE_H
