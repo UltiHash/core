@@ -1,4 +1,5 @@
 #include "server.h"
+#include "s3_parser.h"
 
 namespace uh::rest
 {
@@ -101,21 +102,32 @@ namespace uh::rest
                 stream.expires_after(std::chrono::seconds(10));
 
                 // Read a request
-                http::request<http::string_body> req;
-                co_await http::async_read(stream, buffer, req);
-
-                http::response<http::string_body> msg =
-                        handle_request(std::move(req));
-
-                bool keep_alive = msg.keep_alive();
-
-                // Send the response
-                co_await http::async_write(stream, std::move(msg), net::use_awaitable);
-
-                if(! keep_alive)
-                {
-                    break;
+                uh::rest::s3_parser<true> custom_parser;
+                co_await http::async_read(stream, buffer, custom_parser, net::use_awaitable);
+                message = constrct_message (custom_parser.parsed_request);
+                if (message is put object) {
+                    send (message) to dedupe mpi tags mpi tag::dedupe
                 }
+                else if (message is get objecyt) {
+                    send (message) to phonebook with mpi tag::read
+                }
+                ..
+
+
+
+                get respnse
+//                http::response<http::string_body> msg =
+//                        handle_request(std::move(req));
+
+//                bool keep_alive = msg.keep_alive();
+//
+//                // Send the response
+//                co_await http::async_write(stream, std::move(msg), net::use_awaitable);
+
+//                if(! keep_alive)
+//                {
+//                    break;
+//                }
             }
         }
         catch (boost::system::system_error & se)
@@ -129,6 +141,7 @@ namespace uh::rest
         stream.socket().shutdown(tcp::socket::shutdown_send, ec);
 
         // At this point the connection is closed gracefully
+        // we do not handle any error code because at this point the connection is closed
     }
 
 //------------------------------------------------------------------------------
