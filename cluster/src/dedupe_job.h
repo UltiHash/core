@@ -142,7 +142,6 @@ public:
 
     }
 
-
     const cluster_ranks m_cluster_plan;
     const int m_id;
     const std::string m_job_name;

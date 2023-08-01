@@ -91,7 +91,7 @@ std::pair<std::vector<sets::offset_span>, size_t> smart_core::deduplicate (std::
         const auto lower_common_prefix = largest_common_prefix (integration_data, f.lower->data);
 
         if (lower_common_prefix == integration_data.size()) {
-            m_fragment_set->add_pointer (integration_data, f.lower->data_offset, f.index);
+            //m_fragment_set->add_pointer (integration_data, f.lower->data_offset, f.index);
             result.first.emplace_back(sets::offset_span{f.lower->data_offset, integration_data.size()});
             integration_data = integration_data.substr(integration_data.size());
             continue;
@@ -113,9 +113,10 @@ std::pair<std::vector<sets::offset_span>, size_t> smart_core::deduplicate (std::
             m_fragment_set->add_pointer (integration_data.substr(0, size), offset, f.index);
 
             auto eff_size = size;
-/*
+
+// TODO buggy eff size
             size_t i = 0;
-            size_t sample_interval = 16;
+            size_t sample_interval = 8*1024;
             while (i < size) {
                 const auto fs = m_fragment_set->find(integration_data.substr(i, size - i));
 
@@ -135,7 +136,7 @@ std::pair<std::vector<sets::offset_span>, size_t> smart_core::deduplicate (std::
                     i+= sample_interval;
                 }
             }
-*/
+
 
 
             result.first.emplace_back(sets::offset_span{offset, size});
@@ -144,13 +145,13 @@ std::pair<std::vector<sets::offset_span>, size_t> smart_core::deduplicate (std::
             continue;
         }
         else if (max_common_prefix == integration_data.size()) {
-            m_fragment_set->add_pointer (integration_data, max_data_offset, f.index);
+            //m_fragment_set->add_pointer (integration_data, max_data_offset, f.index);
             result.first.emplace_back(sets::offset_span{max_data_offset, integration_data.size()});
             integration_data = integration_data.substr(integration_data.size());
             continue;
         }
         else {
-            m_fragment_set->add_pointer (integration_data.substr(0, max_common_prefix), max_data_offset, f.index);
+            //m_fragment_set->add_pointer (integration_data.substr(0, max_common_prefix), max_data_offset, f.index);
             result.first.emplace_back (sets::offset_span {max_data_offset, max_common_prefix});
             integration_data = integration_data.substr(max_common_prefix, integration_data.size() - max_common_prefix);
             continue;
