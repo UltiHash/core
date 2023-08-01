@@ -13,27 +13,15 @@ client_options::client_options()
     : options("Client Options")
 {
     visible().add_options()
-        ("retrieve,r",
-         value<std::string>(&m_uhv_path),
-         "read the UltiHash Volume and put the contents to the target destination")
-        ("integrate,i",
-         value<std::string>(&m_uhv_path),
-         "write the contents of the sources provided and generate a UltiHash Volume file at the target")
-        ("jobs,j",
-         value<std::uint16_t>(&m_config.m_worker_count),
-         "size of the worker threads when uploading and downloading")
-        ("exclude,E",
-         value<std::vector<std::string>>(&m_operateStrPaths)->multitoken(),
-         "exclude directories when integrating [optional]")
-        ("target,T",
-         value<std::string>(&m_targetDirectory),
-         "destination of the target directory for --retrieve(-r) operation [optional]")
+        ("retrieve,r", value<std::string>(&m_uhv_path), "read the UltiHash Volume and put the contents to the target destination")
+        ("integrate,i",value<std::string>(&m_uhv_path),"write the contents of the sources provided and generate a UltiHash Volume file at the target")
+        ("jobs,j",value<std::uint16_t>(&m_config.m_worker_count),"size of the worker threads when uploading and downloading")
+        ("exclude,E",value<std::vector<std::string>>(&m_operateStrPaths)->multitoken(),"exclude directories when integrating [optional]")
+        ("target,T",value<std::string>(&m_targetDirectory),"destination of the target directory for --retrieve(-r) operation [optional]")
         ("verbose,V", "shows details about the results of running the command [optional]")
         ("overwrite-all,A", "automatically skips all overwriting requests to yes [optional]");
         hidden().add_options()
-        ("positional,p",
-         value<std::vector<std::string>>(&m_posPaths)->multitoken(),
-         "[default] positional arguments given");
+        ("positional,p",value<std::vector<std::string>>(&m_posPaths)->multitoken(),"[default] positional arguments given");
 
     positional_mapping("positional", -1);
 }
@@ -47,19 +35,18 @@ bool client_options::optDisabled() const
 
 // ---------------------------------------------------------------------
 
-void option_dependency(const boost::program_options::variables_map &vm,
-                       const std::string &for_what, const std::string &required_option)
+void option_dependency(const boost::program_options::variables_map & vm,
+                       const std::string & for_what, const std::string & required_option)
 {
     if (vm.count(for_what) && !vm[for_what].defaulted())
         if (vm.count(required_option) == 0 || vm[required_option].defaulted())
             throw std::logic_error(std::string("Option '") + for_what
-                                       + "' requires option '" + required_option
-                                       + "'. Please refer to --help for more information.");
+                                       + "' requires option '" + required_option + "'. Please refer to --help for more information.");
 }
 
 // ---------------------------------------------------------------------
 
-uh::options::action client_options::evaluate(const boost::program_options::variables_map &vars)
+uh::options::action client_options::evaluate(const boost::program_options::variables_map & vars)
 {
     m_retrieve = vars.count("retrieve") != 0;
     m_integrate = vars.count("integrate") != 0;
@@ -68,11 +55,11 @@ uh::options::action client_options::evaluate(const boost::program_options::varia
     m_overwrite_all = vars.count("overwrite-all") != 0;
 
     if (vars.count("target") != 0)
-        option_dependency(vars, "target", "retrieve");
+        option_dependency(vars,"target", "retrieve");
     if (vars.count("exclude") != 0)
-        option_dependency(vars, "exclude", "integrate");
+        option_dependency(vars,"exclude", "integrate");
     if (vars.count("overwrite-all") != 0)
-        option_dependency(vars, "overwrite-all", "integrate");
+        option_dependency(vars,"overwrite-all", "integrate");
 
     conflictingOptions();
     handle(vars);
@@ -91,14 +78,14 @@ void client_options::conflictingOptions() const
 
 // ---------------------------------------------------------------------
 
-const client_config &client_options::config() const
+const client_config& client_options::config() const
 {
     return m_config;
 }
 
 // ---------------------------------------------------------------------
 
-void client_options::handle(const boost::program_options::variables_map &vars)
+void client_options::handle(const boost::program_options::variables_map& vars)
 {
     if (optDisabled())
         throw std::invalid_argument("No client options given. See --help for more information.");
@@ -108,9 +95,9 @@ void client_options::handle(const boost::program_options::variables_map &vars)
     //------------------------------------------------ LAMDA FUNCTIONS
 
     //lamda function for checking UltiHash Volume
-    auto is_UHV = [](const std::vector<std::filesystem::path> &input, const std::string &chosenOpt)
+    auto is_UHV = [](const std::vector<std::filesystem::path>& input, const std::string& chosenOpt)
     {
-        for (const auto &m_path: input)
+        for (const auto& m_path: input)
         {
             if (m_path.extension() != ".uh")
                 throw std::logic_error(chosenOpt);
@@ -164,12 +151,12 @@ void client_options::handle(const boost::program_options::variables_map &vars)
         if (m_posPaths.size() > 1)
             throw std::runtime_error("Too many arguments for the integrate operation.");
         if (m_exclude)
-            for (const auto &path: m_operateStrPaths)
+            for (const auto& path: m_operateStrPaths)
                 m_config.m_operatePaths.emplace_back(canonical(std::filesystem::path(path)));
         try
         {
             std::set<std::filesystem::path> removeDuplicatePath;
-            for (const auto &m_posPath: m_posPaths)
+            for (const auto& m_posPath: m_posPaths)
             {
                 errorPath = m_posPath;
                 auto sanitizedPath = std::filesystem::canonical(
@@ -178,7 +165,7 @@ void client_options::handle(const boost::program_options::variables_map &vars)
             }
             m_config.m_inputPaths.assign(removeDuplicatePath.begin(), removeDuplicatePath.end());
         }
-        catch (const std::exception &ex)
+        catch (const std::exception& ex)
         {
             throw std::runtime_error("'" + errorPath + "' doesn't exists.");
         }
@@ -210,7 +197,7 @@ void client_options::handle(const boost::program_options::variables_map &vars)
             is_UHV(m_config.m_inputPaths,
                    "source path on --retrieve[-r] has wrong extensions. Please ensure that the source ends with '.uh'.");
         }
-        catch (const std::exception &ex)
+        catch (const std::exception& ex)
         {
             throw std::runtime_error("'" + errorPath + "' doesn't exists.");
         }
@@ -242,7 +229,7 @@ void client_options::handle(const boost::program_options::variables_map &vars)
                 m_config.m_operatePaths.emplace_back("/");
             }
         }
-        catch (const std::exception &ex)
+        catch (const std::exception& ex)
         {
             throw std::runtime_error("'" + errorPath + "' doesn't exists.");
         }
@@ -251,7 +238,7 @@ void client_options::handle(const boost::program_options::variables_map &vars)
     //------------------------------------------------ END OF BASIC SANITY CHECKS
 
     std::cout << "INPUT: ";
-    for (const auto &path: m_config.m_inputPaths)
+    for (const auto& path: m_config.m_inputPaths)
     {
         std::cout << path << " ";
     }
