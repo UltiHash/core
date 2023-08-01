@@ -70,14 +70,11 @@ public:
 
     std::pair <std::size_t, address> deduplicate (std::string_view data) {
 
-        auto total_data = data;
         std::pair <std::size_t, address> result;
-        std::size_t dangling_offset = 0;
+        auto integration_data = data;
 
-        auto integration_data = total_data;
-        // TODO every continue command, i.e. every time we find duplicates, we need to write also the dangling data
         while (!integration_data.empty()) {
-            const auto f = m_fragment_set.find({integration_data.data(), integration_data.size()});
+            const auto f = m_fragment_set.find(integration_data);
             if (f.match) {
                 result.second.emplace_back(wide_span{f.match->data_offset, integration_data.size()});
                 integration_data = integration_data.substr(integration_data.size());
@@ -105,78 +102,10 @@ public:
 
             if (max_common_prefix < m_dedupe_conf.min_fragment_size or integration_data.size() - max_common_prefix < m_dedupe_conf.min_fragment_size) {
 
-                const auto size = std::min (total_data.size(), m_dedupe_conf.max_fragment_size);
-                if (dangling_offset >= size) {
-                    const auto offset = store_data(total_data.substr(0, size));
-                    m_fragment_set.add_pointer (integration_data.substr(0, size), offset, f.index);
-                    result.second.emplace_back (wide_span {offset, size});
-                    result.first += size;
-                    total_data = total_data.substr(size);
-                    dangling_offset = 0;
-                }
-                else {
-                    dangling_offset += m_dedupe_conf.sampling_interval;
-                }
-                integration_data = total_data.substr(dangling_offset);
-
-                continue;
-            }
-            else if (max_common_prefix == integration_data.size()) {
-                m_fragment_set.add_pointer (integration_data, max_data_offset, f.index);
-                result.second.emplace_back(wide_span {max_data_offset, integration_data.size()});
-                integration_data = integration_data.substr(integration_data.size());
-                continue;
-            }
-            else {
-                m_fragment_set.add_pointer (integration_data.substr(0, max_common_prefix), max_data_offset, f.index);
-                result.second.emplace_back (wide_span {max_data_offset, max_common_prefix});
-                integration_data = integration_data.substr(max_common_prefix, integration_data.size() - max_common_prefix);
-                continue;
-            }
-
-
-
-
-        }
-
-
-
-
-        //auto integration_data = data;
-        //std::pair <std::size_t, address> result;
-
-
-        while (!integration_data.empty()) {
-            const auto f = m_fragment_set.find({integration_data.data(), integration_data.size()});
-            if (f.match) {
-                result.second.emplace_back(wide_span{f.match->data_offset, integration_data.size()});
-                integration_data = integration_data.substr(integration_data.size());
-                continue;
-            }
-
-            const std::string_view lower_data_str {f.lower->data.data.get(), f.lower->data.size};
-            const auto lower_common_prefix = largest_common_prefix (integration_data, lower_data_str);
-
-            if (lower_common_prefix == integration_data.size()) {
-                m_fragment_set.add_pointer (integration_data, f.lower->data_offset, f.index);
-                result.second.emplace_back(wide_span {f.lower->data_offset, integration_data.size()});
-                integration_data = integration_data.substr(integration_data.size());
-                continue;
-            }
-
-            const std::string_view upper_data_str {f.upper->data.data.get(), f.lower->data.size};
-            const auto upper_common_prefix = largest_common_prefix (integration_data, upper_data_str);
-            auto max_common_prefix = upper_common_prefix;
-            auto max_data_offset = f.upper->data_offset;
-            if (max_common_prefix < lower_common_prefix) {
-                max_common_prefix = lower_common_prefix;
-                max_data_offset = f.lower->data_offset;
-            }
-
-            if (max_common_prefix < m_dedupe_conf.min_fragment_size or integration_data.size() - max_common_prefix < m_dedupe_conf.min_fragment_size) {
                 const auto size = std::min (integration_data.size(), m_dedupe_conf.max_fragment_size);
                 const auto offset = store_data(integration_data.substr(0, size));
                 m_fragment_set.add_pointer (integration_data.substr(0, size), offset, f.index);
+
                 result.second.emplace_back(wide_span {offset, size});
                 result.first += size;
                 integration_data = integration_data.substr(size);
@@ -194,6 +123,7 @@ public:
                 integration_data = integration_data.substr(max_common_prefix, integration_data.size() - max_common_prefix);
                 continue;
             }
+
         }
 
         return result;
@@ -211,6 +141,7 @@ public:
     uint128_t store_data(const std::string_view& frag) {
 
     }
+
 
     const cluster_ranks m_cluster_plan;
     const int m_id;

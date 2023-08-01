@@ -54,6 +54,7 @@ private:
     static inline size_t largest_common_prefix (const std::string_view &str1, const std::string_view& str2) noexcept;
 
     fragmented_data create_fragmented_data (std::span <const char> fragment_data);
+    std::string_view get_largest_prefix (const std::string_view& data, const sets::set_result& f);
 
     fixed_managed_storage m_data_store;
     std::unique_ptr <sets::set_interface> m_fragment_set;
