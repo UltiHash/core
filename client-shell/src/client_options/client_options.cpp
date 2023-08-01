@@ -10,18 +10,18 @@ namespace uh::client::option
 // ---------------------------------------------------------------------
 
 client_options::client_options()
-    : options("Client Options")
+        : options("Client Options")
 {
     visible().add_options()
-            ("retrieve,r", value<std::string>(&m_uhv_path), "read the UltiHash Volume and put the contents to the target destination")
-            ("integrate,i",value<std::string>(&m_uhv_path),"write the contents of the sources provided and generate a UltiHash Volume file at the target")
-            ("jobs,j",value<std::uint16_t>(&m_config.m_worker_count),"size of the worker threads when uploading and downloading")
-            ("exclude,E",value<std::vector<std::string>>(&m_operateStrPaths)->multitoken(),"exclude directories when integrating [optional]")
-            ("target,T",value<std::string>(&m_targetDirectory),"destination of the target directory for --retrieve(-r) operation [optional]")
-            ("verbose,V", "shows details about the results of running the command [optional]")
-            ("overwrite-all,A", "automatically skips all overwriting requests to yes [optional]");
+            ("retrieve,r", value<std::string>(&m_uhv_path),  "read the UltiHash Volume and put the contents to the target destination")
+            ("integrate,i",value<std::string>(&m_uhv_path), "write the contents of the sources provided and generate a UltiHash Volume file at the target")
+            ("jobs,j",value<std::uint16_t>(&m_config.m_worker_count), "size of the worker threads when uploading and downloading")
+            ("exclude,E",value<std::vector<std::string>>(&m_operateStrPaths)->multitoken(), "exclude directories when integrating [optional]")
+            ("target,T",value<std::string>(&m_targetDirectory), "destination of the target directory for --retrieve(-r) operation [optional]")
+            ("verbose,V",  "shows details about the results of running the command [optional]")
+            ("overwrite-all,A",  "automatically skips all overwriting requests to yes [optional]");
         hidden().add_options()
-            ("positional,p",value<std::vector<std::string>>(&m_posPaths)->multitoken(),"[default] positional arguments given");
+            ("positional,p",value<std::vector<std::string>>(&m_posPaths)->multitoken(), "[default] positional arguments given");
 
     positional_mapping("positional", -1);
 }
@@ -110,7 +110,7 @@ void client_options::handle(const boost::program_options::variables_map& vars)
     // generation of filesystem paths from CLI strings
     if (m_integrate)
     {
-        m_config.m_outputPath = weakly_canonical(std::filesystem::path(m_uhv_path));
+        m_config.m_outputPath  = weakly_canonical(std::filesystem::path(m_uhv_path));
         is_UHV({m_config.m_outputPath}, "destination on --integrate[-i] has wrong extensions. Please ensure that the destination ends with '.uh'.");
 
         if (exists(m_config.m_outputPath))
