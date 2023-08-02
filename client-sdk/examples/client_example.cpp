@@ -4,14 +4,19 @@
 #include <filesystem>
 #include <fstream>
 #include <vector>
+#include <ranges>
+#include <algorithm>
+#include <openssl/sha.h>
 
-struct udb_init{
+struct udb_init
+{
 public:
     UDB_CONFIG* udb_config;
     UDB* udb;
     UDB_CONNECTION* udb_conn;
 
-    udb_init(){
+    udb_init()
+    {
         /* Initialization */
 
         /* Get a pointer to the UDB Config File */
@@ -47,14 +52,16 @@ public:
         }
     }
 
-    ~udb_init(){
+    ~udb_init()
+    {
         udb_destroy_connection(udb_conn);
         udb_destroy_instance(udb);
         udb_destroy_config(udb_config);
     }
 };
 
-void put(std::vector<char>& key_string, std::vector<char>& source, udb_init& udb){
+void put(std::vector<char>& key_string, std::vector<char>& source, udb_init& udb)
+{
 /* labels */
     char test_label_1[] = "Col1";
     char* test_labels[] = {test_label_1};
@@ -94,7 +101,8 @@ void put(std::vector<char>& key_string, std::vector<char>& source, udb_init& udb
     udb_destroy_object(obj1);
 }
 
-void get(std::vector<char>& key_string, const std::filesystem::path& source_path, udb_init& udb){
+void get(std::vector<char>& key_string, const std::filesystem::path& source_path, udb_init& udb)
+{
 /* create a read query*/
     UDB_READ_QUERY* test_read_query = udb_create_read_query();
     udb_read_query_add_key(test_read_query, key_string.data(), key_string.size());
@@ -113,13 +121,14 @@ void get(std::vector<char>& key_string, const std::filesystem::path& source_path
         std::cout << "result retrieved" << '\n';
     }
 
-    if(!result){
+    if (!result)
+    {
         std::cout << "error: nothing finally read from db" << '\n';
         exit(1);
     }
 
     std::ofstream write_back(source_path, std::ios_base::out);
-    write_back.write(result->value,result->value_size);
+    write_back.write(result->value, result->value_size);
     write_back.close();
 
     /* getting object */
@@ -127,17 +136,63 @@ void get(std::vector<char>& key_string, const std::filesystem::path& source_path
     udb_destroy_read_query(test_read_query);
 }
 
-void read_file(std::vector<char>& read_to, const std::filesystem::path& p){
-    std::ifstream read(p,std::ios_base::in);
+void read_file(std::vector<char>& read_to, const std::filesystem::path& p)
+{
+    std::ifstream read(p, std::ios_base::in);
     unsigned long file_size = std::filesystem::file_size(p);
     read_to.resize(file_size);
-    read.read(read_to.data(),file_size);
+    read.read(read_to.data(), file_size);
     read.close();
+}
+
+void put_traverse(std::vector<char>& key_string, const std::filesystem::path& source_path, udb_init& udb)
+{
+    unsigned char SHA512_buffer[512];
+    std::vector<char> source;
+
+    if (std::filesystem::is_regular_file(source_path))
+    {
+        read_file(source, source_path);
+        put(key_string, source, udb);
+    }
+    else
+    {
+        std::vector<char> uhv;
+
+        for (auto const& dir_entry : std::filesystem::recursive_directory_iterator(source_path))
+        {
+            auto dir_name = relative(dir_entry.path(),source_path).string();
+            source.assign(dir_name.cbegin(),dir_name.cend());
+
+            SHA512(std::vector<unsigned char>(dir_name.cbegin(), dir_name.cend()).data(),
+                   dir_name.size(),
+                   SHA512_buffer);
+
+            std::vector<char> SHA_key;
+            SHA_key.assign(SHA512_buffer,SHA512_buffer+512);
+
+            put(SHA_key, source, udb);
+            uhv.push_back((char) dir_entry.is_directory());
+            uhv.insert(uhv.cend(),SHA_key.cbegin(),SHA_key.cend());
+
+            if(not dir_entry.is_directory()){
+                read_file(source, dir_entry.path());
+
+                SHA512(std::vector<unsigned char>(source.cbegin(), source.cend()).data(),
+                       source.size(),
+                       SHA512_buffer);
+
+                SHA_key.assign(SHA512_buffer,SHA512_buffer+512);
+                put(SHA_key, source, udb);
+                uhv.insert(uhv.cend(),SHA_key.cbegin(),SHA_key.cend());
+            }
+        }
+    }
+
 }
 
 int main(int argc, const char* argv[])
 {
-
     std::cout << get_sdk_name() << " " << get_sdk_version() << "\n\n";
 
     if (argc != 4)
@@ -153,7 +208,7 @@ int main(int argc, const char* argv[])
 
     std::vector<char> key_string;
     key_string.resize(strlen(argv[2]));
-    key_string.assign(argv[2], argv[2]+strlen(argv[2]));
+    key_string.assign(argv[2], argv[2] + strlen(argv[2]));
 
     std::filesystem::path source_path{std::string{argv[3], strlen(argv[3])}};
 
@@ -165,19 +220,11 @@ int main(int argc, const char* argv[])
     }
 
     /* key source argument 2 if the key can be found as a file path*/
-    auto key_path = std::filesystem::path(std::string(key_string.begin(),key_string.end()));
+    auto key_path = std::filesystem::path(std::string(key_string.begin(), key_string.end()));
 
     if (exists(key_path))
     {
-        read_file(key_string,key_path);
-    }
-
-    /* case put argument 3, get data */
-    std::vector<char> source;
-
-    if (operation_type_string == "put")
-    {
-        read_file(source, source_path);
+        read_file(key_string, key_path);
     }
 
     /* Initialization */
@@ -187,7 +234,7 @@ int main(int argc, const char* argv[])
 
     if (operation_type_string == "put")
     {
-        put(key_string, source, udb);
+        put_traverse(key_string, source_path, udb);
     }
     else
     {
