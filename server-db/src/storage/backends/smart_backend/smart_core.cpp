@@ -114,9 +114,10 @@ std::pair<std::vector<sets::offset_span>, size_t> smart_core::deduplicate (std::
 
             auto eff_size = size;
 
-// TODO buggy eff size
-            size_t i = 0;
-            size_t sample_interval = 8*1024;
+            /*
+            size_t sample_interval = 128;
+            size_t i = sample_interval;
+
             while (i < size) {
                 const auto fs = m_fragment_set->find(integration_data.substr(i, size - i));
 
@@ -132,11 +133,11 @@ std::pair<std::vector<sets::offset_span>, size_t> smart_core::deduplicate (std::
                     }
                 }
                 else {
-                    eff_size -= sample_interval;
-                    i+= sample_interval;
+                    eff_size -= (size - i);
+                    i = size;
                 }
             }
-
+            */
 
 
             result.first.emplace_back(sets::offset_span{offset, size});

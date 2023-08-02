@@ -85,7 +85,6 @@ public:
             const auto lower_common_prefix = largest_common_prefix (integration_data, lower_data_str);
 
             if (lower_common_prefix == integration_data.size()) {
-                m_fragment_set.add_pointer (integration_data, f.lower->data_offset, f.index);
                 result.second.emplace_back(wide_span {f.lower->data_offset, integration_data.size()});
                 integration_data = integration_data.substr(integration_data.size());
                 continue;
@@ -103,22 +102,20 @@ public:
             if (max_common_prefix < m_dedupe_conf.min_fragment_size or integration_data.size() - max_common_prefix < m_dedupe_conf.min_fragment_size) {
 
                 const auto size = std::min (integration_data.size(), m_dedupe_conf.max_fragment_size);
-                const auto offset = store_data(integration_data.substr(0, size));
-                m_fragment_set.add_pointer (integration_data.substr(0, size), offset, f.index);
+                const auto addr = store_data(integration_data.substr(0, size));
+                m_fragment_set.add_pointer (integration_data.substr(0, addr.front().size), addr.front().pointer, f.index);
 
-                result.second.emplace_back(wide_span {offset, size});
+                result.second.insert(result.second.cend(), addr.cbegin(), addr.cend());
                 result.first += size;
                 integration_data = integration_data.substr(size);
                 continue;
             }
             else if (max_common_prefix == integration_data.size()) {
-                m_fragment_set.add_pointer (integration_data, max_data_offset, f.index);
                 result.second.emplace_back(wide_span {max_data_offset, integration_data.size()});
                 integration_data = integration_data.substr(integration_data.size());
                 continue;
             }
             else {
-                m_fragment_set.add_pointer (integration_data.substr(0, max_common_prefix), max_data_offset, f.index);
                 result.second.emplace_back (wide_span {max_data_offset, max_common_prefix});
                 integration_data = integration_data.substr(max_common_prefix, integration_data.size() - max_common_prefix);
                 continue;
@@ -138,7 +135,7 @@ public:
         return i;
     }
 
-    uint128_t store_data(const std::string_view& frag) {
+    address store_data(const std::string_view& frag) {
 
     }
 

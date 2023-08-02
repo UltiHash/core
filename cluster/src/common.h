@@ -65,4 +65,6 @@ template <typename T>
 using ospan = owning_span <T>;
 } // end namespace uh::cluster
 
+
+
 #endif //CORE_COMMON_H

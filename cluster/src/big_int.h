@@ -8,6 +8,7 @@
 #include <cstdint>
 #include <string>
 #include <numeric>
+#include <functional>
 
 namespace uh::cluster {
 
@@ -165,6 +166,14 @@ public:
 
 };
 
-
 } // end namespace uh::cluster
+
+template <>
+struct std::hash <uh::cluster::big_int> {
+    std::size_t operator()(const uh::cluster::big_int &num) const {
+        const auto hash_func = std::hash <uint64_t> ();
+        return hash_func (num.get_data()[0] + num.get_data()[1]);
+    }
+};
+
 #endif //CORE_BIG_INT_H
