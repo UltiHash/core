@@ -94,7 +94,7 @@ void put(std::vector<char>& key_string, std::vector<char>& source, udb_init& udb
     udb_destroy_object(obj1);
 }
 
-void get(){
+void get(std::vector<char>& key_string, const std::filesystem::path& source_path, udb_init& udb){
 /* create a read query*/
     UDB_READ_QUERY* test_read_query = udb_create_read_query();
     udb_read_query_add_key(test_read_query, key_string.data(), key_string.size());
@@ -187,11 +187,11 @@ int main(int argc, const char* argv[])
 
     if (operation_type_string == "put")
     {
-        put();
+        put(key_string, source, udb);
     }
     else
     {
-        get();
+        get(key_string, source_path, udb);
     }
 
     return 0;
