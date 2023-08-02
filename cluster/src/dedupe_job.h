@@ -123,6 +123,7 @@ public:
 
         }
 
+        m_storage.sync(result.second);
         return result;
     }
 
@@ -136,7 +137,7 @@ public:
     }
 
     address store_data(const std::string_view& frag) {
-
+        return m_storage.write(frag);
     }
 
     const cluster_ranks m_cluster_plan;

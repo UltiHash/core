@@ -32,7 +32,7 @@ struct set_partial_comparator {
     explicit set_partial_comparator (global_data& storage): m_storage(storage) {}
 
     [[nodiscard]] inline int operator () (const std::string_view& key, const mmap_node& set_data) const {
-
+        throw std::exception ();
         //auto* set_data_p = static_cast <const char*> (m_storage.get().get_raw_ptr(set_data.m_data.m_data_offset));
 
         //const uint16_t set_key_size = *reinterpret_cast <const uint16_t*> (set_data_p);

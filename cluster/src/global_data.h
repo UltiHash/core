@@ -7,6 +7,7 @@
 
 #include <map>
 #include <unordered_map>
+#include <set>
 #include "data_node.h"
 
 
@@ -48,7 +49,7 @@ public:
     }
 
     address write (const std::string_view& data) {
-        int source = m_data_nodes [rank_index];
+        const auto source = m_data_nodes [rank_index];
         rank_index = (rank_index + 1) % m_data_nodes.size();
         auto rc = MPI_Send(data.data(), static_cast <int> (data.size()), MPI_CHAR, source, message_types::WRITE_REQ, MPI_COMM_WORLD);
         if (rc != MPI_SUCCESS) [[unlikely]] {
@@ -80,23 +81,104 @@ public:
      */
 
     std::size_t read (char* buffer, const uint128_t pointer, const size_t size) const {
-        return {};
+        const auto source = get_data_node (pointer);
+        address addr {{pointer, size}};
+        auto rc = MPI_Send(addr.data(), static_cast <int> (addr.size()), MPI_CHAR, source, message_types::READ_REQ, MPI_COMM_WORLD);
+        if (rc != MPI_SUCCESS) [[unlikely]] {
+            throw std::runtime_error("Could not send the read request");
+        }
+
+        MPI_Status status;
+        rc = MPI_Probe (source, message_types::READ_RESP, MPI_COMM_WORLD, &status);
+        if (rc != MPI_SUCCESS) [[unlikely]] {
+            throw std::runtime_error("Could not get the data size of the read response");
+        }
+        int data_size;
+        MPI_Get_count (&status, MPI_CHAR, &data_size);
+        rc = MPI_Recv (buffer, data_size, MPI_CHAR, source, message_types::READ_RESP, MPI_COMM_WORLD, &status);
+        if (rc != MPI_SUCCESS) [[unlikely]] {
+            throw std::runtime_error("Could not get the data of the read response");
+        }
+
+        return data_size;
     }
 
-    void remove (const uint128_t pointer, const size_t size) {}
+    void remove (const uint128_t pointer, const size_t size) {
+        const auto source = get_data_node (pointer);
+        address addr {{pointer, size}};
+        auto rc = MPI_Send(addr.data(), static_cast <int> (addr.size()), MPI_CHAR, source, message_types::REMOVE_REQ, MPI_COMM_WORLD);
+        if (rc != MPI_SUCCESS) [[unlikely]] {
+            throw std::runtime_error("Could not send the remove request");
+        }
 
-    void sync (const address&) {}
+        MPI_Status status;
+        int dummy;
+        rc = MPI_Recv (&dummy, 1, MPI_INT, source, message_types::REMOVE_OK, MPI_COMM_WORLD, &status);
+        if (rc != MPI_SUCCESS) [[unlikely]] {
+            throw std::runtime_error("Could not get the remove confirmation");
+        }
 
-    [[nodiscard]] uint128_t get_used_space () const noexcept {
-        return {};
     }
 
+    void sync (const address& addr) {
 
+        std::set <int> targets;
+        for (const auto pointer_span: addr) {
+            targets.emplace (get_data_node (pointer_span.pointer));
+        }
+
+        for (const auto target: targets) {
+            int dummy;
+            auto rc = MPI_Send(&dummy, 1, MPI_INT, target, message_types::SYNC_REQ, MPI_COMM_WORLD);
+            if (rc != MPI_SUCCESS) [[unlikely]] {
+                throw std::runtime_error("Could not send the sync request");
+            }
+
+            MPI_Status status;
+            rc = MPI_Recv (&dummy, 1, MPI_INT, target, message_types::SYNC_OK, MPI_COMM_WORLD, &status);
+            if (rc != MPI_SUCCESS) [[unlikely]] {
+                throw std::runtime_error("Could not get the sync confirmation");
+            }
+        }
+
+    }
+
+    [[nodiscard]] uint128_t get_used_space () const {
+        uint128_t total_used = 0;
+        for (const auto target: m_data_nodes) {
+            int dummy;
+            auto rc = MPI_Send(&dummy, 1, MPI_INT, target, message_types::USED_REQ, MPI_COMM_WORLD);
+            if (rc != MPI_SUCCESS) [[unlikely]] {
+                throw std::runtime_error("Could not send the get_used request");
+            }
+
+            MPI_Status status;
+            uint64_t buffer [2];
+            rc = MPI_Recv (buffer, 2, MPI_UINT64_T, target, message_types::USED_RESP, MPI_COMM_WORLD, &status);
+            if (rc != MPI_SUCCESS) [[unlikely]] {
+                throw std::runtime_error("Could not get the used space information");
+            }
+            total_used += uint128_t (buffer[0], buffer[1]);
+        }
+
+        return total_used;
+
+    }
+
+    void stop () const {
+        for (const auto target: m_data_nodes) {
+            int dummy;
+            MPI_Send(&dummy, 1, MPI_INT, target, message_types::STOP, MPI_COMM_WORLD);
+        }
+    }
 private:
-    static std::map<uint128_t, int> map_offset_data_node(const std::vector<int> &data_node_ranks) {
-        const auto first_rank = data_node_ranks.front();
 
-        return {};
+    [[nodiscard]] int get_data_node (const uint128_t& pointer) const {
+        const auto pfd = m_data_node_offsets.upper_bound (pointer);
+        if (pfd == m_data_node_offsets.cbegin()) [[unlikely]] {
+            throw std::out_of_range ("The given data pointer could not be found among the available data nodes");
+        }
+        return std::prev (pfd)->second;
     }
 
     //std::unordered_map <uint128_t, std::string_view> m_cache;

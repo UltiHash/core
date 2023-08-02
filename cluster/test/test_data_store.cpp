@@ -12,9 +12,7 @@
 #include "free_spot_manager.h"
 #include "data_store.h"
 
-
 // ------------- Tests Suites Follow --------------
-
 
 namespace uh::cluster {
 
@@ -482,6 +480,7 @@ BOOST_FIXTURE_TEST_CASE (test_data_store, config_fixture)
     }
     cleanup();
 }
+
 // ---------------------------------------------------------------------
 
 } // end namespace uh::cluster

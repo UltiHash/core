@@ -34,11 +34,14 @@ private:
 
     void handle_get_used (int target);
 
+    void handle_write_many(int source, int size);
+
+    void handle_stop(int source);
+
     const std::string m_job_name;
     uh::cluster::data_store m_data_store;
     std::atomic <bool> m_stop = false;
 
-    void handle_write_many(int source, int size);
 };
 } // end namespace uh::cluster
 #endif //CORE_DATA_NODE_H

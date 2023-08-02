@@ -46,6 +46,9 @@ void data_node::run() {
                 case message_types::USED_REQ:
                     handle_get_used (status.MPI_SOURCE);
                     break;
+                case message_types::STOP:
+                    handle_stop (status.MPI_SOURCE);
+                    break;
                 default:
                     throw std::invalid_argument ("Unknown tag");
             }
@@ -206,7 +209,7 @@ void data_node::handle_remove(const int target, const int message_size) {
 void data_node::handle_get_used (int target) {
     MPI_Status status;
     int dummy;
-    MPI_Recv (&dummy, 1, MPI_INT, target, message_types::SYNC_REQ, MPI_COMM_WORLD, &status);
+    MPI_Recv (&dummy, 1, MPI_INT, target, message_types::USED_REQ, MPI_COMM_WORLD, &status);
     const auto used = m_data_store.get_used_space();
 
     const auto rc = MPI_Send(used.get_data(), 2, MPI_UINT64_T, target, message_types::USED_RESP, MPI_COMM_WORLD);
@@ -215,4 +218,10 @@ void data_node::handle_get_used (int target) {
     }
 }
 
+void data_node::handle_stop (int source) {
+    MPI_Status status;
+    int dummy;
+    MPI_Recv (&dummy, 1, MPI_INT, source, message_types::STOP, MPI_COMM_WORLD, &status);
+    m_stop = true;
+};
 } // end namespace uh::cluster

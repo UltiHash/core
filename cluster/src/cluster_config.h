@@ -58,7 +58,6 @@ struct data_store_config {
 
 struct global_data_config {
     uint128_t max_data_store_size;
-    std::size_t buffer_size {};
 };
 
 struct dedupe_config {

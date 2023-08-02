@@ -39,7 +39,8 @@ enum message_types {
     USED_REQ,
     USED_RESP,
     DEDUPE,
-    FAILURE
+    FAILURE,
+    STOP
 };
 
 void handle_failure (const std::string& job_name, int target, const std::exception &e);
