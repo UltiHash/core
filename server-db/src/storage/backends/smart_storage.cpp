@@ -26,8 +26,8 @@ smart_config make_smart_config(const std::filesystem::path &root, size_t size, s
     }
 
     dedupe_config dd_conf {};
-    dd_conf.min_fragment_size = 2 * 1024;
-    dd_conf.max_fragment_size = 16 * 1024;
+    dd_conf.min_fragment_size = 32;
+    dd_conf.max_fragment_size = 8 * 1024;
 
 
     // fragment set
