@@ -94,6 +94,7 @@ namespace uh::rest
 
         // This buffer is required to persist across reads
         beast::flat_buffer buffer;
+        beast::error_code ec;
 
         try
         {
@@ -102,42 +103,28 @@ namespace uh::rest
                 stream.expires_after(std::chrono::seconds(10));
 
                 // Read a request
-                uh::rest::s3_parser<true> custom_parser;
-                co_await http::async_read(stream, buffer, custom_parser, net::use_awaitable);
-                message = constrct_message (custom_parser.parsed_request);
-                if (message is put object) {
-                    send (message) to dedupe mpi tags mpi tag::dedupe
-                }
-                else if (message is get objecyt) {
-                    send (message) to phonebook with mpi tag::read
-                }
-                ..
-
-
-
-                get respnse
-//                http::response<http::string_body> msg =
-//                        handle_request(std::move(req));
-
-//                bool keep_alive = msg.keep_alive();
-//
-//                // Send the response
-//                co_await http::async_write(stream, std::move(msg), net::use_awaitable);
-
-//                if(! keep_alive)
-//                {
-//                    break;
-//                }
+                uh::rest::s3_parser<true> s3_parser;
+                co_await http::async_read(stream, buffer, s3_parser, net::use_awaitable);
             }
         }
         catch (boost::system::system_error & se)
         {
             if (se.code() != http::error::end_of_stream )
+            {
+                // Send a response about the error and shut down
+                http::response<http::string_body> res{http::status::bad_request, 11};
+                res.set(http::field::server, BOOST_BEAST_VERSION_STRING);
+                res.set(http::field::content_type, "text/html");
+                res.body() = se.code().message() + '\n';
+                res.prepare_payload();
+
+                // TODO: Should this write also be async? If so how to use it with coroutine
+                http::write(stream, res);
+                stream.socket().shutdown(tcp::socket::shutdown_send, ec);
                 throw ;
+            }
         }
 
-        // Send a TCP shutdown
-        beast::error_code ec;
         stream.socket().shutdown(tcp::socket::shutdown_send, ec);
 
         // At this point the connection is closed gracefully
@@ -159,18 +146,23 @@ namespace uh::rest
 
         for(;;)
         {
+            auto stream = tcp_stream(co_await acceptor.async_accept());
+            auto conn_address = stream.socket().remote_endpoint().address().to_string();
+            auto conn_port = stream.socket().remote_endpoint().port();
+
             boost::asio::co_spawn(
                     acceptor.get_executor(),
-                    do_session(tcp_stream(co_await acceptor.async_accept())),
-                    [](const std::exception_ptr& e)
+                    do_session(std::move(stream)),
+                    [&](const std::exception_ptr& e)
                     {
                         if (e)
                             try
                             {
                                 std::rethrow_exception(e);
                             }
-                            catch (std::exception &e) {
-                                std::cerr << "Error in session: " << e.what() << "\n";
+                            catch (const std::exception &e)
+                            {
+                                INFO << "Error in session: [" << conn_address << ":" << conn_port << "] " << e.what();
                             }
                     });
         }

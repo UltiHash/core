@@ -1,26 +1,42 @@
 #include <boost/beast/http/basic_parser.hpp>
 #include <logging/logging_boost.h>
+#include <set>
 
 namespace uh::rest
 {
 
 //------------------------------------------------------------------------------
 
-    struct s3_put_object_parameters
+    enum req_types
     {
-        std::string BucketID;
+        put_object = 0,
+        get_object,
+    };
+
+    enum http_protocol
+    {
+        host = 0,
+        content_type,
+        content_length,
+    };
+
+    enum s3_tag_types
+    {
+        bucket_id = 0,
+        object_key,
+        x_amz_tagging,
+    };
+
+    struct s3_request_parameters
+    {
+        std::string host;
+        std::string content_type;
+        std::string content_length;
+        std::string bucket_id;
         std::string object_key;
         std::string x_amz_tagging;
+        enum req_types req_type;
     };
-
-    struct large_unifiesd_struct {
-        kdasd
-
-        dlasdkpas
-
-        dsalkdals
-    };
-
 
 //------------------------------------------------------------------------------
 
@@ -30,18 +46,12 @@ namespace uh::rest
     class s3_parser : public basic_parser<isRequest> {
     private:
 
-        enum req_types {
+        static const std::unordered_map <req_types, std::set<s3_tag_types>> s3_valid_tags;
 
-        };
-        enum tag_types {
+        /* static checks for initializing everytime we call it, so we access the data through a
+         * class member variable */
+        const std::unordered_map <req_types, std::set<s3_tag_types>>& s3_tags;
 
-        };
-
-        constexpr std::unordered_map <req_types, std::unordered_set <tag_types>> valid_tags;
-
-
-        publoic:
-        large_unifiesd_struct parsed_struct;
         /** Called after receiving the request-line.
 
             This virtual function is invoked after receiving a request-line
@@ -67,9 +77,35 @@ namespace uh::rest
                 string_view method_str,     // The method as a string
                 string_view target,         // The request-target
                 int version,                // The HTTP-version
-                error_code &ec) override {
-            request = std::make_unique <put_acl> ();
-            rtype = PUT_ACL;
+                error_code &ec) override
+        {
+            if (version != 11)
+            {
+                ec = make_error_code(http::error::bad_version);
+            }
+            else
+            {
+                auto url_target = target.to_string();
+
+                switch (method)
+                {
+                    case verb::put:
+                        if (!url_target.empty() && (url_target.find('?') != std::string::npos))
+                        {
+                            m_parsed_struct.req_type = put_object;
+                            m_parsed_struct.object_key = url_target.substr(1);
+                            std::cout << m_parsed_struct.object_key;
+                        }
+                        else
+                        {
+                            ec = make_error_code(http::error::bad_target);
+                        }
+                        break;
+                    default:
+                        ec = make_error_code(http::error::bad_method);
+                }
+            }
+
         }   // The error returned to the caller, if any
 
         /** Called after receiving the status-line.
@@ -96,11 +132,6 @@ namespace uh::rest
                 string_view reason,         // The obsolete reason-phrase
                 int version,                // The HTTP-version
                 error_code &ec) override {
-
-            if (rtype == put_acl) {
-                dynamic_cast <put_acl> (req);
-
-            }
         }   // The error returned to the caller, if any
 
         /** Called once for each complete field in the HTTP header.
@@ -126,29 +157,29 @@ namespace uh::rest
                 string_view value,          // The field value
                 error_code &ec) override   // The error returned to the caller, if any
         {
-            try
-            {
-                if constexpr (isRequest)
-                {
-                    if (f == field::unknown)
-                    {
-                        // handle unknown fields
-                        // create a map with handler functions?
-                        if (name == "x-amz-tagging")
-                            valid_tags[rtype].find (xamz_tag)
-                                std::cout << name.to_string() << " : " << value.to_string() << std::endl;
-
-                    }
-                    else
-                    {
-                        // handle known fields
-                    }
-                }
-            }
-            catch (const std::exception& e)
-            {
-                ERROR << e.what();
-            }
+//            try
+//            {
+//                if constexpr (isRequest)
+//                {
+//                    if (f == field::unknown)
+//                    {
+//                        // handle unknown fields
+//                        // create a map with handler functions?
+//                        if (name == "x-amz-tagging")
+//                            valid_tags[rtype].find (xamz_tag)
+//                                std::cout << name.to_string() << " : " << value.to_string() << std::endl;
+//
+//                    }
+//                    else
+//                    {
+//                        // handle known fields
+//                    }
+//                }
+//            }
+//            catch (const std::exception& e)
+//            {
+//                ERROR << e.what();
+//            }
         }
 
         /** Called once after the complete HTTP header is received.
@@ -266,9 +297,21 @@ namespace uh::rest
                 error_code &ec) override {}   // The error returned to the caller, if any
 
     public:
-        s3_parser() = default;
+        s3_request_parameters m_parsed_struct;
+
+        s3_parser() : s3_tags(s3_valid_tags)
+        {
+        };
     };
 
 //------------------------------------------------------------------------------
+
+    template<bool isRequest>
+    const std::unordered_map <req_types, std::set<s3_tag_types>> s3_parser<isRequest>::s3_valid_tags =
+            {
+                { req_types::put_object, {bucket_id, object_key, x_amz_tagging } },
+                { req_types::get_object, {} },
+            };
+
 
 } // namespace uh::rest
