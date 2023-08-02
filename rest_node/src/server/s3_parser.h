@@ -13,19 +13,46 @@ namespace uh::rest
         get_object,
     };
 
-    enum http_protocol
+//------------------------------------------------------------------------------
+
+    enum http_protocol_fields
     {
         host = 0,
         content_type,
         content_length,
     };
 
-    enum s3_tag_types
+//------------------------------------------------------------------------------
+
+    enum s3_fields
     {
-        bucket_id = 0,
+        unknown = 0,
+        bucket_id,
         object_key,
         x_amz_tagging,
     };
+
+//------------------------------------------------------------------------------
+
+    s3_fields s3_field_to_enum(const std::string& field)
+    {
+        static const std::unordered_map<std::string, s3_fields> enum_map =
+        {
+            {"x-amz-tagging", x_amz_tagging},
+        };
+
+        auto it = enum_map.find(field);
+        if (it != enum_map.end())
+        {
+            return it->second;
+        }
+        else
+        {
+            return unknown;
+        }
+    }
+
+//------------------------------------------------------------------------------
 
     struct s3_request_parameters
     {
@@ -46,11 +73,11 @@ namespace uh::rest
     class s3_parser : public basic_parser<isRequest> {
     private:
 
-        static const std::unordered_map <req_types, std::set<s3_tag_types>> s3_valid_tags;
+        static const std::unordered_map <req_types, std::set<s3_fields>> static_s3_valid_tags;
 
         /* static checks for initializing everytime we call it, so we access the data through a
          * class member variable */
-        const std::unordered_map <req_types, std::set<s3_tag_types>>& s3_tags;
+        const std::unordered_map <req_types, std::set<s3_fields>>& m_s3_tags;
 
         /** Called after receiving the request-line.
 
@@ -85,16 +112,14 @@ namespace uh::rest
             }
             else
             {
-                auto url_target = target.to_string();
-
                 switch (method)
                 {
                     case verb::put:
-                        if (!url_target.empty() && (url_target.find('?') != std::string::npos))
+                        if (!target.empty() && (target.find('?') == std::string::npos))
                         {
                             m_parsed_struct.req_type = put_object;
-                            m_parsed_struct.object_key = url_target.substr(1);
-                            std::cout << m_parsed_struct.object_key;
+                            m_parsed_struct.object_key = target.substr(1).to_string();
+                            std::cout << m_parsed_struct.object_key << std::endl;
                         }
                         else
                         {
@@ -157,29 +182,42 @@ namespace uh::rest
                 string_view value,          // The field value
                 error_code &ec) override   // The error returned to the caller, if any
         {
-//            try
-//            {
-//                if constexpr (isRequest)
-//                {
-//                    if (f == field::unknown)
-//                    {
-//                        // handle unknown fields
-//                        // create a map with handler functions?
-//                        if (name == "x-amz-tagging")
-//                            valid_tags[rtype].find (xamz_tag)
-//                                std::cout << name.to_string() << " : " << value.to_string() << std::endl;
-//
-//                    }
-//                    else
-//                    {
-//                        // handle known fields
-//                    }
-//                }
-//            }
-//            catch (const std::exception& e)
-//            {
-//                ERROR << e.what();
-//            }
+            if constexpr (isRequest)
+            {
+                if (f == field::unknown)
+                {
+                    // handle unknown fields
+
+                    auto enum_s3_field = s3_field_to_enum(name.to_string());
+                    switch (enum_s3_field)
+                    {
+                        case unknown:
+                            ec = http::make_error_code(boost::beast::http::error::bad_field);
+                            break;
+                        case x_amz_tagging:
+                            if (m_s3_tags.at(m_parsed_struct.req_type).find(x_amz_tagging) == m_s3_tags.at(m_parsed_struct.req_type).end())
+                            {
+                                ec = http::make_error_code(boost::beast::http::error::bad_field);
+                            }
+                            else
+                            {
+                                std::cout << m_parsed_struct.req_type << " has x-amz-tagging, value: " << value << std::endl;
+                            }
+                            break;
+                    }
+                }
+                else
+                {
+                    switch (f) 
+                    {
+                        case boost::beast::http::field::host:
+                            std::cout << value.substr(0, value.find(':')) << std::endl;
+                            break;
+                        case boost::beast::http::field::content_type:
+                            std::cout << name << " : " << value << std::endl;
+                    }
+                }
+            }
         }
 
         /** Called once after the complete HTTP header is received.
@@ -280,7 +318,8 @@ namespace uh::rest
                 // including what is being passed here.
                 // or zero for the last chunk
                 string_view body,           // The next piece of the chunk body
-                error_code &ec) override {
+                error_code &ec) override
+        {
             // send to dedupe
         }   // The error returned to the caller, if any
 
@@ -299,7 +338,7 @@ namespace uh::rest
     public:
         s3_request_parameters m_parsed_struct;
 
-        s3_parser() : s3_tags(s3_valid_tags)
+        s3_parser() : m_s3_tags(static_s3_valid_tags)
         {
         };
     };
@@ -307,7 +346,7 @@ namespace uh::rest
 //------------------------------------------------------------------------------
 
     template<bool isRequest>
-    const std::unordered_map <req_types, std::set<s3_tag_types>> s3_parser<isRequest>::s3_valid_tags =
+    const std::unordered_map <req_types, std::set<s3_fields>> s3_parser<isRequest>::static_s3_valid_tags =
             {
                 { req_types::put_object, {bucket_id, object_key, x_amz_tagging } },
                 { req_types::get_object, {} },

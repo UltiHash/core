@@ -105,6 +105,8 @@ namespace uh::rest
                 // Read a request
                 uh::rest::s3_parser<true> s3_parser;
                 co_await http::async_read(stream, buffer, s3_parser, net::use_awaitable);
+
+
             }
         }
         catch (boost::system::system_error & se)

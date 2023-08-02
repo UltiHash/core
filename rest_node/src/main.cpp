@@ -12,7 +12,7 @@ int main(int argc, char* argv[])
             std::cerr <<
                       "Usage: http-server-awaitable <address> <port> <threads>\n" <<
                       "Example:\n" <<
-                      "    http-server-awaitable 0.0.0.0 8080 1\n";
+                      "    uh-rest-node 0.0.0.0 8080 1\n";
             return EXIT_FAILURE;
         }
 
