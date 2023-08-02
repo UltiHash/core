@@ -62,6 +62,7 @@ namespace uh::rest
         std::string bucket_id;
         std::string object_key;
         std::string x_amz_tagging;
+        std::string_view body;
         enum req_types req_type;
     };
 
@@ -320,7 +321,6 @@ namespace uh::rest
                 string_view body,           // The next piece of the chunk body
                 error_code &ec) override
         {
-            // send to dedupe
         }   // The error returned to the caller, if any
 
         /** Called once when the complete message is received.
@@ -333,7 +333,9 @@ namespace uh::rest
         */
         void
         on_finish_impl(
-                error_code &ec) override {}   // The error returned to the caller, if any
+                error_code &ec) override
+        {
+        }   // The error returned to the caller, if any
 
     public:
         s3_request_parameters m_parsed_struct;
@@ -347,10 +349,10 @@ namespace uh::rest
 
     template<bool isRequest>
     const std::unordered_map <req_types, std::set<s3_fields>> s3_parser<isRequest>::static_s3_valid_tags =
-            {
-                { req_types::put_object, {bucket_id, object_key, x_amz_tagging } },
-                { req_types::get_object, {} },
-            };
+        {
+            { req_types::put_object, { bucket_id, object_key, x_amz_tagging } },
+            { req_types::get_object, {} },
+        };
 
 
 } // namespace uh::rest
