@@ -174,12 +174,13 @@ void put_traverse(std::vector<char>& key_string, const std::filesystem::path& so
     }
     else
     {
-        auto write_back_udb = [&](const std::filesystem::directory_entry& dir_entry){
+        auto write_back_udb = [&](const std::filesystem::directory_entry& dir_entry)
+        {
             uhv.push_back((store_type) dir_entry.is_directory());
 
             auto rel = relative(dir_entry.path(), source_path);
             bool equal_relative = rel.filename().string() == ".";
-            auto dir_name = source_path.filename().string() + (equal_relative?("") : ("/" + rel.string()));
+            auto dir_name = source_path.filename().string() + (equal_relative ? ("") : ("/" + rel.string()));
             source.assign(dir_name.cbegin(), dir_name.cend());
 
             SHA512(std::vector<unsigned char>(dir_name.cbegin(), dir_name.cend()).data(),
@@ -223,65 +224,67 @@ void get_traverse(std::vector<char>& key_string, const std::filesystem::path& so
     std::vector<char> SHA_key;
     unsigned long count{};
 
-    get(key_string, uhv,udb);
+    get(key_string, uhv, udb);
 
-    do{
+    do
+    {
         switch (uhv[count])
         {
             case FILE_TYPE:
             {
                 count++;
-                SHA_key.assign(uhv.cbegin()+count,uhv.cbegin()+count+512);
+                SHA_key.assign(uhv.cbegin() + count, uhv.cbegin() + count + 512);
 
                 get(SHA_key, source, udb);
-                count+=512;
+                count += 512;
 
-                std::filesystem::path out_path{source.cbegin(),source.cend()};
+                std::filesystem::path out_path{source.cbegin(), source.cend()};
                 out_path = source_path / out_path;
 
-                SHA_key.assign(uhv.cbegin()+count,uhv.cbegin()+count+512);
+                SHA_key.assign(uhv.cbegin() + count, uhv.cbegin() + count + 512);
 
                 get(SHA_key, source, udb);
-                count+=512;
+                count += 512;
 
                 std::filesystem::create_directories(out_path.parent_path());
                 std::ofstream write_stream(out_path, std::ios_base::out);
 
-                write_stream.write(source.data(),source.size());
+                write_stream.write(source.data(), source.size());
             }
-            break;
+                break;
             case DIRECTORY_TYPE:
             {
                 count++;
-                SHA_key.assign(uhv.cbegin()+count,uhv.cbegin()+count+512);
+                SHA_key.assign(uhv.cbegin() + count, uhv.cbegin() + count + 512);
 
                 get(SHA_key, source, udb);
-                count+=512;
+                count += 512;
 
-                std::filesystem::path out_path{source.cbegin(),source.cend()};
+                std::filesystem::path out_path{std::string{source.cbegin(), source.cend()}};
                 out_path = source_path / out_path;
 
                 std::filesystem::create_directories(out_path);
             }
-            break;
+                break;
             case DIRECT_TYPE:
             {
                 count++;
-                SHA_key.assign(uhv.cbegin()+count,uhv.cbegin()+count+512);
+                SHA_key.assign(uhv.cbegin() + count, uhv.cbegin() + count + 512);
 
                 get(SHA_key, source, udb);
-                count+=512;
+                count += 512;
 
                 std::filesystem::path out_path = source_path;
 
                 std::filesystem::create_directories(out_path.parent_path());
                 std::ofstream write_stream(out_path, std::ios_base::out);
 
-                write_stream.write(source.data(),source.size());
+                write_stream.write(source.data(), source.size());
             }
-            break;
+                break;
         }
-    }while(count < uhv.size());
+    }
+    while (count < uhv.size());
 
 }
 
@@ -305,7 +308,7 @@ int main(int argc, const char* argv[])
     key_string.assign(argv[2], argv[2] + strlen(argv[2]));
 
     std::filesystem::path source_path{std::string{argv[3], strlen(argv[3])}};
-    if(source_path.filename().string().empty())
+    if (source_path.filename().string().empty())
         source_path = source_path.parent_path();
 
     if (operation_type_string != "put" and operation_type_string != "get")
