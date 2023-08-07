@@ -174,11 +174,12 @@ void put_traverse(std::vector<char>& key_string, const std::filesystem::path& so
     }
     else
     {
-        for (auto const& dir_entry : std::filesystem::recursive_directory_iterator(source_path))
-        {
+        auto write_back_udb = [&](const std::filesystem::directory_entry& dir_entry){
             uhv.push_back((store_type) dir_entry.is_directory());
 
-            auto dir_name = relative(dir_entry.path(), source_path).string();
+            auto rel = relative(dir_entry.path(), source_path);
+            bool equal_relative = rel.filename().string() == ".";
+            auto dir_name = source_path.filename().string() + (equal_relative?("") : ("/" + rel.string()));
             source.assign(dir_name.cbegin(), dir_name.cend());
 
             SHA512(std::vector<unsigned char>(dir_name.cbegin(), dir_name.cend()).data(),
@@ -202,6 +203,14 @@ void put_traverse(std::vector<char>& key_string, const std::filesystem::path& so
                 put(SHA_key, source, udb);
                 uhv.insert(uhv.cend(), SHA_key.cbegin(), SHA_key.cend());
             }
+        };
+
+        std::filesystem::directory_entry dir_entry_root(source_path);
+        write_back_udb(dir_entry_root);
+
+        for (auto const& dir_entry : std::filesystem::recursive_directory_iterator(source_path))
+        {
+            write_back_udb(dir_entry);
         }
     }
     put(key_string, uhv, udb);
@@ -296,6 +305,8 @@ int main(int argc, const char* argv[])
     key_string.assign(argv[2], argv[2] + strlen(argv[2]));
 
     std::filesystem::path source_path{std::string{argv[3], strlen(argv[3])}};
+    if(source_path.filename().string().empty())
+        source_path = source_path.parent_path();
 
     if (operation_type_string != "put" and operation_type_string != "get")
     {
