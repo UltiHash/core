@@ -101,7 +101,7 @@ void put(std::vector<char>& key_string, std::vector<char>& source, udb_init& udb
     udb_destroy_object(obj1);
 }
 
-void get(std::vector<char>& key_string, const std::filesystem::path& source_path, udb_init& udb)
+void get(std::vector<char>& key_string, std::vector<char>& source, udb_init& udb)
 {
 /* create a read query*/
     UDB_READ_QUERY* test_read_query = udb_create_read_query();
@@ -127,9 +127,7 @@ void get(std::vector<char>& key_string, const std::filesystem::path& source_path
         exit(1);
     }
 
-    std::ofstream write_back(source_path, std::ios_base::out);
-    write_back.write(result->value, result->value_size);
-    write_back.close();
+    source.assign(result->value, result->value + result->value_size);
 
     /* getting object */
     udb_destroy_read_query_results(results);
@@ -145,49 +143,136 @@ void read_file(std::vector<char>& read_to, const std::filesystem::path& p)
     read.close();
 }
 
+enum store_type
+{
+    FILE_TYPE,
+    DIRECTORY_TYPE,
+    DIRECT_TYPE
+};
+
 void put_traverse(std::vector<char>& key_string, const std::filesystem::path& source_path, udb_init& udb)
 {
     unsigned char SHA512_buffer[512];
     std::vector<char> source;
+    std::vector<char> uhv;
+    std::vector<char> SHA_key;
 
     if (std::filesystem::is_regular_file(source_path))
     {
+        uhv.push_back(DIRECT_TYPE);
+
         read_file(source, source_path);
-        put(key_string, source, udb);
+
+        SHA512(std::vector<unsigned char>(source.cbegin(), source.cend()).data(),
+               source.size(),
+               SHA512_buffer);
+
+        SHA_key.assign(SHA512_buffer, SHA512_buffer + 512);
+
+        put(SHA_key, source, udb);
+        uhv.insert(uhv.cend(), SHA_key.cbegin(), SHA_key.cend());
     }
     else
     {
-        std::vector<char> uhv;
-
         for (auto const& dir_entry : std::filesystem::recursive_directory_iterator(source_path))
         {
-            auto dir_name = relative(dir_entry.path(),source_path).string();
-            source.assign(dir_name.cbegin(),dir_name.cend());
+            uhv.push_back((store_type) dir_entry.is_directory());
+
+            auto dir_name = relative(dir_entry.path(), source_path).string();
+            source.assign(dir_name.cbegin(), dir_name.cend());
 
             SHA512(std::vector<unsigned char>(dir_name.cbegin(), dir_name.cend()).data(),
                    dir_name.size(),
                    SHA512_buffer);
 
-            std::vector<char> SHA_key;
-            SHA_key.assign(SHA512_buffer,SHA512_buffer+512);
+            SHA_key.assign(SHA512_buffer, SHA512_buffer + 512);
 
             put(SHA_key, source, udb);
-            uhv.push_back((char) dir_entry.is_directory());
-            uhv.insert(uhv.cend(),SHA_key.cbegin(),SHA_key.cend());
+            uhv.insert(uhv.cend(), SHA_key.cbegin(), SHA_key.cend());
 
-            if(not dir_entry.is_directory()){
+            if (not dir_entry.is_directory())
+            {
                 read_file(source, dir_entry.path());
 
                 SHA512(std::vector<unsigned char>(source.cbegin(), source.cend()).data(),
                        source.size(),
                        SHA512_buffer);
 
-                SHA_key.assign(SHA512_buffer,SHA512_buffer+512);
+                SHA_key.assign(SHA512_buffer, SHA512_buffer + 512);
                 put(SHA_key, source, udb);
-                uhv.insert(uhv.cend(),SHA_key.cbegin(),SHA_key.cend());
+                uhv.insert(uhv.cend(), SHA_key.cbegin(), SHA_key.cend());
             }
         }
     }
+    put(key_string, uhv, udb);
+}
+
+void get_traverse(std::vector<char>& key_string, const std::filesystem::path& source_path, udb_init& udb)
+{
+    std::vector<char> source;
+    std::vector<char> uhv;
+    std::vector<char> SHA_key;
+    unsigned long count{};
+
+    get(key_string, uhv,udb);
+
+    do{
+        switch (uhv[count])
+        {
+            case FILE_TYPE:
+            {
+                count++;
+                SHA_key.assign(uhv.cbegin()+count,uhv.cbegin()+count+512);
+
+                get(SHA_key, source, udb);
+                count+=512;
+
+                std::filesystem::path out_path{source.cbegin(),source.cend()};
+                out_path = source_path / out_path;
+
+                SHA_key.assign(uhv.cbegin()+count,uhv.cbegin()+count+512);
+
+                get(SHA_key, source, udb);
+                count+=512;
+
+                std::filesystem::create_directories(out_path.parent_path());
+                std::ofstream write_stream(out_path, std::ios_base::out);
+
+                write_stream.write(source.data(),source.size());
+            }
+            break;
+            case DIRECTORY_TYPE:
+            {
+                count++;
+                SHA_key.assign(uhv.cbegin()+count,uhv.cbegin()+count+512);
+
+                get(SHA_key, source, udb);
+                count+=512;
+
+                std::filesystem::path out_path{source.cbegin(),source.cend()};
+                out_path = source_path / out_path;
+
+                std::filesystem::create_directories(out_path);
+            }
+            break;
+            case DIRECT_TYPE:
+            {
+                count++;
+                SHA_key.assign(uhv.cbegin()+count,uhv.cbegin()+count+512);
+
+                get(SHA_key, source, udb);
+                count+=512;
+
+                std::filesystem::path out_path = source_path;
+
+                std::filesystem::create_directories(out_path.parent_path());
+                std::ofstream write_stream(out_path, std::ios_base::out);
+
+                write_stream.write(source.data(),source.size());
+            }
+            break;
+        }
+    }while(count < uhv.size());
 
 }
 
@@ -238,7 +323,7 @@ int main(int argc, const char* argv[])
     }
     else
     {
-        get(key_string, source_path, udb);
+        get_traverse(key_string, source_path, udb);
     }
 
     return 0;
