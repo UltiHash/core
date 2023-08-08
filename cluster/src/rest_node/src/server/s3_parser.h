@@ -34,7 +34,8 @@ namespace uh::rest
 
 //------------------------------------------------------------------------------
 
-    s3_fields s3_field_to_enum(const std::string& field)
+    s3_fields
+    s3_field_to_enum(const std::string& field)
     {
         static const std::unordered_map<std::string, s3_fields> enum_map =
         {
@@ -75,10 +76,10 @@ namespace uh::rest
     private:
 
         static const std::unordered_map <req_types, std::set<s3_fields>> static_s3_valid_tags;
-
         /* static checks for initializing everytime we call it, so we access the data through a
          * class member variable */
         const std::unordered_map <req_types, std::set<s3_fields>>& m_s3_tags;
+
 
         /** Called after receiving the request-line.
 
@@ -269,7 +270,9 @@ namespace uh::rest
         std::size_t
         on_body_impl(
                 string_view s,              // A portion of the body
-                error_code &ec) override {}   // The error returned to the caller, if any
+                error_code &ec) override
+        {
+        }   // The error returned to the caller, if any
 
         /** Called each time a new chunk header of a chunk encoded body is received.
 

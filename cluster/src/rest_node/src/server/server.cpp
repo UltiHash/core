@@ -109,8 +109,6 @@ namespace uh::rest
                 // for now blocking method to send mpi to dedup node,
                 // TODO: co await mechanism send mpi
 
-                // to scalability branch
-
             }
         }
         catch (boost::system::system_error & se)

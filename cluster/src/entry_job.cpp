@@ -15,7 +15,8 @@ namespace uh::cluster
 
 //------------------------------------------------------------------------------
 
-    void entry_job::run()
+    void
+    entry_job::run()
     {
         m_rest_server->run();
     }
