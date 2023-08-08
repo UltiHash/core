@@ -2,7 +2,7 @@
 
 UltiHash needs at least 40GB of free storage space. Please make sure that your system can provide them prior to installation.
 
-Visit the [UltiHash](https://www.ultihash.io) webpage and download the tarball installation package by clicking the button [SIMON PUT CORRECT LINK HERE TO THE TARBALL](www.example.com).
+Visit the [UltiHash](https://www.ultihash.io) webpage and download the tarball installation package by clicking the button [link](www.example.com).
 
 Fire up a terminal and navigate to the directory where the tarball was saved (Usually `$HOME/Downloads`)
 

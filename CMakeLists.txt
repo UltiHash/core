@@ -77,4 +77,6 @@ endif()
 
 add_subdirectory(client-sdk)
 
+add_subdirectory(rest_node)
+
 enable_testing()
