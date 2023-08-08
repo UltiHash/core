@@ -12,7 +12,7 @@ set(Boost_USE_STATIC_LIBS ON)
 find_package(Boost 1.80 COMPONENTS unit_test_framework  REQUIRED)
 
 # internal dependencies
-set(${PROJECT_NAME}_INTERNAL_DEPS uhLibLogging)
+set(${PROJECT_NAME}_INTERNAL_DEPS uhLibLogging uhLibNet)
 
 # configuring library dependencies for cmake and linker
 set(${PROJECT_NAME}_INCLUDE_DIRS ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/src ${Boost_INCLUDE_DIRS} ${${PROJECT_NAME}_INTERNAL_DEPS})
@@ -24,15 +24,9 @@ file(GLOB_RECURSE HEADER_FILE_LIST ${CMAKE_CURRENT_SOURCE_DIR}/src/server/*.h)
 # adding all the .cpp files of the current project
 file(GLOB_RECURSE SOURCE_FILE_LIST ${CMAKE_CURRENT_SOURCE_DIR}/src/server/*.cpp)
 
-add_library(${PROJECT_NAME}_OBJECTS OBJECT ${HEADER_FILE_LIST} ${SOURCE_FILE_LIST})
-target_include_directories(${PROJECT_NAME}_OBJECTS PUBLIC ${PROJECT_NAME}_INCLUDE_DIRS)
-target_link_libraries(${PROJECT_NAME}_OBJECTS PUBLIC ${${PROJECT_NAME}_LINK_LIBRARIES})
-
-add_executable(${PROJECT_NAME} ${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp)
-target_link_libraries(${PROJECT_NAME} PRIVATE ${PROJECT_NAME}_OBJECTS ${${PROJECT_NAME}_LINK_LIBRARIES})
-
-add_executable(${PROJECT_NAME}-client ${CMAKE_CURRENT_SOURCE_DIR}/src/client/client.cpp)
-target_link_libraries(${PROJECT_NAME} PRIVATE ${${PROJECT_NAME}_LINK_LIBRARIES})
+add_library(${PROJECT_NAME} OBJECT ${HEADER_FILE_LIST} ${SOURCE_FILE_LIST})
+target_include_directories(${PROJECT_NAME} PUBLIC ${PROJECT_NAME}_INCLUDE_DIRS)
+target_link_libraries(${PROJECT_NAME} PUBLIC ${${PROJECT_NAME}_LINK_LIBRARIES})
 
 # create testing targets
 #include(${CMAKE_CURRENT_SOURCE_DIR}/../cmake/testing/CMakeLists.txt)

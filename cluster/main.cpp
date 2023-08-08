@@ -71,7 +71,13 @@ void execute_role (const int rank, const uh::cluster::cluster_skeleton& cluster_
         pb.run();
     }
     else if (rank <= cluster_plan.entry_ranks.back()) {
-        uh::cluster::entry_job en (rank, std::move (cluster_plan));
+
+        uh::rest::rest_server_config rest_config;
+        rest_config.address = boost::asio::ip::make_address("0.0.0.0");
+        rest_config.port = 8080;
+        rest_config.threads = 10;
+
+        uh::cluster::entry_job en (rank, std::move (cluster_plan), std::move(rest_config));
         en.run();
     }
 }

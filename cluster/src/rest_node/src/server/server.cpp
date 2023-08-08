@@ -6,8 +6,8 @@ namespace uh::rest
 
 //------------------------------------------------------------------------------
 
-    rest_server::rest_server(const uh::rest::rest_server_config &config) :
-        m_config(config), m_ioc(static_cast<int>(m_config.threads)), m_thread_container(m_config.threads-1)
+    rest_server::rest_server(uh::rest::rest_server_config&& config) :
+        m_config(std::move(config)), m_ioc(static_cast<int>(m_config.threads)), m_thread_container(m_config.threads-1)
     {
         // spawn a coroutine
         boost::asio::co_spawn(m_ioc,

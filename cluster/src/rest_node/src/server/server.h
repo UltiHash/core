@@ -48,14 +48,14 @@ namespace uh::rest
     class rest_server : public uh::net::server
     {
     private:
-        const rest_server_config& m_config;
+        rest_server_config m_config;
         net::io_context m_ioc;
         std::vector<std::thread> m_thread_container;
 
     public:
-        explicit rest_server(const rest_server_config& config);
+        explicit rest_server(rest_server_config&& config);
 
-        ~rest_server() = default;
+        ~rest_server() override = default;
 
         [[nodiscard]] bool is_busy() const override;
 
