@@ -7,6 +7,7 @@
 
 #include <functional>
 #include <iostream>
+#include <utility>
 #include "cluster_config.h"
 #include "global_data.h"
 #include "paged_redblack_tree.h"
@@ -19,7 +20,7 @@ public:
             m_cluster_plan (std::move (cluster_plan)),
             m_id (id),
             m_job_name ("dedupe_node_" + std::to_string (id)),
-            m_dedupe_conf(conf),
+            m_dedupe_conf(std::move(conf)),
             m_storage (m_dedupe_conf.storage_conf, m_cluster_plan.data_node_ranks),
             m_fragment_set (m_dedupe_conf.set_conf, m_storage) {
 
