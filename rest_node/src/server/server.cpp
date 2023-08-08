@@ -106,6 +106,10 @@ namespace uh::rest
                 uh::rest::s3_parser<true> s3_parser;
                 co_await http::async_read(stream, buffer, s3_parser, net::use_awaitable);
 
+                // for now blocking method to send mpi to dedup node,
+                // TODO: co await mechanism send mpi
+
+                // to scalability branch
 
             }
         }
