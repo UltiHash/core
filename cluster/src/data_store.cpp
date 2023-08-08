@@ -17,7 +17,7 @@ data_store::data_store(data_store_config conf, int id, bool adaptive) :
 
     std::unordered_map <int, std::size_t> file_sizes;
     for (const auto& entry: std::filesystem::directory_iterator (m_conf.directory)) {
-        if (entry.path() == m_conf.hole_log) {
+        if (!is_data_file(entry.path())) {
             continue;
         }
 
@@ -277,6 +277,10 @@ std::string data_store::get_name(const uint128_t &offset) const {
     return "data_" + std::to_string(m_data_id) + "_" + offset.to_string();
 }
 
+bool data_store::is_data_file(const std::filesystem::path &path) {
+    return path.string().starts_with("data_");
+}
+
 uint128_t data_store::get_used_space() const noexcept {
     return m_used;
 }
@@ -284,6 +288,7 @@ uint128_t data_store::get_used_space() const noexcept {
 int data_store::get_data_id() const noexcept {
     return m_data_id;
 }
+
 
 
 } // end namespace uh::cluster

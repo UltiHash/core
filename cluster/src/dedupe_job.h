@@ -7,6 +7,7 @@
 
 #include <functional>
 #include <iostream>
+#include <utility>
 #include "cluster_config.h"
 #include "global_data.h"
 #include "paged_redblack_tree.h"
@@ -19,9 +20,9 @@ public:
             m_cluster_plan (std::move (cluster_plan)),
             m_id (id),
             m_job_name ("dedupe_node_" + std::to_string (id)),
-            m_dedupe_conf(conf),
-            m_storage (m_dedupe_conf.storage_conf, cluster_plan.data_node_ranks),
-            m_fragment_set (set_config{}, m_storage) {
+            m_dedupe_conf(std::move(conf)),
+            m_storage (m_dedupe_conf.storage_conf, m_cluster_plan.data_node_ranks),
+            m_fragment_set (m_dedupe_conf.set_conf, m_storage) {
 
     }
 
@@ -56,7 +57,7 @@ public:
         const auto buf = std::make_unique_for_overwrite<char []> (data_size);
         auto rc = MPI_Recv(buf.get(), data_size, MPI_CHAR, source, message_types::DEDUPE, MPI_COMM_WORLD, &status);
         if (rc != MPI_SUCCESS) [[unlikely]] {
-            throw std::runtime_error("Could not receive the data for deduplication");
+            MPI_Abort(MPI_COMM_WORLD, rc);
         }
 
         auto res = deduplicate ({buf.get(), static_cast <size_t> (data_size)});
@@ -64,7 +65,7 @@ public:
         const auto size = static_cast <int> (res.second.size() * sizeof (wide_span));
         rc = MPI_Send(res.second.data(), size, MPI_CHAR, source, message_types::WRITE_RESP, MPI_COMM_WORLD);
         if (rc != MPI_SUCCESS) [[unlikely]] {
-            throw std::runtime_error("Could not send the address of the written data");
+            MPI_Abort(MPI_COMM_WORLD, rc);
         }
     }
 
