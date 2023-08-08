@@ -14,19 +14,12 @@
 #include "src/entry_job.h"
 
 uh::cluster::cluster_skeleton make_cluster_skeleton () {
-//    return {
-//        .data_node_jobs_count = 4,
-//        .dedupe_jobs_count = 2,
-//        .redupe_jobs_count = 2,
-//        .phonebook_jobs_count = 1,
-//        .entry_jobs_count= 1,
-//    };
     return {
-            .data_node_jobs_count = 1,
-            .dedupe_jobs_count = 0,
-            .redupe_jobs_count = 0,
-            .phonebook_jobs_count = 0,
-            .entry_jobs_count= 0,
+        .data_node_jobs_count = 4,
+        .dedupe_jobs_count = 2,
+        .redupe_jobs_count = 2,
+        .phonebook_jobs_count = 1,
+        .entry_jobs_count= 1,
     };
 }
 
@@ -34,9 +27,9 @@ uh::cluster::data_store_config make_data_store_config () {
     return {
         .directory = "root/dn",
         .hole_log = "root/dn/log",
-        .min_file_size = 2ul * 1024ul * 1024ul * 1024ul,
-        .max_file_size = 16ul * 1024ul * 1024ul * 1024ul,
-        .max_data_store_size = 64ul * 1024ul * 1024ul * 1024ul
+        .min_file_size = 1ul * 1024ul * 1024ul,
+        .max_file_size = 4ul * 1024ul * 1024ul,
+        .max_data_store_size = 32ul * 1024ul * 1024ul,
     };
 }
 
@@ -45,9 +38,16 @@ uh::cluster::dedupe_config make_dedupe_node_config () {
         .min_fragment_size = 1024,
         .max_fragment_size = 4 * 1024,
         .storage_conf = {
-                .max_data_store_size =  64ul * 1024ul * 1024ul * 1024ul,
-                .buffer_size = 1024,
-        }
+                .max_data_store_size =  64ul * 1024ul * 1024ul,
+        },
+        .set_conf = {
+                .set_minimum_free_space = 1ul * 1024ul * 1024ul,
+                .max_empty_hole_size = 1ul * 1024ul * 1024ul,
+                .key_store_config = {
+                        .file  = "root/set",
+                        .init_size = 1ul * 1024ul * 1024ul,
+                }
+        },
     };
 }
 

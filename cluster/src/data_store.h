@@ -65,6 +65,8 @@ private:
 
     [[nodiscard]] std::string get_name (const uint128_t& offset) const;
 
+    static bool is_data_file (const std::filesystem::path& path);
+
     int m_last_fd {};
     std::size_t m_last_file_data_end {};
     int m_data_id;

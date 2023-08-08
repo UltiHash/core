@@ -21,8 +21,12 @@ public:
 
     }
 
+    void do_session () {
+    }
+
     void run() {
         std::cout << "hello from " << m_job_name << std::endl;
+
     }
 
     const cluster_ranks m_cluster_plan;

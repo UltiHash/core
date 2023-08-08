@@ -31,11 +31,11 @@ public:
             int id;
             rc = MPI_Send (&rank, 1, MPI_INT, rank, message_types::INIT_REQ, MPI_COMM_WORLD);
             if (rc != MPI_SUCCESS) [[unlikely]] {
-                throw std::runtime_error ("Could not send init request");
+                MPI_Abort(MPI_COMM_WORLD, rc);
             }
             rc = MPI_Recv(&id, 1, MPI_INT, rank, message_types::INIT_RESP, MPI_COMM_WORLD, &status);
             if (rc != MPI_SUCCESS) [[unlikely]] {
-                throw std::runtime_error ("Could not receive init response");
+                MPI_Abort(MPI_COMM_WORLD, rc);
             }
             m_data_node_offsets.emplace (conf.max_data_store_size * id, rank);
         }
@@ -43,7 +43,7 @@ public:
         int rank;
         rc = MPI_Comm_rank(MPI_COMM_WORLD, &rank);
         if (rc != MPI_SUCCESS) [[unlikely]] {
-            throw std::runtime_error ("Could not fetch the rank");
+            MPI_Abort(MPI_COMM_WORLD, rc);
         }
         rank_index = rank % m_data_nodes.size();
     }
@@ -53,20 +53,30 @@ public:
         rank_index = (rank_index + 1) % m_data_nodes.size();
         auto rc = MPI_Send(data.data(), static_cast <int> (data.size()), MPI_CHAR, source, message_types::WRITE_REQ, MPI_COMM_WORLD);
         if (rc != MPI_SUCCESS) [[unlikely]] {
-            throw std::runtime_error("Could not send the data to be written");
+            MPI_Abort(MPI_COMM_WORLD, rc);
         }
 
         MPI_Status status;
-        rc = MPI_Probe (source, message_types::WRITE_RESP, MPI_COMM_WORLD, &status);
+        rc = MPI_Probe (source, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
         if (rc != MPI_SUCCESS) [[unlikely]] {
-            throw std::runtime_error("Could not get the address size of the sent data");
+            MPI_Abort(MPI_COMM_WORLD, rc);
         }
-        int address_size;
-        MPI_Get_count (&status, MPI_CHAR, &address_size);
-        address addr (address_size / sizeof (wide_span));
-        rc = MPI_Recv (addr.data(), address_size, MPI_CHAR, source, message_types::WRITE_REQ, MPI_COMM_WORLD, &status);
+        int message_size;
+
+        MPI_Get_count (&status, MPI_CHAR, &message_size);
+
+        if (status.MPI_TAG != message_types::WRITE_RESP) [[unlikely]] {
+            ospan<char> buffer (message_size);
+            rc = MPI_Recv (buffer.data.get(), message_size, MPI_CHAR, source, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
+            if (rc != MPI_SUCCESS) [[unlikely]] {
+                MPI_Abort(MPI_COMM_WORLD, rc);
+            }
+            throw std::runtime_error (std::string (buffer.data.get(), buffer.size));
+        }
+        address addr (message_size / sizeof (wide_span));
+        rc = MPI_Recv (addr.data(), message_size, MPI_CHAR, source, message_types::WRITE_RESP, MPI_COMM_WORLD, &status);
         if (rc != MPI_SUCCESS) [[unlikely]] {
-            throw std::runtime_error("Could not receive the address of the sent data");
+            MPI_Abort(MPI_COMM_WORLD, rc);
         }
 
         return addr;
@@ -85,19 +95,19 @@ public:
         address addr {{pointer, size}};
         auto rc = MPI_Send(addr.data(), static_cast <int> (addr.size()), MPI_CHAR, source, message_types::READ_REQ, MPI_COMM_WORLD);
         if (rc != MPI_SUCCESS) [[unlikely]] {
-            throw std::runtime_error("Could not send the read request");
+            MPI_Abort(MPI_COMM_WORLD, rc);
         }
 
         MPI_Status status;
         rc = MPI_Probe (source, message_types::READ_RESP, MPI_COMM_WORLD, &status);
         if (rc != MPI_SUCCESS) [[unlikely]] {
-            throw std::runtime_error("Could not get the data size of the read response");
+            MPI_Abort(MPI_COMM_WORLD, rc);
         }
         int data_size;
         MPI_Get_count (&status, MPI_CHAR, &data_size);
         rc = MPI_Recv (buffer, data_size, MPI_CHAR, source, message_types::READ_RESP, MPI_COMM_WORLD, &status);
         if (rc != MPI_SUCCESS) [[unlikely]] {
-            throw std::runtime_error("Could not get the data of the read response");
+            MPI_Abort(MPI_COMM_WORLD, rc);
         }
 
         return data_size;
@@ -108,14 +118,14 @@ public:
         address addr {{pointer, size}};
         auto rc = MPI_Send(addr.data(), static_cast <int> (addr.size()), MPI_CHAR, source, message_types::REMOVE_REQ, MPI_COMM_WORLD);
         if (rc != MPI_SUCCESS) [[unlikely]] {
-            throw std::runtime_error("Could not send the remove request");
+            MPI_Abort(MPI_COMM_WORLD, rc);
         }
 
         MPI_Status status;
         int dummy;
         rc = MPI_Recv (&dummy, 1, MPI_INT, source, message_types::REMOVE_OK, MPI_COMM_WORLD, &status);
         if (rc != MPI_SUCCESS) [[unlikely]] {
-            throw std::runtime_error("Could not get the remove confirmation");
+            MPI_Abort(MPI_COMM_WORLD, rc);
         }
 
     }
@@ -131,13 +141,13 @@ public:
             int dummy;
             auto rc = MPI_Send(&dummy, 1, MPI_INT, target, message_types::SYNC_REQ, MPI_COMM_WORLD);
             if (rc != MPI_SUCCESS) [[unlikely]] {
-                throw std::runtime_error("Could not send the sync request");
+                MPI_Abort(MPI_COMM_WORLD, rc);
             }
 
             MPI_Status status;
             rc = MPI_Recv (&dummy, 1, MPI_INT, target, message_types::SYNC_OK, MPI_COMM_WORLD, &status);
             if (rc != MPI_SUCCESS) [[unlikely]] {
-                throw std::runtime_error("Could not get the sync confirmation");
+                MPI_Abort(MPI_COMM_WORLD, rc);
             }
         }
 
@@ -149,14 +159,14 @@ public:
             int dummy;
             auto rc = MPI_Send(&dummy, 1, MPI_INT, target, message_types::USED_REQ, MPI_COMM_WORLD);
             if (rc != MPI_SUCCESS) [[unlikely]] {
-                throw std::runtime_error("Could not send the get_used request");
+                MPI_Abort(MPI_COMM_WORLD, rc);
             }
 
             MPI_Status status;
             uint64_t buffer [2];
             rc = MPI_Recv (buffer, 2, MPI_UINT64_T, target, message_types::USED_RESP, MPI_COMM_WORLD, &status);
             if (rc != MPI_SUCCESS) [[unlikely]] {
-                throw std::runtime_error("Could not get the used space information");
+                MPI_Abort(MPI_COMM_WORLD, rc);
             }
             total_used += uint128_t (buffer[0], buffer[1]);
         }

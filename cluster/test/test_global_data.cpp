@@ -43,21 +43,23 @@ struct MPI_Functionality_Fixture {
     int m_argc;
     char **m_argv;
 
-    char data1 [512];
-    char data2 [1024];
-    char data3 [164];
-    char data4 [1520];
-    char data5 [2572];
-    char data6 [3021];
-    char data7 [102];
-    char data8 [5021];
-    char data9 [2048];
-    char data10 [3202];
-    char data11 [2021];
+    char data1 [512]{};
+    char data2 [1024]{};
+    char data3 [164]{};
+    char data4 [1520]{};
+    char data5 [2572]{};
+    char data6 [3021]{};
+    char data7 [102]{};
+    char data8 [5021]{};
+    char data9 [2048]{};
+    char data10 [3202]{};
+    char data11 [2021]{};
 
     static void cleanup () {
-
-        std::filesystem::remove_all("ds");
+        try {
+            std::filesystem::remove_all("ds");
+        }
+        catch (std::exception&) {}
 
     }
 
@@ -108,30 +110,29 @@ BOOST_FIXTURE_TEST_CASE (test_big_int, MPI_Functionality_Fixture) {
         }
 
         global_data gdata(global_data_conf, ranks);
-        auto addr1 = gdata.write(data1);
-        auto expected_size = sizeof (data1);
+        auto addr1 = gdata.write({data1, sizeof(data1)});
+        auto expected_size = sizeof (data1) + 2 * sizeof (size_t);
         BOOST_CHECK(gdata.get_used_space() == expected_size);
-        auto addr2 = gdata.write(data2);
+        auto addr2 = gdata.write({data2, sizeof(data2)});
         expected_size += sizeof (data2);
         BOOST_CHECK(gdata.get_used_space() == expected_size);
-        auto addr3 = gdata.write(data3);
+        auto addr3 = gdata.write({data3, sizeof(data3)});
         expected_size += sizeof (data3);
         BOOST_CHECK(gdata.get_used_space() == expected_size);
-        auto addr4 = gdata.write(data4);
+        auto addr4 = gdata.write({data4, sizeof(data4)});
         expected_size += sizeof (data4);
-        auto addr5 = gdata.write(data5);
+        auto addr5 = gdata.write({data5, sizeof(data5)});
         expected_size += sizeof (data5);
         BOOST_CHECK(gdata.get_used_space() == expected_size);
-        auto addr6 = gdata.write(data6);
-        expected_size += sizeof (data6) + sizeof (std::size_t); // new file
-        auto addr7 = gdata.write(data7);
+        auto addr6 = gdata.write({data6, sizeof(data6)});
+        expected_size += sizeof (data6); // new file
+        auto addr7 = gdata.write({data7, sizeof(data7)});
         expected_size += sizeof (data7);
-        auto addr8 = gdata.write(data8);
+        auto addr8 = gdata.write({data8, sizeof(data8)});
         expected_size += sizeof (data8);
-        auto addr9 = gdata.write(data9);
+        auto addr9 = gdata.write({data9, sizeof(data9)});
         expected_size += sizeof (data9);
         BOOST_CHECK(gdata.get_used_space() == expected_size);
-
 
 
 

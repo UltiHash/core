@@ -60,26 +60,26 @@ struct global_data_config {
     uint128_t max_data_store_size;
 };
 
-struct dedupe_config {
-    std::size_t min_fragment_size;
-    std::size_t max_fragment_size;
-    std::size_t sampling_interval;
-    global_data_config storage_conf;
-};
-
 
 struct growing_plain_storage_config {
     std::filesystem::path file;
     size_t init_size;
 };
 
-// data structures
-
 struct set_config {
     unsigned long set_minimum_free_space;
     unsigned long max_empty_hole_size;
     growing_plain_storage_config key_store_config;
 };
+
+struct dedupe_config {
+    std::size_t min_fragment_size;
+    std::size_t max_fragment_size;
+    std::size_t sampling_interval;
+    global_data_config storage_conf;
+    set_config set_conf;
+};
+
 
 
 } // end namespace uh::cluster
