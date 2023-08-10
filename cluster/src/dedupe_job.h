@@ -38,7 +38,7 @@ public:
 
             try {
                 switch (status.MPI_TAG) {
-                    case message_types::DEDUPE:
+                    case message_types::DEDUPE_REQ:
                         MPI_Get_count (&status, MPI_CHAR, &message_size);
                         handle_dedupe (status.MPI_SOURCE, message_size);
                         break;
@@ -55,7 +55,7 @@ public:
     void handle_dedupe (int source, int data_size) {
         MPI_Status status;
         const auto buf = std::make_unique_for_overwrite<char []> (data_size);
-        auto rc = MPI_Recv(buf.get(), data_size, MPI_CHAR, source, message_types::DEDUPE, MPI_COMM_WORLD, &status);
+        auto rc = MPI_Recv(buf.get(), data_size, MPI_CHAR, source, message_types::DEDUPE_REQ, MPI_COMM_WORLD, &status);
         if (rc != MPI_SUCCESS) [[unlikely]] {
             MPI_Abort(MPI_COMM_WORLD, rc);
         }
@@ -63,7 +63,7 @@ public:
         auto res = deduplicate ({buf.get(), static_cast <size_t> (data_size)});
         res.second.emplace_back(0, res.first); // last element contains the effective size
         const auto size = static_cast <int> (res.second.size() * sizeof (wide_span));
-        rc = MPI_Send(res.second.data(), size, MPI_CHAR, source, message_types::WRITE_RESP, MPI_COMM_WORLD);
+        rc = MPI_Send(res.second.data(), size, MPI_CHAR, source, message_types::DEDUPE_RESP, MPI_COMM_WORLD);
         if (rc != MPI_SUCCESS) [[unlikely]] {
             MPI_Abort(MPI_COMM_WORLD, rc);
         }

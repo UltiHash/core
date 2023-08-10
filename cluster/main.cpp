@@ -14,8 +14,8 @@
 
 uh::cluster::cluster_skeleton make_cluster_skeleton () {
     return {
-        .data_node_jobs_count = 4,
-        .dedupe_jobs_count = 2,
+        .data_node_jobs_count = 1,
+        .dedupe_jobs_count = 1,
         .phonebook_jobs_count = 1,
         .entry_jobs_count= 1,
     };

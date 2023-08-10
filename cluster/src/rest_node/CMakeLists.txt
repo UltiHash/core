@@ -10,13 +10,14 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/src/config.hpp.in ${CMAKE_CURRENT_BIN
 # external dependencies
 set(Boost_USE_STATIC_LIBS ON)
 find_package(Boost 1.80 COMPONENTS unit_test_framework  REQUIRED)
+find_package(MPI REQUIRED)
 
 # internal dependencies
 set(${PROJECT_NAME}_INTERNAL_DEPS uhLibLogging uhLibNet)
 
 # configuring library dependencies for cmake and linker
-set(${PROJECT_NAME}_INCLUDE_DIRS ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/src ${Boost_INCLUDE_DIRS} ${${PROJECT_NAME}_INTERNAL_DEPS})
-set(${PROJECT_NAME}_LINK_LIBRARIES ${Boost_LIBRARIES} ${${PROJECT_NAME}_INTERNAL_DEPS})
+set(${PROJECT_NAME}_INCLUDE_DIRS ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/src ${Boost_INCLUDE_DIRS} ${MPI_INCLUDE_PATH} ${${PROJECT_NAME}_INTERNAL_DEPS})
+set(${PROJECT_NAME}_LINK_LIBRARIES ${Boost_LIBRARIES} ${MPI_LIBRARIES} MPI::MPI_CXX ${${PROJECT_NAME}_INTERNAL_DEPS})
 
 # adding all the .h files of the current project
 file(GLOB_RECURSE HEADER_FILE_LIST ${CMAKE_CURRENT_SOURCE_DIR}/src/server/*.h)

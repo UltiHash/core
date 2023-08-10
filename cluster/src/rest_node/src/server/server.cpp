@@ -1,13 +1,16 @@
+#include <mpi/mpi.h>
 #include "server.h"
 #include "s3_parser.h"
+#include "../../../common.h"
 
 namespace uh::rest
 {
 
 //------------------------------------------------------------------------------
 
-    rest_server::rest_server(uh::rest::rest_server_config&& config) :
-        m_config(std::move(config)), m_ioc(static_cast<int>(m_config.threads)), m_thread_container(m_config.threads-1)
+    rest_server::rest_server(uh::rest::rest_server_config&& config, const uh::cluster::cluster_ranks& cluster_plan) :
+        m_config(std::move(config)), m_ioc(static_cast<int>(m_config.threads)), m_thread_container(m_config.threads-1),
+        m_cluster_plan(cluster_plan)
     {
         // spawn a coroutine
         boost::asio::co_spawn(m_ioc,
@@ -100,14 +103,49 @@ namespace uh::rest
         {
             for(;;)
             {
-                stream.expires_after(std::chrono::seconds(10));
+//                stream.expires_after(std::chrono::seconds(10));
 
                 // Read a request
                 uh::rest::s3_parser<true> s3_parser;
                 co_await http::async_read(stream, buffer, s3_parser, net::use_awaitable);
 
-                // for now blocking method to send mpi to dedup node,
-                // TODO: co await mechanism send mpi
+                std::cout << "Here: " << s3_parser.m_body_stream.str() << std::endl;
+
+//                // TODO: co await mechanism send mpi
+//                // TODO: use mpi scatter to send to a specific communicator processes
+//                auto rc = MPI_Send(s3_parser.m_body_stream.str().data(), s3_parser.m_body_stream.str().size(), MPI_CHAR,
+//                         m_cluster_plan.dedupe_ranks.front(), uh::cluster::message_types::DEDUPE_REQ, MPI_COMM_WORLD);
+//
+//                // send message before abort to the client
+//                if (rc != MPI_SUCCESS) [[unlikely]]
+//                {
+//                    MPI_Abort(MPI_COMM_WORLD, rc);
+//                }
+//
+//                /* receiving a message */
+//                MPI_Status status;
+//                int inc_message_size;
+//                MPI_Probe(MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
+//                MPI_Get_count(&status, MPI_CHAR, &inc_message_size);
+//                uh::cluster::address addr (static_cast<size_t>(inc_message_size)/sizeof(uh::cluster::wide_span));
+//                rc = MPI_Recv(addr.data(), inc_message_size, MPI_CHAR, m_cluster_plan.dedupe_ranks.front(), uh::cluster::message_types::DEDUPE_RESP,
+//                                   MPI_COMM_WORLD, &status);
+//                if (rc != MPI_SUCCESS) [[unlikely]]
+//                {
+//                    MPI_Abort(MPI_COMM_WORLD, rc);
+//                }
+//                const auto effective_size = addr.back().size;
+//
+//                std::cout << "Effective size is: " << effective_size << std::endl;
+
+//                // send to phonebook
+//                rc = MPI_Send(addr.data(), inc_message_size-sizeof(uh::cluster::wide_span), MPI_CHAR,
+//                                   m_cluster_plan.dedupe_ranks.front(), uh::cluster::message_types::, MPI_COMM_WORLD);
+//
+//                if (rc != MPI_SUCCESS) [[unlikely]]
+//                {
+//                    MPI_Abort(MPI_COMM_WORLD, rc);
+//                }
 
             }
         }
@@ -127,6 +165,7 @@ namespace uh::rest
                 stream.socket().shutdown(tcp::socket::shutdown_send, ec);
                 throw ;
             }
+
         }
 
         stream.socket().shutdown(tcp::socket::shutdown_send, ec);

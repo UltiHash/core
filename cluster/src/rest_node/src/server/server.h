@@ -17,6 +17,7 @@
 #include <boost/beast/http/message_generator.hpp>
 #include <logging/logging_boost.h>
 #include "net/server.h"
+#include "../../../cluster_config.h"
 
 //------------------------------------------------------------------------------
 
@@ -49,11 +50,12 @@ namespace uh::rest
     {
     private:
         rest_server_config m_config;
+        const uh::cluster::cluster_ranks& m_cluster_plan;
         net::io_context m_ioc;
-        std::vector<std::thread> m_thread_container;
+        std::vector<std::thread> m_thread_container {};
 
     public:
-        explicit rest_server(rest_server_config&& config);
+        rest_server(rest_server_config&& config, const uh::cluster::cluster_ranks& cluster_plan);
 
         ~rest_server() override = default;
 

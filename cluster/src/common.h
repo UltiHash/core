@@ -38,7 +38,8 @@ enum message_types {
     REMOVE_OK,
     USED_REQ,
     USED_RESP,
-    DEDUPE,
+    DEDUPE_REQ,
+    DEDUPE_RESP,
     FAILURE,
     STOP
 };

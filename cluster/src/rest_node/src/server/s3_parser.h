@@ -114,22 +114,30 @@ namespace uh::rest
             }
             else
             {
+                auto check_target = [&target, &ec, this](req_types method)
+                        {
+                            if (!target.empty() && (target.find('?') == std::string::npos))
+                            {
+                                m_parsed_struct.object_key = target.substr(1).to_string();
+                                m_parsed_struct.req_type = method;
+                            }
+                            else
+                            {
+                                ec = make_error_code(http::error::bad_target);
+                            }
+                        };
+
                 switch (method)
                 {
                     case verb::put:
-                        if (!target.empty() && (target.find('?') == std::string::npos))
-                        {
-                            m_parsed_struct.req_type = put_object;
-                            m_parsed_struct.object_key = target.substr(1).to_string();
-                            std::cout << m_parsed_struct.object_key << std::endl;
-                        }
-                        else
-                        {
-                            ec = make_error_code(http::error::bad_target);
-                        }
+                        check_target(req_types::put_object);
+                        break;
+                    case verb::get:
+                        check_target(req_types::get_object);
                         break;
                     default:
                         ec = make_error_code(http::error::bad_method);
+                        break;
                 }
             }
 
@@ -200,10 +208,7 @@ namespace uh::rest
                             if (m_s3_tags.at(m_parsed_struct.req_type).find(x_amz_tagging) == m_s3_tags.at(m_parsed_struct.req_type).end())
                             {
                                 ec = http::make_error_code(boost::beast::http::error::bad_field);
-                            }
-                            else
-                            {
-                                std::cout << m_parsed_struct.req_type << " has x-amz-tagging, value: " << value << std::endl;
+                                m_parsed_struct.x_amz_tagging = value.to_string();
                             }
                             break;
                     }
@@ -213,10 +218,10 @@ namespace uh::rest
                     switch (f) 
                     {
                         case boost::beast::http::field::host:
-                            std::cout << value.substr(0, value.find(':')) << std::endl;
+                            m_parsed_struct.bucket_id = value.substr(0, value.find(':')).to_string();
                             break;
                         case boost::beast::http::field::content_type:
-                            std::cout << name << " : " << value << std::endl;
+                            m_parsed_struct.content_type = value.to_string();
                     }
                 }
             }
@@ -272,6 +277,7 @@ namespace uh::rest
                 string_view s,              // A portion of the body
                 error_code &ec) override
         {
+            m_body_stream << s;
         }   // The error returned to the caller, if any
 
         /** Called each time a new chunk header of a chunk encoded body is received.
@@ -338,10 +344,13 @@ namespace uh::rest
         on_finish_impl(
                 error_code &ec) override
         {
+            std::cout << "It should reach here at least!" << std::endl;
+            std::cout << m_body_stream.str() << std::endl;
         }   // The error returned to the caller, if any
 
     public:
         s3_request_parameters m_parsed_struct;
+        std::stringstream m_body_stream;
 
         s3_parser() : m_s3_tags(static_s3_valid_tags)
         {

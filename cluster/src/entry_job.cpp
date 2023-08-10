@@ -10,7 +10,7 @@ namespace uh::cluster
             m_id (id),
             m_job_name ("entry_" + std::to_string (id))
     {
-        m_rest_server = std::make_unique<uh::rest::rest_server>(std::move(rest_config));
+        m_rest_server = std::make_unique<uh::rest::rest_server>(std::move(rest_config), m_cluster_plan);
     }
 
 //------------------------------------------------------------------------------
