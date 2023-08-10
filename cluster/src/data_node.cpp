@@ -135,7 +135,7 @@ void data_node::handle_read(const int source, const int req_size) const {
 
     const auto buffer = std::make_unique_for_overwrite <char []>(read_size);
 
-    size_t tr = sizeof (size_t);
+    size_t tr = 0;
     for (const auto& ws: addr) {
         const auto r = m_data_store.read(buffer.get() + tr, ws.pointer, ws.size);
         if (r != ws.size) [[unlikely]] {

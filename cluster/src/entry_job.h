@@ -22,7 +22,7 @@ namespace uh::cluster
         entry_job (int id, uh::cluster::cluster_ranks cluster_plan, uh::rest::rest_server_config&& rest_config);
 
         void run();
-        
+
         const cluster_ranks m_cluster_plan;
         const int m_id;
         const std::string m_job_name;

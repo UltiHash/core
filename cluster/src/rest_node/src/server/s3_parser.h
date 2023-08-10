@@ -118,7 +118,7 @@ namespace uh::rest
                         {
                             if (!target.empty() && (target.find('?') == std::string::npos))
                             {
-                                m_parsed_struct.object_key = target.substr(1).to_string();
+                                m_parsed_struct.object_key = target.substr(1);
                                 m_parsed_struct.req_type = method;
                             }
                             else
@@ -198,7 +198,7 @@ namespace uh::rest
                 {
                     // handle unknown fields
 
-                    auto enum_s3_field = s3_field_to_enum(name.to_string());
+                    auto enum_s3_field = s3_field_to_enum(name);
                     switch (enum_s3_field)
                     {
                         case unknown:
@@ -208,7 +208,7 @@ namespace uh::rest
                             if (m_s3_tags.at(m_parsed_struct.req_type).find(x_amz_tagging) == m_s3_tags.at(m_parsed_struct.req_type).end())
                             {
                                 ec = http::make_error_code(boost::beast::http::error::bad_field);
-                                m_parsed_struct.x_amz_tagging = value.to_string();
+                                m_parsed_struct.x_amz_tagging = value;
                             }
                             break;
                     }
@@ -218,10 +218,10 @@ namespace uh::rest
                     switch (f) 
                     {
                         case boost::beast::http::field::host:
-                            m_parsed_struct.bucket_id = value.substr(0, value.find(':')).to_string();
+                            m_parsed_struct.bucket_id = value.substr(0, value.find(':'));
                             break;
                         case boost::beast::http::field::content_type:
-                            m_parsed_struct.content_type = value.to_string();
+                            m_parsed_struct.content_type = value;
                     }
                 }
             }
@@ -278,6 +278,7 @@ namespace uh::rest
                 error_code &ec) override
         {
             m_body_stream << s;
+            return s.size();
         }   // The error returned to the caller, if any
 
         /** Called each time a new chunk header of a chunk encoded body is received.
@@ -344,8 +345,6 @@ namespace uh::rest
         on_finish_impl(
                 error_code &ec) override
         {
-            std::cout << "It should reach here at least!" << std::endl;
-            std::cout << m_body_stream.str() << std::endl;
         }   // The error returned to the caller, if any
 
     public:

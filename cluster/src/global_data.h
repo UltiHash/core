@@ -175,7 +175,7 @@ public:
     std::size_t read (char* buffer, const uint128_t pointer, const size_t size) const {
         const auto source = get_data_node (pointer);
         address addr {{pointer, size}};
-        auto rc = MPI_Send(addr.data(), static_cast <int> (addr.size()), MPI_CHAR, source, message_types::READ_REQ, MPI_COMM_WORLD);
+        auto rc = MPI_Send(addr.data(), static_cast <int> (addr.size()*sizeof(wide_span)), MPI_CHAR, source, message_types::READ_REQ, MPI_COMM_WORLD);
         if (rc != MPI_SUCCESS) [[unlikely]] {
             MPI_Abort(MPI_COMM_WORLD, rc);
         }

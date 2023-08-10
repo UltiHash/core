@@ -60,41 +60,41 @@ void execute_role (const int rank, const uh::cluster::cluster_skeleton& cluster_
     if (rank <= cluster_plan.data_node_ranks.back()) {
         const auto id = rank - cluster_plan.data_node_ranks.front();
 
-        for (int i = 0; i < cluster_plan.dedupe_ranks.size(); i++) {
-            MPI_Comm_split(MPI_COMM_WORLD, uh::cluster::communities::DEDUPE_DATA_NODES, id + 1,
-                           &uh::cluster::dedupe_data_comm);
-        }
-        for (int i = 0; i < cluster_plan.phonebook_ranks.size(); i++) {
-            MPI_Comm_split(MPI_COMM_WORLD, uh::cluster::communities::PHONEBOOK_DATA_NODES, id + 1,
-                           &uh::cluster::phonebook_data_comm);
-        }
+//        for (int i = 0; i < cluster_plan.dedupe_ranks.size(); i++) {
+//            MPI_Comm_split(MPI_COMM_WORLD, uh::cluster::communities::DEDUPE_DATA_NODES, id + 1,
+//                           &uh::cluster::dedupe_data_comm);
+//        }
+//        for (int i = 0; i < cluster_plan.phonebook_ranks.size(); i++) {
+//            MPI_Comm_split(MPI_COMM_WORLD, uh::cluster::communities::PHONEBOOK_DATA_NODES, id + 1,
+//                           &uh::cluster::phonebook_data_comm);
+//        }
 
         uh::cluster::data_node dn (make_data_store_config(), id);
         dn.run();
     }
     else if (rank <= cluster_plan.dedupe_ranks.back()) {
         const auto id = rank - cluster_plan.dedupe_ranks.front();
+        /*
         MPI_Comm_split(MPI_COMM_WORLD, uh::cluster::communities::DEDUPE_DATA_NODES, 0, &uh::cluster::dedupe_data_comm);
         for (int i = 0; i < cluster_plan.entry_ranks.size(); i++) {
             MPI_Comm_split(MPI_COMM_WORLD, uh::cluster::communities::ENTRY_DEDUPE_NODES, id + 1,
                            &uh::cluster::entry_dedupe_comm);
-        }
+        }*/
         uh::cluster::dedupe_job dd (rank, make_dedupe_node_config (), std::move (cluster_plan));
         dd.run();
     }
     else if (rank <= cluster_plan.phonebook_ranks.back()) {
-        MPI_Comm_split(MPI_COMM_WORLD, uh::cluster::communities::PHONEBOOK_DATA_NODES, 0, &uh::cluster::phonebook_data_comm);
+       // MPI_Comm_split(MPI_COMM_WORLD, uh::cluster::communities::PHONEBOOK_DATA_NODES, 0, &uh::cluster::phonebook_data_comm);
         uh::cluster::phonebook_job pb (rank, make_global_data_config(), std::move (cluster_plan));
         pb.run();
     }
     else if (rank <= cluster_plan.entry_ranks.back()) {
-<<<<<<< HEAD
+        /*
         for (int i = 0; i < cluster_plan.dedupe_ranks.size(); i++) {
             MPI_Comm_split(MPI_COMM_WORLD, uh::cluster::communities::ENTRY_DEDUPE_NODES, 0,
                            &uh::cluster::entry_dedupe_comm);
         }
-        uh::cluster::entry_job en (rank, std::move (cluster_plan));
-=======
+*/
 
         uh::rest::rest_server_config rest_config;
         rest_config.address = boost::asio::ip::make_address("0.0.0.0");
@@ -102,7 +102,7 @@ void execute_role (const int rank, const uh::cluster::cluster_skeleton& cluster_
         rest_config.threads = 10;
 
         uh::cluster::entry_job en (rank, std::move (cluster_plan), std::move(rest_config));
->>>>>>> 4814f095d8c1a579976a26748d8ff33c352a9b64
+
         en.run();
     }
 }

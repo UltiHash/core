@@ -15,14 +15,14 @@ namespace uh::cluster::dedupe  {
 struct set_full_comparator {
     explicit set_full_comparator (global_data& storage): m_storage (storage) {}
 
-    [[nodiscard]] inline int operator () (const std::string_view& new_data, const mmap_node& set_data) const {
+    [[nodiscard]] inline std::pair <int, ospan <char>> operator () (const std::string_view& new_data, const mmap_node& set_data) const {
         if (const auto comp = new_data.substr(0,8).compare({reinterpret_cast <const char*>(&set_data.data_prefix), sizeof(set_data.data_prefix)}); comp != 0) {
-            return comp;
+            return {comp, ospan<char>{}};
         }
 
         ospan <char> buf (set_data.m_data.size);
         m_storage.get().read (buf.data.get(), set_data.m_data.pointer, set_data.m_data.size);
-        return new_data.compare({buf.data.get(), set_data.m_data.size});
+        return {new_data.compare({buf.data.get(), set_data.m_data.size}), std::move (buf)};
     }
 
     const std::reference_wrapper <global_data> m_storage;

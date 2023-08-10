@@ -92,7 +92,7 @@ public:
         z.m_mnode->m_right = m_first_block->nill_offset;
         z.m_mnode->m_color = RED;
         z.m_mnode->m_data = {data_offset, data.size()};
-        //z.m_mnode->data_prefix = *reinterpret_cast <const uint64_t*> (data.data());
+        z.m_mnode->data_prefix = *reinterpret_cast <const uint64_t*> (data.data());
 
         const auto offset = z.m_offset;
 
@@ -110,9 +110,10 @@ public:
     [[nodiscard]] set_result find (const std::string_view& data, const index_type& pos = {}) const {
         set_result res;
 
-        if (pos.position != 0) {
-            if (const auto n = get_node (pos.position); m_comp (data, *n.m_mnode) == 0) {
-                res.match = {fetch_node_data(n), n.m_mnode->m_data.pointer, n.m_offset};
+        if (pos.position != 0) [[unlikely]] {
+            const auto n = get_node (pos.position);
+            if (auto comp = m_comp (data, *n.m_mnode); comp.first == 0) {
+                res.match = {std::move (comp.second), n.m_mnode->m_data.pointer, n.m_offset};
                 return res;
             }
         }
@@ -126,7 +127,8 @@ public:
         node smallest_upper = m_nil;
         while (x.m_offset != m_first_block->nill_offset) {
             y = x;
-            comp_int = m_comp (data, *x.m_mnode);
+            auto comp_res = m_comp (data, *x.m_mnode);
+            comp_int = comp_res.first;
             if (comp_int < 0) {
                 smallest_upper = x;
                 x = get_node (x.m_mnode->m_left);
@@ -136,14 +138,15 @@ public:
                 x = get_node (x.m_mnode->m_right);
             }
             else {
-                res.match = {fetch_node_data(y), y.m_mnode->m_data.pointer, y.m_offset};
+                res.match = {std::move (comp_res.second), y.m_mnode->m_data.pointer, y.m_offset};
                 break;
             }
         }
 
         if (!res.match) {
             res.lower = {fetch_node_data (largest_lower), largest_lower.m_mnode->m_data.pointer, largest_lower.m_offset};
-            res.upper = {fetch_node_data (smallest_upper), smallest_upper.m_mnode->m_data.pointer, smallest_upper.m_offset};
+            res.upper = {fetch_node_data(smallest_upper), smallest_upper.m_mnode->m_data.pointer,
+                         smallest_upper.m_offset};
         }
         res.index = {y.m_offset, comp_int};
         return res;
@@ -266,7 +269,9 @@ private:
     }
 
     [[nodiscard]] inline ospan <char> fetch_node_data (const node& n) const {
-
+        if (n.m_offset == m_nil.m_offset) [[unlikely]] {
+            return {};
+        }
         ospan <char> buffer (n.m_mnode->m_data.size);
         m_data_store.get().read(buffer.data.get(), n.m_mnode->m_data.pointer, n.m_mnode->m_data.size);
         return buffer;
