@@ -104,7 +104,7 @@ void data_node::handle_write_many(int source, int size) {
         const auto data_size = *reinterpret_cast <uint32_t *> (buf.get() + w);
         w += sizeof(uint32_t);
         const auto addr = m_data_store.write ({buf.get() + w, static_cast <size_t>(data_size)});
-        addresses.insert (addresses.cend(), addr.cbegin (), addr.cend() + addr.size ());
+        addresses.insert (addresses.cend(), addr.cbegin (), addr.cend());
         w += data_size;
     }
 

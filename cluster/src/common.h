@@ -9,6 +9,7 @@
 #include <span>
 #include "big_int.h"
 #include <memory>
+#include <mpi.h>
 
 namespace uh::cluster {
 
@@ -38,10 +39,21 @@ enum message_types {
     REMOVE_OK,
     USED_REQ,
     USED_RESP,
-    DEDUPE,
+    DEDUPE_REQ,
+    DEDUPE_RESP,
     FAILURE,
     STOP
 };
+
+enum communities {
+    ENTRY_DEDUPE_NODES,
+    DEDUPE_DATA_NODES,
+    PHONEBOOK_DATA_NODES
+};
+
+extern MPI_Comm entry_dedupe_comm;
+extern MPI_Comm dedupe_data_comm;
+extern MPI_Comm phonebook_data_comm;
 
 void handle_failure (const std::string& job_name, int target, const std::exception &e);
 

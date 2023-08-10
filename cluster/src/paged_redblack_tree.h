@@ -107,13 +107,12 @@ public:
         return {.position = offset, .comp = pos.comp};
     }
 
-
     [[nodiscard]] set_result find (const std::string_view& data, const index_type& pos = {}) const {
         set_result res;
 
         if (pos.position != 0) {
             if (const auto n = get_node (pos.position); m_comp (data, *n.m_mnode) == 0) {
-                res.match = {fetch_node_data(n), n.m_mnode->m_data.m_data_offset, n.m_offset};
+                res.match = {fetch_node_data(n), n.m_mnode->m_data.pointer, n.m_offset};
                 return res;
             }
         }
@@ -137,14 +136,14 @@ public:
                 x = get_node (x.m_mnode->m_right);
             }
             else {
-                res.match = {fetch_node_data(y), y.m_mnode->m_data.m_data_offset, y.m_offset};
+                res.match = {fetch_node_data(y), y.m_mnode->m_data.pointer, y.m_offset};
                 break;
             }
         }
 
         if (!res.match) {
-            res.lower = {fetch_node_data (largest_lower), largest_lower.m_mnode->m_data.m_data_offset, largest_lower.m_offset};
-            res.upper = {fetch_node_data (smallest_upper), smallest_upper.m_mnode->m_data.m_data_offset, smallest_upper.m_offset};
+            res.lower = {fetch_node_data (largest_lower), largest_lower.m_mnode->m_data.pointer, largest_lower.m_offset};
+            res.upper = {fetch_node_data (smallest_upper), smallest_upper.m_mnode->m_data.pointer, smallest_upper.m_offset};
         }
         res.index = {y.m_offset, comp_int};
         return res;
@@ -218,6 +217,11 @@ public:
         throw std::runtime_error ("not implemented");
     }
 
+    void update_pointer (uint64_t index_pointer, const wide_span& data_span) noexcept {
+        const auto n = get_node (reinterpret_cast<uint64_t>(m_index_store.get_storage() + index_pointer));
+        n.m_mnode->m_data = data_span;
+    }
+
 private:
 
     bool in_order_traverse (uint64_t start_offset, uint64_t end_offset, std::list<set_data> &result) const {
@@ -263,8 +267,8 @@ private:
 
     [[nodiscard]] inline ospan <char> fetch_node_data (const node& n) const {
 
-        ospan <char> buffer (n.m_mnode->m_data.m_size);
-        m_data_store.get().read(buffer.data.get(), n.m_mnode->m_data.m_data_offset, n.m_mnode->m_data.m_size);
+        ospan <char> buffer (n.m_mnode->m_data.size);
+        m_data_store.get().read(buffer.data.get(), n.m_mnode->m_data.pointer, n.m_mnode->m_data.size);
         return buffer;
     }
 

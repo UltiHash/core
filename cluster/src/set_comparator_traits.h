@@ -20,9 +20,9 @@ struct set_full_comparator {
             return comp;
         }
 
-        ospan <char> buf (set_data.m_data.m_size);
-        m_storage.get().read (buf.data.get(), set_data.m_data.m_data_offset, set_data.m_data.m_size);
-        return new_data.compare({buf.data.get(), set_data.m_data.m_size});
+        ospan <char> buf (set_data.m_data.size);
+        m_storage.get().read (buf.data.get(), set_data.m_data.pointer, set_data.m_data.size);
+        return new_data.compare({buf.data.get(), set_data.m_data.size});
     }
 
     const std::reference_wrapper <global_data> m_storage;

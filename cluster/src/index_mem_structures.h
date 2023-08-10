@@ -17,13 +17,9 @@ enum color_t : uint8_t
     BLACK = 1
 };
 
-struct offset_span {
-    uint128_t m_data_offset;
-    std::size_t m_size;
-};
 
 struct mmap_node {
-    offset_span m_data;
+    wide_span m_data;
     uint64_t m_parent;
     uint64_t m_left;
     uint64_t m_right;

@@ -25,6 +25,9 @@ public:
     }
 
     void run() {
+
+
+        auto buffer = std::make_unique_for_overwrite<char []>(1000);
         std::cout << "hello from " << m_job_name << std::endl;
 
     }

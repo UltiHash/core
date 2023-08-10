@@ -10,6 +10,10 @@
 
 namespace uh::cluster {
 
+    MPI_Comm entry_dedupe_comm;
+    MPI_Comm dedupe_data_comm;
+    MPI_Comm phonebook_data_comm;
+
     void handle_failure (const std::string& job_name, const int target, const std::exception &e) {
         const auto size = static_cast <int> (strlen (e.what()));
         const auto rc = MPI_Send(e.what(), size, MPI_CHAR, target, message_types::FAILURE, MPI_COMM_WORLD);
