@@ -8,34 +8,25 @@
 #include <functional>
 #include <iostream>
 #include "cluster_config.h"
+#include "rest_node/src/server/server.h"
 
-namespace uh::cluster {
+namespace uh::cluster
+{
 
-class entry_job {
-public:
+    class entry_job
+    {
+    private:
+        std::unique_ptr<uh::rest::rest_server> m_rest_server;
+    public:
 
-    entry_job (int id, uh::cluster::cluster_ranks cluster_plan):
-            m_cluster_plan (std::move (cluster_plan)),
-            m_id (id),
-            m_job_name ("entry_" + std::to_string (id)) {
+        entry_job (int id, uh::cluster::cluster_ranks cluster_plan, uh::rest::rest_server_config&& rest_config);
 
-    }
-
-    void do_session () {
-    }
-
-    void run() {
-
-
-        auto buffer = std::make_unique_for_overwrite<char []>(1000);
-        std::cout << "hello from " << m_job_name << std::endl;
-
-    }
-
-    const cluster_ranks m_cluster_plan;
-    const int m_id;
-    const std::string m_job_name;
-};
+        void run();
+        
+        const cluster_ranks m_cluster_plan;
+        const int m_id;
+        const std::string m_job_name;
+    };
 
 } // end namespace uh::cluster
 
