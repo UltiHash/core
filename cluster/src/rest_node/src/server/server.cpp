@@ -107,6 +107,8 @@ namespace uh::rest
 
                 // Read a request
                 uh::rest::s3_parser<true> s3_parser;
+                s3_parser.body_limit(1024ul*1024ul*1024ul);
+
                 co_await http::async_read(stream, buffer, s3_parser, net::use_awaitable);
 
 //                // TODO: co await mechanism send mpi

@@ -64,7 +64,7 @@ public:
         }
 
         MPI_Status status;
-        rc = MPI_Probe (source, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
+        rc = MPI_Probe (source, message_types::WRITE_RESP, MPI_COMM_WORLD, &status);
         if (rc != MPI_SUCCESS) [[unlikely]] {
             MPI_Abort(MPI_COMM_WORLD, rc);
         }
@@ -72,14 +72,16 @@ public:
 
         MPI_Get_count (&status, MPI_CHAR, &message_size);
 
-        if (status.MPI_TAG != message_types::WRITE_RESP) [[unlikely]] {
+        /*if (status.MPI_TAG != message_types::WRITE_RESP) [[unlikely]] {
             ospan<char> buffer (message_size);
+            std::cout << "error in global data read" << std::endl;
+
             rc = MPI_Recv (buffer.data.get(), message_size, MPI_CHAR, source, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
             if (rc != MPI_SUCCESS) [[unlikely]] {
                 MPI_Abort(MPI_COMM_WORLD, rc);
             }
             throw std::runtime_error (std::string (buffer.data.get(), buffer.size));
-        }
+        }*/
         address addr (message_size / sizeof (wide_span));
         rc = MPI_Recv (addr.data(), message_size, MPI_CHAR, source, message_types::WRITE_RESP, MPI_COMM_WORLD, &status);
         if (rc != MPI_SUCCESS) [[unlikely]] {

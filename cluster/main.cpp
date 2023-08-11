@@ -25,15 +25,15 @@ uh::cluster::data_store_config make_data_store_config () {
     return {
         .directory = "root/dn",
         .hole_log = "root/dn/log",
-        .min_file_size = 1ul * 1024ul * 1024ul,
-        .max_file_size = 4ul * 1024ul * 1024ul,
-        .max_data_store_size = 32ul * 1024ul * 1024ul,
+        .min_file_size = 1ul * 1024ul * 1024ul * 1024ul,
+        .max_file_size = 4ul * 1024ul * 1024ul * 1024ul,
+        .max_data_store_size = 64ul * 1024ul * 1024ul * 1024ul,
     };
 }
 
 uh::cluster::global_data_config make_global_data_config () {
     return {
-            .max_data_store_size =  64ul * 1024ul * 1024ul,
+            .max_data_store_size =  64ul * 1024ul * 1024ul * 1024ul,
     };
 }
 
@@ -43,11 +43,11 @@ uh::cluster::dedupe_config make_dedupe_node_config () {
         .max_fragment_size = 4 * 1024,
         .storage_conf = make_global_data_config (),
         .set_conf = {
-                .set_minimum_free_space = 1ul * 1024ul * 1024ul,
-                .max_empty_hole_size = 1ul * 1024ul * 1024ul,
+                .set_minimum_free_space = 1ul * 1024ul * 1024ul * 1024ul,
+                .max_empty_hole_size = 1ul * 1024ul * 1024ul * 1024ul,
                 .key_store_config = {
                         .file  = "root/set",
-                        .init_size = 1ul * 1024ul * 1024ul,
+                        .init_size = 1ul * 1024ul * 1024ul * 1024ul,
                 }
         },
     };
