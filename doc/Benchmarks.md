@@ -19,7 +19,7 @@ Here is a summary of the `insert` operation, comparing side by side UltiHash and
 
 ## Find operation - UltiHash vs MongoDB
 
-Here is a summary of the `find` operation, comparing side by side UltiHash and MongoDB performance. The timings and throughputs keep almost constant, regardless of the block size.
+Here is a summary of the `find` operation, comparing side by side UltiHash and MongoDB performance. The timing and throughput values remain almost constant, regardless of the block size.
 
 
 | 	UltiHash	    ||			     MongoDB	||		

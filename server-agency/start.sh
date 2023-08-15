@@ -1,7 +1,7 @@
 #!/bin/bash
 
 SERVER_NAME="uh-server-db"
-SERVER_PORT=12345
+SERVER_PORT=21832
 TIMEOUT="60"  # empty for infinite
 
 echo "Waiting for ${SERVER_NAME}:${SERVER_PORT} to become available..."
