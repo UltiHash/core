@@ -9,6 +9,7 @@
 #include <optional>
 #include <list>
 #include <span>
+#include <cstdint>
 
 namespace uh::dbn::storage::smart::sets {
 
