@@ -1,4 +1,4 @@
-FROM ghcr.io/ultihash/build-base:20230418 as build
+FROM ghcr.io/ultihash/build-base:20230821 as build
 
 ARG CMAKE_OPTION
 
@@ -12,7 +12,8 @@ RUN mkdir build \
 
 # Execute tests
 WORKDIR /core/build
-RUN ctest -C Release --output-on-failure
+RUN dpkg -i /tmp/foundationdb-server_7.1.31-1_amd64.deb && \
+    ctest -C Release --output-on-failure
 
 FROM ubuntu:22.04 as deploy
 
@@ -26,6 +27,15 @@ ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update \
     && apt-get upgrade --yes \
     && apt-get install --yes --no-install-recommends curl ncat
+
+# Install FoundationDB
+#COPY --from=build /tmp/foundationdb-clients_7.1.31-1_amd64.deb /tmp/foundationdb-clients_7.1.31-1_amd64.deb
+#COPY --from=build /tmp/foundationdb-server_7.1.31-1_amd64.deb /tmp/foundationdb-server_7.1.31-1_amd64.deb
+
+#RUN if [ "$TARGET" = "uh-data-node" ]; then \
+#        dpkg -i /tmp/foundationdb-clients_7.1.31-1_amd64.deb; \
+#        dpkg -i /tmp/foundationdb-server_7.1.31-1_amd64.deb; \
+#    fi
 
 COPY --from=build /core/build/${SRC_PATH}/${TARGET} /usr/local/bin
 COPY --from=build /core/${SRC_PATH}/start.sh /usr/local/bin
@@ -42,6 +52,10 @@ RUN chown -R uh:uh /var/lib/uh-agency-node
 # required for data-node storage
 RUN mkdir -p /var/lib/uh-data-node
 RUN chown -R uh:uh /var/lib/uh-data-node
+
+#ADD foundationdb.conf /etc/foundationdb/foundationdb.conf
+#RUN mkdir -p /home/uh/foundationdb/log
+#RUN chown -R uh:uh /home/uh/foundationdb
 
 USER uh
 WORKDIR /home/uh
