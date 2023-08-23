@@ -1,4 +1,3 @@
-#include <mpi.h>
 #include "server.h"
 #include "s3_parser.h"
 #include "functions.h"
@@ -58,38 +57,6 @@ namespace uh::rest
 
 //------------------------------------------------------------------------------
 
-    template <class Body, class Allocator>
-    http::response<http::string_body>
-    rest_server::handle_request(http::request<Body, http::basic_fields<Allocator>> &&req)
-        {
-            auto const bad_request =
-                    [&req](beast::string_view why)
-                    {
-                        http::response<http::string_body> res{http::status::bad_request, req.version()};
-                        res.set(http::field::server, BOOST_BEAST_VERSION_STRING);
-                        res.set(http::field::content_type, "text/html");
-                        res.keep_alive(req.keep_alive());
-                        res.body() = std::string(why);
-                        res.prepare_payload();
-                        return res;
-                    };
-
-            if(req.method() == http::verb::get)
-            {
-                http::response<http::string_body> res{http::status::ok, req.version()};
-                res.set(http::field::server, BOOST_BEAST_VERSION_STRING);
-                res.set(http::field::content_type, "text/html");
-                res.keep_alive(req.keep_alive());
-                res.body() = std::string("This is the response for the GET request.");
-                res.prepare_payload();
-                return res;
-            }
-
-            return bad_request("Unknown HTTP-method");
-        }
-
-//------------------------------------------------------------------------------
-
     net::awaitable<void>
     rest_server::do_session(tcp_stream stream)
     {
@@ -99,9 +66,9 @@ namespace uh::rest
         beast::flat_buffer buffer;
         beast::error_code ec;
 
-        std::unordered_map<req_types, std::function<void(const s3_parser<true>&)>> request_to_function
-            { { put_object, [this](const s3_parser<true>& s3_parser) { putObject(s3_parser, m_cluster_plan); } },
-              { get_object, [this](const s3_parser<true>& s3_parser) { getObject(s3_parser, m_cluster_plan); } } };
+        std::unordered_map<req_types, std::function<void(const s3_request_object&)>> request_to_function
+            { { put_object, [](const s3_request_object& s3_parsed_request) { putObject(s3_parsed_request); } },
+              { get_object, [](const s3_request_object& s3_parsed_request) { getObject(s3_parsed_request); } } };
 
         try
         {
@@ -117,7 +84,7 @@ namespace uh::rest
 
 //                // TODO: co await mechanism send mpi
 //                // TODO: use mpi scatter to send to a specific communicator processes
-                request_to_function[s3_parser.m_parsed_struct.req_type](s3_parser);
+                request_to_function[s3_parser.m_parsed_struct.req_type](s3_parser.m_parsed_struct);
 
             }
         }
