@@ -1,7 +1,7 @@
 #include <mpi.h>
 #include "server.h"
 #include "s3_parser.h"
-#include "../../../common.h"
+#include "functions.h"
 
 namespace uh::rest
 {
@@ -99,6 +99,10 @@ namespace uh::rest
         beast::flat_buffer buffer;
         beast::error_code ec;
 
+        std::unordered_map<req_types, std::function<void(const s3_parser<true>&)>> request_to_function
+            { { put_object, [this](const s3_parser<true>& s3_parser) { putObject(s3_parser, m_cluster_plan); } },
+              { get_object, [this](const s3_parser<true>& s3_parser) { getObject(s3_parser, m_cluster_plan); } } };
+
         try
         {
             for(;;)
@@ -113,47 +117,7 @@ namespace uh::rest
 
 //                // TODO: co await mechanism send mpi
 //                // TODO: use mpi scatter to send to a specific communicator processes
-                auto rc = MPI_Send(s3_parser.m_body_stream.str().data(), s3_parser.m_body_stream.str().size(), MPI_CHAR,
-                         m_cluster_plan.dedupe_ranks.front(), uh::cluster::message_types::DEDUPE_REQ, MPI_COMM_WORLD);
-
-                // send message before abort to the client
-                if (rc != MPI_SUCCESS) [[unlikely]]
-                {
-                    MPI_Abort(MPI_COMM_WORLD, rc);
-                }
-
-                /* receiving a message */
-                MPI_Status status;
-                int inc_message_size;
-
-                rc = MPI_Probe(MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
-                if (rc != MPI_SUCCESS) [[unlikely]]
-                {
-                    MPI_Abort(MPI_COMM_WORLD, rc);
-                }
-
-                MPI_Get_count(&status, MPI_CHAR, &inc_message_size);
-
-                uh::cluster::address addr (static_cast<size_t>(inc_message_size)/sizeof(uh::cluster::wide_span));
-
-                rc = MPI_Recv(addr.data(), inc_message_size, MPI_CHAR, m_cluster_plan.dedupe_ranks.front(), uh::cluster::message_types::DEDUPE_RESP,
-                                   MPI_COMM_WORLD, &status);
-                if (rc != MPI_SUCCESS) [[unlikely]]
-                {
-                    MPI_Abort(MPI_COMM_WORLD, rc);
-                }
-                const auto effective_size = addr.back().size;
-
-                std::cout << "Effective size is: " << effective_size << std::endl;
-
-//                // send to phonebook
-//                rc = MPI_Send(addr.data(), inc_message_size-sizeof(uh::cluster::wide_span), MPI_CHAR,
-//                                   m_cluster_plan.dedupe_ranks.front(), uh::cluster::message_types::, MPI_COMM_WORLD);
-//
-//                if (rc != MPI_SUCCESS) [[unlikely]]
-//                {
-//                    MPI_Abort(MPI_COMM_WORLD, rc);
-//                }
+                request_to_function[s3_parser.m_parsed_struct.req_type](s3_parser);
 
             }
         }

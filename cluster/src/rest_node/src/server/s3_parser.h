@@ -1,3 +1,6 @@
+#ifndef REST_NODE_SRC_S3_PARSER
+#define REST_NODE_SRC_S3_PARSER
+
 #include <boost/beast/http/basic_parser.hpp>
 #include <logging/logging_boost.h>
 #include <set>
@@ -30,6 +33,12 @@ namespace uh::rest
         bucket_id,
         object_key,
         x_amz_tagging,
+        x_amz_acl,
+        range,
+        if_match,
+        if_modified_since,
+        if_none_match,
+        if_unmodified_since,
     };
 
 //------------------------------------------------------------------------------
@@ -63,7 +72,8 @@ namespace uh::rest
         std::string bucket_id;
         std::string object_key;
         std::string x_amz_tagging;
-        std::string_view body;
+        // TODO: don't copy the body
+        std::stringstream body_stream;
         enum req_types req_type;
     };
 
@@ -118,7 +128,7 @@ namespace uh::rest
                         {
                             if (!target.empty() && (target.find('?') == std::string::npos))
                             {
-                                m_parsed_struct.object_key = target.substr(1);
+                                m_parsed_struct.object_key = target.substr(1).to_string();
                                 m_parsed_struct.req_type = method;
                             }
                             else
@@ -198,7 +208,7 @@ namespace uh::rest
                 {
                     // handle unknown fields
 
-                    auto enum_s3_field = s3_field_to_enum(name);
+                    auto enum_s3_field = s3_field_to_enum(name.to_string());
                     switch (enum_s3_field)
                     {
                         case unknown:
@@ -208,7 +218,7 @@ namespace uh::rest
                             if (m_s3_tags.at(m_parsed_struct.req_type).find(x_amz_tagging) == m_s3_tags.at(m_parsed_struct.req_type).end())
                             {
                                 ec = http::make_error_code(boost::beast::http::error::bad_field);
-                                m_parsed_struct.x_amz_tagging = value;
+                                m_parsed_struct.x_amz_tagging = value.to_string();
                             }
                             break;
                     }
@@ -218,10 +228,10 @@ namespace uh::rest
                     switch (f) 
                     {
                         case boost::beast::http::field::host:
-                            m_parsed_struct.bucket_id = value.substr(0, value.find(':'));
+                            m_parsed_struct.bucket_id = value.substr(0, value.find(':')).to_string();
                             break;
                         case boost::beast::http::field::content_type:
-                            m_parsed_struct.content_type = value;
+                            m_parsed_struct.content_type = value.to_string();
                     }
                 }
             }
@@ -277,7 +287,7 @@ namespace uh::rest
                 string_view s,              // A portion of the body
                 error_code &ec) override
         {
-            m_body_stream << s;
+            m_parsed_struct.body_stream << s;
             return s.size();
         }   // The error returned to the caller, if any
 
@@ -349,7 +359,6 @@ namespace uh::rest
 
     public:
         s3_request_parameters m_parsed_struct;
-        std::stringstream m_body_stream;
 
         s3_parser() : m_s3_tags(static_s3_valid_tags)
         {
@@ -361,9 +370,11 @@ namespace uh::rest
     template<bool isRequest>
     const std::unordered_map <req_types, std::set<s3_fields>> s3_parser<isRequest>::static_s3_valid_tags =
         {
-            { req_types::put_object, { bucket_id, object_key, x_amz_tagging } },
-            { req_types::get_object, {} },
+            { req_types::put_object, { bucket_id, object_key, x_amz_tagging, x_amz_acl } },
+            { req_types::get_object, { bucket_id, object_key, if_match, if_modified_since, if_none_match, if_unmodified_since, range } },
         };
 
 
 } // namespace uh::rest
+
+#endif // REST_NODE_SRC_S3_PARSER
