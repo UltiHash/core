@@ -8,25 +8,26 @@
 #include <functional>
 #include <iostream>
 #include "cluster_config.h"
+#include "cluster_map.h"
 #include "rest_node/src/server/server.h"
 
 namespace uh::cluster
 {
 
-    class entry_job
-    {
-    private:
-        std::unique_ptr<uh::rest::rest_server> m_rest_server;
-    public:
+class entry_job {
+public:
 
-        entry_job (int id, uh::cluster::cluster_ranks cluster_plan, uh::rest::rest_server_config&& rest_config);
+    entry_job (int id, server_config rest_config, cluster_map&& cmap);
 
-        void run();
+    void run();
 
-        const cluster_ranks m_cluster_plan;
-        const int m_id;
-        const std::string m_job_name;
-    };
+private:
+
+    const cluster_map m_cluster_map;
+    const int m_id;
+    uh::rest::rest_server m_rest_server;
+    const std::string m_job_name;
+};
 
 } // end namespace uh::cluster
 

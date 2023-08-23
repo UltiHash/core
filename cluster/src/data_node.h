@@ -9,6 +9,8 @@
 #include <iostream>
 #include "cluster_config.h"
 #include "data_store.h"
+#include "server.h"
+#include "cluster_map.h"
 #include <mpi.h>
 #include <atomic>
 
@@ -16,32 +18,17 @@ namespace uh::cluster {
 class data_node {
 public:
 
-    data_node (data_store_config conf, int id);
+    data_node (int id, data_node_config conf, cluster_map&& cmap);
 
     void run();
 
 private:
 
-    void handle_init (int target) const;
-
-    void handle_write (int source, int size);
-
-    void handle_read (int source, int req_size) const;
-
-    void handle_sync (int target);
-
-    void handle_remove (int target, int message_size);
-
-    void handle_get_used (int target);
-
-    void handle_write_many(int source, int size);
-
-    void handle_stop(int source);
-
     const std::string m_job_name;
+    cluster_map m_cluster_map;
+    server m_server;
     uh::cluster::data_store m_data_store;
     std::atomic <bool> m_stop = false;
-
 };
 } // end namespace uh::cluster
 #endif //CORE_DATA_NODE_H

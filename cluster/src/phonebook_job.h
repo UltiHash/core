@@ -14,13 +14,11 @@ namespace uh::cluster {
 class phonebook_job {
 public:
 
-    phonebook_job (int id,
-                   global_data_config storage_conf,
-                   uh::cluster::cluster_ranks cluster_plan):
-            m_cluster_plan (std::move (cluster_plan)),
+    phonebook_job (int id, global_data_config storage_conf, cluster_map cmap):
+            m_cluster_map (std::move (cmap)),
             m_id (id),
             m_job_name ("phonebook_" + std::to_string (id)),
-            m_storage (storage_conf, m_cluster_plan.data_node_ranks)
+            m_storage (storage_conf)
     {
 
     }
@@ -55,7 +53,7 @@ public:
 
     }
 
-    const cluster_ranks m_cluster_plan;
+    const cluster_map m_cluster_map;
     const int m_id;
     const std::string m_job_name;
     global_data m_storage;

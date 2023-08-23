@@ -45,16 +45,12 @@ enum message_types {
     STOP
 };
 
-enum communities {
-    ENTRY_DEDUPE_NODES,
-    DEDUPE_DATA_NODES,
-    PHONEBOOK_DATA_NODES
+enum role: uint8_t {
+    DATA_NODE,
+    DEDUPE_NODE,
+    PHONE_BOOK_NODE,
+    ENTRY_NODE,
 };
-
-extern MPI_Comm entry_dedupe_comm;
-extern MPI_Comm dedupe_data_comm;
-extern MPI_Comm phonebook_data_comm;
-
 void handle_failure (const std::string& job_name, int target, const std::exception &e);
 
 void* align_ptr (void* ptr) noexcept;

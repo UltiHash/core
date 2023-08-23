@@ -18,41 +18,11 @@ class global_data {
 
 
 public:
-    explicit global_data (global_data_config conf,
-                          const std::vector <int>& data_node_ranks):
-                          m_data_nodes (data_node_ranks),
+
+    explicit global_data (global_data_config conf):
                           m_temp_offset (temp_offset_start)
     {
 
-        std::vector <MPI_Request> reqs (data_node_ranks.size());
-        std::vector <MPI_Status> stats (data_node_ranks.size());
-
-        int rc;
-
-        for (int i = 0; i < data_node_ranks.size(); ++i) {
-            rc = MPI_Isend (&data_node_ranks[i], 1, MPI_INT, data_node_ranks[i], message_types::INIT_REQ, MPI_COMM_WORLD, &reqs[i]);
-            if (rc != MPI_SUCCESS) [[unlikely]] {
-                MPI_Abort(MPI_COMM_WORLD, rc);
-            }
-        }
-
-        MPI_Waitall(static_cast <int> (data_node_ranks.size()), reqs.data(), stats.data());
-
-        for (int i = 0; i < data_node_ranks.size(); ++i) {
-            int id;
-            rc = MPI_Recv(&id, 1, MPI_INT, data_node_ranks[i], message_types::INIT_RESP, MPI_COMM_WORLD, &stats[i]);
-            if (rc != MPI_SUCCESS) [[unlikely]] {
-                MPI_Abort(MPI_COMM_WORLD, rc);
-            }
-            m_data_node_offsets.emplace (conf.max_data_store_size * id, data_node_ranks[i]);
-        }
-
-        int rank;
-        rc = MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-        if (rc != MPI_SUCCESS) [[unlikely]] {
-            MPI_Abort(MPI_COMM_WORLD, rc);
-        }
-        rank_index = rank % m_data_nodes.size();
     }
 
     address write (const std::string_view& data) {

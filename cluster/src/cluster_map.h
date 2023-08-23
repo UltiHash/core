@@ -1,0 +1,146 @@
+//
+// Created by masi on 8/22/23.
+//
+
+#ifndef CORE_CLUSTER_MAP_H
+#define CORE_CLUSTER_MAP_H
+
+#include <boost/bind/bind.hpp>
+#include <condition_variable>
+#include <boost/asio.hpp>
+#include <ranges>
+#include <map>
+#include <unordered_map>
+
+namespace uh::cluster {
+    class cluster_map {
+
+        struct ipv4 {
+            uint8_t bytes[4] {};
+            explicit ipv4 (const boost::asio::ip::address_v4& address) {
+
+                const auto ip_str = address.to_string();
+                const auto ip_nums = std::string_view (ip_str)
+                           | std::ranges::views::split ('.')
+                           | std::ranges::views::transform([](auto && rng) {
+                    char* end;
+                    return std::strtol (&*rng.begin(), &end, 10);
+                });
+
+                int i = 0;
+                for (const auto num: ip_nums) {
+                    bytes [i++] = num;
+                }
+            }
+            explicit ipv4 (const char* buf) {
+                std::memcpy(bytes, buf, sizeof (bytes));
+            }
+
+            [[nodiscard]] boost::asio::ip::address_v4 to_address () const {
+                return boost::asio::ip::address_v4::from_string(std::to_string(bytes[0]) + "."
+                                                            + std::to_string(bytes[1]) + "."
+                                                            + std::to_string(bytes[2]) + "."
+                                                            + std::to_string(bytes[3]));
+            }
+        };
+
+    public:
+
+
+        explicit cluster_map (cluster_config cluster_conf):
+                m_cluster_conf (cluster_conf),
+                m_roles_buf (m_cluster_conf.init_process_count * PROCESS_DATA_SIZE) {
+        }
+
+        cluster_map (cluster_map&& cmap) noexcept:
+            m_cluster_conf (cmap.m_cluster_conf),
+            m_resp_count (cmap.m_resp_count.load()),
+            m_roles_buf (std::move (cmap.m_roles_buf)),
+            m_roles (std::move (cmap.m_roles))
+            {
+            m_resp_count = 0;
+        }
+
+        void broadcast_init () {
+            boost::asio::io_service io (m_cluster_conf.broadcast_threads);
+            boost::asio::ip::udp::socket socket(io);
+
+            socket.open(boost::asio::ip::udp::v4());
+
+            socket.set_option(boost::asio::ip::udp::socket::reuse_address(true));
+            socket.set_option(boost::asio::socket_base::broadcast(true));
+
+            boost::asio::ip::udp::endpoint sender_endpoint (boost::asio::ip::address_v4::broadcast(), m_cluster_conf.broadcast_port);
+            socket.async_send_to (boost::asio::buffer(INIT_MESSAGE),
+                                  sender_endpoint,
+                                  boost::bind (&cluster_map::handle_send, this, std::ref (socket)));
+            io.run();
+        }
+
+
+        void send_recv_roles (const uh::cluster::role role, const int id) {
+            boost::asio::io_service io_service;
+            boost::asio::ip::udp::socket socket (io_service,
+                            boost::asio::ip::udp::endpoint (boost::asio::ip::udp::v4(), m_cluster_conf.broadcast_port));
+
+            boost::asio::ip::udp::endpoint sender_endpoint;
+            char recv_buf [INIT_MESSAGE.size()];
+            std::size_t r = socket.receive_from(boost::asio::buffer(recv_buf, INIT_MESSAGE.size()), sender_endpoint);
+            if (r != INIT_MESSAGE.size() and std::string_view (recv_buf, INIT_MESSAGE.size()) != INIT_MESSAGE) {
+                throw std::runtime_error ("Invalid message");
+            }
+
+            auto send_buf = std::make_unique_for_overwrite<char[]> (sizeof (id) + sizeof (role));
+            std::memcpy(send_buf.get(), &id, sizeof (id));
+            std::memcpy(send_buf.get() + sizeof (id), &role, sizeof (role));
+            socket.send_to (boost::asio::buffer(send_buf.get(), sizeof (id) + sizeof (role)), sender_endpoint);
+
+            socket.receive_from(boost::asio::buffer(m_roles_buf.data.get(), m_roles_buf.size), sender_endpoint);
+
+            for (int i = 0; i < m_roles_buf.size; i += PROCESS_DATA_SIZE) {
+                const auto pointer = m_roles_buf.data.get() + i;
+                const auto rid = *reinterpret_cast <int*> (pointer);
+                const auto rrole = *reinterpret_cast <uh::cluster::role*> (pointer + sizeof (rid));
+                const ipv4 ip (pointer + sizeof rid + sizeof rrole);
+                m_roles [rrole].emplace(rid, ip.to_address());
+            }
+        }
+
+    private:
+
+
+        void wait_for_responses () {
+            std::unique_lock<std::mutex> lk(m_cv_m);
+            m_cv.wait(lk, [this] {return m_resp_count == m_cluster_conf.init_process_count;});
+        }
+
+        void handle_send (std::reference_wrapper <boost::asio::basic_datagram_socket<boost::asio::ip::udp>> socket) {
+
+            const auto offset = m_resp_count.fetch_add(1, std::memory_order_relaxed) * PROCESS_DATA_SIZE;
+            const auto pointer = m_roles_buf.data.get() + offset;
+            boost::asio::ip::udp::endpoint end_point;
+            socket.get().receive_from (boost::asio::buffer(pointer, sizeof (int) + sizeof (role)), end_point);
+            std::memcpy (pointer + sizeof (int) + sizeof (role), ipv4 (end_point.address().to_v4()).bytes, sizeof (ipv4));
+
+            const auto id = *reinterpret_cast <int*> (pointer);
+            const auto role = *reinterpret_cast <uh::cluster::role*> (pointer + sizeof (id));
+            m_roles [role].emplace(id, end_point.address());
+
+            wait_for_responses();
+
+            socket.get().send_to (boost::asio::buffer(m_roles_buf.data.get(), m_roles_buf.size), end_point);
+        }
+
+        std::atomic <int> m_resp_count = 0;
+        std::unordered_map <uh::cluster::role, std::map <int, boost::asio::ip::address>> m_roles;
+        cluster_config m_cluster_conf;
+        ospan <char> m_roles_buf;
+        std::condition_variable m_cv;
+        std::mutex m_cv_m;
+        constexpr static size_t PROCESS_DATA_SIZE = sizeof (int) + sizeof (role) + sizeof(ipv4);
+        constexpr static std::string_view INIT_MESSAGE = "in";
+
+    };
+} // end namespace uh::cluster
+
+#endif //CORE_CLUSTER_MAP_H

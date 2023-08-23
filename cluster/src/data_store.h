@@ -25,7 +25,7 @@ class data_store {
 
 public:
 
-    explicit data_store (data_store_config conf, int id, bool adaptive = true);
+    explicit data_store (data_node_config conf, long id, bool adaptive = true);
 
     address write (std::span <char> data);
 
@@ -37,7 +37,7 @@ public:
 
     [[nodiscard]] uint128_t get_used_space () const noexcept;
 
-    int get_data_id () const noexcept;
+    long get_data_id () const noexcept;
 
     ~data_store();
 
@@ -69,8 +69,8 @@ private:
 
     int m_last_fd {};
     std::size_t m_last_file_data_end {};
-    int m_data_id;
-    const data_store_config m_conf;
+    long m_data_id;
+    const data_node_config m_conf;
     free_spot_manager m_free_spot_manager;
     std::map <uint128_t, int> m_open_files;
     std::unordered_map <int, std::size_t> m_modified_files;

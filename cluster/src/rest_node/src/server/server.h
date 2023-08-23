@@ -46,22 +46,20 @@ namespace uh::rest
 
 //------------------------------------------------------------------------------
 
-    class rest_server : public uh::net::server
+    class rest_server
     {
     private:
-        rest_server_config m_config;
-        const uh::cluster::cluster_ranks& m_cluster_plan;
+        uh::cluster::server_config m_config;
         net::io_context m_ioc;
         std::vector<std::thread> m_thread_container {};
+        const boost::asio::ip::address m_server_address = boost::asio::ip::make_address("0.0.0.0");
 
     public:
-        rest_server(rest_server_config&& config, const uh::cluster::cluster_ranks& cluster_plan);
+        explicit rest_server(uh::cluster::server_config config);
 
-        ~rest_server() override = default;
+        [[nodiscard]] bool is_busy() const;
 
-        [[nodiscard]] bool is_busy() const override;
-
-        void run() override;
+        void run();
 
         // Handles the request received
         template <class Body, class Allocator>

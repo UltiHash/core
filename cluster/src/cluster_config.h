@@ -12,43 +12,25 @@
 
 namespace uh::cluster {
 
-struct cluster_skeleton {
-    int data_node_jobs_count;
-    int dedupe_jobs_count;
-    int phonebook_jobs_count;
-    int entry_jobs_count;
+struct cluster_config {
+    int init_process_count;
+    int broadcast_port;
+    int broadcast_threads;
 };
 
-struct cluster_ranks {
-    std::vector <int> data_node_ranks;
-    std::vector <int> dedupe_ranks;
-    std::vector <int> phonebook_ranks;
-    std::vector <int> entry_ranks;
-
-    explicit cluster_ranks (const cluster_skeleton& cluster_conf):
-        data_node_ranks (cluster_conf.data_node_jobs_count),
-        dedupe_ranks (cluster_conf.dedupe_jobs_count),
-        phonebook_ranks (cluster_conf.phonebook_jobs_count),
-        entry_ranks (cluster_conf.entry_jobs_count) {
-
-        size_t rank_offset = 0;
-        std::iota (std::begin(data_node_ranks), std::end(data_node_ranks), rank_offset);
-        rank_offset += data_node_ranks.size();
-        std::iota (std::begin(dedupe_ranks), std::end(dedupe_ranks), rank_offset);
-        rank_offset += dedupe_ranks.size();
-        std::iota (std::begin(phonebook_ranks), std::end(phonebook_ranks), rank_offset);
-        rank_offset += phonebook_ranks.size();
-        std::iota (std::begin(entry_ranks), std::end(entry_ranks), rank_offset);
-
-    }
+struct server_config {
+    std::size_t threads;
+    uint16_t port;
+    std::size_t buffer_size;
 };
 
-struct data_store_config {
+struct data_node_config {
     std::filesystem::path directory;
     std::filesystem::path hole_log;
     size_t min_file_size;
     size_t max_file_size;
     uint128_t max_data_store_size;
+    server_config server_conf;
 };
 
 struct global_data_config {
@@ -72,6 +54,7 @@ struct dedupe_config {
     std::size_t max_fragment_size;
     std::size_t sampling_interval;
     global_data_config storage_conf;
+    server_config server_conf;
     set_config set_conf;
 };
 

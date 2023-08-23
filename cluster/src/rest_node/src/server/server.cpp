@@ -8,13 +8,12 @@ namespace uh::rest
 
 //------------------------------------------------------------------------------
 
-    rest_server::rest_server(uh::rest::rest_server_config&& config, const uh::cluster::cluster_ranks& cluster_plan) :
-        m_config(std::move(config)), m_ioc(static_cast<int>(m_config.threads)), m_thread_container(m_config.threads-1),
-        m_cluster_plan(cluster_plan)
+    rest_server::rest_server(uh::cluster::server_config config) :
+        m_config(config), m_ioc(static_cast<int>(m_config.threads)), m_thread_container(m_config.threads-1)
     {
         // spawn a coroutine
         boost::asio::co_spawn(m_ioc,
-                              do_listen(tcp::endpoint{m_config.address, m_config.port}),
+                              do_listen(tcp::endpoint{m_server_address, m_config.port}),
                               [](const std::exception_ptr& e)
                               {
                                   if (e)
@@ -27,15 +26,6 @@ namespace uh::rest
                                           std::cerr << "Error in acceptor: " << e.what() << "\n";
                                       }
                               });
-    }
-
-//------------------------------------------------------------------------------
-
-    bool
-    rest_server::is_busy() const
-    {
-        //TODO: implement busyness logic
-        return false;
     }
 
 //------------------------------------------------------------------------------
@@ -56,37 +46,6 @@ namespace uh::rest
         m_ioc.run();
     }
 
-//------------------------------------------------------------------------------
-
-    template <class Body, class Allocator>
-    http::response<http::string_body>
-    rest_server::handle_request(http::request<Body, http::basic_fields<Allocator>> &&req)
-        {
-            auto const bad_request =
-                    [&req](beast::string_view why)
-                    {
-                        http::response<http::string_body> res{http::status::bad_request, req.version()};
-                        res.set(http::field::server, BOOST_BEAST_VERSION_STRING);
-                        res.set(http::field::content_type, "text/html");
-                        res.keep_alive(req.keep_alive());
-                        res.body() = std::string(why);
-                        res.prepare_payload();
-                        return res;
-                    };
-
-            if(req.method() == http::verb::get)
-            {
-                http::response<http::string_body> res{http::status::ok, req.version()};
-                res.set(http::field::server, BOOST_BEAST_VERSION_STRING);
-                res.set(http::field::content_type, "text/html");
-                res.keep_alive(req.keep_alive());
-                res.body() = std::string("This is the response for the GET request.");
-                res.prepare_payload();
-                return res;
-            }
-
-            return bad_request("Unknown HTTP-method");
-        }
 
 //------------------------------------------------------------------------------
 
@@ -113,47 +72,7 @@ namespace uh::rest
 
 //                // TODO: co await mechanism send mpi
 //                // TODO: use mpi scatter to send to a specific communicator processes
-                auto rc = MPI_Send(s3_parser.m_body_stream.str().data(), s3_parser.m_body_stream.str().size(), MPI_CHAR,
-                         m_cluster_plan.dedupe_ranks.front(), uh::cluster::message_types::DEDUPE_REQ, MPI_COMM_WORLD);
 
-                // send message before abort to the client
-                if (rc != MPI_SUCCESS) [[unlikely]]
-                {
-                    MPI_Abort(MPI_COMM_WORLD, rc);
-                }
-
-                /* receiving a message */
-                MPI_Status status;
-                int inc_message_size;
-
-                rc = MPI_Probe(MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
-                if (rc != MPI_SUCCESS) [[unlikely]]
-                {
-                    MPI_Abort(MPI_COMM_WORLD, rc);
-                }
-
-                MPI_Get_count(&status, MPI_CHAR, &inc_message_size);
-
-                uh::cluster::address addr (static_cast<size_t>(inc_message_size)/sizeof(uh::cluster::wide_span));
-
-                rc = MPI_Recv(addr.data(), inc_message_size, MPI_CHAR, m_cluster_plan.dedupe_ranks.front(), uh::cluster::message_types::DEDUPE_RESP,
-                                   MPI_COMM_WORLD, &status);
-                if (rc != MPI_SUCCESS) [[unlikely]]
-                {
-                    MPI_Abort(MPI_COMM_WORLD, rc);
-                }
-                const auto effective_size = addr.back().size;
-
-                std::cout << "Effective size is: " << effective_size << std::endl;
-
-//                // send to phonebook
-//                rc = MPI_Send(addr.data(), inc_message_size-sizeof(uh::cluster::wide_span), MPI_CHAR,
-//                                   m_cluster_plan.dedupe_ranks.front(), uh::cluster::message_types::, MPI_COMM_WORLD);
-//
-//                if (rc != MPI_SUCCESS) [[unlikely]]
-//                {
-//                    MPI_Abort(MPI_COMM_WORLD, rc);
-//                }
 
             }
         }

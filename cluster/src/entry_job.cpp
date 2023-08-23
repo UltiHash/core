@@ -5,12 +5,12 @@ namespace uh::cluster
 
 //------------------------------------------------------------------------------
 
-    entry_job::entry_job(int id, uh::cluster::cluster_ranks cluster_plan, uh::rest::rest_server_config&& rest_config) :
-            m_cluster_plan (std::move (cluster_plan)),
+    entry_job::entry_job(int id, server_config rest_config, cluster_map&& cmap) :
+            m_cluster_map (std::move (cmap)),
             m_id (id),
-            m_job_name ("entry_" + std::to_string (id))
+            m_job_name ("entry_" + std::to_string (id)),
+            m_rest_server (rest_config)
     {
-        m_rest_server = std::make_unique<uh::rest::rest_server>(std::move(rest_config), m_cluster_plan);
     }
 
 //------------------------------------------------------------------------------
@@ -18,7 +18,7 @@ namespace uh::cluster
     void
     entry_job::run()
     {
-        m_rest_server->run();
+        m_rest_server.run();
     }
 
 //------------------------------------------------------------------------------

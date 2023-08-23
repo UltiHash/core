@@ -6,7 +6,7 @@
 
 namespace uh::cluster {
 
-data_store::data_store(data_store_config conf, int id, bool adaptive) :
+data_store::data_store(data_node_config conf, long id, bool adaptive) :
         m_data_id (id),
         m_conf (std::move (conf)),
         m_free_spot_manager (m_conf.hole_log) {
@@ -285,7 +285,7 @@ uint128_t data_store::get_used_space() const noexcept {
     return m_used;
 }
 
-int data_store::get_data_id() const noexcept {
+long data_store::get_data_id() const noexcept {
     return m_data_id;
 }
 

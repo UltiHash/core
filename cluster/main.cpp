@@ -2,32 +2,46 @@
 // Created by masi on 7/17/23.
 //
 
-#include <mpi.h>
 #include <system_error>
-#include <cerrno>
 #include "src/cluster_config.h"
-#include <memory>
 #include "src/data_node.h"
 #include "src/dedupe_job.h"
 #include "src/phonebook_job.h"
 #include "src/entry_job.h"
+#include "cluster_map.h"
 
-uh::cluster::cluster_skeleton make_cluster_skeleton () {
+uh::cluster::cluster_config make_cluster_config () {
     return {
-        .data_node_jobs_count = 1,
-        .dedupe_jobs_count = 1,
-        .phonebook_jobs_count = 1,
-        .entry_jobs_count= 1,
+        .init_process_count = 6,
+        .broadcast_port = 8079,
+        .broadcast_threads = 4,
     };
 }
 
-uh::cluster::data_store_config make_data_store_config () {
+uh::cluster::server_config make_rest_server_config () {
+    return {
+            .threads = 10,
+            .port = 8080,
+            .buffer_size = 1024 * 1024,
+    };
+}
+
+uh::cluster::server_config make_internal_server_config () {
+    return {
+            .threads = 10,
+            .port = 8081,
+            .buffer_size = 1024 * 1024,
+    };
+}
+
+uh::cluster::data_node_config make_data_node_config () {
     return {
         .directory = "root/dn",
         .hole_log = "root/dn/log",
         .min_file_size = 1ul * 1024ul * 1024ul * 1024ul,
         .max_file_size = 4ul * 1024ul * 1024ul * 1024ul,
         .max_data_store_size = 64ul * 1024ul * 1024ul * 1024ul,
+        .server_conf = make_internal_server_config(),
     };
 }
 
@@ -42,6 +56,7 @@ uh::cluster::dedupe_config make_dedupe_node_config () {
         .min_fragment_size = 1024,
         .max_fragment_size = 4 * 1024,
         .storage_conf = make_global_data_config (),
+        .server_conf = make_internal_server_config(),
         .set_conf = {
                 .set_minimum_free_space = 1ul * 1024ul * 1024ul * 1024ul,
                 .max_empty_hole_size = 1ul * 1024ul * 1024ul * 1024ul,
@@ -53,90 +68,74 @@ uh::cluster::dedupe_config make_dedupe_node_config () {
     };
 }
 
-void execute_role (const int rank, const uh::cluster::cluster_skeleton& cluster_conf) {
+void execute_role (const uh::cluster::role role, const int id, uh::cluster::cluster_map cmap) {
 
-    uh::cluster::cluster_ranks cluster_plan (cluster_conf);
-
-    if (rank <= cluster_plan.data_node_ranks.back()) {
-        const auto id = rank - cluster_plan.data_node_ranks.front();
-
-//        for (int i = 0; i < cluster_plan.dedupe_ranks.size(); i++) {
-//            MPI_Comm_split(MPI_COMM_WORLD, uh::cluster::communities::DEDUPE_DATA_NODES, id + 1,
-//                           &uh::cluster::dedupe_data_comm);
-//        }
-//        for (int i = 0; i < cluster_plan.phonebook_ranks.size(); i++) {
-//            MPI_Comm_split(MPI_COMM_WORLD, uh::cluster::communities::PHONEBOOK_DATA_NODES, id + 1,
-//                           &uh::cluster::phonebook_data_comm);
-//        }
-
-        uh::cluster::data_node dn (make_data_store_config(), id);
-        dn.run();
-    }
-    else if (rank <= cluster_plan.dedupe_ranks.back()) {
-        const auto id = rank - cluster_plan.dedupe_ranks.front();
-        /*
-        MPI_Comm_split(MPI_COMM_WORLD, uh::cluster::communities::DEDUPE_DATA_NODES, 0, &uh::cluster::dedupe_data_comm);
-        for (int i = 0; i < cluster_plan.entry_ranks.size(); i++) {
-            MPI_Comm_split(MPI_COMM_WORLD, uh::cluster::communities::ENTRY_DEDUPE_NODES, id + 1,
-                           &uh::cluster::entry_dedupe_comm);
-        }*/
-        uh::cluster::dedupe_job dd (rank, make_dedupe_node_config (), std::move (cluster_plan));
-        dd.run();
-    }
-    else if (rank <= cluster_plan.phonebook_ranks.back()) {
-       // MPI_Comm_split(MPI_COMM_WORLD, uh::cluster::communities::PHONEBOOK_DATA_NODES, 0, &uh::cluster::phonebook_data_comm);
-        uh::cluster::phonebook_job pb (rank, make_global_data_config(), std::move (cluster_plan));
-        pb.run();
-    }
-    else if (rank <= cluster_plan.entry_ranks.back()) {
-        /*
-        for (int i = 0; i < cluster_plan.dedupe_ranks.size(); i++) {
-            MPI_Comm_split(MPI_COMM_WORLD, uh::cluster::communities::ENTRY_DEDUPE_NODES, 0,
-                           &uh::cluster::entry_dedupe_comm);
+    switch (role) {
+        case uh::cluster::DATA_NODE: {
+            uh::cluster::data_node dn (id, make_data_node_config(), std::move (cmap));
+            dn.run();
+            break;
         }
-*/
+        case uh::cluster::DEDUPE_NODE: {
+            uh::cluster::dedupe_job dd (id, make_dedupe_node_config (), std::move (cmap));
+            dd.run();
+            break;
+        }
+        case uh::cluster::PHONE_BOOK_NODE: {
+            uh::cluster::phonebook_job pb (id, make_global_data_config(), std::move (cmap));
+            pb.run();
+            break;
+        }
+        case uh::cluster::ENTRY_NODE: {
+            uh::cluster::entry_job en (id, make_rest_server_config(), std::move(cmap));
+            en.run();
+            break;
+        }
+    }
 
-        uh::rest::rest_server_config rest_config;
-        rest_config.address = boost::asio::ip::make_address("0.0.0.0");
-        rest_config.port = 8080;
-        rest_config.threads = 10;
+}
 
-        uh::cluster::entry_job en (rank, std::move (cluster_plan), std::move(rest_config));
+uh::cluster::cluster_map init_cluster_map (const uh::cluster::role role, const int id) {
+    uh::cluster::cluster_map cmap (make_cluster_config());
+    if (role == uh::cluster::ENTRY_NODE and id == 0) { // master
+        cmap.broadcast_init();
+    }
+    else {
+        cmap.send_recv_roles(role, id);
+    }
+    return cmap;
+}
 
-        en.run();
+uh::cluster::role get_role (const std::string_view& role_str) {
+    if (role_str == "dn") {
+        return uh::cluster::DATA_NODE;
+    }
+    else if (role_str == "dd") {
+        return uh::cluster::DEDUPE_NODE;
+    }
+    else if (role_str == "pb") {
+        return uh::cluster::PHONE_BOOK_NODE;
+    }
+    else if (role_str == "en") {
+        return uh::cluster::ENTRY_NODE;
+    }
+    else {
+        throw std::invalid_argument ("Invalid role!");
     }
 }
 
-int main (int argc, char* argv[]) {
-    auto rc = MPI_Init (&argc, &argv);
-    if (rc != MPI_SUCCESS) {
-        throw std::runtime_error ("MPI operation failed");
+int main (int argc, char* args[]) {
+    if (argc != 3) {
+        throw std::invalid_argument("Usage: uh-cluster <role> <id>");
     }
+    const auto role_str = std::string_view(args[1]);   // en, dd, ph, dn
+    char* end;
+    const auto id = static_cast <int> (std::strtol(args[2], &end, 10));
 
-    int total_jobs;
-    rc = MPI_Comm_size(MPI_COMM_WORLD, &total_jobs);
-    if (rc != MPI_SUCCESS) {
-        throw std::runtime_error ("MPI operation failed");
-    }
+    const auto role = get_role (role_str);
 
-    const auto cluster_conf = make_cluster_skeleton();
-    if (total_jobs != cluster_conf.entry_jobs_count  +
-                    cluster_conf.phonebook_jobs_count  +
-                    cluster_conf.dedupe_jobs_count +
-                    cluster_conf.data_node_jobs_count) {
-        throw std::logic_error ("The number of processes must match the cluster configuration");
-    }
+    uh::cluster::cluster_map cmap = init_cluster_map (role, id);
 
-    int rank;
-    rc = MPI_Comm_rank(MPI_COMM_WORLD, &rank);
-    if (rc != MPI_SUCCESS) {
-        throw std::runtime_error ("MPI operation failed");
-    }
+    execute_role (role, id, std::move (cmap));
 
-    execute_role (rank, cluster_conf);
-
-    rc = MPI_Finalize();
-    if (rc != MPI_SUCCESS) {
-        throw std::runtime_error ("MPI operation failed");
-    }
 }
