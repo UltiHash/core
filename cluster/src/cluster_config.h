@@ -12,6 +12,8 @@
 
 namespace uh::cluster {
 
+// fundamental config
+
 struct cluster_config {
     int init_process_count;
     int broadcast_port;
@@ -22,15 +24,6 @@ struct server_config {
     std::size_t threads;
     uint16_t port;
     std::size_t buffer_size;
-};
-
-struct data_node_config {
-    std::filesystem::path directory;
-    std::filesystem::path hole_log;
-    size_t min_file_size;
-    size_t max_file_size;
-    uint128_t max_data_store_size;
-    server_config server_conf;
 };
 
 struct global_data_config {
@@ -49,6 +42,8 @@ struct set_config {
     growing_plain_storage_config key_store_config;
 };
 
+// roles config
+
 struct dedupe_config {
     std::size_t min_fragment_size;
     std::size_t max_fragment_size;
@@ -58,7 +53,24 @@ struct dedupe_config {
     set_config set_conf;
 };
 
+struct data_node_config {
+    std::filesystem::path directory;
+    std::filesystem::path hole_log;
+    size_t min_file_size;
+    size_t max_file_size;
+    uint128_t max_data_store_size;
+    server_config server_conf;
+};
 
+struct entry_node_config {
+    server_config internal_server_conf;
+    server_config rest_server_conf;
+};
+
+struct phonebook_node_config {
+    server_config server_conf;
+    global_data_config storage_conf;
+};
 
 } // end namespace uh::cluster
 

@@ -18,19 +18,30 @@ uh::cluster::cluster_config make_cluster_config () {
     };
 }
 
-uh::cluster::server_config make_rest_server_config () {
-    return {
-            .threads = 10,
-            .port = 8080,
-            .buffer_size = 1024 * 1024,
-    };
-}
-
 uh::cluster::server_config make_internal_server_config () {
     return {
             .threads = 10,
             .port = 8081,
             .buffer_size = 1024 * 1024,
+    };
+}
+
+uh::cluster::global_data_config make_global_data_config () {
+    return {
+            .max_data_store_size =  64ul * 1024ul * 1024ul * 1024ul,
+    };
+}
+
+// config roles
+
+uh::cluster::entry_node_config make_entry_node_config () {
+    return {
+        .internal_server_conf = make_internal_server_config(),
+        .rest_server_conf = {
+                .threads = 10,
+                .port = 8080,
+                .buffer_size = 1024 * 1024,
+        }
     };
 }
 
@@ -45,9 +56,10 @@ uh::cluster::data_node_config make_data_node_config () {
     };
 }
 
-uh::cluster::global_data_config make_global_data_config () {
+uh::cluster::phonebook_node_config make_phonebook_node_config () {
     return {
-            .max_data_store_size =  64ul * 1024ul * 1024ul * 1024ul,
+        .server_conf = make_internal_server_config(),
+        .storage_conf = make_global_data_config(),
     };
 }
 
@@ -82,12 +94,12 @@ void execute_role (const uh::cluster::role role, const int id, uh::cluster::clus
             break;
         }
         case uh::cluster::PHONE_BOOK_NODE: {
-            uh::cluster::phonebook_job pb (id, make_global_data_config(), std::move (cmap));
+            uh::cluster::phonebook_job pb (id, make_phonebook_node_config(), std::move (cmap));
             pb.run();
             break;
         }
         case uh::cluster::ENTRY_NODE: {
-            uh::cluster::entry_job en (id, make_rest_server_config(), std::move(cmap));
+            uh::cluster::entry_job en (id, make_entry_node_config(), std::move(cmap));
             en.run();
             break;
         }

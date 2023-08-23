@@ -112,7 +112,6 @@ namespace uh::cluster
             try {
                 for (;;) {
                     co_await boost::asio::async_read(stream, boost::asio::buffer(buffer.get(), m_config.buffer_size), nothrow_await);
-                   // co_await boost::asio::this_coro::async_read_some (stream, buffer, net::use_awaitable);
                     std::cout << "message " << std::string_view (buffer.get(), 10) << std::endl;
                 }
             }

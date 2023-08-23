@@ -194,6 +194,7 @@ namespace uh::cluster {
                 m_id (id),
                 m_job_name ("dedupe_node_" + std::to_string (id)),
                 m_dedupe_conf(std::move(conf)),
+                m_server (m_dedupe_conf.server_conf),
                 m_storage (m_dedupe_conf.storage_conf),
                 m_fragment_set (m_dedupe_conf.set_conf, m_storage) {
 
@@ -320,6 +321,7 @@ namespace uh::cluster {
         const int m_id;
         const std::string m_job_name;
         dedupe_config m_dedupe_conf;
+        server m_server;
         global_data m_storage;
         dedupe::paged_redblack_tree <dedupe::set_full_comparator> m_fragment_set;
 
