@@ -10,6 +10,8 @@
 #include "src/entry_job.h"
 #include "cluster_map.h"
 
+// config fundamentals
+
 uh::cluster::cluster_config make_cluster_config () {
     return {
         .init_process_count = 6,

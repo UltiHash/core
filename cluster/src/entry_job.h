@@ -10,7 +10,7 @@
 #include "cluster_config.h"
 #include "cluster_map.h"
 #include "server.h"
-#include "rest_node/src/server/server.h"
+#include "rest_api/server.h"
 
 namespace uh::cluster
 {

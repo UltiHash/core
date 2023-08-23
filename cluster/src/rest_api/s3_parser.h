@@ -1,5 +1,5 @@
 #include <boost/beast/http/basic_parser.hpp>
-#include <logging/logging_boost.h>
+#include "logging/logging_boost.h"
 #include <set>
 
 namespace uh::rest
@@ -331,6 +331,7 @@ namespace uh::rest
                 string_view body,           // The next piece of the chunk body
                 error_code &ec) override
         {
+            return 0;
         }   // The error returned to the caller, if any
 
         /** Called once when the complete message is received.

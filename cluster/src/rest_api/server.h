@@ -15,9 +15,9 @@
 #include <thread>
 #include <vector>
 #include <boost/beast/http/message_generator.hpp>
-#include <logging/logging_boost.h>
+#include "logging/logging_boost.h"
 #include "net/server.h"
-#include "../../../cluster_config.h"
+#include "../cluster_config.h"
 
 //------------------------------------------------------------------------------
 

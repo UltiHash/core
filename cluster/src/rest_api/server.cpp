@@ -1,7 +1,7 @@
 #include <mpi.h>
 #include "server.h"
 #include "s3_parser.h"
-#include "../../../common.h"
+#include "../common.h"
 
 namespace uh::rest
 {
