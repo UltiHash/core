@@ -26,39 +26,7 @@ public:
     }
 
     address write (const std::string_view& data) {
-        const auto source = m_data_nodes [rank_index];
-        rank_index = (rank_index + 1) % m_data_nodes.size();
-        auto rc = MPI_Send(data.data(), static_cast <int> (data.size()), MPI_CHAR, source, message_types::WRITE_REQ, MPI_COMM_WORLD);
-        if (rc != MPI_SUCCESS) [[unlikely]] {
-            MPI_Abort(MPI_COMM_WORLD, rc);
-        }
-
-        MPI_Status status;
-        rc = MPI_Probe (source, message_types::WRITE_RESP, MPI_COMM_WORLD, &status);
-        if (rc != MPI_SUCCESS) [[unlikely]] {
-            MPI_Abort(MPI_COMM_WORLD, rc);
-        }
-        int message_size;
-
-        MPI_Get_count (&status, MPI_CHAR, &message_size);
-
-        /*if (status.MPI_TAG != message_types::WRITE_RESP) [[unlikely]] {
-            ospan<char> buffer (message_size);
-            std::cout << "error in global data read" << std::endl;
-
-            rc = MPI_Recv (buffer.data.get(), message_size, MPI_CHAR, source, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
-            if (rc != MPI_SUCCESS) [[unlikely]] {
-                MPI_Abort(MPI_COMM_WORLD, rc);
-            }
-            throw std::runtime_error (std::string (buffer.data.get(), buffer.size));
-        }*/
-        address addr (message_size / sizeof (wide_span));
-        rc = MPI_Recv (addr.data(), message_size, MPI_CHAR, source, message_types::WRITE_RESP, MPI_COMM_WORLD, &status);
-        if (rc != MPI_SUCCESS) [[unlikely]] {
-            MPI_Abort(MPI_COMM_WORLD, rc);
-        }
-
-        return addr;
+        return {};
     }
 
 
@@ -69,7 +37,8 @@ public:
     }
 
     std::unordered_map <uint128_t, address> sync_cache () {
-
+        return {};
+        /*
         if (m_temp_offset == temp_offset_start) [[unlikely]] {
             return {};
         }
@@ -141,99 +110,27 @@ public:
         m_temp_offset = temp_offset_start;
 
         return result;
+         */
     }
 
 
     std::size_t read (char* buffer, const uint128_t pointer, const size_t size) const {
-        const auto source = get_data_node (pointer);
-        address addr {{pointer, size}};
-        auto rc = MPI_Send(addr.data(), static_cast <int> (addr.size()*sizeof(wide_span)), MPI_CHAR, source, message_types::READ_REQ, MPI_COMM_WORLD);
-        if (rc != MPI_SUCCESS) [[unlikely]] {
-            MPI_Abort(MPI_COMM_WORLD, rc);
-        }
-
-        MPI_Status status;
-        rc = MPI_Probe (source, message_types::READ_RESP, MPI_COMM_WORLD, &status);
-        if (rc != MPI_SUCCESS) [[unlikely]] {
-            MPI_Abort(MPI_COMM_WORLD, rc);
-        }
-        int data_size;
-        MPI_Get_count (&status, MPI_CHAR, &data_size);
-        rc = MPI_Recv (buffer, data_size, MPI_CHAR, source, message_types::READ_RESP, MPI_COMM_WORLD, &status);
-        if (rc != MPI_SUCCESS) [[unlikely]] {
-            MPI_Abort(MPI_COMM_WORLD, rc);
-        }
-
-        return data_size;
+        return {};
     }
 
     void remove (const uint128_t pointer, const size_t size) {
-        const auto source = get_data_node (pointer);
-        address addr {{pointer, size}};
-        auto rc = MPI_Send(addr.data(), static_cast <int> (addr.size()), MPI_CHAR, source, message_types::REMOVE_REQ, MPI_COMM_WORLD);
-        if (rc != MPI_SUCCESS) [[unlikely]] {
-            MPI_Abort(MPI_COMM_WORLD, rc);
-        }
-
-        MPI_Status status;
-        int dummy;
-        rc = MPI_Recv (&dummy, 1, MPI_INT, source, message_types::REMOVE_OK, MPI_COMM_WORLD, &status);
-        if (rc != MPI_SUCCESS) [[unlikely]] {
-            MPI_Abort(MPI_COMM_WORLD, rc);
-        }
-
     }
 
     void sync (const address& addr) {
 
-        std::set <int> targets;
-        for (const auto pointer_span: addr) {
-            targets.emplace (get_data_node (pointer_span.pointer));
-        }
-
-        for (const auto target: targets) {
-            int dummy;
-            auto rc = MPI_Send(&dummy, 1, MPI_INT, target, message_types::SYNC_REQ, MPI_COMM_WORLD);
-            if (rc != MPI_SUCCESS) [[unlikely]] {
-                MPI_Abort(MPI_COMM_WORLD, rc);
-            }
-
-            MPI_Status status;
-            rc = MPI_Recv (&dummy, 1, MPI_INT, target, message_types::SYNC_OK, MPI_COMM_WORLD, &status);
-            if (rc != MPI_SUCCESS) [[unlikely]] {
-                MPI_Abort(MPI_COMM_WORLD, rc);
-            }
-        }
-
     }
 
     [[nodiscard]] uint128_t get_used_space () const {
-        uint128_t total_used = 0;
-        for (const auto target: m_data_nodes) {
-            int dummy;
-            auto rc = MPI_Send(&dummy, 1, MPI_INT, target, message_types::USED_REQ, MPI_COMM_WORLD);
-            if (rc != MPI_SUCCESS) [[unlikely]] {
-                MPI_Abort(MPI_COMM_WORLD, rc);
-            }
-
-            MPI_Status status;
-            uint64_t buffer [2];
-            rc = MPI_Recv (buffer, 2, MPI_UINT64_T, target, message_types::USED_RESP, MPI_COMM_WORLD, &status);
-            if (rc != MPI_SUCCESS) [[unlikely]] {
-                MPI_Abort(MPI_COMM_WORLD, rc);
-            }
-            total_used += uint128_t (buffer[0], buffer[1]);
-        }
-
-        return total_used;
-
+        return {};
     }
 
     void stop () const {
-        for (const auto target: m_data_nodes) {
-            int dummy;
-            MPI_Send(&dummy, 1, MPI_INT, target, message_types::STOP, MPI_COMM_WORLD);
-        }
+
     }
 
     uint128_t m_temp_offset;

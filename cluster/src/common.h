@@ -9,7 +9,6 @@
 #include <span>
 #include "big_int.h"
 #include <memory>
-#include <mpi.h>
 
 namespace uh::cluster {
 

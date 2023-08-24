@@ -11,7 +11,6 @@
 #include "data_store.h"
 #include "server.h"
 #include "cluster_map.h"
-#include <mpi.h>
 #include <atomic>
 
 namespace uh::cluster {

@@ -203,46 +203,10 @@ namespace uh::cluster {
         void run() {
             std::cout << "hello from " << m_job_name << std::endl;
 
-            MPI_Status status;
-            int message_size;
-
-            while (!m_stop) {
-
-                MPI_Probe(MPI_ANY_SOURCE, MPI_ANY_TAG, MPI_COMM_WORLD, &status);
-
-                try {
-                    switch (status.MPI_TAG) {
-                        case message_types::DEDUPE_REQ:
-                            MPI_Get_count (&status, MPI_CHAR, &message_size);
-                            handle_dedupe (status.MPI_SOURCE, message_size);
-                            break;
-                        default:
-                            throw std::invalid_argument("Unknown tag");
-                    }
-                }
-                catch (std::exception& e) {
-                    handle_failure (m_job_name, status.MPI_SOURCE, e);
-                }
-            }
         }
 
         void handle_dedupe (int source, int data_size) {
-            MPI_Status status;
-            const auto buf = std::make_unique_for_overwrite<char []> (data_size);
-            auto rc = MPI_Recv(buf.get(), data_size, MPI_CHAR, source, message_types::DEDUPE_REQ, MPI_COMM_WORLD, &status);
-            if (rc != MPI_SUCCESS) [[unlikely]] {
-                MPI_Abort(MPI_COMM_WORLD, rc);
-            }
 
-            auto res = deduplicate ({buf.get(), static_cast <size_t> (data_size)});
-            //std::cout << "data at dedupe node: " << std::string_view (buf.get(), data_size) << std::endl;
-            //std::pair <size_t, address> res {10, {{1, 1}}};
-            res.second.emplace_back(0, res.first); // last element contains the effective size
-            const auto size = static_cast <int> (res.second.size() * sizeof (wide_span));
-            rc = MPI_Send(res.second.data(), size, MPI_CHAR, source, message_types::DEDUPE_RESP, MPI_COMM_WORLD);
-            if (rc != MPI_SUCCESS) [[unlikely]] {
-                MPI_Abort(MPI_COMM_WORLD, rc);
-            }
         }
 
         std::pair <std::size_t, address> deduplicate (std::string_view data) {
