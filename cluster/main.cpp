@@ -10,23 +10,6 @@
 #include "src/entry_job.h"
 #include "cluster_map.h"
 
-// config fundamentals
-
-uh::cluster::cluster_config make_cluster_config () {
-    return {
-        .init_process_count = 6,
-        .broadcast_port = 8079,
-        .broadcast_threads = 4,
-    };
-}
-
-uh::cluster::server_config make_internal_server_config () {
-    return {
-            .threads = 10,
-            .port = 8081,
-            .buffer_size = 1024 * 1024,
-    };
-}
 
 uh::cluster::global_data_config make_global_data_config () {
     return {
@@ -34,11 +17,13 @@ uh::cluster::global_data_config make_global_data_config () {
     };
 }
 
-// config roles
-
 uh::cluster::entry_node_config make_entry_node_config () {
     return {
-        .internal_server_conf = make_internal_server_config(),
+        .internal_server_conf = {
+                .threads = 4,
+                .port = 8081,
+                .buffer_size = 1024 * 1024,
+        },
         .rest_server_conf = {
                 .threads = 10,
                 .port = 8080,
@@ -54,13 +39,21 @@ uh::cluster::data_node_config make_data_node_config () {
         .min_file_size = 1ul * 1024ul * 1024ul * 1024ul,
         .max_file_size = 4ul * 1024ul * 1024ul * 1024ul,
         .max_data_store_size = 64ul * 1024ul * 1024ul * 1024ul,
-        .server_conf = make_internal_server_config(),
+        .server_conf = {
+                .threads = 4,
+                .port = 8082,
+                .buffer_size = 1024 * 1024,
+        },
     };
 }
 
 uh::cluster::phonebook_node_config make_phonebook_node_config () {
     return {
-        .server_conf = make_internal_server_config(),
+        .server_conf = {
+                .threads = 4,
+                .port = 8083,
+                .buffer_size = 1024 * 1024,
+        },
         .storage_conf = make_global_data_config(),
     };
 }
@@ -70,7 +63,11 @@ uh::cluster::dedupe_config make_dedupe_node_config () {
         .min_fragment_size = 1024,
         .max_fragment_size = 4 * 1024,
         .storage_conf = make_global_data_config (),
-        .server_conf = make_internal_server_config(),
+        .server_conf = {
+                .threads = 4,
+                .port = 8084,
+                .buffer_size = 1024 * 1024,
+        },
         .set_conf = {
                 .set_minimum_free_space = 1ul * 1024ul * 1024ul * 1024ul,
                 .max_empty_hole_size = 1ul * 1024ul * 1024ul * 1024ul,
@@ -79,6 +76,17 @@ uh::cluster::dedupe_config make_dedupe_node_config () {
                         .init_size = 1ul * 1024ul * 1024ul * 1024ul,
                 }
         },
+    };
+}
+
+uh::cluster::cluster_config make_cluster_config () {
+    return {
+            .init_process_count = 3,
+            .broadcast_threads = 4,
+            .data_node_conf = make_data_node_config(),
+            .dedupe_node_conf = make_dedupe_node_config(),
+            .phonebook_node_conf = make_phonebook_node_config(),
+            .entry_node_conf = make_entry_node_config(),
     };
 }
 
@@ -109,8 +117,9 @@ void execute_role (const uh::cluster::role role, const int id, uh::cluster::clus
 
 }
 
-uh::cluster::cluster_map init_cluster_map (const uh::cluster::role role, const int id) {
-    uh::cluster::cluster_map cmap (make_cluster_config());
+uh::cluster::cluster_map init_cluster_map (const uh::cluster::role role, const int id, const uh::cluster::cluster_config& cluster_conf) {
+    uh::cluster::cluster_map cmap (cluster_conf);
+
     if (role == uh::cluster::ENTRY_NODE and id == 0) { // master
         cmap.broadcast_init();
     }
@@ -147,9 +156,16 @@ int main (int argc, char* args[]) {
     const auto id = static_cast <int> (std::strtol(args[2], &end, 10));
 
     const auto role = get_role (role_str);
+    const auto cluster_conf = make_cluster_config();
 
-    uh::cluster::cluster_map cmap = init_cluster_map (role, id);
+    uh::cluster::cluster_map cmap = init_cluster_map (role, id, cluster_conf);
 
-    execute_role (role, id, std::move (cmap));
+    std::cout << "role " << role_str << " detected: ";
+    for (const auto& item: cmap.m_roles) {
+        std::cout << static_cast <int> (item.first) << " ip " << item.second.begin()->second << ", ";
+    }
+    std::cout << std::endl;
+
+    //execute_role (role, id, std::move (cmap));
 
 }

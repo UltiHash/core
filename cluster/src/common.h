@@ -51,6 +51,7 @@ enum role: uint8_t {
     PHONE_BOOK_NODE,
     ENTRY_NODE,
 };
+
 void handle_failure (const std::string& job_name, int target, const std::exception &e);
 
 void* align_ptr (void* ptr) noexcept;

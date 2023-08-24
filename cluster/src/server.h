@@ -18,7 +18,6 @@
 #include <string>
 #include <thread>
 #include <vector>
-#include <boost/beast/http/message_generator.hpp>
 #include <logging/logging_boost.h>
 #include "cluster_config.h"
 
@@ -29,10 +28,6 @@ namespace uh::cluster
 
     namespace net = boost::asio;            // from <boost/asio.hpp>
     using tcp = boost::asio::ip::tcp;       // from <boost/asio/ip/tcp.hpp>
-
-//------------------------------------------------------------------------------
-
-
 
 //------------------------------------------------------------------------------
 

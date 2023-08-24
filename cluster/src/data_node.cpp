@@ -16,7 +16,7 @@ data_node::data_node(int id, data_node_config conf, cluster_map&& cmap):
 void data_node::run() {
     std::cout << "hello from " << m_job_name << std::endl;
 
-    m_server.run();
+    //m_server.run();
 
 }
 

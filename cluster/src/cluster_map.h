@@ -11,6 +11,7 @@
 #include <ranges>
 #include <map>
 #include <unordered_map>
+#include <forward_list>
 
 namespace uh::cluster {
     class cluster_map {
@@ -47,7 +48,7 @@ namespace uh::cluster {
     public:
 
 
-        explicit cluster_map (cluster_config cluster_conf):
+        explicit cluster_map (const cluster_config& cluster_conf):
                 m_cluster_conf (cluster_conf),
                 m_roles_buf (m_cluster_conf.init_process_count * PROCESS_DATA_SIZE) {
         }
@@ -56,13 +57,15 @@ namespace uh::cluster {
             m_cluster_conf (cmap.m_cluster_conf),
             m_resp_count (cmap.m_resp_count.load()),
             m_roles_buf (std::move (cmap.m_roles_buf)),
-            m_roles (std::move (cmap.m_roles))
+            m_roles (std::move (cmap.m_roles)),
+            m_endpoints (std::move(cmap.m_endpoints))
             {
             m_resp_count = 0;
         }
 
         void broadcast_init () {
-            boost::asio::io_service io (m_cluster_conf.broadcast_threads);
+            boost::asio::io_service io;
+
             boost::asio::ip::udp::socket socket(io);
 
             socket.open(boost::asio::ip::udp::v4());
@@ -70,18 +73,32 @@ namespace uh::cluster {
             socket.set_option(boost::asio::ip::udp::socket::reuse_address(true));
             socket.set_option(boost::asio::socket_base::broadcast(true));
 
-            boost::asio::ip::udp::endpoint sender_endpoint (boost::asio::ip::address_v4::broadcast(), m_cluster_conf.broadcast_port);
-            socket.async_send_to (boost::asio::buffer(INIT_MESSAGE),
-                                  sender_endpoint,
-                                  boost::bind (&cluster_map::handle_send, this, std::ref (socket)));
+            const auto bc = [this, &socket] (const int port) {
+
+                boost::asio::ip::udp::endpoint sender_endpoint (boost::asio::ip::address_v4::broadcast(), port);
+                socket.async_send_to (boost::asio::buffer (INIT_MESSAGE),
+                                      sender_endpoint,
+                                      boost::bind (&cluster_map::handle_send, this, std::ref (socket)));
+
+            };
+
+            bc (m_cluster_conf.data_node_conf.server_conf.port);
+            bc (m_cluster_conf.dedupe_node_conf.server_conf.port);
+            bc (m_cluster_conf.phonebook_node_conf.server_conf.port);
             io.run();
+
+            wait_for_responses();
+
+            for (const auto& endpoint: m_endpoints) {
+                socket.send_to(boost::asio::buffer(m_roles_buf.data.get(), m_roles_buf.size), endpoint);
+            }
         }
 
 
         void send_recv_roles (const uh::cluster::role role, const int id) {
             boost::asio::io_service io_service;
             boost::asio::ip::udp::socket socket (io_service,
-                            boost::asio::ip::udp::endpoint (boost::asio::ip::udp::v4(), m_cluster_conf.broadcast_port));
+                            boost::asio::ip::udp::endpoint (boost::asio::ip::udp::v4(), get_port (role)));
 
             boost::asio::ip::udp::endpoint sender_endpoint;
             char recv_buf [INIT_MESSAGE.size()];
@@ -106,6 +123,8 @@ namespace uh::cluster {
             }
         }
 
+        std::unordered_map <uh::cluster::role, std::map <int, boost::asio::ip::address>> m_roles;
+
     private:
 
 
@@ -116,7 +135,7 @@ namespace uh::cluster {
 
         void handle_send (std::reference_wrapper <boost::asio::basic_datagram_socket<boost::asio::ip::udp>> socket) {
 
-            const auto offset = m_resp_count.fetch_add(1, std::memory_order_relaxed) * PROCESS_DATA_SIZE;
+            const auto offset = m_resp_count.fetch_add (1, std::memory_order_relaxed) * PROCESS_DATA_SIZE;
             const auto pointer = m_roles_buf.data.get() + offset;
             boost::asio::ip::udp::endpoint end_point;
             socket.get().receive_from (boost::asio::buffer(pointer, sizeof (int) + sizeof (role)), end_point);
@@ -125,18 +144,31 @@ namespace uh::cluster {
             const auto id = *reinterpret_cast <int*> (pointer);
             const auto role = *reinterpret_cast <uh::cluster::role*> (pointer + sizeof (id));
             m_roles [role].emplace(id, end_point.address());
+            m_endpoints.emplace_front(std::move (end_point));
 
-            wait_for_responses();
+        }
 
-            socket.get().send_to (boost::asio::buffer(m_roles_buf.data.get(), m_roles_buf.size), end_point);
+        [[nodiscard]] int get_port (const role r) const {
+            switch (r) {
+                case DEDUPE_NODE:
+                    return m_cluster_conf.dedupe_node_conf.server_conf.port;
+                case DATA_NODE:
+                    return m_cluster_conf.data_node_conf.server_conf.port;
+                case PHONE_BOOK_NODE:
+                    return m_cluster_conf.phonebook_node_conf.server_conf.port;
+                case ENTRY_NODE:
+                    return m_cluster_conf.entry_node_conf.internal_server_conf.port;
+                default:
+                    throw std::invalid_argument ("Invalid role!");
+            }
         }
 
         std::atomic <int> m_resp_count = 0;
-        std::unordered_map <uh::cluster::role, std::map <int, boost::asio::ip::address>> m_roles;
-        cluster_config m_cluster_conf;
+        const cluster_config& m_cluster_conf;
         ospan <char> m_roles_buf;
         std::condition_variable m_cv;
         std::mutex m_cv_m;
+        std::forward_list <boost::asio::ip::udp::endpoint> m_endpoints;
         constexpr static size_t PROCESS_DATA_SIZE = sizeof (int) + sizeof (role) + sizeof(ipv4);
         constexpr static std::string_view INIT_MESSAGE = "in";
 
