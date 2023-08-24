@@ -30,7 +30,7 @@ jobs:
         username: plauth
         password: ${{ secrets.PAT }}
     - name: Pull build base image
-      run: docker pull ghcr.io/ultihash/build-base:20230418
+      run: docker pull ghcr.io/ultihash/build-base:20230824
 
     - name: Energy measurement - setup
       uses: green-coding-berlin/eco-ci-energy-estimation@main

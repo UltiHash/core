@@ -1,4 +1,4 @@
-FROM ghcr.io/ultihash/build-base:20230821 as build
+FROM ghcr.io/ultihash/build-base:20230824 as build
 
 ARG CMAKE_OPTION
 
@@ -29,13 +29,16 @@ RUN apt-get update \
     && apt-get install --yes --no-install-recommends curl ncat
 
 # Install FoundationDB
-#COPY --from=build /tmp/foundationdb-clients_7.1.31-1_amd64.deb /tmp/foundationdb-clients_7.1.31-1_amd64.deb
-#COPY --from=build /tmp/foundationdb-server_7.1.31-1_amd64.deb /tmp/foundationdb-server_7.1.31-1_amd64.deb
+COPY --from=build /tmp/foundationdb-clients_7.1.31-1_amd64.deb /tmp/foundationdb-clients_7.1.31-1_amd64.deb
+COPY --from=build /tmp/foundationdb-server_7.1.31-1_amd64.deb /tmp/foundationdb-server_7.1.31-1_amd64.deb
 
-#RUN if [ "$TARGET" = "uh-data-node" ]; then \
-#        dpkg -i /tmp/foundationdb-clients_7.1.31-1_amd64.deb; \
-#        dpkg -i /tmp/foundationdb-server_7.1.31-1_amd64.deb; \
-#    fi
+RUN if [ "$TARGET" = "uh-data-node" ]; then \
+        dpkg -i /tmp/foundationdb-clients_7.1.31-1_amd64.deb; \
+        dpkg -i /tmp/foundationdb-server_7.1.31-1_amd64.deb; \
+    fi
+
+RUN rm /tmp/foundationdb-clients_7.1.31-1_amd64.deb
+RUN rm /tmp/foundationdb-server_7.1.31-1_amd64.deb
 
 COPY --from=build /core/build/${SRC_PATH}/${TARGET} /usr/local/bin
 COPY --from=build /core/${SRC_PATH}/start.sh /usr/local/bin
@@ -46,16 +49,16 @@ RUN addgroup --system --gid 234 uh
 RUN adduser --system --uid 234 --gid 234 --shell /bin/bash uh
 
 # required for agency-node metrics persistence
-RUN mkdir -p /var/lib/uh-agency-node
-RUN chown -R uh:uh /var/lib/uh-agency-node
+RUN install -d -m 0755 -o uh -g uh /var/lib/uh-agency-node
 
 # required for data-node storage
-RUN mkdir -p /var/lib/uh-data-node
-RUN chown -R uh:uh /var/lib/uh-data-node
+RUN install -d -m 0755 -o uh -g uh /var/lib/uh-data-node && ls -lh /var/lib/
 
-#ADD foundationdb.conf /etc/foundationdb/foundationdb.conf
-#RUN mkdir -p /home/uh/foundationdb/log
-#RUN chown -R uh:uh /home/uh/foundationdb
+RUN ls -lh /var/lib/
+RUN ls -lh /home
+
+ADD foundationdb.conf /etc/foundationdb/foundationdb.conf
+RUN install -d -m 0755 -o uh -g uh /home/uh/foundationdb/log
 
 USER uh
 WORKDIR /home/uh
@@ -63,4 +66,4 @@ WORKDIR /home/uh
 EXPOSE 21832
 EXPOSE 8080
 
-ENTRYPOINT ["start.sh"]
+CMD ["start.sh"]
