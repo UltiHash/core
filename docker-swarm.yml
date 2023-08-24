@@ -85,8 +85,8 @@ services:
     networks:
       - uh-integration
     ports:
-      - target: 12345
-        published: 12345
+      - target: 21832
+        published: 21832
         protocol: tcp
         mode: host
     deploy:
@@ -105,7 +105,7 @@ services:
       - uh-integration
     ports:
       - target: 21832
-        published: 21832
+        published: 21833
         protocol: tcp
         mode: host
       - target: 8080

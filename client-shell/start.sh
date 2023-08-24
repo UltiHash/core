@@ -8,6 +8,9 @@ TIMEOUT="60"  # empty for infinite
 
 echo "Waiting for ${SERVER_NAME}:${SERVER_PORT} to become available..."
 
+#proper health check by sending a hello message
+#echo -e "\x01\x01\x01\x01\x07\x6e\x65\x74\x63\x61\x74\x0a" | nc -q 1 172.18.0.5 12345
+
 sleep 15
 
 timeout=$TIMEOUT
