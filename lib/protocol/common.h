@@ -6,6 +6,7 @@
 #include <list>
 #include <memory>
 #include <span>
+#include <cstdint>
 
 namespace uh::protocol
 {
