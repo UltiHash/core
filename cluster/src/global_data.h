@@ -9,6 +9,7 @@
 #include <unordered_map>
 #include <set>
 #include "data_node.h"
+#include "messenger.h"
 
 
 namespace uh::cluster {
@@ -19,10 +20,10 @@ class global_data {
 
 public:
 
-    explicit global_data (global_data_config conf):
-                          m_temp_offset (temp_offset_start)
-    {
-
+    explicit global_data (global_data_config conf, const cluster_map& cmap):
+                          m_temp_offset (temp_offset_start),
+                          m_cluster_map (cmap) {
+        create_data_node_messengers();
     }
 
     address write (const std::string_view& data) {
@@ -137,7 +138,18 @@ public:
 
 private:
 
-    [[nodiscard]] int get_data_node (const uint128_t& pointer) const {
+    void create_data_node_messengers () {
+
+        for (const auto& data_node: m_cluster_map.m_roles.at(DATA_NODE)) {
+            // TODO messenger
+        }
+        boost::asio::io_service io_service (m_cluster_map.m_cluster_conf.dedupe_node_conf.server_conf.threads);
+        tcp::socket socket (io_service);
+        tcp::endpoint endpoint (m_cluster_map.m_roles.at(DATA_NODE).at(0), m_cluster_map.m_cluster_conf.data_node_conf.server_conf.port);
+        socket.connect(endpoint);
+    }
+
+   messenger& get_data_node (const uint128_t& pointer) {
         const auto pfd = m_data_node_offsets.upper_bound (pointer);
         if (pfd == m_data_node_offsets.cbegin()) [[unlikely]] {
             throw std::out_of_range ("The given data pointer could not be found among the available data nodes");
@@ -145,9 +157,11 @@ private:
         return std::prev (pfd)->second;
     }
 
+    const cluster_map& m_cluster_map;
+
     std::unordered_map <uint128_t, std::string_view> m_cache;
     constexpr static uint128_t temp_offset_start = uint128_t (std::numeric_limits <uint64_t>::max(), std::numeric_limits <uint64_t>::max());
-    std::map <const uint128_t, const int> m_data_node_offsets;
+    std::map <const uint128_t, messenger> m_data_node_offsets;
     std::vector <int> m_data_nodes;
     std::size_t rank_index {};
 

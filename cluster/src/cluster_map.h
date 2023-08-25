@@ -94,7 +94,6 @@ namespace uh::cluster {
             }
         }
 
-
         void send_recv_roles (const uh::cluster::role role, const int id) {
             boost::asio::io_service io_service;
             boost::asio::ip::udp::socket socket (io_service,
@@ -124,6 +123,7 @@ namespace uh::cluster {
         }
 
         std::unordered_map <uh::cluster::role, std::map <int, boost::asio::ip::address>> m_roles;
+        const cluster_config& m_cluster_conf;
 
     private:
 
@@ -164,7 +164,6 @@ namespace uh::cluster {
         }
 
         std::atomic <int> m_resp_count = 0;
-        const cluster_config& m_cluster_conf;
         ospan <char> m_roles_buf;
         std::condition_variable m_cv;
         std::mutex m_cv_m;

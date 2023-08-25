@@ -69,7 +69,6 @@ struct phonebook_node_config {
 
 struct cluster_config {
     int init_process_count{};
-    int broadcast_threads{};
     data_node_config data_node_conf;
     dedupe_config dedupe_node_conf;
     phonebook_node_config phonebook_node_conf;

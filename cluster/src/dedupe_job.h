@@ -195,14 +195,14 @@ namespace uh::cluster {
                 m_job_name ("dedupe_node_" + std::to_string (id)),
                 m_dedupe_conf(std::move(conf)),
                 m_server (m_dedupe_conf.server_conf),
-                m_storage (m_dedupe_conf.storage_conf),
+                m_storage (m_dedupe_conf.storage_conf, m_cluster_map),
                 m_fragment_set (m_dedupe_conf.set_conf, m_storage) {
 
         }
 
         void run() {
             std::cout << "hello from " << m_job_name << std::endl;
-
+            m_server.run();
         }
 
         void handle_dedupe (int source, int data_size) {

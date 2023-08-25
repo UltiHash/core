@@ -21,6 +21,7 @@ struct wide_span {
     size_t size {};
 };
 
+
 typedef std::vector <wide_span> address;
 
 enum message_types {

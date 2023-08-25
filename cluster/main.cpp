@@ -82,7 +82,6 @@ uh::cluster::dedupe_config make_dedupe_node_config () {
 uh::cluster::cluster_config make_cluster_config () {
     return {
             .init_process_count = 3,
-            .broadcast_threads = 4,
             .data_node_conf = make_data_node_config(),
             .dedupe_node_conf = make_dedupe_node_config(),
             .phonebook_node_conf = make_phonebook_node_config(),
@@ -160,12 +159,6 @@ int main (int argc, char* args[]) {
 
     uh::cluster::cluster_map cmap = init_cluster_map (role, id, cluster_conf);
 
-    std::cout << "role " << role_str << " detected: ";
-    for (const auto& item: cmap.m_roles) {
-        std::cout << static_cast <int> (item.first) << " ip " << item.second.begin()->second << ", ";
-    }
-    std::cout << std::endl;
-
-    //execute_role (role, id, std::move (cmap));
+    execute_role (role, id, std::move (cmap));
 
 }

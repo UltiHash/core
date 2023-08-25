@@ -19,7 +19,7 @@ public:
             m_id (id),
             m_job_name ("phonebook_" + std::to_string (id)),
             m_server (config.server_conf),
-            m_storage (config.storage_conf)
+            m_storage (config.storage_conf, m_cluster_map)
     {
 
     }
