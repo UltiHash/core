@@ -57,14 +57,7 @@ namespace uh::rest
     public:
         explicit rest_server(uh::cluster::server_config config);
 
-        [[nodiscard]] bool is_busy() const;
-
         void run();
-
-        // Handles the request received
-        template <class Body, class Allocator>
-        http::response<http::string_body>
-        handle_request(http::request<Body, http::basic_fields<Allocator>>&& req);
 
         // Handles an HTTP server connection
         net::awaitable<void> do_session(tcp_stream stream);

@@ -1,4 +1,4 @@
-#include "server.h"
+#include "rest_server.h"
 #include "s3_parser.h"
 
 namespace uh::rest
