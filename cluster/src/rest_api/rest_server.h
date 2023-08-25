@@ -1,3 +1,6 @@
+#ifndef REST_NODE_SRC_SERVER
+#define REST_NODE_SRC_SERVER
+
 #include <boost/beast/core.hpp>
 #include <boost/beast/http.hpp>
 #include <boost/beast/version.hpp>
@@ -69,3 +72,5 @@ namespace uh::rest
 //------------------------------------------------------------------------------
 
 } // namespace uh::net
+
+#endif // REST_NODE_SRC_SERVER

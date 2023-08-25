@@ -10,6 +10,7 @@
 #include <cstring>
 #include <utility>
 #include <vector>
+#include <cstdint>
 #include "io/device.h"
 #include "check_byteswap.h"
 

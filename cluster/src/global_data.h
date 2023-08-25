@@ -20,9 +20,11 @@ class global_data {
 
 public:
 
-    explicit global_data (global_data_config conf, const cluster_map& cmap):
+    explicit global_data (boost::asio::io_service& io_service, const cluster_map& cmap):
                           m_temp_offset (temp_offset_start),
-                          m_cluster_map (cmap) {
+                          m_cluster_map (cmap),
+                          m_io_service (io_service) {
+        sleep(2);
         create_data_node_messengers();
     }
 
@@ -141,15 +143,13 @@ private:
     void create_data_node_messengers () {
 
         for (const auto& data_node: m_cluster_map.m_roles.at(DATA_NODE)) {
-            // TODO messenger
+            uint128_t offset = m_cluster_map.m_cluster_conf.data_node_conf.max_data_store_size * data_node.first;
+            m_data_node_offsets.emplace(offset, messenger {m_io_service, data_node.second,
+                                                 m_cluster_map.m_cluster_conf.data_node_conf.server_conf.port});
         }
-        boost::asio::io_service io_service (m_cluster_map.m_cluster_conf.dedupe_node_conf.server_conf.threads);
-        tcp::socket socket (io_service);
-        tcp::endpoint endpoint (m_cluster_map.m_roles.at(DATA_NODE).at(0), m_cluster_map.m_cluster_conf.data_node_conf.server_conf.port);
-        socket.connect(endpoint);
     }
 
-   messenger& get_data_node (const uint128_t& pointer) {
+   messenger& get_messenger (const uint128_t& pointer) {
         const auto pfd = m_data_node_offsets.upper_bound (pointer);
         if (pfd == m_data_node_offsets.cbegin()) [[unlikely]] {
             throw std::out_of_range ("The given data pointer could not be found among the available data nodes");
@@ -158,12 +158,12 @@ private:
     }
 
     const cluster_map& m_cluster_map;
-
+    boost::asio::io_service& m_io_service;
     std::unordered_map <uint128_t, std::string_view> m_cache;
-    constexpr static uint128_t temp_offset_start = uint128_t (std::numeric_limits <uint64_t>::max(), std::numeric_limits <uint64_t>::max());
     std::map <const uint128_t, messenger> m_data_node_offsets;
     std::vector <int> m_data_nodes;
-    std::size_t rank_index {};
+
+    constexpr static uint128_t temp_offset_start = uint128_t (std::numeric_limits <uint64_t>::max(), std::numeric_limits <uint64_t>::max());
 
 };
 

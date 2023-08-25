@@ -14,19 +14,19 @@ namespace uh::cluster {
 class phonebook_job {
 public:
 
-    phonebook_job (int id, phonebook_node_config config, cluster_map cmap):
+    phonebook_job (int id, cluster_map cmap):
             m_cluster_map (std::move (cmap)),
             m_id (id),
             m_job_name ("phonebook_" + std::to_string (id)),
-            m_server (config.server_conf),
-            m_storage (config.storage_conf, m_cluster_map)
+            m_server (m_cluster_map.m_cluster_conf.phonebook_node_conf.server_conf),
+            m_storage (m_cluster_map)
     {
 
     }
 
     void run() {
         std::cout << "hello from " << m_job_name << std::endl;
-
+        m_server.run();
         while (!m_stop) {
             m_stop = true;
         }

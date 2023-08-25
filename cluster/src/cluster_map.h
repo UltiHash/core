@@ -118,11 +118,11 @@ namespace uh::cluster {
                 const auto rid = *reinterpret_cast <int*> (pointer);
                 const auto rrole = *reinterpret_cast <uh::cluster::role*> (pointer + sizeof (rid));
                 const ipv4 ip (pointer + sizeof rid + sizeof rrole);
-                m_roles [rrole].emplace(rid, ip.to_address());
+                m_roles [rrole].emplace(rid, ip.to_address().to_string());
             }
         }
 
-        std::unordered_map <uh::cluster::role, std::map <int, boost::asio::ip::address>> m_roles;
+        std::unordered_map <uh::cluster::role, std::map <int, std::string>> m_roles;
         const cluster_config& m_cluster_conf;
 
     private:
@@ -143,7 +143,7 @@ namespace uh::cluster {
 
             const auto id = *reinterpret_cast <int*> (pointer);
             const auto role = *reinterpret_cast <uh::cluster::role*> (pointer + sizeof (id));
-            m_roles [role].emplace(id, end_point.address());
+            m_roles [role].emplace(id, end_point.address().to_string());
             m_endpoints.emplace_front(std::move (end_point));
 
         }

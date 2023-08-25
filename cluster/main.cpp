@@ -10,24 +10,15 @@
 #include "src/entry_job.h"
 #include "cluster_map.h"
 
-
-uh::cluster::global_data_config make_global_data_config () {
-    return {
-            .max_data_store_size =  64ul * 1024ul * 1024ul * 1024ul,
-    };
-}
-
 uh::cluster::entry_node_config make_entry_node_config () {
     return {
         .internal_server_conf = {
                 .threads = 4,
                 .port = 8081,
-                .buffer_size = 1024 * 1024,
         },
         .rest_server_conf = {
                 .threads = 10,
                 .port = 8080,
-                .buffer_size = 1024 * 1024,
         }
     };
 }
@@ -42,7 +33,6 @@ uh::cluster::data_node_config make_data_node_config () {
         .server_conf = {
                 .threads = 4,
                 .port = 8082,
-                .buffer_size = 1024 * 1024,
         },
     };
 }
@@ -52,9 +42,7 @@ uh::cluster::phonebook_node_config make_phonebook_node_config () {
         .server_conf = {
                 .threads = 4,
                 .port = 8083,
-                .buffer_size = 1024 * 1024,
         },
-        .storage_conf = make_global_data_config(),
     };
 }
 
@@ -62,11 +50,9 @@ uh::cluster::dedupe_config make_dedupe_node_config () {
     return {
         .min_fragment_size = 1024,
         .max_fragment_size = 4 * 1024,
-        .storage_conf = make_global_data_config (),
         .server_conf = {
                 .threads = 4,
                 .port = 8084,
-                .buffer_size = 1024 * 1024,
         },
         .set_conf = {
                 .set_minimum_free_space = 1ul * 1024ul * 1024ul * 1024ul,
@@ -93,22 +79,22 @@ void execute_role (const uh::cluster::role role, const int id, uh::cluster::clus
 
     switch (role) {
         case uh::cluster::DATA_NODE: {
-            uh::cluster::data_node dn (id, make_data_node_config(), std::move (cmap));
+            uh::cluster::data_node dn (id, std::move (cmap));
             dn.run();
             break;
         }
         case uh::cluster::DEDUPE_NODE: {
-            uh::cluster::dedupe_job dd (id, make_dedupe_node_config (), std::move (cmap));
+            uh::cluster::dedupe_job dd (id, std::move (cmap));
             dd.run();
             break;
         }
         case uh::cluster::PHONE_BOOK_NODE: {
-            uh::cluster::phonebook_job pb (id, make_phonebook_node_config(), std::move (cmap));
+            uh::cluster::phonebook_job pb (id, std::move (cmap));
             pb.run();
             break;
         }
         case uh::cluster::ENTRY_NODE: {
-            uh::cluster::entry_job en (id, make_entry_node_config(), std::move(cmap));
+            uh::cluster::entry_job en (id, std::move(cmap));
             en.run();
             break;
         }

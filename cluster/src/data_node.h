@@ -17,7 +17,7 @@ namespace uh::cluster {
 class data_node {
 public:
 
-    data_node (int id, data_node_config conf, cluster_map&& cmap);
+    data_node (int id, cluster_map&& cmap);
 
     void run();
 

@@ -189,13 +189,13 @@ namespace uh::cluster {
     class dedupe_job {
     public:
 
-        dedupe_job (int id, dedupe_config conf, cluster_map&& cmap):
+        dedupe_job (int id, cluster_map&& cmap):
                 m_cluster_map (std::move (cmap)),
                 m_id (id),
                 m_job_name ("dedupe_node_" + std::to_string (id)),
-                m_dedupe_conf(std::move(conf)),
+                m_dedupe_conf(m_cluster_map.m_cluster_conf.dedupe_node_conf),
                 m_server (m_dedupe_conf.server_conf),
-                m_storage (m_dedupe_conf.storage_conf, m_cluster_map),
+                m_storage (m_cluster_map),
                 m_fragment_set (m_dedupe_conf.set_conf, m_storage) {
 
         }

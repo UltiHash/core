@@ -1,3 +1,6 @@
+#ifndef REST_NODE_SRC_S3_PARSER
+#define REST_NODE_SRC_S3_PARSER
+
 #include <boost/beast/http/basic_parser.hpp>
 #include "logging/logging_boost.h"
 #include <set>
@@ -29,7 +32,13 @@ namespace uh::rest
         unknown = 0,
         bucket_id,
         object_key,
+        x_amz_acl,
         x_amz_tagging,
+        range,
+        if_match,
+        if_modified_since,
+        if_none_match,
+        if_unmodified_since,
     };
 
 //------------------------------------------------------------------------------
@@ -39,7 +48,13 @@ namespace uh::rest
     {
         static const std::unordered_map<std::string, s3_fields> enum_map =
         {
+            {"x-amz-acl", x_amz_tagging},
             {"x-amz-tagging", x_amz_tagging},
+            {"Range", range},
+            {"If-Match", if_match},
+            {"If-Modified-Since", if_modified_since},
+            {"If-None-Match", if_none_match},
+            {"If-Unmodified-Since", if_unmodified_since},
         };
 
         auto it = enum_map.find(field);
@@ -55,15 +70,22 @@ namespace uh::rest
 
 //------------------------------------------------------------------------------
 
-    struct s3_request_parameters
+    struct s3_request_object
     {
         std::string host;
         std::string content_type;
         std::string content_length;
         std::string bucket_id;
         std::string object_key;
+        std::string x_amz_acl;
         std::string x_amz_tagging;
-        std::string_view body;
+        std::string range;
+        std::string if_match;
+        std::string if_modified_since;
+        std::string if_none_match;
+        std::string if_unmodified_since;
+        // TODO: don't copy the body
+        std::stringstream body_stream;
         enum req_types req_type;
     };
 
@@ -211,6 +233,48 @@ namespace uh::rest
                                 m_parsed_struct.x_amz_tagging = value;
                             }
                             break;
+                        case x_amz_acl:
+                            if (m_s3_tags.at(m_parsed_struct.req_type).find(x_amz_acl) == m_s3_tags.at(m_parsed_struct.req_type).end())
+                            {
+                                ec = http::make_error_code(boost::beast::http::error::bad_field);
+                                m_parsed_struct.x_amz_acl = value;
+                            }
+                            break;
+                        case range:
+                            if (m_s3_tags.at(m_parsed_struct.req_type).find(range) == m_s3_tags.at(m_parsed_struct.req_type).end())
+                            {
+                                ec = http::make_error_code(boost::beast::http::error::bad_field);
+                                m_parsed_struct.range = value;
+                            }
+                            break;
+                        case if_match:
+                            if (m_s3_tags.at(m_parsed_struct.req_type).find(if_match) == m_s3_tags.at(m_parsed_struct.req_type).end())
+                            {
+                                ec = http::make_error_code(boost::beast::http::error::bad_field);
+                                m_parsed_struct.if_match = value;
+                            }
+                            break;
+                        case if_modified_since:
+                            if (m_s3_tags.at(m_parsed_struct.req_type).find(if_modified_since) == m_s3_tags.at(m_parsed_struct.req_type).end())
+                            {
+                                ec = http::make_error_code(boost::beast::http::error::bad_field);
+                                m_parsed_struct.if_modified_since = value;
+                            }
+                            break;
+                        case if_none_match:
+                            if (m_s3_tags.at(m_parsed_struct.req_type).find(if_none_match) == m_s3_tags.at(m_parsed_struct.req_type).end())
+                            {
+                                ec = http::make_error_code(boost::beast::http::error::bad_field);
+                                m_parsed_struct.if_none_match = value;
+                            }
+                            break;
+                        case if_unmodified_since:
+                            if (m_s3_tags.at(m_parsed_struct.req_type).find(if_unmodified_since) == m_s3_tags.at(m_parsed_struct.req_type).end())
+                            {
+                                ec = http::make_error_code(boost::beast::http::error::bad_field);
+                                m_parsed_struct.if_unmodified_since = value;
+                            }
+                            break;
                     }
                 }
                 else
@@ -222,6 +286,7 @@ namespace uh::rest
                             break;
                         case boost::beast::http::field::content_type:
                             m_parsed_struct.content_type = value;
+                            break;
                     }
                 }
             }
@@ -277,7 +342,7 @@ namespace uh::rest
                 string_view s,              // A portion of the body
                 error_code &ec) override
         {
-            m_body_stream << s;
+            m_parsed_struct.body_stream << s;
             return s.size();
         }   // The error returned to the caller, if any
 
@@ -349,8 +414,7 @@ namespace uh::rest
         }   // The error returned to the caller, if any
 
     public:
-        s3_request_parameters m_parsed_struct;
-        std::stringstream m_body_stream;
+        s3_request_object m_parsed_struct;
 
         s3_parser() : m_s3_tags(static_s3_valid_tags)
         {
@@ -362,9 +426,11 @@ namespace uh::rest
     template<bool isRequest>
     const std::unordered_map <req_types, std::set<s3_fields>> s3_parser<isRequest>::static_s3_valid_tags =
         {
-            { req_types::put_object, { bucket_id, object_key, x_amz_tagging } },
-            { req_types::get_object, {} },
+            { req_types::put_object, { bucket_id, object_key, x_amz_tagging, x_amz_acl } },
+            { req_types::get_object, { bucket_id, object_key, if_match, if_modified_since, if_none_match, if_unmodified_since, range } },
         };
 
 
 } // namespace uh::rest
+
+#endif // REST_NODE_SRC_S3_PARSER

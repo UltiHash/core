@@ -108,15 +108,6 @@
         mode: 0775
       become: yes
 
-    - name: Creates uh-data-node directory
-      file:
-        path: "{{ data_dir }}/uh-agency-node"
-        state: directory
-        owner: "234"
-        group: "234"
-        mode: 0775
-      become: yes
-
     - name: Creates grafana directory
       file:
         path: "{{ data_dir }}/grafana"

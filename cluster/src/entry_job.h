@@ -11,6 +11,7 @@
 #include "cluster_map.h"
 #include "server.h"
 #include "rest_api/rest_server.h"
+#include "messenger.h"
 
 namespace uh::cluster
 {
@@ -18,13 +19,19 @@ namespace uh::cluster
 class entry_job {
 public:
 
-    entry_job (int id, entry_node_config config, cluster_map&& cmap);
+    entry_job (int id, cluster_map&& cmap);
 
     void run();
 
 private:
 
+    void create_messengers ();
+
+    std::vector <messenger> m_dedupe_nodes;
+    std::vector <messenger> m_phonebooks;
+
     const cluster_map m_cluster_map;
+    boost::asio::io_service m_io_service;
     const int m_id;
     const std::string m_job_name;
     server m_internal_server;

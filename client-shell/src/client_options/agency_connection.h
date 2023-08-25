@@ -2,6 +2,7 @@
 #define CLIENT_OPTIONS_AGENCY_CONNECTION_H
 
 #include <options/options.h>
+#include <cstdint>
 
 namespace uh::client::option
 {

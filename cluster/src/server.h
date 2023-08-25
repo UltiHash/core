@@ -20,6 +20,7 @@
 #include <vector>
 #include <logging/logging_boost.h>
 #include "cluster_config.h"
+#include "messenger.h"
 
 //------------------------------------------------------------------------------
 
@@ -101,13 +102,15 @@ namespace uh::cluster
         net::awaitable<void> do_session(tcp::socket stream) const {
             INFO << "connection from: " << stream.remote_endpoint();
 
-            auto buffer = std::make_unique_for_overwrite<char[]> (m_config.buffer_size);
+            messenger m (std::move (stream));
+
             boost::system::error_code ec;
-            constexpr auto nothrow_await = boost::asio::as_tuple(boost::asio::use_awaitable);
             try {
                 for (;;) {
-                    co_await boost::asio::async_read(stream, boost::asio::buffer(buffer.get(), m_config.buffer_size), nothrow_await);
-                    std::cout << "message " << std::string_view (buffer.get(), 10) << std::endl;
+
+                    const auto buf = co_await m.recv();
+
+                    std::cout << "message " << std::string_view (buf.data.get(), 13) << std::endl;
                 }
             }
             catch (boost::system::system_error &se) {
