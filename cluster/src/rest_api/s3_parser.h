@@ -5,24 +5,35 @@
 #include "logging/logging_boost.h"
 #include <set>
 
-namespace uh::rest
-{
+namespace uh::rest {
 
 //------------------------------------------------------------------------------
 
     enum req_types
     {
         put_object = 0,
+        copy_object,
         get_object,
     };
 
 //------------------------------------------------------------------------------
 
-    enum http_protocol_fields
+    enum http_fields
     {
         host = 0,
-        content_type,
+        cache_control,
+        content_disposition,
+        content_encoding,
+        content_language,
         content_length,
+        content_md5,
+        content_type,
+        expires,
+        range,
+        if_match,
+        if_modified_since,
+        if_none_match,
+        if_unmodified_since
     };
 
 //------------------------------------------------------------------------------
@@ -33,36 +44,53 @@ namespace uh::rest
         bucket_id,
         object_key,
         x_amz_acl,
+        x_amz_grant_full_control,
+        x_amz_grant_read,
+        x_amz_grant_read_acp,
+        x_amz_grant_write_acp,
+        x_amz_storage_class,
         x_amz_tagging,
-        range,
-        if_match,
-        if_modified_since,
-        if_none_match,
-        if_unmodified_since,
+        x_amz_meta_author,
+        x_amz_request_payer,
+        x_amz_copy_source,
+        x_amz_copy_source_if_match,
+        x_amz_copy_source_if_modified_since,
+        x_amz_copy_source_if_none_match,
+        x_amz_copy_source_if_unmodified_since,
+        x_amz_metadata_directive,
+        x_amz_tagging_directive,
+        x_amz_expected_bucket_owner,
+        x_amz_source_expected_bucket_owner,
     };
 
 //------------------------------------------------------------------------------
 
     s3_fields
-    s3_field_to_enum(const std::string& field)
+    s3_field_to_enum(const std::string &field)
     {
         static const std::unordered_map<std::string, s3_fields> enum_map =
-        {
-            {"x-amz-acl", x_amz_tagging},
-            {"x-amz-tagging", x_amz_tagging},
-            {"Range", range},
-            {"If-Match", if_match},
-            {"If-Modified-Since", if_modified_since},
-            {"If-None-Match", if_none_match},
-            {"If-Unmodified-Since", if_unmodified_since},
-        };
+                {
+                        {"x-amz-acl",           x_amz_acl},
+                        {"x-amz-grant-full-control",    x_amz_grant_full_control},
+                        {"x-amz-grant-read",    x_amz_grant_read},
+                        {"x-amz-grant-read-acp",    x_amz_grant_read_acp},
+                        {"x-amz-grant-write-acp",   x_amz_grant_write_acp},
+                        {"x-amz-storage-class", x_amz_storage_class},
+                        {"x-amz-request-payer", x_amz_request_payer},
+                        {"x-amz-tagging",       x_amz_tagging},
+                        {"x-amz-meta-author",           x_amz_meta_author},
+                        {"x-amz-expected-bucket-owner", x_amz_expected_bucket_owner},
+                        {"x-amz-copy-source",   x_amz_copy_source},
+                        {"x-amz-metadata-directive",   x_amz_metadata_directive},
+                        {"x-amz-tagging-directive",   x_amz_tagging_directive},
+
+                };
 
         auto it = enum_map.find(field);
         if (it != enum_map.end())
         {
             return it->second;
-        }
-        else
+        } else
         {
             return unknown;
         }
@@ -70,23 +98,74 @@ namespace uh::rest
 
 //------------------------------------------------------------------------------
 
-    struct s3_request_object
+    struct http_fields_object
     {
         std::string host;
-        std::string content_type;
+        std::string cache_control;
+        std::string content_disposition;
+        std::string content_encoding;
+        std::string content_language;
         std::string content_length;
-        std::string bucket_id;
-        std::string object_key;
-        std::string x_amz_acl;
-        std::string x_amz_tagging;
+        std::string content_md5;
+        std::string content_type;
+        std::string expires;
         std::string range;
         std::string if_match;
         std::string if_modified_since;
         std::string if_none_match;
         std::string if_unmodified_since;
+    };
+
+//------------------------------------------------------------------------------
+
+    struct s3_copy_object
+    {
+        std::string x_amz_copy_source;
+        std::string x_amz_copy_source_if_match;
+        std::string x_amz_copy_source_if_modified_since;
+        std::string x_amz_copy_source_if_none_match;
+        std::string x_amz_copy_source_if_unmodified_since;
+        std::string x_amz_metadata_directive;
+        std::string x_amz_tagging_directive;
+    };
+
+//------------------------------------------------------------------------------
+
+    struct s3_put
+    {
+        std::string x_amz_acl;
+        std::string x_amz_grant_full_control;
+        std::string x_amz_grant_read;
+        std::string x_amz_grant_read_acp;
+        std::string x_amz_grant_write_acp;
+        std::string x_amz_storage_class;
+        std::string x_amz_tagging;
+
+        std::unique_ptr<s3_copy_object> copy_object {};
+    };
+
+//------------------------------------------------------------------------------
+
+    struct s3_get
+    {
+    };
+
+//------------------------------------------------------------------------------
+
+    struct s3_req_object
+    {
+        enum req_types req_type;
+        http_fields_object http_headers;
+        std::string bucket_id;
+        std::string object_key;
         // TODO: don't copy the body
         std::stringstream body_stream;
-        enum req_types req_type;
+
+        std::unique_ptr<s3_put> put {};
+        std::unique_ptr<s3_get> get {};
+
+        std::string x_amz_request_payer;
+        std::string x_amz_expected_bucket_owner;
     };
 
 //------------------------------------------------------------------------------
@@ -96,12 +175,6 @@ namespace uh::rest
     template<bool isRequest>
     class s3_parser : public basic_parser<isRequest> {
     private:
-
-        static const std::unordered_map <req_types, std::set<s3_fields>> static_s3_valid_tags;
-        /* static checks for initializing everytime we call it, so we access the data through a
-         * class member variable */
-        const std::unordered_map <req_types, std::set<s3_fields>>& m_s3_tags;
-
 
         /** Called after receiving the request-line.
 
@@ -136,27 +209,32 @@ namespace uh::rest
             }
             else
             {
-                auto check_target = [&target, &ec, this](req_types method)
-                        {
-                            if (!target.empty() && (target.find('?') == std::string::npos))
-                            {
-                                m_parsed_struct.object_key = target.substr(1);
-                                m_parsed_struct.req_type = method;
-                            }
-                            else
-                            {
-                                ec = make_error_code(http::error::bad_target);
-                            }
-                        };
-
                 switch (method)
                 {
                     case verb::put:
-                        check_target(req_types::put_object);
+                        if (!target.empty() && (target.find('?') == std::string::npos))
+                        {
+                            m_parsed_struct.object_key = target.substr(1);
+                            m_parsed_struct.req_type = put_object;
+                        }
+                        else
+                        {
+                            ec = make_error_code(http::error::bad_target);
+                        }
                         break;
+
                     case verb::get:
-                        check_target(req_types::get_object);
+                        if (!target.empty() && (target.find('?') == std::string::npos))
+                        {
+                            m_parsed_struct.object_key = target.substr(1);
+                            m_parsed_struct.req_type = get_object;
+                        }
+                        else
+                        {
+                            ec = make_error_code(http::error::bad_target);
+                        }
                         break;
+
                     default:
                         ec = make_error_code(http::error::bad_method);
                         break;
@@ -220,72 +298,157 @@ namespace uh::rest
                 {
                     // handle unknown fields
 
+                    // TODO: since we already know the req_type we can simply compare a smaller subset of enum rather than checking everything
+                    // TODO: s3_field_to_enum should take the req_type that is already known into account
                     auto enum_s3_field = s3_field_to_enum(name);
+
                     switch (enum_s3_field)
                     {
-                        case unknown:
-                            ec = http::make_error_code(boost::beast::http::error::bad_field);
+                        case x_amz_expected_bucket_owner:
+                            m_parsed_struct.x_amz_expected_bucket_owner = value;
                             break;
-                        case x_amz_tagging:
-                            if (m_s3_tags.at(m_parsed_struct.req_type).find(x_amz_tagging) == m_s3_tags.at(m_parsed_struct.req_type).end())
+
+                        case x_amz_request_payer:
+                            m_parsed_struct.x_amz_request_payer = value;
+                            break;
+                    }
+
+                    switch (m_parsed_struct.req_type)
+                    {
+                        case put_object:
+
+                            switch (enum_s3_field)
                             {
-                                ec = http::make_error_code(boost::beast::http::error::bad_field);
-                                m_parsed_struct.x_amz_tagging = value;
+                                case unknown:
+                                    ec = http::make_error_code(boost::beast::http::error::bad_field);
+                                    break;
+
+                                case x_amz_acl:
+                                    m_parsed_struct.put->x_amz_acl = value;
+                                    break;
+
+                                case x_amz_grant_full_control:
+                                    m_parsed_struct.put->x_amz_grant_full_control = value;
+                                    break;
+
+                                case x_amz_grant_read:
+                                    m_parsed_struct.put->x_amz_grant_read = value;
+                                    break;
+
+                                case x_amz_grant_read_acp:
+                                    m_parsed_struct.put->x_amz_grant_read_acp = value;
+                                    break;
+
+                                case x_amz_grant_write_acp:
+                                    m_parsed_struct.put->x_amz_grant_write_acp = value;
+                                    break;
+
+                                case x_amz_tagging:
+                                    m_parsed_struct.put->x_amz_tagging = value;
+                                    break;
+
+                                case x_amz_copy_source:
+                                    m_parsed_struct.req_type = copy_object;
+                                    m_parsed_struct.put->copy_object->x_amz_copy_source = value;
+                                    break;
+
+                                default:
+                                    ec = http::make_error_code(boost::beast::http::error::bad_field);
+                                    break;
+
                             }
                             break;
-                        case x_amz_acl:
-                            if (m_s3_tags.at(m_parsed_struct.req_type).find(x_amz_acl) == m_s3_tags.at(m_parsed_struct.req_type).end())
+
+                        case get_object:
+
+                            switch (enum_s3_field)
                             {
-                                ec = http::make_error_code(boost::beast::http::error::bad_field);
-                                m_parsed_struct.x_amz_acl = value;
-                            }
-                            break;
-                        case range:
-                            if (m_s3_tags.at(m_parsed_struct.req_type).find(range) == m_s3_tags.at(m_parsed_struct.req_type).end())
-                            {
-                                ec = http::make_error_code(boost::beast::http::error::bad_field);
-                                m_parsed_struct.range = value;
-                            }
-                            break;
-                        case if_match:
-                            if (m_s3_tags.at(m_parsed_struct.req_type).find(if_match) == m_s3_tags.at(m_parsed_struct.req_type).end())
-                            {
-                                ec = http::make_error_code(boost::beast::http::error::bad_field);
-                                m_parsed_struct.if_match = value;
-                            }
-                            break;
-                        case if_modified_since:
-                            if (m_s3_tags.at(m_parsed_struct.req_type).find(if_modified_since) == m_s3_tags.at(m_parsed_struct.req_type).end())
-                            {
-                                ec = http::make_error_code(boost::beast::http::error::bad_field);
-                                m_parsed_struct.if_modified_since = value;
-                            }
-                            break;
-                        case if_none_match:
-                            if (m_s3_tags.at(m_parsed_struct.req_type).find(if_none_match) == m_s3_tags.at(m_parsed_struct.req_type).end())
-                            {
-                                ec = http::make_error_code(boost::beast::http::error::bad_field);
-                                m_parsed_struct.if_none_match = value;
-                            }
-                            break;
-                        case if_unmodified_since:
-                            if (m_s3_tags.at(m_parsed_struct.req_type).find(if_unmodified_since) == m_s3_tags.at(m_parsed_struct.req_type).end())
-                            {
-                                ec = http::make_error_code(boost::beast::http::error::bad_field);
-                                m_parsed_struct.if_unmodified_since = value;
+                                case unknown:
+                                    ec = http::make_error_code(boost::beast::http::error::bad_field);
+                                    break;
+
+                                default:
+                                    ec = http::make_error_code(boost::beast::http::error::bad_field);
+                                    break;
+
                             }
                             break;
                     }
+
                 }
                 else
                 {
-                    switch (f) 
+
+                    switch (f)
                     {
                         case boost::beast::http::field::host:
                             m_parsed_struct.bucket_id = value.substr(0, value.find(':'));
                             break;
-                        case boost::beast::http::field::content_type:
-                            m_parsed_struct.content_type = value;
+                    }
+                    switch (m_parsed_struct.req_type)
+                    {
+                        case put_object:
+
+                            switch (f)
+                            {
+
+                                case boost::beast::http::field::content_disposition:
+                                    m_parsed_struct.http_headers.content_disposition = value;
+                                    break;
+
+                                case boost::beast::http::field::content_encoding:
+                                    m_parsed_struct.http_headers.content_disposition = value;
+                                    break;
+
+                                case boost::beast::http::field::content_language:
+                                    m_parsed_struct.http_headers.content_language = value;
+                                    break;
+
+                                case boost::beast::http::field::content_length:
+                                    m_parsed_struct.http_headers.content_length = value;
+                                    break;
+
+                                case boost::beast::http::field::content_md5:
+                                    m_parsed_struct.http_headers.content_md5 = value;
+                                    break;
+
+                                case boost::beast::http::field::content_type:
+                                    m_parsed_struct.http_headers.content_type = value;
+                                    break;
+
+                                case boost::beast::http::field::expires:
+                                    m_parsed_struct.http_headers.expires = value;
+                                    break;
+
+                            }
+                            break;
+
+                        case get_object:
+
+                            switch (f)
+                            {
+
+                                case boost::beast::http::field::if_match:
+                                    m_parsed_struct.http_headers.if_match = value;
+                                    break;
+
+                                case boost::beast::http::field::if_modified_since:
+                                    m_parsed_struct.http_headers.if_modified_since = value;
+                                    break;
+
+                                case boost::beast::http::field::if_none_match:
+                                    m_parsed_struct.http_headers.if_none_match = value;
+                                    break;
+
+                                case boost::beast::http::field::if_unmodified_since:
+                                    m_parsed_struct.http_headers.if_unmodified_since = value;
+                                    break;
+
+                                case boost::beast::http::field::range:
+                                    m_parsed_struct.http_headers.range = value;
+                                    break;
+
+                            }
                             break;
                     }
                 }
@@ -414,22 +577,13 @@ namespace uh::rest
         }   // The error returned to the caller, if any
 
     public:
-        s3_request_object m_parsed_struct;
+        s3_req_object m_parsed_struct;
+        std::vector<s3_fields> m_parsed_fields;
 
-        s3_parser() : m_s3_tags(static_s3_valid_tags)
-        {
-        };
+        s3_parser() = default;
     };
 
 //------------------------------------------------------------------------------
-
-    template<bool isRequest>
-    const std::unordered_map <req_types, std::set<s3_fields>> s3_parser<isRequest>::static_s3_valid_tags =
-        {
-            { req_types::put_object, { bucket_id, object_key, x_amz_tagging, x_amz_acl } },
-            { req_types::get_object, { bucket_id, object_key, if_match, if_modified_since, if_none_match, if_unmodified_since, range } },
-        };
-
 
 } // namespace uh::rest
 
