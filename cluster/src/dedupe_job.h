@@ -195,7 +195,7 @@ namespace uh::cluster {
                 m_job_name ("dedupe_node_" + std::to_string (id)),
                 m_dedupe_conf(m_cluster_map.m_cluster_conf.dedupe_node_conf),
                 m_server (m_dedupe_conf.server_conf),
-                m_storage (m_cluster_map),
+                m_storage (m_cluster_map, m_dedupe_conf.data_node_connection_count, m_dedupe_conf.server_conf.threads),
                 m_fragment_set (m_dedupe_conf.set_conf, m_storage) {
 
         }

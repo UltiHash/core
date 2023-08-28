@@ -19,7 +19,9 @@ public:
             m_id (id),
             m_job_name ("phonebook_" + std::to_string (id)),
             m_server (m_cluster_map.m_cluster_conf.phonebook_node_conf.server_conf),
-            m_storage (m_cluster_map)
+            m_storage (m_cluster_map,
+                       m_cluster_map.m_cluster_conf.phonebook_node_conf.data_node_connection_count,
+                       m_cluster_map.m_cluster_conf.phonebook_node_conf.server_conf.threads)
     {
 
     }

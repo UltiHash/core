@@ -12,7 +12,6 @@ data_node::data_node(int id, cluster_map&& cmap):
         m_server (m_cluster_map.m_cluster_conf.data_node_conf.server_conf),
         m_data_store (m_cluster_map.m_cluster_conf.data_node_conf, id)
         {
-
         }
 
 void data_node::run() {

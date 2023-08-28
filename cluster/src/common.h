@@ -21,10 +21,9 @@ struct wide_span {
     size_t size {};
 };
 
-
 typedef std::vector <wide_span> address;
 
-enum message_types {
+enum message_types:uint8_t {
     INIT_REQ,
     INIT_RESP,
     READ_REQ,
@@ -52,8 +51,6 @@ enum role: uint8_t {
     ENTRY_NODE,
 };
 
-void handle_failure (const std::string& job_name, int target, const std::exception &e);
-
 void* align_ptr (void* ptr) noexcept;
 void sync_ptr (void *ptr, std::size_t size);
 
@@ -68,7 +65,6 @@ struct owning_span {
     owning_span(size_t data_size, std::unique_ptr <T[]>&& ptr):
             size (data_size),
             data {std::move (ptr)} {}
-
 };
 
 template <typename T>

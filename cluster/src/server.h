@@ -36,8 +36,9 @@ namespace uh::cluster
 
     public:
         explicit server(server_config config) :
-                m_config(config), m_ioc(static_cast<int>(m_config.threads)),
-                m_thread_container(m_config.threads - 1) {
+                m_config (config), m_ioc (m_config.threads),
+                m_thread_container (m_config.threads - 1) {
+
             boost::asio::co_spawn(m_ioc,
                                   do_listen(tcp::endpoint{m_server_address, m_config.port}),
                                   [](const std::exception_ptr &e) {
@@ -110,7 +111,7 @@ namespace uh::cluster
 
                     const auto buf = co_await m.recv();
 
-                    std::cout << "message " << std::string_view (buf.data.get(), 13) << std::endl;
+                    //std::cout << "message " << std::string_view (buf.data.get(), 13) << std::endl;
                 }
             }
             catch (boost::system::system_error &se) {

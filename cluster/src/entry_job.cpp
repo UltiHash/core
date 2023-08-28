@@ -25,7 +25,6 @@ entry_job::run()
 {
 
     std::string msg ("hello cluster");
-    m_dedupe_nodes.front().send(msg);
     //const auto resp = m_dedupe_nodes.front().recv();
     //std::cout << std::string_view (resp.data.get(), resp.size) << std::endl;
 

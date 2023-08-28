@@ -9,7 +9,7 @@
 #include <unordered_map>
 #include <set>
 #include "data_node.h"
-#include "messenger.h"
+#include "client.h"
 
 
 namespace uh::cluster {
@@ -20,12 +20,12 @@ class global_data {
 
 public:
 
-    explicit global_data (boost::asio::io_service& io_service, const cluster_map& cmap):
+    explicit global_data (const cluster_map& cmap, int data_node_connection_count, int running_threads):
                           m_temp_offset (temp_offset_start),
                           m_cluster_map (cmap),
-                          m_io_service (io_service) {
+                          m_io_service (running_threads) {
         sleep(2);
-        create_data_node_messengers();
+        create_data_node_connections(data_node_connection_count);
     }
 
     address write (const std::string_view& data) {
@@ -140,16 +140,17 @@ public:
 
 private:
 
-    void create_data_node_messengers () {
+    void create_data_node_connections (int connection_count) {
 
         for (const auto& data_node: m_cluster_map.m_roles.at(DATA_NODE)) {
-            uint128_t offset = m_cluster_map.m_cluster_conf.data_node_conf.max_data_store_size * data_node.first;
-            m_data_node_offsets.emplace(offset, messenger {m_io_service, data_node.second,
-                                                 m_cluster_map.m_cluster_conf.data_node_conf.server_conf.port});
+            const uint128_t offset = m_cluster_map.m_cluster_conf.data_node_conf.max_data_store_size * data_node.first;
+            auto cl = client (m_io_service, data_node.second,
+                              m_cluster_map.m_cluster_conf.data_node_conf.server_conf.port, connection_count);
+            m_data_node_offsets.emplace(offset, std::move (cl));
         }
     }
 
-   messenger& get_messenger (const uint128_t& pointer) {
+   client& get_data_node (const uint128_t& pointer) {
         const auto pfd = m_data_node_offsets.upper_bound (pointer);
         if (pfd == m_data_node_offsets.cbegin()) [[unlikely]] {
             throw std::out_of_range ("The given data pointer could not be found among the available data nodes");
@@ -158,9 +159,9 @@ private:
     }
 
     const cluster_map& m_cluster_map;
-    boost::asio::io_service& m_io_service;
+    boost::asio::io_context m_io_service;
     std::unordered_map <uint128_t, std::string_view> m_cache;
-    std::map <const uint128_t, messenger> m_data_node_offsets;
+    std::map <const uint128_t, client> m_data_node_offsets;
     std::vector <int> m_data_nodes;
 
     constexpr static uint128_t temp_offset_start = uint128_t (std::numeric_limits <uint64_t>::max(), std::numeric_limits <uint64_t>::max());
