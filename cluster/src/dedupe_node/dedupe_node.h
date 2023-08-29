@@ -194,10 +194,11 @@ namespace uh::cluster {
                 m_cluster_map (std::move (cmap)),
                 m_id (id),
                 m_job_name ("dedupe_node_" + std::to_string (id)),
-                m_dedupe_conf(m_cluster_map.m_cluster_conf.dedupe_node_conf),
-                m_server (m_dedupe_conf.server_conf, std::make_unique <dedupe_node_handler>()),
-                m_storage (m_cluster_map, m_dedupe_conf.data_node_connection_count, m_dedupe_conf.server_conf.threads),
-                m_fragment_set (m_dedupe_conf.set_conf, m_storage) {
+                m_storage (m_cluster_map, m_cluster_map.m_cluster_conf.dedupe_node_conf.data_node_connection_count,
+                           m_cluster_map.m_cluster_conf.dedupe_node_conf.server_conf.threads),
+                m_server (m_cluster_map.m_cluster_conf.dedupe_node_conf.server_conf,
+                          std::make_unique <dedupe_node_handler>(m_cluster_map.m_cluster_conf.dedupe_node_conf, m_storage))
+    {
 
         }
 
@@ -206,85 +207,12 @@ namespace uh::cluster {
             m_server.run();
         }
 
-        std::pair <std::size_t, address> deduplicate (std::string_view data) {
-
-            std::pair <std::size_t, address> result;
-            auto integration_data = data;
-
-            while (!integration_data.empty()) {
-                const auto f = m_fragment_set.find(integration_data);
-                if (f.match) {
-                    result.second.emplace_back(wide_span{f.match->data_offset, integration_data.size()});
-                    integration_data = integration_data.substr(integration_data.size());
-                    continue;
-                }
-
-                const std::string_view lower_data_str {f.lower->data.data.get(), f.lower->data.size};
-                const auto lower_common_prefix = largest_common_prefix (integration_data, lower_data_str);
-
-                if (lower_common_prefix == integration_data.size()) {
-                    result.second.emplace_back(wide_span {f.lower->data_offset, integration_data.size()});
-                    integration_data = integration_data.substr(integration_data.size());
-                    continue;
-                }
-
-                const std::string_view upper_data_str {f.upper->data.data.get(), f.upper->data.size};
-                const auto upper_common_prefix = largest_common_prefix (integration_data, upper_data_str);
-                auto max_common_prefix = upper_common_prefix;
-                auto max_data_offset = f.upper->data_offset;
-                if (max_common_prefix < lower_common_prefix) {
-                    max_common_prefix = lower_common_prefix;
-                    max_data_offset = f.lower->data_offset;
-                }
-
-                if (max_common_prefix < m_dedupe_conf.min_fragment_size or integration_data.size() - max_common_prefix < m_dedupe_conf.min_fragment_size) {
-
-                    const auto size = std::min (integration_data.size(), m_dedupe_conf.max_fragment_size);
-                    const auto addr = store_data(integration_data.substr(0, size));
-                    m_fragment_set.add_pointer (integration_data.substr(0, addr.front().size), addr.front().pointer, f.index);
-
-                    result.second.insert(result.second.cend(), addr.cbegin(), addr.cend());
-                    result.first += size;
-                    integration_data = integration_data.substr(size);
-                    continue;
-                }
-                else if (max_common_prefix == integration_data.size()) {
-                    result.second.emplace_back(wide_span {max_data_offset, integration_data.size()});
-                    integration_data = integration_data.substr(integration_data.size());
-                    continue;
-                }
-                else {
-                    result.second.emplace_back (wide_span {max_data_offset, max_common_prefix});
-                    integration_data = integration_data.substr(max_common_prefix, integration_data.size() - max_common_prefix);
-                    continue;
-                }
-
-            }
-
-            m_storage.sync(result.second);
-            return result;
-        }
-
-        static size_t largest_common_prefix(const std::string_view &str1, const std::string_view &str2) noexcept {
-            size_t i = 0;
-            const auto min_size = std::min (str1.size(), str2.size());
-            while (i < min_size and str1[i] == str2[i]) {
-                i++;
-            }
-            return i;
-        }
-
-        address store_data(const std::string_view& frag) {
-            return m_storage.write(frag);
-        }
 
         const cluster_map m_cluster_map;
         const int m_id;
         const std::string m_job_name;
-        dedupe_config m_dedupe_conf;
-        server m_server;
         global_data m_storage;
-        dedupe::paged_redblack_tree <dedupe::set_full_comparator> m_fragment_set;
+        server m_server;
 
         std::atomic <bool> m_stop = false;
 

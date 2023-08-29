@@ -158,6 +158,7 @@ namespace uh::cluster {
                 case http::verb::unknown:
                     throw std::runtime_error("bad http verb.");
             }
+            return s3_req_type::not_initialized;
         }
 
     };

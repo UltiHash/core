@@ -100,7 +100,7 @@ namespace uh::cluster
 
         boost::asio::awaitable<void> do_session(boost::asio::ip::tcp::socket stream) {
             INFO << "connection from: " << stream.remote_endpoint();
-            m_handler->handle(messenger (m_ioc, std::move (stream)));
+            m_handler->handle(messenger(m_ioc, std::move(stream)));
             co_return;
         }
 
