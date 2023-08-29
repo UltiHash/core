@@ -155,10 +155,9 @@ namespace uh::cluster {
                         m_parsed_req_wrapper.object_key = m_target.substr(1);
                         return get_object;
                     }
-                case http::verb::unknown:
+                default:
                     throw std::runtime_error("bad http verb.");
             }
-            return s3_req_type::not_initialized;
         }
 
     };
