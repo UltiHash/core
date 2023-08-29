@@ -3,13 +3,13 @@
 #include "s3_parser.h"
 #include "functions.h"
 
-namespace uh::rest
+namespace uh::cluster
 {
 
 //------------------------------------------------------------------------------
 
-    rest_server::rest_server(uh::cluster::server_config config) :
-        m_config(config), m_ioc(static_cast<int>(m_config.threads)), m_thread_container(m_config.threads-1)
+    rest_server::rest_server(uh::cluster::server_config config, std::unique_ptr <protocol_handler> handler) :
+        m_config(config), m_ioc(static_cast<int>(m_config.threads)), m_thread_container(m_config.threads-1), m_handler (std::move (handler))
     {
         // spawn a coroutine
         boost::asio::co_spawn(m_ioc,
@@ -68,7 +68,7 @@ namespace uh::rest
                 stream.expires_after(std::chrono::seconds(10));
 
                 // Read a request
-                uh::rest::s3_parser<true> s3_parser;
+                s3_parser<true> s3_parser;
                 s3_parser.body_limit(1024ul*1024ul*1024ul);
 
                 co_await http::async_read(stream, buffer, s3_parser, net::use_awaitable);
@@ -145,4 +145,4 @@ namespace uh::rest
 
 //------------------------------------------------------------------------------
 
-} // namespace uh::rest
+} // namespace uh::cluster

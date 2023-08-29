@@ -70,8 +70,12 @@ public:
         };
 
         boost::asio::co_spawn (m_strand.context(), [&] () -> boost::asio::awaitable <void> {
-            co_await boost::asio::async_write(m_socket, send_data, boost::asio::as_tuple(boost::asio::use_awaitable));
+            co_await boost::asio::async_write (m_socket, send_data, boost::asio::as_tuple(boost::asio::use_awaitable));
         }, [] (const std::exception_ptr& e) {if (e) std::rethrow_exception(e);});
+    }
+
+    ~messenger() {
+        m_socket.shutdown (boost::asio::ip::tcp::socket::shutdown_send);
     }
 
 private:

@@ -1,7 +1,7 @@
 #ifndef REST_NODE_SRC_FUNCTIONS
 #define REST_NODE_SRC_FUNCTIONS
 
-namespace uh::rest
+namespace uh::cluster
 {
 
 //------------------------------------------------------------------------------
@@ -18,6 +18,6 @@ namespace uh::rest
         std::cout << "getObject function called" << std::endl;
     }
 
-} // namespace uh::rest
+} // namespace uh::cluster
 
 #endif // REST_NODE_SRC_FUNCTIONS

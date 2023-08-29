@@ -175,8 +175,8 @@
 // Created by masi on 7/17/23.
 //
 
-#ifndef CORE_DEDUPE_JOB_H
-#define CORE_DEDUPE_JOB_H
+#ifndef CORE_DEDUPE_NODE_H
+#define CORE_DEDUPE_NODE_H
 
 #include <functional>
 #include <iostream>
@@ -184,17 +184,18 @@
 #include "common/cluster_config.h"
 #include "global_data.h"
 #include "paged_redblack_tree.h"
+#include "dedupe_node_handler.h"
 
 namespace uh::cluster {
-    class dedupe_job {
+    class dedupe_node {
     public:
 
-        dedupe_job (int id, cluster_map&& cmap):
+        dedupe_node (int id, cluster_map&& cmap):
                 m_cluster_map (std::move (cmap)),
                 m_id (id),
                 m_job_name ("dedupe_node_" + std::to_string (id)),
                 m_dedupe_conf(m_cluster_map.m_cluster_conf.dedupe_node_conf),
-                m_server (m_dedupe_conf.server_conf),
+                m_server (m_dedupe_conf.server_conf, std::make_unique <dedupe_node_handler>()),
                 m_storage (m_cluster_map, m_dedupe_conf.data_node_connection_count, m_dedupe_conf.server_conf.threads),
                 m_fragment_set (m_dedupe_conf.set_conf, m_storage) {
 
@@ -203,10 +204,6 @@ namespace uh::cluster {
         void run() {
             std::cout << "hello from " << m_job_name << std::endl;
             m_server.run();
-        }
-
-        void handle_dedupe (int source, int data_size) {
-
         }
 
         std::pair <std::size_t, address> deduplicate (std::string_view data) {
@@ -294,4 +291,4 @@ namespace uh::cluster {
     };
 } // end namespace uh::cluster
 
-#endif //CORE_DEDUPE_JOB_H
+#endif //CORE_DEDUPE_NODE_H

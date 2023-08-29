@@ -21,10 +21,11 @@
 #include "logging/logging_boost.h"
 #include "net/server.h"
 #include "common/cluster_config.h"
+#include "common/protocol_handler.h"
 
 //------------------------------------------------------------------------------
 
-namespace uh::rest
+namespace uh::cluster
 {
 
     namespace beast = boost::beast;         // from <boost/beast.hpp>
@@ -55,10 +56,12 @@ namespace uh::rest
         uh::cluster::server_config m_config;
         net::io_context m_ioc;
         std::vector<std::thread> m_thread_container {};
+        std::unique_ptr <protocol_handler> m_handler;
+
         const boost::asio::ip::address m_server_address = boost::asio::ip::make_address("0.0.0.0");
 
     public:
-        explicit rest_server(uh::cluster::server_config config);
+        rest_server(uh::cluster::server_config config, std::unique_ptr <protocol_handler> handler);
 
         void run();
 
@@ -71,6 +74,6 @@ namespace uh::rest
 
 //------------------------------------------------------------------------------
 
-} // namespace uh::net
+} // namespace uh::cluster
 
 #endif // REST_NODE_SRC_SERVER

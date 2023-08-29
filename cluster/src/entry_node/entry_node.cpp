@@ -1,17 +1,21 @@
-#include "entry_job.h"
+#include "entry_node.h"
+#include "entry_node_internal_handler.h"
+#include "entry_node_rest_handler.h"
 
 namespace uh::cluster
 {
 
 //------------------------------------------------------------------------------
 
-entry_job::entry_job(int id, cluster_map&& cmap) :
+entry_node::entry_node(int id, cluster_map&& cmap) :
         m_cluster_map (std::move (cmap)),
         m_io_service (m_cluster_map.m_cluster_conf.entry_node_conf.internal_server_conf.threads),
         m_id (id),
         m_job_name ("entry_" + std::to_string (id)),
-        m_internal_server (m_cluster_map.m_cluster_conf.entry_node_conf.internal_server_conf),
-        m_rest_server (m_cluster_map.m_cluster_conf.entry_node_conf.rest_server_conf)
+        m_internal_server (m_cluster_map.m_cluster_conf.entry_node_conf.internal_server_conf,
+                           std::make_unique <entry_node_internal_handler>()),
+        m_rest_server (m_cluster_map.m_cluster_conf.entry_node_conf.rest_server_conf,
+                       std::make_unique <entry_node_rest_handler>())
 {
     sleep(4);
     create_connections();
@@ -21,7 +25,7 @@ entry_job::entry_job(int id, cluster_map&& cmap) :
 //------------------------------------------------------------------------------
 
 void
-entry_job::run()
+entry_node::run()
 {
 
     std::string msg ("hello cluster");
@@ -32,7 +36,7 @@ entry_job::run()
     m_rest_server.run();
 }
 
-void entry_job::create_connections() {
+void entry_node::create_connections() {
 
     for (const auto& dedupe_node: m_cluster_map.m_roles.at(DEDUPE_NODE)) {
         m_dedupe_nodes.emplace_back (m_io_service, dedupe_node.second,

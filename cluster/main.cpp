@@ -5,9 +5,9 @@
 #include <system_error>
 #include "common/cluster_config.h"
 #include "data_node/data_node.h"
-#include "dedupe_node/dedupe_job.h"
-#include "phonebook_node/phonebook_job.h"
-#include "entry_node/entry_job.h"
+#include "dedupe_node/dedupe_node.h"
+#include "phonebook_node/phonebook_node.h"
+#include "entry_node/entry_node.h"
 #include "network/cluster_map.h"
 
 uh::cluster::entry_node_config make_entry_node_config () {
@@ -88,17 +88,17 @@ void execute_role (const uh::cluster::role role, const int id, uh::cluster::clus
             break;
         }
         case uh::cluster::DEDUPE_NODE: {
-            uh::cluster::dedupe_job dd (id, std::move (cmap));
+            uh::cluster::dedupe_node dd (id, std::move (cmap));
             dd.run();
             break;
         }
         case uh::cluster::PHONE_BOOK_NODE: {
-            uh::cluster::phonebook_job pb (id, std::move (cmap));
+            uh::cluster::phonebook_node pb (id, std::move (cmap));
             pb.run();
             break;
         }
         case uh::cluster::ENTRY_NODE: {
-            uh::cluster::entry_job en (id, std::move(cmap));
+            uh::cluster::entry_node en (id, std::move(cmap));
             en.run();
             break;
         }

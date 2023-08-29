@@ -5,7 +5,7 @@
 #include "logging/logging_boost.h"
 #include <set>
 
-namespace uh::rest {
+namespace uh::cluster {
 
 //------------------------------------------------------------------------------
 
@@ -588,6 +588,6 @@ namespace uh::rest {
 
 //------------------------------------------------------------------------------
 
-} // namespace uh::rest
+} // namespace uh::cluster
 
 #endif // REST_NODE_SRC_S3_PARSER

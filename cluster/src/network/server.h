@@ -21,6 +21,7 @@
 #include "logging/logging_boost.h"
 #include "common/cluster_config.h"
 #include "messenger.h"
+#include "common/protocol_handler.h"
 
 //------------------------------------------------------------------------------
 
@@ -32,9 +33,9 @@ namespace uh::cluster
     class server {
 
     public:
-        explicit server(server_config config) :
+        server(server_config config, std::unique_ptr <protocol_handler> handler) :
                 m_config (config), m_ioc (m_config.threads),
-                m_thread_container (m_config.threads - 1) {
+                m_thread_container (m_config.threads - 1), m_handler (std::move (handler)) {
 
             boost::asio::co_spawn(m_ioc,
                                   do_listen(boost::asio::ip::tcp::endpoint{m_server_address, m_config.port}),
@@ -99,26 +100,14 @@ namespace uh::cluster
 
         boost::asio::awaitable<void> do_session(boost::asio::ip::tcp::socket stream) {
             INFO << "connection from: " << stream.remote_endpoint();
-
-            messenger m (m_ioc, std::move (stream));
-
-            boost::system::error_code ec;
-            try {
-                for (;;) {
-
-                    //std::cout << "message " << std::string_view (buf.data.get(), 13) << std::endl;
-                }
-            }
-            catch (boost::system::system_error &se) {
-
-            }
-
-            stream.shutdown(boost::asio::ip::tcp::socket::shutdown_send, ec);
+            m_handler->handle(messenger (m_ioc, std::move (stream)));
+            co_return;
         }
 
         server_config m_config;
         boost::asio::io_context m_ioc;
         std::vector<std::thread> m_thread_container {};
+        std::unique_ptr <protocol_handler> m_handler;
         const boost::asio::ip::address m_server_address = boost::asio::ip::make_address("0.0.0.0");
 
     };
