@@ -73,7 +73,7 @@ namespace uh::cluster
 
                 // parse the request
                 s3_parser s3_parser(received_request);
-                s3_parser.parse();
+                auto parsed_request = s3_parser.parse();
 
                 /////request_to_function[s3_parser.m_parsed_struct.req_type](s3_parser.m_parsed_struct);
 
