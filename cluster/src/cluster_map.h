@@ -21,7 +21,7 @@ namespace uh::cluster {
             explicit ipv4 (const boost::asio::ip::address_v4& address) {
 
                 const auto ip_str = address.to_string();
-                const auto ip_nums = std::string_view (ip_str)
+                auto ip_nums = std::string_view (ip_str)
                            | std::ranges::views::split ('.')
                            | std::ranges::views::transform([](auto && rng) {
                     char* end;

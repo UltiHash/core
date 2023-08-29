@@ -31,7 +31,7 @@ namespace uh::rest
 //------------------------------------------------------------------------------
 
     void
-    rest_server::run()
+    rest_server:: run()
     {
         INFO << "starting server";
 
@@ -57,9 +57,10 @@ namespace uh::rest
         beast::flat_buffer buffer;
         beast::error_code ec;
 
-        std::unordered_map<req_types, std::function<void(const s3_request_object&)>> request_to_function
-            { { put_object, [](const s3_request_object& s3_parsed_request) { putObject(s3_parsed_request); } },
-              { get_object, [](const s3_request_object& s3_parsed_request) { getObject(s3_parsed_request); } } };
+//        std::unordered_map<req_types, std::function<void(const s3_request_object&)>> request_to_function
+//            { { put_object, [](const s3_request_object& s3_parsed_request) { putObject(s3_parsed_request); } },
+//              { get_object, [](const s3_request_object& s3_parsed_request) { getObject(s3_parsed_request); } } };
+
 
         try
         {
@@ -68,15 +69,14 @@ namespace uh::rest
                 stream.expires_after(std::chrono::seconds(10));
 
                 // Read a request
-                uh::rest::s3_parser<true> s3_parser;
-                s3_parser.body_limit(1024ul*1024ul*1024ul);
+                http::request<http::string_body> received_request;
+                co_await http::async_read(stream, buffer, received_request, net::use_awaitable);
 
-                co_await http::async_read(stream, buffer, s3_parser, net::use_awaitable);
+                // parse the request
+                s3_parser s3_parser(received_request);
+                s3_parser.parse();
 
-//                // TODO: co await mechanism send mpi
-//                // TODO: use mpi scatter to send to a specific communicator processes
-
-                request_to_function[s3_parser.m_parsed_struct.req_type](s3_parser.m_parsed_struct);
+//                request_to_function[s3_parser.m_parsed_struct.req_type](s3_parser.m_parsed_struct);
 
             }
         }
@@ -96,6 +96,21 @@ namespace uh::rest
                 stream.socket().shutdown(tcp::socket::shutdown_send, ec);
                 throw ;
             }
+
+        }
+        catch (const std::exception & e)
+        {
+            // Send a response about the error and shut down
+            http::response<http::string_body> res{http::status::bad_request, 11};
+            res.set(http::field::server, BOOST_BEAST_VERSION_STRING);
+            res.set(http::field::content_type, "text/html");
+            res.body() = e.what();
+            res.prepare_payload();
+
+            // TODO: Should this write also be async? If so how to use it with coroutine
+            http::write(stream, res);
+            stream.socket().shutdown(tcp::socket::shutdown_send, ec);
+            throw ;
 
         }
 
