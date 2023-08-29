@@ -15,6 +15,12 @@ class client;
 
 class messenger {
 public:
+
+    struct header {
+        message_types type;
+        uint32_t size;
+    };
+
     messenger (boost::asio::io_context& ioc, const std::string& address, const int port):
         m_socket (ioc),
         m_strand (ioc) {
@@ -46,7 +52,7 @@ public:
         return {type, std::move (buf)};
     }
 
-    std::pair <message_types, size_t> recv (std::span <char> buffer) {
+    header recv (std::span <char> buffer) {
         uint32_t size = 0;
         message_types type;
         std::vector <boost::asio::mutable_buffer> buffers {
