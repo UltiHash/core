@@ -10,6 +10,8 @@
 namespace uh::cluster {
 
 class entry_node_rest_handler: public protocol_handler {
+public:
+
     void handle (messenger m) override {
 
     }

@@ -139,6 +139,7 @@ namespace uh::cluster {
                     break;
 
             }
+            return s3_req_type::not_initialized;
         }
 
     };

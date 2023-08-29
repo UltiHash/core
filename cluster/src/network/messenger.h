@@ -80,8 +80,6 @@ public:
 
 private:
 
-
-    friend client;
     boost::asio::ip::tcp::socket m_socket;
     boost::asio::io_context::strand m_strand;
 };
