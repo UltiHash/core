@@ -12,7 +12,7 @@
 #include "index_mem_structures.h"
 #include <iostream>
 #include "growing_plain_storage.h"
-#include "common.h"
+#include "common/common.h"
 #include <boost/interprocess/mapped_region.hpp>
 
 

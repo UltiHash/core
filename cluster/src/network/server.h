@@ -18,17 +18,14 @@
 #include <string>
 #include <thread>
 #include <vector>
-#include <logging/logging_boost.h>
-#include "cluster_config.h"
+#include "logging/logging_boost.h"
+#include "common/cluster_config.h"
 #include "messenger.h"
 
 //------------------------------------------------------------------------------
 
 namespace uh::cluster
 {
-
-    namespace net = boost::asio;            // from <boost/asio.hpp>
-    using tcp = boost::asio::ip::tcp;       // from <boost/asio/ip/tcp.hpp>
 
 //------------------------------------------------------------------------------
 
@@ -40,7 +37,7 @@ namespace uh::cluster
                 m_thread_container (m_config.threads - 1) {
 
             boost::asio::co_spawn(m_ioc,
-                                  do_listen(tcp::endpoint{m_server_address, m_config.port}),
+                                  do_listen(boost::asio::ip::tcp::endpoint{m_server_address, m_config.port}),
                                   [](const std::exception_ptr &e) {
                                       if (e)
                                           try {
@@ -68,15 +65,15 @@ namespace uh::cluster
     private:
 
         // Accepts incoming connections and launches the sessions
-        net::awaitable<void> do_listen(tcp::endpoint endpoint) const {
+        boost::asio::awaitable<void> do_listen(boost::asio::ip::tcp::endpoint endpoint) {
             auto acceptor = boost::asio::use_awaitable_t<boost::asio::any_io_executor>::as_default_on(
-                    tcp::acceptor(co_await net::this_coro::executor));
+                    boost::asio::ip::tcp::acceptor(co_await boost::asio::this_coro::executor));
 
             acceptor.open(endpoint.protocol());
-            acceptor.set_option(net::socket_base::reuse_address(true));
+            acceptor.set_option(boost::asio::socket_base::reuse_address(true));
 
             acceptor.bind(endpoint);
-            acceptor.listen(net::socket_base::max_listen_connections);
+            acceptor.listen(boost::asio::socket_base::max_listen_connections);
 
             for (;;) {
                 boost::asio::ip::tcp::socket stream = co_await acceptor.async_accept();
@@ -100,16 +97,14 @@ namespace uh::cluster
 
         }
 
-        net::awaitable<void> do_session(tcp::socket stream) const {
+        boost::asio::awaitable<void> do_session(boost::asio::ip::tcp::socket stream) {
             INFO << "connection from: " << stream.remote_endpoint();
 
-            messenger m (std::move (stream));
+            messenger m (m_ioc, std::move (stream));
 
             boost::system::error_code ec;
             try {
                 for (;;) {
-
-                    const auto buf = co_await m.recv();
 
                     //std::cout << "message " << std::string_view (buf.data.get(), 13) << std::endl;
                 }
@@ -118,11 +113,11 @@ namespace uh::cluster
 
             }
 
-            stream.shutdown(tcp::socket::shutdown_send, ec);
+            stream.shutdown(boost::asio::ip::tcp::socket::shutdown_send, ec);
         }
 
         server_config m_config;
-        net::io_context m_ioc;
+        boost::asio::io_context m_ioc;
         std::vector<std::thread> m_thread_container {};
         const boost::asio::ip::address m_server_address = boost::asio::ip::make_address("0.0.0.0");
 

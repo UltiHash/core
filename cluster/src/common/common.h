@@ -65,6 +65,10 @@ struct owning_span {
     owning_span(size_t data_size, std::unique_ptr <T[]>&& ptr):
             size (data_size),
             data {std::move (ptr)} {}
+    void resize (std::size_t new_size) {
+        data = std::make_unique_for_overwrite <T[]> (size);
+        size = new_size;
+    }
 };
 
 template <typename T>

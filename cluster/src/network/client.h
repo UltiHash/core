@@ -14,7 +14,7 @@
 #include <deque>
 #include <memory>
 #include <condition_variable>
-#include "common.h"
+#include "common/common.h"
 #include "messenger.h"
 
 namespace uh::cluster {
@@ -35,16 +35,16 @@ public:
 
     }
 
-    boost::asio::awaitable<std::shared_ptr <messenger>> send (const message_types type, std::span<const char> data) {
+    std::shared_ptr <messenger> init_send (const message_types type, std::span<const char> data) {
         std::unique_lock<std::mutex> lk(m);
         // The only case where a thread might wait. This wait never happen if we have higher number of connections than the threads
         m_cv.wait(lk, [this]() { return !m_messengers.empty(); });
         auto messenger = m_messengers.front();
         m_messengers.pop_front();
-        co_await messenger->send(type, data);
+        messenger->send(type, data);
         m_messengers.emplace_back (messenger);
         m_cv.notify_one();
-        co_return messenger;
+        return messenger;
     }
 
 };

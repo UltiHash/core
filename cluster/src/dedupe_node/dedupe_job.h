@@ -181,7 +181,7 @@
 #include <functional>
 #include <iostream>
 #include <utility>
-#include "cluster_config.h"
+#include "common/cluster_config.h"
 #include "global_data.h"
 #include "paged_redblack_tree.h"
 

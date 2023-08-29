@@ -6,7 +6,7 @@
 #define CORE_CLUSTER_INDEX_MEM_STRUCTURES_H
 
 #include <stdexcept>
-#include "common.h"
+#include "common/common.h"
 
 namespace uh::cluster::dedupe {
 

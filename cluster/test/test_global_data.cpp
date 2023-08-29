@@ -8,8 +8,8 @@
 #endif
 
 #include <boost/test/unit_test.hpp>
-#include "common.h"
-#include "global_data.h"
+#include "common/common.h"
+#include "dedupe_node/global_data.h"
 #include <mpi.h>
 
 // ------------- Tests Suites Follow --------------
