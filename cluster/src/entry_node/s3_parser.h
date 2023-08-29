@@ -97,7 +97,13 @@ namespace uh::cluster {
     {
     private:
         const http::request<http::string_body>& m_recv_req;
-        std::unordered_map <s3_fields, std::string_view> parsed_request;
+        struct parsed_request_wrapper
+        {
+            http::verb verb;
+            std::string_view target;
+            std::unordered_map <s3_fields, std::string_view> parsed_request;
+        };
+        parsed_request_wrapper m_parsed_req_wrapper;
         s3_req_type m_req_type = not_initialized;
 
     public:
@@ -112,20 +118,28 @@ namespace uh::cluster {
                 throw std::runtime_error("Bad HTTP version. Support exists for only HTTP 1.1.");
             }
 
-            parsed_request.emplace(s3_field_to_enum(to_string(m_recv_req.base().method())), m_recv_req.base().method_string());
+            m_parsed_req_wrapper.verb = m_recv_req.base().method();
+            m_parsed_req_wrapper.target = m_recv_req.base().target();
             for (const auto& header : m_recv_req)
             {
-                parsed_request.emplace(s3_field_to_enum(header.name_string()), header.value());
+                m_parsed_req_wrapper.parsed_request.emplace(s3_field_to_enum(header.name_string()), header.value());
                 std::cout << header.name_string() << " " << header.value() << std::endl;
             }
 
 //            m_req_type = get_type();
         }
 
-//        s3_req_type get_type() const
-//        {
-//
-//        }
+        s3_req_type get_type() const
+        {
+            switch (m_parsed_req_wrapper.verb)
+            {
+                case http::verb::put:
+                    break;
+                case http::verb::get:
+                    break;
+
+            }
+        }
 
     };
 

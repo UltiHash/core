@@ -57,9 +57,9 @@ namespace uh::cluster
         beast::flat_buffer buffer;
         beast::error_code ec;
 
-        std::unordered_map<req_types, std::function<void(const http_fields_object&)>> request_to_function
-            { { put_object, [](const http_fields_object& s3_parsed_request) { putObject(s3_parsed_request); } },
-              { get_object, [](const http_fields_object& s3_parsed_request) { getObject(s3_parsed_request); } } };
+//        std::unordered_map<req_types, std::function<void(const http_fields_object&)>> request_to_function
+//            { { put_object, [](const http_fields_object& s3_parsed_request) { putObject(s3_parsed_request); } },
+//              { get_object, [](const http_fields_object& s3_parsed_request) { getObject(s3_parsed_request); } } };
 
         try
         {
@@ -68,13 +68,12 @@ namespace uh::cluster
                 stream.expires_after(std::chrono::seconds(10));
 
                 // Read a request
-                s3_parser<true> s3_parser;
-                s3_parser.body_limit(1024ul*1024ul*1024ul);
+                http::request<http::string_body> received_request;
+                co_await http::async_read(stream, buffer, received_request, net::use_awaitable);
 
-                co_await http::async_read(stream, buffer, s3_parser, net::use_awaitable);
-
-//                // TODO: co await mechanism send mpi
-//                // TODO: use mpi scatter to send to a specific communicator processes
+                // parse the request
+                s3_parser s3_parser(received_request);
+                s3_parser.parse();
 
                 /////request_to_function[s3_parser.m_parsed_struct.req_type](s3_parser.m_parsed_struct);
 
