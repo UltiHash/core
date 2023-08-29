@@ -11,7 +11,7 @@
 #include "cluster_map.h"
 #include "server.h"
 #include "rest_api/rest_server.h"
-#include "messenger.h"
+#include "client.h"
 
 namespace uh::cluster
 {
@@ -25,10 +25,10 @@ public:
 
 private:
 
-    void create_messengers ();
+    void create_connections ();
 
-    std::vector <messenger> m_dedupe_nodes;
-    std::vector <messenger> m_phonebooks;
+    std::vector <client> m_dedupe_nodes;
+    std::vector <client> m_phonebooks;
 
     const cluster_map m_cluster_map;
     boost::asio::io_service m_io_service;

@@ -57,9 +57,9 @@ namespace uh::rest
         beast::flat_buffer buffer;
         beast::error_code ec;
 
-        std::unordered_map<req_types, std::function<void(const s3_request_object&)>> request_to_function
-            { { put_object, [](const s3_request_object& s3_parsed_request) { putObject(s3_parsed_request); } },
-              { get_object, [](const s3_request_object& s3_parsed_request) { getObject(s3_parsed_request); } } };
+        std::unordered_map<req_types, std::function<void(const http_fields_object&)>> request_to_function
+            { { put_object, [](const http_fields_object& s3_parsed_request) { putObject(s3_parsed_request); } },
+              { get_object, [](const http_fields_object& s3_parsed_request) { getObject(s3_parsed_request); } } };
 
         try
         {
@@ -76,7 +76,7 @@ namespace uh::rest
 //                // TODO: co await mechanism send mpi
 //                // TODO: use mpi scatter to send to a specific communicator processes
 
-                request_to_function[s3_parser.m_parsed_struct.req_type](s3_parser.m_parsed_struct);
+                /////request_to_function[s3_parser.m_parsed_struct.req_type](s3_parser.m_parsed_struct);
 
             }
         }

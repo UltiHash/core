@@ -65,6 +65,7 @@ namespace uh::rest {
 
 //------------------------------------------------------------------------------
 
+
     s3_fields
     s3_field_to_enum(const std::string &field)
     {
@@ -214,8 +215,8 @@ namespace uh::rest {
                     case verb::put:
                         if (!target.empty() && (target.find('?') == std::string::npos))
                         {
-                            m_parsed_struct.object_key = target.substr(1);
-                            m_parsed_struct.req_type = put_object;
+                   ////         m_parsed_fields.object_key = target.substr(1);
+                   ////         m_parsed_struct.req_type = put_object;
                         }
                         else
                         {
@@ -226,8 +227,8 @@ namespace uh::rest {
                     case verb::get:
                         if (!target.empty() && (target.find('?') == std::string::npos))
                         {
-                            m_parsed_struct.object_key = target.substr(1);
-                            m_parsed_struct.req_type = get_object;
+                       ///     m_parsed_struct.object_key = target.substr(1);
+                      ////      m_parsed_struct.req_type = get_object;
                         }
                         else
                         {
@@ -305,15 +306,15 @@ namespace uh::rest {
                     switch (enum_s3_field)
                     {
                         case x_amz_expected_bucket_owner:
-                            m_parsed_struct.x_amz_expected_bucket_owner = value;
+                   ////         m_parsed_struct.x_amz_expected_bucket_owner = value;
                             break;
 
                         case x_amz_request_payer:
-                            m_parsed_struct.x_amz_request_payer = value;
+                 ///           m_parsed_struct.x_amz_request_payer = value;
                             break;
                     }
-
-                    switch (m_parsed_struct.req_type)
+/*
+                    switch (m_parsed_struct)
                     {
                         case put_object:
 
@@ -324,7 +325,7 @@ namespace uh::rest {
                                     break;
 
                                 case x_amz_acl:
-                                    m_parsed_struct.put->x_amz_acl = value;
+                                    m_parsed_struct->x_amz_acl = value;
                                     break;
 
                                 case x_amz_grant_full_control:
@@ -393,31 +394,31 @@ namespace uh::rest {
                             {
 
                                 case boost::beast::http::field::content_disposition:
-                                    m_parsed_struct.http_headers.content_disposition = value;
+                                    m_parsed_struct.content_disposition = value;
                                     break;
 
                                 case boost::beast::http::field::content_encoding:
-                                    m_parsed_struct.http_headers.content_disposition = value;
+                                    m_parsed_struct.content_disposition = value;
                                     break;
 
                                 case boost::beast::http::field::content_language:
-                                    m_parsed_struct.http_headers.content_language = value;
+                                    m_parsed_struct.content_language = value;
                                     break;
 
                                 case boost::beast::http::field::content_length:
-                                    m_parsed_struct.http_headers.content_length = value;
+                                    m_parsed_struct.content_length = value;
                                     break;
 
                                 case boost::beast::http::field::content_md5:
-                                    m_parsed_struct.http_headers.content_md5 = value;
+                                    m_parsed_struct.content_md5 = value;
                                     break;
 
                                 case boost::beast::http::field::content_type:
-                                    m_parsed_struct.http_headers.content_type = value;
+                                    m_parsed_struct.content_type = value;
                                     break;
 
                                 case boost::beast::http::field::expires:
-                                    m_parsed_struct.http_headers.expires = value;
+                                    m_parsed_struct.expires = value;
                                     break;
 
                             }
@@ -429,30 +430,32 @@ namespace uh::rest {
                             {
 
                                 case boost::beast::http::field::if_match:
-                                    m_parsed_struct.http_headers.if_match = value;
+                                    m_parsed_struct.if_match = value;
                                     break;
 
                                 case boost::beast::http::field::if_modified_since:
-                                    m_parsed_struct.http_headers.if_modified_since = value;
+                                    m_parsed_struct.if_modified_since = value;
                                     break;
 
                                 case boost::beast::http::field::if_none_match:
-                                    m_parsed_struct.http_headers.if_none_match = value;
+                                    m_parsed_struct.if_none_match = value;
                                     break;
 
                                 case boost::beast::http::field::if_unmodified_since:
-                                    m_parsed_struct.http_headers.if_unmodified_since = value;
+                                    m_parsed_struct.if_unmodified_since = value;
                                     break;
 
                                 case boost::beast::http::field::range:
-                                    m_parsed_struct.http_headers.range = value;
+                                    m_parsed_struct.range = value;
                                     break;
 
                             }
                             break;
                     }
+                  */
                 }
             }
+
         }
 
         /** Called once after the complete HTTP header is received.
@@ -505,7 +508,7 @@ namespace uh::rest {
                 string_view s,              // A portion of the body
                 error_code &ec) override
         {
-            m_parsed_struct.body_stream << s;
+           // m_parsed_struct.body_stream << s;
             return s.size();
         }   // The error returned to the caller, if any
 
@@ -577,7 +580,7 @@ namespace uh::rest {
         }   // The error returned to the caller, if any
 
     public:
-        s3_req_object m_parsed_struct;
+        http_fields_object m_parsed_struct;
         std::vector<s3_fields> m_parsed_fields;
 
         s3_parser() = default;

@@ -68,7 +68,7 @@ namespace uh::cluster
     private:
 
         // Accepts incoming connections and launches the sessions
-        net::awaitable<void> do_listen(tcp::endpoint endpoint) const {
+        net::awaitable<void> do_listen(tcp::endpoint endpoint) {
             auto acceptor = boost::asio::use_awaitable_t<boost::asio::any_io_executor>::as_default_on(
                     tcp::acceptor(co_await net::this_coro::executor));
 
@@ -100,16 +100,14 @@ namespace uh::cluster
 
         }
 
-        net::awaitable<void> do_session(tcp::socket stream) const {
+        net::awaitable<void> do_session(tcp::socket stream) {
             INFO << "connection from: " << stream.remote_endpoint();
 
-            messenger m (std::move (stream));
+            messenger m (m_ioc, std::move (stream));
 
             boost::system::error_code ec;
             try {
                 for (;;) {
-
-                    const auto buf = co_await m.recv();
 
                     //std::cout << "message " << std::string_view (buf.data.get(), 13) << std::endl;
                 }
