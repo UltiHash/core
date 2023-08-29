@@ -32,8 +32,8 @@ entry_node::run()
 
     //std::cout << std::string_view (resp.data.get(), resp.size) << std::endl;
 
-    m_internal_server.run();
     m_rest_server.run();
+    m_internal_server.run();
 }
 
 void entry_node::create_connections() {
