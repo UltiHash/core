@@ -19,15 +19,38 @@
 
 namespace uh::cluster {
 
+
+
 class client {
-    std::deque <std::shared_ptr<messenger>> m_messengers;
+
+    class borrowed_messenger {
+    public:
+        borrowed_messenger (std::unique_ptr <messenger> m,
+                            std::reference_wrapper <client> cl):
+                m_messenger(std::move (m)),
+                m_client(cl) {
+        }
+
+        messenger& get () {
+            return *m_messenger;
+        }
+
+        ~borrowed_messenger() {
+            m_client.get().take_back_messenger (std::move (m_messenger));
+        }
+
+        std::unique_ptr <messenger> m_messenger;
+        const std::reference_wrapper <client> m_client;
+    };
+
+    std::deque <std::unique_ptr<messenger>> m_messengers;
     std::condition_variable m_cv;
     std::mutex m;
 
 public:
     client (boost::asio::io_context &ioc, const std::string &ip, const int port, const int connections) {
         for (int i = 0; i < connections; ++i) {
-            m_messengers.emplace_back(std::make_shared<messenger> (ioc, ip, port));
+            m_messengers.emplace_back(std::make_unique<messenger> (ioc, ip, port));
         }
     }
 
@@ -35,16 +58,21 @@ public:
 
     }
 
-    std::shared_ptr <messenger> init_send (const message_types type, std::span<const char> data) {
+    borrowed_messenger borrow_messenger () {
         std::unique_lock<std::mutex> lk(m);
-        // The only case where a thread might wait. This wait never happen if we have higher number of connections than the threads
+        // The only case where a thread might wait.
         m_cv.wait(lk, [this]() { return !m_messengers.empty(); });
-        auto messenger = m_messengers.front();
+        auto messenger = std::move (m_messengers.front());
         m_messengers.pop_front();
-        messenger->send(type, data);
-        m_messengers.emplace_back (messenger);
+        return {std::move (messenger), std::ref (*this)};
+    }
+
+private:
+    void take_back_messenger (std::unique_ptr <messenger> msg) {
+        std::unique_lock <std::mutex> lk (m);
+        m_messengers.emplace_back(std::move (msg));
+        lk.unlock();
         m_cv.notify_one();
-        return messenger;
     }
 
 };

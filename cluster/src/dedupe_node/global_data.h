@@ -114,8 +114,9 @@ public:
 
 
     address write (const std::string_view& data) {
-        auto m = m_data_node_offsets.at(0).init_send(WRITE_REQ, data);
-        const auto result = m->recv();
+        auto m = m_data_node_offsets.at(0).borrow_messenger();
+        m.get().send(WRITE_REQ, data);
+        const auto result = m.get().recv();
         return {};
     }
 
