@@ -7,10 +7,10 @@
 
 #include <functional>
 #include <iostream>
-#include "cluster_config.h"
+#include "common/cluster_config.h"
 #include "data_store.h"
-#include "server.h"
-#include "cluster_map.h"
+#include "network/server.h"
+#include "network/cluster_map.h"
 #include <atomic>
 
 namespace uh::cluster {

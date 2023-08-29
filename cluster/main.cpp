@@ -3,12 +3,12 @@
 //
 
 #include <system_error>
-#include "src/cluster_config.h"
-#include "src/data_node.h"
-#include "src/dedupe_job.h"
-#include "src/phonebook_job.h"
-#include "src/entry_job.h"
-#include "cluster_map.h"
+#include "common/cluster_config.h"
+#include "data_node/data_node.h"
+#include "dedupe_node/dedupe_job.h"
+#include "phonebook_node/phonebook_job.h"
+#include "entry_node/entry_job.h"
+#include "network/cluster_map.h"
 
 uh::cluster::entry_node_config make_entry_node_config () {
     return {

@@ -7,7 +7,7 @@
 
 #include <functional>
 #include <iostream>
-#include "cluster_config.h"
+#include "common/cluster_config.h"
 
 namespace uh::cluster {
 

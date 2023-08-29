@@ -20,7 +20,7 @@
 #include <boost/beast/http/message_generator.hpp>
 #include "logging/logging_boost.h"
 #include "net/server.h"
-#include "../cluster_config.h"
+#include "common/cluster_config.h"
 
 //------------------------------------------------------------------------------
 

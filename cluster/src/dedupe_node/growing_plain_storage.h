@@ -10,7 +10,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <cstring>
-#include "cluster_config.h"
+#include "common/cluster_config.h"
 
 namespace uh::cluster::dedupe {
 

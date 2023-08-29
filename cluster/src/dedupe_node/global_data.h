@@ -8,8 +8,8 @@
 #include <map>
 #include <unordered_map>
 #include <set>
-#include "data_node.h"
-#include "client.h"
+#include "data_node/data_node.h"
+#include "network/client.h"
 
 
 namespace uh::cluster {

@@ -7,11 +7,11 @@
 
 #include <functional>
 #include <iostream>
-#include "cluster_config.h"
-#include "cluster_map.h"
-#include "server.h"
-#include "rest_api/rest_server.h"
-#include "client.h"
+#include "common/cluster_config.h"
+#include "network/cluster_map.h"
+#include "network/server.h"
+#include "entry_node/rest_server.h"
+#include "network/client.h"
 
 namespace uh::cluster
 {
