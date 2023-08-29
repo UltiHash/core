@@ -97,14 +97,14 @@ namespace uh::cluster {
     {
     private:
         const http::request<http::string_body>& m_recv_req;
-        http::verb verb;
-        std::string_view target;
+        http::verb m_verb;
+        std::string_view m_target;
 
         struct parsed_request_wrapper
         {
             std::unordered_map <s3_fields, std::string_view> parsed_request;
-            s3_req_type m_req_type = not_initialized;
-            std::string bucket;
+            s3_req_type req_type = not_initialized;
+            std::string bucket_id;
             std::string object_key;
             std::string_view body;
         };
@@ -115,35 +115,49 @@ namespace uh::cluster {
         (const http::request<http::string_body>& recv_req) : m_recv_req(recv_req)
         {}
 
-        void parse()
+        const
+        parsed_request_wrapper& parse()
         {
             if (m_recv_req.base().version() != 11)
             {
-                throw std::runtime_error("Bad HTTP version. Support exists for only HTTP 1.1.");
+                throw std::runtime_error("bad http version. support exists only for HTTP 1.1.");
             }
 
-            verb = m_recv_req.base().method();
-            target = m_recv_req.base().target();
+            m_verb = m_recv_req.base().method();
+            m_target = m_recv_req.base().target();
+
             for (const auto& header : m_recv_req)
-            {
                 m_parsed_req_wrapper.parsed_request.emplace(s3_field_to_enum(header.name_string()), header.value());
-                std::cout << header.name_string() << " " << header.value() << std::endl;
-            }
 
-//            m_req_type = get_type();
+            m_parsed_req_wrapper.req_type = get_type();
+            m_parsed_req_wrapper.body = m_recv_req.body();
+            return m_parsed_req_wrapper;
         }
 
-        s3_req_type get_type() const
+        s3_req_type
+        get_type()
         {
-            switch (verb)
+            switch (m_verb)
             {
                 case http::verb::put:
-                    break;
+                    if (m_parsed_req_wrapper.parsed_request.contains(x_amz_copy_source))
+                    {
+                        return copy_object;
+                    }
+                    else if (!m_target.empty() && (m_target.find('?') == std::string::npos))
+                    {
+                        m_parsed_req_wrapper.object_key = m_target.substr(1);
+                        return put_object;
+                    }
                 case http::verb::get:
-                    break;
-
+                    if (!m_target.empty() && (m_target.find('?') == std::string::npos))
+                    {
+                        m_parsed_req_wrapper.object_key = m_target.substr(1);
+                        return get_object;
+                    }
+                default:
+                    throw std::runtime_error("bad http verb.");
             }
-            return s3_req_type::not_initialized;
         }
 
     };
