@@ -49,8 +49,7 @@ namespace uh::cluster
 //------------------------------------------------------------------------------
 
     net::awaitable<void>
-    rest_server::do_session(tcp_stream stream)
-    {
+    rest_server::do_session(tcp_stream stream) {
         INFO << "connection from: " << stream.socket().remote_endpoint();
 
         // This buffer is required to persist across reads
@@ -61,10 +60,8 @@ namespace uh::cluster
 //            { { put_object, [](const http_fields_object& s3_parsed_request) { putObject(s3_parsed_request); } },
 //              { get_object, [](const http_fields_object& s3_parsed_request) { getObject(s3_parsed_request); } } };
 
-        try
-        {
-            for(;;)
-            {
+        try {
+            for (;;) {
                 stream.expires_after(std::chrono::seconds(10));
 
                 // Read a request
@@ -79,10 +76,8 @@ namespace uh::cluster
 
             }
         }
-        catch (boost::system::system_error & se)
-        {
-            if (se.code() != http::error::end_of_stream )
-            {
+        catch (boost::system::system_error &se) {
+            if (se.code() != http::error::end_of_stream) {
                 // Send a response about the error and shut down
                 http::response<http::string_body> res{http::status::bad_request, 11};
                 res.set(http::field::server, BOOST_BEAST_VERSION_STRING);
@@ -93,9 +88,22 @@ namespace uh::cluster
                 // TODO: Should this write also be async? If so how to use it with coroutine
                 http::write(stream, res);
                 stream.socket().shutdown(tcp::socket::shutdown_send, ec);
-                throw ;
+                throw;
             }
+        }
+        catch (const std::exception& e)
+        {
+            // Send a response about the error and shut down
+            http::response<http::string_body> res{http::status::bad_request, 11};
+            res.set(http::field::server, BOOST_BEAST_VERSION_STRING);
+            res.set(http::field::content_type, "text/html");
+            res.body() = e.what();
+            res.prepare_payload();
 
+            // TODO: Should this write also be async? If so how to use it with coroutine
+            http::write(stream, res);
+            stream.socket().shutdown(tcp::socket::shutdown_send, ec);
+            throw;
         }
 
         stream.socket().shutdown(tcp::socket::shutdown_send, ec);
