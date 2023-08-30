@@ -137,7 +137,9 @@ namespace uh::cluster {
         not_initialized = 0,
         put_object,
         get_object,
+        get_object_information,
         copy_object,
+        delete_object,
     };
 
 //------------------------------------------------------------------------------
@@ -219,6 +221,16 @@ namespace uh::cluster {
                     {
                         return get_object;
                     }
+                case http::verb::delete_:
+                    if (!m_target.empty() && (m_target.find('?') == std::string::npos))
+                    {
+                        return copy_object;
+                    }
+                case http::verb::head:
+                    if (!m_target.empty() && (m_target.find('?') == std::string::npos))
+                    {
+                        return get_object_information;
+                    }
                 default:
                     throw std::runtime_error("bad http verb.");
             }
@@ -249,16 +261,23 @@ namespace uh::cluster {
                                          x_amz_storage_class, x_amz_request_payer, x_amz_tagging,
                                          x_amz_expected_bucket_owner, x_amz_meta_author } },
             { s3_req_type::get_object, { x_amz_request_payer, x_amz_expected_bucket_owner } },
-            { s3_req_type::copy_object, { } },
+            {  },
+            { s3_req_type::copy_object, { x_amz_acl, x_amz_copy_source, x_amz_copy_source_if_match, x_amz_copy_source_if_modified_since,
+                                          x_amz_copy_source_if_none_match, x_amz_copy_source_if_unmodified_since, x_amz_grant_full_control, x_amz_grant_read,
+                                        x_amz_grant_read_acp, x_amz_grant_write_acp, x_amz_metadata_directive, x_amz_tagging_directive,
+                                        x_amz_storage_class, x_amz_request_payer, x_amz_tagging, x_amz_expected_bucket_owner, x_amz_source_expected_bucket_owner } },
+            { s3_req_type::delete_object, { x_amz_request_payer, x_amz_expected_bucket_owner } },
+
         };
 
 //------------------------------------------------------------------------------
 
     const std::unordered_map <s3_req_type, std::set<http_fields>> s3_parser::static_http_valid_fields =
         {
-            { s3_req_type::put_object, { host, user_agent, http_accept, connection, cache_control, content_disposition, content_encoding, content_language, content_length, content_md5, content_type } },
+            { s3_req_type::put_object, { host, user_agent, http_accept, connection, cache_control, content_disposition, content_encoding, content_language, content_length, content_md5, content_type, expires } },
             { s3_req_type::get_object, { host, user_agent, http_accept, connection, if_match, if_modified_since, if_none_match, if_unmodified_since, range } },
-            { s3_req_type::copy_object, { host, user_agent, http_accept, connection, } },
+            { s3_req_type::copy_object, { host, user_agent, http_accept, connection, cache_control, content_disposition, content_encoding, content_language, content_type, expires } },
+            { s3_req_type::delete_object, { host, user_agent, http_accept, connection } },
         };
 
 //------------------------------------------------------------------------------
