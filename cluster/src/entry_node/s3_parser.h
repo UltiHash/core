@@ -17,7 +17,9 @@ namespace uh::cluster {
         x_amz_grant_full_control,
         x_amz_grant_read,
         x_amz_grant_read_acp,
+        x_amz_grant_write,
         x_amz_grant_write_acp,
+        x_amz_object_ownership,
         x_amz_storage_class,
         x_amz_tagging,
         x_amz_meta_author,
@@ -38,12 +40,15 @@ namespace uh::cluster {
     enum http_fields : uint8_t
     {
         not_known = 0,
-        put,
-        get,
         host,
         user_agent,
         http_accept,
         connection,
+        date,
+        server,
+        put,
+        get,
+        delete_,
         cache_control,
         content_disposition,
         content_encoding,
@@ -69,7 +74,9 @@ namespace uh::cluster {
                         {"x-amz-grant-full-control",    x_amz_grant_full_control},
                         {"x-amz-grant-read",    x_amz_grant_read},
                         {"x-amz-grant-read-acp",    x_amz_grant_read_acp},
+                        {"x-amz-grant-write",    x_amz_grant_write},
                         {"x-amz-grant-write-acp",   x_amz_grant_write_acp},
+                        {"x-amz-object-ownership", x_amz_object_ownership},
                         {"x-amz-storage-class", x_amz_storage_class},
                         {"x-amz-request-payer", x_amz_request_payer},
                         {"x-amz-tagging",       x_amz_tagging},
@@ -102,6 +109,7 @@ namespace uh::cluster {
                         {"User-Agent", user_agent},
                         {"Accept" , http_accept},
                         {"Connection", connection},
+                        {"Server", server},
                         {"PUT", put},
                         {"Cache-Control", cache_control},
                         {"Content-Disposition", content_disposition},
@@ -117,6 +125,7 @@ namespace uh::cluster {
                         {"If-None-Match", if_none_match},
                         {"If-Unmodified-Since", if_unmodified_since},
                         {"Range", range},
+                        {"DELETE", delete_},
                 };
 
         auto it = enum_map.find(field);
@@ -140,6 +149,8 @@ namespace uh::cluster {
         get_object_information,
         copy_object,
         delete_object,
+        create_bucket,
+        delete_bucket,
     };
 
 //------------------------------------------------------------------------------
@@ -153,6 +164,7 @@ namespace uh::cluster {
          * class member variable */
         const std::unordered_map <s3_req_type, std::set<s3_fields>>& m_s3_vfields;
         const std::unordered_map <s3_req_type, std::set<http_fields>>& m_http_vfields;
+        const std::set<http_fields> m_http_common_fields = {host, user_agent, http_accept, connection, date, server};
 
         const http::request<http::string_body>& m_recv_req;
         http::verb m_verb {};
@@ -208,7 +220,11 @@ namespace uh::cluster {
             switch (m_verb)
             {
                 case http::verb::put:
-                    if (m_parsed_req_wrapper.s3_parsed_fields.contains(x_amz_copy_source))
+                    if (m_target == "/")
+                    {
+                        return create_bucket;
+                    }
+                    else if (m_parsed_req_wrapper.s3_parsed_fields.contains(x_amz_copy_source))
                     {
                         return copy_object;
                     }
@@ -222,14 +238,13 @@ namespace uh::cluster {
                         return get_object;
                     }
                 case http::verb::delete_:
-                    if (!m_target.empty() && (m_target.find('?') == std::string::npos))
+                    if (m_target == "/")
                     {
-                        return copy_object;
+                        return delete_bucket;
                     }
-                case http::verb::head:
-                    if (!m_target.empty() && (m_target.find('?') == std::string::npos))
+                    else if (!m_target.empty() && (m_target.find('?') == std::string::npos))
                     {
-                        return get_object_information;
+                        return delete_object;
                     }
                 default:
                     throw std::runtime_error("bad http verb.");
@@ -238,15 +253,20 @@ namespace uh::cluster {
 
         void sanitizer()
         {
+            // check for common fields
+
+            // check for s3_fields
             for (const auto& tag: m_parsed_req_wrapper.s3_parsed_fields)
             {
                 if (!m_s3_vfields.at(m_parsed_req_wrapper.req_type).contains(tag.first))
                     throw std::runtime_error("encountered invalid field for the given request.\n");
             }
+
             for (const auto& tag: m_parsed_req_wrapper.http_parsed_fields)
             {
-                if (!m_http_vfields.at(m_parsed_req_wrapper.req_type).contains(tag.first))
-                    throw std::runtime_error("encountered invalid field for the given request.\n");
+                if (!m_http_common_fields.contains(tag.first))
+                    if (!m_http_vfields.at(m_parsed_req_wrapper.req_type).contains(tag.first))
+                        throw std::runtime_error("encountered invalid field for the given request.\n");
             }
         }
 
@@ -261,23 +281,26 @@ namespace uh::cluster {
                                          x_amz_storage_class, x_amz_request_payer, x_amz_tagging,
                                          x_amz_expected_bucket_owner, x_amz_meta_author } },
             { s3_req_type::get_object, { x_amz_request_payer, x_amz_expected_bucket_owner } },
-            {  },
             { s3_req_type::copy_object, { x_amz_acl, x_amz_copy_source, x_amz_copy_source_if_match, x_amz_copy_source_if_modified_since,
                                           x_amz_copy_source_if_none_match, x_amz_copy_source_if_unmodified_since, x_amz_grant_full_control, x_amz_grant_read,
                                         x_amz_grant_read_acp, x_amz_grant_write_acp, x_amz_metadata_directive, x_amz_tagging_directive,
                                         x_amz_storage_class, x_amz_request_payer, x_amz_tagging, x_amz_expected_bucket_owner, x_amz_source_expected_bucket_owner } },
             { s3_req_type::delete_object, { x_amz_request_payer, x_amz_expected_bucket_owner } },
-
+            {s3_req_type::create_bucket, { x_amz_acl, x_amz_grant_full_control, x_amz_grant_read, x_amz_grant_read_acp, x_amz_grant_write, x_amz_grant_write_acp, x_amz_object_ownership }},
+            { s3_req_type::delete_bucket, { x_amz_expected_bucket_owner } },
         };
 
 //------------------------------------------------------------------------------
 
     const std::unordered_map <s3_req_type, std::set<http_fields>> s3_parser::static_http_valid_fields =
         {
-            { s3_req_type::put_object, { host, user_agent, http_accept, connection, cache_control, content_disposition, content_encoding, content_language, content_length, content_md5, content_type, expires } },
-            { s3_req_type::get_object, { host, user_agent, http_accept, connection, if_match, if_modified_since, if_none_match, if_unmodified_since, range } },
-            { s3_req_type::copy_object, { host, user_agent, http_accept, connection, cache_control, content_disposition, content_encoding, content_language, content_type, expires } },
-            { s3_req_type::delete_object, { host, user_agent, http_accept, connection } },
+            { s3_req_type::put_object, { content_disposition, content_encoding, content_language, content_length, content_md5, content_type, expires } },
+            { s3_req_type::get_object, { if_match, if_modified_since, if_none_match, if_unmodified_since, range } },
+            { s3_req_type::get_object, { if_match, if_modified_since, if_none_match, if_unmodified_since, range } },
+            { s3_req_type::copy_object, { content_disposition, content_encoding, content_language, content_type, expires } },
+            { s3_req_type::delete_object, {  } },
+            { s3_req_type::create_bucket, {  } },
+            { s3_req_type::delete_bucket, {  } },
         };
 
 //------------------------------------------------------------------------------

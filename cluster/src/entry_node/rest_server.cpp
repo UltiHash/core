@@ -74,6 +74,12 @@ namespace uh::cluster
 
                 /////request_to_function[s3_parser.m_parsed_struct.req_type](s3_parser.m_parsed_struct);
 
+                // Determine if we should close the connection
+                bool keep_alive = received_request.keep_alive();
+                if(! keep_alive)
+                {
+                    break;
+                }
             }
         }
         catch (boost::system::system_error &se) {
