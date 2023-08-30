@@ -13,7 +13,6 @@ class phonebook_node_handler: public protocol_handler {
 public:
 
     void handle (messenger m) override {
-
     }
 };
 
