@@ -201,9 +201,13 @@ namespace uh::cluster {
             for (const auto& header : m_recv_req)
             {
                 if (header.name_string().starts_with("x-"))
+                {
                     m_parsed_req_wrapper.s3_parsed_fields.emplace(s3_field_to_enum(header.name_string()), header.value());
+                }
                 else
+                {
                     m_parsed_req_wrapper.http_parsed_fields.emplace(http_field_to_enum(header.name_string()), header.value());
+                }
             }
 
             m_parsed_req_wrapper.req_type = get_type();
@@ -253,20 +257,19 @@ namespace uh::cluster {
 
         void sanitizer()
         {
-            // check for common fields
-
-            // check for s3_fields
-            for (const auto& tag: m_parsed_req_wrapper.s3_parsed_fields)
-            {
-                if (!m_s3_vfields.at(m_parsed_req_wrapper.req_type).contains(tag.first))
-                    throw std::runtime_error("encountered invalid field for the given request.\n");
-            }
 
             for (const auto& tag: m_parsed_req_wrapper.http_parsed_fields)
             {
                 if (!m_http_common_fields.contains(tag.first))
                     if (!m_http_vfields.at(m_parsed_req_wrapper.req_type).contains(tag.first))
                         throw std::runtime_error("encountered invalid field for the given request.\n");
+            }
+
+            // check for s3_fields
+            for (const auto& tag: m_parsed_req_wrapper.s3_parsed_fields)
+            {
+                if (!m_s3_vfields.at(m_parsed_req_wrapper.req_type).contains(tag.first))
+                    throw std::runtime_error("encountered invalid field for the given request.\n");
             }
         }
 
