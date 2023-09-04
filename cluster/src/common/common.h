@@ -82,6 +82,9 @@ struct address {
     explicit address (std::size_t size):
         pointers (size * 2),
         sizes (size) {}
+    explicit address (const fragment& frag) {
+        push_fragment(frag);
+    }
 
     void push_fragment (const fragment& frag) {
         pointers.emplace_back(frag.pointer.get_data()[0]);

@@ -102,7 +102,7 @@ private:
 
         }
 
-        m_storage.sync(result.second);
+        co_await m_storage.sync(result.second);
         co_return result;
     }
 

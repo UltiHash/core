@@ -116,37 +116,61 @@ public:
 
 
     coro <address> write (const std::string_view& data) {
-        auto m = m_data_node_offsets.at(0).pull_messenger();
+        auto m = m_data_node_offsets.at(0).acquire_messenger();
         co_await m.get().send(WRITE_REQ, data);
 
-        const auto message_header = co_await m.get().recv_header();
-        if (message_header.type != WRITE_RESP) [[unlikely]] {
+        auto resp = co_await m.get().recv_address();
+        if (resp.first.type != WRITE_RESP) [[unlikely]] {
             throw std::runtime_error ("Invalid response for write request");
         }
-        address addr;
-        addr.allocate_for_serialized_data(message_header.size);
-        m.get().register_read_buffer(addr.pointers);
-        m.get().register_read_buffer(addr.sizes);
-        co_return addr;
+        co_return std::move (resp.second);
     }
 
     coro <std::size_t> read (char* buffer, const uint128_t pointer, const size_t size) {
-        auto m = m_data_node_offsets.at(pointer).pull_messenger();
+        auto m = m_data_node_offsets.at(pointer).acquire_messenger();
         m.get().register_write_buffer(pointer.get_data(), 2);
         co_await m.get().send_buffers (READ_REQ);
         const auto h = co_await m.get().recv ({buffer, size});
         co_return h.size;
     }
 
-    void remove (const uint128_t pointer, const size_t size) {
+    coro <void> remove (const uint128_t pointer, const size_t size) {
+        auto m = m_data_node_offsets.at(pointer).acquire_messenger();
+        m.get().register_write_buffer(pointer.get_data(), 2);
+        co_await m.get().send_buffers (REMOVE_REQ);
+        const auto h = co_await m.get().recv_header();
+        if (h.type != REMOVE_OK) [[unlikely]] {
+            throw std::runtime_error ("Remove not successful");
+        }
     }
 
-    void sync (const address& addr) {
+    coro <void> sync (const address& addr) {
 
+        std::unordered_map <client*, address> dn_address_map;
+        for (int i = 0; i < addr.size(); i++) {
+            const auto frag = addr.get_fragment(i);
+            auto& cl = m_data_node_offsets.at(frag.pointer);
+            if (const auto f = dn_address_map.find(&cl); f != dn_address_map.cend()) {
+                f->second.push_fragment(frag);
+            }
+            else {
+                dn_address_map.emplace (&cl, frag);
+            }
+        }
+
+        for (const auto& dn_address: dn_address_map) {
+
+            auto m = dn_address.first->acquire_messenger();
+            co_await m.get ().send_address(REMOVE_REQ, dn_address.second);
+            const auto h = co_await m.get().recv_header();
+            if (h.type != REMOVE_OK) [[unlikely]] {
+                throw std::runtime_error ("Remove not successful");
+            }
+        }
     }
 
-    [[nodiscard]] uint128_t get_used_space () const {
-        return {};
+    [[nodiscard]] coro <uint128_t> get_used_space () const {
+        co_return uint128_t {};
     }
 
     void stop () const {
