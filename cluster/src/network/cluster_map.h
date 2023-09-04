@@ -84,7 +84,7 @@ namespace uh::cluster {
 
             bc (m_cluster_conf.data_node_conf.server_conf.port);
             bc (m_cluster_conf.dedupe_node_conf.server_conf.port);
-            bc (m_cluster_conf.phonebook_node_conf.server_conf.port);
+            bc (m_cluster_conf.directory_node_conf.server_conf.port);
             io.run();
 
             wait_for_responses();
@@ -154,8 +154,8 @@ namespace uh::cluster {
                     return m_cluster_conf.dedupe_node_conf.server_conf.port;
                 case DATA_NODE:
                     return m_cluster_conf.data_node_conf.server_conf.port;
-                case PHONE_BOOK_NODE:
-                    return m_cluster_conf.phonebook_node_conf.server_conf.port;
+                case DIRECTORY_NODE:
+                    return m_cluster_conf.directory_node_conf.server_conf.port;
                 case ENTRY_NODE:
                     return m_cluster_conf.entry_node_conf.internal_server_conf.port;
                 default:

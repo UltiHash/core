@@ -44,10 +44,10 @@ void entry_node::create_connections() {
                                      m_cluster_map.m_cluster_conf.entry_node_conf.dedupe_node_connection_count);
     }
 
-    for (const auto& phonebook: m_cluster_map.m_roles.at(PHONE_BOOK_NODE)) {
-        m_phonebooks.emplace_back(m_io_service, phonebook.second,
-                                  m_cluster_map.m_cluster_conf.phonebook_node_conf.server_conf.port,
-                                  m_cluster_map.m_cluster_conf.entry_node_conf.phonebook_connection_count);
+    for (const auto& directory: m_cluster_map.m_roles.at(DIRECTORY_NODE)) {
+        m_directory_nodes.emplace_back(m_io_service, directory.second,
+                                       m_cluster_map.m_cluster_conf.directory_node_conf.server_conf.port,
+                                       m_cluster_map.m_cluster_conf.entry_node_conf.directory_connection_count);
     }
 }
 

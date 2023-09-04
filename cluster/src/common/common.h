@@ -47,7 +47,7 @@ enum message_types:uint8_t {
 enum role: uint8_t {
     DATA_NODE,
     DEDUPE_NODE,
-    PHONE_BOOK_NODE,
+    DIRECTORY_NODE,
     ENTRY_NODE,
 };
 

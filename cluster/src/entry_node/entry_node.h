@@ -28,7 +28,7 @@ private:
     void create_connections ();
 
     std::vector <client> m_dedupe_nodes;
-    std::vector <client> m_phonebooks;
+    std::vector <client> m_directory_nodes;
 
     const cluster_map m_cluster_map;
     boost::asio::io_service m_io_service;

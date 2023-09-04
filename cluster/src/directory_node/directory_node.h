@@ -2,28 +2,28 @@
 // Created by masi on 7/17/23.
 //
 
-#ifndef CORE_PHONEBOOK_NODE_H
-#define CORE_PHONEBOOK_NODE_H
+#ifndef CORE_DIRECTORY_NODE_H
+#define CORE_DIRECTORY_NODE_H
 
 #include <functional>
 #include <iostream>
 #include "common/cluster_config.h"
-#include "phonebook_node_handler.h"
+#include "directory_node_handler.h"
 
 namespace uh::cluster {
 
-class phonebook_node {
+class directory_node {
 public:
 
-    phonebook_node (int id, cluster_map cmap):
+    directory_node (int id, cluster_map cmap):
             m_cluster_map (std::move (cmap)),
             m_id (id),
-            m_job_name ("phonebook_" + std::to_string (id)),
-            m_server (m_cluster_map.m_cluster_conf.phonebook_node_conf.server_conf,
-                      std::make_unique <phonebook_node_handler>()),
+            m_job_name ("directory_" + std::to_string (id)),
+            m_server (m_cluster_map.m_cluster_conf.directory_node_conf.server_conf,
+                      std::make_unique <directory_handler>()),
             m_storage (m_cluster_map,
-                       m_cluster_map.m_cluster_conf.phonebook_node_conf.data_node_connection_count,
-                       m_cluster_map.m_cluster_conf.phonebook_node_conf.server_conf.threads)
+                       m_cluster_map.m_cluster_conf.directory_node_conf.data_node_connection_count,
+                       m_cluster_map.m_cluster_conf.directory_node_conf.server_conf.threads)
     {
 
     }
@@ -47,4 +47,4 @@ public:
 
 } // end namespace uh::cluster
 
-#endif //CORE_PHONEBOOK_NODE_H
+#endif //CORE_DIRECTORY_NODE_H
