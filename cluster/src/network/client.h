@@ -36,7 +36,8 @@ class client {
         }
 
         ~borrowed_messenger() {
-            m_client.get().take_back_messenger (std::move (m_messenger));
+            m_messenger->clear_buffers();
+            m_client.get().push_messenger(std::move(m_messenger));
         }
 
         std::unique_ptr <messenger> m_messenger;
@@ -58,7 +59,7 @@ public:
 
     }
 
-    borrowed_messenger borrow_messenger () {
+    borrowed_messenger pull_messenger () {
         std::unique_lock<std::mutex> lk(m);
         // The only case where a thread might wait.
         m_cv.wait(lk, [this]() { return !m_messengers.empty(); });
@@ -68,7 +69,7 @@ public:
     }
 
 private:
-    void take_back_messenger (std::unique_ptr <messenger> msg) {
+    void push_messenger (std::unique_ptr <messenger> msg) {
         std::unique_lock <std::mutex> lk (m);
         m_messengers.emplace_back(std::move (msg));
         lk.unlock();

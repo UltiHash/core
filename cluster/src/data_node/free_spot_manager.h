@@ -20,7 +20,7 @@ public:
 
     void push_free_spot (uint128_t pointer, std::size_t size);
 
-    std::optional <wide_span> pop_free_spot ();
+    std::optional <fragment> pop_free_spot ();
 
     void apply_popped_items ();
 

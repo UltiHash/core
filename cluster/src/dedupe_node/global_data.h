@@ -32,7 +32,9 @@ public:
     address cache_write (const std::string_view& data) {
         m_temp_offset = m_temp_offset - 1;
         m_cache.emplace(m_temp_offset, data);
-        return {wide_span {m_temp_offset, data.size()}};
+        address addr;
+        addr.push_fragment(fragment {m_temp_offset, data.size()});
+        return addr;
     }
 
     std::unordered_map <uint128_t, address> sync_cache () {
@@ -113,15 +115,27 @@ public:
     }
 
 
-    address write (const std::string_view& data) {
-        auto m = m_data_node_offsets.at(0).borrow_messenger();
-        m.get().send(WRITE_REQ, data);
-        const auto result = m.get().recv();
-        return {};
+    coro <address> write (const std::string_view& data) {
+        auto m = m_data_node_offsets.at(0).pull_messenger();
+        co_await m.get().send(WRITE_REQ, data);
+
+        const auto message_header = co_await m.get().recv_header();
+        if (message_header.type != WRITE_RESP) [[unlikely]] {
+            throw std::runtime_error ("Invalid response for write request");
+        }
+        address addr;
+        addr.allocate_for_serialized_data(message_header.size);
+        m.get().register_read_buffer(addr.pointers);
+        m.get().register_read_buffer(addr.sizes);
+        co_return addr;
     }
 
-    std::size_t read (char* buffer, const uint128_t pointer, const size_t size) const {
-        return {};
+    coro <std::size_t> read (char* buffer, const uint128_t pointer, const size_t size) {
+        auto m = m_data_node_offsets.at(pointer).pull_messenger();
+        m.get().register_write_buffer(pointer.get_data(), 2);
+        co_await m.get().send_buffers (READ_REQ);
+        const auto h = co_await m.get().recv ({buffer, size});
+        co_return h.size;
     }
 
     void remove (const uint128_t pointer, const size_t size) {

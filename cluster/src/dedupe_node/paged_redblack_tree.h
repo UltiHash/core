@@ -107,14 +107,14 @@ public:
         return {.position = offset, .comp = pos.comp};
     }
 
-    [[nodiscard]] set_result find (const std::string_view& data, const index_type& pos = {}) const {
+    [[nodiscard]] coro <set_result> find (const std::string_view& data, const index_type& pos = {}) const {
         set_result res;
 
         if (pos.position != 0) [[unlikely]] {
             const auto n = get_node (pos.position);
-            if (auto comp = m_comp (data, *n.m_mnode); comp.first == 0) {
+            if (auto comp = co_await m_comp (data, *n.m_mnode); comp.first == 0) {
                 res.match = {std::move (comp.second), n.m_mnode->m_data.pointer, n.m_offset};
-                return res;
+                co_return res;
             }
         }
 
@@ -127,7 +127,7 @@ public:
         node smallest_upper = m_nil;
         while (x.m_offset != m_first_block->nill_offset) {
             y = x;
-            auto comp_res = m_comp (data, *x.m_mnode);
+            auto comp_res = co_await m_comp (data, *x.m_mnode);
             comp_int = comp_res.first;
             if (comp_int < 0) {
                 smallest_upper = x;
@@ -144,12 +144,12 @@ public:
         }
 
         if (!res.match) {
-            res.lower = {fetch_node_data (largest_lower), largest_lower.m_mnode->m_data.pointer, largest_lower.m_offset};
-            res.upper = {fetch_node_data(smallest_upper), smallest_upper.m_mnode->m_data.pointer,
+            res.lower = {co_await fetch_node_data(largest_lower), largest_lower.m_mnode->m_data.pointer, largest_lower.m_offset};
+            res.upper = {co_await fetch_node_data(smallest_upper), smallest_upper.m_mnode->m_data.pointer,
                          smallest_upper.m_offset};
         }
         res.index = {y.m_offset, comp_int};
-        return res;
+        co_return res;
     }
 
     [[nodiscard]] std::list<set_data> do_get_range (const std::span<char> &start_data, const std::span<char> &end_data) const {
@@ -220,7 +220,7 @@ public:
         throw std::runtime_error ("not implemented");
     }
 
-    void update_pointer (uint64_t index_pointer, const wide_span& data_span) noexcept {
+    void update_pointer (uint64_t index_pointer, const fragment& data_span) noexcept {
         const auto n = get_node (reinterpret_cast<uint64_t>(m_index_store.get_storage() + index_pointer));
         n.m_mnode->m_data = data_span;
     }
@@ -268,13 +268,13 @@ private:
         return false;
     }
 
-    [[nodiscard]] inline ospan <char> fetch_node_data (const node& n) const {
+    [[nodiscard]] inline coro <ospan <char>> fetch_node_data (const node& n) const {
         if (n.m_offset == m_nil.m_offset) [[unlikely]] {
-            return {};
+            co_return ospan <char> {};
         }
         ospan <char> buffer (n.m_mnode->m_data.size);
-        m_data_store.get().read(buffer.data.get(), n.m_mnode->m_data.pointer, n.m_mnode->m_data.size);
-        return buffer;
+        co_await m_data_store.get().read(buffer.data.get(), n.m_mnode->m_data.pointer, n.m_mnode->m_data.size);
+        co_return buffer;
     }
 
     void balance (node& z) {
