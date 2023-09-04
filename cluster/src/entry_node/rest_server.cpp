@@ -1,14 +1,15 @@
 
 #include "rest_server.h"
 #include "s3_parser.h"
+#include "s3_authenticator.h"
 #include "functions.h"
 
-namespace uh::cluster
+namespace uh::rest
 {
 
 //------------------------------------------------------------------------------
 
-    rest_server::rest_server(uh::cluster::server_config config, std::unique_ptr <protocol_handler> handler) :
+    rest_server::rest_server(uh::cluster::server_config config, std::unique_ptr <cluster::protocol_handler> handler) :
         m_config(config), m_ioc(static_cast<int>(m_config.threads)), m_thread_container(m_config.threads-1), m_handler (std::move (handler))
     {
         // spawn a coroutine
@@ -71,6 +72,10 @@ namespace uh::cluster
                 // parse the request
                 s3_parser s3_parser(received_request);
                 auto parsed_request = s3_parser.parse();
+
+                // authenticate the request
+                s3_authenticator s3_authenticate(received_request, parsed_request);
+                s3_authenticate.authenticate();
 
                 /////request_to_function[s3_parser.m_parsed_struct.req_type](s3_parser.m_parsed_struct);
 
@@ -158,4 +163,4 @@ namespace uh::cluster
 
 //------------------------------------------------------------------------------
 
-} // namespace uh::cluster
+} // namespace uh::rest
