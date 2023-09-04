@@ -31,7 +31,7 @@ void free_spot_manager::push_free_spot(uint128_t pointer, std::size_t size) {
     m_total_free_size += size;
 }
 
-std::optional<wide_span> free_spot_manager::pop_free_spot() {
+std::optional<fragment> free_spot_manager::pop_free_spot() {
     if (m_start_pos + m_pop_count * ELEMENT_SIZE == m_end_pos) {
         return std::nullopt;
     }
@@ -39,7 +39,7 @@ std::optional<wide_span> free_spot_manager::pop_free_spot() {
     m_file.seekg (m_start_pos + m_pop_count * ELEMENT_SIZE, std::ios::beg);
     unsigned long buffer [3];
     read_size (m_file, ELEMENT_SIZE, reinterpret_cast <char *> (&buffer));
-    wide_span wspan {{buffer[0], buffer[1]}, buffer[2]};
+    fragment wspan {{buffer[0], buffer[1]}, buffer[2]};
     m_pop_count ++;
     m_popped_size += buffer[2];
     return wspan;

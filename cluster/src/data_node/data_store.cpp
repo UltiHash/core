@@ -67,7 +67,8 @@ address data_store::write(std::span<char> data) {
     const auto alloc = allocate (data.size());
     // TODO io_uring
 
-    unsigned long offset = 0, index = 0;
+    unsigned long offset = 0;
+    int index = 0;
     address data_address (alloc.size());
     for (const auto& partial_alloc: alloc) {
         if (lseek(partial_alloc.fd, partial_alloc.offset, SEEK_SET) != partial_alloc.offset) [[unlikely]] {
@@ -77,7 +78,7 @@ address data_store::write(std::span<char> data) {
              written < partial_alloc.size;
              written += ::write(partial_alloc.fd, data.data() + offset + written, partial_alloc.size - written));
         offset += partial_alloc.size;
-        data_address [index ++] = wide_span (partial_alloc.global_offset, partial_alloc.size);
+        data_address.insert_fragment(index ++, fragment (partial_alloc.global_offset, partial_alloc.size));
     }
 
     m_free_spot_manager.apply_popped_items();

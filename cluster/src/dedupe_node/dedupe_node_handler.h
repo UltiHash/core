@@ -20,11 +20,11 @@ public:
         m_fragment_set (m_dedupe_conf.set_conf, storage),
         m_storage (storage) {}
 
-    void handle (messenger m) override {
-        auto message = m.recv();
-        switch (message.first) {
+    coro <void> handle (messenger m) override {
+        const auto message_header = co_await m.recv_header ();
+        switch (message_header.type) {
             case DEDUPE_REQ:
-                handle_dedupe (m, std::move (message.second));
+                co_await handle_dedupe (m, message_header);
                 break;
             default:
                 throw std::invalid_argument ("Invalid message type!");
@@ -33,21 +33,29 @@ public:
 
 private:
 
-    void handle_dedupe (messenger& m, ospan<char> data) {
-        const auto result = deduplicate ({data.data.get(), data.size});
-        // TODO: send effective size
-        m.send (DEDUPE_RESP, {reinterpret_cast <const char*> (result.second.data()), result.second.size()});
+    coro <void> handle_dedupe (messenger& m, const messenger::header& h) {
+
+        ospan<char> data (h.size);
+        m.register_read_buffer(data);
+        co_await m.recv_buffers(h);
+
+        const auto result = co_await deduplicate ({data.data.get(), data.size});
+
+        m.register_write_buffer(result.first);
+        m.register_write_buffer(result.second.pointers);
+        m.register_write_buffer(result.second.sizes);
+        co_await m.send_buffers(DEDUPE_RESP);
     }
 
-    std::pair <std::size_t, address> deduplicate (std::string_view data) {
+    coro <std::pair <std::size_t, address>> deduplicate (std::string_view data) {
 
         std::pair <std::size_t, address> result;
         auto integration_data = data;
 
         while (!integration_data.empty()) {
-            const auto f = m_fragment_set.find(integration_data);
+            const auto f = co_await m_fragment_set.find(integration_data);
             if (f.match) {
-                result.second.emplace_back(wide_span{f.match->data_offset, integration_data.size()});
+                result.second.push_fragment (fragment {f.match->data_offset, integration_data.size()});
                 integration_data = integration_data.substr(integration_data.size());
                 continue;
             }
@@ -56,7 +64,7 @@ private:
             const auto lower_common_prefix = largest_common_prefix (integration_data, lower_data_str);
 
             if (lower_common_prefix == integration_data.size()) {
-                result.second.emplace_back(wide_span {f.lower->data_offset, integration_data.size()});
+                result.second.push_fragment (fragment {f.lower->data_offset, integration_data.size()});
                 integration_data = integration_data.substr(integration_data.size());
                 continue;
             }
@@ -73,21 +81,21 @@ private:
             if (max_common_prefix < m_dedupe_conf.min_fragment_size or integration_data.size() - max_common_prefix < m_dedupe_conf.min_fragment_size) {
 
                 const auto size = std::min (integration_data.size(), m_dedupe_conf.max_fragment_size);
-                const auto addr = store_data(integration_data.substr(0, size));
-                m_fragment_set.add_pointer (integration_data.substr(0, addr.front().size), addr.front().pointer, f.index);
+                const auto addr = co_await store_data(integration_data.substr(0, size));
+                m_fragment_set.add_pointer (integration_data.substr(0, addr.sizes.front()), addr.pointers.front(), f.index);
 
-                result.second.insert(result.second.cend(), addr.cbegin(), addr.cend());
+                result.second.append_address(addr);
                 result.first += size;
                 integration_data = integration_data.substr(size);
                 continue;
             }
             else if (max_common_prefix == integration_data.size()) {
-                result.second.emplace_back(wide_span {max_data_offset, integration_data.size()});
+                result.second.push_fragment(fragment {max_data_offset, integration_data.size()});
                 integration_data = integration_data.substr(integration_data.size());
                 continue;
             }
             else {
-                result.second.emplace_back (wide_span {max_data_offset, max_common_prefix});
+                result.second.push_fragment (fragment {max_data_offset, max_common_prefix});
                 integration_data = integration_data.substr(max_common_prefix, integration_data.size() - max_common_prefix);
                 continue;
             }
@@ -95,7 +103,7 @@ private:
         }
 
         m_storage.sync(result.second);
-        return result;
+        co_return result;
     }
 
     static size_t largest_common_prefix(const std::string_view &str1, const std::string_view &str2) noexcept {
@@ -107,8 +115,8 @@ private:
         return i;
     }
 
-    address store_data(const std::string_view& frag) {
-        return m_storage.write(frag);
+    coro <address> store_data(const std::string_view& frag) {
+        co_return co_await m_storage.write(frag);;
     }
 
     dedupe_config m_dedupe_conf;
