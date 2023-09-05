@@ -1,5 +1,7 @@
 #include "s3_authenticator.h"
 #include <map>
+#include <openssl/sha.h>
+#include <iostream>
 
 namespace uh::rest {
 
@@ -23,20 +25,68 @@ namespace uh::rest {
     std::string
     s3_authenticator::get_canonical_query_string()
     {
-        return std::string("\n");
+        return {'\n'};
     }
 
 //------------------------------------------------------------------------------
 
     std::string
-    s3_authenticator::get_canonical_headers()
+    s3_authenticator::get_headers()
     {
         std::multimap<std::string, std::string> lexically_sorted_headers;
 
         // iterate through all headers
         for (const auto& header : m_received_request)
         {
-            lexically_sorted_headers.emplace(header.name_string(), header.value());
+            std::string header_name;
+            std::transform(header.name_string().begin(), header.name_string().end(), header_name.begin(), [](char c)
+            {
+               return tolower(c);
+            });
+
+            auto header_value = header.value();
+            while (!header_value.empty() && std::isspace(header_value.front()))
+            {
+                header_value.remove_prefix(1);
+            }
+
+            while (!header_value.empty() && std::isspace(header_value.back()))
+            {
+                header_value.remove_suffix(1);
+            }
+
+            lexically_sorted_headers.emplace(header_name, header_value);
+        }
+
+        std::string canonical_header_string {};
+        std::string header_list_string {};
+        for (const auto& pair: lexically_sorted_headers)
+        {
+            canonical_header_string += pair.first + ":" + pair.second + "\n";
+            header_list_string += pair.first + ";";
+        }
+        header_list_string.pop_back();
+        header_list_string += '\n';
+
+        std::cout << canonical_header_string << std::endl;
+        return {canonical_header_string + header_list_string};
+    }
+
+//------------------------------------------------------------------------------
+
+    std::string
+    sha_256(const std::string_view& payload)
+    {
+        if (payload.empty())
+        {
+            return {"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"};
+        }
+        else
+        {
+            unsigned char result[SHA256_DIGEST_LENGTH];
+            SHA256((unsigned char *) payload.data(), payload.size(), result);
+
+            return {reinterpret_cast<char*>(result), SHA256_DIGEST_LENGTH};
         }
     }
 
@@ -45,25 +95,25 @@ namespace uh::rest {
     std::string
     s3_authenticator::get_canonical_request()
     {
-        std::string canonical_headers;
+        std::string canonical_request {};
         switch (m_parsed_request.verb)
         {
             case put:
-                canonical_headers.append("PUT");
+                canonical_request.append("PUT\n");
                 break;
             case get:
-                canonical_headers.append("GET");
+                canonical_request.append("GET\n");
                 break;
             case delete_:
-                canonical_headers.append("DELETE");
+                canonical_request.append("DELETE\n");
                 break;
             default:
                 throw std::runtime_error("unknown verb encountered.");
         }
 
-        canonical_headers.append(get_canonical_uri());
-        canonical_headers.append(get_canonical_query_string());
+        canonical_request += get_canonical_uri() + get_canonical_query_string() + get_headers() + sha_256(m_parsed_request.body);
 
+        return canonical_request;
     }
 
 //------------------------------------------------------------------------------
