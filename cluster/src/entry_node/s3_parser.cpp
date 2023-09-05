@@ -116,7 +116,7 @@ namespace uh::rest {
 //------------------------------------------------------------------------------
 
     const
-    parsed_request_wrapper &s3_parser::parse()
+    parsed_request_wrapper& s3_parser::parse()
     {
         if (m_recv_req.base().version() != 11)
         {
