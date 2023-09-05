@@ -23,7 +23,7 @@ namespace uh::rest {
         get_canonical_query_string();
 
         std::string
-        get_canonical_headers();
+        get_headers();
 
         std::string
         get_canonical_request();

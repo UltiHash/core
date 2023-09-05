@@ -34,6 +34,10 @@ enum message_types:uint8_t {
     USED_RESP,
     DEDUPE_REQ,
     DEDUPE_RESP,
+    DIR_PUT_OBJ_REQ,
+    DIR_GET_OBJ_REQ,
+    DIR_GET_OBJ_RESP,
+    SUCCESS,
     FAILURE,
     STOP
 };
@@ -41,7 +45,7 @@ enum message_types:uint8_t {
 enum role: uint8_t {
     DATA_NODE,
     DEDUPE_NODE,
-    PHONE_BOOK_NODE,
+    DIRECTORY_NODE,
     ENTRY_NODE,
 };
 

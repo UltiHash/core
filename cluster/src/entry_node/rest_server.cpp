@@ -57,9 +57,9 @@ namespace uh::rest
         beast::flat_buffer buffer;
         beast::error_code ec;
 
-//        std::unordered_map<req_types, std::function<void(const http_fields_object&)>> request_to_function
-//            { { put_object, [](const http_fields_object& s3_parsed_request) { putObject(s3_parsed_request); } },
-//              { get_object, [](const http_fields_object& s3_parsed_request) { getObject(s3_parsed_request); } } };
+        std::unordered_map<s3_req_type, std::function<void(const parsed_request_wrapper&)>> request_to_function
+            { { put_object, [](const parsed_request_wrapper& s3_parsed_request) { putObject(s3_parsed_request); } },
+              { get_object, [](const parsed_request_wrapper& s3_parsed_request) { getObject(s3_parsed_request); } } };
 
         try {
             for (;;) {
@@ -77,8 +77,7 @@ namespace uh::rest
                 s3_authenticator s3_authenticate(received_request, parsed_request);
                 s3_authenticate.authenticate();
 
-
-                /////request_to_function[s3_parser.m_parsed_struct.req_type](s3_parser.m_parsed_struct);
+                request_to_function[parsed_request.req_type](parsed_request);
 
                 // Determine if we should close the connection
                 bool keep_alive = received_request.keep_alive();
