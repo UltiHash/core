@@ -41,7 +41,9 @@ enum message_types:uint8_t {
     DEDUPE_REQ,
     DEDUPE_RESP,
     DIR_PUT_OBJ_REQ,
-    DIR_PUT_OBJ_RESP,
+    DIR_GET_OBJ_REQ,
+    DIR_GET_OBJ_RESP,
+    SUCCESS,
     FAILURE,
     STOP
 };

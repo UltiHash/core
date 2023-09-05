@@ -31,17 +31,14 @@ public:
     void run() {
         std::cout << "hello from " << m_job_name << std::endl;
         m_server.run();
-        while (!m_stop) {
-            m_stop = true;
-        }
     }
 
     const cluster_map m_cluster_map;
     const int m_id;
     const std::string m_job_name;
-    server m_server;
     global_data m_storage;
-    std::atomic <bool> m_stop = false;
+    server m_server;
+
 
 };
 
