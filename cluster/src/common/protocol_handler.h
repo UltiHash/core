@@ -10,7 +10,7 @@
 namespace uh::cluster {
 
 struct protocol_handler {
-    virtual void handle (messenger m) = 0;
+    virtual coro <void> handle (messenger m) = 0;
 
     virtual ~protocol_handler() = default;
 };

@@ -34,10 +34,9 @@ namespace uh::cluster
 
     public:
         server(server_config config, std::unique_ptr <protocol_handler> handler) :
-                m_config (config), m_ioc (m_config.threads),
-                m_thread_container (m_config.threads - 1), m_handler (std::move (handler)) {
+                m_config (config), m_ioc (std::make_shared <boost::asio::io_context> (m_config.threads)), m_handler (std::move (handler)) {
 
-            boost::asio::co_spawn(m_ioc,
+            boost::asio::co_spawn(*m_ioc,
                                   do_listen(boost::asio::ip::tcp::endpoint{m_server_address, m_config.port}),
                                   [](const std::exception_ptr &e) {
                                       if (e)
@@ -56,17 +55,24 @@ namespace uh::cluster
             for (auto i = 0; i < m_config.threads - 1; i++)
                 m_thread_container.emplace_back(
                         [&] {
-                            m_ioc.run();
+                            m_ioc->run();
                         });
 
             // the calling thread is also running the I/O service
-            m_ioc.run();
+            m_ioc->run();
+        }
+
+        ~server() {
+            for (auto& thread: m_thread_container) {
+                thread.join();
+            }
         }
 
     private:
 
         // Accepts incoming connections and launches the sessions
         boost::asio::awaitable<void> do_listen(boost::asio::ip::tcp::endpoint endpoint) {
+
             auto acceptor = boost::asio::use_awaitable_t<boost::asio::any_io_executor>::as_default_on(
                     boost::asio::ip::tcp::acceptor(co_await boost::asio::this_coro::executor));
 
@@ -99,13 +105,15 @@ namespace uh::cluster
         }
 
         boost::asio::awaitable<void> do_session(boost::asio::ip::tcp::socket stream) {
+            const auto life_time = m_ioc;
             INFO << "connection from: " << stream.remote_endpoint();
-            m_handler->handle(messenger(m_ioc, std::move(stream)));
+            co_await m_handler->handle(messenger(std::move(stream)));
             co_return;
         }
 
+
         server_config m_config;
-        boost::asio::io_context m_ioc;
+        std::shared_ptr <boost::asio::io_context> m_ioc;
         std::vector<std::thread> m_thread_container {};
         std::unique_ptr <protocol_handler> m_handler;
         const boost::asio::ip::address m_server_address = boost::asio::ip::make_address("0.0.0.0");

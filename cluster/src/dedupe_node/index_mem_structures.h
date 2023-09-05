@@ -19,7 +19,7 @@ enum color_t : uint8_t
 
 
 struct mmap_node {
-    wide_span m_data;
+    fragment m_data;
     uint64_t m_parent;
     uint64_t m_left;
     uint64_t m_right;

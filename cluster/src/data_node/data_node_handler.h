@@ -11,8 +11,8 @@ namespace uh::cluster {
 
 class data_node_handler: public protocol_handler {
 public:
-    void handle (messenger m) override {
-
+    coro <void> handle (messenger m) override {
+        co_return;
     }
 };
 

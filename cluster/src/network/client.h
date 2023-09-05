@@ -23,9 +23,11 @@ namespace uh::cluster {
 
 class client {
 
-    class borrowed_messenger {
+public:
+
+    class acquired_messenger {
     public:
-        borrowed_messenger (std::unique_ptr <messenger> m,
+        acquired_messenger (std::unique_ptr <messenger> m,
                             std::reference_wrapper <client> cl):
                 m_messenger(std::move (m)),
                 m_client(cl) {
@@ -35,8 +37,9 @@ class client {
             return *m_messenger;
         }
 
-        ~borrowed_messenger() {
-            m_client.get().take_back_messenger (std::move (m_messenger));
+        ~acquired_messenger() {
+            m_messenger->clear_buffers();
+            m_client.get().push_messenger(std::move(m_messenger));
         }
 
         std::unique_ptr <messenger> m_messenger;
@@ -47,7 +50,6 @@ class client {
     std::condition_variable m_cv;
     std::mutex m;
 
-public:
     client (boost::asio::io_context &ioc, const std::string &ip, const int port, const int connections) {
         for (int i = 0; i < connections; ++i) {
             m_messengers.emplace_back(std::make_unique<messenger> (ioc, ip, port));
@@ -58,7 +60,7 @@ public:
 
     }
 
-    borrowed_messenger borrow_messenger () {
+    acquired_messenger acquire_messenger () {
         std::unique_lock<std::mutex> lk(m);
         // The only case where a thread might wait.
         m_cv.wait(lk, [this]() { return !m_messengers.empty(); });
@@ -68,7 +70,7 @@ public:
     }
 
 private:
-    void take_back_messenger (std::unique_ptr <messenger> msg) {
+    void push_messenger (std::unique_ptr <messenger> msg) {
         std::unique_lock <std::mutex> lk (m);
         m_messengers.emplace_back(std::move (msg));
         lk.unlock();
