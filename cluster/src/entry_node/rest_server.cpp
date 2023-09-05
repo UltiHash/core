@@ -77,6 +77,7 @@ namespace uh::rest
                 s3_authenticator s3_authenticate(received_request, parsed_request);
                 s3_authenticate.authenticate();
 
+
                 /////request_to_function[s3_parser.m_parsed_struct.req_type](s3_parser.m_parsed_struct);
 
                 // Determine if we should close the connection

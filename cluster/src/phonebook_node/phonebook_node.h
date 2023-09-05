@@ -31,9 +31,6 @@ public:
     void run() {
         std::cout << "hello from " << m_job_name << std::endl;
         m_server.run();
-        while (!m_stop) {
-            m_stop = true;
-        }
     }
 
     const cluster_map m_cluster_map;

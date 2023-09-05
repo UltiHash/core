@@ -26,7 +26,6 @@ private:
     const std::string m_job_name;
     cluster_map m_cluster_map;
     server m_server;
-    uh::cluster::data_store m_data_store;
     std::atomic <bool> m_stop = false;
 };
 } // end namespace uh::cluster

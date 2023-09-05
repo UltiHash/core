@@ -63,7 +63,7 @@ namespace uh::rest {
 
         canonical_headers.append(get_canonical_uri());
         canonical_headers.append(get_canonical_query_string());
-
+        return canonical_headers;
     }
 
 //------------------------------------------------------------------------------
@@ -71,7 +71,7 @@ namespace uh::rest {
     std::string
     s3_authenticator::get_string_to_sign()
     {
-
+        return {};
     }
 
 //------------------------------------------------------------------------------
