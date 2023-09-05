@@ -40,6 +40,8 @@ enum message_types:uint8_t {
     USED_RESP,
     DEDUPE_REQ,
     DEDUPE_RESP,
+    DIR_PUT_OBJ_REQ,
+    DIR_PUT_OBJ_RESP,
     FAILURE,
     STOP
 };
