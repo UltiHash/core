@@ -2,6 +2,7 @@
 #include <map>
 #include <openssl/sha.h>
 #include <iostream>
+#include <chrono>
 
 namespace uh::rest {
 
@@ -60,6 +61,8 @@ namespace uh::rest {
 
         std::string canonical_header_string {};
         std::string header_list_string {};
+
+        // TODO: what happens on multiple same headers, do we convert it to one header with multiple values?
         for (const auto& pair: lexically_sorted_headers)
         {
             canonical_header_string += pair.first + ":" + pair.second + "\n";
@@ -121,7 +124,8 @@ namespace uh::rest {
     std::string
     s3_authenticator::get_string_to_sign()
     {
-
+        // TODO: add time and scope
+        return { "AWS4-HMAC-SHA256\n" + sha_256(get_canonical_request()) };
     }
 
 //------------------------------------------------------------------------------

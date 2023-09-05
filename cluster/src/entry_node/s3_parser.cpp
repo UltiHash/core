@@ -124,7 +124,7 @@ namespace uh::rest {
         }
 
         m_parsed_req_wrapper.verb = http_field_to_enum(to_string(m_recv_req.base().method()));
-        m_parsed_req_wrapper.m_target = m_recv_req.base().target();
+        m_target = m_recv_req.base().target();
 
         for (const auto& header : m_recv_req)
         {
@@ -154,7 +154,7 @@ namespace uh::rest {
         switch (m_parsed_req_wrapper.verb)
         {
             case put:
-                if (m_parsed_req_wrapper.m_target == "/")
+                if (m_target == "/")
                 {
                     return create_bucket;
                 }
@@ -162,21 +162,21 @@ namespace uh::rest {
                 {
                     return copy_object;
                 }
-                else if (!m_parsed_req_wrapper.m_target.empty() && (m_parsed_req_wrapper.m_target.find('?') == std::string::npos))
+                else if (!m_target.empty() && (m_target.find('?') == std::string::npos))
                 {
                     return put_object;
                 }
             case get:
-                if (!m_parsed_req_wrapper.m_target.empty() && (m_parsed_req_wrapper.m_target.find('?') == std::string::npos))
+                if (!m_target.empty() && (m_target.find('?') == std::string::npos))
                 {
                     return get_object;
                 }
             case delete_:
-                if (m_parsed_req_wrapper.m_target == "/")
+                if (m_target == "/")
                 {
                     return delete_bucket;
                 }
-                else if (!m_parsed_req_wrapper.m_target.empty() && (m_parsed_req_wrapper.m_target.find('?') == std::string::npos))
+                else if (!m_target.empty() && (m_target.find('?') == std::string::npos))
                 {
                     return delete_object;
                 }
