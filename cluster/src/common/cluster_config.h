@@ -54,10 +54,10 @@ struct entry_node_config {
     server_config internal_server_conf;
     server_config rest_server_conf;
     int dedupe_node_connection_count;
-    int phonebook_connection_count;
+    int directory_connection_count;
 };
 
-struct phonebook_node_config {
+struct directory_node_config {
     server_config server_conf{};
     int data_node_connection_count;
 };
@@ -67,7 +67,7 @@ struct cluster_config {
     int init_process_count{};
     data_node_config data_node_conf;
     dedupe_config dedupe_node_conf;
-    phonebook_node_config phonebook_node_conf;
+    directory_node_config directory_node_conf;
     entry_node_config entry_node_conf{};
 };
 

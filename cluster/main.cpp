@@ -6,7 +6,7 @@
 #include "common/cluster_config.h"
 #include "data_node/data_node.h"
 #include "dedupe_node/dedupe_node.h"
-#include "phonebook_node/phonebook_node.h"
+#include "directory_node/directory_node.h"
 #include "entry_node/entry_node.h"
 #include "network/cluster_map.h"
 
@@ -21,7 +21,7 @@ uh::cluster::entry_node_config make_entry_node_config () {
                 .port = 8080,
         },
         .dedupe_node_connection_count = 2,
-        .phonebook_connection_count = 2,
+        .directory_connection_count = 2,
     };
 }
 
@@ -39,7 +39,7 @@ uh::cluster::data_node_config make_data_node_config () {
     };
 }
 
-uh::cluster::phonebook_node_config make_phonebook_node_config () {
+uh::cluster::directory_node_config make_directory_node_config () {
     return {
         .server_conf = {
                 .threads = 4,
@@ -74,7 +74,7 @@ uh::cluster::cluster_config make_cluster_config () {
             .init_process_count = 3,
             .data_node_conf = make_data_node_config(),
             .dedupe_node_conf = make_dedupe_node_config(),
-            .phonebook_node_conf = make_phonebook_node_config(),
+            .directory_node_conf = make_directory_node_config(),
             .entry_node_conf = make_entry_node_config(),
     };
 }
@@ -92,8 +92,8 @@ void execute_role (const uh::cluster::role role, const int id, uh::cluster::clus
             dd.run();
             break;
         }
-        case uh::cluster::PHONE_BOOK_NODE: {
-            uh::cluster::phonebook_node pb (id, std::move (cmap));
+        case uh::cluster::DIRECTORY_NODE: {
+            uh::cluster::directory_node pb (id, std::move (cmap));
             pb.run();
             break;
         }
@@ -126,7 +126,7 @@ uh::cluster::role get_role (const std::string_view& role_str) {
         return uh::cluster::DEDUPE_NODE;
     }
     else if (role_str == "pb") {
-        return uh::cluster::PHONE_BOOK_NODE;
+        return uh::cluster::DIRECTORY_NODE;
     }
     else if (role_str == "en") {
         return uh::cluster::ENTRY_NODE;
