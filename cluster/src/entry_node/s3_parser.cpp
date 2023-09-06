@@ -1,6 +1,6 @@
 #include "s3_parser.h"
 
-namespace uh::rest {
+namespace uh::cluster {
 
 //------------------------------------------------------------------------------
 
@@ -23,10 +23,10 @@ namespace uh::rest {
 
     const std::unordered_map <s3_req_type, std::set<http_fields>> s3_parser::static_http_valid_fields =
             {
-                    { s3_req_type::put_object, { content_disposition, content_encoding, content_language, content_length, content_md5, content_type, expires } },
-                    { s3_req_type::get_object, { if_match, if_modified_since, if_none_match, if_unmodified_since, range } },
-                    { s3_req_type::get_object, { if_match, if_modified_since, if_none_match, if_unmodified_since, range } },
-                    { s3_req_type::copy_object, { content_disposition, content_encoding, content_language, content_type, expires } },
+                    { s3_req_type::put_object, { http_fields::content_disposition, http_fields::content_encoding, http_fields::content_language, http_fields::content_length, http_fields::content_md5, http_fields::content_type, http_fields::expires } },
+                    { s3_req_type::get_object, { http_fields::if_match, http_fields::if_modified_since, http_fields::if_none_match, http_fields::if_unmodified_since, http_fields::range } },
+                    { s3_req_type::get_object, { http_fields::if_match, http_fields::if_modified_since, http_fields::if_none_match, http_fields::if_unmodified_since, http_fields::range } },
+                    { s3_req_type::copy_object, { http_fields::content_disposition, http_fields::content_encoding, http_fields::content_language, http_fields::content_type, http_fields::expires } },
                     { s3_req_type::delete_object, {  } },
                     { s3_req_type::create_bucket, {  } },
                     { s3_req_type::delete_bucket, {  } },
@@ -73,27 +73,27 @@ namespace uh::rest {
     {
         static const std::unordered_map<std::string, http_fields> enum_map =
                 {
-                        {"Host", host},
-                        {"User-Agent", user_agent},
-                        {"Accept" , http_accept},
-                        {"Connection", connection},
-                        {"Server", server},
-                        {"PUT", put},
-                        {"Cache-Control", cache_control},
-                        {"Content-Disposition", content_disposition},
-                        {"Content-Encoding", content_encoding},
-                        {"Content-Language", content_language},
-                        {"Content-Length", content_length},
-                        {"Content-MD5", content_md5},
-                        {"Content-Type", content_type},
-                        {"Expires", expires},
-                        {"GET", get},
-                        {"If-Match", if_match},
-                        {"If-Modified-Since", if_modified_since},
-                        {"If-None-Match", if_none_match},
-                        {"If-Unmodified-Since", if_unmodified_since},
-                        {"Range", range},
-                        {"DELETE", delete_},
+                        {"Host", http_fields::host},
+                        {"User-Agent", http_fields::user_agent},
+                        {"Accept" , http_fields::http_accept},
+                        {"Connection", http_fields::connection},
+                        {"Server", http_fields::server},
+                        {"PUT", http_fields::put},
+                        {"Cache-Control", http_fields::cache_control},
+                        {"Content-Disposition", http_fields::content_disposition},
+                        {"Content-Encoding", http_fields::content_encoding},
+                        {"Content-Language", http_fields::content_language},
+                        {"Content-Length", http_fields::content_length},
+                        {"Content-MD5", http_fields::content_md5},
+                        {"Content-Type", http_fields::content_type},
+                        {"Expires", http_fields::expires},
+                        {"GET", http_fields::get},
+                        {"If-Match", http_fields::if_match},
+                        {"If-Modified-Since", http_fields::if_modified_since},
+                        {"If-None-Match", http_fields::if_none_match},
+                        {"If-Unmodified-Since", http_fields::if_unmodified_since},
+                        {"Range", http_fields::range},
+                        {"DELETE", http_fields::delete_},
                 };
 
         auto it = enum_map.find(field);
@@ -103,7 +103,7 @@ namespace uh::rest {
         }
         else
         {
-            return not_known;
+            return http_fields::not_known;
         }
     };
 
@@ -153,7 +153,7 @@ namespace uh::rest {
     {
         switch (m_parsed_req_wrapper.verb)
         {
-            case put:
+            case http_fields::put:
                 if (m_target == "/")
                 {
                     return create_bucket;
@@ -166,12 +166,12 @@ namespace uh::rest {
                 {
                     return put_object;
                 }
-            case get:
+            case http_fields::get:
                 if (!m_target.empty() && (m_target.find('?') == std::string::npos))
                 {
                     return get_object;
                 }
-            case delete_:
+            case http_fields::delete_:
                 if (m_target == "/")
                 {
                     return delete_bucket;
@@ -207,4 +207,4 @@ namespace uh::rest {
 
 //------------------------------------------------------------------------------
 
-} // uh::rest
+} // uh::cluster

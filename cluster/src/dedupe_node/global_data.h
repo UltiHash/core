@@ -116,7 +116,13 @@ std::unordered_map <uint128_t, address> sync_cache () {
 
 
     coro <address> write (const std::string_view& data) {
-        auto m = m_data_node_offsets.at(0).acquire_messenger();
+        auto index = m_data_node_index.load();
+        auto new_val = (index + 1) % m_data_node_offsets.size();
+        while (!m_data_node_index.compare_exchange_weak (index, new_val)) {
+            index = m_data_node_index.load();
+            new_val = (index + 1) % m_data_node_offsets.size();
+        }
+        auto m = m_data_node_offsets.at(index).acquire_messenger();
         co_await m.get().send(WRITE_REQ, data);
         const auto message_header = co_await m.get().recv_header();
         auto resp = co_await m.get().recv_address(message_header);
@@ -230,7 +236,7 @@ private:
     std::unordered_map <uint128_t, std::string_view> m_cache;
     std::map <const uint128_t, client> m_data_node_offsets;
     std::vector <int> m_data_nodes;
-
+    std::atomic <size_t> m_data_node_index {};
     constexpr static uint128_t temp_offset_start = uint128_t (std::numeric_limits <uint64_t>::max(), std::numeric_limits <uint64_t>::max());
 
 };

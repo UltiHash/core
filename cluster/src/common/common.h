@@ -8,7 +8,7 @@
 #include <vector>
 #include <span>
 #include <memory>
-#include "address.h"
+#include "common_types.h"
 
 namespace uh::cluster {
 

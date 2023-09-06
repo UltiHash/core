@@ -1,12 +1,11 @@
 #ifndef REST_NODE_SRC_S3_PARSER
 #define REST_NODE_SRC_S3_PARSER
 
-#include "logging/logging_boost.h"
 #include <set>
 #include <boost/beast/http.hpp>
 
 
-namespace uh::rest {
+namespace uh::cluster {
 
 //------------------------------------------------------------------------------
 
@@ -43,7 +42,7 @@ namespace uh::rest {
 
 //------------------------------------------------------------------------------
 
-    enum http_fields : uint8_t
+    enum class http_fields : uint8_t
     {
         not_known = 0,
         host,
@@ -110,7 +109,7 @@ namespace uh::rest {
          * class member variable */
         const std::unordered_map <s3_req_type, std::set<s3_fields>>& m_s3_vfields;
         const std::unordered_map <s3_req_type, std::set<http_fields>>& m_http_vfields;
-        const std::set<http_fields> m_http_common_fields = {host, user_agent, http_accept, connection, date, server};
+        const std::set<http_fields> m_http_common_fields = {http_fields::host, http_fields::user_agent, http_fields::http_accept, http_fields::connection, http_fields::date, http_fields::server};
 
         const http::request<http::string_body>& m_recv_req;
         parsed_request_wrapper m_parsed_req_wrapper;
@@ -133,6 +132,6 @@ namespace uh::rest {
 
 //------------------------------------------------------------------------------
 
-} // namespace uh::rest
+} // namespace uh::cluster
 
 #endif // REST_NODE_SRC_S3_PARSER
