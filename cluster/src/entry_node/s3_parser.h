@@ -53,6 +53,7 @@ namespace uh::rest {
         connection,
         date,
         server,
+        expect,
         put,
         get,
         delete_,
@@ -111,15 +112,15 @@ namespace uh::rest {
          * class member variable */
         const std::unordered_map <s3_req_type, std::set<s3_fields>>& m_s3_vfields;
         const std::unordered_map <s3_req_type, std::set<http_fields>>& m_http_vfields;
-        const std::set<http_fields> m_http_common_fields = {host, user_agent, http_accept, connection, date, server, authorization};
+        const std::set<http_fields> m_http_common_fields = {host, user_agent, http_accept, connection, date, server, authorization, expect};
 
-        const http::request<http::string_body>& m_recv_req;
+        const http::request_parser<http::string_body>& m_recv_req;
         parsed_request_wrapper m_parsed_req_wrapper;
         std::string_view m_target;
 
     public:
         explicit s3_parser
-        (const http::request<http::string_body>& recv_req);
+        (const http::request_parser<http::string_body>& recv_req);
 
         const
         parsed_request_wrapper& parse();

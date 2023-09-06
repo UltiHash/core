@@ -80,6 +80,7 @@ namespace uh::rest {
                         {"Connection", connection},
                         {"Server", server},
                         {"Authorization", authorization},
+                        {"Expect", expect},
                         {"PUT", put},
                         {"Cache-Control", cache_control},
                         {"Content-Disposition", content_disposition},
@@ -111,7 +112,7 @@ namespace uh::rest {
 
 //------------------------------------------------------------------------------
 
-    s3_parser::s3_parser(const http::request<http::string_body>& recv_req) : m_recv_req(recv_req), m_s3_vfields(static_s3_valid_fields),
+    s3_parser::s3_parser(const http::request_parser<http::string_body>& recv_req) : m_recv_req(recv_req), m_s3_vfields(static_s3_valid_fields),
     m_http_vfields(static_http_valid_fields)
     {}
 
@@ -120,13 +121,14 @@ namespace uh::rest {
     const
     parsed_request_wrapper& s3_parser::parse()
     {
-        if (m_recv_req.base().version() != 11)
+        if (m_recv_req.get().base().version() != 11)
         {
             throw std::runtime_error("bad http version. support exists only for HTTP 1.1.\n");
         }
 
-        for (const auto& header : m_recv_req)
+        for (const auto& header : m_recv_req.get())
         {
+            std::cout << header.name_string() << std::endl;
             if (header.name_string().starts_with("x-"))
             {
                 m_parsed_req_wrapper.s3_parsed_fields.emplace(s3_field_to_enum(header.name_string()), header.value());
@@ -137,8 +139,8 @@ namespace uh::rest {
             }
         }
 
-        m_parsed_req_wrapper.verb = http_field_to_enum(to_string(m_recv_req.base().method()));
-        m_target = m_recv_req.base().target();
+        m_parsed_req_wrapper.verb = http_field_to_enum(to_string(m_recv_req.get().base().method()));
+        m_target = m_recv_req.get().base().target();
 
         auto index = m_target.find('?');
         if ( index != std::string::npos)
@@ -150,7 +152,7 @@ namespace uh::rest {
                 substr(0, m_parsed_req_wrapper.http_parsed_fields[host].find(':'));
 
         m_parsed_req_wrapper.req_type = get_type();
-        m_parsed_req_wrapper.body = m_recv_req.body();
+        m_parsed_req_wrapper.body = m_recv_req.get().body();
 
         sanitizer();
 
