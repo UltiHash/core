@@ -39,24 +39,13 @@ namespace uh::rest {
         // iterate through all headers
         for (const auto& header : m_received_request)
         {
-            std::string header_name;
-            std::transform(header.name_string().begin(), header.name_string().end(), header_name.begin(), [](char c)
+            std::string header_name = header.name_string();
+            for (char& c : header_name)
             {
-               return tolower(c);
-            });
-
-            auto header_value = header.value();
-            while (!header_value.empty() && std::isspace(header_value.front()))
-            {
-                header_value.remove_prefix(1);
+                c = std::tolower(static_cast<unsigned char>(c));
             }
 
-            while (!header_value.empty() && std::isspace(header_value.back()))
-            {
-                header_value.remove_suffix(1);
-            }
-
-            lexically_sorted_headers.emplace(header_name, header_value);
+            lexically_sorted_headers.emplace(header_name, header.value());
         }
 
         std::string canonical_header_string {};
@@ -71,7 +60,6 @@ namespace uh::rest {
         header_list_string.pop_back();
         header_list_string += '\n';
 
-        std::cout << canonical_header_string << std::endl;
         return {canonical_header_string + header_list_string};
     }
 
@@ -121,10 +109,25 @@ namespace uh::rest {
 
 //------------------------------------------------------------------------------
 
+    std::stringstream
+    ISO_8601_timestamp()
+    {
+        auto currentTime = std::chrono::system_clock::now();
+        std::time_t timeT = std::chrono::system_clock::to_time_t(currentTime);
+        std::tm* timeInfo = std::gmtime(&timeT);
+
+        std::stringstream iso8601Time;
+        iso8601Time << std::put_time(timeInfo, "%Y-%m-%dT%H:%M:%SZ");
+
+        return iso8601Time;
+    }
+
+//------------------------------------------------------------------------------
+
     std::string
     s3_authenticator::get_string_to_sign()
     {
-        // TODO: add time and scope
+        std::cout << get_canonical_request() << std::endl;
         return { "AWS4-HMAC-SHA256\n" + sha_256(get_canonical_request()) };
     }
 
@@ -133,7 +136,11 @@ namespace uh::rest {
     void
     s3_authenticator::authenticate()
     {
+        // parse authentication field
+        std::string_view authorization_string = m_parsed_request.http_parsed_fields.at(authorization);
 
+
+        get_string_to_sign();
     }
 
 //------------------------------------------------------------------------------

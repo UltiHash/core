@@ -47,6 +47,7 @@ namespace uh::rest {
     {
         not_known = 0,
         host,
+        authorization,
         user_agent,
         http_accept,
         connection,
@@ -109,7 +110,7 @@ namespace uh::rest {
          * class member variable */
         const std::unordered_map <s3_req_type, std::set<s3_fields>>& m_s3_vfields;
         const std::unordered_map <s3_req_type, std::set<http_fields>>& m_http_vfields;
-        const std::set<http_fields> m_http_common_fields = {host, user_agent, http_accept, connection, date, server};
+        const std::set<http_fields> m_http_common_fields = {host, user_agent, http_accept, connection, date, server, authorization};
 
         const http::request<http::string_body>& m_recv_req;
         parsed_request_wrapper m_parsed_req_wrapper;

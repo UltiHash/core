@@ -1,4 +1,5 @@
 #include "s3_parser.h"
+#include <iostream>
 
 namespace uh::rest {
 
@@ -78,6 +79,7 @@ namespace uh::rest {
                         {"Accept" , http_accept},
                         {"Connection", connection},
                         {"Server", server},
+                        {"Authorization", authorization},
                         {"PUT", put},
                         {"Cache-Control", cache_control},
                         {"Content-Disposition", content_disposition},
@@ -123,9 +125,6 @@ namespace uh::rest {
             throw std::runtime_error("bad http version. support exists only for HTTP 1.1.\n");
         }
 
-        m_parsed_req_wrapper.verb = http_field_to_enum(to_string(m_recv_req.base().method()));
-        m_target = m_recv_req.base().target();
-
         for (const auto& header : m_recv_req)
         {
             if (header.name_string().starts_with("x-"))
@@ -138,11 +137,23 @@ namespace uh::rest {
             }
         }
 
+        m_parsed_req_wrapper.verb = http_field_to_enum(to_string(m_recv_req.base().method()));
+        m_target = m_recv_req.base().target();
+
+        auto index = m_target.find('?');
+        if ( index != std::string::npos)
+            m_parsed_req_wrapper.object_key = m_target.substr(1, index);
+        else
+            m_parsed_req_wrapper.object_key = m_target.substr(1);
+
+        m_parsed_req_wrapper.bucket_id = m_parsed_req_wrapper.http_parsed_fields[host].
+                substr(0, m_parsed_req_wrapper.http_parsed_fields[host].find(':'));
+
         m_parsed_req_wrapper.req_type = get_type();
+        m_parsed_req_wrapper.body = m_recv_req.body();
 
         sanitizer();
 
-        m_parsed_req_wrapper.body = m_recv_req.body();
         return m_parsed_req_wrapper;
     }
 

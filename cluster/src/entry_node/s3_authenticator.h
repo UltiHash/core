@@ -13,6 +13,10 @@ namespace uh::rest {
         const parsed_request_wrapper& m_parsed_request;
         const http::request<http::string_body>& m_received_request;
 
+        std::string access_key {};
+        std::vector<std::string> signed_headers {};
+        std::string signature {};
+
     public:
         explicit s3_authenticator(const http::request<http::string_body>& received_request, const uh::rest::parsed_request_wrapper& parsed_request);
 
