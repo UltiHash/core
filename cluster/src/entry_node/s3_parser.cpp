@@ -1,4 +1,5 @@
 #include "s3_parser.h"
+#include <iostream>
 
 namespace uh::cluster {
 
@@ -79,6 +80,7 @@ namespace uh::cluster {
                         {"Connection", http_fields::connection},
                         {"Server", http_fields::server},
                         {"PUT", http_fields::put},
+                        {"Authorization", http_fields::authorization},
                         {"Cache-Control", http_fields::cache_control},
                         {"Content-Disposition", http_fields::content_disposition},
                         {"Content-Encoding", http_fields::content_encoding},
@@ -123,9 +125,6 @@ namespace uh::cluster {
             throw std::runtime_error("bad http version. support exists only for HTTP 1.1.\n");
         }
 
-        m_parsed_req_wrapper.verb = http_field_to_enum(to_string(m_recv_req.base().method()));
-        m_target = m_recv_req.base().target();
-
         for (const auto& header : m_recv_req)
         {
             if (header.name_string().starts_with("x-"))
@@ -138,11 +137,23 @@ namespace uh::cluster {
             }
         }
 
+        m_parsed_req_wrapper.verb = http_field_to_enum(to_string(m_recv_req.base().method()));
+        m_target = m_recv_req.base().target();
+
+        auto index = m_target.find('?');
+        if ( index != std::string::npos)
+            m_parsed_req_wrapper.object_key = m_target.substr(1, index);
+        else
+            m_parsed_req_wrapper.object_key = m_target.substr(1);
+
+        m_parsed_req_wrapper.bucket_id = m_parsed_req_wrapper.http_parsed_fields[http_fields::host].
+                substr(0, m_parsed_req_wrapper.http_parsed_fields[http_fields::host].find(':'));
+
         m_parsed_req_wrapper.req_type = get_type();
+        m_parsed_req_wrapper.body = m_recv_req.body();
 
         sanitizer();
 
-        m_parsed_req_wrapper.body = m_recv_req.body();
         return m_parsed_req_wrapper;
     }
 

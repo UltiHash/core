@@ -46,6 +46,7 @@ namespace uh::cluster {
     {
         not_known = 0,
         host,
+        authorization,
         user_agent,
         http_accept,
         connection,
@@ -109,7 +110,7 @@ namespace uh::cluster {
          * class member variable */
         const std::unordered_map <s3_req_type, std::set<s3_fields>>& m_s3_vfields;
         const std::unordered_map <s3_req_type, std::set<http_fields>>& m_http_vfields;
-        const std::set<http_fields> m_http_common_fields = {http_fields::host, http_fields::user_agent, http_fields::http_accept, http_fields::connection, http_fields::date, http_fields::server};
+        const std::set<http_fields> m_http_common_fields = {http_fields::host, http_fields::user_agent, http_fields::http_accept, http_fields::connection, http_fields::date, http_fields::server, http_fields::authorization};
 
         const http::request<http::string_body>& m_recv_req;
         parsed_request_wrapper m_parsed_req_wrapper;
