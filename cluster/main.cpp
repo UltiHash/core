@@ -45,7 +45,7 @@ uh::cluster::directory_node_config make_directory_node_config () {
                 .threads = 4,
                 .port = 8083,
         },
-        .data_node_connection_count = 2,
+        .data_node_connection_count = 4,
     };
 }
 
@@ -57,7 +57,7 @@ uh::cluster::dedupe_config make_dedupe_node_config () {
                 .threads = 4,
                 .port = 8084,
         },
-        .data_node_connection_count = 2,
+        .data_node_connection_count = 4,
         .set_conf = {
                 .set_minimum_free_space = 1ul * 1024ul * 1024ul * 1024ul,
                 .max_empty_hole_size = 1ul * 1024ul * 1024ul * 1024ul,

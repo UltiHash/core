@@ -102,6 +102,7 @@ namespace uh::rest {
                 throw std::runtime_error("unknown verb encountered.");
         }
 
+
         canonical_request += get_canonical_uri() + get_canonical_query_string() + get_headers() + sha_256(m_parsed_request.body);
 
         return canonical_request;

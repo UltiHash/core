@@ -161,6 +161,10 @@ public:
         return num;
     }
 
+    constexpr inline auto& ref_data () noexcept {
+        return num;
+    }
+
     constexpr static auto UNSIGNED_MAX_8 = std::numeric_limits <unsigned long>::max();
     constexpr static auto UNSIGNED_MAX_4 = std::numeric_limits <uint32_t>::max();
 

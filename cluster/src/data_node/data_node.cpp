@@ -11,8 +11,7 @@ data_node::data_node(int id, cluster_map&& cmap):
         m_cluster_map (std::move (cmap)),
         m_job_name ("data_node_" + std::to_string (id)),
         m_server (m_cluster_map.m_cluster_conf.data_node_conf.server_conf,
-                  std::make_unique<data_node_handler>()),
-        m_data_store (m_cluster_map.m_cluster_conf.data_node_conf, id)
+                  std::make_unique<data_node_handler> (m_cluster_map.m_cluster_conf.data_node_conf, id))
         {
         }
 

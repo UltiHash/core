@@ -33,6 +33,9 @@ public:
                 m_client(cl) {
         }
 
+        acquired_messenger (acquired_messenger&& m) noexcept:
+            m_messenger (std::move (m.m_messenger)), m_client (m.m_client) {}
+
         messenger& get () {
             return *m_messenger;
         }

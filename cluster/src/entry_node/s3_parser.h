@@ -73,6 +73,7 @@ namespace uh::rest {
 
 //------------------------------------------------------------------------------
 
+    // TODO: List Buckets, PUT/GET/DELETE ACL
     enum s3_req_type
     {
         not_initialized = 0,
