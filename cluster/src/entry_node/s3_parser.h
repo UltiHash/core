@@ -121,8 +121,8 @@ namespace uh::cluster {
         explicit s3_parser
         (const http::request_parser<http::string_body>& recv_req);
 
-        const
-        parsed_request_wrapper& parse();
+        parsed_request_wrapper&
+        parse();
 
         s3_req_type
         get_type() const;

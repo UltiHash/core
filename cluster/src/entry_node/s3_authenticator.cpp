@@ -9,7 +9,7 @@ namespace uh::cluster {
 
 //------------------------------------------------------------------------------
 
-    s3_authenticator::s3_authenticator(const http::request<http::string_body>& received_request, const parsed_request_wrapper &parsed_request) :
+    s3_authenticator::s3_authenticator(const http::request_parser<http::string_body>& received_request, parsed_request_wrapper &parsed_request) :
     m_parsed_request(parsed_request), m_received_request(received_request)
     {
     }
@@ -38,7 +38,7 @@ namespace uh::cluster {
         std::multimap<std::string, std::string> lexically_sorted_headers;
 
         // iterate through all headers
-        for (const auto& header : m_received_request)
+        for (const auto& header : m_received_request.get() )
         {
             std::string header_name = header.name_string();
             for (char& c : header_name)
@@ -138,11 +138,16 @@ namespace uh::cluster {
     void
     s3_authenticator::authenticate()
     {
-        // parse authentication field
-        std::string_view authorization_string = m_parsed_request.http_parsed_fields.at(http_fields::authorization);
+        std::string_view authorization_string = m_parsed_request.http_parsed_fields[http_fields::authorization];
 
+        auto credential_index = authorization_string.find("Credential=");
+        auto signedheaders_index = authorization_string.find("SignedHeaders=");
+        auto signature_index = authorization_string.find("Signature=");
 
-        get_string_to_sign();
+        if (signature_index != std::string::npos)
+            m_signature = authorization_string.substr(signature_index+10);
+        std::cout << m_signature << std::endl;
+//        get_string_to_sign();
     }
 
 //------------------------------------------------------------------------------

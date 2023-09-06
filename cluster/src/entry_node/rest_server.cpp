@@ -63,23 +63,19 @@ namespace uh::cluster
             for (;;) {
                 stream.expires_after(std::chrono::seconds(10));
 
-                // Read a request
                 http::request_parser<http::string_body> received_request;
                 received_request.body_limit((std::numeric_limits<std::uint64_t>::max)());
                 co_await http::async_read(stream, buffer, received_request, net::use_awaitable);
 
 
-                // parse the request
                 s3_parser s3_parser(received_request);
                 auto parsed_request = s3_parser.parse();
 
-                // authenticate the request
-//                s3_authenticator s3_authenticate(received_request, parsed_request);
-//                s3_authenticate.authenticate();
+                s3_authenticator s3_authenticate(received_request, parsed_request);
+                s3_authenticate.authenticate();
 
                 co_await m_handler.handle (parsed_request);
 
-                // Determine if we should close the connection
                 bool keep_alive = received_request.keep_alive();
                 if(! keep_alive)
                 {

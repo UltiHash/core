@@ -10,15 +10,15 @@ namespace uh::cluster {
     class s3_authenticator
     {
     private:
-        const parsed_request_wrapper& m_parsed_request;
-        const http::request<http::string_body>& m_received_request;
+        parsed_request_wrapper& m_parsed_request;
+        const http::request_parser<http::string_body>& m_received_request;
 
-        std::string access_key {};
-        std::vector<std::string> signed_headers {};
-        std::string signature {};
+        std::string m_access_key {};
+        std::vector<std::string> m_signed_headers {};
+        std::string m_signature {};
 
     public:
-        explicit s3_authenticator(const http::request<http::string_body>& received_request, const parsed_request_wrapper& parsed_request);
+        explicit s3_authenticator(const http::request_parser<http::string_body>& received_request, parsed_request_wrapper& parsed_request);
 
         std::string
         get_canonical_uri();
