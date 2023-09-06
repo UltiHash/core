@@ -125,7 +125,7 @@ uh::cluster::role get_role (const std::string_view& role_str) {
     else if (role_str == "dd") {
         return uh::cluster::DEDUPE_NODE;
     }
-    else if (role_str == "pb") {
+    else if (role_str == "dr") {
         return uh::cluster::DIRECTORY_NODE;
     }
     else if (role_str == "en") {

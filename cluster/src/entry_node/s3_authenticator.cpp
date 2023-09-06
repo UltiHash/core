@@ -3,12 +3,13 @@
 #include <openssl/sha.h>
 #include <iostream>
 #include <chrono>
+#include <iomanip>
 
-namespace uh::rest {
+namespace uh::cluster {
 
 //------------------------------------------------------------------------------
 
-    s3_authenticator::s3_authenticator(const http::request<http::string_body>& received_request, const uh::rest::parsed_request_wrapper &parsed_request) :
+    s3_authenticator::s3_authenticator(const http::request<http::string_body>& received_request, const parsed_request_wrapper &parsed_request) :
     m_parsed_request(parsed_request), m_received_request(received_request)
     {
     }
@@ -89,13 +90,13 @@ namespace uh::rest {
         std::string canonical_request {};
         switch (m_parsed_request.verb)
         {
-            case put:
+            case http_fields::put:
                 canonical_request.append("PUT\n");
                 break;
-            case get:
+            case http_fields::get:
                 canonical_request.append("GET\n");
                 break;
-            case delete_:
+            case http_fields::delete_:
                 canonical_request.append("DELETE\n");
                 break;
             default:
@@ -138,7 +139,7 @@ namespace uh::rest {
     s3_authenticator::authenticate()
     {
         // parse authentication field
-        std::string_view authorization_string = m_parsed_request.http_parsed_fields.at(authorization);
+        std::string_view authorization_string = m_parsed_request.http_parsed_fields.at(http_fields::authorization);
 
 
         get_string_to_sign();
@@ -146,4 +147,4 @@ namespace uh::rest {
 
 //------------------------------------------------------------------------------
 
-} // namespace uh::rest
+} // namespace uh::cluster

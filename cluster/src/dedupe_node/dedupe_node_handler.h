@@ -40,22 +40,18 @@ private:
         co_await m.recv_buffers(h);
 
         const auto result = co_await deduplicate ({data.data.get(), data.size});
-
-        m.register_write_buffer(result.first);
-        m.register_write_buffer(result.second.pointers);
-        m.register_write_buffer(result.second.sizes);
-        co_await m.send_buffers(DEDUPE_RESP);
+        co_await m.send_dedupe_response(DEDUPE_RESP, result);
     }
 
-    coro <std::pair <std::size_t, address>> deduplicate (std::string_view data) {
+    coro <dedupe_response> deduplicate (std::string_view data) {
 
-        std::pair <std::size_t, address> result;
+        dedupe_response result;
         auto integration_data = data;
 
         while (!integration_data.empty()) {
             const auto f = co_await m_fragment_set.find(integration_data);
             if (f.match) {
-                result.second.push_fragment (fragment {f.match->data_offset, integration_data.size()});
+                result.addr.push_fragment (fragment {f.match->data_offset, integration_data.size()});
                 integration_data = integration_data.substr(integration_data.size());
                 continue;
             }
@@ -64,7 +60,7 @@ private:
             const auto lower_common_prefix = largest_common_prefix (integration_data, lower_data_str);
 
             if (lower_common_prefix == integration_data.size()) {
-                result.second.push_fragment (fragment {f.lower->data_offset, integration_data.size()});
+                result.addr.push_fragment (fragment {f.lower->data_offset, integration_data.size()});
                 integration_data = integration_data.substr(integration_data.size());
                 continue;
             }
@@ -84,25 +80,25 @@ private:
                 const auto addr = co_await store_data(integration_data.substr(0, size));
                 m_fragment_set.add_pointer (integration_data.substr(0, addr.sizes.front()), addr.pointers.front(), f.index);
 
-                result.second.append_address(addr);
-                result.first += size;
+                result.addr.append_address(addr);
+                result.effective_size += size;
                 integration_data = integration_data.substr(size);
                 continue;
             }
             else if (max_common_prefix == integration_data.size()) {
-                result.second.push_fragment(fragment {max_data_offset, integration_data.size()});
+                result.addr.push_fragment(fragment {max_data_offset, integration_data.size()});
                 integration_data = integration_data.substr(integration_data.size());
                 continue;
             }
             else {
-                result.second.push_fragment (fragment {max_data_offset, max_common_prefix});
+                result.addr.push_fragment (fragment {max_data_offset, max_common_prefix});
                 integration_data = integration_data.substr(max_common_prefix, integration_data.size() - max_common_prefix);
                 continue;
             }
 
         }
 
-        co_await m_storage.sync(result.second);
+        co_await m_storage.sync(result.addr);
         co_return result;
     }
 

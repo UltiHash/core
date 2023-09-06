@@ -3,7 +3,7 @@
 
 #include "s3_parser.h"
 
-namespace uh::rest {
+namespace uh::cluster {
 
 //------------------------------------------------------------------------------
 
@@ -18,7 +18,7 @@ namespace uh::rest {
         std::string signature {};
 
     public:
-        explicit s3_authenticator(const http::request<http::string_body>& received_request, const uh::rest::parsed_request_wrapper& parsed_request);
+        explicit s3_authenticator(const http::request<http::string_body>& received_request, const parsed_request_wrapper& parsed_request);
 
         std::string
         get_canonical_uri();
@@ -42,6 +42,6 @@ namespace uh::rest {
 
 //------------------------------------------------------------------------------
 
-} // namespace uh::est
+} // namespace uh::cluster
 
 #endif

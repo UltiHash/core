@@ -2,15 +2,17 @@
 #include "rest_server.h"
 #include "s3_parser.h"
 #include "s3_authenticator.h"
-#include "functions.h"
+#include <common/logging_boost.h>
 
-namespace uh::rest
+namespace uh::cluster
 {
 
 //------------------------------------------------------------------------------
 
-    rest_server::rest_server(uh::cluster::server_config config, std::unique_ptr <cluster::protocol_handler> handler) :
-        m_config(config), m_ioc(static_cast<int>(m_config.threads)), m_thread_container(m_config.threads-1), m_handler (std::move (handler))
+    rest_server::rest_server(server_config config, std::vector <client>& dedupe_nodes, std::vector <client>& directory_nodes) :
+        m_config(config), m_ioc(static_cast<int>(m_config.threads)),
+        m_thread_container(m_config.threads-1),
+        m_handler (dedupe_nodes, directory_nodes)
     {
         // spawn a coroutine
         boost::asio::co_spawn(m_ioc,
@@ -57,10 +59,6 @@ namespace uh::rest
         beast::flat_buffer buffer;
         beast::error_code ec;
 
-        std::unordered_map<s3_req_type, std::function<void(const parsed_request_wrapper&)>> request_to_function
-            { { put_object, [](const parsed_request_wrapper& s3_parsed_request) { putObject(s3_parsed_request); } },
-              { get_object, [](const parsed_request_wrapper& s3_parsed_request) { getObject(s3_parsed_request); } } };
-
         try {
             for (;;) {
                 stream.expires_after(std::chrono::seconds(10));
@@ -79,7 +77,7 @@ namespace uh::rest
 //                s3_authenticator s3_authenticate(received_request, parsed_request);
 //                s3_authenticate.authenticate();
 
-                request_to_function[parsed_request.req_type](parsed_request);
+                co_await m_handler.handle (parsed_request);
 
                 // Determine if we should close the connection
                 bool keep_alive = received_request.keep_alive();
@@ -165,4 +163,4 @@ namespace uh::rest
 
 //------------------------------------------------------------------------------
 
-} // namespace uh::rest
+} // namespace uh::cluster

@@ -18,14 +18,14 @@
 #include <thread>
 #include <vector>
 #include <boost/beast/http/message_generator.hpp>
-#include "logging/logging_boost.h"
-#include "net/server.h"
 #include "common/cluster_config.h"
 #include "common/protocol_handler.h"
+#include "entry_node_rest_handler.h"
+#include "network/client.h"
 
 //------------------------------------------------------------------------------
 
-namespace uh::rest
+namespace uh::cluster
 {
 
     namespace beast = boost::beast;         // from <boost/beast.hpp>
@@ -53,15 +53,15 @@ namespace uh::rest
     class rest_server
     {
     private:
-        uh::cluster::server_config m_config;
+        server_config m_config;
         net::io_context m_ioc;
         std::vector<std::thread> m_thread_container {};
-        std::unique_ptr <cluster::protocol_handler> m_handler;
+        entry_node_rest_handler m_handler;
 
         const boost::asio::ip::address m_server_address = boost::asio::ip::make_address("0.0.0.0");
 
     public:
-        rest_server(uh::cluster::server_config config, std::unique_ptr <cluster::protocol_handler> handler);
+        rest_server(server_config config, std::vector <client>& dedupe_nodes, std::vector <client>& directory_nodes);
 
         void run();
 
@@ -74,6 +74,6 @@ namespace uh::rest
 
 //------------------------------------------------------------------------------
 
-} // namespace uh::rest
+} // namespace uh::cluster
 
 #endif // REST_NODE_SRC_SERVER

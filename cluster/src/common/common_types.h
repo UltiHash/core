@@ -2,8 +2,8 @@
 // Created by masi on 9/6/23.
 //
 
-#ifndef CORE_ADDRESS_H
-#define CORE_ADDRESS_H
+#ifndef CORE_COMMON_TYPES_H
+#define CORE_COMMON_TYPES_H
 
 #include <vector>
 #include <span>
@@ -17,7 +17,6 @@ struct fragment {
     uint128_t pointer;
     size_t size {};
 };
-
 
 struct address {
     std::vector <uint64_t> pointers;
@@ -63,8 +62,12 @@ struct address {
     }
 };
 
+struct dedupe_response {
+    std::size_t effective_size {};
+    address addr;
+};
 
 } // end namespace uh::cluster
 
 
-#endif //CORE_ADDRESS_H
+#endif //CORE_COMMON_TYPES_H
