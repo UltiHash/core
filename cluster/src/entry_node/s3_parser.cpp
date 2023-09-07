@@ -81,6 +81,7 @@ namespace uh::cluster {
                         {"Server", http_fields::server},
                         {"PUT", http_fields::put},
                         {"Authorization", http_fields::authorization},
+                        {"Expect", http_fields::expect},
                         {"Cache-Control", http_fields::cache_control},
                         {"Content-Disposition", http_fields::content_disposition},
                         {"Content-Encoding", http_fields::content_encoding},
@@ -111,21 +112,21 @@ namespace uh::cluster {
 
 //------------------------------------------------------------------------------
 
-    s3_parser::s3_parser(const http::request<http::string_body>& recv_req) : m_recv_req(recv_req), m_s3_vfields(static_s3_valid_fields),
+    s3_parser::s3_parser(const http::request_parser<http::string_body>& recv_req) : m_recv_req(recv_req), m_s3_vfields(static_s3_valid_fields),
     m_http_vfields(static_http_valid_fields)
     {}
 
 //------------------------------------------------------------------------------
 
-    const
-    parsed_request_wrapper& s3_parser::parse()
+    parsed_request_wrapper&
+    s3_parser::parse()
     {
-        if (m_recv_req.base().version() != 11)
+        if (m_recv_req.get().base().version() != 11)
         {
             throw std::runtime_error("bad http version. support exists only for HTTP 1.1.\n");
         }
 
-        for (const auto& header : m_recv_req)
+        for (const auto& header : m_recv_req.get())
         {
             if (header.name_string().starts_with("x-"))
             {
@@ -137,8 +138,8 @@ namespace uh::cluster {
             }
         }
 
-        m_parsed_req_wrapper.verb = http_field_to_enum(to_string(m_recv_req.base().method()));
-        m_target = m_recv_req.base().target();
+        m_parsed_req_wrapper.verb = http_field_to_enum(to_string(m_recv_req.get().base().method()));
+        m_target = m_recv_req.get().base().target();
 
         auto index = m_target.find('?');
         if ( index != std::string::npos)
@@ -150,7 +151,7 @@ namespace uh::cluster {
                 substr(0, m_parsed_req_wrapper.http_parsed_fields[http_fields::host].find(':'));
 
         m_parsed_req_wrapper.req_type = get_type();
-        m_parsed_req_wrapper.body = m_recv_req.body();
+        m_parsed_req_wrapper.body = m_recv_req.get().body();
 
         sanitizer();
 
