@@ -18,10 +18,10 @@ namespace uh::cluster {
         std::string m_signature {};
 
     public:
-        explicit s3_authenticator(const http::request_parser<http::string_body>& received_request, parsed_request_wrapper& parsed_request);
+        s3_authenticator(const http::request_parser<http::string_body>& received_request, parsed_request_wrapper& parsed_request);
 
         std::string
-        get_canonical_uri();
+        get_canonical_uri() const;
 
         std::string
         get_canonical_query_string();

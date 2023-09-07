@@ -9,15 +9,47 @@ namespace uh::cluster {
 
 //------------------------------------------------------------------------------
 
-    s3_authenticator::s3_authenticator(const http::request_parser<http::string_body>& received_request, parsed_request_wrapper &parsed_request) :
+    s3_authenticator::s3_authenticator(const http::request_parser<http::string_body>& received_request, parsed_request_wrapper& parsed_request) :
     m_parsed_request(parsed_request), m_received_request(received_request)
     {
+        std::string_view authorization_string = m_parsed_request.http_parsed_fields[http_fields::authorization];
+
+        auto credential_index = authorization_string.find("Credential=") + 11;
+        auto slash_index = authorization_string.find_first_of('/', credential_index);
+
+        if (credential_index != std::string::npos && slash_index != std::string::npos)
+        {
+            m_access_key = authorization_string.substr(credential_index, slash_index - credential_index);
+        }
+
+        auto signature_index = authorization_string.find("Signature=") + 10;
+        if (signature_index != std::string::npos)
+        {
+            m_signature = authorization_string.substr(signature_index);
+        }
+
+        auto signedheaders_index = authorization_string.find("SignedHeaders=") + 14;
+        if (signedheaders_index != std::string::npos)
+        {
+            auto semi_colon_index = authorization_string.find_first_of(';', signedheaders_index);
+            while (semi_colon_index != std::string::npos)
+            {
+                m_signed_headers.emplace_back(authorization_string.substr(signedheaders_index, semi_colon_index - signedheaders_index));
+                signedheaders_index = semi_colon_index+1;
+                semi_colon_index = authorization_string.find_first_of(';', signedheaders_index);
+            }
+            m_signed_headers.emplace_back(authorization_string.substr(signedheaders_index, authorization_string.find_first_of(',', signedheaders_index) - signedheaders_index));
+        }
+
+        if (m_signature.empty() || m_signed_headers.empty() || m_access_key.empty())
+            throw std::runtime_error("invalid authorization header given.");
+
     }
 
 //------------------------------------------------------------------------------
 
     std::string
-    s3_authenticator::get_canonical_uri()
+    s3_authenticator::get_canonical_uri() const
     {
         return std::string('/' + m_parsed_request.bucket_id + '/' + m_parsed_request.object_key + '\n');
     }
@@ -138,16 +170,7 @@ namespace uh::cluster {
     void
     s3_authenticator::authenticate()
     {
-        std::string_view authorization_string = m_parsed_request.http_parsed_fields[http_fields::authorization];
-
-        auto credential_index = authorization_string.find("Credential=");
-        auto signedheaders_index = authorization_string.find("SignedHeaders=");
-        auto signature_index = authorization_string.find("Signature=");
-
-        if (signature_index != std::string::npos)
-            m_signature = authorization_string.substr(signature_index+10);
-        std::cout << m_signature << std::endl;
-//        get_string_to_sign();
+        get_string_to_sign();
     }
 
 //------------------------------------------------------------------------------
