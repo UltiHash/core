@@ -54,7 +54,7 @@ namespace uh::cluster
     {
     private:
         server_config m_config;
-        net::io_context m_ioc;
+        std::shared_ptr <net::io_context> m_ioc;
         std::vector<std::thread> m_thread_container {};
         entry_node_rest_handler m_handler;
 

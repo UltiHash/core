@@ -71,7 +71,7 @@ uh::cluster::dedupe_config make_dedupe_node_config () {
 
 uh::cluster::cluster_config make_cluster_config () {
     return {
-            .init_process_count = 3,
+            .init_process_count = 4,
             .data_node_conf = make_data_node_config(),
             .dedupe_node_conf = make_dedupe_node_config(),
             .directory_node_conf = make_directory_node_config(),

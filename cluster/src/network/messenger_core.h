@@ -7,7 +7,7 @@
 
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/awaitable.hpp>
-#include <forward_list>
+#include <list>
 
 
 namespace uh::cluster {
@@ -45,42 +45,42 @@ public:
     template <typename T>
     requires (std::is_arithmetic_v <T> or std::is_enum_v <T>)
     inline void register_read_buffer (T& t) {
-        m_read_buffers.emplace_after (m_read_buffers.cend(), &t, sizeof (t));
+        m_read_buffers.emplace_back (&t, sizeof (t));
         m_read_size += sizeof (t);
     }
 
     template <typename T>
     requires (std::is_arithmetic_v <T> or std::is_enum_v <T>)
     inline void register_read_buffer (const T* t, std::uint32_t size) {
-        m_read_buffers.emplace_after (m_read_buffers.cend(), t, size * sizeof (t));
+        m_read_buffers.emplace_back (t, size * sizeof (t));
         m_read_size += sizeof (t);
     }
 
     template <typename T, typename InnerType = std::ranges::range_value_t <T>>
     requires std::ranges::contiguous_range<T>
-             and (std::is_arithmetic_v < InnerType > )
+             and (std::is_arithmetic_v <InnerType>)
     inline void register_read_buffer (T& t) {
-        m_read_buffers.emplace_after (m_read_buffers.cend(), std::ranges::data (t), std::ranges::size (t) * sizeof (InnerType));
+        m_read_buffers.emplace_back (std::ranges::data (t), std::ranges::size (t) * sizeof (InnerType));
         m_read_size += std::ranges::size (t);
     }
 
     template<typename T>
     inline void register_read_buffer (const ospan <T>& buf) {
-        m_read_buffers.emplace_after (m_read_buffers.cend(), buf.data.get(), buf.size * sizeof(T));
+        m_read_buffers.emplace_back (buf.data.get(), buf.size * sizeof(T));
         m_read_size += buf.size;
     }
 
     template <typename T>
     requires (std::is_arithmetic_v <T> or std::is_enum_v <T>)
     inline void register_write_buffer (const T& t) {
-        m_write_buffers.emplace_after (m_write_buffers.cend(), &t, sizeof (t));
+        m_write_buffers.emplace_back (&t, sizeof (t));
         m_write_size += sizeof (t);
     }
 
     template <typename T>
     requires (std::is_arithmetic_v <T> or std::is_enum_v <T>)
     inline void register_write_buffer (const T* t, std::uint32_t size) {
-        m_write_buffers.emplace_after (m_write_buffers.cend(), t, size * sizeof (t));
+        m_write_buffers.emplace_back (t, size * sizeof (t));
         m_write_size += sizeof (t);
     }
 
@@ -88,19 +88,19 @@ public:
     requires std::ranges::contiguous_range<T>
              and (std::is_arithmetic_v < InnerType > )
     inline void register_write_buffer (const T& t) {
-        m_write_buffers.emplace_after (m_write_buffers.cend(), std::ranges::data (t), std::ranges::size (t) * sizeof (InnerType));
+        m_write_buffers.emplace_back (std::ranges::data (t), std::ranges::size (t) * sizeof (InnerType));
         m_write_size += std::ranges::size (t);
     }
 
     template<typename T>
     inline void register_write_buffer (const ospan <T>& buf) {
-        m_write_buffers.emplace_after (m_write_buffers.cend(), buf.data.get(), buf.size * sizeof(T));
+        m_write_buffers.emplace_back (buf.data.get(), buf.size * sizeof(T));
         m_write_size += buf.size;
     }
 
     coro <header> recv_header () {
         header h;
-        std::forward_list <boost::asio::mutable_buffer> buffers {
+        std::list <boost::asio::mutable_buffer> buffers {
                 {&h.type, sizeof h.type},
                 {&h.size, sizeof h.size}
         };
@@ -118,8 +118,11 @@ public:
     }
 
     coro <void> send_buffers (const message_types type) {
-        m_write_buffers.emplace_front(&m_write_size, sizeof m_write_size);
-        m_write_buffers.emplace_front(&type, sizeof type);
+        std::list <boost::asio::const_buffer> header_buffers {
+                {&m_write_size, sizeof m_write_size},
+                {&type, sizeof type}
+        };
+        co_await boost::asio::async_write (m_socket, header_buffers, boost::asio::as_tuple(boost::asio::use_awaitable));
         co_await boost::asio::async_write (m_socket, m_write_buffers, boost::asio::as_tuple(boost::asio::use_awaitable));
         m_write_buffers.clear();
         m_write_size = 0;
@@ -128,13 +131,14 @@ public:
     coro <void> send (const message_types type, std::span <const char> data) {
         const auto size = static_cast <uint32_t> (data.size());
 
-        std::vector <boost::asio::const_buffer> send_data {
+        std::vector <boost::asio::const_buffer> header {
                 {&type, sizeof (type)},
                 {&size, sizeof (size)},
-                {data.data(), data.size()},
         };
 
-        co_await boost::asio::async_write (m_socket, send_data, boost::asio::as_tuple(boost::asio::use_awaitable));
+        co_await boost::asio::async_write (m_socket, header, boost::asio::as_tuple(boost::asio::use_awaitable));
+        co_await boost::asio::async_write (m_socket, boost::asio::buffer (data), boost::asio::as_tuple(boost::asio::use_awaitable));
+
     }
 
     coro <header> recv (std::span <char> buffer) {
@@ -164,8 +168,8 @@ private:
 
     boost::asio::ip::tcp::socket m_socket;
 
-    std::forward_list <boost::asio::mutable_buffer> m_read_buffers;
-    std::forward_list <boost::asio::const_buffer> m_write_buffers;
+    std::list <boost::asio::mutable_buffer> m_read_buffers;
+    std::list <boost::asio::const_buffer> m_write_buffers;
     std::uint32_t m_read_size = 0;
     std::uint32_t m_write_size = 0;
 

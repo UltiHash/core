@@ -6,6 +6,7 @@
 #define CORE_MESSENGER_H
 
 #include "messenger_core.h"
+#include "entry_node/s3_parser.h"
 
 namespace uh::cluster {
 
@@ -24,7 +25,7 @@ namespace uh::cluster {
 
         coro <std::pair <header, fragment>> recv_fragment (const header& message_header) {
             fragment frag;
-            register_read_buffer(frag.pointer.ref_data());
+            register_read_buffer (frag.pointer.ref_data());
             register_read_buffer(frag.size);
             co_await recv_buffers (message_header);
             co_return std::pair {message_header, frag};

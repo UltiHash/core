@@ -18,8 +18,6 @@ namespace uh::cluster {
 //typedef std::vector <wide_span> address;
 
 enum message_types:uint8_t {
-    INIT_REQ,
-    INIT_RESP,
     READ_REQ,
     READ_RESP,
     WRITE_REQ,

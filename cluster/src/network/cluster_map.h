@@ -50,7 +50,7 @@ namespace uh::cluster {
 
         explicit cluster_map (const cluster_config& cluster_conf):
                 m_cluster_conf (cluster_conf),
-                m_roles_buf (m_cluster_conf.init_process_count * PROCESS_DATA_SIZE) {
+                m_roles_buf ((m_cluster_conf.init_process_count - 1) * PROCESS_DATA_SIZE) {
         }
 
         cluster_map (cluster_map&& cmap) noexcept:
@@ -130,7 +130,7 @@ namespace uh::cluster {
 
         void wait_for_responses () {
             std::unique_lock<std::mutex> lk(m_cv_m);
-            m_cv.wait(lk, [this] {return m_resp_count == m_cluster_conf.init_process_count;});
+            m_cv.wait(lk, [this] {return m_resp_count == m_cluster_conf.init_process_count - 1;});
         }
 
         void handle_send (std::reference_wrapper <boost::asio::basic_datagram_socket<boost::asio::ip::udp>> socket) {

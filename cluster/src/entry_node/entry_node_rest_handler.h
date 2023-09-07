@@ -25,10 +25,14 @@ public:
             auto m = m_dedupe_nodes.at(get_round_robin_index(m_dedupe_node_index, m_dedupe_nodes.size())).acquire_messenger();
             co_await m.get().send (DEDUPE_REQ, req.body);
             const auto h = co_await m.get().recv_header();
-            const auto dedupe_resp = co_await m.get().recv_dedupe_response(h);
-            std::cout << "effective size " << dedupe_resp.second.effective_size << std::endl;
+            const auto resp = co_await m.get().recv_dedupe_response(h);
+            std::cout << "effective size " << resp.second.effective_size << std::endl;
+
+            // TODO send the address resp.second.addr to the directory
+            //co_await m.get().send_rest_request(DIR_PUT_OBJ_REQ, req);
         }
         else {
+            // TODO send the request to the directory
 
         }
         co_return;

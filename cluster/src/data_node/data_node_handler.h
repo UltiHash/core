@@ -20,27 +20,29 @@ public:
     {}
 
     coro <void> handle (messenger m) override {
-        const auto message_header = co_await m.recv_header ();
-        switch (message_header.type) {
-            case WRITE_REQ:
-                co_await handle_write (m, message_header);
-                break;
-            case READ_REQ:
-                co_await handle_read (m, message_header);
-                break;
-            case REMOVE_REQ:
-                co_await handle_remove (m, message_header);
-                break;
-            case SYNC_REQ:
-                co_await handle_sync (m, message_header);
-                break;
-            case USED_REQ:
-                co_await handle_get_used (m, message_header);
-                break;
-            case STOP:
-                co_return;
-            default:
-                throw std::invalid_argument ("Invalid message type!");
+        for (;;) {
+            const auto message_header = co_await m.recv_header();
+            switch (message_header.type) {
+                case WRITE_REQ:
+                    co_await handle_write(m, message_header);
+                    break;
+                case READ_REQ:
+                    co_await handle_read(m, message_header);
+                    break;
+                case REMOVE_REQ:
+                    co_await handle_remove(m, message_header);
+                    break;
+                case SYNC_REQ:
+                    co_await handle_sync(m, message_header);
+                    break;
+                case USED_REQ:
+                    co_await handle_get_used(m, message_header);
+                    break;
+                case STOP:
+                    co_return;
+                default:
+                    throw std::invalid_argument("Invalid message type!");
+            }
         }
     }
 
@@ -49,6 +51,7 @@ private:
     coro <void> handle_write (messenger &m, const messenger::header& h) {
         ospan <char> data (h.size);
         m.register_read_buffer(data);
+        co_await m.recv_buffers(h);
         const auto addr = m_data_store.write({data.data.get(), data.size});
         co_await m.send_address(WRITE_RESP, addr);
     }

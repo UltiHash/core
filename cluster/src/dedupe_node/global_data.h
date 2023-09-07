@@ -169,9 +169,9 @@ std::unordered_map <uint128_t, address> sync_cache () {
         for (const auto& dn_address: dn_address_map) {
 
             auto m = dn_address.first->acquire_messenger();
-            co_await m.get ().send_address(REMOVE_REQ, dn_address.second);
+            co_await m.get ().send_address(SYNC_REQ, dn_address.second);
             const auto h = co_await m.get().recv_header();
-            success = success and (h.type == REMOVE_OK);
+            success = success and (h.type == SYNC_OK);
         }
 
         if (!success) [[unlikely]] {
@@ -191,7 +191,7 @@ std::unordered_map <uint128_t, address> sync_cache () {
         uint128_t used = 0;
         for (auto& m: messengers) {
             const auto message_header = co_await m.get().recv_header();
-            const auto resp = co_await m.get().recv_uint128_t(message_header);
+            const auto resp = co_await m.get().recv_uint128_t (message_header);
             success = success and (resp.first.type == USED_RESP);
             used = used + resp.second;
         }

@@ -2,7 +2,6 @@
 #include "rest_server.h"
 #include "s3_parser.h"
 #include "s3_authenticator.h"
-#include <common/logging_boost.h>
 
 namespace uh::cluster
 {
@@ -10,12 +9,12 @@ namespace uh::cluster
 //------------------------------------------------------------------------------
 
     rest_server::rest_server(server_config config, std::vector <client>& dedupe_nodes, std::vector <client>& directory_nodes) :
-        m_config(config), m_ioc(static_cast<int>(m_config.threads)),
+        m_config(config), m_ioc(std::make_shared <boost::asio::io_context>(static_cast<int>(m_config.threads))),
         m_thread_container(m_config.threads-1),
         m_handler (dedupe_nodes, directory_nodes)
     {
         // spawn a coroutine
-        boost::asio::co_spawn(m_ioc,
+        boost::asio::co_spawn(*m_ioc,
                               do_listen(tcp::endpoint{m_server_address, m_config.port}),
                               [](const std::exception_ptr& e)
                               {
@@ -36,24 +35,25 @@ namespace uh::cluster
     void
     rest_server::run()
     {
-        INFO << "starting server";
+        std::cout << "starting server";
 
         for(auto i = 0 ; i < m_config.threads - 1 ; i++)
             m_thread_container.emplace_back(
                     [&]
                     {
-                        m_ioc.run();
+                        m_ioc->run();
                     });
 
         // the calling thread is also running the I/O service
-        m_ioc.run();
+        m_ioc->run();
     }
 
 //------------------------------------------------------------------------------
 
     net::awaitable<void>
     rest_server::do_session(tcp_stream stream) {
-        INFO << "connection from: " << stream.socket().remote_endpoint();
+        auto copy = m_ioc;
+        std::cout << "connection from: " << stream.socket().remote_endpoint();
 
         // This buffer is required to persist across reads
         beast::flat_buffer buffer;
@@ -61,7 +61,7 @@ namespace uh::cluster
 
         try {
             for (;;) {
-                stream.expires_after(std::chrono::seconds(10));
+                stream.expires_after(std::chrono::seconds(10000));
 
                 // Read a request
                 http::request<http::string_body> received_request;
@@ -73,7 +73,7 @@ namespace uh::cluster
 
                 // authenticate the request
                 s3_authenticator s3_authenticate(received_request, parsed_request);
-                s3_authenticate.authenticate();
+                // s3_authenticate.authenticate();
 
                 co_await m_handler.handle (parsed_request);
 
@@ -152,7 +152,7 @@ namespace uh::cluster
                             }
                             catch (const std::exception &e)
                             {
-                                INFO << "Error in session: [" << conn_address << ":" << conn_port << "] " << e.what();
+                                std::cout << "Error in session: [" << conn_address << ":" << conn_port << "] " << e.what();
                             }
                     });
         }
