@@ -23,7 +23,7 @@ public:
                       std::make_unique <directory_handler>()),
             m_storage (m_cluster_map,
                        m_cluster_map.m_cluster_conf.directory_node_conf.data_node_connection_count,
-                       m_cluster_map.m_cluster_conf.directory_node_conf.server_conf.threads)
+                       m_server.get_executor())
     {
 
     }
@@ -36,8 +36,8 @@ public:
     const cluster_map m_cluster_map;
     const int m_id;
     const std::string m_job_name;
-    global_data m_storage;
     server m_server;
+    global_data m_storage;
 
 
 };

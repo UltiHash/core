@@ -23,8 +23,9 @@ public:
         uint32_t size;
     };
 
-    messenger_core (boost::asio::io_context& ioc, const std::string& address, const int port):
-        m_socket (ioc) {
+    messenger_core (const std::shared_ptr <boost::asio::io_context>& ioc, const std::string& address, const int port):
+        m_socket (*ioc),
+        m_ioc (ioc) {
         boost::asio::ip::tcp::endpoint endpoint (boost::asio::ip::address::from_string (address), port);
         m_socket.connect (endpoint);
     }
@@ -105,6 +106,10 @@ public:
                 {&h.size, sizeof h.size}
         };
         co_await boost::asio::async_read (m_socket, buffers, boost::asio::as_tuple(boost::asio::use_awaitable));
+        //co_await boost::asio::async_read (m_socket, boost::asio::buffer (&h.type, sizeof h.type), boost::asio::as_tuple(boost::asio::use_awaitable));
+        //co_await boost::asio::async_read (m_socket, boost::asio::buffer (&h.size, sizeof h.size), boost::asio::as_tuple(boost::asio::use_awaitable));
+        //boost::asio::read (m_socket, buffers);
+
         co_return h;
     }
 
@@ -137,6 +142,9 @@ public:
         };
 
         co_await boost::asio::async_write (m_socket, header, boost::asio::as_tuple(boost::asio::use_awaitable));
+        //co_await boost::asio::async_write (m_socket, boost::asio::buffer (&type, sizeof type), boost::asio::as_tuple(boost::asio::use_awaitable));
+        //co_await boost::asio::async_write (m_socket, boost::asio::buffer (&size, sizeof size), boost::asio::as_tuple(boost::asio::use_awaitable));
+        //boost::asio::write (m_socket, header);
         co_await boost::asio::async_write (m_socket, boost::asio::buffer (data), boost::asio::as_tuple(boost::asio::use_awaitable));
 
     }
@@ -172,6 +180,8 @@ private:
     std::list <boost::asio::const_buffer> m_write_buffers;
     std::uint32_t m_read_size = 0;
     std::uint32_t m_write_size = 0;
+
+    std::shared_ptr <boost::asio::io_context> m_ioc;
 
 };
 

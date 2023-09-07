@@ -65,6 +65,10 @@ namespace uh::cluster
 
         void run();
 
+        [[nodiscard]] std::shared_ptr <boost::asio::io_context> get_executor () const;
+
+        ~rest_server();
+
         // Handles an HTTP server connection
         net::awaitable<void> do_session(tcp_stream stream);
 

@@ -52,7 +52,6 @@ namespace uh::cluster
 
     net::awaitable<void>
     rest_server::do_session(tcp_stream stream) {
-        auto copy = m_ioc;
         std::cout << "connection from: " << stream.socket().remote_endpoint();
 
         // This buffer is required to persist across reads
@@ -70,7 +69,7 @@ namespace uh::cluster
 
                 s3_parser s3_parser(received_request);
                 auto parsed_request = s3_parser.parse();
-                
+
 //                s3_authenticator s3_authenticate(received_request, parsed_request);
 //                s3_authenticate.authenticate();
 
@@ -156,6 +155,16 @@ namespace uh::cluster
                     });
         }
 
+    }
+
+    std::shared_ptr<boost::asio::io_context> rest_server::get_executor() const {
+        return m_ioc;
+    }
+
+    rest_server::~rest_server() {
+        for (auto& thread: m_thread_container) {
+            thread.join();
+        }
     }
 
 //------------------------------------------------------------------------------

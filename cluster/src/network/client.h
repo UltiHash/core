@@ -36,7 +36,7 @@ public:
         acquired_messenger (acquired_messenger&& m) noexcept:
             m_messenger (std::move (m.m_messenger)), m_client (m.m_client) {}
 
-        messenger& get () {
+        [[nodiscard]] messenger& get () const {
             return *m_messenger;
         }
 
@@ -53,7 +53,7 @@ public:
     std::condition_variable m_cv;
     std::mutex m;
 
-    client (boost::asio::io_context &ioc, const std::string &ip, const int port, const int connections) {
+    client (const std::shared_ptr <boost::asio::io_context>& ioc, const std::string &ip, const int port, const int connections) {
         for (int i = 0; i < connections; ++i) {
             m_messengers.emplace_back(std::make_unique<messenger> (ioc, ip, port));
         }

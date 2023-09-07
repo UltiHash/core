@@ -31,7 +31,6 @@ private:
     std::vector <client> m_directory_nodes;
 
     const cluster_map m_cluster_map;
-    boost::asio::io_service m_io_service;
     const int m_id;
     const std::string m_job_name;
     server m_internal_server;

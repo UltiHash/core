@@ -194,10 +194,11 @@ namespace uh::cluster {
                 m_cluster_map (std::move (cmap)),
                 m_id (id),
                 m_job_name ("dedupe_node_" + std::to_string (id)),
-                m_storage (m_cluster_map, m_cluster_map.m_cluster_conf.dedupe_node_conf.data_node_connection_count,
-                           m_cluster_map.m_cluster_conf.dedupe_node_conf.server_conf.threads),
                 m_server (m_cluster_map.m_cluster_conf.dedupe_node_conf.server_conf,
-                          std::make_unique <dedupe_node_handler>(m_cluster_map.m_cluster_conf.dedupe_node_conf, m_storage))
+                          std::make_unique <dedupe_node_handler>(m_cluster_map.m_cluster_conf.dedupe_node_conf, m_storage)),
+                m_storage (m_cluster_map, m_cluster_map.m_cluster_conf.dedupe_node_conf.data_node_connection_count,
+                           m_server.get_executor())
+
     {
 
         }
@@ -211,8 +212,8 @@ namespace uh::cluster {
         const cluster_map m_cluster_map;
         const int m_id;
         const std::string m_job_name;
-        global_data m_storage;
         server m_server;
+        global_data m_storage;
 
         std::atomic <bool> m_stop = false;
 
