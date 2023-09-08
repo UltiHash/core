@@ -7,6 +7,7 @@
 
 #include "messenger_core.h"
 #include "entry_node/s3_parser.h"
+#include <third-party/zpp_bits/zpp_bits.h>
 
 namespace uh::cluster {
 
@@ -70,6 +71,24 @@ namespace uh::cluster {
             register_write_buffer (dedupe_resp.addr.pointers);
             register_write_buffer(dedupe_resp.addr.sizes);
             co_await send_buffers(type);
+        }
+
+        coro <void> send_directory_request (const message_types type, const directory_request& dir_req) {
+            std::vector<char> data;
+            zpp::bits::out{data}(dir_req).or_throw();
+            register_write_buffer(data);
+            co_await send_buffers(type);
+        }
+
+        coro <directory_request> recv_directory_request (const header& message_header) {
+            std::vector<char> data;
+            data.resize(message_header.size);
+            register_read_buffer(data);
+            co_await recv_buffers(message_header);
+
+            directory_request req;
+            zpp::bits::in{data}(req).or_throw();
+            co_return std::move (req);
         }
 
     };
