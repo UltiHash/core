@@ -7,6 +7,7 @@
 
 #include <vector>
 #include <span>
+#include <third-party/zpp_bits/zpp_bits.h>
 #include "big_int.h"
 
 namespace uh::cluster {
@@ -60,11 +61,20 @@ struct address {
     [[nodiscard]] std::size_t size () const noexcept {
         return sizes.size();
     }
+
+    using serialize = zpp::bits::members<2>;
 };
 
 struct dedupe_response {
     std::size_t effective_size {};
     address addr;
+};
+
+struct directory_request {
+    std::string bucket_id;
+    std::string object_key;
+    address addr;
+
 };
 
 } // end namespace uh::cluster
