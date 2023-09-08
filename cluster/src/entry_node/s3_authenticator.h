@@ -14,7 +14,7 @@ namespace uh::cluster {
         const http::request_parser<http::string_body>& m_received_request;
 
         std::string m_access_key {};
-        std::vector<std::string> m_signed_headers {};
+        std::set<std::string> m_signed_headers {};
         std::string m_signature {};
 
     public:
