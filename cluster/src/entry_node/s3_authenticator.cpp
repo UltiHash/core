@@ -4,8 +4,13 @@
 #include <iostream>
 #include <chrono>
 #include <iomanip>
+#include "s3_parser.h"
 
 namespace uh::cluster {
+
+//------------------------------------------------------------------------------
+
+    extern s3_fields s3_field_to_enum(const std::string &field);
 
 //------------------------------------------------------------------------------
 
@@ -34,15 +39,37 @@ namespace uh::cluster {
             auto semi_colon_index = authorization_string.find_first_of(';', signedheaders_index);
             while (semi_colon_index != std::string::npos)
             {
-                m_signed_headers.emplace_back(authorization_string.substr(signedheaders_index, semi_colon_index - signedheaders_index));
+                m_signed_headers.emplace(authorization_string.substr(signedheaders_index, semi_colon_index - signedheaders_index));
                 signedheaders_index = semi_colon_index+1;
                 semi_colon_index = authorization_string.find_first_of(';', signedheaders_index);
             }
-            m_signed_headers.emplace_back(authorization_string.substr(signedheaders_index, authorization_string.find_first_of(',', signedheaders_index) - signedheaders_index));
+            m_signed_headers.emplace(authorization_string.substr(signedheaders_index, authorization_string.find_first_of(',', signedheaders_index) - signedheaders_index));
         }
 
         if (m_signature.empty() || m_signed_headers.empty() || m_access_key.empty())
             throw std::runtime_error("invalid authorization header given.");
+
+        if (m_parsed_request.http_parsed_fields.contains(http_fields::content_type))
+        {
+            bool contains_string = std::ranges::any_of(m_signed_headers,[](const std::string& str)
+            {
+                return str == "content-type";
+            });
+            if (!contains_string)
+                throw std::runtime_error("content-type must also be included in signed headers");
+        }
+
+        std::set<s3_fields> signed_headers_set;
+        for (const auto& header : m_signed_headers)
+        {
+            signed_headers_set.emplace(s3_field_to_enum(header));
+        }
+        for (const auto& value : m_parsed_request.s3_parsed_fields)
+        {
+            if (! signed_headers_set.contains(value.first))
+                throw std::runtime_error("signed headers must include all the x-amz tags given in the request");
+
+        }
 
     }
 
@@ -87,8 +114,11 @@ namespace uh::cluster {
         // TODO: what happens on multiple same headers, do we convert it to one header with multiple values?
         for (const auto& pair: lexically_sorted_headers)
         {
-            canonical_header_string += pair.first + ":" + pair.second + "\n";
-            header_list_string += pair.first + ";";
+            if (m_signed_headers.contains(pair.first))
+            {
+                canonical_header_string += pair.first + ":" + pair.second + "\n";
+                header_list_string += pair.first + ";";
+            }
         }
         header_list_string.pop_back();
         header_list_string += '\n';

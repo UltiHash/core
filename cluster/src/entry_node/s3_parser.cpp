@@ -35,7 +35,7 @@ namespace uh::cluster {
 
 //------------------------------------------------------------------------------
 
-    auto s3_field_to_enum = [](const std::string &field)
+    s3_fields s3_field_to_enum (const std::string &field)
     {
         static const std::unordered_map<std::string, s3_fields> enum_map =
                 {
@@ -70,7 +70,7 @@ namespace uh::cluster {
 
 //------------------------------------------------------------------------------
 
-    auto http_field_to_enum = [](const std::string &field)
+    http_fields http_field_to_enum (const std::string &field)
     {
         static const std::unordered_map<std::string, http_fields> enum_map =
                 {

@@ -71,8 +71,8 @@ namespace uh::cluster
                 s3_parser s3_parser(received_request);
                 auto parsed_request = s3_parser.parse();
 
-//                s3_authenticator s3_authenticate(received_request, parsed_request);
-//                s3_authenticate.authenticate();
+                s3_authenticator s3_authenticate(received_request, parsed_request);
+                s3_authenticate.authenticate();
 
                 co_await m_handler.handle (parsed_request);
 
