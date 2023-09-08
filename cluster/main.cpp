@@ -17,7 +17,7 @@ uh::cluster::entry_node_config make_entry_node_config () {
                 .port = 8081,
         },
         .rest_server_conf = {
-                .threads = 10,
+                .threads = 4,
                 .port = 8080,
         },
         .dedupe_node_connection_count = 2,
@@ -27,8 +27,8 @@ uh::cluster::entry_node_config make_entry_node_config () {
 
 uh::cluster::data_node_config make_data_node_config () {
     return {
-        .directory = "root/dn",
-        .hole_log = "root/dn/log",
+        .directory = "ultihash-root/dn",
+        .hole_log = "ultihash-root/dn/log",
         .min_file_size = 1ul * 1024ul * 1024ul * 1024ul,
         .max_file_size = 4ul * 1024ul * 1024ul * 1024ul,
         .max_data_store_size = 64ul * 1024ul * 1024ul * 1024ul,
@@ -45,19 +45,19 @@ uh::cluster::directory_node_config make_directory_node_config () {
                 .threads = 4,
                 .port = 8083,
         },
-        .data_node_connection_count = 4,
+        .data_node_connection_count = 2,
     };
 }
 
 uh::cluster::dedupe_config make_dedupe_node_config () {
     return {
-        .min_fragment_size = 1024,
-        .max_fragment_size = 4 * 1024,
+        .min_fragment_size = 32,
+        .max_fragment_size = 8 * 1024,
         .server_conf = {
-                .threads = 4,
+                .threads = 1,
                 .port = 8084,
         },
-        .data_node_connection_count = 4,
+        .data_node_connection_count = 2,
         .set_conf = {
                 .set_minimum_free_space = 1ul * 1024ul * 1024ul * 1024ul,
                 .max_empty_hole_size = 1ul * 1024ul * 1024ul * 1024ul,
@@ -140,7 +140,7 @@ int main (int argc, char* args[]) {
     if (argc != 3) {
         throw std::invalid_argument("Usage: uh-cluster <role> <id>");
     }
-    const auto role_str = std::string_view(args[1]);   // en, dd, ph, dn
+    const auto role_str = std::string_view(args[1]);   // en, dd, dr, dn
     char* end;
     const auto id = static_cast <int> (std::strtol(args[2], &end, 10));
 
