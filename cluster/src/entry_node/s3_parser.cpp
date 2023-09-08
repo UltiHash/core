@@ -9,8 +9,8 @@ namespace uh::cluster {
             {
                     { s3_req_type::put_object, { x_amz_acl, x_amz_grant_full_control, x_amz_grant_read, x_amz_grant_read_acp,
                                                  x_amz_grant_write_acp, x_amz_storage_class, x_amz_request_payer, x_amz_tagging,
-                                                 x_amz_expected_bucket_owner, x_amz_meta_author } },
-                    { s3_req_type::get_object, { x_amz_request_payer, x_amz_expected_bucket_owner } },
+                                                 x_amz_expected_bucket_owner, x_amz_meta_author, x_amz_content_sha256 } },
+                    { s3_req_type::get_object, { x_amz_request_payer, x_amz_expected_bucket_owner, x_amz_content_sha256 } }, //TODO: put the common x-amz-header outside this enum
                     { s3_req_type::copy_object, { x_amz_acl, x_amz_copy_source, x_amz_copy_source_if_match, x_amz_copy_source_if_modified_since,
                                                   x_amz_copy_source_if_none_match, x_amz_copy_source_if_unmodified_since, x_amz_grant_full_control, x_amz_grant_read,
                                                   x_amz_grant_read_acp, x_amz_grant_write_acp, x_amz_metadata_directive, x_amz_tagging_directive,
@@ -54,6 +54,7 @@ namespace uh::cluster {
                         {"x-amz-copy-source",   x_amz_copy_source},
                         {"x-amz-metadata-directive",   x_amz_metadata_directive},
                         {"x-amz-tagging-directive",   x_amz_tagging_directive},
+                        {"x-amz-content-sha256", x_amz_content_sha256},
 
                 };
 

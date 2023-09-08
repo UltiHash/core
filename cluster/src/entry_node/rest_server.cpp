@@ -35,7 +35,7 @@ namespace uh::cluster
     void
     rest_server::run()
     {
-        std::cout << "starting server";
+        std::cout << "starting server" << std::endl;
 
         for(auto i = 0 ; i < m_config.threads - 1 ; i++)
             m_thread_container.emplace_back(
@@ -52,7 +52,7 @@ namespace uh::cluster
 
     net::awaitable<void>
     rest_server::do_session(tcp_stream stream) {
-        std::cout << "connection from: " << stream.socket().remote_endpoint();
+        std::cout << "connection from: " << stream.socket().remote_endpoint() << std::endl;
 
         // This buffer is required to persist across reads
         beast::flat_buffer buffer;

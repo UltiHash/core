@@ -38,6 +38,7 @@ namespace uh::cluster {
         x_amz_tagging_directive,
         x_amz_expected_bucket_owner,
         x_amz_source_expected_bucket_owner,
+        x_amz_content_sha256,
     };
 
 //------------------------------------------------------------------------------
