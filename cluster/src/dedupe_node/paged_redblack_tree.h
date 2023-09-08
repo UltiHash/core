@@ -27,6 +27,12 @@ struct set_data {
     ospan <char> data;
     uint128_t data_offset;
     uint64_t index_offset;
+    set_data (ospan <char> os, uint128_t data_off, uint64_t index_off): data (std::move(os)), data_offset (data_off), index_offset (index_off) {}
+    set_data (set_data&& sd) noexcept: data (std::move (sd.data)), data_offset(sd.data_offset), index_offset (sd.index_offset) {
+        sd.data_offset = 0;
+        sd.index_offset = 0;
+    }
+    set_data (set_data& sd) = delete;
 };
 
 struct set_result {
@@ -34,6 +40,21 @@ struct set_result {
     std::optional <set_data> match;
     std::optional <set_data> upper;
     index_type index;
+    set_result (std::optional <set_data> lo, std::optional <set_data> eq, std::optional <set_data> up, index_type idx = {}):
+            lower (std::move (lo)),
+            match (std::move (eq)),
+            upper (std::move (up)),
+            index (idx) {
+    }
+    set_result (set_result&& res) noexcept:
+        lower (std::move (res.lower)),
+        match (std::move (res.match)),
+        upper (std::move (res.upper)),
+        index (res.index) {
+        res.lower = std::nullopt;
+        res.match = std::nullopt;
+        res.upper = std::nullopt;
+    }
 };
 
 template <typename Comparator = set_full_comparator>
@@ -69,7 +90,7 @@ public:
 
     index_type add_pointer (const std::string_view& data, uint128_t data_offset, const index_type& pos) {
 
-        if (pos.position == 0) {
+        if (pos.position == 0) [[unlikely]] {
             throw std::logic_error ("paged_redblack_tree relies on the given position. First call the find function.");
         }
         if (pos.comp == 0 and pos.position != m_first_block->nill_offset) {
@@ -108,13 +129,11 @@ public:
     }
 
     [[nodiscard]] coro <set_result> find (const std::string_view& data, const index_type& pos = {}) const {
-        set_result res;
 
         if (pos.position != 0) [[unlikely]] {
             const auto n = get_node (pos.position);
             if (auto comp = co_await m_comp (data, *n.m_mnode); comp.first == 0) {
-                res.match = {std::move (comp.second), n.m_mnode->m_data.pointer, n.m_offset};
-                co_return res;
+                co_return std::move (set_result {std::nullopt, set_data (std::move (comp.second), n.m_mnode->m_data.pointer, n.m_offset), std::nullopt});
             }
         }
 
@@ -138,18 +157,14 @@ public:
                 x = get_node (x.m_mnode->m_right);
             }
             else {
-                res.match = {std::move (comp_res.second), y.m_mnode->m_data.pointer, y.m_offset};
-                break;
+                co_return std::move (set_result {std::nullopt, std::move (set_data {std::move (comp_res.second), y.m_mnode->m_data.pointer, y.m_offset}), std::nullopt});
             }
         }
 
-        if (!res.match) {
-            res.lower = {co_await fetch_node_data(largest_lower), largest_lower.m_mnode->m_data.pointer, largest_lower.m_offset};
-            res.upper = {co_await fetch_node_data(smallest_upper), smallest_upper.m_mnode->m_data.pointer,
-                         smallest_upper.m_offset};
-        }
-        res.index = {y.m_offset, comp_int};
-        co_return res;
+        co_return std::move (set_result {set_data {std::move (co_await fetch_node_data(largest_lower)), largest_lower.m_mnode->m_data.pointer, largest_lower.m_offset},
+                              std::nullopt,
+                              set_data {std::move (co_await fetch_node_data(smallest_upper)), smallest_upper.m_mnode->m_data.pointer, smallest_upper.m_offset},
+                              {y.m_offset, comp_int}});
     }
 
     [[nodiscard]] std::list<set_data> do_get_range (const std::span<char> &start_data, const std::span<char> &end_data) const {
@@ -274,7 +289,7 @@ private:
         }
         ospan <char> buffer (n.m_mnode->m_data.size);
         co_await m_data_store.get().read(buffer.data.get(), n.m_mnode->m_data.pointer, n.m_mnode->m_data.size);
-        co_return buffer;
+        co_return std::move (buffer);
     }
 
     void balance (node& z) {

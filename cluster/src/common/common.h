@@ -52,7 +52,7 @@ void sync_ptr (void *ptr, std::size_t size);
 
 template <typename T>
 struct owning_span {
-    std::size_t size {};
+    std::size_t size {0};
     std::unique_ptr <T[]> data = nullptr;
     owning_span() = default;
     explicit owning_span (size_t data_size):
@@ -61,6 +61,10 @@ struct owning_span {
     owning_span(size_t data_size, std::unique_ptr <T[]>&& ptr):
             size (data_size),
             data {std::move (ptr)} {}
+    owning_span (owning_span&& os) noexcept: size (os.size), data (std::move (os.data)) {
+        os.size = 0;
+        os.data = nullptr;
+    }
     void resize (std::size_t new_size) {
         data = std::make_unique_for_overwrite <T[]> (size);
         size = new_size;
