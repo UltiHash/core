@@ -21,13 +21,16 @@ public:
         m_storage (storage) {}
 
     coro <void> handle (messenger m) override {
-        const auto message_header = co_await m.recv_header ();
-        switch (message_header.type) {
-            case DEDUPE_REQ:
-                co_await handle_dedupe (m, message_header);
-                break;
-            default:
-                throw std::invalid_argument ("Invalid message type!");
+
+        for (;;) {
+            const auto message_header = co_await m.recv_header();
+            switch (message_header.type) {
+                case DEDUPE_REQ:
+                    co_await handle_dedupe(m, message_header);
+                    break;
+                default:
+                    throw std::invalid_argument("Invalid message type!");
+            }
         }
     }
 

@@ -9,7 +9,6 @@ namespace uh::cluster
 
 entry_node::entry_node(int id, cluster_map&& cmap) :
         m_cluster_map (std::move (cmap)),
-        m_io_service (m_cluster_map.m_cluster_conf.entry_node_conf.internal_server_conf.threads),
         m_id (id),
         m_job_name ("entry_" + std::to_string (id)),
         m_internal_server (m_cluster_map.m_cluster_conf.entry_node_conf.internal_server_conf,
@@ -18,7 +17,6 @@ entry_node::entry_node(int id, cluster_map&& cmap) :
 {
     sleep(4);
     create_connections();
-    m_io_service.run();
 }
 
 //------------------------------------------------------------------------------
@@ -38,13 +36,13 @@ entry_node::run()
 void entry_node::create_connections() {
 
     for (const auto& dedupe_node: m_cluster_map.m_roles.at(DEDUPE_NODE)) {
-        m_dedupe_nodes.emplace_back (m_io_service, dedupe_node.second,
+        m_dedupe_nodes.emplace_back (m_rest_server.get_executor(), dedupe_node.second,
                                      m_cluster_map.m_cluster_conf.dedupe_node_conf.server_conf.port,
                                      m_cluster_map.m_cluster_conf.entry_node_conf.dedupe_node_connection_count);
     }
 
     for (const auto& directory: m_cluster_map.m_roles.at(DIRECTORY_NODE)) {
-        m_directory_nodes.emplace_back(m_io_service, directory.second,
+        m_directory_nodes.emplace_back(m_rest_server.get_executor(), directory.second,
                                        m_cluster_map.m_cluster_conf.directory_node_conf.server_conf.port,
                                        m_cluster_map.m_cluster_conf.entry_node_conf.directory_connection_count);
     }

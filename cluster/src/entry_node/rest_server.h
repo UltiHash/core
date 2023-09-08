@@ -54,7 +54,7 @@ namespace uh::cluster
     {
     private:
         server_config m_config;
-        net::io_context m_ioc;
+        std::shared_ptr <net::io_context> m_ioc;
         std::vector<std::thread> m_thread_container {};
         entry_node_rest_handler m_handler;
 
@@ -64,6 +64,10 @@ namespace uh::cluster
         rest_server(server_config config, std::vector <client>& dedupe_nodes, std::vector <client>& directory_nodes);
 
         void run();
+
+        [[nodiscard]] std::shared_ptr <boost::asio::io_context> get_executor () const;
+
+        ~rest_server();
 
         // Handles an HTTP server connection
         net::awaitable<void> do_session(tcp_stream stream);

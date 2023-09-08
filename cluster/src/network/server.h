@@ -18,7 +18,6 @@
 #include <string>
 #include <thread>
 #include <vector>
-#include "logging/logging_boost.h"
 #include "common/cluster_config.h"
 #include "messenger.h"
 #include "common/protocol_handler.h"
@@ -50,7 +49,7 @@ namespace uh::cluster
         }
 
         void run() {
-            INFO << "starting server";
+            std::cout << "starting server";
 
             for (auto i = 0; i < m_config.threads - 1; i++)
                 m_thread_container.emplace_back(
@@ -60,6 +59,10 @@ namespace uh::cluster
 
             // the calling thread is also running the I/O service
             m_ioc->run();
+        }
+
+        [[nodiscard]] std::shared_ptr <boost::asio::io_context> get_executor () const {
+            return m_ioc;
         }
 
         ~server() {
@@ -96,7 +99,7 @@ namespace uh::cluster
                                     std::rethrow_exception(e);
                                 }
                                 catch (const std::exception &e) {
-                                    INFO << "Error in session: [" << conn_address << ":" << conn_port << "] "
+                                    std::cout << "Error in session: [" << conn_address << ":" << conn_port << "] "
                                          << e.what();
                                 }
                         });
@@ -106,7 +109,7 @@ namespace uh::cluster
 
         boost::asio::awaitable<void> do_session(boost::asio::ip::tcp::socket stream) {
             const auto life_time = m_ioc;
-            INFO << "connection from: " << stream.remote_endpoint();
+            std::cout << "connection from: " << stream.remote_endpoint();
             co_await m_handler->handle(messenger(std::move(stream)));
             co_return;
         }

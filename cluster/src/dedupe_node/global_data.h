@@ -20,10 +20,10 @@ class global_data {
 
 public:
 
-    explicit global_data (const cluster_map& cmap, int data_node_connection_count, int running_threads):
+    explicit global_data (const cluster_map& cmap, int data_node_connection_count, const std::shared_ptr <boost::asio::io_context>& ioc):
                           m_temp_offset (temp_offset_start),
                           m_cluster_map (cmap),
-                          m_io_service (running_threads) {
+                          m_io_service (ioc) {
         sleep(2);
         create_data_node_connections(data_node_connection_count);
     }
@@ -169,9 +169,9 @@ std::unordered_map <uint128_t, address> sync_cache () {
         for (const auto& dn_address: dn_address_map) {
 
             auto m = dn_address.first->acquire_messenger();
-            co_await m.get ().send_address(REMOVE_REQ, dn_address.second);
+            co_await m.get ().send_address(SYNC_REQ, dn_address.second);
             const auto h = co_await m.get().recv_header();
-            success = success and (h.type == REMOVE_OK);
+            success = success and (h.type == SYNC_OK);
         }
 
         if (!success) [[unlikely]] {
@@ -191,7 +191,7 @@ std::unordered_map <uint128_t, address> sync_cache () {
         uint128_t used = 0;
         for (auto& m: messengers) {
             const auto message_header = co_await m.get().recv_header();
-            const auto resp = co_await m.get().recv_uint128_t(message_header);
+            const auto resp = co_await m.get().recv_uint128_t (message_header);
             success = success and (resp.first.type == USED_RESP);
             used = used + resp.second;
         }
@@ -232,7 +232,7 @@ private:
     }
 
     const cluster_map& m_cluster_map;
-    boost::asio::io_context m_io_service;
+    std::shared_ptr <boost::asio::io_context> m_io_service;
     std::unordered_map <uint128_t, std::string_view> m_cache;
     std::map <const uint128_t, client> m_data_node_offsets;
     std::vector <int> m_data_nodes;
