@@ -1,10 +1,10 @@
 //
-// Created by masi on 9/8/23.
+// Created by max on 9/8/23.
 //
 #ifdef SINGLE_TEST_RUNNER
 #define BOOST_TEST_NO_MAIN
 #else
-#define BOOST_TEST_MODULE "fdb serialization tests"
+#define BOOST_TEST_MODULE "serialization tests"
 #endif
 
 #include <boost/test/unit_test.hpp>
@@ -32,7 +32,8 @@ BOOST_AUTO_TEST_CASE (directory_request_serialization) {
     directory_request req_deserialized;
     zpp::bits::in{serData}(req_deserialized).or_throw();
 
-    BOOST_CHECK(true);
+
+    BOOST_CHECK(req_orig == req_deserialized);
 
 
 }

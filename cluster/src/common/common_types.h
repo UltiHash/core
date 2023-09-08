@@ -63,6 +63,7 @@ struct address {
     }
 
     using serialize = zpp::bits::members<2>;
+    auto operator<=>(const address&) const = default;
 };
 
 struct dedupe_response {
@@ -74,6 +75,8 @@ struct directory_request {
     std::string bucket_id;
     std::string object_key;
     address addr;
+
+    auto operator<=>(const directory_request&) const = default;
 
 };
 
