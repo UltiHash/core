@@ -25,7 +25,8 @@ namespace uh::cluster {
         std::string m_signature {};
 
     public:
-        s3_authenticator(const http::request_parser<http::string_body>& received_request, parsed_request_wrapper& parsed_request);
+        s3_authenticator(const http::request_parser<http::string_body>& received_request,
+                         parsed_request_wrapper& parsed_request);
 
         [[nodiscard]] std::string
         get_canonical_uri() const;
@@ -61,7 +62,7 @@ namespace uh::cluster {
         hmac_sha_256(const std::string& payload, const std::string& signing_key) const;
 
         void
-        authenticate();
+        authenticate() const;
 
     };
 

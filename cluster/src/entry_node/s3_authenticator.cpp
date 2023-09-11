@@ -78,8 +78,31 @@ namespace uh::cluster {
         m_signature = authorization_string.substr(signature_index + 10);
 
         if ( m_algorithm.empty() || m_access_key.empty() || m_date.empty() || m_region.empty()
-            || m_service.empty() || m_signed_headers.empty() || m_signature.empty())
+             || m_service.empty() || m_signed_headers.empty() || m_signature.empty())
             throw std::runtime_error("invalid authorization header");
+
+
+        if (m_parsed_request.http_parsed_fields.contains(http_fields::content_type))
+        {
+            bool contains_string = std::ranges::any_of(m_signed_headers,[](const std::string& str)
+            {
+                return str == "content-type";
+            });
+            if (!contains_string)
+                throw std::runtime_error("content-type must also be included in signed headers");
+        }
+
+        std::set<s3_fields> signed_headers_set;
+        for (const auto& header : m_signed_headers)
+        {
+            signed_headers_set.emplace(s3_field_to_enum(header));
+        }
+        for (const auto& value : m_parsed_request.s3_parsed_fields)
+        {
+            if (! signed_headers_set.contains(value.first))
+                throw std::runtime_error("signed headers must include all the x-amz tags given in the request");
+
+        }
 
     }
 
@@ -102,7 +125,8 @@ namespace uh::cluster {
 
 //------------------------------------------------------------------------------
 
-    std::string to_hex(const std::string& sha)
+    std::string
+    to_hex(const std::string& sha)
     {
         if (sha.empty())
         {
@@ -180,6 +204,7 @@ namespace uh::cluster {
     std::string
     s3_authenticator::get_headers() const
     {
+        //TODO: inefficient as we make maps and then copy the headers value a lot
         std::multimap<std::string, std::string> lexically_sorted_headers;
 
         // iterate through all headers
@@ -302,7 +327,7 @@ namespace uh::cluster {
 //------------------------------------------------------------------------------
 
     void
-    s3_authenticator::authenticate()
+    s3_authenticator::authenticate() const
     {
         auto calculated_signature = to_hex(hmac_sha_256( get_string_to_sign(), signing_key()));
         if (m_signature != calculated_signature)
