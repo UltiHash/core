@@ -84,6 +84,7 @@ namespace uh::cluster {
 
         if (m_parsed_request.http_parsed_fields.contains(http_fields::content_type))
         {
+            // TODO: signed header is sorted alphabetically so if we don't find content-type within 'c' character we can stop searching
             bool contains_string = std::ranges::any_of(m_signed_headers,[](const std::string& str)
             {
                 return str == "content-type";
@@ -223,6 +224,8 @@ namespace uh::cluster {
         std::string header_list_string {};
 
         // TODO: what happens on multiple same headers, do we convert it to one header with multiple values?
+        //TODO: switch the comparison from lexically_sorted_headers to lexically sorted signed headers as we have to do
+        // less comparision
         for (const auto& pair: lexically_sorted_headers)
         {
             if (m_signed_headers.contains(pair.first))
