@@ -44,7 +44,6 @@ namespace uh::cluster
                         m_ioc->run();
                     });
 
-        // the calling thread is also running the I/O service
         m_ioc->run();
     }
 
@@ -150,16 +149,21 @@ namespace uh::cluster
                             }
                             catch (const std::exception &e)
                             {
-                                std::cout << "Error in session: [" << conn_address << ":" << conn_port << "] " << e.what();
+                                std::cout << "Error in session: [" << conn_address << ":" << conn_port << "] " << e.what() << "\n";
                             }
                     });
         }
 
     }
 
-    std::shared_ptr<boost::asio::io_context> rest_server::get_executor() const {
+//------------------------------------------------------------------------------
+
+    std::shared_ptr<boost::asio::io_context> rest_server::get_executor() const
+    {
         return m_ioc;
     }
+
+//------------------------------------------------------------------------------
 
     rest_server::~rest_server() {
         for (auto& thread: m_thread_container) {

@@ -2,10 +2,10 @@
 #include <map>
 #include <openssl/sha.h>
 #include <openssl/hmac.h>
-#include <iostream>
 #include <chrono>
 #include <iomanip>
 #include "s3_parser.h"
+#include <iostream>
 
 namespace uh::cluster {
 
@@ -14,24 +14,6 @@ namespace uh::cluster {
     extern s3_fields s3_field_to_enum(const std::string &field);
 
 //------------------------------------------------------------------------------
-
-    std::string printStringWithEscapes(const std::string &str) {
-        std::stringstream ss;
-        for (char c : str) {
-            switch (c) {
-                case '\0':
-                    ss << "\\0";
-                    break;
-                case '\n':
-                    ss << "\\n";
-                    break;
-                    // Add more cases for other special characters as needed
-                default:
-                    ss << c;
-            }
-        }
-        return ss.str();
-    }
 
     s3_authenticator::s3_authenticator(const http::request_parser<http::string_body>& received_request, parsed_request_wrapper& parsed_request) :
     m_parsed_request(parsed_request), m_received_request(received_request)
@@ -150,7 +132,6 @@ namespace uh::cluster {
         {
             unsigned char result[SHA256_DIGEST_LENGTH];
             SHA256((unsigned char *) payload.data(), payload.length(), result);
-
             return {reinterpret_cast<char*>(result), SHA256_DIGEST_LENGTH};
         }
     }
@@ -213,13 +194,13 @@ namespace uh::cluster {
     {
         unsigned char hmac_result[SHA256_DIGEST_LENGTH];
         HMAC(
-                EVP_sha256(),                  // Use SHA-256 as the hash function
-                m_secret_key.c_str(),            // Secret key
-                m_secret_key.length(),           // Length of the secret key
-                reinterpret_cast<const unsigned char*>(payload.data()),                   // Message hash
-                SHA256_DIGEST_LENGTH,          // Length of the message hash
-                hmac_result,                   // Output buffer for HMAC
-                nullptr                       // No need for an HMAC context
+                EVP_sha256(),
+                m_secret_key.c_str(),
+                m_secret_key.length(),
+                reinterpret_cast<const unsigned char*>(payload.data()),
+                SHA256_DIGEST_LENGTH,
+                hmac_result,
+                nullptr
         );
 
         return {reinterpret_cast<char*>(hmac_result), SHA256_DIGEST_LENGTH};
@@ -232,13 +213,13 @@ namespace uh::cluster {
     {
         unsigned char hmac_result[SHA256_DIGEST_LENGTH];
         HMAC(
-                EVP_sha256(),                  // Use SHA-256 as the hash function
-                signing_key.data(),            // Secret key
-                signing_key.length(),           // Length of the secret key
-                reinterpret_cast<const unsigned char*>(payload.data()),                   // Message hash
-                payload.length(),          // Length of the message hash
-                hmac_result,                   // Output buffer for HMAC
-                nullptr                       // No need for an HMAC context
+                EVP_sha256(),
+                signing_key.data(),
+                signing_key.length(),
+                reinterpret_cast<const unsigned char*>(payload.data()),
+                payload.length(),
+                hmac_result,
+                nullptr
         );
 
         return {reinterpret_cast<char*>(hmac_result), SHA256_DIGEST_LENGTH};
@@ -315,9 +296,7 @@ namespace uh::cluster {
     std::string
     s3_authenticator::get_string_to_sign() const
     {
-        std::cout << get_canonical_request() << std::endl;
         auto tmp = "AWS4-HMAC-SHA256\\n" + get_scope() + to_hex(sha_256(get_canonical_request()));
-        std::cout << "\nstring to sign:\n" << tmp << std::endl;
         return tmp;
     }
 
@@ -326,10 +305,10 @@ namespace uh::cluster {
     std::string
     s3_authenticator::signing_key() const
     {
-        std::cout << "First HMAC " << to_hex(hmac_sha_256("AWS4" + m_secret_key, get_formatted_date())) << std::endl;
-        std::cout << "Second HMAC " << to_hex( hmac_sha_256( to_hex( hmac_sha_256("AWS4" + m_secret_key, get_formatted_date()) ), m_region)) << std::endl;
-        auto tmp = hmac_sha_256(to_hex(hmac_sha_256(to_hex(hmac_sha_256(to_hex( hmac_sha_256("AWS4" + m_secret_key, get_formatted_date()) ), m_region)), m_service)), "aws4_request");
-        std::cout << "signing key: " << to_hex(tmp) << std::endl;
+        auto first_hmac = to_hex(hmac_sha_256("AWS4" + m_secret_key, get_formatted_date()));
+        auto second_hmac = to_hex( hmac_sha_256( first_hmac, m_region));
+        auto third_hmac = to_hex(hmac_sha_256(second_hmac, m_service));
+        auto tmp = to_hex(hmac_sha_256(third_hmac, "aws4_request"));
         return tmp;
     }
 
@@ -338,10 +317,14 @@ namespace uh::cluster {
     void
     s3_authenticator::authenticate()
     {
-        auto calculated_signature = to_hex(hmac_sha_256( get_string_to_sign(), signing_key()));
+        std::cout << get_string_to_sign() << std::endl;
+        std::cout << "-------------------" << std::endl;
+        std::cout << m_received_request.get().body() << std::endl;
+        std::cout << "-------------------" << std::endl;
 
-        std::cout << "\n\nreceived signature: " << m_signature << std::endl;
-        std::cout << "\n\ncalculated_signature: " << calculated_signature << std::endl;
+        std::cout << "SHA 256 of body is: " << to_hex(sha_256(m_received_request.get().body())) << std::endl;
+
+        auto calculated_signature = to_hex(hmac_sha_256( get_string_to_sign(), signing_key()));
         if (m_signature != calculated_signature)
             throw std::runtime_error("authentication failed");
 
