@@ -13,6 +13,7 @@ namespace uh::cluster {
         parsed_request_wrapper& m_parsed_request;
         const http::request_parser<http::string_body>& m_received_request;
 
+        std::string m_algorithm {};
         std::string m_access_key {};
         std::string m_date {};
         std::string m_region {};

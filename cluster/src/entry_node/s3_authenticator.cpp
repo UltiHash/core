@@ -18,86 +18,68 @@ namespace uh::cluster {
     s3_authenticator::s3_authenticator(const http::request_parser<http::string_body>& received_request, parsed_request_wrapper& parsed_request) :
     m_parsed_request(parsed_request), m_received_request(received_request)
     {
+
+        if (m_parsed_request.http_parsed_fields.find(http_fields::authorization) == m_parsed_request.http_parsed_fields.end())
+            throw std::runtime_error("no authorization header");
+
         std::string_view authorization_string = m_parsed_request.http_parsed_fields[http_fields::authorization];
 
-        auto credential_index = authorization_string.find("Credential=") + 11;
-        size_t slash_index;
+        auto credential_index = authorization_string.find("Credential=");
+        auto signed_headers_index = authorization_string.find("SignedHeaders=");
+        auto signature_index = authorization_string.find("Signature=");
 
-        if (credential_index != std::string::npos )
+        if (credential_index == std::string::npos || signed_headers_index == std::string::npos || signature_index == std::string::npos)
+            throw std::runtime_error("invalid authorization header");
+
+        m_algorithm = authorization_string.substr(0, credential_index - 1);
+
+        auto index_pointer = credential_index + 11;
+        for (int slashes = 0; slashes < 4; ++ slashes )
         {
-            for (int loop=0 ; loop < 4; ++loop)
+            auto slash_index = authorization_string.find_first_of('/', index_pointer);
+            if (slash_index == std::string::npos)
+                throw std::runtime_error("invalid authorization header");
+
+
+            switch (slashes)
             {
-                slash_index = authorization_string.find_first_of('/', credential_index);
-                if (slash_index != std::string::npos)
-                {
-                    if (loop == 0)
-                    {
-                        m_access_key = authorization_string.substr(credential_index, slash_index - credential_index);
-                    }
-                    else if (loop == 1)
-                    {
-                        m_date = authorization_string.substr(credential_index, slash_index - credential_index);
-                    }
-                    else if (loop == 2)
-                    {
-                        m_region = authorization_string.substr(credential_index, slash_index - credential_index);
-                    }
-                    else
-                    {
-                        m_service = authorization_string.substr(credential_index, slash_index - credential_index);
-                    }
-                    credential_index = slash_index + 1;
-                }
-                else
-                {
+                case 0:
+                    m_access_key = authorization_string.substr(index_pointer, slash_index - index_pointer);
                     break;
-                }
+                case 1:
+                    m_date = authorization_string.substr(index_pointer, slash_index - index_pointer);
+                    break;
+                case 2:
+                    m_region = authorization_string.substr(index_pointer, slash_index - index_pointer);
+                    break;
+                case 3:
+                    m_service = authorization_string.substr(index_pointer, slash_index - index_pointer);
+                    break;
             }
+
+            index_pointer = slash_index + 1;
         }
 
-        auto signature_index = authorization_string.find("Signature=") + 10;
-        if (signature_index != std::string::npos)
+        index_pointer = signed_headers_index + 14;
+        auto semi_colon_index = authorization_string.find_first_of(";,", index_pointer);
+        while (semi_colon_index != std::string::npos)
         {
-            m_signature = authorization_string.substr(signature_index);
-        }
 
-        auto signedheaders_index = authorization_string.find("SignedHeaders=") + 14;
-        if (signedheaders_index != std::string::npos)
-        {
-            auto semi_colon_index = authorization_string.find_first_of(';', signedheaders_index);
-            while (semi_colon_index != std::string::npos)
-            {
-                m_signed_headers.emplace(authorization_string.substr(signedheaders_index, semi_colon_index - signedheaders_index));
-                signedheaders_index = semi_colon_index+1;
-                semi_colon_index = authorization_string.find_first_of(';', signedheaders_index);
-            }
-            m_signed_headers.emplace(authorization_string.substr(signedheaders_index, authorization_string.find_first_of(',', signedheaders_index) - signedheaders_index));
-        }
+            m_signed_headers.emplace(authorization_string.substr(index_pointer, semi_colon_index - index_pointer));
 
-        if (m_signature.empty() || m_signed_headers.empty() || m_access_key.empty() || m_date.empty() || m_region.empty() || m_service.empty())
-            throw std::runtime_error("invalid authorization header given.");
+            if (authorization_string[semi_colon_index] == ',') [[unlikely]]
+                break;
 
-        if (m_parsed_request.http_parsed_fields.contains(http_fields::content_type))
-        {
-            bool contains_string = std::ranges::any_of(m_signed_headers,[](const std::string& str)
-            {
-                return str == "content-type";
-            });
-            if (!contains_string)
-                throw std::runtime_error("content-type must also be included in signed headers");
-        }
-
-        std::set<s3_fields> signed_headers_set;
-        for (const auto& header : m_signed_headers)
-        {
-            signed_headers_set.emplace(s3_field_to_enum(header));
-        }
-        for (const auto& value : m_parsed_request.s3_parsed_fields)
-        {
-            if (! signed_headers_set.contains(value.first))
-                throw std::runtime_error("signed headers must include all the x-amz tags given in the request");
+            index_pointer = semi_colon_index + 1;
+            semi_colon_index = authorization_string.find_first_of(";,", index_pointer);
 
         }
+
+        m_signature = authorization_string.substr(signature_index + 10);
+
+        if ( m_algorithm.empty() || m_access_key.empty() || m_date.empty() || m_region.empty()
+            || m_service.empty() || m_signed_headers.empty() || m_signature.empty())
+            throw std::runtime_error("invalid authorization header");
 
     }
 
@@ -107,7 +89,7 @@ namespace uh::cluster {
     s3_authenticator::get_canonical_uri() const
     {
 //        return std::string('/' + m_parsed_request.bucket_id + '/' + m_parsed_request.object_key + '\n');
-        return  std::string('/' + m_parsed_request.object_key + "\\n");
+        return  {'/' + m_parsed_request.object_key + "\\n" };
     }
 
 //------------------------------------------------------------------------------
@@ -120,13 +102,32 @@ namespace uh::cluster {
 
 //------------------------------------------------------------------------------
 
+    std::string to_hex(const std::string& sha)
+    {
+        if (sha.empty())
+        {
+            return {"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"};
+        }
+        else
+        {
+            std::stringstream ss;
+            for (unsigned char i: sha)
+            {
+                ss << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(i);
+            }
+
+            return std::move(ss.str());
+        }
+    }
+
+//------------------------------------------------------------------------------
 
     std::string
     sha_256(const std::string_view& payload)
     {
         if (payload.empty())
         {
-            return {"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"};
+            return {};
         }
         else
         {
@@ -134,57 +135,6 @@ namespace uh::cluster {
             SHA256((unsigned char *) payload.data(), payload.length(), result);
             return {reinterpret_cast<char*>(result), SHA256_DIGEST_LENGTH};
         }
-    }
-
-//------------------------------------------------------------------------------
-
-    std::string to_hex(const std::string& sha)
-    {
-        std::stringstream ss;
-        for (unsigned char i : sha)
-        {
-            ss << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(i);
-        }
-
-        return ss.str();
-    }
-
-//------------------------------------------------------------------------------
-
-    std::string
-    s3_authenticator::get_headers() const
-    {
-        std::multimap<std::string, std::string> lexically_sorted_headers;
-
-        // iterate through all headers
-        for (const auto& header : m_received_request.get() )
-        {
-            std::string header_name = header.name_string();
-            for (char& c : header_name)
-            {
-                c = std::tolower(static_cast<unsigned char>(c));
-            }
-
-            lexically_sorted_headers.emplace(header_name, header.value());
-        }
-
-        std::string canonical_header_string {};
-        std::string header_list_string {};
-
-        // TODO: what happens on multiple same headers, do we convert it to one header with multiple values?
-        for (const auto& pair: lexically_sorted_headers)
-        {
-            if (m_signed_headers.contains(pair.first))
-            {
-                canonical_header_string += pair.first + ":" + pair.second + "\\n";
-                header_list_string += pair.first + ";";
-            }
-        }
-        header_list_string.pop_back();
-        header_list_string += "\\n";
-
-
-        return {canonical_header_string + header_list_string};
     }
 
 //------------------------------------------------------------------------------
@@ -223,6 +173,44 @@ namespace uh::cluster {
         );
 
         return {reinterpret_cast<char*>(hmac_result), SHA256_DIGEST_LENGTH};
+    }
+
+//------------------------------------------------------------------------------
+
+    std::string
+    s3_authenticator::get_headers() const
+    {
+        std::multimap<std::string, std::string> lexically_sorted_headers;
+
+        // iterate through all headers
+        for (const auto& header : m_received_request.get() )
+        {
+            std::string header_name = header.name_string();
+            for (char& c : header_name)
+            {
+                c = std::tolower(static_cast<unsigned char>(c));
+            }
+
+            lexically_sorted_headers.emplace(header_name, header.value());
+        }
+
+        std::string canonical_header_string {};
+        std::string header_list_string {};
+
+        // TODO: what happens on multiple same headers, do we convert it to one header with multiple values?
+        for (const auto& pair: lexically_sorted_headers)
+        {
+            if (m_signed_headers.contains(pair.first))
+            {
+                canonical_header_string += pair.first + ":" + pair.second + "\\n";
+                header_list_string += pair.first + ";";
+            }
+        }
+        header_list_string.pop_back();
+        header_list_string += "\\n";
+
+
+        return {canonical_header_string + header_list_string};
     }
 
 //------------------------------------------------------------------------------
@@ -296,8 +284,7 @@ namespace uh::cluster {
     std::string
     s3_authenticator::get_string_to_sign() const
     {
-        auto tmp = "AWS4-HMAC-SHA256\\n" + get_scope() + to_hex(sha_256(get_canonical_request()));
-        return tmp;
+        return "AWS4-HMAC-SHA256\\n" + get_scope() + to_hex(sha_256(get_canonical_request()));
     }
 
 //------------------------------------------------------------------------------
@@ -317,13 +304,6 @@ namespace uh::cluster {
     void
     s3_authenticator::authenticate()
     {
-        std::cout << get_string_to_sign() << std::endl;
-        std::cout << "-------------------" << std::endl;
-        std::cout << m_received_request.get().body() << std::endl;
-        std::cout << "-------------------" << std::endl;
-
-        std::cout << "SHA 256 of body is: " << to_hex(sha_256(m_received_request.get().body())) << std::endl;
-
         auto calculated_signature = to_hex(hmac_sha_256( get_string_to_sign(), signing_key()));
         if (m_signature != calculated_signature)
             throw std::runtime_error("authentication failed");
