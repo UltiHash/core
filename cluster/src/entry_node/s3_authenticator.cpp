@@ -12,6 +12,7 @@ namespace uh::cluster {
 //------------------------------------------------------------------------------
 
     extern s3_fields s3_field_to_enum(const std::string &field);
+    extern http_fields http_field_to_enum(const std::string &field);
 
 //------------------------------------------------------------------------------
 
@@ -205,35 +206,35 @@ namespace uh::cluster {
     std::string
     s3_authenticator::get_headers() const
     {
-        //TODO: inefficient as we make maps and then copy the headers value a lot
-        std::multimap<std::string, std::string> lexically_sorted_headers;
-
-        // iterate through all headers
-        for (const auto& header : m_received_request.get() )
-        {
-            std::string header_name = header.name_string();
-            for (char& c : header_name)
-            {
-                c = std::tolower(static_cast<unsigned char>(c));
-            }
-
-            lexically_sorted_headers.emplace(header_name, header.value());
-        }
-
         std::string canonical_header_string {};
         std::string header_list_string {};
 
         // TODO: what happens on multiple same headers, do we convert it to one header with multiple values?
-        //TODO: switch the comparison from lexically_sorted_headers to lexically sorted signed headers as we have to do
-        // less comparision
-        for (const auto& pair: lexically_sorted_headers)
+        for (const auto& header : m_signed_headers)
         {
-            if (m_signed_headers.contains(pair.first))
+            if (header.starts_with("x-"))
             {
-                canonical_header_string += pair.first + ":" + pair.second + "\\n";
-                header_list_string += pair.first + ";";
+                auto converted_s3_enum = s3_field_to_enum(header);
+                if (m_parsed_request.s3_parsed_fields.contains(converted_s3_enum))
+                {
+                    canonical_header_string += header + ":" + std::string(m_parsed_request.s3_parsed_fields[converted_s3_enum]) + "\\n";
+                }
+                else
+                    throw std::runtime_error("one of the given signed header doesn't exists");
             }
+            else
+            {
+                auto converted_http_enum = http_field_to_enum(header);
+                if (m_parsed_request.http_parsed_fields.contains(converted_http_enum))
+                {
+                    canonical_header_string += header + ":" + std::string(m_parsed_request.http_parsed_fields[converted_http_enum]) + "\\n";
+                }
+                else
+                    throw std::runtime_error("one of the given signed header doesn't exists");
+            }
+            header_list_string += header + ";";
         }
+
         header_list_string.pop_back();
         header_list_string += "\\n";
 

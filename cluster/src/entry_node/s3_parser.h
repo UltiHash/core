@@ -93,7 +93,8 @@ namespace uh::cluster {
     struct parsed_request_wrapper
     {
         enum http_fields verb;
-        std::unordered_multimap <s3_fields, std::string_view> s3_parsed_fields;
+        // TODO: make it multimap or at least combine the multiple header values into one
+        std::unordered_map <s3_fields, std::string_view> s3_parsed_fields;
         std::unordered_map <http_fields, std::string_view> http_parsed_fields;
         s3_req_type req_type = not_initialized;
         std::string bucket_id;
