@@ -20,12 +20,14 @@ public:
         m_directory_nodes (directory_nodes)
     {}
 
-    coro <void> handle (const parsed_request_wrapper& req) {
+    coro <std::stringstream> handle (const parsed_request_wrapper& req) {
 
         const auto size_mb = static_cast <double> (req.body.size()) / static_cast <double> (1024ul * 1024ul);
 
         std::chrono::time_point <std::chrono::steady_clock> timer;
         const auto start = std::chrono::steady_clock::now ();
+
+        std::stringstream metrics;
 
         if (req.req_type == s3_req_type::put_object) {
 
@@ -34,10 +36,13 @@ public:
             co_await m.get().send (DEDUPE_REQ, req.body);
             const auto h = co_await m.get().recv_header();
             const auto resp = co_await m.get().recv_dedupe_response(h);
-            std::cout << "effective size " << static_cast <double> (resp.second.effective_size) / static_cast <double> (1024ul * 1024ul) << " MB" << std::endl;
+            auto effective_size = static_cast <double> (resp.second.effective_size) / static_cast <double> (1024ul * 1024ul);
+            std::cout << "effective size " << effective_size << " MB" << std::endl;
             std::cout << "original size " << size_mb << " MB" << std::endl;
-            std::cout << "space saving " << 1.0 - static_cast <double> (resp.second.effective_size) / static_cast <double> (req.body.size()) << std::endl;
+            auto space_saving = 1.0 - static_cast <double> (resp.second.effective_size) / static_cast <double> (req.body.size());
+            std::cout << "space saving " << space_saving << std::endl;
 
+            metrics << "effective size: " << effective_size << " MB, original size: " << size_mb << " MB, space savings: " << space_saving << '\n';
             // TODO send the address resp.second.addr to the directory
             //co_await m.get().send_rest_request(DIR_PUT_OBJ_REQ, req);
         }
@@ -51,7 +56,7 @@ public:
         std::cout << "duration " << duration.count() << " s" << std::endl;
         const auto bandwidth = size_mb / duration.count();
         std::cout << "bandwidth " << bandwidth << "MB/s" << std::endl;
-        co_return;
+        co_return metrics;
     }
 
 private:

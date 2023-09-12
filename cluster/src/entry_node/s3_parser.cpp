@@ -142,7 +142,6 @@ namespace uh::cluster {
                 {
                     return std::tolower(c);
                 });
-                std::cout << recev_header << std::endl;
                 m_parsed_req_wrapper.http_parsed_fields.emplace(http_field_to_enum(recev_header), header.value());
             }
         }

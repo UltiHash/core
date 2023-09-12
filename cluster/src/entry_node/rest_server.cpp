@@ -72,7 +72,16 @@ namespace uh::cluster
 //                s3_authenticate.authenticate();
 
 
-                co_await m_handler.handle (parsed_request);
+                std::stringstream response_stream = co_await m_handler.handle (parsed_request);
+
+                // send response
+                http::response<http::string_body> res{http::status::bad_request, 11};
+                res.set(http::field::server, BOOST_BEAST_VERSION_STRING);
+                res.set(http::field::content_type, "text/html");
+                res.body() = response_stream.str();
+                res.prepare_payload();
+                http::write(stream, res);
+                stream.socket().shutdown(tcp::socket::shutdown_send, ec);
 
                 bool keep_alive = received_request.keep_alive();
                 if(! keep_alive)
