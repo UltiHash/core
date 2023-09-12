@@ -51,30 +51,8 @@ endif()
 
 add_subdirectory(lib)
 
-if(BUILD_TOOLS)
-add_subdirectory(tools)
-endif()
-
-if(BUILD_SERVER_DB)
-add_subdirectory(server-db)
-endif()
-
-if(BUILD_SERVER_AGENCY)
-add_subdirectory(server-agency)
-endif()
-
-if(BUILD_CLIENT_SHELL)
-add_subdirectory(client-shell)
-endif()
-
-if(BUILD_CLIENT_FUSE)
-add_subdirectory(client-fuse)
-endif()
-
 if(BUILD_CLUSTER)
     add_subdirectory(cluster)
 endif()
-
-add_subdirectory(client-sdk)
 
 enable_testing()
