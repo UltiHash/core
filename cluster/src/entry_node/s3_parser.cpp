@@ -87,6 +87,7 @@ namespace uh::cluster {
                         {"cache-control", http_fields::cache_control},
                         {"content-disposition", http_fields::content_disposition},
                         {"content-encoding", http_fields::content_encoding},
+                        {"accept-encoding", http_fields::accept_encoding},
                         {"content-language", http_fields::content_language},
                         {"content-length", http_fields::content_length},
                         {"content-md5", http_fields::content_md5},
