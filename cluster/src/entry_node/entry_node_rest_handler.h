@@ -20,7 +20,11 @@ public:
         m_directory_nodes (directory_nodes)
     {}
 
-    coro <std::stringstream> handle (const parsed_request_wrapper& req) {
+    coro < http::response<http::string_body> > handle (const parsed_request_wrapper& req) {
+
+        http::response<http::string_body> res{http::status::ok, 11};
+        res.set(http::field::server, "UltiHash v0.2.0");
+        res.set(http::field::content_type, "text/html");
 
         const auto size_mb = static_cast <double> (req.body.size()) / static_cast <double> (1024ul * 1024ul);
 
@@ -55,8 +59,14 @@ public:
         const std::chrono::duration <double> duration = stop - start;
         std::cout << "duration " << duration.count() << " s" << std::endl;
         const auto bandwidth = size_mb / duration.count();
-        std::cout << "bandwidth " << bandwidth << "MB/s" << std::endl;
-        co_return metrics;
+        std::cout << "bandwidth " << bandwidth << " MB/s" << std::endl;
+
+        metrics << "bandwidth " << bandwidth << " MB/s";
+
+        res.body() = metrics.str();
+        res.prepare_payload();
+
+        co_return res;
     }
 
 private:

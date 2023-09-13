@@ -71,35 +71,25 @@ namespace uh::cluster
 //                s3_authenticator s3_authenticate(received_request, parsed_request);
 //                s3_authenticate.authenticate();
 
-
-                std::stringstream response_stream = co_await m_handler.handle (parsed_request);
+                auto response = co_await m_handler.handle(parsed_request);
 
                 // send response
-                http::response<http::string_body> res{http::status::bad_request, 11};
-                res.set(http::field::server, BOOST_BEAST_VERSION_STRING);
-                res.set(http::field::content_type, "text/html");
-                res.body() = response_stream.str();
-                res.prepare_payload();
-                http::write(stream, res);
-                stream.socket().shutdown(tcp::socket::shutdown_send, ec);
+                co_await http::async_write(stream, response, net::use_awaitable);
 
-                bool keep_alive = received_request.keep_alive();
-                if(! keep_alive)
+                if(! received_request.keep_alive() )
                 {
                     break;
                 }
             }
         }
         catch (boost::system::system_error &se) {
-            if (se.code() != http::error::end_of_stream) {
-                // Send a response about the error and shut down
+            if (se.code() != http::error::end_of_stream)
+            {
                 http::response<http::string_body> res{http::status::bad_request, 11};
                 res.set(http::field::server, BOOST_BEAST_VERSION_STRING);
                 res.set(http::field::content_type, "text/html");
                 res.body() = se.code().message() + '\n';
                 res.prepare_payload();
-
-                // TODO: Should this write also be async? If so how to use it with coroutine
                 http::write(stream, res);
                 stream.socket().shutdown(tcp::socket::shutdown_send, ec);
                 throw;
@@ -107,14 +97,11 @@ namespace uh::cluster
         }
         catch (const std::exception& e)
         {
-            // Send a response about the error and shut down
             http::response<http::string_body> res{http::status::bad_request, 11};
             res.set(http::field::server, BOOST_BEAST_VERSION_STRING);
             res.set(http::field::content_type, "text/html");
             res.body() = e.what();
             res.prepare_payload();
-
-            // TODO: Should this write also be async? If so how to use it with coroutine
             http::write(stream, res);
             stream.socket().shutdown(tcp::socket::shutdown_send, ec);
             throw;
