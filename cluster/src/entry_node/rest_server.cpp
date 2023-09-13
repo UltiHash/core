@@ -61,20 +61,41 @@ namespace uh::cluster
             for (;;) {
                 stream.expires_after(std::chrono::seconds(10000));
 
-                http::request_parser<http::string_body> received_request;
+                http::request_parser<http::dynamic_body> received_request;
                 received_request.body_limit((std::numeric_limits<std::uint64_t>::max)());
-                co_await http::async_read(stream, buffer, received_request, net::use_awaitable);
 
-                s3_parser s3_parser(received_request);
-                auto parsed_request = s3_parser.parse();
+                // read header first
+                co_await http::async_read_header(stream, buffer, received_request, net::use_awaitable);
+
+                // expect-100-continue
+                if (received_request.get()[http::field::expect] == "100-continue")
+                {
+                    // handle server load here and send response accordingly
+                    http::response<http::empty_body> res;
+                    res.version(11);
+                    res.result(http::status::continue_);
+                    co_await http::async_write(stream, res, net::use_awaitable);
+                }
+
+                while (!received_request.is_done())
+                {
+                    co_await http::async_read(stream, buffer, received_request, net::use_awaitable);
+                    std::cout << received_request.get().body().size() << std::endl;
+                }
+
+//                s3_parser s3_parser(received_request);
+//                auto parsed_request = s3_parser.parse();
+//
+//                std::cout << received_request.get().body().size() << std::endl;
+
 
 //                s3_authenticator s3_authenticate(received_request, parsed_request);
 //                s3_authenticate.authenticate();
 
-                auto response = co_await m_handler.handle(parsed_request);
+//                auto response = co_await m_handler.handle(parsed_request);
 
                 // send response
-                co_await http::async_write(stream, response, net::use_awaitable);
+//                co_await http::async_write(stream, response, net::use_awaitable);
 
                 if(! received_request.keep_alive() )
                 {

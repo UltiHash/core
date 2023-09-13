@@ -88,6 +88,7 @@ namespace uh::cluster {
                         {"content-disposition", http_fields::content_disposition},
                         {"content-encoding", http_fields::content_encoding},
                         {"accept-encoding", http_fields::accept_encoding},
+                        {"transfer-encoding", http_fields::transfer_encoding},
                         {"content-language", http_fields::content_language},
                         {"content-length", http_fields::content_length},
                         {"content-md5", http_fields::content_md5},

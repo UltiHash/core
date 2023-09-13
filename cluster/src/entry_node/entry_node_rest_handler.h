@@ -46,7 +46,7 @@ public:
             auto space_saving = 1.0 - static_cast <double> (resp.second.effective_size) / static_cast <double> (req.body.size());
             std::cout << "space saving " << space_saving << std::endl;
 
-            metrics << "effective size: " << effective_size << " MB, original size: " << size_mb << " MB, space savings: " << space_saving << '\n';
+            metrics << "effective size: " << effective_size << " MB, original size: " << size_mb << " MB, space savings: " << space_saving;
             // TODO send the address resp.second.addr to the directory
             //co_await m.get().send_rest_request(DIR_PUT_OBJ_REQ, req);
         }
