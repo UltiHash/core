@@ -57,6 +57,7 @@ namespace uh::cluster
         std::shared_ptr <net::io_context> m_ioc;
         std::vector<std::thread> m_thread_container {};
         entry_node_rest_handler m_handler;
+        bool m_server_busy = false;
 
         const boost::asio::ip::address m_server_address = boost::asio::ip::make_address("0.0.0.0");
 

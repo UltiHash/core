@@ -61,7 +61,7 @@ namespace uh::cluster
             for (;;) {
                 stream.expires_after(std::chrono::seconds(10000));
 
-                http::request_parser<http::dynamic_body> received_request;
+                http::request_parser<http::empty_body> received_request;
                 received_request.body_limit((std::numeric_limits<std::uint64_t>::max)());
 
                 // read header first
@@ -70,24 +70,36 @@ namespace uh::cluster
                 // expect-100-continue
                 if (received_request.get()[http::field::expect] == "100-continue")
                 {
-                    // handle server load here and send response accordingly
                     http::response<http::empty_body> res;
                     res.version(11);
-                    res.result(http::status::continue_);
+
+                    if (!m_server_busy)
+                        res.result(http::status::continue_);
+                    else
+                        res.result(http::status::payload_too_large);
+
                     co_await http::async_write(stream, res, net::use_awaitable);
                 }
 
-                while (!received_request.is_done())
-                {
-                    co_await http::async_read(stream, buffer, received_request, net::use_awaitable);
-                    std::cout << received_request.get().body().size() << std::endl;
-                }
+//                // Process body in chunks
+//                std::vector<char> chunk(450029190); // Adjust the chunk size as needed
+//                while ()
+//                {
+//                    std::size_t bytes_transferred = co_await stream.async_read_some(net::buffer(chunk), net::use_awaitable);
+//                    std::cout << bytes_transferred << std::endl;
+//                    if (bytes_transferred == 0)
+//                        break; // End of body
+//
+//                }
 
+//                std::cout << std::string{chunk.data(), chunk.size()} << std::endl;
+
+//                // check for invalid headers before getting the body
 //                s3_parser s3_parser(received_request);
 //                auto parsed_request = s3_parser.parse();
 //
+//                co_await http::async_read(stream, buffer, received_request, net::use_awaitable);
 //                std::cout << received_request.get().body().size() << std::endl;
-
 
 //                s3_authenticator s3_authenticate(received_request, parsed_request);
 //                s3_authenticate.authenticate();
