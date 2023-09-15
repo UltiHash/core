@@ -2,6 +2,7 @@
 #include "rest_server.h"
 #include "s3_parser.h"
 #include "s3_authenticator.h"
+#include <fstream>
 
 namespace uh::cluster
 {
@@ -66,6 +67,7 @@ namespace uh::cluster
 
                 // read header first
                 co_await http::async_read_header(stream, buffer, received_request, net::use_awaitable);
+                std::cout << received_request.get().base() << std::endl;
 
                 // expect-100-continue
                 if (received_request.get()[http::field::expect] == "100-continue")
@@ -80,6 +82,37 @@ namespace uh::cluster
 
                     co_await http::async_write(stream, res, net::use_awaitable);
                 }
+
+                // Determine the content length from the header
+                if (received_request.get().find(http::field::content_length) != received_request.get().end())
+                {
+                    std::size_t content_length = std::stoull(received_request.get()[http::field::content_length]);
+
+                    std::vector<char> body_buffer(content_length);
+                    auto data_left = content_length- buffer.size();
+
+                    // copy remaining bytes from flat buffer to body_buffer
+                    boost::asio::buffer_copy(boost::asio::buffer(body_buffer), buffer.data());
+
+                    // TODO: async read starts to write from the beginning
+                    auto size_transferred = co_await boost::asio::async_read(stream.socket(), boost::asio::buffer(body_buffer), boost::asio::transfer_exactly(data_left), boost::asio::use_awaitable);
+
+                    if (size_transferred + buffer.size() != content_length)
+                    {
+                        throw std::runtime_error("error reading the http body");
+                    }
+
+                    std::ofstream output_file("/home/ankit/Downloads/output_file.txt", std::ios::binary);
+                    output_file.write(body_buffer.data(), body_buffer.size());
+                    output_file.close();
+
+                    std::cout << std::string(body_buffer.data(), body_buffer.size()) << std::endl;
+                }
+                else
+                {
+                    throw std::runtime_error("please specify the content length");
+                }
+
 
 //                // Process body in chunks
 //                std::vector<char> chunk(450029190); // Adjust the chunk size as needed
