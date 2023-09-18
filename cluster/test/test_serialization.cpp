@@ -35,7 +35,6 @@ BOOST_AUTO_TEST_CASE (directory_request_serialization) {
 
     BOOST_CHECK(req_orig == req_deserialized);
 
-
 }
 
 // ---------------------------------------------------------------------

@@ -49,6 +49,17 @@ namespace uh::cluster {
             co_return std::pair {message_header, std::move (dedupe_resp)};
         }
 
+        coro <directory_request> recv_directory_request (const header& message_header) {
+            std::vector<char> data;
+            data.resize(message_header.size);
+            register_read_buffer(data);
+            co_await recv_buffers(message_header);
+
+            directory_request req;
+            zpp::bits::in{data}(req).or_throw();
+            co_return std::move (req);
+        }
+
         coro <void> send_address (const message_types type, const address& addr) {
             register_write_buffer (addr.pointers);
             register_write_buffer(addr.sizes);
@@ -79,18 +90,6 @@ namespace uh::cluster {
             register_write_buffer(data);
             co_await send_buffers(type);
         }
-
-        coro <directory_request> recv_directory_request (const header& message_header) {
-            std::vector<char> data;
-            data.resize(message_header.size);
-            register_read_buffer(data);
-            co_await recv_buffers(message_header);
-
-            directory_request req;
-            zpp::bits::in{data}(req).or_throw();
-            co_return std::move (req);
-        }
-
     };
 
 } // end namespace uh::cluster

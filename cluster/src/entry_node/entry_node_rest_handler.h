@@ -34,12 +34,11 @@ public:
         std::stringstream metrics;
 
         if (req.req_type == s3_req_type::put_object) {
+            auto m_dedup = m_dedupe_nodes.at(get_round_robin_index(m_dedupe_node_index, m_dedupe_nodes.size())).acquire_messenger();
+            co_await m_dedup.get().send (DEDUPE_REQ, req.body);
+            const auto h_dedup = co_await m_dedup.get().recv_header();
+            const auto resp = co_await m_dedup.get().recv_dedupe_response(h_dedup);
 
-
-            auto m = m_dedupe_nodes.at(get_round_robin_index(m_dedupe_node_index, m_dedupe_nodes.size())).acquire_messenger();
-            co_await m.get().send (DEDUPE_REQ, req.body);
-            const auto h = co_await m.get().recv_header();
-            const auto resp = co_await m.get().recv_dedupe_response(h);
             auto effective_size = static_cast <double> (resp.second.effective_size) / static_cast <double> (1024ul * 1024ul);
             std::cout << "effective size " << effective_size << " MB" << std::endl;
             std::cout << "original size " << size_mb << " MB" << std::endl;
@@ -49,6 +48,17 @@ public:
             metrics << "effective size: " << effective_size << " MB, original size: " << size_mb << " MB, space savings: " << space_saving;
             // TODO send the address resp.second.addr to the directory
             //co_await m.get().send_rest_request(DIR_PUT_OBJ_REQ, req);
+            auto m_dir = m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size())).acquire_messenger();
+            directory_request dir_req;
+            dir_req.bucket_id = req.bucket_id;
+            dir_req.object_key = req.object_key;
+            dir_req.addr = resp.second.addr;
+            co_await m_dir.get().send_directory_request(DIR_PUT_OBJ_REQ, dir_req);
+            const auto h_dir = co_await m_dir.get().recv_header();
+            if(h_dir.type == FAILURE) {
+                throw std::runtime_error("Failed to add the fragment address of object " + dir_req.bucket_id + "/" + dir_req.object_key + " to the directory.");
+                //TODO: consider using custom exceptions to indicate if and how the error gets communicated to the HTTP client.
+            }
         }
         else {
             // TODO send the request to the directory
