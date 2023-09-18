@@ -13,30 +13,56 @@ namespace uh::cluster {
         parsed_request_wrapper& m_parsed_request;
         const http::request_parser<http::string_body>& m_received_request;
 
+        std::string m_algorithm {};
         std::string m_access_key {};
+        std::string m_date {};
+        std::string m_region {};
+        std::string m_service {};
+
+        std::string m_secret_key = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY";
+
         std::set<std::string> m_signed_headers {};
         std::string m_signature {};
 
     public:
-        s3_authenticator(const http::request_parser<http::string_body>& received_request, parsed_request_wrapper& parsed_request);
+        s3_authenticator(const http::request_parser<http::string_body>& received_request,
+                         parsed_request_wrapper& parsed_request);
 
-        std::string
+        [[nodiscard]] std::string
         get_canonical_uri() const;
 
-        std::string
-        get_canonical_query_string();
+        [[nodiscard]] std::string
+        get_canonical_query_string() const;
 
-        std::string
-        get_headers();
+        [[nodiscard]] std::string
+        get_headers() const;
 
-        std::string
-        get_canonical_request();
+        [[nodiscard]] std::string
+        get_canonical_request() const;
 
-        std::string
-        get_string_to_sign();
+        [[nodiscard]] std::string
+        get_string_to_sign() const;
+
+        [[nodiscard]] std::string
+        get_formatted_date() const;
+
+        [[nodiscard]] std::string
+        get_scope() const;
+
+        [[nodiscard]] std::string
+        signing_key() const;
+
+        [[nodiscard]] std::string
+        ISO_8601_timestamp() const;
+
+        [[nodiscard]] std::string
+        hmac_sha_256(const std::string& payload) const;
+
+        [[nodiscard]] std::string
+        hmac_sha_256(const std::string& payload, const std::string& signing_key) const;
 
         void
-        authenticate();
+        authenticate() const;
 
     };
 

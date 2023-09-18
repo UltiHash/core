@@ -22,7 +22,7 @@ struct set_full_comparator {
 
         ospan <char> buf (set_data.m_data.size);
         co_await m_storage.get().read (buf.data.get(), set_data.m_data.pointer, set_data.m_data.size);
-        co_return std::pair {new_data.compare({buf.data.get(), set_data.m_data.size}), std::move (buf)};
+        co_return std::move (std::pair {new_data.compare({buf.data.get(), set_data.m_data.size}), std::move (buf)});
     }
 
     const std::reference_wrapper <global_data> m_storage;

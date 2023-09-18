@@ -9,8 +9,8 @@ namespace uh::cluster {
             {
                     { s3_req_type::put_object, { x_amz_acl, x_amz_grant_full_control, x_amz_grant_read, x_amz_grant_read_acp,
                                                  x_amz_grant_write_acp, x_amz_storage_class, x_amz_request_payer, x_amz_tagging,
-                                                 x_amz_expected_bucket_owner, x_amz_meta_author } },
-                    { s3_req_type::get_object, { x_amz_request_payer, x_amz_expected_bucket_owner } },
+                                                 x_amz_expected_bucket_owner, x_amz_meta_author, x_amz_content_sha256 } },
+                    { s3_req_type::get_object, { x_amz_request_payer, x_amz_expected_bucket_owner, x_amz_content_sha256 } }, //TODO: put the common x-amz-header outside this enum
                     { s3_req_type::copy_object, { x_amz_acl, x_amz_copy_source, x_amz_copy_source_if_match, x_amz_copy_source_if_modified_since,
                                                   x_amz_copy_source_if_none_match, x_amz_copy_source_if_unmodified_since, x_amz_grant_full_control, x_amz_grant_read,
                                                   x_amz_grant_read_acp, x_amz_grant_write_acp, x_amz_metadata_directive, x_amz_tagging_directive,
@@ -54,6 +54,7 @@ namespace uh::cluster {
                         {"x-amz-copy-source",   x_amz_copy_source},
                         {"x-amz-metadata-directive",   x_amz_metadata_directive},
                         {"x-amz-tagging-directive",   x_amz_tagging_directive},
+                        {"x-amz-content-sha256", x_amz_content_sha256},
 
                 };
 
@@ -70,33 +71,36 @@ namespace uh::cluster {
 
 //------------------------------------------------------------------------------
 
+    // make the map in lowercase
     http_fields http_field_to_enum (const std::string &field)
     {
         static const std::unordered_map<std::string, http_fields> enum_map =
                 {
-                        {"Host", http_fields::host},
-                        {"User-Agent", http_fields::user_agent},
-                        {"Accept" , http_fields::http_accept},
-                        {"Connection", http_fields::connection},
-                        {"Server", http_fields::server},
-                        {"PUT", http_fields::put},
-                        {"Authorization", http_fields::authorization},
-                        {"Expect", http_fields::expect},
-                        {"Cache-Control", http_fields::cache_control},
-                        {"Content-Disposition", http_fields::content_disposition},
-                        {"Content-Encoding", http_fields::content_encoding},
-                        {"Content-Language", http_fields::content_language},
-                        {"Content-Length", http_fields::content_length},
-                        {"Content-MD5", http_fields::content_md5},
-                        {"Content-Type", http_fields::content_type},
-                        {"Expires", http_fields::expires},
-                        {"GET", http_fields::get},
-                        {"If-Match", http_fields::if_match},
-                        {"If-Modified-Since", http_fields::if_modified_since},
-                        {"If-None-Match", http_fields::if_none_match},
-                        {"If-Unmodified-Since", http_fields::if_unmodified_since},
-                        {"Range", http_fields::range},
-                        {"DELETE", http_fields::delete_},
+                        {"host", http_fields::host},
+                        {"user-agent", http_fields::user_agent},
+                        {"accept" , http_fields::http_accept},
+                        {"connection", http_fields::connection},
+                        {"server", http_fields::server},
+                        {"put", http_fields::put},
+                        {"authorization", http_fields::authorization},
+                        {"expect", http_fields::expect},
+                        {"cache-control", http_fields::cache_control},
+                        {"content-disposition", http_fields::content_disposition},
+                        {"content-encoding", http_fields::content_encoding},
+                        {"accept-encoding", http_fields::accept_encoding},
+                        {"transfer-encoding", http_fields::transfer_encoding},
+                        {"content-language", http_fields::content_language},
+                        {"content-length", http_fields::content_length},
+                        {"content-md5", http_fields::content_md5},
+                        {"content-type", http_fields::content_type},
+                        {"expires", http_fields::expires},
+                        {"get", http_fields::get},
+                        {"if-match", http_fields::if_match},
+                        {"if-modified-since", http_fields::if_modified_since},
+                        {"if-none-match", http_fields::if_none_match},
+                        {"if-unmodified-since", http_fields::if_unmodified_since},
+                        {"range", http_fields::range},
+                        {"delete", http_fields::delete_},
                 };
 
         auto it = enum_map.find(field);
@@ -134,11 +138,21 @@ namespace uh::cluster {
             }
             else
             {
-                m_parsed_req_wrapper.http_parsed_fields.emplace(http_field_to_enum(header.name_string()), header.value());
+                std::string recev_header = header.name_string();
+                std::transform(recev_header.begin(), recev_header.end(), recev_header.begin(), [](unsigned char c)
+                {
+                    return std::tolower(c);
+                });
+                m_parsed_req_wrapper.http_parsed_fields.emplace(http_field_to_enum(recev_header), header.value());
             }
         }
 
-        m_parsed_req_wrapper.verb = http_field_to_enum(to_string(m_recv_req.get().base().method()));
+        std::string verb_string = to_string(m_recv_req.get().base().method());
+        std::transform(verb_string.begin(), verb_string.end(), verb_string.begin(), [](unsigned char c)
+        {
+            return std::tolower(c);
+        });
+        m_parsed_req_wrapper.verb = http_field_to_enum(verb_string);
         m_target = m_recv_req.get().base().target();
 
         auto index = m_target.find('?');

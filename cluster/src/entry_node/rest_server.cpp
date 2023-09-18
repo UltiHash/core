@@ -2,6 +2,7 @@
 #include "rest_server.h"
 #include "s3_parser.h"
 #include "s3_authenticator.h"
+#include <fstream>
 
 namespace uh::cluster
 {
@@ -35,7 +36,7 @@ namespace uh::cluster
     void
     rest_server::run()
     {
-        std::cout << "starting server";
+        std::cout << "starting server" << std::endl;
 
         for(auto i = 0 ; i < m_config.threads - 1 ; i++)
             m_thread_container.emplace_back(
@@ -44,7 +45,6 @@ namespace uh::cluster
                         m_ioc->run();
                     });
 
-        // the calling thread is also running the I/O service
         m_ioc->run();
     }
 
@@ -52,7 +52,7 @@ namespace uh::cluster
 
     net::awaitable<void>
     rest_server::do_session(tcp_stream stream) {
-        std::cout << "connection from: " << stream.socket().remote_endpoint();
+        std::cout << "connection from: " << stream.socket().remote_endpoint() << std::endl;
 
         // This buffer is required to persist across reads
         beast::flat_buffer buffer;
@@ -62,37 +62,100 @@ namespace uh::cluster
             for (;;) {
                 stream.expires_after(std::chrono::seconds(10000));
 
-                http::request_parser<http::string_body> received_request;
+                http::request_parser<http::empty_body> received_request;
                 received_request.body_limit((std::numeric_limits<std::uint64_t>::max)());
-                co_await http::async_read(stream, buffer, received_request, net::use_awaitable);
+
+                // read header first
+                co_await http::async_read_header(stream, buffer, received_request, net::use_awaitable);
+                std::cout << received_request.get().base() << std::endl;
+
+                // expect-100-continue
+                if (received_request.get()[http::field::expect] == "100-continue")
+                {
+                    http::response<http::empty_body> res;
+                    res.version(11);
+
+                    if (!m_server_busy)
+                        res.result(http::status::continue_);
+                    else
+                        res.result(http::status::payload_too_large);
+
+                    co_await http::async_write(stream, res, net::use_awaitable);
+                }
+
+                // Determine the content length from the header
+                if (received_request.get().find(http::field::content_length) != received_request.get().end())
+                {
+                    std::size_t content_length = std::stoull(received_request.get()[http::field::content_length]);
+
+                    std::vector<char> body_buffer(content_length);
+                    auto data_left = content_length- buffer.size();
+
+                    // copy remaining bytes from flat buffer to body_buffer
+                    boost::asio::buffer_copy(boost::asio::buffer(body_buffer), buffer.data());
+
+                    // TODO: async read starts to write from the beginning
+                    auto size_transferred = co_await boost::asio::async_read(stream.socket(), boost::asio::buffer(body_buffer), boost::asio::transfer_exactly(data_left), boost::asio::use_awaitable);
+
+                    if (size_transferred + buffer.size() != content_length)
+                    {
+                        throw std::runtime_error("error reading the http body");
+                    }
+
+                    std::ofstream output_file("/home/ankit/Downloads/output_file.txt", std::ios::binary);
+                    output_file.write(body_buffer.data(), body_buffer.size());
+                    output_file.close();
+
+                    std::cout << std::string(body_buffer.data(), body_buffer.size()) << std::endl;
+                }
+                else
+                {
+                    throw std::runtime_error("please specify the content length");
+                }
 
 
-                s3_parser s3_parser(received_request);
-                auto parsed_request = s3_parser.parse();
+//                // Process body in chunks
+//                std::vector<char> chunk(450029190); // Adjust the chunk size as needed
+//                while ()
+//                {
+//                    std::size_t bytes_transferred = co_await stream.async_read_some(net::buffer(chunk), net::use_awaitable);
+//                    std::cout << bytes_transferred << std::endl;
+//                    if (bytes_transferred == 0)
+//                        break; // End of body
+//
+//                }
 
-                s3_authenticator s3_authenticate(received_request, parsed_request);
-                s3_authenticate.authenticate();
+//                std::cout << std::string{chunk.data(), chunk.size()} << std::endl;
 
+//                // check for invalid headers before getting the body
+//                s3_parser s3_parser(received_request);
+//                auto parsed_request = s3_parser.parse();
+//
+//                co_await http::async_read(stream, buffer, received_request, net::use_awaitable);
+//                std::cout << received_request.get().body().size() << std::endl;
 
-                co_await m_handler.handle (parsed_request);
+//                s3_authenticator s3_authenticate(received_request, parsed_request);
+//                s3_authenticate.authenticate();
 
-                bool keep_alive = received_request.keep_alive();
-                if(! keep_alive)
+//                auto response = co_await m_handler.handle(parsed_request);
+
+                // send response
+//                co_await http::async_write(stream, response, net::use_awaitable);
+
+                if(! received_request.keep_alive() )
                 {
                     break;
                 }
             }
         }
         catch (boost::system::system_error &se) {
-            if (se.code() != http::error::end_of_stream) {
-                // Send a response about the error and shut down
+            if (se.code() != http::error::end_of_stream)
+            {
                 http::response<http::string_body> res{http::status::bad_request, 11};
                 res.set(http::field::server, BOOST_BEAST_VERSION_STRING);
                 res.set(http::field::content_type, "text/html");
                 res.body() = se.code().message() + '\n';
                 res.prepare_payload();
-
-                // TODO: Should this write also be async? If so how to use it with coroutine
                 http::write(stream, res);
                 stream.socket().shutdown(tcp::socket::shutdown_send, ec);
                 throw;
@@ -100,14 +163,11 @@ namespace uh::cluster
         }
         catch (const std::exception& e)
         {
-            // Send a response about the error and shut down
             http::response<http::string_body> res{http::status::bad_request, 11};
             res.set(http::field::server, BOOST_BEAST_VERSION_STRING);
             res.set(http::field::content_type, "text/html");
             res.body() = e.what();
             res.prepare_payload();
-
-            // TODO: Should this write also be async? If so how to use it with coroutine
             http::write(stream, res);
             stream.socket().shutdown(tcp::socket::shutdown_send, ec);
             throw;
@@ -150,16 +210,21 @@ namespace uh::cluster
                             }
                             catch (const std::exception &e)
                             {
-                                std::cout << "Error in session: [" << conn_address << ":" << conn_port << "] " << e.what();
+                                std::cout << "Error in session: [" << conn_address << ":" << conn_port << "] " << e.what() << "\n";
                             }
                     });
         }
 
     }
 
-    std::shared_ptr<boost::asio::io_context> rest_server::get_executor() const {
+//------------------------------------------------------------------------------
+
+    std::shared_ptr<boost::asio::io_context> rest_server::get_executor() const
+    {
         return m_ioc;
     }
+
+//------------------------------------------------------------------------------
 
     rest_server::~rest_server() {
         for (auto& thread: m_thread_container) {

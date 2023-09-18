@@ -50,7 +50,6 @@ private:
 
         dedupe_response result;
         auto integration_data = data;
-
         while (!integration_data.empty()) {
             const auto f = co_await m_fragment_set.find(integration_data);
             if (f.match) {
@@ -81,7 +80,7 @@ private:
 
                 const auto size = std::min (integration_data.size(), m_dedupe_conf.max_fragment_size);
                 const auto addr = co_await store_data(integration_data.substr(0, size));
-                m_fragment_set.add_pointer (integration_data.substr(0, addr.sizes.front()), addr.pointers.front(), f.index);
+                m_fragment_set.add_pointer (integration_data.substr(0, addr.sizes.front()), {addr.pointers[0], addr.pointers[1]}, f.index);
 
                 result.addr.append_address(addr);
                 result.effective_size += size;
@@ -102,7 +101,7 @@ private:
         }
 
         co_await m_storage.sync(result.addr);
-        co_return result;
+        co_return std::move (result);
     }
 
     static size_t largest_common_prefix(const std::string_view &str1, const std::string_view &str2) noexcept {
@@ -115,13 +114,13 @@ private:
     }
 
     coro <address> store_data(const std::string_view& frag) {
-        co_return co_await m_storage.write(frag);;
+        co_return std::move (co_await m_storage.write(frag));
     }
 
     dedupe_config m_dedupe_conf;
     dedupe::paged_redblack_tree <dedupe::set_full_comparator> m_fragment_set;
     global_data& m_storage;
-
+    std::mutex m_mutex;
 
 };
 

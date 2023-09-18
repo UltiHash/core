@@ -20,14 +20,34 @@ public:
         m_directory_nodes (directory_nodes)
     {}
 
-    coro <void> handle (const parsed_request_wrapper& req) {
+    coro < http::response<http::string_body> > handle (const parsed_request_wrapper& req) {
+
+        http::response<http::string_body> res{http::status::ok, 11};
+        res.set(http::field::server, "UltiHash v0.2.0");
+        res.set(http::field::content_type, "text/html");
+
+        const auto size_mb = static_cast <double> (req.body.size()) / static_cast <double> (1024ul * 1024ul);
+
+        std::chrono::time_point <std::chrono::steady_clock> timer;
+        const auto start = std::chrono::steady_clock::now ();
+
+        std::stringstream metrics;
+
         if (req.req_type == s3_req_type::put_object) {
             auto m_dedup = m_dedupe_nodes.at(get_round_robin_index(m_dedupe_node_index, m_dedupe_nodes.size())).acquire_messenger();
             co_await m_dedup.get().send (DEDUPE_REQ, req.body);
             const auto h_dedup = co_await m_dedup.get().recv_header();
             const auto resp = co_await m_dedup.get().recv_dedupe_response(h_dedup);
-            std::cout << "effective size " << resp.second.effective_size << std::endl;
 
+            auto effective_size = static_cast <double> (resp.second.effective_size) / static_cast <double> (1024ul * 1024ul);
+            std::cout << "effective size " << effective_size << " MB" << std::endl;
+            std::cout << "original size " << size_mb << " MB" << std::endl;
+            auto space_saving = 1.0 - static_cast <double> (resp.second.effective_size) / static_cast <double> (req.body.size());
+            std::cout << "space saving " << space_saving << std::endl;
+
+            metrics << "effective size: " << effective_size << " MB, original size: " << size_mb << " MB, space savings: " << space_saving;
+            // TODO send the address resp.second.addr to the directory
+            //co_await m.get().send_rest_request(DIR_PUT_OBJ_REQ, req);
             auto m_dir = m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size())).acquire_messenger();
             directory_request dir_req;
             dir_req.bucket_id = req.bucket_id;
@@ -44,7 +64,19 @@ public:
             // TODO send the request to the directory
 
         }
-        co_return;
+
+        const auto stop = std::chrono::steady_clock::now ();
+        const std::chrono::duration <double> duration = stop - start;
+        std::cout << "duration " << duration.count() << " s" << std::endl;
+        const auto bandwidth = size_mb / duration.count();
+        std::cout << "bandwidth " << bandwidth << " MB/s" << std::endl;
+
+        metrics << "bandwidth " << bandwidth << " MB/s";
+
+        res.body() = metrics.str();
+        res.prepare_payload();
+
+        co_return res;
     }
 
 private:

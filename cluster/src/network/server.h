@@ -49,7 +49,7 @@ namespace uh::cluster
         }
 
         void run() {
-            std::cout << "starting server";
+            std::cout << "starting server" << std::endl;
 
             for (auto i = 0; i < m_config.threads - 1; i++)
                 m_thread_container.emplace_back(
@@ -100,7 +100,8 @@ namespace uh::cluster
                                 }
                                 catch (const std::exception &e) {
                                     std::cout << "Error in session: [" << conn_address << ":" << conn_port << "] "
-                                         << e.what();
+                                         << e.what() << std::endl;
+
                                 }
                         });
             }
@@ -109,7 +110,7 @@ namespace uh::cluster
 
         boost::asio::awaitable<void> do_session(boost::asio::ip::tcp::socket stream) {
             const auto life_time = m_ioc;
-            std::cout << "connection from: " << stream.remote_endpoint();
+            std::cout << "connection from: " << stream.remote_endpoint() << std::endl;
             co_await m_handler->handle(messenger(std::move(stream)));
             co_return;
         }
