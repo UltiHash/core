@@ -6,6 +6,7 @@
 #define CORE_DIRECTORY_NODE_HANDLER_H
 
 #include "common/protocol_handler.h"
+#include "fdb/fdb.h"
 
 namespace uh::cluster {
 
@@ -27,9 +28,29 @@ public:
     }
 
 private:
+
+#if defined(__APPLE__)
+    fdb::fdb m_fdb = fdb::fdb("/usr/local/etc/foundationdb/fdb.cluster");
+#else
+    fdb::fdb m_fdb = fdb::fdb("/etc/foundationdb/fdb.cluster");
+#endif
     coro <void> handle_put_obj (messenger& m, const messenger::header& h) {
         std::cout << "received DIR_PUT_OBJ_REQ message" << std::endl;
-        co_await m.send(SUCCESS, {});
+
+        directory_request request = co_await m.recv_directory_request(h);
+        std::vector<char> addressData;
+        zpp::bits::out{addressData}(request.addr).or_throw();
+
+        message_types status = SUCCESS;
+        try {
+            auto trans = m_fdb.make_transaction();
+            trans->put({request.object_key.data(), request.object_key.size()},{addressData.data(), addressData.size()});
+            trans->commit();
+        } catch (const fdb::fdb_exception e) {
+            status = FAILURE;
+        }
+
+        co_await m.send(status, {});
         co_return;
     }
 
