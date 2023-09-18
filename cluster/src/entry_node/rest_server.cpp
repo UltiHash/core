@@ -11,6 +11,7 @@ namespace uh::cluster
 
     rest_server::rest_server(server_config config, std::vector <client>& dedupe_nodes, std::vector <client>& directory_nodes) :
         m_config(config), m_ioc(std::make_shared <boost::asio::io_context>(static_cast<int>(m_config.threads))),
+        m_ssl(boost::asio::ssl::context::tlsv12_client),
         m_thread_container(m_config.threads-1),
         m_handler (dedupe_nodes, directory_nodes)
     {
@@ -63,6 +64,7 @@ namespace uh::cluster
                 stream.expires_after(std::chrono::seconds(10000));
 
                 http::request_parser<http::empty_body> received_request;
+                std::string body_buffer;
                 received_request.body_limit((std::numeric_limits<std::uint64_t>::max)());
 
                 // read header first
@@ -88,14 +90,13 @@ namespace uh::cluster
                 {
                     std::size_t content_length = std::stoull(received_request.get()[http::field::content_length]);
 
-                    std::vector<char> body_buffer(content_length);
-                    auto data_left = content_length- buffer.size();
+                    body_buffer.append(content_length, 0);
+                    auto data_left = content_length - buffer.size();
 
                     // copy remaining bytes from flat buffer to body_buffer
                     boost::asio::buffer_copy(boost::asio::buffer(body_buffer), buffer.data());
-
-                    // TODO: async read starts to write from the beginning
-                    auto size_transferred = co_await boost::asio::async_read(stream.socket(), boost::asio::buffer(body_buffer), boost::asio::transfer_exactly(data_left), boost::asio::use_awaitable);
+                    auto size_transferred = co_await boost::asio::async_read(stream.socket(), boost::asio::buffer(body_buffer.data() + buffer.size(), data_left),
+                                                                             boost::asio::transfer_exactly(data_left), boost::asio::use_awaitable);
 
                     if (size_transferred + buffer.size() != content_length)
                     {
@@ -105,42 +106,24 @@ namespace uh::cluster
                     std::ofstream output_file("/home/ankit/Downloads/output_file.txt", std::ios::binary);
                     output_file.write(body_buffer.data(), body_buffer.size());
                     output_file.close();
-
-                    std::cout << std::string(body_buffer.data(), body_buffer.size()) << std::endl;
                 }
                 else
                 {
                     throw std::runtime_error("please specify the content length");
                 }
 
-
-//                // Process body in chunks
-//                std::vector<char> chunk(450029190); // Adjust the chunk size as needed
-//                while ()
-//                {
-//                    std::size_t bytes_transferred = co_await stream.async_read_some(net::buffer(chunk), net::use_awaitable);
-//                    std::cout << bytes_transferred << std::endl;
-//                    if (bytes_transferred == 0)
-//                        break; // End of body
-//
-//                }
-
-//                std::cout << std::string{chunk.data(), chunk.size()} << std::endl;
-
-//                // check for invalid headers before getting the body
-//                s3_parser s3_parser(received_request);
-//                auto parsed_request = s3_parser.parse();
-//
-//                co_await http::async_read(stream, buffer, received_request, net::use_awaitable);
-//                std::cout << received_request.get().body().size() << std::endl;
+                // check for invalid header
+                s3_parser s3_parser(received_request);
+                auto parsed_request = s3_parser.parse();
+                parsed_request.body = body_buffer;
 
 //                s3_authenticator s3_authenticate(received_request, parsed_request);
 //                s3_authenticate.authenticate();
 
-//                auto response = co_await m_handler.handle(parsed_request);
+                auto response = co_await m_handler.handle(parsed_request);
 
                 // send response
-//                co_await http::async_write(stream, response, net::use_awaitable);
+                co_await http::async_write(stream, response, net::use_awaitable);
 
                 if(! received_request.keep_alive() )
                 {
@@ -184,8 +167,10 @@ namespace uh::cluster
     net::awaitable<void>
     rest_server::do_listen(tcp::endpoint endpoint)
     {
-        auto acceptor = boost::asio::use_awaitable_t<boost::asio::any_io_executor>::as_default_on(tcp::acceptor(co_await net::this_coro::executor));
+//        m_ssl.use_certificate_chain_file(config.tls_chain);
+//        m_ssl.use_private_key_file(config.tls_pkey, ssl::context::pem);
 
+        auto acceptor = boost::asio::use_awaitable_t<boost::asio::any_io_executor>::as_default_on(tcp::acceptor(co_await net::this_coro::executor));
         acceptor.open(endpoint.protocol());
         acceptor.set_option(net::socket_base::reuse_address(true));
 

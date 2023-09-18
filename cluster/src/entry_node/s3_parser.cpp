@@ -116,7 +116,7 @@ namespace uh::cluster {
 
 //------------------------------------------------------------------------------
 
-    s3_parser::s3_parser(const http::request_parser<http::string_body>& recv_req) : m_recv_req(recv_req), m_s3_vfields(static_s3_valid_fields),
+    s3_parser::s3_parser(const http::request_parser<http::empty_body>& recv_req) : m_recv_req(recv_req), m_s3_vfields(static_s3_valid_fields),
     m_http_vfields(static_http_valid_fields)
     {}
 
@@ -165,7 +165,6 @@ namespace uh::cluster {
                 substr(0, m_parsed_req_wrapper.http_parsed_fields[http_fields::host].find(':'));
 
         m_parsed_req_wrapper.req_type = get_type();
-        m_parsed_req_wrapper.body = m_recv_req.get().body();
 
         sanitizer();
 

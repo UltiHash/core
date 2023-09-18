@@ -117,13 +117,13 @@ namespace uh::cluster {
         const std::unordered_map <s3_req_type, std::set<http_fields>>& m_http_vfields;
         const std::set<http_fields> m_http_common_fields = { http_fields::transfer_encoding, http_fields::accept_encoding, http_fields::host, http_fields::user_agent, http_fields::http_accept, http_fields::connection, http_fields::date, http_fields::server, http_fields::authorization, http_fields::expect};
 
-        const http::request_parser<http::string_body>& m_recv_req;
+        const http::request_parser<http::empty_body>& m_recv_req;
         parsed_request_wrapper m_parsed_req_wrapper;
         std::string_view m_target;
 
     public:
         explicit s3_parser
-        (const http::request_parser<http::string_body>& recv_req);
+        (const http::request_parser<http::empty_body>& recv_req);
 
         parsed_request_wrapper&
         parse();
