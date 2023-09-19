@@ -15,7 +15,6 @@ namespace uh::cluster
         m_thread_container(m_config.threads-1),
         m_handler (dedupe_nodes, directory_nodes)
     {
-        // spawn a coroutine
         boost::asio::co_spawn(*m_ioc,
                               do_listen(tcp::endpoint{m_server_address, m_config.port}),
                               [](const std::exception_ptr& e)
@@ -102,10 +101,6 @@ namespace uh::cluster
                     {
                         throw std::runtime_error("error reading the http body");
                     }
-
-                    std::ofstream output_file("/home/ankit/Downloads/output_file.txt", std::ios::binary);
-                    output_file.write(body_buffer.data(), body_buffer.size());
-                    output_file.close();
                 }
                 else
                 {
@@ -122,7 +117,7 @@ namespace uh::cluster
 
                 auto response = co_await m_handler.handle(parsed_request);
 
-                // send response
+//                // send response
                 co_await http::async_write(stream, response, net::use_awaitable);
 
                 if(! received_request.keep_alive() )
@@ -131,7 +126,9 @@ namespace uh::cluster
                 }
             }
         }
-        catch (boost::system::system_error &se) {
+            // TODO: don't send all the info to the user on throw
+        catch (boost::system::system_error &se)
+        {
             if (se.code() != http::error::end_of_stream)
             {
                 http::response<http::string_body> res{http::status::bad_request, 11};
@@ -157,9 +154,6 @@ namespace uh::cluster
         }
 
         stream.socket().shutdown(tcp::socket::shutdown_send, ec);
-
-        // At this point the connection is closed gracefully
-        // we do not handle any error code because at this point the connection is closed
     }
 
 //------------------------------------------------------------------------------
@@ -167,6 +161,7 @@ namespace uh::cluster
     net::awaitable<void>
     rest_server::do_listen(tcp::endpoint endpoint)
     {
+        // TODO : implement ssl
 //        m_ssl.use_certificate_chain_file(config.tls_chain);
 //        m_ssl.use_private_key_file(config.tls_pkey, ssl::context::pem);
 
@@ -212,7 +207,8 @@ namespace uh::cluster
 //------------------------------------------------------------------------------
 
     rest_server::~rest_server() {
-        for (auto& thread: m_thread_container) {
+        for (auto& thread: m_thread_container)
+        {
             thread.join();
         }
     }

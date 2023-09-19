@@ -39,18 +39,6 @@ namespace uh::cluster
 
 //------------------------------------------------------------------------------
 
-    struct rest_server_config
-    {
-        constexpr static uint16_t DEFAULT_PORT = 8080;
-        constexpr static std::size_t DEFAULT_THREADS = 5;
-
-        std::size_t threads = DEFAULT_THREADS;
-        boost::asio::ip::address address;
-        uint16_t port = DEFAULT_PORT;
-    };
-
-//------------------------------------------------------------------------------
-
     class rest_server
     {
     private:
