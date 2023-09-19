@@ -16,6 +16,7 @@ struct growing_managed_storage_config {
     std::filesystem::path log_file;
     size_t min_file_size;
     size_t max_file_size;
+    size_t max_storage_size;
 };
 
 struct fixed_managed_storage_config {

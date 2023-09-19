@@ -110,8 +110,37 @@ std::pair<std::vector<sets::offset_span>, size_t> smart_core::deduplicate (std::
             const auto size = std::min (integration_data.size(), m_dedupe_conf.max_fragment_size);
             const auto offset = store_data(integration_data.substr(0, size));
             m_fragment_set->add_pointer (integration_data.substr(0, size), offset, f.index);
+
+            auto eff_size = size;
+
+            /*
+            size_t sample_interval = 128;
+            size_t i = sample_interval;
+
+            while (i < size) {
+                const auto fs = m_fragment_set->find(integration_data.substr(i, size - i));
+
+                if (!fs.match.has_value()) {
+                    const auto str = get_largest_prefix(integration_data.substr(i, size - i), fs);
+                    if (str.size() >= m_dedupe_conf.min_fragment_size) {
+                        eff_size -= str.size();
+                        i += str.size();
+                    }
+                    else {
+                        m_fragment_set->add_pointer(integration_data.substr(i, size - i), offset + i, fs.index);
+                        i+= sample_interval;
+                    }
+                }
+                else {
+                    eff_size -= (size - i);
+                    i = size;
+                }
+            }
+            */
+
+
             result.first.emplace_back(sets::offset_span{offset, size});
-            result.second += size;
+            result.second += eff_size;
             integration_data = integration_data.substr(size);
             continue;
         }
@@ -128,6 +157,28 @@ std::pair<std::vector<sets::offset_span>, size_t> smart_core::deduplicate (std::
     }
 
     return result;
+}
+
+std::string_view smart_core::get_largest_prefix (const std::string_view& data, const sets::set_result& f) {
+
+    const auto lower_common_prefix = largest_common_prefix (data, f.lower->data);
+
+    if (lower_common_prefix == data.size()) {
+        m_fragment_set->add_pointer (data, f.lower->data_offset, f.index);
+        return f.lower->data.substr(0, data.size());
+    }
+
+    const auto upper_common_prefix = largest_common_prefix (data, f.upper->data);
+    auto max_common_prefix = upper_common_prefix;
+    auto max_data_offset = f.upper->data_offset;
+    if (max_common_prefix < lower_common_prefix) {
+        max_common_prefix = lower_common_prefix;
+        max_data_offset = f.lower->data_offset;
+        return f.lower->data.substr(0, max_common_prefix);
+    }
+    else {
+        return f.upper->data.substr(0, max_common_prefix);
+    }
 }
 
 

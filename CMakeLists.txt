@@ -8,17 +8,20 @@ option(BUILD_SERVER_AGENCY  "Build the server-agency component" OFF)
 option(BUILD_CLIENT_SHELL   "Build the client-shell component"  OFF)
 option(BUILD_CLIENT_FUSE    "Build the client-fuse component"  OFF)
 option(BUILD_TOOLS          "Build the tools component"  OFF)
+option(BUILD_CLUSTER        "Build the cluster component"  OFF)
+
 
 set(Boost_USE_STATIC_LIBS ON)
 add_compile_options(-fPIC)
 
 
-if((NOT BUILD_SERVER_DB) AND (NOT BUILD_SERVER_AGENCY) AND (NOT BUILD_CLIENT_SHELL) AND (NOT BUILD_CLIENT_FUSE) AND (NOT BUILD_TOOLS))
+if((NOT BUILD_SERVER_DB) AND (NOT BUILD_SERVER_AGENCY) AND (NOT BUILD_CLIENT_SHELL) AND (NOT BUILD_CLUSTER) AND (NOT BUILD_CLIENT_FUSE) AND (NOT BUILD_TOOLS))
     SET(BUILD_SERVER_DB ON CACHE BOOL       "Building the server-db component" FORCE)
     SET(BUILD_SERVER_AGENCY ON CACHE BOOL   "Building the server-agency component" FORCE)
     SET(BUILD_CLIENT_SHELL ON CACHE BOOL    "Building the server-client component" FORCE)
     SET(BUILD_CLIENT_FUSE ON CACHE BOOL     "Building the server-fuse component" FORCE)
     SET(BUILD_TOOLS ON CACHE BOOL           "Building the tools component" FORCE)
+    SET(BUILD_CLUSTER ON CACHE BOOL         "Building the cluster component" FORCE)
 endif()
 
 option(USE_LICENSE_SPRING "Use the LicenseSpring licensing backend" OFF)
@@ -66,6 +69,10 @@ endif()
 
 if(BUILD_CLIENT_FUSE)
 add_subdirectory(client-fuse)
+endif()
+
+if(BUILD_CLUSTER)
+    add_subdirectory(cluster)
 endif()
 
 add_subdirectory(client-sdk)

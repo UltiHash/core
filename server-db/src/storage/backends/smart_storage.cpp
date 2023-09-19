@@ -16,10 +16,10 @@ smart_config make_smart_config(const std::filesystem::path &root, size_t size, s
 
     // data store
     fixed_managed_storage_config ds_conf;
-    ds_conf.data_store_file_size = 4ul * GB;
+    ds_conf.data_store_file_size = 16ul * GB;
     ds_conf.log_file = data_store_directory / "log_file";
     size_t offset = 0;
-    while (offset < 20ul * GB) {
+    while (offset < 32ul * GB) {
         const std::filesystem::path data_store_file = "data_" + std::to_string(offset);
         ds_conf.data_store_files.emplace_front (data_store_directory / data_store_file);
         offset += ds_conf.data_store_file_size;
@@ -48,6 +48,7 @@ smart_config make_smart_config(const std::filesystem::path &root, size_t size, s
     growing_managed_storage_config key_store_data_store;
     key_store_data_store.max_file_size = 1ul * GB;
     key_store_data_store.min_file_size = GB;
+    key_store_data_store.max_storage_size = 64ul * GB;
     key_store_data_store.log_file = set_directory / "log";
     key_store_data_store.directory = set_directory / "key_store_data";
 
@@ -70,6 +71,7 @@ smart_config make_smart_config(const std::filesystem::path &root, size_t size, s
     key_store_hashmap_value_store.log_file = key_store_hashmap_value_store.directory / "log";
     key_store_hashmap_value_store.min_file_size = 4ul * GB;
     key_store_hashmap_value_store.max_file_size = 8ul * GB;
+    key_store_hashmap_value_store.max_storage_size = 128ul * GB;
 
     hashmap_config hashmap_conf;
     hashmap_conf.key_size = 64;

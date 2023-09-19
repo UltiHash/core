@@ -8,10 +8,11 @@
 namespace uh::dbn::storage::smart {
 
 growing_managed_storage::growing_managed_storage (growing_managed_storage_config conf):
-        m_min_file_size (std::move (conf.min_file_size)),
-        m_max_file_size (std::move (conf.max_file_size)),
+        m_min_file_size (conf.min_file_size),
+        m_max_file_size (conf.max_file_size),
         m_directory (std::move (conf.directory)),
-        m_log_file_path (std::move (conf.log_file)) {
+        m_log_file_path (std::move (conf.log_file)),
+        m_max_storage_size (conf.max_storage_size) {
      load_data_store ();
      m_log = create_logger();
      replay_logger();
@@ -100,17 +101,21 @@ void growing_managed_storage::do_deallocate (const offset_ptr& offset_ptr, size_
 void growing_managed_storage::load_data_store () {
     std::filesystem::create_directories(std::filesystem::absolute (m_directory));
     if (std::filesystem::is_empty(m_directory)) {
+        if (m_min_file_size > m_max_storage_size) {
+            throw std::bad_alloc ();
+        }
         mmap_file(get_file_name (0, m_min_file_size), 0, m_min_file_size);
+        m_storage_size = m_min_file_size;
     }
     else {
-        std::size_t aggregated_size = 0;
+        m_storage_size = 0;
         for (const auto& file: std::filesystem::directory_iterator (m_directory)) {
             if (file == m_log_file_path) {
                 continue;
             }
             const auto offset_size = parse_file_name(file);
             mmap_file(file, offset_size.first, offset_size.second);
-            aggregated_size += offset_size.second;
+            m_storage_size += offset_size.second;
         }
     }
 }
@@ -121,17 +126,27 @@ void growing_managed_storage::grow () {
     const auto file_name = last_resource->second.m_path;
     const auto last_offset_size = parse_file_name(file_name);
     if (last_offset_size.second >= m_max_file_size) { // then, create a new file
+        const auto tmp_new_size = m_storage_size + m_min_file_size;
+        if (tmp_new_size > m_max_storage_size) {
+            throw std::bad_alloc ();
+        }
         const auto new_offset = last_offset_size.first + last_offset_size.second;
         mmap_file(get_file_name (new_offset, m_min_file_size), new_offset, m_min_file_size);
+        m_storage_size = tmp_new_size;
         return;
     }
     else { // else, grow the last existing file
         const auto offset = last_offset_size.first;
         const auto new_size = last_offset_size.second * 2ul;
+        const auto tmp_new_size = m_storage_size + new_size - last_offset_size.second;
+        if (tmp_new_size > m_max_storage_size) {
+            throw std::bad_alloc ();
+        }
         const auto new_file_name = get_file_name (offset, new_size);
         std::filesystem::rename(file_name, new_file_name);
         m_resources.erase (std::next (last_resource).base());
         mmap_file(new_file_name, offset, new_size);
+        m_storage_size = tmp_new_size;
     }
     replay_logger();
 }
