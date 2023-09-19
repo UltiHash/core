@@ -159,14 +159,16 @@ namespace uh::cluster {
         m_parsed_req_wrapper.verb = http_field_to_enum(verb_string);
         m_target = m_recv_req.get().base().target();
 
+        m_parsed_req_wrapper.bucket_id = m_target.substr(1, m_target.find_first_of('/', 1) - 1);
+        std::cout << "BUCKET ID: " << m_parsed_req_wrapper.bucket_id;
+
         auto index = m_target.find('?');
         if ( index != std::string::npos)
-            m_parsed_req_wrapper.object_key = m_target.substr(1, index);
+            throw std::runtime_error("Query parameters not supported in requests");
         else
-            m_parsed_req_wrapper.object_key = m_target.substr(1);
+            m_parsed_req_wrapper.object_key = m_target.substr(m_target.find_first_of('/', 1) +1 );
 
-        m_parsed_req_wrapper.bucket_id = m_parsed_req_wrapper.http_parsed_fields[http_fields::host].
-                substr(0, m_parsed_req_wrapper.http_parsed_fields[http_fields::host].find(':'));
+        std::cout << "OBJECT ID: " << m_parsed_req_wrapper.object_key;
 
         m_parsed_req_wrapper.req_type = get_type();
 
