@@ -20,6 +20,7 @@ struct fragment {
 };
 
 struct address {
+
     std::vector <uint64_t> pointers;
     std::vector <uint16_t> sizes;
 
@@ -71,13 +72,17 @@ struct dedupe_response {
     address addr;
 };
 
-struct directory_request {
+struct directory_put_request {
     std::string bucket_id;
     std::string object_key;
     address addr;
 
-    auto operator<=>(const directory_request&) const = default;
+    auto operator<=>(const directory_put_request&) const = default;
+};
 
+struct directory_get_request {
+    std::string bucket_id;
+    std::string object_key;
 };
 
 } // end namespace uh::cluster

@@ -19,10 +19,9 @@ public:
         m_dedupe_nodes (dedupe_nodes),
         m_directory_nodes (directory_nodes)
     {}
-
     coro < http::response<http::string_body> > handle (const parsed_request_wrapper& req) {
 
-        http::response<http::string_body> res{http::status::ok, 11};
+        http::response<http::buffer_body> res{http::status::ok, 11};
         res.set(http::field::server, "UltiHash v0.2.0");
         res.set(http::field::content_type, "text/html");
 
@@ -49,16 +48,38 @@ public:
             // TODO send the address resp.second.addr to the directory
             //co_await m.get().send_rest_request(DIR_PUT_OBJ_REQ, req);
             auto m_dir = m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size())).acquire_messenger();
-            directory_request dir_req;
+            directory_put_request dir_req;
             dir_req.bucket_id = req.bucket_id;
             dir_req.object_key = req.object_key;
             dir_req.addr = resp.second.addr;
-            co_await m_dir.get().send_directory_request(DIR_PUT_OBJ_REQ, dir_req);
+            co_await m_dir.get().send_directory_put_object_request(DIR_PUT_OBJ_REQ, dir_req);
             const auto h_dir = co_await m_dir.get().recv_header();
             if(h_dir.type == FAILURE) {
                 throw std::runtime_error("Failed to add the fragment address of object " + dir_req.bucket_id + "/" + dir_req.object_key + " to the directory.");
                 //TODO: consider using custom exceptions to indicate if and how the error gets communicated to the HTTP client.
             }
+        }
+        else if (req.req_type == s3_req_type::get_object) {
+            auto m_dir = m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size())).acquire_messenger();
+            directory_get_request dir_req;
+            dir_req.bucket_id = req.bucket_id;
+            dir_req.object_key = req.object_key;
+            co_await m_dir.get().send_directory_get_object_request(DIR_GET_OBJ_REQ, dir_req);
+            const auto h_dir = co_await m_dir.get().recv_header();
+            if(h_dir.type == DIR_GET_OBJ_RESP) {
+                ospan <char> buffer (h_dir.size);
+                m_dir.get().register_read_buffer(buffer);
+                co_await m_dir.get().recv_buffers(h_dir);
+                res.body().data = buffer.data.get();
+                res.body().size = buffer.size;
+                res.body().more = false;
+                res.prepare_payload();
+            }
+            if(h_dir.type == FAILURE) {
+                throw std::runtime_error("Failed to retreive object " + dir_req.bucket_id + "/" + dir_req.object_key + " from the directory.");
+                //TODO: consider using custom exceptions to indicate if and how the error gets communicated to the HTTP client.
+            }
+
         }
         else {
             // TODO send the request to the directory
@@ -70,11 +91,6 @@ public:
         std::cout << "duration " << duration.count() << " s" << std::endl;
         const auto bandwidth = size_mb / duration.count();
         std::cout << "bandwidth " << bandwidth << " MB/s" << std::endl;
-
-        metrics << "bandwidth " << bandwidth << " MB/s";
-
-        res.body() = metrics.str();
-        res.prepare_payload();
 
         co_return res;
     }
