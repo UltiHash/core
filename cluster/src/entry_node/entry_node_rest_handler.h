@@ -92,6 +92,7 @@ public:
         const auto bandwidth = size_mb / duration.count();
         std::cout << "bandwidth " << bandwidth << " MB/s" << std::endl;
 
+        res.prepare_payload();
         co_return res;
     }
 

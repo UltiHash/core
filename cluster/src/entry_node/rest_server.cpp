@@ -129,13 +129,8 @@ namespace uh::cluster
 //                s3_authenticator s3_authenticate(received_request, parsed_request);
 //                s3_authenticate.authenticate();
 
-// TODO: NOT WORKING DUE TO SOME ERROR, SO FOR NOW DUMPING IN /tmp/ folder.
-//                auto response = co_await m_handler.handle(parsed_request);
-//
-////                // send response
-                http::response<http::empty_body> res{http::status::ok, 11};
-                res.prepare_payload();
-                co_await http::async_write(stream, res, net::use_awaitable);
+                auto response = co_await m_handler.handle(parsed_request);
+                co_await http::async_write(stream, response, net::use_awaitable);
 
                 if(! received_request.keep_alive() )
                 {

@@ -17,17 +17,22 @@ public:
     m_storage (storage) {}
 
     coro <void> handle (messenger m) override {
-        const auto message_header = co_await m.recv_header ();
-        switch (message_header.type) {
-            case DIR_PUT_OBJ_REQ:
-                co_await handle_put_obj (m, message_header);
-                break;
-            case DIR_GET_OBJ_REQ:
-                co_await handle_get_obj (m, message_header);
-                break;
-            default:
-                throw std::invalid_argument ("Invalid message type!");
+        for (;;) {
+            const auto message_header = co_await m.recv_header ();
+            switch (message_header.type) {
+                case DIR_PUT_OBJ_REQ:
+                    co_await handle_put_obj (m, message_header);
+                    break;
+                case DIR_GET_OBJ_REQ:
+                    co_await handle_get_obj (m, message_header);
+                    break;
+                case STOP:
+                    co_return;
+                default:
+                    throw std::invalid_argument ("Invalid message type!");
+            }
         }
+
     }
 
 private:
@@ -38,21 +43,22 @@ private:
     fdb::fdb m_fdb = fdb::fdb("/etc/foundationdb/fdb.cluster");
 #endif
     coro <void> handle_put_obj (messenger& m, const messenger::header& h) {
-        std::cout << "received DIR_PUT_OBJ_REQ message" << std::endl;
-
         directory_put_request request = co_await m.recv_directory_put_object_request(h);
         std::vector<char> addressData;
         zpp::bits::out{addressData}(request.addr).or_throw();
 
+        bool failure = false;
         try {
             auto trans = m_fdb.make_transaction();
             trans->put({request.object_key.data(), request.object_key.size()},{addressData.data(), addressData.size()});
             trans->commit();
             co_await m.send(SUCCESS, {});
         } catch (const fdb::fdb_exception& e) {
-            m.send(FAILURE, {});
-            //TODO: ask Masoud if this is legal
+            failure = true;
         }
+
+        if(failure)
+            co_await m.send(FAILURE, {});
 
 
         co_return;
@@ -64,6 +70,7 @@ private:
         directory_get_request request = co_await m.recv_directory_get_object_request(h);
         address addr;
 
+        bool failure = false;
         try {
             auto trans = m_fdb.make_transaction();
             auto result = trans->get({request.object_key.data(), request.object_key.size()});
@@ -74,8 +81,11 @@ private:
 
             zpp::bits::in{ result->value}(addr).or_throw();
         } catch (const fdb::fdb_exception& e) {
-            m.send(FAILURE, {});
+            failure = true;
         }
+
+        if(failure)
+            co_await m.send(FAILURE, {});
 
         std::size_t buffer_size = 0;
         for(auto frag_size : addr.sizes){
