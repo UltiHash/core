@@ -58,6 +58,7 @@ namespace uh::cluster {
         date,
         server,
         expect,
+        post,
         put,
         get,
         delete_,
@@ -85,6 +86,10 @@ namespace uh::cluster {
     {
         not_initialized = 0,
         put_object,
+        init_multi_part,
+        multi_part_upload,
+        close_multi_part,
+        delete_multi_part_upload,
         get_object,
         get_object_information,
         copy_object,
@@ -105,6 +110,8 @@ namespace uh::cluster {
         s3_req_type req_type = not_initialized;
         std::string bucket_id;
         std::string object_key;
+        std::string upload_id;
+        uint16_t part_number;
         std::string_view body;
     };
 
@@ -133,7 +140,7 @@ namespace uh::cluster {
         parse();
 
         s3_req_type
-        get_type() const;
+        get_type();
 
         void
         sanitizer();

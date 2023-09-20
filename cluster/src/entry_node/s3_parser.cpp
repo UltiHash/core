@@ -10,7 +10,16 @@ namespace uh::cluster {
                     { s3_req_type::put_object, { x_amz_date, x_amz_security_token, amz_sdk_request, amz_sdk_invocation_id, x_amz_acl, x_amz_grant_full_control, x_amz_grant_read, x_amz_grant_read_acp,
                                                  x_amz_grant_write_acp, x_amz_storage_class, x_amz_request_payer, x_amz_tagging,
                                                  x_amz_expected_bucket_owner, x_amz_meta_author, x_amz_content_sha256 } },
-                    { s3_req_type::get_object, { x_amz_request_payer, x_amz_expected_bucket_owner, x_amz_content_sha256 } }, //TODO: put the common x-amz-header outside this enum
+                    { s3_req_type::init_multi_part , { x_amz_date, x_amz_security_token, amz_sdk_request, amz_sdk_invocation_id, x_amz_acl, x_amz_grant_full_control, x_amz_grant_read, x_amz_grant_read_acp,
+                                                       x_amz_grant_write_acp, x_amz_storage_class, x_amz_request_payer, x_amz_tagging,
+                                                       x_amz_expected_bucket_owner, x_amz_meta_author, x_amz_content_sha256 } },
+                    { s3_req_type::multi_part_upload, { x_amz_date, x_amz_security_token, amz_sdk_request, amz_sdk_invocation_id, x_amz_acl, x_amz_grant_full_control, x_amz_grant_read, x_amz_grant_read_acp,
+                                                              x_amz_grant_write_acp, x_amz_storage_class, x_amz_request_payer, x_amz_tagging,
+                                                              x_amz_expected_bucket_owner, x_amz_meta_author, x_amz_content_sha256 } },
+                    { s3_req_type::close_multi_part, { x_amz_date, x_amz_security_token, amz_sdk_request, amz_sdk_invocation_id, x_amz_acl, x_amz_grant_full_control, x_amz_grant_read, x_amz_grant_read_acp,
+                                                              x_amz_grant_write_acp, x_amz_storage_class, x_amz_request_payer, x_amz_tagging,
+                                                              x_amz_expected_bucket_owner, x_amz_meta_author, x_amz_content_sha256 } },
+                    { s3_req_type::get_object, { x_amz_date, x_amz_security_token, amz_sdk_request, amz_sdk_invocation_id, x_amz_request_payer, x_amz_expected_bucket_owner, x_amz_content_sha256 } }, //TODO: put the common x-amz-header outside this enum
                     { s3_req_type::copy_object, { x_amz_acl, x_amz_copy_source, x_amz_copy_source_if_match, x_amz_copy_source_if_modified_since,
                                                   x_amz_copy_source_if_none_match, x_amz_copy_source_if_unmodified_since, x_amz_grant_full_control, x_amz_grant_read,
                                                   x_amz_grant_read_acp, x_amz_grant_write_acp, x_amz_metadata_directive, x_amz_tagging_directive,
@@ -25,6 +34,9 @@ namespace uh::cluster {
     const std::unordered_map <s3_req_type, std::set<http_fields>> s3_parser::static_http_valid_fields =
             {
                     { s3_req_type::put_object, { http_fields::content_disposition, http_fields::content_encoding, http_fields::content_language, http_fields::content_length, http_fields::content_md5, http_fields::content_type, http_fields::expires } },
+                    { s3_req_type::init_multi_part, { http_fields::content_disposition, http_fields::content_encoding, http_fields::content_language, http_fields::content_length, http_fields::content_md5, http_fields::content_type, http_fields::expires } },
+                    { s3_req_type::multi_part_upload, { http_fields::content_disposition, http_fields::content_encoding, http_fields::content_language, http_fields::content_length, http_fields::content_md5, http_fields::content_type, http_fields::expires } },
+                    { s3_req_type::close_multi_part, { http_fields::content_disposition, http_fields::content_encoding, http_fields::content_language, http_fields::content_length, http_fields::content_md5, http_fields::content_type, http_fields::expires } },
                     { s3_req_type::get_object, { http_fields::if_match, http_fields::if_modified_since, http_fields::if_none_match, http_fields::if_unmodified_since, http_fields::range } },
                     { s3_req_type::get_object, { http_fields::if_match, http_fields::if_modified_since, http_fields::if_none_match, http_fields::if_unmodified_since, http_fields::range } },
                     { s3_req_type::copy_object, { http_fields::content_disposition, http_fields::content_encoding, http_fields::content_language, http_fields::content_type, http_fields::expires } },
@@ -86,6 +98,7 @@ namespace uh::cluster {
                         {"connection", http_fields::connection},
                         {"server", http_fields::server},
                         {"put", http_fields::put},
+                        {"post", http_fields::post},
                         {"authorization", http_fields::authorization},
                         {"expect", http_fields::expect},
                         {"cache-control", http_fields::cache_control},
@@ -159,16 +172,14 @@ namespace uh::cluster {
         m_parsed_req_wrapper.verb = http_field_to_enum(verb_string);
         m_target = m_recv_req.get().base().target();
 
-        m_parsed_req_wrapper.bucket_id = m_target.substr(1, m_target.find_first_of('/', 1) - 1);
-        std::cout << "BUCKET ID: " << m_parsed_req_wrapper.bucket_id;
+        auto after_bucket_slash = m_target.find_first_of('/', 1);
+        m_parsed_req_wrapper.bucket_id = m_target.substr(1, after_bucket_slash - 1);
 
-        auto index = m_target.find('?');
+        auto index = m_target.find_first_of('?');
         if ( index != std::string::npos)
-            throw std::runtime_error("Query parameters not supported in requests");
+            m_parsed_req_wrapper.object_key = m_target.substr( after_bucket_slash + 1 , index - after_bucket_slash - 1);
         else
-            m_parsed_req_wrapper.object_key = m_target.substr(m_target.find_first_of('/', 1) +1 );
-
-        std::cout << "OBJECT ID: " << m_parsed_req_wrapper.object_key;
+            m_parsed_req_wrapper.object_key = m_target.substr( after_bucket_slash + 1 );
 
         m_parsed_req_wrapper.req_type = get_type();
 
@@ -180,10 +191,27 @@ namespace uh::cluster {
 //------------------------------------------------------------------------------
 
     s3_req_type
-    s3_parser::get_type() const
+    s3_parser::get_type()
     {
         switch (m_parsed_req_wrapper.verb)
         {
+            case http_fields::post:
+                if (m_target.find("?uploads") != std::string::npos)
+                {
+                    return init_multi_part;
+                }
+                else
+                {
+                    if (m_target.find("?uploadId=") != std::string::npos)
+                    {
+                        m_parsed_req_wrapper.upload_id = std::string(m_target.substr(m_target.find("uploadId=") + 9));
+                        return close_multi_part;
+                    }
+                    else
+                    {
+                        throw std::runtime_error("Bad request with post");
+                    }
+                }
             case http_fields::put:
                 if (m_target == "/")
                 {
@@ -196,6 +224,13 @@ namespace uh::cluster {
                 else if (!m_target.empty() && (m_target.find('?') == std::string::npos))
                 {
                     return put_object;
+                }
+                else if (m_target.find("partNumber=") && m_target.find("uploadId="))
+                {
+                    m_parsed_req_wrapper.upload_id = std::string(m_target.substr(m_target.find("uploadId=") + 9, m_target.find("&partNumber=") - m_target.find("uploadId=") - 9 ));
+                    m_parsed_req_wrapper.part_number = std::stoi(std::string(m_target.substr(m_target.find("partNumber=") + 11)));
+                    std::cout << "UPLOAD ID: " << m_parsed_req_wrapper.upload_id << " PART NUMBER: " << m_parsed_req_wrapper.part_number << std::endl;
+                    return multi_part_upload;
                 }
             case http_fields::get:
                 if (!m_target.empty() && (m_target.find('?') == std::string::npos))
@@ -210,6 +245,11 @@ namespace uh::cluster {
                 else if (!m_target.empty() && (m_target.find('?') == std::string::npos))
                 {
                     return delete_object;
+                }
+                else if (!m_target.empty() && (m_target.find("?uploadId=") == std::string::npos))
+                {
+                    m_parsed_req_wrapper.upload_id = std::string(m_target.substr(m_target.find("uploadId=") + 9));
+                    return delete_multi_part_upload;
                 }
             default:
                 throw std::runtime_error("bad http verb.");

@@ -23,6 +23,7 @@
 #include "common/protocol_handler.h"
 #include "entry_node_rest_handler.h"
 #include "network/client.h"
+#include <map>
 
 //------------------------------------------------------------------------------
 
@@ -48,6 +49,10 @@ namespace uh::cluster
         boost::asio::ssl::context m_ssl;
         entry_node_rest_handler m_handler;
         bool m_server_busy = false;
+
+        // TODO: WHY does it WORK without mutex protection????
+        std::map<uint16_t, std::string> m_multi_part_container;
+        std::mutex m_mutex;
 
         const boost::asio::ip::address m_server_address = boost::asio::ip::make_address("0.0.0.0");
 
