@@ -70,7 +70,7 @@ namespace uh::cluster
 
                 // read header first
                 co_await http::async_read_header(stream, buffer, received_request, net::use_awaitable);
-                std::cout << received_request.get().base() << std::endl;
+                //std::cout << received_request.get().base() << std::endl;
 
                 // expect-100-continue
                 if (received_request.get()[http::field::expect] == "100-continue")
@@ -92,8 +92,7 @@ namespace uh::cluster
 
                 if(parsed_request.req_type != get_object) {
                     // Determine the content length from the header
-                    if (received_request.get().find(http::field::content_length) != received_request.get().end() &&
-                        parsed_request.req_type == get_object) {
+                    if (received_request.get().find(http::field::content_length) != received_request.get().end()) {
                         std::size_t content_length = std::stoull(received_request.get()[http::field::content_length]);
 
                         body_buffer.append(content_length, 0);

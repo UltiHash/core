@@ -65,8 +65,6 @@ private:
     }
 
     coro <void> handle_get_obj (messenger& m, const messenger::header& h) {
-        std::cout << "received DIR_GET_OBJ_REQ message" << std::endl;
-
         directory_get_request request = co_await m.recv_directory_get_object_request(h);
         address addr;
 
