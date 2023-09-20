@@ -90,38 +90,40 @@ namespace uh::cluster
                 s3_parser s3_parser(received_request);
                 auto parsed_request = s3_parser.parse();
 
-                // Determine the content length from the header
-                if (received_request.get().find(http::field::content_length) != received_request.get().end())
-                {
-                    std::size_t content_length = std::stoull(received_request.get()[http::field::content_length]);
+                if(parsed_request.req_type != get_object) {
+                    // Determine the content length from the header
+                    if (received_request.get().find(http::field::content_length) != received_request.get().end() &&
+                        parsed_request.req_type == get_object) {
+                        std::size_t content_length = std::stoull(received_request.get()[http::field::content_length]);
 
-                    body_buffer.append(content_length, 0);
-                    auto data_left = content_length - buffer.size();
+                        body_buffer.append(content_length, 0);
+                        auto data_left = content_length - buffer.size();
 
-                    // copy remaining bytes from flat buffer to body_buffer
-                    boost::asio::buffer_copy(boost::asio::buffer(body_buffer), buffer.data());
-                    auto size_transferred = co_await boost::asio::async_read(stream.socket(), boost::asio::buffer(body_buffer.data() + buffer.size(), data_left),
-                                                                             boost::asio::transfer_exactly(data_left), boost::asio::use_awaitable);
+                        // copy remaining bytes from flat buffer to body_buffer
+                        boost::asio::buffer_copy(boost::asio::buffer(body_buffer), buffer.data());
+                        auto size_transferred = co_await boost::asio::async_read(stream.socket(), boost::asio::buffer(
+                                                                                         body_buffer.data() + buffer.size(), data_left),
+                                                                                 boost::asio::transfer_exactly(
+                                                                                         data_left),
+                                                                                 boost::asio::use_awaitable);
 
-                    if (size_transferred + buffer.size() != content_length)
-                    {
-                        throw std::runtime_error("error reading the http body");
+                        if (size_transferred + buffer.size() != content_length) {
+                            throw std::runtime_error("error reading the http body");
+                        }
+
+                        std::string output_path = std::getenv("HOME");
+                        output_path = output_path + "/ULTIHASH_DUMP/";
+                        std::filesystem::create_directory(output_path);
+                        output_path += parsed_request.bucket_id;
+                        std::filesystem::create_directory(output_path);
+                        std::ofstream output_file(output_path + "/" +
+                                                  parsed_request.object_key + ".bin", std::ios::binary);
+                        output_file.write(body_buffer.data(), body_buffer.size());
+                        output_file.close();
+
+                    } else {
+                        throw std::runtime_error("please specify the content length");
                     }
-
-                    std::string output_path = std::getenv("HOME");
-                    output_path = output_path + "/ULTIHASH_DUMP/";
-                    std::filesystem::create_directory(output_path);
-                    output_path += parsed_request.bucket_id ;
-                    std::filesystem::create_directory(output_path);
-                    std::ofstream output_file(output_path + "/" +
-                                                parsed_request.object_key + ".bin" , std::ios::binary);
-                    output_file.write(body_buffer.data(), body_buffer.size());
-                    output_file.close();
-
-                }
-                else
-                {
-                    throw std::runtime_error("please specify the content length");
                 }
 
                 parsed_request.body = body_buffer;

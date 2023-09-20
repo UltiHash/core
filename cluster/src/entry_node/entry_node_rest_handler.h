@@ -21,7 +21,7 @@ public:
     {}
     coro < http::response<http::string_body> > handle (const parsed_request_wrapper& req) {
 
-        http::response<http::buffer_body> res{http::status::ok, 11};
+        http::response<http::string_body> res{http::status::ok, 11};
         res.set(http::field::server, "UltiHash v0.2.0");
         res.set(http::field::content_type, "text/html");
 
@@ -70,12 +70,8 @@ public:
                 ospan <char> buffer (h_dir.size);
                 m_dir.get().register_read_buffer(buffer);
                 co_await m_dir.get().recv_buffers(h_dir);
-                res.body().data = buffer.data.get();
-                res.body().size = buffer.size;
-                res.body().more = false;
-                res.prepare_payload();
-            }
-            if(h_dir.type == FAILURE) {
+                res.body() = std::string(buffer.data.get(), buffer.size);
+            } else {
                 throw std::runtime_error("Failed to retreive object " + dir_req.bucket_id + "/" + dir_req.object_key + " from the directory.");
                 //TODO: consider using custom exceptions to indicate if and how the error gets communicated to the HTTP client.
             }
