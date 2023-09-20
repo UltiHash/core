@@ -14,7 +14,8 @@ namespace uh::cluster {
 
 // fundamental config
 
-struct server_config {
+struct server_config
+{
     int threads;
     uint16_t port;
 };

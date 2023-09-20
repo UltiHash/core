@@ -7,7 +7,7 @@ namespace uh::cluster {
 
     const std::unordered_map <s3_req_type, std::set<s3_fields>> s3_parser::static_s3_valid_fields =
             {
-                    { s3_req_type::put_object, { x_amz_acl, x_amz_grant_full_control, x_amz_grant_read, x_amz_grant_read_acp,
+                    { s3_req_type::put_object, { x_amz_date, x_amz_security_token, amz_sdk_request, amz_sdk_invocation_id, x_amz_acl, x_amz_grant_full_control, x_amz_grant_read, x_amz_grant_read_acp,
                                                  x_amz_grant_write_acp, x_amz_storage_class, x_amz_request_payer, x_amz_tagging,
                                                  x_amz_expected_bucket_owner, x_amz_meta_author, x_amz_content_sha256 } },
                     { s3_req_type::get_object, { x_amz_request_payer, x_amz_expected_bucket_owner, x_amz_content_sha256 } }, //TODO: put the common x-amz-header outside this enum
@@ -39,6 +39,10 @@ namespace uh::cluster {
     {
         static const std::unordered_map<std::string, s3_fields> enum_map =
                 {
+                        {"amz-sdk-invocation-id", amz_sdk_invocation_id},
+                        {"amz-sdk-request", amz_sdk_request},
+                        {"x-amz-date", x_amz_date},
+                        {"x-amz-security-token", x_amz_security_token},
                         {"x-amz-acl",           x_amz_acl},
                         {"x-amz-grant-full-control",    x_amz_grant_full_control},
                         {"x-amz-grant-read",    x_amz_grant_read},
@@ -55,7 +59,7 @@ namespace uh::cluster {
                         {"x-amz-metadata-directive",   x_amz_metadata_directive},
                         {"x-amz-tagging-directive",   x_amz_tagging_directive},
                         {"x-amz-content-sha256", x_amz_content_sha256},
-
+                        {"amz-sdk-invocation-id", amz_sdk_invocation_id},
                 };
 
         auto it = enum_map.find(field);
@@ -116,7 +120,7 @@ namespace uh::cluster {
 
 //------------------------------------------------------------------------------
 
-    s3_parser::s3_parser(const http::request_parser<http::string_body>& recv_req) : m_recv_req(recv_req), m_s3_vfields(static_s3_valid_fields),
+    s3_parser::s3_parser(const http::request_parser<http::empty_body>& recv_req) : m_recv_req(recv_req), m_s3_vfields(static_s3_valid_fields),
     m_http_vfields(static_http_valid_fields)
     {}
 
@@ -132,17 +136,17 @@ namespace uh::cluster {
 
         for (const auto& header : m_recv_req.get())
         {
-            if (header.name_string().starts_with("x-"))
+            std::string recev_header = header.name_string();
+            std::transform(recev_header.begin(), recev_header.end(), recev_header.begin(), [](unsigned char c)
             {
-                m_parsed_req_wrapper.s3_parsed_fields.emplace(s3_field_to_enum(header.name_string()), header.value());
+                return std::tolower(c);
+            });
+            if (recev_header.starts_with("x-") || recev_header.starts_with("amz-"))
+            {
+                m_parsed_req_wrapper.s3_parsed_fields.emplace(s3_field_to_enum(recev_header), header.value());
             }
             else
             {
-                std::string recev_header = header.name_string();
-                std::transform(recev_header.begin(), recev_header.end(), recev_header.begin(), [](unsigned char c)
-                {
-                    return std::tolower(c);
-                });
                 m_parsed_req_wrapper.http_parsed_fields.emplace(http_field_to_enum(recev_header), header.value());
             }
         }
@@ -155,17 +159,18 @@ namespace uh::cluster {
         m_parsed_req_wrapper.verb = http_field_to_enum(verb_string);
         m_target = m_recv_req.get().base().target();
 
+        m_parsed_req_wrapper.bucket_id = m_target.substr(1, m_target.find_first_of('/', 1) - 1);
+        std::cout << "BUCKET ID: " << m_parsed_req_wrapper.bucket_id;
+
         auto index = m_target.find('?');
         if ( index != std::string::npos)
-            m_parsed_req_wrapper.object_key = m_target.substr(1, index);
+            throw std::runtime_error("Query parameters not supported in requests");
         else
-            m_parsed_req_wrapper.object_key = m_target.substr(1);
+            m_parsed_req_wrapper.object_key = m_target.substr(m_target.find_first_of('/', 1) +1 );
 
-        m_parsed_req_wrapper.bucket_id = m_parsed_req_wrapper.http_parsed_fields[http_fields::host].
-                substr(0, m_parsed_req_wrapper.http_parsed_fields[http_fields::host].find(':'));
+        std::cout << "OBJECT ID: " << m_parsed_req_wrapper.object_key;
 
         m_parsed_req_wrapper.req_type = get_type();
-        m_parsed_req_wrapper.body = m_recv_req.get().body();
 
         sanitizer();
 

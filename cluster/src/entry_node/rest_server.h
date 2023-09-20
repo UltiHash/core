@@ -4,6 +4,7 @@
 #include <boost/beast/core.hpp>
 #include <boost/beast/http.hpp>
 #include <boost/beast/version.hpp>
+#include <boost/beast/ssl.hpp>
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/awaitable.hpp>
 #include <boost/asio/co_spawn.hpp>
@@ -38,24 +39,13 @@ namespace uh::cluster
 
 //------------------------------------------------------------------------------
 
-    struct rest_server_config
-    {
-        constexpr static uint16_t DEFAULT_PORT = 8080;
-        constexpr static std::size_t DEFAULT_THREADS = 5;
-
-        std::size_t threads = DEFAULT_THREADS;
-        boost::asio::ip::address address;
-        uint16_t port = DEFAULT_PORT;
-    };
-
-//------------------------------------------------------------------------------
-
     class rest_server
     {
     private:
         server_config m_config;
         std::shared_ptr <net::io_context> m_ioc;
         std::vector<std::thread> m_thread_container {};
+        boost::asio::ssl::context m_ssl;
         entry_node_rest_handler m_handler;
         bool m_server_busy = false;
 
