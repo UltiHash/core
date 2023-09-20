@@ -19,7 +19,7 @@ namespace uh::cluster {
 
 BOOST_AUTO_TEST_CASE (directory_request_serialization) {
 
-    directory_request req_orig;
+    directory_put_request req_orig;
     req_orig.bucket_id = "very_important_data";
     req_orig.object_key = "unbelievable_object";
     fragment frag;
@@ -29,7 +29,7 @@ BOOST_AUTO_TEST_CASE (directory_request_serialization) {
 
     std::vector<char> serData;
     zpp::bits::out{serData}(req_orig).or_throw();
-    directory_request req_deserialized;
+    directory_put_request req_deserialized;
     zpp::bits::in{serData}(req_deserialized).or_throw();
 
 
