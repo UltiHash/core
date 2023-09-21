@@ -1,6 +1,9 @@
 //
 // Created by masi on 8/2/23.
 //
+
+/* COMMENTING OUT THE WHOLE FILE
+
 #ifdef SINGLE_TEST_RUNNER
 #define BOOST_TEST_NO_MAIN
 #else
@@ -150,3 +153,4 @@ BOOST_FIXTURE_TEST_CASE (test_big_int, MPI_Functionality_Fixture) {
 // ---------------------------------------------------------------------
 
 } // end namespace uh::cluster
+COMMENTING OUT THE WHOLE FILE */

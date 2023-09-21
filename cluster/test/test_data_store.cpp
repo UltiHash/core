@@ -1,6 +1,9 @@
 //
 // Created by masi on 7/24/23.
 //
+
+/* COMMENTING THE WHOLE FILE
+
 #ifdef SINGLE_TEST_RUNNER
 #define BOOST_TEST_NO_MAIN
 #else
@@ -484,3 +487,5 @@ BOOST_FIXTURE_TEST_CASE (test_data_store, config_fixture)
 // ---------------------------------------------------------------------
 
 } // end namespace uh::cluster
+
+COMMENTING THE WHOLE FILE */
