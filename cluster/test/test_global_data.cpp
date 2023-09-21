@@ -1,0 +1,152 @@
+//
+// Created by masi on 8/2/23.
+//
+#ifdef SINGLE_TEST_RUNNER
+#define BOOST_TEST_NO_MAIN
+#else
+#define BOOST_TEST_MODULE "global_data tests"
+#endif
+
+#include <boost/test/unit_test.hpp>
+#include "common/common.h"
+#include "dedupe_node/global_data.h"
+#include <mpi.h>
+
+// ------------- Tests Suites Follow --------------
+
+namespace uh::cluster {
+
+struct MPI_Functionality_Fixture {
+    MPI_Functionality_Fixture() {
+        m_argc = boost::unit_test::framework::master_test_suite().argc;
+        m_argv = boost::unit_test::framework::master_test_suite().argv;
+    }
+
+
+    std::size_t max_data_store_size = 8 * 1024;
+
+    global_data_config global_data_conf{
+            .max_data_store_size = max_data_store_size
+    };
+
+
+    data_store_config make_data_store_conf(int rank) {
+        return {.directory = "ds",
+                .hole_log = "ds/log" + std::to_string(rank),
+                .min_file_size = 2 * 1024,
+                .max_file_size = 4 * 1024,
+                .max_data_store_size = max_data_store_size,
+        };
+    }
+
+
+    int m_argc;
+    char **m_argv;
+
+    char data1 [512]{};
+    char data2 [1024]{};
+    char data3 [164]{};
+    char data4 [1520]{};
+    char data5 [2572]{};
+    char data6 [3021]{};
+    char data7 [102]{};
+    char data8 [5021]{};
+    char data9 [2048]{};
+    char data10 [3202]{};
+    char data11 [2021]{};
+
+    static void cleanup () {
+        try {
+            std::filesystem::remove_all("ds");
+        }
+        catch (std::exception&) {}
+
+    }
+
+    void fill_random(char* buf, size_t size) {
+        for (int i = 0; i < size; ++i) {
+            buf[i] = rand()&0xff;
+        }
+    }
+
+    void fill_data () {
+
+        fill_random (data1, sizeof (data1));
+        fill_random (data2, sizeof (data2));
+        fill_random (data3, sizeof (data3));
+        fill_random (data4, sizeof (data4));
+        fill_random (data5, sizeof (data5));
+        fill_random (data6, sizeof (data6));
+        fill_random (data7, sizeof (data7));
+        fill_random (data8, sizeof (data8));
+        fill_random (data9, sizeof (data9));
+        fill_random (data10, sizeof (data10));
+        fill_random (data11, sizeof (data11));
+    }
+
+};
+
+// ---------------------------------------------------------------------
+
+BOOST_FIXTURE_TEST_CASE (test_big_int, MPI_Functionality_Fixture) {
+
+    cleanup();
+
+    MPI_Init (&m_argc, &m_argv);
+    int rank;
+    int size;
+    MPI_Comm_rank(MPI_COMM_WORLD, &rank);
+    MPI_Comm_size(MPI_COMM_WORLD, &size);
+
+    if (size == 1) {
+        return;
+    }
+
+    if (rank == 0) {
+        std::vector <int> ranks;
+        ranks.reserve(size - 1);
+        for (int i = 1; i < size; ++i) {
+            ranks.push_back(i);
+        }
+
+        global_data gdata(global_data_conf, ranks);
+        auto addr1 = gdata.write({data1, sizeof(data1)});
+        auto expected_size = sizeof (data1) + 2 * sizeof (size_t);
+        BOOST_CHECK(gdata.get_used_space() == expected_size);
+        auto addr2 = gdata.write({data2, sizeof(data2)});
+        expected_size += sizeof (data2);
+        BOOST_CHECK(gdata.get_used_space() == expected_size);
+        auto addr3 = gdata.write({data3, sizeof(data3)});
+        expected_size += sizeof (data3);
+        BOOST_CHECK(gdata.get_used_space() == expected_size);
+        auto addr4 = gdata.write({data4, sizeof(data4)});
+        expected_size += sizeof (data4);
+        auto addr5 = gdata.write({data5, sizeof(data5)});
+        expected_size += sizeof (data5);
+        BOOST_CHECK(gdata.get_used_space() == expected_size);
+        auto addr6 = gdata.write({data6, sizeof(data6)});
+        expected_size += sizeof (data6); // new file
+        auto addr7 = gdata.write({data7, sizeof(data7)});
+        expected_size += sizeof (data7);
+        auto addr8 = gdata.write({data8, sizeof(data8)});
+        expected_size += sizeof (data8);
+        auto addr9 = gdata.write({data9, sizeof(data9)});
+        expected_size += sizeof (data9);
+        BOOST_CHECK(gdata.get_used_space() == expected_size);
+
+
+
+        gdata.stop();
+
+    }
+    else { // data nodes
+        uh::cluster::data_node dn (make_data_store_conf (rank), rank);
+        dn.run();
+    }
+
+    MPI_Finalize();
+}
+
+// ---------------------------------------------------------------------
+
+} // end namespace uh::cluster
