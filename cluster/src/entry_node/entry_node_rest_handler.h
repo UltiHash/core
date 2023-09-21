@@ -58,6 +58,20 @@ public:
                 throw std::runtime_error("Failed to add the fragment address of object " + dir_req.bucket_id + "/" + dir_req.object_key + " to the directory.");
                 //TODO: consider using custom exceptions to indicate if and how the error gets communicated to the HTTP client.
             }
+
+            if (req.req_type == close_multi_part)
+            {
+                res.set(boost::beast::http::field::transfer_encoding, "chunked");
+                res.set(boost::beast::http::field::connection, "close");
+                res.set(boost::beast::http::field::content_type, "application/xml");
+                res.body() =  std::string("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+                                          "<CompleteMultipartUploadResult>\n"
+                                          "<Location>string</Location>\n"
+                                          "<Bucket>" + req.bucket_id +"</Bucket>\n"
+                                          "<Key>" + req.object_key + "</Key>\n"
+                                          "<ETag>string</ETag>\n"
+                                          "</CompleteMultipartUploadResult>");
+            }
         }
         else if (req.req_type == s3_req_type::get_object) {
             auto m_dir = m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size())).acquire_messenger();
@@ -87,20 +101,6 @@ public:
         std::cout << "duration " << duration.count() << " s" << std::endl;
         const auto bandwidth = size_mb / duration.count();
         std::cout << "bandwidth " << bandwidth << " MB/s" << std::endl;
-
-        if (req.req_type == multi_part_upload)
-        {
-            res.set(boost::beast::http::field::transfer_encoding, "chunked");
-            res.set(boost::beast::http::field::connection, "close");
-            res.set(boost::beast::http::field::content_type, "application/xml");
-            res.body() =  std::string("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
-                                      "<CompleteMultipartUploadResult>\n"
-                                      "<Location>string</Location>\n"
-                                      "<Bucket>" + req.bucket_id +"</Bucket>\n"
-                                      "<Key>" + req.object_key + "</Key>\n"
-                                      "<ETag>string</ETag>\n"
-                                      "</CompleteMultipartUploadResult>");
-        }
 
         res.prepare_payload();
         co_return res;

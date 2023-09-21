@@ -54,7 +54,7 @@ namespace uh::cluster
     net::awaitable<void>
     rest_server::do_session(tcp_stream stream) {
         std::cout << "connection from: " << stream.socket().remote_endpoint() << std::endl;
-
+        std::cout << "\nNUMBER:" << some_number++  << "-----" << std::endl;
         beast::error_code ec;
 
         try {
@@ -95,15 +95,20 @@ namespace uh::cluster
                 }
                 else if (parsed_request.req_type == close_multi_part)
                 {
-                    for (const auto& pair : m_multi_part_container)
+                    if (!m_is_close)
                     {
-                        body_buffer += pair.second;
+                        m_is_close = true;
+                        for (const auto& pair : m_multi_part_container)
+                        {
+                            body_buffer += pair.second;
+                        }
+
+                        parsed_request.body = body_buffer;
+                        auto response = co_await m_handler.handle(parsed_request);
+
+                        co_await http::async_write(stream, response, net::use_awaitable);
+                        m_is_close = false;
                     }
-
-                    parsed_request.body = body_buffer;
-                    auto response = co_await m_handler.handle(parsed_request);
-
-                    co_await http::async_write(stream, response, net::use_awaitable);
                 }
                 else
                 {
