@@ -49,7 +49,6 @@ namespace uh::cluster
         boost::asio::ssl::context m_ssl;
         entry_node_rest_handler m_handler;
         bool m_server_busy = false;
-        std::atomic<int> some_number = 0;
         //TODO: remove the m_is_close for when multiple same requests arrive
         // Handle multiple same requests arriving
         std::atomic<bool> m_is_close = false;

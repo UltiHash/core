@@ -54,7 +54,7 @@ namespace uh::cluster
     net::awaitable<void>
     rest_server::do_session(tcp_stream stream) {
         std::cout << "connection from: " << stream.socket().remote_endpoint() << std::endl;
-        std::cout << "\nNUMBER:" << some_number++  << "-----" << std::endl;
+
         beast::error_code ec;
 
         try {
