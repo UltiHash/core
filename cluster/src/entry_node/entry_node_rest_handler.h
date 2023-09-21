@@ -32,7 +32,7 @@ public:
 
         std::stringstream metrics;
 
-        if (req.req_type == s3_req_type::put_object) {
+        if (req.req_type == s3_req_type::put_object || req.req_type == s3_req_type::close_multi_part) {
             auto m_dedup = m_dedupe_nodes.at(get_round_robin_index(m_dedupe_node_index, m_dedupe_nodes.size())).acquire_messenger();
             co_await m_dedup.get().send (DEDUPE_REQ, req.body);
             const auto h_dedup = co_await m_dedup.get().recv_header();
@@ -87,6 +87,20 @@ public:
         std::cout << "duration " << duration.count() << " s" << std::endl;
         const auto bandwidth = size_mb / duration.count();
         std::cout << "bandwidth " << bandwidth << " MB/s" << std::endl;
+
+        if (req.req_type == multi_part_upload)
+        {
+            res.set(boost::beast::http::field::transfer_encoding, "chunked");
+            res.set(boost::beast::http::field::connection, "close");
+            res.set(boost::beast::http::field::content_type, "application/xml");
+            res.body() =  std::string("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+                                      "<CompleteMultipartUploadResult>\n"
+                                      "<Location>string</Location>\n"
+                                      "<Bucket>" + req.bucket_id +"</Bucket>\n"
+                                      "<Key>" + req.object_key + "</Key>\n"
+                                      "<ETag>string</ETag>\n"
+                                      "</CompleteMultipartUploadResult>");
+        }
 
         res.prepare_payload();
         co_return res;

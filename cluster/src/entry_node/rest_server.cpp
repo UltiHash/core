@@ -100,30 +100,10 @@ namespace uh::cluster
                         body_buffer += pair.second;
                     }
 
-                    // save to disk
-                    std::string output_path = std::getenv("HOME");
-                    output_path = output_path + "/ULTIHASH_DUMP/";
-                    std::filesystem::create_directory(output_path);
-                    output_path += parsed_request.bucket_id ;
-                    std::filesystem::create_directory(output_path);
-                    std::ofstream output_file(output_path + "/" +
-                                              parsed_request.object_key , std::ios::binary);
-                    output_file.write(body_buffer.data(), body_buffer.size());
-                    output_file.close();
+                    parsed_request.body = body_buffer;
+                    auto response = co_await m_handler.handle(parsed_request);
 
-                    http::response<http::string_body> res{http::status::ok, 11};
-                    res.set(boost::beast::http::field::transfer_encoding, "chunked");
-                    res.set(boost::beast::http::field::connection, "close");
-                    res.set(boost::beast::http::field::content_type, "application/xml");
-                    res.body() =  std::string("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
-                                              "<CompleteMultipartUploadResult>\n"
-                                              "<Location>string</Location>\n"
-                                              "<Bucket>" + parsed_request.bucket_id +"</Bucket>\n"
-                                              "<Key>" + parsed_request.object_key + "</Key>\n"
-                                              "<ETag>string</ETag>\n"
-                                              "</CompleteMultipartUploadResult>");
-
-                    co_await http::async_write(stream, res, net::use_awaitable);
+                    co_await http::async_write(stream, response, net::use_awaitable);
                 }
                 else
                 {
@@ -141,12 +121,9 @@ namespace uh::cluster
                         co_await http::async_write(stream, res, net::use_awaitable);
                     }
 
-    //                s3_authenticator s3_authenticate(received_request, parsed_request);
-    //                s3_authenticate.authenticate();
-
     // TODO: NOT WORKING DUE TO SOME ERROR, SO FOR NOW DUMPING IN /tmp/ folder.
-    //                auto response = co_await m_handler.handle(parsed_request);
-                    // multiple threads will execute this
+//                    auto response = co_await m_handler.handle(parsed_request);
+                    // not thread safe but for some reason it works : multiple threads will execute this
                     if (parsed_request.req_type == multi_part_upload)
                     {
                         if (received_request.get().find(http::field::content_length) != received_request.get().end())
@@ -169,8 +146,6 @@ namespace uh::cluster
                                 {
                                     throw std::runtime_error("error reading the http body");
                                 }
-
-//                            std::cout <<
 
                                 // send response
                                 http::response<http::empty_body> res{http::status::ok, 11};
@@ -212,55 +187,16 @@ namespace uh::cluster
                                 throw std::runtime_error("please specify the content length");
                             }
 
-                            // save to disk
-                            std::string output_path = std::getenv("HOME");
-                            output_path = output_path + "/ULTIHASH_DUMP/";
-                            std::filesystem::create_directory(output_path);
-                            output_path += parsed_request.bucket_id ;
-                            std::filesystem::create_directory(output_path);
-                            std::ofstream output_file(output_path + "/" +
-                                                      parsed_request.object_key , std::ios::binary);
-                            output_file.write(body_buffer.data(), body_buffer.size());
-                            output_file.close();
-
                             parsed_request.body = body_buffer;
 
                             // send response
-                            http::response<http::empty_body> res{http::status::ok, 11};
-                            res.prepare_payload();
-                            co_await http::async_write(stream, res, net::use_awaitable);
+                            auto response = co_await m_handler.handle(parsed_request);
+                            co_await http::async_write(stream, response, net::use_awaitable);
                         }
                         else
                         {
-                            beast::error_code i_ec;
-                            http::file_body::value_type body;
-                            std::string output_path = std::getenv("HOME");
-                            output_path = output_path + "/ULTIHASH_DUMP/";
-                            output_path += parsed_request.bucket_id + "/" +
-                                                                      parsed_request.object_key;
-                            body.open(output_path.c_str(), beast::file_mode::scan, i_ec);
-
-                            // Handle the case where the file doesn't exist
-                            if(i_ec == beast::errc::no_such_file_or_directory)
-                            {
-                                http::response<http::string_body> res{http::status::not_found, 11};
-                                res.set(http::field::content_type, "text/html");
-                                res.body() = "The resource '" + output_path;
-                                res.keep_alive(false);
-                                res.prepare_payload();
-                                co_await http::async_write(stream, res, net::use_awaitable);
-                            }
-                            else
-                            {
-                                auto const size = body.size();
-                                http::response<http::file_body> res{
-                                        std::piecewise_construct,
-                                        std::make_tuple(std::move(body)),
-                                        std::make_tuple(http::status::ok, 11)};
-                                res.content_length(size);
-                                co_await http::async_write(stream, res, net::use_awaitable);
-                            }
-
+                            auto response = co_await m_handler.handle(parsed_request);
+                            co_await http::async_write(stream, response, net::use_awaitable);
                         }
                     }
                 }
