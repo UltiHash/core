@@ -120,10 +120,10 @@ namespace uh::cluster
 
             // TODO: For now, we use fixed upload id for a client
             res.body() =  std::string("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
-                                      "<InitiateMultipartUploadResult xmlns=\"http://s3.amazonaws.com/doc/2006-03-01/\">\n"
+                                      "<InitiateMultipartUploadResult>\n"
                                       "<Bucket>" + parsed_request.bucket_id + "</Bucket>\n"
                                       "<Key>" + parsed_request.object_key + "</Key>\n"
-                                      "<UploadId>" + "1" + "</UploadId>\n"
+                                      "<UploadId>1</UploadId>\n"
                                       "</InitiateMultipartUploadResult>");
 
             co_return std::move(res);
