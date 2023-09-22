@@ -40,6 +40,29 @@ namespace uh::cluster
 
 //------------------------------------------------------------------------------
 
+    template <typename T, typename Y>
+    class ts_map
+    {
+    private:
+        std::map<T,Y> m_container;
+        std::mutex m_mutex;
+
+    public:
+        void insert(const T& key, const Y& value);
+
+        std::map<T,Y>::iterator find(const T& key, Y& value);
+
+        Y& operator[] (const T& key);
+
+        typename std::map<T, Y>::iterator begin();
+        typename std::map<T, Y>::iterator end();
+
+        void clear();
+
+    };
+
+//------------------------------------------------------------------------------
+
     class rest_server
     {
     private:
@@ -53,8 +76,7 @@ namespace uh::cluster
         // Handle multiple same requests arriving
         std::atomic<bool> m_is_close = false;
 
-        // TODO: WHY does it WORK without mutex protection????
-        std::map<uint16_t, std::string> m_multi_part_container;
+        ts_map<uint16_t, std::string> m_multi_part_container;
         std::mutex m_mutex;
 
         const boost::asio::ip::address m_server_address = boost::asio::ip::make_address("0.0.0.0");
@@ -64,15 +86,22 @@ namespace uh::cluster
 
         void run();
 
-        [[nodiscard]] std::shared_ptr <boost::asio::io_context> get_executor () const;
+        coro <http::response<http::string_body>>
+        handle_requests (parsed_request_wrapper& req, tcp_stream& stream,
+                         beast::flat_buffer& remaining_buffer);
+
+        [[nodiscard]] std::shared_ptr <boost::asio::io_context>
+        get_executor () const;
 
         ~rest_server();
 
         // Handles an HTTP server connection
-        net::awaitable<void> do_session(tcp_stream stream);
+        net::awaitable<void>
+        do_session(tcp_stream stream);
 
         // Accepts incoming connections and launches the sessions
-        net::awaitable<void> do_listen(tcp::endpoint endpoint);
+        net::awaitable<void>
+        do_listen(tcp::endpoint endpoint);
     };
 
 //------------------------------------------------------------------------------

@@ -19,6 +19,7 @@ namespace uh::cluster {
                     { s3_req_type::close_multi_part, { x_amz_date, x_amz_security_token, amz_sdk_request, amz_sdk_invocation_id, x_amz_acl, x_amz_grant_full_control, x_amz_grant_read, x_amz_grant_read_acp,
                                                               x_amz_grant_write_acp, x_amz_storage_class, x_amz_request_payer, x_amz_tagging,
                                                               x_amz_expected_bucket_owner, x_amz_meta_author, x_amz_content_sha256 } },
+                    { s3_req_type::delete_multi_part_upload, {  x_amz_date, x_amz_content_sha256, amz_sdk_request, amz_sdk_invocation_id } },
                     { s3_req_type::get_object, { x_amz_date, x_amz_security_token, amz_sdk_request, amz_sdk_invocation_id, x_amz_request_payer, x_amz_expected_bucket_owner, x_amz_content_sha256 } }, //TODO: put the common x-amz-header outside this enum
                     { s3_req_type::copy_object, { x_amz_acl, x_amz_copy_source, x_amz_copy_source_if_match, x_amz_copy_source_if_modified_since,
                                                   x_amz_copy_source_if_none_match, x_amz_copy_source_if_unmodified_since, x_amz_grant_full_control, x_amz_grant_read,
@@ -37,6 +38,7 @@ namespace uh::cluster {
                     { s3_req_type::init_multi_part, { http_fields::content_disposition, http_fields::content_encoding, http_fields::content_language, http_fields::content_length, http_fields::content_md5, http_fields::content_type, http_fields::expires } },
                     { s3_req_type::multi_part_upload, { http_fields::content_disposition, http_fields::content_encoding, http_fields::content_language, http_fields::content_length, http_fields::content_md5, http_fields::content_type, http_fields::expires } },
                     { s3_req_type::close_multi_part, { http_fields::content_disposition, http_fields::content_encoding, http_fields::content_language, http_fields::content_length, http_fields::content_md5, http_fields::content_type, http_fields::expires } },
+                    { s3_req_type::delete_multi_part_upload, { http_fields::content_length } },
                     { s3_req_type::get_object, { http_fields::if_match, http_fields::if_modified_since, http_fields::if_none_match, http_fields::if_unmodified_since, http_fields::range } },
                     { s3_req_type::get_object, { http_fields::if_match, http_fields::if_modified_since, http_fields::if_none_match, http_fields::if_unmodified_since, http_fields::range } },
                     { s3_req_type::copy_object, { http_fields::content_disposition, http_fields::content_encoding, http_fields::content_language, http_fields::content_type, http_fields::expires } },
@@ -99,6 +101,7 @@ namespace uh::cluster {
                         {"server", http_fields::server},
                         {"put", http_fields::put},
                         {"post", http_fields::post},
+                        {"delete", http_fields::delete_},
                         {"authorization", http_fields::authorization},
                         {"expect", http_fields::expect},
                         {"cache-control", http_fields::cache_control},
@@ -117,7 +120,6 @@ namespace uh::cluster {
                         {"if-none-match", http_fields::if_none_match},
                         {"if-unmodified-since", http_fields::if_unmodified_since},
                         {"range", http_fields::range},
-                        {"delete", http_fields::delete_},
                 };
 
         auto it = enum_map.find(field);
@@ -242,14 +244,20 @@ namespace uh::cluster {
                 {
                     return delete_bucket;
                 }
-                else if (!m_target.empty() && (m_target.find('?') == std::string::npos))
+                else if (!m_target.empty() && (m_target.find("?uploadId=") != std::string::npos))
+                {
+                    m_parsed_req_wrapper.upload_id = std::string(m_target.substr(m_target.find("uploadId=") + 9));
+                    if (m_parsed_req_wrapper.upload_id.empty())
+                        throw std::runtime_error("No upload ID given!");
+                    return delete_multi_part_upload;
+                }
+                else if (!m_target.empty() && (m_target.find('?') != std::string::npos))
                 {
                     return delete_object;
                 }
-                else if (!m_target.empty() && (m_target.find("?uploadId=") == std::string::npos))
+                else
                 {
-                    m_parsed_req_wrapper.upload_id = std::string(m_target.substr(m_target.find("uploadId=") + 9));
-                    return delete_multi_part_upload;
+                    throw std::runtime_error("bad request with delete");
                 }
             default:
                 throw std::runtime_error("bad http verb.");
