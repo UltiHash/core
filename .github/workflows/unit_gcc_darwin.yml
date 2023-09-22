@@ -1,12 +1,12 @@
 name: Unit Tests (MacOS Monterey, GCC)
 
 on:
-#  push:
-#    branches: [ "master" ]
-#  pull_request:
-#    branches: [ "master" ]
-#  schedule:
-#    - cron: '0 6 * * *'
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+  schedule:
+    - cron: '0 6 * * *'
   workflow_dispatch:
 
 jobs:
@@ -20,9 +20,7 @@ jobs:
           submodules: recursive
 
       - name: Install dependencies from Homebrew
-        run: |
-          brew install wget openssl gcc cmake macfuse
-          ln -s /usr/local/opt/openssl/include/openssl /usr/local/include
+        run: brew install wget openssl gcc cmake macfuse
 
       - name: Cache boost
         id: cache-boost
