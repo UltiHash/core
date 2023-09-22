@@ -19,7 +19,7 @@ namespace uh::cluster
 //------------------------------------------------------------------------------
 
     template <typename T, typename Y>
-    std::map<T,Y>::iterator ts_map<T,Y>::find(const T& key, Y& value)
+    std::map<T,Y>::iterator ts_map<T,Y>::find(const T& key)
     {
         std::lock_guard<std::mutex> lock(m_mutex);
         return m_container.find(key);
@@ -182,26 +182,26 @@ namespace uh::cluster
                 if (parsed_request.req_type == multi_part_upload)
                 {
 
-    //                if (m_multi_part_container.find(parsed_request.part_number) != m_multi_part_container.end())
-    //                {
-                    m_multi_part_container[parsed_request.part_number] = "";
-                    auto& multipart_buffer = m_multi_part_container[parsed_request.part_number];
-                    multipart_buffer.append(content_length, 0);
-                    boost::asio::buffer_copy(boost::asio::buffer(multipart_buffer), remaining_buffer.data());
-
-                    auto size_transferred = co_await boost::asio::async_read(stream.socket(), boost::asio::buffer(multipart_buffer.data() + remaining_buffer.size(), data_left),
-                                                                             boost::asio::transfer_exactly(data_left), boost::asio::use_awaitable);
-
-                    if (size_transferred + remaining_buffer.size() != content_length)
+                    if ( m_multi_part_container.find(parsed_request.part_number) == m_multi_part_container.end() )
                     {
-                        throw std::runtime_error("error reading the http body");
+                        m_multi_part_container[parsed_request.part_number] = "";
+                        auto& multipart_buffer = m_multi_part_container[parsed_request.part_number];
+                        multipart_buffer.append(content_length, 0);
+                        boost::asio::buffer_copy(boost::asio::buffer(multipart_buffer), remaining_buffer.data());
+
+                        auto size_transferred = co_await boost::asio::async_read(stream.socket(), boost::asio::buffer(multipart_buffer.data() + remaining_buffer.size(), data_left),
+                                                                                 boost::asio::transfer_exactly(data_left), boost::asio::use_awaitable);
+
+                        if (size_transferred + remaining_buffer.size() != content_length)
+                        {
+                            throw std::runtime_error("error reading the http body");
+                        }
+
+                        res.set(http::field::etag, "ThisistheCustomEtag" + std::to_string(parsed_request.part_number));
+                        res.prepare_payload();
+
+                        co_return std::move(res);
                     }
-
-                    res.set(http::field::etag, "ThisistheCustomEtag" + std::to_string(parsed_request.part_number));
-                    res.prepare_payload();
-
-                    co_return std::move(res);
-    //                    }
                 }
                 else
                 {

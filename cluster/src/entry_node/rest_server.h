@@ -50,7 +50,7 @@ namespace uh::cluster
     public:
         void insert(const T& key, const Y& value);
 
-        std::map<T,Y>::iterator find(const T& key, Y& value);
+        std::map<T,Y>::iterator find(const T& key);
 
         Y& operator[] (const T& key);
 
