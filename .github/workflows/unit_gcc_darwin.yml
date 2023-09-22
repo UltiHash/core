@@ -24,8 +24,8 @@ jobs:
 
       - name: Install FoundationDB
         run: |
-          wget -O /tmp/FoundationDB-7.1.31_x86_64.pkg https://github.com/apple/foundationdb/releases/download/7.1.31/FoundationDB-7.1.31_x86_64.pkg
-          sudo installer -pkg /tmp/FoundationDB-7.1.31_x86_64.pkg -target /
+          wget -O /tmp/FoundationDB-7.3.17_x86_64.pkg https://github.com/apple/foundationdb/releases/download/7.3.17/FoundationDB-7.3.17_x86_64.pkg
+          sudo installer -pkg /tmp/FoundationDB-7.3.17_x86_64.pkg -target /
 
       - name: Cache boost
         id: cache-boost
