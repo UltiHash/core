@@ -26,7 +26,7 @@ public:
 private:
 
     // plain storage for hash index
-    
+
     KeyHandle m_key_handle;
     ValueHandle m_value_handle;
 };
