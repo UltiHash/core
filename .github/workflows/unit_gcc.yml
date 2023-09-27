@@ -2,7 +2,7 @@ name: Unit Tests (Linux, GCC)
 
 on:
   push:
-    branches: [ "master" ]
+    branches: [ "master", "no-mpi" ]
   pull_request:
     branches: [ "master" ]
   schedule:
@@ -43,6 +43,7 @@ jobs:
 
       - name: Packaging (.deb)
         working-directory: ${{github.workspace}}/build
+        if: matrix.build == 'Release'
         run: cpack -G DEB
 
       - name: Upload uh-cli
