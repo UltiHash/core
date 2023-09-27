@@ -106,12 +106,14 @@ namespace uh::cluster {
         enum http_fields verb;
         // TODO: make it multimap or at least combine the multiple header values into one
         std::unordered_map <s3_fields, std::string_view> s3_parsed_fields;
+        std::unordered_map < s3_fields, std::string_view > s3_amz_only;
         std::unordered_map <http_fields, std::string_view> http_parsed_fields;
         s3_req_type req_type = not_initialized;
         std::string bucket_id;
         std::string object_key;
         std::string upload_id;
         uint16_t part_number;
+        std::string query_string;
         std::string_view body;
     };
 

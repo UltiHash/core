@@ -49,15 +49,13 @@ namespace uh::cluster
 
     public:
         void insert(const T& key, const Y& value);
+        void clear();
 
         std::map<T,Y>::iterator find(const T& key);
-
         Y& operator[] (const T& key);
 
         typename std::map<T, Y>::iterator begin();
         typename std::map<T, Y>::iterator end();
-
-        void clear();
 
     };
 
