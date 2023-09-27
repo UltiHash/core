@@ -14,7 +14,7 @@ jobs:
     strategy:
       matrix:
         build: [Release, Debug]
-        os: [uh-x86_64-ubuntu-18.04, uh-x86_64-ubuntu-20.04, uh-x86_64-ubuntu-22.04] #, uh-aarch64-ubuntu-22.04]
+        os: [uh-x86_64-ubuntu-20.04, uh-x86_64-ubuntu-22.04] #, uh-aarch64-ubuntu-22.04]
     runs-on: ${{ matrix.os }}
 
     steps:
@@ -26,7 +26,7 @@ jobs:
       - name: Configure CMake
         # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
         # See https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html?highlight=cmake_build_type
-        run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{ matrix.build }} -DUPDATE_GIT_SUBMODULE=Off -DPROTOCOL_USE_SMALL_CHUNKS=On
+        run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{ matrix.build }} -DCPACK_COMPONENTS_ALL="uh-cluster;uh-data-node;uh-cli"
 
       - name: Build
         # Build your program with the given configuration
@@ -41,26 +41,27 @@ jobs:
         # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
         run: ctest -C ${{ matrix.build }} --output-on-failure
 
+      - name: Packaging (.deb)
+        run: cpack -G DEB
+
       - name: Upload uh-cli
         uses: actions/upload-artifact@v3
+        if: matrix.build == 'Release' && matrix.os == uh-x86_64-ubuntu-22.04
         with:
-          name: uh-cli-${{ matrix.os }}-${{ matrix.build }}
-          path: ${{github.workspace}}/build/client-shell/uh-cli
+          name: ultihash-cli_${{ github.sha }}_amd64.deb
+          path: ${{github.workspace}}/packaging/ultihash-cli_0.2.0_amd64.deb
 
       - name: Upload uh-data-node
         uses: actions/upload-artifact@v3
+        if: matrix.build == 'Release' && matrix.os == uh-x86_64-ubuntu-22.04
         with:
-          name: uh-data-node-${{ matrix.os }}-${{ matrix.build }}
-          path: ${{github.workspace}}/build/server-db/uh-data-node
+          name: ultihash-data-node_${{ github.sha }}_amd64.deb
+          path: ${{github.workspace}}/packaging/ultihash-data-node_0.2.0_amd64.deb
 
-      - name: Upload uh-agency-node
+      - name: Upload uh-cluster
         uses: actions/upload-artifact@v3
+        if: matrix.build == 'Release' && matrix.os == uh-x86_64-ubuntu-22.04
         with:
-          name: uh-agency-node-${{ matrix.os }}-${{ matrix.build }}
-          path: ${{github.workspace}}/build/server-agency/uh-agency-node
+          name: ultihash-cluster_${{ github.sha }}_amd64.deb
+          path: ${{github.workspace}}/packaging/ultihash-cluster_0.2.0_amd64.deb
 
-      - name: Upload libudb.a
-        uses: actions/upload-artifact@v3
-        with:
-          name: libudb.a-${{ matrix.os }}-${{ matrix.build }}
-          path: ${{github.workspace}}/build/client-sdk/libudb.a
