@@ -50,20 +50,17 @@ jobs:
         uses: actions/upload-artifact@v3
         if: matrix.build == 'Release' && matrix.os == 'uh-x86_64-ubuntu-22.04'
         with:
-          name: ultihash-cli_${{ github.sha }}_amd64.deb
           path: ${{github.workspace}}/packaging/ultihash-cli_0.2.0_amd64.deb
 
       - name: Upload uh-data-node
         uses: actions/upload-artifact@v3
         if: matrix.build == 'Release' && matrix.os == 'uh-x86_64-ubuntu-22.04'
         with:
-          name: ultihash-data-node_${{ github.sha }}_amd64.deb
           path: ${{github.workspace}}/packaging/ultihash-data-node_0.2.0_amd64.deb
 
       - name: Upload uh-cluster
         uses: actions/upload-artifact@v3
         if: matrix.build == 'Release' && matrix.os == 'uh-x86_64-ubuntu-22.04'
         with:
-          name: ultihash-cluster_${{ github.sha }}_amd64.deb
           path: ${{github.workspace}}/packaging/ultihash-cluster_0.2.0_amd64.deb
 
