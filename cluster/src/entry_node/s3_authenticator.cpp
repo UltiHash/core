@@ -7,6 +7,9 @@
 #include "s3_parser.h"
 #include <iostream>
 
+#define EMPTY_SHA_256 "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+#define NEWLINE '\n'
+
 namespace uh::cluster {
 
 //------------------------------------------------------------------------------
@@ -16,8 +19,8 @@ namespace uh::cluster {
 
 //------------------------------------------------------------------------------
 
-    s3_authenticator::s3_authenticator(const http::request_parser<http::string_body>& received_request, parsed_request_wrapper& parsed_request) :
-    m_parsed_request(parsed_request), m_received_request(received_request)
+    s3_authenticator::s3_authenticator(parsed_request_wrapper& parsed_request) :
+    m_parsed_request(parsed_request)
     {
 
         if (m_parsed_request.http_parsed_fields.find(http_fields::authorization) == m_parsed_request.http_parsed_fields.end())
@@ -110,11 +113,24 @@ namespace uh::cluster {
 
 //------------------------------------------------------------------------------
 
+//    std::string s3_authenticator::uri_encode() const
+//    {
+//
+//    }
+//
+////------------------------------------------------------------------------------
+//
+//    std::string s3_authenticator::trim() const
+//    {
+//
+//    }
+
+//------------------------------------------------------------------------------
+
     std::string
     s3_authenticator::get_canonical_uri() const
     {
-//        return std::string('/' + m_parsed_request.bucket_id + '/' + m_parsed_request.object_key + '\n');
-        return  {'/' + m_parsed_request.object_key + "\\n" };
+        return std::string('/' + m_parsed_request.bucket_id + '/' + m_parsed_request.object_key + "\n");
     }
 
 //------------------------------------------------------------------------------
@@ -122,7 +138,31 @@ namespace uh::cluster {
     std::string
     s3_authenticator::get_canonical_query_string() const
     {
-        return {"\\n"};
+        std::string canonical_query_string {};
+
+        std::size_t query_index;
+        std::size_t initial_index = 0;
+        do
+        {
+            query_index = m_parsed_request.query_string.find('&');
+            auto single_query_parameter = m_parsed_request.query_string.substr(initial_index, query_index - 1);
+
+            if (!single_query_parameter.empty() && single_query_parameter.find('=') == std::string::npos)
+                single_query_parameter += '=';
+
+            canonical_query_string += single_query_parameter + '&';
+
+            // TODO: uriencode and trim here
+
+
+            initial_index = query_index + 1;
+
+        } while (query_index != std::string::npos);
+        canonical_query_string.pop_back();
+
+        // TODO: sort parameters alphabetically by the key name
+
+        return canonical_query_string + "\n";
     }
 
 //------------------------------------------------------------------------------
@@ -165,35 +205,18 @@ namespace uh::cluster {
 
 //------------------------------------------------------------------------------
 
+    // not hex encoded
     std::string
-    s3_authenticator::hmac_sha_256(const std::string& payload) const
+    s3_authenticator::hmac_sha_256(const std::string& signing_key, const std::string& string_to_sign) const
     {
         unsigned char hmac_result[SHA256_DIGEST_LENGTH];
-        HMAC(
-                EVP_sha256(),
-                m_secret_key.c_str(),
-                m_secret_key.length(),
-                reinterpret_cast<const unsigned char*>(payload.data()),
-                SHA256_DIGEST_LENGTH,
-                hmac_result,
-                nullptr
-        );
-
-        return {reinterpret_cast<char*>(hmac_result), SHA256_DIGEST_LENGTH};
-    }
-
-//------------------------------------------------------------------------------
-
-    std::string
-    s3_authenticator::hmac_sha_256(const std::string& payload, const std::string& signing_key) const
-    {
-        unsigned char hmac_result[SHA256_DIGEST_LENGTH];
+        // TODO: HMAC can fail and return nullptr
         HMAC(
                 EVP_sha256(),
                 signing_key.data(),
                 signing_key.length(),
-                reinterpret_cast<const unsigned char*>(payload.data()),
-                payload.length(),
+                reinterpret_cast<const unsigned char*>(string_to_sign.data()),
+                string_to_sign.length(),
                 hmac_result,
                 nullptr
         );
@@ -217,7 +240,7 @@ namespace uh::cluster {
                 auto converted_s3_enum = s3_field_to_enum(header);
                 if (m_parsed_request.s3_parsed_fields.contains(converted_s3_enum))
                 {
-                    canonical_header_string += header + ":" + std::string(m_parsed_request.s3_parsed_fields[converted_s3_enum]) + "\\n";
+                    canonical_header_string += header + ":" + std::string(m_parsed_request.s3_parsed_fields[converted_s3_enum]) + "\n";
                 }
                 else
                     throw std::runtime_error("one of the given signed header doesn't exists");
@@ -227,7 +250,7 @@ namespace uh::cluster {
                 auto converted_http_enum = http_field_to_enum(header);
                 if (m_parsed_request.http_parsed_fields.contains(converted_http_enum))
                 {
-                    canonical_header_string += header + ":" + std::string(m_parsed_request.http_parsed_fields[converted_http_enum]) + "\\n";
+                    canonical_header_string += header + ":" + std::string(m_parsed_request.http_parsed_fields[converted_http_enum]) + "\n";
                 }
                 else
                     throw std::runtime_error("one of the given signed header doesn't exists");
@@ -236,10 +259,9 @@ namespace uh::cluster {
         }
 
         header_list_string.pop_back();
-        header_list_string += "\\n";
+        header_list_string += "\n";
 
-
-        return {canonical_header_string + header_list_string};
+        return {canonical_header_string + NEWLINE + header_list_string};
     }
 
 //------------------------------------------------------------------------------
@@ -250,23 +272,26 @@ namespace uh::cluster {
         std::string canonical_request {};
         switch (m_parsed_request.verb)
         {
+            case http_fields::post:
+                canonical_request.append("POST\n");
+                break;
             case http_fields::put:
-                canonical_request.append("PUT\\n");
+                canonical_request.append("PUT\n");
                 break;
             case http_fields::get:
-                canonical_request.append("GET\\n");
+                canonical_request.append("GET\n");
                 break;
             case http_fields::delete_:
-                canonical_request.append("DELETE\\n");
+                canonical_request.append("DELETE\n");
                 break;
             default:
                 throw std::runtime_error("unknown verb encountered.");
         }
 
-        if (m_received_request.get().body().empty())
-            canonical_request += get_canonical_uri() + get_canonical_query_string() + get_headers() + "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
+        if (m_parsed_request.body.empty())
+            canonical_request += get_canonical_uri() + get_canonical_query_string() + get_headers() + EMPTY_SHA_256;
         else
-            canonical_request += get_canonical_uri() + get_canonical_query_string() + get_headers() + to_hex(sha_256(m_received_request.get().body()));
+            canonical_request += get_canonical_uri() + get_canonical_query_string() + get_headers() + to_hex(sha_256(m_parsed_request.body));
 
         return canonical_request;
     }
@@ -281,9 +306,9 @@ namespace uh::cluster {
         std::tm* timeInfo = std::gmtime(&timeT);
 
         std::stringstream iso8601Time;
-        iso8601Time << std::put_time(timeInfo, "%Y-%m-%dT%H:%M:%SZ");
+        iso8601Time << std::put_time(timeInfo, "%Y%m%dT%H%M%SZ");
 
-        return iso8601Time.str() + "\n";
+        return iso8601Time.str();
     }
 
 //------------------------------------------------------------------------------
@@ -291,7 +316,7 @@ namespace uh::cluster {
     std::string
     s3_authenticator::get_scope() const
     {
-        return get_formatted_date() + '/' + m_region + '/' + m_service + "/aws4_request\\n";
+        return get_formatted_date() + '/' + m_region + '/' + m_service + "/aws4_request";
     }
 
 //------------------------------------------------------------------------------
@@ -313,7 +338,7 @@ namespace uh::cluster {
     std::string
     s3_authenticator::get_string_to_sign() const
     {
-        return "AWS4-HMAC-SHA256\\n" + get_scope() + to_hex(sha_256(get_canonical_request()));
+        return "AWS4-HMAC-SHA256\n" + std::string(m_parsed_request.s3_parsed_fields[x_amz_date]) + "\n" + get_scope() + "\n" + to_hex(sha_256(get_canonical_request()));
     }
 
 //------------------------------------------------------------------------------
@@ -321,10 +346,10 @@ namespace uh::cluster {
     std::string
     s3_authenticator::signing_key() const
     {
-        auto first_hmac = to_hex(hmac_sha_256("AWS4" + m_secret_key, get_formatted_date()));
-        auto second_hmac = to_hex( hmac_sha_256( first_hmac, m_region));
-        auto third_hmac = to_hex(hmac_sha_256(second_hmac, m_service));
-        auto tmp = to_hex(hmac_sha_256(third_hmac, "aws4_request"));
+        auto first_hmac = hmac_sha_256("AWS4" + m_secret_key, get_formatted_date());
+        auto second_hmac = hmac_sha_256( first_hmac, m_region );
+        auto third_hmac = hmac_sha_256( second_hmac, m_service );
+        auto tmp = hmac_sha_256( third_hmac, "aws4_request" );
         return tmp;
     }
 
@@ -333,7 +358,8 @@ namespace uh::cluster {
     void
     s3_authenticator::authenticate() const
     {
-        auto calculated_signature = to_hex(hmac_sha_256( get_string_to_sign(), signing_key()));
+        auto calculated_signature = to_hex(hmac_sha_256( signing_key(), get_string_to_sign() ));
+
         if (m_signature != calculated_signature)
             throw std::runtime_error("authentication failed");
 

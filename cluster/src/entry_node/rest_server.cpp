@@ -241,7 +241,6 @@ namespace uh::cluster
             for (;;)
             {
                 stream.expires_after(std::chrono::seconds(10000));
-
                 beast::flat_buffer buffer;
 
                 http::request_parser<http::empty_body> received_request;
@@ -254,6 +253,10 @@ namespace uh::cluster
                 // parse
                 s3_parser s3_parser(received_request);
                 auto parsed_request = s3_parser.parse();
+
+//                // authenticate
+//                s3_authenticator s3_authenticator(parsed_request);
+//                s3_authenticator.authenticate();
 
                 // handle
                 auto res = co_await handle_requests(parsed_request, stream, buffer);
@@ -271,13 +274,14 @@ namespace uh::cluster
                 }
             }
         }
-            // TODO: don't send all the info to the user on throw
+            // TODO: don't send all the info to the user on throw, and also we need to send appropriatre error code
+            // like 401 on authorization failed and not 400 which is a bad request
         catch (boost::system::system_error &se)
         {
             if (se.code() != http::error::end_of_stream)
             {
                 http::response<http::string_body> res{http::status::bad_request, 11};
-                res.set(http::field::server, BOOST_BEAST_VERSION_STRING);
+                res.set(http::field::server, "UltiHash");
                 res.set(http::field::content_type, "text/html");
                 res.body() = se.code().message() + '\n';
                 res.prepare_payload();
@@ -289,7 +293,7 @@ namespace uh::cluster
         catch (const std::exception& e)
         {
             http::response<http::string_body> res{http::status::bad_request, 11};
-            res.set(http::field::server, BOOST_BEAST_VERSION_STRING);
+            res.set(http::field::server, "UltiHash");
             res.set(http::field::content_type, "text/html");
             res.body() = e.what();
             res.prepare_payload();

@@ -156,9 +156,13 @@ namespace uh::cluster {
             {
                 return std::tolower(c);
             });
-            if (recev_header.starts_with("x-") || recev_header.starts_with("amz-"))
+            if (recev_header.starts_with("x-"))
             {
                 m_parsed_req_wrapper.s3_parsed_fields.emplace(s3_field_to_enum(recev_header), header.value());
+            }
+            else if (recev_header.starts_with("amz-"))
+            {
+                m_parsed_req_wrapper.s3_amz_only.emplace(s3_field_to_enum(recev_header), header.value());
             }
             else
             {
@@ -179,7 +183,10 @@ namespace uh::cluster {
 
         auto index = m_target.find_first_of('?');
         if ( index != std::string::npos)
+        {
             m_parsed_req_wrapper.object_key = m_target.substr( after_bucket_slash + 1 , index - after_bucket_slash - 1);
+            m_parsed_req_wrapper.query_string = m_target.substr( index + 1 );
+        }
         else
             m_parsed_req_wrapper.object_key = m_target.substr( after_bucket_slash + 1 );
 
@@ -231,7 +238,6 @@ namespace uh::cluster {
                 {
                     m_parsed_req_wrapper.upload_id = std::string(m_target.substr(m_target.find("uploadId=") + 9, m_target.find("&partNumber=") - m_target.find("uploadId=") - 9 ));
                     m_parsed_req_wrapper.part_number = std::stoi(std::string(m_target.substr(m_target.find("partNumber=") + 11)));
-                    std::cout << "UPLOAD ID: " << m_parsed_req_wrapper.upload_id << " PART NUMBER: " << m_parsed_req_wrapper.part_number << std::endl;
                     return multi_part_upload;
                 }
             case http_fields::get:
