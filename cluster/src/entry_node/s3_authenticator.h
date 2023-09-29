@@ -11,7 +11,6 @@ namespace uh::cluster {
     {
     private:
         parsed_request_wrapper& m_parsed_request;
-        const http::request_parser<http::empty_body>& m_received_request;
 
         std::string m_algorithm {};
         std::string m_access_key {};
@@ -23,10 +22,6 @@ namespace uh::cluster {
 
         std::set<std::string> m_signed_headers {};
         std::string m_signature {};
-
-    public:
-        s3_authenticator(const http::request_parser<http::empty_body>& received_request,
-                         parsed_request_wrapper& parsed_request);
 
         std::string
         uri_encode() const;
@@ -66,6 +61,9 @@ namespace uh::cluster {
 
         [[nodiscard]] std::string
         hmac_sha_256(const std::string& payload, const std::string& signing_key) const;
+
+    public:
+        s3_authenticator(parsed_request_wrapper& parsed_request);
 
         void
         authenticate() const;

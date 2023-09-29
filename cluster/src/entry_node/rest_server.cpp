@@ -255,7 +255,7 @@ namespace uh::cluster
                 auto parsed_request = s3_parser.parse();
 
 //                // authenticate
-//                s3_authenticator s3_authenticator(received_request, parsed_request);
+//                s3_authenticator s3_authenticator(parsed_request);
 //                s3_authenticator.authenticate();
 
                 // handle
