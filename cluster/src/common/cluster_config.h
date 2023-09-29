@@ -38,7 +38,7 @@ struct dedupe_config {
     std::size_t max_fragment_size{};
     std::size_t sampling_interval{};
     server_config server_conf{};
-    int data_node_connection_count;
+    int data_node_connection_count{};
     set_config set_conf;
 };
 
@@ -60,7 +60,7 @@ struct entry_node_config {
 
 struct directory_node_config {
     server_config server_conf{};
-    int data_node_connection_count;
+    int data_node_connection_count{};
 };
 
 

@@ -18,7 +18,7 @@ public:
     constexpr big_int () noexcept: num {0,0} {
     }
 
-    constexpr big_int (unsigned long number) noexcept: num {0, number} {
+    constexpr explicit big_int (unsigned long number) noexcept: num {0, number} {
     }
 
     constexpr big_int (unsigned long nh, unsigned long nl) noexcept: num {nh, nl} {
@@ -155,6 +155,10 @@ public:
 
     [[nodiscard]] inline std::string to_string () const {
         return std::to_string(num[0]) + "_" + std::to_string(num[1]);
+    }
+
+    [[nodiscard]] constexpr inline uint64_t get_low () const noexcept {
+        return num[1];
     }
 
     [[nodiscard]] constexpr inline const auto& get_data () const noexcept {

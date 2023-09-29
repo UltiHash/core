@@ -41,7 +41,7 @@ data_store::data_store(data_node_config conf, long id, bool adaptive) :
     }
 
     if (m_open_files.empty()) {
-        int fd = add_new_file(0, static_cast <long> (m_conf.min_file_size));
+        int fd = add_new_file(uint128_t (0), static_cast <long> (m_conf.min_file_size));
         file_sizes.emplace(fd, m_conf.min_file_size);
     }
     else {
@@ -151,7 +151,7 @@ void data_store::sync() {
 }
 
 uint128_t data_store::fetch_used_space() const noexcept {
-    const auto prev_files_data_size = big_int (m_conf.max_file_size) * (m_open_files.size() - 1);
+    const auto prev_files_data_size = uint128_t (m_conf.max_file_size) * (m_open_files.size() - 1);
     return prev_files_data_size + m_last_file_data_end - m_free_spot_manager.total_free_spots();
 }
 
@@ -169,7 +169,7 @@ std::pair<int, long> data_store::get_file_offset_pair(uint128_t pointer) const {
         throw std::out_of_range ("The given data offset could not be found in this data store");
     }
     const auto [file_offset, fd] = *std::prev (pfd);
-    const auto seek = static_cast <long> ((pointer - file_offset).get_data()[1]);
+    const auto seek = static_cast <long> ((pointer - file_offset).get_low ());
 
     return {fd, seek};
 }
@@ -279,7 +279,7 @@ std::string data_store::get_name(const uint128_t &offset) const {
 }
 
 bool data_store::is_data_file(const std::filesystem::path &path) {
-    return path.string().starts_with("data_");
+    return path.filename().string().starts_with("data_");
 }
 
 uint128_t data_store::get_used_space() const noexcept {

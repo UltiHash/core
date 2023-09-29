@@ -57,7 +57,7 @@ void free_spot_manager::apply_popped_items() {
     m_start_pos += free_size;
     m_pop_count = 0;
     m_total_free_size = m_total_free_size - m_popped_size;
-    m_popped_size = 0;
+    m_popped_size = uint128_t (0);
 }
 
 uint128_t free_spot_manager::total_free_spots() const noexcept {
@@ -101,7 +101,7 @@ uint128_t free_spot_manager::get_total_free_size() {
     const auto buffer = std::make_unique_for_overwrite <char []>(m_end_pos);
     m_file.seekg (0, std::ios::beg);
     read_size (m_file, m_end_pos, buffer.get());
-    uint128_t total_size = 0;
+    auto total_size = uint128_t (0);
     const auto* long_buffer = reinterpret_cast <unsigned long*> (buffer.get());
 
     for (std::size_t i = 2; i < m_end_pos / sizeof (unsigned long); i += 3) {

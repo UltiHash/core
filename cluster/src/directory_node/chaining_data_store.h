@@ -42,13 +42,13 @@ class chaining_data_store {
         constexpr static size_t root_size = sizeof (uint32_t) + sizeof (uint64_t) + sizeof (size_t);
 
 
-        uint32_t has_next: 1;
-        uint32_t size: 31;
-        uint64_t next_ptr;
+        uint32_t has_next: 1 {};
+        uint32_t size: 31 {};
+        uint64_t next_ptr {};
         size_t total_size = 0;
 
         [[nodiscard]] inline std::vector <uint32_t> serialize () const {
-            std::vector <uint32_t> buf {1};
+            std::vector <uint32_t> buf (1);
             buf [0] |= has_next << 31;
             buf [0] |= size;
             if (has_next) [[unlikely]] {
@@ -84,6 +84,21 @@ class chaining_data_store {
             }
         }
 
+        static std::size_t get_header_size (bool has_next, bool root) {
+            size_t header_size;
+            if (has_next) [[unlikely]] {
+                if (root) {
+                    header_size = header::root_size;
+                }
+                else {
+                    header_size = header::large_size;
+                }
+            }
+            else {
+                header_size = header::small_size;
+            }
+            return header_size;
+        }
     };
 
 public:
@@ -150,18 +165,7 @@ public:
             }
             header h;
             h.has_next = index < (alloc.size() - 1);
-            size_t header_size = 0;
-            if (h.has_next) [[unlikely]] {
-                if (index == 0) {
-                    header_size = header::root_size;
-                }
-                else {
-                    header_size = header::large_size;
-                }
-            }
-            else {
-                header_size = header::small_size;
-            }
+            const auto header_size = header::get_header_size (h.has_next, index == 0);
             h.size = partial_alloc.size - header_size;
             if (h.has_next) {
                 h.next_ptr = alloc [index + 1].global_offset;
@@ -179,8 +183,12 @@ public:
                  written += ::write(partial_alloc.fd, data.data() + offset + written, h.size - written));
             offset += h.size;
             total_acquired_size += partial_alloc.size;
+
+
             index ++;
         }
+
+
 
         m_free_spot_manager.apply_popped_items();
         m_used += total_acquired_size;
@@ -225,7 +233,7 @@ public:
 
             tr = 0;
             do {
-                const auto r = ::read (fd, buf.data.get() + offset, h.size - tr);
+                const auto r = ::read (next_fd, buf.data.get() + offset, h.size - tr);
                 if (r == 0) [[unlikely]] {
                     break;
                 }
@@ -237,14 +245,81 @@ public:
         return buf;
     }
 
-    void remove (index_type index);
+    void remove (index_type index) {
 
-    void sync ();
+        auto [fd, seek] = get_file_offset_pair(index);
 
-    [[nodiscard]] size_type get_used_space () const noexcept;
+        if (::lseek (fd, seek, SEEK_SET) != seek) [[unlikely]] {
+            throw std::runtime_error ("Could not seek to the read position.");
+        }
+
+        char buf [1024];
+        std::memset (buf, 0, sizeof(buf));
+
+        header h;
+        h.load_from_file (fd, true);
+
+        auto header_size = header::get_header_size (h.has_next, true);
+        for (size_t written = 0; written < h.size; written += ::write(fd, buf, std::min (h.size - written, sizeof(buf))));
+        m_free_spot_manager.push_free_spot (uint128_t (index), h.size + header_size);
+        m_used = m_used - (h.size + header_size);
+        fsync (fd);
+
+        while (h.has_next) {
+
+            std::tie (fd, seek) = get_file_offset_pair (h.next_ptr);
+            index = h.next_ptr;
+            if (::lseek (fd, seek, SEEK_SET) != seek) [[unlikely]] {
+                throw std::runtime_error ("Could not seek to the read position.");
+            }
+            h.load_from_file (fd, false);
+            header_size = header::get_header_size (h.has_next, false);
+            for (size_t written = 0; written < h.size; written += ::write(fd, buf, std::min (h.size - written, sizeof(buf))));
+            m_free_spot_manager.push_free_spot (uint128_t (index), h.size + header_size);
+            m_used = m_used - (h.size + header_size);
+            fsync (fd);
+
+        } while (h.has_next);
+
+    }
+
+    void sync () {
+
+        for (const auto modification: m_modified_files) {
+
+            const auto fd = modification.first;
+            const auto data_end = modification.second;
+            if (::lseek(fd, 0, SEEK_SET) != 0) [[unlikely]] {
+                throw std::runtime_error ("Could not seek to the first position.");
+            }
+            const auto ret = ::write(fd, &data_end, sizeof(data_end));
+            if (ret != sizeof(data_end)) [[unlikely]] {
+                throw std::system_error (std::error_code(errno, std::system_category()), "Could not write the data size");
+            }
 
 
-    ~chaining_data_store();
+            if (::lseek(fd, 8, SEEK_SET) != 8) [[unlikely]] {
+                throw std::runtime_error ("Could not seek to the first position.");
+            }
+
+            fsync (fd);
+        }
+        m_modified_files.clear();
+        m_free_spot_manager.sync();
+    }
+
+    [[nodiscard]] size_type get_used_space () const noexcept {
+        return m_used;
+    }
+
+
+    ~chaining_data_store() {
+        sync ();
+        for (const auto& open_file: m_open_files) {
+            fsync (open_file.second);
+            close (open_file.second);
+        }
+    }
 
 
 private:
@@ -258,9 +333,21 @@ private:
     };
     typedef std::vector <partial_alloc_t> alloc_t;
 
-    [[nodiscard]] std::pair <int, long> get_file_offset_pair (uint128_t pointer) const;
+    [[nodiscard]] std::pair <int, long> get_file_offset_pair (index_type pointer) const {
+        const auto pfd = m_open_files.upper_bound (pointer);
+        if (pfd == m_open_files.cbegin()) [[unlikely]] {
+            throw std::out_of_range ("The given data offset could not be found in this data store");
+        }
+        const auto [file_offset, fd] = *std::prev (pfd);
+        const auto seek = static_cast <long> (pointer - file_offset);
 
-    [[nodiscard]] size_type fetch_used_space () const noexcept;
+        return {fd, seek};
+    }
+
+    [[nodiscard]] size_type fetch_used_space () const noexcept {
+        const auto prev_files_data_size = m_conf.max_file_size * (m_open_files.size() - 1);
+        return prev_files_data_size + m_last_file_data_end - m_free_spot_manager.total_free_spots().get_low ();
+    }
 
     alloc_t allocate (std::size_t size) {
 
@@ -272,9 +359,9 @@ private:
         auto free_spot = m_free_spot_manager.pop_free_spot();
         std::size_t partial_size = 0;
         while (free_spot.has_value() and required_size > 0) {
-            const auto [fd, seek] = get_file_offset_pair(free_spot->pointer);
+            const auto [fd, seek] = get_file_offset_pair(free_spot->pointer.get_low ());
             partial_size = std::min (required_size, free_spot->size);
-            alloc.emplace_back (fd, seek, partial_size, free_spot->pointer.get_data() [1]);
+            alloc.emplace_back (fd, seek, partial_size, free_spot->pointer.get_low ());
 
             required_size -= partial_size;
             if (required_size > 0) {
@@ -340,22 +427,58 @@ private:
         return alloc;
     }
 
-    int add_new_file (const index_type& offset, long file_size);
+    int add_new_file (const index_type& offset, long file_size) {
+        const auto file_path = m_conf.directory / get_name(offset);
+        const int fd = open (file_path.c_str(), O_RDWR | O_CREAT, S_IWUSR | S_IRUSR);
+        if (fd <= 0) [[unlikely]] {
+            throw std::filesystem::filesystem_error ("Could not create new files in the data store root",
+                                                     std::error_code(errno, std::system_category()));
+        }
 
-    [[nodiscard]] static std::pair <int, index_type> parse_file_name (const std::string& filename);
+        const int rc = ftruncate(fd, file_size);
+        if (rc != 0) [[unlikely]] {
+            throw std::filesystem::filesystem_error ("Could not truncate new files in the data store root",
+                                                     std::error_code(errno, std::system_category()));
+        }
 
-    [[nodiscard]] std::string get_name (const index_type& offset) const;
+        std::size_t data_end = sizeof (data_end);
+        const auto ret = ::write(fd, &data_end, sizeof(data_end));
+        if (ret != sizeof(data_end)) [[unlikely]] {
+            throw std::system_error (std::error_code(errno, std::system_category()), "Could not write the data size");
+        }
+        m_open_files.emplace(offset, fd);
+        m_last_file_data_end = data_end;
+        m_last_file_size = file_size;
+        m_last_fd = fd;
+        m_last_file_offset = offset;
 
-    static bool is_data_file (const std::filesystem::path& path);
+        return fd;
+    }
+
+    [[nodiscard]] static std::pair <int, index_type> parse_file_name (const std::string& filename) {
+        const auto index1 = filename.find('_') + 1;
+        const auto index2 = filename.substr(index1).find('_') + index1 + 1;
+        const auto id_str = filename.substr(index1, index2 - 1 - index1);
+        const auto offset_str = filename.substr(index2);
+        return {std::stoi (id_str), std::stoul (offset_str)};
+    }
+
+    [[nodiscard]] std::string get_name (const index_type offset) const {
+        return "data_" + std::to_string(m_data_id) + "_" + std::to_string (offset);
+    }
+
+    static bool is_data_file (const std::filesystem::path& path) {
+        return path.filename().string().starts_with("data_");
+    }
 
     int m_last_fd {};
     std::size_t m_last_file_data_end {};
-    long m_data_id;
+    long m_data_id{};
     const chaining_data_store_config m_conf;
     free_spot_manager m_free_spot_manager;
     std::map <uint64_t, int> m_open_files;
     std::unordered_map <int, std::size_t> m_modified_files;
-    uint64_t m_last_file_offset;
+    uint64_t m_last_file_offset{};
     std::size_t m_last_file_size;
     uint64_t m_used;
     std::shared_mutex m;

@@ -66,8 +66,8 @@ struct owning_span {
         os.data = nullptr;
     }
     void resize (std::size_t new_size) {
-        data = std::make_unique_for_overwrite <T[]> (size);
         size = new_size;
+        data = std::make_unique_for_overwrite <T[]> (size);
     }
 };
 
