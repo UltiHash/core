@@ -1,5 +1,7 @@
 #pragma once
 
+#include "http_request.h"
+
 namespace uh::cluster::rest::http
 {
 
@@ -91,7 +93,13 @@ namespace uh::cluster::rest::http
     public:
         http_response();
         virtual ~http_response() = default;
+
+        virtual inline const http_request& get_originating_request() const { return *m_http_req; }
+        virtual void add_header( const std::string&, const std::string& );
+
     private:
+        std::shared_ptr<const http_request> m_http_req;
+        http::response<http::string_body> res{http::status::ok, 11};
     };
 
 } // uh::cluster::rest::http

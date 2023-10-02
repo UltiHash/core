@@ -4,6 +4,11 @@
 
 namespace uh::cluster::rest::utils::time
 {
+    enum class DateFormat
+    {
+        RFC822, //for http headers
+        AutoDetect
+    };
 
     enum class Month
     {
@@ -34,6 +39,16 @@ namespace uh::cluster::rest::utils::time
 
     class date_time
     {
+    public:
+        date_time() = default;
+        ~date_time() = default;
+
+        [[nodiscard]] date_time now() const;
+        [[nodiscard]] std::string to_gmt_string(DateFormat date) const;
+        std::string to_gmt_string(const char* formatStr) const;
+        [[nodiscard]] tm convert_time_stamp_to_gmt_struct() const;
+
+
     private:
         std::chrono::system_clock::time_point m_time;
     };

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <string>
+#include <boost/beast/http.hpp>
 
 namespace uh::cluster::rest::http
 {
@@ -15,6 +16,8 @@ namespace uh::cluster::rest::http
         HTTP_PATCH
     };
 
-    std::string get_name_for_http_method(http_method method);
+    const char * get_name_for_http_method(http_method method);
+
+    http_method get_http_method_from_name(boost::beast::http::verb method);
 
 } // uh::cluster::rest::http

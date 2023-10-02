@@ -68,7 +68,7 @@ namespace uh::cluster
         std::shared_ptr <net::io_context> m_ioc;
         std::vector<std::thread> m_thread_container {};
         boost::asio::ssl::context m_ssl;
-        entry_node_rest_handler m_handler;
+//        entry_node_rest_handler m_handler;
         bool m_server_busy = false;
         //TODO: remove the m_is_close for when multiple same requests arrive
         // Handle multiple same requests arriving
@@ -84,9 +84,9 @@ namespace uh::cluster
 
         void run();
 
-        coro <http::response<http::string_body>>
-        handle_requests (parsed_request_wrapper& req, tcp_stream& stream,
-                         beast::flat_buffer& remaining_buffer);
+//        coro <http::response<http::string_body>>
+//        handle_requests (parsed_request_wrapper& req, tcp_stream& stream,
+//                         beast::flat_buffer& remaining_buffer);
 
         [[nodiscard]] std::shared_ptr <boost::asio::io_context>
         get_executor () const;

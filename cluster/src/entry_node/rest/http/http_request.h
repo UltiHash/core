@@ -3,6 +3,7 @@
 #include <map>
 #include <boost/beast/http.hpp>
 #include "http_types.h"
+#include "URI.h"
 
 namespace uh::cluster::rest::http
 {
@@ -39,19 +40,26 @@ namespace uh::cluster::rest::http
     {
     public:
 
-        http_request(const http::request_parser<http::empty_body>& recv_request) :
-        m_req(recv_request)
+        explicit http_request(const http::request_parser<http::empty_body>& recv_request) :
+        m_req(recv_request), m_method(get_http_method_from_name(recv_request.get().base().method()))
         {}
 
         virtual ~http_request() = default;
 
-        virtual std::map<std::string, std::string> get_headers() const = 0;
+        [[nodiscard]] virtual std::map<std::string, std::string> get_headers() const = 0;
 
-        virtual const char * get_request_name() const = 0;
+        [[nodiscard]] virtual const char * get_request_name() const = 0;
 
-    private:
-        http_method m_method;
+        [[nodiscard]] inline http_method get_method() const
+        {
+            return m_method;
+        }
+
+    protected:
         const http::request_parser<http::empty_body>& m_req;
+        http_method m_method;
+        URI m_uri;
+        std::string m_req_body {};
     };
 
 } // uh::cluster::rest::http

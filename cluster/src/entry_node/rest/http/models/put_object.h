@@ -10,7 +10,7 @@ namespace uh::cluster::rest::http::model
     class put_object : public http_request
     {
     public:
-        put_object();
+        explicit put_object(const http::request_parser<http::empty_body>&);
 
         ~put_object() override = default;
 
@@ -19,9 +19,11 @@ namespace uh::cluster::rest::http::model
         [[nodiscard]] std::map<std::string, std::string> get_headers() const override;
 
     private:
+
+        put_object& operator =(const http::request_parser<http::empty_body>& recv_req);
+
         object_canned_acl m_aCL;
         bool m_aCLHasBeenSet = false;
-
 
         std::string m_bucket;
         bool m_bucketHasBeenSet = false;
@@ -44,6 +46,9 @@ namespace uh::cluster::rest::http::model
         std::string m_contentMD5;
         bool m_contentMD5HasBeenSet = false;
 
+        std::string m_contentType;
+        bool m_contentTypeHasBeenSet = false;
+
         std::string m_checksumAlgorithm;
         bool m_checksumAlgorithmHasBeenSet = false;
 
@@ -59,7 +64,7 @@ namespace uh::cluster::rest::http::model
         std::string m_checksumSHA256;
         bool m_checksumSHA256HasBeenSet = false;
 
-        utils::time::date_time m_expires;
+        std::string m_expires;
         bool m_expiresHasBeenSet = false;
 
         std::string m_grantFullControl;
@@ -116,7 +121,7 @@ namespace uh::cluster::rest::http::model
         std::string m_objectLockMode;
         bool m_objectLockModeHasBeenSet = false;
 
-        utils::time::date_time m_objectLockRetainUntilDate;
+        std::string m_objectLockRetainUntilDate;
         bool m_objectLockRetainUntilDateHasBeenSet = false;
 
         std::string m_objectLockLegalHoldStatus;
