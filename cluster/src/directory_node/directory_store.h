@@ -63,10 +63,9 @@ class object_store {
     log_file m_log_file;
     void integrate (std::span <char> key, std::span <char> data) {
         const auto id = data_store.write (data);
-
+        // id = data_store.write (data)
         // write key + id into log
         //objects.insert (key, id);
-
 
         try {
             m_log_file.append(key, 0, log_file::operation::INSERT_START);

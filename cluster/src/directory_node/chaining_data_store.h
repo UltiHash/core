@@ -149,7 +149,12 @@ public:
     index_type write (std::span <char> data) {
 
         std::lock_guard <std::shared_mutex> lock (m);
+        const auto index = post_write (data);
+        apply_write();
+        return index;
+    }
 
+    index_type post_write (std::span <char> data) {
         if (m_used + data.size() > m_conf.max_storage_size) [[unlikely]] {
             throw std::bad_alloc();
         }
@@ -188,13 +193,13 @@ public:
             index ++;
         }
 
-
-
-        m_free_spot_manager.apply_popped_items();
         m_used += total_acquired_size;
-
         return alloc.begin()->global_offset;
+    }
 
+    void apply_write () {
+        m_free_spot_manager.apply_popped_items();
+        sync ();
     }
 
     ospan <char> read (index_type index) const {
