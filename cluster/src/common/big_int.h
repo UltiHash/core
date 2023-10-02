@@ -18,7 +18,7 @@ public:
     constexpr big_int () noexcept: num {0,0} {
     }
 
-    constexpr explicit big_int (unsigned long number) noexcept: num {0, number} {
+    constexpr big_int (unsigned long number) noexcept: num {0, number} {
     }
 
     constexpr big_int (unsigned long nh, unsigned long nl) noexcept: num {nh, nl} {
