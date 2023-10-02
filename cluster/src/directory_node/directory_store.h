@@ -5,9 +5,10 @@
 #ifndef CORE_DIRECTORY_STORE_H
 #define CORE_DIRECTORY_STORE_H
 
-#include "unordered_map"
+#include <unordered_map>
+#include <string>
+
 #include "common/common.h"
-#include "string"
 #include "chaining_data_store.h"
 
 namespace uh::cluster {
@@ -28,7 +29,7 @@ public:
 
     }
 
-    std::unordered_map <ospan<char>, uint64_t> replay () {
+    std::unordered_map <std::string, uint64_t> replay () {
 
     }
 
@@ -58,27 +59,32 @@ public:
 
 
 class object_store {
-    std::unordered_map<ospan <char>, uint64_t> objects;
-    chaining_data_store data_store;
-    log_file m_log_file;
-    void integrate (std::span <char> key, std::span <char> data) {
-        const auto id = data_store.write (data);
-        // id = data_store.write (data)
-        // write key + id into log
-        //objects.insert (key, id);
 
-        try {
-            m_log_file.append(key, 0, log_file::operation::INSERT_START);
-            //insertion
-            //log.write
+    explicit object_store (chaining_data_store_config& conf, std::unordered_map<std::string, uint64_t>& object_ptrs,
+                           log_file& log_file):
+        m_data_store (std::move(conf)), m_object_ptrs (object_ptrs), m_log_file (log_file) {}
 
-            //...
-            m_log_file.append(key, 0, log_file::operation::INSERT_END);
-
-        }catch (...) {
-        }
-
+    void insert (std::string key, std::span <char> data) {
+        std::lock_guard <std::shared_mutex> lock (m_mutex);
+        const auto index = m_data_store.post_write (data);
+        m_log_file.append(key, index, log_file::operation::INSERT_START);
+        m_data_store.apply_write();
+        m_object_ptrs.insert({key, index});
+        m_log_file.append(key, index, log_file::operation::INSERT_END);
+        //todo: proper error handling
     }
+
+    ospan <char> get (std::string key) {
+        const auto index = m_object_ptrs.at(key);
+        return m_data_store.read(index);
+        //todo: proper error handling
+    }
+
+    private:
+    chaining_data_store m_data_store;
+    std::unordered_map<std::string, uint64_t> m_object_ptrs;
+    log_file m_log_file;
+    std::shared_mutex m_mutex;
 };
 
 class bucket {

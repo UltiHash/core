@@ -2,8 +2,8 @@
 // Created by masi on 7/17/23.
 //
 
-#ifndef CORE_DATA_STORE_H
-#define CORE_DATA_STORE_H
+#ifndef CORE_CHAINING_DATA_STORE_H
+#define CORE_CHAINING_DATA_STORE_H
 
 #include "common/cluster_config.h"
 #include "common/common.h"
@@ -492,4 +492,4 @@ private:
 
 } // end namespace uh::cluster
 
-#endif //CORE_DATA_STORE_H
+#endif //CORE_CHAINING_DATA_STORE_H
