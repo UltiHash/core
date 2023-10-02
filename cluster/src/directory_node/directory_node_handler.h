@@ -6,6 +6,7 @@
 #define CORE_DIRECTORY_NODE_HANDLER_H
 
 #include "common/protocol_handler.h"
+#include "directory_store.h"
 #include "fdb/fdb.h"
 
 namespace uh::cluster {
