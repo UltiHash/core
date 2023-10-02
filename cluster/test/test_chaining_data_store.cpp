@@ -246,30 +246,6 @@ BOOST_FIXTURE_TEST_CASE (test_data_store, config_fixture)
 
         BOOST_CHECK_THROW (ds.write(data11), std::bad_alloc);
 
-        /*
-        ts = 0;
-        for (int i = 0; i < addr6.size (); ++i) {
-            const auto p = addr6.get_fragment(i);
-            ds.remove(p.pointer, p.size);
-            ts += p.size;
-        }
-        expected_size -= ts;
-        BOOST_CHECK(ds.get_used_space() == expected_size);
-
-        addr11 = ds.write(data11);
-        expected_size += sizeof (data11);
-        BOOST_CHECK(ds.get_used_space() == expected_size);
-
-        ts = 0;
-
-        for (int i = 0; i < addr11.size (); ++i) {
-            const auto p = addr11.get_fragment(i);
-            rsize = ds.read(buf + ts, p.pointer, p.size);
-            ts += rsize;
-        }
-        BOOST_TEST(ts == sizeof (data11));
-        BOOST_CHECK(std::memcmp(buf, data11, ts) == 0);
-         */
     }
     cleanup();
 }
