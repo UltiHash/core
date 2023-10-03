@@ -12,13 +12,13 @@
 #include <list>
 #include <fstream>
 #include <filesystem>
+#include <fcntl.h>
 
 namespace uh::cluster {
     class key_logger {
 
         std::filesystem::path m_log_path;
-        std::fstream m_log_file;
-
+        int m_log_file;
 
     public:
         enum operation:char {
@@ -34,58 +34,65 @@ namespace uh::cluster {
         explicit key_logger (std::filesystem::path log_path):
             m_log_path (std::move (log_path)),
             m_log_file (get_log_file (m_log_path)) {
-            if (!m_log_file.is_open()) {
+            if (m_log_file <= 0) {
                 perror (m_log_path.c_str());
                 throw std::runtime_error ("Could not open the key logger file");
             }
-            m_log_file.seekp(0, std::ios::end);
+            lseek(m_log_file, 0, SEEK_END);
         }
 
-        void append (std::string_view key, uint64_t object_id, operation op) {
-            m_log_file << op << key << std::hex << std::setw(sizeof(object_id)) << object_id << std::endl;
-            m_log_file.sync();
+        void append (std::string_view key, uint64_t object_id, operation op) const {
+            const auto buf = serialise({.key = key, .op = op, .object_id = object_id});
+            if (buf.size != ::write (m_log_file, buf.data.get(), buf.size)) [[unlikely]] {
+                throw std::runtime_error ("Could not write into the log file");
+            }
         }
 
         std::unordered_map <std::string, uint64_t> replay () {
-            m_log_file.seekp(0, std::ios::beg);
+
             std::unordered_map <std::string, uint64_t> log_map;
-            std::string line;
             std::unordered_map <std::string, uint64_t> dangling_inserts;
             std::unordered_map <std::string, uint64_t> dangling_deletes;
             std::unordered_map <std::string, uint64_t> dangling_updates;
-            while (std::getline(m_log_file, line))
+            const auto file_size = std::filesystem::file_size (m_log_path);
+            size_t offset = 0;
+            if (0 != lseek(m_log_file, 0, SEEK_SET)) [[unlikely]] {
+                throw std::runtime_error ("Could not seek the log file");
+            }
+            while (offset < file_size)
             {
-                const auto op = static_cast <operation> (line[0]);
-                const auto object_id = std::strtoul (line.substr(line.size() - sizeof (uint64_t)).c_str(), nullptr, 16);
-                auto key = line.substr(1, line.size() - sizeof(object_id) - sizeof(op));
-                switch (op) {
+                auto e = deserialize(m_log_file);
+                const auto key_size = std::get <std::string> (e.key).size();
+                switch (e.op) {
                     case operation::INSERT:
-                        log_map.emplace(std::move (key), object_id);
+                        log_map.emplace(std::move (std::get <std::string> (e.key)), e.object_id);
                         break;
                     case operation::INSERT_END:
-                        dangling_inserts.erase(key);
-                        log_map.emplace(std::move (key), object_id);
+                        dangling_inserts.erase(std::get <std::string> (e.key));
+                        log_map.emplace(std::move (std::get <std::string> (e.key)), e.object_id);
                         break;
                     case operation::UPDATE_END:
-                        dangling_updates.erase (key);
-                        log_map.at (key) = object_id;
+                        dangling_updates.erase (std::get <std::string> (e.key));
+                        log_map.at (std::get <std::string> (e.key)) = e.object_id;
                         break;
                     case operation::DELETE_END:
-                        dangling_deletes.erase (key);
-                        log_map.erase(key);
+                        dangling_deletes.erase (std::get <std::string> (e.key));
+                        log_map.erase(std::get <std::string> (e.key));
                         break;
                     case operation::INSERT_START:
-                        dangling_inserts.emplace (std::move (key), object_id);
+                        dangling_inserts.emplace (std::move (std::get <std::string> (e.key)), e.object_id);
                         break;
                     case operation::UPDATE_START:
-                        dangling_updates.emplace (std::move (key), object_id);
+                        dangling_updates.emplace (std::move (std::get <std::string> (e.key)), e.object_id);
                         break;
                     case operation::DELETE_START:
-                        dangling_deletes.emplace (std::move (key), object_id);
+                        dangling_deletes.emplace (std::move (std::get <std::string> (e.key)), e.object_id);
                         break;
                     default:
                         throw std::invalid_argument ("Invalid log entry!");
                 }
+
+                offset += sizeof (uint16_t) + sizeof e.op + sizeof e.object_id + key_size;
             }
 
             if (!dangling_inserts.empty()) {
@@ -105,17 +112,56 @@ namespace uh::cluster {
 
     private:
 
+        struct entry {
+            std::variant <std::string, std::string_view> key;
+            operation op;
+            uint64_t object_id;
+        };
+
+        static ospan<char> serialise (const entry& entry_) {
+            const uint16_t key_size = std::get <std::string_view> (entry_.key).size();
+            ospan<char> buf (sizeof entry_.op + sizeof entry_.object_id + sizeof key_size + key_size);
+            std::memcpy (buf.data.get(), &key_size, sizeof key_size);
+            buf.data.get()[sizeof key_size] = entry_.op;
+            std::memcpy (buf.data.get() + sizeof key_size + sizeof entry_.op, &entry_.object_id, sizeof entry_.object_id);
+            std::memcpy (buf.data.get() + sizeof key_size + sizeof entry_.op + sizeof entry_.object_id, std::get <std::string_view> (entry_.key).data(), key_size);
+            return buf;
+        }
+
+         static entry deserialize (const int fd) {
+            uint16_t key_size;
+            char buf [sizeof key_size + sizeof entry::op + sizeof entry::object_id];
+            if (const auto rc = ::read(fd, buf, sizeof buf); rc != sizeof buf) [[unlikely]] {
+                perror ("Read error");
+                throw std::runtime_error ("Could not read the entry from the log file");
+            }
+            key_size = *reinterpret_cast <uint16_t*> (buf);
+            entry e;
+            e.key = std::string ();
+            std::get <std::string> (e.key).resize(key_size);
+
+            if (key_size != ::read (fd, std::get <std::string> (e.key).data(), key_size)) [[unlikely]] {
+                throw std::runtime_error ("Could not read the entry from the log file");
+            }
+            e.op = static_cast <operation> (buf [sizeof key_size]);
+            std::memcpy (&e.object_id, buf + sizeof key_size + sizeof e.op, sizeof e.object_id);
+            return e;
+        }
+
         void recreate (const std::unordered_map <std::string, uint64_t>& log_map) {
             const auto new_file_path = m_log_path.parent_path() / "_key_logger_tmp_file_new";
             const auto old_file_tmp_path = m_log_path.parent_path() / "_key_logger_tmp_file_original";
             try {
 
-                std::fstream tmp_file = get_log_file(new_file_path);
+                const auto tmp_file = get_log_file(new_file_path);
                 for (const auto &item: log_map) {
-                    tmp_file << operation::INSERT << item.first << std::hex << std::setw(sizeof(item.second)) << item.second << std::endl;
+                    const auto buf = serialise({.key = std::string_view (item.first), .op = operation::INSERT, .object_id = item.second});
+                    if (buf.size != ::write (tmp_file, buf.data.get(), buf.size)) [[unlikely]] {
+                        throw std::runtime_error ("Could not write into the log file");
+                    }
                 }
-                tmp_file.close();
-                m_log_file.close();
+                close(tmp_file);
+                close(m_log_file);
 
                 std::filesystem::rename(m_log_path, old_file_tmp_path);
                 std::filesystem::rename(new_file_path, m_log_path);
@@ -127,16 +173,17 @@ namespace uh::cluster {
                     m_log_file = get_log_file(m_log_path);
                 }
             }
-            m_log_file.seekp(0, std::ios::end);
+
+            ::lseek(m_log_file, 0, SEEK_END);
             std::filesystem::remove (old_file_tmp_path);
         }
 
-        static std::fstream get_log_file (const std::filesystem::path& path) {
+        static int get_log_file (const std::filesystem::path& path) {
             if (std::filesystem::exists (path)) {
-                return {path, std::ios::in | std::ios::out};
+                return ::open (path.c_str(), O_RDWR | O_APPEND);
             }
             else {
-                return {path, std::ios::in | std::ios::out | std::ios::trunc};
+                return ::open (path.c_str(), O_RDWR | O_APPEND | O_CREAT, S_IWUSR | S_IRUSR);
             }
         }
     };
