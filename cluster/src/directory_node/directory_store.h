@@ -11,7 +11,7 @@
 
 #include "common/common.h"
 #include "chaining_data_store.h"
-#include "key_logger.h"
+#include "transaction_log.h"
 
 namespace uh::cluster {
 
@@ -27,11 +27,11 @@ class object_store {
         }
         std::lock_guard <std::shared_mutex> lock (m_mutex);
         const auto index = m_data_store.post_write (data);
-        m_log_file.append(key, index, key_logger::operation::INSERT_START);
+        m_log_file.append(key, index, transaction_log::operation::INSERT_START);
         //TODO: handle rollback in case something goes up in smoke during the transaction
         m_data_store.apply_write();
         m_object_ptrs[key] = index;
-        m_log_file.append(key, index, key_logger::operation::INSERT_END);
+        m_log_file.append(key, index, transaction_log::operation::INSERT_END);
     }
 
     ospan <char> get (const std::string& key) {
@@ -47,28 +47,28 @@ class object_store {
             throw std::runtime_error ("Attempt to remove object ' + key + ' failed: no such object.");
         }
         const auto index = m_object_ptrs.at(key);
-        m_log_file.append(key, index, key_logger::operation::REMOVE_START);
+        m_log_file.append(key, index, transaction_log::operation::REMOVE_START);
         m_object_ptrs.erase(key);
         m_data_store.remove(index);
-        m_log_file.append(key, index, key_logger::operation::REMOVE_END);
+        m_log_file.append(key, index, transaction_log::operation::REMOVE_END);
     }
 
     void update (const std::string& key, std::span <char> data) {
         //TODO: consider dropping update (as S3 has no update) and merge the functionality with insert
         std::lock_guard <std::shared_mutex> lock (m_mutex);
         const auto index = m_data_store.post_write (data);
-        m_log_file.append(key, index, key_logger::operation::UPDATE_START);
+        m_log_file.append(key, index, transaction_log::operation::UPDATE_START);
         m_data_store.apply_write();
         const auto old_index = m_object_ptrs.at(key);
         m_data_store.remove(old_index);
         m_object_ptrs[key] = index;
-        m_log_file.append(key, index, key_logger::operation::UPDATE_END);
+        m_log_file.append(key, index, transaction_log::operation::UPDATE_END);
     }
 
 
     private:
     chaining_data_store m_data_store;
-    key_logger m_log_file;
+    transaction_log m_log_file;
     std::unordered_map<std::string, uint64_t> m_object_ptrs;
     std::shared_mutex m_mutex;
 };

@@ -2,8 +2,8 @@
 // Created by masi on 10/2/23.
 //
 
-#ifndef CORE_KEY_LOGGER_H
-#define CORE_KEY_LOGGER_H
+#ifndef CORE_TRANSACTION_LOG_H
+#define CORE_TRANSACTION_LOG_H
 
 
 #include "unordered_map"
@@ -15,7 +15,7 @@
 #include <fcntl.h>
 
 namespace uh::cluster {
-    class key_logger {
+    class transaction_log {
 
         std::filesystem::path m_log_path;
         int m_log_file;
@@ -31,7 +31,7 @@ namespace uh::cluster {
             INSERT = 'a',
         };
 
-        explicit key_logger (std::filesystem::path log_path):
+        explicit transaction_log (std::filesystem::path log_path):
             m_log_path (std::move (log_path)),
             m_log_file (get_log_file (m_log_path)) {
             if (m_log_file <= 0) {
@@ -190,4 +190,4 @@ namespace uh::cluster {
 } // end namespace uh::cluster
 
 
-#endif //CORE_KEY_LOGGER_H
+#endif //CORE_TRANSACTION_LOG_H
