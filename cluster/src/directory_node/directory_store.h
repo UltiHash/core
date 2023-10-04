@@ -69,12 +69,13 @@ class object_store {
         const auto index = m_data_store.post_write (data);
         m_log_file.append(key, index, log_file::operation::INSERT_START);
         m_data_store.apply_write();
+        // TODO we don't need the lock anymore
         m_object_ptrs.insert({key, index});
         m_log_file.append(key, index, log_file::operation::INSERT_END);
         //todo: proper error handling
     }
 
-    ospan <char> get (std::string key) {
+    ospan <char> get (const std::string& key) {
         const auto index = m_object_ptrs.at(key);
         return m_data_store.read(index);
         //todo: proper error handling

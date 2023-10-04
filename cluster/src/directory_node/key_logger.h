@@ -118,7 +118,7 @@ namespace uh::cluster {
             uint64_t object_id;
         };
 
-        static ospan<char> serialise (const entry& entry_) {
+        static ospan <char> serialise (const entry& entry_) {
             const uint16_t key_size = std::get <std::string_view> (entry_.key).size();
             ospan<char> buf (sizeof entry_.op + sizeof entry_.object_id + sizeof key_size + key_size);
             std::memcpy (buf.data.get(), &key_size, sizeof key_size);
