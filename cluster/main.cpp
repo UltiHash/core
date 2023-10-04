@@ -45,6 +45,15 @@ uh::cluster::directory_node_config make_directory_node_config () {
                 .threads = 4,
                 .port = 8083,
         },
+        .directory_conf = {
+                .root = "ultihash-root/dr",
+                .bucket_conf = {
+                        .min_file_size = 1024ul * 1024ul * 1024ul * 2,
+                        .max_file_size = 1024ul * 1024ul * 1024ul * 64,
+                        .max_storage_size = 1024ul * 1024ul * 1024ul * 256,
+                        .max_chunk_size = std::numeric_limits <uint32_t>::max(),
+                },
+        },
         .data_node_connection_count = 2,
     };
 }

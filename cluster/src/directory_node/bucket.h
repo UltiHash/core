@@ -5,9 +5,11 @@
 #ifndef CORE_BUCKET_H
 #define CORE_BUCKET_H
 
-#include <mutex>
 #include "chaining_data_store.h"
 #include "transaction_log.h"
+#include <memory>
+#include <shared_mutex>
+#include <mutex>
 
 namespace uh::cluster{
 
@@ -24,28 +26,31 @@ struct bucket_config {
 class bucket {
 
 public:
-    explicit bucket (const bucket_config& conf):
-        m_bucket_id(conf.bucket_id),
-        m_bucket_base(conf.root / "dr" / m_bucket_id),
+    bucket (const std::filesystem::path& root, const std::string& bucket_name, bucket_config& conf):
+        m_bucket_path (root/bucket_name),
         m_data_store({
-            .directory = m_bucket_base,
-            .free_spot_log = m_bucket_base / "free_spot_log",
-            .min_file_size = conf.ds_min_file_size,
-            .max_file_size = conf.ds_max_file_size,
-            .max_storage_size = conf.ds_max_storage_size,
-            .max_chunk_size = conf.ds_max_chunk_size,
+            .directory = m_bucket_path/"ds",
+            .free_spot_log = m_bucket_path/"ds/free_spot_log",
+            .min_file_size = conf.min_file_size,
+            .max_file_size = conf.max_file_size,
+            .max_storage_size = conf.max_storage_size,
+            .max_chunk_size = conf.max_chunk_size,
         }),
-        m_transaction_log(m_bucket_base / "transaction_log")
-        {
-            if (!std::filesystem::exists(m_bucket_base)) {
-                std::filesystem::create_directories(m_bucket_base);
-            }
-            m_object_ptrs = m_transaction_log.replay();
-        }
+        m_transaction_log(m_bucket_path/"transaction_log"),
+        m_object_ptrs (m_transaction_log.replay()) {
+    }
 
+    std::vector <std::string> list_keys () {
+        std::vector <std::string> keys;
+        keys.reserve (m_object_ptrs.size());
+        for (const auto& obj: m_object_ptrs) {
+            keys.emplace_back (obj.first);
+        }
+        return keys;
+    }
 
     void insert_object (const std::string& key, std::span<char> data) {
-        std::unique_lock <std::shared_mutex> lock(m_mutex);
+        std::unique_lock <std::shared_mutex> lock (m_mutex);
         if (m_object_ptrs.contains(key)) [[unlikely]] {
             throw std::runtime_error("Attempt to insert object ' + key + ' failed: an object with the same name already exists.");
         }
@@ -63,7 +68,7 @@ public:
     ospan<char> get_obj(const std::string& key) {
         std::shared_lock lock(m_mutex);
         if (!m_object_ptrs.contains(key)) [[unlikely]] {
-            throw std::runtime_error("Attempt to get object ' + key + ' failed: no such object.");
+            throw std::out_of_range ("Attempt to get object ' + key + ' failed: no such object.");
         }
         const auto index = m_object_ptrs.at(key);
         return m_data_store.read(index);
@@ -72,7 +77,7 @@ public:
     void delete_object (const std::string& key) {
         std::unique_lock <std::shared_mutex> lock(m_mutex);
         if (!m_object_ptrs.contains(key)) [[unlikely]] {
-            throw std::runtime_error("Attempt to remove object ' + key + ' failed: no such object.");
+            throw std::out_of_range ("Attempt to remove object ' + key + ' failed: no such object.");
         }
         const auto index = m_object_ptrs.at(key);
         m_transaction_log.append(key, index, transaction_log::operation::REMOVE_START);
@@ -99,13 +104,20 @@ public:
         m_transaction_log.append(key, index, transaction_log::operation::UPDATE_END);
     }
 
-    bool contains_object (const std::string &key) {
+    bool contains_object (const std::string &key) const {
         return m_object_ptrs.contains(key);
     }
 
+    size_t get_used_space () const {
+        return m_data_store.get_used_space();
+    }
+
+    void destroy_bucket () {
+        std::filesystem::remove_all(m_bucket_path);
+    }
+
 private:
-    std::string m_bucket_id;
-    std::filesystem::path m_bucket_base;
+    std::filesystem::path m_bucket_path;
     chaining_data_store m_data_store;
     transaction_log m_transaction_log;
     std::unordered_map <std::string, uint64_t> m_object_ptrs;
