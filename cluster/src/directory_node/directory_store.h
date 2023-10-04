@@ -15,6 +15,25 @@
 
 namespace uh::cluster {
 
+class config_bucket {
+    std::string bucket_name;
+    std::filesystem::path root;
+    size_t min_file_size;
+    size_t max_file_size;
+    size_t max_storage_size;
+    size_t max_chunk_size;
+};
+    /**
+
+void constructor (config_bucket conf) {
+
+     m_datastore (root/bucket_name/data_store)
+     m_transactoon_log (root/buckeyname/trans_dir)
+
+
+};
+     */
+
 class object_store {
 
     explicit object_store (chaining_data_store_config& conf, std::filesystem::path log_path,
@@ -96,7 +115,9 @@ class directory_store {
 
     // log file bucket_name
 
-    void insert (const std::string& bucket, const std::string& key, const address& addr);
+    void insert (const std::string& bucket, const std::string& key, const address& addr) {
+
+    }
     address get (const std::string& bucket, const std::string& key);
     void add_bucket (const std::string& bucket);
     std::vector <std::string> list_keys (const std::string& bucket);
