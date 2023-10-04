@@ -26,7 +26,11 @@ public:
     directory_store (std::filesystem::path root, bucket_config bucket_conf):
         m_root (std::move (root)),
         m_bucket_conf (std::move (bucket_conf))
-        {}
+    {
+        for (const auto& entry: std::filesystem::directory_iterator (m_root)) {
+            m_buckets.emplace (entry.path().filename(), std::make_unique <bucket> (m_root, entry.path().filename(), m_bucket_conf));
+        }
+    }
 
     void insert (const std::string& bucket, const std::string& key, const std::span <char>& data) {
         m_buckets.at(bucket)->insert_object (key, data);
