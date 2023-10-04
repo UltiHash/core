@@ -36,7 +36,7 @@ namespace uh::cluster {
             m_log_file (get_log_file (m_log_path)) {
             if (m_log_file <= 0) {
                 perror (m_log_path.c_str());
-                throw std::runtime_error ("Could not open the key logger file");
+                throw std::runtime_error ("Could not open the transaction log file");
             }
             lseek(m_log_file, 0, SEEK_END);
         }

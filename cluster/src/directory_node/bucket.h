@@ -5,6 +5,7 @@
 #ifndef CORE_BUCKET_H
 #define CORE_BUCKET_H
 
+#include <mutex>
 #include "chaining_data_store.h"
 #include "transaction_log.h"
 
@@ -13,27 +14,34 @@ namespace uh::cluster{
 struct bucket_config {
     std::string bucket_id;
     std::filesystem::path root;
-    size_t min_file_size;
-    size_t max_file_size;
-    size_t max_storage_size;
-    size_t max_chunk_size;
+    size_t ds_min_file_size;
+    size_t ds_max_file_size;
+    size_t ds_max_storage_size;
+    size_t ds_max_chunk_size;
 
 };
 
 class bucket {
 
-
-    bucket (bucket_config& conf, std::unordered_map < std::string, uint64_t >& object_ptrs):
-            m_data_store({
-            .directory = conf.root/"dr",
-            .free_spot_log = conf.root/"dr/free_spot_log",
-            .min_file_size = conf.min_file_size,
-            .max_file_size = conf.max_file_size,
-            .max_storage_size = conf.max_storage_size,
-            .max_chunk_size = conf.max_chunk_size,
+public:
+    explicit bucket (const bucket_config& conf):
+        m_bucket_id(conf.bucket_id),
+        m_bucket_base(conf.root / "dr" / m_bucket_id),
+        m_data_store({
+            .directory = m_bucket_base,
+            .free_spot_log = m_bucket_base / "free_spot_log",
+            .min_file_size = conf.ds_min_file_size,
+            .max_file_size = conf.ds_max_file_size,
+            .max_storage_size = conf.ds_max_storage_size,
+            .max_chunk_size = conf.ds_max_chunk_size,
         }),
-            m_transaction_log(conf.root / "dr/transaction_log"),
-            m_object_ptrs(object_ptrs) {}
+        m_transaction_log(m_bucket_base / "transaction_log")
+        {
+            if (!std::filesystem::exists(m_bucket_base)) {
+                std::filesystem::create_directories(m_bucket_base);
+            }
+            m_object_ptrs = m_transaction_log.replay();
+        }
 
 
     void insert_object (const std::string& key, std::span<char> data) {
@@ -95,14 +103,14 @@ class bucket {
         return m_object_ptrs.contains(key);
     }
 
-
 private:
     std::string m_bucket_id;
-    std::filesystem::path m_root;
+    std::filesystem::path m_bucket_base;
     chaining_data_store m_data_store;
     transaction_log m_transaction_log;
     std::unordered_map <std::string, uint64_t> m_object_ptrs;
     std::shared_mutex m_mutex;
+    //ACLs, other meta-data
 
 
 
