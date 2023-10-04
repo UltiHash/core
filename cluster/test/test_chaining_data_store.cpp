@@ -40,13 +40,13 @@ struct config_fixture
 
 // ---------------------------------------------------------------------
 
-void fill_random(char* buf, size_t size) {
+void fill_random2(char* buf, size_t size) {
     for (int i = 0; i < size; ++i) {
         buf[i] = rand()&0xff;
     }
 }
 
-BOOST_FIXTURE_TEST_CASE (test_data_store, config_fixture)
+BOOST_FIXTURE_TEST_CASE (test_chaining_data_store, config_fixture)
 {
 
     cleanup();
@@ -63,17 +63,17 @@ BOOST_FIXTURE_TEST_CASE (test_data_store, config_fixture)
     char data10 [3202];
     char data11 [2021];
 
-    fill_random (data1, sizeof (data1));
-    fill_random (data2, sizeof (data2));
-    fill_random (data3, sizeof (data3));
-    fill_random (data4, sizeof (data4));
-    fill_random (data5, sizeof (data5));
-    fill_random (data6, sizeof (data6));
-    fill_random (data7, sizeof (data7));
-    fill_random (data8, sizeof (data8));
-    fill_random (data9, sizeof (data9));
-    fill_random (data10, sizeof (data10));
-    fill_random (data11, sizeof (data11));
+    fill_random2 (data1, sizeof (data1));
+    fill_random2 (data2, sizeof (data2));
+    fill_random2 (data3, sizeof (data3));
+    fill_random2 (data4, sizeof (data4));
+    fill_random2 (data5, sizeof (data5));
+    fill_random2 (data6, sizeof (data6));
+    fill_random2 (data7, sizeof (data7));
+    fill_random2 (data8, sizeof (data8));
+    fill_random2 (data9, sizeof (data9));
+    fill_random2 (data10, sizeof (data10));
+    fill_random2 (data11, sizeof (data11));
 
 
     char buf [8*1024];
