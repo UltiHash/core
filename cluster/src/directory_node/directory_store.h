@@ -45,11 +45,20 @@ public:
         m_buckets.emplace (bucket_id, std::make_unique <bucket> (m_root, bucket_id, m_bucket_conf));
     }
 
+    void remove (const std::string& bucket, const std::string& key) {
+        m_buckets.at(bucket)->delete_object(key);
+    }
+
+    void remove_bucket (const std::string& bucket) {
+        m_buckets.at(bucket)->destroy_bucket();
+        m_buckets.erase(bucket);
+    }
+
     std::vector <std::string> list_keys (const std::string& bucket) {
         return m_buckets.at (bucket)->list_keys();
     }
 
-    std::vector <std::string> list_buckets (const std::string& bucket) {
+    std::vector <std::string> list_buckets () {
         std::vector <std::string> buckets;
         buckets.reserve(m_buckets.size());
         for (const auto& bucket_name: m_buckets) {

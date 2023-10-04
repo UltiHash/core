@@ -17,15 +17,16 @@ class bucket {
 
 public:
     bucket (const std::filesystem::path& root, const std::string& bucket_name, bucket_config& conf):
+        m_bucket_path (root/bucket_name),
         m_data_store({
-            .directory = root/bucket_name/"ds",
-            .free_spot_log = root/bucket_name/"ds/free_spot_log",
+            .directory = m_bucket_path/"ds",
+            .free_spot_log = m_bucket_path/"ds/free_spot_log",
             .min_file_size = conf.min_file_size,
             .max_file_size = conf.max_file_size,
             .max_storage_size = conf.max_storage_size,
             .max_chunk_size = conf.max_chunk_size,
         }),
-        m_transaction_log(root/bucket_name/"transaction_log"),
+        m_transaction_log(m_bucket_path/"transaction_log"),
         m_object_ptrs (m_transaction_log.replay()) {
     }
 
@@ -97,10 +98,12 @@ public:
         return m_object_ptrs.contains(key);
     }
 
+    void destroy_bucket () {
+        std::filesystem::remove_all(m_bucket_path);
+    }
 
 private:
-    std::string m_bucket_id;
-    std::filesystem::path m_root;
+    std::filesystem::path m_bucket_path;
     chaining_data_store m_data_store;
     transaction_log m_transaction_log;
     std::unordered_map <std::string, uint64_t> m_object_ptrs;
