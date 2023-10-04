@@ -16,7 +16,7 @@ namespace uh::cluster{
 class bucket {
 
 public:
-    bucket (const std::filesystem::path& root, const std::string& bucket_name, bucket_config& conf):
+    bucket (const std::filesystem::path& root, const std::string& bucket_name, const bucket_config& conf):
         m_bucket_path (root/bucket_name),
         m_data_store({
             .directory = m_bucket_path/"ds",
@@ -112,6 +112,7 @@ private:
     transaction_log m_transaction_log;
     std::unordered_map <std::string, uint64_t> m_object_ptrs;
     std::shared_mutex m_mutex;
+    //ACLs, other meta-data
 
 
 

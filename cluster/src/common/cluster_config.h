@@ -59,7 +59,6 @@ struct entry_node_config {
 };
 
 struct bucket_config {
-    std::string bucket_id;
     size_t min_file_size;
     size_t max_file_size;
     size_t max_storage_size;
