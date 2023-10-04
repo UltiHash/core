@@ -7,14 +7,14 @@
 
 #include "common/protocol_handler.h"
 #include "directory_store.h"
-#include "fdb/fdb.h"
 
 namespace uh::cluster {
 
 class directory_handler: public protocol_handler {
 public:
 
-    explicit directory_handler (global_data& storage):
+    directory_handler (directory_store_config conf, global_data& storage):
+    m_directory (std::move (conf)),
     m_storage (storage) {}
 
     coro <void> handle (messenger m) override {
@@ -38,23 +38,16 @@ public:
 
 private:
 
-#if defined(__APPLE__)
-    fdb::fdb m_fdb = fdb::fdb("/usr/local/etc/foundationdb/fdb.cluster");
-#else
-    fdb::fdb m_fdb = fdb::fdb("/etc/foundationdb/fdb.cluster");
-#endif
     coro <void> handle_put_obj (messenger& m, const messenger::header& h) {
         directory_put_request request = co_await m.recv_directory_put_object_request(h);
-        std::vector<char> addressData;
-        zpp::bits::out{addressData}(request.addr).or_throw();
+        std::vector<char> address_data;
+        zpp::bits::out{address_data}(request.addr).or_throw();
 
         bool failure = false;
         try {
-            auto trans = m_fdb.make_transaction();
-            trans->put({request.object_key.data(), request.object_key.size()},{addressData.data(), addressData.size()});
-            trans->commit();
+            m_directory.insert (request.bucket_id, request.object_key, address_data);
             co_await m.send(SUCCESS, {});
-        } catch (const fdb::fdb_exception& e) {
+        } catch (const std::exception& e) {
             failure = true;
         }
 
@@ -71,15 +64,11 @@ private:
 
         bool failure = false;
         try {
-            auto trans = m_fdb.make_transaction();
-            auto result = trans->get({request.object_key.data(), request.object_key.size()});
+            const auto buf = m_directory.get(request.bucket_id, request.object_key);
 
-            if (!result.has_value()) {
-                co_await m.send(FAILURE, {});
-            }
 
-            zpp::bits::in{ result->value}(addr).or_throw();
-        } catch (const fdb::fdb_exception& e) {
+            //zpp::bits::in{buf}(addr).or_throw();
+        } catch (const std::exception& e) {
             failure = true;
         }
 
@@ -106,6 +95,7 @@ private:
         co_return;
     }
 
+    directory_store m_directory;
     global_data& m_storage;
 };
 } // end namespace uh::cluster

@@ -66,10 +66,14 @@ struct bucket_config {
     size_t max_chunk_size;
 };
 
+struct directory_store_config {
+    std::filesystem::path root;
+    bucket_config bucket_conf;
+};
+
 struct directory_node_config {
     server_config server_conf{};
-    bucket_config bucket_conf;
-    std::filesystem::path root;
+    directory_store_config directory_conf;
     int data_node_connection_count{};
 };
 

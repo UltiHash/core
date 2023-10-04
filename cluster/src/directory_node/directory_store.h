@@ -23,9 +23,9 @@ class directory_store {
 
 public:
 
-    directory_store (std::filesystem::path root, bucket_config bucket_conf):
-        m_root (std::move (root)),
-        m_bucket_conf (std::move (bucket_conf))
+    explicit directory_store (directory_store_config conf):
+        m_root (std::move (conf.root)),
+        m_bucket_conf (std::move (conf.bucket_conf))
     {
         std::filesystem::create_directories (m_root);
         for (const auto& entry: std::filesystem::directory_iterator (m_root)) {
