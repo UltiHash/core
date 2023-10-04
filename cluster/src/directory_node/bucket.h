@@ -7,6 +7,9 @@
 
 #include "chaining_data_store.h"
 #include "transaction_log.h"
+#include <memory>
+#include <shared_mutex>
+#include <mutex>
 
 namespace uh::cluster{
 
@@ -36,7 +39,7 @@ public:
     }
 
     void insert_object (const std::string& key, std::span<char> data) {
-        std::unique_lock <std::shared_mutex> lock(m_mutex);
+        std::unique_lock <std::shared_mutex> lock (m_mutex);
         if (m_object_ptrs.contains(key)) [[unlikely]] {
             throw std::runtime_error("Attempt to insert object ' + key + ' failed: an object with the same name already exists.");
         }
