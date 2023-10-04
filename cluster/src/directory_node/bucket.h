@@ -13,20 +13,18 @@ namespace uh::cluster{
 class bucket {
 
 public:
-    bucket (const std::filesystem::path& root, bucket_config& conf):
+    bucket (const std::filesystem::path& root, const std::string& bucket_name, bucket_config& conf):
         m_data_store({
-            .directory = root/"dr/ds",
-            .free_spot_log = root/"dr/ds/free_spot_log",
+            .directory = root/bucket_name/"ds",
+            .free_spot_log = root/bucket_name/"ds/free_spot_log",
             .min_file_size = conf.min_file_size,
             .max_file_size = conf.max_file_size,
             .max_storage_size = conf.max_storage_size,
             .max_chunk_size = conf.max_chunk_size,
         }),
-        m_transaction_log(root/"dr/transaction_log"),
+        m_transaction_log(root/bucket_name/"transaction_log"),
         m_object_ptrs (m_transaction_log.replay()) {
     }
-
-
 
     void insert_object (const std::string& key, std::span<char> data) {
         std::unique_lock <std::shared_mutex> lock(m_mutex);

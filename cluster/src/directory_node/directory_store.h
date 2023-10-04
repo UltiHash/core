@@ -6,6 +6,7 @@
 #define CORE_DIRECTORY_STORE_H
 
 #include <unordered_map>
+
 #include <string>
 #include <utility>
 
@@ -16,21 +17,29 @@ namespace uh::cluster {
 
 class directory_store {
 
-    std::unordered_map <std::string, bucket> m_buckets;
+    std::unordered_map <std::string, std::unique_ptr <bucket>> m_buckets;
+    std::filesystem::path m_root;
+    bucket_config m_bucket_conf;
 
-    // log file bucket_name
+public:
+
+    directory_store (std::filesystem::path root, bucket_config bucket_conf):
+        m_root (std::move (root)),
+        m_bucket_conf (std::move (bucket_conf))
+        {}
 
     void insert (const std::string& bucket, const std::string& key, const std::span <char>& data) {
-        m_buckets.at(bucket).insert_object (key, data);
+        m_buckets.at(bucket)->insert_object (key, data);
     }
 
     ospan <char> get (const std::string& bucket, const std::string& key) {
-        return m_buckets.at(bucket).get_obj(key);
+        return m_buckets.at(bucket)->get_obj(key);
     }
 
-    void add_bucket (const std::string& bucket) {
-        m_buckets.emplace(bucket);
+    void add_bucket (const std::string& bucket_id) {
+        m_buckets.emplace (bucket_id, std::make_unique <bucket> (m_root, bucket_id, m_bucket_conf));
     }
+
     std::vector <std::string> list_keys (const std::string& bucket);
     std::vector <std::string> list_buckets (const std::string& bucket) {
         std::vector <std::string> buckets;
