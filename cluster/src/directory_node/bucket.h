@@ -26,6 +26,15 @@ public:
         m_object_ptrs (m_transaction_log.replay()) {
     }
 
+    std::vector <std::string> list_keys () {
+        std::vector <std::string> keys;
+        keys.reserve (m_object_ptrs.size());
+        for (const auto& obj: m_object_ptrs) {
+            keys.emplace_back (obj.first);
+        }
+        return keys;
+    }
+
     void insert_object (const std::string& key, std::span<char> data) {
         std::unique_lock <std::shared_mutex> lock(m_mutex);
         if (m_object_ptrs.contains(key)) [[unlikely]] {

@@ -40,7 +40,10 @@ public:
         m_buckets.emplace (bucket_id, std::make_unique <bucket> (m_root, bucket_id, m_bucket_conf));
     }
 
-    std::vector <std::string> list_keys (const std::string& bucket);
+    std::vector <std::string> list_keys (const std::string& bucket) {
+        return m_buckets.at (bucket)->list_keys();
+    }
+
     std::vector <std::string> list_buckets (const std::string& bucket) {
         std::vector <std::string> buckets;
         buckets.reserve(m_buckets.size());
