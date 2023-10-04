@@ -10,15 +10,9 @@
 #include <utility>
 
 #include "common/common.h"
-#include "object_store.h"
+#include "bucket.h"
 
 namespace uh::cluster {
-
-class bucket {
-    object_store m_object_store;
-    std::string bucket_name;
-    // acl
-};
 
 class directory_store {
 
@@ -26,7 +20,9 @@ class directory_store {
 
     // log file bucket_name
 
-    void insert (const std::string& bucket, const std::string& key, const address& addr);
+    void insert (const std::string& bucket, const std::string& key, const address& addr) {
+
+    }
     address get (const std::string& bucket, const std::string& key);
     void add_bucket (const std::string& bucket);
     std::vector <std::string> list_keys (const std::string& bucket);
