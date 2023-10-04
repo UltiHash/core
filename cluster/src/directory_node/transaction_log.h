@@ -2,8 +2,8 @@
 // Created by masi on 10/2/23.
 //
 
-#ifndef CORE_KEY_LOGGER_H
-#define CORE_KEY_LOGGER_H
+#ifndef CORE_TRANSACTION_LOG_H
+#define CORE_TRANSACTION_LOG_H
 
 
 #include "unordered_map"
@@ -15,7 +15,7 @@
 #include <fcntl.h>
 
 namespace uh::cluster {
-    class key_logger {
+    class transaction_log {
 
         std::filesystem::path m_log_path;
         int m_log_file;
@@ -24,14 +24,14 @@ namespace uh::cluster {
         enum operation:char {
             INSERT_START = 'i',
             INSERT_END = 'I',
-            DELETE_START = 'd',
-            DELETE_END = 'D',
+            REMOVE_START = 'r',
+            REMOVE_END = 'R',
             UPDATE_START = 'u',
             UPDATE_END = 'U',
             INSERT = 'a',
         };
 
-        explicit key_logger (std::filesystem::path log_path):
+        explicit transaction_log (std::filesystem::path log_path):
             m_log_path (std::move (log_path)),
             m_log_file (get_log_file (m_log_path)) {
             if (m_log_file <= 0) {
@@ -75,7 +75,7 @@ namespace uh::cluster {
                         dangling_updates.erase (std::get <std::string> (e.key));
                         log_map.at (std::get <std::string> (e.key)) = e.object_id;
                         break;
-                    case operation::DELETE_END:
+                    case operation::REMOVE_END:
                         dangling_deletes.erase (std::get <std::string> (e.key));
                         log_map.erase(std::get <std::string> (e.key));
                         break;
@@ -85,7 +85,7 @@ namespace uh::cluster {
                     case operation::UPDATE_START:
                         dangling_updates.emplace (std::move (std::get <std::string> (e.key)), e.object_id);
                         break;
-                    case operation::DELETE_START:
+                    case operation::REMOVE_START:
                         dangling_deletes.emplace (std::move (std::get <std::string> (e.key)), e.object_id);
                         break;
                     default:
@@ -190,4 +190,4 @@ namespace uh::cluster {
 } // end namespace uh::cluster
 
 
-#endif //CORE_KEY_LOGGER_H
+#endif //CORE_TRANSACTION_LOG_H
