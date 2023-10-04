@@ -48,7 +48,7 @@ private:
 
     coro <dedupe_response> deduplicate (std::string_view data) {
 
-        dedupe_response result;
+        dedupe_response result {.addr = address {}};
         auto integration_data = data;
         while (!integration_data.empty()) {
             const auto f = co_await m_fragment_set.find(integration_data);

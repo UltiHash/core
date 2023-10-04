@@ -40,10 +40,11 @@ private:
 
     coro <void> handle_put_obj (messenger& m, const messenger::header& h) {
         directory_put_request request = co_await m.recv_directory_put_object_request(h);
+
+        bool failure = false;
         std::vector<char> address_data;
         zpp::bits::out{address_data}(request.addr).or_throw();
 
-        bool failure = false;
         try {
             m_directory.insert (request.bucket_id, request.object_key, address_data);
             co_await m.send(SUCCESS, {});
@@ -53,7 +54,6 @@ private:
 
         if(failure)
             co_await m.send(FAILURE, {});
-
 
         co_return;
     }
@@ -65,9 +65,7 @@ private:
         bool failure = false;
         try {
             const auto buf = m_directory.get(request.bucket_id, request.object_key);
-
-
-            //zpp::bits::in{buf}(addr).or_throw();
+            zpp::bits::in{std::span <char> {buf.data.get(), buf.size}}(addr).or_throw();
         } catch (const std::exception& e) {
             failure = true;
         }

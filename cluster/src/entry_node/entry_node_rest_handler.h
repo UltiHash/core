@@ -36,7 +36,7 @@ public:
             auto m_dedup = m_dedupe_nodes.at(get_round_robin_index(m_dedupe_node_index, m_dedupe_nodes.size())).acquire_messenger();
             co_await m_dedup.get().send (DEDUPE_REQ, req.body);
             const auto h_dedup = co_await m_dedup.get().recv_header();
-            const auto resp = co_await m_dedup.get().recv_dedupe_response(h_dedup);
+            auto resp = co_await m_dedup.get().recv_dedupe_response(h_dedup);
 
             auto effective_size = static_cast <double> (resp.second.effective_size) / static_cast <double> (1024ul * 1024ul);
             std::cout << "effective size " << effective_size << " MB" << std::endl;
@@ -48,10 +48,11 @@ public:
             // TODO send the address resp.second.addr to the directory
             //co_await m.get().send_rest_request(DIR_PUT_OBJ_REQ, req);
             auto m_dir = m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size())).acquire_messenger();
-            directory_put_request dir_req;
-            dir_req.bucket_id = req.bucket_id;
-            dir_req.object_key = req.object_key;
-            dir_req.addr = resp.second.addr;
+            const directory_put_request dir_req {
+                .bucket_id = req.bucket_id,
+                .object_key = req.object_key,
+                .addr = std::move (resp.second.addr),
+            };
             co_await m_dir.get().send_directory_put_object_request(DIR_PUT_OBJ_REQ, dir_req);
             const auto h_dir = co_await m_dir.get().recv_header();
             if(h_dir.type == FAILURE) {

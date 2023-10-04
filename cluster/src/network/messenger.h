@@ -58,6 +58,7 @@ namespace uh::cluster {
             directory_put_request req;
             zpp::bits::in{data}(req).or_throw();
             co_return std::move (req);
+
         }
 
         coro <directory_get_request> recv_directory_get_object_request (const header& message_header) {
@@ -105,6 +106,7 @@ namespace uh::cluster {
         coro <void> send_directory_get_object_request (const message_types type, const directory_get_request& dir_req) {
             std::vector<char> data;
             zpp::bits::out{data}(dir_req).or_throw();
+            co_await send(type, data);
             register_write_buffer(data);
             co_await send_buffers(type);
         }

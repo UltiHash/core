@@ -50,29 +50,6 @@ enum role: uint8_t {
 void* align_ptr (void* ptr) noexcept;
 void sync_ptr (void *ptr, std::size_t size);
 
-template <typename T>
-struct owning_span {
-    std::size_t size {0};
-    std::unique_ptr <T[]> data = nullptr;
-    owning_span() = default;
-    explicit owning_span (size_t data_size):
-            size (data_size),
-            data {std::make_unique_for_overwrite <T[]> (size)} {}
-    owning_span(size_t data_size, std::unique_ptr <T[]>&& ptr):
-            size (data_size),
-            data {std::move (ptr)} {}
-    owning_span (owning_span&& os) noexcept: size (os.size), data (std::move (os.data)) {
-        os.size = 0;
-        os.data = nullptr;
-    }
-    void resize (std::size_t new_size) {
-        size = new_size;
-        data = std::make_unique_for_overwrite <T[]> (size);
-    }
-};
-
-template <typename T>
-using ospan = owning_span <T>;
 
 } // end namespace uh::cluster
 

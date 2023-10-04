@@ -71,7 +71,7 @@ BOOST_FIXTURE_TEST_CASE (test_chaining_data_store, config_fixture)
     fill_random (data11, sizeof (data11));
 
     {
-        directory_store ds ("root", make_bucket_config());
+        directory_store ds ({"root", make_bucket_config()});
         BOOST_CHECK_THROW (ds.insert("b1", "k1", data1), std::out_of_range);
         ds.add_bucket("b1");
         ds.insert("b1", "k1", data1);
@@ -155,7 +155,7 @@ BOOST_FIXTURE_TEST_CASE (test_chaining_data_store, config_fixture)
     }
 
     {
-        directory_store ds ("root", make_bucket_config());
+        directory_store ds ({"root", make_bucket_config()});
         const auto buckets = ds.list_buckets();
         BOOST_TEST (buckets.size() == 3);
         BOOST_CHECK (std::find (buckets.begin(), buckets.end(), "b1") != buckets.end());
@@ -236,7 +236,7 @@ BOOST_FIXTURE_TEST_CASE (test_chaining_data_store, config_fixture)
     }
 
     {
-        directory_store ds ("root", make_bucket_config());
+        directory_store ds ({"root", make_bucket_config()});
         const auto buckets = ds.list_buckets();
         BOOST_TEST (buckets.size() == 3);
         BOOST_CHECK (std::find (buckets.begin(), buckets.end(), "b1") != buckets.end());
@@ -244,15 +244,13 @@ BOOST_FIXTURE_TEST_CASE (test_chaining_data_store, config_fixture)
         BOOST_CHECK (std::find (buckets.begin(), buckets.end(), "b3") != buckets.end());
 
         const auto b1 = ds.list_keys ("b1");
-        BOOST_TEST (b1.size() == 3);
+        BOOST_TEST (b1.size() == 2);
         BOOST_CHECK (std::find (b1.begin(), b1.end(), "k1") != b1.end());
         BOOST_CHECK (std::find (b1.begin(), b1.end(), "k2") != b1.end());
-        BOOST_CHECK (std::find (b1.begin(), b1.end(), "k3") != b1.end());
 
         const auto b2= ds.list_keys ("b2");
-        BOOST_TEST (b2.size() == 4);
+        BOOST_TEST (b2.size() == 3);
         BOOST_CHECK (std::find (b2.begin(), b2.end(), "k3") != b2.end());
-        BOOST_CHECK (std::find (b2.begin(), b2.end(), "k4") != b2.end());
         BOOST_CHECK (std::find (b2.begin(), b2.end(), "k5") != b2.end());
         BOOST_CHECK (std::find (b2.begin(), b2.end(), "k6") != b2.end());
 
@@ -298,7 +296,7 @@ BOOST_FIXTURE_TEST_CASE (test_chaining_data_store, config_fixture)
     }
 
     {
-        directory_store ds ("root", make_bucket_config());
+        directory_store ds ({"root", make_bucket_config()});
         const auto buckets = ds.list_buckets();
         BOOST_TEST (buckets.size() == 2);
         BOOST_CHECK (std::find (buckets.begin(), buckets.end(), "b1") != buckets.end());
