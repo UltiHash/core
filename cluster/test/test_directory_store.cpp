@@ -221,6 +221,89 @@ BOOST_FIXTURE_TEST_CASE (test_chaining_data_store, config_fixture)
         BOOST_TEST(d53.size == sizeof(data5));
         BOOST_CHECK(std::memcmp(d53.data.get(), data5, d5.size) == 0);
 
+        const auto used_space_1 = ds.get_used_space();
+
+        ds.remove("b1", "k3");
+        BOOST_CHECK_THROW (ds.get("b1", "k3"), std::out_of_range);
+        ds.remove("b2", "k4");
+        BOOST_CHECK_THROW (ds.get("b2", "k4"), std::out_of_range);
+
+        const auto used_space_2 = ds.get_used_space();
+
+        BOOST_CHECK (used_space_1 >= (used_space_2 + sizeof (data3) + sizeof (data4)));
+
+
+    }
+
+    {
+        directory_store ds ("root", make_bucket_config());
+        const auto buckets = ds.list_buckets();
+        BOOST_TEST (buckets.size() == 3);
+        BOOST_CHECK (std::find (buckets.begin(), buckets.end(), "b1") != buckets.end());
+        BOOST_CHECK (std::find (buckets.begin(), buckets.end(), "b2") != buckets.end());
+        BOOST_CHECK (std::find (buckets.begin(), buckets.end(), "b3") != buckets.end());
+
+        const auto b1 = ds.list_keys ("b1");
+        BOOST_TEST (b1.size() == 3);
+        BOOST_CHECK (std::find (b1.begin(), b1.end(), "k1") != b1.end());
+        BOOST_CHECK (std::find (b1.begin(), b1.end(), "k2") != b1.end());
+        BOOST_CHECK (std::find (b1.begin(), b1.end(), "k3") != b1.end());
+
+        const auto b2= ds.list_keys ("b2");
+        BOOST_TEST (b2.size() == 4);
+        BOOST_CHECK (std::find (b2.begin(), b2.end(), "k3") != b2.end());
+        BOOST_CHECK (std::find (b2.begin(), b2.end(), "k4") != b2.end());
+        BOOST_CHECK (std::find (b2.begin(), b2.end(), "k5") != b2.end());
+        BOOST_CHECK (std::find (b2.begin(), b2.end(), "k6") != b2.end());
+
+        const auto b3 = ds.list_keys ("b3");
+        BOOST_TEST (b3.size() == 3);
+        BOOST_CHECK (std::find (b3.begin(), b3.end(), "k7") != b3.end());
+        BOOST_CHECK (std::find (b3.begin(), b3.end(), "k5") != b3.end());
+        BOOST_CHECK (std::find (b3.begin(), b3.end(), "k8") != b3.end());
+
+        const auto d1 = ds.get("b1", "k1");
+        BOOST_TEST(d1.size == sizeof(data1));
+        BOOST_CHECK(std::memcmp(d1.data.get(), data1, d1.size) == 0);
+
+        const auto d2 = ds.get("b1", "k2");
+        BOOST_TEST(d2.size == sizeof(data2));
+        BOOST_CHECK(std::memcmp(d2.data.get(), data2, d2.size) == 0);
+
+        const auto d32 = ds.get("b2", "k3");
+        BOOST_TEST(d32.size == sizeof(data3));
+        BOOST_CHECK(std::memcmp(d32.data.get(), data3, d32.size) == 0);
+
+        const auto d5 = ds.get("b2", "k5");
+        BOOST_TEST(d5.size == sizeof(data5));
+        BOOST_CHECK(std::memcmp(d5.data.get(), data5, d5.size) == 0);
+
+        const auto d6 = ds.get("b2", "k6");
+        BOOST_TEST(d6.size == sizeof(data6));
+        BOOST_CHECK(std::memcmp(d6.data.get(), data6, d6.size) == 0);
+
+        const auto d7 = ds.get("b3", "k7");
+        BOOST_TEST(d7.size == sizeof(data7));
+        BOOST_CHECK(std::memcmp(d7.data.get(), data7, d7.size) == 0);
+
+        const auto d8 = ds.get("b3", "k8");
+        BOOST_TEST(d8.size == sizeof(data8));
+        BOOST_CHECK(std::memcmp(d8.data.get(), data8, d8.size) == 0);
+
+        const auto d53 = ds.get("b3", "k5");
+        BOOST_TEST(d53.size == sizeof(data5));
+        BOOST_CHECK(std::memcmp(d53.data.get(), data5, d5.size) == 0);
+
+        ds.remove_bucket("b2");
+    }
+
+    {
+        directory_store ds ("root", make_bucket_config());
+        const auto buckets = ds.list_buckets();
+        BOOST_TEST (buckets.size() == 2);
+        BOOST_CHECK (std::find (buckets.begin(), buckets.end(), "b1") != buckets.end());
+        BOOST_CHECK (std::find (buckets.begin(), buckets.end(), "b3") != buckets.end());
+
     }
 
     cleanup();

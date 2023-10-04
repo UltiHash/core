@@ -66,6 +66,14 @@ public:
         }
         return buckets;
     }
+
+    size_t get_used_space () {
+        size_t used_space = 0;
+        for (const auto& bucket: m_buckets) {
+            used_space += bucket.second->get_used_space();
+        }
+        return used_space;
+    }
 };
 
 }
