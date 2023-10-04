@@ -115,13 +115,20 @@ class directory_store {
 
     // log file bucket_name
 
-    void insert (const std::string& bucket, const std::string& key, const address& addr) {
-
+    void insert (const std::string& bucket, const std::string& key, const std::span <char>& data) {
+        m_buckets.at(bucket).m_object_store.insert(key, data);
     }
     address get (const std::string& bucket, const std::string& key);
     void add_bucket (const std::string& bucket);
     std::vector <std::string> list_keys (const std::string& bucket);
-    std::vector <std::string> list_buckets (const std::string& bucket);
+    std::vector <std::string> list_buckets (const std::string& bucket) {
+        std::vector <std::string> buckets;
+        buckets.reserve(m_buckets.size());
+        for (const auto& bucket_name: m_buckets) {
+            buckets.emplace_back (bucket_name.first);
+        }
+        return buckets;
+    }
 };
 
 }
