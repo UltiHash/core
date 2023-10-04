@@ -13,20 +13,10 @@
 
 namespace uh::cluster{
 
-struct bucket_config {
-    std::string bucket_id;
-    std::filesystem::path root;
-    size_t ds_min_file_size;
-    size_t ds_max_file_size;
-    size_t ds_max_storage_size;
-    size_t ds_max_chunk_size;
-
-};
-
 class bucket {
 
 public:
-    bucket (const std::filesystem::path& root, const std::string& bucket_name, bucket_config& conf):
+    bucket (const std::filesystem::path& root, const std::string& bucket_name, const bucket_config& conf):
         m_bucket_path (root/bucket_name),
         m_data_store({
             .directory = m_bucket_path/"ds",
