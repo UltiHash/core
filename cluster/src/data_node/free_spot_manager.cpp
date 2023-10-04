@@ -15,6 +15,17 @@ free_spot_manager::free_spot_manager(std::filesystem::path hole_log) :
     m_file.exceptions(std::ios::badbit | std::ios::failbit);
 }
 
+void free_spot_manager::note_free_spot (uint128_t pointer, std::size_t size) {
+    m_noted_free_spots.emplace_front(pointer, size);
+}
+
+void free_spot_manager::push_noted_free_spots () {
+    for (const auto& fs: m_noted_free_spots) {
+        push_free_spot(fs.first, fs.second);
+    }
+    m_noted_free_spots.clear();
+}
+
 void free_spot_manager::push_free_spot(uint128_t pointer, std::size_t size) {
 
     shift_forward ();

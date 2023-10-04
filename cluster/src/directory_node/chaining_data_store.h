@@ -199,10 +199,16 @@ public:
 
     void apply_write () {
         m_free_spot_manager.apply_popped_items();
+        m_free_spot_manager.push_noted_free_spots();
         sync ();
     }
 
-    ospan <char> read (index_type index) const {
+    void revert_write () {
+        throw std::runtime_error ("Revert in chaining data store not implemented");
+    }
+
+    ospan <char> read (index_type index) {
+        std::shared_lock <std::shared_mutex> lock (m);
         const auto [fd, seek] = get_file_offset_pair(index);
         if (::lseek (fd, seek, SEEK_SET) != seek) [[unlikely]] {
             throw std::runtime_error ("Could not seek to the read position.");
@@ -251,6 +257,7 @@ public:
     }
 
     void remove (index_type index) {
+        std::lock_guard <std::shared_mutex> lock (m);
 
         auto [fd, seek] = get_file_offset_pair(index);
 
@@ -378,7 +385,7 @@ private:
         }
 
         if (free_spot.has_value() and partial_size < free_spot->size) [[unlikely]] {
-            m_free_spot_manager.push_free_spot (free_spot->pointer + partial_size,
+            m_free_spot_manager.note_free_spot (free_spot->pointer + partial_size,
                                                free_spot->size - partial_size);
         }
 
