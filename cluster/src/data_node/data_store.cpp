@@ -87,7 +87,9 @@ address data_store::write(std::span<char> data) {
     return data_address;
 }
 
-std::size_t data_store::read(char *buffer, uint128_t pointer, size_t size) const {
+std::size_t data_store::read(char *buffer, uint128_t pointer, size_t size) {
+    std::shared_lock <std::shared_mutex> lock (m);
+
     const auto [fd, seek] = get_file_offset_pair(pointer);
     if (::lseek (fd, seek, SEEK_SET) != seek) [[unlikely]] {
         throw std::runtime_error ("Could not seek to the read position.");
@@ -106,6 +108,7 @@ std::size_t data_store::read(char *buffer, uint128_t pointer, size_t size) const
 }
 
 void data_store::remove(uint128_t pointer, size_t size) {
+    std::lock_guard <std::shared_mutex> lock (m);
 
     const auto [fd, seek] = get_file_offset_pair(pointer);
 
@@ -126,6 +129,7 @@ void data_store::remove(uint128_t pointer, size_t size) {
 }
 
 void data_store::sync() {
+    m_free_spot_manager.push_noted_free_spots();
 
     for (const auto modification: m_modified_files) {
 
@@ -189,8 +193,8 @@ data_store::alloc_t data_store::allocate (std::size_t size) {
     }
 
     if (free_spot.has_value() and partial_size < free_spot->size) [[unlikely]] {
-        m_free_spot_manager.push_free_spot(free_spot->pointer + partial_size,
-                                           free_spot->size - partial_size);
+        m_free_spot_manager.note_free_spot (free_spot->pointer + partial_size,
+                                            free_spot->size - partial_size);
     }
 
     auto last_file_data_end = m_last_file_data_end;
