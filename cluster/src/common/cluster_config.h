@@ -58,11 +58,20 @@ struct entry_node_config {
     int directory_connection_count;
 };
 
-struct directory_node_config {
-    server_config server_conf{};
-    int data_node_connection_count{};
+struct bucket_config {
+    std::string bucket_id;
+    size_t min_file_size;
+    size_t max_file_size;
+    size_t max_storage_size;
+    size_t max_chunk_size;
 };
 
+struct directory_node_config {
+    server_config server_conf{};
+    bucket_config bucket_conf;
+    std::filesystem::path root;
+    int data_node_connection_count{};
+};
 
 struct cluster_config {
     int init_process_count{};

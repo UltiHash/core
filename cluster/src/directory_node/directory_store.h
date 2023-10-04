@@ -21,10 +21,16 @@ class directory_store {
     // log file bucket_name
 
     void insert (const std::string& bucket, const std::string& key, const std::span <char>& data) {
-        m_buckets.at(bucket).m_object_store.insert(key, data);
+        m_buckets.at(bucket).insert_object (key, data);
     }
-    address get (const std::string& bucket, const std::string& key);
-    void add_bucket (const std::string& bucket);
+
+    ospan <char> get (const std::string& bucket, const std::string& key) {
+        return m_buckets.at(bucket).get_obj(key);
+    }
+
+    void add_bucket (const std::string& bucket) {
+        m_buckets.emplace(bucket);
+    }
     std::vector <std::string> list_keys (const std::string& bucket);
     std::vector <std::string> list_buckets (const std::string& bucket) {
         std::vector <std::string> buckets;

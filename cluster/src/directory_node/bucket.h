@@ -10,32 +10,22 @@
 
 namespace uh::cluster{
 
-struct bucket_config {
-    std::string bucket_id;
-    std::filesystem::path root;
-    //std::filesystem::path directory;
-    //std::filesystem::path free_spot_log;
-    size_t min_file_size;
-    size_t max_file_size;
-    size_t max_storage_size;
-    size_t max_chunk_size;
-
-};
 
 class bucket {
 
-
-    bucket (bucket_config& conf, std::unordered_map < std::string, uint64_t >& object_ptrs):
+public:
+    bucket (const std::filesystem::path& root, bucket_config& conf):
         m_data_store({
-            .directory = conf.root/"ds",
-            .free_spot_log = conf.root/"fsl",
+            .directory = root/"ds",
+            .free_spot_log = root/"ds/fsl",
             .min_file_size = conf.min_file_size,
             .max_file_size = conf.max_file_size,
             .max_storage_size = conf.max_storage_size,
             .max_chunk_size = conf.max_chunk_size,
         }),
-        m_log_file(conf.root/"log"),
-        m_object_ptrs(object_ptrs) {}
+        m_log_file(root/"log"),
+        m_object_ptrs (m_log_file.replay()) {
+    }
 
 
     void insert_object (const std::string& key, std::span<char> data) {
