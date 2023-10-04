@@ -24,8 +24,8 @@ namespace uh::cluster {
         enum operation:char {
             INSERT_START = 'i',
             INSERT_END = 'I',
-            DELETE_START = 'd',
-            DELETE_END = 'D',
+            REMOVE_START = 'r',
+            REMOVE_END = 'R',
             UPDATE_START = 'u',
             UPDATE_END = 'U',
             INSERT = 'a',
@@ -75,7 +75,7 @@ namespace uh::cluster {
                         dangling_updates.erase (std::get <std::string> (e.key));
                         log_map.at (std::get <std::string> (e.key)) = e.object_id;
                         break;
-                    case operation::DELETE_END:
+                    case operation::REMOVE_END:
                         dangling_deletes.erase (std::get <std::string> (e.key));
                         log_map.erase(std::get <std::string> (e.key));
                         break;
@@ -85,7 +85,7 @@ namespace uh::cluster {
                     case operation::UPDATE_START:
                         dangling_updates.emplace (std::move (std::get <std::string> (e.key)), e.object_id);
                         break;
-                    case operation::DELETE_START:
+                    case operation::REMOVE_START:
                         dangling_deletes.emplace (std::move (std::get <std::string> (e.key)), e.object_id);
                         break;
                     default:
