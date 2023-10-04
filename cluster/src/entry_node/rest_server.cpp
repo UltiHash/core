@@ -4,60 +4,8 @@
 #include <fstream>
 #include <filesystem>
 
-namespace uh::cluster
+namespace uh::cluster::rest
 {
-
-//------------------------------------------------------------------------------
-    template <typename T, typename Y>
-    void ts_map<T,Y>::insert(const T& key, const Y& value)
-    {
-        std::lock_guard<std::mutex> lock(m_mutex);
-        m_container[key] = value;
-    }
-
-//------------------------------------------------------------------------------
-
-    template <typename T, typename Y>
-    std::map<T,Y>::iterator ts_map<T,Y>::find(const T& key)
-    {
-        std::lock_guard<std::mutex> lock(m_mutex);
-        return m_container.find(key);
-    }
-
-//------------------------------------------------------------------------------
-
-    template <typename T, typename Y>
-    Y& ts_map<T,Y>::operator[] (const T& key)
-    {
-        std::lock_guard<std::mutex> lock(m_mutex);
-        return m_container[key];
-    }
-
-//------------------------------------------------------------------------------
-
-    template <typename T, typename Y>
-    std::map<T, Y>::iterator ts_map<T,Y>::begin()
-    {
-        std::lock_guard<std::mutex> lock(m_mutex);
-        return m_container.begin();
-    }
-
-//------------------------------------------------------------------------------
-
-    template <typename T, typename Y>
-    std::map<T, Y>::iterator ts_map<T,Y>::end()
-    {
-        std::lock_guard<std::mutex> lock(m_mutex);
-        return m_container.end();
-    }
-
-//------------------------------------------------------------------------------
-    template <typename T, typename Y>
-    void ts_map<T, Y>::clear()
-    {
-        std::lock_guard<std::mutex> lock(m_mutex);
-        m_container.clear();
-    }
 
 //------------------------------------------------------------------------------
 
@@ -243,17 +191,25 @@ namespace uh::cluster
                 beast::flat_buffer buffer;
 
                 // read header
-                http::request_parser<http::empty_body> received_request;
+                b_http::request_parser<b_http::empty_body> received_request;
                 received_request.body_limit((std::numeric_limits<std::uint64_t>::max)());
 
-                co_await http::async_read_header(stream, buffer, received_request, net::use_awaitable);
+                co_await b_http::async_read_header(stream, buffer, received_request, net::use_awaitable);
                 std::cout << received_request.get().base() << std::endl;
-                // parse
-                rest::utils::parser::s3_parser s3_parser(received_request);
-                auto parsed_service_ptr = s3_parser.parse();
 
-                for (const auto& pair : parsed_service_ptr->get_headers())
-                    std::cout << pair.first << " : " << pair.second << std::endl;
+                // parse
+//                rest::utils::parser::s3_parser s3_parser(received_request, m_uomap_multipart);
+//                auto parsed_service_ptr = s3_parser.parse();
+//
+//                // authenticate
+//
+//                std::cout << "General Headers: " << std::endl;
+//                for (const auto& pair : parsed_service_ptr->get_headers())
+//                    std::cout << pair.first << " : " << pair.second << std::endl;
+//
+//                std::cout << "\nRequest Specific Headers: " << std::endl;
+//                for (const auto& pair : parsed_service_ptr->get_request_specific_headers())
+//                    std::cout << pair.first << " : " << pair.second << std::endl;
 
 //                // handle
 //                auto res = co_await handle_requests(parsed_request, stream, buffer);
@@ -275,26 +231,26 @@ namespace uh::cluster
             // like 401 on authorization failed and not 400 which is a bad request
         catch (boost::system::system_error &se)
         {
-            if (se.code() != http::error::end_of_stream)
+            if (se.code() != b_http::error::end_of_stream)
             {
-                http::response<http::string_body> res{http::status::bad_request, 11};
-                res.set(http::field::server, "UltiHash");
-                res.set(http::field::content_type, "text/html");
+                b_http::response<b_http::string_body> res{b_http::status::bad_request, 11};
+                res.set(b_http::field::server, "UltiHash");
+                res.set(b_http::field::content_type, "text/html");
                 res.body() = se.code().message() + '\n';
                 res.prepare_payload();
-                http::write(stream, res);
+                b_http::write(stream, res);
                 stream.socket().shutdown(tcp::socket::shutdown_send, ec);
                 throw;
             }
         }
         catch (const std::exception& e)
         {
-            http::response<http::string_body> res{http::status::bad_request, 11};
-            res.set(http::field::server, "UltiHash");
-            res.set(http::field::content_type, "text/html");
+            b_http::response<b_http::string_body> res{b_http::status::bad_request, 11};
+            res.set(b_http::field::server, "UltiHash");
+            res.set(b_http::field::content_type, "text/html");
             res.body() = e.what();
             res.prepare_payload();
-            http::write(stream, res);
+            b_http::write(stream, res);
             stream.socket().shutdown(tcp::socket::shutdown_send, ec);
             throw;
         }

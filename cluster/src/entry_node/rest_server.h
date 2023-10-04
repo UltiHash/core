@@ -23,41 +23,22 @@
 #include "common/protocol_handler.h"
 #include "entry_node_rest_handler.h"
 #include "network/client.h"
-#include <map>
+#include <entry_node/rest/http/models/multi_part_upload.h>
+#include <entry_node/rest/utils/containers/ts_unordered_map.h>
+
 
 //------------------------------------------------------------------------------
 
-namespace uh::cluster
+namespace uh::cluster::rest
 {
 
     namespace beast = boost::beast;         // from <boost/beast.hpp>
-    namespace http = beast::http;           // from <boost/beast/http.hpp>
+    namespace b_http = beast::http;           // from <boost/beast/http.hpp>
     namespace net = boost::asio;            // from <boost/asio.hpp>
     using tcp = boost::asio::ip::tcp;       // from <boost/asio/ip/tcp.hpp>
 
     using tcp_stream = typename beast::tcp_stream::rebind_executor<
             net::use_awaitable_t<>::executor_with_default<net::any_io_executor>>::other;
-
-//------------------------------------------------------------------------------
-
-    template <typename T, typename Y>
-    class ts_map
-    {
-    private:
-        std::map<T,Y> m_container;
-        std::mutex m_mutex;
-
-    public:
-        void insert(const T& key, const Y& value);
-        void clear();
-
-        std::map<T,Y>::iterator find(const T& key);
-        Y& operator[] (const T& key);
-
-        typename std::map<T, Y>::iterator begin();
-        typename std::map<T, Y>::iterator end();
-
-    };
 
 //------------------------------------------------------------------------------
 
@@ -74,8 +55,7 @@ namespace uh::cluster
         // Handle multiple same requests arriving
         std::atomic<bool> m_is_close = false;
 
-        ts_map<uint16_t, std::string> m_multi_part_container;
-        std::mutex m_mutex;
+        rest::utils::ts_unordered_map<std::string, std::shared_ptr<rest::http::model::multi_part_upload>> m_uomap_multipart;
 
         const boost::asio::ip::address m_server_address = boost::asio::ip::make_address("0.0.0.0");
 
@@ -104,6 +84,6 @@ namespace uh::cluster
 
 //------------------------------------------------------------------------------
 
-} // namespace uh::cluster
+} // namespace uh::cluster::rest
 
 #endif // REST_NODE_SRC_SERVER

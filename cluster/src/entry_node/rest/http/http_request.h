@@ -46,9 +46,11 @@ namespace uh::cluster::rest::http
 
         virtual ~http_request() = default;
 
-        [[nodiscard]] virtual std::map<std::string, std::string> get_headers() const = 0;
-
         [[nodiscard]] virtual const char * get_request_name() const = 0;
+
+        [[nodiscard]] virtual std::map<std::string, std::string> get_request_specific_headers() const = 0;
+
+        [[nodiscard]] std::map<std::string, std::string> get_headers() const;
 
         [[nodiscard]] inline http_method get_method() const
         {

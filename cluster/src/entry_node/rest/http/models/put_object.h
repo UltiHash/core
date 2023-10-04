@@ -16,11 +16,11 @@ namespace uh::cluster::rest::http::model
 
         [[nodiscard]] inline const char * get_request_name() const override { return "PutObject"; }
 
-        [[nodiscard]] std::map<std::string, std::string> get_headers() const override;
+        [[nodiscard]] std::map<std::string, std::string> get_request_specific_headers() const override;
 
     private:
 
-        put_object& operator =(const http::request_parser<http::empty_body>& recv_req);
+        put_object& operator = (const http::request_parser<http::empty_body>& recv_req);
 
         object_canned_acl m_aCL;
         bool m_aCLHasBeenSet = false;
