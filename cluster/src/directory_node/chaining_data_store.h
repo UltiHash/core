@@ -202,6 +202,10 @@ public:
         sync ();
     }
 
+    void revert_write () {
+        throw std::runtime_error ("Revert in chaining data store not implemented");
+    }
+
     ospan <char> read (index_type index) const {
         const auto [fd, seek] = get_file_offset_pair(index);
         if (::lseek (fd, seek, SEEK_SET) != seek) [[unlikely]] {
