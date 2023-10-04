@@ -25,13 +25,15 @@ class object_store {
         if(m_object_ptrs.contains(key)) [[unlikely]] {
             throw std::runtime_error ("Attempt to insert object ' + key + ' failed: an object with the same name already exists.");
         }
-        std::lock_guard <std::shared_mutex> lock (m_mutex);
+        std::unique_lock<std::shared_mutex> lock (m_mutex);
         const auto index = m_data_store.post_write (data);
         m_log_file.append(key, index, transaction_log::operation::INSERT_START);
+
         //TODO: handle rollback in case something goes up in smoke during the transaction
         m_data_store.apply_write();
-        // TODO we don't need the lock anymore
         m_object_ptrs[key] = index;
+        lock.unlock();
+
         m_log_file.append(key, index, transaction_log::operation::INSERT_END);
     }
 
@@ -42,28 +44,36 @@ class object_store {
         const auto index = m_object_ptrs.at(key);
         return m_data_store.read(index);
     }
-
     void remove (const std::string& key) {
         if(!m_object_ptrs.contains(key)) [[unlikely]] {
             throw std::runtime_error ("Attempt to remove object ' + key + ' failed: no such object.");
         }
         const auto index = m_object_ptrs.at(key);
         m_log_file.append(key, index, transaction_log::operation::REMOVE_START);
+
         m_object_ptrs.erase(key);
         m_data_store.remove(index);
+
         m_log_file.append(key, index, transaction_log::operation::REMOVE_END);
     }
 
     void update (const std::string& key, std::span <char> data) {
-        //TODO: consider dropping update (as S3 has no update) and merge the functionality with insert
-        std::lock_guard <std::shared_mutex> lock (m_mutex);
+        std::unique_lock <std::shared_mutex> lock (m_mutex);
         const auto index = m_data_store.post_write (data);
         m_log_file.append(key, index, transaction_log::operation::UPDATE_START);
+
+        //TODO: handle rollback in case something goes up in smoke during the transaction
         m_data_store.apply_write();
         const auto old_index = m_object_ptrs.at(key);
         m_data_store.remove(old_index);
         m_object_ptrs[key] = index;
+        lock.unlock();
+
         m_log_file.append(key, index, transaction_log::operation::UPDATE_END);
+    }
+
+    bool contains (const std::string& key) {
+        return m_object_ptrs.contains(key);
     }
 
 
