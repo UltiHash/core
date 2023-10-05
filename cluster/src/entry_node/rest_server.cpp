@@ -151,7 +151,7 @@ namespace uh::cluster
             co_return std::move(res);
         }
 
-        else if (parsed_request.req_type == get_object)
+        else if (parsed_request.req_type == get_object or parsed_request.req_type == create_bucket)
         {
             co_return co_await m_handler.handle(parsed_request);
         }

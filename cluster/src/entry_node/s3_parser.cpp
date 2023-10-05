@@ -26,7 +26,7 @@ namespace uh::cluster {
                                                   x_amz_grant_read_acp, x_amz_grant_write_acp, x_amz_metadata_directive, x_amz_tagging_directive,
                                                   x_amz_storage_class, x_amz_request_payer, x_amz_tagging, x_amz_expected_bucket_owner, x_amz_source_expected_bucket_owner } },
                     { s3_req_type::delete_object, { x_amz_request_payer, x_amz_expected_bucket_owner } },
-                    {s3_req_type::create_bucket, { x_amz_acl, x_amz_grant_full_control, x_amz_grant_read, x_amz_grant_read_acp, x_amz_grant_write, x_amz_grant_write_acp, x_amz_object_ownership }},
+                    {s3_req_type::create_bucket, { x_amz_acl, x_amz_grant_full_control, x_amz_grant_read, x_amz_grant_read_acp, x_amz_grant_write, x_amz_grant_write_acp, x_amz_object_ownership, x_amz_date, x_amz_content_sha256 }},
                     { s3_req_type::delete_bucket, { x_amz_expected_bucket_owner } },
             };
 
@@ -43,7 +43,7 @@ namespace uh::cluster {
                     { s3_req_type::get_object, { http_fields::if_match, http_fields::if_modified_since, http_fields::if_none_match, http_fields::if_unmodified_since, http_fields::range } },
                     { s3_req_type::copy_object, { http_fields::content_disposition, http_fields::content_encoding, http_fields::content_language, http_fields::content_type, http_fields::expires } },
                     { s3_req_type::delete_object, {  } },
-                    { s3_req_type::create_bucket, {  } },
+                    { s3_req_type::create_bucket, { http_fields::content_length, http_fields::authorization, http_fields::accept_encoding, http_fields::host, http_fields::user_agent } },
                     { s3_req_type::delete_bucket, {  } },
             };
 
@@ -222,7 +222,7 @@ namespace uh::cluster {
                     }
                 }
             case http_fields::put:
-                if (m_target == "/")
+                if (m_target.rfind('/') == 0)
                 {
                     return create_bucket;
                 }

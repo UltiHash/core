@@ -34,11 +34,21 @@ public:
     }
 
     void insert (const std::string& bucket, const std::string& key, const std::span <char>& data) {
-        m_buckets.at(bucket)->insert_object (key, data);
+        if (const auto& b = m_buckets.find(bucket); b != m_buckets.cend()) [[likely]] {
+            b->second->insert_object(key, data);
+        }
+        else {
+            throw std::out_of_range ("The bucket " + bucket + " does not exist.");
+        }
     }
 
     ospan <char> get (const std::string& bucket, const std::string& key) {
-        return m_buckets.at(bucket)->get_obj(key);
+        if (const auto& b = m_buckets.find(bucket); b != m_buckets.cend()) [[likely]] {
+            return b->second->get_obj(key);
+        }
+        else {
+            throw std::out_of_range ("The bucket " + bucket + " does not exist.");
+        }
     }
 
     void add_bucket (const std::string& bucket_id) {
@@ -46,16 +56,31 @@ public:
     }
 
     void remove (const std::string& bucket, const std::string& key) {
-        m_buckets.at(bucket)->delete_object(key);
+        if (const auto& b = m_buckets.find(bucket); b != m_buckets.cend()) [[likely]] {
+            b->second->delete_object(key);
+        }
+        else {
+            throw std::out_of_range ("The bucket " + bucket + " does not exist.");
+        }
     }
 
     void remove_bucket (const std::string& bucket) {
-        m_buckets.at(bucket)->destroy_bucket();
-        m_buckets.erase(bucket);
+        if (const auto& b = m_buckets.find(bucket); b != m_buckets.cend()) [[likely]] {
+            b->second->destroy_bucket();
+            m_buckets.erase(bucket);
+        }
+        else {
+            throw std::out_of_range ("The bucket " + bucket + " does not exist.");
+        }
     }
 
     std::vector <std::string> list_keys (const std::string& bucket) {
-        return m_buckets.at (bucket)->list_keys();
+        if (const auto& b = m_buckets.find(bucket); b != m_buckets.cend()) [[likely]] {
+            return b->second->list_keys();
+        }
+        else {
+            throw std::out_of_range ("The bucket " + bucket + " does not exist.");
+        }
     }
 
     std::vector <std::string> list_buckets () {

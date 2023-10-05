@@ -44,19 +44,18 @@ private:
     coro <void> handle_put_obj (messenger& m, const messenger::header& h) {
         directory_message request = co_await m.recv_directory_message (h);
 
-        bool failure = false;
+        std::string failure;
         std::vector<char> address_data;
-        zpp::bits::out{address_data}(request.addr).or_throw();
-
+        zpp::bits::out{address_data, zpp::bits::size4b{}}(*request.addr).or_throw();
         try {
             m_directory.insert (request.bucket_id, *request.object_key, address_data);
             co_await m.send(SUCCESS, {});
         } catch (const std::exception& e) {
-            failure = true;
+            failure = std::string (e.what());
         }
 
-        if(failure)
-            co_await m.send(FAILURE, {});
+        if(!failure.empty())
+            co_await m.send(FAILURE, failure);
 
         co_return;
     }

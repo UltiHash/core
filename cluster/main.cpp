@@ -71,7 +71,7 @@ uh::cluster::dedupe_config make_dedupe_node_config () {
                 .set_minimum_free_space = 1ul * 1024ul * 1024ul * 1024ul,
                 .max_empty_hole_size = 1ul * 1024ul * 1024ul * 1024ul,
                 .key_store_config = {
-                        .file  = "root/set",
+                        .file  = "ultihash-root/dd/set",
                         .init_size = 1ul * 1024ul * 1024ul * 1024ul,
                 }
         },
