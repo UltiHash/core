@@ -202,7 +202,7 @@ namespace uh::cluster::rest
                 auto s3_request_ptr = s3_parser.parse();
 
                 // read body
-                s3_request_ptr->read_body(stream, buffer);
+                co_await s3_request_ptr->read_body(stream, buffer);
 
                 // authenticate
 

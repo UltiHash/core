@@ -1,4 +1,5 @@
 #include "put_object.h"
+#include <iostream>
 
 namespace uh::cluster::rest::http::model
 {

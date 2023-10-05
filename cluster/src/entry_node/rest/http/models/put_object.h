@@ -42,7 +42,7 @@ namespace uh::cluster::rest::http::model
         std::string m_contentLanguage;
         bool m_contentLanguageHasBeenSet = false;
 
-        long long m_contentLength;
+        long long m_contentLength{};
         bool m_contentLengthHasBeenSet = false;
 
         std::string m_contentMD5;
@@ -111,7 +111,7 @@ namespace uh::cluster::rest::http::model
         std::string m_sSEKMSEncryptionContext;
         bool m_sSEKMSEncryptionContextHasBeenSet = false;
 
-        bool m_bucketKeyEnabled;
+        bool m_bucketKeyEnabled{};
         bool m_bucketKeyEnabledHasBeenSet = false;
 
         std::string m_requestPayer;

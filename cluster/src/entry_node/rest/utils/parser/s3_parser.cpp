@@ -33,7 +33,7 @@ namespace uh::cluster::rest::utils::parser {
                     // mechanism for creating upload id, does this mechanism create same upload id for same POST request occurring twice?
                     auto upload_id = "first_upload";
 
-                    m_uomap_multipart.ts_insert(upload_id, std::make_shared<rest::http::model::multi_part_container>(upload_id));
+//                    m_uomap_multipart.ts_insert(upload_id, std::make_shared<rest::http::model::multi_part_container>(upload_id));
 
 //                    return std::make_unique<rest::http::model::init_multi_part_upload>(m_recv_req);
                 }
