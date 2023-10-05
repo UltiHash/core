@@ -80,7 +80,11 @@ public:
         co_await m_dir.get().send_directory_message (DIR_PUT_OBJ_REQ, dir_req);
         const auto h_dir = co_await m_dir.get().recv_header();
         if(h_dir.type == FAILURE) [[unlikely]] {
-            throw std::runtime_error("Failed to add the fragment address of object " + dir_req.bucket_id + "/" + *dir_req.object_key + " to the directory.");
+            std::string msg;
+            msg.resize(h_dir.size);
+            m_dir.get().register_read_buffer(msg);
+            co_await m_dir.get().recv_buffers(h_dir);
+            throw std::runtime_error("Failed to add the fragment address of object " + dir_req.bucket_id + "/" + *dir_req.object_key + " to the directory.\n" + "Error: \n" + msg);
             //TODO: consider using custom exceptions to indicate if and how the error gets communicated to the HTTP client.
         }
 
@@ -106,13 +110,17 @@ public:
         dir_req.object_key = std::make_unique <std::string> (req.object_key);
         co_await m_dir.get().send_directory_message (DIR_GET_OBJ_REQ, dir_req);
         const auto h_dir = co_await m_dir.get().recv_header();
-        if(h_dir.type == DIR_GET_OBJ_RESP) {
+        if(h_dir.type == DIR_GET_OBJ_RESP) [[likely]] {
             ospan <char> buffer (h_dir.size);
             m_dir.get().register_read_buffer(buffer);
             co_await m_dir.get().recv_buffers(h_dir);
             res.body() = std::string(buffer.data.get(), buffer.size);
-        } else {
-            throw std::runtime_error("Failed to retreive object " + dir_req.bucket_id + "/" + *dir_req.object_key + " from the directory.");
+        } else if (h_dir.type == FAILURE){
+            std::string msg;
+            msg.resize(h_dir.size);
+            m_dir.get().register_read_buffer(msg);
+            co_await m_dir.get().recv_buffers(h_dir);
+            throw std::runtime_error("Failed to retreive object " + dir_req.bucket_id + "/" + *dir_req.object_key + " from the directory.\n" + "Error: \n" + msg);
             //TODO: consider using custom exceptions to indicate if and how the error gets communicated to the HTTP client.
         }
     }
@@ -123,8 +131,12 @@ public:
         dir_req.bucket_id = req.bucket_id;
         co_await m_dir.get().send_directory_message (DIR_PUT_BUCKET_REQ, dir_req);
         const auto h_dir = co_await m_dir.get().recv_header();
-        if(h_dir.type != SUCCESS) [[unlikely]] {
-            throw std::runtime_error("Failed to add the bucket " + dir_req.bucket_id + " to the directory.");
+        if(h_dir.type == FAILURE) [[unlikely]] {
+            std::string msg;
+            msg.resize(h_dir.size);
+            m_dir.get().register_read_buffer(msg);
+            co_await m_dir.get().recv_buffers(h_dir);
+            throw std::runtime_error("Failed to add the bucket " + dir_req.bucket_id + " to the directory.\n" + "Error: \n" + msg);
         }
     }
 

@@ -54,7 +54,7 @@ namespace uh::cluster {
             register_read_buffer(data);
             co_await recv_buffers(message_header);
             directory_message req;
-            zpp::bits::in{std::span <char> {data.data.get(), data.size}}(req).or_throw();
+            zpp::bits::in{std::span <char> {data.data.get(), data.size}, zpp::bits::size4b{}}(req).or_throw();
             co_return std::move (req);
 
         }
@@ -85,7 +85,7 @@ namespace uh::cluster {
 
         coro <void> send_directory_message (const message_types type, const directory_message& dir_req) {
             std::vector<char> data;
-            zpp::bits::out{data}(dir_req).or_throw();
+            zpp::bits::out{data, zpp::bits::size4b{}}(dir_req).or_throw();
             register_write_buffer(data);
             co_await send_buffers(type);
         }

@@ -65,16 +65,16 @@ private:
         directory_message request = co_await m.recv_directory_message (h);
         address addr;
 
-        bool failure = false;
+        std::string failure;
         try {
             const auto buf = m_directory.get(request.bucket_id, *request.object_key);
-            zpp::bits::in{std::span <char> {buf.data.get(), buf.size}}(addr).or_throw();
+            zpp::bits::in{std::span <char> {buf.data.get(), buf.size}, zpp::bits::size4b{}}(addr).or_throw();
         } catch (const std::exception& e) {
-            failure = true;
+            failure = std::string (e.what());
         }
 
-        if(failure)
-            co_await m.send(FAILURE, {});
+        if(!failure.empty())
+            co_await m.send(FAILURE, failure);
 
         std::size_t buffer_size = 0;
         for(auto frag_size : addr.sizes){
@@ -98,17 +98,17 @@ private:
 
     coro <void> handle_put_bucket (messenger& m, const messenger::header& h) {
         directory_message request = co_await m.recv_directory_message (h);
-        bool failure = false;
+        std::string failure;
 
         try {
             m_directory.add_bucket(request.bucket_id);
             co_await m.send(SUCCESS, {});
         } catch (const std::exception& e) {
-            failure = true;
+            failure = std::string (e.what());
         }
 
-        if(failure)
-            co_await m.send(FAILURE, {});
+        if(!failure.empty())
+            co_await m.send(FAILURE, failure);
     }
 
     directory_store m_directory;
