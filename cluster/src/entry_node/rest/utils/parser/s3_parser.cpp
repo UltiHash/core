@@ -1,6 +1,7 @@
 #include <iostream>
 #include "s3_parser.h"
 #include <entry_node/rest/http/models/put_object.h>
+#include <entry_node/rest/http/models/init_multi_part_upload.h>
 #include <memory>
 
 namespace uh::cluster::rest::utils::parser {
@@ -9,10 +10,11 @@ namespace uh::cluster::rest::utils::parser {
 
     s3_parser::s3_parser
     (const http::request_parser<http::empty_body>& recv_req,
-     rest::utils::ts_unordered_map<std::string, std::shared_ptr<rest::http::model::multi_part_upload>>& uomap) : m_recv_req(recv_req), m_uomap_multipart(uomap)
+     rest::utils::ts_unordered_map<std::string, std::shared_ptr<rest::http::model::multi_part_container>>& uomap)
+     : m_recv_req(recv_req), m_uomap_multipart(uomap)
     {}
 
-    std::shared_ptr<rest::http::http_request>
+    std::unique_ptr<rest::http::http_request>
     s3_parser::parse() const
     {
         if (m_recv_req.get().base().version() != 11)
@@ -31,17 +33,14 @@ namespace uh::cluster::rest::utils::parser {
                     // mechanism for creating upload id, does this mechanism create same upload id for same POST request occurring twice?
                     auto upload_id = "first_upload";
 
-                    auto req_p = std::make_shared<rest::http::model::multi_part_upload>(m_recv_req);
-                    m_uomap_multipart.ts_insert(upload_id, req_p);
+                    m_uomap_multipart.ts_insert(upload_id, std::make_shared<rest::http::model::multi_part_container>(upload_id));
 
-                    return req_p;
+//                    return std::make_unique<rest::http::model::init_multi_part_upload>(m_recv_req);
                 }
                 else if (target.find("partNumber=") && target.find("uploadId="))
                 {
                     auto upload_id = std::string(target.substr(target.find("uploadId=") + 9, target.find("&partNumber=") - target.find("uploadId=") - 9 ));
                     auto part_number = std::stoi(std::string(target.substr(target.find("partNumber=") + 11)));
-
-
 
                 }
                 else

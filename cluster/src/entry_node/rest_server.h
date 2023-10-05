@@ -23,7 +23,7 @@
 #include "common/protocol_handler.h"
 #include "entry_node_rest_handler.h"
 #include "network/client.h"
-#include <entry_node/rest/http/models/multi_part_upload.h>
+#include <entry_node/rest/http/models/multi_part_container.h>
 #include <entry_node/rest/utils/containers/ts_unordered_map.h>
 
 
@@ -55,7 +55,7 @@ namespace uh::cluster::rest
         // Handle multiple same requests arriving
         std::atomic<bool> m_is_close = false;
 
-        rest::utils::ts_unordered_map<std::string, std::shared_ptr<rest::http::model::multi_part_upload>> m_uomap_multipart;
+        rest::utils::ts_unordered_map<std::string, std::shared_ptr<rest::http::model::multi_part_container>> m_uomap_multipart;
 
         const boost::asio::ip::address m_server_address = boost::asio::ip::make_address("0.0.0.0");
 

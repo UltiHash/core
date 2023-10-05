@@ -2,12 +2,19 @@
 
 #include <map>
 #include <boost/beast/http.hpp>
+#include <boost/beast/core.hpp>
+#include <boost/asio.hpp>
 #include "http_types.h"
 #include "URI.h"
 
 namespace uh::cluster::rest::http
 {
     namespace http = boost::beast::http;           // from <boost/beast/http.hpp>
+    namespace net = boost::asio;
+    using tcp_stream = typename boost::beast::tcp_stream::rebind_executor<
+            net::use_awaitable_t<>::executor_with_default<net::any_io_executor>>::other;
+    template <typename T>
+    using coro =  boost::asio::awaitable <T>;   // for coroutine
 
     /**
      * Enum to represent version of the http protocol to use
@@ -50,18 +57,19 @@ namespace uh::cluster::rest::http
 
         [[nodiscard]] virtual std::map<std::string, std::string> get_request_specific_headers() const = 0;
 
+        virtual coro<void> read_body(tcp_stream& stream, boost::beast::flat_buffer& buffer) = 0;
+
+        [[nodiscard]] inline std::string get_body() const { return m_body; }
+
         [[nodiscard]] std::map<std::string, std::string> get_headers() const;
 
-        [[nodiscard]] inline http_method get_method() const
-        {
-            return m_method;
-        }
+        [[nodiscard]] inline http_method get_method() const { return m_method; }
 
     protected:
         const http::request_parser<http::empty_body>& m_req;
         http_method m_method;
         URI m_uri;
-        std::string m_req_body {};
+        std::string m_body {};
     };
 
 } // uh::cluster::rest::http

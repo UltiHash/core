@@ -198,18 +198,24 @@ namespace uh::cluster::rest
                 std::cout << received_request.get().base() << std::endl;
 
                 // parse
-//                rest::utils::parser::s3_parser s3_parser(received_request, m_uomap_multipart);
-//                auto parsed_service_ptr = s3_parser.parse();
-//
-//                // authenticate
-//
-//                std::cout << "General Headers: " << std::endl;
-//                for (const auto& pair : parsed_service_ptr->get_headers())
-//                    std::cout << pair.first << " : " << pair.second << std::endl;
-//
-//                std::cout << "\nRequest Specific Headers: " << std::endl;
-//                for (const auto& pair : parsed_service_ptr->get_request_specific_headers())
-//                    std::cout << pair.first << " : " << pair.second << std::endl;
+                rest::utils::parser::s3_parser s3_parser(received_request, m_uomap_multipart);
+                auto s3_request_ptr = s3_parser.parse();
+
+                // read body
+                s3_request_ptr->read_body(stream, buffer);
+
+                // authenticate
+
+                std::cout << "General Headers: " << std::endl;
+                for (const auto& pair : s3_request_ptr->get_headers())
+                    std::cout << pair.first << " : " << pair.second << std::endl;
+
+                std::cout << "\nRequest Specific Headers: " << std::endl;
+                for (const auto& pair : s3_request_ptr->get_request_specific_headers())
+                    std::cout << pair.first << " : " << pair.second << std::endl;
+
+                std::cout << "Body received: " << std::endl;
+                std::cout << s3_request_ptr->get_body() << std::endl;
 
 //                // handle
 //                auto res = co_await handle_requests(parsed_request, stream, buffer);
