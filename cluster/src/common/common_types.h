@@ -96,16 +96,12 @@ struct dedupe_response {
     address addr;
 };
 
-struct directory_put_request {
+struct directory_message {
     std::string bucket_id;
-    std::string object_key;
-    address addr;
+    zpp::bits::optional_ptr <std::string> object_key;
+    zpp::bits::optional_ptr<address> addr;
 };
 
-struct directory_get_request {
-    std::string bucket_id;
-    std::string object_key;
-};
 
 } // end namespace uh::cluster
 

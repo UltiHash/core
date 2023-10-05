@@ -22,8 +22,6 @@ enum message_types:uint8_t {
     READ_RESP,
     WRITE_REQ,
     WRITE_RESP,
-    WRITE_MANY_REQ,
-    WRITE_MANY_RESP,
     SYNC_REQ,
     SYNC_OK,
     REMOVE_REQ,
@@ -35,6 +33,7 @@ enum message_types:uint8_t {
     DIR_PUT_OBJ_REQ,
     DIR_GET_OBJ_REQ,
     DIR_GET_OBJ_RESP,
+    DIR_PUT_BUCKET_REQ,
     SUCCESS,
     FAILURE,
     STOP

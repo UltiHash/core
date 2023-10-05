@@ -27,6 +27,9 @@ public:
                 case DIR_GET_OBJ_REQ:
                     co_await handle_get_obj (m, message_header);
                     break;
+                case DIR_PUT_BUCKET_REQ:
+                    co_await handle_put_bucket (m, message_header);
+                    break;
                 case STOP:
                     co_return;
                 default:
@@ -39,14 +42,14 @@ public:
 private:
 
     coro <void> handle_put_obj (messenger& m, const messenger::header& h) {
-        directory_put_request request = co_await m.recv_directory_put_object_request(h);
+        directory_message request = co_await m.recv_directory_message (h);
 
         bool failure = false;
         std::vector<char> address_data;
         zpp::bits::out{address_data}(request.addr).or_throw();
 
         try {
-            m_directory.insert (request.bucket_id, request.object_key, address_data);
+            m_directory.insert (request.bucket_id, *request.object_key, address_data);
             co_await m.send(SUCCESS, {});
         } catch (const std::exception& e) {
             failure = true;
@@ -59,12 +62,12 @@ private:
     }
 
     coro <void> handle_get_obj (messenger& m, const messenger::header& h) {
-        directory_get_request request = co_await m.recv_directory_get_object_request(h);
+        directory_message request = co_await m.recv_directory_message (h);
         address addr;
 
         bool failure = false;
         try {
-            const auto buf = m_directory.get(request.bucket_id, request.object_key);
+            const auto buf = m_directory.get(request.bucket_id, *request.object_key);
             zpp::bits::in{std::span <char> {buf.data.get(), buf.size}}(addr).or_throw();
         } catch (const std::exception& e) {
             failure = true;
@@ -91,6 +94,21 @@ private:
         co_await m.send_buffers(DIR_GET_OBJ_RESP);
 
         co_return;
+    }
+
+    coro <void> handle_put_bucket (messenger& m, const messenger::header& h) {
+        directory_message request = co_await m.recv_directory_message (h);
+        bool failure = false;
+
+        try {
+            m_directory.add_bucket(request.bucket_id);
+            co_await m.send(SUCCESS, {});
+        } catch (const std::exception& e) {
+            failure = true;
+        }
+
+        if(failure)
+            co_await m.send(FAILURE, {});
     }
 
     directory_store m_directory;

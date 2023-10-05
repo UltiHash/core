@@ -49,27 +49,14 @@ namespace uh::cluster {
             co_return std::pair {message_header, std::move (dedupe_resp)};
         }
 
-        coro <directory_put_request> recv_directory_put_object_request (const header& message_header) {
-            std::vector<char> data;
-            data.resize(message_header.size);
+        coro <directory_message> recv_directory_message (const header& message_header) {
+            ospan <char> data (message_header.size);
             register_read_buffer(data);
             co_await recv_buffers(message_header);
-
-            directory_put_request req;
-            zpp::bits::in{data}(req).or_throw();
+            directory_message req;
+            zpp::bits::in{std::span <char> {data.data.get(), data.size}}(req).or_throw();
             co_return std::move (req);
 
-        }
-
-        coro <directory_get_request> recv_directory_get_object_request (const header& message_header) {
-            std::vector<char> data;
-            data.resize(message_header.size);
-            register_read_buffer(data);
-            co_await recv_buffers(message_header);
-
-            directory_get_request req;
-            zpp::bits::in{data}(req).or_throw();
-            co_return std::move (req);
         }
 
         coro <void> send_address (const message_types type, const address& addr) {
@@ -96,20 +83,13 @@ namespace uh::cluster {
             co_await send_buffers(type);
         }
 
-        coro <void> send_directory_put_object_request (const message_types type, const directory_put_request& dir_req) {
+        coro <void> send_directory_message (const message_types type, const directory_message& dir_req) {
             std::vector<char> data;
             zpp::bits::out{data}(dir_req).or_throw();
             register_write_buffer(data);
             co_await send_buffers(type);
         }
 
-        coro <void> send_directory_get_object_request (const message_types type, const directory_get_request& dir_req) {
-            std::vector<char> data;
-            zpp::bits::out{data}(dir_req).or_throw();
-            co_await send(type, data);
-            register_write_buffer(data);
-            co_await send_buffers(type);
-        }
     };
 
 } // end namespace uh::cluster
