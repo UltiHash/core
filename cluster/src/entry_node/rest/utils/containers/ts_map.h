@@ -14,14 +14,37 @@ namespace uh::cluster::rest::utils
         std::mutex m_mutex;
 
     public:
-        void insert(const T& key, const Y& value);
-        void clear();
+        void insert(const T& key, const Y& value)
+        {
+            std::lock_guard<std::mutex> lock(m_mutex);
+            m_container.insert(key, value);
+        }
+        void clear()
+        {
+            std::lock_guard<std::mutex> lock(m_mutex);
+            m_container.clear();
+        }
 
-        std::map<T,Y>::iterator find(const T& key);
-        Y& operator[] (const T& key);
+        typename std::map<T,Y>::iterator find(const T& key)
+        {
+            std::lock_guard<std::mutex> lock(m_mutex);
+            return m_container.find(key);
+        }
 
-        typename std::map<T, Y>::iterator begin();
-        typename std::map<T, Y>::iterator end();
+        Y& operator[] (const T& key)
+        {
+            std::lock_guard<std::mutex> lock(m_mutex);
+            return m_container[key];
+        }
+
+        typename std::map<T, Y>::iterator begin()
+        {
+            return m_container.begin();
+        }
+        typename std::map<T, Y>::iterator end()
+        {
+            return m_container.end();
+        }
 
     };
 

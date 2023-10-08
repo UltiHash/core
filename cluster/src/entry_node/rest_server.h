@@ -23,8 +23,9 @@
 #include "common/protocol_handler.h"
 #include "entry_node_rest_handler.h"
 #include "network/client.h"
-#include <entry_node/rest/http/models/multi_part_container.h>
-#include <entry_node/rest/utils/containers/ts_unordered_map.h>
+#include "entry_node/rest/http/http_request.h"
+#include "entry_node/rest/utils/containers/ts_unordered_map.h"
+#include "entry_node/rest/utils/containers/ts_map.h"
 
 
 //------------------------------------------------------------------------------
@@ -55,7 +56,7 @@ namespace uh::cluster::rest
         // Handle multiple same requests arriving
         std::atomic<bool> m_is_close = false;
 
-        rest::utils::ts_unordered_map<std::string, std::shared_ptr<rest::http::model::multi_part_container>> m_uomap_multipart;
+        rest::utils::ts_unordered_map<std::string, std::shared_ptr<utils::ts_map<uint16_t, std::string>>> m_uomap_multipart;
 
         const boost::asio::ip::address m_server_address = boost::asio::ip::make_address("0.0.0.0");
 
@@ -64,9 +65,8 @@ namespace uh::cluster::rest
 
         void run();
 
-//        coro <http::response<http::string_body>>
-//        handle_requests (parsed_request_wrapper& req, tcp_stream& stream,
-//                         beast::flat_buffer& remaining_buffer);
+        coro <b_http::response<b_http::string_body>>
+        handle_requests(const http::http_request& req) const;
 
         [[nodiscard]] std::shared_ptr <boost::asio::io_context>
         get_executor () const;

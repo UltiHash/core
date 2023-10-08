@@ -14,8 +14,32 @@ namespace uh::cluster::rest::utils
         std::mutex m_mutex;
 
     public:
-        void ts_insert(const T& key, const Y& value);
-        void ts_remove(const T& key);
+        void emplace(T key, Y value)
+        {
+            std::lock_guard<std::mutex> lock(m_mutex);
+            m_container.emplace(std::move(key), std::move(value));
+        }
+
+        void remove(const T& key)
+        {
+            std::lock_guard<std::mutex> lock(m_mutex);
+            m_container.erase(key);
+        }
+
+        std::unordered_map<T,Y>::iterator find(const T& key)
+        {
+            return m_container.find(key);
+        }
+
+        std::unordered_map<T,Y>::iterator begin()
+        {
+            return m_container.begin();
+        }
+
+        std::unordered_map<T,Y>::iterator end()
+        {
+            return m_container.end();
+        }
 
     };
 

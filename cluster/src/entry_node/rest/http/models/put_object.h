@@ -18,8 +18,6 @@ namespace uh::cluster::rest::http::model
 
         [[nodiscard]] std::map<std::string, std::string> get_request_specific_headers() const override;
 
-        coro<void> read_body(tcp_stream&, boost::beast::flat_buffer&) override;
-
     private:
 
         put_object& operator = (const http::request_parser<http::empty_body>& recv_req);

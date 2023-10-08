@@ -49,7 +49,8 @@ namespace uh::cluster::rest::http
 
         explicit http_request(const http::request_parser<http::empty_body>& recv_request) :
         m_req(recv_request), m_method(get_http_method_from_name(recv_request.get().base().method()))
-        {}
+        {
+        }
 
         virtual ~http_request() = default;
 
@@ -57,9 +58,9 @@ namespace uh::cluster::rest::http
 
         [[nodiscard]] virtual std::map<std::string, std::string> get_request_specific_headers() const = 0;
 
-        virtual coro<void> read_body(tcp_stream& stream, boost::beast::flat_buffer& buffer) = 0;
+        virtual coro<void> read_body(tcp_stream& stream, boost::beast::flat_buffer& buffer);
 
-        [[nodiscard]] inline std::string get_body() const { return m_body; }
+        [[nodiscard]] virtual inline std::string get_body() const { return m_body; }
 
         [[nodiscard]] std::map<std::string, std::string> get_headers() const;
 

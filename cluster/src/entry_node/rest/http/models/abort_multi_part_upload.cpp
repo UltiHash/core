@@ -4,7 +4,6 @@ namespace uh::cluster::rest::http::model
 {
 
     abort_multi_part_upload::abort_multi_part_upload(const http::request_parser<http::empty_body>& recv_req) :
-            m_recv_req(recv_req),
             rest::http::http_request(recv_req)
     {}
 

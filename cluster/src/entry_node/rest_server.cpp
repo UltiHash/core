@@ -50,131 +50,35 @@ namespace uh::cluster::rest
 
 //------------------------------------------------------------------------------
 
-//    coro<http::response<http::string_body>>
-//    rest_server::handle_requests (parsed_request_wrapper& parsed_request, tcp_stream& stream,
-//                                  beast::flat_buffer& remaining_buffer)
-//    {
-//        std::string body_buffer;
-//
-//        // common response headers
-//        http::response<http::string_body> res {http::status::ok, 11};
-//
-//        if (parsed_request.req_type == init_multi_part)
-//        {
-//            res.set(boost::beast::http::field::transfer_encoding, "chunked");
-//            res.set(boost::beast::http::field::connection, "keep-alive");
-//            res.set(boost::beast::http::field::content_type, "application/xml");
-//
-//            // TODO: For now, we use fixed upload id for a client
-//            res.body() =  std::string("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
-//                                      "<InitiateMultipartUploadResult>\n"
-//                                      "<Bucket>" + parsed_request.bucket_id + "</Bucket>\n"
-//                                      "<Key>" + parsed_request.object_key + "</Key>\n"
-//                                      "<UploadId>1</UploadId>\n"
-//                                      "</InitiateMultipartUploadResult>");
-//
-//            co_return std::move(res);
-//        }
-//
-//        else if (parsed_request.req_type == close_multi_part)
-//        {
-//            if (!m_is_close)
-//            {
-//                m_is_close = true;
-//                for (const auto& pair : m_multi_part_container)
-//                {
-//                    body_buffer += pair.second;
-//                }
-//
-//                parsed_request.body = body_buffer;
-//                co_return co_await m_handler.handle(parsed_request);
-//            }
-//        }
-//
-//        else if (parsed_request.req_type == delete_multi_part_upload)
-//        {
-//            m_multi_part_container.clear();
-//            res.prepare_payload();
-//            co_return std::move(res);
-//        }
-//
-//        else if (parsed_request.req_type == get_object)
-//        {
-//            co_return co_await m_handler.handle(parsed_request);
-//        }
-//
-//        else if (parsed_request.req_type == put_object || parsed_request.req_type == multi_part_upload)
-//        {
-//            // expect-100-continue
-//            if (parsed_request.http_parsed_fields[http_fields::expect] == "100-continue")
-//            {
-//                http::response<http::string_body> res_expect;
-//                res_expect.set(boost::beast::http::field::version, "11");
-//
-//                if (!m_server_busy)
-//                    res_expect.result(http::status::continue_);
-//                else
-//                    res_expect.result(http::status::payload_too_large);
-//
-//                co_await http::async_write(stream, res_expect, net::use_awaitable);
-//            }
-//
-//            if (parsed_request.http_parsed_fields.contains(http_fields::content_length) &&
-//                !parsed_request.http_parsed_fields[http_fields::content_length].empty())
-//            {
-//                std::size_t content_length = std::stoull(static_cast<const std::string>(parsed_request.http_parsed_fields[http_fields::content_length]));
-//                auto data_left = content_length - remaining_buffer.size();
-//
-//
-//                if (parsed_request.req_type == multi_part_upload)
-//                {
-//
-//                    if ( m_multi_part_container.find(parsed_request.part_number) == m_multi_part_container.end() )
-//                    {
-//                        m_multi_part_container[parsed_request.part_number] = "";
-//                        auto& multipart_buffer = m_multi_part_container[parsed_request.part_number];
-//                        multipart_buffer.append(content_length, 0);
-//                        boost::asio::buffer_copy(boost::asio::buffer(multipart_buffer), remaining_buffer.data());
-//
-//                        auto size_transferred = co_await boost::asio::async_read(stream.socket(), boost::asio::buffer(multipart_buffer.data() + remaining_buffer.size(), data_left),
-//                                                                                 boost::asio::transfer_exactly(data_left), boost::asio::use_awaitable);
-//
-//                        if (size_transferred + remaining_buffer.size() != content_length)
-//                        {
-//                            throw std::runtime_error("error reading the http body");
-//                        }
-//
-//                        res.set(http::field::etag, "ThisistheCustomEtag" + std::to_string(parsed_request.part_number));
-//                        res.prepare_payload();
-//
-//                        co_return std::move(res);
-//                    }
-//                }
-//                else
-//                {
-//                    body_buffer.append(content_length, 0);
-//
-//                    // copy remaining bytes from flat buffer to body_buffer
-//                    boost::asio::buffer_copy(boost::asio::buffer(body_buffer), remaining_buffer.data());
-//                    auto size_transferred = co_await boost::asio::async_read(stream.socket(), boost::asio::buffer(body_buffer.data() + remaining_buffer.size(), data_left),
-//                                                                             boost::asio::transfer_exactly(data_left), boost::asio::use_awaitable);
-//
-//                    if (size_transferred + remaining_buffer.size() != content_length)
-//                    {
-//                        throw std::runtime_error("error reading the http body");
-//                    }
-//
-//                    parsed_request.body = body_buffer;
-//
-//                    co_return co_await m_handler.handle(parsed_request);
-//                }
-//            }
-//            else
-//            {
-//                throw std::runtime_error("please specify the content length on requests as other methods are currently not supported");
-//            }
-//        }
-//    }
+    coro<b_http::response<b_http::string_body>>
+    rest_server::handle_requests (const http::http_request& req) const
+    {
+        std::string body_buffer;
+
+        // common response headers
+        b_http::response<b_http::string_body> res {b_http::status::ok, 11};
+
+        if (strcmp(req.get_request_name(), "InitiateMultipartUpload") == 0)
+        {
+            res.set(boost::beast::http::field::transfer_encoding, "chunked");
+            res.set(boost::beast::http::field::connection, "keep-alive");
+            res.set(boost::beast::http::field::content_type, "application/xml");
+
+            // TODO: For now, we use fixed upload id for a client
+            res.body() =  std::string("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+                                      "<InitiateMultipartUploadResult>\n"
+                                      "<Bucket>myBucket</Bucket>\n"
+                                      "<Key>myObject</Key>\n"
+                                      "<UploadId>1</UploadId>\n"
+                                      "</InitiateMultipartUploadResult>");
+
+            co_return std::move(res);
+        }
+        else
+        {
+            co_return std::move(res);
+        }
+    }
 
 //------------------------------------------------------------------------------
 
@@ -217,11 +121,11 @@ namespace uh::cluster::rest
                 std::cout << "Body received: " << std::endl;
                 std::cout << s3_request_ptr->get_body() << std::endl;
 
-//                // handle
-//                auto res = co_await handle_requests(parsed_request, stream, buffer);
-//
-//                // send response
-//                co_await http::async_write(stream, res, net::use_awaitable);
+                // handle
+                auto res = co_await handle_requests(*s3_request_ptr);
+
+                // send response
+                co_await b_http::async_write(stream, res, net::use_awaitable);
 //
 //                // TODO: find a way to remove this
 //                if (parsed_request.req_type == close_multi_part)
