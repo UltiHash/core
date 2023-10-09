@@ -1,0 +1,24 @@
+#!/bin/sh
+
+TESTING_BASE_DIR="@CMAKE_CURRENT_SOURCE_DIR@"
+TESTING_BINARY_DIR="@CMAKE_CURRENT_BINARY_DIR@"
+PYTHON3="@Python3_EXECUTABLE@"
+venv_dir="@TESTING_VENV_DIR@"
+
+set -e
+
+if [ ! -d "$venv_dir" ]; then
+    $PYTHON3 -m venv "$venv_dir"
+
+    . "$venv_dir/bin/activate"
+
+    pip --require-virtualenv install --requirement "$TESTING_BASE_DIR/python-requirements.txt" || {
+        deactivate
+        rm -rf "$venv_dir"
+        exit 1
+    }
+
+    deactivate
+fi
+
+. "$venv_dir/bin/activate"
