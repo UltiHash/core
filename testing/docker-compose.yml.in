@@ -1,0 +1,58 @@
+version: '3'
+
+services:
+    dd:
+        image: uh/test
+        container_name: dedupe
+        restart: always
+        volumes:
+            - "$<TARGET_FILE:uh-cluster>:/uh-cluster"
+        entrypoint: [ "/uh-cluster", "dd", "0" ]
+        healthcheck:
+            test: [ "CMD", "lsof", "-i", "UDP:8084" ]
+            timeout: 1s
+            interval: 5s
+            retries: 5
+
+    dn:
+        image: uh/test
+        container_name: data
+        restart: always
+        volumes:
+            - "$<TARGET_FILE:uh-cluster>:/uh-cluster"
+        entrypoint: [ "/uh-cluster", "dn", "0" ]
+        healthcheck:
+            test: [ "CMD", "lsof", "-i", "UDP:8082" ]
+            timeout: 1s
+            interval: 5s
+            retries: 5
+
+    dr:
+        image: uh/test
+        container_name: directory
+        restart: always
+        volumes:
+            - "$<TARGET_FILE:uh-cluster>:/uh-cluster"
+        entrypoint: [ "/uh-cluster", "dr", "0" ]
+        healthcheck:
+            test: [ "CMD", "lsof", "-i", "UDP:8083" ]
+            timeout: 1s
+            interval: 5s
+            retries: 5
+
+    en:
+        image: uh/test
+        container_name: entrypoint
+        restart: always
+        volumes:
+            - "$<TARGET_FILE:uh-cluster>:/uh-cluster"
+        entrypoint: [ "/uh-cluster", "en", "0" ]
+        depends_on:
+            dd:
+                condition: service_healthy
+            dn:
+                condition: service_healthy
+            dr:
+                condition: service_healthy
+        ports:
+            - "8080:8080"

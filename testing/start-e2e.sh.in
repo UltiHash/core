@@ -4,15 +4,20 @@ TESTING_BASE_DIR="@CMAKE_CURRENT_SOURCE_DIR@"
 TESTING_BINARY_DIR="@CMAKE_CURRENT_BINARY_DIR@"
 PYTHON3="@Python3_EXECUTABLE@"
 venv_dir="@TESTING_VENV_DIR@"
+requirements_file="$TESTING_BASE_DIR/python-requirements.txt"
 
 set -e
 
-if [ ! -d "$venv_dir" ]; then
+
+
+if [ ! -d "$venv_dir" ] || [ "$venv_dir" -ot "$requirements_file" ]; then
+    echo "Creating virtual environment ..."
+
     $PYTHON3 -m venv "$venv_dir"
 
     . "$venv_dir/bin/activate"
 
-    pip --require-virtualenv install --requirement "$TESTING_BASE_DIR/python-requirements.txt" || {
+    pip --require-virtualenv install --requirement "$requirements_file" || {
         deactivate
         rm -rf "$venv_dir"
         exit 1
@@ -24,4 +29,4 @@ fi
 . "$venv_dir/bin/activate"
 
 export PYTHONDONTWRITEBYTECODE=1
-pytest "$TESTING_BASE_DIR/tests" $@
+pytest "$TESTING_BASE_DIR/tests" --docker-compose-file=$TESTING_BINARY_DIR/docker-compose.yml $@
