@@ -22,4 +22,6 @@ if [ ! -d "$venv_dir" ]; then
 fi
 
 . "$venv_dir/bin/activate"
+
+export PYTHONDONTWRITEBYTECODE=1
 pytest "$TESTING_BASE_DIR/tests" $@
