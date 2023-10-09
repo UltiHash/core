@@ -22,3 +22,4 @@ if [ ! -d "$venv_dir" ]; then
 fi
 
 . "$venv_dir/bin/activate"
+pytest "$TESTING_BASE_DIR/tests" $@
