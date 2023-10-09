@@ -24,6 +24,7 @@
 #include "entry_node_rest_handler.h"
 #include "network/client.h"
 #include "entry_node/rest/http/http_request.h"
+#include "rest/http/http_response.h"
 #include "entry_node/rest/utils/containers/ts_unordered_map.h"
 #include "entry_node/rest/utils/containers/ts_map.h"
 
@@ -65,7 +66,7 @@ namespace uh::cluster::rest
 
         void run();
 
-        coro <b_http::response<b_http::string_body>>
+        coro<http::http_response>
         handle_requests(const http::http_request& req) const;
 
         [[nodiscard]] std::shared_ptr <boost::asio::io_context>

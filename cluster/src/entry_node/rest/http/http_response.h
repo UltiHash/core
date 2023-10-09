@@ -91,15 +91,16 @@ namespace uh::cluster::rest::http
     class http_response
     {
     public:
-        http_response();
+        explicit http_response(const http_request&);
         virtual ~http_response() = default;
 
-        virtual inline const http_request& get_originating_request() const { return *m_http_req; }
+        [[nodiscard]] virtual inline const http_request& get_originating_request() const { return m_orig_req; }
+        [[nodiscard]] inline http::response<http::string_body>& get_underlying_object() { return m_res; }
         virtual void add_header( const std::string&, const std::string& );
 
     private:
-        std::shared_ptr<const http_request> m_http_req;
-        http::response<http::string_body> res{http::status::ok, 11};
+        const http_request& m_orig_req;
+        http::response<http::string_body> m_res{http::status::ok, 11};
     };
 
 } // uh::cluster::rest::http

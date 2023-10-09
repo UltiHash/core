@@ -1,4 +1,3 @@
-
 #include "rest_server.h"
 #include "rest/utils/parser/s3_parser.h"
 #include <fstream>
@@ -50,34 +49,29 @@ namespace uh::cluster::rest
 
 //------------------------------------------------------------------------------
 
-    coro<b_http::response<b_http::string_body>>
+    coro<http::http_response>
     rest_server::handle_requests (const http::http_request& req) const
     {
-        std::string body_buffer;
 
-        // common response headers
-        b_http::response<b_http::string_body> res {b_http::status::ok, 11};
+        http::http_response s3_res(req);
 
         if (strcmp(req.get_request_name(), "InitiateMultipartUpload") == 0)
         {
-            res.set(boost::beast::http::field::transfer_encoding, "chunked");
-            res.set(boost::beast::http::field::connection, "keep-alive");
-            res.set(boost::beast::http::field::content_type, "application/xml");
+            s3_res.get_underlying_object().set(boost::beast::http::field::transfer_encoding, "chunked");
+            s3_res.get_underlying_object().set(boost::beast::http::field::connection, "keep-alive");
+            s3_res.get_underlying_object().set(boost::beast::http::field::content_type, "application/xml");
 
             // TODO: For now, we use fixed upload id for a client
-            res.body() =  std::string("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+            s3_res.get_underlying_object().body() =  std::string("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
                                       "<InitiateMultipartUploadResult>\n"
                                       "<Bucket>myBucket</Bucket>\n"
                                       "<Key>myObject</Key>\n"
                                       "<UploadId>1</UploadId>\n"
                                       "</InitiateMultipartUploadResult>");
 
-            co_return std::move(res);
         }
-        else
-        {
-            co_return std::move(res);
-        }
+
+        co_return std::move(s3_res);
     }
 
 //------------------------------------------------------------------------------
@@ -118,14 +112,11 @@ namespace uh::cluster::rest
                 for (const auto& pair : s3_request_ptr->get_request_specific_headers())
                     std::cout << pair.first << " : " << pair.second << std::endl;
 
-                std::cout << "Body received: " << std::endl;
-                std::cout << s3_request_ptr->get_body() << std::endl;
-
                 // handle
-                auto res = co_await handle_requests(*s3_request_ptr);
+                auto s3_res = co_await handle_requests(*s3_request_ptr);
 
                 // send response
-                co_await b_http::async_write(stream, res, net::use_awaitable);
+                co_await b_http::async_write(stream, s3_res.get_underlying_object(), net::use_awaitable);
 //
 //                // TODO: find a way to remove this
 //                if (parsed_request.req_type == close_multi_part)
