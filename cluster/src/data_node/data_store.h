@@ -29,6 +29,12 @@ public:
 
     address write (std::span <char> data);
 
+    address allocate (size_t size);
+
+    void cancel_allocate (const address& addr);
+
+    void allocated_write (const address& allocation, std::span <char> data);
+
     std::size_t read (char* buffer, uint128_t pointer, size_t size);
 
     void remove (uint128_t pointer, size_t size);
@@ -57,7 +63,7 @@ private:
 
     [[nodiscard]] uint128_t fetch_used_space () const noexcept;
 
-    alloc_t allocate (std::size_t size);
+    alloc_t allocate_internal (std::size_t size);
 
     int add_new_file (const uint128_t& offset, long file_size);
 

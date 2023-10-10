@@ -132,6 +132,19 @@ std::unordered_map <uint128_t, address> sync_cache () {
         co_return std::move (resp.second);
     }
 
+
+    coro <address> allocate (size_t size) {
+
+    }
+
+    coro <void> cancel_allocation (const address& alloc) {
+
+    }
+
+    coro <void> allocated_write (const address& alloc, std::span <char> data) {
+
+    }
+
     coro <std::size_t> read (char* buffer, const uint128_t pointer, const size_t size) {
         auto m = get_data_node (pointer).acquire_messenger();
         co_await m.get().send_fragment(READ_REQ, {pointer, size});
