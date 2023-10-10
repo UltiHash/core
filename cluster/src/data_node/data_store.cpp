@@ -41,7 +41,7 @@ data_store::data_store(data_node_config conf, long id, bool adaptive) :
     }
 
     if (m_open_files.empty()) {
-        int fd = add_new_file(0, static_cast <long> (m_conf.min_file_size));
+        int fd = add_new_file(uint128_t (0), static_cast <long> (m_conf.min_file_size));
         file_sizes.emplace(fd, m_conf.min_file_size);
     }
     else {
@@ -87,7 +87,9 @@ address data_store::write(std::span<char> data) {
     return data_address;
 }
 
-std::size_t data_store::read(char *buffer, uint128_t pointer, size_t size) const {
+std::size_t data_store::read(char *buffer, uint128_t pointer, size_t size) {
+    std::shared_lock <std::shared_mutex> lock (m);
+
     const auto [fd, seek] = get_file_offset_pair(pointer);
     if (::lseek (fd, seek, SEEK_SET) != seek) [[unlikely]] {
         throw std::runtime_error ("Could not seek to the read position.");
@@ -106,6 +108,7 @@ std::size_t data_store::read(char *buffer, uint128_t pointer, size_t size) const
 }
 
 void data_store::remove(uint128_t pointer, size_t size) {
+    std::lock_guard <std::shared_mutex> lock (m);
 
     const auto [fd, seek] = get_file_offset_pair(pointer);
 
@@ -126,6 +129,7 @@ void data_store::remove(uint128_t pointer, size_t size) {
 }
 
 void data_store::sync() {
+    m_free_spot_manager.push_noted_free_spots();
 
     for (const auto modification: m_modified_files) {
 
@@ -151,7 +155,7 @@ void data_store::sync() {
 }
 
 uint128_t data_store::fetch_used_space() const noexcept {
-    const auto prev_files_data_size = big_int (m_conf.max_file_size) * (m_open_files.size() - 1);
+    const auto prev_files_data_size = uint128_t (m_conf.max_file_size) * (m_open_files.size() - 1);
     return prev_files_data_size + m_last_file_data_end - m_free_spot_manager.total_free_spots();
 }
 
@@ -169,7 +173,7 @@ std::pair<int, long> data_store::get_file_offset_pair(uint128_t pointer) const {
         throw std::out_of_range ("The given data offset could not be found in this data store");
     }
     const auto [file_offset, fd] = *std::prev (pfd);
-    const auto seek = static_cast <long> ((pointer - file_offset).get_data()[1]);
+    const auto seek = static_cast <long> ((pointer - file_offset).get_low ());
 
     return {fd, seek};
 }
@@ -189,8 +193,8 @@ data_store::alloc_t data_store::allocate (std::size_t size) {
     }
 
     if (free_spot.has_value() and partial_size < free_spot->size) [[unlikely]] {
-        m_free_spot_manager.push_free_spot(free_spot->pointer + partial_size,
-                                           free_spot->size - partial_size);
+        m_free_spot_manager.note_free_spot (free_spot->pointer + partial_size,
+                                            free_spot->size - partial_size);
     }
 
     auto last_file_data_end = m_last_file_data_end;
@@ -279,7 +283,7 @@ std::string data_store::get_name(const uint128_t &offset) const {
 }
 
 bool data_store::is_data_file(const std::filesystem::path &path) {
-    return path.string().starts_with("data_");
+    return path.filename().string().starts_with("data_");
 }
 
 uint128_t data_store::get_used_space() const noexcept {

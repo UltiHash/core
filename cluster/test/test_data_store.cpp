@@ -2,8 +2,6 @@
 // Created by masi on 7/24/23.
 //
 
-/* COMMENTING THE WHOLE FILE
-
 #ifdef SINGLE_TEST_RUNNER
 #define BOOST_TEST_NO_MAIN
 #else
@@ -23,17 +21,17 @@ namespace uh::cluster {
 
 struct config_fixture
 {
-    static uh::cluster::data_store_config make_data_store_config () {
+    static uh::cluster::data_node_config make_data_store_config () {
         return {
                 .directory = "root/dn",
                 .hole_log = "root/dn/log",
                 .min_file_size = 1024ul,
                 .max_file_size = 8ul * 1024ul,
-                .max_data_store_size = 16 * 1024ul
+                .max_data_store_size = 16 * 1024ul,
         };
     }
 
-    void cleanup () {
+    static void cleanup () {
         std::filesystem::remove_all("root");
     }
 };
@@ -295,23 +293,23 @@ BOOST_FIXTURE_TEST_CASE (test_data_store, config_fixture)
         BOOST_CHECK(ds.get_used_space() == expected_size);
 
         size_t rsize;
-        rsize = ds.read(buf, addr1[0].pointer, addr1[0].size);
+        rsize = ds.read(buf, addr1.get_fragment(0).pointer, addr1.get_fragment(0).size);
         BOOST_TEST(rsize == sizeof(data1));
         BOOST_CHECK(std::memcmp(buf, data1, rsize) == 0);
 
-        rsize = ds.read(buf, addr2[0].pointer, addr2[0].size);
+        rsize = ds.read(buf, addr2.get_fragment(0).pointer, addr2.get_fragment(0).size);
         BOOST_TEST(rsize == sizeof(data2));
         BOOST_CHECK(std::memcmp(buf, data2, rsize) == 0);
 
-        rsize = ds.read(buf, addr3[0].pointer, addr3[0].size);
+        rsize = ds.read(buf, addr3.get_fragment(0).pointer, addr3.get_fragment(0).size);
         BOOST_TEST(rsize == sizeof(data3));
         BOOST_CHECK(std::memcmp(buf, data3, rsize) == 0);
 
-        rsize = ds.read(buf, addr4[0].pointer, addr4[0].size);
+        rsize = ds.read(buf, addr4.get_fragment(0).pointer, addr4.get_fragment(0).size);
         BOOST_TEST(rsize == sizeof(data4));
         BOOST_CHECK(std::memcmp(buf, data4, rsize) == 0);
 
-        rsize = ds.read(buf, addr5[0].pointer, addr5[0].size);
+        rsize = ds.read(buf, addr5.get_fragment(0).pointer, addr5.get_fragment(0).size);
         BOOST_TEST(rsize == sizeof(data5));
         BOOST_CHECK(std::memcmp(buf, data5, rsize) == 0);
 
@@ -319,7 +317,7 @@ BOOST_FIXTURE_TEST_CASE (test_data_store, config_fixture)
 
 
         for (int i = 0; i < addr6.size (); ++i) {
-            const auto p = addr6[i];
+            const auto p = addr6.get_fragment(i);
             rsize = ds.read(buf + ts, p.pointer, p.size);
             ts += rsize;
         }
@@ -328,7 +326,7 @@ BOOST_FIXTURE_TEST_CASE (test_data_store, config_fixture)
 
         ts = 0;
         for (int i = 0; i < addr7.size (); ++i) {
-            const auto p = addr7[i];
+            const auto p = addr7.get_fragment(i);
             rsize = ds.read(buf + ts, p.pointer, p.size);
             ts += rsize;
         }
@@ -337,7 +335,7 @@ BOOST_FIXTURE_TEST_CASE (test_data_store, config_fixture)
 
         ts = 0;
         for (int i = 0; i < addr8.size (); ++i) {
-            const auto p = addr8[i];
+            const auto p = addr8.get_fragment(i);
             rsize = ds.read(buf + ts, p.pointer, p.size);
             ts += rsize;
         }
@@ -346,7 +344,7 @@ BOOST_FIXTURE_TEST_CASE (test_data_store, config_fixture)
 
         ts = 0;
         for (int i = 0; i < addr9.size (); ++i) {
-            const auto p = addr9[i];
+            const auto p = addr9.get_fragment(i);
             rsize = ds.read(buf + ts, p.pointer, p.size);
             ts += rsize;
         }
@@ -355,10 +353,10 @@ BOOST_FIXTURE_TEST_CASE (test_data_store, config_fixture)
 
         BOOST_CHECK(ds.get_used_space() == expected_size);
 
-        ds.remove(addr9[0].pointer, addr9[0].size);
+        ds.remove(addr9.get_fragment(0).pointer, addr9.get_fragment(0).size);
         ts = 0;
         for (int i = 0; i < addr9.size (); ++i) {
-            const auto p = addr9[i];
+            const auto p = addr9.get_fragment(i);
             rsize = ds.read(buf + ts, p.pointer, p.size);
             ts += rsize;
         }
@@ -370,10 +368,10 @@ BOOST_FIXTURE_TEST_CASE (test_data_store, config_fixture)
         BOOST_CHECK_THROW (ds.write(data10), std::bad_alloc);
         BOOST_CHECK(ds.get_used_space() == expected_size);
 
-        ds.remove(addr2[0].pointer, addr2[0].size);
+        ds.remove(addr2.get_fragment(0).pointer, addr2.get_fragment(0).size);
         ts = 0;
         for (int i = 0; i < addr2.size (); ++i) {
-            const auto p = addr2[i];
+            const auto p = addr2.get_fragment(i);
             rsize = ds.read(buf + ts, p.pointer, p.size);
             ts += rsize;
         }
@@ -390,7 +388,7 @@ BOOST_FIXTURE_TEST_CASE (test_data_store, config_fixture)
 
         ts = 0;
         for (int i = 0; i < addr6.size (); ++i) {
-            const auto p = addr6[i];
+            const auto p = addr6.get_fragment(i);
             rsize = ds.read(buf + ts, p.pointer, p.size);
             ts += rsize;
         }
@@ -400,7 +398,7 @@ BOOST_FIXTURE_TEST_CASE (test_data_store, config_fixture)
 
         ts = 0;
         for (int i = 0; i < addr7.size (); ++i) {
-            const auto p = addr7[i];
+            const auto p = addr7.get_fragment(i);
             rsize = ds.read(buf + ts, p.pointer, p.size);
             ts += rsize;
         }
@@ -409,7 +407,7 @@ BOOST_FIXTURE_TEST_CASE (test_data_store, config_fixture)
 
         ts = 0;
         for (int i = 0; i < addr8.size (); ++i) {
-            const auto p = addr8[i];
+            const auto p = addr8.get_fragment(i);
             rsize = ds.read(buf + ts, p.pointer, p.size);
             ts += rsize;
         }
@@ -433,7 +431,7 @@ BOOST_FIXTURE_TEST_CASE (test_data_store, config_fixture)
         ts = 0;
 
         for (int i = 0; i < addr6.size (); ++i) {
-            const auto p = addr6[i];
+            const auto p = addr6.get_fragment(i);
             rsize = ds.read(buf + ts, p.pointer, p.size);
             ts += rsize;
         }
@@ -442,7 +440,7 @@ BOOST_FIXTURE_TEST_CASE (test_data_store, config_fixture)
 
         ts = 0;
         for (int i = 0; i < addr7.size (); ++i) {
-            const auto p = addr7[i];
+            const auto p = addr7.get_fragment(i);
             rsize = ds.read(buf + ts, p.pointer, p.size);
             ts += rsize;
         }
@@ -451,7 +449,7 @@ BOOST_FIXTURE_TEST_CASE (test_data_store, config_fixture)
 
         ts = 0;
         for (int i = 0; i < addr8.size (); ++i) {
-            const auto p = addr8[i];
+            const auto p = addr8.get_fragment(i);
             rsize = ds.read(buf + ts, p.pointer, p.size);
             ts += rsize;
         }
@@ -460,7 +458,7 @@ BOOST_FIXTURE_TEST_CASE (test_data_store, config_fixture)
 
         ts = 0;
         for (int i = 0; i < addr6.size (); ++i) {
-            const auto p = addr6[i];
+            const auto p = addr6.get_fragment(i);
             ds.remove(p.pointer, p.size);
             ts += p.size;
         }
@@ -474,7 +472,7 @@ BOOST_FIXTURE_TEST_CASE (test_data_store, config_fixture)
         ts = 0;
 
         for (int i = 0; i < addr11.size (); ++i) {
-            const auto p = addr11[i];
+            const auto p = addr11.get_fragment(i);
             rsize = ds.read(buf + ts, p.pointer, p.size);
             ts += rsize;
         }
@@ -487,5 +485,3 @@ BOOST_FIXTURE_TEST_CASE (test_data_store, config_fixture)
 // ---------------------------------------------------------------------
 
 } // end namespace uh::cluster
-
-COMMENTING THE WHOLE FILE */

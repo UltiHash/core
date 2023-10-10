@@ -40,6 +40,7 @@ public:
                 co_await handle_create_bucket(req, res);
                 break;
             case http::http_request_type::PUT_OBJECT:
+            case http::http_request_type::COMPLETE_MULTIPART_UPLOAD:
                 co_await handle_put_object(req, res);
                 break;
             case http::http_request_type::GET_OBJECT:
@@ -50,7 +51,6 @@ public:
                 break;
             default:
                 throw std::invalid_argument("Not supported request type");
-
         }
 
         const auto stop = std::chrono::steady_clock::now ();
@@ -79,9 +79,7 @@ public:
                                   "<Key>myObject</Key>\n"
                                   "<UploadId>first-upload</UploadId>\n"
                                   "</InitiateMultipartUploadResult>");
-
-        return;
-    }
+   }
 
     coro <void> handle_put_object (const rest::http::http_request& req, rest::http::http_response& res)
     {
@@ -118,6 +116,22 @@ public:
             co_await m_dir.get().recv_buffers(h_dir);
             throw std::runtime_error("Failed to add the fragment address of object " + dir_req.bucket_id + "/" + *dir_req.object_key + " to the directory.\n" + "Error: \n" + msg);
             //TODO: consider using custom exceptions to indicate if and how the error gets communicated to the HTTP client.
+        }
+
+        if (req.get_request_name() == rest::http::http_request_type::COMPLETE_MULTIPART_UPLOAD)
+        {
+            auto& underlying_res = res.get_underlying_object();
+
+            underlying_res.set(boost::beast::http::field::transfer_encoding, "chunked");
+            underlying_res.set(boost::beast::http::field::connection, "close");
+            underlying_res.set(boost::beast::http::field::content_type, "application/xml");
+            underlying_res.body() =  std::string("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+                                      "<CompleteMultipartUploadResult>\n"
+                                      "<Location>string</Location>\n"
+                                      "<Bucket>" + req.get_URI().get_bucket_id() +"</Bucket>\n"
+                                      "<Key>" + req.get_URI().get_object_key() + "</Key>\n"
+                                      "<ETag>string</ETag>\n"
+                                      "</CompleteMultipartUploadResult>");
         }
 
         co_return;

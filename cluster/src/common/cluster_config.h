@@ -38,7 +38,7 @@ struct dedupe_config {
     std::size_t max_fragment_size{};
     std::size_t sampling_interval{};
     server_config server_conf{};
-    int data_node_connection_count;
+    int data_node_connection_count{};
     set_config set_conf;
 };
 
@@ -58,11 +58,23 @@ struct entry_node_config {
     int directory_connection_count;
 };
 
-struct directory_node_config {
-    server_config server_conf{};
-    int data_node_connection_count;
+struct bucket_config {
+    size_t min_file_size;
+    size_t max_file_size;
+    size_t max_storage_size;
+    size_t max_chunk_size;
 };
 
+struct directory_store_config {
+    std::filesystem::path root;
+    bucket_config bucket_conf;
+};
+
+struct directory_node_config {
+    server_config server_conf{};
+    directory_store_config directory_conf;
+    int data_node_connection_count{};
+};
 
 struct cluster_config {
     int init_process_count{};

@@ -67,23 +67,41 @@ struct address {
     auto operator<=>(const address&) const = default;
 };
 
+template <typename T>
+struct owning_span {
+    std::size_t size {0};
+    std::unique_ptr <T[]> data = nullptr;
+    owning_span() = default;
+    explicit owning_span (size_t data_size):
+            size (data_size),
+            data {std::make_unique_for_overwrite <T[]> (size)} {}
+    owning_span(size_t data_size, std::unique_ptr <T[]>&& ptr):
+            size (data_size),
+            data {std::move (ptr)} {}
+    owning_span (owning_span&& os) noexcept: size (os.size), data (std::move (os.data)) {
+        os.size = 0;
+        os.data = nullptr;
+    }
+    void resize (std::size_t new_size) {
+        size = new_size;
+        data = std::make_unique_for_overwrite <T[]> (size);
+    }
+};
+
+template <typename T>
+using ospan = owning_span <T>;
+
 struct dedupe_response {
     std::size_t effective_size {};
     address addr;
 };
 
-struct directory_put_request {
+struct directory_message {
     std::string bucket_id;
-    std::string object_key;
-    address addr;
-
-    auto operator<=>(const directory_put_request&) const = default;
+    zpp::bits::optional_ptr <std::string> object_key;
+    zpp::bits::optional_ptr<address> addr;
 };
 
-struct directory_get_request {
-    std::string bucket_id;
-    std::string object_key;
-};
 
 } // end namespace uh::cluster
 

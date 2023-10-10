@@ -29,7 +29,7 @@ public:
 
     address write (std::span <char> data);
 
-    std::size_t read (char* buffer, uint128_t pointer, size_t size) const;
+    std::size_t read (char* buffer, uint128_t pointer, size_t size);
 
     void remove (uint128_t pointer, size_t size);
 

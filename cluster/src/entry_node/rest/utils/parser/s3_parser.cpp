@@ -8,6 +8,7 @@
 #include <entry_node/rest/http/models/multi_part_upload.h>
 #include <entry_node/rest/http/models/complete_multi_part_upload.h>
 #include <entry_node/rest/http/models/abort_multi_part_upload.h>
+#include <regex>
 
 namespace uh::cluster::rest::utils::parser {
 
@@ -29,6 +30,9 @@ namespace uh::cluster::rest::utils::parser {
 
         auto target = m_recv_req.get().base().target();
         auto method = m_recv_req.get().base().method();
+
+        std::regex pattern("^\\/\\w+$");
+        std::string string_to_reg = target;
 
         switch (method)
         {
@@ -56,7 +60,7 @@ namespace uh::cluster::rest::utils::parser {
                     throw std::runtime_error("unknown request type");
                 }
             case boost::beast::http::verb::put:
-                if (target == "/")
+                if (std::regex_match(string_to_reg, pattern))
                 {
                     return std::make_unique<rest::http::model::create_bucket>(m_recv_req);
                 }

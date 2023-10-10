@@ -6,14 +6,15 @@
 #define CORE_DIRECTORY_NODE_HANDLER_H
 
 #include "common/protocol_handler.h"
-#include "fdb/fdb.h"
+#include "directory_store.h"
 
 namespace uh::cluster {
 
 class directory_handler: public protocol_handler {
 public:
 
-    explicit directory_handler (global_data& storage):
+    directory_handler (directory_store_config conf, global_data& storage):
+    m_directory (std::move (conf)),
     m_storage (storage) {}
 
     coro <void> handle (messenger m) override {
@@ -26,6 +27,9 @@ public:
                 case DIR_GET_OBJ_REQ:
                     co_await handle_get_obj (m, message_header);
                     break;
+                case DIR_PUT_BUCKET_REQ:
+                    co_await handle_put_bucket (m, message_header);
+                    break;
                 case STOP:
                     co_return;
                 default:
@@ -37,53 +41,39 @@ public:
 
 private:
 
-#if defined(__APPLE__)
-    fdb::fdb m_fdb = fdb::fdb("/usr/local/etc/foundationdb/fdb.cluster");
-#else
-    fdb::fdb m_fdb = fdb::fdb("/etc/foundationdb/fdb.cluster");
-#endif
     coro <void> handle_put_obj (messenger& m, const messenger::header& h) {
-        directory_put_request request = co_await m.recv_directory_put_object_request(h);
-        std::vector<char> addressData;
-        zpp::bits::out{addressData}(request.addr).or_throw();
+        directory_message request = co_await m.recv_directory_message (h);
 
-        bool failure = false;
+        std::string failure;
+        std::vector<char> address_data;
+        zpp::bits::out{address_data, zpp::bits::size4b{}}(*request.addr).or_throw();
         try {
-            auto trans = m_fdb.make_transaction();
-            trans->put({request.object_key.data(), request.object_key.size()},{addressData.data(), addressData.size()});
-            trans->commit();
+            m_directory.insert (request.bucket_id, *request.object_key, address_data);
             co_await m.send(SUCCESS, {});
-        } catch (const fdb::fdb_exception& e) {
-            failure = true;
+        } catch (const std::exception& e) {
+            failure = std::string (e.what());
         }
 
-        if(failure)
-            co_await m.send(FAILURE, {});
-
+        if(!failure.empty())
+            co_await m.send(FAILURE, failure);
 
         co_return;
     }
 
     coro <void> handle_get_obj (messenger& m, const messenger::header& h) {
-        directory_get_request request = co_await m.recv_directory_get_object_request(h);
+        directory_message request = co_await m.recv_directory_message (h);
         address addr;
 
-        bool failure = false;
+        std::string failure;
         try {
-            auto trans = m_fdb.make_transaction();
-            auto result = trans->get({request.object_key.data(), request.object_key.size()});
-
-            if (!result.has_value()) {
-                co_await m.send(FAILURE, {});
-            }
-
-            zpp::bits::in{ result->value}(addr).or_throw();
-        } catch (const fdb::fdb_exception& e) {
-            failure = true;
+            const auto buf = m_directory.get(request.bucket_id, *request.object_key);
+            zpp::bits::in{std::span <char> {buf.data.get(), buf.size}, zpp::bits::size4b{}}(addr).or_throw();
+        } catch (const std::exception& e) {
+            failure = std::string (e.what());
         }
 
-        if(failure)
-            co_await m.send(FAILURE, {});
+        if(!failure.empty())
+            co_await m.send(FAILURE, failure);
 
         std::size_t buffer_size = 0;
         for(auto frag_size : addr.sizes){
@@ -105,6 +95,22 @@ private:
         co_return;
     }
 
+    coro <void> handle_put_bucket (messenger& m, const messenger::header& h) {
+        directory_message request = co_await m.recv_directory_message (h);
+        std::string failure;
+
+        try {
+            m_directory.add_bucket(request.bucket_id);
+            co_await m.send(SUCCESS, {});
+        } catch (const std::exception& e) {
+            failure = std::string (e.what());
+        }
+
+        if(!failure.empty())
+            co_await m.send(FAILURE, failure);
+    }
+
+    directory_store m_directory;
     global_data& m_storage;
 };
 } // end namespace uh::cluster

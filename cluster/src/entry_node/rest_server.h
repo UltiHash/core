@@ -63,9 +63,6 @@ namespace uh::cluster::rest
 
         void run();
 
-        coro<http::http_response>
-        handle_requests(const http::http_request& req) const;
-
         [[nodiscard]] std::shared_ptr <boost::asio::io_context>
         get_executor () const;
 

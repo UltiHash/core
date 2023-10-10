@@ -50,66 +50,14 @@ namespace uh::cluster::rest
 
 //------------------------------------------------------------------------------
 
-//    coro<http::http_response>
-//    rest_server::handle_requests (const http::http_request& req) const
-//    {
-//
-//        http::http_response s3_res(req);
-//        auto& underlying_res = s3_res.get_underlying_object();
-//
-//        if (req.get_request_name() == http::http_request_type::INIT_MULTIPART_UPLOAD)
-//        {
-//            underlying_res.set(boost::beast::http::field::transfer_encoding, "chunked");
-//            underlying_res.set(boost::beast::http::field::connection, "keep-alive");
-//            underlying_res.set(boost::beast::http::field::content_type, "application/xml");
-//
-//            // TODO: For now, we use fixed upload id for a client
-//            underlying_res.body() =  std::string("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
-//                                      "<InitiateMultipartUploadResult>\n"
-//                                      "<Bucket>myBucket</Bucket>\n"
-//                                      "<Key>myObject</Key>\n"
-//                                      "<UploadId>first-upload</UploadId>\n"
-//                                      "</InitiateMultipartUploadResult>");
-//
-//        }
-////        else if(req.get_request_name() == http::http_request_type::COMPLETE_MULTIPART_UPLOAD)
-////        {
-////            underlying_res.set(boost::beast::http::field::transfer_encoding, "chunked");
-////            underlying_res.set(boost::beast::http::field::connection, "close");
-////            underlying_res.set(boost::beast::http::field::content_type, "application/xml");
-////            underlying_res.body() =  std::string("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
-////                                      "<CompleteMultipartUploadResult>\n"
-////                                      "<Location>string</Location>\n"
-////                                      "<Bucket>" + req.get_URI().get_bucket_id() +"</Bucket>\n"
-////                                      "<Key>" + req.get_URI().get_object_key() + "</Key>\n"
-////                                      "<ETag>string</ETag>\n"
-////                                      "</CompleteMultipartUploadResult>");
-////        }
-////        else if (req.get_request_name() == http::http_request_type::PUT_OBJECT)
-////        {
-////            co_return co_await m_handler.handle(req, s3_res);
-////        }
-////        else if (req.get_request_name() == http::http_request_type::GET_OBJECT)
-////        {
-////            co_return co_await m_handler.handle(req, s3_res);
-////        }
-////        else if (req.get_request_name() == http::http_request_type::CREATE_BUCKET)
-////        {
-////            co_return co_await m_handler.handle(req, s3_res);
-////        }
-//
-//        co_return std::move(s3_res);
-//    }
-
-//------------------------------------------------------------------------------
-
     net::awaitable<void>
     rest_server::do_session(tcp_stream stream) {
         std::cout << "connection from: " << stream.socket().remote_endpoint() << std::endl;
 
         beast::error_code ec;
 
-        try {
+        try
+        {
             for (;;)
             {
                 stream.expires_after(std::chrono::seconds(10000));
@@ -132,7 +80,7 @@ namespace uh::cluster::rest
                 // authenticate
 
                 // handle
-                auto s3_res = co_await handle_requests(*s3_request);
+                auto s3_res = co_await m_handler.handle(*s3_request);
 
                 // send response
                 co_await b_http::async_write(stream, s3_res.get_underlying_object(), net::use_awaitable);
@@ -143,7 +91,7 @@ namespace uh::cluster::rest
                 }
             }
         }
-            // TODO: don't send all the info to the user on throw, and also we need to send appropriatre error code
+            // TODO: don't send all the info to the user on throw, and also we need to send appropriate error code
             // like 401 on authorization failed and not 400 which is a bad request
         catch (boost::system::system_error &se)
         {
