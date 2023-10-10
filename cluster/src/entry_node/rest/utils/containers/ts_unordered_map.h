@@ -10,8 +10,8 @@ namespace uh::cluster::rest::utils
     class ts_unordered_map
     {
     private:
-        std::unordered_map<T,Y> m_container;
-        std::mutex m_mutex;
+        std::unordered_map<T,Y> m_container {};
+        std::mutex m_mutex {};
 
     public:
         void emplace(T key, Y value)
@@ -28,16 +28,19 @@ namespace uh::cluster::rest::utils
 
         std::unordered_map<T,Y>::iterator find(const T& key)
         {
+            std::lock_guard<std::mutex> lock(m_mutex);
             return m_container.find(key);
         }
 
         std::unordered_map<T,Y>::iterator begin()
         {
+            std::lock_guard<std::mutex> lock(m_mutex);
             return m_container.begin();
         }
 
         std::unordered_map<T,Y>::iterator end()
         {
+            std::lock_guard<std::mutex> lock(m_mutex);
             return m_container.end();
         }
 

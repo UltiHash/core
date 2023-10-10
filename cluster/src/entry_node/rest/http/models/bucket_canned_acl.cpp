@@ -34,7 +34,7 @@ namespace uh::cluster::rest::http::model
         return bucket_canned_acl::NOT_SET;
     }
 
-    std::string GetNameForBucketCannedACL(bucket_canned_acl enumValue)
+    std::string get_name_for_bucket_canned_ACL(bucket_canned_acl enumValue)
     {
         switch(enumValue)
         {
@@ -51,4 +51,4 @@ namespace uh::cluster::rest::http::model
         }
     }
 
-}
+} // uh::cluster::rest::http::model

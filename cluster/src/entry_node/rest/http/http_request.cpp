@@ -1,8 +1,15 @@
 #include "entry_node/rest/utils/string/string_utils.h"
 #include "http_request.h"
+#include <iostream>
 
 namespace uh::cluster::rest::http
 {
+
+    http_request::http_request(const http::request_parser<http::empty_body>& recv_request) :
+            m_req(recv_request), m_method(get_http_method_from_name(recv_request.get().base().method())),
+            m_uri(recv_request)
+    {
+    }
 
     [[nodiscard]] std::map<std::string, std::string> http_request::get_headers() const
     {
@@ -16,30 +23,34 @@ namespace uh::cluster::rest::http
         return headers_map;
     }
 
-    coro<void> http_request::read_body(uh::cluster::rest::http::tcp_stream &stream, boost::beast::flat_buffer &buffer)
+    coro<void> http_request::read_body(uh::cluster::rest::http::tcp_stream& stream, boost::beast::flat_buffer& buffer)
     {
-        if (m_req.get().has_content_length() &&
-            m_req.content_length().value() != 0)
+        if (m_req.get().has_content_length())
         {
-            std::size_t content_length = m_req.content_length().value();
-            m_body.append(content_length, 0);
-
-            auto data_left = content_length - buffer.size();
-
-            // copy remaining bytes from flat buffer to body_buffer
-            boost::asio::buffer_copy(boost::asio::buffer(m_body), buffer.data());
-            auto size_transferred = co_await boost::asio::async_read(stream.socket(), boost::asio::buffer(m_body.data() + buffer.size(), data_left),
-                                                                     boost::asio::transfer_exactly(data_left), boost::asio::use_awaitable);
-
-            if (size_transferred + buffer.size() != content_length)
+            if (m_req.content_length().value() != 0)
             {
-                throw std::runtime_error("error reading the http body");
+                std::size_t content_length = m_req.content_length().value();
+                m_body.append(content_length, 0);
+
+                auto data_left = content_length - buffer.size();
+
+                // copy remaining bytes from flat buffer to body_buffer
+                boost::asio::buffer_copy(boost::asio::buffer(m_body), buffer.data());
+                auto size_transferred = co_await boost::asio::async_read(stream.socket(), boost::asio::buffer(m_body.data() + buffer.size(), data_left),
+                                                                         boost::asio::transfer_exactly(data_left), boost::asio::use_awaitable);
+
+                if (size_transferred + buffer.size() != content_length)
+                {
+                    throw std::runtime_error("error reading the http body");
+                }
             }
         }
         else
         {
             throw std::runtime_error("please specify the content length on requests as other methods without content length are currently not supported");
         }
+
+        co_return;
     }
 
 } // namespace uh::cluster::rest::http

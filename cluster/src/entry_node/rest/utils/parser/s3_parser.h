@@ -7,7 +7,6 @@
 #include <entry_node/rest/utils/containers/ts_unordered_map.h>
 #include <entry_node/rest/utils/containers/ts_map.h>
 
-
 namespace uh::cluster::rest::utils::parser
 {
 

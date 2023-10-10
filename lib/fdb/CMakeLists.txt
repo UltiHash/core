@@ -11,7 +11,7 @@ if(APPLE)
     add_library(fdb_c UNKNOWN IMPORTED)
     set_property(TARGET fdb_c PROPERTY IMPORTED_LOCATION ${FDB_C_LIB})
 else()
-    find_package(FoundationDB-Client REQUIRED)
+#    find_package(FoundationDB-Client REQUIRED)
 endif()
 
 set(${PROJECT_NAME}_INCLUDE_DIRS ${Boost_INCLUDE_DIRS})

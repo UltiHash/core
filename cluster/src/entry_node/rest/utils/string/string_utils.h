@@ -9,6 +9,7 @@ namespace uh::cluster::rest::utils
     {
     public:
         static std::string to_lower(const char* source);
+        static bool is_same(const char* string1, const char* string2);
     };
 
 } // uh::cluster::rest::utils

@@ -14,7 +14,7 @@ namespace uh::cluster::rest::http::model
 
         ~multi_part_upload() override = default;
 
-        [[nodiscard]] inline const char * get_request_name() const override { return "MultipartUpload"; }
+        [[nodiscard]] inline http_request_type get_request_name() const override { return http_request_type::MULTIPART_UPLOAD; }
 
         [[nodiscard]] std::map<std::string, std::string> get_request_specific_headers() const override;
 

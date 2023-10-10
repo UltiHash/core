@@ -31,6 +31,18 @@ namespace uh::cluster::rest::http
         HTTP_VERSION_3ONLY,
     };
 
+    enum class http_request_type
+    {
+        CREATE_BUCKET,
+        LIST_BUCKETS,
+        PUT_OBJECT,
+        GET_OBJECT,
+        INIT_MULTIPART_UPLOAD,
+        MULTIPART_UPLOAD,
+        COMPLETE_MULTIPART_UPLOAD,
+        ABORT_MULTIPART_UPLOAD,
+    };
+
     /**
      * Enum representing URI scheme.
      */
@@ -47,14 +59,11 @@ namespace uh::cluster::rest::http
     {
     public:
 
-        explicit http_request(const http::request_parser<http::empty_body>& recv_request) :
-        m_req(recv_request), m_method(get_http_method_from_name(recv_request.get().base().method()))
-        {
-        }
+        explicit http_request(const http::request_parser<http::empty_body>& recv_request);
 
         virtual ~http_request() = default;
 
-        [[nodiscard]] virtual const char * get_request_name() const = 0;
+        [[nodiscard]] virtual http_request_type get_request_name() const = 0;
 
         [[nodiscard]] virtual std::map<std::string, std::string> get_request_specific_headers() const = 0;
 
@@ -62,9 +71,13 @@ namespace uh::cluster::rest::http
 
         [[nodiscard]] virtual inline std::string get_body() const { return m_body; }
 
+        [[nodiscard]] virtual inline std::size_t get_body_size() const { return m_body.size(); }
+
         [[nodiscard]] std::map<std::string, std::string> get_headers() const;
 
         [[nodiscard]] inline http_method get_method() const { return m_method; }
+
+        [[nodiscard]] inline const URI& get_URI() const { return m_uri; }
 
     protected:
         const http::request_parser<http::empty_body>& m_req;

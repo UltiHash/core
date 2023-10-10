@@ -2,6 +2,7 @@
 #include "rest/utils/parser/s3_parser.h"
 #include <fstream>
 #include <filesystem>
+#include "entry_node/rest/utils/string/string_utils.h"
 
 namespace uh::cluster::rest
 {
@@ -11,8 +12,8 @@ namespace uh::cluster::rest
     rest_server::rest_server(server_config config, std::vector <client>& dedupe_nodes, std::vector <client>& directory_nodes) :
         m_config(config), m_ioc(std::make_shared <boost::asio::io_context>(static_cast<int>(m_config.threads))),
         m_ssl(boost::asio::ssl::context::tlsv12_client),
-        m_thread_container(m_config.threads-1)
-//        m_handler (dedupe_nodes, directory_nodes)
+        m_thread_container(m_config.threads-1),
+        m_handler (dedupe_nodes, directory_nodes)
     {
         boost::asio::co_spawn(*m_ioc,
                               do_listen(tcp::endpoint{m_server_address, m_config.port}),
@@ -49,30 +50,56 @@ namespace uh::cluster::rest
 
 //------------------------------------------------------------------------------
 
-    coro<http::http_response>
-    rest_server::handle_requests (const http::http_request& req) const
-    {
-
-        http::http_response s3_res(req);
-
-        if (strcmp(req.get_request_name(), "InitiateMultipartUpload") == 0)
-        {
-            s3_res.get_underlying_object().set(boost::beast::http::field::transfer_encoding, "chunked");
-            s3_res.get_underlying_object().set(boost::beast::http::field::connection, "keep-alive");
-            s3_res.get_underlying_object().set(boost::beast::http::field::content_type, "application/xml");
-
-            // TODO: For now, we use fixed upload id for a client
-            s3_res.get_underlying_object().body() =  std::string("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
-                                      "<InitiateMultipartUploadResult>\n"
-                                      "<Bucket>myBucket</Bucket>\n"
-                                      "<Key>myObject</Key>\n"
-                                      "<UploadId>1</UploadId>\n"
-                                      "</InitiateMultipartUploadResult>");
-
-        }
-
-        co_return std::move(s3_res);
-    }
+//    coro<http::http_response>
+//    rest_server::handle_requests (const http::http_request& req) const
+//    {
+//
+//        http::http_response s3_res(req);
+//        auto& underlying_res = s3_res.get_underlying_object();
+//
+//        if (req.get_request_name() == http::http_request_type::INIT_MULTIPART_UPLOAD)
+//        {
+//            underlying_res.set(boost::beast::http::field::transfer_encoding, "chunked");
+//            underlying_res.set(boost::beast::http::field::connection, "keep-alive");
+//            underlying_res.set(boost::beast::http::field::content_type, "application/xml");
+//
+//            // TODO: For now, we use fixed upload id for a client
+//            underlying_res.body() =  std::string("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+//                                      "<InitiateMultipartUploadResult>\n"
+//                                      "<Bucket>myBucket</Bucket>\n"
+//                                      "<Key>myObject</Key>\n"
+//                                      "<UploadId>first-upload</UploadId>\n"
+//                                      "</InitiateMultipartUploadResult>");
+//
+//        }
+////        else if(req.get_request_name() == http::http_request_type::COMPLETE_MULTIPART_UPLOAD)
+////        {
+////            underlying_res.set(boost::beast::http::field::transfer_encoding, "chunked");
+////            underlying_res.set(boost::beast::http::field::connection, "close");
+////            underlying_res.set(boost::beast::http::field::content_type, "application/xml");
+////            underlying_res.body() =  std::string("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
+////                                      "<CompleteMultipartUploadResult>\n"
+////                                      "<Location>string</Location>\n"
+////                                      "<Bucket>" + req.get_URI().get_bucket_id() +"</Bucket>\n"
+////                                      "<Key>" + req.get_URI().get_object_key() + "</Key>\n"
+////                                      "<ETag>string</ETag>\n"
+////                                      "</CompleteMultipartUploadResult>");
+////        }
+////        else if (req.get_request_name() == http::http_request_type::PUT_OBJECT)
+////        {
+////            co_return co_await m_handler.handle(req, s3_res);
+////        }
+////        else if (req.get_request_name() == http::http_request_type::GET_OBJECT)
+////        {
+////            co_return co_await m_handler.handle(req, s3_res);
+////        }
+////        else if (req.get_request_name() == http::http_request_type::CREATE_BUCKET)
+////        {
+////            co_return co_await m_handler.handle(req, s3_res);
+////        }
+//
+//        co_return std::move(s3_res);
+//    }
 
 //------------------------------------------------------------------------------
 
@@ -97,30 +124,18 @@ namespace uh::cluster::rest
 
                 // parse
                 rest::utils::parser::s3_parser s3_parser(received_request, m_uomap_multipart);
-                auto s3_request_ptr = s3_parser.parse();
+                auto s3_request = s3_parser.parse();
 
                 // read body
-                co_await s3_request_ptr->read_body(stream, buffer);
+                co_await s3_request->read_body(stream, buffer);
 
                 // authenticate
 
-                std::cout << "General Headers: " << std::endl;
-                for (const auto& pair : s3_request_ptr->get_headers())
-                    std::cout << pair.first << " : " << pair.second << std::endl;
-
-                std::cout << "\nRequest Specific Headers: " << std::endl;
-                for (const auto& pair : s3_request_ptr->get_request_specific_headers())
-                    std::cout << pair.first << " : " << pair.second << std::endl;
-
                 // handle
-                auto s3_res = co_await handle_requests(*s3_request_ptr);
+                auto s3_res = co_await handle_requests(*s3_request);
 
                 // send response
                 co_await b_http::async_write(stream, s3_res.get_underlying_object(), net::use_awaitable);
-//
-//                // TODO: find a way to remove this
-//                if (parsed_request.req_type == close_multi_part)
-//                    m_is_close = false;
 
                 if(! received_request.keep_alive() )
                 {

@@ -90,6 +90,13 @@ namespace uh::cluster::rest::http::model
         std::map<std::string, std::string> headers;
         std::stringstream ss;
 
+        if(m_aCLHasBeenSet)
+        {
+            ss << get_name_for_bucket_canned_ACL(m_aCL);
+            headers.emplace("x-amz-acl",  ss.str());
+            ss.str("");
+        }
+
         if(m_grantFullControlHasBeenSet)
         {
             ss << m_grantFullControl;
@@ -115,6 +122,20 @@ namespace uh::cluster::rest::http::model
         {
             ss << m_grantWriteACP;
             headers.emplace("x-amz-grant-write-acp",  ss.str());
+            ss.str("");
+        }
+
+        if(m_objectLockEnabledForBucketHasBeenSet)
+        {
+            ss << m_objectLockEnabledForBucket;
+            headers.emplace("x-amz-bucket-object-lock-enabled",  ss.str());
+            ss.str("");
+        }
+
+        if(m_objectOwnershipHasBeenSet)
+        {
+            ss << m_objectOwnership;
+            headers.emplace("x-amz-object-ownership",  ss.str());
             ss.str("");
         }
 

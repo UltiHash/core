@@ -15,4 +15,10 @@ namespace uh::cluster::rest::utils
         return copy;
     }
 
+    bool string_utils::is_same(const char* string1, const char* string2)
+    {
+        return ( strcmp(string1, string2) == 0 );
+    }
+
+
 } // uh::cluster::rest::utils

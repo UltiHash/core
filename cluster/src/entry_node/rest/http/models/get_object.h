@@ -12,7 +12,7 @@ namespace uh::cluster::rest::http::model
 
         ~get_object() override = default;
 
-        [[nodiscard]] inline const char * get_request_name() const override { return "GetObject"; }
+        [[nodiscard]] inline http_request_type get_request_name() const override { return http_request_type::GET_OBJECT; }
 
         [[nodiscard]] std::map<std::string, std::string> get_request_specific_headers() const override;
 

@@ -94,9 +94,9 @@ namespace uh::cluster::rest::http
         explicit http_response(const http_request&);
         virtual ~http_response() = default;
 
-        [[nodiscard]] virtual inline const http_request& get_originating_request() const { return m_orig_req; }
+        [[nodiscard]] inline const http_request& get_originating_request() const { return m_orig_req; }
         [[nodiscard]] inline http::response<http::string_body>& get_underlying_object() { return m_res; }
-        virtual void add_header( const std::string&, const std::string& );
+        void add_header( const std::string&, const std::string& );
 
     private:
         const http_request& m_orig_req;
