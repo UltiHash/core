@@ -1,4 +1,4 @@
-FROM ghcr.io/ultihash/build-base:20230824 as build
+FROM ghcr.io/ultihash/build-base:latest as build
 
 ARG CMAKE_OPTION
 
@@ -12,8 +12,7 @@ RUN mkdir build \
 
 # Execute tests
 WORKDIR /core/build
-RUN dpkg -i /tmp/foundationdb-server_7.1.31-1_amd64.deb && \
-    ctest -C Release --output-on-failure
+RUN ctest -C Release --output-on-failure
 
 FROM ubuntu:22.04 as deploy
 
@@ -27,18 +26,6 @@ ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update \
     && apt-get upgrade --yes \
     && apt-get install --yes --no-install-recommends curl ncat
-
-# Install FoundationDB
-COPY --from=build /tmp/foundationdb-clients_7.1.31-1_amd64.deb /tmp/foundationdb-clients_7.1.31-1_amd64.deb
-COPY --from=build /tmp/foundationdb-server_7.1.31-1_amd64.deb /tmp/foundationdb-server_7.1.31-1_amd64.deb
-
-RUN if [ "$TARGET" = "uh-data-node" ]; then \
-        dpkg -i /tmp/foundationdb-clients_7.1.31-1_amd64.deb; \
-        dpkg -i /tmp/foundationdb-server_7.1.31-1_amd64.deb; \
-    fi
-
-RUN rm /tmp/foundationdb-clients_7.1.31-1_amd64.deb
-RUN rm /tmp/foundationdb-server_7.1.31-1_amd64.deb
 
 COPY --from=build /core/build/${SRC_PATH}/${TARGET} /usr/local/bin
 COPY --from=build /core/${SRC_PATH}/start.sh /usr/local/bin
@@ -56,9 +43,6 @@ RUN install -d -m 0755 -o uh -g uh /var/lib/uh-data-node && ls -lh /var/lib/
 
 RUN ls -lh /var/lib/
 RUN ls -lh /home
-
-ADD foundationdb.conf /etc/foundationdb/foundationdb.conf
-RUN install -d -m 0755 -o uh -g uh /home/uh/foundationdb/log
 
 USER uh
 WORKDIR /home/uh
