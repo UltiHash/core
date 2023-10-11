@@ -16,7 +16,7 @@ namespace uh::cluster::rest::http::model
 
     std::string complete_multi_part_upload::get_body() const
     {
-        std::string body;
+        std::string body {};
         for (const auto& part : m_mpcontainer)
             body += part.second;
 
@@ -25,9 +25,9 @@ namespace uh::cluster::rest::http::model
 
     std::size_t complete_multi_part_upload::get_body_size() const
     {
-        size_t body_size;
+        size_t body_size {};
         for (const auto& part : m_mpcontainer)
-            body_size += part.second.size();
+            body_size += part.second.length();
 
         return body_size;
     }

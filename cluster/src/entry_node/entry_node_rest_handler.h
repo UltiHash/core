@@ -103,6 +103,7 @@ public:
     coro <void> handle_put_object (const rest::http::http_request& req, rest::http::http_response& res)
     {
         auto body_size = req.get_body_size();
+        std::cout << body_size << std::endl;
         const auto size_mb = static_cast <double> (body_size) / static_cast <double> (1024ul * 1024ul);
 
         auto m_dedup = m_dedupe_nodes.at(get_round_robin_index(m_dedupe_node_index, m_dedupe_nodes.size())).acquire_messenger();

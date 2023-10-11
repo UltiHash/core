@@ -38,7 +38,7 @@ public:
                 case USED_REQ:
                     co_await handle_get_used(m, message_header);
                     break;
-                case ALLOC_REQ
+                case ALLOC_REQ:
                     co_await handle_alloc (m, message_header);
                 case STOP:
                     co_return;
