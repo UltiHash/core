@@ -33,7 +33,7 @@ struct config_fixture
     }
 };
 
-void fill_random (char* buf, size_t size) {
+void fill_random_dirstore (char* buf, size_t size) {
     for (int i = 0; i < size; ++i) {
         buf[i] = rand()&0xff;
     }
@@ -41,7 +41,7 @@ void fill_random (char* buf, size_t size) {
 
 // ---------------------------------------------------------------------
 
-BOOST_FIXTURE_TEST_CASE (test_chaining_data_store, config_fixture)
+BOOST_FIXTURE_TEST_CASE (test_directory_store, config_fixture)
 {
 
     cleanup();
@@ -58,17 +58,17 @@ BOOST_FIXTURE_TEST_CASE (test_chaining_data_store, config_fixture)
     char data10 [3202];
     char data11 [2021];
 
-    fill_random (data1, sizeof (data1));
-    fill_random (data2, sizeof (data2));
-    fill_random (data3, sizeof (data3));
-    fill_random (data4, sizeof (data4));
-    fill_random (data5, sizeof (data5));
-    fill_random (data6, sizeof (data6));
-    fill_random (data7, sizeof (data7));
-    fill_random (data8, sizeof (data8));
-    fill_random (data9, sizeof (data9));
-    fill_random (data10, sizeof (data10));
-    fill_random (data11, sizeof (data11));
+    fill_random_dirstore (data1, sizeof (data1));
+    fill_random_dirstore (data2, sizeof (data2));
+    fill_random_dirstore (data3, sizeof (data3));
+    fill_random_dirstore (data4, sizeof (data4));
+    fill_random_dirstore (data5, sizeof (data5));
+    fill_random_dirstore (data6, sizeof (data6));
+    fill_random_dirstore (data7, sizeof (data7));
+    fill_random_dirstore (data8, sizeof (data8));
+    fill_random_dirstore (data9, sizeof (data9));
+    fill_random_dirstore (data10, sizeof (data10));
+    fill_random_dirstore (data11, sizeof (data11));
 
     {
         directory_store ds ({"root", make_bucket_config()});
