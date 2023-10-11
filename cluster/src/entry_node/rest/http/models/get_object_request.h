@@ -5,12 +5,12 @@
 namespace uh::cluster::rest::http::model
 {
 
-    class get_object : public http_request
+    class get_object_request : public http_request
     {
     public:
-        explicit get_object(const http::request_parser<http::empty_body>&);
+        explicit get_object_request(const http::request_parser<http::empty_body>&);
 
-        ~get_object() override = default;
+        ~get_object_request() override = default;
 
         [[nodiscard]] inline http_request_type get_request_name() const override { return http_request_type::GET_OBJECT; }
 
@@ -20,7 +20,7 @@ namespace uh::cluster::rest::http::model
 
     private:
 
-        get_object& operator = (const http::request_parser<http::empty_body>& recv_req);
+        get_object_request& operator = (const http::request_parser<http::empty_body>& recv_req);
 
         std::string m_bucket;
         bool m_bucketHasBeenSet = false;

@@ -1,8 +1,8 @@
 #include <iostream>
 #include "s3_parser.h"
-#include <entry_node/rest/http/models/put_object.h>
-#include <entry_node/rest/http/models/get_object.h>
-#include <entry_node/rest/http/models/create_bucket.h>
+#include <entry_node/rest/http/models/put_object_request.h>
+#include <entry_node/rest/http/models/get_object_request.h>
+#include <entry_node/rest/http/models/create_bucket_request.h>
 #include <entry_node/rest/http/models/list_buckets.h>
 #include <entry_node/rest/http/models/init_multi_part_upload.h>
 #include <entry_node/rest/http/models/multi_part_upload.h>
@@ -62,11 +62,11 @@ namespace uh::cluster::rest::utils::parser {
             case boost::beast::http::verb::put:
                 if (std::regex_match(string_to_reg, pattern))
                 {
-                    return std::make_unique<rest::http::model::create_bucket>(m_recv_req);
+                    return std::make_unique<rest::http::model::create_bucket_request>(m_recv_req);
                 }
                 else if (!target.empty() && (target.find('?') == std::string::npos))
                 {
-                    return std::make_unique<rest::http::model::put_object>(m_recv_req);
+                    return std::make_unique<rest::http::model::put_object_request>(m_recv_req);
                 }
                 else if (target.find("?partNumber=") && target.find("&uploadId="))
                 {
@@ -91,7 +91,7 @@ namespace uh::cluster::rest::utils::parser {
                 }
                 else if (!target.empty() && (target.find('?') == std::string::npos))
                 {
-                    return std::make_unique<rest::http::model::get_object>(m_recv_req);
+                    return std::make_unique<rest::http::model::get_object_request>(m_recv_req);
                 }
                 else
                 {

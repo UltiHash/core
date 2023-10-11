@@ -1,15 +1,15 @@
-#include "get_object.h"
+#include "get_object_request.h"
 
 namespace uh::cluster::rest::http::model
 {
 
-    get_object::get_object(const http::request_parser<http::empty_body> & recv_req) : http_request(recv_req)
+    get_object_request::get_object_request(const http::request_parser<http::empty_body> & recv_req) : http_request(recv_req)
     {
         // parse and set the received request parameters
         *this = recv_req;
     }
 
-    get_object& get_object::operator = (const http::request_parser<http::empty_body>& recv_req)
+    get_object_request& get_object_request::operator = (const http::request_parser<http::empty_body>& recv_req)
     {
         const auto& header_list = recv_req.get();
 
@@ -103,7 +103,7 @@ namespace uh::cluster::rest::http::model
         return *this;
     }
 
-    std::map<std::string, std::string> get_object::get_request_specific_headers() const
+    std::map<std::string, std::string> get_object_request::get_request_specific_headers() const
     {
         std::map<std::string, std::string> headers;
         std::stringstream ss;

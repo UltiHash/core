@@ -82,7 +82,8 @@ namespace uh::cluster::rest
                 auto s3_res = co_await m_handler.handle(*s3_request);
 
                 // send response
-                co_await b_http::async_write(stream, s3_res.get_underlying_object(), net::use_awaitable);
+                const auto& res_to_send = s3_res->get_response_specific_object();
+                co_await b_http::async_write(stream, res_to_send, net::use_awaitable);
 
                 if(! received_request.keep_alive() )
                 {
@@ -90,8 +91,6 @@ namespace uh::cluster::rest
                 }
             }
         }
-            // TODO: don't send all the info to the user on throw, and also we need to send appropriate error code
-            // like 401 on authorization failed and not 400 which is a bad request
         catch (boost::system::system_error &se)
         {
             if (se.code() != b_http::error::end_of_stream)

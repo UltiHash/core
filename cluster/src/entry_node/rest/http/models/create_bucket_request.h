@@ -6,12 +6,12 @@
 namespace uh::cluster::rest::http::model
 {
 
-    class create_bucket : public http_request
+    class create_bucket_request : public http_request
     {
     public:
-        explicit create_bucket(const http::request_parser<http::empty_body>&);
+        explicit create_bucket_request(const http::request_parser<http::empty_body>&);
 
-        ~create_bucket() override = default;
+        ~create_bucket_request() override = default;
 
         [[nodiscard]] inline http_request_type get_request_name() const override { return http_request_type::CREATE_BUCKET; }
 
@@ -19,7 +19,7 @@ namespace uh::cluster::rest::http::model
 
     private:
 
-        create_bucket& operator = (const http::request_parser<http::empty_body>& recv_req);
+        create_bucket_request& operator = (const http::request_parser<http::empty_body>& recv_req);
 
         bucket_canned_acl m_aCL;
         bool m_aCLHasBeenSet = false;

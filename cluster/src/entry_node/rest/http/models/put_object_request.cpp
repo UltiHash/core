@@ -1,16 +1,16 @@
-#include "put_object.h"
+#include "put_object_request.h"
 #include <iostream>
 
 namespace uh::cluster::rest::http::model
 {
 
-    put_object::put_object(const http::request_parser<http::empty_body> & recv_req) : http_request(recv_req)
+    put_object_request::put_object_request(const http::request_parser<http::empty_body> & recv_req) : http_request(recv_req)
     {
         // parse and set the received request parameters
         *this = recv_req;
     }
 
-    put_object& put_object::operator = (const http::request_parser<http::empty_body>& recv_req)
+    put_object_request& put_object_request::operator = (const http::request_parser<http::empty_body>& recv_req)
     {
         const auto& header_list = recv_req.get();
 
@@ -273,7 +273,7 @@ namespace uh::cluster::rest::http::model
         return *this;
     }
 
-    std::map<std::string, std::string> put_object::get_request_specific_headers() const
+    std::map<std::string, std::string> put_object_request::get_request_specific_headers() const
     {
         std::map<std::string, std::string> headers;
         std::stringstream ss;

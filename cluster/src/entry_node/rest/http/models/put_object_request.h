@@ -7,12 +7,12 @@
 namespace uh::cluster::rest::http::model
 {
 
-    class put_object : public http_request
+    class put_object_request : public http_request
     {
     public:
-        explicit put_object(const http::request_parser<http::empty_body>&);
+        explicit put_object_request(const http::request_parser<http::empty_body>&);
 
-        ~put_object() override = default;
+        ~put_object_request() override = default;
 
         [[nodiscard]] inline http_request_type get_request_name() const override { return http_request_type::PUT_OBJECT; }
 
@@ -20,7 +20,7 @@ namespace uh::cluster::rest::http::model
 
     private:
 
-        put_object& operator = (const http::request_parser<http::empty_body>& recv_req);
+        put_object_request& operator = (const http::request_parser<http::empty_body>& recv_req);
 
         object_canned_acl m_aCL;
         bool m_aCLHasBeenSet = false;
