@@ -56,7 +56,6 @@ namespace uh::cluster {
             directory_message req;
             zpp::bits::in{std::span <char> {data.data.get(), data.size}, zpp::bits::size4b{}}(req).or_throw();
             co_return std::move (req);
-
         }
 
         coro <void> send_address (const message_types type, const address& addr) {

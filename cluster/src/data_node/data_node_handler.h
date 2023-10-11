@@ -38,6 +38,8 @@ public:
                 case USED_REQ:
                     co_await handle_get_used(m, message_header);
                     break;
+                case ALLOC_REQ
+                    co_await handle_alloc (m, message_header);
                 case STOP:
                     co_return;
                 default:
@@ -78,6 +80,10 @@ private:
     coro <void> handle_get_used (messenger &m, const messenger::header& h) {
         const auto used = m_data_store.get_used_space();
         co_await m.send_uint128_t(USED_RESP, used);
+    }
+
+    coro <void> handle_alloc (messenger &m, const messenger::header& h) {
+        //
     }
 
     uh::cluster::data_store m_data_store;
