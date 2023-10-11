@@ -10,22 +10,17 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
+  unit-test-darwin-gcc:
     runs-on: macos-12
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           token: ${{ secrets.PAT }}
           submodules: recursive
 
       - name: Install dependencies from Homebrew
         run: brew install wget openssl gcc cmake macfuse
-
-      - name: Install FoundationDB
-        run: |
-          wget -O /tmp/FoundationDB-7.1.31_x86_64.pkg https://github.com/apple/foundationdb/releases/download/7.1.31/FoundationDB-7.1.31_x86_64.pkg
-          sudo installer -pkg /tmp/FoundationDB-7.1.31_x86_64.pkg -target /
 
       - name: Cache boost
         id: cache-boost

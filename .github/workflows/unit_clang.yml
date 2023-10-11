@@ -10,15 +10,15 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
+  unit-test-linux-clang:
     strategy:
       matrix:
         build: [Release, Debug]
-        os: [uh-x86_64-ubuntu-22.04] #, uh-aarch64-ubuntu-22.04]
+        os: [uh-x86_64-ubuntu-22.04, uh-aarch64-ubuntu-22.04]
     runs-on: ${{ matrix.os }}
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           token: ${{ secrets.PAT }}
           submodules: recursive
@@ -26,7 +26,7 @@ jobs:
       - name: Configure CMake
         # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
         # See https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html?highlight=cmake_build_type
-        run: cmake -B ${{github.workspace}}/build -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_C_COMPILER=clang -DCMAKE_BUILD_TYPE=${{ matrix.build }} -DPROTOCOL_USE_SMALL_CHUNKS=On
+        run: cmake -B ${{github.workspace}}/build -DCMAKE_CXX_COMPILER=clang++ -DCMAKE_C_COMPILER=clang -DCMAKE_BUILD_TYPE=${{ matrix.build }} -DUSE_LICENSE_SPRING=OFF
 
       - name: Build
         # Build your program with the given configuration

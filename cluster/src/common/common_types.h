@@ -98,8 +98,10 @@ struct dedupe_response {
 
 struct directory_message {
     std::string bucket_id;
-    zpp::bits::optional_ptr <std::string> object_key;
+    zpp::bits::optional_ptr<std::string> object_key;
     zpp::bits::optional_ptr<address> addr;
+
+    auto operator<=>(const directory_message&) const = default;
 };
 
 
