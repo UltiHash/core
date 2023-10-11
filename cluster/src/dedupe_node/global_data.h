@@ -10,7 +10,7 @@
 #include <set>
 #include "data_node/data_node.h"
 #include "network/client.h"
-
+#include <network/network_traits.h>
 
 namespace uh::cluster {
 
@@ -21,7 +21,6 @@ class global_data {
 public:
 
     explicit global_data (const cluster_map& cmap, int data_node_connection_count, const std::shared_ptr <boost::asio::io_context>& ioc):
-                          m_temp_offset (temp_offset_start),
                           m_cluster_map (cmap),
                           m_io_service (ioc) {
         sleep(2);
@@ -134,7 +133,23 @@ std::unordered_map <uint128_t, address> sync_cache () {
 
 
     coro <address> allocate (size_t size) {
+        std::vector <std::reference_wrapper <client>> nodes;
+        for (auto& node: m_data_node_offsets) {
+            nodes.emplace_back(std::ref (node.second));
+        }
 
+        address addr;
+        const auto resp = broadcast_gather ({}, *m_io_service, nodes, ALLOC_REQ, std::span <char> {reinterpret_cast <char*> (&size), sizeof size});
+        for (const auto& r: resp) {
+
+            address node_addr;
+            if (r.first.type != ALLOC_RESP) [[unlikely]] {
+
+            }
+            zpp::bits::in {std::span <char> {r.second.data.get(), r.second.size}} (node_addr).or_throw();
+            addr.append_address(node_addr);
+        }
+        co_return std::move (addr);
     }
 
     coro <void> cancel_allocation (const address& alloc) {
@@ -246,11 +261,8 @@ private:
 
     const cluster_map& m_cluster_map;
     std::shared_ptr <boost::asio::io_context> m_io_service;
-    std::unordered_map <uint128_t, std::string_view> m_cache;
     std::map <const uint128_t, client> m_data_node_offsets;
-    std::vector <int> m_data_nodes;
     std::atomic <size_t> m_data_node_index {};
-    constexpr static uint128_t temp_offset_start = uint128_t (std::numeric_limits <uint64_t>::max(), std::numeric_limits <uint64_t>::max());
 
 };
 
