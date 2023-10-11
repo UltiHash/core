@@ -9,7 +9,7 @@ namespace uh::dbn::metrics
 storage_metrics::storage_metrics(uh::metrics::service& service)
     : m_gauges(service.add_gauge_family("uh_storage", "storage monitoring")),
       m_free_space(m_gauges.Add({{"type", "free_space"}})),
-      m_used_space(m_gauges.Add({{"type", "used_space"}})),
+      m_used_space(m_gauges.Add({{"type", "fetch_used_space"}})),
       m_alloc_space(m_gauges.Add({{"type", "allocated_space"}})),
 
       m_gauge_comp(service.add_gauge_family("uh_compression", "compression monitoring")),

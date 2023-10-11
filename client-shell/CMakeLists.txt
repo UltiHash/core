@@ -33,3 +33,5 @@ target_link_libraries(${PROJECT_NAME} PRIVATE ${PROJECT_NAME}_OBJECTS ${${PROJEC
 
 # create testing targets
 include(${CMAKE_CURRENT_SOURCE_DIR}/../cmake/testing/CMakeLists.txt)
+
+include(${CMAKE_CURRENT_SOURCE_DIR}/../cmake/packaging/CMakeLists.txt)

@@ -110,6 +110,7 @@ private:
         key_store_hashmap_value_store.log_file = key_store_hashmap_value_store.directory / "log";
         key_store_hashmap_value_store.min_file_size = 8 * 1024;
         key_store_hashmap_value_store.max_file_size = 16 * 1024;
+        key_store_hashmap_value_store.max_storage_size = 1024 * 1024;
 
         hashmap_config hashmap_conf;
         hashmap_conf.key_size = 128;
@@ -143,6 +144,7 @@ private:
         growing_managed_storage_config key_store_data_store;
         key_store_data_store.max_file_size = 32 * 1024;
         key_store_data_store.min_file_size = 8 * 1024;
+        key_store_data_store.max_storage_size = 1024 * 1024;
         key_store_data_store.log_file = "key_store/data/log";
         key_store_data_store.directory = "key_store/data/";
 

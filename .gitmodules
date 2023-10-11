@@ -4,3 +4,6 @@
 [submodule "lib/third-party/brotli"]
 	path = lib/third-party/brotli
 	url = https://github.com/google/brotli
+[submodule "lib/third-party/zpp_bits"]
+	path = lib/third-party/zpp_bits
+	url = https://github.com/eyalz800/zpp_bits.git

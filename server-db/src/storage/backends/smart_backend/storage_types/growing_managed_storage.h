@@ -69,6 +69,8 @@ private:
 
     std::fstream m_log;
     std::mutex m_mutex;
+    std::size_t m_storage_size {};
+    const std::size_t m_max_storage_size;
 };
 } // end namespace uh::dbn::storage::smart
 
