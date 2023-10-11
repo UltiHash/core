@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
+  unit-test-darwin-gcc:
     runs-on: macos-12
 
     steps:
