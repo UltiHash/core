@@ -9,4 +9,9 @@ namespace uh::cluster::rest::http
         m_res.set(http::field::content_type, "plain/text");
     }
 
+    void http_response::set_response_object(http::response<http::string_body> recv_res)
+    {
+        m_res = std::move(recv_res);
+    };
+
 } // namespace uh::cluster::rest::http

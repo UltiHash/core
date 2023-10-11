@@ -49,6 +49,12 @@ public:
             case http::http_request_type::INIT_MULTIPART_UPLOAD:
                 handle_init_mp_upload(req, res);
                 break;
+            case http::http_request_type::MULTIPART_UPLOAD:
+                handle_multipart_upload(res);
+                break;
+            case http::http_request_type::ABORT_MULTIPART_UPLOAD:
+                handle_abort_mp_upload(res);
+                break;
             default:
                 throw std::invalid_argument("Not supported request type");
         }
@@ -68,18 +74,31 @@ public:
     {
         auto& underlying_res = res.get_underlying_object();
 
-        underlying_res.set(boost::beast::http::field::transfer_encoding, "chunked");
         underlying_res.set(boost::beast::http::field::connection, "keep-alive");
         underlying_res.set(boost::beast::http::field::content_type, "application/xml");
 
         // TODO: For now, we use fixed upload id for a client
         underlying_res.body() =  std::string("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
                                   "<InitiateMultipartUploadResult>\n"
-                                  "<Bucket>myBucket</Bucket>\n"
-                                  "<Key>myObject</Key>\n"
+                                  "<Bucket>"+ req.get_URI().get_bucket_id() + "</Bucket>\n"
+                                  "<Key>" + req.get_URI().get_object_key() + "</Key>\n"
                                   "<UploadId>first-upload</UploadId>\n"
                                   "</InitiateMultipartUploadResult>");
    }
+
+    void handle_multipart_upload (rest::http::http_response& res)
+    {
+        auto& underlying_res = res.get_underlying_object();
+
+        underlying_res.set(boost::beast::http::field::connection, "keep-alive");
+        underlying_res.set(boost::beast::http::field::content_type, "application/xml");
+        underlying_res.set(boost::beast::http::field::etag, "ThisistheCustomEtag");
+    }
+
+    void handle_abort_mp_upload (rest::http::http_response& res)
+    {
+        res.set_response_object(boost::beast::http::response<boost::beast::http::string_body>{boost::beast::http::status::no_content, 11});
+    }
 
     coro <void> handle_put_object (const rest::http::http_request& req, rest::http::http_response& res)
     {

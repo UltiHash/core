@@ -97,6 +97,7 @@ namespace uh::cluster::rest::http
         [[nodiscard]] inline const http_request& get_originating_request() const { return m_orig_req; }
         [[nodiscard]] inline http::response<http::string_body>& get_underlying_object() { return m_res; }
         void add_header( const std::string&, const std::string& );
+        void set_response_object(http::response<http::string_body> recv_res);
 
     private:
         const http_request& m_orig_req;

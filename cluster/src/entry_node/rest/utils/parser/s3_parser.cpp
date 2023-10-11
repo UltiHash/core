@@ -97,6 +97,15 @@ namespace uh::cluster::rest::utils::parser {
                 {
                     throw std::runtime_error("unknown request type");
                 }
+            case boost::beast::http::verb::delete_:
+                if (target.find("?uploadId="))
+                {
+                    auto upload_id = std::string(target.substr(target.find("uploadId=") + 9));
+                    if (upload_id.empty())
+                        throw std::runtime_error("No upload ID given!");
+
+                    return std::make_unique<rest::http::model::abort_multi_part_upload>(m_recv_req, m_uomap_multipart, upload_id);
+                }
             default:
                 throw std::runtime_error("bad http verb.");
         }
