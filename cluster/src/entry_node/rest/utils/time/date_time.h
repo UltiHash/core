@@ -2,6 +2,8 @@
 
 #include <chrono>
 #include <string>
+#include <ctime>
+#include <stdexcept>
 
 namespace uh::cluster::rest::utils::time
 {
