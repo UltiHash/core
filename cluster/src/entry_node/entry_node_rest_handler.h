@@ -65,7 +65,7 @@ public:
         }
         else if ( request_name == rest::http::http_request_type::COMPLETE_MULTIPART_UPLOAD )
         {
-            res = handle_complete_mp_upload(req);
+            res = co_await handle_complete_mp_upload(req);
         }
         else if ( request_name == rest::http::http_request_type::ABORT_MULTIPART_UPLOAD )
         {
@@ -127,10 +127,11 @@ public:
     coro <std::unique_ptr<http::http_response>> handle_put_object (const rest::http::http_request& req)
     {
 
-        std::unique_ptr<http::model::put_object_response> res = std::make_unique<http::model::put_object_response>(req);
+        std::unique_ptr<http::model::put_object_response> res;
 
         try
         {
+            res = std::make_unique<http::model::put_object_response>(req);
             auto body_size = req.get_body_size();
             const auto size_mb = static_cast <double> (body_size) / static_cast <double> (1024ul * 1024ul);
 
@@ -180,10 +181,11 @@ public:
     coro <std::unique_ptr<http::http_response>> handle_get_object (const rest::http::http_request& req)
     {
 
-        std::unique_ptr<http::model::get_object_response> res = std::make_unique<http::model::get_object_response>(req);
+        std::unique_ptr<http::model::get_object_response> res;
 
         try
         {
+            res = std::make_unique<http::model::get_object_response>(req);
             auto m_dir = m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size())).acquire_messenger();
             directory_message dir_req;
             dir_req.bucket_id = req.get_URI().get_bucket_id();
@@ -255,12 +257,47 @@ public:
         return std::move(res);
     }
 
-    std::unique_ptr<http::http_response> handle_complete_mp_upload (const rest::http::http_request& req)
+    coro<std::unique_ptr<http::http_response>> handle_complete_mp_upload (const rest::http::http_request& req)
     {
         std::unique_ptr<http::model::complete_multi_part_upload_response> res;
         try
         {
             res = std::make_unique<http::model::complete_multi_part_upload_response>(req);
+            auto body_size = req.get_body_size();
+            const auto size_mb = static_cast <double> (body_size) / static_cast <double> (1024ul * 1024ul);
+
+            auto m_dedup = m_dedupe_nodes.at(get_round_robin_index(m_dedupe_node_index, m_dedupe_nodes.size())).acquire_messenger();
+            co_await m_dedup.get().send (DEDUPE_REQ, req.get_body());
+            const auto h_dedup = co_await m_dedup.get().recv_header();
+            auto resp = co_await m_dedup.get().recv_dedupe_response(h_dedup);
+
+            auto effective_size = static_cast <double> (resp.second.effective_size) / static_cast <double> (1024ul * 1024ul);
+            auto space_saving = 1.0 - static_cast <double> (resp.second.effective_size) / static_cast <double> (body_size);
+
+//            std::cout << "original size " << size_mb << " MB" << std::endl;
+//            std::cout << "effective size " << effective_size << " MB" << std::endl;
+//            std::cout << "space saving " << space_saving << std::endl;
+
+            auto m_dir = m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size())).acquire_messenger();
+            const directory_message dir_req
+                    {
+                            .bucket_id = req.get_URI().get_bucket_id(),
+                            .object_key = std::make_unique <std::string> (req.get_URI().get_object_key()),
+                            .addr = std::make_unique <address> (std::move (resp.second.addr)),
+                    };
+
+            co_await m_dir.get().send_directory_message (DIR_PUT_OBJ_REQ, dir_req);
+            const auto h_dir = co_await m_dir.get().recv_header();
+            if(h_dir.type == FAILURE) [[unlikely]]
+            {
+                std::string msg;
+                msg.resize(h_dir.size);
+                m_dir.get().register_read_buffer(msg);
+                co_await m_dir.get().recv_buffers(h_dir);
+                throw std::runtime_error("Failed to add the fragment address of object " + dir_req.bucket_id + "/" + *dir_req.object_key + " to the directory.\n" + "Error: \n" + msg);
+            }
+
+            res->set_etag("CustomEtag");
         }
         catch(const std::exception& e)
         {
@@ -269,7 +306,7 @@ public:
             res->set_error_body(e.what());
         }
 
-        return std::move(res);
+        co_return std::move(res);
     }
 
     std::unique_ptr<http::http_response> handle_abort_mp_upload (const rest::http::http_request& req)

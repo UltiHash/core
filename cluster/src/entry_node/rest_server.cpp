@@ -64,7 +64,6 @@ namespace uh::cluster::rest
                 stream.expires_after(std::chrono::seconds(10000));
                 beast::flat_buffer buffer;
 
-                // read header
                 b_http::request_parser<b_http::empty_body> received_request;
                 received_request.body_limit((std::numeric_limits<std::uint64_t>::max)());
 
@@ -72,21 +71,16 @@ namespace uh::cluster::rest
                 // log this to debug
                 std::cout << received_request.get().base() << std::endl;
 
-                // parse
                 rest::utils::parser::s3_parser s3_parser(received_request, m_uomap_multipart);
                 auto s3_request = s3_parser.parse();
 
-                // read body
                 co_await s3_request->read_body(stream, buffer);
 
                 // authenticate
 
-                // handle
                 auto s3_res = co_await m_handler.handle(*s3_request);
 
-                // send response
-                const auto& res_to_send = s3_res->get_response_specific_object();
-                co_await b_http::async_write(stream, res_to_send, net::use_awaitable);
+                co_await b_http::async_write(stream, s3_res->get_response_specific_object(), net::use_awaitable);
 
                 if(! received_request.keep_alive() )
                 {
@@ -94,7 +88,7 @@ namespace uh::cluster::rest
                 }
             }
         }
-        catch (boost::system::system_error &se)
+        catch (const boost::system::system_error& se)
         {
             if (se.code() != b_http::error::end_of_stream)
             {

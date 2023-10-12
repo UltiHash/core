@@ -9,6 +9,7 @@
 #include <entry_node/rest/http/models/complete_multi_part_upload_request.h>
 #include <entry_node/rest/http/models/abort_multi_part_upload_request.h>
 #include <entry_node/rest/http/models/delete_bucket_request.h>
+#include <entry_node/rest/http/models/delete_objects_request.h>
 #include <regex>
 
 namespace uh::cluster::rest::utils::parser {
@@ -33,6 +34,8 @@ namespace uh::cluster::rest::utils::parser {
         auto method = m_recv_req.get().base().method();
 
         std::regex pattern("^\\/\\w+$");
+        std::regex delete_pattern("\\/[^?]+\\?delete");
+
 
         switch (method)
         {
@@ -50,6 +53,10 @@ namespace uh::cluster::rest::utils::parser {
                     auto upload_id = std::string(target.substr(target.find("uploadId=") + 9));
 
                     return std::make_unique<rest::http::model::complete_multi_part_upload_request>(m_recv_req, m_uomap_multipart, upload_id);
+                }
+                else if (std::regex_match(std::string(target), delete_pattern))
+                {
+                    return std::make_unique<rest::http::model::delete_objects_request>(m_recv_req);
                 }
                 else
                 {
