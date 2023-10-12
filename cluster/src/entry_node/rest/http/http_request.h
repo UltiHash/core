@@ -35,6 +35,7 @@ namespace uh::cluster::rest::http
     {
         CREATE_BUCKET,
         LIST_BUCKETS,
+        DELETE_BUCKET,
         PUT_OBJECT,
         GET_OBJECT,
         INIT_MULTIPART_UPLOAD,

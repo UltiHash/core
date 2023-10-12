@@ -3,6 +3,7 @@
 #include <fstream>
 #include <filesystem>
 #include "entry_node/rest/utils/string/string_utils.h"
+#include "rest/http/models/generic_error_response.h"
 
 namespace uh::cluster::rest
 {
@@ -97,24 +98,16 @@ namespace uh::cluster::rest
         {
             if (se.code() != b_http::error::end_of_stream)
             {
-                b_http::response<b_http::string_body> res{b_http::status::bad_request, 11};
-                res.set(b_http::field::server, "UltiHash");
-                res.set(b_http::field::content_type, "text/html");
-                res.body() = se.code().message() + '\n';
-                res.prepare_payload();
-                b_http::write(stream, res);
+                uh::cluster::rest::http::model::error_response err;
+                b_http::write(stream, err.get_response_specific_object());
                 stream.socket().shutdown(tcp::socket::shutdown_send, ec);
                 throw;
             }
         }
         catch (const std::exception& e)
         {
-            b_http::response<b_http::string_body> res{b_http::status::bad_request, 11};
-            res.set(b_http::field::server, "UltiHash");
-            res.set(b_http::field::content_type, "text/html");
-            res.body() = e.what();
-            res.prepare_payload();
-            b_http::write(stream, res);
+            uh::cluster::rest::http::model::error_response err;
+            b_http::write(stream, err.get_response_specific_object());
             stream.socket().shutdown(tcp::socket::shutdown_send, ec);
             throw;
         }

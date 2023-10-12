@@ -17,6 +17,7 @@
 #include "entry_node/rest/http/models/multi_part_upload_response.h"
 #include "entry_node/rest/http/models/complete_multi_part_upload_response.h"
 #include "entry_node/rest/http/models/abort_multi_part_upload_response.h"
+#include "entry_node/rest/http/models/list_buckets_response.h"
 #include <memory>
 
 namespace uh::cluster {
@@ -69,6 +70,14 @@ public:
         else if ( request_name == rest::http::http_request_type::ABORT_MULTIPART_UPLOAD )
         {
             res = handle_abort_mp_upload(req);
+        }
+        else if ( request_name == rest::http::http_request_type::LIST_BUCKETS )
+        {
+            res = handle_list_buckets(req);
+        }
+        else if ( request_name == rest::http::http_request_type::DELETE_BUCKET )
+        {
+            res = handle_delete_bucket(req);
         }
         else
         {
@@ -276,6 +285,24 @@ public:
             res->set_error(boost::beast::http::response<boost::beast::http::string_body>{boost::beast::http::status::internal_server_error, 11});
             res->set_error_body(e.what());
         }
+
+        return std::move(res);
+    }
+
+    std::unique_ptr<http::http_response> handle_list_buckets (const rest::http::http_request& req)
+    {
+
+        std::unique_ptr<http::model::list_buckets_response> res;
+        res->set_error(boost::beast::http::response<boost::beast::http::string_body>{boost::beast::http::status::internal_server_error, 11});
+
+        return std::move(res);
+    }
+
+    std::unique_ptr<http::http_response> handle_delete_bucket (const rest::http::http_request& req)
+    {
+
+        std::unique_ptr<http::model::list_buckets_response> res;
+        res->set_error(boost::beast::http::response<boost::beast::http::string_body>{boost::beast::http::status::internal_server_error, 11});
 
         return std::move(res);
     }

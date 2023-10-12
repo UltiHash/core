@@ -3,11 +3,12 @@
 #include <entry_node/rest/http/models/put_object_request.h>
 #include <entry_node/rest/http/models/get_object_request.h>
 #include <entry_node/rest/http/models/create_bucket_request.h>
-#include <entry_node/rest/http/models/list_buckets.h>
+#include <entry_node/rest/http/models/list_buckets_request.h>
 #include <entry_node/rest/http/models/init_multi_part_upload_request.h>
 #include <entry_node/rest/http/models/multi_part_upload_request.h>
 #include <entry_node/rest/http/models/complete_multi_part_upload_request.h>
 #include <entry_node/rest/http/models/abort_multi_part_upload_request.h>
+#include <entry_node/rest/http/models/delete_bucket_request.h>
 #include <regex>
 
 namespace uh::cluster::rest::utils::parser {
@@ -32,7 +33,6 @@ namespace uh::cluster::rest::utils::parser {
         auto method = m_recv_req.get().base().method();
 
         std::regex pattern("^\\/\\w+$");
-        std::string string_to_reg = target;
 
         switch (method)
         {
@@ -56,7 +56,7 @@ namespace uh::cluster::rest::utils::parser {
                     throw std::runtime_error("unknown request type");
                 }
             case boost::beast::http::verb::put:
-                if (std::regex_match(string_to_reg, pattern))
+                if (std::regex_match(std::string(target), pattern))
                 {
                     return std::make_unique<rest::http::model::create_bucket_request>(m_recv_req);
                 }
@@ -83,7 +83,7 @@ namespace uh::cluster::rest::utils::parser {
             case boost::beast::http::verb::get:
                 if (target == "/")
                 {
-                    return std::make_unique<rest::http::model::list_buckets>(m_recv_req);
+                    return std::make_unique<rest::http::model::list_buckets_request>(m_recv_req);
                 }
                 else if (!target.empty() && (target.find('?') == std::string::npos))
                 {
@@ -94,7 +94,11 @@ namespace uh::cluster::rest::utils::parser {
                     throw std::runtime_error("unknown request type");
                 }
             case boost::beast::http::verb::delete_:
-                if (target.find("?uploadId="))
+                if (std::regex_match(std::string(target), pattern))
+                {
+                    return std::make_unique<rest::http::model::delete_bucket_request>(m_recv_req);
+                }
+                else if (target.find("?uploadId="))
                 {
                     auto upload_id = std::string(target.substr(target.find("uploadId=") + 9));
                     if (upload_id.empty())
