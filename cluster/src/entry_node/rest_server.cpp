@@ -68,6 +68,8 @@ namespace uh::cluster::rest
                 received_request.body_limit((std::numeric_limits<std::uint64_t>::max)());
 
                 co_await b_http::async_read_header(stream, buffer, received_request, net::use_awaitable);
+                // log this to debug
+                std::cout << received_request.get().base() << std::endl;
 
                 // parse
                 rest::utils::parser::s3_parser s3_parser(received_request, m_uomap_multipart);

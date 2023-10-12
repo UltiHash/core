@@ -5,12 +5,12 @@
 namespace uh::cluster::rest::http::model
 {
 
-    class init_multi_part_upload : public rest::http::http_request
+    class init_multi_part_upload_request : public rest::http::http_request
     {
     public:
-        explicit init_multi_part_upload(const http::request_parser<http::empty_body>&);
+        explicit init_multi_part_upload_request(const http::request_parser<http::empty_body>&);
 
-        ~init_multi_part_upload() override = default;
+        ~init_multi_part_upload_request() override = default;
 
         [[nodiscard]] http_request_type get_request_name() const override { return http_request_type::INIT_MULTIPART_UPLOAD; }
 

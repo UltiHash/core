@@ -1,23 +1,23 @@
-#include "multi_part_upload.h"
+#include "multi_part_upload_request.h"
 
 namespace uh::cluster::rest::http::model
 {
 
-    multi_part_upload::multi_part_upload(const http::request_parser<http::empty_body>& recv_req,
-                                         rest::utils::ts_map<uint16_t, std::string>& container, uint16_t part_number) :
+    multi_part_upload_request::multi_part_upload_request(const http::request_parser<http::empty_body>& recv_req,
+                                                 rest::utils::ts_map<uint16_t, std::string>& container, uint16_t part_number) :
             rest::http::http_request(recv_req),
             m_mpcontainer(container),
             m_part_number(part_number)
     {}
 
-    std::map<std::string, std::string> multi_part_upload::get_request_specific_headers() const
+    std::map<std::string, std::string> multi_part_upload_request::get_request_specific_headers() const
     {
         std::map<std::string, std::string> headers;
 
         return headers;
     }
 
-    coro<void> multi_part_upload::read_body(tcp_stream& stream, boost::beast::flat_buffer& buffer)
+    coro<void> multi_part_upload_request::read_body(tcp_stream& stream, boost::beast::flat_buffer& buffer)
     {
         if (m_req.get().has_content_length())
         {

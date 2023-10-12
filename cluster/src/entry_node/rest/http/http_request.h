@@ -79,6 +79,8 @@ namespace uh::cluster::rest::http
 
         [[nodiscard]] inline const URI& get_URI() const { return m_uri; }
 
+        [[maybe_unused]] virtual inline void clear_body() { m_body.clear(); }
+
     protected:
         const http::request_parser<http::empty_body>& m_req;
         http_method m_method;

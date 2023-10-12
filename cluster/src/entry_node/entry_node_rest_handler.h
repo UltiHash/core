@@ -13,6 +13,10 @@
 #include "entry_node/rest/http/models/put_object_response.h"
 #include "entry_node/rest/http/models/get_object_response.h"
 #include "entry_node/rest/http/models/create_bucket_response.h"
+#include "entry_node/rest/http/models/init_multi_part_upload_response.h"
+#include "entry_node/rest/http/models/multi_part_upload_response.h"
+#include "entry_node/rest/http/models/complete_multi_part_upload_response.h"
+#include "entry_node/rest/http/models/abort_multi_part_upload_response.h"
 #include <memory>
 
 namespace uh::cluster {
@@ -50,6 +54,22 @@ public:
         else if (request_name == rest::http::http_request_type::GET_OBJECT)
         {
             res = co_await handle_get_object(req);
+        }
+        else if ( request_name == rest::http::http_request_type::INIT_MULTIPART_UPLOAD )
+        {
+            res = handle_init_mp_upload(req);
+        }
+        else if ( request_name == rest::http::http_request_type::MULTIPART_UPLOAD )
+        {
+            res = handle_mp_upload(req);
+        }
+        else if ( request_name == rest::http::http_request_type::COMPLETE_MULTIPART_UPLOAD )
+        {
+            res = handle_complete_mp_upload(req);
+        }
+        else if ( request_name == rest::http::http_request_type::ABORT_MULTIPART_UPLOAD )
+        {
+            res = handle_abort_mp_upload(req);
         }
         else
         {
@@ -149,100 +169,117 @@ public:
         co_return std::move(res);
     }
 
-        coro <std::unique_ptr<http::http_response>> handle_get_object (const rest::http::http_request& req)
+    coro <std::unique_ptr<http::http_response>> handle_get_object (const rest::http::http_request& req)
+    {
+
+        std::unique_ptr<http::model::get_object_response> res = std::make_unique<http::model::get_object_response>(req);
+
+        try
         {
+            auto m_dir = m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size())).acquire_messenger();
+            directory_message dir_req;
+            dir_req.bucket_id = req.get_URI().get_bucket_id();
+            dir_req.object_key = std::make_unique <std::string> (req.get_URI().get_object_key());
 
-            std::unique_ptr<http::model::get_object_response> res = std::make_unique<http::model::get_object_response>(req);
+            co_await m_dir.get().send_directory_message (DIR_GET_OBJ_REQ, dir_req);
+            const auto h_dir = co_await m_dir.get().recv_header();
 
-            try
+            if(h_dir.type == DIR_GET_OBJ_RESP) [[likely]]
             {
-                auto m_dir = m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size())).acquire_messenger();
-                directory_message dir_req;
-                dir_req.bucket_id = req.get_URI().get_bucket_id();
-                dir_req.object_key = std::make_unique <std::string> (req.get_URI().get_object_key());
-
-                co_await m_dir.get().send_directory_message (DIR_GET_OBJ_REQ, dir_req);
-                const auto h_dir = co_await m_dir.get().recv_header();
-
-                if(h_dir.type == DIR_GET_OBJ_RESP) [[likely]]
-                {
-                    ospan <char> buffer (h_dir.size);
-                    m_dir.get().register_read_buffer(buffer);
-                    co_await m_dir.get().recv_buffers(h_dir);
-                    res->set_body(std::string(buffer.data.get(), buffer.size));
-                }
-                else if (h_dir.type == FAILURE)
-                {
-                    std::string msg;
-                    msg.resize(h_dir.size);
-                    m_dir.get().register_read_buffer(msg);
-                    co_await m_dir.get().recv_buffers(h_dir);
-                    throw std::runtime_error("Failed to retreive object " + dir_req.bucket_id + "/" + *dir_req.object_key + " from the directory.\n" + "Error: \n" + msg);
-                }
+                ospan <char> buffer (h_dir.size);
+                m_dir.get().register_read_buffer(buffer);
+                co_await m_dir.get().recv_buffers(h_dir);
+                res->set_body(std::string(buffer.data.get(), buffer.size));
             }
-            catch (const std::exception& e)
+            else if (h_dir.type == FAILURE)
             {
-                std::cout << e.what() << std::endl;
-                res->set_error(boost::beast::http::response<boost::beast::http::string_body>{boost::beast::http::status::internal_server_error, 11});
-                res->set_error_body(e.what());
+                std::string msg;
+                msg.resize(h_dir.size);
+                m_dir.get().register_read_buffer(msg);
+                co_await m_dir.get().recv_buffers(h_dir);
+                throw std::runtime_error("Failed to retreive object " + dir_req.bucket_id + "/" + *dir_req.object_key + " from the directory.\n" + "Error: \n" + msg);
             }
-
-            co_return std::move(res);
+        }
+        catch (const std::exception& e)
+        {
+            std::cout << e.what() << std::endl;
+            res->set_error(boost::beast::http::response<boost::beast::http::string_body>{boost::beast::http::status::internal_server_error, 11});
+            res->set_error_body(e.what());
         }
 
-//    void handle_init_mp_upload (const rest::http::http_request& req)
-//    {
-//        http::model::put_object_response res(req, boost::beast::http::response<boost::beast::http::string_body>{boost::beast::http::status::no_content, 11});
-//
-//        try
-//        {
-//            underlying_res.set(boost::beast::http::field::content_type, "application/xml");
-//
-//            // TODO: For now, we use fixed upload id for a client
-//            underlying_res.body() =  std::string("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
-//                                                 "<InitiateMultipartUploadResult>\n"
-//                                                 "<Bucket>"+ req.get_URI().get_bucket_id() + "</Bucket>\n"
-//                                                 "<Key>" + req.get_URI().get_object_key() + "</Key>\n"
-//                                                 "<UploadId>first-upload</UploadId>\n"
-//                                                 "</InitiateMultipartUploadResult>");
-//        }
-//        catch(const std::exception& e)
-//        {
-//            res.set_response_object(boost::beast::http::response<boost::beast::http::string_body>{boost::beast::http::status::internal_server_error, 11});
-//        }
-//
-//        return std::move(res);
-//    void handle_multipart_upload (rest::http::http_response& res)
-//    {
-//        auto& underlying_res = res.get_underlying_object();
-//
-//        underlying_res.set(boost::beast::http::field::connection, "keep-alive");
-//        underlying_res.set(boost::beast::http::field::content_type, "application/xml");
-//        underlying_res.set(boost::beast::http::field::etag, "ThisistheCustomEtag");
-//    }
-//
-//    void handle_abort_mp_upload (rest::http::http_response& res)
-//    {
-//        res.set_response_object(boost::beast::http::response<boost::beast::http::string_body>{boost::beast::http::status::no_content, 11});
-//    coro <void> handle_create_bucket (const rest::http::http_request& req, rest::http::http_response& res)
-//    {
-//        auto m_dir = m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size())).acquire_messenger();
-//        directory_message dir_req;
-//        dir_req.bucket_id = req.get_URI().get_bucket_id();
-//        co_await m_dir.get().send_directory_message (DIR_PUT_BUCKET_REQ, dir_req);
-//        const auto h_dir = co_await m_dir.get().recv_header();
-//        if(h_dir.type == FAILURE) [[unlikely]]
-//        {
-//            std::string msg;
-//            msg.resize(h_dir.size);
-//            m_dir.get().register_read_buffer(msg);
-//            co_await m_dir.get().recv_buffers(h_dir);
-//            throw std::runtime_error("Failed to add the bucket " + dir_req.bucket_id + " to the directory.\n" + "Error: \n" + msg);
-//        }
-//
-//        co_return;
-//    }
-//
+        co_return std::move(res);
+    }
+
+    std::unique_ptr<http::http_response> handle_init_mp_upload (const rest::http::http_request& req)
+    {
+
+        std::unique_ptr<http::model::init_multi_part_upload_response> res;
+        try
+        {
+            res = std::make_unique<http::model::init_multi_part_upload_response>(req);
+        }
+        catch(const std::exception& e)
+        {
+            std::cout << e.what() << std::endl;
+            res->set_error(boost::beast::http::response<boost::beast::http::string_body>{boost::beast::http::status::internal_server_error, 11});
+            res->set_error_body(e.what());
+        }
+
+        return std::move(res);
+    }
+
+    std::unique_ptr<http::http_response> handle_mp_upload (const rest::http::http_request& req)
+    {
+
+        std::unique_ptr<http::model::multi_part_upload_response> res;
+        try
+        {
+            res = std::make_unique<http::model::multi_part_upload_response>(req);
+            res->set_etag("CustomEtag");
+        }
+        catch(const std::exception& e)
+        {
+            std::cout << e.what() << std::endl;
+            res->set_error(boost::beast::http::response<boost::beast::http::string_body>{boost::beast::http::status::internal_server_error, 11});
+            res->set_error_body(e.what());
+        }
+
+        return std::move(res);
+    }
+
+    std::unique_ptr<http::http_response> handle_complete_mp_upload (const rest::http::http_request& req)
+    {
+        std::unique_ptr<http::model::complete_multi_part_upload_response> res;
+        try
+        {
+            res = std::make_unique<http::model::complete_multi_part_upload_response>(req);
+        }
+        catch(const std::exception& e)
+        {
+            std::cout << e.what() << std::endl;
+            res->set_error(boost::beast::http::response<boost::beast::http::string_body>{boost::beast::http::status::internal_server_error, 11});
+            res->set_error_body(e.what());
+        }
+
+        return std::move(res);
+    }
+
+    std::unique_ptr<http::http_response> handle_abort_mp_upload (const rest::http::http_request& req)
+    {
+        std::unique_ptr<http::model::abort_multi_part_upload_response> res;
+        try
+        {
+            res = std::make_unique<http::model::abort_multi_part_upload_response>(req);
+        }
+        catch(const std::exception& e)
+        {
+            std::cout << e.what() << std::endl;
+            res->set_error(boost::beast::http::response<boost::beast::http::string_body>{boost::beast::http::status::internal_server_error, 11});
+            res->set_error_body(e.what());
+        }
+
+        return std::move(res);
+    }
 
 
 private:

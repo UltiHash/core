@@ -4,10 +4,10 @@
 #include <entry_node/rest/http/models/get_object_request.h>
 #include <entry_node/rest/http/models/create_bucket_request.h>
 #include <entry_node/rest/http/models/list_buckets.h>
-#include <entry_node/rest/http/models/init_multi_part_upload.h>
-#include <entry_node/rest/http/models/multi_part_upload.h>
-#include <entry_node/rest/http/models/complete_multi_part_upload.h>
-#include <entry_node/rest/http/models/abort_multi_part_upload.h>
+#include <entry_node/rest/http/models/init_multi_part_upload_request.h>
+#include <entry_node/rest/http/models/multi_part_upload_request.h>
+#include <entry_node/rest/http/models/complete_multi_part_upload_request.h>
+#include <entry_node/rest/http/models/abort_multi_part_upload_request.h>
 #include <regex>
 
 namespace uh::cluster::rest::utils::parser {
@@ -43,17 +43,13 @@ namespace uh::cluster::rest::utils::parser {
 
                     m_uomap_multipart.emplace("first-upload", std::make_shared<utils::ts_map<uint16_t, std::string>>());
 
-                    return std::make_unique<rest::http::model::init_multi_part_upload>(m_recv_req);
+                    return std::make_unique<rest::http::model::init_multi_part_upload_request>(m_recv_req);
                 }
                 else if (target.find("?uploadId=") != std::string::npos)
                 {
                     auto upload_id = std::string(target.substr(target.find("uploadId=") + 9));
 
-                    auto iterator = m_uomap_multipart.find(upload_id);
-                    if (iterator == m_uomap_multipart.end())
-                        throw std::runtime_error("Invalid Upload ID");
-
-                    return std::make_unique<rest::http::model::complete_multi_part_upload>(m_recv_req, *iterator->second);
+                    return std::make_unique<rest::http::model::complete_multi_part_upload_request>(m_recv_req, m_uomap_multipart, upload_id);
                 }
                 else
                 {
@@ -78,7 +74,7 @@ namespace uh::cluster::rest::utils::parser {
                     if (iterator == m_uomap_multipart.end())
                         throw std::runtime_error("Invalid Upload ID");
 
-                    return std::make_unique<rest::http::model::multi_part_upload>(m_recv_req, *iterator->second, part_number);
+                    return std::make_unique<rest::http::model::multi_part_upload_request>(m_recv_req, *iterator->second, part_number);
                 }
                 else
                 {
@@ -104,7 +100,7 @@ namespace uh::cluster::rest::utils::parser {
                     if (upload_id.empty())
                         throw std::runtime_error("No upload ID given!");
 
-                    return std::make_unique<rest::http::model::abort_multi_part_upload>(m_recv_req, m_uomap_multipart, upload_id);
+                    return std::make_unique<rest::http::model::abort_multi_part_upload_request>(m_recv_req, m_uomap_multipart, upload_id);
                 }
             default:
                 throw std::runtime_error("bad http verb.");
