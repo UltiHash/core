@@ -33,7 +33,6 @@ public:
 
     coro < std::unique_ptr<http::http_response> > handle (const rest::http::http_request& req)
     {
-
         auto body_size = req.get_body_size();
         const auto size_mb = static_cast <double> (body_size) / static_cast <double> (1024ul * 1024ul);
 
@@ -280,7 +279,6 @@ public:
 
         return std::move(res);
     }
-
 
 private:
 
