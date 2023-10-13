@@ -20,6 +20,8 @@
 #include "entry_node/rest/http/models/list_buckets_response.h"
 #include "entry_node/rest/http/models/get_object_attributes_response.h"
 #include "entry_node/rest/http/models/list_objectsv2_response.h"
+#include "entry_node/rest/http/models/delete_bucket_response.h"
+#include "entry_node/rest/http/models/delete_object_response.h"
 #include <memory>
 
 namespace uh::cluster {
@@ -81,6 +83,10 @@ public:
         else if ( request_name == rest::http::http_request_type::DELETE_BUCKET )
         {
             res = handle_delete_bucket(req);
+        }
+        else if ( request_name == rest::http::http_request_type::DELETE_OBJECT )
+        {
+            res = handle_delete_object(req);
         }
         else if (request_name == rest::http::http_request_type::GET_OBJECT_ATTRIBUTES)
         {
@@ -233,15 +239,8 @@ public:
 
         std::unique_ptr<http::model::get_object_attributes_response> res;
 
-        try
-        {
-            res = std::make_unique<http::model::get_object_attributes_response>(req);
-        }
-        catch (const std::exception& e)
-        {
-            std::cout << e.what() << std::endl;
-            res->set_error();
-        }
+        res = std::make_unique<http::model::get_object_attributes_response>(req);
+        res->set_error();
 
         return std::move(res);
     }
@@ -251,15 +250,8 @@ public:
 
         std::unique_ptr<http::model::list_objectsv2_response> res;
 
-        try
-        {
-            res = std::make_unique<http::model::list_objectsv2_response>(req);
-        }
-        catch (const std::exception& e)
-        {
-            std::cout << e.what() << std::endl;
-            res->set_error();
-        }
+        res = std::make_unique<http::model::list_objectsv2_response>(req);
+        res->set_error();
 
         return std::move(res);
     }
@@ -378,7 +370,16 @@ public:
     std::unique_ptr<http::http_response> handle_delete_bucket (const rest::http::http_request& req)
     {
 
-        std::unique_ptr<http::model::list_buckets_response> res;
+        std::unique_ptr<http::model::delete_bucket_response> res;
+        res->set_error();
+
+        return std::move(res);
+    }
+
+    std::unique_ptr<http::http_response> handle_delete_object (const rest::http::http_request& req)
+    {
+
+        std::unique_ptr<http::model::delete_object_response> res;
         res->set_error();
 
         return std::move(res);

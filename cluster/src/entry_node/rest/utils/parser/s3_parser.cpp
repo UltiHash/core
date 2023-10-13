@@ -10,6 +10,7 @@
 #include <entry_node/rest/http/models/abort_multi_part_upload_request.h>
 #include <entry_node/rest/http/models/delete_bucket_request.h>
 #include <entry_node/rest/http/models/delete_objects_request.h>
+#include <entry_node/rest/http/models/delete_object_request.h>
 #include <entry_node/rest/http/models/get_object_attributes_request.h>
 #include <entry_node/rest/http/models/list_objectsv2_request.h>
 #include <regex>
@@ -114,6 +115,11 @@ namespace uh::cluster::rest::utils::parser {
                 if (std::regex_match(std::string(target), pattern))
                 {
                     return std::make_unique<rest::http::model::delete_bucket_request>(m_recv_req);
+                }
+                // TODO: switch to regex since object key might be missing on this
+                else if (target.find("?versionId="))
+                {
+                    return std::make_unique<rest::http::model::delete_object_request>(m_recv_req);
                 }
                 else if (target.find("?uploadId="))
                 {

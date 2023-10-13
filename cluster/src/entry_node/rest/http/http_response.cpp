@@ -10,7 +10,8 @@ namespace uh::cluster::rest::http
     {}
 
     http_response::http_response(const http_request& req, http::response<http::string_body> res) :
-    m_orig_req(req), m_res(std::move(res))
+    m_orig_req(req), m_res(std::move(res)),
+    m_error(boost::beast::http::response<boost::beast::http::string_body>{boost::beast::http::status::internal_server_error, 11})
     {}
 
     void http_response::set_body(std::string body)

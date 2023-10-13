@@ -5,12 +5,14 @@ namespace uh::cluster::rest::http::model
 
     list_objectsv2_response::list_objectsv2_response(const http_request& req) : http_response(req)
     {
-
+        m_res.set(boost::beast::http::field::content_type, "application/xml");
     }
 
     list_objectsv2_response::list_objectsv2_response(const http_request& req, http::response<http::string_body> recv_res) :
             http_response(req, std::move(recv_res))
-    {}
+    {
+        m_res.set(boost::beast::http::field::content_type, "application/xml");
+    }
 
     const http::response<http::string_body>& list_objectsv2_response::get_response_specific_object()
     {

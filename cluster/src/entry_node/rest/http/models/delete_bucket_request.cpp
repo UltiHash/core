@@ -15,9 +15,9 @@ namespace uh::cluster::rest::http::model
 
         const auto& expec_l = header_list.find("x-amz-expected-bucket-owner");
         const auto& expec_u = header_list.find("X-Amz-Expected-Bucket-Owner");
-        if (expec_u != header_list.end() || expec_u != header_list.end())
+        if (expec_l != header_list.end() || expec_u != header_list.end())
         {
-            m_expectedBucketOwner = ( expec_u != header_list.end() ) ? expec_u->value() : expec_u->value();
+            m_expectedBucketOwner = ( expec_l != header_list.end() ) ? expec_l->value() : expec_u->value();
             m_expectedBucketOwnerHasBeenSet = true;
         }
 
