@@ -5,7 +5,8 @@ namespace uh::cluster::rest::http
 
     http_response::http_response(const http_request& orig_req) :
     m_orig_req(orig_req),
-    m_res(boost::beast::http::response<boost::beast::http::string_body>{boost::beast::http::status::ok, 11})
+    m_res(boost::beast::http::response<boost::beast::http::string_body>{boost::beast::http::status::ok, 11}),
+    m_error(boost::beast::http::response<boost::beast::http::string_body>{boost::beast::http::status::internal_server_error, 11})
     {}
 
     http_response::http_response(const http_request& req, http::response<http::string_body> res) :

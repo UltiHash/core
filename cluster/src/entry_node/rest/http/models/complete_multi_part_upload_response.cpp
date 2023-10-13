@@ -10,7 +10,9 @@ namespace uh::cluster::rest::http::model
 
     complete_multi_part_upload_response::complete_multi_part_upload_response(const http_request& req, http::response<http::string_body> recv_res) :
             http_response(req, std::move(recv_res))
-    {}
+    {
+        m_res.set(boost::beast::http::field::content_type, "application/xml");
+    }
 
     void complete_multi_part_upload_response::set_etag(std::string etag)
     {

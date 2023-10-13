@@ -18,7 +18,7 @@ namespace uh::cluster::rest::http::model
 
 
     private:
-
+        list_buckets_request& operator  = (const http::request_parser<http::empty_body>& recv_req);
     };
 
 } // uh::cluster::rest::http::model

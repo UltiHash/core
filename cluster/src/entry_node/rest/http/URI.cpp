@@ -21,6 +21,26 @@ namespace uh::cluster::rest::http
         return m_object_key;
     }
 
+    std::string URI::get_query_string_value(const std::string& key) const
+    {
+        auto index = m_query_string.find(key+'=');
+        if (!index)
+        {
+            return "";
+        }
+        index += key.length()+1;
+
+        auto value_end_index = m_query_string.find_first_of('&', index);
+        if(value_end_index != std::string::npos)
+        {
+            return m_query_string.substr(index, value_end_index - index);
+        }
+        else
+        {
+            return m_query_string.substr(index);
+        }
+    }
+
     void URI::extract_and_set_bucket_id_and_object_key()
     {
         auto after_bucket_slash = m_target_string.find_first_of('/', 1);

@@ -19,8 +19,9 @@ namespace uh::cluster::rest::http
         explicit URI(const http::request_parser<http::empty_body>&);
         ~URI() = default;
 
-        std::string get_bucket_id() const;
-        std::string get_object_key() const;
+        [[nodiscard]] std::string get_bucket_id() const;
+        [[nodiscard]] std::string get_object_key() const;
+        [[nodiscard]] std::string get_query_string_value(const std::string& key) const;
 
     private:
         void extract_and_set_query_strings();

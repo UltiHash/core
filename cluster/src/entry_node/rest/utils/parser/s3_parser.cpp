@@ -10,6 +10,8 @@
 #include <entry_node/rest/http/models/abort_multi_part_upload_request.h>
 #include <entry_node/rest/http/models/delete_bucket_request.h>
 #include <entry_node/rest/http/models/delete_objects_request.h>
+#include <entry_node/rest/http/models/get_object_attributes_request.h>
+#include <entry_node/rest/http/models/list_objectsv2_request.h>
 #include <regex>
 
 namespace uh::cluster::rest::utils::parser {
@@ -33,9 +35,9 @@ namespace uh::cluster::rest::utils::parser {
         auto target = m_recv_req.get().base().target();
         auto method = m_recv_req.get().base().method();
 
+        // TODO: switch to regex for everything?
         std::regex pattern("^\\/\\w+$");
         std::regex delete_pattern("\\/[^?]+\\?delete");
-
 
         switch (method)
         {
@@ -91,6 +93,14 @@ namespace uh::cluster::rest::utils::parser {
                 if (target == "/")
                 {
                     return std::make_unique<rest::http::model::list_buckets_request>(m_recv_req);
+                }
+                else if (target.find("?attributes"))
+                {
+                    return std::make_unique<rest::http::model::get_object_attributes_request>(m_recv_req);
+                }
+                else if (target.find("/?list-type=2"))
+                {
+                    return std::make_unique<rest::http::model::list_objectsv2_request>(m_recv_req);
                 }
                 else if (!target.empty() && (target.find('?') == std::string::npos))
                 {

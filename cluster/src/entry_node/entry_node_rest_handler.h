@@ -18,6 +18,8 @@
 #include "entry_node/rest/http/models/complete_multi_part_upload_response.h"
 #include "entry_node/rest/http/models/abort_multi_part_upload_response.h"
 #include "entry_node/rest/http/models/list_buckets_response.h"
+#include "entry_node/rest/http/models/get_object_attributes_response.h"
+#include "entry_node/rest/http/models/list_objectsv2_response.h"
 #include <memory>
 
 namespace uh::cluster {
@@ -42,6 +44,7 @@ public:
 
         std::unique_ptr<http::http_response> res;
 
+        // TODO: use unordered map for the below
         auto request_name = req.get_request_name();
         if ( request_name == rest::http::http_request_type::CREATE_BUCKET )
         {
@@ -78,6 +81,14 @@ public:
         else if ( request_name == rest::http::http_request_type::DELETE_BUCKET )
         {
             res = handle_delete_bucket(req);
+        }
+        else if (request_name == rest::http::http_request_type::GET_OBJECT_ATTRIBUTES)
+        {
+            res = handle_get_object_attributes(req);
+        }
+        else if (request_name == rest::http::http_request_type::LIST_OBJECTS_V2)
+        {
+            res = handle_list_objects_v2(req);
         }
         else
         {
@@ -117,8 +128,7 @@ public:
         catch(const std::exception& e)
         {
             std::cout << e.what() << std::endl;
-            res->set_error(boost::beast::http::response<boost::beast::http::string_body>{boost::beast::http::status::internal_server_error, 11});
-            res->set_error_body(e.what());
+            res->set_error();
         }
 
         co_return std::move(res);
@@ -171,8 +181,7 @@ public:
         catch(const std::exception& e)
         {
             std::cout << e.what() << std::endl;
-            res->set_error(boost::beast::http::response<boost::beast::http::string_body>{boost::beast::http::status::internal_server_error, 11});
-            res->set_error_body(e.what());
+            res->set_error();
         }
 
         co_return std::move(res);
@@ -213,11 +222,46 @@ public:
         catch (const std::exception& e)
         {
             std::cout << e.what() << std::endl;
-            res->set_error(boost::beast::http::response<boost::beast::http::string_body>{boost::beast::http::status::internal_server_error, 11});
-            res->set_error_body(e.what());
+            res->set_error();
         }
 
         co_return std::move(res);
+    }
+
+    std::unique_ptr<http::http_response> handle_get_object_attributes (const rest::http::http_request& req)
+    {
+
+        std::unique_ptr<http::model::get_object_attributes_response> res;
+
+        try
+        {
+            res = std::make_unique<http::model::get_object_attributes_response>(req);
+        }
+        catch (const std::exception& e)
+        {
+            std::cout << e.what() << std::endl;
+            res->set_error();
+        }
+
+        return std::move(res);
+    }
+
+    std::unique_ptr<http::http_response> handle_list_objects_v2 (const rest::http::http_request& req)
+    {
+
+        std::unique_ptr<http::model::list_objectsv2_response> res;
+
+        try
+        {
+            res = std::make_unique<http::model::list_objectsv2_response>(req);
+        }
+        catch (const std::exception& e)
+        {
+            std::cout << e.what() << std::endl;
+            res->set_error();
+        }
+
+        return std::move(res);
     }
 
     std::unique_ptr<http::http_response> handle_init_mp_upload (const rest::http::http_request& req)
@@ -231,8 +275,7 @@ public:
         catch(const std::exception& e)
         {
             std::cout << e.what() << std::endl;
-            res->set_error(boost::beast::http::response<boost::beast::http::string_body>{boost::beast::http::status::internal_server_error, 11});
-            res->set_error_body(e.what());
+            res->set_error();
         }
 
         return std::move(res);
@@ -250,8 +293,7 @@ public:
         catch(const std::exception& e)
         {
             std::cout << e.what() << std::endl;
-            res->set_error(boost::beast::http::response<boost::beast::http::string_body>{boost::beast::http::status::internal_server_error, 11});
-            res->set_error_body(e.what());
+            res->set_error();
         }
 
         return std::move(res);
@@ -302,8 +344,7 @@ public:
         catch(const std::exception& e)
         {
             std::cout << e.what() << std::endl;
-            res->set_error(boost::beast::http::response<boost::beast::http::string_body>{boost::beast::http::status::internal_server_error, 11});
-            res->set_error_body(e.what());
+            res->set_error();
         }
 
         co_return std::move(res);
@@ -319,8 +360,7 @@ public:
         catch(const std::exception& e)
         {
             std::cout << e.what() << std::endl;
-            res->set_error(boost::beast::http::response<boost::beast::http::string_body>{boost::beast::http::status::internal_server_error, 11});
-            res->set_error_body(e.what());
+            res->set_error();
         }
 
         return std::move(res);
@@ -330,7 +370,7 @@ public:
     {
 
         std::unique_ptr<http::model::list_buckets_response> res;
-        res->set_error(boost::beast::http::response<boost::beast::http::string_body>{boost::beast::http::status::internal_server_error, 11});
+        res->set_error();
 
         return std::move(res);
     }
@@ -339,7 +379,7 @@ public:
     {
 
         std::unique_ptr<http::model::list_buckets_response> res;
-        res->set_error(boost::beast::http::response<boost::beast::http::string_body>{boost::beast::http::status::internal_server_error, 11});
+        res->set_error();
 
         return std::move(res);
     }
