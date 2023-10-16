@@ -37,8 +37,8 @@ namespace uh::cluster::rest::utils::parser {
         auto method = m_recv_req.get().base().method();
 
         // TODO: switch to regex for everything?
-        std::regex pattern("^\\/\\w+$");
-        std::regex delete_pattern("\\/[^?]+\\?delete");
+        std::regex pattern(R"(^\/\w+$)");
+        std::regex delete_pattern(R"(^\/\w+\?delete)");
 
         switch (method)
         {
@@ -95,11 +95,11 @@ namespace uh::cluster::rest::utils::parser {
                 {
                     return std::make_unique<rest::http::model::list_buckets_request>(m_recv_req);
                 }
-                else if (target.find("?attributes"))
+                else if (target.find("?attributes") != std::string::npos)
                 {
                     return std::make_unique<rest::http::model::get_object_attributes_request>(m_recv_req);
                 }
-                else if (target.find("/?list-type=2"))
+                else if (target.find("/?list-type=2") != std::string::npos )
                 {
                     return std::make_unique<rest::http::model::list_objectsv2_request>(m_recv_req);
                 }

@@ -5,6 +5,12 @@
 namespace uh::cluster::rest::http::model
 {
 
+    struct object
+    {
+        std::string key;
+        std::string version_id;
+    };
+
     class delete_objects_request : public http_request
     {
     public:
@@ -16,8 +22,9 @@ namespace uh::cluster::rest::http::model
 
         [[nodiscard]] std::map<std::string, std::string> get_request_specific_headers() const override;
 
-
     private:
+
+        delete_objects_request& operator = (const http::request_parser<http::empty_body>& recv_req);
 
         std::string m_mFA;
         bool m_mFAHasBeenSet = false;
@@ -25,7 +32,7 @@ namespace uh::cluster::rest::http::model
         std::string m_requestPayer;
         bool m_requestPayerHasBeenSet = false;
 
-        bool m_bypassGovernanceRetention;
+        std::string m_bypassGovernanceRetention;
         bool m_bypassGovernanceRetentionHasBeenSet = false;
 
         std::string m_expectedBucketOwner;

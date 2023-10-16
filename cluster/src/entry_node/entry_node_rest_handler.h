@@ -22,7 +22,10 @@
 #include "entry_node/rest/http/models/list_objectsv2_response.h"
 #include "entry_node/rest/http/models/delete_bucket_response.h"
 #include "entry_node/rest/http/models/delete_object_response.h"
+#include "entry_node/rest/http/models/delete_objects_response.h"
+#include "entry_node/rest/http/models/delete_objects_request.h"
 #include <memory>
+#include "entry_node/rest/utils/parser/xml_parser.h"
 
 namespace uh::cluster {
 
@@ -36,7 +39,7 @@ public:
         m_directory_nodes (directory_nodes)
     {}
 
-    coro < std::unique_ptr<http::http_response> > handle (const rest::http::http_request& req)
+    coro < std::unique_ptr<http::http_response> > handle (rest::http::http_request& req)
     {
         auto body_size = req.get_body_size();
         const auto size_mb = static_cast <double> (body_size) / static_cast <double> (1024ul * 1024ul);
@@ -87,6 +90,10 @@ public:
         else if ( request_name == rest::http::http_request_type::DELETE_OBJECT )
         {
             res = handle_delete_object(req);
+        }
+        else if ( request_name == rest::http::http_request_type::DELETE_OBJECTS )
+        {
+            res = handle_delete_objects(req);
         }
         else if (request_name == rest::http::http_request_type::GET_OBJECT_ATTRIBUTES)
         {
@@ -140,7 +147,7 @@ public:
         co_return std::move(res);
     }
 
-    coro <std::unique_ptr<http::http_response>> handle_put_object (const rest::http::http_request& req)
+    coro <std::unique_ptr<http::http_response>> handle_put_object (rest::http::http_request& req)
     {
 
         std::unique_ptr<http::model::put_object_response> res;
@@ -187,7 +194,7 @@ public:
         catch(const std::exception& e)
         {
             std::cout << e.what() << std::endl;
-            res->set_error();
+            res->set_error(boost::beast::http::response<boost::beast::http::string_body>{boost::beast::http::status::not_found, 11});
         }
 
         co_return std::move(res);
@@ -228,7 +235,7 @@ public:
         catch (const std::exception& e)
         {
             std::cout << e.what() << std::endl;
-            res->set_error();
+            res->set_error(boost::beast::http::response<boost::beast::http::string_body>{boost::beast::http::status::not_found, 11});
         }
 
         co_return std::move(res);
@@ -240,7 +247,7 @@ public:
         std::unique_ptr<http::model::get_object_attributes_response> res;
 
         res = std::make_unique<http::model::get_object_attributes_response>(req);
-        res->set_error();
+        res->set_error(boost::beast::http::response<boost::beast::http::string_body>{boost::beast::http::status::not_implemented, 11});
 
         return std::move(res);
     }
@@ -251,7 +258,7 @@ public:
         std::unique_ptr<http::model::list_objectsv2_response> res;
 
         res = std::make_unique<http::model::list_objectsv2_response>(req);
-        res->set_error();
+        res->set_error(boost::beast::http::response<boost::beast::http::string_body>{boost::beast::http::status::not_implemented, 11});
 
         return std::move(res);
     }
@@ -291,7 +298,7 @@ public:
         return std::move(res);
     }
 
-    coro<std::unique_ptr<http::http_response>> handle_complete_mp_upload (const rest::http::http_request& req)
+    coro<std::unique_ptr<http::http_response>> handle_complete_mp_upload (rest::http::http_request& req)
     {
         std::unique_ptr<http::model::complete_multi_part_upload_response> res;
         try
@@ -361,8 +368,8 @@ public:
     std::unique_ptr<http::http_response> handle_list_buckets (const rest::http::http_request& req)
     {
 
-        std::unique_ptr<http::model::list_buckets_response> res;
-        res->set_error();
+        std::unique_ptr<http::model::list_buckets_response> res = std::make_unique<http::model::list_buckets_response>(req);;
+        res->set_error(boost::beast::http::response<boost::beast::http::string_body>{boost::beast::http::status::not_implemented, 11});
 
         return std::move(res);
     }
@@ -370,8 +377,8 @@ public:
     std::unique_ptr<http::http_response> handle_delete_bucket (const rest::http::http_request& req)
     {
 
-        std::unique_ptr<http::model::delete_bucket_response> res;
-        res->set_error();
+        std::unique_ptr<http::model::delete_bucket_response> res = std::make_unique<http::model::delete_bucket_response>(req);;
+        res->set_error(boost::beast::http::response<boost::beast::http::string_body>{boost::beast::http::status::not_implemented, 11});
 
         return std::move(res);
     }
@@ -379,8 +386,37 @@ public:
     std::unique_ptr<http::http_response> handle_delete_object (const rest::http::http_request& req)
     {
 
-        std::unique_ptr<http::model::delete_object_response> res;
-        res->set_error();
+        std::unique_ptr<http::model::delete_object_response> res = std::make_unique<http::model::delete_object_response>(req);
+        res->set_error(boost::beast::http::response<boost::beast::http::string_body>{boost::beast::http::status::not_implemented, 11});
+
+        return std::move(res);
+    }
+
+    std::unique_ptr<http::http_response> handle_delete_objects (rest::http::http_request& req)
+    {
+
+        std::unique_ptr<http::model::delete_objects_response> res = std::make_unique<http::model::delete_objects_response>(req);
+
+        try
+        {
+            rest::utils::parser::xml_parser parsed_xml(req.get_body());
+
+            std::vector<rest::http::model::object> objects;
+
+            std::cout << "Parsed Elements: " << std::endl;
+            for (pugi::xml_node object = parsed_xml.get_child_product(parsed_xml.get_root_element(), "Object"); object; object = object.next_sibling("Object"))
+            {
+                std::string key = parsed_xml.get_child_value(object, "Key");
+                std::string version_id = parsed_xml.get_child_value(object, "VersionId");
+
+                std::cout << "Key: " << key << ", VersionId: " << version_id << std::endl;
+            }
+
+        }
+        catch (const std::exception& e)
+        {
+
+        }
 
         return std::move(res);
     }

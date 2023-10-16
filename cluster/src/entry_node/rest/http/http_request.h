@@ -74,7 +74,7 @@ namespace uh::cluster::rest::http
 
         virtual coro<void> read_body(tcp_stream& stream, boost::beast::flat_buffer& buffer);
 
-        [[nodiscard]] virtual inline std::string get_body() const { return m_body; }
+        [[nodiscard]] virtual inline const std::string& get_body() { return m_body; }
 
         [[nodiscard]] virtual inline std::size_t get_body_size() const { return m_body.size(); }
 

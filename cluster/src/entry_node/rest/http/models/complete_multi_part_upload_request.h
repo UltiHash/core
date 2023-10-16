@@ -18,7 +18,7 @@ namespace uh::cluster::rest::http::model
 
         [[nodiscard]] inline http_request_type get_request_name() const override { return http_request_type::COMPLETE_MULTIPART_UPLOAD; }
 
-        [[nodiscard]] std::string get_body() const override;
+        [[nodiscard]] const std::string& get_body() override;
 
         [[nodiscard]] std::size_t get_body_size() const override;
 
