@@ -156,7 +156,7 @@ struct rabin_polynomial *gen_new_polynomial(struct rabin_polynomial *tail, uint6
     struct rabin_polynomial *next=malloc(sizeof(struct rabin_polynomial));
     
     if(next == NULL) {
-        fprintf(stderr, "Could not allocate memory for rabin fingerprint record!");
+        fprintf(stderr, "Could not allocate_internal memory for rabin fingerprint record!");
         return NULL;
     }
     
@@ -268,7 +268,7 @@ struct rabin_polynomial *get_file_rabin_polys(FILE *file_to_read) {
     char *file_data=malloc(RAB_FILE_READ_BUF_SIZE);
     
     if(file_data == NULL) {
-        fprintf(stderr,"Could not allocate buffer for reading input file to rabin polynomial.\n");
+        fprintf(stderr,"Could not allocate_internal buffer for reading input file to rabin polynomial.\n");
         return NULL;
     }
     
@@ -296,7 +296,7 @@ struct rab_block_info *init_empty_block() {
     initialize_rabin_polynomial_defaults();
 	struct rab_block_info *block=malloc(sizeof(struct rab_block_info));
     if(block == NULL) {
-        fprintf(stderr,"Could not allocate rabin polynomial block, no memory left!\n");
+        fprintf(stderr,"Could not allocate_internal rabin polynomial block, no memory left!\n");
         return NULL;
     }
 
@@ -314,7 +314,7 @@ struct rab_block_info *init_empty_block() {
     block->current_window_data=malloc(sizeof(char)*rabin_sliding_window_size);
     
 	if(block->current_window_data == NULL) {
-	    fprintf(stderr,"Could not allocate buffer for sliding window data!\n");
+	    fprintf(stderr,"Could not allocate_internal buffer for sliding window data!\n");
 	    free(block);
 	    return NULL;
 	}

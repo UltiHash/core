@@ -36,6 +36,7 @@ namespace uh::cluster::rest
 
     namespace beast = boost::beast;         // from <boost/beast.hpp>
     namespace b_http = beast::http;           // from <boost/beast/http.hpp>
+
     namespace net = boost::asio;            // from <boost/asio.hpp>
     using tcp = boost::asio::ip::tcp;       // from <boost/asio/ip/tcp.hpp>
 
@@ -43,6 +44,7 @@ namespace uh::cluster::rest
             net::use_awaitable_t<>::executor_with_default<net::any_io_executor>>::other;
 
 //------------------------------------------------------------------------------
+
 
     class rest_server
     {
@@ -80,5 +82,6 @@ namespace uh::cluster::rest
 //------------------------------------------------------------------------------
 
 } // namespace uh::cluster::rest
+
 
 #endif // REST_NODE_SRC_SERVER

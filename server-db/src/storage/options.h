@@ -19,7 +19,7 @@ namespace uh::dbn::storage
         {
             case OptionsEnum::DataDirectory: return "data-directory";
             case OptionsEnum::DbStorageAlgorithm: return "db-storage-algorithm";
-            case OptionsEnum::AllocateStorage: return "allocate-storage";
+            case OptionsEnum::AllocateStorage: return "allocate_internal-storage";
             default: THROW(util::exception, "Not implemented option");
         }
     }

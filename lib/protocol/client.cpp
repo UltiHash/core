@@ -63,7 +63,7 @@ std::unique_ptr<io::device> client::read_block(const blob& hash)
 
 std::unique_ptr<allocation> client::allocate(std::size_t size)
 {
-    THROW(util::exception, "client::allocate is disabled");
+    THROW(util::exception, "client::allocate_internal is disabled");
 }
 
 // ---------------------------------------------------------------------

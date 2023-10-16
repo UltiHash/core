@@ -15,6 +15,7 @@ namespace uh::cluster {
 
     namespace http = rest::http;
 
+
 class entry_node_rest_handler {
 public:
 
@@ -30,6 +31,7 @@ public:
 
         auto body_size = req.get_body_size();
         const auto size_mb = static_cast <double> (body_size) / static_cast <double> (1024ul * 1024ul);
+
 
         std::chrono::time_point <std::chrono::steady_clock> timer;
         const auto start = std::chrono::steady_clock::now ();
@@ -108,6 +110,7 @@ public:
 
         auto m_dedup = m_dedupe_nodes.at(get_round_robin_index(m_dedupe_node_index, m_dedupe_nodes.size())).acquire_messenger();
         co_await m_dedup.get().send (DEDUPE_REQ, req.get_body());
+
         const auto h_dedup = co_await m_dedup.get().recv_header();
         auto resp = co_await m_dedup.get().recv_dedupe_response(h_dedup);
 
@@ -130,6 +133,7 @@ public:
         const auto h_dir = co_await m_dir.get().recv_header();
         if(h_dir.type == FAILURE) [[unlikely]]
         {
+
             std::string msg;
             msg.resize(h_dir.size);
             m_dir.get().register_read_buffer(msg);

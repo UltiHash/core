@@ -51,7 +51,6 @@ namespace uh::cluster::rest::utils::time
         std::string to_gmt_string(const char* formatStr) const;
         [[nodiscard]] tm convert_time_stamp_to_gmt_struct() const;
 
-
     private:
         std::chrono::system_clock::time_point m_time;
     };

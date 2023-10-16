@@ -50,6 +50,7 @@ namespace uh::cluster::rest
 
 //------------------------------------------------------------------------------
 
+
     net::awaitable<void>
     rest_server::do_session(tcp_stream stream) {
         std::cout << "connection from: " << stream.socket().remote_endpoint() << std::endl;
@@ -102,6 +103,7 @@ namespace uh::cluster::rest
                 res.body() = se.code().message() + '\n';
                 res.prepare_payload();
                 b_http::write(stream, res);
+
                 stream.socket().shutdown(tcp::socket::shutdown_send, ec);
                 throw;
             }
@@ -114,6 +116,7 @@ namespace uh::cluster::rest
             res.body() = e.what();
             res.prepare_payload();
             b_http::write(stream, res);
+
             stream.socket().shutdown(tcp::socket::shutdown_send, ec);
             throw;
         }

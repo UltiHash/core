@@ -20,7 +20,7 @@ options::options()
                 "Database chunk sorting algorithm. One of [DumpStorage | OtherStorage]")
         (optionString(OptionsEnum::AllocateStorage),
             value<size_t>()->default_value(uh::dbn::storage::storage_config::default_allocated_size),
-                "Space in bytes to allocate to this storage backend. Zero for maximum");
+                "Space in bytes to allocate_internal to this storage backend. Zero for maximum");
 }
 
 // ---------------------------------------------------------------------
