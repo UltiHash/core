@@ -125,6 +125,10 @@ struct directory_message {
     zpp::bits::optional_ptr<address> addr;
 };
 
+struct allocated_write_message {
+    address addr;
+    std::variant <std::string_view, ospan <char>> data;
+};
 
 } // end namespace uh::cluster
 

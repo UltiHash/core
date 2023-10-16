@@ -55,7 +55,6 @@ enum role: uint8_t {
 void* align_ptr (void* ptr) noexcept;
 void sync_ptr (void *ptr, std::size_t size);
 
-
 } // end namespace uh::cluster
 
 
