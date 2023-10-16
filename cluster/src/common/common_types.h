@@ -72,6 +72,10 @@ struct address {
         return sizes.size();
     }
 
+    [[nodiscard]] bool empty () const noexcept {
+        return sizes.empty();
+    }
+
     // TODO: pop_front is not really cheap right now, perhaps this can be revised
     fragment pop_front() {
         fragment frag = { {pointers[0], pointers[1]}, sizes[0]};
