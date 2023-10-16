@@ -164,7 +164,7 @@ public:
         co_return header {type, size};
     }
 
-    coro <std::pair <header, ospan <char>>> send_recv (message_types type, std::span <char> data) {
+    coro <std::pair <header, ospan <char>>> send_recv (message_types type, std::span <const char> data) {
         co_await send (type, data);
         const auto h = co_await recv_header();
         ospan <char> buf (h.size);

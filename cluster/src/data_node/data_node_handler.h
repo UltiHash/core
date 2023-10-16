@@ -38,8 +38,15 @@ public:
                 case USED_REQ:
                     co_await handle_get_used(m, message_header);
                     break;
-                case ALLOC_REQ
+                case ALLOC_REQ:
                     co_await handle_alloc (m, message_header);
+                    break;
+                case DEALLOC_REQ:
+                    co_await handle_dealloc (m, message_header);
+                    break;
+                case ALLOC_WRITE_REQ:
+                    co_await handle_alloc_write (m, message_header);
+                    break;
                 case STOP:
                     co_return;
                 default:
@@ -83,7 +90,30 @@ private:
     }
 
     coro <void> handle_alloc (messenger &m, const messenger::header& h) {
-        //
+        size_t size;
+        m.register_read_buffer(size);
+        co_await m.recv_buffers(h);
+        const auto addr = m_data_store.allocate(size);
+        std::vector <char> data;
+        zpp::bits::out {data, zpp::bits::size4b{}} (addr).or_throw();
+        co_await m.send(ALLOC_RESP, data);
+    }
+
+    coro <void> handle_dealloc (messenger &m, const messenger::header& h) {
+        std::vector <char> data (h.size);
+        m.register_read_buffer(data);
+        co_await m.recv_buffers(h);
+        address addr;
+        zpp::bits::in {data, zpp::bits::size4b{}} (addr).or_throw();
+        m_data_store.cancel_allocate(addr);
+        co_await m.send(DEALLOC_RESP, {});
+    }
+
+    coro <void> handle_alloc_write (messenger &m, const messenger::header& h) {
+        const auto msg = co_await m.recv_allocated_write(h);
+        const auto& data_ospan = std::get <ospan <char>> (msg.data);
+        m_data_store.allocated_write(msg.addr, {data_ospan.data.get(), data_ospan.size});
+        co_await m.send(DEALLOC_RESP, {});
     }
 
     uh::cluster::data_store m_data_store;
