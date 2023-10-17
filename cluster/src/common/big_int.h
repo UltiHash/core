@@ -157,6 +157,10 @@ public:
         return std::to_string(num[0]) + "_" + std::to_string(num[1]);
     }
 
+    [[nodiscard]] constexpr inline uint64_t get_high () const noexcept {
+        return num[0];
+    }
+
     [[nodiscard]] constexpr inline uint64_t get_low () const noexcept {
         return num[1];
     }

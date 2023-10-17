@@ -17,6 +17,10 @@ typedef big_int uint128_t;
 struct fragment {
     uint128_t pointer;
     size_t size {};
+
+    bool operator==(const fragment& frag) const {
+        return pointer == frag.pointer && size == frag.size;
+    }
 };
 
 struct address {
@@ -59,8 +63,31 @@ struct address {
         return {{pointers[2*i], pointers[2*i+1]}, sizes[i]};
     }
 
+    void set_fragment(int i, const fragment& frag) {
+        pointers[2*i] = frag.pointer.get_high();
+        pointers[2*i+1] = frag.pointer.get_low();
+    }
+
     [[nodiscard]] std::size_t size () const noexcept {
         return sizes.size();
+    }
+
+    [[nodiscard]] bool empty () const noexcept {
+        return sizes.empty();
+    }
+
+    // TODO: pop_front is not really cheap right now, perhaps this can be revised
+    fragment pop_front() {
+        fragment frag = { {pointers[0], pointers[1]}, sizes[0]};
+
+        pointers.erase(pointers.begin(), pointers.begin()+2);
+        sizes.erase(sizes.begin());
+
+        return frag;
+    }
+
+    [[nodiscard]] fragment first() const {
+        return {{pointers[0], pointers[1]}, sizes[0]};
     }
 
     using serialize = zpp::bits::members<2>;
@@ -109,5 +136,12 @@ struct allocated_write_message {
 
 } // end namespace uh::cluster
 
+template<> struct std::hash<uh::cluster::fragment> {
+    std::size_t operator()(const uh::cluster::fragment& frag) const {
+        return std::hash<std::uint64_t>{}(frag.pointer.get_high())
+             ^ std::hash<std::uint64_t>{}(frag.pointer.get_low())
+             ^ std::hash<std::size_t>{}(frag.size);
+    }
+};
 
 #endif //CORE_COMMON_TYPES_H
