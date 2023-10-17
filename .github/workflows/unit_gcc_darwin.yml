@@ -1,86 +1,63 @@
 name: Unit Tests (MacOS Monterey, GCC)
 
 on:
-#  push:
-#    branches: [ "master" ]
-#  pull_request:
-#    branches: [ "master" ]
-#  schedule:
-#    - cron: '0 6 * * *'
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+  schedule:
+    - cron: '0 6 * * *'
   workflow_dispatch:
 
 jobs:
-  build:
+  unit-test-darwin-gcc:
     runs-on: macos-12
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
         with:
           token: ${{ secrets.PAT }}
           submodules: recursive
 
       - name: Install dependencies from Homebrew
-        run: |
-          brew install wget openssl gcc cmake macfuse
-          ln -s /usr/local/opt/openssl/include/openssl /usr/local/include
+        run: brew install wget openssl gcc cmake macfuse
 
       - name: Cache boost
         id: cache-boost
         uses: actions/cache@v3
         with:
-          path: "/tmp/boost_1_81_0"
-          key: ${{ runner.os }}-boost_1_81_0
+          path: "/tmp/boost_1_83_0"
+          key: ${{ runner.os }}-boost_1_83_0
 
       - name: Compile Boost with gcc
         if: steps.cache-boost.outputs.cache-hit != 'true'
         run: |
-          wget -O /tmp/boost_1_81_0.tar.gz https://sourceforge.net/projects/boost/files/boost/1.81.0/boost_1_81_0.tar.gz/download
+          wget -O /tmp/boost_1_83_0.tar.gz https://sourceforge.net/projects/boost/files/boost/1.83.0/boost_1_83_0.tar.gz/download
           cd /tmp/
-          tar -xzf boost_1_81_0.tar.gz
-          cd /tmp/boost_1_81_0
+          tar -xzf boost_1_83_0.tar.gz
+          cd /tmp/boost_1_83_0
           ./bootstrap.sh --with-libraries=all --with-toolset=gcc-12
           sed '10,15d' project-config.jam > project-config.jam.custom 
-          echo "using gcc : 12.2 : /usr/local/bin/g++-12 ;" >> project-config.jam.custom
+          echo "using gcc : 12.3 : /usr/local/bin/g++-12 ;" >> project-config.jam.custom
           mv project-config.jam.custom project-config.jam
           ./b2 -j $(sysctl -n hw.logicalcpu) --target=shared,static --link=shared
 
-      #- name: Install Boost
-      #  run: |
-      #    cd /tmp/boost_1_81_0
-      #    sudo ./b2 install --target=shared,static --link=shared
-
       - name: Configure CMake
-        # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
-        # See https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html?highlight=cmake_build_type
         run: |
-          export CXXFLAGS="$CXXFLAGS -I/tmp/boost_1_81_0 -I/usr/local/opt/openssl@3/include"
-          cmake -B ${{github.workspace}}/build -DBOOST_ROOT=/tmp/boost_1_81_0 -DOPENSSL_ROOT_DIR=$(brew --prefix openssl@3) -DCMAKE_C_COMPILER=gcc-12 -DCMAKE_CXX_COMPILER=g++-12 -DCMAKE_BUILD_TYPE=Release -DBUILD_CLIENT_SHELL=ON
+          export CXXFLAGS="$CXXFLAGS -I/tmp/boost_1_83_0 -I/usr/local/opt/openssl@3/include -I/usr/local/include"
+          cmake -B ${{github.workspace}}/build -DBOOST_ROOT=/tmp/boost_1_83_0 -DOPENSSL_ROOT_DIR=$(brew --prefix openssl@3) -DCMAKE_C_COMPILER=gcc-12 -DCMAKE_CXX_COMPILER=g++-12 -DCMAKE_BUILD_TYPE=Release -DBUILD_CLUSTER=ON
 
       - name: Build
         # Build your program with the given configuration
-        run: cmake --build ${{github.workspace}}/build --config Debug --parallel $(sysctl -n hw.logicalcpu)
+        run: cmake --build ${{github.workspace}}/build --config Release --parallel $(sysctl -n hw.logicalcpu)
 
       - name: Test
         working-directory: ${{github.workspace}}/build
-        # Execute tests defined by the CMake configuration.
-        # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
-        run: ctest -C Debug --output-on-failure
+        run: ctest -C Release --output-on-failure
 
-#      - name: Upload uh-data-node
-#        uses: actions/upload-artifact@v3
-#        with:
-#          name: uh-data-node
-#          path: ${{github.workspace}}/build/server-db/uh-data-node
-#
-#      - name: Upload uh-agency-node
-#        uses: actions/upload-artifact@v3
-#        with:
-#          name: uh-agency-node
-#          path: ${{github.workspace}}/build/server-agency/uh-agency-node
-
-      - name: Upload uh-cli
+      - name: Upload uh-cluster
         uses: actions/upload-artifact@v3
         with:
-          name: uh-cli
-          path: ${{github.workspace}}/build/client-shell/uh-cli
+          name: uh-cluster
+          path: ${{github.workspace}}/build/cluster/uh-cluster
 

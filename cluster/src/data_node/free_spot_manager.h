@@ -9,6 +9,7 @@
 #include <fstream>
 #include <optional>
 #include <cstring>
+#include <forward_list>
 #include "common/common.h"
 
 namespace uh::cluster {
@@ -17,6 +18,10 @@ class free_spot_manager {
 public:
 
     explicit free_spot_manager (std::filesystem::path hole_log);
+
+    void note_free_spot (uint128_t pointer, std::size_t size);
+
+    void push_noted_free_spots ();
 
     void push_free_spot (uint128_t pointer, std::size_t size);
 
@@ -48,6 +53,7 @@ private:
     uint128_t m_popped_size {};
     long m_start_pos {};
     constexpr static long ELEMENT_SIZE = 3 * sizeof (unsigned long);
+    std::forward_list <std::pair <uint128_t, size_t>> m_noted_free_spots;
 };
 
 } // end namespace uh::cluster

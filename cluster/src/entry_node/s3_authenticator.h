@@ -11,7 +11,6 @@ namespace uh::cluster {
     {
     private:
         parsed_request_wrapper& m_parsed_request;
-        const http::request_parser<http::string_body>& m_received_request;
 
         std::string m_algorithm {};
         std::string m_access_key {};
@@ -19,14 +18,16 @@ namespace uh::cluster {
         std::string m_region {};
         std::string m_service {};
 
-        std::string m_secret_key = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY";
+        std::string m_secret_key = "Q14P/eO1FZM0pEQf7v6zNszF91CjGwVMMk4lp04B";
 
         std::set<std::string> m_signed_headers {};
         std::string m_signature {};
 
-    public:
-        s3_authenticator(const http::request_parser<http::string_body>& received_request,
-                         parsed_request_wrapper& parsed_request);
+        std::string
+        uri_encode() const;
+
+        std::string
+        trim() const;
 
         [[nodiscard]] std::string
         get_canonical_uri() const;
@@ -60,6 +61,9 @@ namespace uh::cluster {
 
         [[nodiscard]] std::string
         hmac_sha_256(const std::string& payload, const std::string& signing_key) const;
+
+    public:
+        s3_authenticator(parsed_request_wrapper& parsed_request);
 
         void
         authenticate() const;

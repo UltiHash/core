@@ -18,6 +18,10 @@ namespace uh::cluster {
         unknown = 0,
         bucket_id,
         object_key,
+        amz_sdk_invocation_id,
+        amz_sdk_request,
+        x_amz_date,
+        x_amz_security_token,
         x_amz_acl,
         x_amz_grant_full_control,
         x_amz_grant_read,
@@ -54,12 +58,15 @@ namespace uh::cluster {
         date,
         server,
         expect,
+        post,
         put,
         get,
         delete_,
         cache_control,
         content_disposition,
         content_encoding,
+        transfer_encoding,
+        accept_encoding,
         content_language,
         content_length,
         content_md5,
@@ -79,6 +86,10 @@ namespace uh::cluster {
     {
         not_initialized = 0,
         put_object,
+        init_multi_part,
+        multi_part_upload,
+        close_multi_part,
+        delete_multi_part_upload,
         get_object,
         get_object_information,
         copy_object,
@@ -93,11 +104,16 @@ namespace uh::cluster {
     struct parsed_request_wrapper
     {
         enum http_fields verb;
-        std::unordered_multimap <s3_fields, std::string_view> s3_parsed_fields;
+        // TODO: make it multimap or at least combine the multiple header values into one
+        std::unordered_map <s3_fields, std::string_view> s3_parsed_fields;
+        std::unordered_map < s3_fields, std::string_view > s3_amz_only;
         std::unordered_map <http_fields, std::string_view> http_parsed_fields;
         s3_req_type req_type = not_initialized;
         std::string bucket_id;
         std::string object_key;
+        std::string upload_id;
+        uint16_t part_number;
+        std::string query_string;
         std::string_view body;
     };
 
@@ -112,21 +128,21 @@ namespace uh::cluster {
          * class member variable */
         const std::unordered_map <s3_req_type, std::set<s3_fields>>& m_s3_vfields;
         const std::unordered_map <s3_req_type, std::set<http_fields>>& m_http_vfields;
-        const std::set<http_fields> m_http_common_fields = {http_fields::host, http_fields::user_agent, http_fields::http_accept, http_fields::connection, http_fields::date, http_fields::server, http_fields::authorization, http_fields::expect};
+        const std::set<http_fields> m_http_common_fields = { http_fields::transfer_encoding, http_fields::accept_encoding, http_fields::host, http_fields::user_agent, http_fields::http_accept, http_fields::connection, http_fields::date, http_fields::server, http_fields::authorization, http_fields::expect};
 
-        const http::request_parser<http::string_body>& m_recv_req;
+        const http::request_parser<http::empty_body>& m_recv_req;
         parsed_request_wrapper m_parsed_req_wrapper;
         std::string_view m_target;
 
     public:
         explicit s3_parser
-        (const http::request_parser<http::string_body>& recv_req);
+        (const http::request_parser<http::empty_body>& recv_req);
 
         parsed_request_wrapper&
         parse();
 
         s3_req_type
-        get_type() const;
+        get_type();
 
         void
         sanitizer();

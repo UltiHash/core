@@ -8,6 +8,7 @@
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/awaitable.hpp>
 #include <list>
+#include <common/awaitable_future.h>
 
 
 namespace uh::cluster {
@@ -145,10 +146,8 @@ public:
                 {data.data(), data.size()}
         };
 
-        //boost::asio::write (m_socket, buffers);
         co_await boost::asio::async_write (m_socket, buffers, boost::asio::as_tuple(boost::asio::use_awaitable));
         co_return;
-
     }
 
     coro <header> recv (std::span <char> buffer) {
@@ -163,6 +162,15 @@ public:
         co_await boost::asio::async_read (m_socket, buffers, boost::asio::as_tuple(boost::asio::use_awaitable));
 
         co_return header {type, size};
+    }
+
+    coro <std::pair <header, ospan <char>>> send_recv (message_types type, std::span <const char> data) {
+        co_await send (type, data);
+        const auto h = co_await recv_header();
+        ospan <char> buf (h.size);
+        register_read_buffer(buf);
+        co_await recv_buffers(h);
+        co_return std::move (std::pair {h, std::move (buf)});
     }
 
     void clear_buffers () {

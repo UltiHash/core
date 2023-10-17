@@ -1,19 +1,20 @@
-
 #include "rest_server.h"
-#include "s3_parser.h"
-#include "s3_authenticator.h"
+#include "rest/utils/parser/s3_parser.h"
+#include <fstream>
+#include <filesystem>
+#include "entry_node/rest/utils/string/string_utils.h"
 
-namespace uh::cluster
+namespace uh::cluster::rest
 {
 
 //------------------------------------------------------------------------------
 
     rest_server::rest_server(server_config config, std::vector <client>& dedupe_nodes, std::vector <client>& directory_nodes) :
         m_config(config), m_ioc(std::make_shared <boost::asio::io_context>(static_cast<int>(m_config.threads))),
+        m_ssl(boost::asio::ssl::context::tlsv12_client),
         m_thread_container(m_config.threads-1),
         m_handler (dedupe_nodes, directory_nodes)
     {
-        // spawn a coroutine
         boost::asio::co_spawn(*m_ioc,
                               do_listen(tcp::endpoint{m_server_address, m_config.port}),
                               [](const std::exception_ptr& e)
@@ -49,77 +50,78 @@ namespace uh::cluster
 
 //------------------------------------------------------------------------------
 
+
     net::awaitable<void>
     rest_server::do_session(tcp_stream stream) {
         std::cout << "connection from: " << stream.socket().remote_endpoint() << std::endl;
 
-        // This buffer is required to persist across reads
-        beast::flat_buffer buffer;
         beast::error_code ec;
 
-        try {
-            for (;;) {
+        try
+        {
+            for (;;)
+            {
                 stream.expires_after(std::chrono::seconds(10000));
+                beast::flat_buffer buffer;
 
-                http::request_parser<http::string_body> received_request;
+                // read header
+                b_http::request_parser<b_http::empty_body> received_request;
                 received_request.body_limit((std::numeric_limits<std::uint64_t>::max)());
-                co_await http::async_read(stream, buffer, received_request, net::use_awaitable);
 
-                // JUAN added
-                std::cout << received_request.get().base() << std::endl;
+                co_await b_http::async_read_header(stream, buffer, received_request, net::use_awaitable);
 
+                // parse
+                rest::utils::parser::s3_parser s3_parser(received_request, m_uomap_multipart);
+                auto s3_request = s3_parser.parse();
 
-                s3_parser s3_parser(received_request);
-                auto parsed_request = s3_parser.parse();
+                // read body
+                co_await s3_request->read_body(stream, buffer);
 
-                //JUAN commented out
-                //s3_authenticator s3_authenticate(received_request, parsed_request);
-                //s3_authenticate.authenticate();
+                // authenticate
 
+                // handle
+                auto s3_res = co_await m_handler.handle(*s3_request);
 
-                co_await m_handler.handle (parsed_request);
+                // send response
+                co_await b_http::async_write(stream, s3_res.get_underlying_object(), net::use_awaitable);
 
-                bool keep_alive = received_request.keep_alive();
-                if(! keep_alive)
+                if(! received_request.keep_alive() )
                 {
                     break;
                 }
             }
         }
-        catch (boost::system::system_error &se) {
-            if (se.code() != http::error::end_of_stream) {
-                // Send a response about the error and shut down
-                http::response<http::string_body> res{http::status::bad_request, 11};
-                res.set(http::field::server, BOOST_BEAST_VERSION_STRING);
-                res.set(http::field::content_type, "text/html");
+            // TODO: don't send all the info to the user on throw, and also we need to send appropriate error code
+            // like 401 on authorization failed and not 400 which is a bad request
+        catch (boost::system::system_error &se)
+        {
+            if (se.code() != b_http::error::end_of_stream)
+            {
+                b_http::response<b_http::string_body> res{b_http::status::bad_request, 11};
+                res.set(b_http::field::server, "UltiHash");
+                res.set(b_http::field::content_type, "text/html");
                 res.body() = se.code().message() + '\n';
                 res.prepare_payload();
+                b_http::write(stream, res);
 
-                // TODO: Should this write also be async? If so how to use it with coroutine
-                http::write(stream, res);
                 stream.socket().shutdown(tcp::socket::shutdown_send, ec);
                 throw;
             }
         }
         catch (const std::exception& e)
         {
-            // Send a response about the error and shut down
-            http::response<http::string_body> res{http::status::bad_request, 11};
-            res.set(http::field::server, BOOST_BEAST_VERSION_STRING);
-            res.set(http::field::content_type, "text/html");
+            b_http::response<b_http::string_body> res{b_http::status::bad_request, 11};
+            res.set(b_http::field::server, "UltiHash");
+            res.set(b_http::field::content_type, "text/html");
             res.body() = e.what();
             res.prepare_payload();
+            b_http::write(stream, res);
 
-            // TODO: Should this write also be async? If so how to use it with coroutine
-            http::write(stream, res);
             stream.socket().shutdown(tcp::socket::shutdown_send, ec);
             throw;
         }
 
         stream.socket().shutdown(tcp::socket::shutdown_send, ec);
-
-        // At this point the connection is closed gracefully
-        // we do not handle any error code because at this point the connection is closed
     }
 
 //------------------------------------------------------------------------------
@@ -127,8 +129,11 @@ namespace uh::cluster
     net::awaitable<void>
     rest_server::do_listen(tcp::endpoint endpoint)
     {
-        auto acceptor = boost::asio::use_awaitable_t<boost::asio::any_io_executor>::as_default_on(tcp::acceptor(co_await net::this_coro::executor));
+        // TODO : implement ssl
+//        m_ssl.use_certificate_chain_file(config.tls_chain);
+//        m_ssl.use_private_key_file(config.tls_pkey, ssl::context::pem);
 
+        auto acceptor = boost::asio::use_awaitable_t<boost::asio::any_io_executor>::as_default_on(tcp::acceptor(co_await net::this_coro::executor));
         acceptor.open(endpoint.protocol());
         acceptor.set_option(net::socket_base::reuse_address(true));
 
@@ -170,7 +175,8 @@ namespace uh::cluster
 //------------------------------------------------------------------------------
 
     rest_server::~rest_server() {
-        for (auto& thread: m_thread_container) {
+        for (auto& thread: m_thread_container)
+        {
             thread.join();
         }
     }

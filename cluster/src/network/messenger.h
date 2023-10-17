@@ -6,7 +6,6 @@
 #define CORE_MESSENGER_H
 
 #include "messenger_core.h"
-#include "entry_node/s3_parser.h"
 #include <third-party/zpp_bits/zpp_bits.h>
 
 namespace uh::cluster {
@@ -49,6 +48,32 @@ namespace uh::cluster {
             co_return std::pair {message_header, std::move (dedupe_resp)};
         }
 
+        coro <directory_message> recv_directory_message (const header& message_header) {
+            ospan <char> data (message_header.size);
+            register_read_buffer(data);
+            co_await recv_buffers(message_header);
+            directory_message req;
+            zpp::bits::in{std::span <char> {data.data.get(), data.size}, zpp::bits::size4b{}}(req).or_throw();
+            co_return std::move (req);
+        }
+
+        coro <allocated_write_message> recv_allocated_write (const header& message_header) {
+
+            auto addr = co_await recv_address (message_header);
+            co_await throw_if_failure(addr.first);
+            const auto header = co_await recv_header();
+            auto resp = allocated_write_message {.data = ospan<char> (header.size)};
+            const auto& resp_data = std::get <ospan <char>> (resp.data);
+            co_await recv({resp_data.data.get(), resp_data.size});
+            resp.addr = std::move (addr.second);
+            co_return std::move (resp);
+        }
+
+        coro <void> send_allocated_write (const message_types type, const allocated_write_message& msg) {
+            co_await send_address(type, msg.addr);
+            co_await send (type, std::get <std::string_view> (msg.data));
+        }
+
         coro <void> send_address (const message_types type, const address& addr) {
             register_write_buffer (addr.pointers);
             register_write_buffer(addr.sizes);
@@ -73,22 +98,19 @@ namespace uh::cluster {
             co_await send_buffers(type);
         }
 
-        coro <void> send_directory_request (const message_types type, const directory_request& dir_req) {
+        coro <void> send_directory_message (const message_types type, const directory_message& dir_req) {
             std::vector<char> data;
-            zpp::bits::out{data}(dir_req).or_throw();
+            zpp::bits::out{data, zpp::bits::size4b{}}(dir_req).or_throw();
             register_write_buffer(data);
             co_await send_buffers(type);
         }
 
-        coro <directory_request> recv_directory_request (const header& message_header) {
-            std::vector<char> data;
-            data.resize(message_header.size);
-            register_read_buffer(data);
-            co_await recv_buffers(message_header);
-
-            directory_request req;
-            zpp::bits::in{data}(req).or_throw();
-            co_return std::move (req);
+        coro <void> throw_if_failure (messenger::header h) {
+            std::string msg;
+            msg.resize(h.size);
+            register_read_buffer(msg);
+            co_await recv_buffers(h);
+            throw std::runtime_error ("Received failure with message: " + msg);
         }
 
     };

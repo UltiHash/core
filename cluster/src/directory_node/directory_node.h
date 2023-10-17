@@ -20,7 +20,7 @@ public:
             m_id (id),
             m_job_name ("directory_" + std::to_string (id)),
             m_server (m_cluster_map.m_cluster_conf.directory_node_conf.server_conf,
-                      std::make_unique <directory_handler>()),
+                      std::make_unique <directory_handler>(m_cluster_map.m_cluster_conf.directory_node_conf.directory_conf, m_storage)),
             m_storage (m_cluster_map,
                        m_cluster_map.m_cluster_conf.directory_node_conf.data_node_connection_count,
                        m_server.get_executor())

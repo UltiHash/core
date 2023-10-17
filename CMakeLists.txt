@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.1)
 project(Core)
 
+
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/lib)
 
 option(BUILD_SERVER_DB      "Build the server-db component"     OFF)
@@ -56,3 +57,47 @@ if(BUILD_CLUSTER)
 endif()
 
 enable_testing()
+
+set(CPACK_PACKAGE_NAME "ultihash")
+set(CPACK_PACKAGE_VENDOR "UltiHash, Inc.")
+
+set(CPACK_VERBATIM_VARIABLES YES)
+
+set(CPACK_PACKAGE_INSTALL_DIRECTORY ${CPACK_PACKAGE_NAME})
+SET(CPACK_OUTPUT_FILE_PREFIX "${CMAKE_SOURCE_DIR}/packaging")
+
+set(CPACK_PACKAGING_INSTALL_PREFIX "/usr/")
+
+set(CPACK_PACKAGE_VERSION_MAJOR 0)
+set(CPACK_PACKAGE_VERSION_MINOR 2)
+set(CPACK_PACKAGE_VERSION_PATCH 0)
+
+set(CPACK_PACKAGE_CONTACT "hello@ultihash.io")
+set(CPACK_DEBIAN_PACKAGE_MAINTAINER "UltiHash Inc. <hello@ultihash.io>")
+
+set(CPACK_DEBIAN_PACKAGE_SHLIBDEPS YES)
+set(CPACK_STRIP_FILES YES)
+set(CPACK_DEBIAN_PACKAGE_SECTION database)
+set(CPACK_INSTALL_DEFAULT_DIRECTORY_PERMISSIONS
+        OWNER_READ OWNER_WRITE OWNER_EXECUTE
+        GROUP_READ GROUP_EXECUTE
+        WORLD_READ WORLD_EXECUTE
+)
+
+#set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE")
+#set(CPACK_RESOURCE_FILE_README "${CMAKE_CURRENT_SOURCE_DIR}/README.md")
+
+set(CPACK_DEBIAN_FILE_NAME DEB-DEFAULT)
+set(CPACK_COMPONENTS_GROUPING ONE_PER_GROUP)
+set(CPACK_DEB_COMPONENT_INSTALL YES)
+
+set(CPACK_DEBIAN_UH-CLUSTER_PACKAGE_NAME "ultihash-cluster")
+set(CPACK_DEBIAN_UH-CLUSTER_DESCRIPTION "Scale-out storage cluster  for the UltiHash high-performance object storage")
+
+set(CPACK_DEBIAN_UH-CLI_PACKAGE_NAME "ultihash-cli")
+set(CPACK_DEBIAN_UH-CLI_DESCRIPTION "CLI for the UltiHash high-performance object storage (single node)")
+
+set(CPACK_DEBIAN_UH-DATA-NODE_PACKAGE_NAME "ultihash-data-node")
+set(CPACK_DEBIAN_UH-DATA-NODE_DESCRIPTION "Single-node data node server for the UltiHash high-performance object storage")
+
+include(CPack)
