@@ -1,0 +1,42 @@
+#ifndef PROTOCOL_REQUEST_INTERFACE_H
+#define PROTOCOL_REQUEST_INTERFACE_H
+
+#include "protocol.h"
+#include "allocation.h"
+#include "messages.h"
+
+namespace uh::protocol
+{
+
+// ---------------------------------------------------------------------
+
+struct request_interface
+{
+
+    virtual uh::protocol::server_information on_hello(const std::string& client_version) = 0;
+
+    virtual write_chunks::response on_write_chunks (const write_chunks::request &) = 0;
+
+    virtual read_chunks::response on_read_chunks (const read_chunks::request &) = 0;
+
+    virtual write_key_value::response on_write_kv (const write_key_value::request &) = 0;
+
+    virtual read_key_value::response on_read_kv (const read_key_value::request &) = 0;
+
+    // default implementations
+
+    virtual std::size_t on_free_space() { return 0; }
+
+    virtual void on_quit(const std::string &reason) { };
+
+    virtual void on_client_statistics(uh::protocol::client_statistics::request& client_stat) {};
+
+    virtual ~request_interface() = default;
+
+};
+
+// ---------------------------------------------------------------------
+
+} // namespace uh::protocol
+
+#endif
