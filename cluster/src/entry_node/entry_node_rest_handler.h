@@ -306,6 +306,7 @@ public:
         {
             res = std::make_unique<http::model::complete_multi_part_upload_response>(req);
             auto body_size = req.get_body_size();
+
             const auto size_mb = static_cast <double> (body_size) / static_cast <double> (1024ul * 1024ul);
 
             auto m_dedup = m_dedupe_nodes.at(get_round_robin_index(m_dedupe_node_index, m_dedupe_nodes.size())).acquire_messenger();
@@ -396,10 +397,11 @@ public:
     std::unique_ptr<http::http_response> handle_delete_objects (rest::http::http_request& req)
     {
 
-        std::unique_ptr<http::model::delete_objects_response> res = std::make_unique<http::model::delete_objects_response>(req);
+        std::unique_ptr<http::model::delete_objects_response> res;
 
         try
         {
+            res = std::make_unique<http::model::delete_objects_response>(req);
             rest::utils::parser::xml_parser parsed_xml(req.get_body());
 
             std::vector<rest::http::model::object> objects_container;
@@ -413,7 +415,7 @@ public:
         }
         catch (const std::exception& e)
         {
-
+            res->set_error(boost::beast::http::response<boost::beast::http::string_body>{boost::beast::http::status::not_implemented, 11});
         }
 
         return std::move(res);

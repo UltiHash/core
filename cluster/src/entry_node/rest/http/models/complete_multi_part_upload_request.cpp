@@ -24,14 +24,17 @@ namespace uh::cluster::rest::http::model
 
     const std::string& complete_multi_part_upload_request::get_body()
     {
-        auto iterator = m_uomap_multipart.find(m_upload_id);
-        if (iterator == m_uomap_multipart.end())
-            throw std::runtime_error("Invalid Upload ID");
+        if (m_completed_body.empty())
+        {
+            auto iterator = m_uomap_multipart.find(m_upload_id);
+            if (iterator == m_uomap_multipart.end())
+                throw std::runtime_error("Invalid Upload ID");
 
-        for (const auto& part : *iterator->second)
-            m_body += part.second;
+            for (const auto& part : *iterator->second)
+                m_completed_body += part.second;
+        }
 
-        return m_body;
+        return m_completed_body;
     }
 
     std::size_t complete_multi_part_upload_request::get_body_size() const
