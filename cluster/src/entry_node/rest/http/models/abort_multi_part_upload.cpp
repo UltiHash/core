@@ -15,6 +15,7 @@ namespace uh::cluster::rest::http::model
 
     std::map<std::string, std::string> abort_multi_part_upload::get_request_specific_headers() const
     {
+        return {};
     }
 
 } // uh::cluster::rest::http::model
