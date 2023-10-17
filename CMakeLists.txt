@@ -1,31 +1,18 @@
-cmake_minimum_required(VERSION 3.1)
-project(Core)
+cmake_minimum_required(VERSION 3.20.0)
 
-
+add_subdirectory(lib)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/lib)
 
-option(BUILD_SERVER_DB      "Build the server-db component"     OFF)
-option(BUILD_SERVER_AGENCY  "Build the server-agency component" OFF)
-option(BUILD_CLIENT_SHELL   "Build the client-shell component"  OFF)
-option(BUILD_CLIENT_FUSE    "Build the client-fuse component"  OFF)
-option(BUILD_TOOLS          "Build the tools component"  OFF)
-option(BUILD_CLUSTER        "Build the cluster component"  OFF)
+project(uh-cluster VERSION 0.1.0)
+message(STATUS "Building ${PROJECT_NAME}...")
 
-
-set(Boost_USE_STATIC_LIBS ON)
+set(CMAKE_CXX_STANDARD 20)
 add_compile_options(-fPIC)
 
+set(Boost_USE_STATIC_LIBS ON)
+find_package(Boost 1.80 COMPONENTS unit_test_framework REQUIRED)
+find_package(OpenSSL REQUIRED)
 
-if((NOT BUILD_SERVER_DB) AND (NOT BUILD_SERVER_AGENCY) AND (NOT BUILD_CLIENT_SHELL) AND (NOT BUILD_CLUSTER) AND (NOT BUILD_CLIENT_FUSE) AND (NOT BUILD_TOOLS))
-    SET(BUILD_SERVER_DB ON CACHE BOOL       "Building the server-db component" FORCE)
-    SET(BUILD_SERVER_AGENCY ON CACHE BOOL   "Building the server-agency component" FORCE)
-    SET(BUILD_CLIENT_SHELL ON CACHE BOOL    "Building the server-client component" FORCE)
-    SET(BUILD_CLIENT_FUSE ON CACHE BOOL     "Building the server-fuse component" FORCE)
-    SET(BUILD_TOOLS ON CACHE BOOL           "Building the tools component" FORCE)
-    SET(BUILD_CLUSTER ON CACHE BOOL         "Building the cluster component" FORCE)
-endif()
-
-option(USE_LICENSE_SPRING "Use the LicenseSpring licensing backend" OFF)
 
 find_package(Git REQUIRED)
 if(GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/.git")
@@ -50,13 +37,28 @@ if(GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/.git")
 
 endif()
 
-add_subdirectory(lib)
+set(${PROJECT_NAME}_INTERNAL_DEPS uhLibLogging uhLibUtil zpp_bits)
+set(${PROJECT_NAME}_LINK_LIBRARIES ${Boost_LIBRARIES} ${${PROJECT_NAME}_INTERNAL_DEPS} ${OPENSSL_LIBRARIES})
+set(${PROJECT_NAME}_INCLUDE_DIRS ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/src ${CMAKE_CURRENT_SOURCE_DIR}/include ${Boost_INCLUDE_DIRS} ${${PROJECT_NAME}_INTERNAL_DEPS})
 
-if(BUILD_CLUSTER)
-    add_subdirectory(cluster)
-endif()
+file(GLOB_RECURSE HEADER_FILE_LIST ${CMAKE_CURRENT_SOURCE_DIR}/src/*.h)
+file(GLOB_RECURSE SOURCE_FILE_LIST ${CMAKE_CURRENT_SOURCE_DIR}/src/*.cpp)
+list(REMOVE_ITEM SOURCE_FILE_LIST ${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp)
 
+add_library(${PROJECT_NAME}_OBJECTS OBJECT ${HEADER_FILE_LIST} ${SOURCE_FILE_LIST})
+target_include_directories(${PROJECT_NAME}_OBJECTS PUBLIC ${${PROJECT_NAME}_INCLUDE_DIRS})
+target_link_libraries(${PROJECT_NAME}_OBJECTS PUBLIC ${${PROJECT_NAME}_LINK_LIBRARIES})
+
+add_executable(${PROJECT_NAME} ${CMAKE_CURRENT_SOURCE_DIR}/main.cpp)
+target_link_libraries(${PROJECT_NAME} ${PROJECT_NAME}_OBJECTS ${${PROJECT_NAME}_LINK_LIBRARIES})
+target_include_directories(${PROJECT_NAME} PRIVATE ${${PROJECT_NAME}_INCLUDE_DIRS})
+
+# Testing
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/testing/CMakeLists.txt)
 enable_testing()
+
+# Packaging
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/packaging/CMakeLists.txt)
 
 set(CPACK_PACKAGE_NAME "ultihash")
 set(CPACK_PACKAGE_VENDOR "UltiHash, Inc.")
@@ -84,20 +86,11 @@ set(CPACK_INSTALL_DEFAULT_DIRECTORY_PERMISSIONS
         WORLD_READ WORLD_EXECUTE
 )
 
-#set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE")
-#set(CPACK_RESOURCE_FILE_README "${CMAKE_CURRENT_SOURCE_DIR}/README.md")
-
 set(CPACK_DEBIAN_FILE_NAME DEB-DEFAULT)
 set(CPACK_COMPONENTS_GROUPING ONE_PER_GROUP)
 set(CPACK_DEB_COMPONENT_INSTALL YES)
 
 set(CPACK_DEBIAN_UH-CLUSTER_PACKAGE_NAME "ultihash-cluster")
 set(CPACK_DEBIAN_UH-CLUSTER_DESCRIPTION "Scale-out storage cluster  for the UltiHash high-performance object storage")
-
-set(CPACK_DEBIAN_UH-CLI_PACKAGE_NAME "ultihash-cli")
-set(CPACK_DEBIAN_UH-CLI_DESCRIPTION "CLI for the UltiHash high-performance object storage (single node)")
-
-set(CPACK_DEBIAN_UH-DATA-NODE_PACKAGE_NAME "ultihash-data-node")
-set(CPACK_DEBIAN_UH-DATA-NODE_DESCRIPTION "Single-node data node server for the UltiHash high-performance object storage")
 
 include(CPack)

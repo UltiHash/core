@@ -6,16 +6,17 @@
 #define CORE_DEDUPE_WRITE_CACHE_H
 
 #include "common/common_types.h"
+#include "dedupe_node/global_data.h"
 
 namespace uh::cluster {
 
     class dedupe_write_cache {
     //todo: make sure allocated storage on the data node is freed in case of an exception -> avoid storage data leaks
     public:
-        dedupe_write_cache(std::string_view &integration_data, global_data &storage, size_t num_nodes, dedupe_config& config) :
-        m_integration_data(integration_data), m_storage(storage), m_num_nodes(num_nodes), m_dedupe_conf(config) {
+        dedupe_write_cache(std::string_view &integration_data, global_data &storage, dedupe_config& config) :
+        m_integration_data(integration_data), m_storage(storage), m_dedupe_conf(config) {
             //todo: m_cache_size can now divert from
-            m_cache_size = std::lcm(std::min(m_num_nodes * m_cache_size_per_node, m_integration_data.size()), m_num_nodes);
+            m_cache_size = std::lcm(std::min(m_storage.get_data_node_count() * m_cache_size_per_node, m_integration_data.size()), m_storage.get_data_node_count());
             m_cache_data = static_cast<char *>(std::malloc(m_cache_size));
             m_cache_data_ptr = m_cache_data;
         }
@@ -124,7 +125,7 @@ namespace uh::cluster {
 
             //clear internal buffer, resize if necessary and reset all bookkeepers
             std::memset(m_cache_data, 0, m_cache_size);
-            std::size_t new_cache_size = std::lcm(std::min(m_num_nodes * m_cache_size_per_node, m_integration_data.size()), m_num_nodes);
+            std::size_t new_cache_size = std::lcm(std::min(m_storage.get_data_node_count() * m_cache_size_per_node, m_integration_data.size()), m_storage.get_data_node_count());
             if(m_cache_size != new_cache_size) [[unlikely]] {
                 std::free(m_cache_data);
                 m_cache_data = static_cast<char *>(std::malloc(new_cache_size));
@@ -147,7 +148,6 @@ namespace uh::cluster {
 
         std::string_view& m_integration_data;
         global_data& m_storage;
-        std::size_t m_num_nodes;
         dedupe_config& m_dedupe_conf;
 
         address m_cache_fragments;

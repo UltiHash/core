@@ -8,7 +8,11 @@ set(Boost_USE_STATIC_LIBS ON)
 #testing needs to be enabled to 'collect' tests of all subdirectories into top-level cmake project
 enable_testing()
 
-
+add_subdirectory(io)
 add_subdirectory(logging)
-add_subdirectory(third-party)
+add_subdirectory(net)
+add_subdirectory(protocol)
+add_subdirectory(serialization)
 add_subdirectory(test)
+add_subdirectory(third-party)
+add_subdirectory(util)
