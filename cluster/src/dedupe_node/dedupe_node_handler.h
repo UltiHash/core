@@ -8,6 +8,7 @@
 #include <utility>
 
 #include "common/protocol_handler.h"
+#include "dedupe_write_cache.h"
 
 namespace uh::cluster {
 
@@ -50,6 +51,7 @@ private:
 
         dedupe_response result {.addr = address {}};
         auto integration_data = data;
+        dedupe_write_cache cache(integration_data.size(), m_storage.get_data_node_count(), m_storage, m_dedupe_conf);
         while (!integration_data.empty()) {
             const auto f = co_await m_fragment_set.find(integration_data);
             if (f.match) {
@@ -79,7 +81,7 @@ private:
             if (max_common_prefix < m_dedupe_conf.min_fragment_size or integration_data.size() - max_common_prefix < m_dedupe_conf.min_fragment_size) {
 
                 const auto size = std::min (integration_data.size(), m_dedupe_conf.max_fragment_size);
-                const auto addr = co_await store_data(integration_data.substr(0, size));
+                const auto addr = std::move(co_await cache.write(integration_data.substr(0, size)));
                 m_fragment_set.add_pointer (integration_data.substr(0, addr.sizes.front()), {addr.pointers[0], addr.pointers[1]}, f.index);
 
                 result.addr.append_address(addr);
@@ -100,6 +102,7 @@ private:
 
         }
 
+        co_await cache.flush();
         co_await m_storage.sync(result.addr);
         co_return std::move (result);
     }

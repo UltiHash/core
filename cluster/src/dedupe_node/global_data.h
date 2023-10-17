@@ -293,6 +293,10 @@ std::unordered_map <uint128_t, address> sync_cache () {
         co_return used;
     }
 
+    [[nodiscard]] std::size_t get_data_node_count() {
+        return m_cluster_map.m_roles.at(DATA_NODE).size();
+    }
+
     coro <void> stop () {
         for (auto& dn: m_data_node_offsets) {
             auto m = dn.second->acquire_messenger();
