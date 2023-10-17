@@ -1,4 +1,4 @@
-name: Docker Image CI (client-shell)
+name: Docker Image CI (server-db)
 
 on:
   schedule:
@@ -19,6 +19,6 @@ jobs:
         username: plauth
         password: ${{ secrets.PAT }}
     - name: Build the Docker image
-      run: docker build --file Dockerfile --build-arg CMAKE_OPTION=BUILD_CLIENT_SHELL --build-arg SRC_PATH=client-shell --build-arg TARGET=uh-cli --tag ghcr.io/ultihash/client-shell:$(printf '%(%Y%m%d)T' -1) .
+      run: docker build --file Dockerfile --tag ghcr.io/ultihash/cluster:$(printf '%(%Y%m%d)T' -1) .
     - name: Push the Docker image
-      run: docker push ghcr.io/ultihash/client-shell:$(printf '%(%Y%m%d)T' -1)
+      run: docker push ghcr.io/ultihash/cluster:$(printf '%(%Y%m%d)T' -1)
