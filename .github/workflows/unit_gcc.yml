@@ -46,24 +46,44 @@ jobs:
         if: matrix.build == 'Release'
         run: cpack -G DEB
 
-      - name: Upload uh-cli
+      - name: Upload uh-cli (amd64)
         uses: actions/upload-artifact@v3
-        if: matrix.build == 'Release' && matrix.os == 'uh-x86_64-ubuntu-22.04'
+        if: matrix.build == 'Release' && matrix.os == 'uh-x86_64-ubuntu-22.04' && runner.arch == 'X64'
         with:
           name: ultihash-cli_${{ github.sha }}_amd64.deb
           path: ${{github.workspace}}/packaging/ultihash-cli_0.2.0_amd64.deb
 
-      - name: Upload uh-data-node
+      - name: Upload uh-data-node (amd64)
         uses: actions/upload-artifact@v3
-        if: matrix.build == 'Release' && matrix.os == 'uh-x86_64-ubuntu-22.04'
+        if: matrix.build == 'Release' && matrix.os == 'uh-x86_64-ubuntu-22.04' && runner.arch == 'X64'
         with:
           name: ultihash-data-node_${{ github.sha }}_amd64.deb
           path: ${{github.workspace}}/packaging/ultihash-data-node_0.2.0_amd64.deb
 
-      - name: Upload uh-cluster
+      - name: Upload uh-cluster (amd64)
         uses: actions/upload-artifact@v3
-        if: matrix.build == 'Release' && matrix.os == 'uh-x86_64-ubuntu-22.04'
+        if: matrix.build == 'Release' && matrix.os == 'uh-x86_64-ubuntu-22.04' && runner.arch == 'X64'
         with:
           name: ultihash-cluster_${{ github.sha }}_amd64.deb
           path: ${{github.workspace}}/packaging/ultihash-cluster_0.2.0_amd64.deb
 
+      - name: Upload uh-cli (arm64)
+        uses: actions/upload-artifact@v3
+        if: matrix.build == 'Release' && matrix.os == 'uh-aarch64-ubuntu-22.04' && runner.arch == 'ARM64'
+        with:
+          name: ultihash-cli_${{ github.sha }}_arm64.deb
+          path: ${{github.workspace}}/packaging/ultihash-cli_0.2.0_arm64.deb
+
+      - name: Upload uh-data-node (arm64)
+        uses: actions/upload-artifact@v3
+        if: matrix.build == 'Release' && matrix.os == 'uh-aarch64-ubuntu-22.04' && runner.arch == 'ARM64'
+        with:
+          name: ultihash-data-node_${{ github.sha }}_arm64.deb
+          path: ${{github.workspace}}/packaging/ultihash-data-node_0.2.0_arm64.deb
+
+      - name: Upload uh-cluster (arm64)
+        uses: actions/upload-artifact@v3
+        if: matrix.build == 'Release' && matrix.os == 'uh-aarch64-ubuntu-22.04' && runner.arch == 'ARM64'
+        with:
+          name: ultihash-cluster_${{ github.sha }}_arm64.deb
+          path: ${{github.workspace}}/packaging/ultihash-cluster_0.2.0_arm64.deb
