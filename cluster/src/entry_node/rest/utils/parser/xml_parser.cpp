@@ -14,18 +14,12 @@ namespace uh::cluster::rest::utils::parser
 
     pugi::xml_node xml_parser::get_root_element() const
     {
-        return m_doc.root();
+        return m_doc.first_child();
     }
 
-    pugi::xml_node xml_parser::get_child_product(const pugi::xml_node& parent, const char* childName) const
+    pugi::xpath_node_set xml_parser::get_nodes_from_path(const char* childName) const
     {
-        return parent.child(childName);
-    }
-
-    std::string xml_parser::get_child_value(const pugi::xml_node& parent, const char* child_name) const
-    {
-        auto child = parent.child(child_name);
-        return (child) ? child.value() : "";
+        return m_doc.select_nodes(childName);
     }
 
 } // uh::cluster::rest::utils::parser

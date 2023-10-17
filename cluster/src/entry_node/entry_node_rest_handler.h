@@ -26,6 +26,7 @@
 #include "entry_node/rest/http/models/delete_objects_request.h"
 #include <memory>
 #include "entry_node/rest/utils/parser/xml_parser.h"
+#include "entry_node/rest/utils/string/string_utils.h"
 
 namespace uh::cluster {
 
@@ -401,15 +402,12 @@ public:
         {
             rest::utils::parser::xml_parser parsed_xml(req.get_body());
 
-            std::vector<rest::http::model::object> objects;
+            std::vector<rest::http::model::object> objects_container;
 
-            std::cout << "Parsed Elements: " << std::endl;
-            for (pugi::xml_node object = parsed_xml.get_child_product(parsed_xml.get_root_element(), "Object"); object; object = object.next_sibling("Object"))
+            auto object_nodes_set = parsed_xml.get_nodes_from_path("/Delete/Object");
+            for (const auto& objectNode : object_nodes_set)
             {
-                std::string key = parsed_xml.get_child_value(object, "Key");
-                std::string version_id = parsed_xml.get_child_value(object, "VersionId");
-
-                std::cout << "Key: " << key << ", VersionId: " << version_id << std::endl;
+                objects_container.emplace_back(objectNode.node().child("Key").child_value(), objectNode.node().child("VersionId").child_value());
             }
 
         }

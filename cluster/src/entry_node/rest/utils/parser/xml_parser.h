@@ -15,7 +15,7 @@ namespace uh::cluster::rest::utils::parser
         ~xml_parser() = default;
 
         [[nodiscard]] pugi::xml_node get_root_element() const;
-        [[nodiscard]] pugi::xml_node get_child_product(const pugi::xml_node& parent, const char* child_name) const;
+        [[nodiscard]] pugi::xpath_node_set get_nodes_from_path(const char* child_name) const;
         [[nodiscard]] std::string get_child_value(const pugi::xml_node& parent, const char* child_name) const;
 
     private:
