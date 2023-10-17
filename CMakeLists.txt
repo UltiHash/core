@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.20.0)
+cmake_minimum_required(VERSION 3.22.0 FATAL_ERROR)
 
 add_subdirectory(lib)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/lib)
@@ -10,9 +10,8 @@ set(CMAKE_CXX_STANDARD 20)
 add_compile_options(-fPIC)
 
 set(Boost_USE_STATIC_LIBS ON)
-find_package(Boost 1.80 COMPONENTS unit_test_framework REQUIRED)
+find_package(Boost 1.80 COMPONENTS thread unit_test_framework REQUIRED)
 find_package(OpenSSL REQUIRED)
-find_package(Threads REQUIRED)
 
 
 find_package(Git REQUIRED)
@@ -39,7 +38,7 @@ if(GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/.git")
 endif()
 
 set(${PROJECT_NAME}_INTERNAL_DEPS zpp_bits)
-set(${PROJECT_NAME}_LINK_LIBRARIES ${Boost_LIBRARIES} ${OPENSSL_LIBRARIES} ${THREADS_LIBRARIES} ${${PROJECT_NAME}_INTERNAL_DEPS} )
+set(${PROJECT_NAME}_LINK_LIBRARIES ${Boost_LIBRARIES} ${OPENSSL_LIBRARIES} ${${PROJECT_NAME}_INTERNAL_DEPS} )
 set(${PROJECT_NAME}_INCLUDE_DIRS ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/src ${CMAKE_CURRENT_SOURCE_DIR}/include ${Boost_INCLUDE_DIRS} ${${PROJECT_NAME}_INTERNAL_DEPS})
 
 file(GLOB_RECURSE HEADER_FILE_LIST ${CMAKE_CURRENT_SOURCE_DIR}/src/*.h)
