@@ -1,4 +1,6 @@
 #include "list_buckets_response.h"
+#include "entry_node/rest/utils/time/date_time.h"
+#include <iostream>
 
 namespace uh::cluster::rest::http::model
 {
@@ -30,8 +32,7 @@ namespace uh::cluster::rest::http::model
         {
             for (const auto& bucket: m_buckets)
             {
-                bucket_xml_string = "      <Bucket>\n"
-                                    "         <CreationDate>timestamp</CreationDate>\n"
+                bucket_xml_string += "      <Bucket>\n"
                                     "         <Name>" + bucket + "</Name>\n"
                                     "      </Bucket>\n";
             }
@@ -44,11 +45,6 @@ namespace uh::cluster::rest::http::model
                                 "      <DisplayName>" + m_owner + "</DisplayName>\n"
                                 "      <ID>string</ID>\n"
                                 "   </Owner>\n";
-        }
-
-        if (m_requestIdHasBeenSet)
-        {
-            m_res.set("x-amz-request-id", m_requestId);
         }
 
         set_body(std::string("<ListAllMyBucketsResult>\n"

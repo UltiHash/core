@@ -5,9 +5,10 @@
 #ifndef CORE_ENTRY_NODE_REST_HANDLER_H
 #define CORE_ENTRY_NODE_REST_HANDLER_H
 
+#include <iostream>
+#include <memory>
 #include "common/protocol_handler.h"
 #include "network/client.h"
-#include <iostream>
 #include "entry_node/rest/http/http_request.h"
 #include "entry_node/rest/http/http_response.h"
 #include "entry_node/rest/http/models/put_object_response.h"
@@ -25,7 +26,6 @@
 #include "entry_node/rest/http/models/delete_objects_response.h"
 #include "entry_node/rest/http/models/list_multi_part_uploads_response.h"
 #include "entry_node/rest/http/models/delete_objects_request.h"
-#include <memory>
 #include "entry_node/rest/utils/parser/xml_parser.h"
 #include "entry_node/rest/utils/string/string_utils.h"
 
@@ -87,7 +87,7 @@ public:
         }
         else if ( request_name == rest::http::http_request_type::LIST_BUCKETS )
         {
-            res = handle_list_buckets(req);
+            res = co_await handle_list_buckets(req);
         }
         else if ( request_name == rest::http::http_request_type::DELETE_BUCKET )
         {
@@ -146,8 +146,47 @@ public:
         }
         catch(const std::exception& e)
         {
-            std::cout << e.what() << std::endl;
+            std::cout << "ERROR: " << e.what() << std::endl;
             res->set_error();
+        }
+
+        co_return std::move(res);
+    }
+
+
+    coro <std::unique_ptr<http::http_response>> handle_list_buckets (const rest::http::http_request& req)
+    {
+
+        std::unique_ptr<http::model::list_buckets_response> res;
+        try
+        {
+            res = std::make_unique<http::model::list_buckets_response>(req);
+            auto m_dir = m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size())).acquire_messenger();
+            co_await m_dir.get().send(DIR_LIST_BUCKET_REQ, {});
+            const auto h_dir = co_await m_dir.get().recv_header();
+
+            if(h_dir.type == DIR_LIST_BUCKET_RESP) [[likely]]
+            {
+                auto list_buckets_res = co_await m_dir.get().recv_directory_list_entities_message(h_dir);
+                for (const auto& bucket: list_buckets_res.entities)
+                {
+                    res->add_bucket(bucket);
+                }
+            }
+            if(h_dir.type == FAILURE) [[unlikely]]
+            {
+                std::string msg;
+                msg.resize(h_dir.size);
+                m_dir.get().register_read_buffer(msg);
+                co_await m_dir.get().recv_buffers(h_dir);
+                throw std::runtime_error("Failed to list buckets.\nError: \n" + msg);
+            }
+
+        }
+        catch (const std::exception& e)
+        {
+            std::cout << "ERROR: " << e.what() << std::endl;
+            res->set_error(boost::beast::http::response<boost::beast::http::string_body>{boost::beast::http::status::internal_server_error, 11});
         }
 
         co_return std::move(res);
@@ -199,7 +238,7 @@ public:
         }
         catch(const std::exception& e)
         {
-            std::cout << e.what() << std::endl;
+            std::cout << "ERROR: " << e.what() << std::endl;
             res->set_error(boost::beast::http::response<boost::beast::http::string_body>{boost::beast::http::status::not_found, 11});
         }
 
@@ -240,7 +279,7 @@ public:
         }
         catch (const std::exception& e)
         {
-            std::cout << e.what() << std::endl;
+            std::cout << "ERROR: " << e.what() << std::endl;
             res->set_error(boost::beast::http::response<boost::beast::http::string_body>{boost::beast::http::status::not_found, 11});
         }
 
@@ -279,7 +318,7 @@ public:
         }
         catch(const std::exception& e)
         {
-            std::cout << e.what() << std::endl;
+            std::cout << "ERROR: " << e.what() << std::endl;
             res->set_error();
         }
 
@@ -297,7 +336,7 @@ public:
         }
         catch(const std::exception& e)
         {
-            std::cout << e.what() << std::endl;
+            std::cout << "ERROR: " << e.what() << std::endl;
             res->set_error();
         }
 
@@ -349,7 +388,7 @@ public:
         }
         catch(const std::exception& e)
         {
-            std::cout << e.what() << std::endl;
+            std::cout << "ERROR: " << e.what() << std::endl;
             res->set_error();
         }
 
@@ -365,18 +404,9 @@ public:
         }
         catch(const std::exception& e)
         {
-            std::cout << e.what() << std::endl;
+            std::cout << "ERROR: " << e.what() << std::endl;
             res->set_error();
         }
-
-        return std::move(res);
-    }
-
-    std::unique_ptr<http::http_response> handle_list_buckets (const rest::http::http_request& req)
-    {
-
-        std::unique_ptr<http::model::list_buckets_response> res = std::make_unique<http::model::list_buckets_response>(req);;
-        res->set_error(boost::beast::http::response<boost::beast::http::string_body>{boost::beast::http::status::not_implemented, 11});
 
         return std::move(res);
     }

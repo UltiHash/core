@@ -63,10 +63,10 @@ struct address {
         return {{pointers[2*i], pointers[2*i+1]}, sizes[i]};
     }
 
-    void set_fragment(int i, const fragment& frag) {
-        pointers[2*i] = frag.pointer.get_high();
-        pointers[2*i+1] = frag.pointer.get_low();
-    }
+//    void set_fragment(int i, const fragment& frag) {
+//        pointers[2*i] = frag.pointer.get_high();
+//        pointers[2*i+1] = frag.pointer.get_low();
+//    }
 
     [[nodiscard]] std::size_t size () const noexcept {
         return sizes.size();
@@ -142,12 +142,12 @@ struct allocated_write_message {
 
 } // end namespace uh::cluster
 
-template<> struct std::hash<uh::cluster::fragment> {
-    std::size_t operator()(const uh::cluster::fragment& frag) const {
-        return std::hash<std::uint64_t>{}(frag.pointer.get_high())
-             ^ std::hash<std::uint64_t>{}(frag.pointer.get_low())
-             ^ std::hash<std::size_t>{}(frag.size);
-    }
-};
+//template<> struct std::hash<uh::cluster::fragment> {
+//    std::size_t operator()(const uh::cluster::fragment& frag) const {
+//        return std::hash<std::uint64_t>{}(frag.pointer.get_high())
+//             ^ std::hash<std::uint64_t>{}(frag.pointer.get_low())
+//             ^ std::hash<std::size_t>{}(frag.size);
+//    }
+//};
 
 #endif //CORE_COMMON_TYPES_H
