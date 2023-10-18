@@ -153,7 +153,6 @@ public:
         co_return std::move(res);
     }
 
-
     coro <std::unique_ptr<http::http_response>> handle_list_buckets (const rest::http::http_request& req)
     {
 
@@ -194,7 +193,6 @@ public:
 
     coro <std::unique_ptr<http::http_response>> handle_put_object (rest::http::http_request& req)
     {
-
         std::unique_ptr<http::model::put_object_response> res;
 
         try

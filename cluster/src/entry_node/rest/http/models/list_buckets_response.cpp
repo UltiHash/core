@@ -1,6 +1,5 @@
 #include "list_buckets_response.h"
 #include "entry_node/rest/utils/time/date_time.h"
-#include <iostream>
 
 namespace uh::cluster::rest::http::model
 {

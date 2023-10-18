@@ -9,4 +9,4 @@
 	url = https://github.com/eyalz800/zpp_bits.git
 [submodule "lib/third-party/pugixml"]
 	path = lib/third-party/pugixml
-	url = git@github.com:zeux/pugixml.git
+	url = https://github.com/zeux/pugixml
