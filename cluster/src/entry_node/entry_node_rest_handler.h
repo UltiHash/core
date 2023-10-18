@@ -23,6 +23,7 @@
 #include "entry_node/rest/http/models/delete_bucket_response.h"
 #include "entry_node/rest/http/models/delete_object_response.h"
 #include "entry_node/rest/http/models/delete_objects_response.h"
+#include "entry_node/rest/http/models/list_multi_part_uploads_response.h"
 #include "entry_node/rest/http/models/delete_objects_request.h"
 #include <memory>
 #include "entry_node/rest/utils/parser/xml_parser.h"
@@ -46,7 +47,7 @@ public:
         const auto size_mb = static_cast <double> (body_size) / static_cast <double> (1024ul * 1024ul);
 
         std::chrono::time_point <std::chrono::steady_clock> timer;
-        const auto start = std::chrono::steady_clock::now ();
+        const auto start = std::chrono::steady_clock::now();
 
         std::unique_ptr<http::http_response> res;
 
@@ -79,6 +80,10 @@ public:
         else if ( request_name == rest::http::http_request_type::ABORT_MULTIPART_UPLOAD )
         {
             res = handle_abort_mp_upload(req);
+        }
+        else if ( request_name == rest::http::http_request_type::LIST_MULTI_PART_UPLOADS )
+        {
+            res = handle_list_mp_uploads(req);
         }
         else if ( request_name == rest::http::http_request_type::LIST_BUCKETS )
         {
@@ -389,6 +394,15 @@ public:
     {
 
         std::unique_ptr<http::model::delete_object_response> res = std::make_unique<http::model::delete_object_response>(req);
+        res->set_error(boost::beast::http::response<boost::beast::http::string_body>{boost::beast::http::status::not_implemented, 11});
+
+        return std::move(res);
+    }
+
+    std::unique_ptr<http::http_response> handle_list_mp_uploads (const rest::http::http_request& req)
+    {
+
+        std::unique_ptr<http::model::list_multi_part_uploads_response> res = std::make_unique<http::model::list_multi_part_uploads_response>(req);
         res->set_error(boost::beast::http::response<boost::beast::http::string_body>{boost::beast::http::status::not_implemented, 11});
 
         return std::move(res);
