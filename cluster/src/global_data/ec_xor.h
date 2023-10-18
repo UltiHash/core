@@ -8,6 +8,9 @@
 #include "ec.h"
 
 namespace uh::cluster {
+struct ec_xor: public ec {
+
+};
 } // namespace uh::cluster
 
 #endif //CORE_EC_XOR_H

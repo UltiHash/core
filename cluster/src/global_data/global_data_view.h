@@ -31,7 +31,7 @@ public:
         create_data_node_connections(data_node_connection_count);
     }
 
-    /*
+
     coro <address> write (const std::string_view& data) {
         auto index = m_data_node_index.load();
         auto new_val = (index + 1) % m_data_node_offsets.size();
@@ -49,7 +49,7 @@ public:
         }
         co_return std::move (resp.second);
     }
-*/
+
     coro <address> allocate (size_t total_size) {
 
         if (total_size % m_data_node_offsets.size() != 0) {
