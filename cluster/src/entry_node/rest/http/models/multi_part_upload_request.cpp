@@ -23,20 +23,23 @@ namespace uh::cluster::rest::http::model
         {
             std::size_t content_length = m_req.content_length().value();
 
-            if (m_mpcontainer.find(m_part_number) == m_mpcontainer.end())
+            if (content_length != 0)
             {
-                m_mpcontainer[m_part_number].append(content_length, 0);
-
-                auto data_left = content_length - buffer.size();
-
-                // copy remaining bytes from flat buffer to body_buffer
-                boost::asio::buffer_copy(boost::asio::buffer(m_mpcontainer[m_part_number]), buffer.data());
-                auto size_transferred = co_await boost::asio::async_read(stream.socket(), boost::asio::buffer(m_mpcontainer[m_part_number].data() + buffer.size(), data_left),
-                                                                         boost::asio::transfer_exactly(data_left), boost::asio::use_awaitable);
-
-                if (size_transferred + buffer.size() != content_length)
+                if (m_mpcontainer.find(m_part_number) == m_mpcontainer.end())
                 {
-                    throw std::runtime_error("error reading the http body");
+                    m_mpcontainer[m_part_number].append(content_length, 0);
+
+                    auto data_left = content_length - buffer.size();
+
+                    // copy remaining bytes from flat buffer to body_buffer
+                    boost::asio::buffer_copy(boost::asio::buffer(m_mpcontainer[m_part_number]), buffer.data());
+                    auto size_transferred = co_await boost::asio::async_read(stream.socket(), boost::asio::buffer(m_mpcontainer[m_part_number].data() + buffer.size(), data_left),
+                                                                             boost::asio::transfer_exactly(data_left), boost::asio::use_awaitable);
+
+                    if (size_transferred + buffer.size() != content_length)
+                    {
+                        throw std::runtime_error("error reading the http body");
+                    }
                 }
             }
         }
@@ -44,6 +47,8 @@ namespace uh::cluster::rest::http::model
         {
             throw std::runtime_error("please specify the content length on requests as other methods without content length are currently not supported");
         }
+
+        co_return;
     }
 
 } // uh::cluster::rest::http::model

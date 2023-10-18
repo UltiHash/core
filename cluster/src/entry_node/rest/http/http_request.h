@@ -46,6 +46,7 @@ namespace uh::cluster::rest::http
         MULTIPART_UPLOAD,
         COMPLETE_MULTIPART_UPLOAD,
         ABORT_MULTIPART_UPLOAD,
+        LIST_MULTI_PART_UPLOADS,
     };
 
     /**

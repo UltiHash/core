@@ -27,6 +27,7 @@ namespace uh::cluster::rest::http::model
         void clear_body() override;
 
     private:
+        std::string m_completed_body {};
         std::string m_upload_id;
         rest::utils::ts_unordered_map<std::string, std::shared_ptr<utils::ts_map<uint16_t, std::string>>>& m_uomap_multipart;
     };

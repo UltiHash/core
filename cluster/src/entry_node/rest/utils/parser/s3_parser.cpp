@@ -13,6 +13,7 @@
 #include <entry_node/rest/http/models/delete_object_request.h>
 #include <entry_node/rest/http/models/get_object_attributes_request.h>
 #include <entry_node/rest/http/models/list_objectsv2_request.h>
+#include <entry_node/rest/http/models/list_multi_part_uploads_request.h>
 #include <regex>
 
 namespace uh::cluster::rest::utils::parser {
@@ -94,6 +95,10 @@ namespace uh::cluster::rest::utils::parser {
                 if (target == "/")
                 {
                     return std::make_unique<rest::http::model::list_buckets_request>(m_recv_req);
+                }
+                else if (target.find("?uploads") != std::string::npos)
+                {
+                    return std::make_unique<rest::http::model::list_multi_part_uploads_request>(m_recv_req);
                 }
                 else if (target.find("?attributes") != std::string::npos)
                 {

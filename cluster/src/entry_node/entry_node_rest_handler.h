@@ -23,9 +23,11 @@
 #include "entry_node/rest/http/models/delete_bucket_response.h"
 #include "entry_node/rest/http/models/delete_object_response.h"
 #include "entry_node/rest/http/models/delete_objects_response.h"
+#include "entry_node/rest/http/models/list_multi_part_uploads_response.h"
 #include "entry_node/rest/http/models/delete_objects_request.h"
 #include <memory>
 #include "entry_node/rest/utils/parser/xml_parser.h"
+#include "entry_node/rest/utils/string/string_utils.h"
 
 namespace uh::cluster {
 
@@ -45,7 +47,7 @@ public:
         const auto size_mb = static_cast <double> (body_size) / static_cast <double> (1024ul * 1024ul);
 
         std::chrono::time_point <std::chrono::steady_clock> timer;
-        const auto start = std::chrono::steady_clock::now ();
+        const auto start = std::chrono::steady_clock::now();
 
         std::unique_ptr<http::http_response> res;
 
@@ -78,6 +80,10 @@ public:
         else if ( request_name == rest::http::http_request_type::ABORT_MULTIPART_UPLOAD )
         {
             res = handle_abort_mp_upload(req);
+        }
+        else if ( request_name == rest::http::http_request_type::LIST_MULTI_PART_UPLOADS )
+        {
+            res = handle_list_mp_uploads(req);
         }
         else if ( request_name == rest::http::http_request_type::LIST_BUCKETS )
         {
@@ -305,6 +311,7 @@ public:
         {
             res = std::make_unique<http::model::complete_multi_part_upload_response>(req);
             auto body_size = req.get_body_size();
+
             const auto size_mb = static_cast <double> (body_size) / static_cast <double> (1024ul * 1024ul);
 
             auto m_dedup = m_dedupe_nodes.at(get_round_robin_index(m_dedupe_node_index, m_dedupe_nodes.size())).acquire_messenger();
@@ -392,30 +399,37 @@ public:
         return std::move(res);
     }
 
+    std::unique_ptr<http::http_response> handle_list_mp_uploads (const rest::http::http_request& req)
+    {
+
+        std::unique_ptr<http::model::list_multi_part_uploads_response> res = std::make_unique<http::model::list_multi_part_uploads_response>(req);
+        res->set_error(boost::beast::http::response<boost::beast::http::string_body>{boost::beast::http::status::not_implemented, 11});
+
+        return std::move(res);
+    }
+
     std::unique_ptr<http::http_response> handle_delete_objects (rest::http::http_request& req)
     {
 
-        std::unique_ptr<http::model::delete_objects_response> res = std::make_unique<http::model::delete_objects_response>(req);
+        std::unique_ptr<http::model::delete_objects_response> res;
 
         try
         {
+            res = std::make_unique<http::model::delete_objects_response>(req);
             rest::utils::parser::xml_parser parsed_xml(req.get_body());
 
-            std::vector<rest::http::model::object> objects;
+            std::vector<rest::http::model::object> objects_container;
 
-            std::cout << "Parsed Elements: " << std::endl;
-            for (pugi::xml_node object = parsed_xml.get_child_product(parsed_xml.get_root_element(), "Object"); object; object = object.next_sibling("Object"))
+            auto object_nodes_set = parsed_xml.get_nodes_from_path("/Delete/Object");
+            for (const auto& objectNode : object_nodes_set)
             {
-                std::string key = parsed_xml.get_child_value(object, "Key");
-                std::string version_id = parsed_xml.get_child_value(object, "VersionId");
-
-                std::cout << "Key: " << key << ", VersionId: " << version_id << std::endl;
+                objects_container.emplace_back(objectNode.node().child("Key").child_value(), objectNode.node().child("VersionId").child_value());
             }
 
         }
         catch (const std::exception& e)
         {
-
+            res->set_error(boost::beast::http::response<boost::beast::http::string_body>{boost::beast::http::status::not_implemented, 11});
         }
 
         return std::move(res);

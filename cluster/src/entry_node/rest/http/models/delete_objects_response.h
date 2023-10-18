@@ -15,7 +15,14 @@ namespace uh::cluster::rest::http::model
         [[nodiscard]] const http::response<http::string_body>& get_response_specific_object() override;
 
     private:
+        std::vector<std::string> m_deleted;
 
+        bool m_requestChargedHasBeenSet = false;
+        std::string m_requestCharged;
+
+        std::vector<std::string> m_errors;
+
+        std::string m_requestId;
     };
 
 } // namespace uh::cluster::rest::http::model
