@@ -7,8 +7,11 @@
 
 #include <utility>
 
+#include "common/common.h"
+#include "common/cluster_config.h"
 #include "common/protocol_handler.h"
 #include "dedupe_write_cache.h"
+
 
 namespace uh::cluster {
 
@@ -51,7 +54,7 @@ private:
 
         dedupe_response result {.addr = address {}};
         auto integration_data = data;
-        dedupe_write_cache cache(integration_data.size(), m_storage.get_data_node_count(), m_storage, m_dedupe_conf);
+        dedupe_write_cache cache(integration_data, m_storage, m_dedupe_conf);
         while (!integration_data.empty()) {
             const auto f = co_await m_fragment_set.find(integration_data);
             if (f.match) {
