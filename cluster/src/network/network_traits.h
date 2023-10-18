@@ -65,7 +65,7 @@ std::vector <std::pair <messenger_core::header, ResultType>> broadcast_gather_cu
 }
 
 
-std::vector <std::pair <messenger_core::header, ospan <char>>> broadcast_gather (as_coroutine, boost::asio::io_context& ioc, std::vector <std::shared_ptr <client>> &nodes, const message_types type, const std::span<char> &data) {
+std::vector <std::pair <messenger_core::header, ospan <char>>> broadcast_gather (as_coroutine, boost::asio::io_context& ioc, std::vector <std::shared_ptr <client>> &nodes, const message_types type, const std::span<const char> &data) {
     std::vector <client::acquired_messenger> messengers;
     messengers.reserve (nodes.size());
     std::vector <std::future<std::pair <messenger_core::header, ospan <char>>>> futures;

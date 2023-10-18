@@ -12,7 +12,7 @@ namespace uh::cluster {
     class dedupe_write_cache {
     //todo: make sure allocated storage on the data node is freed in case of an exception -> avoid storage data leaks
     public:
-        dedupe_write_cache(std::string_view &integration_data, global_data &storage, size_t num_nodes, dedupe_config& config) :
+        dedupe_write_cache(std::string_view &integration_data, global_data_view &storage, size_t num_nodes, dedupe_config& config) :
         m_integration_data(integration_data), m_storage(storage), m_num_nodes(num_nodes), m_dedupe_conf(config) {
             //todo: m_cache_size can now divert from
             m_cache_size = std::lcm(std::min(m_num_nodes * m_cache_size_per_node, m_integration_data.size()), m_num_nodes);
@@ -26,7 +26,7 @@ namespace uh::cluster {
             }
         }
 
-        std::size_t get_size_available() {
+        std::size_t get_size_available() const {
             return m_cache_available;
         }
 
@@ -146,7 +146,7 @@ namespace uh::cluster {
         const std::size_t m_cache_size_per_node = 1024 * 1024; // 1MiB
 
         std::string_view& m_integration_data;
-        global_data& m_storage;
+        global_data_view& m_storage;
         std::size_t m_num_nodes;
         dedupe_config& m_dedupe_conf;
 
@@ -159,5 +159,5 @@ namespace uh::cluster {
         address m_dn_allocation;
     };
 
-}
+} // namespace uh::cluster
 #endif //CORE_DEDUPE_WRITE_CACHE_H

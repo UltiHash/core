@@ -13,7 +13,7 @@ namespace uh::cluster {
 class directory_handler: public protocol_handler {
 public:
 
-    directory_handler (directory_store_config conf, global_data& storage):
+    directory_handler (directory_store_config conf, global_data_view& storage):
     m_directory (std::move (conf)),
     m_storage (storage) {}
 
@@ -111,7 +111,7 @@ private:
     }
 
     directory_store m_directory;
-    global_data& m_storage;
+    global_data_view& m_storage;
 };
 } // end namespace uh::cluster
 

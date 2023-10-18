@@ -6,14 +6,14 @@
 #define CORE_SET_COMPARATOR_TRAITS_H
 
 #include "index_mem_structures.h"
-#include "global_data.h"
+#include "global_data/global_data_view.h"
 #include <cstring>
 
 namespace uh::cluster::dedupe  {
 
 
 struct set_full_comparator {
-    explicit set_full_comparator (global_data& storage): m_storage (storage) {}
+    explicit set_full_comparator (global_data_view& storage): m_storage (storage) {}
 
     [[nodiscard]] inline coro <std::pair <int, ospan <char>>> operator () (const std::string_view& new_data, const mmap_node& set_data) const {
         if (const auto comp = new_data.substr(0,8).compare({reinterpret_cast <const char*>(&set_data.data_prefix), sizeof(set_data.data_prefix)}); comp != 0) {
@@ -25,11 +25,11 @@ struct set_full_comparator {
         co_return std::move (std::pair {new_data.compare({buf.data.get(), set_data.m_data.size}), std::move (buf)});
     }
 
-    const std::reference_wrapper <global_data> m_storage;
+    const std::reference_wrapper <global_data_view> m_storage;
 };
 
 struct set_partial_comparator {
-    explicit set_partial_comparator (global_data& storage): m_storage(storage) {}
+    explicit set_partial_comparator (global_data_view& storage): m_storage(storage) {}
 
     [[nodiscard]] inline int operator () (const std::string_view& key, const mmap_node& set_data) const {
         throw std::exception ();
@@ -41,7 +41,7 @@ struct set_partial_comparator {
         //return key.compare(set_key);
     }
 
-    const std::reference_wrapper <global_data> m_storage;
+    const std::reference_wrapper <global_data_view> m_storage;
 };
 
 } // end namespace uh::cluster::dedupe

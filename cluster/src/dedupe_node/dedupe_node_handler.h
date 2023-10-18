@@ -16,7 +16,7 @@ class dedupe_node_handler: public protocol_handler {
 
 public:
 
-    dedupe_node_handler (dedupe_config dedupe_conf, global_data& storage):
+    dedupe_node_handler (dedupe_config dedupe_conf, global_data_view& storage):
         m_dedupe_conf (std::move(dedupe_conf)),
         m_fragment_set (m_dedupe_conf.set_conf, storage),
         m_storage (storage) {}
@@ -122,7 +122,7 @@ private:
 
     dedupe_config m_dedupe_conf;
     dedupe::paged_redblack_tree <dedupe::set_full_comparator> m_fragment_set;
-    global_data& m_storage;
+    global_data_view& m_storage;
     std::mutex m_mutex;
 
 };
