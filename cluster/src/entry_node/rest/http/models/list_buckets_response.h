@@ -24,9 +24,6 @@ namespace uh::cluster::rest::http::model
         bool m_ownerHasBeenSet = false;
         std::string m_owner {};
 
-        bool m_requestIdHasBeenSet = false;
-        std::string m_requestId {};
-
     };
 
 } // namespace uh::cluster::rest::http::model

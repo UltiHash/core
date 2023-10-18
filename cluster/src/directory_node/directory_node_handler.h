@@ -30,6 +30,12 @@ public:
                 case DIR_PUT_BUCKET_REQ:
                     co_await handle_put_bucket (m, message_header);
                     break;
+                case DIR_LIST_BUCKET_REQ:
+                    co_await handle_list_buckets(m, message_header);
+                    break;
+                case DIR_LIST_OBJ_REQ:
+                    co_await handle_list_objects(m, message_header);
+                    break;
                 case STOP:
                     co_return;
                 default:
@@ -108,6 +114,24 @@ private:
 
         if(!failure.empty())
             co_await m.send(FAILURE, failure);
+    }
+
+    coro <void> handle_list_buckets (messenger&m, const messenger::header &h) {
+        directory_lst_entities_message response = {
+            .entities = m_directory.list_buckets()
+        };
+        co_await m.send_directory_list_entities_message(DIR_LIST_BUCKET_RESP, response);
+    }
+
+    coro <void> handle_list_objects (messenger&m, const messenger::header &h) {
+        directory_message request = co_await m.recv_directory_message (h);
+        directory_lst_entities_message response = {
+            .entities = m_directory.list_keys(
+                request.bucket_id,
+                *request.object_key_lower_bound,
+                *request.object_key_prefix)
+        };
+        co_await m.send_directory_list_entities_message(DIR_LIST_OBJ_RESP, response);
     }
 
     directory_store m_directory;
