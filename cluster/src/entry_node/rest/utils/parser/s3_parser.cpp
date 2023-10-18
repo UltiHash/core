@@ -3,11 +3,16 @@
 #include <entry_node/rest/http/models/put_object_request.h>
 #include <entry_node/rest/http/models/get_object_request.h>
 #include <entry_node/rest/http/models/create_bucket_request.h>
-#include <entry_node/rest/http/models/list_buckets.h>
-#include <entry_node/rest/http/models/init_multi_part_upload.h>
-#include <entry_node/rest/http/models/multi_part_upload.h>
-#include <entry_node/rest/http/models/complete_multi_part_upload.h>
-#include <entry_node/rest/http/models/abort_multi_part_upload.h>
+#include <entry_node/rest/http/models/list_buckets_request.h>
+#include <entry_node/rest/http/models/init_multi_part_upload_request.h>
+#include <entry_node/rest/http/models/multi_part_upload_request.h>
+#include <entry_node/rest/http/models/complete_multi_part_upload_request.h>
+#include <entry_node/rest/http/models/abort_multi_part_upload_request.h>
+#include <entry_node/rest/http/models/delete_bucket_request.h>
+#include <entry_node/rest/http/models/delete_objects_request.h>
+#include <entry_node/rest/http/models/delete_object_request.h>
+#include <entry_node/rest/http/models/get_object_attributes_request.h>
+#include <entry_node/rest/http/models/list_objectsv2_request.h>
 #include <regex>
 
 namespace uh::cluster::rest::utils::parser {
@@ -31,8 +36,9 @@ namespace uh::cluster::rest::utils::parser {
         auto target = m_recv_req.get().base().target();
         auto method = m_recv_req.get().base().method();
 
-        std::regex pattern("^\\/\\w+$");
-        std::string string_to_reg = target;
+        // TODO: switch to regex for everything?
+        std::regex pattern(R"(^\/\w+$)");
+        std::regex delete_pattern(R"(^\/\w+\?delete)");
 
         switch (method)
         {
@@ -43,24 +49,24 @@ namespace uh::cluster::rest::utils::parser {
 
                     m_uomap_multipart.emplace("first-upload", std::make_shared<utils::ts_map<uint16_t, std::string>>());
 
-                    return std::make_unique<rest::http::model::init_multi_part_upload>(m_recv_req);
+                    return std::make_unique<rest::http::model::init_multi_part_upload_request>(m_recv_req);
                 }
                 else if (target.find("?uploadId=") != std::string::npos)
                 {
                     auto upload_id = std::string(target.substr(target.find("uploadId=") + 9));
 
-                    auto iterator = m_uomap_multipart.find(upload_id);
-                    if (iterator == m_uomap_multipart.end())
-                        throw std::runtime_error("Invalid Upload ID");
-
-                    return std::make_unique<rest::http::model::complete_multi_part_upload>(m_recv_req, *iterator->second);
+                    return std::make_unique<rest::http::model::complete_multi_part_upload_request>(m_recv_req, m_uomap_multipart, upload_id);
+                }
+                else if (std::regex_match(std::string(target), delete_pattern))
+                {
+                    return std::make_unique<rest::http::model::delete_objects_request>(m_recv_req);
                 }
                 else
                 {
                     throw std::runtime_error("unknown request type");
                 }
             case boost::beast::http::verb::put:
-                if (std::regex_match(string_to_reg, pattern))
+                if (std::regex_match(std::string(target), pattern))
                 {
                     return std::make_unique<rest::http::model::create_bucket_request>(m_recv_req);
                 }
@@ -78,7 +84,7 @@ namespace uh::cluster::rest::utils::parser {
                     if (iterator == m_uomap_multipart.end())
                         throw std::runtime_error("Invalid Upload ID");
 
-                    return std::make_unique<rest::http::model::multi_part_upload>(m_recv_req, *iterator->second, part_number);
+                    return std::make_unique<rest::http::model::multi_part_upload_request>(m_recv_req, *iterator->second, part_number);
                 }
                 else
                 {
@@ -87,7 +93,15 @@ namespace uh::cluster::rest::utils::parser {
             case boost::beast::http::verb::get:
                 if (target == "/")
                 {
-                    return std::make_unique<rest::http::model::list_buckets>(m_recv_req);
+                    return std::make_unique<rest::http::model::list_buckets_request>(m_recv_req);
+                }
+                else if (target.find("?attributes") != std::string::npos)
+                {
+                    return std::make_unique<rest::http::model::get_object_attributes_request>(m_recv_req);
+                }
+                else if (target.find("/?list-type=2") != std::string::npos )
+                {
+                    return std::make_unique<rest::http::model::list_objectsv2_request>(m_recv_req);
                 }
                 else if (!target.empty() && (target.find('?') == std::string::npos))
                 {
@@ -98,13 +112,22 @@ namespace uh::cluster::rest::utils::parser {
                     throw std::runtime_error("unknown request type");
                 }
             case boost::beast::http::verb::delete_:
-                if (target.find("?uploadId="))
+                if (std::regex_match(std::string(target), pattern))
+                {
+                    return std::make_unique<rest::http::model::delete_bucket_request>(m_recv_req);
+                }
+                // TODO: switch to regex since object key might be missing on this
+                else if (target.find("?versionId="))
+                {
+                    return std::make_unique<rest::http::model::delete_object_request>(m_recv_req);
+                }
+                else if (target.find("?uploadId="))
                 {
                     auto upload_id = std::string(target.substr(target.find("uploadId=") + 9));
                     if (upload_id.empty())
                         throw std::runtime_error("No upload ID given!");
 
-                    return std::make_unique<rest::http::model::abort_multi_part_upload>(m_recv_req, m_uomap_multipart, upload_id);
+                    return std::make_unique<rest::http::model::abort_multi_part_upload_request>(m_recv_req, m_uomap_multipart, upload_id);
                 }
             default:
                 throw std::runtime_error("bad http verb.");

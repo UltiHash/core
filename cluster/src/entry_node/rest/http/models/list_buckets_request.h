@@ -5,12 +5,12 @@
 namespace uh::cluster::rest::http::model
 {
 
-    class list_buckets : public http_request
+    class list_buckets_request : public http_request
     {
     public:
-        explicit list_buckets(const http::request_parser<http::empty_body>&);
+        explicit list_buckets_request(const http::request_parser<http::empty_body>&);
 
-        ~list_buckets() override = default;
+        ~list_buckets_request() override = default;
 
         [[nodiscard]] inline http_request_type get_request_name() const override { return http_request_type::LIST_BUCKETS; }
 
@@ -18,7 +18,7 @@ namespace uh::cluster::rest::http::model
 
 
     private:
-
+        list_buckets_request& operator  = (const http::request_parser<http::empty_body>& recv_req);
     };
 
 } // uh::cluster::rest::http::model

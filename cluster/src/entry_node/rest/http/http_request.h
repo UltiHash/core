@@ -35,8 +35,13 @@ namespace uh::cluster::rest::http
     {
         CREATE_BUCKET,
         LIST_BUCKETS,
+        DELETE_BUCKET,
+        DELETE_OBJECTS,
         PUT_OBJECT,
         GET_OBJECT,
+        DELETE_OBJECT,
+        LIST_OBJECTS_V2,
+        GET_OBJECT_ATTRIBUTES,
         INIT_MULTIPART_UPLOAD,
         MULTIPART_UPLOAD,
         COMPLETE_MULTIPART_UPLOAD,
@@ -69,7 +74,7 @@ namespace uh::cluster::rest::http
 
         virtual coro<void> read_body(tcp_stream& stream, boost::beast::flat_buffer& buffer);
 
-        [[nodiscard]] virtual inline std::string get_body() const { return m_body; }
+        [[nodiscard]] virtual inline const std::string& get_body() { return m_body; }
 
         [[nodiscard]] virtual inline std::size_t get_body_size() const { return m_body.size(); }
 
@@ -78,6 +83,8 @@ namespace uh::cluster::rest::http
         [[nodiscard]] inline http_method get_method() const { return m_method; }
 
         [[nodiscard]] inline const URI& get_URI() const { return m_uri; }
+
+        [[maybe_unused]] virtual inline void clear_body() { m_body.clear(); }
 
     protected:
         const http::request_parser<http::empty_body>& m_req;

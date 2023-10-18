@@ -6,13 +6,13 @@
 namespace uh::cluster::rest::http::model
 {
 
-    class multi_part_upload : public rest::http::http_request
+    class multi_part_upload_request : public rest::http::http_request
     {
     public:
-        explicit multi_part_upload(const http::request_parser<http::empty_body>&,
-                                   rest::utils::ts_map<uint16_t, std::string>&, uint16_t part_number);
+        explicit multi_part_upload_request(const http::request_parser<http::empty_body>&,
+                                           rest::utils::ts_map<uint16_t, std::string>&, uint16_t part_number);
 
-        ~multi_part_upload() override = default;
+        ~multi_part_upload_request() override = default;
 
         [[nodiscard]] inline http_request_type get_request_name() const override { return http_request_type::MULTIPART_UPLOAD; }
 

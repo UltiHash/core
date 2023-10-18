@@ -1,55 +1,39 @@
-#include "get_object.h"
+#include "get_object_attributes_request.h"
 
 namespace uh::cluster::rest::http::model
 {
 
-    get_object::get_object(const http::request_parser<http::empty_body> & recv_req) : http_request(recv_req)
+    get_object_attributes_request::get_object_attributes_request(const http::request_parser<http::empty_body> & recv_req) : http_request(recv_req)
     {
         // parse and set the received request parameters
         *this = recv_req;
     }
 
-    get_object& get_object::operator = (const http::request_parser<http::empty_body>& recv_req)
+    get_object_attributes_request& get_object_attributes_request::operator = (const http::request_parser<http::empty_body>& recv_req)
     {
         const auto& header_list = recv_req.get();
 
-        const auto& if_match_l = header_list.find("if-match");
-        const auto& if_match_u = header_list.find("If-Match");
-        if (if_match_l != header_list.end() || if_match_u != header_list.end())
+        std::string version_id = m_uri.get_query_string_value("versionId");
+        if (!version_id.empty())
         {
-            m_ifMatch = ( if_match_l != header_list.end() ) ? if_match_l->value() : if_match_u->value();
-            m_ifMatchHasBeenSet = true;
+            m_versionId  = std::move(version_id);
+            m_versionIdHasBeenSet = true;
         }
 
-        const auto& if_modified_since_l = header_list.find("if-modified-since");
-        const auto& if_modified_since_u = header_list.find("If-Modified-Since");
-        if (if_modified_since_l != header_list.end() || if_modified_since_u != header_list.end())
+        const auto& max_parts_l = header_list.find("x-amz-max-parts");
+        const auto& max_parts_u = header_list.find("X-Amz-Max-Parts");
+        if (max_parts_l != header_list.end() || max_parts_u != header_list.end())
         {
-            m_ifModifiedSince = ( if_modified_since_l != header_list.end() ) ? if_modified_since_l->value() : if_modified_since_u->value();
-            m_ifModifiedSinceHasBeenSet = true;
+            m_maxParts = std::stoi((max_parts_l != header_list.end()) ? max_parts_l->value() : max_parts_u->value());
+            m_maxPartsHasBeenSet = true;
         }
 
-        const auto& if_none_match_l = header_list.find("if-none-match");
-        const auto& if_none_match_u = header_list.find("If-None-Match");
-        if (if_none_match_l != header_list.end() || if_none_match_u != header_list.end())
+        const auto& part_number_marker_l = header_list.find("x-amz-part-number-marker");
+        const auto& part_number_marker_u = header_list.find("X-Amz-Part-Number-Marker");
+        if (part_number_marker_l != header_list.end() || part_number_marker_u != header_list.end())
         {
-            m_ifNoneMatch = ( if_none_match_l != header_list.end() ) ? if_none_match_l->value() : if_none_match_u->value();
-            m_ifNoneMatchHasBeenSet = true;
-        }
-
-        const auto& if_unmodified_since_l = header_list.find("if-modified-since");
-        const auto& if_unmodified_since_u = header_list.find("If-Modified-Since");
-        if (if_unmodified_since_l != header_list.end() || if_unmodified_since_u != header_list.end())
-        {
-            m_ifUnmodifiedSince = ( if_unmodified_since_l != header_list.end() ) ? if_unmodified_since_l->value() : if_unmodified_since_u->value();
-            m_ifUnmodifiedSinceHasBeenSet = true;
-        }
-
-        const auto& range = header_list.find(boost::beast::http::field::range);
-        if (range != header_list.end())
-        {
-            m_range = range->value();
-            m_rangeHasBeenSet = true;
+            m_partNumberMarker = std::stoi((part_number_marker_l != header_list.end()) ? part_number_marker_l->value() : part_number_marker_u->value());
+            m_partNumberMarkerHasBeenSet = true;
         }
 
         const auto& sse_customer_algorithm_l = header_list.find("x-amz-server-side-encryption-customer-algorithm");
@@ -92,54 +76,40 @@ namespace uh::cluster::rest::http::model
             m_expectedBucketOwnerHasBeenSet = true;
         }
 
-        const auto& checksome_mode_l = header_list.find("x-amz-checksum-mode");
-        const auto& checksome_mode_u = header_list.find("X-Amz-Checksum-Mode");
-        if (checksome_mode_l != header_list.end() || checksome_mode_u != header_list.end())
+        const auto& object_attributes_l = header_list.find("x-amz-object-attributes");
+        const auto& object_attributes_u = header_list.find("X-Amz-Object-Attributes");
+        if (object_attributes_l != header_list.end() || object_attributes_u != header_list.end())
         {
-            m_checksumMode = (checksome_mode_l != header_list.end()) ? checksome_mode_l->value() : checksome_mode_u->value();
-            m_checksumModeHasBeenSet = true;
+            m_objectAttributes.push_back(( object_attributes_l != header_list.end() ) ? object_attributes_l->value() : object_attributes_u->value());
+            m_expectedBucketOwnerHasBeenSet = true;
         }
 
         return *this;
     }
 
-    std::map<std::string, std::string> get_object::get_request_specific_headers() const
+    std::map<std::string, std::string> get_object_attributes_request::get_request_specific_headers() const
     {
         std::map<std::string, std::string> headers;
         std::stringstream ss;
 
-        if(m_ifMatchHasBeenSet)
+        if(m_maxPartsHasBeenSet)
         {
-            ss << m_ifMatch;
-            headers.emplace("if-match",  ss.str());
+            ss << m_maxParts;
+            headers.emplace("x-amz-max-parts", ss.str());
             ss.str("");
         }
 
-        if(m_ifModifiedSinceHasBeenSet)
+        if(m_partNumberMarkerHasBeenSet)
         {
-            ss << m_ifModifiedSince;
-            headers.emplace("if-modified-since",  ss.str());
+            ss << m_partNumberMarker;
+            headers.emplace("x-amz-part-number-marker", ss.str());
             ss.str("");
         }
 
-        if(m_ifNoneMatchHasBeenSet)
+        if(m_sSECustomerAlgorithmHasBeenSet)
         {
-            ss << m_ifNoneMatch;
-            headers.emplace("if-none-match",  ss.str());
-            ss.str("");
-        }
-
-        if(m_ifUnmodifiedSinceHasBeenSet)
-        {
-            ss << m_ifUnmodifiedSince;
-            headers.emplace("if-unmodified-since",  ss.str());
-            ss.str("");
-        }
-
-        if(m_rangeHasBeenSet)
-        {
-            ss << m_range;
-            headers.emplace("range",  ss.str());
+            ss << m_sSECustomerAlgorithm;
+            headers.emplace("x-amz-server-side-encryption-customer-algorithm",  ss.str());
             ss.str("");
         }
 
@@ -171,10 +141,10 @@ namespace uh::cluster::rest::http::model
             ss.str("");
         }
 
-        if(m_checksumModeHasBeenSet)
+        if (m_objectAttributesHasBeenSet)
         {
-            ss << m_checksumModeHasBeenSet;
-            headers.emplace("x-amz-checksum-mode",  ss.str());
+            ss << m_objectAttributes.front();
+            headers.emplace("x-amz-object-attributes", ss.str());
             ss.str("");
         }
 

@@ -143,6 +143,13 @@ namespace uh::cluster::rest::http::model
             ss.str("");
         }
 
+        if(m_sSECustomerAlgorithmHasBeenSet)
+        {
+            ss << m_sSECustomerAlgorithm;
+            headers.emplace("x-amz-server-side-encryption-customer-algorithm",  ss.str());
+            ss.str("");
+        }
+
         if(m_sSECustomerKeyHasBeenSet)
         {
             ss << m_sSECustomerKey;

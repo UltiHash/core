@@ -7,14 +7,14 @@
 namespace uh::cluster::rest::http::model
 {
 
-    class abort_multi_part_upload : public rest::http::http_request
+    class abort_multi_part_upload_request : public rest::http::http_request
     {
     public:
-        abort_multi_part_upload(const http::request_parser<http::empty_body>&,
-                                rest::utils::ts_unordered_map<std::string, std::shared_ptr<utils::ts_map<uint16_t, std::string>>>&,
-                                std::string);
+        abort_multi_part_upload_request(const http::request_parser<http::empty_body>&,
+                                        rest::utils::ts_unordered_map<std::string, std::shared_ptr<utils::ts_map<uint16_t, std::string>>>&,
+                                        std::string);
 
-        ~abort_multi_part_upload() override = default;
+        ~abort_multi_part_upload_request() override = default;
 
         [[nodiscard]] inline http_request_type get_request_name() const override { return http_request_type::ABORT_MULTIPART_UPLOAD; }
 
