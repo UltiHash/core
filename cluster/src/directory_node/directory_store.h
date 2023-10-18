@@ -74,9 +74,9 @@ public:
         }
     }
 
-    std::vector <std::string> list_keys (const std::string& bucket) {
+    std::vector <std::string> list_keys (const std::string& bucket, const std::string& lower_bound = "", const std::string& prefix = "") {
         if (const auto& b = m_buckets.find(bucket); b != m_buckets.cend()) [[likely]] {
-            return b->second->list_keys();
+            return b->second->list_keys(lower_bound, prefix);
         }
         else {
             throw std::out_of_range ("The bucket " + bucket + " does not exist.");

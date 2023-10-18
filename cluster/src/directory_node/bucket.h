@@ -30,13 +30,22 @@ public:
         m_object_ptrs (m_transaction_log.replay()) {
     }
 
-    std::vector <std::string> list_keys () {
+    std::vector <std::string> list_keys (const std::string& lower_bound, const std::string& prefix) {
         std::vector <std::string> keys;
         keys.reserve (m_object_ptrs.size());
         for (const auto& obj: m_object_ptrs) {
             keys.emplace_back (obj.first);
         }
-        return keys;
+
+        std::vector<std::string> filtered_keys;
+        auto lower_bound_it = lower_bound.empty() ? keys.begin() : std::lower_bound(keys.begin(), keys.end(), lower_bound);
+        std::copy_if(lower_bound_it, keys.end(), std::back_inserter(filtered_keys),
+                     [prefix](const std::string& key) {
+                         return prefix.empty() || key.find(prefix) == 0;
+                     }
+        );
+
+        return filtered_keys;
     }
 
     void insert_object (const std::string& key, std::span<char> data) {
@@ -110,7 +119,7 @@ private:
     std::filesystem::path m_bucket_path;
     chaining_data_store m_data_store;
     transaction_log m_transaction_log;
-    std::unordered_map <std::string, uint64_t> m_object_ptrs;
+    std::map <std::string, uint64_t> m_object_ptrs;
     std::shared_mutex m_mutex;
     //ACLs, other meta-data
 

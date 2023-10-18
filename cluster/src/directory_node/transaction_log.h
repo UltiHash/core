@@ -48,9 +48,9 @@ namespace uh::cluster {
             }
         }
 
-        std::unordered_map <std::string, uint64_t> replay () {
+        std::map <std::string, uint64_t> replay () {
 
-            std::unordered_map <std::string, uint64_t> log_map;
+            std::map <std::string, uint64_t> log_map;
             std::unordered_map <std::string, uint64_t> dangling_inserts;
             std::unordered_map <std::string, uint64_t> dangling_deletes;
             std::unordered_map <std::string, uint64_t> dangling_updates;
@@ -148,7 +148,7 @@ namespace uh::cluster {
             return e;
         }
 
-        void recreate (const std::unordered_map <std::string, uint64_t>& log_map) {
+        void recreate (const std::map <std::string, uint64_t>& log_map) {
             const auto new_file_path = m_log_path.parent_path() / "_key_logger_tmp_file_new";
             const auto old_file_tmp_path = m_log_path.parent_path() / "_key_logger_tmp_file_original";
             try {
