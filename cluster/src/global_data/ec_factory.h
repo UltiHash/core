@@ -17,9 +17,11 @@ namespace uh::cluster {
         static std::unique_ptr <ec> make_ec (ec_type type) {
             switch (type) {
                 case NON:
-                    //return std::make_unique <ec_non> ();
+                    return std::make_unique <ec_non> ();
                 case XOR:
-                    //return std::make_unique <ec_xor> ();
+                    return std::make_unique <ec_xor> ();
+                default:
+                    throw std::runtime_error ("Unknown EC type!");
             }
         }
     };
