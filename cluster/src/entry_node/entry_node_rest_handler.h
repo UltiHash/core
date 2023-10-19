@@ -91,7 +91,7 @@ public:
         }
         else if ( request_name == rest::http::http_request_type::DELETE_BUCKET )
         {
-            res = handle_delete_bucket(req);
+            res = co_await handle_delete_bucket(req);
         }
         else if ( request_name == rest::http::http_request_type::DELETE_OBJECT )
         {
@@ -153,6 +153,39 @@ public:
         co_return std::move(res);
     }
 
+    coro<std::unique_ptr<http::http_response>> handle_delete_bucket (const rest::http::http_request& req)
+    {
+
+        std::unique_ptr<http::model::delete_bucket_response> res;
+
+        try
+        {
+            res = std::make_unique<http::model::delete_bucket_response>(req);
+
+            auto m_dir = m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size())).acquire_messenger();
+            directory_message dir_req;
+            dir_req.bucket_id = req.get_URI().get_bucket_id();
+            co_await m_dir.get().send_directory_message (DIR_DELETE_BUCKET_REQ, dir_req);
+
+            const auto h_dir = co_await m_dir.get().recv_header();
+            if(h_dir.type == FAILURE) [[unlikely]]
+            {
+                std::string msg;
+                msg.resize(h_dir.size);
+                m_dir.get().register_read_buffer(msg);
+                co_await m_dir.get().recv_buffers(h_dir);
+                throw std::runtime_error("Failed to delete bucket.\nError: \n" + msg);
+            }
+        }
+        catch (const std::exception& e)
+        {
+            std::cout << "ERROR: " << e.what() << std::endl;
+            res->set_error(boost::beast::http::response<boost::beast::http::string_body>{boost::beast::http::status::not_found, 11});
+        }
+
+        co_return std::move(res);
+    }
+
     coro <std::unique_ptr<http::http_response>> handle_list_buckets (const rest::http::http_request& req)
     {
 
@@ -167,9 +200,14 @@ public:
             if(h_dir.type == DIR_LIST_BUCKET_RESP) [[likely]]
             {
                 auto list_buckets_res = co_await m_dir.get().recv_directory_list_entities_message(h_dir);
-                for (const auto& bucket: list_buckets_res.entities)
+                if (list_buckets_res.entities.empty())
+                    throw std::runtime_error("no buckets created yet");
+                else
                 {
-                    res->add_bucket(bucket);
+                    for (const auto& bucket: list_buckets_res.entities)
+                    {
+                        res->add_bucket(bucket);
+                    }
                 }
             }
             if(h_dir.type == FAILURE) [[unlikely]]
@@ -185,7 +223,7 @@ public:
         catch (const std::exception& e)
         {
             std::cout << "ERROR: " << e.what() << std::endl;
-            res->set_error(boost::beast::http::response<boost::beast::http::string_body>{boost::beast::http::status::internal_server_error, 11});
+            res->set_error(boost::beast::http::response<boost::beast::http::string_body>{boost::beast::http::status::not_found, 11});
         }
 
         co_return std::move(res);
@@ -405,15 +443,6 @@ public:
             std::cout << "ERROR: " << e.what() << std::endl;
             res->set_error();
         }
-
-        return std::move(res);
-    }
-
-    std::unique_ptr<http::http_response> handle_delete_bucket (const rest::http::http_request& req)
-    {
-
-        std::unique_ptr<http::model::delete_bucket_response> res = std::make_unique<http::model::delete_bucket_response>(req);;
-        res->set_error(boost::beast::http::response<boost::beast::http::string_body>{boost::beast::http::status::not_implemented, 11});
 
         return std::move(res);
     }

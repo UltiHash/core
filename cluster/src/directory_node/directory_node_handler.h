@@ -36,6 +36,9 @@ public:
                 case DIR_LIST_OBJ_REQ:
                     co_await handle_list_objects(m, message_header);
                     break;
+                case DIR_DELETE_BUCKET_REQ:
+                    co_await handle_delete_bucket(m, message_header);
+                    break;
                 case STOP:
                     co_return;
                 default:
@@ -107,6 +110,21 @@ private:
 
         try {
             m_directory.add_bucket(request.bucket_id);
+            co_await m.send(SUCCESS, {});
+        } catch (const std::exception& e) {
+            failure = std::string (e.what());
+        }
+
+        if(!failure.empty())
+            co_await m.send(FAILURE, failure);
+    }
+
+    coro <void> handle_delete_bucket (messenger& m, const messenger::header& h) {
+        directory_message request = co_await m.recv_directory_message (h);
+        std::string failure;
+
+        try {
+            m_directory.remove_bucket(request.bucket_id);
             co_await m.send(SUCCESS, {});
         } catch (const std::exception& e) {
             failure = std::string (e.what());
