@@ -190,14 +190,14 @@ namespace uh::cluster {
     class dedupe_node {
     public:
 
-        dedupe_node (int id, cluster_map&& cmap):
+        dedupe_node (int id, cluster_map&& cmap, const bool use_id_as_port_offset = false):
                 m_cluster_map (std::move (cmap)),
                 m_id (id),
                 m_job_name ("dedupe_node_" + std::to_string (id)),
                 m_server (m_cluster_map.m_cluster_conf.dedupe_node_conf.server_conf,
                           std::make_unique <dedupe_node_handler>(m_cluster_map.m_cluster_conf.dedupe_node_conf, m_storage)),
                 m_storage (m_cluster_map, m_cluster_map.m_cluster_conf.dedupe_node_conf.data_node_connection_count,
-                           m_server.get_executor())
+                           m_server.get_executor(), use_id_as_port_offset)
 
     {
 
@@ -208,6 +208,10 @@ namespace uh::cluster {
             m_server.run();
         }
 
+        void stop() {
+            m_server.stop();
+        }
+
 
         const cluster_map m_cluster_map;
         const int m_id;
@@ -215,7 +219,10 @@ namespace uh::cluster {
         server m_server;
         global_data m_storage;
 
-        std::atomic <bool> m_stop = false;
+    public:
+        global_data& get_global_data_view() {
+            return m_storage;
+        }
 
     };
 } // end namespace uh::cluster

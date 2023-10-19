@@ -21,11 +21,11 @@ class global_data {
 
 public:
 
-    explicit global_data (const cluster_map& cmap, int data_node_connection_count, const std::shared_ptr <boost::asio::io_context>& ioc):
+    explicit global_data (const cluster_map& cmap, int data_node_connection_count, const std::shared_ptr <boost::asio::io_context>& ioc, const bool use_id_as_port_offset = false):
                           m_cluster_map (cmap),
                           m_io_service (ioc) {
         sleep(2);
-        create_data_node_connections(data_node_connection_count);
+        create_data_node_connections(data_node_connection_count, use_id_as_port_offset);
     }
     
     coro <address> write (const std::string_view& data) {
@@ -219,12 +219,16 @@ public:
 
 private:
 
-    void create_data_node_connections (int connection_count) {
+    void create_data_node_connections(int connection_count, const bool use_id_as_port_offset) {
 
         for (const auto& data_node: m_cluster_map.m_roles.at(DATA_NODE)) {
             const uint128_t offset = m_cluster_map.m_cluster_conf.data_node_conf.max_data_store_size * data_node.first;
+            uint16_t port = m_cluster_map.m_cluster_conf.data_node_conf.server_conf.port;
+            if(use_id_as_port_offset) {
+                port += data_node.first;
+            }
             auto cl = std::make_shared <client> (m_io_service, data_node.second,
-                              m_cluster_map.m_cluster_conf.data_node_conf.server_conf.port, connection_count);
+                                                                  port, connection_count);
             m_data_node_offsets.emplace(offset, std::move (cl));
         }
     }

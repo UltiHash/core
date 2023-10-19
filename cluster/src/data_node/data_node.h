@@ -20,6 +20,7 @@ public:
     data_node (int id, cluster_map&& cmap);
 
     void run();
+    void stop();
 
 private:
 

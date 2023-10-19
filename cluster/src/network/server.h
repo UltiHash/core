@@ -61,6 +61,12 @@ namespace uh::cluster
             m_ioc->run();
         }
 
+        void stop() {
+            m_ioc->post([this]() {
+                m_ioc->stop();
+            });
+        }
+
         [[nodiscard]] std::shared_ptr <boost::asio::io_context> get_executor () const {
             return m_ioc;
         }

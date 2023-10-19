@@ -63,6 +63,15 @@ namespace uh::cluster {
             m_resp_count = 0;
         }
 
+        // only intended to be used for testing
+        cluster_map(cluster_config& config, std::unordered_map <uh::cluster::role, std::map <int, std::string>> roles):
+                m_cluster_conf(config),
+                m_roles_buf ((m_cluster_conf.init_process_count - 1) * PROCESS_DATA_SIZE),
+                m_roles(std::move(roles)) {
+            m_resp_count = 0;
+        }
+
+
         void broadcast_init () {
             boost::asio::io_service io;
 
