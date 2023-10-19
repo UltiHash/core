@@ -79,6 +79,7 @@ endif()
 add_subdirectory(client-sdk)
 
 enable_testing()
+add_subdirectory(testing)
 
 set(CPACK_PACKAGE_NAME "ultihash")
 set(CPACK_PACKAGE_VENDOR "UltiHash, Inc.")
