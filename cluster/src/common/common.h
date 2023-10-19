@@ -44,6 +44,8 @@ enum message_types:uint8_t {
     DIR_LIST_BUCKET_RESP,
     DIR_LIST_OBJ_REQ,
     DIR_LIST_OBJ_RESP,
+    DIR_DELETE_BUCKET_REQ,
+    DIR_DELETE_BUCKET_RESP,
     SUCCESS,
     FAILURE,
     STOP
