@@ -223,7 +223,7 @@ public:
                 auto write_bc =  [&] (auto && m, int node_id) -> coro <int> {
                     const auto& data = recovered.at(node_id);
                     std::string_view str {data.data.get(), data.size};
-                    const auto addr = co_await write (str);
+                    co_await write (str);
                     co_return node_id;
                 };
                 const auto recovery_response = broadcast_gather_custom <int> ({}, *m_io_service, failed_nodes, write_bc);
