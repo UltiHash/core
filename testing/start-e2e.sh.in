@@ -10,6 +10,38 @@ AWS_SECRET_ACCESS_KEY="aws_secret_access_key"
 
 set -e
 
+cluster_url=""
+
+print_help()
+{
+    echo "start-e2e.sh [options] -- [py_test options]"
+    echo
+    echo "options are:"
+    echo " -h, --help           print this text"
+    echo " -u URL, --url URL    run tests against an existing cluster"
+}
+
+while [ -n "$1" ]; do
+    if [ "$1" = "--" ]; then
+        shift
+        break
+    fi
+
+    case "$1" in
+        -h|--help)  print_help
+                    exit 0
+                    ;;
+        -u|--url)   shift
+                    cluster_url="$1"
+                    case "$cluster_url" in
+                        http://*);;
+                        *) cluster_url="http://$cluster_url";;
+                    esac
+                    ;;
+    esac
+
+    shift
+done
 
 
 if [ ! -d "$venv_dir" ] || [ "$venv_dir" -ot "$requirements_file" ]; then
@@ -30,6 +62,36 @@ fi
 
 . "$venv_dir/bin/activate"
 
+
+set +e
+
+use_docker_compose="0"
+if [ -z "$cluster_url" ]; then
+    docker-compose -f "$TESTING_BINARY_DIR/docker-compose.yml" up --detach
+    cluster_url="http://localhost:8080"
+    use_docker_compose="1"
+fi
+
+timeout=30
+while [ "$timeout" -gt "0" ]; do
+
+    if curl --silent --output /dev/null $cluster_url; then
+        break
+    fi
+
+    timeout=$((timeout - 1))
+    sleep 1
+done
+
+if [ "$timeout" -eq "0" ]; then
+    echo "connection to cluster URL failed"
+    exit 1
+fi
+
 export PYTHONDONTWRITEBYTECODE=1
-pytest "$TESTING_BASE_DIR/tests" --docker-compose-file=$TESTING_BINARY_DIR/docker-compose.yml \
+pytest "$TESTING_BASE_DIR/tests" --cluster-url="$cluster_url" \
     --aws-access-key-id="$AWS_ACCESS_KEY_ID" --aws-secret-access-key="$AWS_SECRET_ACCESS_KEY" $@
+
+if [ "$use_docker_compose" -eq "1" ]; then
+    docker-compose -f "$TESTING_BINARY_DIR/docker-compose.yml" down
+fi

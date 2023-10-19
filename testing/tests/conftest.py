@@ -4,29 +4,18 @@ import requests
 
 from requests.exceptions import ConnectionError
 
+#
+# Command line options
+#
 
 def pytest_addoption(parser):
-    parser.addoption("--docker-compose-file", action="store", required=True)
+    parser.addoption("--cluster-url", action="store", required=True)
     parser.addoption("--aws-access-key-id", action="store", required=True)
     parser.addoption("--aws-secret-access-key", action="store", required=True)
 
-@pytest.fixture(scope="session")
-def aws_secrets(request):
-    return {
-        "aws_access_key_id": request.config.getoption("--aws-access-key-id"),
-        "aws_secret_access_key": request.config.getoption("--aws-secret-access-key")
-    }
-
-@pytest.fixture(scope="session")
-def docker_compose_file(request):
-    return request.config.getoption("--docker-compose-file")
-
-@pytest.fixture
-def s3(http_service, aws_secrets):
-    return boto3.client('s3',
-        **aws_secrets,
-        endpoint_url=http_service,
-        use_ssl=False)
+#
+# Helper functions
+#
 
 def is_responsive(url):
     try:
@@ -35,12 +24,24 @@ def is_responsive(url):
     except ConnectionError:
         return False
 
-@pytest.fixture(scope="session")
-def http_service(docker_ip, docker_services):
-    port = docker_services.port_for("en", 8080)
-    url = "http://{}:{}".format(docker_ip, port)
-    docker_services.wait_until_responsive(
-        timeout=30.0, pause=0.1, check=lambda: is_responsive(url)
-        )
-    return url
+#
+# Fixtures
+#
 
+@pytest.fixture(scope="session")
+def http_service(request):
+    return request.config.getoption("--cluster-url")
+
+@pytest.fixture(scope="session")
+def aws_secrets(request):
+    return {
+        "aws_access_key_id": request.config.getoption("--aws-access-key-id"),
+        "aws_secret_access_key": request.config.getoption("--aws-secret-access-key")
+    }
+
+@pytest.fixture
+def s3(http_service, aws_secrets):
+    return boto3.client('s3',
+        **aws_secrets,
+        endpoint_url=http_service,
+        use_ssl=False)
