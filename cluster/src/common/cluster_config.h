@@ -77,7 +77,9 @@ struct directory_node_config {
 };
 
 struct cluster_config {
-    int init_process_count{};
+    int init_process_count {};
+    ec_type ec_algorithm {};
+    size_t recovery_chunk_size {};
     data_node_config data_node_conf;
     dedupe_config dedupe_node_conf;
     directory_node_config directory_node_conf;

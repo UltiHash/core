@@ -52,6 +52,11 @@ enum role: uint8_t {
     ENTRY_NODE,
 };
 
+enum ec_type: uint8_t {
+    NON = 0,
+    XOR,
+};
+
 void* align_ptr (void* ptr) noexcept;
 void sync_ptr (void *ptr, std::size_t size);
 

@@ -62,7 +62,7 @@ class paged_redblack_tree {
 
 public:
 
-    paged_redblack_tree (set_config set_conf, global_data& data_store) :
+    paged_redblack_tree (set_config set_conf, global_data_view& data_store) :
             m_set_conf (std::move (set_conf)),
             m_data_store (data_store),
             m_index_store (growing_plain_storage (m_set_conf.key_store_config)),
@@ -424,7 +424,7 @@ private:
     }
 
     const set_config m_set_conf;
-    std::reference_wrapper <global_data> m_data_store;
+    std::reference_wrapper <global_data_view> m_data_store;
     growing_plain_storage m_index_store;
     node m_nil {};
     first_block* m_first_block;

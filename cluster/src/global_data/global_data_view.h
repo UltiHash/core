@@ -2,32 +2,36 @@
 // Created by masi on 7/27/23.
 //
 
-#ifndef CORE_GLOBAL_DATA_H
-#define CORE_GLOBAL_DATA_H
+#ifndef CORE_GLOBAL_DATA_VIEW_H
+#define CORE_GLOBAL_DATA_VIEW_H
 
 #include <map>
 #include <unordered_map>
 #include <set>
 #include "data_node/data_node.h"
 #include "network/client.h"
-#include <network/network_traits.h>
+#include "network/network_traits.h"
+#include "ec.h"
+#include "ec_factory.h"
 
 namespace uh::cluster {
 
 using namespace std::placeholders;
 
-class global_data {
+class global_data_view {
 
 
 public:
 
-    explicit global_data (const cluster_map& cmap, int data_node_connection_count, const std::shared_ptr <boost::asio::io_context>& ioc, const bool use_id_as_port_offset = false):
+    explicit global_data_view (const cluster_map& cmap, int data_node_connection_count, const std::shared_ptr <boost::asio::io_context>& ioc, const bool use_id_as_port_offset = false):
                           m_cluster_map (cmap),
-                          m_io_service (ioc) {
+                          m_io_service (ioc),
+                          m_ec (ec_factory::make_ec (cmap.m_cluster_conf.ec_algorithm)){
         sleep(2);
         create_data_node_connections(data_node_connection_count, use_id_as_port_offset);
     }
-    
+
+
     coro <address> write (const std::string_view& data) {
         auto index = m_data_node_index.load();
         auto new_val = (index + 1) % m_data_node_offsets.size();
@@ -46,15 +50,24 @@ public:
         co_return std::move (resp.second);
     }
 
-    coro <address> allocate (size_t size) {
+    coro <address> allocate (size_t total_size) {
+
+        if (total_size % m_data_node_offsets.size() != 0) {
+            throw std::length_error ("");
+        }
+
+        const auto size = total_size / m_data_node_offsets.size();
+
         std::vector <std::shared_ptr <client>> nodes;
+        nodes.reserve(m_data_node_offsets.size());
         for (auto& node: m_data_node_offsets) {
             nodes.emplace_back(node.second);
         }
+        nodes.insert(nodes.cend(), m_ec->get_ec_nodes().cbegin(), m_ec->get_ec_nodes().cend());
 
         std::list <std::string> errors;
         address addr;
-        const auto resp = broadcast_gather ({}, *m_io_service, nodes, ALLOC_REQ, std::span <char> {reinterpret_cast <char*> (&size), sizeof size});
+        const auto resp = broadcast_gather ({}, *m_io_service, nodes, ALLOC_REQ, std::span <const char> {reinterpret_cast <const char*> (&size), sizeof size});
         for (const auto& r: resp) {
 
             address node_addr;
@@ -116,22 +129,106 @@ public:
             node_address_map [nodes.back()].push_fragment(frag);
         }
 
-        if (data.size() % nodes.size() != 0) [[unlikely]] {
+        if (data.size() % m_data_node_offsets.size() != 0) [[unlikely]] {
             throw std::length_error ("Invalid data length for broadcast");
         }
-        const auto part_size = data.size() / nodes.size();
+        const auto part_size = data.size() / m_data_node_offsets.size();
+        const auto ec_nodes = m_ec->get_ec_nodes();
+        int ec_node_index = 0;
+        const auto ec_data = m_ec->compute_ec(data, static_cast <int> (m_data_node_offsets.size()));
 
-        auto bc_func = [&] (auto && m, int node_id) -> coro <std::pair <messenger::header, int>> {
-            allocated_write_message msg {.addr = node_address_map.at (nodes.at (node_id)),
-                                         .data = data.substr(node_id * part_size, part_size)};
+        auto bc_func = [&] (auto && m, int node_id) -> coro <int> {
+            std::string_view data_part;
+            const auto node = nodes.at (node_id);
+            if (std::find (ec_nodes.cbegin(), ec_nodes.cend(), node) == ec_nodes.cend()) { // no ec node
+                data_part = data.substr(node_id * part_size, part_size);
+            }
+            else { // ec node
+                data_part = std::string_view {ec_data [ec_node_index].data.get(), ec_data[ec_node_index].size};
+                ec_node_index ++;
+            }
+            allocated_write_message msg {.addr = node_address_map.at (node),
+                                         .data = data_part};
             co_await m.get ().send_allocated_write (ALLOC_WRITE_REQ, msg);
             const auto h = co_await m.get ().recv_header ();
             co_await m.get ().throw_if_failure (h);
-            co_return std::pair <messenger::header, int> (h, node_id);
+            co_return node_id;
         };
 
         broadcast_gather_custom <int> ({}, *m_io_service, nodes, bc_func);
 
+        co_return;
+    }
+
+    coro <void> recover () {
+        std::vector <std::shared_ptr <client>> nodes;
+        nodes.reserve(m_data_node_offsets.size());
+        std::vector <uint128_t> offsets;
+        offsets.reserve(m_data_node_offsets.size());
+        for (auto& node: m_data_node_offsets) {
+            offsets.emplace_back(node.first);
+            nodes.emplace_back(node.second);
+        }
+        nodes.insert(nodes.cend(), m_ec->get_ec_nodes().cbegin(), m_ec->get_ec_nodes().cend());
+
+        auto bc_func = [&] (auto && m, int node_id) -> coro <std::pair <int, uint128_t>> {
+            co_await m.get ().send(USED_REQ, {});
+            const auto message_header = co_await m.get().recv_header();
+            if (message_header.type == FAILURE) [[unlikely]] {
+                std::string error;
+                error.resize(message_header.size);
+                m.get ().register_read_buffer (error);
+                co_await m.get().recv_buffers(message_header);
+                throw std::runtime_error ("Received failure when broadcasting get used request");
+            }
+            const auto resp = co_await m.get().recv_uint128_t (message_header);
+            co_return std::pair <int, uint128_t> {node_id, resp.second};
+
+        };
+        const auto resp = broadcast_gather_custom <std::pair <int, uint128_t>> ({}, *m_io_service, nodes, bc_func);
+
+        // assert that only one node has 0 used and the rest have equal positive value
+        uint128_t data_size = 0;
+        std::vector <std::shared_ptr <client>> failed_nodes;
+        std::vector <std::shared_ptr <client>> healthy_nodes;
+
+        for (const auto& r: resp) {
+            if (r.second == 0 and failed_nodes.size() < m_ec->get_maximum_allowed_failed_nodes_count ()) {
+                failed_nodes.emplace_back (nodes [r.first]);
+            }
+            else if (r.second == 0) [[unlikely]] {
+                throw std::runtime_error ("More failed nodes than EC can tolerate!");
+            }
+            else if (data_size > 0 and r.second != data_size) [[unlikely]] {
+                throw std::logic_error ("Non equal data sizes in different data nodes!");
+            }
+            else if (data_size == 0) {
+                data_size = r.second;
+                healthy_nodes.emplace_back(nodes [r.first]);
+            }
+        }
+
+        if (!failed_nodes.empty()) {
+
+            size_t chunk_size = m_cluster_map.m_cluster_conf.recovery_chunk_size;
+            for (uint128_t offset = 0; offset < data_size; offset = offset + chunk_size) {
+                auto read_bc =  [&] (auto && m, int node_id) -> coro <ospan <char>> {
+                    ospan <char> buf (std::min (uint128_t (chunk_size), (data_size - offset)).get_low());
+                    co_await read(buf.data.get(), offset + offsets.at (node_id), buf.size);
+                    co_return std::move (buf);
+                };
+                const auto response = broadcast_gather_custom <ospan <char>> ({}, *m_io_service, healthy_nodes, read_bc);
+                const auto recovered = m_ec->recover(response, static_cast <int> (failed_nodes.size()));
+
+                auto write_bc =  [&] (auto && m, int node_id) -> coro <int> {
+                    const auto& data = recovered.at(node_id);
+                    std::string_view str {data.data.get(), data.size};
+                    co_await write (str);
+                    co_return node_id;
+                };
+                const auto recovery_response = broadcast_gather_custom <int> ({}, *m_io_service, failed_nodes, write_bc);
+            }
+        }
         co_return;
     }
 
@@ -221,22 +318,32 @@ private:
 
     void create_data_node_connections(int connection_count, const bool use_id_as_port_offset) {
 
+        if (m_cluster_map.m_roles.size() < m_ec->get_minimum_node_count()) [[unlikely]] {
+            throw std::logic_error ("The count of data nodes does not satisfy the minimum EC requirement");
+        }
+
         for (const auto& data_node: m_cluster_map.m_roles.at(DATA_NODE)) {
-            const uint128_t offset = m_cluster_map.m_cluster_conf.data_node_conf.max_data_store_size * data_node.first;
             uint16_t port = m_cluster_map.m_cluster_conf.data_node_conf.server_conf.port;
             if(use_id_as_port_offset) {
                 port += data_node.first;
             }
-            auto cl = std::make_shared <client> (m_io_service, data_node.second,
-                                                                  port, connection_count);
-            m_data_node_offsets.emplace(offset, std::move (cl));
+            auto cl = std::make_shared <client> (m_io_service, data_node.second, port, connection_count);
+            const uint128_t offset = m_cluster_map.m_cluster_conf.data_node_conf.max_data_store_size * data_node.first;
+
+            if (m_ec->get_acquired_ec_node_count() < m_ec->get_required_ec_node_count()) {
+                m_ec->add_ec_node(offset, std::move (cl));
+            }
+            else {
+                m_data_node_offsets.emplace(offset, std::move(cl));
+            }
         }
+
     }
 
    std::shared_ptr <client> get_data_node (const uint128_t& pointer) {
         const auto pfd = m_data_node_offsets.upper_bound (pointer);
-        if (pfd == m_data_node_offsets.cbegin()) [[unlikely]] {
-            throw std::out_of_range ("The given data pointer could not be found among the available data nodes");
+        if (pfd == m_data_node_offsets.cbegin() or pfd->first + m_cluster_map.m_cluster_conf.data_node_conf.max_data_store_size < pointer) {
+            return m_ec->get_ec_node (pointer);
         }
         return std::prev (pfd)->second;
     }
@@ -244,10 +351,11 @@ private:
     const cluster_map& m_cluster_map;
     std::shared_ptr <boost::asio::io_context> m_io_service;
     std::map <const uint128_t, std::shared_ptr <client>> m_data_node_offsets;
+    std::unique_ptr <ec> m_ec;
     std::atomic <size_t> m_data_node_index {};
 
 };
 
 } // end namespace uh::cluster
 
-#endif //CORE_GLOBAL_DATA_H
+#endif //CORE_GLOBAL_DATA_VIEW_H

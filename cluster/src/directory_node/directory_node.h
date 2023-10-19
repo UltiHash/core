@@ -37,7 +37,7 @@ public:
     const int m_id;
     const std::string m_job_name;
     server m_server;
-    global_data m_storage;
+    global_data_view m_storage;
 
 
 };

@@ -182,7 +182,7 @@
 #include <iostream>
 #include <utility>
 #include "common/cluster_config.h"
-#include "global_data.h"
+#include "global_data/global_data_view.h"
 #include "paged_redblack_tree.h"
 #include "dedupe_node_handler.h"
 
@@ -217,7 +217,7 @@ namespace uh::cluster {
         const int m_id;
         const std::string m_job_name;
         server m_server;
-        global_data m_storage;
+        global_data_view m_storage;
 
     public:
         global_data& get_global_data_view() {

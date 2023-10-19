@@ -41,7 +41,7 @@ data_store::data_store(data_node_config conf, long id, bool adaptive) :
     }
 
     if (m_open_files.empty()) {
-        int fd = add_new_file(uint128_t (0), static_cast <long> (m_conf.min_file_size));
+        int fd = add_new_file(uint128_t (m_conf.max_data_store_size) * id, static_cast <long> (m_conf.min_file_size));
         file_sizes.emplace(fd, m_conf.min_file_size);
     }
     else {
