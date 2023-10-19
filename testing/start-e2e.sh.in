@@ -5,6 +5,8 @@ TESTING_BINARY_DIR="@CMAKE_CURRENT_BINARY_DIR@"
 PYTHON3="@Python3_EXECUTABLE@"
 venv_dir="@TESTING_VENV_DIR@"
 requirements_file="$TESTING_BASE_DIR/python-requirements.txt"
+AWS_ACCESS_KEY_ID="aws_access_key_id"
+AWS_SECRET_ACCESS_KEY="aws_secret_access_key"
 
 set -e
 
@@ -29,4 +31,5 @@ fi
 . "$venv_dir/bin/activate"
 
 export PYTHONDONTWRITEBYTECODE=1
-pytest "$TESTING_BASE_DIR/tests" --docker-compose-file=$TESTING_BINARY_DIR/docker-compose.yml $@
+pytest "$TESTING_BASE_DIR/tests" --docker-compose-file=$TESTING_BINARY_DIR/docker-compose.yml \
+    --aws-access-key-id="$AWS_ACCESS_KEY_ID" --aws-secret-access-key="$AWS_SECRET_ACCESS_KEY" $@
