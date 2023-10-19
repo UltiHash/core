@@ -160,7 +160,7 @@ BOOST_FIXTURE_TEST_CASE (test_dedup_write_cache_setup, config_fixture)
     std::thread dd0_t([&dd0]() { dd0.run(); });
 
     // do stuff
-    global_data& data_view = dd0.get_global_data_view();
+    global_data_view& data_view = dd0.get_global_data_view();
     auto addr = co_await data_view.write("Hallo dies ist ein sehr langer Text mit vielen vielen Duplikaten. Hallo dies ist ein sehr langer Text mit vielen vielen Duplikaten.");
 
     dd0.stop();

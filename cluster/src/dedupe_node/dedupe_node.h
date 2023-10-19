@@ -220,7 +220,7 @@ namespace uh::cluster {
         global_data_view m_storage;
 
     public:
-        global_data& get_global_data_view() {
+        global_data_view& get_global_data_view() {
             return m_storage;
         }
 
