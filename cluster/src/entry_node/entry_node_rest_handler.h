@@ -180,7 +180,7 @@ public:
         catch (const std::exception& e)
         {
             std::cout << "ERROR: " << e.what() << std::endl;
-            res->set_error(boost::beast::http::response<boost::beast::http::string_body>{boost::beast::http::status::not_implemented, 11});
+            res->set_error(boost::beast::http::response<boost::beast::http::string_body>{boost::beast::http::status::not_found, 11});
         }
 
         co_return std::move(res);
