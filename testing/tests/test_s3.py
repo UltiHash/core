@@ -10,7 +10,7 @@ def has_bucket(s3, bucket):
     buckets = s3.list_buckets()
     pprint.pprint(buckets)
     for b in buckets['Buckets']:
-        if b['Name'] == 'my_bucket':
+        if b['Name'] == bucket:
             return True
 
     return False
