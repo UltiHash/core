@@ -12,6 +12,12 @@ namespace uh::cluster::rest::http::model
             http_response(req, std::move(recv_res))
     {}
 
+    void init_multi_part_upload_response::set_upload_id(const std::string& upload_id)
+    {
+        m_uploadId = upload_id;
+        m_uploadIdHasBeenSet = true;
+    }
+
     const http::response<http::string_body>& init_multi_part_upload_response::get_response_specific_object()
     {
 
@@ -26,11 +32,6 @@ namespace uh::cluster::rest::http::model
             m_res.set(boost::beast::http::field::location, m_location);
         }
 
-        if(m_uploadIdHasBeenSet)
-        {
-            m_res.set("x-amz-multipart-upload-id", m_uploadId);
-        }
-
         if(m_requestIdHasBeenSet)
         {
             m_res.set("x-amzn-requestid", m_requestId);
@@ -40,7 +41,7 @@ namespace uh::cluster::rest::http::model
                                    "<InitiateMultipartUploadResult>\n"
                                    "<Bucket>"+ m_orig_req.get_URI().get_bucket_id() + "</Bucket>\n"
                                    "<Key>" + m_orig_req.get_URI().get_object_key() + "</Key>\n"
-                                   "<UploadId>first-upload</UploadId>\n"
+                                   "<UploadId>" + m_uploadId + "</UploadId>\n"
                                    "</InitiateMultipartUploadResult>"));
 
         m_res.prepare_payload();

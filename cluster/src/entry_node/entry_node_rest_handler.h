@@ -397,6 +397,7 @@ public:
         try
         {
             res = std::make_unique<http::model::init_multi_part_upload_response>(req);
+            res->set_upload_id(req.get_eTag());
         }
         catch(const std::exception& e)
         {

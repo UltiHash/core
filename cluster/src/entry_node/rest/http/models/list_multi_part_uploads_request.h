@@ -44,9 +44,6 @@ namespace uh::cluster::rest::http::model
         std::string m_requestPayer;
         bool m_requestPayerHasBeenSet = false;
 
-        std::map<std::string, std::string> m_customizedAccessLogTag;
-        bool m_customizedAccessLogTagHasBeenSet = false;
-
     };
 
 } // uh::cluster::rest::http::model

@@ -15,6 +15,7 @@
 #include <entry_node/rest/http/models/list_objectsv2_request.h>
 #include <entry_node/rest/http/models/list_multi_part_uploads_request.h>
 #include <entry_node/rest/http/models/get_bucket_request.h>
+#include <entry_node/rest/utils/generator/generator.h>
 #include <regex>
 
 namespace uh::cluster::rest::utils::parser {
@@ -50,11 +51,10 @@ namespace uh::cluster::rest::utils::parser {
             case boost::beast::http::verb::post:
                 if (target.ends_with("?uploads"))
                 {
-                    // mechanism for creating upload id, does this mechanism create same upload id for same POST request occurring twice?
+                    auto upload_id = generator::generate_unique_id();
+                    m_uomap_multipart.emplace(upload_id, std::make_shared<utils::ts_map<uint16_t, std::string>>());
 
-                    m_uomap_multipart.emplace("first-upload", std::make_shared<utils::ts_map<uint16_t, std::string>>());
-
-                    return std::make_unique<rest::http::model::init_multi_part_upload_request>(m_recv_req);
+                    return std::make_unique<rest::http::model::init_multi_part_upload_request>(m_recv_req, upload_id);
                 }
                 else if (target.find("?uploadId=") != std::string::npos)
                 {
