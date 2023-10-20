@@ -28,14 +28,66 @@ using coro =  boost::asio::awaitable <T>;
 
 // ---------------------------------------------------------------------
 
-struct config_fixture
+class config_fixture
 {
-    static std::filesystem::path get_root_path() {
-        return "_tmp_test/dr/";
+public:
+
+    cluster_config config_dn0 = make_cluster_config(0);
+    cluster_config config_dn1 = make_cluster_config(1);
+    cluster_config config_dn2 = make_cluster_config(2);
+    cluster_config config_dd0 = make_cluster_config(0);
+    std::optional<cluster_map> cmap_dn0;
+    std::optional<cluster_map> cmap_dn1;
+    std::optional<cluster_map> cmap_dn2;
+    std::optional<cluster_map> cmap_dd0;
+    std::thread thread_dn0;
+    std::thread thread_dn1;
+    std::thread thread_dn2;
+    std::thread thread_dd0;
+    std::unique_ptr<data_node> dn0;
+    std::unique_ptr<data_node> dn1;
+    std::unique_ptr<data_node> dn2;
+    std::unique_ptr<dedupe_node> dd0;
+
+
+    void setup() {
+        cmap_dn0.emplace(cluster_map(config_dn0, get_cluster_roles()));
+        cmap_dn1.emplace(cluster_map(config_dn1, get_cluster_roles()));
+        cmap_dn2.emplace(cluster_map(config_dn2, get_cluster_roles()));
+        cmap_dd0.emplace(cluster_map(config_dd0, get_cluster_roles()));
+
+        dn0 = std::make_unique<data_node>(0,  std::move(cmap_dn0.value()));
+        thread_dn0 = std::thread([&]() { dn0->run(); });
+        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+
+        dn1 = std::make_unique<data_node>(1,  std::move(cmap_dn1.value()));
+        thread_dn1 = std::thread([&]() { dn1->run(); });
+        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+
+        dn2 = std::make_unique<data_node>(2,  std::move(cmap_dn2.value()));
+        thread_dn2 = std::thread([&]() { dn2->run(); });
+        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+
+        dd0 = std::make_unique<dedupe_node>(0,  std::move(cmap_dd0.value()), true);
+        thread_dd0 = std::thread([&]() { dd0->run(); });
     }
 
-    static void cleanup () {
-        std::filesystem::remove_all("_tmp_test");
+
+    static std::filesystem::path get_root_path() {
+        return "/tmp/uh/";
+    }
+
+    void teardown() {
+        dd0->stop();
+        thread_dd0.join();
+        dn0->stop();
+        thread_dn0.join();
+        dn1->stop();
+        thread_dn1.join();
+        dn2->stop();
+        thread_dn2.join();
+
+        std::filesystem::remove_all(get_root_path());
     }
 
     static std::unordered_map <uh::cluster::role, std::map <int, std::string>> get_cluster_roles() {
@@ -45,7 +97,7 @@ struct config_fixture
         };
     }
 
-    uh::cluster::entry_node_config make_entry_node_config(int i) {
+    static uh::cluster::entry_node_config make_entry_node_config(int i) {
         return {
                 .internal_server_conf = {
                         .threads = 4,
@@ -60,10 +112,10 @@ struct config_fixture
         };
     }
 
-    uh::cluster::data_node_config make_data_node_config(int i) {
+    static uh::cluster::data_node_config make_data_node_config(int i) {
         return {
-                .directory = "ultihash-root/dn",
-                        .hole_log = "ultihash-root/dn/log",
+                .directory = get_root_path() / "dn",
+                .hole_log = get_root_path() / "dn/log",
                 .min_file_size = 1ul * 1024ul * 1024ul * 1024ul,
                 .max_file_size = 4ul * 1024ul * 1024ul * 1024ul,
                 .max_data_store_size = 64ul * 1024ul * 1024ul * 1024ul,
@@ -74,14 +126,14 @@ struct config_fixture
         };
     }
 
-    uh::cluster::directory_node_config make_directory_node_config(int i) {
+    static uh::cluster::directory_node_config make_directory_node_config(int i) {
         return {
                 .server_conf = {
                         .threads = 4,
                         .port = static_cast<uint16_t>(9020 + i),
                 },
                 .directory_conf = {
-                        .root = "ultihash-root/dr",
+                        .root = get_root_path() / "dr",
                         .bucket_conf = {
                                 .min_file_size = 1024ul * 1024ul * 1024ul * 2,
                                 .max_file_size = 1024ul * 1024ul * 1024ul * 64,
@@ -93,7 +145,7 @@ struct config_fixture
         };
     }
 
-    uh::cluster::dedupe_config make_dedupe_node_config(int i) {
+    static uh::cluster::dedupe_config make_dedupe_node_config(int i) {
         return {
                 .min_fragment_size = 32,
                 .max_fragment_size = 8 * 1024,
@@ -106,14 +158,14 @@ struct config_fixture
                         .set_minimum_free_space = 1ul * 1024ul * 1024ul * 1024ul,
                         .max_empty_hole_size = 1ul * 1024ul * 1024ul * 1024ul,
                         .key_store_config = {
-                                .file  = "ultihash-root/dd/set",
+                                .file  = get_root_path() / "dd/set",
                                 .init_size = 1ul * 1024ul * 1024ul * 1024ul,
                         }
                 },
         };
     }
 
-    uh::cluster::cluster_config make_cluster_config(int i) {
+    static uh::cluster::cluster_config make_cluster_config(int i) {
         return {
                 .init_process_count = 4,
                 .data_node_conf = make_data_node_config(i),
@@ -123,58 +175,88 @@ struct config_fixture
         };
     }
 
-    uh::cluster::cluster_map get_cluster_map() {
-        auto conf = make_cluster_config(0);
-        std::unordered_map<role, std::map<int, std::string>> roles = get_cluster_roles();
-        return {conf, roles};
-    }
-
 };
 
 
 // ---------------------------------------------------------------------
 
-BOOST_FIXTURE_TEST_CASE (test_dedup_write_cache_setup, config_fixture)
+BOOST_FIXTURE_TEST_CASE (test_uncached_write, config_fixture)
 {
-    cluster_config config0= make_cluster_config(0);
-    cluster_map cmap0(config0, get_cluster_roles());
-    uh::cluster::data_node dn0 (0,  std::move(cmap0));
-    std::thread dn0_t([&dn0]() { dn0.run(); });
-    std::this_thread::sleep_for(std::chrono::milliseconds(500));
-
-    cluster_config config1= make_cluster_config(1);
-    cluster_map cmap1(config1, get_cluster_roles());
-    uh::cluster::data_node dn1 (1,  std::move(cmap1));
-    std::thread dn1_t([&dn1]() { dn1.run(); });
-    std::this_thread::sleep_for(std::chrono::milliseconds(500));
-
-    cluster_config config2= make_cluster_config(2);
-    cluster_map cmap2(config2, get_cluster_roles());
-    uh::cluster::data_node dn2 (2,  std::move(cmap2));
-    std::thread dn2_t([&dn2]() { dn2.run(); });
-    std::this_thread::sleep_for(std::chrono::milliseconds(500));
-
-    cluster_config config3 = make_cluster_config(0);
-    cluster_map cmap3(config3, get_cluster_roles());
-    uh::cluster::dedupe_node dd0 (0,  std::move(cmap3), true);
-    std::thread dd0_t([&dd0]() { dd0.run(); });
-
-    // do stuff
-    global_data_view& data_view = dd0.get_global_data_view();
-    auto addr = co_await data_view.write("Hallo dies ist ein sehr langer Text mit vielen vielen Duplikaten. Hallo dies ist ein sehr langer Text mit vielen vielen Duplikaten.");
-
-    dd0.stop();
-    dd0_t.join();
-    dn0.stop();
-    dn0_t.join();
-    dn1.stop();
-    dn1_t.join();
-    dn2.stop();
-    dn2_t.join();
+    boost::asio::io_context io_context;
+    boost::asio::io_context io_context2;
+    global_data_view& data_view = dd0->get_global_data_view();
 
 
+    std::string data_in = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Maecenas risus justo, blandit tincidunt hendrerit ac, pulvinar sed quam.";
+    //std::string_view lorem_view(data_in);
+    //dedupe_config conf = dd0->m_cluster_map.m_cluster_conf.dedupe_node_conf;
+    //dedupe_write_cache cache(lorem_view, data_view, conf);
 
+
+    std::promise<address> write_result_promise;
+    boost::asio::co_spawn(io_context, [&]() -> boost::asio::awaitable<void> {
+        write_result_promise.set_value(co_await data_view.write(data_in));
+    }, boost::asio::detached);
+    io_context.run();
+    address write_result = write_result_promise.get_future().get();
+
+    ospan<char> read_result(data_in.size());
+    std::promise<bool> read_result_promise;
+    boost::asio::co_spawn(io_context2, [&]() -> boost::asio::awaitable<void> {
+        size_t read_count = 0;
+        for(int i = 0; i < write_result.size(); i++) {
+            auto frag = write_result.get_fragment(i);
+            co_await data_view.read(read_result.data.get() + read_count, frag.pointer, frag.size);
+            read_count += frag.size;
+        }
+        read_result_promise.set_value(true);
+    }, boost::asio::detached);
+    io_context2.run();
+    read_result_promise.get_future().get();
+
+    std::string_view data_out(read_result.data.get(), read_result.size);
+
+    BOOST_CHECK(data_out == data_in);
 }
+
+//    BOOST_FIXTURE_TEST_CASE (test_cached_write, config_fixture)
+//    {
+//        boost::asio::io_context io_context;
+//        boost::asio::io_context io_context2;
+//        global_data_view& data_view = dd0->get_global_data_view();
+//
+//
+//        std::string data_in_str = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Maecenas risus justo, blandit tincidunt hendrerit ac, pulvinar sed quam.";
+//        std::string_view data_in(data_in_str);
+//        dedupe_config conf = dd0->m_cluster_map.m_cluster_conf.dedupe_node_conf;
+//        dedupe_write_cache cache(data_in, data_view, conf);
+//
+//
+//        std::promise<address> write_result_promise;
+//        boost::asio::co_spawn(io_context, [&]() -> boost::asio::awaitable<void> {
+//            write_result_promise.set_value(co_await cache.write(data_in));
+//        }, boost::asio::detached);
+//        io_context.run();
+//        address write_result = write_result_promise.get_future().get();
+//
+//        ospan<char> read_result(data_in.size());
+//        std::promise<bool> read_result_promise;
+//        boost::asio::co_spawn(io_context2, [&]() -> boost::asio::awaitable<void> {
+//            size_t read_count = 0;
+//            for(int i = 0; i < write_result.size(); i++) {
+//                auto frag = write_result.get_fragment(i);
+//                co_await data_view.read(read_result.data.get() + read_count, frag.pointer, frag.size);
+//                read_count += frag.size;
+//            }
+//            read_result_promise.set_value(true);
+//        }, boost::asio::detached);
+//        io_context2.run();
+//        read_result_promise.get_future().get();
+//
+//        std::string_view data_out(read_result.data.get(), read_result.size);
+//
+//        BOOST_CHECK(data_out == data_in);
+//    }
 
 
 // ---------------------------------------------------------------------
