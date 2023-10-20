@@ -58,6 +58,7 @@ if [ ! -d "$venv_dir" ] || [ "$venv_dir" -ot "$requirements_file" ]; then
     }
 
     deactivate
+    touch "$venv_dir"
 fi
 
 . "$venv_dir/bin/activate"
