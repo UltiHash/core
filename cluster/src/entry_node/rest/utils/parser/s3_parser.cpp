@@ -38,8 +38,7 @@ namespace uh::cluster::rest::utils::parser {
         auto method = m_recv_req.get().base().method();
 
         // TODO: switch to regex for everything?
-        std::regex bucket(R"(^\/[\w!-._*']+$)");
-        std::regex delete_object(R"(^\/[\w!-._*']+\/[\w!-._*']+(\?versionId=\d+)?$)");
+        std::regex pattern(R"(^\/\w+$)");
         std::regex delete_pattern(R"(^\/\w+\?delete)");
 
         switch (method)
@@ -68,7 +67,7 @@ namespace uh::cluster::rest::utils::parser {
                     throw std::runtime_error("unknown request type");
                 }
             case boost::beast::http::verb::put:
-                if (std::regex_match(std::string(target), bucket))
+                if (std::regex_match(std::string(target), pattern))
                 {
                     return std::make_unique<rest::http::model::create_bucket_request>(m_recv_req);
                 }
@@ -118,12 +117,12 @@ namespace uh::cluster::rest::utils::parser {
                     throw std::runtime_error("unknown request type");
                 }
             case boost::beast::http::verb::delete_:
-                if (std::regex_match(std::string(target), bucket))
+                if (std::regex_match(std::string(target), pattern))
                 {
                     return std::make_unique<rest::http::model::delete_bucket_request>(m_recv_req);
                 }
                 // TODO: switch to regex since object key might be missing on this
-                else if (std::regex_match(std::string(target), delete_object))
+                else if (target.find("?versionId="))
                 {
                     return std::make_unique<rest::http::model::delete_object_request>(m_recv_req);
                 }
