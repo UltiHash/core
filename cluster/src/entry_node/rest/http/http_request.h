@@ -34,6 +34,7 @@ namespace uh::cluster::rest::http
     enum class http_request_type
     {
         CREATE_BUCKET,
+        GET_BUCKET,
         LIST_BUCKETS,
         DELETE_BUCKET,
         DELETE_OBJECTS,
