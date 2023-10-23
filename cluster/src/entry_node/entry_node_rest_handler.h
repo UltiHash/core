@@ -78,9 +78,9 @@ public:
             case http::http_request_type::DELETE_OBJECT:
                 res = handle_delete_object(req);
                 break;
-//            case http::http_request_type::LIST_OBJECTS_V2:
-//                res = handle_list_objects_v2(req);
-//                break;
+            case http::http_request_type::LIST_OBJECTS_V2:
+                res = co_await handle_list_objects_v2(req);
+                break;
             case http::http_request_type::GET_OBJECT_ATTRIBUTES:
                 res = handle_get_object_attributes(req);
                 break;
@@ -230,14 +230,9 @@ public:
             if(h_dir.type == DIR_LIST_BUCKET_RESP) [[likely]]
             {
                 auto list_buckets_res = co_await m_dir.get().recv_directory_list_entities_message(h_dir);
-                if (list_buckets_res.entities.empty())
-                    throw std::runtime_error("no buckets created yet");
-                else
+                for (const auto& bucket: list_buckets_res.entities)
                 {
-                    for (const auto& bucket: list_buckets_res.entities)
-                    {
-                        res->add_bucket(bucket);
-                    }
+                    res->add_bucket(bucket);
                 }
             }
             if(h_dir.type == FAILURE) [[unlikely]]
@@ -376,9 +371,9 @@ public:
 
         std::unique_ptr<http::model::list_objectsv2_response> res;
 
-//        try
-//        {
-//            res = std::make_unique<http::model::list_objectsv2_response>(req);
+        try
+        {
+            res = std::make_unique<http::model::list_objectsv2_response>(req);
 //            auto m_dir = m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size())).acquire_messenger();
 //
 //            directory_message dir_req;
@@ -389,27 +384,34 @@ public:
 //
 //            ospan <char> buffer (h_dir.size);
 //            std::string msg;
+//            directory_lst_entities_message list_objects_res;
 //
 //            switch (h_dir.type)
 //            {
 //                case DIR_LIST_OBJ_RESP:
-//                    m_dir.get().register_read_buffer(buffer);
-//                    co_await m_dir.get().recv_buffers(h_dir);
-//                    res->set_body(std::string(buffer.data.get(), buffer.size));
+//                    list_objects_res = co_await m_dir.get().recv_directory_list_entities_message(h_dir);
+//
+//                    for (const auto& content : list_objects_res.entities)
+//                    {
+//                        res->add_content(content);
+//                    }
 //                    break;
+//
 //                case FAILURE:
 //                    msg.resize(h_dir.size);
 //                    m_dir.get().register_read_buffer(msg);
 //                    co_await m_dir.get().recv_buffers(h_dir);
 //                    throw std::runtime_error("Failed to list objects of bucket: " + dir_req.bucket_id + "\n" + "Error: \n" + msg);
+//
 //                default:
 //                    throw std::runtime_error("unexpected internal server error");
 //            }
-//        }
-//        catch(const std::exception &e)
-//        {
-//            res->set_error(boost::beast::http::response<boost::beast::http::string_body>{boost::beast::http::status::internal_server_error, 11});
-//        }
+
+        }
+        catch(const std::exception &e)
+        {
+            res->set_error(boost::beast::http::response<boost::beast::http::string_body>{boost::beast::http::status::internal_server_error, 11});
+        }
 
         co_return std::move(res);
     }

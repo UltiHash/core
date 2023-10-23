@@ -14,6 +14,7 @@ namespace uh::cluster::rest::http::model
 
         [[nodiscard]] const http::response<http::string_body>& get_response_specific_object() override;
         void add_content(std::string);
+        void add_name(std::string);
 
     private:
 

@@ -39,9 +39,6 @@ public:
                 case DIR_DELETE_BUCKET_REQ:
                     co_await handle_delete_bucket(m, message_header);
                     break;
-//                case DIR_LIST_OBJECTS_REQ:
-//                    co_await handle_list_objects(m, message_header);
-//                    break;
                 case STOP:
                     co_return;
                 default:

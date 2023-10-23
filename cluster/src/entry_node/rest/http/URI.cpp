@@ -24,7 +24,7 @@ namespace uh::cluster::rest::http
     std::string URI::get_query_string_value(const std::string& key) const
     {
         auto index = m_query_string.find(key+'=');
-        if (!index)
+        if (index ==  std::string::npos)
         {
             return "";
         }

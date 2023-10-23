@@ -17,6 +17,13 @@ namespace uh::cluster::rest::http::model
     void list_objectsv2_response::add_content(std::string content)
     {
         m_contents.emplace_back(std::move(content));
+        m_contentsHasBeenSet = true;
+    }
+
+    void list_objectsv2_response::add_name(std::string bucket_name)
+    {
+        m_name = std::move(bucket_name);
+        m_nameHasBeenSet = true;
     }
 
     const http::response<http::string_body>& list_objectsv2_response::get_response_specific_object()
@@ -33,25 +40,26 @@ namespace uh::cluster::rest::http::model
             m_res.set("x-amz-request-charged", m_requestCharged);
         }
 
+        std::string content_xml_string;
+        if (m_contentsHasBeenSet)
+        {
+            for (const auto& bucket: m_contents)
+            {
+                content_xml_string +="<Contents>\n"
+                                     "<Key>" + bucket + "</Key>\n"
+                                     "</Contents>\n";
+            }
+        }
+
+        std::string name_xml_string;
+        if (m_nameHasBeenSet)
+        {
+            name_xml_string += "<Name>" + m_name + "<Name>\n";
+        }
+
         set_body(std::string("<ListBucketResult>\n"
-                             "   <IsTruncated>boolean</IsTruncated>\n"
-                             "   <Contents>\n"
-                             "      <ChecksumAlgorithm>string</ChecksumAlgorithm>\n"
-                             "      <ETag>string</ETag>\n"
-                             "      <Key>string</Key>\n"
-                             "      <LastModified>timestamp</LastModified>\n"
-                             "      <Owner>\n"
-                             "         <DisplayName>string</DisplayName>\n"
-                             "         <ID>string</ID>\n"
-                             "      </Owner>\n"
-                             "      <RestoreStatus>\n"
-                             "         <IsRestoreInProgress>boolean</IsRestoreInProgress>\n"
-                             "         <RestoreExpiryDate>timestamp</RestoreExpiryDate>\n"
-                             "      </RestoreStatus>\n"
-                             "      <Size>long</Size>\n"
-                             "      <StorageClass>string</StorageClass>\n"
-                             "   </Contents>\n"
-                             "   <Name>string</Name>\n"
+                             + content_xml_string
+                             + name_xml_string +
                              "   <Prefix>string</Prefix>\n"
                              "   <Delimiter>string</Delimiter>\n"
                              "   <MaxKeys>integer</MaxKeys>\n"
