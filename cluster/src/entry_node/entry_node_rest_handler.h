@@ -322,26 +322,34 @@ public:
             auto m_dir = m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size())).acquire_messenger();
             directory_message dir_req;
             dir_req.bucket_id = req.get_URI().get_bucket_id();
+            std::cout << req.get_URI().get_object_key() << std::endl;
             dir_req.object_key = std::make_unique <std::string> (req.get_URI().get_object_key());
 
             co_await m_dir.get().send_directory_message (DIR_GET_OBJ_REQ, dir_req);
             const auto h_dir = co_await m_dir.get().recv_header();
 
-            if(h_dir.type == DIR_GET_OBJ_RESP) [[likely]]
+
+            ospan <char> buffer (h_dir.size);
+            std::string msg;
+
+            switch (h_dir.type)
             {
-                ospan <char> buffer (h_dir.size);
-                m_dir.get().register_read_buffer(buffer);
-                co_await m_dir.get().recv_buffers(h_dir);
-                res->set_body(std::string(buffer.data.get(), buffer.size));
+                case DIR_GET_OBJ_RESP:
+                    m_dir.get().register_read_buffer(buffer);
+                    co_await m_dir.get().recv_buffers(h_dir);
+                    res->set_body(std::string(buffer.data.get(), buffer.size));
+                    break;
+
+                case FAILURE:
+                    msg.resize(h_dir.size);
+                    m_dir.get().register_read_buffer(msg);
+                    co_await m_dir.get().recv_buffers(h_dir);
+                    throw std::runtime_error("Failed to retreive object " + dir_req.bucket_id + "/" + *dir_req.object_key + " from the directory.\n" + "Error: \n" + msg);
+
+                default:
+                    throw std::runtime_error("unexpected internal server error");
             }
-            else if (h_dir.type == FAILURE)
-            {
-                std::string msg;
-                msg.resize(h_dir.size);
-                m_dir.get().register_read_buffer(msg);
-                co_await m_dir.get().recv_buffers(h_dir);
-                throw std::runtime_error("Failed to retreive object " + dir_req.bucket_id + "/" + *dir_req.object_key + " from the directory.\n" + "Error: \n" + msg);
-            }
+
         }
         catch (const std::exception& e)
         {

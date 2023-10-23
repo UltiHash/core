@@ -85,7 +85,10 @@ private:
         }
 
         if(!failure.empty())
+        {
             co_await m.send(FAILURE, failure);
+            co_return;
+        }
 
         std::size_t buffer_size = 0;
         for(auto frag_size : addr.sizes){
