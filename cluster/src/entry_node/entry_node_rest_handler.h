@@ -52,71 +52,55 @@ public:
 
         std::unique_ptr<http::http_response> res;
 
-        // TODO: use unordered map for the below
-        auto request_name = req.get_request_name();
-        if ( request_name == rest::http::http_request_type::CREATE_BUCKET )
+        switch (req.get_request_name())
         {
-            res = co_await handle_create_bucket(req);
-        }
-        else if( request_name == rest::http::http_request_type::PUT_OBJECT )
-        {
-            res = co_await handle_put_object(req);
-        }
-        else if (request_name == rest::http::http_request_type::GET_OBJECT)
-        {
-            res = co_await handle_get_object(req);
-        }
-        else if ( request_name == rest::http::http_request_type::INIT_MULTIPART_UPLOAD )
-        {
-            res = handle_init_mp_upload(req);
-        }
-        else if ( request_name == rest::http::http_request_type::MULTIPART_UPLOAD )
-        {
-            res = handle_mp_upload(req);
-        }
-        else if ( request_name == rest::http::http_request_type::COMPLETE_MULTIPART_UPLOAD )
-        {
-            res = co_await handle_complete_mp_upload(req);
-        }
-        else if ( request_name == rest::http::http_request_type::ABORT_MULTIPART_UPLOAD )
-        {
-            res = handle_abort_mp_upload(req);
-        }
-        else if ( request_name == rest::http::http_request_type::LIST_MULTI_PART_UPLOADS )
-        {
-            res = handle_list_mp_uploads(req);
-        }
-        else if ( request_name == rest::http::http_request_type::LIST_BUCKETS )
-        {
-            res = co_await handle_list_buckets(req);
-        }
-        else if ( request_name == rest::http::http_request_type::DELETE_BUCKET )
-        {
-            res = co_await handle_delete_bucket(req);
-        }
-        else if ( request_name == rest::http::http_request_type::DELETE_OBJECT )
-        {
-            res = handle_delete_object(req);
-        }
-        else if ( request_name == rest::http::http_request_type::DELETE_OBJECTS )
-        {
-            res = handle_delete_objects(req);
-        }
-        else if (request_name == rest::http::http_request_type::GET_OBJECT_ATTRIBUTES)
-        {
-            res = handle_get_object_attributes(req);
-        }
-        else if ( request_name == rest::http::http_request_type::LIST_OBJECTS_V2 )
-        {
-            res = handle_list_objects_v2(req);
-        }
-        else if ( request_name == rest::http::http_request_type::GET_BUCKET )
-        {
-            res = co_await handle_get_bucket(req);
-        }
-        else
-        {
-            throw std::runtime_error("request not supported by the backend yet.");
+            case rest::http::http_request_type::CREATE_BUCKET:
+                res = co_await handle_create_bucket(req);
+                break;
+            case http::http_request_type::GET_BUCKET:
+                res = co_await handle_get_bucket(req);
+                break;
+            case http::http_request_type::LIST_BUCKETS:
+                res = co_await handle_list_buckets(req);
+                break;
+            case http::http_request_type::DELETE_BUCKET:
+                res = co_await handle_delete_bucket(req);
+                break;
+            case http::http_request_type::DELETE_OBJECTS:
+                res = handle_delete_objects(req);
+                break;
+            case http::http_request_type::PUT_OBJECT:
+                res = co_await handle_put_object(req);
+                break;
+            case http::http_request_type::GET_OBJECT:
+                res = co_await handle_get_object(req);
+                break;
+            case http::http_request_type::DELETE_OBJECT:
+                res = handle_delete_object(req);
+                break;
+//            case http::http_request_type::LIST_OBJECTS_V2:
+//                res = handle_list_objects_v2(req);
+//                break;
+            case http::http_request_type::GET_OBJECT_ATTRIBUTES:
+                res = handle_get_object_attributes(req);
+                break;
+            case http::http_request_type::INIT_MULTIPART_UPLOAD:
+                res = handle_init_mp_upload(req);
+                break;
+            case http::http_request_type::MULTIPART_UPLOAD:
+                res = handle_mp_upload(req);
+                break;
+            case http::http_request_type::COMPLETE_MULTIPART_UPLOAD:
+                res = co_await handle_complete_mp_upload(req);
+                break;
+            case http::http_request_type::ABORT_MULTIPART_UPLOAD:
+                res = handle_abort_mp_upload(req);
+                break;
+            case http::http_request_type::LIST_MULTI_PART_UPLOADS:
+                res = handle_list_mp_uploads(req);
+                break;
+            default:
+                throw std::runtime_error("request not supported by the backend yet.");
         }
 
         const auto stop = std::chrono::steady_clock::now ();
@@ -379,15 +363,47 @@ public:
         return std::move(res);
     }
 
-    std::unique_ptr<http::http_response> handle_list_objects_v2 (const rest::http::http_request& req)
+    coro<std::unique_ptr<http::http_response>> handle_list_objects_v2 (const rest::http::http_request& req)
     {
 
         std::unique_ptr<http::model::list_objectsv2_response> res;
 
-        res = std::make_unique<http::model::list_objectsv2_response>(req);
-        res->set_error(boost::beast::http::response<boost::beast::http::string_body>{boost::beast::http::status::not_implemented, 11});
+//        try
+//        {
+//            res = std::make_unique<http::model::list_objectsv2_response>(req);
+//            auto m_dir = m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size())).acquire_messenger();
+//
+//            directory_message dir_req;
+//            dir_req.bucket_id = req.get_URI().get_bucket_id();
+//
+//            co_await m_dir.get().send_directory_message (DIR_LIST_OBJ_REQ, dir_req);
+//            const auto h_dir = co_await m_dir.get().recv_header();
+//
+//            ospan <char> buffer (h_dir.size);
+//            std::string msg;
+//
+//            switch (h_dir.type)
+//            {
+//                case DIR_LIST_OBJ_RESP:
+//                    m_dir.get().register_read_buffer(buffer);
+//                    co_await m_dir.get().recv_buffers(h_dir);
+//                    res->set_body(std::string(buffer.data.get(), buffer.size));
+//                    break;
+//                case FAILURE:
+//                    msg.resize(h_dir.size);
+//                    m_dir.get().register_read_buffer(msg);
+//                    co_await m_dir.get().recv_buffers(h_dir);
+//                    throw std::runtime_error("Failed to list objects of bucket: " + dir_req.bucket_id + "\n" + "Error: \n" + msg);
+//                default:
+//                    throw std::runtime_error("unexpected internal server error");
+//            }
+//        }
+//        catch(const std::exception &e)
+//        {
+//            res->set_error(boost::beast::http::response<boost::beast::http::string_body>{boost::beast::http::status::internal_server_error, 11});
+//        }
 
-        return std::move(res);
+        co_return std::move(res);
     }
 
     std::unique_ptr<http::http_response> handle_init_mp_upload (const rest::http::http_request& req)

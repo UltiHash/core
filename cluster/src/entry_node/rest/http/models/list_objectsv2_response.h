@@ -13,6 +13,7 @@ namespace uh::cluster::rest::http::model
         list_objectsv2_response(const http_request&, http::response<http::string_body>);
 
         [[nodiscard]] const http::response<http::string_body>& get_response_specific_object() override;
+        void add_content(std::string);
 
     private:
 

@@ -14,6 +14,11 @@ namespace uh::cluster::rest::http::model
         m_res.set(boost::beast::http::field::content_type, "application/xml");
     }
 
+    void list_objectsv2_response::add_content(std::string content)
+    {
+        m_contents.emplace_back(std::move(content));
+    }
+
     const http::response<http::string_body>& list_objectsv2_response::get_response_specific_object()
     {
 

@@ -56,7 +56,7 @@ namespace uh::cluster::rest::utils::parser {
 
                     return std::make_unique<rest::http::model::init_multi_part_upload_request>(m_recv_req, upload_id);
                 }
-                else if (target.find("?uploadId=") != std::string::npos)
+                else if (target.ends_with("?uploadId="))
                 {
                     auto upload_id = std::string(target.substr(target.find("uploadId=") + 9));
 
@@ -108,7 +108,7 @@ namespace uh::cluster::rest::utils::parser {
                 {
                     return std::make_unique<rest::http::model::get_object_attributes_request>(m_recv_req);
                 }
-                else if (target.find("/?list-type=2") != std::string::npos )
+                else if (target.find("?list-type=2") != std::string::npos )
                 {
                     return std::make_unique<rest::http::model::list_objectsv2_request>(m_recv_req);
                 }
