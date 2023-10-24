@@ -5,6 +5,7 @@
 #ifndef CORE_DEDUPE_WRITE_CACHE_H
 #define CORE_DEDUPE_WRITE_CACHE_H
 
+#include <algorithm>
 #include "common/common_types.h"
 #include "global_data/global_data_view.h"
 
@@ -15,8 +16,8 @@ namespace uh::cluster {
     public:
         dedupe_write_cache(std::string_view &integration_data, global_data_view &storage, dedupe_config& config) :
         m_integration_data(integration_data), m_storage(storage), m_dedupe_conf(config) {
-            //todo: m_cache_size can now divert from
-            m_cache_size = std::lcm(std::min(m_storage.get_data_node_count() * m_cache_size_per_node, m_integration_data.size()), m_storage.get_data_node_count());
+            m_cache_size = next_divisible(std::min(m_storage.get_data_node_count() * m_cache_size_per_node, m_integration_data.size()), m_storage.get_data_node_count()) ;
+
             m_cache_data = static_cast<char *>(std::malloc(m_cache_size));
             m_cache_data_ptr = m_cache_data;
         }
@@ -25,6 +26,10 @@ namespace uh::cluster {
             if(m_cache_data != nullptr) {
                 std::free(m_cache_data);
             }
+        }
+
+        static inline std::size_t next_divisible(const std::size_t x, const std::size_t y) {
+            return (x % y == 0) ? x : x + (y - (x % y));
         }
 
         std::size_t get_size_available() const {

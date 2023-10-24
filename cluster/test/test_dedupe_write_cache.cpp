@@ -69,31 +69,30 @@ BOOST_FIXTURE_TEST_CASE (test_uncached_write, global_data_view_fixture)
         dedupe_write_cache cache(data_in, data_view, conf);
 
 
-//        std::promise<address> write_result_promise;
-//        boost::asio::co_spawn(io_context, [&]() -> boost::asio::awaitable<void> {
-//            write_result_promise.set_value(co_await cache.write(data_in));
-//        }, boost::asio::detached);
-//        io_context.run();
-//        address write_result = write_result_promise.get_future().get();
+        std::promise<address> write_result_promise;
+        boost::asio::co_spawn(io_context, [&]() -> boost::asio::awaitable<void> {
+            write_result_promise.set_value(co_await cache.write(data_in));
+        }, boost::asio::detached);
+        io_context.run();
+        address write_result = write_result_promise.get_future().get();
 
         ospan<char> read_result(data_in.size());
-//        std::promise<bool> read_result_promise;
-//        boost::asio::co_spawn(io_context2, [&]() -> boost::asio::awaitable<void> {
-//            size_t read_count = 0;
-//            for(int i = 0; i < write_result.size(); i++) {
-//                auto frag = write_result.get_fragment(i);
-//                co_await data_view.read(read_result.data.get() + read_count, frag.pointer, frag.size);
-//                read_count += frag.size;
-//            }
-//            read_result_promise.set_value(true);
-//        }, boost::asio::detached);
-//        io_context2.run();
-//        read_result_promise.get_future().get();
+        std::promise<bool> read_result_promise;
+        boost::asio::co_spawn(io_context2, [&]() -> boost::asio::awaitable<void> {
+            size_t read_count = 0;
+            for(int i = 0; i < write_result.size(); i++) {
+                auto frag = write_result.get_fragment(i);
+                co_await data_view.read(read_result.data.get() + read_count, frag.pointer, frag.size);
+                read_count += frag.size;
+            }
+            read_result_promise.set_value(true);
+        }, boost::asio::detached);
+        io_context2.run();
+        read_result_promise.get_future().get();
 
         std::string_view data_out(read_result.data.get(), read_result.size);
 
-        BOOST_CHECK(true);
-        //BOOST_CHECK(data_out == data_in);
+        BOOST_CHECK(data_out == data_in);
     }
 
 
