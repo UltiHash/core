@@ -30,23 +30,29 @@ public:
         acquired_messenger (std::unique_ptr <messenger> m,
                             std::reference_wrapper <client> cl):
                 m_messenger(std::move (m)),
-                m_client(cl) {
+                m_client(cl),
+                m_moved(false) {
         }
 
         acquired_messenger (acquired_messenger&& m) noexcept:
-            m_messenger (std::move (m.m_messenger)), m_client (m.m_client) {}
+            m_messenger (std::move (m.m_messenger)), m_client (m.m_client) {
+            m.m_moved = true;
+        }
 
         [[nodiscard]] messenger& get () const {
             return *m_messenger;
         }
 
         ~acquired_messenger() {
-            m_messenger->clear_buffers();
-            m_client.get().push_messenger(std::move(m_messenger));
+            if(!m_moved) {
+                m_messenger->clear_buffers();
+                m_client.get().push_messenger(std::move(m_messenger));
+            }
         }
 
         std::unique_ptr <messenger> m_messenger;
         const std::reference_wrapper <client> m_client;
+        bool m_moved;
     };
 
     std::deque <std::unique_ptr<messenger>> m_messengers;
