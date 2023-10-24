@@ -194,13 +194,11 @@ namespace uh::cluster {
                 m_cluster_map (std::move (cmap)),
                 m_id (id),
                 m_job_name ("dedupe_node_" + std::to_string (id)),
+                m_storage (m_cluster_map),
                 m_server (m_cluster_map.m_cluster_conf.dedupe_node_conf.server_conf,
-                          std::make_unique <dedupe_node_handler>(m_cluster_map.m_cluster_conf.dedupe_node_conf, m_storage)),
-                m_storage (m_cluster_map, m_cluster_map.m_cluster_conf.dedupe_node_conf.data_node_connection_count,
-                           m_server.get_executor(), use_id_as_port_offset)
-
-    {
-
+                          std::make_unique <dedupe_node_handler>(m_cluster_map.m_cluster_conf.dedupe_node_conf, m_storage))
+        {
+        m_storage.create_data_node_connections(m_server.get_executor(), m_cluster_map.m_cluster_conf.dedupe_node_conf.data_node_connection_count, use_id_as_port_offset);
         }
 
         void run() {
@@ -209,6 +207,11 @@ namespace uh::cluster {
         }
 
         void stop() {
+            boost::asio::io_context io_context;
+            auto answer = boost::asio::co_spawn(m_server.get_executor()->get_executor(), [&]() -> boost::asio::awaitable<void> {
+                co_await m_storage.stop();
+            }, boost::asio::use_future);
+            answer.wait();
             m_server.stop();
         }
 
@@ -216,8 +219,8 @@ namespace uh::cluster {
         const cluster_map m_cluster_map;
         const int m_id;
         const std::string m_job_name;
-        server m_server;
         global_data_view m_storage;
+        server m_server;
 
     public:
         global_data_view& get_global_data_view() {

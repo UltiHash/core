@@ -23,14 +23,11 @@ class global_data_view {
 
 public:
 
-    explicit global_data_view (const cluster_map& cmap, int data_node_connection_count, const std::shared_ptr <boost::asio::io_context>& ioc, const bool use_id_as_port_offset = false):
+    explicit global_data_view (const cluster_map& cmap):
                           m_cluster_map (cmap),
-                          m_io_service (ioc),
                           m_ec (ec_factory::make_ec (cmap.m_cluster_conf.ec_algorithm)){
         sleep(2);
-        create_data_node_connections(data_node_connection_count, use_id_as_port_offset);
     }
-
 
     coro <address> write (const std::string_view& data) {
         auto index = m_data_node_index.load();
@@ -314,9 +311,9 @@ public:
         }
     }
 
-private:
+    void create_data_node_connections(const std::shared_ptr <boost::asio::io_context>& io_service, int connection_count, const bool use_id_as_port_offset) {
 
-    void create_data_node_connections(int connection_count, const bool use_id_as_port_offset) {
+        m_io_service = io_service;
 
         if (m_cluster_map.m_roles.size() < m_ec->get_minimum_node_count()) [[unlikely]] {
             throw std::logic_error ("The count of data nodes does not satisfy the minimum EC requirement");
@@ -339,6 +336,9 @@ private:
         }
 
     }
+
+private:
+
 
    std::shared_ptr <client> get_data_node (const uint128_t& pointer) {
         const auto pfd = m_data_node_offsets.upper_bound (pointer);

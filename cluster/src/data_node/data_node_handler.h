@@ -16,7 +16,7 @@ class data_node_handler: public protocol_handler {
 public:
 
     data_node_handler (data_node_config conf, int id):
-    m_data_store (std::move(conf), id)
+    m_data_store (std::move(conf), id), m_is_stopped(false)
     {}
 
     coro <void> handle (messenger m) override {
@@ -48,11 +48,16 @@ public:
                     co_await handle_alloc_write (m, message_header);
                     break;
                 case STOP:
+                    m_is_stopped = true;
                     co_return;
                 default:
                     throw std::invalid_argument("Invalid message type!");
             }
         }
+    }
+
+    bool stop_received() {
+        return m_is_stopped;
     }
 
 private:
@@ -118,7 +123,7 @@ private:
     }
 
     uh::cluster::data_store m_data_store;
-
+    bool m_is_stopped;
 };
 
 } // end namespace uh::cluster

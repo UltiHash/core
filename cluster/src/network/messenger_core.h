@@ -181,8 +181,12 @@ public:
     }
 
     ~messenger_core() {
-        m_socket.shutdown (boost::asio::ip::tcp::socket::shutdown_send);
+        if(m_socket.is_open()) {
+            m_socket.shutdown (boost::asio::ip::tcp::socket::shutdown_both);
+            m_socket.close();
+        }
     }
+
 
 private:
 
