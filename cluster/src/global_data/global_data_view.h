@@ -305,10 +305,20 @@ public:
     }
 
     coro <void> stop () {
-        for (auto& dn: m_data_node_offsets) {
-            auto m = dn.second->acquire_messenger();
-            co_await m.get().send(STOP, {});
+
+        std::vector <std::shared_ptr <client>> nodes;
+        nodes.reserve(m_data_node_offsets.size());
+        for (auto& node: m_data_node_offsets) {
+            nodes.emplace_back(node.second);
         }
+        nodes.insert(nodes.cend(), m_ec->get_ec_nodes().cbegin(), m_ec->get_ec_nodes().cend());
+        auto bc_func = [&] (auto && m, int node_id) -> coro <message_types> {
+            co_await m.get ().send(STOP, {});
+            co_return SUCCESS;
+        };
+
+        broadcast_gather_custom <message_types> ({}, *m_io_service, nodes, bc_func);
+
     }
 
     void create_data_node_connections(const std::shared_ptr <boost::asio::io_context>& io_service, int connection_count, const bool use_id_as_port_offset) {

@@ -164,7 +164,7 @@ namespace uh::cluster {
             return {
                     .init_process_count = 4,
                     .ec_algorithm = XOR,
-                    .recovery_chunk_size = 1024ul,
+                    .recovery_chunk_size = 1 * 1024ul * 1024ul * 1024ul,
                     .data_node_conf = make_data_node_config(i),
                     .dedupe_node_conf = make_dedupe_node_config(i),
                     .directory_node_conf = make_directory_node_config(i),
