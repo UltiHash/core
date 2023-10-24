@@ -27,7 +27,7 @@ std::vector <std::pair <messenger_core::header, ospan <char>>> scatter_gather (a
     futures.reserve(nodes.size());
 
     for (int i = 0; i < nodes.size(); i++) {
-        messengers.emplace_back (nodes[i].get()->acquire_messenger());
+        messengers.emplace_back (std::move (nodes[i].get()->acquire_messenger()));
         futures.emplace_back(boost::asio::co_spawn(ioc, messengers.back().get().send_recv(type, data[i]), boost::asio::use_future));
     }
 

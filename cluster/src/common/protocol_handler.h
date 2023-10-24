@@ -14,7 +14,7 @@ struct protocol_handler {
 
     virtual ~protocol_handler() = default;
 
-    virtual bool stop_received() {
+    [[nodiscard]] virtual bool stop_received() const {
         return false;
     }
 };

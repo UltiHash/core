@@ -56,7 +56,7 @@ public:
         }
     }
 
-    bool stop_received() {
+    bool stop_received() const override {
         return m_is_stopped;
     }
 
