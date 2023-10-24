@@ -318,10 +318,10 @@ public:
         };
 
         broadcast_gather_custom <message_types> ({}, *m_io_service, nodes, bc_func);
-
+        co_return;
     }
 
-    void create_data_node_connections(const std::shared_ptr <boost::asio::io_context>& io_service, int connection_count, const bool use_id_as_port_offset) {
+    void create_data_node_connections (const std::shared_ptr <boost::asio::io_context>& io_service, int connection_count, const bool use_id_as_port_offset) {
 
         m_io_service = io_service;
 

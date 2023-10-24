@@ -198,7 +198,7 @@ namespace uh::cluster {
                 m_server (m_cluster_map.m_cluster_conf.dedupe_node_conf.server_conf,
                           std::make_unique <dedupe_node_handler>(m_cluster_map.m_cluster_conf.dedupe_node_conf, m_storage))
         {
-        m_storage.create_data_node_connections(m_server.get_executor(), m_cluster_map.m_cluster_conf.dedupe_node_conf.data_node_connection_count, use_id_as_port_offset);
+            m_storage.create_data_node_connections(m_server.get_executor(), m_cluster_map.m_cluster_conf.dedupe_node_conf.data_node_connection_count, use_id_as_port_offset);
         }
 
         void run() {
