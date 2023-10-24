@@ -305,8 +305,16 @@ public:
     }
 
     coro <void> stop () {
-        for (auto& dn: m_data_node_offsets) {
-            auto m = dn.second->acquire_messenger();
+        std::vector <std::shared_ptr <client>> nodes;
+        nodes.reserve(m_data_node_offsets.size());
+        for (auto& node: m_data_node_offsets) {
+            nodes.emplace_back(node.second);
+        }
+        nodes.insert(nodes.cend(), m_ec->get_ec_nodes().cbegin(), m_ec->get_ec_nodes().cend());
+
+
+        for (auto& node: nodes) {
+            auto m = node->acquire_messenger();
             co_await m.get().send(STOP, {});
         }
     }
