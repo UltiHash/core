@@ -72,7 +72,7 @@ std::vector <std::pair <messenger_core::header, ospan <char>>> broadcast_gather 
     futures.reserve(nodes.size());
 
     for (const auto& node: nodes) {
-        messengers.emplace_back (node->acquire_messenger());
+        messengers.emplace_back (std::move(node->acquire_messenger()));
         futures.emplace_back(boost::asio::co_spawn(ioc, messengers.back().get().send_recv(type, data), boost::asio::use_future));
     }
 

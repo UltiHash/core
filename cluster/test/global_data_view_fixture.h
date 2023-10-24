@@ -45,15 +45,15 @@ namespace uh::cluster {
 
             dn0 = std::make_unique<data_node>(0,  std::move(cmap_dn0.value()));
             thread_dn0 = std::thread([&]() { dn0->run(); });
-            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
             dn1 = std::make_unique<data_node>(1,  std::move(cmap_dn1.value()));
             thread_dn1 = std::thread([&]() { dn1->run(); });
-            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
             dn2 = std::make_unique<data_node>(2,  std::move(cmap_dn2.value()));
             thread_dn2 = std::thread([&]() { dn2->run(); });
-            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
             dd0 = std::make_unique<dedupe_node>(0,  std::move(cmap_dd0.value()), true);
             thread_dd0 = std::thread([&]() { dd0->run(); });
@@ -78,6 +78,8 @@ namespace uh::cluster {
             dn0.reset(nullptr);
             dn1.reset(nullptr);
             dn2.reset(nullptr);
+
+            sleep(2);
 
             std::filesystem::remove_all(get_root_path());
 
