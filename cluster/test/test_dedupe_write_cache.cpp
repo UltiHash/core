@@ -65,6 +65,7 @@ BOOST_FIXTURE_TEST_CASE (test_uncached_write, global_data_view_fixture)
 
 BOOST_FIXTURE_TEST_CASE (test_cached_write, global_data_view_fixture)
 {
+    setup (3, 1, 0);
     boost::asio::io_context io_context;
     boost::asio::io_context io_context2;
     global_data_view& data_view = get_dedupe_node(0).get_global_data_view();

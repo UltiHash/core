@@ -312,16 +312,15 @@ public:
             nodes.emplace_back(node.second);
         }
         nodes.insert(nodes.cend(), m_ec->get_ec_nodes().cbegin(), m_ec->get_ec_nodes().cend());
-
-        auto bc_func = [&] (auto m, int node_id) -> coro <message_types> {
-
+        auto bc_func = [&] (auto && m, int node_id) -> coro <void> {
             co_await m.get ().send(STOP, {});
-            co_return SUCCESS;
+            co_return;
         };
 
-        broadcast_gather_custom <message_types> ({}, *m_io_service, nodes, bc_func);
+        broadcast_custom ({}, *m_io_service, nodes, bc_func);
         co_return;
     }
+
 
     void create_data_node_connections (const std::shared_ptr <boost::asio::io_context>& io_service, int connection_count, const bool use_id_as_port_offset) {
 
