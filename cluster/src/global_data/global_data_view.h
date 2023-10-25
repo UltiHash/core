@@ -244,30 +244,27 @@ public:
 
     coro <void> sync (const address& addr) {
 
-        std::unordered_map <std::shared_ptr <client>, address> dn_address_map;
-        for (int i = 0; i < addr.size(); i++) {
+        std::unordered_map <std::shared_ptr <client>, address> node_address_map;
+        std::vector <std::shared_ptr <client>> nodes;
+
+        for (int i = 0; i < addr.size(); ++i) {
             const auto frag = addr.get_fragment(i);
-            auto cl = get_data_node (frag.pointer);
-            if (const auto f = dn_address_map.find(cl); f != dn_address_map.cend()) {
-                f->second.push_fragment(frag);
-            }
-            else {
-                dn_address_map.emplace (cl, frag);
-            }
+            nodes.emplace_back (get_data_node (frag.pointer));
+            node_address_map [nodes.back()].push_fragment(frag);
         }
 
-        bool success = true;
-        for (const auto& dn_address: dn_address_map) {
+        auto bc_func = [&] (auto && m, int node_id) -> coro <message_type> {
+            const auto node = nodes.at (node_id);
 
-            auto m = dn_address.first->acquire_messenger();
-            co_await m.get ().send_address(SYNC_REQ, dn_address.second);
+            co_await m.get ().send_address(SYNC_REQ, node_address_map.at (node));
             const auto h = co_await m.get().recv_header();
-            success = success and (h.type == SYNC_OK);
-        }
+            co_return h.type;
+        };
 
-        if (!success) [[unlikely]] {
-            throw std::runtime_error ("Remove not successful");
-        }
+        broadcast_gather_custom <message_type> (nodes, bc_func);
+        // error checking
+
+        co_return;
     }
 
     [[nodiscard]] coro <uint128_t> get_used_space () {
