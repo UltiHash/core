@@ -62,27 +62,23 @@ public:
         }
         nodes.insert(nodes.cend(), m_ec->get_ec_nodes().cbegin(), m_ec->get_ec_nodes().cend());
 
-        std::list <std::string> errors;
         address addr;
-        const auto resp = broadcast_gather ({}, *m_io_service, nodes, ALLOC_REQ, std::span <const char> {reinterpret_cast <const char*> (&size), sizeof size});
+        auto bc = [&] (auto m, auto id) -> coro <address> {
+            m.get ().register_write_buffer (size);
+            co_await m.get ().send_buffers (ALLOC_REQ);
+            const auto h = co_await m.get ().recv_header ();
+            auto resp = co_await m.get ().recv_address (h);
+            co_return std::move (resp.second);
+        };
+        const auto resp = broadcast_gather_custom <address> (nodes, bc);
         for (const auto& r: resp) {
-
-            address node_addr;
-            if (r.first.type != ALLOC_RESP) [[unlikely]] {
-                // handle errors
-            }
-            zpp::bits::in {std::span <char> {r.second.data.get(), r.second.size}, zpp::bits::size4b{}} (node_addr).or_throw();
-            addr.append_address(node_addr);
+            addr.append_address(r.second);
         }
 
-        if (!errors.empty()) {
-            // handle
-        }
         co_return std::move (addr);
     }
 
     coro <void> cancel_allocation (const address& alloc) {
-
         std::unordered_map <std::shared_ptr <client>, address> node_address_map;
         std::vector <std::shared_ptr <client>> nodes;
 
@@ -92,30 +88,28 @@ public:
             node_address_map [nodes.back()].push_fragment(frag);
         }
 
-        std::vector <std::vector <char>> data_pieces;
+        std::vector <address> data_pieces;
         data_pieces.reserve(nodes.size());
 
         for (const auto& item: node_address_map) {
-            data_pieces.emplace_back();
-            zpp::bits::out {data_pieces.back(), zpp::bits::size4b {}} (item.second).or_throw();
+            data_pieces.emplace_back(item.second);
         }
 
-        const auto resp = scatter_gather <std::vector <std::vector <char>>> ({}, *m_io_service, nodes, DEALLOC_REQ, data_pieces);
-        for (const auto& r: resp) {
-            if (r.first.type == FAILURE) [[unlikely]] {
-                const auto msg = std::string_view {r.second.data.get(), r.second.size};
-                std::string msgstr (msg);
-                throw std::runtime_error ("Received failure by cancel allocation with message: " + msgstr);
-            }
-        }
+        auto bc = [&] (auto m, auto id) -> coro <message_type> {
+            co_await m.get ().send_address (DEALLOC_REQ, data_pieces.at(id));
+            const auto h = co_await m.get ().recv_header ();
+            co_return h.type;
+        };
+        const auto resp = broadcast_gather_custom <message_type> (nodes, bc);
+        co_return;
     }
 
 
     coro <void> scatter_allocated_write (const address& addr, const std::string_view& data) {
 
-        if (std::accumulate(addr.sizes.cbegin(), addr.sizes.cend(), 0ul) != data.size()) [[unlikely]] {
-            throw std::bad_array_new_length ();
-        }
+        //if (std::accumulate(addr.sizes.cbegin(), addr.sizes.cend(), 0ul) != data.size()) [[unlikely]] {
+        //    throw std::bad_array_new_length ();
+        //}
 
         std::unordered_map <std::shared_ptr <client>, address> node_address_map;
         std::vector <std::shared_ptr <client>> nodes;
@@ -152,7 +146,7 @@ public:
             co_return node_id;
         };
 
-        broadcast_gather_custom <int> ({}, *m_io_service, nodes, bc_func);
+        broadcast_gather_custom <int> (nodes, bc_func);
 
         co_return;
     }
@@ -168,7 +162,7 @@ public:
         }
         nodes.insert(nodes.cend(), m_ec->get_ec_nodes().cbegin(), m_ec->get_ec_nodes().cend());
 
-        auto bc_func = [&] (auto && m, int node_id) -> coro <std::pair <int, uint128_t>> {
+        auto bc_func = [&] (auto && m, int node_id) -> coro <uint128_t> {
             co_await m.get ().send(USED_REQ, {});
             const auto message_header = co_await m.get().recv_header();
             if (message_header.type == FAILURE) [[unlikely]] {
@@ -179,10 +173,10 @@ public:
                 throw std::runtime_error ("Received failure when broadcasting get used request");
             }
             const auto resp = co_await m.get().recv_uint128_t (message_header);
-            co_return std::pair <int, uint128_t> {node_id, resp.second};
+            co_return resp.second;
 
         };
-        const auto resp = broadcast_gather_custom <std::pair <int, uint128_t>> ({}, *m_io_service, nodes, bc_func);
+        const auto resp = broadcast_gather_custom <uint128_t> (nodes, bc_func);
 
         // assert that only one node has 0 used and the rest have equal positive value
         uint128_t data_size = 0;
@@ -214,7 +208,7 @@ public:
                     co_await read(buf.data.get(), offset + offsets.at (node_id), buf.size);
                     co_return std::move (buf);
                 };
-                const auto response = broadcast_gather_custom <ospan <char>> ({}, *m_io_service, healthy_nodes, read_bc);
+                const auto response = broadcast_gather_custom <ospan <char>> (healthy_nodes, read_bc);
                 const auto recovered = m_ec->recover(response, static_cast <int> (failed_nodes.size()));
 
                 auto write_bc =  [&] (auto && m, int node_id) -> coro <int> {
@@ -223,7 +217,7 @@ public:
                     co_await write (str);
                     co_return node_id;
                 };
-                const auto recovery_response = broadcast_gather_custom <int> ({}, *m_io_service, failed_nodes, write_bc);
+                const auto recovery_response = broadcast_gather_custom <int> (failed_nodes, write_bc);
             }
         }
         co_return;
@@ -355,10 +349,15 @@ private:
 
    std::shared_ptr <client> get_data_node (const uint128_t& pointer) {
         const auto pfd = m_data_node_offsets.upper_bound (pointer);
-        if (pfd == m_data_node_offsets.cbegin() or pfd->first + m_cluster_map.m_cluster_conf.data_node_conf.max_data_store_size < pointer) {
+
+       if (pfd == m_data_node_offsets.cbegin()) [[unlikely]] {
+            throw std::out_of_range ("The pointer is not in the range of data nodes");
+       }
+       const auto n = std::prev (pfd);
+       if (pfd == m_data_node_offsets.cend() and n->first + m_cluster_map.m_cluster_conf.data_node_conf.max_data_store_size < pointer) {
             return m_ec->get_ec_node (pointer);
         }
-        return std::prev (pfd)->second;
+        return n->second;
     }
 
     const cluster_map& m_cluster_map;

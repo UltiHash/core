@@ -35,7 +35,7 @@ public:
         }
 
         acquired_messenger (acquired_messenger&& m) noexcept:
-            m_messenger (std::move (m.m_messenger)), m_client (m.m_client) {
+            m_messenger (std::move (m.m_messenger)), m_client (m.m_client), m_moved (false) {
             m.m_moved = true;
         }
 

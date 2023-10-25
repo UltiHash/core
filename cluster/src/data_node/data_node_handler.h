@@ -95,14 +95,11 @@ private:
     }
 
     coro <void> handle_alloc (messenger &m, const messenger::header& h) {
-
         size_t size;
         m.register_read_buffer(size);
         co_await m.recv_buffers(h);
         const auto addr = m_data_store.allocate(size);
-        std::vector <char> data;
-        zpp::bits::out {data, zpp::bits::size4b{}} (addr).or_throw();
-        co_await m.send(ALLOC_RESP, data);
+        co_await m.send_address(ALLOC_RESP, addr);
     }
 
     coro <void> handle_dealloc (messenger &m, const messenger::header& h) {
@@ -119,7 +116,7 @@ private:
         const auto msg = co_await m.recv_allocated_write(h);
         const auto& data_ospan = std::get <ospan <char>> (msg.data);
         m_data_store.allocated_write(msg.addr, {data_ospan.data.get(), data_ospan.size});
-        co_await m.send(DEALLOC_RESP, {});
+        co_await m.send(ALLOC_WRITE_RESP, {});
     }
 
     uh::cluster::data_store m_data_store;

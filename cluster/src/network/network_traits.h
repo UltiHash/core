@@ -15,7 +15,7 @@ namespace uh::cluster {
 
 template <typename DataPieces>
 requires std::is_same_v <DataPieces, std::vector <std::vector <char>>> or std::is_same_v <DataPieces, std::vector <std::span <char>>>
-std::vector <std::pair <messenger_core::header, ospan <char>>> scatter_gather (as_coroutine, boost::asio::io_context& ioc, std::vector <std::shared_ptr <client>> &nodes, const message_types type, const DataPieces &data) {
+std::vector <std::pair <messenger_core::header, ospan <char>>> scatter_gather (as_coroutine, boost::asio::io_context& ioc, std::vector <std::shared_ptr <client>> &nodes, const message_type type, const DataPieces &data) {
     if (nodes.size() != data.size()) [[unlikely]] {
         throw std::logic_error("The count of data pieces does not match with the count of the nodes");
     }
@@ -45,37 +45,34 @@ std::vector <std::pair <messenger_core::header, ospan <char>>> scatter_gather (a
 
 template <typename ResultType, typename Func>
 requires requires (Func& func, client::acquired_messenger& m) {{func(std::move (m), int {})} -> std::same_as <coro <ResultType>>;}
-std::vector <ResultType> broadcast_gather_custom (as_coroutine, boost::asio::io_context& ioc, std::vector <std::shared_ptr <client>> &nodes, Func func) {
+std::map <int, ResultType> broadcast_gather_custom (std::vector <std::shared_ptr <client>> &nodes, Func func) {
 
-    std::vector <std::future<ResultType>> futures;
-    futures.reserve(nodes.size());
+    boost::asio::io_context ioc;
+    std::map <int, ResultType> results;
 
     for (int id = 0; id < nodes.size(); id++) {
-        futures.emplace_back(boost::asio::co_spawn(ioc, func (std::move (nodes[id].get()->acquire_messenger()), id), boost::asio::use_future));
+        boost::asio::co_spawn(ioc, [&func, &nodes, &results, id] () -> coro <message_type> {
+                results.emplace(id, co_await func (std::move (nodes[id].get()->acquire_messenger()), id));
+                co_return SUCCESS;
+            }, boost::asio::detached);
     }
 
-    std::vector <ResultType> result;
-    result.reserve (nodes.size());
-
-    for (auto& f: futures) {
-        result.emplace_back(f.get());
-    }
-
-    return result;
+    ioc.run();
+    return results;
 }
 
-    template <typename Func>
-    requires requires (Func& func, client::acquired_messenger& m) {{func(std::move (m), int {})} -> std::same_as <coro <void>>;}
-    void broadcast_custom (as_coroutine, boost::asio::io_context& ioc, std::vector <std::shared_ptr <client>> &nodes, Func func) {
+template <typename Func>
+requires requires (Func& func, client::acquired_messenger& m) {{func(std::move (m), int {})} -> std::same_as <coro <void>>;}
+void broadcast_custom (as_coroutine, boost::asio::io_context& ioc, std::vector <std::shared_ptr <client>> &nodes, Func func) {
 
-        for (int id = 0; id < nodes.size(); id++) {
-            boost::asio::co_spawn(ioc, func (std::move (nodes[id].get()->acquire_messenger()), id), boost::asio::detached);
-        }
-
+    for (int id = 0; id < nodes.size(); id++) {
+        boost::asio::co_spawn(ioc, func (std::move (nodes[id].get()->acquire_messenger()), id), boost::asio::detached);
     }
 
+}
 
-std::vector <std::pair <messenger_core::header, ospan <char>>> broadcast_gather (as_coroutine, boost::asio::io_context& ioc, std::vector <std::shared_ptr <client>> &nodes, const message_types type, const std::span<const char> &data) {
+
+std::vector <std::pair <messenger_core::header, ospan <char>>> broadcast_gather (as_coroutine, boost::asio::io_context& ioc, std::vector <std::shared_ptr <client>> &nodes, const message_type type, const std::span<const char> &data) {
     std::vector <client::acquired_messenger> messengers;
     messengers.reserve (nodes.size());
     std::vector <std::future<std::pair <messenger_core::header, ospan <char>>>> futures;

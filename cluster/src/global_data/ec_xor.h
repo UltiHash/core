@@ -48,7 +48,7 @@ struct ec_xor: public ec {
         std::vector <ospan <char>> result;
         result.emplace_back(part_size);
         std::span <char> parity_view {result.back().data.get(), part_size};
-        const auto long_size = part_size - part_size % sizeof (unsigned long);
+        const auto long_size = (part_size - part_size % sizeof (unsigned long)) / sizeof (unsigned long);
         std::span <unsigned long> long_parity_view {reinterpret_cast <unsigned long*> (parity_view.data()),long_size};
         std::memset (result.back().data.get(), 0, part_size);
         for (int j = 0; j < data_nodes_count; j += sizeof (unsigned long)) {
@@ -64,8 +64,8 @@ struct ec_xor: public ec {
         return result;
     }
 
-    [[nodiscard]] std::vector <ospan <char>> recover (const std::vector <ospan<char>>& data_pieces, int fail_count) const override {
-        const size_t part_size = data_pieces.front().size;
+    [[nodiscard]] std::vector <ospan <char>> recover (const std::map <int, ospan<char>>& data_pieces, int fail_count) const override {
+        const size_t part_size = data_pieces.cbegin()->second.size;
         std::vector <ospan <char>> result;
         result.emplace_back(part_size);
         std::span <char> parity_view {result.back().data.get(), part_size};
@@ -73,7 +73,7 @@ struct ec_xor: public ec {
         std::span <unsigned long> long_parity_view {reinterpret_cast <unsigned long*> (parity_view.data()),long_size};
         std::memset (result.back().data.get(), 0, part_size);
         for (int j = 0; j < data_pieces.size(); j += sizeof (unsigned long)) {
-            const auto data_part = std::string_view (data_pieces[j].data.get(), data_pieces[j].size);
+            const auto data_part = std::string_view (data_pieces.at(j).data.get(), data_pieces.at(j).size);
             std::span <const unsigned long> long_data_part {reinterpret_cast <const unsigned long*> (data_part.data()), long_size};
             for (size_t k = 0; k < long_data_part.size(); ++k) {
                 long_parity_view [k] ^= long_data_part[k];

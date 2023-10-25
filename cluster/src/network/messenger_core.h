@@ -20,7 +20,7 @@ class messenger_core {
 public:
 
     struct header {
-        message_types type;
+        message_type type;
         uint32_t size;
     };
 
@@ -124,7 +124,7 @@ public:
         co_return;
     }
 
-    coro <void> send_buffers (const message_types type) {
+    coro <void> send_buffers (const message_type type) {
         m_write_buffers.emplace_front(&m_write_size, sizeof m_write_size);
         m_write_buffers.emplace_front(&type, sizeof type);
 
@@ -137,7 +137,7 @@ public:
 
     }
 
-    coro <void> send (const message_types type, std::span <const char> data) {
+    coro <void> send (const message_type type, std::span <const char> data) {
         const auto size = static_cast <uint32_t> (data.size());
 
         std::vector <boost::asio::const_buffer> buffers {
@@ -152,7 +152,7 @@ public:
 
     coro <header> recv (std::span <char> buffer) {
         uint32_t size = 0;
-        message_types type;
+        message_type type;
         std::vector <boost::asio::mutable_buffer> buffers {
                 {&type, sizeof (type)},
                 {&size, sizeof (size)},
@@ -164,7 +164,7 @@ public:
         co_return header {type, size};
     }
 
-    coro <std::pair <header, ospan <char>>> send_recv (message_types type, std::span <const char> data) {
+    coro <std::pair <header, ospan <char>>> send_recv (message_type type, std::span <const char> data) {
         co_await send (type, data);
         const auto h = co_await recv_header();
         ospan <char> buf (h.size);

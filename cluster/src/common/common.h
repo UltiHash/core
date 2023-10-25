@@ -12,37 +12,32 @@
 
 namespace uh::cluster {
 
-//typedef boost::multiprecision::uint128_t uint128_t;
-
-
-//typedef std::vector <wide_span> address;
-
-enum message_types:uint8_t {
-    READ_REQ,
-    READ_RESP,
-    WRITE_REQ,
-    WRITE_RESP,
-    ALLOC_REQ,
-    ALLOC_RESP,
-    DEALLOC_REQ,
-    DEALLOC_RESP,
-    ALLOC_WRITE_REQ,
-    ALLOC_WRITE_RESP,
-    SYNC_REQ,
-    SYNC_OK,
-    REMOVE_REQ,
-    REMOVE_OK,
-    USED_REQ,
-    USED_RESP,
-    DEDUPE_REQ,
-    DEDUPE_RESP,
-    DIR_PUT_OBJ_REQ,
-    DIR_GET_OBJ_REQ,
-    DIR_GET_OBJ_RESP,
-    DIR_PUT_BUCKET_REQ,
-    SUCCESS,
-    FAILURE,
-    STOP
+enum message_type: uint8_t {
+    READ_REQ = 10,
+    READ_RESP = 11,
+    WRITE_REQ = 12,
+    WRITE_RESP = 13,
+    ALLOC_REQ = 14,
+    ALLOC_RESP = 15,
+    DEALLOC_REQ = 16,
+    DEALLOC_RESP = 17,
+    ALLOC_WRITE_REQ = 18,
+    ALLOC_WRITE_RESP = 19,
+    SYNC_REQ = 20,
+    SYNC_OK = 21,
+    REMOVE_REQ = 22,
+    REMOVE_OK = 23,
+    USED_REQ = 24,
+    USED_RESP = 25,
+    DEDUPE_REQ = 26,
+    DEDUPE_RESP = 27,
+    DIR_PUT_OBJ_REQ = 28,
+    DIR_GET_OBJ_REQ = 29,
+    DIR_GET_OBJ_RESP = 30,
+    DIR_PUT_BUCKET_REQ = 31,
+    SUCCESS = 32,
+    FAILURE = 33,
+    STOP = 34
 };
 
 enum role: uint8_t {

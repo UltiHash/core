@@ -63,42 +63,43 @@ namespace uh::cluster {
             co_await throw_if_failure(addr.first);
             const auto header = co_await recv_header();
             auto resp = allocated_write_message {.data = ospan<char> (header.size)};
-            const auto& resp_data = std::get <ospan <char>> (resp.data);
-            co_await recv({resp_data.data.get(), resp_data.size});
+            auto& resp_data = std::get <ospan <char>> (resp.data);
+            register_read_buffer (resp_data);
+            co_await recv_buffers(header);
             resp.addr = std::move (addr.second);
             co_return std::move (resp);
         }
 
-        coro <void> send_allocated_write (const message_types type, const allocated_write_message& msg) {
+        coro <void> send_allocated_write (const message_type type, const allocated_write_message& msg) {
             co_await send_address(type, msg.addr);
             co_await send (type, std::get <std::string_view> (msg.data));
         }
 
-        coro <void> send_address (const message_types type, const address& addr) {
+        coro <void> send_address (const message_type type, const address& addr) {
             register_write_buffer (addr.pointers);
             register_write_buffer(addr.sizes);
             co_await send_buffers(type);
         }
 
-        coro <void> send_fragment (const message_types type, const fragment frag) {
+        coro <void> send_fragment (const message_type type, const fragment frag) {
             register_write_buffer(frag.pointer.get_data(), 2);
             register_write_buffer(frag.size);
             co_await send_buffers (type);
         }
 
-        coro <void> send_uint128_t (const message_types type, const uint128_t num) {
+        coro <void> send_uint128_t (const message_type type, const uint128_t num) {
             register_write_buffer(num.get_data(), 2);
             co_await send_buffers (type);
         }
 
-        coro <void> send_dedupe_response (const message_types type, const dedupe_response& dedupe_resp) {
+        coro <void> send_dedupe_response (const message_type type, const dedupe_response& dedupe_resp) {
             register_write_buffer(dedupe_resp.effective_size);
             register_write_buffer (dedupe_resp.addr.pointers);
             register_write_buffer(dedupe_resp.addr.sizes);
             co_await send_buffers(type);
         }
 
-        coro <void> send_directory_message (const message_types type, const directory_message& dir_req) {
+        coro <void> send_directory_message (const message_type type, const directory_message& dir_req) {
             std::vector<char> data;
             zpp::bits::out{data, zpp::bits::size4b{}}(dir_req).or_throw();
             register_write_buffer(data);
@@ -106,6 +107,9 @@ namespace uh::cluster {
         }
 
         coro <void> throw_if_failure (messenger::header h) {
+            if (h.type != FAILURE) [[likely]] {
+                co_return;
+            }
             std::string msg;
             msg.resize(h.size);
             register_read_buffer(msg);

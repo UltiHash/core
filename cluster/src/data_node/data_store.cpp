@@ -159,15 +159,16 @@ void data_store::allocated_write(const address &allocation, std::span<char> data
 
     unsigned long offset = 0;
     for (int i = 0; i < allocation.size(); ++i) {
-        const auto [fd, seek] = get_file_offset_pair(allocation.pointers[i]);
+        const auto fragment = allocation.get_fragment(i);
+        const auto [fd, seek] = get_file_offset_pair(fragment.pointer);
         if (::lseek (fd, seek, SEEK_SET) != seek) [[unlikely]] {
             throw std::runtime_error ("Could not seek to the allocated position.");
         }
 
         for (size_t written = 0;
-             written < allocation.sizes[i];
-             written += ::write(fd, data.data() + offset + written, allocation.sizes[i] - written));
-        offset += allocation.size();
+             written < fragment.size;
+             written += ::write(fd, data.data() + offset + written, fragment.size - written));
+        offset += fragment.size;
     }
 }
 
