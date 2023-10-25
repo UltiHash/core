@@ -55,6 +55,9 @@ namespace uh::cluster {
         }
 
         void setup (int data_nodes, int dedupe_nodes, int directory_nodes) {
+
+            teardown();
+
             const auto cluster_roles = get_cluster_roles(data_nodes, dedupe_nodes, directory_nodes);
 
             for (const auto &role: cluster_roles) {
