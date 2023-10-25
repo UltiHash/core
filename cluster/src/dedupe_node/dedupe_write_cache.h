@@ -12,20 +12,12 @@
 namespace uh::cluster {
 
     class dedupe_write_cache {
-    //todo: make sure allocated storage on the data node is freed in case of an exception -> avoid storage data leaks
     public:
         dedupe_write_cache(std::string_view &integration_data, global_data_view &storage, dedupe_config& config) :
-        m_integration_data(integration_data), m_storage(storage), m_dedupe_conf(config) {
-            m_cache_size = next_divisible(std::min(m_storage.get_data_node_count() * m_cache_size_per_node, m_integration_data.size()), m_storage.get_data_node_count()) ;
-
-            m_cache_data = static_cast<char *>(std::malloc(m_cache_size));
-            m_cache_data_ptr = m_cache_data;
-        }
-
-        ~dedupe_write_cache() {
-            if(m_cache_data != nullptr) {
-                std::free(m_cache_data);
-            }
+        m_integration_data(integration_data), m_storage(storage), m_dedupe_conf(config),
+        m_cache_size(next_divisible(std::min(m_storage.get_data_node_count() * m_cache_size_per_node, m_integration_data.size()), m_storage.get_data_node_count())),
+        m_cache_data(std::make_unique<char>(m_cache_size)) {
+            m_cache_data_ptr = m_cache_data.get();
         }
 
         static inline std::size_t next_divisible(const std::size_t x, const std::size_t y) {
@@ -112,31 +104,30 @@ namespace uh::cluster {
         }
 
         coro <void> flush() {
-            if(m_cache_fragments.empty() && m_cache_data == m_cache_data_ptr) {
+            if(m_cache_fragments.empty() && m_cache_data.get() == m_cache_data_ptr) {
                 co_return;
             }
 
-            co_await m_storage.scatter_allocated_write(m_cache_fragments, {m_cache_data, m_cache_size});
+            co_await m_storage.scatter_allocated_write(m_cache_fragments, {m_cache_data.get(), m_cache_size});
 
             if(m_integration_data.empty()) {
                 m_cache_size = 0;
                 m_cache_available = 0;
-                std::free(m_cache_data);
-                m_cache_data = nullptr;
+                m_cache_data.reset(nullptr);
                 m_cache_data_ptr = nullptr;
 
                 co_return;
             }
 
             //clear internal buffer, resize if necessary and reset all bookkeepers
-            std::memset(m_cache_data, 0, m_cache_size);
-            std::size_t new_cache_size = std::lcm(std::min(m_storage.get_data_node_count() * m_cache_size_per_node, m_integration_data.size()), m_storage.get_data_node_count());
+            std::memset(m_cache_data.get(), 0, m_cache_size);
+            std::size_t new_cache_size = next_divisible(std::min(m_storage.get_data_node_count() * m_cache_size_per_node, m_integration_data.size()), m_storage.get_data_node_count());
             if(m_cache_size != new_cache_size) [[unlikely]] {
-                std::free(m_cache_data);
-                m_cache_data = static_cast<char *>(std::malloc(new_cache_size));
+                m_cache_data.reset(nullptr);
+                m_cache_data = std::make_unique<char>(new_cache_size);
                 m_cache_size = new_cache_size;
             }
-            m_cache_data_ptr = m_cache_data;
+            m_cache_data_ptr = m_cache_data.get();
 
             //acquire new data node allocation
             m_dn_allocation = co_await m_storage.allocate(m_cache_size);
@@ -158,7 +149,7 @@ namespace uh::cluster {
         address m_cache_fragments;
         std::size_t m_cache_size;
         std::size_t m_cache_available = 0;
-        char* m_cache_data;
+        std::unique_ptr<char> m_cache_data;
         char* m_cache_data_ptr;
 
         address m_dn_allocation;
