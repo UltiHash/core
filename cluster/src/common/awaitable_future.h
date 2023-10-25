@@ -18,7 +18,7 @@
 
 // A program-defined type on which the coroutine_traits specializations below depend
 struct as_coroutine { };
-
+/*
 // Enable the use of std::future<T> as a coroutine type
 // by using a std::promise<T> as the promise type.
 template <typename T, typename... Args>
@@ -107,5 +107,5 @@ requires(!std::is_reference_v<T>)
 
     return awaiter { std::move(future) };
 }
-
+*/
 #endif //CORE_AWAITABLE_FUTURE_H

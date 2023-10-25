@@ -48,6 +48,10 @@ void entry_node::create_connections() {
     }
 }
 
+void entry_node::stop() {
+    throw std::runtime_error ("not implemented");
+}
+
 //------------------------------------------------------------------------------
 
 } // namespace uh::cluster
