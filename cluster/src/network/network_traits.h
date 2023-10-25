@@ -69,7 +69,7 @@ std::vector <ResultType> broadcast_gather_custom (as_coroutine, boost::asio::io_
     void broadcast_custom (as_coroutine, boost::asio::io_context& ioc, std::vector <std::shared_ptr <client>> &nodes, Func func) {
 
         for (int id = 0; id < nodes.size(); id++) {
-            boost::asio::co_spawn(ioc, func (std::move (nodes[id].get()->acquire_messenger()), id), boost::asio::use_future);
+            boost::asio::co_spawn(ioc, func (std::move (nodes[id].get()->acquire_messenger()), id), boost::asio::detached);
         }
 
     }
