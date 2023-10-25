@@ -9,6 +9,7 @@
 #include "network/cluster_map.h"
 #include "data_node/data_node.h"
 #include "dedupe_node/dedupe_node.h"
+#include "directory_node/directory_node.h"
 
 namespace uh::cluster {
 
@@ -19,6 +20,121 @@ namespace uh::cluster {
     {
     public:
 
+        std::vector <std::shared_ptr <node_interface>> m_nodes;
+        std::vector <std::shared_ptr <node_interface>> m_dedupe_nodes;
+        std::vector <std::shared_ptr <node_interface>> m_directory_nodes;
+        std::vector <std::shared_ptr <node_interface>> m_data_nodes;
+        std::vector <std::thread> m_threads;
+        boost::asio::io_context m_ioc;
+
+        static std::unordered_map <uh::cluster::role, std::map <int, std::string>>
+        get_cluster_roles(int data_nodes, int dedupe_nodes, int directory_nodes) {
+            std::unordered_map <uh::cluster::role, std::map <int, std::string>> roles;
+            for (int i = 0; i < data_nodes; ++i) {
+                roles[DATA_NODE].emplace(i, "127.0.0.1");
+            }
+            for (int i = 0; i < dedupe_nodes; ++i) {
+                roles[DEDUPE_NODE].emplace(i, "127.0.0.1");
+            }
+            for (int i = 0; i < directory_nodes; ++i) {
+                roles[DIRECTORY_NODE].emplace(i, "127.0.0.1");
+            }
+            return roles;
+        }
+
+        dedupe_node& get_dedupe_node (int i) {
+            return dynamic_cast <dedupe_node&> (*m_dedupe_nodes.at(i));
+        }
+
+        directory_node& get_directory_node (int i) {
+            return dynamic_cast <directory_node&> (*m_directory_nodes.at(i));
+        }
+
+        data_node& get_data_node (int i) {
+            return dynamic_cast <data_node&> (*m_data_nodes.at(i));
+        }
+
+        void setup (int data_nodes, int dedupe_nodes, int directory_nodes) {
+            const auto cluster_roles = get_cluster_roles(data_nodes, dedupe_nodes, directory_nodes);
+
+            for (const auto &role: cluster_roles) {
+                for (const auto &role_nodes: role.second) {
+                    auto config = make_cluster_config(role_nodes.first);
+                    auto cmap = cluster_map(std::move (config), cluster_roles);
+                    switch (role.first) {
+                        case DATA_NODE:
+                            m_nodes.emplace_back(std::make_shared<data_node>(role_nodes.first, std::move(cmap)));
+                            m_data_nodes.emplace_back(m_nodes.back());
+                            break;
+                        case DEDUPE_NODE:
+                            m_nodes.emplace_back(std::make_shared<dedupe_node>(role_nodes.first, std::move(cmap), true));
+                            m_dedupe_nodes.emplace_back(m_nodes.back());
+                            break;
+                        case DIRECTORY_NODE:
+                            m_nodes.emplace_back(std::make_shared<directory_node>(role_nodes.first, std::move(cmap)));
+                            m_directory_nodes.emplace_back(m_nodes.back());
+                            break;
+                        default:
+                            throw std::runtime_error("no support for the role type");
+                    }
+                }
+            }
+
+            for (const auto &node: m_data_nodes) {
+                m_ioc.post([&node] { node->run(); });
+                m_threads.emplace_back([&] {m_ioc.run();});
+            }
+
+            std::this_thread::sleep_for(std::chrono::milliseconds(500));
+
+            for (const auto &node: m_dedupe_nodes) {
+                m_ioc.post([&node] { node->run(); });
+                m_threads.emplace_back([&] {m_ioc.run();});
+            }
+
+            std::this_thread::sleep_for(std::chrono::milliseconds(500));
+
+            for (const auto &node: m_directory_nodes) {
+                m_ioc.post([&node] { node->run(); });
+                m_threads.emplace_back([&] {m_ioc.run();});
+            }
+
+            std::this_thread::sleep_for(std::chrono::milliseconds(500));
+
+        }
+
+        void teardown () {
+
+            for (auto& node: m_dedupe_nodes) {
+                auto& dedupe = dynamic_cast <dedupe_node&> (*node);
+                auto answer = boost::asio::co_spawn(*dedupe.get_server().get_executor(), [&]() -> boost::asio::awaitable<void> {
+                    co_await dedupe.get_global_data_view().stop();
+                }, boost::asio::use_future);
+                answer.wait();
+            }
+
+            for (const auto& node: m_nodes) {
+                node->stop();
+            }
+
+            for (auto& thread: m_threads) {
+                thread.join();
+            }
+
+            m_threads.clear();
+            m_nodes.clear();
+            m_dedupe_nodes.clear();
+            m_data_nodes.clear();
+            m_directory_nodes.clear();
+
+            m_ioc.stop();
+            m_ioc.restart();
+            sleep(2);
+
+            std::filesystem::remove_all(get_root_path());
+        }
+
+        /*
         cluster_config config_dn0 = make_cluster_config(0);
         cluster_config config_dn1 = make_cluster_config(1);
         cluster_config config_dn2 = make_cluster_config(2);
@@ -60,9 +176,6 @@ namespace uh::cluster {
         }
 
 
-        static std::filesystem::path get_root_path() {
-            return "/tmp/uh/";
-        }
 
         void teardown() {
             dd0->stop();
@@ -83,6 +196,10 @@ namespace uh::cluster {
 
             std::filesystem::remove_all(get_root_path());
 
+        }*/
+
+        static std::filesystem::path get_root_path() {
+            return "/tmp/uh/";
         }
 
         static std::unordered_map <uh::cluster::role, std::map <int, std::string>> get_cluster_roles() {

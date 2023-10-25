@@ -56,7 +56,7 @@ public:
         const auto size = total_size / m_data_node_offsets.size();
 
         std::vector <std::shared_ptr <client>> nodes;
-        nodes.reserve(m_data_node_offsets.size());
+        nodes.reserve(m_data_node_offsets.size() + m_ec->get_acquired_ec_node_count());
         for (auto& node: m_data_node_offsets) {
             nodes.emplace_back(node.second);
         }
@@ -159,7 +159,7 @@ public:
 
     coro <void> recover () {
         std::vector <std::shared_ptr <client>> nodes;
-        nodes.reserve(m_data_node_offsets.size());
+        nodes.reserve(m_data_node_offsets.size() + m_ec->get_acquired_ec_node_count());
         std::vector <uint128_t> offsets;
         offsets.reserve(m_data_node_offsets.size());
         for (auto& node: m_data_node_offsets) {
@@ -307,12 +307,18 @@ public:
     coro <void> stop () {
 
         std::vector <std::shared_ptr <client>> nodes;
-        nodes.reserve(m_data_node_offsets.size());
+        nodes.reserve(m_data_node_offsets.size() + m_ec->get_acquired_ec_node_count());
         for (auto& node: m_data_node_offsets) {
             nodes.emplace_back(node.second);
         }
         nodes.insert(nodes.cend(), m_ec->get_ec_nodes().cbegin(), m_ec->get_ec_nodes().cend());
-        auto bc_func = [&] (auto && m, int node_id) -> coro <message_types> {
+        /*
+
+        for (auto& node: nodes) {
+            co_await node->acquire_messenger().get().send(STOP, {});
+        }         */
+
+        auto bc_func = [&] (auto m, int node_id) -> coro <message_types> {
             co_await m.get ().send(STOP, {});
             co_return SUCCESS;
         };

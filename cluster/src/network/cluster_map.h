@@ -48,8 +48,8 @@ namespace uh::cluster {
     public:
 
 
-        explicit cluster_map (const cluster_config& cluster_conf):
-                m_cluster_conf (cluster_conf),
+        explicit cluster_map (cluster_config&& cluster_conf):
+                m_cluster_conf (std::move (cluster_conf)),
                 m_roles_buf ((m_cluster_conf.init_process_count - 1) * PROCESS_DATA_SIZE) {
         }
 
@@ -64,8 +64,8 @@ namespace uh::cluster {
         }
 
         // only intended to be used for testing
-        cluster_map(cluster_config& config, std::unordered_map <uh::cluster::role, std::map <int, std::string>> roles):
-                m_cluster_conf(config),
+        cluster_map(cluster_config&& config, std::unordered_map <uh::cluster::role, std::map <int, std::string>> roles):
+                m_cluster_conf(std::move (config)),
                 m_roles_buf ((m_cluster_conf.init_process_count - 1) * PROCESS_DATA_SIZE),
                 m_roles(std::move(roles)) {
             m_resp_count = 0;
@@ -132,7 +132,7 @@ namespace uh::cluster {
         }
 
         std::unordered_map <uh::cluster::role, std::map <int, std::string>> m_roles;
-        const cluster_config& m_cluster_conf;
+        const cluster_config m_cluster_conf;
 
     private:
 

@@ -24,9 +24,10 @@ namespace uh::cluster {
 
 BOOST_FIXTURE_TEST_CASE (test_uncached_write, global_data_view_fixture)
 {
+    setup (3, 1, 0);
     boost::asio::io_context io_context;
     boost::asio::io_context io_context2;
-    global_data_view& data_view = dd0->get_global_data_view();
+    global_data_view& data_view = get_dedupe_node(0).get_global_data_view();
 
     std::string data_in = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Maecenas risus justo, blandit tincidunt hendrerit ac, pulvinar sed quam.";
 
@@ -60,12 +61,12 @@ BOOST_FIXTURE_TEST_CASE (test_uncached_write, global_data_view_fixture)
     {
         boost::asio::io_context io_context;
         boost::asio::io_context io_context2;
-        global_data_view& data_view = dd0->get_global_data_view();
+        global_data_view& data_view = get_dedupe_node(0).get_global_data_view();
 
 
         std::string data_in_str = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Maecenas risus justo, blandit tincidunt hendrerit ac, pulvinar sed quam.";
         std::string_view data_in(data_in_str);
-        dedupe_config conf = dd0->m_cluster_map.m_cluster_conf.dedupe_node_conf;
+        dedupe_config conf = make_dedupe_node_config(0);
         dedupe_write_cache cache(data_in, data_view, conf);
 
 

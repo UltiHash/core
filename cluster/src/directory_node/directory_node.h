@@ -12,7 +12,7 @@
 
 namespace uh::cluster {
 
-class directory_node {
+class directory_node: public node_interface {
 public:
 
     directory_node (int id, cluster_map cmap):
@@ -27,9 +27,13 @@ public:
         m_storage.create_data_node_connections(m_server.get_executor(), m_cluster_map.m_cluster_conf.directory_node_conf.data_node_connection_count, false);
     }
 
-    void run() {
+    void run() override {
         std::cout << "hello from " << m_job_name << std::endl;
         m_server.run();
+    }
+
+    void stop () override {
+        m_server.stop();
     }
 
     const cluster_map m_cluster_map;
