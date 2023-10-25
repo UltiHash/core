@@ -198,17 +198,20 @@ namespace uh::cluster {
 
             std::filesystem::remove_all(get_root_path());
 
-        }*/
-
-        static std::filesystem::path get_root_path() {
-            return "/tmp/uh/";
         }
+
+
 
         static std::unordered_map <uh::cluster::role, std::map <int, std::string>> get_cluster_roles() {
             return {
                     {uh::cluster::role::DATA_NODE, {{0, "127.0.0.1"}, {1, "127.0.0.1"}, {2, "127.0.0.1"}}},
                     {uh::cluster::role::DEDUPE_NODE, {{0, "127.0.0.1"}}},
             };
+        }
+         */
+
+        static std::filesystem::path get_root_path() {
+            return "/tmp/uh/";
         }
 
         static uh::cluster::entry_node_config make_entry_node_config(int i) {
@@ -227,9 +230,10 @@ namespace uh::cluster {
         }
 
         static uh::cluster::data_node_config make_data_node_config(int i) {
+            std::string dn_dir = "dn" + std::to_string(i);
             return {
-                    .directory = get_root_path() / "dn",
-                    .hole_log = get_root_path() / "dn/log",
+                    .directory = get_root_path() / dn_dir,
+                    .hole_log = get_root_path() / dn_dir / "log",
                     .min_file_size = 1ul * 1024ul * 1024ul * 1024ul,
                     .max_file_size = 4ul * 1024ul * 1024ul * 1024ul,
                     .max_data_store_size = 64ul * 1024ul * 1024ul * 1024ul,
@@ -241,13 +245,15 @@ namespace uh::cluster {
         }
 
         static uh::cluster::directory_node_config make_directory_node_config(int i) {
+            std::string dr_dir = "dr" + std::to_string(i);
+
             return {
                     .server_conf = {
                             .threads = 4,
                             .port = static_cast<uint16_t>(9020 + i),
                     },
                     .directory_conf = {
-                            .root = get_root_path() / "dr",
+                            .root = get_root_path() / dr_dir,
                             .bucket_conf = {
                                     .min_file_size = 1024ul * 1024ul * 1024ul * 2,
                                     .max_file_size = 1024ul * 1024ul * 1024ul * 64,
@@ -260,6 +266,8 @@ namespace uh::cluster {
         }
 
         static uh::cluster::dedupe_config make_dedupe_node_config(int i) {
+            std::string dd_dir = "dd" + std::to_string(i);
+
             return {
                     .min_fragment_size = 32,
                     .max_fragment_size = 8 * 1024,
@@ -272,7 +280,7 @@ namespace uh::cluster {
                             .set_minimum_free_space = 1ul * 1024ul * 1024ul * 1024ul,
                             .max_empty_hole_size = 1ul * 1024ul * 1024ul * 1024ul,
                             .key_store_config = {
-                                    .file  = get_root_path() / "dd/set",
+                                    .file  = get_root_path() / dd_dir / "set",
                                     .init_size = 1ul * 1024ul * 1024ul * 1024ul,
                             }
                     },

@@ -330,6 +330,7 @@ public:
             throw std::logic_error ("The count of data nodes does not satisfy the minimum EC requirement");
         }
 
+        int i = 0;
         for (const auto& data_node: m_cluster_map.m_roles.at(DATA_NODE)) {
             uint16_t port = m_cluster_map.m_cluster_conf.data_node_conf.server_conf.port;
             if(use_id_as_port_offset) {
@@ -338,12 +339,13 @@ public:
             auto cl = std::make_shared <client> (m_io_service, data_node.second, port, connection_count);
             const uint128_t offset = m_cluster_map.m_cluster_conf.data_node_conf.max_data_store_size * (data_node.first - m_ec->get_acquired_ec_node_count());
 
-            if (m_ec->get_acquired_ec_node_count() < m_ec->get_required_ec_node_count()) {
+            if ( m_cluster_map.m_roles.at(DATA_NODE).size() - i <= m_ec->get_required_ec_node_count()) {
                 m_ec->add_ec_node(offset, std::move (cl));
             }
             else {
                 m_data_node_offsets.emplace(offset, std::move(cl));
             }
+            i++;
         }
 
     }
