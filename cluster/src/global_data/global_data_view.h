@@ -312,13 +312,9 @@ public:
             nodes.emplace_back(node.second);
         }
         nodes.insert(nodes.cend(), m_ec->get_ec_nodes().cbegin(), m_ec->get_ec_nodes().cend());
-        /*
-
-        for (auto& node: nodes) {
-            co_await node->acquire_messenger().get().send(STOP, {});
-        }         */
 
         auto bc_func = [&] (auto m, int node_id) -> coro <message_types> {
+
             co_await m.get ().send(STOP, {});
             co_return SUCCESS;
         };

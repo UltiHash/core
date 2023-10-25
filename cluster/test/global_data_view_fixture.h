@@ -191,8 +191,7 @@ namespace uh::cluster {
             dn0.reset(nullptr);
             dn1.reset(nullptr);
             dn2.reset(nullptr);
-
-            sleep(2);
+            std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
             std::filesystem::remove_all(get_root_path());
 
@@ -290,6 +289,7 @@ namespace uh::cluster {
         }
 
     };
+
 
 } // end namespace uh::cluster
 #endif //CORE_TEST_GLOBAL_DATA_VIEW_FIXTURE_H
