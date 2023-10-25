@@ -32,7 +32,7 @@ namespace uh::cluster {
             return (x % y == 0) ? x : x + (y - (x % y));
         }
 
-        std::size_t get_size_available() const {
+        [[nodiscard]] std::size_t get_size_available() const {
             return m_cache_available;
         }
 

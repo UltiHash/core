@@ -19,13 +19,12 @@ public:
             m_cluster_map (std::move (cmap)),
             m_id (id),
             m_job_name ("directory_" + std::to_string (id)),
+            m_storage (m_cluster_map),
             m_server (m_cluster_map.m_cluster_conf.directory_node_conf.server_conf,
-                      std::make_unique <directory_handler>(m_cluster_map.m_cluster_conf.directory_node_conf.directory_conf, m_storage)),
-            m_storage (m_cluster_map,
-                       m_cluster_map.m_cluster_conf.directory_node_conf.data_node_connection_count,
-                       m_server.get_executor())
-    {
+                      std::make_unique <directory_handler>(m_cluster_map.m_cluster_conf.directory_node_conf.directory_conf, m_storage))
 
+    {
+        m_storage.create_data_node_connections(m_server.get_executor(), m_cluster_map.m_cluster_conf.directory_node_conf.data_node_connection_count, false);
     }
 
     void run() {
@@ -36,8 +35,8 @@ public:
     const cluster_map m_cluster_map;
     const int m_id;
     const std::string m_job_name;
-    server m_server;
     global_data_view m_storage;
+    server m_server;
 
 
 };
