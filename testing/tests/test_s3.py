@@ -17,13 +17,14 @@ import util
 # Valid characters in bucket names according to
 # https://docs.aws.amazon.com/AmazonS3/latest/userguide/bucketnamingrules.html
 #
-BUCKET_NAME_CHARACTERS=string.ascii_lowercase + string.digits + ".-"
+BUCKET_NAME_CHARACTERS=string.ascii_lowercase + string.digits
 
 #
 # Valid characters in object keys according to
 # https://docs.aws.amazon.com/AmazonS3/latest/userguide/object-keys.html
 #
 OBJECT_NAME_CHARACTERS=string.ascii_letters + string.digits + "!-_.*'()"
+
 
 def has_bucket(s3, bucket):
     buckets = s3.list_buckets()
@@ -65,7 +66,8 @@ def test_create_bucket(s3):
     response = s3.create_bucket(Bucket=name)
 
     assert has_bucket(s3, name)
-
+    with pytest.raises(Exception):
+        s3.create_bucket(Bucket=name)
 
 def test_put_object(s3):
     bucket = unused_bucket_name(s3)
@@ -76,7 +78,33 @@ def test_put_object(s3):
 
     assert has_object(s3, bucket, name)
 
+def test_create_illegal_bucket_name(s3):
+    # See https://docs.aws.amazon.com/AmazonS3/latest/userguide/bucketnamingrules.html
+    with pytest.raises(Exception):
+        s3.create_bucket(Bucket='xx')
+    with pytest.raises(Exception):
+        s3.create_bucket(Bucket='xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx')
+    with pytest.raises(Exception):
+        s3.create_bucket(Bucket='XXX')
+    with pytest.raises(Exception):
+        s3.create_bucket(Bucket='.aa')
+    with pytest.raises(Exception):
+        s3.create_bucket(Bucket='aa.')
+    with pytest.raises(Exception):
+        s3.create_bucket(Bucket='-aa')
+    with pytest.raises(Exception):
+        s3.create_bucket(Bucket='aa-')
+    with pytest.raises(Exception):
+        s3.create_bucket(Bucket='0.0.0.0')
+    with pytest.raises(Exception):
+        s3.create_bucket(Bucket='xn--foo')
+    with pytest.raises(Exception):
+        s3.create_bucket(Bucket='sthree-foo')
+    with pytest.raises(Exception):
+        s3.create_bucket(Bucket='sthree-configurator-foo')
+    with pytest.raises(Exception):
+        s3.create_bucket(Bucket='bar-s3alias')
+    with pytest.raises(Exception):
+        s3.create_bucket(Bucket='bar--ol-s3')
 
-#def test_create_illegal_bucket_name(s3):
-# https://docs.aws.amazon.com/AmazonS3/latest/userguide/bucketnamingrules.html
-#assert False
+    assert True
