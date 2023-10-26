@@ -16,7 +16,7 @@ struct ec_non: public ec {
     void add_ec_node (uint128_t offset, std::shared_ptr <client> node) override {throw std::runtime_error ("Not supported operation!");}
     [[nodiscard]] const std::vector <std::shared_ptr <client>>& get_ec_nodes () const override {return m_nodes;};
     [[nodiscard]] std::shared_ptr <client> get_ec_node (uint128_t offset) const override {throw std::runtime_error ("Not supported operation!");};
-    [[nodiscard]] std::vector <ospan <char>> compute_ec (const std::string_view& data, int data_nodes_count) const override {throw std::runtime_error ("Not supported operation!");};
+    [[nodiscard]] std::vector <ospan <char>> compute_ec (const std::string_view& data, int data_nodes_count) const override {return {};};
     [[nodiscard]] std::vector <ospan <char>> recover (const std::map <int, ospan<char>>& data_pieces, int fail_count) const override {throw std::runtime_error ("Not supported operation!");};
 private:
     std::vector <std::shared_ptr <client>> m_nodes;

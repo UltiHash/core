@@ -292,7 +292,7 @@ public:
     }
 
     [[nodiscard]] std::size_t get_data_node_count() {
-        return m_cluster_map.m_roles.at(DATA_NODE).size() - m_ec->get_acquired_ec_node_count();
+        return m_data_node_offsets.size();
     }
 
     coro <void> stop () {

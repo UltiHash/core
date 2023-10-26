@@ -58,6 +58,8 @@ namespace uh::cluster {
 
             teardown();
 
+            std::exception_ptr excp_ptr;
+
             const auto cluster_roles = get_cluster_roles(data_nodes, dedupe_nodes, directory_nodes);
 
             for (const auto &role: cluster_roles) {
@@ -85,35 +87,49 @@ namespace uh::cluster {
 
             for (const auto &node: m_data_nodes) {
                 m_ioc.post([&node] { node->run(); });
-                m_threads.emplace_back([&] {m_ioc.run();});
+                m_threads.emplace_back([&] {try {m_ioc.run();} catch (std::exception&) {excp_ptr = std::current_exception();}});
             }
 
             std::this_thread::sleep_for(std::chrono::milliseconds(500));
+
+            if (excp_ptr) {
+                std::rethrow_exception(excp_ptr);
+            }
 
             for (const auto &node: m_dedupe_nodes) {
                 m_ioc.post([&node] { node->run(); });
-                m_threads.emplace_back([&] {m_ioc.run();});
+                m_threads.emplace_back([&] {try {m_ioc.run();} catch (std::exception&) {excp_ptr = std::current_exception();}});
             }
 
             std::this_thread::sleep_for(std::chrono::milliseconds(500));
+
+            if (excp_ptr) {
+                std::rethrow_exception(excp_ptr);
+            }
 
             for (const auto &node: m_directory_nodes) {
                 m_ioc.post([&node] { node->run(); });
-                m_threads.emplace_back([&] {m_ioc.run();});
+                m_threads.emplace_back([&] {try {m_ioc.run();} catch (std::exception&) {excp_ptr = std::current_exception();}});
             }
 
             std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
+            if (excp_ptr) {
+                std::rethrow_exception(excp_ptr);
+            }
         }
 
         void teardown () {
 
             for (auto& node: m_dedupe_nodes) {
                 auto& dedupe = dynamic_cast <dedupe_node&> (*node);
-                auto answer = boost::asio::co_spawn(*dedupe.get_server().get_executor(), [&]() -> boost::asio::awaitable<void> {
-                    co_await dedupe.get_global_data_view().stop();
-                }, boost::asio::use_future);
-                answer.wait();
+                if (dedupe.get_global_data_view().get_data_node_count() > 0) {
+                    auto answer = boost::asio::co_spawn(*dedupe.get_server().get_executor(),
+                                                        [&]() -> boost::asio::awaitable<void> {
+                                                            co_await dedupe.get_global_data_view().stop();
+                                                        }, boost::asio::use_future);
+                    answer.wait();
+                }
             }
 
             for (const auto& node: m_nodes) {
