@@ -43,17 +43,32 @@ namespace uh::cluster::rest::http
 
     void URI::extract_and_set_bucket_id_and_object_key()
     {
-        auto after_bucket_slash = m_target_string.find_first_of('/', 1);
-        m_bucket_id = m_target_string.substr(1, after_bucket_slash - 1);
-
         auto index = m_target_string.find_first_of('?');
-        if ( index != std::string::npos)
+
+        auto after_bucket_slash = m_target_string.find_first_of('/', 1);
+        if (after_bucket_slash == std::string::npos)
         {
-            m_object_key = m_target_string.substr( after_bucket_slash + 1 , index - after_bucket_slash - 1);
+            if ( index != std::string::npos)
+            {
+                m_bucket_id = m_target_string.substr( 1 , index - 1);
+            }
+            else
+            {
+                m_bucket_id = m_target_string.substr(1);
+            }
         }
         else
         {
-            m_object_key = m_target_string.substr(after_bucket_slash + 1);
+            m_bucket_id = m_target_string.substr(1, after_bucket_slash - 1);
+
+            if ( index != std::string::npos)
+            {
+                m_object_key = m_target_string.substr( after_bucket_slash + 1 , index - after_bucket_slash - 1);
+            }
+            else
+            {
+                m_object_key = m_target_string.substr(after_bucket_slash + 1);
+            }
         }
     }
 

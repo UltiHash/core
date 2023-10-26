@@ -4,6 +4,7 @@
 #include <boost/beast/http.hpp>
 #include <boost/beast/core.hpp>
 #include <boost/asio.hpp>
+#include <map>
 
 namespace uh::cluster::rest::http
 {
@@ -32,6 +33,7 @@ namespace uh::cluster::rest::http
         std::string m_bucket_id;
         std::string m_object_key;
         std::string m_query_string;
+        std::map<std::string, std::string> m_query_strings_parameters;
     };
 
 } // uh::cluster::rest::http

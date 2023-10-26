@@ -13,6 +13,7 @@
 #include <entry_node/rest/http/models/delete_object_request.h>
 #include <entry_node/rest/http/models/get_object_attributes_request.h>
 #include <entry_node/rest/http/models/list_objectsv2_request.h>
+#include <entry_node/rest/http/models/list_objects_request.h>
 #include <entry_node/rest/http/models/list_multi_part_uploads_request.h>
 #include <entry_node/rest/http/models/get_bucket_request.h>
 #include <entry_node/rest/utils/generator/generator.h>
@@ -43,8 +44,9 @@ namespace uh::cluster::rest::utils::parser {
         std::regex bucket(R"(^\/[\w!-._*']+$)");
         std::regex delete_object(R"(^\/[\w!-._*']+\/[\w!-._*']+(\?versionId=\d+)?$)");
         std::regex get_object(R"(^\/[\w!-._*']+\/[\w!-._*']+$)");
+        std::regex list_objects(R"(^\/[\w!-._*']+\?[\w!-._*=']+)");
         std::regex get_bucket(R"(^\/[\w!-._*']+$)");
-        std::regex delete_pattern(R"(^\/\w+\?delete)");
+        std::regex delete_pattern(R"(^\/[\w!-._*']+\?delete)");
 
         switch (method)
         {
@@ -111,6 +113,10 @@ namespace uh::cluster::rest::utils::parser {
                 else if (target.find("?list-type=2") != std::string::npos )
                 {
                     return std::make_unique<rest::http::model::list_objectsv2_request>(m_recv_req);
+                }
+                else if ( std::regex_match(std::string(target), list_objects) )
+                {
+                    return std::make_unique<rest::http::model::list_objects_request>(m_recv_req);
                 }
                 else if (std::regex_match(std::string(target), get_object))
                 {

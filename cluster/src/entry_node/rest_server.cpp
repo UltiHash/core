@@ -76,7 +76,10 @@ namespace uh::cluster::rest
 
                 co_await s3_request->read_body(stream, buffer);
 
+                std::cout << s3_request->get_body() << std::endl;
+
                 auto s3_res = co_await m_handler.handle(*s3_request);
+
 
                 co_await b_http::async_write(stream, s3_res->get_response_specific_object(), net::use_awaitable);
 

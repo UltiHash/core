@@ -42,6 +42,7 @@ namespace uh::cluster::rest::http
         GET_OBJECT,
         DELETE_OBJECT,
         LIST_OBJECTS_V2,
+        LIST_OBJECTS,
         GET_OBJECT_ATTRIBUTES,
         INIT_MULTIPART_UPLOAD,
         MULTIPART_UPLOAD,

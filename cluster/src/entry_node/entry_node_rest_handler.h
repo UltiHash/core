@@ -21,6 +21,7 @@
 #include "entry_node/rest/http/models/list_buckets_response.h"
 #include "entry_node/rest/http/models/get_object_attributes_response.h"
 #include "entry_node/rest/http/models/list_objectsv2_response.h"
+#include "entry_node/rest/http/models/list_objects_response.h"
 #include "entry_node/rest/http/models/delete_bucket_response.h"
 #include "entry_node/rest/http/models/delete_object_response.h"
 #include "entry_node/rest/http/models/delete_objects_response.h"
@@ -80,6 +81,9 @@ public:
                 break;
             case http::http_request_type::LIST_OBJECTS_V2:
                 res = co_await handle_list_objects_v2(req);
+                break;
+            case http::http_request_type::LIST_OBJECTS:
+                res = co_await handle_list_objects(req);
                 break;
             case http::http_request_type::GET_OBJECT_ATTRIBUTES:
                 res = handle_get_object_attributes(req);
@@ -374,44 +378,100 @@ public:
         try
         {
             res = std::make_unique<http::model::list_objectsv2_response>(req);
-//            auto m_dir = m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size())).acquire_messenger();
-//
-//            directory_message dir_req;
-//            dir_req.bucket_id = req.get_URI().get_bucket_id();
-//
-//            co_await m_dir.get().send_directory_message (DIR_LIST_OBJ_REQ, dir_req);
-//            const auto h_dir = co_await m_dir.get().recv_header();
-//
-//            ospan <char> buffer (h_dir.size);
-//            std::string msg;
-//            directory_lst_entities_message list_objects_res;
-//
-//            switch (h_dir.type)
-//            {
-//                case DIR_LIST_OBJ_RESP:
-//                    list_objects_res = co_await m_dir.get().recv_directory_list_entities_message(h_dir);
-//
-//                    for (const auto& content : list_objects_res.entities)
-//                    {
-//                        res->add_content(content);
-//                    }
-//                    break;
-//
-//                case FAILURE:
-//                    msg.resize(h_dir.size);
-//                    m_dir.get().register_read_buffer(msg);
-//                    co_await m_dir.get().recv_buffers(h_dir);
-//                    throw std::runtime_error("Failed to list objects of bucket: " + dir_req.bucket_id + "\n" + "Error: \n" + msg);
-//
-//                default:
-//                    throw std::runtime_error("unexpected internal server error");
-//            }
+            auto m_dir = m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size())).acquire_messenger();
+
+            directory_message dir_req;
+            dir_req.bucket_id = req.get_URI().get_bucket_id();
+
+            co_await m_dir.get().send_directory_message (DIR_LIST_OBJ_REQ, dir_req);
+            const auto h_dir = co_await m_dir.get().recv_header();
+
+            ospan <char> buffer (h_dir.size);
+            std::string msg;
+            directory_lst_entities_message list_objects_res;
+
+            switch (h_dir.type)
+            {
+                case DIR_LIST_OBJ_RESP:
+                    list_objects_res = co_await m_dir.get().recv_directory_list_entities_message(h_dir);
+
+                    for (const auto& content : list_objects_res.entities)
+                    {
+                        res->add_content(content);
+                    }
+                    break;
+
+                case FAILURE:
+                    msg.resize(h_dir.size);
+                    m_dir.get().register_read_buffer(msg);
+                    co_await m_dir.get().recv_buffers(h_dir);
+                    std::cout << msg << std::endl;
+                    throw std::runtime_error("Failed to list objects of bucket: " + dir_req.bucket_id + "\n" + "Error: \n" + msg);
+
+                default:
+                    throw std::runtime_error("unexpected internal server error");
+            }
 
         }
         catch(const std::exception &e)
         {
             res->set_error(boost::beast::http::response<boost::beast::http::string_body>{boost::beast::http::status::internal_server_error, 11});
         }
+
+        std::cout << res->get_response_specific_object() << std::endl;
+
+        co_return std::move(res);
+    }
+
+    coro<std::unique_ptr<http::http_response>> handle_list_objects (const rest::http::http_request& req)
+    {
+
+        std::unique_ptr<http::model::list_objects_response> res;
+
+        try
+        {
+            res = std::make_unique<http::model::list_objects_response>(req);
+            auto m_dir = m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size())).acquire_messenger();
+
+            directory_message dir_req;
+            dir_req.bucket_id = req.get_URI().get_bucket_id();
+
+            co_await m_dir.get().send_directory_message (DIR_LIST_OBJ_REQ, dir_req);
+            const auto h_dir = co_await m_dir.get().recv_header();
+
+            ospan <char> buffer (h_dir.size);
+            std::string msg;
+            directory_lst_entities_message list_objects_res;
+
+            switch (h_dir.type)
+            {
+                case DIR_LIST_OBJ_RESP:
+                    list_objects_res = co_await m_dir.get().recv_directory_list_entities_message(h_dir);
+
+                    for (const auto& content : list_objects_res.entities)
+                    {
+                        res->add_content(content);
+                    }
+                    res->add_name(req.get_URI().get_bucket_id());
+                    break;
+
+                case FAILURE:
+                    msg.resize(h_dir.size);
+                    m_dir.get().register_read_buffer(msg);
+                    co_await m_dir.get().recv_buffers(h_dir);
+                    throw std::runtime_error("Failed to list objects of bucket: " + dir_req.bucket_id + "\n" + "Error: \n" + msg);
+
+                default:
+                    throw std::runtime_error("unexpected internal server error");
+            }
+
+        }
+        catch(const std::exception &e)
+        {
+            res->set_error(boost::beast::http::response<boost::beast::http::string_body>{boost::beast::http::status::internal_server_error, 11});
+        }
+
+        std::cout << res->get_response_specific_object() << std::endl;
 
         co_return std::move(res);
     }
