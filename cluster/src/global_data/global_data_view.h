@@ -213,19 +213,28 @@ public:
             for (uint128_t offset = 8; offset < data_size + 8; offset = offset + chunk_size) {
                 auto read_bc =  [&] (auto m, int node_id) -> coro <ospan <char>> {
                     ospan <char> buf (std::min (uint128_t (chunk_size), (data_size - offset)).get_low());
-                    co_await read(buf.data.get(), offset + healthy_offsets.at (node_id), buf.size);
+                    co_await m.get().send_fragment(READ_REQ, {offset + healthy_offsets.at (node_id), buf.size});
+                    const auto h = co_await m.get().recv ({buf.data.get(), buf.size});
+                    if (h.type != READ_RESP) [[unlikely]] {
+                        throw std::runtime_error ("Unsuccessful recovery");
+                    }
                     co_return std::move (buf);
                 };
                 const auto response = broadcast_gather_custom <ospan <char>> (healthy_nodes, read_bc);
                 const auto recovered = m_ec->recover(response, static_cast <int> (failed_nodes.size()));
 
-                auto write_bc =  [&] (auto m, int node_id) -> coro <int> {
+                auto write_bc =  [&recovered] (auto m, int node_id) -> coro <address> {
                     const auto& data = recovered.at(node_id);
-                    std::string_view str {data.data.get(), data.size};
-                    co_await write (str);
-                    co_return node_id;
+                    std::span <char> sp {data.data.get(), data.size};
+                    co_await m.get ().send (WRITE_REQ, sp);
+                    const auto message_header = co_await m.get().recv_header();
+                    auto resp = co_await m.get().recv_address(message_header);
+                    if (resp.first.type != WRITE_RESP) [[unlikely]] {
+                        throw std::runtime_error ("Invalid response for write request");
+                    }
+                    co_return resp.second;
                 };
-                const auto recovery_response = broadcast_gather_custom <int> (failed_nodes, write_bc);
+                const auto recovery_response = broadcast_gather_custom <address> (failed_nodes, write_bc);
             }
         }
         co_return;
