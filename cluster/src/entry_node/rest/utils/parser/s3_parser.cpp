@@ -37,7 +37,9 @@ namespace uh::cluster::rest::utils::parser {
             throw std::runtime_error("bad http version. support exists only for HTTP 1.1.\n");
         }
 
-        auto target = m_recv_req.get().base().target();
+        // parse the URI
+        rest::http::URI URI(m_recv_req);
+
         auto method = m_recv_req.get().base().method();
 
         // TODO: switch to regex for everything?

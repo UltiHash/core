@@ -8,7 +8,7 @@ namespace uh::cluster::rest::http
     URI::URI(const http::request_parser<http::empty_body>& req) : m_req(req), m_target_string(req.get().target())
     {
         extract_and_set_bucket_id_and_object_key();
-        extract_and_set_query_strings();
+        extract_and_set_query_parameters();
     }
 
     std::string URI::get_bucket_id() const
@@ -38,6 +38,47 @@ namespace uh::cluster::rest::http
         else
         {
             return m_query_string.substr(index);
+        }
+    }
+
+    void URI::extract_and_set_query_parameters()
+    {
+        extract_and_set_query_string();
+
+        if (!m_query_string.empty())
+        {
+            size_t currentPos = 0, locationOfNextDelimiter = 1;
+
+            while (currentPos < m_query_string.size())
+            {
+                locationOfNextDelimiter = m_query_string.find('&', currentPos);
+
+                std::string keyValuePair;
+
+                if (locationOfNextDelimiter != std::string::npos)
+                {
+                    keyValuePair = m_query_string.substr(currentPos, locationOfNextDelimiter - currentPos);
+                }
+                else
+                {
+                    keyValuePair = m_query_string.substr(currentPos);
+                }
+
+                size_t locationOfEquals = keyValuePair.find('=');
+                std::string key = keyValuePair.substr(0, locationOfEquals);
+                std::string value = keyValuePair.substr(locationOfEquals + 1);
+
+//                if(decode)
+//                {
+//                    m_query_parameters[string_utils::URLDecode(key.c_str())] = string_utils::URLDecode(value.c_str()));
+//                }
+//                else
+//                {
+                    m_query_parameters[key] = value;
+//                }
+
+                currentPos += keyValuePair.size() + 1;
+            }
         }
     }
 
@@ -72,7 +113,7 @@ namespace uh::cluster::rest::http
         }
     }
 
-    void URI::extract_and_set_query_strings()
+    void URI::extract_and_set_query_string()
     {
         size_t query_start = m_target_string.find('?');
 
