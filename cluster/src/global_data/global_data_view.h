@@ -63,7 +63,7 @@ public:
         nodes.insert(nodes.cend(), m_ec->get_ec_nodes().cbegin(), m_ec->get_ec_nodes().cend());
 
         address addr;
-        auto bc = [&] (auto m, auto id) -> coro <address> {
+        auto bc = [&size] (auto m, auto id) -> coro <address> {
             m.get ().register_write_buffer (size);
             co_await m.get ().send_buffers (ALLOC_REQ);
             const auto h = co_await m.get ().recv_header ();
@@ -95,7 +95,7 @@ public:
             data_pieces.emplace_back(item.second);
         }
 
-        auto bc = [&] (auto m, auto id) -> coro <message_type> {
+        auto bc = [&data_pieces] (auto m, auto id) -> coro <message_type> {
             co_await m.get ().send_address (DEALLOC_REQ, data_pieces.at(id));
             const auto h = co_await m.get ().recv_header ();
             co_return h.type;
@@ -106,10 +106,6 @@ public:
 
 
     coro <void> scatter_allocated_write (const address& addr, const std::string_view& data) {
-
-        //if (std::accumulate(addr.sizes.cbegin(), addr.sizes.cend(), 0ul) != data.size()) [[unlikely]] {
-        //    throw std::bad_array_new_length ();
-        //}
 
         std::unordered_map <std::shared_ptr <client>, address> node_address_map;
         std::vector <std::shared_ptr <client>> nodes;
@@ -125,18 +121,24 @@ public:
         }
         const auto part_size = data.size() / m_data_node_offsets.size();
         const auto ec_nodes = m_ec->get_ec_nodes();
-        int ec_node_index = 0;
+        std::atomic <int> ec_node_index = 0;
         const auto ec_data = m_ec->compute_ec(data, static_cast <int> (m_data_node_offsets.size()));
 
-        auto bc_func = [&] (auto && m, int node_id) -> coro <int> {
+        auto bc_func = [&] (auto m, int node_id) -> coro <int> {
             std::string_view data_part;
             const auto node = nodes.at (node_id);
             if (std::find (ec_nodes.cbegin(), ec_nodes.cend(), node) == ec_nodes.cend()) { // no ec node
                 data_part = data.substr(node_id * part_size, part_size);
             }
             else { // ec node
-                data_part = std::string_view {ec_data [ec_node_index].data.get(), ec_data[ec_node_index].size};
-                ec_node_index ++;
+
+                auto index = ec_node_index.load();
+                auto new_val = index + 1;
+                while (!ec_node_index.compare_exchange_weak (index, new_val)) {
+                    index = ec_node_index.load();
+                    new_val = index + 1;
+                }
+                data_part = std::string_view {ec_data [index].data.get(), ec_data[index].size};
             }
             allocated_write_message msg {.addr = node_address_map.at (node),
                                          .data = data_part};
@@ -155,14 +157,17 @@ public:
         std::vector <std::shared_ptr <client>> nodes;
         nodes.reserve(m_data_node_offsets.size() + m_ec->get_acquired_ec_node_count());
         std::vector <uint128_t> offsets;
-        offsets.reserve(m_data_node_offsets.size());
+        offsets.reserve(m_data_node_offsets.size() + m_ec->get_acquired_ec_node_count());
         for (auto& node: m_data_node_offsets) {
             offsets.emplace_back(node.first);
             nodes.emplace_back(node.second);
         }
-        nodes.insert(nodes.cend(), m_ec->get_ec_nodes().cbegin(), m_ec->get_ec_nodes().cend());
+        for (auto& node: m_ec->get_ec_node_offset_map()) {
+            offsets.emplace_back(node.first);
+            nodes.emplace_back(node.second);
+        }
 
-        auto bc_func = [&] (auto && m, int node_id) -> coro <uint128_t> {
+        auto bc_func = [] (auto m, int node_id) -> coro <uint128_t> {
             co_await m.get ().send(USED_REQ, {});
             const auto message_header = co_await m.get().recv_header();
             if (message_header.type == FAILURE) [[unlikely]] {
@@ -182,36 +187,39 @@ public:
         uint128_t data_size = 0;
         std::vector <std::shared_ptr <client>> failed_nodes;
         std::vector <std::shared_ptr <client>> healthy_nodes;
+        std::vector <uint128_t> healthy_offsets;
 
         for (const auto& r: resp) {
-            if (r.second == 0 and failed_nodes.size() < m_ec->get_maximum_allowed_failed_nodes_count ()) {
+            if (r.second == 8 and failed_nodes.size() < m_ec->get_maximum_allowed_failed_nodes_count ()) { // failed node
                 failed_nodes.emplace_back (nodes [r.first]);
+                continue;
             }
-            else if (r.second == 0) [[unlikely]] {
+            else if (r.second == 8) [[unlikely]] {
                 throw std::runtime_error ("More failed nodes than EC can tolerate!");
             }
-            else if (data_size > 0 and r.second != data_size) [[unlikely]] {
+            else if (data_size > 8 and r.second != data_size) [[unlikely]] {
                 throw std::logic_error ("Non equal data sizes in different data nodes!");
             }
             else if (data_size == 0) {
                 data_size = r.second;
-                healthy_nodes.emplace_back(nodes [r.first]);
             }
+            healthy_nodes.emplace_back(nodes [r.first]);
+            healthy_offsets.emplace_back(offsets.at (r.first));
         }
 
         if (!failed_nodes.empty()) {
 
             size_t chunk_size = m_cluster_map.m_cluster_conf.recovery_chunk_size;
-            for (uint128_t offset = 0; offset < data_size; offset = offset + chunk_size) {
-                auto read_bc =  [&] (auto && m, int node_id) -> coro <ospan <char>> {
+            for (uint128_t offset = 8; offset < data_size + 8; offset = offset + chunk_size) {
+                auto read_bc =  [&] (auto m, int node_id) -> coro <ospan <char>> {
                     ospan <char> buf (std::min (uint128_t (chunk_size), (data_size - offset)).get_low());
-                    co_await read(buf.data.get(), offset + offsets.at (node_id), buf.size);
+                    co_await read(buf.data.get(), offset + healthy_offsets.at (node_id), buf.size);
                     co_return std::move (buf);
                 };
                 const auto response = broadcast_gather_custom <ospan <char>> (healthy_nodes, read_bc);
                 const auto recovered = m_ec->recover(response, static_cast <int> (failed_nodes.size()));
 
-                auto write_bc =  [&] (auto && m, int node_id) -> coro <int> {
+                auto write_bc =  [&] (auto m, int node_id) -> coro <int> {
                     const auto& data = recovered.at(node_id);
                     std::string_view str {data.data.get(), data.size};
                     co_await write (str);
@@ -253,7 +261,7 @@ public:
             node_address_map [nodes.back()].push_fragment(frag);
         }
 
-        auto bc_func = [&] (auto && m, int node_id) -> coro <message_type> {
+        auto bc_func = [&] (auto m, int node_id) -> coro <message_type> {
             const auto node = nodes.at (node_id);
 
             co_await m.get ().send_address(SYNC_REQ, node_address_map.at (node));
@@ -303,7 +311,7 @@ public:
             nodes.emplace_back(node.second);
         }
         nodes.insert(nodes.cend(), m_ec->get_ec_nodes().cbegin(), m_ec->get_ec_nodes().cend());
-        auto bc_func = [&] (auto && m, int node_id) -> coro <void> {
+        auto bc_func = [] (auto m, int node_id) -> coro <void> {
             co_await m.get ().send(STOP, {});
             co_return;
         };

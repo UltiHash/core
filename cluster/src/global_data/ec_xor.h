@@ -35,6 +35,10 @@ struct ec_xor: public ec {
         return m_nodes;
     }
 
+    [[nodiscard]] const std::map <uint128_t, std::shared_ptr <client>>& get_ec_node_offset_map () const override {
+        return m_node_offset_map;
+    }
+
     [[nodiscard]] std::shared_ptr <client> get_ec_node (uint128_t offset) const override {
         const auto pfd = m_node_offset_map.upper_bound (offset);
         if (pfd == m_node_offset_map.cbegin()) {
@@ -51,13 +55,13 @@ struct ec_xor: public ec {
         const auto long_size = (part_size - part_size % sizeof (unsigned long)) / sizeof (unsigned long);
         std::span <unsigned long> long_parity_view {reinterpret_cast <unsigned long*> (parity_view.data()),long_size};
         std::memset (result.back().data.get(), 0, part_size);
-        for (int j = 0; j < data_nodes_count; j += sizeof (unsigned long)) {
+        for (int j = 0; j < data_nodes_count; j ++) {
             const auto data_part = data.substr(j * part_size, part_size);
             std::span <const unsigned long> long_data_part {reinterpret_cast <const unsigned long*> (data_part.data()), long_size};
             for (size_t k = 0; k < long_data_part.size(); ++k) {
                 long_parity_view [k] ^= long_data_part[k];
             }
-            for (size_t k = long_size; k < part_size; k++) {
+            for (size_t k = long_size * sizeof (unsigned long); k < part_size; k++) {
                 parity_view [k] ^= data_part [k];
             }
         }
@@ -69,16 +73,16 @@ struct ec_xor: public ec {
         std::vector <ospan <char>> result;
         result.emplace_back(part_size);
         std::span <char> parity_view {result.back().data.get(), part_size};
-        const auto long_size = part_size - part_size % sizeof (unsigned long);
-        std::span <unsigned long> long_parity_view {reinterpret_cast <unsigned long*> (parity_view.data()),long_size};
+        const auto long_size = (part_size - part_size % sizeof (unsigned long)) / sizeof (unsigned long);
+        std::span <unsigned long> long_parity_view {reinterpret_cast <unsigned long*> (parity_view.data()), long_size};
         std::memset (result.back().data.get(), 0, part_size);
-        for (int j = 0; j < data_pieces.size(); j += sizeof (unsigned long)) {
+        for (int j = 0; j < data_pieces.size(); j ++) {
             const auto data_part = std::string_view (data_pieces.at(j).data.get(), data_pieces.at(j).size);
             std::span <const unsigned long> long_data_part {reinterpret_cast <const unsigned long*> (data_part.data()), long_size};
             for (size_t k = 0; k < long_data_part.size(); ++k) {
                 long_parity_view [k] ^= long_data_part[k];
             }
-            for (size_t k = long_size; k < part_size; k++) {
+            for (size_t k = long_size * sizeof (unsigned long); k < part_size; k++) {
                 parity_view [k] ^= data_part [k];
             }
         }

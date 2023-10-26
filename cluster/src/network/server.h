@@ -77,6 +77,7 @@ namespace uh::cluster
             for (auto& thread: m_thread_container) {
                 thread.join();
             }
+            stop ();
         }
 
     private:

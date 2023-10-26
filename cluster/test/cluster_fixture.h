@@ -58,6 +58,45 @@ namespace uh::cluster {
 
             teardown();
 
+            turn_on(data_nodes, dedupe_nodes, directory_nodes, ec);
+        }
+
+        void shut_down () {
+            for (auto& node: m_dedupe_nodes) {
+                auto& dedupe = dynamic_cast <dedupe_node&> (*node);
+                if (dedupe.get_global_data_view().get_data_node_count() > 0) {
+                    auto answer = boost::asio::co_spawn(*dedupe.get_server().get_executor(),
+                                                        [&]() -> boost::asio::awaitable<void> {
+                                                            co_await dedupe.get_global_data_view().stop();
+                                                        }, boost::asio::use_future);
+                    try {
+                        answer.get();
+                    } catch (std::exception& e) {
+                        std::cerr << e.what() << std::endl;
+                    }
+                }
+            }
+
+            for (const auto& node: m_nodes) {
+                node->stop();
+            }
+
+            for (auto& thread: m_threads) {
+                thread.join();
+            }
+
+            m_threads.clear();
+            m_nodes.clear();
+            m_dedupe_nodes.clear();
+            m_data_nodes.clear();
+            m_directory_nodes.clear();
+
+            m_ioc.stop();
+            m_ioc.restart();
+            sleep(1);
+        }
+
+        void turn_on (int data_nodes, int dedupe_nodes, int directory_nodes, ec_type ec) {
             std::exception_ptr excp_ptr;
 
             const auto cluster_roles = get_cluster_roles(data_nodes, dedupe_nodes, directory_nodes);
@@ -92,20 +131,12 @@ namespace uh::cluster {
 
             std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
-            if (excp_ptr) {
-                std::rethrow_exception(excp_ptr);
-            }
-
             for (const auto &node: m_dedupe_nodes) {
                 m_ioc.post([&node] { node->run(); });
                 m_threads.emplace_back([&] {try {m_ioc.run();} catch (std::exception&) {excp_ptr = std::current_exception();}});
             }
 
             std::this_thread::sleep_for(std::chrono::milliseconds(500));
-
-            if (excp_ptr) {
-                std::rethrow_exception(excp_ptr);
-            }
 
             for (const auto &node: m_directory_nodes) {
                 m_ioc.post([&node] { node->run(); });
@@ -115,44 +146,27 @@ namespace uh::cluster {
             std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
             if (excp_ptr) {
-                std::rethrow_exception(excp_ptr);
+                try {
+                    std::rethrow_exception(excp_ptr);
+                }
+                catch (std::exception& e) {
+                    throw e;
+                }
             }
         }
 
         void teardown () {
 
-            for (auto& node: m_dedupe_nodes) {
-                auto& dedupe = dynamic_cast <dedupe_node&> (*node);
-                if (dedupe.get_global_data_view().get_data_node_count() > 0) {
-                    auto answer = boost::asio::co_spawn(*dedupe.get_server().get_executor(),
-                                                        [&]() -> boost::asio::awaitable<void> {
-                                                            co_await dedupe.get_global_data_view().stop();
-                                                        }, boost::asio::use_future);
-                    answer.wait();
-                }
-            }
-
-            for (const auto& node: m_nodes) {
-                node->stop();
-            }
-
-            for (auto& thread: m_threads) {
-                thread.join();
-            }
-
-            m_threads.clear();
-            m_nodes.clear();
-            m_dedupe_nodes.clear();
-            m_data_nodes.clear();
-            m_directory_nodes.clear();
-
-            m_ioc.stop();
-            m_ioc.restart();
-            sleep(2);
+            shut_down();
 
             std::filesystem::remove_all(get_root_path());
         }
 
+        static void destroy_data_node (int i) {
+            std::string dn_dir = "dn" + std::to_string(i);
+
+            std::filesystem::remove_all(get_root_path() / dn_dir);
+        }
 
         static std::filesystem::path get_root_path() {
             return "/tmp/uh/";
@@ -166,7 +180,7 @@ namespace uh::cluster {
                     },
                     .rest_server_conf = {
                             .threads = 4,
-                            .port = static_cast<uint16_t>(9040 + i),
+                            .port = static_cast<uint16_t>(9050 + i),
                     },
                     .dedupe_node_connection_count = 2,
                     .directory_connection_count = 2,
@@ -183,7 +197,7 @@ namespace uh::cluster {
                     .max_data_store_size = 64ul * 1024ul * 1024ul * 1024ul,
                     .server_conf = {
                             .threads = 4,
-                            .port = static_cast<uint16_t>(9000 + i),
+                            .port = static_cast<uint16_t>(8600 + i),
                     },
             };
         }
