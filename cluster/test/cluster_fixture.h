@@ -16,7 +16,7 @@ namespace uh::cluster {
     template <typename T>
     using coro =  boost::asio::awaitable <T>;
 
-    class global_data_view_fixture
+    class cluster_fixture
     {
     public:
 
@@ -54,7 +54,7 @@ namespace uh::cluster {
             return dynamic_cast <data_node&> (*m_data_nodes.at(i));
         }
 
-        void setup (int data_nodes, int dedupe_nodes, int directory_nodes) {
+        void setup (int data_nodes, int dedupe_nodes, int directory_nodes, ec_type ec) {
 
             teardown();
 
@@ -62,7 +62,7 @@ namespace uh::cluster {
 
             for (const auto &role: cluster_roles) {
                 for (const auto &role_nodes: role.second) {
-                    auto config = make_cluster_config(role_nodes.first);
+                    auto config = make_cluster_config(role_nodes.first, ec);
                     auto cmap = cluster_map(std::move (config), cluster_roles);
                     switch (role.first) {
                         case DATA_NODE:
@@ -137,78 +137,6 @@ namespace uh::cluster {
             std::filesystem::remove_all(get_root_path());
         }
 
-        /*
-        cluster_config config_dn0 = make_cluster_config(0);
-        cluster_config config_dn1 = make_cluster_config(1);
-        cluster_config config_dn2 = make_cluster_config(2);
-        cluster_config config_dd0 = make_cluster_config(0);
-        std::optional<cluster_map> cmap_dn0;
-        std::optional<cluster_map> cmap_dn1;
-        std::optional<cluster_map> cmap_dn2;
-        std::optional<cluster_map> cmap_dd0;
-        std::thread thread_dn0;
-        std::thread thread_dn1;
-        std::thread thread_dn2;
-        std::thread thread_dd0;
-        std::unique_ptr<data_node> dn0;
-        std::unique_ptr<data_node> dn1;
-        std::unique_ptr<data_node> dn2;
-        std::unique_ptr<dedupe_node> dd0;
-
-
-        void setup() {
-            cmap_dn0.emplace(cluster_map(config_dn0, get_cluster_roles()));
-            cmap_dn1.emplace(cluster_map(config_dn1, get_cluster_roles()));
-            cmap_dn2.emplace(cluster_map(config_dn2, get_cluster_roles()));
-            cmap_dd0.emplace(cluster_map(config_dd0, get_cluster_roles()));
-
-            dn0 = std::make_unique<data_node>(0,  std::move(cmap_dn0.value()));
-            thread_dn0 = std::thread([&]() { dn0->run(); });
-            std::this_thread::sleep_for(std::chrono::milliseconds(500));
-
-            dn1 = std::make_unique<data_node>(1,  std::move(cmap_dn1.value()));
-            thread_dn1 = std::thread([&]() { dn1->run(); });
-            std::this_thread::sleep_for(std::chrono::milliseconds(500));
-
-            dn2 = std::make_unique<data_node>(2,  std::move(cmap_dn2.value()));
-            thread_dn2 = std::thread([&]() { dn2->run(); });
-            std::this_thread::sleep_for(std::chrono::milliseconds(500));
-
-            dd0 = std::make_unique<dedupe_node>(0,  std::move(cmap_dd0.value()), true);
-            thread_dd0 = std::thread([&]() { dd0->run(); });
-        }
-
-
-
-        void teardown() {
-            dd0->stop();
-            thread_dd0.join();
-            dn0->stop();
-            thread_dn0.join();
-            dn1->stop();
-            thread_dn1.join();
-            dn2->stop();
-            thread_dn2.join();
-
-            dd0.reset(nullptr);
-            dn0.reset(nullptr);
-            dn1.reset(nullptr);
-            dn2.reset(nullptr);
-            std::this_thread::sleep_for(std::chrono::milliseconds(500));
-
-            std::filesystem::remove_all(get_root_path());
-
-        }
-
-
-
-        static std::unordered_map <uh::cluster::role, std::map <int, std::string>> get_cluster_roles() {
-            return {
-                    {uh::cluster::role::DATA_NODE, {{0, "127.0.0.1"}, {1, "127.0.0.1"}, {2, "127.0.0.1"}}},
-                    {uh::cluster::role::DEDUPE_NODE, {{0, "127.0.0.1"}}},
-            };
-        }
-         */
 
         static std::filesystem::path get_root_path() {
             return "/tmp/uh/";
@@ -287,10 +215,10 @@ namespace uh::cluster {
             };
         }
 
-        static uh::cluster::cluster_config make_cluster_config(int i) {
+        static uh::cluster::cluster_config make_cluster_config(int i, ec_type ec) {
             return {
                     .init_process_count = 4,
-                    .ec_algorithm = XOR,
+                    .ec_algorithm = ec,
                     .recovery_chunk_size = 1 * 1024ul * 1024ul * 1024ul,
                     .data_node_conf = make_data_node_config(i),
                     .dedupe_node_conf = make_dedupe_node_config(i),

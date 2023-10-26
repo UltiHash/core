@@ -13,7 +13,7 @@
 
 #include <filesystem>
 
-#include "global_data_view_fixture.h"
+#include "cluster_fixture.h"
 
 
 // ------------- Tests Suites Follow --------------
@@ -22,9 +22,9 @@ namespace uh::cluster {
 
 // ---------------------------------------------------------------------
 
-BOOST_FIXTURE_TEST_CASE (test_uncached_write, global_data_view_fixture)
+BOOST_FIXTURE_TEST_CASE (test_uncached_write, cluster_fixture)
 {
-    setup (3, 1, 0);
+    setup (3, 1, 0, XOR);
     boost::asio::io_context io_context;
     boost::asio::io_context io_context2;
     global_data_view& data_view = get_dedupe_node(0).get_global_data_view();
@@ -63,9 +63,9 @@ BOOST_FIXTURE_TEST_CASE (test_uncached_write, global_data_view_fixture)
     BOOST_CHECK(data_out == data_in);
 }
 
-BOOST_FIXTURE_TEST_CASE (test_cached_write, global_data_view_fixture)
+BOOST_FIXTURE_TEST_CASE (test_cached_write, cluster_fixture)
 {
-    setup (3, 1, 0);
+    setup (3, 1, 0, XOR);
     boost::asio::io_context io_context;
     boost::asio::io_context io_context2;
     global_data_view& data_view = get_dedupe_node(0).get_global_data_view();
