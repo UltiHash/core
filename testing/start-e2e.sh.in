@@ -100,7 +100,7 @@ if [ "$timeout" -eq "0" ]; then
 fi
 
 export PYTHONDONTWRITEBYTECODE=1
-pytest "$TESTING_BASE_DIR/tests" --cluster-url="$cluster_url" \
+pytest "$TESTING_BINARY_DIR/tests" --cluster-url="$cluster_url" \
     --aws-access-key-id="$AWS_ACCESS_KEY_ID" --aws-secret-access-key="$AWS_SECRET_ACCESS_KEY" $@
 
 if [ "$use_docker_compose" -eq "1" ]; then

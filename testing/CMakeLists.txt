@@ -39,6 +39,18 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/start-e2e.sh.in
             ${CMAKE_CURRENT_BINARY_DIR}/start-e2e.sh
             FILE_PERMISSIONS OWNER_READ OWNER_EXECUTE)
 
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/pytest.ini.in
+        ${CMAKE_CURRENT_BINARY_DIR}/pytest.ini)
+
+file(CREATE_LINK
+        ${CMAKE_CURRENT_SOURCE_DIR}/tests
+        ${CMAKE_CURRENT_BINARY_DIR}/tests
+        SYMBOLIC)
+
+add_test(NAME pytest_e2e
+        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+        COMMAND ${CMAKE_CURRENT_BINARY_DIR}/start-e2e.sh)
+
 set_directory_properties(PROPERTIES ADDITIONAL_CLEAN_FILES "${TESTING_VENV_DIR}")
 
 if (enable_e2e_test)
