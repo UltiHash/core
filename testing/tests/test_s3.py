@@ -78,6 +78,15 @@ def test_put_object(s3):
 
     assert has_object(s3, bucket, name)
 
+def test_delete_bucket(s3):
+    name = unused_bucket_name(s3)
+    response = s3.create_bucket(Bucket=name)
+
+    assert has_bucket(s3, name)
+
+    s3.delete_bucket(Bucket=name)
+    assert not has_bucket(s3, name)
+
 def test_object_content(s3):
     bucket = unused_bucket_name(s3)
     s3.create_bucket(Bucket=bucket)
