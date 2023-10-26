@@ -119,7 +119,7 @@ private:
     std::filesystem::path m_bucket_path;
     chaining_data_store m_data_store;
     transaction_log m_transaction_log;
-    std::map <std::string, uint64_t> m_object_ptrs;
+    std::map<std::string, uint64_t> m_object_ptrs;
     std::shared_mutex m_mutex;
     //ACLs, other meta-data
 

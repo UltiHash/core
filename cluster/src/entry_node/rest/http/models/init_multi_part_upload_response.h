@@ -14,6 +14,8 @@ namespace uh::cluster::rest::http::model
 
         [[nodiscard]] const http::response<http::string_body>& get_response_specific_object() override;
 
+        void set_upload_id(const std::string& upload_id);
+
     private:
 
         bool m_locationHasBeenSet = false;

@@ -5,11 +5,15 @@ namespace uh::cluster::rest::http::model
 {
 
     list_buckets_response::list_buckets_response(const http_request& req) : http_response(req)
-    {}
+    {
+        m_res.set(boost::beast::http::field::content_type, "application/xml");
+    }
 
     list_buckets_response::list_buckets_response(const http_request& req, http::response<http::string_body> recv_res) :
             http_response(req, std::move(recv_res))
-    {}
+    {
+        m_res.set(boost::beast::http::field::content_type, "application/xml");
+    }
 
     void list_buckets_response::add_bucket(std::string bucket_to_add)
     {

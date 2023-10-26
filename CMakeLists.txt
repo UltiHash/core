@@ -13,6 +13,7 @@ option(BUILD_CLUSTER        "Build the cluster component"  OFF)
 option(ENABLE_E2E_TESTS     "Enable End-to-End tests" OFF)
 
 
+
 set(Boost_USE_STATIC_LIBS ON)
 add_compile_options(-fPIC)
 

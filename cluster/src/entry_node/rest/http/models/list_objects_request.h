@@ -5,14 +5,14 @@
 namespace uh::cluster::rest::http::model
 {
 
-    class list_objectsv2_request : public http_request
+    class list_objects_request : public http_request
     {
     public:
-        explicit list_objectsv2_request(const http::request_parser<http::empty_body>&);
+        explicit list_objects_request(const http::request_parser<http::empty_body>&);
 
-        ~list_objectsv2_request() override = default;
+        ~list_objects_request() override = default;
 
-        [[nodiscard]] inline http_request_type get_request_name() const override { return http_request_type::LIST_OBJECTS_V2; }
+        [[nodiscard]] inline http_request_type get_request_name() const override { return http_request_type::LIST_OBJECTS; }
 
         [[nodiscard]] std::map<std::string, std::string> get_request_specific_headers() const override;
 
@@ -20,7 +20,7 @@ namespace uh::cluster::rest::http::model
 
 
     private:
-        list_objectsv2_request& operator  = (const http::request_parser<http::empty_body>& recv_req);
+        list_objects_request& operator  = (const http::request_parser<http::empty_body>& recv_req);
 
         std::string m_delimiter;
         bool m_delimiterHasBeenSet = false;
@@ -34,14 +34,8 @@ namespace uh::cluster::rest::http::model
         std::string m_prefix;
         bool m_prefixHasBeenSet = false;
 
-        std::string m_continuationToken;
-        bool m_continuationTokenHasBeenSet = false;
-
-        std::string m_fetchOwner;
-        bool m_fetchOwnerHasBeenSet = false;
-
-        std::string m_startAfter;
-        bool m_startAfterHasBeenSet = false;
+        std::string m_marker;
+        bool m_markerHasBeenSet = false;
 
         std::string m_requestPayer;
         bool m_requestPayerHasBeenSet = false;

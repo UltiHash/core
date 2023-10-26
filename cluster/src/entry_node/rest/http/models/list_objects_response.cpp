@@ -1,35 +1,34 @@
-#include "list_objectsv2_response.h"
-
+#include "list_objects_response.h"
+#include <iostream>
 namespace uh::cluster::rest::http::model
 {
 
-    list_objectsv2_response::list_objectsv2_response(const http_request& req) : http_response(req)
+    list_objects_response::list_objects_response(const http_request& req) : http_response(req)
     {
         m_res.set(boost::beast::http::field::content_type, "application/xml");
         populate_response_headers();
     }
 
-    list_objectsv2_response::list_objectsv2_response(const http_request& req, http::response<http::string_body> recv_res) :
+    list_objects_response::list_objects_response(const http_request& req, http::response<http::string_body> recv_res) :
             http_response(req, std::move(recv_res))
     {
         m_res.set(boost::beast::http::field::content_type, "application/xml");
         populate_response_headers();
     }
 
-    void list_objectsv2_response::add_content(std::string content)
+    void list_objects_response::add_content(std::string content)
     {
         m_contents.emplace_back(std::move(content));
         m_contentsHasBeenSet = true;
-        m_keyCountHasBeenSet = true;
     }
 
-    void list_objectsv2_response::add_name(std::string bucket_name)
+    void list_objects_response::add_name(std::string bucket_name)
     {
         m_name = std::move(bucket_name);
         m_nameHasBeenSet = true;
     }
 
-    void list_objectsv2_response::populate_response_headers()
+    void list_objects_response::populate_response_headers()
     {
         auto max_keys = m_orig_req.get_URI().get_query_string_value("max-keys");
         if (!max_keys.empty())
@@ -38,15 +37,15 @@ namespace uh::cluster::rest::http::model
             m_maxKeysHasBeenSet = true;
         }
 
-        auto marker = m_orig_req.get_URI().get_query_string_value("start-after");
+        auto marker = m_orig_req.get_URI().get_query_string_value("marker");
         if (!marker.empty())
         {
-            m_startAfter = marker;
-            m_startAfterHasBeenSet = true;
+            m_marker = marker;
+            m_markerHasBeenSet = true;
         }
     }
 
-    const http::response<http::string_body>& list_objectsv2_response::get_response_specific_object()
+    const http::response<http::string_body>& list_objects_response::get_response_specific_object()
     {
 
         if(m_errorHasBeenSet)
@@ -68,9 +67,9 @@ namespace uh::cluster::rest::http::model
             int counter = 0;
 
             auto content_itr = m_contents.begin();
-            if (m_startAfterHasBeenSet)
+            if (m_markerHasBeenSet)
             {
-                content_itr = std::find(m_contents.begin(), m_contents.end(), m_startAfter);
+                content_itr = std::find(m_contents.begin(), m_contents.end(), m_marker);
 
                 if (content_itr != m_contents.end())
                 {
@@ -87,18 +86,12 @@ namespace uh::cluster::rest::http::model
             {
                 content_xml_string +="<Contents>\n"
                                      "<Key>" + *content_itr + "</Key>\n"
-                                     "</Contents>\n";
+                                                              "</Contents>\n";
 
                 counter++;
                 if ( m_maxKeysHasBeenSet && m_maxKeys == counter)
                     break;
             }
-        }
-
-        std::string key_count_xml;
-        if (m_keyCountHasBeenSet)
-        {
-            content_xml_string += "<KeyCount>" + std::to_string(m_contents.size()) + "</KeyCount>\n";
         }
 
         std::string name_xml_string;
