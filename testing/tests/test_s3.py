@@ -78,6 +78,18 @@ def test_put_object(s3):
 
     assert has_object(s3, bucket, name)
 
+def test_object_content(s3):
+    bucket = unused_bucket_name(s3)
+    s3.create_bucket(Bucket=bucket)
+
+    name = unused_object_key(s3, bucket)
+    body = util.get_random_name(string.printable, 64 * 1024)
+    s3.put_object(Bucket=bucket, Key=name, body=body)
+
+    resp = s3.get_object(Bucket=bucket, Key=name)
+    assert body == resp['Body']
+
+
 def test_create_illegal_bucket_name(s3):
     # See https://docs.aws.amazon.com/AmazonS3/latest/userguide/bucketnamingrules.html
     with pytest.raises(Exception):
