@@ -40,6 +40,7 @@ namespace uh::cluster::rest::utils::parser {
         // parse the URI
         rest::http::URI URI(m_recv_req);
 
+        auto target = m_recv_req.get().base().target();
         auto method = m_recv_req.get().base().method();
 
         // TODO: switch to regex for everything?

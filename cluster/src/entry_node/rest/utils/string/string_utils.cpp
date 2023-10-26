@@ -20,5 +20,28 @@ namespace uh::cluster::rest::utils
         return ( strcmp(string1, string2) == 0 );
     }
 
+    std::string URL_encode()
+    {
+//        std::string escaped;
+//        escaped.fill('0');
+//        escaped << std::hex << std::uppercase;
+//
+//        size_t unsafeLength = strlen(unsafe);
+//        for (auto i = unsafe, n = unsafe + unsafeLength; i != n; ++i)
+//        {
+//            char c = *i;
+//            if (IsAlnum(c) || c == '-' || c == '_' || c == '.' || c == '~')
+//            {
+//                escaped << (char)c;
+//            }
+//            else
+//            {
+//                //this unsigned char cast allows us to handle unicode characters.
+//                escaped << '%' << std::setw(2) << int((unsigned char)c) << std::setw(0);
+//            }
+//        }
+//
+//        return escaped.str();
+    }
 
 } // uh::cluster::rest::utils
