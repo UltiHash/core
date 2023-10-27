@@ -13,8 +13,10 @@
 #include <entry_node/rest/http/models/delete_object_request.h>
 #include <entry_node/rest/http/models/get_object_attributes_request.h>
 #include <entry_node/rest/http/models/list_objectsv2_request.h>
+#include <entry_node/rest/http/models/list_objects_request.h>
 #include <entry_node/rest/http/models/list_multi_part_uploads_request.h>
 #include <entry_node/rest/http/models/get_bucket_request.h>
+#include <entry_node/rest/utils/generator/generator.h>
 #include <regex>
 
 namespace uh::cluster::rest::utils::parser {
@@ -35,6 +37,9 @@ namespace uh::cluster::rest::utils::parser {
             throw std::runtime_error("bad http version. support exists only for HTTP 1.1.\n");
         }
 
+        // parse the URI
+        rest::http::URI URI(m_recv_req);
+
         auto target = m_recv_req.get().base().target();
         auto method = m_recv_req.get().base().method();
 
@@ -42,21 +47,21 @@ namespace uh::cluster::rest::utils::parser {
         std::regex bucket(R"(^\/[\w!-._*']+$)");
         std::regex delete_object(R"(^\/[\w!-._*']+\/[\w!-._*']+(\?versionId=\d+)?$)");
         std::regex get_object(R"(^\/[\w!-._*']+\/[\w!-._*']+$)");
+        std::regex list_objects(R"(^\/[\w!-._*']+\?[\w!-._*=']+)");
         std::regex get_bucket(R"(^\/[\w!-._*']+$)");
-        std::regex delete_pattern(R"(^\/\w+\?delete)");
+        std::regex delete_pattern(R"(^\/[\w!-._*']+\?delete)");
 
         switch (method)
         {
             case boost::beast::http::verb::post:
                 if (target.ends_with("?uploads"))
                 {
-                    // mechanism for creating upload id, does this mechanism create same upload id for same POST request occurring twice?
+                    auto upload_id = generator::generate_unique_id();
+                    m_uomap_multipart.emplace(upload_id, std::make_shared<utils::ts_map<uint16_t, std::string>>());
 
-                    m_uomap_multipart.emplace("first-upload", std::make_shared<utils::ts_map<uint16_t, std::string>>());
-
-                    return std::make_unique<rest::http::model::init_multi_part_upload_request>(m_recv_req);
+                    return std::make_unique<rest::http::model::init_multi_part_upload_request>(m_recv_req, upload_id);
                 }
-                else if (target.find("?uploadId=") != std::string::npos)
+                else if (target.ends_with("?uploadId="))
                 {
                     auto upload_id = std::string(target.substr(target.find("uploadId=") + 9));
 
@@ -108,9 +113,13 @@ namespace uh::cluster::rest::utils::parser {
                 {
                     return std::make_unique<rest::http::model::get_object_attributes_request>(m_recv_req);
                 }
-                else if (target.find("/?list-type=2") != std::string::npos )
+                else if (target.find("?list-type=2") != std::string::npos )
                 {
                     return std::make_unique<rest::http::model::list_objectsv2_request>(m_recv_req);
+                }
+                else if ( std::regex_match(std::string(target), list_objects) )
+                {
+                    return std::make_unique<rest::http::model::list_objects_request>(m_recv_req);
                 }
                 else if (std::regex_match(std::string(target), get_object))
                 {
@@ -129,7 +138,7 @@ namespace uh::cluster::rest::utils::parser {
                 {
                     return std::make_unique<rest::http::model::delete_bucket_request>(m_recv_req);
                 }
-                    // TODO: switch to regex since object key might be missing on this
+                // TODO: switch to regex since object key might be missing on this
                 else if (std::regex_match(std::string(target), delete_object))
                 {
                     return std::make_unique<rest::http::model::delete_object_request>(m_recv_req);

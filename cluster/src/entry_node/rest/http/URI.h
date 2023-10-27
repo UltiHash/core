@@ -25,9 +25,9 @@ namespace uh::cluster::rest::http
         [[nodiscard]] std::string get_query_string_value(const std::string& key) const;
 
     private:
-        void extract_and_set_query_string();
-        void extract_and_set_query_parameters();
         void extract_and_set_bucket_id_and_object_key();
+        void extract_and_set_query_parameters();
+        void extract_and_set_query_string();
 
         const http::request_parser<http::empty_body>& m_req;
         std::string m_target_string;
