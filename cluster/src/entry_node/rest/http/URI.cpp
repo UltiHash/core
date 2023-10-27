@@ -1,5 +1,4 @@
 #include "URI.h"
-#include <utility>
 #include <iostream>
 
 namespace uh::cluster::rest::http
@@ -7,6 +6,7 @@ namespace uh::cluster::rest::http
 
     URI::URI(const http::request_parser<http::empty_body>& req) : m_req(req), m_target_string(req.get().target())
     {
+        // USE BOOST URI TO EXTRACT EVERYTHING IN THIS CLASS
         extract_and_set_bucket_id_and_object_key();
         extract_and_set_query_parameters();
     }
@@ -74,7 +74,7 @@ namespace uh::cluster::rest::http
 //                }
 //                else
 //                {
-                    m_query_parameters[key] = value;
+                m_query_parameters[key] = value;
 //                }
 
                 currentPos += keyValuePair.size() + 1;
@@ -111,6 +111,8 @@ namespace uh::cluster::rest::http
                 m_object_key = m_target_string.substr(after_bucket_slash + 1);
             }
         }
+
+        // check bucket id and object key for validity
     }
 
     void URI::extract_and_set_query_string()
