@@ -587,4 +587,230 @@ BOOST_FIXTURE_TEST_CASE (ec_test_lost_one_data_node_with_recover_non_dividable_t
 
 }
 
+BOOST_FIXTURE_TEST_CASE (ec_test_empty_nodes, cluster_fixture)
+{
+    setup(25, 1, 0, XOR);
+    BOOST_TEST (get_dedupe_node(0).get_global_data_view().get_data_node_count() == 24);
+
+
+    shut_down();
+    turn_on(25, 1, 0, XOR);
+    BOOST_TEST (get_dedupe_node(0).get_global_data_view().get_data_node_count() == 24);
+    boost::asio::io_context ioc;
+
+    boost::asio::co_spawn (ioc, [&] () -> coro <void> {co_await get_dedupe_node(0).get_global_data_view().recover();}, boost::asio::use_future);
+    ioc.run();
+}
+
+BOOST_FIXTURE_TEST_CASE (ec_test_empty_nodes_no_ec, cluster_fixture)
+{
+    setup(25, 1, 0, NON);
+    BOOST_TEST (get_dedupe_node(0).get_global_data_view().get_data_node_count() == 25);
+
+    shut_down();
+    turn_on(25, 1, 0, NON);
+    BOOST_TEST (get_dedupe_node(0).get_global_data_view().get_data_node_count() == 25);
+    boost::asio::io_context ioc;
+
+    boost::asio::co_spawn (ioc, [&] () -> coro <void> {co_await get_dedupe_node(0).get_global_data_view().recover();}, boost::asio::use_future);
+    ioc.run();
+}
+
+BOOST_FIXTURE_TEST_CASE (ec_test_chain_of_failures, cluster_fixture)
+{
+    setup(30, 1, 0, XOR);
+    BOOST_TEST (get_dedupe_node(0).get_global_data_view().get_data_node_count() == 29);
+
+    std::promise <address> alloc_promise;
+    constexpr auto data_size = 29ul * 6ul*1024ul + 29ul * 100;
+    char data [data_size];
+    fill_random(data, data_size);
+
+    const auto data_str = std::string_view (data, data_size);
+    auto write_data = [&] () -> coro <void> {
+        auto alloc = co_await get_dedupe_node(0).get_global_data_view().allocate(data_size);
+        co_await get_dedupe_node(0).get_global_data_view().scatter_allocated_write(alloc, data_str);
+        co_await get_dedupe_node(0).get_global_data_view().sync(alloc);
+        alloc_promise.set_value(std::move (alloc));
+        co_return;
+    };
+    boost::asio::io_context ioc;
+    boost::asio::co_spawn(ioc, write_data, boost::asio::use_future);
+    ioc.run();
+
+    address alloc = alloc_promise.get_future().get();;
+
+    ioc.stop();
+    ioc.restart();
+    shut_down();
+    destroy_data_node(0);
+    turn_on(30, 1, 0, XOR);
+    BOOST_TEST (get_dedupe_node(0).get_global_data_view().get_data_node_count() == 29);
+
+    boost::asio::co_spawn (ioc, [&] () -> coro <void> {co_await get_dedupe_node(0).get_global_data_view().recover();}, boost::asio::use_future);
+    ioc.run();
+    ioc.stop();
+    ioc.restart();
+
+    char read_buf [data_size];
+
+    auto read_data = [&] () -> coro <message_type> {
+        size_t offset = 0;
+        for (int i = 0; i < alloc.size(); ++i) {
+            const auto frag = alloc.get_fragment(i);
+            co_await get_dedupe_node(0).get_global_data_view().read(read_buf + offset, frag.pointer, frag.size);
+            offset += frag.size;
+            if (offset == data_size) {
+                break;
+            }
+        }
+        co_return SUCCESS;
+    };
+
+    boost::asio::co_spawn(ioc, read_data, boost::asio::use_future);
+    ioc.run();
+
+    BOOST_CHECK(std::string_view (data, data_size) == std::string_view (read_buf, data_size));
+
+    ioc.stop();
+    ioc.restart();
+    shut_down();
+    destroy_data_node(30);
+    turn_on(30, 1, 0, XOR);
+    BOOST_TEST (get_dedupe_node(0).get_global_data_view().get_data_node_count() == 29);
+
+    boost::asio::co_spawn (ioc, [&] () -> coro <void> {co_await get_dedupe_node(0).get_global_data_view().recover();}, boost::asio::use_future);
+    ioc.run();
+    ioc.stop();
+    ioc.restart();
+
+ // second write
+
+    std::promise <address> alloc_promise_2;
+    constexpr auto data_size_2 = 29ul * 2ul*1024ul + 29ul * 200;
+    char data_2 [data_size_2];
+    fill_random(data_2, data_size_2);
+
+    const auto data_str_2 = std::string_view (data_2, data_size_2);
+    auto write_data_2 = [&] () -> coro <void> {
+        auto alloc = co_await get_dedupe_node(0).get_global_data_view().allocate(data_size_2);
+        co_await get_dedupe_node(0).get_global_data_view().scatter_allocated_write(alloc, data_str_2);
+        co_await get_dedupe_node(0).get_global_data_view().sync(alloc);
+        alloc_promise_2.set_value(std::move (alloc));
+        co_return;
+    };
+
+    boost::asio::co_spawn(ioc, write_data_2, boost::asio::use_future);
+    ioc.run();
+
+    address alloc_2 = alloc_promise_2.get_future().get();
+
+    ioc.stop();
+    ioc.restart();
+    shut_down();
+    destroy_data_node(0);
+    turn_on(30, 1, 0, XOR);
+    BOOST_TEST (get_dedupe_node(0).get_global_data_view().get_data_node_count() == 29);
+
+    boost::asio::co_spawn (ioc, [&] () -> coro <void> {co_await get_dedupe_node(0).get_global_data_view().recover();}, boost::asio::use_future);
+    ioc.run();
+    ioc.stop();
+    ioc.restart();
+
+    // third write
+
+    std::promise <address> alloc_promise_3;
+    constexpr auto data_size_3 = 29ul * 3ul*1024ul + 29ul * 400;
+    char data_3 [data_size_3];
+    fill_random(data_3, data_size_3);
+
+    const auto data_str_3 = std::string_view (data_3, data_size_3);
+    auto write_data_3 = [&] () -> coro <void> {
+        auto alloc = co_await get_dedupe_node(0).get_global_data_view().allocate(data_size_3);
+        co_await get_dedupe_node(0).get_global_data_view().scatter_allocated_write(alloc, data_str_3);
+        co_await get_dedupe_node(0).get_global_data_view().sync(alloc);
+        alloc_promise_3.set_value(std::move (alloc));
+        co_return;
+    };
+    boost::asio::co_spawn(ioc, write_data_3, boost::asio::use_future);
+    ioc.run();
+
+    address alloc_3 = alloc_promise_3.get_future().get();
+
+    ioc.stop();
+    ioc.restart();
+    shut_down();
+    destroy_data_node(0);
+    turn_on(30, 1, 0, XOR);
+    BOOST_TEST (get_dedupe_node(0).get_global_data_view().get_data_node_count() == 29);
+
+    boost::asio::co_spawn (ioc, [&] () -> coro <void> {co_await get_dedupe_node(0).get_global_data_view().recover();}, boost::asio::use_future);
+    ioc.run();
+    ioc.stop();
+    ioc.restart();
+
+    char read_buf_1 [data_size];
+    char read_buf_2 [data_size_2];
+    char read_buf_3 [data_size_3];
+
+    auto read_data_1 = [&] () -> coro <message_type> {
+        size_t offset = 0;
+        for (int i = 0; i < alloc.size(); ++i) {
+            const auto frag = alloc.get_fragment(i);
+            co_await get_dedupe_node(0).get_global_data_view().read(read_buf_1 + offset, frag.pointer, frag.size);
+            offset += frag.size;
+            if (offset == data_size) {
+                break;
+            }
+        }
+        co_return SUCCESS;
+    };
+
+    boost::asio::co_spawn(ioc, read_data_1, boost::asio::use_future);
+    ioc.run();
+    ioc.stop();
+    ioc.restart();
+
+    auto read_data_2 = [&] () -> coro <message_type> {
+        size_t offset = 0;
+        for (int i = 0; i < alloc_2.size(); ++i) {
+            const auto frag = alloc_2.get_fragment(i);
+            co_await get_dedupe_node(0).get_global_data_view().read(read_buf_2 + offset, frag.pointer, frag.size);
+            offset += frag.size;
+            if (offset == data_size_2) {
+                break;
+            }
+        }
+        co_return SUCCESS;
+    };
+
+    boost::asio::co_spawn(ioc, read_data_2, boost::asio::use_future);
+    ioc.run();
+    ioc.stop();
+    ioc.restart();
+
+    auto read_data_3 = [&] () -> coro <message_type> {
+        size_t offset = 0;
+        for (int i = 0; i < alloc_3.size(); ++i) {
+            const auto frag = alloc_3.get_fragment(i);
+            co_await get_dedupe_node(0).get_global_data_view().read(read_buf_3 + offset, frag.pointer, frag.size);
+            offset += frag.size;
+            if (offset == data_size_3) {
+                break;
+            }
+        }
+        co_return SUCCESS;
+    };
+
+    boost::asio::co_spawn(ioc, read_data_3, boost::asio::use_future);
+    ioc.run();
+    ioc.stop();
+    ioc.restart();
+
+    BOOST_CHECK(std::string_view (data, data_size) == std::string_view (read_buf_1, data_size));
+    BOOST_CHECK(std::string_view (data_2, data_size_2) == std::string_view (read_buf_2, data_size_2));
+    BOOST_CHECK(std::string_view (data_3, data_size_3) == std::string_view (read_buf_3, data_size_3));
+
+}
+
 } // end namespace uh::cluster

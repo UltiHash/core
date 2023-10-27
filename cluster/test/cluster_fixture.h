@@ -133,7 +133,7 @@ namespace uh::cluster {
                 });
             }
 
-            std::this_thread::sleep_for(std::chrono::seconds (1));
+            std::this_thread::sleep_for(std::chrono::seconds (2));
 
             for (const auto &node: m_dedupe_nodes) {
                 m_ioc.post([&node] { node->run(); });
@@ -154,8 +154,6 @@ namespace uh::cluster {
                     }
                 });
             }
-
-            std::this_thread::sleep_for(std::chrono::seconds (1));
 
             if (excp_ptr) {
                 try {
