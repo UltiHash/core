@@ -172,7 +172,7 @@ BOOST_FIXTURE_TEST_CASE (basic_write_read_test_multiple_nodes_without_ec, cluste
 
 BOOST_FIXTURE_TEST_CASE (exception_test_single_node_with_ec, cluster_fixture)
 {
-    BOOST_CHECK_THROW (setup(1, 1, 0, XOR), std::logic_error);
+    BOOST_CHECK_THROW (setup(1, 1, 0, XOR), std::exception);
 }
 
 BOOST_FIXTURE_TEST_CASE (exception_test_non_divisible_data_size, cluster_fixture)

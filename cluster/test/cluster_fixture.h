@@ -126,21 +126,33 @@ namespace uh::cluster {
 
             for (const auto &node: m_data_nodes) {
                 m_ioc.post([&node] { node->run(); });
-                m_threads.emplace_back([&] {try {m_ioc.run();} catch (std::exception&) {excp_ptr = std::current_exception();}});
+                m_threads.emplace_back([&] {
+                    try { m_ioc.run(); } catch (std::exception& e) {
+                        excp_ptr = std::current_exception();
+                    }
+                });
             }
 
             std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
             for (const auto &node: m_dedupe_nodes) {
                 m_ioc.post([&node] { node->run(); });
-                m_threads.emplace_back([&] {try {m_ioc.run();} catch (std::exception&) {excp_ptr = std::current_exception();}});
+                m_threads.emplace_back([&] {
+                    try { m_ioc.run(); } catch (std::exception& e) {
+                        excp_ptr = std::current_exception();
+                    }
+                });
             }
 
             std::this_thread::sleep_for(std::chrono::milliseconds(500));
 
             for (const auto &node: m_directory_nodes) {
                 m_ioc.post([&node] { node->run(); });
-                m_threads.emplace_back([&] {try {m_ioc.run();} catch (std::exception&) {excp_ptr = std::current_exception();}});
+                m_threads.emplace_back([&] {
+                    try { m_ioc.run(); } catch (std::exception& e) {
+                        excp_ptr = std::current_exception();
+                    }
+                });
             }
 
             std::this_thread::sleep_for(std::chrono::milliseconds(500));
@@ -150,6 +162,7 @@ namespace uh::cluster {
                     std::rethrow_exception(excp_ptr);
                 }
                 catch (std::exception& e) {
+                    shut_down();
                     throw e;
                 }
             }
