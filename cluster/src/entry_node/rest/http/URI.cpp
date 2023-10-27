@@ -1,5 +1,4 @@
 #include "URI.h"
-#include <utility>
 #include <iostream>
 
 namespace uh::cluster::rest::http
@@ -7,8 +6,9 @@ namespace uh::cluster::rest::http
 
     URI::URI(const http::request_parser<http::empty_body>& req) : m_req(req), m_target_string(req.get().target())
     {
+        // USE BOOST URI TO EXTRACT EVERYTHING IN THIS CLASS
         extract_and_set_bucket_id_and_object_key();
-        extract_and_set_query_strings();
+        extract_and_set_query_parameters();
     }
 
     std::string URI::get_bucket_id() const
@@ -24,7 +24,7 @@ namespace uh::cluster::rest::http
     std::string URI::get_query_string_value(const std::string& key) const
     {
         auto index = m_query_string.find(key+'=');
-        if (!index)
+        if (index ==  std::string::npos)
         {
             return "";
         }
@@ -41,23 +41,81 @@ namespace uh::cluster::rest::http
         }
     }
 
-    void URI::extract_and_set_bucket_id_and_object_key()
+    void URI::extract_and_set_query_parameters()
     {
-        auto after_bucket_slash = m_target_string.find_first_of('/', 1);
-        m_bucket_id = m_target_string.substr(1, after_bucket_slash - 1);
+        extract_and_set_query_string();
 
-        auto index = m_target_string.find_first_of('?');
-        if ( index != std::string::npos)
+        if (!m_query_string.empty())
         {
-            m_object_key = m_target_string.substr( after_bucket_slash + 1 , index - after_bucket_slash - 1);
-        }
-        else
-        {
-            m_object_key = m_target_string.substr(after_bucket_slash + 1);
+            size_t currentPos = 0, locationOfNextDelimiter = 1;
+
+            while (currentPos < m_query_string.size())
+            {
+                locationOfNextDelimiter = m_query_string.find('&', currentPos);
+
+                std::string keyValuePair;
+
+                if (locationOfNextDelimiter != std::string::npos)
+                {
+                    keyValuePair = m_query_string.substr(currentPos, locationOfNextDelimiter - currentPos);
+                }
+                else
+                {
+                    keyValuePair = m_query_string.substr(currentPos);
+                }
+
+                size_t locationOfEquals = keyValuePair.find('=');
+                std::string key = keyValuePair.substr(0, locationOfEquals);
+                std::string value = keyValuePair.substr(locationOfEquals + 1);
+
+//                if(decode)
+//                {
+//                    m_query_parameters[string_utils::URLDecode(key.c_str())] = string_utils::URLDecode(value.c_str()));
+//                }
+//                else
+//                {
+                m_query_parameters[key] = value;
+//                }
+
+                currentPos += keyValuePair.size() + 1;
+            }
         }
     }
 
-    void URI::extract_and_set_query_strings()
+    void URI::extract_and_set_bucket_id_and_object_key()
+    {
+        auto index = m_target_string.find_first_of('?');
+
+        auto after_bucket_slash = m_target_string.find_first_of('/', 1);
+        if (after_bucket_slash == std::string::npos)
+        {
+            if ( index != std::string::npos)
+            {
+                m_bucket_id = m_target_string.substr( 1 , index - 1);
+            }
+            else
+            {
+                m_bucket_id = m_target_string.substr(1);
+            }
+        }
+        else
+        {
+            m_bucket_id = m_target_string.substr(1, after_bucket_slash - 1);
+
+            if ( index != std::string::npos)
+            {
+                m_object_key = m_target_string.substr( after_bucket_slash + 1 , index - after_bucket_slash - 1);
+            }
+            else
+            {
+                m_object_key = m_target_string.substr(after_bucket_slash + 1);
+            }
+        }
+
+        // check bucket id and object key for validity
+    }
+
+    void URI::extract_and_set_query_string()
     {
         size_t query_start = m_target_string.find('?');
 
