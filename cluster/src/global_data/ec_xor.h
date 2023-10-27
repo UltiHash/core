@@ -68,16 +68,16 @@ struct ec_xor: public ec {
         return result;
     }
 
-    [[nodiscard]] std::vector <ospan <char>> recover (const std::map <int, ospan<char>>& data_pieces, int fail_count) const override {
-        const size_t part_size = data_pieces.cbegin()->second.size;
+    [[nodiscard]] std::vector <ospan <char>> recover (const std::vector <ospan<char>>& data_pieces, int fail_count) const override {
+        const size_t part_size = data_pieces.cbegin()->size;
         std::vector <ospan <char>> result;
         result.emplace_back(part_size);
         std::span <char> parity_view {result.back().data.get(), part_size};
         const auto long_size = (part_size - part_size % sizeof (unsigned long)) / sizeof (unsigned long);
         std::span <unsigned long> long_parity_view {reinterpret_cast <unsigned long*> (parity_view.data()), long_size};
         std::memset (result.back().data.get(), 0, part_size);
-        for (int j = 0; j < data_pieces.size(); j ++) {
-            const auto data_part = std::string_view (data_pieces.at(j).data.get(), data_pieces.at(j).size);
+        for (const auto& data_piece : data_pieces) {
+            const auto data_part = std::string_view (data_piece.data.get(), data_piece.size);
             std::span <const unsigned long> long_data_part {reinterpret_cast <const unsigned long*> (data_part.data()), long_size};
             for (size_t k = 0; k < long_data_part.size(); ++k) {
                 long_parity_view [k] ^= long_data_part[k];

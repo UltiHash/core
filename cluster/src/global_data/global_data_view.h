@@ -70,9 +70,9 @@ public:
             auto resp = co_await m.get ().recv_address (h);
             co_return std::move (resp.second);
         };
-        const auto resp = broadcast_gather_custom <address> (nodes, bc);
+        const auto resp = broadcast_gather_custom <address> (*m_io_service, nodes, bc);
         for (const auto& r: resp) {
-            addr.append_address(r.second);
+            addr.append_address(r);
         }
 
         co_return std::move (addr);
@@ -100,7 +100,7 @@ public:
             const auto h = co_await m.get ().recv_header ();
             co_return h.type;
         };
-        const auto resp = broadcast_gather_custom <message_type> (nodes, bc);
+        const auto resp = broadcast_gather_custom <message_type> (*m_io_service, nodes, bc);
         co_return;
     }
 
@@ -148,7 +148,7 @@ public:
             co_return node_id;
         };
 
-        broadcast_gather_custom <int> (nodes, bc_func);
+        broadcast_gather_custom <int> (*m_io_service, nodes, bc_func);
 
         co_return;
     }
@@ -181,7 +181,7 @@ public:
             co_return resp.second;
 
         };
-        const auto resp = broadcast_gather_custom <uint128_t> (nodes, bc_func);
+        const auto resp = broadcast_gather_custom <uint128_t> (*m_io_service, nodes, bc_func);
 
         // assert that only one node has 0 used and the rest have equal positive value
         uint128_t data_size = 0;
@@ -189,22 +189,23 @@ public:
         std::vector <std::shared_ptr <client>> healthy_nodes;
         std::vector <uint128_t> healthy_offsets;
 
-        for (const auto& r: resp) {
-            if (r.second == 8 and failed_nodes.size() < m_ec->get_maximum_allowed_failed_nodes_count ()) { // failed node
-                failed_nodes.emplace_back (nodes [r.first]);
+        for (int i = 0; i < resp.size(); i++) {
+            const auto& r = resp[i];
+            if (r == 8 and failed_nodes.size() < m_ec->get_maximum_allowed_failed_nodes_count ()) { // failed node
+                failed_nodes.emplace_back (nodes [i]);
                 continue;
             }
-            else if (r.second == 8) [[unlikely]] {
+            else if (r == 8) [[unlikely]] {
                 throw std::runtime_error ("More failed nodes than EC can tolerate!");
             }
-            else if (data_size > 8 and r.second != data_size) [[unlikely]] {
+            else if (data_size > 8 and r != data_size) [[unlikely]] {
                 throw std::logic_error ("Non equal data sizes in different data nodes!");
             }
             else if (data_size == 0) {
-                data_size = r.second;
+                data_size = r;
             }
-            healthy_nodes.emplace_back(nodes [r.first]);
-            healthy_offsets.emplace_back(offsets.at (r.first));
+            healthy_nodes.emplace_back(nodes [i]);
+            healthy_offsets.emplace_back(offsets[i]);
         }
 
         if (!failed_nodes.empty()) {
@@ -220,7 +221,7 @@ public:
                     }
                     co_return std::move (buf);
                 };
-                const auto response = broadcast_gather_custom <ospan <char>> (healthy_nodes, read_bc);
+                const auto response = broadcast_gather_custom <ospan <char>> (*m_io_service, healthy_nodes, read_bc);
                 const auto recovered = m_ec->recover(response, static_cast <int> (failed_nodes.size()));
 
                 auto write_bc =  [&recovered] (auto m, int node_id) -> coro <address> {
@@ -234,7 +235,7 @@ public:
                     }
                     co_return resp.second;
                 };
-                const auto recovery_response = broadcast_gather_custom <address> (failed_nodes, write_bc);
+                const auto recovery_response = broadcast_gather_custom <address> (*m_io_service, failed_nodes, write_bc);
             }
         }
         co_return;
@@ -278,7 +279,7 @@ public:
             co_return h.type;
         };
 
-        broadcast_gather_custom <message_type> (nodes, bc_func);
+        broadcast_gather_custom <message_type> (*m_io_service, nodes, bc_func);
         // error checking
 
         co_return;
@@ -325,7 +326,7 @@ public:
             co_return;
         };
 
-        broadcast_custom ({}, *m_io_service, nodes, bc_func);
+        broadcast_custom (*m_io_service, nodes, bc_func);
         co_return;
     }
 

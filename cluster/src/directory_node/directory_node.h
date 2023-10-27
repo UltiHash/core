@@ -24,11 +24,14 @@ public:
                       std::make_unique <directory_handler>(m_cluster_map.m_cluster_conf.directory_node_conf.directory_conf, m_storage))
 
     {
-        m_storage.create_data_node_connections(m_server.get_executor(), m_cluster_map.m_cluster_conf.directory_node_conf.data_node_connection_count, false);
     }
 
     void run() override {
         std::cout << "hello from " << m_job_name << std::endl;
+        m_storage.create_data_node_connections(m_server.get_executor(), m_cluster_map.m_cluster_conf.directory_node_conf.data_node_connection_count, false);
+        if (m_id == 0) {
+            //m_storage.recover();
+        }
         m_server.run();
     }
 
