@@ -25,6 +25,7 @@
 #include "entry_node/rest/http/models/delete_object_response.h"
 #include "entry_node/rest/http/models/delete_objects_response.h"
 #include "entry_node/rest/http/models/list_multi_part_uploads_response.h"
+#include "entry_node/rest/http/models/get_bucket_response.h"
 #include "entry_node/rest/http/models/delete_objects_request.h"
 #include "entry_node/rest/utils/parser/xml_parser.h"
 #include "entry_node/rest/utils/string/string_utils.h"
@@ -105,9 +106,13 @@ public:
         {
             res = handle_get_object_attributes(req);
         }
-        else if (request_name == rest::http::http_request_type::LIST_OBJECTS_V2)
+        else if ( request_name == rest::http::http_request_type::LIST_OBJECTS_V2 )
         {
             res = handle_list_objects_v2(req);
+        }
+        else if ( request_name == rest::http::http_request_type::GET_BUCKET )
+        {
+            res = co_await handle_get_bucket(req);
         }
         else
         {
@@ -175,6 +180,47 @@ public:
                 m_dir.get().register_read_buffer(msg);
                 co_await m_dir.get().recv_buffers(h_dir);
                 throw std::runtime_error("Failed to delete bucket.\nError: \n" + msg);
+            }
+        }
+        catch (const std::exception& e)
+        {
+            std::cout << "ERROR: " << e.what() << std::endl;
+            res->set_error(boost::beast::http::response<boost::beast::http::string_body>{boost::beast::http::status::not_found, 11});
+        }
+
+        co_return std::move(res);
+    }
+
+    coro <std::unique_ptr<http::http_response>> handle_get_bucket (const rest::http::http_request& req)
+    {
+
+        std::unique_ptr<http::model::get_bucket_response> res;
+        try
+        {
+            res = std::make_unique<http::model::get_bucket_response>(req);
+
+            auto m_dir = m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size())).acquire_messenger();
+            co_await m_dir.get().send(DIR_LIST_BUCKET_REQ, {});
+            const auto h_dir = co_await m_dir.get().recv_header();
+
+            if(h_dir.type == DIR_LIST_BUCKET_RESP) [[likely]]
+            {
+                auto list_buckets_res = co_await m_dir.get().recv_directory_list_entities_message(h_dir);
+                for (const auto& bucket: list_buckets_res.entities)
+                {
+                    if (bucket == req.get_URI().get_bucket_id())
+                        res->add_bucket(bucket);
+                }
+                if (res->get_bucket().empty())
+                    throw std::runtime_error("Bucket: " + req.get_URI().get_bucket_id() + " doesn't exist.");
+            }
+            if(h_dir.type == FAILURE) [[unlikely]]
+            {
+                std::string msg;
+                msg.resize(h_dir.size);
+                m_dir.get().register_read_buffer(msg);
+                co_await m_dir.get().recv_buffers(h_dir);
+                throw std::runtime_error("Failed to find bucket.\nError: \n" + msg);
             }
         }
         catch (const std::exception& e)
