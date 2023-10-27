@@ -63,7 +63,7 @@ BOOST_FIXTURE_TEST_CASE (test_uncached_write, cluster_fixture)
     BOOST_CHECK(data_out == data_in);
 }
 
-BOOST_FIXTURE_TEST_CASE (test_cached_write, cluster_fixture)
+BOOST_FIXTURE_TEST_CASE (test_cached_write_trivial, cluster_fixture)
 {
     setup (3, 1, 0, XOR);
     boost::asio::io_context io_context;
@@ -80,6 +80,7 @@ BOOST_FIXTURE_TEST_CASE (test_cached_write, cluster_fixture)
     std::promise<address> write_result_promise;
     boost::asio::co_spawn(io_context, [&]() -> boost::asio::awaitable<void> {
         write_result_promise.set_value(co_await cache.write(data_in));
+        co_await cache.flush();
     }, boost::asio::detached);
     io_context.run();
     address write_result = write_result_promise.get_future().get();

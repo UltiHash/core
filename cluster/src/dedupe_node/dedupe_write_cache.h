@@ -14,10 +14,12 @@ namespace uh::cluster {
     class dedupe_write_cache {
     public:
         dedupe_write_cache(std::string_view &integration_data, global_data_view &storage, dedupe_config& config) :
+        m_cache_size_per_node(config.write_cache_size_per_dn),
         m_integration_data(integration_data), m_storage(storage), m_dedupe_conf(config),
         m_cache_size(next_divisible(std::min(m_storage.get_data_node_count() * m_cache_size_per_node, m_integration_data.size()), m_storage.get_data_node_count())),
-        m_cache_data(std::make_unique<char>(m_cache_size)) {
+        m_cache_data(std::make_unique<char[]>(m_cache_size)) {
             m_cache_data_ptr = m_cache_data.get();
+
         }
 
         static inline std::size_t next_divisible(const std::size_t x, const std::size_t y) {
@@ -35,6 +37,7 @@ namespace uh::cluster {
             //the allocation is deferred until here as the allocate co-routine cannot be executed from the constructor
             if(m_cache_available == 0) {
                 m_dn_allocation = co_await m_storage.allocate(m_cache_size);
+                m_dn_allocation_free = m_dn_allocation;
                 m_cache_available = m_cache_size;
             }
 
@@ -48,6 +51,7 @@ namespace uh::cluster {
                 if(data.size() < m_dedupe_conf.min_fragment_size) {
                     co_await flush();
                 } else {
+                    //TODO: write test case to trigger this edge case
                     auto write_data = data.substr(0, m_cache_available);
                     addr.append_address(co_await write(write_data));
                     data = data.substr(m_cache_available);
@@ -57,7 +61,7 @@ namespace uh::cluster {
             auto write_data = data;
 
             while (!write_data.empty()) {
-                auto frag_free = m_dn_allocation.first();
+                auto frag_free = m_dn_allocation_free.first();
                 std::string_view frag_data;
                 fragment frag_ptr;
 
@@ -67,7 +71,7 @@ namespace uh::cluster {
 
                     write_data = write_data.substr(frag_free.size);
 
-                    m_dn_allocation.pop_front();
+                    m_dn_allocation_free.pop_front();
                 } else {
                     frag_ptr = frag_free;
                     frag_ptr.size = write_data.size();
@@ -77,21 +81,20 @@ namespace uh::cluster {
 
                     //update frag_free fragment
                     if(frag_free.size == frag_ptr.size) {
-                        m_dn_allocation.pop_front();
+                        m_dn_allocation_free.pop_front();
                     } else {
                         frag_free.pointer += frag_ptr.size;
                         frag_free.size -= frag_ptr.size;
-                        m_dn_allocation.set_fragment(0, frag_free);
+                        m_dn_allocation_free.set_fragment(0, frag_free);
                     }
                 }
 
-                m_cache_fragments.push_fragment(frag_ptr);
                 std::memcpy(m_cache_data_ptr, frag_data.data(), frag_data.size());
                 m_cache_data_ptr += frag_data.size();
-
+                m_cache_available -= frag_data.size();
                 addr.push_fragment(frag_ptr);
 
-                if(m_cache_available == 0) {
+                if(m_cache_available < m_dedupe_conf.min_fragment_size) {
                     co_await flush();
                 }
             }
@@ -99,16 +102,25 @@ namespace uh::cluster {
             co_return std::move(addr);
         }
 
-        void cleanup() {
-
+        inline bool is_dirty() {
+            return m_cache_data.get() != m_cache_data_ptr;
         }
 
         coro <void> flush() {
-            if(m_cache_fragments.empty() && m_cache_data.get() == m_cache_data_ptr) {
+            if(!is_dirty()) {
                 co_return;
             }
 
-            co_await m_storage.scatter_allocated_write(m_cache_fragments, {m_cache_data.get(), m_cache_size});
+            if (m_cache_available) {
+                auto pad_frag = m_dn_allocation_free.pop_front();
+                if(pad_frag.size != m_cache_available) {
+                    throw std::bad_array_new_length ();
+                }
+                m_cache_available -= pad_frag.size;
+
+            }
+
+            co_await m_storage.scatter_allocated_write(m_dn_allocation, {m_cache_data.get(), m_cache_size});
 
             if(m_integration_data.empty()) {
                 m_cache_size = 0;
@@ -124,35 +136,34 @@ namespace uh::cluster {
             std::size_t new_cache_size = next_divisible(std::min(m_storage.get_data_node_count() * m_cache_size_per_node, m_integration_data.size()), m_storage.get_data_node_count());
             if(m_cache_size != new_cache_size) [[unlikely]] {
                 m_cache_data.reset(nullptr);
-                m_cache_data = std::make_unique<char>(new_cache_size);
+                m_cache_data = std::make_unique<char[]>(new_cache_size);
                 m_cache_size = new_cache_size;
             }
             m_cache_data_ptr = m_cache_data.get();
 
             //acquire new data node allocation
             m_dn_allocation = co_await m_storage.allocate(m_cache_size);
+            m_dn_allocation_free = m_dn_allocation;
             m_cache_available = m_cache_size;
-
-            m_cache_fragments = address();
 
             co_return;
         }
 
     private:
 
-        const std::size_t m_cache_size_per_node = 1024 * 1024; // 1MiB
+        const std::size_t m_cache_size_per_node;
 
         std::string_view& m_integration_data;
         global_data_view& m_storage;
         dedupe_config& m_dedupe_conf;
 
-        address m_cache_fragments;
         std::size_t m_cache_size;
         std::size_t m_cache_available = 0;
-        std::unique_ptr<char> m_cache_data;
+        std::unique_ptr<char[]> m_cache_data;
         char* m_cache_data_ptr;
 
         address m_dn_allocation;
+        address m_dn_allocation_free;
     };
 
 } // namespace uh::cluster

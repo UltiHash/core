@@ -66,6 +66,7 @@ struct address {
     void set_fragment(int i, const fragment& frag) {
         pointers[2*i] = frag.pointer.get_high();
         pointers[2*i+1] = frag.pointer.get_low();
+        sizes[i] = frag.size;
     }
 
     [[nodiscard]] std::size_t size () const noexcept {
