@@ -30,6 +30,9 @@ public:
                 case DIR_PUT_BUCKET_REQ:
                     co_await handle_put_bucket (m, message_header);
                     break;
+                case RECOVER_REQ:
+                    co_await handle_recovery (m, message_header);
+                    break;
                 case STOP:
                     co_return;
                 default:
@@ -108,6 +111,11 @@ private:
 
         if(!failure.empty())
             co_await m.send(FAILURE, failure);
+    }
+
+    coro <void> handle_recovery (messenger& m, const messenger::header& h) {
+        co_await m_storage.recover();
+        co_await m.send(RECOVER_RESP, {});
     }
 
     directory_store m_directory;

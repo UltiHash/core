@@ -15,7 +15,7 @@ namespace uh::cluster {
 
 template <typename ResultType, typename Func>
 requires requires (Func& func, client::acquired_messenger& m) {{func(std::move (m), int {})} -> std::same_as <coro <ResultType>>;}
-std::vector <ResultType> broadcast_gather_custom (boost::asio::io_context& ioc, std::vector <std::shared_ptr <client>> &nodes, Func func) {
+std::vector <ResultType> broadcast_gather_custom (boost::asio::io_context& ioc, const std::vector <std::shared_ptr <client>> &nodes, Func func) {
 
     std::vector <std::future <ResultType>> futures;
     std::vector <ResultType> results;

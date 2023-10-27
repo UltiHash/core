@@ -26,10 +26,8 @@ entry_node::run()
 {
 
     std::string msg ("hello cluster");
-
-    //std::cout << std::string_view (resp.data.get(), resp.size) << std::endl;
+    //run_recovery ();
     m_rest_server.run();
-    //m_internal_server.run();
 }
 
 void entry_node::create_connections() {

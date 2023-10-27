@@ -39,6 +39,7 @@ private:
     const std::string m_job_name;
     server m_internal_server;
     rest::rest_server m_rest_server;
+
 };
 
 } // end namespace uh::cluster

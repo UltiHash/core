@@ -184,34 +184,34 @@ public:
         const auto resp = broadcast_gather_custom <uint128_t> (*m_io_service, nodes, bc_func);
 
         // assert that only one node has 0 used and the rest have equal positive value
-        uint128_t data_size = 0;
-        std::vector <std::shared_ptr <client>> failed_nodes;
-        std::vector <std::shared_ptr <client>> healthy_nodes;
-        std::vector <uint128_t> healthy_offsets;
+
+        std::map <uint128_t, std::vector <std::shared_ptr <client>>> node_sizes;
+        std::map <uint128_t, std::vector <uint128_t>> offset_sizes;
 
         for (int i = 0; i < resp.size(); i++) {
-            const auto& r = resp[i];
-            if (r == 8 and failed_nodes.size() < m_ec->get_maximum_allowed_failed_nodes_count ()) { // failed node
-                failed_nodes.emplace_back (nodes [i]);
-                continue;
-            }
-            else if (r == 8) [[unlikely]] {
-                throw std::runtime_error ("More failed nodes than EC can tolerate!");
-            }
-            else if (data_size > 8 and r != data_size) [[unlikely]] {
-                throw std::logic_error ("Non equal data sizes in different data nodes!");
-            }
-            else if (data_size == 0) {
-                data_size = r;
-            }
-            healthy_nodes.emplace_back(nodes [i]);
-            healthy_offsets.emplace_back(offsets[i]);
+            node_sizes [resp[i]].emplace_back (nodes.at(i));
+            offset_sizes [resp[i]].emplace_back (offsets.at(i));
         }
+
+        if (node_sizes.size() == 1) [[likely]] {
+            co_return;
+        }
+        else if (node_sizes.cbegin()->first != data_store::alloc_offset) { // we need to delete the existing data of the lost node first
+            throw std::runtime_error ("Complicated recovery mechanism not supported yet!");
+        }
+        else if (node_sizes.size() > 2 or node_sizes.cbegin()->second.size() > 1) {
+            throw std::runtime_error ("More failed nodes than EC can tolerate!");
+        }
+
+        const auto& failed_nodes = node_sizes.cbegin()->second;
+        const auto& healthy_nodes = std::next (node_sizes.begin())->second;
+        const auto& healthy_offsets = std::next (offset_sizes.begin())->second;
+        const auto& data_size = std::next (node_sizes.begin())->first;
 
         if (!failed_nodes.empty()) {
 
-            size_t chunk_size = m_cluster_map.m_cluster_conf.recovery_chunk_size;
-            for (uint128_t offset = 8; offset < data_size + 8; offset = offset + chunk_size) {
+            const auto chunk_size = m_cluster_map.m_cluster_conf.recovery_chunk_size;
+            for (uint128_t offset = data_store::alloc_offset; offset < data_size + data_store::alloc_offset; offset = offset + chunk_size) {
                 auto read_bc =  [&] (auto m, int node_id) -> coro <ospan <char>> {
                     ospan <char> buf (std::min (uint128_t (chunk_size), (data_size - offset)).get_low());
                     co_await m.get().send_fragment(READ_REQ, {offset + healthy_offsets.at (node_id), buf.size});

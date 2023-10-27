@@ -106,7 +106,6 @@ public:
                 {&h.type, sizeof h.type},
                 {&h.size, sizeof h.size}
         };
-        //boost::asio::read (m_socket, buffers);
         co_await boost::asio::async_read (m_socket, buffers, boost::asio::as_tuple(boost::asio::use_awaitable));
 
         co_return h;
@@ -158,7 +157,6 @@ public:
                 {&size, sizeof (size)},
                 {buffer.data(), buffer.size()}};
 
-        //::asio::read (m_socket, buffers);
         co_await boost::asio::async_read (m_socket, buffers, boost::asio::as_tuple(boost::asio::use_awaitable));
 
         co_return header {type, size};

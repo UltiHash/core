@@ -209,6 +209,10 @@ public:
         co_return;
     }
 
+    [[nodiscard]] client& get_recovery_director () const {
+        return m_directory_nodes.at(0);
+    }
+
 private:
 
     static size_t get_round_robin_index (std::atomic <size_t>& current_index, const size_t total_size)
