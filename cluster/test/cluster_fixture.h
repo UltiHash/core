@@ -242,6 +242,7 @@ namespace uh::cluster {
             return {
                     .min_fragment_size = 32,
                     .max_fragment_size = 8 * 1024,
+                    .write_cache_size_per_dn = 1024ul * 1024ul,
                     .server_conf = {
                             .threads = 1,
                             .port = static_cast<uint16_t>(9010 + i),
