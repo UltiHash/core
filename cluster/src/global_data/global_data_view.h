@@ -199,7 +199,7 @@ public:
         else if (node_sizes.cbegin()->first != data_store::alloc_offset) { // we need to delete the existing data of the lost node first
             throw std::runtime_error ("Complicated recovery mechanism not supported yet!");
         }
-        else if (node_sizes.size() > 2 or node_sizes.cbegin()->second.size() > 1) {
+        else if (node_sizes.size() > 2 or node_sizes.cbegin()->second.size() > m_ec->get_maximum_allowed_failed_nodes_count()) {
             throw std::runtime_error ("More failed nodes than EC can tolerate!");
         }
 
@@ -208,12 +208,18 @@ public:
         const auto& healthy_offsets = std::next (offset_sizes.begin())->second;
         const auto& data_size = std::next (node_sizes.begin())->first;
 
-        if (!failed_nodes.empty()) {
+        const auto chunk_size = m_cluster_map.m_cluster_conf.recovery_chunk_size;
+        const auto max_file_size = m_cluster_map.m_cluster_conf.data_node_conf.max_file_size;
+        uint128_t last_file_end_offset = max_file_size;
+        uint128_t offset = data_store::alloc_offset;
+        while (offset < data_size) {
+            const auto min_end = std::min (data_size, last_file_end_offset);
+            while (offset < min_end) {
+                const auto adjusted_chunk_size = std::min (uint128_t (chunk_size), (min_end - offset)).get_low();
+                //
 
-            const auto chunk_size = m_cluster_map.m_cluster_conf.recovery_chunk_size;
-            for (uint128_t offset = data_store::alloc_offset; offset < data_size + data_store::alloc_offset; offset = offset + chunk_size) {
                 auto read_bc =  [&] (auto m, int node_id) -> coro <ospan <char>> {
-                    ospan <char> buf (std::min (uint128_t (chunk_size), (data_size - offset)).get_low());
+                    ospan <char> buf (adjusted_chunk_size);
                     co_await m.get().send_fragment(READ_REQ, {offset + healthy_offsets.at (node_id), buf.size});
                     const auto h = co_await m.get().recv ({buf.data.get(), buf.size});
                     if (h.type != READ_RESP) [[unlikely]] {
@@ -236,18 +242,25 @@ public:
                     co_return resp.second;
                 };
                 const auto recovery_response = broadcast_gather_custom <address> (*m_io_service, failed_nodes, write_bc);
+
+                offset += adjusted_chunk_size;
+            }
+            if (min_end < data_size) {
+                last_file_end_offset += max_file_size;
+                offset += data_store::alloc_offset;
             }
         }
+
         co_return;
     }
 
     coro <std::size_t> read (char* buffer, const uint128_t pointer, const size_t size) {
         auto m = get_data_node (pointer)->acquire_messenger();
         co_await m.get().send_fragment(READ_REQ, {pointer, size});
-        const auto h = co_await m.get().recv ({buffer, size});
-        if (h.type != READ_RESP) [[unlikely]] {
-            throw std::runtime_error ("Read not successful");
-        }
+        const auto h = co_await m.get().recv_header();
+        m.get().register_read_buffer (buffer, h.size);
+        co_await m.get().throw_if_failure(h);
+        co_await m.get().recv_buffers(h);
         co_return h.size;
     }
 

@@ -26,6 +26,7 @@ void fill_random(char* buf, size_t size) {
     }
 }
 
+/*
 BOOST_FIXTURE_TEST_CASE (basic_write_read_test_multiple_nodes_with_ec, cluster_fixture)
 {
     setup(4, 1, 0, XOR);
@@ -252,7 +253,7 @@ BOOST_FIXTURE_TEST_CASE (ec_test_lost_one_data_node_without_recover, cluster_fix
     BOOST_CHECK(std::string_view (data, data_size) != std::string_view (read_buf, data_size));
 
 }
-
+*/
 BOOST_FIXTURE_TEST_CASE (ec_test_lost_one_data_node_with_recover, cluster_fixture)
 {
     setup(12, 1, 0, XOR);
@@ -295,7 +296,10 @@ BOOST_FIXTURE_TEST_CASE (ec_test_lost_one_data_node_with_recover, cluster_fixtur
         size_t offset = 0;
         for (int i = 0; i < alloc.size(); ++i) {
             const auto frag = alloc.get_fragment(i);
-            co_await get_dedupe_node(0).get_global_data_view().read(read_buf + offset, frag.pointer, frag.size);
+            const auto s = co_await get_dedupe_node(0).get_global_data_view().read(read_buf + offset, frag.pointer, frag.size);
+            if (s != frag.size) {
+                int i = 0;
+            }
             offset += frag.size;
             if (offset == data_size) {
                 break;

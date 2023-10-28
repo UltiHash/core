@@ -203,8 +203,8 @@ namespace uh::cluster {
             return {
                     .directory = get_root_path() / dn_dir,
                     .hole_log = get_root_path() / dn_dir / "log",
-                    .min_file_size = 1ul * 1024ul * 1024ul * 1024ul,
-                    .max_file_size = 4ul * 1024ul * 1024ul * 1024ul,
+                    .min_file_size = 1ul * 1024ul,
+                    .max_file_size = 2ul * 1024ul,
                     .max_data_store_size = 64ul * 1024ul * 1024ul * 1024ul,
                     .server_conf = {
                             .threads = 4,

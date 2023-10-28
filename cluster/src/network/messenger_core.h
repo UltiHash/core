@@ -53,9 +53,9 @@ public:
 
     template <typename T>
     requires (std::is_arithmetic_v <T> or std::is_enum_v <T>)
-    inline void register_read_buffer (const T* t, std::uint32_t size) {
-        m_read_buffers.emplace_back (t, size * sizeof (t));
-        m_read_size += size * sizeof (t);
+    inline void register_read_buffer (T* t, std::uint32_t size) {
+        m_read_buffers.emplace_back (t, size * sizeof (T));
+        m_read_size += size * sizeof (T);
     }
 
     template <typename T, typename InnerType = std::ranges::range_value_t <T>>
@@ -82,7 +82,7 @@ public:
     template <typename T>
     requires (std::is_arithmetic_v <T> or std::is_enum_v <T>)
     inline void register_write_buffer (const T* t, std::uint32_t size) {
-        m_write_buffers.emplace_back (t, size * sizeof (t));
+        m_write_buffers.emplace_back (t, size * sizeof (T));
         m_write_size += size * sizeof (T);
     }
 
