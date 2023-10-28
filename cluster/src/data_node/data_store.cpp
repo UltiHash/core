@@ -153,7 +153,8 @@ void data_store::cancel_allocate(const address &addr) {
 
 void data_store::allocated_write(const address &allocation, std::span<char> data) {
 
-    if (std::accumulate(allocation.sizes.cbegin(), allocation.sizes.cend(), 0ul) != data.size()) [[unlikely]] {
+    const auto s2 = data.size();
+    if (const auto s = std::accumulate(allocation.sizes.cbegin(), allocation.sizes.cend(), 0ul); s != data.size()) [[unlikely]] {
         throw std::bad_array_new_length ();
     }
 
@@ -249,10 +250,10 @@ data_store::alloc_t data_store::allocate_internal (std::size_t size) {
             //TODO revert the new file if IO not successful
             m_modified_files.insert_or_assign (m_last_fd, last_file_data_end);
 
-            add_new_file (big_int (m_conf.max_file_size) * m_open_files.size(),
+            add_new_file (uint128_t (m_conf.max_data_store_size) * m_data_id + big_int (m_conf.max_file_size) * m_open_files.size(),
                          static_cast <long> (m_conf.min_file_size));
             m_used += sizeof (last_file_data_end);
-            partial_size = std::min (size, m_conf.max_file_size);
+            partial_size = std::min (size, m_conf.max_file_size - m_last_file_data_end);
             last_file_data_end = m_last_file_data_end;
         }
 

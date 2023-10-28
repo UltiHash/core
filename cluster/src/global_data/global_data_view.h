@@ -112,8 +112,12 @@ public:
 
         for (int i = 0; i < addr.size(); ++i) {
             const auto frag = addr.get_fragment(i);
-            nodes.emplace_back (get_data_node (frag.pointer));
-            node_address_map [nodes.back()].push_fragment(frag);
+            auto n = get_data_node (frag.pointer);
+            auto& node_address = node_address_map [n];
+            if (node_address.empty()) {
+                nodes.emplace_back(std::move (n));
+            }
+            node_address.push_fragment(frag);
         }
 
         if (data.size() % m_data_node_offsets.size() != 0) [[unlikely]] {
@@ -129,6 +133,9 @@ public:
             const auto node = nodes.at (node_id);
             if (std::find (ec_nodes.cbegin(), ec_nodes.cend(), node) == ec_nodes.cend()) { // no ec node
                 data_part = data.substr(node_id * part_size, part_size);
+                if (data_part.size() == 0) {
+                    int i = 0;
+                }
             }
             else { // ec node
 
