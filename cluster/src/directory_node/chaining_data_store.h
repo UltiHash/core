@@ -400,7 +400,7 @@ private:
                 add_new_file (m_conf.max_file_size * m_open_files.size(),
                               static_cast <long> (m_conf.min_file_size));
                 m_used += sizeof (last_file_data_end);
-                partial_size = std::min ({m_conf.max_chunk_size, required_size, m_conf.max_file_size});
+                partial_size = std::min ({m_conf.max_chunk_size, required_size, m_conf.max_file_size - m_last_file_data_end});
                 last_file_data_end = m_last_file_data_end;
             }
 

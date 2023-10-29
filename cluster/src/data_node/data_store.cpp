@@ -153,8 +153,7 @@ void data_store::cancel_allocate(const address &addr) {
 
 void data_store::allocated_write(const address &allocation, std::span<char> data) {
 
-    const auto s2 = data.size();
-    if (const auto s = std::accumulate(allocation.sizes.cbegin(), allocation.sizes.cend(), 0ul); s != data.size()) [[unlikely]] {
+    if (std::accumulate(allocation.sizes.cbegin(), allocation.sizes.cend(), 0ul) != data.size()) [[unlikely]] {
         throw std::bad_array_new_length ();
     }
 
