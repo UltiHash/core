@@ -21,37 +21,38 @@
 namespace uh::cluster {
 
 // ---------------------------------------------------------------------
-/*
+
 BOOST_FIXTURE_TEST_CASE (test_uncached_write, cluster_fixture)
 {
     setup (3, 1, 0, XOR);
-    boost::asio::io_context io_context;
-    boost::asio::io_context io_context2;
+
     global_data_view& data_view = get_dedupe_node(0).get_global_data_view();
-
-
-
     std::string data_in = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Maecenas risus justo, blandit tincidunt hendrerit ac, pulvinar sed quam.";
 
     std::promise<address> write_result_promise;
-    boost::asio::co_spawn(io_context, [&]() -> boost::asio::awaitable<void> {
+    auto write_data = [&]() -> boost::asio::awaitable<void> {
         write_result_promise.set_value(co_await data_view.write(data_in));
-    }, boost::asio::detached);
-    io_context.run();
+    };
+    boost::asio::io_context ioc;
+    boost::asio::co_spawn(ioc, write_data, boost::asio::use_future);
+    ioc.run();
     address write_result = write_result_promise.get_future().get();
 
     ospan<char> read_result(data_in.size());
-    std::promise<bool> read_result_promise;
-    boost::asio::co_spawn(io_context2, [&]() -> boost::asio::awaitable<void> {
+    std::promise<std::size_t> read_result_promise;
+    auto read_data = [&]() -> boost::asio::awaitable<void> {
         size_t read_count = 0;
         for(int i = 0; i < write_result.size(); i++) {
             auto frag = write_result.get_fragment(i);
             co_await data_view.read(read_result.data.get() + read_count, frag.pointer, frag.size);
             read_count += frag.size;
         }
-        read_result_promise.set_value(true);
-    }, boost::asio::detached);
-    io_context2.run();
+        read_result_promise.set_value(read_count);
+    };
+    ioc.stop();
+    ioc.restart();
+    boost::asio::co_spawn(ioc, read_data, boost::asio::use_future);
+    ioc.run();
     read_result_promise.get_future().get();
 
     std::string_view data_out(read_result.data.get(), read_result.size);
@@ -62,49 +63,50 @@ BOOST_FIXTURE_TEST_CASE (test_uncached_write, cluster_fixture)
 BOOST_FIXTURE_TEST_CASE (test_cached_write_basic, cluster_fixture)
 {
     setup (3, 1, 0, XOR);
-    boost::asio::io_context io_context;
-    boost::asio::io_context io_context2;
-    global_data_view& data_view = get_dedupe_node(0).get_global_data_view();
 
+    dedupe_config conf = make_dedupe_node_config(0);
+    global_data_view& data_view = get_dedupe_node(0).get_global_data_view();
 
     std::string data_in_str = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Maecenas risus justo, blandit tincidunt hendrerit ac, pulvinar sed quam.";
     std::string_view data_in(data_in_str);
-    dedupe_config conf = make_dedupe_node_config(0);
     dedupe_write_cache cache(data_in, data_view, conf);
 
 
     std::promise<address> write_result_promise;
-    boost::asio::co_spawn(io_context, [&]() -> boost::asio::awaitable<void> {
+    auto write_data = [&]() -> boost::asio::awaitable<void> {
         write_result_promise.set_value(co_await cache.write(data_in));
         co_await cache.flush();
-    }, boost::asio::detached);
-    io_context.run();
+    };
+    boost::asio::io_context ioc;
+    boost::asio::co_spawn(ioc, write_data, boost::asio::use_future);
+    ioc.run();
     address write_result = write_result_promise.get_future().get();
 
     ospan<char> read_result(data_in.size());
-    std::promise<bool> read_result_promise;
-    boost::asio::co_spawn(io_context2, [&]() -> boost::asio::awaitable<void> {
+    std::promise<std::size_t> read_result_promise;
+    auto read_data = [&]() -> boost::asio::awaitable<void> {
         size_t read_count = 0;
-        for(int i = 0; i < write_result.size(); i++) {
+        for (int i = 0; i < write_result.size(); i++) {
             auto frag = write_result.get_fragment(i);
             co_await data_view.read(read_result.data.get() + read_count, frag.pointer, frag.size);
             read_count += frag.size;
         }
-        read_result_promise.set_value(true);
-    }, boost::asio::detached);
-    io_context2.run();
-    read_result_promise.get_future().get();
+        read_result_promise.set_value(read_count);
+    };
+    ioc.stop();
+    ioc.restart();
+    boost::asio::co_spawn(ioc, read_data, boost::asio::use_future);
+    ioc.run();
 
+    read_result_promise.get_future().get();
     std::string_view data_out(read_result.data.get(), read_result.size);
 
     BOOST_CHECK(data_out == data_in);
 }
-*/
+
 BOOST_FIXTURE_TEST_CASE (test_cached_write_auto_flush_realloc, cluster_fixture)
 {
     setup (3, 1, 0, XOR);
-
-    const auto start = std::chrono::steady_clock::now ();
 
     dedupe_config conf = make_dedupe_node_config(0);
     global_data_view& data_view = get_dedupe_node(0).get_global_data_view();
@@ -150,10 +152,6 @@ BOOST_FIXTURE_TEST_CASE (test_cached_write_auto_flush_realloc, cluster_fixture)
     std::size_t read_count_result = read_result_promise.get_future().get();
 
     std::string_view data_out(read_buf.get(), read_count_result);
-
-    const auto stop = std::chrono::steady_clock::now ();
-    const std::chrono::duration <double> duration = stop - start;
-    std::cout << "duration " << duration.count() << " s" << std::endl;
 
     BOOST_CHECK(data_out == data_in);
 }
