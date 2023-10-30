@@ -16,21 +16,6 @@ namespace uh::cluster::rest::http
     template <typename T>
     using coro =  boost::asio::awaitable <T>;   // for coroutine
 
-    /**
-     * Enum to represent version of the http protocol to use
-     */
-    enum class http_version
-    {
-        HTTP_VERSION_NONE,
-        HTTP_VERSION_1_0,
-        HTTP_VERSION_1_1,
-        HTTP_VERSION_2_0,
-        HTTP_VERSION_2TLS,
-        HTTP_VERSION_2_PRIOR_KNOWLEDGE,
-        HTTP_VERSION_3,
-        HTTP_VERSION_3ONLY,
-    };
-
     enum class http_request_type
     {
         CREATE_BUCKET,
@@ -49,15 +34,6 @@ namespace uh::cluster::rest::http
         COMPLETE_MULTIPART_UPLOAD,
         ABORT_MULTIPART_UPLOAD,
         LIST_MULTI_PART_UPLOADS,
-    };
-
-    /**
-     * Enum representing URI scheme.
-     */
-    enum class scheme
-    {
-        HTTP,
-        HTTPS
     };
 
     /**

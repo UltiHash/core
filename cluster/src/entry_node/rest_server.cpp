@@ -80,7 +80,6 @@ namespace uh::cluster::rest
 
                 auto s3_res = co_await m_handler.handle(*s3_request);
 
-
                 co_await b_http::async_write(stream, s3_res->get_response_specific_object(), net::use_awaitable);
 
                 if(! received_request.keep_alive() )

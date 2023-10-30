@@ -109,9 +109,9 @@ public:
 
         const auto stop = std::chrono::steady_clock::now ();
         const std::chrono::duration <double> duration = stop - start;
-//        std::cout << "duration " << duration.count() << " s" << std::endl;
+        std::cout << "duration " << duration.count() << " s" << std::endl;
         const auto bandwidth = size_mb / duration.count();
-//        std::cout << "bandwidth " << bandwidth << " MB/s" << std::endl;
+        std::cout << "bandwidth " << bandwidth << " MB/s" << std::endl;
 
         co_return std::move(res);
     }

@@ -17,14 +17,14 @@
 #include <entry_node/rest/http/models/list_multi_part_uploads_request.h>
 #include <entry_node/rest/http/models/get_bucket_request.h>
 #include <entry_node/rest/utils/generator/generator.h>
-#include <regex>
+#include "entry_node/rest/http/http_types.h"
 
 namespace uh::cluster::rest::utils::parser {
 
 //------------------------------------------------------------------------------
 
     s3_parser::s3_parser
-            (const http::request_parser<http::empty_body>& recv_req,
+            (const b_http::request_parser<b_http::empty_body>& recv_req,
              rest::utils::ts_unordered_map<std::string, std::shared_ptr<utils::ts_map<uint16_t, std::string>>>& uomap)
             : m_recv_req(recv_req), m_uomap_multipart(uomap)
     {}
@@ -32,28 +32,12 @@ namespace uh::cluster::rest::utils::parser {
     std::unique_ptr<rest::http::http_request>
     s3_parser::parse() const
     {
-        if (m_recv_req.get().base().version() != 11)
-        {
-            throw std::runtime_error("bad http version. support exists only for HTTP 1.1.\n");
-        }
-
         // parse the URI
-        rest::http::URI URI(m_recv_req);
+        rest::http::URI uri(m_recv_req);
 
-        auto target = m_recv_req.get().base().target();
-        auto method = m_recv_req.get().base().method();
-
-        // TODO: switch to regex for everything?
-        std::regex bucket(R"(^\/[\w!-._*']+$)");
-        std::regex delete_object(R"(^\/[\w!-._*']+\/[\w!-._*']+(\?versionId=\d+)?$)");
-        std::regex get_object(R"(^\/[\w!-._*']+\/[\w!-._*']+$)");
-        std::regex list_objects(R"(^\/[\w!-._*']+\?[\w!-._*=']+)");
-        std::regex get_bucket(R"(^\/[\w!-._*']+$)");
-        std::regex delete_pattern(R"(^\/[\w!-._*']+\?delete)");
-
-        switch (method)
+        switch (uri.get_http_method())
         {
-            case boost::beast::http::verb::post:
+            case http::http_method::HTTP_POST:
                 if (target.ends_with("?uploads"))
                 {
                     auto upload_id = generator::generate_unique_id();
