@@ -130,7 +130,7 @@ namespace uh::cluster::rest::http
             if (m_bucket_id.size() < 3 || m_bucket_id.size() > 63 )
                 throw std::runtime_error("invalid bucket name length");
 
-            std::regex bucket_pattern(R"("^(?!(xn--|sthree-|sthree-configurator-))(?!.*-s3alias$)(?!.*--ol-s3$)(?!^(\d{1,3}\.){3}\d{1,3}$)[a-z0-9](?!.*\.\.)[a-z0-9.-]*[a-z0-9]$")");
+            std::regex bucket_pattern(R"(^(?!(xn--|sthree-|sthree-configurator-))(?!.*-s3alias$)(?!.*--ol-s3$)(?!^(\d{1,3}\.){3}\d{1,3}$)[a-z0-9](?!.*\.\.)[a-z0-9.-]*[a-z0-9]$)");
             if (!std::regex_match(m_bucket_id, bucket_pattern))
                 throw std::runtime_error("invalid bucket name");
         }
