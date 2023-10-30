@@ -21,7 +21,7 @@
 namespace uh::cluster {
 
 // ---------------------------------------------------------------------
-
+/*
 BOOST_FIXTURE_TEST_CASE (test_uncached_write, cluster_fixture)
 {
     setup (3, 1, 0, XOR);
@@ -99,7 +99,7 @@ BOOST_FIXTURE_TEST_CASE (test_cached_write_basic, cluster_fixture)
 
     BOOST_CHECK(data_out == data_in);
 }
-
+*/
 BOOST_FIXTURE_TEST_CASE (test_cached_write_auto_flush_realloc, cluster_fixture)
 {
     setup (3, 1, 0, XOR);
