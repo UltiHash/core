@@ -42,6 +42,8 @@ namespace uh::cluster::rest::utils
 //        }
 //
 //        return escaped.str();
+        return {};
+
     }
 
 } // uh::cluster::rest::utils

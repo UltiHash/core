@@ -12,7 +12,7 @@ namespace uh::cluster::rest::http::model
 
     std::map<std::string, std::string> init_multi_part_upload_request::get_request_specific_headers() const
     {
-
+        return {};
     }
 
 } // uh::cluster::rest::http::model

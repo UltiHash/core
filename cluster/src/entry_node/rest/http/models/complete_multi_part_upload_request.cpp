@@ -20,6 +20,7 @@ namespace uh::cluster::rest::http::model
 
     std::map<std::string, std::string> complete_multi_part_upload_request::get_request_specific_headers() const
     {
+        return {};
     }
 
     const std::string& complete_multi_part_upload_request::get_body()
