@@ -61,7 +61,7 @@ namespace uh::cluster::rest::utils::parser {
 
                     return std::make_unique<rest::http::model::init_multi_part_upload_request>(m_recv_req, upload_id);
                 }
-                else if (target.ends_with("?uploadId="))
+                else if (target.find("?uploadId="))
                 {
                     auto upload_id = std::string(target.substr(target.find("uploadId=") + 9));
 
