@@ -205,7 +205,7 @@ namespace uh::cluster {
                     .hole_log = get_root_path() / dn_dir / "log",
                     .min_file_size = 1ul * 1024ul,
                     .max_file_size = 2ul * 1024ul,
-                    .max_data_store_size = 64ul * 1024ul * 1024ul * 1024ul,
+                    .max_data_store_size = 64ul * 1024ul,
                     .server_conf = {
                             .threads = 4,
                             .port = static_cast<uint16_t>(8600 + i),
@@ -224,9 +224,9 @@ namespace uh::cluster {
                     .directory_conf = {
                             .root = get_root_path() / dr_dir,
                             .bucket_conf = {
-                                    .min_file_size = 1024ul * 1024ul * 1024ul * 2,
-                                    .max_file_size = 1024ul * 1024ul * 1024ul * 64,
-                                    .max_storage_size = 1024ul * 1024ul * 1024ul * 256,
+                                    .min_file_size = 1024ul * 2,
+                                    .max_file_size = 1024ul * 64,
+                                    .max_storage_size = 1024ul * 256,
                                     .max_chunk_size = std::numeric_limits <uint32_t>::max(),
                             },
                     },
@@ -247,11 +247,11 @@ namespace uh::cluster {
                     },
                     .data_node_connection_count = 2,
                     .set_conf = {
-                            .set_minimum_free_space = 1ul * 1024ul * 1024ul * 1024ul,
-                            .max_empty_hole_size = 1ul * 1024ul * 1024ul * 1024ul,
+                            .set_minimum_free_space = 1ul * 1024ul,
+                            .max_empty_hole_size = 1ul *  1024ul,
                             .key_store_config = {
                                     .file  = get_root_path() / dd_dir / "set",
-                                    .init_size = 1ul * 1024ul * 1024ul * 1024ul,
+                                    .init_size = 4ul * 1024ul,
                             }
                     },
             };
@@ -261,7 +261,7 @@ namespace uh::cluster {
             return {
                     .init_process_count = 4,
                     .ec_algorithm = ec,
-                    .recovery_chunk_size = 1 * 1024ul * 1024ul * 1024ul,
+                    .recovery_chunk_size = 1 * 1024ul,
                     .data_node_conf = make_data_node_config(i),
                     .dedupe_node_conf = make_dedupe_node_config(i),
                     .directory_node_conf = make_directory_node_config(i),
