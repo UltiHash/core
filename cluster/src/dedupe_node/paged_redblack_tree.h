@@ -71,7 +71,7 @@ public:
             m_block_size (boost::interprocess::mapped_region::get_page_size()) {
 
         if (m_set_conf.key_store_config.init_size < 2 * m_block_size) {
-            throw std::logic_error ("set file size should be at list large enough for 2 pages");
+            throw std::logic_error ("set file size should be at least large enough for 2 pages");
         }
 
         if (m_first_block->root_offset == 0) {

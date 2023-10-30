@@ -251,7 +251,7 @@ namespace uh::cluster {
                             .max_empty_hole_size = 1ul *  1024ul,
                             .key_store_config = {
                                     .file  = get_root_path() / dd_dir / "set",
-                                    .init_size = 4ul * 1024ul,
+                                    .init_size = 8ul * 1024ul,
                             }
                     },
             };
