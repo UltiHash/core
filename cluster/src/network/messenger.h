@@ -106,7 +106,7 @@ namespace uh::cluster {
             co_await send_buffers(type);
         }
 
-        coro <void> throw_if_failure (messenger::header h) {
+        coro <void> throw_if_failure (messenger::header h, std::string error = "undefined") {
             if (h.type != FAILURE) [[likely]] {
                 co_return;
             }
@@ -114,7 +114,7 @@ namespace uh::cluster {
             msg.resize(h.size);
             register_read_buffer(msg);
             co_await recv_buffers(h);
-            throw std::runtime_error ("Received failure with message: " + msg);
+            throw std::runtime_error ("Received failure with message: " + msg + "\nerror: " + error);
         }
 
     };

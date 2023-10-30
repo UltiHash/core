@@ -133,9 +133,6 @@ public:
             const auto node = nodes.at (node_id);
             if (std::find (ec_nodes.cbegin(), ec_nodes.cend(), node) == ec_nodes.cend()) { // no ec node
                 data_part = data.substr(node_id * part_size, part_size);
-                if (data_part.size() == 0) {
-                    int i = 0;
-                }
             }
             else { // ec node
 
@@ -177,13 +174,7 @@ public:
         auto bc_func = [] (auto m, int node_id) -> coro <uint128_t> {
             co_await m.get ().send(USED_REQ, {});
             const auto message_header = co_await m.get().recv_header();
-            if (message_header.type == FAILURE) [[unlikely]] {
-                std::string error;
-                error.resize(message_header.size);
-                m.get ().register_read_buffer (error);
-                co_await m.get().recv_buffers(message_header);
-                throw std::runtime_error ("Received failure when broadcasting get used request");
-            }
+            co_await m.get ().throw_if_failure (message_header, "failure in recovery get_used");
             const auto resp = co_await m.get().recv_uint128_t (message_header);
             co_return resp.second;
 
@@ -223,7 +214,6 @@ public:
             const auto min_end = std::min (data_size, last_file_end_offset);
             while (offset < min_end) {
                 const auto adjusted_chunk_size = std::min (uint128_t (chunk_size), (min_end - offset)).get_low();
-                //
 
                 auto read_bc =  [&] (auto m, int node_id) -> coro <ospan <char>> {
                     ospan <char> buf (adjusted_chunk_size);
