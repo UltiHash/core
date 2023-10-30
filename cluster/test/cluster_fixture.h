@@ -269,6 +269,12 @@ namespace uh::cluster {
             };
         }
 
+        static void fill_random(char* buf, size_t size) {
+            for (int i = 0; i < size; ++i) {
+                buf[i] = rand()&0xff;
+            }
+        }
+
     };
 
 
