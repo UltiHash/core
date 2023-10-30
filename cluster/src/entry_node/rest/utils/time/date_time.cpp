@@ -35,13 +35,24 @@ namespace uh::cluster::rest::utils::time
     tm date_time::convert_time_stamp_to_gmt_struct() const
     {
         std::time_t time = std::chrono::system_clock::to_time_t(m_time);
-        struct tm gmtTimeStamp;
+        struct tm gmtTimeStamp{};
         gmtime_r(&time, &gmtTimeStamp);
 
         return gmtTimeStamp;
     }
 
-    date_time date_time::now() const
+    std::string date_time::get_date() const
+    {
+        std::time_t t = std::chrono::system_clock::to_time_t(m_time);
+        std::tm tm = *std::localtime(&t);
+
+        char buffer[9];
+        std::strftime(buffer, sizeof(buffer), "%Y%m%d", &tm);
+
+        return {buffer, sizeof(buffer) - 1};
+    }
+
+    date_time date_time::now()
     {
         date_time dateTime;
         dateTime.m_time = std::chrono::system_clock::now();

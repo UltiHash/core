@@ -18,9 +18,12 @@ public:
     m_storage (storage) {}
 
     coro <void> handle (messenger m) override {
+
         for (;;) {
+            std::string failure;
+            try {
             const auto message_header = co_await m.recv_header ();
-            switch (message_header.type) {
+                switch (message_header.type) {
                 case DIR_PUT_OBJ_REQ:
                     co_await handle_put_obj (m, message_header);
                     break;
@@ -32,11 +35,25 @@ public:
                     break;
                 case RECOVER_REQ:
                     co_await handle_recovery (m, message_header);
+                case DIR_LIST_BUCKET_REQ:
+                    co_await handle_list_buckets(m, message_header);
+                    break;
+                case DIR_LIST_OBJ_REQ:
+                    co_await handle_list_objects(m, message_header);
+                    break;
+                case DIR_DELETE_BUCKET_REQ:
+                    co_await handle_delete_bucket(m, message_header);
                     break;
                 case STOP:
                     co_return;
                 default:
                     throw std::invalid_argument ("Invalid message type!");
+                }
+            } catch (const std::exception& e) {
+                failure = e.what();
+            }
+            if (!failure.empty()) {
+                co_await m.send(FAILURE, failure);
             }
         }
 
@@ -47,19 +64,10 @@ private:
     coro <void> handle_put_obj (messenger& m, const messenger::header& h) {
         directory_message request = co_await m.recv_directory_message (h);
 
-        std::string failure;
         std::vector<char> address_data;
         zpp::bits::out{address_data, zpp::bits::size4b{}}(*request.addr).or_throw();
-        try {
             m_directory.insert (request.bucket_id, *request.object_key, address_data);
             co_await m.send(SUCCESS, {});
-        } catch (const std::exception& e) {
-            failure = std::string (e.what());
-        }
-
-        if(!failure.empty())
-            co_await m.send(FAILURE, failure);
-
         co_return;
     }
 
@@ -67,16 +75,8 @@ private:
         directory_message request = co_await m.recv_directory_message (h);
         address addr;
 
-        std::string failure;
-        try {
-            const auto buf = m_directory.get(request.bucket_id, *request.object_key);
-            zpp::bits::in{std::span <char> {buf.data.get(), buf.size}, zpp::bits::size4b{}}(addr).or_throw();
-        } catch (const std::exception& e) {
-            failure = std::string (e.what());
-        }
-
-        if(!failure.empty())
-            co_await m.send(FAILURE, failure);
+        const auto buf = m_directory.get(request.bucket_id, *request.object_key);
+        zpp::bits::in{std::span <char> {buf.data.get(), buf.size}, zpp::bits::size4b{}}(addr).or_throw();
 
         std::size_t buffer_size = 0;
         for(auto frag_size : addr.sizes){
@@ -100,17 +100,33 @@ private:
 
     coro <void> handle_put_bucket (messenger& m, const messenger::header& h) {
         directory_message request = co_await m.recv_directory_message (h);
-        std::string failure;
 
-        try {
-            m_directory.add_bucket(request.bucket_id);
-            co_await m.send(SUCCESS, {});
-        } catch (const std::exception& e) {
-            failure = std::string (e.what());
-        }
+        m_directory.add_bucket(request.bucket_id);
+        co_await m.send(SUCCESS, {});
 
-        if(!failure.empty())
-            co_await m.send(FAILURE, failure);
+    }
+
+    coro <void> handle_delete_bucket (messenger& m, const messenger::header& h) {
+        directory_message request = co_await m.recv_directory_message (h);
+        m_directory.remove_bucket(request.bucket_id);
+        co_await m.send(SUCCESS, {});
+
+    }
+
+    coro <void> handle_list_buckets (messenger&m, const messenger::header &h) {
+        directory_lst_entities_message response = {
+            .entities = m_directory.list_buckets()
+        };
+        co_await m.send_directory_list_entities_message(DIR_LIST_BUCKET_RESP, response);
+    }
+
+    coro <void> handle_list_objects (messenger&m, const messenger::header &h) {
+        directory_message request = co_await m.recv_directory_message (h);
+        directory_lst_entities_message response = {
+            .entities = m_directory.list_keys(
+                request.bucket_id)
+        };
+        co_await m.send_directory_list_entities_message(DIR_LIST_OBJ_RESP, response);
     }
 
     coro <void> handle_recovery (messenger& m, const messenger::header& h) {
