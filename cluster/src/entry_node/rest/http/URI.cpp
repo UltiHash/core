@@ -81,17 +81,27 @@ namespace uh::cluster::rest::http
     }
 
 
-    const std::string& URI::get_query_string_value(const std::string& key) const
+    bool URI::query_string_exists(const std::string& key) const
     {
         auto itr = m_query_parameters.find(key);
         if (itr != m_query_parameters.end())
         {
-            return itr->second;
+            return true;
         }
         else
         {
-            return "";
+            return false;
         }
+    }
+
+    const std::string& URI::get_query_string_value(const std::string& key) const
+    {
+        return m_query_parameters.at(key);
+    }
+
+    const std::map<std::string, std::string>& URI::get_query_parameters() const
+    {
+        return m_query_parameters;
     }
 
     void URI::extract_and_set_query_parameters()

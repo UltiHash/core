@@ -52,7 +52,9 @@ namespace uh::cluster::rest::http
 
         [[nodiscard]] const std::string& get_bucket_id() const;
         [[nodiscard]] const std::string& get_object_key() const;
+        [[nodiscard]] bool query_string_exists(const std::string& key) const;
         [[nodiscard]] const std::string& get_query_string_value(const std::string& key) const;
+        [[nodiscard]] const std::map<std::string, std::string>& get_query_parameters() const;
         [[nodiscard]] http_method get_http_method() const;
 
     private:
