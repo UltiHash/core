@@ -20,13 +20,6 @@
 namespace uh::cluster {
 
 
-void fill_random(char* buf, size_t size) {
-    for (int i = 0; i < size; ++i) {
-        buf[i] = rand()&0xff;
-    }
-}
-
-
 BOOST_FIXTURE_TEST_CASE (basic_write_read_test_multiple_nodes_with_ec, cluster_fixture)
 {
     setup(4, 1, 0, XOR);
