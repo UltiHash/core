@@ -3,6 +3,7 @@
 #include <fstream>
 #include <filesystem>
 #include "entry_node/rest/utils/string/string_utils.h"
+#include "rest/http/models/generic_error_response.h"
 
 namespace uh::cluster::rest
 {
@@ -86,26 +87,24 @@ namespace uh::cluster::rest
                 stream.expires_after(std::chrono::seconds(10000));
                 beast::flat_buffer buffer;
 
-                // read header
                 b_http::request_parser<b_http::empty_body> received_request;
                 received_request.body_limit((std::numeric_limits<std::uint64_t>::max)());
 
                 co_await b_http::async_read_header(stream, buffer, received_request, net::use_awaitable);
+                // log this to debug
+                std::cout << received_request.get().base() << std::endl;
 
-                // parse
                 rest::utils::parser::s3_parser s3_parser(received_request, m_uomap_multipart);
                 auto s3_request = s3_parser.parse();
 
-                // read body
                 co_await s3_request->read_body(stream, buffer);
 
-                // authenticate
+                std::cout << s3_request->get_body() << std::endl;
 
-                // handle
                 auto s3_res = co_await m_handler.handle(*s3_request);
 
-                // send response
-                co_await b_http::async_write(stream, s3_res.get_underlying_object(), net::use_awaitable);
+
+                co_await b_http::async_write(stream, s3_res->get_response_specific_object(), net::use_awaitable);
 
                 if(! received_request.keep_alive() )
                 {
@@ -113,32 +112,20 @@ namespace uh::cluster::rest
                 }
             }
         }
-            // TODO: don't send all the info to the user on throw, and also we need to send appropriate error code
-            // like 401 on authorization failed and not 400 which is a bad request
-        catch (boost::system::system_error &se)
+        catch (const boost::system::system_error& se)
         {
             if (se.code() != b_http::error::end_of_stream)
             {
-                b_http::response<b_http::string_body> res{b_http::status::bad_request, 11};
-                res.set(b_http::field::server, "UltiHash");
-                res.set(b_http::field::content_type, "text/html");
-                res.body() = se.code().message() + '\n';
-                res.prepare_payload();
-                b_http::write(stream, res);
-
+                uh::cluster::rest::http::model::error_response err;
+                b_http::write(stream, err.get_response_specific_object());
                 stream.socket().shutdown(tcp::socket::shutdown_send, ec);
                 throw;
             }
         }
         catch (const std::exception& e)
         {
-            b_http::response<b_http::string_body> res{b_http::status::bad_request, 11};
-            res.set(b_http::field::server, "UltiHash");
-            res.set(b_http::field::content_type, "text/html");
-            res.body() = e.what();
-            res.prepare_payload();
-            b_http::write(stream, res);
-
+            uh::cluster::rest::http::model::error_response err;
+            b_http::write(stream, err.get_response_specific_object());
             stream.socket().shutdown(tcp::socket::shutdown_send, ec);
             throw;
         }

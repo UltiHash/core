@@ -78,6 +78,7 @@ struct address {
     }
 
     // TODO: pop_front is not really cheap right now, perhaps this can be revised
+
     fragment pop_front() {
         fragment frag = { {pointers[0], pointers[1]}, sizes[0]};
 
@@ -127,7 +128,13 @@ struct dedupe_response {
 struct directory_message {
     std::string bucket_id;
     zpp::bits::optional_ptr <std::string> object_key;
+    zpp::bits::optional_ptr <std::string> object_key_prefix;
+    zpp::bits::optional_ptr <std::string> object_key_lower_bound;
     zpp::bits::optional_ptr<address> addr;
+};
+
+struct directory_lst_entities_message {
+    std::vector<std::string> entities;
 };
 
 struct allocated_write_message {
@@ -144,5 +151,6 @@ template<> struct std::hash<uh::cluster::fragment> {
              ^ std::hash<std::size_t>{}(frag.size);
     }
 };
+
 
 #endif //CORE_COMMON_TYPES_H

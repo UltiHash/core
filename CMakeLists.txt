@@ -10,6 +10,7 @@ option(BUILD_CLIENT_SHELL   "Build the client-shell component"  OFF)
 option(BUILD_CLIENT_FUSE    "Build the client-fuse component"  OFF)
 option(BUILD_TOOLS          "Build the tools component"  OFF)
 option(BUILD_CLUSTER        "Build the cluster component"  OFF)
+option(UH_ENABLE_E2E_TESTS  "Enable End-to-End tests" ON)
 
 
 set(Boost_USE_STATIC_LIBS ON)
@@ -79,6 +80,10 @@ endif()
 add_subdirectory(client-sdk)
 
 enable_testing()
+
+#if(UH_ENABLE_E2E_TESTS)
+    add_subdirectory(testing)
+#endif()
 
 set(CPACK_PACKAGE_NAME "ultihash")
 set(CPACK_PACKAGE_VENDOR "UltiHash, Inc.")

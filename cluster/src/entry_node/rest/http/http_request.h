@@ -34,13 +34,21 @@ namespace uh::cluster::rest::http
     enum class http_request_type
     {
         CREATE_BUCKET,
+        GET_BUCKET,
         LIST_BUCKETS,
+        DELETE_BUCKET,
+        DELETE_OBJECTS,
         PUT_OBJECT,
         GET_OBJECT,
+        DELETE_OBJECT,
+        LIST_OBJECTS_V2,
+        LIST_OBJECTS,
+        GET_OBJECT_ATTRIBUTES,
         INIT_MULTIPART_UPLOAD,
         MULTIPART_UPLOAD,
         COMPLETE_MULTIPART_UPLOAD,
         ABORT_MULTIPART_UPLOAD,
+        LIST_MULTI_PART_UPLOADS,
     };
 
     /**
@@ -69,7 +77,7 @@ namespace uh::cluster::rest::http
 
         virtual coro<void> read_body(tcp_stream& stream, boost::beast::flat_buffer& buffer);
 
-        [[nodiscard]] virtual inline std::string get_body() const { return m_body; }
+        [[nodiscard]] virtual inline const std::string& get_body() { return m_body; }
 
         [[nodiscard]] virtual inline std::size_t get_body_size() const { return m_body.size(); }
 
@@ -79,10 +87,15 @@ namespace uh::cluster::rest::http
 
         [[nodiscard]] inline const URI& get_URI() const { return m_uri; }
 
+        [[nodiscard]] inline const std::string& get_eTag() const { return m_etag; }
+
+        [[maybe_unused]] virtual inline void clear_body() { m_body.clear(); }
+
     protected:
         const http::request_parser<http::empty_body>& m_req;
         http_method m_method;
         URI m_uri;
+        std::string m_etag {};
         std::string m_body {};
     };
 
