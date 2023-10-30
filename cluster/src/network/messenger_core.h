@@ -115,7 +115,6 @@ public:
         if (h.size != m_read_size) [[unlikely]] {
             throw std::length_error ("The size of the buffers does not match with the header size!");
         }
-        //boost::asio::read (m_socket, m_read_buffers);
         co_await boost::asio::async_read (m_socket, m_read_buffers, boost::asio::as_tuple(boost::asio::use_awaitable));
 
         m_read_buffers.clear();
@@ -127,7 +126,6 @@ public:
         m_write_buffers.emplace_front(&m_write_size, sizeof m_write_size);
         m_write_buffers.emplace_front(&type, sizeof type);
 
-        //boost::asio::write (m_socket, m_write_buffers);
         co_await boost::asio::async_write (m_socket, m_write_buffers, boost::asio::as_tuple(boost::asio::use_awaitable));
 
         m_write_buffers.clear();

@@ -104,6 +104,8 @@ BOOST_FIXTURE_TEST_CASE (test_cached_write_auto_flush_realloc, cluster_fixture)
 {
     setup (3, 1, 0, XOR);
 
+    const auto start = std::chrono::steady_clock::now ();
+
     dedupe_config conf = make_dedupe_node_config(0);
     global_data_view& data_view = get_dedupe_node(0).get_global_data_view();
 
@@ -148,6 +150,10 @@ BOOST_FIXTURE_TEST_CASE (test_cached_write_auto_flush_realloc, cluster_fixture)
     std::size_t read_count_result = read_result_promise.get_future().get();
 
     std::string_view data_out(read_buf.get(), read_count_result);
+
+    const auto stop = std::chrono::steady_clock::now ();
+    const std::chrono::duration <double> duration = stop - start;
+    std::cout << "duration " << duration.count() << " s" << std::endl;
 
     BOOST_CHECK(data_out == data_in);
 }
