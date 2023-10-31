@@ -43,7 +43,7 @@ namespace uh::cluster::rest::http
     {
     public:
 
-        explicit http_request(const http::request_parser<http::empty_body>& recv_request);
+        http_request(const http::request_parser<http::empty_body>& recv_request, std::unique_ptr<URI> uri);
 
         virtual ~http_request() = default;
 
@@ -61,7 +61,7 @@ namespace uh::cluster::rest::http
 
         [[nodiscard]] inline http_method get_method() const { return m_method; }
 
-        [[nodiscard]] inline const URI& get_URI() const { return m_uri; }
+        [[nodiscard]] inline const URI& get_URI() const { return *m_uri; }
 
         [[nodiscard]] inline const std::string& get_eTag() const { return m_etag; }
 
@@ -70,7 +70,7 @@ namespace uh::cluster::rest::http
     protected:
         const http::request_parser<http::empty_body>& m_req;
         http_method m_method;
-        URI m_uri;
+        std::unique_ptr<URI> m_uri;
         std::string m_etag {};
         std::string m_body {};
     };

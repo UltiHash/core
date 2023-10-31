@@ -4,8 +4,9 @@ namespace uh::cluster::rest::http::model
 {
 
     multi_part_upload_request::multi_part_upload_request(const http::request_parser<http::empty_body>& recv_req,
-                                                 rest::utils::ts_map<uint16_t, std::string>& container, uint16_t part_number) :
-            rest::http::http_request(recv_req),
+                                                 rest::utils::ts_map<uint16_t, std::string>& container, uint16_t part_number,
+                                                 std::unique_ptr<rest::http::URI> uri) :
+            rest::http::http_request(recv_req, std::move(uri)),
             m_mpcontainer(container),
             m_part_number(part_number)
     {}

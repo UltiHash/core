@@ -4,8 +4,8 @@ namespace uh::cluster::rest::http::model
 {
 
     init_multi_part_upload_request::init_multi_part_upload_request(const http::request_parser<http::empty_body>& recv_req,
-                                                                   std::string upload_id) :
-            rest::http::http_request(recv_req)
+                                                                   std::string upload_id, std::unique_ptr<URI> uri) :
+                                                                    rest::http::http_request(recv_req, std::move(uri))
     {
         m_etag = std::move(upload_id);
     }

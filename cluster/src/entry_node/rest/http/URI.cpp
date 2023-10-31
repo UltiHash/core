@@ -126,6 +126,7 @@ namespace uh::cluster::rest::http
             m_object_key.pop_back();
 
         // check bucket id and object key for validity
+        if (!m_bucket_id.empty())
         {
             if (m_bucket_id.size() < 3 || m_bucket_id.size() > 63 )
                 throw std::runtime_error("invalid bucket name length");
@@ -134,8 +135,6 @@ namespace uh::cluster::rest::http
             if (!std::regex_match(m_bucket_id, bucket_pattern))
                 throw std::runtime_error("invalid bucket name");
         }
-
-
 
     }
 
