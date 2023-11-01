@@ -92,7 +92,7 @@ namespace uh::cluster::rest
 
                 co_await b_http::async_read_header(stream, buffer, received_request, net::use_awaitable);
                 // log this to debug
-                std::cout << received_request.get().base() << std::endl;
+                //std::cout << received_request.get().base() << std::endl;
 
                 rest::utils::parser::s3_parser s3_parser(received_request, m_uomap_multipart);
                 auto s3_request = s3_parser.parse();

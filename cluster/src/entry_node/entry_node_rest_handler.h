@@ -50,8 +50,6 @@ public:
         const auto size_mb = static_cast <double> (body_size) / static_cast <double> (1024ul * 1024ul);
 
 
-        std::chrono::time_point <std::chrono::steady_clock> timer;
-        const auto start = std::chrono::steady_clock::now();
 
         std::unique_ptr<http::http_response> res;
 
@@ -108,12 +106,6 @@ public:
             default:
                 throw std::runtime_error("request not supported by the backend yet.");
         }
-
-        const auto stop = std::chrono::steady_clock::now ();
-        const std::chrono::duration <double> duration = stop - start;
-//        std::cout << "duration " << duration.count() << " s" << std::endl;
-        const auto bandwidth = size_mb / duration.count();
-//        std::cout << "bandwidth " << bandwidth << " MB/s" << std::endl;
 
         co_return std::move(res);
     }
@@ -319,11 +311,14 @@ public:
 
         try
         {
+
+            std::chrono::time_point <std::chrono::steady_clock> timer;
+            const auto start = std::chrono::steady_clock::now();
+
             res = std::make_unique<http::model::get_object_response>(req);
             auto m_dir = m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size())).acquire_messenger();
             directory_message dir_req;
             dir_req.bucket_id = req.get_URI().get_bucket_id();
-            std::cout << req.get_URI().get_object_key() << std::endl;
             dir_req.object_key = std::make_unique <std::string> (req.get_URI().get_object_key());
 
             co_await m_dir.get().send_directory_message (DIR_GET_OBJ_REQ, dir_req);
@@ -350,6 +345,12 @@ public:
                 default:
                     throw std::runtime_error("unexpected internal server error");
             }
+
+            const auto stop = std::chrono::steady_clock::now ();
+            const std::chrono::duration <double> duration = stop - start;
+            const auto bandwidth = h_dir.size / duration.count();
+            std::cout << "duration " << duration.count() << " s" << std::endl;
+            std::cout << "bandwidth " << bandwidth << " MB/s" << std::endl;
 
         }
         catch (const std::exception& e)
@@ -420,8 +421,6 @@ public:
             res->set_error(boost::beast::http::response<boost::beast::http::string_body>{boost::beast::http::status::internal_server_error, 11});
         }
 
-        std::cout << res->get_response_specific_object() << std::endl;
-
         co_return std::move(res);
     }
 
@@ -473,8 +472,6 @@ public:
             res->set_error(boost::beast::http::response<boost::beast::http::string_body>{boost::beast::http::status::internal_server_error, 11});
         }
 
-        std::cout << res->get_response_specific_object() << std::endl;
-
         co_return std::move(res);
     }
 
@@ -519,9 +516,12 @@ public:
         std::unique_ptr<http::model::complete_multi_part_upload_response> res;
         try
         {
+
             res = std::make_unique<http::model::complete_multi_part_upload_response>(req);
             auto body_size = req.get_body_size();
 
+            std::chrono::time_point <std::chrono::steady_clock> timer;
+            const auto start = std::chrono::steady_clock::now();
             const auto size_mb = static_cast <double> (body_size) / static_cast <double> (1024ul * 1024ul);
 
             auto m_dedup = m_dedupe_nodes.at(get_round_robin_index(m_dedupe_node_index, m_dedupe_nodes.size())).acquire_messenger();
@@ -531,10 +531,6 @@ public:
 
             auto effective_size = static_cast <double> (resp.second.effective_size) / static_cast <double> (1024ul * 1024ul);
             auto space_saving = 1.0 - static_cast <double> (resp.second.effective_size) / static_cast <double> (body_size);
-
-//            std::cout << "original size " << size_mb << " MB" << std::endl;
-//            std::cout << "effective size " << effective_size << " MB" << std::endl;
-//            std::cout << "space saving " << space_saving << std::endl;
 
             auto m_dir = m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size())).acquire_messenger();
             const directory_message dir_req
@@ -556,6 +552,16 @@ public:
             }
 
             res->set_etag("CustomEtag");
+
+            std::cout << "original size " << size_mb << " MB" << std::endl;
+            std::cout << "effective size " << effective_size << " MB" << std::endl;
+            std::cout << "space saving " << space_saving << std::endl;
+            const auto stop = std::chrono::steady_clock::now ();
+            const std::chrono::duration <double> duration = stop - start;
+            const auto bandwidth = size_mb / duration.count();
+            std::cout << "duration " << duration.count() << " s" << std::endl;
+            std::cout << "bandwidth " << bandwidth << " MB/s" << std::endl;
+
         }
         catch(const std::exception& e)
         {

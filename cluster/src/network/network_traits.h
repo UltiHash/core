@@ -20,7 +20,6 @@ coro <std::map <int, ResultType>> broadcast_gather_custom (boost::asio::io_conte
     std::vector <std::unique_ptr <ResultType>> result (nodes.size ());
 
     std::atomic <int> responses = 0;
-
     for (int id = 0; id < nodes.size(); id++) {
         boost::asio::co_spawn(ioc,
                               [&func, &nodes, &result, &waiter, &responses, id] () -> coro <message_type> {
@@ -40,6 +39,7 @@ coro <std::map <int, ResultType>> broadcast_gather_custom (boost::asio::io_conte
     }
 
     co_await waiter.async_wait(as_tuple(boost::asio::use_awaitable));
+
     std::map <int, ResultType> result_map;
     for (int i = 0; i < result.size(); i++) {
         result_map.emplace(i, std::move (*result[i].release()));

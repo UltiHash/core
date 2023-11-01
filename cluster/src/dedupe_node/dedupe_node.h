@@ -225,10 +225,10 @@ namespace uh::cluster {
 
         const cluster_map m_cluster_map;
         const int m_id;
-        const bool m_use_id_as_port_offset;
         const std::string m_job_name;
         global_data_view m_storage;
         server m_server;
+        const bool m_use_id_as_port_offset;
 
     };
 } // end namespace uh::cluster

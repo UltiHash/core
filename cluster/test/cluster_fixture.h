@@ -115,7 +115,7 @@ namespace uh::cluster {
                             m_dedupe_nodes.emplace_back(m_nodes.back());
                             break;
                         case DIRECTORY_NODE:
-                            m_nodes.emplace_back(std::make_shared<directory_node>(role_nodes.first, std::move(cmap)));
+                            m_nodes.emplace_back(std::make_shared<directory_node>(role_nodes.first, std::move(cmap), true));
                             m_directory_nodes.emplace_back(m_nodes.back());
                             break;
                         default:
@@ -154,6 +154,8 @@ namespace uh::cluster {
                     }
                 });
             }
+
+            std::this_thread::sleep_for(std::chrono::seconds (3));
 
             if (excp_ptr) {
                 try {

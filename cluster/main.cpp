@@ -62,9 +62,9 @@ uh::cluster::dedupe_config make_dedupe_node_config () {
     return {
         .min_fragment_size = 32,
         .max_fragment_size = 8 * 1024,
-        .write_cache_size_per_dn = 1024ul * 1024ul,
+        .write_cache_size_per_dn = 20ul * 1024ul * 1024ul,
         .server_conf = {
-                .threads = 1,
+                .threads = 2,
                 .port = 8084,
         },
         .data_node_connection_count = 2,

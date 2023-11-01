@@ -26,7 +26,7 @@ struct fragment {
 struct address {
 
     std::vector <uint64_t> pointers;
-    std::vector <uint16_t> sizes;
+    std::vector <uint32_t> sizes;
 
     address () = default;
     explicit address (std::size_t size):
@@ -40,6 +40,7 @@ struct address {
         pointers.emplace_back(frag.pointer.get_data()[0]);
         pointers.emplace_back(frag.pointer.get_data()[1]);
         sizes.emplace_back(frag.size);
+        int i = 0;
     }
 
     void append_address (const address& addr) {
@@ -54,7 +55,7 @@ struct address {
     }
 
     void allocate_for_serialized_data (std::size_t size) {
-        size_t count = size / (2 * sizeof (uint64_t) + sizeof (uint16_t));
+        size_t count = size / (2 * sizeof (uint64_t) + sizeof (uint32_t));
         pointers.resize (count * 2);
         sizes.resize (count);
     }

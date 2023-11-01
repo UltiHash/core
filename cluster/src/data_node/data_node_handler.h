@@ -29,6 +29,9 @@ public:
                 case READ_REQ:
                     co_await handle_read(m, message_header);
                     break;
+                case READ_ADDRESS_REQ:
+                    co_await handle_read_address (m, message_header);
+                    break;
                 case REMOVE_REQ:
                     co_await handle_remove(m, message_header);
                     break;
@@ -75,6 +78,21 @@ private:
         ospan <char> buffer (resp.second.size);
         const auto size = m_data_store.read(buffer.data.get(), resp.second.pointer, resp.second.size);
         co_await m.send (READ_RESP, {buffer.data.get(), size});
+    }
+
+    coro <void> handle_read_address (messenger &m, const messenger::header& h) {
+        const auto resp = co_await m.recv_address(h);
+        const auto read_size = std::accumulate (resp.second.sizes.cbegin(), resp.second.sizes.cend(), 0);
+        ospan <char> buffer (read_size);
+        size_t offset = 0;
+        for (int i = 0; i < resp.second.size(); i++) {
+            const auto frag = resp.second.get_fragment(i);
+            if (m_data_store.read(buffer.data.get() + offset, frag.pointer, frag.size) != frag.size) [[unlikely]] {
+                throw std::runtime_error ("Could not read the data with the given size");
+            }
+            offset += frag.size;
+        }
+        co_await m.send (READ_ADDRESS_RESP, {buffer.data.get(), offset});
     }
 
     coro <void> handle_remove (messenger &m, const messenger::header& h) {

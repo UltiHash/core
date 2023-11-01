@@ -19,7 +19,6 @@
 
 namespace uh::cluster {
 
-
 BOOST_FIXTURE_TEST_CASE (basic_write_read_test_multiple_nodes_with_ec, cluster_fixture)
 {
     setup(4, 1, 0, XOR);
@@ -82,9 +81,13 @@ BOOST_FIXTURE_TEST_CASE (basic_write_read_test_single_node_without_ec, cluster_f
     std::promise <address> alloc_promise;
     const auto data_str = std::string_view (data, data_size);
     auto write_data = [&] () -> coro <message_type> {
+        std::cout << "before alloc" << std::endl;
         auto alloc = co_await get_dedupe_node(0).get_global_data_view().allocate(data_size);
+        std::cout << "before alloc write" << std::endl;
         co_await get_dedupe_node(0).get_global_data_view().scatter_allocated_write(alloc, data_str);
+        std::cout << "before sync" << std::endl;
         co_await get_dedupe_node(0).get_global_data_view().sync(alloc);
+        std::cout << "after sync" << std::endl;
         alloc_promise.set_value(std::move (alloc));
         co_return SUCCESS;
     };

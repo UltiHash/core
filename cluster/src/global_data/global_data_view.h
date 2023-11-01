@@ -25,7 +25,7 @@ public:
 
     explicit global_data_view (const cluster_map& cmap):
                           m_cluster_map (cmap),
-                          m_ec (ec_factory::make_ec (cmap.m_cluster_conf.ec_algorithm)){
+                          m_ec (ec_factory::make_ec (cmap.m_cluster_conf.ec_algorithm)) {
         sleep(2);
     }
 
@@ -252,13 +252,51 @@ public:
     }
 
     coro <std::size_t> read (char* buffer, const uint128_t pointer, const size_t size) {
+        const fragment frag {pointer, size};
         auto m = get_data_node (pointer)->acquire_messenger();
-        co_await m.get().send_fragment(READ_REQ, {pointer, size});
+        co_await m.get().send_fragment(READ_REQ, frag);
         const auto h = co_await m.get().recv_header();
         m.get().register_read_buffer (buffer, h.size);
         co_await m.get().throw_if_failure(h);
         co_await m.get().recv_buffers(h);
         co_return h.size;
+    }
+
+    coro <std::size_t> read_address (char* buffer, const address& addr) {
+
+        std::unordered_map <std::shared_ptr <client>, address> node_address_map;
+        std::unordered_map <std::shared_ptr <client>, std::vector <size_t>> node_data_offsets_map;
+        std::vector <std::shared_ptr <client>> nodes;
+
+        size_t offset = 0;
+        for (int i = 0; i < addr.size(); ++i) {
+            const auto frag = addr.get_fragment(i);
+            auto n = get_data_node (frag.pointer);
+            auto& node_address = node_address_map [n];
+            if (node_address.empty()) {
+                nodes.emplace_back(n);
+            }
+            node_address.push_fragment(frag);
+            node_data_offsets_map [n].emplace_back(offset);
+            offset += frag.size;
+        }
+
+        auto bc_func = [&] (auto m, int node_id) -> coro <int> {
+            const auto node = nodes.at (node_id);
+            const auto& addr = node_address_map.at(node);
+            const auto& offsets = node_data_offsets_map.at(node);
+            co_await m.get ().send_address (READ_ADDRESS_REQ, addr);
+            const auto h = co_await m.get ().recv_header ();
+            co_await m.get ().throw_if_failure (h);
+            for (int i = 0; i < addr.size(); ++i) {
+                m.get ().register_read_buffer (buffer + offsets.at(i), addr.sizes[i]);
+            }
+            co_await m.get ().recv_buffers (h);
+            co_return node_id;
+        };
+
+        co_await broadcast_gather_custom <int> (*m_io_service, nodes, bc_func);
+
     }
 
     coro <void> remove (const uint128_t pointer, const size_t size) {

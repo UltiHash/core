@@ -85,13 +85,7 @@ private:
 
         ospan <char> buffer (buffer_size);
 
-        std::size_t buffer_offset = 0;
-        for(int i = 0; i < addr.size(); i++) {
-            auto frag = addr.get_fragment(i);
-            co_await m_storage.read(buffer.data.get() + buffer_offset, frag.pointer, frag.size);
-            buffer_offset += frag.size;
-        }
-
+        co_await m_storage.read_address(buffer.data.get(), addr);
         m.register_write_buffer(buffer);
         co_await m.send_buffers(DIR_GET_OBJ_RESP);
 
