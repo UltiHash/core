@@ -30,17 +30,16 @@ namespace uh::cluster::rest::http::model
 
     void list_objects_response::populate_response_headers()
     {
-        auto max_keys = m_orig_req.get_URI().get_query_string_value("max-keys");
-        if (!max_keys.empty())
+        auto URI = m_orig_req.get_URI();
+        if (URI.query_string_exists("max-keys"))
         {
-            m_maxKeys = std::stoi(max_keys);
+            m_maxKeys = std::stoi(URI.get_query_string_value("max-keys"));
             m_maxKeysHasBeenSet = true;
         }
 
-        auto marker = m_orig_req.get_URI().get_query_string_value("marker");
-        if (!marker.empty())
+        if (URI.query_string_exists("marker"))
         {
-            m_marker = marker;
+            m_marker = URI.get_query_string_value("marker");
             m_markerHasBeenSet = true;
         }
     }

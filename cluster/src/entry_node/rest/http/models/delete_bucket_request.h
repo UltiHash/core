@@ -8,7 +8,7 @@ namespace uh::cluster::rest::http::model
     class delete_bucket_request : public http_request
     {
     public:
-        explicit delete_bucket_request(const http::request_parser<http::empty_body>&);
+        explicit delete_bucket_request(const http::request_parser<http::empty_body>&, std::unique_ptr<rest::http::URI> uri);
 
         ~delete_bucket_request() override = default;
 

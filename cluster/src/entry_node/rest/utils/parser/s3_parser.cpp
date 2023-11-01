@@ -17,14 +17,14 @@
 #include <entry_node/rest/http/models/list_multi_part_uploads_request.h>
 #include <entry_node/rest/http/models/get_bucket_request.h>
 #include <entry_node/rest/utils/generator/generator.h>
-#include <regex>
+#include "entry_node/rest/http/http_types.h"
 
 namespace uh::cluster::rest::utils::parser {
 
 //------------------------------------------------------------------------------
 
     s3_parser::s3_parser
-            (const http::request_parser<http::empty_body>& recv_req,
+            (const b_http::request_parser<b_http::empty_body>& recv_req,
              rest::utils::ts_unordered_map<std::string, std::shared_ptr<utils::ts_map<uint16_t, std::string>>>& uomap)
             : m_recv_req(recv_req), m_uomap_multipart(uomap)
     {}
@@ -32,127 +32,148 @@ namespace uh::cluster::rest::utils::parser {
     std::unique_ptr<rest::http::http_request>
     s3_parser::parse() const
     {
-        if (m_recv_req.get().base().version() != 11)
-        {
-            throw std::runtime_error("bad http version. support exists only for HTTP 1.1.\n");
-        }
-
         // parse the URI
-        rest::http::URI URI(m_recv_req);
+        std::unique_ptr<rest::http::URI> uri = std::make_unique<rest::http::URI>(m_recv_req);
 
-        auto target = m_recv_req.get().base().target();
-        auto method = m_recv_req.get().base().method();
-
-        // TODO: switch to regex for everything?
-        std::regex bucket(R"(^\/[\w!-._*']+$)");
-        std::regex delete_object(R"(^\/[\w!-._*']+\/[\w!-._*']+(\?versionId=\d+)?$)");
-        std::regex get_object(R"(^\/[\w!-._*']+\/[\w!-._*']+$)");
-        std::regex list_objects(R"(^\/[\w!-._*']+\?[\w!-._*=']+)");
-        std::regex get_bucket(R"(^\/[\w!-._*']+$)");
-        std::regex delete_pattern(R"(^\/[\w!-._*']+\?delete)");
-
-        switch (method)
+        switch (uri->get_http_method())
         {
-            case boost::beast::http::verb::post:
-                if (target.ends_with("?uploads"))
+            case http::http_method::HTTP_POST:
+                if (!uri->get_bucket_id().empty() && !uri->get_object_key().empty())
                 {
-                    auto upload_id = generator::generate_unique_id();
-                    m_uomap_multipart.emplace(upload_id, std::make_shared<utils::ts_map<uint16_t, std::string>>());
+                    if (uri->query_string_exists("uploads"))
+                    {
+                        auto upload_id = generator::generate_unique_id();
+                        m_uomap_multipart.emplace(upload_id, std::make_shared<utils::ts_map<uint16_t, std::string>>());
 
-                    return std::make_unique<rest::http::model::init_multi_part_upload_request>(m_recv_req, upload_id);
-                }
-                else if (target.find("?uploadId="))
-                {
-                    auto upload_id = std::string(target.substr(target.find("uploadId=") + 9));
+                        return std::make_unique<rest::http::model::init_multi_part_upload_request>(m_recv_req, upload_id, std::move(uri));
+                    }
+                    else if (uri->query_string_exists("uploadId"))
+                    {
+                        auto upload_id = uri->get_query_string_value("uploadId");
+                        if (upload_id.empty())
+                            throw std::runtime_error("no upload id given");
 
-                    return std::make_unique<rest::http::model::complete_multi_part_upload_request>(m_recv_req, m_uomap_multipart, upload_id);
+                        return std::make_unique<rest::http::model::complete_multi_part_upload_request>(m_recv_req, m_uomap_multipart, upload_id,  std::move(uri));
+                    }
                 }
-                else if (std::regex_match(std::string(target), delete_pattern))
+                else if (!uri->get_bucket_id().empty() && uri->get_object_key().empty())
                 {
-                    return std::make_unique<rest::http::model::delete_objects_request>(m_recv_req);
+                    if (uri->query_string_exists("delete"))
+                    {
+                        return std::make_unique<rest::http::model::delete_objects_request>(m_recv_req, std::move(uri));
+                    }
                 }
                 else
                 {
                     throw std::runtime_error("unknown request type");
                 }
-            case boost::beast::http::verb::put:
-                if (std::regex_match(std::string(target), bucket))
+            case http::http_method::HTTP_PUT:
+                if (!uri->get_bucket_id().empty() && !uri->get_object_key().empty())
                 {
-                    return std::make_unique<rest::http::model::create_bucket_request>(m_recv_req);
+                    if (uri->get_query_parameters().empty())
+                    {
+                        return std::make_unique<rest::http::model::put_object_request>(m_recv_req,  std::move(uri));
+                    }
+                    else if (uri->query_string_exists("partNumber") && uri->query_string_exists("uploadId"))
+                    {
+                        auto upload_id = uri->get_query_string_value("uploadId");
+                        if (upload_id.empty())
+                            throw std::runtime_error("unknown upload id");
+
+                        auto part_string = uri->get_query_string_value("partNumber");
+                        if (part_string.empty())
+                            throw std::runtime_error("unknown upload id");
+
+                        auto part_number = std::stoi(part_string);
+
+                        auto iterator = m_uomap_multipart.find(upload_id);
+                        if (iterator == m_uomap_multipart.end())
+                            throw std::runtime_error("Invalid Upload ID");
+
+                        return std::make_unique<rest::http::model::multi_part_upload_request>(m_recv_req, *iterator->second, part_number, std::move(uri));
+                    }
                 }
-                else if (!target.empty() && (target.find('?') == std::string::npos))
+                else if (!uri->get_bucket_id().empty() && uri->get_object_key().empty())
                 {
-                    return std::make_unique<rest::http::model::put_object_request>(m_recv_req);
-                }
-                else if (target.find("?partNumber=") && target.find("&uploadId="))
-                {
-
-                    auto upload_id = std::string(target.substr(target.find("uploadId=") + 9, target.find("&partNumber=") - target.find("uploadId=") - 9 ));
-                    auto part_number = std::stoi(std::string(target.substr(target.find("partNumber=") + 11)));
-
-                    auto iterator = m_uomap_multipart.find(upload_id);
-                    if (iterator == m_uomap_multipart.end())
-                        throw std::runtime_error("Invalid Upload ID");
-
-                    return std::make_unique<rest::http::model::multi_part_upload_request>(m_recv_req, *iterator->second, part_number);
+                    if (uri->get_query_parameters().empty())
+                    {
+                        return std::make_unique<rest::http::model::create_bucket_request>(m_recv_req, std::move(uri));
+                    }
                 }
                 else
                 {
                     throw std::runtime_error("unknown request type");
                 }
-            case boost::beast::http::verb::get:
-                if (target == "/")
+            case http::http_method::HTTP_GET:
+                if (!uri->get_bucket_id().empty() && !uri->get_object_key().empty())
                 {
-                    return std::make_unique<rest::http::model::list_buckets_request>(m_recv_req);
+                    if (uri->query_string_exists("attributes"))
+                    {
+                        return std::make_unique<rest::http::model::get_object_attributes_request>(m_recv_req, std::move(uri));
+                    }
+                    else
+                    {
+                        return std::make_unique<rest::http::model::get_object_request>(m_recv_req, std::move(uri));
+                    }
                 }
-                else if (target.find("?uploads") != std::string::npos)
+                else if (!uri->get_bucket_id().empty() && uri->get_object_key().empty())
                 {
-                    return std::make_unique<rest::http::model::list_multi_part_uploads_request>(m_recv_req);
+                    if (uri->query_string_exists("uploads"))
+                    {
+                        return std::make_unique<rest::http::model::list_multi_part_uploads_request>(m_recv_req, std::move(uri));
+                    }
+                    else if (uri->query_string_exists("list-type") && uri->get_query_string_value("list-type") == "2")
+                    {
+                        return std::make_unique<rest::http::model::list_objectsv2_request>(m_recv_req, std::move(uri));
+                    }
+                    else if (uri->get_query_parameters().empty())
+                    {
+                        return std::make_unique<rest::http::model::get_bucket_request>(m_recv_req, std::move(uri));
+                    }
+                    else // TODO: there is conflict between get_bucket_request and list_objects_request if no query string is given
+                    {
+                        return std::make_unique<rest::http::model::list_objects_request>(m_recv_req, std::move(uri));
+                    }
                 }
-                else if (target.find("?attributes") != std::string::npos)
+                else if (uri->get_bucket_id().empty() && uri->get_object_key().empty())
                 {
-                    return std::make_unique<rest::http::model::get_object_attributes_request>(m_recv_req);
-                }
-                else if (target.find("?list-type=2") != std::string::npos )
-                {
-                    return std::make_unique<rest::http::model::list_objectsv2_request>(m_recv_req);
-                }
-                else if ( std::regex_match(std::string(target), list_objects) )
-                {
-                    return std::make_unique<rest::http::model::list_objects_request>(m_recv_req);
-                }
-                else if (std::regex_match(std::string(target), get_object))
-                {
-                    return std::make_unique<rest::http::model::get_object_request>(m_recv_req);
-                }
-                else if (std::regex_match(std::string(target), get_bucket))
-                {
-                    return std::make_unique<rest::http::model::get_bucket_request>(m_recv_req);
+                    return std::make_unique<rest::http::model::list_buckets_request>(m_recv_req, std::move(uri));
                 }
                 else
                 {
                     throw std::runtime_error("unknown request type");
                 }
-            case boost::beast::http::verb::delete_:
-                if (std::regex_match(std::string(target), bucket))
-                {
-                    return std::make_unique<rest::http::model::delete_bucket_request>(m_recv_req);
-                }
-                // TODO: switch to regex since object key might be missing on this
-                else if (std::regex_match(std::string(target), delete_object))
-                {
-                    return std::make_unique<rest::http::model::delete_object_request>(m_recv_req);
-                }
-                else if (target.find("?uploadId="))
-                {
-                    auto upload_id = std::string(target.substr(target.find("uploadId=") + 9));
-                    if (upload_id.empty())
-                        throw std::runtime_error("No upload ID given!");
 
-                    return std::make_unique<rest::http::model::abort_multi_part_upload_request>(m_recv_req, m_uomap_multipart, upload_id);
+            case http::http_method::HTTP_DELETE:
+                if (!uri->get_bucket_id().empty() && !uri->get_object_key().empty())
+                {
+                    if (uri->query_string_exists("uploadId"))
+                    {
+                        auto upload_id = uri->get_query_string_value("uploadId");
+                        if (upload_id.empty())
+                            throw std::runtime_error("No upload ID given!");
+
+                        return std::make_unique<rest::http::model::abort_multi_part_upload_request>(m_recv_req, m_uomap_multipart, upload_id, std::move(uri));
+                    }
+                    else
+                    {
+                        return std::make_unique<rest::http::model::delete_object_request>(m_recv_req, std::move(uri));
+                    }
                 }
+                else if (!uri->get_bucket_id().empty() && uri->get_object_key().empty())
+                {
+                    if (uri->get_query_parameters().empty() )
+                    {
+                        return std::make_unique<rest::http::model::delete_bucket_request>(m_recv_req, std::move(uri));
+                    }
+                }
+                else
+                {
+                    throw std::runtime_error("unknown request type");
+                }
+
             default:
-                throw std::runtime_error("bad http verb.");
+                throw std::runtime_error("bad http method.");
         }
 
     }
