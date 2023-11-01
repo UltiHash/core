@@ -51,7 +51,6 @@ namespace uh::cluster {
                 if(data.size() < m_dedupe_conf.min_fragment_size) {
                     co_await flush();
                 } else {
-                    //TODO: write test case to trigger this edge case
                     auto write_data = data.substr(0, m_cache_available);
                     addr.append_address(co_await write(write_data));
                     data = data.substr(m_cache_available);
@@ -94,7 +93,7 @@ namespace uh::cluster {
                 m_cache_available -= frag_data.size();
                 addr.push_fragment(frag_ptr);
 
-                if(m_cache_available < m_dedupe_conf.min_fragment_size) {
+                if(m_cache_available == 0) {
                     co_await flush();
                 }
             }

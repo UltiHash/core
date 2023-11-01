@@ -169,6 +169,7 @@ namespace uh::cluster {
         void teardown () {
 
             shut_down();
+            sleep(1);
 
             std::filesystem::remove_all(get_root_path());
         }
