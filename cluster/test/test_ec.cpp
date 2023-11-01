@@ -19,7 +19,7 @@
 
 namespace uh::cluster {
 
-/*
+
 BOOST_FIXTURE_TEST_CASE (basic_write_read_test_multiple_nodes_with_ec, cluster_fixture)
 {
     setup(4, 1, 0, XOR);
@@ -612,7 +612,7 @@ BOOST_FIXTURE_TEST_CASE (ec_test_empty_nodes_no_ec, cluster_fixture)
     boost::asio::co_spawn (ioc, [&] () -> coro <void> {co_await get_dedupe_node(0).get_global_data_view().recover();}, boost::asio::use_future);
     ioc.run();
 }
-*/
+
 BOOST_FIXTURE_TEST_CASE (ec_test_chain_of_failures, cluster_fixture)
 {
     setup(30, 1, 0, XOR);

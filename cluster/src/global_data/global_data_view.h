@@ -280,13 +280,18 @@ public:
 
     coro <void> sync (const address& addr) {
 
+
         std::unordered_map <std::shared_ptr <client>, address> node_address_map;
         std::vector <std::shared_ptr <client>> nodes;
 
         for (int i = 0; i < addr.size(); ++i) {
             const auto frag = addr.get_fragment(i);
-            nodes.emplace_back (get_data_node (frag.pointer));
-            node_address_map [nodes.back()].push_fragment(frag);
+            auto n = get_data_node (frag.pointer);
+            auto& node_address = node_address_map [n];
+            if (node_address.empty()) {
+                nodes.emplace_back(std::move (n));
+            }
+            node_address.push_fragment(frag);
         }
 
         auto bc_func = [&] (auto m, int node_id) -> coro <message_type> {

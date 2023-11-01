@@ -45,7 +45,10 @@ public:
         }
 
         ~acquired_messenger() {
+            std::cout << "before push back" << std::endl;
+
             if(!m_moved) {
+                std::cout << "push back" << std::endl;
                 m_messenger->clear_buffers();
                 m_client.get().push_messenger(std::move(m_messenger));
             }
@@ -71,6 +74,7 @@ public:
     }
 
     acquired_messenger acquire_messenger () {
+        std::cout << "remaining messengers " << m_messengers.size() << std::endl;
         std::unique_lock<std::mutex> lk(m);
         m_cv.wait(lk, [this]() { return !m_messengers.empty(); });
         auto messenger = std::move (m_messengers.front());
