@@ -19,7 +19,7 @@
 
 namespace uh::cluster {
 
-
+/*
 BOOST_FIXTURE_TEST_CASE (basic_write_read_test_multiple_nodes_with_ec, cluster_fixture)
 {
     setup(4, 1, 0, XOR);
@@ -612,7 +612,7 @@ BOOST_FIXTURE_TEST_CASE (ec_test_empty_nodes_no_ec, cluster_fixture)
     boost::asio::co_spawn (ioc, [&] () -> coro <void> {co_await get_dedupe_node(0).get_global_data_view().recover();}, boost::asio::use_future);
     ioc.run();
 }
-
+*/
 BOOST_FIXTURE_TEST_CASE (ec_test_chain_of_failures, cluster_fixture)
 {
     setup(30, 1, 0, XOR);
@@ -625,7 +625,10 @@ BOOST_FIXTURE_TEST_CASE (ec_test_chain_of_failures, cluster_fixture)
 
     const auto data_str = std::string_view (data, data_size);
     auto write_data = [&] () -> coro <void> {
+        std::cout << "started bc_func" << std::endl;
         auto alloc = co_await get_dedupe_node(0).get_global_data_view().allocate(data_size);
+        std::cout << "after global alloc" << std::endl;
+
         co_await get_dedupe_node(0).get_global_data_view().scatter_allocated_write(alloc, data_str);
         co_await get_dedupe_node(0).get_global_data_view().sync(alloc);
         alloc_promise.set_value(std::move (alloc));

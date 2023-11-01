@@ -19,7 +19,7 @@ namespace uh::cluster {
         [[nodiscard]] virtual const std::map <uint128_t, std::shared_ptr <client>>& get_ec_node_offset_map () const = 0;
         [[nodiscard]] virtual std::shared_ptr <client> get_ec_node (uint128_t offset) const = 0;
         [[nodiscard]] virtual std::vector <ospan <char>> compute_ec (const std::string_view& data, int data_nodes_count) const = 0;
-        [[nodiscard]] virtual std::vector <ospan <char>> recover (const std::vector <ospan<char>>& data_pieces, int fail_count) const = 0;
+        [[nodiscard]] virtual std::vector <ospan <char>> recover (const std::map <int, ospan<char>>& data_pieces, int fail_count) const = 0;
         virtual ~ec () = default;
     };
 

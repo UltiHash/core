@@ -15,25 +15,47 @@ namespace uh::cluster {
 
 template <typename ResultType, typename Func>
 requires requires (Func& func, client::acquired_messenger& m) {{func(std::move (m), int {})} -> std::same_as <coro <ResultType>>;}
-std::vector <ResultType> broadcast_gather_custom (boost::asio::io_context& ioc, const std::vector <std::shared_ptr <client>> &nodes, Func func) {
+coro <std::map <int, ResultType>> broadcast_gather_custom (boost::asio::io_context& ioc, const std::vector <std::shared_ptr <client>> &nodes, Func func) {
 
-    std::vector <std::future <ResultType>> futures;
-    std::vector <ResultType> results;
+    boost::asio::steady_timer waiter (ioc, boost::asio::steady_timer::clock_type::duration::max ());
+    std::vector <std::unique_ptr <ResultType>> result (nodes.size ());
 
-    futures.reserve (nodes.size());
-    results.reserve (nodes.size());
+    std::cout << "broadcast start" << std::endl;
+    std::atomic <int> responses = 0;
 
     for (int id = 0; id < nodes.size(); id++) {
-        futures.emplace_back (boost::asio::co_spawn(ioc, func (nodes[id].get()->acquire_messenger(), id), boost::asio::use_future));
+        boost::asio::co_spawn(ioc,
+                              [&func, &nodes, &result, &waiter, &responses, id] () -> coro <message_type> {
+                                    std::cout << "start acquire " << id << std::endl;
+                                    auto m = nodes[id]->acquire_messenger();
+                                    std::cout << "start bc func " << id << std::endl;
+                                    result [id] = std::make_unique <ResultType> (co_await func (std::move (m), id));
+                                    std::cout << "end bc func " << id << std::endl;
+                                    auto count = responses.load();
+                                    auto new_val = count + 1;
+                                    while (!responses.compare_exchange_weak (count, new_val)) {
+                                        count = responses.load();
+                                        new_val = count + 1;
+                                    }
+                                    std::cout << "counter " << new_val << " id " << id  << std::endl;
+                                    if (new_val == nodes.size()) {
+                                        std::cout << "waiter canceled " << id << std::endl;
+                                        waiter.expires_at(boost::asio::steady_timer::time_point::min());
+                                    }
+                                    co_return SUCCESS;
+        }, boost::asio::detached);
     }
 
-    std::thread tr ([&results, &futures] {
-        for (auto& f: futures) {
-            results.emplace_back (std::move (f.get()));
-        }});
-    tr.join();
+    std::cout << "before wait" << std::endl;
+    co_await waiter.async_wait(as_tuple(boost::asio::use_awaitable));
+    std::cout << "after wait" << std::endl;
 
-    return results;
+    std::map <int, ResultType> result_map;
+    for (int i = 0; i < result.size(); i++) {
+        result_map.emplace(i, std::move (*result[i].release()));
+    }
+
+    co_return result_map;
 }
 
 template <typename Func>
@@ -41,9 +63,8 @@ requires requires (Func& func, client::acquired_messenger& m) {{func(std::move (
 void broadcast_custom (boost::asio::io_context& ioc, std::vector <std::shared_ptr <client>> &nodes, Func func) {
 
     for (int id = 0; id < nodes.size(); id++) {
-        boost::asio::co_spawn(ioc, func (nodes[id].get()->acquire_messenger(), id), boost::asio::detached);
+        boost::asio::co_spawn(ioc, func(nodes[id].get()->acquire_messenger(), id), boost::asio::detached);
     }
-
 }
 
 } // end namespace uh::cluster

@@ -16,6 +16,7 @@
 #include <condition_variable>
 #include "common/common.h"
 #include "messenger.h"
+#include "common/awaitable_condition_variable.h"
 
 namespace uh::cluster {
 
@@ -71,11 +72,10 @@ public:
 
     acquired_messenger acquire_messenger () {
         std::unique_lock<std::mutex> lk(m);
-        // The only case where a thread might wait.
         m_cv.wait(lk, [this]() { return !m_messengers.empty(); });
         auto messenger = std::move (m_messengers.front());
         m_messengers.pop_front();
-        return {std::move (messenger), std::ref (*this)};
+        return acquired_messenger {std::move (messenger), std::ref (*this)};
     }
 
 private:

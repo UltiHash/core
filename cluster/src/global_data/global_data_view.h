@@ -53,7 +53,7 @@ public:
             throw std::length_error ("");
         }
 
-        const auto size = total_size / m_data_node_offsets.size();
+        const size_t size = total_size / m_data_node_offsets.size();
 
         std::vector <std::shared_ptr <client>> nodes;
         nodes.reserve(m_data_node_offsets.size() + m_ec->get_acquired_ec_node_count());
@@ -65,14 +65,22 @@ public:
         address addr;
         auto bc = [&size] (auto m, auto id) -> coro <address> {
             m.get ().register_write_buffer (size);
+            std::cout << "before alloc " << std::endl;
+
             co_await m.get ().send_buffers (ALLOC_REQ);
+            std::cout << "after alloc " << std::endl;
+
             const auto h = co_await m.get ().recv_header ();
+            std::cout << "after recv header" << std::endl;
+
             auto resp = co_await m.get ().recv_address (h);
+            std::cout << "after recv addr" << std::endl;
+
             co_return std::move (resp.second);
         };
-        const auto resp = broadcast_gather_custom <address> (*m_io_service, nodes, bc);
+        const auto resp = co_await broadcast_gather_custom <address> (*m_io_service, nodes, bc);
         for (const auto& r: resp) {
-            addr.append_address(r);
+            addr.append_address(r.second);
         }
 
         co_return std::move (addr);
@@ -100,7 +108,7 @@ public:
             const auto h = co_await m.get ().recv_header ();
             co_return h.type;
         };
-        const auto resp = broadcast_gather_custom <message_type> (*m_io_service, nodes, bc);
+        const auto resp = co_await broadcast_gather_custom <message_type> (*m_io_service, nodes, bc);
         co_return;
     }
 
@@ -152,7 +160,7 @@ public:
             co_return node_id;
         };
 
-        broadcast_gather_custom <int> (*m_io_service, nodes, bc_func);
+        co_await broadcast_gather_custom <int> (*m_io_service, nodes, bc_func);
 
         co_return;
     }
@@ -179,16 +187,16 @@ public:
             co_return resp.second;
 
         };
-        const auto resp = broadcast_gather_custom <uint128_t> (*m_io_service, nodes, bc_func);
+        const auto resp = co_await broadcast_gather_custom <uint128_t> (*m_io_service, nodes, bc_func);
 
         // assert that only one node has 0 used and the rest have equal positive value
 
         std::map <uint128_t, std::vector <std::shared_ptr <client>>> node_sizes;
         std::map <uint128_t, std::vector <uint128_t>> offset_sizes;
 
-        for (int i = 0; i < resp.size(); i++) {
-            node_sizes [resp[i]].emplace_back (nodes.at(i));
-            offset_sizes [resp[i]].emplace_back (offsets.at(i));
+        for (const auto r: resp) {
+            node_sizes [r.second].emplace_back (nodes.at(r.first));
+            offset_sizes [r.second].emplace_back (offsets.at(r.first));
         }
 
         if (node_sizes.size() == 1) [[likely]] {
@@ -224,7 +232,7 @@ public:
                     }
                     co_return std::move (buf);
                 };
-                const auto response = broadcast_gather_custom <ospan <char>> (*m_io_service, healthy_nodes, read_bc);
+                const auto response = co_await broadcast_gather_custom <ospan <char>> (*m_io_service, healthy_nodes, read_bc);
                 const auto recovered = m_ec->recover(response, static_cast <int> (failed_nodes.size()));
 
                 auto write_bc =  [&recovered] (auto m, int node_id) -> coro <address> {
@@ -238,7 +246,7 @@ public:
                     }
                     co_return resp.second;
                 };
-                const auto recovery_response = broadcast_gather_custom <address> (*m_io_service, failed_nodes, write_bc);
+                const auto recovery_response = co_await broadcast_gather_custom <address> (*m_io_service, failed_nodes, write_bc);
 
                 offset += adjusted_chunk_size;
             }
@@ -289,7 +297,7 @@ public:
             co_return h.type;
         };
 
-        broadcast_gather_custom <message_type> (*m_io_service, nodes, bc_func);
+        co_await broadcast_gather_custom <message_type> (*m_io_service, nodes, bc_func);
         // error checking
 
         co_return;

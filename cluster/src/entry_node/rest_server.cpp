@@ -99,8 +99,6 @@ namespace uh::cluster::rest
 
                 co_await s3_request->read_body(stream, buffer);
 
-                std::cout << s3_request->get_body() << std::endl;
-
                 auto s3_res = co_await m_handler.handle(*s3_request);
 
 

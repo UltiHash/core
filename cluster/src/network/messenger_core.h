@@ -47,8 +47,8 @@ public:
     template <typename T>
     requires (std::is_arithmetic_v <T> or std::is_enum_v <T>)
     inline void register_read_buffer (T& t) {
-        m_read_buffers.emplace_back (&t, sizeof (t));
-        m_read_size += sizeof (t);
+        m_read_buffers.emplace_back (&t, sizeof (T));
+        m_read_size += sizeof (T);
     }
 
     template <typename T>
@@ -75,8 +75,8 @@ public:
     template <typename T>
     requires (std::is_arithmetic_v <T> or std::is_enum_v <T>)
     inline void register_write_buffer (const T& t) {
-        m_write_buffers.emplace_back (&t, sizeof (t));
-        m_write_size += sizeof (t);
+        m_write_buffers.emplace_back (&t, sizeof (T));
+        m_write_size += sizeof (T);
     }
 
     template <typename T>
