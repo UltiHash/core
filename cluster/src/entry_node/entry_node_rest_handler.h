@@ -109,9 +109,9 @@ public:
 
         const auto stop = std::chrono::steady_clock::now ();
         const std::chrono::duration <double> duration = stop - start;
-//        std::cout << "duration " << duration.count() << " s" << std::endl;
+        std::cout << "duration " << duration.count() << " s" << std::endl;
         const auto bandwidth = size_mb / duration.count();
-//        std::cout << "bandwidth " << bandwidth << " MB/s" << std::endl;
+        std::cout << "bandwidth " << bandwidth << " MB/s" << std::endl;
 
         co_return std::move(res);
     }
@@ -321,7 +321,6 @@ public:
             auto m_dir = m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size())).acquire_messenger();
             directory_message dir_req;
             dir_req.bucket_id = req.get_URI().get_bucket_id();
-            std::cout << req.get_URI().get_object_key() << std::endl;
             dir_req.object_key = std::make_unique <std::string> (req.get_URI().get_object_key());
 
             co_await m_dir.get().send_directory_message (DIR_GET_OBJ_REQ, dir_req);

@@ -3,7 +3,8 @@
 namespace uh::cluster::rest::http::model
 {
 
-    list_objects_request::list_objects_request(const http::request_parser<http::empty_body>& recv_req) : http_request(recv_req)
+    list_objects_request::list_objects_request(const http::request_parser<http::empty_body>& recv_req,
+                                               std::unique_ptr<rest::http::URI> uri) : http_request(recv_req, std::move(uri))
     {
         *this = recv_req;
     }
@@ -12,31 +13,27 @@ namespace uh::cluster::rest::http::model
     {
         const auto& header_list = recv_req.get();
 
-        std::string delimiter = m_uri.get_query_string_value("delimiter");
-        if (!delimiter.empty())
+        if (m_uri->query_string_exists("delimiter"))
         {
-            m_delimiter  = std::move(delimiter);
+            m_delimiter  = m_uri->get_query_string_value("delimiter");
             m_delimiterHasBeenSet = true;
         }
 
-        std::string encoding_type = m_uri.get_query_string_value("encoding-type");
-        if (!encoding_type.empty())
+        if (m_uri->query_string_exists("encoding-type"))
         {
-            m_encodingType  = std::move(encoding_type);
+            m_encodingType  = m_uri->get_query_string_value("encoding-type");
             m_encodingTypeHasBeenSet = true;
         }
 
-        std::string max_keys = m_uri.get_query_string_value("max-keys");
-        if (!max_keys.empty())
+        if (m_uri->query_string_exists("max-keys"))
         {
-            m_maxKeys  = std::stoi(max_keys);
+            m_maxKeys  = std::stoi(m_uri->get_query_string_value("max-keys"));
             m_maxKeysHasBeenSet = true;
         }
 
-        std::string prefix = m_uri.get_query_string_value("prefix");
-        if (!prefix.empty())
+        if (m_uri->query_string_exists("prefix"))
         {
-            m_prefix  = std::move(prefix);
+            m_prefix  = m_uri->get_query_string_value("prefix");
             m_prefixHasBeenSet = true;
         }
 

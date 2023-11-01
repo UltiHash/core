@@ -3,7 +3,8 @@
 namespace uh::cluster::rest::http::model
 {
 
-    list_objectsv2_request::list_objectsv2_request(const http::request_parser<http::empty_body>& recv_req) : http_request(recv_req)
+    list_objectsv2_request::list_objectsv2_request(const http::request_parser<http::empty_body>& recv_req,
+                                                   std::unique_ptr<rest::http::URI> uri) : http_request(recv_req, std::move(uri))
     {
         *this = recv_req;
     }
@@ -12,52 +13,45 @@ namespace uh::cluster::rest::http::model
     {
         const auto& header_list = recv_req.get();
 
-        std::string delimiter = m_uri.get_query_string_value("delimiter");
-        if (!delimiter.empty())
+        if (m_uri->query_string_exists("delimiter"))
         {
-            m_delimiter  = std::move(delimiter);
+            m_delimiter  = m_uri->get_query_string_value("delimiter");
             m_delimiterHasBeenSet = true;
         }
 
-        std::string encoding_type = m_uri.get_query_string_value("encoding-type");
-        if (!encoding_type.empty())
+        if (m_uri->query_string_exists("encoding-type"))
         {
-            m_encodingType  = std::move(encoding_type);
+            m_encodingType  = m_uri->get_query_string_value("encoding-type");
             m_encodingTypeHasBeenSet = true;
         }
 
-        std::string max_keys = m_uri.get_query_string_value("max-keys");
-        if (!max_keys.empty())
+        if (m_uri->query_string_exists("max-keys"))
         {
-            m_maxKeys  = std::stoi(max_keys);
+            m_maxKeys  = std::stoi(m_uri->get_query_string_value("max-keys"));
             m_maxKeysHasBeenSet = true;
         }
 
-        std::string prefix = m_uri.get_query_string_value("prefix");
-        if (!prefix.empty())
+        if (m_uri->query_string_exists("prefix"))
         {
-            m_prefix  = std::move(prefix);
+            m_prefix  = m_uri->get_query_string_value("prefix");
             m_prefixHasBeenSet = true;
         }
 
-        std::string continuation_token = m_uri.get_query_string_value("continuation-token");
-        if (!continuation_token.empty())
+        if (m_uri->query_string_exists("continuation-token"))
         {
-            m_continuationToken  = std::move(continuation_token);
+            m_continuationToken  = m_uri->get_query_string_value("continuation-token");
             m_continuationTokenHasBeenSet = true;
         }
 
-        std::string fetch_owner = m_uri.get_query_string_value("fetch-owner");
-        if (!fetch_owner.empty())
+        if (m_uri->query_string_exists("fetch-owner"))
         {
-            m_fetchOwner  = std::move(fetch_owner);
+            m_fetchOwner  = m_uri->get_query_string_value("fetch-owner");
             m_fetchOwnerHasBeenSet = true;
         }
 
-        std::string start_after = m_uri.get_query_string_value("start-after");
-        if (!start_after.empty())
+        if (m_uri->query_string_exists("start-after"))
         {
-            m_startAfter  = std::move(start_after);
+            m_startAfter  = m_uri->get_query_string_value("start-after");
             m_startAfterHasBeenSet = true;
         }
 

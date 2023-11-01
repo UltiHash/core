@@ -3,7 +3,7 @@ project(uh-cluster VERSION 0.1.0)
 message(STATUS "Building ${PROJECT_NAME}...")
 
 set(CMAKE_CXX_STANDARD 20)
-find_package(Boost COMPONENTS unit_test_framework REQUIRED)
+find_package(Boost COMPONENTS unit_test_framework url REQUIRED)
 find_package(OpenSSL REQUIRED)
 
 set(${PROJECT_NAME}_INTERNAL_DEPS uhLibLogging uhLibUtil zpp_bits pugixml)

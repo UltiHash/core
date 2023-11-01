@@ -9,7 +9,7 @@ namespace uh::cluster::rest::http::model
     class create_bucket_request : public http_request
     {
     public:
-        explicit create_bucket_request(const http::request_parser<http::empty_body>&);
+        explicit create_bucket_request(const http::request_parser<http::empty_body>&, std::unique_ptr<rest::http::URI>);
 
         ~create_bucket_request() override = default;
 

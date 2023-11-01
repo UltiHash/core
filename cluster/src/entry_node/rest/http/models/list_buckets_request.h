@@ -8,7 +8,7 @@ namespace uh::cluster::rest::http::model
     class list_buckets_request : public http_request
     {
     public:
-        explicit list_buckets_request(const http::request_parser<http::empty_body>&);
+        explicit list_buckets_request(const http::request_parser<http::empty_body>&, std::unique_ptr<rest::http::URI>);
 
         ~list_buckets_request() override = default;
 

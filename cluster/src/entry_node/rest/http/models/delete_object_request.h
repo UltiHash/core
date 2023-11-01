@@ -8,7 +8,7 @@ namespace uh::cluster::rest::http::model
     class delete_object_request : public http_request
     {
     public:
-        explicit delete_object_request(const http::request_parser<http::empty_body>&);
+        explicit delete_object_request(const http::request_parser<http::empty_body>&, std::unique_ptr<rest::http::URI>);
 
         ~delete_object_request() override = default;
 
