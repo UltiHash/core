@@ -10,7 +10,8 @@ namespace uh::cluster::rest::http::model
     {
     public:
         explicit multi_part_upload_request(const http::request_parser<http::empty_body>&,
-                                           rest::utils::ts_map<uint16_t, std::string>&, uint16_t part_number);
+                                           rest::utils::ts_map<uint16_t, std::string>&, uint16_t part_number,
+                                           std::unique_ptr<rest::http::URI> uri);
 
         ~multi_part_upload_request() override = default;
 

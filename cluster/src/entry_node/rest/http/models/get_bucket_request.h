@@ -8,7 +8,7 @@ namespace uh::cluster::rest::http::model
     class get_bucket_request : public http_request
     {
     public:
-        explicit get_bucket_request(const http::request_parser<http::empty_body>&);
+        explicit get_bucket_request(const http::request_parser<http::empty_body>&, std::unique_ptr<rest::http::URI>);
 
         ~get_bucket_request() override = default;
 

@@ -12,7 +12,7 @@ namespace uh::cluster::rest::http::model
     public:
         complete_multi_part_upload_request(const http::request_parser<http::empty_body>&,
                                                     rest::utils::ts_unordered_map<std::string, std::shared_ptr<utils::ts_map<uint16_t, std::string>>>&,
-                                                    std::string);
+                                                    std::string, std::unique_ptr<rest::http::URI>);
 
         ~complete_multi_part_upload_request() override;
 

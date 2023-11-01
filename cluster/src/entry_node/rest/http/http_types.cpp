@@ -27,7 +27,7 @@ namespace uh::cluster::rest::http
         }
     }
 
-    http_method get_http_method_from_name(boost::beast::http::verb method)
+    http_method get_http_method_from_beast(boost::beast::http::verb method)
     {
         switch (method)
         {
