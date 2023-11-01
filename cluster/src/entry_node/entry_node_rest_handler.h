@@ -326,7 +326,6 @@ public:
             co_await m_dir.get().send_directory_message (DIR_GET_OBJ_REQ, dir_req);
             const auto h_dir = co_await m_dir.get().recv_header();
 
-
             ospan <char> buffer (h_dir.size);
             std::string msg;
 

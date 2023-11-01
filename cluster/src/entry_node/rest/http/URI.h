@@ -6,7 +6,7 @@
 #include <boost/asio.hpp>
 #include <map>
 #include <boost/url/decode_view.hpp>
-#include <boost/url/url.hpp>
+#include <boost/url/url_view.hpp>
 #include "http_types.h"
 
 namespace uh::cluster::rest::http
@@ -66,7 +66,7 @@ namespace uh::cluster::rest::http
         http_method m_method;
         std::string m_bucket_id {};
         std::string m_object_key {};
-        boost::urls::url m_url;
+        boost::urls::url_view m_url;
         std::map<std::string, std::string> m_query_parameters;
     };
 

@@ -1,5 +1,6 @@
 #include "URI.h"
 #include <regex>
+#include <boost/url/parse.hpp>
 #include "entry_node/rest/utils/string/string_utils.h"
 
 namespace uh::cluster::rest::http
@@ -45,21 +46,12 @@ namespace uh::cluster::rest::http
 
         auto target = m_req.get().target();
 
-        auto query_index = target.find('?');
-
-        if (query_index != std::string::npos)
+        auto ru = boost::urls::parse_origin_form(target);
+        if (ru.has_error())
         {
-            // extract query string
-            m_url.set_encoded_query(target.substr(query_index + 1));
-
-            // extract path
-            m_url.set_encoded_path(target.substr(0, query_index));
+            throw std::runtime_error("error parsing the http request");
         }
-        else
-        {
-            // extract path
-            m_url.set_encoded_path(target.substr(0));
-        }
+        m_url = ru.value();
 
         extract_and_set_bucket_id_and_object_key();
         extract_and_set_query_parameters();
@@ -119,7 +111,7 @@ namespace uh::cluster::rest::http
             if (m_bucket_id.empty())
                 m_bucket_id = seg;
             else
-                m_object_key = seg + '/';
+                m_object_key += seg + '/';
         }
 
         if (!m_object_key.empty())
