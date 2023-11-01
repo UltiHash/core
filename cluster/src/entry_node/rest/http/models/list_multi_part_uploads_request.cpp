@@ -3,7 +3,8 @@
 namespace uh::cluster::rest::http::model
 {
 
-    list_multi_part_uploads_request::list_multi_part_uploads_request(const http::request_parser<http::empty_body>& recv_req) : http_request(recv_req)
+    list_multi_part_uploads_request::list_multi_part_uploads_request(const http::request_parser<http::empty_body>& recv_req,
+                                                                     std::unique_ptr<rest::http::URI> uri) : http_request(recv_req, std::move(uri))
     {
         *this = recv_req;
     }
@@ -12,42 +13,42 @@ namespace uh::cluster::rest::http::model
     {
         const auto& header_list = recv_req.get();
 
-        std::string delimiter = m_uri.get_query_string_value("delimiter");
+        std::string delimiter = m_uri->get_query_string_value("delimiter");
         if (!delimiter.empty())
         {
             m_delimiter  = std::move(delimiter);
             m_delimiterHasBeenSet = true;
         }
 
-        std::string encoding_type = m_uri.get_query_string_value("encoding-type");
+        std::string encoding_type = m_uri->get_query_string_value("encoding-type");
         if (!encoding_type.empty())
         {
             m_encodingType  = std::move(encoding_type);
             m_encodingTypeHasBeenSet = true;
         }
 
-        std::string key_marker = m_uri.get_query_string_value("key-marker");
+        std::string key_marker = m_uri->get_query_string_value("key-marker");
         if (!key_marker.empty())
         {
             m_keyMarker = std::move(key_marker);
             m_keyMarkerHasBeenSet = true;
         }
 
-        std::string max_uploads = m_uri.get_query_string_value("max-uploads");
+        std::string max_uploads = m_uri->get_query_string_value("max-uploads");
         if (!max_uploads.empty())
         {
             m_maxUploads  = std::stoi(max_uploads);
             m_maxUploadsHasBeenSet = true;
         }
 
-        std::string prefix = m_uri.get_query_string_value("prefix");
+        std::string prefix = m_uri->get_query_string_value("prefix");
         if (!prefix.empty())
         {
             m_prefix  = std::move(prefix);
             m_prefixHasBeenSet = true;
         }
 
-        std::string upload_id = m_uri.get_query_string_value("upload-id-marker");
+        std::string upload_id = m_uri->get_query_string_value("upload-id-marker");
         if (!upload_id.empty())
         {
             m_uploadIdMarker  = std::move(upload_id);

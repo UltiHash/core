@@ -3,7 +3,8 @@
 namespace uh::cluster::rest::http::model
 {
 
-    get_bucket_request::get_bucket_request(const http::request_parser<http::empty_body> & recv_req) : http_request(recv_req)
+    get_bucket_request::get_bucket_request(const http::request_parser<http::empty_body> & recv_req,
+                                           std::unique_ptr<rest::http::URI> uri) : http_request(recv_req, std::move(uri))
     {
         // parse and set the received request parameters
         *this = recv_req;

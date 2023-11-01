@@ -3,7 +3,8 @@
 namespace uh::cluster::rest::http::model
 {
 
-    delete_objects_request::delete_objects_request(const http::request_parser<http::empty_body>& recv_req) : http_request(recv_req)
+    delete_objects_request::delete_objects_request(const http::request_parser<http::empty_body>& recv_req,
+                                                   std::unique_ptr<rest::http::URI> uri) : http_request(recv_req, std::move(uri))
     {
         *this = recv_req;
     }
