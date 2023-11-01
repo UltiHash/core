@@ -65,17 +65,9 @@ public:
         address addr;
         auto bc = [&size] (auto m, auto id) -> coro <address> {
             m.get ().register_write_buffer (size);
-            std::cout << "before alloc " << std::endl;
-
             co_await m.get ().send_buffers (ALLOC_REQ);
-            std::cout << "after alloc " << std::endl;
-
             const auto h = co_await m.get ().recv_header ();
-            std::cout << "after recv header" << std::endl;
-
             auto resp = co_await m.get ().recv_address (h);
-            std::cout << "after recv addr" << std::endl;
-
             co_return std::move (resp.second);
         };
         const auto resp = co_await broadcast_gather_custom <address> (*m_io_service, nodes, bc);

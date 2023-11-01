@@ -34,21 +34,18 @@ public:
                     break;
                 case SYNC_REQ:
                     co_await handle_sync(m, message_header);
-                    std::cout << "handle sync end" << std::endl;
                     break;
                 case USED_REQ:
                     co_await handle_get_used(m, message_header);
                     break;
                 case ALLOC_REQ:
                     co_await handle_alloc (m, message_header);
-                    std::cout << "handle alloc end" << std::endl;
                     break;
                 case DEALLOC_REQ:
                     co_await handle_dealloc (m, message_header);
                     break;
                 case ALLOC_WRITE_REQ:
                     co_await handle_alloc_write (m, message_header);
-                    std::cout << "handle alloc write end" << std::endl;
                     break;
                 case STOP:
                     m_is_stopped = true;

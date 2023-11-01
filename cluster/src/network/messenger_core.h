@@ -8,7 +8,6 @@
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/awaitable.hpp>
 #include <list>
-#include <common/awaitable_future.h>
 
 
 namespace uh::cluster {

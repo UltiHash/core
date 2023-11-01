@@ -625,10 +625,7 @@ BOOST_FIXTURE_TEST_CASE (ec_test_chain_of_failures, cluster_fixture)
 
     const auto data_str = std::string_view (data, data_size);
     auto write_data = [&] () -> coro <void> {
-        std::cout << "started bc_func" << std::endl;
         auto alloc = co_await get_dedupe_node(0).get_global_data_view().allocate(data_size);
-        std::cout << "after global alloc" << std::endl;
-
         co_await get_dedupe_node(0).get_global_data_view().scatter_allocated_write(alloc, data_str);
         co_await get_dedupe_node(0).get_global_data_view().sync(alloc);
         alloc_promise.set_value(std::move (alloc));
