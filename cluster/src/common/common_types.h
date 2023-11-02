@@ -132,6 +132,8 @@ struct directory_message {
     zpp::bits::optional_ptr <std::string> object_key_prefix;
     zpp::bits::optional_ptr <std::string> object_key_lower_bound;
     zpp::bits::optional_ptr<address> addr;
+
+    auto operator <=>(const directory_message& rhs) const = default;
 };
 
 struct directory_lst_entities_message {

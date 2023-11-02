@@ -19,7 +19,7 @@
 
 namespace uh::cluster {
 
-BOOST_FIXTURE_TEST_CASE (basic_write_read_test_multiple_nodes_with_ec, cluster_fixture)
+BOOST_FIXTURE_TEST_CASE (ec_basic_write_read_test_multiple_nodes_with_ec, cluster_fixture)
 {
     setup(4, 1, 0, XOR);
     BOOST_TEST (get_dedupe_node(0).get_global_data_view().get_data_node_count() == 3);
@@ -68,7 +68,7 @@ BOOST_FIXTURE_TEST_CASE (basic_write_read_test_multiple_nodes_with_ec, cluster_f
 
 }
 
-BOOST_FIXTURE_TEST_CASE (basic_write_read_test_single_node_without_ec, cluster_fixture)
+BOOST_FIXTURE_TEST_CASE (ec_basic_write_read_test_single_node_without_ec, cluster_fixture)
 {
     setup(1, 1, 0, NON);
 
@@ -121,7 +121,7 @@ BOOST_FIXTURE_TEST_CASE (basic_write_read_test_single_node_without_ec, cluster_f
 
 }
 
-BOOST_FIXTURE_TEST_CASE (basic_write_read_test_multiple_nodes_without_ec, cluster_fixture)
+BOOST_FIXTURE_TEST_CASE (ec_basic_write_read_test_multiple_nodes_without_ec, cluster_fixture)
 {
     setup(7, 1, 0, XOR);
     BOOST_TEST (get_dedupe_node(0).get_global_data_view().get_data_node_count() == 6);
@@ -169,12 +169,12 @@ BOOST_FIXTURE_TEST_CASE (basic_write_read_test_multiple_nodes_without_ec, cluste
 
 }
 
-BOOST_FIXTURE_TEST_CASE (exception_test_single_node_with_ec, cluster_fixture)
+BOOST_FIXTURE_TEST_CASE (ec_exception_test_single_node_with_ec, cluster_fixture)
 {
     BOOST_CHECK_THROW (setup(1, 1, 0, XOR), std::exception);
 }
 
-BOOST_FIXTURE_TEST_CASE (exception_test_non_divisible_data_size, cluster_fixture)
+BOOST_FIXTURE_TEST_CASE (ec_exception_test_non_divisible_data_size, cluster_fixture)
 {
     setup(7, 1, 0, XOR);
     BOOST_TEST (get_dedupe_node(0).get_global_data_view().get_data_node_count() == 6);

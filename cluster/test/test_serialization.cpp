@@ -17,7 +17,7 @@ namespace uh::cluster {
 
 // ---------------------------------------------------------------------
 
-BOOST_AUTO_TEST_CASE (directory_request_serialization) {
+BOOST_AUTO_TEST_CASE (serialization_directory_request_test) {
 
     directory_message msg_orig;
     msg_orig.bucket_id = "very_important_data";
@@ -34,7 +34,7 @@ BOOST_AUTO_TEST_CASE (directory_request_serialization) {
     zpp::bits::in{serData}(msg_deserialized).or_throw();
 
 
-    //BOOST_CHECK(msg_orig == msg_deserialized);
+    BOOST_CHECK(msg_orig == msg_deserialized);
 
 }
 
