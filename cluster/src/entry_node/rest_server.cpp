@@ -1,9 +1,11 @@
+#include <common/log.h>
 #include "rest_server.h"
 #include "rest/utils/parser/s3_parser.h"
 #include <fstream>
 #include <filesystem>
 #include "entry_node/rest/utils/string/string_utils.h"
 #include "rest/http/models/generic_error_response.h"
+
 
 namespace uh::cluster::rest
 {
@@ -27,7 +29,7 @@ namespace uh::cluster::rest
                                       }
                                       catch(std::exception & e)
                                       {
-                                          std::cerr << "Error in acceptor: " << e.what() << "\n";
+                                        LOG_ERROR() << "acceptor failed: " << e.what();
                                       }
                               });
     }
@@ -37,7 +39,7 @@ namespace uh::cluster::rest
     void
     rest_server::run()
     {
-        std::cout << "starting server" << std::endl;
+        LOG_INFO() << "starting server";
 
         for(auto i = 0 ; i < m_config.threads - 1 ; i++)
             m_thread_container.emplace_back(
@@ -53,7 +55,7 @@ namespace uh::cluster::rest
 
     net::awaitable<void>
     rest_server::do_session(tcp_stream stream) {
-        std::cout << "connection from: " << stream.socket().remote_endpoint() << std::endl;
+        LOG_INFO() << "connection from: " << stream.socket().remote_endpoint();
 
         beast::error_code ec;
 
@@ -69,7 +71,7 @@ namespace uh::cluster::rest
 
                 co_await b_http::async_read_header(stream, buffer, received_request, net::use_awaitable);
                 // log this to debug
-                std::cout << received_request.get().base() << std::endl;
+                LOG_DEBUG() << received_request.get().base();
 
                 rest::utils::parser::s3_parser s3_parser(received_request, m_uomap_multipart);
                 auto s3_request = s3_parser.parse();
@@ -141,7 +143,7 @@ namespace uh::cluster::rest
                             }
                             catch (const std::exception &e)
                             {
-                                std::cout << "Error in session: [" << conn_address << ":" << conn_port << "] " << e.what() << "\n";
+                                LOG_ERROR() << "in session: [" << conn_address << ":" << conn_port << "] " << e.what();
                             }
                     });
         }

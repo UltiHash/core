@@ -185,6 +185,7 @@
 #include "global_data.h"
 #include "paged_redblack_tree.h"
 #include "dedupe_node_handler.h"
+#include <common/log.h>
 
 namespace uh::cluster {
     class dedupe_node {
@@ -204,7 +205,7 @@ namespace uh::cluster {
         }
 
         void run() {
-            std::cout << "hello from " << m_job_name << std::endl;
+            LOG_INFO() << "starting " << m_job_name;
             m_server.run();
         }
 
