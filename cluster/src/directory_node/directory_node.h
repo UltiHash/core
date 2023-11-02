@@ -7,6 +7,7 @@
 
 #include <functional>
 #include <iostream>
+#include <common/log.h>
 #include "common/cluster_config.h"
 #include "directory_node_handler.h"
 
@@ -29,7 +30,7 @@ public:
     }
 
     void run() {
-        std::cout << "hello from " << m_job_name << std::endl;
+        LOG_INFO() << "starting " << m_job_name;
         m_server.run();
     }
 

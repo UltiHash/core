@@ -10,6 +10,10 @@
 #include "entry_node/entry_node.h"
 #include "network/cluster_map.h"
 
+#include <config.h>
+#include <common/log.h>
+
+
 uh::cluster::entry_node_config make_entry_node_config () {
     return {
         .internal_server_conf = {
@@ -92,21 +96,25 @@ void execute_role (const uh::cluster::role role, const int id, uh::cluster::clus
 
     switch (role) {
         case uh::cluster::DATA_NODE: {
+            LOG_INFO() << "starting data node";
             uh::cluster::data_node dn (id, std::move (cmap));
             dn.run();
             break;
         }
         case uh::cluster::DEDUPE_NODE: {
+            LOG_INFO() << "starting dedupe node";
             uh::cluster::dedupe_node dd (id, std::move (cmap));
             dd.run();
             break;
         }
         case uh::cluster::DIRECTORY_NODE: {
+            LOG_INFO() << "starting directory node";
             uh::cluster::directory_node pb (id, std::move (cmap));
             pb.run();
             break;
         }
         case uh::cluster::ENTRY_NODE: {
+            LOG_INFO() << "starting entry node";
             uh::cluster::entry_node en (id, std::move(cmap));
             en.run();
             break;
@@ -149,6 +157,22 @@ int main (int argc, char* args[]) {
     if (argc != 3) {
         throw std::invalid_argument("Usage: uh-cluster <role> <id>");
     }
+
+    uh::log::config lc {
+        .sinks = {
+            uh::log::sink_config {
+                .type = uh::log::sink_type::cout
+            },
+            uh::log::sink_config {
+                .type = uh::log::sink_type::file,
+                .filename = "log.log"
+            }
+        }
+    };
+
+    uh::log::init(lc);
+    LOG_INFO() << "starting " << PROJECT_NAME << " " << PROJECT_VERSION;
+
     const auto role_str = std::string_view(args[1]);   // en, dd, dr, dn
     char* end;
     const auto id = static_cast <int> (std::strtol(args[2], &end, 10));
@@ -159,5 +183,4 @@ int main (int argc, char* args[]) {
     uh::cluster::cluster_map cmap = init_cluster_map (role, id, cluster_conf);
 
     execute_role (role, id, std::move (cmap));
-
 }

@@ -8,6 +8,7 @@
 #include <iostream>
 #include <memory>
 #include "common/protocol_handler.h"
+#include <common/log.h>
 #include "network/client.h"
 #include "entry_node/rest/http/http_request.h"
 #include "entry_node/rest/http/http_response.h"
@@ -109,9 +110,9 @@ public:
 
         const auto stop = std::chrono::steady_clock::now ();
         const std::chrono::duration <double> duration = stop - start;
-        std::cout << "duration " << duration.count() << " s" << std::endl;
+        LOG_INFO() << "duration " << duration.count() << " s";
         const auto bandwidth = size_mb / duration.count();
-        std::cout << "bandwidth " << bandwidth << " MB/s" << std::endl;
+        LOG_INFO() << "bandwidth " << bandwidth << " MB/s";
 
         co_return std::move(res);
     }
@@ -139,7 +140,7 @@ public:
         }
         catch(const std::exception& e)
         {
-            std::cout << "ERROR: " << e.what() << std::endl;
+            LOG_ERROR() << e.what();
             res->set_error();
         }
 
@@ -172,7 +173,7 @@ public:
         }
         catch (const std::exception& e)
         {
-            std::cout << "ERROR: " << e.what() << std::endl;
+            LOG_ERROR() << e.what();
             res->set_error(boost::beast::http::response<boost::beast::http::string_body>{boost::beast::http::status::not_found, 11});
         }
 
@@ -213,7 +214,7 @@ public:
         }
         catch (const std::exception& e)
         {
-            std::cout << "ERROR: " << e.what() << std::endl;
+            LOG_ERROR() << e.what();
             res->set_error(boost::beast::http::response<boost::beast::http::string_body>{boost::beast::http::status::not_found, 11});
         }
 
@@ -251,7 +252,7 @@ public:
         }
         catch (const std::exception& e)
         {
-            std::cout << "ERROR: " << e.what() << std::endl;
+            LOG_ERROR() << e.what();
             res->set_error(boost::beast::http::response<boost::beast::http::string_body>{boost::beast::http::status::not_found, 11});
         }
 
@@ -303,7 +304,7 @@ public:
         }
         catch(const std::exception& e)
         {
-            std::cout << "ERROR: " << e.what() << std::endl;
+            LOG_ERROR() << e.what();
             res->set_error(boost::beast::http::response<boost::beast::http::string_body>{boost::beast::http::status::not_found, 11});
         }
 
@@ -351,7 +352,7 @@ public:
         }
         catch (const std::exception& e)
         {
-            std::cout << "ERROR: " << e.what() << std::endl;
+            LOG_ERROR() << e.what();
             res->set_error(boost::beast::http::response<boost::beast::http::string_body>{boost::beast::http::status::not_found, 11});
         }
 
@@ -404,7 +405,6 @@ public:
                     msg.resize(h_dir.size);
                     m_dir.get().register_read_buffer(msg);
                     co_await m_dir.get().recv_buffers(h_dir);
-                    std::cout << msg << std::endl;
                     throw std::runtime_error("Failed to list objects of bucket: " + dir_req.bucket_id + "\n" + "Error: \n" + msg);
 
                 default:
@@ -414,10 +414,11 @@ public:
         }
         catch(const std::exception &e)
         {
+            LOG_ERROR() << e.what();
             res->set_error(boost::beast::http::response<boost::beast::http::string_body>{boost::beast::http::status::internal_server_error, 11});
         }
 
-        std::cout << res->get_response_specific_object() << std::endl;
+        LOG_INFO() << res->get_response_specific_object();
 
         co_return std::move(res);
     }
@@ -467,10 +468,11 @@ public:
         }
         catch(const std::exception &e)
         {
+            LOG_ERROR() << e.what();
             res->set_error(boost::beast::http::response<boost::beast::http::string_body>{boost::beast::http::status::internal_server_error, 11});
         }
 
-        std::cout << res->get_response_specific_object() << std::endl;
+        LOG_INFO() << res->get_response_specific_object();
 
         co_return std::move(res);
     }
@@ -486,7 +488,7 @@ public:
         }
         catch(const std::exception& e)
         {
-            std::cout << "ERROR: " << e.what() << std::endl;
+            LOG_ERROR() << e.what();
             res->set_error();
         }
 
@@ -504,7 +506,7 @@ public:
         }
         catch(const std::exception& e)
         {
-            std::cout << "ERROR: " << e.what() << std::endl;
+            LOG_ERROR() << e.what();
             res->set_error();
         }
 
@@ -556,7 +558,7 @@ public:
         }
         catch(const std::exception& e)
         {
-            std::cout << "ERROR: " << e.what() << std::endl;
+            LOG_ERROR() << e.what();
             res->set_error();
         }
 
@@ -572,7 +574,7 @@ public:
         }
         catch(const std::exception& e)
         {
-            std::cout << "ERROR: " << e.what() << std::endl;
+            LOG_ERROR() << e.what();
             res->set_error();
         }
 
