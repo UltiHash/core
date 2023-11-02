@@ -351,7 +351,7 @@ private:
             throw std::out_of_range ("The given data offset could not be found in this data store");
         }
         const auto [file_offset, fd] = *std::prev (pfd);
-        const auto seek = static_cast <long> (pointer - file_offset);
+        const auto seek = pointer - file_offset;
 
         return {fd, seek};
     }
