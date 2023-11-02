@@ -78,7 +78,7 @@ address data_store::write(std::span<char> data) {
              written < partial_alloc.size;
              written += ::write(partial_alloc.fd, data.data() + offset + written, partial_alloc.size - written));
         offset += partial_alloc.size;
-        data_address.insert_fragment(index ++, fragment (partial_alloc.global_offset, partial_alloc.size));
+        data_address.insert_fragment(index ++, fragment {.pointer = partial_alloc.global_offset, .size = partial_alloc.size});
     }
 
     m_free_spot_manager.apply_popped_items();
@@ -216,7 +216,7 @@ std::pair<int, long> data_store::get_file_offset_pair(uint128_t pointer) const {
         throw std::out_of_range ("The given data offset could not be found in this data store");
     }
     const auto [file_offset, fd] = *std::prev (pfd);
-    const auto seek = static_cast <long> ((pointer - file_offset).get_low ());
+    const auto seek = (pointer - file_offset).get_low ();
 
     return {fd, seek};
 }
