@@ -44,6 +44,9 @@ namespace uh::cluster::rest::http::model
         bool m_commonPrefixesHasBeenSet = false;
         std::vector<std::string> m_commonPrefixes;
 
+        bool m_fetchOwnerHasBeenSet = false;
+        std::string m_fetchOwner;
+
         bool m_encodingTypeHasBeenSet = false;
         std::string m_encodingType;
 

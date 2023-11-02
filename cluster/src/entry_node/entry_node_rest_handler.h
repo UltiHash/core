@@ -413,7 +413,7 @@ public:
         }
         catch(const std::exception &e)
         {
-            res->set_error(boost::beast::http::response<boost::beast::http::string_body>{boost::beast::http::status::internal_server_error, 11});
+            res->set_error(boost::beast::http::response<boost::beast::http::string_body>{boost::beast::http::status::not_found, 11});
         }
 
         std::cout << res->get_response_specific_object() << std::endl;

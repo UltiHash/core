@@ -30,6 +30,18 @@ namespace uh::cluster::rest::utils
         return ( strcmp(string1, string2) == 0 );
     }
 
+    bool string_utils::is_bool(const std::string& str_to_eval)
+    {
+        if (str_to_eval == "true" || str_to_eval == "TRUE" || str_to_eval == "True")
+        {
+            return true;
+        }
+        else
+        {
+            return false;
+        }
+    }
+
     std::string string_utils::URL_encode(const std::string& str_to_encode)
     {
         auto encoded_string = boost::urls::encode(str_to_encode, custom_unreserved_chars);

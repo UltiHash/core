@@ -37,7 +37,6 @@ namespace uh::cluster::rest::http::model
         if (URI.query_string_exists("max-keys"))
         {
             m_maxKeys = std::stoi(URI.get_query_string_value("max-keys"));
-//            m_maxKeysHasBeenSet = true; max keys is always set
         }
 
         if (URI.query_string_exists("start-after"))
@@ -47,11 +46,26 @@ namespace uh::cluster::rest::http::model
                 m_startAfterHasBeenSet = true;
         }
 
+        if (URI.query_string_exists("continuation-token"))
+        {
+            m_continuationToken = URI.get_query_string_value("continuation-token");
+            m_continuationTokenHasBeenSet = true;
+        }
+
         if (URI.query_string_exists("prefix"))
         {
             m_prefix = URI.get_query_string_value("prefix");
-            if (!m_prefix.empty())
-                m_prefixHasBeenSet = true;
+            m_prefixHasBeenSet = true;
+        }
+
+        if (URI.query_string_exists("fetch-owner"))
+        {
+            m_fetchOwner = URI.get_query_string_value("fetch-owner");
+            if (!m_fetchOwner.empty())
+            {
+                if (rest::utils::string_utils::is_bool(m_fetchOwner))
+                    m_fetchOwnerHasBeenSet = true;
+            }
         }
 
         if (URI.query_string_exists("delimiter"))
@@ -83,7 +97,7 @@ namespace uh::cluster::rest::http::model
             m_res.set("x-amz-request-charged", m_requestCharged);
         }
 
-        if (m_prefixHasBeenSet)
+        if (m_prefixHasBeenSet && !m_prefix.empty())
         {
             std::vector<std::string> filtered_by_prefix;
             std::copy_if(m_contents.begin(), m_contents.end(), std::back_inserter(filtered_by_prefix),
@@ -98,9 +112,8 @@ namespace uh::cluster::rest::http::model
 
         size_t till_marker_count = 0;
         int counter = 0;
-        if (m_contentsHasBeenSet)
+        if (m_contentsHasBeenSet && m_maxKeys != 0 )
         {
-
             auto content_itr = m_contents.begin();
             if (m_startAfterHasBeenSet)
             {
@@ -134,7 +147,8 @@ namespace uh::cluster::rest::http::model
                 else
                 {
                     content_xml_string += "<Contents>\n"
-                                          "<Key>" + (m_encodingTypeHasBeenSet ? rest::utils::string_utils::URL_encode(*content_itr) : *content_itr) + "</Key>\n"
+                                          "<Key>" + (m_encodingTypeHasBeenSet ? rest::utils::string_utils::URL_encode(*content_itr) : *content_itr) + "</Key>\n" +
+                                          (m_fetchOwnerHasBeenSet ? "<Owner>no-owner-support</Owner>" : "" ) +
                                           "</Contents>\n";
 
                     counter++;
@@ -169,7 +183,7 @@ namespace uh::cluster::rest::http::model
             name_xml_string += "<Name>" + m_name + "</Name>\n";
         }
 
-        if (m_contents.size() - till_marker_count > m_maxKeys)
+        if (m_contents.size() - till_marker_count > m_maxKeys && m_maxKeys != 0 )
             m_isTruncated = "true";
 
         std::string max_keys_xml_string = "<MaxKeys>" + std::to_string(m_maxKeys) + "</MaxKeys>\n";
@@ -180,21 +194,36 @@ namespace uh::cluster::rest::http::model
             encoding_type_xml_string = "<EncodingType>" + m_encodingType + "</EncodingType>\n";
         }
 
+        std::string continuation_token_xml_string;
+        if (m_continuationTokenHasBeenSet)
+        {
+            continuation_token_xml_string = "<ContinuationToken>" + m_continuationToken + "</ContinuationToken>\n";
+        }
+
         std::string start_after_xml_string;
         if (m_startAfterHasBeenSet)
         {
-            encoding_type_xml_string = "<StartAfter>" + (m_encodingTypeHasBeenSet ? rest::utils::string_utils::URL_encode(m_startAfter) : m_startAfter ) + "</StartAfter>\n";
+//            (m_encodingTypeHasBeenSet ? rest::utils::string_utils::URL_encode(m_startAfter) : m_startAfter )
+            encoding_type_xml_string = "<StartAfter>" + m_startAfter + "</StartAfter>\n";
+        }
+
+        std::string prefix_xml_string;
+        if (m_prefixHasBeenSet)
+        {
+            prefix_xml_string = "<Prefix>" + (m_encodingTypeHasBeenSet ? rest::utils::string_utils::URL_encode(m_prefix) : m_prefix ) + "</Prefix>\n";
         }
 
         set_body(std::string("<ListBucketResult>\n"
                              "<IsTruncated>" + m_isTruncated + "</IsTruncated>\n" +
                               content_xml_string +
                               name_xml_string +
+                              prefix_xml_string +
                               delimiter_xml_string +
                               max_keys_xml_string +
                               common_prefixes_xml_string +
                               encoding_type_xml_string +
                               key_count_xml +
+                              continuation_token_xml_string +
                               start_after_xml_string +
                               "</ListBucketResult>"));
 
