@@ -105,6 +105,7 @@ public:
                 {&h.type, sizeof h.type},
                 {&h.size, sizeof h.size}
         };
+
         co_await boost::asio::async_read (m_socket, buffers, boost::asio::as_tuple(boost::asio::use_awaitable));
 
         co_return h;
@@ -114,6 +115,7 @@ public:
         if (h.size != m_read_size) [[unlikely]] {
             throw std::length_error ("The size of the buffers does not match with the header size!");
         }
+
         co_await boost::asio::async_read (m_socket, m_read_buffers, boost::asio::as_tuple(boost::asio::use_awaitable));
 
         m_read_buffers.clear();
