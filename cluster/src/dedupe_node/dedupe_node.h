@@ -204,6 +204,7 @@ namespace uh::cluster {
 
         void run() override {
             LOG_INFO() << "starting " << m_job_name;
+            m_storage.create_data_node_connections(m_server.get_executor(), m_cluster_map.m_cluster_conf.dedupe_node_conf.data_node_connection_count, m_use_id_as_port_offset);
             m_server.run();
         }
 

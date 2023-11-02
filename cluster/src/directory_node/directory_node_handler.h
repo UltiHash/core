@@ -35,6 +35,7 @@ public:
                     break;
                 case RECOVER_REQ:
                     co_await handle_recovery (m, message_header);
+                    break;
                 case DIR_LIST_BUCKET_REQ:
                     co_await handle_list_buckets(m, message_header);
                     break;

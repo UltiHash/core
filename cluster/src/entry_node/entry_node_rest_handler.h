@@ -50,8 +50,6 @@ public:
         auto body_size = req.get_body_size();
         const auto size_mb = static_cast <double> (body_size) / static_cast <double> (1024ul * 1024ul);
 
-
-
         std::unique_ptr<http::http_response> res;
 
         switch (req.get_request_name())
@@ -107,12 +105,6 @@ public:
             default:
                 throw std::runtime_error("request not supported by the backend yet.");
         }
-
-        const auto stop = std::chrono::steady_clock::now ();
-        const std::chrono::duration <double> duration = stop - start;
-        LOG_INFO() << "duration " << duration.count() << " s";
-        const auto bandwidth = size_mb / duration.count();
-        LOG_INFO() << "bandwidth " << bandwidth << " MB/s";
 
         co_return std::move(res);
     }
@@ -274,9 +266,6 @@ public:
             const auto h_dedup = co_await m_dedup.get().recv_header();
             auto resp = co_await m_dedup.get().recv_dedupe_response(h_dedup);
 
-            auto effective_size = static_cast <double> (resp.second.effective_size) / static_cast <double> (1024ul * 1024ul);
-            auto space_saving = 1.0 - static_cast <double> (resp.second.effective_size) / static_cast <double> (body_size);
-
             auto m_dir = m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size())).acquire_messenger();
             const directory_message dir_req
                     {
@@ -353,8 +342,8 @@ public:
             const std::chrono::duration <double> duration = stop - start;
             const auto size = h_dir.size / static_cast <double> (1024ul * 1024ul);
             const auto bandwidth = size / duration.count();
-            LOG_INFO() << "duration " << duration.count() << " s";
-            LOG_INFO() << "bandwidth " << bandwidth << " MB/s";
+            LOG_INFO() << "retrieval duration " << duration.count() << " s";
+            LOG_INFO() << "retrieval bandwidth " << bandwidth << " MB/s";
 
         }
         catch (const std::exception& e)
@@ -566,8 +555,8 @@ public:
             const auto stop = std::chrono::steady_clock::now ();
             const std::chrono::duration <double> duration = stop - start;
             const auto bandwidth = size_mb / duration.count();
-            std::cout << "duration " << duration.count() << " s" << std::endl;
-            std::cout << "bandwidth " << bandwidth << " MB/s" << std::endl;
+            std::cout << "integration duration " << duration.count() << " s" << std::endl;
+            std::cout << "integration bandwidth " << bandwidth << " MB/s" << std::endl;
 
         }
         catch(const std::exception& e)
