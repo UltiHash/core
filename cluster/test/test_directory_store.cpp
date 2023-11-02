@@ -41,7 +41,7 @@ void fill_random_dirstore (char* buf, size_t size) {
 
 // ---------------------------------------------------------------------
 
-BOOST_FIXTURE_TEST_CASE (test_directory_store, config_fixture)
+BOOST_FIXTURE_TEST_CASE (directory_store_test, config_fixture)
 
 {
 

@@ -132,6 +132,41 @@ struct directory_message {
     zpp::bits::optional_ptr <std::string> object_key_prefix;
     zpp::bits::optional_ptr <std::string> object_key_lower_bound;
     zpp::bits::optional_ptr<address> addr;
+
+    bool operator ==(const directory_message& rhs) const {
+        bool result = bucket_id == rhs.bucket_id;
+
+        if(object_key.get() != nullptr && rhs.object_key.get() != nullptr)
+            result &= *object_key == *rhs.object_key;
+        else if(object_key.get() == nullptr && rhs.object_key.get() == nullptr)
+            result &= true;
+        else
+            return false;
+
+        if(object_key_prefix.get() != nullptr && rhs.object_key_prefix.get() != nullptr)
+            result &= *object_key_prefix == *rhs.object_key_prefix;
+        else if(object_key_prefix.get() == nullptr && rhs.object_key_prefix.get() == nullptr)
+            result &= true;
+        else
+            return false;
+
+        if(object_key_lower_bound.get() != nullptr && rhs.object_key_lower_bound.get() != nullptr)
+            result &= *object_key_lower_bound == *rhs.object_key_lower_bound;
+        else if(object_key_lower_bound.get() == nullptr && rhs.object_key_lower_bound.get() == nullptr)
+            result &= true;
+        else
+            return false;
+
+        if(addr.get() != nullptr && rhs.addr.get() != nullptr)
+            result &= *addr == *rhs.addr;
+        else if(addr.get() == nullptr && rhs.addr.get() == nullptr)
+            result &= true;
+        else
+            return false;
+
+        return result;
+
+    };
 };
 
 struct directory_lst_entities_message {

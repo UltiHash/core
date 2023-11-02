@@ -22,7 +22,7 @@ namespace uh::cluster {
 
 // ---------------------------------------------------------------------
 
-BOOST_FIXTURE_TEST_CASE (test_uncached_write, cluster_fixture)
+BOOST_FIXTURE_TEST_CASE (dedupe_write_cache_uncached_write_test, cluster_fixture)
 {
     setup (3, 1, 0, XOR);
 
@@ -60,7 +60,7 @@ BOOST_FIXTURE_TEST_CASE (test_uncached_write, cluster_fixture)
     BOOST_CHECK(data_out == data_in);
 }
 
-BOOST_FIXTURE_TEST_CASE (test_cached_write_basic, cluster_fixture)
+BOOST_FIXTURE_TEST_CASE (dedupe_write_cache_cached_write_basic_test, cluster_fixture)
 {
     setup (3, 1, 0, XOR);
 
@@ -104,7 +104,7 @@ BOOST_FIXTURE_TEST_CASE (test_cached_write_basic, cluster_fixture)
     BOOST_CHECK(data_out == data_in);
 }
 
-BOOST_FIXTURE_TEST_CASE (test_cached_write_auto_flush_realloc, cluster_fixture)
+BOOST_FIXTURE_TEST_CASE (dedupe_write_cache_test_cached_write_auto_flush_realloc_test, cluster_fixture)
 {
     setup (3, 1, 0, XOR);
 
