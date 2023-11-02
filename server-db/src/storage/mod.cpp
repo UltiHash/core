@@ -61,7 +61,7 @@ std::unique_ptr<backend> make_backend(const storage_config& cfg, metrics::storag
     size_t max_size = max_configurable_capacity(cfg.db_root);
     size_t size_needed = cfg.allocate_bytes > 0 ? cfg.allocate_bytes : max_size;
     if(size_needed > max_size){
-        THROW(util::exception, "Requesting to allocate more space than available. Unable to make a storage backend");
+        THROW(util::exception, "Requesting to allocate_internal more space than available. Unable to make a storage backend");
     }
 
     auto backend_type = define_backend_type(cfg.backend_type);

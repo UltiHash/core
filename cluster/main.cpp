@@ -66,8 +66,9 @@ uh::cluster::dedupe_config make_dedupe_node_config () {
     return {
         .min_fragment_size = 32,
         .max_fragment_size = 8 * 1024,
+        .write_cache_size_per_dn = 20ul * 1024ul * 1024ul,
         .server_conf = {
-                .threads = 1,
+                .threads = 2,
                 .port = 8084,
         },
         .data_node_connection_count = 2,
@@ -85,6 +86,8 @@ uh::cluster::dedupe_config make_dedupe_node_config () {
 uh::cluster::cluster_config make_cluster_config () {
     return {
             .init_process_count = 4,
+            .ec_algorithm = uh::cluster::NON,
+            .recovery_chunk_size = 1024ul * 1024ul * 1024ul,
             .data_node_conf = make_data_node_config(),
             .dedupe_node_conf = make_dedupe_node_config(),
             .directory_node_conf = make_directory_node_config(),
@@ -123,8 +126,8 @@ void execute_role (const uh::cluster::role role, const int id, uh::cluster::clus
 
 }
 
-uh::cluster::cluster_map init_cluster_map (const uh::cluster::role role, const int id, const uh::cluster::cluster_config& cluster_conf) {
-    uh::cluster::cluster_map cmap (cluster_conf);
+uh::cluster::cluster_map init_cluster_map (const uh::cluster::role role, const int id, uh::cluster::cluster_config&& cluster_conf) {
+    uh::cluster::cluster_map cmap (std::move (cluster_conf));
 
     if (role == uh::cluster::ENTRY_NODE and id == 0) { // master
         cmap.broadcast_init();
@@ -178,9 +181,9 @@ int main (int argc, char* args[]) {
     const auto id = static_cast <int> (std::strtol(args[2], &end, 10));
 
     const auto role = get_role (role_str);
-    const auto cluster_conf = make_cluster_config();
+    auto cluster_conf = make_cluster_config();
 
-    uh::cluster::cluster_map cmap = init_cluster_map (role, id, cluster_conf);
+    uh::cluster::cluster_map cmap = init_cluster_map (role, id, std::move (cluster_conf));
 
     execute_role (role, id, std::move (cmap));
 }

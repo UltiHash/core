@@ -7,7 +7,11 @@
 
 #include <utility>
 
+#include "common/common.h"
+#include "common/cluster_config.h"
 #include "common/protocol_handler.h"
+#include "dedupe_write_cache.h"
+
 
 namespace uh::cluster {
 
@@ -15,7 +19,7 @@ class dedupe_node_handler: public protocol_handler {
 
 public:
 
-    dedupe_node_handler (dedupe_config dedupe_conf, global_data& storage):
+    dedupe_node_handler (dedupe_config dedupe_conf, global_data_view& storage):
         m_dedupe_conf (std::move(dedupe_conf)),
         m_fragment_set (m_dedupe_conf.set_conf, storage),
         m_storage (storage) {}
@@ -50,6 +54,7 @@ private:
 
         dedupe_response result {.addr = address {}};
         auto integration_data = data;
+        dedupe_write_cache cache(integration_data, m_storage, m_dedupe_conf);
         while (!integration_data.empty()) {
             const auto f = co_await m_fragment_set.find(integration_data);
             if (f.match) {
@@ -80,6 +85,7 @@ private:
 
                 const auto size = std::min (integration_data.size(), m_dedupe_conf.max_fragment_size);
                 const auto addr = co_await store_data(integration_data.substr(0, size));
+                //const auto addr = std::move(co_await cache.write(integration_data.substr(0, size)));
                 m_fragment_set.add_pointer (integration_data.substr(0, addr.sizes.front()), {addr.pointers[0], addr.pointers[1]}, f.index);
 
                 result.addr.append_address(addr);
@@ -100,6 +106,7 @@ private:
 
         }
 
+        //co_await cache.flush();
         co_await m_storage.sync(result.addr);
         co_return std::move (result);
     }
@@ -119,7 +126,7 @@ private:
 
     dedupe_config m_dedupe_conf;
     dedupe::paged_redblack_tree <dedupe::set_full_comparator> m_fragment_set;
-    global_data& m_storage;
+    global_data_view& m_storage;
     std::mutex m_mutex;
 
 };

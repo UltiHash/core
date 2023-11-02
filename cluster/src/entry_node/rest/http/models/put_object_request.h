@@ -41,6 +41,7 @@ namespace uh::cluster::rest::http::model
         bool m_contentLanguageHasBeenSet = false;
 
         long long m_contentLength{};
+
         bool m_contentLengthHasBeenSet = false;
 
         std::string m_contentMD5;
@@ -65,6 +66,7 @@ namespace uh::cluster::rest::http::model
         bool m_checksumSHA256HasBeenSet = false;
 
         std::string m_expires;
+
         bool m_expiresHasBeenSet = false;
 
         std::string m_grantFullControl;
@@ -110,6 +112,7 @@ namespace uh::cluster::rest::http::model
         bool m_sSEKMSEncryptionContextHasBeenSet = false;
 
         bool m_bucketKeyEnabled{};
+
         bool m_bucketKeyEnabledHasBeenSet = false;
 
         std::string m_requestPayer;
@@ -122,6 +125,7 @@ namespace uh::cluster::rest::http::model
         bool m_objectLockModeHasBeenSet = false;
 
         std::string m_objectLockRetainUntilDate;
+
         bool m_objectLockRetainUntilDateHasBeenSet = false;
 
         std::string m_objectLockLegalHoldStatus;

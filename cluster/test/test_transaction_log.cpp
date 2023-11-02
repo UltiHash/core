@@ -31,7 +31,7 @@ struct config_fixture
 
 // ---------------------------------------------------------------------
 
-BOOST_FIXTURE_TEST_CASE (test_transaction_log, config_fixture)
+BOOST_FIXTURE_TEST_CASE (transaction_log_test, config_fixture)
 {
 
     cleanup();

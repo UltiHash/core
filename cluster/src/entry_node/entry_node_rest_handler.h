@@ -36,6 +36,7 @@ namespace uh::cluster {
 
     namespace http = rest::http;
 
+
 class entry_node_rest_handler {
 public:
 
@@ -48,9 +49,6 @@ public:
     {
         auto body_size = req.get_body_size();
         const auto size_mb = static_cast <double> (body_size) / static_cast <double> (1024ul * 1024ul);
-
-        std::chrono::time_point <std::chrono::steady_clock> timer;
-        const auto start = std::chrono::steady_clock::now();
 
         std::unique_ptr<http::http_response> res;
 
@@ -107,12 +105,6 @@ public:
             default:
                 throw std::runtime_error("request not supported by the backend yet.");
         }
-
-        const auto stop = std::chrono::steady_clock::now ();
-        const std::chrono::duration <double> duration = stop - start;
-        LOG_INFO() << "duration " << duration.count() << " s";
-        const auto bandwidth = size_mb / duration.count();
-        LOG_INFO() << "bandwidth " << bandwidth << " MB/s";
 
         co_return std::move(res);
     }
@@ -274,13 +266,6 @@ public:
             const auto h_dedup = co_await m_dedup.get().recv_header();
             auto resp = co_await m_dedup.get().recv_dedupe_response(h_dedup);
 
-            auto effective_size = static_cast <double> (resp.second.effective_size) / static_cast <double> (1024ul * 1024ul);
-            auto space_saving = 1.0 - static_cast <double> (resp.second.effective_size) / static_cast <double> (body_size);
-
-//            std::cout << "original size " << size_mb << " MB" << std::endl;
-//            std::cout << "effective size " << effective_size << " MB" << std::endl;
-//            std::cout << "space saving " << space_saving << std::endl;
-
             auto m_dir = m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size())).acquire_messenger();
             const directory_message dir_req
                     {
@@ -318,6 +303,10 @@ public:
 
         try
         {
+
+            std::chrono::time_point <std::chrono::steady_clock> timer;
+            const auto start = std::chrono::steady_clock::now();
+
             res = std::make_unique<http::model::get_object_response>(req);
             auto m_dir = m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size())).acquire_messenger();
             directory_message dir_req;
@@ -343,11 +332,18 @@ public:
                     msg.resize(h_dir.size);
                     m_dir.get().register_read_buffer(msg);
                     co_await m_dir.get().recv_buffers(h_dir);
-                    throw std::runtime_error("Failed to retreive object " + dir_req.bucket_id + "/" + *dir_req.object_key + " from the directory.\n" + "Error: \n" + msg);
+                    throw std::runtime_error("Failed to retrieve object " + dir_req.bucket_id + "/" + *dir_req.object_key + " from the directory.\n" + "Error: \n" + msg);
 
                 default:
                     throw std::runtime_error("unexpected internal server error");
             }
+
+            const auto stop = std::chrono::steady_clock::now ();
+            const std::chrono::duration <double> duration = stop - start;
+            const auto size = h_dir.size / static_cast <double> (1024ul * 1024ul);
+            const auto bandwidth = size / duration.count();
+            LOG_INFO() << "retrieval duration " << duration.count() << " s";
+            LOG_INFO() << "retrieval bandwidth " << bandwidth << " MB/s";
 
         }
         catch (const std::exception& e)
@@ -419,7 +415,6 @@ public:
         }
 
         LOG_INFO() << res->get_response_specific_object();
-
         co_return std::move(res);
     }
 
@@ -473,7 +468,6 @@ public:
         }
 
         LOG_INFO() << res->get_response_specific_object();
-
         co_return std::move(res);
     }
 
@@ -518,9 +512,12 @@ public:
         std::unique_ptr<http::model::complete_multi_part_upload_response> res;
         try
         {
+
             res = std::make_unique<http::model::complete_multi_part_upload_response>(req);
             auto body_size = req.get_body_size();
 
+            std::chrono::time_point <std::chrono::steady_clock> timer;
+            const auto start = std::chrono::steady_clock::now();
             const auto size_mb = static_cast <double> (body_size) / static_cast <double> (1024ul * 1024ul);
 
             auto m_dedup = m_dedupe_nodes.at(get_round_robin_index(m_dedupe_node_index, m_dedupe_nodes.size())).acquire_messenger();
@@ -530,10 +527,6 @@ public:
 
             auto effective_size = static_cast <double> (resp.second.effective_size) / static_cast <double> (1024ul * 1024ul);
             auto space_saving = 1.0 - static_cast <double> (resp.second.effective_size) / static_cast <double> (body_size);
-
-//            std::cout << "original size " << size_mb << " MB" << std::endl;
-//            std::cout << "effective size " << effective_size << " MB" << std::endl;
-//            std::cout << "space saving " << space_saving << std::endl;
 
             auto m_dir = m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size())).acquire_messenger();
             const directory_message dir_req
@@ -555,6 +548,16 @@ public:
             }
 
             res->set_etag("CustomEtag");
+
+            std::cout << "original size " << size_mb << " MB" << std::endl;
+            std::cout << "effective size " << effective_size << " MB" << std::endl;
+            std::cout << "space saving " << space_saving << std::endl;
+            const auto stop = std::chrono::steady_clock::now ();
+            const std::chrono::duration <double> duration = stop - start;
+            const auto bandwidth = size_mb / duration.count();
+            std::cout << "integration duration " << duration.count() << " s" << std::endl;
+            std::cout << "integration bandwidth " << bandwidth << " MB/s" << std::endl;
+
         }
         catch(const std::exception& e)
         {
@@ -624,6 +627,10 @@ public:
         }
 
         return std::move(res);
+    }
+
+    [[nodiscard]] client& get_recovery_director () const {
+        return m_directory_nodes.at(0);
     }
 
 private:

@@ -37,6 +37,7 @@ struct dedupe_config {
     std::size_t min_fragment_size{};
     std::size_t max_fragment_size{};
     std::size_t sampling_interval{};
+    std::size_t write_cache_size_per_dn{};
     server_config server_conf{};
     int data_node_connection_count{};
     set_config set_conf;
@@ -77,7 +78,9 @@ struct directory_node_config {
 };
 
 struct cluster_config {
-    int init_process_count{};
+    int init_process_count {};
+    ec_type ec_algorithm {};
+    size_t recovery_chunk_size {};
     data_node_config data_node_conf;
     dedupe_config dedupe_node_conf;
     directory_node_config directory_node_conf;

@@ -22,4 +22,8 @@ void data_node::run() {
 
 }
 
+void data_node::stop() {
+    m_server.stop();
+}
+
 } // end namespace uh::cluster
