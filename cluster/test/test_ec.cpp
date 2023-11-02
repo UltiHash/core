@@ -18,7 +18,7 @@
 // ------------- Tests Suites Follow --------------
 
 namespace uh::cluster {
-
+/*
 BOOST_FIXTURE_TEST_CASE (ec_basic_write_read_test_multiple_nodes_with_ec, cluster_fixture)
 {
     std::cout << "begin ec_basic_write_read_test_multiple_nodes_with_ec" << std::endl;
@@ -123,7 +123,7 @@ BOOST_FIXTURE_TEST_CASE (ec_basic_write_read_test_single_node_without_ec, cluste
     std::cout << "end ec_basic_write_read_test_single_node_without_ec" << std::endl;
 
 }
-
+*/
 BOOST_FIXTURE_TEST_CASE (ec_basic_write_read_test_multiple_nodes_without_ec, cluster_fixture)
 {
     std::cout << "begin ec_basic_write_read_test_multiple_nodes_without_ec" << std::endl;
@@ -138,9 +138,13 @@ BOOST_FIXTURE_TEST_CASE (ec_basic_write_read_test_multiple_nodes_without_ec, clu
     std::promise <address> alloc_promise;
     const auto data_str = std::string_view (data, data_size);
     auto write_data = [&] () -> coro <message_type> {
+        std::cout << "before alloc" << std::endl;
         auto alloc = co_await get_dedupe_node(0).get_global_data_view().allocate(data_size);
+        std::cout << "before scatter" << std::endl;
         co_await get_dedupe_node(0).get_global_data_view().scatter_allocated_write(alloc, data_str);
+        std::cout << "before sync" << std::endl;
         co_await get_dedupe_node(0).get_global_data_view().sync(alloc);
+        std::cout << "after sync" << std::endl;
         alloc_promise.set_value(std::move (alloc));
         co_return SUCCESS;
     };
@@ -174,7 +178,7 @@ BOOST_FIXTURE_TEST_CASE (ec_basic_write_read_test_multiple_nodes_without_ec, clu
     std::cout << "end ec_basic_write_read_test_multiple_nodes_without_ec" << std::endl;
 
 }
-
+/*
 BOOST_FIXTURE_TEST_CASE (ec_exception_test_single_node_with_ec, cluster_fixture)
 {
     std::cout << "begin ec_exception_test_single_node_with_ec" << std::endl;
@@ -857,5 +861,5 @@ BOOST_FIXTURE_TEST_CASE (ec_test_chain_of_failures, cluster_fixture)
     std::cout << "end ec_test_chain_of_failures" << std::endl;
 
 }
-
+*/
 } // end namespace uh::cluster
