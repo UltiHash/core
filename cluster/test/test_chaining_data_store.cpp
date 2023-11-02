@@ -46,7 +46,7 @@ void fill_random2(char* buf, size_t size) {
     }
 }
 
-BOOST_FIXTURE_TEST_CASE (test_chaining_data_store, config_fixture)
+BOOST_FIXTURE_TEST_CASE (chaining_data_store_test, config_fixture)
 {
 
     cleanup();

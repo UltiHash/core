@@ -12,16 +12,20 @@
 #include "network/server.h"
 #include "entry_node/rest_server.h"
 #include "network/client.h"
+#include "common/node_interface.h"
 
 namespace uh::cluster
 {
 
-class entry_node {
+class entry_node: public node_interface {
 public:
 
     entry_node (int id, cluster_map&& cmap);
 
-    void run();
+    void run() override;
+
+    void stop() override;
+
 
 private:
 
@@ -35,6 +39,7 @@ private:
     const std::string m_job_name;
     server m_internal_server;
     rest::rest_server m_rest_server;
+
 };
 
 } // end namespace uh::cluster

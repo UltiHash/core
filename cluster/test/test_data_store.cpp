@@ -38,7 +38,7 @@ struct config_fixture
 
 // ---------------------------------------------------------------------
 
-BOOST_AUTO_TEST_CASE (test_big_int)
+BOOST_AUTO_TEST_CASE (data_store_big_int_test)
 {
     constexpr uint128_t b1 {0, 16140901064495857661ul};
     constexpr uint64_t b2 = 13835058055282163710ul;
@@ -70,7 +70,7 @@ BOOST_AUTO_TEST_CASE (test_big_int)
 }
 // ---------------------------------------------------------------------
 
-BOOST_AUTO_TEST_CASE (test_free_spot_manager)
+BOOST_AUTO_TEST_CASE (data_store_free_spot_manager_test)
 {
     std::filesystem::remove ("__test_free_spot_manager");
     std::array <uint128_t, 100> offsets;
@@ -225,7 +225,7 @@ void fill_random(char* buf, size_t size) {
     }
 }
 
-BOOST_FIXTURE_TEST_CASE (test_data_store, config_fixture)
+BOOST_FIXTURE_TEST_CASE (data_store_test, config_fixture)
 {
 
     cleanup();

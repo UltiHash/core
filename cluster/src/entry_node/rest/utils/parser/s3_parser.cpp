@@ -44,7 +44,6 @@ namespace uh::cluster::rest::utils::parser {
                     {
                         auto upload_id = generator::generate_unique_id();
                         m_uomap_multipart.emplace(upload_id, std::make_shared<utils::ts_map<uint16_t, std::string>>());
-
                         return std::make_unique<rest::http::model::init_multi_part_upload_request>(m_recv_req, upload_id, std::move(uri));
                     }
                     else if (uri->query_string_exists("uploadId"))
@@ -52,7 +51,6 @@ namespace uh::cluster::rest::utils::parser {
                         auto upload_id = uri->get_query_string_value("uploadId");
                         if (upload_id.empty())
                             throw std::runtime_error("no upload id given");
-
                         return std::make_unique<rest::http::model::complete_multi_part_upload_request>(m_recv_req, m_uomap_multipart, upload_id,  std::move(uri));
                     }
                 }

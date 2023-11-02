@@ -19,6 +19,21 @@ namespace uh::cluster::rest
         m_handler (dedupe_nodes, directory_nodes)
     {
         boost::asio::co_spawn(*m_ioc,
+                              recover_failed_nodes (),
+                              [](const std::exception_ptr& e)
+                              {
+                                  if (e)
+                                      try
+                                      {
+                                          std::rethrow_exception(e);
+                                      }
+                                      catch(std::exception & e)
+                                      {
+                                          std::cerr << "Error in acceptor: " << e.what() << "\n";
+                                      }
+                              });
+
+        boost::asio::co_spawn(*m_ioc,
                               do_listen(tcp::endpoint{m_server_address, m_config.port}),
                               [](const std::exception_ptr& e)
                               {
@@ -53,7 +68,15 @@ namespace uh::cluster::rest
 
 //------------------------------------------------------------------------------
 
-    net::awaitable<void>
+    coro <void> rest_server::recover_failed_nodes () {
+        auto m = m_handler.get_recovery_director().acquire_messenger();
+        co_await m.get().send(RECOVER_REQ, {});
+        const auto h = co_await m.get().recv_header();
+        co_await m.get().throw_if_failure(h);
+        m_recover_response.set_value(h.type);
+    }
+
+    coro <void>
     rest_server::do_session(tcp_stream stream) {
         LOG_INFO() << "connection from: " << stream.socket().remote_endpoint();
 
@@ -70,7 +93,7 @@ namespace uh::cluster::rest
                 received_request.body_limit((std::numeric_limits<std::uint64_t>::max)());
 
                 co_await b_http::async_read_header(stream, buffer, received_request, net::use_awaitable);
-                // log this to debug
+
                 LOG_DEBUG() << received_request.get().base();
 
                 rest::utils::parser::s3_parser s3_parser(received_request, m_uomap_multipart);
@@ -111,9 +134,14 @@ namespace uh::cluster::rest
 
 //------------------------------------------------------------------------------
 
-    net::awaitable<void>
+    coro <void>
     rest_server::do_listen(tcp::endpoint endpoint)
     {
+        const auto recover_response = m_recover_response.get_future().get();
+        if (recover_response != RECOVER_RESP) [[unlikely]] {
+            throw std::runtime_error ("Recovery not successful!");
+        }
+
         // TODO : implement ssl
 //        m_ssl.use_certificate_chain_file(config.tls_chain);
 //        m_ssl.use_private_key_file(config.tls_pkey, ssl::context::pem);

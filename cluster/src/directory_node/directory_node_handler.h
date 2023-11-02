@@ -13,7 +13,7 @@ namespace uh::cluster {
 class directory_handler: public protocol_handler {
 public:
 
-    directory_handler (directory_store_config conf, global_data& storage):
+    directory_handler (directory_store_config conf, global_data_view& storage):
     m_directory (std::move (conf)),
     m_storage (storage) {}
 
@@ -32,6 +32,9 @@ public:
                     break;
                 case DIR_PUT_BUCKET_REQ:
                     co_await handle_put_bucket (m, message_header);
+                    break;
+                case RECOVER_REQ:
+                    co_await handle_recovery (m, message_header);
                     break;
                 case DIR_LIST_BUCKET_REQ:
                     co_await handle_list_buckets(m, message_header);
@@ -70,6 +73,7 @@ private:
     }
 
     coro <void> handle_get_obj (messenger& m, const messenger::header& h) {
+
         directory_message request = co_await m.recv_directory_message (h);
         address addr;
 
@@ -83,17 +87,10 @@ private:
 
         ospan <char> buffer (buffer_size);
 
-        std::size_t buffer_offset = 0;
-        for(int i = 0; i < addr.size(); i++) {
-            auto frag = addr.get_fragment(i);
-            co_await m_storage.read(buffer.data.get() + buffer_offset, frag.pointer, frag.size);
-            buffer_offset += frag.size;
-        }
-
+        co_await m_storage.read_address(buffer.data.get(), addr);
         m.register_write_buffer(buffer);
         co_await m.send_buffers(DIR_GET_OBJ_RESP);
 
-        co_return;
     }
 
     coro <void> handle_put_bucket (messenger& m, const messenger::header& h) {
@@ -127,8 +124,13 @@ private:
         co_await m.send_directory_list_entities_message(DIR_LIST_OBJ_RESP, response);
     }
 
+    coro <void> handle_recovery (messenger& m, const messenger::header& h) {
+        co_await m_storage.recover();
+        co_await m.send(RECOVER_RESP, {});
+    }
+
     directory_store m_directory;
-    global_data& m_storage;
+    global_data_view& m_storage;
 };
 } // end namespace uh::cluster
 
