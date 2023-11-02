@@ -70,7 +70,7 @@ public:
     }
 
     acquired_messenger acquire_messenger () {
-        std::cout << "remaining messengers " << m_messengers.size() << std::endl;
+        //std::cout << "remaining messengers " << m_messengers.size() << std::endl;
         std::unique_lock<std::mutex> lk(m);
         m_cv.wait(lk, [this]() { return !m_messengers.empty(); });
         auto messenger = std::move (m_messengers.front());
