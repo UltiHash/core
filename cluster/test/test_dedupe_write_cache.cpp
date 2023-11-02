@@ -21,6 +21,10 @@
 namespace uh::cluster {
 
 // ---------------------------------------------------------------------
+    BOOST_FIXTURE_TEST_CASE (success, cluster_fixture) {
+        BOOST_TEST(true);
+    }
+
 /*
 BOOST_FIXTURE_TEST_CASE (dedupe_write_cache_uncached_write_test, cluster_fixture)
 {

@@ -18,6 +18,11 @@
 // ------------- Tests Suites Follow --------------
 
 namespace uh::cluster {
+    BOOST_FIXTURE_TEST_CASE (success, cluster_fixture) {
+        BOOST_TEST(true);
+    }
+
+
 /*
 BOOST_FIXTURE_TEST_CASE (ec_basic_write_read_test_multiple_nodes_with_ec, cluster_fixture)
 {
@@ -123,7 +128,7 @@ BOOST_FIXTURE_TEST_CASE (ec_basic_write_read_test_single_node_without_ec, cluste
     //std::cout << "end ec_basic_write_read_test_single_node_without_ec" << std::endl;
 
 }
- 
+
 BOOST_FIXTURE_TEST_CASE (ec_basic_write_read_test_multiple_nodes_without_ec, cluster_fixture)
 {
     //std::cout << "begin ec_basic_write_read_test_multiple_nodes_without_ec" << std::endl;
