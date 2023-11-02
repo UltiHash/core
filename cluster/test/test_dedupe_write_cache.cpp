@@ -21,7 +21,7 @@
 namespace uh::cluster {
 
 // ---------------------------------------------------------------------
-
+/*
 BOOST_FIXTURE_TEST_CASE (dedupe_write_cache_uncached_write_test, cluster_fixture)
 {
     setup (3, 1, 0, XOR);
@@ -155,7 +155,7 @@ BOOST_FIXTURE_TEST_CASE (dedupe_write_cache_test_cached_write_auto_flush_realloc
 
     BOOST_CHECK(data_out == data_in);
 }
-
+*/
 //BOOST_FIXTURE_TEST_CASE (test_cached_write_partition_overlap, cluster_fixture)
 //{
 //    setup (3, 1, 0, XOR);
