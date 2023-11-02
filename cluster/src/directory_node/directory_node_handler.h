@@ -72,6 +72,7 @@ private:
     }
 
     coro <void> handle_get_obj (messenger& m, const messenger::header& h) {
+
         directory_message request = co_await m.recv_directory_message (h);
         address addr;
 
@@ -89,7 +90,6 @@ private:
         m.register_write_buffer(buffer);
         co_await m.send_buffers(DIR_GET_OBJ_RESP);
 
-        co_return;
     }
 
     coro <void> handle_put_bucket (messenger& m, const messenger::header& h) {

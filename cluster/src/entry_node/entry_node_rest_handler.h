@@ -340,7 +340,7 @@ public:
                     msg.resize(h_dir.size);
                     m_dir.get().register_read_buffer(msg);
                     co_await m_dir.get().recv_buffers(h_dir);
-                    throw std::runtime_error("Failed to retreive object " + dir_req.bucket_id + "/" + *dir_req.object_key + " from the directory.\n" + "Error: \n" + msg);
+                    throw std::runtime_error("Failed to retrieve object " + dir_req.bucket_id + "/" + *dir_req.object_key + " from the directory.\n" + "Error: \n" + msg);
 
                 default:
                     throw std::runtime_error("unexpected internal server error");
@@ -348,7 +348,8 @@ public:
 
             const auto stop = std::chrono::steady_clock::now ();
             const std::chrono::duration <double> duration = stop - start;
-            const auto bandwidth = h_dir.size / duration.count();
+            const auto size = h_dir.size / static_cast <double> (1024ul * 1024ul);
+            const auto bandwidth = size / duration.count();
             std::cout << "duration " << duration.count() << " s" << std::endl;
             std::cout << "bandwidth " << bandwidth << " MB/s" << std::endl;
 
