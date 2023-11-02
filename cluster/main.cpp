@@ -10,6 +10,7 @@
 #include "entry_node/entry_node.h"
 #include "network/cluster_map.h"
 
+#include <config.h>
 #include <common/log.h>
 
 
@@ -170,6 +171,7 @@ int main (int argc, char* args[]) {
     };
 
     uh::log::init(lc);
+    LOG_INFO() << "starting " << PROJECT_NAME << " " << PROJECT_VERSION;
 
     const auto role_str = std::string_view(args[1]);   // en, dd, dr, dn
     char* end;
