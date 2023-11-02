@@ -185,6 +185,7 @@
 #include "global_data/global_data_view.h"
 #include "paged_redblack_tree.h"
 #include "dedupe_node_handler.h"
+#include <common/log.h>
 
 namespace uh::cluster {
     class dedupe_node: public node_interface {
@@ -202,8 +203,7 @@ namespace uh::cluster {
         }
 
         void run() override {
-            std::cout << "hello from " << m_job_name << std::endl;
-            m_storage.create_data_node_connections(m_server.get_executor(), m_cluster_map.m_cluster_conf.dedupe_node_conf.data_node_connection_count, m_use_id_as_port_offset);
+            LOG_INFO() << "starting " << m_job_name;
             m_server.run();
         }
 

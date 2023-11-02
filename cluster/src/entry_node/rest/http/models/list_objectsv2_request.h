@@ -8,7 +8,7 @@ namespace uh::cluster::rest::http::model
     class list_objectsv2_request : public http_request
     {
     public:
-        explicit list_objectsv2_request(const http::request_parser<http::empty_body>&);
+        explicit list_objectsv2_request(const http::request_parser<http::empty_body>&, std::unique_ptr<rest::http::URI>);
 
         ~list_objectsv2_request() override = default;
 

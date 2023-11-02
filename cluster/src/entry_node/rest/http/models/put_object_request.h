@@ -10,7 +10,7 @@ namespace uh::cluster::rest::http::model
     class put_object_request : public http_request
     {
     public:
-        explicit put_object_request(const http::request_parser<http::empty_body>&);
+        explicit put_object_request(const http::request_parser<http::empty_body>&, std::unique_ptr<rest::http::URI>);
 
         ~put_object_request() override = default;
 

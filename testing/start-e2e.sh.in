@@ -66,9 +66,19 @@ fi
 
 set +e
 
+compose_file="$TESTING_BINARY_DIR/docker-compose.yml"
 use_docker_compose="0"
 if [ -z "$cluster_url" ]; then
-    docker-compose -f "$TESTING_BINARY_DIR/docker-compose.yml" up --detach
+    if [ ! -e "$compose_file" ]; then
+        echo "Compose file was not generated. Do you have docker installed?"
+        echo
+        echo "Install docker and enable it for this user. Then run cmake again."
+        echo "You can also start the cluster yourself and reference it using "
+        echo "--url <cluster-url>"
+        exit 1
+    fi
+
+    docker-compose -f "$compose_file" up --detach
     cluster_url="http://localhost:8080"
     use_docker_compose="1"
 fi
@@ -90,7 +100,7 @@ if [ "$timeout" -eq "0" ]; then
 fi
 
 export PYTHONDONTWRITEBYTECODE=1
-pytest "$TESTING_BASE_DIR/tests" --cluster-url="$cluster_url" \
+pytest "$TESTING_BINARY_DIR/tests" --cluster-url="$cluster_url" \
     --aws-access-key-id="$AWS_ACCESS_KEY_ID" --aws-secret-access-key="$AWS_SECRET_ACCESS_KEY" $@
 
 if [ "$use_docker_compose" -eq "1" ]; then
