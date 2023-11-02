@@ -21,7 +21,7 @@
 namespace uh::cluster {
 
 // ---------------------------------------------------------------------
-    BOOST_FIXTURE_TEST_CASE (success, cluster_fixture) {
+    BOOST_FIXTURE_TEST_CASE (success_dedupe, cluster_fixture) {
         BOOST_TEST(true);
     }
 
