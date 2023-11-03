@@ -50,7 +50,7 @@ namespace uh::cluster::rest::http::model
         bool m_encodingTypeHasBeenSet = false;
         std::string m_encodingType;
 
-        bool m_keyCountHasBeenSet = false;
+        bool m_keyCountHasBeenSet = true;
 
         bool m_continuationTokenHasBeenSet = false;
         std::string m_continuationToken;
