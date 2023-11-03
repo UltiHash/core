@@ -23,6 +23,9 @@ uh::cluster::entry_node_config make_entry_node_config () {
         .rest_server_conf = {
                 .threads = 4,
                 .port = 8080,
+                .metrics_bind_address = "0.0.0.0:9080",
+                .metrics_threads = 2,
+                .metrics_path = "/metrics"
         },
         .dedupe_node_connection_count = 2,
         .directory_connection_count = 2,
@@ -39,6 +42,9 @@ uh::cluster::data_node_config make_data_node_config () {
         .server_conf = {
                 .threads = 4,
                 .port = 8082,
+                .metrics_bind_address = "0.0.0.0:9082",
+                .metrics_threads = 2,
+                .metrics_path = "/metrics"
         },
     };
 }
@@ -48,6 +54,9 @@ uh::cluster::directory_node_config make_directory_node_config () {
         .server_conf = {
                 .threads = 4,
                 .port = 8083,
+                .metrics_bind_address = "0.0.0.0:9083",
+                .metrics_threads = 2,
+                .metrics_path = "/metrics"
         },
         .directory_conf = {
                 .root = "ultihash-root/dr",
@@ -70,6 +79,9 @@ uh::cluster::dedupe_config make_dedupe_node_config () {
         .server_conf = {
                 .threads = 2,
                 .port = 8084,
+                .metrics_bind_address = "0.0.0.0:9084",
+                .metrics_threads = 2,
+                .metrics_path = "/metrics"
         },
         .data_node_connection_count = 2,
         .set_conf = {

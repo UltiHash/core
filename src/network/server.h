@@ -22,6 +22,11 @@
 #include <common/log.h>
 #include "messenger.h"
 #include "common/protocol_handler.h"
+#include <prometheus/exposer.h>
+#include <prometheus/registry.h>
+#include <prometheus/counter.h>
+#include <prometheus/gauge.h>
+
 
 //------------------------------------------------------------------------------
 
@@ -34,7 +39,8 @@ namespace uh::cluster
 
     public:
         server(server_config config, std::unique_ptr <protocol_handler> handler) :
-                m_config (config), m_ioc (std::make_shared <boost::asio::io_context> (m_config.threads)), m_handler (std::move (handler)) {
+                m_config (config), m_ioc (std::make_shared <boost::asio::io_context> (m_config.threads)), m_handler (std::move (handler)),
+                m_exposer(make_exposer(config)) {
             m_is_running = true;
             boost::asio::co_spawn(*m_ioc,
                                   do_listen(boost::asio::ip::tcp::endpoint{m_server_address, m_config.port}),
@@ -44,12 +50,25 @@ namespace uh::cluster
                                               std::rethrow_exception(e);
                                           }
                                           catch (boost::system::system_error &e) {
-                                              std::cout << "Server stopped." << std::endl;
+                                              LOG_INFO() << "Server stopped.";
                                           }
                                           catch (std::exception &e) {
                                               LOG_ERROR() << "accept: " << e.what();
                                           }
                                   });
+        }
+
+        prometheus::Exposer make_exposer(const server_config& c)
+        {
+            LOG_INFO() << "starting metrics server at " << c.metrics_bind_address;
+            try
+            {
+                return prometheus::Exposer(c.metrics_bind_address, c.metrics_threads);
+            }
+            catch (const std::exception& e)
+            {
+                throw std::runtime_error(std::string("could not start metrics HTTP server: ") + e.what());
+            }
         }
 
         void run() {
@@ -72,6 +91,23 @@ namespace uh::cluster
 
         [[nodiscard]] std::shared_ptr <boost::asio::io_context> get_executor () const {
             return m_ioc;
+        }
+
+        prometheus::Family<prometheus::Counter>& add_counter_family(const std::string& name,
+                                                                 const std::string& help)
+        {
+            auto builder = prometheus::BuildCounter().Name(name).Help(help);
+
+            return builder.Register(*m_registry);
+        }
+
+
+        prometheus::Family<prometheus::Gauge>& add_gauge_family(const std::string& name,
+                                                             const std::string& help)
+        {
+            auto builder = prometheus::BuildGauge().Name(name).Help(help);
+
+            return builder.Register(*m_registry);
         }
 
         ~server() {
@@ -143,6 +179,8 @@ namespace uh::cluster
         std::unique_ptr <protocol_handler> m_handler;
         const boost::asio::ip::address m_server_address = boost::asio::ip::make_address("0.0.0.0");
         std::atomic<bool> m_is_running;
+        prometheus::Exposer m_exposer;
+        std::shared_ptr<prometheus::Registry> m_registry;
     };
 
 //------------------------------------------------------------------------------
