@@ -1,4 +1,0 @@
-
-#ifndef DEFAULT_CHUNK_SIZE
-#define DEFAULT_CHUNK_SIZE 4 * 1024 * 1024
-#endif
