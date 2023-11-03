@@ -268,10 +268,16 @@ public:
             auto body_size = req.get_body_size();
             const auto size_mb = static_cast <double> (body_size) / static_cast <double> (1024ul * 1024ul);
 
-'t '            auto m_dedup = m_dedupe_nodes.at(get_round_robin_index(m_dedupe_node_index, m_dedupe_nodes.size())).acquire_messenger();
-            co_await m_dedup.get().send (DEDUPE_REQ, req.get_body());
-            const auto h_dedup = co_await m_dedup.get().recv_header();
-            auto resp = co_await m_dedup.get().recv_dedupe_response(h_dedup);
+            auto m_dedup = m_dedupe_nodes.at(get_round_robin_index(m_dedupe_node_index, m_dedupe_nodes.size())).acquire_messenger();
+            std::pair <messenger::header, dedupe_response> resp;
+            if(body_size > 0) [[likely]] {
+                co_await m_dedup.get().send (DEDUPE_REQ, req.get_body());
+                const auto h_dedup = co_await m_dedup.get().recv_header();
+                resp = co_await m_dedup.get().recv_dedupe_response(h_dedup);
+            } else [[unlikely]] {
+                resp = std::make_pair<messenger::header, dedupe_response>({.type = DEDUPE_RESP, .size = 0},
+                                                                          {.effective_size = 0, .addr = address()});
+            }
 
             auto m_dir = m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size())).acquire_messenger();
             const directory_message dir_req
