@@ -51,7 +51,7 @@ public:
         const auto size_mb = static_cast <double> (body_size) / static_cast <double> (1024ul * 1024ul);
 
         std::unique_ptr<http::http_response> res;
-        const auto start = std::chrono::steady_clock::now();
+//        const auto start = std::chrono::steady_clock::now();
 
         switch (req.get_request_name())
         {
@@ -107,11 +107,11 @@ public:
                 throw std::runtime_error("request not supported by the backend yet.");
         }
 
-        const auto stop = std::chrono::steady_clock::now ();
-        const std::chrono::duration <double> duration = stop - start;
-        LOG_INFO() << "duration " << duration.count() << " s";
-        const auto bandwidth = size_mb / duration.count();
-        LOG_INFO() << "bandwidth " << bandwidth << " MB/s";
+//        const auto stop = std::chrono::steady_clock::now ();
+//        const std::chrono::duration <double> duration = stop - start;
+//        LOG_INFO() << "duration " << duration.count() << " s";
+//        const auto bandwidth = size_mb / duration.count();
+//        LOG_INFO() << "bandwidth " << bandwidth << " MB/s";
 
         co_return std::move(res);
     }
@@ -268,7 +268,7 @@ public:
             auto body_size = req.get_body_size();
             const auto size_mb = static_cast <double> (body_size) / static_cast <double> (1024ul * 1024ul);
 
-            auto m_dedup = m_dedupe_nodes.at(get_round_robin_index(m_dedupe_node_index, m_dedupe_nodes.size())).acquire_messenger();
+'t '            auto m_dedup = m_dedupe_nodes.at(get_round_robin_index(m_dedupe_node_index, m_dedupe_nodes.size())).acquire_messenger();
             co_await m_dedup.get().send (DEDUPE_REQ, req.get_body());
             const auto h_dedup = co_await m_dedup.get().recv_header();
             auto resp = co_await m_dedup.get().recv_dedupe_response(h_dedup);
@@ -420,7 +420,6 @@ public:
             res->set_error(boost::beast::http::response<boost::beast::http::string_body>{boost::beast::http::status::not_found, 11});
         }
 
-        LOG_INFO() << res->get_response_specific_object();
         co_return std::move(res);
     }
 
@@ -473,7 +472,6 @@ public:
             res->set_error(boost::beast::http::response<boost::beast::http::string_body>{boost::beast::http::status::internal_server_error, 11});
         }
 
-        LOG_INFO() << res->get_response_specific_object();
         co_return std::move(res);
     }
 

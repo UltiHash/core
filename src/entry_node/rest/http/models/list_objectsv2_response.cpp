@@ -117,11 +117,11 @@ namespace uh::cluster::rest::http::model
             auto content_itr = m_contents.begin();
             if (m_startAfterHasBeenSet)
             {
-                content_itr = std::find(m_contents.begin(), m_contents.end(), m_startAfter);
+                auto index_itr = std::find(m_contents.begin(), m_contents.end(), m_startAfter);
 
-                if (content_itr != m_contents.end())
+                if (index_itr != m_contents.end())
                 {
-                    content_itr++;
+                    content_itr = index_itr++;
                 }
             }
 

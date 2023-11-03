@@ -54,7 +54,7 @@ namespace uh::cluster::rest
     void
     rest_server::run()
     {
-        LOG_INFO() << "starting server";
+        LOG_INFO() << "starting rest server";
 
         for(auto i = 0 ; i < m_config.threads - 1 ; i++)
             m_thread_container.emplace_back(
@@ -68,7 +68,8 @@ namespace uh::cluster::rest
 
 //------------------------------------------------------------------------------
 
-    coro <void> rest_server::recover_failed_nodes () {
+    coro <void> rest_server::recover_failed_nodes ()
+    {
         auto m = m_handler.get_recovery_director().acquire_messenger();
         co_await m.get().send(RECOVER_REQ, {});
         const auto h = co_await m.get().recv_header();
@@ -77,7 +78,8 @@ namespace uh::cluster::rest
     }
 
     coro <void>
-    rest_server::do_session(tcp_stream stream) {
+    rest_server::do_session(tcp_stream stream)
+    {
         LOG_INFO() << "connection from: " << stream.socket().remote_endpoint();
 
         beast::error_code ec;
@@ -94,7 +96,7 @@ namespace uh::cluster::rest
 
                 co_await b_http::async_read_header(stream, buffer, received_request, net::use_awaitable);
 
-                LOG_DEBUG() << received_request.get().base();
+                LOG_INFO() << "received request: " << received_request.get().base();
 
                 rest::utils::parser::s3_parser s3_parser(received_request, m_uomap_multipart);
                 auto s3_request = s3_parser.parse();
@@ -103,8 +105,10 @@ namespace uh::cluster::rest
 
                 auto s3_res = co_await m_handler.handle(*s3_request);
 
-                co_await b_http::async_write(stream, s3_res->get_response_specific_object(), net::use_awaitable);
+                auto s3_res_specific_object = s3_res->get_response_specific_object();
+                co_await b_http::async_write(stream, s3_res_specific_object, net::use_awaitable);
 
+                LOG_INFO() << "sent response: " << s3_res_specific_object;
                 if(! received_request.keep_alive() )
                 {
                     break;
@@ -138,7 +142,8 @@ namespace uh::cluster::rest
     rest_server::do_listen(tcp::endpoint endpoint)
     {
         const auto recover_response = m_recover_response.get_future().get();
-        if (recover_response != RECOVER_RESP) [[unlikely]] {
+        if (recover_response != RECOVER_RESP) [[unlikely]]
+        {
             throw std::runtime_error ("Recovery not successful!");
         }
 
