@@ -47,6 +47,7 @@ public:
 
     ~data_store();
 
+    static constexpr std::size_t alloc_offset = sizeof (std::size_t);
 
 private:
 
@@ -84,7 +85,6 @@ private:
     std::size_t m_last_file_size;
     uint128_t m_used;
     std::shared_mutex m;
-
 };
 
 } // end namespace uh::cluster

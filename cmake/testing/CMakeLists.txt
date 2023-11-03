@@ -36,6 +36,7 @@ foreach(testSrc ${TEST_SRCS})
     #make sure to register the test binary for the "make test" target
     add_test(NAME ${PROJECT_NAME}_${testName}
             COMMAND ${EXECUTABLE_OUTPUT_PATH}/${PROJECT_NAME}_${testName} )
+    set_tests_properties(${PROJECT_NAME}_${testName} PROPERTIES TIMEOUT 600)
     #store source file name for single test executable scenario (see below)
     list(APPEND testSrcFiles ${testSrc})
 endforeach(testSrc)

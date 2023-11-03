@@ -41,7 +41,7 @@ data_store::data_store(data_node_config conf, long id, bool adaptive) :
     }
 
     if (m_open_files.empty()) {
-        int fd = add_new_file(uint128_t (0), static_cast <long> (m_conf.min_file_size));
+        int fd = add_new_file(uint128_t (m_conf.max_data_store_size) * id, static_cast <long> (m_conf.min_file_size));
         file_sizes.emplace(fd, m_conf.min_file_size);
     }
     else {
@@ -78,7 +78,7 @@ address data_store::write(std::span<char> data) {
              written < partial_alloc.size;
              written += ::write(partial_alloc.fd, data.data() + offset + written, partial_alloc.size - written));
         offset += partial_alloc.size;
-        data_address.insert_fragment(index ++, fragment (partial_alloc.global_offset, partial_alloc.size));
+        data_address.insert_fragment(index ++, fragment {.pointer = partial_alloc.global_offset, .size = partial_alloc.size});
     }
 
     m_free_spot_manager.apply_popped_items();
@@ -159,15 +159,16 @@ void data_store::allocated_write(const address &allocation, std::span<char> data
 
     unsigned long offset = 0;
     for (int i = 0; i < allocation.size(); ++i) {
-        const auto [fd, seek] = get_file_offset_pair(allocation.pointers[i]);
+        const auto fragment = allocation.get_fragment(i);
+        const auto [fd, seek] = get_file_offset_pair(fragment.pointer);
         if (::lseek (fd, seek, SEEK_SET) != seek) [[unlikely]] {
             throw std::runtime_error ("Could not seek to the allocated position.");
         }
 
         for (size_t written = 0;
-             written < allocation.sizes[i];
-             written += ::write(fd, data.data() + offset + written, allocation.sizes[i] - written));
-        offset += allocation.size();
+             written < fragment.size;
+             written += ::write(fd, data.data() + offset + written, fragment.size - written));
+        offset += fragment.size;
     }
 }
 
@@ -215,7 +216,7 @@ std::pair<int, long> data_store::get_file_offset_pair(uint128_t pointer) const {
         throw std::out_of_range ("The given data offset could not be found in this data store");
     }
     const auto [file_offset, fd] = *std::prev (pfd);
-    const auto seek = static_cast <long> ((pointer - file_offset).get_low ());
+    const auto seek = (pointer - file_offset).get_low ();
 
     return {fd, seek};
 }
@@ -248,10 +249,10 @@ data_store::alloc_t data_store::allocate_internal (std::size_t size) {
             //TODO revert the new file if IO not successful
             m_modified_files.insert_or_assign (m_last_fd, last_file_data_end);
 
-            add_new_file (big_int (m_conf.max_file_size) * m_open_files.size(),
+            add_new_file (uint128_t (m_conf.max_data_store_size) * m_data_id + big_int (m_conf.max_file_size) * m_open_files.size(),
                          static_cast <long> (m_conf.min_file_size));
             m_used += sizeof (last_file_data_end);
-            partial_size = std::min (size, m_conf.max_file_size);
+            partial_size = std::min (size, m_conf.max_file_size - m_last_file_data_end);
             last_file_data_end = m_last_file_data_end;
         }
 

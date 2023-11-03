@@ -5,9 +5,9 @@
 namespace uh::cluster::rest::http
 {
 
-    http_request::http_request(const http::request_parser<http::empty_body>& recv_request) :
-            m_req(recv_request), m_method(get_http_method_from_name(recv_request.get().base().method())),
-            m_uri(recv_request)
+    http_request::http_request(const http::request_parser<http::empty_body>& recv_request, std::unique_ptr<URI> uri) :
+            m_req(recv_request), m_method(get_http_method_from_beast(recv_request.get().base().method())),
+            m_uri(std::move(uri))
     {
     }
 

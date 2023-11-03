@@ -8,15 +8,15 @@ namespace uh::cluster::rest::http::model
     class get_object_request : public http_request
     {
     public:
-        explicit get_object_request(const http::request_parser<http::empty_body>&);
+        explicit get_object_request(const http::request_parser<http::empty_body>&, std::unique_ptr<rest::http::URI>);
 
         ~get_object_request() override = default;
 
         [[nodiscard]] inline http_request_type get_request_name() const override { return http_request_type::GET_OBJECT; }
 
-        [[nodiscard]] std::map<std::string, std::string> get_request_specific_headers() const override;
+        inline coro<void> read_body(tcp_stream& stream, boost::beast::flat_buffer& buffer) override { co_return; }
 
-        coro<void> read_body(tcp_stream& stream, boost::beast::flat_buffer& buffer) override { co_return ; }
+        [[nodiscard]] std::map<std::string, std::string> get_request_specific_headers() const override;
 
     private:
 

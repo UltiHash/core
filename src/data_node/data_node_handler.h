@@ -16,7 +16,7 @@ class data_node_handler: public protocol_handler {
 public:
 
     data_node_handler (data_node_config conf, int id):
-    m_data_store (std::move(conf), id)
+    m_data_store (std::move(conf), id), m_is_stopped(false)
     {}
 
     coro <void> handle (messenger m) override {
@@ -28,6 +28,9 @@ public:
                     break;
                 case READ_REQ:
                     co_await handle_read(m, message_header);
+                    break;
+                case READ_ADDRESS_REQ:
+                    co_await handle_read_address (m, message_header);
                     break;
                 case REMOVE_REQ:
                     co_await handle_remove(m, message_header);
@@ -48,11 +51,16 @@ public:
                     co_await handle_alloc_write (m, message_header);
                     break;
                 case STOP:
+                    m_is_stopped = true;
                     co_return;
                 default:
                     throw std::invalid_argument("Invalid message type!");
             }
         }
+    }
+
+    bool stop_received() const override {
+        return m_is_stopped;
     }
 
 private:
@@ -70,6 +78,21 @@ private:
         ospan <char> buffer (resp.second.size);
         const auto size = m_data_store.read(buffer.data.get(), resp.second.pointer, resp.second.size);
         co_await m.send (READ_RESP, {buffer.data.get(), size});
+    }
+
+    coro <void> handle_read_address (messenger &m, const messenger::header& h) {
+        const auto resp = co_await m.recv_address(h);
+        const auto read_size = std::accumulate (resp.second.sizes.cbegin(), resp.second.sizes.cend(), 0);
+        ospan <char> buffer (read_size);
+        size_t offset = 0;
+        for (int i = 0; i < resp.second.size(); i++) {
+            const auto frag = resp.second.get_fragment(i);
+            if (m_data_store.read(buffer.data.get() + offset, frag.pointer, frag.size) != frag.size) [[unlikely]] {
+                throw std::runtime_error ("Could not read the data with the given size");
+            }
+            offset += frag.size;
+        }
+        co_await m.send (READ_ADDRESS_RESP, {buffer.data.get(), offset});
     }
 
     coro <void> handle_remove (messenger &m, const messenger::header& h) {
@@ -90,14 +113,15 @@ private:
     }
 
     coro <void> handle_alloc (messenger &m, const messenger::header& h) {
-
         size_t size;
         m.register_read_buffer(size);
+        //std::cout << "data node handle alloc" << std::endl;
         co_await m.recv_buffers(h);
+        //std::cout << "data node handle alloc recv size " << size << std::endl;
         const auto addr = m_data_store.allocate(size);
-        std::vector <char> data;
-        zpp::bits::out {data, zpp::bits::size4b{}} (addr).or_throw();
-        co_await m.send(ALLOC_RESP, data);
+        //std::cout << "data node handle alloc after alloc for size " << size << std::endl;
+        co_await m.send_address(ALLOC_RESP, addr);
+        //std::cout << "data node handle alloc after send alloc size " << size << std::endl;
     }
 
     coro <void> handle_dealloc (messenger &m, const messenger::header& h) {
@@ -114,11 +138,11 @@ private:
         const auto msg = co_await m.recv_allocated_write(h);
         const auto& data_ospan = std::get <ospan <char>> (msg.data);
         m_data_store.allocated_write(msg.addr, {data_ospan.data.get(), data_ospan.size});
-        co_await m.send(DEALLOC_RESP, {});
+        co_await m.send(ALLOC_WRITE_RESP, {});
     }
 
     uh::cluster::data_store m_data_store;
-
+    bool m_is_stopped;
 };
 
 } // end namespace uh::cluster

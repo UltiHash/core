@@ -5,19 +5,37 @@
 #ifndef CORE_ENTRY_NODE_REST_HANDLER_H
 #define CORE_ENTRY_NODE_REST_HANDLER_H
 
-#include "common/protocol_handler.h"
-#include "network/client.h"
 #include <iostream>
+#include <memory>
+#include "common/protocol_handler.h"
+#include <common/log.h>
+#include "network/client.h"
 #include "entry_node/rest/http/http_request.h"
 #include "entry_node/rest/http/http_response.h"
 #include "entry_node/rest/http/models/put_object_response.h"
 #include "entry_node/rest/http/models/get_object_response.h"
 #include "entry_node/rest/http/models/create_bucket_response.h"
-#include <memory>
+#include "entry_node/rest/http/models/init_multi_part_upload_response.h"
+#include "entry_node/rest/http/models/multi_part_upload_response.h"
+#include "entry_node/rest/http/models/complete_multi_part_upload_response.h"
+#include "entry_node/rest/http/models/abort_multi_part_upload_response.h"
+#include "entry_node/rest/http/models/list_buckets_response.h"
+#include "entry_node/rest/http/models/get_object_attributes_response.h"
+#include "entry_node/rest/http/models/list_objectsv2_response.h"
+#include "entry_node/rest/http/models/list_objects_response.h"
+#include "entry_node/rest/http/models/delete_bucket_response.h"
+#include "entry_node/rest/http/models/delete_object_response.h"
+#include "entry_node/rest/http/models/delete_objects_response.h"
+#include "entry_node/rest/http/models/list_multi_part_uploads_response.h"
+#include "entry_node/rest/http/models/get_bucket_response.h"
+#include "entry_node/rest/http/models/delete_objects_request.h"
+#include "entry_node/rest/utils/parser/xml_parser.h"
+#include "entry_node/rest/utils/string/string_utils.h"
 
 namespace uh::cluster {
 
     namespace http = rest::http;
+
 
 class entry_node_rest_handler {
 public:
@@ -27,39 +45,66 @@ public:
         m_directory_nodes (directory_nodes)
     {}
 
-    coro < std::unique_ptr<http::http_response> > handle (const rest::http::http_request& req)
+    coro < std::unique_ptr<http::http_response> > handle (rest::http::http_request& req)
     {
         auto body_size = req.get_body_size();
         const auto size_mb = static_cast <double> (body_size) / static_cast <double> (1024ul * 1024ul);
 
-        std::chrono::time_point <std::chrono::steady_clock> timer;
-        const auto start = std::chrono::steady_clock::now ();
-
         std::unique_ptr<http::http_response> res;
 
-        auto request_name = req.get_request_name();
-        if ( request_name == rest::http::http_request_type::CREATE_BUCKET )
+        switch (req.get_request_name())
         {
-            res = co_await handle_create_bucket(req);
+            case rest::http::http_request_type::CREATE_BUCKET:
+                res = co_await handle_create_bucket(req);
+                break;
+            case http::http_request_type::GET_BUCKET:
+                res = co_await handle_get_bucket(req);
+                break;
+            case http::http_request_type::LIST_BUCKETS:
+                res = co_await handle_list_buckets(req);
+                break;
+            case http::http_request_type::DELETE_BUCKET:
+                res = co_await handle_delete_bucket(req);
+                break;
+            case http::http_request_type::DELETE_OBJECTS:
+                res = handle_delete_objects(req);
+                break;
+            case http::http_request_type::PUT_OBJECT:
+                res = co_await handle_put_object(req);
+                break;
+            case http::http_request_type::GET_OBJECT:
+                res = co_await handle_get_object(req);
+                break;
+            case http::http_request_type::DELETE_OBJECT:
+                res = handle_delete_object(req);
+                break;
+            case http::http_request_type::LIST_OBJECTS_V2:
+                res = co_await handle_list_objects_v2(req);
+                break;
+            case http::http_request_type::LIST_OBJECTS:
+                res = co_await handle_list_objects(req);
+                break;
+            case http::http_request_type::GET_OBJECT_ATTRIBUTES:
+                res = handle_get_object_attributes(req);
+                break;
+            case http::http_request_type::INIT_MULTIPART_UPLOAD:
+                res = handle_init_mp_upload(req);
+                break;
+            case http::http_request_type::MULTIPART_UPLOAD:
+                res = handle_mp_upload(req);
+                break;
+            case http::http_request_type::COMPLETE_MULTIPART_UPLOAD:
+                res = co_await handle_complete_mp_upload(req);
+                break;
+            case http::http_request_type::ABORT_MULTIPART_UPLOAD:
+                res = handle_abort_mp_upload(req);
+                break;
+            case http::http_request_type::LIST_MULTI_PART_UPLOADS:
+                res = handle_list_mp_uploads(req);
+                break;
+            default:
+                throw std::runtime_error("request not supported by the backend yet.");
         }
-        else if( request_name == rest::http::http_request_type::PUT_OBJECT )
-        {
-            res = co_await handle_put_object(req);
-        }
-        else if (request_name == rest::http::http_request_type::GET_OBJECT)
-        {
-            res = co_await handle_get_object(req);
-        }
-        else
-        {
-            throw std::runtime_error("request not supported by the backend yet.");
-        }
-
-        const auto stop = std::chrono::steady_clock::now ();
-        const std::chrono::duration <double> duration = stop - start;
-//        std::cout << "duration " << duration.count() << " s" << std::endl;
-        const auto bandwidth = size_mb / duration.count();
-//        std::cout << "bandwidth " << bandwidth << " MB/s" << std::endl;
 
         co_return std::move(res);
     }
@@ -87,21 +132,132 @@ public:
         }
         catch(const std::exception& e)
         {
-            std::cout << e.what() << std::endl;
-            res->set_error(boost::beast::http::response<boost::beast::http::string_body>{boost::beast::http::status::internal_server_error, 11});
-            res->set_error_body(e.what());
+            LOG_ERROR() << e.what();
+            res->set_error();
         }
 
         co_return std::move(res);
     }
 
-    coro <std::unique_ptr<http::http_response>> handle_put_object (const rest::http::http_request& req)
+    coro<std::unique_ptr<http::http_response>> handle_delete_bucket (const rest::http::http_request& req)
     {
 
-        std::unique_ptr<http::model::put_object_response> res = std::make_unique<http::model::put_object_response>(req);
+        std::unique_ptr<http::model::delete_bucket_response> res;
 
         try
         {
+            res = std::make_unique<http::model::delete_bucket_response>(req);
+
+            auto m_dir = m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size())).acquire_messenger();
+            directory_message dir_req;
+            dir_req.bucket_id = req.get_URI().get_bucket_id();
+            co_await m_dir.get().send_directory_message (DIR_DELETE_BUCKET_REQ, dir_req);
+
+            const auto h_dir = co_await m_dir.get().recv_header();
+            if(h_dir.type == FAILURE) [[unlikely]]
+            {
+                std::string msg;
+                msg.resize(h_dir.size);
+                m_dir.get().register_read_buffer(msg);
+                co_await m_dir.get().recv_buffers(h_dir);
+                throw std::runtime_error("Failed to delete bucket.\nError: \n" + msg);
+            }
+        }
+        catch (const std::exception& e)
+        {
+            LOG_ERROR() << e.what();
+            res->set_error(boost::beast::http::response<boost::beast::http::string_body>{boost::beast::http::status::not_found, 11});
+        }
+
+        co_return std::move(res);
+    }
+
+    coro <std::unique_ptr<http::http_response>> handle_get_bucket (const rest::http::http_request& req)
+    {
+
+        std::unique_ptr<http::model::get_bucket_response> res;
+        try
+        {
+            res = std::make_unique<http::model::get_bucket_response>(req);
+
+            auto m_dir = m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size())).acquire_messenger();
+            co_await m_dir.get().send(DIR_LIST_BUCKET_REQ, {});
+            const auto h_dir = co_await m_dir.get().recv_header();
+
+            if(h_dir.type == DIR_LIST_BUCKET_RESP) [[likely]]
+            {
+                auto list_buckets_res = co_await m_dir.get().recv_directory_list_entities_message(h_dir);
+                for (const auto& bucket: list_buckets_res.entities)
+                {
+                    if (bucket == req.get_URI().get_bucket_id())
+                        res->add_bucket(bucket);
+                }
+                if (res->get_bucket().empty())
+                    throw std::runtime_error("Bucket: " + req.get_URI().get_bucket_id() + " doesn't exist.");
+            }
+            if(h_dir.type == FAILURE) [[unlikely]]
+            {
+                std::string msg;
+                msg.resize(h_dir.size);
+                m_dir.get().register_read_buffer(msg);
+                co_await m_dir.get().recv_buffers(h_dir);
+                throw std::runtime_error("Failed to find bucket.\nError: \n" + msg);
+            }
+        }
+        catch (const std::exception& e)
+        {
+            LOG_ERROR() << e.what();
+            res->set_error(boost::beast::http::response<boost::beast::http::string_body>{boost::beast::http::status::not_found, 11});
+        }
+
+        co_return std::move(res);
+    }
+
+    coro <std::unique_ptr<http::http_response>> handle_list_buckets (const rest::http::http_request& req)
+    {
+
+        std::unique_ptr<http::model::list_buckets_response> res;
+        try
+        {
+            res = std::make_unique<http::model::list_buckets_response>(req);
+            auto m_dir = m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size())).acquire_messenger();
+            co_await m_dir.get().send(DIR_LIST_BUCKET_REQ, {});
+            const auto h_dir = co_await m_dir.get().recv_header();
+
+            if(h_dir.type == DIR_LIST_BUCKET_RESP) [[likely]]
+            {
+                auto list_buckets_res = co_await m_dir.get().recv_directory_list_entities_message(h_dir);
+                for (const auto& bucket: list_buckets_res.entities)
+                {
+                    res->add_bucket(bucket);
+                }
+            }
+            if(h_dir.type == FAILURE) [[unlikely]]
+            {
+                std::string msg;
+                msg.resize(h_dir.size);
+                m_dir.get().register_read_buffer(msg);
+                co_await m_dir.get().recv_buffers(h_dir);
+                throw std::runtime_error("Failed to list buckets.\nError: \n" + msg);
+            }
+
+        }
+        catch (const std::exception& e)
+        {
+            LOG_ERROR() << e.what();
+            res->set_error(boost::beast::http::response<boost::beast::http::string_body>{boost::beast::http::status::not_found, 11});
+        }
+
+        co_return std::move(res);
+    }
+
+    coro <std::unique_ptr<http::http_response>> handle_put_object (rest::http::http_request& req)
+    {
+        std::unique_ptr<http::model::put_object_response> res;
+
+        try
+        {
+            res = std::make_unique<http::model::put_object_response>(req);
             auto body_size = req.get_body_size();
             const auto size_mb = static_cast <double> (body_size) / static_cast <double> (1024ul * 1024ul);
 
@@ -109,13 +265,6 @@ public:
             co_await m_dedup.get().send (DEDUPE_REQ, req.get_body());
             const auto h_dedup = co_await m_dedup.get().recv_header();
             auto resp = co_await m_dedup.get().recv_dedupe_response(h_dedup);
-
-            auto effective_size = static_cast <double> (resp.second.effective_size) / static_cast <double> (1024ul * 1024ul);
-            auto space_saving = 1.0 - static_cast <double> (resp.second.effective_size) / static_cast <double> (body_size);
-
-//            std::cout << "original size " << size_mb << " MB" << std::endl;
-//            std::cout << "effective size " << effective_size << " MB" << std::endl;
-//            std::cout << "space saving " << space_saving << std::endl;
 
             auto m_dir = m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size())).acquire_messenger();
             const directory_message dir_req
@@ -140,108 +289,349 @@ public:
         }
         catch(const std::exception& e)
         {
-            std::cout << e.what() << std::endl;
-            res->set_error(boost::beast::http::response<boost::beast::http::string_body>{boost::beast::http::status::internal_server_error, 11});
-            res->set_error_body(e.what());
+            LOG_ERROR() << e.what();
+            res->set_error(boost::beast::http::response<boost::beast::http::string_body>{boost::beast::http::status::not_found, 11});
         }
 
         co_return std::move(res);
     }
 
-        coro <std::unique_ptr<http::http_response>> handle_get_object (const rest::http::http_request& req)
+    coro <std::unique_ptr<http::http_response>> handle_get_object (const rest::http::http_request& req)
+    {
+
+        std::unique_ptr<http::model::get_object_response> res;
+
+        try
         {
 
-            std::unique_ptr<http::model::get_object_response> res = std::make_unique<http::model::get_object_response>(req);
+            std::chrono::time_point <std::chrono::steady_clock> timer;
+            const auto start = std::chrono::steady_clock::now();
 
-            try
+            res = std::make_unique<http::model::get_object_response>(req);
+            auto m_dir = m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size())).acquire_messenger();
+            directory_message dir_req;
+            dir_req.bucket_id = req.get_URI().get_bucket_id();
+            dir_req.object_key = std::make_unique <std::string> (req.get_URI().get_object_key());
+
+            co_await m_dir.get().send_directory_message (DIR_GET_OBJ_REQ, dir_req);
+            const auto h_dir = co_await m_dir.get().recv_header();
+
+
+            ospan <char> buffer (h_dir.size);
+            std::string msg;
+
+            switch (h_dir.type)
             {
-                auto m_dir = m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size())).acquire_messenger();
-                directory_message dir_req;
-                dir_req.bucket_id = req.get_URI().get_bucket_id();
-                dir_req.object_key = std::make_unique <std::string> (req.get_URI().get_object_key());
-
-                co_await m_dir.get().send_directory_message (DIR_GET_OBJ_REQ, dir_req);
-                const auto h_dir = co_await m_dir.get().recv_header();
-
-                if(h_dir.type == DIR_GET_OBJ_RESP) [[likely]]
-                {
-                    ospan <char> buffer (h_dir.size);
+                case DIR_GET_OBJ_RESP:
                     m_dir.get().register_read_buffer(buffer);
                     co_await m_dir.get().recv_buffers(h_dir);
                     res->set_body(std::string(buffer.data.get(), buffer.size));
-                }
-                else if (h_dir.type == FAILURE)
-                {
-                    std::string msg;
+                    break;
+
+                case FAILURE:
                     msg.resize(h_dir.size);
                     m_dir.get().register_read_buffer(msg);
                     co_await m_dir.get().recv_buffers(h_dir);
-                    throw std::runtime_error("Failed to retreive object " + dir_req.bucket_id + "/" + *dir_req.object_key + " from the directory.\n" + "Error: \n" + msg);
-                }
-            }
-            catch (const std::exception& e)
-            {
-                std::cout << e.what() << std::endl;
-                res->set_error(boost::beast::http::response<boost::beast::http::string_body>{boost::beast::http::status::internal_server_error, 11});
-                res->set_error_body(e.what());
+                    throw std::runtime_error("Failed to retrieve object " + dir_req.bucket_id + "/" + *dir_req.object_key + " from the directory.\n" + "Error: \n" + msg);
+
+                default:
+                    throw std::runtime_error("unexpected internal server error");
             }
 
-            co_return std::move(res);
+            const auto stop = std::chrono::steady_clock::now ();
+            const std::chrono::duration <double> duration = stop - start;
+            const auto size = h_dir.size / static_cast <double> (1024ul * 1024ul);
+            const auto bandwidth = size / duration.count();
+            LOG_INFO() << "retrieval duration " << duration.count() << " s";
+            LOG_INFO() << "retrieval bandwidth " << bandwidth << " MB/s";
+
+        }
+        catch (const std::exception& e)
+        {
+            LOG_ERROR() << e.what();
+            res->set_error(boost::beast::http::response<boost::beast::http::string_body>{boost::beast::http::status::not_found, 11});
         }
 
-//    void handle_init_mp_upload (const rest::http::http_request& req)
-//    {
-//        http::model::put_object_response res(req, boost::beast::http::response<boost::beast::http::string_body>{boost::beast::http::status::no_content, 11});
-//
-//        try
-//        {
-//            underlying_res.set(boost::beast::http::field::content_type, "application/xml");
-//
-//            // TODO: For now, we use fixed upload id for a client
-//            underlying_res.body() =  std::string("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
-//                                                 "<InitiateMultipartUploadResult>\n"
-//                                                 "<Bucket>"+ req.get_URI().get_bucket_id() + "</Bucket>\n"
-//                                                 "<Key>" + req.get_URI().get_object_key() + "</Key>\n"
-//                                                 "<UploadId>first-upload</UploadId>\n"
-//                                                 "</InitiateMultipartUploadResult>");
-//        }
-//        catch(const std::exception& e)
-//        {
-//            res.set_response_object(boost::beast::http::response<boost::beast::http::string_body>{boost::beast::http::status::internal_server_error, 11});
-//        }
-//
-//        return std::move(res);
-//    void handle_multipart_upload (rest::http::http_response& res)
-//    {
-//        auto& underlying_res = res.get_underlying_object();
-//
-//        underlying_res.set(boost::beast::http::field::connection, "keep-alive");
-//        underlying_res.set(boost::beast::http::field::content_type, "application/xml");
-//        underlying_res.set(boost::beast::http::field::etag, "ThisistheCustomEtag");
-//    }
-//
-//    void handle_abort_mp_upload (rest::http::http_response& res)
-//    {
-//        res.set_response_object(boost::beast::http::response<boost::beast::http::string_body>{boost::beast::http::status::no_content, 11});
-//    coro <void> handle_create_bucket (const rest::http::http_request& req, rest::http::http_response& res)
-//    {
-//        auto m_dir = m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size())).acquire_messenger();
-//        directory_message dir_req;
-//        dir_req.bucket_id = req.get_URI().get_bucket_id();
-//        co_await m_dir.get().send_directory_message (DIR_PUT_BUCKET_REQ, dir_req);
-//        const auto h_dir = co_await m_dir.get().recv_header();
-//        if(h_dir.type == FAILURE) [[unlikely]]
-//        {
-//            std::string msg;
-//            msg.resize(h_dir.size);
-//            m_dir.get().register_read_buffer(msg);
-//            co_await m_dir.get().recv_buffers(h_dir);
-//            throw std::runtime_error("Failed to add the bucket " + dir_req.bucket_id + " to the directory.\n" + "Error: \n" + msg);
-//        }
-//
-//        co_return;
-//    }
-//
+        co_return std::move(res);
+    }
+
+    std::unique_ptr<http::http_response> handle_get_object_attributes (const rest::http::http_request& req)
+    {
+
+        std::unique_ptr<http::model::get_object_attributes_response> res;
+
+        res = std::make_unique<http::model::get_object_attributes_response>(req);
+        res->set_error(boost::beast::http::response<boost::beast::http::string_body>{boost::beast::http::status::not_implemented, 11});
+
+        return std::move(res);
+    }
+
+    coro<std::unique_ptr<http::http_response>> handle_list_objects_v2 (const rest::http::http_request& req)
+    {
+
+        std::unique_ptr<http::model::list_objectsv2_response> res;
+
+        try
+        {
+            res = std::make_unique<http::model::list_objectsv2_response>(req);
+            auto m_dir = m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size())).acquire_messenger();
+
+            directory_message dir_req;
+            dir_req.bucket_id = req.get_URI().get_bucket_id();
+
+            co_await m_dir.get().send_directory_message (DIR_LIST_OBJ_REQ, dir_req);
+            const auto h_dir = co_await m_dir.get().recv_header();
+
+            ospan <char> buffer (h_dir.size);
+            std::string msg;
+            directory_lst_entities_message list_objects_res;
+
+            switch (h_dir.type)
+            {
+                case DIR_LIST_OBJ_RESP:
+                    list_objects_res = co_await m_dir.get().recv_directory_list_entities_message(h_dir);
+
+                    for (const auto& content : list_objects_res.entities)
+                    {
+                        res->add_content(content);
+                    }
+                    break;
+
+                case FAILURE:
+                    msg.resize(h_dir.size);
+                    m_dir.get().register_read_buffer(msg);
+                    co_await m_dir.get().recv_buffers(h_dir);
+                    throw std::runtime_error("Failed to list objects of bucket: " + dir_req.bucket_id + "\n" + "Error: \n" + msg);
+
+                default:
+                    throw std::runtime_error("unexpected internal server error");
+            }
+
+        }
+        catch(const std::exception &e)
+        {
+            LOG_ERROR() << e.what();
+            res->set_error(boost::beast::http::response<boost::beast::http::string_body>{boost::beast::http::status::internal_server_error, 11});
+        }
+
+        LOG_INFO() << res->get_response_specific_object();
+        co_return std::move(res);
+    }
+
+    coro<std::unique_ptr<http::http_response>> handle_list_objects (const rest::http::http_request& req)
+    {
+
+        std::unique_ptr<http::model::list_objects_response> res;
+
+        try
+        {
+            res = std::make_unique<http::model::list_objects_response>(req);
+            auto m_dir = m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size())).acquire_messenger();
+
+            directory_message dir_req;
+            dir_req.bucket_id = req.get_URI().get_bucket_id();
+
+            co_await m_dir.get().send_directory_message (DIR_LIST_OBJ_REQ, dir_req);
+            const auto h_dir = co_await m_dir.get().recv_header();
+
+            ospan <char> buffer (h_dir.size);
+            std::string msg;
+            directory_lst_entities_message list_objects_res;
+
+            switch (h_dir.type)
+            {
+                case DIR_LIST_OBJ_RESP:
+                    list_objects_res = co_await m_dir.get().recv_directory_list_entities_message(h_dir);
+
+                    for (const auto& content : list_objects_res.entities)
+                    {
+                        res->add_content(content);
+                    }
+                    res->add_name(req.get_URI().get_bucket_id());
+                    break;
+
+                case FAILURE:
+                    msg.resize(h_dir.size);
+                    m_dir.get().register_read_buffer(msg);
+                    co_await m_dir.get().recv_buffers(h_dir);
+                    throw std::runtime_error("Failed to list objects of bucket: " + dir_req.bucket_id + "\n" + "Error: \n" + msg);
+
+                default:
+                    throw std::runtime_error("unexpected internal server error");
+            }
+
+        }
+        catch(const std::exception &e)
+        {
+            LOG_ERROR() << e.what();
+            res->set_error(boost::beast::http::response<boost::beast::http::string_body>{boost::beast::http::status::internal_server_error, 11});
+        }
+
+        LOG_INFO() << res->get_response_specific_object();
+        co_return std::move(res);
+    }
+
+    std::unique_ptr<http::http_response> handle_init_mp_upload (const rest::http::http_request& req)
+    {
+
+        std::unique_ptr<http::model::init_multi_part_upload_response> res;
+        try
+        {
+            res = std::make_unique<http::model::init_multi_part_upload_response>(req);
+            res->set_upload_id(req.get_eTag());
+        }
+        catch(const std::exception& e)
+        {
+            LOG_ERROR() << e.what();
+            res->set_error();
+        }
+
+        return std::move(res);
+    }
+
+    std::unique_ptr<http::http_response> handle_mp_upload (const rest::http::http_request& req)
+    {
+
+        std::unique_ptr<http::model::multi_part_upload_response> res;
+        try
+        {
+            res = std::make_unique<http::model::multi_part_upload_response>(req);
+            res->set_etag("CustomEtag");
+        }
+        catch(const std::exception& e)
+        {
+            LOG_ERROR() << e.what();
+            res->set_error();
+        }
+
+        return std::move(res);
+    }
+
+    coro<std::unique_ptr<http::http_response>> handle_complete_mp_upload (rest::http::http_request& req)
+    {
+        std::unique_ptr<http::model::complete_multi_part_upload_response> res;
+        try
+        {
+
+            res = std::make_unique<http::model::complete_multi_part_upload_response>(req);
+            auto body_size = req.get_body_size();
+
+            std::chrono::time_point <std::chrono::steady_clock> timer;
+            const auto start = std::chrono::steady_clock::now();
+            const auto size_mb = static_cast <double> (body_size) / static_cast <double> (1024ul * 1024ul);
+
+            auto m_dedup = m_dedupe_nodes.at(get_round_robin_index(m_dedupe_node_index, m_dedupe_nodes.size())).acquire_messenger();
+            co_await m_dedup.get().send (DEDUPE_REQ, req.get_body());
+            const auto h_dedup = co_await m_dedup.get().recv_header();
+            auto resp = co_await m_dedup.get().recv_dedupe_response(h_dedup);
+
+            auto effective_size = static_cast <double> (resp.second.effective_size) / static_cast <double> (1024ul * 1024ul);
+            auto space_saving = 1.0 - static_cast <double> (resp.second.effective_size) / static_cast <double> (body_size);
+
+            auto m_dir = m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size())).acquire_messenger();
+            const directory_message dir_req
+                    {
+                            .bucket_id = req.get_URI().get_bucket_id(),
+                            .object_key = std::make_unique <std::string> (req.get_URI().get_object_key()),
+                            .addr = std::make_unique <address> (std::move (resp.second.addr)),
+                    };
+
+            co_await m_dir.get().send_directory_message (DIR_PUT_OBJ_REQ, dir_req);
+            const auto h_dir = co_await m_dir.get().recv_header();
+            if(h_dir.type == FAILURE) [[unlikely]]
+            {
+                std::string msg;
+                msg.resize(h_dir.size);
+                m_dir.get().register_read_buffer(msg);
+                co_await m_dir.get().recv_buffers(h_dir);
+                throw std::runtime_error("Failed to add the fragment address of object " + dir_req.bucket_id + "/" + *dir_req.object_key + " to the directory.\n" + "Error: \n" + msg);
+            }
+
+            res->set_etag("CustomEtag");
+
+            std::cout << "original size " << size_mb << " MB" << std::endl;
+            std::cout << "effective size " << effective_size << " MB" << std::endl;
+            std::cout << "space saving " << space_saving << std::endl;
+            const auto stop = std::chrono::steady_clock::now ();
+            const std::chrono::duration <double> duration = stop - start;
+            const auto bandwidth = size_mb / duration.count();
+            std::cout << "integration duration " << duration.count() << " s" << std::endl;
+            std::cout << "integration bandwidth " << bandwidth << " MB/s" << std::endl;
+
+        }
+        catch(const std::exception& e)
+        {
+            LOG_ERROR() << e.what();
+            res->set_error();
+        }
+
+        co_return std::move(res);
+    }
+
+    std::unique_ptr<http::http_response> handle_abort_mp_upload (const rest::http::http_request& req)
+    {
+        std::unique_ptr<http::model::abort_multi_part_upload_response> res;
+        try
+        {
+            res = std::make_unique<http::model::abort_multi_part_upload_response>(req);
+        }
+        catch(const std::exception& e)
+        {
+            LOG_ERROR() << e.what();
+            res->set_error();
+        }
+
+        return std::move(res);
+    }
+
+    std::unique_ptr<http::http_response> handle_delete_object (const rest::http::http_request& req)
+    {
+
+        std::unique_ptr<http::model::delete_object_response> res = std::make_unique<http::model::delete_object_response>(req);
+        res->set_error(boost::beast::http::response<boost::beast::http::string_body>{boost::beast::http::status::not_implemented, 11});
+
+        return std::move(res);
+    }
+
+    std::unique_ptr<http::http_response> handle_list_mp_uploads (const rest::http::http_request& req)
+    {
+
+        std::unique_ptr<http::model::list_multi_part_uploads_response> res = std::make_unique<http::model::list_multi_part_uploads_response>(req);
+        res->set_error(boost::beast::http::response<boost::beast::http::string_body>{boost::beast::http::status::not_implemented, 11});
+
+        return std::move(res);
+    }
+
+    std::unique_ptr<http::http_response> handle_delete_objects (rest::http::http_request& req)
+    {
+
+        std::unique_ptr<http::model::delete_objects_response> res;
+
+        try
+        {
+            res = std::make_unique<http::model::delete_objects_response>(req);
+            rest::utils::parser::xml_parser parsed_xml(req.get_body());
+
+            std::vector<rest::http::model::object> objects_container;
+
+            auto object_nodes_set = parsed_xml.get_nodes_from_path("/Delete/Object");
+            for (const auto& objectNode : object_nodes_set)
+            {
+                objects_container.emplace_back(objectNode.node().child("Key").child_value(), objectNode.node().child("VersionId").child_value());
+            }
+
+        }
+        catch (const std::exception& e)
+        {
+            res->set_error(boost::beast::http::response<boost::beast::http::string_body>{boost::beast::http::status::not_implemented, 11});
+        }
+
+        return std::move(res);
+    }
+
+    [[nodiscard]] client& get_recovery_director () const {
+        return m_directory_nodes.at(0);
+    }
 
 private:
 

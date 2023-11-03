@@ -26,11 +26,8 @@ entry_node::run()
 {
 
     std::string msg ("hello cluster");
-
-    //std::cout << std::string_view (resp.data.get(), resp.size) << std::endl;
-
+    //run_recovery ();
     m_rest_server.run();
-    //m_internal_server.run();
 }
 
 void entry_node::create_connections() {
@@ -46,6 +43,10 @@ void entry_node::create_connections() {
                                        m_cluster_map.m_cluster_conf.directory_node_conf.server_conf.port,
                                        m_cluster_map.m_cluster_conf.entry_node_conf.directory_connection_count);
     }
+}
+
+void entry_node::stop() {
+    throw std::runtime_error ("not implemented");
 }
 
 //------------------------------------------------------------------------------

@@ -11,15 +11,17 @@
 #include "data_store.h"
 #include "network/server.h"
 #include "network/cluster_map.h"
+#include "common/node_interface.h"
 #include <atomic>
 
 namespace uh::cluster {
-class data_node {
+class data_node: public node_interface {
 public:
 
     data_node (int id, cluster_map&& cmap);
 
-    void run();
+    void run() override;
+    void stop() override;
 
 private:
 

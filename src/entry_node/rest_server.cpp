@@ -1,8 +1,11 @@
+#include <common/log.h>
 #include "rest_server.h"
 #include "rest/utils/parser/s3_parser.h"
 #include <fstream>
 #include <filesystem>
 #include "entry_node/rest/utils/string/string_utils.h"
+#include "rest/http/models/generic_error_response.h"
+
 
 namespace uh::cluster::rest
 {
@@ -16,7 +19,7 @@ namespace uh::cluster::rest
         m_handler (dedupe_nodes, directory_nodes)
     {
         boost::asio::co_spawn(*m_ioc,
-                              do_listen(tcp::endpoint{m_server_address, m_config.port}),
+                              recover_failed_nodes (),
                               [](const std::exception_ptr& e)
                               {
                                   if (e)
@@ -29,6 +32,21 @@ namespace uh::cluster::rest
                                           std::cerr << "Error in acceptor: " << e.what() << "\n";
                                       }
                               });
+
+        boost::asio::co_spawn(*m_ioc,
+                              do_listen(tcp::endpoint{m_server_address, m_config.port}),
+                              [](const std::exception_ptr& e)
+                              {
+                                  if (e)
+                                      try
+                                      {
+                                          std::rethrow_exception(e);
+                                      }
+                                      catch(std::exception & e)
+                                      {
+                                        LOG_ERROR() << "acceptor failed: " << e.what();
+                                      }
+                              });
     }
 
 //------------------------------------------------------------------------------
@@ -36,7 +54,7 @@ namespace uh::cluster::rest
     void
     rest_server::run()
     {
-        std::cout << "starting server" << std::endl;
+        LOG_INFO() << "starting server";
 
         for(auto i = 0 ; i < m_config.threads - 1 ; i++)
             m_thread_container.emplace_back(
@@ -50,10 +68,17 @@ namespace uh::cluster::rest
 
 //------------------------------------------------------------------------------
 
+    coro <void> rest_server::recover_failed_nodes () {
+        auto m = m_handler.get_recovery_director().acquire_messenger();
+        co_await m.get().send(RECOVER_REQ, {});
+        const auto h = co_await m.get().recv_header();
+        co_await m.get().throw_if_failure(h);
+        m_recover_response.set_value(h.type);
+    }
 
-    net::awaitable<void>
+    coro <void>
     rest_server::do_session(tcp_stream stream) {
-        std::cout << "connection from: " << stream.socket().remote_endpoint() << std::endl;
+        LOG_INFO() << "connection from: " << stream.socket().remote_endpoint();
 
         beast::error_code ec;
 
@@ -64,27 +89,21 @@ namespace uh::cluster::rest
                 stream.expires_after(std::chrono::seconds(10000));
                 beast::flat_buffer buffer;
 
-                // read header
                 b_http::request_parser<b_http::empty_body> received_request;
                 received_request.body_limit((std::numeric_limits<std::uint64_t>::max)());
 
                 co_await b_http::async_read_header(stream, buffer, received_request, net::use_awaitable);
 
-                // parse
+                LOG_DEBUG() << received_request.get().base();
+
                 rest::utils::parser::s3_parser s3_parser(received_request, m_uomap_multipart);
                 auto s3_request = s3_parser.parse();
 
-                // read body
                 co_await s3_request->read_body(stream, buffer);
 
-                // authenticate
-
-                // handle
                 auto s3_res = co_await m_handler.handle(*s3_request);
 
-                // send response
-                const auto& res_to_send = s3_res->get_response_specific_object();
-                co_await b_http::async_write(stream, res_to_send, net::use_awaitable);
+                co_await b_http::async_write(stream, s3_res->get_response_specific_object(), net::use_awaitable);
 
                 if(! received_request.keep_alive() )
                 {
@@ -92,30 +111,20 @@ namespace uh::cluster::rest
                 }
             }
         }
-        catch (boost::system::system_error &se)
+        catch (const boost::system::system_error& se)
         {
             if (se.code() != b_http::error::end_of_stream)
             {
-                b_http::response<b_http::string_body> res{b_http::status::bad_request, 11};
-                res.set(b_http::field::server, "UltiHash");
-                res.set(b_http::field::content_type, "text/html");
-                res.body() = se.code().message() + '\n';
-                res.prepare_payload();
-                b_http::write(stream, res);
-
+                uh::cluster::rest::http::model::error_response err;
+                b_http::write(stream, err.get_response_specific_object());
                 stream.socket().shutdown(tcp::socket::shutdown_send, ec);
                 throw;
             }
         }
         catch (const std::exception& e)
         {
-            b_http::response<b_http::string_body> res{b_http::status::bad_request, 11};
-            res.set(b_http::field::server, "UltiHash");
-            res.set(b_http::field::content_type, "text/html");
-            res.body() = e.what();
-            res.prepare_payload();
-            b_http::write(stream, res);
-
+            uh::cluster::rest::http::model::error_response err;
+            b_http::write(stream, err.get_response_specific_object());
             stream.socket().shutdown(tcp::socket::shutdown_send, ec);
             throw;
         }
@@ -125,9 +134,14 @@ namespace uh::cluster::rest
 
 //------------------------------------------------------------------------------
 
-    net::awaitable<void>
+    coro <void>
     rest_server::do_listen(tcp::endpoint endpoint)
     {
+        const auto recover_response = m_recover_response.get_future().get();
+        if (recover_response != RECOVER_RESP) [[unlikely]] {
+            throw std::runtime_error ("Recovery not successful!");
+        }
+
         // TODO : implement ssl
 //        m_ssl.use_certificate_chain_file(config.tls_chain);
 //        m_ssl.use_private_key_file(config.tls_pkey, ssl::context::pem);
@@ -157,7 +171,7 @@ namespace uh::cluster::rest
                             }
                             catch (const std::exception &e)
                             {
-                                std::cout << "Error in session: [" << conn_address << ":" << conn_port << "] " << e.what() << "\n";
+                                LOG_ERROR() << "in session: [" << conn_address << ":" << conn_port << "] " << e.what();
                             }
                     });
         }

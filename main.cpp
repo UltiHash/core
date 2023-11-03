@@ -10,6 +10,10 @@
 #include "entry_node/entry_node.h"
 #include "network/cluster_map.h"
 
+#include <config.h>
+#include <common/log.h>
+
+
 uh::cluster::entry_node_config make_entry_node_config () {
     return {
         .internal_server_conf = {
@@ -62,8 +66,9 @@ uh::cluster::dedupe_config make_dedupe_node_config () {
     return {
         .min_fragment_size = 32,
         .max_fragment_size = 8 * 1024,
+        .write_cache_size_per_dn = 20ul * 1024ul * 1024ul,
         .server_conf = {
-                .threads = 1,
+                .threads = 2,
                 .port = 8084,
         },
         .data_node_connection_count = 2,
@@ -81,6 +86,8 @@ uh::cluster::dedupe_config make_dedupe_node_config () {
 uh::cluster::cluster_config make_cluster_config () {
     return {
             .init_process_count = 4,
+            .ec_algorithm = uh::cluster::NON,
+            .recovery_chunk_size = 1024ul * 1024ul * 1024ul,
             .data_node_conf = make_data_node_config(),
             .dedupe_node_conf = make_dedupe_node_config(),
             .directory_node_conf = make_directory_node_config(),
@@ -92,21 +99,25 @@ void execute_role (const uh::cluster::role role, const int id, uh::cluster::clus
 
     switch (role) {
         case uh::cluster::DATA_NODE: {
+            LOG_INFO() << "starting data node";
             uh::cluster::data_node dn (id, std::move (cmap));
             dn.run();
             break;
         }
         case uh::cluster::DEDUPE_NODE: {
+            LOG_INFO() << "starting dedupe node";
             uh::cluster::dedupe_node dd (id, std::move (cmap));
             dd.run();
             break;
         }
         case uh::cluster::DIRECTORY_NODE: {
+            LOG_INFO() << "starting directory node";
             uh::cluster::directory_node pb (id, std::move (cmap));
             pb.run();
             break;
         }
         case uh::cluster::ENTRY_NODE: {
+            LOG_INFO() << "starting entry node";
             uh::cluster::entry_node en (id, std::move(cmap));
             en.run();
             break;
@@ -115,8 +126,8 @@ void execute_role (const uh::cluster::role role, const int id, uh::cluster::clus
 
 }
 
-uh::cluster::cluster_map init_cluster_map (const uh::cluster::role role, const int id, const uh::cluster::cluster_config& cluster_conf) {
-    uh::cluster::cluster_map cmap (cluster_conf);
+uh::cluster::cluster_map init_cluster_map (const uh::cluster::role role, const int id, uh::cluster::cluster_config&& cluster_conf) {
+    uh::cluster::cluster_map cmap (std::move (cluster_conf));
 
     if (role == uh::cluster::ENTRY_NODE and id == 0) { // master
         cmap.broadcast_init();
@@ -149,15 +160,30 @@ int main (int argc, char* args[]) {
     if (argc != 3) {
         throw std::invalid_argument("Usage: uh-cluster <role> <id>");
     }
+
+    uh::log::config lc {
+        .sinks = {
+            uh::log::sink_config {
+                .type = uh::log::sink_type::cout
+            },
+            uh::log::sink_config {
+                .type = uh::log::sink_type::file,
+                .filename = "log.log"
+            }
+        }
+    };
+
+    uh::log::init(lc);
+    LOG_INFO() << "starting " << PROJECT_NAME << " " << PROJECT_VERSION;
+
     const auto role_str = std::string_view(args[1]);   // en, dd, dr, dn
     char* end;
     const auto id = static_cast <int> (std::strtol(args[2], &end, 10));
 
     const auto role = get_role (role_str);
-    const auto cluster_conf = make_cluster_config();
+    auto cluster_conf = make_cluster_config();
 
-    uh::cluster::cluster_map cmap = init_cluster_map (role, id, cluster_conf);
+    uh::cluster::cluster_map cmap = init_cluster_map (role, id, std::move (cluster_conf));
 
     execute_role (role, id, std::move (cmap));
-
 }

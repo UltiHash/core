@@ -26,7 +26,7 @@ struct fragment {
 struct address {
 
     std::vector <uint64_t> pointers;
-    std::vector <uint16_t> sizes;
+    std::vector <uint32_t> sizes;
 
     address () = default;
     explicit address (std::size_t size):
@@ -40,6 +40,7 @@ struct address {
         pointers.emplace_back(frag.pointer.get_data()[0]);
         pointers.emplace_back(frag.pointer.get_data()[1]);
         sizes.emplace_back(frag.size);
+        int i = 0;
     }
 
     void append_address (const address& addr) {
@@ -54,7 +55,7 @@ struct address {
     }
 
     void allocate_for_serialized_data (std::size_t size) {
-        size_t count = size / (2 * sizeof (uint64_t) + sizeof (uint16_t));
+        size_t count = size / (2 * sizeof (uint64_t) + sizeof (uint32_t));
         pointers.resize (count * 2);
         sizes.resize (count);
     }
@@ -66,6 +67,7 @@ struct address {
     void set_fragment(int i, const fragment& frag) {
         pointers[2*i] = frag.pointer.get_high();
         pointers[2*i+1] = frag.pointer.get_low();
+        sizes[i] = frag.size;
     }
 
     [[nodiscard]] std::size_t size () const noexcept {
@@ -77,6 +79,7 @@ struct address {
     }
 
     // TODO: pop_front is not really cheap right now, perhaps this can be revised
+
     fragment pop_front() {
         fragment frag = { {pointers[0], pointers[1]}, sizes[0]};
 
@@ -126,7 +129,48 @@ struct dedupe_response {
 struct directory_message {
     std::string bucket_id;
     zpp::bits::optional_ptr <std::string> object_key;
+    zpp::bits::optional_ptr <std::string> object_key_prefix;
+    zpp::bits::optional_ptr <std::string> object_key_lower_bound;
     zpp::bits::optional_ptr<address> addr;
+
+    bool operator ==(const directory_message& rhs) const {
+        bool result = bucket_id == rhs.bucket_id;
+
+        if(object_key.get() != nullptr && rhs.object_key.get() != nullptr)
+            result &= *object_key == *rhs.object_key;
+        else if(object_key.get() == nullptr && rhs.object_key.get() == nullptr)
+            result &= true;
+        else
+            return false;
+
+        if(object_key_prefix.get() != nullptr && rhs.object_key_prefix.get() != nullptr)
+            result &= *object_key_prefix == *rhs.object_key_prefix;
+        else if(object_key_prefix.get() == nullptr && rhs.object_key_prefix.get() == nullptr)
+            result &= true;
+        else
+            return false;
+
+        if(object_key_lower_bound.get() != nullptr && rhs.object_key_lower_bound.get() != nullptr)
+            result &= *object_key_lower_bound == *rhs.object_key_lower_bound;
+        else if(object_key_lower_bound.get() == nullptr && rhs.object_key_lower_bound.get() == nullptr)
+            result &= true;
+        else
+            return false;
+
+        if(addr.get() != nullptr && rhs.addr.get() != nullptr)
+            result &= *addr == *rhs.addr;
+        else if(addr.get() == nullptr && rhs.addr.get() == nullptr)
+            result &= true;
+        else
+            return false;
+
+        return result;
+
+    };
+};
+
+struct directory_lst_entities_message {
+    std::vector<std::string> entities;
 };
 
 struct allocated_write_message {
@@ -143,5 +187,6 @@ template<> struct std::hash<uh::cluster::fragment> {
              ^ std::hash<std::size_t>{}(frag.size);
     }
 };
+
 
 #endif //CORE_COMMON_TYPES_H

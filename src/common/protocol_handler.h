@@ -13,6 +13,10 @@ struct protocol_handler {
     virtual coro <void> handle (messenger m) = 0;
 
     virtual ~protocol_handler() = default;
+
+    [[nodiscard]] virtual bool stop_received() const {
+        return false;
+    }
 };
 
 } // namespace uh::cluster

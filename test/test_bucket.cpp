@@ -77,7 +77,7 @@ void fill_random_object(char* buf, size_t size) {
 
 // ---------------------------------------------------------------------
 
-BOOST_FIXTURE_TEST_CASE (test_bucket_prefilled, config_fixture)
+BOOST_FIXTURE_TEST_CASE (bucket_prefilled_test, config_fixture)
 {
     cleanup();
     setup_prefilled();

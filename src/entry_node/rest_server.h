@@ -54,6 +54,7 @@ namespace uh::cluster::rest
         std::vector<std::thread> m_thread_container {};
         boost::asio::ssl::context m_ssl;
         entry_node_rest_handler m_handler;
+        std::promise <message_type> m_recover_response;
         bool m_server_busy = false;
 
         rest::utils::ts_unordered_map<std::string, std::shared_ptr<utils::ts_map<uint16_t, std::string>>> m_uomap_multipart;
@@ -70,12 +71,15 @@ namespace uh::cluster::rest
 
         ~rest_server();
 
+        coro <void>
+        recover_failed_nodes ();
+
         // Handles an HTTP server connection
-        net::awaitable<void>
+        coro <void>
         do_session(tcp_stream stream);
 
         // Accepts incoming connections and launches the sessions
-        net::awaitable<void>
+        coro <void>
         do_listen(tcp::endpoint endpoint);
     };
 

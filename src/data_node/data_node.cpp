@@ -16,10 +16,14 @@ data_node::data_node(int id, cluster_map&& cmap):
         }
 
 void data_node::run() {
-    std::cout << "hello from " << m_job_name << std::endl;
+    LOG_INFO() << "starting " << m_job_name;
 
     m_server.run();
 
+}
+
+void data_node::stop() {
+    m_server.stop();
 }
 
 } // end namespace uh::cluster

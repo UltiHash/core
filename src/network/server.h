@@ -19,6 +19,7 @@
 #include <thread>
 #include <vector>
 #include "common/cluster_config.h"
+#include <common/log.h>
 #include "messenger.h"
 #include "common/protocol_handler.h"
 
@@ -34,7 +35,7 @@ namespace uh::cluster
     public:
         server(server_config config, std::unique_ptr <protocol_handler> handler) :
                 m_config (config), m_ioc (std::make_shared <boost::asio::io_context> (m_config.threads)), m_handler (std::move (handler)) {
-
+            m_is_running = true;
             boost::asio::co_spawn(*m_ioc,
                                   do_listen(boost::asio::ip::tcp::endpoint{m_server_address, m_config.port}),
                                   [](const std::exception_ptr &e) {
@@ -42,14 +43,17 @@ namespace uh::cluster
                                           try {
                                               std::rethrow_exception(e);
                                           }
+                                          catch (boost::system::system_error &e) {
+                                              std::cout << "Server stopped." << std::endl;
+                                          }
                                           catch (std::exception &e) {
-                                              std::cerr << "Error in acceptor: " << e.what() << "\n";
+                                              LOG_ERROR() << "accept: " << e.what();
                                           }
                                   });
         }
 
         void run() {
-            std::cout << "starting server" << std::endl;
+            LOG_INFO() << "starting server";
 
             for (auto i = 0; i < m_config.threads - 1; i++)
                 m_thread_container.emplace_back(
@@ -61,6 +65,11 @@ namespace uh::cluster
             m_ioc->run();
         }
 
+        void stop() {
+            m_is_running = false;
+            m_ioc->stop();
+        }
+
         [[nodiscard]] std::shared_ptr <boost::asio::io_context> get_executor () const {
             return m_ioc;
         }
@@ -69,6 +78,7 @@ namespace uh::cluster
             for (auto& thread: m_thread_container) {
                 thread.join();
             }
+            stop ();
         }
 
     private:
@@ -85,7 +95,7 @@ namespace uh::cluster
             acceptor.bind(endpoint);
             acceptor.listen(boost::asio::socket_base::max_listen_connections);
 
-            for (;;) {
+            while (m_is_running) {
                 boost::asio::ip::tcp::socket stream = co_await acceptor.async_accept();
                 auto conn_address = stream.remote_endpoint().address().to_string();
                 auto conn_port = stream.remote_endpoint().port();
@@ -99,19 +109,29 @@ namespace uh::cluster
                                     std::rethrow_exception(e);
                                 }
                                 catch (const std::exception &e) {
-                                    std::cout << "Error in session: [" << conn_address << ":" << conn_port << "] "
-                                         << e.what() << std::endl;
+                                    LOG_ERROR() << "in session: [" << conn_address << ":" << conn_port << "] "
+                                         << e.what();
 
                                 }
+
+                            if(m_handler->stop_received()) {
+                                m_is_running = false;
+                                try {
+                                    acceptor.close();
+                                    while(acceptor.is_open()) {};
+                                } catch (boost::system::system_error &e) {
+                                    std::cout << "do we get here?" << std::endl;
+                                }
+                            }
                         });
             }
-
         }
 
         boost::asio::awaitable<void> do_session(boost::asio::ip::tcp::socket stream) {
             const auto life_time = m_ioc;
-            std::cout << "connection from: " << stream.remote_endpoint() << std::endl;
+            LOG_INFO() << "connection from: " << stream.remote_endpoint();
             co_await m_handler->handle(messenger(std::move(stream)));
+
             co_return;
         }
 
@@ -119,9 +139,10 @@ namespace uh::cluster
         server_config m_config;
         std::shared_ptr <boost::asio::io_context> m_ioc;
         std::vector<std::thread> m_thread_container {};
+        std::vector<boost::asio::basic_socket_acceptor<boost::asio::ip::tcp, boost::asio::use_awaitable_t<boost::asio::any_io_executor>::executor_with_default<boost::asio::any_io_executor>>> m_acceptors;
         std::unique_ptr <protocol_handler> m_handler;
         const boost::asio::ip::address m_server_address = boost::asio::ip::make_address("0.0.0.0");
-
+        std::atomic<bool> m_is_running;
     };
 
 //------------------------------------------------------------------------------

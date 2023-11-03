@@ -8,7 +8,6 @@
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/awaitable.hpp>
 #include <list>
-#include <common/awaitable_future.h>
 
 
 namespace uh::cluster {
@@ -20,7 +19,7 @@ class messenger_core {
 public:
 
     struct header {
-        message_types type;
+        message_type type;
         uint32_t size;
     };
 
@@ -47,15 +46,15 @@ public:
     template <typename T>
     requires (std::is_arithmetic_v <T> or std::is_enum_v <T>)
     inline void register_read_buffer (T& t) {
-        m_read_buffers.emplace_back (&t, sizeof (t));
-        m_read_size += sizeof (t);
+        m_read_buffers.emplace_back (&t, sizeof (T));
+        m_read_size += sizeof (T);
     }
 
     template <typename T>
     requires (std::is_arithmetic_v <T> or std::is_enum_v <T>)
-    inline void register_read_buffer (const T* t, std::uint32_t size) {
-        m_read_buffers.emplace_back (t, size * sizeof (t));
-        m_read_size += size * sizeof (t);
+    inline void register_read_buffer (T* t, std::uint32_t size) {
+        m_read_buffers.emplace_back (t, size * sizeof (T));
+        m_read_size += size * sizeof (T);
     }
 
     template <typename T, typename InnerType = std::ranges::range_value_t <T>>
@@ -75,14 +74,14 @@ public:
     template <typename T>
     requires (std::is_arithmetic_v <T> or std::is_enum_v <T>)
     inline void register_write_buffer (const T& t) {
-        m_write_buffers.emplace_back (&t, sizeof (t));
-        m_write_size += sizeof (t);
+        m_write_buffers.emplace_back (&t, sizeof (T));
+        m_write_size += sizeof (T);
     }
 
     template <typename T>
     requires (std::is_arithmetic_v <T> or std::is_enum_v <T>)
     inline void register_write_buffer (const T* t, std::uint32_t size) {
-        m_write_buffers.emplace_back (t, size * sizeof (t));
+        m_write_buffers.emplace_back (t, size * sizeof (T));
         m_write_size += size * sizeof (T);
     }
 
@@ -106,7 +105,6 @@ public:
                 {&h.type, sizeof h.type},
                 {&h.size, sizeof h.size}
         };
-        //boost::asio::read (m_socket, buffers);
         co_await boost::asio::async_read (m_socket, buffers, boost::asio::as_tuple(boost::asio::use_awaitable));
 
         co_return h;
@@ -116,7 +114,6 @@ public:
         if (h.size != m_read_size) [[unlikely]] {
             throw std::length_error ("The size of the buffers does not match with the header size!");
         }
-        //boost::asio::read (m_socket, m_read_buffers);
         co_await boost::asio::async_read (m_socket, m_read_buffers, boost::asio::as_tuple(boost::asio::use_awaitable));
 
         m_read_buffers.clear();
@@ -124,11 +121,10 @@ public:
         co_return;
     }
 
-    coro <void> send_buffers (const message_types type) {
+    coro <void> send_buffers (const message_type type) {
         m_write_buffers.emplace_front(&m_write_size, sizeof m_write_size);
         m_write_buffers.emplace_front(&type, sizeof type);
 
-        //boost::asio::write (m_socket, m_write_buffers);
         co_await boost::asio::async_write (m_socket, m_write_buffers, boost::asio::as_tuple(boost::asio::use_awaitable));
 
         m_write_buffers.clear();
@@ -137,7 +133,7 @@ public:
 
     }
 
-    coro <void> send (const message_types type, std::span <const char> data) {
+    coro <void> send (const message_type type, std::span <const char> data) {
         const auto size = static_cast <uint32_t> (data.size());
 
         std::vector <boost::asio::const_buffer> buffers {
@@ -152,19 +148,18 @@ public:
 
     coro <header> recv (std::span <char> buffer) {
         uint32_t size = 0;
-        message_types type;
+        message_type type;
         std::vector <boost::asio::mutable_buffer> buffers {
                 {&type, sizeof (type)},
                 {&size, sizeof (size)},
                 {buffer.data(), buffer.size()}};
 
-        //::asio::read (m_socket, buffers);
         co_await boost::asio::async_read (m_socket, buffers, boost::asio::as_tuple(boost::asio::use_awaitable));
 
         co_return header {type, size};
     }
 
-    coro <std::pair <header, ospan <char>>> send_recv (message_types type, std::span <const char> data) {
+    coro <std::pair <header, ospan <char>>> send_recv (message_type type, std::span <const char> data) {
         co_await send (type, data);
         const auto h = co_await recv_header();
         ospan <char> buf (h.size);
@@ -181,8 +176,12 @@ public:
     }
 
     ~messenger_core() {
-        m_socket.shutdown (boost::asio::ip::tcp::socket::shutdown_send);
+        if(m_socket.is_open()) {
+            m_socket.shutdown (boost::asio::ip::tcp::socket::shutdown_both);
+            m_socket.close();
+        }
     }
+
 
 private:
 

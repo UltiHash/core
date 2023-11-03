@@ -3,7 +3,8 @@
 namespace uh::cluster::rest::http::model
 {
 
-    get_object_request::get_object_request(const http::request_parser<http::empty_body> & recv_req) : http_request(recv_req)
+    get_object_request::get_object_request(const http::request_parser<http::empty_body> & recv_req,
+                                           std::unique_ptr<rest::http::URI> uri) : http_request(recv_req, std::move(uri))
     {
         // parse and set the received request parameters
         *this = recv_req;
@@ -140,6 +141,13 @@ namespace uh::cluster::rest::http::model
         {
             ss << m_range;
             headers.emplace("range",  ss.str());
+            ss.str("");
+        }
+
+        if(m_sSECustomerAlgorithmHasBeenSet)
+        {
+            ss << m_sSECustomerAlgorithm;
+            headers.emplace("x-amz-server-side-encryption-customer-algorithm",  ss.str());
             ss.str("");
         }
 
