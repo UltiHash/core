@@ -11,7 +11,7 @@ entry_node::entry_node(int id, cluster_map&& cmap) :
         m_cluster_map (std::move (cmap)),
         m_id (id),
         m_job_name ("entry_" + std::to_string (id)),
-        m_internal_server (m_cluster_map.m_cluster_conf.entry_node_conf.internal_server_conf,
+        m_internal_server (m_cluster_map.m_cluster_conf.entry_node_conf.internal_server_conf, m_job_name,
                            std::make_unique <entry_node_internal_handler>()),
         m_rest_server (m_cluster_map.m_cluster_conf.entry_node_conf.rest_server_conf, m_dedupe_nodes, m_directory_nodes)
 {
