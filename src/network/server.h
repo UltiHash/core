@@ -97,6 +97,7 @@ namespace uh::cluster
 
             while (m_is_running) {
                 boost::asio::ip::tcp::socket stream = co_await acceptor.async_accept();
+                std::cout << m_node_name << " connection established before co_spawn" << std::endl;
                 auto conn_address = stream.remote_endpoint().address().to_string();
                 auto conn_port = stream.remote_endpoint().port();
 
