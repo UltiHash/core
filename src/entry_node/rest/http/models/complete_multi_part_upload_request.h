@@ -24,9 +24,13 @@ namespace uh::cluster::rest::http::model
 
         [[nodiscard]] std::map<std::string, std::string> get_request_specific_headers() const override;
 
+        void handle_request_specific_criteria() override;
+
         void clear_body() override;
 
     private:
+        void parse_and_check_xml() const;
+
         std::string m_completed_body {};
         std::string m_upload_id;
         rest::utils::ts_unordered_map<std::string, std::shared_ptr<utils::ts_map<uint16_t, std::string>>>& m_uomap_multipart;

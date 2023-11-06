@@ -1,4 +1,5 @@
 #include "abort_multi_part_upload_request.h"
+#include "custom_error_response_exception.h"
 
 namespace uh::cluster::rest::http::model
 {
@@ -11,7 +12,21 @@ namespace uh::cluster::rest::http::model
             m_uomap_multipart(container),
             m_upload_id(std::move(upload_id))
     {
-        m_uomap_multipart.remove(m_upload_id);
+        // upload id should exist to delete it
+        auto iterator = m_uomap_multipart.find(m_upload_id);
+        if (iterator == m_uomap_multipart.end())
+        {
+            std::string m_body = "<Error>\n"
+                                 "<Code>NoSuchUpload</Code>\n"
+                                 "<Message>Upload id not found.</Message>\n"
+                                 "</Error>";
+
+            throw custom_error_response_exception(http::response<http::string_body>{http::status::not_found, 11}, std::move(m_body));
+        }
+        else
+        {
+            m_uomap_multipart.remove(m_upload_id);
+        }
     }
 
     std::map<std::string, std::string> abort_multi_part_upload_request::get_request_specific_headers() const

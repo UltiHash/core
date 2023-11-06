@@ -1,7 +1,7 @@
 #include "URI.h"
 #include <regex>
 #include "entry_node/rest/utils/string/string_utils.h"
-
+#include "iostream"
 namespace uh::cluster::rest::http
 {
 
@@ -119,7 +119,7 @@ namespace uh::cluster::rest::http
             if (m_bucket_id.empty())
                 m_bucket_id = seg;
             else
-                m_object_key = seg + '/';
+                m_object_key += seg + '/';
         }
 
         if (!m_object_key.empty())

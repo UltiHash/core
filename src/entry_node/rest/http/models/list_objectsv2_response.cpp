@@ -49,7 +49,8 @@ namespace uh::cluster::rest::http::model
         if (URI.query_string_exists("continuation-token"))
         {
             m_continuationToken = URI.get_query_string_value("continuation-token");
-            m_continuationTokenHasBeenSet = true;
+            if (!m_continuationToken.empty())
+                m_continuationTokenHasBeenSet = true;
         }
 
         if (URI.query_string_exists("prefix"))

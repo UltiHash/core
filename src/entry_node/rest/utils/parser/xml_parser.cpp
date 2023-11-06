@@ -3,12 +3,16 @@
 namespace uh::cluster::rest::utils::parser
 {
 
-    xml_parser::xml_parser(const std::string& xml_string)
+    bool xml_parser::parse(const std::string& xml_string)
     {
         auto result = m_doc.load_string(xml_string.c_str());
         if (!result)
         {
-            throw std::runtime_error("XML parsing error: " + std::string(result.description()));
+            return false;
+        }
+        else
+        {
+            return true;
         }
     }
 

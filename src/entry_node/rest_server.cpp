@@ -4,7 +4,7 @@
 #include <fstream>
 #include <filesystem>
 #include "entry_node/rest/utils/string/string_utils.h"
-#include "rest/http/models/generic_error_response.h"
+#include "rest/http/models/custom_error_response_exception.h"
 
 
 namespace uh::cluster::rest
@@ -103,12 +103,15 @@ namespace uh::cluster::rest
 
                 co_await s3_request->read_body(stream, buffer);
 
+                s3_request->handle_request_specific_criteria();
+
                 auto s3_res = co_await m_handler.handle(*s3_request);
 
                 auto s3_res_specific_object = s3_res->get_response_specific_object();
                 co_await b_http::async_write(stream, s3_res_specific_object, net::use_awaitable);
 
                 LOG_INFO() << "sent response: " << s3_res_specific_object;
+
                 if(! received_request.keep_alive() )
                 {
                     break;
@@ -119,15 +122,21 @@ namespace uh::cluster::rest
         {
             if (se.code() != b_http::error::end_of_stream)
             {
-                uh::cluster::rest::http::model::error_response err;
+                uh::cluster::rest::http::model::custom_error_response_exception err(b_http::response<b_http::string_body>{b_http::status::internal_server_error, 11});
                 b_http::write(stream, err.get_response_specific_object());
                 stream.socket().shutdown(tcp::socket::shutdown_send, ec);
                 throw;
             }
         }
+        catch (uh::cluster::rest::http::model::custom_error_response_exception& res_exc)
+        {
+            b_http::write(stream, res_exc.get_response_specific_object());
+            stream.socket().shutdown(tcp::socket::shutdown_send, ec);
+            throw;
+        }
         catch (const std::exception& e)
         {
-            uh::cluster::rest::http::model::error_response err;
+            uh::cluster::rest::http::model::custom_error_response_exception err(b_http::response<b_http::string_body>{b_http::status::internal_server_error, 11});
             b_http::write(stream, err.get_response_specific_object());
             stream.socket().shutdown(tcp::socket::shutdown_send, ec);
             throw;
