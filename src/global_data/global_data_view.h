@@ -61,17 +61,17 @@ public:
             nodes.emplace_back(node.second);
         }
         nodes.insert(nodes.cend(), m_ec->get_ec_nodes().cbegin(), m_ec->get_ec_nodes().cend());
-        //std::cout << "allocate nodes size " << nodes.size() << std::endl;
+        std::cout << "allocate nodes size " << nodes.size() << std::endl;
         address addr;
         auto bc = [&size] (auto m, auto id) -> coro <address> {
             m.get ().register_write_buffer (size);
-            //std::cout << "in bc func: before send buffer " << id  << std::endl;
+            std::cout << "in bc func: before send buffer " << id  << std::endl;
             co_await m.get ().send_buffers (ALLOC_REQ);
-            //std::cout << "in bc func: before recv header " << id  << std::endl;
+            std::cout << "in bc func: before recv header " << id  << std::endl;
             const auto h = co_await m.get ().recv_header ();
-            //std::cout << "in bc func: before recv address " << id  << std::endl;
+            std::cout << "in bc func: before recv address " << id  << std::endl;
             auto resp = co_await m.get ().recv_address (h);
-            //std::cout << "in bc func: after recv addr " << id  << std::endl;
+            std::cout << "in bc func: after recv addr " << id  << std::endl;
             co_return std::move (resp.second);
         };
         const auto resp = co_await broadcast_gather_custom <address> (*m_io_service, nodes, bc);

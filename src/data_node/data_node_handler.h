@@ -115,13 +115,13 @@ private:
     coro <void> handle_alloc (messenger &m, const messenger::header& h) {
         size_t size;
         m.register_read_buffer(size);
-        //std::cout << "data node handle alloc" << std::endl;
+        std::cout << "data node handle alloc" << std::endl;
         co_await m.recv_buffers(h);
-        //std::cout << "data node handle alloc recv size " << size << std::endl;
+        std::cout << "data node handle alloc recv size " << size << std::endl;
         const auto addr = m_data_store.allocate(size);
-        //std::cout << "data node handle alloc after alloc for size " << size << std::endl;
+        std::cout << "data node handle alloc after alloc for size " << size << std::endl;
         co_await m.send_address(ALLOC_RESP, addr);
-        //std::cout << "data node handle alloc after send alloc size " << size << std::endl;
+        std::cout << "data node handle alloc after send alloc size " << size << std::endl;
     }
 
     coro <void> handle_dealloc (messenger &m, const messenger::header& h) {
