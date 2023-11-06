@@ -128,10 +128,8 @@ namespace uh::cluster
         }
 
         boost::asio::awaitable<void> do_session(boost::asio::ip::tcp::socket stream) {
-            const auto life_time = m_ioc;
             LOG_INFO() << m_node_name <<" connection from: " << stream.remote_endpoint();
-            co_await m_handler->handle(messenger(std::move(stream)));
-
+            co_await m_handler->handle (messenger(std::move(stream)));
             co_return;
         }
 

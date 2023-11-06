@@ -23,6 +23,9 @@ public:
     void run() override;
     void stop() override;
 
+    ~data_node() override {
+        std::cout << "data node " << m_job_name << " going down";
+    }
 private:
 
     const std::string m_job_name;

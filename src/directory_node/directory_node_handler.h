@@ -67,8 +67,8 @@ private:
 
         std::vector<char> address_data;
         zpp::bits::out{address_data, zpp::bits::size4b{}}(*request.addr).or_throw();
-            m_directory.insert (request.bucket_id, *request.object_key, address_data);
-            co_await m.send(SUCCESS, {});
+        m_directory.insert (request.bucket_id, *request.object_key, address_data);
+        co_await m.send(SUCCESS, {});
         co_return;
     }
 
