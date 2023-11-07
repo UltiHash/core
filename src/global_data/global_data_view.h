@@ -422,9 +422,11 @@ public:
 
     }
 
+    [[nodiscard]] std::shared_ptr <boost::asio::io_context> get_executor () const {
+        return m_io_service;
+    }
+
 private:
-
-
 
     std::shared_ptr <client> get_data_node (const uint128_t& pointer) {
         const auto pfd = m_data_node_offsets.upper_bound (pointer);
