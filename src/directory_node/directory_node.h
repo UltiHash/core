@@ -34,6 +34,7 @@ public:
     }
 
     void stop () override {
+        LOG_INFO() << "stopping " << m_job_name;
         m_server.stop();
     }
 

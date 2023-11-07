@@ -7,7 +7,7 @@
 
 namespace uh::cluster {
 
-data_node::data_node(int id, cluster_map&& cmap):
+data_node::data_node(int id, cluster_map cmap):
         m_cluster_map (std::move (cmap)),
         m_job_name ("data_node_" + std::to_string (id)),
         m_server (m_cluster_map.m_cluster_conf.data_node_conf.server_conf, m_job_name,
@@ -17,12 +17,12 @@ data_node::data_node(int id, cluster_map&& cmap):
 
 void data_node::run() {
     LOG_INFO() << "starting " << m_job_name;
-
     m_server.run();
 
 }
 
 void data_node::stop() {
+    LOG_INFO() << "stopping " << m_job_name;
     m_server.stop();
 }
 

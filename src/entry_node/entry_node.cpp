@@ -7,7 +7,7 @@ namespace uh::cluster
 
 //------------------------------------------------------------------------------
 
-entry_node::entry_node(int id, cluster_map&& cmap) :
+entry_node::entry_node(int id, cluster_map cmap) :
         m_cluster_map (std::move (cmap)),
         m_id (id),
         m_job_name ("entry_" + std::to_string (id)),
@@ -24,9 +24,6 @@ entry_node::entry_node(int id, cluster_map&& cmap) :
 void
 entry_node::run()
 {
-
-    std::string msg ("hello cluster");
-    //run_recovery ();
     m_rest_server.run();
 }
 
