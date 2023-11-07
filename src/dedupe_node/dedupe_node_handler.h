@@ -19,10 +19,11 @@ class dedupe_node_handler: public protocol_handler {
 
 public:
 
-    dedupe_node_handler (dedupe_config dedupe_conf, global_data_view& storage):
-        m_dedupe_conf (std::move(dedupe_conf)),
-        m_fragment_set (m_dedupe_conf.set_conf, storage),
-        m_storage (storage) {}
+    dedupe_node_handler(dedupe_config dedupe_conf, global_data_view &storage) :
+            protocol_handler(dedupe_conf.server_conf),
+            m_dedupe_conf(std::move(dedupe_conf)),
+            m_fragment_set(m_dedupe_conf.set_conf, storage),
+            m_storage(storage) {}
 
     coro <void> handle (messenger m) override {
 

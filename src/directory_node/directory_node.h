@@ -22,7 +22,7 @@ public:
             m_job_name ("directory_" + std::to_string (id)),
             m_storage (m_cluster_map),
             m_server (m_cluster_map.m_cluster_conf.directory_node_conf.server_conf,
-                      std::make_unique <directory_handler>(m_cluster_map.m_cluster_conf.directory_node_conf.directory_conf, m_storage)),
+                      std::make_unique <directory_handler>(m_cluster_map.m_cluster_conf.directory_node_conf, m_storage)),
             m_use_id_as_port_offset (use_id_as_port_offset)
     {
     }

@@ -13,9 +13,8 @@ namespace uh::cluster {
 class directory_handler: public protocol_handler {
 public:
 
-    directory_handler (directory_store_config conf, global_data_view& storage):
-    m_directory (std::move (conf)),
-    m_storage (storage) {}
+    directory_handler(directory_node_config conf, global_data_view &storage) :
+            protocol_handler(conf.server_conf), m_directory(conf.directory_conf), m_storage(storage) {}
 
     coro <void> handle (messenger m) override {
 

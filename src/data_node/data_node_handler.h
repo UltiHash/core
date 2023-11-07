@@ -15,8 +15,10 @@ namespace uh::cluster {
 class data_node_handler: public protocol_handler {
 public:
 
-    data_node_handler (data_node_config conf, int id):
-    m_data_store (std::move(conf), id), m_is_stopped(false)
+    data_node_handler(data_node_config conf, int id) :
+            protocol_handler(conf.server_conf),
+            m_data_store(std::move(conf), id),
+            m_is_stopped(false)
     {}
 
     coro <void> handle (messenger m) override {

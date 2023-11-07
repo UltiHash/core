@@ -37,7 +37,6 @@ private:
     const cluster_map m_cluster_map;
     const int m_id;
     const std::string m_job_name;
-    server m_internal_server;
     rest::rest_server m_rest_server;
 
 };
