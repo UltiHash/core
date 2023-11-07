@@ -45,22 +45,6 @@ public:
         m_directory_nodes (directory_nodes)
     {}
 
-    coro<messenger_core::header> get_valid_header(messenger& m)
-    {
-        auto hdr = co_await m.recv_header();
-
-        if (hdr.type == FAILURE)
-        {
-            std::string msg(hdr.size, 0);
-            m.register_read_buffer(msg);
-            co_await m.recv_buffers(hdr);
-
-            throw std::runtime_error(msg);
-        }
-
-        co_return hdr;
-    }
-
     coro < std::unique_ptr<http::http_response> > handle (rest::http::http_request& req)
     {
         auto body_size = req.get_body_size();
@@ -138,9 +122,14 @@ public:
             dir_req.bucket_id = bucket_id;
             co_await m_dir.get().send_directory_message (DIR_PUT_BUCKET_REQ, dir_req);
 
-            co_await get_valid_header(m_dir.get());
+            co_await m_dir.get().recv_header();
         }
-        catch(const std::exception& e)
+        catch (const error_exception& e)
+        {
+            LOG_ERROR() << "Failed to add the bucket " << bucket_id << " to the directory: " << e;
+            res->set_error();
+        }
+        catch (const std::exception& e)
         {
             LOG_ERROR() << "Failed to add the bucket " << bucket_id << " to the directory: " << e.what();
             res->set_error();
@@ -163,7 +152,12 @@ public:
             dir_req.bucket_id = req.get_URI().get_bucket_id();
             co_await m_dir.get().send_directory_message (DIR_DELETE_BUCKET_REQ, dir_req);
 
-            co_await get_valid_header(m_dir.get());
+            co_await m_dir.get().recv_header();
+        }
+        catch (const error_exception& e)
+        {
+            LOG_ERROR() << "Failed to delete bucket: " << e;
+            res->set_error(boost::beast::http::response<boost::beast::http::string_body>{boost::beast::http::status::not_found, 11});
         }
         catch (const std::exception& e)
         {
@@ -187,7 +181,7 @@ public:
             auto m_dir = m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size())).acquire_messenger();
             co_await m_dir.get().send(DIR_LIST_BUCKET_REQ, {});
 
-            auto hdr = co_await get_valid_header(m_dir.get());
+            auto hdr = co_await m_dir.get().recv_header();
 
             if(hdr.type == DIR_LIST_BUCKET_RESP) [[likely]]
             {
@@ -207,6 +201,11 @@ public:
                 }
             }
             // TODO throw here
+        }
+        catch (const error_exception& e)
+        {
+            LOG_ERROR() << "Failed to get bucket `" << req_bucket_id << "`: " << e;
+            res->set_error(boost::beast::http::response<boost::beast::http::string_body>{boost::beast::http::status::not_found, 11});
         }
         catch (const std::exception& e)
         {
