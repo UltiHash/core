@@ -26,4 +26,8 @@ void data_node::stop() {
     m_server.stop();
 }
 
+data_node::~data_node() {
+    LOG_DEBUG() << "data node " << m_job_name << " going down";
+}
+
 } // end namespace uh::cluster

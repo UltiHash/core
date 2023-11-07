@@ -44,7 +44,7 @@ namespace uh::cluster
                                               std::rethrow_exception(e);
                                           }
                                           catch (boost::system::system_error &e) {
-                                              std::cout << "Server stopped." << std::endl;
+                                              LOG_INFO() << "Server stopped." << std::endl;
                                           }
                                           catch (std::exception &e) {
                                               LOG_ERROR() << "accept: " << e.what();
@@ -97,7 +97,7 @@ namespace uh::cluster
 
             while (m_is_running) {
                 boost::asio::ip::tcp::socket stream = co_await acceptor.async_accept();
-                std::cout << m_node_name << " connection established before co_spawn" << std::endl;
+                //std::cout << m_node_name << " connection established before co_spawn" << std::endl;
                 auto conn_address = stream.remote_endpoint().address().to_string();
                 auto conn_port = stream.remote_endpoint().port();
 
@@ -121,7 +121,7 @@ namespace uh::cluster
                                     acceptor.close();
                                     while(acceptor.is_open()) {};
                                 } catch (boost::system::system_error &e) {
-                                    std::cout << "do we get here?" << std::endl;
+                                    LOG_ERROR() << "Error in closing the server acceptor in " << m_node_name;
                                 }
                             }
                         });
