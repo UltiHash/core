@@ -42,12 +42,16 @@ private:
 
     coro <void> handle_dedupe (messenger& m, const messenger::header& h) {
 
-        ospan<char> data (h.size);
+        if (h.size == 0) [[unlikely]] {
+            throw std::length_error ("Empty data sent do the dedupe node");
+        }
+
+        ospan<char> data(h.size);
         m.register_read_buffer(data);
         co_await m.recv_buffers(h);
-
         const auto result = co_await deduplicate ({data.data.get(), data.size});
         co_await m.send_dedupe_response(DEDUPE_RESP, result);
+
     }
 
     coro <dedupe_response> deduplicate (std::string_view data) {

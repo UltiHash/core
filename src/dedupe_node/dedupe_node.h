@@ -191,12 +191,12 @@ namespace uh::cluster {
     class dedupe_node: public node_interface {
     public:
 
-        dedupe_node (int id, cluster_map&& cmap, const bool use_id_as_port_offset = false):
+        dedupe_node (int id, cluster_map cmap, const bool use_id_as_port_offset = false):
                 m_cluster_map (std::move (cmap)),
                 m_id (id),
                 m_job_name ("dedupe_node_" + std::to_string (id)),
                 m_storage (m_cluster_map),
-                m_server (m_cluster_map.m_cluster_conf.dedupe_node_conf.server_conf,
+                m_server (m_cluster_map.m_cluster_conf.dedupe_node_conf.server_conf, m_job_name,
                           std::make_unique <dedupe_node_handler>(m_cluster_map.m_cluster_conf.dedupe_node_conf, m_storage)),
                 m_use_id_as_port_offset (use_id_as_port_offset)
         {
@@ -209,6 +209,7 @@ namespace uh::cluster {
         }
 
         void stop() override {
+            LOG_INFO() << "stopping " << m_job_name;
             m_server.stop();
         }
 

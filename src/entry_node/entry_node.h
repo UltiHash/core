@@ -20,7 +20,7 @@ namespace uh::cluster
 class entry_node: public node_interface {
 public:
 
-    entry_node (int id, cluster_map&& cmap);
+    entry_node (int id, cluster_map cmap);
 
     void run() override;
 

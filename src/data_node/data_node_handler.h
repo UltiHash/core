@@ -22,6 +22,7 @@ public:
     coro <void> handle (messenger m) override {
         for (;;) {
             const auto message_header = co_await m.recv_header();
+            //std::cout << "data node header recv " << message_header.type << std::endl;
             switch (message_header.type) {
                 case WRITE_REQ:
                     co_await handle_write(m, message_header);
@@ -115,7 +116,7 @@ private:
     coro <void> handle_alloc (messenger &m, const messenger::header& h) {
         size_t size;
         m.register_read_buffer(size);
-        //std::cout << "data node handle alloc" << std::endl;
+        //std::cout << "data node handle alloc start" << std::endl;
         co_await m.recv_buffers(h);
         //std::cout << "data node handle alloc recv size " << size << std::endl;
         const auto addr = m_data_store.allocate(size);
