@@ -51,7 +51,7 @@ public:
     void insert_object (const std::string& key, std::span<char> data) {
         std::unique_lock <std::shared_mutex> lock (m_mutex);
         if (m_object_ptrs.contains(key)) [[unlikely]] {
-            throw std::runtime_error("Attempt to insert object ' + key + ' failed: an object with the same name already exists.");
+            throw std::runtime_error("Attempt to insert object '" + key + "' failed: an object with the same name already exists.");
         }
         const auto index = m_data_store.post_write(data);
         m_transaction_log.append(key, index, transaction_log::operation::INSERT_START);
@@ -67,7 +67,7 @@ public:
     ospan<char> get_obj(const std::string& key) {
         std::shared_lock lock(m_mutex);
         if (!m_object_ptrs.contains(key)) [[unlikely]] {
-            throw std::out_of_range ("Attempt to get object ' + key + ' failed: no such object.");
+            throw std::out_of_range ("Attempt to get object '" + key + "' failed: no such object.");
         }
         const auto index = m_object_ptrs.at(key);
         return m_data_store.read(index);
@@ -76,7 +76,7 @@ public:
     void delete_object (const std::string& key) {
         std::unique_lock <std::shared_mutex> lock(m_mutex);
         if (!m_object_ptrs.contains(key)) [[unlikely]] {
-            throw std::out_of_range ("Attempt to remove object ' + key + ' failed: no such object.");
+            throw std::out_of_range ("Attempt to remove object '" + key + "' failed: no such object.");
         }
         const auto index = m_object_ptrs.at(key);
         m_transaction_log.append(key, index, transaction_log::operation::REMOVE_START);
