@@ -314,6 +314,9 @@ public:
 
     coro <void> sync (const address& addr) {
 
+        if (addr.empty()) [[unlikely]] {
+            throw std::length_error ("Empty address is not allowed for sync");
+        }
 
         std::unordered_map <std::shared_ptr <client>, address> node_address_map;
         std::vector <std::shared_ptr <client>> nodes;
@@ -327,6 +330,8 @@ public:
             }
             node_address.push_fragment(frag);
         }
+
+
 
         auto bc_func = [&] (auto m, int node_id) -> coro <message_type> {
             const auto node = nodes.at (node_id);
@@ -397,6 +402,7 @@ public:
         }
 
         int i = 0;
+
         for (const auto& data_node: m_cluster_map.m_roles.at(DATA_NODE)) {
             uint16_t port = m_cluster_map.m_cluster_conf.data_node_conf.server_conf.port;
             if(use_id_as_port_offset) {
@@ -419,7 +425,8 @@ public:
 private:
 
 
-   std::shared_ptr <client> get_data_node (const uint128_t& pointer) {
+
+    std::shared_ptr <client> get_data_node (const uint128_t& pointer) {
         const auto pfd = m_data_node_offsets.upper_bound (pointer);
 
        if (pfd == m_data_node_offsets.cbegin()) [[unlikely]] {
