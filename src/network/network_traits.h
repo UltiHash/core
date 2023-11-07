@@ -50,7 +50,6 @@ coro <std::map <int, ResultType>> broadcast_gather_custom (boost::asio::io_conte
     co_await waiter.async_wait(as_tuple(boost::asio::use_awaitable));
     //std::cout << "after wait" << std::endl;
 
-
     co_return result_map;
 }
 
