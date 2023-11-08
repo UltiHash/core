@@ -17,21 +17,39 @@ public:
 
     data_node_handler(data_node_config conf, int id) :
             protocol_handler(conf.server_conf),
-            m_data_store(std::move(conf), id),
+            m_data_store(conf, id),
             m_is_stopped(false),
-            m_counters(add_counter_family("uh_dn_requests", "number of requests handled by the data node")),
-            m_reqs_write(m_counters.Add({{"type", "WRITE_REQ"}})),
-            m_reqs_read(m_counters.Add({{"type", "READ_REQ"}})),
-            m_reqs_read_address(m_counters.Add({{"type", "READ_ADDRESS_REQ"}})),
-            m_reqs_remove(m_counters.Add({{"type", "REMOVE_REQ"}})),
-            m_reqs_sync(m_counters.Add({{"type", "SYNC_REQ"}})),
-            m_reqs_used(m_counters.Add({{"type", "USED_REQ"}})),
-            m_reqs_alloc(m_counters.Add({{"type", "ALLOC_REQ"}})),
-            m_reqs_dealloc(m_counters.Add({{"type", "DEALLOC_REQ"}})),
-            m_reqs_alloc_write(m_counters.Add({{"type", "ALLOC_WRITE_REQ"}})),
-            m_reqs_invalid(m_counters.Add({{"type", "INVALID"}}))
+
+            m_req_counters(add_counter_family("uh_dn_requests", "number of requests handled by the data node")),
+            m_reqs_write(m_req_counters.Add({{"message_type", "WRITE_REQ"}})),
+            m_reqs_read(m_req_counters.Add({{"message_type", "READ_REQ"}})),
+            m_reqs_read_address(m_req_counters.Add({{"message_type", "READ_ADDRESS_REQ"}})),
+            m_reqs_remove(m_req_counters.Add({{"message_type", "REMOVE_REQ"}})),
+            m_reqs_sync(m_req_counters.Add({{"message_type", "SYNC_REQ"}})),
+            m_reqs_used(m_req_counters.Add({{"message_type", "USED_REQ"}})),
+            m_reqs_alloc(m_req_counters.Add({{"message_type", "ALLOC_REQ"}})),
+            m_reqs_dealloc(m_req_counters.Add({{"message_type", "DEALLOC_REQ"}})),
+            m_reqs_alloc_write(m_req_counters.Add({{"message_type", "ALLOC_WRITE_REQ"}})),
+            m_reqs_query_usage(m_req_counters.Add({{"message_type", "QUERY_USAGE_REQ"}})),
+            m_reqs_invalid(m_req_counters.Add({{"message_type", "INVALID"}})),
+
+            m_resource_util(add_gauge_family("uh_dn_resource_utilization", "resources utilization of the data node instance")),
+            m_util_used_storage(m_resource_util.Add({{"resource_type", "used_storage"}})),
+            m_util_free_storage(m_resource_util.Add({{"resource_type", "free_storage"}})),
+
+            m_configs(add_gauge_family("uh_dn_config_parameters", "configuration parameters the data node instance has been set-up with")),
+            m_config_min_file_size(m_configs.Add({{"config_parameter", "min_file_size"}})),
+            m_config_max_file_size(m_configs.Add({{"config_parameter", "max_file_size"}})),
+            m_config_max_data_store_size(m_configs.Add({{"config_parameter", "max_data_store_size"}}))
+
+
     {
         init();
+        m_util_used_storage.Set(m_data_store.get_used_space().get_low());
+        m_util_free_storage.Set(m_data_store.get_free_space().get_low());
+        m_config_min_file_size.Set(conf.min_file_size);
+        m_config_max_file_size.Set(conf.max_file_size);
+        m_config_max_data_store_size.Set(conf.max_data_store_size.get_low());
     }
 
     coro <void> handle (messenger m) override {
@@ -95,6 +113,8 @@ private:
         m.register_read_buffer(data);
         co_await m.recv_buffers(h);
         const auto addr = m_data_store.write({data.data.get(), data.size});
+        m_util_used_storage.Set(m_data_store.get_used_space().get_low());
+        m_util_free_storage.Set(m_data_store.get_free_space().get_low());
         co_await m.send_address(WRITE_RESP, addr);
     }
 
@@ -123,12 +143,16 @@ private:
     coro <void> handle_remove (messenger &m, const messenger::header& h) {
         const auto resp = co_await m.recv_fragment(h);
         m_data_store.remove(resp.second.pointer, resp.second.size);
+        m_util_used_storage.Set(m_data_store.get_used_space().get_low());
+        m_util_free_storage.Set(m_data_store.get_free_space().get_low());
         co_await m.send (REMOVE_OK, {});
     }
 
     coro <void> handle_sync (messenger &m, const messenger::header& h) {
         co_await m.recv_address(h);
         m_data_store.sync();
+        m_util_used_storage.Set(m_data_store.get_used_space().get_low());
+        m_util_free_storage.Set(m_data_store.get_free_space().get_low());
         co_await m.send (SYNC_OK, {});
     }
 
@@ -144,6 +168,8 @@ private:
         co_await m.recv_buffers(h);
         //std::cout << "data node handle alloc recv size " << size << std::endl;
         const auto addr = m_data_store.allocate(size);
+        m_util_used_storage.Set(m_data_store.get_used_space().get_low());
+        m_util_free_storage.Set(m_data_store.get_free_space().get_low());
         //std::cout << "data node handle alloc after alloc for size " << size << std::endl;
         co_await m.send_address(ALLOC_RESP, addr);
         //std::cout << "data node handle alloc after send alloc size " << size << std::endl;
@@ -156,6 +182,8 @@ private:
         address addr;
         zpp::bits::in {data, zpp::bits::size4b{}} (addr).or_throw();
         m_data_store.cancel_allocate(addr);
+        m_util_used_storage.Set(m_data_store.get_used_space().get_low());
+        m_util_free_storage.Set(m_data_store.get_free_space().get_low());
         co_await m.send(DEALLOC_RESP, {});
     }
 
@@ -163,13 +191,15 @@ private:
         const auto msg = co_await m.recv_allocated_write(h);
         const auto& data_ospan = std::get <ospan <char>> (msg.data);
         m_data_store.allocated_write(msg.addr, {data_ospan.data.get(), data_ospan.size});
+        m_util_used_storage.Set(m_data_store.get_used_space().get_low());
+        m_util_free_storage.Set(m_data_store.get_free_space().get_low());
         co_await m.send(ALLOC_WRITE_RESP, {});
     }
 
     uh::cluster::data_store m_data_store;
     bool m_is_stopped;
 
-    prometheus::Family<prometheus::Counter>& m_counters;
+    prometheus::Family<prometheus::Counter>& m_req_counters;
     prometheus::Counter& m_reqs_write;
     prometheus::Counter &m_reqs_read;
     prometheus::Counter &m_reqs_read_address;
@@ -179,7 +209,17 @@ private:
     prometheus::Counter &m_reqs_alloc;
     prometheus::Counter &m_reqs_dealloc;
     prometheus::Counter &m_reqs_alloc_write;
+    prometheus::Counter &m_reqs_query_usage;
     prometheus::Counter &m_reqs_invalid;
+
+    prometheus::Family<prometheus::Gauge> &m_resource_util;
+    prometheus::Gauge &m_util_used_storage;
+    prometheus::Gauge &m_util_free_storage;
+
+    prometheus::Family<prometheus::Gauge> &m_configs;
+    prometheus::Gauge &m_config_min_file_size;
+    prometheus::Gauge &m_config_max_file_size;
+    prometheus::Gauge &m_config_max_data_store_size;
 };
 
 } // end namespace uh::cluster
