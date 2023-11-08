@@ -18,44 +18,67 @@ public:
     data_node_handler(data_node_config conf, int id) :
             protocol_handler(conf.server_conf),
             m_data_store(std::move(conf), id),
-            m_is_stopped(false)
-    {}
+            m_is_stopped(false),
+            m_counters(add_counter_family("uh_dn_requests", "number of requests handled by the data node")),
+            m_reqs_write(m_counters.Add({{"type", "WRITE_REQ"}})),
+            m_reqs_read(m_counters.Add({{"type", "READ_REQ"}})),
+            m_reqs_read_address(m_counters.Add({{"type", "READ_ADDRESS_REQ"}})),
+            m_reqs_remove(m_counters.Add({{"type", "REMOVE_REQ"}})),
+            m_reqs_sync(m_counters.Add({{"type", "SYNC_REQ"}})),
+            m_reqs_used(m_counters.Add({{"type", "USED_REQ"}})),
+            m_reqs_alloc(m_counters.Add({{"type", "ALLOC_REQ"}})),
+            m_reqs_dealloc(m_counters.Add({{"type", "DEALLOC_REQ"}})),
+            m_reqs_alloc_write(m_counters.Add({{"type", "ALLOC_WRITE_REQ"}})),
+            m_reqs_invalid(m_counters.Add({{"type", "INVALID"}}))
+    {
+        init();
+    }
 
     coro <void> handle (messenger m) override {
         for (;;) {
             const auto message_header = co_await m.recv_header();
             switch (message_header.type) {
                 case WRITE_REQ:
+                    m_reqs_write.Increment();
                     co_await handle_write(m, message_header);
                     break;
                 case READ_REQ:
+                    m_reqs_read.Increment();
                     co_await handle_read(m, message_header);
                     break;
                 case READ_ADDRESS_REQ:
+                    m_reqs_read_address.Increment();
                     co_await handle_read_address (m, message_header);
                     break;
                 case REMOVE_REQ:
+                    m_reqs_remove.Increment();
                     co_await handle_remove(m, message_header);
                     break;
                 case SYNC_REQ:
+                    m_reqs_sync.Increment();
                     co_await handle_sync(m, message_header);
                     break;
                 case USED_REQ:
+                    m_reqs_used.Increment();
                     co_await handle_get_used(m, message_header);
                     break;
                 case ALLOC_REQ:
+                    m_reqs_alloc.Increment();
                     co_await handle_alloc (m, message_header);
                     break;
                 case DEALLOC_REQ:
+                    m_reqs_dealloc.Increment();
                     co_await handle_dealloc (m, message_header);
                     break;
                 case ALLOC_WRITE_REQ:
+                    m_reqs_alloc_write.Increment();
                     co_await handle_alloc_write (m, message_header);
                     break;
                 case STOP:
                     m_is_stopped = true;
                     co_return;
                 default:
+                    m_reqs_invalid.Increment();
                     throw std::invalid_argument("Invalid message type!");
             }
         }
@@ -145,6 +168,18 @@ private:
 
     uh::cluster::data_store m_data_store;
     bool m_is_stopped;
+
+    prometheus::Family<prometheus::Counter>& m_counters;
+    prometheus::Counter& m_reqs_write;
+    prometheus::Counter &m_reqs_read;
+    prometheus::Counter &m_reqs_read_address;
+    prometheus::Counter &m_reqs_remove;
+    prometheus::Counter &m_reqs_sync;
+    prometheus::Counter &m_reqs_used;
+    prometheus::Counter &m_reqs_alloc;
+    prometheus::Counter &m_reqs_dealloc;
+    prometheus::Counter &m_reqs_alloc_write;
+    prometheus::Counter &m_reqs_invalid;
 };
 
 } // end namespace uh::cluster
