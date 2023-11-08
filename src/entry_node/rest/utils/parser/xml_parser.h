@@ -1,6 +1,6 @@
 #pragma once
 
-#include "third-party/pugixml/src/pugixml.hpp"
+#include <pugixml.hpp>
 #include <span>
 
 namespace uh::cluster::rest::utils::parser
