@@ -19,6 +19,11 @@ namespace uh::cluster::rest::http
         m_res.body() = std::move(body);
     }
 
+    void http_response::set_etag_from_request_body()
+    {
+
+    }
+
     void http_response::set_error_body(std::string body)
     {
         m_error.body() = std::move(body);

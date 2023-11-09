@@ -122,6 +122,7 @@ namespace uh::cluster::rest
         {
             if (se.code() != b_http::error::end_of_stream)
             {
+                LOG_ERROR() << se.what();
                 uh::cluster::rest::http::model::custom_error_response_exception err(b_http::response<b_http::string_body>{b_http::status::internal_server_error, 11});
                 b_http::write(stream, err.get_response_specific_object());
                 stream.socket().shutdown(tcp::socket::shutdown_send, ec);
@@ -130,12 +131,14 @@ namespace uh::cluster::rest
         }
         catch (uh::cluster::rest::http::model::custom_error_response_exception& res_exc)
         {
+            LOG_ERROR() << res_exc.what();
             b_http::write(stream, res_exc.get_response_specific_object());
             stream.socket().shutdown(tcp::socket::shutdown_send, ec);
             throw;
         }
         catch (const std::exception& e)
         {
+            LOG_ERROR() << e.what();
             uh::cluster::rest::http::model::custom_error_response_exception err(b_http::response<b_http::string_body>{b_http::status::internal_server_error, 11});
             b_http::write(stream, err.get_response_specific_object());
             stream.socket().shutdown(tcp::socket::shutdown_send, ec);

@@ -61,13 +61,43 @@ namespace uh::cluster::rest::http::model
             throw custom_error_response_exception(http::response<http::string_body>{http::status::bad_request, 11}, std::move(m_body));
         }
 
+        uint16_t part_counter = 1;
         for (const auto& objectNode : object_nodes_set)
         {
-            if ( iterator->second->find(std::stoi(objectNode.node().child("PartNumber").child_value())) == iterator->second->end() )
+            auto value = std::stoi(objectNode.node().child("PartNumber").child_value());
+
+            if ( iterator->second->find(value) == iterator->second->end() )
             {
                 std::string m_body = "<Error>\n"
                                      "<Code>InvalidPart</Code>\n"
                                      "<Message>Part not found.</Message>\n"
+                                     "</Error>";
+
+                throw custom_error_response_exception(http::response<http::string_body>{http::status::bad_request, 11}, std::move(m_body));
+            }
+
+            if (value != part_counter)
+            {
+                std::string m_body = "<Error>\n"
+                                     "<Code>InvalidPartOrder</Code>\n"
+                                     "<Message>Part lists must be in ascending order.</Message>\n"
+                                     "</Error>";
+
+                throw custom_error_response_exception(http::response<http::string_body>{http::status::bad_request, 11}, std::move(m_body));
+            }
+
+            part_counter++;
+        }
+
+        // small entity
+        auto part_container_size = iterator->second->size();
+        for (const auto& part : *iterator->second)
+        {
+            if (part.second.size() < 5*1024*1024 && part.first < part_container_size)
+            {
+                std::string m_body = "<Error>\n"
+                                     "<Code>EntityTooSmall</Code>\n"
+                                     "<Message>Parts must be greater than 5MB in size.</Message>\n"
                                      "</Error>";
 
                 throw custom_error_response_exception(http::response<http::string_body>{http::status::bad_request, 11}, std::move(m_body));
@@ -110,6 +140,10 @@ namespace uh::cluster::rest::http::model
 
     void complete_multi_part_upload_request::handle_request_specific_criteria()
     {
+        /* check if already another complete request multipart upload with the same upload id is already working on
+         * deduplicating. If so just ignore it.
+         */
+
         parse_and_check_xml();
     }
 

@@ -28,25 +28,27 @@ namespace uh::cluster::rest::utils
 
         typename std::map<T,Y>::iterator find(const T& key)
         {
-            std::lock_guard<std::mutex> lock(m_mutex);
             return m_container.find(key);
         }
 
         Y& operator[] (const T& key)
         {
-            std::lock_guard<std::mutex> lock(m_mutex);
             return m_container[key];
         }
 
         typename std::map<T, Y>::iterator begin()
         {
-            std::lock_guard<std::mutex> lock(m_mutex);
             return m_container.begin();
         }
+
         typename std::map<T, Y>::iterator end()
         {
-            std::lock_guard<std::mutex> lock(m_mutex);
             return m_container.end();
+        }
+
+        size_t size()
+        {
+            return m_container.size();
         }
 
     };

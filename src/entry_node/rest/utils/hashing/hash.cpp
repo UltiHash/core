@@ -17,4 +17,10 @@ namespace uh::cluster::rest::utils::hashing
         return hash;
     }
 
+    std::string MD5::calculate(const std::string& str) const
+    {
+
+    }
+
+
 } // uh::cluster::rest::utils::hashing
