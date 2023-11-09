@@ -34,8 +34,7 @@
 
 namespace uh::cluster {
 
-    namespace http = rest::http;
-
+namespace http = rest::http;
 
 class entry_node_rest_handler {
 public:
@@ -197,7 +196,7 @@ public:
 
                 if (res->get_bucket().empty())
                 {
-                    throw std::runtime_error("bucket does not exist");
+                    throw error_exception(error::bucket_not_found);
                 }
             }
             // TODO throw here
@@ -205,12 +204,19 @@ public:
         catch (const error_exception& e)
         {
             LOG_ERROR() << "Failed to get bucket `" << req_bucket_id << "`: " << e;
-            res->set_error(boost::beast::http::response<boost::beast::http::string_body>{boost::beast::http::status::not_found, 11});
+            switch (*e.error())
+            {
+                case error::bucket_not_found:
+                    res->set_error(boost::beast::http::response<boost::beast::http::string_body>{boost::beast::http::status::not_found, 11});
+                    break;
+                default:
+                    res->set_error();
+            }
         }
         catch (const std::exception& e)
         {
             LOG_ERROR() << "Failed to get bucket `" << req_bucket_id << "`: " << e.what();
-            res->set_error(boost::beast::http::response<boost::beast::http::string_body>{boost::beast::http::status::not_found, 11});
+            res->set_error();
         }
 
         co_return std::move(res);

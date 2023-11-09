@@ -13,6 +13,7 @@ public:
     enum type {
         success = 0,
         unknown = 1,
+        bucket_not_found = 2,
     };
 
     error(type t = unknown, const std::string& message = "");
@@ -20,6 +21,7 @@ public:
 
     const std::string& message() const;
     uint32_t code() const;
+    type operator*() const;
 
     static type from_code(uint32_t code);
 

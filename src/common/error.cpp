@@ -14,6 +14,7 @@ static const std::vector<std::string> error_messages =
 {
     "success",
     "unknown",
+    "bucket does not exist",
 };
 
 static const std::string error_out_of_range = "error out of range";
@@ -44,6 +45,11 @@ const std::string& error::message() const {
 
 uint32_t error::code() const {
     return static_cast<uint32_t>(m_type);
+}
+
+error::type error::operator*() const
+{
+    return m_type;
 }
 
 const char* error_exception::what() const noexcept {
