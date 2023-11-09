@@ -16,7 +16,7 @@ namespace uh::cluster::rest
         m_config(config), m_ioc(std::make_shared <boost::asio::io_context>(static_cast<int>(m_config.threads))),
         m_ssl(boost::asio::ssl::context::tlsv12_client),
         m_thread_container(m_config.threads-1),
-        m_handler (dedupe_nodes, directory_nodes)
+        m_handler(config, dedupe_nodes, directory_nodes)
     {
         boost::asio::co_spawn(*m_ioc,
                               recover_failed_nodes (),
