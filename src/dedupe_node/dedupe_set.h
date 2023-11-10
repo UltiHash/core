@@ -14,6 +14,12 @@
 namespace uh::cluster {
 
 
+
+struct dedupe_set_config {
+    std::size_t max_read_cache_size;
+    std::size_t moderated_read_cache_free_space;
+};
+
 class dedupe_set {
 
 public:
@@ -194,9 +200,9 @@ public:
                 m_dedupe_set.get().m_cache_size += tmp_data.size();
                 m_dedupe_set.get().m_cache.emplace(tmp_data.size());
                 const auto ptr = m_dedupe_set.get().m_cache.front().data.get();
-                std::string_view cache_data {ptr, tmp_data.size()};
                 std::memcpy (ptr, tmp_data.data(), tmp_data.size());
-                m_dedupe_set.get().m_cached_refs.emplace(cache_data);
+                //m_dedupe_set.get().m_cached_refs.emplace(std::optional <std::string_view> {std::string_view{ptr,
+                                                                                                            //tmp_data.size()}});
                 tmp_cache.pop();
             }
         }

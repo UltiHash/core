@@ -31,22 +31,17 @@ struct set_config {
     growing_plain_storage_config key_store_config;
 };
 
-struct dedupe_set_config {
-    std::size_t max_read_cache_size;
-    std::size_t moderated_read_cache_free_space;
-};
-
 // roles config
 
 struct dedupe_config {
     std::size_t min_fragment_size{};
     std::size_t max_fragment_size{};
-    std::size_t sampling_interval{};
     std::size_t write_cache_size_per_dn{};
+    int read_cache_capacity{};
     server_config server_conf{};
     int data_node_connection_count{};
     set_config set_conf;
-    dedupe_set_config dedupe_set_conf;
+    //dedupe_set_config dedupe_set_conf;
 };
 
 struct data_node_config {

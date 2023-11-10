@@ -13,6 +13,7 @@
 #include "network/network_traits.h"
 #include "ec.h"
 #include "ec_factory.h"
+#include "lfu_cache.h"
 
 namespace uh::cluster {
 
@@ -25,7 +26,8 @@ public:
 
     explicit global_data_view (const cluster_map& cmap):
                           m_cluster_map (cmap),
-                          m_ec (ec_factory::make_ec (cmap.m_cluster_conf.ec_algorithm)) {
+                          m_ec (ec_factory::make_ec (cmap.m_cluster_conf.ec_algorithm)),
+                          m_cache (m_cluster_map.m_cluster_conf.dedupe_node_conf.read_cache_capacity) {
         sleep(2);
     }
 
@@ -50,7 +52,7 @@ public:
     coro <address> allocate (size_t total_size) {
 
         if (total_size % m_data_node_offsets.size() != 0) {
-            throw std::length_error ("");
+            throw std::length_error ("allocate size is not a multiple of the number of data nodes");
         }
 
         const size_t size = total_size / m_data_node_offsets.size();
@@ -255,7 +257,14 @@ public:
         co_return;
     }
 
-    coro <std::size_t> read (char* buffer, const uint128_t pointer, const size_t size) {
+    coro <std::size_t> read (char* buffer, const uint128_t& pointer, const size_t size) {
+        total_read ++;
+        if (const auto c = m_cache.get(pointer); c.has_value() and c.value().get().size >= size) {
+            cache_hit ++;
+            std::memcpy (buffer, c.value().get().data.get(), size);
+            std::cout << "hit rate " << static_cast <double> (cache_hit) / static_cast <double> (total_read) << std::endl;
+            co_return size;
+        }
         const fragment frag {pointer, size};
         auto m = get_data_node (pointer)->acquire_messenger();
         co_await m.get().send_fragment(READ_REQ, frag);
@@ -263,6 +272,9 @@ public:
         m.get().register_read_buffer (buffer, h.size);
         co_await m.get().throw_if_failure(h);
         co_await m.get().recv_buffers(h);
+        ospan <char> buf (h.size);
+        std::memcpy (buf.data.get(), buffer, h.size);
+        m_cache.put (pointer, std::move (buf));
         co_return h.size;
     }
 
@@ -444,9 +456,11 @@ private:
     const cluster_map& m_cluster_map;
     std::shared_ptr <boost::asio::io_context> m_io_service;
     std::map <const uint128_t, std::shared_ptr <client>> m_data_node_offsets;
+    lfu_cache <uint128_t, ospan <char>> m_cache;
     std::unique_ptr <ec> m_ec;
     std::atomic <size_t> m_data_node_index {};
-
+    size_t cache_hit {};
+    size_t total_read {};
 };
 
 } // end namespace uh::cluster

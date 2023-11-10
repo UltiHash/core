@@ -12,6 +12,7 @@
 #include "common/protocol_handler.h"
 #include "dedupe_write_cache.h"
 #include "dedupe_set.h"
+#include "paged_redblack_tree.h"
 
 namespace uh::cluster {
 
@@ -22,8 +23,9 @@ public:
     dedupe_node_handler (dedupe_config dedupe_conf, global_data_view& storage):
         m_dedupe_conf (std::move(dedupe_conf)),
         m_fragment_set (m_dedupe_conf.set_conf, storage),
-        m_storage (storage),
-        m_dedupe_set (m_dedupe_conf.dedupe_set_conf, m_storage) {}
+        m_storage (storage)
+        //m_dedupe_set (m_dedupe_conf.dedupe_set_conf, m_storage)
+        {}
 
     coro <void> handle (messenger m) override {
 
@@ -64,6 +66,7 @@ private:
         auto integration_data = data;
         dedupe_write_cache cache(integration_data, m_storage, m_dedupe_conf);
         while (!integration_data.empty()) {
+            /*
             const auto cf = cache.get_cached_map().equal_range(integration_data);
 
             const auto cached_lower_common_prefix = largest_common_prefix (integration_data, cf.first->first);
@@ -82,7 +85,7 @@ private:
                 // not found -> search in global set
             }
 
-
+*/
             const auto f = co_await m_fragment_set.find(integration_data);
             if (f.match) {
                 result.addr.push_fragment (fragment {f.match->data_offset, integration_data.size()});
@@ -111,8 +114,8 @@ private:
             if (max_common_prefix < m_dedupe_conf.min_fragment_size or integration_data.size() - max_common_prefix < m_dedupe_conf.min_fragment_size) {
 
                 const auto size = std::min (integration_data.size(), m_dedupe_conf.max_fragment_size);
-                //const auto addr = co_await store_data(integration_data.substr(0, size));
-                const auto addr = std::move(co_await cache.write(integration_data.substr(0, size)));
+                const auto addr = co_await store_data(integration_data.substr(0, size));
+                //const auto addr = std::move(co_await cache.write(integration_data.substr(0, size)));
                 m_fragment_set.add_pointer (integration_data.substr(0, addr.sizes.front()), {addr.pointers[0], addr.pointers[1]}, f.index);
 
                 result.addr.append_address(addr);
@@ -133,8 +136,8 @@ private:
 
         }
 
-        co_await cache.flush();
-        //co_await m_storage.sync(result.addr);
+        //co_await cache.flush();
+        co_await m_storage.sync(result.addr);
         co_return std::move (result);
     }
 
@@ -155,7 +158,7 @@ private:
     dedupe::paged_redblack_tree <dedupe::set_full_comparator> m_fragment_set;
     global_data_view& m_storage;
     std::mutex m_mutex;
-    dedupe_set m_dedupe_set;
+    // dedupe_set m_dedupe_set;
 };
 
 } // end namespace uh::cluster
