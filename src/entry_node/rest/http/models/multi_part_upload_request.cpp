@@ -18,6 +18,11 @@ namespace uh::cluster::rest::http::model
         return headers;
     }
 
+    const std::string& multi_part_upload_request::get_body()
+    {
+        return m_mpcontainer.find(m_part_number)->second.second;
+    }
+
     coro<void> multi_part_upload_request::read_body(tcp_stream& stream, boost::beast::flat_buffer& buffer)
     {
         if (m_req.get().has_content_length())

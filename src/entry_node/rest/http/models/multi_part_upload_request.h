@@ -21,6 +21,8 @@ namespace uh::cluster::rest::http::model
 
         coro<void> read_body(tcp_stream& stream, boost::beast::flat_buffer& buffer) override;
 
+        [[nodiscard]] const std::string& get_body() override;
+
     private:
         rest::utils::ts_map<uint16_t, std::pair<std::string, std::string>>& m_mpcontainer;
         uint16_t m_part_number;
