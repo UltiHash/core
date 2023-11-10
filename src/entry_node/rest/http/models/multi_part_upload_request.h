@@ -10,7 +10,7 @@ namespace uh::cluster::rest::http::model
     {
     public:
         explicit multi_part_upload_request(const http::request_parser<http::empty_body>&,
-                                           rest::utils::ts_map<uint16_t, std::string>&, uint16_t part_number,
+                                           rest::utils::ts_map<uint16_t, std::pair<std::string, std::string>>&, uint16_t part_number,
                                            std::unique_ptr<rest::http::URI> uri);
 
         ~multi_part_upload_request() override = default;
@@ -22,7 +22,7 @@ namespace uh::cluster::rest::http::model
         coro<void> read_body(tcp_stream& stream, boost::beast::flat_buffer& buffer) override;
 
     private:
-        rest::utils::ts_map<uint16_t, std::string>& m_mpcontainer;
+        rest::utils::ts_map<uint16_t, std::pair<std::string, std::string>>& m_mpcontainer;
         uint16_t m_part_number;
     };
 

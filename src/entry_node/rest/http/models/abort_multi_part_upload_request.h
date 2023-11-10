@@ -11,7 +11,7 @@ namespace uh::cluster::rest::http::model
     {
     public:
         abort_multi_part_upload_request(const http::request_parser<http::empty_body>&,
-                                        rest::utils::ts_unordered_map<std::string, std::shared_ptr<utils::ts_map<uint16_t, std::string>>>&,
+                                        rest::utils::ts_unordered_map<std::string, std::shared_ptr<utils::ts_map<uint16_t, std::pair<std::string, std::string>>>>&,
                                         std::string,
                                         std::unique_ptr<rest::http::URI>);
 
@@ -22,7 +22,7 @@ namespace uh::cluster::rest::http::model
         [[nodiscard]] std::map<std::string, std::string> get_request_specific_headers() const override;
 
     private:
-        rest::utils::ts_unordered_map<std::string, std::shared_ptr<utils::ts_map<uint16_t, std::string>>>& m_uomap_multipart;
+        rest::utils::ts_unordered_map<std::string, std::shared_ptr<utils::ts_map<uint16_t, std::pair<std::string, std::string>>>>& m_uomap_multipart;
         std::string m_upload_id;
     };
 

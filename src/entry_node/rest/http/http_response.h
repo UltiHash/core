@@ -102,7 +102,6 @@ namespace uh::cluster::rest::http
         void set_error(http::response<http::string_body>);
         void set_body(std::string);
         void set_error_body(std::string body);
-        void set_etag_from_request_body();
 
     protected:
         const http_request& m_orig_req;
@@ -112,7 +111,7 @@ namespace uh::cluster::rest::http
         http::response<http::string_body> m_error;
 
         bool etagHasBeenSet = false;
-        std::string etag;
+        std::string m_etag;
     };
 
 } // uh::cluster::rest::http

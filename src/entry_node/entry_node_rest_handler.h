@@ -10,6 +10,8 @@
 #include "common/protocol_handler.h"
 #include <common/log.h>
 #include "network/client.h"
+
+// HTTP
 #include "entry_node/rest/http/http_request.h"
 #include "entry_node/rest/http/http_response.h"
 #include "entry_node/rest/http/models/put_object_response.h"
@@ -29,8 +31,11 @@
 #include "entry_node/rest/http/models/list_multi_part_uploads_response.h"
 #include "entry_node/rest/http/models/get_bucket_response.h"
 #include "entry_node/rest/http/models/delete_objects_request.h"
+
+// UTILS
 #include "entry_node/rest/utils/parser/xml_parser.h"
 #include "entry_node/rest/utils/string/string_utils.h"
+#include "entry_node/rest/utils/hashing/hash.h"
 
 namespace uh::cluster {
 
@@ -298,7 +303,8 @@ public:
                 throw std::runtime_error("Failed to add the fragment address of object " + dir_req.bucket_id + "/" + *dir_req.object_key + " to the directory.\n" + "Error: \n" + msg);
             }
 
-            res->set_etag("CustomEtag");
+            rest::utils::hashing::MD5 md5;
+            res->set_etag(md5.calculateMD5(req.get_body()));
         }
         catch(const std::exception& e)
         {
@@ -499,14 +505,16 @@ public:
         return std::move(res);
     }
 
-    std::unique_ptr<http::http_response> handle_mp_upload (const rest::http::http_request& req)
+    std::unique_ptr<http::http_response> handle_mp_upload (rest::http::http_request& req)
     {
 
         std::unique_ptr<http::model::multi_part_upload_response> res;
         try
         {
             res = std::make_unique<http::model::multi_part_upload_response>(req);
-            res->set_etag("CustomEtag");
+
+            rest::utils::hashing::MD5 md5;
+            res->set_etag(md5.calculateMD5(req.get_body()));
         }
         catch(const std::exception& e)
         {
@@ -563,7 +571,8 @@ public:
                 throw std::runtime_error("Failed to add the fragment address of object " + dir_req.bucket_id + "/" + *dir_req.object_key + " to the directory.\n" + "Error: \n" + msg);
             }
 
-            res->set_etag("CustomEtag");
+            rest::utils::hashing::MD5 md5;
+            res->set_etag(md5.calculateMD5(req.get_body()));
 
             LOG_INFO() << "original size " << size_mb << " MB";
             LOG_INFO() << "effective size " << effective_size << " MB";

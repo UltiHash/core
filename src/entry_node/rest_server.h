@@ -57,7 +57,7 @@ namespace uh::cluster::rest
         std::promise <message_type> m_recover_response;
         bool m_server_busy = false;
 
-        rest::utils::ts_unordered_map<std::string, std::shared_ptr<utils::ts_map<uint16_t, std::string>>> m_uomap_multipart;
+        rest::utils::ts_unordered_map<std::string, std::shared_ptr<utils::ts_map<uint16_t, std::pair<std::string, std::string>>>> m_uomap_multipart;
 
         const boost::asio::ip::address m_server_address = boost::asio::ip::make_address("0.0.0.0");
 

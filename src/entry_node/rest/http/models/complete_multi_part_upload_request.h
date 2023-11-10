@@ -11,7 +11,7 @@ namespace uh::cluster::rest::http::model
     {
     public:
         complete_multi_part_upload_request(const http::request_parser<http::empty_body>&,
-                                                    rest::utils::ts_unordered_map<std::string, std::shared_ptr<utils::ts_map<uint16_t, std::string>>>&,
+                                                    rest::utils::ts_unordered_map<std::string, std::shared_ptr<utils::ts_map<uint16_t, std::pair<std::string, std::string>>>>&,
                                                     std::string, std::unique_ptr<rest::http::URI>);
 
         ~complete_multi_part_upload_request() override;
@@ -33,7 +33,7 @@ namespace uh::cluster::rest::http::model
 
         std::string m_completed_body {};
         std::string m_upload_id;
-        rest::utils::ts_unordered_map<std::string, std::shared_ptr<utils::ts_map<uint16_t, std::string>>>& m_uomap_multipart;
+        rest::utils::ts_unordered_map<std::string, std::shared_ptr<utils::ts_map<uint16_t, std::pair<std::string, std::string>>>>& m_uomap_multipart;
     };
 
 } // uh::cluster::rest::http::model

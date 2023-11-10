@@ -6,7 +6,7 @@ namespace uh::cluster::rest::http::model
 {
 
     complete_multi_part_upload_request::complete_multi_part_upload_request(const http::request_parser<http::empty_body>& recv_req,
-                                                                           rest::utils::ts_unordered_map<std::string, std::shared_ptr<utils::ts_map<uint16_t, std::string>>>& uo_container,
+                                                                           rest::utils::ts_unordered_map<std::string, std::shared_ptr<utils::ts_map<uint16_t, std::pair<std::string, std::string>>>>& uo_container,
                                                                            std::string upload_id, std::unique_ptr<rest::http::URI> uri) :
             rest::http::http_request(recv_req, std::move(uri)),
             m_uomap_multipart(uo_container),
@@ -64,9 +64,11 @@ namespace uh::cluster::rest::http::model
         uint16_t part_counter = 1;
         for (const auto& objectNode : object_nodes_set)
         {
-            auto value = std::stoi(objectNode.node().child("PartNumber").child_value());
+            auto part_num = std::stoi(objectNode.node().child("PartNumber").child_value());
+            auto etag = objectNode.node().child("ETag").child_value();
 
-            if ( iterator->second->find(value) == iterator->second->end() )
+            auto part_iterator = iterator->second->find(part_num);
+            if ( part_iterator == iterator->second->end() || part_iterator->second.first != etag  )
             {
                 std::string m_body = "<Error>\n"
                                      "<Code>InvalidPart</Code>\n"
@@ -76,7 +78,7 @@ namespace uh::cluster::rest::http::model
                 throw custom_error_response_exception(http::response<http::string_body>{http::status::bad_request, 11}, std::move(m_body));
             }
 
-            if (value != part_counter)
+            if (part_num != part_counter)
             {
                 std::string m_body = "<Error>\n"
                                      "<Code>InvalidPartOrder</Code>\n"
@@ -93,7 +95,7 @@ namespace uh::cluster::rest::http::model
         auto part_container_size = iterator->second->size();
         for (const auto& part : *iterator->second)
         {
-            if (part.second.size() < 5*1024*1024 && part.first < part_container_size)
+            if (part.second.second.size() < 5*1024*1024 && part.first < part_container_size)
             {
                 std::string m_body = "<Error>\n"
                                      "<Code>EntityTooSmall</Code>\n"
@@ -114,7 +116,7 @@ namespace uh::cluster::rest::http::model
                 throw std::runtime_error("Invalid Upload ID");
 
             for (const auto& part : *iterator->second)
-                m_completed_body += part.second;
+                m_completed_body += part.second.second;
         }
 
         return m_completed_body;
@@ -128,7 +130,7 @@ namespace uh::cluster::rest::http::model
 
         size_t body_size {};
         for (const auto& part : *iterator->second)
-            body_size += part.second.length();
+            body_size += part.second.second.length();
 
         return body_size;
     }

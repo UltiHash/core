@@ -25,7 +25,7 @@ namespace uh::cluster::rest::utils::parser {
 
     s3_parser::s3_parser
             (const b_http::request_parser<b_http::empty_body>& recv_req,
-             rest::utils::ts_unordered_map<std::string, std::shared_ptr<utils::ts_map<uint16_t, std::string>>>& uomap)
+             rest::utils::ts_unordered_map<std::string, std::shared_ptr<utils::ts_map<uint16_t, std::pair<std::string, std::string>>>>& uomap)
             : m_recv_req(recv_req), m_uomap_multipart(uomap)
     {}
 
@@ -43,7 +43,7 @@ namespace uh::cluster::rest::utils::parser {
                     if (uri->query_string_exists("uploads"))
                     {
                         auto upload_id = generator::generate_unique_id();
-                        m_uomap_multipart.emplace(upload_id, std::make_shared<utils::ts_map<uint16_t, std::string>>());
+                        m_uomap_multipart.emplace(upload_id, std::make_shared<utils::ts_map<uint16_t, std::pair<std::string, std::string>>>());
                         return std::make_unique<rest::http::model::init_multi_part_upload_request>(m_recv_req, upload_id, std::move(uri));
                     }
                     else if (uri->query_string_exists("uploadId"))

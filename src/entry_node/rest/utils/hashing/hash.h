@@ -1,5 +1,6 @@
 #pragma once
 #include <string>
+#include <openssl/evp.h>
 
 namespace uh::cluster::rest::utils::hashing
 {
@@ -8,13 +9,17 @@ namespace uh::cluster::rest::utils::hashing
 
     class MD5
     {
-        MD5() = default;
-        ~MD5() = default;
+    public:
+        MD5();
 
-        /**
-        * Calculates an MD5 hash
-        */
-        std::string calculate(const std::string& str) const;
+        ~MD5();
+
+        std::string calculateMD5(const std::string& input);
+
+    private:
+        EVP_MD_CTX* pEvpContext;
+
+        std::string toHex(unsigned char value);
     };
 
 } // uh::cluster::rest::utils::hashing
