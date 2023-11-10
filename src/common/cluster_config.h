@@ -56,7 +56,6 @@ struct data_node_config {
 };
 
 struct entry_node_config {
-    server_config internal_server_conf;
     server_config rest_server_conf;
     int dedupe_node_connection_count;
     int directory_connection_count;

@@ -334,7 +334,7 @@ uint128_t data_store::get_used_space() const noexcept {
 }
 
 uint128_t data_store::get_free_space() const noexcept {
-    m_conf.max_data_store_size - m_used;
+    return m_conf.max_data_store_size - m_used;
 }
 
 long data_store::get_data_id() const noexcept {

@@ -188,13 +188,9 @@ namespace uh::cluster {
 
         static uh::cluster::entry_node_config make_entry_node_config(int i) {
             return {
-                    .internal_server_conf = {
-                            .threads = 4,
-                            .port = static_cast<uint16_t>(9030 + i),
-                    },
                     .rest_server_conf = {
                             .threads = 4,
-                            .port = static_cast<uint16_t>(9050 + i),
+                            .port = static_cast<uint16_t>(8500 + i),
                     },
                     .dedupe_node_connection_count = 2,
                     .directory_connection_count = 2,
@@ -212,6 +208,9 @@ namespace uh::cluster {
                     .server_conf = {
                             .threads = 4,
                             .port = static_cast<uint16_t>(8600 + i),
+                            .metrics_bind_address = "0.0.0.0:" + std::to_string(static_cast<uint16_t>(9600 + i)),
+                            .metrics_threads = 2,
+                            .metrics_path = "/metrics"
                     },
             };
         }
@@ -222,7 +221,11 @@ namespace uh::cluster {
             return {
                     .server_conf = {
                             .threads = 4,
-                            .port = static_cast<uint16_t>(9020 + i),
+                            .port = static_cast<uint16_t>(8700 + i),
+                            .metrics_bind_address = "0.0.0.0:" + std::to_string(static_cast<uint16_t>(9700 + i)),
+                            .metrics_threads = 2,
+                            .metrics_path = "/metrics"
+
                     },
                     .directory_conf = {
                             .root = get_root_path() / dr_dir,
@@ -246,7 +249,10 @@ namespace uh::cluster {
                     .write_cache_size_per_dn = 512,
                     .server_conf = {
                             .threads = 1,
-                            .port = static_cast<uint16_t>(9010 + i),
+                            .port = static_cast<uint16_t>(8800 + i),
+                            .metrics_bind_address = "0.0.0.0:" + std::to_string(static_cast<uint16_t>(9800 + i)),
+                            .metrics_threads = 2,
+                            .metrics_path = "/metrics"
                     },
                     .data_node_connection_count = 2,
                     .set_conf = {
