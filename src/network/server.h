@@ -41,7 +41,7 @@ namespace uh::cluster
             m_is_running = true;
             boost::asio::co_spawn(*m_ioc,
                                   do_listen(boost::asio::ip::tcp::endpoint{m_server_address, m_config.port}),
-                                  [](const std::exception_ptr &e) {
+                                  [&](const std::exception_ptr &e) {
                                       if (e)
                                           try {
                                               std::rethrow_exception(e);
