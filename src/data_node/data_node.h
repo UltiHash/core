@@ -18,11 +18,12 @@ namespace uh::cluster {
 class data_node: public node_interface {
 public:
 
-    data_node (int id, cluster_map&& cmap);
+    data_node (int id, cluster_map cmap);
 
     void run() override;
     void stop() override;
 
+    ~data_node() override;
 private:
 
     const std::string m_job_name;

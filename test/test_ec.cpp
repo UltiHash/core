@@ -18,12 +18,7 @@
 // ------------- Tests Suites Follow --------------
 
 namespace uh::cluster {
-    BOOST_FIXTURE_TEST_CASE (success_ec, cluster_fixture) {
-        BOOST_TEST(true);
-    }
 
-
-/*
 BOOST_FIXTURE_TEST_CASE (ec_basic_write_read_test_multiple_nodes_with_ec, cluster_fixture)
 {
     //std::cout << "begin ec_basic_write_read_test_multiple_nodes_with_ec" << std::endl;
@@ -680,9 +675,13 @@ BOOST_FIXTURE_TEST_CASE (ec_test_chain_of_failures, cluster_fixture)
 
     const auto data_str = std::string_view (data, data_size);
     auto write_data = [&] () -> coro <void> {
+        //std::cout << "before alloc data 1" << std::endl;
         auto alloc = co_await get_dedupe_node(0).get_global_data_view().allocate(data_size);
+        //std::cout << "before write data 1" << std::endl;
         co_await get_dedupe_node(0).get_global_data_view().scatter_allocated_write(alloc, data_str);
+        //std::cout << "before sync data 1" << std::endl;
         co_await get_dedupe_node(0).get_global_data_view().sync(alloc);
+        //std::cout << "after sync data 1" << std::endl;
         alloc_promise.set_value(std::move (alloc));
         co_return;
     };
@@ -691,6 +690,7 @@ BOOST_FIXTURE_TEST_CASE (ec_test_chain_of_failures, cluster_fixture)
     ioc.run();
 
     address alloc = alloc_promise.get_future().get();;
+    //std::cout << "finished write data 1" << std::endl;
 
     ioc.stop();
     ioc.restart();
@@ -708,6 +708,7 @@ BOOST_FIXTURE_TEST_CASE (ec_test_chain_of_failures, cluster_fixture)
 
     auto read_data = [&] () -> coro <message_type> {
         size_t offset = 0;
+        //std::cout << "before read data 1" << std::endl;
         for (int i = 0; i < alloc.size(); ++i) {
             const auto frag = alloc.get_fragment(i);
             co_await get_dedupe_node(0).get_global_data_view().read(read_buf + offset, frag.pointer, frag.size);
@@ -716,12 +717,14 @@ BOOST_FIXTURE_TEST_CASE (ec_test_chain_of_failures, cluster_fixture)
                 break;
             }
         }
+        //std::cout << "after read data 1" << std::endl;
         co_return SUCCESS;
     };
 
     boost::asio::co_spawn(ioc, read_data, boost::asio::use_future);
     ioc.run();
 
+    //std::cout << "finished read data 1" << std::endl;
     BOOST_CHECK(std::string_view (data, data_size) == std::string_view (read_buf, data_size));
 
     ioc.stop();
@@ -745,16 +748,20 @@ BOOST_FIXTURE_TEST_CASE (ec_test_chain_of_failures, cluster_fixture)
 
     const auto data_str_2 = std::string_view (data_2, data_size_2);
     auto write_data_2 = [&] () -> coro <void> {
+        //std::cout << "before alloc data 2" << std::endl;
         auto alloc = co_await get_dedupe_node(0).get_global_data_view().allocate(data_size_2);
+        //std::cout << "before write data 2" << std::endl;
         co_await get_dedupe_node(0).get_global_data_view().scatter_allocated_write(alloc, data_str_2);
+        //std::cout << "before sync data 2" << std::endl;
         co_await get_dedupe_node(0).get_global_data_view().sync(alloc);
+        //std::cout << "after sync data 2" << std::endl;
         alloc_promise_2.set_value(std::move (alloc));
         co_return;
     };
 
     boost::asio::co_spawn(ioc, write_data_2, boost::asio::use_future);
     ioc.run();
-
+    //std::cout << "finished write data 2" << std::endl;
     address alloc_2 = alloc_promise_2.get_future().get();
 
     ioc.stop();
@@ -778,9 +785,13 @@ BOOST_FIXTURE_TEST_CASE (ec_test_chain_of_failures, cluster_fixture)
 
     const auto data_str_3 = std::string_view (data_3, data_size_3);
     auto write_data_3 = [&] () -> coro <void> {
+        //std::cout << "before alloc data 3" << std::endl;
         auto alloc = co_await get_dedupe_node(0).get_global_data_view().allocate(data_size_3);
+        //std::cout << "before write data 3" << std::endl;
         co_await get_dedupe_node(0).get_global_data_view().scatter_allocated_write(alloc, data_str_3);
+        //std::cout << "before sync data 3" << std::endl;
         co_await get_dedupe_node(0).get_global_data_view().sync(alloc);
+        //std::cout << "after sync data 3" << std::endl;
         alloc_promise_3.set_value(std::move (alloc));
         co_return;
     };
@@ -788,6 +799,7 @@ BOOST_FIXTURE_TEST_CASE (ec_test_chain_of_failures, cluster_fixture)
     ioc.run();
 
     address alloc_3 = alloc_promise_3.get_future().get();
+    //std::cout << "finished write data 3" << std::endl;
 
     ioc.stop();
     ioc.restart();
@@ -866,5 +878,4 @@ BOOST_FIXTURE_TEST_CASE (ec_test_chain_of_failures, cluster_fixture)
     //std::cout << "end ec_test_chain_of_failures" << std::endl;
 
 }
-*/
 } // end namespace uh::cluster
