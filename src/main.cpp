@@ -16,10 +16,6 @@
 
 uh::cluster::entry_node_config make_entry_node_config () {
     return {
-        .internal_server_conf = {
-                .threads = 4,
-                .port = 8081,
-        },
         .rest_server_conf = {
                 .threads = 4,
                 .port = 8080,
