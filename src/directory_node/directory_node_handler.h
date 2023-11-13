@@ -5,6 +5,7 @@
 #ifndef CORE_DIRECTORY_NODE_HANDLER_H
 #define CORE_DIRECTORY_NODE_HANDLER_H
 
+#include <common/error.h>
 #include "common/protocol_handler.h"
 #include "directory_store.h"
 
@@ -20,9 +21,10 @@ public:
     coro <void> handle (messenger m) override {
 
         for (;;) {
-            std::string failure;
+            std::optional<error> err;
+
             try {
-            const auto message_header = co_await m.recv_header ();
+                const auto message_header = co_await m.recv_header ();
                 switch (message_header.type) {
                 case DIR_PUT_OBJ_REQ:
                     co_await handle_put_obj (m, message_header);
@@ -50,11 +52,15 @@ public:
                 default:
                     throw std::invalid_argument ("Invalid message type!");
                 }
+            } catch (const error_exception& e) {
+                err = e.error();
             } catch (const std::exception& e) {
-                failure = e.what();
+                err = error(error::unknown, e.what());
             }
-            if (!failure.empty()) {
-                co_await m.send(FAILURE, failure);
+
+            if (err)
+            {
+                co_await m.send(*err);
             }
         }
 
