@@ -14,6 +14,7 @@ set(Boost_USE_STATIC_LIBS ON)
 find_package(Boost 1.80 COMPONENTS thread log url unit_test_framework REQUIRED)
 find_package(OpenSSL REQUIRED)
 
+option(ENABLE_E2E_TESTS "Enable End-to-End tests" OFF)
 
 find_package(Git REQUIRED)
 if(GIT_FOUND AND EXISTS "${PROJECT_SOURCE_DIR}/.git")
@@ -59,6 +60,8 @@ target_include_directories(${PROJECT_NAME} PRIVATE ${${PROJECT_NAME}_INCLUDE_DIR
 # Testing
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/testing/CMakeLists.txt)
 enable_testing()
+
+add_subdirectory(testing)
 
 # Packaging
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/packaging/CMakeLists.txt)

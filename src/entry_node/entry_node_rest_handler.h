@@ -39,8 +39,7 @@
 
 namespace uh::cluster {
 
-    namespace http = rest::http;
-
+namespace http = rest::http;
 
 class entry_node_rest_handler {
 public:
@@ -125,26 +124,25 @@ public:
     {
 
         std::unique_ptr<http::model::create_object_response> res = std::make_unique<http::model::create_object_response>(req);
+        auto bucket_id = req.get_URI().get_bucket_id();
 
         try
         {
             auto m_dir = m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size())).acquire_messenger();
             directory_message dir_req;
-            dir_req.bucket_id = req.get_URI().get_bucket_id();
+            dir_req.bucket_id = bucket_id;
             co_await m_dir.get().send_directory_message (DIR_PUT_BUCKET_REQ, dir_req);
-            const auto h_dir = co_await m_dir.get().recv_header();
-            if(h_dir.type == FAILURE) [[unlikely]]
-            {
-                std::string msg;
-                msg.resize(h_dir.size);
-                m_dir.get().register_read_buffer(msg);
-                co_await m_dir.get().recv_buffers(h_dir);
-                throw std::runtime_error("Failed to add the bucket " + dir_req.bucket_id + " to the directory.\n" + "Error: \n" + msg);
-            }
+
+            co_await m_dir.get().recv_header();
         }
-        catch(const std::exception& e)
+        catch (const error_exception& e)
         {
-            LOG_ERROR() << e.what();
+            LOG_ERROR() << "Failed to add the bucket " << bucket_id << " to the directory: " << e;
+            res->set_error();
+        }
+        catch (const std::exception& e)
+        {
+            LOG_ERROR() << "Failed to add the bucket " << bucket_id << " to the directory: " << e.what();
             res->set_error();
         }
 
@@ -165,19 +163,16 @@ public:
             dir_req.bucket_id = req.get_URI().get_bucket_id();
             co_await m_dir.get().send_directory_message (DIR_DELETE_BUCKET_REQ, dir_req);
 
-            const auto h_dir = co_await m_dir.get().recv_header();
-            if(h_dir.type == FAILURE) [[unlikely]]
-            {
-                std::string msg;
-                msg.resize(h_dir.size);
-                m_dir.get().register_read_buffer(msg);
-                co_await m_dir.get().recv_buffers(h_dir);
-                throw std::runtime_error("Failed to delete bucket.\nError: \n" + msg);
-            }
+            co_await m_dir.get().recv_header();
+        }
+        catch (const error_exception& e)
+        {
+            LOG_ERROR() << "Failed to delete bucket: " << e;
+            res->set_error(boost::beast::http::response<boost::beast::http::string_body>{boost::beast::http::status::not_found, 11});
         }
         catch (const std::exception& e)
         {
-            LOG_ERROR() << e.what();
+            LOG_ERROR() << "Failed to delete bucket: " << e.what();
             res->set_error(boost::beast::http::response<boost::beast::http::string_body>{boost::beast::http::status::not_found, 11});
         }
 
@@ -188,38 +183,52 @@ public:
     {
 
         std::unique_ptr<http::model::get_bucket_response> res;
+        auto req_bucket_id = req.get_URI().get_bucket_id();
+
         try
         {
             res = std::make_unique<http::model::get_bucket_response>(req);
 
             auto m_dir = m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size())).acquire_messenger();
             co_await m_dir.get().send(DIR_LIST_BUCKET_REQ, {});
-            const auto h_dir = co_await m_dir.get().recv_header();
 
-            if(h_dir.type == DIR_LIST_BUCKET_RESP) [[likely]]
+            auto hdr = co_await m_dir.get().recv_header();
+
+            if(hdr.type == DIR_LIST_BUCKET_RESP) [[likely]]
             {
-                auto list_buckets_res = co_await m_dir.get().recv_directory_list_entities_message(h_dir);
+                auto list_buckets_res = co_await m_dir.get().recv_directory_list_entities_message(hdr);
                 for (const auto& bucket: list_buckets_res.entities)
                 {
-                    if (bucket == req.get_URI().get_bucket_id())
+                    if (bucket == req_bucket_id)
+                    {
                         res->add_bucket(bucket);
+                        break;
+                    }
                 }
+
                 if (res->get_bucket().empty())
-                    throw std::runtime_error("Bucket: " + req.get_URI().get_bucket_id() + " doesn't exist.");
+                {
+                    throw error_exception(error::bucket_not_found);
+                }
             }
-            if(h_dir.type == FAILURE) [[unlikely]]
+            // TODO throw here
+        }
+        catch (const error_exception& e)
+        {
+            LOG_ERROR() << "Failed to get bucket `" << req_bucket_id << "`: " << e;
+            switch (*e.error())
             {
-                std::string msg;
-                msg.resize(h_dir.size);
-                m_dir.get().register_read_buffer(msg);
-                co_await m_dir.get().recv_buffers(h_dir);
-                throw std::runtime_error("Failed to find bucket.\nError: \n" + msg);
+                case error::bucket_not_found:
+                    res->set_error(boost::beast::http::response<boost::beast::http::string_body>{boost::beast::http::status::not_found, 11});
+                    break;
+                default:
+                    res->set_error();
             }
         }
         catch (const std::exception& e)
         {
-            LOG_ERROR() << e.what();
-            res->set_error(boost::beast::http::response<boost::beast::http::string_body>{boost::beast::http::status::not_found, 11});
+            LOG_ERROR() << "Failed to get bucket `" << req_bucket_id << "`: " << e.what();
+            res->set_error();
         }
 
         co_return std::move(res);
