@@ -21,7 +21,7 @@ namespace uh::cluster::rest::http::model
                                  "<Message>Upload id not found.</Message>\n"
                                  "</Error>";
 
-            throw custom_error_response_exception(http::response<http::string_body>{http::status::not_found, 11}, std::move(m_body));
+            throw custom_error_response_exception(http::status::not_found, error::type::no_such_upload);
         }
         else
         {

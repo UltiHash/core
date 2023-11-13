@@ -31,6 +31,7 @@
 #include "entry_node/rest/http/models/list_multi_part_uploads_response.h"
 #include "entry_node/rest/http/models/get_bucket_response.h"
 #include "entry_node/rest/http/models/delete_objects_request.h"
+#include "entry_node/rest/http/models/custom_error_response_exception.h"
 
 // UTILS
 #include "entry_node/rest/utils/parser/xml_parser.h"
@@ -40,6 +41,8 @@
 namespace uh::cluster {
 
 namespace http = rest::http;
+namespace beast = boost::beast;         // from <boost/beast.hpp>
+namespace b_http = beast::http;           // from <boost/beast/http.hpp>
 
 class entry_node_rest_handler {
 public:
@@ -138,12 +141,7 @@ public:
         catch (const error_exception& e)
         {
             LOG_ERROR() << "Failed to add the bucket " << bucket_id << " to the directory: " << e;
-            res->set_error();
-        }
-        catch (const std::exception& e)
-        {
-            LOG_ERROR() << "Failed to add the bucket " << bucket_id << " to the directory: " << e.what();
-            res->set_error();
+            throw rest::http::model::custom_error_response_exception(b_http::status::not_found);
         }
 
         co_return std::move(res);
@@ -168,12 +166,7 @@ public:
         catch (const error_exception& e)
         {
             LOG_ERROR() << "Failed to delete bucket: " << e;
-            res->set_error(boost::beast::http::response<boost::beast::http::string_body>{boost::beast::http::status::not_found, 11});
-        }
-        catch (const std::exception& e)
-        {
-            LOG_ERROR() << "Failed to delete bucket: " << e.what();
-            res->set_error(boost::beast::http::response<boost::beast::http::string_body>{boost::beast::http::status::not_found, 11});
+            throw rest::http::model::custom_error_response_exception(b_http::status::not_found);
         }
 
         co_return std::move(res);
@@ -219,16 +212,11 @@ public:
             switch (*e.error())
             {
                 case error::bucket_not_found:
-                    res->set_error(boost::beast::http::response<boost::beast::http::string_body>{boost::beast::http::status::not_found, 11});
+                    throw rest::http::model::custom_error_response_exception(b_http::status::not_found);
                     break;
                 default:
-                    res->set_error();
+                    throw rest::http::model::custom_error_response_exception(b_http::status::internal_server_error);
             }
-        }
-        catch (const std::exception& e)
-        {
-            LOG_ERROR() << "Failed to get bucket `" << req_bucket_id << "`: " << e.what();
-            res->set_error();
         }
 
         co_return std::move(res);
@@ -266,7 +254,7 @@ public:
         catch (const std::exception& e)
         {
             LOG_ERROR() << e.what();
-            res->set_error(boost::beast::http::response<boost::beast::http::string_body>{boost::beast::http::status::not_found, 11});
+            throw rest::http::model::custom_error_response_exception(b_http::status::not_found);
         }
 
         co_return std::move(res);
@@ -318,7 +306,7 @@ public:
         catch(const std::exception& e)
         {
             LOG_ERROR() << e.what();
-            res->set_error(boost::beast::http::response<boost::beast::http::string_body>{boost::beast::http::status::not_found, 11});
+            throw rest::http::model::custom_error_response_exception(b_http::status::not_found);
         }
 
         co_return std::move(res);
@@ -376,7 +364,7 @@ public:
         catch (const std::exception& e)
         {
             LOG_ERROR() << e.what();
-            res->set_error(boost::beast::http::response<boost::beast::http::string_body>{boost::beast::http::status::not_found, 11});
+            throw rest::http::model::custom_error_response_exception(b_http::status::not_found);
         }
 
         co_return std::move(res);
@@ -388,7 +376,7 @@ public:
         std::unique_ptr<http::model::get_object_attributes_response> res;
 
         res = std::make_unique<http::model::get_object_attributes_response>(req);
-        res->set_error(boost::beast::http::response<boost::beast::http::string_body>{boost::beast::http::status::not_implemented, 11});
+        throw rest::http::model::custom_error_response_exception(b_http::status::not_implemented);
 
         return std::move(res);
     }
@@ -438,7 +426,7 @@ public:
         catch(const std::exception &e)
         {
             LOG_ERROR() << e.what();
-            res->set_error(boost::beast::http::response<boost::beast::http::string_body>{boost::beast::http::status::not_found, 11});
+            throw rest::http::model::custom_error_response_exception(b_http::status::not_found);
         }
 
         co_return std::move(res);
@@ -490,7 +478,7 @@ public:
         catch(const std::exception &e)
         {
             LOG_ERROR() << e.what();
-            res->set_error(boost::beast::http::response<boost::beast::http::string_body>{boost::beast::http::status::internal_server_error, 11});
+            throw rest::http::model::custom_error_response_exception(b_http::status::internal_server_error);
         }
 
         co_return std::move(res);
@@ -596,7 +584,7 @@ public:
         catch(const std::exception& e)
         {
             LOG_ERROR() << e.what();
-            res->set_error();
+            throw rest::http::model::custom_error_response_exception(b_http::status::internal_server_error);
         }
 
         co_return std::move(res);
@@ -612,26 +600,42 @@ public:
         catch(const std::exception& e)
         {
             LOG_ERROR() << e.what();
-            res->set_error();
+            throw rest::http::model::custom_error_response_exception(b_http::status::not_implemented);
         }
 
         return std::move(res);
     }
 
-    std::unique_ptr<http::http_response> handle_delete_object (const rest::http::http_request& req)
+    coro<std::unique_ptr<http::http_response>> handle_delete_object (const rest::http::http_request& req)
     {
 
         std::unique_ptr<http::model::delete_object_response> res = std::make_unique<http::model::delete_object_response>(req);
-        res->set_error(boost::beast::http::response<boost::beast::http::string_body>{boost::beast::http::status::not_implemented, 11});
 
-        return std::move(res);
+
+        try
+        {
+            auto m_dir = m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size())).acquire_messenger();
+            directory_message dir_req;
+            dir_req.bucket_id = bucket_id;
+            dir_req.object_key =
+            co_await m_dir.get().send_directory_message (DIR_DELETE_OBJ_REQ, dir_req);
+
+            co_await m_dir.get().recv_header();
+        }
+        catch (const error_exception& e)
+        {
+            LOG_ERROR() << "Failed to delete the bucket " << bucket_id << " to the directory: " << e;
+            throw rest::http::model::custom_error_response_exception(b_http::status::not_found);
+        }
+
+        co_return std::move(res);
     }
 
     std::unique_ptr<http::http_response> handle_list_mp_uploads (const rest::http::http_request& req)
     {
 
         std::unique_ptr<http::model::list_multi_part_uploads_response> res = std::make_unique<http::model::list_multi_part_uploads_response>(req);
-        res->set_error(boost::beast::http::response<boost::beast::http::string_body>{boost::beast::http::status::not_implemented, 11});
+        throw rest::http::model::custom_error_response_exception(b_http::status::not_implemented);
 
         return std::move(res);
     }

@@ -31,12 +31,7 @@ namespace uh::cluster::rest::http::model
         auto iterator = m_uomap_multipart.find(m_upload_id);
         if (iterator == m_uomap_multipart.end())
         {
-            std::string m_body = "<Error>\n"
-                                 "<Code>NoSuchUpload</Code>\n"
-                                 "<Message>Upload id not found.</Message>\n"
-                                 "</Error>";
-
-            throw custom_error_response_exception(http::response<http::string_body>{http::status::not_found, 11}, std::move(m_body));
+            throw custom_error_response_exception(http::status::not_found, error::type::no_such_upload);
         }
 
         rest::utils::parser::xml_parser parsed_xml;
@@ -53,12 +48,7 @@ namespace uh::cluster::rest::http::model
         }
         catch(const std::exception& e)
         {
-            std::string m_body = "<Error>\n"
-                                 "<Code>MalformedXML</Code>\n"
-                                 "<Message>XML is invalid.</Message>\n"
-                                 "</Error>";
-
-            throw custom_error_response_exception(http::response<http::string_body>{http::status::bad_request, 11}, std::move(m_body));
+            throw custom_error_response_exception(http::status::bad_request, error::type::malformed_xml);
         }
 
         uint16_t part_counter = 1;
@@ -70,22 +60,12 @@ namespace uh::cluster::rest::http::model
             auto part_iterator = iterator->second->find(part_num);
             if ( part_iterator == iterator->second->end() || part_iterator->second.first != etag  )
             {
-                std::string m_body = "<Error>\n"
-                                     "<Code>InvalidPart</Code>\n"
-                                     "<Message>Part not found.</Message>\n"
-                                     "</Error>";
-
-                throw custom_error_response_exception(http::response<http::string_body>{http::status::bad_request, 11}, std::move(m_body));
+                throw custom_error_response_exception(http::status::bad_request, error::type::invalid_part);
             }
 
             if (part_num != part_counter)
             {
-                std::string m_body = "<Error>\n"
-                                     "<Code>InvalidPartOrder</Code>\n"
-                                     "<Message>Part lists must be in ascending order.</Message>\n"
-                                     "</Error>";
-
-                throw custom_error_response_exception(http::response<http::string_body>{http::status::bad_request, 11}, std::move(m_body));
+                throw custom_error_response_exception(http::status::bad_request, error::type::invalid_part_oder);
             }
 
             part_counter++;
@@ -97,12 +77,7 @@ namespace uh::cluster::rest::http::model
         {
             if (part.second.second.size() < 5*1024*1024 && part.first < part_container_size)
             {
-                std::string m_body = "<Error>\n"
-                                     "<Code>EntityTooSmall</Code>\n"
-                                     "<Message>Parts must be greater than 5MB in size.</Message>\n"
-                                     "</Error>";
-
-                throw custom_error_response_exception(http::response<http::string_body>{http::status::bad_request, 11}, std::move(m_body));
+                throw custom_error_response_exception(http::status::bad_request, error::type::entity_too_small);
             }
         }
     }
@@ -142,10 +117,6 @@ namespace uh::cluster::rest::http::model
 
     void complete_multi_part_upload_request::handle_request_specific_criteria()
     {
-        /* check if already another complete request multipart upload with the same upload id is already working on
-         * deduplicating. If so just ignore it.
-         */
-
         parse_and_check_xml();
     }
 

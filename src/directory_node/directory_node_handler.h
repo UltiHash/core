@@ -47,6 +47,9 @@ public:
                 case DIR_DELETE_BUCKET_REQ:
                     co_await handle_delete_bucket(m, message_header);
                     break;
+                case DIR_DELETE_OBJ_REQ:
+                    co_await handle_delete_object(m, message_header);
+                    break;
                 case STOP:
                     co_return;
                 default:
@@ -68,7 +71,8 @@ public:
 
 private:
 
-    coro <void> handle_put_obj (messenger& m, const messenger::header& h) {
+    coro <void> handle_put_obj (messenger& m, const messenger::header& h)
+    {
         directory_message request = co_await m.recv_directory_message (h);
 
         std::vector<char> address_data;
@@ -111,7 +115,12 @@ private:
         directory_message request = co_await m.recv_directory_message (h);
         m_directory.remove_bucket(request.bucket_id);
         co_await m.send(SUCCESS, {});
+    }
 
+    coro <void> handle_delete_object (messenger& m, const messenger::header& h) {
+        directory_message request = co_await m.recv_directory_message (h);
+        m_directory.remove_object(request.bucket_id, request.object_key);
+        co_await m.send(SUCCESS, {});
     }
 
     coro <void> handle_list_buckets (messenger&m, const messenger::header &h) {
