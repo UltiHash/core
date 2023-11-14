@@ -119,7 +119,7 @@ private:
 
     coro <void> handle_delete_object (messenger& m, const messenger::header& h) {
         directory_message request = co_await m.recv_directory_message (h);
-        m_directory.remove_object(request.bucket_id, request.object_key);
+        m_directory.remove_object(request.bucket_id, *request.object_key);
         co_await m.send(SUCCESS, {});
     }
 

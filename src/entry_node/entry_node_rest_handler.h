@@ -84,7 +84,7 @@ public:
                 res = co_await handle_get_object(req);
                 break;
             case http::http_request_type::DELETE_OBJECT:
-                res = handle_delete_object(req);
+                res = co_await handle_delete_object(req);
                 break;
             case http::http_request_type::LIST_OBJECTS_V2:
                 res = co_await handle_list_objects_v2(req);
@@ -166,7 +166,7 @@ public:
         catch (const error_exception& e)
         {
             LOG_ERROR() << "Failed to delete bucket: " << e;
-            throw rest::http::model::custom_error_response_exception(b_http::status::not_found);
+            throw rest::http::model::custom_error_response_exception(b_http::status::not_found, rest::http::model::error::bucket_not_found);
         }
 
         co_return std::move(res);
@@ -610,14 +610,15 @@ public:
     {
 
         std::unique_ptr<http::model::delete_object_response> res = std::make_unique<http::model::delete_object_response>(req);
-
+        auto bucket_id = req.get_URI().get_bucket_id();
 
         try
         {
             auto m_dir = m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size())).acquire_messenger();
             directory_message dir_req;
             dir_req.bucket_id = bucket_id;
-            dir_req.object_key =
+            dir_req.object_key = std::make_unique <std::string> (req.get_URI().get_object_key());
+
             co_await m_dir.get().send_directory_message (DIR_DELETE_OBJ_REQ, dir_req);
 
             co_await m_dir.get().recv_header();
@@ -625,7 +626,7 @@ public:
         catch (const error_exception& e)
         {
             LOG_ERROR() << "Failed to delete the bucket " << bucket_id << " to the directory: " << e;
-            throw rest::http::model::custom_error_response_exception(b_http::status::not_found);
+            throw rest::http::model::custom_error_response_exception(b_http::status::not_found, rest::http::model::error::bucket_not_found);
         }
 
         co_return std::move(res);

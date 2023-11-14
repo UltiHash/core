@@ -55,6 +55,15 @@ public:
         m_buckets.emplace (bucket_id, std::make_unique <bucket> (m_root, bucket_id, m_bucket_conf));
     }
 
+    void remove_object (const std::string& bucket_id, const std::string& object_key) {
+        if (const auto& b = m_buckets.find(bucket_id); b != m_buckets.cend()) [[likely]] {
+            b->second->delete_object(object_key);
+        }
+        else {
+            throw std::out_of_range ("The bucket " + bucket_id + " does not exist.");
+        }
+    }
+
     void remove (const std::string& bucket, const std::string& key) {
         if (const auto& b = m_buckets.find(bucket); b != m_buckets.cend()) [[likely]] {
             b->second->delete_object(key);

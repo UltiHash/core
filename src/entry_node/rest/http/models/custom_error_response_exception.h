@@ -24,16 +24,17 @@ namespace uh::cluster::rest::http::model
             invalid_part = 5,
             invalid_part_oder = 6,
             entity_too_small = 7,
+            bucket_not_found = 8,
+            invalid_bucket_name = 9,
         };
 
-        explicit error(type t = unknown, std::string  message = "");
+        explicit error(type t = unknown);
 
-        const std::string& message() const;
+        const std::pair<std::string, std::string>& message() const;
         uint32_t code() const;
         type operator*() const;
 
     private:
-        std::string m_message;
         type m_type;
     };
 
