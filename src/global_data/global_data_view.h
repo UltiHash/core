@@ -113,6 +113,10 @@ public:
 
     coro <void> scatter_allocated_write (const address& addr, const std::string_view& data) {
 
+        if (data.size() % m_data_node_offsets.size() != 0) [[unlikely]] {
+            throw std::length_error ("Invalid data length for broadcast");
+        }
+
         std::unordered_map <std::shared_ptr <client>, address> node_address_map;
         std::vector <std::shared_ptr <client>> nodes;
 
@@ -126,12 +130,8 @@ public:
             node_address.push_fragment(frag);
         }
 
-        if (data.size() % m_data_node_offsets.size() != 0) [[unlikely]] {
-            throw std::length_error ("Invalid data length for broadcast");
-        }
         const auto part_size = data.size() / m_data_node_offsets.size();
-        const auto ec_nodes = m_ec->get_ec_nodes();
-        std::atomic <int> ec_node_index = 0;
+        const auto& ec_nodes = m_ec->get_ec_nodes();
         const auto ec_data = m_ec->compute_ec(data, static_cast <int> (m_data_node_offsets.size()));
 
         auto bc_func = [&] (auto m, int node_id) -> coro <int> {
@@ -141,13 +141,7 @@ public:
                 data_part = data.substr(node_id * part_size, part_size);
             }
             else { // ec node
-
-                auto index = ec_node_index.load();
-                auto new_val = index + 1;
-                while (!ec_node_index.compare_exchange_weak (index, new_val)) {
-                    index = ec_node_index.load();
-                    new_val = index + 1;
-                }
+                const auto index = m_data_node_offsets.size() - node_id;
                 data_part = std::string_view {ec_data [index].data.get(), ec_data[index].size};
             }
             allocated_write_message msg {.addr = node_address_map.at (node),
@@ -161,6 +155,47 @@ public:
         co_await broadcast_gather_custom <int> (*m_io_service, nodes, bc_func);
 
         co_return;
+    }
+
+
+    coro <address> scatter_write (const std::string_view& data) {
+
+        if (data.size() % m_data_node_offsets.size() != 0) [[unlikely]] {
+            throw std::length_error ("Invalid data length for broadcast");
+        }
+
+        const auto& ec_nodes = m_ec->get_ec_nodes();
+
+        std::vector <std::shared_ptr <client>> nodes;
+        nodes.reserve(m_data_node_offsets.size() + ec_nodes.size());
+        for (const auto& n: m_data_node_offsets) {
+            nodes.emplace_back(n.second);
+        }
+        for (const auto& n: ec_nodes) {
+            nodes.emplace_back(n);
+        }
+
+        const auto part_size = data.size() / m_data_node_offsets.size();
+        const auto ec_data = m_ec->compute_ec(data, static_cast <int> (m_data_node_offsets.size()));
+
+        auto bc_func = [&] (auto m, int node_id) -> coro <int> {
+            std::string_view data_part;
+            const auto node = nodes.at (node_id);
+            if (std::find (ec_nodes.cbegin(), ec_nodes.cend(), node) == ec_nodes.cend()) { // no ec node
+                data_part = data.substr(node_id * part_size, part_size);
+            }
+            else { // ec node
+                const auto index = m_data_node_offsets.size() - node_id;
+                data_part = std::string_view {ec_data [index].data.get(), ec_data[index].size};
+            }
+            co_await m.get ().send (WRITE_REQ, data_part);
+            const auto h = co_await m.get ().recv_header ();
+            co_await m.get ().throw_if_failure (h);
+            co_return node_id;
+        };
+
+        co_await broadcast_gather_custom <int> (*m_io_service, nodes, bc_func);
+
     }
 
     coro <void> recover () {
