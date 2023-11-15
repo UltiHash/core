@@ -214,7 +214,7 @@ namespace uh::cluster::rest::http::model
 
         if (m_bandwidthHasBeenSet)
         {
-            m_res.set("uh-bandwidth", std::to_string(m_bandwidth));
+            m_res.set("uh-bandwidth-mbps", std::to_string(m_bandwidth));
         }
 
         m_res.prepare_payload();

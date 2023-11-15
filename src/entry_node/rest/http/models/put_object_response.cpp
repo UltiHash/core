@@ -126,22 +126,22 @@ namespace uh::cluster::rest::http::model
 
         if (m_bandwidthHasBeenSet)
         {
-            m_res.set("uh-bandwidth", std::to_string(m_bandwidth));
+            m_res.set("uh-bandwidth-mbps", std::to_string(m_bandwidth));
         }
 
         if (m_originalSizeHasBeenSet)
         {
-            m_res.set("uh-original-size", std::to_string(m_originalSize));
+            m_res.set("uh-original-size-mb", std::to_string(m_originalSize));
         }
 
         if (m_effectiveSizeHasBeenSet)
         {
-            m_res.set("uh-effective-size", std::to_string(m_effectiveSize));
+            m_res.set("uh-effective-size-mb", std::to_string(m_effectiveSize));
         }
 
         if (m_spaceSavingsHasBeenSet)
         {
-            m_res.set("uh-space-savings", std::to_string(m_spaceSavings));
+            m_res.set("uh-space-savings-ratio", std::to_string(m_spaceSavings));
         }
 
         m_res.prepare_payload();
