@@ -52,7 +52,7 @@ public:
         m_directory_nodes (directory_nodes)
     {}
 
-    coro < std::unique_ptr<http::http_response> > handle (rest::http::http_request& req)
+    coro < std::unique_ptr<http::http_response> > handle (http::http_request& req)
     {
         auto body_size = req.get_body_size();
         const auto size_mb = static_cast <double> (body_size) / static_cast <double> (1024ul * 1024ul);
@@ -62,7 +62,7 @@ public:
 
         switch (req.get_request_name())
         {
-            case rest::http::http_request_type::CREATE_BUCKET:
+            case http::http_request_type::CREATE_BUCKET:
                 res = co_await handle_create_bucket(req);
                 break;
             case http::http_request_type::GET_BUCKET:
@@ -75,7 +75,7 @@ public:
                 res = co_await handle_delete_bucket(req);
                 break;
             case http::http_request_type::DELETE_OBJECTS:
-                res = handle_delete_objects(req);
+                res = co_await handle_delete_objects(req);
                 break;
             case http::http_request_type::PUT_OBJECT:
                 res = co_await handle_put_object(req);
@@ -123,7 +123,7 @@ public:
         co_return std::move(res);
     }
 
-    coro <std::unique_ptr<http::http_response>> handle_create_bucket (const rest::http::http_request& req)
+    coro <std::unique_ptr<http::http_response>> handle_create_bucket (const http::http_request& req)
     {
 
         std::unique_ptr<http::model::create_object_response> res = std::make_unique<http::model::create_object_response>(req);
@@ -141,13 +141,13 @@ public:
         catch (const error_exception& e)
         {
             LOG_ERROR() << "Failed to add the bucket " << bucket_id << " to the directory: " << e;
-            throw rest::http::model::custom_error_response_exception(b_http::status::not_found);
+            throw http::model::custom_error_response_exception(b_http::status::not_found);
         }
 
         co_return std::move(res);
     }
 
-    coro<std::unique_ptr<http::http_response>> handle_delete_bucket (const rest::http::http_request& req)
+    coro<std::unique_ptr<http::http_response>> handle_delete_bucket (const http::http_request& req)
     {
 
         std::unique_ptr<http::model::delete_bucket_response> res;
@@ -166,13 +166,23 @@ public:
         catch (const error_exception& e)
         {
             LOG_ERROR() << "Failed to delete bucket: " << e;
-            throw rest::http::model::custom_error_response_exception(b_http::status::not_found, rest::http::model::error::bucket_not_found);
+            switch (*e.error())
+            {
+                case error::bucket_not_found:
+                    throw http::model::custom_error_response_exception(b_http::status::not_found, http::model::error::bucket_not_found);
+                    break;
+                case error::bucket_not_empty:
+                    throw http::model::custom_error_response_exception(b_http::status::conflict, http::model::error::bucket_not_empty);
+                    break;
+                default:
+                    throw http::model::custom_error_response_exception(b_http::status::internal_server_error);
+            }
         }
 
         co_return std::move(res);
     }
 
-    coro <std::unique_ptr<http::http_response>> handle_get_bucket (const rest::http::http_request& req)
+    coro <std::unique_ptr<http::http_response>> handle_get_bucket (const http::http_request& req)
     {
 
         std::unique_ptr<http::model::get_bucket_response> res;
@@ -212,17 +222,17 @@ public:
             switch (*e.error())
             {
                 case error::bucket_not_found:
-                    throw rest::http::model::custom_error_response_exception(b_http::status::not_found);
+                    throw http::model::custom_error_response_exception(b_http::status::not_found, http::model::error::bucket_not_found);
                     break;
                 default:
-                    throw rest::http::model::custom_error_response_exception(b_http::status::internal_server_error);
+                    throw http::model::custom_error_response_exception(b_http::status::internal_server_error);
             }
         }
 
         co_return std::move(res);
     }
 
-    coro <std::unique_ptr<http::http_response>> handle_list_buckets (const rest::http::http_request& req)
+    coro <std::unique_ptr<http::http_response>> handle_list_buckets (const http::http_request& req)
     {
 
         std::unique_ptr<http::model::list_buckets_response> res;
@@ -254,13 +264,13 @@ public:
         catch (const std::exception& e)
         {
             LOG_ERROR() << e.what();
-            throw rest::http::model::custom_error_response_exception(b_http::status::not_found);
+            throw http::model::custom_error_response_exception(b_http::status::not_found);
         }
 
         co_return std::move(res);
     }
 
-    coro <std::unique_ptr<http::http_response>> handle_put_object (rest::http::http_request& req)
+    coro <std::unique_ptr<http::http_response>> handle_put_object (http::http_request& req)
     {
         std::unique_ptr<http::model::put_object_response> res;
 
@@ -268,6 +278,8 @@ public:
         {
             res = std::make_unique<http::model::put_object_response>(req);
             auto body_size = req.get_body_size();
+
+            const auto start = std::chrono::steady_clock::now();
             const auto size_mb = static_cast <double> (body_size) / static_cast <double> (1024ul * 1024ul);
 
             auto m_dedup = m_dedupe_nodes.at(get_round_robin_index(m_dedupe_node_index, m_dedupe_nodes.size())).acquire_messenger();
@@ -280,6 +292,9 @@ public:
                 resp = std::make_pair<messenger::header, dedupe_response>({.type = DEDUPE_RESP, .size = 0},
                                                                           {.effective_size = 0, .addr = address()});
             }
+
+            auto effective_size = static_cast <double> (resp.second.effective_size) / static_cast <double> (1024ul * 1024ul);
+            auto space_saving = 1.0 - static_cast <double> (resp.second.effective_size) / static_cast <double> (body_size);
 
             auto m_dir = m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size())).acquire_messenger();
             const directory_message dir_req
@@ -302,17 +317,31 @@ public:
 
             rest::utils::hashing::MD5 md5;
             res->set_etag(md5.calculateMD5(req.get_body()));
+
+            LOG_INFO() << "original size " << size_mb << " MB";
+            LOG_INFO() << "effective size " << effective_size << " MB";
+            LOG_INFO() << "space saving " << space_saving;
+            const auto stop = std::chrono::steady_clock::now ();
+            const std::chrono::duration <double> duration = stop - start;
+            const auto bandwidth = size_mb / duration.count();
+            LOG_INFO() << "integration duration " << duration.count() << " s";
+            LOG_INFO() << "integration bandwidth " << bandwidth << " MB/s";
+
+            res->set_size(size_mb);
+            res->set_effective_size(effective_size);
+            res->set_space_savings(space_saving);
+            res->set_bandwidth(bandwidth);
         }
         catch(const std::exception& e)
         {
             LOG_ERROR() << e.what();
-            throw rest::http::model::custom_error_response_exception(b_http::status::not_found);
+            throw http::model::custom_error_response_exception(b_http::status::not_found);
         }
 
         co_return std::move(res);
     }
 
-    coro <std::unique_ptr<http::http_response>> handle_get_object (const rest::http::http_request& req)
+    coro <std::unique_ptr<http::http_response>> handle_get_object (const http::http_request& req)
     {
 
         std::unique_ptr<http::model::get_object_response> res;
@@ -360,28 +389,37 @@ public:
             LOG_INFO() << "retrieval duration " << duration.count() << " s";
             LOG_INFO() << "retrieval bandwidth " << bandwidth << " MB/s";
 
+            res->set_bandwidth(bandwidth);
+
         }
-        catch (const std::exception& e)
+        catch (const error_exception& e)
         {
             LOG_ERROR() << e.what();
-            throw rest::http::model::custom_error_response_exception(b_http::status::not_found);
+            switch (*e.error())
+            {
+                case error::object_not_found:
+                    throw http::model::custom_error_response_exception(b_http::status::not_found, http::model::error::object_not_found);
+                    break;
+                default:
+                    throw http::model::custom_error_response_exception(b_http::status::internal_server_error);
+            }
         }
 
         co_return std::move(res);
     }
 
-    std::unique_ptr<http::http_response> handle_get_object_attributes (const rest::http::http_request& req)
+    std::unique_ptr<http::http_response> handle_get_object_attributes (const http::http_request& req)
     {
 
         std::unique_ptr<http::model::get_object_attributes_response> res;
 
         res = std::make_unique<http::model::get_object_attributes_response>(req);
-        throw rest::http::model::custom_error_response_exception(b_http::status::not_implemented);
+        throw http::model::custom_error_response_exception(b_http::status::not_implemented);
 
         return std::move(res);
     }
 
-    coro<std::unique_ptr<http::http_response>> handle_list_objects_v2 (const rest::http::http_request& req)
+    coro<std::unique_ptr<http::http_response>> handle_list_objects_v2 (const http::http_request& req)
     {
 
         std::unique_ptr<http::model::list_objectsv2_response> res;
@@ -426,13 +464,13 @@ public:
         catch(const std::exception &e)
         {
             LOG_ERROR() << e.what();
-            throw rest::http::model::custom_error_response_exception(b_http::status::not_found);
+            throw http::model::custom_error_response_exception(b_http::status::not_found);
         }
 
         co_return std::move(res);
     }
 
-    coro<std::unique_ptr<http::http_response>> handle_list_objects (const rest::http::http_request& req)
+    coro<std::unique_ptr<http::http_response>> handle_list_objects (const http::http_request& req)
     {
 
         std::unique_ptr<http::model::list_objects_response> res;
@@ -478,13 +516,13 @@ public:
         catch(const std::exception &e)
         {
             LOG_ERROR() << e.what();
-            throw rest::http::model::custom_error_response_exception(b_http::status::internal_server_error);
+            throw http::model::custom_error_response_exception(b_http::status::internal_server_error);
         }
 
         co_return std::move(res);
     }
 
-    std::unique_ptr<http::http_response> handle_init_mp_upload (const rest::http::http_request& req)
+    std::unique_ptr<http::http_response> handle_init_mp_upload (const http::http_request& req)
     {
 
         std::unique_ptr<http::model::init_multi_part_upload_response> res;
@@ -502,7 +540,7 @@ public:
         return std::move(res);
     }
 
-    std::unique_ptr<http::http_response> handle_mp_upload (rest::http::http_request& req)
+    std::unique_ptr<http::http_response> handle_mp_upload (http::http_request& req)
     {
 
         std::unique_ptr<http::model::multi_part_upload_response> res;
@@ -522,7 +560,7 @@ public:
         return std::move(res);
     }
 
-    coro<std::unique_ptr<http::http_response>> handle_complete_mp_upload (rest::http::http_request& req)
+    coro<std::unique_ptr<http::http_response>> handle_complete_mp_upload (http::http_request& req)
     {
         std::unique_ptr<http::model::complete_multi_part_upload_response> res;
         try
@@ -580,17 +618,22 @@ public:
             LOG_INFO() << "integration duration " << duration.count() << " s";
             LOG_INFO() << "integration bandwidth " << bandwidth << " MB/s";
 
+            res->set_size(size_mb);
+            res->set_effective_size(effective_size);
+            res->set_space_savings(space_saving);
+            res->set_bandwidth(bandwidth);
+
         }
         catch(const std::exception& e)
         {
             LOG_ERROR() << e.what();
-            throw rest::http::model::custom_error_response_exception(b_http::status::internal_server_error);
+            throw http::model::custom_error_response_exception(b_http::status::internal_server_error);
         }
 
         co_return std::move(res);
     }
 
-    std::unique_ptr<http::http_response> handle_abort_mp_upload (const rest::http::http_request& req)
+    std::unique_ptr<http::http_response> handle_abort_mp_upload (const http::http_request& req)
     {
         std::unique_ptr<http::model::abort_multi_part_upload_response> res;
         try
@@ -600,13 +643,13 @@ public:
         catch(const std::exception& e)
         {
             LOG_ERROR() << e.what();
-            throw rest::http::model::custom_error_response_exception(b_http::status::not_implemented);
+            throw http::model::custom_error_response_exception(b_http::status::not_implemented);
         }
 
         return std::move(res);
     }
 
-    coro<std::unique_ptr<http::http_response>> handle_delete_object (const rest::http::http_request& req)
+    coro<std::unique_ptr<http::http_response>> handle_delete_object (const http::http_request& req)
     {
 
         std::unique_ptr<http::model::delete_object_response> res = std::make_unique<http::model::delete_object_response>(req);
@@ -625,47 +668,81 @@ public:
         }
         catch (const error_exception& e)
         {
-            LOG_ERROR() << "Failed to delete the bucket " << bucket_id << " to the directory: " << e;
-            throw rest::http::model::custom_error_response_exception(b_http::status::not_found, rest::http::model::error::bucket_not_found);
+            switch (*e.error())
+            {
+                case error::object_not_found:
+                    throw http::model::custom_error_response_exception(b_http::status::not_found, http::model::error::object_not_found);
+                    break;
+                case error::bucket_not_found:
+                    throw http::model::custom_error_response_exception(b_http::status::not_found, http::model::error::bucket_not_found);
+                    break;
+                default:
+                    throw http::model::custom_error_response_exception(b_http::status::internal_server_error);
+            }
         }
 
         co_return std::move(res);
     }
 
-    std::unique_ptr<http::http_response> handle_list_mp_uploads (const rest::http::http_request& req)
+    std::unique_ptr<http::http_response> handle_list_mp_uploads (const http::http_request& req)
     {
 
         std::unique_ptr<http::model::list_multi_part_uploads_response> res = std::make_unique<http::model::list_multi_part_uploads_response>(req);
-        throw rest::http::model::custom_error_response_exception(b_http::status::not_implemented);
+        throw http::model::custom_error_response_exception(b_http::status::not_implemented);
 
         return std::move(res);
     }
 
-    std::unique_ptr<http::http_response> handle_delete_objects (rest::http::http_request& req)
+    coro <std::unique_ptr<http::http_response>> handle_delete_objects (http::http_request& req)
     {
 
         std::unique_ptr<http::model::delete_objects_response> res;
 
+        res = std::make_unique<http::model::delete_objects_response>(req);
+
+        rest::utils::parser::xml_parser parsed_xml;
+        pugi::xpath_node_set object_nodes_set;
+
         try
         {
-            res = std::make_unique<http::model::delete_objects_response>(req);
-//            rest::utils::parser::xml_parser parsed_xml(req.get_body());
-//
-//            std::vector<rest::http::model::object> objects_container;
-//
-//            auto object_nodes_set = parsed_xml.get_nodes_from_path("/Delete/Object");
-//            for (const auto& objectNode : object_nodes_set)
-//            {
-//                objects_container.emplace_back(objectNode.node().child("Key").child_value(), objectNode.node().child("VersionId").child_value());
-//            }
+            if (!parsed_xml.parse(req.get_body()))
+                throw std::runtime_error("");
 
+            object_nodes_set = parsed_xml.get_nodes_from_path("/Delete/Object");
+            if (object_nodes_set.empty())
+                throw std::runtime_error("");
         }
-        catch (const std::exception& e)
+        catch(const std::exception& e)
         {
-            res->set_error(boost::beast::http::response<boost::beast::http::string_body>{boost::beast::http::status::not_implemented, 11});
+            throw http::model::custom_error_response_exception(b_http::status::bad_request, http::model::error::type::malformed_xml);
         }
 
-        return std::move(res);
+        auto bucket_id = req.get_URI().get_bucket_id();
+        for (const auto& objectNode : object_nodes_set)
+        {
+            auto key = objectNode.node().child("Key").child_value();
+
+            try
+            {
+                auto m_dir = m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size())).acquire_messenger();
+                directory_message dir_req;
+                dir_req.bucket_id = bucket_id;
+                dir_req.object_key = std::make_unique <std::string> (key);
+
+                co_await m_dir.get().send_directory_message (DIR_DELETE_OBJ_REQ, dir_req);
+
+                co_await m_dir.get().recv_header();
+
+                res->add_deleted_keys(key);
+            }
+            catch (const error_exception& e)
+            {
+                LOG_ERROR() << "Failed to delete the bucket " << bucket_id << " to the directory: " << e;
+                res->add_failed_keys({key, e.error().code()});
+            }
+        }
+
+        co_return std::move(res);
     }
 
     [[nodiscard]] client& get_recovery_director () const {

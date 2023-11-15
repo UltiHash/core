@@ -60,7 +60,7 @@ public:
             b->second->delete_object(object_key);
         }
         else {
-            throw std::out_of_range ("The bucket " + bucket_id + " does not exist.");
+            throw error_exception(error::bucket_not_found);
         }
     }
 
@@ -74,12 +74,21 @@ public:
     }
 
     void remove_bucket (const std::string& bucket) {
-        if (const auto& b = m_buckets.find(bucket); b != m_buckets.cend()) [[likely]] {
-            b->second->destroy_bucket();
-            m_buckets.erase(bucket);
+        if (const auto& b = m_buckets.find(bucket); b != m_buckets.cend()) [[likely]]
+        {
+            if (b->second->is_empty())
+            {
+                b->second->destroy_bucket();
+                m_buckets.erase(bucket);
+            }
+            else
+            {
+                throw error_exception (error::bucket_not_empty);
+            }
         }
-        else {
-            throw std::out_of_range ("The bucket " + bucket + " does not exist.");
+        else
+        {
+            throw error_exception(error::bucket_not_found);
         }
     }
 

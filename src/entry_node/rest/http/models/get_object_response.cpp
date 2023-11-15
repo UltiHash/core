@@ -10,6 +10,12 @@ namespace uh::cluster::rest::http::model
             http_response(req, std::move(recv_res))
     {}
 
+    void get_object_response::set_bandwidth(double bandwidth)
+    {
+        m_bandwidth = bandwidth;
+        m_bandwidthHasBeenSet = true;
+    }
+
     const http::response<http::string_body>& get_object_response::get_response_specific_object()
     {
 
@@ -204,6 +210,11 @@ namespace uh::cluster::rest::http::model
         if(m_requestIdHasBeenSet)
         {
             m_res.set("x-amz-request-id", m_requestId);
+        }
+
+        if (m_bandwidthHasBeenSet)
+        {
+            m_res.set("uh-bandwidth", std::to_string(m_bandwidth));
         }
 
         m_res.prepare_payload();

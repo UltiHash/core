@@ -16,6 +16,30 @@ namespace uh::cluster::rest::http::model
         m_eTag = std::move(etag);
     }
 
+    void put_object_response::set_size(double size)
+    {
+        m_originalSize = size;
+        m_originalSizeHasBeenSet = true;
+    }
+
+    void put_object_response::set_effective_size(double effective_size)
+    {
+        m_effectiveSize = effective_size;
+        m_effectiveSizeHasBeenSet = true;
+    }
+
+    void put_object_response::set_space_savings(double space_savings)
+    {
+        m_spaceSavings = space_savings;
+        m_spaceSavingsHasBeenSet = true;
+    }
+
+    void put_object_response::set_bandwidth(double bandwidth)
+    {
+        m_bandwidth = bandwidth;
+        m_bandwidthHasBeenSet = true;
+    }
+
     const http::response<http::string_body>& put_object_response::get_response_specific_object()
     {
 
@@ -98,6 +122,26 @@ namespace uh::cluster::rest::http::model
         if(m_requestIdHasBeenSet)
         {
             m_res.set("x-amz-request-id", m_requestId);
+        }
+
+        if (m_bandwidthHasBeenSet)
+        {
+            m_res.set("uh-bandwidth", std::to_string(m_bandwidth));
+        }
+
+        if (m_originalSizeHasBeenSet)
+        {
+            m_res.set("uh-original-size", std::to_string(m_originalSize));
+        }
+
+        if (m_effectiveSizeHasBeenSet)
+        {
+            m_res.set("uh-effective-size", std::to_string(m_effectiveSize));
+        }
+
+        if (m_spaceSavingsHasBeenSet)
+        {
+            m_res.set("uh-space-savings", std::to_string(m_spaceSavings));
         }
 
         m_res.prepare_payload();

@@ -14,6 +14,16 @@ namespace uh::cluster::rest::http::model
         m_res.set(boost::beast::http::field::content_type, "application/xml");
     }
 
+    void delete_objects_response::add_deleted_keys(const std::string& key)
+    {
+        m_deleted.push_back(key);
+    }
+
+    void delete_objects_response::add_failed_keys(fail&& f)
+    {
+        m_errors.push_back(std::move(f));
+    }
+
     const http::response<http::string_body>& delete_objects_response::get_response_specific_object()
     {
 
@@ -28,19 +38,24 @@ namespace uh::cluster::rest::http::model
             m_res.set("x-amz-request-charged", m_requestCharged);
         }
 
+        std::string delete_xml_string;
+        for (const auto& val : m_deleted)
+        {
+            delete_xml_string += "<Deleted>\n"
+                                 "<Key>" + val + "</Key>\n"
+                                 "</Deleted>\n";
+        }
+        for (const auto& val : m_errors)
+        {
+            auto error = error::get_code_message(val.code);
+            delete_xml_string += "<Error>\n"
+                                 "<Key>" + error.first + "</Key>\n"
+                                 "<Code>" + error.second  + "</Code>\n"
+                                 "</Error>\n";
+        }
+
         set_body(std::string("<DeleteResult>\n"
-                             "   <Deleted>\n"
-                             "      <DeleteMarker>boolean</DeleteMarker>\n"
-                             "      <DeleteMarkerVersionId>string</DeleteMarkerVersionId>\n"
-                             "      <Key>string</Key>\n"
-                             "      <VersionId>string</VersionId>\n"
-                             "   </Deleted>\n"
-                             "   <Error>\n"
-                             "      <Code>string</Code>\n"
-                             "      <Key>string</Key>\n"
-                             "      <Message>string</Message>\n"
-                             "      <VersionId>string</VersionId>\n"
-                             "   </Error>\n"
+                             + std::move(delete_xml_string )+
                              "</DeleteResult>"));
 
         m_res.prepare_payload();

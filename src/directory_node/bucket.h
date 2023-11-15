@@ -64,7 +64,7 @@ public:
     ospan<char> get_obj(const std::string& key) {
         std::shared_lock lock(m_mutex);
         if (!m_object_ptrs.contains(key)) [[unlikely]] {
-            throw std::out_of_range ("Attempt to get object '" + key + "' failed: no such object.");
+            throw error_exception ({error::object_not_found, "Attempt to get object '" + key + "' failed: no such object."});
         }
         const auto index = m_object_ptrs.at(key);
         return m_data_store.read(index);
@@ -73,7 +73,7 @@ public:
     void delete_object (const std::string& key) {
         std::unique_lock <std::shared_mutex> lock(m_mutex);
         if (!m_object_ptrs.contains(key)) [[unlikely]] {
-            throw std::out_of_range ("Attempt to remove object '" + key + "' failed: no such object.");
+            throw error_exception ({error::object_not_found, "Attempt to get object '" + key + "' failed: no such object."});
         }
         const auto index = m_object_ptrs.at(key);
         m_transaction_log.append(key, index, transaction_log::operation::REMOVE_START);
@@ -102,6 +102,10 @@ public:
 
     bool contains_object (const std::string &key) const {
         return m_object_ptrs.contains(key);
+    }
+
+    bool is_empty () const {
+        return m_object_ptrs.empty();
     }
 
     size_t get_used_space () const {

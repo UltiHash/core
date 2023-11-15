@@ -17,21 +17,24 @@ namespace uh::cluster::rest::http::model
     public:
         enum type {
             success = 0,
-            fail = 1,
-            unknown = 2,
-            no_such_upload = 3,
-            malformed_xml = 4,
-            invalid_part = 5,
-            invalid_part_oder = 6,
-            entity_too_small = 7,
-            bucket_not_found = 8,
-            invalid_bucket_name = 9,
+            unknown,
+            bucket_not_found,
+            object_not_found,
+            bucket_not_empty,
+            fail,
+            no_such_upload,
+            malformed_xml,
+            invalid_part,
+            invalid_part_oder,
+            entity_too_small,
+            invalid_bucket_name,
         };
 
         explicit error(type t = unknown);
 
         const std::pair<std::string, std::string>& message() const;
         uint32_t code() const;
+        static const std::pair<std::string, std::string>& get_code_message(uint32_t);
         type operator*() const;
 
     private:

@@ -110,7 +110,7 @@ namespace uh::cluster::rest
                 auto s3_res_specific_object = s3_res->get_response_specific_object();
                 co_await b_http::async_write(stream, s3_res_specific_object, net::use_awaitable);
 
-                LOG_INFO() << "sent response: " << s3_res_specific_object;
+                LOG_INFO() << "sent response: " << s3_res_specific_object.base();
 
                 if(! received_request.keep_alive() )
                 {

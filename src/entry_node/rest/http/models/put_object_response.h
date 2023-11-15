@@ -14,8 +14,24 @@ namespace uh::cluster::rest::http::model
 
         [[nodiscard]] const http::response<http::string_body>& get_response_specific_object() override;
         void set_etag(std::string);
+        void set_size(double);
+        void set_effective_size(double);
+        void set_space_savings(double);
+        void set_bandwidth(double);
 
     private:
+
+        bool m_bandwidthHasBeenSet = false;
+        double m_bandwidth;
+
+        bool m_originalSizeHasBeenSet = false;
+        double m_originalSize;
+
+        bool m_effectiveSizeHasBeenSet = false;
+        double m_effectiveSize;
+
+        bool m_spaceSavingsHasBeenSet = false;
+        double m_spaceSavings;
 
         bool m_expirationHasBeenSet = false;
         std::string m_expiration;

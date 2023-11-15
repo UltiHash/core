@@ -9,15 +9,17 @@ namespace uh::cluster::rest::http::model
     static const std::vector<std::pair<std::string, std::string>> error_messages =
             {
                     {"success", "success"},
-                    {"fail", "fail"},
                     {"unknown", "unknown"},
+                    {"NoSuchBucket", "bucket not found"},
+                    {"NoSuchKey", "object not found"},
+                    {"BucketNotEmpty", "bucket is not empty"},
+                    {"fail", "fail"},
                     {"NoSuchUpload", "upload id not found"},
                     {"MalformedXML", "xml is invalid"},
                     {"InvalidPart", "part not found"},
                     {"InvalidPartOrder", "part oder is not ascending"},
                     {"EntityTooSmall", "entity is too small"},
-                    {"NoSuchBucket", "bucket not found"},
-                    {"InvalidBucketName", "bucket name has invalid characters"}
+                    {"InvalidBucketName", "bucket name has invalid characters"},
             };
 
     static const std::pair<std::string, std::string> error_out_of_range = {"OutOfRange", "error out of range"};
@@ -38,6 +40,16 @@ namespace uh::cluster::rest::http::model
 
     uint32_t error::code() const {
         return static_cast<uint32_t>(m_type);
+    }
+
+    const std::pair<std::string, std::string>& error::get_code_message(uint32_t ec)
+    {
+        if (error_messages.size() <= ec)
+        {
+            return error_out_of_range;
+        }
+
+        return error_messages[ec];
     }
 
     error::type error::operator*() const

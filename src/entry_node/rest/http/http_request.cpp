@@ -50,8 +50,6 @@ namespace uh::cluster::rest::http
             throw std::runtime_error("please specify the content length on requests as other methods without content length are currently not supported");
         }
 
-        std::cout << "BODY: " << m_body << std::endl;
-
         co_return;
     }
 
