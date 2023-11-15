@@ -28,12 +28,10 @@ class lfu_cache {
 
     std::list <key_order_data> m_order;
     std::map <Key, key_map_data> m_key_values;
-    //std::list <key_order_data>::iterator m_last_new;
     const int m_capacity;
 
 public:
     explicit lfu_cache(int capacity): m_capacity {capacity} {
-        //m_last_new = m_order.end();
     }
 
     void put (const Key& key, Value&& val) {
@@ -43,14 +41,10 @@ public:
         }
         else {
             auto pos = m_order.begin();
-            //if (m_last_new != m_order.end()) {
-            //    pos = std::next (m_last_new);
-            //}
-            //else {
-                while (pos != m_order.end () and pos->frequency == 1) {
-                    pos = std::next (pos);
-                }
-           // }
+
+            while (pos != m_order.end () and pos->frequency == 1) {
+                pos = std::next (pos);
+            }
 
             pos = m_order.emplace(pos, 1, key);
             m_key_values.emplace_hint(it, key, key_map_data {pos, std::move (val)});
@@ -81,7 +75,6 @@ private:
             nx ++;
         }
         m_order.splice (nx, m_order, pos);
-       // m_last_new = m_order.end();
 
     }
 
