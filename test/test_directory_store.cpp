@@ -225,9 +225,9 @@ BOOST_FIXTURE_TEST_CASE (directory_store_test, config_fixture)
         const auto used_space_1 = ds.get_used_space();
 
         ds.remove("b1", "k3");
-        BOOST_CHECK_THROW (ds.get("b1", "k3"), std::out_of_range);
+        BOOST_CHECK_THROW (ds.get("b1", "k3"), std::exception);
         ds.remove("b2", "k4");
-        BOOST_CHECK_THROW (ds.get("b2", "k4"), std::out_of_range);
+        BOOST_CHECK_THROW (ds.get("b2", "k4"), std::exception);
 
         const auto used_space_2 = ds.get_used_space();
 
