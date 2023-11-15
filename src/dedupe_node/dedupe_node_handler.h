@@ -11,6 +11,7 @@
 #include "common/cluster_config.h"
 #include "common/protocol_handler.h"
 #include "dedupe_write_cache.h"
+#include "set_comparator_traits.h"
 
 
 namespace uh::cluster {
@@ -49,6 +50,7 @@ private:
         ospan<char> data(h.size);
         m.register_read_buffer(data);
         co_await m.recv_buffers(h);
+
         const auto result = co_await deduplicate ({data.data.get(), data.size});
         co_await m.send_dedupe_response(DEDUPE_RESP, result);
 
@@ -116,12 +118,12 @@ private:
     }
 
     static size_t largest_common_prefix(const std::string_view &str1, const std::string_view &str2) noexcept {
-        size_t i = 0;
-        const auto min_size = std::min (str1.size(), str2.size());
-        while (i < min_size and str1[i] == str2[i]) {
-            i++;
+        if (str1.size() <= str2.size()) {
+            return std::distance(str1.cbegin(), std::mismatch(str1.cbegin(), str1.cend(), str2.cbegin()).first);
         }
-        return i;
+        else {
+            return std::distance(str2.cbegin(), std::mismatch(str2.cbegin(), str2.cend(), str1.cbegin()).first);
+        }
     }
 
     coro <address> store_data(const std::string_view& frag) {
