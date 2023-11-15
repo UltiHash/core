@@ -118,51 +118,12 @@ private:
     }
 
     static size_t largest_common_prefix(const std::string_view &str1, const std::string_view &str2) noexcept {
-
-
         if (str1.size() <= str2.size()) {
             return std::distance(str1.cbegin(), std::mismatch(str1.cbegin(), str1.cend(), str2.cbegin()).first);
         }
         else {
             return std::distance(str2.cbegin(), std::mismatch(str2.cbegin(), str2.cend(), str1.cbegin()).first);
         }
-
-/*
-        const auto min_size = std::min (str1.size(), str2.size());
-        auto* p = reinterpret_cast <const unsigned long *> (str1.data());
-        auto* q = reinterpret_cast <const unsigned long *> (str2.data());
-        unsigned long l = 0;
-        while (l + sizeof (unsigned long) < min_size) {
-            if (*p != *q) {
-                break;
-            }
-            l += sizeof (unsigned long);
-            p ++;
-            q ++;
-        }
-
-        auto* cp = reinterpret_cast <const unsigned char *> (p);
-        auto* cq = reinterpret_cast <const unsigned char *> (q);
-        while (l + sizeof (unsigned char) < min_size) {
-            if (*cp != *cq) {
-                break;
-            }
-            l += sizeof (unsigned char);
-            cp ++;
-            cq ++;
-        }
-
-        return l;
-                */
-/*
-        size_t i = 0;
-        const auto min_size = std::min (str1.size(), str2.size());
-        while (i < min_size and str1[i] == str2[i]) {
-            i++;
-        }
-        return i;
-        */
-
     }
 
     coro <address> store_data(const std::string_view& frag) {

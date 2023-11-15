@@ -128,14 +128,8 @@ public:
         return {.position = offset, .comp = pos.comp};
     }
 
-    [[nodiscard]] coro <set_result> find (const std::string_view& data, const index_type& pos = {}) const {
+    [[nodiscard]] coro <set_result> find (const std::string_view& data) const {
 
-        if (pos.position != 0) [[unlikely]] {
-            const auto n = get_node (pos.position);
-            if (auto comp = co_await m_comp (data, *n.m_mnode); comp.first == 0) {
-                co_return std::move (set_result {std::nullopt, set_data (std::move (comp.second), n.m_mnode->m_data.pointer, n.m_offset), std::nullopt});
-            }
-        }
 
         auto y = m_nil;
 
@@ -182,62 +176,6 @@ public:
                               {y.m_offset, comp_int}});
     }
 
-    [[nodiscard]] std::list<set_data> do_get_range (const std::span<char> &start_data, const std::span<char> &end_data) const {
-
-        // TODO if start data or end data are empty
-
-        auto fstart = find ({start_data.data(), start_data.size()});
-        std::list<set_data> result;
-
-        uint64_t start_offset;
-        if (fstart.match.has_value()) {
-            start_offset = fstart.index.position;
-            result.push_back({fstart.match.value().data, fstart.match.value().data_offset, start_offset});
-
-        }
-        else if (fstart.upper.has_value()) {
-           start_offset = fstart.upper->index_offset;
-           if (fstart.upper.value().data.compare({end_data.data(), end_data.size()}) < 0)
-                result.push_back({fstart.upper.value().data, fstart.upper.value().data_offset, start_offset});
-        }
-        else {
-            return {};
-        }
-
-        auto fend = find ({end_data.data(), end_data.size()});
-
-        uint64_t end_offset;
-        if (fend.match.has_value()) {
-            end_offset = fend.index.position;
-        }
-        else if (fend.lower.has_value()) {
-            end_offset = fend.lower->index_offset;
-            if (fend.lower.value().data.compare({start_data.data(), start_data.size()}) > 0)
-                result.push_back({fend.lower.value().data, fend.lower.value().data_offset, end_offset});
-        }
-        else {
-            return {};
-        }
-
-
-        auto n = get_node (start_offset);
-        if (!in_order_traverse (n.m_mnode->m_right, end_offset, result)) {
-            auto p = get_node (n.m_mnode->m_parent);
-
-            while (n.m_offset == p.m_mnode->m_left) {
-                n = p;
-                result.push_back({fetch_node_data(n), n.m_mnode->m_data.m_data_offset, n.m_offset});
-
-                if (in_order_traverse (n.m_mnode->m_right, end_offset, result)) {
-                    break;
-                }
-                p = get_node (n.m_mnode->m_parent);
-            }
-        }
-
-        return result;
-    }
-
     void sync (const index_type& pos) {
 
         if (msync(align_ptr (m_index_store.get_storage() + pos.position), sizeof (mmap_node), MS_SYNC) != 0) {
@@ -257,46 +195,6 @@ public:
 
 private:
 
-    bool in_order_traverse (uint64_t start_offset, uint64_t end_offset, std::list<set_data> &result) const {
-
-        const auto nil =  m_first_block->nill_offset;
-
-        if (start_offset == nil) {
-            return false;
-        }
-
-        auto offset = start_offset;
-
-        std::stack <uint64_t> nodes;
-
-        bool done = false;
-        while (!done) {
-            if (offset != nil) {
-                nodes.push(offset);
-                auto n = get_node(offset);
-                offset = n.m_mnode->m_left;
-            }
-            else {
-                if (!nodes.empty()) {
-                    offset = nodes.top();
-                    nodes.pop();
-
-                    auto n = get_node(offset);
-
-                    if (offset == end_offset) {
-                        return true;
-                    }
-                    result.push_back({fetch_node_data(n), n.m_mnode->m_data.m_data_offset, offset});
-
-                    offset = n.m_mnode->m_right;
-                } else {
-                    done = true;
-                }
-            }
-
-        }
-        return false;
-    }
 
     [[nodiscard]] inline std::optional<ospan <char>> fetch_cached_node_data (const node& n) const {
         if (n.m_offset == m_nil.m_offset) [[unlikely]] {
