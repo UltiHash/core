@@ -27,11 +27,13 @@ class lfu_cache {
     };
 
     std::list <key_order_data> m_order;
-    std::unordered_map <Key, key_map_data> m_key_values;
+
+    std::map <Key, key_map_data> m_key_values;
     const int m_capacity;
 
 public:
-    explicit lfu_cache(int capacity): m_capacity {capacity} {}
+    explicit lfu_cache(int capacity): m_capacity {capacity} {
+    }
 
     void put (const Key& key, Value&& val) {
 
@@ -40,6 +42,7 @@ public:
         }
         else {
             auto pos = m_order.begin();
+
             while (pos != m_order.end () and pos->frequency == 1) {
                 pos = std::next (pos);
             }
@@ -71,9 +74,9 @@ private:
         const auto freq = pos->frequency;
         auto nx = std::next(pos);
         while (nx != m_order.end () and nx->frequency <= freq) {
-            m_order.splice (pos, m_order, nx);
-            nx = std::next (pos);
+            nx ++;
         }
+        m_order.splice (nx, m_order, pos);
 
     }
 

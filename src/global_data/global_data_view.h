@@ -13,7 +13,8 @@
 #include "network/network_traits.h"
 #include "ec.h"
 #include "ec_factory.h"
-#include "lfu_cache.h"
+
+#include "lru_cache.h"
 
 namespace uh::cluster {
 
@@ -26,8 +27,8 @@ public:
 
     explicit global_data_view (const cluster_map& cmap):
                           m_cluster_map (cmap),
-                          m_ec (ec_factory::make_ec (cmap.m_cluster_conf.ec_algorithm)),
-                          m_cache (m_cluster_map.m_cluster_conf.dedupe_node_conf.read_cache_capacity) {
+                          m_ec (ec_factory::make_ec (cmap.m_cluster_conf.global_data_view_conf.ec_algorithm)),
+                          m_cache (cmap.m_cluster_conf.global_data_view_conf.read_cache_capacity){
         sleep(2);
     }
 
@@ -46,6 +47,9 @@ public:
         if (resp.first.type != WRITE_RESP) [[unlikely]] {
             throw std::runtime_error ("Invalid response for write request");
         }
+        ospan <char> buf (resp.second.first().size);
+        std::memcpy (buf.data.get(), data.data(), resp.second.first().size);
+        m_cache.put (resp.second.first().pointer, std::move (buf));
         co_return std::move (resp.second);
     }
 
@@ -247,7 +251,7 @@ public:
         const auto& healthy_offsets = std::next (offset_sizes.begin())->second;
         const auto& data_size = std::next (node_sizes.begin())->first;
 
-        const auto chunk_size = m_cluster_map.m_cluster_conf.recovery_chunk_size;
+        const auto chunk_size = m_cluster_map.m_cluster_conf.global_data_view_conf.recovery_chunk_size;
         const auto max_file_size = m_cluster_map.m_cluster_conf.data_node_conf.max_file_size;
         uint128_t last_file_end_offset = max_file_size;
         uint128_t offset = data_store::alloc_offset;
@@ -292,12 +296,19 @@ public:
         co_return;
     }
 
-    coro <std::size_t> read (char* buffer, const uint128_t& pointer, const size_t size) {
-        total_read ++;
+
+    std::optional <ospan <char>> read_cache (const uint128_t pointer, const size_t size) {
         if (const auto c = m_cache.get(pointer); c.has_value() and c.value().get().size >= size) {
-            cache_hit ++;
+            ospan <char> buffer (size);
+            std::memcpy (buffer.data.get(), c.value().get().data.get(), size);
+            return buffer;
+        }
+        return std::nullopt;
+    }
+
+    coro <std::size_t> read (char* buffer, const uint128_t pointer, const size_t size) {
+        if (const auto c = m_cache.get(pointer); c.has_value() and c.value().get().size >= size) {
             std::memcpy (buffer, c.value().get().data.get(), size);
-            std::cout << "hit rate " << static_cast <double> (cache_hit) / static_cast <double> (total_read) << std::endl;
             co_return size;
         }
         const fragment frag {pointer, size};
@@ -491,11 +502,10 @@ private:
     const cluster_map& m_cluster_map;
     std::shared_ptr <boost::asio::io_context> m_io_service;
     std::map <const uint128_t, std::shared_ptr <client>> m_data_node_offsets;
-    lfu_cache <uint128_t, ospan <char>> m_cache;
     std::unique_ptr <ec> m_ec;
     std::atomic <size_t> m_data_node_index {};
-    size_t cache_hit {};
-    size_t total_read {};
+    lru_cache <uint128_t, ospan <char>> m_cache;
+
 };
 
 } // end namespace uh::cluster

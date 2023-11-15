@@ -31,6 +31,24 @@ struct set_config {
     growing_plain_storage_config key_store_config;
 };
 
+struct bucket_config {
+    size_t min_file_size;
+    size_t max_file_size;
+    size_t max_storage_size;
+    size_t max_chunk_size;
+};
+
+struct directory_store_config {
+    std::filesystem::path root;
+    bucket_config bucket_conf;
+};
+
+struct global_data_view_config {
+    int read_cache_capacity {};
+    ec_type ec_algorithm {};
+    size_t recovery_chunk_size {};
+};
+
 // roles config
 
 struct dedupe_config {
@@ -60,18 +78,6 @@ struct entry_node_config {
     int directory_connection_count;
 };
 
-struct bucket_config {
-    size_t min_file_size;
-    size_t max_file_size;
-    size_t max_storage_size;
-    size_t max_chunk_size;
-};
-
-struct directory_store_config {
-    std::filesystem::path root;
-    bucket_config bucket_conf;
-};
-
 struct directory_node_config {
     server_config server_conf{};
     directory_store_config directory_conf;
@@ -80,12 +86,11 @@ struct directory_node_config {
 
 struct cluster_config {
     int init_process_count {};
-    ec_type ec_algorithm {};
-    size_t recovery_chunk_size {};
     data_node_config data_node_conf;
     dedupe_config dedupe_node_conf;
     directory_node_config directory_node_conf;
     entry_node_config entry_node_conf{};
+    global_data_view_config global_data_view_conf;
 };
 
 } // end namespace uh::cluster
