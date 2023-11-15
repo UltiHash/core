@@ -110,17 +110,17 @@ public:
 
         co_await boost::asio::async_read (m_socket, buffers, boost::asio::as_tuple(boost::asio::use_awaitable));
 
-        if (h.type == FAILURE)
+        if (h.type == FAILURE) [[unlikely]]
         {
             uint32_t ec;
             std::string msg(h.size - sizeof(ec), 0);
 
-            std::list <boost::asio::mutable_buffer> buffers {
+            std::list <boost::asio::mutable_buffer> error_buffers {
                 { &ec, sizeof(ec) },
                 { msg.data(), msg.size() },
             };
 
-            co_await boost::asio::async_read (m_socket, buffers, boost::asio::as_tuple(boost::asio::use_awaitable));
+            co_await boost::asio::async_read (m_socket, error_buffers, boost::asio::as_tuple(boost::asio::use_awaitable));
 
             throw error_exception(error(ec, msg));
         }
@@ -193,6 +193,20 @@ public:
 
         co_await boost::asio::async_read (m_socket, buffers, boost::asio::as_tuple(boost::asio::use_awaitable));
 
+        if (type == FAILURE) [[unlikely]]
+        {
+            uint32_t ec;
+            std::string msg(size - sizeof(ec), 0);
+
+            std::list <boost::asio::mutable_buffer> error_buffers {
+                    { &ec, sizeof(ec) },
+                    { msg.data(), msg.size() },
+            };
+
+            co_await boost::asio::async_read (m_socket, error_buffers, boost::asio::as_tuple(boost::asio::use_awaitable));
+
+            throw error_exception(error(ec, msg));
+        }
         co_return header {type, size};
     }
 

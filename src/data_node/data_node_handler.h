@@ -76,18 +76,18 @@ private:
 
     coro <void> handle_read (messenger &m, const messenger::header& h) {
         const auto resp = co_await m.recv_fragment(h);
-        ospan <char> buffer (resp.second.size);
-        const auto size = m_data_store.read(buffer.data.get(), resp.second.pointer, resp.second.size);
+        ospan <char> buffer (resp.size);
+        const auto size = m_data_store.read(buffer.data.get(), resp.pointer, resp.size);
         co_await m.send (READ_RESP, {buffer.data.get(), size});
     }
 
     coro <void> handle_read_address (messenger &m, const messenger::header& h) {
         const auto resp = co_await m.recv_address(h);
-        const auto read_size = std::accumulate (resp.second.sizes.cbegin(), resp.second.sizes.cend(), 0);
+        const auto read_size = std::accumulate (resp.sizes.cbegin(), resp.sizes.cend(), 0);
         ospan <char> buffer (read_size);
         size_t offset = 0;
-        for (int i = 0; i < resp.second.size(); i++) {
-            const auto frag = resp.second.get_fragment(i);
+        for (int i = 0; i < resp.size(); i++) {
+            const auto frag = resp.get_fragment(i);
             if (m_data_store.read(buffer.data.get() + offset, frag.pointer, frag.size) != frag.size) [[unlikely]] {
                 throw std::runtime_error ("Could not read the data with the given size");
             }
@@ -98,7 +98,7 @@ private:
 
     coro <void> handle_remove (messenger &m, const messenger::header& h) {
         const auto resp = co_await m.recv_fragment(h);
-        m_data_store.remove(resp.second.pointer, resp.second.size);
+        m_data_store.remove(resp.pointer, resp.size);
         co_await m.send (REMOVE_OK, {});
     }
 

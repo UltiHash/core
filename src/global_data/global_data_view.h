@@ -43,15 +43,12 @@ public:
         auto m = m_data_node_offsets.at(index)->acquire_messenger();
         co_await m.get().send(WRITE_REQ, data);
         const auto message_header = co_await m.get().recv_header();
-        if (message_header.type == FAILURE) [[unlikely]] {
-            co_await m.get().recv_failure (message_header);
-        }
         auto resp = co_await m.get().recv_address(message_header);
 
-        ospan <char> buf (resp.second.first().size);
-        std::memcpy (buf.data.get(), data.data(), resp.second.first().size);
-        m_cache.put (resp.second.first().pointer, std::move (buf));
-        co_return std::move (resp.second);
+        ospan <char> buf (resp.first().size);
+        std::memcpy (buf.data.get(), data.data(), resp.first().size);
+        m_cache.put (resp.first().pointer, std::move (buf));
+        co_return std::move (resp);
     }
 
     coro <address> allocate (size_t total_size) {
@@ -79,7 +76,7 @@ public:
             //std::cout << "in bc func: before recv address " << id  << std::endl;
             auto resp = co_await m.get ().recv_address (h);
             //std::cout << "in bc func: after recv addr " << id  << std::endl;
-            co_return std::move (resp.second);
+            co_return std::move (resp);
         };
         const auto resp = co_await broadcast_gather_custom <address> (*m_io_service, nodes, bc);
         for (const auto& r: resp) {
@@ -152,10 +149,7 @@ public:
             allocated_write_message msg {.addr = node_address_map.at (node),
                                          .data = data_part};
             co_await m.get ().send_allocated_write (ALLOC_WRITE_REQ, msg);
-            const auto h = co_await m.get ().recv_header ();
-            if (h.type == FAILURE) [[unlikely]] {
-                co_await m.get().recv_failure (h);
-            }
+            co_await m.get ().recv_header ();
             co_return node_id;
         };
 
@@ -198,11 +192,8 @@ public:
             }
             co_await m.get ().send (WRITE_REQ, data_part);
             const auto message_header = co_await m.get().recv_header();
-            if (message_header.type == FAILURE) [[unlikely]] {
-                co_await m.get().recv_failure (message_header);
-            }
             auto resp = co_await m.get().recv_address(message_header);
-            addrs[node_id] = std::move (resp.second);
+            addrs[node_id] = std::move (resp);
             co_return node_id;
         };
 
@@ -237,11 +228,8 @@ public:
         auto bc_func = [] (auto m, int node_id) -> coro <uint128_t> {
             co_await m.get ().send(USED_REQ, {});
             const auto message_header = co_await m.get().recv_header();
-            if (message_header.type == FAILURE) [[unlikely]] {
-                co_await m.get().recv_failure (message_header, "failure in recovery get_used");
-            }
             const auto resp = co_await m.get().recv_uint128_t (message_header);
-            co_return resp.second;
+            co_return resp;
 
         };
         const auto resp = co_await broadcast_gather_custom <uint128_t> (*m_io_service, nodes, bc_func);
@@ -283,10 +271,7 @@ public:
                 auto read_bc =  [&] (auto m, int node_id) -> coro <ospan <char>> {
                     ospan <char> buf (adjusted_chunk_size);
                     co_await m.get().send_fragment(READ_REQ, {offset + healthy_offsets.at (node_id), buf.size});
-                    const auto h = co_await m.get().recv ({buf.data.get(), buf.size});
-                    if (h.type != READ_RESP) [[unlikely]] {
-                        throw std::runtime_error ("Unsuccessful recovery");
-                    }
+                    co_await m.get().recv ({buf.data.get(), buf.size});
                     co_return std::move (buf);
                 };
                 const auto response = co_await broadcast_gather_custom <ospan <char>> (*m_io_service, healthy_nodes, read_bc);
@@ -298,10 +283,7 @@ public:
                     co_await m.get ().send (WRITE_REQ, sp);
                     const auto message_header = co_await m.get().recv_header();
                     auto resp = co_await m.get().recv_address(message_header);
-                    if (resp.first.type != WRITE_RESP) [[unlikely]] {
-                        throw std::runtime_error ("Invalid response for write request");
-                    }
-                    co_return resp.second;
+                    co_return resp;
                 };
                 const auto recovery_response = co_await broadcast_gather_custom <address> (*m_io_service, failed_nodes, write_bc);
 
@@ -335,9 +317,6 @@ public:
         co_await m.get().send_fragment(READ_REQ, frag);
         const auto h = co_await m.get().recv_header();
         m.get().register_read_buffer (buffer, h.size);
-        if (h.type == FAILURE) [[unlikely]] {
-            co_await m.get().recv_failure (h);
-        }
         co_await m.get().recv_buffers(h);
         ospan <char> buf (h.size);
         std::memcpy (buf.data.get(), buffer, h.size);
@@ -370,9 +349,6 @@ public:
             const auto& offsets = node_data_offsets_map.at(node);
             co_await m.get ().send_address (READ_ADDRESS_REQ, addr);
             const auto h = co_await m.get ().recv_header ();
-            if (h.type == FAILURE) [[unlikely]] {
-                co_await m.get().recv_failure (h);
-            }
             for (int i = 0; i < addr.size(); ++i) {
                 m.get ().register_read_buffer (buffer + offsets.at(i), addr.sizes[i]);
             }
@@ -388,9 +364,6 @@ public:
         auto m = get_data_node (pointer)->acquire_messenger();
         co_await m.get().send_fragment(REMOVE_REQ, {pointer, size});
         const auto h = co_await m.get().recv_header();
-        if (h.type != REMOVE_OK) [[unlikely]] {
-            throw std::runtime_error ("Remove not successful");
-        }
     }
 
     coro <void> sync (const address& addr) {
@@ -432,23 +405,30 @@ public:
 
         std::forward_list <client::acquired_messenger> messengers;
         for (auto& dn: m_data_node_offsets) {
-
             messengers.emplace_front(dn.second->acquire_messenger());
             co_await messengers.front().get().send(USED_REQ, {});
         }
 
-        bool success = true;
-        uint128_t used = 0;
-        for (auto& m: messengers) {
-            const auto message_header = co_await m.get().recv_header();
-            const auto resp = co_await m.get().recv_uint128_t (message_header);
-            success = success and (resp.first.type == USED_RESP);
-            used = used + resp.second;
+        std::vector <std::shared_ptr <client>> nodes;
+        nodes.reserve(m_data_node_offsets.size());
+        for (const auto& n: m_data_node_offsets) {
+            nodes.emplace_back(n.second);
         }
 
-        if (!success) [[unlikely]] {
-            throw std::runtime_error ("Get used space not successful");
-        }
+        uint128_t used = 0;
+        std::mutex mut;
+        auto bc_func = [&] (auto m, int node_id) -> coro <message_type> {
+
+            co_await messengers.front().get().send(USED_REQ, {});
+            const auto message_header = co_await m.get().recv_header();
+            const auto resp = co_await m.get().recv_uint128_t (message_header);
+            std::lock_guard <std::mutex> lock (mut);
+            used = used + resp;
+            co_return SUCCESS;
+        };
+
+        co_await broadcast_gather_custom <message_type> (*m_io_service, nodes, bc_func);
+
         co_return used;
     }
 

@@ -64,7 +64,7 @@ private:
 
         dedupe_response result {.addr = address {}};
         auto integration_data = data;
-        dedupe_write_cache cache(integration_data, m_storage, m_dedupe_conf);
+        //dedupe_write_cache cache(integration_data, m_storage, m_dedupe_conf);
         while (!integration_data.empty()) {
             /*
             const auto cf = cache.get_cached_map().equal_range(integration_data);
