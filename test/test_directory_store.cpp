@@ -299,7 +299,7 @@ BOOST_FIXTURE_TEST_CASE (directory_store_test, config_fixture)
     {
         directory_store ds ({"root", make_bucket_config()});
         const auto buckets = ds.list_buckets();
-        BOOST_TEST (buckets.size() == 2);
+        BOOST_TEST (buckets.size() == 3);
         BOOST_CHECK (std::find (buckets.begin(), buckets.end(), "b1") != buckets.end());
         BOOST_CHECK (std::find (buckets.begin(), buckets.end(), "b3") != buckets.end());
 
