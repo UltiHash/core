@@ -293,7 +293,7 @@ BOOST_FIXTURE_TEST_CASE (directory_store_test, config_fixture)
         BOOST_TEST(d53.size == sizeof(data5));
         BOOST_CHECK(std::memcmp(d53.data.get(), data5, d5.size) == 0);
 
-        ds.remove_bucket("b2");
+        BOOST_CHECK_THROW(ds.remove_bucket("b2"), std::exception);
     }
 
     {
