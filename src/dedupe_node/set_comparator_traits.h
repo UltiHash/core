@@ -16,13 +16,22 @@ struct set_full_comparator {
     explicit set_full_comparator (global_data_view& storage): m_storage (storage) {}
 
     [[nodiscard]] inline coro <std::pair <int, ospan <char>>> operator () (const std::string_view& new_data, const mmap_node& set_data) const {
-        if (const auto comp = new_data.substr(0,8).compare({reinterpret_cast <const char*>(&set_data.data_prefix), sizeof(set_data.data_prefix)}); comp != 0) {
-            co_return std::pair {comp, ospan<char>{}};
-        }
-
         ospan <char> buf (set_data.m_data.size);
         co_await m_storage.get().read (buf.data.get(), set_data.m_data.pointer, set_data.m_data.size);
         co_return std::move (std::pair {new_data.compare({buf.data.get(), set_data.m_data.size}), std::move (buf)});
+    }
+
+    [[nodiscard]] inline std::optional <std::pair <int, ospan <char>>> cached (const std::string_view& new_data, const mmap_node& set_data) const {
+        if (const auto comp = new_data.substr(0,sizeof (set_data.data_prefix)).compare({reinterpret_cast <const char*>(&set_data.data_prefix), sizeof(set_data.data_prefix)}); comp != 0) {
+            return std::pair {comp, ospan<char>{}};
+        }
+
+        auto buf = m_storage.get().read_cache(set_data.m_data.pointer, set_data.m_data.size);
+        if (buf.has_value())
+            return std::pair {new_data.compare(buf.value().get_str_view()), std::move (buf.value())};
+        else {
+            return std::nullopt;
+        }
     }
 
     const std::reference_wrapper <global_data_view> m_storage;

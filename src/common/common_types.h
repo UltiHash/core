@@ -112,9 +112,24 @@ struct owning_span {
         os.size = 0;
         os.data = nullptr;
     }
+    owning_span& operator=(owning_span&& os) noexcept {
+        size = os.size;
+        data = std::move (os.data);
+        os.size = 0;
+        os.data = nullptr;
+        return *this;
+    }
     void resize (std::size_t new_size) {
         size = new_size;
         data = std::make_unique_for_overwrite <T[]> (size);
+    }
+
+    inline std::span <char> get_span () noexcept {
+        return {data.get(), size};
+    }
+
+    inline std::string_view get_str_view () noexcept {
+        return {data.get(), size};
     }
 };
 
