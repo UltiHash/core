@@ -72,7 +72,9 @@ namespace uh::cluster::rest
         auto m = m_handler.get_recovery_director().acquire_messenger();
         co_await m.get().send(RECOVER_REQ, {});
         const auto h = co_await m.get().recv_header();
-        co_await m.get().throw_if_failure(h);
+        if (h.type == FAILURE) [[unlikely]] {
+            co_await m.get().recv_failure (h);
+        }
         m_recover_response.set_value(h.type);
     }
 

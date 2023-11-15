@@ -151,7 +151,7 @@ private:
     }
 
     coro <address> store_data(const std::string_view& frag) {
-        co_return std::move (co_await m_storage.scatter_write(frag));
+        co_return std::move (co_await m_storage.write(frag));
     }
 
     dedupe_config m_dedupe_conf;

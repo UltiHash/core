@@ -43,10 +43,11 @@ public:
         auto m = m_data_node_offsets.at(index)->acquire_messenger();
         co_await m.get().send(WRITE_REQ, data);
         const auto message_header = co_await m.get().recv_header();
-        auto resp = co_await m.get().recv_address(message_header);
-        if (resp.first.type != WRITE_RESP) [[unlikely]] {
-            throw std::runtime_error ("Invalid response for write request");
+        if (message_header.type == FAILURE) [[unlikely]] {
+            co_await m.get().recv_failure (message_header);
         }
+        auto resp = co_await m.get().recv_address(message_header);
+
         ospan <char> buf (resp.second.first().size);
         std::memcpy (buf.data.get(), data.data(), resp.second.first().size);
         m_cache.put (resp.second.first().pointer, std::move (buf));
@@ -152,7 +153,9 @@ public:
                                          .data = data_part};
             co_await m.get ().send_allocated_write (ALLOC_WRITE_REQ, msg);
             const auto h = co_await m.get ().recv_header ();
-            co_await m.get ().throw_if_failure (h);
+            if (h.type == FAILURE) [[unlikely]] {
+                co_await m.get().recv_failure (h);
+            }
             co_return node_id;
         };
 
@@ -182,6 +185,7 @@ public:
         const auto part_size = data.size() / m_data_node_offsets.size();
         const auto ec_data = m_ec->compute_ec(data, static_cast <int> (m_data_node_offsets.size()));
 
+        std::vector <address> addrs (nodes.size());
         auto bc_func = [&] (auto m, int node_id) -> coro <int> {
             std::string_view data_part;
             const auto node = nodes.at (node_id);
@@ -193,13 +197,27 @@ public:
                 data_part = std::string_view {ec_data [index].data.get(), ec_data[index].size};
             }
             co_await m.get ().send (WRITE_REQ, data_part);
-            const auto h = co_await m.get ().recv_header ();
-            co_await m.get ().throw_if_failure (h);
+            const auto message_header = co_await m.get().recv_header();
+            if (message_header.type == FAILURE) [[unlikely]] {
+                co_await m.get().recv_failure (message_header);
+            }
+            auto resp = co_await m.get().recv_address(message_header);
+            addrs[node_id] = std::move (resp.second);
             co_return node_id;
         };
 
         co_await broadcast_gather_custom <int> (*m_io_service, nodes, bc_func);
 
+        address addr;
+        for (const auto& a: addrs) {
+            addr.append_address(a);
+        }
+
+        ospan <char> buf (addr.sizes[0]);
+        std::memcpy (buf.data.get(), data.data(), addr.sizes[0]);
+        m_cache.put (addr.get_fragment(0).pointer, std::move (buf));
+
+        co_return std::move (addr);
     }
 
     coro <void> recover () {
@@ -219,7 +237,9 @@ public:
         auto bc_func = [] (auto m, int node_id) -> coro <uint128_t> {
             co_await m.get ().send(USED_REQ, {});
             const auto message_header = co_await m.get().recv_header();
-            co_await m.get ().throw_if_failure (message_header, "failure in recovery get_used");
+            if (message_header.type == FAILURE) [[unlikely]] {
+                co_await m.get().recv_failure (message_header, "failure in recovery get_used");
+            }
             const auto resp = co_await m.get().recv_uint128_t (message_header);
             co_return resp.second;
 
@@ -293,7 +313,6 @@ public:
             }
         }
 
-        co_return;
     }
 
 
@@ -316,7 +335,9 @@ public:
         co_await m.get().send_fragment(READ_REQ, frag);
         const auto h = co_await m.get().recv_header();
         m.get().register_read_buffer (buffer, h.size);
-        co_await m.get().throw_if_failure(h);
+        if (h.type == FAILURE) [[unlikely]] {
+            co_await m.get().recv_failure (h);
+        }
         co_await m.get().recv_buffers(h);
         ospan <char> buf (h.size);
         std::memcpy (buf.data.get(), buffer, h.size);
@@ -349,7 +370,9 @@ public:
             const auto& offsets = node_data_offsets_map.at(node);
             co_await m.get ().send_address (READ_ADDRESS_REQ, addr);
             const auto h = co_await m.get ().recv_header ();
-            co_await m.get ().throw_if_failure (h);
+            if (h.type == FAILURE) [[unlikely]] {
+                co_await m.get().recv_failure (h);
+            }
             for (int i = 0; i < addr.size(); ++i) {
                 m.get ().register_read_buffer (buffer + offsets.at(i), addr.sizes[i]);
             }

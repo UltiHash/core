@@ -69,7 +69,9 @@ namespace uh::cluster {
         coro <allocated_write_message> recv_allocated_write (const header& message_header) {
 
             auto addr = co_await recv_address (message_header);
-            co_await throw_if_failure(addr.first);
+            if (addr.first.type == FAILURE) [[unlikely]] {
+                co_await recv_failure(addr.first);
+            }
             const auto header = co_await recv_header();
             auto resp = allocated_write_message {.data = ospan<char> (header.size)};
             auto& resp_data = std::get <ospan <char>> (resp.data);
@@ -122,10 +124,7 @@ namespace uh::cluster {
             co_await send_buffers(type);
         }
 
-        coro <void> throw_if_failure (messenger::header h, std::string error = "undefined") {
-            if (h.type != FAILURE) [[likely]] {
-                co_return;
-            }
+        coro <void> recv_failure (messenger::header h, std::string error = "undefined") {
             std::string msg;
             msg.resize(h.size);
             register_read_buffer(msg);
