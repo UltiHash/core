@@ -146,8 +146,12 @@ public:
         node smallest_upper = m_nil;
         while (x.m_offset != m_first_block->nill_offset) {
             y = x;
-            auto comp_res = co_await m_comp (data, *x.m_mnode);
-            comp_int = comp_res.first;
+
+            auto comp_res = m_comp.cached (data, *x.m_mnode);
+            if (!comp_res.has_value ()) {
+                comp_res = co_await m_comp (data, *x.m_mnode);
+            }
+            comp_int = comp_res.value().first;
             if (comp_int < 0) {
                 smallest_upper = x;
                 x = get_node (x.m_mnode->m_left);
@@ -157,13 +161,24 @@ public:
                 x = get_node (x.m_mnode->m_right);
             }
             else {
-                co_return std::move (set_result {std::nullopt, std::move (set_data {std::move (comp_res.second), y.m_mnode->m_data.pointer, y.m_offset}), std::nullopt});
+                co_return std::move (set_result {std::nullopt, std::move (set_data {std::move (comp_res.value().second), y.m_mnode->m_data.pointer, y.m_offset}), std::nullopt});
             }
         }
 
-        co_return std::move (set_result {set_data {std::move (co_await fetch_node_data(largest_lower)), largest_lower.m_mnode->m_data.pointer, largest_lower.m_offset},
+        auto low_data = fetch_cached_node_data(largest_lower);
+        auto up_data = fetch_cached_node_data(smallest_upper);
+
+        if (!low_data.has_value()) {
+            low_data.emplace(co_await fetch_node_data(largest_lower));
+        }
+
+        if (!up_data.has_value()) {
+            up_data.emplace(co_await fetch_node_data(smallest_upper));
+        }
+
+        co_return std::move (set_result {set_data {std::move (low_data.value()), largest_lower.m_mnode->m_data.pointer, largest_lower.m_offset},
                               std::nullopt,
-                              set_data {std::move (co_await fetch_node_data(smallest_upper)), smallest_upper.m_mnode->m_data.pointer, smallest_upper.m_offset},
+                              set_data {std::move (up_data.value()), smallest_upper.m_mnode->m_data.pointer, smallest_upper.m_offset},
                               {y.m_offset, comp_int}});
     }
 
@@ -281,6 +296,13 @@ private:
 
         }
         return false;
+    }
+
+    [[nodiscard]] inline std::optional<ospan <char>> fetch_cached_node_data (const node& n) const {
+        if (n.m_offset == m_nil.m_offset) [[unlikely]] {
+            return ospan <char> {};
+        }
+        return m_data_store.get().read_cache(n.m_mnode->m_data.pointer, n.m_mnode->m_data.size);
     }
 
     [[nodiscard]] inline coro <ospan <char>> fetch_node_data (const node& n) const {

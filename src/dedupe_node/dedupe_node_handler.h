@@ -49,6 +49,7 @@ private:
         ospan<char> data(h.size);
         m.register_read_buffer(data);
         co_await m.recv_buffers(h);
+
         const auto result = co_await deduplicate ({data.data.get(), data.size});
         co_await m.send_dedupe_response(DEDUPE_RESP, result);
 
