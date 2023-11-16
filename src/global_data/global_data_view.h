@@ -300,10 +300,12 @@ public:
     }
 
     coro <std::size_t> read (char* buffer, const uint128_t pointer, const size_t size) {
+        /*
         if (const auto c = m_cache.get(pointer); c.has_value() and c.value().get().size >= size) {
             std::memcpy (buffer, c.value().get().data.get(), size);
             co_return size;
         }
+         */
         const fragment frag {pointer, size};
         auto m = get_data_node (pointer)->acquire_messenger();
         co_await m.get().send_fragment(READ_REQ, frag);
