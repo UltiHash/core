@@ -188,15 +188,6 @@ public:
         co_return header {type, size};
     }
 
-    coro <std::pair <header, ospan <char>>> send_recv (message_type type, std::span <const char> data) {
-        co_await send (type, data);
-        const auto h = co_await recv_header();
-        ospan <char> buf (h.size);
-        register_read_buffer(buf);
-        co_await recv_buffers(h);
-        co_return std::move (std::pair {h, std::move (buf)});
-    }
-
     void clear_buffers () {
         m_write_buffers.clear();
         m_read_buffers.clear();
