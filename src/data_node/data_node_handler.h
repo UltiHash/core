@@ -21,41 +21,53 @@ public:
 
     coro <void> handle (messenger m) override {
         for (;;) {
-            const auto message_header = co_await m.recv_header();
-            //std::cout << "data node header recv " << message_header.type << std::endl;
-            switch (message_header.type) {
-                case WRITE_REQ:
-                    co_await handle_write(m, message_header);
-                    break;
-                case READ_REQ:
-                    co_await handle_read(m, message_header);
-                    break;
-                case READ_ADDRESS_REQ:
-                    co_await handle_read_address (m, message_header);
-                    break;
-                case REMOVE_REQ:
-                    co_await handle_remove(m, message_header);
-                    break;
-                case SYNC_REQ:
-                    co_await handle_sync(m, message_header);
-                    break;
-                case USED_REQ:
-                    co_await handle_get_used(m, message_header);
-                    break;
-                case ALLOC_REQ:
-                    co_await handle_alloc (m, message_header);
-                    break;
-                case DEALLOC_REQ:
-                    co_await handle_dealloc (m, message_header);
-                    break;
-                case ALLOC_WRITE_REQ:
-                    co_await handle_alloc_write (m, message_header);
-                    break;
-                case STOP:
-                    m_is_stopped = true;
-                    co_return;
-                default:
-                    throw std::invalid_argument("Invalid message type!");
+            std::optional<error> err;
+
+            try {
+                const auto message_header = co_await m.recv_header();
+                switch (message_header.type) {
+                    case WRITE_REQ:
+                        co_await handle_write(m, message_header);
+                        break;
+                    case READ_REQ:
+                        co_await handle_read(m, message_header);
+                        break;
+                    case READ_ADDRESS_REQ:
+                        co_await handle_read_address (m, message_header);
+                        break;
+                    case REMOVE_REQ:
+                        co_await handle_remove(m, message_header);
+                        break;
+                    case SYNC_REQ:
+                        co_await handle_sync(m, message_header);
+                        break;
+                    case USED_REQ:
+                        co_await handle_get_used(m, message_header);
+                        break;
+                    case ALLOC_REQ:
+                        co_await handle_alloc (m, message_header);
+                        break;
+                    case DEALLOC_REQ:
+                        co_await handle_dealloc (m, message_header);
+                        break;
+                    case ALLOC_WRITE_REQ:
+                        co_await handle_alloc_write (m, message_header);
+                        break;
+                    case STOP:
+                        m_is_stopped = true;
+                        co_return;
+                    default:
+                        throw std::invalid_argument("Invalid message type!");
+                }
+            } catch (const error_exception& e) {
+                err = e.error();
+            } catch (const std::exception& e) {
+                err = error(error::unknown, e.what());
+            }
+
+            if (err)
+            {
+                co_await m.send_error (*err);
             }
         }
     }
@@ -116,13 +128,9 @@ private:
     coro <void> handle_alloc (messenger &m, const messenger::header& h) {
         size_t size;
         m.register_read_buffer(size);
-        //std::cout << "data node handle alloc start" << std::endl;
         co_await m.recv_buffers(h);
-        //std::cout << "data node handle alloc recv size " << size << std::endl;
         const auto addr = m_data_store.allocate(size);
-        //std::cout << "data node handle alloc after alloc for size " << size << std::endl;
         co_await m.send_address(ALLOC_RESP, addr);
-        //std::cout << "data node handle alloc after send alloc size " << size << std::endl;
     }
 
     coro <void> handle_dealloc (messenger &m, const messenger::header& h) {

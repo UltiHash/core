@@ -6,6 +6,7 @@
 #define CORE_DEDUPE_WRITE_CACHE_H
 
 #include <algorithm>
+#include <set>
 #include "common/common_types.h"
 #include "global_data/global_data_view.h"
 

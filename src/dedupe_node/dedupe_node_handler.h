@@ -29,13 +29,24 @@ public:
     coro <void> handle (messenger m) override {
 
         for (;;) {
-            const auto message_header = co_await m.recv_header();
-            switch (message_header.type) {
-                case DEDUPE_REQ:
-                    co_await handle_dedupe(m, message_header);
-                    break;
-                default:
-                    throw std::invalid_argument("Invalid message type!");
+            std::optional<error> err;
+
+            try {
+                const auto message_header = co_await m.recv_header();
+                switch (message_header.type) {
+                    case DEDUPE_REQ:
+                        co_await handle_dedupe(m, message_header);
+                        break;
+                    default:
+                        throw std::invalid_argument("Invalid message type!");
+                }
+            } catch (const error_exception& e) {
+                err = e.error();
+            } catch (const std::exception& e) {
+                err = error(error::unknown, e.what());
+            }
+            if (err) {
+                co_await m.send_error (*err);
             }
         }
     }
@@ -59,33 +70,12 @@ private:
     }
 
 
-
     coro <dedupe_response> deduplicate (std::string_view data) {
 
         dedupe_response result {.addr = address {}};
         auto integration_data = data;
         //dedupe_write_cache cache(integration_data, m_storage, m_dedupe_conf);
         while (!integration_data.empty()) {
-            /*
-            const auto cf = cache.get_cached_map().equal_range(integration_data);
-
-            const auto cached_lower_common_prefix = largest_common_prefix (integration_data, cf.first->first);
-            if (cached_lower_common_prefix == integration_data.size() or cached_lower_common_prefix >= m_dedupe_conf.min_fragment_size) {
-                result.addr.push_fragment (fragment {cf.first->second.pointer, cached_lower_common_prefix});
-                integration_data = integration_data.substr(cached_lower_common_prefix, integration_data.size() - cached_lower_common_prefix);
-                continue;
-            }
-            const auto cached_upper_common_prefix = largest_common_prefix (integration_data, cf.second->first);
-            if (cached_upper_common_prefix >= m_dedupe_conf.min_fragment_size) {
-                result.addr.push_fragment (fragment {cf.second->second.pointer, cached_upper_common_prefix});
-                integration_data = integration_data.substr(cached_upper_common_prefix, integration_data.size() - cached_upper_common_prefix);
-                continue;
-            }
-            else {
-                // not found -> search in global set
-            }
-
-*/
             const auto f = co_await m_fragment_set.find(integration_data);
             if (f.match) {
                 result.addr.push_fragment (fragment {f.match->data_offset, integration_data.size()});

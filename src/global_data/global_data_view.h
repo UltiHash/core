@@ -6,14 +6,11 @@
 #define CORE_GLOBAL_DATA_VIEW_H
 
 #include <map>
-#include <unordered_map>
-#include <set>
 #include "data_node/data_node.h"
 #include "network/client.h"
 #include "network/network_traits.h"
 #include "ec.h"
 #include "ec_factory.h"
-
 #include "lru_cache.h"
 
 namespace uh::cluster {
@@ -65,17 +62,12 @@ public:
             nodes.emplace_back(node.second);
         }
         nodes.insert(nodes.cend(), m_ec->get_ec_nodes().cbegin(), m_ec->get_ec_nodes().cend());
-        //std::cout << "allocate nodes size " << nodes.size() << std::endl;
         address addr;
         auto bc = [&size] (auto m, auto id) -> coro <address> {
             m.get ().register_write_buffer (size);
-            //std::cout << "in bc func: before send buffer " << id  << std::endl;
             co_await m.get ().send_buffers (ALLOC_REQ);
-            //std::cout << "in bc func: before recv header " << id  << std::endl;
             const auto h = co_await m.get ().recv_header ();
-            //std::cout << "in bc func: before recv address " << id  << std::endl;
             auto resp = co_await m.get ().recv_address (h);
-            //std::cout << "in bc func: after recv addr " << id  << std::endl;
             co_return std::move (resp);
         };
         const auto resp = co_await broadcast_gather_custom <address> (*m_io_service, nodes, bc);
@@ -285,7 +277,7 @@ public:
                     auto resp = co_await m.get().recv_address(message_header);
                     co_return resp;
                 };
-                const auto recovery_response = co_await broadcast_gather_custom <address> (*m_io_service, failed_nodes, write_bc);
+                co_await broadcast_gather_custom <address> (*m_io_service, failed_nodes, write_bc);
 
                 offset += adjusted_chunk_size;
             }
