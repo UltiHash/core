@@ -25,8 +25,8 @@ namespace uh::cluster::rest::utils::parser {
 
     s3_parser::s3_parser
             (const b_http::request_parser<b_http::empty_body>& recv_req,
-             rest::utils::ts_unordered_map<std::string, std::shared_ptr<utils::ts_map<uint16_t, std::pair<std::string, std::string>>>>& uomap)
-            : m_recv_req(recv_req), m_uomap_multipart(uomap)
+             utils::state& server_state)
+            : m_recv_req(recv_req), m_internal_server_state(server_state)
     {}
 
     std::unique_ptr<rest::http::http_request>
@@ -42,16 +42,12 @@ namespace uh::cluster::rest::utils::parser {
                 {
                     if (uri->query_string_exists("uploads"))
                     {
-                        auto upload_id = generator::generate_unique_id();
-                        m_uomap_multipart.emplace(upload_id, std::make_shared<utils::ts_map<uint16_t, std::pair<std::string, std::string>>>());
+                        auto upload_id = m_internal_server_state.generate_and_add_upload_id(uri->get_bucket_id());
                         return std::make_unique<rest::http::model::init_multi_part_upload_request>(m_recv_req, upload_id, std::move(uri));
                     }
                     else if (uri->query_string_exists("uploadId"))
                     {
-                        auto upload_id = uri->get_query_string_value("uploadId");
-                        if (upload_id.empty())
-                            throw std::runtime_error("no upload id given");
-                        return std::make_unique<rest::http::model::complete_multi_part_upload_request>(m_recv_req, m_uomap_multipart, upload_id,  std::move(uri));
+                        return std::make_unique<rest::http::model::complete_multi_part_upload_request>(m_recv_req, m_internal_server_state, std::move(uri));
                     }
                 }
                 else if (!uri->get_bucket_id().empty() && uri->get_object_key().empty())

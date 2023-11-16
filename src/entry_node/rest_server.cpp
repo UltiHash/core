@@ -98,7 +98,7 @@ namespace uh::cluster::rest
 
                 LOG_INFO() << "received request: " << received_request.get().base();
 
-                rest::utils::parser::s3_parser s3_parser(received_request, m_uomap_multipart);
+                rest::utils::parser::s3_parser s3_parser(received_request, m_internal_server_state);
                 auto s3_request = s3_parser.parse();
 
                 co_await s3_request->read_body(stream, buffer);

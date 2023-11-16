@@ -4,8 +4,8 @@
 #include <boost/beast/core.hpp>
 #include <boost/asio.hpp>
 #include <entry_node/rest/http/http_request.h>
-#include <entry_node/rest/utils/containers/ts_unordered_map.h>
-#include <entry_node/rest/utils/containers/ts_map.h>
+#include "entry_node/rest/utils/containers/internal_server_state.h"
+
 
 namespace uh::cluster::rest::utils::parser
 {
@@ -19,12 +19,11 @@ namespace uh::cluster::rest::utils::parser
     {
     private:
         const b_http::request_parser<b_http::empty_body>& m_recv_req;
-        rest::utils::ts_unordered_map<std::string, std::shared_ptr<utils::ts_map<uint16_t, std::pair<std::string, std::string>>>>& m_uomap_multipart;
+        utils::state& m_internal_server_state;
 
     public:
         s3_parser
-        (const b_http::request_parser<b_http::empty_body>& recv_req,
-         rest::utils::ts_unordered_map<std::string, std::shared_ptr<utils::ts_map<uint16_t, std::pair<std::string, std::string>>>>&);
+        (const b_http::request_parser<b_http::empty_body>&, utils::state&);
 
         [[nodiscard]] std::unique_ptr<rest::http::http_request>
         parse() const;

@@ -15,11 +15,24 @@ namespace uh::cluster::rest::utils
 
     public:
 
+        ts_map() = default;
+
+        explicit ts_map(T key)
+        {
+            m_container.emplace(std::move(key), Y{});
+        }
+
+        ts_map(const T& key, const Y& value)
+        {
+            m_container.insert(key, value);
+        }
+
         void insert(const T& key, const Y& value)
         {
             std::lock_guard<std::mutex> lock(m_mutex);
             m_container.insert(key, value);
         }
+
         void clear()
         {
             std::lock_guard<std::mutex> lock(m_mutex);
@@ -33,6 +46,7 @@ namespace uh::cluster::rest::utils
 
         Y& operator[] (const T& key)
         {
+            std::lock_guard<std::mutex> lock(m_mutex);
             return m_container[key];
         }
 
@@ -48,6 +62,7 @@ namespace uh::cluster::rest::utils
 
         size_t size()
         {
+            std::lock_guard<std::mutex> lock(m_mutex);
             return m_container.size();
         }
 

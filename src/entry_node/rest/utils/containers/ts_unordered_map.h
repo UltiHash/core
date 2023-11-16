@@ -14,7 +14,7 @@ namespace uh::cluster::rest::utils
         std::mutex m_mutex {};
 
     public:
-        void emplace(T key, Y value)
+        std::pair<typename std::unordered_map<T,Y>::iterator, bool> emplace(T key, Y value)
         {
             std::lock_guard<std::mutex> lock(m_mutex);
             m_container.emplace(std::move(key), std::move(value));

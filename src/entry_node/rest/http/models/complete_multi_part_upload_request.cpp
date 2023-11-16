@@ -6,13 +6,12 @@ namespace uh::cluster::rest::http::model
 {
 
     complete_multi_part_upload_request::complete_multi_part_upload_request(const http::request_parser<http::empty_body>& recv_req,
-                                                                           rest::utils::ts_unordered_map<std::string, std::shared_ptr<utils::ts_map<uint16_t, std::pair<std::string, std::string>>>>& uo_container,
-                                                                           std::string upload_id, std::unique_ptr<rest::http::URI> uri) :
+                                                                           utils::state& server_state,
+                                                                           std::unique_ptr<rest::http::URI> uri) :
             rest::http::http_request(recv_req, std::move(uri)),
-            m_uomap_multipart(uo_container),
-            m_upload_id(std::move(upload_id))
-    {
-    }
+            m_internal_server_state(server_state),
+            m_upload_id(m_uri->get_query_string_value("uploadId"))
+    {}
 
     complete_multi_part_upload_request::~complete_multi_part_upload_request()
     {
@@ -26,7 +25,6 @@ namespace uh::cluster::rest::http::model
 
     void complete_multi_part_upload_request::parse_and_check_xml() const
     {
-
         // upload id should exist
         auto iterator = m_uomap_multipart.find(m_upload_id);
         if (iterator == m_uomap_multipart.end())
