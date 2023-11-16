@@ -280,7 +280,7 @@ public:
                     {
                             .bucket_id = req.get_URI().get_bucket_id(),
                             .object_key = std::make_unique <std::string> (req.get_URI().get_object_key()),
-                            .addr = std::make_unique <address> (std::move (resp.second.addr)),
+                            .addr = std::make_unique <address> (std::move (resp.addr)),
                     };
 
             co_await m_dir.get().send_directory_message (DIR_PUT_OBJ_REQ, dir_req);
@@ -534,27 +534,19 @@ public:
             const auto h_dedup = co_await m_dedup.get().recv_header();
             auto resp = co_await m_dedup.get().recv_dedupe_response(h_dedup);
 
-            auto effective_size = static_cast <double> (resp.second.effective_size) / static_cast <double> (1024ul * 1024ul);
-            auto space_saving = 1.0 - static_cast <double> (resp.second.effective_size) / static_cast <double> (body_size);
+            auto effective_size = static_cast <double> (resp.effective_size) / static_cast <double> (1024ul * 1024ul);
+            auto space_saving = 1.0 - static_cast <double> (resp.effective_size) / static_cast <double> (body_size);
 
             auto m_dir = m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size())).acquire_messenger();
             const directory_message dir_req
                     {
                             .bucket_id = req.get_URI().get_bucket_id(),
                             .object_key = std::make_unique <std::string> (req.get_URI().get_object_key()),
-                            .addr = std::make_unique <address> (std::move (resp.second.addr)),
+                            .addr = std::make_unique <address> (std::move (resp.addr)),
                     };
 
             co_await m_dir.get().send_directory_message (DIR_PUT_OBJ_REQ, dir_req);
             const auto h_dir = co_await m_dir.get().recv_header();
-            if(h_dir.type == FAILURE) [[unlikely]]
-            {
-                std::string msg;
-                msg.resize(h_dir.size);
-                m_dir.get().register_read_buffer(msg);
-                co_await m_dir.get().recv_buffers(h_dir);
-                throw std::runtime_error("Failed to add the fragment address of object " + dir_req.bucket_id + "/" + *dir_req.object_key + " to the directory.\n" + "Error: \n" + msg);
-            }
 
             res->set_etag("CustomEtag");
 

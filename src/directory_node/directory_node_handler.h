@@ -60,7 +60,7 @@ public:
 
             if (err)
             {
-                co_await m.send(*err);
+                co_await m.send_error (*err);
             }
         }
 

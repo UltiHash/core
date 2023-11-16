@@ -110,19 +110,9 @@ public:
 
         co_await boost::asio::async_read (m_socket, buffers, boost::asio::as_tuple(boost::asio::use_awaitable));
 
-        if (h.type == FAILURE)
-        {
-            uint32_t ec;
-            std::string msg(h.size - sizeof(ec), 0);
-
-            std::list <boost::asio::mutable_buffer> buffers {
-                { &ec, sizeof(ec) },
-                { msg.data(), msg.size() },
-            };
-
-            co_await boost::asio::async_read (m_socket, buffers, boost::asio::as_tuple(boost::asio::use_awaitable));
-
-            throw error_exception(error(ec, msg));
+        if (h.type == FAILURE) [[unlikely]] {
+            const auto e = co_await recv_error(h);
+            throw error_exception(e);
         }
 
         co_return h;
@@ -152,22 +142,20 @@ public:
 
     }
 
-    coro <void> send (const error& e) {
-        uint32_t ec = e.code();
-        std::span<const char> data = e.message();
+    coro <void> send_error (const error& e) {
+        const auto ec = e.code();
+        register_write_buffer(ec);
+        register_write_buffer(e.message());
+        co_await send_buffers(FAILURE);
+    }
 
-        message_type type = FAILURE;
-        const auto size = static_cast <uint32_t> (data.size() + sizeof(ec));
-
-        std::vector <boost::asio::const_buffer> buffers {
-                {&type, sizeof (type)},
-                {&size, sizeof (size)},
-                {&ec, sizeof(ec)},
-                {data.data(), data.size()}
-        };
-
-        co_await boost::asio::async_write (m_socket, buffers, boost::asio::as_tuple(boost::asio::use_awaitable));
-        co_return;
+    coro <error> recv_error (const header& h) {
+        uint32_t ec;
+        std::string msg (h.size - sizeof(ec), 0);
+        register_read_buffer (ec);
+        register_read_buffer (msg);
+        co_await recv_buffers(h);
+        co_return error (ec, msg);
     }
 
     coro <void> send (const message_type type, std::span <const char> data) {
@@ -193,16 +181,11 @@ public:
 
         co_await boost::asio::async_read (m_socket, buffers, boost::asio::as_tuple(boost::asio::use_awaitable));
 
+        if (type == FAILURE) [[unlikely]] {
+            const auto e = co_await recv_error({.type = type, .size = size});
+            throw error_exception(e);
+        }
         co_return header {type, size};
-    }
-
-    coro <std::pair <header, ospan <char>>> send_recv (message_type type, std::span <const char> data) {
-        co_await send (type, data);
-        const auto h = co_await recv_header();
-        ospan <char> buf (h.size);
-        register_read_buffer(buf);
-        co_await recv_buffers(h);
-        co_return std::move (std::pair {h, std::move (buf)});
     }
 
     void clear_buffers () {

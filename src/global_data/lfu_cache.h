@@ -27,6 +27,7 @@ class lfu_cache {
     };
 
     std::list <key_order_data> m_order;
+
     std::map <Key, key_map_data> m_key_values;
     const int m_capacity;
 
@@ -48,6 +49,7 @@ public:
 
             pos = m_order.emplace(pos, 1, key);
             m_key_values.emplace_hint(it, key, key_map_data {pos, std::move (val)});
+
             if (m_key_values.size() > m_capacity) {
                 const auto rk = m_order.front().key;
                 m_key_values.erase (rk);

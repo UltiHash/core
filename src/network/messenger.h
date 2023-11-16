@@ -14,38 +14,38 @@ namespace uh::cluster {
     public:
         using messenger_core::messenger_core;
 
-        coro <std::pair <header, address>> recv_address (const header& message_header) {
+        coro <address> recv_address (const header& message_header) {
             address addr;
             addr.allocate_for_serialized_data(message_header.size);
             register_read_buffer(addr.pointers);
             register_read_buffer(addr.sizes);
             co_await recv_buffers(message_header);
-            co_return std::pair {message_header, std::move (addr)};
+            co_return std::move (addr);
         }
 
-        coro <std::pair <header, fragment>> recv_fragment (const header& message_header) {
+        coro <fragment> recv_fragment (const header& message_header) {
             fragment frag;
             register_read_buffer (frag.pointer.ref_data());
             register_read_buffer(frag.size);
             co_await recv_buffers (message_header);
-            co_return std::pair {message_header, frag};
+            co_return frag;
         }
 
-        coro <std::pair <header, uint128_t>> recv_uint128_t (const header& message_header) {
+        coro <uint128_t> recv_uint128_t (const header& message_header) {
             uint128_t num;
             register_read_buffer(num.ref_data());
             co_await recv_buffers (message_header);
-            co_return std::pair {message_header, num};
+            co_return num;
         }
 
-        coro <std::pair <header, dedupe_response>> recv_dedupe_response (const header& message_header) {
+        coro <dedupe_response> recv_dedupe_response (const header& message_header) {
             dedupe_response dedupe_resp;
             register_read_buffer(dedupe_resp.effective_size);
             dedupe_resp.addr.allocate_for_serialized_data(message_header.size - sizeof (dedupe_resp.effective_size));
             register_read_buffer(dedupe_resp.addr.pointers);
             register_read_buffer(dedupe_resp.addr.sizes);
             co_await recv_buffers (message_header);
-            co_return std::pair {message_header, std::move (dedupe_resp)};
+            co_return std::move (dedupe_resp);
         }
 
         coro <directory_message> recv_directory_message (const header& message_header) {
@@ -69,13 +69,12 @@ namespace uh::cluster {
         coro <allocated_write_message> recv_allocated_write (const header& message_header) {
 
             auto addr = co_await recv_address (message_header);
-            co_await throw_if_failure(addr.first);
             const auto header = co_await recv_header();
             auto resp = allocated_write_message {.data = ospan<char> (header.size)};
             auto& resp_data = std::get <ospan <char>> (resp.data);
             register_read_buffer (resp_data);
             co_await recv_buffers(header);
-            resp.addr = std::move (addr.second);
+            resp.addr = std::move (addr);
             co_return std::move (resp);
         }
 
@@ -120,17 +119,6 @@ namespace uh::cluster {
             zpp::bits::out{data, zpp::bits::size4b{}}(dir_req).or_throw();
             register_write_buffer(data);
             co_await send_buffers(type);
-        }
-
-        coro <void> throw_if_failure (messenger::header h, std::string error = "undefined") {
-            if (h.type != FAILURE) [[likely]] {
-                co_return;
-            }
-            std::string msg;
-            msg.resize(h.size);
-            register_read_buffer(msg);
-            co_await recv_buffers(h);
-            throw std::runtime_error ("Received failure with message: " + msg + "\nerror: " + error);
         }
 
     };
