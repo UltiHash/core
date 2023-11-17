@@ -1,15 +1,20 @@
 #include "multi_part_upload_request.h"
 #include "entry_node/rest/utils/hashing/hash.h"
+#include "custom_error_response_exception.h"
+
 namespace uh::cluster::rest::http::model
 {
 
     multi_part_upload_request::multi_part_upload_request(const http::request_parser<http::empty_body>& recv_req,
-                                                 rest::utils::ts_map<uint16_t, std::pair<std::string, std::string>>& container, uint16_t part_number,
+                                                         utils::state& server_state,
                                                  std::unique_ptr<rest::http::URI> uri) :
             rest::http::http_request(recv_req, std::move(uri)),
-            m_mpcontainer(container),
-            m_part_number(part_number)
-    {}
+            m_internal_server_state(server_state),
+            m_part_number(std::stoi(m_uri->get_query_parameters().at("partNumber"))),
+            m_upload_id(m_uri->get_query_parameters().at("uploadId"))
+    {
+        validate_request();
+    }
 
     std::map<std::string, std::string> multi_part_upload_request::get_request_specific_headers() const
     {
@@ -20,7 +25,20 @@ namespace uh::cluster::rest::http::model
 
     const std::string& multi_part_upload_request::get_body()
     {
-        return m_mpcontainer.find(m_part_number)->second.second;
+        return m_internal_server_state.get_multipart_container().
+                find(m_uri->get_query_parameters().at("uploadId"))->second->find(m_part_number)->second.second;
+    }
+
+    void multi_part_upload_request::validate_request() const
+    {
+        auto& multipart_container = m_internal_server_state.get_multipart_container();
+
+        // upload id should exist
+        auto iterator = multipart_container.find(m_upload_id);
+        if (iterator == multipart_container.end())
+        {
+            throw custom_error_response_exception(http::status::not_found, error::type::no_such_upload);
+        }
     }
 
     coro<void> multi_part_upload_request::read_body(tcp_stream& stream, boost::beast::flat_buffer& buffer)
@@ -28,6 +46,7 @@ namespace uh::cluster::rest::http::model
         if (m_req.get().has_content_length())
         {
             std::size_t content_length = m_req.content_length().value();
+            auto& m_mpcontainer = *m_internal_server_state.get_multipart_container().find(m_upload_id)->second;
 
             if (content_length != 0)
             {
@@ -38,6 +57,7 @@ namespace uh::cluster::rest::http::model
                     auto data_left = content_length - buffer.size();
 
                     // copy remaining bytes from flat buffer to body_buffer
+                    // TODO: reference is given in m_mpcontainer[m_part_number].second . This has to be discussed further!!
                     boost::asio::buffer_copy(boost::asio::buffer(m_mpcontainer[m_part_number].second), buffer.data());
                     auto size_transferred = co_await boost::asio::async_read(stream.socket(), boost::asio::buffer(m_mpcontainer[m_part_number].second.data() + buffer.size(), data_left),
                                                                              boost::asio::transfer_exactly(data_left), boost::asio::use_awaitable);
@@ -55,7 +75,7 @@ namespace uh::cluster::rest::http::model
         }
         else
         {
-            throw std::runtime_error("please specify the content length on requests as other methods without content length are currently not supported");
+            throw custom_error_response_exception(boost::beast::http::status::no_content);
         }
 
         co_return;

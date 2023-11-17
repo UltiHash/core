@@ -69,7 +69,7 @@ namespace uh::cluster::rest::http::model
 
     }
 
-    void delete_objects_request::handle_request_specific_criteria()
+    void delete_objects_request::validate_request_specific_criteria()
     {
         parse_and_check_xml();
     }

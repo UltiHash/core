@@ -103,7 +103,7 @@ namespace uh::cluster::rest
 
                 co_await s3_request->read_body(stream, buffer);
 
-                s3_request->handle_request_specific_criteria();
+                s3_request->validate_request_specific_criteria();
 
                 auto s3_res = co_await m_handler.handle(*s3_request);
 

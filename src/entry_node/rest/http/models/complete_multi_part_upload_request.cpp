@@ -23,11 +23,13 @@ namespace uh::cluster::rest::http::model
         return {};
     }
 
-    void complete_multi_part_upload_request::parse_and_check_xml() const
+    void complete_multi_part_upload_request::validate_request() const
     {
+        auto& multipart_container = m_internal_server_state.get_multipart_container();
+
         // upload id should exist
-        auto iterator = m_uomap_multipart.find(m_upload_id);
-        if (iterator == m_uomap_multipart.end())
+        auto iterator = multipart_container.find(m_upload_id);
+        if (iterator == multipart_container.end())
         {
             throw custom_error_response_exception(http::status::not_found, error::type::no_such_upload);
         }
@@ -84,8 +86,10 @@ namespace uh::cluster::rest::http::model
     {
         if (m_completed_body.empty())
         {
-            auto iterator = m_uomap_multipart.find(m_upload_id);
-            if (iterator == m_uomap_multipart.end())
+            auto& multipart_container = m_internal_server_state.get_multipart_container();
+
+            auto iterator = multipart_container.find(m_upload_id);
+            if (iterator == multipart_container.end())
                 throw std::runtime_error("Invalid Upload ID");
 
             for (const auto& part : *iterator->second)
@@ -97,8 +101,10 @@ namespace uh::cluster::rest::http::model
 
     std::size_t complete_multi_part_upload_request::get_body_size() const
     {
-        auto iterator = m_uomap_multipart.find(m_upload_id);
-        if (iterator == m_uomap_multipart.end())
+        auto& multipart_container = m_internal_server_state.get_multipart_container();
+
+        auto iterator = multipart_container.find(m_upload_id);
+        if (iterator == multipart_container.end())
             throw std::runtime_error("Invalid Upload ID");
 
         size_t body_size {};
@@ -110,12 +116,12 @@ namespace uh::cluster::rest::http::model
 
     void complete_multi_part_upload_request::clear_body()
     {
-        m_uomap_multipart.remove(m_upload_id);
+        m_internal_server_state.get_multipart_container().remove(m_upload_id);
     }
 
-    void complete_multi_part_upload_request::handle_request_specific_criteria()
+    void complete_multi_part_upload_request::validate_request_specific_criteria()
     {
-        parse_and_check_xml();
+        validate_request();
     }
 
 } // uh::cluster::rest::http::model

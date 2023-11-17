@@ -636,15 +636,7 @@ public:
     std::unique_ptr<http::http_response> handle_abort_mp_upload (const http::http_request& req)
     {
         std::unique_ptr<http::model::abort_multi_part_upload_response> res;
-        try
-        {
-            res = std::make_unique<http::model::abort_multi_part_upload_response>(req);
-        }
-        catch(const std::exception& e)
-        {
-            LOG_ERROR() << e.what();
-            throw http::model::custom_error_response_exception(b_http::status::not_implemented);
-        }
+        res = std::make_unique<http::model::abort_multi_part_upload_response>(req);
 
         return std::move(res);
     }

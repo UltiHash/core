@@ -47,7 +47,7 @@ namespace uh::cluster::rest::http
 
         virtual ~http_request() = default;
 
-        [[maybe_unused]] virtual void handle_request_specific_criteria() { };
+        [[maybe_unused]] virtual void validate_request_specific_criteria() { };
 
         [[nodiscard]] virtual inline std::size_t get_body_size() const { return m_body.size(); }
 

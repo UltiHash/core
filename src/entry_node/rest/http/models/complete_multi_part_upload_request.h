@@ -25,12 +25,12 @@ namespace uh::cluster::rest::http::model
 
         [[nodiscard]] std::map<std::string, std::string> get_request_specific_headers() const override;
 
-        void handle_request_specific_criteria() override;
+        void validate_request_specific_criteria() override;
 
         void clear_body() override;
 
     private:
-        void parse_and_check_xml() const;
+        void validate_request() const;
 
         std::string m_completed_body {};
         std::string m_upload_id;

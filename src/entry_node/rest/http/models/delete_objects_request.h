@@ -22,7 +22,7 @@ namespace uh::cluster::rest::http::model
 
         [[nodiscard]] std::map<std::string, std::string> get_request_specific_headers() const override;
 
-        void handle_request_specific_criteria() override;
+        void validate_request_specific_criteria() override;
 
     private:
 

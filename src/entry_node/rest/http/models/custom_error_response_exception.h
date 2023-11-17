@@ -28,6 +28,8 @@ namespace uh::cluster::rest::http::model
             invalid_part_oder,
             entity_too_small,
             invalid_bucket_name,
+            bad_upload_id,
+            bad_part_number,
         };
 
         explicit error(type t = unknown);

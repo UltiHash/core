@@ -20,6 +20,8 @@ namespace uh::cluster::rest::http::model
                     {"InvalidPartOrder", "part oder is not ascending"},
                     {"EntityTooSmall", "entity is too small"},
                     {"InvalidBucketName", "bucket name has invalid characters"},
+                    {"BadUploadId", "upload id is invalid"},
+                    {"BadPartNumber", "part number is invalid"},
             };
 
     static const std::pair<std::string, std::string> error_out_of_range = {"OutOfRange", "error out of range"};

@@ -1,8 +1,7 @@
 #pragma once
 
 #include <entry_node/rest/http/http_request.h>
-#include <entry_node/rest/utils/containers/ts_unordered_map.h>
-#include <entry_node/rest/utils/containers/ts_map.h>
+#include "entry_node/rest/utils/containers/internal_server_state.h"
 
 namespace uh::cluster::rest::http::model
 {
@@ -11,8 +10,7 @@ namespace uh::cluster::rest::http::model
     {
     public:
         abort_multi_part_upload_request(const http::request_parser<http::empty_body>&,
-                                        rest::utils::ts_unordered_map<std::string, std::shared_ptr<utils::ts_map<uint16_t, std::pair<std::string, std::string>>>>&,
-                                        std::string,
+                                        utils::state&,
                                         std::unique_ptr<rest::http::URI>);
 
         ~abort_multi_part_upload_request() override = default;
@@ -22,7 +20,7 @@ namespace uh::cluster::rest::http::model
         [[nodiscard]] std::map<std::string, std::string> get_request_specific_headers() const override;
 
     private:
-        rest::utils::ts_unordered_map<std::string, std::shared_ptr<utils::ts_map<uint16_t, std::pair<std::string, std::string>>>>& m_uomap_multipart;
+        utils::state& m_internal_server_state;
         std::string m_upload_id;
     };
 
