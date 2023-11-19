@@ -105,7 +105,7 @@ namespace uh::cluster::rest
 
                 s3_request->validate_request_specific_criteria();
 
-                auto s3_res = co_await m_handler.handle(*s3_request);
+                auto s3_res = co_await m_handler.handle(*s3_request, m_internal_server_state);
 
                 auto s3_res_specific_object = s3_res->get_response_specific_object();
                 co_await b_http::async_write(stream, s3_res_specific_object, net::use_awaitable);

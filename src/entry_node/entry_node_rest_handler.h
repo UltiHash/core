@@ -37,6 +37,7 @@
 #include "entry_node/rest/utils/parser/xml_parser.h"
 #include "entry_node/rest/utils/string/string_utils.h"
 #include "entry_node/rest/utils/hashing/hash.h"
+#include "entry_node/rest/utils/containers/internal_server_state.h"
 
 namespace uh::cluster {
 
@@ -52,7 +53,7 @@ public:
         m_directory_nodes (directory_nodes)
     {}
 
-    coro < std::unique_ptr<http::http_response> > handle (http::http_request& req)
+    coro < std::unique_ptr<http::http_response> > handle (http::http_request& req, rest::utils::state& state)
     {
         auto body_size = req.get_body_size();
         const auto size_mb = static_cast <double> (body_size) / static_cast <double> (1024ul * 1024ul);
@@ -108,7 +109,7 @@ public:
                 res = handle_abort_mp_upload(req);
                 break;
             case http::http_request_type::LIST_MULTI_PART_UPLOADS:
-                res = handle_list_mp_uploads(req);
+                res = handle_list_mp_uploads(req, state);
                 break;
             default:
                 throw std::runtime_error("request not supported by the backend yet.");
@@ -439,32 +440,24 @@ public:
             std::string msg;
             directory_lst_entities_message list_objects_res;
 
-            switch (h_dir.type)
+            list_objects_res = co_await m_dir.get().recv_directory_list_entities_message(h_dir);
+
+            for (const auto& content : list_objects_res.entities)
             {
-                case DIR_LIST_OBJ_RESP:
-                    list_objects_res = co_await m_dir.get().recv_directory_list_entities_message(h_dir);
-
-                    for (const auto& content : list_objects_res.entities)
-                    {
-                        res->add_content(content);
-                    }
-                    break;
-
-                case FAILURE:
-                    msg.resize(h_dir.size);
-                    m_dir.get().register_read_buffer(msg);
-                    co_await m_dir.get().recv_buffers(h_dir);
-                    throw std::runtime_error("Failed to list objects of bucket: " + dir_req.bucket_id + "\n" + "Error: \n" + msg);
-
-                default:
-                    throw std::runtime_error("unexpected internal server error");
+                res->add_content(content);
             }
 
         }
-        catch(const std::exception &e)
+        catch (const error_exception& e)
         {
             LOG_ERROR() << e.what();
-            throw http::model::custom_error_response_exception(b_http::status::not_found);
+            switch (*e.error())
+            {
+                case error::bucket_not_found:
+                    throw http::model::custom_error_response_exception(b_http::status::not_found, http::model::error::bucket_not_found);
+                default:
+                    throw http::model::custom_error_response_exception(b_http::status::internal_server_error);
+            }
         }
 
         co_return std::move(res);
@@ -676,11 +669,18 @@ public:
         co_return std::move(res);
     }
 
-    std::unique_ptr<http::http_response> handle_list_mp_uploads (const http::http_request& req)
+    std::unique_ptr<http::http_response> handle_list_mp_uploads (const http::http_request& req, rest::utils::state& state)
     {
 
         std::unique_ptr<http::model::list_multi_part_uploads_response> res = std::make_unique<http::model::list_multi_part_uploads_response>(req);
-        throw http::model::custom_error_response_exception(b_http::status::not_implemented);
+
+        auto bucket_name = req.get_URI().get_bucket_id();
+        auto itr = state.get_bucket_multiparts().find(bucket_name);
+        for (const auto& pair : *itr->second)
+        {
+            for (const auto& sec_pair : *pair.second)
+                res->add_uploadId(sec_pair);
+        }
 
         return std::move(res);
     }

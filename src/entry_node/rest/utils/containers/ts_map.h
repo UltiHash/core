@@ -33,6 +33,12 @@ namespace uh::cluster::rest::utils
             m_container.insert(key, value);
         }
 
+        void emplace(T key, Y value)
+        {
+            std::lock_guard<std::mutex> lock(m_mutex);
+            m_container.emplace(std::move(key), std::move(value));
+        }
+
         void clear()
         {
             std::lock_guard<std::mutex> lock(m_mutex);

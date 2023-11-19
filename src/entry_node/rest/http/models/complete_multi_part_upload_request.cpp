@@ -10,6 +10,8 @@ namespace uh::cluster::rest::http::model
                                                                            std::unique_ptr<rest::http::URI> uri) :
             rest::http::http_request(recv_req, std::move(uri)),
             m_internal_server_state(server_state),
+            m_bucket_name(m_uri->get_bucket_id()),
+            m_object_name(m_uri->get_object_key()),
             m_upload_id(m_uri->get_query_string_value("uploadId"))
     {}
 
@@ -117,6 +119,12 @@ namespace uh::cluster::rest::http::model
     void complete_multi_part_upload_request::clear_body()
     {
         m_internal_server_state.get_multipart_container().remove(m_upload_id);
+
+        auto& bucket_multiparts = m_internal_server_state.get_bucket_multiparts();
+        auto vector_itr = bucket_multiparts.find(m_bucket_name)->second->find(m_object_name)->second;
+        vector_itr->remove(m_upload_id);
+        if (vector_itr->is_empty())
+            bucket_multiparts.remove(m_bucket_name);
     }
 
     void complete_multi_part_upload_request::validate_request_specific_criteria()

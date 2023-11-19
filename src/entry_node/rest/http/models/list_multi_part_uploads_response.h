@@ -14,7 +14,11 @@ namespace uh::cluster::rest::http::model
 
         [[nodiscard]] const http::response<http::string_body>& get_response_specific_object() override;
 
+        void add_uploadId(std::string);
+
     private:
+
+        void populate_response_headers();
 
         bool m_bucketHasBeenSet = false;
         std::string m_bucket;
@@ -55,8 +59,11 @@ namespace uh::cluster::rest::http::model
         bool m_requestChargedHasBeenSet = false;
         std::string m_requestCharged;
 
-        bool m_requestIdHasBeenSet = false;
-        std::string m_requestId;
+        bool m_uploadIdsHasBeenSet = false;
+        std::vector<std::string> m_uploadIds;
+
+        bool m_expectedBucketOwnerHasBeenSet = false;
+        std::string m_expectedBucketOwner;
 
     };
 

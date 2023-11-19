@@ -17,7 +17,7 @@ namespace uh::cluster::rest::utils
         std::pair<typename std::unordered_map<T,Y>::iterator, bool> emplace(T key, Y value)
         {
             std::lock_guard<std::mutex> lock(m_mutex);
-            m_container.emplace(std::move(key), std::move(value));
+            return m_container.emplace(std::move(key), std::move(value));
         }
 
         void remove(const T& key)

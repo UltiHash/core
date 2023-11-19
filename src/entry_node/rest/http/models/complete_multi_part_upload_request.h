@@ -34,6 +34,8 @@ namespace uh::cluster::rest::http::model
 
         std::string m_completed_body {};
         std::string m_upload_id;
+        std::string m_bucket_name;
+        std::string m_object_name;
         utils::state& m_internal_server_state;
     };
 

@@ -118,7 +118,7 @@ namespace uh::cluster::rest::http::model
             auto content_itr = m_contents.begin();
             if (m_startAfterHasBeenSet)
             {
-                auto index_itr = std::find(m_contents.begin(), m_contents.end(), m_startAfter);
+                auto index_itr = utils::string_utils::find_lexically_closest(m_contents, m_startAfter);
 
                 if (index_itr != m_contents.end())
                 {

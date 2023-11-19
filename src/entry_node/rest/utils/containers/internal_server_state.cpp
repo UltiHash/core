@@ -12,18 +12,27 @@ namespace uh::cluster::rest::utils
                                    std::make_shared<ts_map<uint16_t, std::pair<std::string, std::string>>>());
 
 
-//        auto find_key_ptr = m_current_multiparts.find(bucket_name);
-//        if (find_key_ptr != m_current_multiparts.end())
-//        {
-//            if (find_key_ptr->second->find(upload_id) != find_key_ptr->second->end())
-//            {
-//
-//            }
-//        }
-//        else
-//        {
-//
-//        }
+        // for listing multi-parts uploads
+        auto itr = m_current_bucket_multiparts.find(bucket_name);
+        if (itr != m_current_bucket_multiparts.end())
+        {
+            auto obj_ptr = itr->second->find(object_key);
+            if (obj_ptr != itr->second->end())
+            {
+                obj_ptr->second->push_back(upload_id);
+            }
+            else
+            {
+                itr->second->emplace(object_key, std::make_shared<ts_vector<std::string>>(upload_id));
+            }
+        }
+        else
+        {
+            m_current_bucket_multiparts.emplace(bucket_name,
+                                           std::make_shared<ts_map<std::string, std::shared_ptr<ts_vector<std::string>>>>
+                                           (object_key));
+            m_current_bucket_multiparts.find(bucket_name)->second->find(object_key)->second = std::make_shared<ts_vector<std::string>>(upload_id);
+        }
 
         return upload_id;
     }
@@ -32,6 +41,12 @@ namespace uh::cluster::rest::utils
     state::get_multipart_container()
     {
         return m_parts_container;
+    }
+
+    ts_unordered_map<std::string, std::shared_ptr<ts_map<std::string, std::shared_ptr<ts_vector<std::string>>>>>&
+    state::get_bucket_multiparts()
+    {
+        return m_current_bucket_multiparts;
     }
 
 } // uh::cluster::rest::utils

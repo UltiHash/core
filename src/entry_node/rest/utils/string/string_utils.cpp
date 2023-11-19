@@ -49,4 +49,32 @@ namespace uh::cluster::rest::utils
         return encoded_string;
     }
 
+    std::vector<std::string>::iterator string_utils::find_lexically_closest(std::vector<std::string>& strings,
+                                                                    const std::string& compareTo)
+    {
+        if (strings.empty())
+        {
+            return strings.end();
+        }
+
+        if (compareTo.empty())
+        {
+            return strings.begin();
+        }
+
+        auto lexicalCompare = [](const std::string& a, const std::string& b)
+        {
+            return a < b;
+        };
+
+        auto nextDifferentItr = std::lower_bound(strings.begin(), strings.end(), compareTo, lexicalCompare);
+
+        if (nextDifferentItr != strings.end() && *nextDifferentItr == compareTo)
+        {
+            ++nextDifferentItr;
+        }
+
+        return nextDifferentItr;
+    }
+
 } // uh::cluster::rest::utils
