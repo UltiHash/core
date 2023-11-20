@@ -95,6 +95,7 @@ uh::cluster::global_data_view_config make_global_data_view_config () {
 uh::cluster::cluster_config make_cluster_config () {
     return {
             .init_process_count = 4,
+            .maximum_chunk_size = 1024ul * 1024ul * 1024ul,
             .data_node_conf = make_data_node_config(),
             .dedupe_node_conf = make_dedupe_node_config(),
             .directory_node_conf = make_directory_node_config(),
