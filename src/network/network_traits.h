@@ -70,7 +70,7 @@ void broadcast_custom (boost::asio::io_context& ioc, std::vector <std::shared_pt
 
 template <typename DataType, typename Func>
 requires requires (Func& func, messenger& m) {{func(m)} -> std::same_as <coro <void>>;}
-coro <void> send_in_chunks (messenger& m, const std::list <DataType>& chunks, message_type type, size_t max_chunk_size, Func&& response_op) {
+coro <void> send_chunks (messenger& m, const std::list <DataType>& chunks, message_type type, size_t max_chunk_size, Func&& response_op) {
 
     for (const auto& c:chunks) {
         if (c.size () > max_chunk_size) [[unlikely]] {
