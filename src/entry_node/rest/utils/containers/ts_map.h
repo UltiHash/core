@@ -42,7 +42,7 @@ namespace uh::cluster::rest::utils
         void remove(const T& value)
         {
             std::lock_guard<std::mutex> lock(m_mutex);
-            auto it = std::find(m_container.begin(), m_container.end(), value);
+            auto it = m_container.find(value);
             if (it != m_container.end())
                 m_container.erase(it);
         }
@@ -51,6 +51,12 @@ namespace uh::cluster::rest::utils
         {
             std::lock_guard<std::mutex> lock(m_mutex);
             m_container.clear();
+        }
+
+        bool is_empty()
+        {
+            std::lock_guard<std::mutex> lock(m_mutex);
+            return m_container.empty();
         }
 
         typename std::map<T,Y>::iterator find(const T& key)

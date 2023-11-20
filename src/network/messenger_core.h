@@ -22,7 +22,7 @@ public:
 
     struct header {
         message_type type;
-        uint32_t size;
+        size_t size;
     };
 
     messenger_core (const std::shared_ptr <boost::asio::io_context>& ioc, const std::string& address, const int port):
@@ -54,7 +54,7 @@ public:
 
     template <typename T>
     requires (std::is_arithmetic_v <T> or std::is_enum_v <T>)
-    inline void register_read_buffer (T* t, std::uint32_t size) {
+    inline void register_read_buffer (T* t, std::size_t size) {
         m_read_buffers.emplace_back (t, size * sizeof (T));
         m_read_size += size * sizeof (T);
     }
@@ -82,7 +82,7 @@ public:
 
     template <typename T>
     requires (std::is_arithmetic_v <T> or std::is_enum_v <T>)
-    inline void register_write_buffer (const T* t, std::uint32_t size) {
+    inline void register_write_buffer (const T* t, std::size_t size) {
         m_write_buffers.emplace_back (t, size * sizeof (T));
         m_write_size += size * sizeof (T);
     }
@@ -157,7 +157,7 @@ public:
         std::span<const char> data = e.message();
 
         message_type type = FAILURE;
-        const auto size = static_cast <uint32_t> (data.size() + sizeof(ec));
+        const auto size = static_cast <size_t> (data.size() + sizeof(ec));
 
         std::vector <boost::asio::const_buffer> buffers {
                 {&type, sizeof (type)},
@@ -171,7 +171,7 @@ public:
     }
 
     coro <void> send (const message_type type, std::span <const char> data) {
-        const auto size = static_cast <uint32_t> (data.size());
+        const auto size = static_cast <size_t> (data.size());
 
         std::vector <boost::asio::const_buffer> buffers {
                 {&type, sizeof (type)},
@@ -184,7 +184,7 @@ public:
     }
 
     coro <header> recv (std::span <char> buffer) {
-        uint32_t size = 0;
+        size_t size = 0;
         message_type type;
         std::vector <boost::asio::mutable_buffer> buffers {
                 {&type, sizeof (type)},
@@ -205,11 +205,11 @@ public:
         co_return std::move (std::pair {h, std::move (buf)});
     }
 
-    [[nodiscard]] std::uint32_t get_buffered_read_size () const noexcept {
+    [[nodiscard]] std::size_t get_buffered_read_size () const noexcept {
         return m_read_size;
     }
 
-    [[nodiscard]] std::uint32_t get_buffered_write_size () const noexcept {
+    [[nodiscard]] std::size_t get_buffered_write_size () const noexcept {
         return m_write_size;
     }
 
@@ -234,8 +234,8 @@ private:
 
     std::list <boost::asio::mutable_buffer> m_read_buffers;
     std::list <boost::asio::const_buffer> m_write_buffers;
-    std::uint32_t m_read_size = 0;
-    std::uint32_t m_write_size = 0;
+    std::size_t m_read_size = 0;
+    std::size_t m_write_size = 0;
 
     std::shared_ptr <boost::asio::io_context> m_ioc;
 

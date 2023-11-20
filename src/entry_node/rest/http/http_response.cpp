@@ -14,7 +14,7 @@ namespace uh::cluster::rest::http
     m_error(boost::beast::http::response<boost::beast::http::string_body>{boost::beast::http::status::internal_server_error, 11})
     {}
 
-    void http_response::set_body(std::string body)
+    void http_response::set_body(std::string&& body)
     {
         m_res.body() = std::move(body);
     }

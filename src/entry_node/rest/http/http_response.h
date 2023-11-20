@@ -20,7 +20,7 @@ namespace uh::cluster::rest::http
 
         [[nodiscard]] virtual const http::response<http::string_body>& get_response_specific_object() = 0;
         void set_error(http::response<http::string_body>);
-        void set_body(std::string);
+        void set_body(std::string&&);
         void set_error_body(std::string body);
 
     protected:

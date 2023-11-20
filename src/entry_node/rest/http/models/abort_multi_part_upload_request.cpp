@@ -26,14 +26,22 @@ namespace uh::cluster::rest::http::model
             multipart_container.remove(m_upload_id);
         }
 
-//        auto& bucket_multiparts = m_internal_server_state.get_bucket_multiparts();
-//        auto vector_itr = bucket_multiparts.find(m_bucket_name)->second->find(m_object_name);
-//        if (vector_itr != bucket_multiparts.find(m_bucket_name)->second->end())
-//        {
-//            vector_itr->second->remove(m_upload_id);
-//            if (vector_itr->second->is_empty())
-////                bucket_multiparts.find(m_bucket_name)->second.remove(m_object_name);
-//        }
+        auto& bucket_multiparts = m_internal_server_state.get_bucket_multiparts();
+        auto vector_itr = bucket_multiparts.find(m_bucket_name)->second->find(m_object_name);
+
+        if (vector_itr != bucket_multiparts.find(m_bucket_name)->second->end())
+        {
+            vector_itr->second->remove(m_upload_id);
+            // if there are no upload ids in the object map , remove the object map
+            if (vector_itr->second->is_empty())
+                bucket_multiparts.find(m_bucket_name)->second->remove(m_object_name);
+        }
+
+        // if there are no objects in bucket remove the whole bucket
+        if (bucket_multiparts.find(m_bucket_name)->second->is_empty())
+        {
+            bucket_multiparts.remove(m_bucket_name);
+        }
     }
 
     std::map<std::string, std::string> abort_multi_part_upload_request::get_request_specific_headers() const
