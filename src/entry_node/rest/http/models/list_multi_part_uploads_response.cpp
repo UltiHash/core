@@ -17,9 +17,9 @@ namespace uh::cluster::rest::http::model
         populate_response_headers();
     }
 
-    void list_multi_part_uploads_response::add_uploadId(std::string upload_id)
+    void list_multi_part_uploads_response::add_key_and_uploadid(const std::string& obj_name, const std::string& upload_id)
     {
-        m_uploadIds.push_back(std::move(upload_id));
+        m_keys_and_uploadids.emplace_back(obj_name, upload_id);
     }
 
     void list_multi_part_uploads_response::populate_response_headers()
@@ -88,38 +88,16 @@ namespace uh::cluster::rest::http::model
             m_res.set("x-amz-request-payer", m_requestCharged);
         }
 
-        for (const auto& item: m_uploadIds)
-            std::cout << "Uploads: " << item << std::endl;
+        std::string upload_xml_string;
+        for (const auto& val : m_keys_and_uploadids)
+            upload_xml_string += "<Upload>\n"
+                                 "<Key>" + val.object_name + "</Key>\n"
+                                 "<UploadId>" + val.upload_id + "</UploadId>\n"
+                                 "</Upload>\n";
 
         set_body(std::string("<ListMultipartUploadsResult>\n"
-                             "   <Bucket>string</Bucket>\n"
-                             "   <KeyMarker>string</KeyMarker>\n"
-                             "   <UploadIdMarker>string</UploadIdMarker>\n"
-                             "   <NextKeyMarker>string</NextKeyMarker>\n"
-                             "   <Prefix>string</Prefix>\n"
-                             "   <Delimiter>string</Delimiter>\n"
-                             "   <NextUploadIdMarker>string</NextUploadIdMarker>\n"
-                             "   <MaxUploads>integer</MaxUploads>\n"
-                             "   <IsTruncated>boolean</IsTruncated>\n"
-                             "   <Upload>\n"
-                             "      <ChecksumAlgorithm>string</ChecksumAlgorithm>\n"
-                             "      <Initiated>timestamp</Initiated>\n"
-                             "      <Initiator>\n"
-                             "         <DisplayName>string</DisplayName>\n"
-                             "         <ID>string</ID>\n"
-                             "      </Initiator>\n"
-                             "      <Key>string</Key>\n"
-                             "      <Owner>\n"
-                             "         <DisplayName>string</DisplayName>\n"
-                             "         <ID>string</ID>\n"
-                             "      </Owner>\n"
-                             "      <StorageClass>string</StorageClass>\n"
-                             "      <UploadId>string</UploadId>\n"
-                             "   </Upload>\n"
-                             "   <CommonPrefixes>\n"
-                             "      <Prefix>string</Prefix>\n"
-                             "   </CommonPrefixes>\n"
-                             "   <EncodingType>string</EncodingType>\n"
+                             "   <Bucket>" + m_orig_req.get_URI().get_bucket_id() + "</Bucket>\n"
+                             + upload_xml_string +
                              "</ListMultipartUploadsResult>"));
 
         m_res.prepare_payload();

@@ -6,17 +6,16 @@
 #include "entry_node/rest/utils/string/string_utils.h"
 #include "rest/http/models/custom_error_response_exception.h"
 
-
 namespace uh::cluster::rest
 {
 
 //------------------------------------------------------------------------------
 
-    rest_server::rest_server(server_config config, std::vector <client>& dedupe_nodes, std::vector <client>& directory_nodes) :
-        m_config(config), m_ioc(std::make_shared <boost::asio::io_context>(static_cast<int>(m_config.threads))),
+    rest_server::rest_server(entry_node_config config, std::vector <client>& dedupe_nodes, std::vector <client>& directory_nodes) :
+        m_config(config), m_ioc(std::make_shared <boost::asio::io_context>(static_cast<int>(m_config.rest_server_conf.threads))),
         m_ssl(boost::asio::ssl::context::tlsv12_client),
-        m_thread_container(m_config.threads-1),
-        m_handler (dedupe_nodes, directory_nodes)
+        m_thread_container(m_config.rest_server_conf.threads-1),
+        m_handler (dedupe_nodes, directory_nodes, m_config)
     {
         boost::asio::co_spawn(*m_ioc,
                               recover_failed_nodes (),
@@ -34,7 +33,7 @@ namespace uh::cluster::rest
                               });
 
         boost::asio::co_spawn(*m_ioc,
-                              do_listen(tcp::endpoint{m_server_address, m_config.port}),
+                              do_listen(tcp::endpoint{m_server_address, m_config.rest_server_conf.port}),
                               [](const std::exception_ptr& e)
                               {
                                   if (e)
@@ -56,7 +55,7 @@ namespace uh::cluster::rest
     {
         LOG_INFO() << "starting rest server";
 
-        for(auto i = 0 ; i < m_config.threads - 1 ; i++)
+        for(auto i = 0 ; i < m_config.rest_server_conf.threads - 1 ; i++)
             m_thread_container.emplace_back(
                     [&]
                     {
@@ -112,7 +111,7 @@ namespace uh::cluster::rest
 
                 LOG_INFO() << "sent response: " << s3_res_specific_object.base();
 
-                if(! received_request.keep_alive() )
+                if(!received_request.keep_alive() )
                 {
                     break;
                 }
