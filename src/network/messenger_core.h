@@ -205,6 +205,14 @@ public:
         co_return std::move (std::pair {h, std::move (buf)});
     }
 
+    [[nodiscard]] std::uint32_t get_buffered_read_size () const noexcept {
+        return m_read_size;
+    }
+
+    [[nodiscard]] std::uint32_t get_buffered_write_size () const noexcept {
+        return m_write_size;
+    }
+
     void clear_buffers () {
         m_write_buffers.clear();
         m_read_buffers.clear();
