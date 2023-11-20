@@ -26,6 +26,7 @@ uh::cluster::entry_node_config make_entry_node_config () {
         },
         .dedupe_node_connection_count = 2,
         .directory_connection_count = 2,
+        .max_chunk_size = 1024ul * 1024ul * 1024ul,
     };
 }
 

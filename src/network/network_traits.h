@@ -9,6 +9,8 @@
 #include "client.h"
 #include "messenger_core.h"
 #include <memory>
+#include <map>
+#include <forward_list>
 
 namespace uh::cluster {
 
@@ -68,21 +70,20 @@ void broadcast_custom (boost::asio::io_context& ioc, std::vector <std::shared_pt
 
 template <typename DataType, typename Func>
 requires requires (Func& func, messenger& m) {{func(m)} -> std::same_as <coro <void>>;}
-coro <void> send_in_chunks (messenger& m, const std::forward_list <DataType>& chunks, message_type type, size_t max_chunk_size, Func&& response_op) {
+coro <void> send_in_chunks (messenger& m, const std::list <DataType>& chunks, message_type type, size_t max_chunk_size, Func&& response_op) {
 
 
     for (const auto& c:chunks) {
         if (m.get_buffered_write_size() > max_chunk_size) {
             co_await m.send_buffers(type);
-            co_await response_op;
+            co_await response_op (m);
         }
         m.register_write_buffer(c);
     }
     if (m.get_buffered_write_size() > 0) {
         co_await m.send_buffers(type);
-        co_await response_op;
+        co_await response_op (m);
     }
-
 }
 
 } // end namespace uh::cluster

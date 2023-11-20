@@ -47,7 +47,7 @@ namespace uh::cluster::rest
     class rest_server
     {
     private:
-        server_config m_config;
+        entry_node_config m_config;
         std::shared_ptr <net::io_context> m_ioc;
         std::vector<std::thread> m_thread_container {};
         boost::asio::ssl::context m_ssl;
@@ -59,7 +59,7 @@ namespace uh::cluster::rest
         const boost::asio::ip::address m_server_address = boost::asio::ip::make_address("0.0.0.0");
 
     public:
-        rest_server(server_config config, std::vector <client>& dedupe_nodes, std::vector <client>& directory_nodes);
+        rest_server(entry_node_config config, std::vector <client>& dedupe_nodes, std::vector <client>& directory_nodes);
 
         void run();
 

@@ -6,6 +6,12 @@
 namespace uh::cluster::rest::http::model
 {
 
+    typedef struct
+    {
+        std::string object_name;
+        std::string upload_id;
+    } key_and_uploadid;
+
     class list_multi_part_uploads_response : public http_response
     {
     public:
@@ -14,11 +20,13 @@ namespace uh::cluster::rest::http::model
 
         [[nodiscard]] const http::response<http::string_body>& get_response_specific_object() override;
 
-        void add_uploadId(std::string);
+        void add_key_and_uploadid(const std::string&, const std::string&);
 
     private:
 
         void populate_response_headers();
+
+        std::vector<key_and_uploadid> m_keys_and_uploadids;
 
         bool m_bucketHasBeenSet = false;
         std::string m_bucket;

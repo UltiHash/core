@@ -39,6 +39,14 @@ namespace uh::cluster::rest::utils
             m_container.emplace(std::move(key), std::move(value));
         }
 
+        void remove(const T& value)
+        {
+            std::lock_guard<std::mutex> lock(m_mutex);
+            auto it = std::find(m_container.begin(), m_container.end(), value);
+            if (it != m_container.end())
+                m_container.erase(it);
+        }
+
         void clear()
         {
             std::lock_guard<std::mutex> lock(m_mutex);
