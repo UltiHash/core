@@ -4,6 +4,7 @@
 #include <exception>
 #include <iosfwd>
 #include <string>
+#include <cstdint>
 
 
 namespace uh::cluster {
