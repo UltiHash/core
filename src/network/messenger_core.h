@@ -6,9 +6,11 @@
 #define CORE_MESSENGER_CORE_H
 
 #include <common/error.h>
+#include "common/common.h"
 
 #include <boost/asio/ip/tcp.hpp>
 #include <boost/asio/awaitable.hpp>
+#include <boost/asio.hpp>
 #include <list>
 
 
