@@ -32,6 +32,8 @@ namespace uh::cluster::rest::http::model
     private:
         void validate_request() const;
 
+        std::shared_ptr<utils::ts_map<uint16_t, std::pair<std::string, std::string>>> m_parts_container_ptr;
+
         std::string m_completed_body {};
         std::string m_upload_id;
         std::string m_bucket_name;

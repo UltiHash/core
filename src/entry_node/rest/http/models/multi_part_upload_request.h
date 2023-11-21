@@ -24,9 +24,9 @@ namespace uh::cluster::rest::http::model
         [[nodiscard]] const std::string& get_body() override;
 
     private:
-        void validate_request() const;
 
         utils::state& m_internal_server_state;
+        std::shared_ptr<utils::ts_map<uint16_t, std::pair<std::string, std::string>>> m_parts_container_ptr;
         uint16_t m_part_number;
         std::string m_upload_id;
     };

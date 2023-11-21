@@ -13,7 +13,15 @@ namespace uh::cluster::rest::http::model
             m_bucket_name(m_uri->get_bucket_id()),
             m_object_name(m_uri->get_object_key()),
             m_upload_id(m_uri->get_query_string_value("uploadId"))
-    {}
+    {
+        m_parts_container_ptr = m_internal_server_state.get_multipart_container().find(m_upload_id);
+
+        // grab a hold of the parts map
+        if (m_parts_container_ptr == nullptr)
+        {
+            throw custom_error_response_exception(http::status::not_found, error::type::no_such_upload);
+        }
+    }
 
     complete_multi_part_upload_request::~complete_multi_part_upload_request()
     {
@@ -27,15 +35,6 @@ namespace uh::cluster::rest::http::model
 
     void complete_multi_part_upload_request::validate_request() const
     {
-        auto& multipart_container = m_internal_server_state.get_multipart_container();
-
-        // upload id should exist
-        auto iterator = multipart_container.find(m_upload_id);
-        if (iterator == multipart_container.end())
-        {
-            throw custom_error_response_exception(http::status::not_found, error::type::no_such_upload);
-        }
-
         rest::utils::parser::xml_parser parsed_xml;
         pugi::xpath_node_set object_nodes_set;
 
@@ -59,8 +58,8 @@ namespace uh::cluster::rest::http::model
             auto part_num = std::stoi(objectNode.node().child("PartNumber").child_value());
             auto etag = objectNode.node().child("ETag").child_value();
 
-            auto part_iterator = iterator->second->find(part_num);
-            if ( part_iterator == iterator->second->end() || part_iterator->second.first != etag  )
+            auto part_iterator = m_parts_container_ptr->find(part_num);
+            if ( part_iterator == m_parts_container_ptr->end() || part_iterator->second.first != etag  )
             {
                 throw custom_error_response_exception(http::status::bad_request, error::type::invalid_part);
             }
@@ -74,8 +73,8 @@ namespace uh::cluster::rest::http::model
         }
 
         // small entity
-        auto part_container_size = iterator->second->size();
-        for (const auto& part : *iterator->second)
+        auto part_container_size = m_parts_container_ptr->size();
+        for (const auto& part : *m_parts_container_ptr)
         {
             if (part.second.second.size() < 5*1024*1024 && part.first < part_container_size)
             {
@@ -88,13 +87,7 @@ namespace uh::cluster::rest::http::model
     {
         if (m_completed_body.empty())
         {
-            auto& multipart_container = m_internal_server_state.get_multipart_container();
-
-            auto iterator = multipart_container.find(m_upload_id);
-            if (iterator == multipart_container.end())
-                throw std::runtime_error("Invalid Upload ID");
-
-            for (const auto& part : *iterator->second)
+            for (const auto& part : *m_parts_container_ptr)
                 m_completed_body += part.second.second;
         }
 
@@ -103,14 +96,9 @@ namespace uh::cluster::rest::http::model
 
     std::size_t complete_multi_part_upload_request::get_body_size() const
     {
-        auto& multipart_container = m_internal_server_state.get_multipart_container();
-
-        auto iterator = multipart_container.find(m_upload_id);
-        if (iterator == multipart_container.end())
-            throw std::runtime_error("Invalid Upload ID");
 
         size_t body_size {};
-        for (const auto& part : *iterator->second)
+        for (const auto& part : *m_parts_container_ptr)
             body_size += part.second.second.length();
 
         return body_size;
@@ -118,13 +106,25 @@ namespace uh::cluster::rest::http::model
 
     void complete_multi_part_upload_request::clear_body()
     {
+        // TODO: does remove(upload_id) throw?
         m_internal_server_state.get_multipart_container().remove(m_upload_id);
 
-        auto& bucket_multiparts = m_internal_server_state.get_bucket_multiparts();
-        auto vector_itr = bucket_multiparts.find(m_bucket_name)->second->find(m_object_name)->second;
-        vector_itr->remove(m_upload_id);
-        if (vector_itr->is_empty())
-            bucket_multiparts.remove(m_bucket_name);
+//        auto& bucket_multiparts = m_internal_server_state.get_bucket_multiparts();
+//        auto vector_itr = bucket_multiparts.find(m_bucket_name)->second->find(m_object_name);
+//
+//        if (vector_itr != bucket_multiparts.find(m_bucket_name)->second->end())
+//        {
+//            vector_itr->second->remove(m_upload_id);
+//            // if there are no upload ids in the object map , remove the object map
+//            if (vector_itr->second->is_empty())
+//                bucket_multiparts.find(m_bucket_name)->second->remove(m_object_name);
+//        }
+//
+//        // if there are no objects in bucket remove the whole bucket
+//        if (bucket_multiparts.find(m_bucket_name)->second->is_empty())
+//        {
+//            bucket_multiparts.remove(m_bucket_name);
+//        }
     }
 
     void complete_multi_part_upload_request::validate_request_specific_criteria()
