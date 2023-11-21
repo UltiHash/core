@@ -27,7 +27,7 @@ coro <std::map <int, ResultType>> broadcast_gather_custom (boost::asio::io_conte
     std::mutex mut;
     for (int id = 0; id < nodes.size(); id++) {
         boost::asio::co_spawn(ioc,
-                              [&func, &nodes, &result_map, &waiter, &mut, id] () -> coro <message_type> {
+                              [&func, &nodes, &result_map, &waiter, &mut, id] () -> coro <void> {
                                     auto m = nodes[id]->acquire_messenger();
 
                                     auto res = co_await func (std::move (m), id);
@@ -36,8 +36,16 @@ coro <std::map <int, ResultType>> broadcast_gather_custom (boost::asio::io_conte
                                     if (result_map.size() == nodes.size()) {
                                         waiter.expires_at(boost::asio::steady_timer::time_point::min());
                                     }
-                                    co_return SUCCESS;
-        }, boost::asio::detached);
+        }, [] (const std::exception_ptr& eptr) {
+            if (eptr) {
+                try {
+                    std::rethrow_exception(eptr);
+                }
+                catch (std::exception& e) {
+                    throw e;
+                }
+            }
+        });
     }
 
     co_await waiter.async_wait(as_tuple(boost::asio::use_awaitable));
@@ -54,7 +62,16 @@ void broadcast_custom (boost::asio::io_context& ioc, std::vector <std::shared_pt
     }
 
     for (int id = 0; id < nodes.size(); id++) {
-        boost::asio::co_spawn(ioc, func(nodes[id].get()->acquire_messenger(), id), boost::asio::detached);
+        boost::asio::co_spawn(ioc, func(nodes[id].get()->acquire_messenger(), id), [] (const std::exception_ptr& eptr) {
+            if (eptr) {
+                try {
+                    std::rethrow_exception(eptr);
+                }
+                catch (std::exception& e) {
+                    throw e;
+                }
+            }
+        });
     }
 }
 
