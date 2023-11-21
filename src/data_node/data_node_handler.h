@@ -95,7 +95,9 @@ private:
 
     coro <void> handle_read_address (messenger &m, const messenger::header& h) {
         const auto resp = co_await m.recv_address(h);
-        const auto read_size = std::accumulate (resp.sizes.cbegin(), resp.sizes.cend(), 0);
+
+        const auto read_size = std::accumulate (resp.sizes.cbegin(), resp.sizes.cend(), 0ul);
+
         ospan <char> buffer (read_size);
         size_t offset = 0;
         for (int i = 0; i < resp.size(); i++) {

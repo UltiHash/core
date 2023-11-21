@@ -19,12 +19,16 @@ namespace uh::cluster {
 template <typename T>
 using coro =  boost::asio::awaitable <T>;
 
+using size_type = size_t;
+
 class messenger_core {
+
+
 public:
 
     struct header {
         message_type type;
-        uint32_t size;
+        size_type size;
     };
 
     messenger_core (const std::shared_ptr <boost::asio::io_context>& ioc, const std::string& address, const int port):
@@ -56,7 +60,7 @@ public:
 
     template <typename T>
     requires (std::is_arithmetic_v <T> or std::is_enum_v <T>)
-    inline void register_read_buffer (T* t, std::uint32_t size) {
+    inline void register_read_buffer (T* t, size_type size) {
         m_read_buffers.emplace_back (t, size * sizeof (T));
         m_read_size += size * sizeof (T);
     }
@@ -84,7 +88,7 @@ public:
 
     template <typename T>
     requires (std::is_arithmetic_v <T> or std::is_enum_v <T>)
-    inline void register_write_buffer (const T* t, std::uint32_t size) {
+    inline void register_write_buffer (const T* t, size_type size) {
         m_write_buffers.emplace_back (t, size * sizeof (T));
         m_write_size += size * sizeof (T);
     }
@@ -161,7 +165,7 @@ public:
     }
 
     coro <void> send (const message_type type, std::span <const char> data) {
-        const auto size = static_cast <uint32_t> (data.size());
+        const auto size = static_cast <size_type> (data.size());
 
         std::vector <boost::asio::const_buffer> buffers {
                 {&type, sizeof (type)},
@@ -174,7 +178,7 @@ public:
     }
 
     coro <header> recv (std::span <char> buffer) {
-        uint32_t size = 0;
+        size_type size = 0;
         message_type type;
         std::vector <boost::asio::mutable_buffer> buffers {
                 {&type, sizeof (type)},
@@ -211,8 +215,8 @@ private:
 
     std::list <boost::asio::mutable_buffer> m_read_buffers;
     std::list <boost::asio::const_buffer> m_write_buffers;
-    std::uint32_t m_read_size = 0;
-    std::uint32_t m_write_size = 0;
+    size_type m_read_size = 0;
+    size_type m_write_size = 0;
 
     std::shared_ptr <boost::asio::io_context> m_ioc;
 
