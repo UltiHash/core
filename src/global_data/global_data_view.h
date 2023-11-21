@@ -450,6 +450,7 @@ public:
 
     void create_data_node_connections (const std::shared_ptr <boost::asio::io_context>& io_service, int connection_count, const bool use_id_as_port_offset) {
 
+        LOG_INFO() << "before create connections to " << m_cluster_map.m_roles.at(DATA_NODE).size()  << "number of data nodes";
         m_io_service = io_service;
 
         if (m_cluster_map.m_roles.at(DATA_NODE).size() < m_ec->get_minimum_node_count()) [[unlikely]] {
@@ -460,6 +461,7 @@ public:
 
         for (const auto& data_node: m_cluster_map.m_roles.at(DATA_NODE)) {
             uint16_t port = m_cluster_map.m_cluster_conf.data_node_conf.server_conf.port;
+            LOG_INFO() << "connecting to data node " << data_node.second << " port " << port;
             if(use_id_as_port_offset) {
                 port += data_node.first;
             }
@@ -473,7 +475,10 @@ public:
                 m_data_node_offsets.emplace(offset, std::move(cl));
             }
             i++;
+            LOG_INFO() << "connected";
         }
+
+        LOG_INFO() << "after connection";
 
     }
 
