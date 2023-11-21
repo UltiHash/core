@@ -6,7 +6,6 @@
 #include <string>
 #include <cstdint>
 
-
 namespace uh::cluster {
 
 class error {

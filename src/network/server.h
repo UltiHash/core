@@ -54,15 +54,35 @@ namespace uh::cluster
 
         void run() {
             LOG_INFO() << m_node_name << " starting server";
+            std::exception_ptr excp_ptr;
 
             for (auto i = 0; i < m_config.threads - 1; i++)
                 m_thread_container.emplace_back(
                         [&] {
-                            m_ioc->run();
+                            try {
+                                m_ioc->run();
+                            } catch
+                            (std::exception& e) {
+                                excp_ptr = std::current_exception();
+                            }
                         });
 
             // the calling thread is also running the I/O service
-            m_ioc->run();
+            try {
+                m_ioc->run();
+            } catch
+                    (std::exception& e) {
+                excp_ptr = std::current_exception();
+            }
+
+            if (excp_ptr) {
+                try {
+                    std::rethrow_exception(excp_ptr);
+                }
+                catch (std::exception& e) {
+                    throw e;
+                }
+            }
         }
 
         void stop() {
