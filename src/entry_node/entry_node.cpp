@@ -30,15 +30,21 @@ entry_node::run()
 void entry_node::create_connections() {
 
     for (const auto& dedupe_node: m_cluster_map.m_roles.at(DEDUPE_NODE)) {
+        LOG_INFO() << "connecting to " << dedupe_node.second << " : " << m_cluster_map.m_cluster_conf.dedupe_node_conf.server_conf.port;
         m_dedupe_nodes.emplace_back (m_rest_server.get_executor(), dedupe_node.second,
                                      m_cluster_map.m_cluster_conf.dedupe_node_conf.server_conf.port,
                                      m_cluster_map.m_cluster_conf.entry_node_conf.dedupe_node_connection_count);
+        LOG_INFO() << "connected to " << dedupe_node.second << " : " << m_cluster_map.m_cluster_conf.dedupe_node_conf.server_conf.port;
     }
 
     for (const auto& directory: m_cluster_map.m_roles.at(DIRECTORY_NODE)) {
+        LOG_INFO() << "connecting to " << directory.second << " : " << m_cluster_map.m_cluster_conf.dedupe_node_conf.server_conf.port;
+
         m_directory_nodes.emplace_back(m_rest_server.get_executor(), directory.second,
                                        m_cluster_map.m_cluster_conf.directory_node_conf.server_conf.port,
                                        m_cluster_map.m_cluster_conf.entry_node_conf.directory_connection_count);
+        LOG_INFO() << "connected to " << directory.second << " : " << m_cluster_map.m_cluster_conf.dedupe_node_conf.server_conf.port;
+
     }
 }
 
