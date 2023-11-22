@@ -14,10 +14,10 @@ namespace uh::cluster::rest::utils
         std::mutex m_mutex {};
 
     public:
-        void emplace(T key, Y value)
+        std::pair<typename std::unordered_map<T,Y>::iterator, bool> emplace(T key, Y value)
         {
             std::lock_guard<std::mutex> lock(m_mutex);
-            m_container.emplace(std::move(key), std::move(value));
+            return m_container.emplace(std::move(key), std::move(value));
         }
 
         void remove(const T& key)
@@ -26,10 +26,24 @@ namespace uh::cluster::rest::utils
             m_container.erase(key);
         }
 
-        std::unordered_map<T,Y>::iterator find(const T& key)
+        Y get_value(const T& key)
         {
             std::lock_guard<std::mutex> lock(m_mutex);
-            return m_container.find(key);
+            auto itr =  m_container.find(key);
+            if (itr != m_container.end())
+            {
+                return itr->second;
+            }
+            else
+            {
+                return {};
+            }
+        }
+
+        std::unordered_map<T,Y>::iterator find_iterator(const T& key)
+        {
+            std::lock_guard<std::mutex> lock(m_mutex);
+            return  m_container.find(key);
         }
 
         std::unordered_map<T,Y>::iterator begin()

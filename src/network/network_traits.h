@@ -9,6 +9,8 @@
 #include "client.h"
 #include "messenger_core.h"
 #include <memory>
+#include <map>
+#include <forward_list>
 
 namespace uh::cluster {
 

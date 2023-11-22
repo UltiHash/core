@@ -48,6 +48,7 @@ enum message_type: uint8_t {
     DIR_DELETE_BUCKET_RESP = 42,
     READ_ADDRESS_REQ = 43,
     READ_ADDRESS_RESP = 44,
+    DIR_DELETE_OBJ_REQ = 45,
 };
 
 enum role: uint8_t {

@@ -4,6 +4,7 @@
 #include <exception>
 #include <iosfwd>
 #include <string>
+#include <utility>
 #include <cstdint>
 
 namespace uh::cluster {
@@ -14,6 +15,8 @@ public:
         success = 0,
         unknown = 1,
         bucket_not_found = 2,
+        object_not_found = 3,
+        bucket_not_empty = 4,
     };
 
     error(type t = unknown, const std::string& message = "");
@@ -33,7 +36,7 @@ private:
 class error_exception : public std::exception {
 public:
     error_exception(uh::cluster::error e = uh::cluster::error())
-        : m_error(e) {
+        : m_error(std::move(e)) {
     }
 
     const char* what() const noexcept override;

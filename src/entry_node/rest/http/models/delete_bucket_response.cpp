@@ -13,12 +13,6 @@ namespace uh::cluster::rest::http::model
     const http::response<http::string_body>& delete_bucket_response::get_response_specific_object()
     {
 
-        if(m_errorHasBeenSet)
-        {
-            m_error.prepare_payload();
-            return m_error;
-        }
-
         m_res.prepare_payload();
         return m_res;
 

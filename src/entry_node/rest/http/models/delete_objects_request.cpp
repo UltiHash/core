@@ -1,4 +1,6 @@
 #include "delete_objects_request.h"
+#include "entry_node/rest/utils/parser/xml_parser.h"
+#include "custom_error_response_exception.h"
 
 namespace uh::cluster::rest::http::model
 {
@@ -60,6 +62,16 @@ namespace uh::cluster::rest::http::model
         std::map<std::string, std::string> headers;
 
         return headers;
+    }
+
+    void delete_objects_request::parse_and_check_xml() const
+    {
+
+    }
+
+    void delete_objects_request::validate_request_specific_criteria()
+    {
+        parse_and_check_xml();
     }
 
 } // uh::cluster::http::rest::model

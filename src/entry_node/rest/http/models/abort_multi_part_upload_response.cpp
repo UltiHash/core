@@ -15,12 +15,6 @@ namespace uh::cluster::rest::http::model
     const http::response<http::string_body>& abort_multi_part_upload_response::get_response_specific_object()
     {
 
-        if(m_errorHasBeenSet)
-        {
-            m_error.prepare_payload();
-            return m_error;
-        }
-
         if (m_requestChargedHasBeenSet)
         {
             m_res.set("x-amz-request-charged",m_requestCharged);

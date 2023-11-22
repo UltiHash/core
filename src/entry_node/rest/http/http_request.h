@@ -47,6 +47,10 @@ namespace uh::cluster::rest::http
 
         virtual ~http_request() = default;
 
+        [[maybe_unused]] virtual void validate_request_specific_criteria() { };
+
+        [[nodiscard]] virtual inline std::size_t get_body_size() const { return m_body.size(); }
+
         [[nodiscard]] virtual http_request_type get_request_name() const = 0;
 
         [[nodiscard]] virtual std::map<std::string, std::string> get_request_specific_headers() const = 0;
@@ -54,8 +58,6 @@ namespace uh::cluster::rest::http
         virtual coro<void> read_body(tcp_stream& stream, boost::beast::flat_buffer& buffer);
 
         [[nodiscard]] virtual inline const std::string& get_body() { return m_body; }
-
-        [[nodiscard]] virtual inline std::size_t get_body_size() const { return m_body.size(); }
 
         [[nodiscard]] std::map<std::string, std::string> get_headers() const;
 

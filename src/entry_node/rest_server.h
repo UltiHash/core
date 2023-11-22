@@ -25,9 +25,7 @@
 #include "network/client.h"
 #include "entry_node/rest/http/http_request.h"
 #include "rest/http/http_response.h"
-#include "entry_node/rest/utils/containers/ts_unordered_map.h"
-#include "entry_node/rest/utils/containers/ts_map.h"
-
+#include "entry_node/rest/utils/containers/internal_server_state.h"
 
 //------------------------------------------------------------------------------
 
@@ -49,20 +47,19 @@ namespace uh::cluster::rest
     class rest_server
     {
     private:
-        server_config m_config;
+        entry_node_config m_config;
         std::shared_ptr <net::io_context> m_ioc;
         std::vector<std::thread> m_thread_container {};
         boost::asio::ssl::context m_ssl;
         entry_node_rest_handler m_handler;
         std::promise <message_type> m_recover_response;
-        bool m_server_busy = false;
 
-        rest::utils::ts_unordered_map<std::string, std::shared_ptr<utils::ts_map<uint16_t, std::string>>> m_uomap_multipart;
+        utils::state m_internal_server_state;
 
         const boost::asio::ip::address m_server_address = boost::asio::ip::make_address("0.0.0.0");
 
     public:
-        rest_server(server_config config, std::vector <client>& dedupe_nodes, std::vector <client>& directory_nodes);
+        rest_server(entry_node_config config, std::vector <client>& dedupe_nodes, std::vector <client>& directory_nodes);
 
         void run();
 

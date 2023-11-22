@@ -13,46 +13,41 @@ namespace uh::cluster::rest::http::model
     {
         const auto& header_list = recv_req.get();
 
-        std::string delimiter = m_uri->get_query_string_value("delimiter");
-        if (!delimiter.empty())
+        auto URI = *m_uri;
+
+        if (URI.query_string_exists("prefix"))
         {
-            m_delimiter  = std::move(delimiter);
-            m_delimiterHasBeenSet = true;
+            m_prefix = URI.get_query_string_value("prefix");
+            if (!m_prefix.empty())
+                m_prefixHasBeenSet = true;
         }
 
-        std::string encoding_type = m_uri->get_query_string_value("encoding-type");
-        if (!encoding_type.empty())
+        if (URI.query_string_exists("delimiter"))
         {
-            m_encodingType  = std::move(encoding_type);
-            m_encodingTypeHasBeenSet = true;
+            m_delimiter = URI.get_query_string_value("delimiter");
+            if (!m_delimiter.empty())
+                m_delimiterHasBeenSet = true;
         }
 
-        std::string key_marker = m_uri->get_query_string_value("key-marker");
-        if (!key_marker.empty())
+        if (URI.query_string_exists("encoding-type"))
         {
-            m_keyMarker = std::move(key_marker);
-            m_keyMarkerHasBeenSet = true;
+            m_encodingType = URI.get_query_string_value("encoding-type");
+            if (!m_encodingType.empty())
+                m_encodingTypeHasBeenSet = true;
         }
 
-        std::string max_uploads = m_uri->get_query_string_value("max-uploads");
-        if (!max_uploads.empty())
+        if (URI.query_string_exists("key-marker"))
         {
-            m_maxUploads  = std::stoi(max_uploads);
-            m_maxUploadsHasBeenSet = true;
+            m_keyMarker = URI.get_query_string_value("key-marker");
+            if (!m_keyMarker.empty())
+                m_keyMarkerHasBeenSet = true;
         }
 
-        std::string prefix = m_uri->get_query_string_value("prefix");
-        if (!prefix.empty())
+        if (URI.query_string_exists("max-uploads"))
         {
-            m_prefix  = std::move(prefix);
-            m_prefixHasBeenSet = true;
-        }
-
-        std::string upload_id = m_uri->get_query_string_value("upload-id-marker");
-        if (!upload_id.empty())
-        {
-            m_uploadIdMarker  = std::move(upload_id);
-            m_uploadIdMarkerHasBeenSet = true;
+            m_maxUploads = std::stoi(URI.get_query_string_value("max-uploads"));
+            if (m_maxUploads > -1)
+                m_maxUploadsHasBeenSet = true;
         }
 
         const auto& request_payer_l = header_list.find("x-amz-request-payer");
