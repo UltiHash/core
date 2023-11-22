@@ -259,8 +259,12 @@ public:
         try
         {
             res = std::make_unique<http::model::put_object_response>(req);
-            auto body_size = req.get_body_size();
 
+            std::chrono::time_point <std::chrono::steady_clock> timer;
+            const auto start = std::chrono::steady_clock::now();
+
+            auto body_size = req.get_body_size();
+            const auto size_mb = static_cast <double> (body_size) / static_cast <double> (1024ul * 1024ul);
             auto m_dedup = m_dedupe_nodes.at(get_round_robin_index(m_dedupe_node_index, m_dedupe_nodes.size())).acquire_messenger();
 
             dedupe_response resp;
@@ -272,6 +276,9 @@ public:
             {
                 resp = {.effective_size = 0, .addr = address()};
             }
+
+            auto effective_size = static_cast <double> (resp.effective_size) / static_cast <double> (1024ul * 1024ul);
+            auto space_saving = 1.0 - static_cast <double> (resp.effective_size) / static_cast <double> (body_size);
 
             auto m_dir = m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size())).acquire_messenger();
             const directory_message dir_req
@@ -286,6 +293,21 @@ public:
 
             rest::utils::hashing::MD5 md5;
             res->set_etag(md5.calculateMD5(req.get_body()));
+
+            LOG_INFO() << "original size " << size_mb << " MB";
+            LOG_INFO() << "effective size " << effective_size << " MB";
+            LOG_INFO() << "space saving " << space_saving;
+            const auto stop = std::chrono::steady_clock::now ();
+            const std::chrono::duration <double> duration = stop - start;
+            const auto bandwidth = size_mb / duration.count();
+            LOG_INFO() << "integration duration " << duration.count() << " s";
+            LOG_INFO() << "integration bandwidth " << bandwidth << " MB/s";
+
+            res->set_size(size_mb);
+            res->set_effective_size(effective_size);
+            res->set_space_savings(space_saving);
+            res->set_bandwidth(bandwidth);
+
         }
         catch (const error_exception& e)
         {
