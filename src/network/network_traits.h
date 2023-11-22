@@ -26,31 +26,31 @@ coro <std::map <int, ResultType>> broadcast_gather_custom (boost::asio::io_conte
 
     std::map <int, ResultType> result_map;
 
-    //std::cout << "bc start" << std::endl;
-
     std::mutex mut;
     for (int id = 0; id < nodes.size(); id++) {
         boost::asio::co_spawn(ioc,
-                              [&func, &nodes, &result_map, &waiter, &mut, id] () -> coro <message_type> {
-                                    //std::cout << "before acquire " << id << std::endl;
+                              [&func, &nodes, &result_map, &waiter, &mut, id] () -> coro <void> {
                                     auto m = nodes[id]->acquire_messenger();
-                                    //std::cout << "before co await func " << id  << std::endl;
 
                                     auto res = co_await func (std::move (m), id);
                                     std::lock_guard lk (mut);
                                     result_map.emplace(id, std::move (res));
-                                    //std::cout << "after co await func " << id << " count " << new_val << std::endl;
                                     if (result_map.size() == nodes.size()) {
                                         waiter.expires_at(boost::asio::steady_timer::time_point::min());
-                                        //std::cout << "after expire " << id << std::endl;
                                     }
-                                    co_return SUCCESS;
-        }, boost::asio::detached);
+        }, [] (const std::exception_ptr& eptr) {
+            if (eptr) {
+                try {
+                    std::rethrow_exception(eptr);
+                }
+                catch (std::exception& e) {
+                    throw e;
+                }
+            }
+        });
     }
 
-    //std::cout << "before wait" << std::endl;
     co_await waiter.async_wait(as_tuple(boost::asio::use_awaitable));
-    //std::cout << "after wait" << std::endl;
 
     co_return result_map;
 }
@@ -64,7 +64,16 @@ void broadcast_custom (boost::asio::io_context& ioc, std::vector <std::shared_pt
     }
 
     for (int id = 0; id < nodes.size(); id++) {
-        boost::asio::co_spawn(ioc, func(nodes[id].get()->acquire_messenger(), id), boost::asio::detached);
+        boost::asio::co_spawn(ioc, func(nodes[id].get()->acquire_messenger(), id), [] (const std::exception_ptr& eptr) {
+            if (eptr) {
+                try {
+                    std::rethrow_exception(eptr);
+                }
+                catch (std::exception& e) {
+                    throw e;
+                }
+            }
+        });
     }
 }
 

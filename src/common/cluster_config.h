@@ -54,11 +54,11 @@ struct global_data_view_config {
 struct dedupe_config {
     std::size_t min_fragment_size{};
     std::size_t max_fragment_size{};
-    std::size_t sampling_interval{};
     std::size_t write_cache_size_per_dn{};
     server_config server_conf{};
     int data_node_connection_count{};
     set_config set_conf;
+    //dedupe_set_config dedupe_set_conf;
 };
 
 struct data_node_config {

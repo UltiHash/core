@@ -173,10 +173,8 @@ public:
             {
                 case error::bucket_not_found:
                     throw http::model::custom_error_response_exception(b_http::status::not_found, http::model::error::bucket_not_found);
-                    break;
                 case error::bucket_not_empty:
                     throw http::model::custom_error_response_exception(b_http::status::conflict, http::model::error::bucket_not_empty);
-                    break;
                 default:
                     throw http::model::custom_error_response_exception(b_http::status::internal_server_error);
             }
@@ -226,7 +224,6 @@ public:
             {
                 case error::bucket_not_found:
                     throw http::model::custom_error_response_exception(b_http::status::not_found, http::model::error::bucket_not_found);
-                    break;
                 default:
                     throw http::model::custom_error_response_exception(b_http::status::internal_server_error);
             }
@@ -282,29 +279,17 @@ public:
             res = std::make_unique<http::model::put_object_response>(req);
             auto body_size = req.get_body_size();
 
-            const auto start = std::chrono::steady_clock::now();
-            const auto size_mb = static_cast <double> (body_size) / static_cast <double> (1024ul * 1024ul);
-
             auto m_dedup = m_dedupe_nodes.at(get_round_robin_index(m_dedupe_node_index, m_dedupe_nodes.size())).acquire_messenger();
-            std::pair <messenger::header, dedupe_response> resp;
-            if(body_size > 0) [[likely]] {
-                co_await m_dedup.get().send (DEDUPE_REQ, req.get_body());
-                const auto h_dedup = co_await m_dedup.get().recv_header();
-                resp = co_await m_dedup.get().recv_dedupe_response(h_dedup);
-            } else [[unlikely]] {
-                resp = std::make_pair<messenger::header, dedupe_response>({.type = DEDUPE_RESP, .size = 0},
-                                                                          {.effective_size = 0, .addr = address()});
-            }
-
-            auto effective_size = static_cast <double> (resp.second.effective_size) / static_cast <double> (1024ul * 1024ul);
-            auto space_saving = 1.0 - static_cast <double> (resp.second.effective_size) / static_cast <double> (body_size);
+            co_await m_dedup.get().send (DEDUPE_REQ, req.get_body());
+            const auto h_dedup = co_await m_dedup.get().recv_header();
+            auto resp = co_await m_dedup.get().recv_dedupe_response(h_dedup);
 
             auto m_dir = m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size())).acquire_messenger();
             const directory_message dir_req
                     {
                             .bucket_id = req.get_URI().get_bucket_id(),
                             .object_key = std::make_unique <std::string> (req.get_URI().get_object_key()),
-                            .addr = std::make_unique <address> (std::move (resp.second.addr)),
+                            .addr = std::make_unique <address> (std::move (resp.addr)),
                     };
 
             co_await m_dir.get().send_directory_message (DIR_PUT_OBJ_REQ, dir_req);
@@ -318,27 +303,12 @@ public:
                 throw std::runtime_error("Failed to add the fragment address of object " + dir_req.bucket_id + "/" + *dir_req.object_key + " to the directory.\n" + "Error: \n" + msg);
             }
 
-            rest::utils::hashing::MD5 md5;
-            res->set_etag(md5.calculateMD5(req.get_body()));
-
-            LOG_INFO() << "original size " << size_mb << " MB";
-            LOG_INFO() << "effective size " << effective_size << " MB";
-            LOG_INFO() << "space saving " << space_saving;
-            const auto stop = std::chrono::steady_clock::now ();
-            const std::chrono::duration <double> duration = stop - start;
-            const auto bandwidth = size_mb / duration.count();
-            LOG_INFO() << "integration duration " << duration.count() << " s";
-            LOG_INFO() << "integration bandwidth " << bandwidth << " MB/s";
-
-            res->set_size(size_mb);
-            res->set_effective_size(effective_size);
-            res->set_space_savings(space_saving);
-            res->set_bandwidth(bandwidth);
+            res->set_etag("CustomEtag");
         }
         catch(const std::exception& e)
         {
             LOG_ERROR() << e.what();
-            throw http::model::custom_error_response_exception(b_http::status::not_found);
+            res->set_error(boost::beast::http::response<boost::beast::http::string_body>{boost::beast::http::status::not_found, 11});
         }
 
         co_return std::move(res);
@@ -518,39 +488,13 @@ public:
         auto m_dedup = m_dedupe_nodes.at(get_round_robin_index(m_dedupe_node_index, m_dedupe_nodes.size())).acquire_messenger();
         std::pair <messenger::header, dedupe_response> resp;
         if(body_size > 0) [[likely]] {
-            co_await m_dedup.get().send (DEDUPE_REQ, req.get_body());
+            co_await m_dedup.get().send(DEDUPE_REQ, req.get_body());
             const auto h_dedup = co_await m_dedup.get().recv_header();
             resp = co_await m_dedup.get().recv_dedupe_response(h_dedup);
         } else [[unlikely]] {
             resp = std::make_pair<messenger::header, dedupe_response>({.type = DEDUPE_RESP, .size = 0},
                                                                       {.effective_size = 0, .addr = address()});
         }
-
-//        address address_collect;
-//        size_t effective_size_collect = 0;
-//        if(body_size > 0) [[likely]]
-//        {
-//            auto& multipart_container = state.get_multipart_container();
-//            auto itr = multipart_container.find(req.get_URI().get_query_parameters().at("uploadId"));
-//
-//            size_t counter = 0;
-//            std::list<std::string_view> list_string_view;
-//
-//            for (const auto& pair : *itr->second)
-//            {
-//                list_string_view.emplace_back(pair.second.second);
-//
-//            }
-//
-//            auto effective_address_callback = [&address_collect, &effective_size_collect](messenger& m_dedup) -> coro <void> {
-//                const auto h_dedup = co_await m_dedup.recv_header();
-//                auto resp = co_await m_dedup.recv_dedupe_response(h_dedup);
-//                address_collect.append_address(resp.second.addr);
-//                effective_size_collect += resp.second.effective_size;
-//            };
-//
-//            co_await send_in_chunks(m_dedup.get(), list_string_view, DEDUPE_REQ, m_entry_node_config.max_chunk_size, effective_address_callback );
-//        }
 
         auto effective_size = static_cast <double> (resp.second.effective_size) / static_cast <double> (1024ul * 1024ul);
         auto space_saving = 1.0 - static_cast <double> (resp.second.effective_size) / static_cast <double> (body_size);

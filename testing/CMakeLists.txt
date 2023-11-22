@@ -49,6 +49,10 @@ file(CREATE_LINK
 
 set_directory_properties(PROPERTIES ADDITIONAL_CLEAN_FILES "${TESTING_VENV_DIR}")
 
+add_executable(${PROJECT_NAME}-client ${CMAKE_CURRENT_SOURCE_DIR}/client/main.cpp)
+target_link_libraries(${PROJECT_NAME}-client ${PROJECT_NAME}_OBJECTS ${${PROJECT_NAME}_LINK_LIBRARIES})
+target_include_directories(${PROJECT_NAME}-client PRIVATE ${${PROJECT_NAME}_INCLUDE_DIRS})
+
 if (${enable_e2e_test})
     add_test(NAME pytest_e2e
             WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}

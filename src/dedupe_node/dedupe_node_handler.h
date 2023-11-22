@@ -11,9 +11,8 @@
 #include "common/cluster_config.h"
 #include "common/protocol_handler.h"
 #include "dedupe_write_cache.h"
-#include "set_comparator_traits.h"
-
-
+#include "dedupe_set.h"
+#include "paged_redblack_tree.h"
 namespace uh::cluster {
 
 class dedupe_node_handler: public protocol_handler {
@@ -23,18 +22,31 @@ public:
     dedupe_node_handler (dedupe_config dedupe_conf, global_data_view& storage):
         m_dedupe_conf (std::move(dedupe_conf)),
         m_fragment_set (m_dedupe_conf.set_conf, storage),
-        m_storage (storage) {}
+        m_storage (storage)
+        //m_dedupe_set (m_dedupe_conf.dedupe_set_conf, m_storage)
+        {}
 
     coro <void> handle (messenger m) override {
 
         for (;;) {
-            const auto message_header = co_await m.recv_header();
-            switch (message_header.type) {
-                case DEDUPE_REQ:
-                    co_await handle_dedupe(m, message_header);
-                    break;
-                default:
-                    throw std::invalid_argument("Invalid message type!");
+            std::optional<error> err;
+
+            try {
+                const auto message_header = co_await m.recv_header();
+                switch (message_header.type) {
+                    case DEDUPE_REQ:
+                        co_await handle_dedupe(m, message_header);
+                        break;
+                    default:
+                        throw std::invalid_argument("Invalid message type!");
+                }
+            } catch (const error_exception& e) {
+                err = e.error();
+            } catch (const std::exception& e) {
+                err = error(error::unknown, e.what());
+            }
+            if (err) {
+                co_await m.send_error (*err);
             }
         }
     }
@@ -47,6 +59,7 @@ private:
             throw std::length_error ("Empty data sent do the dedupe node");
         }
 
+
         ospan<char> data(h.size);
         m.register_read_buffer(data);
         co_await m.recv_buffers(h);
@@ -56,11 +69,12 @@ private:
 
     }
 
+
     coro <dedupe_response> deduplicate (std::string_view data) {
 
         dedupe_response result {.addr = address {}};
         auto integration_data = data;
-        dedupe_write_cache cache(integration_data, m_storage, m_dedupe_conf);
+        //dedupe_write_cache cache(integration_data, m_storage, m_dedupe_conf);
         while (!integration_data.empty()) {
             const auto f = co_await m_fragment_set.find(integration_data);
             if (f.match) {
@@ -134,7 +148,7 @@ private:
     dedupe::paged_redblack_tree <dedupe::set_full_comparator> m_fragment_set;
     global_data_view& m_storage;
     std::mutex m_mutex;
-
+    // dedupe_set m_dedupe_set;
 };
 
 } // end namespace uh::cluster

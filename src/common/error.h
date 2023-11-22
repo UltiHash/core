@@ -5,7 +5,7 @@
 #include <iosfwd>
 #include <string>
 #include <utility>
-
+#include <cstdint>
 
 namespace uh::cluster {
 
