@@ -61,7 +61,23 @@ namespace uh::cluster::rest::utils
 
         typename std::map<T,Y>::iterator find(const T& key)
         {
+            std::lock_guard<std::mutex> lock(m_mutex);
             return m_container.find(key);
+        }
+
+        Y get_value(const T& key)
+        {
+            std::lock_guard<std::mutex> lock(m_mutex);
+            auto itr = m_container.find(key);
+
+            if (itr != m_container.end())
+            {
+                return itr->second;
+            }
+            else
+            {
+                return {};
+            }
         }
 
         Y& operator[] (const T& key)

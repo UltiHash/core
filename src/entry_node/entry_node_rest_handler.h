@@ -633,12 +633,19 @@ public:
         std::unique_ptr<http::model::list_multi_part_uploads_response> res = std::make_unique<http::model::list_multi_part_uploads_response>(req);
 
         auto bucket_name = req.get_URI().get_bucket_id();
-        auto itr = state.get_bucket_multiparts().find(bucket_name);
-        for (const auto& pair : *itr->second)
+        auto ptr = state.get_bucket_multiparts().get_value(bucket_name);
+        if (ptr == nullptr)
         {
-            for (const auto& sec_pair : *pair.second)
+            throw http::model::custom_error_response_exception(b_http::status::not_found, http::model::error::bucket_not_found);
+        }
+        else
+        {
+            for (const auto pair : *ptr)
             {
-                res->add_key_and_uploadid(pair.first, sec_pair);
+                for (const auto& sec_pair : *pair.second)
+                {
+                    res->add_key_and_uploadid(pair.first, sec_pair);
+                }
             }
         }
 

@@ -12,18 +12,18 @@ namespace uh::cluster::rest::utils
                                    std::make_shared<ts_map<uint16_t, std::pair<std::string, std::string>>>());
 
 
-        // for listing multi-parts uploads
-        auto itr = m_current_bucket_multiparts.find(bucket_name);
-        if (itr != m_current_bucket_multiparts.end())
+        // TODO for listing multi-parts uploads  ---> is thread safe but does not give expected behaviour! Refactor this!!
+        auto ptr = m_current_bucket_multiparts.get_value(bucket_name);
+        if (ptr != nullptr)
         {
-            auto obj_ptr = itr->second->find(object_key);
-            if (obj_ptr != itr->second->end())
+            auto obj_ptr = ptr->get_value(object_key);
+            if (obj_ptr != nullptr)
             {
-                obj_ptr->second->push_back(upload_id);
+                obj_ptr->push_back(upload_id);
             }
             else
             {
-                itr->second->emplace(object_key, std::make_shared<ts_vector<std::string>>(upload_id));
+                ptr->emplace(object_key, std::make_shared<ts_vector<std::string>>(upload_id));
             }
         }
         else
@@ -31,7 +31,7 @@ namespace uh::cluster::rest::utils
             m_current_bucket_multiparts.emplace(bucket_name,
                                            std::make_shared<ts_map<std::string, std::shared_ptr<ts_vector<std::string>>>>
                                            (object_key));
-            m_current_bucket_multiparts.find(bucket_name)->second->find(object_key)->second = std::make_shared<ts_vector<std::string>>(upload_id);
+            m_current_bucket_multiparts.find_iterator(bucket_name)->second->find(object_key)->second = std::make_shared<ts_vector<std::string>>(upload_id);
         }
 
         return upload_id;

@@ -14,7 +14,7 @@ namespace uh::cluster::rest::http::model
             m_object_name(m_uri->get_object_key()),
             m_upload_id(m_uri->get_query_string_value("uploadId"))
     {
-        m_parts_container_ptr = m_internal_server_state.get_multipart_container().find(m_upload_id);
+        m_parts_container_ptr = m_internal_server_state.get_multipart_container().get_value(m_upload_id);
 
         // grab a hold of the parts map
         if (m_parts_container_ptr == nullptr)
@@ -109,22 +109,30 @@ namespace uh::cluster::rest::http::model
         // TODO: does remove(upload_id) throw?
         m_internal_server_state.get_multipart_container().remove(m_upload_id);
 
-//        auto& bucket_multiparts = m_internal_server_state.get_bucket_multiparts();
-//        auto vector_itr = bucket_multiparts.find(m_bucket_name)->second->find(m_object_name);
-//
-//        if (vector_itr != bucket_multiparts.find(m_bucket_name)->second->end())
-//        {
-//            vector_itr->second->remove(m_upload_id);
-//            // if there are no upload ids in the object map , remove the object map
-//            if (vector_itr->second->is_empty())
-//                bucket_multiparts.find(m_bucket_name)->second->remove(m_object_name);
-//        }
-//
-//        // if there are no objects in bucket remove the whole bucket
-//        if (bucket_multiparts.find(m_bucket_name)->second->is_empty())
-//        {
-//            bucket_multiparts.remove(m_bucket_name);
-//        }
+        auto& bucket_multiparts = m_internal_server_state.get_bucket_multiparts();
+        auto keys_map_ptr = bucket_multiparts.get_value(m_bucket_name);
+        if (keys_map_ptr == nullptr)
+        {
+            throw custom_error_response_exception(http::status::not_found, error::type::bucket_not_found);
+        }
+
+        auto vector_ptr = keys_map_ptr->get_value(m_object_name);
+        if (vector_ptr == nullptr)
+        {
+            throw custom_error_response_exception(http::status::not_found, error::type::object_not_found);
+        }
+
+
+        vector_ptr->remove(m_upload_id);
+        // if there are no upload ids in the object map , remove the object map
+        if (vector_ptr->is_empty())
+            keys_map_ptr->remove(m_object_name);
+
+        // if there are no objects in bucket remove the whole bucket
+        if (keys_map_ptr->is_empty())
+        {
+            bucket_multiparts.remove(m_bucket_name);
+        }
     }
 
     void complete_multi_part_upload_request::validate_request_specific_criteria()

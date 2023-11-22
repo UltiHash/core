@@ -26,7 +26,7 @@ namespace uh::cluster::rest::utils
             m_container.erase(key);
         }
 
-        Y find(const T& key)
+        Y get_value(const T& key)
         {
             std::lock_guard<std::mutex> lock(m_mutex);
             auto itr =  m_container.find(key);
@@ -38,6 +38,12 @@ namespace uh::cluster::rest::utils
             {
                 return {};
             }
+        }
+
+        std::unordered_map<T,Y>::iterator find_iterator(const T& key)
+        {
+            std::lock_guard<std::mutex> lock(m_mutex);
+            return  m_container.find(key);
         }
 
         std::unordered_map<T,Y>::iterator begin()

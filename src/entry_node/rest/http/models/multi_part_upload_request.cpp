@@ -13,7 +13,7 @@ namespace uh::cluster::rest::http::model
             m_part_number(std::stoi(m_uri->get_query_parameters().at("partNumber"))),
             m_upload_id(m_uri->get_query_parameters().at("uploadId"))
     {
-        m_parts_container_ptr = m_internal_server_state.get_multipart_container().find(m_upload_id);
+        m_parts_container_ptr = m_internal_server_state.get_multipart_container().get_value(m_upload_id);
 
         // grab a hold of the parts map
         if (m_parts_container_ptr == nullptr)
