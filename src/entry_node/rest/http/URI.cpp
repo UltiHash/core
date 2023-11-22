@@ -1,6 +1,7 @@
 #include "URI.h"
 #include <regex>
 #include "entry_node/rest/utils/string/string_utils.h"
+#include "entry_node/rest/http/models/custom_error_response_exception.h"
 
 namespace uh::cluster::rest::http
 {
@@ -119,7 +120,7 @@ namespace uh::cluster::rest::http
             if (m_bucket_id.empty())
                 m_bucket_id = seg;
             else
-                m_object_key = seg + '/';
+                m_object_key += seg + '/';
         }
 
         if (!m_object_key.empty())
@@ -129,11 +130,12 @@ namespace uh::cluster::rest::http
         if (!m_bucket_id.empty())
         {
             if (m_bucket_id.size() < 3 || m_bucket_id.size() > 63 )
-                throw std::runtime_error("invalid bucket name length");
+                throw rest::http::model::custom_error_response_exception(http::status::bad_request, rest::http::model::error::invalid_bucket_name);
 
-            std::regex bucket_pattern(R"(^(?!(xn--|sthree-|sthree-configurator-))(?!.*-s3alias$)(?!.*--ol-s3$)(?!^(\d{1,3}\.){3}\d{1,3}$)[a-z0-9](?!.*\.\.)[a-z0-9.-]*[a-z0-9]$)");
+            std::regex bucket_pattern(R"(^(?!(xn--|sthree-|sthree-configurator-))(?!.*-s3alias$)(?!.*--ol-s3$)(?!^(\d{1,3}\.){3}\d{1,3}$)[a-z0-9](?!.*\.\.)(?!.*[.\s-][.\s-])[a-z0-9.-]*[a-z0-9]$)");
             if (!std::regex_match(m_bucket_id, bucket_pattern))
-                throw std::runtime_error("invalid bucket name");
+                throw rest::http::model::custom_error_response_exception(http::status::bad_request, rest::http::model::error::invalid_bucket_name);
+
         }
 
     }

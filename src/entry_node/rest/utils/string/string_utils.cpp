@@ -1,9 +1,19 @@
 #include <algorithm>
 #include <cstring>
 #include "string_utils.h"
+#include <boost/url/encode.hpp>
+#include <boost/url.hpp>
 
 namespace uh::cluster::rest::utils
 {
+
+    constexpr
+    boost::urls::grammar::lut_chars
+            custom_unreserved_chars =
+            "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+            "abcdefghijklmnopqrstuvwxyz"
+            "0123456789"
+            "-._~/";
 
     std::string string_utils::to_lower(const char* source)
     {
@@ -20,30 +30,51 @@ namespace uh::cluster::rest::utils
         return ( strcmp(string1, string2) == 0 );
     }
 
-    std::string URL_encode()
+    bool string_utils::is_bool(const std::string& str_to_eval)
     {
-//        std::string escaped;
-//        escaped.fill('0');
-//        escaped << std::hex << std::uppercase;
-//
-//        size_t unsafeLength = strlen(unsafe);
-//        for (auto i = unsafe, n = unsafe + unsafeLength; i != n; ++i)
-//        {
-//            char c = *i;
-//            if (IsAlnum(c) || c == '-' || c == '_' || c == '.' || c == '~')
-//            {
-//                escaped << (char)c;
-//            }
-//            else
-//            {
-//                //this unsigned char cast allows us to handle unicode characters.
-//                escaped << '%' << std::setw(2) << int((unsigned char)c) << std::setw(0);
-//            }
-//        }
-//
-//        return escaped.str();
-        return {};
+        if (str_to_eval == "true" || str_to_eval == "TRUE" || str_to_eval == "True")
+        {
+            return true;
+        }
+        else
+        {
+            return false;
+        }
+    }
 
+    std::string string_utils::URL_encode(const std::string& str_to_encode)
+    {
+        auto encoded_string = boost::urls::encode(str_to_encode, custom_unreserved_chars);
+
+        return encoded_string;
+    }
+
+    std::vector<std::string>::iterator string_utils::find_lexically_closest(std::vector<std::string>& strings,
+                                                                    const std::string& compareTo)
+    {
+        if (strings.empty())
+        {
+            return strings.end();
+        }
+
+        if (compareTo.empty())
+        {
+            return strings.begin();
+        }
+
+        auto lexicalCompare = [](const std::string& a, const std::string& b)
+        {
+            return a < b;
+        };
+
+        auto nextDifferentItr = std::lower_bound(strings.begin(), strings.end(), compareTo, lexicalCompare);
+
+        if (nextDifferentItr != strings.end() && *nextDifferentItr == compareTo)
+        {
+            ++nextDifferentItr;
+        }
+
+        return nextDifferentItr;
     }
 
 } // uh::cluster::rest::utils

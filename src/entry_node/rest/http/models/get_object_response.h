@@ -14,7 +14,12 @@ namespace uh::cluster::rest::http::model
 
         [[nodiscard]] const http::response<http::string_body>& get_response_specific_object() override;
 
+        void set_bandwidth(double);
+
     private:
+
+        bool m_bandwidthHasBeenSet = false;
+        double m_bandwidth;
 
         bool m_deleteMarkerHasBeenSet = false;
         std::string m_deleteMarker;

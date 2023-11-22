@@ -14,7 +14,9 @@ static const std::vector<std::string> error_messages =
 {
     "success",
     "unknown",
-    "bucket does not exist",
+    "bucket does not exists",
+    "object does not exists",
+    "bucket is not empty"
 };
 
 static const std::string error_out_of_range = "error out of range";

@@ -20,14 +20,32 @@ namespace uh::cluster::rest::http::model
         m_eTag = std::move(etag);
     }
 
+    void complete_multi_part_upload_response::set_size(double size)
+    {
+        m_originalSize = size;
+        m_originalSizeHasBeenSet = true;
+    }
+
+    void complete_multi_part_upload_response::set_effective_size(double effective_size)
+    {
+        m_effectiveSize = effective_size;
+        m_effectiveSizeHasBeenSet = true;
+    }
+
+    void complete_multi_part_upload_response::set_space_savings(double space_savings)
+    {
+        m_spaceSavings = space_savings;
+        m_spaceSavingsHasBeenSet = true;
+    }
+
+    void complete_multi_part_upload_response::set_bandwidth(double bandwidth)
+    {
+        m_bandwidth = bandwidth;
+        m_bandwidthHasBeenSet = true;
+    }
+
     const http::response<http::string_body>& complete_multi_part_upload_response::get_response_specific_object()
     {
-
-        if(m_errorHasBeenSet)
-        {
-            m_error.prepare_payload();
-            return m_error;
-        }
 
         if(m_expirationHasBeenSet)
         {
@@ -59,10 +77,31 @@ namespace uh::cluster::rest::http::model
             m_res.set("x-amz-request-charged", m_requestCharged);
         }
 
+        if (m_bandwidthHasBeenSet)
+        {
+            m_res.set("uh-bandwidth-mbps", std::to_string(m_bandwidth));
+        }
+
+        if (m_originalSizeHasBeenSet)
+        {
+            m_res.set("uh-original-size-mb", std::to_string(m_originalSize));
+        }
+
+        if (m_effectiveSizeHasBeenSet)
+        {
+            m_res.set("uh-effective-size-mb", std::to_string(m_effectiveSize));
+        }
+
+        if (m_spaceSavingsHasBeenSet)
+        {
+            m_res.set("uh-space-savings-ratio", std::to_string(m_spaceSavings));
+        }
+
+
         // xml body
         set_body(std::string("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n"
                              "<CompleteMultipartUploadResult>\n"
-                             "<Location>string</Location>\n"
+                             "<Location>Berlin</Location>\n"
                              "<Bucket>" + m_orig_req.get_URI().get_bucket_id() +"</Bucket>\n"
                              "<Key>" + m_orig_req.get_URI().get_object_key() + "</Key>\n"
                              "<ETag>" + ((m_eTagHasBeenSet) ? m_eTag : "CustomEtag" ) + "</ETag>\n"

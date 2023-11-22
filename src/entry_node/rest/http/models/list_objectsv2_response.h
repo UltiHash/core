@@ -36,18 +36,21 @@ namespace uh::cluster::rest::http::model
         std::string m_prefix;
 
         bool m_delimiterHasBeenSet = false;
-        std::string m_delimiter;
+        std::string m_delimiter {};
 
-        bool m_maxKeysHasBeenSet = false;
-        int m_maxKeys;
+        bool m_maxKeysHasBeenSet = true;
+        int m_maxKeys = 1000;
 
         bool m_commonPrefixesHasBeenSet = false;
         std::vector<std::string> m_commonPrefixes;
 
+        bool m_fetchOwnerHasBeenSet = false;
+        std::string m_fetchOwner;
+
         bool m_encodingTypeHasBeenSet = false;
         std::string m_encodingType;
 
-        bool m_keyCountHasBeenSet = false;
+        bool m_keyCountHasBeenSet = true;
 
         bool m_continuationTokenHasBeenSet = false;
         std::string m_continuationToken;

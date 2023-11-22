@@ -75,6 +75,7 @@ struct entry_node_config {
     server_config rest_server_conf;
     int dedupe_node_connection_count;
     int directory_connection_count;
+    size_t max_chunk_size;
 };
 
 struct directory_node_config {
@@ -85,6 +86,7 @@ struct directory_node_config {
 
 struct cluster_config {
     int init_process_count {};
+    size_t maximum_chunk_size {};
     data_node_config data_node_conf;
     dedupe_config dedupe_node_conf;
     directory_node_config directory_node_conf;
