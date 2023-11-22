@@ -72,12 +72,6 @@ namespace uh::cluster::rest::http::model
     const http::response<http::string_body>& list_multi_part_uploads_response::get_response_specific_object()
     {
 
-        if(m_errorHasBeenSet)
-        {
-            m_error.prepare_payload();
-            return m_error;
-        }
-
         if(m_expectedBucketOwnerHasBeenSet)
         {
             m_res.set("x-amz-expected-bucket-owner", m_expectedBucketOwner);

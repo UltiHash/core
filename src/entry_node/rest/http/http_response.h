@@ -16,19 +16,13 @@ namespace uh::cluster::rest::http
         virtual ~http_response() = default;
 
         [[nodiscard]] inline const http_request& get_originating_request() const { return m_orig_req; }
-        inline void set_error() { m_errorHasBeenSet = true; }
 
         [[nodiscard]] virtual const http::response<http::string_body>& get_response_specific_object() = 0;
-        void set_error(http::response<http::string_body>);
         void set_body(std::string&&);
-        void set_error_body(std::string body);
 
     protected:
         const http_request& m_orig_req;
         http::response<http::string_body> m_res;
-
-        bool m_errorHasBeenSet = false;
-        http::response<http::string_body> m_error;
 
         bool etagHasBeenSet = false;
         std::string m_etag;

@@ -96,7 +96,6 @@ namespace uh::cluster::rest::http::model
 
     std::size_t complete_multi_part_upload_request::get_body_size() const
     {
-
         size_t body_size {};
         for (const auto& part : *m_parts_container_ptr)
             body_size += part.second.second.length();

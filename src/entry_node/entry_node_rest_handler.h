@@ -236,35 +236,16 @@ public:
     {
 
         std::unique_ptr<http::model::list_buckets_response> res;
-        try
-        {
-            res = std::make_unique<http::model::list_buckets_response>(req);
-            auto m_dir = m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size())).acquire_messenger();
-            co_await m_dir.get().send(DIR_LIST_BUCKET_REQ, {});
-            const auto h_dir = co_await m_dir.get().recv_header();
 
-            if(h_dir.type == DIR_LIST_BUCKET_RESP) [[likely]]
-            {
-                auto list_buckets_res = co_await m_dir.get().recv_directory_list_entities_message(h_dir);
-                for (const auto& bucket: list_buckets_res.entities)
-                {
-                    res->add_bucket(bucket);
-                }
-            }
-            if(h_dir.type == FAILURE) [[unlikely]]
-            {
-                std::string msg;
-                msg.resize(h_dir.size);
-                m_dir.get().register_read_buffer(msg);
-                co_await m_dir.get().recv_buffers(h_dir);
-                throw std::runtime_error("Failed to list buckets.\nError: \n" + msg);
-            }
+        res = std::make_unique<http::model::list_buckets_response>(req);
+        auto m_dir = m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size())).acquire_messenger();
+        co_await m_dir.get().send(DIR_LIST_BUCKET_REQ, {});
+        const auto h_dir = co_await m_dir.get().recv_header();
 
-        }
-        catch (const std::exception& e)
+        auto list_buckets_res = co_await m_dir.get().recv_directory_list_entities_message(h_dir);
+        for (const auto& bucket: list_buckets_res.entities)
         {
-            LOG_ERROR() << e.what();
-            throw http::model::custom_error_response_exception(b_http::status::not_found);
+            res->add_bucket(bucket);
         }
 
         co_return std::move(res);
@@ -273,6 +254,7 @@ public:
     coro <std::unique_ptr<http::http_response>> handle_put_object (http::http_request& req)
     {
         std::unique_ptr<http::model::put_object_response> res;
+        auto req_bucket_id = req.get_URI().get_bucket_id();
 
         try
         {
@@ -294,22 +276,21 @@ public:
 
             co_await m_dir.get().send_directory_message (DIR_PUT_OBJ_REQ, dir_req);
             const auto h_dir = co_await m_dir.get().recv_header();
-            if(h_dir.type == FAILURE) [[unlikely]]
-            {
-                std::string msg;
-                msg.resize(h_dir.size);
-                m_dir.get().register_read_buffer(msg);
-                co_await m_dir.get().recv_buffers(h_dir);
-                throw std::runtime_error("Failed to add the fragment address of object " + dir_req.bucket_id + "/" + *dir_req.object_key + " to the directory.\n" + "Error: \n" + msg);
-            }
 
             res->set_etag("CustomEtag");
         }
-        catch(const std::exception& e)
+        catch (const error_exception& e)
         {
-            LOG_ERROR() << e.what();
-            res->set_error(boost::beast::http::response<boost::beast::http::string_body>{boost::beast::http::status::not_found, 11});
+            LOG_ERROR() << "Failed to get bucket `" << req_bucket_id << "`: " << e;
+            switch (*e.error())
+            {
+                case error::bucket_not_found:
+                    throw http::model::custom_error_response_exception(b_http::status::not_found, http::model::error::bucket_not_found);
+                default:
+                    throw http::model::custom_error_response_exception(b_http::status::internal_server_error);
+            }
         }
+
 
         co_return std::move(res);
     }
@@ -477,6 +458,9 @@ public:
         std::unique_ptr<http::model::complete_multi_part_upload_response> res;
 
         res = std::make_unique<http::model::complete_multi_part_upload_response>(req);
+
+        // acquire the internal parts container
+        auto parts_container_ptr = state.get_multipart_container().get_value(req.get_URI().get_query_parameters().at("uploadId"));
         auto body_size = req.get_body_size();
 
         std::cout << "UPLOAD SIZE: " << req.get_body_size() << std::endl;
@@ -486,25 +470,28 @@ public:
         const auto size_mb = static_cast <double> (body_size) / static_cast <double> (1024ul * 1024ul);
 
         auto m_dedup = m_dedupe_nodes.at(get_round_robin_index(m_dedupe_node_index, m_dedupe_nodes.size())).acquire_messenger();
-        std::pair <messenger::header, dedupe_response> resp;
+        dedupe_response resp;
         if(body_size > 0) [[likely]] {
-            co_await m_dedup.get().send(DEDUPE_REQ, req.get_body());
+            for (const auto& pair : *parts_container_ptr)
+            {
+                m_dedup.get().register_write_buffer(pair.second.second);
+            }
+            co_await m_dedup.get().send_buffers(DEDUPE_REQ);
             const auto h_dedup = co_await m_dedup.get().recv_header();
             resp = co_await m_dedup.get().recv_dedupe_response(h_dedup);
         } else [[unlikely]] {
-            resp = std::make_pair<messenger::header, dedupe_response>({.type = DEDUPE_RESP, .size = 0},
-                                                                      {.effective_size = 0, .addr = address()});
+            resp = {.effective_size = 0, .addr = address()};
         }
 
-        auto effective_size = static_cast <double> (resp.second.effective_size) / static_cast <double> (1024ul * 1024ul);
-        auto space_saving = 1.0 - static_cast <double> (resp.second.effective_size) / static_cast <double> (body_size);
+        auto effective_size = static_cast <double> (resp.effective_size) / static_cast <double> (1024ul * 1024ul);
+        auto space_saving = 1.0 - static_cast <double> (resp.effective_size) / static_cast <double> (body_size);
 
         auto m_dir = m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size())).acquire_messenger();
         const directory_message dir_req
             {
                 .bucket_id = req.get_URI().get_bucket_id(),
                 .object_key = std::make_unique <std::string> (req.get_URI().get_object_key()),
-                .addr = std::make_unique <address> (std::move (resp.second.addr)),
+                .addr = std::make_unique <address> (std::move (resp.addr)),
             };
 
         co_await m_dir.get().send_directory_message (DIR_PUT_OBJ_REQ, dir_req);

@@ -13,12 +13,6 @@ namespace uh::cluster::rest::http::model
     const http::response<http::string_body>& delete_object_response::get_response_specific_object()
     {
 
-        if(m_errorHasBeenSet)
-        {
-            m_error.prepare_payload();
-            return m_error;
-        }
-
         if (m_deleteMarkerHasBeenSet)
         {
             m_res.set("x-amz-delete-marker", m_deleteMarker);
