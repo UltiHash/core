@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 TESTING_BASE_DIR="@CMAKE_CURRENT_SOURCE_DIR@"
 TESTING_BINARY_DIR="@CMAKE_CURRENT_BINARY_DIR@"
@@ -66,8 +66,15 @@ fi
 
 set +e
 
+setup_docker_compose_cluster ()
+{
+    compose_file="$1"
+    docker-compose -f "$compose_file" up --detach
+    trap "docker-compose -f "$compose_file" down" SIGHUP SIGINT SIGQUIT SIGABRT
+    echo "http://localhost:8080"
+}
+
 compose_file="$TESTING_BINARY_DIR/docker-compose.yml"
-use_docker_compose="0"
 if [ -z "$cluster_url" ]; then
     if [ ! -e "$compose_file" ]; then
         echo "Compose file was not generated. Do you have docker installed?"
@@ -78,9 +85,7 @@ if [ -z "$cluster_url" ]; then
         exit 1
     fi
 
-    docker-compose -f "$compose_file" up --detach
-    cluster_url="http://localhost:8080"
-    use_docker_compose="1"
+    cluster_url=$(setup_docker_compose_cluster "$compose_file")
 fi
 
 timeout=30
@@ -102,7 +107,3 @@ fi
 export PYTHONDONTWRITEBYTECODE=1
 pytest "$TESTING_BINARY_DIR/tests" --cluster-url="$cluster_url" \
     --aws-access-key-id="$AWS_ACCESS_KEY_ID" --aws-secret-access-key="$AWS_SECRET_ACCESS_KEY" $@
-
-if [ "$use_docker_compose" -eq "1" ]; then
-    docker-compose -f "$TESTING_BINARY_DIR/docker-compose.yml" down
-fi
