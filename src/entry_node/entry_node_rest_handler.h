@@ -57,11 +57,7 @@ public:
 
     coro < std::unique_ptr<http::http_response> > handle (http::http_request& req, rest::utils::state& state)
     {
-        auto body_size = req.get_body_size();
-        const auto size_mb = static_cast <double> (body_size) / static_cast <double> (1024ul * 1024ul);
-
         std::unique_ptr<http::http_response> res;
-//        const auto start = std::chrono::steady_clock::now();
 
         switch (req.get_request_name())
         {
@@ -116,12 +112,6 @@ public:
             default:
                 throw std::runtime_error("request not supported by the backend yet.");
         }
-
-//        const auto stop = std::chrono::steady_clock::now ();
-//        const std::chrono::duration <double> duration = stop - start;
-//        LOG_INFO() << "duration " << duration.count() << " s";
-//        const auto bandwidth = size_mb / duration.count();
-//        LOG_INFO() << "bandwidth " << bandwidth << " MB/s";
 
         co_return std::move(res);
     }
@@ -638,6 +628,12 @@ public:
         }
 
         auto bucket_id = req.get_URI().get_bucket_id();
+
+        if (object_nodes_set.size() > 1000)
+        {
+            throw http::model::custom_error_response_exception(b_http::status::bad_request, http::model::error::type::too_many_elements);
+        }
+
         for (const auto& objectNode : object_nodes_set)
         {
             auto key = objectNode.node().child("Key").child_value();

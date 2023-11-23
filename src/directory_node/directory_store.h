@@ -81,10 +81,10 @@ public:
                 b->second->destroy_bucket();
                 m_buckets.erase(bucket);
             }
-            else
-            {
-                throw error_exception (error::bucket_not_empty);
-            }
+//            else
+//            {
+//                throw error_exception (error::bucket_not_empty);
+//            }
         }
         else
         {

@@ -50,7 +50,7 @@ namespace uh::cluster::rest
         entry_node_config m_config;
         std::shared_ptr <net::io_context> m_ioc;
         std::vector<std::thread> m_thread_container {};
-        boost::asio::ssl::context m_ssl;
+        boost::asio::ssl::context m_ssl; // TODO:
         entry_node_rest_handler m_handler;
         std::promise <message_type> m_recover_response;
 

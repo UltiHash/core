@@ -83,11 +83,14 @@ namespace uh::cluster::rest::http::model
         }
 
         std::string upload_xml_string;
+
         for (const auto& val : m_keys_and_uploadids)
+        {
             upload_xml_string += "<Upload>\n"
                                  "<Key>" + val.object_name + "</Key>\n"
                                  "<UploadId>" + val.upload_id + "</UploadId>\n"
-                                 "</Upload>\n";
+                                "</Upload>\n";
+        }
 
         set_body(std::string("<ListMultipartUploadsResult>\n"
                              "   <Bucket>" + m_orig_req.get_URI().get_bucket_id() + "</Bucket>\n"

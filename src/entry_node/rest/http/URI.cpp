@@ -81,7 +81,6 @@ namespace uh::cluster::rest::http
         return m_method;
     }
 
-
     bool URI::query_string_exists(const std::string& key) const
     {
         auto itr = m_query_parameters.find(key);

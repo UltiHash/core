@@ -92,22 +92,24 @@ namespace uh::cluster::rest
                 b_http::request_parser<b_http::empty_body> received_request;
                 received_request.body_limit((std::numeric_limits<std::uint64_t>::max)());
 
+                // read header
                 co_await b_http::async_read_header(stream, buffer, received_request, net::use_awaitable);
-
                 LOG_INFO() << "received request: " << received_request.get().base();
 
+                // parse
                 rest::utils::parser::s3_parser s3_parser(received_request, m_internal_server_state);
                 auto s3_request = s3_parser.parse();
 
+                // read body
                 co_await s3_request->read_body(stream, buffer);
 
+                // validate
                 s3_request->validate_request_specific_criteria();
-
                 auto s3_res = co_await m_handler.handle(*s3_request, m_internal_server_state);
 
+                // send response
                 auto s3_res_specific_object = s3_res->get_response_specific_object();
                 co_await b_http::async_write(stream, s3_res_specific_object, net::use_awaitable);
-
                 LOG_INFO() << "sent response: " << s3_res_specific_object.base();
 
                 if(!received_request.keep_alive() )
@@ -156,10 +158,6 @@ namespace uh::cluster::rest
         {
             throw std::runtime_error ("Recovery not successful!");
         }
-
-        // TODO : implement ssl
-//        m_ssl.use_certificate_chain_file(config.tls_chain);
-//        m_ssl.use_private_key_file(config.tls_pkey, ssl::context::pem);
 
         auto acceptor = boost::asio::use_awaitable_t<boost::asio::any_io_executor>::as_default_on(tcp::acceptor(co_await net::this_coro::executor));
         acceptor.open(endpoint.protocol());

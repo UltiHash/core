@@ -69,11 +69,6 @@ namespace uh::cluster::rest::utils
 
         auto nextDifferentItr = std::lower_bound(strings.begin(), strings.end(), compareTo, lexicalCompare);
 
-        if (nextDifferentItr != strings.end() && *nextDifferentItr == compareTo)
-        {
-            ++nextDifferentItr;
-        }
-
         return nextDifferentItr;
     }
 
