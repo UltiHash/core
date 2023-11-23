@@ -15,11 +15,7 @@ endif ()
 find_program(Docker_EXECUTABLE docker)
 if(NOT Docker_EXECUTABLE)
 
-    if (${ENABLE_E2E_TESTS})
-        message(FATAL_ERROR "Cannot find the docker executable. E2E tests will not run during `make test`.")
-    else()
-        message(WARNING "Cannot find the docker executable. E2E tests will not run during `make test`.")
-    endif()
+    message(WARNING "Cannot find the docker executable. E2E tests will not run during `make test`.")
 
 else()
 
