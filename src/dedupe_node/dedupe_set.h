@@ -52,20 +52,23 @@ private:
             }
             ospan <char> b1, b2;
             std::string_view s1, s2;
-            if (!m_data.has_value()) {
-                b1 = load_fragment(*this, m_storage);
-                s1 = b1.get_str_view();
-            }
-            else {
+            if (m_data.has_value()) {
                 s1 = m_data.value();
-            }
 
-            if (!f.m_data.has_value()) {
                 b2 = load_fragment(f, m_storage);
                 s2 = b2.get_str_view();
             }
             else {
-                s2 = f.m_data.value();
+                b1 = load_fragment(*this, m_storage);
+                s1 = b1.get_str_view();
+
+                if (!f.m_data.has_value()) {
+                    b2 = load_fragment(f, m_storage);
+                    s2 = b2.get_str_view();
+                }
+                else {
+                    s2 = f.m_data.value();
+                }
             }
 
             return s1 < s2;
