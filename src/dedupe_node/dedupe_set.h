@@ -81,7 +81,8 @@ public:
     };
 
     struct response {
-        std::optional <const std::reference_wrapper <const fragment_element>> res;
+        std::optional <const std::reference_wrapper <const fragment_element>> low;
+        std::optional <const std::reference_wrapper <const fragment_element>> high;
         const std::set <fragment_element>::const_iterator hint;
     };
 
@@ -111,8 +112,11 @@ public:
         lock.unlock();
 
         response resp {.hint = res};
-        if (res != m_set.cend() and res != m_set.cbegin()) [[likely]] {
-            resp.res.emplace(*std::prev (res));
+        if (res != m_set.cend()) [[likely]] {
+            resp.high.emplace(*res);
+        }
+        if (res != m_set.cbegin()) [[likely]] {
+            resp.low.emplace(*std::prev (res));
         }
 
         return resp;
