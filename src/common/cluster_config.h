@@ -58,7 +58,7 @@ struct dedupe_config {
     server_config server_conf{};
     int data_node_connection_count{};
     set_config set_conf;
-    //dedupe_set_config dedupe_set_conf;
+    int dedupe_workers{};
 };
 
 struct data_node_config {

@@ -194,10 +194,11 @@ namespace uh::cluster {
         dedupe_node (int id, cluster_map cmap, const bool use_id_as_port_offset = false):
                 m_cluster_map (std::move (cmap)),
                 m_id (id),
-                m_job_name ("dedupe_node_" + std::to_string (id)),
+                m_job_name ("dedupe_node_" + std::to_string (m_id)),
+                m_dedupe_workers (std::make_shared <boost::asio::thread_pool> (m_cluster_map.m_cluster_conf.dedupe_node_conf.dedupe_workers)),
                 m_storage (m_cluster_map),
                 m_server (m_cluster_map.m_cluster_conf.dedupe_node_conf.server_conf, m_job_name,
-                          std::make_unique <dedupe_node_handler>(m_cluster_map.m_cluster_conf.dedupe_node_conf, m_storage)),
+                          std::make_unique <dedupe_node_handler>(m_cluster_map.m_cluster_conf.dedupe_node_conf, m_storage, m_dedupe_workers)),
                 m_use_id_as_port_offset (use_id_as_port_offset)
         {
         }
@@ -211,6 +212,8 @@ namespace uh::cluster {
         void stop() override {
             LOG_INFO() << "stopping " << m_job_name;
             m_server.stop();
+            m_dedupe_workers->join();
+            m_dedupe_workers->stop();
         }
 
 
@@ -228,6 +231,7 @@ namespace uh::cluster {
         const cluster_map m_cluster_map;
         const int m_id;
         const std::string m_job_name;
+        std::shared_ptr <boost::asio::thread_pool> m_dedupe_workers;
         global_data_view m_storage;
         server m_server;
         const bool m_use_id_as_port_offset;

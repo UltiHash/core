@@ -124,11 +124,11 @@ struct owning_span {
         data = std::make_unique_for_overwrite <T[]> (size);
     }
 
-    inline std::span <char> get_span () noexcept {
+    [[nodiscard]] inline std::span <char> get_span () const noexcept {
         return {data.get(), size};
     }
 
-    inline std::string_view get_str_view () noexcept {
+    [[nodiscard]] inline std::string_view get_str_view () const noexcept {
         return {data.get(), size};
     }
 };

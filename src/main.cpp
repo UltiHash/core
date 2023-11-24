@@ -81,6 +81,7 @@ uh::cluster::dedupe_config make_dedupe_node_config () {
                         .init_size = 1ul * 1024ul * 1024ul * 1024ul,
                 }
         },
+        .dedupe_workers = 4,
     };
 }
 
