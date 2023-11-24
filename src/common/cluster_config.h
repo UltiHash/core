@@ -25,12 +25,6 @@ struct growing_plain_storage_config {
     size_t init_size;
 };
 
-struct set_config {
-    unsigned long set_minimum_free_space{};
-    unsigned long max_empty_hole_size{};
-    growing_plain_storage_config key_store_config;
-};
-
 struct bucket_config {
     size_t min_file_size;
     size_t max_file_size;
@@ -57,7 +51,7 @@ struct dedupe_config {
     std::size_t write_cache_size_per_dn{};
     server_config server_conf{};
     int data_node_connection_count{};
-    set_config set_conf;
+    std::filesystem::path set_log_path;
     int dedupe_workers{};
 };
 

@@ -24,13 +24,14 @@ class lru_cache {
     std::unordered_map<K, typename std::list<Node>::iterator> m_map;
     std::list<Node> m_lruList;
     int m_capacity;
+    std::mutex m;
 
 public:
     explicit lru_cache(int capacity): m_capacity {capacity} {
     }
 
     void put (const K& key, V&& value) {
-
+        std::lock_guard <std::mutex> lock (m);
         if (const auto f = m_map.find(key) ; f != m_map.cend()) {
             f->second->value = std::forward <V> (value);
             m_lruList.splice(m_lruList.cend(), m_lruList, f->second);
@@ -45,6 +46,7 @@ public:
     }
 
     std::optional <std::reference_wrapper <const V>> get (const K& key) {
+        std::lock_guard <std::mutex> lock (m);
         if (const auto f = m_map.find(key); f != m_map.cend()) {
             m_lruList.splice(m_lruList.cend(), m_lruList, f->second);
             return f->second->value;

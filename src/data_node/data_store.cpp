@@ -173,6 +173,7 @@ void data_store::allocated_write(const address &allocation, std::span<char> data
 }
 
 void data_store::sync() {
+    std::lock_guard <std::shared_mutex> lock (m);
 
     for (const auto modification: m_modified_files) {
 

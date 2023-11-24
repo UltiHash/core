@@ -41,11 +41,35 @@ public:
         co_await m.get().send(WRITE_REQ, data);
         const auto message_header = co_await m.get().recv_header();
         auto resp = co_await m.get().recv_address(message_header);
+        m.release();
 
         ospan <char> buf (resp.first().size);
         std::memcpy (buf.data.get(), data.data(), resp.first().size);
         m_cache.put (resp.first().pointer, std::move (buf));
         co_return std::move (resp);
+    }
+
+    std::optional <ospan <char>> read_cache (const uint128_t pointer, const size_t size) {
+        if (const auto c = m_cache.get(pointer); c.has_value() and c.value().get().size >= size) {
+            ospan <char> buffer (size);
+            std::memcpy (buffer.data.get(), c.value().get().data.get(), size);
+            return buffer;
+        }
+        return std::nullopt;
+    }
+
+    coro <std::size_t> read (char* buffer, const uint128_t pointer, const size_t size) {
+        const fragment frag {pointer, size};
+        auto m = get_data_node (pointer)->acquire_messenger();
+        co_await m.get().send_fragment(READ_REQ, frag);
+        const auto h = co_await m.get().recv_header();
+        m.get().register_read_buffer (buffer, h.size);
+        co_await m.get().recv_buffers(h);
+        m.release();
+        ospan <char> buf (h.size);
+        std::memcpy (buf.data.get(), buffer, h.size);
+        m_cache.put (pointer, std::move (buf));
+        co_return h.size;
     }
 
     coro <address> allocate (size_t total_size) {
@@ -287,35 +311,6 @@ public:
             }
         }
 
-    }
-
-
-    std::optional <ospan <char>> read_cache (const uint128_t pointer, const size_t size) {
-        if (const auto c = m_cache.get(pointer); c.has_value() and c.value().get().size >= size) {
-            ospan <char> buffer (size);
-            std::memcpy (buffer.data.get(), c.value().get().data.get(), size);
-            return buffer;
-        }
-        return std::nullopt;
-    }
-
-    coro <std::size_t> read (char* buffer, const uint128_t pointer, const size_t size) {
-        /*
-        if (const auto c = m_cache.get(pointer); c.has_value() and c.value().get().size >= size) {
-            std::memcpy (buffer, c.value().get().data.get(), size);
-            co_return size;
-        }
-         */
-        const fragment frag {pointer, size};
-        auto m = get_data_node (pointer)->acquire_messenger();
-        co_await m.get().send_fragment(READ_REQ, frag);
-        const auto h = co_await m.get().recv_header();
-        m.get().register_read_buffer (buffer, h.size);
-        co_await m.get().recv_buffers(h);
-        ospan <char> buf (h.size);
-        std::memcpy (buf.data.get(), buffer, h.size);
-        m_cache.put (pointer, std::move (buf));
-        co_return h.size;
     }
 
     coro <std::size_t> read_address (char* buffer, const address& addr) {

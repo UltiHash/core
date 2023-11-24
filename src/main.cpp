@@ -72,16 +72,9 @@ uh::cluster::dedupe_config make_dedupe_node_config () {
                 .threads = 2,
                 .port = 8084,
         },
-        .data_node_connection_count = 2,
-        .set_conf = {
-                .set_minimum_free_space = 1ul * 1024ul * 1024ul * 1024ul,
-                .max_empty_hole_size = 1ul * 1024ul * 1024ul * 1024ul,
-                .key_store_config = {
-                        .file  = "ultihash-root/dd/set",
-                        .init_size = 1ul * 1024ul * 1024ul * 1024ul,
-                }
-        },
-        .dedupe_workers = 1,
+        .data_node_connection_count = 8,
+        .set_log_path = "ultihash-root/dd/set_log",
+        .dedupe_workers = 8,
     };
 }
 

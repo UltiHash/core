@@ -183,7 +183,6 @@
 #include <utility>
 #include "common/cluster_config.h"
 #include "global_data/global_data_view.h"
-#include "paged_redblack_tree.h"
 #include "dedupe_node_handler.h"
 #include <common/log.h>
 
@@ -201,6 +200,9 @@ namespace uh::cluster {
                           std::make_unique <dedupe_node_handler>(m_cluster_map.m_cluster_conf.dedupe_node_conf, m_storage, m_dedupe_workers)),
                 m_use_id_as_port_offset (use_id_as_port_offset)
         {
+            if (m_cluster_map.m_cluster_conf.dedupe_node_conf.dedupe_workers > m_cluster_map.m_cluster_conf.dedupe_node_conf.data_node_connection_count) {
+                throw std::runtime_error ("Invalid configurations that lead to deadlock");
+            }
         }
 
         void run() override {

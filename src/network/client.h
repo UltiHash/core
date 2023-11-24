@@ -31,28 +31,33 @@ public:
                             std::reference_wrapper <client> cl):
                 m_messenger(std::move (m)),
                 m_client(cl),
-                m_moved(false) {
+                m_owning (true) {
         }
 
         acquired_messenger (acquired_messenger&& m) noexcept:
-            m_messenger (std::move (m.m_messenger)), m_client (m.m_client), m_moved (false) {
-            m.m_moved = true;
+                m_messenger (std::move (m.m_messenger)), m_client (m.m_client), m_owning (true) {
+            m.m_owning = false;
         }
 
         [[nodiscard]] messenger& get () const {
             return *m_messenger;
         }
 
+        void release () {
+            m_messenger->clear_buffers();
+            m_client.get().push_messenger(std::move(m_messenger));
+            m_owning = false;
+        }
+
         ~acquired_messenger() {
-            if(!m_moved) {
-                m_messenger->clear_buffers();
-                m_client.get().push_messenger(std::move(m_messenger));
+            if(m_owning) {
+                release();
             }
         }
 
         std::unique_ptr <messenger> m_messenger;
         const std::reference_wrapper <client> m_client;
-        bool m_moved;
+        bool m_owning;
     };
 
     std::deque <std::unique_ptr<messenger>> m_messengers;
@@ -70,7 +75,6 @@ public:
     }
 
     acquired_messenger acquire_messenger () {
-        //std::cout << "remaining messengers " << m_messengers.size() << std::endl;
         std::unique_lock<std::mutex> lk(m);
         m_cv.wait(lk, [this]() { return !m_messengers.empty(); });
         auto messenger = std::move (m_messengers.front());
