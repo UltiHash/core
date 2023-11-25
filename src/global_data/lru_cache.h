@@ -45,13 +45,22 @@ public:
         }
     }
 
-    std::optional <std::reference_wrapper <const V>> get (const K& key) {
+    std::optional <std::reference_wrapper <const V>> get (const K& key) noexcept {
         std::lock_guard <std::mutex> lock (m);
         if (const auto f = m_map.find(key); f != m_map.cend()) {
             m_lruList.splice(m_lruList.cend(), m_lruList, f->second);
             return f->second->value;
         }
         return std::nullopt;
+    }
+
+    V get (const K& key, V&& default_value) noexcept {
+        std::lock_guard <std::mutex> lock (m);
+        if (const auto f = m_map.find(key); f != m_map.cend()) {
+            m_lruList.splice(m_lruList.cend(), m_lruList, f->second);
+            return f->second->value;
+        }
+        return default_value;
     }
 
 

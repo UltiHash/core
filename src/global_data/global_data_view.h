@@ -43,19 +43,19 @@ public:
         auto resp = co_await m.get().recv_address(message_header);
         m.release();
 
-        ospan <char> buf (resp.first().size);
-        std::memcpy (buf.data.get(), data.data(), resp.first().size);
+        auto buf = std::make_shared <ospan<char>> (resp.first().size);
+        std::memcpy (buf->data.get(), data.data(), resp.first().size);
         m_cache.put (resp.first().pointer, std::move (buf));
         co_return std::move (resp);
     }
 
-    std::optional <ospan <char>> read_cache (const uint128_t pointer, const size_t size) {
-        if (const auto c = m_cache.get(pointer); c.has_value() and c.value().get().size >= size) {
-            ospan <char> buffer (size);
-            std::memcpy (buffer.data.get(), c.value().get().data.get(), size);
-            return buffer;
+    std::shared_ptr <ospan <char>> read_cache (const uint128_t pointer, const size_t size) {
+        if (const auto c = m_cache.get(pointer, nullptr); c != nullptr) {
+            if (c->size >= size) [[likely]] {
+                return c;
+            }
         }
-        return std::nullopt;
+        return nullptr;
     }
 
     coro <std::size_t> read (char* buffer, const uint128_t pointer, const size_t size) {
@@ -66,8 +66,8 @@ public:
         m.get().register_read_buffer (buffer, h.size);
         co_await m.get().recv_buffers(h);
         m.release();
-        ospan <char> buf (h.size);
-        std::memcpy (buf.data.get(), buffer, h.size);
+        auto buf = std::make_shared <ospan<char>> (h.size);
+        std::memcpy (buf->data.get(), buffer, h.size);
         m_cache.put (pointer, std::move (buf));
         co_return h.size;
     }
@@ -222,7 +222,7 @@ public:
 
         ospan <char> buf (addr.sizes[0]);
         std::memcpy (buf.data.get(), data.data(), addr.sizes[0]);
-        m_cache.put (addr.get_fragment(0).pointer, std::move (buf));
+        m_cache.put (addr.get_fragment(0).pointer, std::make_shared <ospan<char>> (std::move (buf)));
 
         co_return std::move (addr);
     }
@@ -496,7 +496,7 @@ private:
     std::map <const uint128_t, std::shared_ptr <client>> m_data_node_offsets;
     std::unique_ptr <ec> m_ec;
     std::atomic <size_t> m_data_node_index {};
-    lru_cache <uint128_t, ospan <char>> m_cache;
+    lru_cache <uint128_t, std::shared_ptr <ospan <char>>> m_cache;
 
 };
 
