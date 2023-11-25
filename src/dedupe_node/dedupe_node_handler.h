@@ -64,7 +64,9 @@ private:
         m.register_read_buffer(data);
         co_await m.recv_buffers(h);
 
-        int pieces = 8;
+        const auto pieces = std::min (m_dedupe_conf.dedupe_workers,
+                                      static_cast <int> (std::ceil (static_cast <double> (data.size) /
+                                      static_cast <double> (m_dedupe_conf.dedupe_worker_minimum_data_size))));
         size_t piece_size = std::ceil (static_cast <double> (data.size) / pieces);
         std::vector <dedupe_response> responses (pieces);
         std::atomic <int> resp = 0;

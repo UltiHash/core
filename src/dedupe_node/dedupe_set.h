@@ -24,6 +24,7 @@ public:
         uint16_t size {};
         uint128_t prefix {0};
         std::optional <std::string_view> m_data;
+        // TODO instead: std::weak_ptr <std::string> m_cached_data
 
         explicit fragment_element (const uint128_t& ptr, uint16_t size_, const uint128_t& prefix_, global_data_view& storage):
         m_storage(storage), pointer (ptr), size (size_), prefix(prefix_), m_data (std::nullopt) {}

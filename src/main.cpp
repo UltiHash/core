@@ -75,6 +75,7 @@ uh::cluster::dedupe_config make_dedupe_node_config () {
         .data_node_connection_count = 8,
         .set_log_path = "ultihash-root/dd/set_log",
         .dedupe_workers = 8,
+        .dedupe_worker_minimum_data_size = 128ul * 1024ul,
     };
 }
 
