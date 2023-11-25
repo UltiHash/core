@@ -52,7 +52,6 @@ struct dedupe_config {
     server_config server_conf{};
     int data_node_connection_count{};
     std::filesystem::path set_log_path;
-    int dedupe_workers{};
     size_t dedupe_worker_minimum_data_size{};
 };
 

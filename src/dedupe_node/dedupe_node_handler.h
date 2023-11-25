@@ -64,7 +64,7 @@ private:
         m.register_read_buffer(data);
         co_await m.recv_buffers(h);
 
-        const auto pieces = std::min (m_dedupe_conf.dedupe_workers,
+        const auto pieces = std::min (m_dedupe_conf.data_node_connection_count,
                                       static_cast <int> (std::ceil (static_cast <double> (data.size) /
                                       static_cast <double> (m_dedupe_conf.dedupe_worker_minimum_data_size))));
         size_t piece_size = std::ceil (static_cast <double> (data.size) / pieces);
