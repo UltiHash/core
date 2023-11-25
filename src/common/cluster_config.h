@@ -69,7 +69,6 @@ struct entry_node_config {
     server_config rest_server_conf;
     int dedupe_node_connection_count;
     int directory_connection_count;
-    size_t max_chunk_size;
 };
 
 struct directory_node_config {
