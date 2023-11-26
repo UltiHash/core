@@ -25,8 +25,8 @@ public:
     explicit global_data_view (const cluster_map& cmap):
                           m_cluster_map (cmap),
                           m_ec (ec_factory::make_ec (cmap.m_cluster_conf.global_data_view_conf.ec_algorithm)),
-//                          m_cache_l1 (cmap.m_cluster_conf.global_data_view_conf.read_cache_capacity),
-                          m_cache_l2 (cmap.m_cluster_conf.global_data_view_conf.read_cache_capacity){
+                          m_cache_l1 (cmap.m_cluster_conf.global_data_view_conf.read_cache_capacity_l1),
+                          m_cache_l2 (cmap.m_cluster_conf.global_data_view_conf.read_cache_capacity_l2){
         sleep(2);
     }
 
@@ -44,13 +44,29 @@ public:
         auto resp = co_await m.get().recv_address(message_header);
         m.release();
 
-        sspan <char> buf (resp.first().size);
-        std::memcpy (buf.data(), data.data(), resp.first().size);
-        m_cache_l2.put (resp.first().pointer, std::move (buf));
+        // l1 cache
+        sspan <char> l1_buf (std::max (resp.first().size, m_cluster_map.m_cluster_conf.global_data_view_conf.l1_sample_size));
+        std::memcpy (l1_buf.data(), data.data(), l1_buf.size());
+        m_cache_l1.put (resp.first().pointer, std::move (l1_buf));
+/*
+        // l2 cache
+        sspan <char> l2_buf (resp.first().size);
+        std::memcpy (l2_buf.data(), data.data(), l2_buf.size());
+        m_cache_l2.put (resp.first().pointer, std::move (l2_buf));
+*/
         co_return std::move (resp);
     }
 
-    sspan <char> read_cache (const uint128_t pointer, const size_t size) {
+    sspan <char> read_l1_cache (const uint128_t pointer, const size_t size) {
+        if (const auto c = m_cache_l1.get(pointer, nullptr); c.data() != nullptr) {
+            if (c.size() >= size) [[likely]] {
+                return c;
+            }
+        }
+        return nullptr;
+    }
+
+    sspan <char> read_l2_cache (const uint128_t pointer, const size_t size) {
         if (const auto c = m_cache_l2.get(pointer, nullptr); c.data() != nullptr) {
             if (c.size() >= size) [[likely]] {
                 return c;
@@ -67,9 +83,17 @@ public:
         m.get().register_read_buffer (buffer, h.size);
         co_await m.get().recv_buffers(h);
         m.release();
-        sspan <char> buf (h.size);
-        std::memcpy (buf.data(), buffer, h.size);
-        m_cache_l2.put (pointer, std::move (buf));
+
+        // l1 cache
+        sspan <char> l1_buf (std::max (h.size, m_cluster_map.m_cluster_conf.global_data_view_conf.l1_sample_size));
+        std::memcpy (l1_buf.data(), buffer, l1_buf.size());
+        m_cache_l2.put (pointer, std::move (l1_buf));
+
+        // l2 cache
+        sspan <char> l2_buf (h.size);
+        std::memcpy (l2_buf.data(), buffer, h.size);
+        m_cache_l2.put (pointer, std::move (l2_buf));
+
         co_return h.size;
     }
 
@@ -477,6 +501,10 @@ public:
         return m_io_service;
     }
 
+    [[nodiscard]] inline std::size_t l1_cache_sample_size () const noexcept {
+        return m_cluster_map.m_cluster_conf.global_data_view_conf.l1_sample_size;
+    }
+
 private:
 
     std::shared_ptr <client> get_data_node (const uint128_t& pointer) {
@@ -497,7 +525,7 @@ private:
     std::map <const uint128_t, std::shared_ptr <client>> m_data_node_offsets;
     std::unique_ptr <ec> m_ec;
     std::atomic <size_t> m_data_node_index {};
-//    lru_cache <uint128_t, sspan <char>> m_cache_l1;
+    lru_cache <uint128_t, sspan <char>> m_cache_l1;
     lru_cache <uint128_t, sspan <char>> m_cache_l2;
 
 };

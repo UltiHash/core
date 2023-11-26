@@ -37,7 +37,7 @@ uh::cluster::data_node_config make_data_node_config () {
         .max_file_size = 4ul * 1024ul * 1024ul * 1024ul,
         .max_data_store_size = 64ul * 1024ul * 1024ul * 1024ul,
         .server_conf = {
-                .threads = 4,
+                .threads = 8,
                 .port = 8082,
         },
     };
@@ -67,7 +67,7 @@ uh::cluster::dedupe_config make_dedupe_node_config () {
         .min_fragment_size = 32,
         .max_fragment_size = 8 * 1024,
         .server_conf = {
-                .threads = 2,
+                .threads = 4,
                 .port = 8084,
         },
         .data_node_connection_count = 8,
@@ -79,7 +79,9 @@ uh::cluster::dedupe_config make_dedupe_node_config () {
 uh::cluster::global_data_view_config make_global_data_view_config () {
 
     return {
-        .read_cache_capacity = 4000,
+        .read_cache_capacity_l1= 4000000,
+        .read_cache_capacity_l2= 4000,
+        .l1_sample_size = 128,
         .ec_algorithm = uh::cluster::NON,
         .recovery_chunk_size = 1024ul * 1024ul * 1024ul,
     };

@@ -33,7 +33,9 @@ struct directory_store_config {
 };
 
 struct global_data_view_config {
-    int read_cache_capacity {};
+    int read_cache_capacity_l1 {};
+    int read_cache_capacity_l2 {};
+    size_t l1_sample_size {};
     ec_type ec_algorithm {};
     size_t recovery_chunk_size {};
 };

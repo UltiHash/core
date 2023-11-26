@@ -96,25 +96,37 @@ private:
         dedupe_response result {.addr = address {}};
         auto integration_data = data;
 
+        auto check_dedupe = [&] (const dedupe_set::fragment_element& frag) {
+            auto frag_data = m_storage.read_l1_cache(frag.pointer, frag.size);
+            bool l1 = true;
+            if (frag_data.data() == nullptr) {
+                l1 = false;
+                frag_data = dedupe_set::load_fragment(frag, m_storage);
+            }
+            auto common_prefix = largest_common_prefix(integration_data, frag_data.get_str_view());
+            if (common_prefix >= m_dedupe_conf.min_fragment_size) {
+                if (common_prefix == m_storage.l1_cache_sample_size() and l1) {
+                    // TODO here we assume min fragment size <= l1 cache sample size
+                    frag_data = dedupe_set::load_fragment(frag, m_storage);
+                    common_prefix += largest_common_prefix(integration_data.substr(common_prefix), frag_data.get_str_view().substr(common_prefix));
+                }
+                result.addr.push_fragment(fragment{frag.pointer, common_prefix});
+                integration_data = integration_data.substr(common_prefix);
+                return true;
+            }
+            return false;
+        };
+
         while (!integration_data.empty()) {
             const auto f = m_fragment_set.find (integration_data);
 
             if (f.low.has_value()) {
-                const auto frag = dedupe_set::load_fragment(*f.low, m_storage);
-                const auto common_prefix = largest_common_prefix(integration_data, frag.get_str_view());
-                if (common_prefix >= m_dedupe_conf.min_fragment_size) {
-                    result.addr.push_fragment(fragment{f.low->get().pointer, common_prefix});
-                    integration_data = integration_data.substr(common_prefix);
+                if (check_dedupe (f.low->get())) {
                     continue;
                 }
             }
-
             if (f.high.has_value()) {
-                const auto frag = dedupe_set::load_fragment(*f.high, m_storage);
-                const auto common_prefix = largest_common_prefix(integration_data, frag.get_str_view());
-                if (common_prefix >= m_dedupe_conf.min_fragment_size) {
-                    result.addr.push_fragment(fragment{f.high->get().pointer, common_prefix});
-                    integration_data = integration_data.substr(common_prefix);
+                if (check_dedupe (f.high->get())) {
                     continue;
                 }
             }

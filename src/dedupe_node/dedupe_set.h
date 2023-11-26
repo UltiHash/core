@@ -54,28 +54,55 @@ public:
             if (prefix != f.prefix) [[likely]] {
                 return prefix < f.prefix;
             }
-            sspan <char> b1, b2;
+
+            sspan <char> d1, d2;
             std::string_view s1, s2;
-            if (m_data.has_value()) {
-                s1 = m_data.value();
+            bool b1 = false, b2 = false;
 
-                b2 = load_fragment(f, m_storage);
-                s2 = b2.get_str_view();
-            }
-            else {
-                b1 = load_fragment(*this, m_storage);
-                s1 = b1.get_str_view();
-
-                if (!f.m_data.has_value()) {
-                    b2 = load_fragment(f, m_storage);
-                    s2 = b2.get_str_view();
+            auto catch_frag = [&] (const fragment_element& f, sspan<char>& data, std::string_view& str, bool& l1) {
+                if (f.m_data.has_value()) {
+                    str = *f.m_data;
+                }
+                else if (data = m_storage.get().read_l1_cache(f.pointer, f.size); data.data() != nullptr) {
+                    l1 = true;
+                    str = data.get_str_view();
                 }
                 else {
-                    s2 = f.m_data.value();
+                    data = load_fragment (f, m_storage);
+                    str = data.get_str_view();
                 }
+            };
+
+            catch_frag (*this, d1, s1, b1);
+            catch_frag (f, d2, s2, b2);
+            size_t comp_len = 0;
+
+            if (b1 or b2) {
+                std::string_view s1_l1 = s1;
+                std::string_view s2_l1 = s2;
+                if (!b1) {
+                    s1_l1 = s1.substr(0, std::min(s1.size(), m_storage.get().l1_cache_sample_size()));
+                }
+                else if (!b2) {
+                    s2_l1 = s2.substr(0, std::min(s2.size(), m_storage.get().l1_cache_sample_size()));
+                }
+                if (const auto comp = s1_l1.compare(s2_l1); comp != 0) {
+                    return comp < 0;
+                }
+                comp_len = std::min (s1_l1.size(), s2_l1.size());
             }
 
-            return s1 < s2;
+            if (b1 and !m_data.has_value() and size > m_storage.get().l1_cache_sample_size()) {
+                d1 = load_fragment(*this, m_storage);
+                s1 = d1.get_str_view();
+            }
+            if (b2 and !f.m_data.has_value() and f.size > m_storage.get().l1_cache_sample_size()) {
+                d2 = load_fragment(f, m_storage);
+                s2 = d2.get_str_view();
+            }
+
+            return s1.substr(comp_len) < s2.substr(comp_len);
+
         }
 
     };
@@ -87,7 +114,7 @@ public:
     };
 
     [[nodiscard]] static inline sspan<char> load_fragment (const fragment_element& f, global_data_view& storage) {
-        if (auto c = storage.read_cache(f.pointer, f.size); c.data() != nullptr) {
+        if (const auto c = storage.read_l2_cache(f.pointer, f.size); c.data() != nullptr) {
             return c;
         }
 
