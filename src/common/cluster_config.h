@@ -20,11 +20,6 @@ struct server_config
     uint16_t port;
 };
 
-struct growing_plain_storage_config {
-    std::filesystem::path file;
-    size_t init_size;
-};
-
 struct bucket_config {
     size_t min_file_size;
     size_t max_file_size;
@@ -48,7 +43,6 @@ struct global_data_view_config {
 struct dedupe_config {
     std::size_t min_fragment_size{};
     std::size_t max_fragment_size{};
-    std::size_t write_cache_size_per_dn{};
     server_config server_conf{};
     int data_node_connection_count{};
     std::filesystem::path set_log_path;
@@ -79,7 +73,6 @@ struct directory_node_config {
 
 struct cluster_config {
     int init_process_count {};
-    size_t maximum_chunk_size {};
     data_node_config data_node_conf;
     dedupe_config dedupe_node_conf;
     directory_node_config directory_node_conf;

@@ -54,21 +54,21 @@ public:
             if (prefix != f.prefix) [[likely]] {
                 return prefix < f.prefix;
             }
-            std::shared_ptr <ospan <char>> b1, b2;
+            sspan <char> b1, b2;
             std::string_view s1, s2;
             if (m_data.has_value()) {
                 s1 = m_data.value();
 
                 b2 = load_fragment(f, m_storage);
-                s2 = b2->get_str_view();
+                s2 = b2.get_str_view();
             }
             else {
                 b1 = load_fragment(*this, m_storage);
-                s1 = b1->get_str_view();
+                s1 = b1.get_str_view();
 
                 if (!f.m_data.has_value()) {
                     b2 = load_fragment(f, m_storage);
-                    s2 = b2->get_str_view();
+                    s2 = b2.get_str_view();
                 }
                 else {
                     s2 = f.m_data.value();
@@ -86,12 +86,13 @@ public:
         const std::set <fragment_element>::const_iterator hint;
     };
 
-    [[nodiscard]] static inline std::shared_ptr <ospan<char>> load_fragment (const fragment_element& f, global_data_view& storage) {
-        if (auto c = storage.read_cache(f.pointer, f.size); c != nullptr) {
+    [[nodiscard]] static inline sspan<char> load_fragment (const fragment_element& f, global_data_view& storage) {
+        if (auto c = storage.read_cache(f.pointer, f.size); c.data() != nullptr) {
             return c;
         }
-        auto buf = std::make_shared <ospan<char>> (f.size);
-        auto fut = boost::asio::co_spawn (*storage.get_executor(), storage.read (buf->data.get(), f.pointer, f.size), boost::asio::use_future);
+
+        sspan <char> buf (f.size);
+        auto fut = boost::asio::co_spawn (*storage.get_executor(), storage.read (buf.data(), f.pointer, f.size), boost::asio::use_future);
         fut.wait();
         return buf;
     }

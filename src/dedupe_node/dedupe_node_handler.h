@@ -101,7 +101,7 @@ private:
 
             if (f.low.has_value()) {
                 const auto frag = dedupe_set::load_fragment(*f.low, m_storage);
-                const auto common_prefix = largest_common_prefix(integration_data, frag->get_str_view());
+                const auto common_prefix = largest_common_prefix(integration_data, frag.get_str_view());
                 if (common_prefix >= m_dedupe_conf.min_fragment_size) {
                     result.addr.push_fragment(fragment{f.low->get().pointer, common_prefix});
                     integration_data = integration_data.substr(common_prefix);
@@ -111,7 +111,7 @@ private:
 
             if (f.high.has_value()) {
                 const auto frag = dedupe_set::load_fragment(*f.high, m_storage);
-                const auto common_prefix = largest_common_prefix(integration_data, frag->get_str_view());
+                const auto common_prefix = largest_common_prefix(integration_data, frag.get_str_view());
                 if (common_prefix >= m_dedupe_conf.min_fragment_size) {
                     result.addr.push_fragment(fragment{f.high->get().pointer, common_prefix});
                     integration_data = integration_data.substr(common_prefix);

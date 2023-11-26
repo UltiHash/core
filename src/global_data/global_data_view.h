@@ -25,7 +25,8 @@ public:
     explicit global_data_view (const cluster_map& cmap):
                           m_cluster_map (cmap),
                           m_ec (ec_factory::make_ec (cmap.m_cluster_conf.global_data_view_conf.ec_algorithm)),
-                          m_cache (cmap.m_cluster_conf.global_data_view_conf.read_cache_capacity){
+//                          m_cache_l1 (cmap.m_cluster_conf.global_data_view_conf.read_cache_capacity),
+                          m_cache_l2 (cmap.m_cluster_conf.global_data_view_conf.read_cache_capacity){
         sleep(2);
     }
 
@@ -43,15 +44,15 @@ public:
         auto resp = co_await m.get().recv_address(message_header);
         m.release();
 
-        auto buf = std::make_shared <ospan<char>> (resp.first().size);
-        std::memcpy (buf->data.get(), data.data(), resp.first().size);
-        m_cache.put (resp.first().pointer, std::move (buf));
+        sspan <char> buf (resp.first().size);
+        std::memcpy (buf.data(), data.data(), resp.first().size);
+        m_cache_l2.put (resp.first().pointer, std::move (buf));
         co_return std::move (resp);
     }
 
-    std::shared_ptr <ospan <char>> read_cache (const uint128_t pointer, const size_t size) {
-        if (const auto c = m_cache.get(pointer, nullptr); c != nullptr) {
-            if (c->size >= size) [[likely]] {
+    sspan <char> read_cache (const uint128_t pointer, const size_t size) {
+        if (const auto c = m_cache_l2.get(pointer, nullptr); c.data() != nullptr) {
+            if (c.size() >= size) [[likely]] {
                 return c;
             }
         }
@@ -66,9 +67,9 @@ public:
         m.get().register_read_buffer (buffer, h.size);
         co_await m.get().recv_buffers(h);
         m.release();
-        auto buf = std::make_shared <ospan<char>> (h.size);
-        std::memcpy (buf->data.get(), buffer, h.size);
-        m_cache.put (pointer, std::move (buf));
+        sspan <char> buf (h.size);
+        std::memcpy (buf.data(), buffer, h.size);
+        m_cache_l2.put (pointer, std::move (buf));
         co_return h.size;
     }
 
@@ -220,9 +221,9 @@ public:
             addr.append_address(a);
         }
 
-        ospan <char> buf (addr.sizes[0]);
-        std::memcpy (buf.data.get(), data.data(), addr.sizes[0]);
-        m_cache.put (addr.get_fragment(0).pointer, std::make_shared <ospan<char>> (std::move (buf)));
+        sspan <char> buf (addr.sizes[0]);
+        std::memcpy (buf.data(), data.data(), addr.sizes[0]);
+        m_cache_l2.put (addr.get_fragment(0).pointer, std::move (buf));
 
         co_return std::move (addr);
     }
@@ -496,7 +497,8 @@ private:
     std::map <const uint128_t, std::shared_ptr <client>> m_data_node_offsets;
     std::unique_ptr <ec> m_ec;
     std::atomic <size_t> m_data_node_index {};
-    lru_cache <uint128_t, std::shared_ptr <ospan <char>>> m_cache;
+//    lru_cache <uint128_t, sspan <char>> m_cache_l1;
+    lru_cache <uint128_t, sspan <char>> m_cache_l2;
 
 };
 
