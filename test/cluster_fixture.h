@@ -210,7 +210,7 @@ namespace uh::cluster {
                             .port = static_cast<uint16_t>(8600 + i),
                             .metrics_bind_address = "0.0.0.0:" + std::to_string(static_cast<uint16_t>(9600 + i)),
                             .metrics_threads = 2,
-                            .metrics_path = get_root_path() / "metrics"
+                            .metrics_path = "/metrics"
                     },
             };
         }
@@ -224,7 +224,7 @@ namespace uh::cluster {
                             .port = static_cast<uint16_t>(8700 + i),
                             .metrics_bind_address = "0.0.0.0:" + std::to_string(static_cast<uint16_t>(9700 + i)),
                             .metrics_threads = 2,
-                            .metrics_path = get_root_path()/"metrics"
+                            .metrics_path = "/metrics"
 
                     },
                     .directory_conf = {
@@ -251,7 +251,7 @@ namespace uh::cluster {
                             .port = static_cast <uint16_t> (8800 + i),
                             .metrics_bind_address = "0.0.0.0:" + std::to_string(static_cast<uint16_t>(9800 + i)),
                             .metrics_threads = 2,
-                            .metrics_path = get_root_path() / "metrics"
+                            .metrics_path = "/metrics"
                     },
                     .data_node_connection_count = 2,
                     .set_log_path = get_root_path() / "dd_set",
