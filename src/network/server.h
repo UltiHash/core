@@ -34,23 +34,28 @@ namespace uh::cluster
 
     public:
         server(server_config config, std::string node_name, std::unique_ptr <protocol_handler> handler) :
-                m_config (config), m_ioc (std::make_shared <boost::asio::io_context> (m_config.threads)), m_handler (std::move (handler)), m_node_name (std::move (node_name)) {
+                m_config (config),
+                m_ioc (std::make_shared <boost::asio::io_context> (m_config.threads)),
+                m_handler (std::move (handler)),
+                m_node_name (std::move (node_name)) {
             m_is_running = true;
             boost::asio::co_spawn(*m_ioc,
                                   do_listen(boost::asio::ip::tcp::endpoint{m_server_address, m_config.port}),
-                                  [](const std::exception_ptr &e) {
+                                  [&](const std::exception_ptr &e) {
                                       if (e)
                                           try {
                                               std::rethrow_exception(e);
                                           }
                                           catch (boost::system::system_error &e) {
-                                              LOG_INFO() << "Server stopped." << std::endl;
+                                              LOG_INFO() << m_node_name << " stopped server." << std::endl;
                                           }
                                           catch (std::exception &e) {
                                               LOG_ERROR() << "accept: " << e.what();
                                           }
                                   });
         }
+
+
 
         void run() {
             LOG_INFO() << m_node_name << " starting server";

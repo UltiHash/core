@@ -42,6 +42,7 @@ public:
     void sync ();
 
     [[nodiscard]] uint128_t get_used_space () const noexcept;
+    [[nodiscard]] uint128_t get_free_space() const noexcept;
 
     long get_data_id () const noexcept;
 
