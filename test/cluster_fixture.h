@@ -246,7 +246,6 @@ namespace uh::cluster {
             return {
                     .min_fragment_size = 32,
                     .max_fragment_size = 8 * 1024,
-                    .write_cache_size_per_dn = 512,
                     .server_conf = {
                             .threads = 1,
                             .port = static_cast<uint16_t>(8800 + i),
@@ -255,21 +254,15 @@ namespace uh::cluster {
                             .metrics_path = "/metrics"
                     },
                     .data_node_connection_count = 2,
-                    .set_conf = {
-                            .set_minimum_free_space = 1ul * 1024ul,
-                            .max_empty_hole_size = 1ul *  1024ul,
-                            .key_store_config = {
-                                    .file  = get_root_path() / dd_dir / "set",
-                                    .init_size = 8ul * 1024ul,
-                            }
-                    },
+                    .dedupe_worker_minimum_data_size = 128ul * 1024ul,
             };
         }
 
         static uh::cluster::global_data_view_config make_global_data_view_config(ec_type ec) {
 
             return {
-                    .read_cache_capacity = 100,
+                    .read_cache_capacity_l1 = 100,
+                    .read_cache_capacity_l2 = 100,
                     .ec_algorithm = ec,
                     .recovery_chunk_size = 1 * 1024ul,
             };
