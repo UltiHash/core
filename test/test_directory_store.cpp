@@ -72,7 +72,8 @@ BOOST_FIXTURE_TEST_CASE (directory_store_test, config_fixture)
     fill_random_dirstore (data11, sizeof (data11));
 
     {
-        directory_store ds ({"root", make_bucket_config()});
+        directory_store_config ds_conf = {"root", make_bucket_config()};
+        directory_store ds (ds_conf);
         BOOST_CHECK_THROW (ds.insert("b1", "k1", data1), std::out_of_range);
         ds.add_bucket("b1");
         ds.insert("b1", "k1", data1);
@@ -156,7 +157,8 @@ BOOST_FIXTURE_TEST_CASE (directory_store_test, config_fixture)
     }
 
     {
-        directory_store ds ({"root", make_bucket_config()});
+        directory_store_config ds_conf = {"root", make_bucket_config()};
+        directory_store ds (ds_conf);
         const auto buckets = ds.list_buckets();
         BOOST_TEST (buckets.size() == 3);
         BOOST_CHECK (std::find (buckets.begin(), buckets.end(), "b1") != buckets.end());
@@ -237,7 +239,8 @@ BOOST_FIXTURE_TEST_CASE (directory_store_test, config_fixture)
     }
 
     {
-        directory_store ds ({"root", make_bucket_config()});
+        directory_store_config ds_conf = {"root", make_bucket_config()};
+        directory_store ds (ds_conf);
         const auto buckets = ds.list_buckets();
         BOOST_TEST (buckets.size() == 3);
         BOOST_CHECK (std::find (buckets.begin(), buckets.end(), "b1") != buckets.end());
@@ -297,7 +300,8 @@ BOOST_FIXTURE_TEST_CASE (directory_store_test, config_fixture)
     }
 
     {
-        directory_store ds ({"root", make_bucket_config()});
+        directory_store_config ds_conf = {"root", make_bucket_config()};
+        directory_store ds (ds_conf);
         const auto buckets = ds.list_buckets();
         //!! changed to 3 from 2 below
         BOOST_TEST (buckets.size() == 3);

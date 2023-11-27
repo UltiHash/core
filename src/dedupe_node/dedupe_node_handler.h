@@ -19,11 +19,15 @@ class dedupe_node_handler: public protocol_handler {
 public:
 
     dedupe_node_handler (dedupe_config dedupe_conf, global_data_view& storage, std::shared_ptr <boost::asio::thread_pool> dedupe_workers):
+        protocol_handler (dedupe_conf.server_conf),
         m_dedupe_conf (std::move(dedupe_conf)),
         m_fragment_set (m_dedupe_conf.set_log_path, storage),
         m_storage (storage),
-        m_dedupe_workers (std::move (dedupe_workers))
+        m_dedupe_workers (std::move (dedupe_workers)),
+        m_counters (add_counter_family("uh_dd_requests", "number of requests handled by the deduplication node")),
+        m_reqs_dedupe (m_counters.Add({{"type", "DEDUPE_REQ"}}))
         {
+            init();
             boost::asio::post (*m_dedupe_workers, [&] () {m_fragment_set.load();});
         }
 
@@ -36,6 +40,7 @@ public:
                 const auto message_header = co_await m.recv_header();
                 switch (message_header.type) {
                     case DEDUPE_REQ:
+                        m_reqs_dedupe.Increment();
                         co_await handle_dedupe(m, message_header);
                         break;
                     default:
@@ -165,7 +170,8 @@ private:
     dedupe_set m_fragment_set;
     global_data_view& m_storage;
     std::shared_ptr <boost::asio::thread_pool> m_dedupe_workers;
-
+    prometheus::Family<prometheus::Counter>& m_counters;
+    prometheus::Counter& m_reqs_dedupe;
 };
 
 } // end namespace uh::cluster

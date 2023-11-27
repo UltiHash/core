@@ -12,6 +12,11 @@ namespace uh::cluster {
 class entry_node_internal_handler: public protocol_handler {
 public:
 
+    entry_node_internal_handler(entry_node_config conf, int id) :
+    protocol_handler(conf.internal_server_conf) {
+        init();
+    }
+
     coro <void> handle (messenger m) override {
         co_return;
     }
