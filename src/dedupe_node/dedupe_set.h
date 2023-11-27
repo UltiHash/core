@@ -130,7 +130,7 @@ public:
     }
 
     void load () {
-        m_set_log.replay (m_set, m_storage);
+        m_set_log.replay (m_set, m_storage, m);
     }
 
     response find (std::string_view data) {

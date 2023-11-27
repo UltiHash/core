@@ -54,7 +54,7 @@ public:
     }
 
     template <typename Set>
-    void replay (Set&& set, global_data_view& storage) {
+    void replay (Set&& set, global_data_view& storage, std::shared_mutex& m) {
 
         const auto file_size = std::filesystem::file_size (m_log_path);
         size_t offset = 0;
@@ -64,6 +64,7 @@ public:
         while (offset < file_size)
         {
             auto op_fe = deserialize();
+            std::lock_guard <std::shared_mutex> l (m);
             switch (op_fe.first) {
                 case set_operation::INSERT:
                     set.emplace(op_fe.second.pointer, op_fe.second.size, op_fe.second.prefix, storage);
