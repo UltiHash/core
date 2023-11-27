@@ -16,6 +16,13 @@
 
 uh::cluster::entry_node_config make_entry_node_config () {
     return {
+        .internal_server_conf = {
+                .threads = 4,
+                .port = 8081,
+                .metrics_bind_address = "0.0.0.0:9081",
+                .metrics_threads = 2,
+                .metrics_path = "/metrics"
+        },
         .rest_server_conf = {
                 .threads = 4,
                 .port = 8080,
