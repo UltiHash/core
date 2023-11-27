@@ -45,7 +45,7 @@ public:
         m.release();
 
         // l1 cache
-        sspan <char> l1_buf (std::max (resp.first().size, m_cluster_map.m_cluster_conf.global_data_view_conf.l1_sample_size));
+        sspan <char> l1_buf (std::min (resp.first().size, m_cluster_map.m_cluster_conf.global_data_view_conf.l1_sample_size));
         std::memcpy (l1_buf.data(), data.data(), l1_buf.size());
         m_cache_l1.put (resp.first().pointer, std::move (l1_buf));
 /*
@@ -85,7 +85,7 @@ public:
         m.release();
 
         // l1 cache
-        sspan <char> l1_buf (std::max (h.size, m_cluster_map.m_cluster_conf.global_data_view_conf.l1_sample_size));
+        sspan <char> l1_buf (std::min (h.size, m_cluster_map.m_cluster_conf.global_data_view_conf.l1_sample_size));
         std::memcpy (l1_buf.data(), buffer, l1_buf.size());
         m_cache_l2.put (pointer, std::move (l1_buf));
 
