@@ -38,7 +38,7 @@ public:
             b->second->insert_object(key, data);
         }
         else {
-            throw std::out_of_range ("The bucket " + bucket + " does not exist.");
+            throw error_exception(error::bucket_not_found);
         }
     }
 
@@ -47,7 +47,7 @@ public:
             return b->second->get_obj(key);
         }
         else {
-            throw std::out_of_range ("The bucket " + bucket + " does not exist.");
+            throw error_exception(error::bucket_not_found);
         }
     }
 
@@ -69,7 +69,7 @@ public:
             b->second->delete_object(key);
         }
         else {
-            throw std::out_of_range ("The bucket " + bucket + " does not exist.");
+            throw error_exception(error::bucket_not_found);
         }
     }
 

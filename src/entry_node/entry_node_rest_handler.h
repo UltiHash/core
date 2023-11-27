@@ -134,7 +134,7 @@ public:
                 break;
             case http::http_request_type::MULTIPART_UPLOAD:
                 m_reqs_multiplart_upload.Increment();
-                res = handle_mp_upload(req);
+                res = co_await handle_mp_upload(req, state);
                 break;
             case http::http_request_type::COMPLETE_MULTIPART_UPLOAD:
                 m_reqs_complete_multipart_upload.Increment();
@@ -142,7 +142,7 @@ public:
                 break;
             case http::http_request_type::ABORT_MULTIPART_UPLOAD:
                 m_reqs_abort_multipart_upload.Increment();
-                res = handle_abort_mp_upload(req);
+                res = handle_abort_mp_upload(req, state);
                 break;
             case http::http_request_type::LIST_MULTI_PART_UPLOADS:
                 m_reqs_list_multi_part_uploads.Increment();
@@ -500,17 +500,42 @@ public:
         return std::move(res);
     }
 
-    std::unique_ptr<http::http_response> handle_mp_upload (http::http_request& req)
+    coro <std::unique_ptr<http::http_response>> handle_mp_upload (http::http_request& req, rest::utils::state& state)
     {
 
+        // TODO it is not transactional right now, also is not good if we send the same part twice. How can this be fixed?
         std::unique_ptr<http::model::multi_part_upload_response> res;
 
         res = std::make_unique<http::model::multi_part_upload_response>(req);
 
+        auto body_size = req.get_body_size();
+
+        auto upload_id = req.get_URI().get_query_parameters().at("uploadId");
+
+        dedupe_response resp;
+
+        const auto start = std::chrono::steady_clock::now();
+        const auto size_mb = static_cast <double> (body_size) / static_cast <double> (1024ul * 1024ul);
+
+        auto m_dedup = m_dedupe_nodes.at(
+                get_round_robin_index(m_dedupe_node_index, m_dedupe_nodes.size())).acquire_messenger();
+
+        if (body_size > 0) [[likely]] {
+            auto &body = req.get_body();
+            co_await m_dedup.get().send(DEDUPE_REQ, body);
+            const auto h_dedup = co_await m_dedup.get().recv_header();
+            resp = co_await m_dedup.get().recv_dedupe_response(h_dedup);
+        } else [[unlikely]] {
+            resp = {.effective_size = 0, .addr = address()};
+        }
+
+        auto shared_ptr = std::make_shared<rest::utils::ts_address_size>(resp.addr, resp.effective_size, std::stoi(req.get_URI().get_query_parameters().at("partNumber")));
+        state.get_mp_address_container().emplace((upload_id), std::move(shared_ptr));
+
         rest::utils::hashing::MD5 md5;
         res->set_etag(md5.calculateMD5(req.get_body()));
 
-        return std::move(res);
+        co_return std::move(res);
     }
 
     coro<std::unique_ptr<http::http_response>> handle_complete_mp_upload (http::http_request& req, rest::utils::state& state)
@@ -529,29 +554,28 @@ public:
         const auto start = std::chrono::steady_clock::now();
         const auto size_mb = static_cast <double> (body_size) / static_cast <double> (1024ul * 1024ul);
 
-        auto m_dedup = m_dedupe_nodes.at(get_round_robin_index(m_dedupe_node_index, m_dedupe_nodes.size())).acquire_messenger();
-        dedupe_response resp;
-        if(body_size > 0) [[likely]] {
-            for (const auto& pair : *parts_container_ptr)
-            {
-                m_dedup.get().register_write_buffer(pair.second.second);
-            }
-            co_await m_dedup.get().send_buffers(DEDUPE_REQ);
-            const auto h_dedup = co_await m_dedup.get().recv_header();
-            resp = co_await m_dedup.get().recv_dedupe_response(h_dedup);
-        } else [[unlikely]] {
-            resp = {.effective_size = 0, .addr = address()};
+        auto pair_ptr = state.get_mp_address_container().get_value((req.get_URI().get_query_parameters().at("uploadId")));
+        size_t total_eff_size {};
+        for (const auto& size: pair_ptr->get_eff_sizes())
+        {
+            total_eff_size += size;
         }
 
-        auto effective_size = static_cast <double> (resp.effective_size) / static_cast <double> (1024ul * 1024ul);
-        auto space_saving = 1.0 - static_cast <double> (resp.effective_size) / static_cast <double> (body_size);
+        auto effective_size = static_cast <double> (total_eff_size) / static_cast <double> (1024ul * 1024ul);
+        auto space_saving = 1.0 - static_cast <double> (total_eff_size) / static_cast <double> (body_size);
+
+        address addr;
+        for (const auto& pair: pair_ptr->get_map_address())
+        {
+            addr.append_address(pair.second);
+        }
 
         auto m_dir = m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size())).acquire_messenger();
         const directory_message dir_req
             {
                 .bucket_id = req.get_URI().get_bucket_id(),
                 .object_key = std::make_unique <std::string> (req.get_URI().get_object_key()),
-                .addr = std::make_unique <address> (std::move (resp.addr)),
+                .addr = std::make_unique <address> (std::move(addr)),
             };
 
         co_await m_dir.get().send_directory_message (DIR_PUT_OBJ_REQ, dir_req);
@@ -574,10 +598,12 @@ public:
         res->set_space_savings(space_saving);
         res->set_bandwidth(bandwidth);
 
+        state.get_mp_address_container().remove(req.get_URI().get_query_parameters().at("uploadId"));
+
         co_return std::move(res);
     }
 
-    std::unique_ptr<http::http_response> handle_abort_mp_upload (const http::http_request& req)
+    std::unique_ptr<http::http_response> handle_abort_mp_upload (const http::http_request& req, rest::utils::state& state)
     {
         std::unique_ptr<http::model::abort_multi_part_upload_response> res;
         res = std::make_unique<http::model::abort_multi_part_upload_response>(req);

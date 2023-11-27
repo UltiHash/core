@@ -49,4 +49,10 @@ namespace uh::cluster::rest::utils
         return m_current_bucket_multiparts;
     }
 
+    rest::utils::ts_unordered_map<std::string, std::shared_ptr<ts_address_size>>&
+    state::get_mp_address_container()
+    {
+        return m_addr;
+    }
+
 } // uh::cluster::rest::utils

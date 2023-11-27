@@ -48,6 +48,9 @@ namespace uh::cluster::rest::http::model
         {
             bucket_multiparts.remove(m_bucket_name);
         }
+
+        server_state.get_mp_address_container().remove(m_upload_id);
+
     }
 
     std::map<std::string, std::string> abort_multi_part_upload_request::get_request_specific_headers() const

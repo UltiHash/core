@@ -13,6 +13,7 @@ add_compile_options(-fPIC)
 set(Boost_USE_STATIC_LIBS ON)
 find_package(Boost 1.80 COMPONENTS thread log url unit_test_framework REQUIRED)
 find_package(OpenSSL REQUIRED)
+
 find_package(prometheus-cpp CONFIG REQUIRED)
 find_package(PugiXML REQUIRED)
 

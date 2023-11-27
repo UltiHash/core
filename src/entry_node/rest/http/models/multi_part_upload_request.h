@@ -23,6 +23,8 @@ namespace uh::cluster::rest::http::model
 
         [[nodiscard]] const std::string& get_body() override;
 
+        [[nodiscard]] std::size_t get_body_size() const override;
+
     private:
 
         utils::state& m_internal_server_state;

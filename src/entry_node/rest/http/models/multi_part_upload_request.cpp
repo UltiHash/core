@@ -34,6 +34,11 @@ namespace uh::cluster::rest::http::model
         return (*m_parts_container_ptr).find(m_part_number)->second.second;
     }
 
+    [[nodiscard]] std::size_t multi_part_upload_request::get_body_size() const
+    {
+        return (*m_parts_container_ptr).find(m_part_number)->second.second.size();
+    }
+
     coro<void> multi_part_upload_request::read_body(tcp_stream& stream, boost::beast::flat_buffer& buffer)
     {
         if (m_req.get().has_content_length())
