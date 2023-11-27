@@ -18,6 +18,9 @@ struct server_config
 {
     int threads;
     uint16_t port;
+    std::string metrics_bind_address;
+    std::size_t metrics_threads;
+    std::string metrics_path;
 };
 
 struct growing_plain_storage_config {
