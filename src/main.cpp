@@ -32,24 +32,6 @@ uh::cluster::entry_node_config make_entry_node_config () {
         },
         .dedupe_node_connection_count = 2,
         .directory_connection_count = 2,
-        .max_chunk_size = 1024ul * 1024ul * 1024ul,
-    };
-}
-
-uh::cluster::data_node_config make_data_node_config () {
-    return {
-        .directory = "ultihash-root/dn",
-        .hole_log = "ultihash-root/dn/log",
-        .min_file_size = 1ul * 1024ul * 1024ul * 1024ul,
-        .max_file_size = 4ul * 1024ul * 1024ul * 1024ul,
-        .max_data_store_size = 64ul * 1024ul * 1024ul * 1024ul,
-        .server_conf = {
-                .threads = 4,
-                .port = 8082,
-                .metrics_bind_address = "0.0.0.0:9082",
-                .metrics_threads = 2,
-                .metrics_path = "/metrics"
-        },
     };
 }
 
@@ -79,30 +61,42 @@ uh::cluster::dedupe_config make_dedupe_node_config () {
     return {
         .min_fragment_size = 32,
         .max_fragment_size = 8 * 1024,
-        .write_cache_size_per_dn = 20ul * 1024ul * 1024ul,
         .server_conf = {
-                .threads = 2,
+                .threads = 4,
                 .port = 8084,
                 .metrics_bind_address = "0.0.0.0:9084",
                 .metrics_threads = 2,
                 .metrics_path = "/metrics"
         },
-        .data_node_connection_count = 2,
-        .set_conf = {
-                .set_minimum_free_space = 1ul * 1024ul * 1024ul * 1024ul,
-                .max_empty_hole_size = 1ul * 1024ul * 1024ul * 1024ul,
-                .key_store_config = {
-                        .file  = "ultihash-root/dd/set",
-                        .init_size = 1ul * 1024ul * 1024ul * 1024ul,
-                }
-        },
+        .data_node_connection_count = 16,
+        .set_log_path = "ultihash-root/dd/set_log",
+        .dedupe_worker_minimum_data_size = 128ul * 1024ul,
+    };
+}
+
+uh::cluster::data_node_config make_data_node_config () {
+    return {
+            .directory = "ultihash-root/dn",
+            .hole_log = "ultihash-root/dn/log",
+            .min_file_size = 1ul * 1024ul * 1024ul * 1024ul,
+            .max_file_size = 4ul * 1024ul * 1024ul * 1024ul,
+            .max_data_store_size = 64ul * 1024ul * 1024ul * 1024ul,
+            .server_conf = {
+                    .threads = 16,
+                    .port = 8082,
+                    .metrics_bind_address = "0.0.0.0:9082",
+                    .metrics_threads = 2,
+                    .metrics_path = "/metrics"
+            },
     };
 }
 
 uh::cluster::global_data_view_config make_global_data_view_config () {
 
     return {
-        .read_cache_capacity = 4000,
+        .read_cache_capacity_l1= 8000000,
+        .read_cache_capacity_l2= 4000,
+        .l1_sample_size = 128,
         .ec_algorithm = uh::cluster::NON,
         .recovery_chunk_size = 1024ul * 1024ul * 1024ul,
     };
@@ -111,7 +105,6 @@ uh::cluster::global_data_view_config make_global_data_view_config () {
 uh::cluster::cluster_config make_cluster_config () {
     return {
             .init_process_count = 4,
-            .maximum_chunk_size = 1024ul * 1024ul * 1024ul,
             .data_node_conf = make_data_node_config(),
             .dedupe_node_conf = make_dedupe_node_config(),
             .directory_node_conf = make_directory_node_config(),

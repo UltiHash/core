@@ -23,17 +23,6 @@ struct server_config
     std::string metrics_path;
 };
 
-struct growing_plain_storage_config {
-    std::filesystem::path file;
-    size_t init_size;
-};
-
-struct set_config {
-    unsigned long set_minimum_free_space{};
-    unsigned long max_empty_hole_size{};
-    growing_plain_storage_config key_store_config;
-};
-
 struct bucket_config {
     size_t min_file_size;
     size_t max_file_size;
@@ -47,7 +36,9 @@ struct directory_store_config {
 };
 
 struct global_data_view_config {
-    int read_cache_capacity {};
+    int read_cache_capacity_l1 {};
+    int read_cache_capacity_l2 {};
+    size_t l1_sample_size {};
     ec_type ec_algorithm {};
     size_t recovery_chunk_size {};
 };
@@ -57,11 +48,10 @@ struct global_data_view_config {
 struct dedupe_config {
     std::size_t min_fragment_size{};
     std::size_t max_fragment_size{};
-    std::size_t write_cache_size_per_dn{};
     server_config server_conf{};
     int data_node_connection_count{};
-    set_config set_conf;
-    //dedupe_set_config dedupe_set_conf;
+    std::filesystem::path set_log_path;
+    size_t dedupe_worker_minimum_data_size{};
 };
 
 struct data_node_config {
@@ -78,7 +68,6 @@ struct entry_node_config {
     server_config rest_server_conf;
     int dedupe_node_connection_count;
     int directory_connection_count;
-    size_t max_chunk_size;
 };
 
 struct directory_node_config {
@@ -89,7 +78,6 @@ struct directory_node_config {
 
 struct cluster_config {
     int init_process_count {};
-    size_t maximum_chunk_size {};
     data_node_config data_node_conf;
     dedupe_config dedupe_node_conf;
     directory_node_config directory_node_conf;
