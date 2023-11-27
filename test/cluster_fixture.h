@@ -210,7 +210,7 @@ namespace uh::cluster {
                             .port = static_cast<uint16_t>(8600 + i),
                             .metrics_bind_address = "0.0.0.0:" + std::to_string(static_cast<uint16_t>(9600 + i)),
                             .metrics_threads = 2,
-                            .metrics_path = "/metrics"
+                            .metrics_path = get_root_path() / "metrics"
                     },
             };
         }
@@ -224,7 +224,7 @@ namespace uh::cluster {
                             .port = static_cast<uint16_t>(8700 + i),
                             .metrics_bind_address = "0.0.0.0:" + std::to_string(static_cast<uint16_t>(9700 + i)),
                             .metrics_threads = 2,
-                            .metrics_path = "/metrics"
+                            .metrics_path = get_root_path()/"metrics"
 
                     },
                     .directory_conf = {
@@ -248,12 +248,13 @@ namespace uh::cluster {
                     .max_fragment_size = 8 * 1024,
                     .server_conf = {
                             .threads = 1,
-                            .port = static_cast<uint16_t>(8800 + i),
+                            .port = static_cast <uint16_t> (8800 + i),
                             .metrics_bind_address = "0.0.0.0:" + std::to_string(static_cast<uint16_t>(9800 + i)),
                             .metrics_threads = 2,
-                            .metrics_path = "/metrics"
+                            .metrics_path = get_root_path() / "metrics"
                     },
                     .data_node_connection_count = 2,
+                    .set_log_path = get_root_path() / "dd_set",
                     .dedupe_worker_minimum_data_size = 128ul * 1024ul,
             };
         }
@@ -261,8 +262,9 @@ namespace uh::cluster {
         static uh::cluster::global_data_view_config make_global_data_view_config(ec_type ec) {
 
             return {
-                    .read_cache_capacity_l1 = 100,
+                    .read_cache_capacity_l1 = 200,
                     .read_cache_capacity_l2 = 100,
+                    .l1_sample_size = 128,
                     .ec_algorithm = ec,
                     .recovery_chunk_size = 1 * 1024ul,
             };
