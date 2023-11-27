@@ -5,6 +5,7 @@
 #ifndef CORE_DIRECTORY_NODE_HANDLER_H
 #define CORE_DIRECTORY_NODE_HANDLER_H
 
+#include <common/error.h>
 #include "common/protocol_handler.h"
 #include "directory_store.h"
 
@@ -33,9 +34,10 @@ public:
     coro <void> handle (messenger m) override {
 
         for (;;) {
-            std::string failure;
+            std::optional<error> err;
+
             try {
-            const auto message_header = co_await m.recv_header ();
+                const auto message_header = co_await m.recv_header ();
                 switch (message_header.type) {
                 case DIR_PUT_OBJ_REQ:
                     m_reqs_dir_put_obj.Increment();
@@ -65,17 +67,24 @@ public:
                     m_reqs_dir_delete_bucket.Increment();
                     co_await handle_delete_bucket(m, message_header);
                     break;
+                case DIR_DELETE_OBJ_REQ:
+                    co_await handle_delete_object(m, message_header);
+                    break;
                 case STOP:
                     co_return;
                 default:
                     m_reqs_invalid.Increment();
                     throw std::invalid_argument ("Invalid message type!");
                 }
+            } catch (const error_exception& e) {
+                err = e.error();
             } catch (const std::exception& e) {
-                failure = e.what();
+                err = error(error::unknown, e.what());
             }
-            if (!failure.empty()) {
-                co_await m.send(FAILURE, failure);
+
+            if (err)
+            {
+                co_await m.send_error (*err);
             }
         }
 
@@ -83,7 +92,8 @@ public:
 
 private:
 
-    coro <void> handle_put_obj (messenger& m, const messenger::header& h) {
+    coro <void> handle_put_obj (messenger& m, const messenger::header& h)
+    {
         directory_message request = co_await m.recv_directory_message (h);
 
         std::vector<char> address_data;
@@ -126,7 +136,12 @@ private:
         directory_message request = co_await m.recv_directory_message (h);
         m_directory.remove_bucket(request.bucket_id);
         co_await m.send(SUCCESS, {});
+    }
 
+    coro <void> handle_delete_object (messenger& m, const messenger::header& h) {
+        directory_message request = co_await m.recv_directory_message (h);
+        m_directory.remove_object(request.bucket_id, *request.object_key);
+        co_await m.send(SUCCESS, {});
     }
 
     coro <void> handle_list_buckets (messenger&m, const messenger::header &h) {

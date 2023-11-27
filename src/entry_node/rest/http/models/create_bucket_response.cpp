@@ -13,12 +13,6 @@ namespace uh::cluster::rest::http::model
     const http::response<http::string_body>& create_object_response::get_response_specific_object()
     {
 
-        if(m_errorHasBeenSet)
-        {
-            m_error.prepare_payload();
-            return m_error;
-        }
-
         if (m_locationHasBeenSet)
         {
             m_res.set(boost::beast::http::field::location, m_location);

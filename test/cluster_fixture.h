@@ -266,15 +266,23 @@ namespace uh::cluster {
             };
         }
 
+        static uh::cluster::global_data_view_config make_global_data_view_config(ec_type ec) {
+
+            return {
+                    .read_cache_capacity = 100,
+                    .ec_algorithm = ec,
+                    .recovery_chunk_size = 1 * 1024ul,
+            };
+        }
+
         static uh::cluster::cluster_config make_cluster_config(int i, ec_type ec) {
             return {
                     .init_process_count = 4,
-                    .ec_algorithm = ec,
-                    .recovery_chunk_size = 1 * 1024ul,
                     .data_node_conf = make_data_node_config(i),
                     .dedupe_node_conf = make_dedupe_node_config(i),
                     .directory_node_conf = make_directory_node_config(i),
                     .entry_node_conf = make_entry_node_config(i),
+                    .global_data_view_conf = make_global_data_view_config(ec)
             };
         }
 

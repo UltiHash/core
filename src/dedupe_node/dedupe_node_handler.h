@@ -11,36 +11,48 @@
 #include "common/cluster_config.h"
 #include "common/protocol_handler.h"
 #include "dedupe_write_cache.h"
-
-
+#include "dedupe_set.h"
+#include "paged_redblack_tree.h"
 namespace uh::cluster {
 
 class dedupe_node_handler: public protocol_handler {
 
 public:
 
-    dedupe_node_handler(dedupe_config dedupe_conf, global_data_view &storage) :
-            protocol_handler(dedupe_conf.server_conf),
-            m_dedupe_conf(std::move(dedupe_conf)),
-            m_fragment_set(m_dedupe_conf.set_conf, storage),
-            m_storage(storage),
-            m_counters(add_counter_family("uh_dd_requests", "number of requests handled by the deduplication node")),
-            m_reqs_dedupe(m_counters.Add({{"type", "DEDUPE_REQ"}}))
-            {
-                init();
-            }
+    dedupe_node_handler (dedupe_config dedupe_conf, global_data_view& storage):
+        protocol_handler(dedupe_conf.server_conf),
+        m_dedupe_conf (std::move(dedupe_conf)),
+        m_fragment_set (m_dedupe_conf.set_conf, storage),
+        m_storage (storage),
+        //m_dedupe_set (m_dedupe_conf.dedupe_set_conf, m_storage),
+        m_counters(add_counter_family("uh_dd_requests", "number of requests handled by the deduplication node")),
+        m_reqs_dedupe(m_counters.Add({{"type", "DEDUPE_REQ"}}))
+    {
+        init();
+    }
 
     coro <void> handle (messenger m) override {
 
         for (;;) {
-            const auto message_header = co_await m.recv_header();
-            switch (message_header.type) {
-                case DEDUPE_REQ:
-                    m_reqs_dedupe.Increment();
-                    co_await handle_dedupe(m, message_header);
-                    break;
-                default:
-                    throw std::invalid_argument("Invalid message type!");
+            std::optional<error> err;
+
+            try {
+                const auto message_header = co_await m.recv_header();
+                switch (message_header.type) {
+                    case DEDUPE_REQ:
+                        m_reqs_dedupe.Increment();
+                        co_await handle_dedupe(m, message_header);
+                        break;
+                    default:
+                        throw std::invalid_argument("Invalid message type!");
+                }
+            } catch (const error_exception& e) {
+                err = e.error();
+            } catch (const std::exception& e) {
+                err = error(error::unknown, e.what());
+            }
+            if (err) {
+                co_await m.send_error (*err);
             }
         }
     }
@@ -53,19 +65,22 @@ private:
             throw std::length_error ("Empty data sent do the dedupe node");
         }
 
+
         ospan<char> data(h.size);
         m.register_read_buffer(data);
         co_await m.recv_buffers(h);
+
         const auto result = co_await deduplicate ({data.data.get(), data.size});
         co_await m.send_dedupe_response(DEDUPE_RESP, result);
 
     }
 
+
     coro <dedupe_response> deduplicate (std::string_view data) {
 
         dedupe_response result {.addr = address {}};
         auto integration_data = data;
-        dedupe_write_cache cache(integration_data, m_storage, m_dedupe_conf);
+        //dedupe_write_cache cache(integration_data, m_storage, m_dedupe_conf);
         while (!integration_data.empty()) {
             const auto f = co_await m_fragment_set.find(integration_data);
             if (f.match) {
@@ -123,12 +138,12 @@ private:
     }
 
     static size_t largest_common_prefix(const std::string_view &str1, const std::string_view &str2) noexcept {
-        size_t i = 0;
-        const auto min_size = std::min (str1.size(), str2.size());
-        while (i < min_size and str1[i] == str2[i]) {
-            i++;
+        if (str1.size() <= str2.size()) {
+            return std::distance(str1.cbegin(), std::mismatch(str1.cbegin(), str1.cend(), str2.cbegin()).first);
         }
-        return i;
+        else {
+            return std::distance(str2.cbegin(), std::mismatch(str2.cbegin(), str2.cend(), str1.cbegin()).first);
+        }
     }
 
     coro <address> store_data(const std::string_view& frag) {
@@ -139,6 +154,7 @@ private:
     dedupe::paged_redblack_tree <dedupe::set_full_comparator> m_fragment_set;
     global_data_view& m_storage;
     std::mutex m_mutex;
+    // dedupe_set m_dedupe_set;
 
     prometheus::Family<prometheus::Counter> &m_counters;
     prometheus::Counter &m_reqs_dedupe;

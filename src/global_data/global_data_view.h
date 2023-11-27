@@ -6,13 +6,12 @@
 #define CORE_GLOBAL_DATA_VIEW_H
 
 #include <map>
-#include <unordered_map>
-#include <set>
 #include "data_node/data_node.h"
 #include "network/client.h"
 #include "network/network_traits.h"
 #include "ec.h"
 #include "ec_factory.h"
+#include "lru_cache.h"
 
 namespace uh::cluster {
 
@@ -25,7 +24,8 @@ public:
 
     explicit global_data_view (const cluster_map& cmap):
                           m_cluster_map (cmap),
-                          m_ec (ec_factory::make_ec (cmap.m_cluster_conf.ec_algorithm)) {
+                          m_ec (ec_factory::make_ec (cmap.m_cluster_conf.global_data_view_conf.ec_algorithm)),
+                          m_cache (cmap.m_cluster_conf.global_data_view_conf.read_cache_capacity){
         sleep(2);
     }
 
@@ -41,16 +41,17 @@ public:
         co_await m.get().send(WRITE_REQ, data);
         const auto message_header = co_await m.get().recv_header();
         auto resp = co_await m.get().recv_address(message_header);
-        if (resp.first.type != WRITE_RESP) [[unlikely]] {
-            throw std::runtime_error ("Invalid response for write request");
-        }
-        co_return std::move (resp.second);
+
+        ospan <char> buf (resp.first().size);
+        std::memcpy (buf.data.get(), data.data(), resp.first().size);
+        m_cache.put (resp.first().pointer, std::move (buf));
+        co_return std::move (resp);
     }
 
     coro <address> allocate (size_t total_size) {
 
         if (total_size % m_data_node_offsets.size() != 0) {
-            throw std::length_error ("");
+            throw std::length_error ("allocate size is not a multiple of the number of data nodes");
         }
 
         const size_t size = total_size / m_data_node_offsets.size();
@@ -61,18 +62,13 @@ public:
             nodes.emplace_back(node.second);
         }
         nodes.insert(nodes.cend(), m_ec->get_ec_nodes().cbegin(), m_ec->get_ec_nodes().cend());
-        //std::cout << "allocate nodes size " << nodes.size() << std::endl;
         address addr;
         auto bc = [&size] (auto m, auto id) -> coro <address> {
             m.get ().register_write_buffer (size);
-            //std::cout << "in bc func: before send buffer " << id  << std::endl;
             co_await m.get ().send_buffers (ALLOC_REQ);
-            //std::cout << "in bc func: before recv header " << id  << std::endl;
             const auto h = co_await m.get ().recv_header ();
-            //std::cout << "in bc func: before recv address " << id  << std::endl;
             auto resp = co_await m.get ().recv_address (h);
-            //std::cout << "in bc func: after recv addr " << id  << std::endl;
-            co_return std::move (resp.second);
+            co_return std::move (resp);
         };
         const auto resp = co_await broadcast_gather_custom <address> (*m_io_service, nodes, bc);
         for (const auto& r: resp) {
@@ -111,6 +107,10 @@ public:
 
     coro <void> scatter_allocated_write (const address& addr, const std::string_view& data) {
 
+        if (data.size() % m_data_node_offsets.size() != 0) [[unlikely]] {
+            throw std::length_error ("Invalid data length for broadcast");
+        }
+
         std::unordered_map <std::shared_ptr <client>, address> node_address_map;
         std::vector <std::shared_ptr <client>> nodes;
 
@@ -124,12 +124,8 @@ public:
             node_address.push_fragment(frag);
         }
 
-        if (data.size() % m_data_node_offsets.size() != 0) [[unlikely]] {
-            throw std::length_error ("Invalid data length for broadcast");
-        }
         const auto part_size = data.size() / m_data_node_offsets.size();
-        const auto ec_nodes = m_ec->get_ec_nodes();
-        std::atomic <int> ec_node_index = 0;
+        const auto& ec_nodes = m_ec->get_ec_nodes();
         const auto ec_data = m_ec->compute_ec(data, static_cast <int> (m_data_node_offsets.size()));
 
         auto bc_func = [&] (auto m, int node_id) -> coro <int> {
@@ -139,26 +135,72 @@ public:
                 data_part = data.substr(node_id * part_size, part_size);
             }
             else { // ec node
-
-                auto index = ec_node_index.load();
-                auto new_val = index + 1;
-                while (!ec_node_index.compare_exchange_weak (index, new_val)) {
-                    index = ec_node_index.load();
-                    new_val = index + 1;
-                }
+                const auto index = m_data_node_offsets.size() - node_id;
                 data_part = std::string_view {ec_data [index].data.get(), ec_data[index].size};
             }
             allocated_write_message msg {.addr = node_address_map.at (node),
                                          .data = data_part};
             co_await m.get ().send_allocated_write (ALLOC_WRITE_REQ, msg);
-            const auto h = co_await m.get ().recv_header ();
-            co_await m.get ().throw_if_failure (h);
+            co_await m.get ().recv_header ();
             co_return node_id;
         };
 
         co_await broadcast_gather_custom <int> (*m_io_service, nodes, bc_func);
 
         co_return;
+    }
+
+
+    coro <address> scatter_write (const std::string_view& data) {
+
+        if (data.size() % m_data_node_offsets.size() != 0) [[unlikely]] {
+            throw std::length_error ("Invalid data length for broadcast");
+        }
+
+        const auto& ec_nodes = m_ec->get_ec_nodes();
+
+        std::vector <std::shared_ptr <client>> nodes;
+        nodes.reserve(m_data_node_offsets.size() + ec_nodes.size());
+        for (const auto& n: m_data_node_offsets) {
+            nodes.emplace_back(n.second);
+        }
+        for (const auto& n: ec_nodes) {
+            nodes.emplace_back(n);
+        }
+
+        const auto part_size = data.size() / m_data_node_offsets.size();
+        const auto ec_data = m_ec->compute_ec(data, static_cast <int> (m_data_node_offsets.size()));
+
+        std::vector <address> addrs (nodes.size());
+        auto bc_func = [&] (auto m, int node_id) -> coro <int> {
+            std::string_view data_part;
+            const auto node = nodes.at (node_id);
+            if (std::find (ec_nodes.cbegin(), ec_nodes.cend(), node) == ec_nodes.cend()) { // no ec node
+                data_part = data.substr(node_id * part_size, part_size);
+            }
+            else { // ec node
+                const auto index = m_data_node_offsets.size() - node_id;
+                data_part = std::string_view {ec_data [index].data.get(), ec_data[index].size};
+            }
+            co_await m.get ().send (WRITE_REQ, data_part);
+            const auto message_header = co_await m.get().recv_header();
+            auto resp = co_await m.get().recv_address(message_header);
+            addrs[node_id] = std::move (resp);
+            co_return node_id;
+        };
+
+        co_await broadcast_gather_custom <int> (*m_io_service, nodes, bc_func);
+
+        address addr;
+        for (const auto& a: addrs) {
+            addr.append_address(a);
+        }
+
+        ospan <char> buf (addr.sizes[0]);
+        std::memcpy (buf.data.get(), data.data(), addr.sizes[0]);
+        m_cache.put (addr.get_fragment(0).pointer, std::move (buf));
+
+        co_return std::move (addr);
     }
 
     coro <void> recover () {
@@ -178,9 +220,8 @@ public:
         auto bc_func = [] (auto m, int node_id) -> coro <uint128_t> {
             co_await m.get ().send(USED_REQ, {});
             const auto message_header = co_await m.get().recv_header();
-            co_await m.get ().throw_if_failure (message_header, "failure in recovery get_used");
             const auto resp = co_await m.get().recv_uint128_t (message_header);
-            co_return resp.second;
+            co_return resp;
 
         };
         const auto resp = co_await broadcast_gather_custom <uint128_t> (*m_io_service, nodes, bc_func);
@@ -210,7 +251,7 @@ public:
         const auto& healthy_offsets = std::next (offset_sizes.begin())->second;
         const auto& data_size = std::next (node_sizes.begin())->first;
 
-        const auto chunk_size = m_cluster_map.m_cluster_conf.recovery_chunk_size;
+        const auto chunk_size = m_cluster_map.m_cluster_conf.global_data_view_conf.recovery_chunk_size;
         const auto max_file_size = m_cluster_map.m_cluster_conf.data_node_conf.max_file_size;
         uint128_t last_file_end_offset = max_file_size;
         uint128_t offset = data_store::alloc_offset;
@@ -222,10 +263,7 @@ public:
                 auto read_bc =  [&] (auto m, int node_id) -> coro <ospan <char>> {
                     ospan <char> buf (adjusted_chunk_size);
                     co_await m.get().send_fragment(READ_REQ, {offset + healthy_offsets.at (node_id), buf.size});
-                    const auto h = co_await m.get().recv ({buf.data.get(), buf.size});
-                    if (h.type != READ_RESP) [[unlikely]] {
-                        throw std::runtime_error ("Unsuccessful recovery");
-                    }
+                    co_await m.get().recv ({buf.data.get(), buf.size});
                     co_return std::move (buf);
                 };
                 const auto response = co_await broadcast_gather_custom <ospan <char>> (*m_io_service, healthy_nodes, read_bc);
@@ -237,12 +275,9 @@ public:
                     co_await m.get ().send (WRITE_REQ, sp);
                     const auto message_header = co_await m.get().recv_header();
                     auto resp = co_await m.get().recv_address(message_header);
-                    if (resp.first.type != WRITE_RESP) [[unlikely]] {
-                        throw std::runtime_error ("Invalid response for write request");
-                    }
-                    co_return resp.second;
+                    co_return resp;
                 };
-                const auto recovery_response = co_await broadcast_gather_custom <address> (*m_io_service, failed_nodes, write_bc);
+                co_await broadcast_gather_custom <address> (*m_io_service, failed_nodes, write_bc);
 
                 offset += adjusted_chunk_size;
             }
@@ -252,17 +287,34 @@ public:
             }
         }
 
-        co_return;
+    }
+
+
+    std::optional <ospan <char>> read_cache (const uint128_t pointer, const size_t size) {
+        if (const auto c = m_cache.get(pointer); c.has_value() and c.value().get().size >= size) {
+            ospan <char> buffer (size);
+            std::memcpy (buffer.data.get(), c.value().get().data.get(), size);
+            return buffer;
+        }
+        return std::nullopt;
     }
 
     coro <std::size_t> read (char* buffer, const uint128_t pointer, const size_t size) {
+        /*
+        if (const auto c = m_cache.get(pointer); c.has_value() and c.value().get().size >= size) {
+            std::memcpy (buffer, c.value().get().data.get(), size);
+            co_return size;
+        }
+         */
         const fragment frag {pointer, size};
         auto m = get_data_node (pointer)->acquire_messenger();
         co_await m.get().send_fragment(READ_REQ, frag);
         const auto h = co_await m.get().recv_header();
         m.get().register_read_buffer (buffer, h.size);
-        co_await m.get().throw_if_failure(h);
         co_await m.get().recv_buffers(h);
+        ospan <char> buf (h.size);
+        std::memcpy (buf.data.get(), buffer, h.size);
+        m_cache.put (pointer, std::move (buf));
         co_return h.size;
     }
 
@@ -291,7 +343,6 @@ public:
             const auto& offsets = node_data_offsets_map.at(node);
             co_await m.get ().send_address (READ_ADDRESS_REQ, addr);
             const auto h = co_await m.get ().recv_header ();
-            co_await m.get ().throw_if_failure (h);
             for (int i = 0; i < addr.size(); ++i) {
                 m.get ().register_read_buffer (buffer + offsets.at(i), addr.sizes[i]);
             }
@@ -307,9 +358,6 @@ public:
         auto m = get_data_node (pointer)->acquire_messenger();
         co_await m.get().send_fragment(REMOVE_REQ, {pointer, size});
         const auto h = co_await m.get().recv_header();
-        if (h.type != REMOVE_OK) [[unlikely]] {
-            throw std::runtime_error ("Remove not successful");
-        }
     }
 
     coro <void> sync (const address& addr) {
@@ -351,23 +399,30 @@ public:
 
         std::forward_list <client::acquired_messenger> messengers;
         for (auto& dn: m_data_node_offsets) {
-
             messengers.emplace_front(dn.second->acquire_messenger());
             co_await messengers.front().get().send(USED_REQ, {});
         }
 
-        bool success = true;
-        uint128_t used = 0;
-        for (auto& m: messengers) {
-            const auto message_header = co_await m.get().recv_header();
-            const auto resp = co_await m.get().recv_uint128_t (message_header);
-            success = success and (resp.first.type == USED_RESP);
-            used = used + resp.second;
+        std::vector <std::shared_ptr <client>> nodes;
+        nodes.reserve(m_data_node_offsets.size());
+        for (const auto& n: m_data_node_offsets) {
+            nodes.emplace_back(n.second);
         }
 
-        if (!success) [[unlikely]] {
-            throw std::runtime_error ("Get used space not successful");
-        }
+        uint128_t used = 0;
+        std::mutex mut;
+        auto bc_func = [&] (auto m, int node_id) -> coro <message_type> {
+
+            co_await messengers.front().get().send(USED_REQ, {});
+            const auto message_header = co_await m.get().recv_header();
+            const auto resp = co_await m.get().recv_uint128_t (message_header);
+            std::lock_guard <std::mutex> lock (mut);
+            used = used + resp;
+            co_return SUCCESS;
+        };
+
+        co_await broadcast_gather_custom <message_type> (*m_io_service, nodes, bc_func);
+
         co_return used;
     }
 
@@ -422,9 +477,11 @@ public:
 
     }
 
+    [[nodiscard]] std::shared_ptr <boost::asio::io_context> get_executor () const {
+        return m_io_service;
+    }
+
 private:
-
-
 
     std::shared_ptr <client> get_data_node (const uint128_t& pointer) {
         const auto pfd = m_data_node_offsets.upper_bound (pointer);
@@ -444,6 +501,7 @@ private:
     std::map <const uint128_t, std::shared_ptr <client>> m_data_node_offsets;
     std::unique_ptr <ec> m_ec;
     std::atomic <size_t> m_data_node_index {};
+    lru_cache <uint128_t, ospan <char>> m_cache;
 
 };
 

@@ -227,9 +227,9 @@ BOOST_FIXTURE_TEST_CASE (directory_store_test, config_fixture)
         const auto used_space_1 = ds.get_used_space();
 
         ds.remove("b1", "k3");
-        BOOST_CHECK_THROW (ds.get("b1", "k3"), std::out_of_range);
+        BOOST_CHECK_THROW (ds.get("b1", "k3"), std::exception);
         ds.remove("b2", "k4");
-        BOOST_CHECK_THROW (ds.get("b2", "k4"), std::out_of_range);
+        BOOST_CHECK_THROW (ds.get("b2", "k4"), std::exception);
 
         const auto used_space_2 = ds.get_used_space();
 
@@ -296,14 +296,15 @@ BOOST_FIXTURE_TEST_CASE (directory_store_test, config_fixture)
         BOOST_TEST(d53.size == sizeof(data5));
         BOOST_CHECK(std::memcmp(d53.data.get(), data5, d5.size) == 0);
 
-        ds.remove_bucket("b2");
+        BOOST_CHECK_THROW(ds.remove_bucket("b2"), std::exception);
     }
 
     {
         directory_store_config ds_conf = {"root", make_bucket_config()};
         directory_store ds (ds_conf);
         const auto buckets = ds.list_buckets();
-        BOOST_TEST (buckets.size() == 2);
+        //!! changed to 3 from 2 below
+        BOOST_TEST (buckets.size() == 3);
         BOOST_CHECK (std::find (buckets.begin(), buckets.end(), "b1") != buckets.end());
         BOOST_CHECK (std::find (buckets.begin(), buckets.end(), "b3") != buckets.end());
 

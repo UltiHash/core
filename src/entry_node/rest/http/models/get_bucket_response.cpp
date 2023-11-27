@@ -28,12 +28,6 @@ namespace uh::cluster::rest::http::model
     const http::response<http::string_body>& get_bucket_response::get_response_specific_object()
     {
 
-        if(m_errorHasBeenSet)
-        {
-            m_error.prepare_payload();
-            return m_error;
-        }
-
         std::string bucket_xml_string;
         if (m_bucketHasBeenSet)
         {
