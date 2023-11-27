@@ -2,6 +2,7 @@
 // Created by masi on 7/21/23.
 //
 
+#include <mutex>
 #include "data_store.h"
 
 namespace uh::cluster {
@@ -131,7 +132,7 @@ void data_store::remove(uint128_t pointer, size_t size) {
 }
 
 address data_store::allocate (size_t size) {
-    std::lock_guard <std::shared_mutex> lock (m);
+    std::unique_lock <std::shared_mutex> lock (m);
 
     const auto alloc = allocate_internal (size);
     address addr;
@@ -140,6 +141,7 @@ address data_store::allocate (size_t size) {
     }
     m_free_spot_manager.apply_popped_items();
     m_used += size;
+    lock.unlock();
     sync();
     return addr;
 }
