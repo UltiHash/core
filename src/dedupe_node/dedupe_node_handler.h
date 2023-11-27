@@ -20,11 +20,16 @@ class dedupe_node_handler: public protocol_handler {
 public:
 
     dedupe_node_handler (dedupe_config dedupe_conf, global_data_view& storage):
+        protocol_handler(dedupe_conf.server_conf),
         m_dedupe_conf (std::move(dedupe_conf)),
         m_fragment_set (m_dedupe_conf.set_conf, storage),
-        m_storage (storage)
-        //m_dedupe_set (m_dedupe_conf.dedupe_set_conf, m_storage)
-        {}
+        m_storage (storage),
+        //m_dedupe_set (m_dedupe_conf.dedupe_set_conf, m_storage),
+        m_counters(add_counter_family("uh_dd_requests", "number of requests handled by the deduplication node")),
+        m_reqs_dedupe(m_counters.Add({{"type", "DEDUPE_REQ"}}))
+    {
+        init();
+    }
 
     coro <void> handle (messenger m) override {
 
@@ -35,6 +40,7 @@ public:
                 const auto message_header = co_await m.recv_header();
                 switch (message_header.type) {
                     case DEDUPE_REQ:
+                        m_reqs_dedupe.Increment();
                         co_await handle_dedupe(m, message_header);
                         break;
                     default:
@@ -149,6 +155,9 @@ private:
     global_data_view& m_storage;
     std::mutex m_mutex;
     // dedupe_set m_dedupe_set;
+
+    prometheus::Family<prometheus::Counter> &m_counters;
+    prometheus::Counter &m_reqs_dedupe;
 };
 
 } // end namespace uh::cluster
