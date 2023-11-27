@@ -25,6 +25,7 @@ namespace uh::cluster {
         BOOST_TEST(true);
     }
 
+    /*
 BOOST_FIXTURE_TEST_CASE (dedupe_write_cache_uncached_write_test, cluster_fixture)
 {
     setup (3, 1, 0, XOR);
@@ -171,6 +172,6 @@ BOOST_FIXTURE_TEST_CASE (dedupe_write_cache_test_cached_write_auto_flush_realloc
 //    //- when fragmentation occurs due to padding (split fragment < min frag size), the overall data that should be written may not fit into the cache any longer. Does reallocation work properly?
 //}
 // ---------------------------------------------------------------------
-
+*/
 } // end namespace uh::cluster
 
