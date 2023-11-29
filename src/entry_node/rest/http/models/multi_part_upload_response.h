@@ -13,9 +13,9 @@ namespace uh::cluster::rest::http::model
         multi_part_upload_response(const http_request&, http::response<http::string_body>);
 
         [[nodiscard]] const http::response<http::string_body>& get_response_specific_object() override;
-        void set_etag(std::string);
-
     private:
+
+        void set_etag();
 
         bool m_eTagHasBeenSet = false;
         std::string m_eTag;

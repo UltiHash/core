@@ -1,19 +1,25 @@
 #include "multi_part_upload_response.h"
 
+// UTILS
+#include "entry_node/rest/utils/hashing/hash.h"
+
 namespace uh::cluster::rest::http::model
 {
 
     multi_part_upload_response::multi_part_upload_response(const http_request& req) : http_response(req)
-    {}
+    {
+        set_etag();
+    }
 
     multi_part_upload_response::multi_part_upload_response(const http_request& req, http::response<http::string_body> recv_res) :
             http_response(req, std::move(recv_res))
     {}
 
-    void multi_part_upload_response::set_etag(std::string etag)
+    void multi_part_upload_response::set_etag()
     {
         m_eTagHasBeenSet = true;
-        m_eTag = std::move(etag);
+        rest::utils::hashing::MD5 md5;
+//        m_eTag = md5.calculateMD5(m_orig_req.)
     }
 
     const http::response<http::string_body>& multi_part_upload_response::get_response_specific_object()

@@ -1,6 +1,7 @@
 #pragma once
 
-#include <entry_node/rest/http/http_request.h>
+#include "entry_node/rest/http/http_request.h"
+#include "entry_node/rest/utils/state/server_state.h"
 
 namespace uh::cluster::rest::http::model
 {
@@ -8,7 +9,7 @@ namespace uh::cluster::rest::http::model
     class init_multi_part_upload_request : public rest::http::http_request
     {
     public:
-        explicit init_multi_part_upload_request(const http::request_parser<http::empty_body>&, std::string upload_id, std::unique_ptr<URI> uri);
+        explicit init_multi_part_upload_request(const http::request_parser<http::empty_body>&, utils::server_state& , std::unique_ptr<URI>);
 
         ~init_multi_part_upload_request() override = default;
 

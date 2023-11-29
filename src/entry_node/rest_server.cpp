@@ -97,7 +97,7 @@ namespace uh::cluster::rest
                 LOG_INFO() << "received request: " << received_request.get().base();
 
                 // parse
-                rest::utils::parser::s3_parser s3_parser(received_request, m_internal_server_state);
+                rest::utils::parser::s3_parser s3_parser(received_request, m_server_state);
                 auto s3_request = s3_parser.parse();
 
                 // read body
@@ -105,7 +105,7 @@ namespace uh::cluster::rest
 
                 // validate
                 s3_request->validate_request_specific_criteria();
-                auto s3_res = co_await m_handler.handle(*s3_request, m_internal_server_state);
+                auto s3_res = co_await m_handler.handle(*s3_request, m_server_state);
 
                 // send response
                 auto s3_res_specific_object = s3_res->get_response_specific_object();
