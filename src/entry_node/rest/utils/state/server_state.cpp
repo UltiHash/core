@@ -26,10 +26,41 @@ namespace uh::cluster::rest::utils
     }
 
 
+    const std::string& parts::part_data::get_body()
+    {
+        return body;
+    }
+
+
+    const std::string& parts::part_data::get_etag()
+    {
+        return etag;
+    }
+
+
     bool parts::put_single_part(std::uint16_t part_number, std::string&& body)
     {
         std::lock_guard<std::mutex> lock(mutex);
         return parts_container.emplace(part_number, std::make_shared<part_data>(std::move(body))).second;
+    }
+
+
+    size_t parts::size()
+    {
+        std::lock_guard<std::mutex> lock(mutex);
+        return parts_container.size();
+    }
+
+
+    std::map<std::uint16_t, std::shared_ptr<parts::part_data>>::const_iterator parts::begin() const
+    {
+        return parts_container.begin();
+    }
+
+
+    std::map<std::uint16_t, std::shared_ptr<parts::part_data>>::const_iterator parts::end() const
+    {
+        return parts_container.end();
     }
 
 

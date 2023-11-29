@@ -13,16 +13,24 @@ namespace uh::cluster::rest::utils
     public:
         struct part_data
         {
+        public:
+            explicit part_data(std::string&&);
+            const std::string& get_body();
+            const std::string& get_etag();
+        private:
+            std::mutex mutex {};
             std::string body {};
             std::string etag {};
             address address {};
             std::string effective_size {};
-
-            explicit part_data(std::string&&);
         };
 
         std::shared_ptr<part_data> find(std::uint16_t part_num);
         bool put_single_part(std::uint16_t part_number, std::string&& body);
+        size_t size();
+
+        [[nodiscard]] std::map<std::uint16_t, std::shared_ptr<part_data>>::const_iterator begin() const;
+        [[nodiscard]] std::map<std::uint16_t, std::shared_ptr<part_data>>::const_iterator end() const;
 
         parts() = default;
 
