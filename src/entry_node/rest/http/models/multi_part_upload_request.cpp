@@ -86,6 +86,9 @@ namespace uh::cluster::rest::http::model
 
                     m_parts_container->put_single_part(m_part_number, std::move(read_body));
                 }
+
+                // set etag
+                m_etag = m_parts_container->find(m_part_number)->etag;
             }
         }
         else

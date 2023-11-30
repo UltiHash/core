@@ -8,10 +8,6 @@ namespace uh::cluster::rest::http::model
     {
     }
 
-    abort_multi_part_upload_response::abort_multi_part_upload_response(const http_request& req, http::response<http::string_body> recv_res) :
-            http_response(req, std::move(recv_res))
-    {}
-
     const http::response<http::string_body>& abort_multi_part_upload_response::get_response_specific_object()
     {
 
@@ -24,8 +20,6 @@ namespace uh::cluster::rest::http::model
         {
             m_res.set("x-amz-request-id",m_requestId);
         }
-
-        // xml body
 
         m_res.prepare_payload();
         return m_res;

@@ -11,13 +11,18 @@ namespace uh::cluster::rest::utils
     struct parts
     {
     public:
+
+        /*
+         * THIS STRUCT IS IMMUTABLE ONCE INITIALIZED. IT CAN ONLY BE CONSTRUCTED AND DESTRUCTED
+         */
         struct part_data
         {
+        private:
+            rest::utils::hashing::MD5 md5 {};
+
+        public:
             explicit part_data(std::string&&);
 
-            rest::utils::hashing::MD5 md5;
-
-            // READ ONLY BODY AND ETAG AFTER CONSTRUCTION
             const std::string body {};
             const std::string etag {};
         };

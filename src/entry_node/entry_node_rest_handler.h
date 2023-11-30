@@ -78,7 +78,7 @@ namespace uh::cluster {
             init();
         }
 
-        coro < std::unique_ptr<http::http_response> > handle (http::http_request& req, rest::utils::server_state& state)
+        coro < std::unique_ptr<http::http_response> > handle (const http::http_request& req, rest::utils::server_state& state)
         {
 
             std::unique_ptr<http::http_response> res;
@@ -282,7 +282,7 @@ namespace uh::cluster {
             co_return std::move(res);
         }
 
-        coro <std::unique_ptr<http::http_response>> handle_put_object (http::http_request& req)
+        coro <std::unique_ptr<http::http_response>> handle_put_object (const http::http_request& req)
         {
             std::unique_ptr<http::model::put_object_response> res;
             auto req_bucket_id = req.get_URI().get_bucket_id();
@@ -495,32 +495,28 @@ namespace uh::cluster {
         {
 
             std::unique_ptr<http::model::init_multi_part_upload_response> res = std::make_unique<http::model::init_multi_part_upload_response>(req);
+
+            // TODO fix the following where upload id is received from etag because response object and the request is a bit separated
             res->set_upload_id(req.get_eTag());
 
             return std::move(res);
         }
 
-        std::unique_ptr<http::http_response> handle_mp_upload (http::http_request& req)
+        std::unique_ptr<http::http_response> handle_mp_upload (const http::http_request& req)
         {
 
-            std::unique_ptr<http::model::multi_part_upload_response> res;
-
-            res = std::make_unique<http::model::multi_part_upload_response>(req);
-
-            rest::utils::hashing::MD5 md5;
-            res->set_etag(md5.calculateMD5(req.get_body()));
-
+            std::unique_ptr<http::model::multi_part_upload_response> res =  std::make_unique<http::model::multi_part_upload_response>(req);
             return std::move(res);
         }
 
-        coro<std::unique_ptr<http::http_response>> handle_complete_mp_upload (http::http_request& req, rest::utils::state& state)
+        coro<std::unique_ptr<http::http_response>> handle_complete_mp_upload (const http::http_request& req, rest::utils::server_state& state)
         {
             std::unique_ptr<http::model::complete_multi_part_upload_response> res;
 
             res = std::make_unique<http::model::complete_multi_part_upload_response>(req);
 
             // acquire the internal parts container
-            auto parts_container_ptr = state.get_multipart_container().get_value(req.get_URI().get_query_parameters().at("uploadId"));
+            auto parts_container_ptr = state.m_uploads.get_parts_container(req.get_URI().get_query_parameters().at("uploadId"));
             auto body_size = req.get_body_size();
 
             std::cout << "UPLOAD SIZE: " << req.get_body_size() << std::endl;
@@ -532,9 +528,9 @@ namespace uh::cluster {
             auto m_dedup = m_dedupe_nodes.at(get_round_robin_index(m_dedupe_node_index, m_dedupe_nodes.size())).acquire_messenger();
             dedupe_response resp;
             if(body_size > 0) [[likely]] {
-                for (const auto& pair : *parts_container_ptr)
+                for (const auto& pair : parts_container_ptr->get_parts())
                 {
-                    m_dedup.get().register_write_buffer(pair.second.second);
+                    m_dedup.get().register_write_buffer(pair.second.first);
                 }
                 co_await m_dedup.get().send_buffers(DEDUPE_REQ);
                 const auto h_dedup = co_await m_dedup.get().recv_header();
@@ -579,9 +575,7 @@ namespace uh::cluster {
 
         std::unique_ptr<http::http_response> handle_abort_mp_upload (const http::http_request& req)
         {
-            std::unique_ptr<http::model::abort_multi_part_upload_response> res;
-            res = std::make_unique<http::model::abort_multi_part_upload_response>(req);
-
+            std::unique_ptr<http::model::abort_multi_part_upload_response> res = std::make_unique<http::model::abort_multi_part_upload_response>(req);
             return std::move(res);
         }
 
@@ -618,32 +612,32 @@ namespace uh::cluster {
             co_return std::move(res);
         }
 
-        std::unique_ptr<http::http_response> handle_list_mp_uploads (const http::http_request& req, rest::utils::state& state)
+        std::unique_ptr<http::http_response> handle_list_mp_uploads (const http::http_request& req, rest::utils::server_state& state)
         {
 
             std::unique_ptr<http::model::list_multi_part_uploads_response> res = std::make_unique<http::model::list_multi_part_uploads_response>(req);
 
-            auto bucket_name = req.get_URI().get_bucket_id();
-            auto ptr = state.get_bucket_multiparts().get_value(bucket_name);
-            if (ptr == nullptr)
-            {
-                throw http::model::custom_error_response_exception(b_http::status::not_found, http::model::error::bucket_not_found);
-            }
-            else
-            {
-                for (const auto pair : *ptr)
-                {
-                    for (const auto& sec_pair : *pair.second)
-                    {
-                        res->add_key_and_uploadid(pair.first, sec_pair);
-                    }
-                }
-            }
+//            auto bucket_name = req.get_URI().get_bucket_id();
+//            auto ptr = state.get_bucket_multiparts().get_value(bucket_name);
+//            if (ptr == nullptr)
+//            {
+//                throw http::model::custom_error_response_exception(b_http::status::not_found, http::model::error::bucket_not_found);
+//            }
+//            else
+//            {
+//                for (const auto pair : *ptr)
+//                {
+//                    for (const auto& sec_pair : *pair.second)
+//                    {
+//                        res->add_key_and_uploadid(pair.first, sec_pair);
+//                    }
+//                }
+//            }
 
             return std::move(res);
         }
 
-        coro <std::unique_ptr<http::http_response>> handle_delete_objects (http::http_request& req)
+        coro <std::unique_ptr<http::http_response>> handle_delete_objects (const http::http_request& req)
         {
 
             std::unique_ptr<http::model::delete_objects_response> res;

@@ -5,7 +5,8 @@
 namespace uh::cluster::rest::http::model
 {
 
-    complete_multi_part_upload_request::complete_multi_part_upload_request(const http::request_parser<http::empty_body>& recv_req,
+    complete_multi_part_upload_request::
+    complete_multi_part_upload_request(const http::request_parser<http::empty_body>& recv_req,
                                                                            utils::server_state& server_state,
                                                                            std::unique_ptr<rest::http::URI> uri) :
             rest::http::http_request(recv_req, std::move(uri)),
