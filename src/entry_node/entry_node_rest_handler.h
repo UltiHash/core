@@ -292,37 +292,42 @@ namespace uh::cluster {
             {
                 res = std::make_unique<http::model::put_object_response>(req);
 
-                std::chrono::time_point <std::chrono::steady_clock> timer;
+                std::chrono::time_point<std::chrono::steady_clock> timer;
                 const auto start = std::chrono::steady_clock::now();
 
                 auto body_size = req.get_body_size();
                 const auto size_mb = static_cast <double> (body_size) / static_cast <double> (1024ul * 1024ul);
 
-                dedupe_response resp {.effective_size = 0};
-                if(body_size > 0)
+                dedupe_response resp{.effective_size = 0};
+                std::list<std::string_view> pieces;
+                pieces.emplace_back(req.get_body());
+
+                if (body_size > 0)
                 {
-                    resp = co_await integrate_data({req.get_body()});
+                    resp = co_await integrate_data(pieces);
                 }
 
-                auto effective_size = static_cast <double> (resp.effective_size) / static_cast <double> (1024ul * 1024ul);
+                auto effective_size =
+                        static_cast <double> (resp.effective_size) / static_cast <double> (1024ul * 1024ul);
                 auto space_saving = 1.0 - static_cast <double> (resp.effective_size) / static_cast <double> (body_size);
 
-                auto m_dir = m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size()))->acquire_messenger();
+                auto m_dir = m_directory_nodes.at(
+                        get_round_robin_index(m_directory_node_index, m_directory_nodes.size()))->acquire_messenger();
                 const directory_message dir_req
                         {
                                 .bucket_id = req.get_URI().get_bucket_id(),
-                                .object_key = std::make_unique <std::string> (req.get_URI().get_object_key()),
-                                .addr = std::make_unique <address> (std::move (resp.addr)),
+                                .object_key = std::make_unique<std::string>(req.get_URI().get_object_key()),
+                                .addr = std::make_unique<address>(std::move(resp.addr)),
                         };
 
-                co_await m_dir.get().send_directory_message (DIR_PUT_OBJ_REQ, dir_req);
+                co_await m_dir.get().send_directory_message(DIR_PUT_OBJ_REQ, dir_req);
                 const auto h_dir = co_await m_dir.get().recv_header();
 
                 LOG_INFO() << "original size " << size_mb << " MB";
                 LOG_INFO() << "effective size " << effective_size << " MB";
                 LOG_INFO() << "space saving " << space_saving;
-                const auto stop = std::chrono::steady_clock::now ();
-                const std::chrono::duration <double> duration = stop - start;
+                const auto stop = std::chrono::steady_clock::now();
+                const std::chrono::duration<double> duration = stop - start;
                 const auto bandwidth = size_mb / duration.count();
                 LOG_INFO() << "integration duration " << duration.count() << " s";
                 LOG_INFO() << "integration bandwidth " << bandwidth << " MB/s";
@@ -333,18 +338,18 @@ namespace uh::cluster {
                 res->set_bandwidth(bandwidth);
 
             }
-            catch (const error_exception& e)
+            catch (const error_exception &e)
             {
                 LOG_ERROR() << "Failed to get bucket `" << req_bucket_id << "`: " << e;
                 switch (*e.error())
                 {
                     case error::bucket_not_found:
-                        throw http::model::custom_error_response_exception(b_http::status::not_found, http::model::error::bucket_not_found);
+                        throw http::model::custom_error_response_exception(b_http::status::not_found,
+                                                                           http::model::error::bucket_not_found);
                     default:
                         throw http::model::custom_error_response_exception(b_http::status::internal_server_error);
                 }
             }
-
 
             co_return std::move(res);
         }
