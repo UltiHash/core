@@ -17,6 +17,7 @@ namespace uh::cluster::rest::utils
         }
     }
 
+
     parts::part_data::part_data(std::string&& recv_body) : body(std::move(recv_body)), etag(std::move(md5.calculateMD5(body)))
     {}
 
