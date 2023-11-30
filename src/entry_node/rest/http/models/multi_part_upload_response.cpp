@@ -5,22 +5,12 @@ namespace uh::cluster::rest::http::model
 
     multi_part_upload_response::multi_part_upload_response(const http_request& req) : http_response(req)
     {
-        set_etag();
-    }
-
-    void multi_part_upload_response::set_etag()
-    {
-        m_eTag = m_orig_req.get_eTag();
-        m_eTagHasBeenSet = true;
     }
 
     const http::response<http::string_body>& multi_part_upload_response::get_response_specific_object()
     {
 
-        if(m_eTagHasBeenSet)
-        {
-            m_res.set(boost::beast::http::field::etag, m_eTag);
-        }
+        m_res.set(boost::beast::http::field::etag, m_orig_req.get_eTag());
 
         if(m_checksumCRC32HasBeenSet)
         {

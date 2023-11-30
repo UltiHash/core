@@ -3,6 +3,7 @@
 #include "rest/utils/parser/s3_parser.h"
 #include <fstream>
 #include <filesystem>
+#include <utility>
 #include "entry_node/rest/utils/string/string_utils.h"
 #include "rest/http/models/custom_error_response_exception.h"
 
@@ -11,11 +12,11 @@ namespace uh::cluster::rest
 
 //------------------------------------------------------------------------------
 
-    rest_server::rest_server(entry_node_config config, std::vector <client>& dedupe_nodes, std::vector <client>& directory_nodes) :
-        m_config(config), m_ioc(std::make_shared <boost::asio::io_context>(static_cast<int>(m_config.rest_server_conf.threads))),
+    rest_server::rest_server(entry_node_config config, std::vector <std::shared_ptr <client>>& dedupe_nodes, std::vector <std::shared_ptr <client>>& directory_nodes) :
+        m_config(std::move(config)), m_ioc(std::make_shared <boost::asio::io_context>(static_cast<int>(m_config.rest_server_conf.threads))),
         m_ssl(boost::asio::ssl::context::tlsv12_client),
         m_thread_container(m_config.rest_server_conf.threads-1),
-        m_handler (dedupe_nodes, directory_nodes, m_config)
+        m_handler (m_ioc, dedupe_nodes, directory_nodes, m_config)
     {
         boost::asio::co_spawn(*m_ioc,
                               recover_failed_nodes (),

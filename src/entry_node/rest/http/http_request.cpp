@@ -1,6 +1,7 @@
+#include <iostream>
 #include "entry_node/rest/utils/string/string_utils.h"
 #include "http_request.h"
-#include <iostream>
+#include "entry_node/rest/utils/hashing/hash.h"
 
 namespace uh::cluster::rest::http
 {
@@ -43,6 +44,9 @@ namespace uh::cluster::rest::http
                 {
                     throw std::runtime_error("error reading the http body");
                 }
+
+                rest::utils::hashing::MD5 md5 {};
+                m_etag = md5.calculateMD5(m_body);
             }
         }
         else

@@ -14,11 +14,6 @@ namespace uh::cluster::rest::http::model
         [[nodiscard]] const http::response<http::string_body>& get_response_specific_object() override;
     private:
 
-        void set_etag();
-
-        bool m_eTagHasBeenSet = false;
-        std::string m_eTag;
-
         bool m_checksumCRC32HasBeenSet = false;
         std::string m_checksumCRC32;
 
