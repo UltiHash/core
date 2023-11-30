@@ -15,11 +15,11 @@ namespace uh::cluster::rest::http::model
                                            utils::server_state&,
                                            std::unique_ptr<rest::http::URI>);
 
-        ~complete_multi_part_upload_request() override;
+        ~complete_multi_part_upload_request() override = default;
 
         [[nodiscard]] inline http_request_type get_request_name() const override { return http_request_type::COMPLETE_MULTIPART_UPLOAD; }
 
-        [[nodiscard]] const std::string& get_body() override;
+        [[nodiscard]] const std::string& get_body() const override;
 
         [[nodiscard]] std::size_t get_body_size() const override;
 
@@ -27,14 +27,12 @@ namespace uh::cluster::rest::http::model
 
         void validate_request_specific_criteria() override;
 
-        void clear_body() override;
-
     private:
         void validate_request() const;
 
         std::shared_ptr<utils::parts> m_parts_container;
 
-        std::string m_completed_body {};
+        mutable std::string m_completed_body {};
         std::string m_upload_id;
         std::string m_bucket_name;
         std::string m_object_name;

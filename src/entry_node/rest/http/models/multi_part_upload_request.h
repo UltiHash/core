@@ -23,7 +23,7 @@ namespace uh::cluster::rest::http::model
 
         coro<void> read_body(tcp_stream& stream, boost::beast::flat_buffer& buffer) override;
 
-        [[nodiscard]] const std::string& get_body() override;
+        [[nodiscard]] const std::string& get_body() const override;
 
         [[nodiscard]] std::size_t get_body_size() const override;
 

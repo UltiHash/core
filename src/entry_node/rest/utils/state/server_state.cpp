@@ -1,10 +1,9 @@
 #include "server_state.h"
-#include "entry_node/rest/utils/hashing/hash.h"
 
 namespace uh::cluster::rest::utils
 {
 
-    std::shared_ptr<parts::part_data> parts::find(std::uint16_t part_num)
+    std::shared_ptr<parts::part_data> parts::find(std::uint16_t part_num) const
     {
         std::lock_guard<std::mutex> lock(mutex);
         auto itr = parts_container.find(part_num);
@@ -18,24 +17,8 @@ namespace uh::cluster::rest::utils
         }
     }
 
-    parts::part_data::part_data(std::string&& recv_body)
-    {
-        body = std::move(recv_body);
-        rest::utils::hashing::MD5 md5;
-        etag = std::move(md5.calculateMD5(body));
-    }
-
-
-    const std::string& parts::part_data::get_body()
-    {
-        return body;
-    }
-
-
-    const std::string& parts::part_data::get_etag()
-    {
-        return etag;
-    }
+    parts::part_data::part_data(std::string&& recv_body) : body(std::move(recv_body)), etag(std::move(md5.calculateMD5(body)))
+    {}
 
 
     bool parts::put_single_part(std::uint16_t part_number, std::string&& body)
@@ -45,22 +28,24 @@ namespace uh::cluster::rest::utils
     }
 
 
-    size_t parts::size()
+    size_t parts::size() const
     {
         std::lock_guard<std::mutex> lock(mutex);
         return parts_container.size();
     }
 
 
-    std::map<std::uint16_t, std::shared_ptr<parts::part_data>>::const_iterator parts::begin() const
+    std::map<std::uint16_t, std::pair<const std::string&, std::size_t>> parts::get_parts() const
     {
-        return parts_container.begin();
-    }
+        std::lock_guard<std::mutex> lock(mutex);
 
+        std::map<std::uint16_t, std::pair<const std::string&, std::size_t>> parts_and_sizes;
+        for (const auto& pair : parts_container)
+        {
+            parts_and_sizes.emplace(pair.first, std::pair<const std::string&, std::size_t>{pair.second->body, pair.second->body.size()});
+        }
 
-    std::map<std::uint16_t, std::shared_ptr<parts::part_data>>::const_iterator parts::end() const
-    {
-        return parts_container.end();
+        return parts_and_sizes;
     }
 
 
@@ -79,7 +64,7 @@ namespace uh::cluster::rest::utils
     }
 
 
-    std::shared_ptr<parts> upload_state::get_parts_container(const std::string& upload_id)
+    std::shared_ptr<parts> upload_state::get_parts_container(const std::string& upload_id) const
     {
         std::lock_guard<std::mutex> lock(mutex);
         auto itr = upload_to_parts_container.find(upload_id);

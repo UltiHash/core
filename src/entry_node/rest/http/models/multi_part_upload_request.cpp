@@ -32,7 +32,7 @@ namespace uh::cluster::rest::http::model
         return headers;
     }
 
-    const std::string& multi_part_upload_request::get_body()
+    const std::string& multi_part_upload_request::get_body() const
     {
         auto single_part = m_parts_container->find(m_part_number);
 
@@ -41,7 +41,7 @@ namespace uh::cluster::rest::http::model
             throw std::runtime_error("part not found");
         }
 
-        return single_part->get_body();
+        return single_part->body;
     }
 
     [[nodiscard]] std::size_t multi_part_upload_request::get_body_size() const
@@ -53,7 +53,7 @@ namespace uh::cluster::rest::http::model
             throw std::runtime_error("part not found");
         }
 
-        return single_part->get_body().size();
+        return single_part->body.size();
     }
 
     coro<void> multi_part_upload_request::read_body(tcp_stream& stream, boost::beast::flat_buffer& buffer)

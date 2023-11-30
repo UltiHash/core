@@ -3,7 +3,7 @@
 #include <memory>
 #include <map>
 #include <unordered_map>
-#include "common/common_types.h"
+#include "entry_node/rest/utils/hashing/hash.h"
 
 namespace uh::cluster::rest::utils
 {
@@ -13,31 +13,26 @@ namespace uh::cluster::rest::utils
     public:
         struct part_data
         {
-        public:
             explicit part_data(std::string&&);
-            const std::string& get_body();
-            const std::string& get_etag();
-        private:
-            std::mutex mutex {};
-            std::string body {};
-            std::string etag {};
-            address address {};
-            std::string effective_size {};
+
+            rest::utils::hashing::MD5 md5;
+
+            // READ ONLY BODY AND ETAG AFTER CONSTRUCTION
+            const std::string body {};
+            const std::string etag {};
         };
 
-        std::shared_ptr<part_data> find(std::uint16_t part_num);
+        std::shared_ptr<part_data> find(std::uint16_t part_num) const;
         bool put_single_part(std::uint16_t part_number, std::string&& body);
-        size_t size();
+        size_t size() const;
 
-        [[nodiscard]] std::map<std::uint16_t, std::shared_ptr<part_data>>::const_iterator begin() const;
-        [[nodiscard]] std::map<std::uint16_t, std::shared_ptr<part_data>>::const_iterator end() const;
+        std::map<std::uint16_t, std::pair<const std::string&, std::size_t>> get_parts() const;
 
         parts() = default;
 
     private:
-        std::mutex mutex {};
+        mutable std::mutex mutex {};
         std::map<std::uint16_t, std::shared_ptr<part_data>> parts_container;
-
     };
 
     struct upload_state
@@ -45,11 +40,11 @@ namespace uh::cluster::rest::utils
         upload_state() = default;
 
         bool insert_upload(std::string upload_id);
-        std::shared_ptr<parts> get_parts_container(const std::string& upload_id);
+        std::shared_ptr<parts> get_parts_container(const std::string& upload_id) const;
         bool remove_upload(const std::string& upload_id);
 
     private:
-        std::mutex mutex {};
+        mutable std::mutex mutex {};
         /* { upload_id, shared ptr to parts struct } */
         std::unordered_map<std::string, std::shared_ptr<parts>> upload_to_parts_container;
     };
