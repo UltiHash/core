@@ -1,0 +1,887 @@
+
+// dumb experiments
+
+ ./uh-cluster-dd-dumb-expr 1 ~/Data/workspace_tar 
+set 0 fragment count 4545132 space saving 18.2152 GB
+original size: 52.8918 GB
+effective size: 34.6766 GB
+space saved 18.2152 GB
+space saving ratio 0.344386
+transfer size: 52.8918 GB
+
+ ./uh-cluster-dd-dumb-expr 2 ~/Data/workspace_tar 
+set 0 fragment count 1670346 space saving 13.7022 GB
+set 1 fragment count 2880130 space saving 4.47226 GB
+original size: 52.8918 GB
+effective size: 34.7174 GB
+space saved 18.1744 GB
+space saving ratio 0.343615
+transfer size: 52.8918 GB
+
+ ./uh-cluster-dd-dumb-expr 4 ~/Data/workspace_tar
+set 0 fragment count 906774 space saving 6.30482 GB
+set 1 fragment count 945254 space saving 6.01124 GB
+set 2 fragment count 1410604 space saving 2.4609 GB
+set 3 fragment count 1469533 space saving 2.01131 GB
+original size: 52.8918 GB
+effective size: 36.1035 GB
+space saved 16.7883 GB
+space saving ratio 0.317408
+transfer size: 52.8918 GB
+
+ ./uh-cluster-dd-dumb-expr 8 ~/Data/workspace_tar 
+set 0 fragment count 858903 space saving 0.0585682 GB
+set 1 fragment count 114044 space saving 5.74139 GB
+set 2 fragment count 183799 space saving 5.2092 GB
+set 3 fragment count 762089 space saving 0.797199 GB
+set 4 fragment count 544024 space saving 2.4609 GB
+set 5 fragment count 866580 space saving 0 GB
+set 6 fragment count 866579 space saving 6.70552e-06 GB
+set 7 fragment count 602903 space saving 2.01169 GB
+original size: 52.8918 GB
+effective size: 36.6128 GB
+space saved 16.279 GB
+space saving ratio 0.307779
+transfer size: 52.8918 GB
+
+ ./uh-cluster-dd-dumb-expr 16 ~/Data/workspace_tar 
+set 0 fragment count 433290 space saving 0 GB
+set 1 fragment count 425613 space saving 0.0585706 GB
+set 2 fragment count 43118 space saving 2.97677 GB
+set 3 fragment count 71619 space saving 2.75933 GB
+set 4 fragment count 178630 space saving 1.9429 GB
+set 5 fragment count 5915 space saving 3.26061 GB
+set 6 fragment count 328800 space saving 0.797199 GB
+set 7 fragment count 433290 space saving 0 GB
+set 8 fragment count 176164 space saving 1.96172 GB
+set 9 fragment count 367861 space saving 0.499182 GB
+set 10 fragment count 433290 space saving 0 GB
+set 11 fragment count 433290 space saving 0 GB
+set 12 fragment count 433289 space saving 6.70552e-06 GB
+set 13 fragment count 433290 space saving 0 GB
+set 14 fragment count 347358 space saving 0.655607 GB
+set 15 fragment count 255557 space saving 1.35599 GB
+original size: 52.8918 GB
+effective size: 36.6239 GB
+space saved 16.2679 GB
+space saving ratio 0.307569
+transfer size: 52.8918 GB
+
+// prefix experiments
+
+ ./uh-cluster-dd-prefix-expr 1 ~/Data/workspace_tar 
+set 0 fragment count 4545132 space saving 18.2152 GB
+original size: 52.8918 GB
+effective size: 34.6766 GB
+space saved 18.2152 GB
+space saving ratio 0.344386
+transfer size: 52.8918 GB
+set switch count: 0
+
+ ./uh-cluster-dd-prefix-expr 2 ~/Data/workspace_tar 
+set 0 fragment count 2111027 space saving 13.9044 GB
+set 1 fragment count 2441979 space saving 4.27411 GB
+original size: 52.8918 GB
+effective size: 34.7133 GB
+space saved 18.1785 GB
+space saving ratio 0.343692
+transfer size: 105.784 GB
+set switch count: 1583566
+
+ ./uh-cluster-dd-prefix-expr 4 ~/Data/workspace_tar 
+set 0 fragment count 1039701 space saving 13.9158 GB
+set 1 fragment count 1185017 space saving 0.781521 GB
+set 2 fragment count 1113057 space saving 0.784245 GB
+set 3 fragment count 1142233 space saving 3.27069 GB
+original size: 52.8918 GB
+effective size: 34.1395 GB
+space saved 18.7523 GB
+space saving ratio 0.35454
+transfer size: 211.566 GB
+set switch count: 1317221
+
+ ./uh-cluster-dd-prefix-expr 8 ~/Data/workspace_tar 
+set 0 fragment count 451437 space saving 14.3554 GB
+set 1 fragment count 508804 space saving 0.767966 GB
+set 2 fragment count 489319 space saving 0.90707 GB
+set 3 fragment count 504074 space saving 0.874861 GB
+set 4 fragment count 505964 space saving 0.891602 GB
+set 5 fragment count 523845 space saving 0.904147 GB
+set 6 fragment count 467116 space saving 0.891427 GB
+set 7 fragment count 473518 space saving 3.43137 GB
+original size: 52.8918 GB
+effective size: 29.868 GB
+space saved 23.0238 GB
+space saving ratio 0.435301
+transfer size: 423.13 GB
+set switch count: 1021558
+
+ ./uh-cluster-dd-prefix-expr 16 ~/Data/workspace_tar 
+set 0 fragment count 241216 space saving 14.1092 GB
+set 1 fragment count 211647 space saving 0.333859 GB
+set 2 fragment count 225781 space saving 0.377555 GB
+set 3 fragment count 325807 space saving 0.436436 GB
+set 4 fragment count 229637 space saving 0.42884 GB
+set 5 fragment count 243480 space saving 0.434324 GB
+set 6 fragment count 255898 space saving 0.425664 GB
+set 7 fragment count 252679 space saving 0.433932 GB
+set 8 fragment count 244533 space saving 0.45243 GB
+set 9 fragment count 236005 space saving 0.434282 GB
+set 10 fragment count 229495 space saving 0.454827 GB
+set 11 fragment count 317422 space saving 0.432328 GB
+set 12 fragment count 222472 space saving 0.418149 GB
+set 13 fragment count 229879 space saving 0.431977 GB
+set 14 fragment count 229374 space saving 0.44263 GB
+set 15 fragment count 236630 space saving 2.96682 GB
+original size: 52.8918 GB
+effective size: 29.8786 GB
+space saved 23.0133 GB
+space saving ratio 0.435101
+transfer size: 846.231 GB
+set switch count: 830526
+
+
+
+
+
+
+=========================================
+ Extra
+=========================================
+
+// dumb
+
+set 0 fragment count 27081 space saving 0 GB
+set 1 fragment count 27081 space saving 0 GB
+set 2 fragment count 27081 space saving 0 GB
+set 3 fragment count 27081 space saving 0 GB
+set 4 fragment count 27081 space saving 0 GB
+set 5 fragment count 27081 space saving 0 GB
+set 6 fragment count 27081 space saving 0 GB
+set 7 fragment count 27081 space saving 0 GB
+set 8 fragment count 27081 space saving 0 GB
+set 9 fragment count 27081 space saving 0 GB
+set 10 fragment count 27081 space saving 0 GB
+set 11 fragment count 27081 space saving 0 GB
+set 12 fragment count 27081 space saving 0 GB
+set 13 fragment count 27081 space saving 0 GB
+set 14 fragment count 27081 space saving 0 GB
+set 15 fragment count 27081 space saving 0 GB
+set 16 fragment count 27081 space saving 0 GB
+set 17 fragment count 27081 space saving 0 GB
+set 18 fragment count 27081 space saving 0 GB
+set 19 fragment count 27081 space saving 0 GB
+set 20 fragment count 27081 space saving 0 GB
+set 21 fragment count 27081 space saving 0 GB
+set 22 fragment count 27081 space saving 0 GB
+set 23 fragment count 27081 space saving 0 GB
+set 24 fragment count 26294 space saving 0.00600433 GB
+set 25 fragment count 26098 space saving 0.00750349 GB
+set 26 fragment count 26105 space saving 0.00744551 GB
+set 27 fragment count 26097 space saving 0.0075044 GB
+set 28 fragment count 26097 space saving 0.00751105 GB
+set 29 fragment count 26109 space saving 0.00741853 GB
+set 30 fragment count 26097 space saving 0.0075084 GB
+set 31 fragment count 26097 space saving 0.00750623 GB
+set 32 fragment count 26093 space saving 0.00754121 GB
+set 33 fragment count 13788 space saving 0.101415 GB
+set 34 fragment count 442 space saving 0.203236 GB
+set 35 fragment count 687 space saving 0.201367 GB
+set 36 fragment count 474 space saving 0.202992 GB
+set 37 fragment count 475 space saving 0.202985 GB
+set 38 fragment count 539 space saving 0.202496 GB
+set 39 fragment count 443 space saving 0.203229 GB
+set 40 fragment count 609 space saving 0.201962 GB
+set 41 fragment count 483 space saving 0.202924 GB
+set 42 fragment count 480 space saving 0.202947 GB
+set 43 fragment count 389 space saving 0.203641 GB
+set 44 fragment count 419 space saving 0.203412 GB
+set 45 fragment count 625 space saving 0.20184 GB
+set 46 fragment count 639 space saving 0.201741 GB
+set 47 fragment count 657 space saving 0.201596 GB
+set 48 fragment count 447 space saving 0.203198 GB
+set 49 fragment count 608 space saving 0.20197 GB
+set 50 fragment count 653 space saving 0.201627 GB
+set 51 fragment count 487 space saving 0.202893 GB
+set 52 fragment count 631 space saving 0.201794 GB
+set 53 fragment count 560 space saving 0.202336 GB
+set 54 fragment count 724 space saving 0.201085 GB
+set 55 fragment count 778 space saving 0.200673 GB
+set 56 fragment count 1121 space saving 0.198056 GB
+set 57 fragment count 901 space saving 0.199735 GB
+set 58 fragment count 983 space saving 0.199109 GB
+set 59 fragment count 533 space saving 0.202542 GB
+set 60 fragment count 915 space saving 0.199628 GB
+set 61 fragment count 14597 space saving 0.0952474 GB
+set 62 fragment count 26097 space saving 0.00750848 GB
+set 63 fragment count 26096 space saving 0.0075145 GB
+set 64 fragment count 26097 space saving 0.00750629 GB
+set 65 fragment count 26098 space saving 0.00750175 GB
+set 66 fragment count 26105 space saving 0.00744507 GB
+set 67 fragment count 26098 space saving 0.00750369 GB
+set 68 fragment count 26097 space saving 0.00751033 GB
+set 69 fragment count 26092 space saving 0.0075447 GB
+set 70 fragment count 20319 space saving 0.051587 GB
+set 71 fragment count 490 space saving 0.20287 GB
+set 72 fragment count 693 space saving 0.201321 GB
+set 73 fragment count 454 space saving 0.203145 GB
+set 74 fragment count 447 space saving 0.203198 GB
+set 75 fragment count 566 space saving 0.20229 GB
+set 76 fragment count 426 space saving 0.203359 GB
+set 77 fragment count 596 space saving 0.202062 GB
+set 78 fragment count 486 space saving 0.202901 GB
+set 79 fragment count 429 space saving 0.203336 GB
+set 80 fragment count 435 space saving 0.20329 GB
+set 81 fragment count 405 space saving 0.203519 GB
+set 82 fragment count 451 space saving 0.203168 GB
+set 83 fragment count 863 space saving 0.200024 GB
+set 84 fragment count 622 space saving 0.201863 GB
+set 85 fragment count 451 space saving 0.203168 GB
+set 86 fragment count 664 space saving 0.201543 GB
+set 87 fragment count 658 space saving 0.201588 GB
+set 88 fragment count 457 space saving 0.203122 GB
+set 89 fragment count 621 space saving 0.201871 GB
+set 90 fragment count 487 space saving 0.202893 GB
+set 91 fragment count 822 space saving 0.200337 GB
+set 92 fragment count 733 space saving 0.201024 GB
+set 93 fragment count 919 space saving 0.199597 GB
+set 94 fragment count 1153 space saving 0.197812 GB
+set 95 fragment count 950 space saving 0.199361 GB
+set 96 fragment count 613 space saving 0.201934 GB
+set 97 fragment count 880 space saving 0.199895 GB
+set 98 fragment count 683 space saving 0.201398 GB
+set 99 fragment count 22170 space saving 0.0374649 GB
+set 100 fragment count 8187 space saving 0.144148 GB
+set 101 fragment count 26967 space saving 0.000869786 GB
+set 102 fragment count 26937 space saving 0.00109834 GB
+set 103 fragment count 26925 space saving 0.00119465 GB
+set 104 fragment count 26951 space saving 0.000992638 GB
+set 105 fragment count 27081 space saving 0 GB
+set 106 fragment count 27081 space saving 0 GB
+set 107 fragment count 27081 space saving 0 GB
+set 108 fragment count 27081 space saving 0 GB
+set 109 fragment count 27081 space saving 0 GB
+set 110 fragment count 27081 space saving 0 GB
+set 111 fragment count 27081 space saving 0 GB
+set 112 fragment count 27081 space saving 0 GB
+set 113 fragment count 27081 space saving 0 GB
+set 114 fragment count 27081 space saving 0 GB
+set 115 fragment count 27081 space saving 0 GB
+set 116 fragment count 27081 space saving 0 GB
+set 117 fragment count 27081 space saving 0 GB
+set 118 fragment count 27081 space saving 0 GB
+set 119 fragment count 27081 space saving 0 GB
+set 120 fragment count 27081 space saving 0 GB
+set 121 fragment count 27081 space saving 0 GB
+set 122 fragment count 27081 space saving 0 GB
+set 123 fragment count 27081 space saving 0 GB
+set 124 fragment count 27081 space saving 0 GB
+set 125 fragment count 27081 space saving 0 GB
+set 126 fragment count 27081 space saving 0 GB
+set 127 fragment count 27081 space saving 0 GB
+set 128 fragment count 20092 space saving 0.0533264 GB
+set 129 fragment count 1 space saving 0.206601 GB
+set 130 fragment count 1 space saving 0.206601 GB
+set 131 fragment count 1 space saving 0.206601 GB
+set 132 fragment count 1 space saving 0.206601 GB
+set 133 fragment count 1 space saving 0.206601 GB
+set 134 fragment count 1 space saving 0.206601 GB
+set 135 fragment count 1 space saving 0.206601 GB
+set 136 fragment count 1 space saving 0.206601 GB
+set 137 fragment count 1 space saving 0.206601 GB
+set 138 fragment count 20671 space saving 0.0489059 GB
+set 139 fragment count 27081 space saving 0 GB
+set 140 fragment count 27081 space saving 0 GB
+set 141 fragment count 27081 space saving 0 GB
+set 142 fragment count 27081 space saving 0 GB
+set 143 fragment count 27081 space saving 0 GB
+set 144 fragment count 27081 space saving 0 GB
+set 145 fragment count 27081 space saving 0 GB
+set 146 fragment count 27081 space saving 0 GB
+set 147 fragment count 27081 space saving 0 GB
+set 148 fragment count 27081 space saving 0 GB
+set 149 fragment count 27081 space saving 0 GB
+set 150 fragment count 27081 space saving 0 GB
+set 151 fragment count 27081 space saving 0 GB
+set 152 fragment count 27081 space saving 0 GB
+set 153 fragment count 27081 space saving 0 GB
+set 154 fragment count 27081 space saving 0 GB
+set 155 fragment count 4901 space saving 0.169217 GB
+set 156 fragment count 1 space saving 0.206601 GB
+set 157 fragment count 10914 space saving 0.123343 GB
+set 158 fragment count 27081 space saving 0 GB
+set 159 fragment count 27081 space saving 0 GB
+set 160 fragment count 27081 space saving 0 GB
+set 161 fragment count 27081 space saving 0 GB
+set 162 fragment count 27081 space saving 0 GB
+set 163 fragment count 27081 space saving 0 GB
+set 164 fragment count 27081 space saving 0 GB
+set 165 fragment count 27081 space saving 0 GB
+set 166 fragment count 27081 space saving 0 GB
+set 167 fragment count 27081 space saving 0 GB
+set 168 fragment count 27081 space saving 0 GB
+set 169 fragment count 27081 space saving 0 GB
+set 170 fragment count 27081 space saving 0 GB
+set 171 fragment count 27081 space saving 0 GB
+set 172 fragment count 27081 space saving 0 GB
+set 173 fragment count 27081 space saving 0 GB
+set 174 fragment count 27081 space saving 0 GB
+set 175 fragment count 27081 space saving 0 GB
+set 176 fragment count 27081 space saving 0 GB
+set 177 fragment count 27081 space saving 0 GB
+set 178 fragment count 27081 space saving 0 GB
+set 179 fragment count 27081 space saving 0 GB
+set 180 fragment count 27081 space saving 0 GB
+set 181 fragment count 27081 space saving 0 GB
+set 182 fragment count 27081 space saving 0 GB
+set 183 fragment count 27081 space saving 0 GB
+set 184 fragment count 27081 space saving 0 GB
+set 185 fragment count 27081 space saving 0 GB
+set 186 fragment count 27081 space saving 0 GB
+set 187 fragment count 27081 space saving 0 GB
+set 188 fragment count 27081 space saving 0 GB
+set 189 fragment count 27081 space saving 0 GB
+set 190 fragment count 27081 space saving 0 GB
+set 191 fragment count 27081 space saving 0 GB
+set 192 fragment count 27081 space saving 0 GB
+set 193 fragment count 27081 space saving 0 GB
+set 194 fragment count 27081 space saving 0 GB
+set 195 fragment count 27081 space saving 0 GB
+set 196 fragment count 27081 space saving 0 GB
+set 197 fragment count 27081 space saving 0 GB
+set 198 fragment count 27081 space saving 1.87755e-06 GB
+set 199 fragment count 27081 space saving 0 GB
+set 200 fragment count 27081 space saving 0 GB
+set 201 fragment count 27081 space saving 0 GB
+set 202 fragment count 27081 space saving 0 GB
+set 203 fragment count 27081 space saving 0 GB
+set 204 fragment count 27081 space saving 0 GB
+set 205 fragment count 27081 space saving 0 GB
+set 206 fragment count 27081 space saving 0 GB
+set 207 fragment count 27081 space saving 0 GB
+set 208 fragment count 27081 space saving 0 GB
+set 209 fragment count 27081 space saving 0 GB
+set 210 fragment count 27081 space saving 0 GB
+set 211 fragment count 27081 space saving 0 GB
+set 212 fragment count 27081 space saving 0 GB
+set 213 fragment count 27081 space saving 0 GB
+set 214 fragment count 27081 space saving 0 GB
+set 215 fragment count 27081 space saving 0 GB
+set 216 fragment count 27081 space saving 0 GB
+set 217 fragment count 27081 space saving 0 GB
+set 218 fragment count 27081 space saving 0 GB
+set 219 fragment count 27081 space saving 0 GB
+set 220 fragment count 27081 space saving 0 GB
+set 221 fragment count 27081 space saving 0 GB
+set 222 fragment count 27081 space saving 0 GB
+set 223 fragment count 27081 space saving 0 GB
+set 224 fragment count 27081 space saving 0 GB
+set 225 fragment count 27081 space saving 0 GB
+set 226 fragment count 27081 space saving 0 GB
+set 227 fragment count 27081 space saving 0 GB
+set 228 fragment count 27081 space saving 0 GB
+set 229 fragment count 27081 space saving 0 GB
+set 230 fragment count 27081 space saving 0 GB
+set 231 fragment count 27081 space saving 0 GB
+set 232 fragment count 27081 space saving 0 GB
+set 233 fragment count 27081 space saving 0 GB
+set 234 fragment count 27081 space saving 0 GB
+set 235 fragment count 27076 space saving 4.13191e-05 GB
+set 236 fragment count 22429 space saving 0.0354889 GB
+set 237 fragment count 11 space saving 0.206525 GB
+set 238 fragment count 1 space saving 0.206601 GB
+set 239 fragment count 1 space saving 0.206601 GB
+set 240 fragment count 1 space saving 0.206601 GB
+set 241 fragment count 1 space saving 0.206601 GB
+set 242 fragment count 1 space saving 0.206601 GB
+set 243 fragment count 1 space saving 0.206601 GB
+set 244 fragment count 1 space saving 0.206601 GB
+set 245 fragment count 16 space saving 0.206489 GB
+set 246 fragment count 26998 space saving 0.000637103 GB
+set 247 fragment count 26997 space saving 0.00064187 GB
+set 248 fragment count 26997 space saving 0.000638974 GB
+set 249 fragment count 27000 space saving 0.000619853 GB
+set 250 fragment count 27000 space saving 0.000617328 GB
+set 251 fragment count 27000 space saving 0.000620875 GB
+set 252 fragment count 26998 space saving 0.000632732 GB
+set 253 fragment count 26997 space saving 0.000640244 GB
+set 254 fragment count 26858 space saving 0.00170536 GB
+set 255 fragment count 12726 space saving 0.10952 GB
+original size: 52.8918 GB
+effective size: 36.7571 GB
+space saved 16.1347 GB
+space saving ratio 0.305052
+transfer size: 52.8918 GB
+
+// prefix
+
+ ./uh-cluster-dd-prefix-expr 128 ~/Data/workspace_tar 
+set 0 fragment count 310630 space saving 15.1696 GB
+set 1 fragment count 34336 space saving 0.0475118 GB
+set 2 fragment count 31589 space saving 0.0349855 GB
+set 3 fragment count 29673 space saving 0.0446045 GB
+set 4 fragment count 28561 space saving 0.0476494 GB
+set 5 fragment count 32497 space saving 0.0602766 GB
+set 6 fragment count 32001 space saving 0.0556571 GB
+set 7 fragment count 31318 space saving 0.0454676 GB
+set 8 fragment count 25710 space saving 0.0450284 GB
+set 9 fragment count 34797 space saving 0.0486595 GB
+set 10 fragment count 30170 space saving 0.0582497 GB
+set 11 fragment count 29107 space saving 0.0556605 GB
+set 12 fragment count 30816 space saving 0.0485839 GB
+set 13 fragment count 30710 space saving 0.0734969 GB
+set 14 fragment count 26560 space saving 0.0565182 GB
+set 15 fragment count 33306 space saving 0.0651553 GB
+set 16 fragment count 32721 space saving 0.0396299 GB
+set 17 fragment count 32161 space saving 0.040412 GB
+set 18 fragment count 24315 space saving 0.0389424 GB
+set 19 fragment count 23914 space saving 0.0288647 GB
+set 20 fragment count 29515 space saving 0.0322811 GB
+set 21 fragment count 29350 space saving 0.0447885 GB
+set 22 fragment count 30760 space saving 0.035883 GB
+set 23 fragment count 32225 space saving 0.0352776 GB
+set 24 fragment count 28696 space saving 0.0212674 GB
+set 25 fragment count 28607 space saving 0.0317489 GB
+set 26 fragment count 26349 space saving 0.0278281 GB
+set 27 fragment count 26330 space saving 0.0264871 GB
+set 28 fragment count 29981 space saving 0.036711 GB
+set 29 fragment count 23414 space saving 0.0385145 GB
+set 30 fragment count 33251 space saving 0.0375974 GB
+set 31 fragment count 94244 space saving 0.0405459 GB
+set 32 fragment count 23051 space saving 0.0337992 GB
+set 33 fragment count 29221 space saving 0.0440081 GB
+set 34 fragment count 27400 space saving 0.0293924 GB
+set 35 fragment count 27928 space saving 0.0374805 GB
+set 36 fragment count 23211 space saving 0.031697 GB
+set 37 fragment count 33608 space saving 0.0486207 GB
+set 38 fragment count 28184 space saving 0.0384977 GB
+set 39 fragment count 28633 space saving 0.0430245 GB
+set 40 fragment count 25084 space saving 0.029008 GB
+set 41 fragment count 28584 space saving 0.034993 GB
+set 42 fragment count 30930 space saving 0.0485855 GB
+set 43 fragment count 32414 space saving 0.0403833 GB
+set 44 fragment count 20983 space saving 0.037719 GB
+set 45 fragment count 24252 space saving 0.0412167 GB
+set 46 fragment count 29077 space saving 0.0284277 GB
+set 47 fragment count 24156 space saving 0.033068 GB
+set 48 fragment count 36802 space saving 0.0382392 GB
+set 49 fragment count 37066 space saving 0.0388165 GB
+set 50 fragment count 30959 space saving 0.0335703 GB
+set 51 fragment count 24820 space saving 0.0355389 GB
+set 52 fragment count 26254 space saving 0.0277436 GB
+set 53 fragment count 27763 space saving 0.0412019 GB
+set 54 fragment count 31628 space saving 0.0414212 GB
+set 55 fragment count 36666 space saving 0.0345649 GB
+set 56 fragment count 37804 space saving 0.0451846 GB
+set 57 fragment count 24497 space saving 0.0281244 GB
+set 58 fragment count 29316 space saving 0.0423217 GB
+set 59 fragment count 27879 space saving 0.0261004 GB
+set 60 fragment count 26891 space saving 0.0414773 GB
+set 61 fragment count 30725 space saving 0.039067 GB
+set 62 fragment count 26194 space saving 0.0302278 GB
+set 63 fragment count 29416 space saving 0.0432459 GB
+set 64 fragment count 24733 space saving 0.038555 GB
+set 65 fragment count 26178 space saving 0.0417848 GB
+set 66 fragment count 28902 space saving 0.0448523 GB
+set 67 fragment count 29591 space saving 0.0265653 GB
+set 68 fragment count 29180 space saving 0.0509918 GB
+set 69 fragment count 27407 space saving 0.053449 GB
+set 70 fragment count 29736 space saving 0.0341926 GB
+set 71 fragment count 28033 space saving 0.0336737 GB
+set 72 fragment count 30091 space saving 0.0411963 GB
+set 73 fragment count 24230 space saving 0.0390955 GB
+set 74 fragment count 24850 space saving 0.0372643 GB
+set 75 fragment count 26286 space saving 0.0502807 GB
+set 76 fragment count 37016 space saving 0.0553415 GB
+set 77 fragment count 25611 space saving 0.0353676 GB
+set 78 fragment count 26957 space saving 0.047121 GB
+set 79 fragment count 27663 space saving 0.0464119 GB
+set 80 fragment count 26286 space saving 0.0324162 GB
+set 81 fragment count 27400 space saving 0.0487028 GB
+set 82 fragment count 27882 space saving 0.0454572 GB
+set 83 fragment count 22983 space saving 0.0256423 GB
+set 84 fragment count 23089 space saving 0.0353377 GB
+set 85 fragment count 26052 space saving 0.0301162 GB
+set 86 fragment count 29080 space saving 0.0556249 GB
+set 87 fragment count 27244 space saving 0.0297113 GB
+set 88 fragment count 26799 space saving 0.0502093 GB
+set 89 fragment count 28149 space saving 0.0286225 GB
+set 90 fragment count 28075 space saving 0.0380661 GB
+set 91 fragment count 30104 space saving 0.0287117 GB
+set 92 fragment count 26760 space saving 0.0294525 GB
+set 93 fragment count 26713 space saving 0.0376757 GB
+set 94 fragment count 34154 space saving 0.0348213 GB
+set 95 fragment count 94487 space saving 0.0448349 GB
+set 96 fragment count 25434 space saving 0.0467198 GB
+set 97 fragment count 26211 space saving 0.0397237 GB
+set 98 fragment count 27892 space saving 0.0432314 GB
+set 99 fragment count 28071 space saving 0.0402595 GB
+set 100 fragment count 26798 space saving 0.0549802 GB
+set 101 fragment count 26167 space saving 0.0419172 GB
+set 102 fragment count 28824 space saving 0.0363474 GB
+set 103 fragment count 31436 space saving 0.0459317 GB
+set 104 fragment count 26960 space saving 0.022739 GB
+set 105 fragment count 24518 space saving 0.0304829 GB
+set 106 fragment count 25646 space saving 0.0366685 GB
+set 107 fragment count 32207 space saving 0.0377333 GB
+set 108 fragment count 29326 space saving 0.0516088 GB
+set 109 fragment count 19784 space saving 0.0312046 GB
+set 110 fragment count 23891 space saving 0.046453 GB
+set 111 fragment count 29228 space saving 0.0356406 GB
+set 112 fragment count 27019 space saving 0.0455755 GB
+set 113 fragment count 26233 space saving 0.0323092 GB
+set 114 fragment count 22546 space saving 0.0418327 GB
+set 115 fragment count 26421 space saving 0.0488564 GB
+set 116 fragment count 26519 space saving 0.0194966 GB
+set 117 fragment count 26089 space saving 0.0407781 GB
+set 118 fragment count 28344 space saving 0.0444584 GB
+set 119 fragment count 27952 space saving 0.037295 GB
+set 120 fragment count 25138 space saving 0.0386533 GB
+set 121 fragment count 30851 space saving 0.037364 GB
+set 122 fragment count 25497 space saving 0.0314913 GB
+set 123 fragment count 26820 space saving 0.047863 GB
+set 124 fragment count 29790 space saving 0.0331585 GB
+set 125 fragment count 28796 space saving 0.0445415 GB
+set 126 fragment count 25505 space saving 0.0319328 GB
+set 127 fragment count 28937 space saving 2.56123 GB
+original size: 52.8918 GB
+effective size: 30.1411 GB
+space saved 22.7507 GB
+space saving ratio 0.430136
+transfer size: 6754.68 GB
+set switch count: 676922
+
+
+ ./uh-cluster-dd-prefix-expr 256 ~/Data/workspace_tar 
+set 0 fragment count 185978 space saving 14.6161 GB
+set 1 fragment count 234158 space saving 0.483141 GB
+set 2 fragment count 19246 space saving 0.0326458 GB
+set 3 fragment count 17769 space saving 0.0250027 GB
+set 4 fragment count 19077 space saving 0.016382 GB
+set 5 fragment count 14467 space saving 0.0277572 GB
+set 6 fragment count 12306 space saving 0.029065 GB
+set 7 fragment count 13351 space saving 0.0242489 GB
+set 8 fragment count 12440 space saving 0.0242982 GB
+set 9 fragment count 19762 space saving 0.033777 GB
+set 10 fragment count 15381 space saving 0.0364921 GB
+set 11 fragment count 13957 space saving 0.0306614 GB
+set 12 fragment count 13112 space saving 0.031137 GB
+set 13 fragment count 10555 space saving 0.0126792 GB
+set 14 fragment count 16555 space saving 0.0346337 GB
+set 15 fragment count 14473 space saving 0.0174387 GB
+set 16 fragment count 14566 space saving 0.0251495 GB
+set 17 fragment count 19182 space saving 0.0299035 GB
+set 18 fragment count 17637 space saving 0.0230879 GB
+set 19 fragment count 9920 space saving 0.00786028 GB
+set 20 fragment count 18733 space saving 0.0354049 GB
+set 21 fragment count 13309 space saving 0.0312206 GB
+set 22 fragment count 16040 space saving 0.0236427 GB
+set 23 fragment count 15577 space saving 0.0196687 GB
+set 24 fragment count 15817 space saving 0.0235909 GB
+set 25 fragment count 13924 space saving 0.0137425 GB
+set 26 fragment count 13946 space saving 0.0304699 GB
+set 27 fragment count 14452 space saving 0.0229394 GB
+set 28 fragment count 18521 space saving 0.0440205 GB
+set 29 fragment count 10664 space saving 0.028353 GB
+set 30 fragment count 14602 space saving 0.0134563 GB
+set 31 fragment count 12139 space saving 0.0172603 GB
+set 32 fragment count 16573 space saving 0.0169844 GB
+set 33 fragment count 9391 space saving 0.0145339 GB
+set 34 fragment count 11905 space saving 0.0316756 GB
+set 35 fragment count 11015 space saving 0.0197114 GB
+set 36 fragment count 12740 space saving 0.0187908 GB
+set 37 fragment count 17117 space saving 0.0269499 GB
+set 38 fragment count 11543 space saving 0.00979598 GB
+set 39 fragment count 13646 space saving 0.0151449 GB
+set 40 fragment count 19090 space saving 0.0156172 GB
+set 41 fragment count 12737 space saving 0.0219338 GB
+set 42 fragment count 13556 space saving 0.0195058 GB
+set 43 fragment count 16704 space saving 0.00839743 GB
+set 44 fragment count 13624 space saving 0.0231711 GB
+set 45 fragment count 12985 space saving 0.0316083 GB
+set 46 fragment count 13309 space saving 0.0151537 GB
+set 47 fragment count 13879 space saving 0.0264472 GB
+set 48 fragment count 14821 space saving 0.00834181 GB
+set 49 fragment count 17378 space saving 0.0255483 GB
+set 50 fragment count 14977 space saving 0.0229856 GB
+set 51 fragment count 16800 space saving 0.0366452 GB
+set 52 fragment count 12785 space saving 0.0196861 GB
+set 53 fragment count 17594 space saving 0.031482 GB
+set 54 fragment count 6308 space saving 0.00932147 GB
+set 55 fragment count 19139 space saving 0.0521202 GB
+set 56 fragment count 23003 space saving 0.0313802 GB
+set 57 fragment count 16157 space saving 0.0172422 GB
+set 58 fragment count 11510 space saving 0.0118643 GB
+set 59 fragment count 11245 space saving 0.00973237 GB
+set 60 fragment count 14355 space saving 0.0173913 GB
+set 61 fragment count 18835 space saving 0.0247398 GB
+set 62 fragment count 39986 space saving 0.0285105 GB
+set 63 fragment count 46715 space saving 0.0142475 GB
+set 64 fragment count 12241 space saving 0.0218821 GB
+set 65 fragment count 12448 space saving 0.0108179 GB
+set 66 fragment count 11413 space saving 0.0217592 GB
+set 67 fragment count 15682 space saving 0.0114421 GB
+set 68 fragment count 10585 space saving 0.0160067 GB
+set 69 fragment count 17446 space saving 0.0293336 GB
+set 70 fragment count 15864 space saving 0.021078 GB
+set 71 fragment count 16202 space saving 0.0130898 GB
+set 72 fragment count 22937 space saving 0.0271669 GB
+set 73 fragment count 12160 space saving 0.00866517 GB
+set 74 fragment count 10467 space saving 0.00443484 GB
+set 75 fragment count 13511 space saving 0.0216401 GB
+set 76 fragment count 17430 space saving 0.0201792 GB
+set 77 fragment count 13119 space saving 0.0290239 GB
+set 78 fragment count 12933 space saving 0.00895536 GB
+set 79 fragment count 14088 space saving 0.0318418 GB
+set 80 fragment count 13937 space saving 0.0222378 GB
+set 81 fragment count 20093 space saving 0.0130305 GB
+set 82 fragment count 15039 space saving 0.021185 GB
+set 83 fragment count 11146 space saving 0.008295 GB
+set 84 fragment count 21148 space saving 0.0265626 GB
+set 85 fragment count 7301 space saving 0.0188342 GB
+set 86 fragment count 6587 space saving 0.0174253 GB
+set 87 fragment count 13262 space saving 0.00684558 GB
+set 88 fragment count 16983 space saving 0.0330386 GB
+set 89 fragment count 12326 space saving 0.0365581 GB
+set 90 fragment count 14544 space saving 0.0244861 GB
+set 91 fragment count 19986 space saving 0.0388033 GB
+set 92 fragment count 10708 space saving 0.00692878 GB
+set 93 fragment count 9667 space saving 0.0168754 GB
+set 94 fragment count 11679 space saving 0.0199972 GB
+set 95 fragment count 15037 space saving 0.0165521 GB
+set 96 fragment count 13670 space saving 0.00640046 GB
+set 97 fragment count 14969 space saving 0.015891 GB
+set 98 fragment count 17751 space saving 0.0455133 GB
+set 99 fragment count 15826 space saving 0.024725 GB
+set 100 fragment count 16022 space saving 0.0207989 GB
+set 101 fragment count 16720 space saving 0.0181047 GB
+set 102 fragment count 16304 space saving 0.00436538 GB
+set 103 fragment count 12062 space saving 0.0104083 GB
+set 104 fragment count 11874 space saving 0.0195711 GB
+set 105 fragment count 18151 space saving 0.0110351 GB
+set 106 fragment count 14637 space saving 0.0189107 GB
+set 107 fragment count 12273 space saving 0.0184221 GB
+set 108 fragment count 13699 space saving 0.0205857 GB
+set 109 fragment count 19301 space saving 0.0257466 GB
+set 110 fragment count 10013 space saving 0.0139196 GB
+set 111 fragment count 14899 space saving 0.0155047 GB
+set 112 fragment count 15514 space saving 0.0241356 GB
+set 113 fragment count 12167 space saving 0.0175639 GB
+set 114 fragment count 15550 space saving 0.0335744 GB
+set 115 fragment count 14364 space saving 0.0126385 GB
+set 116 fragment count 18223 space saving 0.0132783 GB
+set 117 fragment count 18978 space saving 0.0257003 GB
+set 118 fragment count 15374 space saving 0.0133384 GB
+set 119 fragment count 9769 space saving 0.0128872 GB
+set 120 fragment count 10512 space saving 0.01722 GB
+set 121 fragment count 10359 space saving 0.00348546 GB
+set 122 fragment count 15564 space saving 0.0153864 GB
+set 123 fragment count 14756 space saving 0.0108682 GB
+set 124 fragment count 10677 space saving 0.0168819 GB
+set 125 fragment count 12326 space saving 0.0139639 GB
+set 126 fragment count 14101 space saving 0.00792666 GB
+set 127 fragment count 12659 space saving 0.0198081 GB
+set 128 fragment count 17962 space saving 0.0178752 GB
+set 129 fragment count 19258 space saving 0.0266874 GB
+set 130 fragment count 16650 space saving 0.0145298 GB
+set 131 fragment count 10765 space saving 0.0124186 GB
+set 132 fragment count 9637 space saving 0.0134333 GB
+set 133 fragment count 21947 space saving 0.0336984 GB
+set 134 fragment count 15901 space saving 0.0279318 GB
+set 135 fragment count 13745 space saving 0.0124903 GB
+set 136 fragment count 8762 space saving 0.01029 GB
+set 137 fragment count 16031 space saving 0.0185199 GB
+set 138 fragment count 16701 space saving 0.0253771 GB
+set 139 fragment count 16047 space saving 0.037448 GB
+set 140 fragment count 17540 space saving 0.0205427 GB
+set 141 fragment count 15509 space saving 0.0131604 GB
+set 142 fragment count 14033 space saving 0.00840546 GB
+set 143 fragment count 13719 space saving 0.0365191 GB
+set 144 fragment count 12600 space saving 0.0260627 GB
+set 145 fragment count 12954 space saving 0.0102248 GB
+set 146 fragment count 9066 space saving 0.0100195 GB
+set 147 fragment count 12740 space saving 0.0115268 GB
+set 148 fragment count 12184 space saving 0.0276359 GB
+set 149 fragment count 11122 space saving 0.0251875 GB
+set 150 fragment count 12014 space saving 0.0118283 GB
+set 151 fragment count 14108 space saving 0.0267342 GB
+set 152 fragment count 11515 space saving 0.0143478 GB
+set 153 fragment count 12236 space saving 0.0268657 GB
+set 154 fragment count 13137 space saving 0.0200195 GB
+set 155 fragment count 9549 space saving 0.017226 GB
+set 156 fragment count 15049 space saving 0.0053797 GB
+set 157 fragment count 17026 space saving 0.0194674 GB
+set 158 fragment count 17051 space saving 0.0270945 GB
+set 159 fragment count 12309 space saving 0.0176788 GB
+set 160 fragment count 14539 space saving 0.0332118 GB
+set 161 fragment count 19348 space saving 0.0214064 GB
+set 162 fragment count 9922 space saving 0.0182571 GB
+set 163 fragment count 12012 space saving 0.0194878 GB
+set 164 fragment count 16752 space saving 0.0130678 GB
+set 165 fragment count 16017 space saving 0.0214261 GB
+set 166 fragment count 10017 space saving 0.010803 GB
+set 167 fragment count 15783 space saving 0.0240854 GB
+set 168 fragment count 11773 space saving 0.00379403 GB
+set 169 fragment count 10498 space saving 0.00672734 GB
+set 170 fragment count 9579 space saving 0.00640133 GB
+set 171 fragment count 13346 space saving 0.0182999 GB
+set 172 fragment count 16474 space saving 0.0184542 GB
+set 173 fragment count 15131 space saving 0.0162221 GB
+set 174 fragment count 13537 space saving 0.0166912 GB
+set 175 fragment count 13650 space saving 0.0211126 GB
+set 176 fragment count 8700 space saving 0.0161113 GB
+set 177 fragment count 12723 space saving 0.0224595 GB
+set 178 fragment count 7981 space saving 0.0172814 GB
+set 179 fragment count 12197 space saving 0.0302205 GB
+set 180 fragment count 15168 space saving 0.022661 GB
+set 181 fragment count 12059 space saving 0.0104165 GB
+set 182 fragment count 16411 space saving 0.0220423 GB
+set 183 fragment count 11812 space saving 0.0258008 GB
+set 184 fragment count 15280 space saving 0.0188453 GB
+set 185 fragment count 17078 space saving 0.0141791 GB
+set 186 fragment count 16982 space saving 0.0263978 GB
+set 187 fragment count 11422 space saving 0.0187979 GB
+set 188 fragment count 18857 space saving 0.0136415 GB
+set 189 fragment count 20823 space saving 0.0171855 GB
+set 190 fragment count 40358 space saving 0.00864053 GB
+set 191 fragment count 44492 space saving 0.0331864 GB
+set 192 fragment count 11101 space saving 0.0200545 GB
+set 193 fragment count 10408 space saving 0.0173933 GB
+set 194 fragment count 10095 space saving 0.00869237 GB
+set 195 fragment count 9802 space saving 0.0218452 GB
+set 196 fragment count 7834 space saving 0.0139082 GB
+set 197 fragment count 10243 space saving 0.0192495 GB
+set 198 fragment count 16217 space saving 0.0100352 GB
+set 199 fragment count 13460 space saving 0.0326973 GB
+set 200 fragment count 17027 space saving 0.0427547 GB
+set 201 fragment count 13421 space saving 0.0207298 GB
+set 202 fragment count 14627 space saving 0.0316916 GB
+set 203 fragment count 5791 space saving 0.0025642 GB
+set 204 fragment count 18856 space saving 0.0200044 GB
+set 205 fragment count 12732 space saving 0.0185535 GB
+set 206 fragment count 11356 space saving 0.0240589 GB
+set 207 fragment count 18371 space saving 0.0217469 GB
+set 208 fragment count 12952 space saving 0.0246887 GB
+set 209 fragment count 12452 space saving 0.0206699 GB
+set 210 fragment count 11947 space saving 0.0233811 GB
+set 211 fragment count 9381 space saving 0.0179135 GB
+set 212 fragment count 16682 space saving 0.0208874 GB
+set 213 fragment count 16105 space saving 0.0207233 GB
+set 214 fragment count 11450 space saving 0.0230682 GB
+set 215 fragment count 17361 space saving 0.0366891 GB
+set 216 fragment count 12424 space saving 0.0114333 GB
+set 217 fragment count 9305 space saving 0.0186935 GB
+set 218 fragment count 9599 space saving 0.0100198 GB
+set 219 fragment count 15500 space saving 0.00930894 GB
+set 220 fragment count 11106 space saving 0.0184762 GB
+set 221 fragment count 11969 space saving 0.00353475 GB
+set 222 fragment count 10048 space saving 0.0152245 GB
+set 223 fragment count 10785 space saving 0.011957 GB
+set 224 fragment count 17445 space saving 0.0108162 GB
+set 225 fragment count 23072 space saving 0.0258274 GB
+set 226 fragment count 12995 space saving 0.0163313 GB
+set 227 fragment count 12298 space saving 0.0120185 GB
+set 228 fragment count 11445 space saving 0.0135775 GB
+set 229 fragment count 14544 space saving 0.0234994 GB
+set 230 fragment count 10707 space saving 0.0308562 GB
+set 231 fragment count 10644 space saving 0.0236885 GB
+set 232 fragment count 24521 space saving 0.0269808 GB
+set 233 fragment count 5696 space saving 0.00557046 GB
+set 234 fragment count 16137 space saving 0.0268497 GB
+set 235 fragment count 15451 space saving 0.0274094 GB
+set 236 fragment count 8174 space saving 0.0137678 GB
+set 237 fragment count 14528 space saving 0.0114125 GB
+set 238 fragment count 15737 space saving 0.0127504 GB
+set 239 fragment count 13163 space saving 0.0236694 GB
+set 240 fragment count 14665 space saving 0.0117381 GB
+set 241 fragment count 15777 space saving 0.0279397 GB
+set 242 fragment count 18305 space saving 0.027841 GB
+set 243 fragment count 18065 space saving 0.0146706 GB
+set 244 fragment count 17053 space saving 0.0215969 GB
+set 245 fragment count 8957 space saving 0.0187643 GB
+set 246 fragment count 18860 space saving 0.0310339 GB
+set 247 fragment count 16841 space saving 0.0184343 GB
+set 248 fragment count 13411 space saving 0.0148605 GB
+set 249 fragment count 19328 space saving 0.0190282 GB
+set 250 fragment count 12703 space saving 0.0383841 GB
+set 251 fragment count 10739 space saving 0.0198987 GB
+set 252 fragment count 8290 space saving 0.0162665 GB
+set 253 fragment count 11624 space saving 0.0240333 GB
+set 254 fragment count 14336 space saving 0.0165557 GB
+set 255 fragment count 15280 space saving 2.5374 GB
+original size: 52.8918 GB
+effective size: 30.1864 GB
+space saved 22.7055 GB
+space saving ratio 0.429281
+transfer size: 13416.1 GB
+set switch count: 670701
+
+
++++++++++++++++++++++++++++++++++++++++++++
+
+step back to min fragment
+
+++++++++++++++++++++++++++++++++++++++++++
+
+[massi@fedora experiments]$ ./uh-cluster-dd-prefix-expr 2 ~/Data/workspace_tar 
+set 0 fragment count 2138926 space saving 13.957 GB
+set 1 fragment count 2412762 space saving 4.21101 GB
+original size: 52.8918 GB
+effective size: 34.7238 GB
+space saved 18.168 GB
+space saving ratio 0.343494
+transfer size: 105.784 GB
+set switch count: 1887882
+[massi@fedora experiments]$ ./uh-cluster-dd-prefix-expr 4 ~/Data/workspace_tar 
+set 0 fragment count 980824 space saving 14.7532 GB
+set 1 fragment count 1076044 space saving 1.51805 GB
+set 2 fragment count 998202 space saving 1.50402 GB
+set 3 fragment count 1021051 space saving 4.02867 GB
+original size: 52.8918 GB
+effective size: 31.0879 GB
+space saved 21.8039 GB
+space saving ratio 0.412236
+transfer size: 211.566 GB
+set switch count: 1666697
+[massi@fedora experiments]$ ./uh-cluster-dd-prefix-expr 8 ~/Data/workspace_tar 
+set 0 fragment count 543305 space saving 14.1969 GB
+set 1 fragment count 665539 space saving 0.553493 GB
+set 2 fragment count 492811 space saving 0.562072 GB
+set 3 fragment count 487543 space saving 0.557941 GB
+set 4 fragment count 528633 space saving 0.574718 GB
+set 5 fragment count 639163 space saving 0.575052 GB
+set 6 fragment count 443513 space saving 0.563228 GB
+set 7 fragment count 427085 space saving 3.07633 GB
+original size: 52.8918 GB
+effective size: 32.232 GB
+space saved 20.6598 GB
+space saving ratio 0.390604
+transfer size: 423.13 GB
+set switch count: 1580022
+[massi@fedora experiments]$ ./uh-cluster-dd-prefix-expr 16 ~/Data/workspace_tar 
+set 0 fragment count 293823 space saving 14.3264 GB
+set 1 fragment count 214700 space saving 0.567951 GB
+set 2 fragment count 190859 space saving 0.413927 GB
+set 3 fragment count 664987 space saving 0.419863 GB
+set 4 fragment count 194450 space saving 0.405889 GB
+set 5 fragment count 170467 space saving 0.418292 GB
+set 6 fragment count 180049 space saving 0.412281 GB
+set 7 fragment count 175949 space saving 0.409045 GB
+set 8 fragment count 215057 space saving 0.41003 GB
+set 9 fragment count 187909 space saving 0.409495 GB
+set 10 fragment count 169580 space saving 0.399396 GB
+set 11 fragment count 642195 space saving 0.409355 GB
+set 12 fragment count 167752 space saving 0.407101 GB
+set 13 fragment count 146749 space saving 0.403504 GB
+set 14 fragment count 142709 space saving 0.395511 GB
+set 15 fragment count 147595 space saving 2.91561 GB
+original size: 52.8918 GB
+effective size: 29.7681 GB
+space saved 23.1237 GB
+space saving ratio 0.437188
+transfer size: 846.26 GB
+set switch count: 1954160
+
+
+
+

@@ -49,8 +49,9 @@ namespace b_http = beast::http;           // from <boost/beast/http.hpp>
 class entry_node_rest_handler : protected metrics_handler {
 public:
 
-    entry_node_rest_handler (std::vector <client>& dedupe_nodes, std::vector <client>& directory_nodes, entry_node_config config):
+    entry_node_rest_handler (std::shared_ptr <boost::asio::io_context> ioc, std::vector <std::shared_ptr <client>>& dedupe_nodes, std::vector <std::shared_ptr <client>>& directory_nodes, entry_node_config config):
             metrics_handler(config.rest_server_conf),
+            m_ioc (std::move (ioc)),
             m_dedupe_nodes (dedupe_nodes),
             m_directory_nodes (directory_nodes),
             m_entry_node_config(config),
@@ -174,7 +175,7 @@ public:
 
         try
         {
-            auto m_dir = m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size())).acquire_messenger();
+            auto m_dir = m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size()))->acquire_messenger();
             directory_message dir_req;
             dir_req.bucket_id = bucket_id;
             co_await m_dir.get().send_directory_message (DIR_PUT_BUCKET_REQ, dir_req);
@@ -199,7 +200,7 @@ public:
         {
             res = std::make_unique<http::model::delete_bucket_response>(req);
 
-            auto m_dir = m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size())).acquire_messenger();
+            auto m_dir = m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size()))->acquire_messenger();
             directory_message dir_req;
             dir_req.bucket_id = req.get_URI().get_bucket_id();
             co_await m_dir.get().send_directory_message (DIR_DELETE_BUCKET_REQ, dir_req);
@@ -233,7 +234,7 @@ public:
         {
             res = std::make_unique<http::model::get_bucket_response>(req);
 
-            auto m_dir = m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size())).acquire_messenger();
+            auto m_dir = m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size()))->acquire_messenger();
             co_await m_dir.get().send(DIR_LIST_BUCKET_REQ, {});
 
             auto hdr = co_await m_dir.get().recv_header();
@@ -278,7 +279,7 @@ public:
         std::unique_ptr<http::model::list_buckets_response> res;
 
         res = std::make_unique<http::model::list_buckets_response>(req);
-        auto m_dir = m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size())).acquire_messenger();
+        auto m_dir = m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size()))->acquire_messenger();
         co_await m_dir.get().send(DIR_LIST_BUCKET_REQ, {});
         const auto h_dir = co_await m_dir.get().recv_header();
 
@@ -305,22 +306,16 @@ public:
 
             auto body_size = req.get_body_size();
             const auto size_mb = static_cast <double> (body_size) / static_cast <double> (1024ul * 1024ul);
-            auto m_dedup = m_dedupe_nodes.at(get_round_robin_index(m_dedupe_node_index, m_dedupe_nodes.size())).acquire_messenger();
 
-            dedupe_response resp;
+            dedupe_response resp {.effective_size = 0};
             if(body_size > 0) [[likely]] {
-                co_await m_dedup.get().send (DEDUPE_REQ, req.get_body());
-                const auto h_dedup = co_await m_dedup.get().recv_header();
-                resp = co_await m_dedup.get().recv_dedupe_response(h_dedup);
-            } else [[unlikely]]
-            {
-                resp = {.effective_size = 0, .addr = address()};
+                resp = co_await integrate_data({req.get_body()});
             }
 
             auto effective_size = static_cast <double> (resp.effective_size) / static_cast <double> (1024ul * 1024ul);
             auto space_saving = 1.0 - static_cast <double> (resp.effective_size) / static_cast <double> (body_size);
 
-            auto m_dir = m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size())).acquire_messenger();
+            auto m_dir = m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size()))->acquire_messenger();
             const directory_message dir_req
                     {
                             .bucket_id = req.get_URI().get_bucket_id(),
@@ -377,7 +372,7 @@ public:
             const auto start = std::chrono::steady_clock::now();
 
             res = std::make_unique<http::model::get_object_response>(req);
-            auto m_dir = m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size())).acquire_messenger();
+            auto m_dir = m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size()))->acquire_messenger();
             directory_message dir_req;
             dir_req.bucket_id = req.get_URI().get_bucket_id();
             dir_req.object_key = std::make_unique <std::string> (req.get_URI().get_object_key());
@@ -436,7 +431,7 @@ public:
         try
         {
             res = std::make_unique<http::model::list_objectsv2_response>(req);
-            auto m_dir = m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size())).acquire_messenger();
+            auto m_dir = m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size()))->acquire_messenger();
 
             directory_message dir_req;
             dir_req.bucket_id = req.get_URI().get_bucket_id();
@@ -477,7 +472,7 @@ public:
         std::unique_ptr<http::model::list_objects_response> res;
 
         res = std::make_unique<http::model::list_objects_response>(req);
-        auto m_dir = m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size())).acquire_messenger();
+        auto m_dir = m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size()))->acquire_messenger();
 
         directory_message dir_req;
         dir_req.bucket_id = req.get_URI().get_bucket_id();
@@ -539,24 +534,20 @@ public:
         const auto start = std::chrono::steady_clock::now();
         const auto size_mb = static_cast <double> (body_size) / static_cast <double> (1024ul * 1024ul);
 
-        auto m_dedup = m_dedupe_nodes.at(get_round_robin_index(m_dedupe_node_index, m_dedupe_nodes.size())).acquire_messenger();
-        dedupe_response resp;
+
+        dedupe_response resp {.effective_size = 0};
         if(body_size > 0) [[likely]] {
-            for (const auto& pair : *parts_container_ptr)
-            {
-                m_dedup.get().register_write_buffer(pair.second.second);
+            std::list<std::string_view> pieces;
+            for (const auto &pair: *parts_container_ptr) {
+                pieces.emplace_back(pair.second.second);
             }
-            co_await m_dedup.get().send_buffers(DEDUPE_REQ);
-            const auto h_dedup = co_await m_dedup.get().recv_header();
-            resp = co_await m_dedup.get().recv_dedupe_response(h_dedup);
-        } else [[unlikely]] {
-            resp = {.effective_size = 0, .addr = address()};
+            resp = co_await integrate_data(pieces);
         }
 
         auto effective_size = static_cast <double> (resp.effective_size) / static_cast <double> (1024ul * 1024ul);
         auto space_saving = 1.0 - static_cast <double> (resp.effective_size) / static_cast <double> (body_size);
 
-        auto m_dir = m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size())).acquire_messenger();
+        auto m_dir = m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size()))->acquire_messenger();
         const directory_message dir_req
             {
                 .bucket_id = req.get_URI().get_bucket_id(),
@@ -603,7 +594,7 @@ public:
 
         try
         {
-            auto m_dir = m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size())).acquire_messenger();
+            auto m_dir = m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size()))->acquire_messenger();
             directory_message dir_req;
             dir_req.bucket_id = bucket_id;
             dir_req.object_key = std::make_unique <std::string> (req.get_URI().get_object_key());
@@ -684,7 +675,7 @@ public:
 
             try
             {
-                auto m_dir = m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size())).acquire_messenger();
+                auto m_dir = m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size()))->acquire_messenger();
                 directory_message dir_req;
                 dir_req.bucket_id = bucket_id;
                 dir_req.object_key = std::make_unique <std::string> (key);
@@ -706,7 +697,7 @@ public:
     }
 
     [[nodiscard]] client& get_recovery_director () const {
-        return m_directory_nodes.at(0);
+        return *m_directory_nodes.at(0);
     }
 
 private:
@@ -725,12 +716,58 @@ private:
         return index;
     }
 
-    std::atomic <size_t> m_dedupe_node_index {};
+    coro <dedupe_response> integrate_data (const std::list <std::string_view>& data_pieces) {
+
+        size_t total_size = 0;
+        std::map <size_t, std::string_view> offset_pieces;
+        for (const auto& dp: data_pieces) {
+            offset_pieces.emplace_hint(offset_pieces.cend(), total_size, dp);
+            total_size += dp.size();
+        }
+        const auto part_size = static_cast <size_t> (std::ceil (static_cast <double> (total_size) / static_cast <double> (m_dedupe_nodes.size())));
+
+        auto upload_to_dd = [&] (client::acquired_messenger m, int i) -> coro <dedupe_response> {
+            const auto my_offset = i * part_size;
+            std::list <std::string_view> my_pieces;
+            auto offset_itr = offset_pieces.upper_bound(my_offset);
+            offset_itr --;
+            size_t my_data_size = 0;
+            auto seek = my_offset - offset_itr->first;
+            while (my_data_size < part_size) {
+                const auto piece_size = offset_itr->second.size();
+                const auto piece_size_for_me = std::min (piece_size, part_size - my_data_size);
+                my_pieces.emplace_back (offset_itr->second.substr(seek, piece_size_for_me));
+                seek = 0;
+                m.get().register_write_buffer(my_pieces.back());
+                offset_itr ++;
+                my_data_size += piece_size_for_me;
+                if (offset_itr == offset_pieces.cend()) {
+                    break;
+                }
+            }
+
+            co_await m.get().send_buffers(DEDUPE_REQ);
+            const auto h_dedup = co_await m.get().recv_header();
+            co_return co_await m.get().recv_dedupe_response(h_dedup);
+        };
+
+        auto responses = co_await broadcast_gather_custom <dedupe_response> (*m_ioc, m_dedupe_nodes, upload_to_dd);
+
+        dedupe_response resp {.effective_size = 0};
+
+        for (const auto& r: responses) {
+            resp.effective_size += r.second.effective_size;
+            resp.addr.append_address(r.second.addr);
+        }
+        co_return resp;
+    }
+
     std::atomic <size_t> m_directory_node_index {};
     entry_node_config m_entry_node_config {};
 
-    std::vector <client>& m_dedupe_nodes;
-    std::vector <client>& m_directory_nodes;
+    std::shared_ptr <boost::asio::io_context> m_ioc;
+    std::vector <std::shared_ptr <client>>& m_dedupe_nodes;
+    std::vector <std::shared_ptr <client>>& m_directory_nodes;
 
     prometheus::Family<prometheus::Counter> &m_req_counters;
     prometheus::Counter &m_reqs_create_bucket;
