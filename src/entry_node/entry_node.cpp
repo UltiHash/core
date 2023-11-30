@@ -15,7 +15,9 @@ entry_node::entry_node(int id, cluster_map cmap) :
                            std::make_unique <entry_node_internal_handler>(m_cluster_map.m_cluster_conf.entry_node_conf, id)),
         m_rest_server (m_cluster_map.m_cluster_conf.entry_node_conf, m_dedupe_nodes, m_directory_nodes)
 {
-    sleep(5);
+
+    sleep(6);
+
     create_connections();
 }
 
