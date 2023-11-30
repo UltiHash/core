@@ -31,8 +31,8 @@ private:
 
     void create_connections ();
 
-    std::vector <client> m_dedupe_nodes;
-    std::vector <client> m_directory_nodes;
+    std::vector <std::shared_ptr <client>> m_dedupe_nodes;
+    std::vector <std::shared_ptr <client>> m_directory_nodes;
 
     const cluster_map m_cluster_map;
     const int m_id;
