@@ -26,6 +26,13 @@ namespace uh::cluster::rest::http::model
         }
     }
 
+    complete_multi_part_upload_request::
+    ~complete_multi_part_upload_request()
+    {
+        // THIS REMOVED ON ERROR ON COMPLETE MULTIPART REQUEST AS WELL.
+        m_server_state.m_uploads.remove_upload(m_upload_id, m_bucket_name, m_object_name);
+    }
+
     std::map<std::string, std::string> complete_multi_part_upload_request::get_request_specific_headers() const
     {
         return {};

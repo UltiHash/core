@@ -18,6 +18,8 @@ namespace uh::cluster::rest::http::model
         [[nodiscard]] std::map<std::string, std::string> get_request_specific_headers() const override;
 
     private:
+        std::string m_bucket_name;
+        std::string m_object_name;
     };
 
 } // uh::cluster::rest::http::model

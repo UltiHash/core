@@ -17,14 +17,14 @@ namespace uh::cluster::rest::http::model
          * grab a hold of the parts container so that we don't get segmentation fault if
          * the given upload is aborted or completed
         */
-        m_parts_container = m_server_state.m_uploads.get_parts_container(m_upload_id);
-        if (m_parts_container == nullptr)
+        if (!m_server_state.m_uploads.contains_upload(m_upload_id))
         {
             throw custom_error_response_exception(http::status::not_found, error::type::no_such_upload);
         }
         else
         {
-            m_server_state.m_uploads.remove_upload(m_upload_id);
+            // by this time another request might have removed the upload_id
+            m_server_state.m_uploads.remove_upload(m_upload_id, m_bucket_name, m_object_name);
         }
     }
 

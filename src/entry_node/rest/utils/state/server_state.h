@@ -2,6 +2,7 @@
 
 #include <memory>
 #include <map>
+#include <vector>
 #include <unordered_map>
 #include "entry_node/rest/utils/hashing/hash.h"
 
@@ -44,14 +45,22 @@ namespace uh::cluster::rest::utils
     {
         upload_state() = default;
 
-        bool insert_upload(std::string upload_id);
+        bool insert_upload(std::string upload_id, std::string bucket, std::string object_key);
+        bool contains_upload(const std::string& bucket) const;
         std::shared_ptr<parts> get_parts_container(const std::string& upload_id) const;
-        bool remove_upload(const std::string& upload_id);
+        bool remove_upload(const std::string& upload_id, const std::string& bucket, const std::string& object_key);
+        std::map<std::string, std::string> list_multipart_uploads(const std::string&) const;
 
     private:
         mutable std::mutex mutex {};
-        /* { upload_id, shared ptr to parts struct } */
+
         std::unordered_map<std::string, std::shared_ptr<parts>> upload_to_parts_container;
+        struct list_state
+        {
+            std::unordered_map<std::string, std::vector<std::string>> bucket_to_uploads_container;
+            std::unordered_map<std::string, std::string> uploads_to_key_container;
+        };
+        list_state m_list_state;
     };
 
     struct server_state

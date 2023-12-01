@@ -13,7 +13,7 @@ namespace uh::cluster::rest::http::model
                                            utils::server_state&,
                                            std::unique_ptr<rest::http::URI>);
 
-        ~complete_multi_part_upload_request() override = default;
+        ~complete_multi_part_upload_request() override;
 
         [[nodiscard]] inline http_request_type get_request_name() const override { return http_request_type::COMPLETE_MULTIPART_UPLOAD; }
 

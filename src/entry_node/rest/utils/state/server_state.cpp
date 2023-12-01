@@ -1,4 +1,5 @@
 #include "server_state.h"
+#include <algorithm>
 
 namespace uh::cluster::rest::utils
 {
@@ -49,19 +50,68 @@ namespace uh::cluster::rest::utils
         return parts_and_sizes;
     }
 
-
-    bool upload_state::insert_upload(std::string upload_id)
+    std::map<std::string, std::string> upload_state::list_multipart_uploads(const std::string& bucket) const
     {
         std::lock_guard<std::mutex> lock(mutex);
-        auto pair = upload_to_parts_container.emplace(std::move(upload_id), std::make_shared<parts>());
+
+        std::map<std::string, std::string> multipart_uploads {};
+        auto bucket_iter = m_list_state.bucket_to_uploads_container.find(bucket);
+        if (bucket_iter != m_list_state.bucket_to_uploads_container.end())
+        {
+            for (const auto& value : bucket_iter->second)
+            {
+                multipart_uploads.emplace(value, m_list_state.uploads_to_key_container.at(value));
+            }
+        }
+
+        return multipart_uploads;
+    }
+
+
+    bool upload_state::insert_upload(std::string upload_id, std::string bucket, std::string object_key)
+    {
+        std::lock_guard<std::mutex> lock(mutex);
+        auto pair = upload_to_parts_container.emplace(upload_id, std::make_shared<parts>());
+
+        // extra information for list multipart uploads
+        if (m_list_state.bucket_to_uploads_container.find(bucket) == m_list_state.bucket_to_uploads_container.end())
+        {
+            m_list_state.bucket_to_uploads_container.emplace(std::move(bucket), std::vector<std::string>{upload_id});
+        }
+        else
+        {
+            m_list_state.bucket_to_uploads_container[bucket].emplace_back(upload_id);
+        }
+
+        m_list_state.uploads_to_key_container.emplace(std::move(upload_id), std::move(object_key));
+
         return pair.second;
     }
 
 
-    bool upload_state::remove_upload(const std::string& upload_id)
+    bool upload_state::remove_upload(const std::string& upload_id, const std::string& bucket, const std::string& object_key)
     {
         std::lock_guard<std::mutex> lock(mutex);
-        return upload_to_parts_container.erase(upload_id);
+
+        bool status = upload_to_parts_container.erase(upload_id);
+
+        auto bucket_iter = m_list_state.bucket_to_uploads_container.find(bucket);
+        if (bucket_iter != m_list_state.bucket_to_uploads_container.end())
+        {
+            auto object_key_itr = std::find(bucket_iter->second.begin(), bucket_iter->second.end(), object_key);
+            if (object_key_itr != bucket_iter->second.end())
+            {
+                bucket_iter->second.erase(object_key_itr);
+
+                if (bucket_iter->second.empty())
+                {
+                    m_list_state.bucket_to_uploads_container.erase(bucket);
+                }
+            }
+        }
+        m_list_state.uploads_to_key_container.erase(upload_id);
+
+        return status;
     }
 
 
@@ -79,5 +129,19 @@ namespace uh::cluster::rest::utils
         }
     }
 
+
+    bool upload_state::contains_upload(const std::string& upload_id) const
+    {
+        std::lock_guard<std::mutex> lock(mutex);
+        auto itr = upload_to_parts_container.find(upload_id);
+        if (itr != upload_to_parts_container.end())
+        {
+            return true;
+        }
+        else
+        {
+            return false;
+        }
+    }
 
 } // uh::cluster::rest::utils
