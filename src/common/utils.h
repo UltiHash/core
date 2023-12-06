@@ -28,11 +28,11 @@ namespace uh::cluster {
                 }
                 waiter.expires_at(boost::asio::steady_timer::time_point::min());
             });
+
+            co_await waiter.async_wait(as_tuple(boost::asio::use_awaitable));
             if (eptr) {
                 std::rethrow_exception(eptr);
             }
-            co_await waiter.async_wait(as_tuple(boost::asio::use_awaitable));
-
         }
 
         template<typename Func>
@@ -42,9 +42,10 @@ namespace uh::cluster {
                                                                                client& cl,
                                                                                Func&& func) {
             co_await post_in_workers (workers, ioc, [&] () {
-                auto m = cl.acquire_messenger();
-                boost::asio::co_spawn (ioc, func (std::move (m)), boost::asio::use_future).wait ();
+                    auto m = cl.acquire_messenger();
+                    boost::asio::co_spawn(ioc, func(std::move(m)), boost::asio::use_future).get();
             });
+
         }
 
         template<typename Func>
@@ -61,7 +62,7 @@ namespace uh::cluster {
             }
 
             for (auto& f: futures) {
-                f.wait();
+                f.get();
             }
         }
 

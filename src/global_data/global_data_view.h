@@ -11,6 +11,7 @@
 #include "ec.h"
 #include "ec_factory.h"
 #include "lru_cache.h"
+#include "common/utils.h"
 
 namespace uh::cluster {
 
@@ -357,28 +358,17 @@ public:
             offset += frag.size;
         }
 
-        std::vector <std::future <void>> futures;
-        futures.reserve(node_address_map.size());
-
-        for (auto& n: node_address_map) {
-            const auto node = n.first;
+        utils::broadcast_from_worker_in_io_threads (nodes, *m_io_service, [&buffer, &nodes, &node_address_map, &node_data_offsets_map] (client::acquired_messenger m, long id) -> coro <void> {
+            const auto node = nodes.at(id);
             const auto& add = node_address_map.at(node);
             const auto& offsets = node_data_offsets_map.at(node);
-            auto m = n.first->acquire_messenger();
-
-            futures.emplace_back (boost::asio::co_spawn(*m_io_service, [buffer, offsets, add] (client::acquired_messenger m) -> coro <void> {
-                co_await m.get ().send_address (READ_ADDRESS_REQ, add);
-                const auto h = co_await m.get ().recv_header ();
-                for (int i = 0; i < add.size(); ++i) {
-                    m.get ().register_read_buffer (buffer + offsets.at(i), add.sizes[i]);
-                }
-                co_await m.get ().recv_buffers (h);
-            } (std::move (m)), boost::asio::use_future));
-        }
-
-        for (auto& f: futures) {
-            f.wait();
-        }
+            co_await m.get ().send_address (READ_ADDRESS_REQ, add);
+            const auto h = co_await m.get ().recv_header ();
+            for (int i = 0; i < add.size(); ++i) {
+                m.get ().register_read_buffer (buffer + offsets.at(i), add.sizes[i]);
+            }
+            co_await m.get ().recv_buffers (h);
+        });
 
         return offset;
     }
