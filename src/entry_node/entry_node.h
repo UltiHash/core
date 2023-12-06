@@ -37,7 +37,7 @@ private:
     const cluster_map m_cluster_map;
     const int m_id;
     const std::string m_job_name;
-    server m_internal_server;
+    std::shared_ptr <boost::asio::thread_pool> m_workers;
     rest::rest_server m_rest_server;
 
 };

@@ -150,8 +150,7 @@ private:
             integration_data = integration_data.substr(frag_size);
         }
 
-        const auto sync_fut = boost::asio::co_spawn (*m_storage.get_executor(), m_storage.sync(result.addr), boost::asio::use_future);
-        sync_fut.wait();
+        m_storage.sync(result.addr);
         return result;
     }
 

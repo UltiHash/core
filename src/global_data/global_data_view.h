@@ -8,7 +8,6 @@
 #include <map>
 #include "data_node/data_node.h"
 #include "network/client.h"
-#include "network/network_traits.h"
 #include "ec.h"
 #include "ec_factory.h"
 #include "lru_cache.h"
@@ -97,6 +96,7 @@ public:
         co_return h.size;
     }
 
+    /*
     coro <address> allocate (size_t total_size) {
 
         if (total_size % m_data_node_offsets.size() != 0) {
@@ -337,8 +337,8 @@ public:
         }
 
     }
-
-    coro <std::size_t> read_address (char* buffer, const address& addr) {
+*/
+    std::size_t read_address (char* buffer, const address& addr) {
 
         std::unordered_map <std::shared_ptr <client>, address> node_address_map;
         std::unordered_map <std::shared_ptr <client>, std::vector <size_t>> node_data_offsets_map;
@@ -357,21 +357,30 @@ public:
             offset += frag.size;
         }
 
-        auto bc_func = [&] (auto m, int node_id) -> coro <int> {
-            const auto node = nodes.at (node_id);
-            const auto& addr = node_address_map.at(node);
+        std::vector <std::future <void>> futures;
+        futures.reserve(node_address_map.size());
+
+        for (auto& n: node_address_map) {
+            const auto node = n.first;
+            const auto& add = node_address_map.at(node);
             const auto& offsets = node_data_offsets_map.at(node);
-            co_await m.get ().send_address (READ_ADDRESS_REQ, addr);
-            const auto h = co_await m.get ().recv_header ();
-            for (int i = 0; i < addr.size(); ++i) {
-                m.get ().register_read_buffer (buffer + offsets.at(i), addr.sizes[i]);
-            }
-            co_await m.get ().recv_buffers (h);
-            co_return node_id;
-        };
+            auto m = n.first->acquire_messenger();
 
-        co_await broadcast_gather_custom <int> (*m_io_service, nodes, bc_func);
+            futures.emplace_back (boost::asio::co_spawn(*m_io_service, [buffer, offsets, add] (client::acquired_messenger m) -> coro <void> {
+                co_await m.get ().send_address (READ_ADDRESS_REQ, add);
+                const auto h = co_await m.get ().recv_header ();
+                for (int i = 0; i < add.size(); ++i) {
+                    m.get ().register_read_buffer (buffer + offsets.at(i), add.sizes[i]);
+                }
+                co_await m.get ().recv_buffers (h);
+            } (std::move (m)), boost::asio::use_future));
+        }
 
+        for (auto& f: futures) {
+            f.wait();
+        }
+
+        return offset;
     }
 
     coro <void> remove (const uint128_t pointer, const size_t size) {
@@ -380,91 +389,71 @@ public:
         const auto h = co_await m.get().recv_header();
     }
 
-    coro <void> sync (const address& addr) {
+    void sync (const address& addr) {
 
         if (addr.empty()) [[unlikely]] {
             throw std::length_error ("Empty address is not allowed for sync");
         }
 
         std::unordered_map <std::shared_ptr <client>, address> node_address_map;
-        std::vector <std::shared_ptr <client>> nodes;
 
         for (int i = 0; i < addr.size(); ++i) {
             const auto frag = addr.get_fragment(i);
             auto n = get_data_node (frag.pointer);
             auto& node_address = node_address_map [n];
-            if (node_address.empty()) {
-                nodes.emplace_back(std::move (n));
-            }
             node_address.push_fragment(frag);
         }
 
+        std::vector <std::future <void>> futures;
+        futures.reserve(node_address_map.size());
 
-
-        auto bc_func = [&] (auto m, int node_id) -> coro <message_type> {
-            const auto node = nodes.at (node_id);
-
-            co_await m.get ().send_address(SYNC_REQ, node_address_map.at (node));
-            const auto h = co_await m.get().recv_header();
-            co_return h.type;
-        };
-
-        co_await broadcast_gather_custom <message_type> (*m_io_service, nodes, bc_func);
-        // error checking
-
-        co_return;
-    }
-
-    [[nodiscard]] coro <uint128_t> get_used_space () {
-
-        std::forward_list <client::acquired_messenger> messengers;
-        for (auto& dn: m_data_node_offsets) {
-            messengers.emplace_front(dn.second->acquire_messenger());
-            co_await messengers.front().get().send(USED_REQ, {});
+        for (auto& n: node_address_map) {
+            auto m = n.first->acquire_messenger();
+            futures.emplace_back (boost::asio::co_spawn (*m_io_service, [] (client::acquired_messenger m, address addr) -> coro <void> {
+                co_await m.get().send_address(SYNC_REQ, addr);
+                co_await m.get().recv_header();
+                } (std::move (m), n.second), boost::asio::use_future));
         }
 
-        std::vector <std::shared_ptr <client>> nodes;
-        nodes.reserve(m_data_node_offsets.size());
+        for (auto& f: futures) {
+            f.wait();
+        }
+    }
+
+    [[nodiscard]] uint128_t get_used_space () {
+
+        std::vector <std::future <uint128_t>> futures;
+        futures.reserve(m_data_node_offsets.size());
         for (const auto& n: m_data_node_offsets) {
-            nodes.emplace_back(n.second);
+            auto m = n.second->acquire_messenger();
+            futures.emplace_back (boost::asio::co_spawn (*m_io_service, [] (client::acquired_messenger m) -> coro <uint128_t> {
+                co_await m.get().send(USED_REQ, {});
+                const auto message_header = co_await m.get().recv_header();
+                const auto resp = co_await m.get().recv_uint128_t (message_header);
+                co_return resp;
+            } (std::move (m)), boost::asio::use_future));
         }
 
         uint128_t used = 0;
-        std::mutex mut;
-        auto bc_func = [&] (auto m, int node_id) -> coro <message_type> {
+        for (auto& f: futures) {
+            used += f.get();
+        }
 
-            co_await messengers.front().get().send(USED_REQ, {});
-            const auto message_header = co_await m.get().recv_header();
-            const auto resp = co_await m.get().recv_uint128_t (message_header);
-            std::lock_guard <std::mutex> lock (mut);
-            used = used + resp;
-            co_return SUCCESS;
-        };
-
-        co_await broadcast_gather_custom <message_type> (*m_io_service, nodes, bc_func);
-
-        co_return used;
+        return used;
     }
 
     [[nodiscard]] std::size_t get_data_node_count() {
         return m_data_node_offsets.size();
     }
 
-    coro <void> stop () {
+    void stop () {
 
-        std::vector <std::shared_ptr <client>> nodes;
-        nodes.reserve(m_data_node_offsets.size() + m_ec->get_acquired_ec_node_count());
-        for (auto& node: m_data_node_offsets) {
-            nodes.emplace_back(node.second);
+        for (const auto& n: m_data_node_offsets) {
+            auto m = n.second->acquire_messenger();
+            boost::asio::co_spawn (*m_io_service, [] (client::acquired_messenger m) -> coro <uint128_t> {
+                co_await m.get ().send(STOP, {});
+            } (std::move (m)), boost::asio::detached);
         }
-        nodes.insert(nodes.cend(), m_ec->get_ec_nodes().cbegin(), m_ec->get_ec_nodes().cend());
-        auto bc_func = [] (auto m, int node_id) -> coro <void> {
-            co_await m.get ().send(STOP, {});
-            co_return;
-        };
-
-        broadcast_custom (*m_io_service, nodes, bc_func);
-        co_return;
     }
 
 
