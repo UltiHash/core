@@ -46,7 +46,7 @@ namespace uh::cluster {
         char read_buf [data_size];
 
         auto read_data = [&] () -> coro <message_type> {
-            co_await get_dedupe_node(0).get_global_data_view().read_address(read_buf, alloc);
+            get_dedupe_node(0).get_global_data_view().read_address(read_buf, alloc);
             co_return SUCCESS;
         };
 
