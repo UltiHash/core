@@ -70,6 +70,9 @@ public:
                 case DIR_DELETE_OBJ_REQ:
                     co_await handle_delete_object(m, message_header);
                     break;
+                case DIR_BUCKET_EXISTS:
+                    co_await handle_bucket_exists(m, message_header);
+                    break;
                 case STOP:
                     co_return;
                 default:
@@ -91,6 +94,16 @@ public:
     }
 
 private:
+
+    coro <void> handle_bucket_exists (messenger& m, const messenger::header& h)
+    {
+        directory_message request = co_await m.recv_directory_message (h);
+
+        m_directory.bucket_exists(request.bucket_id);
+
+        co_await m.send(SUCCESS, {});
+        co_return;
+    }
 
     coro <void> handle_put_obj (messenger& m, const messenger::header& h)
     {

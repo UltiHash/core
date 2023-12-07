@@ -132,7 +132,7 @@ namespace uh::cluster {
                     break;
                 case http::http_request_type::INIT_MULTIPART_UPLOAD:
                     m_reqs_init_multipart_upload.Increment();
-                    res = handle_init_mp_upload(req);
+                    res = co_await handle_init_mp_upload(req);
                     break;
                 case http::http_request_type::MULTIPART_UPLOAD:
                     m_reqs_multiplart_upload.Increment();
@@ -461,9 +461,7 @@ namespace uh::cluster {
         coro<std::unique_ptr<http::http_response>> handle_list_objects (const http::http_request& req)
         {
 
-            std::unique_ptr<http::model::list_objects_response> res;
-
-            res = std::make_unique<http::model::list_objects_response>(req);
+            std::unique_ptr<http::model::list_objects_response> res =  std::make_unique<http::model::list_objects_response>(req);
             auto m_dir = m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size()))->acquire_messenger();
 
             directory_message dir_req;
@@ -487,13 +485,35 @@ namespace uh::cluster {
             co_return std::move(res);
         }
 
-        std::unique_ptr<http::http_response> handle_init_mp_upload (const http::http_request& req)
+        coro <std::unique_ptr<http::http_response>> handle_init_mp_upload (const http::http_request& req)
         {
+            std::unique_ptr<http::model::init_multi_part_upload_response> res;
+            try
+            {
+                res = std::make_unique<http::model::init_multi_part_upload_response>(req);
 
-            std::unique_ptr<http::model::init_multi_part_upload_response> res = std::make_unique<http::model::init_multi_part_upload_response>(req);
-            res->set_upload_id(req.get_eTag());
+                auto m_dir = m_directory_nodes.at(get_round_robin_index(m_directory_node_index, m_directory_nodes.size()))->acquire_messenger();
 
-            return std::move(res);
+                directory_message dir_req;
+                dir_req.bucket_id = req.get_URI().get_bucket_id();
+
+                co_await m_dir.get().send_directory_message (DIR_BUCKET_EXISTS, dir_req);
+                const auto h_dir = co_await m_dir.get().recv_header();
+
+                res->set_upload_id(req.get_eTag());
+            }
+            catch (const error_exception& e)
+            {
+                switch (*e.error())
+                {
+                    case error::bucket_not_found:
+                        throw http::model::custom_error_response_exception(b_http::status::not_found, http::model::error::bucket_not_found);
+                    default:
+                        throw http::model::custom_error_response_exception(b_http::status::internal_server_error);
+                }
+            }
+
+            co_return std::move(res);
         }
 
         std::unique_ptr<http::http_response> handle_mp_upload (const http::http_request& req)
