@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 TESTING_BASE_DIR="@CMAKE_CURRENT_SOURCE_DIR@"
 TESTING_BINARY_DIR="@CMAKE_CURRENT_BINARY_DIR@"
@@ -66,21 +66,55 @@ fi
 
 set +e
 
-compose_file="$TESTING_BINARY_DIR/docker-compose.yml"
-use_docker_compose="0"
-if [ -z "$cluster_url" ]; then
-    if [ ! -e "$compose_file" ]; then
-        echo "Compose file was not generated. Do you have docker installed?"
-        echo
-        echo "Install docker and enable it for this user. Then run cmake again."
-        echo "You can also start the cluster yourself and reference it using "
-        echo "--url <cluster-url>"
-        exit 1
-    fi
-
+setup_docker_compose_cluster ()
+{
+    compose_file="$1"
     docker-compose -f "$compose_file" up --detach
+    trap "docker-compose -f "$compose_file" down" SIGHUP SIGINT SIGQUIT SIGABRT
+}
+
+stop_base_cluster ()
+{
+    dir="$1"
+
+    for role in en dn dr dd; do
+        kill -TERM $(cat "$dir/$role/uhc.pid")
+    done
+
+    wait
+    rm -rf "$dir"
+}
+
+setup_bare_cluster ()
+{
+    dir=$(mktemp --directory)
+    uhc=$(realpath --canonicalize-existing "$TESTING_BINARY_DIR/../uh-cluster")
+
+    for role in dd dr dn en; do
+        mkdir -p "$dir/$role/log"
+        mkdir -p "$dir/$role/data"
+
+        (
+            cd "$dir/$role"
+            $uhc "$role" 0 2> log/stderr 1> log/stdout &
+            echo $! > uhc.pid
+        )
+    done
+
+    trap "stop_base_cluster \"$dir\"" SIGHUP SIGINT SIGQUIT SIGABRT
+}
+
+compose_file="$TESTING_BINARY_DIR/docker-compose.yml"
+if [ -z "$cluster_url" ]; then
+    if [ ! -e "$compose_file" ] || [ "$E2E_RUN_BARE" == "1" ]; then
+        echo "No compose file was found or running bare-metal was requested."
+        echo "The servers are started directly on the machine."
+
+        setup_bare_cluster
+    else
+        setup_docker_compose_cluster "$compose_file"
+    fi
     cluster_url="http://localhost:8080"
-    use_docker_compose="1"
 fi
 
 timeout=30
@@ -102,7 +136,3 @@ fi
 export PYTHONDONTWRITEBYTECODE=1
 pytest "$TESTING_BINARY_DIR/tests" --cluster-url="$cluster_url" \
     --aws-access-key-id="$AWS_ACCESS_KEY_ID" --aws-secret-access-key="$AWS_SECRET_ACCESS_KEY" $@
-
-if [ "$use_docker_compose" -eq "1" ]; then
-    docker-compose -f "$TESTING_BINARY_DIR/docker-compose.yml" down
-fi
