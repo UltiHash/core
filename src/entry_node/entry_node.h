@@ -12,19 +12,18 @@
 #include "network/server.h"
 #include "entry_node/rest_server.h"
 #include "network/client.h"
-#include "common/node_interface.h"
 
 namespace uh::cluster
 {
 
-class entry_node: public node_interface {
+class entry_node {
 public:
 
     entry_node (int id, cluster_map cmap);
 
-    void run() override;
+    void run();
 
-    void stop() override;
+    void stop();
 
 
 private:

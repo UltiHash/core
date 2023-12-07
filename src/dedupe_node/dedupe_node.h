@@ -10,7 +10,7 @@
 #include <common/log.h>
 
 namespace uh::cluster {
-    class dedupe_node: public node_interface {
+    class dedupe_node {
     public:
 
         dedupe_node (int id, cluster_map cmap, const bool use_id_as_port_offset = false):
@@ -24,13 +24,13 @@ namespace uh::cluster {
                 m_use_id_as_port_offset (use_id_as_port_offset)
         {}
 
-        void run() override {
+        void run() {
             LOG_INFO() << "starting " << m_job_name;
             m_storage.create_data_node_connections(m_server.get_executor(), m_cluster_map.m_cluster_conf.dedupe_node_conf.data_node_connection_count, m_use_id_as_port_offset);
             m_server.run();
         }
 
-        void stop() override {
+        void stop() {
             LOG_INFO() << "stopping " << m_job_name;
             m_server.stop();
             m_dedupe_workers->join();

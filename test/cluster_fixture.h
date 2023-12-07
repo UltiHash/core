@@ -19,11 +19,9 @@ namespace uh::cluster {
     class cluster_fixture
     {
     public:
-
-        std::vector <std::shared_ptr <node_interface>> m_nodes;
-        std::vector <std::shared_ptr <node_interface>> m_dedupe_nodes;
-        std::vector <std::shared_ptr <node_interface>> m_directory_nodes;
-        std::vector <std::shared_ptr <node_interface>> m_data_nodes;
+        std::vector <std::shared_ptr <dedupe_node>> m_dedupe_nodes;
+        std::vector <std::shared_ptr <directory_node>> m_directory_nodes;
+        std::vector <std::shared_ptr <data_node>> m_data_nodes;
         std::vector <std::thread> m_threads;
         boost::asio::io_context m_ioc;
 
@@ -43,15 +41,15 @@ namespace uh::cluster {
         }
 
         dedupe_node& get_dedupe_node (int i) {
-            return dynamic_cast <dedupe_node&> (*m_dedupe_nodes.at(i));
+            return *m_dedupe_nodes.at(i);
         }
 
         directory_node& get_directory_node (int i) {
-            return dynamic_cast <directory_node&> (*m_directory_nodes.at(i));
+            return *m_directory_nodes.at(i);
         }
 
         data_node& get_data_node (int i) {
-            return dynamic_cast <data_node&> (*m_data_nodes.at(i));
+            return *m_data_nodes.at(i);
         }
 
         void setup (int data_nodes, int dedupe_nodes, int directory_nodes, ec_type ec) {
@@ -63,7 +61,7 @@ namespace uh::cluster {
 
         void shut_down () {
             for (auto& node: m_dedupe_nodes) {
-                auto& dedupe = dynamic_cast <dedupe_node&> (*node);
+                auto& dedupe = *node;
                 if (dedupe.get_global_data_view().get_data_node_count() > 0) {
                     try {
                         dedupe.get_global_data_view().stop();
@@ -73,7 +71,17 @@ namespace uh::cluster {
                 }
             }
 
-            for (const auto& node: m_nodes) {
+            for (const auto& node : m_dedupe_nodes)
+            {
+                node->stop();
+            }
+
+            for (const auto& node : m_directory_nodes)
+            {
+                node->stop();
+            }
+
+            for (const auto& node: m_data_nodes) {
                 node->stop();
             }
 
@@ -82,7 +90,6 @@ namespace uh::cluster {
             }
 
             m_threads.clear();
-            m_nodes.clear();
             m_dedupe_nodes.clear();
             m_data_nodes.clear();
             m_directory_nodes.clear();
@@ -103,16 +110,13 @@ namespace uh::cluster {
                     auto cmap = cluster_map(std::move (config), cluster_roles);
                     switch (role.first) {
                         case DATA_NODE:
-                            m_nodes.emplace_back(std::make_shared<data_node>(role_nodes.first, std::move(cmap)));
-                            m_data_nodes.emplace_back(m_nodes.back());
+                            m_data_nodes.emplace_back(std::make_shared<data_node>(role_nodes.first, std::move(cmap)));
                             break;
                         case DEDUPE_NODE:
-                            m_nodes.emplace_back(std::make_shared<dedupe_node>(role_nodes.first, std::move(cmap), true));
-                            m_dedupe_nodes.emplace_back(m_nodes.back());
+                            m_dedupe_nodes.emplace_back(std::make_shared<dedupe_node>(role_nodes.first, std::move(cmap), true));
                             break;
                         case DIRECTORY_NODE:
-                            m_nodes.emplace_back(std::make_shared<directory_node>(role_nodes.first, std::move(cmap), true));
-                            m_directory_nodes.emplace_back(m_nodes.back());
+                            m_directory_nodes.emplace_back(std::make_shared<directory_node>(role_nodes.first, std::move(cmap), true));
                             break;
                         default:
                             throw std::runtime_error("no support for the role type");
