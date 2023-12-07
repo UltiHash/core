@@ -55,11 +55,16 @@ namespace uh::cluster::rest::utils
         mutable std::mutex mutex {};
 
         std::unordered_map<std::string, std::shared_ptr<parts>> upload_to_parts_container;
+
         struct list_state
         {
             std::unordered_map<std::string, std::vector<std::string>> bucket_to_uploads_container;
             std::unordered_map<std::string, std::string> uploads_to_key_container;
+
+            void insert_upload();
+            void remove_upload();
         };
+
         list_state m_list_state;
     };
 

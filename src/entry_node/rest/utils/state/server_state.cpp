@@ -68,6 +68,18 @@ namespace uh::cluster::rest::utils
     }
 
 
+    void upload_state::list_state::insert_upload()
+    {
+
+    }
+
+
+    void upload_state::list_state::remove_upload()
+    {
+
+    }
+
+
     bool upload_state::insert_upload(std::string upload_id, std::string bucket, std::string object_key)
     {
         std::lock_guard<std::mutex> lock(mutex);
@@ -117,7 +129,7 @@ namespace uh::cluster::rest::utils
 
     std::shared_ptr<parts> upload_state::get_parts_container(const std::string& upload_id) const
     {
-        std::lock_guard<std::mutex> lock(mutex);
+        std::lock_guard<std::mutex> lock(mutex); // use shared lock here since we do not modify it
         auto itr = upload_to_parts_container.find(upload_id);
         if (itr != upload_to_parts_container.end())
         {
