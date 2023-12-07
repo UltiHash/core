@@ -52,6 +52,7 @@ struct dedupe_config {
     int data_node_connection_count{};
     std::filesystem::path set_log_path;
     size_t dedupe_worker_minimum_data_size{};
+    int worker_thread_count {};
 };
 
 struct data_node_config {
@@ -64,16 +65,17 @@ struct data_node_config {
 };
 
 struct entry_node_config {
-    server_config internal_server_conf;
     server_config rest_server_conf;
-    int dedupe_node_connection_count;
-    int directory_connection_count;
+    int dedupe_node_connection_count {};
+    int directory_connection_count {};
+    int worker_thread_count {};
 };
 
 struct directory_node_config {
     server_config server_conf{};
     directory_store_config directory_conf;
     int data_node_connection_count{};
+    int worker_thread_count {};
 };
 
 struct cluster_config {

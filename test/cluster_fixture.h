@@ -65,12 +65,8 @@ namespace uh::cluster {
             for (auto& node: m_dedupe_nodes) {
                 auto& dedupe = dynamic_cast <dedupe_node&> (*node);
                 if (dedupe.get_global_data_view().get_data_node_count() > 0) {
-                    auto answer = boost::asio::co_spawn(*dedupe.get_server().get_executor(),
-                                                        [&]() -> boost::asio::awaitable<void> {
-                                                            co_await dedupe.get_global_data_view().stop();
-                                                        }, boost::asio::use_future);
                     try {
-                        answer.get();
+                        dedupe.get_global_data_view().stop();
                     } catch (std::exception& e) {
                         std::cerr << e.what() << std::endl;
                     }

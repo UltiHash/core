@@ -20,9 +20,10 @@ public:
             m_cluster_map (std::move (cmap)),
             m_id (id),
             m_job_name ("directory_" + std::to_string (id)),
+            m_directory_workers (std::make_shared <boost::asio::thread_pool> (m_cluster_map.m_cluster_conf.directory_node_conf.worker_thread_count)),
             m_storage (m_cluster_map),
             m_server (m_cluster_map.m_cluster_conf.directory_node_conf.server_conf, m_job_name,
-                      std::make_unique <directory_handler>(m_cluster_map.m_cluster_conf.directory_node_conf, m_storage)),
+                      std::make_unique <directory_handler>(m_cluster_map.m_cluster_conf.directory_node_conf, m_storage, m_directory_workers)),
             m_use_id_as_port_offset (use_id_as_port_offset)
     {
     }
@@ -36,6 +37,8 @@ public:
     void stop () override {
         LOG_INFO() << "stopping " << m_job_name;
         m_server.stop();
+        m_directory_workers->join();
+        m_directory_workers->stop();
     }
 
     global_data_view& get_global_data_view() {
@@ -49,6 +52,7 @@ public:
     const cluster_map m_cluster_map;
     const int m_id;
     const std::string m_job_name;
+    std::shared_ptr <boost::asio::thread_pool> m_directory_workers;
     global_data_view m_storage;
     server m_server;
     const bool m_use_id_as_port_offset;
