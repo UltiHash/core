@@ -32,7 +32,7 @@ namespace uh::cluster {
         std::promise <address> alloc_promise;
         const auto data_str = std::string_view (data, data_size);
         auto write_data = [&] () -> coro <message_type> {
-            auto alloc = co_await get_dedupe_node(0).get_global_data_view().write(data_str);
+            auto alloc = get_dedupe_node(0).get_global_data_view().write(data_str);
             get_dedupe_node(0).get_global_data_view().sync(alloc);
             alloc_promise.set_value(std::move (alloc));
             co_return SUCCESS;
