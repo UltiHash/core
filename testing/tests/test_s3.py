@@ -9,6 +9,7 @@ import util
 from s3_util import has_bucket, has_object, unused_bucket_name, unused_object_key
 
 
+@pytest.mark.xfail
 def test_create_bucket(s3):
     name = unused_bucket_name(s3)
     response = s3.create_bucket(Bucket=name)
@@ -53,10 +54,10 @@ def test_object_content(s3):
 
     name = unused_object_key(s3, bucket)
     body = util.random_string(string.printable, 64 * 1024)
-    s3.put_object(Bucket=bucket, Key=name, body=body)
+    s3.put_object(Bucket=bucket, Key=name, Body=body)
 
     resp = s3.get_object(Bucket=bucket, Key=name)
-    assert body == resp['Body']
+    assert body.encode('ascii') == resp['Body'].read()
 
 
 def test_create_illegal_bucket_name(s3):

@@ -31,6 +31,9 @@ def has_bucket(s3, bucket):
 def has_object(s3, bucket, key):
     objs = s3.list_objects_v2(Bucket=bucket)
 
+    if not 'Contents' in objs:
+        return False
+
     for o in objs['Contents']:
         if o['Key'] == key:
             return True
