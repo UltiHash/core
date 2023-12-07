@@ -17,7 +17,7 @@ namespace uh::cluster {
                 m_cluster_map (std::move (cmap)),
                 m_id (id),
                 m_job_name ("dedupe_node_" + std::to_string (m_id)),
-                m_dedupe_workers (std::make_shared <boost::asio::thread_pool> (m_cluster_map.m_cluster_conf.dedupe_node_conf.data_node_connection_count)),
+                m_dedupe_workers (std::make_shared <boost::asio::thread_pool> (m_cluster_map.m_cluster_conf.dedupe_node_conf.worker_thread_count)),
                 m_storage (m_cluster_map),
                 m_server (m_cluster_map.m_cluster_conf.dedupe_node_conf.server_conf, m_job_name,
                           std::make_unique <dedupe_node_handler>(m_cluster_map.m_cluster_conf.dedupe_node_conf, m_storage, m_dedupe_workers)),

@@ -10,8 +10,7 @@ entry_node::entry_node(int id, cluster_map cmap) :
         m_cluster_map (std::move (cmap)),
         m_id (id),
         m_job_name ("entry_" + std::to_string (id)),
-        m_workers (std::make_shared <boost::asio::thread_pool> (m_cluster_map.m_cluster_conf.directory_node_conf.data_node_connection_count +
-                                                                        m_cluster_map.m_cluster_conf.dedupe_node_conf.data_node_connection_count)),
+        m_workers (std::make_shared <boost::asio::thread_pool> (m_cluster_map.m_cluster_conf.entry_node_conf.worker_thread_count)),
         m_rest_server (m_cluster_map.m_cluster_conf.entry_node_conf, m_dedupe_nodes, m_directory_nodes, m_workers)
 {
 
