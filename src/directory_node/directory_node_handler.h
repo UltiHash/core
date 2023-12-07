@@ -98,10 +98,10 @@ private:
     {
         directory_message request = co_await m.recv_directory_message (h);
 
-        co_await utils::post_in_workers (*m_directory_workers, *m_storage.get_executor(), [this, &request] () {
+        co_await utils::post_in_workers (*m_directory_workers, *m_storage.get_executor(), [this, request = std::cref (request)] () {
             std::vector<char> address_data;
-            zpp::bits::out{address_data, zpp::bits::size4b{}}(*request.addr).or_throw();
-            m_directory.insert (request.bucket_id, *request.object_key, address_data);
+            zpp::bits::out{address_data, zpp::bits::size4b{}}(*request.get().addr).or_throw();
+            m_directory.insert (request.get().bucket_id, *request.get().object_key, address_data);
         });
 
         co_await m.send(SUCCESS, {});
@@ -114,16 +114,17 @@ private:
 
         ospan <char> buffer;
 
-        co_await utils::post_in_workers (*m_directory_workers, *m_storage.get_executor(),[this, &request, &buffer] () {
+        co_await utils::post_in_workers (*m_directory_workers, *m_storage.get_executor(),[this, request = std::cref (request),
+                                                                                          buffer = std::ref(buffer)] {
             address addr;
-            const auto buf = m_directory.get(request.bucket_id, *request.object_key);
+            const auto buf = m_directory.get(request.get().bucket_id, *request.get().object_key);
             zpp::bits::in{std::span <char> {buf.data.get(), buf.size}, zpp::bits::size4b{}}(addr).or_throw();
             std::size_t buffer_size = 0;
             for(auto frag_size : addr.sizes){
                 buffer_size += frag_size;
             }
-            buffer = ospan <char> (buffer_size);
-            m_storage.read_address(buffer.data.get(), addr);
+            buffer.get() = ospan <char> (buffer_size);
+            m_storage.read_address(buffer.get().data.get(), addr);
         });
 
         m.register_write_buffer(buffer);
@@ -133,8 +134,8 @@ private:
 
     coro <void> handle_put_bucket (messenger& m, const messenger::header& h) {
         directory_message request = co_await m.recv_directory_message (h);
-        co_await utils::post_in_workers (*m_directory_workers, *m_storage.get_executor(),[this, &request] () {
-            m_directory.add_bucket(request.bucket_id);
+        co_await utils::post_in_workers (*m_directory_workers, *m_storage.get_executor(),[this, request = std::cref (request)] () {
+            m_directory.add_bucket(request.get().bucket_id);
         });
         co_await m.send(SUCCESS, {});
 
@@ -142,34 +143,36 @@ private:
 
     coro <void> handle_delete_bucket (messenger& m, const messenger::header& h) {
         directory_message request = co_await m.recv_directory_message (h);
-        co_await utils::post_in_workers (*m_directory_workers, *m_storage.get_executor(),[this, &request] () {
-            m_directory.remove_bucket(request.bucket_id);
+        co_await utils::post_in_workers (*m_directory_workers, *m_storage.get_executor(),[this, request = std::cref (request)] () {
+            m_directory.remove_bucket(request.get().bucket_id);
         });
         co_await m.send(SUCCESS, {});
     }
 
     coro <void> handle_delete_object (messenger& m, const messenger::header& h) {
         directory_message request = co_await m.recv_directory_message (h);
-        co_await utils::post_in_workers (*m_directory_workers, *m_storage.get_executor(),[this, &request] () {
-            m_directory.remove_object(request.bucket_id, *request.object_key);
+        co_await utils::post_in_workers (*m_directory_workers, *m_storage.get_executor(),[this, request = std::cref (request)] () {
+            m_directory.remove_object(request.get().bucket_id, *request.get().object_key);
         });
         co_await m.send(SUCCESS, {});
     }
 
     coro <void> handle_list_buckets (messenger&m, const messenger::header &h) {
         directory_lst_entities_message response;
-        co_await utils::post_in_workers (*m_directory_workers, *m_storage.get_executor(),[this, &response] () {
+        auto func = [this] (auto& response) {
             response.entities = m_directory.list_buckets();
-        });
+        };
+        co_await utils::post_in_workers (*m_directory_workers, *m_storage.get_executor(), std::bind (func, std::ref (response)));
         co_await m.send_directory_list_entities_message(DIR_LIST_BUCKET_RESP, response);
     }
 
     coro <void> handle_list_objects (messenger&m, const messenger::header &h) {
         directory_message request = co_await m.recv_directory_message (h);
         directory_lst_entities_message response;
-        co_await utils::post_in_workers (*m_directory_workers, *m_storage.get_executor(),[this, &request, &response] () {
+        auto func = [this] (auto& response, auto& request) {
             response.entities = m_directory.list_keys(request.bucket_id);
-        });
+        };
+        co_await utils::post_in_workers (*m_directory_workers, *m_storage.get_executor(), std::bind (func, std::ref(response), std::ref(request)));
         co_await m.send_directory_list_entities_message(DIR_LIST_OBJ_RESP, response);
     }
 

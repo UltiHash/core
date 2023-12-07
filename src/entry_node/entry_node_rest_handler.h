@@ -223,7 +223,7 @@ public:
     coro <std::unique_ptr<http::http_response>> handle_get_bucket (const http::http_request& req)
     {
 
-        std::unique_ptr<http::model::get_bucket_response> res;
+        std::unique_ptr<http::model::get_bucket_response> res = std::make_unique <http::model::get_bucket_response> (req);
         auto req_bucket_id = req.get_URI().get_bucket_id();
 
         try {
@@ -264,7 +264,7 @@ public:
     coro <std::unique_ptr<http::http_response>> handle_list_buckets (const http::http_request& req)
     {
 
-        std::unique_ptr<http::model::list_buckets_response> res;
+        std::unique_ptr<http::model::list_buckets_response> res = std::make_unique <http::model::list_buckets_response> (req);
 
         co_await utils::io_thread_acquire_messenger_and_post_in_io_threads (*m_workers,
                                                                             *m_ioc,
