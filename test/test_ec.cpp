@@ -18,6 +18,11 @@
 // ------------- Tests Suites Follow --------------
 
 namespace uh::cluster {
+
+    BOOST_FIXTURE_TEST_CASE (success_ec, cluster_fixture) {
+        BOOST_TEST(true);
+    }
+
 /*
 BOOST_FIXTURE_TEST_CASE (ec_basic_write_read_test_multiple_nodes_with_ec, cluster_fixture)
 {
