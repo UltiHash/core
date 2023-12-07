@@ -42,8 +42,7 @@ namespace uh::cluster {
                                                                                client& cl,
                                                                                Func&& func) {
             co_await post_in_workers (workers, ioc, [&] () {
-                    auto m = cl.acquire_messenger();
-                    boost::asio::co_spawn(ioc, func(std::move(m)), boost::asio::use_future).get();
+                    boost::asio::co_spawn(ioc, func(cl.acquire_messenger()), boost::asio::use_future).get();
             });
 
         }
@@ -56,9 +55,9 @@ namespace uh::cluster {
 
             long i = 0;
             for (auto& n: nodes) {
-                auto m = n->acquire_messenger();
-                futures.emplace_back (boost::asio::co_spawn(ioc, func (std::move (m), i), boost::asio::use_future));
-                i++;
+                futures.emplace_back (boost::asio::co_spawn(ioc,
+                                                            func (n->acquire_messenger(), i++),
+                                                            boost::asio::use_future));
             }
 
             for (auto& f: futures) {
