@@ -1,42 +1,28 @@
 name: Integration Test (C++ Apps)
 
 on:
-  #push:
-  #  branches: [ "master" ]
-  #pull_request:
-  #  branches: [ "master" ]
-  #schedule:
-  #  - cron: '0 6 * * *'
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
   workflow_dispatch:
 
 jobs:
   integration-test-docker:
-    runs-on: ubuntu-latest
-    permissions:
-      actions: read
+    runs-on: uh-x86_64-ubuntu-22.04
+
     steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.PAT }}
+          submodules: recursive
 
-    - uses: actions/checkout@v4
-      with:
-        token: ${{ secrets.PAT }}
-        submodules: recursive
+      - name: Configure CMake
+        run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=Release -DENABLE_E2E_TESTS=On
 
-    - uses: docker/login-action@v3
-      with:
-        registry: ghcr.io
-        username: plauth
-        password: ${{ secrets.PAT }}
+      - name: Build
+        run: cmake --build ${{github.workspace}}/build --config Release --parallel $(nproc)
 
-    - name: Pull build base image
-      run: docker pull ghcr.io/ultihash/build-base:latest
-
-    - name: Build and bring up containers
-      run: docker-compose -f docker-compose-integration.yml up -d --build
-
-    - name: Wait for integration test to complete
-      run: ./wait_for_benchmark.py
-
-    - name: Validate integration test output
-      env:
-        RUN_AS_ACTION: 1
-      run: ./integration.sh
+      - name: Test
+        working-directory: ${{github.workspace}}/build
+        run: ctest --build-config Release --output-on-failure
