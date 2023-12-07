@@ -309,7 +309,8 @@ public:
 
             dedupe_response resp {.effective_size = 0};
             if(body_size > 0) [[likely]] {
-                resp = co_await integrate_data({req.get_body()});
+                std::list<std::string_view> data{req.get_body()};
+                resp = co_await integrate_data(data);
             }
 
             auto effective_size = static_cast <double> (resp.effective_size) / static_cast <double> (1024ul * 1024ul);
