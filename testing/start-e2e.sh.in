@@ -106,7 +106,7 @@ setup_bare_cluster ()
 
 compose_file="$TESTING_BINARY_DIR/docker-compose.yml"
 if [ -z "$cluster_url" ]; then
-    if [ ! -e "$compose_file" ] || [ "$E2E_RUN_BARE" -eq "1" ]; then
+    if [ ! -e "$compose_file" ] || [ "$E2E_RUN_BARE" == "1" ]; then
         echo "No compose file was found or running bare-metal was requested."
         echo "The servers are started directly on the machine."
 
