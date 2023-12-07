@@ -30,7 +30,7 @@ public:
         sleep(2);
     }
 
-    coro <address> write (const std::string_view& data) {
+    address write (const std::string_view& data) {
         auto index = m_data_node_index.load();
         auto new_val = (index + 1) % m_data_node_offsets.size();
         while (!m_data_node_index.compare_exchange_weak (index, new_val)) {
@@ -38,23 +38,17 @@ public:
             new_val = (index + 1) % m_data_node_offsets.size();
         }
 
-        auto m = m_data_node_offsets.at(index)->acquire_messenger();
-        co_await m.get().send(WRITE_REQ, data);
-        const auto message_header = co_await m.get().recv_header();
-        auto resp = co_await m.get().recv_address(message_header);
-        m.release();
+        address addr;
+        boost::asio::co_spawn(*m_io_service, [&data, &addr] (client::acquired_messenger m)-> coro <void> {
+                co_await m.get().send(WRITE_REQ, data);
+                const auto message_header = co_await m.get().recv_header();
+                addr = co_await m.get().recv_address(message_header);
+            } (m_data_node_offsets.at(index)->acquire_messenger()), boost::asio::use_future).get();
 
-        // l1 cache
-        sspan <char> l1_buf (std::min (resp.first().size, m_cluster_map.m_cluster_conf.global_data_view_conf.l1_sample_size));
+        sspan <char> l1_buf (std::min (addr.first().size, m_cluster_map.m_cluster_conf.global_data_view_conf.l1_sample_size));
         std::memcpy (l1_buf.data(), data.data(), l1_buf.size());
-        m_cache_l1.put (resp.first().pointer, std::move (l1_buf));
-/*
-        // l2 cache
-        sspan <char> l2_buf (resp.first().size);
-        std::memcpy (l2_buf.data(), data.data(), l2_buf.size());
-        m_cache_l2.put (resp.first().pointer, std::move (l2_buf));
-*/
-        co_return std::move (resp);
+        m_cache_l1.put (addr.first().pointer, std::move (l1_buf));
+        return addr;
     }
 
     sspan <char> read_l1_cache (const uint128_t pointer, const size_t size) {
@@ -75,26 +69,29 @@ public:
         return nullptr;
     }
 
-    coro <std::size_t> read (char* buffer, const uint128_t pointer, const size_t size) {
+    size_t read (char* buffer, const uint128_t pointer, const size_t size) {
         const fragment frag {pointer, size};
-        auto m = get_data_node (pointer)->acquire_messenger();
-        co_await m.get().send_fragment(READ_REQ, frag);
-        const auto h = co_await m.get().recv_header();
-        m.get().register_read_buffer (buffer, h.size);
-        co_await m.get().recv_buffers(h);
-        m.release();
+        size_t read_size = 0;
+        boost::asio::co_spawn(*m_io_service, [&frag, &buffer, &read_size] (client::acquired_messenger m)-> coro <void> {
+            co_await m.get().send_fragment(READ_REQ, frag);
+            const auto h = co_await m.get().recv_header();
+            read_size = h.size;
+            m.get().register_read_buffer (buffer, read_size);
+            co_await m.get().recv_buffers(h);
+        } (get_data_node (pointer)->acquire_messenger()), boost::asio::use_future).get();
 
         // l1 cache
-        sspan <char> l1_buf (std::min (h.size, m_cluster_map.m_cluster_conf.global_data_view_conf.l1_sample_size));
+        sspan <char> l1_buf (std::min (read_size, m_cluster_map.m_cluster_conf.global_data_view_conf.l1_sample_size));
         std::memcpy (l1_buf.data(), buffer, l1_buf.size());
         m_cache_l2.put (pointer, std::move (l1_buf));
 
         // l2 cache
-        sspan <char> l2_buf (h.size);
-        std::memcpy (l2_buf.data(), buffer, h.size);
+        sspan <char> l2_buf (read_size);
+        std::memcpy (l2_buf.data(), buffer, read_size);
         m_cache_l2.put (pointer, std::move (l2_buf));
 
-        co_return h.size;
+        return read_size;
+
     }
 
     /*

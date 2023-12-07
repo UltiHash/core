@@ -119,8 +119,7 @@ public:
         }
 
         sspan <char> buf (f.size);
-        auto fut = boost::asio::co_spawn (*storage.get_executor(), storage.read (buf.data(), f.pointer, f.size), boost::asio::use_future);
-        fut.wait();
+        storage.read (buf.data(), f.pointer, f.size);
         return buf;
     }
 
